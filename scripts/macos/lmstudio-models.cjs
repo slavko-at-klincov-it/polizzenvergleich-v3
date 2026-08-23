@@ -168,17 +168,56 @@ function recommendedMetadataProblems(model) {
   return problems;
 }
 
-function recommendedRuntimeProblems(model) {
-  const instance = model?.loaded_instances?.find(
-    (item) => item.id === configuredChatIdentifier
-  );
+function loadedRuntimeProblems(instance) {
   if (!instance) return ["geladene Instanz"];
   const problems = [];
-  if (Number(instance.config?.context_length) !== configuredChatContextLength)
+  // Current MLX engines can auto-fit an explicitly requested context upward.
+  // AnythingLLM remains capped at configuredChatContextLength, so a larger
+  // effective runtime is compatible; a smaller one is not.
+  const effectiveContextLength = Number(instance.contextLength);
+  if (
+    !Number.isFinite(effectiveContextLength) ||
+    effectiveContextLength < configuredChatContextLength
+  )
     problems.push("Runtime-Kontext");
-  if (Number(instance.config?.parallel) !== lock.chat.parallel)
+  if (Number(instance.parallel) !== lock.chat.parallel)
     problems.push("Parallelität");
   return problems;
+}
+
+function loadConfiguredChat(model) {
+  run(
+    lmsCommand,
+    [
+      "load",
+      model.modelKey,
+      "--identifier",
+      configuredChatIdentifier,
+      "--context-length",
+      String(configuredChatContextLength),
+      "--parallel",
+      String(lock.chat.parallel),
+      "-y",
+    ],
+    { capture: false }
+  );
+}
+
+function ensureConfiguredChatRuntime(model) {
+  const loaded = lmsJson(["ps", "--json"]);
+  const existing = loaded.find(
+    (item) =>
+      item.identifier === configuredChatIdentifier && item.type === "llm"
+  );
+  const problems = loadedRuntimeProblems(existing);
+  if (existing && problems.length === 0) return;
+  if (existing) {
+    run(lmsCommand, ["unload", existing.identifier], {
+      allowFailure: true,
+      capture: false,
+    });
+  }
+  loadConfiguredChat(model);
 }
 
 async function recommendedNativeModel() {
@@ -391,46 +430,11 @@ async function loadModels() {
       allowFailure: true,
       capture: false,
     });
-  const loaded = lmsJson(["ps", "--json"]);
-  const existingChat = loaded.find(
-    (item) =>
-      item.identifier === configuredChatIdentifier && item.type === "llm"
-  );
-  const contextMatches =
-    Number(existingChat?.contextLength) === configuredChatContextLength;
-  const recommendedRuntimeMatches =
-    configuredChatIdentifier !== lock.chat.identifier ||
-    recommendedRuntimeProblems(recommendedModel).length === 0;
-  let activeChat =
-    existingChat && contextMatches && recommendedRuntimeMatches
-      ? existingChat
-      : null;
-  if (existingChat && (!contextMatches || !recommendedRuntimeMatches)) {
-    run(lmsCommand, ["unload", existingChat.identifier], {
-      allowFailure: true,
-      capture: false,
-    });
-  }
-  if (!activeChat) {
-    run(
-      lmsCommand,
-      [
-        "load",
-        models.chat.modelKey,
-        "--identifier",
-        configuredChatIdentifier,
-        "--context-length",
-        String(configuredChatContextLength),
-        "--parallel",
-        String(lock.chat.parallel),
-        "-y",
-      ],
-      { capture: false }
-    );
-  }
+  ensureConfiguredChatRuntime(models.chat);
 
   await ensureWrapper();
-  const activeEmbedding = loaded.find(
+  const loadedBeforeEmbedding = lmsJson(["ps", "--json"]);
+  const activeEmbedding = loadedBeforeEmbedding.find(
     (item) =>
       item.identifier === lock.embedding.identifier &&
       item.type === "embedding" &&
@@ -449,6 +453,10 @@ async function loadModels() {
       { capture: false }
     );
   }
+  // The first Dinghy classification can restart llmster. Re-assert the chat
+  // runtime afterwards because older `lms ps --json` payloads do not always
+  // preserve every load option while lms-embed restores prior models.
+  ensureConfiguredChatRuntime(models.chat);
 
   const tokenizerCandidate = path.join(
     process.env.HOME,
@@ -501,20 +509,19 @@ async function validate() {
     );
   if (configuredChatIdentifier === lock.chat.identifier) {
     const nativeModel = await recommendedNativeModel();
-    const problems = [
-      ...recommendedMetadataProblems(nativeModel),
-      ...recommendedRuntimeProblems(nativeModel),
-    ];
+    const problems = recommendedMetadataProblems(nativeModel);
     if (problems.length > 0)
       fail(`Qwen-Modellvertrag verletzt: ${problems.join(", ")}.`);
   }
   if (!embedding)
     fail(`Embeddingmodell '${lock.embedding.identifier}' ist nicht geladen.`);
-  if (Number(chat.contextLength) !== configuredChatContextLength) {
+  const runtimeProblems = loadedRuntimeProblems(chat);
+  if (runtimeProblems.length > 0)
     fail(
-      `Chatmodell hat ${chat.contextLength} statt exakt ${configuredChatContextLength} Runtime-Tokens.`
+      `Chatmodell-Laufzeit verletzt: ${runtimeProblems.join(", ")} ` +
+        `(Kontext ${chat.contextLength ?? "unbekannt"}/mindestens ${configuredChatContextLength}, ` +
+        `Parallelität ${chat.parallel ?? "unbekannt"}/${lock.chat.parallel}).`
     );
-  }
 
   const embeddingResponse = await fetch(`${lmStudioBaseUrl}/v1/embeddings`, {
     method: "POST",

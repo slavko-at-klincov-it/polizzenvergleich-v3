@@ -166,6 +166,30 @@ POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
 POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
 POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
   "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null
+if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_MOCK_LMS_CONTEXT=16384 \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] wrong runtime context was not rejected' >&2
+  exit 1
+fi
+if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_MOCK_LMS_CONTEXT='"unknown"' \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] unknown runtime context was not rejected' >&2
+  exit 1
+fi
+if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_MOCK_LMS_PARALLEL=4 \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] wrong runtime parallelism was not rejected' >&2
+  exit 1
+fi
 
 printf '%s\n' '[installer-test] focused application contracts'
 "$NODE_BIN" "$REPO/scripts/macos/pipeline-smoke.cjs" >/dev/null

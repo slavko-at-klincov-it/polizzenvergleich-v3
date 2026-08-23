@@ -24,7 +24,9 @@ const server = http.createServer((request, response) => {
               loaded_instances: [
                 {
                   id: "qwen/qwen3.8-27b",
-                  config: { context_length: 32768, parallel: 1 },
+                  // MLX auto-fit may raise the effective context above the
+                  // requested 32k while AnythingLLM remains capped at 32k.
+                  config: { context_length: 42496, parallel: 1 },
                 },
               ],
               capabilities: {

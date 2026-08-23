@@ -17,7 +17,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.2 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.3 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -86,6 +86,12 @@ Entwicklerreferenz erhalten.
 - OCR: Deutsch und Englisch, maximal zwei Worker
 - Suche: exakte Volltextsuche/BM25 und semantische Suche, getrennt für Dokument
   A und Dokument B
+
+AnythingLLM bleibt auf 32.768 Tokens begrenzt. Aktuelle LM-Studio-MLX-Versionen
+können den effektiven Wert beim Laden durch Auto-Fit nach oben anpassen; ein
+größerer Wert in `lms ps` ist zulässig und wird nicht als AnythingLLM-Budget
+übernommen. Ein Wert unter 32.768 oder eine Parallelität ungleich 1 wird vom
+Installer weiterhin abgelehnt beziehungsweise repariert.
 
 TurboQuant ist keine Voraussetzung. Es wird in diesem Stand weder benötigt
 noch von LM Studio als einfache produktive Option vorausgesetzt.
