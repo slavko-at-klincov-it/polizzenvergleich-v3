@@ -146,17 +146,8 @@ function chatEndpoints(app) {
           return;
         }
 
-        await streamChatWithWorkspace(
-          response,
-          workspace,
-          message,
-          workspace?.chatMode,
-          user,
-          thread,
-          attachments
-        );
-
-        // If thread was renamed emit event to frontend via special `action` response.
+        // Rename before generation so an error, cancellation, or navigation
+        // cannot leave an unfindable generic "Thread" behind.
         await WorkspaceThread.autoRenameThread({
           thread,
           workspace,
@@ -172,6 +163,16 @@ function chatEndpoints(app) {
             });
           },
         });
+
+        await streamChatWithWorkspace(
+          response,
+          workspace,
+          message,
+          workspace?.chatMode,
+          user,
+          thread,
+          attachments
+        );
 
         await Telemetry.sendTelemetry("sent_chat", {
           multiUserMode: multiUserMode(response),

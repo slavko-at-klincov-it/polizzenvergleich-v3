@@ -4,6 +4,7 @@ process.env.NODE_ENV === "development"
 
 require("./utils/logger")();
 require("./utils/boot/patchSdkTimeouts")();
+require("./utils/PolicyComparison/registerLifecycleHooks");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -23,6 +24,9 @@ const { developerEndpoints } = require("./endpoints/api");
 const { extensionEndpoints } = require("./endpoints/extensions");
 const { bootHTTP, bootSSL } = require("./utils/boot");
 const { workspaceThreadEndpoints } = require("./endpoints/workspaceThreads");
+const {
+  comparisonDocumentEndpoints,
+} = require("./endpoints/comparisonDocuments");
 const { documentEndpoints } = require("./endpoints/document");
 const { agentWebsocket } = require("./endpoints/agentWebsocket");
 const {
@@ -82,6 +86,7 @@ systemEndpoints(apiRouter);
 extensionEndpoints(apiRouter);
 workspaceEndpoints(apiRouter);
 workspaceThreadEndpoints(apiRouter);
+comparisonDocumentEndpoints(apiRouter);
 chatEndpoints(apiRouter);
 adminEndpoints(apiRouter);
 modelRouterEndpoints(apiRouter);

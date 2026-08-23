@@ -1,15 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Workspace from "@/models/workspace";
 import LoadingChat from "./LoadingChat";
 import ChatContainer from "./ChatContainer";
 import paths from "@/utils/paths";
 import ModalWrapper from "../ModalWrapper";
-import { useNavigate, useParams } from "react-router-dom";
-import {
-  DnDFileUploaderProvider,
-  DndUploaderContext,
-  PASTE_ATTACHMENT_EVENT,
-} from "./ChatContainer/DnDWrapper";
+import { useParams } from "react-router-dom";
+import { DnDFileUploaderProvider } from "./ChatContainer/DnDWrapper";
 import { WarningCircle } from "@phosphor-icons/react";
 import {
   TTSProvider,
@@ -20,31 +16,10 @@ import { PENDING_HOME_MESSAGE } from "@/utils/constants";
 export default function WorkspaceChat({ loading, workspace }) {
   useWatchForAutoPlayAssistantTTSResponse();
   const { threadSlug = null } = useParams();
-  const navigate = useNavigate();
   // Stores { key, workspace, history } currently rendered. Lags the props so
   // the previous chat stays mounted until the next one's history is ready,
   // avoiding a skeleton/loader flash on workspace/thread switches.
   const [loaded, setLoaded] = useState(null);
-  const [dragging, setDragging] = useState(false);
-  const pendingFilesRef = useRef([]);
-
-  // When the thread becomes available and we have pending files, trigger upload
-  useEffect(() => {
-    if (loaded?.threadSlug && pendingFilesRef.current.length > 0) {
-      const files = pendingFilesRef.current;
-      pendingFilesRef.current = [];
-      window.dispatchEvent(
-        new CustomEvent(PASTE_ATTACHMENT_EVENT, { detail: { files } })
-      );
-    }
-  }, [loaded?.threadSlug]);
-
-  async function handleDropWithoutThread(acceptedFiles) {
-    setDragging(false);
-    pendingFilesRef.current = acceptedFiles;
-    const { thread } = await Workspace.threads.new(workspace.slug);
-    if (thread) navigate(paths.workspace.thread(workspace.slug, thread.slug));
-  }
 
   useEffect(() => {
     async function getHistory() {
@@ -120,16 +95,10 @@ export default function WorkspaceChat({ loading, workspace }) {
 
   return (
     <TTSProvider>
-      <DnDWrapper
-        loaded={loaded}
-        opts={{
-          files: [],
-          ready: true,
-          dragging,
-          setDragging,
-          onDrop: handleDropWithoutThread,
-          parseAttachments: () => [],
-        }}
+      <DnDFileUploaderProvider
+        key={loaded.key}
+        workspace={loaded.workspace}
+        threadSlug={loaded.threadSlug}
       >
         <ChatContainer
           key={loaded.key}
@@ -137,26 +106,8 @@ export default function WorkspaceChat({ loading, workspace }) {
           threadSlug={loaded.threadSlug}
           knownHistory={loaded.history}
         />
-      </DnDWrapper>
+      </DnDFileUploaderProvider>
     </TTSProvider>
-  );
-}
-
-function DnDWrapper({ children, loaded, opts }) {
-  if (!loaded?.threadSlug) {
-    return (
-      <DndUploaderContext.Provider value={opts}>
-        {children}
-      </DndUploaderContext.Provider>
-    );
-  }
-  return (
-    <DnDFileUploaderProvider
-      workspace={loaded.workspace}
-      threadSlug={loaded.threadSlug}
-    >
-      {children}
-    </DnDFileUploaderProvider>
   );
 }
 

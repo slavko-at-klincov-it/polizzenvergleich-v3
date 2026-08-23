@@ -74,7 +74,9 @@ class CollectorApi {
       WhisperGenericOpenAiModel:
         process.env.WHISPER_GENERIC_OPEN_AI_MODEL || null,
       ocr: {
-        langList: process.env.TARGET_OCR_LANG || "eng",
+        // Insurance policies are predominantly German, but product and legal
+        // terms can be English. Keep both language packs local and available.
+        langList: process.env.TARGET_OCR_LANG || "deu,eng",
       },
       runtimeSettings: {
         allowAnyIp: process.env.COLLECTOR_ALLOW_ANY_IP ?? "false",

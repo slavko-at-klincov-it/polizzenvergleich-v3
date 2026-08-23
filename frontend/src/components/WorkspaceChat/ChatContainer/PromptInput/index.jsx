@@ -32,6 +32,7 @@ const MAX_EDIT_STACK_SIZE = 100;
  * @param {boolean} [props.centered] - renders in centered layout mode (for home page)
  * @param {string} [props.workspaceSlug] - workspace slug for home page context
  * @param {string} [props.threadSlug] - thread slug for home page context
+ * @param {boolean} [props.attachmentsProcessing] - blocks send while PDFs are read/indexed
  */
 export default function PromptInput({
   workspace = {},
@@ -42,10 +43,11 @@ export default function PromptInput({
   centered = false,
   workspaceSlug = null,
   threadSlug = null,
+  attachmentsProcessing = false,
 }) {
   const { t } = useTranslation();
   const { showAgentCommand = true } = workspace ?? {};
-  const { isDisabled } = useIsDisabled();
+  const { isDisabled } = useIsDisabled(attachmentsProcessing);
   const agentSessionActive = useIsAgentSessionActive();
   const [promptInput, setPromptInput] = useState("");
   const [showTools, setShowTools] = useState(false);
@@ -528,7 +530,7 @@ function SendPromptButton({ formRef, promptInput, isDisabled }) {
  * Handle event listeners to prevent the send button from being used
  * for whatever reason that may we may want to prevent the user from sending a message.
  */
-function useIsDisabled() {
+function useIsDisabled(externallyDisabled = false) {
   const [isDisabled, setIsDisabled] = useState(false);
 
   /**
@@ -550,5 +552,5 @@ function useIsDisabled() {
     };
   }, []);
 
-  return { isDisabled };
+  return { isDisabled: isDisabled || externallyDisabled };
 }

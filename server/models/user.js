@@ -301,6 +301,18 @@ const User = {
 
   delete: async function (clause = {}) {
     try {
+      const users = await prisma.users.findMany({
+        where: clause,
+        select: { id: true },
+      });
+      if (users.length > 0) {
+        const { WorkspaceThread } = require("./workspaceThread");
+        const cleaned = await WorkspaceThread.delete({
+          user_id: { in: users.map((user) => user.id) },
+        });
+        if (!cleaned)
+          throw new Error("Could not clean comparison threads for user(s). ");
+      }
       await prisma.users.deleteMany({ where: clause });
       return true;
     } catch (error) {

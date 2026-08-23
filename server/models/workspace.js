@@ -391,6 +391,26 @@ const Workspace = {
 
   delete: async function (clause = {}) {
     try {
+      const workspaces = await prisma.workspaces.findMany({
+        where: clause,
+        select: { id: true },
+      });
+      if (workspaces.length > 0) {
+        const { WorkspaceThread } = require("./workspaceThread");
+        const {
+          ComparisonChunkIndex,
+        } = require("../utils/PolicyComparison/ComparisonChunkIndex");
+        for (const workspace of workspaces) {
+          const cleaned = await WorkspaceThread.delete({
+            workspace_id: workspace.id,
+          });
+          if (!cleaned)
+            throw new Error(
+              `Could not clean comparison threads for workspace ${workspace.id}.`
+            );
+          await ComparisonChunkIndex.removeWorkspace(workspace.id);
+        }
+      }
       await prisma.workspaces.delete({
         where: clause,
       });

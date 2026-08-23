@@ -10,6 +10,7 @@ export default function SourceItem({ source, onClick }) {
   const info = parseChunkSource(source);
   const customImage = getCustomImage(info?.icon);
   const subtitle = info?.isUrl ? info?.text : t("chat_window.document");
+  const pages = source.pages?.join(", ");
 
   return (
     <button
@@ -31,6 +32,7 @@ export default function SourceItem({ source, onClick }) {
       </div>
       <div className="flex flex-col gap-[2px] pl-[22px] text-[10px] text-zinc-400 light:text-slate-500 leading-[14px]">
         <p>{subtitle}</p>
+        {pages && <p className="text-sky-300 light:text-sky-700">{pages}</p>}
         <p>{t("chat_window.source_count", { count: source.references })}</p>
       </div>
     </button>

@@ -55,7 +55,8 @@ export default function AttachItem({
    * so we need to sync the state in the ParsedFilesMenu picker here.
    */
   async function handleRemoveAttachment(e) {
-    const { document } = e.detail;
+    const { document, attachmentType } = e.detail;
+    if (attachmentType === "comparison_document" || !document?.id) return;
     await Workspace.deleteParsedFiles(slug, [document.id]);
     fetchFiles();
   }

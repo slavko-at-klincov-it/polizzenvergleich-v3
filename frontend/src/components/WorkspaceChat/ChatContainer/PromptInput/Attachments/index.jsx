@@ -47,17 +47,52 @@ export default function AttachmentManager({ attachments }) {
  * @param {{attachment: import("../../DnDWrapper").Attachment}}
  */
 function AttachmentItem({ attachment, onImageClick }) {
-  const { uid, file, status, error, document, type, contentString } =
-    attachment;
+  const {
+    uid,
+    file,
+    status,
+    error,
+    document,
+    tokenCountEstimate,
+    modelTokenCount,
+    modelTokenLabel,
+    qwenTokenCount,
+    parsedFileId,
+    pageCount,
+    type,
+    contentString,
+  } = attachment;
   const { iconBgColor, Icon } = displayFromFile(file);
+  const exactModelTokenLabel = Number.isFinite(modelTokenCount)
+    ? `${new Intl.NumberFormat().format(modelTokenCount)} ${modelTokenLabel || "Modell"}-Tokens`
+    : null;
+  const legacyQwenTokenLabel = Number.isFinite(qwenTokenCount)
+    ? `${new Intl.NumberFormat().format(qwenTokenCount)} Tokens`
+    : null;
+  const estimatedTokenLabel = Number.isFinite(tokenCountEstimate)
+    ? `ca. ${new Intl.NumberFormat().format(tokenCountEstimate)} Tokens`
+    : null;
+  const tokenLabel =
+    exactModelTokenLabel ?? legacyQwenTokenLabel ?? estimatedTokenLabel;
+  const pageLabel = Number.isFinite(pageCount)
+    ? `${new Intl.NumberFormat().format(pageCount)} Seiten`
+    : null;
 
   function removeFileFromQueue() {
     window.dispatchEvent(
-      new CustomEvent(REMOVE_ATTACHMENT_EVENT, { detail: { uid, document } })
+      new CustomEvent(REMOVE_ATTACHMENT_EVENT, {
+        detail: { uid, document, attachmentType: type, parsedFileId },
+      })
     );
   }
 
-  if (status === "in_progress") {
+  if (["in_progress", "reading", "indexing", "deleting"].includes(status)) {
+    const progressLabel =
+      status === "indexing"
+        ? "Wird indexiert …"
+        : status === "deleting"
+          ? "Wird entfernt …"
+          : "Text wird gelesen …";
     return (
       <div className="relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group">
         <div
@@ -74,7 +109,7 @@ function AttachmentItem({ attachment, onImageClick }) {
             {file.name}
           </p>
           <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-            Uploading...
+            {progressLabel}
           </p>
         </div>
       </div>
@@ -183,9 +218,9 @@ function AttachmentItem({ attachment, onImageClick }) {
     <div
       data-tooltip-id="attachment-status-tooltip"
       data-tooltip-content={
-        status === "embedded"
-          ? `${file.name} was uploaded and embedded into this workspace. It will be available for RAG chat now.`
-          : `${file.name} will be used as context for this chat only.`
+        status === "ready"
+          ? `${file.name} ist für diesen Vergleich indexiert.${tokenLabel ? ` Extrahierter Text: ${tokenLabel}.` : ""}`
+          : `${file.name} wird nur in diesem Vergleich verwendet.`
       }
       className={`relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group`}
     >
@@ -206,7 +241,9 @@ function AttachmentItem({ attachment, onImageClick }) {
       <div className="flex flex-col w-[125px]">
         <p className="text-white text-xs font-semibold truncate">{file.name}</p>
         <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-          {status === "embedded" ? "File embedded!" : "Added as context!"}
+          {status === "ready"
+            ? `Bereit${pageLabel ? ` · ${pageLabel}` : ""}${tokenLabel ? ` · ${tokenLabel}` : ""}`
+            : "Zum Vergleich hinzugefügt"}
         </p>
       </div>
     </div>

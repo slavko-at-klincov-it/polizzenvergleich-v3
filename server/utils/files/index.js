@@ -16,8 +16,13 @@ const vectorCachePath =
   process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../storage/vector-cache`)
     : path.resolve(process.env.STORAGE_DIR, `vector-cache`);
-const hotdirPath =
-  process.env.NODE_ENV === "development"
+// Desktop packages store the collector beside the app storage directory, while
+// bare-metal deployments keep it beside the server source. Allow the shared
+// directory to be configured explicitly so both services always use the same
+// hotdir.
+const hotdirPath = process.env.COLLECTOR_HOTDIR_PATH
+  ? path.resolve(process.env.COLLECTOR_HOTDIR_PATH)
+  : process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../../collector/hotdir`)
     : path.resolve(process.env.STORAGE_DIR, `../../collector/hotdir`);
 const generatedImagesPath =

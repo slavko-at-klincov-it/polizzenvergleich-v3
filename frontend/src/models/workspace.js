@@ -477,6 +477,45 @@ const Workspace = {
     return { response, data };
   },
 
+  /** Persist and index one parsed PDF for exactly one comparison thread. */
+  embedComparisonDocument: async function (slug, threadSlug, fileId) {
+    const response = await fetch(
+      `${API_BASE}/workspace/${slug}/thread/${threadSlug}/comparison-documents/${fileId}`,
+      {
+        method: "POST",
+        headers: baseHeaders(),
+      }
+    );
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  },
+
+  /** List the at-most-two PDFs attached to a comparison thread. */
+  listComparisonDocuments: async function (slug, threadSlug) {
+    const response = await fetch(
+      `${API_BASE}/workspace/${slug}/thread/${threadSlug}/comparison-documents`,
+      {
+        method: "GET",
+        headers: baseHeaders(),
+      }
+    );
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  },
+
+  /** Delete one thread document and its lexical/vector index entries. */
+  deleteComparisonDocument: async function (slug, threadSlug, documentId) {
+    const response = await fetch(
+      `${API_BASE}/workspace/${slug}/thread/${threadSlug}/comparison-documents/${documentId}`,
+      {
+        method: "DELETE",
+        headers: baseHeaders(),
+      }
+    );
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  },
+
   /**
    * Deletes and un-embeds a single file in a single call from a workspace
    * @param {string} slug - workspace slug

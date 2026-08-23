@@ -110,21 +110,86 @@ export function SourceTypeCircle({
 }
 
 export function combineLikeSources(sources) {
-  const combined = {};
+  const combined = new Map();
   sources.forEach((source) => {
     const { id, title, text, chunkSource = "", score = null } = source;
-    if (combined.hasOwnProperty(title)) {
-      combined[title].chunks.push({ id, text, chunkSource, score });
-      combined[title].references += 1;
+    const metadata = sourceMetadata(source);
+    const key = String(
+      source.documentId ??
+        source.document_id ??
+        source.docId ??
+        metadata.documentId ??
+        metadata.docId ??
+        title ??
+        chunkSource
+    );
+    const pageLabel = citationPageLabel(source);
+    const chunk = { id, text, chunkSource, score, pageLabel };
+    if (combined.has(key)) {
+      const document = combined.get(key);
+      document.chunks.push(chunk);
+      document.references += 1;
+      if (pageLabel && !document.pages.includes(pageLabel))
+        document.pages.push(pageLabel);
     } else {
-      combined[title] = {
+      combined.set(key, {
+        key,
         title,
-        chunks: [{ id, text, chunkSource, score }],
+        chunks: [chunk],
         references: 1,
-      };
+        pages: pageLabel ? [pageLabel] : [],
+      });
     }
   });
-  return Object.values(combined);
+  return Array.from(combined.values());
+}
+
+export function citationPageLabel(source = {}) {
+  const metadata = sourceMetadata(source);
+  const start = firstPageNumber(
+    source.pageNumber,
+    source.page_number,
+    source.page,
+    source.pageStart,
+    source.page_start,
+    metadata.pageNumber,
+    metadata.page_number,
+    metadata.page,
+    metadata.pageStart,
+    metadata.page_start
+  );
+  const end = firstPageNumber(
+    source.pageEnd,
+    source.page_end,
+    metadata.pageEnd,
+    metadata.page_end
+  );
+  if (!start) return null;
+  if (end && end !== start) return `Seiten ${start}–${end}`;
+  return `Seite ${start}`;
+}
+
+function sourceMetadata(source) {
+  if (source?.metadata && typeof source.metadata === "object")
+    return source.metadata;
+  if (typeof source?.metadata !== "string") return {};
+  try {
+    return JSON.parse(source.metadata);
+  } catch {
+    return {};
+  }
+}
+
+function firstPageNumber(...values) {
+  for (const value of values) {
+    const candidate =
+      value && typeof value === "object"
+        ? (value.number ?? value.start ?? value.page)
+        : value;
+    const page = Number(candidate);
+    if (Number.isInteger(page) && page > 0) return page;
+  }
+  return null;
 }
 
 export default function Citations({ sources = [] }) {
@@ -167,7 +232,7 @@ export default function Citations({ sources = [] }) {
           const customImage = CIRCLE_IMAGES[info.icon];
           return (
             <div
-              key={source.title || idx}
+              key={source.key || source.title || idx}
               className={`absolute top-0 size-[22px] rounded-full ${customImage ? "border-none" : "border-2 border-zinc-800 light:border-white"}`}
               style={{ left: `${idx * 17}px`, zIndex: 3 - idx }}
             >
@@ -248,10 +313,15 @@ export function CitationDetailModal({ source, onClose }) {
           style={{ maxHeight: "calc(100vh - 200px)" }}
         >
           <div className="py-7 px-9 space-y-2 flex-col">
-            {chunks.map(({ text, score }, idx) => (
+            {chunks.map(({ text, score, pageLabel }, idx) => (
               <Fragment key={idx}>
                 <div className="pt-6 text-white light:text-slate-900">
                   <div className="flex flex-col w-full justify-start pb-6 gap-y-1">
+                    {pageLabel && (
+                      <p className="text-xs font-semibold text-sky-300 light:text-sky-700">
+                        {pageLabel}
+                      </p>
+                    )}
                     <p className="text-white light:text-slate-900 whitespace-pre-line">
                       {HTMLDecode(omitChunkHeader(text))}
                     </p>

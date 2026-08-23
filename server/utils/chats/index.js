@@ -85,7 +85,16 @@ async function recentChatHistory({
       messageLimit,
       { id: "desc" }
     )
-  ).reverse();
+  )
+    .reverse()
+    .filter((chat) => {
+      try {
+        const response = JSON.parse(chat.response);
+        return !response?.pending && !response?.interrupted;
+      } catch {
+        return true;
+      }
+    });
   return { rawHistory, chatHistory: convertToPromptHistory(rawHistory) };
 }
 

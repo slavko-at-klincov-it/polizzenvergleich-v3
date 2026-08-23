@@ -1,4 +1,5 @@
 const fs = require("fs").promises;
+const { assessPageText } = require("../PageTextQuality");
 
 class PDFLoader {
   constructor(filePath, { splitPages = true } = {}) {
@@ -23,25 +24,8 @@ class PDFLoader {
     for (let i = 1; i <= pdf.numPages; i += 1) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-
-      if (content.items.length === 0) {
-        continue;
-      }
-
-      let lastY;
-      const textItems = [];
-      for (const item of content.items) {
-        if ("str" in item) {
-          if (lastY === item.transform[5] || !lastY) {
-            textItems.push(item.str);
-          } else {
-            textItems.push(`\n${item.str}`);
-          }
-          lastY = item.transform[5];
-        }
-      }
-
-      const text = textItems.join("");
+      const text = this.textFromItems(content.items);
+      const quality = assessPageText(text);
       documents.push({
         pageContent: text.trim(),
         metadata: {
@@ -53,6 +37,11 @@ class PDFLoader {
             totalPages: pdf.numPages,
           },
           loc: { pageNumber: i },
+          extraction: {
+            method: "native",
+            status: quality.needsOcr ? "needs_ocr" : "ok",
+            quality,
+          },
         },
       });
     }
@@ -79,6 +68,45 @@ class PDFLoader {
         },
       },
     ];
+  }
+
+  textFromItems(items = []) {
+    let previous = null;
+    let text = "";
+
+    for (const item of items) {
+      if (!("str" in item) || !item.str) continue;
+      const x = item.transform?.[4];
+      const y = item.transform?.[5];
+      const height = Math.abs(item.height || item.transform?.[3] || 0);
+
+      if (previous) {
+        const lineTolerance = Math.max(1, height * 0.25);
+        const changedLine =
+          Number.isFinite(y) &&
+          Number.isFinite(previous.y) &&
+          Math.abs(y - previous.y) > lineTolerance;
+        if (changedLine || previous.hasEOL) {
+          text += "\n";
+        } else {
+          const previousEnd = previous.x + previous.width;
+          const gap = Number.isFinite(x) ? x - previousEnd : 0;
+          const wordGap = Math.max(1, height * 0.12);
+          if (gap > wordGap && !text.endsWith(" ") && !item.str.startsWith(" "))
+            text += " ";
+        }
+      }
+
+      text += item.str;
+      previous = {
+        x: Number.isFinite(x) ? x : 0,
+        y,
+        width: Number.isFinite(item.width) ? item.width : 0,
+        hasEOL: item.hasEOL === true,
+      };
+    }
+
+    return text;
   }
 
   async getPdfJS() {

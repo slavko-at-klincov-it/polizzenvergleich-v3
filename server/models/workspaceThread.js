@@ -92,15 +92,23 @@ const WorkspaceThread = {
   delete: async function (clause = {}) {
     try {
       const { WorkspaceChats } = require("./workspaceChats");
+      const {
+        ComparisonDocumentService,
+      } = require("../utils/comparisonDocuments");
       // thread_id has no FK relation so chats don't cascade-delete with the thread.
       const threads = await prisma.workspace_threads.findMany({
         where: clause,
-        select: { id: true },
+        select: { id: true, workspace_id: true, user_id: true },
       });
-      if (threads.length > 0)
+      if (threads.length > 0) {
+        // External vector/file indexes do not participate in SQLite cascades.
+        // Clean them first; if cleanup fails, keep the thread so deletion can
+        // be retried without losing the ownership record.
+        await ComparisonDocumentService.cleanupThreads(threads);
         await WorkspaceChats.delete({
           thread_id: { in: threads.map((thread) => thread.id) },
         });
+      }
 
       await prisma.workspace_threads.deleteMany({
         where: clause,
@@ -149,7 +157,10 @@ const WorkspaceThread = {
       user_id: user?.id || null,
       thread_id: thread.id,
     });
-    if (chatCount !== 1) return { renamed: false, thread };
+    // Normal chat calls this before the first generation (count 0), while the
+    // agent chat-history plugin calls it immediately after persisting the first
+    // exchange (count 1). Both are the same first-message lifecycle.
+    if (chatCount > 1) return { renamed: false, thread };
     const { thread: updatedThread } = await this.update(thread, {
       name: truncate(prompt, 22),
     });

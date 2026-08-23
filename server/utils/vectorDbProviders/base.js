@@ -122,6 +122,8 @@ class VectorDatabase {
    * @param {number} params.similarityThreshold - Similarity threshold
    * @param {number} params.topN - Number of results to return
    * @param {string[]} params.filterIdentifiers - Identifiers to filter out
+   * @param {string[]} params.includeDocIds - Document IDs to search exclusively
+   * @param {string[]} params.excludeDocIds - Document IDs to exclude before top-N
    * @returns {Promise<{contextTexts: string[], sources: any[], message: string|boolean}>}
    */
   async performSimilaritySearch({
@@ -131,6 +133,8 @@ class VectorDatabase {
     similarityThreshold = 0.25,
     topN = 4,
     filterIdentifiers = [],
+    includeDocIds = [],
+    excludeDocIds = [],
   }) {
     throw new Error("Must be implemented by provider");
   }

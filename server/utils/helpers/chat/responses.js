@@ -24,6 +24,14 @@ function clientAbortedHandler(resolve, fullText) {
   return;
 }
 
+function hasUnclosedThoughtChain(text = "") {
+  return (
+    typeof text === "string" &&
+    /<(?:think|thinking|thought|thought_chain)\b[^>]*>/i.test(text) &&
+    !/<\/(?:think|thinking|thought|thought_chain)>/i.test(text)
+  );
+}
+
 /**
  * Handles the default stream response for a chat.
  * @param {import("express").Response} response
@@ -214,6 +222,10 @@ function convertToChatHistory(history = []) {
       continue;
     }
 
+    const responseText = hasUnclosedThoughtChain(data.text)
+      ? "Antwort wurde nicht fertiggestellt. Sende die Frage erneut, um eine neue Antwort zu erhalten."
+      : data.text;
+
     formattedHistory.push([
       {
         role: "user",
@@ -225,7 +237,7 @@ function convertToChatHistory(history = []) {
       {
         type: data?.type || "chart",
         role: "assistant",
-        content: data.text,
+        content: responseText,
         sources: data.sources || [],
         chatId: id,
         sentAt: moment(createdAt).unix(),
@@ -285,6 +297,15 @@ function convertToPromptHistory(history = []) {
   for (const record of history) {
     const { prompt, response } = record;
     const data = JSON.parse(response);
+
+    // Keep an interrupted request visible in the UI, but never present its
+    // placeholder as a real assistant answer to the next model invocation.
+    if (
+      data?.pending ||
+      data?.interrupted ||
+      hasUnclosedThoughtChain(data?.text)
+    )
+      continue;
 
     // In the event that a bad response was stored - we should skip its entire record
     // because it was likely an error and cannot be used in chats and will fail to render on UI.

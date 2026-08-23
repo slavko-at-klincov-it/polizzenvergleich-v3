@@ -30,9 +30,14 @@ export default function SourceDetailView({ source, onBack, onClose }) {
         </button>
       </div>
       <div className="flex flex-col overflow-y-auto no-scroll">
-        {source.chunks.map(({ text, score }, idx) => (
+        {source.chunks.map(({ text, score, pageLabel }, idx) => (
           <Fragment key={idx}>
             <div className="flex flex-col gap-y-1 py-4">
+              {pageLabel && (
+                <p className="text-xs font-semibold text-sky-300 light:text-sky-700">
+                  {pageLabel}
+                </p>
+              )}
               <p className="text-sm leading-[20px] text-white light:text-slate-900">
                 {HTMLDecode(omitChunkHeader(text))}
               </p>

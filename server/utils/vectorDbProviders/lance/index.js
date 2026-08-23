@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const { sourceIdentifier } = require("../../chats");
 const { NativeEmbeddingReranker } = require("../../EmbeddingRerankers/native");
 const { VectorDatabase } = require("../base");
+const { PageAwareTextSplitter } = require("../../PageAwareTextSplitter");
 const path = require("path");
 
 /**
@@ -97,6 +98,8 @@ class LanceDb extends VectorDatabase {
     topN = 4,
     similarityThreshold = 0.25,
     filterIdentifiers = [],
+    includeVectorIds = [],
+    excludeVectorIds = [],
   }) {
     const reranker = new NativeEmbeddingReranker();
     const collection = await client.openTable(namespace);
@@ -122,13 +125,20 @@ class LanceDb extends VectorDatabase {
      */
     const searchLimit = Math.max(
       10,
-      Math.min(50, Math.ceil(totalEmbeddings * 0.1))
+      Math.min(
+        50,
+        Math.ceil((includeVectorIds.length || totalEmbeddings) * 0.1)
+      )
     );
-    const vectorSearchResults = await collection
+    let vectorQuery = collection
       .vectorSearch(queryVector)
-      .distanceType("cosine")
-      .limit(searchLimit)
-      .toArray();
+      .distanceType("cosine");
+    const scopeFilter = this.vectorScopeFilter({
+      includeVectorIds,
+      excludeVectorIds,
+    });
+    if (scopeFilter) vectorQuery = vectorQuery.where(scopeFilter);
+    const vectorSearchResults = await vectorQuery.limit(searchLimit).toArray();
 
     await reranker
       .rerank(query, vectorSearchResults, { topK: topN })
@@ -180,6 +190,8 @@ class LanceDb extends VectorDatabase {
     similarityThreshold = 0.25,
     topN = 4,
     filterIdentifiers = [],
+    includeVectorIds = [],
+    excludeVectorIds = [],
   }) {
     const collection = await client.openTable(namespace);
     const result = {
@@ -188,11 +200,15 @@ class LanceDb extends VectorDatabase {
       scores: [],
     };
 
-    const response = await collection
+    let vectorQuery = collection
       .vectorSearch(queryVector)
-      .distanceType("cosine")
-      .limit(topN)
-      .toArray();
+      .distanceType("cosine");
+    const scopeFilter = this.vectorScopeFilter({
+      includeVectorIds,
+      excludeVectorIds,
+    });
+    if (scopeFilter) vectorQuery = vectorQuery.where(scopeFilter);
+    const response = await vectorQuery.limit(topN).toArray();
 
     response.forEach((item) => {
       if (this.distanceToSimilarity(item._distance) < similarityThreshold)
@@ -302,6 +318,26 @@ class LanceDb extends VectorDatabase {
     return true;
   }
 
+  vectorIdFilter(vectorIds = []) {
+    if (!Array.isArray(vectorIds) || vectorIds.length === 0)
+      throw new Error("At least one vector ID is required for scoped search.");
+    const escaped = vectorIds.map(
+      (id) => `'${String(id).replaceAll("'", "''")}'`
+    );
+    return `id IN (${escaped.join(",")})`;
+  }
+
+  vectorScopeFilter({ includeVectorIds = [], excludeVectorIds = [] } = {}) {
+    const filters = [];
+    if (includeVectorIds.length > 0)
+      filters.push(this.vectorIdFilter(includeVectorIds));
+    if (excludeVectorIds.length > 0)
+      filters.push(`NOT ${this.vectorIdFilter(excludeVectorIds)}`);
+    return filters.length > 0
+      ? filters.map((item) => `(${item})`).join(" AND ")
+      : null;
+  }
+
   async addDocumentToNamespace(
     namespace,
     documentData = {},
@@ -310,7 +346,7 @@ class LanceDb extends VectorDatabase {
   ) {
     const { DocumentVectors } = require("../../../models/vectors");
     try {
-      const { pageContent, docId, ...metadata } = documentData;
+      const { pageContent, docId } = documentData;
       if (!pageContent || pageContent.length == 0) return false;
 
       this.logger("Adding new vectorized document into namespace", namespace);
@@ -342,7 +378,8 @@ class LanceDb extends VectorDatabase {
       // because we then cannot atomically control our namespace to granularly find/remove documents
       // from vectordb.
       const EmbedderEngine = getEmbeddingEngineSelection();
-      const textSplitter = new TextSplitter({
+      const textChunksWithMetadata = await PageAwareTextSplitter.splitDocument({
+        documentData,
         chunkSize: TextSplitter.determineMaxChunkSize(
           await SystemSettings.getValueOrFallback({
             label: "text_splitter_chunk_size",
@@ -353,10 +390,9 @@ class LanceDb extends VectorDatabase {
           { label: "text_splitter_chunk_overlap" },
           20
         ),
-        chunkHeaderMeta: TextSplitter.buildHeaderMeta(metadata),
         chunkPrefix: EmbedderEngine?.embeddingPrefix,
       });
-      const textChunks = await textSplitter.splitText(pageContent);
+      const textChunks = textChunksWithMetadata.map((chunk) => chunk.text);
 
       this.logger("Snippets created from document:", textChunks.length);
       const documentVectors = [];
@@ -372,7 +408,10 @@ class LanceDb extends VectorDatabase {
             // [DO NOT REMOVE]
             // LangChain will be unable to find your text if you embed manually and dont include the `text` key.
             // https://github.com/hwchase17/langchainjs/blob/2def486af734c0ca87285a48f1a04c057ab74bdf/langchain/src/vectorstores/pinecone.ts#L64
-            metadata: { ...metadata, text: textChunks[i] },
+            metadata: {
+              ...textChunksWithMetadata[i].metadata,
+              text: textChunks[i],
+            },
           };
 
           vectors.push(vectorRecord);
@@ -415,6 +454,8 @@ class LanceDb extends VectorDatabase {
     topN = 4,
     filterIdentifiers = [],
     rerank = false,
+    includeDocIds = [],
+    excludeDocIds = [],
   }) {
     if (!namespace || !input || !LLMConnector)
       throw new Error("Invalid request to performSimilaritySearch.");
@@ -428,6 +469,23 @@ class LanceDb extends VectorDatabase {
       };
     }
 
+    let includeVectorIds = [];
+    let excludeVectorIds = [];
+    if (includeDocIds.length > 0) {
+      const { DocumentVectors } = require("../../../models/vectors");
+      includeVectorIds = (
+        await DocumentVectors.where({ docId: { in: includeDocIds } })
+      ).map((record) => record.vectorId);
+      if (includeVectorIds.length === 0)
+        return { contextTexts: [], sources: [], message: false };
+    }
+    if (excludeDocIds.length > 0) {
+      const { DocumentVectors } = require("../../../models/vectors");
+      excludeVectorIds = (
+        await DocumentVectors.where({ docId: { in: excludeDocIds } })
+      ).map((record) => record.vectorId);
+    }
+
     const queryVector = await LLMConnector.embedTextInput(input);
     const result = rerank
       ? await this.rerankedSimilarityResponse({
@@ -438,6 +496,8 @@ class LanceDb extends VectorDatabase {
           similarityThreshold,
           topN,
           filterIdentifiers,
+          includeVectorIds,
+          excludeVectorIds,
         })
       : await this.similarityResponse({
           client,
@@ -446,6 +506,8 @@ class LanceDb extends VectorDatabase {
           similarityThreshold,
           topN,
           filterIdentifiers,
+          includeVectorIds,
+          excludeVectorIds,
         });
 
     const { contextTexts, sourceDocuments } = result;

@@ -4,6 +4,15 @@ const {
   reportEmbeddingProgress,
 } = require("../../helpers");
 
+function formatQueryInput(textInput) {
+  const prefix = process.env.EMBEDDING_QUERY_PREFIX?.trim();
+  if (!prefix) return textInput;
+  const applyPrefix = (value) => `${prefix}\nQuery: ${String(value)}`;
+  return Array.isArray(textInput)
+    ? textInput.map(applyPrefix)
+    : applyPrefix(textInput);
+}
+
 class LMStudioEmbedder {
   constructor() {
     if (!process.env.EMBEDDING_BASE_PATH)
@@ -41,7 +50,9 @@ class LMStudioEmbedder {
 
   async embedTextInput(textInput) {
     const result = await this.embedChunks(
-      Array.isArray(textInput) ? textInput : [textInput]
+      Array.isArray(textInput)
+        ? formatQueryInput(textInput)
+        : [formatQueryInput(textInput)]
     );
     return result?.[0] || [];
   }
@@ -119,4 +130,5 @@ class LMStudioEmbedder {
 
 module.exports = {
   LMStudioEmbedder,
+  formatQueryInput,
 };

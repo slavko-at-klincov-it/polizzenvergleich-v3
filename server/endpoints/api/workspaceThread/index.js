@@ -230,10 +230,11 @@ function apiWorkspaceThreadEndpoints(app) {
           return;
         }
 
-        await WorkspaceThread.delete({
+        const deleted = await WorkspaceThread.delete({
           slug: String(threadSlug),
           workspace_id: workspace.id,
         });
+        if (!deleted) return response.sendStatus(500).end();
         response.sendStatus(200).end();
       } catch (e) {
         console.error(e.message, e);

@@ -57,7 +57,7 @@ export default function SourcesSidebar() {
           <div className="flex flex-col gap-3 overflow-y-auto no-scroll">
             {combined.map((source, idx) => (
               <SourceItem
-                key={source.title || idx}
+                key={source.key || source.title || idx}
                 source={source}
                 onClick={() => setSelectedSource(source)}
               />

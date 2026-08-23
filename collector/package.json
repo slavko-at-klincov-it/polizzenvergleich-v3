@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@langchain/community": "^0.2.23",
+    "@napi-rs/canvas": "^1.0.7",
     "@xenova/transformers": "^2.14.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",

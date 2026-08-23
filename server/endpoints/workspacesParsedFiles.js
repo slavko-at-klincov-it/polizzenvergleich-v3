@@ -11,6 +11,7 @@ const { validWorkspaceSlug } = require("../utils/middleware/validWorkspace");
 const { CollectorApi } = require("../utils/collectorApi");
 const { WorkspaceThread } = require("../models/workspaceThread");
 const { WorkspaceParsedFiles } = require("../models/workspaceParsedFiles");
+const { countModelTokens } = require("../utils/LocalModelTokenizer");
 
 function workspaceParsedFilesEndpoints(app) {
   if (!app) return;
@@ -165,17 +166,36 @@ function workspaceParsedFilesEndpoints(app) {
             // Strip out pageContent
             delete metadata.pageContent;
             const filename = `${originalname}-${doc.id}.json`;
+            let modelTokenCount = null;
+            let modelTokenLabel = null;
+            try {
+              const tokenResult = await countModelTokens(doc.pageContent);
+              modelTokenCount = tokenResult.count;
+              modelTokenLabel = tokenResult.label;
+            } catch (error) {
+              console.warn(
+                "Could not count local model tokens:",
+                error.message
+              );
+            }
             const { file, error: dbError } = await WorkspaceParsedFiles.create({
               filename,
               workspaceId: workspace.id,
               userId: user?.id || null,
               threadId: thread?.id || null,
               metadata: JSON.stringify(metadata),
-              tokenCountEstimate: doc.token_count_estimate || 0,
+              tokenCountEstimate:
+                modelTokenCount ?? doc.token_count_estimate ?? 0,
             });
 
             if (dbError) throw new Error(dbError);
-            return file;
+            return {
+              ...file,
+              modelTokenCount,
+              modelTokenLabel,
+              // Backward compatibility for the existing prototype UI.
+              qwenTokenCount: modelTokenCount,
+            };
           })
         );
 

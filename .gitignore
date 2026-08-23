@@ -10,3 +10,7 @@ aws_cf_deploy_anything_llm.json
 yarn.lock
 *.bak
 .idea
+
+# Local isolated runtime data. May contain uploaded documents, databases,
+# logs, generated keys, and provider configuration; never commit it.
+test-storage/

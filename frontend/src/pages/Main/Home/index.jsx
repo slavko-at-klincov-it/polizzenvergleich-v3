@@ -186,7 +186,11 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { files, parseAttachments } = useContext(DndUploaderContext);
+  const {
+    files,
+    parseAttachments,
+    isProcessing = false,
+  } = useContext(DndUploaderContext);
 
   useEffect(() => {
     if (!threadSlug) {
@@ -222,16 +226,20 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
         if (thread) setThreadSlug(thread.slug);
       }
 
+      if (!targetThread)
+        throw new Error("Der Vergleichs-Thread konnte nicht erstellt werden.");
+
       sessionStorage.setItem(
         PENDING_HOME_MESSAGE,
-        JSON.stringify({ message, attachments })
+        JSON.stringify({
+          workspaceSlug: targetWorkspace.slug,
+          threadSlug: targetThread,
+          message,
+          attachments,
+        })
       );
 
-      if (targetThread) {
-        navigate(paths.workspace.thread(targetWorkspace.slug, targetThread));
-      } else {
-        navigate(paths.workspace.chat(targetWorkspace.slug));
-      }
+      navigate(paths.workspace.thread(targetWorkspace.slug, targetThread));
     } catch (error) {
       console.error("Error submitting message:", error);
       showToast("Failed to send message", "error");
@@ -304,6 +312,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
                   isStreaming={loading}
                   sendCommand={sendCommand}
                   attachments={files}
+                  attachmentsProcessing={isProcessing}
                   centered={true}
                   workspaceSlug={workspace?.slug}
                   threadSlug={threadSlug}

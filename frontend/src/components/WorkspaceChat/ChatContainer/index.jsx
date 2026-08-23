@@ -38,6 +38,7 @@ import WorkspaceModelPicker from "./WorkspaceModelPicker";
 import { ChatSidebarProvider } from "./ChatSidebar";
 import SourcesSidebar from "./SourcesSidebar";
 import MemoriesSidebar from "./MemoriesSidebar";
+import { THREAD_CREATED_EVENT } from "@/components/Sidebar/ActiveWorkspaces/ThreadContainer";
 
 export default function ChatContainer({
   workspace,
@@ -50,11 +51,14 @@ export default function ChatContainer({
   const [chatHistory, setChatHistory] = useState(knownHistory);
   const [socketId, setSocketId] = useState(null);
   const [websocket, setWebsocket] = useState(null);
-  const { files, parseAttachments } = useContext(DndUploaderContext);
+  const { files, parseAttachments, comparisonThread, isProcessing } =
+    useContext(DndUploaderContext);
   const { chatHistoryRef } = useChatContainerQuickScroll();
   const pendingMessageChecked = useRef(false);
   const pendingResetRef = useRef(false);
   const activeThreadSlug = threadSlug;
+  const effectiveThreadSlug =
+    activeThreadSlug || comparisonThread?.slug || null;
 
   const isEmpty =
     chatHistory.length === 0 && !sessionStorage.getItem(PENDING_HOME_MESSAGE);
@@ -104,18 +108,27 @@ export default function ChatContainer({
 
     // Clear the localStorage draft for this thread/workspace so that if the
     // PromptInput remounts (empty→chat transition), it won't restore stale text
-    clearPromptInputDraft(activeThreadSlug ?? workspace.slug);
+    clearPromptInputDraft(effectiveThreadSlug ?? workspace.slug);
 
     // If we're on a bare workspace route (no thread) and no chats exist yet,
     // create a new thread and navigate to it — mimicking Home page behavior.
     if (!activeThreadSlug && chatHistory.length === 0) {
-      const { thread } = await Workspace.threads.new(workspace.slug);
+      const { thread } = comparisonThread?.slug
+        ? { thread: comparisonThread }
+        : await Workspace.threads.new(workspace.slug);
       if (thread) {
         sessionStorage.setItem(
           PENDING_HOME_MESSAGE,
           JSON.stringify({
+            workspaceSlug: workspace.slug,
+            threadSlug: thread.slug,
             message: currentMessage,
             attachments: parseAttachments(),
+          })
+        );
+        window.dispatchEvent(
+          new CustomEvent(THREAD_CREATED_EVENT, {
+            detail: { workspaceSlug: workspace.slug, thread },
           })
         );
         navigate(paths.workspace.thread(workspace.slug, thread.slug));
@@ -196,11 +209,23 @@ export default function ChatContainer({
     // If on a bare workspace route with no thread and no chat yet, create a
     // virtual thread and navigate — same as handleSubmit does.
     if (!activeThreadSlug && chatHistory.length === 0 && history.length === 0) {
-      const { thread } = await Workspace.threads.new(workspace.slug);
+      const { thread } = comparisonThread?.slug
+        ? { thread: comparisonThread }
+        : await Workspace.threads.new(workspace.slug);
       if (thread) {
         sessionStorage.setItem(
           PENDING_HOME_MESSAGE,
-          JSON.stringify({ message: text, attachments })
+          JSON.stringify({
+            workspaceSlug: workspace.slug,
+            threadSlug: thread.slug,
+            message: text,
+            attachments,
+          })
+        );
+        window.dispatchEvent(
+          new CustomEvent(THREAD_CREATED_EVENT, {
+            detail: { workspaceSlug: workspace.slug, thread },
+          })
         );
         navigate(paths.workspace.thread(workspace.slug, thread.slug));
         return;
@@ -210,7 +235,7 @@ export default function ChatContainer({
     // Clear the localStorage draft so that if the PromptInput remounts
     // (e.g. /reset causing empty→chat or chat→empty transitions),
     // it won't restore stale text.
-    clearPromptInputDraft(activeThreadSlug ?? workspace.slug);
+    clearPromptInputDraft(effectiveThreadSlug ?? workspace.slug);
 
     // If we are auto-submitting
     // Then we can replace the current text since this is not accumulating.
@@ -277,11 +302,23 @@ export default function ChatContainer({
   );
 
   useEffect(() => {
-    if (pendingMessageChecked.current || !workspace?.slug) return;
-    pendingMessageChecked.current = true;
+    if (pendingMessageChecked.current || !workspace?.slug || !activeThreadSlug)
+      return;
 
     const pending = safeJsonParse(sessionStorage.getItem(PENDING_HOME_MESSAGE));
-    if (pending?.message) {
+    if (!pending?.workspaceSlug || !pending?.threadSlug) {
+      // Do not replay an old unscoped handoff into an arbitrary thread.
+      if (pending) sessionStorage.removeItem(PENDING_HOME_MESSAGE);
+      pendingMessageChecked.current = true;
+      return;
+    }
+
+    if (
+      pending.workspaceSlug === workspace.slug &&
+      pending.threadSlug === activeThreadSlug &&
+      pending.message
+    ) {
+      pendingMessageChecked.current = true;
       setTimeout(() => {
         sessionStorage.removeItem(PENDING_HOME_MESSAGE);
         sendCommand({
@@ -291,7 +328,7 @@ export default function ChatContainer({
         });
       }, 100);
     }
-  }, [workspace?.slug]);
+  }, [workspace?.slug, activeThreadSlug]);
 
   useEffect(() => {
     async function fetchReply() {
@@ -330,7 +367,7 @@ export default function ChatContainer({
 
       await Workspace.multiplexStream({
         workspaceSlug: workspace.slug,
-        threadSlug: activeThreadSlug,
+        threadSlug: effectiveThreadSlug,
         prompt: promptMessage.userMessage,
         chatHandler: (chatResult) =>
           handleChat(
@@ -464,7 +501,7 @@ export default function ChatContainer({
           <ChatSettingsMenu
             history={chatHistory}
             workspace={workspace}
-            threadSlug={activeThreadSlug}
+            threadSlug={effectiveThreadSlug}
           />
           <div className="flex-1 min-w-0 relative md:rounded-[16px] bg-zinc-900 light:bg-white w-full h-full overflow-hidden border-none light:border-solid light:border light:border-theme-modal-border">
             {isMobile && <SidebarMobileHeader />}
@@ -481,6 +518,7 @@ export default function ChatContainer({
                     isStreaming={loadingResponse}
                     sendCommand={sendCommand}
                     attachments={files}
+                    attachmentsProcessing={isProcessing}
                     centered={true}
                   />
                   <QuickActions
@@ -521,7 +559,7 @@ export default function ChatContainer({
         <ChatSettingsMenu
           history={chatHistory}
           workspace={workspace}
-          threadSlug={activeThreadSlug}
+          threadSlug={effectiveThreadSlug}
         />
         <div className="flex-1 min-w-0 relative md:rounded-[16px] bg-zinc-900 light:bg-white text-white light:text-slate-900 h-full overflow-hidden border-none light:border-solid light:border light:border-theme-modal-border">
           {isMobile && <SidebarMobileHeader />}
@@ -546,6 +584,7 @@ export default function ChatContainer({
                   isStreaming={loadingResponse}
                   sendCommand={sendCommand}
                   attachments={files}
+                  attachmentsProcessing={isProcessing}
                   centered={false}
                 />
               </div>

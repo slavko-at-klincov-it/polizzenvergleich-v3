@@ -142,7 +142,14 @@ function adminEndpoints(app) {
         }
 
         await BrowserExtensionApiKey.deleteAllForUser(Number(id));
-        await User.delete({ id: Number(id) });
+        const deleted = await User.delete({ id: Number(id) });
+        if (!deleted) {
+          response.status(500).json({
+            success: false,
+            error: "User comparison data could not be cleaned safely.",
+          });
+          return;
+        }
         await EventLogs.logEvent(
           "user_deleted",
           {
