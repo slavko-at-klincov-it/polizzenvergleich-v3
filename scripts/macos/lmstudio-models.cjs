@@ -12,10 +12,16 @@ const repo = path.resolve(
   process.env.POLICY_REPO_DIR || path.resolve(__dirname, "../..")
 );
 const serverEnvPath = path.join(repo, "server/.env");
-if (fs.existsSync(serverEnvPath))
-  require(path.join(repo, "server/node_modules/dotenv")).config({
-    path: serverEnvPath,
-  });
+const serverEnv = fs.existsSync(serverEnvPath)
+  ? fs.readFileSync(serverEnvPath, "utf8")
+  : "";
+function envFileValue(key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = serverEnv.match(
+    new RegExp(`^\\s*${escaped}\\s*=\\s*['\"]?([^'\"\\r\\n#]*)`, "m")
+  );
+  return match?.[1]?.trim() || null;
+}
 const lock = JSON.parse(
   fs.readFileSync(path.join(__dirname, "models.lock.json"), "utf8")
 );
@@ -33,14 +39,23 @@ const lmStudioBaseUrl = (
   process.env.POLICY_LMSTUDIO_BASE_URL || "http://127.0.0.1:1234"
 ).replace(/\/$/, "");
 const inferenceTimeoutMs = 60_000;
-const configuredChatIdentifier = String(
+const legacyManagedChatIdentifiers = new Set(["policy-chat"]);
+function normalizeConfiguredChatIdentifier(value) {
+  const configured = String(value || "").trim();
+  return !configured || legacyManagedChatIdentifiers.has(configured)
+    ? lock.chat.identifier
+    : configured;
+}
+const configuredChatIdentifier = normalizeConfiguredChatIdentifier(
   process.env.POLICY_CHAT_MODEL_ID ||
     process.env.LMSTUDIO_MODEL_PREF ||
+    envFileValue("LMSTUDIO_MODEL_PREF") ||
     lock.chat.identifier
-).trim();
+);
 const configuredChatContextLength = Number(
   process.env.POLICY_CONTEXT_LENGTH ||
     process.env.LMSTUDIO_MODEL_TOKEN_LIMIT ||
+    envFileValue("LMSTUDIO_MODEL_TOKEN_LIMIT") ||
     lock.chat.contextLength
 );
 const modelStatePath = path.join(runtimeDir, "models.json");
@@ -94,11 +109,79 @@ function lmsJson(args) {
 }
 
 function findModel(models, config) {
+  if (!config.indexedModelIdentifier) return null;
   return models.find(
     (model) =>
       model.indexedModelIdentifier === config.indexedModelIdentifier &&
       model.path === config.indexedModelIdentifier
   );
+}
+
+function modelMatchesKey(model, expectedKey) {
+  return [
+    model?.identifier,
+    model?.key,
+    model?.modelKey,
+    model?.indexedModelIdentifier,
+    model?.path,
+  ].includes(expectedKey);
+}
+
+async function fetchNativeModels() {
+  const endpoint = new URL(lmStudioBaseUrl);
+  endpoint.pathname = "/api/v1/models";
+  const apiKey =
+    process.env.LMSTUDIO_AUTH_TOKEN || envFileValue("LMSTUDIO_AUTH_TOKEN");
+  const response = await fetch(endpoint, {
+    headers: {
+      "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+    },
+    signal: AbortSignal.timeout(inferenceTimeoutMs),
+  });
+  if (!response.ok)
+    fail(`LM-Studio-Modellmetadaten sind nicht verfügbar: ${response.status}`);
+  const data = await response.json();
+  return Array.isArray(data?.models) ? data.models : [];
+}
+
+function recommendedMetadataProblems(model) {
+  if (!model) return [`Modell-Key '${lock.chat.modelKey}' fehlt.`];
+  const problems = [];
+  if (model.key !== lock.chat.modelKey) problems.push("Modell-Key");
+  if (model.selected_variant !== lock.chat.selectedVariant)
+    problems.push("4-bit-Variante");
+  if (String(model.format || "").toLowerCase() !== lock.chat.format)
+    problems.push("MLX-Format");
+  if (Number(model.size_bytes) !== lock.chat.sizeBytes)
+    problems.push("Modellgröße");
+  if (Number(model.max_context_length) !== lock.chat.maxContextLength)
+    problems.push("theoretisches Kontextfenster");
+  const reasoning = model.capabilities?.reasoning;
+  if (
+    reasoning?.default !== lock.chat.reasoningDefault ||
+    !reasoning?.allowed_options?.includes(lock.chat.reasoningDefault)
+  )
+    problems.push("Reasoning-Standard (in LM Studio auf 'off' setzen)");
+  return problems;
+}
+
+function recommendedRuntimeProblems(model) {
+  const instance = model?.loaded_instances?.find(
+    (item) => item.id === configuredChatIdentifier
+  );
+  if (!instance) return ["geladene Instanz"];
+  const problems = [];
+  if (Number(instance.config?.context_length) !== configuredChatContextLength)
+    problems.push("Runtime-Kontext");
+  if (Number(instance.config?.parallel) !== lock.chat.parallel)
+    problems.push("Parallelität");
+  return problems;
+}
+
+async function recommendedNativeModel() {
+  const models = await fetchNativeModels();
+  return models.find((model) => model.key === lock.chat.modelKey) || null;
 }
 
 function findConfiguredChatModel(models, loaded = []) {
@@ -121,13 +204,14 @@ function findConfiguredChatModel(models, loaded = []) {
     if (remembered) return remembered;
   }
 
+  const acceptableKeys = [
+    configuredChatIdentifier,
+    ...(configuredChatIdentifier === lock.chat.identifier
+      ? [lock.chat.selectedVariant]
+      : []),
+  ];
   const configured = models.find((model) =>
-    [
-      model.identifier,
-      model.modelKey,
-      model.indexedModelIdentifier,
-      model.path,
-    ].includes(configuredChatIdentifier)
+    acceptableKeys.some((key) => modelMatchesKey(model, key))
   );
   if (configured) return configured;
   if (configuredChatIdentifier === lock.chat.identifier)
@@ -272,7 +356,8 @@ function acquireModels({ verifyArtifacts = true } = {}) {
       "Modelle wurden nach dem Download nicht eindeutig in LM Studio gefunden."
     );
   if (verifyArtifacts) {
-    if (findModel([chat], lock.chat)) verifyModelArtifacts(chat, lock.chat);
+    if (Object.keys(lock.chat.artifacts || {}).length > 0)
+      verifyModelArtifacts(chat, lock.chat);
     verifyModelArtifacts(embedding, lock.embedding);
   }
   return { chat, embedding };
@@ -280,6 +365,22 @@ function acquireModels({ verifyArtifacts = true } = {}) {
 
 async function loadModels() {
   ensureLmsServer({ repair: true });
+  let recommendedModel = null;
+  if (configuredChatIdentifier === lock.chat.identifier) {
+    recommendedModel = await recommendedNativeModel();
+    const metadataProblems = recommendedMetadataProblems(recommendedModel);
+    if (metadataProblems.length > 0) {
+      if (!shouldDownload)
+        fail(`Qwen-Modellvertrag verletzt: ${metadataProblems.join(", ")}.`);
+      run(lmsCommand, ["get", lock.chat.downloadUrl, "--mlx", "-y"], {
+        capture: false,
+      });
+      recommendedModel = await recommendedNativeModel();
+      const remainingProblems = recommendedMetadataProblems(recommendedModel);
+      if (remainingProblems.length > 0)
+        fail(`Qwen-Modellvertrag verletzt: ${remainingProblems.join(", ")}.`);
+    }
+  }
   const models = acquireModels({
     verifyArtifacts: !skipArtifactVerification,
   });
@@ -289,12 +390,25 @@ async function loadModels() {
       capture: false,
     });
   const loaded = lmsJson(["ps", "--json"]);
-  const activeChat = loaded.find(
+  const existingChat = loaded.find(
     (item) =>
-      item.identifier === configuredChatIdentifier &&
-      item.type === "llm" &&
-      Number(item.contextLength) >= configuredChatContextLength
+      item.identifier === configuredChatIdentifier && item.type === "llm"
   );
+  const contextMatches =
+    Number(existingChat?.contextLength) === configuredChatContextLength;
+  const recommendedRuntimeMatches =
+    configuredChatIdentifier !== lock.chat.identifier ||
+    recommendedRuntimeProblems(recommendedModel).length === 0;
+  let activeChat =
+    existingChat && contextMatches && recommendedRuntimeMatches
+      ? existingChat
+      : null;
+  if (existingChat && (!contextMatches || !recommendedRuntimeMatches)) {
+    run(lmsCommand, ["unload", existingChat.identifier], {
+      allowFailure: true,
+      capture: false,
+    });
+  }
   if (!activeChat) {
     run(
       lmsCommand,
@@ -376,11 +490,27 @@ async function validate() {
   );
   if (!chat)
     fail(`Chatmodell '${configuredChatIdentifier}' ist nicht geladen.`);
+  if (
+    configuredChatIdentifier === lock.chat.identifier &&
+    !modelMatchesKey(chat, lock.chat.modelKey)
+  )
+    fail(
+      `Geladenes Standard-Chatmodell stimmt nicht mit '${lock.chat.modelKey}' überein.`
+    );
+  if (configuredChatIdentifier === lock.chat.identifier) {
+    const nativeModel = await recommendedNativeModel();
+    const problems = [
+      ...recommendedMetadataProblems(nativeModel),
+      ...recommendedRuntimeProblems(nativeModel),
+    ];
+    if (problems.length > 0)
+      fail(`Qwen-Modellvertrag verletzt: ${problems.join(", ")}.`);
+  }
   if (!embedding)
     fail(`Embeddingmodell '${lock.embedding.identifier}' ist nicht geladen.`);
-  if (Number(chat.contextLength) < configuredChatContextLength) {
+  if (Number(chat.contextLength) !== configuredChatContextLength) {
     fail(
-      `Chatmodell hat nur ${chat.contextLength} statt ${configuredChatContextLength} Runtime-Tokens.`
+      `Chatmodell hat ${chat.contextLength} statt exakt ${configuredChatContextLength} Runtime-Tokens.`
     );
   }
 

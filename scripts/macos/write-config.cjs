@@ -37,11 +37,19 @@ if (fs.existsSync(modelStatePath)) {
     modelState = JSON.parse(fs.readFileSync(modelStatePath, "utf8"));
   } catch {}
 }
-const configuredChatModel =
+const legacyManagedChatIdentifiers = new Set(["policy-chat"]);
+function normalizeConfiguredChatModel(value) {
+  const configured = String(value || "").trim();
+  return !configured || legacyManagedChatIdentifiers.has(configured)
+    ? modelLock.chat.identifier
+    : configured;
+}
+const configuredChatModel = normalizeConfiguredChatModel(
   process.env.POLICY_CHAT_MODEL_ID ||
-  existingValue(existingServerConfig, "LMSTUDIO_MODEL_PREF") ||
-  modelState.chatIdentifier ||
-  modelLock.chat.identifier;
+    existingValue(existingServerConfig, "LMSTUDIO_MODEL_PREF") ||
+    modelState.chatIdentifier ||
+    modelLock.chat.identifier
+);
 const configuredContextLength =
   process.env.POLICY_CONTEXT_LENGTH ||
   existingValue(existingServerConfig, "LMSTUDIO_MODEL_TOKEN_LIMIT") ||

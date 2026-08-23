@@ -32,6 +32,23 @@ describe("LocalModelTokenizer configuration", () => {
     expect(tokenizerLabel()).toBe("Qwen");
   });
 
+  test("defaults to the installed Qwen 3.8 customer model", () => {
+    delete process.env.MODEL_TOKENIZER_PATH;
+    delete process.env.MODEL_TOKENIZER_LABEL;
+    delete process.env.QWEN_TOKENIZER_PATH;
+
+    expect(tokenizerDirectory()).toBe(
+      path.join(
+        require("os").homedir(),
+        ".lmstudio",
+        "models",
+        "qwen",
+        "qwen3.8-27b"
+      )
+    );
+    expect(tokenizerLabel()).toBe("qwen/qwen3.8-27b");
+  });
+
   test("fails clearly when local tokenizer files are unavailable", async () => {
     process.env.MODEL_TOKENIZER_PATH = "/definitely/missing/model";
     await expect(getTokenizer()).rejects.toThrow("MODEL_TOKENIZER_PATH");

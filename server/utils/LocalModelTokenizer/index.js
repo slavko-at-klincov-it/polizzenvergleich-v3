@@ -15,22 +15,16 @@ function tokenizerDirectory() {
       : resolvedPath;
   }
 
-  // Backward-compatible local default from the original prototype. Production
-  // deployments should set MODEL_TOKENIZER_PATH to the active chat model.
-  return path.join(
-    os.homedir(),
-    ".lmstudio",
-    "models",
-    "lmstudio-community",
-    "Qwen3.5-4B-MLX-4bit"
-  );
+  // Recommended local default. Production writes MODEL_TOKENIZER_PATH from
+  // the exact model selected by the LM Studio model manager.
+  return path.join(os.homedir(), ".lmstudio", "models", "qwen", "qwen3.8-27b");
 }
 
 function tokenizerLabel() {
   if (process.env.MODEL_TOKENIZER_LABEL)
     return String(process.env.MODEL_TOKENIZER_LABEL);
   if (process.env.QWEN_TOKENIZER_PATH) return "Qwen";
-  return "Modell";
+  return "qwen/qwen3.8-27b";
 }
 
 async function getTokenizer() {

@@ -32,6 +32,8 @@ grep -q 'EMBEDDING_ENGINE="lmstudio"' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_BASE_PATH="http://127.0.0.1:1234/v1"' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_MODEL_PREF="dinghy-embed"' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_MODEL_MAX_CHUNK_LENGTH="8192"' "$temp_dir/config-repo/server/.env"
+grep -q 'LMSTUDIO_MODEL_PREF="qwen/qwen3.8-27b"' "$temp_dir/config-repo/server/.env"
+grep -q 'LMSTUDIO_MODEL_TOKEN_LIMIT="32768"' "$temp_dir/config-repo/server/.env"
 ! grep -q 'unsafe-override' "$temp_dir/config-repo/server/.env"
 grep -q 'COLLECTOR_HOTDIR_PATH=' "$temp_dir/config-repo/collector/.env"
 [ "$(grep -c 'BEGIN POLIZZENVERGLEICH MANAGED CONFIG' "$temp_dir/config-repo/server/.env")" -eq 1 ]
@@ -129,6 +131,7 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/comparisonDocuments.endpoint.test.js \
   server/__tests__/comparisonDocuments.threadCleanup.test.js \
   server/__tests__/utils/comparisonDocuments/index.test.js \
+  server/__tests__/utils/LocalModelTokenizer/index.test.js \
   server/__tests__/utils/PageAwareTextSplitter/index.test.js \
   server/__tests__/utils/vectorDbProviders/lance/scopedSearch.test.js \
   server/__tests__/comparisonDocumentInventory.model.test.js \

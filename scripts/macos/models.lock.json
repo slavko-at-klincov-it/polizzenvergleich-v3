@@ -1,15 +1,19 @@
 {
   "schemaVersion": 1,
   "chat": {
-    "publisher": "lmstudio-community",
-    "repository": "Qwen3.8-27B-MLX-4bit",
-    "downloadUrl": "https://huggingface.co/lmstudio-community/Qwen3.8-27B-MLX-4bit",
-    "modelKey": "qwen3.8-27b",
-    "indexedModelIdentifier": "lmstudio-community/Qwen3.8-27B-MLX-4bit",
+    "publisher": "qwen",
+    "repository": "qwen3.8-27b",
+    "downloadUrl": "qwen/qwen3.8-27b@4bit",
+    "modelKey": "qwen/qwen3.8-27b",
+    "selectedVariant": "qwen/qwen3.8-27b@4bit",
+    "format": "mlx",
     "artifacts": {},
-    "identifier": "policy-chat",
+    "identifier": "qwen/qwen3.8-27b",
+    "sizeBytes": 16081678494,
+    "maxContextLength": 262144,
     "contextLength": 32768,
     "parallel": 1,
+    "reasoningDefault": "off",
     "recommended": true
   },
   "embedding": {

@@ -17,7 +17,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.0 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.1 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -73,7 +73,9 @@ Entwicklerreferenz erhalten.
 
 ## Festgelegtes Start-Setup für den 32-GB-Mac
 
-- Empfohlenes Chatmodell: Qwen 3.8 27B, MLX 4-bit. Das Chatmodell ist nicht
+- Empfohlenes Chatmodell: Qwen 3.8 27B, MLX 4-bit, LM-Studio-Key
+  `qwen/qwen3.8-27b`, 32.768 Runtime-Tokens, Parallelität 1 und Reasoning
+  standardmäßig `off`. Das Chatmodell ist nicht
   fest verdrahtet und kann in AnythingLLM auf ein anderes lokal installiertes
   LM-Studio-Modell geändert werden.
 - Embeddingmodell: Dinghy-Law-4B-v1 GGUF Q6_K
@@ -130,9 +132,9 @@ Runtime-Wert unter `loaded_instances[].config.context_length`:
 curl -sS http://127.0.0.1:1234/api/v1/models | python3 -m json.tool
 ```
 
-Nicht `max_context_length` als AnythingLLM-Kontextwert übernehmen. Erst wenn ein
-vollständiger Vergleich ohne gelben/roten Speicherdruck und ohne nennenswerten
-Swap stabil läuft, kann 42.496 getestet werden.
+Nicht `max_context_length` als AnythingLLM-Kontextwert übernehmen. Dieser
+Release lädt und prüft aus Speicher- und Stabilitätsgründen exakt 32.768
+Runtime-Tokens.
 
 ### 2. AnythingLLM-Umgebung
 
@@ -146,11 +148,11 @@ COLLECTOR_HOTDIR_PATH='/absoluter/pfad/zum/repo/collector/hotdir'
 
 LLM_PROVIDER='lmstudio'
 LMSTUDIO_BASE_PATH='http://127.0.0.1:1234/v1'
-LMSTUDIO_MODEL_PREF='EXAKTE_LM_STUDIO_MODELL_ID_DES_CHATMODELLS'
+LMSTUDIO_MODEL_PREF='qwen/qwen3.8-27b'
 LMSTUDIO_MODEL_TOKEN_LIMIT=32768
 
 MODEL_TOKENIZER_PATH='/absoluter/pfad/zum/chatmodellordner-mit-tokenizer.json'
-MODEL_TOKENIZER_LABEL='Name des Chatmodells'
+MODEL_TOKENIZER_LABEL='qwen/qwen3.8-27b'
 
 EMBEDDING_ENGINE='lmstudio'
 EMBEDDING_BASE_PATH='http://127.0.0.1:1234/v1'
