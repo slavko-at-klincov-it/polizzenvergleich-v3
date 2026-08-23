@@ -17,7 +17,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.4 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.5 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -89,19 +89,29 @@ Entwicklerreferenz erhalten.
 - Suche: exakte Volltextsuche/BM25 und semantische Suche, getrennt für Dokument
   A und Dokument B
 
-AnythingLLM bleibt auf 32.768 Tokens begrenzt. Aktuelle LM-Studio-MLX-Versionen
+Für das empfohlene Modell bleibt AnythingLLM auf 32.768 Tokens begrenzt. Aktuelle LM-Studio-MLX-Versionen
 können den effektiven Wert beim Laden durch Auto-Fit nach oben anpassen; ein
 größerer Wert in `lms ps` ist zulässig und wird nicht als AnythingLLM-Budget
-übernommen. Ein Wert unter 32.768 oder eine Parallelität ungleich 1 wird vom
-Installer weiterhin abgelehnt beziehungsweise repariert.
+übernommen. Bei einem selbst gewählten Chatmodell muss das konfigurierte
+AnythingLLM-Fenster mindestens 4.096 Tokens betragen und darf den geladenen
+Runtime-Wert nicht überschreiten. Parallelität bleibt aus Stabilitätsgründen 1.
 
 TurboQuant ist keine Voraussetzung. Es wird in diesem Stand weder benötigt
 noch von LM Studio als einfache produktive Option vorausgesetzt.
 
-Nach einer Änderung des Chatmodells in der AnythingLLM-Konfiguration genügt
-`~/.local/bin/polizzenvergleich restart`. Autostart und Doctor lesen
-`LMSTUDIO_MODEL_PREF`, laden genau dieses lokale Modell und prüfen dessen
-tatsächliches Kontextfenster. Dinghy und LanceDB bleiben davon unberührt.
+Zum Wechsel zuerst das gewünschte LLM in LM Studio laden; die AnythingLLM-
+Auswahl zeigt ausschließlich geladene Chatmodelle und niemals `dinghy-embed`.
+Auf einem 32-GB-Mac das bisherige Chatmodell vorher in LM Studio entladen, damit
+nicht zwei große LLMs gleichzeitig Speicher belegen; die Einstellungsseite
+bleibt währenddessen erreichbar.
+Danach das Modell und sein Kontextfenster unter den LM-Studio-Einstellungen
+speichern und einmal `~/.local/bin/polizzenvergleich restart` ausführen.
+Alias und physischer Modell-Key werden gemeinsam gespeichert. Autostart und
+Doctor laden beziehungsweise prüfen danach genau diese Auswahl. Beim Neustart
+wird nur das zuvor von der Anwendung verwaltete Chatmodell entladen; Dinghy und
+LanceDB bleiben unberührt. Reasoning-Modelle werden unterstützt, können die
+Inventarbildung jedoch deutlich verlängern; für den produktiven Vergleich ist
+Reasoning `off` weiterhin die Empfehlung.
 
 ## Was der Makler sieht
 
@@ -140,9 +150,10 @@ Runtime-Wert unter `loaded_instances[].config.context_length`:
 curl -sS http://127.0.0.1:1234/api/v1/models | python3 -m json.tool
 ```
 
-Nicht `max_context_length` als AnythingLLM-Kontextwert übernehmen. Dieser
-Release lädt und prüft aus Speicher- und Stabilitätsgründen exakt 32.768
-Runtime-Tokens.
+Nicht `max_context_length` als AnythingLLM-Kontextwert übernehmen. Für das
+empfohlene Standardmodell verwendet dieser Release aus Speicher- und
+Stabilitätsgründen 32.768 AnythingLLM-Tokens; LM Studio darf per MLX-Auto-Fit
+einen höheren effektiven Runtime-Wert anzeigen.
 
 ### 2. AnythingLLM-Umgebung
 

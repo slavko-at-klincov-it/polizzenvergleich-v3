@@ -1,5 +1,4 @@
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
 
 let tokenizerPromise = null;
@@ -15,20 +14,22 @@ function tokenizerDirectory() {
       : resolvedPath;
   }
 
-  // Recommended local default. Production writes MODEL_TOKENIZER_PATH from
-  // the exact model selected by the LM Studio model manager.
-  return path.join(os.homedir(), ".lmstudio", "models", "qwen", "qwen3.8-27b");
+  return null;
 }
 
 function tokenizerLabel() {
   if (process.env.MODEL_TOKENIZER_LABEL)
     return String(process.env.MODEL_TOKENIZER_LABEL);
   if (process.env.QWEN_TOKENIZER_PATH) return "Qwen";
-  return "qwen/qwen3.8-27b";
+  return process.env.LMSTUDIO_MODEL_PREF || "Local LM Studio model";
 }
 
 async function getTokenizer() {
   const directory = tokenizerDirectory();
+  if (!directory)
+    throw new Error(
+      "MODEL_TOKENIZER_PATH is not configured for the selected local model."
+    );
   if (tokenizerPromise && tokenizerCacheKey === directory)
     return tokenizerPromise;
 

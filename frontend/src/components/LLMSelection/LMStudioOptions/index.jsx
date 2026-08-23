@@ -315,7 +315,7 @@ function LMStudioModelSelection({ settings, basePath = null, apiKey = null }) {
         className="border-none bg-theme-settings-input-bg border-gray-500 text-white text-sm rounded-lg block w-full p-2.5"
       >
         {customModels.length > 0 && (
-          <optgroup label="Your loaded models">
+          <optgroup label="Your loaded chat models">
             {customModels.map((model) => {
               return (
                 <option
@@ -323,7 +323,7 @@ function LMStudioModelSelection({ settings, basePath = null, apiKey = null }) {
                   value={model.id}
                   selected={settings.LMStudioModelPref === model.id}
                 >
-                  {model.id}
+                  {model.name || model.id}
                 </option>
               );
             })}

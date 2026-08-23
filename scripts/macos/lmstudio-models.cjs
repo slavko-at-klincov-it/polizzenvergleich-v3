@@ -7,6 +7,11 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { pipeline } = require("stream/promises");
 const { Readable } = require("stream");
+const {
+  pendingChatIdentifiers,
+  readChatModelState,
+  writeChatModelState,
+} = require("../../shared/lmStudioChatModelState.cjs");
 
 const repo = path.resolve(
   process.env.POLICY_REPO_DIR || path.resolve(__dirname, "../..")
@@ -60,13 +65,10 @@ const configuredChatContextLength = Number(
     envFileValue("LMSTUDIO_MODEL_TOKEN_LIMIT") ||
     lock.chat.contextLength
 );
-const modelStatePath = path.join(runtimeDir, "models.json");
-let previousModelState = {};
-if (fs.existsSync(modelStatePath)) {
-  try {
-    previousModelState = JSON.parse(fs.readFileSync(modelStatePath, "utf8"));
-  } catch {}
-}
+const previousModelState = readChatModelState(repo);
+const pendingPreviousChatIdentifiers = pendingChatIdentifiers(
+  previousModelState
+).filter((identifier) => identifier !== configuredChatIdentifier);
 
 function fail(message) {
   throw new Error(message);
@@ -213,7 +215,6 @@ function ensureConfiguredChatRuntime(model) {
   if (existing && problems.length === 0) return;
   if (existing) {
     run(lmsCommand, ["unload", existing.identifier], {
-      allowFailure: true,
       capture: false,
     });
   }
@@ -247,6 +248,11 @@ function findConfiguredChatModel(models, loaded = []) {
 
   const acceptableKeys = [
     configuredChatIdentifier,
+    ...(active?.modelKey ? [active.modelKey] : []),
+    ...(previousModelState.chatIdentifier === configuredChatIdentifier &&
+    previousModelState.chatModelKey
+      ? [previousModelState.chatModelKey]
+      : []),
     ...(configuredChatIdentifier === lock.chat.identifier
       ? [lock.chat.selectedVariant]
       : []),
@@ -258,6 +264,36 @@ function findConfiguredChatModel(models, loaded = []) {
   if (configuredChatIdentifier === lock.chat.identifier)
     return findModel(models, lock.chat);
   return null;
+}
+
+function tokenizerPathForModel(model) {
+  const modelDirectory = path.join(
+    process.env.HOME,
+    ".lmstudio/models",
+    model.path ||
+      model.indexedModelIdentifier ||
+      `${lock.chat.publisher}/${lock.chat.repository}`
+  );
+  return fs.existsSync(path.join(modelDirectory, "tokenizer.json")) &&
+    fs.existsSync(path.join(modelDirectory, "tokenizer_config.json"))
+    ? modelDirectory
+    : null;
+}
+
+function persistConfiguredChatState(model, extra = {}) {
+  return writeChatModelState(
+    {
+      chatModelKey: model.modelKey,
+      chatIdentifier: configuredChatIdentifier,
+      chatIndexedModelIdentifier: model.indexedModelIdentifier || null,
+      embeddingIdentifier: lock.embedding.identifier,
+      tokenizerPath: tokenizerPathForModel(model),
+      previousChatIdentifiers: [],
+      previousChatIdentifier: null,
+      ...extra,
+    },
+    repo
+  );
 }
 
 function verifyModelArtifacts(model, config) {
@@ -430,9 +466,29 @@ async function loadModels() {
       allowFailure: true,
       capture: false,
     });
+  // Resolve the replacement artifact first, then remove only chat models that
+  // were previously managed by this product before loading the replacement.
+  // This avoids a transient Qwen + Gemma + Dinghy allocation on a 32-GB Mac.
+  for (const previousChatIdentifier of pendingPreviousChatIdentifiers) {
+    const previouslyLoaded = lmsJson(["ps", "--json"]).find(
+      (item) =>
+        item.type === "llm" && item.identifier === previousChatIdentifier
+    );
+    if (!previouslyLoaded) continue;
+    run(lmsCommand, ["unload", previousChatIdentifier], {
+      capture: false,
+    });
+    const stillLoaded = lmsJson(["ps", "--json"]).some(
+      (item) =>
+        item.type === "llm" && item.identifier === previousChatIdentifier
+    );
+    if (stillLoaded)
+      fail(
+        `Das vorherige Chatmodell '${previousChatIdentifier}' konnte nicht entladen werden.`
+      );
+  }
   ensureConfiguredChatRuntime(models.chat);
 
-  await ensureWrapper();
   const loadedBeforeEmbedding = lmsJson(["ps", "--json"]);
   const activeEmbedding = loadedBeforeEmbedding.find(
     (item) =>
@@ -441,6 +497,7 @@ async function loadModels() {
       item.indexedModelIdentifier === lock.embedding.indexedModelIdentifier
   );
   if (!activeEmbedding) {
+    await ensureWrapper();
     run(
       process.execPath,
       [
@@ -457,32 +514,7 @@ async function loadModels() {
   // runtime afterwards because older `lms ps --json` payloads do not always
   // preserve every load option while lms-embed restores prior models.
   ensureConfiguredChatRuntime(models.chat);
-
-  const tokenizerCandidate = path.join(
-    process.env.HOME,
-    ".lmstudio/models",
-    models.chat.path ||
-      models.chat.indexedModelIdentifier ||
-      `${lock.chat.publisher}/${lock.chat.repository}`,
-    "tokenizer.json"
-  );
-  fs.writeFileSync(
-    modelStatePath,
-    JSON.stringify(
-      {
-        chatModelKey: models.chat.modelKey,
-        chatIdentifier: configuredChatIdentifier,
-        chatIndexedModelIdentifier: models.chat.indexedModelIdentifier,
-        embeddingIdentifier: lock.embedding.identifier,
-        tokenizerPath: fs.existsSync(tokenizerCandidate)
-          ? path.dirname(tokenizerCandidate)
-          : null,
-      },
-      null,
-      2
-    ),
-    { mode: 0o600 }
-  );
+  persistConfiguredChatState(models.chat);
 }
 
 async function validate() {
@@ -500,6 +532,17 @@ async function validate() {
   );
   if (!chat)
     fail(`Chatmodell '${configuredChatIdentifier}' ist nicht geladen.`);
+  const pendingLoadedChatModels = loaded.filter(
+    (item) =>
+      item.type === "llm" &&
+      pendingPreviousChatIdentifiers.includes(item.identifier)
+  );
+  if (pendingLoadedChatModels.length > 0)
+    fail(
+      `Vorheriges Chatmodell wird noch bereinigt: ${pendingLoadedChatModels
+        .map(({ identifier }) => identifier)
+        .join(", ")}. Bitte den Modell-Neustart abwarten.`
+    );
   if (
     configuredChatIdentifier === lock.chat.identifier &&
     !modelMatchesKey(chat, lock.chat.modelKey)
@@ -554,16 +597,46 @@ async function validate() {
     body: JSON.stringify({
       model: configuredChatIdentifier,
       messages: [{ role: "user", content: "Antworte nur mit: bereit" }],
-      max_tokens: 12,
+      // Reasoning-capable models can consume dozens of hidden tokens before
+      // emitting a one-word visible answer. Keep the probe bounded, but large
+      // enough to validate the configured model rather than a Qwen-specific
+      // output pattern.
+      max_tokens: 256,
       temperature: 0,
     }),
     signal: AbortSignal.timeout(inferenceTimeoutMs),
   });
   if (!chatResponse.ok)
     fail(`Chatmodell-Test fehlgeschlagen: ${chatResponse.status}`);
-  const answer = (await chatResponse.json())?.choices?.[0]?.message?.content;
+  const chatPayload = await chatResponse.json();
+  const choice = chatPayload?.choices?.[0];
+  const content = choice?.message?.content;
+  const answer = Array.isArray(content)
+    ? content
+        .map((part) => (typeof part === "string" ? part : part?.text || ""))
+        .join("")
+    : content;
   if (!String(answer || "").trim())
     fail("Chatmodell-Test lieferte keine Antwort.");
+
+  const installedChat = findConfiguredChatModel(
+    lmsJson(["ls", "--json"]),
+    loaded
+  );
+  if (!installedChat)
+    fail(
+      `Chatmodell '${configuredChatIdentifier}' konnte keiner installierten Modelldatei zugeordnet werden.`
+    );
+  persistConfiguredChatState(installedChat, {
+    // The independent models launch job owns removal of the former managed
+    // chat model. Do not clear this hand-off from the server/Doctor check.
+    previousChatIdentifier:
+      command === "check"
+        ? previousModelState.previousChatIdentifier || null
+        : null,
+    previousChatIdentifiers:
+      command === "check" ? pendingPreviousChatIdentifiers : [],
+  });
   console.log(
     JSON.stringify({
       success: true,

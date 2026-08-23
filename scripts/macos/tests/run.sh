@@ -158,17 +158,22 @@ sqlite3 "$generation_db" <"$REPO/server/prisma/migrations/20260823213000_add_cha
 
 printf '%s\n' '[installer-test] mocked LM Studio contract'
 chmod 700 "$REPO/scripts/macos/fixtures/mock-lms.sh"
+model_check_runtime="$temp_dir/model-check-runtime"
+mkdir -p "$model_check_runtime"
 port_file="$temp_dir/lmstudio-port"
-"$NODE_BIN" "$REPO/scripts/macos/fixtures/mock-lmstudio.cjs" "$port_file" &
+chat_request_log="$temp_dir/lmstudio-chat-requests.jsonl"
+"$NODE_BIN" "$REPO/scripts/macos/fixtures/mock-lmstudio.cjs" "$port_file" "$chat_request_log" &
 mock_pid=$!
 for _ in $(seq 1 50); do [ -s "$port_file" ] && break; sleep 0.1; done
 [ -s "$port_file" ]
 port="$(cat "$port_file")"
 POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+POLICY_RUNTIME_DIR="$model_check_runtime" \
 POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
 POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
   "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null
 if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_RUNTIME_DIR="$model_check_runtime" \
   POLICY_MOCK_LMS_CONTEXT=16384 \
   POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
   POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
@@ -177,6 +182,7 @@ if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
   exit 1
 fi
 if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_RUNTIME_DIR="$model_check_runtime" \
   POLICY_MOCK_LMS_CONTEXT='"unknown"' \
   POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
   POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
@@ -185,6 +191,7 @@ if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
   exit 1
 fi
 if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_RUNTIME_DIR="$model_check_runtime" \
   POLICY_MOCK_LMS_PARALLEL=4 \
   POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
   POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
@@ -192,6 +199,158 @@ if POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
   printf '%s\n' '[installer-test] wrong runtime parallelism was not rejected' >&2
   exit 1
 fi
+
+printf '%s\n' '[installer-test] configurable reasoning-heavy Gemma chat model'
+LMSTUDIO_MODEL_PREF="gemma" \
+LMSTUDIO_MODEL_TOKEN_LIMIT=32768 \
+POLICY_MOCK_LMS_CHAT_IDENTIFIER="gemma" \
+POLICY_MOCK_LMS_CHAT_MODEL_KEY="google/gemma-4-26b-a4b" \
+POLICY_MOCK_LMS_CONTEXT=80128 \
+POLICY_RUNTIME_DIR="$model_check_runtime" \
+POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+  "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null
+"$NODE_BIN" -e '
+  const fs = require("fs");
+  const requests = fs.readFileSync(process.argv[1], "utf8").trim().split("\n").map(JSON.parse);
+  const request = requests.at(-1);
+  if (request.model !== "gemma" || !Number.isFinite(Number(request.max_tokens)) || Number(request.max_tokens) < 256)
+    throw new Error(`Gemma health request drifted: ${JSON.stringify(request)}`);
+' "$chat_request_log"
+"$NODE_BIN" -e '
+  const state = require(process.argv[1]);
+  if (state.chatIdentifier !== "gemma" || state.chatModelKey !== "google/gemma-4-26b-a4b")
+    throw new Error(`alternative chat mapping was not persisted: ${JSON.stringify(state)}`);
+  if (state.embeddingIdentifier !== "dinghy-embed")
+    throw new Error(`embedding identity drifted: ${JSON.stringify(state)}`);
+' "$model_check_runtime/models.json"
+if LMSTUDIO_MODEL_PREF="gemma-reasoning-only" \
+  LMSTUDIO_MODEL_TOKEN_LIMIT=32768 \
+  POLICY_MOCK_LMS_CHAT_IDENTIFIER="gemma-reasoning-only" \
+  POLICY_MOCK_LMS_CHAT_MODEL_KEY="google/gemma-4-26b-a4b" \
+  POLICY_MOCK_LMS_CONTEXT=80128 \
+  POLICY_RUNTIME_DIR="$model_check_runtime" \
+  POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms.sh" \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] reasoning-only chat output was accepted' >&2
+  exit 1
+fi
+
+printf '%s\n' '[installer-test] reboot loads the persisted alternative model key'
+stateful_runtime="$temp_dir/stateful-model-runtime"
+stateful_lms_state="$temp_dir/stateful-lms.json"
+mkdir -p "$stateful_runtime"
+printf '%s\n' '{"chatIdentifier":"gemma","chatModelKey":"google/gemma-4-26b-a4b","chatIndexedModelIdentifier":null,"previousChatIdentifier":"qwen/qwen3.8-27b","embeddingIdentifier":"dinghy-embed","tokenizerPath":null}' >"$stateful_runtime/models.json"
+chmod 600 "$stateful_runtime/models.json"
+chmod 700 "$REPO/scripts/macos/fixtures/mock-lms-stateful.cjs"
+LMSTUDIO_MODEL_PREF="gemma" \
+LMSTUDIO_MODEL_TOKEN_LIMIT=32768 \
+POLICY_RUNTIME_DIR="$stateful_runtime" \
+POLICY_MOCK_LMS_STATE="$stateful_lms_state" \
+POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms-stateful.cjs" \
+POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+  "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" prepare --skip-artifact-verification >/dev/null
+"$NODE_BIN" -e '
+  const lms = require(process.argv[1]);
+  const runtime = require(process.argv[2]);
+  const ids = lms.loaded.map(({identifier}) => identifier).sort();
+  if (JSON.stringify(ids) !== JSON.stringify(["dinghy-embed", "gemma"]))
+    throw new Error(`unexpected loaded models after reboot: ${JSON.stringify(ids)}`);
+  const load = lms.calls.find((call) => call[0] === "load");
+  if (!load || load[1] !== "google/gemma-4-26b-a4b" || !load.includes("gemma"))
+    throw new Error(`persisted Gemma was not loaded: ${JSON.stringify(lms.calls)}`);
+  const unload = lms.calls.find((call) => call[0] === "unload");
+  if (!unload || unload[1] !== "qwen/qwen3.8-27b")
+    throw new Error(`previous Qwen was not unloaded: ${JSON.stringify(lms.calls)}`);
+  if (runtime.previousChatIdentifier !== null)
+    throw new Error(`model switch hand-off was not completed: ${JSON.stringify(runtime)}`);
+  if (!Array.isArray(runtime.previousChatIdentifiers) || runtime.previousChatIdentifiers.length !== 0)
+    throw new Error(`pending model cleanup was not drained: ${JSON.stringify(runtime)}`);
+' "$stateful_lms_state" "$stateful_runtime/models.json"
+
+printf '%s\n' '[installer-test] failed previous-model unload is fail-closed and retryable'
+failed_unload_runtime="$temp_dir/failed-unload-runtime"
+failed_unload_lms_state="$temp_dir/failed-unload-lms.json"
+mkdir -p "$failed_unload_runtime"
+printf '%s\n' '{"chatIdentifier":"gemma","chatModelKey":"google/gemma-4-26b-a4b","chatIndexedModelIdentifier":null,"previousChatIdentifiers":["qwen/qwen3.8-27b"],"previousChatIdentifier":"qwen/qwen3.8-27b","embeddingIdentifier":"dinghy-embed","tokenizerPath":null}' >"$failed_unload_runtime/models.json"
+chmod 600 "$failed_unload_runtime/models.json"
+if LMSTUDIO_MODEL_PREF="gemma" \
+  LMSTUDIO_MODEL_TOKEN_LIMIT=32768 \
+  POLICY_RUNTIME_DIR="$failed_unload_runtime" \
+  POLICY_MOCK_LMS_STATE="$failed_unload_lms_state" \
+  POLICY_MOCK_LMS_UNLOAD_FAIL="qwen/qwen3.8-27b" \
+  POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms-stateful.cjs" \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" prepare --skip-artifact-verification >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] failed previous-model unload did not stop prepare' >&2
+  exit 1
+fi
+"$NODE_BIN" -e '
+  const runtime = require(process.argv[1]);
+  if (!runtime.previousChatIdentifiers?.includes("qwen/qwen3.8-27b"))
+    throw new Error(`failed cleanup was not retained for retry: ${JSON.stringify(runtime)}`);
+' "$failed_unload_runtime/models.json"
+
+printf '%s\n' '[installer-test] server check rejects a still-loaded pending chat model'
+pending_gate_runtime="$temp_dir/pending-gate-runtime"
+pending_gate_lms_state="$temp_dir/pending-gate-lms.json"
+mkdir -p "$pending_gate_runtime"
+cp "$failed_unload_runtime/models.json" "$pending_gate_runtime/models.json"
+POLICY_MOCK_LMS_STATE="$pending_gate_lms_state" \
+  "$REPO/scripts/macos/fixtures/mock-lms-stateful.cjs" load google/gemma-4-26b-a4b --identifier gemma --context-length 32768 --parallel 1 -y >/dev/null
+if LMSTUDIO_MODEL_PREF="gemma" \
+  LMSTUDIO_MODEL_TOKEN_LIMIT=32768 \
+  POLICY_RUNTIME_DIR="$pending_gate_runtime" \
+  POLICY_MOCK_LMS_STATE="$pending_gate_lms_state" \
+  POLICY_LMS_COMMAND="$REPO/scripts/macos/fixtures/mock-lms-stateful.cjs" \
+  POLICY_LMSTUDIO_BASE_URL="http://127.0.0.1:$port" \
+  POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
+    "$NODE_BIN" "$REPO/scripts/macos/lmstudio-models.cjs" check >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] pending old chat model did not block server check' >&2
+  exit 1
+fi
+
+printf '%s\n' '[installer-test] server autostart gates models and refreshes config before exec'
+start_gate_dir="$temp_dir/start-server-gate"
+start_gate_state="$start_gate_dir/state.log"
+mkdir -p "$start_gate_dir"
+for step in embedding-check model-check write-config server-entry; do
+  cp "$REPO/scripts/macos/fixtures/mock-start-server-step.cjs" "$start_gate_dir/$step.cjs"
+done
+POLICY_REPO_DIR="$REPO" \
+POLICY_RUNTIME_DIR="$temp_dir/runtime" \
+POLICY_EMBEDDING_CHECK_SCRIPT="$start_gate_dir/embedding-check.cjs" \
+POLICY_MODEL_MANAGER_SCRIPT="$start_gate_dir/model-check.cjs" \
+POLICY_CONFIG_WRITER_SCRIPT="$start_gate_dir/write-config.cjs" \
+POLICY_SERVER_ENTRYPOINT="$start_gate_dir/server-entry.cjs" \
+POLICY_START_GATE_STATE="$start_gate_state" \
+  /bin/bash "$REPO/scripts/macos/start-server.sh"
+[ "$(tr '\n' ' ' <"$start_gate_state")" = "embedding-check.cjs model-check.cjs write-config.cjs server-entry.cjs " ]
+
+blocked_gate_state="$start_gate_dir/blocked-state.log"
+if POLICY_REPO_DIR="$REPO" \
+  POLICY_RUNTIME_DIR="$temp_dir/runtime" \
+  POLICY_EMBEDDING_CHECK_SCRIPT="$start_gate_dir/embedding-check.cjs" \
+  POLICY_MODEL_MANAGER_SCRIPT="$start_gate_dir/model-check.cjs" \
+  POLICY_CONFIG_WRITER_SCRIPT="$start_gate_dir/write-config.cjs" \
+  POLICY_SERVER_ENTRYPOINT="$start_gate_dir/server-entry.cjs" \
+  POLICY_START_GATE_STATE="$blocked_gate_state" \
+  POLICY_START_GATE_FAIL_STEP="model-check.cjs" \
+  POLICY_SERVER_MODEL_RETRY_ATTEMPTS=1 \
+  POLICY_SERVER_MODEL_RETRY_DELAY_SECONDS=0 \
+    /bin/bash "$REPO/scripts/macos/start-server.sh" >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] failed model check did not block server start' >&2
+  exit 1
+fi
+grep -Fxq 'embedding-check.cjs' "$blocked_gate_state"
+grep -Fxq 'model-check.cjs' "$blocked_gate_state"
+! grep -Fq 'write-config.cjs' "$blocked_gate_state"
+! grep -Fq 'server-entry.cjs' "$blocked_gate_state"
 
 printf '%s\n' '[installer-test] focused application contracts'
 "$NODE_BIN" "$REPO/scripts/macos/pipeline-smoke.cjs" >/dev/null
@@ -210,6 +369,7 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/comparisonDocuments.threadCleanup.test.js \
   server/__tests__/utils/comparisonDocuments/index.test.js \
   server/__tests__/utils/LocalModelTokenizer/index.test.js \
+  server/__tests__/utils/AiProviders/lmStudio/managedModelSelection.test.js \
   server/__tests__/utils/PageAwareTextSplitter/index.test.js \
   server/__tests__/utils/vectorDbProviders/lance/scopedSearch.test.js \
   server/__tests__/comparisonDocumentInventory.model.test.js \

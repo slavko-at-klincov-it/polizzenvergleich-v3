@@ -14,6 +14,12 @@ const { GeminiLLM } = require("../AiProviders/gemini");
 const { fetchCometApiModels } = require("../AiProviders/cometapi");
 const { getDockerModels } = require("../AiProviders/dockerModelRunner");
 const { getAllLemonadeModels } = require("../AiProviders/lemonade");
+const {
+  loadedLMStudioChatModels,
+} = require("../AiProviders/lmStudio/managedModelSelection");
+const {
+  managedEmbeddingEnabled,
+} = require("../../../shared/managedEmbeddingContract.cjs");
 
 const SUPPORT_CUSTOM_MODELS = [
   "openai",
@@ -468,6 +474,15 @@ async function getLMStudioModels(basePath = null, _apiKey = null) {
         ? process.env.LMSTUDIO_AUTH_TOKEN
         : _apiKey || process.env.LMSTUDIO_AUTH_TOKEN || null;
 
+    try {
+      const models = await loadedLMStudioChatModels({ basePath, apiKey });
+      return { models, error: null };
+    } catch (error) {
+      if (managedEmbeddingEnabled()) throw error;
+    }
+
+    // Older, unmanaged LM Studio installations may not expose the native
+    // metadata endpoint. Preserve their existing OpenAI-compatible fallback.
     const { OpenAI: OpenAIApi } = require("openai");
     const openai = new OpenAIApi({
       baseURL: parseLMStudioBasePath(

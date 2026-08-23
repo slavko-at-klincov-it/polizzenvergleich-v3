@@ -86,10 +86,11 @@ if (!tokenizerPath && fs.existsSync(modelStatePath)) {
     tokenizerPath = modelState.tokenizerPath || null;
   } catch {}
 }
-if (tokenizerPath) {
-  managedServer.MODEL_TOKENIZER_PATH = tokenizerPath;
-  managedServer.MODEL_TOKENIZER_LABEL = configuredChatModel;
-}
+// Keep tokenizer metadata aligned with the selected chat model. Empty values
+// deliberately remove stale Qwen paths when an alternative model has no local
+// Hugging Face tokenizer files; token display then falls back harmlessly.
+managedServer.MODEL_TOKENIZER_PATH = tokenizerPath || "";
+managedServer.MODEL_TOKENIZER_LABEL = tokenizerPath ? configuredChatModel : "";
 
 const managedCollector = {
   STORAGE_DIR: storageDir,

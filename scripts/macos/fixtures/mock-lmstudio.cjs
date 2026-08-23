@@ -3,6 +3,7 @@ const fs = require("fs");
 const http = require("http");
 
 const portFile = process.argv[2];
+const requestLog = process.argv[3] || null;
 const vector = Array(2560).fill(0);
 vector[0] = 1;
 const server = http.createServer((request, response) => {
@@ -36,6 +37,35 @@ const server = http.createServer((request, response) => {
                 },
               },
             },
+            {
+              type: "llm",
+              key: "google/gemma-4-26b-a4b",
+              selected_variant: "google/gemma-4-26b-a4b",
+              format: "mlx",
+              max_context_length: 131072,
+              loaded_instances: [
+                {
+                  id: "gemma",
+                  config: { context_length: 80128, parallel: 1 },
+                },
+              ],
+              capabilities: {
+                reasoning: {
+                  allowed_options: ["off", "on"],
+                  default: "on",
+                },
+              },
+            },
+            {
+              type: "embedding",
+              key: "text-embedding-dinghy-law-4b-v1",
+              loaded_instances: [
+                {
+                  id: "dinghy-embed",
+                  config: { context_length: 8192 },
+                },
+              ],
+            },
           ],
         })
       );
@@ -46,8 +76,56 @@ const server = http.createServer((request, response) => {
       return;
     }
     if (request.url === "/v1/chat/completions") {
+      let input = {};
+      try {
+        input = JSON.parse(body || "{}");
+      } catch {}
+      if (requestLog)
+        fs.appendFileSync(requestLog, `${JSON.stringify(input)}\n`);
+      const maxTokens = Number(input.max_tokens);
+      if (
+        input.model === "gemma-reasoning-only" ||
+        (input.model === "gemma" &&
+          (!Number.isFinite(maxTokens) || maxTokens < 256))
+      ) {
+        response.end(
+          JSON.stringify({
+            choices: [
+              {
+                message: { content: "", reasoning_content: "thinking" },
+                finish_reason: "length",
+              },
+            ],
+          })
+        );
+        return;
+      }
+      if (!["qwen/qwen3.8-27b", "gemma"].includes(input.model)) {
+        response.statusCode = 400;
+        response.end(JSON.stringify({ error: "unexpected chat model" }));
+        return;
+      }
       response.end(
-        JSON.stringify({ choices: [{ message: { content: "bereit" } }] })
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: "bereit",
+                ...(input.model === "gemma"
+                  ? { reasoning_content: "reasoning used 75 tokens" }
+                  : {}),
+              },
+              finish_reason: "stop",
+            },
+          ],
+          usage:
+            input.model === "gemma"
+              ? {
+                  completion_tokens: 80,
+                  completion_tokens_details: { reasoning_tokens: 75 },
+                }
+              : undefined,
+        })
       );
       return;
     }

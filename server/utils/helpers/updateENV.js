@@ -4,6 +4,14 @@ const {
   MANAGED_EMBEDDING_ENV,
   managedEmbeddingEnabled,
 } = require("../../../shared/managedEmbeddingContract.cjs");
+const {
+  rememberLoadedLMStudioChatModel,
+  resolveLoadedLMStudioChatModel,
+} = require("../AiProviders/lmStudio/managedModelSelection");
+
+const MANAGED_LLM_PROVIDER = "lmstudio";
+const MANAGED_LM_STUDIO_BASE_PATH = "http://127.0.0.1:1234/v1";
+const MINIMUM_CHAT_CONTEXT = 4096;
 
 const KEY_MAPPING = {
   LLMProvider: {
@@ -1384,6 +1392,81 @@ async function updateENV(newENVs = {}, force = false, userId = null) {
     }
   }
 
+  let selectedChatModel = null;
+  const modelSelectionRequested = ENV_KEYS.includes("LMStudioModelPref");
+  const contextUpdateRequested = ENV_KEYS.includes("LMStudioTokenLimit");
+  const previousChatEnvironment = {
+    LMSTUDIO_MODEL_PREF: process.env.LMSTUDIO_MODEL_PREF,
+    LMSTUDIO_MODEL_TOKEN_LIMIT: process.env.LMSTUDIO_MODEL_TOKEN_LIMIT,
+    MODEL_TOKENIZER_PATH: process.env.MODEL_TOKENIZER_PATH,
+    MODEL_TOKENIZER_LABEL: process.env.MODEL_TOKENIZER_LABEL,
+    QWEN_TOKENIZER_PATH: process.env.QWEN_TOKENIZER_PATH,
+  };
+
+  if (managedEmbeddingEnabled()) {
+    const effectiveProvider = String(
+      ENV_KEYS.includes("LLMProvider")
+        ? newENVs.LLMProvider
+        : process.env.LLM_PROVIDER || ""
+    );
+    if (effectiveProvider !== MANAGED_LLM_PROVIDER) {
+      return {
+        newValues,
+        error:
+          "Der lokale Versicherungsmodus verwendet ausschließlich LM Studio als Chatanbieter.",
+      };
+    }
+    const effectiveBasePath = String(
+      ENV_KEYS.includes("LMStudioBasePath")
+        ? newENVs.LMStudioBasePath
+        : process.env.LMSTUDIO_BASE_PATH || ""
+    ).replace(/\/$/, "");
+    if (effectiveBasePath !== MANAGED_LM_STUDIO_BASE_PATH) {
+      return {
+        newValues,
+        error: `LMSTUDIO_BASE_PATH ist für lokale Kundendaten auf ${MANAGED_LM_STUDIO_BASE_PATH} festgelegt.`,
+      };
+    }
+
+    if (modelSelectionRequested || contextUpdateRequested) {
+      const identifier = String(
+        modelSelectionRequested
+          ? newENVs.LMStudioModelPref
+          : process.env.LMSTUDIO_MODEL_PREF || ""
+      ).trim();
+      const contextLength = Number(
+        contextUpdateRequested
+          ? newENVs.LMStudioTokenLimit
+          : process.env.LMSTUDIO_MODEL_TOKEN_LIMIT
+      );
+      if (
+        !Number.isInteger(contextLength) ||
+        contextLength < MINIMUM_CHAT_CONTEXT
+      ) {
+        return {
+          newValues,
+          error: `Das Chat-Kontextfenster muss eine ganze Zahl ab ${MINIMUM_CHAT_CONTEXT} sein.`,
+        };
+      }
+
+      try {
+        selectedChatModel = await resolveLoadedLMStudioChatModel(identifier, {
+          basePath: MANAGED_LM_STUDIO_BASE_PATH,
+        });
+      } catch (error) {
+        return { newValues, error: error.message };
+      }
+      if (contextLength > selectedChatModel.contextLength) {
+        return {
+          newValues,
+          error:
+            `Das konfigurierte Kontextfenster ${contextLength} ist größer als ` +
+            `der geladene Laufzeitkontext ${selectedChatModel.contextLength} von '${identifier}'.`,
+        };
+      }
+    }
+  }
+
   for (const key of ENV_KEYS) {
     const {
       envKey,
@@ -1423,6 +1506,31 @@ async function updateENV(newENVs = {}, force = false, userId = null) {
 
     for (const postUpdateFunc of postUpdate)
       await postUpdateFunc(key, prevValue, nextValue);
+  }
+
+  if (!error && modelSelectionRequested && selectedChatModel) {
+    try {
+      rememberLoadedLMStudioChatModel({
+        selection: selectedChatModel,
+        previousIdentifier: previousChatEnvironment.LMSTUDIO_MODEL_PREF,
+      });
+      if (
+        previousChatEnvironment.LMSTUDIO_MODEL_PREF !== selectedChatModel.id
+      ) {
+        delete process.env.MODEL_TOKENIZER_PATH;
+        delete process.env.MODEL_TOKENIZER_LABEL;
+        delete process.env.QWEN_TOKENIZER_PATH;
+      }
+    } catch (stateError) {
+      for (const [key, value] of Object.entries(previousChatEnvironment)) {
+        if (value == null) delete process.env[key];
+        else process.env[key] = value;
+      }
+      return {
+        newValues: {},
+        error: `Die Chatmodell-Auswahl konnte nicht dauerhaft gespeichert werden: ${stateError.message}`,
+      };
+    }
   }
 
   for (const runAfterAllFunc of runAfterAll)

@@ -95,7 +95,6 @@ async function status() {
   const expectedEnv = {
     LLM_PROVIDER: "lmstudio",
     LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
-    LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
     ...MANAGED_EMBEDDING_ENV,
     TARGET_OCR_LANG: "deu,eng",
   };
@@ -106,6 +105,11 @@ async function status() {
   if (!String(process.env.LMSTUDIO_MODEL_PREF || "").trim())
     problems.push(
       "LMSTUDIO_MODEL_PREF enthält kein konfiguriertes Chatmodell."
+    );
+  const configuredChatContext = Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT);
+  if (!Number.isInteger(configuredChatContext) || configuredChatContext < 4096)
+    problems.push(
+      "LMSTUDIO_MODEL_TOKEN_LIMIT ist kein gültiges Kontextfenster ab 4096."
     );
   return {
     workspaceExists: Boolean(workspace),

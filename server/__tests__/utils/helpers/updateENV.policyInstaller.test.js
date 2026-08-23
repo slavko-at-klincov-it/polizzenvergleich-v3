@@ -8,6 +8,19 @@ jest.mock("../../../utils/vectorStore/resetAllVectorStores", () => ({
 jest.mock("../../../models/eventLogs", () => ({
   EventLogs: { logEvent: jest.fn() },
 }));
+jest.mock("../../../utils/AiProviders/lmStudio/managedModelSelection", () => ({
+  resolveLoadedLMStudioChatModel: jest.fn(async (identifier) => {
+    if (identifier === "dinghy-embed") throw new Error("not loaded as an LLM");
+    return {
+      id: identifier,
+      modelKey:
+        identifier === "gemma" ? "google/gemma-4-26b-a4b" : "qwen/qwen3.8-27b",
+      contextLength: identifier === "gemma" ? 80128 : 42496,
+      parallel: 1,
+    };
+  }),
+  rememberLoadedLMStudioChatModel: jest.fn(),
+}));
 
 const {
   MANAGED_EMBEDDING_ENV,
@@ -15,6 +28,10 @@ const {
 const {
   resetAllVectorStores,
 } = require("../../../utils/vectorStore/resetAllVectorStores");
+const {
+  rememberLoadedLMStudioChatModel,
+  resolveLoadedLMStudioChatModel,
+} = require("../../../utils/AiProviders/lmStudio/managedModelSelection");
 
 describe("installer-managed environment persistence", () => {
   const managed = {
@@ -32,6 +49,8 @@ describe("installer-managed environment persistence", () => {
     for (const key of Object.keys(managed)) delete process.env[key];
     require("fs").writeFileSync.mockClear();
     resetAllVectorStores.mockClear();
+    rememberLoadedLMStudioChatModel.mockClear();
+    resolveLoadedLMStudioChatModel.mockClear();
   });
 
   it("keeps fork-specific settings when AnythingLLM dumps .env", () => {
@@ -65,7 +84,10 @@ describe("installer-managed environment persistence", () => {
   });
 
   it("accepts idempotent writes of the exact managed values without a reset", async () => {
-    Object.assign(process.env, MANAGED_EMBEDDING_ENV);
+    Object.assign(process.env, MANAGED_EMBEDDING_ENV, {
+      LLM_PROVIDER: "lmstudio",
+      LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
+    });
     const { updateENV } = require("../../../utils/helpers/updateENV");
     const result = await updateENV({
       EmbeddingEngine: MANAGED_EMBEDDING_ENV.EMBEDDING_ENGINE,
@@ -93,5 +115,70 @@ describe("installer-managed environment persistence", () => {
     expect(process.env.EMBEDDING_ENGINE).toBe("lmstudio");
     expect(resetAllVectorStores).not.toHaveBeenCalled();
     delete process.env.LLM_PROVIDER;
+  });
+
+  it("persists a loaded alternative chat model without touching Dinghy or LanceDB", async () => {
+    Object.assign(process.env, MANAGED_EMBEDDING_ENV, {
+      LLM_PROVIDER: "lmstudio",
+      LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
+      LMSTUDIO_MODEL_PREF: "qwen/qwen3.8-27b",
+      LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
+      MODEL_TOKENIZER_PATH: "/models/qwen",
+      MODEL_TOKENIZER_LABEL: "Qwen",
+    });
+    const { updateENV } = require("../../../utils/helpers/updateENV");
+
+    const result = await updateENV({
+      LLMProvider: "lmstudio",
+      LMStudioBasePath: "http://127.0.0.1:1234/v1",
+      LMStudioModelPref: "gemma",
+      LMStudioTokenLimit: "42496",
+    });
+
+    expect(result.error).toBe(false);
+    expect(process.env.LMSTUDIO_MODEL_PREF).toBe("gemma");
+    expect(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT).toBe("42496");
+    expect(process.env.MODEL_TOKENIZER_PATH).toBeUndefined();
+    expect(process.env.MODEL_TOKENIZER_LABEL).toBeUndefined();
+    expect(rememberLoadedLMStudioChatModel).toHaveBeenCalledWith({
+      selection: expect.objectContaining({
+        id: "gemma",
+        modelKey: "google/gemma-4-26b-a4b",
+      }),
+      previousIdentifier: "qwen/qwen3.8-27b",
+    });
+    expect(resolveLoadedLMStudioChatModel).toHaveBeenCalledWith("gemma", {
+      basePath: "http://127.0.0.1:1234/v1",
+    });
+    expect(resetAllVectorStores).not.toHaveBeenCalled();
+    expect(process.env.EMBEDDING_MODEL_PREF).toBe("dinghy-embed");
+  });
+
+  it("rejects embedding aliases, unsafe providers and invalid model contexts", async () => {
+    Object.assign(process.env, MANAGED_EMBEDDING_ENV, {
+      LLM_PROVIDER: "lmstudio",
+      LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
+      LMSTUDIO_MODEL_PREF: "qwen/qwen3.8-27b",
+      LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
+    });
+    const { updateENV } = require("../../../utils/helpers/updateENV");
+
+    await expect(updateENV({ LLMProvider: "openai" })).resolves.toMatchObject({
+      error: expect.stringContaining("LM Studio"),
+    });
+    await expect(
+      updateENV({ LMStudioModelPref: "dinghy-embed" })
+    ).resolves.toMatchObject({
+      error: expect.stringContaining("not loaded as an LLM"),
+    });
+    await expect(
+      updateENV({ LMStudioTokenLimit: "2048" })
+    ).resolves.toMatchObject({ error: expect.stringContaining("4096") });
+    await expect(
+      updateENV({ LMStudioModelPref: "gemma", LMStudioTokenLimit: "90000" })
+    ).resolves.toMatchObject({
+      error: expect.stringContaining("größer als"),
+    });
+    expect(resetAllVectorStores).not.toHaveBeenCalled();
   });
 });

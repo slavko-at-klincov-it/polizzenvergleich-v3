@@ -87,7 +87,7 @@ describe("macOS policy provisioning contract", () => {
       LLM_PROVIDER: "lmstudio",
       LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
       LMSTUDIO_MODEL_PREF: "qwen/qwen3.8-27b",
-      LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
+      LMSTUDIO_MODEL_TOKEN_LIMIT: "42496",
       EMBEDDING_ENGINE: "lmstudio",
       EMBEDDING_BASE_PATH: "http://127.0.0.1:1234/v1",
       EMBEDDING_MODEL_PREF: "dinghy-embed",
