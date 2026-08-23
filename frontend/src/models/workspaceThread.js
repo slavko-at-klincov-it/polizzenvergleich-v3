@@ -4,6 +4,10 @@ import { baseHeaders, safeJsonParse } from "@/utils/request";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { v4 } from "uuid";
 
+const activeThreadGenerations = new Map();
+const generationKey = (workspaceSlug, threadSlug) =>
+  `${workspaceSlug}:${threadSlug}`;
+
 const WorkspaceThread = {
   all: async function (workspaceSlug) {
     const { threads, defaultThreadChatCount } = await fetch(
@@ -87,6 +91,44 @@ const WorkspaceThread = {
       .catch(() => []);
     return history;
   },
+  stopGeneration: async function (workspaceSlug, threadSlug) {
+    let generationId = activeThreadGenerations.get(
+      generationKey(workspaceSlug, threadSlug)
+    );
+    if (!generationId) {
+      const status = await this.activeGeneration(workspaceSlug, threadSlug);
+      generationId = status?.generationId;
+      if (generationId)
+        this.registerActiveGeneration(workspaceSlug, threadSlug, generationId);
+    }
+    if (!generationId) return false;
+    return fetch(
+      `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/stop-generation`,
+      {
+        method: "POST",
+        headers: baseHeaders(),
+        body: JSON.stringify({ generationId }),
+      }
+    )
+      .then((res) => (res.ok ? res.json() : { cancelled: false }))
+      .then((data) => data.cancelled === true)
+      .catch(() => false);
+  },
+  activeGeneration: async function (workspaceSlug, threadSlug) {
+    return fetch(
+      `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/generation-status`,
+      { method: "GET", headers: baseHeaders() }
+    )
+      .then((res) => (res.ok ? res.json() : { active: false }))
+      .catch(() => ({ active: false, unavailable: true }));
+  },
+  registerActiveGeneration: function (workspaceSlug, threadSlug, generationId) {
+    if (!generationId) return;
+    activeThreadGenerations.set(
+      generationKey(workspaceSlug, threadSlug),
+      generationId
+    );
+  },
   streamChat: async function (
     { workspaceSlug, threadSlug },
     message,
@@ -94,73 +136,99 @@ const WorkspaceThread = {
     attachments = []
   ) {
     const ctrl = new AbortController();
+    const key = generationKey(workspaceSlug, threadSlug);
+    let currentGenerationId = v4();
+    activeThreadGenerations.set(key, currentGenerationId);
 
     // Listen for the ABORT_STREAM_EVENT key to be emitted by the client
     // to early abort the streaming response. On abort we send a special `stopGeneration`
     // event to be handled which resets the UI for us to be able to send another message.
     // The backend response abort handling is done in each LLM's handleStreamResponse.
-    window.addEventListener(ABORT_STREAM_EVENT, () => {
+    const handleAbort = (event) => {
+      const detail = event?.detail;
+      if (
+        !detail ||
+        detail.workspaceSlug !== workspaceSlug ||
+        detail.threadSlug !== threadSlug
+      )
+        return;
       ctrl.abort();
       handleChat({ id: v4(), type: "stopGeneration" });
-    });
+    };
+    window.addEventListener(ABORT_STREAM_EVENT, handleAbort);
 
-    await fetchEventSource(
-      `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/stream-chat`,
-      {
-        method: "POST",
-        body: JSON.stringify({ message, attachments }),
-        headers: baseHeaders(),
-        signal: ctrl.signal,
-        openWhenHidden: true,
-        async onopen(response) {
-          if (response.ok) {
-            return; // everything's good
-          } else if (
-            response.status >= 400 &&
-            response.status < 500 &&
-            response.status !== 429
-          ) {
+    try {
+      await fetchEventSource(
+        `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/stream-chat`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            message,
+            attachments,
+            generationId: currentGenerationId,
+          }),
+          headers: baseHeaders(),
+          signal: ctrl.signal,
+          openWhenHidden: true,
+          async onopen(response) {
+            if (response.ok) {
+              return; // everything's good
+            } else if (
+              response.status >= 400 &&
+              response.status < 500 &&
+              response.status !== 429
+            ) {
+              handleChat({
+                id: v4(),
+                type: "abort",
+                textResponse: null,
+                sources: [],
+                close: true,
+                error: `An error occurred while streaming response. Code ${response.status}`,
+              });
+              ctrl.abort();
+              throw new Error("Invalid Status code response.");
+            } else {
+              handleChat({
+                id: v4(),
+                type: "abort",
+                textResponse: null,
+                sources: [],
+                close: true,
+                error: `An error occurred while streaming response. Unknown Error.`,
+              });
+              ctrl.abort();
+              throw new Error("Unknown error");
+            }
+          },
+          async onmessage(msg) {
+            const chatResult = safeJsonParse(msg.data, null);
+            if (chatResult?.type === "generationStarted") {
+              currentGenerationId = chatResult.generationId;
+              activeThreadGenerations.set(key, currentGenerationId);
+              return;
+            }
+            if (chatResult) handleChat(chatResult);
+          },
+          onerror(err) {
             handleChat({
               id: v4(),
               type: "abort",
               textResponse: null,
               sources: [],
               close: true,
-              error: `An error occurred while streaming response. Code ${response.status}`,
+              error: `An error occurred while streaming response. ${err.message}`,
             });
             ctrl.abort();
-            throw new Error("Invalid Status code response.");
-          } else {
-            handleChat({
-              id: v4(),
-              type: "abort",
-              textResponse: null,
-              sources: [],
-              close: true,
-              error: `An error occurred while streaming response. Unknown Error.`,
-            });
-            ctrl.abort();
-            throw new Error("Unknown error");
-          }
-        },
-        async onmessage(msg) {
-          const chatResult = safeJsonParse(msg.data, null);
-          if (chatResult) handleChat(chatResult);
-        },
-        onerror(err) {
-          handleChat({
-            id: v4(),
-            type: "abort",
-            textResponse: null,
-            sources: [],
-            close: true,
-            error: `An error occurred while streaming response. ${err.message}`,
-          });
-          ctrl.abort();
-          throw new Error();
-        },
-      }
-    );
+            throw new Error();
+          },
+        }
+      );
+    } finally {
+      window.removeEventListener(ABORT_STREAM_EVENT, handleAbort);
+      if (activeThreadGenerations.get(key) === currentGenerationId)
+        activeThreadGenerations.delete(key);
+    }
   },
   _deleteEditedChats: async function (
     workspaceSlug = "",

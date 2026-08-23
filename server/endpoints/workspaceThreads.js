@@ -19,6 +19,9 @@ const {
 const { WorkspaceChats } = require("../models/workspaceChats");
 const { convertToChatHistory } = require("../utils/helpers/chat/responses");
 const { getModelTag } = require("./utils");
+const {
+  reconcileOrphanedPendingChats,
+} = require("../utils/chats/ChatGenerationManager");
 
 function workspaceThreadEndpoints(app) {
   if (!app) return;
@@ -157,6 +160,12 @@ function workspaceThreadEndpoints(app) {
           null,
           { id: "asc" }
         );
+
+        await reconcileOrphanedPendingChats(history, {
+          workspaceId: workspace.id,
+          threadId: thread.id,
+          userId: user?.id ?? null,
+        });
 
         response.status(200).json({ history: convertToChatHistory(history) });
       } catch (e) {

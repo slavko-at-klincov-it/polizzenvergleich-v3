@@ -222,9 +222,11 @@ function convertToChatHistory(history = []) {
       continue;
     }
 
-    const responseText = hasUnclosedThoughtChain(data.text)
-      ? "Antwort wurde nicht fertiggestellt. Sende die Frage erneut, um eine neue Antwort zu erhalten."
-      : data.text;
+    const responseText = data?.pending
+      ? "Antwort wird erstellt …"
+      : hasUnclosedThoughtChain(data.text)
+        ? "Antwort wurde nicht fertiggestellt. Sende die Frage erneut, um eine neue Antwort zu erhalten."
+        : data.text;
 
     formattedHistory.push([
       {
@@ -238,6 +240,11 @@ function convertToChatHistory(history = []) {
         type: data?.type || "chart",
         role: "assistant",
         content: responseText,
+        pending: Boolean(data?.pending),
+        interrupted: Boolean(data?.interrupted),
+        generationId: data?.generationId ?? null,
+        closed: !data?.pending,
+        animate: false,
         sources: data.sources || [],
         chatId: id,
         sentAt: moment(createdAt).unix(),

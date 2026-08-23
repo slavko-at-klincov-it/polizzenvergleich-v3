@@ -12,6 +12,9 @@ import {
   useWatchForAutoPlayAssistantTTSResponse,
 } from "../contexts/TTSProvider";
 import { PENDING_HOME_MESSAGE } from "@/utils/constants";
+import chatGenerationState from "./ChatContainer/chatGenerationState.cjs";
+
+const { loadGenerationSnapshot } = chatGenerationState;
 
 export default function WorkspaceChat({ loading, workspace }) {
   useWatchForAutoPlayAssistantTTSResponse();
@@ -22,25 +25,43 @@ export default function WorkspaceChat({ loading, workspace }) {
   const [loaded, setLoaded] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function getHistory() {
       if (loading) return;
       if (!workspace?.slug) {
-        setLoaded({ key: "none", workspace: null, history: [] });
+        if (!cancelled)
+          setLoaded({ key: "none", workspace: null, history: [] });
         return false;
       }
 
-      const chatHistory = threadSlug
-        ? await Workspace.threads.chatHistory(workspace.slug, threadSlug)
-        : await Workspace.chatHistory(workspace.slug);
+      // Read status first. The manager is removed only after the final DB
+      // write, so active:false guarantees the following history snapshot can
+      // already see the terminal answer.
+      const { status: activeGeneration, history: chatHistory } =
+        await loadGenerationSnapshot(
+          () =>
+            threadSlug
+              ? Workspace.threads.activeGeneration(workspace.slug, threadSlug)
+              : Workspace.activeGeneration(workspace.slug),
+          () =>
+            threadSlug
+              ? Workspace.threads.chatHistory(workspace.slug, threadSlug)
+              : Workspace.chatHistory(workspace.slug)
+        );
 
+      if (cancelled) return;
       setLoaded({
         key: `${workspace.slug}:${threadSlug ?? "default"}`,
         workspace,
         threadSlug,
         history: chatHistory,
+        activeGeneration,
       });
     }
     getHistory();
+    return () => {
+      cancelled = true;
+    };
   }, [workspace, loading, threadSlug]);
 
   const hasPendingMessage = !!sessionStorage.getItem(PENDING_HOME_MESSAGE);
@@ -105,6 +126,7 @@ export default function WorkspaceChat({ loading, workspace }) {
           workspace={loaded.workspace}
           threadSlug={loaded.threadSlug}
           knownHistory={loaded.history}
+          activeGeneration={loaded.activeGeneration}
         />
       </DnDFileUploaderProvider>
     </TTSProvider>

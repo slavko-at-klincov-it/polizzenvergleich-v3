@@ -89,7 +89,12 @@ async function loadLatestChats(userId, workspaceId) {
   return latest
     .filter((c) => {
       const parsed = safeJsonParse(c.response);
-      return typeof parsed?.text === "string" && parsed.text.length > 0;
+      return (
+        typeof parsed?.text === "string" &&
+        parsed.text.length > 0 &&
+        parsed.pending !== true &&
+        parsed.interrupted !== true
+      );
     })
     .reverse();
 }

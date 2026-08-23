@@ -39,15 +39,28 @@ import { ChatSidebarProvider } from "./ChatSidebar";
 import SourcesSidebar from "./SourcesSidebar";
 import MemoriesSidebar from "./MemoriesSidebar";
 import { THREAD_CREATED_EVENT } from "@/components/Sidebar/ActiveWorkspaces/ThreadContainer";
+import chatGenerationState from "./chatGenerationState.cjs";
+
+const {
+  claimPendingHandoff,
+  generationPollDecision,
+  hasHydratedPendingGeneration,
+  hasPendingGeneration,
+  loadGenerationSnapshot,
+} = chatGenerationState;
 
 export default function ChatContainer({
   workspace,
   threadSlug = null,
   knownHistory = [],
+  activeGeneration = null,
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [loadingResponse, setLoadingResponse] = useState(false);
+  const [loadingResponse, setLoadingResponse] = useState(
+    () =>
+      activeGeneration?.active === true || hasPendingGeneration(knownHistory)
+  );
   const [chatHistory, setChatHistory] = useState(knownHistory);
   const [socketId, setSocketId] = useState(null);
   const [websocket, setWebsocket] = useState(null);
@@ -305,30 +318,121 @@ export default function ChatContainer({
     if (pendingMessageChecked.current || !workspace?.slug || !activeThreadSlug)
       return;
 
-    const pending = safeJsonParse(sessionStorage.getItem(PENDING_HOME_MESSAGE));
-    if (!pending?.workspaceSlug || !pending?.threadSlug) {
-      // Do not replay an old unscoped handoff into an arbitrary thread.
-      if (pending) sessionStorage.removeItem(PENDING_HOME_MESSAGE);
-      pendingMessageChecked.current = true;
-      return;
+    const pending = claimPendingHandoff(
+      sessionStorage,
+      PENDING_HOME_MESSAGE,
+      workspace.slug,
+      activeThreadSlug
+    );
+    if (!pending) return;
+    pendingMessageChecked.current = true;
+    sendCommand({
+      text: pending.message,
+      attachments: pending.attachments || [],
+      autoSubmit: true,
+    });
+  }, [workspace?.slug, activeThreadSlug]);
+
+  const hasHydratedPending = hasHydratedPendingGeneration(chatHistory);
+
+  useEffect(() => {
+    if (activeGeneration?.generationId) {
+      if (effectiveThreadSlug)
+        Workspace.threads.registerActiveGeneration(
+          workspace.slug,
+          effectiveThreadSlug,
+          activeGeneration.generationId
+        );
+      else
+        Workspace.registerActiveGeneration(
+          workspace.slug,
+          activeGeneration.generationId
+        );
     }
 
-    if (
-      pending.workspaceSlug === workspace.slug &&
-      pending.threadSlug === activeThreadSlug &&
-      pending.message
-    ) {
-      pendingMessageChecked.current = true;
-      setTimeout(() => {
-        sessionStorage.removeItem(PENDING_HOME_MESSAGE);
-        sendCommand({
-          text: pending.message,
-          attachments: pending.attachments || [],
-          autoSubmit: true,
-        });
-      }, 100);
-    }
-  }, [workspace?.slug, activeThreadSlug]);
+    const pendingGeneration = chatHistory.findLast(
+      (message) =>
+        message.role === "assistant" &&
+        message.pending === true &&
+        message.generationId
+    );
+    if (!pendingGeneration) return;
+    if (effectiveThreadSlug)
+      Workspace.threads.registerActiveGeneration(
+        workspace.slug,
+        effectiveThreadSlug,
+        pendingGeneration.generationId
+      );
+    else
+      Workspace.registerActiveGeneration(
+        workspace.slug,
+        pendingGeneration.generationId
+      );
+  }, [
+    activeGeneration?.generationId,
+    chatHistory,
+    workspace.slug,
+    effectiveThreadSlug,
+  ]);
+
+  // A generation belongs to the thread, not to this mounted view. When the
+  // user returns while it is still running, reconcile the persisted row until
+  // it becomes terminal. This never replays the prompt or opens a second POST.
+  useEffect(() => {
+    if ((!hasHydratedPending && !activeGeneration?.active) || !workspace?.slug)
+      return;
+
+    let cancelled = false;
+    let timer = null;
+    const poll = async () => {
+      // Ordered snapshot: once status becomes inactive, the manager has
+      // already awaited the final DB write. Reading history second cannot miss
+      // a fast completion and stop polling on stale history.
+      const { status, history } = await loadGenerationSnapshot(
+        () =>
+          effectiveThreadSlug
+            ? Workspace.threads.activeGeneration(
+                workspace.slug,
+                effectiveThreadSlug
+              )
+            : Workspace.activeGeneration(workspace.slug),
+        () =>
+          effectiveThreadSlug
+            ? Workspace.threads.chatHistory(workspace.slug, effectiveThreadSlug)
+            : Workspace.chatHistory(workspace.slug)
+      );
+      if (cancelled) return;
+
+      if (history.length > 0) setChatHistory(history);
+      const decision = generationPollDecision(
+        history,
+        status,
+        activeGeneration?.generationId
+      );
+      if (!decision.keepWaiting) {
+        setLoadingResponse(false);
+        return;
+      }
+
+      // Status may remain active before the pending DB row exists (notably
+      // during auto-rename/router setup). Keep the prompt locked and poll even
+      // when older history is already present.
+      setLoadingResponse(true);
+      timer = setTimeout(poll, 750);
+    };
+
+    timer = setTimeout(poll, 250);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    hasHydratedPending,
+    activeGeneration?.active,
+    activeGeneration?.generationId,
+    workspace?.slug,
+    effectiveThreadSlug,
+  ]);
 
   useEffect(() => {
     async function fetchReply() {
@@ -520,6 +624,8 @@ export default function ChatContainer({
                     attachments={files}
                     attachmentsProcessing={isProcessing}
                     centered={true}
+                    workspaceSlug={workspace.slug}
+                    threadSlug={effectiveThreadSlug}
                   />
                   <QuickActions
                     hasAvailableWorkspace={!!workspace}
@@ -586,6 +692,8 @@ export default function ChatContainer({
                   attachments={files}
                   attachmentsProcessing={isProcessing}
                   centered={false}
+                  workspaceSlug={workspace.slug}
+                  threadSlug={effectiveThreadSlug}
                 />
               </div>
             </div>

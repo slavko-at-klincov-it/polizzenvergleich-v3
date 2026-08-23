@@ -27,6 +27,9 @@ const { CollectorApi } = require("../utils/collectorApi");
 const { getTTSProvider } = require("../utils/TextToSpeech");
 const { getAudioFileInfo } = require("../utils/TextToSpeech/audioFormat");
 const { WorkspaceThread } = require("../models/workspaceThread");
+const {
+  reconcileOrphanedPendingChats,
+} = require("../utils/chats/ChatGenerationManager");
 
 const truncate = require("truncate");
 const { purgeDocument } = require("../utils/files/purgeDocument");
@@ -429,6 +432,11 @@ function workspaceEndpoints(app) {
         const history = multiUserMode(response)
           ? await WorkspaceChats.forWorkspaceByUser(workspace.id, user.id)
           : await WorkspaceChats.forWorkspace(workspace.id);
+        await reconcileOrphanedPendingChats(history, {
+          workspaceId: workspace.id,
+          threadId: null,
+          userId: user?.id ?? null,
+        });
         response.status(200).json({ history: convertToChatHistory(history) });
       } catch (e) {
         console.error(e.message, e);

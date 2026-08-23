@@ -1,11 +1,21 @@
 import { ABORT_STREAM_EVENT } from "@/utils/chat";
 import { Tooltip } from "react-tooltip";
 import { useTranslation } from "react-i18next";
+import Workspace from "@/models/workspace";
 
-export default function StopGenerationButton() {
+export default function StopGenerationButton({ workspaceSlug, threadSlug }) {
   const { t } = useTranslation();
-  function emitHaltEvent() {
-    window.dispatchEvent(new CustomEvent(ABORT_STREAM_EVENT));
+  async function emitHaltEvent() {
+    const cancelled = threadSlug
+      ? await Workspace.threads.stopGeneration(workspaceSlug, threadSlug)
+      : await Workspace.stopGeneration(workspaceSlug);
+    if (!cancelled) return;
+
+    window.dispatchEvent(
+      new CustomEvent(ABORT_STREAM_EVENT, {
+        detail: { workspaceSlug, threadSlug: threadSlug ?? null },
+      })
+    );
   }
 
   return (

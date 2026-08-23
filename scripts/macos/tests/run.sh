@@ -80,7 +80,11 @@ printf '%s\n' '[installer-test] focused application contracts'
 "$NODE_BIN" "$REPO/scripts/macos/pipeline-smoke.cjs" >/dev/null
 (cd "$REPO" && npx jest --runInBand \
   scripts/macos/__tests__/comparisonDocumentMerge.test.js \
+  scripts/macos/__tests__/chatGenerationState.test.js \
   scripts/macos/__tests__/provision.test.js \
+  server/__tests__/utils/chats/ChatGenerationManager.test.js \
+  server/__tests__/utils/chats/pendingHistory.test.js \
+  server/__tests__/utils/chats/threadNavigationStream.test.js \
   server/__tests__/utils/boot/localBinding.test.js \
   server/__tests__/utils/helpers/updateENV.policyInstaller.test.js \
   collector/__tests__/utils/http/localBinding.test.js)

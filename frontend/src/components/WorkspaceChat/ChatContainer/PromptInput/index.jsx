@@ -391,7 +391,10 @@ export default function PromptInput({
                 <div className="flex gap-x-2 items-center">
                   <SpeechToText sendCommand={sendCommand} />
                   {isStreaming ? (
-                    <StopGenerationButton />
+                    <StopGenerationButton
+                      workspaceSlug={workspaceSlug ?? workspace?.slug}
+                      threadSlug={threadSlug}
+                    />
                   ) : (
                     <SendPromptButton
                       formRef={formRef}
