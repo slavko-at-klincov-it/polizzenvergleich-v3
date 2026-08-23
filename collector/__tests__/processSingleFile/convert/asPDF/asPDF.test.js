@@ -131,4 +131,59 @@ describe("asPDF selective extraction", () => {
     );
     expect(mockWriteToServerDocuments).not.toHaveBeenCalled();
   });
+
+  test("fails closed when OCR text is nonempty but still low quality", async () => {
+    mockOcrPDF.mockResolvedValue([
+      {
+        pageContent: "??",
+        status: "ok",
+        confidence: 12,
+        metadata: { loc: { pageNumber: 2 } },
+      },
+    ]);
+
+    const result = await asPDF({
+      fullFilePath: pdfPath,
+      filename: "policy.pdf",
+      options: { absolutePath: true, parseOnly: true },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: false,
+        documents: [],
+        reason: expect.stringContaining("quality is insufficient"),
+      })
+    );
+    expect(mockWriteToServerDocuments).not.toHaveBeenCalled();
+  });
+
+  test("never falls back to a native text layer that already failed quality", async () => {
+    mockLoad.mockResolvedValue([
+      nativePage(
+        1,
+        "Die Versicherung enthält einen Selbstbehalt von EUR 500.",
+        false
+      ),
+      nativePage(2, "kaputte Textschicht", true),
+    ]);
+    mockOcrPDF.mockResolvedValue([
+      {
+        pageContent: "",
+        status: "empty",
+        confidence: 0,
+        metadata: { loc: { pageNumber: 2 } },
+      },
+    ]);
+
+    const result = await asPDF({
+      fullFilePath: pdfPath,
+      filename: "policy.pdf",
+      options: { absolutePath: true, parseOnly: true },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toContain("native text layer failed quality checks");
+    expect(mockWriteToServerDocuments).not.toHaveBeenCalled();
+  });
 });

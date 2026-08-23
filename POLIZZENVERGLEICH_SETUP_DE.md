@@ -12,7 +12,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.1.1 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.2.0 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -199,6 +199,14 @@ getrennte Prozesse starten. Die allgemeinen Hinweise stehen in `BARE_METAL.md`.
   Seitennummer, Extraktionsart und Quell-Hash.
 - Aussagen ohne Fundstelle müssen als `keine belegte Fundstelle gefunden`
   gekennzeichnet werden, nicht als sicherer Vertragsausschluss.
+- Aus allen kanonischen Seiten wird ohne Top-N-Vorauswahl ein offenes,
+  persistentes Klauselinventar erstellt. FTS und LanceDB suchen anschließend
+  jedes Inventarthema getrennt in Dokument A und B; häufige Standardthemen
+  können seltene Deckungen daher nicht mehr aus dem Kontext verdrängen.
+- Bestehende Vergleichsthreads bleiben erhalten. Beim ersten erneuten Vergleich
+  wird ein fehlendes oder veraltetes Inventar automatisch aus dem gespeicherten
+  Seitenbestand neu erzeugt, ohne OCR, Embeddings, Dokument-IDs oder Chats zu
+  verändern.
 
 ## Abnahmetest am Kundenrechner
 
@@ -208,7 +216,8 @@ verfügbar waren, ist dieser Test vor dem produktiven Einsatz verpflichtend:
 1. Ein synthetisches oder freigegebenes PDF-Paar mit bekannten Fundstellen
    verwenden; keine Kundendaten in Support-Chats kopieren.
 2. Mindestens je eine Fundstelle für Selbstbehalt, Ausschluss, Geldbetrag,
-   Prozentwert und Obliegenheit in beiden Dokumenten prüfen.
+   Prozentwert, Obliegenheit und eine seltene Deckung wie Vandalismus in beiden
+   Dokumenten prüfen.
 3. Eine Fundstelle muss auf einer gescannten Seite liegen, damit selektives OCR
    geprüft wird.
 4. Seitennummern im PDF visuell gegen die Antwort vergleichen.

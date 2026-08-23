@@ -56,6 +56,11 @@ if [ -x "$POLICY_NODE_BIN" ] && [ -d "$POLICY_REPO_DIR/server/node_modules" ]; t
     check_fail "Provisionierung ist unvollständig"
     "$POLICY_NODE_BIN" -e 'try { for (const p of JSON.parse(process.argv[1]).problems || []) console.error(`  - ${p}`); } catch {}' "$status_json"
   fi
+  if "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/inventory-schema-check.cjs" >/dev/null; then
+    check_ok "Persistentes Klauselinventar und additive Datenbankmigration"
+  else
+    check_fail "Inventar-Datenbankschema fehlt oder ist inkonsistent"
+  fi
   if "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/pipeline-smoke.cjs" >/dev/null; then
     check_ok "Synthetischer Zwei-Dokument-Test: Selbstbehalt, Seite, A/B-Isolation und Cleanup"
   else

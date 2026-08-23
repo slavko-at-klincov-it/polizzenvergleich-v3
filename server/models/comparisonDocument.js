@@ -150,6 +150,7 @@ const ComparisonDocument = {
       docId: document.workspaceDocument?.docId ?? document.docId ?? null,
       location: document.workspaceDocument?.docpath ?? document.docpath ?? null,
       docpath: document.workspaceDocument?.docpath ?? document.docpath ?? null,
+      sourceSha256: document.sourceSha256 ?? null,
       error: document.error ?? null,
     };
   },

@@ -16,6 +16,7 @@ const {
   purgeVectorCache,
 } = require("../files");
 const { safeJsonParse } = require("../http");
+const { PageAwareTextSplitter } = require("../PageAwareTextSplitter");
 const { runComparisonDocumentLifecycleHooks } = require("./lifecycleHooks");
 
 class ComparisonDocumentError extends Error {
@@ -25,6 +26,8 @@ class ComparisonDocumentError extends Error {
     this.statusCode = statusCode;
   }
 }
+
+const embedOperations = new Map();
 
 function pageCountFromMetadata(metadata = {}) {
   const candidates = [
@@ -64,6 +67,32 @@ function docpathForParsedFile(parsedFile) {
       400
     );
   return `custom-documents/${path.basename(metadata.location)}`;
+}
+
+function validateCanonicalPdf(documentData) {
+  const extraction = documentData?.pdfExtraction;
+  if (
+    extraction?.complete !== true ||
+    !/^[a-f0-9]{64}$/iu.test(String(extraction?.sourceSha256 || "").trim())
+  )
+    throw new ComparisonDocumentError(
+      "PDF extraction is incomplete or has no source hash.",
+      422
+    );
+  const pages = PageAwareTextSplitter.extractionPages(documentData);
+  const expectedPages = Number(extraction.totalPages);
+  if (
+    !Array.isArray(pages) ||
+    pages.length === 0 ||
+    !Number.isInteger(expectedPages) ||
+    expectedPages !== pages.length ||
+    pages.some((page, index) => page.pageNumber !== index + 1)
+  )
+    throw new ComparisonDocumentError(
+      "PDF page map is incomplete or not contiguous.",
+      422
+    );
+  return pages;
 }
 
 async function removeWorkspaceDocumentArtifacts({
@@ -133,7 +162,23 @@ const ComparisonDocumentService = {
     return documents.map(ComparisonDocument.serialize);
   },
 
-  embedParsedFile: async function ({
+  embedParsedFile: async function (args) {
+    const key = [
+      args?.workspace?.id,
+      args?.thread?.id,
+      args?.user?.id ?? "anonymous",
+      Number(args?.parsedFileId),
+    ].join(":");
+    const existing = embedOperations.get(key);
+    if (existing) return existing;
+    const operation = this._embedParsedFile(args).finally(() => {
+      if (embedOperations.get(key) === operation) embedOperations.delete(key);
+    });
+    embedOperations.set(key, operation);
+    return operation;
+  },
+
+  _embedParsedFile: async function ({
     workspace,
     thread,
     user = null,
@@ -211,6 +256,7 @@ const ComparisonDocumentService = {
           "Parsed document contains no text content.",
           422
         );
+      validateCanonicalPdf(data);
 
       docId = uuidv4();
       await ComparisonDocument.update(comparisonDocument.id, {
@@ -218,6 +264,7 @@ const ComparisonDocumentService = {
         error: null,
         docId,
         docpath: targetDocpath,
+        sourceSha256: data.pdfExtraction.sourceSha256.toLowerCase(),
         workspaceDocumentId: null,
       });
 
@@ -271,6 +318,7 @@ const ComparisonDocumentService = {
             error: null,
             docId,
             docpath: targetDocpath,
+            sourceSha256: data.pdfExtraction.sourceSha256.toLowerCase(),
             workspaceDocumentId: workspaceDocument.id,
             lastUpdatedAt: new Date(),
           },
@@ -405,4 +453,5 @@ module.exports = {
   ComparisonDocumentError,
   ComparisonDocumentLimitError,
   pageCountFromMetadata,
+  validateCanonicalPdf,
 };

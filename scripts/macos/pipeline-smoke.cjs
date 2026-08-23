@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // Deterministic, customer-data-free acceptance of the failure path that
-// motivated this fork: page provenance -> isolated A/B FTS -> Selbstbehalt.
+// motivated this fork: page provenance -> open all-page inventory -> isolated
+// A/B FTS -> Selbstbehalt and a rare late Vandalismus clause.
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
@@ -22,10 +23,16 @@ const { assemblePdfExtraction } = require(
 const { ComparisonChunkIndex } = require(
   path.join(repo, "server/utils/PolicyComparison/ComparisonChunkIndex")
 );
+const { ComparisonInventoryExtractor } = require(
+  path.join(
+    repo,
+    "server/utils/PolicyComparison/ComparisonInventoryExtractor"
+  )
+);
 
 function documentData(filename, amount, secondPageMethod) {
   const extraction = assemblePdfExtraction({
-    totalPages: 2,
+    totalPages: 3,
     sourceSha256: "0".repeat(64),
     pages: [
       {
@@ -40,6 +47,12 @@ function documentData(filename, amount, secondPageMethod) {
         method: secondPageMethod,
         status: "ok",
         ocrConfidence: secondPageMethod === "ocr" ? 92 : null,
+      },
+      {
+        pageNumber: 3,
+        text: "Vandalismus: Mutwillige Beschädigung durch Dritte ist versichert.",
+        method: "native",
+        status: "ok",
       },
     ],
   });
@@ -76,6 +89,11 @@ async function main() {
       },
     ];
     for (const fixture of fixtures) {
+      const canonical = documentData(
+        fixture.filename,
+        fixture.amount,
+        fixture.method
+      );
       await ComparisonChunkIndex.indexDocument({
         comparisonDocument: {
           id: fixture.id,
@@ -86,13 +104,39 @@ async function main() {
           slot: fixture.slot,
           originalFilename: fixture.filename,
         },
-        documentData: documentData(
-          fixture.filename,
-          fixture.amount,
-          fixture.method
-        ),
+        documentData: canonical,
         db,
       });
+      const inventory = await ComparisonInventoryExtractor.extract({
+        documentData: canonical,
+        fallbackTopics: [],
+        Connector: {
+          getChatCompletion: async (_messages) => ({
+            textResponse: JSON.stringify({
+              topics: [
+                {
+                  label: "Selbstbehalt",
+                  aliases: ["Franchise"],
+                  page: 2,
+                  evidence: `Der Selbstbehalt beträgt EUR ${fixture.amount} je Schadenfall.`,
+                },
+                {
+                  label: "Vandalismus",
+                  aliases: ["mutwillige Beschädigung"],
+                  page: 3,
+                  evidence:
+                    "Vandalismus: Mutwillige Beschädigung durch Dritte ist versichert.",
+                },
+              ],
+            }),
+          }),
+        },
+      });
+      assert.ok(
+        inventory.inventoryItems.some(
+          (item) => item.facetKey === "vandalismus" && item.pageNumber === 3
+        )
+      );
     }
 
     for (const fixture of fixtures) {
@@ -107,6 +151,15 @@ async function main() {
       assert.equal(hits[0].pageNumber, 2);
       assert.equal(hits[0].exactMatch, true);
       assert.match(hits[0].text, new RegExp(`EUR ${fixture.amount}`));
+
+      const vandalism = await ComparisonChunkIndex.searchDocument({
+        threadId: 77,
+        comparisonDocumentId: fixture.id,
+        query: "Vandalismus",
+        db,
+      });
+      assert.equal(vandalism.length, 1);
+      assert.equal(vandalism[0].pageNumber, 3);
     }
 
     await ComparisonChunkIndex.removeThread(77, db);
@@ -122,6 +175,8 @@ async function main() {
         success: true,
         documents: 2,
         exactTerm: "Selbstbehalt",
+        rareTerm: "Vandalismus",
+        openInventory: true,
         pageEvidence: true,
         ocrProvenance: true,
         threadCleanup: true,

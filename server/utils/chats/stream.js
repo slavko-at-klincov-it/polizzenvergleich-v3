@@ -16,6 +16,12 @@ const {
 const {
   ComparisonHybridRetriever,
 } = require("../PolicyComparison/ComparisonHybridRetriever");
+const {
+  ComparisonBatchSynthesizer,
+} = require("../PolicyComparison/ComparisonBatchSynthesizer");
+const {
+  PolicyInferenceQueue,
+} = require("../PolicyComparison/PolicyInferenceQueue");
 const { grepAgents } = require("./agents");
 const {
   grepCommand,
@@ -423,50 +429,97 @@ async function streamChatWithWorkspace(
     const systemPrompt = comparisonContext.active
       ? `${baseSystemPrompt}\n\n${comparisonContext.systemPrompt}`
       : baseSystemPrompt;
-    const messages = await LLMConnector.compressMessages(
-      {
+    const comparisonBatches = comparisonContext?.contextBatches || [];
+    if (comparisonBatches.length > 1) {
+      const batchResult = await ComparisonBatchSynthesizer.run({
+        Connector: LLMConnector,
+        contextBatches: comparisonBatches,
         systemPrompt,
         userPrompt: updatedMessage,
-        contextTexts,
         chatHistory,
+        rawHistory,
         attachments,
-      },
-      rawHistory
-    );
-
-    // If streaming is not explicitly enabled for connector
-    // we do regular waiting of a response and send a single chunk.
-    if (LLMConnector.streamingEnabled() !== true) {
-      console.log(
-        `\x1b[31m[STREAMING DISABLED]\x1b[0m Streaming is not available for ${LLMConnector.constructor.name}. Will use regular chat method.`
+        temperature: workspace?.openAiTemp ?? LLMConnector.defaultTemp,
+        user,
+        signal: generationContext?.controller?.signal,
+        onBatch: async (section) =>
+          writeResponseChunk(response, {
+            uuid,
+            sources,
+            type: "textResponseChunk",
+            textResponse: `${section}\n\n`,
+            close: false,
+            error: false,
+          }),
+        onFinal: async (section) =>
+          writeResponseChunk(response, {
+            uuid,
+            sources,
+            type: "textResponseChunk",
+            textResponse: `${section}\n\n`,
+            close: false,
+            error: false,
+          }),
+      });
+      completeText = batchResult.textResponse;
+      metrics = { comparisonBatches: batchResult.metrics };
+    } else {
+      const messages = await LLMConnector.compressMessages(
+        {
+          systemPrompt,
+          userPrompt: updatedMessage,
+          contextTexts,
+          chatHistory,
+          attachments,
+        },
+        rawHistory
       );
-      const { textResponse, metrics: performanceMetrics } =
-        await LLMConnector.getChatCompletion(messages, {
+
+      const generateSingleComparison = async () => {
+        // If streaming is not explicitly enabled for connector
+        // we do regular waiting of a response and send a single chunk.
+        if (LLMConnector.streamingEnabled() !== true) {
+          console.log(
+            `\x1b[31m[STREAMING DISABLED]\x1b[0m Streaming is not available for ${LLMConnector.constructor.name}. Will use regular chat method.`
+          );
+          const { textResponse, metrics: performanceMetrics } =
+            await LLMConnector.getChatCompletion(messages, {
+              temperature: workspace?.openAiTemp ?? LLMConnector.defaultTemp,
+              user: user,
+            });
+
+          completeText = textResponse;
+          metrics = performanceMetrics;
+          writeResponseChunk(response, {
+            uuid,
+            sources,
+            type: "textResponseChunk",
+            textResponse: completeText,
+            close: true,
+            error: false,
+            metrics,
+          });
+          return;
+        }
+        const stream = await LLMConnector.streamGetChatCompletion(messages, {
           temperature: workspace?.openAiTemp ?? LLMConnector.defaultTemp,
           user: user,
         });
+        completeText = await LLMConnector.handleStream(response, stream, {
+          uuid,
+          sources,
+        });
+        metrics = stream.metrics;
+      };
 
-      completeText = textResponse;
-      metrics = performanceMetrics;
-      writeResponseChunk(response, {
-        uuid,
-        sources,
-        type: "textResponseChunk",
-        textResponse: completeText,
-        close: true,
-        error: false,
-        metrics,
-      });
-    } else {
-      const stream = await LLMConnector.streamGetChatCompletion(messages, {
-        temperature: workspace?.openAiTemp ?? LLMConnector.defaultTemp,
-        user: user,
-      });
-      completeText = await LLMConnector.handleStream(response, stream, {
-        uuid,
-        sources,
-      });
-      metrics = stream.metrics;
+      if (comparisonContext.active)
+        await PolicyInferenceQueue.runOperation({
+          operation: generateSingleComparison,
+          // Timeout the wait behind a stuck local inference, but once the live
+          // token stream owns the model, keep the lease until it really ends.
+          timeoutStartedOperation: false,
+        });
+      else await generateSingleComparison();
     }
 
     if (generationContext?.controller?.signal?.aborted) {

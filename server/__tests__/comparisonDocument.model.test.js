@@ -97,6 +97,7 @@ describe("ComparisonDocument", () => {
       docId: "doc-b",
       location: "custom/b.json",
       docpath: "custom/b.json",
+      sourceSha256: null,
       error: null,
     });
   });

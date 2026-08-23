@@ -396,30 +396,64 @@ model workspace_parsed_files {
 }
 
 model comparison_documents {
-  id                  Int                     @id @default(autoincrement())
-  workspaceId         Int
-  threadId            Int
-  userId              Int?
-  slot                String
-  status              String                  @default("indexing")
-  originalFilename    String
-  tokenCount          Int?                    @default(0)
-  pageCount           Int?
-  parsedFileId        Int?                    @unique
-  workspaceDocumentId Int?                    @unique
-  docId               String?
-  docpath             String?
-  error               String?
-  createdAt           DateTime                @default(now())
-  lastUpdatedAt       DateTime                @default(now())
-  workspace           workspaces              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  thread              workspace_threads       @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  parsedFile          workspace_parsed_files? @relation(fields: [parsedFileId], references: [id], onDelete: SetNull)
-  workspaceDocument   workspace_documents?    @relation(fields: [workspaceDocumentId], references: [id], onDelete: SetNull)
+  id                    Int                                   @id @default(autoincrement())
+  workspaceId           Int
+  threadId              Int
+  userId                Int?
+  slot                  String
+  status                String                                @default("indexing")
+  originalFilename      String
+  tokenCount            Int?                                  @default(0)
+  pageCount             Int?
+  parsedFileId          Int?                                  @unique
+  workspaceDocumentId   Int?                                  @unique
+  docId                 String?
+  docpath               String?
+  sourceSha256          String?
+  error                 String?
+  inventoryStatus       String?
+  inventoryVersion      Int?
+  inventoryItemCount    Int                                   @default(0)
+  inventoryPageCount    Int                                   @default(0)
+  inventorySourceSha256 String?
+  inventoryError        String?
+  createdAt             DateTime                              @default(now())
+  lastUpdatedAt         DateTime                              @default(now())
+  workspace             workspaces                            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  thread                workspace_threads                     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  parsedFile            workspace_parsed_files?               @relation(fields: [parsedFileId], references: [id], onDelete: SetNull)
+  workspaceDocument     workspace_documents?                  @relation(fields: [workspaceDocumentId], references: [id], onDelete: SetNull)
+  inventoryItems        comparison_document_inventory_items[]
 
   @@unique([threadId, slot])
   @@index([workspaceId, threadId, status])
   @@index([userId])
+}
+
+model comparison_document_inventory_items {
+  id                   Int                  @id @default(autoincrement())
+  comparisonDocumentId Int
+  factKey              String
+  facetKey             String?
+  label                String
+  aliasesJson          String               @default("[]")
+  polarity             String?
+  valueJson            String?
+  unit                 String?
+  conditionsJson       String?
+  pageNumber           Int
+  evidenceText         String
+  evidenceHash         String
+  sourceMethod         String?
+  confidence           Float?
+  createdAt            DateTime             @default(now())
+  lastUpdatedAt        DateTime             @default(now())
+  comparisonDocument   comparison_documents @relation(fields: [comparisonDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([comparisonDocumentId, factKey], map: "comparison_document_inventory_items_document_fact_key")
+  @@index([comparisonDocumentId, facetKey], map: "comparison_document_inventory_items_document_facet_idx")
+  @@index([comparisonDocumentId, pageNumber], map: "comparison_document_inventory_items_document_page_idx")
+  @@index([comparisonDocumentId, evidenceHash], map: "comparison_document_inventory_items_document_evidence_idx")
 }
 
 model external_communication_connectors {

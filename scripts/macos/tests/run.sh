@@ -63,6 +63,26 @@ git -C "$REPO" check-ignore -q server/public.new/example.js
 git -C "$REPO" check-ignore -q server/public.previous/example.js
 git -C "$REPO" check-ignore -q server/storage/logs/server.log
 
+printf '%s\n' '[installer-test] post-migration rollback keeps compatible schema'
+mkdir -p "$temp_dir/rollback-repo/server/storage"
+printf '%s' 'migrated-schema' >"$temp_dir/rollback-repo/server/storage/anythingllm.db"
+printf '%s' 'old-schema' >"$temp_dir/old.db"
+POLICY_REPO_DIR="$temp_dir/rollback-repo" \
+POLICY_LAST_DB_BACKUP="$temp_dir/old.db" \
+POLICY_DB_SCHEMA_MIGRATED=true \
+POLICY_COMMON_PATH="$REPO/scripts/macos/lib/common.sh" \
+POLICY_BUILD_PATH="$REPO/scripts/macos/lib/build.sh" \
+  /bin/bash -c 'source "$POLICY_COMMON_PATH"; source "$POLICY_BUILD_PATH"; policy_restore_database_backup'
+grep -q 'migrated-schema' "$temp_dir/rollback-repo/server/storage/anythingllm.db"
+
+printf '%s\n' '[installer-test] additive inventory migration preserves legacy rows'
+inventory_db="$temp_dir/inventory-migration.db"
+sqlite3 "$inventory_db" 'CREATE TABLE comparison_documents (id INTEGER PRIMARY KEY, status TEXT NOT NULL, originalFilename TEXT); INSERT INTO comparison_documents VALUES (7, "ready", "Altbestand.pdf");'
+sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260823160000_add_comparison_document_inventory/migration.sql"
+[ "$(sqlite3 "$inventory_db" 'SELECT status || ":" || originalFilename FROM comparison_documents WHERE id=7;')" = 'ready:Altbestand.pdf' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM pragma_table_info("comparison_documents") WHERE name IN ("sourceSha256","inventoryStatus","inventorySourceSha256");')" = '3' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items;')" = '0' ]
+
 printf '%s\n' '[installer-test] mocked LM Studio contract'
 chmod 700 "$REPO/scripts/macos/fixtures/mock-lms.sh"
 port_file="$temp_dir/lmstudio-port"
@@ -85,6 +105,14 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/chats/ChatGenerationManager.test.js \
   server/__tests__/utils/chats/pendingHistory.test.js \
   server/__tests__/utils/chats/threadNavigationStream.test.js \
+  server/__tests__/comparisonDocumentInventory.model.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonInventoryExtractor.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonInventoryService.test.js \
+  server/__tests__/utils/PolicyComparison/PolicyInferenceQueue.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonChunkIndex.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonHybridRetriever.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonBatchSynthesizer.test.js \
+  server/__tests__/utils/PolicyComparison/registerLifecycleHooks.test.js \
   server/__tests__/utils/boot/localBinding.test.js \
   server/__tests__/utils/helpers/updateENV.policyInstaller.test.js \
   collector/__tests__/utils/http/localBinding.test.js)

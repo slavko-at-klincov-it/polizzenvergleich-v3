@@ -123,6 +123,20 @@ describe("ComparisonDocumentService", () => {
       JSON.stringify({
         title: "Polizze A.pdf",
         pageContent: "Versicherung mit Selbstbehalt.",
+        pdfExtraction: {
+          complete: true,
+          sourceSha256: "a".repeat(64),
+          totalPages: 1,
+          pages: [
+            {
+              pageNumber: 1,
+              start: 0,
+              end: "Versicherung mit Selbstbehalt.".length,
+              method: "native",
+              status: "ok",
+            },
+          ],
+        },
       })
     );
     WorkspaceParsedFiles.get.mockResolvedValue(parsedFile);
@@ -200,6 +214,28 @@ describe("ComparisonDocumentService", () => {
     );
   });
 
+  it("coalesces duplicate embed requests for the same parsed file", async () => {
+    let releaseVector;
+    VectorDb.addDocumentToNamespace.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseVector = () => resolve({ vectorized: true, error: null });
+        })
+    );
+    const args = { workspace, thread, user, parsedFileId: parsedFile.id };
+    const first = ComparisonDocumentService.embedParsedFile(args);
+    const second = ComparisonDocumentService.embedParsedFile(args);
+    while (!releaseVector)
+      await new Promise((resolve) => setImmediate(resolve));
+    expect(WorkspaceParsedFiles.get).toHaveBeenCalledTimes(1);
+    releaseVector();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(VectorDb.addDocumentToNamespace).toHaveBeenCalledTimes(1);
+    expect(ComparisonDocument.reserve).toHaveBeenCalledTimes(1);
+    expect(firstResult).toEqual(secondResult);
+  });
+
   it("rolls back vector artifacts and keeps the parsed file when embedding fails", async () => {
     VectorDb.addDocumentToNamespace.mockResolvedValue({
       vectorized: false,
@@ -247,6 +283,26 @@ describe("ComparisonDocumentService", () => {
       })
     ).rejects.toMatchObject({ statusCode: 415 });
     expect(ComparisonDocument.reserve).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before embedding when the canonical page map is incomplete", async () => {
+    fs.readFileSync.mockReturnValue(
+      JSON.stringify({
+        title: "Polizze A.pdf",
+        pageContent: "Unvollständiger Text",
+        pdfExtraction: { complete: false, pages: [] },
+      })
+    );
+
+    await expect(
+      ComparisonDocumentService.embedParsedFile({
+        workspace,
+        thread,
+        user,
+        parsedFileId: parsedFile.id,
+      })
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(VectorDb.addDocumentToNamespace).not.toHaveBeenCalled();
   });
 
   it("rolls back a created workspace document when a retrieval hook fails", async () => {

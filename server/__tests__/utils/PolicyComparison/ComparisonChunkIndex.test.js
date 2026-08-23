@@ -42,4 +42,43 @@ describe("ComparisonChunkIndex query preparation", () => {
       )
     ).toEqual(expect.arrayContaining(["selbstbehalt", "franchise"]));
   });
+
+  test("recognizes natural generic broker wording without using filler terms", () => {
+    expect(
+      ComparisonChunkIndex.isGenericComparison(
+        "Was sind die Unterschiede in den beiden Versicherungen?"
+      )
+    ).toBe(true);
+    expect(
+      ComparisonChunkIndex.isGenericComparison(
+        "Analysiere beide Verträge vollständig"
+      )
+    ).toBe(true);
+    expect(
+      ComparisonChunkIndex.isGenericComparison(
+        "Vergleiche beide Policen und nenne Vor- und Nachteile"
+      )
+    ).toBe(true);
+  });
+
+  test("does not treat short query fragments as exact substring matches", () => {
+    expect(
+      ComparisonChunkIndex.exactTermMatches(
+        "Die Versicherung leistet bei Feuer.",
+        "in"
+      )
+    ).toBe(false);
+    expect(
+      ComparisonChunkIndex.exactTermMatches(
+        "Vandalismus ist bis EUR 25.000 versichert.",
+        "vandalismus"
+      )
+    ).toBe(true);
+    expect(
+      ComparisonChunkIndex.exactTermMatches(
+        "Der Betrag ist vom Kunden selbst zu tragen.",
+        "selbst zu tragen"
+      )
+    ).toBe(true);
+  });
 });

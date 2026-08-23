@@ -12,6 +12,7 @@ const {
   assemblePdfExtraction,
   sha256File,
 } = require("./PdfExtractionAssembler");
+const { assessPageText } = require("./PageTextQuality");
 
 async function asPdf({
   fullFilePath = "",
@@ -72,23 +73,37 @@ async function asPdf({
         };
       }
       if (ocrPage.pageContent) {
+        const ocrQuality = assessPageText(ocrPage.pageContent);
+        if (ocrQuality.needsOcr) {
+          return {
+            pageNumber,
+            text: "",
+            method: "ocr",
+            status: "failed",
+            quality: { native: quality, ocr: ocrQuality },
+            ocrConfidence: ocrPage.confidence,
+            error: `OCR text quality is insufficient: ${ocrQuality.reason}.`,
+          };
+        }
         return {
           pageNumber,
           text: ocrPage.pageContent,
           method: "ocr",
           status: "ok",
-          quality,
+          quality: { native: quality, ocr: ocrQuality },
           ocrConfidence: ocrPage.confidence,
         };
       }
       if (nativePage.pageContent) {
         return {
           pageNumber,
-          text: nativePage.pageContent,
-          method: "native",
-          status: "ocr_empty_native_fallback",
+          text: "",
+          method: "ocr",
+          status: "failed",
           quality,
           ocrConfidence: ocrPage.confidence,
+          error:
+            "OCR returned no usable text for a page whose native text layer failed quality checks.",
         };
       }
       return {

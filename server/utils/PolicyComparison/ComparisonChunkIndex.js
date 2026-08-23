@@ -1,5 +1,6 @@
 const prisma = require("../prisma");
 const { PageAwareTextSplitter } = require("../PageAwareTextSplitter");
+const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 
 const STOP_WORDS = new Set([
   "aber",
@@ -17,9 +18,16 @@ const STOP_WORDS = new Set([
   "eine",
   "einer",
   "eines",
+  "einen",
+  "einem",
+  "es",
   "für",
   "ist",
+  "in",
+  "ich",
+  "im",
   "mit",
+  "beim",
   "oder",
   "sind",
   "und",
@@ -29,37 +37,23 @@ const STOP_WORDS = new Set([
   "von",
   "was",
   "welche",
+  "welcher",
+  "welches",
+  "welchen",
   "wie",
+  "wo",
   "zu",
   "zwischen",
+  "am",
+  "zum",
+  "zur",
 ]);
 
-const SYNONYM_GROUPS = [
-  [
-    "selbstbehalt",
-    "selbstbeteiligung",
-    "franchise",
-    "eigenanteil",
-    "selbst zu tragen",
-  ],
-  ["prämie", "praemie", "beitrag", "jahresbeitrag", "versicherungsentgelt"],
-  ["deckungssumme", "versicherungssumme", "höchstleistung", "limit"],
-  ["ausschluss", "ausgeschlossen", "keine deckung", "nicht versichert"],
-  ["obliegenheit", "pflicht", "anzeigepflicht", "meldepflicht"],
-  ["wartezeit", "karenz", "beginn", "ablauf", "laufzeit", "kündigung"],
-  ["schaden", "schadenfall", "versicherungsfall", "leistung"],
-];
-
-const DEFAULT_COMPARISON_TERMS = [
-  "selbstbehalt",
-  "prämie",
-  "deckungssumme",
-  "ausschluss",
-  "obliegenheit",
-  "wartezeit",
-  "kündigung",
-  "schadenfall",
-];
+const SYNONYM_GROUPS = FALLBACK_TOPICS.map((topic) => topic.terms);
+const FALLBACK_QUERY_TERMS = FALLBACK_TOPICS.map((topic) => topic.terms[0]);
+// Backward-compatible export and fallback catalog. The dynamic inventory is
+// authoritative; this list remains available for legacy callers and recovery.
+const DEFAULT_COMPARISON_TERMS = FALLBACK_QUERY_TERMS;
 
 const GENERIC_COMPARISON_WORDS = new Set([
   "beide",
@@ -75,6 +69,39 @@ const GENERIC_COMPARISON_WORDS = new Set([
   "ausführlich",
   "ausfuehrlich",
   "miteinander",
+  "unterschied",
+  "unterschiede",
+  "versicherung",
+  "versicherungen",
+  "analysiere",
+  "analysieren",
+  "nenne",
+  "vorteil",
+  "vorteile",
+  "vor",
+  "nachteil",
+  "nachteile",
+  "gegenüberstellung",
+  "gegenueberstellung",
+  "hoch",
+  "deckung",
+  "deckungen",
+  "leistung",
+  "leistungen",
+  "gilt",
+  "gelten",
+  "gibt",
+  "geben",
+  "hat",
+  "haben",
+  "besteht",
+  "bestehen",
+  "greift",
+  "greifen",
+  "umfasst",
+  "enthalten",
+  "beinhaltet",
+  "versichert",
 ]);
 
 /**
@@ -98,7 +125,17 @@ const ComparisonChunkIndex = {
 
   isGenericComparison(query = "") {
     const normalized = this.normalize(query);
-    if (!/\bvergleich(?:e|en)?\b/u.test(normalized)) return false;
+    const broadComparisonIntent =
+      /\b(?:vorteile?|nachteile?|deckungen?|leistungen?|inhalt|inhalte|vollständig|vollstaendig|komplett|besser|schlechter)\b/u.test(
+        normalized
+      );
+    if (broadComparisonIntent) return true;
+    if (
+      !/\b(?:vergleich(?:e|en)?|unterschiede?|analysier\w*|gegenüberstell\w*|gegenueberstell\w*)\b/u.test(
+        normalized
+      )
+    )
+      return false;
     const tokens = normalized.match(/[\p{L}\p{N}€%]+/gu) || [];
     const meaningful = tokens.filter(
       (token) =>
@@ -124,24 +161,83 @@ const ComparisonChunkIndex = {
     // that case, search the critical contract categories even when filler
     // words such as "beiden Policen" survived stop-word filtering.
     if (this.isGenericComparison(query) || terms.length === 0)
-      terms.push(...DEFAULT_COMPARISON_TERMS);
+      terms.push(...FALLBACK_QUERY_TERMS);
     return [
       ...new Set(terms.map((term) => this.normalize(term)).filter(Boolean)),
     ];
   },
 
+  qualifierTerms(query = "", topicTerms = []) {
+    const normalizedTopicTerms = topicTerms.map((term) => this.normalize(term));
+    const relatedAliases = SYNONYM_GROUPS.filter((group) =>
+      group.some((alias) =>
+        normalizedTopicTerms.some(
+          (topicTerm) =>
+            this.exactTermMatches(alias, topicTerm) ||
+            this.exactTermMatches(topicTerm, alias)
+        )
+      )
+    ).flat();
+    const vocabulary = [...normalizedTopicTerms, ...relatedAliases].map(
+      (term) => this.normalize(term)
+    );
+    const tokens = this.normalize(query).match(/[\p{L}\p{N}€%]+/gu) || [];
+    return [
+      ...new Set(
+        tokens.filter(
+          (token) =>
+            token.length > 1 &&
+            !STOP_WORDS.has(token) &&
+            !GENERIC_COMPARISON_WORDS.has(token) &&
+            !vocabulary.some(
+              (term) =>
+                this.exactTermMatches(token, term) ||
+                this.exactTermMatches(term, token)
+            )
+        )
+      ),
+    ];
+  },
+
   ftsQuery(query = "") {
-    return this.queryTerms(query)
-      .flatMap((term) => term.split(" "))
+    return this.ftsQueryFromTerms(this.queryTerms(query));
+  },
+
+  ftsQueryFromTerms(terms = []) {
+    return terms
+      .map((term) => this.normalize(term))
       .filter(Boolean)
-      .map((term) => `"${term.replaceAll('"', '""')}"`)
+      .map((term) => {
+        const escaped = term.replaceAll('"', '""');
+        return !term.includes(" ") && term.length >= 6
+          ? `"${escaped}"*`
+          : `"${escaped}"`;
+      })
       .join(" OR ");
+  },
+
+  exactTermMatches(text = "", term = "") {
+    const normalizedText = this.normalize(text);
+    const normalizedTerm = this.normalize(term);
+    if (!normalizedText || !normalizedTerm || normalizedTerm.length < 3)
+      return false;
+    const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const phrase = normalizedTerm.includes(" ");
+    const suffix =
+      !phrase && normalizedTerm.length >= 6
+        ? "(?:s|es|e|en|er|ern|regelung(?:en)?|schaden|schäden)?"
+        : "";
+    const pattern = escaped.replace(/\s+/g, "\\s+") + suffix;
+    return new RegExp(
+      `(^|[^\\p{L}\\p{N}])${pattern}(?=$|[^\\p{L}\\p{N}])`,
+      "u"
+    ).test(normalizedText);
   },
 
   async ensureSchema(db = prisma) {
     if (!this._schemaPromise) {
-      this._schemaPromise = db
-        .$executeRawUnsafe(
+      this._schemaPromise = (async () => {
+        await db.$executeRawUnsafe(
           `
           CREATE VIRTUAL TABLE IF NOT EXISTS comparison_document_chunks_fts
           USING fts5(
@@ -159,13 +255,13 @@ const ComparisonChunkIndex = {
             tokenize = 'unicode61 remove_diacritics 2'
           )
         `
-        )
-        .catch((error) => {
-          this._schemaPromise = null;
-          throw new Error(
-            `Could not initialize policy full-text index: ${error.message}`
-          );
-        });
+        );
+      })().catch((error) => {
+        this._schemaPromise = null;
+        throw new Error(
+          `Could not initialize policy full-text index: ${error.message}`
+        );
+      });
     }
     await this._schemaPromise;
   },
@@ -184,13 +280,11 @@ const ComparisonChunkIndex = {
       chunkSize: 1_500,
       chunkOverlap: 120,
     });
-
     await db.$transaction(async (transaction) => {
       await transaction.$executeRawUnsafe(
         "DELETE FROM comparison_document_chunks_fts WHERE comparisonDocumentId = ?",
         comparisonDocument.id
       );
-
       for (const chunk of chunks) {
         await transaction.$executeRawUnsafe(
           `INSERT INTO comparison_document_chunks_fts (
@@ -213,7 +307,9 @@ const ComparisonChunkIndex = {
       }
     });
 
-    return { indexed: chunks.length };
+    return {
+      indexed: chunks.length,
+    };
   },
 
   async removeDocument(comparisonDocumentId, db = prisma) {
@@ -250,12 +346,16 @@ const ComparisonChunkIndex = {
     threadId,
     comparisonDocumentId,
     query,
+    terms = null,
     limit = 8,
     db = prisma,
   }) {
     if (!threadId || !comparisonDocumentId) return [];
     await this.ensureSchema(db);
-    const match = this.ftsQuery(query);
+    const exactTerms = Array.isArray(terms)
+      ? [...new Set(terms.map((term) => this.normalize(term)).filter(Boolean))]
+      : this.queryTerms(query);
+    const match = this.ftsQueryFromTerms(exactTerms);
     if (!match) return [];
 
     const rows = await db.$queryRawUnsafe(
@@ -275,11 +375,9 @@ const ComparisonChunkIndex = {
       Math.max(1, Math.min(Number(limit) || 8, 20))
     );
 
-    const exactTerms = this.queryTerms(query);
     return rows.map((row) => {
-      const normalizedText = this.normalize(row.text);
       const exactMatch = exactTerms.some((term) =>
-        normalizedText.includes(term)
+        this.exactTermMatches(row.text, term)
       );
       return {
         comparisonDocumentId: Number(row.comparisonDocumentId),
@@ -291,10 +389,36 @@ const ComparisonChunkIndex = {
         chunkIndex: Number(row.chunkIndex),
         text: row.text,
         exactMatch,
+        matchedTerms: exactTerms.filter((term) =>
+          this.exactTermMatches(row.text, term)
+        ),
         lexicalRank: Number(row.rank),
         retrieval: "lexical",
       };
     });
+  },
+
+  async searchTopic({
+    threadId,
+    comparisonDocumentId,
+    topic,
+    limit = 2,
+    db = prisma,
+  }) {
+    if (!topic?.id || !Array.isArray(topic.terms)) return [];
+    const results = await this.searchDocument({
+      threadId,
+      comparisonDocumentId,
+      query: topic.label,
+      terms: [...topic.terms, ...(topic.qualifierTerms || [])],
+      limit,
+      db,
+    });
+    return results.map((result) => ({
+      ...result,
+      topicId: topic.id,
+      topicLabel: topic.label,
+    }));
   },
 
   async searchComparisonCatalog({
@@ -315,7 +439,6 @@ const ComparisonChunkIndex = {
         }))
       );
     }
-
     const seen = new Set();
     return catalogResults.filter((result) => {
       const key = `${result.comparisonDocumentId}:${result.pageNumber ?? "?"}:${result.chunkIndex}`;
@@ -329,6 +452,7 @@ const ComparisonChunkIndex = {
 module.exports = {
   ComparisonChunkIndex,
   DEFAULT_COMPARISON_TERMS,
+  FALLBACK_QUERY_TERMS,
   SYNONYM_GROUPS,
   GENERIC_COMPARISON_WORDS,
 };

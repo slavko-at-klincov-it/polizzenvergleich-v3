@@ -4,6 +4,8 @@
 # before Prisma runs; the frontend is swapped only after a successful build.
 
 policy_build_application() {
+  POLICY_DB_SCHEMA_MIGRATED=false
+  export POLICY_DB_SCHEMA_MIGRATED
   policy_export_runtime_path
   export PUPPETEER_SKIP_DOWNLOAD="true"
   policy_log "Sichere die gestoppte Datenbank ..."
@@ -34,6 +36,10 @@ policy_build_application() {
   policy_log "Erzeuge Datenbankclient und führe Migrationen aus ..."
   (cd "$POLICY_REPO_DIR/server" && ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma)
   (cd "$POLICY_REPO_DIR/server" && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma)
+  # All policy migrations are additive. Once deploy succeeded, restoring only
+  # the pre-migration DB would pair new code with an old schema (Prisma P2022).
+  POLICY_DB_SCHEMA_MIGRATED=true
+  export POLICY_DB_SCHEMA_MIGRATED
 
   policy_log "Baue die lokale Oberfläche ..."
   (cd "$POLICY_REPO_DIR/frontend" && yarn build)
@@ -54,6 +60,10 @@ policy_build_application() {
 policy_restore_database_backup() {
   [ -n "${POLICY_LAST_DB_BACKUP:-}" ] || return 0
   [ -s "$POLICY_LAST_DB_BACKUP" ] || return 0
+  if [ "${POLICY_DB_SCHEMA_MIGRATED:-false}" = "true" ]; then
+    policy_warn "Migration war erfolgreich; die additive, neue Datenbank bleibt erhalten. Ein DB-only Rollback wäre schema-inkonsistent."
+    return 0
+  fi
   local database="$POLICY_REPO_DIR/server/storage/anythingllm.db"
   [ "$database" = "$POLICY_REPO_DIR/server/storage/anythingllm.db" ] || return 1
   /bin/cp -p "$POLICY_LAST_DB_BACKUP" "$database"
