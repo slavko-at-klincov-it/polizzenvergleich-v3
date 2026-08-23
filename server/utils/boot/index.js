@@ -17,6 +17,10 @@ const { TelegramBotService } = require("../telegramBot");
 // Update .env keys with the correct values and boot. These are temporary and not real SSL certs - only use for local.
 // Test with https://localhost:3001/api/ping
 // build and copy frontend to server/public with correct API_BASE and start server in prod model and all should be ok
+function getServerHost() {
+  return process.env.SERVER_HOST || "0.0.0.0";
+}
+
 function bootSSL(app, port = 3001) {
   try {
     console.log(
@@ -30,7 +34,7 @@ function bootSSL(app, port = 3001) {
     const server = https.createServer(credentials, app);
 
     server
-      .listen(port, async () => {
+      .listen(port, getServerHost(), async () => {
         await markOnboarded();
         await setupTelemetry();
         new CommunicationKey(true);
@@ -39,7 +43,9 @@ function bootSSL(app, port = 3001) {
         await eagerLoadContextWindows();
         await PushNotifications.setupPushNotificationService();
         await TelegramBotService.bootIfActive();
-        console.log(`Primary server in HTTPS mode listening on port ${port}`);
+        console.log(
+          `Primary server in HTTPS mode listening on ${getServerHost()}:${port}`
+        );
       })
       .on("error", catchSigTerms);
 
@@ -63,7 +69,7 @@ function bootHTTP(app, port = 3001) {
   if (!app) throw new Error('No "app" defined - crashing!');
 
   app
-    .listen(port, async () => {
+    .listen(port, getServerHost(), async () => {
       await markOnboarded();
       await setupTelemetry();
       new CommunicationKey(true);
@@ -72,7 +78,9 @@ function bootHTTP(app, port = 3001) {
       await eagerLoadContextWindows();
       await PushNotifications.setupPushNotificationService();
       await TelegramBotService.bootIfActive();
-      console.log(`Primary server in HTTP mode listening on port ${port}`);
+      console.log(
+        `Primary server in HTTP mode listening on ${getServerHost()}:${port}`
+      );
     })
     .on("error", catchSigTerms);
 
@@ -93,4 +101,5 @@ function catchSigTerms() {
 module.exports = {
   bootHTTP,
   bootSSL,
+  getServerHost,
 };

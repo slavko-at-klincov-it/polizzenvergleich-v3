@@ -6,6 +6,14 @@ import DndIcon from "./dnd-icon.png";
 import Workspace from "@/models/workspace";
 import showToast from "@/utils/toast";
 import { THREAD_CREATED_EVENT } from "@/components/Sidebar/ActiveWorkspaces/ThreadContainer";
+import comparisonDocumentMerge from "./comparisonDocumentMerge.cjs";
+
+const {
+  availableComparisonSlots,
+  comparisonDocumentAttachment,
+  deleteParsedComparisonSource,
+  mergeHydratedComparisonDocuments,
+} = comparisonDocumentMerge;
 
 export const DndUploaderContext = createContext();
 export const REMOVE_ATTACHMENT_EVENT = "ATTACHMENT_REMOVE";
@@ -32,6 +40,8 @@ export const PARSED_FILE_ATTACHMENT_REMOVED_EVENT =
  * @property {string|null} modelTokenLabel - Short name of the tokenizer/model.
  * @property {number|null} qwenTokenCount - Exact Qwen tokens in the extracted document text.
  * @property {number|null} parsedFileId - Thread-scoped parsed source used for retry/cleanup.
+ * @property {number|string|null} fileId - Stable upload identity, equivalent to parsedFileId.
+ * @property {number|string|null} comparisonDocumentId - Stable server-side comparison-document identity.
  * @property {('attachment'|'comparison_document')} type - Images are prompt attachments; PDFs are thread comparison documents.
  */
 
@@ -63,6 +73,7 @@ export function DnDFileUploaderProvider({
   );
   const threadRef = useRef(threadSlug ? { slug: threadSlug } : null);
   const threadPromiseRef = useRef(null);
+  const pdfReservationsRef = useRef(0);
 
   function updateFiles(updater) {
     const previous = filesRef.current;
@@ -213,12 +224,23 @@ export function DnDFileUploaderProvider({
 
     const activeSlug = threadRef.current?.slug;
     if (!document?.id) {
-      if (event.detail?.parsedFileId) {
-        await Workspace.deleteParsedFiles(workspace.slug, [
-          event.detail.parsedFileId,
-        ]);
-      }
-      updateFiles((prev) => prev.filter((prevFile) => prevFile.uid !== uid));
+      beginProcessing();
+      const removal = await deleteParsedComparisonSource({
+        workspaceSlug: workspace.slug,
+        parsedFileId: event.detail?.parsedFileId,
+        deleteParsedFiles: Workspace.deleteParsedFiles,
+      });
+      if (removal.success)
+        updateFiles((prev) => prev.filter((prevFile) => prevFile.uid !== uid));
+      else
+        updateFiles((prev) =>
+          prev.map((item) =>
+            item.uid === uid
+              ? { ...item, status: "failed", error: removal.error }
+              : item
+          )
+        );
+      endProcessing();
       return;
     }
     if (!activeSlug) return;
@@ -350,29 +372,41 @@ export function DnDFileUploaderProvider({
         "warning"
       );
 
-    const existingPdfCount = filesRef.current.filter(
-      (item) =>
-        item.type === "comparison_document" &&
-        (item.status !== "failed" || Boolean(item.document?.id))
-    ).length;
-    const acceptedPdfs = pdfs.slice(0, Math.max(0, 2 - existingPdfCount));
+    const acceptedPdfs = pdfs.slice(
+      0,
+      availableComparisonSlots(filesRef.current, pdfReservationsRef.current)
+    );
     if (acceptedPdfs.length < pdfs.length)
       showToast(
         "Pro Vergleich können maximal zwei PDFs verwendet werden.",
         "warning"
       );
+    pdfReservationsRef.current += acceptedPdfs.length;
 
-    const imageAttachments = await Promise.all(
-      images.map(async (file) => ({
-        uid: v4(),
-        file,
-        contentString: await toBase64(file),
-        status: "success",
-        error: null,
-        type: "attachment",
-        ...(storageFilename && { storageFilename }),
-      }))
-    );
+    let imageAttachments;
+    try {
+      imageAttachments = await Promise.all(
+        images.map(async (file) => ({
+          uid: v4(),
+          file,
+          contentString: await toBase64(file),
+          status: "success",
+          error: null,
+          type: "attachment",
+          ...(storageFilename && { storageFilename }),
+        }))
+      );
+    } catch (error) {
+      pdfReservationsRef.current = Math.max(
+        0,
+        pdfReservationsRef.current - acceptedPdfs.length
+      );
+      showToast(
+        error.message || "Das Bild konnte nicht gelesen werden.",
+        "error"
+      );
+      return;
+    }
     const pdfAttachments = acceptedPdfs.map((file) => ({
       uid: v4(),
       file,
@@ -382,23 +416,37 @@ export function DnDFileUploaderProvider({
       document: null,
       type: "comparison_document",
     }));
-    updateFiles((previous) => [
-      ...previous,
-      ...imageAttachments,
-      ...pdfAttachments,
-    ]);
+    let queuedPdfAttachments = [];
+    updateFiles((previous) => {
+      queuedPdfAttachments = pdfAttachments.slice(
+        0,
+        availableComparisonSlots(previous)
+      );
+      return [...previous, ...imageAttachments, ...queuedPdfAttachments];
+    });
+    pdfReservationsRef.current = Math.max(
+      0,
+      pdfReservationsRef.current - acceptedPdfs.length
+    );
 
-    if (pdfAttachments.length === 0) return;
+    if (queuedPdfAttachments.length < pdfAttachments.length)
+      showToast(
+        "Der Vergleich enthält bereits zwei PDFs. Zusätzliche Uploads wurden nicht übernommen.",
+        "warning"
+      );
+    if (queuedPdfAttachments.length === 0) return;
     beginProcessing();
     try {
       const thread = await ensureComparisonThread();
       await Promise.all(
-        pdfAttachments.map((attachment) =>
+        queuedPdfAttachments.map((attachment) =>
           ingestComparisonDocument(attachment, thread.slug)
         )
       );
     } catch (error) {
-      const ids = new Set(pdfAttachments.map((attachment) => attachment.uid));
+      const ids = new Set(
+        queuedPdfAttachments.map((attachment) => attachment.uid)
+      );
       updateFiles((previous) =>
         previous.map((item) =>
           ids.has(item.uid)
@@ -434,6 +482,7 @@ export function DnDFileUploaderProvider({
                 modelTokenLabel: parsedFile.modelTokenLabel ?? null,
                 qwenTokenCount: parsedFile.qwenTokenCount ?? null,
                 parsedFileId: parsedFile.id,
+                fileId: parsedFile.id,
               }
             : item
         )
@@ -489,6 +538,11 @@ export function DnDFileUploaderProvider({
                 error: error.message,
                 document: error.document ?? item.document,
                 parsedFileId: error.parsedFileId ?? item.parsedFileId ?? null,
+                fileId:
+                  error.parsedFileId ??
+                  item.fileId ??
+                  item.parsedFileId ??
+                  null,
               }
             : item
         )
@@ -518,11 +572,11 @@ export function DnDFileUploaderProvider({
 }
 
 export default function DnDFileUploaderWrapper({ children }) {
-  const { onDrop, ready, dragging, setDragging } =
+  const { onDrop, ready, dragging, setDragging, isProcessing } =
     useContext(DndUploaderContext);
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
-    disabled: !ready,
+    disabled: !ready || isProcessing,
     noClick: true,
     noKeyboard: true,
     onDragEnter: () => setDragging(true),
@@ -592,67 +646,4 @@ function emitComparisonDocumentsChanged(workspaceSlug, threadSlug) {
       detail: { workspaceSlug, threadSlug },
     })
   );
-}
-
-function mergeHydratedComparisonDocuments(previous, hydrated) {
-  const promptAttachments = previous.filter(
-    (item) => item.type === "attachment"
-  );
-  const current = previous.filter(
-    (item) => item.type === "comparison_document"
-  );
-  const consumed = new Set();
-  const remoteDocuments = hydrated.map((remote) => {
-    const localIndex = current.findIndex(
-      (local, index) =>
-        !consumed.has(index) &&
-        ((local.document?.id && local.document.id === remote.document?.id) ||
-          local.file?.name === remote.file?.name)
-    );
-    if (localIndex < 0) return remote;
-    consumed.add(localIndex);
-    const local = current[localIndex];
-    return {
-      ...remote,
-      uid: local.uid,
-      file: local.file || remote.file,
-    };
-  });
-  const localOnly = current.filter(
-    (item, index) =>
-      !consumed.has(index) &&
-      (["reading", "indexing", "deleting"].includes(item.status) ||
-        (item.status === "failed" && !item.document?.id))
-  );
-  return [...promptAttachments, ...localOnly, ...remoteDocuments];
-}
-
-function comparisonDocumentAttachment(document = {}, uid = null) {
-  const filename =
-    document.originalFilename ||
-    document.name ||
-    document.filename ||
-    document.title ||
-    "PDF-Dokument";
-  const status = ["indexing", "ready", "deleting", "failed"].includes(
-    document.status
-  )
-    ? document.status
-    : "ready";
-  return {
-    uid: uid || `comparison-document-${document.id}`,
-    file: { name: filename, type: "application/pdf" },
-    contentString: null,
-    status,
-    error: document.error ?? null,
-    document,
-    tokenCountEstimate:
-      document.tokenCountEstimate ?? document.tokenCount ?? null,
-    modelTokenCount: document.modelTokenCount ?? document.tokenCount ?? null,
-    modelTokenLabel: document.modelTokenLabel ?? "Modell",
-    qwenTokenCount: document.qwenTokenCount ?? null,
-    parsedFileId: document.parsedFileId ?? null,
-    pageCount: document.pageCount ?? document.pages ?? null,
-    type: "comparison_document",
-  };
 }

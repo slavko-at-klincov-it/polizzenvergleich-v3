@@ -4,6 +4,8 @@
 > This private fork adds a thread-isolated, two-PDF policy-comparison workflow.
 > See [POLIZZENVERGLEICH_SETUP_DE.md](./POLIZZENVERGLEICH_SETUP_DE.md) for the
 > German deployment and acceptance guide.
+> On a prepared Apple-Silicon Mac, run [`install.command`](./install.command)
+> for the native customer installation and automatic readiness check.
 
 > [!NOTE]
 > We are also working on [Open Computer](/open-computer) which gives an entire computer environment for AI Agents to use.

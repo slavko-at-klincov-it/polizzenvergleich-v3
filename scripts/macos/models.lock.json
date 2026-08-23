@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "chat": {
+    "publisher": "mlx-community",
+    "repository": "gemma-4-26b-a4b-it-4bit",
+    "observedRevision": "0d77464eeb233a2da68ebf9d7dc4edaac7db956d",
+    "downloadUrl": "https://huggingface.co/mlx-community/gemma-4-26b-a4b-it-4bit",
+    "modelKey": "gemma-4-26b-a4b-it",
+    "indexedModelIdentifier": "mlx-community/gemma-4-26b-a4b-it-4bit",
+    "artifacts": {
+      "chat_template.jinja": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+      "config.json": "419e13a27ec359654c1ce7dd06d1a87149fd07d0c8af9f770494185e62e1b2ba",
+      "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+      "model-00001-of-00003.safetensors": "683f420ee09550b8027bf0335c4202e196b37eb520b60a4bcbe8690b9e388c07",
+      "model-00002-of-00003.safetensors": "feab2873c2976fb7ed666f8462549564a29409364388e0c8f6b015729d165e15",
+      "model-00003-of-00003.safetensors": "bc607486deb1de5bc7e459932fda5c776a4f816b368feaa661bab8cfbb47e567",
+      "model.safetensors.index.json": "bf198c9f5ea6462addca1966e5dd669c407537a876e82cf06db9084c5c850b13",
+      "processor_config.json": "de3e580aebdc98272d4c4547daffe6525fcbae18a83a0e0bcf0d7444d4ee6f37",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656"
+    },
+    "identifier": "policy-chat",
+    "contextLength": 32768,
+    "parallel": 1
+  },
+  "embedding": {
+    "publisher": "Hanno-Labs",
+    "repository": "dinghy-law-4b-v1-gguf",
+    "revision": "25557eeac86b901822eedbffc0d34574f43848f6",
+    "filename": "dinghy-law-4b-v1-Q6_K.gguf",
+    "downloadUrl": "https://huggingface.co/Hanno-Labs/dinghy-law-4b-v1-gguf/resolve/25557eeac86b901822eedbffc0d34574f43848f6/dinghy-law-4b-v1-Q6_K.gguf",
+    "modelKey": "dinghy-law-4b-v1",
+    "indexedModelIdentifier": "Hanno-Labs/dinghy-law-4b-v1-gguf/dinghy-law-4b-v1-Q6_K.gguf",
+    "pathIsFile": true,
+    "artifacts": {
+      "dinghy-law-4b-v1-Q6_K.gguf": "eb8c6b3d5291505d0eaee15558f33511148b124d06ffc026baa3d6cad0fb744b"
+    },
+    "identifier": "dinghy-law",
+    "dimensions": 2560
+  },
+  "lmsEmbed": {
+    "repository": "slavko-at-klincov-it/lms-embed",
+    "revision": "c0cd58ff6e09f10bc036840d593173669be6fe37",
+    "downloadUrl": "https://raw.githubusercontent.com/slavko-at-klincov-it/lms-embed/c0cd58ff6e09f10bc036840d593173669be6fe37/lms-embed",
+    "sha256": "cd858ec7cc39e4952a34cdeca1123a762195e0bbfbb83f6f1a239e6d9c148803"
+  }
+}

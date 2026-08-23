@@ -5,6 +5,66 @@ ausgelegt: neuer Vergleich, zwei PDFs in den Chat ziehen, Frage oder Auftrag
 eingeben, fertig. Die technische Verarbeitung läuft threadbezogen im
 Hintergrund.
 
+## Empfohlene Kundeninstallation
+
+Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
+`lms`-CLI. Der private GitHub-Zugriff muss einmalig eingerichtet sein. Danach
+lädt und installiert diese einzelne Terminalzeile das Produkt:
+
+```bash
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.1.0 && "$HOME/Polizzenvergleich/install.command"
+```
+
+Der Installer:
+
+- prüft macOS, Apple Silicon, freien Speicher und LM Studio,
+- installiert eine eigene, geprüfte Node-Laufzeit ohne Homebrew oder `sudo`,
+- lädt Gemma 4 und Dinghy Law bei Bedarf und prüft beide APIs,
+- erzeugt lokale Geheimnisse und schützt Konfiguration und Kundendaten,
+- baut Frontend, Server und Collector und führt Produktionsmigrationen aus,
+- fragt Admin- und Maklerpasswort verdeckt ab,
+- richtet Rollen und den Workspace `Polizzenvergleich` ein,
+- installiert benutzerspezifische macOS-Autostartdienste,
+- führt einen Doctor-Test aus und öffnet erst danach die Oberfläche.
+
+Falls beide Modelle bereits in LM Studio vorhanden sind:
+
+```bash
+"$HOME/Polizzenvergleich/install.command" --skip-model-download
+```
+
+Beim ersten Lauf werden andere geladene LM-Studio-Modelle standardmäßig
+entladen, damit auf dem 32-GB-Mac genug RAM frei ist. Mit
+`--keep-loaded-models` lässt sich das bewusst verhindern; der Autostartjob
+entlädt später keine fremden Modelle.
+
+LM Studio selbst und die private GitHub-Anmeldung werden bewusst nicht still
+installiert oder umgangen. Beim ersten Login zeigt AnythingLLM einmalig die
+Wiederherstellungscodes; diese müssen sicher verwahrt werden.
+
+### Betrieb und Diagnose
+
+Der Installer legt `~/.local/bin/polizzenvergleich` an:
+
+```bash
+~/.local/bin/polizzenvergleich status
+~/.local/bin/polizzenvergleich doctor
+~/.local/bin/polizzenvergleich restart
+~/.local/bin/polizzenvergleich open
+~/.local/bin/polizzenvergleich logs
+```
+
+Updates werden absichtlich nicht direkt von einem veränderlichen `main`-Branch
+eingespielt. Dafür wird ein geprüfter Release-Stand mit Sicherungs- und
+Rollbackpfad bereitgestellt.
+
+`uninstall.command` entfernt nur Dienste und Starter. Kundendaten werden nicht
+automatisch gelöscht. Laufzeitdaten liegen in `server/storage`; Upload-Hotdir,
+Konfigurationen und Logs sind nur für den installierenden macOS-Benutzer lesbar.
+
+Die nachfolgenden manuellen Schritte bleiben als Reparatur- und
+Entwicklerreferenz erhalten.
+
 ## Festgelegtes Start-Setup für den 32-GB-Mac
 
 - Chatmodell: Gemma 4 26B-A4B Instruct, MLX 4-bit
@@ -32,8 +92,10 @@ noch von LM Studio als einfache produktive Option vorausgesetzt.
 6. Ergebnis mit Dokumentname und Seitennummer prüfen.
 
 Alte Kundendokumente werden nicht in neue Vergleiche einbezogen. Das Löschen
-eines Vergleichsthreads entfernt dessen Vergleichsdokumente, Vektoren,
-Volltextindex und lokale Quelldateien.
+eines Vergleichsthreads entfernt die zugeordneten Vergleichsdokumente,
+Vektoren und Volltexttreffer aus der aktiven Anwendung. Dateisystem-Backups und
+historische technische Metadaten unterliegen dem lokalen Backup- und
+Aufbewahrungskonzept; eine sichere SSD-Löschung wird nicht versprochen.
 
 ## Einmalige Admin-Einrichtung
 

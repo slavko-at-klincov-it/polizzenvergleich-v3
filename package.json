@@ -34,6 +34,8 @@
     "prisma:reset": "truncate -s 0 server/storage/anythingllm.db && yarn prisma:migrate",
     "prod:server": "cd server && yarn start",
     "prod:frontend": "cd frontend && yarn build",
+    "installer:test": "bash scripts/macos/tests/run.sh",
+    "installer:doctor": "bash scripts/macos/doctor.sh",
     "generate:cloudformation": "node cloud-deployments/aws/cloudformation/generate.mjs",
     "generate::gcp_deployment": "node cloud-deployments/gcp/deployment/generate.mjs",
     "translations:verify": "cd frontend/src/locales && node verifyTranslations.mjs",

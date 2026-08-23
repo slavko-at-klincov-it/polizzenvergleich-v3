@@ -1444,7 +1444,15 @@ function dumpENV() {
 
     "STORAGE_DIR",
     "SERVER_PORT",
+    "SERVER_HOST",
     "COLLECTOR_PORT",
+    "COLLECTOR_HOST",
+    "COLLECTOR_API_HOST",
+    "COLLECTOR_HOTDIR_PATH",
+    "MODEL_TOKENIZER_PATH",
+    "MODEL_TOKENIZER_LABEL",
+    "QWEN_TOKENIZER_PATH",
+    "EMBEDDING_QUERY_PREFIX",
     // For persistent data encryption
     "SIG_KEY",
     "SIG_SALT",

@@ -14,3 +14,10 @@ yarn.lock
 # Local isolated runtime data. May contain uploaded documents, databases,
 # logs, generated keys, and provider configuration; never commit it.
 test-storage/
+.codex/test-fix-loop/
+.runtime/
+server/public/
+server/public.new/
+server/public.previous/
+server/storage/logs/
+scripts/macos/.test-output/
