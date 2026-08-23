@@ -1478,6 +1478,7 @@ function dumpENV() {
     "QWEN_TOKENIZER_PATH",
     "EMBEDDING_QUERY_PREFIX",
     "POLICY_MANAGED_EMBEDDING",
+    "POLICY_SINGLE_USER_NO_AUTH",
     // For persistent data encryption
     "SIG_KEY",
     "SIG_SALT",

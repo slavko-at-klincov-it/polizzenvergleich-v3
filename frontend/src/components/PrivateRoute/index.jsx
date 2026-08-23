@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { FullScreenLoader } from "../Preloader";
 import validateSessionTokenForUser from "@/utils/session";
@@ -8,10 +8,12 @@ import { userFromStorage } from "@/utils/request";
 import System from "@/models/system";
 import UserMenu from "../UserMenu";
 import { KeyboardShortcutWrapper } from "@/utils/keyboardShortcuts";
+import { AuthContext } from "@/AuthContext";
 
 // Used only for Multi-user mode only as we permission specific pages based on auth role.
 // When in single user mode we just bypass any authchecks.
 function useIsAuthenticated() {
+  const { actions } = useContext(AuthContext);
   const [isAuthd, setIsAuthed] = useState(null);
   const [shouldRedirectToOnboarding, setShouldRedirectToOnboarding] =
     useState(false);
@@ -20,8 +22,13 @@ function useIsAuthenticated() {
   useEffect(() => {
     const validateSession = async () => {
       const onboardingComplete = await System.isOnboardingComplete();
-      const { MultiUserMode, RequiresAuth } = await System.keys();
+      const { MultiUserMode, RequiresAuth, PolicyNoAuthMode } =
+        await System.keys();
       setMultiUserMode(MultiUserMode);
+
+      if (PolicyNoAuthMode) {
+        actions.unsetUser();
+      }
 
       // Check for the onboarding redirect condition
       if (onboardingComplete === false) {
@@ -69,7 +76,7 @@ function useIsAuthenticated() {
       setIsAuthed(true);
     };
     validateSession();
-  }, []);
+  }, [actions]);
 
   return { isAuthd, shouldRedirectToOnboarding, multiUserMode };
 }

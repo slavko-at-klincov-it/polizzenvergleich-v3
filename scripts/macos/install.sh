@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # One-command native customer installation. Safe to re-run: configuration is
-# merged, passwords are requested only for missing users, and data is backed up.
+# merged, existing customer data is migrated safely, and data is backed up.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib/common.sh"
 source "$POLICY_SCRIPT_DIR/lib/runtime.sh"
@@ -11,13 +11,12 @@ source "$POLICY_SCRIPT_DIR/lib/services.sh"
 download_models=true
 unload_other=true
 dry_run=false
-non_interactive=false
 for argument in "$@"; do
   case "$argument" in
     --skip-model-download) download_models=false ;;
     --keep-loaded-models) unload_other=false ;;
     --dry-run) dry_run=true ;;
-    --non-interactive) non_interactive=true ;;
+    --non-interactive) ;;
     --help|-h)
       printf '%s\n' "Verwendung: ./install.command [--skip-model-download] [--keep-loaded-models] [--non-interactive] [--dry-run]"
       exit 0
@@ -29,8 +28,6 @@ done
 policy_log "Prüfe den Mac und das Projekt ..."
 [ "${POLICY_SERVER_PORT:-3002}" = "3002" ] || policy_die "Kundeninstaller verwendet fest Port 3002."
 [ "${POLICY_COLLECTOR_PORT:-8888}" = "8888" ] || policy_die "Kundeninstaller verwendet fest Port 8888."
-[ "${POLICY_ADMIN_USERNAME:-admin}" = "admin" ] || policy_die "Kundeninstaller verwendet fest den Admin-Namen 'admin'."
-[ "${POLICY_BROKER_USERNAME:-makler}" = "makler" ] || policy_die "Kundeninstaller verwendet fest den Makler-Namen 'makler'."
 policy_safe_repo_path
 policy_require_macos_arm64
 policy_require_memory
@@ -42,7 +39,7 @@ policy_require_port_available "${POLICY_COLLECTOR_PORT:-8888}"
 if [ "$download_models" = true ]; then policy_require_disk_space 26214400; else policy_require_disk_space 5242880; fi
 
 if [ "$dry_run" = true ]; then
-  policy_ok "Vorprüfung bestanden. Der echte Lauf würde Runtime, Modelle, Build, Datenbank, Benutzer und Autostart einrichten."
+  policy_ok "Vorprüfung bestanden. Der echte Lauf würde Runtime, Modelle, Build, Datenbank, lokalen Workspace und Autostart einrichten."
   exit 0
 fi
 
@@ -92,45 +89,8 @@ policy_build_application
 policy_log "Bereite deutsche und englische OCR-Sprachdaten vor ..."
 "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/prewarm-ocr.cjs"
 
-status_json="$($POLICY_NODE_BIN "$POLICY_SCRIPT_DIR/provision.cjs" status | tail -n 1)"
-needs_admin="$($POLICY_NODE_BIN -e 'const s=JSON.parse(process.argv[1]); process.stdout.write(String(s.needsAdminPassword))' "$status_json")"
-needs_broker="$($POLICY_NODE_BIN -e 'const s=JSON.parse(process.argv[1]); process.stdout.write(String(s.needsBrokerPassword))' "$status_json")"
-admin_password="${POLICY_ADMIN_PASSWORD:-}"
-broker_password="${POLICY_BROKER_PASSWORD:-}"
-
-read_new_password() {
-  local label="$1"
-  local first second
-  while true; do
-    read -r -s -p "$label (mindestens 8 Zeichen): " first </dev/tty
-    printf '\n' >/dev/tty
-    read -r -s -p "Passwort wiederholen: " second </dev/tty
-    printf '\n' >/dev/tty
-    if [ "${#first}" -lt 8 ]; then policy_warn "Das Passwort ist zu kurz."; continue; fi
-    if [ "$first" != "$second" ]; then policy_warn "Die Passwörter stimmen nicht überein."; continue; fi
-    POLICY_CAPTURED_PASSWORD="$first"
-    return
-  done
-}
-
-if [ "$needs_admin" = true ] && [ -z "$admin_password" ]; then
-  [ "$non_interactive" = false ] || policy_die "POLICY_ADMIN_PASSWORD fehlt für den nicht-interaktiven Lauf."
-  read_new_password "Neues Admin-Passwort"
-  admin_password="$POLICY_CAPTURED_PASSWORD"
-fi
-if [ "$needs_broker" = true ] && [ -z "$broker_password" ]; then
-  [ "$non_interactive" = false ] || policy_die "POLICY_BROKER_PASSWORD fehlt für den nicht-interaktiven Lauf."
-  read_new_password "Neues Makler-Passwort"
-  broker_password="$POLICY_CAPTURED_PASSWORD"
-fi
-
-policy_log "Richte Benutzer und Vergleichs-Workspace ein ..."
-POLICY_ADMIN_PASSWORD="$admin_password" \
-POLICY_BROKER_PASSWORD="$broker_password" \
-POLICY_ADMIN_USERNAME="${POLICY_ADMIN_USERNAME:-admin}" \
-POLICY_BROKER_USERNAME="${POLICY_BROKER_USERNAME:-makler}" \
-  "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/provision.cjs" apply
-unset admin_password broker_password POLICY_CAPTURED_PASSWORD POLICY_ADMIN_PASSWORD POLICY_BROKER_PASSWORD
+policy_log "Richte den lokalen Vergleichs-Workspace ohne Login ein ..."
+"$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/provision.cjs" apply
 
 policy_install_services
 mkdir -p "$HOME/.local/bin"
@@ -153,6 +113,5 @@ fi
 
 /usr/bin/open "$POLICY_APP_URL" >/dev/null 2>&1 || true
 policy_ok "Fertig. Oberfläche: $POLICY_APP_URL"
-printf '%s\n' "Makler-Benutzer: ${POLICY_BROKER_USERNAME:-makler}"
-printf '%s\n' "Admin-Benutzer: ${POLICY_ADMIN_USERNAME:-admin}"
+printf '%s\n' "Login: deaktiviert (lokaler Single-User-Modus)"
 printf '%s\n' "Steuerung: $control_path {status|start|stop|restart|doctor|open|logs}"

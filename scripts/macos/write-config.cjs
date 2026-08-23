@@ -68,6 +68,8 @@ const managedServer = {
   SIG_KEY: process.env.POLICY_SIG_KEY || crypto.randomBytes(32).toString("hex"),
   SIG_SALT:
     process.env.POLICY_SIG_SALT || crypto.randomBytes(32).toString("hex"),
+  AUTH_TOKEN: "",
+  POLICY_SINGLE_USER_NO_AUTH: "true",
   LLM_PROVIDER: "lmstudio",
   LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
   LMSTUDIO_MODEL_PREF: configuredChatModel,

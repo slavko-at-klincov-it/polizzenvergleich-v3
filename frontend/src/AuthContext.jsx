@@ -49,6 +49,11 @@ export function AuthProvider(props) {
    */
   useEffect(() => {
     async function refreshUser() {
+      const { PolicyNoAuthMode } = await System.keys();
+      if (PolicyNoAuthMode) {
+        actions.unsetUser();
+        return;
+      }
       const { success, user: refreshedUser } = await System.refreshUser();
       if (success && refreshedUser === null) return;
 

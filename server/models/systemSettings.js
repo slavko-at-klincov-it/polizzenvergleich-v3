@@ -459,15 +459,17 @@ const SystemSettings = {
     const llmProvider = process.env.LLM_PROVIDER;
     const vectorDB = process.env.VECTOR_DB;
     const embeddingEngine = process.env.EMBEDDING_ENGINE ?? "native";
+    const policyNoAuthMode = await this.isPolicyNoAuthMode();
     return {
       // --------------------------------------------------------
       // General Settings
       // --------------------------------------------------------
-      RequiresAuth: !!process.env.AUTH_TOKEN,
-      AuthToken: !!process.env.AUTH_TOKEN,
+      RequiresAuth: !policyNoAuthMode && !!process.env.AUTH_TOKEN,
+      AuthToken: !policyNoAuthMode && !!process.env.AUTH_TOKEN,
       JWTSecret: !!process.env.JWT_SECRET,
       StorageDir: process.env.STORAGE_DIR,
       MultiUserMode: await this.isMultiUserMode(),
+      PolicyNoAuthMode: policyNoAuthMode,
       MemoryEnabled: await this.memoriesEnabled(),
       MemoryAutoExtraction: await this.memoryAutoExtractionSetting(),
       DisableTelemetry: process.env.DISABLE_TELEMETRY || "false",
@@ -749,6 +751,16 @@ const SystemSettings = {
     } catch (error) {
       console.error(error.message);
       return false;
+    }
+  },
+
+  isPolicyNoAuthMode: async function () {
+    try {
+      const setting = await this.get({ label: "policy_no_auth_mode" });
+      return setting?.value === "true";
+    } catch (error) {
+      console.error(error.message);
+      return process.env.POLICY_SINGLE_USER_NO_AUTH === "true";
     }
   },
 

@@ -52,7 +52,7 @@ if [ -x "$POLICY_NODE_BIN" ] && [ -d "$POLICY_REPO_DIR/server/node_modules" ]; t
   status_json="$($POLICY_NODE_BIN "$POLICY_SCRIPT_DIR/provision.cjs" status | tail -n 1 2>/dev/null || true)"
   provision_ready="$($POLICY_NODE_BIN -e 'try { const s=JSON.parse(process.argv[1]); process.stdout.write(String(s.ready === true)); } catch { process.stdout.write("false"); }' "$status_json")"
   if [ "$provision_ready" = "true" ]; then
-    check_ok "Rollen, Workspace, Prompt und Provider-Konfiguration"
+    check_ok "Single-User-Modus ohne Login, Workspace, Prompt und Provider-Konfiguration"
   else
     check_fail "Provisionierung ist unvollständig"
     "$POLICY_NODE_BIN" -e 'try { for (const p of JSON.parse(process.argv[1]).problems || []) console.error(`  - ${p}`); } catch {}' "$status_json"

@@ -37,6 +37,9 @@ function makeJWT(info = {}, expiry = "30d") {
  * @returns {Promise<import("@prisma/client").users | null>} The user
  */
 async function userFromSession(request, response = null) {
+  // A stale multi-user JWT must never re-introduce user scoping after the
+  // managed installation has migrated to local single-user mode.
+  if (!!response && response.locals?.multiUserMode === false) return null;
   if (!!response && !!response.locals?.user) {
     return response.locals.user;
   }

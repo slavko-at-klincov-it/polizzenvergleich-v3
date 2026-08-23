@@ -17,7 +17,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.3 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.4 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -28,8 +28,7 @@ Der Installer:
   AnythingLLM konfiguriertes lokales Chatmodell wird stattdessen übernommen,
 - erzeugt lokale Geheimnisse und schützt Konfiguration und Kundendaten,
 - baut Frontend, Server und Collector und führt Produktionsmigrationen aus,
-- fragt Admin- und Maklerpasswort verdeckt ab,
-- richtet Rollen und den Workspace `Polizzenvergleich` ein,
+- richtet den lokalen Workspace `Polizzenvergleich` ohne Login ein,
 - installiert benutzerspezifische macOS-Autostartdienste,
 - führt einen Doctor-Test aus und öffnet erst danach die Oberfläche.
 
@@ -45,8 +44,11 @@ entladen, damit auf dem 32-GB-Mac genug RAM frei ist. Mit
 entlädt später keine fremden Modelle.
 
 LM Studio selbst und die private GitHub-Anmeldung werden bewusst nicht still
-installiert oder umgangen. Beim ersten Login zeigt AnythingLLM einmalig die
-Wiederherstellungscodes; diese müssen sicher verwahrt werden.
+installiert oder umgangen. AnythingLLM läuft danach lokal ohne Benutzerlogin.
+Server, Collector und LM Studio lauschen ausschließlich auf diesem Mac. Jeder
+Prozess im selben macOS-Benutzerkonto kann die lokale Anwendung grundsätzlich
+aufrufen; eine gemeinsam oder von nicht vertrauenswürdigen Personen genutzte
+macOS-Sitzung ist deshalb ungeeignet.
 
 ### Betrieb und Diagnose
 
@@ -119,7 +121,7 @@ Vektoren und Volltexttreffer aus der aktiven Anwendung. Dateisystem-Backups und
 historische technische Metadaten unterliegen dem lokalen Backup- und
 Aufbewahrungskonzept; eine sichere SSD-Löschung wird nicht versprochen.
 
-## Einmalige Admin-Einrichtung
+## Manuelle Einrichtung und Reparatur
 
 ### 1. Modelle in LM Studio
 
@@ -151,6 +153,8 @@ Storage niemals committen. Die relevanten Werte sind:
 SERVER_PORT=3002
 STORAGE_DIR='/absoluter/pfad/zu/privatem/anythingllm-storage'
 COLLECTOR_HOTDIR_PATH='/absoluter/pfad/zum/repo/collector/hotdir'
+AUTH_TOKEN=''
+POLICY_SINGLE_USER_NO_AUTH='true'
 
 LLM_PROVIDER='lmstudio'
 LMSTUDIO_BASE_PATH='http://127.0.0.1:1234/v1'

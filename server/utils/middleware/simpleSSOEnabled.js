@@ -9,6 +9,11 @@ const { SystemSettings } = require("../../models/systemSettings");
  * @returns {void}
  */
 async function simpleSSOEnabled(_, response, next) {
+  if (await SystemSettings.isPolicyNoAuthMode()) {
+    return response
+      .status(403)
+      .send("Login is disabled for this installation.");
+  }
   if (!("SIMPLE_SSO_ENABLED" in process.env)) {
     return response
       .status(403)
@@ -62,6 +67,13 @@ function simpleSSOLoginDisabled() {
  * @returns {void}
  */
 async function simpleSSOLoginDisabledMiddleware(_, response, next) {
+  if (await SystemSettings.isPolicyNoAuthMode()) {
+    response.status(403).json({
+      success: false,
+      error: "Login is disabled for this installation.",
+    });
+    return;
+  }
   if (!("multiUserMode" in response.locals)) {
     const multiUserMode = await SystemSettings.isMultiUserMode();
     response.locals.multiUserMode = multiUserMode;

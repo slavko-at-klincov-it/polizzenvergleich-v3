@@ -195,6 +195,14 @@ function systemEndpoints(app) {
 
   app.post("/request-token", async (request, response) => {
     try {
+      if (await SystemSettings.isPolicyNoAuthMode()) {
+        response.status(403).json({
+          valid: false,
+          token: null,
+          message: "Login is disabled for this local installation.",
+        });
+        return;
+      }
       const bcrypt = require("bcryptjs");
 
       if (await SystemSettings.isMultiUserMode()) {
@@ -592,6 +600,16 @@ function systemEndpoints(app) {
     async (request, response) => {
       try {
         const body = reqBody(request);
+        if (
+          (await SystemSettings.isPolicyNoAuthMode()) &&
+          Object.prototype.hasOwnProperty.call(body, "AuthToken")
+        ) {
+          response.status(403).json({
+            newValues: {},
+            error: "Password login is managed and disabled.",
+          });
+          return;
+        }
         const { newValues, error } = await updateENV(
           body,
           false,
@@ -610,6 +628,13 @@ function systemEndpoints(app) {
     [validatedRequest],
     async (request, response) => {
       try {
+        if (await SystemSettings.isPolicyNoAuthMode()) {
+          response.status(403).json({
+            success: false,
+            error: "Password login is managed and disabled.",
+          });
+          return;
+        }
         // Cannot update password in multi - user mode.
         if (multiUserMode(response)) {
           response.sendStatus(401).end();
@@ -644,6 +669,13 @@ function systemEndpoints(app) {
     [validatedRequest],
     async (request, response) => {
       try {
+        if (await SystemSettings.isPolicyNoAuthMode()) {
+          response.status(403).json({
+            success: false,
+            error: "Multi-user login is managed and disabled.",
+          });
+          return;
+        }
         if (response.locals.multiUserMode) {
           response.status(200).json({
             success: false,

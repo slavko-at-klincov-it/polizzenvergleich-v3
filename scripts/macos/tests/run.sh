@@ -19,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir -p "$temp_dir/config-repo/server" "$temp_dir/config-repo/collector" "$temp_dir/config-repo/frontend"
-printf '%s\n' 'JWT_SECRET="keep-this-secret"' 'UNRELATED_SETTING="keep-me"' >"$temp_dir/config-repo/server/.env"
+printf '%s\n' 'JWT_SECRET="keep-this-secret"' 'AUTH_TOKEN="old-password"' 'UNRELATED_SETTING="keep-me"' >"$temp_dir/config-repo/server/.env"
 
 printf '%s\n' '[installer-test] pinned local Yarn bootstrap'
 runtime_test_dir="$temp_dir/yarn-runtime"
@@ -80,6 +80,8 @@ grep -q 'JWT_SECRET="keep-this-secret"' "$temp_dir/config-repo/server/.env"
 grep -q 'UNRELATED_SETTING="keep-me"' "$temp_dir/config-repo/server/.env"
 grep -q 'SERVER_HOST="127.0.0.1"' "$temp_dir/config-repo/server/.env"
 grep -q 'POLICY_MANAGED_EMBEDDING="true"' "$temp_dir/config-repo/server/.env"
+grep -q 'POLICY_SINGLE_USER_NO_AUTH="true"' "$temp_dir/config-repo/server/.env"
+grep -q '^AUTH_TOKEN=""$' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_ENGINE="lmstudio"' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_BASE_PATH="http://127.0.0.1:1234/v1"' "$temp_dir/config-repo/server/.env"
 grep -q 'EMBEDDING_MODEL_PREF="dinghy-embed"' "$temp_dir/config-repo/server/.env"
@@ -219,6 +221,8 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/PolicyComparison/ComparisonBatchSynthesizer.test.js \
   server/__tests__/utils/PolicyComparison/registerLifecycleHooks.test.js \
   server/__tests__/utils/boot/localBinding.test.js \
+  server/__tests__/utils/boot/localProductCors.test.js \
+  server/__tests__/utils/middleware/simpleSSOEnabled.test.js \
   server/__tests__/utils/helpers/updateENV.policyInstaller.test.js \
   collector/__tests__/processSingleFile/convert/asPDF/PDFLoader.test.js \
   collector/__tests__/processSingleFile/convert/asPDF/PDFPageRenderer.test.js \

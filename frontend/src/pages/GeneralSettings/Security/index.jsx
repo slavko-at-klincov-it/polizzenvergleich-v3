@@ -17,6 +17,14 @@ import {
 
 export default function GeneralSecurity() {
   const { t } = useTranslation();
+  const [policyNoAuthMode, setPolicyNoAuthMode] = useState(null);
+
+  useEffect(() => {
+    System.keys().then(({ PolicyNoAuthMode }) =>
+      setPolicyNoAuthMode(Boolean(PolicyNoAuthMode))
+    );
+  }, []);
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-theme-bg-container flex">
       <Sidebar />
@@ -29,8 +37,19 @@ export default function GeneralSecurity() {
             {t("security.title")}
           </p>
         </div>
-        <MultiUserMode />
-        <PasswordProtection />
+        {policyNoAuthMode === null ? (
+          <PreLoader />
+        ) : policyNoAuthMode ? (
+          <div className="px-1 md:pl-6 md:pr-[50px] py-6 text-sm text-theme-text-secondary">
+            Diese lokale Installation läuft bewusst ohne Login. Der Zugriff ist
+            auf diesen Mac und die lokale Produktoberfläche begrenzt.
+          </div>
+        ) : (
+          <>
+            <MultiUserMode />
+            <PasswordProtection />
+          </>
+        )}
       </div>
     </div>
   );

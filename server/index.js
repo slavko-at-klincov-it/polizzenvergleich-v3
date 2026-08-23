@@ -50,6 +50,10 @@ const {
 } = require("./endpoints/utils/googleAgentSkillEndpoints");
 const { memoryEndpoints } = require("./endpoints/memory");
 const { httpLogger } = require("./middleware/httpLogger");
+const {
+  localProductCorsOrigin,
+  rejectForeignProductOrigin,
+} = require("./utils/boot/localProductCors");
 const app = express();
 const apiRouter = express.Router();
 const FILE_LIMIT = "3GB";
@@ -65,7 +69,8 @@ if (
     })
   );
 }
-app.use(cors({ origin: true }));
+app.use(cors({ origin: localProductCorsOrigin }));
+app.use(rejectForeignProductOrigin);
 app.use(bodyParser.text({ limit: FILE_LIMIT }));
 app.use(bodyParser.json({ limit: FILE_LIMIT }));
 app.use(
