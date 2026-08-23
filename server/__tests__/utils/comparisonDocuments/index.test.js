@@ -17,6 +17,7 @@ jest.mock("fs", () => ({
   mkdirSync: jest.fn(),
   copyFileSync: jest.fn(),
   readFileSync: jest.fn(),
+  writeFileSync: jest.fn(),
   unlinkSync: jest.fn(),
 }));
 jest.mock("uuid", () => ({ v4: jest.fn(() => "new-doc-id") }));
@@ -58,6 +59,7 @@ jest.mock("../../../models/comparisonDocument", () => ({
 jest.mock("../../../models/workspaceParsedFiles", () => ({
   WorkspaceParsedFiles: {
     get: jest.fn(),
+    where: jest.fn(),
     delete: jest.fn(),
   },
 }));
@@ -140,6 +142,7 @@ describe("ComparisonDocumentService", () => {
       })
     );
     WorkspaceParsedFiles.get.mockResolvedValue(parsedFile);
+    WorkspaceParsedFiles.where.mockResolvedValue([]);
     WorkspaceParsedFiles.delete.mockResolvedValue(true);
     ComparisonDocument.reserve.mockResolvedValue(reservation);
     ComparisonDocument.update.mockImplementation(async (_id, data) => ({
@@ -236,6 +239,47 @@ describe("ComparisonDocumentService", () => {
     expect(firstResult).toEqual(secondResult);
   });
 
+  it("deletes a parsed source only inside the current thread scope", async () => {
+    await expect(
+      ComparisonDocumentService.removeParsedFile({
+        workspace,
+        thread,
+        user,
+        parsedFileId: parsedFile.id,
+      })
+    ).resolves.toBe(true);
+
+    expect(WorkspaceParsedFiles.get).toHaveBeenCalledWith({
+      id: 4,
+      workspaceId: 1,
+      threadId: 2,
+      userId: 3,
+    });
+    expect(fs.unlinkSync).toHaveBeenCalledWith("/direct-uploads/parsed-a.json");
+    expect(WorkspaceParsedFiles.delete).toHaveBeenCalledWith({
+      id: 4,
+      workspaceId: 1,
+      threadId: 2,
+      userId: 3,
+    });
+  });
+
+  it("keeps the parsed DB handle when source cleanup fails", async () => {
+    fs.unlinkSync.mockImplementationOnce(() => {
+      throw new Error("filesystem busy");
+    });
+
+    await expect(
+      ComparisonDocumentService.removeParsedFile({
+        workspace,
+        thread,
+        user,
+        parsedFileId: parsedFile.id,
+      })
+    ).rejects.toThrow("filesystem busy");
+    expect(WorkspaceParsedFiles.delete).not.toHaveBeenCalled();
+  });
+
   it("rolls back vector artifacts and keeps the parsed file when embedding fails", async () => {
     VectorDb.addDocumentToNamespace.mockResolvedValue({
       vectorized: false,
@@ -265,12 +309,12 @@ describe("ComparisonDocumentService", () => {
     );
   });
 
-  it("rejects non-PDF parsed files before reserving a comparison slot", async () => {
+  it("rejects unsupported parsed files before reserving a comparison slot", async () => {
     WorkspaceParsedFiles.get.mockResolvedValue({
       ...parsedFile,
       metadata: JSON.stringify({
         location: "conditions.json",
-        title: "conditions.docx",
+        title: "conditions.exe",
       }),
     });
 
@@ -284,6 +328,52 @@ describe("ComparisonDocumentService", () => {
     ).rejects.toMatchObject({ statusCode: 415 });
     expect(ComparisonDocument.reserve).not.toHaveBeenCalled();
   });
+
+  it.each(["docx", "odt", "txt", "md", "csv", "xlsx", "pptx"])(
+    "embeds a page-less %s document without inventing page metadata",
+    async (extension) => {
+      WorkspaceParsedFiles.get.mockResolvedValue({
+        ...parsedFile,
+        metadata: JSON.stringify({
+          location: `conditions-${extension}.json`,
+          originalFilename: `conditions.${extension}`,
+          mimeType: "application/octet-stream",
+          pageCount: 99,
+          totalPages: 99,
+          pages: Array.from({ length: 99 }, (_, index) => ({
+            pageNumber: index + 1,
+          })),
+        }),
+      });
+      fs.readFileSync.mockReturnValue(
+        JSON.stringify({
+          title: `conditions.${extension}`,
+          pageContent: "Vandalismus ist bis EUR 25.000 versichert.",
+        })
+      );
+
+      const document = await ComparisonDocumentService.embedParsedFile({
+        workspace,
+        thread,
+        user,
+        parsedFileId: parsedFile.id,
+      });
+
+      expect(document.status).toBe("ready");
+      expect(ComparisonDocument.reserve).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originalFilename: `conditions.${extension}`,
+          pageCount: null,
+        })
+      );
+      const vectorData = VectorDb.addDocumentToNamespace.mock.calls[0][1];
+      expect(vectorData.documentExtraction).toMatchObject({
+        complete: true,
+        kind: extension,
+      });
+      expect(vectorData.pdfExtraction).toBeUndefined();
+    }
+  );
 
   it("fails closed before embedding when the canonical page map is incomplete", async () => {
     fs.readFileSync.mockReturnValue(
@@ -358,5 +448,68 @@ describe("ComparisonDocumentService", () => {
       docId: "new-doc-id",
     });
     expect(ComparisonDocument.delete).toHaveBeenCalledWith({ id: 5 });
+  });
+
+  it("removes parsed uploads that never reached embedding during thread cleanup", async () => {
+    ComparisonDocument.where.mockResolvedValue([]);
+    WorkspaceParsedFiles.where.mockResolvedValue([parsedFile]);
+
+    await expect(
+      ComparisonDocumentService.cleanupThread({ workspace, thread })
+    ).resolves.toBe(true);
+
+    expect(WorkspaceParsedFiles.where).toHaveBeenCalledWith({
+      workspaceId: 1,
+      threadId: 2,
+    });
+    expect(WorkspaceParsedFiles.get).toHaveBeenCalledWith({
+      id: 4,
+      workspaceId: 1,
+      threadId: 2,
+      userId: 3,
+    });
+    expect(fs.unlinkSync).toHaveBeenCalledWith("/direct-uploads/parsed-a.json");
+    expect(WorkspaceParsedFiles.delete).toHaveBeenCalledWith({
+      id: 4,
+      workspaceId: 1,
+      threadId: 2,
+      userId: 3,
+    });
+  });
+
+  it("reconciles a legacy parsed upload into a visible comparison slot", async () => {
+    WorkspaceParsedFiles.where.mockResolvedValue([parsedFile]);
+    ComparisonDocument.forThread.mockResolvedValue([reservation]);
+
+    const documents = await ComparisonDocumentService.list({
+      workspace,
+      thread,
+      user,
+    });
+
+    expect(ComparisonDocument.reserve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parsedFileId: 4,
+        workspaceId: 1,
+        threadId: 2,
+        userId: 3,
+      })
+    );
+    expect(documents).toEqual([
+      expect.objectContaining({ id: 5, status: "indexing" }),
+    ]);
+  });
+
+  it("keeps parsed thread state retryable when orphan cleanup fails", async () => {
+    ComparisonDocument.where.mockResolvedValue([]);
+    WorkspaceParsedFiles.where.mockResolvedValue([parsedFile]);
+    fs.unlinkSync.mockImplementationOnce(() => {
+      throw new Error("filesystem busy");
+    });
+
+    await expect(
+      ComparisonDocumentService.cleanupThread({ workspace, thread })
+    ).rejects.toThrow("filesystem busy");
+    expect(WorkspaceParsedFiles.delete).not.toHaveBeenCalled();
   });
 });

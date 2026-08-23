@@ -6,14 +6,18 @@ import Workspace from "@/models/workspace";
 export default function StopGenerationButton({ workspaceSlug, threadSlug }) {
   const { t } = useTranslation();
   async function emitHaltEvent() {
-    const cancelled = threadSlug
+    const result = threadSlug
       ? await Workspace.threads.stopGeneration(workspaceSlug, threadSlug)
       : await Workspace.stopGeneration(workspaceSlug);
-    if (!cancelled) return;
+    if (!result.cancelled || !result.generationId) return;
 
     window.dispatchEvent(
       new CustomEvent(ABORT_STREAM_EVENT, {
-        detail: { workspaceSlug, threadSlug: threadSlug ?? null },
+        detail: {
+          workspaceSlug,
+          threadSlug: threadSlug ?? null,
+          generationId: result.generationId,
+        },
       })
     );
   }

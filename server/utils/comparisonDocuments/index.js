@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const prisma = require("../prisma");
 const {
@@ -18,6 +19,10 @@ const {
 const { safeJsonParse } = require("../http");
 const { PageAwareTextSplitter } = require("../PageAwareTextSplitter");
 const { runComparisonDocumentLifecycleHooks } = require("./lifecycleHooks");
+const {
+  comparisonDocumentExtension,
+  isSupportedComparisonDocument,
+} = require("./supportedFormats");
 
 class ComparisonDocumentError extends Error {
   constructor(message, statusCode = 500) {
@@ -95,6 +100,40 @@ function validateCanonicalPdf(documentData) {
   return pages;
 }
 
+function canonicalizeComparisonDocument(documentData, originalFilename) {
+  const extension = comparisonDocumentExtension(originalFilename);
+  if (extension === ".pdf") {
+    validateCanonicalPdf(documentData);
+    return {
+      data: documentData,
+      sourceSha256: documentData.pdfExtraction.sourceSha256.toLowerCase(),
+    };
+  }
+
+  const pageContent = String(documentData?.pageContent || "");
+  if (!pageContent.trim())
+    throw new ComparisonDocumentError(
+      "Parsed document contains no text content.",
+      422
+    );
+  const sourceSha256 = crypto
+    .createHash("sha256")
+    .update(pageContent, "utf8")
+    .digest("hex");
+  return {
+    data: {
+      ...documentData,
+      documentExtraction: {
+        schemaVersion: 1,
+        complete: true,
+        kind: extension.slice(1),
+        sourceSha256,
+      },
+    },
+    sourceSha256,
+  };
+}
+
 async function removeWorkspaceDocumentArtifacts({
   comparisonDocument,
   workspace,
@@ -154,12 +193,111 @@ async function rollbackEmbed({
 
 const ComparisonDocumentService = {
   list: async function ({ workspace, thread, user = null }) {
+    await this.reconcileParsedReservations({ workspace, thread, user });
     const documents = await ComparisonDocument.forThread({
       workspaceId: workspace.id,
       threadId: thread.id,
       userId: user?.id ?? null,
     });
     return documents.map(ComparisonDocument.serialize);
+  },
+
+  reconcileParsedReservations: async function ({
+    workspace,
+    thread,
+    user = null,
+  }) {
+    const parsedFiles = await WorkspaceParsedFiles.where({
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      ...(user ? { userId: user.id } : {}),
+    });
+    for (const parsedFile of parsedFiles) {
+      await this.reserveParsedFile({
+        workspace,
+        thread,
+        user: user ?? (parsedFile.userId ? { id: parsedFile.userId } : null),
+        parsedFile,
+      });
+    }
+    return true;
+  },
+
+  removeParsedFile: async function ({
+    workspace,
+    thread,
+    user = null,
+    parsedFileId,
+  }) {
+    const parsedFile = await WorkspaceParsedFiles.get({
+      id: Number(parsedFileId),
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      userId: user?.id ?? null,
+    });
+    if (!parsedFile)
+      throw new ComparisonDocumentError(
+        "Parsed file was not found in this comparison thread.",
+        404
+      );
+    const parsedSource = sourcePathForParsedFile(parsedFile);
+    // Remove the customer payload before dropping its scoped DB handle. If the
+    // filesystem operation fails, keeping the row lets the user retry cleanup
+    // instead of creating an unreachable orphan file.
+    if (fs.existsSync(parsedSource)) fs.unlinkSync(parsedSource);
+    const deleted = await WorkspaceParsedFiles.delete({
+      id: parsedFile.id,
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      userId: user?.id ?? null,
+    });
+    if (!deleted)
+      throw new ComparisonDocumentError(
+        "Parsed comparison file could not be deleted."
+      );
+    return true;
+  },
+
+  reserveParsedFile: async function ({
+    workspace,
+    thread,
+    user = null,
+    parsedFile,
+  }) {
+    if (!thread)
+      throw new ComparisonDocumentError(
+        "Comparison documents require a thread.",
+        400
+      );
+    if (!parsedFile)
+      throw new ComparisonDocumentError("Parsed file was not found.", 404);
+
+    const metadata = parsedFileMetadata(parsedFile);
+    const originalFilename =
+      metadata.originalFilename || metadata.title || parsedFile.filename;
+    if (
+      !isSupportedComparisonDocument({
+        filename: originalFilename,
+        mime: metadata.mimeType || "",
+      })
+    )
+      throw new ComparisonDocumentError(
+        "Unterstützt werden PDF, DOCX, ODT, TXT, MD, CSV, XLSX und PPTX.",
+        415
+      );
+
+    const extension = comparisonDocumentExtension(originalFilename);
+    return ComparisonDocument.reserve({
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      userId: user?.id ?? null,
+      parsedFileId: parsedFile.id,
+      originalFilename,
+      tokenCount: parsedFile.tokenCountEstimate ?? 0,
+      // Only PDFs have a physical, page-aware extraction contract. Office
+      // and plain-text metadata must never manufacture page citations.
+      pageCount: extension === ".pdf" ? pageCountFromMetadata(metadata) : null,
+    });
   },
 
   embedParsedFile: async function (args) {
@@ -206,19 +344,11 @@ const ComparisonDocumentService = {
 
     const originalFilename =
       metadata.originalFilename || metadata.title || parsedFile.filename;
-    if (path.extname(String(originalFilename)).toLowerCase() !== ".pdf")
-      throw new ComparisonDocumentError(
-        "Only PDF files can be added to a policy comparison.",
-        415
-      );
-    const comparisonDocument = await ComparisonDocument.reserve({
-      workspaceId: workspace.id,
-      threadId: thread.id,
-      userId: user?.id ?? null,
-      parsedFileId: parsedFile.id,
-      originalFilename,
-      tokenCount: parsedFile.tokenCountEstimate ?? 0,
-      pageCount: pageCountFromMetadata(metadata),
+    const comparisonDocument = await this.reserveParsedFile({
+      workspace,
+      thread,
+      user,
+      parsedFile,
     });
     if (comparisonDocument.status === "ready")
       return ComparisonDocument.serialize(comparisonDocument);
@@ -250,13 +380,19 @@ const ComparisonDocumentService = {
         fs.mkdirSync(targetDirectory, { recursive: true });
       fs.copyFileSync(sourcePath, targetPath);
 
-      const data = safeJsonParse(fs.readFileSync(targetPath, "utf8"), null);
+      let data = safeJsonParse(fs.readFileSync(targetPath, "utf8"), null);
       if (!data?.pageContent)
         throw new ComparisonDocumentError(
           "Parsed document contains no text content.",
           422
         );
-      validateCanonicalPdf(data);
+      const canonical = canonicalizeComparisonDocument(data, originalFilename);
+      data = canonical.data;
+      if (comparisonDocumentExtension(originalFilename) !== ".pdf")
+        fs.writeFileSync(targetPath, JSON.stringify(data), {
+          encoding: "utf8",
+          mode: 0o600,
+        });
 
       docId = uuidv4();
       await ComparisonDocument.update(comparisonDocument.id, {
@@ -264,7 +400,7 @@ const ComparisonDocumentService = {
         error: null,
         docId,
         docpath: targetDocpath,
-        sourceSha256: data.pdfExtraction.sourceSha256.toLowerCase(),
+        sourceSha256: canonical.sourceSha256,
         workspaceDocumentId: null,
       });
 
@@ -284,6 +420,7 @@ const ComparisonDocumentService = {
         pages: _pages,
         pageMap: _pageMap,
         pdfExtraction: _pdfExtraction,
+        documentExtraction: _documentExtraction,
         ...documentMetadata
       } = data;
       workspaceDocument = await prisma.workspace_documents.create({
@@ -318,7 +455,7 @@ const ComparisonDocumentService = {
             error: null,
             docId,
             docpath: targetDocpath,
-            sourceSha256: data.pdfExtraction.sourceSha256.toLowerCase(),
+            sourceSha256: canonical.sourceSha256,
             workspaceDocumentId: workspaceDocument.id,
             lastUpdatedAt: new Date(),
           },
@@ -433,6 +570,23 @@ const ComparisonDocumentService = {
         id: document.id,
       });
     }
+
+    // A browser can disappear after parsing but before the embed request.
+    // Those thread-scoped sources are still customer documents and must be
+    // cleaned with the same fail-closed, file-before-row semantics.
+    const remainingParsedFiles = await WorkspaceParsedFiles.where({
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      ...(user ? { userId: user.id } : {}),
+    });
+    for (const parsedFile of remainingParsedFiles) {
+      await this.removeParsedFile({
+        workspace,
+        thread,
+        user: user ?? (parsedFile.userId ? { id: parsedFile.userId } : null),
+        parsedFileId: parsedFile.id,
+      });
+    }
     return true;
   },
 
@@ -454,4 +608,5 @@ module.exports = {
   ComparisonDocumentLimitError,
   pageCountFromMetadata,
   validateCanonicalPdf,
+  canonicalizeComparisonDocument,
 };

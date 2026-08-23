@@ -1,11 +1,83 @@
 const {
   claimPendingHandoff,
+  detachedGenerationHistory,
+  generationEventMatches,
   generationPollDecision,
   hasHydratedPendingGeneration,
   loadGenerationSnapshot,
 } = require("../../../frontend/src/components/WorkspaceChat/ChatContainer/chatGenerationState.cjs");
 
 describe("thread generation reconciliation", () => {
+  test("keeps polling when returning before the pending chat row exists", () => {
+    expect(
+      generationPollDecision([], {
+        active: true,
+        generationId: "generation-new",
+      })
+    ).toMatchObject({ keepWaiting: true, pending: false, terminal: false });
+  });
+
+  test("passive detach before the first token preserves every older message", () => {
+    const oldHistory = [
+      { role: "user", content: "Alte Frage" },
+      {
+        role: "assistant",
+        content: "Alte Antwort",
+        closed: true,
+        chatId: 1,
+      },
+      { role: "user", content: "Neue Frage", userMessage: "Neue Frage" },
+    ];
+    const detached = detachedGenerationHistory(oldHistory, "generation-new");
+    expect(detached).toHaveLength(4);
+    expect(detached[1]).toMatchObject({ content: "Alte Antwort", chatId: 1 });
+    expect(detached.at(-1)).toMatchObject({
+      content: "Antwort wird erstellt …",
+      pending: true,
+      generationId: "generation-new",
+    });
+    expect(
+      generationPollDecision(detached, { active: true }, "generation-new")
+        .keepWaiting
+    ).toBe(true);
+  });
+
+  test("passive detach preserves partial output from the current generation", () => {
+    const detached = detachedGenerationHistory(
+      [
+        { role: "user", content: "Neue Frage" },
+        {
+          role: "assistant",
+          content: "Bisheriger Teil",
+          closed: false,
+          uuid: "stream-id",
+        },
+      ],
+      "generation-new"
+    );
+    expect(detached).toHaveLength(2);
+    expect(detached[1]).toMatchObject({
+      content: "Bisheriger Teil",
+      pending: true,
+      generationId: "generation-new",
+    });
+  });
+
+  test("stop events match the exact workspace, thread and generation", () => {
+    const scope = {
+      workspaceSlug: "polizzen",
+      threadSlug: "thread-a",
+      generationId: "generation-a",
+    };
+    expect(generationEventMatches(scope, scope)).toBe(true);
+    expect(
+      generationEventMatches({ ...scope, threadSlug: "thread-b" }, scope)
+    ).toBe(false);
+    expect(
+      generationEventMatches({ ...scope, generationId: "generation-b" }, scope)
+    ).toBe(false);
+  });
+
   test("keeps polling when old history exists before the new pending row", () => {
     const oldHistory = [
       { role: "user", content: "Alt" },

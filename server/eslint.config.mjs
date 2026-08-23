@@ -6,7 +6,17 @@ import configPrettier from "eslint-config-prettier";
 import unusedImports from "eslint-plugin-unused-imports";
 
 export default defineConfig([
-  { ignores: ["__tests__/**", "**/syncStaticLists.mjs"] },
+  {
+    ignores: [
+      "__tests__/**",
+      "**/syncStaticLists.mjs",
+      "node_modules/**",
+      "public/**",
+      "public.new/**",
+      "public.previous/**",
+      "storage/**",
+    ],
+  },
   {
     files: ["**/*.{js,mjs,cjs}"],
     plugins: { js, prettier: pluginPrettier, "unused-imports": unusedImports },

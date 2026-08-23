@@ -156,6 +156,7 @@ async function streamChatWithWorkspace(
     response: pendingResponse,
     threadId: thread?.id || null,
     user,
+    generationId: generationContext?.id ?? null,
   });
   const updatePendingChat = async (responseData, include = true) => {
     const persistedResponse = generationContext?.id
@@ -442,6 +443,9 @@ async function streamChatWithWorkspace(
         temperature: workspace?.openAiTemp ?? LLMConnector.defaultTemp,
         user,
         signal: generationContext?.controller?.signal,
+        documentSlots: (comparisonContext.documents || []).map(
+          (document) => document.slot
+        ),
         onBatch: async (section) =>
           writeResponseChunk(response, {
             uuid,

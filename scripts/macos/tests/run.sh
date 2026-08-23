@@ -22,11 +22,17 @@ mkdir -p "$temp_dir/config-repo/server" "$temp_dir/config-repo/collector" "$temp
 printf '%s\n' 'JWT_SECRET="keep-this-secret"' 'UNRELATED_SETTING="keep-me"' >"$temp_dir/config-repo/server/.env"
 
 printf '%s\n' '[installer-test] idempotent secure config'
-POLICY_REPO_DIR="$temp_dir/config-repo" "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
-POLICY_REPO_DIR="$temp_dir/config-repo" "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
+POLICY_REPO_DIR="$temp_dir/config-repo" POLICY_EMBED_MODEL_ID='unsafe-override' "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
+POLICY_REPO_DIR="$temp_dir/config-repo" POLICY_EMBED_MODEL_ID='unsafe-override' "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
 grep -q 'JWT_SECRET="keep-this-secret"' "$temp_dir/config-repo/server/.env"
 grep -q 'UNRELATED_SETTING="keep-me"' "$temp_dir/config-repo/server/.env"
 grep -q 'SERVER_HOST="127.0.0.1"' "$temp_dir/config-repo/server/.env"
+grep -q 'POLICY_MANAGED_EMBEDDING="true"' "$temp_dir/config-repo/server/.env"
+grep -q 'EMBEDDING_ENGINE="lmstudio"' "$temp_dir/config-repo/server/.env"
+grep -q 'EMBEDDING_BASE_PATH="http://127.0.0.1:1234/v1"' "$temp_dir/config-repo/server/.env"
+grep -q 'EMBEDDING_MODEL_PREF="dinghy-embed"' "$temp_dir/config-repo/server/.env"
+grep -q 'EMBEDDING_MODEL_MAX_CHUNK_LENGTH="8192"' "$temp_dir/config-repo/server/.env"
+! grep -q 'unsafe-override' "$temp_dir/config-repo/server/.env"
 grep -q 'COLLECTOR_HOTDIR_PATH=' "$temp_dir/config-repo/collector/.env"
 [ "$(grep -c 'BEGIN POLIZZENVERGLEICH MANAGED CONFIG' "$temp_dir/config-repo/server/.env")" -eq 1 ]
 [ "$(grep -c '^SERVER_HOST=' "$temp_dir/config-repo/server/.env")" -eq 1 ]
@@ -83,6 +89,17 @@ sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260823160000_add_comp
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM pragma_table_info("comparison_documents") WHERE name IN ("sourceSha256","inventoryStatus","inventorySourceSha256");')" = '3' ]
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items;')" = '0' ]
 
+printf '%s\n' '[installer-test] page-less evidence and durable generation migrations'
+sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,pageNumber,evidenceText,evidenceHash,sourceMethod,createdAt) VALUES (7,"legacy","Legacy","[]",1,"Beleg","hash","native",CURRENT_TIMESTAMP);'
+sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260823210000_allow_pageless_inventory_evidence/migration.sql"
+sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,pageNumber,evidenceText,evidenceHash,sourceMethod,createdAt) VALUES (7,"pageless","DOCX","[]",NULL,"Beleg ohne Seite","hash2","llm-map",CURRENT_TIMESTAMP);'
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE pageNumber IS NULL;')" = '1' ]
+generation_db="$temp_dir/generation-migration.db"
+sqlite3 "$generation_db" 'CREATE TABLE workspace_chats (id INTEGER PRIMARY KEY, prompt TEXT NOT NULL); INSERT INTO workspace_chats VALUES (1,"Altchat");'
+sqlite3 "$generation_db" <"$REPO/server/prisma/migrations/20260823213000_add_chat_generation_id/migration.sql"
+[ "$(sqlite3 "$generation_db" 'SELECT prompt FROM workspace_chats WHERE id=1;')" = 'Altchat' ]
+[ "$(sqlite3 "$generation_db" 'SELECT COUNT(*) FROM pragma_table_info("workspace_chats") WHERE name="generationId";')" = '1' ]
+
 printf '%s\n' '[installer-test] mocked LM Studio contract'
 chmod 700 "$REPO/scripts/macos/fixtures/mock-lms.sh"
 port_file="$temp_dir/lmstudio-port"
@@ -98,13 +115,22 @@ POLICY_SKIP_LMSTUDIO_BINDING_CHECK=1 \
 
 printf '%s\n' '[installer-test] focused application contracts'
 "$NODE_BIN" "$REPO/scripts/macos/pipeline-smoke.cjs" >/dev/null
-(cd "$REPO" && npx jest --runInBand \
+(cd "$REPO" && STORAGE_DIR="$temp_dir/application-test-storage" npx jest --runInBand \
   scripts/macos/__tests__/comparisonDocumentMerge.test.js \
+  scripts/macos/__tests__/comparisonSupportedFormats.test.js \
+  scripts/macos/__tests__/managedEmbeddingContract.test.js \
   scripts/macos/__tests__/chatGenerationState.test.js \
   scripts/macos/__tests__/provision.test.js \
   server/__tests__/utils/chats/ChatGenerationManager.test.js \
   server/__tests__/utils/chats/pendingHistory.test.js \
   server/__tests__/utils/chats/threadNavigationStream.test.js \
+  server/__tests__/workspaceChats.generationId.test.js \
+  server/__tests__/workspacesParsedFiles.endpoint.test.js \
+  server/__tests__/comparisonDocuments.endpoint.test.js \
+  server/__tests__/comparisonDocuments.threadCleanup.test.js \
+  server/__tests__/utils/comparisonDocuments/index.test.js \
+  server/__tests__/utils/PageAwareTextSplitter/index.test.js \
+  server/__tests__/utils/vectorDbProviders/lance/scopedSearch.test.js \
   server/__tests__/comparisonDocumentInventory.model.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonInventoryExtractor.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonInventoryService.test.js \
@@ -115,6 +141,12 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/PolicyComparison/registerLifecycleHooks.test.js \
   server/__tests__/utils/boot/localBinding.test.js \
   server/__tests__/utils/helpers/updateENV.policyInstaller.test.js \
+  collector/__tests__/processSingleFile/convert/asPDF/PDFLoader.test.js \
+  collector/__tests__/processSingleFile/convert/asPDF/PDFPageRenderer.test.js \
+  collector/__tests__/processSingleFile/convert/asPDF/PageTextQuality.test.js \
+  collector/__tests__/processSingleFile/convert/asPDF/PdfExtractionAssembler.test.js \
+  collector/__tests__/processSingleFile/convert/asPDF/asPDF.test.js \
+  collector/__tests__/utils/OCRLoader.test.js \
   collector/__tests__/utils/http/localBinding.test.js)
 
 printf '%s\n' '[installer-test] PASS'

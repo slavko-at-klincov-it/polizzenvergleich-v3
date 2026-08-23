@@ -5,6 +5,9 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const {
+  MANAGED_EMBEDDING_ENV,
+} = require("../../shared/managedEmbeddingContract.cjs");
 
 const repo = path.resolve(
   process.env.POLICY_REPO_DIR || path.resolve(__dirname, "../..")
@@ -14,6 +17,35 @@ const collectorEnvPath = path.join(repo, "collector/.env");
 const frontendEnvPath = path.join(repo, "frontend/.env");
 const storageDir = path.join(repo, "server/storage");
 const hotdirPath = path.join(repo, "collector/hotdir");
+const modelLock = require("./models.lock.json");
+
+function existingValue(content, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*${escaped}\\s*=\\s*['\"]?([^'\"\\r\\n#]*)`, "m")
+  );
+  return match?.[1]?.trim() || null;
+}
+
+const existingServerConfig = fs.existsSync(serverEnvPath)
+  ? fs.readFileSync(serverEnvPath, "utf8")
+  : "";
+let modelState = {};
+const modelStatePath = path.join(repo, ".runtime/models.json");
+if (fs.existsSync(modelStatePath)) {
+  try {
+    modelState = JSON.parse(fs.readFileSync(modelStatePath, "utf8"));
+  } catch {}
+}
+const configuredChatModel =
+  process.env.POLICY_CHAT_MODEL_ID ||
+  existingValue(existingServerConfig, "LMSTUDIO_MODEL_PREF") ||
+  modelState.chatIdentifier ||
+  modelLock.chat.identifier;
+const configuredContextLength =
+  process.env.POLICY_CONTEXT_LENGTH ||
+  existingValue(existingServerConfig, "LMSTUDIO_MODEL_TOKEN_LIMIT") ||
+  String(modelLock.chat.contextLength);
 
 const managedServer = {
   SERVER_PORT: process.env.POLICY_SERVER_PORT || "3002",
@@ -30,31 +62,23 @@ const managedServer = {
     process.env.POLICY_SIG_SALT || crypto.randomBytes(32).toString("hex"),
   LLM_PROVIDER: "lmstudio",
   LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
-  LMSTUDIO_MODEL_PREF: process.env.POLICY_CHAT_MODEL_ID || "policy-chat",
-  LMSTUDIO_MODEL_TOKEN_LIMIT: process.env.POLICY_CONTEXT_LENGTH || "32768",
-  EMBEDDING_ENGINE: "lmstudio",
-  EMBEDDING_BASE_PATH: "http://127.0.0.1:1234/v1",
-  EMBEDDING_MODEL_PREF: process.env.POLICY_EMBED_MODEL_ID || "dinghy-law",
-  EMBEDDING_MODEL_MAX_CHUNK_LENGTH: "8192",
-  EMBEDDING_QUERY_PREFIX:
-    "Instruct: Retrieve all relevant passages from German and Austrian insurance contracts for exact clause comparison, including deductibles, exclusions, limits, monetary amounts, percentages, conditions, and synonymous wording.",
-  VECTOR_DB: "lancedb",
+  LMSTUDIO_MODEL_PREF: configuredChatModel,
+  LMSTUDIO_MODEL_TOKEN_LIMIT: configuredContextLength,
+  ...MANAGED_EMBEDDING_ENV,
   TARGET_OCR_LANG: "deu,eng",
   DISABLE_TELEMETRY: "true",
   DISABLE_SWAGGER_DOCS: "true",
 };
 
 let tokenizerPath = process.env.POLICY_TOKENIZER_PATH || null;
-const modelStatePath = path.join(repo, ".runtime/models.json");
 if (!tokenizerPath && fs.existsSync(modelStatePath)) {
   try {
-    tokenizerPath =
-      JSON.parse(fs.readFileSync(modelStatePath, "utf8")).tokenizerPath || null;
+    tokenizerPath = modelState.tokenizerPath || null;
   } catch {}
 }
 if (tokenizerPath) {
   managedServer.MODEL_TOKENIZER_PATH = tokenizerPath;
-  managedServer.MODEL_TOKENIZER_LABEL = "Gemma 4";
+  managedServer.MODEL_TOKENIZER_LABEL = configuredChatModel;
 }
 
 const managedCollector = {
@@ -64,14 +88,6 @@ const managedCollector = {
   COLLECTOR_HOTDIR_PATH: hotdirPath,
   TARGET_OCR_LANG: "deu,eng",
 };
-
-function existingValue(content, key) {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = content.match(
-    new RegExp(`^\\s*${escaped}\\s*=\\s*['\"]?([^'\"\\r\\n#]*)`, "m")
-  );
-  return match?.[1]?.trim() || null;
-}
 
 function mergeManagedBlock(filePath, values) {
   let current = fs.existsSync(filePath)

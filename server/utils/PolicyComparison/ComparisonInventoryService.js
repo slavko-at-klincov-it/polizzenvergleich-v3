@@ -64,6 +64,13 @@ function pageMethods(documentData = {}) {
   );
 }
 
+function documentSourceHash(documentData = {}) {
+  return normalizedSourceHash(
+    documentData?.pdfExtraction?.sourceSha256 ||
+      documentData?.documentExtraction?.sourceSha256
+  );
+}
+
 function extractionItems(extraction, documentData) {
   if (Array.isArray(extraction?.items)) return extraction.items;
   const methods = pageMethods(documentData);
@@ -125,11 +132,9 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
   const existing = await ComparisonDocumentInventory.get(comparisonDocument.id);
   try {
     const storedSource = normalizedSourceHash(comparisonDocument.sourceSha256);
-    const canonicalSource = normalizedSourceHash(
-      documentData?.pdfExtraction?.sourceSha256
-    );
+    const canonicalSource = documentSourceHash(documentData);
     if (!canonicalSource)
-      throw new Error("Canonical PDF source hash is missing or invalid.");
+      throw new Error("Canonical document source hash is missing or invalid.");
     if (storedSource && storedSource !== canonicalSource)
       throw new Error(
         "Canonical PDF source hash does not match the existing FTS/vector index."
@@ -143,7 +148,7 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
       comparisonDocumentId: comparisonDocument.id,
       version: CURRENT_INVENTORY_VERSION,
       pageCount: extraction.pageCount,
-      sourceSha256: documentData.pdfExtraction.sourceSha256,
+      sourceSha256: canonicalSource,
       items,
     });
     return { manifest, extraction };
@@ -199,7 +204,7 @@ const ComparisonInventoryService = {
           const documentData = await fileData(document.docpath);
           if (!documentData)
             throw new ComparisonInventoryError(
-              `Der gespeicherte Seitenbestand für Dokument ${document.slot} fehlt. Bitte diese PDF entfernen und erneut ablegen.`,
+              `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
               "comparison_inventory_source_missing"
             );
           return buildInventory({
@@ -214,7 +219,7 @@ const ComparisonInventoryService = {
       manifest = await ComparisonDocumentInventory.get(document.id);
       if (!manifestCurrent(manifest, document.sourceSha256))
         throw new ComparisonInventoryError(
-          `Das Klauselinventar für Dokument ${document.slot} ist nicht vollständig. Bitte diese PDF entfernen und erneut ablegen.`
+          `Das Klauselinventar für Dokument ${document.slot} ist nicht vollständig. Bitte dieses Dokument entfernen und erneut ablegen.`
         );
       manifests.push({ document, manifest });
     }

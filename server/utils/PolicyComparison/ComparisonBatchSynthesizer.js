@@ -43,6 +43,7 @@ const ComparisonBatchSynthesizer = {
     onBatch = null,
     onFinal = null,
     inferenceTimeoutMs = undefined,
+    documentSlots = ["A", "B"],
   }) {
     const sections = [];
     const metrics = [];
@@ -53,7 +54,11 @@ const ComparisonBatchSynthesizer = {
         throw error;
       }
       const batchNumber = index + 1;
-      const batchSystemPrompt = `${systemPrompt}\n\nDies ist Belegbatch ${batchNumber} von ${contextBatches.length}. Bearbeite jedes enthaltene Thema vollständig für Dokument A und B. Gib ausschließlich die Gegenüberstellung der Themen dieses Batches aus. Eine fehlende Fundstelle ist kein Vertragsausschluss.`;
+      const scope =
+        documentSlots.length === 1
+          ? `Dokument ${documentSlots[0]}`
+          : `Dokumente ${documentSlots.join(" und ")}`;
+      const batchSystemPrompt = `${systemPrompt}\n\nDies ist Belegbatch ${batchNumber} von ${contextBatches.length}. Bearbeite jedes enthaltene Thema vollständig für ${scope}. Gib ausschließlich die belegte Analyse der Themen dieses Batches aus. Eine fehlende Fundstelle ist kein Vertragsausschluss.`;
       const messages = await Connector.compressMessages(
         {
           systemPrompt: batchSystemPrompt,
@@ -71,7 +76,9 @@ const ComparisonBatchSynthesizer = {
           timeoutMs: inferenceTimeoutMs,
           completionOptions: { temperature, user },
         });
-        const section = `## Vergleichsteil ${batchNumber}/${contextBatches.length}\n${result.textResponse}`;
+        const sectionLabel =
+          documentSlots.length === 1 ? "Analyseteil" : "Vergleichsteil";
+        const section = `## ${sectionLabel} ${batchNumber}/${contextBatches.length}\n${result.textResponse}`;
         sections.push(section);
         metrics.push(result.metrics || {});
         if (typeof onBatch === "function") await onBatch(section, batchNumber);
@@ -100,7 +107,7 @@ const ComparisonBatchSynthesizer = {
         }
         const messages = await Connector.compressMessages(
           {
-            systemPrompt: `${systemPrompt}\n\nVerdichte die folgenden belegten Vergleichsteile verlustarm. Bewahre jedes Thema, die A/B-Zuordnung und vorhandene Dokument-/Seitenangaben. Füge keine neuen Vertragsfakten hinzu.`,
+            systemPrompt: `${systemPrompt}\n\nVerdichte die folgenden belegten Analyseteile verlustarm. Bewahre jedes Thema, die Dokumentzuordnung und vorhandene Seitenangaben. Füge keine neuen Vertragsfakten hinzu.`,
             userPrompt,
             contextTexts: [group],
             chatHistory: [],
@@ -122,7 +129,7 @@ const ComparisonBatchSynthesizer = {
 
     const finalMessages = await Connector.compressMessages(
       {
-        systemPrompt: `${systemPrompt}\n\nErstelle aus den belegten Vergleichsteilen eine knappe Gesamtbewertung zur Nutzerfrage. Verwende ausschließlich enthaltene Fakten, behalte Dokument-/Seitenangaben und kennzeichne fehlende Fundstellen vorsichtig.`,
+        systemPrompt: `${systemPrompt}\n\nErstelle aus den belegten Analyseteilen eine knappe Gesamtbewertung zur Nutzerfrage. Verwende ausschließlich enthaltene Fakten, behalte Dokument- und vorhandene Seitenangaben und kennzeichne fehlende Fundstellen vorsichtig.`,
         userPrompt,
         contextTexts: [reductionTexts.join("\n\n")],
         chatHistory: [],

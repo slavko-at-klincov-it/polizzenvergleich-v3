@@ -64,25 +64,33 @@ function availableComparisonSlots(documents = [], reserved = 0) {
 
 async function deleteParsedComparisonSource({
   workspaceSlug,
+  threadSlug,
   parsedFileId,
+  deleteParsedComparisonFile,
   deleteParsedFiles,
 }) {
   if (!parsedFileId) return { success: true, error: null };
   try {
-    const success = await deleteParsedFiles(workspaceSlug, [parsedFileId]);
+    const success = deleteParsedComparisonFile
+      ? await deleteParsedComparisonFile(
+          workspaceSlug,
+          threadSlug,
+          parsedFileId
+        )
+      : await deleteParsedFiles(workspaceSlug, [parsedFileId]);
     return success
       ? { success: true, error: null }
       : {
           success: false,
           error:
-            "Die temporären PDF-Daten konnten nicht entfernt werden. Bitte erneut versuchen.",
+            "Die temporären Dokumentdaten konnten nicht entfernt werden. Bitte erneut versuchen.",
         };
   } catch (error) {
     return {
       success: false,
       error:
         error.message ||
-        "Die temporären PDF-Daten konnten nicht entfernt werden.",
+        "Die temporären Dokumentdaten konnten nicht entfernt werden.",
     };
   }
 }
@@ -141,7 +149,7 @@ function comparisonDocumentAttachment(document = {}, uid = null) {
     document.name ||
     document.filename ||
     document.title ||
-    "PDF-Dokument";
+    "Dokument";
   const status = ["indexing", "ready", "deleting", "failed"].includes(
     document.status
   )
@@ -150,7 +158,7 @@ function comparisonDocumentAttachment(document = {}, uid = null) {
   const fileId = document.fileId ?? document.parsedFileId ?? null;
   return {
     uid: uid || `comparison-document-${document.id}`,
-    file: { name: filename, type: "application/pdf" },
+    file: { name: filename, type: document.mimeType || "" },
     contentString: null,
     status,
     error: document.error ?? null,

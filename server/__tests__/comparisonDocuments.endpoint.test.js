@@ -23,6 +23,7 @@ jest.mock("../utils/comparisonDocuments", () => ({
     list: jest.fn(),
     embedParsedFile: jest.fn(),
     remove: jest.fn(),
+    removeParsedFile: jest.fn(),
   },
 }));
 
@@ -59,6 +60,7 @@ describe("comparisonDocumentEndpoints", () => {
     ComparisonDocumentService.list.mockReset();
     ComparisonDocumentService.embedParsedFile.mockReset();
     ComparisonDocumentService.remove.mockReset();
+    ComparisonDocumentService.removeParsedFile.mockReset();
     comparisonDocumentEndpoints(app);
     userFromSession.mockResolvedValue({ id: 3, role: "default" });
   });
@@ -104,6 +106,25 @@ describe("comparisonDocumentEndpoints", () => {
 
     expect(getResponse.json).toHaveBeenCalledWith({ documents: [{ id: 5 }] });
     expect(deleteResponse.json).toHaveBeenCalledWith({
+      success: true,
+      error: null,
+    });
+  });
+
+  it("deletes a parsed source only through its workspace and thread scope", async () => {
+    ComparisonDocumentService.removeParsedFile.mockResolvedValue(true);
+    const handler = app.delete.mock.calls[1][2];
+    const response = responseDouble();
+
+    await handler({ params: { fileId: "17" } }, response);
+
+    expect(ComparisonDocumentService.removeParsedFile).toHaveBeenCalledWith({
+      workspace: response.locals.workspace,
+      thread: response.locals.thread,
+      user: { id: 3, role: "default" },
+      parsedFileId: "17",
+    });
+    expect(response.json).toHaveBeenCalledWith({
       success: true,
       error: null,
     });

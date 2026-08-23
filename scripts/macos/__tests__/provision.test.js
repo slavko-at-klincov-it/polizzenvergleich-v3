@@ -68,11 +68,12 @@ describe("macOS policy provisioning contract", () => {
       LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
       EMBEDDING_ENGINE: "lmstudio",
       EMBEDDING_BASE_PATH: "http://127.0.0.1:1234/v1",
-      EMBEDDING_MODEL_PREF: "dinghy-law",
+      EMBEDDING_MODEL_PREF: "dinghy-embed",
       EMBEDDING_MODEL_MAX_CHUNK_LENGTH: "8192",
       EMBEDDING_QUERY_PREFIX:
         "Instruct: Retrieve all relevant passages from German and Austrian insurance contracts for exact clause comparison, including deductibles, exclusions, limits, monetary amounts, percentages, conditions, and synonymous wording.",
       VECTOR_DB: "lancedb",
+      POLICY_MANAGED_EMBEDDING: "true",
       TARGET_OCR_LANG: "deu,eng",
     });
     const prompt = fs
@@ -88,7 +89,7 @@ describe("macOS policy provisioning contract", () => {
       slug: "polizzenvergleich",
       chatMode: "chat",
       chatProvider: "lmstudio",
-      chatModel: "policy-chat",
+      chatModel: null,
       topN: 8,
       similarityThreshold: 0.2,
       vectorSearchMode: "default",

@@ -133,6 +133,17 @@ describe("ComparisonHybridRetriever", () => {
     expect(compact).toContain("Selbstbehalt beträgt EUR 500");
   });
 
+  test("never invents a page label for a page-less source", () => {
+    expect(
+      ComparisonHybridRetriever.evidenceContext(
+        { text: "Vandalismus ist versichert.", pageNumber: null },
+        { slot: "A", originalFilename: "Bedingungen.docx" }
+      )
+    ).toBe(
+      "[DOKUMENT A | Bedingungen.docx]\nVandalismus ist versichert."
+    );
+  });
+
   test("searches and returns evidence separately for both documents", async () => {
     const index = {
       searchDocument: jest.fn(({ comparisonDocumentId }) => [
@@ -168,6 +179,8 @@ describe("ComparisonHybridRetriever", () => {
     });
 
     expect(result.ready).toBe(true);
+    expect(result.mode).toBe("comparison");
+    expect(result.systemPrompt).toContain("zwei Dokumente");
     expect(index.searchDocument).toHaveBeenCalledTimes(2);
     expect(VectorDb.performSimilaritySearch).toHaveBeenNthCalledWith(
       1,
@@ -184,16 +197,68 @@ describe("ComparisonHybridRetriever", () => {
     );
   });
 
-  test("refuses comparison until exactly two documents are ready", async () => {
+  test("does not activate document retrieval when the thread has no documents", async () => {
+    const VectorDb = { performSimilaritySearch: jest.fn() };
+    const result = await ComparisonHybridRetriever.retrieve({
+      workspace: { id: 10, slug: "compare" },
+      thread: { id: 20 },
+      query: "Erkläre mir den Unterschied zwischen Prämie und Beitrag.",
+      LLMConnector: {},
+      VectorDb,
+      documents: [],
+    });
+    expect(result).toEqual({ active: false });
+    expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
+  });
+
+  test("analyzes one ready document without requiring a second policy", async () => {
+    const oneDocument = documents.slice(0, 1);
+    const result = await ComparisonHybridRetriever.retrieve({
+      workspace: { id: 10, slug: "compare" },
+      thread: { id: 20 },
+      query: "Deckung",
+      LLMConnector: {},
+      VectorDb: {
+        name: "LanceDb",
+        performSimilaritySearch: jest.fn(() => ({
+          message: false,
+          sources: [],
+        })),
+      },
+      documents: oneDocument,
+      index: {
+        listThreadTopics: () => [
+          { id: "deckung", label: "Deckung", terms: ["deckung"] },
+        ],
+        searchTopic: jest.fn(() => [
+          {
+            pageNumber: 3,
+            text: "Die Deckung umfasst Feuer und Sturm.",
+            exactMatch: true,
+          },
+        ]),
+      },
+    });
+    expect(result).toMatchObject({ active: true, ready: true, mode: "single" });
+    expect(result.systemPrompt).toContain("das eine Dokument");
+    expect(result.systemPrompt).not.toContain("zwei Dokumente");
+    expect(result.sources).toEqual([
+      expect.objectContaining({ documentSlot: "A", pageNumber: 3 }),
+    ]);
+  });
+
+  test("waits when any attached document is still processing", async () => {
     const result = await ComparisonHybridRetriever.retrieve({
       workspace: { id: 10, slug: "compare" },
       thread: { id: 20 },
       query: "Vergleiche",
       LLMConnector: {},
       VectorDb: {},
-      documents: documents.slice(0, 1),
+      documents: [documents[0], { ...documents[1], status: "indexing" }],
     });
     expect(result).toMatchObject({ active: true, ready: false });
+    expect(result.message).toContain("Alle angehängten Dokumente");
+    expect(result.message).not.toContain("genau zwei");
   });
 
   test("uses the A/B inventory union and independent topic-document quotas", async () => {

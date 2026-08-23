@@ -11,6 +11,11 @@ const { Readable } = require("stream");
 const repo = path.resolve(
   process.env.POLICY_REPO_DIR || path.resolve(__dirname, "../..")
 );
+const serverEnvPath = path.join(repo, "server/.env");
+if (fs.existsSync(serverEnvPath))
+  require(path.join(repo, "server/node_modules/dotenv")).config({
+    path: serverEnvPath,
+  });
 const lock = JSON.parse(
   fs.readFileSync(path.join(__dirname, "models.lock.json"), "utf8")
 );
@@ -28,10 +33,35 @@ const lmStudioBaseUrl = (
   process.env.POLICY_LMSTUDIO_BASE_URL || "http://127.0.0.1:1234"
 ).replace(/\/$/, "");
 const inferenceTimeoutMs = 60_000;
+const configuredChatIdentifier = String(
+  process.env.POLICY_CHAT_MODEL_ID ||
+    process.env.LMSTUDIO_MODEL_PREF ||
+    lock.chat.identifier
+).trim();
+const configuredChatContextLength = Number(
+  process.env.POLICY_CONTEXT_LENGTH ||
+    process.env.LMSTUDIO_MODEL_TOKEN_LIMIT ||
+    lock.chat.contextLength
+);
+const modelStatePath = path.join(runtimeDir, "models.json");
+let previousModelState = {};
+if (fs.existsSync(modelStatePath)) {
+  try {
+    previousModelState = JSON.parse(fs.readFileSync(modelStatePath, "utf8"));
+  } catch {}
+}
 
 function fail(message) {
   throw new Error(message);
 }
+
+if (!configuredChatIdentifier)
+  fail("LMSTUDIO_MODEL_PREF enthält kein Chatmodell.");
+if (
+  !Number.isInteger(configuredChatContextLength) ||
+  configuredChatContextLength < 4096
+)
+  fail("LMSTUDIO_MODEL_TOKEN_LIMIT ist für das Chatmodell ungültig.");
 
 function run(executable, args, { allowFailure = false, capture = true } = {}) {
   const result = spawnSync(executable, args, {
@@ -69,6 +99,40 @@ function findModel(models, config) {
       model.indexedModelIdentifier === config.indexedModelIdentifier &&
       model.path === config.indexedModelIdentifier
   );
+}
+
+function findConfiguredChatModel(models, loaded = []) {
+  const active = loaded.find(
+    (model) =>
+      model.type === "llm" && model.identifier === configuredChatIdentifier
+  );
+  const rememberedIndexedIdentifier =
+    previousModelState.chatIdentifier === configuredChatIdentifier
+      ? previousModelState.chatIndexedModelIdentifier
+      : null;
+  const indexedIdentifier =
+    active?.indexedModelIdentifier || rememberedIndexedIdentifier;
+  if (indexedIdentifier) {
+    const remembered = models.find(
+      (model) =>
+        model.indexedModelIdentifier === indexedIdentifier ||
+        model.path === indexedIdentifier
+    );
+    if (remembered) return remembered;
+  }
+
+  const configured = models.find((model) =>
+    [
+      model.identifier,
+      model.modelKey,
+      model.indexedModelIdentifier,
+      model.path,
+    ].includes(configuredChatIdentifier)
+  );
+  if (configured) return configured;
+  if (configuredChatIdentifier === lock.chat.identifier)
+    return findModel(models, lock.chat);
+  return null;
 }
 
 function verifyModelArtifacts(model, config) {
@@ -175,10 +239,15 @@ function ensureLmsServer({ repair }) {
 
 function acquireModels({ verifyArtifacts = true } = {}) {
   let models = lmsJson(["ls", "--json"]);
-  if (!findModel(models, lock.chat)) {
+  let loaded = lmsJson(["ps", "--json"]);
+  if (!findConfiguredChatModel(models, loaded)) {
+    if (configuredChatIdentifier !== lock.chat.identifier)
+      fail(
+        `Das in AnythingLLM konfigurierte Chatmodell '${configuredChatIdentifier}' ist in LM Studio nicht installiert. Bitte das Modell lokal installieren oder LMSTUDIO_MODEL_PREF ändern.`
+      );
     if (!shouldDownload)
       fail(
-        "Gemma 4 fehlt. Installer erneut ohne --skip-model-download starten."
+        "Das empfohlene Qwen-Chatmodell fehlt. Installer erneut ohne --skip-model-download starten."
       );
     run(lmsCommand, ["get", lock.chat.downloadUrl, "--mlx", "-y"], {
       capture: false,
@@ -195,14 +264,15 @@ function acquireModels({ verifyArtifacts = true } = {}) {
     });
   }
   models = lmsJson(["ls", "--json"]);
-  const chat = findModel(models, lock.chat);
+  loaded = lmsJson(["ps", "--json"]);
+  const chat = findConfiguredChatModel(models, loaded);
   const embedding = findModel(models, lock.embedding);
   if (!chat || !embedding)
     fail(
       "Modelle wurden nach dem Download nicht eindeutig in LM Studio gefunden."
     );
   if (verifyArtifacts) {
-    verifyModelArtifacts(chat, lock.chat);
+    if (findModel([chat], lock.chat)) verifyModelArtifacts(chat, lock.chat);
     verifyModelArtifacts(embedding, lock.embedding);
   }
   return { chat, embedding };
@@ -221,10 +291,9 @@ async function loadModels() {
   const loaded = lmsJson(["ps", "--json"]);
   const activeChat = loaded.find(
     (item) =>
-      item.identifier === lock.chat.identifier &&
-      item.indexedModelIdentifier === lock.chat.indexedModelIdentifier &&
+      item.identifier === configuredChatIdentifier &&
       item.type === "llm" &&
-      Number(item.contextLength) >= lock.chat.contextLength
+      Number(item.contextLength) >= configuredChatContextLength
   );
   if (!activeChat) {
     run(
@@ -233,9 +302,9 @@ async function loadModels() {
         "load",
         models.chat.modelKey,
         "--identifier",
-        lock.chat.identifier,
+        configuredChatIdentifier,
         "--context-length",
-        String(lock.chat.contextLength),
+        String(configuredChatContextLength),
         "--parallel",
         String(lock.chat.parallel),
         "-y",
@@ -268,15 +337,18 @@ async function loadModels() {
   const tokenizerCandidate = path.join(
     process.env.HOME,
     ".lmstudio/models",
-    models.chat.path || `${lock.chat.publisher}/${lock.chat.repository}`,
+    models.chat.path ||
+      models.chat.indexedModelIdentifier ||
+      `${lock.chat.publisher}/${lock.chat.repository}`,
     "tokenizer.json"
   );
   fs.writeFileSync(
-    path.join(runtimeDir, "models.json"),
+    modelStatePath,
     JSON.stringify(
       {
         chatModelKey: models.chat.modelKey,
-        chatIdentifier: lock.chat.identifier,
+        chatIdentifier: configuredChatIdentifier,
+        chatIndexedModelIdentifier: models.chat.indexedModelIdentifier,
         embeddingIdentifier: lock.embedding.identifier,
         tokenizerPath: fs.existsSync(tokenizerCandidate)
           ? path.dirname(tokenizerCandidate)
@@ -294,9 +366,7 @@ async function validate() {
   const loaded = lmsJson(["ps", "--json"]);
   const chat = loaded.find(
     (item) =>
-      item.identifier === lock.chat.identifier &&
-      item.type === "llm" &&
-      item.indexedModelIdentifier === lock.chat.indexedModelIdentifier
+      item.identifier === configuredChatIdentifier && item.type === "llm"
   );
   const embedding = loaded.find(
     (item) =>
@@ -304,12 +374,13 @@ async function validate() {
       item.type === "embedding" &&
       item.indexedModelIdentifier === lock.embedding.indexedModelIdentifier
   );
-  if (!chat) fail(`Chatmodell '${lock.chat.identifier}' ist nicht geladen.`);
+  if (!chat)
+    fail(`Chatmodell '${configuredChatIdentifier}' ist nicht geladen.`);
   if (!embedding)
     fail(`Embeddingmodell '${lock.embedding.identifier}' ist nicht geladen.`);
-  if (Number(chat.contextLength) < lock.chat.contextLength) {
+  if (Number(chat.contextLength) < configuredChatContextLength) {
     fail(
-      `Chatmodell hat nur ${chat.contextLength} statt ${lock.chat.contextLength} Runtime-Tokens.`
+      `Chatmodell hat nur ${chat.contextLength} statt ${configuredChatContextLength} Runtime-Tokens.`
     );
   }
 
@@ -342,7 +413,7 @@ async function validate() {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      model: lock.chat.identifier,
+      model: configuredChatIdentifier,
       messages: [{ role: "user", content: "Antworte nur mit: bereit" }],
       max_tokens: 12,
       temperature: 0,

@@ -8,6 +8,9 @@ const { sourceIdentifier } = require("../../chats");
 const { NativeEmbeddingReranker } = require("../../EmbeddingRerankers/native");
 const { VectorDatabase } = require("../base");
 const { PageAwareTextSplitter } = require("../../PageAwareTextSplitter");
+const {
+  assertManagedEmbeddingVector,
+} = require("../../../../shared/managedEmbeddingContract.cjs");
 const path = require("path");
 
 /**
@@ -353,8 +356,11 @@ class LanceDb extends VectorDatabase {
       if (!skipCache) {
         const cacheResult = await cachedVectorInformation(fullFilePath);
         if (cacheResult.exists) {
-          const { client } = await this.connect();
           const { chunks } = cacheResult;
+          for (const chunk of chunks)
+            for (const vector of chunk)
+              assertManagedEmbeddingVector(vector.values);
+          const { client } = await this.connect();
           const documentVectors = [];
           const submissions = [];
 
@@ -402,6 +408,7 @@ class LanceDb extends VectorDatabase {
 
       if (!!vectorValues && vectorValues.length > 0) {
         for (const [i, vector] of vectorValues.entries()) {
+          assertManagedEmbeddingVector(vector);
           const vectorRecord = {
             id: uuidv4(),
             values: vector,
@@ -460,6 +467,8 @@ class LanceDb extends VectorDatabase {
     if (!namespace || !input || !LLMConnector)
       throw new Error("Invalid request to performSimilaritySearch.");
 
+    const queryVector = await LLMConnector.embedTextInput(input);
+    assertManagedEmbeddingVector(queryVector);
     const { client } = await this.connect();
     if (!(await this.namespaceExists(client, namespace))) {
       return {
@@ -486,7 +495,6 @@ class LanceDb extends VectorDatabase {
       ).map((record) => record.vectorId);
     }
 
-    const queryVector = await LLMConnector.embedTextInput(input);
     const result = rerank
       ? await this.rerankedSimilarityResponse({
           client,

@@ -1,5 +1,9 @@
 const { Telemetry } = require("../../models/telemetry");
 const { resetAllVectorStores } = require("../vectorStore/resetAllVectorStores");
+const {
+  MANAGED_EMBEDDING_ENV,
+  managedEmbeddingEnabled,
+} = require("../../../shared/managedEmbeddingContract.cjs");
 
 const KEY_MAPPING = {
   LLMProvider: {
@@ -1360,6 +1364,26 @@ async function updateENV(newENVs = {}, force = false, userId = null) {
   );
   const newValues = {};
 
+  // Reject the entire settings request before any validation hook, process
+  // mutation or vector-reset callback can run. This matters when a UI request
+  // mixes an unrelated setting with a destructive embedding drift.
+  if (managedEmbeddingEnabled()) {
+    const protectedMismatch = ENV_KEYS.find((key) => {
+      const envKey = KEY_MAPPING[key].envKey;
+      return (
+        Object.prototype.hasOwnProperty.call(MANAGED_EMBEDDING_ENV, envKey) &&
+        String(newENVs[key]) !== MANAGED_EMBEDDING_ENV[envKey]
+      );
+    });
+    if (protectedMismatch) {
+      const envKey = KEY_MAPPING[protectedMismatch].envKey;
+      return {
+        newValues,
+        error: `${envKey} ist in dieser Installation auf ${MANAGED_EMBEDDING_ENV[envKey]} festgelegt, damit der bestehende 2560-dimensionale LanceDB-Index nicht beschädigt wird.`,
+      };
+    }
+  }
+
   for (const key of ENV_KEYS) {
     const {
       envKey,
@@ -1453,6 +1477,7 @@ function dumpENV() {
     "MODEL_TOKENIZER_LABEL",
     "QWEN_TOKENIZER_PATH",
     "EMBEDDING_QUERY_PREFIX",
+    "POLICY_MANAGED_EMBEDDING",
     // For persistent data encryption
     "SIG_KEY",
     "SIG_SALT",

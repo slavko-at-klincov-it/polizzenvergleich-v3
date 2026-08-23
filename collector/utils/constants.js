@@ -5,8 +5,12 @@ const WATCH_DIRECTORY = process.env.COLLECTOR_HOTDIR_PATH
 
 const ACCEPTED_MIMES = {
   "text/plain": [".txt", ".md", ".org", ".adoc", ".rst"],
+  "text/markdown": [".md"],
+  "text/x-markdown": [".md"],
   "text/html": [".html"],
   "text/csv": [".csv"],
+  "application/csv": [".csv"],
+  "application/vnd.ms-excel": [".csv"],
   "application/json": [".json"],
   // TODO: Create asDoc.js that works for standard MS Word files.
   // "application/msword": [".doc"],

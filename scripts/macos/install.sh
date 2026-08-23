@@ -77,7 +77,7 @@ policy_require_command lms "LM Studio einmal öffnen und unter Developer die lms
 model_args=(prepare)
 if [ "$download_models" = true ]; then model_args+=(--download); fi
 if [ "$unload_other" = true ]; then model_args+=(--unload-other); fi
-policy_log "Bereite Gemma 4 und Dinghy Law in LM Studio vor ..."
+policy_log "Bereite das konfigurierte Chatmodell und Dinghy Law in LM Studio vor ..."
 "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/lmstudio-models.cjs" "${model_args[@]}"
 
 tokenizer_path=""
@@ -129,7 +129,6 @@ POLICY_ADMIN_PASSWORD="$admin_password" \
 POLICY_BROKER_PASSWORD="$broker_password" \
 POLICY_ADMIN_USERNAME="${POLICY_ADMIN_USERNAME:-admin}" \
 POLICY_BROKER_USERNAME="${POLICY_BROKER_USERNAME:-makler}" \
-POLICY_CHAT_MODEL_ID="policy-chat" \
   "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/provision.cjs" apply
 unset admin_password broker_password POLICY_CAPTURED_PASSWORD POLICY_ADMIN_PASSWORD POLICY_BROKER_PASSWORD
 

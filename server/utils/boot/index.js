@@ -7,6 +7,9 @@ const eagerLoadContextWindows = require("./eagerLoadContextWindows");
 const markOnboarded = require("./markOnboarded");
 const { PushNotifications } = require("../PushNotifications");
 const { TelegramBotService } = require("../telegramBot");
+const {
+  reconcileAllOrphanedPendingChats,
+} = require("../chats/ChatGenerationManager");
 
 // Testing SSL? You can make a self signed certificate and point the ENVs to that location
 // make a directory in server called 'sslcert' - cd into it
@@ -35,6 +38,7 @@ function bootSSL(app, port = 3001) {
 
     server
       .listen(port, getServerHost(), async () => {
+        await reconcileAllOrphanedPendingChats();
         await markOnboarded();
         await setupTelemetry();
         new CommunicationKey(true);
@@ -70,6 +74,7 @@ function bootHTTP(app, port = 3001) {
 
   app
     .listen(port, getServerHost(), async () => {
+      await reconcileAllOrphanedPendingChats();
       await markOnboarded();
       await setupTelemetry();
       new CommunicationKey(true);

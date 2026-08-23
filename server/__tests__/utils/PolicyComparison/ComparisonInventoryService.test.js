@@ -243,7 +243,7 @@ describe("ComparisonInventoryService", () => {
         documents: [document],
         Connector: {},
       })
-    ).rejects.toThrow("gespeicherte Seitenbestand");
+    ).rejects.toThrow("gespeicherte Textbestand");
     expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
   });
 

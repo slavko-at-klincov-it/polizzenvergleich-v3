@@ -178,21 +178,25 @@ describe("comparison upload chip reconciliation", () => {
   test("keeps a parsed-file chip when backend cleanup is not confirmed", async () => {
     const result = await deleteParsedComparisonSource({
       workspaceSlug: "polizzenvergleich",
+      threadSlug: "thread-a",
       parsedFileId: 91,
-      deleteParsedFiles: jest.fn().mockResolvedValue(false),
+      deleteParsedComparisonFile: jest.fn().mockResolvedValue(false),
     });
     expect(result).toEqual({
       success: false,
       error:
-        "Die temporären PDF-Daten konnten nicht entfernt werden. Bitte erneut versuchen.",
+        "Die temporären Dokumentdaten konnten nicht entfernt werden. Bitte erneut versuchen.",
     });
   });
 
   test("keeps a parsed-file chip when backend cleanup rejects", async () => {
     const result = await deleteParsedComparisonSource({
       workspaceSlug: "polizzenvergleich",
+      threadSlug: "thread-a",
       parsedFileId: 92,
-      deleteParsedFiles: jest.fn().mockRejectedValue(new Error("offline")),
+      deleteParsedComparisonFile: jest
+        .fn()
+        .mockRejectedValue(new Error("offline")),
     });
     expect(result).toEqual({ success: false, error: "offline" });
   });

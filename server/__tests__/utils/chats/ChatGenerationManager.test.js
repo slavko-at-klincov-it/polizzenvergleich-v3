@@ -3,6 +3,7 @@ const {
   ChatGenerationManager,
   chatGenerationManager,
   detachedStreamResponse,
+  reconcileAllOrphanedPendingChats,
   reconcileOrphanedPendingChats,
 } = require("../../../utils/chats/ChatGenerationManager");
 const { WorkspaceChats } = require("../../../models/workspaceChats");
@@ -74,6 +75,23 @@ describe("ChatGenerationManager", () => {
     manager.finish(generation);
   });
 
+  test("stopping A cannot cancel a different thread or generation", () => {
+    const manager = new ChatGenerationManager();
+    const scopeB = { ...scope, threadId: 99 };
+    const a = manager.begin(scope, "generation-a").generation;
+    const b = manager.begin(scopeB, "generation-b").generation;
+
+    expect(manager.cancel(scope, "generation-b")).toBe(false);
+    expect(a.controller.signal.aborted).toBe(false);
+    expect(b.controller.signal.aborted).toBe(false);
+    expect(manager.cancel(scope, "generation-a")).toBe(true);
+    expect(a.controller.signal.aborted).toBe(true);
+    expect(b.controller.signal.aborted).toBe(false);
+
+    manager.finish(a);
+    manager.finish(b);
+  });
+
   test("stale pending snapshot never overwrites an already completed row", async () => {
     const pending = JSON.stringify({
       text: "Antwort wird erstellt …",
@@ -100,5 +118,39 @@ describe("ChatGenerationManager", () => {
     get.mockRestore();
     update.mockRestore();
     chatGenerationManager.resetForTests();
+  });
+
+  test("repairs every durable pending row during server startup", async () => {
+    const where = jest.spyOn(WorkspaceChats, "where").mockResolvedValue([
+      {
+        id: 88,
+        workspaceId: 1,
+        thread_id: 2,
+        user_id: 3,
+        generationId: null,
+        response: JSON.stringify({
+          text: "Antwort wird erstellt …",
+          pending: true,
+          generationId: "generation-restart",
+        }),
+      },
+    ]);
+    const update = jest
+      .spyOn(WorkspaceChats, "_update")
+      .mockResolvedValue(true);
+
+    await expect(reconcileAllOrphanedPendingChats()).resolves.toBe(1);
+    expect(update).toHaveBeenCalledWith(
+      88,
+      expect.objectContaining({
+        response: expect.stringContaining('"pending":false'),
+      })
+    );
+    expect(JSON.parse(update.mock.calls[0][1].response)).toMatchObject({
+      interrupted: true,
+      generationId: "generation-restart",
+    });
+    where.mockRestore();
+    update.mockRestore();
   });
 });

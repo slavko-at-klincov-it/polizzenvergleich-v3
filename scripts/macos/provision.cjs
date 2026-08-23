@@ -4,6 +4,9 @@
 // AnythingLLM's model validation/hashing rather than writing password rows itself.
 const fs = require("fs");
 const path = require("path");
+const {
+  MANAGED_EMBEDDING_ENV,
+} = require("../../shared/managedEmbeddingContract.cjs");
 
 const repo = path.resolve(
   process.env.POLICY_REPO_DIR || path.resolve(__dirname, "../..")
@@ -26,8 +29,6 @@ const workspaceSlug = "polizzenvergleich";
 const installationMarker = "policy_comparison_installation_version";
 const installationState = "policy_comparison_installation_state";
 const installationVersion = "1";
-const queryPrefix =
-  "Instruct: Retrieve all relevant passages from German and Austrian insurance contracts for exact clause comparison, including deductibles, exclusions, limits, monetary amounts, percentages, conditions, and synonymous wording.";
 
 function expectedPrompt() {
   return fs
@@ -85,11 +86,8 @@ async function status() {
       problems.push("Workspace-Chatmodus ist nicht chat.");
     if (workspace.chatProvider !== "lmstudio")
       problems.push("Workspace nutzt nicht LM Studio.");
-    if (
-      workspace.chatModel !==
-      (process.env.POLICY_CHAT_MODEL_ID || "policy-chat")
-    )
-      problems.push("Workspace nutzt nicht das verwaltete Chatmodell.");
+    if (workspace.chatModel !== null)
+      problems.push("Workspace überschreibt das global konfigurierte Chatmodell.");
     if (workspace.topN !== 8) problems.push("Workspace topN ist nicht 8.");
     if (workspace.similarityThreshold !== 0.2)
       problems.push("Workspace Similarity Threshold ist nicht 0.2.");
@@ -106,20 +104,16 @@ async function status() {
   const expectedEnv = {
     LLM_PROVIDER: "lmstudio",
     LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
-    LMSTUDIO_MODEL_PREF: process.env.POLICY_CHAT_MODEL_ID || "policy-chat",
     LMSTUDIO_MODEL_TOKEN_LIMIT: "32768",
-    EMBEDDING_ENGINE: "lmstudio",
-    EMBEDDING_BASE_PATH: "http://127.0.0.1:1234/v1",
-    EMBEDDING_MODEL_PREF: "dinghy-law",
-    EMBEDDING_MODEL_MAX_CHUNK_LENGTH: "8192",
-    VECTOR_DB: "lancedb",
+    ...MANAGED_EMBEDDING_ENV,
     TARGET_OCR_LANG: "deu,eng",
-    EMBEDDING_QUERY_PREFIX: queryPrefix,
   };
   for (const [key, value] of Object.entries(expectedEnv)) {
     if (process.env[key] !== value)
       problems.push(`${key} ist nicht '${value}'.`);
   }
+  if (!String(process.env.LMSTUDIO_MODEL_PREF || "").trim())
+    problems.push("LMSTUDIO_MODEL_PREF enthält kein konfiguriertes Chatmodell.");
   return {
     adminExists: Boolean(admin),
     brokerExists: Boolean(broker),
@@ -227,7 +221,7 @@ async function apply() {
     const created = await Workspace.new("Polizzenvergleich", broker.id, {
       chatMode: "chat",
       chatProvider: "lmstudio",
-      chatModel: process.env.POLICY_CHAT_MODEL_ID || "policy-chat",
+      chatModel: null,
       openAiPrompt: prompt,
       topN: 8,
       similarityThreshold: 0.2,
@@ -243,7 +237,7 @@ async function apply() {
       name: "Polizzenvergleich",
       chatMode: "chat",
       chatProvider: "lmstudio",
-      chatModel: process.env.POLICY_CHAT_MODEL_ID || "policy-chat",
+      chatModel: null,
       openAiPrompt: prompt,
       topN: 8,
       similarityThreshold: 0.2,

@@ -10,8 +10,15 @@ const WorkspaceChats = {
     threadId = null,
     include = true,
     apiSessionId = null,
+    generationId = null,
   }) {
     try {
+      if (generationId) {
+        const existing = await prisma.workspace_chats.findUnique({
+          where: { generationId },
+        });
+        if (existing) return { chat: existing, message: null, existing: true };
+      }
       const chat = await prisma.workspace_chats.create({
         data: {
           workspaceId,
@@ -20,11 +27,18 @@ const WorkspaceChats = {
           user_id: user?.id || null,
           thread_id: threadId,
           api_session_id: apiSessionId,
+          generationId,
           include,
         },
       });
-      return { chat, message: null };
+      return { chat, message: null, existing: false };
     } catch (error) {
+      if (generationId && error?.code === "P2002") {
+        const existing = await prisma.workspace_chats.findUnique({
+          where: { generationId },
+        });
+        if (existing) return { chat: existing, message: null, existing: true };
+      }
       console.error(error.message);
       return { chat: null, message: error.message };
     }

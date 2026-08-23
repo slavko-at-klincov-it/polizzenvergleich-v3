@@ -29,6 +29,7 @@ for file in "$POLICY_REPO_DIR/server/.env" "$POLICY_REPO_DIR/collector/.env"; do
 done
 
 if [ -x "$POLICY_NODE_BIN" ] && command -v lms >/dev/null 2>&1; then
+  if "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/managed-embedding-check.cjs" >/dev/null; then check_ok "Dinghy-Konfiguration und 2560-Dimensionsvertrag"; else check_fail "Dinghy-Konfiguration ist nicht updatesicher"; fi
   if "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/lmstudio-models.cjs" check; then check_ok "LM Studio, 32k Chat und Dinghy-Embeddings"; else check_fail "LM-Studio-Modellprüfung fehlgeschlagen"; fi
 else
   check_fail "LM Studio CLI ist nicht verfügbar"

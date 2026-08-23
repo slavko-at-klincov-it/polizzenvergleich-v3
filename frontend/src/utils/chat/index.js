@@ -1,7 +1,10 @@
 import { THREAD_RENAME_EVENT } from "@/components/Sidebar/ActiveWorkspaces/ThreadContainer";
 import { emitAssistantMessageCompleteEvent } from "@/components/contexts/TTSProvider";
 import { getAgentSessionActive } from "@/utils/chat/agent";
+import chatGenerationState from "@/components/WorkspaceChat/ChatContainer/chatGenerationState.cjs";
 export const ABORT_STREAM_EVENT = "abort-chat-stream";
+
+const { detachedGenerationHistory } = chatGenerationState;
 
 // For handling of chat responses in the frontend by their various types.
 export default function handleChat(
@@ -25,7 +28,16 @@ export default function handleChat(
     metrics = {},
     routedTo = null,
     outputs = null,
+    generationId = null,
   } = chatResult;
+
+  if (type === "generationDetached") {
+    const nextHistory = detachedGenerationHistory(_chatHistory, generationId);
+    _chatHistory.splice(0, _chatHistory.length, ...nextHistory);
+    setChatHistory([..._chatHistory]);
+    setLoadingResponse(true);
+    return;
+  }
 
   if (type === "modelRouteNotification") {
     _chatHistory.push({

@@ -3,6 +3,9 @@ const {
   maximumChunkLength,
   reportEmbeddingProgress,
 } = require("../../helpers");
+const {
+  assertManagedEmbeddingVector,
+} = require("../../../../shared/managedEmbeddingContract.cjs");
 
 function formatQueryInput(textInput) {
   const prefix = process.env.EMBEDDING_QUERY_PREFIX?.trim();
@@ -88,6 +91,7 @@ class LMStudioEmbedder {
                 type: "EMPTY_ARR",
                 message: "The embedding was empty from LMStudio",
               };
+            assertManagedEmbeddingVector(embedding);
             reportEmbeddingProgress(idx + 1, textChunks.length);
             return { data: embedding, error: null };
           })

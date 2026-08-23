@@ -469,21 +469,28 @@ export default function ChatContainer({
       const attachments = promptMessage?.attachments ?? parseAttachments();
       window.dispatchEvent(new CustomEvent(CLEAR_ATTACHMENTS_EVENT));
 
-      await Workspace.multiplexStream({
-        workspaceSlug: workspace.slug,
-        threadSlug: effectiveThreadSlug,
-        prompt: promptMessage.userMessage,
-        chatHandler: (chatResult) =>
-          handleChat(
-            chatResult,
-            setLoadingResponse,
-            setChatHistory,
-            remHistory,
-            _chatHistory,
-            setSocketId
-          ),
-        attachments,
-      });
+      try {
+        await Workspace.multiplexStream({
+          workspaceSlug: workspace.slug,
+          threadSlug: effectiveThreadSlug,
+          prompt: promptMessage.userMessage,
+          chatHandler: (chatResult) =>
+            handleChat(
+              chatResult,
+              setLoadingResponse,
+              setChatHistory,
+              remHistory,
+              _chatHistory,
+              setSocketId
+            ),
+          attachments,
+        });
+      } catch (error) {
+        console.warn(
+          "Live stream detached; the thread will reconcile in the background.",
+          error.message
+        );
+      }
       return;
     }
     loadingResponse === true && fetchReply();
@@ -492,6 +499,19 @@ export default function ChatContainer({
   // TODO: Simplify this WSS stuff
   useEffect(() => {
     let socket = null;
+    const handleAgentAbort = (event) => {
+      const detail = event?.detail;
+      if (
+        !detail ||
+        detail.workspaceSlug !== workspace.slug ||
+        detail.threadSlug !== effectiveThreadSlug
+      )
+        return;
+      setAgentSessionActive(false);
+      setAgentSessionSocket(null);
+      window.dispatchEvent(new CustomEvent(AGENT_SESSION_END));
+      socket?.close();
+    };
 
     function handleWSS() {
       try {
@@ -501,12 +521,7 @@ export default function ChatContainer({
         );
         socket.supportsAgentStreaming = false;
 
-        window.addEventListener(ABORT_STREAM_EVENT, () => {
-          setAgentSessionActive(false);
-          setAgentSessionSocket(null);
-          window.dispatchEvent(new CustomEvent(AGENT_SESSION_END));
-          socket?.close();
-        });
+        window.addEventListener(ABORT_STREAM_EVENT, handleAgentAbort);
 
         socket.addEventListener("message", (event) => {
           try {
@@ -587,13 +602,14 @@ export default function ChatContainer({
     handleWSS();
 
     return () => {
+      window.removeEventListener(ABORT_STREAM_EVENT, handleAgentAbort);
       if (socket) {
         setAgentSessionActive(false);
         window.dispatchEvent(new CustomEvent(AGENT_SESSION_END));
         socket.close();
       }
     };
-  }, [socketId]);
+  }, [socketId, workspace.slug, effectiveThreadSlug]);
 
   if (isEmpty) {
     return (

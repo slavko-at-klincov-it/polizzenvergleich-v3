@@ -99,7 +99,10 @@ function normalizeItem(item = {}) {
   const valueJson = stableJson(item.value);
   const unit = optionalText(item.unit);
   const conditionsJson = stableJson(item.conditions);
-  const pageNumber = positiveInteger(item.pageNumber, "pageNumber");
+  const pageNumber =
+    item.pageNumber == null
+      ? null
+      : positiveInteger(item.pageNumber, "pageNumber");
   const sourceMethod = optionalText(item.sourceMethod);
   const confidence = item.confidence == null ? null : Number(item.confidence);
   if (
@@ -253,7 +256,12 @@ const ComparisonDocumentInventory = {
       throw new Error(
         "A ready comparison inventory requires at least one grounded item."
       );
-    if (uniqueItems.some((item) => item.pageNumber > inventoryPageCount))
+    if (
+      uniqueItems.some(
+        (item) =>
+          item.pageNumber != null && item.pageNumber > inventoryPageCount
+      )
+    )
       throw new Error("An inventory item points beyond the processed pages.");
 
     await prisma.$transaction(async (transaction) => {

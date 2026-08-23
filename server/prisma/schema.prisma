@@ -191,6 +191,7 @@ model workspace_chats {
   user_id        Int?
   thread_id      Int? // No relation to prevent whole table migration
   api_session_id String? // String identifier for only the dev API to partition chats in any mode.
+  generationId   String?  @unique
   createdAt      DateTime @default(now())
   lastUpdatedAt  DateTime @default(now())
   feedbackScore   Boolean?
@@ -441,7 +442,7 @@ model comparison_document_inventory_items {
   valueJson            String?
   unit                 String?
   conditionsJson       String?
-  pageNumber           Int
+  pageNumber           Int?
   evidenceText         String
   evidenceHash         String
   sourceMethod         String?

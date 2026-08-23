@@ -3,6 +3,9 @@ import { API_BASE } from "@/utils/constants";
 import { baseHeaders, safeJsonParse } from "@/utils/request";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { v4 } from "uuid";
+import chatGenerationState from "@/components/WorkspaceChat/ChatContainer/chatGenerationState.cjs";
+
+const { generationEventMatches } = chatGenerationState;
 
 const activeThreadGenerations = new Map();
 const generationKey = (workspaceSlug, threadSlug) =>
@@ -101,7 +104,7 @@ const WorkspaceThread = {
       if (generationId)
         this.registerActiveGeneration(workspaceSlug, threadSlug, generationId);
     }
-    if (!generationId) return false;
+    if (!generationId) return { cancelled: false, generationId: null };
     return fetch(
       `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/stop-generation`,
       {
@@ -111,8 +114,11 @@ const WorkspaceThread = {
       }
     )
       .then((res) => (res.ok ? res.json() : { cancelled: false }))
-      .then((data) => data.cancelled === true)
-      .catch(() => false);
+      .then((data) => ({
+        cancelled: data.cancelled === true,
+        generationId,
+      }))
+      .catch(() => ({ cancelled: false, generationId }));
   },
   activeGeneration: async function (workspaceSlug, threadSlug) {
     return fetch(
@@ -147,9 +153,11 @@ const WorkspaceThread = {
     const handleAbort = (event) => {
       const detail = event?.detail;
       if (
-        !detail ||
-        detail.workspaceSlug !== workspaceSlug ||
-        detail.threadSlug !== threadSlug
+        !generationEventMatches(detail, {
+          workspaceSlug,
+          threadSlug,
+          generationId: currentGenerationId,
+        })
       )
         return;
       ctrl.abort();
@@ -208,19 +216,24 @@ const WorkspaceThread = {
               activeThreadGenerations.set(key, currentGenerationId);
               return;
             }
+            if (chatResult?.type === "generationDetached") {
+              handleChat({
+                ...chatResult,
+                type: "generationDetached",
+                generationId: currentGenerationId,
+              });
+              return;
+            }
             if (chatResult) handleChat(chatResult);
           },
           onerror(err) {
             handleChat({
               id: v4(),
-              type: "abort",
-              textResponse: null,
-              sources: [],
+              type: "generationDetached",
+              generationId: currentGenerationId,
               close: true,
-              error: `An error occurred while streaming response. ${err.message}`,
             });
-            ctrl.abort();
-            throw new Error();
+            throw err;
           },
         }
       );

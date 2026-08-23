@@ -3,7 +3,10 @@ import { baseHeaders, safeJsonParse } from "@/utils/request";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import WorkspaceThread from "@/models/workspaceThread";
 import { v4 } from "uuid";
+import chatGenerationState from "@/components/WorkspaceChat/ChatContainer/chatGenerationState.cjs";
 import { ABORT_STREAM_EVENT } from "@/utils/chat";
+
+const { generationEventMatches } = chatGenerationState;
 
 const activeWorkspaceGenerations = new Map();
 
@@ -167,15 +170,18 @@ const Workspace = {
       generationId = status?.generationId;
       if (generationId) this.registerActiveGeneration(slug, generationId);
     }
-    if (!generationId) return false;
+    if (!generationId) return { cancelled: false, generationId: null };
     return fetch(`${API_BASE}/workspace/${slug}/stop-generation`, {
       method: "POST",
       headers: baseHeaders(),
       body: JSON.stringify({ generationId }),
     })
       .then((res) => (res.ok ? res.json() : { cancelled: false }))
-      .then((data) => data.cancelled === true)
-      .catch(() => false);
+      .then((data) => ({
+        cancelled: data.cancelled === true,
+        generationId,
+      }))
+      .catch(() => ({ cancelled: false, generationId }));
   },
   activeGeneration: async function (slug) {
     return fetch(`${API_BASE}/workspace/${slug}/generation-status`, {
@@ -200,7 +206,14 @@ const Workspace = {
     // The backend response abort handling is done in each LLM's handleStreamResponse.
     const handleAbort = (event) => {
       const detail = event?.detail;
-      if (!detail || detail.workspaceSlug !== slug || detail.threadSlug) return;
+      if (
+        !generationEventMatches(detail, {
+          workspaceSlug: slug,
+          threadSlug: null,
+          generationId: currentGenerationId,
+        })
+      )
+        return;
       ctrl.abort();
       handleChat({ id: v4(), type: "stopGeneration" });
     };
@@ -255,19 +268,24 @@ const Workspace = {
             activeWorkspaceGenerations.set(slug, currentGenerationId);
             return;
           }
+          if (chatResult?.type === "generationDetached") {
+            handleChat({
+              ...chatResult,
+              type: "generationDetached",
+              generationId: currentGenerationId,
+            });
+            return;
+          }
           if (chatResult) handleChat(chatResult);
         },
         onerror(err) {
           handleChat({
             id: v4(),
-            type: "abort",
-            textResponse: null,
-            sources: [],
+            type: "generationDetached",
+            generationId: currentGenerationId,
             close: true,
-            error: `An error occurred while streaming response. ${err.message}`,
           });
-          ctrl.abort();
-          throw new Error();
+          throw err;
         },
       });
     } finally {
@@ -513,6 +531,17 @@ const Workspace = {
       }
     );
     return response.ok;
+  },
+  deleteParsedComparisonFile: async function (slug, threadSlug, fileId) {
+    return fetch(
+      `${API_BASE}/workspace/${slug}/thread/${threadSlug}/comparison-parsed-files/${fileId}`,
+      { method: "DELETE", headers: baseHeaders() }
+    )
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        return response.ok && data?.success !== false;
+      })
+      .catch(() => false);
   },
 
   embedParsedFile: async function (slug, fileId) {

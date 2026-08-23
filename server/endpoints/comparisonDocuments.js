@@ -98,6 +98,28 @@ function comparisonDocumentEndpoints(app) {
       }
     }
   );
+
+  app.delete(
+    "/workspace/:slug/thread/:threadSlug/comparison-parsed-files/:fileId",
+    middleware,
+    async (request, response) => {
+      try {
+        const user = await userFromSession(request, response);
+        await ComparisonDocumentService.removeParsedFile({
+          workspace: response.locals.workspace,
+          thread: response.locals.thread,
+          user,
+          parsedFileId: request.params.fileId,
+        });
+        return response.status(200).json({ success: true, error: null });
+      } catch (error) {
+        return response.status(error.statusCode || 500).json({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+  );
 }
 
 module.exports = { comparisonDocumentEndpoints };

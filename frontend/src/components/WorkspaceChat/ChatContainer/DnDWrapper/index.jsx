@@ -7,6 +7,7 @@ import Workspace from "@/models/workspace";
 import showToast from "@/utils/toast";
 import { THREAD_CREATED_EVENT } from "@/components/Sidebar/ActiveWorkspaces/ThreadContainer";
 import comparisonDocumentMerge from "./comparisonDocumentMerge.cjs";
+import supportedComparisonFiles from "./supportedComparisonFiles.cjs";
 
 const {
   availableComparisonSlots,
@@ -14,6 +15,7 @@ const {
   deleteParsedComparisonSource,
   mergeHydratedComparisonDocuments,
 } = comparisonDocumentMerge;
+const { isSupportedComparisonFile } = supportedComparisonFiles;
 
 export const DndUploaderContext = createContext();
 export const REMOVE_ATTACHMENT_EVENT = "ATTACHMENT_REMOVE";
@@ -42,7 +44,7 @@ export const PARSED_FILE_ATTACHMENT_REMOVED_EVENT =
  * @property {number|null} parsedFileId - Thread-scoped parsed source used for retry/cleanup.
  * @property {number|string|null} fileId - Stable upload identity, equivalent to parsedFileId.
  * @property {number|string|null} comparisonDocumentId - Stable server-side comparison-document identity.
- * @property {('attachment'|'comparison_document')} type - Images are prompt attachments; PDFs are thread comparison documents.
+ * @property {('attachment'|'comparison_document')} type - Images are prompt attachments; supported files are thread comparison documents.
  */
 
 /**
@@ -73,7 +75,7 @@ export function DnDFileUploaderProvider({
   );
   const threadRef = useRef(threadSlug ? { slug: threadSlug } : null);
   const threadPromiseRef = useRef(null);
-  const pdfReservationsRef = useRef(0);
+  const documentReservationsRef = useRef(0);
 
   function updateFiles(updater) {
     const previous = filesRef.current;
@@ -227,8 +229,9 @@ export function DnDFileUploaderProvider({
       beginProcessing();
       const removal = await deleteParsedComparisonSource({
         workspaceSlug: workspace.slug,
+        threadSlug: activeSlug,
         parsedFileId: event.detail?.parsedFileId,
-        deleteParsedFiles: Workspace.deleteParsedFiles,
+        deleteParsedComparisonFile: Workspace.deleteParsedComparisonFile,
       });
       if (removal.success)
         updateFiles((prev) => prev.filter((prevFile) => prevFile.uid !== uid));
@@ -361,27 +364,31 @@ export function DnDFileUploaderProvider({
     const images = acceptedFiles.filter((file) =>
       file.type.startsWith("image/")
     );
-    const pdfs = acceptedFiles.filter(isPdf);
+    const comparisonDocuments = acceptedFiles.filter(isSupportedComparisonFile);
     const unsupported = acceptedFiles.filter(
-      (file) => !file.type.startsWith("image/") && !isPdf(file)
+      (file) =>
+        !file.type.startsWith("image/") && !isSupportedComparisonFile(file)
     );
 
     if (unsupported.length > 0)
       showToast(
-        "Für den Policenvergleich sind nur PDF-Dateien erlaubt. Bilder bleiben normale Chat-Anhänge.",
+        "Unterstützt werden PDF, DOCX, ODT, TXT, MD, CSV, XLSX und PPTX. Bilder bleiben normale Chat-Anhänge.",
         "warning"
       );
 
-    const acceptedPdfs = pdfs.slice(
+    const acceptedDocuments = comparisonDocuments.slice(
       0,
-      availableComparisonSlots(filesRef.current, pdfReservationsRef.current)
+      availableComparisonSlots(
+        filesRef.current,
+        documentReservationsRef.current
+      )
     );
-    if (acceptedPdfs.length < pdfs.length)
+    if (acceptedDocuments.length < comparisonDocuments.length)
       showToast(
-        "Pro Vergleich können maximal zwei PDFs verwendet werden.",
+        "Pro Thread können maximal zwei Dokumente verwendet werden.",
         "warning"
       );
-    pdfReservationsRef.current += acceptedPdfs.length;
+    documentReservationsRef.current += acceptedDocuments.length;
 
     let imageAttachments;
     try {
@@ -397,9 +404,9 @@ export function DnDFileUploaderProvider({
         }))
       );
     } catch (error) {
-      pdfReservationsRef.current = Math.max(
+      documentReservationsRef.current = Math.max(
         0,
-        pdfReservationsRef.current - acceptedPdfs.length
+        documentReservationsRef.current - acceptedDocuments.length
       );
       showToast(
         error.message || "Das Bild konnte nicht gelesen werden.",
@@ -407,7 +414,7 @@ export function DnDFileUploaderProvider({
       );
       return;
     }
-    const pdfAttachments = acceptedPdfs.map((file) => ({
+    const documentAttachments = acceptedDocuments.map((file) => ({
       uid: v4(),
       file,
       contentString: null,
@@ -416,36 +423,36 @@ export function DnDFileUploaderProvider({
       document: null,
       type: "comparison_document",
     }));
-    let queuedPdfAttachments = [];
+    let queuedDocumentAttachments = [];
     updateFiles((previous) => {
-      queuedPdfAttachments = pdfAttachments.slice(
+      queuedDocumentAttachments = documentAttachments.slice(
         0,
         availableComparisonSlots(previous)
       );
-      return [...previous, ...imageAttachments, ...queuedPdfAttachments];
+      return [...previous, ...imageAttachments, ...queuedDocumentAttachments];
     });
-    pdfReservationsRef.current = Math.max(
+    documentReservationsRef.current = Math.max(
       0,
-      pdfReservationsRef.current - acceptedPdfs.length
+      documentReservationsRef.current - acceptedDocuments.length
     );
 
-    if (queuedPdfAttachments.length < pdfAttachments.length)
+    if (queuedDocumentAttachments.length < documentAttachments.length)
       showToast(
-        "Der Vergleich enthält bereits zwei PDFs. Zusätzliche Uploads wurden nicht übernommen.",
+        "Der Thread enthält bereits zwei Dokumente. Zusätzliche Uploads wurden nicht übernommen.",
         "warning"
       );
-    if (queuedPdfAttachments.length === 0) return;
+    if (queuedDocumentAttachments.length === 0) return;
     beginProcessing();
     try {
       const thread = await ensureComparisonThread();
       await Promise.all(
-        queuedPdfAttachments.map((attachment) =>
+        queuedDocumentAttachments.map((attachment) =>
           ingestComparisonDocument(attachment, thread.slug)
         )
       );
     } catch (error) {
       const ids = new Set(
-        queuedPdfAttachments.map((attachment) => attachment.uid)
+        queuedDocumentAttachments.map((attachment) => attachment.uid)
       );
       updateFiles((previous) =>
         previous.map((item) =>
@@ -467,7 +474,7 @@ export function DnDFileUploaderProvider({
       const parsed = await Workspace.parseFile(workspace.slug, formData);
       if (!parsed.response.ok || !parsed.data?.files?.[0])
         throw new Error(
-          parsed.data?.error || "Der PDF-Text konnte nicht gelesen werden."
+          parsed.data?.error || "Der Dokumenttext konnte nicht gelesen werden."
         );
 
       const parsedFile = parsed.data.files[0];
@@ -495,7 +502,7 @@ export function DnDFileUploaderProvider({
       );
       if (!embedded.response.ok || embedded.data?.success === false) {
         const embedError = new Error(
-          embedded.data?.error || "Das PDF konnte nicht indexiert werden."
+          embedded.data?.error || "Das Dokument konnte nicht indexiert werden."
         );
         embedError.document = embedded.data?.document ?? null;
         embedError.parsedFileId = parsedFile.id;
@@ -601,10 +608,11 @@ export default function DnDFileUploaderWrapper({ children }) {
               alt="Drag and drop icon"
             />
             <p className="text-white text-[24px] font-semibold">
-              PDFs zum Vergleich hinzufügen
+              Dokumente analysieren oder vergleichen
             </p>
             <p className="text-white text-[16px] text-center">
-              Maximal zwei PDF-Dateien. Bilder bleiben normale <br />
+              Maximal zwei Dateien: PDF, DOCX, ODT, TXT, MD, CSV, XLSX oder
+              PPTX. Bilder bleiben normale <br />
               Chat-Anhänge.
             </p>
           </div>
@@ -631,13 +639,6 @@ async function toBase64(file) {
     reader.onerror = (error) => reject(error);
     reader.readAsDataURL(file);
   });
-}
-
-function isPdf(file) {
-  return (
-    file?.type === "application/pdf" ||
-    file?.name?.toLowerCase()?.endsWith(".pdf")
-  );
 }
 
 function emitComparisonDocumentsChanged(workspaceSlug, threadSlug) {

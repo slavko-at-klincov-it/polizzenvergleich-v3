@@ -58,6 +58,44 @@ function claimPendingHandoff(storage, storageKey, workspaceSlug, threadSlug) {
   return pending;
 }
 
+function detachedGenerationHistory(history = [], generationId) {
+  const next = [...history];
+  const currentIndex = next.findLastIndex(
+    (message) =>
+      message?.role === "assistant" &&
+      (message?.generationId === generationId ||
+        (message?.closed === false && !message?.chatId))
+  );
+  const current = currentIndex >= 0 ? next[currentIndex] : null;
+  const pending = {
+    ...(current || {}),
+    uuid: current?.uuid || generationId,
+    content: current?.content || "Antwort wird erstellt …",
+    role: "assistant",
+    sources: current?.sources || [],
+    closed: false,
+    error: null,
+    animate: true,
+    pending: true,
+    generationId,
+  };
+  if (currentIndex >= 0) next[currentIndex] = pending;
+  else next.push(pending);
+  return next;
+}
+
+function generationEventMatches(
+  detail,
+  { workspaceSlug, threadSlug = null, generationId }
+) {
+  return Boolean(
+    detail &&
+      detail.workspaceSlug === workspaceSlug &&
+      (detail.threadSlug ?? null) === (threadSlug ?? null) &&
+      detail.generationId === generationId
+  );
+}
+
 async function loadGenerationSnapshot(loadStatus, loadHistory) {
   const status = await loadStatus();
   const history = await loadHistory();
@@ -67,6 +105,8 @@ async function loadGenerationSnapshot(loadStatus, loadHistory) {
 // eslint-disable-next-line no-undef
 module.exports = {
   claimPendingHandoff,
+  detachedGenerationHistory,
+  generationEventMatches,
   generationPollDecision,
   hasHydratedPendingGeneration,
   hasPendingGeneration,

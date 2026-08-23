@@ -12,6 +12,20 @@ const { CollectorApi } = require("../utils/collectorApi");
 const { WorkspaceThread } = require("../models/workspaceThread");
 const { WorkspaceParsedFiles } = require("../models/workspaceParsedFiles");
 const { countModelTokens } = require("../utils/LocalModelTokenizer");
+const fs = require("fs");
+const {
+  isSupportedComparisonDocument,
+} = require("../utils/comparisonDocuments/supportedFormats");
+const { ComparisonDocumentService } = require("../utils/comparisonDocuments");
+
+function removeRejectedUpload(request) {
+  try {
+    if (request?.file?.path && fs.existsSync(request.file.path))
+      fs.unlinkSync(request.file.path);
+  } catch (error) {
+    console.warn("Could not remove rejected comparison upload:", error.message);
+  }
+}
 
 function workspaceParsedFilesEndpoints(app) {
   if (!app) return;
@@ -132,7 +146,39 @@ function workspaceParsedFilesEndpoints(app) {
         const user = await userFromSession(request, response);
         const workspace = response.locals.workspace;
         const Collector = new CollectorApi();
-        const { originalname } = request.file;
+        const { originalname, mimetype } = request.file;
+        if (
+          !isSupportedComparisonDocument({
+            filename: originalname,
+            mime: mimetype,
+          })
+        ) {
+          removeRejectedUpload(request);
+          return response.status(415).json({
+            success: false,
+            error:
+              "Unterstützt werden PDF, DOCX, ODT, TXT, MD, CSV, XLSX und PPTX.",
+          });
+        }
+
+        // Resolve and scope the thread before the collector writes extracted
+        // customer text. A supplied but invalid slug must never degrade into
+        // an unscoped/default-chat upload.
+        const { threadSlug = null } = reqBody(request);
+        const thread = threadSlug
+          ? await WorkspaceThread.get({
+              slug: String(threadSlug),
+              workspace_id: workspace.id,
+              user_id: user?.id || null,
+            })
+          : null;
+        if (threadSlug && !thread) {
+          removeRejectedUpload(request);
+          return response.status(404).json({
+            success: false,
+            error: "Der Vergleichs-Thread wurde nicht gefunden.",
+          });
+        }
         const processingOnline = await Collector.online();
 
         if (!processingOnline) {
@@ -151,18 +197,13 @@ function workspaceParsedFilesEndpoints(app) {
           });
         }
 
-        // Get thread ID if we have a slug
-        const { threadSlug = null } = reqBody(request);
-        const thread = threadSlug
-          ? await WorkspaceThread.get({
-              slug: String(threadSlug),
-              workspace_id: workspace.id,
-              user_id: user?.id || null,
-            })
-          : null;
         const files = await Promise.all(
           documents.map(async (doc) => {
-            const metadata = { ...doc };
+            const metadata = {
+              ...doc,
+              originalFilename: originalname,
+              mimeType: mimetype || null,
+            };
             // Strip out pageContent
             delete metadata.pageContent;
             const filename = `${originalname}-${doc.id}.json`;
@@ -189,6 +230,30 @@ function workspaceParsedFilesEndpoints(app) {
             });
 
             if (dbError) throw new Error(dbError);
+            try {
+              if (thread)
+                await ComparisonDocumentService.reserveParsedFile({
+                  workspace,
+                  thread,
+                  user,
+                  parsedFile: file,
+                });
+            } catch (reservationError) {
+              try {
+                await ComparisonDocumentService.removeParsedFile({
+                  workspace,
+                  thread,
+                  user,
+                  parsedFileId: file.id,
+                });
+              } catch (cleanupError) {
+                console.error(
+                  "Could not clean a rejected comparison upload:",
+                  cleanupError
+                );
+              }
+              throw reservationError;
+            }
             return {
               ...file,
               modelTokenCount,
@@ -217,7 +282,10 @@ function workspaceParsedFilesEndpoints(app) {
         });
       } catch (e) {
         console.error(e.message, e);
-        return response.sendStatus(500).end();
+        return response.status(e.statusCode || 500).json({
+          success: false,
+          error: e.message || "Document could not be parsed.",
+        });
       }
     }
   );

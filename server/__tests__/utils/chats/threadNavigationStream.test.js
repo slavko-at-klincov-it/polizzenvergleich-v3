@@ -134,6 +134,9 @@ describe("thread-independent streaming", () => {
 
     expect(mockConnector.streamGetChatCompletion).toHaveBeenCalledTimes(1);
     expect(mockWorkspaceChats.new).toHaveBeenCalledTimes(1);
+    expect(mockWorkspaceChats.new).toHaveBeenCalledWith(
+      expect.objectContaining({ generationId: "generation-a" })
+    );
     expect(mockWorkspaceChats._update).toHaveBeenCalledTimes(1);
     expect(mockWorkspaceChats._update).toHaveBeenCalledWith(
       77,
@@ -150,5 +153,74 @@ describe("thread-independent streaming", () => {
     });
     expect(persisted.pending).not.toBe(true);
     manager.finish(claimedA.generation);
+  });
+
+  test("provider errors always terminalize the pending chat", async () => {
+    const manager = new ChatGenerationManager();
+    const claimed = manager.begin(
+      { workspaceId: 1, threadId: 10, userId: 5 },
+      "generation-error"
+    );
+    mockConnector.streamGetChatCompletion.mockRejectedValue(
+      new Error("provider offline")
+    );
+    const response = detachedStreamResponse(
+      fakeHttpResponse(),
+      claimed.generation
+    );
+
+    await streamChatWithWorkspace(
+      response,
+      { id: 1, slug: "polizzen", chatMode: "chat", topN: 4 },
+      "Analysiere",
+      "chat",
+      { id: 5 },
+      { id: 10, slug: "a" },
+      [],
+      claimed.generation
+    );
+
+    const persisted = JSON.parse(
+      mockWorkspaceChats._update.mock.calls.at(-1)[1].response
+    );
+    expect(persisted).toMatchObject({
+      pending: false,
+      interrupted: true,
+      error: "provider offline",
+      generationId: "generation-error",
+    });
+    manager.finish(claimed.generation);
+  });
+
+  test("an explicit abort terminalizes only its own pending chat", async () => {
+    const manager = new ChatGenerationManager();
+    const localScope = { workspaceId: 1, threadId: 10, userId: 5 };
+    const claimed = manager.begin(localScope, "generation-stop");
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+    mockConnector.streamGetChatCompletion.mockRejectedValue(abortError);
+    expect(manager.cancel(localScope, "generation-stop")).toBe(true);
+
+    await streamChatWithWorkspace(
+      detachedStreamResponse(fakeHttpResponse(), claimed.generation),
+      { id: 1, slug: "polizzen", chatMode: "chat", topN: 4 },
+      "Analysiere",
+      "chat",
+      { id: 5 },
+      { id: 10, slug: "a" },
+      [],
+      claimed.generation
+    );
+
+    const persisted = JSON.parse(
+      mockWorkspaceChats._update.mock.calls.at(-1)[1].response
+    );
+    expect(persisted).toMatchObject({
+      pending: false,
+      interrupted: true,
+      text: "Antwort wurde gestoppt.",
+      generationId: "generation-stop",
+    });
+    manager.finish(claimed.generation);
   });
 });

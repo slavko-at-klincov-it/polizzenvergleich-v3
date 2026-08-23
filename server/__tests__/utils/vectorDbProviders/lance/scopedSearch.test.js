@@ -2,6 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const lancedb = require("@lancedb/lancedb");
+process.env.STORAGE_DIR ||= path.join(os.tmpdir(), "policy-lance-test-storage");
 const { LanceDb } = require("../../../../utils/vectorDbProviders/lance");
 
 describe("LanceDb scoped similarity search", () => {
@@ -70,5 +71,28 @@ describe("LanceDb scoped similarity search", () => {
 
     expect(result.sourceDocuments).toHaveLength(1);
     expect(result.sourceDocuments[0].id).toBe("vector-b");
+  });
+
+  test("rejects a wrong-dimensional managed query before opening LanceDB", async () => {
+    const previous = process.env.POLICY_MANAGED_EMBEDDING;
+    process.env.POLICY_MANAGED_EMBEDDING = "true";
+    const db = new LanceDb();
+    const connect = jest.spyOn(db, "connect");
+    try {
+      await expect(
+        db.performSimilaritySearch({
+          namespace: "policies",
+          input: "Vandalismus",
+          LLMConnector: {
+            embedTextInput: jest.fn(async () => Array(384).fill(0)),
+          },
+        })
+      ).rejects.toThrow("expected 2560");
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      connect.mockRestore();
+      if (previous == null) delete process.env.POLICY_MANAGED_EMBEDDING;
+      else process.env.POLICY_MANAGED_EMBEDDING = previous;
+    }
   });
 });

@@ -1,9 +1,14 @@
 # Lokaler Polizzenvergleich – Einrichtung und Betrieb
 
 Diese Fork-Variante ist auf einen einfachen Ablauf für Versicherungsmakler
-ausgelegt: neuer Vergleich, zwei PDFs in den Chat ziehen, Frage oder Auftrag
-eingeben, fertig. Die technische Verarbeitung läuft threadbezogen im
-Hintergrund.
+ausgelegt: normal chatten oder bis zu zwei unterstützte Dokumente in den Chat
+ziehen, Frage oder Auftrag eingeben, fertig. Mit einem Dokument erfolgt eine
+Einzelanalyse, mit zwei Dokumenten ein Vergleich. Die technische Verarbeitung
+läuft threadbezogen im Hintergrund.
+
+Unterstützt werden PDF, DOCX, ODT, TXT, MD, CSV, XLSX und PPTX. Nur PDFs
+erhalten physische Seitenangaben; bei den übrigen Formaten werden keine Seiten
+erfunden.
 
 ## Empfohlene Kundeninstallation
 
@@ -12,14 +17,15 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.2.0 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.0 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
 
 - prüft macOS, Apple Silicon, freien Speicher und LM Studio,
 - installiert eine eigene, geprüfte Node-Laufzeit ohne Homebrew oder `sudo`,
-- lädt Gemma 4 und Dinghy Law bei Bedarf und prüft beide APIs,
+- lädt standardmäßig Qwen 3.8 27B und Dinghy Law bei Bedarf; ein bereits in
+  AnythingLLM konfiguriertes lokales Chatmodell wird stattdessen übernommen,
 - erzeugt lokale Geheimnisse und schützt Konfiguration und Kundendaten,
 - baut Frontend, Server und Collector und führt Produktionsmigrationen aus,
 - fragt Admin- und Maklerpasswort verdeckt ab,
@@ -67,7 +73,9 @@ Entwicklerreferenz erhalten.
 
 ## Festgelegtes Start-Setup für den 32-GB-Mac
 
-- Chatmodell: Gemma 4 26B-A4B Instruct, MLX 4-bit
+- Empfohlenes Chatmodell: Qwen 3.8 27B, MLX 4-bit. Das Chatmodell ist nicht
+  fest verdrahtet und kann in AnythingLLM auf ein anderes lokal installiertes
+  LM-Studio-Modell geändert werden.
 - Embeddingmodell: Dinghy-Law-4B-v1 GGUF Q6_K
 - Modellserver: LM Studio
 - Vektordatenbank: LanceDB; andere Vektordatenbanken werden für den sicheren
@@ -80,14 +88,20 @@ Entwicklerreferenz erhalten.
 TurboQuant ist keine Voraussetzung. Es wird in diesem Stand weder benötigt
 noch von LM Studio als einfache produktive Option vorausgesetzt.
 
+Nach einer Änderung des Chatmodells in der AnythingLLM-Konfiguration genügt
+`~/.local/bin/polizzenvergleich restart`. Autostart und Doctor lesen
+`LMSTUDIO_MODEL_PREF`, laden genau dieses lokale Modell und prüfen dessen
+tatsächliches Kontextfenster. Dinghy und LanceDB bleiben davon unberührt.
+
 ## Was der Makler sieht
 
 1. Workspace `Polizzenvergleich` öffnen.
-2. `New Thread` ist nicht manuell erforderlich: Beim ersten PDF wird automatisch
+2. `New Thread` ist nicht manuell erforderlich: Beim ersten Dokument wird automatisch
    ein echter Thread erzeugt.
-3. Genau zwei PDFs hineinziehen.
-4. Warten, bis beide Chips `Bereit` zeigen.
-5. Zum Beispiel `Vergleiche die beiden Policen vollständig` oder
+3. Kein, ein oder zwei unterstützte Dokumente hineinziehen.
+4. Bei Anhängen warten, bis alle Chips `Bereit` zeigen.
+5. Zum Beispiel `Analysiere dieses Dokument` oder
+   `Vergleiche die beiden Policen vollständig` oder
    `Wo unterscheiden sich die Selbstbehalte?` schreiben.
 6. Ergebnis mit Dokumentname und Seitennummer prüfen.
 
@@ -132,11 +146,11 @@ COLLECTOR_HOTDIR_PATH='/absoluter/pfad/zum/repo/collector/hotdir'
 
 LLM_PROVIDER='lmstudio'
 LMSTUDIO_BASE_PATH='http://127.0.0.1:1234/v1'
-LMSTUDIO_MODEL_PREF='EXAKTE_LM_STUDIO_MODELL_ID_VON_GEMMA'
+LMSTUDIO_MODEL_PREF='EXAKTE_LM_STUDIO_MODELL_ID_DES_CHATMODELLS'
 LMSTUDIO_MODEL_TOKEN_LIMIT=32768
 
-MODEL_TOKENIZER_PATH='/absoluter/pfad/zum/gemma-modellordner-mit-tokenizer.json'
-MODEL_TOKENIZER_LABEL='Gemma 4'
+MODEL_TOKENIZER_PATH='/absoluter/pfad/zum/chatmodellordner-mit-tokenizer.json'
+MODEL_TOKENIZER_LABEL='Name des Chatmodells'
 
 EMBEDDING_ENGINE='lmstudio'
 EMBEDDING_BASE_PATH='http://127.0.0.1:1234/v1'

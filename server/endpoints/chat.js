@@ -15,6 +15,9 @@ const {
 const { writeResponseChunk } = require("../utils/helpers/chat/responses");
 const { WorkspaceThread } = require("../models/workspaceThread");
 const { User } = require("../models/user");
+const { WorkspaceChats } = require("../models/workspaceChats");
+const { safeJsonParse } = require("../utils/http");
+const { safeJSONStringify } = require("../utils/helpers/chat/responses");
 const { getModelTag } = require("./utils");
 const {
   chatGenerationManager,
@@ -31,6 +34,80 @@ function generationScope(workspace, thread, user) {
 
 function validGenerationId(generationId) {
   return typeof generationId === "string" && validateUuid(generationId);
+}
+
+function chatMatchesScope(chat, scope, message) {
+  return Boolean(
+    chat &&
+      chat.workspaceId === scope.workspaceId &&
+      (chat.thread_id ?? null) === (scope.threadId ?? null) &&
+      (chat.user_id ?? null) === (scope.userId ?? null) &&
+      chat.prompt === message
+  );
+}
+
+async function replayPersistedGeneration({
+  response,
+  scope,
+  generationId,
+  message,
+}) {
+  const chat = await WorkspaceChats.get({ generationId });
+  if (!chat) return false;
+  if (!chatMatchesScope(chat, scope, message)) {
+    writeResponseChunk(response, {
+      id: generationId,
+      type: "abort",
+      close: true,
+      error: "Generation identity does not belong to this request.",
+    });
+    response.end();
+    return true;
+  }
+
+  let data = safeJsonParse(chat.response, {});
+  if (
+    data.pending === true &&
+    !chatGenerationManager.isActive(scope, generationId)
+  ) {
+    data = {
+      ...data,
+      text: "Antwort wurde durch einen Neustart unterbrochen.",
+      pending: false,
+      interrupted: true,
+    };
+    await WorkspaceChats._update(chat.id, {
+      response: safeJSONStringify(data),
+    });
+  }
+
+  writeResponseChunk(response, {
+    id: generationId,
+    type: "generationStarted",
+    generationId,
+    close: false,
+  });
+  if (data.pending === true) {
+    writeResponseChunk(response, {
+      id: generationId,
+      type: "generationDetached",
+      generationId,
+      close: true,
+    });
+  } else {
+    writeResponseChunk(response, {
+      uuid: generationId,
+      type: "textResponse",
+      textResponse: data.text || "",
+      sources: data.sources || [],
+      close: true,
+      error: data.error || false,
+      chatId: chat.id,
+      metrics: data.metrics || {},
+    });
+  }
+  response.end();
+  return true;
 }
 
 function chatEndpoints(app) {
@@ -84,19 +161,40 @@ function chatEndpoints(app) {
         }
 
         const scope = generationScope(workspace, null, user);
+        if (
+          generationId &&
+          (await replayPersistedGeneration({
+            response,
+            scope,
+            generationId,
+            message,
+          }))
+        )
+          return;
         const { created, generation } = chatGenerationManager.begin(
           scope,
           generationId
         );
         if (!created) {
-          writeResponseChunk(response, {
-            id: generation.id,
-            type: "abort",
-            textResponse: null,
-            sources: [],
-            close: true,
-            error: "In diesem Chat wird bereits eine Antwort erstellt.",
-          });
+          const sameRequest = generation.id === generationId;
+          writeResponseChunk(
+            response,
+            sameRequest
+              ? {
+                  id: generation.id,
+                  type: "generationDetached",
+                  generationId: generation.id,
+                  close: true,
+                }
+              : {
+                  id: generation.id,
+                  type: "abort",
+                  textResponse: null,
+                  sources: [],
+                  close: true,
+                  error: "In diesem Chat wird bereits eine Antwort erstellt.",
+                }
+          );
           response.end();
           return;
         }
@@ -210,19 +308,40 @@ function chatEndpoints(app) {
         }
 
         const scope = generationScope(workspace, thread, user);
+        if (
+          generationId &&
+          (await replayPersistedGeneration({
+            response,
+            scope,
+            generationId,
+            message,
+          }))
+        )
+          return;
         const { created, generation } = chatGenerationManager.begin(
           scope,
           generationId
         );
         if (!created) {
-          writeResponseChunk(response, {
-            id: generation.id,
-            type: "abort",
-            textResponse: null,
-            sources: [],
-            close: true,
-            error: "In diesem Thread wird bereits eine Antwort erstellt.",
-          });
+          const sameRequest = generation.id === generationId;
+          writeResponseChunk(
+            response,
+            sameRequest
+              ? {
+                  id: generation.id,
+                  type: "generationDetached",
+                  generationId: generation.id,
+                  close: true,
+                }
+              : {
+                  id: generation.id,
+                  type: "abort",
+                  textResponse: null,
+                  sources: [],
+                  close: true,
+                  error: "In diesem Thread wird bereits eine Antwort erstellt.",
+                }
+          );
           response.end();
           return;
         }

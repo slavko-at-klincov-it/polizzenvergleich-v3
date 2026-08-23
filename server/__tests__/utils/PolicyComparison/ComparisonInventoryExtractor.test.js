@@ -30,6 +30,51 @@ function pageAwareDocument(pageTexts) {
 }
 
 describe("ComparisonInventoryExtractor", () => {
+  test("extracts a grounded page-less inventory without inventing a page", async () => {
+    const text = "Vandalismus ist bis EUR 25.000 versichert.";
+    const Connector = {
+      getChatCompletion: jest.fn(async () => ({
+        textResponse: JSON.stringify({
+          topics: [
+            {
+              label: "Vandalismus",
+              aliases: ["mutwillige Beschädigung"],
+              page: null,
+              evidence: text,
+            },
+          ],
+        }),
+      })),
+    };
+
+    const result = await ComparisonInventoryExtractor.extract({
+      documentData: {
+        pageContent: text,
+        documentExtraction: {
+          schemaVersion: 1,
+          complete: true,
+          kind: "docx",
+          sourceSha256: "d".repeat(64),
+        },
+      },
+      Connector,
+      fallbackTopics: [],
+    });
+
+    expect(result.complete).toBe(true);
+    expect(result.pageCount).toBe(1);
+    expect(result.inventoryItems).toEqual([
+      expect.objectContaining({
+        label: "Vandalismus",
+        pageNumber: null,
+        evidenceText: text,
+      }),
+    ]);
+    expect(Connector.getChatCompletion.mock.calls[0][0][1].content).toContain(
+      '<document part="1/1">'
+    );
+  });
+
   test("batches every canonical page without a Top-N cutoff", () => {
     const pageTexts = Array.from(
       { length: 14 },

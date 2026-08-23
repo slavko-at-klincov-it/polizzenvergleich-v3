@@ -7,6 +7,8 @@ source "$(cd "$(dirname "$0")" && pwd)/lib/common.sh"
 source "$POLICY_SCRIPT_DIR/lib/runtime.sh"
 policy_export_runtime_path
 
+"$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/managed-embedding-check.cjs" >/dev/null
+
 attempt=0
 while [ "$attempt" -lt 120 ]; do
   if "$POLICY_NODE_BIN" "$POLICY_SCRIPT_DIR/lmstudio-models.cjs" check >/dev/null 2>&1; then

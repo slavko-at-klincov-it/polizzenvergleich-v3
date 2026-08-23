@@ -180,9 +180,46 @@ async function reconcileOrphanedPendingChats(history, scope) {
   return history;
 }
 
+async function reconcileAllOrphanedPendingChats() {
+  const candidates = await WorkspaceChats.where({
+    OR: [
+      { generationId: { not: null } },
+      { response: { contains: '"pending":true' } },
+    ],
+  });
+  let repaired = 0;
+  for (const record of candidates) {
+    let data;
+    try {
+      data = JSON.parse(record.response);
+    } catch {
+      continue;
+    }
+    if (data?.pending !== true) continue;
+    const generationId = record.generationId ?? data.generationId ?? null;
+    const scope = {
+      workspaceId: record.workspaceId,
+      threadId: record.thread_id ?? null,
+      userId: record.user_id ?? null,
+    };
+    if (chatGenerationManager.isActive(scope, generationId)) continue;
+    const updated = await WorkspaceChats._update(record.id, {
+      response: safeJSONStringify({
+        ...data,
+        text: "Antwort wurde durch einen Neustart unterbrochen.",
+        pending: false,
+        interrupted: true,
+      }),
+    });
+    if (updated) repaired += 1;
+  }
+  return repaired;
+}
+
 module.exports = {
   ChatGenerationManager,
   chatGenerationManager,
   detachedStreamResponse,
   reconcileOrphanedPendingChats,
+  reconcileAllOrphanedPendingChats,
 };
