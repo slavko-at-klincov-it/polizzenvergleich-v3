@@ -16,7 +16,7 @@ POLICY_LABEL_PREFIX="at.klincov.polizzenvergleich"
 POLICY_LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 POLICY_LOG_DIR="$POLICY_REPO_DIR/server/storage/logs"
 POLICY_EXPECTED_REPO="slavko-at-klincov-it/anythingllm-polizzenvergleich"
-POLICY_RELEASE_TAG="policy-v0.3.1"
+POLICY_RELEASE_TAG="policy-v0.3.2"
 POLICY_INSTALL_LOCK="$POLICY_RUNTIME_DIR/install.lock"
 
 policy_log() { printf '\033[1;34m[Polizzenvergleich]\033[0m %s\n' "$*"; }

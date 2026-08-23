@@ -46,6 +46,19 @@ policy_ensure_node_runtime() {
 
 policy_prepare_yarn() {
   policy_export_runtime_path
-  corepack prepare yarn@1.22.22 --activate >/dev/null
-  policy_ok "Yarn $(yarn --version) ist bereit."
+  local corepack_bin="$POLICY_NODE_DIR/bin/corepack"
+  local yarn_bin="$POLICY_NODE_DIR/bin/yarn"
+  local yarn_version
+
+  [ -x "$corepack_bin" ] || policy_die "Corepack fehlt in der lokalen Node-Laufzeit."
+  "$corepack_bin" enable --install-directory "$POLICY_NODE_DIR/bin" >/dev/null || \
+    policy_die "Der lokale Yarn-Starter konnte nicht eingerichtet werden."
+  "$corepack_bin" prepare yarn@1.22.22 --activate >/dev/null || \
+    policy_die "Yarn 1.22.22 konnte nicht lokal vorbereitet werden."
+  [ -x "$yarn_bin" ] || policy_die "Der lokale Yarn-Starter fehlt nach der Einrichtung."
+  yarn_version="$("$yarn_bin" --version 2>/dev/null)" || \
+    policy_die "Die lokale Yarn-Laufzeit konnte nicht gestartet werden."
+  [ "$yarn_version" = "1.22.22" ] || \
+    policy_die "Unerwartete Yarn-Version '$yarn_version'; erwartet wird 1.22.22."
+  policy_ok "Yarn $yarn_version ist bereit."
 }

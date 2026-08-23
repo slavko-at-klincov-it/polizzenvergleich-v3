@@ -27,7 +27,9 @@ const lock = JSON.parse(
 );
 const runtimeDir =
   process.env.POLICY_RUNTIME_DIR || path.join(repo, ".runtime");
-const wrapperPath = path.join(runtimeDir, "bin/lms-embed");
+// The repository declares `type: module`. Keep the downloaded CommonJS helper
+// on an explicit `.cjs` path so Node never interprets it as an ES module.
+const wrapperPath = path.join(runtimeDir, "bin/lms-embed.cjs");
 const command = process.argv[2] || "check";
 const shouldDownload = process.argv.includes("--download");
 const unloadOther = process.argv.includes("--unload-other");

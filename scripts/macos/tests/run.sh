@@ -21,6 +21,58 @@ trap cleanup EXIT
 mkdir -p "$temp_dir/config-repo/server" "$temp_dir/config-repo/collector" "$temp_dir/config-repo/frontend"
 printf '%s\n' 'JWT_SECRET="keep-this-secret"' 'UNRELATED_SETTING="keep-me"' >"$temp_dir/config-repo/server/.env"
 
+printf '%s\n' '[installer-test] pinned local Yarn bootstrap'
+runtime_test_dir="$temp_dir/yarn-runtime"
+mkdir -p "$runtime_test_dir/node-v20.19.5/bin"
+ln -s "$NODE_BIN" "$runtime_test_dir/node-v20.19.5/bin/node"
+cp "$REPO/scripts/macos/fixtures/mock-corepack.sh" "$runtime_test_dir/node-v20.19.5/bin/corepack"
+chmod 700 "$runtime_test_dir/node-v20.19.5/bin/corepack"
+HOME="$temp_dir/home" \
+POLICY_REPO_DIR="$REPO" \
+POLICY_RUNTIME_DIR="$runtime_test_dir" \
+POLICY_COMMON_PATH="$REPO/scripts/macos/lib/common.sh" \
+POLICY_RUNTIME_PATH="$REPO/scripts/macos/lib/runtime.sh" \
+  /bin/bash -c 'source "$POLICY_COMMON_PATH"; source "$POLICY_RUNTIME_PATH"; policy_prepare_yarn; [ "$("$POLICY_NODE_DIR/bin/yarn" --version)" = "1.22.22" ]'
+
+no_shim_runtime="$temp_dir/no-shim-runtime"
+mkdir -p "$no_shim_runtime/node-v20.19.5/bin"
+ln -s "$NODE_BIN" "$no_shim_runtime/node-v20.19.5/bin/node"
+cp "$REPO/scripts/macos/fixtures/mock-corepack.sh" "$no_shim_runtime/node-v20.19.5/bin/corepack"
+chmod 700 "$no_shim_runtime/node-v20.19.5/bin/corepack"
+if HOME="$temp_dir/home" \
+  POLICY_REPO_DIR="$REPO" \
+  POLICY_RUNTIME_DIR="$no_shim_runtime" \
+  POLICY_MOCK_COREPACK_MODE=no-shim \
+  POLICY_COMMON_PATH="$REPO/scripts/macos/lib/common.sh" \
+  POLICY_RUNTIME_PATH="$REPO/scripts/macos/lib/runtime.sh" \
+    /bin/bash -c 'source "$POLICY_COMMON_PATH"; source "$POLICY_RUNTIME_PATH"; policy_prepare_yarn' >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] missing Yarn shim was not rejected' >&2
+  exit 1
+fi
+
+wrong_yarn_runtime="$temp_dir/wrong-yarn-runtime"
+mkdir -p "$wrong_yarn_runtime/node-v20.19.5/bin"
+ln -s "$NODE_BIN" "$wrong_yarn_runtime/node-v20.19.5/bin/node"
+cp "$REPO/scripts/macos/fixtures/mock-corepack.sh" "$wrong_yarn_runtime/node-v20.19.5/bin/corepack"
+chmod 700 "$wrong_yarn_runtime/node-v20.19.5/bin/corepack"
+if HOME="$temp_dir/home" \
+  POLICY_REPO_DIR="$REPO" \
+  POLICY_RUNTIME_DIR="$wrong_yarn_runtime" \
+  POLICY_MOCK_COREPACK_MODE=wrong-version \
+  POLICY_COMMON_PATH="$REPO/scripts/macos/lib/common.sh" \
+  POLICY_RUNTIME_PATH="$REPO/scripts/macos/lib/runtime.sh" \
+    /bin/bash -c 'source "$POLICY_COMMON_PATH"; source "$POLICY_RUNTIME_PATH"; policy_prepare_yarn' >/dev/null 2>&1; then
+  printf '%s\n' '[installer-test] wrong Yarn version was not rejected' >&2
+  exit 1
+fi
+
+printf '%s\n' '[installer-test] CommonJS embedding helper path'
+grep -Fq 'path.join(runtimeDir, "bin/lms-embed.cjs")' "$REPO/scripts/macos/lmstudio-models.cjs"
+mkdir -p "$temp_dir/esm-wrapper/.runtime/bin"
+printf '%s\n' '{"type":"module"}' >"$temp_dir/esm-wrapper/package.json"
+printf '%s\n' 'const fs = require("fs"); if (!fs.existsSync(__filename)) process.exit(1);' >"$temp_dir/esm-wrapper/.runtime/bin/lms-embed.cjs"
+"$NODE_BIN" "$temp_dir/esm-wrapper/.runtime/bin/lms-embed.cjs"
+
 printf '%s\n' '[installer-test] idempotent secure config'
 POLICY_REPO_DIR="$temp_dir/config-repo" POLICY_EMBED_MODEL_ID='unsafe-override' "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
 POLICY_REPO_DIR="$temp_dir/config-repo" POLICY_EMBED_MODEL_ID='unsafe-override' "$NODE_BIN" "$REPO/scripts/macos/write-config.cjs" >/dev/null
