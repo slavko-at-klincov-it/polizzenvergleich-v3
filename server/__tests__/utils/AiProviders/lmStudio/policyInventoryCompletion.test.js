@@ -81,6 +81,7 @@ describe("LMStudioLLM policy inventory completion", () => {
           input: "Analysiere den Vertrag.",
           reasoning: "off",
           temperature: 0,
+          store: false,
           stream: false,
         }),
       },

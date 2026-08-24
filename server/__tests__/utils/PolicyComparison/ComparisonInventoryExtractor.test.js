@@ -370,10 +370,11 @@ describe("ComparisonInventoryExtractor", () => {
     expect(reduced.fallbackTopicsAdded).toEqual(["vandalismus"]);
   });
 
-  test("fails closed for non-JSON output and missing or duplicate page maps", async () => {
+  test("fails closed for incomplete JSON output and missing or duplicate page maps", async () => {
     const Connector = {
       getChatCompletion: jest.fn(async () => ({
-        textResponse: '```json\n{"topics":[]}\n```',
+        textResponse:
+          '```json\n{"topics":[{"label":"Inhalt","aliases":[],"page":1',
       })),
     };
     await expect(
@@ -382,7 +383,7 @@ describe("ComparisonInventoryExtractor", () => {
         Connector,
         fallbackTopics: [],
       })
-    ).rejects.toThrow("invalid strict JSON");
+    ).rejects.toThrow("incomplete JSON");
 
     expect(() =>
       ComparisonInventoryExtractor.buildPageBatches({
@@ -421,16 +422,10 @@ describe("ComparisonInventoryExtractor", () => {
             }),
           };
         return {
-          textResponse: JSON.stringify({
-            topics: [
-              {
-                label: "Vandalismus",
-                aliases: [],
-                page: 1,
-                evidence: "Vandalismus ist versichert.",
-              },
-            ],
-          }),
+          textResponse: `Hier ist das korrigierte Inventar:
+\`\`\`json
+{"topics":[{"label":"Vandalismus","aliases":[],"page":1,"evidence":"Vandalismus ist versichert.",}],}
+\`\`\``,
         };
       }),
     };

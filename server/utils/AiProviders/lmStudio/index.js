@@ -318,6 +318,7 @@ class LMStudioLLM {
           ...(reasoning ? { reasoning } : {}),
           temperature,
           max_output_tokens: 8_192,
+          store: false,
           stream: false,
         }),
       }).then(async (response) => {

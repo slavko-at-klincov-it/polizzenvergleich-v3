@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { jsonrepair } = require("jsonrepair");
 const { PageAwareTextSplitter } = require("../PageAwareTextSplitter");
 const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 const { PolicyInferenceQueue } = require("./PolicyInferenceQueue");
@@ -258,15 +259,34 @@ function parseStrictResponse(response, batchIndex) {
     throw new Error(`Inventory batch ${batchIndex + 1} returned no JSON.`);
 
   // LM Studio can expose reasoning separately and the connector prepends it.
-  // Ignore that transport wrapper, but keep the actual answer strict JSON.
-  const jsonText = raw.replace(/^\s*<think>[\s\S]*?<\/think>\s*/u, "").trim();
+  // Ignore that transport wrapper. Some local models additionally wrap an
+  // otherwise complete JSON object in prose/Markdown or make small syntax
+  // errors. Isolate only a complete root object before attempting a repair so
+  // truncated model output can never be mistaken for a complete inventory.
+  const visibleText = raw
+    .replace(/^\s*<think>[\s\S]*?<\/think>\s*/u, "")
+    .trim();
+  const objectStart = visibleText.indexOf("{");
+  const objectEnd = visibleText.lastIndexOf("}");
+  if (objectStart < 0 || objectEnd < objectStart)
+    throw new Error(
+      `Inventory batch ${batchIndex + 1} returned incomplete JSON.`
+    );
+  const jsonText = visibleText.slice(objectStart, objectEnd + 1);
   let parsed;
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    throw new Error(
-      `Inventory batch ${batchIndex + 1} returned invalid strict JSON.`
-    );
+    try {
+      parsed = JSON.parse(jsonrepair(jsonText));
+      console.warn(
+        `[PolicyComparison] Inventory batch ${batchIndex + 1} required deterministic JSON syntax repair.`
+      );
+    } catch {
+      throw new Error(
+        `Inventory batch ${batchIndex + 1} returned invalid strict JSON.`
+      );
+    }
   }
   if (
     !parsed ||

@@ -44,6 +44,27 @@ describe("comparison upload chip reconciliation", () => {
     });
   });
 
+  test("replaces a local indexing chip with the persisted failure", () => {
+    const local = localIndexing("local-upload-failed", "43");
+    const remote = comparisonDocumentAttachment({
+      id: 10,
+      parsedFileId: 43,
+      originalFilename: "Polizze.pdf",
+      status: "failed",
+      error: "Inventar konnte nicht erstellt werden.",
+    });
+
+    const result = mergeHydratedComparisonDocuments([local], [remote]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      uid: "local-upload-failed",
+      status: "failed",
+      comparisonDocumentId: 10,
+      fileId: 43,
+      error: "Inventar konnte nicht erstellt werden.",
+    });
+  });
+
   test("removes an existing duplicate chip by comparison-document id", () => {
     const local = localIndexing("local-upload-2", 51);
     const staleServerChip = comparisonDocumentAttachment(
