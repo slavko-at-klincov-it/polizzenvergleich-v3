@@ -401,10 +401,26 @@ describe("ComparisonInventoryExtractor", () => {
 
   test("retries one invalid model mapping before publishing the batch", async () => {
     const Connector = {
-      getChatCompletion: jest
-        .fn()
-        .mockResolvedValueOnce({ textResponse: "not-json" })
-        .mockResolvedValueOnce({
+      getChatCompletion: jest.fn(async (messages) => {
+        const isCorrection = messages.some((message) =>
+          message.content.includes(
+            "vorherige Antwort wurde vollständig verworfen"
+          )
+        );
+        if (!isCorrection)
+          return {
+            textResponse: JSON.stringify({
+              topics: [
+                {
+                  label: "Vandalismus",
+                  aliases: [],
+                  page: 1,
+                  evidence: "Vandalismus ist vollständig mitversichert.",
+                },
+              ],
+            }),
+          };
+        return {
           textResponse: JSON.stringify({
             topics: [
               {
@@ -415,7 +431,8 @@ describe("ComparisonInventoryExtractor", () => {
               },
             ],
           }),
-        }),
+        };
+      }),
     };
 
     const result = await ComparisonInventoryExtractor.extract({
@@ -425,6 +442,16 @@ describe("ComparisonInventoryExtractor", () => {
     });
 
     expect(Connector.getChatCompletion).toHaveBeenCalledTimes(2);
+    expect(Connector.getChatCompletion.mock.calls[1][0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "user",
+          content: expect.stringContaining(
+            "Kopiere jedes evidence-Zitat wortgetreu"
+          ),
+        }),
+      ])
+    );
     expect(result.inventoryItems).toEqual([
       expect.objectContaining({ label: "Vandalismus", pageNumber: 1 }),
     ]);

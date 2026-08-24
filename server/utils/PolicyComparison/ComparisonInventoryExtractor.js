@@ -52,6 +52,20 @@ Regeln:
 - Wenn nichts erkennbar ist, antworte mit {"topics":[]}.
 `.trim();
 
+const VALIDATION_RETRY_PROMPT = `
+Die vorherige Antwort wurde vollständig verworfen, weil mindestens ein Beleg
+nicht wortgetreu im angegebenen Seitenblock vorkam oder das JSON ungültig war.
+Erstelle das vollständige Inventar dieses Batches erneut.
+
+Zusätzliche zwingende Regeln:
+- Kopiere jedes evidence-Zitat wortgetreu aus genau einem sichtbaren Marker.
+- Paraphrasiere, korrigiere und ergänze im evidence-Feld kein einziges Wort.
+- Verwende exakt die Seitennummer des Markers, aus dem das Zitat stammt.
+- Lasse ein Thema weg, wenn du dafür keinen wortgetreuen Beleg findest.
+- Gib wieder alle belegbaren Themen des Batches aus, nicht nur Korrekturen.
+- Antworte ausschließlich mit dem vollständigen JSON-Objekt.
+`.trim();
+
 function normalize(value = "") {
   return String(value)
     .normalize("NFKC")
@@ -479,7 +493,20 @@ const ComparisonInventoryExtractor = {
       let lastError;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const response = await inventoryCompletion(Connector, messages);
+          console.log(
+            `[PolicyComparison] Inventory batch ${batch.index + 1}/${batches.length}, attempt ${attempt + 1}/2.`
+          );
+          const attemptMessages =
+            attempt === 0
+              ? messages
+              : [
+                  ...messages,
+                  { role: "user", content: VALIDATION_RETRY_PROMPT },
+                ];
+          const response = await inventoryCompletion(
+            Connector,
+            attemptMessages
+          );
           const mappedTopics = parseStrictResponse(response, batch.index);
           const batchValidated = [];
           const batchRejected = [];
@@ -510,10 +537,17 @@ const ComparisonInventoryExtractor = {
               `Inventory evidence validation rejected ${batchRejected.length} model item(s).`
             );
           acceptedBatch = batchValidated;
+          console.log(
+            `[PolicyComparison] Inventory batch ${batch.index + 1}/${batches.length} validated ${batchValidated.length} topic(s).`
+          );
           break;
         } catch (error) {
           if (error?.code === "POLICY_INFERENCE_TIMEOUT") throw error;
           lastError = error;
+          if (attempt === 0)
+            console.warn(
+              `[PolicyComparison] Inventory batch ${batch.index + 1}/${batches.length} failed validation; retrying with strict evidence correction.`
+            );
         }
       }
       if (!acceptedBatch) throw lastError;

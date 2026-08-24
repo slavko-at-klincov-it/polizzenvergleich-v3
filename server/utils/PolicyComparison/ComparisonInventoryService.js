@@ -139,6 +139,10 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
       throw new Error(
         "Canonical PDF source hash does not match the existing FTS/vector index."
       );
+    await ComparisonDocumentInventory.markBuilding({
+      comparisonDocumentId: comparisonDocument.id,
+      version: CURRENT_INVENTORY_VERSION,
+    });
     const extraction = await ComparisonInventoryExtractor.extract({
       documentData,
       Connector,

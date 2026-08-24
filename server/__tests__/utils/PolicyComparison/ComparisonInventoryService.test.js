@@ -1,6 +1,7 @@
 jest.mock("../../../models/comparisonDocumentInventory", () => ({
   ComparisonDocumentInventory: {
     get: jest.fn(),
+    markBuilding: jest.fn(),
     replace: jest.fn(),
     markFailed: jest.fn(),
     clear: jest.fn(),
@@ -48,6 +49,14 @@ describe("ComparisonInventoryService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     ComparisonDocumentInventory.get.mockResolvedValue(null);
+    ComparisonDocumentInventory.markBuilding.mockResolvedValue({
+      comparisonDocumentId: 1,
+      status: "building",
+      version: 7,
+      itemCount: 0,
+      pageCount: 0,
+      items: [],
+    });
     ComparisonDocumentInventory.replace.mockImplementation(async (input) => ({
       comparisonDocumentId: input.comparisonDocumentId,
       status: "ready",
@@ -110,6 +119,10 @@ describe("ComparisonInventoryService", () => {
         ],
       })
     );
+    expect(ComparisonDocumentInventory.markBuilding).toHaveBeenCalledWith({
+      comparisonDocumentId: 1,
+      version: 7,
+    });
     expect(result.manifest.status).toBe("ready");
   });
 
