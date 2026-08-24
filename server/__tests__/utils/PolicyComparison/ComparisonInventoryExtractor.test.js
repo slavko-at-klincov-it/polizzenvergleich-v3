@@ -2,6 +2,7 @@ const {
   ComparisonInventoryExtractor,
   DEFAULT_BATCH_TOKEN_BUDGET,
   DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
+  estimateInventoryTokens,
 } = require("../../../utils/PolicyComparison/ComparisonInventoryExtractor");
 
 function pageAwareDocument(pageTexts) {
@@ -69,6 +70,49 @@ describe("ComparisonInventoryExtractor", () => {
       }
     );
     expect(Connector.getChatCompletion).not.toHaveBeenCalled();
+  });
+
+  test("reserves enough output for dense grounded JSON without widening the input batch", async () => {
+    const clauses = Array.from(
+      { length: 24 },
+      (_, index) =>
+        `Klausel ${index + 1}: Deckung mit Sublimit EUR ${(index + 1) * 1000} und besonderem Selbstbehalt.`
+    );
+    const text = clauses.join("\n");
+    const response = JSON.stringify({
+      topics: clauses.map((evidence, index) => ({
+        label: `Dichte Klausel ${index + 1}`,
+        aliases: [`Sonderregelung ${index + 1}`],
+        page: 1,
+        evidence,
+      })),
+    });
+    // This fixture is deliberately larger than the old 1,024-token response
+    // allowance while remaining inside the dedicated 2,048-token contract.
+    expect(estimateInventoryTokens(response)).toBeGreaterThan(1_024);
+    expect(estimateInventoryTokens(response)).toBeLessThanOrEqual(
+      DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT
+    );
+
+    const Connector = {
+      getChatCompletion: jest.fn(),
+      getPolicyInventoryCompletion: jest.fn(async () => ({
+        textResponse: response,
+      })),
+    };
+    const result = await ComparisonInventoryExtractor.extract({
+      documentData: pageAwareDocument([text]),
+      Connector,
+      fallbackTopics: [],
+    });
+
+    expect(result.validatedTopicCount).toBe(24);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        maxOutputTokens: 2_048,
+      })
+    );
   });
 
   test("extracts a grounded page-less inventory without inventing a page", async () => {
