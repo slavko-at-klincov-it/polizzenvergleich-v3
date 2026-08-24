@@ -515,5 +515,116 @@ describe("ComparisonFactMapper", () => {
     expect(messages.at(-1).content).toContain(
       '"headingPath":["Gebäudeversicherung","Premiumschutz"]'
     );
+    expect(messages.at(-1).content).toContain('"unitKey":"b1"');
+    expect(messages.at(-1).content).not.toContain('"unitKey":"u1"');
+  });
+
+  test("maps short response IDs back to long persisted block keys", async () => {
+    const blockKey = "a".repeat(64);
+    const input = unit("Selbstbehalt EUR 350 je Schadenfall.", blockKey);
+    const Connector = connector([
+      {
+        units: [
+          {
+            unitKey: "b1",
+            facts: [
+              {
+                topic: "Selbstbehalt",
+                factType: "deductible",
+                claim: "350 Euro je Schadenfall",
+                evidenceText: input.text,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await ComparisonFactMapper.extract({
+      units: [input],
+      Connector,
+    });
+
+    expect(result.units[0].unit.unitKey).toBe(blockKey);
+    expect(result.facts[0].unitKey).toBe(blockKey);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  test("recovers a corrupted unitKey from exact evidence without retrying", async () => {
+    const input = unit("Selbstbehalt EUR 500 je Schadenfall.", "b".repeat(64));
+    const Connector = connector([
+      {
+        units: [
+          {
+            unitKey: "Selbstbehalt",
+            facts: [
+              {
+                topic: "Selbstbehalt",
+                factType: "deductible",
+                claim: "500 Euro je Schadenfall",
+                evidenceText: input.text,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await ComparisonFactMapper.extract({
+      units: [input],
+      Connector,
+    });
+
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0].factType).toBe("deductible");
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  test("binds reordered corrupted IDs to the only blocks containing their evidence", async () => {
+    const first = unit("Selbstbehalt EUR 350.", "c".repeat(64));
+    const second = unit("Höchstentschädigung EUR 10.000.", "d".repeat(64));
+    const Connector = connector([
+      {
+        units: [
+          {
+            unitKey: "Deckungsgrenze",
+            facts: [
+              {
+                topic: "Höchstentschädigung",
+                factType: "limit",
+                claim: "Höchstentschädigung 10.000 Euro",
+                evidenceText: second.text,
+              },
+            ],
+          },
+          {
+            unitKey: "Selbstbehalt",
+            facts: [
+              {
+                topic: "Selbstbehalt",
+                factType: "deductible",
+                claim: "Selbstbehalt 350 Euro",
+                evidenceText: first.text,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await ComparisonFactMapper.extract({
+      units: [first, second],
+      Connector,
+    });
+
+    expect(result.facts.map((fact) => fact.unitKey)).toEqual([
+      first.unitKey,
+      second.unitKey,
+    ]);
+    expect(result.facts.map((fact) => fact.factType)).toEqual([
+      "deductible",
+      "limit",
+    ]);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(1);
   });
 });

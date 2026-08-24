@@ -33,6 +33,8 @@ Schema:
 
 Zwingende Regeln:
 - Gib für jeden Eingabeblock genau ein unit-Objekt zurück.
+- Kopiere die kurze unitKey-Kennung (b1, b2, ...) unverändert. Verwende weder
+  Thema noch Überschrift als unitKey.
 - facts enthält null bis mehrere getrennte Fakten. Deckung, Limit,
   Selbstbehalt, Ausschluss und Bedingung sind getrennte Fakten.
 - Lasse keinen Fakt weg, nur weil derselbe Block weitere Fakten enthält.
@@ -104,9 +106,13 @@ function compactRiskSignals(signals = []) {
   return compact;
 }
 
-function renderUnit(unit) {
+function modelUnitKey(index) {
+  return `b${index + 1}`;
+}
+
+function renderUnit(unit, responseUnitKey = unit.blockKey || unit.unitKey) {
   return {
-    unitKey: unit.blockKey || unit.unitKey,
+    unitKey: responseUnitKey,
     physicalPage: unit.pageNumber,
     headingPath: Array.isArray(unit.headingPath) ? unit.headingPath : [],
     riskSignalCount: (unit.riskSignals || []).length,
@@ -387,31 +393,82 @@ function validateReceipts(parsed, units) {
     error.code = FORMAT_MISMATCH_CODE;
     throw error;
   }
-  const expected = new Map(
-    units.map((unit) => [unit.blockKey || unit.unitKey, unit])
+  const expected = units.map((unit, index) => ({
+    unit,
+    actualKey: String(unit.blockKey || unit.unitKey),
+    responseKey: modelUnitKey(index),
+  }));
+  const byActualKey = new Map(
+    expected.map((entry) => [entry.actualKey, entry])
   );
-  const received = new Map();
+  const byResponseKey = new Map(
+    expected.map((entry) => [entry.responseKey, entry])
+  );
+  const assigned = new Map();
+  const unresolved = [];
+  const assign = (entry, receipt) => {
+    const current = assigned.get(entry.actualKey) || [];
+    current.push(receipt);
+    assigned.set(entry.actualKey, current);
+  };
+  const responseEntry = (value) => {
+    const key = String(value || "").trim();
+    const direct = byActualKey.get(key) || byResponseKey.get(key.toLowerCase());
+    if (direct) return direct;
+    const match = key.toLowerCase().match(/^(?:b|u|unit[-_ ]?)?(\d+)$/u);
+    if (!match) return null;
+    return byResponseKey.get(modelUnitKey(Number(match[1]) - 1)) || null;
+  };
   for (const receipt of parsed.units) {
-    const unitKey = String(receipt?.unitKey || "");
-    if (!expected.has(unitKey)) {
-      const error = new Error("Fact mapper returned an unknown unitKey.");
-      error.code = FORMAT_MISMATCH_CODE;
-      throw error;
-    }
-    if (received.has(unitKey)) {
-      const error = new Error("Fact mapper returned a duplicate unitKey.");
-      error.code = FORMAT_MISMATCH_CODE;
-      throw error;
-    }
+    const unitKey = String(receipt?.unitKey || "").trim();
     if (!Array.isArray(receipt.facts)) {
       const error = new Error(`Unit ${unitKey} has no facts array.`);
       error.code = FORMAT_MISMATCH_CODE;
       throw error;
     }
-    const unit = expected.get(unitKey);
+    const entry = responseEntry(unitKey);
+    if (entry) assign(entry, receipt);
+    else unresolved.push(receipt);
+  }
+  for (const receipt of unresolved) {
+    const evidenceTexts = receipt.facts
+      .map((fact) => String(fact?.evidenceText || "").trim())
+      .filter(Boolean);
+    const evidenceCandidates = expected.filter(
+      ({ unit }) =>
+        evidenceTexts.length > 0 &&
+        evidenceTexts.every((evidence) => unit.text.includes(evidence))
+    );
+    if (evidenceCandidates.length === 1) {
+      assign(evidenceCandidates[0], receipt);
+      continue;
+    }
+    const missing = expected.filter((entry) => !assigned.has(entry.actualKey));
+    if (missing.length === 1) {
+      assign(missing[0], receipt);
+      continue;
+    }
+    // A hallucinated extra receipt cannot invalidate an otherwise complete
+    // batch. Its facts are ignored because they cannot be bound to source.
+    if (missing.length === 0) continue;
+    const error = new Error("Fact mapper returned an unresolvable unitKey.");
+    error.code = FORMAT_MISMATCH_CODE;
+    throw error;
+  }
+  const received = new Map();
+  for (const { unit, actualKey } of expected) {
+    const receipts = assigned.get(actualKey);
+    if (!receipts?.length) {
+      const error = new Error(
+        "Fact mapper did not acknowledge every input unitKey."
+      );
+      error.code = FORMAT_MISMATCH_CODE;
+      throw error;
+    }
+    const rawFacts = receipts.flatMap((receipt) => receipt.facts);
     const facts = [];
     const dispositions = [];
-    for (const rawFact of receipt.facts) {
+    for (const rawFact of rawFacts) {
       try {
         const normalized = normalizeFact(rawFact, unit);
         dispositions.push(normalized.disposition);
@@ -447,18 +504,18 @@ function validateReceipts(parsed, units) {
       }
     }
     const metadataOnly =
-      receipt.facts.length > 0 &&
+      rawFacts.length > 0 &&
       dispositions.every(
         (disposition) => disposition === "out_of_scope_document_metadata"
       );
-    if (!facts.length && receipt.facts.length > 0 && !metadataOnly) {
+    if (!facts.length && rawFacts.length > 0 && !metadataOnly) {
       const fallback = sourceBoundFallbackFact(unit);
       if (fallback) facts.push(fallback);
     }
     const uniqueFacts = [
       ...new Map(facts.map((fact) => [fact.factKey, fact])).values(),
     ];
-    received.set(unitKey, {
+    received.set(actualKey, {
       unit,
       facts: uniqueFacts,
       noFactReason:
@@ -467,16 +524,10 @@ function validateReceipts(parsed, units) {
           : metadataOnly
             ? "out_of_scope_document_metadata"
             : String(
-                receipt.noFactReason || "Kein Vertragsfakt erkannt."
+                receipts.find((receipt) => receipt.noFactReason)
+                  ?.noFactReason || "Kein Vertragsfakt erkannt."
               ).trim(),
     });
-  }
-  if (received.size !== expected.size) {
-    const error = new Error(
-      "Fact mapper did not acknowledge every input unitKey."
-    );
-    error.code = FORMAT_MISMATCH_CODE;
-    throw error;
   }
   return units.map((unit) => received.get(unit.blockKey || unit.unitKey));
 }
@@ -523,7 +574,11 @@ function messagesFor(
     { role: "system", content: SYSTEM_PROMPT },
     {
       role: "user",
-      content: `${review}\n${JSON.stringify({ units: units.map(renderUnit) })}`,
+      content: `${review}\n${JSON.stringify({
+        units: units.map((unit, index) =>
+          renderUnit(unit, modelUnitKey(index))
+        ),
+      })}`,
     },
   ];
 }
