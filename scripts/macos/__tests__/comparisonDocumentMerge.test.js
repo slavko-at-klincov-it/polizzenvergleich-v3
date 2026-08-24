@@ -44,6 +44,34 @@ describe("comparison upload chip reconciliation", () => {
     });
   });
 
+  test("keeps the chip processing until the persisted inventory is ready", () => {
+    const building = comparisonDocumentAttachment({
+      id: 9,
+      parsedFileId: 41,
+      originalFilename: "Polizze.pdf",
+      status: "ready",
+      inventoryStatus: "building",
+    });
+    const failed = comparisonDocumentAttachment({
+      id: 10,
+      parsedFileId: 42,
+      originalFilename: "Fehler.pdf",
+      status: "ready",
+      inventoryStatus: "failed",
+      inventoryError: "Inventar-Timeout",
+    });
+
+    expect(building).toMatchObject({
+      status: "indexing",
+      inventoryStatus: "building",
+    });
+    expect(failed).toMatchObject({
+      status: "failed",
+      error: "Inventar-Timeout",
+      inventoryStatus: "failed",
+    });
+  });
+
   test("replaces a local indexing chip with the persisted failure", () => {
     const local = localIndexing("local-upload-failed", "43");
     const remote = comparisonDocumentAttachment({

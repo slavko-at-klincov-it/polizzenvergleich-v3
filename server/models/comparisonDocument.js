@@ -81,6 +81,7 @@ const ComparisonDocument = {
     originalFilename,
     tokenCount = 0,
     pageCount = null,
+    reactivateExisting = false,
   }) {
     const existing = await this.get({
       workspaceId: Number(workspaceId),
@@ -88,7 +89,7 @@ const ComparisonDocument = {
       parsedFileId: Number(parsedFileId),
     });
     if (existing) {
-      if (existing.status === "ready") return existing;
+      if (existing.status === "ready" || !reactivateExisting) return existing;
       return this.update(existing.id, {
         status: "indexing",
         error: null,
@@ -151,6 +152,9 @@ const ComparisonDocument = {
       location: document.workspaceDocument?.docpath ?? document.docpath ?? null,
       docpath: document.workspaceDocument?.docpath ?? document.docpath ?? null,
       sourceSha256: document.sourceSha256 ?? null,
+      inventoryStatus: document.inventoryStatus ?? null,
+      inventoryItemCount: document.inventoryItemCount ?? 0,
+      inventoryError: document.inventoryError ?? null,
       error: document.error ?? null,
     };
   },

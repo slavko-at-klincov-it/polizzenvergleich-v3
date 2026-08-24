@@ -9,7 +9,7 @@ const EXTRACTION_VERSION = 2;
 // deliberately conservative UTF-8 estimate (at most three bytes per token)
 // so German text, umlauts, tables, and page markers all count against the same
 // deterministic input budget without sampling or omitting pages.
-const DEFAULT_BATCH_TOKEN_BUDGET = 2_048;
+const DEFAULT_BATCH_TOKEN_BUDGET = 4_096;
 const DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT = 1_024;
 const MIN_BATCH_TOKEN_BUDGET = 256;
 const MIN_BATCH_CHAR_BUDGET = 256;

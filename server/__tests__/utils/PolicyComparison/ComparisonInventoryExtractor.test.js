@@ -179,6 +179,22 @@ describe("ComparisonInventoryExtractor", () => {
     }
   });
 
+  test("keeps a representative 21-page policy well below twenty model batches", () => {
+    const pageTexts = Array.from(
+      { length: 21 },
+      (_, index) =>
+        `Klauselseite ${index + 1}. ${"Versicherungsbedingungen und Deckungsumfang. ".repeat(120)}`
+    );
+    const { batches } = ComparisonInventoryExtractor.buildPageBatches({
+      documentData: pageAwareDocument(pageTexts),
+    });
+
+    expect(batches.length).toBeLessThanOrEqual(12);
+    expect([
+      ...new Set(batches.flatMap((batch) => batch.pageNumbers)),
+    ]).toHaveLength(21);
+  });
+
   test("maps all batches with strict JSON at temperature zero and adds fallbacks transparently", async () => {
     const documentData = pageAwareDocument(
       Array.from(

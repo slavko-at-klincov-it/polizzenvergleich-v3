@@ -36,6 +36,51 @@ describe("ComparisonDocument", () => {
     expect(prisma.comparison_documents.create).not.toHaveBeenCalled();
   });
 
+  it("does not turn a persisted failure back into indexing during hydration", async () => {
+    const failed = {
+      id: 7,
+      status: "failed",
+      error: "Failed to decode batch",
+    };
+    prisma.comparison_documents.findFirst.mockResolvedValue(failed);
+
+    await expect(
+      ComparisonDocument.reserve({
+        workspaceId: 1,
+        threadId: 2,
+        parsedFileId: 3,
+        originalFilename: "failed.pdf",
+      })
+    ).resolves.toBe(failed);
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  it("reactivates a failed document only for an explicit embed retry", async () => {
+    prisma.comparison_documents.findFirst.mockResolvedValue({
+      id: 7,
+      status: "failed",
+      error: "Failed to decode batch",
+    });
+    prisma.comparison_documents.update.mockResolvedValue({
+      id: 7,
+      status: "indexing",
+      error: null,
+    });
+
+    await ComparisonDocument.reserve({
+      workspaceId: 1,
+      threadId: 2,
+      parsedFileId: 3,
+      originalFilename: "failed.pdf",
+      reactivateExisting: true,
+    });
+
+    expect(prisma.comparison_documents.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: expect.objectContaining({ status: "indexing", error: null }),
+    });
+  });
+
   it("returns only ready records for the requested user and thread", async () => {
     prisma.comparison_documents.findMany.mockResolvedValue([]);
 
@@ -83,6 +128,8 @@ describe("ComparisonDocument", () => {
         tokenCount: 123,
         pageCount: 30,
         workspaceDocumentId: 10,
+        inventoryStatus: "ready",
+        inventoryItemCount: 12,
         workspaceDocument: { docId: "doc-b", docpath: "custom/b.json" },
       })
     ).toEqual({
@@ -98,6 +145,9 @@ describe("ComparisonDocument", () => {
       location: "custom/b.json",
       docpath: "custom/b.json",
       sourceSha256: null,
+      inventoryStatus: "ready",
+      inventoryItemCount: 12,
+      inventoryError: null,
       error: null,
     });
   });

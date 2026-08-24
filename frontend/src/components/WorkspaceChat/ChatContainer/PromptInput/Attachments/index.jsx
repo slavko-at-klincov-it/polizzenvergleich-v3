@@ -89,7 +89,9 @@ function AttachmentItem({ attachment, onImageClick }) {
   if (["in_progress", "reading", "indexing", "deleting"].includes(status)) {
     const progressLabel =
       status === "indexing"
-        ? "Wird indexiert …"
+        ? document?.status === "ready" && document?.inventoryStatus !== "ready"
+          ? "Inventar wird erstellt …"
+          : "Wird indexiert …"
         : status === "deleting"
           ? "Wird entfernt …"
           : "Text wird gelesen …";

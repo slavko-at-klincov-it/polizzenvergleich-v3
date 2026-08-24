@@ -49,6 +49,9 @@ jest.mock("../../../models/comparisonDocument", () => ({
       docId: document.workspaceDocument?.docId ?? document.docId ?? null,
       location: document.workspaceDocument?.docpath ?? document.docpath ?? null,
       docpath: document.workspaceDocument?.docpath ?? document.docpath ?? null,
+      inventoryStatus: document.inventoryStatus ?? null,
+      inventoryItemCount: document.inventoryItemCount ?? 0,
+      inventoryError: document.inventoryError ?? null,
       error: document.error ?? null,
     })),
   },
@@ -195,6 +198,7 @@ describe("ComparisonDocumentService", () => {
         originalFilename: "Polizze A.pdf",
         tokenCount: 456,
         pageCount: 30,
+        reactivateExisting: true,
       })
     );
     expect(VectorDb.addDocumentToNamespace).toHaveBeenCalledWith(
@@ -209,6 +213,7 @@ describe("ComparisonDocumentService", () => {
         id: 5,
         slot: "A",
         status: "ready",
+        inventoryStatus: "building",
         workspaceDocumentId: 6,
         docId: "new-doc-id",
       })
@@ -525,6 +530,7 @@ describe("ComparisonDocumentService", () => {
         workspaceId: 1,
         threadId: 2,
         userId: 3,
+        reactivateExisting: false,
       })
     );
     expect(documents).toEqual([

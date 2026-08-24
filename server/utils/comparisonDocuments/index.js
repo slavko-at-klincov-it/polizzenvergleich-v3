@@ -263,6 +263,7 @@ const ComparisonDocumentService = {
     thread,
     user = null,
     parsedFile,
+    reactivateExisting = false,
   }) {
     if (!thread)
       throw new ComparisonDocumentError(
@@ -297,6 +298,7 @@ const ComparisonDocumentService = {
       // Only PDFs have a physical, page-aware extraction contract. Office
       // and plain-text metadata must never manufacture page citations.
       pageCount: extension === ".pdf" ? pageCountFromMetadata(metadata) : null,
+      reactivateExisting,
     });
   },
 
@@ -349,6 +351,7 @@ const ComparisonDocumentService = {
       thread,
       user,
       parsedFile,
+      reactivateExisting: true,
     });
     if (comparisonDocument.status === "ready")
       return ComparisonDocument.serialize(comparisonDocument);
@@ -490,7 +493,12 @@ const ComparisonDocumentService = {
           inventoryError.message
         );
       });
-      return ComparisonDocument.serialize(readyDocument);
+      return ComparisonDocument.serialize({
+        ...readyDocument,
+        // The afterReady hook starts immediately below, but its first DB write
+        // is asynchronous. Keep the upload chip polling across that short gap.
+        inventoryStatus: readyDocument.inventoryStatus ?? "building",
+      });
     } catch (error) {
       const rolledBack = await rollbackEmbed({
         comparisonDocument: { ...comparisonDocument, docId },

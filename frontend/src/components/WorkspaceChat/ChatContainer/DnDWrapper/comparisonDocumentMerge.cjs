@@ -150,19 +150,27 @@ function comparisonDocumentAttachment(document = {}, uid = null) {
     document.filename ||
     document.title ||
     "Dokument";
-  const status = ["indexing", "ready", "deleting", "failed"].includes(
+  const persistedStatus = ["indexing", "ready", "deleting", "failed"].includes(
     document.status
   )
     ? document.status
     : "ready";
+  const inventoryStatus = document.inventoryStatus ?? null;
+  const status =
+    persistedStatus === "ready" && inventoryStatus === "building"
+      ? "indexing"
+      : persistedStatus === "ready" && inventoryStatus === "failed"
+        ? "failed"
+        : persistedStatus;
   const fileId = document.fileId ?? document.parsedFileId ?? null;
   return {
     uid: uid || `comparison-document-${document.id}`,
     file: { name: filename, type: document.mimeType || "" },
     contentString: null,
     status,
-    error: document.error ?? null,
+    error: document.inventoryError ?? document.error ?? null,
     document,
+    inventoryStatus,
     comparisonDocumentId: document.id ?? null,
     fileId,
     tokenCountEstimate:
