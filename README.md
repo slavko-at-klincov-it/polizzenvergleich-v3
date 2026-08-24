@@ -4,6 +4,12 @@
 > This private fork adds a thread-isolated, two-PDF policy-comparison workflow.
 > See [POLIZZENVERGLEICH_SETUP_DE.md](./POLIZZENVERGLEICH_SETUP_DE.md) for the
 > German deployment and acceptance guide.
+> Development must start with the current
+> [project memory](./POLIZZENVERGLEICH_PROJEKTGEDAECHTNIS.md),
+> [architecture](./POLIZZENVERGLEICH_ARCHITEKTUR.md),
+> [test evidence](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md), and
+> [decision log](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md). These files record
+> the real customer-Mac findings and supersede older inventory assumptions.
 > On a prepared Apple-Silicon Mac, run [`install.command`](./install.command)
 > for the native customer installation and automatic readiness check.
 

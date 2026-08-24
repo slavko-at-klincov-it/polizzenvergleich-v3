@@ -1,5 +1,15 @@
 # Lokaler Polizzenvergleich – Einrichtung und Betrieb
 
+> [!WARNING]
+> `policy-v0.3.22` ist der aktuelle technische Referenzstand, aber die
+> vollständige Faktenanalyse ist auf dem 32-GB-Kunden-Mac noch nicht
+> produktionsreif. Ein realer Lauf hätte wegen 577 verbleibender ambiger
+> Klauselblöcke deutlich über eine Stunde benötigt. Keine weitere
+> Tiefenanalyse am Kundenrechner starten, bis der occurrence-zentrierte
+> Targeted-Pfad gemäß
+> [Projektgedächtnis](./POLIZZENVERGLEICH_PROJEKTGEDAECHTNIS.md) veröffentlicht
+> und abgenommen ist.
+
 Diese Fork-Variante ist auf einen einfachen Ablauf für Versicherungsmakler
 ausgelegt: normal chatten oder bis zu zwei unterstützte Dokumente in den Chat
 ziehen, Frage oder Auftrag eingeben, fertig. Mit einem Dokument erfolgt eine
@@ -17,7 +27,7 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.15 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.22 && "$HOME/Polizzenvergleich/install.command"
 ```
 
 Der Installer:
@@ -119,11 +129,15 @@ Reasoning `off` weiterhin die Empfehlung.
 2. `New Thread` ist nicht manuell erforderlich: Beim ersten Dokument wird automatisch
    ein echter Thread erzeugt.
 3. Kein, ein oder zwei unterstützte Dokumente hineinziehen.
-4. Bei Anhängen warten, bis alle Chips `Bereit` zeigen.
-5. Zum Beispiel `Analysiere dieses Dokument` oder
-   `Vergleiche die beiden Policen vollständig` oder
-   `Wo unterscheiden sich die Selbstbehalte?` schreiben.
-6. Ergebnis mit Dokumentname und Seitennummer prüfen.
+4. Bei Anhängen warten, bis alle Chips `Bereit` zeigen. `Bereit` bezeichnet den
+   schnellen Basisindex aus OCR/Text, FTS und Dinghy/Lance.
+5. Im derzeitigen `v0.3.22`-Stand noch keine Dokumentfrage im Kundenbetrieb
+   absenden: Der Retriever startet sonst vor der Antwort den noch zu teuren
+   vollständigen Faktenlauf.
+6. Nach Veröffentlichung des occurrence-zentrierten Pfads werden konkrete
+   Fragen wieder direkt aus vollständigen Clause-FTS-Treffern,
+   deterministischen Signalen und Dinghy beantwortet; Qwen prüft dann nur
+   verbleibende ambige Klauselgruppen.
 
 Alte Kundendokumente werden nicht in neue Vergleiche einbezogen. Das Löschen
 eines Vergleichsthreads entfernt die zugeordneten Vergleichsdokumente,
@@ -223,7 +237,8 @@ getrennte Prozesse starten. Die allgemeinen Hinweise stehen in `BARE_METAL.md`.
 
 ## Sicherheits- und Qualitätsverhalten dieser Fork
 
-- Ein Vergleich ist erst mit genau zwei erfolgreich indexierten PDFs aktiv.
+- Der normale Chat funktioniert ohne Dokument. Dokumentanalyse ist mit einem
+  oder zwei erfolgreich indexierten Dokumenten möglich.
 - Jeder semantische Suchlauf ist auf die Dokument-ID von A beziehungsweise B
   begrenzt; beide Dokumente erhalten eigene Trefferbudgets.
 - Exakte Begriffe, Beträge und Synonyme wie `Selbstbehalt`,
@@ -236,29 +251,33 @@ getrennte Prozesse starten. Die allgemeinen Hinweise stehen in `BARE_METAL.md`.
   Seitennummer, Extraktionsart und Quell-Hash.
 - Aussagen ohne Fundstelle müssen als `keine belegte Fundstelle gefunden`
   gekennzeichnet werden, nicht als sicherer Vertragsausschluss.
-- Aus allen kanonischen Seiten wird ohne Top-N-Vorauswahl ein offenes,
-  persistentes Klauselinventar erstellt. FTS und LanceDB suchen anschließend
-  jedes Inventarthema getrennt in Dokument A und B; häufige Standardthemen
-  können seltene Deckungen daher nicht mehr aus dem Kontext verdrängen.
-- Bestehende Vergleichsthreads bleiben erhalten. Beim ersten erneuten Vergleich
-  wird ein fehlendes oder veraltetes Inventar automatisch aus dem gespeicherten
-  Seitenbestand neu erzeugt, ohne OCR, Embeddings, Dokument-IDs oder Chats zu
-  verändern.
+- Der Basisindex ist von der vollständigen Faktenanalyse getrennt. Ein
+  Analysefehler löscht weder OCR/Text noch FTS noch LanceDB.
+- Clause Blocks, Signale, Embedding-Zuordnungen, Fakten und Evidenzen werden
+  run-scoped staged. Erst ein vollständig validierter Lauf ersetzt den zuletzt
+  veröffentlichten Snapshot atomar.
+- Der bisherige automatische vollständige Faktenlauf bei der ersten Frage ist
+  als Produktionspfad verworfen. Der nächste Pfad enumeriert konkrete Themen
+  vollständig über Clause-FTS und ergänzt sie semantisch mit Dinghy, ohne einen
+  Qwen-Vollscan vorauszusetzen.
 
 ## Abnahmetest am Kundenrechner
 
-Da im Entwicklungsstand keine echten Kundendokumente oder die Kundenmodelle
-verfügbar waren, ist dieser Test vor dem produktiven Einsatz verpflichtend:
+Die folgende Abnahme ist erst nach Veröffentlichung des neuen
+occurrence-zentrierten Pfads auszuführen. `v0.3.22` erhält wegen der gemessenen
+Vollanalyse-Laufzeit keine fachliche Produktivfreigabe.
 
 1. Ein synthetisches oder freigegebenes PDF-Paar mit bekannten Fundstellen
    verwenden; keine Kundendaten in Support-Chats kopieren.
-2. Mindestens je eine Fundstelle für Selbstbehalt, Ausschluss, Geldbetrag,
-   Prozentwert, Obliegenheit und eine seltene Deckung wie Vandalismus in beiden
-   Dokumenten prüfen.
-3. Eine Fundstelle muss auf einer gescannten Seite liegen, damit selektives OCR
+2. Zuerst den vertikalen Pfad `Ermittle alle Selbstbehalte` prüfen: vollständige
+   Trefferenumeration, Betrag, Bedingung, Variante und physische Seite; kein
+   vollständiger Analysis Run und keine globale Top-N-Kürzung.
+3. Danach mindestens je eine Fundstelle für Ausschluss, Geldbetrag,
+   Prozentwert, Obliegenheit und eine seltene Deckung wie Vandalismus prüfen.
+4. Eine Fundstelle muss auf einer gescannten Seite liegen, damit selektives OCR
    geprüft wird.
-4. Seitennummern im PDF visuell gegen die Antwort vergleichen.
-5. Während Upload, Indexierung und Antwort ausführen:
+5. Seitennummern im PDF visuell gegen die Antwort vergleichen.
+6. Während Upload, Indexierung und Antwort ausführen:
 
    ```bash
    lms ps
@@ -266,22 +285,25 @@ verfügbar waren, ist dieser Test vor dem produktiven Einsatz verpflichtend:
    sysctl vm.swapusage
    ```
 
-6. Abnahme nur bei stabilem Prozess, grünem Speicherdruck und keinem stetig
+7. Abnahme nur bei stabilem Prozess, grünem Speicherdruck und keinem stetig
    wachsenden Swap. Falls Q6 zu knapp ist, zuerst Dinghy Q4_K_M gegen Q6 messen;
    nicht das Kontextfenster erhöhen.
-7. Einen Thread löschen und danach kontrollieren, dass seine PDFs in einem neuen
+8. Einen Thread löschen und danach kontrollieren, dass seine PDFs in einem neuen
    Thread weder als Treffer noch als Quelle auftauchen.
 
 ## Entwicklerprüfung
 
+Der vollständige, repository-spezifische Release-Gate-Lauf ist:
+
 ```bash
-npx jest --runInBand
-npm --prefix server run lint:check
-npm --prefix collector run lint:check
-npm --prefix frontend run lint:check
-npm --prefix frontend run build
+/bin/bash scripts/macos/tests/run.sh
 git diff --check
 ```
+
+Während einer Implementierung werden zunächst nur die unmittelbar betroffenen
+fokussierten Tests ausgeführt. Das vollständige Gate wird vor einem Release
+genau einmal ausgeführt. Zusätzlich ist die dokumentierte reale Laufzeit- und
+Coverage-Abnahme verpflichtend; grüne Unit-Tests allein genügen nicht.
 
 Der Modellvergleich BGE-M3 gegen Dinghy bleibt ein Abnahmetest, keine Annahme:
 Dinghy ist für deutsches Recht plausibel, aber nicht speziell für österreichische
