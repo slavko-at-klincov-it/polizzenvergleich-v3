@@ -25,6 +25,7 @@ export const ATTACHMENTS_PROCESSING_EVENT = "ATTACHMENTS_PROCESSING";
 export const ATTACHMENTS_PROCESSED_EVENT = "ATTACHMENTS_PROCESSED";
 export const COMPARISON_DOCUMENTS_CHANGED_EVENT =
   "COMPARISON_DOCUMENTS_CHANGED";
+export const START_COMPARISON_INVENTORY_EVENT = "COMPARISON_INVENTORY_START";
 export const PARSED_FILE_ATTACHMENT_REMOVED_EVENT =
   "PARSED_FILE_ATTACHMENT_REMOVED";
 
@@ -139,7 +140,10 @@ export function DnDFileUploaderProvider({
     if (!workspace?.slug || !activeSlug) return;
     let cancelled = false;
     let retryTimer = null;
-    setHydrating(true);
+    const blocksChat = !filesRef.current.some(
+      (file) => file.type === "comparison_document"
+    );
+    if (blocksChat) setHydrating(true);
     Workspace.listComparisonDocuments(workspace.slug, activeSlug)
       .then(({ response, data }) => {
         if (cancelled || !response.ok) return;
@@ -151,8 +155,10 @@ export function DnDFileUploaderProvider({
           mergeHydratedComparisonDocuments(previous, hydrated)
         );
         if (
-          hydrated.some((item) =>
-            ["indexing", "deleting"].includes(item.status)
+          hydrated.some(
+            (item) =>
+              ["indexing", "deleting"].includes(item.status) ||
+              item.inventoryStatus === "building"
           )
         )
           retryTimer = window.setTimeout(
@@ -182,6 +188,10 @@ export function DnDFileUploaderProvider({
     window.addEventListener(CLEAR_ATTACHMENTS_EVENT, resetAttachments);
     window.addEventListener(PASTE_ATTACHMENT_EVENT, handlePastedAttachment);
     window.addEventListener(
+      START_COMPARISON_INVENTORY_EVENT,
+      handleStartInventory
+    );
+    window.addEventListener(
       PARSED_FILE_ATTACHMENT_REMOVED_EVENT,
       handleRemoveParsedFile
     );
@@ -197,8 +207,73 @@ export function DnDFileUploaderProvider({
         PASTE_ATTACHMENT_EVENT,
         handlePastedAttachment
       );
+      window.removeEventListener(
+        START_COMPARISON_INVENTORY_EVENT,
+        handleStartInventory
+      );
     };
   }, []);
+
+  async function handleStartInventory(event) {
+    const { uid, document } = event.detail || {};
+    const activeSlug = threadRef.current?.slug;
+    if (!activeSlug || !document?.id) return;
+    updateFiles((previous) =>
+      previous.map((item) =>
+        item.uid === uid
+          ? {
+              ...item,
+              inventoryStatus: "building",
+              document: {
+                ...item.document,
+                inventoryStatus: "building",
+                inventoryError: null,
+              },
+            }
+          : item
+      )
+    );
+    try {
+      const { response, data } = await Workspace.startComparisonInventory(
+        workspace.slug,
+        activeSlug,
+        document.id
+      );
+      if (!response.ok || data?.success === false)
+        throw new Error(
+          data?.error || "Die Tiefenanalyse konnte nicht gestartet werden."
+        );
+      if (data?.document)
+        updateFiles((previous) =>
+          previous.map((item) =>
+            item.uid === uid
+              ? {
+                  ...comparisonDocumentAttachment(data.document, uid),
+                  file: item.file,
+                }
+              : item
+          )
+        );
+      setHydrationVersion((version) => version + 1);
+    } catch (error) {
+      updateFiles((previous) =>
+        previous.map((item) =>
+          item.uid === uid
+            ? {
+                ...item,
+                inventoryStatus: "failed",
+                document: {
+                  ...item.document,
+                  inventoryStatus: "failed",
+                  inventoryError: error.message,
+                },
+              }
+            : item
+        )
+      );
+      showToast(error.message, "error");
+    }
+  }
 
   /**
    * Handles the removal of a parsed file attachment from the uploader queue.

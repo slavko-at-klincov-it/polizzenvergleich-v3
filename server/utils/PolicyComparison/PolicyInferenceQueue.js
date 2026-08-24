@@ -31,31 +31,39 @@ const PolicyInferenceQueue = {
       () => gate
     );
 
-    let timedOut = false;
-    let timer = null;
+    let waitTimedOut = false;
+    let waitTimer = null;
     const queuedOperation = previous.then(async () => {
-      if (timedOut) {
+      if (waitTimedOut) {
         release();
         throw timeoutError();
       }
-      if (!timeoutStartedOperation && timer) {
-        clearTimeout(timer);
-        timer = null;
+      if (waitTimer) {
+        clearTimeout(waitTimer);
+        waitTimer = null;
       }
       const running = Promise.resolve().then(operation);
       running.then(release, release);
-      return running;
+      if (timeoutMs == null || !timeoutStartedOperation) return running;
+      let operationTimer = null;
+      const operationTimeout = new Promise((_resolve, reject) => {
+        operationTimer = setTimeout(() => reject(timeoutError()), timeoutMs);
+        operationTimer.unref?.();
+      });
+      return Promise.race([running, operationTimeout]).finally(() => {
+        if (operationTimer) clearTimeout(operationTimer);
+      });
     });
-    if (timeoutMs == null) return queuedOperation;
-    const timeout = new Promise((_resolve, reject) => {
-      timer = setTimeout(() => {
-        timedOut = true;
+    if (timeoutMs == null || timeoutStartedOperation) return queuedOperation;
+    const waitTimeout = new Promise((_resolve, reject) => {
+      waitTimer = setTimeout(() => {
+        waitTimedOut = true;
         reject(timeoutError());
       }, timeoutMs);
-      timer.unref?.();
+      waitTimer.unref?.();
     });
-    return Promise.race([queuedOperation, timeout]).finally(() => {
-      if (timer) clearTimeout(timer);
+    return Promise.race([queuedOperation, waitTimeout]).finally(() => {
+      if (waitTimer) clearTimeout(waitTimer);
     });
   },
 

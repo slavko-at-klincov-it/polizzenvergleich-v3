@@ -76,6 +76,34 @@ function comparisonDocumentEndpoints(app) {
     }
   );
 
+  app.post(
+    "/workspace/:slug/thread/:threadSlug/comparison-documents/:id/inventory",
+    middleware,
+    async (request, response) => {
+      try {
+        const user = await userFromSession(request, response);
+        const result = await ComparisonDocumentService.startInventory({
+          workspace: response.locals.workspace,
+          thread: response.locals.thread,
+          user,
+          id: request.params.id,
+        });
+        return response.status(result.started ? 202 : 200).json({
+          success: true,
+          error: null,
+          ...result,
+        });
+      } catch (error) {
+        console.error("Failed to start comparison inventory:", error);
+        return response.status(error.statusCode || 500).json({
+          success: false,
+          error: error.message,
+          document: null,
+        });
+      }
+    }
+  );
+
   app.delete(
     "/workspace/:slug/thread/:threadSlug/comparison-documents/:id",
     middleware,

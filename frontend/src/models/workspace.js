@@ -570,6 +570,19 @@ const Workspace = {
     return { response, data };
   },
 
+  /** Start the optional persisted deep inventory for one ready document. */
+  startComparisonInventory: async function (slug, threadSlug, documentId) {
+    const response = await fetch(
+      `${API_BASE}/workspace/${slug}/thread/${threadSlug}/comparison-documents/${documentId}/inventory`,
+      {
+        method: "POST",
+        headers: baseHeaders(),
+      }
+    );
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  },
+
   /** List the at-most-two PDFs attached to a comparison thread. */
   listComparisonDocuments: async function (slug, threadSlug) {
     const response = await fetch(

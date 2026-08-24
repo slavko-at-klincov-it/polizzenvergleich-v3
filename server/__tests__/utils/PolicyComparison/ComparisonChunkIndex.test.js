@@ -61,6 +61,68 @@ describe("ComparisonChunkIndex query preparation", () => {
     ).toBe(true);
   });
 
+  test("distinguishes concrete insurance topics from broad comparison wording", () => {
+    expect(
+      ComparisonChunkIndex.significantQueryTerms(
+        "Vergleiche beide Policen vollständig"
+      )
+    ).toEqual([]);
+    for (const broadQuery of [
+      "Erstelle mir einen vollständigen Vergleich",
+      "Mach eine komplette Gegenüberstellung",
+      "Gib mir eine Übersicht",
+      "Was ist alles versichert?",
+      "Fasse den Versicherungsschutz zusammen",
+      "Zeige sämtliche Unterschiede",
+      "Schau dir beide genau an",
+      "Was fällt dir bei den Unterlagen auf?",
+      "Prüfe alles genau",
+      "Vergleiche alle Klauseln",
+      "Welche Unterschiede gibt es in den Versicherungsbedingungen?",
+      "Fasse alle Regelungen zusammen",
+      "Vergleiche bitte die wichtigsten Punkte der beiden Polizzen vollständig",
+      "Stelle die beiden Policen gegenüber",
+    ])
+      expect(ComparisonChunkIndex.significantQueryTerms(broadQuery)).toEqual(
+        []
+      );
+    expect(
+      ComparisonChunkIndex.isExplicitBroadRequest(
+        "Vergleiche bitte die wichtigsten Punkte der beiden Polizzen vollständig"
+      )
+    ).toBe(true);
+    expect(
+      ComparisonChunkIndex.isExplicitBroadRequest(
+        "Welche Deckungen hat Vandalismus?"
+      )
+    ).toBe(false);
+    expect(
+      ComparisonChunkIndex.targetedQueryTerms(
+        "Sind alle Vandalismusschäden versichert?"
+      )
+    ).toEqual(expect.arrayContaining(["vandalismusschäden", "vandalismus"]));
+    expect(
+      ComparisonChunkIndex.significantQueryTerms(
+        "Welche Deckungen hat Vandalismus?"
+      )
+    ).toEqual(["vandalismus"]);
+    expect(
+      ComparisonChunkIndex.significantQueryTerms(
+        "Wie hoch ist der Selbstbehalt?"
+      )
+    ).toEqual(["selbstbehalt"]);
+    expect(
+      ComparisonChunkIndex.targetedQueryTerms(
+        "Welche Deckungen hat Vandalismus?"
+      )
+    ).toEqual(["vandalismus"]);
+    expect(
+      ComparisonChunkIndex.targetedQueryTerms("Wie hoch ist der Selbstbehalt?")
+    ).toEqual(
+      expect.arrayContaining(["selbstbehalt", "selbstbeteiligung", "franchise"])
+    );
+  });
+
   test("does not treat short query fragments as exact substring matches", () => {
     expect(
       ComparisonChunkIndex.exactTermMatches(

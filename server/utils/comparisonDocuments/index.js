@@ -194,12 +194,70 @@ async function rollbackEmbed({
 const ComparisonDocumentService = {
   list: async function ({ workspace, thread, user = null }) {
     await this.reconcileParsedReservations({ workspace, thread, user });
-    const documents = await ComparisonDocument.forThread({
+    let documents = await ComparisonDocument.forThread({
       workspaceId: workspace.id,
       threadId: thread.id,
       userId: user?.id ?? null,
     });
+    const {
+      ComparisonInventoryService,
+    } = require("../PolicyComparison/ComparisonInventoryService");
+    const reconciled = await ComparisonInventoryService.reconcileInterrupted({
+      documents,
+    });
+    if (reconciled)
+      documents = await ComparisonDocument.forThread({
+        workspaceId: workspace.id,
+        threadId: thread.id,
+        userId: user?.id ?? null,
+      });
     return documents.map(ComparisonDocument.serialize);
+  },
+
+  startInventory: async function ({ workspace, thread, user = null, id }) {
+    const comparisonDocument = await ComparisonDocument.get({
+      id: Number(id),
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      userId: user?.id ?? null,
+    });
+    if (!comparisonDocument)
+      throw new ComparisonDocumentError(
+        "Comparison document was not found in this thread.",
+        404
+      );
+    if (comparisonDocument.status !== "ready")
+      throw new ComparisonDocumentError(
+        "Der Basisindex muss fertig sein, bevor die Tiefenanalyse gestartet werden kann.",
+        409
+      );
+
+    const { resolveProviderConnector } = require("../helpers");
+    const {
+      ComparisonInventoryService,
+    } = require("../PolicyComparison/ComparisonInventoryService");
+    const { connector } = await resolveProviderConnector({
+      workspace,
+      prompt: `Erstelle die optionale Tiefenanalyse für Dokument ${comparisonDocument.slot}.`,
+    });
+    const state = await ComparisonInventoryService.startForDocuments({
+      documents: [comparisonDocument],
+      Connector: connector,
+    });
+    const current =
+      (await ComparisonDocument.get({
+        id: comparisonDocument.id,
+        workspaceId: workspace.id,
+        threadId: thread.id,
+        userId: user?.id ?? null,
+      })) || comparisonDocument;
+    return {
+      document: ComparisonDocument.serialize({
+        ...current,
+        inventoryStatus: state.pending ? "building" : current.inventoryStatus,
+      }),
+      started: state.started,
+    };
   },
 
   reconcileParsedReservations: async function ({
@@ -477,28 +535,10 @@ const ComparisonDocumentService = {
           unlinkError.message
         );
       }
-      // Lance and FTS are now durably ready. Inventory inference is an
-      // independent, retryable phase: do not hold the upload response open and
-      // never roll the successful base indexes back if the model times out or
-      // returns invalid evidence. Retrieval reuses the same inventory
-      // single-flight and remains closed until its manifest is ready.
-      void runComparisonDocumentLifecycleHooks("afterReady", {
-        comparisonDocument: readyDocument,
-        workspaceDocument,
-        workspace,
-        documentData: data,
-      }).catch((inventoryError) => {
-        console.error(
-          `[PolicyComparison] Basisindex für Dokument ${comparisonDocument.id} ist bereit; Inventar bleibt fehlgeschlagen und kann erneut erstellt werden:`,
-          inventoryError.message
-        );
-      });
-      return ComparisonDocument.serialize({
-        ...readyDocument,
-        // The afterReady hook starts immediately below, but its first DB write
-        // is asynchronous. Keep the upload chip polling across that short gap.
-        inventoryStatus: readyDocument.inventoryStatus ?? "building",
-      });
+      // Lance and FTS are now durably ready. The optional deep inventory is
+      // deliberately not started here: normal document questions must become
+      // available immediately without monopolizing the local chat model.
+      return ComparisonDocument.serialize(readyDocument);
     } catch (error) {
       const rolledBack = await rollbackEmbed({
         comparisonDocument: { ...comparisonDocument, docId },

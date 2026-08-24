@@ -49,7 +49,9 @@ describe("PolicyInferenceQueue", () => {
       ),
     };
     const waitingConnector = {
-      getChatCompletion: jest.fn(async () => ({ textResponse: "must not run" })),
+      getChatCompletion: jest.fn(async () => ({
+        textResponse: "must not run",
+      })),
     };
     await expect(
       PolicyInferenceQueue.run({
@@ -63,6 +65,7 @@ describe("PolicyInferenceQueue", () => {
       PolicyInferenceQueue.runOperation({
         operation: () => waitingConnector.getChatCompletion([]),
         timeoutMs: 10,
+        timeoutStartedOperation: false,
       })
     ).rejects.toMatchObject({ code: "POLICY_INFERENCE_TIMEOUT" });
     expect(waitingConnector.getChatCompletion).not.toHaveBeenCalled();
@@ -76,5 +79,29 @@ describe("PolicyInferenceQueue", () => {
         timeoutMs: 100,
       })
     ).resolves.toEqual({ textResponse: "must not run" });
+  });
+
+  test("starts the operation timeout only after the queue lease is acquired", async () => {
+    let releaseFirst;
+    const first = PolicyInferenceQueue.runOperation({
+      operation: () =>
+        new Promise((resolve) => {
+          releaseFirst = resolve;
+        }),
+      timeoutMs: 5,
+    });
+    await expect(first).rejects.toMatchObject({
+      code: "POLICY_INFERENCE_TIMEOUT",
+    });
+
+    const secondOperation = jest.fn(async () => "second-finished");
+    const second = PolicyInferenceQueue.runOperation({
+      operation: secondOperation,
+      timeoutMs: 10,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(secondOperation).not.toHaveBeenCalled();
+    releaseFirst("first-finished");
+    await expect(second).resolves.toBe("second-finished");
   });
 });

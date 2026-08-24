@@ -3,9 +3,7 @@ const {
   flexUserRoleValid,
   ROLES,
 } = require("../utils/middleware/multiUserProtected");
-const {
-  ComparisonDocumentService,
-} = require("../utils/comparisonDocuments");
+const { ComparisonDocumentService } = require("../utils/comparisonDocuments");
 
 jest.mock("../utils/http", () => ({ userFromSession: jest.fn() }));
 jest.mock("../utils/middleware/validatedRequest", () => ({
@@ -22,6 +20,7 @@ jest.mock("../utils/comparisonDocuments", () => ({
   ComparisonDocumentService: {
     list: jest.fn(),
     embedParsedFile: jest.fn(),
+    startInventory: jest.fn(),
     remove: jest.fn(),
     removeParsedFile: jest.fn(),
   },
@@ -59,6 +58,7 @@ describe("comparisonDocumentEndpoints", () => {
     userFromSession.mockReset();
     ComparisonDocumentService.list.mockReset();
     ComparisonDocumentService.embedParsedFile.mockReset();
+    ComparisonDocumentService.startInventory.mockReset();
     ComparisonDocumentService.remove.mockReset();
     ComparisonDocumentService.removeParsedFile.mockReset();
     comparisonDocumentEndpoints(app);
@@ -90,6 +90,37 @@ describe("comparisonDocumentEndpoints", () => {
       success: true,
       error: null,
       document,
+    });
+  });
+
+  it("starts optional inventory inside the current document scope", async () => {
+    const document = {
+      id: 5,
+      slot: "A",
+      status: "ready",
+      inventoryStatus: "building",
+    };
+    ComparisonDocumentService.startInventory.mockResolvedValue({
+      document,
+      started: true,
+    });
+    const handler = app.post.mock.calls[1][2];
+    const response = responseDouble();
+
+    await handler({ params: { id: "5" } }, response);
+
+    expect(ComparisonDocumentService.startInventory).toHaveBeenCalledWith({
+      workspace: response.locals.workspace,
+      thread: response.locals.thread,
+      user: { id: 3, role: "default" },
+      id: "5",
+    });
+    expect(response.status).toHaveBeenCalledWith(202);
+    expect(response.json).toHaveBeenCalledWith({
+      success: true,
+      error: null,
+      document,
+      started: true,
     });
   });
 

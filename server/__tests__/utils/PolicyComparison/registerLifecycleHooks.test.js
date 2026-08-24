@@ -6,13 +6,8 @@ jest.mock("../../../utils/PolicyComparison/ComparisonChunkIndex", () => ({
 }));
 jest.mock("../../../utils/PolicyComparison/ComparisonInventoryService", () => ({
   ComparisonInventoryService: {
-    buildForDocument: jest.fn(),
-    ensureForDocuments: jest.fn(),
     clear: jest.fn(),
   },
-}));
-jest.mock("../../../utils/helpers", () => ({
-  resolveProviderConnector: jest.fn(),
 }));
 
 const {
@@ -21,7 +16,6 @@ const {
 const {
   ComparisonInventoryService,
 } = require("../../../utils/PolicyComparison/ComparisonInventoryService");
-const { resolveProviderConnector } = require("../../../utils/helpers");
 const {
   clearComparisonDocumentLifecycleHooks,
   runComparisonDocumentLifecycleHooks,
@@ -30,13 +24,12 @@ const {
 describe("policy comparison lifecycle registration", () => {
   beforeAll(() => {
     clearComparisonDocumentLifecycleHooks();
-    resolveProviderConnector.mockResolvedValue({ connector: { id: "llm" } });
     require("../../../utils/PolicyComparison/registerLifecycleHooks");
   });
 
   beforeEach(() => jest.clearAllMocks());
 
-  test("keeps FTS in the base phase and starts inventory only after ready", async () => {
+  test("keeps FTS in the base phase without auto-starting inventory", async () => {
     const comparisonDocument = { id: 1 };
     const documentData = { pageContent: "canonical" };
     const workspace = { id: 2 };
@@ -51,36 +44,25 @@ describe("policy comparison lifecycle registration", () => {
       comparisonDocument,
       documentData,
     });
-    expect(
-      ComparisonInventoryService.ensureForDocuments
-    ).not.toHaveBeenCalled();
-
     await runComparisonDocumentLifecycleHooks("afterReady", {
       comparisonDocument,
       documentData,
       workspace,
     });
-    expect(ComparisonInventoryService.ensureForDocuments).toHaveBeenCalledWith({
-      documents: [comparisonDocument],
-      Connector: { id: "llm" },
-    });
+    expect(ComparisonChunkIndex.indexDocument).toHaveBeenCalledTimes(1);
   });
 
-  test("keeps the successful FTS phase when retryable inventory inference fails", async () => {
+  test("does not run optional inference from the after-ready lifecycle", async () => {
     const comparisonDocument = { id: 9 };
     const documentData = { pageContent: "canonical" };
     const workspace = { id: 2 };
-    ComparisonInventoryService.ensureForDocuments.mockRejectedValueOnce(
-      new Error("Policy model call timed out.")
-    );
-
     await expect(
       runComparisonDocumentLifecycleHooks("afterReady", {
         comparisonDocument,
         documentData,
         workspace,
       })
-    ).rejects.toThrow("Policy model call timed out.");
+    ).resolves.toBeUndefined();
 
     expect(ComparisonChunkIndex.indexDocument).not.toHaveBeenCalled();
     expect(ComparisonChunkIndex.removeDocument).not.toHaveBeenCalled();

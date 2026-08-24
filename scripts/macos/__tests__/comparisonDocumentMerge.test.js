@@ -44,7 +44,7 @@ describe("comparison upload chip reconciliation", () => {
     });
   });
 
-  test("keeps the chip processing until the persisted inventory is ready", () => {
+  test("keeps the base-ready chip usable while optional inventory changes", () => {
     const building = comparisonDocumentAttachment({
       id: 9,
       parsedFileId: 41,
@@ -62,12 +62,12 @@ describe("comparison upload chip reconciliation", () => {
     });
 
     expect(building).toMatchObject({
-      status: "indexing",
+      status: "ready",
       inventoryStatus: "building",
     });
     expect(failed).toMatchObject({
-      status: "failed",
-      error: "Inventar-Timeout",
+      status: "ready",
+      error: null,
       inventoryStatus: "failed",
     });
   });

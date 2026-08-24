@@ -170,6 +170,37 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
   }
 }
 
+function rebuildForDocument({ document, Connector }) {
+  const existing = rebuilds.get(document.id);
+  if (existing) return { operation: existing, started: false };
+
+  const operation = (async () => {
+    const { fileData } = require("../files");
+    const documentData = await fileData(document.docpath);
+    if (!documentData) {
+      await ComparisonDocumentInventory.markFailed({
+        comparisonDocumentId: document.id,
+        version: CURRENT_INVENTORY_VERSION,
+        pageCount: document.inventoryPageCount || 0,
+        error: `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
+      });
+      throw new ComparisonInventoryError(
+        `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
+        "comparison_inventory_source_missing"
+      );
+    }
+    return buildInventory({
+      comparisonDocument: document,
+      documentData,
+      Connector,
+    });
+  })().finally(() => {
+    if (rebuilds.get(document.id) === operation) rebuilds.delete(document.id);
+  });
+  rebuilds.set(document.id, operation);
+  return { operation, started: true };
+}
+
 function fallbackTopic(topic) {
   return {
     id: topic.id,
@@ -192,6 +223,53 @@ const ComparisonInventoryService = {
 
   buildForDocument: buildInventory,
 
+  async readyForDocuments({ documents = [] }) {
+    const inventories = [];
+    for (const document of documents) {
+      const manifest = await ComparisonDocumentInventory.get(document.id);
+      if (!manifestCurrent(manifest, document.sourceSha256)) return null;
+      inventories.push({ document, manifest });
+    }
+    return inventories;
+  },
+
+  async startForDocuments({ documents = [], Connector }) {
+    const operations = [];
+    let started = false;
+    for (const document of documents) {
+      const manifest = await ComparisonDocumentInventory.get(document.id);
+      if (manifestCurrent(manifest, document.sourceSha256)) continue;
+      const rebuild = rebuildForDocument({ document, Connector });
+      operations.push(rebuild.operation);
+      started = started || rebuild.started;
+    }
+    for (const operation of operations)
+      void operation.catch((error) =>
+        console.error(
+          "[PolicyComparison] Optionale Tiefenanalyse fehlgeschlagen:",
+          error.message
+        )
+      );
+    return { started, pending: operations.length > 0 };
+  },
+
+  async reconcileInterrupted({ documents = [] }) {
+    let changed = false;
+    for (const document of documents) {
+      if (document.inventoryStatus !== "building" || rebuilds.has(document.id))
+        continue;
+      await ComparisonDocumentInventory.markFailed({
+        comparisonDocumentId: document.id,
+        version: CURRENT_INVENTORY_VERSION,
+        pageCount: document.inventoryPageCount || 0,
+        error:
+          "Die Tiefenanalyse wurde durch einen Serverneustart unterbrochen und kann erneut gestartet werden.",
+      });
+      changed = true;
+    }
+    return changed;
+  },
+
   async ensureForDocuments({ documents = [], Connector }) {
     const manifests = [];
     for (const document of documents) {
@@ -201,25 +279,8 @@ const ComparisonInventoryService = {
         continue;
       }
 
-      let rebuild = rebuilds.get(document.id);
-      if (!rebuild) {
-        rebuild = (async () => {
-          const { fileData } = require("../files");
-          const documentData = await fileData(document.docpath);
-          if (!documentData)
-            throw new ComparisonInventoryError(
-              `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
-              "comparison_inventory_source_missing"
-            );
-          return buildInventory({
-            comparisonDocument: document,
-            documentData,
-            Connector,
-          });
-        })().finally(() => rebuilds.delete(document.id));
-        rebuilds.set(document.id, rebuild);
-      }
-      await rebuild;
+      const { operation } = rebuildForDocument({ document, Connector });
+      await operation;
       manifest = await ComparisonDocumentInventory.get(document.id);
       if (!manifestCurrent(manifest, document.sourceSha256))
         throw new ComparisonInventoryError(

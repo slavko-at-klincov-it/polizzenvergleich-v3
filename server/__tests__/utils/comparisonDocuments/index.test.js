@@ -5,7 +5,10 @@ const {
   WorkspaceParsedFiles,
 } = require("../../../models/workspaceParsedFiles");
 const { DocumentVectors } = require("../../../models/vectors");
-const { getVectorDbClass } = require("../../../utils/helpers");
+const {
+  getVectorDbClass,
+  resolveProviderConnector,
+} = require("../../../utils/helpers");
 const {
   runComparisonDocumentLifecycleHooks,
 } = require("../../../utils/comparisonDocuments/lifecycleHooks");
@@ -69,6 +72,13 @@ jest.mock("../../../models/vectors", () => ({
 }));
 jest.mock("../../../utils/helpers", () => ({
   getVectorDbClass: jest.fn(),
+  resolveProviderConnector: jest.fn(),
+}));
+jest.mock("../../../utils/PolicyComparison/ComparisonInventoryService", () => ({
+  ComparisonInventoryService: {
+    reconcileInterrupted: jest.fn(),
+    startForDocuments: jest.fn(),
+  },
 }));
 jest.mock("../../../utils/files", () => ({
   directUploadsPath: "/direct-uploads",
@@ -83,6 +93,9 @@ jest.mock("../../../utils/comparisonDocuments/lifecycleHooks", () => ({
 const {
   ComparisonDocumentService,
 } = require("../../../utils/comparisonDocuments");
+const {
+  ComparisonInventoryService,
+} = require("../../../utils/PolicyComparison/ComparisonInventoryService");
 
 const workspace = { id: 1, slug: "policies" };
 const thread = { id: 2, workspace_id: 1 };
@@ -151,6 +164,12 @@ describe("ComparisonDocumentService", () => {
       ...data,
     }));
     ComparisonDocument.delete.mockResolvedValue({ count: 1 });
+    ComparisonInventoryService.reconcileInterrupted.mockResolvedValue(false);
+    ComparisonInventoryService.startForDocuments.mockResolvedValue({
+      started: true,
+      pending: true,
+    });
+    resolveProviderConnector.mockResolvedValue({ connector: { id: "llm" } });
     getVectorDbClass.mockReturnValue(VectorDb);
     VectorDb.addDocumentToNamespace.mockResolvedValue({
       vectorized: true,
@@ -213,7 +232,7 @@ describe("ComparisonDocumentService", () => {
         id: 5,
         slot: "A",
         status: "ready",
-        inventoryStatus: "building",
+        inventoryStatus: null,
         workspaceDocumentId: 6,
         docId: "new-doc-id",
       })
@@ -240,6 +259,62 @@ describe("ComparisonDocumentService", () => {
     expect(VectorDb.addDocumentToNamespace).toHaveBeenCalledTimes(1);
     expect(ComparisonDocument.reserve).toHaveBeenCalledTimes(1);
     expect(firstResult).toEqual(secondResult);
+  });
+
+  it("starts optional inventory only for a ready scoped document", async () => {
+    const readyDocument = {
+      ...reservation,
+      status: "ready",
+      sourceSha256: "a".repeat(64),
+      docpath: "custom-documents/parsed-a.json",
+    };
+    ComparisonDocument.get.mockResolvedValue(readyDocument);
+
+    const result = await ComparisonDocumentService.startInventory({
+      workspace,
+      thread,
+      user,
+      id: readyDocument.id,
+    });
+
+    expect(ComparisonDocument.get).toHaveBeenCalledWith({
+      id: readyDocument.id,
+      workspaceId: workspace.id,
+      threadId: thread.id,
+      userId: user.id,
+    });
+    expect(ComparisonInventoryService.startForDocuments).toHaveBeenCalledWith({
+      documents: [readyDocument],
+      Connector: { id: "llm" },
+    });
+    expect(result).toMatchObject({
+      started: true,
+      document: { status: "ready", inventoryStatus: "building" },
+    });
+  });
+
+  it("reports a failed inventory retry as building while its job is pending", async () => {
+    const failedInventory = {
+      ...reservation,
+      status: "ready",
+      inventoryStatus: "failed",
+      inventoryError: "Vorheriger Timeout",
+      sourceSha256: "a".repeat(64),
+      docpath: "custom-documents/parsed-a.json",
+    };
+    ComparisonDocument.get.mockResolvedValue(failedInventory);
+
+    const result = await ComparisonDocumentService.startInventory({
+      workspace,
+      thread,
+      user,
+      id: failedInventory.id,
+    });
+
+    expect(result).toMatchObject({
+      started: true,
+      document: { status: "ready", inventoryStatus: "building" },
+    });
   });
 
   it("deletes a parsed source only inside the current thread scope", async () => {
@@ -418,12 +493,7 @@ describe("ComparisonDocumentService", () => {
     });
   });
 
-  it("keeps ready Lance and FTS data when the asynchronous inventory phase fails", async () => {
-    runComparisonDocumentLifecycleHooks.mockImplementation(async (event) => {
-      if (event === "afterReady") throw new Error("inventory timed out");
-    });
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-
+  it("finishes after the base indexes without invoking optional inventory", async () => {
     await expect(
       ComparisonDocumentService.embedParsedFile({
         workspace,
@@ -432,26 +502,17 @@ describe("ComparisonDocumentService", () => {
         parsedFileId: parsedFile.id,
       })
     ).resolves.toEqual(expect.objectContaining({ status: "ready" }));
-    await new Promise((resolve) => setImmediate(resolve));
-
     expect(runComparisonDocumentLifecycleHooks).toHaveBeenCalledWith(
       "afterEmbedded",
       expect.any(Object)
     );
-    expect(runComparisonDocumentLifecycleHooks).toHaveBeenCalledWith(
+    expect(runComparisonDocumentLifecycleHooks).not.toHaveBeenCalledWith(
       "afterReady",
-      expect.objectContaining({
-        comparisonDocument: expect.objectContaining({ status: "ready" }),
-      })
+      expect.any(Object)
     );
     expect(prisma.workspace_documents.deleteMany).not.toHaveBeenCalled();
     expect(VectorDb.deleteDocumentFromNamespace).not.toHaveBeenCalled();
     expect(DocumentVectors.delete).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Basisindex für Dokument 5 ist bereit"),
-      "inventory timed out"
-    );
-    errorSpy.mockRestore();
   });
 
   it("removes all persisted artifacts before deleting a comparison record", async () => {

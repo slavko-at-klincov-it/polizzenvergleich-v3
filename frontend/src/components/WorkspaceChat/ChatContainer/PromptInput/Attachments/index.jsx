@@ -10,7 +10,10 @@ import {
   WarningOctagon,
   X,
 } from "@phosphor-icons/react";
-import { REMOVE_ATTACHMENT_EVENT } from "../../DnDWrapper";
+import {
+  REMOVE_ATTACHMENT_EVENT,
+  START_COMPARISON_INVENTORY_EVENT,
+} from "../../DnDWrapper";
 import { openImageLightbox } from "@/components/ImageLightbox";
 
 /**
@@ -61,6 +64,7 @@ function AttachmentItem({ attachment, onImageClick }) {
     pageCount,
     type,
     contentString,
+    inventoryStatus,
   } = attachment;
   const { iconBgColor, Icon } = displayFromFile(file);
   const exactModelTokenLabel = Number.isFinite(modelTokenCount)
@@ -82,6 +86,14 @@ function AttachmentItem({ attachment, onImageClick }) {
     window.dispatchEvent(
       new CustomEvent(REMOVE_ATTACHMENT_EVENT, {
         detail: { uid, document, attachmentType: type, parsedFileId },
+      })
+    );
+  }
+
+  function startDeepAnalysis() {
+    window.dispatchEvent(
+      new CustomEvent(START_COMPARISON_INVENTORY_EVENT, {
+        detail: { uid, document },
       })
     );
   }
@@ -221,7 +233,7 @@ function AttachmentItem({ attachment, onImageClick }) {
       data-tooltip-id="attachment-status-tooltip"
       data-tooltip-content={
         status === "ready"
-          ? `${file.name} ist für diesen Vergleich indexiert.${tokenLabel ? ` Extrahierter Text: ${tokenLabel}.` : ""}`
+          ? `${file.name} ist für gezielte Fragen indexiert.${tokenLabel ? ` Extrahierter Text: ${tokenLabel}.` : ""}${document?.inventoryError ? ` Letzte Tiefenanalyse: ${document.inventoryError}` : ""}`
           : `${file.name} wird nur in diesem Vergleich verwendet.`
       }
       className={`relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group`}
@@ -242,11 +254,32 @@ function AttachmentItem({ attachment, onImageClick }) {
       </div>
       <div className="flex flex-col w-[125px]">
         <p className="text-white text-xs font-semibold truncate">{file.name}</p>
-        <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-          {status === "ready"
-            ? `Bereit${pageLabel ? ` · ${pageLabel}` : ""}${tokenLabel ? ` · ${tokenLabel}` : ""}`
-            : "Zum Vergleich hinzugefügt"}
-        </p>
+        {status === "ready" && (
+          <p className="text-theme-attachment-text-secondary text-[9px] leading-[12px] font-medium truncate">
+            {`Bereit${pageLabel ? ` · ${pageLabel}` : ""}${tokenLabel ? ` · ${tokenLabel}` : ""}`}
+          </p>
+        )}
+        {status === "ready" && inventoryStatus === "building" ? (
+          <p className="text-theme-attachment-text-secondary text-[10px] leading-[12px] font-medium">
+            Tiefenanalyse läuft
+          </p>
+        ) : status === "ready" && inventoryStatus === "ready" ? (
+          <p className="text-theme-attachment-text-secondary text-[10px] leading-[12px] font-medium">
+            Tiefenanalyse fertig
+          </p>
+        ) : status === "ready" ? (
+          <button
+            type="button"
+            onClick={startDeepAnalysis}
+            className="text-left text-theme-attachment-text-secondary hover:text-white text-[10px] leading-[12px] font-medium"
+          >
+            Tiefenanalyse starten
+          </button>
+        ) : (
+          <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
+            Zum Vergleich hinzugefügt
+          </p>
+        )}
       </div>
     </div>
   );

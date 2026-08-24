@@ -26,6 +26,7 @@ const STOP_WORDS = new Set([
   "in",
   "ich",
   "im",
+  "mir",
   "mit",
   "beim",
   "oder",
@@ -60,12 +61,23 @@ const GENERIC_COMPARISON_WORDS = new Set([
   "beiden",
   "dokumente",
   "policen",
+  "police",
   "polizzen",
+  "polizze",
   "verträge",
   "vertraege",
   "vollständig",
+  "vollständige",
+  "vollständigen",
+  "vollständiger",
   "vollstaendig",
+  "vollstaendige",
+  "vollstaendigen",
+  "vollstaendiger",
   "komplett",
+  "komplette",
+  "kompletten",
+  "kompletter",
   "ausführlich",
   "ausfuehrlich",
   "miteinander",
@@ -75,12 +87,84 @@ const GENERIC_COMPARISON_WORDS = new Set([
   "versicherungen",
   "analysiere",
   "analysieren",
+  "erstelle",
+  "erstellen",
+  "erkläre",
+  "erklaere",
+  "fasse",
+  "fass",
+  "zusammen",
+  "mach",
+  "mache",
+  "gib",
+  "zeige",
+  "zeig",
+  "schau",
+  "ansehen",
+  "prüfe",
+  "pruefe",
+  "bewerte",
+  "bewerten",
+  "genau",
+  "unterlagen",
+  "auffällig",
+  "auffaellig",
+  "fällt",
+  "faellt",
+  "auf",
+  "an",
+  "dir",
+  "fachlich",
+  "wichtig",
+  "wichtige",
+  "wichtigen",
+  "wichtigste",
+  "wichtigsten",
+  "punkt",
+  "punkte",
+  "stelle",
+  "stellen",
+  "gegenüber",
+  "gegenueber",
   "nenne",
   "vorteil",
   "vorteile",
   "vor",
   "nachteil",
   "nachteile",
+  "besser",
+  "schlechter",
+  "überblick",
+  "ueberblick",
+  "übersicht",
+  "uebersicht",
+  "zusammenfassung",
+  "alles",
+  "sämtliche",
+  "saemtliche",
+  "gesamt",
+  "gesamte",
+  "gesamten",
+  "gesamter",
+  "versicherungsschutz",
+  "klausel",
+  "klauseln",
+  "bedingung",
+  "bedingungen",
+  "versicherungsbedingung",
+  "versicherungsbedingungen",
+  "vertragsbedingung",
+  "vertragsbedingungen",
+  "regelung",
+  "regelungen",
+  "bestimmung",
+  "bestimmungen",
+  "vertragstext",
+  "vertragstexte",
+  "vertragsinhalt",
+  "vertragsinhalte",
+  "inhalt",
+  "inhalte",
   "gegenüberstellung",
   "gegenueberstellung",
   "hoch",
@@ -102,6 +186,9 @@ const GENERIC_COMPARISON_WORDS = new Set([
   "enthalten",
   "beinhaltet",
   "versichert",
+  "gedeckt",
+  "einschließlich",
+  "einschliesslich",
 ]);
 
 /**
@@ -123,8 +210,23 @@ const ComparisonChunkIndex = {
       .toLocaleLowerCase("de-AT");
   },
 
+  isExplicitBroadRequest(query = "") {
+    const normalized = this.normalize(query);
+    return (
+      /\b(?:vollständig\w*|vollstaendig\w*|komplett\w*|alle|alles|sämtlich\w*|saemtlich\w*|überblick|ueberblick|übersicht|uebersicht|zusammenfassung|besser|schlechter)\b/u.test(
+        normalized
+      ) ||
+      /\bwichtig\w*\s+punkte?\b/u.test(normalized) ||
+      /\bgegenüberstell\w*|\bgegenueberstell\w*/u.test(normalized) ||
+      /\b(?:beide|beiden)\b[\s\S]*\b(?:gegenüber|gegenueber)\b/u.test(
+        normalized
+      )
+    );
+  },
+
   isGenericComparison(query = "") {
     const normalized = this.normalize(query);
+    if (this.isExplicitBroadRequest(query)) return true;
     const broadComparisonIntent =
       /\b(?:vorteile?|nachteile?|deckungen?|leistungen?|inhalt|inhalte|vollständig|vollstaendig|komplett|besser|schlechter)\b/u.test(
         normalized
@@ -165,6 +267,36 @@ const ComparisonChunkIndex = {
     return [
       ...new Set(terms.map((term) => this.normalize(term)).filter(Boolean)),
     ];
+  },
+
+  significantQueryTerms(query = "") {
+    const tokens = this.normalize(query).match(/[\p{L}\p{N}€%]+/gu) || [];
+    return [
+      ...new Set(
+        tokens.filter(
+          (token) =>
+            token.length > 1 &&
+            !STOP_WORDS.has(token) &&
+            !GENERIC_COMPARISON_WORDS.has(token)
+        )
+      ),
+    ];
+  },
+
+  targetedQueryTerms(query = "") {
+    const normalized = this.normalize(query);
+    const terms = this.significantQueryTerms(query);
+    for (const group of SYNONYM_GROUPS) {
+      if (group.some((term) => this.exactTermMatches(normalized, term)))
+        terms.push(...group);
+    }
+    for (const term of [...terms]) {
+      if (term.endsWith("schäden") && term.length > "schäden".length + 3)
+        terms.push(term.slice(0, -"schäden".length));
+      if (term.endsWith("schaden") && term.length > "schaden".length + 3)
+        terms.push(term.slice(0, -"schaden".length));
+    }
+    return [...new Set(terms.map((term) => this.normalize(term)))];
   },
 
   qualifierTerms(query = "", topicTerms = []) {

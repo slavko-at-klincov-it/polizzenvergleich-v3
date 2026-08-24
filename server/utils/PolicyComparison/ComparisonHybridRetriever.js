@@ -6,6 +6,8 @@ const RRF_K = 60;
 const LANCEDB_NAME = "LanceDb";
 const MAX_EVIDENCE_CONTEXT_CHARACTERS = 12_000;
 const MIN_TOPIC_SEMANTIC_SCORE = 0.55;
+const TARGETED_CANDIDATE_LIMIT = 8;
+const TARGETED_EVIDENCE_LIMIT = 6;
 
 function systemPromptForDocuments(documents = []) {
   const documentRule =
@@ -337,10 +339,6 @@ const ComparisonHybridRetriever = {
         ComparisonChunkIndex.exactTermMatches(query, term)
       )
     );
-    const explicitlyExpansive =
-      /\b(?:vorteile?|nachteile?|deckungen?|leistungen?|inhalt|inhalte|vollständig|vollstaendig|komplett)\b/u.test(
-        ComparisonChunkIndex.normalize(query)
-      );
     const terms = ComparisonChunkIndex.queryTerms(query);
     if (requested.length > 0)
       return requested.map((topic) => {
@@ -352,8 +350,26 @@ const ComparisonHybridRetriever = {
           ]),
         };
       });
-    if (explicitlyExpansive || ComparisonChunkIndex.isGenericComparison(query))
-      return topics;
+    const significantTerms = ComparisonChunkIndex.significantQueryTerms(query);
+    if (significantTerms.length > 0) {
+      const terms = ComparisonChunkIndex.targetedQueryTerms(query);
+      return [
+        {
+          id: `anfrage-${ComparisonChunkIndex.normalize(query)
+            .replace(/[^\p{L}\p{N}]+/gu, "-")
+            .replace(/^-+|-+$/g, "")
+            .slice(0, 60)}`,
+          label: significantTerms.join(" / "),
+          terms,
+          qualifierTerms: [],
+          origins: [],
+          score: 0,
+          origin: "query",
+        },
+      ];
+    }
+    if (ComparisonChunkIndex.isExplicitBroadRequest(query)) return topics;
+    if (ComparisonChunkIndex.isGenericComparison(query)) return topics;
     return [
       {
         id: `anfrage-${ComparisonChunkIndex.normalize(query)
@@ -449,6 +465,7 @@ const ComparisonHybridRetriever = {
     const contextTexts = [];
     const sources = [];
     let topics;
+    let inventoryReady = false;
     if (index !== ComparisonChunkIndex) {
       topics =
         typeof index.listThreadTopics === "function"
@@ -457,28 +474,44 @@ const ComparisonHybridRetriever = {
               comparisonDocumentIds: ordered.map((document) => document.id),
             })
           : inventoryService.fallbackTopics();
+      inventoryReady = true;
     } else {
-      try {
-        const inventories = await inventoryService.ensureForDocuments({
-          documents: ordered,
-          Connector: LLMConnector,
-        });
+      const inventories =
+        typeof inventoryService.readyForDocuments === "function"
+          ? await inventoryService.readyForDocuments({ documents: ordered })
+          : null;
+      if (inventories) {
         topics = inventoryService.unionTopics(inventories);
-      } catch (error) {
-        return {
-          active: true,
-          ready: false,
-          message:
-            error.message ||
-            "Das offene Klauselinventar konnte nicht erstellt werden. Bitte das betroffene Dokument entfernen und erneut ablegen.",
-          contextTexts: [],
-          sources: [],
-        };
+        inventoryReady = true;
+      } else {
+        topics = inventoryService.fallbackTopics();
       }
     }
     topics = this.planTopics({ query, topics });
+    const targetedWithoutInventory =
+      index === ComparisonChunkIndex &&
+      !inventoryReady &&
+      ComparisonChunkIndex.significantQueryTerms(query).length > 0;
+    if (
+      index === ComparisonChunkIndex &&
+      !inventoryReady &&
+      !targetedWithoutInventory
+    ) {
+      return {
+        active: true,
+        ready: false,
+        deepAnalysisRequired: true,
+        message:
+          "Für einen vollständigen Tiefenvergleich muss zuerst die optionale Tiefenanalyse der Dokumente gestartet und abgeschlossen werden. Konkrete Fragen zu Vandalismus, Selbstbehalt, Ausschlüssen oder Deckungsgrenzen sind bereits jetzt möglich.",
+        contextTexts: [],
+        sources: [],
+      };
+    }
 
     const cells = [];
+    const candidateLimit = targetedWithoutInventory
+      ? TARGETED_CANDIDATE_LIMIT
+      : 2;
     for (const topic of topics) {
       for (const document of ordered) {
         const qualifierMatches = (text) =>
@@ -509,7 +542,7 @@ const ComparisonHybridRetriever = {
                 threadId: thread.id,
                 comparisonDocumentId: document.id,
                 topic,
-                limit: 2,
+                limit: candidateLimit,
               })
             : (
                 await index.searchDocument({
@@ -517,7 +550,7 @@ const ComparisonHybridRetriever = {
                   comparisonDocumentId: document.id,
                   query: topic.label,
                   terms: topic.terms,
-                  limit: 2,
+                  limit: candidateLimit,
                 })
               ).map((result) => ({
                 ...result,
@@ -544,39 +577,87 @@ const ComparisonHybridRetriever = {
             Number(anchorPages.has(a.pageNumber))
           );
         });
-        const vectorResult = await VectorDb.performSimilaritySearch({
-          namespace: workspace.slug,
-          input: `Versicherungsklausel: ${topic.label}. Suchbegriffe: ${topic.terms.join(", ")}. Nutzerbedingung: ${(topic.qualifierTerms || []).join(", ")}`,
-          LLMConnector,
-          similarityThreshold: workspace?.similarityThreshold,
-          topN: 2,
-          includeDocIds: [document.docId],
-          rerank: workspace?.vectorSearchMode === "rerank",
-        });
-        if (vectorResult.message) throw new Error(vectorResult.message);
-        const semanticCandidates = (vectorResult.sources || [])
-          .map((source) => ({
-            ...this.semanticSource(source, document),
-            topicId: topic.id,
-            topicLabel: topic.label,
-          }))
-          .filter((source) => {
-            const score = Number(source.score);
-            const threshold = Math.max(
-              MIN_TOPIC_SEMANTIC_SCORE,
-              Number(workspace?.similarityThreshold) || 0
-            );
-            return Number.isFinite(score) && score >= threshold;
-          });
         cells.push({
           key: `${topic.id}:${document.id}`,
           topic,
           document,
           inventoryHits,
           lexicalSearch: qualifiedLexicalSearch,
-          semanticCandidates,
+          semanticCandidates: [],
+          supplementLimit: targetedWithoutInventory
+            ? TARGETED_EVIDENCE_LIMIT
+            : 2,
         });
       }
+    }
+
+    const knownTarget = topics.some((topic) => topic.origin === "fallback");
+    const hasLexicalTopicSeed = cells.some(
+      (cell) => cell.inventoryHits.length > 0 || cell.lexicalSearch.length > 0
+    );
+    if (targetedWithoutInventory && !knownTarget && !hasLexicalTopicSeed) {
+      return {
+        active: true,
+        ready: false,
+        deepAnalysisRequired: true,
+        message:
+          "Die Anfrage ist ohne fertige Tiefenanalyse nicht eindeutig als belegtes Einzelthema erkennbar. Bitte nennen Sie einen konkreten Klauselbegriff oder starten Sie die optionale Tiefenanalyse.",
+        contextTexts: [],
+        sources: [],
+      };
+    }
+
+    for (const cell of cells) {
+      const { topic, document } = cell;
+      const baseQuery = `Versicherungsklausel: ${topic.label}. Suchbegriffe: ${(topic.terms || []).join(", ")}. Nutzerbedingung: ${(topic.qualifierTerms || []).join(", ")}`;
+      const pivotQueries = targetedWithoutInventory
+        ? cells
+            .filter(
+              (candidate) =>
+                candidate.topic.id === topic.id &&
+                candidate.document.id !== document.id
+            )
+            .flatMap((candidate) => [
+              ...candidate.inventoryHits,
+              ...candidate.lexicalSearch,
+            ])
+            .slice(0, 2)
+            .map(
+              (hit) =>
+                `${baseQuery}. Synonym formulierter Vergleichsbeleg aus dem anderen Dokument: ${this.compactEvidence(hit, topic, 280)}`
+            )
+        : [];
+      const semanticCandidates = new Map();
+      for (const input of [baseQuery, ...pivotQueries]) {
+        const vectorResult = await VectorDb.performSimilaritySearch({
+          namespace: workspace.slug,
+          input,
+          LLMConnector,
+          similarityThreshold: workspace?.similarityThreshold,
+          topN: candidateLimit,
+          includeDocIds: [document.docId],
+          rerank: workspace?.vectorSearchMode === "rerank",
+        });
+        if (vectorResult.message) throw new Error(vectorResult.message);
+        for (const source of vectorResult.sources || []) {
+          const candidate = {
+            ...this.semanticSource(source, document),
+            topicId: topic.id,
+            topicLabel: topic.label,
+          };
+          const score = Number(candidate.score);
+          const threshold = Math.max(
+            MIN_TOPIC_SEMANTIC_SCORE,
+            Number(workspace?.similarityThreshold) || 0
+          );
+          if (!Number.isFinite(score) || score < threshold) continue;
+          const key = this.key(candidate);
+          const previous = semanticCandidates.get(key);
+          if (!previous || Number(previous.score) < score)
+            semanticCandidates.set(key, candidate);
+        }
+      }
+      cell.semanticCandidates = [...semanticCandidates.values()];
     }
 
     // Validate all non-literal semantic candidates in bounded batches. This
@@ -606,7 +687,7 @@ const ComparisonHybridRetriever = {
           document,
           lexical: cell.lexicalSearch,
           semantic: semanticByCell.get(cell.key) || [],
-          limit: 2,
+          limit: cell.supplementLimit,
         }).filter((hit) => !anchorKeys.has(this.key(hit)));
         const hits = [...anchorHits, ...supplements].map((hit) => ({
           ...hit,

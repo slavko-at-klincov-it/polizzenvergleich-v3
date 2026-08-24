@@ -348,7 +348,7 @@ describe("ComparisonHybridRetriever", () => {
       .spyOn(ComparisonChunkIndex, "searchTopic")
       .mockResolvedValue([]);
     const inventoryService = {
-      ensureForDocuments: jest.fn(async () => [
+      readyForDocuments: jest.fn(async () => [
         { document: documents[0], manifest: { items: [] } },
         { document: documents[1], manifest: { items: [] } },
       ]),
@@ -391,7 +391,7 @@ describe("ComparisonHybridRetriever", () => {
         inventoryService,
       });
 
-      expect(inventoryService.ensureForDocuments).toHaveBeenCalledTimes(1);
+      expect(inventoryService.readyForDocuments).toHaveBeenCalledTimes(1);
       expect(searchTopic).toHaveBeenCalledTimes(2);
       expect(result.sources).toEqual(
         expect.arrayContaining([
@@ -406,11 +406,9 @@ describe("ComparisonHybridRetriever", () => {
 
   test("keeps comparison closed while a ready base index has no ready inventory", async () => {
     const inventoryService = {
-      ensureForDocuments: jest.fn(async () => {
-        throw new Error(
-          "Inventar ist fehlgeschlagen und wird erneut erstellt."
-        );
-      }),
+      readyForDocuments: jest.fn(async () => null),
+      fallbackTopics: jest.fn(() => []),
+      ensureForDocuments: jest.fn(),
     };
     const searchTopic = jest.spyOn(ComparisonChunkIndex, "searchTopic");
 
@@ -428,12 +426,177 @@ describe("ComparisonHybridRetriever", () => {
       expect(result).toMatchObject({
         active: true,
         ready: false,
-        message: "Inventar ist fehlgeschlagen und wird erneut erstellt.",
+        deepAnalysisRequired: true,
         contextTexts: [],
         sources: [],
       });
-      expect(inventoryService.ensureForDocuments).toHaveBeenCalledTimes(1);
+      expect(result.message).toContain("optionale Tiefenanalyse");
+      expect(inventoryService.ensureForDocuments).not.toHaveBeenCalled();
       expect(searchTopic).not.toHaveBeenCalled();
+    } finally {
+      searchTopic.mockRestore();
+    }
+  });
+
+  test.each([
+    "Vergleiche alle Klauseln",
+    "Welche Unterschiede gibt es in den Versicherungsbedingungen?",
+    "Fasse alle Regelungen zusammen",
+    "Vergleiche bitte die wichtigsten Punkte der beiden Polizzen vollständig",
+    "Stelle die beiden Policen gegenüber",
+  ])("keeps broad container query fail-closed: %s", async (query) => {
+    const inventoryService = {
+      readyForDocuments: jest.fn(async () => null),
+      fallbackTopics: jest.fn(() => []),
+    };
+    const searchTopic = jest.spyOn(ComparisonChunkIndex, "searchTopic");
+    const VectorDb = {
+      name: "LanceDb",
+      performSimilaritySearch: jest.fn(),
+    };
+
+    try {
+      const result = await ComparisonHybridRetriever.retrieve({
+        workspace: { id: 10, slug: "compare", topN: 4 },
+        thread: { id: 20 },
+        query,
+        LLMConnector: {},
+        VectorDb,
+        documents,
+        inventoryService,
+      });
+
+      expect(result).toMatchObject({
+        active: true,
+        ready: false,
+        deepAnalysisRequired: true,
+      });
+      expect(searchTopic).not.toHaveBeenCalled();
+      expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
+    } finally {
+      searchTopic.mockRestore();
+    }
+  });
+
+  test("answers a targeted Vandalismus question without inventory using an A/B pivot", async () => {
+    const searchTopic = jest
+      .spyOn(ComparisonChunkIndex, "searchTopic")
+      .mockImplementation(async ({ comparisonDocumentId }) =>
+        comparisonDocumentId === 2
+          ? [
+              {
+                docId: "doc-b",
+                pageNumber: 17,
+                text: "Vandalismus: mutwillige Beschädigung durch Dritte.",
+                exactMatch: true,
+              },
+            ]
+          : []
+      );
+    const inventoryService = {
+      readyForDocuments: jest.fn(async () => null),
+      fallbackTopics: jest.fn(() => []),
+      ensureForDocuments: jest.fn(),
+    };
+    const VectorDb = {
+      name: "LanceDb",
+      performSimilaritySearch: jest.fn(({ input, includeDocIds }) => ({
+        message: false,
+        sources:
+          includeDocIds[0] === "doc-a" &&
+          input.includes("mutwillige Beschädigung")
+            ? [
+                {
+                  score: 0.91,
+                  pageNumber: 187,
+                  text: "Böswillige Beschädigungen an versicherten Sachen werden ersetzt.",
+                },
+              ]
+            : [],
+      })),
+    };
+    const LLMConnector = {
+      getChatCompletion: jest.fn(async (messages) => {
+        const candidates = JSON.parse(messages[1].content).candidates;
+        return {
+          textResponse: JSON.stringify({
+            relevantIds: candidates.map(({ id }) => id),
+          }),
+        };
+      }),
+    };
+
+    try {
+      const result = await ComparisonHybridRetriever.retrieve({
+        workspace: { id: 10, slug: "compare", topN: 4 },
+        thread: { id: 20 },
+        query: "Sind alle Vandalismusschäden versichert?",
+        LLMConnector,
+        VectorDb,
+        documents,
+        inventoryService,
+      });
+
+      expect(result).toMatchObject({ active: true, ready: true });
+      expect(inventoryService.ensureForDocuments).not.toHaveBeenCalled();
+      expect(searchTopic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: expect.objectContaining({
+            terms: expect.arrayContaining(["vandalismus"]),
+          }),
+        })
+      );
+      expect(result.sources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ documentSlot: "A", pageNumber: 187 }),
+          expect.objectContaining({ documentSlot: "B", pageNumber: 17 }),
+        ])
+      );
+      expect(VectorDb.performSimilaritySearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeDocIds: ["doc-a"],
+          input: expect.stringContaining("mutwillige Beschädigung"),
+          topN: 8,
+        })
+      );
+    } finally {
+      searchTopic.mockRestore();
+    }
+  });
+
+  test("requires deep analysis when an unknown query has no lexical topic seed", async () => {
+    const searchTopic = jest
+      .spyOn(ComparisonChunkIndex, "searchTopic")
+      .mockResolvedValue([]);
+    const inventoryService = {
+      readyForDocuments: jest.fn(async () => null),
+      fallbackTopics: jest.fn(() => []),
+    };
+    const VectorDb = {
+      name: "LanceDb",
+      performSimilaritySearch: jest.fn(),
+    };
+
+    try {
+      const result = await ComparisonHybridRetriever.retrieve({
+        workspace: { id: 10, slug: "compare", topN: 4 },
+        thread: { id: 20 },
+        query: "Spezialbetrachtung der beiden Policen",
+        LLMConnector: {},
+        VectorDb,
+        documents,
+        inventoryService,
+      });
+
+      expect(result).toMatchObject({
+        active: true,
+        ready: false,
+        deepAnalysisRequired: true,
+        contextTexts: [],
+        sources: [],
+      });
+      expect(searchTopic).toHaveBeenCalledTimes(2);
+      expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
     } finally {
       searchTopic.mockRestore();
     }
@@ -658,6 +821,8 @@ describe("ComparisonHybridRetriever", () => {
     "Welche Deckungen hat Vandalismus?",
     "Welche Leistungen gelten beim Vandalismus?",
     "Vorteile und Nachteile der Vandalismusdeckung",
+    "Ist Vandalismus vollständig gedeckt?",
+    "Sind alle Vandalismusschäden versichert?",
   ])("keeps expansive wording scoped to an explicit topic: %s", (query) => {
     const topics = [
       {

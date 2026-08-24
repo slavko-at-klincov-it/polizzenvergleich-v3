@@ -52,17 +52,20 @@ describe("ComparisonBatchSynthesizer", () => {
       compressMessages: jest.fn(async ({ contextTexts }) => [
         { role: "user", content: contextTexts[0] },
       ]),
-      getChatCompletion: jest.fn(
-        () =>
-          new Promise((resolve) => {
-            active += 1;
-            peak = Math.max(peak, active);
-            releaseBlocked = () => {
-              active -= 1;
-              resolve({ textResponse: "released" });
-            };
-          })
-      ),
+      getChatCompletion: jest.fn(() => {
+        active += 1;
+        peak = Math.max(peak, active);
+        if (Connector.getChatCompletion.mock.calls.length > 1) {
+          active -= 1;
+          return Promise.resolve({ textResponse: "synthesized" });
+        }
+        return new Promise((resolve) => {
+          releaseBlocked = () => {
+            active -= 1;
+            resolve({ textResponse: "released" });
+          };
+        });
+      }),
     };
     await expect(
       PolicyInferenceQueue.run({
@@ -72,17 +75,21 @@ describe("ComparisonBatchSynthesizer", () => {
       })
     ).rejects.toMatchObject({ code: "POLICY_INFERENCE_TIMEOUT" });
 
-    await expect(
-      ComparisonBatchSynthesizer.run({
-        Connector,
-        contextBatches: ["A", "B"],
-        systemPrompt: "Regeln",
-        userPrompt: "Vergleiche",
-        inferenceTimeoutMs: 10,
-      })
-    ).rejects.toThrow("timed out");
+    const synthesis = ComparisonBatchSynthesizer.run({
+      Connector,
+      contextBatches: ["A", "B"],
+      systemPrompt: "Regeln",
+      userPrompt: "Vergleiche",
+      inferenceTimeoutMs: 50,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(Connector.getChatCompletion).toHaveBeenCalledTimes(1);
     expect(peak).toBe(1);
     releaseBlocked();
+    await expect(synthesis).resolves.toMatchObject({
+      textResponse: expect.stringContaining("synthesized"),
+    });
+    expect(Connector.getChatCompletion).toHaveBeenCalledTimes(4);
+    expect(peak).toBe(1);
   });
 });

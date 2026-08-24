@@ -57,6 +57,14 @@ describe("ComparisonInventoryService", () => {
       pageCount: 0,
       items: [],
     });
+    ComparisonDocumentInventory.markFailed.mockResolvedValue({
+      comparisonDocumentId: 1,
+      status: "failed",
+      version: 7,
+      itemCount: 0,
+      pageCount: 0,
+      items: [],
+    });
     ComparisonDocumentInventory.replace.mockImplementation(async (input) => ({
       comparisonDocumentId: input.comparisonDocumentId,
       status: "ready",
@@ -212,6 +220,47 @@ describe("ComparisonInventoryService", () => {
     ).resolves.toEqual([{ document, manifest }]);
     expect(fileData).not.toHaveBeenCalled();
     expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
+  });
+
+  test("reads current inventories without triggering a rebuild", async () => {
+    const manifest = {
+      comparisonDocumentId: 1,
+      status: "ready",
+      version: 7,
+      itemCount: 1,
+      pageCount: 1,
+      sourceSha256: "a".repeat(64),
+      inventorySourceSha256: "a".repeat(64),
+      error: null,
+      items: [{ label: "Vandalismus" }],
+    };
+    ComparisonDocumentInventory.get.mockResolvedValue(manifest);
+
+    await expect(
+      ComparisonInventoryService.readyForDocuments({ documents: [document] })
+    ).resolves.toEqual([{ document, manifest }]);
+    expect(fileData).not.toHaveBeenCalled();
+    expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
+  });
+
+  test("marks an interrupted deep analysis retryable after restart", async () => {
+    await expect(
+      ComparisonInventoryService.reconcileInterrupted({
+        documents: [
+          {
+            ...document,
+            inventoryStatus: "building",
+            inventoryPageCount: 1,
+          },
+        ],
+      })
+    ).resolves.toBe(true);
+    expect(ComparisonDocumentInventory.markFailed).toHaveBeenCalledWith({
+      comparisonDocumentId: 1,
+      version: 7,
+      pageCount: 1,
+      error: expect.stringContaining("Serverneustart"),
+    });
   });
 
   test("rebuilds when the canonical source hash changed", async () => {
