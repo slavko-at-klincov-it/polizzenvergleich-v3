@@ -72,6 +72,43 @@ describe("ComparisonInventoryExtractor", () => {
     expect(Connector.getChatCompletion).not.toHaveBeenCalled();
   });
 
+  test("accepts the compact grounded tuple format used to reduce generation time", async () => {
+    const text = "Vandalismus ist bis EUR 25.000 versichert.";
+    const compactResponse = JSON.stringify({
+      topics: [["Vandalismus", 1, text]],
+    });
+    const verboseResponse = JSON.stringify({
+      topics: [
+        {
+          label: "Vandalismus",
+          aliases: ["mutwillige Beschädigung"],
+          page: 1,
+          evidence: text,
+        },
+      ],
+    });
+    expect(compactResponse.length).toBeLessThan(verboseResponse.length);
+    const Connector = {
+      getChatCompletion: jest.fn(async () => ({
+        textResponse: compactResponse,
+      })),
+    };
+
+    const result = await ComparisonInventoryExtractor.extract({
+      documentData: pageAwareDocument([text]),
+      Connector,
+      fallbackTopics: [],
+    });
+
+    expect(result.inventoryItems).toEqual([
+      expect.objectContaining({
+        label: "Vandalismus",
+        pageNumber: 1,
+        evidenceText: text,
+      }),
+    ]);
+  });
+
   test("reserves enough output for dense grounded JSON without widening the input batch", async () => {
     const clauses = Array.from(
       { length: 24 },
@@ -79,7 +116,7 @@ describe("ComparisonInventoryExtractor", () => {
         `Klausel ${index + 1}: Deckung mit Sublimit EUR ${(index + 1) * 1000} und besonderem Selbstbehalt.`
     );
     const text = clauses.join("\n");
-    const response = JSON.stringify({
+    const verboseResponse = JSON.stringify({
       topics: clauses.map((evidence, index) => ({
         label: `Dichte Klausel ${index + 1}`,
         aliases: [`Sonderregelung ${index + 1}`],
@@ -87,17 +124,27 @@ describe("ComparisonInventoryExtractor", () => {
         evidence,
       })),
     });
-    // This fixture is deliberately larger than the old 1,024-token response
-    // allowance while remaining inside the dedicated 2,048-token contract.
-    expect(estimateInventoryTokens(response)).toBeGreaterThan(1_024);
-    expect(estimateInventoryTokens(response)).toBeLessThanOrEqual(
+    const compactResponse = JSON.stringify({
+      topics: clauses.map((evidence, index) => [
+        `Dichte Klausel ${index + 1}`,
+        1,
+        evidence,
+      ]),
+    });
+    // The compact transport keeps the same grounded topics while materially
+    // reducing generation work and retaining the 1,536-token safety ceiling.
+    expect(estimateInventoryTokens(verboseResponse)).toBeGreaterThan(1_024);
+    expect(estimateInventoryTokens(compactResponse)).toBeLessThan(
+      estimateInventoryTokens(verboseResponse) * 0.7
+    );
+    expect(estimateInventoryTokens(compactResponse)).toBeLessThanOrEqual(
       DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT
     );
 
     const Connector = {
       getChatCompletion: jest.fn(),
       getPolicyInventoryCompletion: jest.fn(async () => ({
-        textResponse: response,
+        textResponse: compactResponse,
       })),
     };
     const result = await ComparisonInventoryExtractor.extract({
@@ -110,7 +157,7 @@ describe("ComparisonInventoryExtractor", () => {
     expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        maxOutputTokens: 2_048,
+        maxOutputTokens: 1_536,
       })
     );
   });
@@ -223,17 +270,19 @@ describe("ComparisonInventoryExtractor", () => {
     }
   });
 
-  test("keeps a representative 21-page policy well below twenty model batches", () => {
-    const pageTexts = Array.from(
-      { length: 21 },
-      (_, index) =>
-        `Klauselseite ${index + 1}. ${"Versicherungsbedingungen und Deckungsumfang. ".repeat(120)}`
-    );
+  test("keeps an 88k-character 21-page policy within six complete model batches", () => {
+    const pageTexts = Array.from({ length: 21 }, (_, index) => {
+      const header = `Physische Seite ${index + 1}; gedruckte Seite ${(index % 7) + 1} von 7. `;
+      return `${header}${"Versicherungsbedingungen, Sublimit, Selbstbehalt, Ausschluss und Obliegenheit. ".repeat(60)}`;
+    });
+    const documentData = pageAwareDocument(pageTexts);
+    expect(documentData.pageContent.length).toBeGreaterThan(88_000);
     const { batches } = ComparisonInventoryExtractor.buildPageBatches({
-      documentData: pageAwareDocument(pageTexts),
+      documentData,
     });
 
-    expect(batches.length).toBeLessThanOrEqual(12);
+    expect(DEFAULT_BATCH_TOKEN_BUDGET).toBe(7_168);
+    expect(batches.length).toBeLessThanOrEqual(6);
     expect([
       ...new Set(batches.flatMap((batch) => batch.pageNumbers)),
     ]).toHaveLength(21);
@@ -506,9 +555,7 @@ describe("ComparisonInventoryExtractor", () => {
     const Connector = {
       getChatCompletion: jest.fn(async (messages) => {
         const isCorrection = messages.some((message) =>
-          message.content.includes(
-            "vorherige Antwort wurde vollständig verworfen"
-          )
+          message.content.includes("nur die verworfenen Themen")
         );
         if (!isCorrection)
           return {
@@ -552,6 +599,50 @@ describe("ComparisonInventoryExtractor", () => {
     expect(result.inventoryItems).toEqual([
       expect.objectContaining({ label: "Vandalismus", pageNumber: 1 }),
     ]);
+  });
+
+  test("keeps valid first-pass evidence and asks only for rejected corrections", async () => {
+    const documentText = [
+      "Selbstbehalt EUR 350 je Schadenfall.",
+      "Vandalismus ist bis EUR 25.000 versichert.",
+    ].join("\n");
+    const Connector = {
+      getChatCompletion: jest.fn(async (messages) => {
+        const correction = messages.some((message) =>
+          message.content.includes("nur die verworfenen Themen")
+        );
+        if (!correction)
+          return {
+            textResponse: JSON.stringify({
+              topics: [
+                ["Selbstbehalt", 1, "Selbstbehalt EUR 350 je Schadenfall."],
+                ["Vandalismus", 1, "Vandalismus ist vollständig versichert."],
+              ],
+            }),
+          };
+        return {
+          textResponse: JSON.stringify({
+            topics: [
+              ["Vandalismus", 1, "Vandalismus ist bis EUR 25.000 versichert."],
+            ],
+          }),
+        };
+      }),
+    };
+
+    const result = await ComparisonInventoryExtractor.extract({
+      documentData: pageAwareDocument([documentText]),
+      Connector,
+      fallbackTopics: [],
+    });
+
+    expect(Connector.getChatCompletion).toHaveBeenCalledTimes(2);
+    expect(result.inventoryItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Selbstbehalt", pageNumber: 1 }),
+        expect.objectContaining({ label: "Vandalismus", pageNumber: 1 }),
+      ])
+    );
   });
 
   test("serializes inventory inference across concurrent PDF jobs", async () => {
