@@ -69,10 +69,22 @@ const ComparisonTermAliasCatalog = {
             : "alias",
       }))
     );
-    if (rows.length)
-      await db.comparison_document_term_aliases.createMany({
-        data: rows,
-        skipDuplicates: true,
+    // Prisma 5.3's SQLite engine rejects createMany for this model even though
+    // the generated client exposes it. Compound upserts keep sync idempotent.
+    for (const row of rows)
+      await db.comparison_document_term_aliases.upsert({
+        where: {
+          catalogVersion_groupKey_aliasTerm: {
+            catalogVersion: row.catalogVersion,
+            groupKey: row.groupKey,
+            aliasTerm: row.aliasTerm,
+          },
+        },
+        create: row,
+        update: {
+          canonicalTerm: row.canonicalTerm,
+          aliasKind: row.aliasKind,
+        },
       });
     return rows.length;
   },

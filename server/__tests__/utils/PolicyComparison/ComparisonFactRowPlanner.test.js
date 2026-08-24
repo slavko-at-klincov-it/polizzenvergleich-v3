@@ -132,6 +132,35 @@ describe("ComparisonFactRowPlanner", () => {
     expect(plan.expectedFactRefs).toHaveLength(7);
   });
 
+  test("groups different model and rule labels by their stable clause block", () => {
+    const facts = [
+      fact("coverage", "coverage", "Vandalismusschäden sind versichert.", {
+        label: "Vandalismusdeckung",
+      }),
+      fact("percent", "limit", "Die Entschädigung beträgt 1 %.", {
+        label: "Vandalismuslimit",
+        evidenceStart: 150,
+        value: { kind: "percentage", percent: 1 },
+      }),
+      fact("deductible", "deductible", "Selbstbehalt EUR 500.", {
+        label: "Vandalismusselbstbehalt",
+        evidenceStart: 190,
+        value: { kind: "money", amount: 500, currency: "EUR" },
+      }),
+    ];
+
+    const plan = ComparisonFactRowPlanner.plan({
+      inventories: [inventory(2, "B", facts)],
+      outputContract: contract,
+    });
+    const rows = plan.documents[0].sections.flatMap((section) => section.rows);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].factRefs).toHaveLength(3);
+    expect(rows[0].cells.limit).toContain("1 %");
+    expect(rows[0].cells.deductible).toContain("EUR 500");
+  });
+
   test("never merges the same topic across variants", () => {
     const plan = ComparisonFactRowPlanner.plan({
       inventories: [

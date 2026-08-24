@@ -88,14 +88,14 @@ function variantFor(fact) {
   return { key: "general", label: null };
 }
 
-function subjectFor(fact) {
-  return normalize(fact.facetKey || fact.label || fact.evidenceText);
-}
-
 function groupKey(document, fact, variant) {
   const block =
     fact.sourceContext?.blockKey || fact.unitKey || `fact:${fact.factKey}`;
-  return [document.id, variant.key, subjectFor(fact), block].join("\u0000");
+  // The clause block and applicability variant are stable, code-owned
+  // boundaries. Model labels are presentation text and may differ (or contain
+  // typos) for coverage, limit, deductible and exclusion facts that belong to
+  // the same contractual position.
+  return [document.id, variant.key, block].join("\u0000");
 }
 
 function factRef(document, manifest, fact) {

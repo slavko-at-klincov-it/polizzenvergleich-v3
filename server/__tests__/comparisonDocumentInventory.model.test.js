@@ -13,21 +13,28 @@ jest.mock("../utils/prisma", () => ({
   comparison_document_clause_blocks: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
-    createMany: jest.fn(),
+    upsert: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
+    deleteMany: jest.fn(),
   },
   comparison_document_block_signals: {
     deleteMany: jest.fn(),
-    createMany: jest.fn(),
+    create: jest.fn(),
   },
-  comparison_document_block_embeddings: { findMany: jest.fn() },
+  comparison_document_block_embeddings: {
+    findMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
   comparison_document_inventory_items: {
     findMany: jest.fn(),
     deleteMany: jest.fn(),
     create: jest.fn(),
   },
-  comparison_document_fact_evidence: { create: jest.fn() },
+  comparison_document_fact_evidence: {
+    create: jest.fn(),
+    deleteMany: jest.fn(),
+  },
   $queryRawUnsafe: jest.fn(),
   $transaction: jest.fn(),
 }));
@@ -91,9 +98,7 @@ describe("ComparisonDocumentInventory run staging", () => {
       })
     );
     prisma.comparison_document_analysis_runs.findMany.mockResolvedValue([]);
-    prisma.comparison_document_clause_blocks.createMany.mockResolvedValue({
-      count: 1,
-    });
+    prisma.comparison_document_clause_blocks.upsert.mockResolvedValue({});
     prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
       { id: 71, analysisRunId: 42, ...block, status: "pending" },
     ]);
@@ -137,12 +142,19 @@ describe("ComparisonDocumentInventory run staging", () => {
       }),
     });
     expect(
-      prisma.comparison_document_clause_blocks.createMany
+      prisma.comparison_document_clause_blocks.upsert
     ).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({ analysisRunId: 42, blockKey: "block-1" }),
-      ],
-      skipDuplicates: true,
+      where: {
+        analysisRunId_blockKey: {
+          analysisRunId: 42,
+          blockKey: "block-1",
+        },
+      },
+      create: expect.objectContaining({
+        analysisRunId: 42,
+        blockKey: "block-1",
+      }),
+      update: {},
     });
     expect(
       prisma.comparison_document_inventory_items.deleteMany
@@ -151,6 +163,50 @@ describe("ComparisonDocumentInventory run staging", () => {
       prisma.comparison_document_analysis_runs.deleteMany
     ).not.toHaveBeenCalled();
     expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("persists block signals with SQLite-compatible single-row writes", async () => {
+    prisma.comparison_document_block_signals.create.mockResolvedValue({
+      id: 81,
+    });
+
+    await expect(
+      ComparisonDocumentInventory.persistBlockSignals({
+        analysisRunId: 42,
+        signalsByBlock: new Map([
+          [
+            "block-1",
+            [
+              {
+                signalKey: "deductible-0",
+                kind: "deductible",
+                normalizedValue: "selbstbehalt",
+                value: { amount: 500, currency: "EUR" },
+                sourceStart: 4,
+                sourceEnd: 18,
+                evidenceText: "Selbstbehalt",
+                evidenceHash: "signal-hash",
+                ruleVersion: 1,
+              },
+            ],
+          ],
+        ]),
+      })
+    ).resolves.toBe(1);
+
+    expect(
+      prisma.comparison_document_block_signals.deleteMany
+    ).toHaveBeenCalledWith({ where: { blockId: 71 } });
+    expect(
+      prisma.comparison_document_block_signals.create
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        analysisRunId: 42,
+        blockId: 71,
+        signalKey: "deductible-0",
+        valueJson: '{"amount":500,"currency":"EUR"}',
+      }),
+    });
   });
 
   test("exposes published block context to the deterministic row planner", async () => {
@@ -705,5 +761,37 @@ describe("ComparisonDocumentInventory run staging", () => {
         publishedAnalysisRunId: expect.anything(),
       }),
     });
+  });
+
+  test("clears a published cyclic run graph in explicit child-first order", async () => {
+    prisma.comparison_document_analysis_runs.findMany.mockResolvedValue([
+      { id: 41 },
+    ]);
+    jest.spyOn(ComparisonDocumentInventory, "get").mockResolvedValue({
+      comparisonDocumentId: 7,
+      status: null,
+    });
+
+    await ComparisonDocumentInventory.clear(7);
+
+    const runWhere = { analysisRunId: { in: [41] } };
+    expect(
+      prisma.comparison_document_fact_evidence.deleteMany
+    ).toHaveBeenCalledWith({ where: runWhere });
+    expect(
+      prisma.comparison_document_inventory_items.deleteMany
+    ).toHaveBeenCalledWith({ where: runWhere });
+    expect(
+      prisma.comparison_document_block_signals.deleteMany
+    ).toHaveBeenCalledWith({ where: runWhere });
+    expect(
+      prisma.comparison_document_block_embeddings.deleteMany
+    ).toHaveBeenCalledWith({ where: runWhere });
+    expect(
+      prisma.comparison_document_clause_blocks.deleteMany
+    ).toHaveBeenCalledWith({ where: runWhere });
+    expect(
+      prisma.comparison_document_analysis_runs.deleteMany
+    ).toHaveBeenCalledWith({ where: { id: { in: [41] } } });
   });
 });

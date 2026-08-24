@@ -179,6 +179,48 @@ describe("ComparisonFactMapper", () => {
     );
   });
 
+  test("repairs an echoed input envelope once without overlapping model calls", async () => {
+    const text = "Der Selbstbehalt beträgt EUR 500 je Schadenfall.";
+    const Connector = connector([
+      {
+        units: [
+          {
+            unitKey: "u1",
+            physicalPage: 4,
+            riskSignals: [{ kind: "deductible" }],
+            text,
+          },
+        ],
+      },
+      {
+        units: [
+          {
+            unitKey: "u1",
+            facts: [
+              {
+                topic: "Selbstbehalt",
+                factType: "deductible",
+                claim: "500 Euro je Schadenfall",
+                evidenceText: text,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await ComparisonFactMapper.extract({
+      units: [unit(text)],
+      Connector,
+    });
+
+    expect(result.facts).toHaveLength(1);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(2);
+    const correctionMessages =
+      Connector.getPolicyInventoryCompletion.mock.calls[1][0];
+    expect(correctionMessages.at(-1).content).toContain("FORMATKORREKTUR");
+  });
+
   test("does not start a second review after an inference timeout", async () => {
     const timeout = new Error("timeout");
     timeout.code = "POLICY_INFERENCE_TIMEOUT";

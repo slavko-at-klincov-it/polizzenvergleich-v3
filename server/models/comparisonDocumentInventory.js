@@ -456,10 +456,20 @@ const ComparisonDocumentInventory = {
           },
         });
       }
-      await transaction.comparison_document_clause_blocks.createMany({
-        data: blocks.map((block) => ({ analysisRunId: current.id, ...block })),
-        skipDuplicates: true,
-      });
+      // Prisma 5.3 exposes createMany for this SQLite model, but the query
+      // engine cannot execute it. Run-scoped upserts retain existing block
+      // checkpoints when an interrupted analysis is resumed.
+      for (const block of blocks)
+        await transaction.comparison_document_clause_blocks.upsert({
+          where: {
+            analysisRunId_blockKey: {
+              analysisRunId: current.id,
+              blockKey: block.blockKey,
+            },
+          },
+          create: { analysisRunId: current.id, ...block },
+          update: {},
+        });
       const hasLegacyPublishedInventory =
         !document.publishedAnalysisRunId &&
         document.inventoryStatus === "ready" &&
@@ -512,36 +522,37 @@ const ComparisonDocumentInventory = {
           where: { blockId: block.id },
         });
         if (signals.length)
-          await transaction.comparison_document_block_signals.createMany({
-            data: signals.map((signal) => ({
-              analysisRunId: runId,
-              blockId: block.id,
-              signalKey: requiredText(signal.signalKey, "signalKey"),
-              kind: requiredText(signal.kind, "signal kind"),
-              normalizedValue: optionalText(signal.normalizedValue),
-              valueJson: stableJson(signal.value),
-              sourceStart: nonNegativeInteger(
-                signal.sourceStart,
-                "signal sourceStart"
-              ),
-              sourceEnd: nonNegativeInteger(
-                signal.sourceEnd,
-                "signal sourceEnd"
-              ),
-              evidenceText: requiredText(
-                signal.evidenceText,
-                "signal evidenceText"
-              ),
-              evidenceHash: requiredText(
-                signal.evidenceHash,
-                "signal evidenceHash"
-              ),
-              ruleVersion: positiveInteger(
-                signal.ruleVersion,
-                "signal ruleVersion"
-              ),
-            })),
-          });
+          for (const signal of signals)
+            await transaction.comparison_document_block_signals.create({
+              data: {
+                analysisRunId: runId,
+                blockId: block.id,
+                signalKey: requiredText(signal.signalKey, "signalKey"),
+                kind: requiredText(signal.kind, "signal kind"),
+                normalizedValue: optionalText(signal.normalizedValue),
+                valueJson: stableJson(signal.value),
+                sourceStart: nonNegativeInteger(
+                  signal.sourceStart,
+                  "signal sourceStart"
+                ),
+                sourceEnd: nonNegativeInteger(
+                  signal.sourceEnd,
+                  "signal sourceEnd"
+                ),
+                evidenceText: requiredText(
+                  signal.evidenceText,
+                  "signal evidenceText"
+                ),
+                evidenceHash: requiredText(
+                  signal.evidenceHash,
+                  "signal evidenceHash"
+                ),
+                ruleVersion: positiveInteger(
+                  signal.ruleVersion,
+                  "signal ruleVersion"
+                ),
+              },
+            });
       }
     });
     return blocks.length;
@@ -977,13 +988,40 @@ const ComparisonDocumentInventory = {
   async clear(comparisonDocumentId) {
     const id = positiveInteger(comparisonDocumentId, "comparisonDocumentId");
     await prisma.$transaction(async (transaction) => {
+      const runIds = (
+        await transaction.comparison_document_analysis_runs.findMany({
+          where: { comparisonDocumentId: id },
+          select: { id: true },
+        })
+      ).map((run) => run.id);
       await transaction.comparison_documents.update({
         where: { id },
         data: { publishedAnalysisRunId: null },
       });
-      await transaction.comparison_document_analysis_runs.deleteMany({
-        where: { comparisonDocumentId: id },
-      });
+      // The run graph contains both run-level cascades and fact-to-primary-
+      // block references. Prisma 5.3/SQLite cannot delete that cyclic graph in
+      // one parent cascade, so remove its run-scoped children explicitly.
+      if (runIds.length) {
+        const where = { analysisRunId: { in: runIds } };
+        await transaction.comparison_document_fact_evidence.deleteMany({
+          where,
+        });
+        await transaction.comparison_document_inventory_items.deleteMany({
+          where,
+        });
+        await transaction.comparison_document_block_signals.deleteMany({
+          where,
+        });
+        await transaction.comparison_document_block_embeddings.deleteMany({
+          where,
+        });
+        await transaction.comparison_document_clause_blocks.deleteMany({
+          where,
+        });
+        await transaction.comparison_document_analysis_runs.deleteMany({
+          where: { id: { in: runIds } },
+        });
+      }
       await transaction.comparison_document_inventory_items.deleteMany({
         where: { comparisonDocumentId: id, analysisRunId: null },
       });

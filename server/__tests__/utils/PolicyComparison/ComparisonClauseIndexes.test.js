@@ -1,6 +1,6 @@
 jest.mock("../../../utils/prisma", () => ({
   comparison_document_term_aliases: {
-    createMany: jest.fn(),
+    upsert: jest.fn(),
     findMany: jest.fn(),
   },
 }));
@@ -17,9 +17,7 @@ describe("clause exact/alias retrieval boundaries", () => {
   beforeEach(() => jest.clearAllMocks());
 
   test("persists a versioned additive alias catalog and expands only known groups", async () => {
-    prisma.comparison_document_term_aliases.createMany.mockResolvedValue({
-      count: 20,
-    });
+    prisma.comparison_document_term_aliases.upsert.mockResolvedValue({});
     prisma.comparison_document_term_aliases.findMany
       .mockResolvedValueOnce([{ groupKey: "vandalismus" }])
       .mockResolvedValueOnce([
@@ -38,19 +36,25 @@ describe("clause exact/alias retrieval boundaries", () => {
     await expect(
       ComparisonTermAliasCatalog.expand(["Vandalismus"])
     ).resolves.toEqual(["vandalismus", "böswillige beschädigung", "graffiti"]);
-    expect(
-      prisma.comparison_document_term_aliases.createMany
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.arrayContaining([
-          expect.objectContaining({
+    expect(prisma.comparison_document_term_aliases.upsert).toHaveBeenCalledWith(
+      {
+        where: {
+          catalogVersion_groupKey_aliasTerm: {
             catalogVersion: ComparisonTermAliasCatalog.version,
             groupKey: "vandalismus",
             aliasTerm: "graffiti",
-          }),
-        ]),
-        skipDuplicates: true,
-      })
+          },
+        },
+        create: expect.objectContaining({
+          catalogVersion: ComparisonTermAliasCatalog.version,
+          groupKey: "vandalismus",
+          aliasTerm: "graffiti",
+        }),
+        update: {
+          canonicalTerm: "vandalismus",
+          aliasKind: "alias",
+        },
+      }
     );
   });
 

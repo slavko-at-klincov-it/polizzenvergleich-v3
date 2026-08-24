@@ -8,6 +8,7 @@ const FACT_EXTRACTION_VERSION = 4;
 const DEFAULT_MAP_INPUT_TOKEN_BUDGET = 4_096;
 const DEFAULT_MAP_OUTPUT_TOKEN_LIMIT = 1_024;
 const DEFAULT_MAX_UNITS_PER_BATCH = 12;
+const FORMAT_MISMATCH_CODE = "FACT_MAPPER_FORMAT_MISMATCH";
 const ALLOWED_FACT_TYPES = new Set([
   "coverage",
   "limit",
@@ -286,8 +287,11 @@ function validateReceipts(parsed, units) {
       throw new Error("Fact mapper returned an unknown unitKey.");
     if (received.has(unitKey))
       throw new Error("Fact mapper returned a duplicate unitKey.");
-    if (!Array.isArray(receipt.facts))
-      throw new Error(`Unit ${unitKey} has no facts array.`);
+    if (!Array.isArray(receipt.facts)) {
+      const error = new Error(`Unit ${unitKey} has no facts array.`);
+      error.code = FORMAT_MISMATCH_CODE;
+      throw error;
+    }
     const unit = expected.get(unitKey);
     received.set(unitKey, {
       unit,
@@ -332,10 +336,15 @@ function packUnits(
   return batches;
 }
 
-function messagesFor(units, { secondReview = false } = {}) {
-  const review = secondReview
-    ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
-    : "Extrahiere alle Fakten aus jedem Block.";
+function messagesFor(
+  units,
+  { secondReview = false, formatCorrection = false } = {}
+) {
+  const review = formatCorrection
+    ? 'FORMATKORREKTUR: Die vorige Antwort wiederholte Eingabefelder statt des verlangten Schemas. Gib ausschließlich {"units":[{"unitKey":"...","facts":[],"noFactReason":null}]} zurück. Jeder Block braucht zwingend das Array facts; kopiere weder text noch riskSignals in die Ausgabe.'
+    : secondReview
+      ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
+      : "Extrahiere alle Fakten aus jedem Block.";
   return [
     { role: "system", content: SYSTEM_PROMPT },
     {
@@ -349,12 +358,13 @@ async function mapBatch({
   Connector,
   units,
   secondReview = false,
+  formatCorrection = false,
   analysisRunId = null,
 }) {
   try {
     const response = await mapCompletion(
       Connector,
-      messagesFor(units, { secondReview }),
+      messagesFor(units, { secondReview, formatCorrection }),
       {
         kind: "comparison_fact_map",
         analysisRunId,
@@ -364,6 +374,14 @@ async function mapBatch({
     );
     return validateReceipts(visibleJson(response?.textResponse), units);
   } catch (error) {
+    if (error?.code === FORMAT_MISMATCH_CODE && formatCorrection === false)
+      return mapBatch({
+        Connector,
+        units,
+        secondReview,
+        formatCorrection: true,
+        analysisRunId,
+      });
     if (error?.code === "POLICY_INFERENCE_TIMEOUT" || units.length === 1)
       throw error;
     const middle = Math.ceil(units.length / 2);
@@ -372,12 +390,14 @@ async function mapBatch({
         Connector,
         units: units.slice(0, middle),
         secondReview,
+        formatCorrection,
         analysisRunId,
       })),
       ...(await mapBatch({
         Connector,
         units: units.slice(middle),
         secondReview,
+        formatCorrection,
         analysisRunId,
       })),
     ];
