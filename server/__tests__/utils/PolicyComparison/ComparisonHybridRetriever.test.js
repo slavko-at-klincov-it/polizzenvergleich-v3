@@ -438,6 +438,60 @@ describe("ComparisonHybridRetriever", () => {
     }
   });
 
+  test("uses an exhaustive broker prompt as the automatic fact-analysis trigger", async () => {
+    const manifests = documents.map((document, index) => ({
+      document,
+      manifest: {
+        comparisonDocumentId: document.id,
+        items: [
+          {
+            factKey: `fact-${index}`,
+            factType: "coverage",
+            label: index === 0 ? "Feuer" : "Leitungswasser",
+            claimText: "Die Gefahr ist versichert.",
+            evidenceText: "Die Gefahr ist versichert.",
+            pageNumber: index + 2,
+            evidenceStart: index * 100,
+            evidenceEnd: index * 100 + 26,
+          },
+        ],
+      },
+    }));
+    const inventoryService = {
+      readyForDocuments: jest.fn(async () => null),
+      ensureForDocuments: jest.fn(async () => manifests),
+      fallbackTopics: jest.fn(() => []),
+    };
+    const VectorDb = {
+      name: "LanceDb",
+      performSimilaritySearch: jest.fn(),
+    };
+
+    const result = await ComparisonHybridRetriever.retrieve({
+      workspace: { id: 10, slug: "compare", topN: 4 },
+      thread: { id: 20 },
+      query:
+        "Analysiere beide Dokumente vollständig und erstelle eine Tabelle aller Deckungsinhalte. Keine Position auslassen.",
+      LLMConnector: {},
+      VectorDb,
+      documents,
+      inventoryService,
+    });
+
+    expect(inventoryService.ensureForDocuments).toHaveBeenCalledWith({
+      documents,
+      Connector: {},
+    });
+    expect(result).toMatchObject({
+      active: true,
+      ready: true,
+      coverage: { plannedFacts: 2, renderedRows: 2 },
+    });
+    expect(result.deterministicTextResponse).toContain("Feuer");
+    expect(result.deterministicTextResponse).toContain("Leitungswasser");
+    expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
+  });
+
   test.each([
     "Vergleiche alle Klauseln",
     "Welche Unterschiede gibt es in den Versicherungsbedingungen?",

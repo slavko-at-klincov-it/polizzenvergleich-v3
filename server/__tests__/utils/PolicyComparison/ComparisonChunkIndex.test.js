@@ -143,4 +143,39 @@ describe("ComparisonChunkIndex query preparation", () => {
       )
     ).toBe(true);
   });
+
+  test("removes output instructions from domain terms and qualifiers", () => {
+    const limits =
+      "Welche Deckungsgrenzen, Sublimits oder Höchstentschädigungen sind genannt? Nenne Betrag, Bedingung und physische PDF-Seite.";
+    expect(
+      ComparisonChunkIndex.qualifierTerms(limits, ["deckungsgrenze"])
+    ).not.toEqual(
+      expect.arrayContaining(["genannt", "betrag", "physische", "pdf", "seite"])
+    );
+
+    const vandalism =
+      "Suche gezielt nach Vandalismus, mutwilliger oder böswilliger Beschädigung, Sachbeschädigung durch Dritte und Graffiti. Nenne nur belegte Fundstellen mit physischer PDF-Seite.";
+    const terms = ComparisonChunkIndex.targetedQueryTerms(vandalism);
+    expect(terms).toEqual(
+      expect.arrayContaining([
+        "vandalismus",
+        "beschädigung",
+        "sachbeschädigung",
+        "graffiti",
+      ])
+    );
+    expect(terms).not.toEqual(
+      expect.arrayContaining([
+        "suche",
+        "gezielt",
+        "nach",
+        "durch",
+        "belegte",
+        "fundstellen",
+        "physischer",
+        "pdf",
+        "seite",
+      ])
+    );
+  });
 });

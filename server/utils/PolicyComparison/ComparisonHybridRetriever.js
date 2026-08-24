@@ -1,6 +1,7 @@
 const { ComparisonChunkIndex } = require("./ComparisonChunkIndex");
 const { ComparisonInventoryService } = require("./ComparisonInventoryService");
 const { PolicyInferenceQueue } = require("./PolicyInferenceQueue");
+const { ComparisonFactTable } = require("./ComparisonFactTable");
 
 const RRF_K = 60;
 const LANCEDB_NAME = "LanceDb";
@@ -476,11 +477,53 @@ const ComparisonHybridRetriever = {
           : inventoryService.fallbackTopics();
       inventoryReady = true;
     } else {
-      const inventories =
+      let inventories =
         typeof inventoryService.readyForDocuments === "function"
           ? await inventoryService.readyForDocuments({ documents: ordered })
           : null;
+      if (
+        !inventories &&
+        ComparisonFactTable.isCompleteAnalysisRequest(query) &&
+        typeof inventoryService.ensureForDocuments === "function"
+      ) {
+        // A complete-analysis prompt is itself the trigger. The user never has
+        // to understand or start an internal inventory phase. Unit checkpoints
+        // make this operation resumable without touching the basis index.
+        inventories = await inventoryService.ensureForDocuments({
+          documents: ordered,
+          Connector: LLMConnector,
+        });
+      }
       if (inventories) {
+        if (ComparisonFactTable.isCompleteAnalysisRequest(query)) {
+          const factRowPlan = ComparisonFactTable.plan(inventories);
+          const deterministicTextResponse =
+            ComparisonFactTable.render(factRowPlan);
+          return {
+            active: true,
+            ready: true,
+            mode: ordered.length === 1 ? "single" : "comparison",
+            documents: ordered,
+            contextTexts: [],
+            contextBatches: [],
+            sources: inventories.flatMap(({ document, manifest }) =>
+              (manifest.items || []).map((fact) => ({
+                title: document.originalFilename,
+                documentSlot: document.slot,
+                pageNumber: fact.pageNumber,
+                text: fact.evidenceText,
+                factKey: fact.factKey,
+              }))
+            ),
+            factRowPlan,
+            deterministicTextResponse,
+            coverage: {
+              plannedFacts: factRowPlan.expectedFactKeys.length,
+              renderedRows: factRowPlan.rows.length,
+            },
+            systemPrompt: this.systemPromptForDocuments(ordered),
+          };
+        }
         topics = inventoryService.unionTopics(inventories);
         inventoryReady = true;
       } else {

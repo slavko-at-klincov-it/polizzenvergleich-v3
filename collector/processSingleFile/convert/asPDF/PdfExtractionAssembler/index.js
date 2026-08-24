@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 
-const PDF_EXTRACTION_SCHEMA_VERSION = 1;
+const PDF_EXTRACTION_SCHEMA_VERSION = 2;
 
 /**
  * @param {string} filePath
@@ -88,6 +88,8 @@ function assemblePdfExtraction({ pages, totalPages, sourceSha256 }) {
       ocrConfidence:
         typeof page.ocrConfidence === "number" ? page.ocrConfidence : null,
       quality: page.quality || null,
+      layoutQuality: page.layout?.quality || "text_only",
+      layout: page.layout || null,
     });
   }
 

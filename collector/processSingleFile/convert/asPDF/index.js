@@ -57,6 +57,7 @@ async function asPdf({
           status: "ok",
           quality,
           ocrConfidence: null,
+          layout: nativePage.metadata.extraction.layout || null,
         };
       }
 
@@ -82,6 +83,7 @@ async function asPdf({
             status: "failed",
             quality: { native: quality, ocr: ocrQuality },
             ocrConfidence: ocrPage.confidence,
+            layout: null,
             error: `OCR text quality is insufficient: ${ocrQuality.reason}.`,
           };
         }
@@ -92,6 +94,7 @@ async function asPdf({
           status: "ok",
           quality: { native: quality, ocr: ocrQuality },
           ocrConfidence: ocrPage.confidence,
+          layout: null,
         };
       }
       if (nativePage.pageContent) {
@@ -102,6 +105,7 @@ async function asPdf({
           status: "failed",
           quality,
           ocrConfidence: ocrPage.confidence,
+          layout: null,
           error:
             "OCR returned no usable text for a page whose native text layer failed quality checks.",
         };
@@ -113,6 +117,7 @@ async function asPdf({
         status: "blank",
         quality,
         ocrConfidence: ocrPage.confidence,
+        layout: null,
       };
     });
     const sourceSha256 = await sha256File(fullFilePath);

@@ -29,7 +29,7 @@ describe("PdfExtractionAssembler", () => {
     });
 
     expect(result.pageContent).toContain("Selbstbehalt EUR 500\n\n");
-    expect(result.pdfExtraction.schemaVersion).toBe(1);
+    expect(result.pdfExtraction.schemaVersion).toBe(2);
     expect(result.pdfExtraction.sourceSha256).toBe("abc123");
     expect(result.pdfExtraction.pages).toEqual(result.pageMap);
     for (const page of result.pageMap) {

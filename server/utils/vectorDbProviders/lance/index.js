@@ -11,6 +11,9 @@ const { PageAwareTextSplitter } = require("../../PageAwareTextSplitter");
 const {
   assertManagedEmbeddingVector,
 } = require("../../../../shared/managedEmbeddingContract.cjs");
+const {
+  PolicyInferenceQueue,
+} = require("../../PolicyComparison/PolicyInferenceQueue");
 const path = require("path");
 
 /**
@@ -404,7 +407,9 @@ class LanceDb extends VectorDatabase {
       const documentVectors = [];
       const vectors = [];
       const submissions = [];
-      const vectorValues = await EmbedderEngine.embedChunks(textChunks);
+      const vectorValues = await PolicyInferenceQueue.runOperation({
+        operation: () => EmbedderEngine.embedChunks(textChunks),
+      });
 
       if (!!vectorValues && vectorValues.length > 0) {
         for (const [i, vector] of vectorValues.entries()) {
@@ -467,7 +472,9 @@ class LanceDb extends VectorDatabase {
     if (!namespace || !input || !LLMConnector)
       throw new Error("Invalid request to performSimilaritySearch.");
 
-    const queryVector = await LLMConnector.embedTextInput(input);
+    const queryVector = await PolicyInferenceQueue.runOperation({
+      operation: () => LLMConnector.embedTextInput(input),
+    });
     assertManagedEmbeddingVector(queryVector);
     const { client } = await this.connect();
     if (!(await this.namespaceExists(client, namespace))) {

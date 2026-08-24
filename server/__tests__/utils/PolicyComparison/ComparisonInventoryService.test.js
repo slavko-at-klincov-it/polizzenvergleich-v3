@@ -1,18 +1,39 @@
 jest.mock("../../../models/comparisonDocumentInventory", () => ({
   ComparisonDocumentInventory: {
     get: jest.fn(),
-    markBuilding: jest.fn(),
-    replace: jest.fn(),
-    markFailed: jest.fn(),
+    prepareAnalysis: jest.fn(),
+    persistBlockSignals: jest.fn(),
+    markBlockAmbiguous: jest.fn(),
+    completeAnalysisUnit: jest.fn(),
+    finalizeAnalysis: jest.fn(),
+    markAnalysisFailed: jest.fn(),
+    interruptedRuns: jest.fn(),
+    analysisArtifacts: jest.fn(),
     clear: jest.fn(),
+    successfulBlockStatuses: new Set([
+      "deterministic_facts",
+      "technical_non_content",
+      "model_validated_facts",
+      "model_verified_no_fact",
+    ]),
   },
 }));
 jest.mock("../../../utils/files", () => ({ fileData: jest.fn() }));
+jest.mock("../../../utils/PolicyComparison/ComparisonFactMapper", () => ({
+  FACT_EXTRACTION_VERSION: 7,
+  ComparisonFactMapper: { extract: jest.fn() },
+  ComparisonAmbiguousFactResolver: { extract: jest.fn() },
+}));
+jest.mock("../../../utils/PolicyComparison/ComparisonClauseBlockIndex", () => ({
+  ComparisonClauseBlockIndex: { indexRun: jest.fn(), removeRun: jest.fn() },
+}));
 jest.mock(
-  "../../../utils/PolicyComparison/ComparisonInventoryExtractor",
+  "../../../utils/PolicyComparison/ComparisonClauseEmbeddingIndex",
   () => ({
-    EXTRACTION_VERSION: 7,
-    ComparisonInventoryExtractor: { extract: jest.fn() },
+    ComparisonClauseEmbeddingIndex: {
+      indexRun: jest.fn(),
+      removeVectorIds: jest.fn(),
+    },
   })
 );
 
@@ -21,8 +42,14 @@ const {
 } = require("../../../models/comparisonDocumentInventory");
 const { fileData } = require("../../../utils/files");
 const {
-  ComparisonInventoryExtractor,
-} = require("../../../utils/PolicyComparison/ComparisonInventoryExtractor");
+  ComparisonAmbiguousFactResolver,
+} = require("../../../utils/PolicyComparison/ComparisonFactMapper");
+const {
+  ComparisonClauseBlockIndex,
+} = require("../../../utils/PolicyComparison/ComparisonClauseBlockIndex");
+const {
+  ComparisonClauseEmbeddingIndex,
+} = require("../../../utils/PolicyComparison/ComparisonClauseEmbeddingIndex");
 const {
   ComparisonInventoryService,
 } = require("../../../utils/PolicyComparison/ComparisonInventoryService");
@@ -34,13 +61,13 @@ const document = {
   sourceSha256: "a".repeat(64),
 };
 const documentData = {
-  pageContent: "Vandalismus ist versichert.",
+  pageContent: "Vandalismus ist versichert, ausgenommen Graffiti.",
   pdfExtraction: {
     complete: true,
     sourceSha256: "a".repeat(64),
     totalPages: 1,
     pages: [
-      { pageNumber: 1, start: 0, end: 27, method: "native", status: "ok" },
+      { pageNumber: 1, start: 0, end: 49, method: "native", status: "ok" },
     ],
   },
 };
@@ -49,15 +76,17 @@ describe("ComparisonInventoryService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     ComparisonDocumentInventory.get.mockResolvedValue(null);
-    ComparisonDocumentInventory.markBuilding.mockResolvedValue({
-      comparisonDocumentId: 1,
-      status: "building",
-      version: 7,
-      itemCount: 0,
-      pageCount: 0,
-      items: [],
+    ComparisonDocumentInventory.persistBlockSignals.mockResolvedValue(true);
+    ComparisonDocumentInventory.markBlockAmbiguous.mockResolvedValue(true);
+    ComparisonDocumentInventory.interruptedRuns.mockResolvedValue([]);
+    ComparisonDocumentInventory.analysisArtifacts.mockResolvedValue({
+      runIds: [],
+      vectorIds: [],
     });
-    ComparisonDocumentInventory.markFailed.mockResolvedValue({
+    ComparisonClauseBlockIndex.indexRun.mockResolvedValue(1);
+    ComparisonClauseEmbeddingIndex.indexRun.mockResolvedValue(1);
+    ComparisonClauseEmbeddingIndex.removeVectorIds.mockResolvedValue(true);
+    ComparisonDocumentInventory.markAnalysisFailed.mockResolvedValue({
       comparisonDocumentId: 1,
       status: "failed",
       version: 7,
@@ -65,44 +94,55 @@ describe("ComparisonInventoryService", () => {
       pageCount: 0,
       items: [],
     });
-    ComparisonDocumentInventory.replace.mockImplementation(async (input) => ({
-      comparisonDocumentId: input.comparisonDocumentId,
-      status: "ready",
-      version: input.version,
-      itemCount: input.items.length,
-      pageCount: input.pageCount,
-      sourceSha256: input.sourceSha256,
-      inventorySourceSha256: input.sourceSha256,
-      error: null,
-      items: input.items,
-    }));
-    ComparisonInventoryExtractor.extract.mockResolvedValue({
-      pageCount: 1,
-      sourceSha256: "a".repeat(64),
-      inventorySourceSha256: "a".repeat(64),
-      topics: [
-        {
-          id: "vandalismus",
+    ComparisonDocumentInventory.prepareAnalysis.mockImplementation(
+      async (input) => ({
+        analysisRunId: 41,
+        units: input.units.map((unit) => ({
+          ...unit,
+          blockKey: unit.blockKey,
+          status: "pending",
+        })),
+      })
+    );
+    ComparisonDocumentInventory.completeAnalysisUnit.mockResolvedValue(true);
+    ComparisonDocumentInventory.finalizeAnalysis.mockImplementation(
+      async (input) => ({
+        comparisonDocumentId: input.comparisonDocumentId,
+        status: "ready",
+        version: input.version,
+        itemCount: 1,
+        pageCount: 1,
+        sourceSha256: input.sourceSha256,
+        inventorySourceSha256: input.sourceSha256,
+        error: null,
+        analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
+        items: [{ label: "Vandalismus" }],
+      })
+    );
+    ComparisonAmbiguousFactResolver.extract.mockImplementation(
+      async ({ units, onUnitValidated }) => {
+        const fact = {
+          factKey: "fact",
+          unitKey: units[0].unitKey,
+          factType: "coverage",
           label: "Vandalismus",
-          aliases: ["mutwillige Beschädigung"],
-          origin: "model",
-          occurrences: [
-            {
-              page: 1,
-              evidence: "Vandalismus ist versichert.",
-              evidenceValidation: "exact",
-            },
-          ],
-        },
-        {
-          id: "selbstbehalt",
-          label: "Selbstbehalt",
           aliases: [],
-          origin: "fallback",
-          occurrences: [],
-        },
-      ],
-    });
+          claimText: "Vandalismus ist versichert, ausgenommen Graffiti.",
+          pageNumber: 1,
+          evidenceText: "Vandalismus ist versichert, ausgenommen Graffiti.",
+          evidenceStart: 0,
+          evidenceEnd: 49,
+        };
+        await onUnitValidated({
+          unit: units[0],
+          facts: [fact],
+          reviewCount: 0,
+          resultKind: "facts",
+          noFactReason: null,
+        });
+        return { complete: true, units: [{ unit: units[0] }], facts: [fact] };
+      }
+    );
   });
 
   test("persists only page-grounded model inventory facts", async () => {
@@ -112,25 +152,21 @@ describe("ComparisonInventoryService", () => {
       Connector: { getChatCompletion: jest.fn() },
     });
 
-    expect(ComparisonDocumentInventory.replace).toHaveBeenCalledWith(
+    expect(
+      ComparisonDocumentInventory.completeAnalysisUnit
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         comparisonDocumentId: 1,
-        version: 7,
-        pageCount: 1,
-        items: [
+        facts: expect.arrayContaining([
           expect.objectContaining({
-            facetKey: "vandalismus",
-            aliases: ["mutwillige Beschädigung"],
+            factType: "coverage",
             pageNumber: 1,
-            evidenceText: "Vandalismus ist versichert.",
+            evidenceText: "Vandalismus ist versichert, ausgenommen Graffiti.",
           }),
-        ],
+        ]),
       })
     );
-    expect(ComparisonDocumentInventory.markBuilding).toHaveBeenCalledWith({
-      comparisonDocumentId: 1,
-      version: 7,
-    });
+    expect(ComparisonDocumentInventory.prepareAnalysis).toHaveBeenCalled();
     expect(result.manifest.status).toBe("ready");
   });
 
@@ -145,9 +181,9 @@ describe("ComparisonInventoryService", () => {
       inventorySourceSha256: "a".repeat(64),
       error: null,
       items: [{ label: "Vandalismus" }],
+      analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
     };
     ComparisonDocumentInventory.get
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(readyManifest);
     fileData.mockResolvedValue(documentData);
@@ -158,27 +194,30 @@ describe("ComparisonInventoryService", () => {
     });
 
     expect(fileData).toHaveBeenCalledWith(document.docpath);
-    expect(ComparisonInventoryExtractor.extract).toHaveBeenCalledTimes(1);
+    expect(ComparisonAmbiguousFactResolver.extract).toHaveBeenCalledTimes(1);
     expect(result).toEqual([{ document, manifest: readyManifest }]);
   });
 
   test("coalesces concurrent legacy regeneration for the same document", async () => {
     let manifest = null;
     ComparisonDocumentInventory.get.mockImplementation(async () => manifest);
-    ComparisonDocumentInventory.replace.mockImplementation(async (input) => {
-      manifest = {
-        comparisonDocumentId: input.comparisonDocumentId,
-        status: "ready",
-        version: input.version,
-        itemCount: input.items.length,
-        pageCount: input.pageCount,
-        sourceSha256: input.sourceSha256,
-        inventorySourceSha256: input.sourceSha256,
-        error: null,
-        items: input.items,
-      };
-      return manifest;
-    });
+    ComparisonDocumentInventory.finalizeAnalysis.mockImplementation(
+      async (input) => {
+        manifest = {
+          comparisonDocumentId: input.comparisonDocumentId,
+          status: "ready",
+          version: input.version,
+          itemCount: 1,
+          pageCount: 1,
+          sourceSha256: input.sourceSha256,
+          inventorySourceSha256: input.sourceSha256,
+          error: null,
+          items: [{ label: "Vandalismus" }],
+          analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
+        };
+        return manifest;
+      }
+    );
     fileData.mockResolvedValue(documentData);
 
     const [first, second] = await Promise.all([
@@ -192,8 +231,10 @@ describe("ComparisonInventoryService", () => {
       }),
     ]);
 
-    expect(ComparisonInventoryExtractor.extract).toHaveBeenCalledTimes(1);
-    expect(ComparisonDocumentInventory.replace).toHaveBeenCalledTimes(1);
+    expect(ComparisonAmbiguousFactResolver.extract).toHaveBeenCalledTimes(1);
+    expect(ComparisonDocumentInventory.finalizeAnalysis).toHaveBeenCalledTimes(
+      1
+    );
     expect(first[0].manifest.status).toBe("ready");
     expect(second[0].manifest.status).toBe("ready");
   });
@@ -209,6 +250,7 @@ describe("ComparisonInventoryService", () => {
       inventorySourceSha256: "a".repeat(64),
       error: null,
       items: [{ label: "Vandalismus" }],
+      analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
     };
     ComparisonDocumentInventory.get.mockResolvedValue(manifest);
 
@@ -219,7 +261,7 @@ describe("ComparisonInventoryService", () => {
       })
     ).resolves.toEqual([{ document, manifest }]);
     expect(fileData).not.toHaveBeenCalled();
-    expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
+    expect(ComparisonAmbiguousFactResolver.extract).not.toHaveBeenCalled();
   });
 
   test("reads current inventories without triggering a rebuild", async () => {
@@ -233,6 +275,7 @@ describe("ComparisonInventoryService", () => {
       inventorySourceSha256: "a".repeat(64),
       error: null,
       items: [{ label: "Vandalismus" }],
+      analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
     };
     ComparisonDocumentInventory.get.mockResolvedValue(manifest);
 
@@ -240,10 +283,11 @@ describe("ComparisonInventoryService", () => {
       ComparisonInventoryService.readyForDocuments({ documents: [document] })
     ).resolves.toEqual([{ document, manifest }]);
     expect(fileData).not.toHaveBeenCalled();
-    expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
+    expect(ComparisonAmbiguousFactResolver.extract).not.toHaveBeenCalled();
   });
 
   test("marks an interrupted deep analysis retryable after restart", async () => {
+    ComparisonDocumentInventory.interruptedRuns.mockResolvedValue([{ id: 41 }]);
     await expect(
       ComparisonInventoryService.reconcileInterrupted({
         documents: [
@@ -255,12 +299,13 @@ describe("ComparisonInventoryService", () => {
         ],
       })
     ).resolves.toBe(true);
-    expect(ComparisonDocumentInventory.markFailed).toHaveBeenCalledWith({
-      comparisonDocumentId: 1,
-      version: 7,
-      pageCount: 1,
-      error: expect.stringContaining("Serverneustart"),
-    });
+    expect(ComparisonDocumentInventory.markAnalysisFailed).toHaveBeenCalledWith(
+      {
+        analysisRunId: 41,
+        comparisonDocumentId: 1,
+        error: expect.stringContaining("Serverneustart"),
+      }
+    );
   });
 
   test("rebuilds when the canonical source hash changed", async () => {
@@ -278,12 +323,13 @@ describe("ComparisonInventoryService", () => {
     let calls = 0;
     ComparisonDocumentInventory.get.mockImplementation(async () => {
       calls += 1;
-      if (calls < 3) return stale;
+      if (calls < 2) return stale;
       return {
         ...stale,
         sourceSha256: "a".repeat(64),
         inventorySourceSha256: "a".repeat(64),
         items: [{ label: "Vandalismus" }],
+        analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
       };
     });
     fileData.mockResolvedValue(documentData);
@@ -293,7 +339,7 @@ describe("ComparisonInventoryService", () => {
       Connector: {},
     });
     expect(fileData).toHaveBeenCalledTimes(1);
-    expect(ComparisonInventoryExtractor.extract).toHaveBeenCalledTimes(1);
+    expect(ComparisonAmbiguousFactResolver.extract).toHaveBeenCalledTimes(1);
   });
 
   test("fails closed when a stale inventory has no canonical source", async () => {
@@ -306,7 +352,7 @@ describe("ComparisonInventoryService", () => {
         Connector: {},
       })
     ).rejects.toThrow("gespeicherte Textbestand");
-    expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
+    expect(ComparisonAmbiguousFactResolver.extract).not.toHaveBeenCalled();
   });
 
   test("records a failed rebuild without deleting the last ready inventory", async () => {
@@ -322,7 +368,7 @@ describe("ComparisonInventoryService", () => {
     };
     ComparisonDocumentInventory.get.mockResolvedValue(stale);
     fileData.mockResolvedValue(documentData);
-    ComparisonInventoryExtractor.extract.mockRejectedValue(
+    ComparisonAmbiguousFactResolver.extract.mockRejectedValue(
       new Error("model unavailable")
     );
 
@@ -332,7 +378,7 @@ describe("ComparisonInventoryService", () => {
         Connector: {},
       })
     ).rejects.toThrow("model unavailable");
-    expect(ComparisonDocumentInventory.markFailed).toHaveBeenCalledWith(
+    expect(ComparisonDocumentInventory.markAnalysisFailed).toHaveBeenCalledWith(
       expect.objectContaining({
         comparisonDocumentId: 1,
         error: "model unavailable",
@@ -364,11 +410,11 @@ describe("ComparisonInventoryService", () => {
         Connector: {},
       })
     ).rejects.toThrow("does not match");
-    expect(ComparisonInventoryExtractor.extract).not.toHaveBeenCalled();
-    expect(ComparisonDocumentInventory.replace).not.toHaveBeenCalled();
-    expect(ComparisonDocumentInventory.markFailed).toHaveBeenCalledWith(
-      expect.objectContaining({ comparisonDocumentId: 1 })
-    );
+    expect(ComparisonAmbiguousFactResolver.extract).not.toHaveBeenCalled();
+    expect(ComparisonDocumentInventory.finalizeAnalysis).not.toHaveBeenCalled();
+    expect(
+      ComparisonDocumentInventory.markAnalysisFailed
+    ).not.toHaveBeenCalled();
   });
 
   test("keeps open topics and adds fallback anchors without replacing them", () => {
@@ -397,6 +443,31 @@ describe("ComparisonInventoryService", () => {
         }),
         expect.objectContaining({ id: "selbstbehalt", origin: "fallback" }),
       ])
+    );
+  });
+
+  test("removes run-scoped FTS and vectors before deleting SQL staging data", async () => {
+    const order = [];
+    ComparisonDocumentInventory.analysisArtifacts.mockResolvedValue({
+      runIds: [41, 42],
+      vectorIds: ["vector-41", "vector-42"],
+    });
+    ComparisonClauseBlockIndex.removeRun.mockImplementation(async (runId) => {
+      order.push(`fts:${runId}`);
+    });
+    ComparisonClauseEmbeddingIndex.removeVectorIds.mockImplementation(
+      async () => order.push("vectors")
+    );
+    ComparisonDocumentInventory.clear.mockImplementation(async () => {
+      order.push("sql");
+      return null;
+    });
+
+    await ComparisonInventoryService.clear(1);
+
+    expect(order).toEqual(["fts:41", "fts:42", "vectors", "sql"]);
+    expect(ComparisonClauseEmbeddingIndex.removeVectorIds).toHaveBeenCalledWith(
+      ["vector-41", "vector-42"]
     );
   });
 });

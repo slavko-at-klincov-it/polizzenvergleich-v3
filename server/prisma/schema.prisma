@@ -183,17 +183,17 @@ model workspace_suggested_messages {
 }
 
 model workspace_chats {
-  id             Int      @id @default(autoincrement())
-  workspaceId    Int
-  prompt         String
-  response       String
-  include        Boolean  @default(true)
-  user_id        Int?
-  thread_id      Int? // No relation to prevent whole table migration
-  api_session_id String? // String identifier for only the dev API to partition chats in any mode.
-  generationId   String?  @unique
-  createdAt      DateTime @default(now())
-  lastUpdatedAt  DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  workspaceId     Int
+  prompt          String
+  response        String
+  include         Boolean  @default(true)
+  user_id         Int?
+  thread_id       Int? // No relation to prevent whole table migration
+  api_session_id  String? // String identifier for only the dev API to partition chats in any mode.
+  generationId    String?  @unique
+  createdAt       DateTime @default(now())
+  lastUpdatedAt   DateTime @default(now())
   feedbackScore   Boolean?
   memoryProcessed Boolean? @map("memory_processed")
   users           users?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -379,17 +379,17 @@ model desktop_mobile_devices {
 }
 
 model workspace_parsed_files {
-  id                 Int                @id @default(autoincrement())
-  filename           String             @unique
-  workspaceId        Int
-  userId             Int?
-  threadId           Int?
-  metadata           String?
-  tokenCountEstimate Int?               @default(0)
-  createdAt          DateTime           @default(now())
-  workspace          workspaces         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user               users?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  thread             workspace_threads? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  id                  Int                   @id @default(autoincrement())
+  filename            String                @unique
+  workspaceId         Int
+  userId              Int?
+  threadId            Int?
+  metadata            String?
+  tokenCountEstimate  Int?                  @default(0)
+  createdAt           DateTime              @default(now())
+  workspace           workspaces            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                users?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread              workspace_threads?    @relation(fields: [threadId], references: [id], onDelete: Cascade)
   comparison_document comparison_documents?
 
   @@index([workspaceId])
@@ -397,34 +397,37 @@ model workspace_parsed_files {
 }
 
 model comparison_documents {
-  id                    Int                                   @id @default(autoincrement())
-  workspaceId           Int
-  threadId              Int
-  userId                Int?
-  slot                  String
-  status                String                                @default("indexing")
-  originalFilename      String
-  tokenCount            Int?                                  @default(0)
-  pageCount             Int?
-  parsedFileId          Int?                                  @unique
-  workspaceDocumentId   Int?                                  @unique
-  docId                 String?
-  docpath               String?
-  sourceSha256          String?
-  error                 String?
-  inventoryStatus       String?
-  inventoryVersion      Int?
-  inventoryItemCount    Int                                   @default(0)
-  inventoryPageCount    Int                                   @default(0)
-  inventorySourceSha256 String?
-  inventoryError        String?
-  createdAt             DateTime                              @default(now())
-  lastUpdatedAt         DateTime                              @default(now())
-  workspace             workspaces                            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  thread                workspace_threads                     @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  parsedFile            workspace_parsed_files?               @relation(fields: [parsedFileId], references: [id], onDelete: SetNull)
-  workspaceDocument     workspace_documents?                  @relation(fields: [workspaceDocumentId], references: [id], onDelete: SetNull)
-  inventoryItems        comparison_document_inventory_items[]
+  id                     Int                                   @id @default(autoincrement())
+  workspaceId            Int
+  threadId               Int
+  userId                 Int?
+  slot                   String
+  status                 String                                @default("indexing")
+  originalFilename       String
+  tokenCount             Int?                                  @default(0)
+  pageCount              Int?
+  parsedFileId           Int?                                  @unique
+  workspaceDocumentId    Int?                                  @unique
+  docId                  String?
+  docpath                String?
+  sourceSha256           String?
+  error                  String?
+  inventoryStatus        String?
+  inventoryVersion       Int?
+  inventoryItemCount     Int                                   @default(0)
+  inventoryPageCount     Int                                   @default(0)
+  inventorySourceSha256  String?
+  inventoryError         String?
+  publishedAnalysisRunId Int?                                  @unique
+  createdAt              DateTime                              @default(now())
+  lastUpdatedAt          DateTime                              @default(now())
+  workspace              workspaces                            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  thread                 workspace_threads                     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  parsedFile             workspace_parsed_files?               @relation(fields: [parsedFileId], references: [id], onDelete: SetNull)
+  workspaceDocument      workspace_documents?                  @relation(fields: [workspaceDocumentId], references: [id], onDelete: SetNull)
+  inventoryItems         comparison_document_inventory_items[]
+  analysisRuns           comparison_document_analysis_runs[]   @relation("DocumentAnalysisRuns")
+  publishedAnalysisRun   comparison_document_analysis_runs?    @relation("PublishedAnalysisRun", fields: [publishedAnalysisRunId], references: [id], onDelete: SetNull)
 
   @@unique([threadId, slot])
   @@index([workspaceId, threadId, status])
@@ -432,12 +435,14 @@ model comparison_documents {
 }
 
 model comparison_document_inventory_items {
-  id                   Int                  @id @default(autoincrement())
+  id                   Int                                 @id @default(autoincrement())
   comparisonDocumentId Int
+  analysisRunId        Int?
+  primaryBlockId       Int?
   factKey              String
   facetKey             String?
   label                String
-  aliasesJson          String               @default("[]")
+  aliasesJson          String                              @default("[]")
   polarity             String?
   valueJson            String?
   unit                 String?
@@ -447,14 +452,167 @@ model comparison_document_inventory_items {
   evidenceHash         String
   sourceMethod         String?
   confidence           Float?
-  createdAt            DateTime             @default(now())
-  lastUpdatedAt        DateTime             @default(now())
-  comparisonDocument   comparison_documents @relation(fields: [comparisonDocumentId], references: [id], onDelete: Cascade)
+  unitKey              String?
+  factType             String?
+  claimText            String?
+  evidenceStart        Int?
+  evidenceEnd          Int?
+  createdAt            DateTime                            @default(now())
+  lastUpdatedAt        DateTime                            @default(now())
+  comparisonDocument   comparison_documents                @relation(fields: [comparisonDocumentId], references: [id], onDelete: Cascade)
+  analysisRun          comparison_document_analysis_runs?  @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  primaryBlock         comparison_document_clause_blocks?  @relation("PrimaryBlockFacts", fields: [primaryBlockId], references: [id], onDelete: SetNull)
+  evidences            comparison_document_fact_evidence[]
 
-  @@unique([comparisonDocumentId, factKey], map: "comparison_document_inventory_items_document_fact_key")
+  @@unique([analysisRunId, factKey], map: "comparison_document_inventory_items_run_fact_key")
   @@index([comparisonDocumentId, facetKey], map: "comparison_document_inventory_items_document_facet_idx")
   @@index([comparisonDocumentId, pageNumber], map: "comparison_document_inventory_items_document_page_idx")
   @@index([comparisonDocumentId, evidenceHash], map: "comparison_document_inventory_items_document_evidence_idx")
+  @@index([analysisRunId, primaryBlockId], map: "comparison_document_inventory_items_run_block_idx")
+}
+
+model comparison_document_analysis_runs {
+  id                   Int                                    @id @default(autoincrement())
+  comparisonDocumentId Int
+  pipelineVersion      Int
+  sourceSha256         String
+  pageCount            Int
+  status               String                                 @default("building")
+  expectedBlockCount   Int                                    @default(0)
+  terminalBlockCount   Int                                    @default(0)
+  factCount            Int                                    @default(0)
+  error                String?
+  startedAt            DateTime                               @default(now())
+  lastUpdatedAt        DateTime                               @default(now())
+  completedAt          DateTime?
+  comparisonDocument   comparison_documents                   @relation("DocumentAnalysisRuns", fields: [comparisonDocumentId], references: [id], onDelete: Cascade)
+  publishedByDocument  comparison_documents?                  @relation("PublishedAnalysisRun")
+  blocks               comparison_document_clause_blocks[]
+  facts                comparison_document_inventory_items[]
+  signals              comparison_document_block_signals[]
+  embeddings           comparison_document_block_embeddings[]
+  evidences            comparison_document_fact_evidence[]
+
+  // SQLite migration adds a partial unique index for one active staged run.
+  // Ready snapshots with the same source/version remain immutable and may
+  // coexist until controlled post-publish cleanup.
+  @@index([comparisonDocumentId, pipelineVersion, sourceSha256], map: "comparison_document_analysis_runs_identity_idx")
+  @@index([comparisonDocumentId, status], map: "comparison_document_analysis_runs_document_status_idx")
+}
+
+model comparison_document_clause_blocks {
+  id               Int                                   @id @default(autoincrement())
+  analysisRunId    Int
+  blockKey         String
+  ordinal          Int
+  pageNumber       Int?
+  printedPageLabel String?
+  pageStart        Int
+  pageEnd          Int
+  sourceStart      Int
+  sourceEnd        Int
+  textHash         String
+  text             String
+  sourceMethod     String?
+  structureKind    String                                @default("unknown")
+  headingPathJson  String                                @default("[]")
+  layoutQuality    String                                @default("text_only")
+  ftsStatus        String                                @default("pending")
+  embeddingStatus  String                                @default("pending")
+  status           String                                @default("pending")
+  reviewCount      Int                                   @default(0)
+  factCount        Int                                   @default(0)
+  reasonCode       String?
+  error            String?
+  leaseToken       String?
+  leaseExpiresAt   DateTime?
+  createdAt        DateTime                              @default(now())
+  lastUpdatedAt    DateTime                              @default(now())
+  analysisRun      comparison_document_analysis_runs     @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  signals          comparison_document_block_signals[]
+  embedding        comparison_document_block_embeddings?
+  primaryFacts     comparison_document_inventory_items[] @relation("PrimaryBlockFacts")
+  evidences        comparison_document_fact_evidence[]
+
+  @@unique([analysisRunId, blockKey], map: "comparison_document_clause_blocks_run_block_key")
+  @@unique([analysisRunId, ordinal], map: "comparison_document_clause_blocks_run_ordinal")
+  @@index([analysisRunId, status, ordinal], map: "comparison_document_clause_blocks_resume_idx")
+}
+
+model comparison_document_block_signals {
+  id              Int                               @id @default(autoincrement())
+  analysisRunId   Int
+  blockId         Int
+  signalKey       String
+  kind            String
+  normalizedValue String?
+  valueJson       String?
+  sourceStart     Int
+  sourceEnd       Int
+  evidenceText    String
+  evidenceHash    String
+  ruleVersion     Int
+  createdAt       DateTime                          @default(now())
+  analysisRun     comparison_document_analysis_runs @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  block           comparison_document_clause_blocks @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisRunId, blockId, signalKey], map: "comparison_document_block_signals_run_block_signal_key")
+  @@index([analysisRunId, kind], map: "comparison_document_block_signals_run_kind_idx")
+  @@index([blockId, kind], map: "comparison_document_block_signals_block_kind_idx")
+}
+
+model comparison_document_block_embeddings {
+  id            Int                               @id @default(autoincrement())
+  analysisRunId Int
+  blockId       Int                               @unique
+  vectorId      String                            @unique
+  namespace     String
+  model         String
+  dimensions    Int
+  textHash      String
+  status        String                            @default("ready")
+  error         String?
+  createdAt     DateTime                          @default(now())
+  lastUpdatedAt DateTime                          @default(now())
+  analysisRun   comparison_document_analysis_runs @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  block         comparison_document_clause_blocks @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisRunId, blockId], map: "comparison_document_block_embeddings_run_block_key")
+  @@index([analysisRunId, status], map: "comparison_document_block_embeddings_run_status_idx")
+}
+
+model comparison_document_fact_evidence {
+  id              Int                                 @id @default(autoincrement())
+  analysisRunId   Int
+  inventoryItemId Int
+  blockId         Int
+  ordinal         Int
+  pageNumber      Int?
+  sourceStart     Int
+  sourceEnd       Int
+  evidenceText    String
+  evidenceHash    String
+  createdAt       DateTime                            @default(now())
+  analysisRun     comparison_document_analysis_runs   @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+  inventoryItem   comparison_document_inventory_items @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  block           comparison_document_clause_blocks   @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisRunId, inventoryItemId, ordinal], map: "comparison_document_fact_evidence_run_item_ordinal")
+  @@index([analysisRunId, blockId], map: "comparison_document_fact_evidence_run_block_idx")
+  @@index([blockId], map: "comparison_document_fact_evidence_block_idx")
+}
+
+model comparison_document_term_aliases {
+  id             Int      @id @default(autoincrement())
+  catalogVersion Int
+  groupKey       String
+  canonicalTerm  String
+  aliasTerm      String
+  aliasKind      String   @default("alias")
+  createdAt      DateTime @default(now())
+
+  @@unique([catalogVersion, groupKey, aliasTerm], map: "comparison_document_term_aliases_version_group_alias")
+  @@index([catalogVersion, canonicalTerm], map: "comparison_document_term_aliases_version_canonical_idx")
 }
 
 model external_communication_connectors {
@@ -525,28 +683,28 @@ model model_routers {
 }
 
 model model_router_rules {
-  id               Int           @id @default(autoincrement())
-  router_id        Int
-  enabled          Boolean       @default(true)
-  priority         Int
-  type             String        @default("calculated")
-  title            String
-  description      String?
+  id              Int           @id @default(autoincrement())
+  router_id       Int
+  enabled         Boolean       @default(true)
+  priority        Int
+  type            String        @default("calculated")
+  title           String
+  description     String?
   // For `calculated` rules: the boolean operator joining `conditions` — "AND"
   // (all must match) or "OR" (any must match). Null for `llm` rules.
-  condition_logic  String?
+  condition_logic String?
   // For `calculated` rules: JSON-stringified array of condition objects, each
   // shaped as { property: string, comparator: string, value: string } where
   // `property` ∈ VALID_PROPERTIES and `comparator` ∈ VALID_COMPARATORS (see
   // server/models/modelRouterRule.js). `value` is always stored as a string;
   // numeric comparators parse it at evaluation time. Null for `llm` rules.
-  conditions       String?
-  route_provider   String
-  route_model      String
-  created_by       Int?
-  createdAt        DateTime      @default(now())
-  lastUpdatedAt    DateTime      @default(now())
-  router           model_routers @relation(fields: [router_id], references: [id], onDelete: Cascade)
+  conditions      String?
+  route_provider  String
+  route_model     String
+  created_by      Int?
+  createdAt       DateTime      @default(now())
+  lastUpdatedAt   DateTime      @default(now())
+  router          model_routers @relation(fields: [router_id], references: [id], onDelete: Cascade)
 
   @@unique([router_id, title])
   @@index([router_id])

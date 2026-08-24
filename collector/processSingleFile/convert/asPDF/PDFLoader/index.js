@@ -25,9 +25,26 @@ class PDFLoader {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const text = this.textFromItems(content.items);
-      const quality = assessPageText(text);
+      const layout = this.layoutFromItems(content.items, content.styles);
+      const normalizedText = text.trim();
+      const leadingTrim = text.length - text.trimStart().length;
+      layout.spans = layout.spans
+        .map((span) => ({
+          ...span,
+          charStart: span.charStart - leadingTrim,
+          charEnd: span.charEnd - leadingTrim,
+        }))
+        .filter(
+          (span) => span.charEnd > 0 && span.charStart < normalizedText.length
+        )
+        .map((span) => ({
+          ...span,
+          charStart: Math.max(0, span.charStart),
+          charEnd: Math.min(normalizedText.length, span.charEnd),
+        }));
+      const quality = assessPageText(normalizedText);
       documents.push({
-        pageContent: text.trim(),
+        pageContent: normalizedText,
         metadata: {
           source: this.filePath,
           pdf: {
@@ -41,6 +58,7 @@ class PDFLoader {
             method: "native",
             status: quality.needsOcr ? "needs_ocr" : "ok",
             quality,
+            layout,
           },
         },
       });
@@ -107,6 +125,74 @@ class PDFLoader {
     }
 
     return text;
+  }
+
+  layoutFromItems(items = [], styles = {}) {
+    const spans = [];
+    let previous = null;
+    let textLength = 0;
+    for (const [ordinal, item] of items.entries()) {
+      if (!("str" in item) || !item.str) continue;
+      const x = item.transform?.[4];
+      const y = item.transform?.[5];
+      const height = Math.abs(item.height || item.transform?.[3] || 0);
+      if (previous) {
+        const changedLine =
+          Number.isFinite(y) &&
+          Number.isFinite(previous.y) &&
+          Math.abs(y - previous.y) > Math.max(1, height * 0.25);
+        if (changedLine || previous.hasEOL) textLength += 1;
+        else {
+          const gap = Number.isFinite(x)
+            ? x - (previous.x + previous.width)
+            : 0;
+          if (
+            gap > Math.max(1, height * 0.12) &&
+            !previous.endsWithSpace &&
+            !item.str.startsWith(" ")
+          )
+            textLength += 1;
+        }
+      }
+      const charStart = textLength;
+      textLength += item.str.length;
+      const fontName = item.fontName || null;
+      const fontFamily = fontName
+        ? styles?.[fontName]?.fontFamily || null
+        : null;
+      spans.push({
+        ordinal,
+        text: item.str,
+        charStart,
+        charEnd: textLength,
+        x: Number.isFinite(item.transform?.[4]) ? item.transform[4] : null,
+        y: Number.isFinite(item.transform?.[5]) ? item.transform[5] : null,
+        width: Number.isFinite(item.width) ? item.width : null,
+        height: Number.isFinite(item.height)
+          ? Math.abs(item.height)
+          : Number.isFinite(item.transform?.[3])
+            ? Math.abs(item.transform[3])
+            : null,
+        fontName,
+        fontFamily,
+        boldHint: /(?:bold|semibold|demi|black|heavy)/iu.test(
+          `${fontName || ""} ${fontFamily || ""}`
+        ),
+        hasEOL: item.hasEOL === true,
+      });
+      previous = {
+        x: Number.isFinite(x) ? x : 0,
+        y,
+        width: Number.isFinite(item.width) ? item.width : 0,
+        hasEOL: item.hasEOL === true,
+        endsWithSpace: item.str.endsWith(" "),
+      };
+    }
+    return {
+      schemaVersion: 1,
+      quality: spans.length ? "native_spans" : "text_only",
+      spans,
+    };
   }
 
   async getPdfJS() {

@@ -150,6 +150,21 @@ sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (compar
 sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260823210000_allow_pageless_inventory_evidence/migration.sql"
 sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,pageNumber,evidenceText,evidenceHash,sourceMethod,createdAt) VALUES (7,"pageless","DOCX","[]",NULL,"Beleg ohne Seite","hash2","llm-map",CURRENT_TIMESTAMP);'
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE pageNumber IS NULL;')" = '1' ]
+sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260824120000_add_comparison_fact_coverage/migration.sql"
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE factKey IN ("legacy","pageless");')" = '2' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM pragma_table_info("comparison_documents") WHERE name="publishedAnalysisRunId";')" = '1' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM sqlite_master WHERE type="table" AND name IN ("comparison_document_analysis_runs","comparison_document_clause_blocks","comparison_document_block_signals","comparison_document_block_embeddings","comparison_document_fact_evidence","comparison_document_clause_blocks_fts");')" = '6' ]
+sqlite3 "$inventory_db" 'INSERT INTO comparison_document_analysis_runs (comparisonDocumentId,pipelineVersion,sourceSha256,pageCount,status,expectedBlockCount) VALUES (7,4,printf("%064d",1),1,"ready",1),(7,5,printf("%064d",2),1,"building",1),(7,4,printf("%064d",1),1,"ready",1),(7,4,printf("%064d",1),1,"building",1); INSERT INTO comparison_document_inventory_items (comparisonDocumentId,analysisRunId,factKey,label,aliasesJson,evidenceText,evidenceHash) VALUES (7,1,"same-fact","Run 1","[]","Evidence 1","h1"),(7,2,"same-fact","Run 2","[]","Evidence 2","h2"); UPDATE comparison_documents SET publishedAnalysisRunId=1 WHERE id=7;'
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE factKey="same-fact";')" = '2' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT publishedAnalysisRunId FROM comparison_documents WHERE id=7;')" = '1' ]
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_analysis_runs WHERE pipelineVersion=4 AND sourceSha256=printf("%064d",1);')" = '3' ]
+! sqlite3 "$inventory_db" 'INSERT INTO comparison_document_analysis_runs (comparisonDocumentId,pipelineVersion,sourceSha256,pageCount,status) VALUES (7,4,printf("%064d",1),1,"building");' 2>/dev/null
+! sqlite3 "$inventory_db" 'UPDATE comparison_documents SET publishedAnalysisRunId=2 WHERE id=7;' 2>/dev/null
+! sqlite3 "$inventory_db" 'UPDATE comparison_document_analysis_runs SET status="retryable_failed" WHERE id=1;' 2>/dev/null
+! sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,evidenceText,evidenceHash) VALUES (7,"legacy","Duplicate legacy","[]","duplicate","duplicate");' 2>/dev/null
+sqlite3 "$inventory_db" 'INSERT INTO comparison_document_clause_blocks (analysisRunId,blockKey,ordinal,pageStart,pageEnd,sourceStart,sourceEnd,textHash,text) VALUES (4,"staged-block",0,0,1,0,1,"hash","x");'
+! sqlite3 "$inventory_db" 'UPDATE comparison_document_clause_blocks SET analysisRunId=1, ordinal=1 WHERE blockKey="staged-block";' 2>/dev/null
+[ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM pragma_foreign_key_check;')" = '0' ]
 generation_db="$temp_dir/generation-migration.db"
 sqlite3 "$generation_db" 'CREATE TABLE workspace_chats (id INTEGER PRIMARY KEY, prompt TEXT NOT NULL); INSERT INTO workspace_chats VALUES (1,"Altchat");'
 sqlite3 "$generation_db" <"$REPO/server/prisma/migrations/20260823213000_add_chat_generation_id/migration.sql"
@@ -375,6 +390,12 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/comparisonDocumentInventory.model.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonInventoryExtractor.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonInventoryService.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonAnalysisUnitBuilder.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonClauseEmbeddingIndex.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonClauseIndexes.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonDeterministicFactExtractor.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonFactMapper.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonFactTable.test.js \
   server/__tests__/utils/PolicyComparison/PolicyInferenceQueue.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonChunkIndex.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonHybridRetriever.test.js \

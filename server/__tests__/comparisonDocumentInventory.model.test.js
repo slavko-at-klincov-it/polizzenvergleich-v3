@@ -1,14 +1,34 @@
 const prisma = require("../utils/prisma");
 
 jest.mock("../utils/prisma", () => ({
-  comparison_documents: {
+  comparison_documents: { findUnique: jest.fn(), update: jest.fn() },
+  comparison_document_analysis_runs: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
     update: jest.fn(),
+    deleteMany: jest.fn(),
   },
-  comparison_document_inventory_items: {
+  comparison_document_clause_blocks: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    createMany: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+  },
+  comparison_document_block_signals: {
     deleteMany: jest.fn(),
     createMany: jest.fn(),
   },
+  comparison_document_block_embeddings: { findMany: jest.fn() },
+  comparison_document_inventory_items: {
+    findMany: jest.fn(),
+    deleteMany: jest.fn(),
+    create: jest.fn(),
+  },
+  comparison_document_fact_evidence: { create: jest.fn() },
+  $queryRawUnsafe: jest.fn(),
   $transaction: jest.fn(),
 }));
 
@@ -16,319 +36,594 @@ const {
   ComparisonDocumentInventory,
 } = require("../models/comparisonDocumentInventory");
 
-describe("ComparisonDocumentInventory", () => {
-  const SOURCE_SHA256 = "a".repeat(64);
+describe("ComparisonDocumentInventory run staging", () => {
+  const SOURCE_A = "a".repeat(64);
+  const SOURCE_B = "b".repeat(64);
+  const block = {
+    blockKey: "block-1",
+    ordinal: 0,
+    pageNumber: 1,
+    pageStart: 0,
+    pageEnd: "Der Selbstbehalt beträgt EUR 500.".length,
+    sourceStart: 100,
+    sourceEnd: 100 + "Der Selbstbehalt beträgt EUR 500.".length,
+    textHash: "hash-1",
+    text: "Der Selbstbehalt beträgt EUR 500.",
+    sourceMethod: "native",
+    structureKind: "paragraph",
+    headingPath: ["Vandalismus"],
+    layoutQuality: "native_spans",
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.comparison_documents.findUnique.mockResolvedValue(null);
     prisma.$transaction.mockImplementation(async (callback) =>
       callback(prisma)
     );
-    prisma.comparison_document_inventory_items.deleteMany.mockResolvedValue({
-      count: 0,
-    });
-    prisma.comparison_document_inventory_items.createMany.mockResolvedValue({
-      count: 0,
-    });
-    prisma.comparison_documents.update.mockImplementation(
-      async ({ where, data }) => ({ id: where.id, ...data })
-    );
-  });
-
-  it("reads the nullable manifest and deserializes open inventory values", async () => {
     prisma.comparison_documents.findUnique.mockResolvedValue({
       id: 7,
-      inventoryStatus: "ready",
-      inventoryVersion: 2,
-      inventoryItemCount: 1,
-      inventoryPageCount: 30,
-      sourceSha256: SOURCE_SHA256,
-      inventorySourceSha256: SOURCE_SHA256,
-      inventoryError: null,
-      inventoryItems: [
-        {
-          id: 8,
-          factKey: "fact-1",
-          facetKey: "kundenspezifisch:glasbruch",
-          label: "Sonderdeckung Glasbruch",
-          aliasesJson: '["Glasbruch-Sonderdeckung"]',
-          polarity: "partially-covered",
-          valueJson: '{"amount":25000,"currency":"EUR"}',
-          unit: "je Schadenfall",
-          conditionsJson: '["nur bei benutzten Gebäuden"]',
-          pageNumber: 12,
-          evidenceText: "Glasbruch ist bis EUR 25.000 gedeckt.",
-          evidenceHash: "hash-1",
-          sourceMethod: "ocr",
-          confidence: 0.91,
-        },
-      ],
-    });
-
-    await expect(ComparisonDocumentInventory.get(7)).resolves.toEqual({
-      comparisonDocumentId: 7,
-      status: "ready",
-      version: 2,
-      itemCount: 1,
-      pageCount: 30,
-      sourceSha256: SOURCE_SHA256,
-      inventorySourceSha256: SOURCE_SHA256,
-      error: null,
-      items: [
-        expect.objectContaining({
-          id: 8,
-          facetKey: "kundenspezifisch:glasbruch",
-          aliases: ["Glasbruch-Sonderdeckung"],
-          polarity: "partially-covered",
-          value: { amount: 25000, currency: "EUR" },
-          conditions: ["nur bei benutzten Gebäuden"],
-          pageNumber: 12,
-          sourceMethod: "ocr",
-        }),
-      ],
-    });
-    expect(prisma.comparison_documents.findUnique).toHaveBeenCalledWith({
-      where: { id: 7 },
-      include: {
-        inventoryItems: {
-          orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-        },
-      },
-    });
-  });
-
-  it("atomically replaces, normalizes and deduplicates an open inventory", async () => {
-    const fact = {
-      facetKey: "vandalismus-und-graffiti",
-      label: "Böswillige Beschädigung",
-      aliases: ["Vandalismus", "Graffiti", "vandalismus"],
-      polarity: "conditional-cover",
-      value: { currency: "EUR", amount: 25_000 },
-      unit: "je Schadenfall",
-      conditions: { minimumDeductible: 500, rate: 0.1 },
-      pageNumber: 19,
-      evidenceText:
-        "Mutwillige Beschädigung durch Dritte ist bis EUR 25.000 versichert.",
-      sourceMethod: "native",
-      confidence: 0.97,
-    };
-    prisma.comparison_documents.findUnique.mockResolvedValue({
-      id: 7,
+      publishedAnalysisRunId: 41,
       inventoryStatus: "ready",
       inventoryVersion: 3,
       inventoryItemCount: 1,
-      inventoryPageCount: 30,
+      inventoryPageCount: 21,
+      sourceSha256: SOURCE_A,
+      inventorySourceSha256: SOURCE_A,
       inventoryError: null,
-      inventoryItems: [],
     });
-
-    await ComparisonDocumentInventory.replace({
+    prisma.comparison_documents.update.mockResolvedValue({ id: 7 });
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue(null);
+    prisma.comparison_document_analysis_runs.findFirst.mockResolvedValue(null);
+    prisma.comparison_document_analysis_runs.create.mockResolvedValue({
+      id: 42,
       comparisonDocumentId: 7,
-      version: 3,
-      pageCount: 30,
-      sourceSha256: SOURCE_SHA256,
-      items: [
-        fact,
-        {
-          ...fact,
-          value: { amount: 25_000, currency: "EUR" },
-          conditions: { rate: 0.1, minimumDeductible: 500 },
-        },
-      ],
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      expectedBlockCount: 1,
+      status: "building",
     });
-
-    const create =
-      prisma.comparison_document_inventory_items.createMany.mock.calls[0][0];
-    expect(create.data).toHaveLength(1);
-    expect(create.data[0]).toEqual(
-      expect.objectContaining({
+    prisma.comparison_document_analysis_runs.update.mockImplementation(
+      async ({ where, data }) => ({
+        id: where.id,
         comparisonDocumentId: 7,
-        facetKey: "vandalismus-und-graffiti",
-        aliasesJson: '["Vandalismus","Graffiti"]',
-        polarity: "conditional-cover",
-        valueJson: '{"amount":25000,"currency":"EUR"}',
-        conditionsJson: '{"minimumDeductible":500,"rate":0.1}',
-        pageNumber: 19,
-        evidenceHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-        factKey: expect.stringMatching(/^[a-f0-9]{64}$/),
+        ...data,
       })
     );
+    prisma.comparison_document_analysis_runs.findMany.mockResolvedValue([]);
+    prisma.comparison_document_clause_blocks.createMany.mockResolvedValue({
+      count: 1,
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      { id: 71, analysisRunId: 42, ...block, status: "pending" },
+    ]);
+    prisma.comparison_document_clause_blocks.findUnique.mockResolvedValue({
+      id: 71,
+      analysisRunId: 42,
+      ...block,
+    });
+    prisma.comparison_document_clause_blocks.update.mockResolvedValue({});
+    prisma.comparison_document_inventory_items.findMany.mockResolvedValue([]);
+    prisma.comparison_document_inventory_items.deleteMany.mockResolvedValue({
+      count: 0,
+    });
+    prisma.comparison_document_inventory_items.create.mockResolvedValue({
+      id: 91,
+    });
+    prisma.comparison_document_fact_evidence.create.mockResolvedValue({
+      id: 101,
+    });
+    prisma.comparison_document_block_embeddings.findMany.mockResolvedValue([]);
+    prisma.$queryRawUnsafe.mockResolvedValue([{ blockId: 71 }]);
+  });
+
+  test("stages a new run without deleting or replacing the published run", async () => {
+    const prepared = await ComparisonDocumentInventory.prepareAnalysis({
+      comparisonDocumentId: 7,
+      version: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      units: [block],
+    });
+
+    expect(prepared.analysisRunId).toBe(42);
+    expect(
+      prisma.comparison_document_analysis_runs.create
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        comparisonDocumentId: 7,
+        sourceSha256: SOURCE_B,
+        expectedBlockCount: 1,
+      }),
+    });
+    expect(
+      prisma.comparison_document_clause_blocks.createMany
+    ).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ analysisRunId: 42, blockKey: "block-1" }),
+      ],
+      skipDuplicates: true,
+    });
+    expect(
+      prisma.comparison_document_inventory_items.deleteMany
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.comparison_document_analysis_runs.deleteMany
+    ).not.toHaveBeenCalled();
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("creates a fresh staging run beside a published run with the same source contract", async () => {
+    prisma.comparison_documents.findUnique.mockResolvedValue({
+      id: 7,
+      publishedAnalysisRunId: 41,
+      inventoryStatus: "ready",
+    });
+    prisma.comparison_document_analysis_runs.create.mockResolvedValue({
+      id: 43,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_A,
+      status: "building",
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      { id: 72, analysisRunId: 43, ...block, status: "pending" },
+    ]);
+
+    const prepared = await ComparisonDocumentInventory.prepareAnalysis({
+      comparisonDocumentId: 7,
+      version: 4,
+      sourceSha256: SOURCE_A,
+      pageCount: 21,
+      units: [block],
+    });
+
+    expect(prepared.analysisRunId).toBe(43);
+    expect(
+      prisma.comparison_document_analysis_runs.findFirst
+    ).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        comparisonDocumentId: 7,
+        sourceSha256: SOURCE_A,
+        id: { not: 41 },
+        status: { in: ["building", "retryable_failed"] },
+      }),
+      orderBy: [{ id: "desc" }],
+    });
+    expect(prisma.comparison_document_analysis_runs.create).toHaveBeenCalled();
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("reuses the stable run identity when an interrupted source/version resumes", async () => {
+    prisma.comparison_document_analysis_runs.findFirst.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_B,
+      status: "retryable_failed",
+    });
+    const prepared = await ComparisonDocumentInventory.prepareAnalysis({
+      comparisonDocumentId: 7,
+      version: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      units: [block],
+    });
+
+    expect(prepared.analysisRunId).toBe(42);
+    expect(
+      prisma.comparison_document_analysis_runs.create
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.comparison_document_analysis_runs.update
+    ).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: expect.objectContaining({ status: "building", error: null }),
+    });
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("keeps a legacy ready inventory published while the first staged run builds or fails", async () => {
+    prisma.comparison_documents.findUnique.mockResolvedValue({
+      id: 7,
+      publishedAnalysisRunId: null,
+      inventoryStatus: "ready",
+      inventoryItemCount: 2,
+      inventorySourceSha256: SOURCE_A,
+    });
+
+    await ComparisonDocumentInventory.prepareAnalysis({
+      comparisonDocumentId: 7,
+      version: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      units: [block],
+    });
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+    });
+    await ComparisonDocumentInventory.markAnalysisFailed({
+      analysisRunId: 42,
+      comparisonDocumentId: 7,
+      error: "timeout",
+    });
     expect(prisma.comparison_documents.update).toHaveBeenCalledWith({
       where: { id: 7 },
+      data: expect.not.objectContaining({ inventoryStatus: "failed" }),
+    });
+  });
+
+  test("scopes fact replacement and evidence to exactly one analysis run", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+    });
+    const evidenceText = "Der Selbstbehalt beträgt EUR 500.";
+    await ComparisonDocumentInventory.completeAnalysisUnit({
+      analysisRunId: 42,
+      unitKey: "block-1",
+      facts: [
+        {
+          factKey: "same-semantic-fact-as-old-run",
+          unitKey: "block-1",
+          factType: "deductible",
+          label: "Selbstbehalt",
+          claimText: evidenceText,
+          pageNumber: 1,
+          evidenceText,
+          evidenceStart: 100,
+          evidenceEnd: 100 + evidenceText.length,
+        },
+      ],
+      reviewCount: 0,
+      resultKind: "facts",
+    });
+
+    expect(
+      prisma.comparison_document_inventory_items.deleteMany
+    ).toHaveBeenCalledWith({
+      where: { analysisRunId: 42, primaryBlockId: 71 },
+    });
+    expect(
+      prisma.comparison_document_inventory_items.create
+    ).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        inventoryStatus: "ready",
-        inventoryVersion: 3,
-        inventoryItemCount: 1,
-        inventoryPageCount: 30,
-        inventoryError: null,
+        comparisonDocumentId: 7,
+        analysisRunId: 42,
+        primaryBlockId: 71,
+        factKey: "same-semantic-fact-as-old-run",
+      }),
+    });
+    expect(
+      prisma.comparison_document_fact_evidence.create
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        analysisRunId: 42,
+        inventoryItemId: 91,
+        blockId: 71,
+        sourceStart: 100,
+        sourceEnd: 100 + evidenceText.length,
       }),
     });
   });
 
-  it("does not write an inventory whose evidence page exceeds coverage", async () => {
+  test("does not allow unknown content to terminate merely because signals are absent", async () => {
     await expect(
-      ComparisonDocumentInventory.replace({
-        comparisonDocumentId: 7,
-        version: 1,
-        pageCount: 10,
-        sourceSha256: SOURCE_SHA256,
-        items: [
-          {
-            label: "Vandalismus",
-            pageNumber: 11,
-            evidenceText: "Vandalismus ist versichert.",
-          },
-        ],
+      ComparisonDocumentInventory.completeAnalysisUnit({
+        analysisRunId: 42,
+        unitKey: "block-1",
+        facts: [],
+        reviewCount: 0,
+        resultKind: "no_fact",
+        noFactReason: "keine bekannte Regel erkannt",
       })
-    ).rejects.toThrow("beyond the processed pages");
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("does not publish ready without processed pages", async () => {
-    await expect(
-      ComparisonDocumentInventory.replace({
-        comparisonDocumentId: 7,
-        version: 1,
-        pageCount: 0,
-        sourceSha256: SOURCE_SHA256,
-        items: [],
-      })
-    ).rejects.toThrow("pageCount must be a positive integer");
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("does not publish an empty fallback-only inventory", async () => {
-    await expect(
-      ComparisonDocumentInventory.replace({
-        comparisonDocumentId: 7,
-        version: 1,
-        pageCount: 10,
-        sourceSha256: SOURCE_SHA256,
-        items: [],
-      })
-    ).rejects.toThrow("at least one grounded item");
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("clears stale items on building, failed and legacy reset transitions", async () => {
-    const building = await ComparisonDocumentInventory.markBuilding({
-      comparisonDocumentId: 7,
-      version: 4,
-    });
-    expect(building).toMatchObject({
-      comparisonDocumentId: 7,
-      status: "building",
-      version: 4,
-      itemCount: 0,
-      pageCount: 0,
-      error: null,
-    });
-
-    const failed = await ComparisonDocumentInventory.markFailed({
-      comparisonDocumentId: 7,
-      version: 4,
-      pageCount: 9,
-      error: "OCR page 10 failed",
-    });
-    expect(failed).toMatchObject({
-      status: "failed",
-      version: 4,
-      itemCount: 0,
-      pageCount: 9,
-      error: "OCR page 10 failed",
-    });
-
-    const cleared = await ComparisonDocumentInventory.clear(7);
-    expect(cleared).toMatchObject({
-      status: null,
-      version: null,
-      itemCount: 0,
-      pageCount: 0,
-      error: null,
-    });
+    ).rejects.toThrow("must remain ambiguous");
     expect(
-      prisma.comparison_document_inventory_items.deleteMany
-    ).toHaveBeenCalledTimes(3);
-  });
-
-  it("keeps the last ready inventory while a rebuild starts or fails", async () => {
-    const ready = {
-      id: 7,
-      inventoryStatus: "ready",
-      inventoryVersion: 3,
-      inventoryItemCount: 2,
-      inventoryPageCount: 30,
-      inventoryError: null,
-    };
-    prisma.comparison_documents.findUnique.mockResolvedValue(ready);
-
-    await expect(
-      ComparisonDocumentInventory.markBuilding({
-        comparisonDocumentId: 7,
-        version: 4,
-      })
-    ).resolves.toMatchObject({
-      status: "ready",
-      version: 3,
-      itemCount: 2,
-      pageCount: 30,
-    });
-    expect(
-      prisma.comparison_document_inventory_items.deleteMany
+      prisma.comparison_document_clause_blocks.update
     ).not.toHaveBeenCalled();
-    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
-
-    prisma.comparison_documents.update.mockResolvedValue({
-      ...ready,
-      inventoryError: "Extractor unavailable",
-    });
-    await expect(
-      ComparisonDocumentInventory.markFailed({
-        comparisonDocumentId: 7,
-        version: 4,
-        pageCount: 10,
-        error: "Extractor unavailable",
-      })
-    ).resolves.toMatchObject({
-      status: "ready",
-      version: 3,
-      itemCount: 2,
-      pageCount: 30,
-      error: "Extractor unavailable",
-    });
-    expect(
-      prisma.comparison_document_inventory_items.deleteMany
-    ).not.toHaveBeenCalled();
-    expect(prisma.comparison_documents.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: {
-        inventoryError: "Extractor unavailable",
-        lastUpdatedAt: expect.any(Date),
-      },
-    });
   });
 
-  it("never publishes ready when item persistence fails", async () => {
-    prisma.comparison_document_inventory_items.createMany.mockRejectedValue(
-      new Error("disk full")
+  test("keeps multiple exact evidence spans attached to one run-scoped fact", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+    });
+    prisma.comparison_document_clause_blocks.findUnique.mockImplementation(
+      async ({ where }) => {
+        const key = where.analysisRunId_blockKey.blockKey;
+        if (key === "block-2")
+          return {
+            id: 72,
+            analysisRunId: 42,
+            blockKey: "block-2",
+            pageNumber: 2,
+            sourceStart: 200,
+            sourceEnd: 223,
+            text: "Polizeilich anzuzeigen.",
+          };
+        return { id: 71, analysisRunId: 42, ...block };
+      }
     );
 
-    await expect(
-      ComparisonDocumentInventory.replace({
+    await ComparisonDocumentInventory.completeAnalysisUnit({
+      analysisRunId: 42,
+      unitKey: "block-1",
+      facts: [
+        {
+          factKey: "vandalismus-with-obligation",
+          unitKey: "block-1",
+          factType: "coverage",
+          label: "Vandalismus",
+          claimText: block.text,
+          pageNumber: 1,
+          evidenceText: block.text,
+          evidenceStart: block.sourceStart,
+          evidenceEnd: block.sourceEnd,
+          evidences: [
+            {
+              blockKey: "block-2",
+              pageNumber: 2,
+              sourceStart: 200,
+              sourceEnd: 223,
+              evidenceText: "Polizeilich anzuzeigen.",
+            },
+          ],
+        },
+      ],
+      reviewCount: 1,
+      resultKind: "facts",
+    });
+
+    expect(
+      prisma.comparison_document_fact_evidence.create
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      prisma.comparison_document_fact_evidence.create
+    ).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({
+        analysisRunId: 42,
+        blockId: 72,
+        ordinal: 1,
+        pageNumber: 2,
+      }),
+    });
+  });
+
+  test("publishes by atomically switching the document pointer only after all gates pass", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      expectedBlockCount: 1,
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      {
+        id: 71,
+        textHash: "hash-1",
+        text: block.text,
+        sourceStart: block.sourceStart,
+        sourceEnd: block.sourceEnd,
+        pageNumber: 1,
+        factCount: 1,
+        status: "model_validated_facts",
+        ftsStatus: "ready",
+        embeddingStatus: "ready",
+      },
+    ]);
+    prisma.comparison_document_block_embeddings.findMany.mockResolvedValue([
+      {
+        analysisRunId: 42,
+        blockId: 71,
+        status: "ready",
+        textHash: "hash-1",
+        model: "dinghy-embed",
+        dimensions: 2560,
+      },
+    ]);
+    prisma.comparison_document_inventory_items.findMany.mockResolvedValue([
+      {
+        id: 91,
         comparisonDocumentId: 7,
-        version: 1,
-        pageCount: 1,
-        sourceSha256: SOURCE_SHA256,
-        items: [
+        analysisRunId: 42,
+        primaryBlockId: 71,
+        pageNumber: 1,
+        evidenceText: block.text,
+        evidenceHash:
+          "ad43664b483ee8ee22137e92ece60d78ee4c35abd5ba8f9edc98c97d742a62d2",
+        evidenceStart: block.sourceStart,
+        evidenceEnd: block.sourceEnd,
+        evidences: [
           {
-            label: "Selbstbehalt",
+            id: 101,
+            analysisRunId: 42,
+            blockId: 71,
+            ordinal: 0,
             pageNumber: 1,
-            evidenceText: "Der Selbstbehalt beträgt EUR 350.",
+            sourceStart: block.sourceStart,
+            sourceEnd: block.sourceEnd,
+            evidenceText: block.text,
+            evidenceHash:
+              "ad43664b483ee8ee22137e92ece60d78ee4c35abd5ba8f9edc98c97d742a62d2",
           },
         ],
+      },
+    ]);
+    jest.spyOn(ComparisonDocumentInventory, "get").mockResolvedValue({
+      comparisonDocumentId: 7,
+      analysisRunId: 42,
+      status: "ready",
+    });
+
+    await ComparisonDocumentInventory.finalizeAnalysis({
+      analysisRunId: 42,
+      comparisonDocumentId: 7,
+      version: 4,
+      sourceSha256: SOURCE_B,
+    });
+
+    expect(prisma.comparison_documents.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: expect.objectContaining({
+        publishedAnalysisRunId: 42,
+        inventoryStatus: "ready",
+        inventoryVersion: 4,
+        inventorySourceSha256: SOURCE_B,
+      }),
+    });
+    expect(
+      prisma.comparison_document_analysis_runs.deleteMany
+    ).not.toHaveBeenCalled();
+  });
+
+  test("leaves the published pointer unchanged when staged coverage is incomplete", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      expectedBlockCount: 1,
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      {
+        id: 71,
+        status: "ambiguous_pending",
+        ftsStatus: "ready",
+        embeddingStatus: "ready",
+      },
+    ]);
+    await expect(
+      ComparisonDocumentInventory.finalizeAnalysis({
+        analysisRunId: 42,
+        comparisonDocumentId: 7,
+        version: 4,
+        sourceSha256: SOURCE_B,
       })
-    ).rejects.toThrow("disk full");
+    ).rejects.toThrow("every primary block");
     expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
-    expect(prisma.comparison_documents.findUnique).not.toHaveBeenCalled();
+  });
+
+  test("rejects a primary evidence span owned by a different run block", async () => {
+    const otherText = "Andere belegte Klausel.";
+    const otherHash =
+      "3aeb2e851017e7c7d1617b55d65b3779ada54c61a36fb036b9aea0a471be03da";
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_B,
+      pageCount: 21,
+      expectedBlockCount: 2,
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      {
+        id: 71,
+        textHash: "hash-1",
+        text: block.text,
+        sourceStart: block.sourceStart,
+        sourceEnd: block.sourceEnd,
+        pageNumber: 1,
+        factCount: 1,
+        status: "model_validated_facts",
+        ftsStatus: "ready",
+        embeddingStatus: "ready",
+      },
+      {
+        id: 72,
+        textHash: "hash-2",
+        text: otherText,
+        sourceStart: 200,
+        sourceEnd: 200 + otherText.length,
+        pageNumber: 1,
+        factCount: 0,
+        status: "technical_non_content",
+        ftsStatus: "ready",
+        embeddingStatus: "ready",
+      },
+    ]);
+    prisma.$queryRawUnsafe.mockResolvedValue([
+      { blockId: 71 },
+      { blockId: 72 },
+    ]);
+    prisma.comparison_document_block_embeddings.findMany.mockResolvedValue([
+      {
+        blockId: 71,
+        status: "ready",
+        textHash: "hash-1",
+        model: "dinghy-embed",
+        dimensions: 2560,
+      },
+      {
+        blockId: 72,
+        status: "ready",
+        textHash: "hash-2",
+        model: "dinghy-embed",
+        dimensions: 2560,
+      },
+    ]);
+    prisma.comparison_document_inventory_items.findMany.mockResolvedValue([
+      {
+        id: 91,
+        comparisonDocumentId: 7,
+        analysisRunId: 42,
+        primaryBlockId: 71,
+        pageNumber: 1,
+        evidenceText: otherText,
+        evidenceHash: otherHash,
+        evidenceStart: 200,
+        evidenceEnd: 200 + otherText.length,
+        evidences: [
+          {
+            analysisRunId: 42,
+            blockId: 72,
+            ordinal: 0,
+            pageNumber: 1,
+            sourceStart: 200,
+            sourceEnd: 200 + otherText.length,
+            evidenceText: otherText,
+            evidenceHash: otherHash,
+          },
+        ],
+      },
+    ]);
+
+    await expect(
+      ComparisonDocumentInventory.finalizeAnalysis({
+        analysisRunId: 42,
+        comparisonDocumentId: 7,
+        version: 4,
+        sourceSha256: SOURCE_B,
+      })
+    ).rejects.toThrow("Every fact and evidence");
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("marks only the staged run failed when an older run is published", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+    });
+    await ComparisonDocumentInventory.markAnalysisFailed({
+      analysisRunId: 42,
+      comparisonDocumentId: 7,
+      error: "model timeout",
+    });
+    expect(
+      prisma.comparison_document_analysis_runs.update
+    ).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: expect.objectContaining({ status: "retryable_failed" }),
+    });
+    expect(prisma.comparison_documents.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: expect.not.objectContaining({
+        publishedAnalysisRunId: expect.anything(),
+      }),
+    });
   });
 });

@@ -90,7 +90,7 @@ describe("asPDF selective extraction", () => {
     );
     expect(result.documents[0].pdfExtraction).toEqual(
       expect.objectContaining({
-        schemaVersion: 1,
+        schemaVersion: 2,
         totalPages: 2,
         processedPages: 2,
         complete: true,

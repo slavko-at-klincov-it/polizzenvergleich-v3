@@ -391,6 +391,37 @@ async function streamChatWithWorkspace(
       sources = [...sources, ...vectorSearchResults.sources];
     }
 
+    // Complete fact tables are enumerated and rendered by code from every
+    // validated fact. A language model must never choose or omit their rows.
+    if (comparisonContext?.deterministicTextResponse != null) {
+      completeText = comparisonContext.deterministicTextResponse;
+      const chat = await updatePendingChat({
+        text: completeText,
+        sources,
+        type: chatMode,
+        attachments,
+        metrics: {
+          factRows: comparisonContext.factRowPlan?.rows?.length || 0,
+        },
+      });
+      writeResponseChunk(response, {
+        uuid,
+        sources,
+        type: "textResponseChunk",
+        textResponse: completeText,
+        close: false,
+        error: false,
+      });
+      writeResponseChunk(response, {
+        uuid,
+        type: "finalizeResponseStream",
+        close: true,
+        error: false,
+        chatId: chat?.id ?? null,
+      });
+      return;
+    }
+
     // If in query mode and no context chunks are found from search, backfill, or pins -  do not
     // let the LLM try to hallucinate a response or use general knowledge and exit early
     if (chatMode === "query" && contextTexts.length === 0) {

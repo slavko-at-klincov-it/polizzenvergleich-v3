@@ -2,15 +2,26 @@ const crypto = require("crypto");
 const {
   ComparisonDocumentInventory,
 } = require("../../models/comparisonDocumentInventory");
-const { PageAwareTextSplitter } = require("../PageAwareTextSplitter");
 const {
-  ComparisonInventoryExtractor,
-  EXTRACTION_VERSION,
-} = require("./ComparisonInventoryExtractor");
+  ComparisonClauseBlockBuilder,
+} = require("./ComparisonAnalysisUnitBuilder");
+const {
+  ComparisonAmbiguousFactResolver,
+  FACT_EXTRACTION_VERSION,
+} = require("./ComparisonFactMapper");
+const { ComparisonFactRiskSignals } = require("./ComparisonFactRiskSignals");
+const {
+  ComparisonDeterministicFactExtractor,
+} = require("./ComparisonDeterministicFactExtractor");
+const { ComparisonClauseBlockIndex } = require("./ComparisonClauseBlockIndex");
+const {
+  ComparisonClauseEmbeddingIndex,
+} = require("./ComparisonClauseEmbeddingIndex");
 const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 
-const CURRENT_INVENTORY_VERSION = EXTRACTION_VERSION;
+const CURRENT_INVENTORY_VERSION = FACT_EXTRACTION_VERSION;
 const rebuilds = new Map();
+const deletingDocuments = new Set();
 
 class ComparisonInventoryError extends Error {
   constructor(message, code = "comparison_inventory_failed") {
@@ -57,13 +68,6 @@ function uniqueStrings(values = []) {
   return result;
 }
 
-function pageMethods(documentData = {}) {
-  const pages = PageAwareTextSplitter.extractionPages(documentData) || [];
-  return new Map(
-    pages.map((page) => [page.pageNumber, page.extractionMethod || "native"])
-  );
-}
-
 function documentSourceHash(documentData = {}) {
   return normalizedSourceHash(
     documentData?.pdfExtraction?.sourceSha256 ||
@@ -73,7 +77,6 @@ function documentSourceHash(documentData = {}) {
 
 function extractionItems(extraction, documentData) {
   if (Array.isArray(extraction?.items)) return extraction.items;
-  const methods = pageMethods(documentData);
   const items = [];
   for (const topic of extraction?.topics || []) {
     if (topic.origin === "fallback") continue;
@@ -95,7 +98,7 @@ function extractionItems(extraction, documentData) {
         aliases: uniqueStrings(topic.aliases || topic.terms || []),
         pageNumber: occurrence.page,
         evidenceText: occurrence.evidence,
-        sourceMethod: methods.get(occurrence.page) || "native",
+        sourceMethod: occurrence.sourceMethod || "native",
         confidence: occurrence.evidenceValidation === "exact" ? 1 : 0.9,
       });
     }
@@ -117,8 +120,10 @@ function manifestCurrent(manifest, expectedSourceSha256 = null) {
   return (
     manifest?.status === "ready" &&
     manifest.version === CURRENT_INVENTORY_VERSION &&
-    manifest.itemCount > 0 &&
     manifest.itemCount === manifest.items.length &&
+    manifest.analysisCoverage?.unitCount > 0 &&
+    manifest.analysisCoverage.validatedUnitCount ===
+      manifest.analysisCoverage.unitCount &&
     manifest.pageCount > 0 &&
     source != null &&
     inventorySource === source &&
@@ -129,7 +134,7 @@ function manifestCurrent(manifest, expectedSourceSha256 = null) {
 async function buildInventory({ comparisonDocument, documentData, Connector }) {
   if (!comparisonDocument?.id)
     throw new ComparisonInventoryError("Vergleichsdokument fehlt.");
-  const existing = await ComparisonDocumentInventory.get(comparisonDocument.id);
+  let analysisRunId = null;
   try {
     const storedSource = normalizedSourceHash(comparisonDocument.sourceSha256);
     const canonicalSource = documentSourceHash(documentData);
@@ -139,31 +144,115 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
       throw new Error(
         "Canonical PDF source hash does not match the existing FTS/vector index."
       );
-    await ComparisonDocumentInventory.markBuilding({
+    const coverage = ComparisonClauseBlockBuilder.build({ documentData });
+    const preparedUnits = coverage.units.map((unit) => ({
+      ...unit,
+      riskSignals: ComparisonFactRiskSignals.detect(unit.text, {
+        sourceStart: unit.sourceStart,
+      }),
+    }));
+    const deterministicResults = new Map(
+      preparedUnits.map((unit) => [
+        unit.blockKey,
+        ComparisonDeterministicFactExtractor.extract(unit, unit.riskSignals),
+      ])
+    );
+    const prepared = await ComparisonDocumentInventory.prepareAnalysis({
       comparisonDocumentId: comparisonDocument.id,
       version: CURRENT_INVENTORY_VERSION,
-    });
-    const extraction = await ComparisonInventoryExtractor.extract({
-      documentData,
-      Connector,
-    });
-    const items = extractionItems(extraction, documentData);
-    const manifest = await ComparisonDocumentInventory.replace({
-      comparisonDocumentId: comparisonDocument.id,
-      version: CURRENT_INVENTORY_VERSION,
-      pageCount: extraction.pageCount,
       sourceSha256: canonicalSource,
-      items,
+      pageCount: coverage.pageCount,
+      units: preparedUnits,
+    });
+    analysisRunId = prepared.analysisRunId;
+    await ComparisonDocumentInventory.persistBlockSignals({
+      analysisRunId,
+      signalsByBlock: new Map(
+        preparedUnits.map((unit) => [unit.blockKey, unit.riskSignals])
+      ),
+    });
+    await ComparisonClauseBlockIndex.indexRun({
+      analysisRunId,
+      comparisonDocumentId: comparisonDocument.id,
+    });
+    await ComparisonClauseEmbeddingIndex.indexRun({
+      analysisRunId,
+      comparisonDocument,
+    });
+
+    const successfulStatuses =
+      ComparisonDocumentInventory.successfulBlockStatuses;
+    const pendingKeys = new Set(
+      prepared.units
+        .filter((unit) => !successfulStatuses.has(unit.status))
+        .map((unit) => unit.blockKey)
+    );
+    const ambiguousUnits = [];
+    for (const unit of preparedUnits.filter((item) =>
+      pendingKeys.has(item.blockKey)
+    )) {
+      const deterministic = deterministicResults.get(unit.blockKey);
+      if (!deterministic.requiresReview) {
+        await ComparisonDocumentInventory.completeAnalysisUnit({
+          analysisRunId,
+          unitKey: unit.blockKey,
+          facts: deterministic.facts,
+          reviewCount: 0,
+          resultKind:
+            deterministic.terminalStatus === "technical_non_content"
+              ? "technical_non_content"
+              : "facts",
+          noFactReason: deterministic.reasonCode,
+        });
+        continue;
+      }
+      await ComparisonDocumentInventory.markBlockAmbiguous({
+        analysisRunId,
+        blockKey: unit.blockKey,
+        reasonCode: deterministic.reasonCode,
+      });
+      ambiguousUnits.push({ ...unit, unitKey: unit.blockKey });
+    }
+
+    const extraction = await ComparisonAmbiguousFactResolver.extract({
+      units: ambiguousUnits,
+      Connector,
+      onUnitValidated: async (result) => {
+        const deterministic = deterministicResults.get(result.unit.unitKey);
+        const combined = [
+          ...(deterministic?.facts || []),
+          ...(result.facts || []),
+        ];
+        const facts = [
+          ...new Map(combined.map((fact) => [fact.factKey, fact])).values(),
+        ];
+        await ComparisonDocumentInventory.completeAnalysisUnit({
+          analysisRunId,
+          comparisonDocumentId: comparisonDocument.id,
+          unitKey: result.unit.unitKey,
+          facts,
+          reviewCount: result.reviewCount,
+          resultKind: facts.length ? "facts" : result.resultKind,
+          noFactReason: result.noFactReason,
+        });
+      },
+    });
+    const manifest = await ComparisonDocumentInventory.finalizeAnalysis({
+      analysisRunId,
+      comparisonDocumentId: comparisonDocument.id,
+      version: CURRENT_INVENTORY_VERSION,
+      sourceSha256: canonicalSource,
     });
     return { manifest, extraction };
   } catch (error) {
-    // A failed regeneration must never destroy a previously usable inventory.
-    await ComparisonDocumentInventory.markFailed({
-      comparisonDocumentId: comparisonDocument.id,
-      version: CURRENT_INVENTORY_VERSION,
-      pageCount: existing?.pageCount || 0,
-      error: error.message,
-    });
+    // Validated unit checkpoints and the independent FTS/Lance basis index
+    // survive. A retry resumes only units that did not validate.
+    if (analysisRunId)
+      await ComparisonDocumentInventory.markAnalysisFailed({
+        analysisRunId,
+        comparisonDocumentId: comparisonDocument.id,
+        error: error.message,
+      });
     throw new ComparisonInventoryError(
       `Das offene Klauselinventar für Dokument ${comparisonDocument.slot || "?"} konnte nicht erstellt werden: ${error.message}`
     );
@@ -171,6 +260,11 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
 }
 
 function rebuildForDocument({ document, Connector }) {
+  if (deletingDocuments.has(document.id))
+    throw new ComparisonInventoryError(
+      "Das Vergleichsdokument wird gerade entfernt.",
+      "comparison_inventory_document_deleting"
+    );
   const existing = rebuilds.get(document.id);
   if (existing) return { operation: existing, started: false };
 
@@ -178,12 +272,6 @@ function rebuildForDocument({ document, Connector }) {
     const { fileData } = require("../files");
     const documentData = await fileData(document.docpath);
     if (!documentData) {
-      await ComparisonDocumentInventory.markFailed({
-        comparisonDocumentId: document.id,
-        version: CURRENT_INVENTORY_VERSION,
-        pageCount: document.inventoryPageCount || 0,
-        error: `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
-      });
       throw new ComparisonInventoryError(
         `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
         "comparison_inventory_source_missing"
@@ -256,16 +344,19 @@ const ComparisonInventoryService = {
   async reconcileInterrupted({ documents = [] }) {
     let changed = false;
     for (const document of documents) {
-      if (document.inventoryStatus !== "building" || rebuilds.has(document.id))
-        continue;
-      await ComparisonDocumentInventory.markFailed({
-        comparisonDocumentId: document.id,
-        version: CURRENT_INVENTORY_VERSION,
-        pageCount: document.inventoryPageCount || 0,
-        error:
-          "Die Tiefenanalyse wurde durch einen Serverneustart unterbrochen und kann erneut gestartet werden.",
-      });
-      changed = true;
+      if (rebuilds.has(document.id)) continue;
+      const interrupted = await ComparisonDocumentInventory.interruptedRuns(
+        document.id
+      );
+      for (const run of interrupted) {
+        await ComparisonDocumentInventory.markAnalysisFailed({
+          analysisRunId: run.id,
+          comparisonDocumentId: document.id,
+          error:
+            "Die Tiefenanalyse wurde durch einen Serverneustart unterbrochen und kann fortgesetzt werden.",
+        });
+        changed = true;
+      }
     }
     return changed;
   },
@@ -337,7 +428,23 @@ const ComparisonInventoryService = {
   },
 
   async clear(comparisonDocumentId) {
-    return ComparisonDocumentInventory.clear(comparisonDocumentId);
+    const documentId = Number(comparisonDocumentId);
+    deletingDocuments.add(documentId);
+    try {
+      // A provider call is not assumed cancellable. Wait for its real
+      // settlement, then take a fresh artifact snapshot so no late vector or
+      // FTS write can escape scoped cleanup.
+      const active = rebuilds.get(documentId);
+      if (active) await active.catch(() => null);
+      const artifacts =
+        await ComparisonDocumentInventory.analysisArtifacts(documentId);
+      for (const runId of artifacts.runIds)
+        await ComparisonClauseBlockIndex.removeRun(runId);
+      await ComparisonClauseEmbeddingIndex.removeVectorIds(artifacts.vectorIds);
+      return ComparisonDocumentInventory.clear(documentId);
+    } finally {
+      deletingDocuments.delete(documentId);
+    }
   },
 };
 
