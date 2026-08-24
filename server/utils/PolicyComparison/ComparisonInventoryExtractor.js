@@ -11,6 +11,11 @@ const MIN_BATCH_CHAR_BUDGET = 256;
 const FRAGMENT_MARKER_RESERVE = 96;
 const TARGET_FRAGMENT_OVERLAP = 200;
 async function inventoryCompletion(Connector, messages) {
+  if (typeof Connector?.getPolicyInventoryCompletion === "function")
+    return PolicyInferenceQueue.runOperation({
+      operation: () =>
+        Connector.getPolicyInventoryCompletion(messages, { temperature: 0 }),
+    });
   return PolicyInferenceQueue.run({
     Connector,
     messages,
@@ -424,8 +429,9 @@ function reduceTopics(validatedTopics = [], fallbackTopics = []) {
 /**
  * Maps every canonical PDF page through an explicitly injected chat connector,
  * validates all quoted evidence locally, and reduces only grounded candidates.
- * Network side effect: `extract` calls `Connector.getChatCompletion` once per
- * batch. Pure/testable boundaries: batching, validation, and reduction.
+ * Network side effect: `extract` calls the connector's dedicated policy
+ * inventory completion when available, otherwise `getChatCompletion`, once
+ * per batch. Pure/testable boundaries: batching, validation, and reduction.
  * Failure mode: invalid page maps or model JSON reject the whole extraction;
  * individual ungrounded candidates are reported and never become inventory.
  */

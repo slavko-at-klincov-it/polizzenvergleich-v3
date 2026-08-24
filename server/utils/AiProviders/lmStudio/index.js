@@ -38,6 +38,7 @@ class LMStudioLLM {
 
     // Lazy load the limits to avoid blocking the main thread on cacheContextWindows
     this.limits = null;
+    this.policyInventoryReasoning = undefined;
 
     LMStudioLLM.cacheContextWindows(true);
     this.#log(`initialized with model: ${this.model}`);
@@ -261,6 +262,140 @@ class LMStudioLLM {
         timestamp: new Date(),
       },
     };
+  }
+
+  /**
+   * Runs policy inventory extraction through LM Studio's native API so that
+   * auxiliary document analysis can disable reasoning without changing the
+   * selected model's default for normal chats.
+   *
+   * This method is intentionally separate from getChatCompletion: user chat
+   * and streaming continue to use the existing OpenAI-compatible contract.
+   * @param {Array<{role: string, content: string}>} messages
+   * @param {{temperature?: number}} options
+   * @returns {Promise<{textResponse: string, metrics: object}>}
+   */
+  async getPolicyInventoryCompletion(messages = [], { temperature = 0 } = {}) {
+    if (!this.model)
+      throw new Error(
+        "LMStudio policy inventory: no valid chat model is configured."
+      );
+
+    const systemPrompt = messages
+      .filter(({ role }) => role === "system")
+      .map(({ content }) => String(content || ""))
+      .filter(Boolean)
+      .join("\n\n");
+    const input = messages
+      .filter(({ role }) => role !== "system")
+      .map(({ role, content }) =>
+        role === "user"
+          ? String(content || "")
+          : `${String(role || "message").toUpperCase()}:\n${String(content || "")}`
+      )
+      .filter(Boolean)
+      .join("\n\n");
+    if (!input)
+      throw new Error("LMStudio policy inventory requires a user input.");
+
+    const endpoint = new URL(
+      parseLMStudioBasePath(process.env.LMSTUDIO_BASE_PATH, "v1")
+    );
+    endpoint.pathname = `${endpoint.pathname.replace(/\/$/u, "")}/chat`;
+    const apiKey = process.env.LMSTUDIO_AUTH_TOKEN ?? null;
+    const reasoning = await this.#policyInventoryReasoningMode(apiKey);
+    const measured = await LLMPerformanceMonitor.measureAsyncFunction(
+      fetch(endpoint.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: this.model,
+          input,
+          ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
+          ...(reasoning ? { reasoning } : {}),
+          temperature,
+          max_output_tokens: 8_192,
+          stream: false,
+        }),
+      }).then(async (response) => {
+        if (!response.ok)
+          throw new Error(
+            `LMStudio native policy inventory request failed (${response.status}).`
+          );
+        return response.json();
+      })
+    );
+    const visibleText = (measured.output?.output || [])
+      .filter(({ type }) => type === "message")
+      .map(({ content }) => (typeof content === "string" ? content : ""))
+      .join("")
+      .trim();
+    if (!visibleText)
+      throw new Error(
+        "LMStudio native policy inventory returned no visible JSON response."
+      );
+
+    const stats = measured.output?.stats || {};
+    const completionTokens = Number(stats.total_output_tokens) || 0;
+    return {
+      textResponse: visibleText,
+      metrics: {
+        prompt_tokens: Number(stats.input_tokens) || 0,
+        completion_tokens: completionTokens,
+        total_tokens: (Number(stats.input_tokens) || 0) + completionTokens,
+        reasoning_tokens: Number(stats.reasoning_output_tokens) || 0,
+        outputTps: Number(stats.tokens_per_second) || 0,
+        duration: measured.duration,
+        model: this.model,
+        provider: this.className,
+        timestamp: new Date(),
+      },
+    };
+  }
+
+  async #policyInventoryReasoningMode(apiKey) {
+    if (this.policyInventoryReasoning !== undefined)
+      return this.policyInventoryReasoning;
+
+    const endpoint = new URL(
+      parseLMStudioBasePath(process.env.LMSTUDIO_BASE_PATH, "v1")
+    );
+    endpoint.pathname = `${endpoint.pathname.replace(/\/$/u, "")}/models`;
+    const response = await fetch(endpoint.toString(), {
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+    });
+    if (!response.ok)
+      throw new Error(
+        `LMStudio policy inventory could not inspect model capabilities (${response.status}).`
+      );
+    const { models = [] } = await response.json();
+    const selectedModel = models.find(
+      (model) =>
+        model.key === this.model ||
+        model.loaded_instances?.some((instance) => instance.id === this.model)
+    );
+    if (!selectedModel)
+      throw new Error(
+        `LMStudio policy inventory model '${this.model}' is not available.`
+      );
+
+    const reasoning = selectedModel.capabilities?.reasoning;
+    if (!reasoning) {
+      this.policyInventoryReasoning = null;
+      return this.policyInventoryReasoning;
+    }
+    if (!reasoning.allowed_options?.includes("off"))
+      throw new Error(
+        `LMStudio model '${this.model}' cannot disable reasoning for policy inventory extraction.`
+      );
+    this.policyInventoryReasoning = "off";
+    return this.policyInventoryReasoning;
   }
 
   async streamGetChatCompletion(messages = null, { temperature = 0.7 }) {

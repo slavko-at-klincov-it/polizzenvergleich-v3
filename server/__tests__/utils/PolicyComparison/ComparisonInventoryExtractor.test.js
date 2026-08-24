@@ -30,6 +30,42 @@ function pageAwareDocument(pageTexts) {
 }
 
 describe("ComparisonInventoryExtractor", () => {
+  test("uses a connector's dedicated policy inventory completion when available", async () => {
+    const text = "Vandalismus ist bis EUR 25.000 versichert.";
+    const Connector = {
+      getChatCompletion: jest.fn(async () => {
+        throw new Error("generic chat completion must not be used");
+      }),
+      getPolicyInventoryCompletion: jest.fn(async () => ({
+        textResponse: JSON.stringify({
+          topics: [
+            {
+              label: "Vandalismus",
+              aliases: ["mutwillige Beschädigung"],
+              page: 1,
+              evidence: text,
+            },
+          ],
+        }),
+      })),
+    };
+
+    const result = await ComparisonInventoryExtractor.extract({
+      documentData: pageAwareDocument([text]),
+      Connector,
+      fallbackTopics: [],
+    });
+
+    expect(result.inventoryItems).toEqual([
+      expect.objectContaining({ label: "Vandalismus", pageNumber: 1 }),
+    ]);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledWith(
+      expect.any(Array),
+      { temperature: 0 }
+    );
+    expect(Connector.getChatCompletion).not.toHaveBeenCalled();
+  });
+
   test("extracts a grounded page-less inventory without inventing a page", async () => {
     const text = "Vandalismus ist bis EUR 25.000 versichert.";
     const Connector = {

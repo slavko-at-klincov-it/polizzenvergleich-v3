@@ -380,6 +380,7 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/PolicyComparison/ComparisonHybridRetriever.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonBatchSynthesizer.test.js \
   server/__tests__/utils/PolicyComparison/registerLifecycleHooks.test.js \
+  server/__tests__/utils/AiProviders/lmStudio/policyInventoryCompletion.test.js \
   server/__tests__/utils/boot/localBinding.test.js \
   server/__tests__/utils/boot/localProductCors.test.js \
   server/__tests__/utils/middleware/simpleSSOEnabled.test.js \
