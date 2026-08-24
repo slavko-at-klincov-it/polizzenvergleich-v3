@@ -493,7 +493,8 @@ model comparison_document_analysis_runs {
   embeddings           comparison_document_block_embeddings[]
   evidences            comparison_document_fact_evidence[]
 
-  // SQLite migration adds a partial unique index for one active staged run.
+  // SQLite migration adds a partial unique index for one active staged run,
+  // including a completed deterministic-only `ledger_ready` prerequisite.
   // Ready snapshots with the same source/version remain immutable and may
   // coexist until controlled post-publish cleanup.
   @@index([comparisonDocumentId, pipelineVersion, sourceSha256], map: "comparison_document_analysis_runs_identity_idx")

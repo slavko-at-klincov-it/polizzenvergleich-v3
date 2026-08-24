@@ -322,7 +322,7 @@ describe("ComparisonDocumentInventory run staging", () => {
         comparisonDocumentId: 7,
         sourceSha256: SOURCE_A,
         id: { not: 41 },
-        status: { in: ["building", "retryable_failed"] },
+        status: { in: ["building", "ledger_ready", "retryable_failed"] },
       }),
       orderBy: [{ id: "desc" }],
     });
@@ -355,6 +355,36 @@ describe("ComparisonDocumentInventory run staging", () => {
     ).toHaveBeenCalledWith({
       where: { id: 42 },
       data: expect.objectContaining({ status: "building", error: null }),
+    });
+    expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
+  });
+
+  test("marks a fully indexed deterministic ledger terminal without publishing inventory", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 42,
+      comparisonDocumentId: 7,
+      expectedBlockCount: 1,
+      status: "building",
+    });
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      { ftsStatus: "ready", embeddingStatus: "ready" },
+    ]);
+
+    await expect(
+      ComparisonDocumentInventory.markDeterministicLedgerReady({
+        analysisRunId: 42,
+        comparisonDocumentId: 7,
+      })
+    ).resolves.toEqual(expect.objectContaining({ status: "ledger_ready" }));
+
+    expect(
+      prisma.comparison_document_analysis_runs.update
+    ).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: expect.objectContaining({
+        status: "ledger_ready",
+        error: null,
+      }),
     });
     expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
   });

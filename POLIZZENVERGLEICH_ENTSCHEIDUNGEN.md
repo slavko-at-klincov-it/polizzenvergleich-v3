@@ -363,7 +363,28 @@ vertikale Schnitt benötigt für die Antwort null generative Modellaufrufe.
 Ein bereits veröffentlichter Analyse-Run wird unverändert wiederverwendet; eine
 kurze Frage erzeugt daneben keinen neuen Staging-Run.
 
-Bewusste Grenze: Semantische Dinghy-Treffer ohne deterministisch belegbares
-Selbstbehalt-Signal werden noch nicht als Fakt ausgegeben. Damit bleibt der
-Pfad bei unbekannten Umschreibungen fail-closed, bis eine kleine, streng
-beleggebundene Ambiguitätsprüfung separat evaluiert wurde.
+### Nachschärfung nach dem ersten Systemvergleich
+
+Der deterministische Ledger erhält den terminalen Zustand `ledger_ready`.
+Dieser Zustand bedeutet ausschließlich, dass Clause Blocks, Signale, FTS und
+Dinghy vollständig vorbereitet sind. Er veröffentlicht kein Vollinventar und
+wird nach einem Neustart nicht als abgebrochene Tiefenanalyse markiert.
+
+Gezielte Ledger-Vorbereitung und vollständige Analyse teilen eine serielle
+Dokument-Sperre. Sie dürfen nicht gleichzeitig FTS, Signale oder Blockstatus
+desselben staged Runs verändern.
+
+Beträge und Bedingungen werden nur aus der exakten Fakt-Evidenz oder aus einer
+unmittelbar benachbarten, gleich gescopten Tabellenzeile übernommen. Eine bloß
+gleiche Überschrift in zwei normalen Nachbarabsätzen reicht nicht.
+
+Dinghy-only- und schwache Alias-Kandidaten dürfen eine kleine, streng
+beleggebundene Ambiguitätsprüfung auslösen. Sie ist auf höchstens 16 Kandidaten
+und Batches zu je höchstens 8 Kandidaten begrenzt. Qwen bestätigt nur die Rolle
+`Selbstbehalt`; der Server validiert das exakte Zitat, leitet Betrag und Seite
+aus dem Quellblock ab und besitzt weiterhin jede Ergebniszeile. Nicht eindeutig
+bestätigte Kandidaten werden sichtbar gemeldet und nicht als Treffer ausgegeben.
+
+Gemischte Anfragen wie „Selbstbehalte und Deckungsgrenzen“ dürfen den
+Selbstbehalt-Spezialpfad nicht kapern. Bis weitere vertikale Resolver existieren,
+ist dieser Pfad ausschließlich für reine Selbstbehalt-Fragen zuständig.

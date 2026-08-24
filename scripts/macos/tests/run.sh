@@ -151,6 +151,7 @@ sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260823210000_allow_pa
 sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,pageNumber,evidenceText,evidenceHash,sourceMethod,createdAt) VALUES (7,"pageless","DOCX","[]",NULL,"Beleg ohne Seite","hash2","llm-map",CURRENT_TIMESTAMP);'
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE pageNumber IS NULL;')" = '1' ]
 sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260824120000_add_comparison_fact_coverage/migration.sql"
+sqlite3 "$inventory_db" <"$REPO/server/prisma/migrations/20260824163000_add_ledger_ready_run_state/migration.sql"
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_inventory_items WHERE factKey IN ("legacy","pageless");')" = '2' ]
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM pragma_table_info("comparison_documents") WHERE name="publishedAnalysisRunId";')" = '1' ]
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM sqlite_master WHERE type="table" AND name IN ("comparison_document_analysis_runs","comparison_document_clause_blocks","comparison_document_block_signals","comparison_document_block_embeddings","comparison_document_fact_evidence","comparison_document_clause_blocks_fts");')" = '6' ]
@@ -159,6 +160,7 @@ sqlite3 "$inventory_db" 'INSERT INTO comparison_document_analysis_runs (comparis
 [ "$(sqlite3 "$inventory_db" 'SELECT publishedAnalysisRunId FROM comparison_documents WHERE id=7;')" = '1' ]
 [ "$(sqlite3 "$inventory_db" 'SELECT COUNT(*) FROM comparison_document_analysis_runs WHERE pipelineVersion=4 AND sourceSha256=printf("%064d",1);')" = '3' ]
 ! sqlite3 "$inventory_db" 'INSERT INTO comparison_document_analysis_runs (comparisonDocumentId,pipelineVersion,sourceSha256,pageCount,status) VALUES (7,4,printf("%064d",1),1,"building");' 2>/dev/null
+! sqlite3 "$inventory_db" 'INSERT INTO comparison_document_analysis_runs (comparisonDocumentId,pipelineVersion,sourceSha256,pageCount,status) VALUES (7,4,printf("%064d",1),1,"ledger_ready");' 2>/dev/null
 ! sqlite3 "$inventory_db" 'UPDATE comparison_documents SET publishedAnalysisRunId=2 WHERE id=7;' 2>/dev/null
 ! sqlite3 "$inventory_db" 'UPDATE comparison_document_analysis_runs SET status="retryable_failed" WHERE id=1;' 2>/dev/null
 ! sqlite3 "$inventory_db" 'INSERT INTO comparison_document_inventory_items (comparisonDocumentId,factKey,label,aliasesJson,evidenceText,evidenceHash) VALUES (7,"legacy","Duplicate legacy","[]","duplicate","duplicate");' 2>/dev/null
@@ -394,6 +396,7 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/PolicyComparison/ComparisonClauseEmbeddingIndex.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonClauseIndexes.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonDeterministicFactExtractor.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonDeductibleCandidateResolver.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonDeductibleRetriever.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonFactMapper.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonFactTable.test.js \

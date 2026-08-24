@@ -76,6 +76,11 @@ describe("ComparisonDeductibleRetriever", () => {
         Versicherungssumme / Sublimit | Selbstbehalt | Voraussetzungen.
       `)
     ).toBe(false);
+    expect(
+      ComparisonDeductibleRetriever.matches(
+        "Vergleiche Selbstbehalte und Deckungsgrenzen."
+      )
+    ).toBe(false);
   });
 
   test("renders every lexical deductible occurrence with amount, condition, heading and physical page without a model call", async () => {
@@ -132,6 +137,9 @@ describe("ComparisonDeductibleRetriever", () => {
       documents: 1,
       matchedRows: 2,
       modelCalls: 0,
+      generativeModelCalls: 0,
+      semanticQueryEmbeddingCalls: 1,
+      unresolvedCandidates: 0,
     });
     expect(result.deterministicTextResponse).toContain("Feuer");
     expect(result.deterministicTextResponse).toContain("350 EUR");
@@ -202,6 +210,90 @@ describe("ComparisonDeductibleRetriever", () => {
 
     expect(result.deterministicTextResponse).toContain("750 EUR");
     expect(result.deterministicTextResponse).not.toContain("9.999");
+  });
+
+  test("does not borrow an unrelated amount from an adjacent ordinary paragraph with the same heading", async () => {
+    const document = { id: 1, slot: "A", originalFilename: "A.pdf" };
+    const units = [
+      {
+        id: 31,
+        blockKey: "deductible-label",
+        ordinal: 1,
+        pageNumber: 2,
+        sourceStart: 0,
+        text: "Selbstbehalt laut Vereinbarung.",
+        structureKind: "paragraph",
+        headingPath: ["Feuer"],
+        deductibleEvidence: "Selbstbehalt laut Vereinbarung.",
+        riskSignals: [],
+      },
+      {
+        id: 32,
+        blockKey: "coverage-limit",
+        ordinal: 2,
+        pageNumber: 2,
+        sourceStart: 40,
+        text: "Höchstentschädigung EUR 50.000.",
+        structureKind: "paragraph",
+        headingPath: ["Feuer"],
+        riskSignals: [signal("money", "EUR 50.000", "50000", 61)],
+      },
+    ];
+    const inventoryService = {
+      ensureDeterministicLedgerForDocuments: jest.fn(async () => [
+        ledger({ document, analysisRunId: 45, units }),
+      ]),
+    };
+    ComparisonClauseBlockIndex.searchAllRun.mockResolvedValue([
+      { blockId: 31 },
+    ]);
+    ComparisonClauseEmbeddingIndex.semanticLinks.mockResolvedValue([]);
+
+    const result = await ComparisonDeductibleRetriever.retrieve({
+      documents: [document],
+      inventoryService,
+    });
+
+    expect(result.deterministicTextResponse).toContain(
+      "keine Betragsangabe im Beleg"
+    );
+    expect(result.deterministicTextResponse).not.toContain("50.000");
+  });
+
+  test("does not treat an unqualified generic 'selbst zu tragen' cost as a deductible", async () => {
+    const document = { id: 1, slot: "A", originalFilename: "A.pdf" };
+    const text = "Nicht ersetzte Reisekosten sind selbst zu tragen.";
+    const unit = {
+      id: 41,
+      blockKey: "generic-cost",
+      ordinal: 0,
+      pageNumber: 7,
+      sourceStart: 0,
+      text,
+      structureKind: "paragraph",
+      headingPath: ["Allgemeine Kosten"],
+      deductibleEvidence: text,
+      riskSignals: [
+        signal("deductible", "selbst zu tragen", "selbst zu tragen", 29),
+      ],
+    };
+    const inventoryService = {
+      ensureDeterministicLedgerForDocuments: jest.fn(async () => [
+        ledger({ document, analysisRunId: 46, units: [unit] }),
+      ]),
+    };
+    ComparisonClauseBlockIndex.searchAllRun.mockResolvedValue([
+      { blockId: 41 },
+    ]);
+    ComparisonClauseEmbeddingIndex.semanticLinks.mockResolvedValue([]);
+
+    const result = await ComparisonDeductibleRetriever.retrieve({
+      documents: [document],
+      inventoryService,
+    });
+
+    expect(result.rows).toHaveLength(0);
+    expect(result.coverage.unresolvedCandidates).toBe(1);
   });
 
   test("keeps every anonymized gold-case deductible as a separate evidenced row", async () => {

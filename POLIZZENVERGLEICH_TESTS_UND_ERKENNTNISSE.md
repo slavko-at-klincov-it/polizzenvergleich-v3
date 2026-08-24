@@ -456,12 +456,30 @@ abgesichert:
 - ein veröffentlichter Run wird wiederverwendet und nicht neu gestaged,
 - die vorhandenen atomaren Publish-/Evidence-Gates bleiben unverändert.
 
-Fokussierter Stand vor dem vollständigen Release-Gate: 5 Suites / 79 Tests
-PASS. Das beweist den kontrollierten Selbstbehalt-Pfad und die betroffenen
-Persistenzgrenzen. Es beweist noch nicht die reale Laufzeit auf dem Kunden-Mac
-oder die vollständige Erkennung bislang unbekannter semantischer
-Selbstbehalt-Umschreibungen.
+Der erste fokussierte Stand vor dem vollständigen Release-Gate war 5 Suites /
+79 Tests PASS. Die anschließende Systemprüfung zeigte zusätzliche Grenzen, die
+in einem Korrekturlauf abgesichert wurden:
+
+- `ledger_ready` bleibt nach Neustart ein fertiger deterministischer Ledger und
+  erzeugt keinen falschen Tiefenanalyse-Fehler,
+- Targeted-Ledger und Full-Analyse werden pro Dokument serialisiert,
+- normale Nachbarabsätze dürfen keine fremden Beträge liefern,
+- „selbst zu tragen“ ohne Selbstbehalt-Kontext wird nicht deterministisch als
+  Selbstbehalt ausgegeben,
+- eine semantische Bestätigung muss ein exaktes, eindeutiges Quellzitat liefern,
+- gemischte Themenfragen werden nicht als reine Selbstbehalt-Frage geroutet.
+
+Der fokussierte Korrekturstand umfasst 5 Suites / 83 Tests PASS. Er beweist
+weiterhin nicht die reale Erstlaufzeit der vollständigen Clause-Dinghy-
+Vorbereitung auf dem Kunden-Mac; diese Messung bleibt vor Freigabe verpflichtend.
 
 Der anschließend genau einmal ausgeführte vollständige technische Gate-Lauf
 war grün: 44 Suites / 304 Tests sowie Installer-, additive Migrations-,
 LM-Studio-, OCR-, FTS-, Lance- und 2560-Dimensionsverträge PASS.
+
+Nach der Lifecycle-/Ambiguitätskorrektur wurde das vollständige Gate wiederum
+genau einmal ausgeführt: 44 Suites / 309 Tests sowie Installer-, additive
+Migration-, LM-Studio-, OCR-, FTS-, Lance- und 2560-Dimensionsverträge PASS.
+Der neue isolierte Candidate-Resolver-Test war im fokussierten 5-Suite-Lauf
+enthalten und wurde anschließend zusätzlich in die künftige Gate-Liste
+aufgenommen.

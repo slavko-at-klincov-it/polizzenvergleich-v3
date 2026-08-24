@@ -488,6 +488,7 @@ const ComparisonHybridRetriever = {
         const targeted = await ComparisonDeductibleRetriever.retrieve({
           documents: ordered,
           inventoryService,
+          Connector: LLMConnector,
         });
         return {
           active: true,

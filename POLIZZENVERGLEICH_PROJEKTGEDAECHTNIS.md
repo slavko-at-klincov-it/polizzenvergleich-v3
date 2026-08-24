@@ -1,7 +1,7 @@
 # Polizzenvergleich – Projektgedächtnis
 
 Stand: 24. August 2026
-Dokumentationsbasis: `policy-v0.3.22` (`17a556dc`)
+Dokumentationsbasis: Entwicklungsstand nach `policy-v0.3.22` (`17a556dc`)
 Gültigkeit: Dieses Dokument ist der Einstiegspunkt für Entwicklung, Diagnose
 und weitere Architekturentscheidungen dieser Fork.
 
@@ -80,13 +80,20 @@ beim Makler.
 - globale Serialisierung lokaler Modell- und Embeddingoperationen,
 - deterministic Row Planner, der keine validierten Fakten still auslassen darf,
 - lokaler Single-User-Betrieb ohne Login und ausschließlich lokale Ports.
+- gezielte Selbstbehalt-Fragen vor dem Vollinventar: vollständige Clause-FTS-
+  Enumeration, Dinghy-Ergänzung, codebasierte Zeilen und höchstens kleine,
+  beleggebundene Ambiguitätsbatches,
+- terminaler `ledger_ready`-Zustand ohne falsche Tiefenanalyse-Meldung sowie
+  gemeinsame Dokument-Serialisierung für Targeted- und Full-Analyse.
 
 ### Was fachlich noch nicht kundenfähig ist
 
-Der aktuelle `policy-v0.3.22`-Pfad erzwingt bei der ersten Dokumentfrage einen
-vollständigen Faktenlauf. Die deterministische Vorstufe markiert bei realen,
-klauseldichten Dokumenten zu viele Blöcke als `ambiguous_pending`. Fast alle
-diese Blöcke werden anschließend an Qwen geschickt.
+Der breite Vollanalysepfad aus `policy-v0.3.22` markiert bei realen,
+klauseldichten Dokumenten weiterhin zu viele Blöcke als `ambiguous_pending`.
+Fast alle diese Blöcke werden anschließend an Qwen geschickt. Reine
+Selbstbehalt-Fragen umgehen diesen Pfad im aktuellen Entwicklungsstand bereits;
+für weitere Themen und den vollständigen Maklerprompt ist die Umstellung noch
+nicht abgeschlossen.
 
 Der gemessene reale Lauf hatte:
 

@@ -397,6 +397,21 @@ const ComparisonDocumentInventory = {
     });
   },
 
+  async readyDeterministicRun({ comparisonDocumentId, version, sourceSha256 }) {
+    return prisma.comparison_document_analysis_runs.findFirst({
+      where: {
+        comparisonDocumentId: positiveInteger(
+          comparisonDocumentId,
+          "comparisonDocumentId"
+        ),
+        pipelineVersion: positiveInteger(version, "version"),
+        sourceSha256: sourceHash(sourceSha256),
+        status: "ledger_ready",
+      },
+      orderBy: [{ id: "desc" }],
+    });
+  },
+
   async prepareAnalysis({
     comparisonDocumentId,
     version,
@@ -427,7 +442,9 @@ const ComparisonDocumentInventory = {
             comparisonDocumentId: id,
             pipelineVersion,
             sourceSha256: hash,
-            status: { in: ["building", "retryable_failed"] },
+            status: {
+              in: ["building", "ledger_ready", "retryable_failed"],
+            },
             ...(document.publishedAnalysisRunId
               ? { id: { not: document.publishedAnalysisRunId } }
               : {}),
@@ -512,6 +529,52 @@ const ComparisonDocumentInventory = {
         error: null,
         lastUpdatedAt: new Date(),
       },
+    });
+  },
+
+  async markDeterministicLedgerReady({
+    analysisRunId,
+    comparisonDocumentId,
+    requireEmbeddings = true,
+  }) {
+    const runId = positiveInteger(analysisRunId, "analysisRunId");
+    const documentId = positiveInteger(
+      comparisonDocumentId,
+      "comparisonDocumentId"
+    );
+    return prisma.$transaction(async (transaction) => {
+      const run =
+        await transaction.comparison_document_analysis_runs.findUnique({
+          where: { id: runId },
+        });
+      if (!run || run.comparisonDocumentId !== documentId)
+        throw new Error(
+          "Deterministic ledger run does not belong to this document."
+        );
+      if (run.status === "ready") return run;
+      const blocks =
+        await transaction.comparison_document_clause_blocks.findMany({
+          where: { analysisRunId: runId },
+          select: { ftsStatus: true, embeddingStatus: true },
+        });
+      if (
+        blocks.length !== run.expectedBlockCount ||
+        blocks.some((block) => block.ftsStatus !== "ready") ||
+        (requireEmbeddings &&
+          blocks.some((block) => block.embeddingStatus !== "ready"))
+      )
+        throw new Error(
+          "Deterministic ledger cannot be completed before every block is indexed."
+        );
+      return transaction.comparison_document_analysis_runs.update({
+        where: { id: runId },
+        data: {
+          status: "ledger_ready",
+          error: null,
+          completedAt: new Date(),
+          lastUpdatedAt: new Date(),
+        },
+      });
     });
   },
 

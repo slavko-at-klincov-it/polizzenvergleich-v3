@@ -22,6 +22,7 @@ const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 const CURRENT_INVENTORY_VERSION = FACT_EXTRACTION_VERSION;
 const rebuilds = new Map();
 const ledgerBuilds = new Map();
+const documentOperations = new Map();
 const deletingDocuments = new Set();
 
 class ComparisonInventoryError extends Error {
@@ -132,6 +133,23 @@ function manifestCurrent(manifest, expectedSourceSha256 = null) {
   );
 }
 
+function runDocumentOperation(documentId, operation) {
+  const id = Number(documentId);
+  const previous = documentOperations.get(id) || Promise.resolve();
+  const running = previous.then(operation, operation);
+  let tracked;
+  tracked = running
+    .then(
+      () => undefined,
+      () => undefined
+    )
+    .finally(() => {
+      if (documentOperations.get(id) === tracked) documentOperations.delete(id);
+    });
+  documentOperations.set(id, tracked);
+  return running;
+}
+
 async function buildInventory({ comparisonDocument, documentData, Connector }) {
   if (!comparisonDocument?.id)
     throw new ComparisonInventoryError("Vergleichsdokument fehlt.");
@@ -197,6 +215,7 @@ async function prepareDeterministicLedger({
   documentData,
   announceInventory = false,
   includeEmbeddings = true,
+  completeLedger = false,
 }) {
   const storedSource = normalizedSourceHash(comparisonDocument.sourceSha256);
   const canonicalSource = documentSourceHash(documentData);
@@ -288,6 +307,12 @@ async function prepareDeterministicLedger({
       unitKey: unit.blockKey,
     });
   }
+  if (completeLedger)
+    await ComparisonDocumentInventory.markDeterministicLedgerReady({
+      analysisRunId,
+      comparisonDocumentId: comparisonDocument.id,
+      requireEmbeddings: includeEmbeddings,
+    });
   return {
     comparisonDocument,
     analysisRunId,
@@ -310,7 +335,27 @@ function deterministicLedgerForDocument({ document, includeEmbeddings }) {
     );
   const existing = ledgerBuilds.get(document.id);
   if (existing) return existing;
-  const operation = (async () => {
+  const operation = runDocumentOperation(document.id, async () => {
+    const manifest = await ComparisonDocumentInventory.get(document.id);
+    if (
+      manifestCurrent(manifest, document.sourceSha256) &&
+      manifest.analysisRunId
+    )
+      return publishedDeterministicLedger(document, manifest);
+    const expectedSource = normalizedSourceHash(document.sourceSha256);
+    const ledgerRun = expectedSource
+      ? await ComparisonDocumentInventory.readyDeterministicRun({
+          comparisonDocumentId: document.id,
+          version: CURRENT_INVENTORY_VERSION,
+          sourceSha256: expectedSource,
+        })
+      : null;
+    if (ledgerRun)
+      return publishedDeterministicLedger(document, {
+        analysisRunId: ledgerRun.id,
+        inventorySourceSha256: ledgerRun.sourceSha256,
+        pageCount: ledgerRun.pageCount,
+      });
     const { fileData } = require("../files");
     const documentData = await fileData(document.docpath);
     if (!documentData)
@@ -323,8 +368,9 @@ function deterministicLedgerForDocument({ document, includeEmbeddings }) {
       documentData,
       announceInventory: false,
       includeEmbeddings,
+      completeLedger: true,
     });
-  })().finally(() => {
+  }).finally(() => {
     if (ledgerBuilds.get(document.id) === operation)
       ledgerBuilds.delete(document.id);
   });
@@ -380,7 +426,7 @@ function rebuildForDocument({ document, Connector }) {
   const existing = rebuilds.get(document.id);
   if (existing) return { operation: existing, started: false };
 
-  const operation = (async () => {
+  const operation = runDocumentOperation(document.id, async () => {
     const { fileData } = require("../files");
     const documentData = await fileData(document.docpath);
     if (!documentData) {
@@ -394,7 +440,7 @@ function rebuildForDocument({ document, Connector }) {
       documentData,
       Connector,
     });
-  })().finally(() => {
+  }).finally(() => {
     if (rebuilds.get(document.id) === operation) rebuilds.delete(document.id);
   });
   rebuilds.set(document.id, operation);
@@ -477,7 +523,7 @@ const ComparisonInventoryService = {
   async reconcileInterrupted({ documents = [] }) {
     let changed = false;
     for (const document of documents) {
-      if (rebuilds.has(document.id)) continue;
+      if (documentOperations.has(document.id)) continue;
       const interrupted = await ComparisonDocumentInventory.interruptedRuns(
         document.id
       );
@@ -567,10 +613,8 @@ const ComparisonInventoryService = {
       // A provider call is not assumed cancellable. Wait for its real
       // settlement, then take a fresh artifact snapshot so no late vector or
       // FTS write can escape scoped cleanup.
-      const active = rebuilds.get(documentId);
+      const active = documentOperations.get(documentId);
       if (active) await active.catch(() => null);
-      const activeLedger = ledgerBuilds.get(documentId);
-      if (activeLedger) await activeLedger.catch(() => null);
       const artifacts =
         await ComparisonDocumentInventory.analysisArtifacts(documentId);
       for (const runId of artifacts.runIds)
