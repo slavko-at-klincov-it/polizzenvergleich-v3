@@ -7,6 +7,7 @@ jest.mock("../../../utils/PolicyComparison/ComparisonChunkIndex", () => ({
 jest.mock("../../../utils/PolicyComparison/ComparisonInventoryService", () => ({
   ComparisonInventoryService: {
     buildForDocument: jest.fn(),
+    ensureForDocuments: jest.fn(),
     clear: jest.fn(),
   },
 }));
@@ -20,9 +21,7 @@ const {
 const {
   ComparisonInventoryService,
 } = require("../../../utils/PolicyComparison/ComparisonInventoryService");
-const {
-  resolveProviderConnector,
-} = require("../../../utils/helpers");
+const { resolveProviderConnector } = require("../../../utils/helpers");
 const {
   clearComparisonDocumentLifecycleHooks,
   runComparisonDocumentLifecycleHooks,
@@ -37,7 +36,7 @@ describe("policy comparison lifecycle registration", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  test("keeps FTS and Lance lifecycle and adds full-page inventory before ready", async () => {
+  test("keeps FTS in the base phase and starts inventory only after ready", async () => {
     const comparisonDocument = { id: 1 };
     const documentData = { pageContent: "canonical" };
     const workspace = { id: 2 };
@@ -52,16 +51,40 @@ describe("policy comparison lifecycle registration", () => {
       comparisonDocument,
       documentData,
     });
-    expect(ComparisonInventoryService.buildForDocument).toHaveBeenCalledWith({
+    expect(
+      ComparisonInventoryService.ensureForDocuments
+    ).not.toHaveBeenCalled();
+
+    await runComparisonDocumentLifecycleHooks("afterReady", {
       comparisonDocument,
       documentData,
+      workspace,
+    });
+    expect(ComparisonInventoryService.ensureForDocuments).toHaveBeenCalledWith({
+      documents: [comparisonDocument],
       Connector: { id: "llm" },
     });
-    expect(
-      ComparisonChunkIndex.indexDocument.mock.invocationCallOrder[0]
-    ).toBeLessThan(
-      ComparisonInventoryService.buildForDocument.mock.invocationCallOrder[0]
+  });
+
+  test("keeps the successful FTS phase when retryable inventory inference fails", async () => {
+    const comparisonDocument = { id: 9 };
+    const documentData = { pageContent: "canonical" };
+    const workspace = { id: 2 };
+    ComparisonInventoryService.ensureForDocuments.mockRejectedValueOnce(
+      new Error("Policy model call timed out.")
     );
+
+    await expect(
+      runComparisonDocumentLifecycleHooks("afterReady", {
+        comparisonDocument,
+        documentData,
+        workspace,
+      })
+    ).rejects.toThrow("Policy model call timed out.");
+
+    expect(ComparisonChunkIndex.indexDocument).not.toHaveBeenCalled();
+    expect(ComparisonChunkIndex.removeDocument).not.toHaveBeenCalled();
+    expect(ComparisonInventoryService.clear).not.toHaveBeenCalled();
   });
 
   test("cleans FTS and persistent inventory before document removal", async () => {

@@ -474,6 +474,22 @@ const ComparisonDocumentService = {
           unlinkError.message
         );
       }
+      // Lance and FTS are now durably ready. Inventory inference is an
+      // independent, retryable phase: do not hold the upload response open and
+      // never roll the successful base indexes back if the model times out or
+      // returns invalid evidence. Retrieval reuses the same inventory
+      // single-flight and remains closed until its manifest is ready.
+      void runComparisonDocumentLifecycleHooks("afterReady", {
+        comparisonDocument: readyDocument,
+        workspaceDocument,
+        workspace,
+        documentData: data,
+      }).catch((inventoryError) => {
+        console.error(
+          `[PolicyComparison] Basisindex für Dokument ${comparisonDocument.id} ist bereit; Inventar bleibt fehlgeschlagen und kann erneut erstellt werden:`,
+          inventoryError.message
+        );
+      });
       return ComparisonDocument.serialize(readyDocument);
     } catch (error) {
       const rolledBack = await rollbackEmbed({

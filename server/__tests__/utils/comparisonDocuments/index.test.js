@@ -1,8 +1,6 @@
 const fs = require("fs");
 const prisma = require("../../../utils/prisma");
-const {
-  ComparisonDocument,
-} = require("../../../models/comparisonDocument");
+const { ComparisonDocument } = require("../../../models/comparisonDocument");
 const {
   WorkspaceParsedFiles,
 } = require("../../../models/workspaceParsedFiles");
@@ -396,11 +394,9 @@ describe("ComparisonDocumentService", () => {
   });
 
   it("rolls back a created workspace document when a retrieval hook fails", async () => {
-    runComparisonDocumentLifecycleHooks.mockImplementation(
-      async (event) => {
-        if (event === "afterEmbedded") throw new Error("FTS unavailable");
-      }
-    );
+    runComparisonDocumentLifecycleHooks.mockImplementation(async (event) => {
+      if (event === "afterEmbedded") throw new Error("FTS unavailable");
+    });
 
     await expect(
       ComparisonDocumentService.embedParsedFile({
@@ -415,6 +411,42 @@ describe("ComparisonDocumentService", () => {
     expect(prisma.workspace_documents.deleteMany).toHaveBeenCalledWith({
       where: { workspaceId: 1, docId: "new-doc-id" },
     });
+  });
+
+  it("keeps ready Lance and FTS data when the asynchronous inventory phase fails", async () => {
+    runComparisonDocumentLifecycleHooks.mockImplementation(async (event) => {
+      if (event === "afterReady") throw new Error("inventory timed out");
+    });
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      ComparisonDocumentService.embedParsedFile({
+        workspace,
+        thread,
+        user,
+        parsedFileId: parsedFile.id,
+      })
+    ).resolves.toEqual(expect.objectContaining({ status: "ready" }));
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(runComparisonDocumentLifecycleHooks).toHaveBeenCalledWith(
+      "afterEmbedded",
+      expect.any(Object)
+    );
+    expect(runComparisonDocumentLifecycleHooks).toHaveBeenCalledWith(
+      "afterReady",
+      expect.objectContaining({
+        comparisonDocument: expect.objectContaining({ status: "ready" }),
+      })
+    );
+    expect(prisma.workspace_documents.deleteMany).not.toHaveBeenCalled();
+    expect(VectorDb.deleteDocumentFromNamespace).not.toHaveBeenCalled();
+    expect(DocumentVectors.delete).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Basisindex für Dokument 5 ist bereit"),
+      "inventory timed out"
+    );
+    errorSpy.mockRestore();
   });
 
   it("removes all persisted artifacts before deleting a comparison record", async () => {

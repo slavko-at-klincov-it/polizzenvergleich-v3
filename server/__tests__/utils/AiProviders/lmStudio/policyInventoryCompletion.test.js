@@ -1,4 +1,7 @@
 const { LMStudioLLM } = require("../../../../utils/AiProviders/lmStudio");
+const {
+  DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
+} = require("../../../../utils/PolicyComparison/ComparisonInventoryExtractor");
 
 describe("LMStudioLLM policy inventory completion", () => {
   const originalEnvironment = { ...process.env };
@@ -81,6 +84,7 @@ describe("LMStudioLLM policy inventory completion", () => {
           input: "Analysiere den Vertrag.",
           reasoning: "off",
           temperature: 0,
+          max_output_tokens: DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
           store: false,
           stream: false,
         }),

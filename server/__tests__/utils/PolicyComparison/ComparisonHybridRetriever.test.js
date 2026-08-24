@@ -139,9 +139,7 @@ describe("ComparisonHybridRetriever", () => {
         { text: "Vandalismus ist versichert.", pageNumber: null },
         { slot: "A", originalFilename: "Bedingungen.docx" }
       )
-    ).toBe(
-      "[DOKUMENT A | Bedingungen.docx]\nVandalismus ist versichert."
-    );
+    ).toBe("[DOKUMENT A | Bedingungen.docx]\nVandalismus ist versichert.");
   });
 
   test("searches and returns evidence separately for both documents", async () => {
@@ -406,6 +404,41 @@ describe("ComparisonHybridRetriever", () => {
     }
   });
 
+  test("keeps comparison closed while a ready base index has no ready inventory", async () => {
+    const inventoryService = {
+      ensureForDocuments: jest.fn(async () => {
+        throw new Error(
+          "Inventar ist fehlgeschlagen und wird erneut erstellt."
+        );
+      }),
+    };
+    const searchTopic = jest.spyOn(ComparisonChunkIndex, "searchTopic");
+
+    try {
+      const result = await ComparisonHybridRetriever.retrieve({
+        workspace: { id: 10, slug: "compare", topN: 4 },
+        thread: { id: 20 },
+        query: "Vergleiche die beiden Policen vollständig",
+        LLMConnector: {},
+        VectorDb: { name: "LanceDb" },
+        documents,
+        inventoryService,
+      });
+
+      expect(result).toMatchObject({
+        active: true,
+        ready: false,
+        message: "Inventar ist fehlgeschlagen und wird erneut erstellt.",
+        contextTexts: [],
+        sources: [],
+      });
+      expect(inventoryService.ensureForDocuments).toHaveBeenCalledTimes(1);
+      expect(searchTopic).not.toHaveBeenCalled();
+    } finally {
+      searchTopic.mockRestore();
+    }
+  });
+
   test("does not turn an unrelated high-score vector into topic evidence", async () => {
     const index = {
       listThreadTopics: () => [
@@ -635,7 +668,9 @@ describe("ComparisonHybridRetriever", () => {
       { id: "glasbruch", label: "Glasbruch", terms: ["glasbruch"] },
     ];
     expect(
-      ComparisonHybridRetriever.planTopics({ query, topics }).map(({ id }) => id)
+      ComparisonHybridRetriever.planTopics({ query, topics }).map(
+        ({ id }) => id
+      )
     ).toEqual(["vandalismus"]);
   });
 

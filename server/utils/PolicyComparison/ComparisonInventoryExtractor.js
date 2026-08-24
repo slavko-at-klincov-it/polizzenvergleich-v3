@@ -5,17 +5,30 @@ const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 const { PolicyInferenceQueue } = require("./PolicyInferenceQueue");
 
 const EXTRACTION_VERSION = 2;
-// Roughly 9-12k German contract tokens, leaving ample extraction-output room
-// inside the production 32k context while avoiding dozens of calls per PDF.
-const DEFAULT_BATCH_CHAR_BUDGET = 36_000;
+// The customer's selected model has no local tokenizer files. Use a
+// deliberately conservative UTF-8 estimate (at most three bytes per token)
+// so German text, umlauts, tables, and page markers all count against the same
+// deterministic input budget without sampling or omitting pages.
+const DEFAULT_BATCH_TOKEN_BUDGET = 2_048;
+const DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT = 1_024;
+const MIN_BATCH_TOKEN_BUDGET = 256;
 const MIN_BATCH_CHAR_BUDGET = 256;
 const FRAGMENT_MARKER_RESERVE = 96;
 const TARGET_FRAGMENT_OVERLAP = 200;
+
+function estimateInventoryTokens(value = "") {
+  const bytes = Buffer.byteLength(String(value), "utf8");
+  return bytes === 0 ? 0 : Math.ceil(bytes / 3);
+}
+
 async function inventoryCompletion(Connector, messages) {
   if (typeof Connector?.getPolicyInventoryCompletion === "function")
     return PolicyInferenceQueue.runOperation({
       operation: () =>
-        Connector.getPolicyInventoryCompletion(messages, { temperature: 0 }),
+        Connector.getPolicyInventoryCompletion(messages, {
+          temperature: 0,
+          maxOutputTokens: DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
+        }),
     });
   return PolicyInferenceQueue.run({
     Connector,
@@ -162,38 +175,77 @@ function canonicalPages(documentData = {}) {
   });
 }
 
-function pageFragments(page, batchCharBudget) {
-  const maxTextLength = batchCharBudget - FRAGMENT_MARKER_RESERVE;
+function fragmentEnvelope(page, text, part = 99_999, parts = 99_999) {
+  const isPaged = Number.isInteger(page.pageNumber);
+  const marker = isPaged
+    ? `<page number="${page.pageNumber}" part="${part}/${parts}">`
+    : `<document part="${part}/${parts}">`;
+  return `${marker}\n${text}\n${isPaged ? "</page>" : "</document>"}`;
+}
+
+function pageFragments(page, { charBudget = null, tokenBudget = null }) {
+  const fits = (value) =>
+    charBudget == null
+      ? estimateInventoryTokens(value) <= tokenBudget
+      : value.length <= charBudget;
+  const roughCharacterBudget =
+    charBudget == null ? tokenBudget * 3 : charBudget;
+  const maxTextLength = roughCharacterBudget - FRAGMENT_MARKER_RESERVE;
   const overlap = Math.min(
     TARGET_FRAGMENT_OVERLAP,
     Math.floor(maxTextLength / 4)
   );
-  const stride = maxTextLength - overlap;
   const text = String(page.text || "");
-  const parts = [];
-  if (text.length === 0) parts.push("");
+  const ranges = [];
+  if (text.length === 0) ranges.push({ start: 0, end: 0, text: "" });
   else {
-    for (let offset = 0; offset < text.length; offset += stride) {
-      parts.push(text.slice(offset, offset + maxTextLength));
-      if (offset + maxTextLength >= text.length) break;
+    let offset = 0;
+    while (offset < text.length) {
+      let low = offset + 1;
+      let high = Math.min(text.length, offset + maxTextLength);
+      let bestEnd = offset;
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        const candidate = fragmentEnvelope(page, text.slice(offset, middle));
+        if (fits(candidate)) {
+          bestEnd = middle;
+          low = middle + 1;
+        } else {
+          high = middle - 1;
+        }
+      }
+      if (bestEnd === offset)
+        throw new Error(
+          `${Number.isInteger(page.pageNumber) ? `Page ${page.pageNumber}` : "Document"} cannot fit inside the inventory batch budget.`
+        );
+      ranges.push({
+        start: offset,
+        end: bestEnd,
+        text: text.slice(offset, bestEnd),
+      });
+      if (bestEnd >= text.length) break;
+      offset = Math.max(offset + 1, bestEnd - overlap);
     }
   }
 
-  return parts.map((part, index) => {
-    const isPaged = Number.isInteger(page.pageNumber);
-    const marker = isPaged
-      ? `<page number="${page.pageNumber}" part="${index + 1}/${parts.length}">`
-      : `<document part="${index + 1}/${parts.length}">`;
-    const rendered = `${marker}\n${part}\n${isPaged ? "</page>" : "</document>"}`;
-    if (rendered.length > batchCharBudget)
+  return ranges.map((range, index) => {
+    const rendered = fragmentEnvelope(
+      page,
+      range.text,
+      index + 1,
+      ranges.length
+    );
+    if (!fits(rendered))
       throw new Error(
-        `${isPaged ? `Page ${page.pageNumber}` : "Document"} fragment exceeds the character budget.`
+        `${Number.isInteger(page.pageNumber) ? `Page ${page.pageNumber}` : "Document"} fragment exceeds the inventory batch budget.`
       );
     return {
       pageNumber: page.pageNumber,
       part: index + 1,
-      parts: parts.length,
-      text: part,
+      parts: ranges.length,
+      start: range.start,
+      end: range.end,
+      text: range.text,
       rendered,
     };
   });
@@ -201,19 +253,34 @@ function pageFragments(page, batchCharBudget) {
 
 function buildPageBatches({
   documentData = {},
-  batchCharBudget = DEFAULT_BATCH_CHAR_BUDGET,
+  batchTokenBudget = DEFAULT_BATCH_TOKEN_BUDGET,
+  batchCharBudget = null,
 } = {}) {
-  const budget = Number(batchCharBudget);
-  if (!Number.isInteger(budget) || budget < MIN_BATCH_CHAR_BUDGET)
-    throw new Error(
-      `batchCharBudget must be an integer of at least ${MIN_BATCH_CHAR_BUDGET}.`
-    );
+  const useLegacyCharacterBudget = batchCharBudget != null;
+  const budget = Number(
+    useLegacyCharacterBudget ? batchCharBudget : batchTokenBudget
+  );
+  const minimum = useLegacyCharacterBudget
+    ? MIN_BATCH_CHAR_BUDGET
+    : MIN_BATCH_TOKEN_BUDGET;
+  const optionName = useLegacyCharacterBudget
+    ? "batchCharBudget"
+    : "batchTokenBudget";
+  if (!Number.isInteger(budget) || budget < minimum)
+    throw new Error(`${optionName} must be an integer of at least ${minimum}.`);
+
+  const budgetOptions = useLegacyCharacterBudget
+    ? { charBudget: budget }
+    : { tokenBudget: budget };
+  const fits = (value) =>
+    useLegacyCharacterBudget
+      ? value.length <= budget
+      : estimateInventoryTokens(value) <= budget;
 
   const pages = canonicalPages(documentData);
-  const fragments = pages.flatMap((page) => pageFragments(page, budget));
+  const fragments = pages.flatMap((page) => pageFragments(page, budgetOptions));
   const batches = [];
   let current = [];
-  let currentLength = 0;
 
   const flush = () => {
     if (current.length === 0) return;
@@ -222,6 +289,7 @@ function buildPageBatches({
       index: batches.length,
       content,
       charCount: content.length,
+      tokenCount: estimateInventoryTokens(content),
       pageNumbers: [
         ...new Set(
           current
@@ -234,23 +302,23 @@ function buildPageBatches({
       ),
     });
     current = [];
-    currentLength = 0;
   };
 
   for (const fragment of fragments) {
-    const separatorLength = current.length === 0 ? 0 : 1;
-    if (
-      current.length > 0 &&
-      currentLength + separatorLength + fragment.rendered.length > budget
-    )
-      flush();
+    const candidate = [...current, fragment]
+      .map((entry) => entry.rendered)
+      .join("\n");
+    if (current.length > 0 && !fits(candidate)) flush();
     current.push(fragment);
-    currentLength +=
-      (current.length === 1 ? 0 : separatorLength) + fragment.rendered.length;
   }
   flush();
 
-  return { pages, batches, batchCharBudget: budget };
+  return {
+    pages,
+    batches,
+    batchTokenBudget: useLegacyCharacterBudget ? null : budget,
+    batchCharBudget: useLegacyCharacterBudget ? budget : null,
+  };
 }
 
 function parseStrictResponse(response, batchIndex) {
@@ -478,7 +546,8 @@ const ComparisonInventoryExtractor = {
   async extract({
     documentData = {},
     Connector,
-    batchCharBudget = DEFAULT_BATCH_CHAR_BUDGET,
+    batchTokenBudget = DEFAULT_BATCH_TOKEN_BUDGET,
+    batchCharBudget = null,
     fallbackTopics = DEFAULT_FALLBACK_TOPICS,
   } = {}) {
     if (typeof Connector?.getChatCompletion !== "function")
@@ -488,6 +557,7 @@ const ComparisonInventoryExtractor = {
 
     const { pages, batches } = buildPageBatches({
       documentData,
+      batchTokenBudget,
       batchCharBudget,
     });
     const canonicalPageByNumber = new Map(
@@ -602,6 +672,8 @@ const ComparisonInventoryExtractor = {
 module.exports = {
   ComparisonInventoryExtractor,
   DEFAULT_FALLBACK_TOPICS,
-  DEFAULT_BATCH_CHAR_BUDGET,
+  DEFAULT_BATCH_TOKEN_BUDGET,
+  DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
+  estimateInventoryTokens,
   EXTRACTION_VERSION,
 };

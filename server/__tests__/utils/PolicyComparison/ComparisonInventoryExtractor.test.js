@@ -1,5 +1,7 @@
 const {
   ComparisonInventoryExtractor,
+  DEFAULT_BATCH_TOKEN_BUDGET,
+  DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
 } = require("../../../utils/PolicyComparison/ComparisonInventoryExtractor");
 
 function pageAwareDocument(pageTexts) {
@@ -61,7 +63,10 @@ describe("ComparisonInventoryExtractor", () => {
     ]);
     expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledWith(
       expect.any(Array),
-      { temperature: 0 }
+      {
+        temperature: 0,
+        maxOutputTokens: DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT,
+      }
     );
     expect(Connector.getChatCompletion).not.toHaveBeenCalled();
   });
@@ -135,6 +140,43 @@ describe("ComparisonInventoryExtractor", () => {
         .flatMap((batch) => batch.fragments)
         .filter((fragment) => fragment.pageNumber === 7).length
     ).toBeGreaterThan(1);
+  });
+
+  test("keeps every page fragment inside the default token budget without omissions", () => {
+    const pageTexts = Array.from({ length: 198 }, (_, index) => {
+      const sentinel = `SEITENMARKER-${String(index + 1).padStart(3, "0")}`;
+      return `${sentinel} ${"Versicherungsbedingung mit Umlauten äöü. ".repeat(
+        index === 97 ? 420 : 14
+      )}`;
+    });
+    const { pages, batches, batchTokenBudget } =
+      ComparisonInventoryExtractor.buildPageBatches({
+        documentData: pageAwareDocument(pageTexts),
+      });
+
+    expect(batchTokenBudget).toBe(DEFAULT_BATCH_TOKEN_BUDGET);
+    expect(batches.length).toBeGreaterThan(3);
+    expect(
+      batches.every((batch) => batch.tokenCount <= DEFAULT_BATCH_TOKEN_BUDGET)
+    ).toBe(true);
+    expect(
+      [...new Set(batches.flatMap((batch) => batch.pageNumbers))].sort(
+        (a, b) => a - b
+      )
+    ).toEqual(Array.from({ length: 198 }, (_, index) => index + 1));
+
+    for (const page of pages) {
+      const fragments = batches
+        .flatMap((batch) => batch.fragments)
+        .filter((fragment) => fragment.pageNumber === page.pageNumber)
+        .sort((left, right) => left.start - right.start);
+      expect(fragments[0].start).toBe(0);
+      expect(fragments.at(-1).end).toBe(page.text.length);
+      for (let index = 1; index < fragments.length; index++)
+        expect(fragments[index].start).toBeLessThanOrEqual(
+          fragments[index - 1].end
+        );
+    }
   });
 
   test("maps all batches with strict JSON at temperature zero and adds fallbacks transparently", async () => {

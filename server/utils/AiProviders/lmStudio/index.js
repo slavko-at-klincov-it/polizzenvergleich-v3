@@ -272,10 +272,13 @@ class LMStudioLLM {
    * This method is intentionally separate from getChatCompletion: user chat
    * and streaming continue to use the existing OpenAI-compatible contract.
    * @param {Array<{role: string, content: string}>} messages
-   * @param {{temperature?: number}} options
+   * @param {{temperature?: number, maxOutputTokens?: number}} options
    * @returns {Promise<{textResponse: string, metrics: object}>}
    */
-  async getPolicyInventoryCompletion(messages = [], { temperature = 0 } = {}) {
+  async getPolicyInventoryCompletion(
+    messages = [],
+    { temperature = 0, maxOutputTokens = 1_024 } = {}
+  ) {
     if (!this.model)
       throw new Error(
         "LMStudio policy inventory: no valid chat model is configured."
@@ -297,6 +300,15 @@ class LMStudioLLM {
       .join("\n\n");
     if (!input)
       throw new Error("LMStudio policy inventory requires a user input.");
+    const outputTokenLimit = Number(maxOutputTokens);
+    if (
+      !Number.isInteger(outputTokenLimit) ||
+      outputTokenLimit < 128 ||
+      outputTokenLimit > 2_048
+    )
+      throw new Error(
+        "LMStudio policy inventory maxOutputTokens must be an integer between 128 and 2048."
+      );
 
     const endpoint = new URL(
       parseLMStudioBasePath(process.env.LMSTUDIO_BASE_PATH, "v1")
@@ -317,7 +329,7 @@ class LMStudioLLM {
           ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
           ...(reasoning ? { reasoning } : {}),
           temperature,
-          max_output_tokens: 8_192,
+          max_output_tokens: outputTokenLimit,
           store: false,
           stream: false,
         }),

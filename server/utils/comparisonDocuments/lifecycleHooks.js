@@ -3,8 +3,9 @@ const hooks = new Set();
 /**
  * Retrieval extensions (for example FTS indexing) can register an idempotent
  * lifecycle hook without coupling comparison ingestion to a specific index.
- * A hook that throws during `afterEmbedded` causes the embed operation to roll
- * back and keeps the parsed file available for retry.
+ * A hook that throws during `afterEmbedded` causes the base index operation to
+ * roll back. `afterReady` runs only after Lance/FTS are durably committed and
+ * is therefore suitable for retryable derived data such as the open inventory.
  */
 function registerComparisonDocumentLifecycleHook(hook) {
   if (!hook || typeof hook !== "object")
