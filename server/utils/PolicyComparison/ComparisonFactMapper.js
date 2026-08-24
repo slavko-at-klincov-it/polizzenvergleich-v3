@@ -7,9 +7,8 @@ const { BUILTIN_TERM_GROUPS } = require("./ComparisonTermAliasCatalog");
 const FACT_EXTRACTION_VERSION = 4;
 const DEFAULT_MAP_INPUT_TOKEN_BUDGET = 4_096;
 const DEFAULT_MAP_OUTPUT_TOKEN_LIMIT = 1_024;
-const DEFAULT_MAX_UNITS_PER_BATCH = 12;
+const DEFAULT_MAX_UNITS_PER_BATCH = 4;
 const FORMAT_MISMATCH_CODE = "FACT_MAPPER_FORMAT_MISMATCH";
-const FACT_VALIDATION_CODE = "FACT_MAPPER_FACT_VALIDATION";
 const ALLOWED_FACT_TYPES = new Set([
   "coverage",
   "limit",
@@ -43,6 +42,9 @@ Zwingende Regeln:
   Seite und Zeichenpositionen werden vom Server ermittelt.
 - Wenn wirklich kein Vertragsfakt enthalten ist, facts:[] und eine knappe
   noFactReason. Erfinde nichts.
+- Versicherername, Firmenbuch-/UID-Nummer, Anschrift, Kontaktangaben sowie
+  Polizzen- oder Vertragsnummern sind Verwaltungsmetadaten und keine
+  Deckungsfakten. Gib sie nicht als Fakten aus.
 - Halte topic und claim knapp. Wiederhole keine langen Vertragsabsätze.
 - factType muss durch das wortgetreue evidenceText belegt sein. Nutze bei einer
   fachlich neuen oder nicht eindeutig typisierbaren Regel other_contract_fact.
@@ -63,8 +65,11 @@ function visibleJson(text = "") {
     .trim();
   const start = visible.indexOf("{");
   const end = visible.lastIndexOf("}");
-  if (start < 0 || end < start)
-    throw new Error("Fact mapper returned incomplete JSON.");
+  if (start < 0 || end < start) {
+    const error = new Error("Fact mapper returned incomplete JSON.");
+    error.code = FORMAT_MISMATCH_CODE;
+    throw error;
+  }
   const json = visible.slice(start, end + 1);
   try {
     return JSON.parse(json);
@@ -72,7 +77,9 @@ function visibleJson(text = "") {
     try {
       return JSON.parse(jsonrepair(json));
     } catch {
-      throw new Error("Fact mapper returned invalid JSON.");
+      const error = new Error("Fact mapper returned invalid JSON.");
+      error.code = FORMAT_MISMATCH_CODE;
+      throw error;
     }
   }
 }
@@ -101,6 +108,7 @@ function renderUnit(unit) {
   return {
     unitKey: unit.blockKey || unit.unitKey,
     physicalPage: unit.pageNumber,
+    headingPath: Array.isArray(unit.headingPath) ? unit.headingPath : [],
     riskSignalCount: (unit.riskSignals || []).length,
     riskSignals: compactRiskSignals(unit.riskSignals || []),
     contextBefore: unit.contextBefore || "",
@@ -163,33 +171,49 @@ function normalizedText(value = "") {
     .toLocaleLowerCase("de-AT");
 }
 
-function assertGroundedTopic(label, unit) {
-  const topic = normalizedText(label);
-  const source = normalizedText(
-    [unit.headingPath?.join(" "), unit.text].filter(Boolean).join(" ")
-  );
-  const group = BUILTIN_TERM_GROUPS.find((candidate) =>
+const DOCUMENT_METADATA_TOPIC =
+  /\b(?:versicherer(?:[-\s]?identifikation)?|versicherungsunternehmen|firmenbuch(?:nummer)?|unternehmensregister|uid(?:nummer)?|anschrift|adresse|telefon|fax|e-?mail|kontakt|webseite|polizzen(?:nummer)?|vertragsnummer)\b/iu;
+const DOCUMENT_METADATA_EVIDENCE = [
+  /^\s*FN\s*\d+[a-z]?\b/iu,
+  /\b(?:Firmenbuch|UID|Telefon|Fax|E-Mail|www\.|https?:\/\/)\b/iu,
+  /\bVersicherung\s+(?:AG|SE|GmbH)\b/iu,
+];
+
+function builtInTopicGroup(topic) {
+  return BUILTIN_TERM_GROUPS.find((candidate) =>
     [candidate.canonicalTerm, ...candidate.aliases]
       .map(normalizedText)
-      .includes(topic)
+      .some(
+        (term) =>
+          topic === term ||
+          (term.length >= 5 && (topic.startsWith(term) || topic.endsWith(term)))
+      )
   );
-  if (group) {
-    if (
-      ![group.canonicalTerm, ...group.aliases]
-        .map(normalizedText)
-        .some((term) => source.includes(term))
-    )
-      throw new Error(`Fact topic ${label} is not grounded in its unit.`);
-    return;
-  }
-  const topicTerms = topic
-    .split(/[^\p{L}\p{N}]+/gu)
-    .filter((term) => term.length >= 4);
-  if (!topicTerms.length || !topicTerms.some((term) => source.includes(term)))
-    throw new Error(`Fact topic ${label} is not grounded in its unit.`);
 }
 
-function assertGroundedFactType(factType, signalKinds) {
+function sourceContainsGroup(group, source) {
+  return [group.canonicalTerm, ...group.aliases]
+    .map(normalizedText)
+    .some((term) => source.includes(term));
+}
+
+function literalTopic(unit, evidence) {
+  const heading = Array.isArray(unit.headingPath)
+    ? String(unit.headingPath.filter(Boolean).at(-1) || "")
+        .replace(/\s+/gu, " ")
+        .trim()
+    : "";
+  if (heading) return heading.slice(0, 160);
+  return String(evidence)
+    .replace(/\s+/gu, " ")
+    .trim()
+    .split(/\s+/u)
+    .slice(0, 12)
+    .join(" ")
+    .slice(0, 160);
+}
+
+function groundedFactType(factType, signalKinds) {
   const required = {
     coverage: ["coverage"],
     limit: ["limit", "money", "percentage"],
@@ -200,18 +224,25 @@ function assertGroundedFactType(factType, signalKinds) {
     duration: ["duration"],
     insured_object: ["insured_object"],
   }[factType];
-  if (required && !required.some((kind) => signalKinds.has(kind)))
-    throw new Error(`Fact type ${factType} is not grounded in its evidence.`);
+  return !required || required.some((kind) => signalKinds.has(kind));
+}
+
+function isDocumentMetadata({ label, evidence, factType }) {
+  if (!["definition", "other_contract_fact"].includes(factType)) return false;
+  return (
+    DOCUMENT_METADATA_TOPIC.test(label) ||
+    DOCUMENT_METADATA_EVIDENCE.some((pattern) => pattern.test(evidence))
+  );
 }
 
 function normalizeFact(rawFact, unit) {
   if (!rawFact || typeof rawFact !== "object" || Array.isArray(rawFact))
     throw new Error(`Unit ${unit.unitKey} contains an invalid fact.`);
-  const label = String(rawFact.topic || "")
+  let label = String(rawFact.topic || "")
     .replace(/\s+/gu, " ")
     .trim();
-  const factType = String(rawFact.factType || "").trim();
-  const claimText = String(rawFact.claim || "")
+  let factType = String(rawFact.factType || "").trim();
+  let claimText = String(rawFact.claim || "")
     .replace(/\s+/gu, " ")
     .trim();
   if (!label || label.length > 160) throw new Error("Fact topic is invalid.");
@@ -219,7 +250,6 @@ function normalizeFact(rawFact, unit) {
     throw new Error(`Unsupported factType ${factType || "(empty)"}.`);
   if (!claimText || claimText.length > 600)
     throw new Error("Fact claim is invalid.");
-  assertGroundedTopic(label, unit);
   const { evidence, localStart, localEnd } = exactEvidenceOffset(
     unit,
     rawFact.evidenceText
@@ -228,7 +258,42 @@ function normalizeFact(rawFact, unit) {
   const evidenceEnd = unit.sourceStart + localEnd;
   const evidenceSignals = ComparisonFactRiskSignals.detect(evidence);
   const signalKinds = new Set(evidenceSignals.map((signal) => signal.kind));
-  assertGroundedFactType(factType, signalKinds);
+  const topic = normalizedText(label);
+  const source = normalizedText(
+    [unit.headingPath?.join(" "), unit.text].filter(Boolean).join(" ")
+  );
+  const group = builtInTopicGroup(topic);
+  const topicTerms = topic
+    .split(/[^\p{L}\p{N}]+/gu)
+    .filter((term) => term.length >= 4);
+  const topicIsLiteral =
+    topicTerms.length > 0 && topicTerms.some((term) => source.includes(term));
+  let usedSafeFallback = false;
+  if (group && sourceContainsGroup(group, source)) {
+    label = group.canonicalTerm;
+  } else if (
+    (group && !sourceContainsGroup(group, source)) ||
+    !topicIsLiteral
+  ) {
+    label = literalTopic(unit, evidence);
+    claimText = evidence;
+    factType = "other_contract_fact";
+    usedSafeFallback = true;
+  }
+  if (!groundedFactType(factType, signalKinds)) {
+    label = literalTopic(unit, evidence);
+    claimText = evidence;
+    factType = "other_contract_fact";
+    usedSafeFallback = true;
+  }
+  if (
+    isDocumentMetadata({
+      label: String(rawFact.topic || label),
+      evidence,
+      factType,
+    })
+  )
+    return { fact: null, disposition: "out_of_scope_document_metadata" };
   const values = evidenceSignals
     .filter((signal) =>
       ["money", "percentage", "duration"].includes(signal.kind)
@@ -246,9 +311,52 @@ function normalizeFact(rawFact, unit) {
         ? "conditional"
         : "neutral";
   return {
+    disposition: usedSafeFallback ? "safe_evidence_fallback" : "validated",
+    fact: {
+      factKey: sha256(
+        [
+          factType,
+          unit.pageNumber ?? "document",
+          evidenceStart,
+          evidenceEnd,
+          evidence,
+        ].join("\u0000")
+      ),
+      unitKey: unit.blockKey || unit.unitKey,
+      factType,
+      label,
+      aliases: [],
+      claimText,
+      polarity,
+      value: values.length ? { values } : null,
+      unit: null,
+      conditions: evidenceSignals
+        .filter((signal) => signal.kind === "condition")
+        .map((signal) => signal.evidenceText),
+      pageNumber: unit.pageNumber,
+      evidenceText: evidence,
+      evidenceStart,
+      evidenceEnd,
+      sourceMethod: usedSafeFallback
+        ? "safe-evidence-fallback"
+        : unit.sourceMethod || "llm-fact-map",
+      confidence: 1,
+    },
+  };
+}
+
+function sourceBoundFallbackFact(unit) {
+  const raw = String(unit.text || "");
+  const localStart = raw.search(/\S/u);
+  if (localStart < 0) return null;
+  const evidence = raw.slice(localStart, localStart + 480).trimEnd();
+  if (!evidence) return null;
+  const evidenceStart = unit.sourceStart + localStart;
+  const evidenceEnd = evidenceStart + evidence.length;
+  return {
     factKey: sha256(
       [
-        factType,
+        "other_contract_fact",
         unit.pageNumber ?? "document",
         evidenceStart,
         evidenceEnd,
@@ -256,63 +364,120 @@ function normalizeFact(rawFact, unit) {
       ].join("\u0000")
     ),
     unitKey: unit.blockKey || unit.unitKey,
-    factType,
-    label,
+    factType: "other_contract_fact",
+    label: literalTopic(unit, evidence),
     aliases: [],
-    claimText,
-    polarity,
-    value: values.length ? { values } : null,
+    claimText: evidence,
+    polarity: "neutral",
+    value: null,
     unit: null,
-    conditions: evidenceSignals
-      .filter((signal) => signal.kind === "condition")
-      .map((signal) => signal.evidenceText),
+    conditions: [],
     pageNumber: unit.pageNumber,
     evidenceText: evidence,
     evidenceStart,
     evidenceEnd,
-    sourceMethod: unit.sourceMethod || "llm-fact-map",
+    sourceMethod: "safe-unit-fallback",
     confidence: 1,
   };
 }
 
 function validateReceipts(parsed, units) {
-  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.units))
-    throw new Error('Fact mapper must return {"units":[]}.');
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.units)) {
+    const error = new Error('Fact mapper must return {"units":[]}.');
+    error.code = FORMAT_MISMATCH_CODE;
+    throw error;
+  }
   const expected = new Map(
     units.map((unit) => [unit.blockKey || unit.unitKey, unit])
   );
   const received = new Map();
   for (const receipt of parsed.units) {
     const unitKey = String(receipt?.unitKey || "");
-    if (!expected.has(unitKey))
-      throw new Error("Fact mapper returned an unknown unitKey.");
-    if (received.has(unitKey))
-      throw new Error("Fact mapper returned a duplicate unitKey.");
+    if (!expected.has(unitKey)) {
+      const error = new Error("Fact mapper returned an unknown unitKey.");
+      error.code = FORMAT_MISMATCH_CODE;
+      throw error;
+    }
+    if (received.has(unitKey)) {
+      const error = new Error("Fact mapper returned a duplicate unitKey.");
+      error.code = FORMAT_MISMATCH_CODE;
+      throw error;
+    }
     if (!Array.isArray(receipt.facts)) {
       const error = new Error(`Unit ${unitKey} has no facts array.`);
       error.code = FORMAT_MISMATCH_CODE;
       throw error;
     }
     const unit = expected.get(unitKey);
-    try {
-      received.set(unitKey, {
-        unit,
-        facts: receipt.facts.map((fact) => normalizeFact(fact, unit)),
-        noFactReason:
-          receipt.facts.length === 0
-            ? String(
-                receipt.noFactReason || "Kein Vertragsfakt erkannt."
-              ).trim()
-            : null,
-      });
-    } catch (error) {
-      error.code = FACT_VALIDATION_CODE;
-      error.unitKey = unitKey;
-      throw error;
+    const facts = [];
+    const dispositions = [];
+    for (const rawFact of receipt.facts) {
+      try {
+        const normalized = normalizeFact(rawFact, unit);
+        dispositions.push(normalized.disposition);
+        if (normalized.fact) facts.push(normalized.fact);
+      } catch {
+        const rawTopic = String(rawFact?.topic || "");
+        const rawEvidence = String(rawFact?.evidenceText || "").trim();
+        if (
+          isDocumentMetadata({
+            label: rawTopic,
+            evidence: rawEvidence,
+            factType: "other_contract_fact",
+          })
+        ) {
+          dispositions.push("out_of_scope_document_metadata");
+          continue;
+        }
+        try {
+          const fallback = normalizeFact(
+            {
+              topic: rawEvidence,
+              factType: "other_contract_fact",
+              claim: rawEvidence,
+              evidenceText: rawEvidence,
+            },
+            unit
+          );
+          dispositions.push(fallback.disposition);
+          if (fallback.fact) facts.push(fallback.fact);
+        } catch {
+          dispositions.push("rejected_without_exact_evidence");
+        }
+      }
     }
+    const metadataOnly =
+      receipt.facts.length > 0 &&
+      dispositions.every(
+        (disposition) => disposition === "out_of_scope_document_metadata"
+      );
+    if (!facts.length && receipt.facts.length > 0 && !metadataOnly) {
+      const fallback = sourceBoundFallbackFact(unit);
+      if (fallback) facts.push(fallback);
+    }
+    const uniqueFacts = [
+      ...new Map(facts.map((fact) => [fact.factKey, fact])).values(),
+    ];
+    received.set(unitKey, {
+      unit,
+      facts: uniqueFacts,
+      noFactReason:
+        uniqueFacts.length > 0
+          ? null
+          : metadataOnly
+            ? "out_of_scope_document_metadata"
+            : String(
+                receipt.noFactReason || "Kein Vertragsfakt erkannt."
+              ).trim(),
+    });
   }
-  if (received.size !== expected.size)
-    throw new Error("Fact mapper did not acknowledge every input unitKey.");
+  if (received.size !== expected.size) {
+    const error = new Error(
+      "Fact mapper did not acknowledge every input unitKey."
+    );
+    error.code = FORMAT_MISMATCH_CODE;
+    throw error;
+  }
   return units.map((unit) => received.get(unit.blockKey || unit.unitKey));
 }
 
@@ -347,19 +512,13 @@ function packUnits(
 
 function messagesFor(
   units,
-  {
-    secondReview = false,
-    formatCorrection = false,
-    factValidationCorrection = null,
-  } = {}
+  { secondReview = false, formatCorrection = false } = {}
 ) {
-  const review = factValidationCorrection
-    ? `BELEGKORREKTUR: Der vorige Fakt wurde lokal abgelehnt: ${factValidationCorrection}. Korrigiere ausschließlich diesen Block. topic muss mit einem konkreten Begriff aus headingPath, text oder evidenceText bezeichnet werden; erfinde keine abstrakte Oberkategorie. factType und evidenceText müssen weiterhin wortgetreu belegt sein.`
-    : formatCorrection
-      ? 'FORMATKORREKTUR: Die vorige Antwort wiederholte Eingabefelder statt des verlangten Schemas. Gib ausschließlich {"units":[{"unitKey":"...","facts":[],"noFactReason":null}]} zurück. Jeder Block braucht zwingend das Array facts; kopiere weder text noch riskSignals in die Ausgabe.'
-      : secondReview
-        ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
-        : "Extrahiere alle Fakten aus jedem Block.";
+  const review = formatCorrection
+    ? 'FORMATKORREKTUR: Die vorige Antwort wiederholte Eingabefelder statt des verlangten Schemas. Gib ausschließlich {"units":[{"unitKey":"...","facts":[],"noFactReason":null}]} zurück. Jeder Block braucht zwingend das Array facts; kopiere weder text noch riskSignals in die Ausgabe.'
+    : secondReview
+      ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
+      : "Extrahiere alle Fakten aus jedem Block.";
   return [
     { role: "system", content: SYSTEM_PROMPT },
     {
@@ -374,50 +533,31 @@ async function mapBatch({
   units,
   secondReview = false,
   formatCorrection = false,
-  factValidationCorrection = null,
   analysisRunId = null,
 }) {
   try {
     const response = await mapCompletion(
       Connector,
-      messagesFor(units, {
-        secondReview,
-        formatCorrection,
-        factValidationCorrection,
-      }),
+      messagesFor(units, { secondReview, formatCorrection }),
       {
         kind: "comparison_fact_map",
         analysisRunId,
         batchSize: units.length,
-        pass: secondReview
-          ? "second"
-          : factValidationCorrection
-            ? "grounding_correction"
-            : "first",
+        pass: secondReview ? "second" : "first",
       }
     );
-    const parsed = visibleJson(response?.textResponse);
-    return await validateParsedWithCorrections({
-      Connector,
-      parsed,
-      units,
-      secondReview,
-      formatCorrection,
-      analysisRunId,
-      allowFactValidationCorrection: factValidationCorrection === null,
-    });
+    return validateReceipts(visibleJson(response?.textResponse), units);
   } catch (error) {
-    if (error?.code === FORMAT_MISMATCH_CODE && formatCorrection === false)
+    if (error?.code !== FORMAT_MISMATCH_CODE) throw error;
+    if (formatCorrection === false)
       return mapBatch({
         Connector,
         units,
         secondReview,
         formatCorrection: true,
-        factValidationCorrection,
         analysisRunId,
       });
-    if (error?.code === "POLICY_INFERENCE_TIMEOUT" || units.length === 1)
-      throw error;
+    if (units.length === 1) throw error;
     const middle = Math.ceil(units.length / 2);
     return [
       ...(await mapBatch({
@@ -425,7 +565,6 @@ async function mapBatch({
         units: units.slice(0, middle),
         secondReview,
         formatCorrection,
-        factValidationCorrection,
         analysisRunId,
       })),
       ...(await mapBatch({
@@ -433,65 +572,9 @@ async function mapBatch({
         units: units.slice(middle),
         secondReview,
         formatCorrection,
-        factValidationCorrection,
         analysisRunId,
       })),
     ];
-  }
-}
-
-async function validateParsedWithCorrections({
-  Connector,
-  parsed,
-  units,
-  secondReview,
-  formatCorrection,
-  analysisRunId,
-  allowFactValidationCorrection,
-}) {
-  try {
-    return validateReceipts(parsed, units);
-  } catch (error) {
-    if (error?.code !== FACT_VALIDATION_CODE || !allowFactValidationCorrection)
-      throw error;
-    const rejectedUnit = units.find(
-      (unit) => (unit.blockKey || unit.unitKey) === error.unitKey
-    );
-    if (!rejectedUnit) throw error;
-    const retainedUnits = units.filter((unit) => unit !== rejectedUnit);
-    const retainedKeys = new Set(
-      retainedUnits.map((unit) => unit.blockKey || unit.unitKey)
-    );
-    const retained = retainedUnits.length
-      ? await validateParsedWithCorrections({
-          Connector,
-          parsed: {
-            units: parsed.units.filter((receipt) =>
-              retainedKeys.has(String(receipt?.unitKey || ""))
-            ),
-          },
-          units: retainedUnits,
-          secondReview,
-          formatCorrection,
-          analysisRunId,
-          allowFactValidationCorrection,
-        })
-      : [];
-    const corrected = await mapBatch({
-      Connector,
-      units: [rejectedUnit],
-      secondReview,
-      formatCorrection,
-      factValidationCorrection: error.message,
-      analysisRunId,
-    });
-    const byUnitKey = new Map(
-      [...retained, ...corrected].map((receipt) => [
-        receipt.unit.blockKey || receipt.unit.unitKey,
-        receipt,
-      ])
-    );
-    return units.map((unit) => byUnitKey.get(unit.blockKey || unit.unitKey));
   }
 }
 
