@@ -483,12 +483,12 @@ const ComparisonHybridRetriever = {
           : null;
       if (
         !inventories &&
-        ComparisonFactTable.isCompleteAnalysisRequest(query) &&
         typeof inventoryService.ensureForDocuments === "function"
       ) {
-        // A complete-analysis prompt is itself the trigger. The user never has
-        // to understand or start an internal inventory phase. Unit checkpoints
-        // make this operation resumable without touching the basis index.
+        // The first document question is the trigger. Customers do not need to
+        // know whether a short topic question or a full broker table requires
+        // the internal fact phase. Unit checkpoints keep the operation
+        // resumable without touching the ready basis index.
         inventories = await inventoryService.ensureForDocuments({
           documents: ordered,
           Connector: LLMConnector,

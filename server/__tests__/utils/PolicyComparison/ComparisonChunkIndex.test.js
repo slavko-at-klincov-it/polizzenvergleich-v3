@@ -121,6 +121,11 @@ describe("ComparisonChunkIndex query preparation", () => {
     ).toEqual(
       expect.arrayContaining(["selbstbehalt", "selbstbeteiligung", "franchise"])
     );
+    expect(
+      ComparisonChunkIndex.significantQueryTerms(
+        "Ermittle alle Selbstbehalte im Dokument. Nenne jeweils Betrag, Bedingung und physische PDF-Seite."
+      )
+    ).toEqual(["selbstbehalte"]);
   });
 
   test("does not treat short query fragments as exact substring matches", () => {

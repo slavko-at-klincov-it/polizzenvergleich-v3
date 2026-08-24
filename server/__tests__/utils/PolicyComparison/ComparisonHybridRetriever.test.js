@@ -431,7 +431,10 @@ describe("ComparisonHybridRetriever", () => {
         sources: [],
       });
       expect(result.message).toContain("optionale Tiefenanalyse");
-      expect(inventoryService.ensureForDocuments).not.toHaveBeenCalled();
+      expect(inventoryService.ensureForDocuments).toHaveBeenCalledWith({
+        documents,
+        Connector: {},
+      });
       expect(searchTopic).not.toHaveBeenCalled();
     } finally {
       searchTopic.mockRestore();
@@ -490,6 +493,92 @@ describe("ComparisonHybridRetriever", () => {
     expect(result.deterministicTextResponse).toContain("Feuer");
     expect(result.deterministicTextResponse).toContain("Leitungswasser");
     expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
+  });
+
+  test("starts fact analysis for the customer's short deductible prompt and keeps instructions out of qualifiers", async () => {
+    const manifests = documents.map((document, index) => ({
+      document,
+      manifest: {
+        comparisonDocumentId: document.id,
+        analysisRunId: 100 + index,
+        items: [
+          {
+            factKey: `deductible-${index}`,
+            factType: "deductible",
+            facetKey: "selbstbehalt",
+            label: "Selbstbehalt",
+            claimText: `Der Selbstbehalt beträgt EUR ${index ? 500 : 350}.`,
+            evidenceText: `Der Selbstbehalt beträgt EUR ${index ? 500 : 350}.`,
+            pageNumber: index + 1,
+            evidenceStart: index * 100,
+            evidenceEnd: index * 100 + 39,
+          },
+        ],
+      },
+    }));
+    const inventoryService = {
+      readyForDocuments: jest.fn(async () => null),
+      ensureForDocuments: jest.fn(async () => manifests),
+      fallbackTopics: jest.fn(() => []),
+      unionTopics: jest.fn(() => [
+        {
+          id: "selbstbehalt",
+          label: "Selbstbehalt",
+          terms: ["selbstbehalt", "selbstbehalte", "franchise"],
+          anchors: manifests.map(({ document, manifest }) => ({
+            slot: document.slot,
+            pageNumber: manifest.items[0].pageNumber,
+            evidenceText: manifest.items[0].evidenceText,
+          })),
+          origin: "inventory",
+        },
+      ]),
+    };
+    const searchTopic = jest
+      .spyOn(ComparisonChunkIndex, "searchTopic")
+      .mockResolvedValue([]);
+    const VectorDb = {
+      name: "LanceDb",
+      performSimilaritySearch: jest.fn(async () => ({
+        message: false,
+        sources: [],
+      })),
+    };
+
+    try {
+      const result = await ComparisonHybridRetriever.retrieve({
+        workspace: { id: 10, slug: "compare", topN: 4 },
+        thread: { id: 20 },
+        query:
+          "Ermittle alle Selbstbehalte im Dokument. Nenne jeweils Betrag, Bedingung und physische PDF-Seite.",
+        LLMConnector: {},
+        VectorDb,
+        documents,
+        inventoryService,
+      });
+
+      expect(inventoryService.ensureForDocuments).toHaveBeenCalledWith({
+        documents,
+        Connector: {},
+      });
+      expect(searchTopic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: expect.objectContaining({
+            id: "selbstbehalt",
+            qualifierTerms: [],
+          }),
+        })
+      );
+      expect(result).toMatchObject({ active: true, ready: true });
+      expect(result.sources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ documentSlot: "A", pageNumber: 1 }),
+          expect.objectContaining({ documentSlot: "B", pageNumber: 2 }),
+        ])
+      );
+    } finally {
+      searchTopic.mockRestore();
+    }
   });
 
   test.each([
@@ -592,7 +681,10 @@ describe("ComparisonHybridRetriever", () => {
       });
 
       expect(result).toMatchObject({ active: true, ready: true });
-      expect(inventoryService.ensureForDocuments).not.toHaveBeenCalled();
+      expect(inventoryService.ensureForDocuments).toHaveBeenCalledWith({
+        documents,
+        Connector: LLMConnector,
+      });
       expect(searchTopic).toHaveBeenCalledWith(
         expect.objectContaining({
           topic: expect.objectContaining({
