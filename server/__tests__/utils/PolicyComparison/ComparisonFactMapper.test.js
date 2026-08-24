@@ -257,9 +257,94 @@ describe("ComparisonFactMapper", () => {
     );
   });
 
+  test("corrects only a unit whose abstract topic is not source-grounded", async () => {
+    const identityText =
+      "WIENER STÄDTISCHE Versicherung AG Vienna Insurance Group";
+    const deductibleText = "Selbstbehalt EUR 350 je Schadenfall.";
+    const Connector = connector([
+      {
+        units: [
+          {
+            unitKey: "identity",
+            facts: [
+              {
+                topic: "Versicherer-Identifikation",
+                factType: "other_contract_fact",
+                claim: "Der Versicherer wird bezeichnet.",
+                evidenceText: identityText,
+              },
+            ],
+          },
+          {
+            unitKey: "deductible",
+            facts: [
+              {
+                topic: "Selbstbehalt",
+                factType: "deductible",
+                claim: "350 Euro je Schadenfall",
+                evidenceText: deductibleText,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        units: [
+          {
+            unitKey: "identity",
+            facts: [
+              {
+                topic: "WIENER STÄDTISCHE Versicherung AG",
+                factType: "other_contract_fact",
+                claim: "Der Versicherer wird bezeichnet.",
+                evidenceText: identityText,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await ComparisonFactMapper.extract({
+      units: [
+        unit(identityText, "identity"),
+        unit(deductibleText, "deductible"),
+      ],
+      Connector,
+    });
+
+    expect(result.facts).toHaveLength(2);
+    expect(result.facts.map((fact) => fact.label)).toEqual([
+      "WIENER STÄDTISCHE Versicherung AG",
+      "Selbstbehalt",
+    ]);
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(2);
+    const correction =
+      Connector.getPolicyInventoryCompletion.mock.calls[1][0].at(-1).content;
+    expect(correction).toContain("BELEGKORREKTUR");
+    expect(correction).toContain('"unitKey":"identity"');
+    expect(correction).not.toContain('"unitKey":"deductible"');
+  });
+
   test("rejects a Vandalismus label grounded only by unrelated Einbruch evidence", async () => {
     const text = "Schäden durch Einbruchdiebstahl sind versichert.";
+    const invalidResponse = {
+      units: [
+        {
+          unitKey: "u1",
+          facts: [
+            {
+              topic: "Vandalismus",
+              factType: "coverage",
+              claim: "Vandalismus ist versichert",
+              evidenceText: text,
+            },
+          ],
+        },
+      ],
+    };
     const Connector = connector([
+      invalidResponse,
       {
         units: [
           {
@@ -280,5 +365,6 @@ describe("ComparisonFactMapper", () => {
     await expect(
       ComparisonFactMapper.extract({ units: [unit(text)], Connector })
     ).rejects.toThrow("not grounded");
+    expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledTimes(2);
   });
 });

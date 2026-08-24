@@ -9,6 +9,7 @@ const DEFAULT_MAP_INPUT_TOKEN_BUDGET = 4_096;
 const DEFAULT_MAP_OUTPUT_TOKEN_LIMIT = 1_024;
 const DEFAULT_MAX_UNITS_PER_BATCH = 12;
 const FORMAT_MISMATCH_CODE = "FACT_MAPPER_FORMAT_MISMATCH";
+const FACT_VALIDATION_CODE = "FACT_MAPPER_FACT_VALIDATION";
 const ALLOWED_FACT_TYPES = new Set([
   "coverage",
   "limit",
@@ -293,14 +294,22 @@ function validateReceipts(parsed, units) {
       throw error;
     }
     const unit = expected.get(unitKey);
-    received.set(unitKey, {
-      unit,
-      facts: receipt.facts.map((fact) => normalizeFact(fact, unit)),
-      noFactReason:
-        receipt.facts.length === 0
-          ? String(receipt.noFactReason || "Kein Vertragsfakt erkannt.").trim()
-          : null,
-    });
+    try {
+      received.set(unitKey, {
+        unit,
+        facts: receipt.facts.map((fact) => normalizeFact(fact, unit)),
+        noFactReason:
+          receipt.facts.length === 0
+            ? String(
+                receipt.noFactReason || "Kein Vertragsfakt erkannt."
+              ).trim()
+            : null,
+      });
+    } catch (error) {
+      error.code = FACT_VALIDATION_CODE;
+      error.unitKey = unitKey;
+      throw error;
+    }
   }
   if (received.size !== expected.size)
     throw new Error("Fact mapper did not acknowledge every input unitKey.");
@@ -338,13 +347,19 @@ function packUnits(
 
 function messagesFor(
   units,
-  { secondReview = false, formatCorrection = false } = {}
+  {
+    secondReview = false,
+    formatCorrection = false,
+    factValidationCorrection = null,
+  } = {}
 ) {
-  const review = formatCorrection
-    ? 'FORMATKORREKTUR: Die vorige Antwort wiederholte Eingabefelder statt des verlangten Schemas. Gib ausschließlich {"units":[{"unitKey":"...","facts":[],"noFactReason":null}]} zurück. Jeder Block braucht zwingend das Array facts; kopiere weder text noch riskSignals in die Ausgabe.'
-    : secondReview
-      ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
-      : "Extrahiere alle Fakten aus jedem Block.";
+  const review = factValidationCorrection
+    ? `BELEGKORREKTUR: Der vorige Fakt wurde lokal abgelehnt: ${factValidationCorrection}. Korrigiere ausschließlich diesen Block. topic muss mit einem konkreten Begriff aus headingPath, text oder evidenceText bezeichnet werden; erfinde keine abstrakte Oberkategorie. factType und evidenceText müssen weiterhin wortgetreu belegt sein.`
+    : formatCorrection
+      ? 'FORMATKORREKTUR: Die vorige Antwort wiederholte Eingabefelder statt des verlangten Schemas. Gib ausschließlich {"units":[{"unitKey":"...","facts":[],"noFactReason":null}]} zurück. Jeder Block braucht zwingend das Array facts; kopiere weder text noch riskSignals in die Ausgabe.'
+      : secondReview
+        ? "ZWEITPRÜFUNG: Der erste Durchlauf meldete null Fakten, obwohl deterministische Risikosignale vorliegen. Prüfe besonders die genannten Signale. Null Fakten sind nur nach erneuter vollständiger Prüfung zulässig."
+        : "Extrahiere alle Fakten aus jedem Block.";
   return [
     { role: "system", content: SYSTEM_PROMPT },
     {
@@ -359,20 +374,38 @@ async function mapBatch({
   units,
   secondReview = false,
   formatCorrection = false,
+  factValidationCorrection = null,
   analysisRunId = null,
 }) {
   try {
     const response = await mapCompletion(
       Connector,
-      messagesFor(units, { secondReview, formatCorrection }),
+      messagesFor(units, {
+        secondReview,
+        formatCorrection,
+        factValidationCorrection,
+      }),
       {
         kind: "comparison_fact_map",
         analysisRunId,
         batchSize: units.length,
-        pass: secondReview ? "second" : "first",
+        pass: secondReview
+          ? "second"
+          : factValidationCorrection
+            ? "grounding_correction"
+            : "first",
       }
     );
-    return validateReceipts(visibleJson(response?.textResponse), units);
+    const parsed = visibleJson(response?.textResponse);
+    return await validateParsedWithCorrections({
+      Connector,
+      parsed,
+      units,
+      secondReview,
+      formatCorrection,
+      analysisRunId,
+      allowFactValidationCorrection: factValidationCorrection === null,
+    });
   } catch (error) {
     if (error?.code === FORMAT_MISMATCH_CODE && formatCorrection === false)
       return mapBatch({
@@ -380,6 +413,7 @@ async function mapBatch({
         units,
         secondReview,
         formatCorrection: true,
+        factValidationCorrection,
         analysisRunId,
       });
     if (error?.code === "POLICY_INFERENCE_TIMEOUT" || units.length === 1)
@@ -391,6 +425,7 @@ async function mapBatch({
         units: units.slice(0, middle),
         secondReview,
         formatCorrection,
+        factValidationCorrection,
         analysisRunId,
       })),
       ...(await mapBatch({
@@ -398,9 +433,65 @@ async function mapBatch({
         units: units.slice(middle),
         secondReview,
         formatCorrection,
+        factValidationCorrection,
         analysisRunId,
       })),
     ];
+  }
+}
+
+async function validateParsedWithCorrections({
+  Connector,
+  parsed,
+  units,
+  secondReview,
+  formatCorrection,
+  analysisRunId,
+  allowFactValidationCorrection,
+}) {
+  try {
+    return validateReceipts(parsed, units);
+  } catch (error) {
+    if (error?.code !== FACT_VALIDATION_CODE || !allowFactValidationCorrection)
+      throw error;
+    const rejectedUnit = units.find(
+      (unit) => (unit.blockKey || unit.unitKey) === error.unitKey
+    );
+    if (!rejectedUnit) throw error;
+    const retainedUnits = units.filter((unit) => unit !== rejectedUnit);
+    const retainedKeys = new Set(
+      retainedUnits.map((unit) => unit.blockKey || unit.unitKey)
+    );
+    const retained = retainedUnits.length
+      ? await validateParsedWithCorrections({
+          Connector,
+          parsed: {
+            units: parsed.units.filter((receipt) =>
+              retainedKeys.has(String(receipt?.unitKey || ""))
+            ),
+          },
+          units: retainedUnits,
+          secondReview,
+          formatCorrection,
+          analysisRunId,
+          allowFactValidationCorrection,
+        })
+      : [];
+    const corrected = await mapBatch({
+      Connector,
+      units: [rejectedUnit],
+      secondReview,
+      formatCorrection,
+      factValidationCorrection: error.message,
+      analysisRunId,
+    });
+    const byUnitKey = new Map(
+      [...retained, ...corrected].map((receipt) => [
+        receipt.unit.blockKey || receipt.unit.unitKey,
+        receipt,
+      ])
+    );
+    return units.map((unit) => byUnitKey.get(unit.blockKey || unit.unitKey));
   }
 }
 
