@@ -496,7 +496,9 @@ const ComparisonHybridRetriever = {
       }
       if (inventories) {
         if (ComparisonFactTable.isCompleteAnalysisRequest(query)) {
-          const factRowPlan = ComparisonFactTable.plan(inventories);
+          const factRowPlan = ComparisonFactTable.plan(inventories, {
+            userPrompt: query,
+          });
           const deterministicTextResponse =
             ComparisonFactTable.render(factRowPlan);
           return {
@@ -518,8 +520,17 @@ const ComparisonHybridRetriever = {
             factRowPlan,
             deterministicTextResponse,
             coverage: {
-              plannedFacts: factRowPlan.expectedFactKeys.length,
-              renderedRows: factRowPlan.rows.length,
+              plannedFacts: factRowPlan.expectedFactRefs.length,
+              renderedRows: factRowPlan.documents.reduce(
+                (total, document) =>
+                  total +
+                  document.sections.reduce(
+                    (sectionTotal, section) =>
+                      sectionTotal + section.rows.length,
+                    0
+                  ),
+                0
+              ),
             },
             systemPrompt: this.systemPromptForDocuments(ordered),
           };

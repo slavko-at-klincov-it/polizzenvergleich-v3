@@ -107,9 +107,10 @@ function renderUnit(unit) {
   };
 }
 
-async function mapCompletion(Connector, messages) {
+async function mapCompletion(Connector, messages, metricContext) {
   if (typeof Connector?.getPolicyInventoryCompletion === "function")
     return PolicyInferenceQueue.runOperation({
+      metricContext,
       operation: () =>
         Connector.getPolicyInventoryCompletion(messages, {
           temperature: 0,
@@ -119,6 +120,7 @@ async function mapCompletion(Connector, messages) {
   return PolicyInferenceQueue.run({
     Connector,
     messages,
+    metricContext,
     retries: 0,
     completionOptions: {
       temperature: 0,
@@ -343,11 +345,22 @@ function messagesFor(units, { secondReview = false } = {}) {
   ];
 }
 
-async function mapBatch({ Connector, units, secondReview = false }) {
+async function mapBatch({
+  Connector,
+  units,
+  secondReview = false,
+  analysisRunId = null,
+}) {
   try {
     const response = await mapCompletion(
       Connector,
-      messagesFor(units, { secondReview })
+      messagesFor(units, { secondReview }),
+      {
+        kind: "comparison_fact_map",
+        analysisRunId,
+        batchSize: units.length,
+        pass: secondReview ? "second" : "first",
+      }
     );
     return validateReceipts(visibleJson(response?.textResponse), units);
   } catch (error) {
@@ -359,11 +372,13 @@ async function mapBatch({ Connector, units, secondReview = false }) {
         Connector,
         units: units.slice(0, middle),
         secondReview,
+        analysisRunId,
       })),
       ...(await mapBatch({
         Connector,
         units: units.slice(middle),
         secondReview,
+        analysisRunId,
       })),
     ];
   }
@@ -379,6 +394,7 @@ const ComparisonFactMapper = {
     inputTokenBudget = DEFAULT_MAP_INPUT_TOKEN_BUDGET,
     maxUnitsPerBatch = DEFAULT_MAX_UNITS_PER_BATCH,
     onUnitValidated = null,
+    analysisRunId = null,
   } = {}) {
     if (units.length === 0)
       return {
@@ -400,7 +416,11 @@ const ComparisonFactMapper = {
       inputTokenBudget,
       maxUnitsPerBatch,
     })) {
-      const firstPass = await mapBatch({ Connector, units: batch });
+      const firstPass = await mapBatch({
+        Connector,
+        units: batch,
+        analysisRunId,
+      });
       const riskZeroUnits = firstPass
         .filter(
           ({ unit, facts }) => facts.length === 0 && unit.riskSignals.length > 0
@@ -412,6 +432,7 @@ const ComparisonFactMapper = {
           Connector,
           units: riskZeroUnits,
           secondReview: true,
+          analysisRunId,
         });
         secondPass.forEach((receipt) =>
           reviewed.set(receipt.unit.unitKey, receipt)

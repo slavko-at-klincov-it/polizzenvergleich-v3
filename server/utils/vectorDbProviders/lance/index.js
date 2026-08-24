@@ -408,6 +408,10 @@ class LanceDb extends VectorDatabase {
       const vectors = [];
       const submissions = [];
       const vectorValues = await PolicyInferenceQueue.runOperation({
+        metricContext: {
+          kind: "comparison_basis_embedding",
+          batchSize: textChunks.length,
+        },
         operation: () => EmbedderEngine.embedChunks(textChunks),
       });
 
@@ -473,6 +477,7 @@ class LanceDb extends VectorDatabase {
       throw new Error("Invalid request to performSimilaritySearch.");
 
     const queryVector = await PolicyInferenceQueue.runOperation({
+      metricContext: { kind: "comparison_query_embedding" },
       operation: () => LLMConnector.embedTextInput(input),
     });
     assertManagedEmbeddingVector(queryVector);

@@ -1,4 +1,6 @@
 const DEFAULT_TIMEOUT_MS = 180_000;
+const crypto = require("crypto");
+const { PolicyComparisonMetrics } = require("./PolicyComparisonMetrics");
 let inferenceTail = Promise.resolve();
 
 function timeoutError() {
@@ -18,10 +20,29 @@ const PolicyInferenceQueue = {
     operation,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     timeoutStartedOperation = true,
+    metricContext = {},
+    metricSink = PolicyComparisonMetrics.emit,
   }) {
     if (typeof operation !== "function")
       throw new Error("Policy inference operation is required.");
     const previous = inferenceTail;
+    const enqueuedAt = Date.now();
+    const operationId = crypto.randomUUID();
+    let acquiredAt = null;
+    const emit = (event) => {
+      try {
+        metricSink?.({
+          operationId,
+          kind: metricContext.kind || "policy_operation",
+          analysisRunId: metricContext.analysisRunId,
+          batchSize: metricContext.batchSize,
+          pass: metricContext.pass,
+          ...event,
+        });
+      } catch {
+        // Observability is deliberately fail-open for product behavior.
+      }
+    };
     let release;
     const gate = new Promise((resolve) => {
       release = resolve;
@@ -42,8 +63,27 @@ const PolicyInferenceQueue = {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
+      acquiredAt = Date.now();
+      const providerStartedAt = acquiredAt;
       const running = Promise.resolve().then(operation);
-      running.then(release, release);
+      running.then(
+        () => {
+          emit({
+            event: "provider_settled",
+            providerDurationMs: Date.now() - providerStartedAt,
+            outcome: "resolved",
+          });
+          release();
+        },
+        () => {
+          emit({
+            event: "provider_settled",
+            providerDurationMs: Date.now() - providerStartedAt,
+            outcome: "rejected",
+          });
+          release();
+        }
+      );
       if (timeoutMs == null || !timeoutStartedOperation) return running;
       let operationTimer = null;
       const operationTimeout = new Promise((_resolve, reject) => {
@@ -54,17 +94,48 @@ const PolicyInferenceQueue = {
         if (operationTimer) clearTimeout(operationTimer);
       });
     });
-    if (timeoutMs == null || timeoutStartedOperation) return queuedOperation;
-    const waitTimeout = new Promise((_resolve, reject) => {
-      waitTimer = setTimeout(() => {
-        waitTimedOut = true;
-        reject(timeoutError());
-      }, timeoutMs);
-      waitTimer.unref?.();
-    });
-    return Promise.race([queuedOperation, waitTimeout]).finally(() => {
-      if (waitTimer) clearTimeout(waitTimer);
-    });
+    let callerPromise = queuedOperation;
+    if (timeoutMs != null && !timeoutStartedOperation) {
+      const waitTimeout = new Promise((_resolve, reject) => {
+        waitTimer = setTimeout(() => {
+          waitTimedOut = true;
+          reject(timeoutError());
+        }, timeoutMs);
+        waitTimer.unref?.();
+      });
+      callerPromise = Promise.race([queuedOperation, waitTimeout]).finally(
+        () => {
+          if (waitTimer) clearTimeout(waitTimer);
+        }
+      );
+    }
+    return callerPromise.then(
+      (value) => {
+        emit({
+          event: "caller_settled",
+          queueWaitMs: Math.max(0, (acquiredAt || Date.now()) - enqueuedAt),
+          callerTotalMs: Date.now() - enqueuedAt,
+          outcome: "resolved",
+        });
+        return value;
+      },
+      (error) => {
+        emit({
+          event: "caller_settled",
+          queueWaitMs: Math.max(0, (acquiredAt || Date.now()) - enqueuedAt),
+          callerTotalMs: Date.now() - enqueuedAt,
+          outcome:
+            error?.code === "POLICY_INFERENCE_TIMEOUT" ? "timeout" : "rejected",
+          timeoutPhase:
+            error?.code === "POLICY_INFERENCE_TIMEOUT"
+              ? acquiredAt == null
+                ? "queue_wait"
+                : "provider"
+              : null,
+        });
+        throw error;
+      }
+    );
   },
 
   run({
@@ -73,9 +144,13 @@ const PolicyInferenceQueue = {
     timeoutMs = DEFAULT_TIMEOUT_MS,
     retries = 0,
     completionOptions = { temperature: 0 },
+    metricContext = {},
+    metricSink,
   }) {
     return this.runOperation({
       timeoutMs,
+      metricContext,
+      metricSink,
       operation: async () => {
         let lastError;
         for (let attempt = 0; attempt <= retries; attempt++) {

@@ -217,6 +217,7 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
     const extraction = await ComparisonAmbiguousFactResolver.extract({
       units: ambiguousUnits,
       Connector,
+      analysisRunId,
       onUnitValidated: async (result) => {
         const deterministic = deterministicResults.get(result.unit.unitKey);
         const combined = [

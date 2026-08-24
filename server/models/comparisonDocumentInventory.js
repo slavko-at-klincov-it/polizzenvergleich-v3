@@ -250,7 +250,26 @@ function serializeItem(item = {}) {
   };
 }
 
+function serializeBlockContext(block = {}) {
+  return {
+    id: block.id ?? null,
+    blockKey: block.blockKey ?? null,
+    ordinal: block.ordinal ?? null,
+    pageNumber: block.pageNumber ?? null,
+    printedPageLabel: block.printedPageLabel ?? null,
+    sourceStart: block.sourceStart ?? null,
+    sourceEnd: block.sourceEnd ?? null,
+    structureKind: block.structureKind ?? null,
+    headingPath: parseJson(block.headingPathJson) || [],
+  };
+}
+
 function serializeManifest(document = {}, run = null, items = [], blocks = []) {
+  const blockContexts = blocks.map(serializeBlockContext);
+  const blocksByKey = new Map(
+    blockContexts.map((block) => [block.blockKey, block])
+  );
+  const blocksById = new Map(blockContexts.map((block) => [block.id, block]));
   return {
     comparisonDocumentId: document.id,
     analysisRunId: run?.id ?? null,
@@ -262,7 +281,18 @@ function serializeManifest(document = {}, run = null, items = [], blocks = []) {
     inventorySourceSha256:
       run?.sourceSha256 ?? document.inventorySourceSha256 ?? null,
     error: document.inventoryError ?? null,
-    items: items.map(serializeItem),
+    items: items.map((item) => {
+      const serialized = serializeItem(item);
+      return {
+        ...serialized,
+        sourceContext: blocksByKey.get(item.unitKey) || null,
+        evidences: serialized.evidences.map((evidence) => ({
+          ...evidence,
+          sourceContext: blocksById.get(evidence.blockId) || null,
+        })),
+      };
+    }),
+    analysisBlocks: blockContexts,
     analysisCoverage:
       blocks.length > 0
         ? {
@@ -320,7 +350,18 @@ async function publishedState(transaction, document) {
     }),
     transaction.comparison_document_clause_blocks.findMany({
       where: { analysisRunId: run.id },
-      select: { status: true },
+      select: {
+        id: true,
+        blockKey: true,
+        ordinal: true,
+        pageNumber: true,
+        printedPageLabel: true,
+        sourceStart: true,
+        sourceEnd: true,
+        structureKind: true,
+        headingPathJson: true,
+        status: true,
+      },
       orderBy: [{ ordinal: "asc" }],
     }),
   ]);

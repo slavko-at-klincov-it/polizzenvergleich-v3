@@ -72,6 +72,11 @@ const ComparisonClauseEmbeddingIndex = {
         );
       }
       const vectors = await PolicyInferenceQueue.runOperation({
+        metricContext: {
+          kind: "comparison_clause_embedding",
+          analysisRunId,
+          batchSize: batch.length,
+        },
         operation: () => Embedder.embedChunks(batch.map((block) => block.text)),
       });
       if (!Array.isArray(vectors) || vectors.length !== batch.length)
@@ -145,6 +150,7 @@ const ComparisonClauseEmbeddingIndex = {
     if (!ledgers.length) return [];
     const Embedder = getEmbeddingEngineSelection();
     const queryVector = await PolicyInferenceQueue.runOperation({
+      metricContext: { kind: "comparison_clause_query_embedding" },
       operation: () => Embedder.embedTextInput(String(text || "")),
     });
     assertManagedEmbeddingVector(queryVector);

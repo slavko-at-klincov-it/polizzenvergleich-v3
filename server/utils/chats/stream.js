@@ -401,7 +401,7 @@ async function streamChatWithWorkspace(
         type: chatMode,
         attachments,
         metrics: {
-          factRows: comparisonContext.factRowPlan?.rows?.length || 0,
+          factRows: comparisonContext.coverage?.renderedRows || 0,
         },
       });
       writeResponseChunk(response, {
@@ -549,6 +549,7 @@ async function streamChatWithWorkspace(
 
       if (comparisonContext.active)
         await PolicyInferenceQueue.runOperation({
+          metricContext: { kind: "comparison_chat_response" },
           operation: generateSingleComparison,
           // Timeout the wait behind a stuck local inference, but once the live
           // token stream owns the model, keep the lease until it really ends.

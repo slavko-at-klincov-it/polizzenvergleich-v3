@@ -153,6 +153,86 @@ describe("ComparisonDocumentInventory run staging", () => {
     expect(prisma.comparison_documents.update).not.toHaveBeenCalled();
   });
 
+  test("exposes published block context to the deterministic row planner", async () => {
+    prisma.comparison_document_analysis_runs.findUnique.mockResolvedValue({
+      id: 41,
+      comparisonDocumentId: 7,
+      pipelineVersion: 4,
+      sourceSha256: SOURCE_A,
+      pageCount: 21,
+      factCount: 1,
+      status: "ready",
+    });
+    prisma.comparison_document_inventory_items.findMany.mockResolvedValue([
+      {
+        id: 91,
+        factKey: "fact-1",
+        label: "Vandalismus",
+        unitKey: "block-1",
+        factType: "coverage",
+        evidenceText: "Vandalismusschäden sind versichert.",
+        evidences: [
+          {
+            blockId: 72,
+            ordinal: 0,
+            pageNumber: 19,
+            sourceStart: 200,
+            sourceEnd: 240,
+            evidenceText: "Zusätzlicher Beleg",
+            evidenceHash: "secondary-hash",
+          },
+        ],
+      },
+    ]);
+    prisma.comparison_document_clause_blocks.findMany.mockResolvedValue([
+      {
+        id: 71,
+        blockKey: "block-1",
+        ordinal: 4,
+        pageNumber: 18,
+        printedPageLabel: "5 von 14",
+        sourceStart: 100,
+        sourceEnd: 180,
+        structureKind: "paragraph",
+        headingPathJson: JSON.stringify(["Sachversicherung", "VARIANTE D"]),
+        status: "model_validated_facts",
+      },
+      {
+        id: 72,
+        blockKey: "block-2",
+        ordinal: 5,
+        pageNumber: 19,
+        printedPageLabel: "6 von 14",
+        sourceStart: 200,
+        sourceEnd: 260,
+        structureKind: "paragraph",
+        headingPathJson: JSON.stringify(["Ausschlüsse", "Graffiti"]),
+        status: "model_validated_facts",
+      },
+    ]);
+
+    const manifest = await ComparisonDocumentInventory.get(7);
+
+    expect(manifest.analysisRunId).toBe(41);
+    expect(manifest.items[0].sourceContext).toEqual(
+      expect.objectContaining({
+        blockKey: "block-1",
+        ordinal: 4,
+        pageNumber: 18,
+        printedPageLabel: "5 von 14",
+        headingPath: ["Sachversicherung", "VARIANTE D"],
+      })
+    );
+    expect(manifest.items[0].evidences[0].sourceContext).toEqual(
+      expect.objectContaining({
+        blockKey: "block-2",
+        pageNumber: 19,
+        printedPageLabel: "6 von 14",
+        headingPath: ["Ausschlüsse", "Graffiti"],
+      })
+    );
+  });
+
   test("creates a fresh staging run beside a published run with the same source contract", async () => {
     prisma.comparison_documents.findUnique.mockResolvedValue({
       id: 7,

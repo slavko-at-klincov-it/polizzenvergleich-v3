@@ -10,66 +10,80 @@ function inventory(documentId, slot, facts) {
       originalFilename: `${slot}.pdf`,
     },
     manifest: {
+      analysisRunId: 40 + documentId,
       comparisonDocumentId: documentId,
       items: facts,
     },
   };
 }
 
-describe("ComparisonFactTable", () => {
-  test("renders every validated fact exactly once in code-controlled order", () => {
-    const inventories = [
-      inventory(1, "A", [
-        {
-          factKey: "coverage",
-          factType: "coverage",
-          label: "Leitungswasser",
-          claimText: "Rohrbruchschäden sind versichert.",
-          evidenceText: "Rohrbruchschäden sind versichert.",
-          pageNumber: 2,
-          evidenceStart: 50,
-          evidenceEnd: 84,
-        },
-        {
-          factKey: "limit",
-          factType: "limit",
-          label: "Leitungswasser",
-          claimText: "Höchstentschädigung 10.000 Euro.",
-          evidenceText: "Höchstentschädigung EUR 10.000.",
-          value: 10_000,
-          unit: "EUR",
-          pageNumber: 2,
-          evidenceStart: 90,
-          evidenceEnd: 125,
-        },
-      ]),
-      inventory(2, "B", [
-        {
-          factKey: "coverage",
-          factType: "exclusion",
-          label: "Leitungswasser",
-          claimText: "Bei Leerstand ausgeschlossen.",
-          evidenceText: "Bei Leerstand ausgeschlossen.",
-          pageNumber: 7,
-          evidenceStart: 20,
-          evidenceEnd: 49,
-        },
-      ]),
-    ];
+function fact(factKey, factType, text, start) {
+  return {
+    factKey,
+    factType,
+    label: "Leitungswasser",
+    claimText: text,
+    evidenceText: text,
+    pageNumber: 2,
+    evidenceStart: start,
+    evidenceEnd: start + text.length,
+    unitKey: "leitungswasser-block",
+    sourceContext: {
+      blockKey: "leitungswasser-block",
+      ordinal: 4,
+      pageNumber: 2,
+      headingPath: ["Leitungswasser"],
+      structureKind: "paragraph",
+    },
+  };
+}
 
-    const plan = ComparisonFactTable.plan(inventories);
+describe("ComparisonFactTable", () => {
+  test("renders grouped facts in the exact requested columns", () => {
+    const prompt = `
+Analysiere das Dokument vollständig. Keine Position auslassen.
+1. Versicherte Sachen
+2. Sparten
+3. Erweiterungen
+TABELLE
+| Deckungsposition | Leistungsversprechen | Selbstbehalt | Quelle |
+SPALTENREGELN
+Keine Zusammenfassung.
+`;
+    const plan = ComparisonFactTable.plan(
+      [
+        inventory(1, "A", [
+          fact("coverage", "coverage", "Rohrbruchschäden sind versichert.", 50),
+          fact("deductible", "deductible", "Selbstbehalt EUR 500.", 90),
+        ]),
+      ],
+      { userPrompt: prompt }
+    );
     const markdown = ComparisonFactTable.render(plan);
 
-    expect(plan.rows).toHaveLength(3);
-    expect(plan.expectedFactKeys).toEqual([
-      "1:coverage",
-      "1:limit",
-      "2:coverage",
+    const rows = plan.documents[0].sections.flatMap((section) => section.rows);
+    expect(rows).toHaveLength(1);
+    expect(markdown).toContain(
+      "| Deckungsposition | Leistungsversprechen | Selbstbehalt | Quelle |"
+    );
+    expect(markdown).toContain("Rohrbruchschäden sind versichert.");
+    expect(markdown).toContain("Selbstbehalt EUR 500.");
+    expect(markdown).toContain("physische PDF-Seite 2");
+    expect(markdown).not.toContain("Versicherungssumme / Sublimit");
+    expect(rows[0].cells.deductible).toBe("Selbstbehalt EUR 500.");
+  });
+
+  test("renders two complete document sections without mixing sources", () => {
+    const plan = ComparisonFactTable.plan([
+      inventory(1, "A", [fact("a", "coverage", "Feuer A.", 10)]),
+      inventory(2, "B", [fact("b", "coverage", "Feuer B.", 20)]),
     ]);
-    expect(markdown.match(/A\.pdf/gu)).toHaveLength(2);
-    expect(markdown.match(/B\.pdf/gu)).toHaveLength(1);
-    expect(markdown).toContain("10.000 EUR");
-    expect(markdown).toContain("physische PDF-Seite 7");
+    const markdown = ComparisonFactTable.render(plan);
+
+    expect(markdown).toContain("# Dokument A – A.pdf");
+    expect(markdown).toContain("# Dokument B – B.pdf");
+    expect(markdown.indexOf("A.pdf")).toBeLessThan(markdown.indexOf("B.pdf"));
+    expect(plan.expectedFactRefs).toEqual(["41:1:a", "42:2:b"]);
   });
 
   test("recognizes the broker's exhaustive structured prompt", () => {

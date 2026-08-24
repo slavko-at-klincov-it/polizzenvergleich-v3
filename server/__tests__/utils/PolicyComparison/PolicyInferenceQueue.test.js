@@ -3,6 +3,14 @@ const {
 } = require("../../../utils/PolicyComparison/PolicyInferenceQueue");
 
 describe("PolicyInferenceQueue", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "info").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    console.info.mockRestore();
+  });
+
   test("does not overlap the next model call after a visible timeout", async () => {
     let releaseFirst;
     const firstConnector = {
@@ -103,5 +111,61 @@ describe("PolicyInferenceQueue", () => {
     expect(secondOperation).not.toHaveBeenCalled();
     releaseFirst("first-finished");
     await expect(second).resolves.toBe("second-finished");
+  });
+
+  test("reports caller timeout separately from the real provider settlement", async () => {
+    const metrics = [];
+    let releaseProvider;
+    const operation = PolicyInferenceQueue.runOperation({
+      operation: () =>
+        new Promise((resolve) => {
+          releaseProvider = resolve;
+        }),
+      timeoutMs: 5,
+      metricContext: {
+        kind: "comparison_fact_map",
+        analysisRunId: 17,
+        batchSize: 4,
+        pass: "first",
+      },
+      metricSink: (event) => metrics.push(event),
+    });
+
+    await expect(operation).rejects.toMatchObject({
+      code: "POLICY_INFERENCE_TIMEOUT",
+    });
+    expect(metrics).toEqual([
+      expect.objectContaining({
+        event: "caller_settled",
+        kind: "comparison_fact_map",
+        analysisRunId: 17,
+        batchSize: 4,
+        pass: "first",
+        outcome: "timeout",
+        timeoutPhase: "provider",
+      }),
+    ]);
+
+    releaseProvider("late-result");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "provider_settled",
+          outcome: "resolved",
+        }),
+      ])
+    );
+  });
+
+  test("never lets a failing metrics sink change inference behavior", async () => {
+    await expect(
+      PolicyInferenceQueue.runOperation({
+        operation: async () => "ready",
+        metricSink: () => {
+          throw new Error("metrics unavailable");
+        },
+      })
+    ).resolves.toBe("ready");
   });
 });
