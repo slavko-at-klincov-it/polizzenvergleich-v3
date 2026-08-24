@@ -132,7 +132,7 @@ describe("ComparisonInventoryExtractor", () => {
       ]),
     });
     // The compact transport keeps the same grounded topics while materially
-    // reducing generation work and retaining the 1,536-token safety ceiling.
+    // reducing generation work while retaining the bounded 2,048-token ceiling.
     expect(estimateInventoryTokens(verboseResponse)).toBeGreaterThan(1_024);
     expect(estimateInventoryTokens(compactResponse)).toBeLessThan(
       estimateInventoryTokens(verboseResponse) * 0.7
@@ -157,9 +157,24 @@ describe("ComparisonInventoryExtractor", () => {
     expect(Connector.getPolicyInventoryCompletion).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        maxOutputTokens: 1_536,
+        maxOutputTokens: 2_048,
       })
     );
+  });
+
+  test("keeps dense compact output above the former 1536-token ceiling intact", () => {
+    const topics = Array.from({ length: 36 }, (_, index) => [
+      `Spezialklausel ${index + 1}`,
+      (index % 4) + 1,
+      `Spezialklausel ${index + 1}: Versicherungsschutz mit Sublimit EUR ${(index + 1) * 1000}, Selbstbehalt und besonderen Voraussetzungen.`,
+    ]);
+    const response = JSON.stringify({ topics });
+
+    expect(estimateInventoryTokens(response)).toBeGreaterThan(1_536);
+    expect(estimateInventoryTokens(response)).toBeLessThanOrEqual(
+      DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT
+    );
+    expect(DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT).toBe(2_048);
   });
 
   test("extracts a grounded page-less inventory without inventing a page", async () => {

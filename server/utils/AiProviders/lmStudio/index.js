@@ -277,7 +277,7 @@ class LMStudioLLM {
    */
   async getPolicyInventoryCompletion(
     messages = [],
-    { temperature = 0, maxOutputTokens = 1_536 } = {}
+    { temperature = 0, maxOutputTokens = 2_048 } = {}
   ) {
     if (!this.model)
       throw new Error(

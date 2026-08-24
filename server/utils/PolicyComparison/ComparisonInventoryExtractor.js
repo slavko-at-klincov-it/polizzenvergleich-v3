@@ -10,7 +10,7 @@ const EXTRACTION_VERSION = 3;
 // so German text, umlauts, tables, and page markers all count against the same
 // deterministic input budget without sampling or omitting pages.
 const DEFAULT_BATCH_TOKEN_BUDGET = 7_168;
-const DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT = 1_536;
+const DEFAULT_INVENTORY_OUTPUT_TOKEN_LIMIT = 2_048;
 const MIN_BATCH_TOKEN_BUDGET = 256;
 const MIN_BATCH_CHAR_BUDGET = 256;
 const FRAGMENT_MARKER_RESERVE = 96;
