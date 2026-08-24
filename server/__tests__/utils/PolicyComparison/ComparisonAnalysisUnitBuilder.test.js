@@ -192,4 +192,28 @@ describe("ComparisonAnalysisUnitBuilder", () => {
     );
     expect(result.units.map((unit) => unit.text).join("")).toBe(text);
   });
+
+  test("keeps heading paths dense when extraction starts at a subsection", () => {
+    const text =
+      "1.1 Selbstbehalte\nDer Selbstbehalt beträgt EUR 350 je Schadenfall.";
+
+    const result = ComparisonAnalysisUnitBuilder.build({
+      documentData: documentData([text]),
+    });
+
+    expect(result.units[0]).toEqual(
+      expect.objectContaining({
+        structureKind: "heading",
+        headingPath: ["1.1 Selbstbehalte"],
+      })
+    );
+    expect(result.units[1]).toEqual(
+      expect.objectContaining({
+        headingPath: ["1.1 Selbstbehalte"],
+      })
+    );
+    expect(result.units.flatMap((unit) => unit.headingPath)).not.toContain(
+      undefined
+    );
+  });
 });

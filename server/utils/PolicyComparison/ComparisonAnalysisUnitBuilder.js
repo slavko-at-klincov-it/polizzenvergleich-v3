@@ -230,8 +230,13 @@ function pageBlocks(page, { sourceSha256, characterLimit }) {
       const kind = layoutStructureKind(text, spans, allSpans);
       if (kind === "heading") {
         const level = headingLevel(text);
-        headingPath.splice(level - 1);
-        headingPath[level - 1] = text.trim();
+        // PDF extracts can begin with a subsection such as "1.1" or jump
+        // directly from level 1 to level 3. Keep the available hierarchy
+        // dense instead of creating sparse `undefined` entries, which are not
+        // valid persisted inventory JSON values.
+        const pathIndex = Math.min(level - 1, headingPath.length);
+        headingPath.splice(pathIndex);
+        headingPath[pathIndex] = text.trim();
       }
       const textHash = sha256(text);
       const sourceStart = page.sourceStart + pageStart;
