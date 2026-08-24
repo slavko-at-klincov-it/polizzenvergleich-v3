@@ -1,6 +1,7 @@
 jest.mock("../../../models/comparisonDocumentInventory", () => ({
   ComparisonDocumentInventory: {
     get: jest.fn(),
+    analysisUnits: jest.fn(),
     prepareAnalysis: jest.fn(),
     persistBlockSignals: jest.fn(),
     markBlockAmbiguous: jest.fn(),
@@ -76,6 +77,7 @@ describe("ComparisonInventoryService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     ComparisonDocumentInventory.get.mockResolvedValue(null);
+    ComparisonDocumentInventory.analysisUnits.mockResolvedValue([]);
     ComparisonDocumentInventory.persistBlockSignals.mockResolvedValue(true);
     ComparisonDocumentInventory.markBlockAmbiguous.mockResolvedValue(true);
     ComparisonDocumentInventory.interruptedRuns.mockResolvedValue([]);
@@ -196,6 +198,79 @@ describe("ComparisonInventoryService", () => {
     expect(fileData).toHaveBeenCalledWith(document.docpath);
     expect(ComparisonAmbiguousFactResolver.extract).toHaveBeenCalledTimes(1);
     expect(result).toEqual([{ document, manifest: readyManifest }]);
+  });
+
+  test("prepares the complete deterministic clause ledger without invoking the fact mapper", async () => {
+    fileData.mockResolvedValue(documentData);
+
+    const [ledger] =
+      await ComparisonInventoryService.ensureDeterministicLedgerForDocuments({
+        documents: [document],
+        includeEmbeddings: true,
+      });
+
+    expect(ledger).toMatchObject({
+      comparisonDocument: document,
+      analysisRunId: 41,
+      coverage: { pageCount: 1 },
+    });
+    expect(ComparisonDocumentInventory.prepareAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({ announceInventory: false })
+    );
+    expect(ComparisonClauseBlockIndex.indexRun).toHaveBeenCalledWith({
+      analysisRunId: 41,
+      comparisonDocumentId: 1,
+    });
+    expect(ComparisonClauseEmbeddingIndex.indexRun).toHaveBeenCalledWith({
+      analysisRunId: 41,
+      comparisonDocument: document,
+    });
+    expect(ComparisonAmbiguousFactResolver.extract).not.toHaveBeenCalled();
+    expect(ComparisonDocumentInventory.finalizeAnalysis).not.toHaveBeenCalled();
+  });
+
+  test("reuses the immutable published ledger without creating a new staged run", async () => {
+    const readyManifest = {
+      comparisonDocumentId: 1,
+      analysisRunId: 77,
+      status: "ready",
+      version: 7,
+      itemCount: 1,
+      pageCount: 1,
+      sourceSha256: "a".repeat(64),
+      inventorySourceSha256: "a".repeat(64),
+      items: [{ factKey: "fact" }],
+      analysisCoverage: { unitCount: 1, validatedUnitCount: 1 },
+    };
+    ComparisonDocumentInventory.get.mockResolvedValue(readyManifest);
+    ComparisonDocumentInventory.analysisUnits.mockResolvedValue([
+      {
+        id: 17,
+        blockKey: "published-block",
+        ordinal: 0,
+        pageNumber: 1,
+        sourceStart: 0,
+        sourceEnd: 23,
+        text: "Selbstbehalt EUR 350.",
+        headingPathJson: '["Erdbeben"]',
+        structureKind: "paragraph",
+      },
+    ]);
+
+    const [ledger] =
+      await ComparisonInventoryService.ensureDeterministicLedgerForDocuments({
+        documents: [document],
+      });
+
+    expect(ledger.analysisRunId).toBe(77);
+    expect(ledger.units[0].headingPath).toEqual(["Erdbeben"]);
+    expect(ledger.deterministicResults.get("published-block").facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ factType: "deductible", pageNumber: 1 }),
+      ])
+    );
+    expect(fileData).not.toHaveBeenCalled();
+    expect(ComparisonDocumentInventory.prepareAnalysis).not.toHaveBeenCalled();
   });
 
   test("coalesces concurrent legacy regeneration for the same document", async () => {

@@ -337,3 +337,33 @@ abzulehnen.
 - Tabellengeometrie/Variantenzuordnung ausbauen,
 - optionaler Audit-Pass für `no_fact`,
 - progressive Hintergrundanreicherung nur bei bewiesener Notwendigkeit.
+
+## ADR-015: Exhaustive Selbstbehalt-Abfrage vor dem Vollinventar
+
+**Status:** IMPLEMENTIERT im Entwicklungsstand nach `policy-v0.3.22`
+
+Die gezielte Frage nach Selbstbehalten wird vor `ensureForDocuments()`
+geroutet. Sie darf keinen vollständigen Qwen-Faktenlauf starten.
+
+Der Pfad:
+
+1. baut beziehungsweise verwendet das vollständige, source-hash-gebundene
+   Clause-Block-Ledger,
+2. enumeriert sämtliche exakten FTS-Fundstellen der versionierten
+   Selbstbehalt-Aliasgruppe ohne Top-K-Grenze,
+3. nutzt vorhandene beziehungsweise dabei erzeugte Dinghy-Blockembeddings nur
+   additiv,
+4. übernimmt ausschließlich deterministisch belegte Selbstbehalt-Fakten,
+5. verbindet Beträge und Bedingungen innerhalb des Belegblocks oder eines
+   unmittelbar kompatiblen Tabellen-Nachbarblocks,
+6. rendert alle Zeilen im Servercode mit physischer PDF-Seite.
+
+Qwen wählt in diesem Pfad keine Treffer oder Zeilen aus. Der aktuelle erste
+vertikale Schnitt benötigt für die Antwort null generative Modellaufrufe.
+Ein bereits veröffentlichter Analyse-Run wird unverändert wiederverwendet; eine
+kurze Frage erzeugt daneben keinen neuen Staging-Run.
+
+Bewusste Grenze: Semantische Dinghy-Treffer ohne deterministisch belegbares
+Selbstbehalt-Signal werden noch nicht als Fakt ausgegeben. Damit bleibt der
+Pfad bei unbekannten Umschreibungen fail-closed, bis eine kleine, streng
+beleggebundene Ambiguitätsprüfung separat evaluiert wurde.

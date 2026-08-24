@@ -403,6 +403,7 @@ const ComparisonDocumentInventory = {
     sourceSha256,
     pageCount,
     units = [],
+    announceInventory = true,
   }) {
     const id = positiveInteger(comparisonDocumentId, "comparisonDocumentId");
     const pipelineVersion = positiveInteger(version, "version");
@@ -474,7 +475,11 @@ const ComparisonDocumentInventory = {
         !document.publishedAnalysisRunId &&
         document.inventoryStatus === "ready" &&
         Number(document.inventoryItemCount) > 0;
-      if (!document.publishedAnalysisRunId && !hasLegacyPublishedInventory)
+      if (
+        announceInventory &&
+        !document.publishedAnalysisRunId &&
+        !hasLegacyPublishedInventory
+      )
         await transaction.comparison_documents.update({
           where: { id },
           data: {

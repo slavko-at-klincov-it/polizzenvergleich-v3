@@ -21,6 +21,7 @@ const { FALLBACK_TOPICS } = require("./ComparisonTopicInventory");
 
 const CURRENT_INVENTORY_VERSION = FACT_EXTRACTION_VERSION;
 const rebuilds = new Map();
+const ledgerBuilds = new Map();
 const deletingDocuments = new Set();
 
 class ComparisonInventoryError extends Error {
@@ -136,83 +137,14 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
     throw new ComparisonInventoryError("Vergleichsdokument fehlt.");
   let analysisRunId = null;
   try {
-    const storedSource = normalizedSourceHash(comparisonDocument.sourceSha256);
-    const canonicalSource = documentSourceHash(documentData);
-    if (!canonicalSource)
-      throw new Error("Canonical document source hash is missing or invalid.");
-    if (storedSource && storedSource !== canonicalSource)
-      throw new Error(
-        "Canonical PDF source hash does not match the existing FTS/vector index."
-      );
-    const coverage = ComparisonClauseBlockBuilder.build({ documentData });
-    const preparedUnits = coverage.units.map((unit) => ({
-      ...unit,
-      riskSignals: ComparisonFactRiskSignals.detect(unit.text, {
-        sourceStart: unit.sourceStart,
-      }),
-    }));
-    const deterministicResults = new Map(
-      preparedUnits.map((unit) => [
-        unit.blockKey,
-        ComparisonDeterministicFactExtractor.extract(unit, unit.riskSignals),
-      ])
-    );
-    const prepared = await ComparisonDocumentInventory.prepareAnalysis({
-      comparisonDocumentId: comparisonDocument.id,
-      version: CURRENT_INVENTORY_VERSION,
-      sourceSha256: canonicalSource,
-      pageCount: coverage.pageCount,
-      units: preparedUnits,
-    });
-    analysisRunId = prepared.analysisRunId;
-    await ComparisonDocumentInventory.persistBlockSignals({
-      analysisRunId,
-      signalsByBlock: new Map(
-        preparedUnits.map((unit) => [unit.blockKey, unit.riskSignals])
-      ),
-    });
-    await ComparisonClauseBlockIndex.indexRun({
-      analysisRunId,
-      comparisonDocumentId: comparisonDocument.id,
-    });
-    await ComparisonClauseEmbeddingIndex.indexRun({
-      analysisRunId,
+    const ledger = await prepareDeterministicLedger({
       comparisonDocument,
+      documentData,
+      announceInventory: true,
+      includeEmbeddings: true,
     });
-
-    const successfulStatuses =
-      ComparisonDocumentInventory.successfulBlockStatuses;
-    const pendingKeys = new Set(
-      prepared.units
-        .filter((unit) => !successfulStatuses.has(unit.status))
-        .map((unit) => unit.blockKey)
-    );
-    const ambiguousUnits = [];
-    for (const unit of preparedUnits.filter((item) =>
-      pendingKeys.has(item.blockKey)
-    )) {
-      const deterministic = deterministicResults.get(unit.blockKey);
-      if (!deterministic.requiresReview) {
-        await ComparisonDocumentInventory.completeAnalysisUnit({
-          analysisRunId,
-          unitKey: unit.blockKey,
-          facts: deterministic.facts,
-          reviewCount: 0,
-          resultKind:
-            deterministic.terminalStatus === "technical_non_content"
-              ? "technical_non_content"
-              : "facts",
-          noFactReason: deterministic.reasonCode,
-        });
-        continue;
-      }
-      await ComparisonDocumentInventory.markBlockAmbiguous({
-        analysisRunId,
-        blockKey: unit.blockKey,
-        reasonCode: deterministic.reasonCode,
-      });
-      ambiguousUnits.push({ ...unit, unitKey: unit.blockKey });
-    }
+    analysisRunId = ledger.analysisRunId;
+    const { canonicalSource, deterministicResults, ambiguousUnits } = ledger;
 
     const extraction = await ComparisonAmbiguousFactResolver.extract({
       units: ambiguousUnits,
@@ -258,6 +190,185 @@ async function buildInventory({ comparisonDocument, documentData, Connector }) {
       `Das offene Klauselinventar für Dokument ${comparisonDocument.slot || "?"} konnte nicht erstellt werden: ${error.message}`
     );
   }
+}
+
+async function prepareDeterministicLedger({
+  comparisonDocument,
+  documentData,
+  announceInventory = false,
+  includeEmbeddings = true,
+}) {
+  const storedSource = normalizedSourceHash(comparisonDocument.sourceSha256);
+  const canonicalSource = documentSourceHash(documentData);
+  if (!canonicalSource)
+    throw new Error("Canonical document source hash is missing or invalid.");
+  if (storedSource && storedSource !== canonicalSource)
+    throw new Error(
+      "Canonical PDF source hash does not match the existing FTS/vector index."
+    );
+  const coverage = ComparisonClauseBlockBuilder.build({ documentData });
+  const preparedUnits = coverage.units.map((unit) => ({
+    ...unit,
+    riskSignals: ComparisonFactRiskSignals.detect(unit.text, {
+      sourceStart: unit.sourceStart,
+    }),
+  }));
+  const deterministicResults = new Map(
+    preparedUnits.map((unit) => [
+      unit.blockKey,
+      ComparisonDeterministicFactExtractor.extract(unit, unit.riskSignals),
+    ])
+  );
+  const prepared = await ComparisonDocumentInventory.prepareAnalysis({
+    comparisonDocumentId: comparisonDocument.id,
+    version: CURRENT_INVENTORY_VERSION,
+    sourceSha256: canonicalSource,
+    pageCount: coverage.pageCount,
+    units: preparedUnits,
+    announceInventory,
+  });
+  const analysisRunId = prepared.analysisRunId;
+  await ComparisonDocumentInventory.persistBlockSignals({
+    analysisRunId,
+    signalsByBlock: new Map(
+      preparedUnits.map((unit) => [unit.blockKey, unit.riskSignals])
+    ),
+  });
+  if (prepared.units.some((unit) => unit.ftsStatus !== "ready"))
+    await ComparisonClauseBlockIndex.indexRun({
+      analysisRunId,
+      comparisonDocumentId: comparisonDocument.id,
+    });
+  if (
+    includeEmbeddings &&
+    prepared.units.some((unit) => unit.embeddingStatus !== "ready")
+  )
+    await ComparisonClauseEmbeddingIndex.indexRun({
+      analysisRunId,
+      comparisonDocument,
+    });
+
+  const successfulStatuses =
+    ComparisonDocumentInventory.successfulBlockStatuses;
+  const persistedByKey = new Map(
+    prepared.units.map((unit) => [unit.blockKey, unit])
+  );
+  const pendingKeys = new Set(
+    prepared.units
+      .filter((unit) => !successfulStatuses.has(unit.status))
+      .map((unit) => unit.blockKey)
+  );
+  const ambiguousUnits = [];
+  for (const unit of preparedUnits.filter((item) =>
+    pendingKeys.has(item.blockKey)
+  )) {
+    const deterministic = deterministicResults.get(unit.blockKey);
+    if (!deterministic.requiresReview) {
+      await ComparisonDocumentInventory.completeAnalysisUnit({
+        analysisRunId,
+        unitKey: unit.blockKey,
+        facts: deterministic.facts,
+        reviewCount: 0,
+        resultKind:
+          deterministic.terminalStatus === "technical_non_content"
+            ? "technical_non_content"
+            : "facts",
+        noFactReason: deterministic.reasonCode,
+      });
+      continue;
+    }
+    await ComparisonDocumentInventory.markBlockAmbiguous({
+      analysisRunId,
+      blockKey: unit.blockKey,
+      reasonCode: deterministic.reasonCode,
+    });
+    ambiguousUnits.push({
+      ...unit,
+      id: persistedByKey.get(unit.blockKey)?.id,
+      unitKey: unit.blockKey,
+    });
+  }
+  return {
+    comparisonDocument,
+    analysisRunId,
+    canonicalSource,
+    coverage,
+    deterministicResults,
+    ambiguousUnits,
+    units: preparedUnits.map((unit) => ({
+      ...unit,
+      id: persistedByKey.get(unit.blockKey)?.id,
+    })),
+  };
+}
+
+function deterministicLedgerForDocument({ document, includeEmbeddings }) {
+  if (deletingDocuments.has(document.id))
+    throw new ComparisonInventoryError(
+      "Das Vergleichsdokument wird gerade entfernt.",
+      "comparison_inventory_document_deleting"
+    );
+  const existing = ledgerBuilds.get(document.id);
+  if (existing) return existing;
+  const operation = (async () => {
+    const { fileData } = require("../files");
+    const documentData = await fileData(document.docpath);
+    if (!documentData)
+      throw new ComparisonInventoryError(
+        `Der gespeicherte Textbestand für Dokument ${document.slot} fehlt. Bitte dieses Dokument entfernen und erneut ablegen.`,
+        "comparison_inventory_source_missing"
+      );
+    return prepareDeterministicLedger({
+      comparisonDocument: document,
+      documentData,
+      announceInventory: false,
+      includeEmbeddings,
+    });
+  })().finally(() => {
+    if (ledgerBuilds.get(document.id) === operation)
+      ledgerBuilds.delete(document.id);
+  });
+  ledgerBuilds.set(document.id, operation);
+  return operation;
+}
+
+async function publishedDeterministicLedger(document, manifest) {
+  const persistedUnits = await ComparisonDocumentInventory.analysisUnits(
+    manifest.analysisRunId
+  );
+  const units = persistedUnits.map((unit) => {
+    let headingPath = [];
+    try {
+      const parsed = JSON.parse(unit.headingPathJson || "[]");
+      if (Array.isArray(parsed)) headingPath = parsed;
+    } catch (_error) {
+      headingPath = [];
+    }
+    return {
+      ...unit,
+      headingPath,
+      riskSignals: ComparisonFactRiskSignals.detect(unit.text, {
+        sourceStart: unit.sourceStart,
+      }),
+    };
+  });
+  return {
+    comparisonDocument: document,
+    analysisRunId: manifest.analysisRunId,
+    canonicalSource: manifest.inventorySourceSha256,
+    coverage: {
+      pageCount: manifest.pageCount,
+      unitCount: units.length,
+    },
+    units,
+    deterministicResults: new Map(
+      units.map((unit) => [
+        unit.blockKey,
+        ComparisonDeterministicFactExtractor.extract(unit, unit.riskSignals),
+      ])
+    ),
+    ambiguousUnits: [],
+  };
 }
 
 function rebuildForDocument({ document, Connector }) {
@@ -311,6 +422,27 @@ const ComparisonInventoryService = {
   },
 
   buildForDocument: buildInventory,
+
+  async ensureDeterministicLedgerForDocuments({
+    documents = [],
+    includeEmbeddings = true,
+  }) {
+    const ledgers = [];
+    for (const document of documents) {
+      const manifest = await ComparisonDocumentInventory.get(document.id);
+      if (
+        manifestCurrent(manifest, document.sourceSha256) &&
+        manifest.analysisRunId
+      ) {
+        ledgers.push(await publishedDeterministicLedger(document, manifest));
+        continue;
+      }
+      ledgers.push(
+        await deterministicLedgerForDocument({ document, includeEmbeddings })
+      );
+    }
+    return ledgers;
+  },
 
   async readyForDocuments({ documents = [] }) {
     const inventories = [];
@@ -437,6 +569,8 @@ const ComparisonInventoryService = {
       // FTS write can escape scoped cleanup.
       const active = rebuilds.get(documentId);
       if (active) await active.catch(() => null);
+      const activeLedger = ledgerBuilds.get(documentId);
+      if (activeLedger) await activeLedger.catch(() => null);
       const artifacts =
         await ComparisonDocumentInventory.analysisArtifacts(documentId);
       for (const runId of artifacts.runIds)

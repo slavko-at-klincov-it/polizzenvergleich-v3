@@ -394,6 +394,7 @@ printf '%s\n' '[installer-test] focused application contracts'
   server/__tests__/utils/PolicyComparison/ComparisonClauseEmbeddingIndex.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonClauseIndexes.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonDeterministicFactExtractor.test.js \
+  server/__tests__/utils/PolicyComparison/ComparisonDeductibleRetriever.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonFactMapper.test.js \
   server/__tests__/utils/PolicyComparison/ComparisonFactTable.test.js \
   server/__tests__/utils/PolicyComparison/PolicyInferenceQueue.test.js \

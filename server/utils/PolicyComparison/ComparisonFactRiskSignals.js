@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const SIGNAL_RULE_VERSION = 1;
+const SIGNAL_RULE_VERSION = 2;
 const SIGNALS = [
   [
     "money",
@@ -15,7 +15,10 @@ const SIGNALS = [
     "limit",
     /\b(?:versicherungssumme|sublimit|höchstentschädigung|hoechstentschaedigung|erstes risiko|jahreshöchst(?:entschädigung|leistung)|maximal|mindestens|höchstens|unbegrenzt|bis(?=\s+(?:EUR|€|\d)))\b/giu,
   ],
-  ["deductible", /\b(?:selbstbehalt|selbstbeteiligung|franchise)\b/giu],
+  [
+    "deductible",
+    /\b(?:selbstbehalt(?:e|en|s)?|selbstbeteiligung(?:en)?|franchise(?:n)?|eigenanteil(?:e|en|s)?|selbst\s+zu\s+tragen)\b/giu,
+  ],
   [
     "coverage",
     /\b(?:versichert|mitversichert|gedeckt|eingeschlossen|ersetzt|entschädigt|leistet)\b/giu,

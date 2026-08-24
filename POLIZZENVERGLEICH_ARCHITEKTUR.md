@@ -362,18 +362,29 @@ Basisindex ready
     -> Code besitzt und rendert jede Tabellenzeile
 ```
 
-### Noch nicht implementierte Produktverdrahtung
+### Implementierter erster vertikaler Pfad
 
-- `ComparisonClauseBlockIndex.searchRun()` hat noch keinen produktiven
-  exhaustive Chat-Aufrufer.
-- `ComparisonClauseEmbeddingIndex.semanticLinks()` ist noch nicht in diesen
-  Targeted-Pfad eingebunden.
-- Clause Blocks entstehen aktuell erst im Analysis Run und nicht bereits als
-  eigenständiger Basisindex-Baustein.
+- Konkrete Selbstbehaltfragen werden vor `ensureForDocuments()` geroutet.
+- `ComparisonClauseBlockIndex.searchAllRun()` paginiert alle exakten
+  Aliasfundstellen ohne Top-K-Grenze.
+- `ComparisonClauseEmbeddingIndex.semanticLinks()` ergänzt semantische
+  Kandidaten; ausgegeben werden nur deterministisch belegbare
+  Selbstbehalt-Fakten.
+- Clause Blocks entstehen source-hash-gebunden in einem resumierbaren
+  Staging-Run. Ein vorhandener Published Run wird unverändert wiederverwendet.
+- Betrag, Bedingung, Heading/Variante, Beleg und physische Seite werden vom
+  Server zusammengeführt und gerendert. Der Pfad hat null generative
+  Modellaufrufe.
+
+### Weiter offen
+
+- Clause Blocks sind noch kein eigenständiger Basisindex-Baustein; beim ersten
+  gezielten Prompt kann daher die schnelle FTS-/Dinghy-Ledgerbereitung nötig
+  sein.
 - Heading-Kontinuität über physische Seiten muss kontrolliert behandelt werden.
 - Tabellenköpfe und Variantenbezüge brauchen realstrukturnahe Tests.
-- Der Retriever muss kurze Fragen beantworten können, ohne vorher
-  `ensureForDocuments()` über das ganze Dokument auszuführen.
+- Semantische Treffer ohne deterministisches Selbstbehalt-Signal bleiben bis
+  zu einer evaluierten, kleinen Ambiguitätsprüfung bewusst unberücksichtigt.
 
 ## 13. Harte Invarianten für künftige Änderungen
 

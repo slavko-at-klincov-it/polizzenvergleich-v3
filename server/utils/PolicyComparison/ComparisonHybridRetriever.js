@@ -2,6 +2,9 @@ const { ComparisonChunkIndex } = require("./ComparisonChunkIndex");
 const { ComparisonInventoryService } = require("./ComparisonInventoryService");
 const { PolicyInferenceQueue } = require("./PolicyInferenceQueue");
 const { ComparisonFactTable } = require("./ComparisonFactTable");
+const {
+  ComparisonDeductibleRetriever,
+} = require("./ComparisonDeductibleRetriever");
 
 const RRF_K = 60;
 const LANCEDB_NAME = "LanceDb";
@@ -477,6 +480,28 @@ const ComparisonHybridRetriever = {
           : inventoryService.fallbackTopics();
       inventoryReady = true;
     } else {
+      if (
+        ComparisonDeductibleRetriever.matches(query) &&
+        typeof inventoryService.ensureDeterministicLedgerForDocuments ===
+          "function"
+      ) {
+        const targeted = await ComparisonDeductibleRetriever.retrieve({
+          documents: ordered,
+          inventoryService,
+        });
+        return {
+          active: true,
+          ready: true,
+          mode: ordered.length === 1 ? "single" : "comparison",
+          documents: ordered,
+          contextTexts: [],
+          contextBatches: [],
+          sources: targeted.sources,
+          deterministicTextResponse: targeted.deterministicTextResponse,
+          coverage: targeted.coverage,
+          systemPrompt: this.systemPromptForDocuments(ordered),
+        };
+      }
       let inventories =
         typeof inventoryService.readyForDocuments === "function"
           ? await inventoryService.readyForDocuments({ documents: ordered })

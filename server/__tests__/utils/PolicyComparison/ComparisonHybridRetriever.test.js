@@ -4,6 +4,12 @@ const {
 const {
   ComparisonChunkIndex,
 } = require("../../../utils/PolicyComparison/ComparisonChunkIndex");
+const {
+  ComparisonClauseBlockIndex,
+} = require("../../../utils/PolicyComparison/ComparisonClauseBlockIndex");
+const {
+  ComparisonClauseEmbeddingIndex,
+} = require("../../../utils/PolicyComparison/ComparisonClauseEmbeddingIndex");
 
 const documents = [
   {
@@ -495,47 +501,83 @@ describe("ComparisonHybridRetriever", () => {
     expect(VectorDb.performSimilaritySearch).not.toHaveBeenCalled();
   });
 
-  test("starts fact analysis for the customer's short deductible prompt and keeps instructions out of qualifiers", async () => {
-    const manifests = documents.map((document, index) => ({
-      document,
-      manifest: {
-        comparisonDocumentId: document.id,
-        analysisRunId: 100 + index,
-        items: [
+  test("answers the customer's exhaustive deductible prompt without starting the full fact inventory", async () => {
+    const ledgers = documents.map((document, index) => {
+      const amount = index ? 500 : 350;
+      const text = `Feuer: Selbstbehalt EUR ${amount} je Schadenfall.`;
+      const unit = {
+        id: 200 + index,
+        blockKey: `block-${index}`,
+        ordinal: 0,
+        pageNumber: index + 1,
+        sourceStart: 0,
+        sourceEnd: text.length,
+        text,
+        structureKind: "paragraph",
+        headingPath: ["Feuerversicherung"],
+        riskSignals: [
           {
-            factKey: `deductible-${index}`,
-            factType: "deductible",
-            facetKey: "selbstbehalt",
-            label: "Selbstbehalt",
-            claimText: `Der Selbstbehalt beträgt EUR ${index ? 500 : 350}.`,
-            evidenceText: `Der Selbstbehalt beträgt EUR ${index ? 500 : 350}.`,
-            pageNumber: index + 1,
-            evidenceStart: index * 100,
-            evidenceEnd: index * 100 + 39,
+            kind: "deductible",
+            evidenceText: "Selbstbehalt",
+            normalizedValue: "selbstbehalt",
+            sourceStart: 7,
+            sourceEnd: 20,
+          },
+          {
+            kind: "money",
+            evidenceText: `EUR ${amount}`,
+            normalizedValue: String(amount),
+            sourceStart: 21,
+            sourceEnd: 28,
+          },
+          {
+            kind: "condition",
+            evidenceText: "je Schadenfall",
+            normalizedValue: "je schadenfall",
+            sourceStart: 29,
+            sourceEnd: 43,
           },
         ],
-      },
-    }));
+      };
+      return {
+        comparisonDocument: document,
+        analysisRunId: 100 + index,
+        units: [unit],
+        deterministicResults: new Map([
+          [
+            unit.blockKey,
+            {
+              facts: [
+                {
+                  factKey: `deductible-${index}`,
+                  factType: "deductible",
+                  value: { kind: "money", amount, currency: "EUR" },
+                  evidenceText: text,
+                  evidenceStart: 0,
+                  evidenceEnd: text.length,
+                },
+              ],
+            },
+          ],
+        ]),
+      };
+    });
     const inventoryService = {
       readyForDocuments: jest.fn(async () => null),
-      ensureForDocuments: jest.fn(async () => manifests),
+      ensureForDocuments: jest.fn(),
+      ensureDeterministicLedgerForDocuments: jest.fn(async () => ledgers),
       fallbackTopics: jest.fn(() => []),
-      unionTopics: jest.fn(() => [
-        {
-          id: "selbstbehalt",
-          label: "Selbstbehalt",
-          terms: ["selbstbehalt", "selbstbehalte", "franchise"],
-          anchors: manifests.map(({ document, manifest }) => ({
-            slot: document.slot,
-            pageNumber: manifest.items[0].pageNumber,
-            evidenceText: manifest.items[0].evidenceText,
-          })),
-          origin: "inventory",
-        },
-      ]),
     };
-    const searchTopic = jest
-      .spyOn(ComparisonChunkIndex, "searchTopic")
+    const searchAll = jest
+      .spyOn(ComparisonClauseBlockIndex, "searchAllRun")
+      .mockImplementation(async ({ analysisRunId }) => {
+        const ledger = ledgers.find(
+          (candidate) => candidate.analysisRunId === analysisRunId
+        );
+        return [{ blockId: ledger.units[0].id }];
+      });
+    const semanticLinks = jest
+      .spyOn(ComparisonClauseEmbeddingIndex, "semanticLinks")
       .mockResolvedValue([]);
     const VectorDb = {
       name: "LanceDb",
@@ -557,19 +599,21 @@ describe("ComparisonHybridRetriever", () => {
         inventoryService,
       });
 
-      expect(inventoryService.ensureForDocuments).toHaveBeenCalledWith({
+      expect(
+        inventoryService.ensureDeterministicLedgerForDocuments
+      ).toHaveBeenCalledWith({
         documents,
-        Connector: {},
+        includeEmbeddings: true,
       });
-      expect(searchTopic).toHaveBeenCalledWith(
-        expect.objectContaining({
-          topic: expect.objectContaining({
-            id: "selbstbehalt",
-            qualifierTerms: [],
-          }),
-        })
-      );
-      expect(result).toMatchObject({ active: true, ready: true });
+      expect(inventoryService.ensureForDocuments).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        active: true,
+        ready: true,
+        coverage: { matchedRows: 2, modelCalls: 0 },
+      });
+      expect(result.deterministicTextResponse).toContain("350 EUR");
+      expect(result.deterministicTextResponse).toContain("500 EUR");
+      expect(result.deterministicTextResponse).toContain("je Schadenfall");
       expect(result.sources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ documentSlot: "A", pageNumber: 1 }),
@@ -577,7 +621,8 @@ describe("ComparisonHybridRetriever", () => {
         ])
       );
     } finally {
-      searchTopic.mockRestore();
+      searchAll.mockRestore();
+      semanticLinks.mockRestore();
     }
   });
 

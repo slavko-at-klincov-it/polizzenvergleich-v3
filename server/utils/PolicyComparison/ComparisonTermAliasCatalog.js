@@ -1,6 +1,6 @@
 const prisma = require("../prisma");
 
-const TERM_ALIAS_CATALOG_VERSION = 1;
+const TERM_ALIAS_CATALOG_VERSION = 2;
 
 // Additive routing hints only. Absence from this catalog never means that a
 // clause or fact is absent; unknown semantic relations are handled by Dinghy.
@@ -40,7 +40,19 @@ const BUILTIN_TERM_GROUPS = Object.freeze([
   {
     groupKey: "selbstbehalt",
     canonicalTerm: "Selbstbehalt",
-    aliases: ["Selbstbehalt", "Selbstbeteiligung", "Franchise"],
+    aliases: [
+      "Selbstbehalt",
+      "Selbstbehalte",
+      "Selbstbehalts",
+      "Selbstbehaltsregelung",
+      "Selbstbeteiligung",
+      "Selbstbeteiligungen",
+      "Franchise",
+      "Franchisen",
+      "Eigenanteil",
+      "Eigenanteile",
+      "selbst zu tragen",
+    ],
   },
 ]);
 

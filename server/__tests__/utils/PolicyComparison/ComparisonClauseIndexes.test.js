@@ -10,6 +10,7 @@ const {
   ComparisonTermAliasCatalog,
 } = require("../../../utils/PolicyComparison/ComparisonTermAliasCatalog");
 const {
+  ComparisonClauseBlockIndex,
   ftsExpression,
 } = require("../../../utils/PolicyComparison/ComparisonClauseBlockIndex");
 
@@ -63,5 +64,31 @@ describe("clause exact/alias retrieval boundaries", () => {
       '"böswillige beschädigung" OR "brand"'
     );
     expect(ftsExpression(["brand"], { prefix: true })).toBe('"brand"*');
+  });
+
+  test("enumerates every exact clause hit across FTS pages without a Top-K cap", async () => {
+    const pages = [
+      Array.from({ length: 100 }, (_, index) => ({ blockId: index + 1 })),
+      Array.from({ length: 100 }, (_, index) => ({ blockId: index + 101 })),
+      Array.from({ length: 37 }, (_, index) => ({ blockId: index + 201 })),
+    ];
+    const db = {
+      $executeRawUnsafe: jest.fn(async () => true),
+      $queryRawUnsafe: jest.fn(async () => pages.shift()),
+    };
+    ComparisonClauseBlockIndex._schemaPromise = null;
+
+    const results = await ComparisonClauseBlockIndex.searchAllRun({
+      analysisRunId: 41,
+      terms: ["Selbstbehalt"],
+      expandAliases: false,
+      pageSize: 100,
+      db,
+    });
+
+    expect(results).toHaveLength(237);
+    expect(results[0].blockId).toBe(1);
+    expect(results.at(-1).blockId).toBe(237);
+    expect(db.$queryRawUnsafe).toHaveBeenCalledTimes(3);
   });
 });

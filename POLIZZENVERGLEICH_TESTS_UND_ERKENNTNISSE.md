@@ -436,3 +436,32 @@ ORDER BY status;
 Die gruppierten Blockstatus sind im aktuellen Stand verlässlicher als die
 denormalisierten Run-Zähler, die während eines laufenden Jobs verzögert wirken
 können.
+
+## 13. Vertikale Abnahme Selbstbehalt nach `policy-v0.3.22`
+
+Der neue gezielte Selbstbehalt-Pfad ist durch fokussierte Regressionen
+abgesichert:
+
+- derselbe Kundenprompt startet `ensureForDocuments()` nicht,
+- sämtliche paginierten Clause-FTS-Treffer werden enumeriert; der Test umfasst
+  237 Treffer über drei SQL-Seiten,
+- ein und zwei Dokumente bleiben getrennt,
+- Betrag, Bedingung, Heading/Variante und physische Seite werden codebasiert
+  gerendert,
+- ein unmittelbar angrenzender kompatibler Tabellenwert wird übernommen,
+  ein Wert auf einer anderen physischen Seite nicht,
+- die anonymisierte Goldstandard-Erwartung für Dokument B bleibt in vier
+  getrennten Zeilen erhalten: EUR 500, EUR 350, 10 Prozent und 25 Prozent,
+- der Pfad meldet `modelCalls: 0`,
+- ein veröffentlichter Run wird wiederverwendet und nicht neu gestaged,
+- die vorhandenen atomaren Publish-/Evidence-Gates bleiben unverändert.
+
+Fokussierter Stand vor dem vollständigen Release-Gate: 5 Suites / 79 Tests
+PASS. Das beweist den kontrollierten Selbstbehalt-Pfad und die betroffenen
+Persistenzgrenzen. Es beweist noch nicht die reale Laufzeit auf dem Kunden-Mac
+oder die vollständige Erkennung bislang unbekannter semantischer
+Selbstbehalt-Umschreibungen.
+
+Der anschließend genau einmal ausgeführte vollständige technische Gate-Lauf
+war grün: 44 Suites / 304 Tests sowie Installer-, additive Migrations-,
+LM-Studio-, OCR-, FTS-, Lance- und 2560-Dimensionsverträge PASS.

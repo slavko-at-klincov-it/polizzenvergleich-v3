@@ -114,6 +114,44 @@ const ComparisonClauseBlockIndex = {
       boundedLimit
     );
   },
+
+  async searchAllRun({
+    analysisRunId,
+    terms = [],
+    prefix = false,
+    expandAliases = true,
+    pageSize = 100,
+    db = prisma,
+  }) {
+    await this.ensureSchema(db);
+    const routedTerms = expandAliases
+      ? await ComparisonTermAliasCatalog.expand(terms, { db })
+      : terms;
+    const match = ftsExpression(routedTerms, { prefix });
+    if (!match) return [];
+    const boundedPageSize = Math.max(1, Math.min(500, Number(pageSize) || 100));
+    const results = [];
+    let offset = 0;
+    while (true) {
+      const page = await db.$queryRawUnsafe(
+        `SELECT analysisRunId, blockId, comparisonDocumentId, pageNumber,
+                ordinal, text, bm25(comparison_document_clause_blocks_fts) AS rank
+         FROM comparison_document_clause_blocks_fts
+         WHERE comparison_document_clause_blocks_fts MATCH ?
+           AND analysisRunId = ?
+         ORDER BY ordinal ASC, blockId ASC
+         LIMIT ? OFFSET ?`,
+        match,
+        analysisRunId,
+        boundedPageSize,
+        offset
+      );
+      results.push(...page);
+      if (page.length < boundedPageSize) break;
+      offset += page.length;
+    }
+    return results;
+  },
 };
 
 module.exports = { ComparisonClauseBlockIndex, ftsExpression };
