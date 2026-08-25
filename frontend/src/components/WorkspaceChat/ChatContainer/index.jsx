@@ -38,16 +38,24 @@ import WorkspaceModelPicker from "./WorkspaceModelPicker";
 import { ChatSidebarProvider } from "./ChatSidebar";
 import SourcesSidebar from "./SourcesSidebar";
 import MemoriesSidebar from "./MemoriesSidebar";
+import useChatSession from "@/hooks/useChatSession";
+import chatSessionStore from "@/utils/chat/chatSessionStore.cjs";
+import conversationScope from "@/utils/chat/conversationScope.cjs";
 
 export default function ChatContainer({
   workspace,
   threadSlug = null,
   knownHistory = [],
+  sessionKey,
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [loadingResponse, setLoadingResponse] = useState(false);
-  const [chatHistory, setChatHistory] = useState(knownHistory);
+  const {
+    loadingResponse,
+    history: chatHistory,
+    setLoadingResponse,
+    setChatHistory,
+  } = useChatSession(sessionKey, knownHistory);
   const [socketId, setSocketId] = useState(null);
   const [websocket, setWebsocket] = useState(null);
   const { files, parseAttachments } = useContext(DndUploaderContext);
@@ -295,9 +303,13 @@ export default function ChatContainer({
 
   useEffect(() => {
     async function fetchReply() {
-      const promptMessage =
-        chatHistory.length > 0 ? chatHistory[chatHistory.length - 1] : null;
-      const remHistory = chatHistory.length > 0 ? chatHistory.slice(0, -1) : [];
+      const requestId = v4();
+      const claimedRequest = chatSessionStore.claimPendingRequest(
+        sessionKey,
+        requestId
+      );
+      if (!claimedRequest) return false;
+      const { promptMessage, remHistory } = claimedRequest;
       var _chatHistory = [...remHistory];
 
       // Override hook for new messages to now go to agents until the connection closes
@@ -328,21 +340,38 @@ export default function ChatContainer({
       const attachments = promptMessage?.attachments ?? parseAttachments();
       window.dispatchEvent(new CustomEvent(CLEAR_ATTACHMENTS_EVENT));
 
-      await Workspace.multiplexStream({
-        workspaceSlug: workspace.slug,
-        threadSlug: activeThreadSlug,
-        prompt: promptMessage.userMessage,
-        chatHandler: (chatResult) =>
-          handleChat(
-            chatResult,
-            setLoadingResponse,
-            setChatHistory,
-            remHistory,
-            _chatHistory,
-            setSocketId
-          ),
-        attachments,
-      });
+      chatSessionStore.setExistingField(sessionKey, "streamActive", true);
+      try {
+        await Workspace.multiplexStream({
+          workspaceSlug: workspace.slug,
+          threadSlug: activeThreadSlug,
+          sessionKey,
+          prompt: promptMessage.userMessage,
+          chatHandler: (chatResult) =>
+            handleChat(
+              chatResult,
+              setLoadingResponse,
+              setChatHistory,
+              remHistory,
+              _chatHistory,
+              setSocketId
+            ),
+          attachments,
+        });
+      } catch (error) {
+        if (
+          chatSessionStore.hasSession(sessionKey) &&
+          chatSessionStore.getSnapshot(sessionKey).loadingResponse
+        )
+          chatSessionStore.failPendingRequest(
+            sessionKey,
+            requestId,
+            error?.message || "Chat request failed."
+          );
+      } finally {
+        if (chatSessionStore.hasSession(sessionKey))
+          chatSessionStore.setExistingField(sessionKey, "streamActive", false);
+      }
       return;
     }
     loadingResponse === true && fetchReply();
@@ -360,12 +389,23 @@ export default function ChatContainer({
         );
         socket.supportsAgentStreaming = false;
 
-        window.addEventListener(ABORT_STREAM_EVENT, () => {
+        const handleAgentAbort = (event) => {
+          if (
+            !conversationScope.matchesEventScope(
+              event?.detail,
+              workspace.slug,
+              activeThreadSlug,
+              sessionKey
+            )
+          )
+            return;
           setAgentSessionActive(false);
           setAgentSessionSocket(null);
           window.dispatchEvent(new CustomEvent(AGENT_SESSION_END));
           socket?.close();
-        });
+        };
+        socket.handleAgentAbort = handleAgentAbort;
+        window.addEventListener(ABORT_STREAM_EVENT, handleAgentAbort);
 
         socket.addEventListener("message", (event) => {
           try {
@@ -447,6 +487,11 @@ export default function ChatContainer({
 
     return () => {
       if (socket) {
+        if (socket.handleAgentAbort)
+          window.removeEventListener(
+            ABORT_STREAM_EVENT,
+            socket.handleAgentAbort
+          );
         setAgentSessionActive(false);
         window.dispatchEvent(new CustomEvent(AGENT_SESSION_END));
         socket.close();
@@ -482,6 +527,8 @@ export default function ChatContainer({
                     sendCommand={sendCommand}
                     attachments={files}
                     centered={true}
+                    workspaceSlug={workspace.slug}
+                    threadSlug={activeThreadSlug}
                   />
                   <QuickActions
                     hasAvailableWorkspace={!!workspace}
@@ -547,6 +594,8 @@ export default function ChatContainer({
                   sendCommand={sendCommand}
                   attachments={files}
                   centered={false}
+                  workspaceSlug={workspace.slug}
+                  threadSlug={activeThreadSlug}
                 />
               </div>
             </div>

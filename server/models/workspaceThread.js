@@ -91,19 +91,18 @@ const WorkspaceThread = {
 
   delete: async function (clause = {}) {
     try {
-      const { WorkspaceChats } = require("./workspaceChats");
-      // thread_id has no FK relation so chats don't cascade-delete with the thread.
-      const threads = await prisma.workspace_threads.findMany({
-        where: clause,
-        select: { id: true },
-      });
-      if (threads.length > 0)
-        await WorkspaceChats.delete({
-          thread_id: { in: threads.map((thread) => thread.id) },
+      await prisma.$transaction(async (tx) => {
+        const threads = await tx.workspace_threads.findMany({
+          where: clause,
+          select: { id: true },
         });
-
-      await prisma.workspace_threads.deleteMany({
-        where: clause,
+        if (threads.length > 0)
+          await tx.workspace_chats.deleteMany({
+            where: {
+              thread_id: { in: threads.map((thread) => thread.id) },
+            },
+          });
+        await tx.workspace_threads.deleteMany({ where: clause });
       });
       return true;
     } catch (error) {

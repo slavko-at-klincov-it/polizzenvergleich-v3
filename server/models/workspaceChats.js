@@ -1,6 +1,23 @@
 const prisma = require("../utils/prisma");
 const { safeJSONStringify } = require("../utils/helpers/chat/responses");
 
+async function conversationTargetExists(tx, workspaceId, threadId = null) {
+  const workspace = await tx.workspaces.findFirst({
+    where: { id: Number(workspaceId) },
+    select: { id: true },
+  });
+  if (!workspace) return false;
+  if (!threadId) return true;
+  const thread = await tx.workspace_threads.findFirst({
+    where: {
+      id: Number(threadId),
+      workspace_id: Number(workspaceId),
+    },
+    select: { id: true },
+  });
+  return Boolean(thread);
+}
+
 const WorkspaceChats = {
   new: async function ({
     workspaceId,
@@ -12,18 +29,25 @@ const WorkspaceChats = {
     apiSessionId = null,
   }) {
     try {
-      const chat = await prisma.workspace_chats.create({
-        data: {
-          workspaceId,
-          prompt,
-          response: safeJSONStringify(response),
-          user_id: user?.id || null,
-          thread_id: threadId,
-          api_session_id: apiSessionId,
-          include,
-        },
+      const chat = await prisma.$transaction(async (tx) => {
+        if (!(await conversationTargetExists(tx, workspaceId, threadId)))
+          return null;
+        return tx.workspace_chats.create({
+          data: {
+            workspaceId,
+            prompt,
+            response: safeJSONStringify(response),
+            user_id: user?.id || null,
+            thread_id: threadId,
+            api_session_id: apiSessionId,
+            include,
+          },
+        });
       });
-      return { chat, message: null };
+      return {
+        chat,
+        message: chat ? null : "Workspace or thread no longer exists.",
+      };
     } catch (error) {
       console.error(error.message);
       return { chat: null, message: error.message };
@@ -364,18 +388,24 @@ const WorkspaceChats = {
         include: data.include,
       };
 
-      const { chat } = await prisma.workspace_chats.upsert({
-        where: {
-          id: Number(chatId),
-          user_id: data.user?.id || null,
-        },
-        // On updates, we already have the prompt so we don't need to set it again.
-        update: { ...payload, lastUpdatedAt: new Date() },
-
-        // On creates, we need to set the prompt or else record will fail.
-        create: { ...payload, prompt: data.prompt },
+      const chat = await prisma.$transaction(async (tx) => {
+        if (
+          !(await conversationTargetExists(tx, data.workspaceId, data.threadId))
+        )
+          return null;
+        return tx.workspace_chats.upsert({
+          where: {
+            id: Number(chatId),
+            user_id: data.user?.id || null,
+          },
+          update: { ...payload, lastUpdatedAt: new Date() },
+          create: { ...payload, prompt: data.prompt },
+        });
       });
-      return { chat, message: null };
+      return {
+        chat,
+        message: chat ? null : "Workspace or thread no longer exists.",
+      };
     } catch (error) {
       console.error(error.message);
       return { chat: null, message: error.message };

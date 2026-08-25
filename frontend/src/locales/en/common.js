@@ -1524,6 +1524,11 @@ const TRANSLATIONS = {
   },
   chat_window: {
     attachments_processing: "Attachments are processing. Please wait...",
+    document_tokens: "document tokens",
+    document_tokens_estimated: "approx. {{count}} document tokens",
+    document_reading: "Reading document...",
+    document_indexing: "Indexing document...",
+    document_ready: "Ready",
     generating_response: "Generating response",
     response_failed: "Could not respond to message.",
     response_failed_reason: "Reason: {{reason}}",

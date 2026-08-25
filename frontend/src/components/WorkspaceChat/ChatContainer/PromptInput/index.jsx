@@ -18,6 +18,7 @@ import usePromptInputStorage from "@/hooks/usePromptInputStorage";
 import ToolsMenu, { TOOLS_MENU_KEYBOARD_EVENT } from "./ToolsMenu";
 import { useSearchParams } from "react-router-dom";
 import { useIsAgentSessionActive } from "@/utils/chat/agent";
+import { nextAttachmentProcessingCount } from "@/utils/chatAttachmentProcessing";
 
 export const PROMPT_INPUT_ID = "primary-prompt-input";
 export const PROMPT_INPUT_EVENT = "set_prompt_input";
@@ -389,7 +390,10 @@ export default function PromptInput({
                 <div className="flex gap-x-2 items-center">
                   <SpeechToText sendCommand={sendCommand} />
                   {isStreaming ? (
-                    <StopGenerationButton />
+                    <StopGenerationButton
+                      workspaceSlug={workspaceSlug ?? workspace?.slug}
+                      threadSlug={threadSlug}
+                    />
                   ) : (
                     <SendPromptButton
                       formRef={formRef}
@@ -529,7 +533,7 @@ function SendPromptButton({ formRef, promptInput, isDisabled }) {
  * for whatever reason that may we may want to prevent the user from sending a message.
  */
 function useIsDisabled() {
-  const [isDisabled, setIsDisabled] = useState(false);
+  const [processingCount, setProcessingCount] = useState(0);
 
   /**
    * Handle attachments processing and processed events
@@ -538,8 +542,14 @@ function useIsDisabled() {
    */
   useEffect(() => {
     if (!window) return;
-    const onProcessing = () => setIsDisabled(true);
-    const onProcessed = () => setIsDisabled(false);
+    const onProcessing = (event) =>
+      setProcessingCount((currentCount) =>
+        nextAttachmentProcessingCount(currentCount, event, 1)
+      );
+    const onProcessed = (event) =>
+      setProcessingCount((currentCount) =>
+        nextAttachmentProcessingCount(currentCount, event, -1)
+      );
 
     window.addEventListener(ATTACHMENTS_PROCESSING_EVENT, onProcessing);
     window.addEventListener(ATTACHMENTS_PROCESSED_EVENT, onProcessed);
@@ -550,5 +560,5 @@ function useIsDisabled() {
     };
   }, []);
 
-  return { isDisabled };
+  return { isDisabled: processingCount > 0 };
 }

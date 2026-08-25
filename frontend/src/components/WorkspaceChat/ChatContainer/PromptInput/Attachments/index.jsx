@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { REMOVE_ATTACHMENT_EVENT } from "../../DnDWrapper";
 import { openImageLightbox } from "@/components/ImageLightbox";
+import { useTranslation } from "react-i18next";
 
 /**
  * @param {{attachments: import("../../DnDWrapper").Attachment[]}}
@@ -47,17 +48,42 @@ export default function AttachmentManager({ attachments }) {
  * @param {{attachment: import("../../DnDWrapper").Attachment}}
  */
 function AttachmentItem({ attachment, onImageClick }) {
-  const { uid, file, status, error, document, type, contentString } =
-    attachment;
+  const { t, i18n } = useTranslation();
+  const {
+    uid,
+    file,
+    status,
+    error,
+    document,
+    documents,
+    parsedFileIds,
+    documentTokenCount,
+    documentTokenCountKind,
+    documentTokenLabel,
+    type,
+    contentString,
+  } = attachment;
   const { iconBgColor, Icon } = displayFromFile(file);
+  const formattedDocumentTokenCount = Number.isFinite(documentTokenCount)
+    ? new Intl.NumberFormat(i18n.language).format(documentTokenCount)
+    : null;
+  const tokenLabel = formattedDocumentTokenCount
+    ? documentTokenCountKind === "exact_model"
+      ? `${formattedDocumentTokenCount} ${t("chat_window.document_tokens")} (${documentTokenLabel || "model"})`
+      : t("chat_window.document_tokens_estimated", {
+          count: formattedDocumentTokenCount,
+        })
+    : null;
 
   function removeFileFromQueue() {
     window.dispatchEvent(
-      new CustomEvent(REMOVE_ATTACHMENT_EVENT, { detail: { uid, document } })
+      new CustomEvent(REMOVE_ATTACHMENT_EVENT, {
+        detail: { uid, document, documents, parsedFileIds },
+      })
     );
   }
 
-  if (status === "in_progress") {
+  if (["reading", "indexing"].includes(status)) {
     return (
       <div className="relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group">
         <div
@@ -74,7 +100,9 @@ function AttachmentItem({ attachment, onImageClick }) {
             {file.name}
           </p>
           <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-            Uploading...
+            {status === "reading"
+              ? t("chat_window.document_reading")
+              : t("chat_window.document_indexing")}
           </p>
         </div>
       </div>
@@ -183,11 +211,11 @@ function AttachmentItem({ attachment, onImageClick }) {
     <div
       data-tooltip-id="attachment-status-tooltip"
       data-tooltip-content={
-        status === "embedded"
-          ? `${file.name} was uploaded and embedded into this workspace. It will be available for RAG chat now.`
-          : `${file.name} will be used as context for this chat only.`
+        status === "ready"
+          ? `${file.name} was indexed into this workspace and is available for RAG chat.${tokenLabel ? ` Extracted text: ${tokenLabel}.` : ""}`
+          : `${file.name} is not ready for RAG chat.`
       }
-      className={`relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group`}
+      className={`relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[240px] group`}
     >
       <div className="invisible group-hover:visible absolute -top-[5px] -right-[5px] w-fit h-fit z-[10]">
         <button
@@ -203,10 +231,11 @@ function AttachmentItem({ attachment, onImageClick }) {
       >
         <Icon size={24} weight="light" className="text-theme-attachment-icon" />
       </div>
-      <div className="flex flex-col w-[125px]">
+      <div className="flex flex-col w-[185px]">
         <p className="text-white text-xs font-semibold truncate">{file.name}</p>
         <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-          {status === "embedded" ? "File embedded!" : "Added as context!"}
+          {t("chat_window.document_ready")}
+          {tokenLabel ? ` · ${tokenLabel}` : ""}
         </p>
       </div>
     </div>

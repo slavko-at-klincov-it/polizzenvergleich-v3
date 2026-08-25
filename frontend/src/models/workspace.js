@@ -4,6 +4,26 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import WorkspaceThread from "@/models/workspaceThread";
 import { v4 } from "uuid";
 import { ABORT_STREAM_EVENT } from "@/utils/chat";
+import conversationScope from "@/utils/chat/conversationScope.cjs";
+import {
+  forgetConversationSessions,
+  stopWorkspaceSessions,
+} from "@/utils/chat/conversationLifecycle";
+
+async function fetchChatHistory(slug) {
+  try {
+    const response = await fetch(`${API_BASE}/workspace/${slug}/chats`, {
+      method: "GET",
+      headers: baseHeaders(),
+    });
+    if (!response.ok)
+      throw new Error(`History request failed: ${response.status}`);
+    const data = await response.json();
+    return { ok: true, history: data.history || [] };
+  } catch {
+    return { ok: false, history: [] };
+  }
+}
 
 const Workspace = {
   workspaceOrderStorageKey: "anythingllm-workspace-order",
@@ -65,14 +85,10 @@ const Workspace = {
       .catch(() => ({ success: false }));
   },
   chatHistory: async function (slug) {
-    const history = await fetch(`${API_BASE}/workspace/${slug}/chats`, {
-      method: "GET",
-      headers: baseHeaders(),
-    })
-      .then((res) => res.json())
-      .then((res) => res.history || [])
-      .catch(() => []);
-    return history;
+    return (await fetchChatHistory(slug)).history;
+  },
+  chatHistoryResult: async function (slug) {
+    return fetchChatHistory(slug);
   },
   /**
    * Export a workspace or thread's chat as a server-generated branded PDF.
@@ -140,61 +156,77 @@ const Workspace = {
   multiplexStream: async function ({
     workspaceSlug,
     threadSlug = null,
+    sessionKey = null,
     prompt,
     chatHandler,
     attachments = [],
   }) {
     if (!!threadSlug)
       return this.threads.streamChat(
-        { workspaceSlug, threadSlug },
+        { workspaceSlug, threadSlug, sessionKey },
         prompt,
         chatHandler,
         attachments
       );
     return this.streamChat(
-      { slug: workspaceSlug },
+      { slug: workspaceSlug, sessionKey },
       prompt,
       chatHandler,
       attachments
     );
   },
-  streamChat: async function ({ slug }, message, handleChat, attachments = []) {
+  streamChat: async function (
+    { slug, sessionKey = null },
+    message,
+    handleChat,
+    attachments = []
+  ) {
     const ctrl = new AbortController();
 
     // Listen for the ABORT_STREAM_EVENT key to be emitted by the client
     // to early abort the streaming response. On abort we send a special `stopGeneration`
     // event to be handled which resets the UI for us to be able to send another message.
     // The backend response abort handling is done in each LLM's handleStreamResponse.
-    window.addEventListener(ABORT_STREAM_EVENT, () => {
+    const handleAbort = (event) => {
+      if (
+        !conversationScope.matchesEventScope(
+          event?.detail,
+          slug,
+          null,
+          sessionKey
+        )
+      )
+        return;
       ctrl.abort();
       handleChat({ id: v4(), type: "stopGeneration" });
-    });
+    };
+    window.addEventListener(ABORT_STREAM_EVENT, handleAbort);
 
-    await fetchEventSource(`${API_BASE}/workspace/${slug}/stream-chat`, {
-      method: "POST",
-      body: JSON.stringify({ message, attachments }),
-      headers: baseHeaders(),
-      signal: ctrl.signal,
-      openWhenHidden: true,
-      async onopen(response) {
-        if (response.ok) {
-          return; // everything's good
-        } else if (
-          response.status >= 400 &&
-          response.status < 500 &&
-          response.status !== 429
-        ) {
-          handleChat({
-            id: v4(),
-            type: "abort",
-            textResponse: null,
-            sources: [],
-            close: true,
-            error: `An error occurred while streaming response. Code ${response.status}`,
-          });
-          ctrl.abort();
-          throw new Error("Invalid Status code response.");
-        } else {
+    try {
+      await fetchEventSource(`${API_BASE}/workspace/${slug}/stream-chat`, {
+        method: "POST",
+        body: JSON.stringify({ message, attachments }),
+        headers: baseHeaders(),
+        signal: ctrl.signal,
+        openWhenHidden: true,
+        async onopen(response) {
+          if (response.ok) return;
+          if (
+            response.status >= 400 &&
+            response.status < 500 &&
+            response.status !== 429
+          ) {
+            handleChat({
+              id: v4(),
+              type: "abort",
+              textResponse: null,
+              sources: [],
+              close: true,
+              error: `An error occurred while streaming response. Code ${response.status}`,
+            });
+            ctrl.abort();
+            throw new Error("Invalid Status code response.");
+          }
           handleChat({
             id: v4(),
             type: "abort",
@@ -205,25 +237,27 @@ const Workspace = {
           });
           ctrl.abort();
           throw new Error("Unknown error");
-        }
-      },
-      async onmessage(msg) {
-        const chatResult = safeJsonParse(msg.data, null);
-        if (chatResult) handleChat(chatResult);
-      },
-      onerror(err) {
-        handleChat({
-          id: v4(),
-          type: "abort",
-          textResponse: null,
-          sources: [],
-          close: true,
-          error: `An error occurred while streaming response. ${err.message}`,
-        });
-        ctrl.abort();
-        throw new Error();
-      },
-    });
+        },
+        async onmessage(msg) {
+          const chatResult = safeJsonParse(msg.data, null);
+          if (chatResult) handleChat(chatResult);
+        },
+        onerror(err) {
+          handleChat({
+            id: v4(),
+            type: "abort",
+            textResponse: null,
+            sources: [],
+            close: true,
+            error: `An error occurred while streaming response. ${err.message}`,
+          });
+          ctrl.abort();
+          throw new Error();
+        },
+      });
+    } finally {
+      window.removeEventListener(ABORT_STREAM_EVENT, handleAbort);
+    }
   },
   all: async function () {
     const workspaces = await fetch(`${API_BASE}/workspaces`, {
@@ -246,6 +280,7 @@ const Workspace = {
     return workspace;
   },
   delete: async function (slug) {
+    const sessionKeys = await stopWorkspaceSessions(slug);
     const result = await fetch(`${API_BASE}/workspace/${slug}`, {
       method: "DELETE",
       headers: baseHeaders(),
@@ -253,6 +288,7 @@ const Workspace = {
       .then((res) => res.ok)
       .catch(() => false);
 
+    if (result) forgetConversationSessions(sessionKeys);
     return result;
   },
   wipeVectorDb: async function (slug) {

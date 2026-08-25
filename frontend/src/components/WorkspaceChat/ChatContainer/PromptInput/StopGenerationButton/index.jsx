@@ -1,11 +1,16 @@
 import { ABORT_STREAM_EVENT } from "@/utils/chat";
 import { Tooltip } from "react-tooltip";
 import { useTranslation } from "react-i18next";
+import conversationScope from "@/utils/chat/conversationScope.cjs";
 
-export default function StopGenerationButton() {
+export default function StopGenerationButton({ workspaceSlug, threadSlug }) {
   const { t } = useTranslation();
   function emitHaltEvent() {
-    window.dispatchEvent(new CustomEvent(ABORT_STREAM_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(ABORT_STREAM_EVENT, {
+        detail: conversationScope.eventDetail(workspaceSlug, threadSlug),
+      })
+    );
   }
 
   return (

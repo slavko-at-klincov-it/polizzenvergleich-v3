@@ -391,8 +391,16 @@ const Workspace = {
 
   delete: async function (clause = {}) {
     try {
-      await prisma.workspaces.delete({
-        where: clause,
+      await prisma.$transaction(async (tx) => {
+        const workspace = await tx.workspaces.findFirst({
+          where: clause,
+          select: { id: true },
+        });
+        if (!workspace) return;
+        await tx.workspace_chats.deleteMany({
+          where: { workspaceId: workspace.id },
+        });
+        await tx.workspaces.delete({ where: { id: workspace.id } });
       });
       return true;
     } catch (error) {

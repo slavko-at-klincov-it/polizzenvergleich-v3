@@ -1276,6 +1276,11 @@ const TRANSLATIONS = {
   },
   chat_window: {
     attachments_processing: "Anhänge werden verarbeitet. Bitte warten...",
+    document_tokens: "Dokument-Tokens",
+    document_tokens_estimated: "ca. {{count}} Dokument-Tokens",
+    document_reading: "Dokument wird gelesen...",
+    document_indexing: "Dokument wird indexiert...",
+    document_ready: "Bereit",
     send_message: "Schreibe eine Nachricht",
     attach_file: "Füge eine Datei zum Chat hinzu",
     text_size: "Ändere die Größe des Textes.",

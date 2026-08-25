@@ -20,10 +20,14 @@ import {
   useWatchForAutoPlayAssistantTTSResponse,
 } from "../contexts/TTSProvider";
 import { PENDING_HOME_MESSAGE } from "@/utils/constants";
+import useUser from "@/hooks/useUser";
+import chatSessionStore from "@/utils/chat/chatSessionStore.cjs";
 
 export default function WorkspaceChat({ loading, workspace }) {
   useWatchForAutoPlayAssistantTTSResponse();
   const { threadSlug = null } = useParams();
+  const { user } = useUser();
+  const authScope = user?.id ? `user:${user.id}` : "single-user";
   const navigate = useNavigate();
   // Stores { key, workspace, history } currently rendered. Lags the props so
   // the previous chat stays mounted until the next one's history is ready,
@@ -51,26 +55,45 @@ export default function WorkspaceChat({ loading, workspace }) {
   }
 
   useEffect(() => {
+    let cancelled = false;
     async function getHistory() {
       if (loading) return;
       if (!workspace?.slug) {
-        setLoaded({ key: "none", workspace: null, history: [] });
+        if (!cancelled)
+          setLoaded({ key: "none", workspace: null, history: [] });
         return false;
       }
 
-      const chatHistory = threadSlug
-        ? await Workspace.threads.chatHistory(workspace.slug, threadSlug)
-        : await Workspace.chatHistory(workspace.slug);
+      const sessionKey = chatSessionStore.conversationKey(
+        authScope,
+        workspace.slug,
+        threadSlug
+      );
+      const snapshot = chatSessionStore.getSnapshot(sessionKey);
+      const expectedRevision = snapshot.revision;
+      const historyResult = threadSlug
+        ? await Workspace.threads.chatHistoryResult(workspace.slug, threadSlug)
+        : await Workspace.chatHistoryResult(workspace.slug);
+      if (cancelled) return;
+      if (historyResult.ok)
+        chatSessionStore.hydrateHistory(
+          sessionKey,
+          historyResult.history,
+          expectedRevision
+        );
 
       setLoaded({
-        key: `${workspace.slug}:${threadSlug ?? "default"}`,
+        key: sessionKey,
         workspace,
         threadSlug,
-        history: chatHistory,
+        history: chatSessionStore.getSnapshot(sessionKey).history,
       });
     }
     getHistory();
-  }, [workspace, loading, threadSlug]);
+    return () => {
+      cancelled = true;
+    };
+  }, [workspace, loading, threadSlug, authScope]);
 
   const hasPendingMessage = !!sessionStorage.getItem(PENDING_HOME_MESSAGE);
   if (loaded === null) {
@@ -135,6 +158,7 @@ export default function WorkspaceChat({ loading, workspace }) {
           workspace={loaded.workspace}
           threadSlug={loaded.threadSlug}
           knownHistory={loaded.history}
+          sessionKey={loaded.key}
         />
       </DnDWrapper>
     </TTSProvider>

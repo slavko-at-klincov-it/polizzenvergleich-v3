@@ -11,6 +11,7 @@ const { validWorkspaceSlug } = require("../utils/middleware/validWorkspace");
 const { CollectorApi } = require("../utils/collectorApi");
 const { WorkspaceThread } = require("../models/workspaceThread");
 const { WorkspaceParsedFiles } = require("../models/workspaceParsedFiles");
+const { countDocumentTokens } = require("../utils/documentTokenCount");
 
 function workspaceParsedFilesEndpoints(app) {
   if (!app) return;
@@ -165,17 +166,26 @@ function workspaceParsedFilesEndpoints(app) {
             // Strip out pageContent
             delete metadata.pageContent;
             const filename = `${originalname}-${doc.id}.json`;
+            const documentTokens = await countDocumentTokens(
+              doc.pageContent,
+              doc.token_count_estimate
+            );
             const { file, error: dbError } = await WorkspaceParsedFiles.create({
               filename,
               workspaceId: workspace.id,
               userId: user?.id || null,
               threadId: thread?.id || null,
               metadata: JSON.stringify(metadata),
-              tokenCountEstimate: doc.token_count_estimate || 0,
+              tokenCountEstimate: documentTokens.count,
             });
 
             if (dbError) throw new Error(dbError);
-            return file;
+            return {
+              ...file,
+              documentTokenCount: documentTokens.count,
+              documentTokenCountKind: documentTokens.kind,
+              documentTokenLabel: documentTokens.label,
+            };
           })
         );
 

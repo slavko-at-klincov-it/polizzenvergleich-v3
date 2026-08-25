@@ -108,6 +108,9 @@ const WorkspaceParsedFiles = {
    * @returns {Promise<{ success: boolean, error: string | null, document: import("@prisma/client").workspace_documents | null }>} The result of the operation.
    */
   moveToDocumentsAndEmbed: async function (user = null, fileId, workspace) {
+    let embeddedSuccessfully = false;
+    let sourceFile = null;
+    let targetPath = null;
     try {
       const parsedFile = await this.get({
         id: parseInt(fileId),
@@ -122,7 +125,7 @@ const WorkspaceParsedFiles = {
       if (!location) throw new Error("No file location in metadata");
 
       // Get file from metadata location
-      const sourceFile = path.join(directUploadsPath, path.basename(location));
+      sourceFile = path.join(directUploadsPath, path.basename(location));
       if (!fs.existsSync(sourceFile)) throw new Error("Source file not found");
 
       // Move to custom-documents
@@ -131,9 +134,8 @@ const WorkspaceParsedFiles = {
         fs.mkdirSync(customDocsPath, { recursive: true });
 
       // Copy the file to custom-documents
-      const targetPath = path.join(customDocsPath, path.basename(location));
+      targetPath = path.join(customDocsPath, path.basename(location));
       fs.copyFileSync(sourceFile, targetPath);
-      fs.unlinkSync(sourceFile);
 
       const {
         failedToEmbed = [],
@@ -147,21 +149,38 @@ const WorkspaceParsedFiles = {
 
       if (failedToEmbed.length > 0)
         throw new Error(errors[0] || "Failed to embed document");
+      if (embedded.length !== 1)
+        throw new Error("Document vector commit did not complete");
 
       const document = await Document.get({
         workspaceId: workspace.id,
         docpath: embedded[0],
       });
+      if (!document)
+        throw new Error("Embedded document record was not committed");
+
+      embeddedSuccessfully = true;
+      try {
+        fs.unlinkSync(sourceFile);
+      } catch (cleanupError) {
+        console.warn(
+          `Embedded document committed, but parsed source cleanup failed: ${cleanupError.message}`
+        );
+      }
       return { success: true, error: null, document };
     } catch (error) {
       console.error("Failed to move and embed file:", error);
       return { success: false, error: error.message, document: null };
     } finally {
-      await this.delete({
-        id: parseInt(fileId),
-        ...(user ? { userId: user.id } : {}),
-        workspaceId: workspace.id,
-      });
+      if (embeddedSuccessfully) {
+        await this.delete({
+          id: parseInt(fileId),
+          ...(user ? { userId: user.id } : {}),
+          workspaceId: workspace.id,
+        });
+      } else if (targetPath && fs.existsSync(targetPath)) {
+        fs.unlinkSync(targetPath);
+      }
     }
   },
 
