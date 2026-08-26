@@ -12,7 +12,10 @@ import useUser from "@/hooks/useUser";
 import ThreadContainer from "./ThreadContainer";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import showToast from "@/utils/toast";
-import { LAST_VISITED_WORKSPACE } from "@/utils/constants";
+import {
+  LAST_VISITED_WORKSPACE,
+  WORKSPACE_CREATED_EVENT,
+} from "@/utils/constants";
 import { safeJsonParse } from "@/utils/request";
 
 export default function ActiveWorkspaces() {
@@ -33,6 +36,10 @@ export default function ActiveWorkspaces() {
       setWorkspaces(Workspace.orderWorkspaces(workspaces));
     }
     getWorkspaces();
+
+    window.addEventListener(WORKSPACE_CREATED_EVENT, getWorkspaces);
+    return () =>
+      window.removeEventListener(WORKSPACE_CREATED_EVENT, getWorkspaces);
   }, []);
 
   if (loading) {

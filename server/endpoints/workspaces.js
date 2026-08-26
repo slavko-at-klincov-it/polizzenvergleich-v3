@@ -36,10 +36,23 @@ const { workspaceParsedFilesEndpoints } = require("./workspacesParsedFiles");
 const {
   workspaceDeletionProtection,
 } = require("../utils/middleware/workspaceDeletionProtection");
+const {
+  WorkspaceTemplateError,
+  buildWorkspaceCreationFields,
+  listWorkspaceTemplates,
+} = require("../utils/workspaceTemplates");
 
 function workspaceEndpoints(app) {
   if (!app) return;
   const responseCache = new Map();
+
+  app.get(
+    "/workspace/templates",
+    [validatedRequest, flexUserRoleValid([ROLES.admin, ROLES.manager])],
+    async (_, response) => {
+      response.status(200).json({ templates: listWorkspaceTemplates() });
+    }
+  );
 
   app.post(
     "/workspace/new",
@@ -47,8 +60,13 @@ function workspaceEndpoints(app) {
     async (request, response) => {
       try {
         const user = await userFromSession(request, response);
-        const { name = null } = reqBody(request);
-        const { workspace, message } = await Workspace.new(name, user?.id);
+        const { name = null, templateId = null } = reqBody(request);
+        const { fields, template } = buildWorkspaceCreationFields(templateId);
+        const { workspace, message } = await Workspace.new(
+          name,
+          user?.id,
+          fields
+        );
         await Telemetry.sendTelemetry(
           "workspace_created",
           {
@@ -66,11 +84,16 @@ function workspaceEndpoints(app) {
           "workspace_created",
           {
             workspaceName: workspace?.name || "Unknown Workspace",
+            workspaceTemplate: template?.id || "default",
           },
           user?.id
         );
-        response.status(200).json({ workspace, message });
+        response.status(200).json({ workspace, message, template });
       } catch (e) {
+        if (e instanceof WorkspaceTemplateError) {
+          response.status(400).json({ workspace: null, message: e.message });
+          return;
+        }
         console.error(e.message, e);
         response.sendStatus(500).end();
       }

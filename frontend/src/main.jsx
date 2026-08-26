@@ -15,6 +15,11 @@ import "@/index.css";
 const isDev = import.meta.env.DEV;
 const REACTWRAP = isDev ? React.Fragment : React.StrictMode;
 
+async function loadWorkspaceChatRoute() {
+  const { default: WorkspaceChat } = await import("@/pages/WorkspaceChat");
+  return { element: <PrivateRoute Component={WorkspaceChat} /> };
+}
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -46,13 +51,11 @@ const router = createBrowserRouter([
       },
       {
         path: "/workspace/:slug",
-        lazy: async () => {
-          const { default: WorkspaceChat } = await import(
-            "@/pages/WorkspaceChat"
-          );
-          return { element: <PrivateRoute Component={WorkspaceChat} /> };
-        },
-        children: [{ path: "t/:threadSlug" }],
+        lazy: loadWorkspaceChatRoute,
+      },
+      {
+        path: "/workspace/:slug/t/:threadSlug",
+        lazy: loadWorkspaceChatRoute,
       },
       {
         path: "/accept-invite/:code",

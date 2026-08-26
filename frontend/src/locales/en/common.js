@@ -149,6 +149,18 @@ const TRANSLATIONS = {
   "new-workspace": {
     title: "New Workspace",
     placeholder: "My Workspace",
+    subtitle:
+      "Create a regular workspace and optionally select an analysis template.",
+    "template-title": "Analysis template",
+    "template-hint":
+      "The selection sets the matching system prompt. Without a template, the AnythingLLM default prompt remains active.",
+    "template-default": "No analysis template (default prompt)",
+    "settings-title": "Automatic workspace settings",
+    "settings-chat":
+      "Chat: System default · Chat mode · History 1 · Temperature 0",
+    "settings-vector":
+      "Vector search: Default · 55 context snippets · no threshold",
+    create: "Create workspace",
   },
   "workspaces—settings": {
     general: "General Settings",

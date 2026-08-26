@@ -143,6 +143,18 @@ const TRANSLATIONS = {
   "new-workspace": {
     title: "Neuer Workspace",
     placeholder: "Mein Workspace",
+    subtitle:
+      "Erstelle einen normalen Workspace und wähle optional eine Fachvorlage.",
+    "template-title": "Fachvorlage",
+    "template-hint":
+      "Die Auswahl setzt den zugehörigen Systemprompt. Ohne Vorlage bleibt der AnythingLLM-Standardprompt aktiv.",
+    "template-default": "Keine Fachvorlage (Standardprompt)",
+    "settings-title": "Automatische Workspace-Einstellungen",
+    "settings-chat":
+      "Chat: System default · Modus Chat · Verlauf 1 · Temperatur 0",
+    "settings-vector":
+      "Vektorsuche: Default · 55 Kontext-Snippets · keine Schwelle",
+    create: "Workspace erstellen",
   },
   "workspaces—settings": {
     general: "Allgemeine Einstellungen",
