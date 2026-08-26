@@ -8,6 +8,25 @@ const {
 } = require("../../helpers/chat/LLMPerformanceMonitor");
 const { OpenAI: OpenAIApi } = require("openai");
 
+function alphabeticContextLabel(index) {
+  let value = Number(index) + 1;
+  let label = "";
+  while (value > 0) {
+    value -= 1;
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26);
+  }
+  return label;
+}
+
+function formatContextBlock(text, index) {
+  if (/physicalPdfPage:\s*\d+/u.test(String(text || ""))) {
+    const label = alphabeticContextLabel(index);
+    return `[PDF SOURCE BLOCK ${label} - TRANSPORT LABEL ONLY]:\n${text}\n[END PDF SOURCE BLOCK ${label}]\n\n`;
+  }
+  return `[CONTEXT ${index}]:\n${text}\n[END CONTEXT ${index}]\n\n`;
+}
+
 //  hybrid of openAi LLM chat completion for LMStudio
 class LMStudioLLM {
   /** @see LMStudioLLM.cacheContextWindows */
@@ -116,9 +135,7 @@ class LMStudioLLM {
     return (
       "\nContext:\n" +
       contextTexts
-        .map((text, i) => {
-          return `[CONTEXT ${i}]:\n${text}\n[END CONTEXT ${i}]\n\n`;
-        })
+        .map((text, index) => formatContextBlock(text, index))
         .join("")
     );
   }
@@ -378,6 +395,8 @@ function parseLMStudioBasePath(providedBasePath = "", apiVersion = "legacy") {
 }
 
 module.exports = {
+  alphabeticContextLabel,
+  formatContextBlock,
   LMStudioLLM,
   parseLMStudioBasePath,
 };

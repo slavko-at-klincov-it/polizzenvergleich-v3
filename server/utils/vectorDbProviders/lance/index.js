@@ -1,6 +1,7 @@
 const lancedb = require("@lancedb/lancedb");
 const { toChunks, getEmbeddingEngineSelection } = require("../../helpers");
 const { TextSplitter } = require("../../TextSplitter");
+const { PageAwareTextSplitter } = require("../../PageAwareTextSplitter");
 const { SystemSettings } = require("../../../models/systemSettings");
 const { storeVectorResult, cachedVectorInformation } = require("../../files");
 const { v4: uuidv4 } = require("uuid");
@@ -8,6 +9,12 @@ const { sourceIdentifier } = require("../../chats");
 const { NativeEmbeddingReranker } = require("../../EmbeddingRerankers/native");
 const { VectorDatabase } = require("../base");
 const path = require("path");
+const {
+  PROVENANCE_SCHEMA_VERSION,
+  assertLanceProvenanceSchema,
+  materializeProvenance,
+  validateCachedProvenance,
+} = require("./provenance");
 
 /**
  * LancedDB Client connection object
@@ -243,6 +250,7 @@ class LanceDb extends VectorDatabase {
     const hasNamespace = await this.hasNamespace(namespace);
     if (hasNamespace) {
       const collection = await client.openTable(namespace);
+      await assertLanceProvenanceSchema(collection);
       await collection.add(data);
       return true;
     }
@@ -310,14 +318,25 @@ class LanceDb extends VectorDatabase {
   ) {
     const { DocumentVectors } = require("../../../models/vectors");
     try {
-      const { pageContent, docId, ...metadata } = documentData;
+      const { pageContent, docId } = documentData;
       if (!pageContent || pageContent.length == 0) return false;
+      const isPdf = PageAwareTextSplitter.isPdfDocument(documentData);
+      if (isPdf) PageAwareTextSplitter.pages(documentData);
+
+      const { client } = await this.connect();
+      if (await this.namespaceExists(client, namespace)) {
+        const table = await client.openTable(namespace);
+        await assertLanceProvenanceSchema(table);
+      }
 
       this.logger("Adding new vectorized document into namespace", namespace);
       if (!skipCache) {
         const cacheResult = await cachedVectorInformation(fullFilePath);
-        if (cacheResult.exists) {
-          const { client } = await this.connect();
+        const cacheValidation = validateCachedProvenance({
+          chunks: cacheResult.chunks,
+          isPdf,
+        });
+        if (cacheResult.exists && cacheValidation.valid) {
           const { chunks } = cacheResult;
           const documentVectors = [];
           const submissions = [];
@@ -325,9 +344,19 @@ class LanceDb extends VectorDatabase {
           for (const chunk of chunks) {
             chunk.forEach((chunk) => {
               const id = uuidv4();
-              const { id: _id, ...metadata } = chunk.metadata;
+              const {
+                id: _id,
+                docId: _cachedDocId,
+                ...metadata
+              } = chunk.metadata;
+              const provenance = materializeProvenance({
+                metadata,
+                documentData,
+                docId,
+                isPdf,
+              });
               documentVectors.push({ docId, vectorId: id });
-              submissions.push({ id: id, vector: chunk.values, ...metadata });
+              submissions.push({ id, vector: chunk.values, ...provenance });
             });
           }
 
@@ -335,6 +364,10 @@ class LanceDb extends VectorDatabase {
           await DocumentVectors.bulkInsert(documentVectors);
           return { vectorized: true, error: null };
         }
+        if (cacheResult.exists)
+          this.logger(
+            `Ignoring legacy vector cache without provenance schema v${PROVENANCE_SCHEMA_VERSION}: ${cacheValidation.reason}.`
+          );
       }
 
       // If we are here then we are going to embed and store a novel document.
@@ -342,21 +375,23 @@ class LanceDb extends VectorDatabase {
       // because we then cannot atomically control our namespace to granularly find/remove documents
       // from vectordb.
       const EmbedderEngine = getEmbeddingEngineSelection();
-      const textSplitter = new TextSplitter({
-        chunkSize: TextSplitter.determineMaxChunkSize(
-          await SystemSettings.getValueOrFallback({
-            label: "text_splitter_chunk_size",
-          }),
-          EmbedderEngine?.embeddingMaxChunkLength
-        ),
-        chunkOverlap: await SystemSettings.getValueOrFallback(
-          { label: "text_splitter_chunk_overlap" },
-          20
-        ),
-        chunkHeaderMeta: TextSplitter.buildHeaderMeta(metadata),
+      const chunkSize = TextSplitter.determineMaxChunkSize(
+        await SystemSettings.getValueOrFallback({
+          label: "text_splitter_chunk_size",
+        }),
+        EmbedderEngine?.embeddingMaxChunkLength
+      );
+      const chunkOverlap = await SystemSettings.getValueOrFallback(
+        { label: "text_splitter_chunk_overlap" },
+        20
+      );
+      const textChunksWithMetadata = await PageAwareTextSplitter.splitDocument({
+        documentData,
+        chunkSize,
+        chunkOverlap,
         chunkPrefix: EmbedderEngine?.embeddingPrefix,
       });
-      const textChunks = await textSplitter.splitText(pageContent);
+      const textChunks = textChunksWithMetadata.map(({ text }) => text);
 
       this.logger("Snippets created from document:", textChunks.length);
       const documentVectors = [];
@@ -364,15 +399,25 @@ class LanceDb extends VectorDatabase {
       const submissions = [];
       const vectorValues = await EmbedderEngine.embedChunks(textChunks);
 
-      if (!!vectorValues && vectorValues.length > 0) {
+      if (
+        !!vectorValues &&
+        vectorValues.length > 0 &&
+        vectorValues.length === textChunksWithMetadata.length
+      ) {
         for (const [i, vector] of vectorValues.entries()) {
+          const provenance = materializeProvenance({
+            metadata: textChunksWithMetadata[i].metadata,
+            documentData,
+            docId,
+            isPdf,
+          });
           const vectorRecord = {
             id: uuidv4(),
             values: vector,
             // [DO NOT REMOVE]
             // LangChain will be unable to find your text if you embed manually and dont include the `text` key.
             // https://github.com/hwchase17/langchainjs/blob/2def486af734c0ca87285a48f1a04c057ab74bdf/langchain/src/vectorstores/pinecone.ts#L64
-            metadata: { ...metadata, text: textChunks[i] },
+            metadata: { ...provenance, text: textChunks[i] },
           };
 
           vectors.push(vectorRecord);
@@ -385,7 +430,7 @@ class LanceDb extends VectorDatabase {
         }
       } else {
         throw new Error(
-          "Could not embed document chunks! This document will not be recorded."
+          "Could not embed every document chunk! This document will not be recorded."
         );
       }
 

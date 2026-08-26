@@ -51,7 +51,22 @@ describe("WorkspaceParsedFiles.moveToDocumentsAndEmbed", () => {
     jest.clearAllMocks();
     fs.mkdirSync(mockDirectUploadsPath, { recursive: true });
     fs.mkdirSync(mockDocumentsPath, { recursive: true });
-    fs.writeFileSync(sourceFile, JSON.stringify({ pageContent: "policy" }));
+    fs.writeFileSync(
+      sourceFile,
+      JSON.stringify({
+        id: "source-policy",
+        documentType: "pdf",
+        pageContent: "[DOCUMENT_PAGE 1]\npolicy",
+        pageMap: [{ pageNumber: 1, start: 18, end: 24 }],
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
+      })
+    );
     prisma.workspace_parsed_files.findFirst.mockResolvedValue({
       id: 5,
       workspaceId: workspace.id,
@@ -77,6 +92,27 @@ describe("WorkspaceParsedFiles.moveToDocumentsAndEmbed", () => {
     ).resolves.toEqual({ success: true, error: null, document });
     expect(prisma.workspace_parsed_files.deleteMany).toHaveBeenCalled();
     expect(fs.existsSync(sourceFile)).toBe(false);
+  });
+
+  test("copies canonical PageMap JSON intact before embedding", async () => {
+    const document = { id: 99, docpath: embeddedPath };
+    Document.addDocuments.mockImplementation(async () => {
+      const copied = JSON.parse(
+        fs.readFileSync(path.join(mockDocumentsPath, embeddedPath), "utf8")
+      );
+      expect(copied).toMatchObject({
+        id: "source-policy",
+        documentType: "pdf",
+        pageMap: [{ pageNumber: 1, start: 18, end: 24 }],
+        pdfExtraction: { schemaVersion: 1, complete: true },
+      });
+      return { embedded: [embeddedPath], failedToEmbed: [], errors: [] };
+    });
+    Document.get.mockResolvedValue(document);
+
+    await expect(
+      WorkspaceParsedFiles.moveToDocumentsAndEmbed(user, 5, workspace)
+    ).resolves.toEqual({ success: true, error: null, document });
   });
 
   test("treats source cleanup as best-effort after a successful commit", async () => {

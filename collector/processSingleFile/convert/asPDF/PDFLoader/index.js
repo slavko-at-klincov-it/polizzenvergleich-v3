@@ -24,10 +24,6 @@ class PDFLoader {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
 
-      if (content.items.length === 0) {
-        continue;
-      }
-
       let lastY;
       const textItems = [];
       for (const item of content.items) {

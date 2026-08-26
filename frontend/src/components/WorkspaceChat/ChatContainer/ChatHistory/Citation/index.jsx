@@ -18,6 +18,10 @@ import OutlookLogo from "@/pages/Admin/Agents/OutlookSkillPanel/outlook.png";
 import { toPercentString } from "@/utils/numbers";
 import { useTranslation } from "react-i18next";
 import { useSourcesSidebar } from "../../ChatSidebar";
+import citationSources from "@/utils/chat/citationSources.cjs";
+
+const { combineLikeSources, omitChunkHeader } = citationSources;
+export { combineLikeSources, omitChunkHeader };
 
 const CIRCLE_ICONS = {
   file: FileText,
@@ -108,24 +112,6 @@ export function SourceTypeCircle({
   );
 }
 
-export function combineLikeSources(sources) {
-  const combined = {};
-  sources.forEach((source) => {
-    const { id, title, text, chunkSource = "", score = null } = source;
-    if (combined.hasOwnProperty(title)) {
-      combined[title].chunks.push({ id, text, chunkSource, score });
-      combined[title].references += 1;
-    } else {
-      combined[title] = {
-        title,
-        chunks: [{ id, text, chunkSource, score }],
-        references: 1,
-      };
-    }
-  });
-  return Object.values(combined);
-}
-
 export default function Citations({ sources = [] }) {
   const {
     sidebarOpen,
@@ -166,7 +152,7 @@ export default function Citations({ sources = [] }) {
           const customImage = CIRCLE_IMAGES[info.icon];
           return (
             <div
-              key={source.title || idx}
+              key={source.groupKey || idx}
               className={`absolute top-0 size-[22px] rounded-full ${customImage ? "border-none" : "border-2 border-zinc-800 light:border-white"}`}
               style={{ left: `${idx * 17}px`, zIndex: 3 - idx }}
             >
@@ -188,11 +174,6 @@ export default function Citations({ sources = [] }) {
       )}
     </button>
   );
-}
-
-export function omitChunkHeader(text) {
-  if (!text.includes("<document_metadata>")) return text;
-  return text.split("</document_metadata>")[1].trim();
 }
 
 export function CitationDetailModal({ source, onClose }) {
@@ -224,10 +205,15 @@ export function CitationDetailModal({ source, onClose }) {
         onClose={onClose}
       />
       <ModalBody>
-        {chunks.map(({ text, score }, idx) => (
+        {chunks.map(({ text, score, pageNumber }, idx) => (
           <Fragment key={idx}>
             <div className="text-zinc-100 light:text-slate-900">
               <div className="flex flex-col w-full justify-start gap-y-1">
+                {pageNumber > 0 && (
+                  <p className="text-xs font-medium text-zinc-400 light:text-slate-500">
+                    {t("chat_window.pdf_page", { page: pageNumber })}
+                  </p>
+                )}
                 <p className="text-zinc-100 light:text-slate-900 whitespace-pre-line">
                   {HTMLDecode(omitChunkHeader(text))}
                 </p>

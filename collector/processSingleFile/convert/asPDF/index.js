@@ -8,6 +8,7 @@ const { tokenizeString } = require("../../../utils/tokenizer");
 const { default: slugify } = require("slugify");
 const PDFLoader = require("./PDFLoader");
 const OCRLoader = require("../../../utils/OCRLoader");
+const { assemblePageMap } = require("./PDFPageMap");
 
 async function asPdf({
   fullFilePath = "",
@@ -20,10 +21,9 @@ async function asPdf({
   });
 
   console.log(`-- Working ${filename} --`);
-  const pageContent = [];
   let docs = await pdfLoader.load();
 
-  if (docs.length === 0) {
+  if (!docs.some((document) => String(document.pageContent || "").trim())) {
     console.log(
       `[asPDF] No text content found for ${filename}. Will attempt OCR parse.`
     );
@@ -38,21 +38,22 @@ async function asPdf({
         doc.metadata?.loc?.pageNumber || "unknown"
       } --`
     );
-    if (!doc.pageContent || !doc.pageContent.length) continue;
-    pageContent.push(doc.pageContent);
   }
 
-  if (!pageContent.length) {
+  let extraction;
+  try {
+    extraction = assemblePageMap(docs);
+  } catch (error) {
     console.error(`[asPDF] Resulting text content was empty for ${filename}.`);
     if (!options.absolutePath) trashFile(fullFilePath);
     return {
       success: false,
-      reason: `No text content found in ${filename}.`,
+      reason: error.message || `No text content found in ${filename}.`,
       documents: [],
     };
   }
 
-  const content = pageContent.join("");
+  const { pageContent: content, pageMap, pdfExtraction } = extraction;
   const data = {
     id: v4(),
     url: "file://" + fullFilePath,
@@ -70,6 +71,9 @@ async function asPdf({
     published: createdDate(fullFilePath),
     wordCount: content.split(" ").length,
     pageContent: content,
+    pageMap,
+    pdfExtraction,
+    documentType: "pdf",
     token_count_estimate: tokenizeString(content),
   };
 

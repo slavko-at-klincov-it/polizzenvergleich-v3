@@ -1553,6 +1553,8 @@ const TRANSLATIONS = {
     source_count_one: "{{count}} reference",
     source_count_other: "{{count}} references",
     document: "Document",
+    pdf_page: "PDF page {{page}}",
+    pdf_pages: "PDF pages {{pages}}",
     similarity_match: "match",
     fork: "Fork",
     delete: "Delete",

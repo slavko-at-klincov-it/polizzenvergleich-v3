@@ -4,12 +4,18 @@ import {
   getCustomImage,
 } from "../../ChatHistory/Citation";
 import { useTranslation } from "react-i18next";
+import citationSources from "@/utils/chat/citationSources.cjs";
 
 export default function SourceItem({ source, onClick }) {
   const { t } = useTranslation();
   const info = parseChunkSource(source);
   const customImage = getCustomImage(info?.icon);
-  const subtitle = info?.isUrl ? info?.text : t("chat_window.document");
+  const pages = citationSources.sourcePageNumbers(source);
+  const subtitle = info?.isUrl
+    ? info?.text
+    : pages.length > 0
+      ? t("chat_window.pdf_pages", { pages: pages.join(", ") })
+      : t("chat_window.document");
 
   return (
     <button

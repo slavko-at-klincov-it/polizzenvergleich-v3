@@ -1334,6 +1334,8 @@ const TRANSLATIONS = {
     similarity_match: "Spiel",
     source_count_one: "{{count}} Referenz",
     source_count_other: "{{count}} Verweise",
+    pdf_page: "PDF-Seite {{page}}",
+    pdf_pages: "PDF-Seiten {{pages}}",
     add_new: "Neu hinzufügen",
     edit: "Bearbeiten",
     publish: "Veröffentlichen",
