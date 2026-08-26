@@ -1,5 +1,19 @@
 const { EncryptionManager } = require("../EncryptionManager");
 const { Agent } = require("undici");
+const { isIP } = require("node:net");
+
+function isValidCollectorHost(host) {
+  if (isIP(host)) return true;
+  if (host.length > 253) return false;
+  return host
+    .split(".")
+    .every(
+      (label) =>
+        label.length > 0 &&
+        label.length <= 63 &&
+        /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label)
+    );
+}
 
 /**
  * @typedef {Object} CollectorOptions
@@ -18,6 +32,9 @@ const { Agent } = require("undici");
 // so no additional security is needed on the endpoint directly. Auth is done however by the express
 // middleware prior to leaving the node-side of the application so that is good enough >:)
 class CollectorApi {
+  /** @type {string} - The default collector API hostname */
+  static DEFAULT_COLLECTOR_API_HOST = "0.0.0.0";
+
   /** @type {number} - The default collector port */
   static DEFAULT_COLLECTOR_PORT = 8888;
 
@@ -48,10 +65,29 @@ class CollectorApi {
     return this.DEFAULT_COLLECTOR_PORT;
   }
 
+  /**
+   * Gets the collector API host used by the server-side client. This is
+   * intentionally separate from COLLECTOR_HOST, which controls the collector's
+   * listening interface.
+   * @returns {string}
+   */
+  static getCollectorApiHost() {
+    const host = process.env.COLLECTOR_API_HOST?.trim();
+    if (!host) return this.DEFAULT_COLLECTOR_API_HOST;
+    if (isValidCollectorHost(host)) return host;
+
+    console.warn(
+      `Invalid COLLECTOR_API_HOST "${process.env.COLLECTOR_API_HOST}". Falling back to ${this.DEFAULT_COLLECTOR_API_HOST}.`
+    );
+    return this.DEFAULT_COLLECTOR_API_HOST;
+  }
+
   constructor() {
     const { CommunicationKey } = require("../comKey");
     this.comkey = new CommunicationKey();
-    this.endpoint = `http://0.0.0.0:${CollectorApi.getCollectorPort()}`;
+    const host = CollectorApi.getCollectorApiHost();
+    const endpointHost = isIP(host) === 6 ? `[${host}]` : host;
+    this.endpoint = `http://${endpointHost}:${CollectorApi.getCollectorPort()}`;
   }
 
   log(text, ...args) {

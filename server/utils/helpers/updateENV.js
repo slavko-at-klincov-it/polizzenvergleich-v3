@@ -1444,7 +1444,11 @@ function dumpENV() {
 
     "STORAGE_DIR",
     "SERVER_PORT",
+    "SERVER_HOST",
     "COLLECTOR_PORT",
+    "COLLECTOR_HOST",
+    "COLLECTOR_API_HOST",
+    "LOCAL_ONLY_MODE",
     // For persistent data encryption
     "SIG_KEY",
     "SIG_SALT",

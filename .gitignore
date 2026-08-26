@@ -6,6 +6,11 @@ node_modules
 __pycache__
 v-env
 .DS_Store
+.runtime/
+server/storage/backups/
+server/storage/logs/
+server/public.new/
+server/public.previous/
 aws_cf_deploy_anything_llm.json
 yarn.lock
 *.bak

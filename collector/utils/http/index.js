@@ -3,6 +3,10 @@ process.env.NODE_ENV === "development"
   : require("dotenv").config();
 const DEFAULT_COLLECTOR_PORT = 8888;
 
+function getCollectorHost() {
+  return process.env.COLLECTOR_HOST || "0.0.0.0";
+}
+
 function reqBody(request) {
   return typeof request.body === "string"
     ? JSON.parse(request.body)
@@ -51,4 +55,5 @@ module.exports = {
   queryParams,
   validBaseUrl,
   getCollectorPort,
+  getCollectorHost,
 };

@@ -44,3 +44,10 @@ MODEL_TOKENIZER_LABEL=Lokales-Modell
 
 Ohne diese Konfiguration bleibt Upload und Embedding voll funktionsfähig; V3
 zeigt dann die geschätzte Dokument-Tokenzahl an.
+
+## macOS-Installation
+
+Ab Version 3.1 steht ein eigener, produktneutraler macOS-Installer zur
+Verfügung. Er nutzt die V3-eigenen Ports 3004 und 8890 und startet Server und
+Collector als lokale LaunchAgents. Details stehen in
+`docs/MACOS_INSTALL_DE.md`.
