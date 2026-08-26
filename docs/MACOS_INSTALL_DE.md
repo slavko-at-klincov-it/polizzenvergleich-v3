@@ -12,7 +12,7 @@ Voraussetzungen:
 ```bash
 cd ~/Code/polizzenvergleich-v3
 git fetch origin --tags
-git checkout v3.1.0
+git checkout v3.2.0
 ./install.command
 ```
 
@@ -36,3 +36,22 @@ V1-/V2-Installationen werden weder gestoppt noch verändert.
 Die Anwendungskonfiguration und Dokumente liegen ausschließlich im V3-Ordner.
 LM-Studio-Modelle werden vom Installer nicht heruntergeladen, entladen oder
 verändert.
+
+## Update einer bestehenden V3-Installation
+
+```bash
+cd ~/Code/polizzenvergleich-v3
+./doctor.command
+./update.command v3.2.0
+./doctor.command
+```
+
+Das Update verwendet einen unveränderlichen Release-Tag und erhält die
+V3-Datenbank, hochgeladene Dokumente und Konfiguration. Für die neue
+PDF-Seitenprovenienz müssen Original-PDFs in einem neuen Workspace erneut
+hochgeladen und indexiert werden. Alte flache PDF-Vektoren können nicht
+nachträglich zuverlässig einer physischen Seite zugeordnet werden.
+
+Der genaue Kundentest mit den externen Kategorie-Systemprompts ist in
+`docs/RELEASE_V3.2.0_DE.md` beschrieben. Die Promptdateien werden nicht
+automatisch in der V3-Datenbank gespeichert.
