@@ -94,7 +94,7 @@ function extractCategoryDefinitions(systemPrompt) {
     const cells = splitMarkdownRow(line);
     if (!cells || cells.length !== 3) continue;
     const id = stripCodeTicks(cells[0]);
-    if (!/^[A-Z]{2}-\d{2}$/u.test(id)) continue;
+    if (!/^[A-Z]{2}-(?:[A-Z]\d{2}|\d{2})$/u.test(id)) continue;
     definitions.push({
       id,
       stage: stripCodeTicks(cells[1]),

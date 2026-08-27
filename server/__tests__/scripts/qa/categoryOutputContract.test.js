@@ -46,6 +46,20 @@ describe("category output acceptance contract", () => {
     );
   });
 
+  test("extracts the shipped fire catalog IDs with a lettered section", () => {
+    const firePrompt = `
+| ID | Stufe | Kategorie-Name |
+|---|---|---|
+| \`FE-A01\` | K | Brandbegriff |
+| \`FE-F10\` | S | Leerstand |
+`;
+
+    expect(extractCategoryDefinitions(firePrompt)).toEqual([
+      { id: "FE-A01", stage: "K", label: "Brandbegriff" },
+      { id: "FE-F10", stage: "S", label: "Leerstand" },
+    ]);
+  });
+
   test("accepts an exact table and notice", () => {
     expect(
       validate([HEADER, SEPARATOR, ROW_1, ROW_2, NOTICE].join("\n"))

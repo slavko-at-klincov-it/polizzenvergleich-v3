@@ -1,0 +1,805 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "hp-occurrence-full-draft-v0.1",
+  "categoryView": "HP",
+  "requirements": [
+    {
+      "id": "HP-01",
+      "label": "Pauschaldeckungssumme für Personen- und Sachschäden",
+      "requestedFields": ["limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["personal_injury", "property_damage"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "combined_liability_limit",
+          "label": "Pauschaldeckungssumme",
+          "factRole": "LIMIT",
+          "aliases": ["Pauschaldeckungssumme", "pauschale Deckungssumme"]
+        },
+        {
+          "id": "personal_injury",
+          "label": "Personenschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Personen- und Sachschäden",
+            "Personen- und Sachschäden pauschal"
+          ]
+        },
+        {
+          "id": "property_damage",
+          "label": "Sachschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Personen- und Sachschäden",
+            "Personen- und Sachschäden pauschal"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-02",
+      "label": "Jahreshöchstleistung als Vielfaches der Deckungssumme",
+      "requestedFields": ["limit", "condition"],
+      "components": [
+        {
+          "id": "annual_aggregate_multiple",
+          "label": "Jahreshöchstleistung als Vielfaches der Deckungssumme",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Jahreshöchstleistung als Vielfaches der Deckungssumme",
+            "Jahreshöchstleistung beträgt das Mehrfache der Deckungssumme",
+            "Jahreshöchstleistung beträgt höchstens das",
+            "Vielfaches der Deckungssumme",
+            "Mehrfaches der Deckungssumme",
+            "fache der Deckungssumme"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-03",
+      "label": "Sublimit für reine Vermögensschäden",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "pure_financial_loss_sublimit",
+          "label": "Sublimit für reine Vermögensschäden",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Reine Vermögensschäden Sublimit",
+            "Sublimit für reine Vermögensschäden",
+            "Höchstentschädigung für reine Vermögensschäden",
+            "reine Vermögensschäden bis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-04",
+      "label": "Wegehalterhaftung für Gehsteige und Zufahrten",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "road_maintenance_liability",
+          "label": "Wegehalterhaftung",
+          "factRole": "BENEFIT",
+          "aliases": ["Wegehalterhaftung", "Haftung als Wegehalter"]
+        },
+        {
+          "id": "sidewalks",
+          "label": "Gehsteige",
+          "factRole": "CONDITION",
+          "aliases": ["Gehsteige", "Gehsteig"]
+        },
+        {
+          "id": "access_roads",
+          "label": "Zufahrten",
+          "factRole": "CONDITION",
+          "aliases": ["Zufahrten", "Zufahrt"]
+        }
+      ]
+    },
+    {
+      "id": "HP-05",
+      "label": "Bauwerkehaftung für herabfallende Teile und Einsturz",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "building_owner_liability",
+          "label": "Bauwerkehaftung",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Bauwerkehaftung",
+            "Haftung für Bauwerke",
+            "Haftung des Gebäudebesitzers"
+          ]
+        },
+        {
+          "id": "falling_parts",
+          "label": "Herabfallende Teile",
+          "factRole": "PERIL",
+          "aliases": ["herabfallende Teile", "Ablösung von Teilen des Gebäudes"]
+        },
+        {
+          "id": "collapse",
+          "label": "Einsturz",
+          "factRole": "PERIL",
+          "aliases": ["Einsturz", "Einstürzen"]
+        }
+      ]
+    },
+    {
+      "id": "HP-06",
+      "label": "Schneeräumung und Streupflicht",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "snow_clearance",
+          "label": "Schneeräumung",
+          "factRole": "CONDITION",
+          "aliases": ["Schneeräumung", "Schneeräumpflicht", "Schneeräumdienst"]
+        },
+        {
+          "id": "gritting_duty",
+          "label": "Streupflicht",
+          "factRole": "CONDITION",
+          "aliases": ["Streupflicht", "Streudienst", "Bestreuung"]
+        }
+      ]
+    },
+    {
+      "id": "HP-07",
+      "label": "Haftung bei Delegation an einen Dienstleister",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "delegated_duty",
+          "label": "Delegation der Pflicht",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Übertragung der Verpflichtung",
+            "Übertragung der Pflicht",
+            "Delegation"
+          ]
+        },
+        {
+          "id": "service_provider",
+          "label": "Dienstleister",
+          "factRole": "CONDITION",
+          "aliases": [
+            "beauftragtes Unternehmen",
+            "beauftragten Unternehmen",
+            "Dienstleister"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-08",
+      "label": "Bauherrenhaftpflicht und bis zu welcher Bausumme",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "builders_liability",
+          "label": "Bauherrenhaftpflicht",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Bauherrenhaftpflicht",
+            "Bauherrenrisiko",
+            "Haftpflicht als Bauherr"
+          ]
+        },
+        {
+          "id": "construction_sum_limit",
+          "label": "Bausummengrenze",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Gesamtbaukosten des Bauvorhabens bis",
+            "Bausumme für Bauvorhaben",
+            "Bausummengrenze der Bauherrenhaftpflicht",
+            "Baukosten des Bauvorhabens bis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-09",
+      "label": "Anzeigepflicht für Sanierungsprojekte",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "renovation_notification",
+          "label": "Anzeigepflicht für Sanierungsprojekte",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Sanierungsarbeiten anzuzeigen",
+            "Sanierungsmaßnahmen anzuzeigen",
+            "Anzeige von Sanierungsarbeiten",
+            "Anzeigepflicht bei Sanierung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-10",
+      "label": "Gewässerschadenhaftpflicht",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "water_pollution_liability",
+          "label": "Gewässerschadenhaftpflicht",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Gewässerschadenhaftpflicht",
+            "Gewässerschäden",
+            "Gewässerschadenrisiko"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-11",
+      "label": "Öltank oder vergleichbares Anlagenrisiko",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "oil_tank_or_installation_risk",
+          "label": "Öltank oder vergleichbares Anlagenrisiko",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Öltank",
+            "Öltanks",
+            "Heizöltank",
+            "Heizöltanks",
+            "Tank-Anlagenrisiko"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-12",
+      "label": "Umweltschäden nach dem Bundes-Umwelthaftungsgesetz",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "environmental_damage",
+          "label": "Umweltschäden",
+          "factRole": "DAMAGE",
+          "aliases": ["Umweltschäden", "Umweltschaden"]
+        },
+        {
+          "id": "federal_environmental_liability_act",
+          "label": "Bundes-Umwelthaftungsgesetz",
+          "factRole": "DEFINITION",
+          "aliases": ["Bundes-Umwelthaftungsgesetz", "B-UHG"]
+        }
+      ]
+    },
+    {
+      "id": "HP-13",
+      "label": "Haftpflicht der Organe der Eigentümergemeinschaft",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "organ_liability",
+          "label": "Haftpflicht der Organe",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Haftpflicht der Organe",
+            "Organe der Eigentümergemeinschaft"
+          ]
+        },
+        {
+          "id": "owners_association",
+          "label": "Eigentümergemeinschaft",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Eigentümergemeinschaft",
+            "Wohnungseigentümergemeinschaft"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-14",
+      "label": "Abgrenzung zur Vermögensschadenhaftpflicht des Verwalters",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "manager_financial_liability",
+          "label": "Vermögensschadenhaftpflicht des Verwalters",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Vermögensschadenhaftpflicht des Verwalters",
+            "Vermögensschaden-Haftpflicht des Verwalters",
+            "Verwalterhaftpflicht"
+          ]
+        },
+        {
+          "id": "coverage_boundary",
+          "label": "Abgrenzung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Abgrenzung zur Verwalterhaftpflicht",
+            "Subsidiarität zur Verwalterhaftpflicht"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-15",
+      "label": "Schäden von Versicherten untereinander eingeschlossen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "cross_liability",
+          "label": "Schäden von Versicherten untereinander",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Schäden von Versicherten untereinander",
+            "Ansprüche der Versicherten untereinander",
+            "gegenseitige Ansprüche mitversicherter Personen",
+            "Cross Liability"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-16",
+      "label": "Regressverzicht gegenüber Mietern",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "recourse_waiver",
+          "label": "Regressverzicht",
+          "factRole": "BENEFIT",
+          "aliases": ["Regressverzicht", "Verzicht auf Regress"]
+        },
+        {
+          "id": "tenants",
+          "label": "Mieter",
+          "factRole": "CONDITION",
+          "aliases": ["gegenüber Mietern", "gegen Mieter", "Mieter und Pächter"]
+        }
+      ]
+    },
+    {
+      "id": "HP-17",
+      "label": "Personenschäden im Zusammenhang mit der Aufzugsanlage",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": [
+            "elevator_personal_injury",
+            "elevator_installation"
+          ],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "elevator_personal_injury",
+          "label": "Personenschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Personenschäden durch Aufzugsanlagen",
+            "Personenschäden aus dem Betrieb der Aufzugsanlage"
+          ]
+        },
+        {
+          "id": "elevator_installation",
+          "label": "Aufzugsanlage",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Personenschäden durch Aufzugsanlagen",
+            "Personenschäden aus dem Betrieb der Aufzugsanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-18",
+      "label": "Spielplatz und Prüfung der Spielgeräte",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "playground",
+          "label": "Spielplatz",
+          "factRole": "CONDITION",
+          "aliases": ["Spielplatz", "Spielplätze"]
+        },
+        {
+          "id": "play_equipment_inspection",
+          "label": "Prüfung der Spielgeräte",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Prüfung der Spielgeräte",
+            "Überprüfung der Spielgeräte",
+            "Spielgeräteprüfung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-19",
+      "label": "Tiefgaragentor und Schrankenanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "underground_garage_door",
+          "label": "Tiefgaragentor",
+          "factRole": "CONDITION",
+          "aliases": ["Tiefgaragentor", "Tiefgaragentore"]
+        },
+        {
+          "id": "barrier_system",
+          "label": "Schrankenanlage",
+          "factRole": "CONDITION",
+          "aliases": ["Schrankenanlage", "Schrankenanlagen"]
+        }
+      ]
+    },
+    {
+      "id": "HP-20",
+      "label": "Vermietung von Dachflächen oder Fassade an Dritte",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "third_party_rental",
+          "label": "Vermietung an Dritte",
+          "factRole": "CONDITION",
+          "aliases": ["Vermietung an Dritte", "Überlassung an Dritte"]
+        },
+        {
+          "id": "roof_or_facade_area",
+          "label": "Dachflächen oder Fassade",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Vermietung von Dachflächen",
+            "Vermietung der Fassade",
+            "Dach- oder Fassadenflächen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-21",
+      "label": "Serienschadenklausel und Definition des Schadenereignisses",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "serial_loss_clause",
+          "label": "Serienschadenklausel",
+          "factRole": "DEFINITION",
+          "aliases": ["Serienschaden", "Serienschäden", "Serienschadenklausel"]
+        },
+        {
+          "id": "loss_event_definition",
+          "label": "Definition des Schadenereignisses",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "als ein Schadenereignis",
+            "ein Schadenereignis gelten",
+            "Schadenereignis ist"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-22",
+      "label": "Selbstbehalt in der Haftpflicht",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "liability_deductible",
+          "label": "Haftpflicht-Selbstbehalt",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt in der Haftpflicht",
+            "Haftpflicht-Selbstbehalt",
+            "Selbstbehalt je Haftpflichtschaden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-23",
+      "label": "Passiver Rechtsschutz zur Abwehr unberechtigter Ansprüche",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "passive_legal_protection",
+          "label": "Passiver Rechtsschutz",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "passiver Rechtsschutz",
+            "Abwehr unberechtigter Ansprüche",
+            "Abwehr unbegründeter Ansprüche"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-24",
+      "label": "Anrechnung der Abwehrkosten auf die Deckungssumme",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "defence_costs",
+          "label": "Abwehrkosten",
+          "factRole": "COST",
+          "aliases": ["Abwehrkosten", "Kosten der Abwehr"]
+        },
+        {
+          "id": "counted_against_limit",
+          "label": "Anrechnung auf die Deckungssumme",
+          "factRole": "CONDITION",
+          "aliases": [
+            "auf die Deckungssumme angerechnet",
+            "innerhalb der Deckungssumme",
+            "zu Lasten der Deckungssumme"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-25",
+      "label": "Räumlicher Geltungsbereich und Auslandsdeckung",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "territorial_scope",
+          "label": "Räumlicher Geltungsbereich",
+          "factRole": "CONDITION",
+          "aliases": ["räumlicher Geltungsbereich", "örtlicher Geltungsbereich"]
+        },
+        {
+          "id": "foreign_coverage",
+          "label": "Auslandsdeckung",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Auslandsdeckung",
+            "im Ausland",
+            "weltweite Deckung",
+            "europaweite Deckung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-26",
+      "label": "Mietsachschäden",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "rented_property_damage",
+          "label": "Mietsachschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Mietsachschäden",
+            "Mietsachschaden",
+            "Schäden an gemieteten Sachen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-27",
+      "label": "Schäden durch Reinigungs- oder Hausbetreuungspersonal",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "cleaning_or_caretaking_staff",
+          "label": "Reinigungs- oder Hausbetreuungspersonal",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Reinigungspersonal",
+            "Hausbetreuungspersonal",
+            "Hausbetreuer",
+            "Hausbesorger"
+          ]
+        },
+        {
+          "id": "staff_caused_damage",
+          "label": "Durch Personal verursachte Schäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Schäden durch das Personal",
+            "durch Hausbetreuungspersonal verursachte Schäden",
+            "durch Reinigungspersonal verursachte Schäden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-28",
+      "label": "Arbeitgeberhaftpflicht für angestelltes Personal",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "employers_liability",
+          "label": "Arbeitgeberhaftpflicht",
+          "factRole": "BENEFIT",
+          "aliases": ["Arbeitgeberhaftpflicht", "Haftpflicht als Arbeitgeber"]
+        },
+        {
+          "id": "employed_staff",
+          "label": "Angestelltes Personal",
+          "factRole": "CONDITION",
+          "aliases": ["angestelltes Personal", "Dienstnehmer", "Arbeitnehmer"]
+        }
+      ]
+    },
+    {
+      "id": "HP-29",
+      "label": "Haftung für den Baumbestand auf der Liegenschaft",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "tree_stock_liability",
+          "label": "Haftung für den Baumbestand",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Haftung für den Baumbestand",
+            "Haftung aus dem Baumbestand",
+            "Verkehrssicherungspflicht für Bäume"
+          ]
+        },
+        {
+          "id": "property_tree_stock",
+          "label": "Baumbestand auf der Liegenschaft",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Baumbestand auf der Liegenschaft",
+            "Bäume auf der Liegenschaft"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-30",
+      "label": "Herabfallende Fassadenteile und Balkonteile",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "falling_facade_parts",
+          "label": "Herabfallende Fassadenteile",
+          "factRole": "PERIL",
+          "aliases": [
+            "herabfallende Fassadenteile",
+            "Ablösung von Fassadenteilen"
+          ]
+        },
+        {
+          "id": "falling_balcony_parts",
+          "label": "Herabfallende Balkonteile",
+          "factRole": "PERIL",
+          "aliases": ["herabfallende Balkonteile", "Ablösung von Balkonteilen"]
+        }
+      ]
+    },
+    {
+      "id": "HP-31",
+      "label": "Anforderungen an die Dokumentation des Winterdienstes",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "winter_service_documentation",
+          "label": "Dokumentation des Winterdienstes",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Dokumentation des Winterdienstes",
+            "Winterdienstprotokoll",
+            "Räum- und Streuprotokoll"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-32",
+      "label": "Nachweispflichten zur Verkehrssicherung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "traffic_safety_evidence",
+          "label": "Nachweispflichten zur Verkehrssicherung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Nachweis der Verkehrssicherung",
+            "Nachweispflicht zur Verkehrssicherung",
+            "Verkehrssicherungsnachweis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-33",
+      "label": "Nachhaftung nach Vertragsende",
+      "requestedFields": ["duration", "condition"],
+      "components": [
+        {
+          "id": "extended_reporting_period",
+          "label": "Nachhaftung",
+          "factRole": "BENEFIT",
+          "aliases": ["Nachhaftung", "Nachdeckungsfrist", "Nachmeldefrist"]
+        },
+        {
+          "id": "after_contract_end",
+          "label": "Nach Vertragsende",
+          "factRole": "CONDITION",
+          "aliases": ["nach Vertragsende", "nach Beendigung des Vertrages"]
+        }
+      ]
+    },
+    {
+      "id": "HP-34",
+      "label": "Vorsorgeversicherung für neu hinzukommende Risiken",
+      "requestedFields": ["condition", "limit"],
+      "components": [
+        {
+          "id": "contingency_coverage",
+          "label": "Vorsorgeversicherung",
+          "factRole": "BENEFIT",
+          "aliases": ["Vorsorgeversicherung", "Vorsorgedeckung"]
+        },
+        {
+          "id": "new_risks",
+          "label": "Neu hinzukommende Risiken",
+          "factRole": "CONDITION",
+          "aliases": [
+            "neu hinzukommende Risiken",
+            "neu entstehende Risiken",
+            "neue Risiken"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-35",
+      "label": "Ausschluss von Asbest und Schadstoffen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "asbestos_exclusion",
+          "label": "Asbestausschluss",
+          "factRole": "EXCLUSION",
+          "aliases": ["Asbest", "asbesthaltig", "asbesthaltige"]
+        },
+        {
+          "id": "pollutant_exclusion",
+          "label": "Schadstoffausschluss",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Schadstoffe",
+            "Schadstoffausschluss",
+            "schadstoffbedingt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HP-36",
+      "label": "Ausschluss vorsätzlicher Schädigung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "intentional_damage_exclusion",
+          "label": "Ausschluss vorsätzlicher Schädigung",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "vorsätzliche Schädigung",
+            "vorsätzlich herbeigeführt",
+            "vorsätzlich verursachte Schäden",
+            "Vorsatz"
+          ]
+        }
+      ]
+    }
+  ]
+}

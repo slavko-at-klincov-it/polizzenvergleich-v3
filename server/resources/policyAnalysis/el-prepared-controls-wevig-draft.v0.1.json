@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "el-prepared-controls-wevig-draft-v0.1",
+  "reviewStatus": "REVIEW_REQUIRED",
+  "controls": [
+    {
+      "id": "elw04-flood",
+      "requirementId": "EL-04",
+      "componentId": "flood",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [4, 20],
+      "forbiddenPhysicalPages": [3]
+    },
+    {
+      "id": "elw04-inundation",
+      "requirementId": "EL-04",
+      "componentId": "inundation",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [4, 20],
+      "forbiddenPhysicalPages": [3]
+    },
+    {
+      "id": "elw08-landslide-liability-negative",
+      "requirementId": "EL-08",
+      "componentId": "landslide",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw08-sinkhole-missing",
+      "requirementId": "EL-08",
+      "componentId": "sinkhole",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw08-subsidence-missing",
+      "requirementId": "EL-08",
+      "componentId": "subsidence",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw16-winter-missing",
+      "requirementId": "EL-16",
+      "componentId": "winter_garden",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw16-vitrine-missing",
+      "requirementId": "EL-16",
+      "componentId": "display_case",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw19-elevator-object-missing",
+      "requirementId": "EL-19",
+      "componentId": "elevator_object",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw19-machinery-role-negative",
+      "requirementId": "EL-19",
+      "componentId": "machinery_breakdown",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw25-vandalism-missing",
+      "requirementId": "EL-25",
+      "componentId": "vandalism_without_burglary",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "elw34-terror",
+      "requirementId": "EL-34",
+      "componentId": "terror",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [1, 10]
+    },
+    {
+      "id": "elw34-sabotage-missing",
+      "requirementId": "EL-34",
+      "componentId": "sabotage",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "vs-prepared-controls-wevig-v0.1",
+  "reviewStatus": "APPROVED",
+  "controls": [
+    {
+      "id": "wevig-vs16-garage-missing",
+      "requirementId": "VS-16",
+      "componentId": "garage",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "wevig-vs16-underground-garage-missing",
+      "requirementId": "VS-16",
+      "componentId": "underground_garage",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "wevig-vs17-waste-room-missing",
+      "requirementId": "VS-17",
+      "componentId": "waste_room",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "wevig-vs17-bicycle-room-missing",
+      "requirementId": "VS-17",
+      "componentId": "bicycle_room",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "wevig-vs17-stroller-room-missing",
+      "requirementId": "VS-17",
+      "componentId": "stroller_room",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "wevig-vs21-cleanup-costs",
+      "requirementId": "VS-21",
+      "componentId": "cleanup_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredPhysicalPages": [1, 2, 4, 5],
+      "forbiddenPhysicalPages": [17]
+    },
+    {
+      "id": "wevig-vs21-demolition-costs",
+      "requirementId": "VS-21",
+      "componentId": "demolition_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredPhysicalPages": [1, 2, 4, 5],
+      "forbiddenPhysicalPages": [17]
+    },
+    {
+      "id": "wevig-vs28-rent-loss",
+      "requirementId": "VS-28",
+      "componentId": "rent_loss",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredPhysicalPages": [1, 2, 4, 9]
+    }
+  ]
+}

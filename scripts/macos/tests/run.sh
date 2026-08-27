@@ -11,6 +11,8 @@ for file in \
   /bin/bash -n "$file"
 done
 "${NODE_BIN:-node}" --check "$SCRIPT_DIR/write-config.cjs"
+/usr/bin/grep -A3 '^  update)' "$SCRIPT_DIR/control.sh" | /usr/bin/grep -q 'shift'
+/usr/bin/grep -A4 '^  update)' "$SCRIPT_DIR/control.sh" | /usr/bin/grep -Fq '"$@"'
 
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/polizzenvergleich-v3-installer-test.XXXXXX")"
 trap '/bin/rm -rf "$temp_dir"' EXIT
@@ -80,11 +82,17 @@ done
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
-if /usr/bin/grep -RniE --exclude='run.sh' \
+if /usr/bin/grep -RniE --exclude='run.sh' --exclude='run-vs-pilot-ab.command' \
   'feuer|policyComparison|dinghy|qwen|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
   exit 1
 fi
+
+# Der explizite Diagnose-RC darf den VS-Pilot starten, aber keine
+# Vergleichslogik in Installer, Servicekonfiguration oder Updatepfad tragen.
+/usr/bin/grep -Fq 'server/scripts/qa/runVsPilotAb.cjs' \
+  "$REPO_DIR/run-vs-pilot-ab.command"
+/usr/bin/grep -Fq 'qwen/qwen3.8-27b' "$REPO_DIR/run-vs-pilot-ab.command"
 
 printf '%s\n' "V3 macOS installer tests: PASS"

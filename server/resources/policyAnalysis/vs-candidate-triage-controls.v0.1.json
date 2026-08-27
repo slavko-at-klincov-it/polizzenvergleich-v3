@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "vs-candidate-triage-controls-v0.1",
+  "reviewStatus": "APPROVED",
+  "controls": [
+    {
+      "id": "vs21-demolition-liability-page18",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "demolition_costs",
+        "pageNumber": 18,
+        "exactText": "Abbruch"
+      },
+      "allowedBindings": ["MENTION_ONLY"]
+    },
+    {
+      "id": "vs21-demolition-special-waste-page27",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "demolition_costs",
+        "pageNumber": 27,
+        "exactText": "Abbruchkosten"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "vs21-demolition-radioactive-page27",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "demolition_costs",
+        "pageNumber": 27,
+        "exactText": "Abbruch"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "vs21-right-headed-cleanup-page5",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 5,
+        "exactText": "Aufräumungs-"
+      },
+      "allowedBindings": ["DIRECT"]
+    },
+    {
+      "id": "vs21-right-headed-demolition-page5",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "demolition_costs",
+        "pageNumber": 5,
+        "exactText": "Abbruch"
+      },
+      "allowedBindings": ["DIRECT"]
+    }
+  ]
+}

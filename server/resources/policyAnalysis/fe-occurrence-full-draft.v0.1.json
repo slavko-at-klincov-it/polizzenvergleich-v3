@@ -1,0 +1,1828 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "fe-occurrence-full-draft-v0.1",
+  "categoryView": "FE",
+  "requirements": [
+    {
+      "id": "FE-A01",
+      "label": "Definition des Brandbegriffs im Bedingungswerk",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "fire_definition",
+          "label": "Branddefinition",
+          "factRole": "DEFINITION",
+          "aliases": ["das ist ein Feuer", "Brand ist", "Feuer ist"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A02",
+      "label": "Abgrenzung und Ausschluss von Nutzfeuer",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "useful_fire_exclusion",
+          "label": "Ausschluss von Nutzfeuer",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Nutzfeuer",
+            "bestimmungsgemäßes Feuer",
+            "dem Nutzfeuer ausgesetzt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A03",
+      "label": "Behandlung von Schwelen, Glimmen und Glühen ohne offene Flamme",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "smouldering_glowing_without_flame",
+          "label": "Schwelen, Glimmen oder Glühen ohne offene Flamme",
+          "factRole": "PERIL",
+          "aliases": ["Schwelen", "Glimmen", "Glühen ohne offene Flamme"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A04",
+      "label": "Direkter Blitzschlag in das Gebäude",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "direct_lightning_strike",
+          "label": "Direkter Blitzschlag",
+          "factRole": "PERIL",
+          "aliases": [
+            "direkter Blitzschlag",
+            "unmittelbarer Blitzschlag",
+            "Blitzschlag in das Gebäude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A05",
+      "label": "Überspannungsschäden durch indirekten Blitzschlag",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "indirect_lightning_damage",
+          "label": "Indirekter Blitzschlag",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "indirekter Blitzschlag",
+            "indirekten Blitzschlag",
+            "Indirekter Blitzschlag an Gebäude-Elektroinstallationen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A06",
+      "label": "Betragsgrenze für Überspannungsschäden",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "indirect_lightning_limit",
+          "label": "Limit indirekter Blitzschlag",
+          "factRole": "LIMIT",
+          "aliases": ["mindestens EUR 10.000"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A07",
+      "label": "Definition der Explosion",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "explosion_definition",
+          "label": "Explosionsdefinition",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Explosion ist",
+            "Als Explosion gilt",
+            "Unter Explosion versteht man"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A08",
+      "label": "Implosion als versicherte Gefahr",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "implosion",
+          "label": "Implosion",
+          "factRole": "PERIL",
+          "aliases": ["Implosion", "Implosionsschäden"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A09",
+      "label": "Verpuffung an Heiz-, Gas- oder Feuerungsanlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "deflagration_at_heating_gas_or_firing_system",
+          "label": "Verpuffung an Heiz-, Gas- oder Feuerungsanlagen",
+          "factRole": "PERIL",
+          "aliases": ["Verpuffung", "Verpuffungsschäden"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A10",
+      "label": "Anprall fremder Fahrzeuge",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "foreign_vehicle_impact",
+          "label": "Anprall fremder Fahrzeuge",
+          "factRole": "PERIL",
+          "aliases": [
+            "Anprall fremder Fahrzeuge",
+            "Anprall unbekannter Fahrzeuge",
+            "Anprall unbekannter Landfahrzeuge",
+            "Kollision mit unbekannten Landfahrzeugen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A11",
+      "label": "Anprall von Fahrzeugen der Bewohner oder Eigentümer",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "resident_or_owner_vehicle_impact",
+          "label": "Anprall von Bewohner- oder Eigentümerfahrzeugen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Anprall von Fahrzeugen der Bewohner",
+            "Anprall von Fahrzeugen der Eigentümer",
+            "Fahrzeuge der Bewohner oder Eigentümer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A12",
+      "label": "Fahrzeuganprall innerhalb der Tiefgarage oder Einfahrt",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "vehicle_impact",
+          "label": "Fahrzeuganprall",
+          "factRole": "PERIL",
+          "aliases": ["Fahrzeuganprall", "Anprall von Fahrzeugen"]
+        },
+        {
+          "id": "underground_garage_or_driveway_scope",
+          "label": "Tiefgarage oder Einfahrt",
+          "factRole": "CONDITION",
+          "aliases": [
+            "innerhalb der Tiefgarage",
+            "in der Tiefgarage",
+            "innerhalb der Einfahrt"
+          ]
+        },
+        {
+          "id": "vehicle_impact_in_underground_garage_or_driveway",
+          "label": "Fahrzeuganprall in Tiefgarage oder Einfahrt",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Fahrzeuganprall innerhalb der Tiefgarage",
+            "Fahrzeuganprall in der Tiefgarage",
+            "Fahrzeuganprall innerhalb der Einfahrt",
+            "Anprall von Fahrzeugen in der Tiefgarage",
+            "Anprall von Fahrzeugen innerhalb der Einfahrt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A13",
+      "label": "Absturz von Luftfahrzeugen einschließlich Teilen und Ladung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "aircraft_crash",
+          "label": "Absturz von Luftfahrzeugen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Absturz von Luftfahrzeugen",
+            "Absturz eines Luftfahrzeuges",
+            "Absturz bemannter Flugkörper"
+          ]
+        },
+        {
+          "id": "aircraft_parts",
+          "label": "Teile von Luftfahrzeugen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Teile von Luftfahrzeugen",
+            "Teile eines Luftfahrzeuges",
+            "Teile bemannter Flugkörper"
+          ]
+        },
+        {
+          "id": "aircraft_cargo",
+          "label": "Ladung von Luftfahrzeugen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Ladung von Luftfahrzeugen",
+            "Ladung eines Luftfahrzeuges"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A14",
+      "label": "Schäden durch Drohnen oder unbemannte Fluggeräte",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "drone_damage",
+          "label": "Drohnen oder unbemannte Fluggeräte",
+          "factRole": "PERIL",
+          "aliases": ["Drohne", "Drohnen", "unbemannte Fluggeräte"]
+        }
+      ]
+    },
+    {
+      "id": "FE-B01",
+      "label": "Ausschluss von Schäden an der Sache, die den Brand verursacht hat",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "fire_causing_item_exclusion",
+          "label": "Ausschluss der brandverursachenden Sache",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Sache, an der der Brand entstanden ist",
+            "Sache, die den Brand verursacht hat",
+            "brandverursachenden Sache"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B02",
+      "label": "Ausschluss von Sengschäden",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "scorching_exclusion",
+          "label": "Ausschluss von Sengschäden",
+          "factRole": "EXCLUSION",
+          "aliases": ["Sengschäden", "Versengungsschäden"]
+        }
+      ]
+    },
+    {
+      "id": "FE-B03",
+      "label": "Ausschluss von Nutzwärmeschäden",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "useful_heat_exclusion",
+          "label": "Ausschluss von Nutzwärmeschäden",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Nutzwärmeschäden",
+            "Nutzwärme",
+            "der Wärme ausgesetzt werden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B04",
+      "label": "Ausschluss von Schäden durch inneren Kurzschluss an elektrischen Einrichtungen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "internal_short_circuit_exclusion",
+          "label": "Ausschluss innerer Kurzschlussschäden",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "inneren Kurzschluss",
+            "Kurzschlussschäden",
+            "Kurzschluss an elektrischen Einrichtungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B05",
+      "label": "Ausschluss von Rußschäden aus bestimmungsgemäßem Betrieb",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "normal_operation_soot_exclusion",
+          "label": "Ausschluss bestimmungsgemäßer Rußschäden",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Rußschäden aus bestimmungsgemäßem Betrieb",
+            "Verrußung durch bestimmungsgemäßen Betrieb",
+            "Rauch oder Ruß aus bestimmungsgemäßem Betrieb"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B06",
+      "label": "Ausschluss der Selbstentzündung von Lagergut",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "stored_goods_spontaneous_combustion_exclusion",
+          "label": "Ausschluss der Selbstentzündung von Lagergut",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Selbstentzündung von Lagergut",
+            "selbstentzündliches Lagergut",
+            "Selbstentzündung gelagerter Stoffe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B07",
+      "label": "Ausschluss bei Brandstiftung durch Versicherte oder Bewohner",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "insured_or_resident_arson_exclusion",
+          "label": "Brandstiftung durch Versicherte oder Bewohner",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Brandstiftung durch Versicherte",
+            "Brandstiftung durch Bewohner",
+            "vorsätzlich in Brand gesetzt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B08",
+      "label": "Zurechnung des Verhaltens von Repräsentanten und Erfüllungsgehilfen",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "representative_attribution",
+          "label": "Zurechnung von Repräsentanten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Verhalten der Repräsentanten",
+            "Repräsentanten des Versicherungsnehmers"
+          ]
+        },
+        {
+          "id": "agent_attribution",
+          "label": "Zurechnung von Erfüllungsgehilfen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Verhalten der Erfüllungsgehilfen",
+            "Erfüllungsgehilfen des Versicherungsnehmers"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B09",
+      "label": "Ausschluss bei Vorsatz und dessen Reichweite",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "intent_exclusion",
+          "label": "Vorsatzausschluss",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "vorsätzlich herbeigeführt",
+            "vorsätzliche Herbeiführung",
+            "durch Vorsatz"
+          ]
+        },
+        {
+          "id": "intent_exclusion_scope",
+          "label": "Reichweite des Vorsatzausschlusses",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Ausschluss bei Vorsatz",
+            "bei vorsätzlicher Herbeiführung",
+            "vorsätzliche Herbeiführung durch",
+            "durch den Versicherungsnehmer vorsätzlich"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B10",
+      "label": "Erdbeben als Brandursache ausgeschlossen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "earthquake_fire_cause_exclusion",
+          "label": "Ausschluss Erdbeben als Brandursache",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Brand durch Erdbeben",
+            "Erdbeben als Brandursache",
+            "durch Erdbeben verursachte Brände"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B11",
+      "label": "Ausschluss von Kernenergie und radioaktiver Kontamination",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "nuclear_energy_exclusion",
+          "label": "Ausschluss von Kernenergie",
+          "factRole": "EXCLUSION",
+          "aliases": ["Kernenergie", "Kernreaktion", "Kernspaltung"]
+        },
+        {
+          "id": "radioactive_contamination_exclusion",
+          "label": "Ausschluss radioaktiver Kontamination",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "radioaktive Kontamination",
+            "radioaktiv kontaminiert",
+            "Radioaktivität"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B12",
+      "label": "Ausschluss von Krieg, inneren Unruhen und hoheitlichen Maßnahmen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "war_exclusion",
+          "label": "Ausschluss von Krieg",
+          "factRole": "EXCLUSION",
+          "aliases": ["Krieg", "Kriegsereignisse"]
+        },
+        {
+          "id": "civil_unrest_exclusion",
+          "label": "Ausschluss innerer Unruhen",
+          "factRole": "EXCLUSION",
+          "aliases": ["innere Unruhen", "inneren Unruhen"]
+        },
+        {
+          "id": "government_action_exclusion",
+          "label": "Ausschluss hoheitlicher Maßnahmen",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "hoheitliche Maßnahmen",
+            "behördliche Maßnahmen",
+            "Verfügung von hoher Hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B13",
+      "label": "Ausschluss von Schäden vor Beginn des Versicherungsschutzes",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "pre_inception_damage_exclusion",
+          "label": "Ausschluss vorvertraglicher Schäden",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "vor Beginn des Versicherungsschutzes",
+            "vor Versicherungsbeginn eingetreten",
+            "vor Vertragsbeginn eingetreten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-B14",
+      "label": "Leistungsfreiheit bei nicht angezeigter Gefahrerhöhung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "unreported_risk_increase_release",
+          "label": "Leistungsfreiheit bei nicht angezeigter Gefahrerhöhung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "nicht angezeigte Gefahrerhöhung",
+            "Gefahrerhöhung nicht angezeigt",
+            "Leistungsfreiheit wegen Gefahrerhöhung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C01",
+      "label": "Fassadendämmung nach WDVS-Bauweise und Brandriegel",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "external_thermal_insulation",
+          "label": "WDVS-Fassadendämmung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Wärmedämmverbundsystem",
+            "Wärmedämm-Verbundsystem",
+            "WDVS"
+          ]
+        },
+        {
+          "id": "fire_barrier",
+          "label": "Brandriegel",
+          "factRole": "CONDITION",
+          "aliases": ["Brandriegel", "Brandschutzriegel"]
+        }
+      ]
+    },
+    {
+      "id": "FE-C02",
+      "label": "Photovoltaikanlage als vom Brand betroffene Sache mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_as_damaged_object",
+          "label": "Photovoltaikanlage als betroffene Sache",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Brandschäden an Photovoltaikanlagen",
+            "Feuerschäden an Photovoltaikanlagen",
+            "Photovoltaikanlage als vom Brand betroffene Sache",
+            "Photovoltaikanlage in der Feuerdeckung",
+            "Photovoltaikanlage in der Feuerversicherung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C03",
+      "label": "Photovoltaikanlage als Brandursache gedeckt",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_as_fire_cause",
+          "label": "Photovoltaikanlage als Brandursache",
+          "factRole": "PERIL",
+          "aliases": [
+            "Brand durch Photovoltaikanlage",
+            "von der Photovoltaikanlage ausgehender Brand",
+            "Photovoltaikanlage als Brandursache"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C04",
+      "label": "E-Ladeinfrastruktur als Brandursache und als betroffene Sache",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "charging_infrastructure_fire_cause",
+          "label": "E-Ladeinfrastruktur als Brandursache",
+          "factRole": "PERIL",
+          "aliases": [
+            "Brand durch Ladestation",
+            "Brand durch Wallbox",
+            "Ladeinfrastruktur als Brandursache"
+          ]
+        },
+        {
+          "id": "charging_infrastructure_damaged_object",
+          "label": "E-Ladeinfrastruktur als betroffene Sache",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "E-Ladeinfrastruktur",
+            "E-Ladestation",
+            "E-Ladestationen",
+            "Wallbox",
+            "Wallboxen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C05",
+      "label": "Flüssiggastank auf dem Grundstück",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "liquefied_gas_tank",
+          "label": "Flüssiggastank",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Flüssiggastank", "Flüssiggastanks", "Flüssiggasbehälter"]
+        }
+      ]
+    },
+    {
+      "id": "FE-C06",
+      "label": "Pelletslager und Selbstentzündungsrisiko",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "pellet_storage",
+          "label": "Pelletslager",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Pelletslager", "Pelletlager", "Pellets-Lager"]
+        },
+        {
+          "id": "pellet_spontaneous_combustion",
+          "label": "Selbstentzündungsrisiko",
+          "factRole": "PERIL",
+          "aliases": [
+            "Selbstentzündung von Pellets",
+            "Selbstentzündungsrisiko der Pellets"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C07",
+      "label": "Sauna oder Infrarotkabine in Gemeinschaftsräumen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "sauna_or_infrared_cabin",
+          "label": "Sauna oder Infrarotkabine",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Sauna",
+            "Saunaanlage",
+            "Infrarotkabine",
+            "Infrarot-Kabine"
+          ]
+        },
+        {
+          "id": "common_room_scope",
+          "label": "Gemeinschaftsraum",
+          "factRole": "CONDITION",
+          "aliases": ["Gemeinschaftsraum", "Gemeinschaftsräume"]
+        },
+        {
+          "id": "sauna_or_infrared_cabin_in_common_room",
+          "label": "Sauna oder Infrarotkabine im Gemeinschaftsraum",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Sauna im Gemeinschaftsraum",
+            "Sauna in Gemeinschaftsräumen",
+            "Infrarotkabine im Gemeinschaftsraum",
+            "Infrarotkabine in Gemeinschaftsräumen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C08",
+      "label": "Wäschetrockner und Trockenraum in der Waschküche",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "tumble_dryer",
+          "label": "Wäschetrockner",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Wäschetrockner", "Trockner"]
+        },
+        {
+          "id": "drying_room",
+          "label": "Trockenraum",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Trockenraum", "Trockenräume"]
+        },
+        {
+          "id": "laundry_room_scope",
+          "label": "Waschküche",
+          "factRole": "CONDITION",
+          "aliases": ["Waschküche", "Waschküchen"]
+        },
+        {
+          "id": "dryer_or_drying_room_in_laundry_room",
+          "label": "Wäschetrockner oder Trockenraum in der Waschküche",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wäschetrockner in der Waschküche",
+            "Trockner in der Waschküche",
+            "Trockenraum in der Waschküche",
+            "Trockenräume in der Waschküche"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C09",
+      "label": "Aufzugsanlage bei Brand oder Löscheinsatz",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "elevator_fire_or_firefighting_damage",
+          "label": "Aufzugsanlage bei Brand oder Löscheinsatz",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Brandschäden an Aufzugsanlagen",
+            "Schäden an Aufzügen durch Löscheinsatz",
+            "Aufzugsanlage bei Brand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C10",
+      "label": "Fremdeigentum in allgemeinen Teilen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "third_party_property_in_common_areas",
+          "label": "Fremdeigentum in allgemeinen Teilen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Fremdeigentum in allgemeinen Teilen",
+            "fremdes Eigentum in Gemeinschaftsräumen",
+            "fremde Sachen in allgemein zugänglichen Teilen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C11",
+      "label": "Nebengebäude und Garagen in der Feuerdeckung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "outbuildings_fire_cover",
+          "label": "Nebengebäude",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Nebengebäude in der Feuerdeckung",
+            "Nebengebäude in der Feuerversicherung",
+            "Brandschäden an Nebengebäuden",
+            "Feuerschäden an Nebengebäuden"
+          ]
+        },
+        {
+          "id": "garages_fire_cover",
+          "label": "Garagen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Garagen in der Feuerdeckung",
+            "Garagen in der Feuerversicherung",
+            "Brandschäden an Garagen",
+            "Feuerschäden an Garagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-C12",
+      "label": "Gerüst und Baustelleneinrichtung während Sanierungen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "scaffolding",
+          "label": "Gerüst",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Gerüst", "Gerüste", "Baugerüst"]
+        },
+        {
+          "id": "site_equipment",
+          "label": "Baustelleneinrichtung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Baustelleneinrichtung", "Baustelleneinrichtungen"]
+        },
+        {
+          "id": "renovation_scope",
+          "label": "Während Sanierungen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "während Sanierungsarbeiten",
+            "während der Sanierung",
+            "im Zuge von Sanierungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D01",
+      "label": "Feuerwehr- und Einsatzkosten, Höhe der Kostenübernahme",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "firefighting_costs",
+          "label": "Feuerwehr- und Einsatzkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Feuerlöschkosten",
+            "Feuerlösch-",
+            "Feuerwehrkosten",
+            "Einsatzkosten"
+          ]
+        },
+        {
+          "id": "firefighting_costs_limit",
+          "label": "Höhe der Feuerwehr- und Einsatzkosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Feuerlöschkosten",
+            "Feuerlösch-",
+            "Feuerwehrkosten",
+            "Einsatzkosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D02",
+      "label": "Kostenübernahme bei Fehlalarm",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "false_alarm_costs",
+          "label": "Kosten bei Fehlalarm",
+          "factRole": "COST",
+          "aliases": [
+            "Fehlalarmkosten",
+            "Kosten eines Fehlalarms",
+            "Kosten bei Fehlalarm"
+          ]
+        },
+        {
+          "id": "false_alarm_cost_limit",
+          "label": "Limit der Fehlalarmkosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Fehlalarmkosten",
+            "Kosten eines Fehlalarms",
+            "Kosten bei Fehlalarm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D03",
+      "label": "Löschschäden durch Wasser, Schaum oder Löschpulver",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "extinguishing_water_damage",
+          "label": "Löschschäden durch Wasser",
+          "factRole": "DAMAGE",
+          "aliases": ["Löschwasserschäden", "Schäden durch Löschwasser"]
+        },
+        {
+          "id": "extinguishing_foam_damage",
+          "label": "Löschschäden durch Schaum",
+          "factRole": "DAMAGE",
+          "aliases": ["Schäden durch Löschschaum", "Löschschaumschäden"]
+        },
+        {
+          "id": "extinguishing_powder_damage",
+          "label": "Löschschäden durch Löschpulver",
+          "factRole": "DAMAGE",
+          "aliases": ["Schäden durch Löschpulver", "Löschpulverschäden"]
+        }
+      ]
+    },
+    {
+      "id": "FE-D04",
+      "label": "Schäden durch Fehlauslösung einer Löschanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "extinguishing_system_false_activation_damage",
+          "label": "Schäden durch Fehlauslösung einer Löschanlage",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Fehlauslösung einer Löschanlage",
+            "Fehlauslösung der Sprinkleranlage",
+            "versehentliche Auslösung der Löschanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D05",
+      "label": "Rauch- und Rußschäden ohne eigenes Feuer",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "smoke_soot_damage",
+          "label": "Rauch- und Rußschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Rauch und Verrußung",
+            "Rauchschäden",
+            "Rußschäden",
+            "Verrußung"
+          ]
+        },
+        {
+          "id": "without_own_fire",
+          "label": "ohne eigenes Feuer",
+          "factRole": "CONDITION",
+          "aliases": ["ohne eigenes Feuer", "ohne Brand", "ohne Feuer"]
+        }
+      ]
+    },
+    {
+      "id": "FE-D06",
+      "label": "Rauchschäden aus einem benachbarten Objekt",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "neighbouring_object_smoke_damage",
+          "label": "Rauchschäden aus benachbartem Objekt",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Rauch aus einem benachbarten Objekt",
+            "Rauchschäden vom Nachbargebäude",
+            "Rauch aus Nachbarobjekten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D07",
+      "label": "Kosten der Bewachung der Brandruine",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "fire_ruin_guarding_costs",
+          "label": "Bewachungskosten der Brandruine",
+          "factRole": "COST",
+          "aliases": [
+            "Bewachungskosten",
+            "Bewachung der Brandruine",
+            "Kosten der Bewachung"
+          ]
+        },
+        {
+          "id": "fire_ruin_guarding_cost_limit",
+          "label": "Limit der Bewachungskosten der Brandruine",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Bewachungskosten",
+            "Bewachung der Brandruine",
+            "Kosten der Bewachung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D08",
+      "label": "Provisorische Absicherung, Bauzaun, Absperrung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "temporary_securing",
+          "label": "Provisorische Absicherung",
+          "factRole": "COST",
+          "aliases": ["provisorische Absicherung", "Notabsicherung"]
+        },
+        {
+          "id": "temporary_construction_fence",
+          "label": "Bauzaun",
+          "factRole": "COST",
+          "aliases": ["Bauzaun", "Bauzäune"]
+        },
+        {
+          "id": "temporary_barrier",
+          "label": "Absperrung",
+          "factRole": "COST",
+          "aliases": ["provisorische Absperrung", "Absperrmaßnahmen"]
+        },
+        {
+          "id": "temporary_securing_cost_limit",
+          "label": "Limit der provisorischen Absicherung",
+          "factRole": "LIMIT",
+          "aliases": [
+            "provisorische Absicherung",
+            "Notabsicherung",
+            "Bauzaun",
+            "Bauzäune",
+            "provisorische Absperrung",
+            "Absperrmaßnahmen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D09",
+      "label": "Kosten der statischen Prüfung nach dem Brand",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "post_fire_structural_inspection_costs",
+          "label": "Kosten der statischen Prüfung",
+          "factRole": "COST",
+          "aliases": [
+            "Kosten der statischen Prüfung",
+            "statische Prüfung nach dem Brand",
+            "Überprüfung der Standsicherheit nach Brand"
+          ]
+        },
+        {
+          "id": "post_fire_structural_inspection_cost_limit",
+          "label": "Limit der statischen Prüfung nach dem Brand",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Kosten der statischen Prüfung",
+            "statische Prüfung nach dem Brand",
+            "Überprüfung der Standsicherheit nach Brand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D10",
+      "label": "Sachverständigen- und Havariekosten",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "expert_costs",
+          "label": "Sachverständigenkosten",
+          "factRole": "COST",
+          "aliases": ["Sachverständigenkosten", "Kosten für Sachverständige"]
+        },
+        {
+          "id": "average_adjuster_costs",
+          "label": "Havariekosten",
+          "factRole": "COST",
+          "aliases": ["Havariekosten", "Havariekommissärskosten"]
+        },
+        {
+          "id": "expert_and_average_adjuster_cost_limit",
+          "label": "Limit der Sachverständigen- und Havariekosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Sachverständigenkosten",
+            "Kosten für Sachverständige",
+            "Havariekosten",
+            "Havariekommissärskosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D11",
+      "label": "Dekontamination des Erdreichs durch Löschwasser",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "soil_decontamination_costs",
+          "label": "Dekontamination des Erdreichs",
+          "factRole": "COST",
+          "aliases": [
+            "Dekontamination des Erdreichs",
+            "Erdreichdekontamination",
+            "Dekontaminationskosten des Erdreichs"
+          ]
+        },
+        {
+          "id": "extinguishing_water_cause",
+          "label": "Durch Löschwasser",
+          "factRole": "CONDITION",
+          "aliases": [
+            "durch Löschwasser verunreinigt",
+            "Kontamination durch Löschwasser"
+          ]
+        },
+        {
+          "id": "soil_decontamination_due_to_extinguishing_water",
+          "label": "Erdreichdekontamination aufgrund von Löschwasser",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Dekontamination des Erdreichs durch Löschwasser",
+            "Erdreichdekontamination durch Löschwasser",
+            "Dekontaminationskosten des Erdreichs durch Löschwasser"
+          ]
+        },
+        {
+          "id": "soil_decontamination_cost_limit",
+          "label": "Limit der Erdreichdekontaminationskosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Dekontamination des Erdreichs",
+            "Erdreichdekontamination",
+            "Dekontaminationskosten des Erdreichs"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D12",
+      "label": "Löschwasserschäden am Nachbargebäude",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "neighbouring_building_extinguishing_water_damage",
+          "label": "Löschwasserschäden am Nachbargebäude",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Löschwasserschäden am Nachbargebäude",
+            "Löschwasser im Nachbarobjekt",
+            "Schäden durch Löschwasser am Nachbargebäude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D13",
+      "label": "Wiederbeschaffung von Verwaltungsunterlagen und Bauplänen",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "administrative_documents_recovery",
+          "label": "Wiederbeschaffung von Verwaltungsunterlagen",
+          "factRole": "COST",
+          "aliases": [
+            "Wiederbeschaffung von Verwaltungsunterlagen",
+            "Rekonstruktion von Verwaltungsunterlagen"
+          ]
+        },
+        {
+          "id": "building_plans_recovery",
+          "label": "Wiederbeschaffung von Bauplänen",
+          "factRole": "COST",
+          "aliases": [
+            "Wiederbeschaffung von Bauplänen",
+            "Rekonstruktion von Bauplänen"
+          ]
+        },
+        {
+          "id": "documents_and_plans_recovery_limit",
+          "label": "Limit der Wiederbeschaffung von Unterlagen und Bauplänen",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Wiederbeschaffung von Verwaltungsunterlagen",
+            "Rekonstruktion von Verwaltungsunterlagen",
+            "Wiederbeschaffung von Bauplänen",
+            "Rekonstruktion von Bauplänen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D14",
+      "label": "Trockenlegung und Bautrocknung nach dem Löscheinsatz",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "drainage_costs",
+          "label": "Trockenlegung",
+          "factRole": "COST",
+          "aliases": ["Trockenlegungskosten", "Kosten der Trockenlegung"]
+        },
+        {
+          "id": "building_drying_costs",
+          "label": "Bautrocknung",
+          "factRole": "COST",
+          "aliases": ["Bautrocknung", "Bautrocknungskosten"]
+        },
+        {
+          "id": "after_firefighting_condition",
+          "label": "Nach Löscheinsatz",
+          "factRole": "CONDITION",
+          "aliases": ["nach dem Löscheinsatz", "infolge des Löscheinsatzes"]
+        },
+        {
+          "id": "drying_after_firefighting",
+          "label": "Trockenlegung oder Bautrocknung nach Löscheinsatz",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Trockenlegung nach dem Löscheinsatz",
+            "Trockenlegung infolge des Löscheinsatzes",
+            "Bautrocknung nach dem Löscheinsatz",
+            "Bautrocknung infolge des Löscheinsatzes"
+          ]
+        },
+        {
+          "id": "drying_after_firefighting_limit",
+          "label": "Limit der Trockenlegung oder Bautrocknung",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Trockenlegungskosten",
+            "Kosten der Trockenlegung",
+            "Bautrocknung",
+            "Bautrocknungskosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E01",
+      "label": "Kehrintervalle des Rauchfangkehrers und Nachweispflicht",
+      "requestedFields": ["interval", "condition"],
+      "components": [
+        {
+          "id": "chimney_sweep_interval",
+          "label": "Kehrintervall",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Kehrintervalle",
+            "Kehrfrist",
+            "Kehrung alle",
+            "Rauchfangkehrerintervall"
+          ]
+        },
+        {
+          "id": "chimney_sweep_proof",
+          "label": "Nachweis des Rauchfangkehrers",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Kehrnachweis",
+            "Nachweis des Rauchfangkehrers",
+            "Rauchfangkehrerbefund"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E02",
+      "label": "Elektrobefund und vorgeschriebenes Überprüfungsintervall",
+      "requestedFields": ["interval", "condition"],
+      "components": [
+        {
+          "id": "electrical_inspection_report",
+          "label": "Elektrobefund",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Elektrobefund",
+            "Elektroattest",
+            "Elektroüberprüfungsbefund"
+          ]
+        },
+        {
+          "id": "electrical_inspection_interval",
+          "label": "Überprüfungsintervall",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Überprüfungsintervall der elektrischen Anlage",
+            "Elektroüberprüfung alle",
+            "wiederkehrende Elektroüberprüfung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E03",
+      "label": "Wartungsintervall der Heizungsanlage",
+      "requestedFields": ["interval"],
+      "components": [
+        {
+          "id": "heating_system_maintenance_interval",
+          "label": "Wartungsintervall der Heizungsanlage",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wartungsintervall der Heizungsanlage",
+            "Heizungsanlage regelmäßig warten",
+            "Wartung der Heizungsanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E04",
+      "label": "Überprüfung der Blitzschutzanlage",
+      "requestedFields": ["interval"],
+      "components": [
+        {
+          "id": "lightning_protection_inspection",
+          "label": "Überprüfung der Blitzschutzanlage",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Überprüfung der Blitzschutzanlage",
+            "Blitzschutzanlage überprüfen",
+            "Blitzschutzbefund"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E05",
+      "label": "Rauchwarnmelder vorgeschrieben und Wartungsnachweis gefordert",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "smoke_alarm_required",
+          "label": "Rauchwarnmelder vorgeschrieben",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Rauchwarnmelder vorgeschrieben",
+            "Rauchmelder vorgeschrieben",
+            "Rauchwarnmelder sind anzubringen"
+          ]
+        },
+        {
+          "id": "smoke_alarm_maintenance_proof",
+          "label": "Wartungsnachweis",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wartungsnachweis der Rauchwarnmelder",
+            "Wartung der Rauchmelder nachzuweisen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E06",
+      "label": "Brandmeldeanlage vorausgesetzt oder prämienrelevant",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "fire_alarm_system_requirement_or_premium",
+          "label": "Brandmeldeanlage als Voraussetzung oder Prämienmerkmal",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Brandmeldeanlage vorausgesetzt",
+            "Brandmeldeanlage prämienrelevant",
+            "Prämiennachlass für Brandmeldeanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E07",
+      "label": "Brandschutztüren funktionsfähig und nicht dauerhaft offen gehalten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "fire_door_functional",
+          "label": "Brandschutztüren funktionsfähig",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Brandschutztüren funktionsfähig",
+            "Feuerschutztüren funktionsfähig"
+          ]
+        },
+        {
+          "id": "fire_door_not_held_open",
+          "label": "Nicht dauerhaft offen gehalten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Brandschutztüren nicht offen halten",
+            "Feuerschutztüren nicht verkeilen",
+            "dürfen nicht dauerhaft offen gehalten werden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E08",
+      "label": "Freihalten von Fluchtwegen, Stiegenhaus und Gängen",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "escape_routes_clear",
+          "label": "Fluchtwege freihalten",
+          "factRole": "CONDITION",
+          "aliases": ["Fluchtwege freihalten", "Fluchtwege sind freizuhalten"]
+        },
+        {
+          "id": "stairwell_clear",
+          "label": "Stiegenhaus freihalten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Stiegenhaus freihalten",
+            "Stiegenhäuser sind freizuhalten"
+          ]
+        },
+        {
+          "id": "corridors_clear",
+          "label": "Gänge freihalten",
+          "factRole": "CONDITION",
+          "aliases": ["Gänge freihalten", "Gänge sind freizuhalten"]
+        }
+      ]
+    },
+    {
+      "id": "FE-E09",
+      "label": "Rauch- und Wärmeabzugsanlage funktionsfähig",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "smoke_heat_exhaust_functional",
+          "label": "Rauch- und Wärmeabzugsanlage funktionsfähig",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Rauch- und Wärmeabzugsanlage funktionsfähig",
+            "Rauchabzugsanlage funktionsfähig",
+            "RWA-Anlage funktionsfähig",
+            "Funktionsfähigkeit der Rauch- und Wärmeabzugsanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E10",
+      "label": "Lagerung brennbarer Stoffe in Keller und Dachboden",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "flammable_material_storage",
+          "label": "Lagerung brennbarer Stoffe",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Lagerung brennbarer Stoffe",
+            "brennbare Stoffe lagern",
+            "brennbare Materialien lagern"
+          ]
+        },
+        {
+          "id": "cellar_scope",
+          "label": "Keller",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Lagerung brennbarer Stoffe in Kellerräumen",
+            "Lagerung brennbarer Stoffe im Keller",
+            "brennbare Stoffe im Keller lagern",
+            "brennbare Materialien in Kellerräumen lagern"
+          ]
+        },
+        {
+          "id": "attic_scope",
+          "label": "Dachboden",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Lagerung brennbarer Stoffe auf Dachböden",
+            "Lagerung brennbarer Stoffe am Dachboden",
+            "brennbare Stoffe am Dachboden lagern",
+            "brennbare Materialien auf Dachböden lagern"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E11",
+      "label": "Erlaubnisscheinpflicht bei Heißarbeiten und Schweißarbeiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "hot_work_permit",
+          "label": "Erlaubnisschein für Heißarbeiten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Erlaubnisschein für Heißarbeiten",
+            "Heißarbeitsschein",
+            "Heißarbeiten mit Erlaubnisschein"
+          ]
+        },
+        {
+          "id": "welding_work",
+          "label": "Schweißarbeiten",
+          "factRole": "CONDITION",
+          "aliases": ["Schweißarbeiten", "Schweissarbeiten"]
+        }
+      ]
+    },
+    {
+      "id": "FE-E12",
+      "label": "Feuerwehrschalter oder Freischaltung der Photovoltaikanlage",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "fire_service_switch_or_pv_isolation",
+          "label": "Feuerwehrschalter oder PV-Freischaltung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Feuerwehrschalter",
+            "Freischaltung der Photovoltaikanlage",
+            "PV-Freischaltung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E13",
+      "label": "Abstellverbot für Krafträder und E-Scooter im Stiegenhaus",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "motorcycle_or_scooter_parking_prohibition",
+          "label": "Abstellverbot für Krafträder oder E-Scooter",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Abstellverbot für Krafträder im Stiegenhaus",
+            "Abstellverbot für E-Scooter im Stiegenhaus",
+            "E-Scooter dürfen im Stiegenhaus nicht abgestellt",
+            "Krafträder dürfen im Stiegenhaus nicht abgestellt"
+          ]
+        },
+        {
+          "id": "stairwell_scope",
+          "label": "Im Stiegenhaus",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Abstellverbot für Krafträder im Stiegenhaus",
+            "Abstellverbot für E-Scooter im Stiegenhaus",
+            "E-Scooter dürfen im Stiegenhaus nicht abgestellt",
+            "Krafträder dürfen im Stiegenhaus nicht abgestellt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E14",
+      "label": "Regelung zum Laden von Akkus und E-Bikes in Keller oder Garage",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "battery_or_ebike_charging",
+          "label": "Laden von Akkus oder E-Bikes",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Laden von Akkus",
+            "Laden von E-Bikes",
+            "Akkus von E-Bikes laden"
+          ]
+        },
+        {
+          "id": "cellar_or_garage_scope",
+          "label": "Keller oder Garage",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Laden im Keller",
+            "Laden in der Garage",
+            "Laden in Kellerräumen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E15",
+      "label": "Prüfintervalle für Feuerlöscher und Löscheinrichtungen",
+      "requestedFields": ["interval"],
+      "components": [
+        {
+          "id": "fire_extinguisher_inspection_interval",
+          "label": "Prüfintervall für Feuerlöscher",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Feuerlöscher regelmäßig prüfen",
+            "Prüfintervall der Feuerlöscher",
+            "Überprüfung der Feuerlöscher"
+          ]
+        },
+        {
+          "id": "extinguishing_equipment_inspection_interval",
+          "label": "Prüfintervall für Löscheinrichtungen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Löscheinrichtungen regelmäßig prüfen",
+            "Prüfintervall der Löscheinrichtungen",
+            "Überprüfung der Löscheinrichtungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-E16",
+      "label": "Rechtsfolgen einer Obliegenheitsverletzung, Kürzung oder Leistungsfreiheit",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "obligation_breach_consequences",
+          "label": "Rechtsfolgen der Obliegenheitsverletzung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Folgen einer Obliegenheitsverletzung",
+            "Verletzung einer Obliegenheit"
+          ]
+        },
+        {
+          "id": "benefit_reduction_or_release",
+          "label": "Kürzung oder Leistungsfreiheit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Kürzung der Leistung",
+            "Leistungsfreiheit",
+            "leistungsfrei"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F01",
+      "label": "Selbstbehalt in der Sparte Feuer",
+      "requestedFields": ["deductible"],
+      "components": [
+        {
+          "id": "fire_deductible",
+          "label": "Feuer-Selbstbehalt",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Feuer",
+            "Selbstbehalt in der Feuerversicherung",
+            "Feuerschäden Selbstbehalt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F02",
+      "label": "Höchstentschädigung und Jahreshöchstleistung Feuer",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "fire_maximum_indemnity",
+          "label": "Höchstentschädigung Feuer",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höchstentschädigung in der Feuerversicherung",
+            "Höchstentschädigung Feuer"
+          ]
+        },
+        {
+          "id": "fire_annual_aggregate",
+          "label": "Jahreshöchstleistung Feuer",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Jahreshöchstleistung Feuer",
+            "Höchstleistung je Versicherungsjahr in Feuer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F03",
+      "label": "Erstrisikosumme oder Vollwertdeckung je Position",
+      "requestedFields": ["limit", "calculation_basis"],
+      "components": [
+        {
+          "id": "first_loss_or_full_value_per_position",
+          "label": "Erstrisikosumme oder Vollwertdeckung je Position",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Aufräum- und Abbruchkosten auf Erstes Risiko",
+            "Mehrkosten durch behördliche Auflagen auf Erstes Risiko",
+            "Entgang von Mietzinseinnahmen auf Erstes Risiko",
+            "Ersatzunterkunft auf Erstes Risiko",
+            "Wohngebäude zum Vollwert",
+            "Gebäude zum Vollwert",
+            "Vollwertdeckung Feuer"
+          ]
+        },
+        {
+          "id": "first_loss_or_full_value_per_position_limit",
+          "label": "Erstrisikosumme oder Vollwertlimit je Feuerposition",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Aufräum- und Abbruchkosten auf Erstes Risiko",
+            "Mehrkosten durch behördliche Auflagen auf Erstes Risiko",
+            "Entgang von Mietzinseinnahmen auf Erstes Risiko",
+            "Ersatzunterkunft auf Erstes Risiko",
+            "Wohngebäude zum Vollwert",
+            "Gebäude zum Vollwert",
+            "Vollwertdeckung Feuer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F04",
+      "label": "Vollständige Übersicht der Sublimits in der Feuersparte",
+      "requestedFields": ["limits"],
+      "components": [
+        {
+          "id": "fire_sublimit_overview",
+          "label": "Sublimits der Feuersparte",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Sublimits Feuer",
+            "Entschädigungsgrenzen Feuer",
+            "Feuerversicherung Höchstentschädigung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F05",
+      "label": "Zeitliche Geltung und Beginn des Versicherungsschutzes",
+      "requestedFields": ["condition", "date"],
+      "components": [
+        {
+          "id": "temporal_validity",
+          "label": "Zeitliche Geltung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "zeitliche Geltung",
+            "Versicherungsdauer",
+            "Versicherungsperiode"
+          ]
+        },
+        {
+          "id": "coverage_start",
+          "label": "Beginn des Versicherungsschutzes",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Beginn des Versicherungsschutzes",
+            "Versicherungsbeginn",
+            "Versicherungsschutz beginnt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F06",
+      "label": "Rückwärtsdeckung vereinbart",
+      "requestedFields": ["condition", "date"],
+      "components": [
+        {
+          "id": "retroactive_cover",
+          "label": "Rückwärtsdeckung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Rückwärtsdeckung",
+            "rückwirkender Versicherungsschutz",
+            "rückwirkende Deckung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F07",
+      "label": "Vorrang individueller Klauseln gegenüber den AVB in der Feuersparte",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "individual_clause_priority",
+          "label": "Vorrang individueller Klauseln",
+          "factRole": "CONDITION",
+          "aliases": [
+            "individuelle Vereinbarungen gehen vor",
+            "besondere Bedingungen gehen den allgemeinen Bedingungen vor",
+            "Klauseln haben Vorrang"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F08",
+      "label": "Verweise auf externe Klauselnummern und deren Verfügbarkeit",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "external_clause_reference",
+          "label": "Externe Klauselnummer",
+          "factRole": "DEFINITION",
+          "aliases": ["gemäß Klausel", "Klausel Nr.", "Klauselnummer"]
+        },
+        {
+          "id": "external_clause_availability",
+          "label": "Verfügbarkeit der Klausel",
+          "factRole": "DOCUMENT_STATUS",
+          "aliases": [
+            "Klausel ist beigefügt",
+            "Klausel liegt bei",
+            "Klauselverzeichnis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F09",
+      "label": "Regressrecht bei Brandstiftung durch Bewohner",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "resident_arson_recourse",
+          "label": "Regress bei Brandstiftung durch Bewohner",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Regress bei Brandstiftung durch Bewohner",
+            "Rückgriff gegen Bewohner bei Brandstiftung",
+            "Regressrecht gegen Bewohner bei Brandstiftung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-F10",
+      "label": "Feuerdeckung bei leerstehenden Einheiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "vacant_unit_fire_cover",
+          "label": "Feuerdeckung bei Leerstand",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Feuerdeckung bei Leerstand",
+            "Feuerversicherung für leerstehende Einheiten",
+            "Feuerversicherung für unbewohnte Einheiten",
+            "Brandschutz für leerstehende Einheiten"
+          ]
+        }
+      ]
+    }
+  ]
+}

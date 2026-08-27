@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "vs-candidate-triage-controls-wevig-v0.1",
+  "reviewStatus": "APPROVED",
+  "controls": [
+    {
+      "id": "wevig-vs21-fire-costs-page1",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 1,
+        "exactText": "Aufräum-, Abbruch-  und Feuerlöschkosten"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs21-water-costs-page2",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 2,
+        "exactText": "Aufräum- und Abbruchkosten"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs21-storm-costs-page4",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 4,
+        "exactText": "Aufräum- und Abbruchkosten"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs21-glass-costs-page5",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 5,
+        "exactText": "Aufräum- und Abbruchkosten"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs28-fire-rent-page1",
+      "selector": {
+        "requirementId": "VS-28",
+        "componentId": "rent_loss",
+        "pageNumber": 1,
+        "exactText": "Entgang von Mietzinseinnahmen"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs28-water-rent-page2",
+      "selector": {
+        "requirementId": "VS-28",
+        "componentId": "rent_loss",
+        "pageNumber": 2,
+        "exactText": "Entgang von Mietzinseinnahmen"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs28-storm-rent-page4",
+      "selector": {
+        "requirementId": "VS-28",
+        "componentId": "rent_loss",
+        "pageNumber": 4,
+        "exactText": "Entgang von Mietzinseinnahmen"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs21-environment-liability-page17",
+      "selector": {
+        "candidateId": "candidate:e50f5856a10ff36e9affe5f22f43ea12efc51e7e77b956018fc89f400969ef51"
+      },
+      "allowedBindings": ["MENTION_ONLY"]
+    },
+    {
+      "id": "wevig-vs21-builder-liability-page17",
+      "selector": {
+        "candidateId": "candidate:095050667941396f125b59aa91fc45b6999d97a052a144a00df13ddfd0fcff65"
+      },
+      "allowedBindings": ["MENTION_ONLY"]
+    },
+    {
+      "id": "wevig-vs21-general-definition-page8",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 8,
+        "exactText": "Aufräum- und Abbruchkosten"
+      },
+      "allowedBindings": ["DIRECT"]
+    },
+    {
+      "id": "wevig-vs21-general-definition-page13",
+      "selector": {
+        "requirementId": "VS-21",
+        "componentId": "cleanup_costs",
+        "pageNumber": 13,
+        "exactText": "Aufräum- und Abbruchkosten",
+        "documentStart": 49484
+      },
+      "allowedBindings": ["DIRECT"]
+    },
+    {
+      "id": "wevig-vs21-radioactive-right-head-page8",
+      "selector": {
+        "candidateId": "candidate:83fdf2c2445d941b3342569c77db9bda59e1bb89bb478a714d5b9d9cb74ac0ef"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    },
+    {
+      "id": "wevig-vs21-radioactive-right-head-page13",
+      "selector": {
+        "candidateId": "candidate:d553f9f1f6c8d3f98c9b048a0a1e8d3664bbf7b0725b2672f9a02d132a553514"
+      },
+      "allowedBindings": ["NARROW_SCOPE"]
+    }
+  ]
+}

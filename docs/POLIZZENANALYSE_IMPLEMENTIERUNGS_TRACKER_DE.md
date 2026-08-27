@@ -1,0 +1,1707 @@
+# V3 Polizzenanalyse – Implementierungs- und Testtracker
+
+Stand: 27. August 2026
+
+## 1. Zweck und verbindlicher Arbeitsmodus
+
+Dieses Dokument steuert die schrittweise Weiterentwicklung der Polizzenanalyse
+in V3. Es ist Roadmap, Experiment-Ledger und Übergabedokument zwischen lokaler
+Entwicklung und den kontrollierten Tests auf dem Kunden-Mac-Studio.
+
+Der verbindliche Ablauf lautet:
+
+```text
+Baseline einfrieren
+  -> genau eine fachliche oder technische Hypothese wählen
+  -> kleinste sinnvolle Implementierung
+  -> fokussierte und angrenzende lokale Tests
+  -> lokaler Vorher-/Nachher-Realtest
+  -> strukturierter Review
+  -> Release Candidate bauen
+  -> identischer Test in frischem Workspace auf dem Kunden-Mac-Studio
+  -> Ergebnisse vergleichen
+  -> PASS, REVISE oder ROLLBACK
+```
+
+Es werden keine großen Umbauten mit mehreren gleichzeitig veränderten
+Qualitätsvariablen durchgeführt. Prompt, Retrieval, Extraktion, Modell,
+Ergebnisvertrag und Darstellung werden nur gemeinsam geändert, wenn sie
+untrennbar zu derselben kleinen vertikalen Funktion gehören. Diese Kopplung
+muss vor der Implementierung ausdrücklich dokumentiert werden.
+
+## 2. Zustands-Lock
+
+Einziger aktiver Implementierungspfad:
+
+```text
+Repository: polizzenvergleich-v3
+Branch: codex/polizzenvergleich-v3
+Ausgangs-HEAD: c2e9cb27
+Tag: v3.2.1
+```
+
+`policy-clean-implementation`, `policy-agent-orchestration` und frühere
+Repositories sind ausschließlich historische Versuchsevidenz. Dortige
+Implementierungen werden weder fortgesetzt noch ungeprüft nach V3 kopiert.
+Nachgewiesene Invarianten, Fehlermuster und Tests dürfen als Designinput für
+eine V3-native Umsetzung verwendet werden.
+
+Vor jeder Implementierung werden erneut festgehalten:
+
+- Branch, HEAD und Dirty State;
+- tatsächlich gestarteter Repositorypfad;
+- V3-Version und Release Candidate;
+- Storage- und Workspace-Identität;
+- Dokumenthashes;
+- Prompt- und Kataloghashes;
+- LLM-, Embedding- und Kontextkonfiguration;
+- Testhardware und Laufzeitumgebung.
+
+## 3. Aktuelle V3-Baseline
+
+V3.2.1 besitzt aktuell:
+
+- kanonische physische PDF-PageMap;
+- seitengebundene Chunks und Quellenmetadaten;
+- automatische Einbettung hochgeladener Dokumente;
+- acht Fachansichten `VS`, `FE`, `LW`, `ST`, `EL`, `HP`, `VB`, `WE`;
+- einen formalen Kategorievalidator im separaten QA-Runner;
+- einen normalen Chatpfad mit globaler Vektorsuche und freiem Modelloutput.
+
+V3.2.1 besitzt aktuell noch nicht:
+
+- dokumentweite lexikalische Occurrence-/Alias-Suche pro Requirement;
+- Überschriften-, Klausel- und Tabellenstruktur;
+- atomare Requirements und Fakten;
+- servereigene Evidence-Spans mit Originaloffsets;
+- sichere Rollen-, Scope-, Varianten- und Betragsbindung;
+- Dokumentrollen, Versionen, Rang und Ersetzungsbeziehungen;
+- serverseitig erzeugte fachliche Ergebniszeilen;
+- einen persistenten, wiederaufnehmbaren Analysejob;
+- ein fachlich bestätigtes EL-Oracle.
+
+Fokussierte technische Baseline am 26. August 2026:
+
+```text
+4 Jest-Suites bestanden
+30 Tests bestanden
+0 fehlgeschlagen
+```
+
+Geprüft wurden Workspace-Fachvorlagen, PageMap, PageAwareTextSplitter und der
+formale Kategorie-Outputvertrag. Diese Baseline ist kein fachlicher
+Genauigkeitsnachweis.
+
+## 4. Unveränderliche Produkt- und Qualitätsregeln
+
+1. Fehlende Evidenz ist niemals automatisch ein Ausschluss oder `Nein`.
+2. Unterschiedliche Objekte, Gefahren, Rollen, Varianten oder Geltungsbereiche
+   sind nicht automatisch widersprüchlich.
+3. Ein Widerspruch benötigt gegensätzliche aktive Fakten desselben Scopes und
+   darf nicht durch eine bekannte Rang- oder Ersetzungsregel auflösbar sein.
+4. Jede sichtbare Aussage, Quelle, Seite und Zahl muss auf servereigene
+   Dokumentevidenz zurückführbar sein.
+5. Kategorien sind Kunden- und Exportansichten, keine Faktenidentitäten.
+6. Ein Vergleichspunkt kann null bis viele atomare Requirements, Fakten und
+   Evidence-Spans besitzen.
+7. Eine Kategorie mit `und` oder einer Aufzählung wird in getrennte
+   Komponenten zerlegt.
+8. Allgemeine Bedingungen, besondere Bedingungen und Nachträge bleiben als
+   getrennte Dokumentfakten erhalten, bis ihre Beziehung geklärt ist.
+9. Globale Top-N-Suche ist kein Vollständigkeitsbeweis für ein
+   Mehrdokumentpaket.
+10. Unsicherheit, fehlende Kandidaten oder ungeklärter Dokumentrang werden
+    sichtbar ausgegeben und nicht durch Modellraten geschlossen.
+11. Ein technisches `PASS` ersetzt keine fachliche oder rechtliche Endprüfung.
+12. Private Policen, Rohzitate und vollständige Modellrequests werden nicht in
+    Git eingecheckt.
+
+## 5. Zielmodell für atomare Ergebnisse
+
+Die interne Wahrheit wird nicht mehr durch genau eine Tabellenzelle
+repräsentiert. Mindestens drei voneinander unabhängige Achsen werden benötigt:
+
+```text
+evidenceCompleteness = COMPLETE | PARTIAL | NONE
+
+coverageEffect je atomarem Requirement =
+  INCLUDED | EXCLUDED | CONDITIONAL | OPTION_ONLY | UNKNOWN
+
+coveragePicture je sichtbarer Kategorie =
+  INCLUDED | EXCLUDED | MIXED | NOT_DETERMINABLE
+
+conflictState =
+  NONE | ACTIVE_SAME_SCOPE | UNRESOLVED_PRECEDENCE
+```
+
+Beispiel EL-16, sofern die autoritativen Belege fachlich bestätigt wurden:
+
+```text
+Wintergarten -> INCLUDED
+Vitrine       -> EXCLUDED
+
+evidenceCompleteness = COMPLETE
+coveragePicture       = MIXED
+conflictState         = NONE
+```
+
+Der sichtbare Legacy-Prüfstatus wird erst aus diesen Fakten abgeleitet. Das
+Modell darf ihn nicht frei bestimmen.
+
+## 6. Zielworkflow
+
+```text
+Vertragspaket
+  -> Dokumentidentität, Rolle, Version und Rang
+  -> kanonische Seiten- und Strukturartefakte
+  -> atomare Requirements
+  -> vollständige Alias-/Occurrence-Suche je Requirement und Dokument
+  -> kleinster Klausel-/Tabellenkontext plus Heading und Fortsetzungen
+  -> servereigene Evidence-Spans
+  -> begrenzte LLM-Klassifikation nur bei Ambiguität
+  -> deterministische Fakten- und Scope-Gates
+  -> serverseitiger Kategorie-Rollup
+  -> Kundenansicht, Detailansicht und Excel
+```
+
+Kapitel dienen als Navigation und Scopekontext. Die primäre Faktgrenze ist die
+kleinste vollständige Klausel, Aufzählung oder Tabellenzeile. Ein Fenster von
+etwa 120 bis 200 Wörtern ist nur Lesefallback, nicht der fachliche Belegvertrag.
+
+## 7. Geplante kleine Implementierungsschritte
+
+Die Reihenfolge ist ein Arbeitsvorschlag. Jeder Schritt benötigt vor Beginn
+einen ausgefüllten Change Brief aus Abschnitt 8.
+
+| ID         | Kleine vertikale Funktion                                             | Lokales Hauptgate                                                                             | Kunden-Gate                                                          | Status         |
+| ---------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------- |
+| `INC-000`  | Reproduzierbare Current-HEAD-Baseline für EL-16 einfrieren            | Run-ID, Dokument-/Prompt-/Runner-/Modellidentität, gehashte Artefakte und Messwerte vorhanden | eigener Ausgangslauf auf Mac Studio mit dortigem Modell              | `IN ARBEIT`    |
+| `INC-001`  | Atomarer EL-16-Ergebnisvertrag und deterministischer Rollup           | synthetische Komponenten- und Konflikttests                                                   | noch kein Kundenrelease erforderlich, sofern ohne Produktintegration | `PASS`         |
+| `INC-002`  | Serverseitiger Renderer für `COMPLETE + MIXED + NONE`                 | keine frei erfundene Zeile; bestehende Kategorien regressionsfrei                             | EL-16 wird korrekt und nachvollziehbar dargestellt                   | `OFFEN`        |
+| `INC-003`  | V3-native dokumentweite Alias-/Occurrence-Suche; Pilot VS-16/17/21/28 | alle deklarierten Vorkommen mit richtiger Seite, Originaloffset und Klauselkontext            | bestätigte Pilot-Fundstellen werden vollständig gefunden             | `PASS (PILOT)` |
+| `INC-003B` | Begrenzte LLM-Kandidatentriage für den VS-Pilot                       | ausschließlich bekannte Candidate-IDs; jeder Kandidat genau einmal klassifiziert              | noch kein Kundenrelease                                              | `REVISE`       |
+| `INC-004`  | Stabile servereigene Evidence-Spans                                   | jede Span-ID rekonstruiert exakt Dokument, Seite und Originaltext                             | Quellen bleiben auf Mac Studio identisch prüfbar                     | `OFFEN`        |
+| `INC-005`  | Begrenzte EL-16-Klassifikation über erlaubte Span-IDs                 | Modell kann keine fremde Quelle, Seite oder ID erzeugen                                       | reproduzierbarer EL-16-Output auf Kundenhardware                     | `OFFEN`        |
+| `INC-006`  | Rollen-/Scope-Gates für EL-16 und Geldwerte                           | kein Cross-Binding benachbarter Rollen; kein falscher Widerspruch                             | gleiche fachliche Verbesserung im Realpaket                          | `OFFEN`        |
+| `INC-007`  | Privates EL-Oracle für EL-16 und synthetisches Repository-Oracle      | Candidate-, Span-, Fact- und Rollup-Gates getrennt messbar                                    | bestätigte Kundenbelege bestehen                                     | `OFFEN`        |
+| `INC-008`  | Erweiterung auf die schwierigen EL-Fälle                              | keine Regression bei EL-16; offene Fälle bleiben offen                                        | kontrollierter EL-Teilrelease                                        | `OFFEN`        |
+| `INC-009`  | EL-01 bis EL-36 auf einem Dokument                                    | vollständige Requirement-Terminierung und serverseitige Rows                                  | beaufsichtigter Einzelpaketlauf                                      | `OFFEN`        |
+| `INC-010`  | Vertragspaket mit 1, 3 und 9 Dokumenten                               | Suche je Requirement und Dokument; Rolle, Version und Rang sichtbar                           | kein Dokumentverlust im Mac-Studio-Paket                             | `OFFEN`        |
+| `INC-011`  | Persistenter Ein-Klick-Analysejob                                     | Progress, Resume, Cancel, Fehler- und Cleanup-Pfade                                           | Lauf übersteht Navigation; Betriebsabnahme                           | `OFFEN`        |
+| `INC-012`  | Weitere Fachansichten und A/B-Vergleich                               | dokumentisolierte Fakten vor dem Join                                                         | LF IMMO gegen zweiten Anbieter                                       | `OFFEN`        |
+
+Ein Schritt darf geteilt werden, wenn sein Change Brief mehr als eine
+unabhängig messbare Hypothese enthält. Schritte dürfen nicht zusammengelegt
+werden, nur um schneller einen großen Release zu erzeugen.
+
+## 8. Change Brief vor jeder Implementierung
+
+```text
+Increment-ID:
+Datum:
+Ausgangs-Branch / HEAD:
+
+Nutzerproblem:
+Beobachtete Baseline:
+Hypothese:
+Genau eine primäre Messvariable:
+
+In Scope:
+Out of Scope:
+Betroffene Module und Caller:
+Persistenz-/UI-/Runtime-Auswirkung:
+Historische Versuchsevidenz:
+Bekanntes Fehlermuster, das nicht wiederholt werden darf:
+
+Erwartete Verbesserung:
+Mögliche Regression:
+Rollbackgrenze:
+
+Fokussierter Reproduktionstest:
+Angrenzende Regressionstests:
+Lokaler Realtest:
+Kunden-Mac-Studio-Test:
+
+PASS-Kriterien:
+REVISE-Kriterien:
+ROLLBACK-Kriterien:
+```
+
+## 9. Modulvertrag für neue V3-Bausteine
+
+Jeder wichtige neue Baustein dokumentiert knapp:
+
+```text
+Modulname und Verantwortung
+Rolle im Workflow
+Explizite Inputs
+Explizite Outputs
+Lese- und Schreibseitenwirkungen
+Fehlermodi und Fail-Closed-Verhalten
+Unit-, Integrations- und Realstrukturtests
+Invarianten, die spätere Änderungen bewahren müssen
+```
+
+Parsing, Suche, Modellaufruf, Faktentscheidung, Persistenz und Rendering werden
+nicht in einem einzigen Runner oder God-Modul vermischt.
+
+Voraussichtliche, noch nicht implementierte Verantwortungsgrenzen:
+
+```text
+policyPackageManifest   -> Paket- und Dokumentidentität
+requirementCatalog      -> stabile Views und atomare Requirements
+documentStructure       -> Seiten, Klauseln, Tabellen, Headings, Fortsetzungen
+occurrenceSearch        -> vollständige kontrollierte Vorkommen
+evidenceSpanRegistry    -> unveränderliche servereigene Belege
+factClassification      -> begrenzte Rollen-/Wirkungskandidaten
+factValidation          -> deterministische Quellen-, Rollen- und Scope-Gates
+categoryRollup          -> Vollständigkeit, Deckungsbild und Konflikt
+categoryRenderer        -> Kundenansicht und Excel
+analysisJob             -> Checkpoints, Resume, Cancel und Veröffentlichung
+```
+
+Diese Namen sind Planungsnamen und werden erst beim jeweiligen Change Brief
+gegen die tatsächlichen V3-Muster geprüft.
+
+## 10. Testpyramide pro Increment
+
+### A. Reproduktion vor der Änderung
+
+- Fehler am eingefrorenen Ausgangsstand reproduzieren oder originalgetreu
+  simulieren;
+- bei Realpolicen Run-ID, Dokumenthash und private Artefakte sichern;
+- eindeutig festhalten, ob der Fehler fachlich bestätigt oder noch eine
+  Annahme ist.
+
+### B. Fokussierte Unit- und Vertragstests
+
+- kleinster Test für die neue Regel;
+- negative Kontrolle;
+- Grenz- und Missing-Evidence-Fälle;
+- deterministische Wiederholung;
+- keine Netzwerk- oder LLM-Abhängigkeit, wenn reine Logik geprüft wird.
+
+### C. Angrenzende Regressionstests
+
+- Caller und Datenfluss;
+- bestehende PDF-PageMap und Quellenanzeige;
+- Workspace-Upload und Embedding;
+- Kategorie-ID-, Reihenfolge- und Ausgabeformat;
+- Fehler-, Cleanup- und Wiederaufnahmepfade, sofern betroffen.
+
+### D. Lokaler Realtest
+
+- identische autoritative Dokumentfassung wie in der Baseline;
+- identische Modelle und Parameter;
+- nur der implementierte Codepfad wird verändert;
+- Antwort, Quellen, Modellinput, Zeitmessung und Gate-Report werden getrennt
+  gespeichert;
+- Vorher-/Nachher-Vergleich pro Requirement, nicht nur Gesamteindruck.
+
+### E. Kunden-Mac-Studio-Test
+
+- signierter beziehungsweise eindeutig gehashter Release Candidate;
+- `doctor.command` vor und nach dem Update;
+- neuer Test-Workspace und zwingende Neuindexierung, wenn sich das
+  Extraktions- oder Vektorschema geändert hat;
+- kein stilles Testen auf einem alten Vektorcache;
+- identische Dokument-, Prompt-, Katalog- und Modellidentität protokollieren;
+- Ergebnis gegen lokale Messung und Oracle vergleichen.
+
+### F. Reviewentscheidung
+
+- `PASS`: Increment erfüllt alle vorher festgelegten Gates;
+- `REVISE`: Hypothese bleibt plausibel, Implementierung oder Nachweis reicht
+  noch nicht;
+- `ROLLBACK`: Regression, unvertretbare Laufzeit oder widerlegte Hypothese;
+- `BLOCKED`: fehlende autoritative Unterlage, Hardwareevidenz oder fachliche
+  Entscheidung verhindert einen ehrlichen Abschluss.
+
+## 11. Verbindliche EL-16-Golden-Cases
+
+| Fall                                                                      | Erwartung                                                |
+| ------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Wintergarten eingeschlossen, Vitrine ausgeschlossen                       | `COMPLETE + MIXED + NONE`; niemals Widerspruch           |
+| Dasselbe Objekt im selben aktiven Scope eingeschlossen und ausgeschlossen | Konfliktkandidat `ACTIVE_SAME_SCOPE`                     |
+| Unterschiedliche Objekte mit unterschiedlicher Wirkung                    | kein Konflikt                                            |
+| Nur eine von zwei Pflichtkomponenten belegt                               | `PARTIAL + NOT_DETERMINABLE`; niemals pauschal `Nein`    |
+| Späterer Nachtrag ersetzt die ältere Regel eindeutig                      | kein aktiver Widerspruch; gültige Nachtragswirkung       |
+| Vorrang zweier Dokumente ungeklärt                                        | `UNRESOLVED_PRECEDENCE`, kein erfundener Sieger          |
+| Span stammt aus anderem Dokument oder falscher Seite                      | fail-closed                                              |
+| Bekannter Alias fehlt, semantischer Kandidat existiert                    | lexikalische und semantische Coverage getrennt berichten |
+
+Das echte EL-16-Oracle wird erst nach Bestätigung der autoritativen PDF-Fassung,
+der exakten Fundstellen und der erwarteten fachlichen Wirkungen als
+`CONFIRMED` geführt.
+
+## 12. Messwerte und Vorher-/Nachher-Vergleich
+
+Jeder Lauf berichtet mindestens:
+
+### Daten- und Retrievalqualität
+
+- Paketdokumente erwartet / verarbeitet / durchsucht;
+- physische Seiten erwartet / extrahiert / textführend;
+- Requirements erwartet / terminal bearbeitet;
+- bestätigte Occurrences gefunden / erwartet;
+- semantische Zusatzkandidaten;
+- sichtbare Kandidatenverluste oder Overflow;
+- Evidence-Spans gültig / ungültig.
+
+### Fachliche Bindung
+
+- korrekte Komponentenwirkung;
+- korrekte Rollenbindung;
+- korrekte Objekt-, Gefahren-, Varianten- und Geltungsbereichsbindung;
+- falsche `Nein`-Aussagen;
+- falsche Widersprüche;
+- unzulässige Verallgemeinerungen;
+- ehrlich offene Requirements.
+
+### Ausgabe
+
+- vollständig serverseitig rekonstruierbare Quellen;
+- korrekte Dokumentkennung, physische Seite und Originalspan;
+- deterministische Row-Anzahl und Reihenfolge;
+- korrekter Rollup;
+- keine freie modellgenerierte Quelle oder Zahl.
+
+### Laufzeit
+
+- Extraktion/OCR;
+- Strukturierung;
+- lexikalische Suche;
+- Embedding und semantische Suche;
+- Modellcalls nach Anzahl, Input- und Outputtokens;
+- Validierung, Rollup und Rendering;
+- Gesamtzeit kalt und warm;
+- Peak-Ressourcen, soweit zuverlässig messbar.
+
+Das Produktziel `< 60 Minuten` für bis zu neun Dokumente ist ein noch
+unbewiesenes SLO. Es wird erst nach festen 1-, 3- und 9-Dokumentläufen auf der
+Kundenhardware als bestanden geführt. Ein Zeitbudget darf zu sichtbaren offenen
+Fällen führen, niemals zu geratenen Ergebnissen.
+
+## 13. Release- und Rollbackregeln
+
+1. Ein lokaler grüner Test erzeugt noch keinen Kundenrelease.
+2. Ein Release Candidate erhält eindeutige Version, Git-Commit und Paket-Hash.
+3. Private Policen und Run-Artefakte bleiben außerhalb des öffentlichen
+   Releasepakets.
+4. Datenbank, Dokumentartefakte, Vektorindex und Code werden als
+   zusammengehöriger Zustand behandelt.
+5. Änderungen am Extraktions- oder Vektorschema erzwingen einen neuen
+   Test-Workspace und eine vollständige Neuindexierung.
+6. Der bestehende Kundenstand wird vor einem riskanten Update gesichert.
+7. Rollbackbefehle und betroffene Zustände werden vor dem Update festgelegt.
+8. Ein Kunden-`PASS` gilt nur für die dokumentierte Hardware, Modelle,
+   Dokumente und Konfiguration.
+9. Ein erfolgreiches EL-16-Ergebnis ist keine automatische Freigabe für EL-36,
+   neun Dokumente oder andere Versicherer.
+
+## 14. Fortlaufendes Experiment-Ledger
+
+| Increment  | Baseline                            | Implementierung                                                                | Lokale Tests                                                                                     | Lokaler Realtest                                                                                         | RC  | Mac Studio         | Entscheidung   | Nächster Schritt                                                                  |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | --- | ------------------ | -------------- | --------------------------------------------------------------------------------- |
+| `INC-000`  | V3.2.1 / `c2e9cb27`                 | keine                                                                          | technische Baseline 30/30 grün; aktuelle Revalidierung: 36 Zeilen, 8 Spalten, 108 formale Gründe | `R01 REVISE`; 31/31 Seiten und 38/38 Chunks im Kontext; EL-16 findet beide Objektregeln                  | –   | ausständig         | `IN ARBEIT`    | Mac-Studio-Ausgangslauf und fachliche EL-16-Bestätigung                           |
+| `INC-001`  | lokaler INC-000-Lock                | isolierter atomarer Komponentenvertrag und deterministischer Rollup            | 14/14 fokussiert; 45/45 fokussiert plus angrenzend; Format und Diff sauber                       | nicht anwendbar, noch kein produktiver Caller                                                            | –   | nicht erforderlich | `PASS`         | vor INC-002 Kunden-Ausgangslauf einfrieren                                        |
+| `INC-003`  | autoritative 31-seitige LF-IMMO-PDF | kontrollierte VS-Alias-/Occurrence-Suche plus Kandidaten-Arbeitsblatt          | 8/8 fokussiert; 53/53 fokussiert plus angrenzend; 17/17 Realoffsets rekonstruiert                | R01 fand 14; Alias-Lücke erkannt; R02/R03 finden 17 Kandidaten in 6/8 Komponenten und sind byteidentisch | –   | nicht erforderlich | `PASS (PILOT)` | Arbeitsblatt reviewen; danach LLM-Aktivierung oder Katalogausweitung entscheiden  |
+| `INC-003B` | INC-003-Worksheet mit 17 Kandidaten | begrenzter Qwen-Triagevertrag, Servermaterialisierung und drei Golden-Controls | 11/11 fokussiert; 65/65 inklusive angrenzender Tests; Format und Diff sauber                     | R05: 17/17 formal, aber 2/3 fachliche Kontrollen; koordinierter Abbruch bleibt falsch klassifiziert      | –   | nicht erforderlich | `REVISE`       | INC-003C: serverseitige Koordinationsstruktur und erlaubte Rollen getrennt prüfen |
+
+Für jedes abgeschlossene Increment wird eine Detailsektion ergänzt:
+
+```text
+## INC-XXX – Titel
+
+Change Brief:
+Geänderte Dateien und Modulgrenzen:
+Commit / Release Candidate:
+Lokale Testbefehle und Resultate:
+Lokaler Vorher-/Nachher-Vergleich:
+Mac-Studio-Konfiguration und Resultat:
+Abweichungen lokal gegen Kunde:
+Reviewentscheidung:
+Restrisiko:
+Folgeentscheidung:
+```
+
+## 15. INC-000 – Current-HEAD-Ausgangslauf für EL-16
+
+### Zustands- und Eingabe-Lock
+
+```text
+Run-ID: INC-000-V321-EL16-LOCAL-QWEN4B-R01
+Repository: polizzenvergleich-v3
+Branch: codex/polizzenvergleich-v3
+HEAD / Tag: c2e9cb27 / v3.2.1
+Produktcodeänderung: keine
+
+Referenz-PDF: ausschließlich die 31-seitige *_mod.pdf
+PDF-SHA-256: 2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62
+Systemprompt-SHA-256: d5b1c465f20836d6d3069aaba89b1d5d22d3eaeed1649a92638c7e1d3b304628
+Runner-SHA-256: 02008e3b3a83aeebff2f8171b3f8d5c3e9fd62b9ff9c564ee55ff657265234b3
+Validator-SHA-256: a79a358244ebdbfd3964a0ed502aae32452d1fedd8a866d597933ab96ff55bfa
+```
+
+Die frühere 40-seitige Generali-Datei ist für diesen Test ausdrücklich keine
+Referenz. Private Antwort-, Quellen-, Nachrichten- und Manifestdateien liegen
+außerhalb von Git unter der Run-ID. Der Laufordner wurde nach dem Lauf auf
+Benutzerzugriff `700/600` beschränkt. Künftige private Läufe beginnen mit
+`umask 077`.
+
+### Lokale Laufkonfiguration
+
+```text
+Hardware: Apple M3 Pro, 18 GiB RAM, arm64
+System: macOS 26.5 (25F71)
+Node: v22.23.2
+LLM: qwen3.5-4b-mlx, LM Studio
+Embedding: text-embedding-dinghy-law-4b-v1
+Top-N: 55
+Chunkgröße / Überlappung: 3000 / 250
+Deklariertes modelTokenLimit: 32768
+Tatsächlich geladener LM-Studio-Kontext: 77312
+```
+
+Wichtige Reproduzierbarkeitsgrenze: Der QA-Runner protokolliert das deklarierte
+`modelTokenLimit`, erzwingt aber nicht den normalen Kompressions- und
+Kontextlimitpfad. Außerdem wurde kein Seed gesetzt. Der Lauf ist anhand seiner
+Eingaben und Artefakte nachvollziehbar, aber nicht als byteidentisch
+deterministisch behauptet.
+
+Der lokale 4B-Lauf und der Kundenlauf mit Qwen 27B sind keine identischen
+Modellläufe. Daher werden auf jeder Maschine eigene Vorher-/Nachher-Paare
+gebildet. Verglichen werden die fachlichen Invarianten und Gates; rohe
+Antwortunterschiede zwischen 4B und 27B gelten nicht als Wirkung eines
+Code-Increments.
+
+### Lokales Resultat R01
+
+```text
+Gesamtdauer: 265,666 Sekunden
+Extraktion: 31/31 physische Seiten, 31/31 textführend
+Index: 38 Chunks / 38 gespeicherte Zeilen
+Retrieval: 38 Quellen; physische Seiten 1 bis 31 vollständig im Kontext
+Tokens: 31.852 Prompt / 3.717 Completion / 35.569 gesamt
+Modellgenerierung: 195,398 Sekunden; 19,02 Output-Tokens/s
+Ausgabeform: 36/36 IDs in Reihenfolge; jede Zeile genau 8 Spalten
+Validator: REVISE; 108 Gründe
+```
+
+Die aktuelle HEAD-Revalidierung reproduziert genau drei formale Fehlerklassen
+für jede der 36 Zeilen:
+
+- `INVALID_STATUS`: Das Modell kombiniert Prüfstatus und Deckungswert in der
+  Statuszelle, statt nur den erlaubten Prüfstatus auszugeben.
+- `INVALID_STATUS_COVERAGE`: Durch diese Kombination ist auch die zulässige
+  Status-/Deckungskombination formal verletzt.
+- `INVALID_SOURCE_FORMAT`: Die Modellquellen entsprechen nicht dem geforderten
+  physischen Seiten- und Vollzitatformat; teilweise enthalten sie Auslassungen.
+
+Das ist kein Spalten- oder ID-Parserfehler. Die Tabellenform mit 36 Zeilen und
+acht Spalten wurde korrekt erkannt.
+
+### EL-16-Beobachtung
+
+R01 findet auf der physischen PDF-Seite 15 beide unterschiedlichen
+Objektaussagen: die einschließende Wintergartenregel und die ausschließende
+Vitrinenregel. Der Lauf erzeugt diesmal nicht `WIDERSPRÜCHLICH`, kann das
+vollständig belegte gemischte Deckungsbild aber ebenfalls nicht korrekt
+darstellen. Er weicht auf eine in sich inkonsistente Kombination aus `Ja`,
+`TEILBELEGT` und `Nicht feststellbar` aus.
+
+Damit ist für INC-001 lokal belegt:
+
+1. Bloßes Hinzufügen der Regel „verschiedene Objekte sind kein Widerspruch“
+   ist kein hinreichender Fix; diese Regel steht bereits im Current-HEAD-Prompt.
+2. Beide benötigten EL-16-Textstellen waren in diesem Lauf vorhanden.
+3. Der aktuelle Ergebnisvertrag besitzt keinen sauberen Zustand für
+   `COMPLETE + MIXED + NONE`.
+4. Status, Deckungsbild und Konflikt müssen intern getrennt werden.
+5. Quellenformat und serverseitige Quellenbindung sind ein eigener späterer
+   Nachweis und dürfen nicht durch Promptkosmetik als gelöst gelten.
+
+Eine vollständige fachliche Bewertung aller 36 Zeilen wurde in INC-000 nicht
+durchgeführt. Auffälligkeiten außerhalb von EL-16 werden deshalb nicht als
+bestätigte Regressionen oder Verbesserungen verbucht.
+
+### Offene Gates
+
+- Fachliche Bestätigung, dass genau die festgehaltenen EL-16-Wirkungen für die
+  autoritative 31-seitige PDF das erwartete Soll sind.
+- Eigener Current-HEAD-Ausgangslauf auf dem Kunden-Mac-Studio mit dessen exakt
+  protokolliertem Qwen-27B-Modell und neuem Workspace.
+- Hashes und private Artefakte des Kundenlaufs.
+
+Reviewentscheidung: `IN ARBEIT`. Der lokale Baseline-Anteil ist eingefroren;
+INC-000 bleibt bis zum Kundenlauf und zur fachlichen Bestätigung offen.
+
+## 16. INC-001 – Change Brief
+
+```text
+Increment-ID: INC-001
+Datum: 26. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+EL-16 kann zwei vollständig belegte, unterschiedliche Objektwirkungen nicht
+ohne falschen Teilstatus oder Widerspruch darstellen.
+
+Beobachtete Baseline:
+R01 findet beide Objektregeln, erzeugt aber eine inkonsistente Kombination aus
+Ja, TEILBELEGT und Nicht feststellbar.
+
+Hypothese:
+Ein reiner atomarer Komponentenvertrag mit drei getrennten Rollup-Achsen kann
+EL-16 und die negativen Kontrollen deterministisch und fail-closed abbilden.
+
+Genau eine primäre Messvariable:
+Der deterministische Rollup liefert für jeden Golden Case exakt das festgelegte
+Quadrupel aus Evidenzvollständigkeit, Deckungsbild, Konflikt und abgeleitetem
+Prüfstatus.
+
+In Scope:
+- reine Enums, Eingabevalidierung und Rollup-Funktion ohne I/O;
+- EL-16- und Konflikt-Golden-Cases;
+- explizite Ablehnung fehlender, doppelter oder inkonsistenter Komponenten.
+
+Out of Scope:
+- bestehender QA-Validator und Fachprompts;
+- Retrieval, LLM, Dokumentevidenz, Scope-Erkennung und Dokumentrang;
+- Chatpfad, UI, Persistenz, Excel und Kundenrelease.
+
+Betroffene Module und Caller:
+Neues isoliertes Modul unter server/utils/policyAnalysis; zunächst ausschließlich
+fokussierter Test-Caller. Kein produktiver Caller in INC-001.
+
+Persistenz-/UI-/Runtime-Auswirkung:
+Keine.
+
+Historische Versuchsevidenz:
+Frühere Rollen-/Occurrence-Prototypen beweisen diese Rollup-Grenze nicht; nur
+ihre Fehlermuster und Invarianten werden übernommen.
+
+Bekanntes Fehlermuster, das nicht wiederholt werden darf:
+MIXED darf niemals automatisch Konflikt bedeuten. Fehlende Evidenz darf niemals
+als EXCLUDED oder Nein gerollt werden.
+
+Erwartete Verbesserung:
+COMPLETE + MIXED + NONE wird erstmals intern eindeutig repräsentierbar.
+
+Mögliche Regression:
+Zu permissive Eingaben könnten unvollständige Pipelinezustände als fachliches
+Ergebnis tarnen; deshalb fordert der Vertrag genau ein terminales Resultat je
+Pflichtkomponente.
+
+Rollbackgrenze:
+Neues Modul und sein fokussierter Test; keine Migration und keine Datenänderung.
+
+Fokussierter Reproduktionstest:
+Wintergarten INCLUDED + Vitrine EXCLUDED.
+
+Angrenzende Regressionstests:
+Bestehender Kategorievertrag, Workspace-Templates, PageMap und Splitter.
+
+Lokaler Realtest:
+Nicht zutreffend; INC-001 ist absichtlich noch nicht produktiv verdrahtet.
+
+Kunden-Mac-Studio-Test:
+Nicht erforderlich für INC-001 allein.
+
+PASS-Kriterien:
+Alle Golden Cases und Invalid-Input-Kontrollen grün; angrenzende Baseline grün;
+keine produktiven Caller und keine I/O-Seitenwirkung.
+
+REVISE-Kriterien:
+Ein Golden Case benötigt weiterhin vermischte Achsen oder unklare Semantik.
+
+ROLLBACK-Kriterien:
+Bestehendes Produktverhalten, Persistenz oder Ausgabe wird unbeabsichtigt
+verändert.
+```
+
+INC-001 darf vor dem ausstehenden Kunden-Ausgangslauf implementiert werden,
+weil sein Modul noch keinen produktiven Caller besitzt und keinen Release
+erzeugt. Vor dem ersten integrierten Release Candidate bleibt der
+Mac-Studio-V3.2.1-Ausgangslauf zwingend.
+
+### INC-001-Resultat
+
+Geänderte Modulgrenze:
+
+- `server/utils/policyAnalysis/categoryResultContract.js` ist eine reine
+  Entscheidungsfunktion ohne I/O, Persistenz, Netzwerk oder globale Mutation.
+- Das Modul verlangt genau ein terminales Resultat pro Pflichtkomponente.
+- Scope- und Rangermittlung bleiben ausdrücklich außerhalb dieses Moduls und
+  müssen ihre Konfliktentscheidung später als validierten Input liefern.
+- Es existiert noch kein produktiver Caller; nur der fokussierte Test importiert
+  das Modul.
+
+Nachgewiesene Regeln:
+
+- Wintergarten `INCLUDED` plus Vitrine `EXCLUDED` ergibt
+  `COMPLETE + MIXED + NONE + BELEGT`.
+- Unterschiedliche Komponentenwirkungen werden niemals allein wegen ihrer
+  Verschiedenheit zum Konflikt.
+- Ein bereits validierter aktiver Same-Scope-Konflikt bleibt
+  `ACTIVE_SAME_SCOPE + WIDERSPRÜCHLICH`, ohne eine Wirkung zu erfinden.
+- Ungeklärter Dokumentvorrang bleibt
+  `UNRESOLVED_PRECEDENCE + UNGEKLÄRT`.
+- Teilweise oder vollständig fehlende Evidenz bleibt
+  `NOT_DETERMINABLE` und kann nicht als Ausschluss eingegeben werden.
+- Fehlende, doppelte, fremde und inkonsistente Komponenten brechen fail-closed
+  mit stabilen Fehlercodes ab.
+- Vollständig belegte Bedingungen und bloße Optionen bleiben als atomare
+  Wirkungen erhalten, ohne sie fälschlich in `INCLUDED` oder `EXCLUDED`
+  umzudeuten.
+
+Verifikation:
+
+```text
+Fokussierte Tests: 1 Suite, 14/14 Tests bestanden
+Fokussiert plus angrenzend: 6 Suites, 45/45 Tests bestanden
+Prettier: PASS
+git diff --check: PASS
+Produktive Caller außerhalb des Moduls: 0
+```
+
+Der erste Testaufruf scheiterte ausschließlich an einem falschen relativen
+Importpfad im neuen Test-Harness. Nach dessen Korrektur waren alle fachlichen
+Tests grün. Der gezielte ESLint-Aufruf konnte wegen einer bereits bestehenden
+Inkompatibilität von ESLint 9 mit `eslint-plugin-react` (`context.getScope`)
+nicht als Gate verwendet werden. Es wurde kein dateibezogener Lintfehler
+gemeldet; Format- und Testgates sind grün. Die Lint-Infrastruktur bleibt als
+separater technischer Befund offen und ist keine fachliche Freigabe.
+
+Reviewentscheidung: `PASS` für INC-001. Das neue Modul ist noch keine
+Produktverbesserung und verändert den aktuellen V3-Output nicht. Seine Wirkung
+kann erst mit INC-002 über einen serverseitigen Renderer beziehungsweise einen
+eng begrenzten Integrationspfad beobachtet werden.
+
+## 17. INC-003 – Change Brief: VS-Occurrence-Arbeitsblatt
+
+```text
+Increment-ID: INC-003
+Datum: 26. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+V3 übergibt heute globale Ähnlichkeits-Chunks an das LLM. Vor dem Modell ist
+nicht prüfbar, ob jede Pflichtkomponente einer VS-Kategorie dokumentweit gesucht
+und mit richtiger Seite sowie richtigem Kontext bereitgestellt wurde.
+
+Beobachtete Baseline:
+Für den neuen atomaren Rollup existiert noch keine PDF-zu-Komponenten-Zufuhr.
+Der normale Chatpfad und der QA-Runner kennen das neue Modul nicht.
+
+Hypothese:
+Eine generische kontrollierte Alias-/Occurrence-Suche auf der kanonischen
+PageMap kann für vier repräsentative VS-Punkte ein vollständiges, vor dem LLM
+prüfbares Kandidaten-Arbeitsblatt erzeugen.
+
+Genau eine primäre Messvariable:
+Alle im Golden Fixture und im manuell geprüften LF-IMMO-Pilot erwarteten
+kontrollierten Aliasvorkommen besitzen richtige physische Seite und exakte
+Originaloffsets.
+
+In Scope:
+- VS-16, VS-17, VS-21 und VS-28 als versionierter Pilotkatalog;
+- Normalisierung mit Rückabbildung auf Originaloffsets;
+- dokumentweite Aliasvorkommen je atomarer Komponente;
+- kleinster verfügbarer Listen-/Absatzkontext;
+- candidate-only Arbeitsblatt vor dem LLM;
+- privater LF-IMMO-Reallauf ohne Modellaufruf.
+
+Out of Scope:
+- Deckungsentscheidung, Rollen-/Scope-/Rangentscheidung und Betragsbindung;
+- semantische Synonymsuche außerhalb des kontrollierten Katalogs;
+- Tabellen-/Heading-Fortsetzungen über Seiten;
+- produktiver Chatpfad, UI, Persistenz, Excel, LLM-Aufruf und Kundenrelease;
+- vollständige VS-01-bis-VS-36-Abdeckung.
+
+Betroffene Module und Caller:
+Neues reines Such-/Kontextmodul, versionierter Pilotkatalog, fokussierte Tests
+und ein separater privater QA-Worksheet-Runner. Keine produktiven Caller.
+
+Persistenz-/UI-/Runtime-Auswirkung:
+Keine Produktwirkung. Der QA-Runner schreibt nur eine explizit angegebene
+private Ausgabedatei mit restriktiven Rechten.
+
+Historische Versuchsevidenz:
+Occurrence-Suche und Klauselkontext waren historisch vielversprechend, banden
+aber Rollen und Beträge falsch. Deshalb erzeugt INC-003 ausschließlich
+Kandidaten und keine Fakten oder Deckungswerte.
+
+Bekanntes Fehlermuster, das nicht wiederholt werden darf:
+Ein Treffer auf Garage darf nicht Tiefgarage oder Garageneinrichtung als
+Garage zählen. Müllsammelplatz darf nicht automatisch Müllraum beweisen.
+Aufräumungs- und Abbruchkosten dürfen nicht ohne Geltungsbereich und Limit
+zusammengeführt werden.
+
+Erwartete Verbesserung:
+Vor dem LLM wird sichtbar, welche Komponenten, Seiten, Originalstellen und
+Kontexte tatsächlich vorbereitet wurden und welche lexikalisch offenbleiben.
+
+Mögliche Regression:
+Fehlerhafte Normalisierung oder Offsets könnten falsche Quellen erzeugen;
+überbreite Aliase könnten Candidate-Noise als Recallgewinn tarnen.
+
+Rollbackgrenze:
+Neue isolierte Module, Pilotkatalog, Tests und QA-Skript; keine Migration.
+
+Fokussierter Reproduktionstest:
+Synthetische PageMap mit Flexion, Umlaut, Soft-Hyphen, Zeilenumbruch,
+Wortgrenzen, Listenfortsetzung und fehlender Komponente.
+
+Angrenzende Regressionstests:
+PageMap, PageAwareTextSplitter, Fachvorlagen und bestehender Outputvertrag.
+
+Lokaler Realtest:
+Autoritative 31-seitige LF-IMMO-PDF, kein LLM; privates Arbeitsblatt und
+manuelle Prüfung der Pilotfundstellen.
+
+Kunden-Mac-Studio-Test:
+Für diesen isolierten candidate-only Pilot noch nicht erforderlich.
+
+PASS-Kriterien:
+Alle synthetischen Treffer und Offsets korrekt; keine Substring-Falschtreffer;
+LF-Arbeitsblatt reproduzierbar, Seiten/Originaltexte rekonstruierbar und kein
+LLM-/Produkt-Caller.
+
+REVISE-Kriterien:
+Erwartete kontrollierte Vorkommen fehlen, Kontexte überschreiten die definierte
+Grenze oder Kandidaten werden als Fakten dargestellt.
+
+ROLLBACK-Kriterien:
+Bestehender Produktpfad oder gespeicherte Dokumentdaten werden verändert.
+```
+
+Die Reihenfolge wurde auf ausdrücklichen Nutzerwunsch geändert: INC-003 wird
+vor dem Renderer INC-002 ausgeführt, damit zuerst die reale Vorbereitung bis
+zum LLM sichtbar und prüfbar wird.
+
+### INC-003-Resultat
+
+Neue Modulgrenzen:
+
+- `controlledOccurrenceWorksheet.js` normalisiert Text mit Rückabbildung auf
+  Originaloffsets, enumeriert kontrollierte Aliase auf jeder physischen Seite
+  und bildet Listen-/Absatzkontext. Das Modul besitzt keine I/O-Seitenwirkung.
+- `vs-occurrence-pilot.v0.1.json` enthält nur den versionierten Pilotkatalog für
+  VS-16, VS-17, VS-21 und VS-28.
+- `buildVsOccurrenceWorksheet.cjs` extrahiert die echte PDF über den aktuellen
+  V3-PDFLoader und schreibt ausschließlich eine explizit angegebene private
+  Worksheet-Datei mit `700/600`-Rechten.
+- Es existiert kein produktiver Caller und kein LLM-Aufruf.
+
+Fokussierte Golden-Case-Verifikation:
+
+```text
+1 Suite / 8 Tests bestanden
+- Umlaut- und Soft-Hyphen-Normalisierung
+- Zeilenhyphenierung mit Originaloffset
+- vollständige dokumentweite Enumeration
+- Garage ungleich Tiefgarage ungleich Garageneinrichtung
+- koordinierte Form Aufräumungs-
+- kleinster vollständiger Listenpunkt
+- explizites NO_CONTROLLED_CANDIDATE ohne Ausschluss
+- fail-closed bei unvollständiger PageMap
+```
+
+Angrenzende Verifikation:
+
+```text
+7 Suites / 53 Tests bestanden
+Prettier: PASS
+git diff --check: PASS
+Produktive Caller: 0
+```
+
+LF-IMMO-Reallauf:
+
+```text
+PDF-SHA-256: 2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62
+Physische Seiten: 31
+PageContent-SHA-256: b2458f8a78074908a0723c0f374f82866ef65b5c8ada913cc57b1828abd8bd85
+Pilotkatalog-SHA-256: e91f0295a77119514549669f913de166ef13fcfaeb0dd409c060286186dc3a7e
+Suchmodul-SHA-256: c2138838f8d7be9eef5398db172e00de8237d51e2bc8d35b8e7bb5e04c752c35
+Worksheet-Runner-SHA-256: b0d871f532b794a79ff73e1aed47799d56bfed3dd38d7f0ce0d95152852fa4d6
+
+R01: 14 Kandidaten / 6 von 8 Komponenten
+Beobachtung: Aufräumungs- auf Seite 5 und 30 fehlte im Aliasvertrag.
+
+R02: 17 Kandidaten / 6 von 8 Komponenten
+R03: 17 Kandidaten / 6 von 8 Komponenten
+R02-SHA-256 = R03-SHA-256:
+5af16ad3ae25f5657a5b21b75207364339365162dc0b39fded0fdf63d928054c
+
+17/17 exakte Originalspans rekonstruiert
+17/17 Kontextspans rekonstruiert
+17/17 Candidate-IDs eindeutig
+```
+
+Pilot-Arbeitsblatt nach R02/R03:
+
+| Requirement | Komponente                  | Kandidaten | physische Seiten |
+| ----------- | --------------------------- | ---------: | ---------------- |
+| VS-16       | Garage                      |          1 | 3                |
+| VS-16       | Tiefgarage                  |          1 | 4                |
+| VS-17       | Müllraum                    |          0 | –                |
+| VS-17       | Fahrradraum                 |          1 | 4                |
+| VS-17       | Kinderwagenraum             |          0 | –                |
+| VS-21       | Aufräumkosten               |          8 | 5, 6, 22, 27, 30 |
+| VS-21       | Abbruchkosten               |          5 | 5, 6, 18, 27     |
+| VS-28       | Mietzinsentgang/Mietverlust |          1 | 5                |
+
+Der Reallauf hat zwei wichtige Systemgrenzen sichtbar gemacht:
+
+1. Der Treffer `Abbruch` auf Seite 18 gehört zur Bauherrenhaftpflicht und ist
+   für VS-21 wahrscheinlich Scope-Noise. Das ist korrektes candidate-only
+   Verhalten und darf erst durch einen späteren Scope-Binder entschieden werden.
+2. Für Müllraum existiert kein kontrollierter Direktalias, obwohl verwandte
+   Begriffe wie Müllentsorgungsanlage oder Müllsammelplatz vorkommen. Diese
+   dürfen nicht still als Müllraum gelten. Ein späterer semantischer Zusatzpfad
+   muss sie getrennt als semantische Kandidaten ausweisen.
+
+Reviewentscheidung: `PASS (PILOT)`. Bewiesen sind kontrollierter lexikalischer
+Recall für den eingefrorenen Pilotkatalog, Seiten-/Offsetkorrektheit,
+reproduzierbare Vorbereitung und ehrliche offene Komponenten. Nicht bewiesen
+sind fachliche Deckung, vollständige Synonymabdeckung, Scope-/Betragsbindung,
+WEVIGA, alle 36 VS-Punkte oder eine Verbesserung des LLM-Outputs.
+
+## 18. INC-003B – Change Brief: begrenzte LLM-Kandidatentriage
+
+```text
+Increment-ID: INC-003B
+Datum: 26. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+Das candidate-only Arbeitsblatt zeigt 17 Fundstellen, enthält aber bewusst auch
+Scope-Noise. Vor einer Deckungsentscheidung muss geprüft werden, ob ein kleines
+LLM diese Kandidaten begrenzt und vollständig triagieren kann.
+
+Beobachtete Baseline:
+VS-21 enthält unter anderem einen Abbruch-Treffer aus der
+Bauherrenhaftpflicht auf Seite 18 und Aufräumungsarbeiten auf Seite 30. Der
+heutige monolithische V3-Pfad macht diese Zwischenentscheidung nicht sichtbar.
+
+Hypothese:
+Qwen kann jeden servereigenen Kandidaten genau einmal als DIRECT, NARROW_SCOPE,
+MENTION_ONLY oder UNRESOLVED klassifizieren, ohne IDs, Quellen, Seiten oder
+Texte zu erzeugen. Ein serverseitiger Validator kann alle Abweichungen
+fail-closed zurückweisen.
+
+Genau eine primäre Messvariable:
+17 von 17 erlaubten Candidate-IDs werden genau einmal und mit einem erlaubten
+Triagewert zurückgegeben; null fremde oder fehlende IDs.
+
+In Scope:
+- kompakter LLM-Input für die vier Pilotpunkte und 17 Kandidaten;
+- nur Kategorie, Komponente, Candidate-ID und serverseitiger Kontext;
+- vier erlaubte Triagewerte;
+- strikter Parser/Validator und serverseitige Rekonstruktion;
+- lokaler Qwen-4B-Reallauf mit Temperatur 0;
+- harte Negativkontrolle für den VS-21-Treffer aus Seite 18.
+
+Out of Scope:
+- Deckungswirkung, Betrag, Frist, Konflikt, Rollup und Kundenzeile;
+- freie Begründungen, freie Zitate oder modellgenerierte Seiten;
+- Retry-Reparaturprompt, produktiver Chatpfad, UI und Kundenrelease;
+- WEVIGA und VS-01 bis VS-36.
+
+Betroffene Module und Caller:
+Neuer reiner Triagevertrag, fokussierte Tests und separater privater
+LM-Studio-QA-Runner. Keine produktiven Caller.
+
+Persistenz-/UI-/Runtime-Auswirkung:
+Keine Produktwirkung. Private Nachrichten, Rohantwort, validiertes Ergebnis und
+Report werden nur im expliziten Laufordner mit 700/600 geschrieben.
+
+Historische Versuchsevidenz:
+Freie Qwen-Zitate waren historisch unzuverlässig. Deshalb darf das Modell nur
+vorhandene Candidate-IDs klassifizieren; Texte und Seiten bleiben Serverbesitz.
+
+Bekanntes Fehlermuster, das nicht wiederholt werden darf:
+Ein irrelevanter Worttreffer darf nicht durch Modellformulierung zur VS-Evidenz
+werden. Fehlende oder zusätzliche IDs dürfen nicht still toleriert werden.
+
+Erwartete Verbesserung:
+Die erste Modellentscheidung wird klein, prüfbar und vollständig sichtbar,
+bevor Deckungslogik oder Rendering hinzukommen.
+
+Mögliche Regression:
+Zu grobe Triagewerte können fachliche Nuancen verlieren. Qwen 4B kann trotz
+Schema ungültiges JSON oder plausible, aber fachlich falsche Bindungen liefern.
+
+Rollbackgrenze:
+Neue isolierte Module, Tests und QA-Skript; keine Migration.
+
+Fokussierter Reproduktionstest:
+Erlaubte IDs vollständig; fremde, doppelte, fehlende und ungültige Werte werden
+abgewiesen; Materialisierung übernimmt nur Servertexte.
+
+Angrenzende Regressionstests:
+Occurrence-Arbeitsblatt, atomarer Rollup, PageMap, Fachvorlagen und bestehender
+Outputvertrag.
+
+Lokaler Realtest:
+Byteidentisches LF-Worksheet R02/R03, Qwen 3.5 4B, Temperatur 0.
+
+Kunden-Mac-Studio-Test:
+Für den isolierten Pilot noch nicht erforderlich.
+
+PASS-Kriterien:
+Formaler Vertrag vollständig grün; Seite-18-Abbruch mindestens nicht DIRECT;
+keine modellgenerierten Quellen im materialisierten Ergebnis.
+
+REVISE-Kriterien:
+Schemafehler, fehlende/fremde IDs oder harte Negativkontrolle verletzt.
+
+ROLLBACK-Kriterien:
+Produktpfad, gespeicherte Dokumente oder bestehende Ausgabe werden verändert.
+```
+
+### INC-003B-Resultat
+
+#### Implementierte Grenze
+
+- Qwen erhält ausschließlich vier VS-Requirements, deren atomare Komponenten,
+  17 servereigene Candidate-IDs und serverseitig extrahierten Kontext.
+- Das Modell darf pro ID nur `DIRECT`, `NARROW_SCOPE`, `MENTION_ONLY` oder
+  `UNRESOLVED` zurückgeben. Es darf weder Quellen, Seiten, Zitate, Beträge,
+  Deckungswirkungen noch Prüfstatus erzeugen.
+- Der Server verlangt jede bekannte ID genau einmal, lehnt fremde, doppelte,
+  fehlende oder erweiterte Einträge ab und rekonstruiert Seite, Text und
+  Originaloffset ausschließlich aus dem Worksheet.
+- Genau ein äußerer Markdown-JSON-Codeblock wird als Transporthülle
+  deterministisch entfernt. Zusatztext, mehrere Blöcke und jeder innere
+  Vertragsfehler bleiben fail-closed.
+- Der V3-Produkt-, Chat-, UI- und Persistenzpfad wurde nicht verdrahtet.
+
+Das INC-003-Worksheet wurde vor der Modelltriage um einen separaten
+`scopeLead` ergänzt. Der kleinste Kontextspan bleibt unverändert; zusätzlich
+darf Qwen bis zu 120 Wörter rückwärts lesen, um eine übergeordnete
+Versicherungs- oder Spartenzuordnung zu erkennen. Die Candidate-IDs blieben
+unverändert. Das neue private Worksheet R04 besitzt den SHA-256
+`c6fda6ba09a8fe47055b434a0cb8859e4e06c2e5d8630735bd1cf02d7238a763`.
+
+#### Lokale Realtests auf der LF-IMMO-PDF
+
+Alle Läufe verwendeten Qwen 3.5 4B über LM Studio, Temperatur 0, keinen Seed
+und dieselben 17 Candidate-IDs. Der tatsächlich geladene LM-Studio-Kontext war
+77.312 Tokens; das im Runner deklarierte Limit von 32.768 Tokens wurde nicht
+über den normalen Kompressionspfad erzwungen.
+
+| Lauf | Inputzustand                         | Formal | Kontrollen | Beobachtung                                                    |
+| ---- | ------------------------------------ | -----: | ---------: | -------------------------------------------------------------- |
+| R01  | kleinster Kontext, eine Kontrolle    |  17/17 |        0/1 | Haftpflicht-Abbruch `NARROW_SCOPE`; Fahrradraum `MENTION_ONLY` |
+| R02  | zusätzlicher `scopeLead`, zwei Gates |  17/17 |        2/2 | beide bekannten Fehler korrigiert                              |
+| R03  | identisch zu R02                     |   0/17 |        0/0 | gleiche Semantik, aber als Markdown-JSON-Codeblock abgewiesen  |
+| R04  | Transportnormalisierung              |  17/17 |        2/2 | kanonisch 0/17 Abweichungen zu R02/R03                         |
+| R05  | Koordinationsregel, drei Gates       |  17/17 |        2/3 | koordinierter `Abbruch` weiterhin fälschlich `MENTION_ONLY`    |
+
+Die R03-Rohantwort wurde nach Einführung der engen
+Transportnormalisierung ohne neuen Modellaufruf revalidiert. Danach waren
+17/17 IDs gültig, beide damaligen Kontrollen grün und alle 17 Bindings exakt
+identisch zu R02. R02, R03 und R04 besitzen denselben kanonischen
+Triage-SHA-256
+`66c53a6f1d211a4357c3fe65aefa807e83d41fcf3d92620da688c26b912398c1`.
+Damit war die Semantik in diesen drei Läufen stabil, das Rohformat jedoch nicht.
+
+Die anschließende manuelle Kontextprüfung fand einen bis dahin nicht
+abgesicherten fachlichen Fehler auf physischer Seite 27. In derselben Klausel
+„Kosten für Aufräumung, Abbruch und Isolierung … sind … mitversichert“ erhielt
+`Aufräumung` stabil `NARROW_SCOPE`, `Abbruch` aber stabil `MENTION_ONLY`.
+Eine dritte Golden-Control reproduziert diesen Fehler. Die allgemeine
+Promptregel, dass der gemeinsame Kostenbezug für alle koordinierten Glieder
+gilt, änderte R05 an keiner der 17 Entscheidungen und beseitigte den Fehler
+nicht. Prompttext allein ist für diese Fehlerklasse damit erneut kein
+hinreichender Fix.
+
+Laufzeit und Tokens:
+
+```text
+R01: 4.554 Prompt + 1.416 Completion; 46,249 Sekunden
+R02: 8.757 Prompt + 1.410 Completion; 49,177 Sekunden
+R03: 8.757 Prompt + 1.415 Completion; 33,931 Sekunden
+R04: 8.757 Prompt + 1.415 Completion; 34,435 Sekunden
+R05: 8.800 Prompt + 1.160 Completion; 43,343 Sekunden
+```
+
+Der zusätzliche `scopeLead` vergrößerte den Prompt erheblich. Die gemessenen
+Einzelläufe reichen wegen fehlendem Seed und schwankender Generierungsrate
+nicht für eine belastbare Laufzeitaussage. Sie zeigen nur, dass der
+Vier-Punkte-Pilot lokal weiterhin unter einer Minute blieb.
+
+#### Verifikation und Entscheidung
+
+```text
+Triagevertrag: 1 Suite / 11 Tests bestanden
+Fokussiert plus angrenzend: 8 Suites / 65 Tests bestanden
+Prettier: PASS
+git diff --check: PASS
+Private Laufordner: 700; private Dateien: 600
+Produktive Caller: 0
+Kundenrelease: keiner
+```
+
+Aktuelle Modul-/Vertragshashes:
+
+```text
+Triagevertrag: 8efa3b5ef5cf783523ced1ae8d1aee30b4e9f8b405905eaeefeecf8bd3322ee1
+Occurrence-Modul: 7221b9f974638aeda4678128632f38df216118e245c358eb506a2ec83c697447
+Triage-Systemprompt: 5a7d401cd97012a02a7bf65862fa6691a172304eacf574460baee9501b6b4982
+Golden-Controls: 9d0b226da55a8cbc9e0832c0dd2e4bd11938fc96427358b2441a441a228a92ac
+QA-Runner: 85dad15434904bcf9c1fa69132cb2183ba5a813886ba1351b83453f3039631ba
+R05-Report: 6c91862bf8a1dc099e4a4fc3328e196d7adcea73aaf4b5263337768f6fc226ec
+```
+
+Reviewentscheidung: `REVISE`. Bewiesen sind die begrenzte Candidate-ID-
+Schnittstelle, servereigene Quellenmaterialisierung, fail-closed Validierung,
+enge Transportnormalisierung und stabile Reproduktion zweier bekannter
+Scopefälle. Nicht bestanden ist die neue koordinierte Komponenten-Kontrolle.
+Dieser Befund darf nicht durch weitere Promptverlängerung oder eine
+automatische Nachkorrektur verdeckt werden.
+
+Es gibt weiterhin keine sichtbare Verbesserung im Kundenprodukt. WEVIGA,
+alle 36 VS-Punkte, Deckungswirkung, Betragsbindung und Kunden-Mac-Studio sind
+nicht getestet.
+
+## 19. INC-003C – Change Brief: serverattestierte Bindungsgruppen
+
+```text
+Increment-ID: INC-003C
+Datum: 26. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+Qwen klassifiziert in derselben Klausel „Kosten für Aufräumung, Abbruch und
+Isolierung“ Aufräumung als NARROW_SCOPE, Abbruch aber als MENTION_ONLY. Eine
+allgemeine Promptregel änderte keine der 17 Entscheidungen.
+
+Beobachtete Baseline:
+INC-003B R05 liefert 17/17 formal gültige Candidate-IDs, aber nur 2/3
+fachliche Golden-Controls. Der koordinierte Abbruch auf physischer Seite 27
+bleibt reproduzierbar falsch gebunden.
+
+Hypothese:
+Eine katalogseitig erlaubte und serverseitig konservativ erkannte
+SHARED_GOVERNOR-Gruppe kann Qwen sichtbar mitteilen und anschließend
+fail-closed prüfen, dass grammatisch gleichrangige Kandidaten dieselbe
+Kandidatenbindung besitzen müssen.
+
+Genau eine primäre Messvariable:
+Drei von drei fachlichen Golden-Controls bestehen in mindestens zwei frischen
+Realläufen; alle 17 Kandidatenbindungen sind zwischen diesen Läufen identisch.
+
+In Scope:
+- optionale Binding-Structure-Deklaration im VS-Pilotkatalog;
+- Gruppenbildung nur bei demselben Requirement, derselben Seite, demselben
+  Strukturkontext, demselben expliziten Governor und kontrollierter
+  Aufzählungssyntax;
+- stabile servereigene Binding-Group-ID und Candidate-Mitgliedschaft;
+- Gruppe im begrenzten Qwen-Payload;
+- fail-closed Ablehnung unterschiedlicher Bindings innerhalb einer Gruppe;
+- synthetische Positiv- und Übergruppierungs-Gegenkontrollen;
+- mindestens zwei frische LF-IMMO-Qwen-4B-Läufe.
+
+Out of Scope:
+- automatische Nachkorrektur eines Modellwertes;
+- Ableitung von Deckung, Betrag, Frist, Konflikt oder Kundenzeile;
+- produktiver Caller, UI, Persistenz, WEVIGA, VS-01 bis VS-36 und Kundenrelease.
+
+Betroffene Module und Caller:
+Pilotkatalog, reines Occurrence-/Strukturmodul, reiner Triagevertrag,
+Systemprompt, fokussierte Tests und privater QA-Runner. Keine produktiven Caller.
+
+Persistenz-/UI-/Runtime-Auswirkung:
+Keine Produktwirkung. Nur private QA-Artefakte im expliziten Laufordner.
+
+Historische Versuchsevidenz:
+R05 falsifiziert Prompt-only. Frühere Rollenbinder zeigten, dass plausible
+Modellzuordnungen ohne serverseitige Struktur- und Rollenregeln nicht genügen.
+
+Bekanntes Fehlermuster, das nicht wiederholt werden darf:
+Der Server darf nicht still MENTION_ONLY in NARROW_SCOPE umschreiben. Eine
+gemeinsame Bindungsgruppe darf keine gemeinsame Deckungswirkung behaupten.
+
+Erwartete Verbesserung:
+Das Modell erhält eine kleine, belegte Strukturrelation und kann nicht mehr
+unbemerkt zwei gleichrangige Glieder derselben Kostenphrase unterschiedlich
+triagieren.
+
+Mögliche Regression:
+Übergruppierung könnte getrennte Klauseln, kontrastierende Prädikate oder
+gliedspezifische Bedingungen fälschlich koppeln.
+
+Rollbackgrenze:
+Neue optionale Katalog-/Worksheet-/Triagefelder und isolierte Tests/Runner;
+keine Migration und keine Produktverdrahtung.
+
+Fokussierter Reproduktionstest:
+„Kosten für Aufräumung und Abbruch“ erzeugt eine Gruppe; getrennte Sätze,
+Listenpunkte und kontrastierende Prädikate erzeugen keine Gruppe.
+
+Angrenzende Regressionstests:
+Occurrence-Suche, Triagevertrag, atomarer Rollup, PageMap, Splitter,
+Fachvorlagen und bestehender Outputvertrag.
+
+Lokaler Realtest:
+Autoritative 31-seitige LF-IMMO-PDF, Worksheet neu erzeugen, zwei frische
+Qwen-4B-Läufe mit identischen Hashes und drei Golden-Controls vergleichen.
+
+Kunden-Mac-Studio-Test:
+Für den weiterhin isolierten Pilot noch nicht erforderlich.
+
+PASS-Kriterien:
+Zwei frische Läufe mit 17/17 IDs, 3/3 Controls und identischen 17 Bindings;
+keine Modellquelle, keine Übergruppierung, alle Regressionen grün.
+
+REVISE-Kriterien:
+Gruppenbildung ist zu breit/zu eng, Modell verletzt die Gruppe oder ein
+fachliches Gate bleibt rot.
+
+ROLLBACK-Kriterien:
+Produktpfad, Dokumentpersistenz oder bestehende Ausgabe werden verändert.
+```
+
+### Ergebnis INC-003C
+
+Die servereigene `SHARED_GOVERNOR`-Gruppe wurde isoliert umgesetzt und gegen
+Übergruppierung getestet. Der Katalog erlaubt sie nur für VS-21, dieselbe
+Klausel, denselben Governor und dieselbe kontrollierte Aufzählung. Zwei
+Vorkommen auf den physischen Seiten 6 und 27 wurden gruppiert; der
+Haftpflicht-Treffer auf Seite 18 blieb ausdrücklich ungruppiert.
+
+Die Modellintegration erreichte allein noch keinen stabilen PASS:
+
+```text
+R01: doppelte Zielrepräsentation; formal REVISE
+R02: ein Ziel ausgelassen; formal REVISE
+R03: eine lange ID beschädigt; formal REVISE
+R04: 17/17 formal, 1/3 Controls
+R05: 17/17 formal, 1/3 Controls
+Entscheidung INC-003C allein: REVISE
+```
+
+Das positive Teilergebnis ist die nachgewiesene Strukturgruppe. Der offene
+Fehler war nicht mehr die Gruppenbildung, sondern die Vermischung von
+Faktrolle und Scope im Modellurteil. Deshalb wurde kein produktiver Caller
+verdrahtet und INC-003D gestartet.
+
+## 20. INC-003D – Change Brief: Rollen- und Scopeachse trennen
+
+```text
+Increment-ID: INC-003D
+Datum: 26. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+Der kombinierte Triagewert vermischt Faktrollenpassung und Scopeweite. Im
+Einzelziellauf wird deshalb die Haftpflicht-Abbruchtätigkeit als engerer
+Abbruchkostenfall und eine echte enge Abbruchkostenklausel als bloße Erwähnung
+klassifiziert.
+
+Baseline:
+INC-003C R05: 15/15 Ziele und 17/17 Kandidaten formal, aber 1/3 fachliche
+Controls. Die serverattestierte Koordinationsgruppe funktioniert technisch.
+
+Hypothese und primäre Messvariable:
+Qwen entscheidet getrennt roleMatch und scopeMatch; der Server leitet den
+Legacy-Bindingwert deterministisch ab. Zwei frische Läufe erreichen jeweils
+17/17 Kandidaten, 3/3 Controls und identische Entscheidungen.
+
+In Scope:
+- katalogseitige Faktrollen für den VS-Pilot;
+- getrennte Enumachsen MATCH/MISMATCH/UNRESOLVED und
+  GENERAL/NARROW/OTHER_SCOPE/UNRESOLVED;
+- deterministische, getestete Ableitung auf DIRECT/NARROW_SCOPE/
+  MENTION_ONLY/UNRESOLVED;
+- weiterhin ein kleines Ziel pro Modellcall und serverseitige Aggregation.
+
+Out of Scope:
+Deckungswirkung, Betrag, Konflikt, Quellenformulierung, Produktcaller, UI,
+WEVIGA, VS-36 und Kundenrelease.
+
+Hauptrisiko:
+Das Modell kann auch die getrennten Achsen semantisch verwechseln. Der Server
+darf daraus keine Deckung ableiten und muss ungültige Kombinationen ablehnen.
+
+PASS:
+Zwei frische LF-Läufe mit 3/3 Controls, identischen 17 Bindings, allen
+Regressionen grün und ohne modellgenerierte IDs oder Quellen.
+```
+
+### Ergebnis INC-003D
+
+`roleMatch` und `scopeMatch` sind nun orthogonale Achsen. Der Server leitet
+daraus ausschließlich den Kandidatenbindungswert ab; Deckung, Betrag,
+Konflikt und Kundenzeile bleiben außerhalb dieses Inkrements. Für die
+VS-21-Kostenrollen gelten konservative Regeln:
+
+- Eine nachgewiesene gemeinsame Kosten-Governor-Struktur oder ein explizites
+  Kostenwort belegt nur die Faktrolle `COST`.
+- Fehlt dieser Rollenbeleg, bleibt der Kandidat serverseitig `UNRESOLVED`.
+- Katalogseitig deklarierte, im selben Strukturkontext gefundene Sonderfall-
+  Aliase belegen nur `scopeMatch: NARROW`.
+- Alle nicht serverseitig belegten Achsen bleiben Modellentscheidungen; ein
+  ungültiges oder zusätzliches Modellfeld beendet den Lauf fail-closed.
+
+Der Verlauf war bewusst nicht glattgebügelt:
+
+```text
+R01: 17/17 formal, 1/3 Controls – Modell verwechselt Rolle und Scope weiter
+R02: 17/17 formal, 3/3 Controls – erster PASS
+R03: 17/17 formal, 2/3 Controls – Spezialmüll schwankt DIRECT/NARROW_SCOPE
+R04: fail-closed – Modell liefert ein nicht angefordertes Zusatzfeld
+R05: 17/17 formal, 3/3 Controls – PASS
+R06: 17/17 formal, 3/3 Controls – PASS
+```
+
+R05 und R06 verwendeten unverändert dasselbe neu aus der autoritativen
+31-seitigen LF-IMMO-PDF erzeugte Worksheet und dieselben Verträge:
+
+```text
+PDF-SHA256: 2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62
+Worksheet-SHA256: e583e0cae4cf2d3b375c96d75dd7c639a392ca481a13b779b8f6b2e6aa97838e
+Triagevertrag-SHA256: 2d02e757e0aa8b61d4bafd9677df40b2190eef7695e2e8eab4f5019720d7fbe2
+Occurrence-Modul-SHA256: 7b645e3ea95738fafce4a17b2e1c8b3e0c9b4679efc3160c403a4456cbe1ff02
+Pilotkatalog-SHA256: 32b2dcef749820610fe4ec699c4863fa8c1fcae0a77ebdc7abb11d27370f0822
+Systemprompt-SHA256: 88839028e15b3aea90111f5fca05b25ba40176ba1e1b90cfe62a4b49d6805f51
+Controls-SHA256: 1c6744a63b83b5e1a5ecfcc1d2c2af76f59447e8a4dd311ae907a923184fe667
+QA-Runner-SHA256: d2d2d0f3f65d3382dbe6f3857e9684e4a66cdd703a92e4667904400950899a64
+Validierte R05/R06-SHA256: 8d39c1269e02f7709e046aa83d466a605f5bca4de42e32efa96cf5f76ba8b947
+R05-Report-SHA256: 71ddd7ab175c397e4b93156fba9525afa9f4253e9fede3fea5911a0025cc6b75
+R06-Report-SHA256: 08acc575dd5281ff024e6e3cbeb28c3ceb8c613693c40f4d3e2f9e499bb7607e
+```
+
+Beide Läufe erzeugten 15 Ziele für 17 Kandidaten. Elf Ziele wurden
+fail-closed oder positiv serverseitig terminiert; nur vier isolierte Ziele
+gingen an Qwen 4B. Die validierten 17 Bindings sind bytegenau identisch.
+Die drei Controls liefern in beiden Läufen:
+
+```text
+Haftpflicht-Abbruch, Seite 18: UNRESOLVED (kein falsches COST-Direktbinding)
+Sondermüll-Abbruchkosten, Seite 27: NARROW_SCOPE
+radioaktiver Abbruch, Seite 27: NARROW_SCOPE
+```
+
+Verifikation:
+
+```text
+Fokussiert: 2 Suites / 36 Tests bestanden
+Fokussiert plus angrenzend: 8 Suites / 81 Tests bestanden
+Prettier: PASS
+git diff --check: PASS
+Private Laufordner: 700; private Dateien: 600
+Produktive Caller: 0
+Kundenrelease: keiner
+```
+
+Reviewentscheidung: `PASS` für den isolierten LF-IMMO-VS-Kandidatenpilot.
+Das ist ausdrücklich kein PASS für VS-01 bis VS-36, WEVIGA, Deckungswirkung,
+Betragsbindung, Excel-Ausgabe oder das Kundenprodukt. Das Scope-Alias-Gate ist
+deterministisch, aber nur innerhalb des serverseitig gewählten
+Strukturkontexts; seine Aliasabdeckung und Überbindungsrate müssen vor einer
+Ausweitung mit einem größeren Oracle gemessen werden.
+
+## 21. Unmittelbar nächster kontrollierter Schritt
+
+1. Den erreichten Pilot-PASS nicht direkt in den Produktpfad übernehmen.
+2. Als eigenes nächstes Inkrement ein kleines, prüferbestätigtes VS-Oracle mit
+   positiven und negativen Scope-Alias-Gegenfällen definieren.
+3. Erst danach denselben Candidate-Preparation-Pfad auf einen begrenzten
+   WEVIGA-VS-Ausschnitt anwenden und LF gegen WEVIGA vergleichen.
+4. Bei stabiler Candidate-Bindung als separates Inkrement die Betrags- und
+   Limitrolle prüfen; erst anschließend ist ein VS-Kundenzeilen-Rollup zulässig.
+5. Ein Kunden-Mac-Studio-A/B erfolgt erst mit einem expliziten Releasekandidaten
+   und identischen PDF-, Katalog-, Modell- und Prompt-Hashes.
+
+## 22. INC-003E - Change Brief: Scope-Oracle und begrenzter WEVIG-Vergleich
+
+```text
+Increment-ID: INC-003E
+Datum: 27. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerproblem:
+Der LF-Pilot ist auf drei Controls positiv, beweist aber weder ausreichende
+positive/negative Scope-Abdeckung noch die Übertragbarkeit auf WEVIG.
+
+Autoritative Quellen:
+LF: 31 Seiten, SHA256 2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62
+WEVIG: 21 Seiten, SHA256 a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16
+
+Unveränderte WEVIG-Baseline:
+13 Kandidaten, aber nur 1/8 Komponenten. Gefunden wurde nur demolition_costs.
+Die PDF enthält zusätzlich die kontrollierbaren Varianten „Aufräum- und
+Abbruchkosten“ sowie „Entgang von Mietzinseinnahmen“. Fehlende Treffer waren
+daher Aliaslücken, keine belegten Inhaltslücken.
+
+Zusätzlicher Baselinefehler:
+In langen Fallback-Kontexten markierte ein späteres „radioaktiv“ eine frühere
+allgemeine Abbruchkostenstelle als NARROW. Der Scope-Alias war nur an den
+gesamten Kontext, nicht an den Satz der Occurrence gebunden.
+
+Hypothese:
+Scope-Aliase müssen auf den occurrence-genauen Satz begrenzt werden.
+Katalogdeklarierte, identische Mehrkomponenten-Spans dürfen Aufräum- und
+Abbruchkosten als gemeinsame Kandidatenbindung tragen, ohne Deckung oder
+Beträge abzuleiten.
+
+In Scope:
+- Satzgebundenes Scope-Alias-Gate mit Überbindungs-Gegenkontrolle;
+- katalogdeklarierter SHARED_SPAN für exakte zusammengesetzte Kostenphrasen;
+- zwei belegte WEVIG-Aliasvarianten;
+- kleiner WEVIG-Control-Draft mit Sparten-Positivfällen und zwei
+  Haftpflicht-Negativfällen;
+- isolierte LF-/WEVIG-Worksheets und Qwen-4B-Läufe.
+
+Out of Scope:
+Prüferfreigabe vortäuschen, Coverage-/Betragsrollup, VS-36, Produktcaller,
+UI, Excel, Kundenrelease.
+
+PASS-Kriterien:
+- allgemeine Abbruchkosten werden durch ein späteres Sonderwort nicht narrow;
+- WEVIG erreicht kontrollierte Kandidaten für cleanup_costs, demolition_costs
+  und rent_loss, ohne Garage/Räume aus Oberbegriffen zu erfinden;
+- alle neun WEVIG-Draft-Controls in zwei unveränderten Läufen stabil;
+- LF-Golden-Controls und angrenzende Regressionen bleiben grün.
+
+REVIEW_REQUIRED:
+Die fachliche Einstufung der spartenbezogenen WEVIG-Fälle als NARROW_SCOPE
+muss vor Produktfreigabe vom Prüfer bestätigt werden. Ein technischer PASS
+ersetzt diese Bestätigung nicht.
+```
+
+### Ergebnis INC-003E
+
+Der begrenzte Vergleich ist technisch positiv. Der unveränderte WEVIG-
+Ausgangspunkt fand 13 Kandidaten und nur `demolition_costs` (1/8
+Pilotkomponenten). Nach der kataloggebundenen Erweiterung entstanden 22
+Kandidaten für `cleanup_costs`, `demolition_costs` und `rent_loss` (3/8),
+darunter sechs `SHARED_SPAN`-Gruppen. Für Garagen oder Räume wurden keine
+unbelegten Oberbegriffe ergänzt.
+
+Dabei wurde ein systemischer Fehler vor der Ausweitung behoben: Scope-Aliase
+werden nur noch im occurrence-genauen Satz ausgewertet. Ein späteres
+`radioaktiv` im selben langen Fallback-Kontext kann daher eine frühere
+allgemeine Abbruchkostenstelle nicht mehr als engen Sonderfall markieren.
+Zusätzlich verwendet die Modelltriage nun ein einheitliches Schema mit
+`roleMatch` und `scopeMatch`. Serverseitig belegte Achsen müssen exakt
+zurückgegeben werden; ein Modellwiderspruch beendet den Lauf fail-closed.
+
+Der reale Laufverlauf bleibt vollständig sichtbar:
+
+```text
+WEVIG R01: REVISE – Qwen lieferte im alten dynamischen Schema ein Zusatzfeld
+WEVIG R02: ABGEBROCHEN – erste Modellantwort hing; LM-Studio-Umgebungsfehler
+WEVIG R03: technischer PASS – 22/22 Kandidaten, 9/9 Draft-Controls
+WEVIG R04: technischer PASS – 22/22 Kandidaten, 9/9 Draft-Controls
+WEVIG R05: TECHNICAL_PASS_REVIEW_REQUIRED – 22/22, 9/9
+LF R01:    PASS – 17/17 Kandidaten, 3/3 bestehende Controls
+```
+
+R03 und R04 erzeugten bytegenau dieselben 22 validierten Bindings. Die neun
+WEVIG-Controls bestehen aus sieben spartenbezogenen Kosten-/Mietverlustfällen
+und zwei Haftpflicht-Negativkontrollen. Ihre Datei trägt ausdrücklich
+`reviewStatus: REVIEW_REQUIRED`. Die beiden bereits erzeugten Reports zeigen
+noch `PASS`, weil die Runner-Ausgabe für diesen Reviewstatus erst anschließend
+präzisiert wurde. R05 bestätigt den neuen Status
+`TECHNICAL_PASS_REVIEW_REQUIRED` im echten Lauf. Die historischen Reports
+werden nicht nachträglich verändert. R03, R04 und R05 enthalten bytegenau
+dieselben validierten Bindings.
+
+```text
+WEVIG-PDF-SHA256: a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16
+WEVIG-Worksheet-SHA256: 050c3ae9a9c61b6ece65e4b336703b34caad7f8af9d70de61a0fad6625d73fdc
+LF-Worksheet-SHA256: d4f9fa134359aecb93721f2f8f5702bcffe690795ad2442f4ee81b3fe5ab30f1
+Triagevertrag-SHA256: 344c7f59318dc32405d1c10a53d5d3034149ae419c3dff84a8e3af4323b771e8
+Occurrence-Modul-SHA256: 9d9c71d5b361849b6b8c075dbd457e195fa2e16c5aa1cf92bbac999326559d72
+Pilotkatalog-SHA256: c86443c02b89a1c3b9dbd14d93df1823c1f0273c9ae117a38d738a1beb5a23a9
+Systemprompt-SHA256: 154cb54212239b39946e7870cb817c47cf69591232393dcf3ae30995324f4274
+WEVIG-Draft-Controls-SHA256: 0d62def42c70d66b552a712975c8abaeecda855a750758860b39fa5a50193929
+QA-Runner-SHA256: 0a6779833bd764efc328a4fd7af43718de14460ecd7d56f4cfd2905937192215
+Oracle-Draft-SHA256: 9c92211f93cbc8777eb735ea0640d4eb5d01fd7e1726623270d89fe31b317928
+WEVIG R03/R04/R05 validiert-SHA256: e39fee4eeade7787621f2189bb7b76889f8a94aa065a6de986289c6b9e30c2c3
+LF R01 validiert-SHA256: ba88f7841c981be3d097efd8ed979648c96c0ee67e74d02eb4ea5942b843c5a0
+WEVIG R03-Report-SHA256: 8023944e799a58acc28c2f649f7aa9e042593a3d75f7fa4c02f68a8f0d40f1f6
+WEVIG R04-Report-SHA256: 454b8edb04286b20854ca23c38b80d406aa96e13c64c9145f54aa0f97659d4a3
+WEVIG R05-Report-SHA256: 21180261ff14174a3aecef57b07d566a5f9f16479d81c9c9a986ddc1cf241676
+LF R01-Report-SHA256: 929ae5940a312ab83d1d2579cd1fb0cb68009e2ce2a60af3d42ab020c9e8360d
+```
+
+Verifikation:
+
+```text
+Finale angrenzende Regression: 8 Suites / 79 Tests bestanden
+Prettier: PASS
+Node-Syntax: PASS
+git diff --check: PASS
+Private Laufordner: 700; private Dateien: 600
+Produktive Caller: 0
+Kundenrelease: keiner
+```
+
+Die Laufzeit ist noch kein PASS-Kriterium: R03 und R04 schwankten bereits
+stark; R05 meldet bei identischen 18.600 Tokens nochmals eine auffällige
+interne Modelldauer. Diese Metrik wird nicht als fachlicher Fehler gewertet,
+aber vor einem Kundenrelease separat gegen das Laufzeitbudget geprüft.
+
+Reviewentscheidung: `PASS` für den isolierten technischen Oracle-Draft und
+den begrenzten LF-/WEVIG-Kandidatenvergleich. `REVIEW_REQUIRED` bleibt für die
+fachliche Scope-Freigabe und jede Produktübernahme. Die zwölf zu bestätigenden
+Fälle stehen in `docs/VS_SCOPE_ROLLEN_ORACLE_DRAFT_DE.md`. Zwei bekannte
+Implementierungslücken bleiben bewusst offen: rechtsköpfige Kostenkoordination
+bei LF (OR-03) und beim radioaktiven WEVIG-Fall (OR-09). Beide bleiben
+`UNRESOLVED`; es wird keine Deckung daraus abgeleitet.
+
+## 23. INC-003F - Change Brief: Koordination und VS-/EL-/FE-Prompt-A/B
+
+```text
+Increment-ID: INC-003F
+Datum: 27. August 2026
+Ausgangs-Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Nutzerziel:
+Die offenen Koordinationsfälle nicht isoliert belassen, sondern auf LF und
+WEVIG mehrere echte Beispiele in VS, EL und Feuer prüfen. Die fertigen
+Kategorieprompts müssen als unveränderte Baseline erhalten bleiben; getrennte
+angepasste Prompts sollen den Nutzen occurrence-genauer Vorbereitung messen.
+
+Originalprompt-Lock:
+VS: 0ff41d99eaa30eb516af5c60f536a39f381ce7184a46bbed4ce69525e47f466a
+EL: d5b1c465f20836d6d3069aaba89b1d5d22d3eaeed1649a92638c7e1d3b304628
+FE: f2bf41109b04e9d907ed7a9af82c1c4270b653718e2f168beb9c5f6132039637
+
+Beobachtete Baselinehürde:
+Der generische Kategorievalidator liest derzeit nur IDs im Muster EL-01.
+FE-A01 bis FE-F10 werden nicht erkannt. Das muss vor einem belastbaren
+Feuer-Baselinelauf mit einem fokussierten Test korrigiert werden.
+
+In Scope:
+- OR-03/OR-09 und synthetische Koordinations-Gegenfälle;
+- mehrere belegte und negative Fälle je VS, EL und FE auf beiden PDFs;
+- Originalprompt-/globaler Kontext als Baseline;
+- getrennte angepasste Prompts mit serverseitig enumerierten Evidenzspans;
+- mindestens zwei Wiederholungen kritischer angepasster Pfade;
+- formale, evidenzielle und fachliche Draft-Controls.
+
+Out of Scope:
+Originalprompts überschreiben, Produktcaller, UI/Excel, Kundenrelease,
+juristische Vollgarantie und automatische Freigabe ungeprüfter Domainwerte.
+
+PASS:
+Die Koordinationsfehler sind fail-closed oder korrekt gruppiert; die
+angepasste Vorbereitung verbessert messbar Quellenbindung/Komponentenabdeckung
+ohne neue False Positives; Wiederholungsläufe sind stabil; bestehende LF- und
+WEVIG-Regressionen bleiben grün.
+```
+
+### Ergebnis INC-003F
+
+Der lokale A/B-Vergleich ist für den isolierten technischen Pilot positiv.
+Die unveränderten fertigen VS-, EL- und FE-Prompts blieben bytegleich; alle
+sechs Vollprompt-Gegenläufe auf LF und WEVIG endeten `REVISE`. Die finalen
+angepassten Läufe erreichten dagegen:
+
+```text
+VS LF:      17/17 Kandidaten, 5/5 Controls; zweimal grün
+VS WEVIG:   28/28 Kandidaten, 13/13 Controls; zweimal grün
+EL LF:      12/12 Komponenten, 11/11 Controls; zweimal grün
+EL WEVIG:   12/12 Komponenten, 11/11 Controls; zweimal grün
+FE LF:      9/9 Komponenten, 9/9 Controls; zweimal grün
+FE WEVIG:   9/9 Komponenten, 9/9 Controls; zweimal grün
+```
+
+Wesentliche erreichte Invarianten:
+
+- rechtsköpfige Kostenkoordination ist nur katalogdeklariert zulässig;
+- occurrence-genauer Fokus verhindert Scope-Überfärbung durch Nachbarklauseln;
+- physische PDF-Seite und sichtbare Seitenbezeichnung bleiben getrennt;
+- EL-16 rollt zu `COMPLETE + MIXED + NONE`, nicht zu Widerspruch;
+- Objektfund und verlangte Schadenart sind getrennte Komponenten;
+- eindeutiger Haftpflicht- und enger Sondermüll-Scope wird fail-closed und
+  auditierbar aus der generischen Deckungsentscheidung gehalten;
+- Modellquellen und unbekannte Candidate-IDs sind nicht zulässig;
+- WEVIG wird als `PROPOSED_ONLY` geführt;
+- FE-IDs mit Buchstabengruppe werden vom QA-Vertrag erkannt.
+
+Finale Regression:
+
+```text
+6 Suites / 87 Tests bestanden
+Prettier: PASS
+Baseline: 6/6 REVISE
+Angepasste finale Paare: 6/6 technisch positiv
+Produktive Caller: 0
+Kundenrelease: keiner
+```
+
+Die vollständige Laufmatrix, konkrete Fehlervorher-/nachher-Beispiele,
+Report-Hashes und Grenzen stehen in
+`docs/VS_EL_FE_PROMPT_AB_VERGLEICH_DE.md`.
+
+Reviewentscheidung:
+
+```text
+PASS: isolierter technischer Pilot und lokale A/B-Evidenz
+REVIEW_REQUIRED: Fachoracle, Aliasabdeckung und WEVIG-Dokumentstatus
+NO_RELEASE: keine Produktintegration, kein Kunden-Mac-Studio-Gegenlauf
+```
+
+## 24. INC-004 - Vollkategorie-Baseline und finaler Pilotgegenlauf
+
+```text
+Increment-ID: INC-004
+Datum: 27. August 2026
+Branch / HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Ziel:
+LF und WEVIG über alle acht Kundenkategorien als aktuelle Baseline laufen
+lassen, die occurrence-genaue Vorbereitung auf alle 320 sichtbaren IDs
+erweitern und den wirklich kontrollierten VS-/EL-/FE-Pfad aus demselben
+Code-/Promptstand wiederholen.
+
+Harte Grenze:
+Ein Vollkatalog ohne flächendeckendes Oracle, Wertbindung und Produktcaller
+darf nicht als fachlich evaluiert oder releasefähig bezeichnet werden.
+```
+
+### Ergebnis
+
+- Originalprompt-Baseline: 16/16 terminal, 636/640 Zeilen, 15 `REVISE`.
+- VB/LF war der einzige formale PASS, aber 36/36 Zeilen waren `UNGEKLÄRT`.
+- Baseline: 3.490,299 Sekunden Modellzeit und 77:29 Minuten Wandzeit.
+- Finale Full-Draft-Worksheets: 16/16, 320/320 IDs, 533 atomare
+  Komponenten, exakte Prompt-ID-/Reihenfolge-/Label-Parität.
+- Aktueller VS-/EL-/FE-Gegenlauf: 6/6
+  `TECHNICAL_PASS_REVIEW_REQUIRED`, 60/60 Kontrollen, 4:25 Minuten Wandzeit.
+- EL/LF: EL-16 = `COMPLETE + MIXED + NONE`; EL-08 und EL-19 =
+  `PARTIAL + NOT_DETERMINABLE`.
+- Fokussierte Endregression: 7 Suites / 104 Tests bestanden.
+
+Neu gehärtete Gates:
+
+- leere, doppelte, unbekannte oder unvollständig abgedeckte Prepared-Controls
+  scheitern fail-closed;
+- leere, doppelte oder unvollständige VS-Triage-Controls scheitern
+  fail-closed;
+- nur `APPROVED` darf einen echten PASS erzeugen;
+- angeforderte Werte/Felder werden bis zu ihrer Implementierung ausdrücklich
+  `NOT_EVALUATED`, nie still als geprüft markiert;
+- alle acht Full-Draft-Kataloge werden persistent gegen die ausgelieferten
+  Prompts auf ID, Reihenfolge und sichtbares Label geprüft.
+
+Reviewentscheidung:
+
+```text
+POSITIVE: occurrence-genaue Vorbereitung und 17 kontrollierte Pilot-IDs
+REVISE: vollständige 320-ID-Semantik, Werte/Relationen und Produktintegration
+NO_RELEASE: kein Kunden-Mac-Lauf und keine unabhängigen Holdouts
+```
+
+Die vollständige Matrix und Beweisgrenze stehen in
+`docs/VOLLKATEGORIE_AB_VERGLEICH_INC004_DE.md`.
+
+## 25. INC-005 - VS-Pilot-Renderer und Kunden-Hardware-RC
+
+```text
+Increment-ID: INC-005
+Datum: 27. August 2026
+Branch / Ausgangs-HEAD: codex/polizzenvergleich-v3 / c2e9cb27
+
+Ziel:
+Den occurrence-genauen VS-Pilot für vier vorab eingefrorene Kategorien auf
+LF und WEVIG bis zur gleichen achtspaltigen Kundentabelle führen, lokal gegen
+ein Oracle stabilisieren und als diagnostischen RC für Qwen 3.8 27B auf dem
+Kunden-Mac bereitstellen.
+
+Scope:
+VS-16, VS-17, VS-21 und VS-28 × LF/WEVIG = 8 Dokument-/Zeilenzellen.
+
+Harte Grenze:
+GO für Kunden-A/B bedeutet nicht Produkt-PASS für VS-36 oder alle acht
+Kategorien. Fehlende Evidenz bleibt offen; WEVIG bleibt PROPOSED_ONLY.
+```
+
+### Implementierung
+
+Der Pilotpfad ist jetzt als expliziter QA-Vertical-Slice ausführbar:
+
+1. vollständige occurrence-genaue Kandidatensuche auf der V3-PageMap;
+2. begrenzte Kandidatentriage;
+3. begrenzte Komponentenwirkung mit bekannten Candidate-IDs;
+4. serverseitige Bindung von `VS-21.limit` und `VS-28.duration`;
+5. deterministischer Renderer im bestehenden Acht-Spalten-Vertrag;
+6. PDF-/Dokumentstatus-/Oracle-Gates und semantischer Wiederholungsvergleich;
+7. ein A/B-Befehl für denselben Modell- und Hardwarezustand.
+
+Im ersten realen Gegenlauf wählte Qwen 4B bei WEVIG nur allgemeine
+Definitionen und ließ positive spartenspezifische Positionen aus. Die Lösung
+ist kein freies Promptversprechen: Nach einem `INCLUDED`-Modellurteil vereinigt
+der Server ausschließlich triagierte `NARROW_SCOPE`-Kandidaten mit explizitem
+Positivmarker. Negativ- und Unklarheitskontrollen verhindern die automatische
+Übernahme von Ausschlüssen. Der gezielte Lauf verbesserte sich dadurch von
+5/8 auf 8/8 Wirkungskontrollen.
+
+### Lokales Ergebnis
+
+```text
+Modell: qwen3.5-4b-mlx
+Wiederholungen: 2
+Dokumentläufe: 4/4 PASS
+Oracle: 16/16 Zeilen PASS
+Triage: LF 5/5, WEVIG 13/13 je Lauf
+Wirkung: LF 8/8, WEVIG 8/8 je Lauf
+Tabellenvertrag: 4/4 PASS
+Stabilität: LF und WEVIG PASS, semantische Snapshots je Dokument identisch
+```
+
+Der abschließende Current-Tree-Lauf `R11` bestand den Pilotpfad zweimal mit
+4/4 Dokumentläufen und 16/16 Oracle-Zeilen. Der vollständige A/B-Smoke `R12`
+ergab auf beiden Dokumenten einen messbaren Vorteil:
+
+```text
+LF:    Legacy A 0/4, Pilot B 4/4 Oracle-Zeilen
+WEVIG: Legacy A 0/4, Pilot B 4/4 Oracle-Zeilen
+A/B-Gate: PASS, positiveEffectObserved = true
+```
+
+Das A/B-Gesamttor verlangt nun zusätzlich exakte Completion- und
+Embedding-Modell-IDs, ein nach dem Lauf exakt geladenes LM-Studio-Modell, die
+finale servergerenderte Zeile einschließlich Inhalt/Wert/Seite/Candidate-ID
+sowie einen echten Oracle-Vorteil von B gegenüber A. Candidate- und
+Quellenmengen werden geschlossen verglichen; zusätzliche Quellen sind damit
+ebenso ein Fehler wie fehlende. Die WEVIG-Dauer für `VS-28` wird nur noch aus
+den Mietzinspositionen auf den physischen Seiten 1, 2 und 4 gebunden, nicht aus
+dem davorstehenden Ersatzunterkunftsabschnitt auf Seite 9. Private
+Laufartefakte landen standardmäßig unter dem lokalen
+macOS-Application-Support-Pfad und nicht in `Documents`.
+
+Release-Gates des finalen Arbeitsstands:
+
+```text
+Jest: 76 Suites / 790 Tests PASS
+Server-Lint: PASS
+Frontend-Produktionsbuild: PASS
+macOS-Installer-Test: PASS
+git diff --check / Shell-Syntax: PASS
+```
+
+Der sichtbare Pilot unterscheidet nun korrekt zwischen belegter Deckung,
+Teilbeleg und fehlender Evidenz. Limits und Dauer stammen ausschließlich aus
+servergebundenen Kandidaten. WEVIG-Zeilen tragen sichtbar den Vorschlagsstatus.
+
+Releaseentscheidung:
+
+```text
+PASS: lokaler 4B-Vertical-Slice und eingefrorenes 8-Zellen-Oracle
+GO: diagnostischer Kunden-Hardware-RC v3.2.2-rc.1
+REVIEW_REQUIRED: Qwen-3.8-27B-A/B auf Kunden-Mac
+NO PRODUCT PASS: VS-36, übrige Kategorien, Holdouts und Mehrdokumentpakete
+```
+
+Bedienung, erwartete Tabellenwerte und Beweisgrenzen stehen in
+`docs/RELEASE_V3.2.2_RC1_DE.md`.

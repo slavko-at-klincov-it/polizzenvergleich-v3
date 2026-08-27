@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "vs-prepared-controls-lf-v0.1",
+  "reviewStatus": "APPROVED",
+  "controls": [
+    {
+      "id": "lf-vs16-garage",
+      "requirementId": "VS-16",
+      "componentId": "garage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [3]
+    },
+    {
+      "id": "lf-vs16-underground-garage",
+      "requirementId": "VS-16",
+      "componentId": "underground_garage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [4]
+    },
+    {
+      "id": "lf-vs17-waste-room-missing",
+      "requirementId": "VS-17",
+      "componentId": "waste_room",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "lf-vs17-bicycle-room-ambiguous",
+      "requirementId": "VS-17",
+      "componentId": "bicycle_room",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [4]
+    },
+    {
+      "id": "lf-vs17-stroller-room-missing",
+      "requirementId": "VS-17",
+      "componentId": "stroller_room",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "lf-vs21-cleanup-costs",
+      "requirementId": "VS-21",
+      "componentId": "cleanup_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [5],
+      "forbiddenPhysicalPages": [18, 30]
+    },
+    {
+      "id": "lf-vs21-demolition-costs",
+      "requirementId": "VS-21",
+      "componentId": "demolition_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [5],
+      "forbiddenPhysicalPages": [18, 30]
+    },
+    {
+      "id": "lf-vs28-rent-loss",
+      "requirementId": "VS-28",
+      "componentId": "rent_loss",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [5]
+    }
+  ]
+}

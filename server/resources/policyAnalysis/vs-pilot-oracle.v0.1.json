@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "oracleId": "vs-pilot-lf-wevig-v0.1",
+  "scope": {
+    "categoryIds": ["VS-16", "VS-17", "VS-21", "VS-28"],
+    "documentCount": 2,
+    "rowDocumentCount": 8
+  },
+  "documents": [
+    {
+      "documentKey": "LF",
+      "pdfSha256": "2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62",
+      "physicalPages": 31,
+      "documentStatus": "FRAMEWORK_TERMS",
+      "rows": [
+        {
+          "categoryId": "VS-16",
+          "coverage": "Ja",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": [
+            "Garagen: eingeschlossen",
+            "Tiefgarage: eingeschlossen"
+          ],
+          "reviewStatus": "BELEGT",
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "normalizedValues": [],
+          "requiredCandidateIds": [
+            "candidate:c8bb8a8d1944bd2db58e919bf0b23221882086f6a3fb63fdc662b0863d5151e1",
+            "candidate:8be392304d6fa7ccdf8e6a3584658749fb8e26dac8b5b078ddd6813fff48b648"
+          ],
+          "requiredSourcePages": [3, 4],
+          "forbiddenSourcePages": []
+        },
+        {
+          "categoryId": "VS-17",
+          "coverage": "Nicht feststellbar",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": [
+            "Müllräume: nicht feststellbar",
+            "Fahrradräume: nicht feststellbar",
+            "Kinderwagenräume: nicht feststellbar"
+          ],
+          "reviewStatus": "TEILBELEGT",
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "normalizedValues": [],
+          "requiredCandidateIds": [
+            "candidate:8c0a92de1d65c5ca39cb36a4ef0b14ab4685a7f734aa3e38bf41c530434e3b9d"
+          ],
+          "requiredSourcePages": [4],
+          "forbiddenSourcePages": []
+        },
+        {
+          "categoryId": "VS-21",
+          "coverage": "Ja",
+          "coverageAmount": "10 %, 15 %",
+          "documentedContentIncludes": [
+            "Aufräumkosten: eingeschlossen",
+            "Abbruchkosten: eingeschlossen"
+          ],
+          "reviewStatus": "BELEGT",
+          "requestedFieldStatus": "COMPLETE",
+          "normalizedValues": ["10 %", "15 %"],
+          "requiredValueCandidateIds": [
+            "candidate:2b6f11efa515e80cfd958a0d57ea067fba02a5d56caf02e956dcc57017a15a79",
+            "candidate:ba58739e8119162edfef9724f9fbbc38df5c48b2fbf3f37efc7f0160dc5f0533"
+          ],
+          "requiredValueSourcePages": [5],
+          "requiredCandidateIds": [
+            "candidate:18cd73aa5524e82ccf23bb6046bcb680c1c6ad3bbcb1cab20b35760c906e9c06",
+            "candidate:1e6650da88cf3656e764e694cdd9018b722ee44526f90149312ea710653a030c",
+            "candidate:45c27ec8c6ad68eb845952247aba6e61722e884db60ee587735cf9f84694a163",
+            "candidate:65a654b61ad8ebae9ed60ac4ebacb5fa54258c22b563dfae2d9a9816bc0c242b",
+            "candidate:65ca9006288ccef8d37702c01ed3214b2c7d4c179e51b50f39ed839a1213826d",
+            "candidate:65ec18c3a95df0e02750ef423cd8d1172b1d8f0dcd24715b99024cf4ab0c396e",
+            "candidate:a7fd9e837fc26c6267d41bb9c65104023303d4ba7a1e3a9168b4390a4dce0fe2",
+            "candidate:ba58739e8119162edfef9724f9fbbc38df5c48b2fbf3f37efc7f0160dc5f0533",
+            "candidate:2b6f11efa515e80cfd958a0d57ea067fba02a5d56caf02e956dcc57017a15a79",
+            "candidate:fcd04b97dc7868266ee0dcd088d9a54e7968704d716f03e8d7c22aa899ea3582"
+          ],
+          "requiredSourcePages": [5, 6, 22, 27],
+          "forbiddenSourcePages": [18, 30]
+        },
+        {
+          "categoryId": "VS-28",
+          "coverage": "Ja",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": [
+            "Mietzinsentgang: eingeschlossen",
+            "Dauer: 6 Monate"
+          ],
+          "reviewStatus": "BELEGT",
+          "requestedFieldStatus": "COMPLETE",
+          "normalizedValues": ["6 Monate"],
+          "requiredValueCandidateIds": [
+            "candidate:897394a5ddfcff2fd3b7f51dfabe1b0df4c573e451475040339447d35777f72f"
+          ],
+          "requiredValueSourcePages": [5],
+          "requiredCandidateIds": [
+            "candidate:897394a5ddfcff2fd3b7f51dfabe1b0df4c573e451475040339447d35777f72f"
+          ],
+          "requiredSourcePages": [5],
+          "forbiddenSourcePages": []
+        }
+      ]
+    },
+    {
+      "documentKey": "WEVIG",
+      "pdfSha256": "a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16",
+      "physicalPages": 21,
+      "documentStatus": "PROPOSAL",
+      "rows": [
+        {
+          "categoryId": "VS-16",
+          "coverage": "Nicht feststellbar",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": ["keine belegte Fundstelle gefunden"],
+          "reviewStatus": "UNGEKLÄRT",
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "normalizedValues": [],
+          "requiredCandidateIds": [],
+          "requiredSourcePages": [],
+          "forbiddenSourcePages": []
+        },
+        {
+          "categoryId": "VS-17",
+          "coverage": "Nicht feststellbar",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": ["keine belegte Fundstelle gefunden"],
+          "reviewStatus": "UNGEKLÄRT",
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "normalizedValues": [],
+          "requiredCandidateIds": [],
+          "requiredSourcePages": [],
+          "forbiddenSourcePages": []
+        },
+        {
+          "categoryId": "VS-21",
+          "coverage": "Ja",
+          "coverageAmount": "EUR 6.121.600,00",
+          "documentedContentIncludes": [
+            "Vorschlag (PROPOSED_ONLY)",
+            "Aufräumkosten: eingeschlossen",
+            "Abbruchkosten: eingeschlossen"
+          ],
+          "reviewStatus": "BELEGT",
+          "requestedFieldStatus": "COMPLETE",
+          "normalizedValues": ["EUR 6.121.600,00"],
+          "requiredValueCandidateIds": [
+            "candidate:0a8dc790fd917eca2787e927214901607620778be2fbe21d01acb9071b4bffa5",
+            "candidate:4115599ddcf97b67c44c17e01ccfb765452d29171d9976edc39116ebb6d01c48",
+            "candidate:730270e5fad9fe84b3609b9e3231345eae5a9fd729a738b7625b6f707dc0e074",
+            "candidate:87613c92ea9042376215d2d9c7bf919fd3386743f422ce67cd803188baef8372",
+            "candidate:bd47c92e2b222097f775e4e2cefe61ad92aa03f0adb0d8636d19166df1a152b6",
+            "candidate:d8d9ac68b1f31636be7d9c6fdf0581774189e8bb63482b3eeb6569ed7ac31739",
+            "candidate:f18d6e161a8652ebd01998f0ccf2a4fe4da72661ff96d0465aaa8ccd09817287",
+            "candidate:f47faf2307705c64a8896dafd69d24b5be184136dfb021f2c4156234be614607"
+          ],
+          "requiredValueSourcePages": [1, 2, 4, 5],
+          "requiredCandidateIds": [
+            "candidate:564f7bda02c58091ff3df4c5ab60da632d4ad783e4fc68f11fc8cb103442ba83",
+            "candidate:9f5c92e7477104b505c91899fcdadfcbc5f7c71406ea147ebbc53f5969abe601",
+            "candidate:09147b3d31ef19102f863a5f7f7a5e48d90a9dceb60bf389e594bc8820e258ec",
+            "candidate:207c0c25897772482e1c105f955d49fb4a13bb7bbf12cb0e807de5865fb7aa69",
+            "candidate:26e170b540b41e68e606b45d785ef315e1deadad5561eb528f48cc5c509a201f",
+            "candidate:4b229fd72f35cc9b365f20f64c373452e16593e67d7b3e0314ed912c9caf6706",
+            "candidate:59262a455edfd7792c014fa3158707c255cba6ced960edc722ce36a24cd308f2",
+            "candidate:83fdf2c2445d941b3342569c77db9bda59e1bb89bb478a714d5b9d9cb74ac0ef",
+            "candidate:9428aad79b679e71d3a528130081397c96e6ff03549ea6048ff5b8ac09e40417",
+            "candidate:aec930fb428116e0e537c8ea9aa1d15a5993e2cde7904b2eda3bd468d0e19d70",
+            "candidate:c1d6796c750e08e974e9a5b0ef14afe6477ef3f5aa65e38a63fb817d3ca2d15e",
+            "candidate:c85e885c6a848a1670aa97a626559115d61943c185f4f5424abb183ad18c4add",
+            "candidate:bd47c92e2b222097f775e4e2cefe61ad92aa03f0adb0d8636d19166df1a152b6",
+            "candidate:87613c92ea9042376215d2d9c7bf919fd3386743f422ce67cd803188baef8372",
+            "candidate:f47faf2307705c64a8896dafd69d24b5be184136dfb021f2c4156234be614607",
+            "candidate:0a8dc790fd917eca2787e927214901607620778be2fbe21d01acb9071b4bffa5",
+            "candidate:4115599ddcf97b67c44c17e01ccfb765452d29171d9976edc39116ebb6d01c48",
+            "candidate:730270e5fad9fe84b3609b9e3231345eae5a9fd729a738b7625b6f707dc0e074",
+            "candidate:d8421fbeccdf35ab3ad8988caf3046f1abfe46d1696eab61fc7f8c78c316964f",
+            "candidate:d8d9ac68b1f31636be7d9c6fdf0581774189e8bb63482b3eeb6569ed7ac31739",
+            "candidate:f18d6e161a8652ebd01998f0ccf2a4fe4da72661ff96d0465aaa8ccd09817287"
+          ],
+          "requiredSourcePages": [1, 2, 4, 5, 8, 13],
+          "forbiddenSourcePages": [17]
+        },
+        {
+          "categoryId": "VS-28",
+          "coverage": "Ja",
+          "coverageAmount": "Nicht feststellbar",
+          "documentedContentIncludes": [
+            "Vorschlag (PROPOSED_ONLY)",
+            "Mietzinsentgang: eingeschlossen",
+            "Dauer: 6 Monate"
+          ],
+          "reviewStatus": "BELEGT",
+          "requestedFieldStatus": "COMPLETE",
+          "normalizedValues": ["6 Monate"],
+          "requiredValueCandidateIds": [
+            "candidate:c8cbfbf5cba6ccd77e72fdbc83fe84c19e64478be14086f93c2c42f8b37b0d0e",
+            "candidate:a16ff14a93fc0bf4acf188b7109a240764b6cd51968d4262abe635fffa3620f7",
+            "candidate:243fa135e87dd852144fcc6c4db65b93fcbb52eb1ae87ce11b38e2a946e0a40d"
+          ],
+          "requiredValueSourcePages": [1, 2, 4],
+          "requiredCandidateIds": [
+            "candidate:c8cbfbf5cba6ccd77e72fdbc83fe84c19e64478be14086f93c2c42f8b37b0d0e",
+            "candidate:a16ff14a93fc0bf4acf188b7109a240764b6cd51968d4262abe635fffa3620f7",
+            "candidate:243fa135e87dd852144fcc6c4db65b93fcbb52eb1ae87ce11b38e2a946e0a40d",
+            "candidate:4e3c06b293bd8af6b82df8359e3ac13b0405d14ffe1e8861d70f3fb6a622004d"
+          ],
+          "requiredSourcePages": [1, 2, 4, 9],
+          "forbiddenSourcePages": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "fe-occurrence-pilot-v0.1",
+  "categoryView": "FE",
+  "requirements": [
+    {
+      "id": "FE-A01",
+      "label": "Definition des Brandbegriffs im Bedingungswerk",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "fire_definition",
+          "label": "Branddefinition",
+          "factRole": "DEFINITION",
+          "aliases": ["das ist ein Feuer", "Brand ist", "Feuer ist"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A05",
+      "label": "Überspannungsschäden durch indirekten Blitzschlag",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "indirect_lightning_damage",
+          "label": "Indirekter Blitzschlag",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "indirekter Blitzschlag",
+            "indirekten Blitzschlag",
+            "Indirekter Blitzschlag an Gebäude-Elektroinstallationen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A06",
+      "label": "Betragsgrenze für Überspannungsschäden",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "indirect_lightning_limit",
+          "label": "Limit indirekter Blitzschlag",
+          "factRole": "LIMIT",
+          "aliases": ["mindestens EUR 10.000"]
+        }
+      ]
+    },
+    {
+      "id": "FE-A10",
+      "label": "Anprall fremder Fahrzeuge",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "foreign_vehicle_impact",
+          "label": "Anprall fremder Fahrzeuge",
+          "factRole": "PERIL",
+          "aliases": [
+            "Anprall fremder Fahrzeuge",
+            "Anprall unbekannter Fahrzeuge",
+            "Anprall unbekannter Landfahrzeuge",
+            "Kollision mit unbekannten Landfahrzeugen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-A14",
+      "label": "Schäden durch Drohnen oder unbemannte Fluggeräte",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "drone_damage",
+          "label": "Drohnen oder unbemannte Fluggeräte",
+          "factRole": "PERIL",
+          "aliases": ["Drohne", "Drohnen", "unbemannte Fluggeräte"]
+        }
+      ]
+    },
+    {
+      "id": "FE-D01",
+      "label": "Feuerwehr- und Einsatzkosten, Höhe der Kostenübernahme",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "firefighting_costs",
+          "label": "Feuerwehr- und Einsatzkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Feuerlöschkosten",
+            "Feuerlösch-",
+            "Feuerwehrkosten",
+            "Einsatzkosten"
+          ]
+        },
+        {
+          "id": "firefighting_costs_limit",
+          "label": "Höhe der Feuerwehr- und Einsatzkosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Feuerlöschkosten",
+            "Feuerlösch-",
+            "Feuerwehrkosten",
+            "Einsatzkosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-D05",
+      "label": "Rauch- und Rußschäden ohne eigenes Feuer",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "smoke_soot_damage",
+          "label": "Rauch- und Rußschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Rauch und Verrußung",
+            "Rauchschäden",
+            "Rußschäden",
+            "Verrußung"
+          ]
+        },
+        {
+          "id": "without_own_fire",
+          "label": "ohne eigenes Feuer",
+          "factRole": "CONDITION",
+          "aliases": ["ohne eigenes Feuer", "ohne Brand", "ohne Feuer"]
+        }
+      ]
+    }
+  ]
+}

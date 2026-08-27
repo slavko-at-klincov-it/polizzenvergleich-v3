@@ -245,7 +245,10 @@ class LMStudioLLM {
     return textResponse;
   }
 
-  async getChatCompletion(messages = null, { temperature = 0.7 }) {
+  async getChatCompletion(
+    messages = null,
+    { temperature = 0.7, maxTokens = null }
+  ) {
     if (!this.model)
       throw new Error(
         `LMStudio chat: ${this.model} is not valid or defined model for chat completion!`
@@ -256,6 +259,9 @@ class LMStudioLLM {
         model: this.model,
         messages,
         temperature,
+        ...(Number.isInteger(maxTokens) && maxTokens > 0
+          ? { max_tokens: maxTokens }
+          : {}),
       })
     );
 
@@ -273,7 +279,9 @@ class LMStudioLLM {
         total_tokens: result.output.usage?.total_tokens || 0,
         outputTps: result.output.usage?.completion_tokens / result.duration,
         duration: result.duration,
-        model: this.model,
+        model: result.output.model || this.model,
+        requestedModel: this.model,
+        responseModel: result.output.model || null,
         provider: this.className,
         timestamp: new Date(),
       },

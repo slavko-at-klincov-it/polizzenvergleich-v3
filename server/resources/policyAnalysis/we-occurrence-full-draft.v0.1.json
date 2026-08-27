@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "we-occurrence-full-draft-v0.1",
+  "categoryView": "WE",
+  "requirements": [
+    {
+      "id": "WE-01",
+      "label": "Versicherungsnehmer ist die Eigentümergemeinschaft",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["policyholder_role", "owners_association"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "policyholder_role",
+          "label": "Versicherungsnehmer",
+          "factRole": "DOCUMENT_STATUS",
+          "aliases": [
+            "Versicherungsnehmer ist die Eigentümergemeinschaft",
+            "Versicherungsnehmerin ist die Eigentümergemeinschaft",
+            "Versicherungsnehmer: Eigentümergemeinschaft"
+          ]
+        },
+        {
+          "id": "owners_association",
+          "label": "Eigentümergemeinschaft",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Versicherungsnehmer ist die Eigentümergemeinschaft",
+            "Versicherungsnehmerin ist die Eigentümergemeinschaft",
+            "Versicherungsnehmer: Eigentümergemeinschaft"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-02",
+      "label": "Systematik der Deckung: nur allgemeine Teile oder gesamte Baulichkeit",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "building_coverage_system",
+          "label": "Deckungssystem der Baulichkeit",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "allgemeine Teile des Gebäudes",
+            "allgemeinen Teile des Gebäudes",
+            "gesamte Baulichkeit",
+            "gesamte Gebäude",
+            "gesamten Gebäude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-03",
+      "label": "Bodenbeläge in den Wohnungen mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "floor_coverings_inside_units",
+          "label": "Bodenbeläge in den Wohnungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Bodenbeläge in den Wohnungen",
+            "Fußbodenbeläge in den Wohnungen",
+            "Fussbodenbeläge in den Wohnungen",
+            "Bodenbeläge innerhalb der Wohnungen",
+            "Fußbodenbeläge in den Wohnungseigentumsobjekten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-04",
+      "label": "Innentüren mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "interior_doors",
+          "label": "Innentüren",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Innentüren", "Wohnungsinnentüren", "Innentüre"]
+        }
+      ]
+    },
+    {
+      "id": "WE-05",
+      "label": "Sanitärinstallation innerhalb der Wohnungen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "sanitary_installation",
+          "label": "Sanitärinstallation",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Sanitärinstallation",
+            "Sanitärinstallationen",
+            "sanitäre Einrichtungen"
+          ]
+        },
+        {
+          "id": "inside_units",
+          "label": "Innerhalb der Wohnungen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "innerhalb der Wohnungen",
+            "in den Wohnungen",
+            "in den Wohnungseigentumsobjekten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-06",
+      "label": "Küchen und Einbaumöbel",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "kitchens",
+          "label": "Küchen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Küchen", "Einbauküchen", "Kücheneinrichtungen"]
+        },
+        {
+          "id": "built_in_furniture",
+          "label": "Einbaumöbel",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Einbaumöbel",
+            "eingebaute Möbel",
+            "fest eingebaute Möbel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-07",
+      "label": "Malerei, Tapeten, Wandbeläge",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "painting",
+          "label": "Malerei",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Malerei", "Malerarbeiten", "Innenanstrich"]
+        },
+        {
+          "id": "wallpaper",
+          "label": "Tapeten",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Tapeten", "Tapete"]
+        },
+        {
+          "id": "wall_coverings",
+          "label": "Wandbeläge",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Wandbeläge", "Wandverkleidungen"]
+        }
+      ]
+    },
+    {
+      "id": "WE-08",
+      "label": "Verbesserungen über die Standardausführung hinaus",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "upgraded_improvements",
+          "label": "Verbesserungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Verbesserungen",
+            "bauliche Verbesserungen",
+            "Investitionen des Wohnungseigentümers"
+          ]
+        },
+        {
+          "id": "above_standard",
+          "label": "Über Standardausführung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "über die Standardausführung hinaus",
+            "über der Standardausführung",
+            "Sonderausstattung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-09",
+      "label": "Zuordnung von Fenstern und Außentüren",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "windows",
+          "label": "Fenster",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Fenster", "Wohnungsfenster"]
+        },
+        {
+          "id": "exterior_doors",
+          "label": "Außentüren",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Außentüren", "Wohnungseingangstüren", "Außentüre"]
+        },
+        {
+          "id": "allocation_relation",
+          "label": "Zuordnung von Fenstern und Außentüren",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Zuordnung von Fenstern und Außentüren",
+            "Fenster und Außentüren gehören",
+            "Fenster und Außentüren gelten als",
+            "Fenster und Wohnungseingangstüren gehören",
+            "Fenster und Wohnungseingangstüren gelten als"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-10",
+      "label": "Abdichtung von Balkonen, Loggien und Terrassen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "balcony_waterproofing",
+          "label": "Abdichtung von Balkonen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Abdichtung von Balkonen",
+            "Abdichtungen von Balkonen",
+            "Balkonabdichtung",
+            "Balkonabdichtungen"
+          ]
+        },
+        {
+          "id": "loggia_waterproofing",
+          "label": "Abdichtung von Loggien",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Abdichtung von Loggien",
+            "Abdichtungen von Loggien",
+            "Loggiaabdichtung",
+            "Loggiaabdichtungen"
+          ]
+        },
+        {
+          "id": "terrace_waterproofing",
+          "label": "Abdichtung von Terrassen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Abdichtung von Terrassen",
+            "Abdichtungen von Terrassen",
+            "Terrassenabdichtung",
+            "Terrassenabdichtungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-11",
+      "label": "Beläge und Geländer von Balkonen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "balcony_coverings",
+          "label": "Balkonbeläge",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Balkonbeläge",
+            "Beläge von Balkonen",
+            "Balkonbodenbeläge"
+          ]
+        },
+        {
+          "id": "balcony_railings",
+          "label": "Balkongeländer",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Balkongeländer",
+            "Geländer von Balkonen",
+            "Balkonbrüstungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-12",
+      "label": "Balkonverglasung und individuell angebrachte Markisen",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "balcony_glazing",
+          "label": "Balkonverglasung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Balkonverglasung",
+            "Balkonverglasungen",
+            "Verglasung von Balkonen"
+          ]
+        },
+        {
+          "id": "awnings",
+          "label": "Markisen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Markisen", "Markise"]
+        },
+        {
+          "id": "individually_installed",
+          "label": "Individuell angebracht",
+          "factRole": "CONDITION",
+          "aliases": [
+            "individuell angebracht",
+            "individuell angebrachte",
+            "vom Wohnungseigentümer angebracht"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-13",
+      "label": "Kellerabteile als Gebäudeteil mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "basement_compartments",
+          "label": "Kellerabteile",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Kellerabteile", "Kellerabteil"]
+        },
+        {
+          "id": "building_component",
+          "label": "Als Gebäudeteil",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Teil des Gebäudes",
+            "Gebäudebestandteil",
+            "als Gebäudeteil"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-14",
+      "label": "Inhalt der Kellerabteile",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "basement_contents",
+          "label": "Inhalt der Kellerabteile",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Inhalt der Kellerabteile",
+            "Kellerabteilinhalt",
+            "in den Kellerabteilen gelagerte Sachen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-15",
+      "label": "Abgrenzung zur Haushaltsversicherung der Eigentümer",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "household_insurance_boundary",
+          "label": "Abgrenzung zur Haushaltsversicherung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Abgrenzung zur Haushaltsversicherung",
+            "Haushaltsversicherung geht vor",
+            "subsidiär zur Haushaltsversicherung"
+          ]
+        },
+        {
+          "id": "unit_owner_household_insurance",
+          "label": "Haushaltsversicherung der Eigentümer",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Haushaltsversicherung der Wohnungseigentümer",
+            "Haushaltsversicherung des Eigentümers",
+            "Haushaltsversicherung der Eigentümer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-16",
+      "label": "Regelung bei Doppelversicherung und Vorrang",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "double_insurance",
+          "label": "Doppelversicherung",
+          "factRole": "DEFINITION",
+          "aliases": ["Doppelversicherung", "Mehrfachversicherung"]
+        },
+        {
+          "id": "priority_rule",
+          "label": "Vorrangregel",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Vorrang",
+            "vorrangig leistungspflichtig",
+            "subsidiäre Deckung",
+            "nachrangig"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-17",
+      "label": "Mietzinsentgang für vermietete Einheiten",
+      "requestedFields": ["duration", "limit"],
+      "components": [
+        {
+          "id": "rent_loss",
+          "label": "Mietzinsentgang",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Mietzinsentgang",
+            "Mietausfall",
+            "Mietverlust",
+            "Entgang von Mietzinseinnahmen"
+          ]
+        },
+        {
+          "id": "rented_units",
+          "label": "Vermietete Einheiten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "vermietete Einheiten",
+            "vermieteten Wohnungen",
+            "vermietete Wohnungseigentumsobjekte"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-18",
+      "label": "Regelung zu Kurzzeitvermietung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "short_term_rental",
+          "label": "Kurzzeitvermietung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Kurzzeitvermietung",
+            "kurzfristige Vermietung",
+            "touristische Vermietung",
+            "Airbnb"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-19",
+      "label": "Gewerblich genutzte Einheiten im Haus",
+      "requestedFields": ["condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["commercial_units", "inside_building"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "commercial_units",
+          "label": "Gewerblich genutzte Einheiten",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "gewerblich genutzte Einheiten im Haus",
+            "Gewerbeeinheiten im versicherten Gebäude",
+            "Geschäftslokale im versicherten Gebäude"
+          ]
+        },
+        {
+          "id": "inside_building",
+          "label": "Im Haus",
+          "factRole": "CONDITION",
+          "aliases": [
+            "gewerblich genutzte Einheiten im Haus",
+            "Gewerbeeinheiten im versicherten Gebäude",
+            "Geschäftslokale im versicherten Gebäude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-20",
+      "label": "Auszahlung an die Gemeinschaft oder an einzelne Eigentümer",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "payment_recipient_alternative",
+          "label": "Auszahlung an die Gemeinschaft oder an einzelne Eigentümer",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Auszahlung an die Eigentümergemeinschaft",
+            "Entschädigung an die Eigentümergemeinschaft",
+            "Zahlung an die Gemeinschaft",
+            "Auszahlung an einzelne Wohnungseigentümer",
+            "Entschädigung an einzelne Eigentümer",
+            "Zahlung an einzelne Wohnungseigentümer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-21",
+      "label": "Verfügungsberechtigung über die Entschädigungssumme",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "disposal_authority_over_compensation",
+          "label": "Verfügungsberechtigung über die Entschädigungssumme",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Verfügungsberechtigung über die Entschädigungssumme",
+            "Verfügung über die Entschädigung",
+            "über die Entschädigungssumme verfügen",
+            "über die Versicherungsentschädigung verfügen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-22",
+      "label": "Beschlusserfordernis für einen Versicherungswechsel",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "resolution_requirement",
+          "label": "Beschlusserfordernis",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Beschluss der Eigentümergemeinschaft",
+            "Mehrheitsbeschluss",
+            "Beschlusserfordernis"
+          ]
+        },
+        {
+          "id": "insurance_change",
+          "label": "Versicherungswechsel",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Versicherungswechsel",
+            "Wechsel des Versicherers",
+            "Änderung des Versicherungsvertrages"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-23",
+      "label": "Informationspflicht gegenüber den Wohnungseigentümern",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "owner_information_duty",
+          "label": "Informationspflicht",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Informationspflicht gegenüber den Wohnungseigentümern",
+            "Wohnungseigentümer zu informieren",
+            "Information der Wohnungseigentümer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE-24",
+      "label": "Tragung des Selbstbehalts innerhalb der Gemeinschaft",
+      "requestedFields": ["condition", "limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["deductible", "association_cost_allocation"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "deductible",
+          "label": "Selbstbehalt",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Tragung des Selbstbehalts",
+            "Selbstbehalt trägt die Eigentümergemeinschaft",
+            "Selbstbehalt ist von der Gemeinschaft"
+          ]
+        },
+        {
+          "id": "association_cost_allocation",
+          "label": "Tragung innerhalb der Gemeinschaft",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Tragung des Selbstbehalts",
+            "Selbstbehalt trägt die Eigentümergemeinschaft",
+            "Selbstbehalt ist von der Gemeinschaft"
+          ]
+        }
+      ]
+    }
+  ]
+}

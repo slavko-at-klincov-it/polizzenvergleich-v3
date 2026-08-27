@@ -1,0 +1,1102 @@
+const crypto = require("crypto");
+
+const WORKSHEET_SCHEMA_VERSION = 1;
+const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
+const DEFAULT_FALLBACK_WORDS_EACH_SIDE = 120;
+const DEFAULT_SCOPE_WORDS_BEFORE = 120;
+const SHARED_GOVERNOR = "SHARED_GOVERNOR";
+const SHARED_SPAN = "SHARED_SPAN";
+const RIGHT_HEADED_COORDINATION = "RIGHT_HEADED_COORDINATION";
+const SAME_CANDIDATE_BINDING = "SAME_CANDIDATE_BINDING";
+const ALLOWED_FACT_ROLES = new Set([
+  "INSURED_OBJECT",
+  "COST",
+  "BENEFIT",
+  "PERIL",
+  "DEFINITION",
+  "DAMAGE",
+  "EXCLUSION",
+  "LIMIT",
+  "DEDUCTIBLE",
+  "CONDITION",
+  "DOCUMENT_STATUS",
+]);
+
+function worksheetError(code, detail = "") {
+  const error = new Error(detail ? `${code}: ${detail}` : code);
+  error.code = code;
+  return error;
+}
+
+function requireNonEmptyString(value, code, detail) {
+  if (typeof value !== "string" || value.trim().length === 0)
+    throw worksheetError(code, detail);
+  return value.trim();
+}
+
+function transliterateCharacter(character) {
+  const lower = character.normalize("NFKC").toLocaleLowerCase("de");
+  if (lower === "ä") return "ae";
+  if (lower === "ö") return "oe";
+  if (lower === "ü") return "ue";
+  if (lower === "ß") return "ss";
+  return lower;
+}
+
+function hyphenatedLineBreakTarget(text, hyphenIndex) {
+  if (text[hyphenIndex] !== "-") return null;
+  const previous = text[hyphenIndex - 1] || "";
+  if (!/\p{L}/u.test(previous)) return null;
+
+  let cursor = hyphenIndex + 1;
+  let includesLineBreak = false;
+  while (cursor < text.length && /\s/u.test(text[cursor])) {
+    if (text[cursor] === "\n" || text[cursor] === "\r")
+      includesLineBreak = true;
+    cursor += 1;
+  }
+  if (!includesLineBreak || !/\p{L}/u.test(text[cursor] || "")) return null;
+
+  const followingWord = String(text.slice(cursor).match(/^\p{L}+/u)?.[0] || "")
+    .toLocaleLowerCase("de")
+    .trim();
+  if (["und", "oder"].includes(followingWord)) return null;
+  return cursor;
+}
+
+/**
+ * Normalizes controlled search text while retaining an index for every output
+ * character back to the original string. Side effects: none. Role: transform.
+ */
+function normalizeWithOffsetMap(value) {
+  const text = String(value || "");
+  const characters = [];
+  const originalOffsets = [];
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === "\u00ad") continue;
+
+    const joinedAt = hyphenatedLineBreakTarget(text, index);
+    if (joinedAt !== null) {
+      index = joinedAt - 1;
+      continue;
+    }
+
+    if (/\s/u.test(character)) {
+      if (characters.length > 0 && characters.at(-1) !== " ") {
+        characters.push(" ");
+        originalOffsets.push(index);
+      }
+      continue;
+    }
+
+    for (const normalizedCharacter of transliterateCharacter(character)) {
+      characters.push(normalizedCharacter);
+      originalOffsets.push(index);
+    }
+  }
+
+  while (characters[0] === " ") {
+    characters.shift();
+    originalOffsets.shift();
+  }
+  while (characters.at(-1) === " ") {
+    characters.pop();
+    originalOffsets.pop();
+  }
+
+  return {
+    normalized: characters.join(""),
+    originalOffsets,
+  };
+}
+
+function isWordCharacter(character) {
+  return Boolean(character && /[\p{L}\p{N}]/u.test(character));
+}
+
+function startsWithConcatenatedClauseCode(value) {
+  return /^\d{2}\p{L}{2}\d{4}/u.test(String(value || ""));
+}
+
+function findAliasRanges(pageText, alias) {
+  const page = normalizeWithOffsetMap(pageText);
+  const normalizedAlias = normalizeWithOffsetMap(alias).normalized;
+  if (!normalizedAlias)
+    throw worksheetError("EMPTY_NORMALIZED_ALIAS", String(alias));
+
+  const ranges = [];
+  let normalizedStart = page.normalized.indexOf(normalizedAlias);
+  while (normalizedStart !== -1) {
+    const normalizedEnd = normalizedStart + normalizedAlias.length;
+    const before = page.normalized[normalizedStart - 1] || "";
+    const after = page.normalized[normalizedEnd] || "";
+    if (
+      !isWordCharacter(before) &&
+      (!isWordCharacter(after) ||
+        startsWithConcatenatedClauseCode(page.normalized.slice(normalizedEnd)))
+    ) {
+      const originalStart = page.originalOffsets[normalizedStart];
+      const originalEnd = page.originalOffsets[normalizedEnd - 1] + 1;
+      ranges.push({
+        originalStart,
+        originalEnd,
+        normalizedAlias,
+      });
+    }
+    normalizedStart = page.normalized.indexOf(
+      normalizedAlias,
+      normalizedStart + 1
+    );
+  }
+  return ranges;
+}
+
+function buildLineRecords(text) {
+  const records = [];
+  let start = 0;
+  while (start < text.length) {
+    const newline = text.indexOf("\n", start);
+    const rawEnd = newline === -1 ? text.length : newline;
+    const end =
+      rawEnd > start && text[rawEnd - 1] === "\r" ? rawEnd - 1 : rawEnd;
+    records.push({ start, end, text: text.slice(start, end) });
+    if (newline === -1) break;
+    start = newline + 1;
+  }
+  if (records.length === 0) records.push({ start: 0, end: 0, text: "" });
+  return records;
+}
+
+function isBlankLine(line) {
+  return line.text.trim().length === 0;
+}
+
+function isBulletLine(line) {
+  return /^\s*[-•]\s+/u.test(line.text);
+}
+
+function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
+  const words = [...text.matchAll(/\S+/gu)].map((match) => ({
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+  const occurrenceWordIndex = words.findIndex(
+    ({ start, end }) => occurrenceStart < end && occurrenceEnd > start
+  );
+  if (occurrenceWordIndex === -1)
+    return { start: occurrenceStart, end: occurrenceEnd };
+  const startWord = words[Math.max(0, occurrenceWordIndex - wordRadius)];
+  const endWord =
+    words[Math.min(words.length - 1, occurrenceWordIndex + wordRadius)];
+  return { start: startWord.start, end: endWord.end };
+}
+
+function precedingWordWindow(text, beforeOffset, wordLimit) {
+  const words = [...text.slice(0, beforeOffset).matchAll(/\S+/gu)].map(
+    (match) => ({
+      start: match.index,
+      end: match.index + match[0].length,
+    })
+  );
+  if (words.length === 0)
+    return { pageStart: beforeOffset, pageEnd: beforeOffset, text: "" };
+  const startWord = words[Math.max(0, words.length - wordLimit)];
+  let pageEnd = beforeOffset;
+  while (pageEnd > startWord.start && /\s/u.test(text[pageEnd - 1]))
+    pageEnd -= 1;
+  return {
+    pageStart: startWord.start,
+    pageEnd,
+    text: text.slice(startWord.start, pageEnd),
+  };
+}
+
+function structuralContext({
+  pageText,
+  occurrenceStart,
+  occurrenceEnd,
+  maxChars,
+  fallbackWordsEachSide,
+}) {
+  const lines = buildLineRecords(pageText);
+  const occurrenceLineIndex = lines.findIndex(
+    ({ start, end }) => occurrenceStart >= start && occurrenceStart <= end
+  );
+  if (occurrenceLineIndex === -1)
+    throw worksheetError("OCCURRENCE_LINE_NOT_FOUND", String(occurrenceStart));
+
+  let startLine = occurrenceLineIndex;
+  let unitType = "PARAGRAPH";
+  for (let index = occurrenceLineIndex; index >= 0; index -= 1) {
+    if (isBulletLine(lines[index])) {
+      startLine = index;
+      unitType = "LIST_ITEM";
+      break;
+    }
+    if (index < occurrenceLineIndex && isBlankLine(lines[index])) break;
+    startLine = index;
+  }
+
+  let endLine = occurrenceLineIndex;
+  for (let index = occurrenceLineIndex + 1; index < lines.length; index += 1) {
+    if (isBlankLine(lines[index]) || isBulletLine(lines[index])) break;
+    endLine = index;
+  }
+
+  let contextStart = lines[startLine].start;
+  let contextEnd = lines[endLine].end;
+  if (contextEnd - contextStart > maxChars) {
+    const fallback = centeredWordWindow(
+      pageText,
+      occurrenceStart,
+      occurrenceEnd,
+      fallbackWordsEachSide
+    );
+    contextStart = fallback.start;
+    contextEnd = fallback.end;
+    unitType = "WORD_WINDOW_FALLBACK";
+  }
+
+  return {
+    unitType,
+    pageStart: contextStart,
+    pageEnd: contextEnd,
+    text: pageText.slice(contextStart, contextEnd),
+  };
+}
+
+function explicitPageScopeHints(pageText) {
+  const patterns = [
+    /\bDie\s+(Feuer|Leitungswasser|Sturm|Glas)versicherung\b/giu,
+    /\bAllgemeine\s+Bedingungen\s+f[üu]r\s+die\s+(Feuer|Leitungswasser|Sturm|Glas)versicherung\b/giu,
+  ];
+  const hints = [];
+  for (const pattern of patterns) {
+    for (const match of String(pageText || "").matchAll(pattern)) {
+      const text = match[0];
+      const scopeKey = `${match[1].toLocaleUpperCase("de")}_INSURANCE`;
+      if (!hints.some((hint) => hint.scopeKey === scopeKey))
+        hints.push({
+          scopeKey,
+          text,
+          pageStart: match.index,
+          pageEnd: match.index + text.length,
+        });
+    }
+  }
+  return hints;
+}
+
+function validateDocument(document) {
+  if (!document || typeof document !== "object")
+    throw worksheetError("DOCUMENT_REQUIRED");
+  const pageContent = String(document.pageContent || "");
+  const pageMap = document.pageMap;
+  const extraction = document.pdfExtraction;
+  if (!Array.isArray(pageMap) || pageMap.length === 0)
+    throw worksheetError("PDF_PAGEMAP_REQUIRED");
+  if (
+    extraction?.schemaVersion !== 1 ||
+    extraction?.complete !== true ||
+    extraction?.totalPages !== pageMap.length ||
+    extraction?.processedPages !== extraction?.totalPages
+  )
+    throw worksheetError("PDF_PAGEMAP_INVALID");
+
+  let previousEnd = 0;
+  const pages = pageMap.map((page, index) => {
+    const pageNumber = Number(page.pageNumber);
+    const start = Number(page.start);
+    const end = Number(page.end);
+    if (
+      pageNumber !== index + 1 ||
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < previousEnd ||
+      end < start ||
+      end > pageContent.length
+    )
+      throw worksheetError("PDF_PAGEMAP_INVALID", `page ${pageNumber}`);
+    previousEnd = end;
+    const text = pageContent.slice(start, end);
+    const printedPageLabels = [
+      ...text.matchAll(/\bSeite\s+\d+\s+von\s+\d+\b/giu),
+    ].map((match) => match[0]);
+    return {
+      pageNumber,
+      physicalPageNumber: pageNumber,
+      printedPageLabel:
+        new Set(printedPageLabels).size === 1 ? printedPageLabels[0] : null,
+      start,
+      end,
+      text,
+      scopeHints: explicitPageScopeHints(text),
+    };
+  });
+  return { pageContent, pages };
+}
+
+function validateCatalog(catalog) {
+  if (catalog?.schemaVersion !== 1 || !Array.isArray(catalog.requirements))
+    throw worksheetError("CATALOG_INVALID");
+  const requirementIds = new Set();
+  return catalog.requirements.map((requirement) => {
+    const id = requireNonEmptyString(
+      requirement.id,
+      "REQUIREMENT_ID_REQUIRED",
+      "requirement"
+    );
+    if (requirementIds.has(id))
+      throw worksheetError("DUPLICATE_REQUIREMENT_ID", id);
+    requirementIds.add(id);
+    if (
+      !Array.isArray(requirement.components) ||
+      requirement.components.length === 0
+    )
+      throw worksheetError("REQUIREMENT_COMPONENTS_REQUIRED", id);
+
+    const componentIds = new Set();
+    const components = requirement.components.map((component) => {
+      const componentId = requireNonEmptyString(
+        component.id,
+        "COMPONENT_ID_REQUIRED",
+        id
+      );
+      if (componentIds.has(componentId))
+        throw worksheetError("DUPLICATE_COMPONENT_ID", `${id}:${componentId}`);
+      componentIds.add(componentId);
+      if (!Array.isArray(component.aliases) || component.aliases.length === 0)
+        throw worksheetError(
+          "COMPONENT_ALIASES_REQUIRED",
+          `${id}:${componentId}`
+        );
+      const aliases = [
+        ...new Set(
+          component.aliases.map((alias) =>
+            requireNonEmptyString(
+              alias,
+              "ALIAS_REQUIRED",
+              `${id}:${componentId}`
+            )
+          )
+        ),
+      ];
+      return {
+        id: componentId,
+        label: requireNonEmptyString(
+          component.label,
+          "COMPONENT_LABEL_REQUIRED",
+          `${id}:${componentId}`
+        ),
+        factRole: (() => {
+          const factRole = requireNonEmptyString(
+            component.factRole,
+            "COMPONENT_FACT_ROLE_REQUIRED",
+            `${id}:${componentId}`
+          );
+          if (!ALLOWED_FACT_ROLES.has(factRole))
+            throw worksheetError(
+              "COMPONENT_FACT_ROLE_INVALID",
+              `${id}:${componentId}:${factRole}`
+            );
+          return factRole;
+        })(),
+        aliases,
+      };
+    });
+    const bindingStructures = Array.isArray(requirement.bindingStructures)
+      ? requirement.bindingStructures.map((structure, index) => {
+          const detail = `${id}:bindingStructures[${index}]`;
+          if (
+            ![SHARED_GOVERNOR, SHARED_SPAN, RIGHT_HEADED_COORDINATION].includes(
+              structure?.type
+            ) ||
+            structure?.constraint !== SAME_CANDIDATE_BINDING
+          )
+            throw worksheetError("BINDING_STRUCTURE_INVALID", detail);
+          let governorAliases = [];
+          let headSuffixes = [];
+          if (structure.type === SHARED_GOVERNOR) {
+            if (
+              !Array.isArray(structure.governorAliases) ||
+              structure.governorAliases.length === 0
+            )
+              throw worksheetError("BINDING_GOVERNOR_ALIASES_REQUIRED", detail);
+            governorAliases = [
+              ...new Set(
+                structure.governorAliases.map((alias) =>
+                  requireNonEmptyString(
+                    alias,
+                    "BINDING_GOVERNOR_ALIAS_REQUIRED",
+                    detail
+                  )
+                )
+              ),
+            ];
+            if (structure.headSuffixes !== undefined)
+              throw worksheetError(
+                "BINDING_GOVERNOR_HEAD_SUFFIX_FORBIDDEN",
+                detail
+              );
+          } else if (structure.type === RIGHT_HEADED_COORDINATION) {
+            if (
+              !Array.isArray(structure.headSuffixes) ||
+              structure.headSuffixes.length === 0
+            )
+              throw worksheetError("BINDING_HEAD_SUFFIXES_REQUIRED", detail);
+            headSuffixes = [
+              ...new Set(
+                structure.headSuffixes.map((suffix) =>
+                  requireNonEmptyString(
+                    suffix,
+                    "BINDING_HEAD_SUFFIX_REQUIRED",
+                    detail
+                  )
+                )
+              ),
+            ];
+            if (structure.governorAliases !== undefined)
+              throw worksheetError(
+                "BINDING_RIGHT_HEAD_GOVERNOR_FORBIDDEN",
+                detail
+              );
+          } else if (
+            structure.governorAliases !== undefined ||
+            structure.headSuffixes !== undefined
+          ) {
+            throw worksheetError(
+              "BINDING_SHARED_SPAN_GOVERNOR_FORBIDDEN",
+              detail
+            );
+          }
+          if (
+            !Array.isArray(structure.memberComponentIds) ||
+            structure.memberComponentIds.length < 2
+          )
+            throw worksheetError("BINDING_MEMBER_COMPONENTS_REQUIRED", detail);
+          const memberComponentIds = [
+            ...new Set(
+              structure.memberComponentIds.map((componentId) =>
+                requireNonEmptyString(
+                  componentId,
+                  "BINDING_MEMBER_COMPONENT_ID_REQUIRED",
+                  detail
+                )
+              )
+            ),
+          ];
+          if (memberComponentIds.length !== structure.memberComponentIds.length)
+            throw worksheetError("BINDING_MEMBER_COMPONENT_DUPLICATE", detail);
+          for (const memberComponentId of memberComponentIds) {
+            if (!componentIds.has(memberComponentId))
+              throw worksheetError(
+                "BINDING_STRUCTURE_COMPONENT_UNKNOWN",
+                `${detail}:${memberComponentId}`
+              );
+          }
+          return {
+            type: structure.type,
+            governorAliases,
+            headSuffixes,
+            memberComponentIds,
+            constraint: SAME_CANDIDATE_BINDING,
+          };
+        })
+      : [];
+    let scopeRules = { narrowAliases: [] };
+    if (requirement.scopeRules !== undefined) {
+      if (
+        !requirement.scopeRules ||
+        typeof requirement.scopeRules !== "object" ||
+        Array.isArray(requirement.scopeRules) ||
+        Object.keys(requirement.scopeRules).length !== 1 ||
+        !Array.isArray(requirement.scopeRules.narrowAliases)
+      )
+        throw worksheetError("SCOPE_RULES_INVALID", id);
+      scopeRules = {
+        narrowAliases: [
+          ...new Set(
+            requirement.scopeRules.narrowAliases.map((alias) =>
+              requireNonEmptyString(alias, "SCOPE_ALIAS_REQUIRED", id)
+            )
+          ),
+        ],
+      };
+    }
+    return {
+      id,
+      label: requireNonEmptyString(
+        requirement.label,
+        "REQUIREMENT_LABEL_REQUIRED",
+        id
+      ),
+      requestedFields: Array.isArray(requirement.requestedFields)
+        ? [...requirement.requestedFields]
+        : [],
+      bindingStructures,
+      scopeRules,
+      components,
+    };
+  });
+}
+
+function removeOverlappingRanges(ranges) {
+  const selected = [];
+  for (const range of [...ranges].sort((left, right) => {
+    const lengthDifference =
+      right.originalEnd -
+      right.originalStart -
+      (left.originalEnd - left.originalStart);
+    return lengthDifference || left.originalStart - right.originalStart;
+  })) {
+    const overlaps = selected.some(
+      (candidate) =>
+        range.originalStart < candidate.originalEnd &&
+        range.originalEnd > candidate.originalStart
+    );
+    if (!overlaps) selected.push(range);
+  }
+  return selected.sort(
+    (left, right) => left.originalStart - right.originalStart
+  );
+}
+
+function candidateId({
+  documentFingerprint,
+  requirementId,
+  componentId,
+  pageNumber,
+  documentStart,
+  documentEnd,
+}) {
+  const identity = [
+    documentFingerprint,
+    requirementId,
+    componentId,
+    pageNumber,
+    documentStart,
+    documentEnd,
+  ].join(":");
+  return `candidate:${crypto.createHash("sha256").update(identity).digest("hex")}`;
+}
+
+function clauseStartBefore(text, beforeOffset) {
+  for (let index = beforeOffset - 1; index >= 0; index -= 1) {
+    if (/[.!?;:\n\r]/u.test(text[index])) return index + 1;
+  }
+  return 0;
+}
+
+function nearestGovernor({ pageText, occurrenceStart, aliases }) {
+  const clauseStart = clauseStartBefore(pageText, occurrenceStart);
+  const prefix = pageText.slice(clauseStart, occurrenceStart);
+  let selected = null;
+  for (const alias of aliases) {
+    for (const range of findAliasRanges(prefix, alias)) {
+      const candidate = {
+        matchedAlias: alias,
+        pageStart: clauseStart + range.originalStart,
+        pageEnd: clauseStart + range.originalEnd,
+      };
+      if (!selected || candidate.pageStart > selected.pageStart)
+        selected = candidate;
+    }
+  }
+  return selected;
+}
+
+function isControlledCoordinationSeparator(value) {
+  const normalized = normalizeWithOffsetMap(value).normalized;
+  if (!normalized) return false;
+  const containsSeparator =
+    normalized.includes(",") || /\b(?:und|oder|sowie)\b/u.test(normalized);
+  const remainder = normalized
+    .replace(/\b(?:und|oder|sowie)\b/gu, "")
+    .replace(/[\s,]/gu, "");
+  return containsSeparator && remainder.length === 0;
+}
+
+function hasTrailingCoordinationHyphen(pageText, occurrence) {
+  if (pageText[occurrence.pageEnd - 1] === "-") return true;
+  let cursor = occurrence.pageEnd;
+  while (cursor < pageText.length && /[\t ]/u.test(pageText[cursor]))
+    cursor += 1;
+  return pageText[cursor] === "-";
+}
+
+function rightHeadAfterOccurrence({
+  pageText,
+  occurrence,
+  contextEnd,
+  headSuffixes,
+}) {
+  const tail = pageText.slice(occurrence.pageEnd, contextEnd);
+  for (const match of tail.matchAll(/\p{L}+/gu)) {
+    const word = match[0];
+    const normalizedWord = normalizeWithOffsetMap(word).normalized;
+    const matchedSuffix = headSuffixes.find((suffix) =>
+      normalizedWord.endsWith(normalizeWithOffsetMap(suffix).normalized)
+    );
+    if (!matchedSuffix) continue;
+    const connector = tail.slice(0, match.index);
+    if (!/(?:,|\b(?:und|oder|sowie)\b)/iu.test(connector)) continue;
+    return {
+      matchedAlias: word,
+      pageStart: occurrence.pageEnd + match.index,
+      pageEnd: occurrence.pageEnd + match.index + word.length,
+    };
+  }
+  return null;
+}
+
+function stableBindingGroupId({
+  documentFingerprint,
+  requirementId,
+  structureIndex,
+  pageNumber,
+  governorPageStart,
+  candidateIds,
+}) {
+  const identity = [
+    documentFingerprint,
+    requirementId,
+    structureIndex,
+    pageNumber,
+    governorPageStart,
+    ...candidateIds,
+  ].join(":");
+  return `binding-group:${crypto
+    .createHash("sha256")
+    .update(identity)
+    .digest("hex")}`;
+}
+
+/**
+ * Builds only catalog-authorized shared binding groups. A group constrains
+ * candidate relevance/scope equality; it never determines coverage or money.
+ * Side effects: none. Role: transform.
+ */
+function buildRequirementBindingGroups({
+  requirement,
+  components,
+  pages,
+  documentFingerprint,
+}) {
+  const pageByNumber = new Map(pages.map((page) => [page.pageNumber, page]));
+  const groups = [];
+
+  requirement.bindingStructures.forEach((structure, structureIndex) => {
+    if (structure.type === SHARED_SPAN) {
+      const spanBuckets = new Map();
+      for (const component of components) {
+        if (!structure.memberComponentIds.includes(component.id)) continue;
+        for (const occurrence of component.occurrences) {
+          const key = [
+            occurrence.pageNumber,
+            occurrence.documentStart,
+            occurrence.documentEnd,
+          ].join(":");
+          if (!spanBuckets.has(key)) spanBuckets.set(key, []);
+          spanBuckets.get(key).push({ componentId: component.id, occurrence });
+        }
+      }
+      for (const candidates of spanBuckets.values()) {
+        const componentCounts = new Map();
+        for (const candidate of candidates)
+          componentCounts.set(
+            candidate.componentId,
+            (componentCounts.get(candidate.componentId) || 0) + 1
+          );
+        const containsEveryDeclaredComponent =
+          structure.memberComponentIds.every(
+            (componentId) => componentCounts.get(componentId) === 1
+          ) && componentCounts.size === structure.memberComponentIds.length;
+        if (!containsEveryDeclaredComponent) continue;
+        const sorted = [...candidates].sort(
+          (left, right) =>
+            structure.memberComponentIds.indexOf(left.componentId) -
+            structure.memberComponentIds.indexOf(right.componentId)
+        );
+        const first = sorted[0].occurrence;
+        const candidateIds = sorted.map(
+          ({ occurrence }) => occurrence.candidateId
+        );
+        groups.push({
+          id: stableBindingGroupId({
+            documentFingerprint,
+            requirementId: requirement.id,
+            structureIndex,
+            pageNumber: first.pageNumber,
+            governorPageStart: first.pageStart,
+            candidateIds,
+          }),
+          requirementId: requirement.id,
+          type: SHARED_SPAN,
+          constraint: structure.constraint,
+          governorText: first.exactText,
+          candidateIds,
+        });
+      }
+      return;
+    }
+    if (structure.type === RIGHT_HEADED_COORDINATION) {
+      const buckets = new Map();
+      for (const component of components) {
+        if (!structure.memberComponentIds.includes(component.id)) continue;
+        for (const occurrence of component.occurrences) {
+          const page = pageByNumber.get(occurrence.pageNumber);
+          if (!hasTrailingCoordinationHyphen(page.text, occurrence)) continue;
+          const key = String(occurrence.pageNumber);
+          if (!buckets.has(key)) buckets.set(key, []);
+          buckets.get(key).push({ componentId: component.id, occurrence });
+        }
+      }
+
+      for (const candidates of buckets.values()) {
+        const sorted = [...candidates].sort(
+          (left, right) =>
+            left.occurrence.pageStart - right.occurrence.pageStart
+        );
+        const runs = [];
+        let run = [];
+        for (const candidate of sorted) {
+          const previous = run.at(-1);
+          if (
+            previous &&
+            !isControlledCoordinationSeparator(
+              pageByNumber
+                .get(candidate.occurrence.pageNumber)
+                .text.slice(
+                  previous.occurrence.pageEnd,
+                  candidate.occurrence.pageStart
+                )
+            )
+          ) {
+            runs.push(run);
+            run = [];
+          }
+          run.push(candidate);
+        }
+        if (run.length > 0) runs.push(run);
+
+        for (const coordinated of runs) {
+          const componentCounts = new Map();
+          for (const candidate of coordinated)
+            componentCounts.set(
+              candidate.componentId,
+              (componentCounts.get(candidate.componentId) || 0) + 1
+            );
+          const containsEveryDeclaredComponent =
+            structure.memberComponentIds.every(
+              (componentId) => componentCounts.get(componentId) === 1
+            ) && componentCounts.size === structure.memberComponentIds.length;
+          if (!containsEveryDeclaredComponent) continue;
+
+          const page = pageByNumber.get(coordinated[0].occurrence.pageNumber);
+          const last = coordinated.at(-1).occurrence;
+          const head = rightHeadAfterOccurrence({
+            pageText: page.text,
+            occurrence: last,
+            contextEnd: last.context.pageEnd,
+            headSuffixes: structure.headSuffixes,
+          });
+          if (!head) continue;
+          const candidateIds = coordinated.map(
+            ({ occurrence }) => occurrence.candidateId
+          );
+          groups.push({
+            id: stableBindingGroupId({
+              documentFingerprint,
+              requirementId: requirement.id,
+              structureIndex,
+              pageNumber: last.pageNumber,
+              governorPageStart: head.pageStart,
+              candidateIds,
+            }),
+            requirementId: requirement.id,
+            type: RIGHT_HEADED_COORDINATION,
+            constraint: structure.constraint,
+            governorText: head.matchedAlias,
+            candidateIds,
+          });
+        }
+      }
+      return;
+    }
+    const buckets = new Map();
+    for (const component of components) {
+      if (!structure.memberComponentIds.includes(component.id)) continue;
+      for (const occurrence of component.occurrences) {
+        const page = pageByNumber.get(occurrence.pageNumber);
+        const governor = nearestGovernor({
+          pageText: page.text,
+          occurrenceStart: occurrence.pageStart,
+          aliases: structure.governorAliases,
+        });
+        if (!governor || governor.pageEnd > occurrence.pageStart) continue;
+        const key = [
+          occurrence.pageNumber,
+          occurrence.context.pageStart,
+          occurrence.context.pageEnd,
+          governor.pageStart,
+          governor.pageEnd,
+        ].join(":");
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets
+          .get(key)
+          .push({ componentId: component.id, occurrence, governor });
+      }
+    }
+
+    for (const candidates of buckets.values()) {
+      const sorted = [...candidates].sort(
+        (left, right) => left.occurrence.pageStart - right.occurrence.pageStart
+      );
+      const runs = [];
+      let run = [];
+      for (const candidate of sorted) {
+        const previous = run.at(-1);
+        if (
+          previous &&
+          !isControlledCoordinationSeparator(
+            pageByNumber
+              .get(candidate.occurrence.pageNumber)
+              .text.slice(
+                previous.occurrence.pageEnd,
+                candidate.occurrence.pageStart
+              )
+          )
+        ) {
+          runs.push(run);
+          run = [];
+        }
+        run.push(candidate);
+      }
+      if (run.length > 0) runs.push(run);
+
+      for (const coordinated of runs) {
+        const componentCounts = new Map();
+        for (const candidate of coordinated)
+          componentCounts.set(
+            candidate.componentId,
+            (componentCounts.get(candidate.componentId) || 0) + 1
+          );
+        const containsEveryDeclaredComponent =
+          structure.memberComponentIds.every(
+            (componentId) => componentCounts.get(componentId) === 1
+          ) && componentCounts.size === structure.memberComponentIds.length;
+        if (!containsEveryDeclaredComponent) continue;
+
+        const candidateIds = coordinated.map(
+          ({ occurrence }) => occurrence.candidateId
+        );
+        const first = coordinated[0];
+        groups.push({
+          id: stableBindingGroupId({
+            documentFingerprint,
+            requirementId: requirement.id,
+            structureIndex,
+            pageNumber: first.occurrence.pageNumber,
+            governorPageStart: first.governor.pageStart,
+            candidateIds,
+          }),
+          requirementId: requirement.id,
+          type: structure.type,
+          constraint: structure.constraint,
+          governorText: first.governor.matchedAlias,
+          candidateIds,
+        });
+      }
+    }
+  });
+
+  const groupIdByCandidateId = new Map();
+  for (const group of groups) {
+    for (const candidateId of group.candidateIds) {
+      if (groupIdByCandidateId.has(candidateId))
+        throw worksheetError("CANDIDATE_MULTIPLE_BINDING_GROUPS", candidateId);
+      groupIdByCandidateId.set(candidateId, group.id);
+    }
+  }
+  return {
+    groups,
+    components: components.map((component) => ({
+      ...component,
+      occurrences: component.occurrences.map((occurrence) => {
+        const bindingGroupId = groupIdByCandidateId.get(occurrence.candidateId);
+        return bindingGroupId ? { ...occurrence, bindingGroupId } : occurrence;
+      }),
+    })),
+  };
+}
+
+/**
+ * Enumerates controlled aliases across every physical page and creates a
+ * candidate-only worksheet for inspection before any LLM call.
+ *
+ * Inputs: canonical V3 PageMap document, document fingerprint and catalog.
+ * Output: immutable-by-convention JSON data. Side effects: none. Role: transform.
+ */
+function buildControlledOccurrenceWorksheet({
+  document,
+  documentFingerprint,
+  catalog,
+  contextMaxChars = DEFAULT_CONTEXT_MAX_CHARS,
+  fallbackWordsEachSide = DEFAULT_FALLBACK_WORDS_EACH_SIDE,
+  scopeWordsBefore = DEFAULT_SCOPE_WORDS_BEFORE,
+}) {
+  const fingerprint = requireNonEmptyString(
+    documentFingerprint,
+    "DOCUMENT_FINGERPRINT_REQUIRED",
+    "documentFingerprint"
+  );
+  const { pageContent, pages } = validateDocument(document);
+  const requirements = validateCatalog(catalog);
+  const sourceDocumentId = String(
+    document.sourceDocumentId || document.id || fingerprint
+  );
+
+  const bindingGroups = [];
+  const worksheetRequirements = requirements.map((requirement) => {
+    const rawComponents = requirement.components.map((component) => {
+      const occurrences = [];
+      for (const page of pages) {
+        const pageRanges = [];
+        for (const alias of component.aliases) {
+          for (const range of findAliasRanges(page.text, alias))
+            pageRanges.push({ ...range, matchedAlias: alias });
+        }
+
+        for (const range of removeOverlappingRanges(pageRanges)) {
+          const documentStart = page.start + range.originalStart;
+          const documentEnd = page.start + range.originalEnd;
+          const context = structuralContext({
+            pageText: page.text,
+            occurrenceStart: range.originalStart,
+            occurrenceEnd: range.originalEnd,
+            maxChars: contextMaxChars,
+            fallbackWordsEachSide,
+          });
+          const scopeLead = precedingWordWindow(
+            page.text,
+            context.pageStart,
+            scopeWordsBefore
+          );
+          occurrences.push({
+            candidateId: candidateId({
+              documentFingerprint: fingerprint,
+              requirementId: requirement.id,
+              componentId: component.id,
+              pageNumber: page.pageNumber,
+              documentStart,
+              documentEnd,
+            }),
+            matchedAlias: range.matchedAlias,
+            pageNumber: page.pageNumber,
+            physicalPageNumber: page.physicalPageNumber,
+            printedPageLabel: page.printedPageLabel,
+            pageScopeHints: page.scopeHints,
+            pageStart: range.originalStart,
+            pageEnd: range.originalEnd,
+            documentStart,
+            documentEnd,
+            exactText: pageContent.slice(documentStart, documentEnd),
+            context: {
+              unitType: context.unitType,
+              pageStart: context.pageStart,
+              pageEnd: context.pageEnd,
+              documentStart: page.start + context.pageStart,
+              documentEnd: page.start + context.pageEnd,
+              text: context.text,
+            },
+            scopeLead: {
+              pageStart: scopeLead.pageStart,
+              pageEnd: scopeLead.pageEnd,
+              documentStart: page.start + scopeLead.pageStart,
+              documentEnd: page.start + scopeLead.pageEnd,
+              text: scopeLead.text,
+            },
+          });
+        }
+      }
+      return {
+        id: component.id,
+        label: component.label,
+        factRole: component.factRole,
+        aliases: component.aliases,
+        terminalState:
+          occurrences.length > 0
+            ? "CONTROLLED_CANDIDATES_FOUND"
+            : "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: occurrences.length,
+        occurrences,
+      };
+    });
+    const grouped = buildRequirementBindingGroups({
+      requirement,
+      components: rawComponents,
+      pages,
+      documentFingerprint: fingerprint,
+    });
+    bindingGroups.push(...grouped.groups);
+    return {
+      id: requirement.id,
+      label: requirement.label,
+      requestedFields: requirement.requestedFields,
+      scopeRules: requirement.scopeRules,
+      componentCount: grouped.components.length,
+      components: grouped.components,
+    };
+  });
+
+  const allComponents = worksheetRequirements.flatMap(
+    (requirement) => requirement.components
+  );
+  return {
+    schemaVersion: WORKSHEET_SCHEMA_VERSION,
+    candidateOnly: true,
+    catalog: {
+      id: String(catalog.catalogId || "unknown"),
+      categoryView: String(catalog.categoryView || "unknown"),
+      schemaVersion: catalog.schemaVersion,
+    },
+    document: {
+      sourceDocumentId,
+      title: String(document.title || "Unknown document"),
+      fingerprint,
+      physicalPages: pages.length,
+      pageContentSha256: crypto
+        .createHash("sha256")
+        .update(pageContent)
+        .digest("hex"),
+    },
+    summary: {
+      requirementCount: worksheetRequirements.length,
+      componentCount: allComponents.length,
+      componentsWithCandidates: allComponents.filter(
+        ({ occurrenceCount }) => occurrenceCount > 0
+      ).length,
+      componentsWithoutCandidates: allComponents.filter(
+        ({ occurrenceCount }) => occurrenceCount === 0
+      ).length,
+      occurrenceCount: allComponents.reduce(
+        (sum, component) => sum + component.occurrenceCount,
+        0
+      ),
+    },
+    bindingGroups,
+    requirements: worksheetRequirements,
+  };
+}
+
+module.exports = {
+  DEFAULT_CONTEXT_MAX_CHARS,
+  DEFAULT_FALLBACK_WORDS_EACH_SIDE,
+  DEFAULT_SCOPE_WORDS_BEFORE,
+  WORKSHEET_SCHEMA_VERSION,
+  buildControlledOccurrenceWorksheet,
+  findAliasRanges,
+  normalizeWithOffsetMap,
+};

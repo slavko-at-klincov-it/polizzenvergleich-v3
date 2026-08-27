@@ -71,6 +71,13 @@ class LMStudioEmbedder {
             encoding_format: "base64",
           })
           .then((result) => {
+            if (result.model !== this.model)
+              throw {
+                type: "EMBEDDING_MODEL_MISMATCH",
+                message: `Requested ${this.model}, received ${String(
+                  result.model || "missing"
+                )}`,
+              };
             const embedding = result.data?.[0]?.embedding;
             if (!Array.isArray(embedding) || !embedding.length)
               throw {
@@ -82,6 +89,7 @@ class LMStudioEmbedder {
           })
           .catch((e) => {
             e.type =
+              e.type ||
               e?.response?.data?.error?.code ||
               e?.response?.status ||
               "failed_to_embed";

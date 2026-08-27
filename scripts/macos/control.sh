@@ -37,7 +37,10 @@ case "${1:-status}" in
     v3_wait_http "$V3_APP_URL/api/ping" 90 || v3_die "Server wurde nicht rechtzeitig erreichbar."
     ;;
   doctor) exec /bin/bash "$V3_SCRIPT_DIR/doctor.sh" ;;
-  update) exec /bin/bash "$V3_SCRIPT_DIR/update.sh" ;;
+  update)
+    shift
+    exec /bin/bash "$V3_SCRIPT_DIR/update.sh" "$@"
+    ;;
   open) /usr/bin/open "$V3_APP_URL" ;;
   logs) /usr/bin/open "$V3_LOG_DIR" ;;
   *) v3_die "Verwendung: polizzenvergleich-v3 {status|start|stop|restart|doctor|update|open|logs}" ;;

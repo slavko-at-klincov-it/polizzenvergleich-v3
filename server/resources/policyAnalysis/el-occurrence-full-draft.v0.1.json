@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "el-occurrence-full-draft-v0.1",
+  "categoryView": "EL",
+  "requirements": [
+    {
+      "id": "EL-01",
+      "label": "Elementar-Sublimit pro Schadenereignis",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "elemental_per_event_limit",
+          "label": "Elementar-Sublimit pro Schadenereignis",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Elementar-Sublimit pro Schadenereignis",
+            "Elementarschäden je Schadenereignis",
+            "Katastrophenschäden je Schadenereignis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-02",
+      "label": "Elementar-Sublimit pro Versicherungsjahr",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "elemental_annual_limit",
+          "label": "Elementar-Sublimit pro Versicherungsjahr",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Elementar-Sublimit pro Versicherungsjahr",
+            "Elementarschäden je Versicherungsjahr",
+            "Katastrophenschäden je Versicherungsjahr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-03",
+      "label": "Gilt das Limit gemeinsam für alle Elementargefahren",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "shared_elemental_limit",
+          "label": "Gemeinsames Limit für alle Elementargefahren",
+          "factRole": "CONDITION",
+          "aliases": [
+            "gemeinsames Limit für alle Elementargefahren",
+            "insgesamt für Elementargefahren",
+            "Elementarschäden insgesamt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-04",
+      "label": "Hochwasser und Überschwemmung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "flood",
+          "label": "Hochwasser",
+          "factRole": "PERIL",
+          "aliases": ["Hochwasser"]
+        },
+        {
+          "id": "inundation",
+          "label": "Überschwemmung",
+          "factRole": "PERIL",
+          "aliases": ["Überschwemmung", "Überschwemmungen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-05",
+      "label": "Starkregen und Oberflächenwasser ohne Gewässerausuferung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "heavy_rain",
+          "label": "Starkregen",
+          "factRole": "PERIL",
+          "aliases": ["Starkregen", "außergewöhnliche Niederschläge"]
+        },
+        {
+          "id": "surface_water",
+          "label": "Oberflächenwasser",
+          "factRole": "PERIL",
+          "aliases": ["Oberflächenwasser", "Oberflächenabfluss"]
+        },
+        {
+          "id": "without_watercourse_overflow",
+          "label": "Ohne Gewässerausuferung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "ohne Ausuferung eines Gewässers",
+            "ohne Gewässerausuferung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-06",
+      "label": "Rückstau aus der Kanalisation",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "sewer_backflow",
+          "label": "Rückstau aus der Kanalisation",
+          "factRole": "PERIL",
+          "aliases": [
+            "Rückstau aus der Kanalisation",
+            "Kanalrückstau",
+            "Rückstau des Kanals"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-07",
+      "label": "Erdbeben",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "earthquake",
+          "label": "Erdbeben",
+          "factRole": "PERIL",
+          "aliases": ["Erdbeben", "Erdbebenschäden"]
+        }
+      ]
+    },
+    {
+      "id": "EL-08",
+      "label": "Erdrutsch, Erdfall und Erdsenkung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "landslide",
+          "label": "Erdrutsch",
+          "factRole": "PERIL",
+          "aliases": ["Erdrutsch", "Erdrutschungen"]
+        },
+        {
+          "id": "sinkhole",
+          "label": "Erdfall",
+          "factRole": "PERIL",
+          "aliases": ["Erdfall", "Erdfälle"]
+        },
+        {
+          "id": "subsidence",
+          "label": "Erdsenkung",
+          "factRole": "PERIL",
+          "aliases": ["Erdsenkung", "Erdsenkungen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-09",
+      "label": "Lawine",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "avalanche",
+          "label": "Lawine",
+          "factRole": "PERIL",
+          "aliases": ["Lawine", "Lawinen", "Lawinenschäden"]
+        }
+      ]
+    },
+    {
+      "id": "EL-10",
+      "label": "Vermurung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "mudslide",
+          "label": "Vermurung",
+          "factRole": "PERIL",
+          "aliases": ["Vermurung", "Vermurungen", "Muren"]
+        }
+      ]
+    },
+    {
+      "id": "EL-11",
+      "label": "Selbstbehalt in der Sparte Elementar",
+      "requestedFields": ["deductible"],
+      "components": [
+        {
+          "id": "elemental_deductible",
+          "label": "Elementar-Selbstbehalt",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Elementar",
+            "Selbstbehalt bei Elementarschäden",
+            "Selbstbehalt für Katastrophenschäden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-12",
+      "label": "Ausschluss oder Zuschlag aufgrund der Hochwasserzone",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "flood_zone_exclusion_or_surcharge",
+          "label": "Ausschluss oder Zuschlag aufgrund der Hochwasserzone",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Hochwasserzone",
+            "Gefahrenzone Hochwasser",
+            "HORA-Zone",
+            "HORA Zone"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-13",
+      "label": "Glasbruch an der Gebäudeverglasung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "building_glazing_breakage",
+          "label": "Glasbruch an der Gebäudeverglasung",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Glasbruch an Gebäudeverglasungen",
+            "Bruch der Gebäudeverglasung",
+            "Gebäudeverglasung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-14",
+      "label": "Glasbruch in Stiegenhaus und Gemeinschaftsräumen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "stairwell_glass_breakage",
+          "label": "Glasbruch im Stiegenhaus",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Stiegenhausverglasung",
+            "Verglasungen in Stiegenhäusern",
+            "Glasbruch im Stiegenhaus"
+          ]
+        },
+        {
+          "id": "common_room_glass_breakage",
+          "label": "Glasbruch in Gemeinschaftsräumen",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Verglasungen in Gemeinschaftsräumen",
+            "Glasbruch in Gemeinschaftsräumen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-15",
+      "label": "Sonderverglasung wie Isolier- oder Sicherheitsglas",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "insulating_or_safety_glass",
+          "label": "Isolier- oder Sicherheitsglas",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Isolierglas",
+            "Isolierverglasung",
+            "Sicherheitsglas",
+            "Sicherheitsverglasung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-16",
+      "label": "Wintergarten und Vitrinen",
+      "requestedFields": ["limit", "condition"],
+      "components": [
+        {
+          "id": "winter_garden",
+          "label": "Wintergarten",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Wintergarten", "Wintergärten"]
+        },
+        {
+          "id": "display_case",
+          "label": "Vitrinen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Vitrine", "Vitrinen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-17",
+      "label": "Kosten einer Notverglasung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "emergency_glazing_costs",
+          "label": "Kosten einer Notverglasung",
+          "factRole": "COST",
+          "aliases": [
+            "Notverglasung",
+            "Kosten der Notverglasung",
+            "provisorische Verglasung"
+          ]
+        },
+        {
+          "id": "emergency_glazing_cost_limit",
+          "label": "Limit der Notverglasungskosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Notverglasung",
+            "Kosten der Notverglasung",
+            "provisorische Verglasung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-18",
+      "label": "Selbstbehalt oder Limit in der Glasversicherung",
+      "requestedFields": ["deductible", "limit"],
+      "components": [
+        {
+          "id": "glass_deductible",
+          "label": "Selbstbehalt der Glasversicherung",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Glasversicherung",
+            "Selbstbehalt in der Glasversicherung",
+            "Selbstbehalt bei Glasbruchschäden"
+          ]
+        },
+        {
+          "id": "glass_limit",
+          "label": "Limit der Glasversicherung",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höchstentschädigung Glasversicherung",
+            "Höchstentschädigung in der Glasversicherung",
+            "Glasbruchschäden je Schadenfall"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-19",
+      "label": "Maschinenbruch der Aufzugsanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "elevator_object",
+          "label": "Aufzugsanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Aufzugsanlage", "Aufzugsanlagen", "Aufzüge"]
+        },
+        {
+          "id": "machinery_breakdown",
+          "label": "Maschinenbruch",
+          "factRole": "DAMAGE",
+          "aliases": ["Maschinenbruch"]
+        }
+      ]
+    },
+    {
+      "id": "EL-20",
+      "label": "Maschinenbruch der übrigen Haustechnik",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "building_services_machinery_breakdown",
+          "label": "Maschinenbruch der Haustechnik",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Maschinenbruch der Haustechnik",
+            "Maschinenbruchversicherung für haustechnische Anlagen"
+          ]
+        },
+        {
+          "id": "building_services_object",
+          "label": "Übrige Haustechnik",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["haustechnische Anlagen", "Gebäudetechnik"]
+        }
+      ]
+    },
+    {
+      "id": "EL-21",
+      "label": "Elektronikversicherung für Gegensprech- und Zutrittsanlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "electronics_cover",
+          "label": "Elektronikversicherung",
+          "factRole": "BENEFIT",
+          "aliases": ["Elektronikversicherung", "Elektronikdeckung"]
+        },
+        {
+          "id": "intercom_system",
+          "label": "Gegensprechanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Gegensprechanlage", "Gegensprechanlagen"]
+        },
+        {
+          "id": "access_system",
+          "label": "Zutrittsanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Zutrittsanlage",
+            "Zutrittsanlagen",
+            "Zutrittskontrollanlage"
+          ]
+        },
+        {
+          "id": "electronics_cover_for_intercom_and_access_systems",
+          "label": "Elektronikdeckung für Gegensprech- und Zutrittsanlagen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Elektronikversicherung für Gegensprech- und Zutrittsanlagen",
+            "Elektronikversicherung für Gegensprechanlagen und Zutrittsanlagen",
+            "Elektronikdeckung für Gegensprech- und Zutrittsanlagen",
+            "Elektronikschäden an Gegensprech- und Zutrittsanlagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-22",
+      "label": "Sachschäden an der E-Ladeinfrastruktur",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "charging_infrastructure_property_damage",
+          "label": "Sachschäden an E-Ladeinfrastruktur",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Sachschäden an Ladestationen",
+            "Schäden an E-Ladestationen",
+            "Schäden an der Ladeinfrastruktur"
+          ]
+        },
+        {
+          "id": "charging_infrastructure",
+          "label": "E-Ladeinfrastruktur",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "E-Ladeinfrastruktur",
+            "E-Ladestation",
+            "E-Ladestationen",
+            "Wallbox",
+            "Wallboxen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-23",
+      "label": "Allgefahrendeckung für die Photovoltaikanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_all_risk",
+          "label": "Allgefahrendeckung",
+          "factRole": "BENEFIT",
+          "aliases": ["Allgefahrendeckung", "All-Risk-Deckung", "All Risks"]
+        },
+        {
+          "id": "photovoltaic_system",
+          "label": "Photovoltaikanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Photovoltaikanlage",
+            "Photovoltaikanlagen",
+            "PV-Anlage",
+            "PV-Anlagen"
+          ]
+        },
+        {
+          "id": "all_risk_cover_for_photovoltaic_system",
+          "label": "Allgefahrendeckung für Photovoltaikanlage",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Allgefahrendeckung für die Photovoltaikanlage",
+            "Allgefahrendeckung für Photovoltaikanlagen",
+            "All-Risk-Deckung für die Photovoltaikanlage",
+            "All Risks für Photovoltaikanlagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-24",
+      "label": "Diebstahl von Photovoltaikmodulen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_module_theft",
+          "label": "Diebstahl von Photovoltaikmodulen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Diebstahl von Photovoltaikmodulen",
+            "Diebstahl der Solarmodule",
+            "Entwendung von Photovoltaikmodulen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-25",
+      "label": "Vandalismus ohne vorangegangenen Einbruch",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "vandalism_without_burglary",
+          "label": "Vandalismus ohne Einbruch",
+          "factRole": "DAMAGE",
+          "aliases": ["böswillige Beschädigung", "erweiterter Vandalismus"]
+        }
+      ]
+    },
+    {
+      "id": "EL-26",
+      "label": "Graffitientfernung, Limit und Anzahl pro Jahr",
+      "requestedFields": ["limit", "annual_count"],
+      "components": [
+        {
+          "id": "graffiti_removal",
+          "label": "Graffitientfernung",
+          "factRole": "COST",
+          "aliases": [
+            "Graffitientfernung",
+            "Entfernung von Graffiti",
+            "Beseitigung von Graffiti"
+          ]
+        },
+        {
+          "id": "graffiti_limit",
+          "label": "Limit der Graffitientfernung",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Graffitientfernung",
+            "Entfernung von Graffiti",
+            "Beseitigung von Graffiti"
+          ]
+        },
+        {
+          "id": "graffiti_annual_count",
+          "label": "Anzahl pro Jahr",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Graffitischäden pro Versicherungsjahr",
+            "Graffitientfernungen pro Jahr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-27",
+      "label": "Einbruchdiebstahl in allgemeine Teile und Kellerabteile",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "burglary",
+          "label": "Einbruchdiebstahl",
+          "factRole": "PERIL",
+          "aliases": ["Einbruchdiebstahl", "Einbruchsdiebstahl"]
+        },
+        {
+          "id": "common_areas",
+          "label": "Allgemeine Teile",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "allgemein zugänglichen Teilen",
+            "allgemeinen Teilen des Gebäudes",
+            "Allgemeinflächen"
+          ]
+        },
+        {
+          "id": "cellar_compartments",
+          "label": "Kellerabteile",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Kellerabteil", "Kellerabteile"]
+        }
+      ]
+    },
+    {
+      "id": "EL-28",
+      "label": "Gebäudeschäden durch den Einbruch selbst",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "burglary_building_damage",
+          "label": "Gebäudeschäden durch Einbruch",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Gebäudeschäden durch Einbruch",
+            "Schäden am Gebäude durch Einbruch",
+            "Einbruchschäden am Gebäude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-29",
+      "label": "Diebstahl fest mit dem Gebäude verbundener Teile",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "theft_of_fixed_building_parts",
+          "label": "Diebstahl fest verbundener Gebäudeteile",
+          "factRole": "PERIL",
+          "aliases": [
+            "Diebstahl fest mit dem Gebäude verbundener Teile",
+            "Entwendung fest verbundener Gebäudebestandteile",
+            "Diebstahl von Gebäudebestandteilen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-30",
+      "label": "Diebstahl von Wärmepumpe oder Außengeräten",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "heat_pump_or_outdoor_unit_theft",
+          "label": "Diebstahl von Wärmepumpe oder Außengeräten",
+          "factRole": "PERIL",
+          "aliases": [
+            "Diebstahl von Wärmepumpen",
+            "Diebstahl der Wärmepumpe",
+            "Entwendung von Außengeräten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-31",
+      "label": "Kosten der Schlossänderung nach Schlüsselverlust",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "lock_change_costs",
+          "label": "Schlossänderungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Schlossänderungskosten",
+            "Kosten der Schlossänderung",
+            "Änderung der Schlösser"
+          ]
+        },
+        {
+          "id": "key_loss",
+          "label": "Schlüsselverlust",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Schlüsselverlust",
+            "Abhandenkommen der Schlüssel",
+            "Verlust von Schlüsseln"
+          ]
+        },
+        {
+          "id": "lock_change_after_key_loss",
+          "label": "Schlossänderung nach Schlüsselverlust",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Schlossänderung nach Schlüsselverlust",
+            "Schlossänderungskosten nach Schlüsselverlust",
+            "Kosten der Schlossänderung nach Schlüsselverlust",
+            "Schlossänderung bei Verlust von Schlüsseln"
+          ]
+        },
+        {
+          "id": "lock_change_cost_limit",
+          "label": "Limit der Schlossänderungskosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Schlossänderungskosten",
+            "Kosten der Schlossänderung",
+            "Änderung der Schlösser"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-32",
+      "label": "Regelung für Generalschlüssel und Schließanlage",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "master_key",
+          "label": "Generalschlüssel",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Generalschlüssel", "Zentralschlüssel"]
+        },
+        {
+          "id": "locking_system",
+          "label": "Schließanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Schließanlage", "Schließanlagen"]
+        },
+        {
+          "id": "master_key_and_locking_system_limit",
+          "label": "Limit für Generalschlüssel und Schließanlage",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Generalschlüssel und Schließanlage",
+            "Generalschlüssel oder Schließanlage",
+            "Zentralschlüssel und Schließanlage",
+            "Kosten für Generalschlüssel",
+            "Kosten der Schließanlage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-33",
+      "label": "Tierschäden durch Marder, Nagetiere oder Tauben",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "marten_rodent_or_pigeon_damage",
+          "label": "Tierschäden durch Marder, Nagetiere oder Tauben",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Marderschäden",
+            "Schäden durch Nagetiere",
+            "Taubenschäden",
+            "Schäden durch Tauben"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "EL-34",
+      "label": "Terror und Sabotage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "terror",
+          "label": "Terror",
+          "factRole": "PERIL",
+          "aliases": ["Terror", "Terrorakte", "Terrorismus"]
+        },
+        {
+          "id": "sabotage",
+          "label": "Sabotage",
+          "factRole": "PERIL",
+          "aliases": ["Sabotage"]
+        }
+      ]
+    },
+    {
+      "id": "EL-35",
+      "label": "Innere Unruhen, Streik und Aussperrung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "civil_unrest",
+          "label": "Innere Unruhen",
+          "factRole": "PERIL",
+          "aliases": ["innere Unruhen", "inneren Unruhen"]
+        },
+        {
+          "id": "strike",
+          "label": "Streik",
+          "factRole": "PERIL",
+          "aliases": ["Streik", "Streiks"]
+        },
+        {
+          "id": "lockout",
+          "label": "Aussperrung",
+          "factRole": "PERIL",
+          "aliases": ["Aussperrung", "Aussperrungen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-36",
+      "label": "Cyberrisiken und Manipulation der Gebäudeautomation",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "cyber_risks",
+          "label": "Cyberrisiken",
+          "factRole": "PERIL",
+          "aliases": [
+            "Cyberrisiken",
+            "Cyber-Angriff",
+            "Cyberangriff",
+            "Cyberattacke"
+          ]
+        },
+        {
+          "id": "building_automation_manipulation",
+          "label": "Manipulation der Gebäudeautomation",
+          "factRole": "PERIL",
+          "aliases": [
+            "Manipulation der Gebäudeautomation",
+            "Manipulation von Gebäudesteuerungen"
+          ]
+        },
+        {
+          "id": "cyber_manipulation_of_building_automation",
+          "label": "Cybermanipulation der Gebäudeautomation",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Cyberrisiken und Manipulation der Gebäudeautomation",
+            "Cyberangriff auf die Gebäudeautomation",
+            "Cyber-Angriff auf die Gebäudeautomation",
+            "Cyberattacke auf die Gebäudesteuerung"
+          ]
+        }
+      ]
+    }
+  ]
+}

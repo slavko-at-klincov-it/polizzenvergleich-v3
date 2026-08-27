@@ -1,0 +1,298 @@
+#!/usr/bin/env node
+
+process.umask(0o077);
+
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+
+function fail(message) {
+  console.error(`[prepared-evidence] ${message}`);
+  process.exit(1);
+}
+
+function parseArguments(argv) {
+  const values = {};
+  for (let index = 0; index < argv.length; index += 2) {
+    const key = argv[index];
+    const value = argv[index + 1];
+    if (!key?.startsWith("--") || !value) fail(`Ungültiges Argument: ${key}`);
+    values[key.slice(2)] = value;
+  }
+  return values;
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function sha256File(file) {
+  return sha256(fs.readFileSync(file));
+}
+
+function writePrivateJson(outputDirectory, fileName, value) {
+  const file = path.join(outputDirectory, fileName);
+  fs.writeFileSync(file, JSON.stringify(value, null, 2), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  fs.chmodSync(file, 0o600);
+}
+
+function aggregateCompletionMetrics(calls, model) {
+  const totals = calls.reduce(
+    (result, call) => {
+      result.prompt_tokens += call.metrics?.prompt_tokens || 0;
+      result.completion_tokens += call.metrics?.completion_tokens || 0;
+      result.total_tokens += call.metrics?.total_tokens || 0;
+      result.duration += call.metrics?.duration || 0;
+      return result;
+    },
+    { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, duration: 0 }
+  );
+  const responseModels = [
+    ...new Set(
+      calls.map((call) => call.metrics?.responseModel).filter(Boolean)
+    ),
+  ];
+  return {
+    callCount: calls.length,
+    ...totals,
+    model,
+    responseModel:
+      responseModels.length === 1 && calls.length > 0
+        ? responseModels[0]
+        : null,
+    responseModelComplete:
+      calls.length > 0 &&
+      calls.every(({ metrics }) => metrics?.responseModel === model),
+  };
+}
+
+function selectedSources({ targets, materialized }) {
+  const sourceById = new Map();
+  for (const target of targets)
+    for (const candidate of target.candidates)
+      sourceById.set(candidate.candidateId, {
+        requirementId: target.requirementId,
+        componentId: target.componentId,
+        candidateId: candidate.candidateId,
+        candidateBinding: candidate.candidateBinding || null,
+        physicalPageNumber: candidate.physicalPageNumber,
+        printedPageLabel: candidate.printedPageLabel || null,
+        exactText: candidate.exactText,
+        contextText: candidate.contextText,
+        contextDocumentStart: candidate.contextDocumentStart,
+      });
+  return materialized.judgements.flatMap((judgement) =>
+    judgement.selectedCandidateIds.map((candidateId) =>
+      sourceById.get(candidateId)
+    )
+  );
+}
+
+async function run() {
+  const args = parseArguments(process.argv.slice(2));
+  const worksheetFile = path.resolve(args.worksheet || "");
+  const systemPromptFile = path.resolve(args.systemPromptFile || "");
+  const controlFile = path.resolve(args.controlFile || "");
+  const triageFile = args.triageFile ? path.resolve(args.triageFile) : null;
+  const outputDirectory = path.resolve(args.output || "");
+  for (const [label, file] of [
+    ["Worksheet", worksheetFile],
+    ["Systemprompt", systemPromptFile],
+    ["Kontrollen", controlFile],
+  ]) {
+    if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
+  }
+  if (triageFile && !fs.existsSync(triageFile))
+    fail(`Triage fehlt: ${triageFile}`);
+  if (!args.output) fail("--output ist erforderlich");
+  fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
+  fs.chmodSync(outputDirectory, 0o700);
+
+  process.env.LMSTUDIO_BASE_PATH =
+    process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
+  process.env.LMSTUDIO_MODEL_PREF =
+    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen3.5-4b-mlx";
+  process.env.LMSTUDIO_MODEL_TOKEN_LIMIT =
+    args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "32768";
+
+  const {
+    DOCUMENT_STATUS,
+    buildPreparedEvidenceTargets,
+    buildSinglePreparedEvidencePayload,
+    materializePreparedEvidence,
+    parseAndValidatePreparedEvidenceResponse,
+  } = require("../../utils/policyAnalysis/preparedEvidenceContract");
+  const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
+  const {
+    evaluatePreparedEvidenceControls,
+  } = require("../../utils/policyAnalysis/preparedEvidenceControls");
+
+  const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
+  const controlSet = JSON.parse(fs.readFileSync(controlFile, "utf8"));
+  const candidateTriage = triageFile
+    ? JSON.parse(fs.readFileSync(triageFile, "utf8"))
+    : null;
+  const reviewStatus = controlSet.reviewStatus || "NOT_DECLARED";
+  if (!["NOT_DECLARED", "REVIEW_REQUIRED", "APPROVED"].includes(reviewStatus))
+    fail(`Ungültiger Control-Reviewstatus: ${reviewStatus}`);
+  const documentStatus = args.documentStatus;
+  if (!Object.values(DOCUMENT_STATUS).includes(documentStatus))
+    fail(`Ungültiger --documentStatus: ${documentStatus}`);
+  const targets = buildPreparedEvidenceTargets({
+    worksheet,
+    documentStatus,
+    candidateTriage,
+  });
+  const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
+  const startedAt = new Date();
+  const calls = [];
+  const messages = [];
+  const judgements = [];
+  let validationError = null;
+
+  for (const target of targets.filter(({ candidates }) => candidates.length)) {
+    const payload = buildSinglePreparedEvidencePayload({ target });
+    const promptMessages = llm.constructPrompt({
+      systemPrompt,
+      contextTexts: [],
+      chatHistory: [],
+      userPrompt: JSON.stringify(payload),
+    });
+    const completion = await llm.getChatCompletion(promptMessages, {
+      temperature: 0,
+      // A valid response may contain many server-owned candidate IDs for one
+      // atomic component. Keep the cap finite, but large enough for the full
+      // validated ID list instead of truncating otherwise valid JSON.
+      maxTokens: 2048,
+    });
+    calls.push({
+      targetId: target.targetId,
+      payloadSha256: sha256(JSON.stringify(payload)),
+      responseText: completion?.textResponse || "",
+      metrics: completion?.metrics || null,
+    });
+    messages.push({ targetId: target.targetId, messages: promptMessages });
+    try {
+      judgements.push(
+        parseAndValidatePreparedEvidenceResponse({
+          responseText: completion?.textResponse || "",
+          target,
+        })
+      );
+    } catch (error) {
+      validationError = {
+        code: error.code || "UNKNOWN",
+        message: error.message,
+        targetId: target.targetId,
+      };
+      break;
+    }
+  }
+
+  let materialized = null;
+  let sources = [];
+  let controls = [];
+  if (!validationError) {
+    try {
+      materialized = materializePreparedEvidence({
+        worksheet,
+        targets,
+        judgements,
+      });
+      sources = selectedSources({ targets, materialized });
+      controls = evaluatePreparedEvidenceControls({
+        controlSet,
+        materialized,
+        sources,
+      });
+    } catch (error) {
+      validationError = {
+        code: error.code || "UNKNOWN",
+        message: error.message,
+      };
+    }
+  }
+
+  writePrivateJson(outputDirectory, "answers.private.json", calls);
+  writePrivateJson(outputDirectory, "messages.private.json", messages);
+  writePrivateJson(outputDirectory, "targets.private.json", targets);
+  if (materialized) {
+    writePrivateJson(
+      outputDirectory,
+      "materialized.private.json",
+      materialized
+    );
+    writePrivateJson(outputDirectory, "selected-sources.private.json", sources);
+  }
+  const technicalPass =
+    materialized && controls.every(({ pass }) => pass) && !validationError;
+  const requestedFieldsNotEvaluated =
+    materialized?.rollups.filter(
+      ({ requestedFieldStatus }) => requestedFieldStatus === "NOT_EVALUATED"
+    ).length || 0;
+  const report = {
+    status: technicalPass
+      ? reviewStatus === "APPROVED" && requestedFieldsNotEvaluated === 0
+        ? "PASS"
+        : "TECHNICAL_PASS_REVIEW_REQUIRED"
+      : "REVISE",
+    startedAt: startedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    model: {
+      provider: "LMStudioLLM",
+      id: process.env.LMSTUDIO_MODEL_PREF,
+      temperature: 0,
+      seed: null,
+    },
+    contracts: {
+      worksheetPath: worksheetFile,
+      worksheetSha256: sha256File(worksheetFile),
+      systemPromptPath: systemPromptFile,
+      systemPromptSha256: sha256File(systemPromptFile),
+      controlPath: controlFile,
+      controlSha256: sha256File(controlFile),
+      triagePath: triageFile,
+      triageSha256: triageFile ? sha256File(triageFile) : null,
+      documentStatus,
+    },
+    input: {
+      requirementCount: worksheet.requirements.length,
+      componentCount: targets.length,
+      serverTerminalCount: targets.filter(
+        ({ candidates }) => !candidates.length
+      ).length,
+      modelTargetCount: calls.length,
+      candidateCount: targets.reduce(
+        (sum, target) => sum + target.candidates.length,
+        0
+      ),
+    },
+    completion: aggregateCompletionMetrics(
+      calls,
+      process.env.LMSTUDIO_MODEL_PREF
+    ),
+    validation: {
+      pass: Boolean(materialized && !validationError),
+      error: validationError,
+      judgementCount: materialized?.judgements.length || 0,
+      requestedFieldsNotEvaluated,
+    },
+    controls: {
+      pass: Boolean(technicalPass),
+      reviewStatus,
+      passed: controls.filter(({ pass }) => pass).length,
+      total: controls.length,
+      results: controls,
+    },
+  };
+  writePrivateJson(outputDirectory, "report.json", report);
+  console.log(
+    `[prepared-evidence] ${report.status}: ${report.validation.judgementCount}/${targets.length} Komponenten, ${report.controls.passed}/${report.controls.total} Kontrollen`
+  );
+}
+
+run().catch((error) => fail(error.stack || error.message));

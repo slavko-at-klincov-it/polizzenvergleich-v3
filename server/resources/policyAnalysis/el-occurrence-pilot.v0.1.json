@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "el-occurrence-pilot-v0.1",
+  "categoryView": "EL",
+  "requirements": [
+    {
+      "id": "EL-04",
+      "label": "Hochwasser und Überschwemmung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "flood",
+          "label": "Hochwasser",
+          "factRole": "PERIL",
+          "aliases": ["Hochwasser"]
+        },
+        {
+          "id": "inundation",
+          "label": "Überschwemmung",
+          "factRole": "PERIL",
+          "aliases": ["Überschwemmung", "Überschwemmungen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-08",
+      "label": "Erdrutsch, Erdfall und Erdsenkung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "landslide",
+          "label": "Erdrutsch",
+          "factRole": "PERIL",
+          "aliases": ["Erdrutsch", "Erdrutschungen"]
+        },
+        {
+          "id": "sinkhole",
+          "label": "Erdfall",
+          "factRole": "PERIL",
+          "aliases": ["Erdfall", "Erdfälle"]
+        },
+        {
+          "id": "subsidence",
+          "label": "Erdsenkung",
+          "factRole": "PERIL",
+          "aliases": ["Erdsenkung", "Erdsenkungen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-16",
+      "label": "Wintergarten und Vitrinen",
+      "requestedFields": ["limit", "condition"],
+      "components": [
+        {
+          "id": "winter_garden",
+          "label": "Wintergarten",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Wintergarten", "Wintergärten"]
+        },
+        {
+          "id": "display_case",
+          "label": "Vitrinen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Vitrine", "Vitrinen"]
+        }
+      ]
+    },
+    {
+      "id": "EL-19",
+      "label": "Maschinenbruch der Aufzugsanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "elevator_object",
+          "label": "Aufzugsanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Aufzugsanlage", "Aufzugsanlagen", "Aufzüge"]
+        },
+        {
+          "id": "machinery_breakdown",
+          "label": "Maschinenbruch",
+          "factRole": "DAMAGE",
+          "aliases": ["Maschinenbruch"]
+        }
+      ]
+    },
+    {
+      "id": "EL-25",
+      "label": "Vandalismus ohne vorangegangenen Einbruch",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "vandalism_without_burglary",
+          "label": "Vandalismus ohne Einbruch",
+          "factRole": "DAMAGE",
+          "aliases": ["böswillige Beschädigung", "erweiterter Vandalismus"]
+        }
+      ]
+    },
+    {
+      "id": "EL-34",
+      "label": "Terror und Sabotage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "terror",
+          "label": "Terror",
+          "factRole": "PERIL",
+          "aliases": ["Terror", "Terrorakte", "Terrorismus"]
+        },
+        {
+          "id": "sabotage",
+          "label": "Sabotage",
+          "factRole": "PERIL",
+          "aliases": ["Sabotage"]
+        }
+      ]
+    }
+  ]
+}

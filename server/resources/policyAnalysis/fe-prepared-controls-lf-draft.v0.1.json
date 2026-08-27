@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "fe-prepared-controls-lf-draft-v0.1",
+  "reviewStatus": "REVIEW_REQUIRED",
+  "controls": [
+    {
+      "id": "felf-a01-definition",
+      "requirementId": "FE-A01",
+      "componentId": "fire_definition",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["DEFINED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [7]
+    },
+    {
+      "id": "felf-a05-indirect-lightning",
+      "requirementId": "FE-A05",
+      "componentId": "indirect_lightning_damage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [7]
+    },
+    {
+      "id": "felf-a06-limit",
+      "requirementId": "FE-A06",
+      "componentId": "indirect_lightning_limit",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["DEFINED", "INCLUDED", "CONDITIONAL"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [7]
+    },
+    {
+      "id": "felf-a10-missing",
+      "requirementId": "FE-A10",
+      "componentId": "foreign_vehicle_impact",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "felf-a14-missing",
+      "requirementId": "FE-A14",
+      "componentId": "drone_damage",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "felf-d01-cost",
+      "requirementId": "FE-D01",
+      "componentId": "firefighting_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [5],
+      "forbiddenPhysicalPages": [7]
+    },
+    {
+      "id": "felf-d01-limit",
+      "requirementId": "FE-D01",
+      "componentId": "firefighting_costs_limit",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["DEFINED", "INCLUDED", "CONDITIONAL"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [5],
+      "forbiddenPhysicalPages": [7, 27]
+    },
+    {
+      "id": "felf-d05-smoke",
+      "requirementId": "FE-D05",
+      "componentId": "smoke_soot_damage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED", "DEFINED"],
+      "allowedApplicabilities": ["CONDITIONAL"],
+      "requiredPhysicalPages": [7]
+    },
+    {
+      "id": "felf-d05-without-fire-missing",
+      "requirementId": "FE-D05",
+      "componentId": "without_own_fire",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "vs-occurrence-pilot-v0.1",
+  "categoryView": "VS",
+  "requirements": [
+    {
+      "id": "VS-16",
+      "label": "Garagen und Tiefgarage mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "garage",
+          "label": "Garagen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Garage", "Garagen"]
+        },
+        {
+          "id": "underground_garage",
+          "label": "Tiefgarage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Tiefgarage", "Tiefgaragen"]
+        }
+      ]
+    },
+    {
+      "id": "VS-17",
+      "label": "Müllräume, Fahrradräume, Kinderwagenräume mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "waste_room",
+          "label": "Müllräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Müllraum", "Müllräume"]
+        },
+        {
+          "id": "bicycle_room",
+          "label": "Fahrradräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Fahrradraum",
+            "Fahrradräume",
+            "Fahrradabstellraum",
+            "Fahrradabstellräume"
+          ]
+        },
+        {
+          "id": "stroller_room",
+          "label": "Kinderwagenräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Kinderwagenraum", "Kinderwagenräume"]
+        }
+      ]
+    },
+    {
+      "id": "VS-21",
+      "label": "Aufräum- und Abbruchkosten, Höhe des Limits",
+      "requestedFields": ["limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_GOVERNOR",
+          "governorAliases": ["Kosten für"],
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        },
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        },
+        {
+          "type": "RIGHT_HEADED_COORDINATION",
+          "headSuffixes": ["kosten"],
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "scopeRules": {
+        "narrowAliases": [
+          "radioaktiv",
+          "kontaminiert",
+          "Sondermüll",
+          "gefährlicher Abfall",
+          "gefährlichem Abfall",
+          "Problemstoffe",
+          "Problemstoffen"
+        ]
+      },
+      "components": [
+        {
+          "id": "cleanup_costs",
+          "label": "Aufräumkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Aufräumung",
+            "Aufräumungen",
+            "Aufräumungs-",
+            "Aufräumungskosten",
+            "Aufräumungsarbeiten",
+            "Aufräum-",
+            "Aufräum- und Abbruchkosten",
+            "Aufräum-, Abbruch- und Feuerlöschkosten"
+          ]
+        },
+        {
+          "id": "demolition_costs",
+          "label": "Abbruchkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Abbruch",
+            "Abbruchkosten",
+            "Aufräum- und Abbruchkosten",
+            "Aufräum-, Abbruch- und Feuerlöschkosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VS-28",
+      "label": "Mietzinsentgang, Dauer der Leistung",
+      "requestedFields": ["duration"],
+      "components": [
+        {
+          "id": "rent_loss",
+          "label": "Mietzinsentgang",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Mietzinsentgang",
+            "Mietverlust",
+            "Mietausfall",
+            "Entgang von Mietzinseinnahmen"
+          ]
+        }
+      ]
+    }
+  ]
+}

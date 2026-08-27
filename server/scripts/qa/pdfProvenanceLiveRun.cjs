@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+process.umask(0o077);
+
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -30,9 +32,11 @@ if (path.extname(pdfPath).toLowerCase() !== ".pdf")
   fail(`Nur PDF-Dateien sind erlaubt: ${pdfPath}`);
 if (!cliArguments.output) fail("--output ist erforderlich");
 
-fs.mkdirSync(outputPath, { recursive: true });
+fs.mkdirSync(outputPath, { recursive: true, mode: 0o700 });
+fs.chmodSync(outputPath, 0o700);
 const storagePath = path.join(outputPath, "storage");
-fs.mkdirSync(storagePath, { recursive: true });
+fs.mkdirSync(storagePath, { recursive: true, mode: 0o700 });
+fs.chmodSync(storagePath, 0o700);
 
 process.env.NODE_ENV = "production";
 process.env.STORAGE_DIR = storagePath;
@@ -108,8 +112,10 @@ function stripChunkHeader(text) {
 function writeJson(fileName, value) {
   fs.writeFileSync(
     path.join(outputPath, fileName),
-    JSON.stringify(value, null, 2)
+    JSON.stringify(value, null, 2),
+    { encoding: "utf8", mode: 0o600 }
   );
+  fs.chmodSync(path.join(outputPath, fileName), 0o600);
 }
 
 async function main() {
@@ -122,6 +128,9 @@ async function main() {
   const chunkOverlap = Number(cliArguments.chunkOverlap || 250);
   const topN = Number(cliArguments.topN || 32);
   const modelTokenLimit = Number(cliArguments.modelTokenLimit || 32768);
+  const maxCompletionTokens = Number(cliArguments.maxCompletionTokens || 8192);
+  if (!Number.isInteger(maxCompletionTokens) || maxCompletionTokens < 1)
+    fail(`Ungültige --maxCompletionTokens: ${maxCompletionTokens}`);
   process.env.LMSTUDIO_MODEL_TOKEN_LIMIT = String(modelTokenLimit);
 
   console.log(`[pdf-provenance-live] Parse: ${fileName}`);
@@ -218,7 +227,10 @@ async function main() {
     userPrompt: USER_PROMPT,
   });
   console.log(`[pdf-provenance-live] Qwen: ${process.env.LMSTUDIO_MODEL_PREF}`);
-  const completion = await llm.getChatCompletion(messages, { temperature: 0 });
+  const completion = await llm.getChatCompletion(messages, {
+    temperature: 0,
+    maxTokens: maxCompletionTokens,
+  });
   if (!completion?.textResponse) fail("Qwen hat keine Antwort geliefert.");
 
   const sourceSummary = retrieved.sourceDocuments.map((source) => ({
@@ -257,6 +269,7 @@ async function main() {
       chunkOverlap,
       topN,
       modelTokenLimit,
+      maxCompletionTokens,
       namespace,
     },
     extraction: {
@@ -280,7 +293,15 @@ async function main() {
   writeJson("report.json", report);
   writeJson("retrieved-sources.private.json", sourceSummary);
   writeJson("messages.private.json", messages);
-  fs.writeFileSync(path.join(outputPath, "answer.md"), completion.textResponse);
+  fs.writeFileSync(
+    path.join(outputPath, "answer.md"),
+    completion.textResponse,
+    {
+      encoding: "utf8",
+      mode: 0o600,
+    }
+  );
+  fs.chmodSync(path.join(outputPath, "answer.md"), 0o600);
   console.log(
     `[pdf-provenance-live] ${report.status}: ${path.join(outputPath, "report.json")}`
   );

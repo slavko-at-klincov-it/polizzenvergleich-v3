@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "controlSetId": "fe-prepared-controls-wevig-draft-v0.1",
+  "reviewStatus": "REVIEW_REQUIRED",
+  "controls": [
+    {
+      "id": "few-a01-missing",
+      "requirementId": "FE-A01",
+      "componentId": "fire_definition",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "few-a05-indirect-lightning",
+      "requirementId": "FE-A05",
+      "componentId": "indirect_lightning_damage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [1, 11]
+    },
+    {
+      "id": "few-a06-no-limit",
+      "requirementId": "FE-A06",
+      "componentId": "indirect_lightning_limit",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "few-a10-vehicle-impact",
+      "requirementId": "FE-A10",
+      "componentId": "foreign_vehicle_impact",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredPhysicalPages": [1, 11]
+    },
+    {
+      "id": "few-a14-missing",
+      "requirementId": "FE-A14",
+      "componentId": "drone_damage",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    },
+    {
+      "id": "few-d01-cost",
+      "requirementId": "FE-D01",
+      "componentId": "firefighting_costs",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [1, 8]
+    },
+    {
+      "id": "few-d01-limit",
+      "requirementId": "FE-D01",
+      "componentId": "firefighting_costs_limit",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["DEFINED", "INCLUDED", "CONDITIONAL"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredPhysicalPages": [1]
+    },
+    {
+      "id": "few-d05-smoke",
+      "requirementId": "FE-D05",
+      "componentId": "smoke_soot_damage",
+      "allowedEvidencePresence": ["FOUND"],
+      "allowedCoverageEffects": ["INCLUDED"],
+      "allowedApplicabilities": ["PROPOSED_ONLY"],
+      "requiredAnyPhysicalPages": [1, 11]
+    },
+    {
+      "id": "few-d05-without-fire-missing",
+      "requirementId": "FE-D05",
+      "componentId": "without_own_fire",
+      "allowedEvidencePresence": ["NOT_FOUND"],
+      "allowedCoverageEffects": ["UNKNOWN"],
+      "allowedApplicabilities": ["UNKNOWN"]
+    }
+  ]
+}

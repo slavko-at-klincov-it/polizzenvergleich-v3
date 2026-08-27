@@ -1,0 +1,745 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "st-occurrence-full-draft-v0.1",
+  "categoryView": "ST",
+  "requirements": [
+    {
+      "id": "ST-01",
+      "label": "Windgeschwindigkeit, ab der ein Sturm vorliegt",
+      "requestedFields": ["threshold"],
+      "components": [
+        {
+          "id": "storm_wind_speed_definition",
+          "label": "Sturmdefinition anhand der Windgeschwindigkeit",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Wind mit Spitzengeschwindigkeiten von mehr als",
+            "Windgeschwindigkeit von mindestens",
+            "Windgeschwindigkeit von mehr als",
+            "Sturm ist eine wetterbedingte Luftbewegung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-02",
+      "label": "Nachweispflicht für die Windstärke und maßgebliche Messstelle",
+      "requestedFields": ["condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["wind_proof_duty", "measuring_station"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "wind_proof_duty",
+          "label": "Nachweispflicht für die Windstärke",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Nachweis der Windstärke an der maßgeblichen Messstelle",
+            "Nachweis der Windgeschwindigkeit durch eine Messstation",
+            "Windstärke durch eine Wetterstation nachzuweisen"
+          ]
+        },
+        {
+          "id": "measuring_station",
+          "label": "maßgebliche Messstelle",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Nachweis der Windstärke an der maßgeblichen Messstelle",
+            "Nachweis der Windgeschwindigkeit durch eine Messstation",
+            "Windstärke durch eine Wetterstation nachzuweisen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-03",
+      "label": "Nachbarschaftsindiz als Ersatznachweis zugelassen",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "neighbourhood_indication",
+          "label": "Nachbarschaftsindiz als Ersatznachweis",
+          "factRole": "CONDITION",
+          "aliases": [
+            "gleichartige Schäden in der Nachbarschaft",
+            "gleichartige Schäden an Nachbargebäuden",
+            "Schäden an Nachbargebäuden als Nachweis der Windstärke"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-04",
+      "label": "Hagelschäden an Dach und Fassade",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "roof",
+          "label": "Hagelschäden am Dach",
+          "factRole": "DAMAGE",
+          "aliases": ["Hagelschäden am Dach", "Hagelschäden an Dach"]
+        },
+        {
+          "id": "facade",
+          "label": "Hagelschäden an der Fassade",
+          "factRole": "DAMAGE",
+          "aliases": ["Hagelschäden an der Fassade", "Hagelschäden an Fassaden"]
+        }
+      ]
+    },
+    {
+      "id": "ST-05",
+      "label": "Rein optische Beeinträchtigung durch Hagel",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["cosmetic_impairment", "hail"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "cosmetic_impairment",
+          "label": "rein optische Beeinträchtigung",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "optische Beeinträchtigung durch Hagel",
+            "optische Schäden durch Hagelschlag",
+            "Optische Schäden an Gebäuden und Gebäudebestandteilen durch Hagelschlag",
+            "Schönheitsfehler durch Hagel"
+          ]
+        },
+        {
+          "id": "hail",
+          "label": "durch Hagel",
+          "factRole": "PERIL",
+          "aliases": [
+            "optische Beeinträchtigung durch Hagel",
+            "optische Schäden durch Hagelschlag",
+            "Optische Schäden an Gebäuden und Gebäudebestandteilen durch Hagelschlag",
+            "Schönheitsfehler durch Hagel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-06",
+      "label": "Schneedruck auf Dach und Tragkonstruktion",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "roof",
+          "label": "Schneedruck auf dem Dach",
+          "factRole": "DAMAGE",
+          "aliases": ["Schneedruck auf dem Dach", "Schneedruck auf Dach"]
+        },
+        {
+          "id": "supporting_structure",
+          "label": "Schneedruck auf der Tragkonstruktion",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Schneedruck auf der Tragkonstruktion",
+            "Schneedruck auf Tragkonstruktionen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-07",
+      "label": "Besondere Regelung für Flachdächer",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "special_rule",
+          "label": "besondere Regelung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "besondere Regelung für Flachdächer",
+            "Sonderregelung für Flachdächer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-08",
+      "label": "Dachlawine auf eigene Anlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "roof_avalanche_on_own_installations",
+          "label": "Dachlawine auf eigene Anlagen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Dachlawine auf eigene Anlagen",
+            "Dachlawinen auf eigenen Anlagen",
+            "Schäden an eigenen Anlagen durch Dachlawinen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-09",
+      "label": "Folgeschäden durch Regen oder Schnee nach Sturmschaden am Dach",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "rain_or_snow_after_storm_roof_damage",
+          "label": "Folgeschäden durch Regen oder Schnee nach Sturmschaden am Dach",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Folgeschäden durch Regen nach einem Sturmschaden am Dach",
+            "Folgeschäden durch Schnee nach einem Sturmschaden am Dach",
+            "Niederschlagswasser durch eine Öffnung infolge Sturm",
+            "Regenwasser durch eine Öffnung infolge Sturm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-10",
+      "label": "Provisorische Notabdeckung und Sicherungsmaßnahmen",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "emergency_cover",
+          "label": "provisorische Notabdeckung",
+          "factRole": "COST",
+          "aliases": ["Notabdeckung", "provisorische Abdeckung", "Notdach"]
+        },
+        {
+          "id": "securing_measures",
+          "label": "Sicherungsmaßnahmen",
+          "factRole": "COST",
+          "aliases": [
+            "provisorische Sicherungsmaßnahmen",
+            "Sicherungskosten nach einem Sturmschaden",
+            "Kosten für provisorische Sicherungsmaßnahmen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-11",
+      "label": "Dachrinnen und Fallrohre, eigenes Sublimit",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "gutter_downpipe_sublimit",
+          "label": "Eigenes Sublimit für Dachrinnen und Fallrohre",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Sublimit für Dachrinnen und Fallrohre",
+            "Dachrinnen und Fallrohre bis zu",
+            "Dachrinnen und Fallrohre auf Erstes Risiko",
+            "Dachrinnen und Außenablaufrohre bis zu"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-12",
+      "label": "Verblechung und Attika",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "sheet_metal_work",
+          "label": "Verblechung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Verblechung", "Verblechungen"]
+        },
+        {
+          "id": "parapet",
+          "label": "Attika",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Attika", "Attiken"]
+        }
+      ]
+    },
+    {
+      "id": "ST-13",
+      "label": "Kamin- und Schornsteinköpfe",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "chimney_head",
+          "label": "Kaminköpfe",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Kamin-", "Kaminkopf", "Kaminköpfe"]
+        },
+        {
+          "id": "smokestack_head",
+          "label": "Schornsteinköpfe",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Schornsteinkopf", "Schornsteinköpfe"]
+        }
+      ]
+    },
+    {
+      "id": "ST-14",
+      "label": "Dachfenster und Lichtkuppeln",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "roof_window",
+          "label": "Dachfenster",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Dachfenster"]
+        },
+        {
+          "id": "skylight_dome",
+          "label": "Lichtkuppeln",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Lichtkuppel", "Lichtkuppeln"]
+        }
+      ]
+    },
+    {
+      "id": "ST-15",
+      "label": "Antennen- und Satellitenanlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "antenna_system",
+          "label": "Antennenanlagen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Antennenanlage", "Antennenanlagen", "Antennen"]
+        },
+        {
+          "id": "satellite_system",
+          "label": "Satellitenanlagen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Sat-",
+            "Satellitenanlage",
+            "Satellitenanlagen",
+            "Satellitenschüssel",
+            "Satellitenschüsseln"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-16",
+      "label": "Markisen und Beschattungseinrichtungen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "awning",
+          "label": "Markisen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Markise", "Markisen"]
+        },
+        {
+          "id": "shading_system",
+          "label": "Beschattungseinrichtungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Beschattungseinrichtung",
+            "Beschattungseinrichtungen",
+            "Sonnenschutzanlage",
+            "Sonnenschutzanlagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-17",
+      "label": "Rollläden und Jalousien",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "roller_shutter",
+          "label": "Rollläden",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Rollladen", "Rollläden", "Rolläden"]
+        },
+        {
+          "id": "blind",
+          "label": "Jalousien",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Jalousie", "Jalousien"]
+        }
+      ]
+    },
+    {
+      "id": "ST-18",
+      "label": "Photovoltaikanlage bei Sturm und Hagel",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_system",
+          "label": "Photovoltaikanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Photovoltaikanlage bei Sturm und Hagel",
+            "Photovoltaikanlagen bei Sturm und Hagel",
+            "Photovoltaikanlagen auf Grund eines Sturmschadens"
+          ]
+        },
+        {
+          "id": "storm",
+          "label": "Sturm",
+          "factRole": "PERIL",
+          "aliases": [
+            "Photovoltaikanlage bei Sturm",
+            "Photovoltaikanlagen auf Grund eines Sturmschadens"
+          ]
+        },
+        {
+          "id": "hail",
+          "label": "Hagel",
+          "factRole": "PERIL",
+          "aliases": [
+            "Photovoltaikanlage bei Sturm und Hagel",
+            "Photovoltaikanlage bei Hagel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-19",
+      "label": "Photovoltaikanlage bei Schneedruck",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "photovoltaic_system",
+          "label": "Photovoltaikanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Photovoltaikanlage bei Schneedruck",
+            "Photovoltaikanlagen bei Schneedruck"
+          ]
+        },
+        {
+          "id": "snow_pressure",
+          "label": "Schneedruck",
+          "factRole": "PERIL",
+          "aliases": [
+            "Photovoltaikanlage bei Schneedruck",
+            "Photovoltaikanlagen bei Schneedruck"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-20",
+      "label": "Ertragsausfall der Photovoltaikanlage",
+      "requestedFields": ["duration", "limit"],
+      "components": [
+        {
+          "id": "photovoltaic_yield_loss",
+          "label": "Ertragsausfall der Photovoltaikanlage",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Ertragsausfall der Photovoltaikanlage",
+            "Ertragsausfall von Photovoltaikanlagen",
+            "Ertragsverlust der PV-Anlage",
+            "Ertragsausfallversicherung für Photovoltaikanlagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-21",
+      "label": "Solarthermieanlage",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "solar_thermal_system",
+          "label": "Solarthermieanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Solarthermieanlage",
+            "Solarthermieanlagen",
+            "thermische Solaranlage",
+            "thermische Solaranlagen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-22",
+      "label": "Außeneinheit einer Wärmepumpe",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "heat_pump_outdoor_unit",
+          "label": "Außeneinheit einer Wärmepumpe",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Außeneinheit einer Wärmepumpe",
+            "Außeneinheiten von Wärmepumpen",
+            "Wärmepumpen-Außengerät",
+            "Wärmepumpen-Außengeräte"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-23",
+      "label": "Anprall fremder Bäume oder Äste",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "foreign_tree_or_branch_impact",
+          "label": "Anprall fremder Bäume oder Äste",
+          "factRole": "PERIL",
+          "aliases": ["Anprall fremder Bäume", "Anprall fremder Äste"]
+        }
+      ]
+    },
+    {
+      "id": "ST-24",
+      "label": "Umsturz eigener Bäume mit Gebäudeschaden",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "building_damage_from_own_tree_toppling",
+          "label": "Gebäudeschaden durch den Umsturz eigener Bäume",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Gebäudeschaden durch den Umsturz eigener Bäume",
+            "Gebäudeschäden durch umstürzende eigene Bäume",
+            "Schäden am Gebäude durch eigene umstürzende Bäume"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-25",
+      "label": "Kosten der Baum- und Astbeseitigung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "tree_removal_costs",
+          "label": "Kosten der Baumbeseitigung",
+          "factRole": "COST",
+          "aliases": [
+            "Baumbeseitigungskosten",
+            "Kosten der Baumbeseitigung",
+            "Beseitigung von Bäumen"
+          ]
+        },
+        {
+          "id": "branch_removal_costs",
+          "label": "Kosten der Astbeseitigung",
+          "factRole": "COST",
+          "aliases": [
+            "Astbeseitigungskosten",
+            "Kosten der Astbeseitigung",
+            "Beseitigung von Ästen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-26",
+      "label": "Steinschlag und Felssturz",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "rockfall",
+          "label": "Steinschlag",
+          "factRole": "PERIL",
+          "aliases": ["Steinschlag"]
+        },
+        {
+          "id": "rock_slide",
+          "label": "Felssturz",
+          "factRole": "PERIL",
+          "aliases": ["Felssturz", "Felsstürze"]
+        }
+      ]
+    },
+    {
+      "id": "ST-27",
+      "label": "Lawine und Schneerutsch",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["avalanche", "snow_slide"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "avalanche",
+          "label": "Lawine",
+          "factRole": "PERIL",
+          "aliases": [
+            "Lawine und Schneerutsch",
+            "Lawinen und Schneerutsche",
+            "Lawinen oder Schneerutsche"
+          ]
+        },
+        {
+          "id": "snow_slide",
+          "label": "Schneerutsch",
+          "factRole": "PERIL",
+          "aliases": [
+            "Lawine und Schneerutsch",
+            "Lawinen und Schneerutsche",
+            "Lawinen oder Schneerutsche"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-28",
+      "label": "Sturmschäden an Gerüsten oder während Bauarbeiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "storm_damage_on_scaffold_or_during_construction",
+          "label": "Sturmschäden an Gerüsten oder während Bauarbeiten",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Sturmschäden an Gerüsten",
+            "Sturmschäden während Bauarbeiten",
+            "Sturmschäden während der Bauarbeiten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-29",
+      "label": "Sturmschäden an Einfriedungen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "storm_damage_to_fencing",
+          "label": "Sturmschäden an Einfriedungen",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Sturmschäden an Einfriedungen",
+            "Sturmschaden an Einfriedungen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-30",
+      "label": "Sturmschäden am Tiefgaragentor",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "storm_damage_to_underground_garage_door",
+          "label": "Sturmschäden am Tiefgaragentor",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Sturmschäden am Tiefgaragentor",
+            "Sturmschaden am Tiefgaragentor"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-31",
+      "label": "Wartungszustand des Daches als Obliegenheit",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "roof_maintenance_duty",
+          "label": "Wartungszustand des Daches als Obliegenheit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wartungszustand des Daches",
+            "Dach in ordnungsgemäßem Zustand zu erhalten",
+            "Dach ordnungsgemäß instand zu halten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-32",
+      "label": "Nachweis der letzten Dachrevision gefordert",
+      "requestedFields": ["condition", "date"],
+      "components": [
+        {
+          "id": "roof_inspection_proof",
+          "label": "Nachweis der Dachrevision",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Nachweis der Dachrevision",
+            "Dachrevision nachzuweisen",
+            "Dachüberprüfung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-33",
+      "label": "Selbstbehalt in der Sparte Sturm",
+      "requestedFields": ["amount"],
+      "components": [
+        {
+          "id": "storm_deductible",
+          "label": "Selbstbehalt in der Sparte Sturm",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt in der Sturmversicherung",
+            "Selbstbehalt für Sturmschäden",
+            "Selbstbehalt Sturm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-34",
+      "label": "Höchstentschädigung in der Sparte Sturm",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "storm_maximum_compensation",
+          "label": "Höchstentschädigung in der Sparte Sturm",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höchstentschädigung in der Sturmversicherung",
+            "Höchstentschädigung für Sturmschäden",
+            "Entschädigungsgrenze Sturm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-35",
+      "label": "Sturmdeckung bei leerstehenden Einheiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "storm_coverage_for_vacant_units",
+          "label": "Sturmdeckung bei leerstehenden Einheiten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Sturmdeckung bei leerstehenden Einheiten",
+            "Sturmversicherung für leerstehende Einheiten",
+            "Sturmschäden an leerstehenden Einheiten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ST-36",
+      "label": "Gemeinsames Sublimit für Dachaufbauten",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "shared_roof_structures_sublimit",
+          "label": "Gemeinsames Sublimit für Dachaufbauten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "gemeinsames Sublimit für Dachaufbauten",
+            "Dachaufbauten gemeinsam bis zu",
+            "Dachaufbauten auf Erstes Risiko bis zu"
+          ]
+        }
+      ]
+    }
+  ]
+}

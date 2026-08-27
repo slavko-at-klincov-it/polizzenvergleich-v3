@@ -1,0 +1,766 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "vb-occurrence-full-draft-v0.1",
+  "categoryView": "VB",
+  "requirements": [
+    {
+      "id": "VB-01",
+      "label": "Vertragslaufzeit in Jahren",
+      "requestedFields": ["duration"],
+      "components": [
+        {
+          "id": "contract_term",
+          "label": "Vertragslaufzeit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Vertragslaufzeit",
+            "Vertragsdauer",
+            "Laufzeit des Vertrages"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-02",
+      "label": "Langfristrabatt und dessen Höhe",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "long_term_discount",
+          "label": "Langfristrabatt",
+          "factRole": "BENEFIT",
+          "aliases": ["Langfristrabatt", "Dauerrabatt", "Laufzeitrabatt"]
+        },
+        {
+          "id": "long_term_discount_amount",
+          "label": "Höhe des Langfristrabatts",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höhe des Langfristrabatts",
+            "Langfristrabatt in Höhe von",
+            "Dauerrabatt in Höhe von",
+            "Laufzeitrabatt in Höhe von"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-03",
+      "label": "Frist und Termin der ordentlichen Kündigung",
+      "requestedFields": ["duration", "condition"],
+      "components": [
+        {
+          "id": "ordinary_notice_period",
+          "label": "Frist der ordentlichen Kündigung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "ordentliche Kündigungsfrist",
+            "Frist für die ordentliche Kündigung",
+            "ordentlich gekündigt"
+          ]
+        },
+        {
+          "id": "ordinary_termination_date",
+          "label": "Termin der ordentlichen Kündigung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Kündigungstermin",
+            "zum Ablauf der Versicherungsperiode",
+            "zum Ende der Versicherungsperiode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-04",
+      "label": "Stillschweigende Verlängerung und Verlängerungszeitraum",
+      "requestedFields": ["duration", "condition"],
+      "components": [
+        {
+          "id": "automatic_extension",
+          "label": "Stillschweigende Verlängerung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "stillschweigend verlängert",
+            "stillschweigende Verlängerung",
+            "automatische Verlängerung"
+          ]
+        },
+        {
+          "id": "extension_period",
+          "label": "Verlängerungszeitraum",
+          "factRole": "CONDITION",
+          "aliases": [
+            "jeweils um ein weiteres Jahr",
+            "Verlängerungszeitraum",
+            "Verlängerungsdauer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-05",
+      "label": "Kündigungsrecht des Versicherungsnehmers nach einem Schadenfall",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "policyholder_claim_termination",
+          "label": "Kündigungsrecht des Versicherungsnehmers nach Schaden",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Versicherungsnehmer nach Eintritt des Versicherungsfalles kündigen",
+            "Kündigungsrecht des Versicherungsnehmers im Schadenfall",
+            "Versicherungsnehmer nach einem Schadenfall"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-06",
+      "label": "Kündigungsrecht des Versicherers nach einem Schadenfall",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "insurer_claim_termination",
+          "label": "Kündigungsrecht des Versicherers nach Schaden",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Versicherer nach Eintritt des Versicherungsfalles kündigen",
+            "Kündigungsrecht des Versicherers im Schadenfall",
+            "Versicherer nach einem Schadenfall"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-07",
+      "label": "Selbstbehalt Feuer",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "fire_deductible",
+          "label": "Selbstbehalt Feuer",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Feuer",
+            "Feuer-Selbstbehalt",
+            "Selbstbehalt in der Feuerversicherung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-08",
+      "label": "Selbstbehalt Leitungswasser",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "water_deductible",
+          "label": "Selbstbehalt Leitungswasser",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Leitungswasser",
+            "Leitungswasser-Selbstbehalt",
+            "Selbstbehalt in der Leitungswasserversicherung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-09",
+      "label": "Selbstbehalt Sturm",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "storm_deductible",
+          "label": "Selbstbehalt Sturm",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Sturm",
+            "Sturm-Selbstbehalt",
+            "Selbstbehalt in der Sturmversicherung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-10",
+      "label": "Selbstbehalt Elementar",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "natural_hazard_deductible",
+          "label": "Selbstbehalt Elementar",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt Elementar",
+            "Elementar-Selbstbehalt",
+            "Selbstbehalt für Elementarschäden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-11",
+      "label": "Jahresmaximum aller Selbstbehalte",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "annual_deductible_maximum",
+          "label": "Jahresmaximum aller Selbstbehalte",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Jahresmaximum der Selbstbehalte",
+            "Jahreshöchstbetrag der Selbstbehalte",
+            "maximaler Selbstbehalt pro Versicherungsjahr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-12",
+      "label": "Verzicht auf den Einwand der groben Fahrlässigkeit",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "gross_negligence_waiver",
+          "label": "Verzicht auf grobe Fahrlässigkeit",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Verzicht auf den Einwand der groben Fahrlässigkeit",
+            "Einwand der groben Fahrlässigkeit",
+            "grob fahrlässig herbeigeführte Schäden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-13",
+      "label": "Für welche Sparten der Verzicht auf grobe Fahrlässigkeit gilt",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "gross_negligence_scope",
+          "label": "Spartengeltung des Verzichts",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Verzicht auf den Einwand der groben Fahrlässigkeit",
+            "grob fahrlässig herbeigeführte Schäden",
+            "grobe Fahrlässigkeit gilt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-14",
+      "label": "Betragsmäßige Grenze des Verzichts auf grobe Fahrlässigkeit",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "gross_negligence_limit",
+          "label": "Betragsgrenze grobe Fahrlässigkeit",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Grobe Fahrlässigkeit auf Erstes Risiko",
+            "grobe Fahrlässigkeit bis",
+            "grob fahrlässig herbeigeführte Schäden bis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-15",
+      "label": "Regressverzicht gegenüber Wohnungseigentümern",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "owners_recourse_waiver",
+          "label": "Regressverzicht",
+          "factRole": "BENEFIT",
+          "aliases": ["Regressverzicht", "Verzicht auf Regress"]
+        },
+        {
+          "id": "unit_owners",
+          "label": "Wohnungseigentümer",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "gegenüber Wohnungseigentümern",
+            "gegen Wohnungseigentümer",
+            "Wohnungseigentümer und Miteigentümer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-16",
+      "label": "Regressverzicht gegenüber Bewohnern und Mietern",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "residents_recourse_waiver",
+          "label": "Regressverzicht",
+          "factRole": "BENEFIT",
+          "aliases": ["Regressverzicht", "Verzicht auf Regress"]
+        },
+        {
+          "id": "residents",
+          "label": "Bewohner",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "gegenüber Bewohnern",
+            "gegen Bewohner",
+            "Bewohner des Gebäudes"
+          ]
+        },
+        {
+          "id": "tenants",
+          "label": "Mieter",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "gegenüber Mietern",
+            "gegen Mieter",
+            "Mieter des Gebäudes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-17",
+      "label": "Anzeigepflicht bei Gefahrerhöhung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "risk_increase_notification",
+          "label": "Anzeigepflicht bei Gefahrerhöhung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Anzeige der Gefahrerhöhung",
+            "Gefahrerhöhung unverzüglich anzeigen",
+            "Anzeigepflicht bei Gefahrerhöhung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-18",
+      "label": "Anzeigepflicht bei gewerblicher Nutzung im Haus",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "commercial_use_notification",
+          "label": "Anzeige gewerblicher Nutzung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "gewerbliche Nutzung anzuzeigen",
+            "Anzeige der gewerblichen Nutzung",
+            "Anzeigepflicht bei gewerblicher Nutzung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-19",
+      "label": "Anzeigepflicht und Auflagen bei Leerstand",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "vacancy_notification",
+          "label": "Anzeigepflicht bei Leerstand",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Leerstand anzuzeigen",
+            "Anzeige des Leerstandes",
+            "Anzeigepflicht bei Leerstand"
+          ]
+        },
+        {
+          "id": "vacancy_requirements",
+          "label": "Auflagen bei Leerstand",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Auflagen bei Leerstand",
+            "Obliegenheiten bei Leerstand",
+            "bei Leerstand sind"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-20",
+      "label": "Anzeigepflicht bei Bauarbeiten oder Gerüststellung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "construction_or_scaffolding_notification",
+          "label": "Anzeige von Bauarbeiten oder Gerüststellung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Bauarbeiten anzuzeigen",
+            "Gerüststellung anzuzeigen",
+            "Anzeige von Bauarbeiten",
+            "Anzeige der Gerüststellung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-21",
+      "label": "Frist zur Schadenmeldung",
+      "requestedFields": ["duration"],
+      "components": [
+        {
+          "id": "claim_notification_deadline",
+          "label": "Frist zur Schadenmeldung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Frist zur Schadenmeldung",
+            "Schadenmeldefrist",
+            "Versicherungsfall unverzüglich anzeigen",
+            "Schaden unverzüglich melden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-22",
+      "label": "Rechtsfolgen der Versäumung der Meldefrist",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "late_notification_consequence",
+          "label": "Rechtsfolgen verspäteter Meldung",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "Versäumung der Meldefrist",
+            "Obliegenheitsverletzung bei verspäteter Schadenmeldung",
+            "Leistungsfreiheit wegen verspäteter Schadenmeldung",
+            "Rechtsfolgen verspäteter Schadenmeldung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-23",
+      "label": "Ersatz von Rettungs- und Schadenminderungskosten",
+      "requestedFields": ["limit"],
+      "bindingStructures": [
+        {
+          "type": "RIGHT_HEADED_COORDINATION",
+          "headSuffixes": ["kosten"],
+          "memberComponentIds": ["rescue_costs", "loss_mitigation_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "rescue_costs",
+          "label": "Rettungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Rettungskosten",
+            "Rettungs-",
+            "Rettungs- und Schadenminderungskosten"
+          ]
+        },
+        {
+          "id": "loss_mitigation_costs",
+          "label": "Schadenminderungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Schadenminderungskosten",
+            "Schadenminderungs-",
+            "Rettungs- und Schadenminderungskosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-24",
+      "label": "Sachverständigenverfahren und Kostentragung",
+      "requestedFields": ["condition", "limit"],
+      "components": [
+        {
+          "id": "expert_procedure",
+          "label": "Sachverständigenverfahren",
+          "factRole": "BENEFIT",
+          "aliases": ["Sachverständigenverfahren", "Sachverständigen-Verfahren"]
+        },
+        {
+          "id": "expert_cost_allocation",
+          "label": "Kostentragung",
+          "factRole": "COST",
+          "aliases": [
+            "Kosten des Sachverständigenverfahrens",
+            "Kosten der Sachverständigen",
+            "Sachverständigenkosten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-25",
+      "label": "Akontozahlung oder Vorschuss bei Großschäden",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "advance_payment",
+          "label": "Akontozahlung oder Vorschuss",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Akontozahlung",
+            "Akontierung",
+            "Vorschusszahlung",
+            "Vorschuss"
+          ]
+        },
+        {
+          "id": "major_loss_condition",
+          "label": "Bei Großschäden",
+          "factRole": "CONDITION",
+          "aliases": ["bei Großschäden", "im Großschadenfall"]
+        }
+      ]
+    },
+    {
+      "id": "VB-26",
+      "label": "Frist für die Wiederherstellung",
+      "requestedFields": ["duration"],
+      "components": [
+        {
+          "id": "reinstatement_deadline",
+          "label": "Wiederherstellungsfrist",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wiederherstellungsfrist",
+            "Frist für die Wiederherstellung",
+            "Wiederherstellung binnen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-27",
+      "label": "Gesamtprämie inklusive Steuer",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "total_premium",
+          "label": "Gesamtprämie",
+          "factRole": "CONDITION",
+          "aliases": ["Gesamtprämie", "Jahresgesamtprämie", "Prämie gesamt"]
+        },
+        {
+          "id": "tax_included",
+          "label": "Steuer inklusive",
+          "factRole": "CONDITION",
+          "aliases": [
+            "inklusive Versicherungssteuer",
+            "inkl. Versicherungssteuer",
+            "einschließlich Versicherungssteuer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-28",
+      "label": "Prämie je Sparte gesondert ausgewiesen",
+      "requestedFields": ["limit", "scope"],
+      "components": [
+        {
+          "id": "premium_by_line",
+          "label": "Prämie je Sparte",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Prämie je Sparte",
+            "Spartenprämie",
+            "Prämie Feuer",
+            "Prämie Leitungswasser",
+            "Prämie Sturm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-29",
+      "label": "Versicherungssteuer gesondert ausgewiesen",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "insurance_tax",
+          "label": "Versicherungssteuer",
+          "factRole": "CONDITION",
+          "aliases": ["Versicherungssteuer", "Versicherungsst."]
+        },
+        {
+          "id": "tax_separately_shown",
+          "label": "Gesonderter Ausweis",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Versicherungssteuer gesondert",
+            "zuzüglich Versicherungssteuer",
+            "Versicherungssteuer separat"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-30",
+      "label": "Zahlungsweise und Zuschlag bei unterjähriger Zahlung",
+      "requestedFields": ["condition", "limit"],
+      "components": [
+        {
+          "id": "payment_frequency",
+          "label": "Zahlungsweise",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Zahlungsweise",
+            "Prämienzahlungsweise",
+            "monatliche Zahlung",
+            "vierteljährliche Zahlung",
+            "halbjährliche Zahlung"
+          ]
+        },
+        {
+          "id": "instalment_surcharge",
+          "label": "Unterjährigkeitszuschlag",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Unterjährigkeitszuschlag",
+            "Teilzahlungszuschlag",
+            "Zuschlag bei unterjähriger Zahlung"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-31",
+      "label": "Bindefrist des Angebots",
+      "requestedFields": ["duration"],
+      "components": [
+        {
+          "id": "offer_binding_period",
+          "label": "Bindefrist des Angebots",
+          "factRole": "CONDITION",
+          "aliases": ["Bindefrist", "Angebot gültig bis", "Anbotsbindefrist"]
+        }
+      ]
+    },
+    {
+      "id": "VB-32",
+      "label": "Berücksichtigung von Vorschäden",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "prior_losses",
+          "label": "Vorschäden",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Vorschäden",
+            "Vorschadensverlauf",
+            "Schadenverlauf der Vorjahre"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-33",
+      "label": "Auflistung der Wartungsobliegenheiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "maintenance_obligations",
+          "label": "Wartungsobliegenheiten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wartungsobliegenheiten",
+            "Wartungspflichten",
+            "vorgeschriebene Wartung",
+            "regelmäßig zu warten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-34",
+      "label": "Geforderte Prüfnachweise für Aufzug, Heizung, Rückstauklappe",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "elevator_inspection_evidence",
+          "label": "Prüfnachweis Aufzug",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Prüfbefund des Aufzuges",
+            "Aufzugsprüfbefund",
+            "Prüfnachweis für den Aufzug"
+          ]
+        },
+        {
+          "id": "heating_inspection_evidence",
+          "label": "Prüfnachweis Heizung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Prüfbefund der Heizungsanlage",
+            "Heizungsprüfbefund",
+            "Prüfnachweis für die Heizung"
+          ]
+        },
+        {
+          "id": "backwater_valve_evidence",
+          "label": "Prüfnachweis Rückstauklappe",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Prüfnachweis der Rückstauklappe",
+            "Wartungsnachweis der Rückstauklappe",
+            "Rückstauklappe regelmäßig gewartet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-35",
+      "label": "Bündelrabatt oder Sanierungsrabatt ausgewiesen",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "bundle_or_renovation_discount",
+          "label": "Bündel- oder Sanierungsrabatt",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Bündelrabatt",
+            "Sanierungsrabatt",
+            "Bündelnachlass",
+            "Sanierungsnachlass"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "VB-36",
+      "label": "Regelung zur Schadenabwicklung und Ansprechpartner",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "claims_handling",
+          "label": "Schadenabwicklung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Schadenabwicklung",
+            "Abwicklung von Schadenfällen",
+            "Schadenmeldung an"
+          ]
+        },
+        {
+          "id": "claims_contact",
+          "label": "Ansprechpartner",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Ansprechpartner im Schadenfall",
+            "Schaden-Ansprechpartner",
+            "Kontakt im Schadenfall"
+          ]
+        }
+      ]
+    }
+  ]
+}
