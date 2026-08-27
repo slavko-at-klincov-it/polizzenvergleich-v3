@@ -419,6 +419,29 @@ describe("candidateTriageContract", () => {
     ).toThrow("TRIAGE_SINGLE_TARGET_SERVER_TERMINAL");
   });
 
+  test("attests a catalog-declared proposal section scope without model variance", () => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    worksheet.requirements[0].scopeRules = {
+      narrowAliases: [],
+      narrowScopeKeys: ["FEUER_INSURANCE"],
+    };
+    worksheet.requirements[0].components[0].occurrences[0].sectionScopeHint = {
+      scopeKey: "FEUER_INSURANCE",
+      text: "FEUERVERSICHERUNG",
+      source: "CURRENT_PAGE_HEADING",
+    };
+
+    const target = buildCandidateTriagePayload(worksheet).bindingTargets[0];
+
+    expect(target.scopeResolution).toEqual({
+      owner: "SERVER",
+      scopeMatch: "NARROW",
+      basis: "CATALOG_NARROW_SECTION",
+      matchedAlias: "FEUER_INSURANCE",
+    });
+    expect(target.modelDecisionFields).toEqual([]);
+  });
+
   test("matches only a catalog-declared inflected narrow phrase", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     worksheet.requirements[0].scopeRules = {
@@ -481,7 +504,9 @@ describe("candidateTriageContract", () => {
     ["MATCH", "GENERAL_WITH_NARROW", "DIRECT"],
     ["MATCH", "NARROW", "NARROW_SCOPE"],
     ["MISMATCH", "GENERAL", "MENTION_ONLY"],
+    ["MISMATCH", "UNRESOLVED", "MENTION_ONLY"],
     ["MATCH", "OTHER_SCOPE", "MENTION_ONLY"],
+    ["UNRESOLVED", "OTHER_SCOPE", "MENTION_ONLY"],
     ["UNRESOLVED", "GENERAL", "UNRESOLVED"],
     ["MATCH", "UNRESOLVED", "UNRESOLVED"],
   ])("derives %s plus %s as %s", (roleMatch, scopeMatch, expectedBinding) => {

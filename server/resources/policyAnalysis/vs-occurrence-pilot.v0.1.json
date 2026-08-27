@@ -7,6 +7,7 @@
       "id": "VS-16",
       "label": "Garagen und Tiefgarage mitversichert",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "components": [
         {
           "id": "garage",
@@ -76,6 +77,12 @@
         }
       ],
       "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ],
         "narrowAliases": [
           "radioaktiv",
           "kontaminiert",
@@ -119,6 +126,14 @@
       "id": "VS-28",
       "label": "Mietzinsentgang, Dauer der Leistung",
       "requestedFields": ["duration"],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "rent_loss",

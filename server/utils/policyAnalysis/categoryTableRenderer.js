@@ -189,7 +189,12 @@ function componentDescription(requirement, judgements) {
         [COVERAGE_EFFECT.OPTION_ONLY]: "nur als Option genannt",
         [COVERAGE_EFFECT.UNKNOWN]: "nicht feststellbar",
       }[effect];
-      return `${component.label}: ${suffix || MISSING_EVIDENCE}`;
+      const scopeSuffix =
+        judgementByComponent.get(component.id)?.selectedScopePicture ===
+        "NARROW_ONLY"
+          ? " (engerer Geltungsbereich; Details siehe Quelle)"
+          : "";
+      return `${component.label}: ${suffix || MISSING_EVIDENCE}${scopeSuffix}`;
     })
     .join("; ");
 }
@@ -361,9 +366,15 @@ function buildCategoryTableRows({
       const fieldResult = fieldsByRequirement.get(normalized.id);
       const valuesComplete = fieldComplete(rollup, fieldResult, candidates);
       const scopeComplete = rowJudgements.every(
-        ({ selectedScopePicture, unresolvedCandidateIds = [] }) =>
-          selectedScopePicture !== "NARROW_ONLY" &&
-          unresolvedCandidateIds.length === 0
+        ({
+          selectedScopePicture,
+          unresolvedCandidateIds = [],
+          coverageEffect,
+        }) =>
+          unresolvedCandidateIds.length === 0 &&
+          (selectedScopePicture !== "NARROW_ONLY" ||
+            (requirement.scopePolicy === "MATCHING_SCOPE_INCLUDED_SUFFICIENT" &&
+              coverageEffect === COVERAGE_EFFECT.INCLUDED))
       );
       const reviewStatus = reviewFor({
         rollup,

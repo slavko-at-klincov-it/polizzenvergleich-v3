@@ -24,6 +24,7 @@ function fixture({
   selected = [true, true],
   fieldResult,
   candidateContext = "Aufräum- und Abbruchkosten sind bis 10 % versichert.",
+  scopePolicy = "GENERAL_REQUIRED",
 } = {}) {
   const componentIds = componentEffects.map((_, index) => `component-${index}`);
   const components = componentIds.map((componentId, index) => {
@@ -76,7 +77,7 @@ function fixture({
     definitions: [{ id, stage: "K", label }],
     worksheet: {
       candidateOnly: true,
-      requirements: [{ id, label, requestedFields, components }],
+      requirements: [{ id, label, requestedFields, scopePolicy, components }],
     },
     materializedEvidence: {
       judgements,
@@ -224,19 +225,67 @@ describe("categoryTableRenderer", () => {
     });
   });
 
-  test("does not roll a narrow-only component up to a complete Ja", () => {
+  test("renders a fully evidenced narrow component without hiding its scope", () => {
     const input = fixture({
       requestedFields: [],
       componentEffects: [COVERAGE_EFFECT.INCLUDED],
       selected: [true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
     });
     input.materializedEvidence.judgements[0].selectedScopePicture =
       "NARROW_ONLY";
 
     expect(buildCategoryTableRows(input)[0]).toMatchObject({
-      coverage: "Nicht feststellbar",
-      reviewStatus: "TEILBELEGT",
+      documentedContent:
+        "Bestandteil 1: eingeschlossen (engerer Geltungsbereich; Details siehe Quelle)",
+      coverage: "Ja",
+      reviewStatus: "BELEGT",
     });
+  });
+
+  test.each([
+    [COVERAGE_EFFECT.EXCLUDED, "TEILBELEGT"],
+    [COVERAGE_EFFECT.CONDITIONAL, "TEILBELEGT"],
+    [COVERAGE_EFFECT.OPTION_ONLY, "TEILBELEGT"],
+    [COVERAGE_EFFECT.UNKNOWN, "UNGEKLÄRT"],
+  ])(
+    "does not generalize narrow-only %s to the complete category",
+    (coverageEffect, reviewStatus) => {
+      const input = fixture({
+        requestedFields: [],
+        componentEffects: [coverageEffect],
+        selected: [true],
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      });
+      input.materializedEvidence.judgements[0].selectedScopePicture =
+        "NARROW_ONLY";
+
+      expect(buildCategoryTableRows(input)[0]).toMatchObject({
+        coverage: "Nicht feststellbar",
+        reviewStatus,
+      });
+    }
+  );
+
+  test("replays LF VS-16 with narrow garage and general underground garage as complete", () => {
+    const input = fixture({
+      id: "VS-16",
+      label: "Garagen und Tiefgarage mitversichert",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED, COVERAGE_EFFECT.INCLUDED],
+      selected: [true, true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    });
+    input.materializedEvidence.judgements[0].selectedScopePicture =
+      "NARROW_ONLY";
+    input.materializedEvidence.judgements[1].selectedScopePicture = "GENERAL";
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Ja",
+      reviewStatus: "BELEGT",
+    });
+    expect(buildCategoryTableRows(input)[0].source).toContain("PDF-Seite 3");
+    expect(buildCategoryTableRows(input)[0].source).toContain("PDF-Seite 4");
   });
 
   test("keeps a row partial while any candidate remains unresolved", () => {

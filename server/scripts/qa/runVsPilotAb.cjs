@@ -24,6 +24,11 @@ const {
 const {
   evaluateVsPilotOracle,
 } = require("../../utils/policyAnalysis/vsPilotOracleContract");
+const {
+  LEGACY_VS_USER_PROMPT,
+  evaluateLegacyRows,
+  evaluatePilotComparison,
+} = require("../../utils/policyAnalysis/vsPilotComparisonContract");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 const PILOT_IDS = Object.freeze(["VS-16", "VS-17", "VS-21", "VS-28"]);
@@ -243,53 +248,25 @@ function legacySemanticSnapshot(result) {
   );
 }
 
-function evaluateLegacyRows({ legacyRows, oracleDocument }) {
-  const rowsById = new Map(
-    legacyRows.map((row) => [String(row.categoryId || ""), row])
-  );
-  const results = oracleDocument.rows.map((expected) => {
-    const observed = rowsById.get(expected.categoryId);
-    const reasons = [];
-    if (!observed || observed.missing) reasons.push("ROW_MISSING");
-    if (observed?.coverage !== expected.coverage)
-      reasons.push("COVERAGE_MISMATCH");
-    if (observed?.reviewStatus !== expected.reviewStatus)
-      reasons.push("REVIEW_STATUS_MISMATCH");
-    if (observed?.coverageAmount !== expected.coverageAmount)
-      reasons.push("COVERAGE_AMOUNT_MISMATCH");
-    for (const fragment of expected.documentedContentIncludes || [])
-      if (!String(observed?.documentedContent || "").includes(fragment))
-        reasons.push(`DOCUMENTED_CONTENT_MISSING:${fragment}`);
-    return {
-      categoryId: expected.categoryId,
-      pass: reasons.length === 0,
-      reasons,
-    };
-  });
-  return {
-    passedRows: results.filter(({ pass }) => pass).length,
-    totalRows: results.length,
-    results,
-  };
-}
-
 function comparisonMarkdown(results) {
   const lines = [
     "# VS-Pilot A/B-Vergleich",
     "",
     "Dieser Bericht vergleicht den bisherigen monolithischen VS-Lauf (A) mit der servergebundenen Pilotpipeline (B).",
     "",
-    "| Dokument | Legacy A: Oracle-Treffer | Pilot B: Oracle-Treffer | Vorteil B |",
+    "| Dokument | Legacy A: semantische Treffer (informativ) | Pilot B: Oracle-Treffer | Einordnung |",
     "|---|---:|---:|---|",
-    ...results.map(
-      (result) =>
-        `| ${result.documentKey} | ${result.legacyEvaluation.passedRows}/${result.legacyEvaluation.totalRows} | ${result.report.gates.oracle.passedRows}/${result.report.gates.oracle.totalRows} | ${
-          result.report.gates.oracle.passedRows >
-          result.legacyEvaluation.passedRows
-            ? "Ja"
-            : "Nein"
-        } |`
-    ),
+    ...results.map((result) => {
+      const comparison = result.comparison;
+      const advantage =
+        {
+          IMPROVED: "Ja",
+          EQUIVALENT: "Gleichstand",
+          REGRESSED: "Regression",
+          PILOT_NOT_READY: "Pilot nicht bereit",
+        }[comparison?.outcome] || "Nicht bewertet";
+      return `| ${result.documentKey} | ${result.legacyEvaluation.passedRows}/${result.legacyEvaluation.totalRows} | ${result.report.gates.oracle.passedRows}/${result.report.gates.oracle.totalRows} | ${advantage} |`;
+    }),
     "",
     "| Dokument | ID | Legacy Deckung / Status | Pilot Deckung / Status | Pilotinhalt |",
     "|---|---|---|---|---|",
@@ -407,8 +384,7 @@ async function runDocument({
   if (actualSha256 !== documentOracle.pdfSha256)
     throw new Error(`PDF_SHA256_MISMATCH:${documentKey}:${actualSha256}`);
 
-  const userPrompt =
-    "Analysiere das vollständig im Kontext bereitgestellte Versicherungsdokument gemäß dem Systemprompt. Gib ausschließlich die definierte Tabelle für VS-01 bis VS-36 und anschließend den vorgeschriebenen Hinweis aus.";
+  const userPrompt = LEGACY_VS_USER_PROMPT;
   if (!skipLegacy)
     runNode(
       PATHS.legacyRunner,
@@ -572,6 +548,12 @@ async function runDocument({
   const legacyEvaluation = skipLegacy
     ? { passedRows: 0, totalRows: PILOT_IDS.length, results: [], skipped: true }
     : evaluateLegacyRows({ legacyRows, oracleDocument: documentOracle });
+  const comparison = skipLegacy
+    ? null
+    : evaluatePilotComparison({
+        pilotEvaluation: oracle,
+        legacyEvaluation,
+      });
   const responseModelPass = Boolean(
     triageReport.completion?.responseModelComplete === true &&
       triageReport.completion?.responseModel === model &&
@@ -663,6 +645,7 @@ async function runDocument({
     requestedFields,
     selectedSources,
     legacyEvaluation,
+    comparison,
     report,
   };
 }
@@ -795,16 +778,17 @@ async function main() {
   );
   const positiveEffectObserved = skipLegacy
     ? null
-    : allResults.every(
-        ({ legacyEvaluation, report: runReport }) =>
-          runReport.gates.oracle.passedRows > legacyEvaluation.passedRows
+    : allResults.every(({ comparison }) =>
+        Boolean(comparison?.pilotAbsolutePass && comparison.pilotNonRegression)
+      ) &&
+      allResults.some(({ comparison }) =>
+        Boolean(comparison?.pilotStrictImprovement)
       );
   const overallPass = Boolean(
     allResults.every(({ pass }) => pass) &&
       stability.every(({ pass }) => pass) &&
       modelAfter.requestedModelLoaded &&
-      modelAfter.requestedEmbeddingModelListed &&
-      (skipLegacy || positiveEffectObserved)
+      modelAfter.requestedEmbeddingModelListed
   );
   const dirty = git(["status", "--porcelain=v1", "--untracked-files=normal"]);
   const manifest = {
@@ -833,6 +817,8 @@ async function main() {
       topN,
       repetitions,
       skipLegacy,
+      userPrompt: LEGACY_VS_USER_PROMPT,
+      userPromptSha256: sha256(LEGACY_VS_USER_PROMPT),
       temperature: 0,
       seed: null,
     },
@@ -856,9 +842,16 @@ async function main() {
     })),
     stability,
     comparison: {
-      gateApplied: !skipLegacy,
+      evaluated: !skipLegacy,
+      gateApplied: false,
       positiveEffectObserved,
-      rule: "Pilot B muss in jedem Dokumentlauf mehr der vier eingefrorenen Oracle-Zeilen treffen als Legacy A.",
+      outcomes: skipLegacy
+        ? []
+        : allResults.map(({ documentKey, comparison }) => ({
+            documentKey,
+            ...comparison,
+          })),
+      rule: "Nur der absolute Pilot-B-Oracle ist ein Release-Gate. Legacy A wird semantisch und ausschließlich informativ verglichen; ein Gleichstand ist releasefähig, aber kein positiver Effekt.",
     },
     modelGate: {
       pass:

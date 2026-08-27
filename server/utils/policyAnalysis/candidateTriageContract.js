@@ -338,6 +338,11 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           containsNormalizedPhrase(scopeSentence, alias)
         )
       : null;
+    const matchedNarrowScopeKey = (
+      candidate.requirement.scopeRules?.narrowScopeKeys || []
+    ).includes(source.sectionScopeHint?.scopeKey)
+      ? source.sectionScopeHint.scopeKey
+      : null;
     let scopeResolution = {
       owner: "MODEL",
       scopeMatch: null,
@@ -361,12 +366,14 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         basis: "ROLE_UNRESOLVED",
         matchedAlias: null,
       };
-    } else if (matchedNarrowAlias) {
+    } else if (matchedNarrowAlias || matchedNarrowScopeKey) {
       scopeResolution = {
         owner: "SERVER",
         scopeMatch: SCOPE_MATCH.NARROW,
-        basis: "CATALOG_NARROW_ALIAS",
-        matchedAlias: matchedNarrowAlias,
+        basis: matchedNarrowAlias
+          ? "CATALOG_NARROW_ALIAS"
+          : "CATALOG_NARROW_SECTION",
+        matchedAlias: matchedNarrowAlias || matchedNarrowScopeKey,
       };
     }
     const modelDecisionFields = [];
@@ -391,6 +398,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
             text,
           }))
         : [],
+      sectionScopeHint: source.sectionScopeHint || null,
       scopeLeadText: source.scopeLead?.text || "",
       contextText: source.context.text,
       structure: group
@@ -439,15 +447,15 @@ function buildCandidateTriagePayload(worksheet) {
 
 function deriveCandidateBinding({ roleMatch, scopeMatch }) {
   if (
-    roleMatch === ROLE_MATCH.UNRESOLVED ||
-    scopeMatch === SCOPE_MATCH.UNRESOLVED
-  )
-    return CANDIDATE_BINDING.UNRESOLVED;
-  if (
     roleMatch === ROLE_MATCH.MISMATCH ||
     scopeMatch === SCOPE_MATCH.OTHER_SCOPE
   )
     return CANDIDATE_BINDING.MENTION_ONLY;
+  if (
+    roleMatch === ROLE_MATCH.UNRESOLVED ||
+    scopeMatch === SCOPE_MATCH.UNRESOLVED
+  )
+    return CANDIDATE_BINDING.UNRESOLVED;
   if (roleMatch !== ROLE_MATCH.MATCH)
     throw triageError("TRIAGE_ROLE_SCOPE_COMBINATION_INVALID");
   if (

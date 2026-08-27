@@ -17,6 +17,33 @@ function compareArrays(left, right) {
   );
 }
 
+function missingValues(required, observed) {
+  const observedSet = new Set(observed);
+  return required.filter((value) => !observedSet.has(value));
+}
+
+function disallowedValues(observed, allowed) {
+  const allowedSet = new Set(allowed);
+  return observed.filter((value) => !allowedSet.has(value));
+}
+
+function allowedValues(expected, requiredKey, allowedKey, forbiddenKey) {
+  const required = uniqueSorted(expected[requiredKey] || []);
+  const allowed = uniqueSorted(expected[allowedKey] || required);
+  const forbidden = uniqueSorted(expected[forbiddenKey] || []);
+  if (missingValues(required, allowed).length > 0)
+    throw oracleError(
+      "VS_ORACLE_ALLOWED_SET_INVALID",
+      `${expected.categoryId}:${allowedKey}`
+    );
+  if (forbidden.some((value) => allowed.includes(value)))
+    throw oracleError(
+      "VS_ORACLE_FORBIDDEN_SET_INVALID",
+      `${expected.categoryId}:${forbiddenKey}`
+    );
+  return { required, allowed, forbidden };
+}
+
 function requestedFieldByRequirement(requestedFieldEvidence) {
   if (!Array.isArray(requestedFieldEvidence?.requirements))
     throw oracleError("VS_ORACLE_REQUESTED_FIELDS_INVALID");
@@ -120,15 +147,29 @@ function evaluateVsPilotOracle({
         .filter(Boolean)
     );
     const renderedSourcePages = rowSourcePages(observed.source);
-    const expectedCandidateIds = uniqueSorted(
-      expected.requiredCandidateIds || []
+    const candidateSet = allowedValues(
+      expected,
+      "requiredCandidateIds",
+      "allowedCandidateIds",
+      "forbiddenCandidateIds"
     );
-    const expectedSourcePages = uniqueSorted(expected.requiredSourcePages);
-    const expectedValueCandidateIds = uniqueSorted(
-      expected.requiredValueCandidateIds || []
+    const sourcePageSet = allowedValues(
+      expected,
+      "requiredSourcePages",
+      "allowedSourcePages",
+      "forbiddenSourcePages"
     );
-    const expectedValueSourcePages = uniqueSorted(
-      expected.requiredValueSourcePages || []
+    const valueCandidateSet = allowedValues(
+      expected,
+      "requiredValueCandidateIds",
+      "allowedValueCandidateIds",
+      "forbiddenValueCandidateIds"
+    );
+    const valueSourcePageSet = allowedValues(
+      expected,
+      "requiredValueSourcePages",
+      "allowedValueSourcePages",
+      "forbiddenValueSourcePages"
     );
     const reasons = [];
     if (observed.coverage !== expected.coverage)
@@ -144,17 +185,48 @@ function evaluateVsPilotOracle({
       reasons.push("REQUESTED_FIELD_STATUS_MISMATCH");
     if (!compareArrays(normalizedValues, expectedValues))
       reasons.push("NORMALIZED_VALUES_MISMATCH");
-    if (!compareArrays(valueCandidateIds, expectedValueCandidateIds))
+    if (missingValues(valueCandidateSet.required, valueCandidateIds).length > 0)
       reasons.push("VALUE_CANDIDATES_MISMATCH");
-    if (!compareArrays(valueSourcePages, expectedValueSourcePages))
+    for (const candidateId of disallowedValues(
+      valueCandidateIds,
+      valueCandidateSet.allowed
+    ))
+      reasons.push(`VALUE_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    for (const candidateId of valueCandidateSet.forbidden)
+      if (valueCandidateIds.includes(candidateId))
+        reasons.push(`FORBIDDEN_VALUE_CANDIDATE_SELECTED:${candidateId}`);
+    if (missingValues(valueSourcePageSet.required, valueSourcePages).length > 0)
       reasons.push("VALUE_SOURCE_PAGES_MISMATCH");
-    if (!compareArrays(selectedCandidateIds, expectedCandidateIds))
+    for (const page of disallowedValues(
+      valueSourcePages,
+      valueSourcePageSet.allowed
+    ))
+      reasons.push(`VALUE_SOURCE_PAGE_NOT_ALLOWED:${page}`);
+    for (const page of valueSourcePageSet.forbidden)
+      if (valueSourcePages.includes(page))
+        reasons.push(`FORBIDDEN_VALUE_SOURCE_PAGE_SELECTED:${page}`);
+    if (missingValues(candidateSet.required, selectedCandidateIds).length > 0)
       reasons.push("SELECTED_CANDIDATES_MISMATCH");
-    if (!compareArrays(sourcePages, expectedSourcePages))
+    for (const candidateId of disallowedValues(
+      selectedCandidateIds,
+      candidateSet.allowed
+    ))
+      reasons.push(`SELECTED_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    for (const candidateId of candidateSet.forbidden)
+      if (selectedCandidateIds.includes(candidateId))
+        reasons.push(`FORBIDDEN_CANDIDATE_SELECTED:${candidateId}`);
+    if (missingValues(sourcePageSet.required, sourcePages).length > 0)
       reasons.push("SELECTED_SOURCE_PAGES_MISMATCH");
-    if (!compareArrays(renderedSourcePages, expectedSourcePages))
+    for (const page of disallowedValues(sourcePages, sourcePageSet.allowed))
+      reasons.push(`SELECTED_SOURCE_PAGE_NOT_ALLOWED:${page}`);
+    if (missingValues(sourcePageSet.required, renderedSourcePages).length > 0)
       reasons.push("RENDERED_SOURCE_PAGES_MISMATCH");
-    for (const page of expected.forbiddenSourcePages)
+    for (const page of disallowedValues(
+      renderedSourcePages,
+      sourcePageSet.allowed
+    ))
+      reasons.push(`RENDERED_SOURCE_PAGE_NOT_ALLOWED:${page}`);
+    for (const page of sourcePageSet.forbidden)
       if (sourcePages.includes(page) || renderedSourcePages.includes(page))
         reasons.push(`FORBIDDEN_SOURCE_PAGE_SELECTED:${page}`);
     return {

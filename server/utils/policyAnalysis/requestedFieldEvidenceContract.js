@@ -62,7 +62,11 @@ function validateWorksheetAndIndexCandidates(worksheet) {
             "REQUESTED_FIELD_WORKSHEET_CANDIDATE_DUPLICATE",
             candidateId
           );
-        candidateById.set(candidateId, { requirement, occurrence });
+        candidateById.set(candidateId, {
+          requirement,
+          component,
+          occurrence,
+        });
       }
     }
   }
@@ -263,6 +267,31 @@ function extractorFor(requirementId, field) {
   return null;
 }
 
+function valueCoversRequirement({
+  indexed,
+  binding,
+  candidateById,
+  bindingByCandidateId,
+}) {
+  if (indexed.requirement.components.length <= 1) return true;
+  const bindingGroupId = indexed.occurrence.bindingGroupId;
+  if (!bindingGroupId) return false;
+
+  const coveredComponentIds = new Set();
+  for (const [candidateId, candidateBinding] of bindingByCandidateId) {
+    if (candidateBinding !== binding) continue;
+    const grouped = candidateById.get(candidateId);
+    if (
+      grouped.requirement.id === indexed.requirement.id &&
+      grouped.occurrence.bindingGroupId === bindingGroupId
+    )
+      coveredComponentIds.add(grouped.component.id);
+  }
+  return indexed.requirement.components.every(({ id }) =>
+    coveredComponentIds.has(id)
+  );
+}
+
 function extractPreferredFacts({
   requirement,
   field,
@@ -279,15 +308,24 @@ function extractPreferredFacts({
     if (!factsByBinding.has(binding)) continue;
     const indexed = candidateById.get(candidateId);
     if (indexed.requirement.id !== requirement.id) continue;
+    if (
+      !valueCoversRequirement({
+        indexed,
+        binding,
+        candidateById,
+        bindingByCandidateId,
+      })
+    )
+      continue;
     factsByBinding
       .get(binding)
       .push(...extractor({ occurrence: indexed.occurrence, binding }));
   }
 
-  const directFacts = factsByBinding.get(VALUE_BINDING.DIRECT);
-  return directFacts.length > 0
-    ? directFacts
-    : factsByBinding.get(VALUE_BINDING.NARROW_SCOPE);
+  return [
+    ...factsByBinding.get(VALUE_BINDING.DIRECT),
+    ...factsByBinding.get(VALUE_BINDING.NARROW_SCOPE),
+  ];
 }
 
 function aggregateRequestedFieldStatus(fields) {

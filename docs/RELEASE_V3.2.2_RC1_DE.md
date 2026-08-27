@@ -1,5 +1,12 @@
 # Polizzenvergleich V3.2.2 RC1 – VS-Evidence-A/B
 
+> **Historischer RC – nicht erneut ausrollen.** Der Qwen-3.8-27B-Kundenlauf
+> endete mit LF und WEVIG jeweils bei `2/4` Oracle-Zeilen. Ursachen und lokal
+> validierte Korrekturen stehen in
+> `docs/VS_PILOT_27B_KUNDENBEFUND_FIX_VALIDIERUNG_DE.md`. Ein neuer RC benötigt
+> vor der Freigabe einen erneuten Kundenlauf. Ersatz-RC:
+> `docs/RELEASE_V3.3.0_RC1_DE.md`.
+
 Stand: 27. August 2026
 Release-Tag: `v3.2.2-rc.1`
 

@@ -28,9 +28,13 @@ const ORACLE = {
       requestedFieldStatus: "COMPLETE",
       normalizedValues: ["EUR 10.000,00"],
       requiredValueCandidateIds: ["candidate:limit"],
+      allowedValueCandidateIds: ["candidate:limit"],
       requiredValueSourcePages: [1],
+      allowedValueSourcePages: [1],
       requiredCandidateIds: ["candidate:limit"],
+      allowedCandidateIds: ["candidate:limit", "candidate:d553-approved"],
       requiredSourcePages: [1],
+      allowedSourcePages: [1],
       forbiddenSourcePages: [2],
     },
   ],
@@ -170,7 +174,21 @@ describe("vsPilotOracleContract", () => {
     );
   });
 
-  test("rejects an additional candidate and source page not explicitly forbidden", () => {
+  test("accepts an additional candidate explicitly approved by the oracle", () => {
+    const input = validInput();
+    input.selectedSources.push({
+      requirementId: "VS-21",
+      candidateId: "candidate:d553-approved",
+      physicalPageNumber: 1,
+    });
+
+    expect(evaluateVsPilotOracle(input).results[1]).toMatchObject({
+      pass: true,
+      reasons: [],
+    });
+  });
+
+  test("rejects an additional candidate and source page not explicitly allowed", () => {
     const input = validInput();
     input.selectedSources.push({
       requirementId: "VS-21",
@@ -181,10 +199,39 @@ describe("vsPilotOracleContract", () => {
 
     expect(evaluateVsPilotOracle(input).results[1].reasons).toEqual(
       expect.arrayContaining([
-        "SELECTED_CANDIDATES_MISMATCH",
-        "SELECTED_SOURCE_PAGES_MISMATCH",
-        "RENDERED_SOURCE_PAGES_MISMATCH",
+        "SELECTED_CANDIDATE_NOT_ALLOWED:candidate:unexpected-narrow-scope",
+        "SELECTED_SOURCE_PAGE_NOT_ALLOWED:3",
+        "RENDERED_SOURCE_PAGE_NOT_ALLOWED:3",
       ])
+    );
+  });
+
+  test("rejects explicitly forbidden candidates", () => {
+    const input = validInput();
+    input.oracleDocument = JSON.parse(JSON.stringify(ORACLE));
+    input.oracleDocument.rows[1].forbiddenCandidateIds = [
+      "candidate:known-wrong-scope",
+    ];
+    input.selectedSources.push({
+      requirementId: "VS-21",
+      candidateId: "candidate:known-wrong-scope",
+      physicalPageNumber: 1,
+    });
+
+    expect(evaluateVsPilotOracle(input).results[1].reasons).toContain(
+      "FORBIDDEN_CANDIDATE_SELECTED:candidate:known-wrong-scope"
+    );
+  });
+
+  test("rejects an internally contradictory allowed/forbidden oracle", () => {
+    const input = validInput();
+    input.oracleDocument = JSON.parse(JSON.stringify(ORACLE));
+    input.oracleDocument.rows[1].forbiddenCandidateIds = [
+      "candidate:d553-approved",
+    ];
+
+    expect(() => evaluateVsPilotOracle(input)).toThrow(
+      "VS_ORACLE_FORBIDDEN_SET_INVALID"
     );
   });
 

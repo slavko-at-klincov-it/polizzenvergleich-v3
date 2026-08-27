@@ -4,6 +4,9 @@ const {
   findAliasRanges,
   normalizeWithOffsetMap,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  buildCandidateTriagePayload,
+} = require("../../../utils/policyAnalysis/candidateTriageContract");
 
 function documentFromPages(pages) {
   let pageContent = "";
@@ -228,6 +231,114 @@ describe("controlledOccurrenceWorksheet", () => {
         text: "Die Sturmversicherung",
       }),
     ]);
+  });
+
+  test("carries an explicit section heading across proposal pages and resets at a new printed document", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 1 von 7\nFEUERVERSICHERUNG\nAufräum- und Abbruchkosten sind versichert.",
+        "Seite 2 von 7\nAufräum- und Abbruchkosten sind weiterhin versichert.",
+        "Seite 1 von 14\nAufräum- und Abbruchkosten werden allgemein definiert.",
+      ]),
+      documentFingerprint: "section-scope-carry",
+      catalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "VS-21",
+      "cleanup_costs"
+    ).occurrences;
+
+    expect(occurrences[0].sectionScopeHint).toMatchObject({
+      scopeKey: "FEUER_INSURANCE",
+      source: "CURRENT_PAGE_HEADING",
+    });
+    expect(occurrences[1].sectionScopeHint).toMatchObject({
+      scopeKey: "FEUER_INSURANCE",
+      source: "PRECEDING_PAGE_HEADING",
+      physicalPageNumber: 1,
+    });
+    expect(occurrences[2].sectionScopeHint).toBeNull();
+  });
+
+  test("makes the seven WEVIG proposal positions server-owned narrow scopes", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Seite 1 von 7",
+          "FEUERVERSICHERUNG",
+          "Aufräum-, Abbruch- und Feuerlöschkosten EUR6.121.600,00",
+          "Entgang von Mietzinseinnahmen mit einer Haftungszeit von 6 Monaten",
+        ].join("\n"),
+        [
+          "Seite 2 von 7",
+          "LEITUNGSWASSERVERSICHERUNG",
+          "Aufräum- und Abbruchkosten EUR6.121.600,00",
+          "Entgang von Mietzinseinnahmen mit einer Haftungszeit von 6 Monaten",
+        ].join("\n"),
+        "Seite 3 von 7\nSTURMVERSICHERUNG",
+        [
+          "Seite 4 von 7",
+          "Aufräum- und Abbruchkosten EUR6.121.600,00",
+          "Entgang von Mietzinseinnahmen mit einer Haftungszeit von 6 Monaten",
+          "GLASPAUSCHALVERSICHERUNG",
+        ].join("\n"),
+        "Seite 5 von 7\nAufräum- und Abbruchkosten EUR6.121.600,00",
+      ]),
+      documentFingerprint: "wevig-27b-section-replay",
+      catalog,
+    });
+    const targets = buildCandidateTriagePayload(
+      worksheet
+    ).bindingTargets.filter(
+      ({ requirementId, physicalPageNumber }) =>
+        (requirementId === "VS-21" &&
+          [1, 2, 4, 5].includes(physicalPageNumber)) ||
+        (requirementId === "VS-28" && [1, 2, 4].includes(physicalPageNumber))
+    );
+
+    expect(targets).toHaveLength(7);
+    const expectedScopeByTarget = new Map([
+      ["VS-21:1", "FEUER_INSURANCE"],
+      ["VS-21:2", "LEITUNGSWASSER_INSURANCE"],
+      ["VS-21:4", "STURM_INSURANCE"],
+      ["VS-21:5", "GLASBRUCH_INSURANCE"],
+      ["VS-28:1", "FEUER_INSURANCE"],
+      ["VS-28:2", "LEITUNGSWASSER_INSURANCE"],
+      ["VS-28:4", "STURM_INSURANCE"],
+    ]);
+    for (const target of targets) {
+      expect(target.scopeResolution).toMatchObject({
+        owner: "SERVER",
+        scopeMatch: "NARROW",
+        basis: "CATALOG_NARROW_SECTION",
+        matchedAlias: expectedScopeByTarget.get(
+          `${target.requirementId}:${target.physicalPageNumber}`
+        ),
+      });
+      expect(target.modelDecisionFields).not.toContain("scopeMatch");
+    }
+  });
+
+  test("resets inherited scope at an unknown uppercase insurance section", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 3 von 7\nSTURMVERSICHERUNG",
+        "Seite 4 von 7\nHAFTPFLICHTVERSICHERUNG\nAufräum- und Abbruchkosten EUR 1.000,00",
+        "Seite 5 von 7\nAufräum- und Abbruchkosten EUR 2.000,00",
+      ]),
+      documentFingerprint: "unknown-section-resets-carry",
+      catalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "VS-21",
+      "cleanup_costs"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0].sectionScopeHint).toBeNull();
+    expect(occurrences[1].sectionScopeHint).toBeNull();
   });
 
   test("groups different components governed by the same coordinated Kosten für phrase", () => {

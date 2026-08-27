@@ -8,6 +8,10 @@ const SHARED_GOVERNOR = "SHARED_GOVERNOR";
 const SHARED_SPAN = "SHARED_SPAN";
 const RIGHT_HEADED_COORDINATION = "RIGHT_HEADED_COORDINATION";
 const SAME_CANDIDATE_BINDING = "SAME_CANDIDATE_BINDING";
+const ALLOWED_SCOPE_POLICIES = new Set([
+  "GENERAL_REQUIRED",
+  "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+]);
 const ALLOWED_FACT_ROLES = new Set([
   "INSURED_OBJECT",
   "COST",
@@ -289,6 +293,36 @@ function explicitPageScopeHints(pageText) {
   return hints;
 }
 
+function explicitSectionHeadings(pageText) {
+  const canonicalScopeByHeading = {
+    FEUER: "FEUER_INSURANCE",
+    LEITUNGSWASSER: "LEITUNGSWASSER_INSURANCE",
+    STURM: "STURM_INSURANCE",
+    GLAS: "GLASBRUCH_INSURANCE",
+    GLASBRUCH: "GLASBRUCH_INSURANCE",
+    GLASPAUSCHAL: "GLASBRUCH_INSURANCE",
+  };
+  const pattern = /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gmu;
+  const headings = [];
+  for (const match of String(pageText || "").matchAll(pattern)) {
+    const text = match[0].trim();
+    if (text !== text.toLocaleUpperCase("de")) continue;
+    const headingKey = match[1].toLocaleUpperCase("de").replace(/\s+/gu, "");
+    headings.push({
+      scopeKey: canonicalScopeByHeading[headingKey] || null,
+      text,
+      pageStart: match.index,
+      pageEnd: match.index + match[0].length,
+    });
+  }
+  return headings;
+}
+
+function printedPageIndex(label) {
+  const match = String(label || "").match(/^Seite\s+(\d+)\s+von\s+(\d+)$/iu);
+  return match ? { current: Number(match[1]), total: Number(match[2]) } : null;
+}
+
 function validateDocument(document) {
   if (!document || typeof document !== "object")
     throw worksheetError("DOCUMENT_REQUIRED");
@@ -333,8 +367,22 @@ function validateDocument(document) {
       end,
       text,
       scopeHints: explicitPageScopeHints(text),
+      sectionHeadings: explicitSectionHeadings(text).map((heading) => ({
+        ...heading,
+        physicalPageNumber: pageNumber,
+      })),
     };
   });
+  let inheritedSectionHeading = null;
+  for (const page of pages) {
+    const printed = printedPageIndex(page.printedPageLabel);
+    if (printed?.current === 1) inheritedSectionHeading = null;
+    page.inheritedSectionHeading = inheritedSectionHeading;
+    if (page.sectionHeadings.length > 0) {
+      const lastHeading = page.sectionHeadings.at(-1);
+      inheritedSectionHeading = lastHeading.scopeKey ? lastHeading : null;
+    }
+  }
   return { pageContent, pages };
 }
 
@@ -505,21 +553,35 @@ function validateCatalog(catalog) {
           };
         })
       : [];
-    let scopeRules = { narrowAliases: [] };
+    let scopeRules = { narrowAliases: [], narrowScopeKeys: [] };
     if (requirement.scopeRules !== undefined) {
+      const scopeRuleKeys = Object.keys(requirement.scopeRules || {});
       if (
         !requirement.scopeRules ||
         typeof requirement.scopeRules !== "object" ||
         Array.isArray(requirement.scopeRules) ||
-        Object.keys(requirement.scopeRules).length !== 1 ||
-        !Array.isArray(requirement.scopeRules.narrowAliases)
+        scopeRuleKeys.length === 0 ||
+        scopeRuleKeys.some(
+          (key) => !["narrowAliases", "narrowScopeKeys"].includes(key)
+        ) ||
+        (requirement.scopeRules.narrowAliases !== undefined &&
+          !Array.isArray(requirement.scopeRules.narrowAliases)) ||
+        (requirement.scopeRules.narrowScopeKeys !== undefined &&
+          !Array.isArray(requirement.scopeRules.narrowScopeKeys))
       )
         throw worksheetError("SCOPE_RULES_INVALID", id);
       scopeRules = {
         narrowAliases: [
           ...new Set(
-            requirement.scopeRules.narrowAliases.map((alias) =>
+            (requirement.scopeRules.narrowAliases || []).map((alias) =>
               requireNonEmptyString(alias, "SCOPE_ALIAS_REQUIRED", id)
+            )
+          ),
+        ],
+        narrowScopeKeys: [
+          ...new Set(
+            (requirement.scopeRules.narrowScopeKeys || []).map((scopeKey) =>
+              requireNonEmptyString(scopeKey, "SCOPE_SECTION_KEY_REQUIRED", id)
             )
           ),
         ],
@@ -535,6 +597,12 @@ function validateCatalog(catalog) {
       requestedFields: Array.isArray(requirement.requestedFields)
         ? [...requirement.requestedFields]
         : [],
+      scopePolicy: (() => {
+        const scopePolicy = requirement.scopePolicy || "GENERAL_REQUIRED";
+        if (!ALLOWED_SCOPE_POLICIES.has(scopePolicy))
+          throw worksheetError("SCOPE_POLICY_INVALID", id);
+        return scopePolicy;
+      })(),
       bindingStructures,
       scopeRules,
       components,
@@ -984,6 +1052,22 @@ function buildControlledOccurrenceWorksheet({
             context.pageStart,
             scopeWordsBefore
           );
+          const currentSectionBoundary = page.sectionHeadings
+            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .at(-1);
+          const sectionScopeHint = currentSectionBoundary
+            ? currentSectionBoundary.scopeKey
+              ? {
+                  ...currentSectionBoundary,
+                  source: "CURRENT_PAGE_HEADING",
+                }
+              : null
+            : page.inheritedSectionHeading
+              ? {
+                  ...page.inheritedSectionHeading,
+                  source: "PRECEDING_PAGE_HEADING",
+                }
+              : null;
           occurrences.push({
             candidateId: candidateId({
               documentFingerprint: fingerprint,
@@ -998,6 +1082,7 @@ function buildControlledOccurrenceWorksheet({
             physicalPageNumber: page.physicalPageNumber,
             printedPageLabel: page.printedPageLabel,
             pageScopeHints: page.scopeHints,
+            sectionScopeHint,
             pageStart: range.originalStart,
             pageEnd: range.originalEnd,
             documentStart,
@@ -1046,6 +1131,7 @@ function buildControlledOccurrenceWorksheet({
       label: requirement.label,
       requestedFields: requirement.requestedFields,
       scopeRules: requirement.scopeRules,
+      scopePolicy: requirement.scopePolicy,
       componentCount: grouped.components.length,
       components: grouped.components,
     };

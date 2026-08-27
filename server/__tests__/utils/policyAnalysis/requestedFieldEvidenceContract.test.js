@@ -12,6 +12,7 @@ function occurrence({
   pageNumber = 7,
   physicalPageNumber = pageNumber,
   printedPageLabel = null,
+  bindingGroupId = null,
 }) {
   const matched =
     requirementId === "VS-21" ? "Aufräumkosten" : "Mietzinsentgang";
@@ -21,6 +22,7 @@ function occurrence({
     pageNumber,
     physicalPageNumber,
     printedPageLabel,
+    bindingGroupId,
     exactText: matched,
     documentStart: contextStart + matchedStart,
     documentEnd: contextStart + matchedStart + matched.length,
@@ -232,7 +234,7 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
-  test("prefers every DIRECT fact and discards NARROW_SCOPE facts when direct evidence exists", () => {
+  test("keeps DIRECT and NARROW_SCOPE facts with their independent sources", () => {
     const direct = occurrence({
       candidateId: "candidate:direct",
       requirementId: "VS-21",
@@ -259,7 +261,126 @@ describe("requestedFieldEvidenceContract", () => {
         binding: "DIRECT",
         source: expect.objectContaining({ candidateId: "candidate:direct" }),
       }),
+      expect.objectContaining({
+        normalizedValue: "5 %",
+        binding: "NARROW_SCOPE",
+        source: expect.objectContaining({ candidateId: "candidate:narrow" }),
+      }),
     ]);
+  });
+
+  test("keeps equal 27B values from direct and narrow sources on different pages", () => {
+    const direct = occurrence({
+      candidateId: "candidate:wevig-direct-page1",
+      requirementId: "VS-21",
+      text: "Aufräumkosten auf Erstes Risiko EUR6.121.600,00.",
+      contextStart: 0,
+      pageNumber: 1,
+    });
+    const narrow = occurrence({
+      candidateId: "candidate:wevig-narrow-page4",
+      requirementId: "VS-21",
+      text: "Aufräumkosten in der Sturmsparte EUR6.121.600,00.",
+      contextStart: 100,
+      pageNumber: 4,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: worksheet({ limitOccurrences: [direct, narrow] }),
+      materializedCandidates: selections(
+        ["candidate:wevig-direct-page1", "DIRECT"],
+        ["candidate:wevig-narrow-page4", "NARROW_SCOPE"]
+      ),
+    });
+
+    expect(result.requirements[1].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue: "EUR 6.121.600,00",
+        binding: "DIRECT",
+        source: expect.objectContaining({
+          candidateId: "candidate:wevig-direct-page1",
+          physicalPageNumber: 1,
+        }),
+      }),
+      expect.objectContaining({
+        normalizedValue: "EUR 6.121.600,00",
+        binding: "NARROW_SCOPE",
+        source: expect.objectContaining({
+          candidateId: "candidate:wevig-narrow-page4",
+          physicalPageNumber: 4,
+        }),
+      }),
+    ]);
+  });
+
+  test.each(["DIRECT", "NARROW_SCOPE"])(
+    "does not promote a %s singleton value to a compound category limit",
+    (binding) => {
+      const cleanupOnly = occurrence({
+        candidateId: "candidate:eco-cleanup-only",
+        requirementId: "VS-21",
+        text: "Aufräumkosten für Problemstoffe bis EUR 7.300,00.",
+        contextStart: 0,
+        pageNumber: 22,
+        bindingGroupId: "binding-group:cleanup-and-demolition",
+      });
+      const input = worksheet({ limitOccurrences: [cleanupOnly] });
+      input.requirements[1].components.push({
+        id: "demolition_costs",
+        label: "Abbruchkosten",
+        factRole: "COST",
+        occurrences: [],
+      });
+
+      const result = materializeRequestedFieldEvidence({
+        worksheet: input,
+        materializedCandidates: selections([
+          "candidate:eco-cleanup-only",
+          binding,
+        ]),
+      });
+
+      expect(result.requirements[1]).toMatchObject({
+        requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+        fields: [{ field: "limit", facts: [] }],
+      });
+    }
+  );
+
+  test("does not combine mixed bindings to complete a compound value group", () => {
+    const cleanup = occurrence({
+      candidateId: "candidate:mixed-cleanup",
+      requirementId: "VS-21",
+      text: "Aufräumkosten bis 10 %.",
+      contextStart: 0,
+      bindingGroupId: "binding-group:mixed",
+    });
+    const demolition = occurrence({
+      candidateId: "candidate:mixed-demolition",
+      requirementId: "VS-21",
+      text: "Aufräumkosten und Abbruchkosten bis 10 %.",
+      contextStart: 100,
+      bindingGroupId: "binding-group:mixed",
+    });
+    const input = worksheet({ limitOccurrences: [cleanup] });
+    input.requirements[1].components.push({
+      id: "demolition_costs",
+      label: "Abbruchkosten",
+      factRole: "COST",
+      occurrences: [demolition],
+    });
+
+    const result = materializeRequestedFieldEvidence({
+      worksheet: input,
+      materializedCandidates: selections(
+        ["candidate:mixed-cleanup", "NARROW_SCOPE"],
+        ["candidate:mixed-demolition", "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements[1]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+      fields: [{ field: "limit", facts: [] }],
+    });
   });
 
   test("uses NARROW_SCOPE values only when no direct value is available", () => {

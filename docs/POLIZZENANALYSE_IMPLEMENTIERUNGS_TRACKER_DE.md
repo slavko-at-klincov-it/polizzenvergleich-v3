@@ -1705,3 +1705,30 @@ NO PRODUCT PASS: VS-36, übrige Kategorien, Holdouts und Mehrdokumentpakete
 
 Bedienung, erwartete Tabellenwerte und Beweisgrenzen stehen in
 `docs/RELEASE_V3.2.2_RC1_DE.md`.
+
+## 26. INC-005A – Korrektur des 27B-Kundenbefunds
+
+Der Kundenlauf widerlegte die lokale RC1-Annahme: LF und WEVIG erreichten in
+beiden Wiederholungen jeweils nur `2/4`. Die Fehler lagen nicht ausschließlich
+am Modell, sondern auch an deterministischer Nachverarbeitung, Scope-Erkennung,
+Oracle- und A/B-Logik.
+
+Nach den Korrekturen gilt lokal:
+
+```text
+Echter 27B-Artefakt-Replay: LF 4/4, WEVIG 4/4
+Realer WEVIG-Worksheet: 7/7 kritische Vorschlagspositionen mit exaktem Scope
+Policy-Analyse: 10 Suites / 157 Tests PASS
+Gesamtregression: 77 Suites / 816 Tests PASS
+```
+
+Entscheidung:
+
+```text
+PASS: deterministische lokale Korrektur und Kundenartefakt-Replay
+GO: v3.3.0-rc.1 für den beaufsichtigten Kunden-A/B-Test
+REVIEW_REQUIRED: neuer Live-Lauf mit Qwen 3.8 27B auf Kundenhardware
+```
+
+Vollständiger Befund:
+`docs/VS_PILOT_27B_KUNDENBEFUND_FIX_VALIDIERUNG_DE.md`.
