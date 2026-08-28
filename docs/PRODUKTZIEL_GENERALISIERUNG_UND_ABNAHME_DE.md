@@ -330,6 +330,8 @@ Dabei gelten unterschiedliche Wahrheitsebenen:
   `docs/VS_01_36_QUALITAETSVERGLEICH_V321_V33_DE.md`
 - RC4-Releasevertrag:
   `docs/RELEASE_V3.3.0_RC4_DE.md`
+- RC5-Releasevertrag für den gemeinsamen Acht-Kategorien-Evidenzpfad:
+  `docs/RELEASE_V3.3.0_RC5_DE.md`
 - Wissensrouter und historische Erfahrungsbasis:
   `../policy-project-documentation/POLIZZENVERGLEICH_KB_INDEX.md`
 - Entscheidungen und verworfene Richtungen:
