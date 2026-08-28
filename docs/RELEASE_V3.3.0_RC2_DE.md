@@ -4,6 +4,11 @@ Stand: 28. August 2026
 
 Release-Tag: `v3.3.0-rc.2`
 
+> Dieser Kandidat wurde durch `v3.3.0-rc.3` ersetzt. RC2 beendet den
+> vollständigen Runner beim ersten technischen `REVISE`-Status und kann
+> deshalb vor WEVIG abbrechen. Die Analyseimplementierung bleibt unverändert;
+> RC3 korrigiert Fortsetzung und vollständige Artefakterzeugung.
+
 ## Zweck
 
 Dieser Release Candidate erweitert `v3.3.0-rc.1` vom Vier-Kategorien-Piloten

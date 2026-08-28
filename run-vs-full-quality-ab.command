@@ -13,6 +13,7 @@ LF_PDF="$1"
 WEVIG_PDF="$2"
 PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
 OUTPUT_DIR="${3:-$PRIVATE_QA_ROOT/VS-FULL-QUALITY-AB-$(date +%Y%m%d-%H%M%S)}"
+RESUME_MODE=false
 MODEL="${VS_FULL_MODEL:-qwen/qwen3.8-27b}"
 EMBEDDING_MODEL="${VS_FULL_EMBEDDING_MODEL:-dinghy-embed}"
 MODEL_TOKEN_LIMIT="${VS_FULL_MODEL_TOKEN_LIMIT:-42496}"
@@ -24,13 +25,31 @@ USER_PROMPT="Analysiere die vollständig im Kontext bereitgestellten Vertragsdok
 }
 [ -f "$LF_PDF" ] || { printf '%s\n' "LF-PDF fehlt: $LF_PDF" >&2; exit 1; }
 [ -f "$WEVIG_PDF" ] || { printf '%s\n' "WEVIG-PDF fehlt: $WEVIG_PDF" >&2; exit 1; }
-[ ! -e "$OUTPUT_DIR" ] || {
-  printf '%s\n' "Ausgabeordner existiert bereits: $OUTPUT_DIR" >&2
-  exit 1
-}
+if [ -e "$OUTPUT_DIR" ]; then
+  [ "$#" -eq 3 ] || {
+    printf '%s\n' "Ausgabeordner existiert bereits: $OUTPUT_DIR" >&2
+    exit 1
+  }
+  [ -d "$OUTPUT_DIR" ] || {
+    printf '%s\n' "Ausgabepfad ist kein Ordner: $OUTPUT_DIR" >&2
+    exit 1
+  }
+  RESOLVED_OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd -P)"
+  RESOLVED_QA_ROOT="$(cd "$PRIVATE_QA_ROOT" && pwd -P)"
+  case "$RESOLVED_OUTPUT_DIR" in
+    "$RESOLVED_QA_ROOT"/VS-FULL-QUALITY-AB-*) ;;
+    *)
+      printf '%s\n' "Fortsetzung nur im privaten VS-QA-Ordner erlaubt: $OUTPUT_DIR" >&2
+      exit 1
+      ;;
+  esac
+  OUTPUT_DIR="$RESOLVED_OUTPUT_DIR"
+  RESUME_MODE=true
+fi
 
 umask 077
 mkdir -p "$OUTPUT_DIR"
+RUN_STATUS=0
 
 export LMSTUDIO_MODEL_PREF="$MODEL"
 export LMSTUDIO_MODEL_TOKEN_LIMIT="$MODEL_TOKEN_LIMIT"
@@ -53,6 +72,20 @@ run_document() {
   local triage_dir="$adapted_dir/triage"
   local effects_dir="$adapted_dir/effects"
   local result_dir="$adapted_dir/result"
+
+  if [ -f "$result_dir/report.json" ] && [ -f "$result_dir/answer.md" ]; then
+    local existing_status
+    existing_status="$("$NODE_BIN" -e 'const fs=require("fs");const report=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(report.status||"UNKNOWN"));' "$result_dir/report.json")"
+    printf '%s\n' "[vs-full-quality-ab] $document_key: bereits vollständig – übersprungen ($existing_status)"
+    if [ "$existing_status" != "TECHNICAL_PASS_REVIEW_REQUIRED" ]; then
+      RUN_STATUS=2
+    fi
+    return 0
+  fi
+  if [ "$RESUME_MODE" = true ] && [ -e "$document_dir" ]; then
+    printf '%s\n' "[vs-full-quality-ab] Unvollständiger Dokumentordner kann nicht sicher fortgesetzt werden: $document_dir" >&2
+    return 1
+  fi
 
   mkdir -p "$baseline_dir" "$triage_dir" "$effects_dir" "$result_dir"
 
@@ -99,6 +132,8 @@ run_document() {
     --allowUniqueCandidateIdRepair true
 
   printf '%s\n' "[vs-full-quality-ab] $document_key: 36-Zeilen-Deltabericht"
+  local materialize_status
+  set +e
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeVsFullResult.cjs" \
     --documentKey "$document_key" \
     --pdf "$pdf_file" \
@@ -114,6 +149,12 @@ run_document() {
     --model "$MODEL" \
     --embeddingModel "$EMBEDDING_MODEL" \
     --output "$result_dir"
+  materialize_status="$?"
+  set -e
+  if [ "$materialize_status" -ne 0 ]; then
+    RUN_STATUS=2
+    printf '%s\n' "[vs-full-quality-ab] $document_key: REVIEW_REQUIRED – beide Dokumente werden trotzdem vollständig verarbeitet." >&2
+  fi
 }
 
 run_document \
@@ -129,3 +170,7 @@ run_document \
 printf '%s\n' "[vs-full-quality-ab] FERTIG: $OUTPUT_DIR"
 printf '%s\n' "[vs-full-quality-ab] Vergleich LF: $OUTPUT_DIR/LF/B-v3.3.0-full/result/comparison.md"
 printf '%s\n' "[vs-full-quality-ab] Vergleich WEVIG: $OUTPUT_DIR/WEVIG/B-v3.3.0-full/result/comparison.md"
+if [ "$RUN_STATUS" -ne 0 ]; then
+  printf '%s\n' "[vs-full-quality-ab] FERTIG MIT REVIEW_REQUIRED: Bitte den vollständigen Ausgabeordner übermitteln." >&2
+  exit "$RUN_STATUS"
+fi
