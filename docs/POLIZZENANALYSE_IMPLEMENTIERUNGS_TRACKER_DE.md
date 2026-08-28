@@ -8,6 +8,12 @@ Dieses Dokument steuert die schrittweise Weiterentwicklung der Polizzenanalyse
 in V3. Es ist Roadmap, Experiment-Ledger und Übergabedokument zwischen lokaler
 Entwicklung und den kontrollierten Tests auf dem Kunden-Mac-Studio.
 
+Der verbindliche Produkt-, Generalisierungs- und Abnahmevertrag steht in
+[`PRODUKTZIEL_GENERALISIERUNG_UND_ABNAHME_DE.md`](./PRODUKTZIEL_GENERALISIERUNG_UND_ABNAHME_DE.md).
+LF IMMO und WEVIG sind Regressionsexemplare; ein Erfolg auf diesen Dokumenten
+allein ist weder das Produktziel noch ein Beweis für allgemeine fachliche
+Richtigkeit.
+
 Der verbindliche Ablauf lautet:
 
 ```text
