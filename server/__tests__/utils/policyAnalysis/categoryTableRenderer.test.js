@@ -174,7 +174,45 @@ describe("categoryTableRenderer", () => {
         materializedEvidence,
         documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
       })[0]
-    ).toMatchObject({ coverage: "Ja", reviewStatus: "BELEGT" });
+    ).toMatchObject({
+      documentedContent:
+        "Rahmenbedingung (FRAMEWORK_TERMS): Indexart: geregelt",
+      coverage: "Ja",
+      reviewStatus: "BELEGT",
+    });
+  });
+
+  test("renders a complete limit-only category as BELEGT instead of partial", () => {
+    const input = fixture({
+      id: "FE-A06",
+      label: "Betragsgrenze für Überspannungsschäden",
+      requestedFields: ["limit"],
+      componentEffects: [COVERAGE_EFFECT.DEFINED],
+      selected: [true],
+      fieldResult: {
+        requirementId: "FE-A06",
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "EUR 10.000",
+                source: { candidateId: "candidate:0" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    input.worksheet.requirements[0].components[0].factRole = "LIMIT";
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Ja",
+      coverageAmount: "EUR 10.000",
+      reviewStatus: "BELEGT",
+    });
   });
 
   test("renders the exact existing eight-column table with a complete included limit", () => {

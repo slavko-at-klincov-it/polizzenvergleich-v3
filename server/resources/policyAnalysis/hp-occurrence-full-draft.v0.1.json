@@ -19,7 +19,11 @@
           "id": "combined_liability_limit",
           "label": "Pauschaldeckungssumme",
           "factRole": "LIMIT",
-          "aliases": ["Pauschaldeckungssumme", "pauschale Deckungssumme"]
+          "aliases": [
+            "Pauschaldeckungssumme",
+            "pauschale Deckungssumme",
+            "Die Pauschaldeckungssumme beträgt"
+          ]
         },
         {
           "id": "personal_injury",
@@ -56,7 +60,8 @@
             "Jahreshöchstleistung beträgt höchstens das",
             "Vielfaches der Deckungssumme",
             "Mehrfaches der Deckungssumme",
-            "fache der Deckungssumme"
+            "fache der Deckungssumme",
+            "Pauschalversicherungssumme für alle Versicherungsfälle eines Jahres zusammen maximal dreimal"
           ]
         }
       ]
@@ -74,7 +79,9 @@
             "Reine Vermögensschäden Sublimit",
             "Sublimit für reine Vermögensschäden",
             "Höchstentschädigung für reine Vermögensschäden",
-            "reine Vermögensschäden bis"
+            "reine Vermögensschäden bis",
+            "Reine Vermögensschäden sind mitversichert",
+            "Bei reinen Vermögensschäden ist der Versicherungsfall der Verstoß"
           ]
         }
       ]
@@ -335,6 +342,9 @@
       "id": "HP-15",
       "label": "Schäden von Versicherten untereinander eingeschlossen",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": ["Reinigungs- und Betreuungsarbeiten"]
+      },
       "components": [
         {
           "id": "cross_liability",
@@ -344,7 +354,8 @@
             "Schäden von Versicherten untereinander",
             "Ansprüche der Versicherten untereinander",
             "gegenseitige Ansprüche mitversicherter Personen",
-            "Cross Liability"
+            "Cross Liability",
+            "Schadenersatzansprüche der Miteigentümer oder Mieter im Zusammenhang mit Reinigungs- und Betreuungsarbeiten sind mitversichert"
           ]
         }
       ]
@@ -358,13 +369,23 @@
           "id": "recourse_waiver",
           "label": "Regressverzicht",
           "factRole": "BENEFIT",
-          "aliases": ["Regressverzicht", "Verzicht auf Regress"]
+          "aliases": [
+            "Regressverzicht",
+            "Verzicht auf Regress",
+            "verzichtet der Versicherer auf seinen Regressanspruch"
+          ]
         },
         {
           "id": "tenants",
           "label": "Mieter",
           "factRole": "CONDITION",
-          "aliases": ["gegenüber Mietern", "gegen Mieter", "Mieter und Pächter"]
+          "aliases": [
+            "gegenüber Mietern",
+            "gegen Mieter",
+            "Mieter und Pächter",
+            "gegen einen Mieter des versicherten Gebäudes",
+            "soweit der Mieter den Schaden weder vorsätzlich noch grob fahrlässig verursacht hat"
+          ]
         }
       ]
     },
@@ -412,7 +433,7 @@
           "id": "playground",
           "label": "Spielplatz",
           "factRole": "CONDITION",
-          "aliases": ["Spielplatz", "Spielplätze"]
+          "aliases": ["Spielplatz", "Spielplätze", "Kinderspielplätze"]
         },
         {
           "id": "play_equipment_inspection",
@@ -472,12 +493,24 @@
       "id": "HP-21",
       "label": "Serienschadenklausel und Definition des Schadenereignisses",
       "requestedFields": ["condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["serial_loss_clause", "loss_event_definition"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "serial_loss_clause",
           "label": "Serienschadenklausel",
           "factRole": "DEFINITION",
-          "aliases": ["Serienschaden", "Serienschäden", "Serienschadenklausel"]
+          "aliases": [
+            "Serienschaden",
+            "Serienschäden",
+            "Serienschadenklausel",
+            "als ein Versicherungsfall mehrere auf derselben Ursache beruhende Schadenereignisse"
+          ]
         },
         {
           "id": "loss_event_definition",
@@ -486,7 +519,8 @@
           "aliases": [
             "als ein Schadenereignis",
             "ein Schadenereignis gelten",
-            "Schadenereignis ist"
+            "Schadenereignis ist",
+            "als ein Versicherungsfall mehrere auf derselben Ursache beruhende Schadenereignisse"
           ]
         }
       ]
@@ -520,7 +554,9 @@
           "aliases": [
             "passiver Rechtsschutz",
             "Abwehr unberechtigter Ansprüche",
-            "Abwehr unbegründeter Ansprüche"
+            "Abwehr unbegründeter Ansprüche",
+            "Kosten der Feststellung und Abwehr auch vor Gericht einer von einem Dritten behaupteten Schadenersatzverpflichtung",
+            "auch im Falle eines unberechtigten Anspruches"
           ]
         }
       ]
@@ -534,7 +570,11 @@
           "id": "defence_costs",
           "label": "Abwehrkosten",
           "factRole": "COST",
-          "aliases": ["Abwehrkosten", "Kosten der Abwehr"]
+          "aliases": [
+            "Abwehrkosten",
+            "Kosten der Abwehr",
+            "Kosten der Feststellung und Abwehr auch vor Gericht"
+          ]
         },
         {
           "id": "counted_against_limit",
@@ -543,7 +583,8 @@
           "aliases": [
             "auf die Deckungssumme angerechnet",
             "innerhalb der Deckungssumme",
-            "zu Lasten der Deckungssumme"
+            "zu Lasten der Deckungssumme",
+            "Kosten werden auf die Pauschalversicherungssumme angerechnet"
           ]
         }
       ]
@@ -557,7 +598,11 @@
           "id": "territorial_scope",
           "label": "Räumlicher Geltungsbereich",
           "factRole": "CONDITION",
-          "aliases": ["räumlicher Geltungsbereich", "örtlicher Geltungsbereich"]
+          "aliases": [
+            "räumlicher Geltungsbereich",
+            "örtlicher Geltungsbereich",
+            "Versicherungsschutz erstreckt sich auf Schadenfälle die in Österreich eingetreten sind"
+          ]
         },
         {
           "id": "foreign_coverage",
@@ -584,7 +629,9 @@
           "aliases": [
             "Mietsachschäden",
             "Mietsachschaden",
-            "Schäden an gemieteten Sachen"
+            "Schäden an gemieteten Sachen",
+            "Schäden an Sachen die entliehen gemietet geleast gepachtet oder in Verwahrung genommen wurden",
+            "entliehen gemietet geleast gepachtet oder in Verwahrung genommen"
           ]
         }
       ]
@@ -593,6 +640,16 @@
       "id": "HP-27",
       "label": "Schäden durch Reinigungs- oder Hausbetreuungspersonal",
       "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": [
+            "cleaning_or_caretaking_staff",
+            "staff_caused_damage"
+          ],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "cleaning_or_caretaking_staff",
@@ -602,7 +659,8 @@
             "Reinigungspersonal",
             "Hausbetreuungspersonal",
             "Hausbetreuer",
-            "Hausbesorger"
+            "Hausbesorger",
+            "Sach- und Personenschäden im Zusammenhang mit Reinigungs- und Betreuungsarbeiten durch Miteigentümer Mieter und deren dort wohnende Angehörige"
           ]
         },
         {
@@ -612,7 +670,8 @@
           "aliases": [
             "Schäden durch das Personal",
             "durch Hausbetreuungspersonal verursachte Schäden",
-            "durch Reinigungspersonal verursachte Schäden"
+            "durch Reinigungspersonal verursachte Schäden",
+            "Sach- und Personenschäden im Zusammenhang mit Reinigungs- und Betreuungsarbeiten durch Miteigentümer Mieter und deren dort wohnende Angehörige"
           ]
         }
       ]
@@ -722,18 +781,40 @@
       "id": "HP-33",
       "label": "Nachhaftung nach Vertragsende",
       "requestedFields": ["duration", "condition"],
+      "scopeRules": {
+        "narrowAliases": ["Umweltsachschäden", "Umweltstörung"]
+      },
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": [
+            "extended_reporting_period",
+            "after_contract_end"
+          ],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "extended_reporting_period",
           "label": "Nachhaftung",
           "factRole": "BENEFIT",
-          "aliases": ["Nachhaftung", "Nachdeckungsfrist", "Nachmeldefrist"]
+          "aliases": [
+            "Nachhaftung",
+            "Nachdeckungsfrist",
+            "Nachmeldefrist",
+            "Umweltstörung die während der Wirksamkeit des Versicherungsschutzes oder spätestens zwei Jahre danach festgestellt wird"
+          ]
         },
         {
           "id": "after_contract_end",
           "label": "Nach Vertragsende",
           "factRole": "CONDITION",
-          "aliases": ["nach Vertragsende", "nach Beendigung des Vertrages"]
+          "aliases": [
+            "nach Vertragsende",
+            "nach Beendigung des Vertrages",
+            "Umweltstörung die während der Wirksamkeit des Versicherungsschutzes oder spätestens zwei Jahre danach festgestellt wird"
+          ]
         }
       ]
     },
@@ -746,7 +827,11 @@
           "id": "contingency_coverage",
           "label": "Vorsorgeversicherung",
           "factRole": "BENEFIT",
-          "aliases": ["Vorsorgeversicherung", "Vorsorgedeckung"]
+          "aliases": [
+            "Vorsorgeversicherung für neu hinzukommende Risiken",
+            "Vorsorgedeckung für neu entstehende Haftpflichtrisiken",
+            "automatische Vorsorge für neue Haftpflichtrisiken"
+          ]
         },
         {
           "id": "new_risks",
@@ -776,9 +861,10 @@
           "label": "Schadstoffausschluss",
           "factRole": "EXCLUSION",
           "aliases": [
-            "Schadstoffe",
             "Schadstoffausschluss",
-            "schadstoffbedingt"
+            "Ausschluss von Schadstoffschäden",
+            "Schäden durch Schadstoffe sind ausgeschlossen",
+            "kein Versicherungsschutz für Schadstoffschäden"
           ]
         }
       ]

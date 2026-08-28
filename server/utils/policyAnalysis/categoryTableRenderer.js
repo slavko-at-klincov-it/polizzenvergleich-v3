@@ -391,7 +391,14 @@ function buildCategoryTableRows({
               coverageEffect === COVERAGE_EFFECT.INCLUDED))
       );
       const coverageDecisionRequired = requirement.components.some(
-        ({ factRole }) => !["CONDITION", "DEFINITION"].includes(factRole)
+        ({ factRole }) =>
+          ![
+            "CONDITION",
+            "DEFINITION",
+            "LIMIT",
+            "DEDUCTIBLE",
+            "DOCUMENT_STATUS",
+          ].includes(factRole)
       );
       const reviewStatus = reviewFor({
         rollup,
@@ -455,6 +462,8 @@ function buildCategoryTableRows({
       }
       if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
         documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
+      if (documentStatus === DOCUMENT_STATUS.FRAMEWORK_TERMS)
+        documentedContent = `Rahmenbedingung (FRAMEWORK_TERMS): ${documentedContent}`;
 
       const completeAssertion = reviewStatus === REVIEW_STATUS.BELEGT;
       return Object.freeze({

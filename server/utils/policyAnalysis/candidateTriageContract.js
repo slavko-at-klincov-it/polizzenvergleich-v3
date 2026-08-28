@@ -284,9 +284,10 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       )
     );
     const scopeSentence = occurrenceScopeSentence(source);
-    const liabilityContext = `${source.scopeLead?.text || ""}\n${
-      source.context?.text || ""
-    }`;
+    const scopeLeadText = `${source.coverageGovernorHint?.text || ""}\n${
+      source.scopeLead?.text || ""
+    }`.trim();
+    const liabilityContext = `${scopeLeadText}\n${source.context?.text || ""}`;
     const explicitCostGovernorContext = scopeSentence || source.context?.text;
     const hasExplicitCostGovernor =
       allCostMembers &&
@@ -363,7 +364,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       candidate.requirement.scopeRules?.narrowAliases || []
     ).find((alias) =>
       containsNormalizedPhrase(
-        `${source.scopeLead?.text || ""}\n${scopeSentence || ""}`,
+        `${scopeLeadText}\n${scopeSentence || ""}`,
         alias
       )
     );
@@ -468,7 +469,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           }))
         : [],
       sectionScopeHint: source.sectionScopeHint || null,
-      scopeLeadText: source.scopeLead?.text || "",
+      scopeLeadText,
       contextText: source.context.text,
       structure: group
         ? { type: group.type, governorText: group.governorText }

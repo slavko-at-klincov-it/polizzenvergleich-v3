@@ -166,7 +166,8 @@
           "aliases": [
             "Rohrersatz bei Rohrbruch bei allen versicherten Rohren",
             "Bruchschäden an den versicherten Rohren",
-            "Bruchschäden an wasserführenden Rohren"
+            "Bruchschäden an wasserführenden Rohren",
+            "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
           ]
         },
         {
@@ -176,7 +177,8 @@
           "aliases": [
             "Rohrersatz bei Rohrbruch bei allen versicherten Rohren",
             "Bruchschäden an den versicherten Rohren",
-            "Bruchschäden an wasserführenden Rohren"
+            "Bruchschäden an wasserführenden Rohren",
+            "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
           ]
         }
       ]
@@ -368,7 +370,13 @@
           "id": "underfloor_heating",
           "label": "Fußbodenheizung",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Fußbodenheizung", "Fußbodenheizungen"]
+          "aliases": [
+            "Fußbodenheizung",
+            "Fußbodenheizungen",
+            "Fußboden- und Wandheizung",
+            "Wasser führende Fußboden- und Wandheizung",
+            "Fußbodenheizungsanlagen"
+          ]
         }
       ]
     },
@@ -478,7 +486,9 @@
             "Kanalrückstau in der Leitungswasserversicherung",
             "Kanalrückstau in der Elementarversicherung",
             "Rückstau aus der Kanalisation in der Leitungswasserversicherung",
-            "Rückstau aus der Kanalisation in der Elementarversicherung"
+            "Rückstau aus der Kanalisation in der Elementarversicherung",
+            "dadurch verursachten Rückstau",
+            "in diesem Zusammenhang auftretenden Rückstau"
           ]
         }
       ]
@@ -551,18 +561,39 @@
       "id": "LW-22",
       "label": "Schwamm- und Fäulnisschäden",
       "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["fungus_damage", "rot_damage"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "fungus_damage",
           "label": "Schwammschäden",
           "factRole": "DAMAGE",
-          "aliases": ["Schwammschaden", "Schwammschäden", "Schwamm"]
+          "aliases": [
+            "Schwammschaden",
+            "Schwammschäden",
+            "Schwamm",
+            "Schwamm- und Vermorschungsschäden",
+            "Schwammbildung",
+            "Schäden durch Holzfäule Schwamm- und Vermorschungsschäden"
+          ]
         },
         {
           "id": "rot_damage",
           "label": "Fäulnisschäden",
           "factRole": "DAMAGE",
-          "aliases": ["Fäulnisschaden", "Fäulnisschäden", "Fäulnis"]
+          "aliases": [
+            "Fäulnisschaden",
+            "Fäulnisschäden",
+            "Fäulnis",
+            "Holzfäule",
+            "Vermorschungsschäden",
+            "Schäden durch Holzfäule Schwamm- und Vermorschungsschäden"
+          ]
         }
       ]
     },
@@ -637,7 +668,8 @@
           "aliases": [
             "Kosten der Rohrreinigung nach der Beseitigung von Verstopfungen",
             "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
-            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren"
+            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
+            "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
           ]
         },
         {
@@ -647,7 +679,8 @@
           "aliases": [
             "Kosten der Rohrreinigung nach der Beseitigung von Verstopfungen",
             "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
-            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren"
+            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
+            "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
           ]
         }
       ]
@@ -665,7 +698,8 @@
             "Kosten des ausgetretenen Wassers gegenüber dem Wasserversorger",
             "Wasserverlustkosten des Wasserversorgers",
             "Mehrverbrauch an Wasser gegenüber dem Wasserversorgungsunternehmen",
-            "nachweisliche Kosten für Leitungswasser, das bestimmungswidrig ausgetreten ist"
+            "nachweisliche Kosten für Leitungswasser, das bestimmungswidrig ausgetreten ist",
+            "Kosten für den Wasserverlust nach einem ersatzpflichtigen Schaden"
           ]
         }
       ]

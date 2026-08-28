@@ -109,6 +109,8 @@ describe("controlledOccurrenceWorksheet", () => {
   test.each([
     ["ALLGEMEINE VERTRAGSBESTIMMUNGEN", "GENERAL_CONTRACT_TERMS"],
     ["7. Wohnungseigentum", "WOHNUNGSEIGENTUM_INSURANCE"],
+    ["7. Glasbruch", "GLASBRUCH_INSURANCE"],
+    ["B. ALLGEMEINER TEIL", "GENERAL_CONTRACT_TERMS"],
   ])("recognizes the cross-cutting section %s", (heading, scopeKey) => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
@@ -153,6 +155,18 @@ describe("controlledOccurrenceWorksheet", () => {
         alias === "Müllräume" ? /Müll.*räume/u : /Tiefgara-\ngen/u
       );
     }
+  });
+
+  test("finds controlled phrases despite harmless punctuation differences", () => {
+    const text =
+      "Absturz und Anprall von Luft- oder Raumfahrzeugen, deren Teile bzw. Ladung.";
+    const alias =
+      "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung";
+    const [range] = findAliasRanges(text, alias);
+
+    expect(text.slice(range.originalStart, range.originalEnd)).toBe(
+      "Absturz und Anprall von Luft- oder Raumfahrzeugen, deren Teile bzw. Ladung"
+    );
   });
 
   test("enumerates each controlled component across all physical pages with exact original offsets", () => {
@@ -458,6 +472,50 @@ describe("controlledOccurrenceWorksheet", () => {
     ).toBe(occurrence.scopeLead.text);
   });
 
+  test("carries an explicit coverage governor across exactly one continued PDF page", () => {
+    const continuationCatalog = {
+      schemaVersion: 1,
+      catalogId: "cross-page-governor",
+      categoryView: "HP",
+      requirements: [
+        {
+          id: "HP-26",
+          label: "Mietsachschäden",
+          requestedFields: [],
+          components: [
+            {
+              id: "rented_property_damage",
+              label: "Mietsachschäden",
+              factRole: "DAMAGE",
+              aliases: ["gemieteten Sachen"],
+            },
+          ],
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "8.4. Nicht versichert im Rahmen der Gebäudehaftpflichtversicherung sind:",
+        "d) Schäden an gemieteten Sachen.",
+        "Unabhängiger Folgetext mit gemieteten Sachen.",
+      ]),
+      documentFingerprint: "cross-page-governor",
+      catalog: continuationCatalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "HP-26",
+      "rented_property_damage"
+    ).occurrences;
+
+    expect(occurrences[0].coverageGovernorHint).toMatchObject({
+      text: "8.4. Nicht versichert im Rahmen der Gebäudehaftpflichtversicherung sind:",
+      physicalPageNumber: 1,
+      source: "PRECEDING_PAGE_GOVERNOR",
+    });
+    expect(occurrences[1].coverageGovernorHint).toBeNull();
+  });
+
   test("keeps physical PDF page and visible printed page label as separate source fields", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
@@ -609,6 +667,56 @@ describe("controlledOccurrenceWorksheet", () => {
       scopeKey: "HAFTPFLICHT_INSURANCE",
       source: "PRECEDING_PAGE_HEADING",
     });
+  });
+
+  test("switches inherited liability scope to the general contract section", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 17\n8. Gebäude- und Grundstückshaftpflichtversicherung",
+        "Seite 25\nB. ALLGEMEINER TEIL\nAufräum- und Abbruchkosten EUR 1.000,00",
+        "Seite 26\nAufräum- und Abbruchkosten EUR 2.000,00",
+      ]),
+      documentFingerprint: "general-section-resets-liability",
+      catalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "VS-21",
+      "cleanup_costs"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0].sectionScopeHint).toMatchObject({
+      scopeKey: "GENERAL_CONTRACT_TERMS",
+      source: "CURRENT_PAGE_HEADING",
+      text: "B. ALLGEMEINER TEIL",
+    });
+    expect(occurrences[1].sectionScopeHint).toMatchObject({
+      scopeKey: "GENERAL_CONTRACT_TERMS",
+      source: "PRECEDING_PAGE_HEADING",
+      physicalPageNumber: 2,
+    });
+  });
+
+  test("resets inherited liability scope at the Oekoschutz section boundary", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 17\n8. Gebäude- und Grundstückshaftpflichtversicherung",
+        "Seite 22\n9. Ökoschutz\nAufräum- und Abbruchkosten EUR 1.000,00",
+        "Seite 23\nAufräum- und Abbruchkosten EUR 2.000,00",
+      ]),
+      documentFingerprint: "eco-section-resets-liability",
+      catalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "VS-21",
+      "cleanup_costs"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0].sectionScopeHint).toBeNull();
+    expect(occurrences[1].sectionScopeHint).toBeNull();
   });
 
   test("groups different components governed by the same coordinated Kosten für phrase", () => {

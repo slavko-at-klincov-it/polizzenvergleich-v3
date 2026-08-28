@@ -124,8 +124,9 @@ function validateCandidateTriage({ worksheet, candidateTriage }) {
 function governingScopeLead(value) {
   const text = String(value || "");
   const markers = [
-    /Nicht\s+versichert\s+sind/giu,
+    /Nicht\s+versichert(?:\s+im\s+Rahmen[^:\n]{0,140})?\s+sind/giu,
     /(?<!Nicht\s)Versichert\s+sind/giu,
+    /Zus[aä]tzlich[^\n]{0,160}\bversichert\b/giu,
     /Zus[aä]tzlich[\s\S]{0,220}?mitversichert/giu,
     /Katastrophen\b/giu,
   ];
@@ -204,8 +205,21 @@ function buildPreparedEvidenceTargets({
       const serverRejectedCandidates = [];
       const unresolvedCandidateIds = [];
       for (const occurrence of component.occurrences) {
-        const candidateBinding =
+        const triagedCandidateBinding =
           triageById?.get(occurrence.candidateId) || null;
+        const deterministicBinding = deterministicCategoryCandidateBinding({
+          worksheet,
+          requirement,
+          component,
+          occurrence,
+        });
+        // A very small set of category rules is server-authoritative because
+        // the clause itself explicitly governs the exact atomic component.
+        // This prevents a model MENTION_ONLY result from discarding that
+        // evidence while leaving all ordinary triage decisions untouched.
+        const candidateBinding = deterministicBinding?.authoritative
+          ? deterministicBinding.binding
+          : triagedCandidateBinding;
         if (candidateBinding === "MENTION_ONLY") {
           serverRejectedCandidates.push({
             candidateId: occurrence.candidateId,
@@ -234,12 +248,6 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
-        const deterministicBinding = deterministicCategoryCandidateBinding({
-          worksheet,
-          requirement,
-          component,
-          occurrence,
-        });
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
@@ -263,7 +271,11 @@ function buildPreparedEvidenceTargets({
           )
             ? occurrence.context.documentStart
             : null,
-          scopeLeadText: governingScopeLead(occurrence.scopeLead?.text),
+          scopeLeadText: governingScopeLead(
+            `${occurrence.coverageGovernorHint?.text || ""}\n${
+              occurrence.scopeLead?.text || ""
+            }`
+          ),
           pageScopeHints: Array.isArray(occurrence.pageScopeHints)
             ? occurrence.pageScopeHints.map(({ scopeKey, text }) => ({
                 scopeKey,

@@ -242,7 +242,9 @@
           "aliases": [
             "provisorische Sicherungsmaßnahmen",
             "Sicherungskosten nach einem Sturmschaden",
-            "Kosten für provisorische Sicherungsmaßnahmen"
+            "Kosten für provisorische Sicherungsmaßnahmen",
+            "Sicherungs-, Aufräumungs-",
+            "Sicherungs-, Aufräumungs-, Abbruch-"
           ]
         }
       ]
@@ -256,6 +258,15 @@
       },
       "components": [
         {
+          "id": "gutter_downpipe_damage",
+          "label": "Deckungswirkung für Dachrinnen und Fallrohre",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Schäden durch Auftauen und Reparaturen von Dachrinnen und Außenablaufrohren",
+            "Reparaturen von Dachrinnen und Außenablaufrohren"
+          ]
+        },
+        {
           "id": "gutter_downpipe_sublimit",
           "label": "Eigenes Sublimit für Dachrinnen und Fallrohre",
           "factRole": "LIMIT",
@@ -263,10 +274,7 @@
             "Sublimit für Dachrinnen und Fallrohre",
             "Dachrinnen und Fallrohre bis zu",
             "Dachrinnen und Fallrohre auf Erstes Risiko",
-            "Dachrinnen und Außenablaufrohre bis zu",
-            "Dachrinnen",
-            "Außenablaufrohre",
-            "Fallrohre"
+            "Dachrinnen und Außenablaufrohre bis zu"
           ]
         }
       ]
@@ -408,7 +416,11 @@
           "aliases": [
             "Photovoltaikanlage bei Sturm und Hagel",
             "Photovoltaikanlagen bei Sturm und Hagel",
-            "Photovoltaikanlagen auf Grund eines Sturmschadens"
+            "Photovoltaikanlagen auf Grund eines Sturmschadens",
+            "Solar- und Fotovoltaikanlagen",
+            "Solar- und Photovoltaikanlagen",
+            "Fotovoltaikanlagen",
+            "Photovoltaikanlagen"
           ]
         },
         {
@@ -417,7 +429,8 @@
           "factRole": "PERIL",
           "aliases": [
             "Photovoltaikanlage bei Sturm",
-            "Photovoltaikanlagen auf Grund eines Sturmschadens"
+            "Photovoltaikanlagen auf Grund eines Sturmschadens",
+            "Sturm (Wind mit Spitzengeschwindigkeiten"
           ]
         },
         {
@@ -426,7 +439,8 @@
           "factRole": "PERIL",
           "aliases": [
             "Photovoltaikanlage bei Sturm und Hagel",
-            "Photovoltaikanlage bei Hagel"
+            "Photovoltaikanlage bei Hagel",
+            "Hagel"
           ]
         }
       ]
@@ -442,7 +456,11 @@
           "factRole": "INSURED_OBJECT",
           "aliases": [
             "Photovoltaikanlage bei Schneedruck",
-            "Photovoltaikanlagen bei Schneedruck"
+            "Photovoltaikanlagen bei Schneedruck",
+            "Solar- und Fotovoltaikanlagen",
+            "Solar- und Photovoltaikanlagen",
+            "Fotovoltaikanlagen",
+            "Photovoltaikanlagen"
           ]
         },
         {
@@ -451,7 +469,8 @@
           "factRole": "PERIL",
           "aliases": [
             "Photovoltaikanlage bei Schneedruck",
-            "Photovoltaikanlagen bei Schneedruck"
+            "Photovoltaikanlagen bei Schneedruck",
+            "Schneedruck"
           ]
         }
       ]
@@ -487,7 +506,11 @@
             "Solarthermieanlage",
             "Solarthermieanlagen",
             "thermische Solaranlage",
-            "thermische Solaranlagen"
+            "thermische Solaranlagen",
+            "Solar- und Fotovoltaikanlagen",
+            "Solar- und Photovoltaikanlagen",
+            "Solarheizungsanlagen",
+            "Sonnenkollektoren"
           ]
         }
       ]
@@ -552,7 +575,9 @@
           "aliases": [
             "Baumbeseitigungskosten",
             "Kosten der Baumbeseitigung",
-            "Beseitigung von Bäumen"
+            "Beseitigung von Bäumen",
+            "Kosten für das Sichern, Entfernen bzw. Entsorgen",
+            "Entfernen bzw. Entsorgen von Bäumen"
           ]
         },
         {
@@ -656,7 +681,10 @@
           "factRole": "DAMAGE",
           "aliases": [
             "Sturmschäden an Einfriedungen",
-            "Sturmschaden an Einfriedungen"
+            "Sturmschaden an Einfriedungen",
+            "Grundstücksbegrenzungen",
+            "Begrenzungen und Umzäunungen",
+            "Mauern, Zäune"
           ]
         }
       ]
@@ -740,7 +768,10 @@
           "aliases": [
             "Höchstentschädigung in der Sturmversicherung",
             "Höchstentschädigung für Sturmschäden",
-            "Entschädigungsgrenze Sturm"
+            "Entschädigungsgrenze Sturm",
+            "Höchstentschädigung im Schadensfall",
+            "für die jeweilige Sparte vereinbarten Positionen",
+            "maximal 150 % der vereinbarten Versicherungssumme"
           ]
         }
       ]

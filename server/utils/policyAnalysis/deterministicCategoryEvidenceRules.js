@@ -17,13 +17,15 @@ const CATEGORY_SCOPE_KEYS = Object.freeze({
 
 const POSITIVE_GOVERNORS = Object.freeze([
   /(?:Zusätzlich\s+)?versichert\s+sind(?:\s+Schäden\s+durch)?/giu,
+  /Zus[aä]tzlich[^\n]{0,160}\bversichert\b/giu,
   /(?:Als\s+)?mitversichert(?:\s+gelten)?/giu,
   /Versicherte\s+Gefahren/giu,
   /Versicherungsschutz\s+(?:besteht|gilt)/giu,
   /auf\s+[,„“"']*Erstes\s+Risiko/giu,
+  /Katastrophen\s+bis/giu,
 ]);
 const NEGATIVE_GOVERNORS = Object.freeze([
-  /Nicht\s+versichert\s+sind/giu,
+  /Nicht\s+versichert(?:\s+im\s+Rahmen[^:\n]{0,140})?\s+sind/giu,
   /nicht\s+mitversichert/giu,
   /(?:vom\s+Versicherungsschutz\s+)?ausgeschlossen/giu,
   /(?:Die\s+)?Versicherung(?:sschutz)?\s+erstreckt\s+sich\s+nicht/giu,
@@ -83,7 +85,7 @@ function clausePolarity({
     relativeStart = String(contextText).length;
   const prefix = `${String(scopeLeadText || "")}\n${String(contextText).slice(
     0,
-    relativeStart
+    relativeStart + String(exactText || "").length
   )}`;
   const positive = lastPatternMatch(prefix, POSITIVE_GOVERNORS);
   const negative = lastPatternMatch(prefix, NEGATIVE_GOVERNORS);
@@ -116,9 +118,9 @@ function resolvedCategoryView(worksheet, requirement) {
 
 function matchedNarrowAlias(requirement, occurrence) {
   const narrowAliases = requirement?.scopeRules?.narrowAliases || [];
-  const scopeText = `${occurrence?.scopeLead?.text || ""}\n${
-    occurrence?.context?.text || ""
-  }`;
+  const scopeText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
+    occurrence?.scopeLead?.text || ""
+  }\n${occurrence?.context?.text || ""}`;
   return (
     narrowAliases.find((alias) => containsPhrase(scopeText, alias)) || null
   );
@@ -189,6 +191,47 @@ function explicitRoleMismatch(component, occurrence) {
   return null;
 }
 
+function explicitEl16GlassObjectBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "EL" ||
+    requirement?.id !== "EL-16" ||
+    !["winter_garden", "display_case"].includes(component?.id) ||
+    component?.factRole !== "INSURED_OBJECT"
+  )
+    return null;
+
+  const evidenceText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
+    occurrence?.scopeLead?.text || ""
+  }\n${occurrence?.context?.text || ""}`;
+  if (
+    !/(?:Glasbruch|Gebäude-Glaspauschale|Innenverglasungen)/iu.test(
+      evidenceText
+    )
+  )
+    return null;
+
+  const polarity = clausePolarity({
+    scopeLeadText: `${occurrence?.coverageGovernorHint?.text || ""}\n${
+      occurrence?.scopeLead?.text || ""
+    }`,
+    contextText: occurrence?.context?.text,
+    exactText: occurrence?.exactText,
+    occurrenceStart: occurrence?.documentStart,
+    contextDocumentStart: occurrence?.context?.documentStart,
+  });
+  if (!["POSITIVE", "NEGATIVE"].includes(polarity)) return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: `EL_16_EXPLICIT_${polarity}_GLASS_OBJECT_CLAUSE`,
+    authoritative: true,
+  };
+}
+
 /**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
@@ -210,6 +253,14 @@ function deterministicCategoryCandidateBinding({
     });
     if (vsDecision) return vsDecision;
   }
+
+  const el16Binding = explicitEl16GlassObjectBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (el16Binding) return el16Binding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)
@@ -238,15 +289,17 @@ function deterministicCategoryCandidateBinding({
     return null;
 
   const polarity = clausePolarity({
-    scopeLeadText: occurrence?.scopeLead?.text,
+    scopeLeadText: `${occurrence?.coverageGovernorHint?.text || ""}\n${
+      occurrence?.scopeLead?.text || ""
+    }`,
     contextText: occurrence?.context?.text,
     exactText: occurrence?.exactText,
     occurrenceStart: occurrence?.documentStart,
     contextDocumentStart: occurrence?.context?.documentStart,
   });
-  const evidenceText = `${occurrence?.scopeLead?.text || ""}\n${
-    occurrence?.context?.text || ""
-  }`;
+  const evidenceText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
+    occurrence?.scopeLead?.text || ""
+  }\n${occurrence?.context?.text || ""}`;
   if (!factRoleMatchesGovernor(component?.factRole, polarity, evidenceText))
     return null;
   return {
@@ -299,6 +352,28 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    target.categoryView === "HP" &&
+    target.requirementId === "HP-16" &&
+    ["recourse_waiver", "tenants"].includes(target.componentId)
+  ) {
+    const selectedCandidateIds = target.candidates
+      .filter(({ contextText }) =>
+        /Mieter[\s\S]{0,260}verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
+          contextText || ""
+        )
+      )
+      .map(({ candidateId }) => candidateId);
+    if (selectedCandidateIds.length > 0)
+      return {
+        selectedCandidateIds,
+        coverageEffect:
+          target.componentId === "recourse_waiver"
+            ? COVERAGE_EFFECT.INCLUDED
+            : COVERAGE_EFFECT.DEFINED,
+        basis: `EXPLICIT_HP16_TENANT_RECOURSE_WAIVER:HP:HP-16`,
+      };
+  }
   if (
     target.candidates.some(
       ({ candidateBinding }) =>

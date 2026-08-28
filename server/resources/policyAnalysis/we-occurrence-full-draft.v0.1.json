@@ -142,24 +142,50 @@
       "id": "WE-07",
       "label": "Malerei, Tapeten, Wandbeläge",
       "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["painting", "wallpaper", "wall_coverings"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "painting",
           "label": "Malerei",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Malerei", "Malerarbeiten", "Innenanstrich"]
+          "aliases": [
+            "Malerei",
+            "Malereien",
+            "Malerarbeiten",
+            "Innenanstrich",
+            "Tapeten Malereien textilen Wand und Bodenbelägen",
+            "Tapeten Malereien textile Wand- und Bodenbeläge"
+          ]
         },
         {
           "id": "wallpaper",
           "label": "Tapeten",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Tapeten", "Tapete"]
+          "aliases": [
+            "Tapeten",
+            "Tapete",
+            "Tapeten Malereien textilen Wand und Bodenbelägen",
+            "Tapeten Malereien textile Wand- und Bodenbeläge"
+          ]
         },
         {
           "id": "wall_coverings",
           "label": "Wandbeläge",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Wandbeläge", "Wandverkleidungen"]
+          "aliases": [
+            "Wandbeläge",
+            "Wandverkleidungen",
+            "textile Wand- und Bodenbeläge",
+            "Wand- und Bodenbeläge",
+            "Tapeten Malereien textilen Wand und Bodenbelägen",
+            "Tapeten Malereien textile Wand- und Bodenbeläge"
+          ]
         }
       ]
     },
@@ -325,12 +351,23 @@
       "id": "WE-13",
       "label": "Kellerabteile als Gebäudeteil mitversichert",
       "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["basement_compartments", "building_component"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "basement_compartments",
           "label": "Kellerabteile",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Kellerabteile", "Kellerabteil"]
+          "aliases": [
+            "Kellerabteile",
+            "Kellerabteil",
+            "Keller- und andere Abstellabteile oder Boxen samt dazugehörigen Türen"
+          ]
         },
         {
           "id": "building_component",
@@ -339,7 +376,8 @@
           "aliases": [
             "Teil des Gebäudes",
             "Gebäudebestandteil",
-            "als Gebäudeteil"
+            "als Gebäudeteil",
+            "Keller- und andere Abstellabteile oder Boxen samt dazugehörigen Türen"
           ]
         }
       ]
@@ -356,7 +394,9 @@
           "aliases": [
             "Inhalt der Kellerabteile",
             "Kellerabteilinhalt",
-            "in den Kellerabteilen gelagerte Sachen"
+            "in den Kellerabteilen gelagerte Sachen",
+            "Keller- und andere Abstellabteile oder Boxen samt dazugehörigen Türen jedoch exklusive deren Inhalt",
+            "exklusive deren Inhalt"
           ]
         }
       ]
@@ -416,6 +456,13 @@
       "id": "WE-17",
       "label": "Mietzinsentgang für vermietete Einheiten",
       "requestedFields": ["duration", "limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["rent_loss", "rented_units"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "rent_loss",
@@ -425,7 +472,8 @@
             "Mietzinsentgang",
             "Mietausfall",
             "Mietverlust",
-            "Entgang von Mietzinseinnahmen"
+            "Entgang von Mietzinseinnahmen",
+            "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und Räume"
           ]
         },
         {
@@ -435,7 +483,9 @@
           "aliases": [
             "vermietete Einheiten",
             "vermieteten Wohnungen",
-            "vermietete Wohnungseigentumsobjekte"
+            "vermietete Wohnungseigentumsobjekte",
+            "wenn der Mieter Pächter den Bestandzins",
+            "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und Räume"
           ]
         }
       ]
@@ -477,7 +527,8 @@
           "aliases": [
             "gewerblich genutzte Einheiten im Haus",
             "Gewerbeeinheiten im versicherten Gebäude",
-            "Geschäftslokale im versicherten Gebäude"
+            "Geschäftslokale im versicherten Gebäude",
+            "gewerblich genutzte Gebäudeeinheiten und Räume"
           ]
         },
         {
@@ -487,7 +538,8 @@
           "aliases": [
             "gewerblich genutzte Einheiten im Haus",
             "Gewerbeeinheiten im versicherten Gebäude",
-            "Geschäftslokale im versicherten Gebäude"
+            "Geschäftslokale im versicherten Gebäude",
+            "gewerblich genutzte Gebäudeeinheiten und Räume"
           ]
         }
       ]

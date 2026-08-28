@@ -2201,3 +2201,120 @@ REVIEW_REQUIRED: frischer vollständiger Qwen-3.8-27B-Lauf auf Zielhardware
 REVIEW_REQUIRED: fachliche Oracles für FE, LW, ST, EL, HP, VB und WE
 NO CLAIM: 99 Prozent oder allgemeine fachliche Vollständigkeit
 ```
+
+## 34. INC-012 – RC5-Gesamtbefund und Recall-/Scope-Härtung für RC6
+
+```text
+Increment-ID: INC-012
+Datum: 29. August 2026
+Quelle: ALL-CATEGORIES-QUALITY.zip, echter LF-Qwen-3.8-27B-Kundenlauf
+Zielrelease: v3.3.0-rc.6
+```
+
+### Fachlicher Befund zu RC5
+
+RC5 erzeugte technisch alle 320 Zeilen, war fachlich aber kein Release-PASS.
+Die technische Kontrolle hatte nur Format, IDs und Quellenintegrität geprüft;
+sie war kein vollständiges Fach-Oracle.
+
+```text
+320/320 Zeilen technisch erzeugt
+38 BELEGT
+29 TEILBELEGT
+253 UNGEKLÄRT
+264 kontrollierte Kandidaten
+137 ausgewählte Quellen
+```
+
+Die Ursachen waren nicht eine unvollständige PDF-Erfassung, sondern zu wenig
+Recall in den sieben neuen Katalogen, verlorene Kapitel- und
+Ausschluss-Governors an Seitenwechseln, zu enge Satzzeichen-Aliase sowie
+fehlende generische Euro- und reine Limitmaterialisierung. Beispiele:
+
+- `FE-A13`, `FE-D01`, `LW-05` und `LW-12` waren im Dokument ausdrücklich
+  vorhanden, blieben aber unbekannt.
+- `EL-16` verband Wintergarten und Vitrinen zu einer falschen gemeinsamen
+  Wirkung, obwohl der Wintergarten eingeschlossen und die Vitrine
+  ausgeschlossen ist.
+- `HP-34` und `HP-35` erhielten sachfremde Haftpflichtfundstellen.
+- Die Ausschlussüberschrift zu `HP-26` stand auf Seite 20, die fortgesetzte
+  Aufzählung auf Seite 21. Ohne Seitenwechsel-Governor wurde der Ausschluss
+  als Einschluss interpretiert.
+- Rahmenbedingungen waren in der Tabelle nicht sichtbar als solche markiert.
+
+Entscheidung:
+
+```text
+NO-GO: RC5 als fachlich freizugebendes Produktrelease
+PASS: RC5 als reale Fehlerbaseline und Ursachenbeweis
+```
+
+### Kleine, ursachengebundene Implementierung
+
+1. FE, LW, ST, EL, HP, VB und WE erhielten konservative, atomare Suchaliase
+   für die im echten LF-Lauf sicher fehlenden Vertragsformulierungen. Unklare
+   Teilaspekte bleiben ausdrücklich unbekannt.
+2. Suche normalisiert harmlose Satzzeichen- und PDF-Trennungsvarianten, ohne
+   die servereigenen Originaloffsets oder Zitate zu verlieren.
+3. `7. Glasbruch`, `B. ALLGEMEINER TEIL` und der Ökoschutz-Übergang bilden
+   korrekte Scopegrenzen.
+4. Ein expliziter positiver oder negativer Deckungs-Governor wird genau auf
+   die unmittelbar folgende PDF-Seite weitergegeben. Eine neue
+   Kapitelüberschrift oder die übernächste Seite beendet die Vererbung.
+5. `EL-16` besitzt eine enge serverautoritäre Regel für die beiden getrennten
+   Glasobjekte. Unterschiedliche Objektwirkungen sind kein Widerspruch.
+6. `HP-16` erkennt den Regressverzicht samt Mieterbedingung; `weder ... noch`
+   wird nicht mehr als Ausschluss des Mieters umgedeutet.
+7. Beträge mit `EUR` und `€` werden quellengebunden normalisiert. Vollständige
+   reine LIMIT-, DEDUCTIBLE- und DOCUMENT_STATUS-Zeilen können als belegt
+   ausgegeben werden.
+8. Ergebnisse aus `FRAMEWORK_TERMS` werden im dokumentierten Inhalt sichtbar
+   als Rahmenbedingung bezeichnet und nicht als aktive Polizze ausgegeben.
+
+### Lokaler Full-Run als Vorfilter
+
+Ein vollständiger LF-Lauf über alle acht Ansichten wurde lokal mit
+`qwen3.5-4b-mlx` durchgeführt. Das kleinere Modell ist kein Ersatz für den
+Kunden-27B-Lauf, belegt aber die komplette technische Verarbeitung und dient
+als schneller qualitativer Vorfilter.
+
+```text
+320/320 Zeilen
+75 BELEGT
+59 TEILBELEGT
+186 UNGEKLÄRT
+381 kontrollierte Kandidaten
+290 ausgewählte Quellen
+```
+
+Sicher korrigierte Beispiele im lokalen Lauf beziehungsweise im
+anschließenden deterministischen Replay:
+
+```text
+FE-A06: BELEGT, Limit indirekter Blitzschlag geregelt
+FE-A13: BELEGT, Luftfahrzeug + Teile + Ladung eingeschlossen
+FE-D01: BELEGT, Feuerwehr-/Einsatzkosten und Höhe geregelt
+LW-05:  BELEGT, Rohrbruch und Rohr selbst eingeschlossen
+LW-12:  BELEGT, Fußbodenheizung eingeschlossen
+LW-26:  BELEGT, C-/D-Deckung bleibt trotz vorheriger Grunddeckungsausnahme positiv
+ST-18/19/21/29/34: BELEGT
+EL-16:  Wintergarten eingeschlossen; Vitrinen ausgeschlossen; kein Widerspruch
+HP-16:  BELEGT + Ja, Regressverzicht gegenüber Mietern
+HP-26:  BELEGT + Nein, Mietsachschäden in der fortgesetzten Ausschlussliste
+HP-34/35: sachfremde RC5-Fundstellen entfernt und wieder UNGEKLÄRT
+VB-05/06/17/22/36: BELEGT
+WE-07/13/14: BELEGT
+```
+
+### Validierung und Freigabegrenze
+
+```text
+PASS: 88 Jest-Suites / 933 Tests
+PASS: Katalog-Recall-Replays gegen das echte RC5-Dokumentartefakt
+PASS: Lint, Formatierung und Git-Diff-Prüfung
+PASS: lokaler 320-Zeilen-Qwen-4B-Vorfilter
+GO: frischer vollständiger Qwen-3.8-27B-Lauf auf dem Kunden-Mac-Studio
+REVIEW_REQUIRED: fachlicher Vergleich der neuen 320 Zeilen mit RC5/RC4
+REVIEW_REQUIRED: vollständige Fachoracles für alle Dokument-/Kategoriepaare
+NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
+```

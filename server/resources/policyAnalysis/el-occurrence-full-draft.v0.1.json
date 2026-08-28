@@ -7,6 +7,7 @@
       "id": "EL-01",
       "label": "Elementar-Sublimit pro Schadenereignis",
       "requestedFields": ["limit"],
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "elemental_per_event_limit",
@@ -15,7 +16,9 @@
           "aliases": [
             "Elementar-Sublimit pro Schadenereignis",
             "Elementarschäden je Schadenereignis",
-            "Katastrophenschäden je Schadenereignis"
+            "Katastrophenschäden je Schadenereignis",
+            "Katastrophen bis",
+            "Katastrophen pro versichertem Objekt"
           ]
         }
       ]
@@ -41,6 +44,7 @@
       "id": "EL-03",
       "label": "Gilt das Limit gemeinsam für alle Elementargefahren",
       "requestedFields": ["condition"],
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "shared_elemental_limit",
@@ -49,7 +53,9 @@
           "aliases": [
             "gemeinsames Limit für alle Elementargefahren",
             "insgesamt für Elementargefahren",
-            "Elementarschäden insgesamt"
+            "Elementarschäden insgesamt",
+            "Katastrophen bis",
+            "Katastrophen pro versichertem Objekt"
           ]
         }
       ]
@@ -58,6 +64,8 @@
       "id": "EL-04",
       "label": "Hochwasser und Überschwemmung",
       "requestedFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "flood",
@@ -77,18 +85,28 @@
       "id": "EL-05",
       "label": "Starkregen und Oberflächenwasser ohne Gewässerausuferung",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "heavy_rain",
           "label": "Starkregen",
           "factRole": "PERIL",
-          "aliases": ["Starkregen", "außergewöhnliche Niederschläge"]
+          "aliases": [
+            "Starkregen",
+            "außergewöhnliche Niederschläge",
+            "Regen- oder Schmelzwasser"
+          ]
         },
         {
           "id": "surface_water",
           "label": "Oberflächenwasser",
           "factRole": "PERIL",
-          "aliases": ["Oberflächenwasser", "Oberflächenabfluss"]
+          "aliases": [
+            "Oberflächenwasser",
+            "Oberflächenabfluss",
+            "Regen- oder Schmelzwasser"
+          ]
         },
         {
           "id": "without_watercourse_overflow",
@@ -96,7 +114,8 @@
           "factRole": "CONDITION",
           "aliases": [
             "ohne Ausuferung eines Gewässers",
-            "ohne Gewässerausuferung"
+            "ohne Gewässerausuferung",
+            "nicht auf normalem Weg abfließt"
           ]
         }
       ]
@@ -105,6 +124,8 @@
       "id": "EL-06",
       "label": "Rückstau aus der Kanalisation",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "sewer_backflow",
@@ -113,7 +134,8 @@
           "aliases": [
             "Rückstau aus der Kanalisation",
             "Kanalrückstau",
-            "Rückstau des Kanals"
+            "Rückstau des Kanals",
+            "auftretenden Rückstau"
           ]
         }
       ]
@@ -135,6 +157,8 @@
       "id": "EL-08",
       "label": "Erdrutsch, Erdfall und Erdsenkung",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "landslide",
@@ -160,6 +184,8 @@
       "id": "EL-09",
       "label": "Lawine",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "avalanche",
@@ -186,6 +212,7 @@
       "id": "EL-11",
       "label": "Selbstbehalt in der Sparte Elementar",
       "requestedFields": ["deductible"],
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "elemental_deductible",
@@ -194,7 +221,8 @@
           "aliases": [
             "Selbstbehalt Elementar",
             "Selbstbehalt bei Elementarschäden",
-            "Selbstbehalt für Katastrophenschäden"
+            "Selbstbehalt für Katastrophenschäden",
+            "Erdbeben"
           ]
         }
       ]
@@ -221,6 +249,8 @@
       "id": "EL-13",
       "label": "Glasbruch an der Gebäudeverglasung",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "building_glazing_breakage",
@@ -229,7 +259,8 @@
           "aliases": [
             "Glasbruch an Gebäudeverglasungen",
             "Bruch der Gebäudeverglasung",
-            "Gebäudeverglasung"
+            "Gebäudeverglasung",
+            "Verglasung der versicherten Gebäude"
           ]
         }
       ]
@@ -238,6 +269,7 @@
       "id": "EL-14",
       "label": "Glasbruch in Stiegenhaus und Gemeinschaftsräumen",
       "requestedFields": [],
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "stairwell_glass_breakage",
@@ -264,6 +296,8 @@
       "id": "EL-15",
       "label": "Sonderverglasung wie Isolier- oder Sicherheitsglas",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "insulating_or_safety_glass",
@@ -272,9 +306,17 @@
           "aliases": [
             "Isolierglas",
             "Isolierverglasung",
+            "Mehrscheibenisolierungen",
             "Sicherheitsglas",
+            "Sicherheitsgläser",
             "Sicherheitsverglasung"
           ]
+        },
+        {
+          "id": "resistant_laminated_safety_glass",
+          "label": "Durchbruch- oder durchschusshemmendes Verbundsicherheitsglas",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Verbundsicherheitsglas", "Verbundsicherheitsgläser"]
         }
       ]
     },
@@ -301,6 +343,7 @@
       "id": "EL-17",
       "label": "Kosten einer Notverglasung",
       "requestedFields": ["limit"],
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "emergency_glazing_costs",
@@ -328,6 +371,7 @@
       "id": "EL-18",
       "label": "Selbstbehalt oder Limit in der Glasversicherung",
       "requestedFields": ["deductible", "limit"],
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "glass_deductible",
@@ -346,7 +390,11 @@
           "aliases": [
             "Höchstentschädigung Glasversicherung",
             "Höchstentschädigung in der Glasversicherung",
-            "Glasbruchschäden je Schadenfall"
+            "Glasbruchschäden je Schadenfall",
+            "Einzelscheibengröße",
+            "Verglasung von Nebengebäuden bis",
+            "Blei-, Messing- und Kunstverglasungen bis",
+            "Portale und Außenverglasungen"
           ]
         }
       ]
@@ -530,6 +578,7 @@
       "id": "EL-26",
       "label": "Graffitientfernung, Limit und Anzahl pro Jahr",
       "requestedFields": ["limit", "annual_count"],
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "graffiti_removal",
@@ -540,6 +589,12 @@
             "Entfernung von Graffiti",
             "Beseitigung von Graffiti"
           ]
+        },
+        {
+          "id": "graffiti_damage",
+          "label": "Graffitischäden",
+          "factRole": "DAMAGE",
+          "aliases": ["Schäden durch Graffiti"]
         },
         {
           "id": "graffiti_limit",
@@ -566,12 +621,22 @@
       "id": "EL-27",
       "label": "Einbruchdiebstahl in allgemeine Teile und Kellerabteile",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": {
+        "narrowAliases": [
+          "im Zusammenhang mit einem vollbrachten oder versuchten Einbruchdiebstahl"
+        ]
+      },
       "components": [
         {
           "id": "burglary",
           "label": "Einbruchdiebstahl",
           "factRole": "PERIL",
-          "aliases": ["Einbruchdiebstahl", "Einbruchsdiebstahl"]
+          "aliases": [
+            "Einbruchdiebstahl",
+            "Einbruchsdiebstahl",
+            "im Zusammenhang mit einem vollbrachten oder versuchten Einbruchdiebstahl"
+          ]
         },
         {
           "id": "common_areas",
@@ -595,6 +660,8 @@
       "id": "EL-28",
       "label": "Gebäudeschäden durch den Einbruch selbst",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "burglary_building_damage",
@@ -603,7 +670,9 @@
           "aliases": [
             "Gebäudeschäden durch Einbruch",
             "Schäden am Gebäude durch Einbruch",
-            "Einbruchschäden am Gebäude"
+            "Einbruchschäden am Gebäude",
+            "Beschädigung von Gebäudebestandteilen",
+            "Beschädigung oder das Abhandenkommen von Gebäudebestandteilen"
           ]
         }
       ]
@@ -612,6 +681,8 @@
       "id": "EL-29",
       "label": "Diebstahl fest mit dem Gebäude verbundener Teile",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "theft_of_fixed_building_parts",
@@ -620,7 +691,9 @@
           "aliases": [
             "Diebstahl fest mit dem Gebäude verbundener Teile",
             "Entwendung fest verbundener Gebäudebestandteile",
-            "Diebstahl von Gebäudebestandteilen"
+            "Diebstahl von Gebäudebestandteilen",
+            "Abhandenkommen von Gebäudebestandteilen",
+            "Beschädigung oder das Abhandenkommen von Gebäudebestandteilen"
           ]
         }
       ]
@@ -762,12 +835,20 @@
       "id": "EL-35",
       "label": "Innere Unruhen, Streik und Aussperrung",
       "requestedFields": [],
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "civil_unrest",
           "label": "Innere Unruhen",
           "factRole": "PERIL",
-          "aliases": ["innere Unruhen", "inneren Unruhen"]
+          "aliases": [
+            "innere Unruhen",
+            "inneren Unruhen",
+            "Zusammenrottung",
+            "Krawall",
+            "Tumult",
+            "Gewalthandlungen anlässlich einer öffentlichen Ansammlung oder Kundgebung"
+          ]
         },
         {
           "id": "strike",

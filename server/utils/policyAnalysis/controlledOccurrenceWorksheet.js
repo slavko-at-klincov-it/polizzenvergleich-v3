@@ -94,7 +94,7 @@ function normalizeWithOffsetMap(value) {
       continue;
     }
 
-    if (/\s/u.test(character)) {
+    if (!/[\p{L}\p{N}]/u.test(character)) {
       if (characters.length > 0 && characters.at(-1) !== " ") {
         characters.push(" ");
         originalOffsets.push(index);
@@ -158,7 +158,14 @@ function findAliasRanges(pageText, alias) {
         ))
     ) {
       const originalStart = page.originalOffsets[normalizedStart];
-      const originalEnd = page.originalOffsets[normalizedEnd - 1] + 1;
+      let originalEnd = page.originalOffsets[normalizedEnd - 1] + 1;
+      const trimmedAlias = String(alias).trim();
+      if (
+        /[^\p{L}\p{N}]$/u.test(trimmedAlias) &&
+        originalEnd < String(pageText).length &&
+        /[^\p{L}\p{N}\s]/u.test(String(pageText)[originalEnd])
+      )
+        originalEnd += 1;
       ranges.push({
         originalStart,
         originalEnd,
@@ -408,7 +415,8 @@ function explicitSectionHeadings(pageText) {
       return "WOHNUNGSEIGENTUM_INSURANCE";
     if (
       normalized.includes("allgemeinevertragsbestimmungen") ||
-      normalized === "vertragsbestimmungen"
+      normalized === "vertragsbestimmungen" ||
+      normalized === "allgemeinerteil"
     )
       return "GENERAL_CONTRACT_TERMS";
     if (
@@ -423,7 +431,8 @@ function explicitSectionHeadings(pageText) {
     /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gmu,
     /^\s*\d{1,3}\.\s+([\p{L}-]+(?:\s+[\p{L}-]+)*versicherung)\s*$/gimu,
     /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,
-    /^\s*\d{1,3}\.\s+((?:Allgemeine\s+)?Vertragsbestimmungen|Wohnungseigentum)\s*$/gimu,
+    /^\s*\d{1,3}\.\s+((?:Allgemeine\s+)?Vertragsbestimmungen|Wohnungseigentum|Glasbruch|Ökoschutz)\s*$/gimu,
+    /^\s*(?:B\.\s*)?(ALLGEMEINER\s+TEIL)\s*$/gimu,
   ];
   const headings = [];
   for (const pattern of patterns) {
@@ -439,6 +448,29 @@ function explicitSectionHeadings(pageText) {
     }
   }
   return headings.sort((left, right) => left.pageStart - right.pageStart);
+}
+
+function explicitCoverageGovernors(pageText) {
+  const patterns = [
+    /^\s*(?:\d+(?:\.\d+)*\.\s*)?(Nicht\s+versichert[^\n:]{0,180}(?:sind)?\s*:?)\s*$/gimu,
+    /^\s*(?:\d+(?:\.\d+)*\.\s*)?((?:Zus[aä]tzlich\s+)?versichert\s+sind(?:\s+Sch[aä]den\s+durch)?\s*:?)\s*$/gimu,
+    /^\s*(Zus[aä]tzlich[^\n]{0,160}\bversichert\b\s*:?)\s*$/gimu,
+    /^\s*(?:\d+(?:\.\d+)*\.\s*)?((?:Als\s+)?mitversichert\s+(?:sind|gelten)\s*:?)\s*$/gimu,
+  ];
+  const governors = [];
+  for (const pattern of patterns) {
+    for (const match of String(pageText || "").matchAll(pattern)) {
+      const text = match[0].trim();
+      if (governors.some(({ pageStart }) => pageStart === match.index))
+        continue;
+      governors.push({
+        text,
+        pageStart: match.index,
+        pageEnd: match.index + match[0].length,
+      });
+    }
+  }
+  return governors.sort((left, right) => left.pageStart - right.pageStart);
 }
 
 function printedPageIndex(label) {
@@ -490,6 +522,10 @@ function validateDocument(document) {
       end,
       text,
       scopeHints: explicitPageScopeHints(text),
+      coverageGovernors: explicitCoverageGovernors(text).map((governor) => ({
+        ...governor,
+        physicalPageNumber: pageNumber,
+      })),
       sectionHeadings: explicitSectionHeadings(text).map((heading) => ({
         ...heading,
         physicalPageNumber: pageNumber,
@@ -497,14 +533,18 @@ function validateDocument(document) {
     };
   });
   let inheritedSectionHeading = null;
+  let previousPageCoverageGovernor = null;
   for (const page of pages) {
     const printed = printedPageIndex(page.printedPageLabel);
     if (printed?.current === 1) inheritedSectionHeading = null;
     page.inheritedSectionHeading = inheritedSectionHeading;
+    page.inheritedCoverageGovernor =
+      page.sectionHeadings.length === 0 ? previousPageCoverageGovernor : null;
     if (page.sectionHeadings.length > 0) {
       const lastHeading = page.sectionHeadings.at(-1);
       inheritedSectionHeading = lastHeading.scopeKey ? lastHeading : null;
     }
+    previousPageCoverageGovernor = page.coverageGovernors.at(-1) || null;
   }
   return { pageContent, pages };
 }
@@ -824,12 +864,13 @@ function nearestGovernor({ pageText, occurrenceStart, aliases }) {
 
 function isControlledCoordinationSeparator(value) {
   const normalized = normalizeWithOffsetMap(value).normalized;
-  if (!normalized) return false;
+  const hasComma = String(value).includes(",");
+  if (!normalized) return hasComma;
   const containsSeparator =
-    normalized.includes(",") || /\b(?:und|oder|sowie)\b/u.test(normalized);
+    hasComma || /\b(?:und|oder|sowie)\b/u.test(normalized);
   const remainder = normalized
     .replace(/\b(?:und|oder|sowie)\b/gu, "")
-    .replace(/[\s,]/gu, "");
+    .replace(/\s/gu, "");
   return containsSeparator && remainder.length === 0;
 }
 
@@ -1224,6 +1265,17 @@ function buildControlledOccurrenceWorksheet({
                   source: "PRECEDING_PAGE_HEADING",
                 }
               : null;
+          const currentCoverageGovernor = page.coverageGovernors
+            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .at(-1);
+          const coverageGovernorHint = currentCoverageGovernor
+            ? { ...currentCoverageGovernor, source: "CURRENT_PAGE_GOVERNOR" }
+            : page.inheritedCoverageGovernor
+              ? {
+                  ...page.inheritedCoverageGovernor,
+                  source: "PRECEDING_PAGE_GOVERNOR",
+                }
+              : null;
           occurrences.push({
             candidateId: candidateId({
               documentFingerprint: fingerprint,
@@ -1239,6 +1291,7 @@ function buildControlledOccurrenceWorksheet({
             printedPageLabel: page.printedPageLabel,
             pageScopeHints: page.scopeHints,
             sectionScopeHint,
+            coverageGovernorHint,
             pageStart: range.originalStart,
             pageEnd: range.originalEnd,
             documentStart,

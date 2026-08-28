@@ -120,6 +120,14 @@ describe("requestedFieldEvidenceContract", () => {
       expected: "EUR 15.000",
     },
     {
+      id: "HP-01",
+      field: "limit",
+      factRole: "LIMIT",
+      text: "Die Pauschaldeckungssumme beträgt € 2.000.000,-.",
+      exactText: "Pauschaldeckungssumme",
+      expected: "EUR 2.000.000",
+    },
+    {
       id: "ST-02",
       field: "condition",
       factRole: "CONDITION",

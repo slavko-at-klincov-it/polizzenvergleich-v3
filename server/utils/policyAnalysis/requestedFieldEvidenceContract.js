@@ -170,10 +170,10 @@ function extractLimitFacts({ occurrence, binding }) {
   const { text } = context;
   const matches = [];
   const moneyPattern =
-    /(?<![\p{L}\p{N}])EUR\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
+    /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
   for (const match of text.matchAll(moneyPattern)) {
     if (!valueFollowsCandidate(occurrence, match)) continue;
-    const amount = match[0].replace(/^EUR\s*/iu, "");
+    const amount = match[0].replace(/^(?:EUR|€)\s*/iu, "");
     matches.push(
       sourceBoundFact({
         occurrence,
@@ -191,10 +191,10 @@ function extractLimitFacts({ occurrence, binding }) {
   if (Number.isInteger(occurrenceEnd) && occurrenceEnd >= 0) {
     const concatenatedMoney = text
       .slice(occurrenceEnd)
-      .match(/^EUR\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/iu);
+      .match(/^(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/iu);
     if (concatenatedMoney) {
       concatenatedMoney.index = occurrenceEnd;
-      const amount = concatenatedMoney[0].replace(/^EUR\s*/iu, "");
+      const amount = concatenatedMoney[0].replace(/^(?:EUR|€)\s*/iu, "");
       matches.push(
         sourceBoundFact({
           occurrence,

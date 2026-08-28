@@ -110,7 +110,8 @@
           "aliases": [
             "Versicherungsnehmer nach Eintritt des Versicherungsfalles kündigen",
             "Kündigungsrecht des Versicherungsnehmers im Schadenfall",
-            "Versicherungsnehmer nach einem Schadenfall"
+            "Versicherungsnehmer nach einem Schadenfall",
+            "Paritätisches Kündigungsrecht nach einem Schadensfall"
           ]
         }
       ]
@@ -127,7 +128,8 @@
           "aliases": [
             "Versicherer nach Eintritt des Versicherungsfalles kündigen",
             "Kündigungsrecht des Versicherers im Schadenfall",
-            "Versicherer nach einem Schadenfall"
+            "Versicherer nach einem Schadenfall",
+            "Paritätisches Kündigungsrecht nach einem Schadensfall"
           ]
         }
       ]
@@ -336,7 +338,10 @@
           "aliases": [
             "Anzeige der Gefahrerhöhung",
             "Gefahrerhöhung unverzüglich anzeigen",
-            "Anzeigepflicht bei Gefahrerhöhung"
+            "Anzeigepflicht bei Gefahrerhöhung",
+            "Anzeige von Gefahrenerhöhungen",
+            "Gefahrerhöhungen unverzüglich anzeigen",
+            "nachträglich eintretende Gefahrerhöhungen anzuzeigen"
           ]
         }
       ]
@@ -416,7 +421,9 @@
             "Frist zur Schadenmeldung",
             "Schadenmeldefrist",
             "Versicherungsfall unverzüglich anzeigen",
-            "Schaden unverzüglich melden"
+            "Schaden unverzüglich melden",
+            "nach einem Schadenfall unverzüglich seine Hausverwaltung",
+            "über den Schadenhergang und Schadenumfang zu informieren"
           ]
         }
       ]
@@ -434,7 +441,9 @@
             "Versäumung der Meldefrist",
             "Obliegenheitsverletzung bei verspäteter Schadenmeldung",
             "Leistungsfreiheit wegen verspäteter Schadenmeldung",
-            "Rechtsfolgen verspäteter Schadenmeldung"
+            "Rechtsfolgen verspäteter Schadenmeldung",
+            "Verletzung dieser Verpflichtungen führt zur Leistungsfreiheit",
+            "Verletzung dieser Pflichten kann zum Verlust des Versicherungsschutzes führen"
           ]
         }
       ]
@@ -483,7 +492,13 @@
           "id": "expert_procedure",
           "label": "Sachverständigenverfahren",
           "factRole": "BENEFIT",
-          "aliases": ["Sachverständigenverfahren", "Sachverständigen-Verfahren"]
+          "aliases": [
+            "Sachverständigenverfahren",
+            "Sachverständigen-Verfahren",
+            "Auswahl des Sachverständigen",
+            "Schiedsgutachterverfahren",
+            "Gutachten tritt an Stelle des Schiedsgutachterverfahrens"
+          ]
         },
         {
           "id": "expert_cost_allocation",
@@ -533,7 +548,10 @@
           "aliases": [
             "Wiederherstellungsfrist",
             "Frist für die Wiederherstellung",
-            "Wiederherstellung binnen"
+            "Wiederherstellung binnen",
+            "innerhalb dreier Jahre nach dem Schadenfall",
+            "nicht innerhalb dreier Jahre ab dem Schadentag wiederhergestellt",
+            "Frist für die Wiederherstellung um die Dauer des Deckungsprozesses erstreckt"
           ]
         }
       ]
@@ -739,6 +757,13 @@
       "id": "VB-36",
       "label": "Regelung zur Schadenabwicklung und Ansprechpartner",
       "requestedFields": ["condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["claims_handling", "claims_contact"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "claims_handling",
@@ -747,7 +772,11 @@
           "aliases": [
             "Schadenabwicklung",
             "Abwicklung von Schadenfällen",
-            "Schadenmeldung an"
+            "Schadenmeldung an",
+            "nach einem Schadenfall unverzüglich seine Hausverwaltung",
+            "über den Schadenhergang und Schadenumfang zu informieren",
+            "im Zusammenhang mit der Schadenbearbeitung",
+            "Feststellung und Erledigung oder Abwehr des Schadens"
           ]
         },
         {
@@ -757,7 +786,10 @@
           "aliases": [
             "Ansprechpartner im Schadenfall",
             "Schaden-Ansprechpartner",
-            "Kontakt im Schadenfall"
+            "Kontakt im Schadenfall",
+            "nach einem Schadenfall unverzüglich seine Hausverwaltung",
+            "zuständige Gebäudeversicherung",
+            "Benachrichtigung an die Hausverwaltung"
           ]
         }
       ]

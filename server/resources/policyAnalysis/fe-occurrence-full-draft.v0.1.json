@@ -210,6 +210,17 @@
       "id": "FE-A13",
       "label": "Absturz von Luftfahrzeugen einschließlich Teilen und Ladung",
       "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": [
+            "aircraft_crash",
+            "aircraft_parts",
+            "aircraft_cargo"
+          ],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "aircraft_crash",
@@ -218,7 +229,9 @@
           "aliases": [
             "Absturz von Luftfahrzeugen",
             "Absturz eines Luftfahrzeuges",
-            "Absturz bemannter Flugkörper"
+            "Absturz bemannter Flugkörper",
+            "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
+            "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
           ]
         },
         {
@@ -228,7 +241,9 @@
           "aliases": [
             "Teile von Luftfahrzeugen",
             "Teile eines Luftfahrzeuges",
-            "Teile bemannter Flugkörper"
+            "Teile bemannter Flugkörper",
+            "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
+            "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
           ]
         },
         {
@@ -237,7 +252,9 @@
           "factRole": "PERIL",
           "aliases": [
             "Ladung von Luftfahrzeugen",
-            "Ladung eines Luftfahrzeuges"
+            "Ladung eines Luftfahrzeuges",
+            "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
+            "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
           ]
         }
       ]
@@ -816,6 +833,16 @@
       "id": "FE-D01",
       "label": "Feuerwehr- und Einsatzkosten, Höhe der Kostenübernahme",
       "requestedFields": ["limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": [
+            "firefighting_costs",
+            "firefighting_costs_limit"
+          ],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "firefighting_costs",
