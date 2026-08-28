@@ -1732,3 +1732,271 @@ REVIEW_REQUIRED: neuer Live-Lauf mit Qwen 3.8 27B auf Kundenhardware
 
 Vollständiger Befund:
 `docs/VS_PILOT_27B_KUNDENBEFUND_FIX_VALIDIERUNG_DE.md`.
+
+## 27. INC-006 – Vollständiger qualitativer VS-01-bis-VS-36-Vergleich
+
+Der vollständige lokale A/B-Lauf gegen LF und WEVIG ist abgeschlossen. Der
+V3.3-Evidenzweg besteht das 8-Zellen-Pilot-Oracle, erreicht über alle 72
+fachlich geprüften Dokument-Kategorie-Zellen aber noch keinen Gesamtvorteil:
+
+```text
+BESSER:      31
+SCHLECHTER:  31
+GLEICH:       4
+UNKLAR:       6
+```
+
+Entscheidung:
+
+```text
+PASS: vollständige technische VS-01-bis-VS-36-Verarbeitung
+PASS: manueller PDF-Qualitätsvergleich für 72 Zellen
+NO-GO: aktueller Stand als qualitativer V3.3-Vollrelease
+NO-GO: 27B-Kundenlauf vor Behebung der bekannten Recall-Regressionen
+```
+
+Vollständiger Befund und priorisierte Korrekturfamilien:
+`docs/VS_01_36_QUALITAETSVERGLEICH_V321_V33_DE.md`.
+
+## 28. INC-007 – VS-07 bis VS-11 als klauselsichere Korrekturfamilie
+
+```text
+Increment-ID: INC-007
+Datum: 28. August 2026
+Scope: VS-07, VS-08, VS-09, VS-10 und VS-11 × LF/WEVIG
+Ausgangsbefund: 9× SCHLECHTER, 1× GLEICH gegenüber V3.2.1
+```
+
+### Ableitung aus den bisherigen Erfahrungen
+
+Die Korrektur folgt ausdrücklich den bereits dokumentierten Befunden und ist
+kein neuer freier Retrievalversuch:
+
+- Beide benötigten Vertragsklauseln waren in den Kundenartefakten bereits auf
+  LF-Seite 31 beziehungsweise WEVIG-Seite 8 vorhanden. Die PDF-Erfassung und
+  ein global höheres Top-N waren daher nicht die Ursache.
+- Frühere große Kontextblöcke führten zu falscher Rollenbindung zwischen
+  benachbarten Beträgen und Bedingungen. Deshalb werden Werte und Wirkungen
+  nur über rollenbezogene, explizite Phrasen gebunden.
+- Frühere Qwen-Triage war formal instabil und unnötig teuer. Eindeutige
+  Fundstellen werden daher vom Server entschieden; nur unbekannte
+  Formulierungen bleiben modelloffen.
+- Die Klausel reicht von einer kontrolliert erkannten Überschrift bis zur
+  nächsten Überschrift auf derselben physischen Seite. Vierstellige
+  Adresszeilen können wegen der auf ein- bis dreistellige Nummern begrenzten
+  Überschriftenregel nicht erneut als Klauselüberschrift fehlklassifiziert
+  werden.
+
+### Kleine Implementierung
+
+1. Fehlende direkte Anker für die Unterversicherungs- und
+   Wertanpassungsklauseln wurden im VS-Katalog ergänzt.
+2. VS-07 bis VS-11 verwenden den vollständigen Klauselabschnitt statt eines
+   pauschalen Seiten- oder Wortfensters.
+3. Bedingung, Voraussetzungen und Indexart werden als exakte,
+   quellgebundene Textfakten extrahiert.
+4. Allgemeine Erwähnungen von `Baukostenindex` gelten bei VS-11 nicht als
+   Beleg der Indexart. Nur eine explizit benannte Indexart wird direkt
+   gebunden.
+5. Identische Klausel- beziehungsweise Indexwertbelege werden für die
+   Entscheidung minimiert; unterschiedliche Indexarten bleiben erhalten.
+6. Der Tabellenrenderer wiederholt bei vorhandenen Feldbelegen nicht noch
+   einmal denselben allgemeinen Kandidatenausschnitt.
+
+### Reale LF-/WEVIG-Ergebnisse
+
+```text
+LF:
+  VS-07 Unterversicherungsverzicht: Ja / BELEGT
+  VS-08 bedingt: vollständig / BELEGT
+  VS-09 Gutachten + Summengleichheit + ca. 3 Jahre: vollständig / BELEGT
+  VS-10 automatische Indexanpassung: Ja / BELEGT
+  VS-11 Baukostenindex Wohnungs- und Siedlungsbau: vollständig / BELEGT
+
+WEVIG:
+  VS-07 Unterversicherungsverzicht: Ja / BELEGT
+  VS-08 bedingt: vollständig / BELEGT
+  VS-09 Bedingungen a–c plus Mehrfachversicherungsbegrenzung: vollständig / BELEGT
+  VS-10 jährliche automatische Wertanpassung: Ja / BELEGT
+  VS-11 BKI 2020 plus Baukostenindex (Baumeisterarbeiten): vollständig / BELEGT
+```
+
+Vorher benötigte dieser Fünferblock lokal insgesamt 36 Qwen-Entscheidungen:
+
+```text
+LF:    7 Triage + 5 Wirkung
+WEVIG: 19 Triage + 5 Wirkung
+```
+
+Nach der Korrektur sind beide Dokumente für diesen Block vollständig
+serverterminal:
+
+```text
+LF:    0 Modellaufrufe, 7/7 Triagekontrollen, 5/5 Wirkungskontrollen
+WEVIG: 0 Modellaufrufe, 19/19 Triagekontrollen, 5/5 Wirkungskontrollen
+Jest: 6 fokussierte Suites / 129 Tests PASS
+```
+
+Qualitatives Urteil gegenüber den vorhandenen V3.2.1-Ausgaben:
+
+```text
+LF:    5× GLEICH, 0× SCHLECHTER
+WEVIG: 2× BESSER, 3× GLEICH, 0× SCHLECHTER
+Gewinne: VS-09 Mehrfachversicherungsbegrenzung und VS-11 vollständige Indexart
+```
+
+Entscheidung:
+
+```text
+POSITIVE: VS-07 bis VS-11 als abgegrenzte Korrekturfamilie
+KEEP: klauselsichere Kandidaten- und deterministische Rollenbindung
+REVIEW_REQUIRED: vollständiger VS-01-bis-VS-36-Regressionslauf
+NO_RELEASE: übrige bekannte Recall- und Feldfamilien sind noch offen
+```
+
+## 29. INC-008 – VS-01/VS-02 ohne erneute Wert- und Klauselverwechslung
+
+```text
+Increment-ID: INC-008
+Datum: 28. August 2026
+Scope: VS-01 und VS-02 × LF/WEVIG
+Zu behebende Verluste: LF VS-02 und WEVIG VS-01
+Zu erhaltender Gewinn: WEVIG VS-02 darf nicht erneut als Indexklausel fehlgedeutet werden
+```
+
+### Historisch begründete Grenze
+
+Der alte WEVIG-Lauf hatte die Baukostenindex-Wertanpassung fälschlich als
+Zeitwertklausel ausgegeben. Das aktuelle `UNGEKLÄRT` für WEVIG VS-02 ist daher
+korrekt und wurde nicht durch breitere Stichwörter aufgeweicht. Behoben wurden
+nur zwei belegte Verluste:
+
+- LF-Seite 26 enthält die Zeitwertentschädigung nach ausbleibender
+  Wiederherstellung/Wiederbeschaffung innerhalb von drei Jahren und die
+  Zeitwertuntergrenze von 30 %.
+- WEVIG enthält `Wohngebäude zum NeuwertEUR30.608.000,00`; der fehlende
+  Zwischenraum zwischen kontrolliertem Begriff und EUR-Wert führte zuvor zur
+  Ablehnung durch die Wortgrenzenlogik.
+
+### Implementierung und verworfene Variante
+
+- Ein PDF-konkatenierter `EUR`-Wert wird nur dann als kontrollierte
+  Begriffgrenze akzeptiert, wenn unmittelbar `EUR` plus Zahl folgt. Normale
+  Wortsuffixe bleiben ausgeschlossen.
+- PDF-Aufzählungen wie `-Wohngebäude` werden auch ohne extrahierten Leerraum
+  als Listenpunkt erkannt. Dadurch bleibt die Wertebindung im kleinen
+  Listeneintrag statt in einem ganzen Seitenrest.
+- VS-01 besitzt ein optionales Betragsfeld: Ein fehlender Betrag macht die
+  LF-Neuwertklausel nicht unvollständig, ein unmittelbar anschließender
+  WEVIG-EUR-Wert wird aber ausgegeben.
+- VS-02 bindet die 3-Jahres-Regel und die 30-%-Schwelle als zwei getrennte,
+  quellgebundene Bedingungen.
+- Verworfen wurde ein allgemeiner Limit-Extractor für VS-01. Er band im ersten
+  Realtest fälschlich `30 % Zeitwert` beziehungsweise `33 % gewerbliche
+Nutzung` als Deckungssumme. Die endgültige Regel erlaubt für VS-01 nur den
+  unmittelbar anschließenden EUR-Betrag; ein Negativtest schützt diese Grenze.
+
+### Reales Ergebnis
+
+```text
+LF VS-01: Ja / BELEGT / kein erfundener Betrag
+LF VS-02: Ja / BELEGT / 3 Jahre + Zeitwert mindestens 30 %
+WEVIG VS-01: Ja / BELEGT / lokal gebundener Neuwertbetrag / PROPOSED_ONLY
+WEVIG VS-02: UNGEKLÄRT / keine Zeitwertklausel belegt
+
+LF:    7/7 Triage, 3/3 Komponenten, 0 Modellaufrufe
+WEVIG: 4/4 Triage, 3/3 Komponenten, 0 Modellaufrufe
+Jest: 6 fokussierte Suites / 137 Tests PASS
+```
+
+Qualitatives Urteil gegenüber V3.2.1:
+
+```text
+LF VS-01: BESSER bleibt erhalten
+LF VS-02: SCHLECHTER -> GLEICH
+WEVIG VS-01: SCHLECHTER -> GLEICH
+WEVIG VS-02: BESSER bleibt erhalten, weil die alte Falschaussage ausbleibt
+```
+
+Entscheidung:
+
+```text
+POSITIVE: zweite abgegrenzte Korrekturfamilie
+KEEP: EUR-Grenze, kompakte PDF-Listenpunkte, rollenlokales optionales Betragsfeld
+REVIEW_REQUIRED: vollständige Regression und weitere INC-006-Familien
+NO_RELEASE: noch bekannte schlechtere VS-Zellen offen
+```
+
+## 30. INC-009 – vollständiger positiver VS-01-bis-VS-36-Gegenlauf
+
+```text
+Increment-ID: INC-009
+Datum: 28. August 2026
+Scope: VS-01 bis VS-36 × LF/WEVIG
+Baseline: INC-006-VS-FULL-QUALITY-AB-LOCAL-4B-R01
+Abschlusslauf: INC-009-VS-FULL-QUALITY-AB-LOCAL-4B-R07
+Modell: qwen3.5-4b-mlx
+```
+
+### Umgesetzte Problemfamilien
+
+Nach INC-007 und INC-008 wurden die verbleibenden Verluste nicht mit globalem
+Top-N oder allgemeinem Prompt-Tuning korrigiert. Die Servervorbereitung wurde
+gezielt erweitert:
+
+- kontrollierte Aliase und Klauselabschnitte für VS-13 bis VS-36;
+- explizite Rollenbindungen für Innenausbau, Sonderausstattung, Außenanlagen,
+  Spielplatz, Kosten, Mietzinsentgang, Unterkunft, Vorsorge,
+  Gemeinschaftsvermögen und Ereignishöchstentschädigung;
+- `ANY` nur bei echten Alternativen, während alle beobachteten Komponenten im
+  Ergebnis sichtbar bleiben;
+- enger Sparten- oder Gefahrenscope wird nicht auf die allgemeine Kategorie
+  übertragen;
+- Beträge, Prozentsätze, Dauer und Berechnungsgrundlagen werden nur lokal an
+  die passende Rolle gebunden;
+- die bloße Nennung einer `Pauschalversicherungssumme`, eines
+  Schaden-Sachverständigengutachtens oder eines Haftpflichtlimits beantwortet
+  VS-04 nicht;
+- ein Jahresaggregat beantwortet VS-36 nicht als Höchstentschädigung pro
+  Ereignis;
+- vollständige Condition-/Definition-Zeilen werden als formal zulässiges
+  `BELEGT + Ja` gerendert.
+
+### Vollständiger Realbefund
+
+```text
+LF:    36/36 Zeilen, 64/64 Komponenten, 64/64 Kontrollen, Tabellenvertrag PASS
+WEVIG: 36/36 Zeilen, 64/64 Komponenten, 64/64 Kontrollen, Tabellenvertrag PASS
+
+Qualität gegenüber V3.2.1:
+LF:    27 BESSER, 8 GLEICH, 1 UNKLAR, 0 SCHLECHTER
+WEVIG: 30 BESSER, 5 GLEICH, 1 UNKLAR, 0 SCHLECHTER
+Gesamt: 57 BESSER, 13 GLEICH, 2 UNKLAR, 0 SCHLECHTER
+```
+
+Besonders relevante bestätigte Ergebnisse:
+
+```text
+LF VS-19:  Wege + Beleuchtung + Bepflanzung, enger Scope sichtbar
+LF VS-22:  Entsorgung + Sondermüll, unterschiedliche Limits rollenlokal
+LF VS-31:  Ersatzunterkunft, Betrag und Leistungsdauer lokal gebunden
+LF VS-36:  Ereignishöchstentschädigung lokal gebunden
+WEVIG VS-25: behördliche Mehrkosten mit lokalem Limit
+WEVIG VS-29: Mietzinsentgang mit Betrag und Berechnungsgrundlage
+WEVIG VS-31: Ersatzunterkunft mit Betrag und Leistungsdauer
+WEVIG VS-36: UNGEKLÄRT; Jahreshöchstbetrag nicht als Ereignislimit umgedeutet
+```
+
+### Entscheidung und Grenze
+
+```text
+PASS: lokaler qualitativer Architekturvergleich gegenüber V3.2.1
+GO: Release Candidate für den kontrollierten Qwen-3.8-27B-Kundenvergleich
+REVIEW_REQUIRED: absolutes fachlich freigegebenes 72-Zellen-Oracle
+REVIEW_REQUIRED: Verhaltensbestätigung auf dem Kunden-Mac-Studio
+NO CLAIM: hundertprozentige fachliche Vollständigkeit
+```
+
+Der vollständige Befund und die 72-Zellen-Matrix stehen in
+`docs/VS_01_36_QUALITAETSVERGLEICH_V321_V33_DE.md`. Die privaten Laufartefakte
+liegen bewusst außerhalb des Repositories im lokalen QA-Archiv.

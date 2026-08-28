@@ -43,6 +43,10 @@ const VALUES = Object.freeze({
   coverageEffect: new Set(Object.values(COVERAGE_EFFECT)),
   conflictState: new Set(Object.values(CONFLICT_STATE)),
 });
+const COMPONENT_SATISFACTION_POLICY = Object.freeze({
+  ALL: "ALL",
+  ANY: "ANY",
+});
 
 function contractError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -216,6 +220,7 @@ function rollupCategoryResult({
   categoryId,
   requiredComponentIds,
   componentResults,
+  componentSatisfactionPolicy = COMPONENT_SATISFACTION_POLICY.ALL,
 }) {
   const normalizedCategoryId = requireNonEmptyString(
     categoryId,
@@ -227,6 +232,15 @@ function rollupCategoryResult({
     throw contractError("COMPONENT_RESULTS_REQUIRED");
 
   const results = componentResults.map(validateComponentResult);
+  if (
+    !Object.values(COMPONENT_SATISFACTION_POLICY).includes(
+      componentSatisfactionPolicy
+    )
+  )
+    throw contractError(
+      "INVALID_COMPONENT_SATISFACTION_POLICY",
+      String(componentSatisfactionPolicy)
+    );
   const resultById = new Map();
   for (const result of results) {
     if (resultById.has(result.componentId))
@@ -243,15 +257,28 @@ function rollupCategoryResult({
   const orderedResults = Object.freeze(
     requiredIds.map((id) => resultById.get(id))
   );
-  const evidenceCompleteness = deriveEvidenceCompleteness(orderedResults);
+  const foundResults = orderedResults.filter(
+    ({ evidencePresence }) => evidencePresence === EVIDENCE_PRESENCE.FOUND
+  );
+  const evaluatedResults =
+    componentSatisfactionPolicy === COMPONENT_SATISFACTION_POLICY.ANY &&
+    foundResults.length > 0
+      ? foundResults
+      : orderedResults;
+  const evidenceCompleteness =
+    componentSatisfactionPolicy === COMPONENT_SATISFACTION_POLICY.ANY
+      ? foundResults.length > 0
+        ? EVIDENCE_COMPLETENESS.COMPLETE
+        : EVIDENCE_COMPLETENESS.NONE
+      : deriveEvidenceCompleteness(orderedResults);
   const conflictState = deriveConflictState(orderedResults);
   const coveragePicture = deriveCoveragePicture({
-    componentResults: orderedResults,
+    componentResults: evaluatedResults,
     evidenceCompleteness,
     conflictState,
   });
   const reviewStatus = deriveReviewStatus({
-    componentResults: orderedResults,
+    componentResults: evaluatedResults,
     evidenceCompleteness,
     conflictState,
   });
@@ -259,6 +286,7 @@ function rollupCategoryResult({
   return Object.freeze({
     categoryId: normalizedCategoryId,
     componentResults: orderedResults,
+    componentSatisfactionPolicy,
     evidenceCompleteness,
     coveragePicture,
     conflictState,
@@ -267,6 +295,7 @@ function rollupCategoryResult({
 }
 
 module.exports = {
+  COMPONENT_SATISFACTION_POLICY,
   CONFLICT_STATE,
   COVERAGE_EFFECT,
   COVERAGE_PICTURE,

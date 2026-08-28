@@ -1,7 +1,10 @@
 const {
   COVERAGE_EFFECT,
+  COVERAGE_PICTURE,
+  EVIDENCE_COMPLETENESS,
   EVIDENCE_PRESENCE,
   CONFLICT_STATE,
+  REVIEW_STATUS,
   rollupCategoryResult,
 } = require("../../../utils/policyAnalysis/categoryResultContract");
 const {
@@ -112,6 +115,68 @@ function completeLimit() {
 }
 
 describe("categoryTableRenderer", () => {
+  test("renders fully evidenced condition-only categories as BELEGT plus Ja", () => {
+    const definitions = [{ id: "VS-11", stage: "S", label: "Art des Index" }];
+    const worksheet = {
+      requirements: [
+        {
+          id: "VS-11",
+          label: "Art des Index",
+          requestedFields: [],
+          components: [
+            {
+              id: "index_type",
+              label: "Indexart",
+              factRole: "DEFINITION",
+              occurrences: [
+                {
+                  candidateId: "candidate:index",
+                  pageNumber: 4,
+                  physicalPageNumber: 4,
+                  exactText: "Baukostenindex",
+                  context: { text: "Wertanpassung nach Baukostenindex." },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const materializedEvidence = {
+      rollups: [
+        {
+          categoryId: "VS-11",
+          requestedFields: [],
+          evidenceCompleteness: EVIDENCE_COMPLETENESS.COMPLETE,
+          coveragePicture: COVERAGE_PICTURE.NOT_DETERMINABLE,
+          conflictState: CONFLICT_STATE.NONE,
+          reviewStatus: REVIEW_STATUS.BELEGT,
+        },
+      ],
+      judgements: [
+        {
+          requirementId: "VS-11",
+          componentId: "index_type",
+          evidencePresence: EVIDENCE_PRESENCE.FOUND,
+          coverageEffect: COVERAGE_EFFECT.DEFINED,
+          conflictState: CONFLICT_STATE.NONE,
+          selectedScopePicture: "GENERAL",
+          unresolvedCandidateIds: [],
+          selectedCandidateIds: ["candidate:index"],
+        },
+      ],
+    };
+
+    expect(
+      buildCategoryTableRows({
+        definitions,
+        worksheet,
+        materializedEvidence,
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      })[0]
+    ).toMatchObject({ coverage: "Ja", reviewStatus: "BELEGT" });
+  });
+
   test("renders the exact existing eight-column table with a complete included limit", () => {
     const input = fixture({ fieldResult: completeLimit() });
     const [row] = buildCategoryTableRows(input);
@@ -140,6 +205,41 @@ describe("categoryTableRenderer", () => {
 
     expect(buildCategoryTableRows(input)[0]).toMatchObject({
       coverage: "Nein",
+      reviewStatus: "BELEGT",
+    });
+  });
+
+  test("renders a complete condition answer with the valid BELEGT plus Ja combination", () => {
+    const condition = {
+      requirementId: "VS-08",
+      requestedFieldStatus: "COMPLETE",
+      fields: [
+        {
+          field: "condition",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: "bedingt",
+              source: { candidateId: "candidate:0" },
+            },
+          ],
+        },
+      ],
+    };
+    const input = fixture({
+      id: "VS-08",
+      label: "Unterversicherungsverzicht bedingt oder unbedingt",
+      requestedFields: ["condition"],
+      componentEffects: [COVERAGE_EFFECT.CONDITIONAL],
+      selected: [true],
+      fieldResult: condition,
+    });
+    input.worksheet.requirements[0].components[0].factRole = "CONDITION";
+    const [row] = buildCategoryTableRows(input);
+
+    expect(row).toMatchObject({
+      documentedContent: "Bestandteil 1: bedingt geregelt; Bedingung: bedingt",
+      coverage: "Ja",
       reviewStatus: "BELEGT",
     });
   });
@@ -350,6 +450,40 @@ describe("categoryTableRenderer", () => {
     expect(row.source).toContain("PDF-Seite 3");
     expect(row.source).not.toContain("999");
     expect(row.source).not.toContain("erfunden");
+  });
+
+  test("uses source-bound field excerpts without repeating the same candidate excerpt", () => {
+    const input = fixture({
+      id: "VS-11",
+      label: "Indexart",
+      requestedFields: ["index_type"],
+      componentEffects: [COVERAGE_EFFECT.DEFINED],
+      selected: [true],
+      candidateContext:
+        "Indexvereinbarung. Verwendet wird der Baukostenindex (Baumeisterarbeiten) für die jährliche Anpassung.",
+      fieldResult: {
+        requirementId: "VS-11",
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "index_type",
+            status: "FOUND",
+            facts: [
+              {
+                rawValue: "Baukostenindex (Baumeisterarbeiten)",
+                normalizedValue: "Baukostenindex (Baumeisterarbeiten)",
+                source: { candidateId: "candidate:0" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const [row] = buildCategoryTableRows(input);
+
+    expect(row.source.match(/PDF-Seite/gu)).toHaveLength(1);
+    expect(row.source).toContain("Baukostenindex (Baumeisterarbeiten)");
   });
 
   test("fails closed when a non-unknown decision has no server-owned source", () => {

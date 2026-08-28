@@ -1,11 +1,13 @@
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
+  NOT_EVALUATED: "NOT_EVALUATED",
   NOT_FOUND: "NOT_FOUND",
   PARTIAL: "PARTIAL",
   COMPLETE: "COMPLETE",
 });
 
 const FIELD_EVIDENCE_STATUS = Object.freeze({
+  NOT_EVALUATED: "NOT_EVALUATED",
   NOT_FOUND: "NOT_FOUND",
   FOUND: "FOUND",
 });
@@ -164,7 +166,8 @@ function valueFollowsCandidate(occurrence, match) {
 }
 
 function extractLimitFacts({ occurrence, binding }) {
-  const { text } = validatedContext(occurrence);
+  const context = validatedContext(occurrence);
+  const { text } = context;
   const matches = [];
   const moneyPattern =
     /(?<![\p{L}\p{N}])EUR\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
@@ -184,13 +187,37 @@ function extractLimitFacts({ occurrence, binding }) {
       })
     );
   }
+  const occurrenceEnd = Number(occurrence.documentEnd) - context.documentStart;
+  if (Number.isInteger(occurrenceEnd) && occurrenceEnd >= 0) {
+    const concatenatedMoney = text
+      .slice(occurrenceEnd)
+      .match(/^EUR\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/iu);
+    if (concatenatedMoney) {
+      concatenatedMoney.index = occurrenceEnd;
+      const amount = concatenatedMoney[0].replace(/^EUR\s*/iu, "");
+      matches.push(
+        sourceBoundFact({
+          occurrence,
+          binding,
+          match: concatenatedMoney,
+          value: {
+            normalizedValue: `EUR ${amount}`,
+            valueType: "MONEY",
+            unit: "EUR",
+          },
+        })
+      );
+    }
+  }
 
   const percentPattern =
-    /(?<![\p{L}\p{N}])(?:\d{1,3}|[lI]0)\s*%(?![\p{L}\p{N}])/gu;
+    /(?<![\p{L}\p{N}])(?:\d{1,3}(?:[.,]\d+)?|[lI]0)\s*%(?![\p{L}\p{N}])/gu;
   for (const match of text.matchAll(percentPattern)) {
     if (!valueFollowsCandidate(occurrence, match)) continue;
     const compact = match[0].replace(/\s/gu, "");
-    const numeric = /^[lI]0%$/u.test(compact) ? "10" : compact.slice(0, -1);
+    const numeric = /^[lI]0%$/u.test(compact)
+      ? "10"
+      : compact.slice(0, -1).replace(".", ",");
     matches.push(
       sourceBoundFact({
         occurrence,
@@ -207,6 +234,77 @@ function extractLimitFacts({ occurrence, binding }) {
   return matches.sort(
     (left, right) => left.source.documentStart - right.source.documentStart
   );
+}
+
+function extractBoundLimitFacts(options) {
+  const occurrenceEnd = Number(options.occurrence?.documentEnd);
+  if (!Number.isInteger(occurrenceEnd)) return [];
+  return extractLimitFacts(options).filter(
+    (fact) => fact.source.documentStart <= occurrenceEnd + 360
+  );
+}
+
+function extractSectionGovernorLimitFacts({ occurrence, binding }) {
+  const { text, documentStart } = validatedContext(occurrence);
+  const occurrenceStart = Number(occurrence.documentStart) - documentStart;
+  if (
+    !Number.isInteger(occurrenceStart) ||
+    occurrenceStart < 0 ||
+    occurrenceStart > text.length
+  )
+    return [];
+  const governorPattern =
+    /bis\s+zu\s+jeweils\s+(?:10|[lI]0)\s*%\s+der\s+Gebäudeversicherungssumme\s+auf\s+[,„“"']*Erstes\s+Risiko/giu;
+  const matches = [...text.slice(0, occurrenceStart).matchAll(governorPattern)];
+  const match = matches.at(-1);
+  if (!match) return [];
+  const percent = match[0].match(/(?:10|[lI]0)\s*%/iu);
+  if (!percent) return [];
+  percent.index = match.index + match[0].indexOf(percent[0]);
+  return [
+    sourceBoundFact({
+      occurrence,
+      binding,
+      match: percent,
+      value: {
+        normalizedValue: "10 %",
+        valueType: "PERCENT",
+        unit: "%",
+      },
+    }),
+  ];
+}
+
+function extractBoundOrSectionGovernorLimitFacts(options) {
+  return [
+    ...extractBoundLimitFacts(options),
+    ...extractSectionGovernorLimitFacts(options),
+  ];
+}
+
+function extractInsuredNewValueFacts({ occurrence, binding }) {
+  const context = validatedContext(occurrence);
+  const occurrenceEnd = Number(occurrence.documentEnd) - context.documentStart;
+  if (!Number.isInteger(occurrenceEnd) || occurrenceEnd < 0) return [];
+  const adjacent = context.text
+    .slice(occurrenceEnd)
+    .match(/^\s*(EUR\s*\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])/iu);
+  if (!adjacent) return [];
+  const rawValue = adjacent[1];
+  const match = [rawValue];
+  match.index = occurrenceEnd + adjacent[0].indexOf(rawValue);
+  return [
+    sourceBoundFact({
+      occurrence,
+      binding,
+      match,
+      value: {
+        normalizedValue: `EUR ${rawValue.replace(/^EUR\s*/iu, "")}`,
+        valueType: "MONEY",
+        unit: "EUR",
+      },
+    }),
+  ];
 }
 
 const GERMAN_MONTH_NUMBERS = Object.freeze({
@@ -260,20 +358,245 @@ function extractDurationFacts({ occurrence, binding }) {
     });
 }
 
+function whitespaceNormalized(value) {
+  return String(value || "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function conditionNormalized(value) {
+  return whitespaceNormalized(value).replace(/[;.]+$/u, "");
+}
+
+function extractPatternFacts({ occurrence, binding, patterns }) {
+  const { text } = validatedContext(occurrence);
+  const facts = [];
+  for (const { pattern, normalize } of patterns) {
+    for (const match of text.matchAll(pattern))
+      facts.push(
+        sourceBoundFact({
+          occurrence,
+          binding,
+          match,
+          value: {
+            normalizedValue: normalize(match[0]),
+            valueType: "TEXT",
+            unit: null,
+          },
+        })
+      );
+  }
+  return facts.sort(
+    (left, right) => left.source.documentStart - right.source.documentStart
+  );
+}
+
+function extractUnderinsuranceConditionTypeFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern: /f[üu]r\s+alle\s+jene\s+Objekte,\s+f[üu]r\s+die/giu,
+        normalize: () => "bedingt",
+      },
+      {
+        pattern: /im\s+Schadenfall\s+nur\s+Anwendung,\s+wenn/giu,
+        normalize: () => "bedingt",
+      },
+      {
+        pattern:
+          /bezieht\s+sich\s+der\s+Verzicht\s+auf\s+den\s+Einwand\s+der\s+Unterversicherung\s+nur/giu,
+        normalize: () => "bedingt",
+      },
+    ],
+  });
+}
+
+function extractCurrentValueConditionFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern:
+          /nicht\s+innerhalb\s+dreier\s+Jahre\s+ab\s+dem\s+Schadentag[\s\S]{0,180}?Entsch[äa]digung\s+nach\s+dem\s+Zeitwert/giu,
+        normalize: () =>
+          "Wiederherstellung oder Wiederbeschaffung nicht innerhalb von 3 Jahren: Entschädigung zum Zeitwert",
+      },
+      {
+        pattern: /Zeitwert\s+von\s+mindestens\s+30\s*%/giu,
+        normalize: () => "Zeitwert mindestens 30 %",
+      },
+    ],
+  });
+}
+
+function extractUnderinsurancePrerequisiteFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern: /f[üu]r\s+die\s+ein\s+Neuwertsch[äa]tzgutachten\s+besteht/giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /die\s+Versicherungssumme\s+dem\s+Neuwert\s+des\s+Gutachtens\s+entspricht/giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /f[üu]r\s+die\s+Dauer\s+von\s+ca\.\s*3\s+Jahren,\s+ab\s+der\s+letzten\s+Anpassung\s+an\s+den\s+Baukostenindex/giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /zum\s+Zeitpunkt\s+der\s+Vereinbarung\s+dieser\s+Wertanpassungsklausel[\s\S]{0,300}?entsprochen\s+hat;/giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /die\s+nach\s+dem\s+Zeitpunkt\s+der\s+Vereinbarung\s+dieser\s+Wertanpassungsklausel[\s\S]{0,400}?entsprochen\s+hat;/giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /die\s+infolge\s+von\s+Ver[äa]nderungen\s+der\s+versicherten\s+Sachen[\s\S]{0,400}?Ber[üu]cksichtigung\s+fand\./giu,
+        normalize: conditionNormalized,
+      },
+      {
+        pattern:
+          /Bei\s+Bestehen\s+mehrfacher\s+Versicherungen\s+f[üu]r\s+dasselbe\s+Interesse[\s\S]{0,500}?Versicherungswert\s+entspricht\./giu,
+        normalize: conditionNormalized,
+      },
+    ],
+  });
+}
+
+function extractIndexTypeFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern:
+          /BKI\s*2020\s*\(Baukostenindex\s+f[üu]r\s+den\s+Wohnhaus-\s+und\s+Siedlungsbau\s*-\s*Baumeisterarbeiten\s+2020\s*-\s*Insgesamt\)/giu,
+        normalize: () =>
+          "BKI 2020 (Baukostenindex für den Wohnhaus- und Siedlungsbau – Baumeisterarbeiten 2020 – Insgesamt)",
+      },
+      {
+        pattern: /Baukostenindex\s*\(Baumeisterarbeiten\)/giu,
+        normalize: () => "Baukostenindex (Baumeisterarbeiten)",
+      },
+      {
+        pattern:
+          /Baukostenindex\s+f[üu]r\s+den\s+Wohnungs-\s+und\s+Siedlungsbau/giu,
+        normalize: () => "Baukostenindex für den Wohnungs- und Siedlungsbau",
+      },
+    ],
+  });
+}
+
+function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern: /auf\s+Erstes\s+Risiko/giu,
+        normalize: () => "auf Erstes Risiko",
+      },
+      {
+        pattern: /bis\s+zu\s+sechs\s+Monaten/giu,
+        normalize: () => "bis zu 6 Monate",
+      },
+      {
+        pattern:
+          /nachweisliche[nr]?\s+Entgang\s+an\s+versicherten\s+Erträgen[\s\S]{0,180}?variable\s+Kosten[\s\S]{0,80}?(?:wegfallen|vermindert\s+werden)/giu,
+        normalize: () =>
+          "nachweislicher Ertragsentgang abzüglich ersparter variabler Kosten",
+      },
+      {
+        pattern:
+          /Bestandzins\s+kraft\s+Gesetz\s+oder\s+nach\s+dem\s+Bestandvertrag\s+ganz\s+oder\s+teilweise\s+verweigern\s+kann/giu,
+        normalize: () =>
+          "Bestandzins wird gesetzlich oder vertraglich ganz oder teilweise verweigert",
+      },
+    ],
+  });
+}
+
 function extractorFor(requirementId, field) {
+  if (requirementId === "VS-01" && field === "limit")
+    return extractInsuredNewValueFacts;
+  if (requirementId === "VS-02" && field === "condition")
+    return extractCurrentValueConditionFacts;
   if (requirementId === "VS-21" && field === "limit") return extractLimitFacts;
   if (requirementId === "VS-28" && field === "duration")
+    return extractDurationFacts;
+  if (requirementId === "VS-08" && field === "condition")
+    return extractUnderinsuranceConditionTypeFacts;
+  if (requirementId === "VS-09" && field === "condition")
+    return extractUnderinsurancePrerequisiteFacts;
+  if (requirementId === "VS-11" && field === "index_type")
+    return extractIndexTypeFacts;
+  if (
+    [
+      "VS-19",
+      "VS-20",
+      "VS-15",
+      "VS-22",
+      "VS-23",
+      "VS-29",
+      "VS-31",
+      "VS-34",
+      "VS-36",
+    ].includes(requirementId) &&
+    field === "limit"
+  )
+    return extractBoundLimitFacts;
+  if (["VS-25", "VS-33"].includes(requirementId) && field === "limit")
+    return extractBoundOrSectionGovernorLimitFacts;
+  if (requirementId === "VS-29" && field === "calculation_basis")
+    return extractRentLossCalculationBasisFacts;
+  if (requirementId === "VS-31" && field === "duration")
     return extractDurationFacts;
   return null;
 }
 
 function valueCoversRequirement({
   indexed,
+  field,
   binding,
   candidateById,
   bindingByCandidateId,
 }) {
   if (indexed.requirement.components.length <= 1) return true;
+  if (
+    indexed.requirement.id === "VS-02" &&
+    field === "condition" &&
+    ["current_value_clause", "residual_value_threshold"].includes(
+      indexed.component.id
+    )
+  )
+    return true;
+  if (
+    field === "limit" &&
+    indexed.component.factRole === "LIMIT" &&
+    ["VS-22", "VS-23", "VS-25", "VS-31", "VS-33"].includes(
+      indexed.requirement.id
+    )
+  )
+    return true;
+  if (indexed.requirement.id === "VS-31" && field === "duration") return true;
+  if (
+    field === "limit" &&
+    indexed.component.factRole === "INSURED_OBJECT" &&
+    ["VS-15", "VS-19", "VS-20", "VS-34"].includes(indexed.requirement.id)
+  )
+    return true;
   const bindingGroupId = indexed.occurrence.bindingGroupId;
   if (!bindingGroupId) return false;
 
@@ -311,6 +634,7 @@ function extractPreferredFacts({
     if (
       !valueCoversRequirement({
         indexed,
+        field,
         binding,
         candidateById,
         bindingByCandidateId,
@@ -322,18 +646,34 @@ function extractPreferredFacts({
       .push(...extractor({ occurrence: indexed.occurrence, binding }));
   }
 
-  return [
+  const preferred = [
     ...factsByBinding.get(VALUE_BINDING.DIRECT),
     ...factsByBinding.get(VALUE_BINDING.NARROW_SCOPE),
   ];
+  const unique = new Map();
+  for (const fact of preferred) {
+    const key = [
+      fact.binding,
+      fact.source.documentStart,
+      fact.source.documentEnd,
+      fact.normalizedValue,
+    ].join(":");
+    if (!unique.has(key)) unique.set(key, fact);
+  }
+  return [...unique.values()];
 }
 
 function aggregateRequestedFieldStatus(fields) {
   if (fields.length === 0) return REQUESTED_FIELD_STATUS.NOT_REQUIRED;
+  const evaluated = fields.filter(
+    ({ status }) => status !== FIELD_EVIDENCE_STATUS.NOT_EVALUATED
+  );
+  if (evaluated.length === 0) return REQUESTED_FIELD_STATUS.NOT_EVALUATED;
   const foundCount = fields.filter(
     ({ status }) => status === FIELD_EVIDENCE_STATUS.FOUND
   ).length;
   if (foundCount === fields.length) return REQUESTED_FIELD_STATUS.COMPLETE;
+  if (evaluated.length < fields.length) return REQUESTED_FIELD_STATUS.PARTIAL;
   if (foundCount === 0) return REQUESTED_FIELD_STATUS.NOT_FOUND;
   return REQUESTED_FIELD_STATUS.PARTIAL;
 }
@@ -359,7 +699,19 @@ function materializeRequestedFieldEvidence({
     const requestedFields = Array.isArray(requirement.requestedFields)
       ? [...requirement.requestedFields]
       : [];
-    const fields = requestedFields.map((field) => {
+    const optionalFields = Array.isArray(requirement.optionalFields)
+      ? requirement.optionalFields.filter(
+          (field) => !requestedFields.includes(field)
+        )
+      : [];
+    const fields = [...requestedFields, ...optionalFields].map((field) => {
+      const extractor = extractorFor(requirement.id, field);
+      if (!extractor)
+        return {
+          field,
+          status: FIELD_EVIDENCE_STATUS.NOT_EVALUATED,
+          facts: [],
+        };
       const facts = extractPreferredFacts({
         requirement,
         field,
@@ -378,7 +730,10 @@ function materializeRequestedFieldEvidence({
     return {
       requirementId: requirement.id,
       requestedFields,
-      requestedFieldStatus: aggregateRequestedFieldStatus(fields),
+      ...(optionalFields.length > 0 ? { optionalFields } : {}),
+      requestedFieldStatus: aggregateRequestedFieldStatus(
+        fields.filter(({ field }) => requestedFields.includes(field))
+      ),
       fields,
     };
   });

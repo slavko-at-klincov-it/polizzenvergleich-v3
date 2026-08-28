@@ -98,17 +98,17 @@ describe("categoryCatalogCoverageContract", () => {
   });
 
   test.each([
-    ["VS", "VS_versicherungssumme_und_versicherte_sachen.md"],
-    ["FE", "FE_feuer.md"],
-    ["LW", "LW_leitungswasser.md"],
-    ["ST", "ST_sturm.md"],
-    ["EL", "EL_elementar_und_zusatzdeckungen.md"],
-    ["HP", "HP_haus_und_grundbesitzhaftpflicht.md"],
-    ["VB", "VB_vertragsbestimmungen.md"],
-    ["WE", "WE_wohnungseigentum.md"],
+    ["VS", "VS_versicherungssumme_und_versicherte_sachen.md", "v0.2"],
+    ["FE", "FE_feuer.md", "v0.1"],
+    ["LW", "LW_leitungswasser.md", "v0.1"],
+    ["ST", "ST_sturm.md", "v0.1"],
+    ["EL", "EL_elementar_und_zusatzdeckungen.md", "v0.1"],
+    ["HP", "HP_haus_und_grundbesitzhaftpflicht.md", "v0.1"],
+    ["VB", "VB_vertragsbestimmungen.md", "v0.1"],
+    ["WE", "WE_wohnungseigentum.md", "v0.1"],
   ])(
     "keeps the shipped %s prompt and full catalog in exact parity",
-    (view, prompt) => {
+    (view, prompt, catalogVersion) => {
       const promptText = fs.readFileSync(
         path.join(__dirname, "../../../resources/workspaceTemplates", prompt),
         "utf8"
@@ -117,7 +117,7 @@ describe("categoryCatalogCoverageContract", () => {
         fs.readFileSync(
           path.join(
             __dirname,
-            `../../../resources/policyAnalysis/${view.toLowerCase()}-occurrence-full-draft.v0.1.json`
+            `../../../resources/policyAnalysis/${view.toLowerCase()}-occurrence-full-draft.${catalogVersion}.json`
           ),
           "utf8"
         )

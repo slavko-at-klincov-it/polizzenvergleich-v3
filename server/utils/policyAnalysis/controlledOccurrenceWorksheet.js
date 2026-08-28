@@ -2,6 +2,7 @@ const crypto = require("crypto");
 
 const WORKSHEET_SCHEMA_VERSION = 1;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
+const DEFAULT_CLAUSE_SECTION_MAX_CHARS = 6_000;
 const DEFAULT_FALLBACK_WORDS_EACH_SIDE = 120;
 const DEFAULT_SCOPE_WORDS_BEFORE = 120;
 const SHARED_GOVERNOR = "SHARED_GOVERNOR";
@@ -12,6 +13,7 @@ const ALLOWED_SCOPE_POLICIES = new Set([
   "GENERAL_REQUIRED",
   "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
 ]);
+const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
 const ALLOWED_FACT_ROLES = new Set([
   "INSURED_OBJECT",
   "COST",
@@ -25,6 +27,11 @@ const ALLOWED_FACT_ROLES = new Set([
   "CONDITION",
   "DOCUMENT_STATUS",
 ]);
+const CONTEXT_MODE = Object.freeze({
+  STRUCTURAL: "STRUCTURAL",
+  CLAUSE_SECTION: "CLAUSE_SECTION",
+});
+const ALLOWED_CONTEXT_MODES = new Set(Object.values(CONTEXT_MODE));
 
 function worksheetError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -124,6 +131,10 @@ function startsWithConcatenatedClauseCode(value) {
   return /^\d{2}\p{L}{2}\d{4}/u.test(String(value || ""));
 }
 
+function startsWithConcatenatedCurrencyValue(value) {
+  return /^EUR\s*\d/iu.test(String(value || ""));
+}
+
 function findAliasRanges(pageText, alias) {
   const page = normalizeWithOffsetMap(pageText);
   const normalizedAlias = normalizeWithOffsetMap(alias).normalized;
@@ -139,7 +150,12 @@ function findAliasRanges(pageText, alias) {
     if (
       !isWordCharacter(before) &&
       (!isWordCharacter(after) ||
-        startsWithConcatenatedClauseCode(page.normalized.slice(normalizedEnd)))
+        startsWithConcatenatedClauseCode(
+          page.normalized.slice(normalizedEnd)
+        ) ||
+        startsWithConcatenatedCurrencyValue(
+          page.normalized.slice(normalizedEnd)
+        ))
     ) {
       const originalStart = page.originalOffsets[normalizedStart];
       const originalEnd = page.originalOffsets[normalizedEnd - 1] + 1;
@@ -178,7 +194,7 @@ function isBlankLine(line) {
 }
 
 function isBulletLine(line) {
-  return /^\s*[-•]\s+/u.test(line.text);
+  return /^\s*[-•](?:\s+|(?=\p{L}))/u.test(line.text);
 }
 
 function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
@@ -268,6 +284,79 @@ function structuralContext({
     pageStart: contextStart,
     pageEnd: contextEnd,
     text: pageText.slice(contextStart, contextEnd),
+  };
+}
+
+function isClauseSectionHeading(line) {
+  const text = String(line?.text || "");
+  return (
+    /^\s*\d{1,3}\.\s+\p{L}/u.test(text) ||
+    /^\s*\S[\s\S]*?\d{2}\p{Lu}{2}\d{4}\s*$/u.test(text)
+  );
+}
+
+function trimContextRange(text, start, end) {
+  let trimmedStart = start;
+  let trimmedEnd = end;
+  while (trimmedStart < trimmedEnd && /\s/u.test(text[trimmedStart]))
+    trimmedStart += 1;
+  while (trimmedEnd > trimmedStart && /\s/u.test(text[trimmedEnd - 1]))
+    trimmedEnd -= 1;
+  return { start: trimmedStart, end: trimmedEnd };
+}
+
+/**
+ * Expands a direct occurrence to its enclosing numbered or clause-coded
+ * section. This mirrors a human reading the complete clause until the next
+ * heading, while retaining exact source offsets. If no controlled heading is
+ * present or the section is unexpectedly large, it fails back to the smaller
+ * structural context.
+ */
+function clauseSectionContext({
+  pageText,
+  occurrenceStart,
+  occurrenceEnd,
+  fallback,
+  maxChars = DEFAULT_CLAUSE_SECTION_MAX_CHARS,
+}) {
+  const lines = buildLineRecords(pageText);
+  const occurrenceLineIndex = lines.findIndex(
+    ({ start, end }) => occurrenceStart >= start && occurrenceStart <= end
+  );
+  if (occurrenceLineIndex === -1) return fallback;
+
+  let headingLineIndex = -1;
+  for (let index = occurrenceLineIndex; index >= 0; index -= 1) {
+    if (!isClauseSectionHeading(lines[index])) continue;
+    headingLineIndex = index;
+    break;
+  }
+  if (headingLineIndex === -1) return fallback;
+
+  let nextHeadingLineIndex = lines.length;
+  for (let index = headingLineIndex + 1; index < lines.length; index += 1) {
+    if (!isClauseSectionHeading(lines[index])) continue;
+    nextHeadingLineIndex = index;
+    break;
+  }
+  const range = trimContextRange(
+    pageText,
+    lines[headingLineIndex].start,
+    nextHeadingLineIndex < lines.length
+      ? lines[nextHeadingLineIndex].start
+      : pageText.length
+  );
+  if (
+    occurrenceStart < range.start ||
+    occurrenceEnd > range.end ||
+    range.end - range.start > maxChars
+  )
+    return fallback;
+  return {
+    unitType: CONTEXT_MODE.CLAUSE_SECTION,
+    pageStart: range.start,
+    pageEnd: range.end,
+    text: pageText.slice(range.start, range.end),
   };
 }
 
@@ -451,6 +540,15 @@ function validateCatalog(catalog) {
             );
           return factRole;
         })(),
+        contextMode: (() => {
+          const contextMode = component.contextMode || CONTEXT_MODE.STRUCTURAL;
+          if (!ALLOWED_CONTEXT_MODES.has(contextMode))
+            throw worksheetError(
+              "COMPONENT_CONTEXT_MODE_INVALID",
+              `${id}:${componentId}:${String(contextMode)}`
+            );
+          return contextMode;
+        })(),
         aliases,
       };
     });
@@ -597,11 +695,26 @@ function validateCatalog(catalog) {
       requestedFields: Array.isArray(requirement.requestedFields)
         ? [...requirement.requestedFields]
         : [],
+      optionalFields: Array.isArray(requirement.optionalFields)
+        ? [
+            ...new Set(
+              requirement.optionalFields.map((field) =>
+                requireNonEmptyString(field, "OPTIONAL_FIELD_INVALID", id)
+              )
+            ),
+          ]
+        : [],
       scopePolicy: (() => {
         const scopePolicy = requirement.scopePolicy || "GENERAL_REQUIRED";
         if (!ALLOWED_SCOPE_POLICIES.has(scopePolicy))
           throw worksheetError("SCOPE_POLICY_INVALID", id);
         return scopePolicy;
+      })(),
+      componentSatisfactionPolicy: (() => {
+        const policy = requirement.componentSatisfactionPolicy || "ALL";
+        if (!ALLOWED_COMPONENT_SATISFACTION_POLICIES.has(policy))
+          throw worksheetError("COMPONENT_SATISFACTION_POLICY_INVALID", id);
+        return policy;
       })(),
       bindingStructures,
       scopeRules,
@@ -1047,9 +1160,18 @@ function buildControlledOccurrenceWorksheet({
             maxChars: contextMaxChars,
             fallbackWordsEachSide,
           });
+          const evidenceContext =
+            component.contextMode === CONTEXT_MODE.CLAUSE_SECTION
+              ? clauseSectionContext({
+                  pageText: page.text,
+                  occurrenceStart: range.originalStart,
+                  occurrenceEnd: range.originalEnd,
+                  fallback: context,
+                })
+              : context;
           const scopeLead = precedingWordWindow(
             page.text,
-            context.pageStart,
+            evidenceContext.pageStart,
             scopeWordsBefore
           );
           const currentSectionBoundary = page.sectionHeadings
@@ -1089,12 +1211,12 @@ function buildControlledOccurrenceWorksheet({
             documentEnd,
             exactText: pageContent.slice(documentStart, documentEnd),
             context: {
-              unitType: context.unitType,
-              pageStart: context.pageStart,
-              pageEnd: context.pageEnd,
-              documentStart: page.start + context.pageStart,
-              documentEnd: page.start + context.pageEnd,
-              text: context.text,
+              unitType: evidenceContext.unitType,
+              pageStart: evidenceContext.pageStart,
+              pageEnd: evidenceContext.pageEnd,
+              documentStart: page.start + evidenceContext.pageStart,
+              documentEnd: page.start + evidenceContext.pageEnd,
+              text: evidenceContext.text,
             },
             scopeLead: {
               pageStart: scopeLead.pageStart,
@@ -1110,6 +1232,7 @@ function buildControlledOccurrenceWorksheet({
         id: component.id,
         label: component.label,
         factRole: component.factRole,
+        contextMode: component.contextMode,
         aliases: component.aliases,
         terminalState:
           occurrences.length > 0
@@ -1130,8 +1253,12 @@ function buildControlledOccurrenceWorksheet({
       id: requirement.id,
       label: requirement.label,
       requestedFields: requirement.requestedFields,
+      ...(requirement.optionalFields.length > 0
+        ? { optionalFields: requirement.optionalFields }
+        : {}),
       scopeRules: requirement.scopeRules,
       scopePolicy: requirement.scopePolicy,
+      componentSatisfactionPolicy: requirement.componentSatisfactionPolicy,
       componentCount: grouped.components.length,
       components: grouped.components,
     };
@@ -1178,6 +1305,8 @@ function buildControlledOccurrenceWorksheet({
 }
 
 module.exports = {
+  CONTEXT_MODE,
+  DEFAULT_CLAUSE_SECTION_MAX_CHARS,
   DEFAULT_CONTEXT_MAX_CHARS,
   DEFAULT_FALLBACK_WORDS_EACH_SIDE,
   DEFAULT_SCOPE_WORDS_BEFORE,

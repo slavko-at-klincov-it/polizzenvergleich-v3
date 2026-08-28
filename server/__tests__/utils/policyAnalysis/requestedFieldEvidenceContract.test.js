@@ -79,7 +79,146 @@ function selections(...entries) {
   return entries.map(([candidateId, binding]) => ({ candidateId, binding }));
 }
 
+function textualOccurrence({ candidateId, text, exactText, contextStart = 0 }) {
+  const matchStart = text.indexOf(exactText);
+  return {
+    candidateId,
+    pageNumber: 8,
+    physicalPageNumber: 8,
+    exactText,
+    documentStart: contextStart + matchStart,
+    documentEnd: contextStart + matchStart + exactText.length,
+    context: {
+      unitType: "CLAUSE_SECTION",
+      text,
+      documentStart: contextStart,
+      documentEnd: contextStart + text.length,
+    },
+  };
+}
+
+function textualWorksheet(requirement) {
+  return { candidateOnly: true, requirements: [requirement] };
+}
+
 describe("requestedFieldEvidenceContract", () => {
+  test("materializes the conditional nature and exact prerequisites of the WEVIG waiver clause", () => {
+    const text = [
+      "Wertanpassung nach dem Baukostenindex10PA0400",
+      "3.Die Vorschriften über Unterversicherung finden im Schadenfall nur Anwendung, wenn",
+      "a) zum Zeitpunkt der Vereinbarung dieser Wertanpassungsklausel die Versicherungssumme nicht dem tatsächlichen Wert entsprochen hat;",
+      "b) die nach dem Zeitpunkt der Vereinbarung dieser Wertanpassungsklausel geänderte Versicherungssumme nicht dem tatsächlichen Wert entsprochen hat;",
+      "c) die infolge von Veränderungen der versicherten Sachen entstandene Wertsteigerung nicht durch entsprechende Erhöhung der Versicherungssumme Berücksichtigung fand.",
+      "4.Bei Bestehen mehrfacher Versicherungen für dasselbe Interesse bezieht sich der Verzicht nur auf jenen Teil, der dem damaligen Versicherungswert entspricht.",
+    ].join("\n");
+    const conditionOccurrence = textualOccurrence({
+      candidateId: "candidate:vs08-condition",
+      text,
+      exactText: "im Schadenfall nur Anwendung, wenn",
+    });
+    const prerequisiteOccurrence = textualOccurrence({
+      candidateId: "candidate:vs09-prerequisites",
+      text,
+      exactText: "zum Zeitpunkt der Vereinbarung dieser Wertanpassungsklausel",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-08",
+        label: "Bedingter Unterversicherungsverzicht",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "underinsurance_waiver_condition",
+            occurrences: [conditionOccurrence],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs08-condition",
+        "DIRECT",
+      ]),
+    });
+    const prerequisites = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-09",
+        label: "Voraussetzungen",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "underinsurance_waiver_prerequisites",
+            occurrences: [prerequisiteOccurrence],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs09-prerequisites",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [expect.objectContaining({ normalizedValue: "bedingt" })],
+        },
+      ],
+    });
+    expect(
+      prerequisites.requirements[0].fields[0].facts.map(
+        ({ normalizedValue }) => normalizedValue
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("zum Zeitpunkt der Vereinbarung"),
+        expect.stringContaining("nach dem Zeitpunkt der Vereinbarung"),
+        expect.stringContaining("infolge von Veränderungen"),
+        expect.stringContaining("mehrfacher Versicherungen"),
+      ])
+    );
+  });
+
+  test.each([
+    [
+      "Die Aufwertung erfolgt nach dem Baukostenindex für den Wohnungs- und Siedlungsbau.",
+      "Baukostenindex für den Wohnungs- und Siedlungsbau",
+    ],
+    [
+      "Statistik Austria veröffentlicht den Baukostenindex (Baumeisterarbeiten).",
+      "Baukostenindex (Baumeisterarbeiten)",
+    ],
+  ])("binds the index type from %s", (text, normalizedValue) => {
+    const source = textualOccurrence({
+      candidateId: `candidate:index:${normalizedValue}`,
+      text,
+      exactText: "Baukostenindex",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-11",
+        label: "Indexart",
+        requestedFields: ["index_type"],
+        components: [{ id: "index_type", occurrences: [source] }],
+      }),
+      materializedCandidates: selections([
+        `candidate:index:${normalizedValue}`,
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "index_type",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [expect.objectContaining({ normalizedValue })],
+        },
+      ],
+    });
+  });
   test("normalizes OCR l0% while preserving raw text and exact server-owned source", () => {
     const text = "Aufräumkosten sind bis l0% der Versicherungssumme gedeckt.";
     const source = occurrence({
@@ -165,6 +304,27 @@ describe("requestedFieldEvidenceContract", () => {
         exactText: "EUR6.121.600,00",
       },
     });
+  });
+
+  test("preserves a decimal percentage instead of dropping its integer part", () => {
+    const source = occurrence({
+      candidateId: "candidate:decimal-percent",
+      requirementId: "VS-21",
+      text: "Aufräumkosten bis 1,5 % der Versicherungssumme.",
+      contextStart: 40,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: worksheet({ limitOccurrences: [source] }),
+      materializedCandidates: selections([
+        "candidate:decimal-percent",
+        "DIRECT",
+      ]),
+    });
+
+    expect(
+      result.requirements.find(({ requirementId }) => requirementId === "VS-21")
+        .fields[0].facts[0]
+    ).toMatchObject({ rawValue: "1,5 %", normalizedValue: "1,5 %" });
   });
 
   test.each([
@@ -468,7 +628,10 @@ describe("requestedFieldEvidenceContract", () => {
       requestedFieldStatus: REQUESTED_FIELD_STATUS.PARTIAL,
       fields: [
         { field: "limit", status: FIELD_EVIDENCE_STATUS.FOUND },
-        { field: "duration", status: FIELD_EVIDENCE_STATUS.NOT_FOUND },
+        {
+          field: "duration",
+          status: FIELD_EVIDENCE_STATUS.NOT_EVALUATED,
+        },
       ],
     });
     expect(result.requirements[0]).toMatchObject({
@@ -476,6 +639,220 @@ describe("requestedFieldEvidenceContract", () => {
       requestedFields: [],
       requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_REQUIRED,
       fields: [],
+    });
+  });
+
+  test("binds both the three-year trigger and the 30-percent threshold for VS-02", () => {
+    const clauseText =
+      "Wird eine versicherte Sache nicht innerhalb dreier Jahre ab dem Schadentag wiederhergestellt bzw. wiederbeschafft, erfolgt die Entschädigung nach dem Zeitwert.";
+    const thresholdText =
+      "Für instandgehaltene Gebäude gilt ein Zeitwert von mindestens 30 % und damit die volle Neuwertentschädigung.";
+    const clause = textualOccurrence({
+      candidateId: "candidate:vs02-clause",
+      text: clauseText,
+      exactText: "Entschädigung nach dem Zeitwert",
+      contextStart: 100,
+    });
+    const threshold = textualOccurrence({
+      candidateId: "candidate:vs02-threshold",
+      text: thresholdText,
+      exactText: "Zeitwert von mindestens 30 %",
+      contextStart: 500,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-02",
+        label: "Zeitwertklausel",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "current_value_clause",
+            label: "Zeitwertklausel",
+            factRole: "BENEFIT",
+            occurrences: [clause],
+          },
+          {
+            id: "residual_value_threshold",
+            label: "Restwertverhältnis",
+            factRole: "CONDITION",
+            occurrences: [threshold],
+          },
+        ],
+      }),
+      materializedCandidates: selections(
+        ["candidate:vs02-clause", "DIRECT"],
+        ["candidate:vs02-threshold", "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            {
+              normalizedValue:
+                "Wiederherstellung oder Wiederbeschaffung nicht innerhalb von 3 Jahren: Entschädigung zum Zeitwert",
+              source: { candidateId: "candidate:vs02-clause" },
+            },
+            {
+              normalizedValue: "Zeitwert mindestens 30 %",
+              source: { candidateId: "candidate:vs02-threshold" },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  test("materializes an optional VS-01 insured value without making it mandatory", () => {
+    const text = "Wohngebäude zum NeuwertEUR30.000.000,00";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs01-value",
+      text,
+      exactText: "Wohngebäude zum Neuwert",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-01",
+        label: "Neuwert",
+        requestedFields: [],
+        optionalFields: ["limit"],
+        components: [
+          {
+            id: "replacement_new_value",
+            label: "Ersatzleistung zum Neuwert",
+            factRole: "BENEFIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections(["candidate:vs01-value", "DIRECT"]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFields: [],
+      optionalFields: ["limit"],
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_REQUIRED,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            {
+              normalizedValue: "EUR 30.000.000,00",
+              source: { candidateId: "candidate:vs01-value" },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  test("does not bind later percentages as an optional VS-01 insured value", () => {
+    const source = textualOccurrence({
+      candidateId: "candidate:vs01-no-adjacent-value",
+      text: "Neuwertentschädigung gilt bei einem Zeitwert von mindestens 30 % und 33 % gewerblicher Nutzung.",
+      exactText: "Neuwertentschädigung",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-01",
+        label: "Neuwert",
+        requestedFields: [],
+        optionalFields: ["limit"],
+        components: [
+          {
+            id: "replacement_new_value",
+            label: "Ersatzleistung zum Neuwert",
+            factRole: "BENEFIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs01-no-adjacent-value",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_REQUIRED,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+  });
+
+  test("binds a controlled section governor to the later VS-33 list item", () => {
+    const source = textualOccurrence({
+      candidateId: "candidate:vs33-governor",
+      text: [
+        "Zusätzlich sind mitversichert bis zu jeweils l0% der Gebäudeversicherungssumme auf „Erstes Risiko“:",
+        "- Kosten für Entsorgungsmaßnahmen;",
+        "- Vorsorge für Neu-, Zu- und Umbauten, Instandsetzungen und Neuanschaffungen;",
+      ].join("\n"),
+      exactText: "Vorsorge für Neu-, Zu- und Umbauten",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-33",
+        label: "Vorsorgedeckung",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "contingency_cover_or_automatic_increase_limit",
+            label: "Limit",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections(["candidate:vs33-governor", "DIRECT"]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "10 %",
+              source: expect.objectContaining({
+                candidateId: "candidate:vs33-governor",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
+  test("distinguishes an unsupported requested field from a searched but missing value", () => {
+    const customWorksheet = worksheet();
+    customWorksheet.requirements[0].requestedFields = ["condition"];
+    const result = materializeRequestedFieldEvidence({
+      worksheet: customWorksheet,
+      materializedCandidates: [],
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_EVALUATED,
+      fields: [
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.NOT_EVALUATED,
+          facts: [],
+        },
+      ],
     });
   });
 

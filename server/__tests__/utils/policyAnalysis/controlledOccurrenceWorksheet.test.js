@@ -134,6 +134,16 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(findAliasRanges("Garageneinrichtung", "Garage")).toEqual([]);
   });
 
+  test("accepts a PDF-concatenated EUR value as a boundary without allowing an ordinary EUR-prefixed suffix", () => {
+    expect(
+      findAliasRanges(
+        "Wohngebäude zum NeuwertEUR30.608.000,00",
+        "Wohngebäude zum Neuwert"
+      )
+    ).toHaveLength(1);
+    expect(findAliasRanges("NeuwertEURopa", "Neuwert")).toEqual([]);
+  });
+
   test("finds the controlled coordinated form Aufräumungs- without broad substring matching", () => {
     const text =
       "Aufräumungs- und Reparaturarbeiten; Aufräumungskosten; Aufräumungshelfer";
@@ -164,6 +174,179 @@ describe("controlledOccurrenceWorksheet", () => {
       "- Tiefgara-\ngen sind ausgeschlossen."
     );
     expect(occurrence.context.text).not.toContain("Garageneinrichtungen");
+  });
+
+  test("recognizes PDF bullets even when extraction removes the space after the dash", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "FEUERVERSICHERUNG",
+          "-Wohngebäude zum NeuwertEUR30.000.000,00",
+          " Bauart: massiv",
+          "-NebengebäudeEUR1.000.000,00",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "compact-bullet-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "compact-bullet-test",
+        categoryView: "VS",
+        requirements: [
+          {
+            id: "VS-01",
+            label: "Neuwert",
+            requestedFields: [],
+            components: [
+              {
+                id: "replacement_new_value",
+                label: "Neuwert",
+                factRole: "BENEFIT",
+                aliases: ["Wohngebäude zum Neuwert"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+    expect(candidate.context).toMatchObject({
+      unitType: "LIST_ITEM",
+      text: "-Wohngebäude zum NeuwertEUR30.000.000,00\n Bauart: massiv",
+    });
+  });
+
+  test("expands catalog-authorized occurrences to a numbered clause section only", () => {
+    const sectionCatalog = {
+      schemaVersion: 1,
+      catalogId: "vs-section-context-test",
+      categoryView: "VS",
+      requirements: [
+        {
+          id: "VS-10",
+          label: "Automatische Indexanpassung",
+          requestedFields: [],
+          components: [
+            {
+              id: "automatic_index_adjustment",
+              label: "Automatische Indexanpassung",
+              factRole: "CONDITION",
+              contextMode: "CLAUSE_SECTION",
+              aliases: ["Aufwertung der Gebäudeversicherungssummen"],
+            },
+          ],
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "32. Vorherige Klausel",
+          "Nicht relevant.",
+          "33. Indexvereinbarung",
+          "Die Aufwertung der Gebäudeversicherungssummen erfolgt nach dem Baukostenindex.",
+          "34. Unterversicherungsverzicht",
+          "Der Versicherer verzichtet unter Voraussetzungen.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "numbered-clause-context",
+      catalog: sectionCatalog,
+    });
+    const [candidate] = component(
+      worksheet,
+      "VS-10",
+      "automatic_index_adjustment"
+    ).occurrences;
+
+    expect(candidate.context).toMatchObject({
+      unitType: "CLAUSE_SECTION",
+      text: [
+        "33. Indexvereinbarung",
+        "Die Aufwertung der Gebäudeversicherungssummen erfolgt nach dem Baukostenindex.",
+      ].join("\n"),
+    });
+    expect(candidate.context.text).not.toContain("Unterversicherungsverzicht");
+  });
+
+  test("expands catalog-authorized occurrences from a coded heading to the next coded heading", () => {
+    const sectionCatalog = {
+      schemaVersion: 1,
+      catalogId: "vs-coded-section-context-test",
+      categoryView: "VS",
+      requirements: [
+        {
+          id: "VS-09",
+          label: "Voraussetzungen des Unterversicherungsverzichts",
+          requestedFields: ["condition"],
+          components: [
+            {
+              id: "underinsurance_waiver_prerequisites",
+              label: "Voraussetzungen",
+              factRole: "CONDITION",
+              contextMode: "CLAUSE_SECTION",
+              aliases: ["im Schadenfall nur Anwendung, wenn"],
+            },
+          ],
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Wertanpassung nach dem Baukostenindex10PA0400",
+          "1.Die Versicherungssumme erhöht sich jährlich.",
+          "3.Die Vorschriften über Unterversicherung finden im Schadenfall nur Anwendung, wenn",
+          "a) die Versicherungssumme nicht dem tatsächlichen Wert entsprochen hat.",
+          "Aufräum-, Abbruch- und Feuerlöschkosten12PA0130",
+          "Diese nächste Klausel gehört nicht mehr dazu.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "coded-clause-context",
+      catalog: sectionCatalog,
+    });
+    const [candidate] = component(
+      worksheet,
+      "VS-09",
+      "underinsurance_waiver_prerequisites"
+    ).occurrences;
+
+    expect(candidate.context.unitType).toBe("CLAUSE_SECTION");
+    expect(candidate.context.text).toContain(
+      "Wertanpassung nach dem Baukostenindex10PA0400"
+    );
+    expect(candidate.context.text).toContain("Versicherungssumme erhöht");
+    expect(candidate.context.text).not.toContain("Diese nächste Klausel");
+  });
+
+  test("rejects unknown catalog context modes", () => {
+    const invalidCatalog = {
+      schemaVersion: 1,
+      catalogId: "invalid-context-mode",
+      categoryView: "VS",
+      requirements: [
+        {
+          id: "VS-99",
+          label: "Ungültig",
+          components: [
+            {
+              id: "invalid",
+              label: "Ungültig",
+              factRole: "CONDITION",
+              contextMode: "WHOLE_DOCUMENT",
+              aliases: ["Klausel"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: documentFromPages(["Klausel"]),
+        documentFingerprint: "invalid-context-mode",
+        catalog: invalidCatalog,
+      })
+    ).toThrow("COMPONENT_CONTEXT_MODE_INVALID");
   });
 
   test("keeps a separate preceding reading window for scope without enlarging the evidence unit", () => {

@@ -66,8 +66,9 @@ function aggregateCompletionMetrics(calls, model) {
         ? responseModels[0]
         : null,
     responseModelComplete:
-      calls.length > 0 &&
+      calls.length === 0 ||
       calls.every(({ metrics }) => metrics?.responseModel === model),
+    executionMode: calls.length === 0 ? "SERVER_ONLY" : "MODEL_ASSISTED",
     provider: "LMStudioLLM",
     timestamp: new Date(),
   };
@@ -75,17 +76,40 @@ function aggregateCompletionMetrics(calls, model) {
 
 async function run() {
   const args = parseArguments(process.argv.slice(2));
+  const allowedArguments = new Set([
+    "worksheet",
+    "systemPromptFile",
+    "controlFile",
+    "controlMode",
+    "output",
+    "model",
+    "modelTokenLimit",
+    "maxAttemptsPerTarget",
+  ]);
+  const unknownArguments = Object.keys(args).filter(
+    (argument) => !allowedArguments.has(argument)
+  );
+  if (unknownArguments.length)
+    fail(`Unbekannte Argumente: ${unknownArguments.join(",")}`);
   const worksheetFile = path.resolve(args.worksheet || "");
   const systemPromptFile = path.resolve(args.systemPromptFile || "");
-  const controlFile = path.resolve(args.controlFile || "");
+  const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
+  const controlMode = args.controlMode || "file";
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ["Systemprompt", systemPromptFile],
-    ["Kontrollen", controlFile],
   ]) {
     if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
   }
+  if (!["file", "technical-review"].includes(controlMode))
+    fail(`Ungültiger --controlMode: ${controlMode}`);
+  if (controlMode === "file" && (!controlFile || !fs.existsSync(controlFile)))
+    fail(`Kontrollen fehlen: ${controlFile}`);
+  if (controlMode === "technical-review" && controlFile)
+    fail(
+      "--controlFile und --controlMode technical-review schließen einander aus"
+    );
   if (!args.output) fail("--output ist erforderlich");
 
   fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
@@ -110,7 +134,16 @@ async function run() {
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
-  const controlSet = JSON.parse(fs.readFileSync(controlFile, "utf8"));
+  let controlSet = controlFile
+    ? JSON.parse(fs.readFileSync(controlFile, "utf8"))
+    : null;
+  if (controlMode === "technical-review")
+    controlSet = {
+      schemaVersion: 1,
+      controlSetId: "vs-full-triage-technical-review-generated-v1",
+      reviewStatus: "REVIEW_REQUIRED",
+      controls: [],
+    };
   const controlReviewStatus = controlSet.reviewStatus || "NOT_DECLARED";
   if (
     !["NOT_DECLARED", "REVIEW_REQUIRED", "APPROVED"].includes(
@@ -121,6 +154,13 @@ async function run() {
   const payload = buildCandidateTriagePayload(worksheet);
   const userPrompt = JSON.stringify(payload);
   const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
+  const maxAttemptsPerTarget = Number(args.maxAttemptsPerTarget || 2);
+  if (
+    !Number.isInteger(maxAttemptsPerTarget) ||
+    maxAttemptsPerTarget < 1 ||
+    maxAttemptsPerTarget > 3
+  )
+    fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
   const startedAt = new Date();
   const calls = [];
   const messageCalls = [];
@@ -144,43 +184,69 @@ async function run() {
       payload,
       targetId: target.targetId,
     });
-    const messages = llm.constructPrompt({
-      systemPrompt,
-      contextTexts: [],
-      chatHistory: [],
-      userPrompt: JSON.stringify(singlePayload),
-    });
-    const completion = await llm.getChatCompletion(messages, {
-      temperature: 0,
-      maxTokens: 128,
-    });
-    const call = {
-      targetId: target.targetId,
-      payloadSha256: sha256(JSON.stringify(singlePayload)),
-      responseText: completion?.textResponse || "",
-      metrics: completion?.metrics || null,
-    };
-    calls.push(call);
-    messageCalls.push({ targetId: target.targetId, messages });
-    if (!completion?.textResponse) {
-      validationError = {
-        code: "TRIAGE_EMPTY_RESPONSE",
-        message: `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`,
-      };
-      break;
-    }
-    try {
-      targetJudgements.push(
-        parseAndValidateSingleBindingTarget({
-          responseText: completion.textResponse,
-          target,
-        })
-      );
-    } catch (error) {
-      validationError = {
-        code: error.code || "UNKNOWN",
-        message: error.message,
+    let targetComplete = false;
+    let previousError = null;
+    for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
+      const retryPayload = previousError
+        ? {
+            ...singlePayload,
+            retryInstruction:
+              "Die vorige Antwort war formal ungültig. Gib kein targetId-Feld aus, verwende nur die erlaubten Enumwerte und antworte erneut ausschließlich mit dem verlangten JSON-Objekt.",
+            previousErrorCode: previousError.code,
+          }
+        : singlePayload;
+      const messages = llm.constructPrompt({
+        systemPrompt,
+        contextTexts: [],
+        chatHistory: [],
+        userPrompt: JSON.stringify(retryPayload),
+      });
+      const completion = await llm.getChatCompletion(messages, {
+        temperature: 0,
+        maxTokens: 128,
+      });
+      if (
+        completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
+      )
+        fail(
+          `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
+        );
+      calls.push({
         targetId: target.targetId,
+        attempt,
+        payloadSha256: sha256(JSON.stringify(retryPayload)),
+        responseText: completion?.textResponse || "",
+        metrics: completion?.metrics || null,
+      });
+      messageCalls.push({ targetId: target.targetId, attempt, messages });
+      try {
+        if (!completion?.textResponse) {
+          const emptyError = new Error(
+            `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`
+          );
+          emptyError.code = "TRIAGE_EMPTY_RESPONSE";
+          throw emptyError;
+        }
+        targetJudgements.push(
+          parseAndValidateSingleBindingTarget({
+            responseText: completion.textResponse,
+            target,
+          })
+        );
+        targetComplete = true;
+        break;
+      } catch (error) {
+        previousError = {
+          code: error.code || "UNKNOWN",
+          message: error.message,
+        };
+      }
+    }
+    if (!targetComplete) {
+      validationError = {
+        ...previousError,
+        targetId: target.targetId,
+        attempts: maxAttemptsPerTarget,
       };
       break;
     }
@@ -210,6 +276,17 @@ async function run() {
         worksheet,
       });
       materialized = materializeCandidateTriage({ worksheet, validatedTriage });
+      if (controlMode === "technical-review")
+        controlSet.controls = materialized.map((candidate) => ({
+          id: `technical-review:${candidate.candidateId}`,
+          selector: { candidateId: candidate.candidateId },
+          allowedBindings: [
+            "DIRECT",
+            "NARROW_SCOPE",
+            "MENTION_ONLY",
+            "UNRESOLVED",
+          ],
+        }));
       controls = evaluateCandidateTriageControls({ materialized, controlSet });
       writePrivateJson(
         outputDirectory,
@@ -253,7 +330,15 @@ async function run() {
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
       controlPath: controlFile,
-      controlSha256: sha256File(controlFile),
+      controlSha256: controlFile
+        ? sha256File(controlFile)
+        : sha256(JSON.stringify(controlSet)),
+      controlMode,
+      materializedTriageSha256: materialized
+        ? sha256File(
+            path.join(outputDirectory, "materialized-triage.private.json")
+          )
+        : null,
       payloadSha256: sha256(userPrompt),
     },
     input: {
@@ -264,11 +349,13 @@ async function run() {
       serverTerminalTargetCount: payload.bindingTargets.filter(
         (target) => target.modelDecisionFields.length === 0
       ).length,
-      modelTargetCount: calls.length,
+      modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
+      modelAttemptCount: calls.length,
       candidateCount: payload.bindingTargets.reduce(
         (sum, target) => sum + target.candidateIds.length,
         0
       ),
+      maxAttemptsPerTarget,
     },
     completion: aggregateCompletionMetrics(
       calls,
@@ -292,6 +379,7 @@ async function run() {
       `${report.validation.judgementCount}/${report.input.candidateCount} IDs, ` +
       `${controls.filter(({ pass }) => pass).length}/${controls.length} Kontrollen`
   );
+  if (!technicalPass) process.exitCode = 2;
 }
 
 run().catch((error) => fail(error.stack || error.message));

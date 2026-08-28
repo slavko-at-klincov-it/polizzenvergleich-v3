@@ -64,8 +64,9 @@ function aggregateCompletionMetrics(calls, model) {
         ? responseModels[0]
         : null,
     responseModelComplete:
-      calls.length > 0 &&
+      calls.length === 0 ||
       calls.every(({ metrics }) => metrics?.responseModel === model),
+    executionMode: calls.length === 0 ? "SERVER_ONLY" : "MODEL_ASSISTED",
   };
 }
 
@@ -93,18 +94,44 @@ function selectedSources({ targets, materialized }) {
 
 async function run() {
   const args = parseArguments(process.argv.slice(2));
+  const allowedArguments = new Set([
+    "worksheet",
+    "systemPromptFile",
+    "controlFile",
+    "controlMode",
+    "triageFile",
+    "output",
+    "model",
+    "modelTokenLimit",
+    "documentStatus",
+    "maxAttemptsPerTarget",
+    "allowUniqueCandidateIdRepair",
+  ]);
+  const unknownArguments = Object.keys(args).filter(
+    (argument) => !allowedArguments.has(argument)
+  );
+  if (unknownArguments.length)
+    fail(`Unbekannte Argumente: ${unknownArguments.join(",")}`);
   const worksheetFile = path.resolve(args.worksheet || "");
   const systemPromptFile = path.resolve(args.systemPromptFile || "");
-  const controlFile = path.resolve(args.controlFile || "");
+  const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
+  const controlMode = args.controlMode || "file";
   const triageFile = args.triageFile ? path.resolve(args.triageFile) : null;
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ["Systemprompt", systemPromptFile],
-    ["Kontrollen", controlFile],
   ]) {
     if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
   }
+  if (!["file", "technical-review"].includes(controlMode))
+    fail(`Ungültiger --controlMode: ${controlMode}`);
+  if (controlMode === "file" && (!controlFile || !fs.existsSync(controlFile)))
+    fail(`Kontrollen fehlen: ${controlFile}`);
+  if (controlMode === "technical-review" && controlFile)
+    fail(
+      "--controlFile und --controlMode technical-review schließen einander aus"
+    );
   if (triageFile && !fs.existsSync(triageFile))
     fail(`Triage fehlt: ${triageFile}`);
   if (!args.output) fail("--output ist erforderlich");
@@ -120,6 +147,7 @@ async function run() {
 
   const {
     DOCUMENT_STATUS,
+    buildDeterministicPreparedEvidenceJudgement,
     buildPreparedEvidenceTargets,
     buildSinglePreparedEvidencePayload,
     materializePreparedEvidence,
@@ -127,12 +155,21 @@ async function run() {
   } = require("../../utils/policyAnalysis/preparedEvidenceContract");
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
   const {
+    buildTechnicalReviewControlSet,
     evaluatePreparedEvidenceControls,
   } = require("../../utils/policyAnalysis/preparedEvidenceControls");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
-  const controlSet = JSON.parse(fs.readFileSync(controlFile, "utf8"));
+  const controlSet =
+    controlMode === "technical-review"
+      ? buildTechnicalReviewControlSet({
+          worksheet,
+          controlSetId: `vs-full-technical-review:${path.basename(
+            worksheetFile
+          )}`,
+        })
+      : JSON.parse(fs.readFileSync(controlFile, "utf8"));
   const candidateTriage = triageFile
     ? JSON.parse(fs.readFileSync(triageFile, "utf8"))
     : null;
@@ -148,6 +185,15 @@ async function run() {
     candidateTriage,
   });
   const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
+  const allowUniqueCandidateIdRepair =
+    String(args.allowUniqueCandidateIdRepair || "false") === "true";
+  const maxAttemptsPerTarget = Number(args.maxAttemptsPerTarget || 2);
+  if (
+    !Number.isInteger(maxAttemptsPerTarget) ||
+    maxAttemptsPerTarget < 1 ||
+    maxAttemptsPerTarget > 3
+  )
+    fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
   const startedAt = new Date();
   const calls = [];
   const messages = [];
@@ -155,39 +201,80 @@ async function run() {
   let validationError = null;
 
   for (const target of targets.filter(({ candidates }) => candidates.length)) {
+    const deterministicJudgement =
+      buildDeterministicPreparedEvidenceJudgement(target);
+    if (deterministicJudgement) {
+      judgements.push(deterministicJudgement);
+      continue;
+    }
     const payload = buildSinglePreparedEvidencePayload({ target });
-    const promptMessages = llm.constructPrompt({
-      systemPrompt,
-      contextTexts: [],
-      chatHistory: [],
-      userPrompt: JSON.stringify(payload),
-    });
-    const completion = await llm.getChatCompletion(promptMessages, {
-      temperature: 0,
-      // A valid response may contain many server-owned candidate IDs for one
-      // atomic component. Keep the cap finite, but large enough for the full
-      // validated ID list instead of truncating otherwise valid JSON.
-      maxTokens: 2048,
-    });
-    calls.push({
-      targetId: target.targetId,
-      payloadSha256: sha256(JSON.stringify(payload)),
-      responseText: completion?.textResponse || "",
-      metrics: completion?.metrics || null,
-    });
-    messages.push({ targetId: target.targetId, messages: promptMessages });
-    try {
-      judgements.push(
-        parseAndValidatePreparedEvidenceResponse({
-          responseText: completion?.textResponse || "",
-          target,
-        })
-      );
-    } catch (error) {
-      validationError = {
-        code: error.code || "UNKNOWN",
-        message: error.message,
+    let targetComplete = false;
+    let previousError = null;
+    for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
+      const retryPayload = previousError
+        ? {
+            ...payload,
+            retryInstruction:
+              "Die vorige Antwort war formal ungültig. Kopiere ausschließlich Candidate-IDs aus allowedCandidateIds exakt und gib erneut nur das verlangte JSON-Objekt aus.",
+            previousErrorCode: previousError.code,
+            allowedCandidateIds: target.candidates.map(
+              ({ candidateId }) => candidateId
+            ),
+          }
+        : payload;
+      const promptMessages = llm.constructPrompt({
+        systemPrompt,
+        contextTexts: [],
+        chatHistory: [],
+        userPrompt: JSON.stringify(retryPayload),
+      });
+      const completion = await llm.getChatCompletion(promptMessages, {
+        temperature: 0,
+        // A valid response may contain many server-owned candidate IDs for one
+        // atomic component. Keep the cap finite, but large enough for the full
+        // validated ID list instead of truncating otherwise valid JSON.
+        maxTokens: 2048,
+      });
+      if (
+        completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
+      )
+        fail(
+          `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
+        );
+      calls.push({
         targetId: target.targetId,
+        attempt,
+        payloadSha256: sha256(JSON.stringify(retryPayload)),
+        responseText: completion?.textResponse || "",
+        metrics: completion?.metrics || null,
+      });
+      messages.push({
+        targetId: target.targetId,
+        attempt,
+        messages: promptMessages,
+      });
+      try {
+        judgements.push(
+          parseAndValidatePreparedEvidenceResponse({
+            responseText: completion?.textResponse || "",
+            target,
+            allowUniqueCandidateIdRepair,
+          })
+        );
+        targetComplete = true;
+        break;
+      } catch (error) {
+        previousError = {
+          code: error.code || "UNKNOWN",
+          message: error.message,
+        };
+      }
+    }
+    if (!targetComplete) {
+      validationError = {
+        ...previousError,
+        targetId: target.targetId,
+        attempts: maxAttemptsPerTarget,
       };
       break;
     }
@@ -254,10 +341,21 @@ async function run() {
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
       controlPath: controlFile,
-      controlSha256: sha256File(controlFile),
+      controlSha256: controlFile
+        ? sha256File(controlFile)
+        : sha256(JSON.stringify(controlSet)),
+      controlMode,
       triagePath: triageFile,
       triageSha256: triageFile ? sha256File(triageFile) : null,
       documentStatus,
+      materializedEvidenceSha256: materialized
+        ? sha256File(path.join(outputDirectory, "materialized.private.json"))
+        : null,
+      selectedSourcesSha256: materialized
+        ? sha256File(
+            path.join(outputDirectory, "selected-sources.private.json")
+          )
+        : null,
     },
     input: {
       requirementCount: worksheet.requirements.length,
@@ -265,11 +363,17 @@ async function run() {
       serverTerminalCount: targets.filter(
         ({ candidates }) => !candidates.length
       ).length,
-      modelTargetCount: calls.length,
+      deterministicTargetCount: judgements.filter(({ decisionOwner }) =>
+        String(decisionOwner).startsWith("SERVER_EXPLICIT_VS_RULE:")
+      ).length,
+      modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
+      modelAttemptCount: calls.length,
       candidateCount: targets.reduce(
         (sum, target) => sum + target.candidates.length,
         0
       ),
+      maxAttemptsPerTarget,
+      allowUniqueCandidateIdRepair,
     },
     completion: aggregateCompletionMetrics(
       calls,
@@ -280,6 +384,14 @@ async function run() {
       error: validationError,
       judgementCount: materialized?.judgements.length || 0,
       requestedFieldsNotEvaluated,
+      candidateIdCorrections:
+        materialized?.judgements.flatMap(
+          ({ targetId, candidateIdCorrections = [] }) =>
+            candidateIdCorrections.map((correction) => ({
+              targetId,
+              ...correction,
+            }))
+        ) || [],
     },
     controls: {
       pass: Boolean(technicalPass),
@@ -293,6 +405,7 @@ async function run() {
   console.log(
     `[prepared-evidence] ${report.status}: ${report.validation.judgementCount}/${targets.length} Komponenten, ${report.controls.passed}/${report.controls.total} Kontrollen`
   );
+  if (!technicalPass) process.exitCode = 2;
 }
 
 run().catch((error) => fail(error.stack || error.message));

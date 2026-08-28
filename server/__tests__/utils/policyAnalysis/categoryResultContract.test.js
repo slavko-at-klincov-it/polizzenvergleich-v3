@@ -131,6 +131,27 @@ describe("categoryResultContract", () => {
     });
   });
 
+  test("supports an explicit ANY policy for alternative object examples", () => {
+    const result = rollupCategoryResult({
+      categoryId: "VS-34",
+      requiredComponentIds: ["community_devices", "community_tools"],
+      componentSatisfactionPolicy: "ANY",
+      componentResults: [
+        component("community_devices", COVERAGE_EFFECT.INCLUDED),
+        component("community_tools", COVERAGE_EFFECT.UNKNOWN, {
+          evidencePresence: NOT_FOUND,
+        }),
+      ],
+    });
+
+    expect(result).toMatchObject({
+      componentSatisfactionPolicy: "ANY",
+      evidenceCompleteness: EVIDENCE_COMPLETENESS.COMPLETE,
+      coveragePicture: COVERAGE_PICTURE.INCLUDED,
+      reviewStatus: REVIEW_STATUS.BELEGT,
+    });
+  });
+
   test("keeps no evidence unresolved and never turns it into exclusion", () => {
     const result = rollup([
       component("wintergarten", COVERAGE_EFFECT.UNKNOWN, {

@@ -4,6 +4,53 @@ function controlError(code, detail = "") {
   return error;
 }
 
+const TECHNICAL_REVIEW_VALUES = Object.freeze({
+  evidencePresence: Object.freeze(["FOUND", "NOT_FOUND"]),
+  coverageEffects: Object.freeze([
+    "INCLUDED",
+    "EXCLUDED",
+    "DEFINED",
+    "CONDITIONAL",
+    "OPTION_ONLY",
+    "UNKNOWN",
+  ]),
+  applicabilities: Object.freeze([
+    "ACTIVE",
+    "CONDITIONAL",
+    "PROPOSED_ONLY",
+    "UNKNOWN",
+  ]),
+});
+
+/**
+ * Creates exhaustive technical controls for a full-catalog discovery run.
+ * They verify that every atomic component reached the validated contract, but
+ * deliberately carry REVIEW_REQUIRED and are not a fachliches Oracle.
+ * Inputs/outputs are plain data. Side effects: none. Role: test support.
+ */
+function buildTechnicalReviewControlSet({ worksheet, controlSetId }) {
+  if (!Array.isArray(worksheet?.requirements))
+    throw controlError("PREPARED_CONTROL_WORKSHEET_INVALID");
+  const controls = worksheet.requirements.flatMap((requirement) =>
+    (requirement.components || []).map((component) => ({
+      id: `technical-review:${requirement.id}:${component.id}`,
+      requirementId: requirement.id,
+      componentId: component.id,
+      allowedEvidencePresence: [...TECHNICAL_REVIEW_VALUES.evidencePresence],
+      allowedCoverageEffects: [...TECHNICAL_REVIEW_VALUES.coverageEffects],
+      allowedApplicabilities: [...TECHNICAL_REVIEW_VALUES.applicabilities],
+    }))
+  );
+  if (controls.length === 0)
+    throw controlError("PREPARED_CONTROL_WORKSHEET_EMPTY");
+  return {
+    schemaVersion: 1,
+    controlSetId: controlSetId || "technical-review-generated-v1",
+    reviewStatus: "REVIEW_REQUIRED",
+    controls,
+  };
+}
+
 function requireArray(value, code, controlId) {
   if (!Array.isArray(value) || value.length === 0)
     throw controlError(code, controlId);
@@ -118,4 +165,7 @@ function evaluatePreparedEvidenceControls({
   });
 }
 
-module.exports = { evaluatePreparedEvidenceControls };
+module.exports = {
+  buildTechnicalReviewControlSet,
+  evaluatePreparedEvidenceControls,
+};

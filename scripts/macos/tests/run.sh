@@ -83,6 +83,7 @@ done
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
 if /usr/bin/grep -RniE --exclude='run.sh' --exclude='run-vs-pilot-ab.command' \
+  --exclude='run-vs-full-quality-ab.command' \
   'feuer|policyComparison|dinghy|qwen|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
@@ -94,5 +95,13 @@ fi
 /usr/bin/grep -Fq 'server/scripts/qa/runVsPilotAb.cjs' \
   "$REPO_DIR/run-vs-pilot-ab.command"
 /usr/bin/grep -Fq 'qwen/qwen3.8-27b' "$REPO_DIR/run-vs-pilot-ab.command"
+
+# Der vollständige VS-Qualitätsrunner ist ebenfalls ein explizites QA-Werkzeug
+# außerhalb des Installers. Sein Modell bleibt lokal und sein Einstiegspunkt
+# muss den 36-Kategorien-Materialisierer verwenden.
+/usr/bin/grep -Fq 'server/scripts/qa/materializeVsFullResult.cjs' \
+  "$REPO_DIR/run-vs-full-quality-ab.command"
+/usr/bin/grep -Fq 'qwen/qwen3.8-27b' \
+  "$REPO_DIR/run-vs-full-quality-ab.command"
 
 printf '%s\n' "V3 macOS installer tests: PASS"

@@ -113,6 +113,81 @@ function response(judgements) {
 }
 
 describe("candidateTriageContract", () => {
+  test("keeps explicit VS07-11 roles server-terminal and rejects a generic index mention", () => {
+    const worksheet = {
+      candidateOnly: true,
+      requirements: [
+        {
+          id: "VS-11",
+          label: "Indexart",
+          requestedFields: ["index_type"],
+          components: [
+            {
+              id: "index_type",
+              label: "Indexart",
+              factRole: "DEFINITION",
+              occurrences: [
+                {
+                  candidateId: "candidate:index-type",
+                  matchedAlias: "Baukostenindex",
+                  pageNumber: 7,
+                  documentStart: 24,
+                  documentEnd: 39,
+                  exactText: "Baukostenindex",
+                  context: {
+                    unitType: "CLAUSE_SECTION",
+                    documentStart: 0,
+                    documentEnd: 73,
+                    text: "Für die Berechnung gilt der Baukostenindex (Baumeisterarbeiten).",
+                  },
+                },
+                {
+                  candidateId: "candidate:index-mention",
+                  matchedAlias: "Baukostenindex",
+                  pageNumber: 8,
+                  documentStart: 29,
+                  documentEnd: 44,
+                  exactText: "Baukostenindex",
+                  context: {
+                    unitType: "CLAUSE_SECTION",
+                    documentStart: 0,
+                    documentEnd: 61,
+                    text: "Die Frist läuft ab der letzten Anpassung an den Baukostenindex.",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const payload = buildCandidateTriagePayload(worksheet);
+
+    expect(payload.bindingTargets).toMatchObject([
+      {
+        targetId: "candidate:index-type",
+        roleResolution: {
+          owner: "SERVER",
+          roleMatch: "MATCH",
+          basis: "EXPLICIT_INDEX_TYPE",
+        },
+        scopeResolution: { owner: "SERVER", scopeMatch: "GENERAL" },
+        modelDecisionFields: [],
+      },
+      {
+        targetId: "candidate:index-mention",
+        roleResolution: {
+          owner: "SERVER",
+          roleMatch: "MISMATCH",
+          basis: "GENERIC_INDEX_MENTION_WITHOUT_TYPE",
+        },
+        scopeResolution: { owner: "SERVER", scopeMatch: "GENERAL" },
+        modelDecisionFields: [],
+      },
+    ]);
+  });
+
   test("builds a compact candidate-only payload without coverage or model-owned sources", () => {
     const payload = buildCandidateTriagePayload(WORKSHEET);
 

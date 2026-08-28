@@ -128,9 +128,16 @@ async function main() {
   const chunkOverlap = Number(cliArguments.chunkOverlap || 250);
   const topN = Number(cliArguments.topN || 32);
   const modelTokenLimit = Number(cliArguments.modelTokenLimit || 32768);
-  const maxCompletionTokens = Number(cliArguments.maxCompletionTokens || 8192);
-  if (!Number.isInteger(maxCompletionTokens) || maxCompletionTokens < 1)
-    fail(`Ungültige --maxCompletionTokens: ${maxCompletionTokens}`);
+  const maxCompletionTokenArgument = cliArguments.maxCompletionTokens || "8192";
+  const maxCompletionTokens =
+    maxCompletionTokenArgument === "provider-default"
+      ? null
+      : Number(maxCompletionTokenArgument);
+  if (
+    maxCompletionTokens !== null &&
+    (!Number.isInteger(maxCompletionTokens) || maxCompletionTokens < 1)
+  )
+    fail(`Ungültige --maxCompletionTokens: ${maxCompletionTokenArgument}`);
   process.env.LMSTUDIO_MODEL_TOKEN_LIMIT = String(modelTokenLimit);
 
   console.log(`[pdf-provenance-live] Parse: ${fileName}`);
@@ -229,9 +236,13 @@ async function main() {
   console.log(`[pdf-provenance-live] Qwen: ${process.env.LMSTUDIO_MODEL_PREF}`);
   const completion = await llm.getChatCompletion(messages, {
     temperature: 0,
-    maxTokens: maxCompletionTokens,
+    ...(maxCompletionTokens === null ? {} : { maxTokens: maxCompletionTokens }),
   });
   if (!completion?.textResponse) fail("Qwen hat keine Antwort geliefert.");
+  if (completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF)
+    fail(
+      `Falsches LM-Studio-Chatmodell: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
+    );
 
   const sourceSummary = retrieved.sourceDocuments.map((source) => ({
     docId: source.docId,
@@ -261,6 +272,14 @@ async function main() {
     promptContract: {
       systemPromptPath,
       systemPromptSha256: sha256File(systemPromptPath),
+      userPromptSha256: crypto
+        .createHash("sha256")
+        .update(USER_PROMPT)
+        .digest("hex"),
+      retrievalQuerySha256: crypto
+        .createHash("sha256")
+        .update(RETRIEVAL_QUERY)
+        .digest("hex"),
       categoryIds: CATEGORY_DEFINITIONS.map(({ id }) => id),
       systemPromptPersisted: false,
     },
@@ -270,6 +289,8 @@ async function main() {
       topN,
       modelTokenLimit,
       maxCompletionTokens,
+      completionTokenMode:
+        maxCompletionTokens === null ? "PROVIDER_DEFAULT_V321" : "EXPLICIT",
       namespace,
     },
     extraction: {

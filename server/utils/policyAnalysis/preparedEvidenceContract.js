@@ -4,6 +4,10 @@ const {
   EVIDENCE_PRESENCE,
   rollupCategoryResult,
 } = require("./categoryResultContract");
+const {
+  deterministicVsCandidateBinding,
+  deterministicVsPreparedDecision,
+} = require("./deterministicVsEvidenceRules");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -142,6 +146,21 @@ function serverScopeRejection({
     occurrence.context?.text || ""
   }`;
   if (
+    worksheet.catalog?.categoryView === "VS" &&
+    requirement.id === "VS-04" &&
+    (occurrence.exactText?.trim().toLocaleLowerCase("de-AT") ===
+      "pauschalversicherungssumme" ||
+      (occurrence.exactText?.trim().toLocaleLowerCase("de-AT") ===
+        "sachverständigengutachten" &&
+        !/(?:Versicherungssumme[\s\S]{0,180}(?:ermittel|festsetz|entsprech)|(?:Gutachten|Neuwertschätzgutachten)[\s\S]{0,180}Versicherungssumme)/iu.test(
+          occurrence.context?.text || ""
+        )) ||
+      /(?:Haftpflicht|AHVB|Schadenersatzverpflichtungen|Pauschaldeckungssumme|Versicherungsfälle\s+eines\s+Jahres)/iu.test(
+        evidenceText
+      ))
+  )
+    return "VS_04_SUM_LABEL_NOT_BUILDING_SUM_METHOD";
+  if (
     worksheet.catalog?.categoryView === "EL" &&
     /\bSchadenersatzverpflichtungen\b/iu.test(evidenceText)
   )
@@ -214,9 +233,17 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
+        const deterministicBinding = deterministicVsCandidateBinding({
+          requirementId: requirement.id,
+          componentId: component.id,
+          occurrence,
+        });
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
+          ...(deterministicBinding?.binding === candidateBinding
+            ? { deterministicBindingBasis: deterministicBinding.basis }
+            : {}),
           physicalPageNumber:
             occurrence.physicalPageNumber || occurrence.pageNumber,
           printedPageLabel: occurrence.printedPageLabel || null,
@@ -357,7 +384,92 @@ function selectedScopePicture({ target, selectedCandidateIds }) {
   return "UNKNOWN";
 }
 
-function parseAndValidatePreparedEvidenceResponse({ responseText, target }) {
+/**
+ * Converts an explicit deterministic VS rule into the same immutable evidence
+ * judgement shape used for validated model answers. Returning null keeps the
+ * target on the model path.
+ * Role: decide. Side effects: none.
+ */
+function buildDeterministicPreparedEvidenceJudgement(target) {
+  const decision = deterministicVsPreparedDecision(target);
+  if (!decision) return null;
+  return {
+    targetId: target.targetId,
+    requirementId: target.requirementId,
+    componentId: target.componentId,
+    selectedCandidateIds: decision.selectedCandidateIds,
+    candidateIdCorrections: [],
+    unresolvedCandidateIds: [...(target.unresolvedCandidateIds || [])],
+    evidencePresence: EVIDENCE_PRESENCE.FOUND,
+    coverageEffect: decision.coverageEffect,
+    conflictState: CONFLICT_STATE.NONE,
+    selectedScopePicture: selectedScopePicture({
+      target,
+      selectedCandidateIds: decision.selectedCandidateIds,
+    }),
+    documentApplicability: applicabilityFor(
+      target.documentStatus,
+      EVIDENCE_PRESENCE.FOUND
+    ),
+    decisionOwner: `SERVER_${decision.basis}`,
+  };
+}
+
+function isBoundedOpaqueIdEdit(left, right, maxDistance = 2) {
+  if (
+    !String(left).startsWith("candidate:") ||
+    !String(right).startsWith("candidate:") ||
+    Math.abs(left.length - right.length) > maxDistance
+  )
+    return false;
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    let rowMinimum = current[0];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const substitutionCost =
+        left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + substitutionCost
+      );
+      rowMinimum = Math.min(rowMinimum, current[rightIndex]);
+    }
+    if (rowMinimum > maxDistance) return false;
+    previous = current;
+  }
+  return previous[right.length] > 0 && previous[right.length] <= maxDistance;
+}
+
+function repairSelectedCandidateIds({
+  selectedCandidateIds,
+  allowedIds,
+  allowUniqueCandidateIdRepair,
+}) {
+  const corrections = [];
+  const repaired = selectedCandidateIds.map((candidateId) => {
+    if (allowedIds.has(candidateId)) return candidateId;
+    if (!allowUniqueCandidateIdRepair)
+      throw preparedError("PREPARED_SELECTED_ID_UNKNOWN", candidateId);
+    const matches = [...allowedIds].filter((allowedId) =>
+      isBoundedOpaqueIdEdit(candidateId, allowedId)
+    );
+    if (matches.length !== 1)
+      throw preparedError("PREPARED_SELECTED_ID_UNKNOWN", candidateId);
+    corrections.push({ observed: candidateId, repaired: matches[0] });
+    return matches[0];
+  });
+  if (new Set(repaired).size !== repaired.length)
+    throw preparedError("PREPARED_SELECTED_ID_DUPLICATE_AFTER_REPAIR");
+  return { repaired, corrections };
+}
+
+function parseAndValidatePreparedEvidenceResponse({
+  responseText,
+  target,
+  allowUniqueCandidateIdRepair = false,
+}) {
   let parsed;
   try {
     parsed = JSON.parse(normalizeResponse(responseText));
@@ -391,10 +503,16 @@ function parseAndValidatePreparedEvidenceResponse({ responseText, target }) {
   const allowedIds = new Set(
     target.candidates.map(({ candidateId }) => candidateId)
   );
-  for (const candidateId of modelSelectedCandidateIds) {
-    if (!allowedIds.has(candidateId))
-      throw preparedError("PREPARED_SELECTED_ID_UNKNOWN", candidateId);
-  }
+  const candidateIdRepair = repairSelectedCandidateIds({
+    selectedCandidateIds: modelSelectedCandidateIds,
+    allowedIds,
+    allowUniqueCandidateIdRepair,
+  });
+  modelSelectedCandidateIds.splice(
+    0,
+    modelSelectedCandidateIds.length,
+    ...candidateIdRepair.repaired
+  );
   if (!ALLOWED_EFFECTS.has(parsed.coverageEffect))
     throw preparedError("PREPARED_EFFECT_INVALID", target.targetId);
   if (!ALLOWED_CONFLICTS.has(parsed.conflictState))
@@ -437,6 +555,7 @@ function parseAndValidatePreparedEvidenceResponse({ responseText, target }) {
     requirementId: target.requirementId,
     componentId: target.componentId,
     selectedCandidateIds,
+    candidateIdCorrections: candidateIdRepair.corrections,
     unresolvedCandidateIds: [...(target.unresolvedCandidateIds || [])],
     evidencePresence,
     coverageEffect: normalizedEffect.coverageEffect,
@@ -535,6 +654,8 @@ function materializePreparedEvidence({ worksheet, targets, judgements }) {
     const categoryRollup = rollupCategoryResult({
       categoryId: requirement.id,
       requiredComponentIds: requirement.components.map(({ id }) => id),
+      componentSatisfactionPolicy:
+        requirement.componentSatisfactionPolicy || "ALL",
       componentResults: componentJudgements.map(
         ({ componentId, evidencePresence, coverageEffect, conflictState }) => ({
           componentId,
@@ -564,6 +685,7 @@ module.exports = {
   DOCUMENT_STATUS,
   PREPARED_EVIDENCE_SCHEMA_VERSION,
   REQUESTED_FIELD_STATUS,
+  buildDeterministicPreparedEvidenceJudgement,
   buildPreparedEvidenceTargets,
   buildSinglePreparedEvidencePayload,
   materializePreparedEvidence,

@@ -138,6 +138,12 @@ function selectedSources({
     const contextText = String(
       occurrence.context?.text || occurrence.exactText || ""
     ).trim();
+    const candidateFieldFacts = (fieldResult?.fields || []).flatMap(
+      ({ facts }) =>
+        (facts || []).filter(
+          ({ source }) => source?.candidateId === candidateId
+        )
+    );
     const quote = compactQuote(contextText, occurrence.exactText);
     if (
       !Number.isInteger(physicalPageNumber) ||
@@ -145,14 +151,10 @@ function selectedSources({
       !quote
     )
       continue;
-    sources.push({ candidateId, physicalPageNumber, quote });
+    if (candidateFieldFacts.length === 0)
+      sources.push({ candidateId, physicalPageNumber, quote });
 
-    const fieldFacts = (fieldResult?.fields || []).flatMap(
-      ({ facts }) => facts || []
-    );
-    for (const fact of fieldFacts.filter(
-      ({ source }) => source?.candidateId === candidateId
-    )) {
+    for (const fact of candidateFieldFacts) {
       const factQuote = compactQuote(
         contextText,
         fact.rawValue || fact.source?.exactText
@@ -271,13 +273,24 @@ function evidenceSourcesBound(requirement, judgements, candidates) {
   });
 }
 
-function coverageFor(rollup) {
+function coverageFor(rollup, coverageDecisionRequired) {
   if (rollup.coveragePicture === COVERAGE_PICTURE.INCLUDED) return "Ja";
   if (rollup.coveragePicture === COVERAGE_PICTURE.EXCLUDED) return "Nein";
+  // Pure CONDITION/DEFINITION categories ask whether the requested rule is
+  // documented, not whether an insured object is included. Once every
+  // requested part is fully evidenced, the table contract still requires the
+  // positive BELEGT + Ja combination.
+  if (!coverageDecisionRequired && rollup.reviewStatus === REVIEW_STATUS.BELEGT)
+    return "Ja";
   return NOT_DETERMINABLE;
 }
 
-function reviewFor({ rollup, valuesComplete, scopeComplete }) {
+function reviewFor({
+  rollup,
+  valuesComplete,
+  scopeComplete,
+  coverageDecisionRequired,
+}) {
   if (rollup.conflictState === CONFLICT_STATE.ACTIVE_SAME_SCOPE)
     return REVIEW_STATUS.WIDERSPRUCHLICH;
   if (
@@ -290,7 +303,8 @@ function reviewFor({ rollup, valuesComplete, scopeComplete }) {
     !valuesComplete ||
     !scopeComplete ||
     rollup.coveragePicture === COVERAGE_PICTURE.MIXED ||
-    rollup.coveragePicture === COVERAGE_PICTURE.NOT_DETERMINABLE
+    (coverageDecisionRequired &&
+      rollup.coveragePicture === COVERAGE_PICTURE.NOT_DETERMINABLE)
   )
     return REVIEW_STATUS.TEILBELEGT;
   return REVIEW_STATUS.BELEGT;
@@ -376,10 +390,14 @@ function buildCategoryTableRows({
             (requirement.scopePolicy === "MATCHING_SCOPE_INCLUDED_SUFFICIENT" &&
               coverageEffect === COVERAGE_EFFECT.INCLUDED))
       );
+      const coverageDecisionRequired = requirement.components.some(
+        ({ factRole }) => !["CONDITION", "DEFINITION"].includes(factRole)
+      );
       const reviewStatus = reviewFor({
         rollup,
         valuesComplete,
         scopeComplete,
+        coverageDecisionRequired,
       });
       if (reviewStatus === REVIEW_STATUS.UNGEKLAERT)
         return unknownRow(normalized);
@@ -397,16 +415,22 @@ function buildCategoryTableRows({
       if (sources.length === 0) return unknownRow(normalized);
 
       let documentedContent = componentDescription(requirement, rowJudgements);
-      const durationFacts = fieldFacts(
-        fieldResult,
-        "duration",
-        candidates,
-        normalized.id
-      );
-      if (durationFacts.length > 0)
-        documentedContent += `; Dauer: ${uniqueNormalizedValues(
-          durationFacts
-        ).join(", ")}`;
+      const displayedFields = [
+        ["condition", "Bedingung"],
+        ["calculation_basis", "Berechnungsgrundlage"],
+        ["index_type", "Indexart"],
+        ["duration", "Dauer"],
+      ];
+      for (const [fieldName, label] of displayedFields) {
+        const facts = fieldFacts(
+          fieldResult,
+          fieldName,
+          candidates,
+          normalized.id
+        );
+        if (facts.length > 0)
+          documentedContent += `; ${label}: ${uniqueNormalizedValues(facts).join("; ")}`;
+      }
       if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
         documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
 
@@ -422,7 +446,9 @@ function buildCategoryTableRows({
         stage: normalized.stage,
         categoryName: normalized.label,
         documentedContent,
-        coverage: completeAssertion ? coverageFor(rollup) : NOT_DETERMINABLE,
+        coverage: completeAssertion
+          ? coverageFor(rollup, coverageDecisionRequired)
+          : NOT_DETERMINABLE,
         coverageAmount:
           completeAssertion && limitFacts.length > 0
             ? uniqueNormalizedValues(limitFacts).join(", ")

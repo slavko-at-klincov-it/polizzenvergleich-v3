@@ -1,4 +1,8 @@
 const TRIAGE_SCHEMA_VERSION = 6;
+const {
+  DETERMINISTIC_BINDING,
+  deterministicVsCandidateBinding,
+} = require("./deterministicVsEvidenceRules");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -296,18 +300,36 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB|Bauherr)\b/iu.test(
         liabilityContext
       );
+    const isVs04LiabilitySum =
+      candidate.requirement.id === "VS-04" &&
+      (source.exactText?.trim().toLocaleLowerCase("de-AT") ===
+        "pauschalversicherungssumme" ||
+        (source.exactText?.trim().toLocaleLowerCase("de-AT") ===
+          "sachverständigengutachten" &&
+          !/(?:Versicherungssumme[\s\S]{0,180}(?:ermittel|festsetz|entsprech)|(?:Gutachten|Neuwertschätzgutachten)[\s\S]{0,180}Versicherungssumme)/iu.test(
+            source.context?.text || ""
+          )) ||
+        /(?:Haftpflicht|AHVB|Schadenersatzverpflichtungen|Pauschaldeckungssumme|Versicherungsfälle\s+eines\s+Jahres)/iu.test(
+          liabilityContext
+        ));
     let roleResolution = {
       owner: "MODEL",
       roleMatch: null,
       basis: "MODEL_REQUIRED",
     };
-    if (isExplicitLiabilityScope || isCleanupWorkStartNotCost) {
+    if (
+      isExplicitLiabilityScope ||
+      isVs04LiabilitySum ||
+      isCleanupWorkStartNotCost
+    ) {
       roleResolution = {
         owner: "SERVER",
         roleMatch: ROLE_MATCH.MISMATCH,
-        basis: isExplicitLiabilityScope
-          ? "LIABILITY_NOT_INSURED_COST"
-          : "CLEANUP_WORK_START_NOT_COST",
+        basis: isVs04LiabilitySum
+          ? "VS04_LIABILITY_SUM_NOT_BUILDING_SUM_METHOD"
+          : isExplicitLiabilityScope
+            ? "LIABILITY_NOT_INSURED_COST"
+            : "CLEANUP_WORK_START_NOT_COST",
       };
     } else if (allCostMembers && group) {
       roleResolution = {
@@ -349,7 +371,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       basis: "MODEL_REQUIRED",
       matchedAlias: null,
     };
-    if (isExplicitLiabilityScope) {
+    if (isExplicitLiabilityScope || isVs04LiabilitySum) {
       scopeResolution = {
         owner: "SERVER",
         scopeMatch: SCOPE_MATCH.OTHER_SCOPE,
@@ -374,6 +396,30 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           ? "CATALOG_NARROW_ALIAS"
           : "CATALOG_NARROW_SECTION",
         matchedAlias: matchedNarrowAlias || matchedNarrowScopeKey,
+      };
+    }
+    const deterministicVsBinding = group
+      ? null
+      : deterministicVsCandidateBinding({
+          requirementId: candidate.requirement.id,
+          componentId: candidate.component.id,
+          occurrence: candidate.occurrence,
+        });
+    if (deterministicVsBinding) {
+      const mentionOnly =
+        deterministicVsBinding.binding === DETERMINISTIC_BINDING.MENTION_ONLY;
+      const narrowScope =
+        deterministicVsBinding.binding === DETERMINISTIC_BINDING.NARROW_SCOPE;
+      roleResolution = {
+        owner: "SERVER",
+        roleMatch: mentionOnly ? ROLE_MATCH.MISMATCH : ROLE_MATCH.MATCH,
+        basis: deterministicVsBinding.basis,
+      };
+      scopeResolution = {
+        owner: "SERVER",
+        scopeMatch: narrowScope ? SCOPE_MATCH.NARROW : SCOPE_MATCH.GENERAL,
+        basis: deterministicVsBinding.basis,
+        matchedAlias: null,
       };
     }
     const modelDecisionFields = [];
@@ -406,6 +452,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         : null,
       roleResolution,
       scopeResolution,
+      deterministicBindingBasis: deterministicVsBinding?.basis || null,
       modelDecisionFields,
     });
   }

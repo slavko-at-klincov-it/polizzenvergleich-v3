@@ -7,6 +7,7 @@ const {
   DOCUMENT_APPLICABILITY,
   DOCUMENT_STATUS,
   REQUESTED_FIELD_STATUS,
+  buildDeterministicPreparedEvidenceJudgement,
   buildPreparedEvidenceTargets,
   materializePreparedEvidence,
   parseAndValidatePreparedEvidenceResponse,
@@ -74,6 +75,136 @@ function response(componentId, selectedCandidateIds, coverageEffect) {
 }
 
 describe("preparedEvidenceContract", () => {
+  test("does not treat a Pauschalversicherungssumme label as the VS-04 building-sum calculation method", () => {
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "VS" },
+      requirements: [
+        {
+          id: "VS-04",
+          label: "Methode der Summenermittlung",
+          requestedFields: ["calculation_method"],
+          components: [
+            {
+              id: "sum_calculation_method",
+              label: "Methode der Summenermittlung",
+              factRole: "DEFINITION",
+              occurrences: [
+                {
+                  candidateId: "candidate:liability-sum",
+                  exactText: "Pauschalversicherungssumme",
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text: "Im Rahmen der Pauschalversicherungssumme gilt ein Sublimit.",
+                  },
+                },
+                {
+                  candidateId: "candidate:claim-adjustment-report",
+                  exactText: "Sachverständigengutachten",
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text: "Liegt noch kein Sachverständigengutachten vor, kann eine Akontozahlung vereinbart werden.",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: [
+        {
+          requirementId: "VS-04",
+          componentId: "sum_calculation_method",
+          candidateId: "candidate:liability-sum",
+          binding: "DIRECT",
+        },
+        {
+          requirementId: "VS-04",
+          componentId: "sum_calculation_method",
+          candidateId: "candidate:claim-adjustment-report",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(target.candidates).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual([
+      {
+        candidateId: "candidate:liability-sum",
+        reason: "VS_04_SUM_LABEL_NOT_BUILDING_SUM_METHOD",
+      },
+      {
+        candidateId: "candidate:claim-adjustment-report",
+        reason: "VS_04_SUM_LABEL_NOT_BUILDING_SUM_METHOD",
+      },
+    ]);
+  });
+
+  test("materializes explicit VS evidence without asking the model to select or classify it", () => {
+    const worksheet = {
+      candidateOnly: true,
+      requirements: [
+        {
+          id: "VS-10",
+          label: "Automatische Indexanpassung",
+          requestedFields: [],
+          components: [
+            {
+              id: "automatic_index_adjustment",
+              label: "Automatische Indexanpassung",
+              factRole: "CONDITION",
+              occurrences: [
+                {
+                  candidateId: "candidate:automatic-index",
+                  pageNumber: 4,
+                  documentStart: 20,
+                  documentEnd: 75,
+                  exactText:
+                    "Versicherungssumme erhöht oder vermindert sich jährlich",
+                  context: {
+                    unitType: "CLAUSE_SECTION",
+                    documentStart: 0,
+                    documentEnd: 98,
+                    text: "Die Versicherungssumme erhöht oder vermindert sich jährlich bei Hauptfälligkeit der Prämie.",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "VS-10",
+          componentId: "automatic_index_adjustment",
+          candidateId: "candidate:automatic-index",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(target.candidates[0].deterministicBindingBasis).toBe(
+      "EXPLICIT_AUTOMATIC_INDEX_ADJUSTMENT"
+    );
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      selectedCandidateIds: ["candidate:automatic-index"],
+      evidencePresence: "FOUND",
+      coverageEffect: "INCLUDED",
+      conflictState: "NONE",
+      selectedScopePicture: "GENERAL",
+      decisionOwner: "SERVER_EXPLICIT_VS_RULE:VS-10",
+    });
+  });
+
   test("exposes server-owned candidate IDs and both page identities", () => {
     const [target] = buildPreparedEvidenceTargets({
       worksheet: WORKSHEET,
@@ -415,6 +546,54 @@ describe("preparedEvidenceContract", () => {
         responseText: response(
           "winter_garden",
           ["candidate:invented"],
+          COVERAGE_EFFECT.INCLUDED
+        ),
+      })
+    ).toThrow("PREPARED_SELECTED_ID_UNKNOWN");
+  });
+
+  test("repairs one uniquely attributable opaque-ID transcription error only when enabled", () => {
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet: WORKSHEET,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+
+    const judgement = parseAndValidatePreparedEvidenceResponse({
+      target,
+      allowUniqueCandidateIdRepair: true,
+      responseText: response(
+        "winter_garden",
+        ["candidate:winterr"],
+        COVERAGE_EFFECT.INCLUDED
+      ),
+    });
+
+    expect(judgement.selectedCandidateIds).toEqual(["candidate:winter"]);
+    expect(judgement.candidateIdCorrections).toEqual([
+      {
+        observed: "candidate:winterr",
+        repaired: "candidate:winter",
+      },
+    ]);
+  });
+
+  test("rejects an ambiguous one-edit candidate repair", () => {
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet: WORKSHEET,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+    target.candidates.push({
+      ...target.candidates[0],
+      candidateId: "candidate:winterx",
+    });
+
+    expect(() =>
+      parseAndValidatePreparedEvidenceResponse({
+        target,
+        allowUniqueCandidateIdRepair: true,
+        responseText: response(
+          "winter_garden",
+          ["candidate:wintery"],
           COVERAGE_EFFECT.INCLUDED
         ),
       })

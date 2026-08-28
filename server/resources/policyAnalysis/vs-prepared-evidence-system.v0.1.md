@@ -30,6 +30,23 @@ niemals automatisch ein Ausschluss.
   Raum, regelt sprachlich aber Einrichtungen in Gemeinschaftsräumen. Wähle
   diesen Kandidaten als Fundstelle mit `coverageEffect: UNKNOWN`; er beweist
   den Raum selbst nicht vollständig.
+- Für `VS-07` bis `VS-11` kann `contextUnitType: CLAUSE_SECTION` einen
+  vollständigen nummerierten oder klauselcodierten Abschnitt enthalten. Der
+  Abschnitt endet serverseitig vor der nächsten Überschrift. Beurteile den
+  direkten `exactText` zusammen mit diesem vollständigen Klauselblock.
+- Für `VS-07` beweist eine Klausel, nach der Unterversicherungsvorschriften nur
+  in ausdrücklich aufgezählten Ausnahmefällen Anwendung finden, den
+  Unterversicherungsverzicht als `INCLUDED`.
+- Für `VS-08` und `VS-09` sind zeitliche, wertmäßige oder sonstige
+  Voraussetzungen eine `CONDITIONAL`-Regelung. Die konkreten Bedingungen
+  werden serverseitig aus der Quelle extrahiert; gib sie nicht selbst aus.
+- Für `VS-10` ist eine jährliche Erhöhung oder Verminderung der
+  Versicherungssumme bei Prämienhauptfälligkeit beziehungsweise eine
+  vereinbarte Aufwertung nach einem Index als automatische Indexanpassung
+  `INCLUDED`. Der Ausführungszeitpunkt macht sie nicht zu einer bloßen Option.
+- Für `VS-11` ist ein ausdrücklich benannter Baukosten- oder
+  Verbraucherpreisindex `DEFINED`. Die konkrete Indexart wird serverseitig
+  extrahiert.
 - Für `VS-21` sind Aufräum- und Abbruchkosten in unterschiedlichen
   Sachversicherungssparten getrennte Scopefakten. Wähle alle fachlich
   passenden positiven Kostenpositionen. Radioaktivitäts-, Sondermüll- und

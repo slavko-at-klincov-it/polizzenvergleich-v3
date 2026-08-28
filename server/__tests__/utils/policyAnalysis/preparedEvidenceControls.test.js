@@ -1,4 +1,5 @@
 const {
+  buildTechnicalReviewControlSet,
   evaluatePreparedEvidenceControls,
 } = require("../../../utils/policyAnalysis/preparedEvidenceControls");
 
@@ -22,6 +23,32 @@ const SOURCES = [
 ];
 
 describe("preparedEvidenceControls", () => {
+  test("builds exhaustive REVIEW_REQUIRED controls without claiming fachliche approval", () => {
+    const controlSet = buildTechnicalReviewControlSet({
+      worksheet: {
+        requirements: [
+          {
+            id: "VS-16",
+            components: [{ id: "garage" }, { id: "underground_garage" }],
+          },
+        ],
+      },
+      controlSetId: "vs-full-discovery",
+    });
+
+    expect(controlSet).toMatchObject({
+      schemaVersion: 1,
+      controlSetId: "vs-full-discovery",
+      reviewStatus: "REVIEW_REQUIRED",
+    });
+    expect(controlSet.controls).toHaveLength(2);
+    expect(controlSet.controls[0]).toMatchObject({
+      requirementId: "VS-16",
+      componentId: "garage",
+      allowedEvidencePresence: ["FOUND", "NOT_FOUND"],
+    });
+  });
+
   test("passes only when values and required/forbidden physical pages agree", () => {
     const [result] = evaluatePreparedEvidenceControls({
       materialized: MATERIALIZED,

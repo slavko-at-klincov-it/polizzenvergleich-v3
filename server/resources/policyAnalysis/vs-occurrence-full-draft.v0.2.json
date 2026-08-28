@@ -1,21 +1,25 @@
 {
   "schemaVersion": 1,
-  "catalogId": "vs-occurrence-full-draft-v0.1",
+  "catalogId": "vs-occurrence-full-draft-v0.2",
   "categoryView": "VS",
   "requirements": [
     {
       "id": "VS-01",
       "label": "Ersatzleistung zum Neuwert vorgesehen",
       "requestedFields": [],
+      "optionalFields": ["limit"],
       "components": [
         {
           "id": "replacement_new_value",
           "label": "Ersatzleistung zum Neuwert",
           "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Ersatz zum Neuwert",
             "Entschädigung zum Neuwert",
-            "Neuwertentschädigung"
+            "Neuwertentschädigung",
+            "zum Neuwert zu ersetzen",
+            "Wohngebäude zum Neuwert"
           ]
         }
       ]
@@ -29,20 +33,25 @@
           "id": "current_value_clause",
           "label": "Zeitwertklausel",
           "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Zeitwertklausel",
             "Entschädigung zum Zeitwert",
-            "Zeitwert ersetzt"
+            "Zeitwert ersetzt",
+            "Entschädigung nach dem Zeitwert",
+            "nicht innerhalb dreier Jahre ab dem Schadentag"
           ]
         },
         {
           "id": "residual_value_threshold",
           "label": "Restwertverhältnis",
           "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Restwertverhältnis",
             "Zeitwert mindestens",
-            "Zeitwert weniger als"
+            "Zeitwert weniger als",
+            "Zeitwert von mindestens 30 %"
           ]
         }
       ]
@@ -118,6 +127,7 @@
           "id": "underinsurance_waiver",
           "label": "Unterversicherungsverzicht",
           "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Unterversicherungsverzicht",
             "Einwand der Unterversicherung",
@@ -135,10 +145,14 @@
           "id": "underinsurance_waiver_condition",
           "label": "Bedingung des Unterversicherungsverzichts",
           "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Unterversicherungsverzicht gilt",
             "Unterversicherungsverzicht besteht",
-            "Einwand der Unterversicherung verzichtet"
+            "Einwand der Unterversicherung verzichtet",
+            "für die Dauer von ca. 3 Jahren",
+            "im Schadenfall nur Anwendung, wenn",
+            "bezieht sich der Verzicht auf den Einwand der Unterversicherung nur"
           ]
         }
       ]
@@ -152,10 +166,15 @@
           "id": "underinsurance_waiver_prerequisites",
           "label": "Voraussetzungen des Unterversicherungsverzichts",
           "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Voraussetzung für den Unterversicherungsverzicht",
             "Unterversicherungsverzicht unter der Voraussetzung",
-            "Verzicht auf den Einwand der Unterversicherung, wenn"
+            "Verzicht auf den Einwand der Unterversicherung, wenn",
+            "für die ein Neuwertschätzgutachten besteht",
+            "Versicherungssumme dem Neuwert des Gutachtens entspricht",
+            "im Schadenfall nur Anwendung, wenn",
+            "Bei Bestehen mehrfacher Versicherungen für dasselbe Interesse"
           ]
         }
       ]
@@ -169,10 +188,13 @@
           "id": "automatic_index_adjustment",
           "label": "Automatische Indexanpassung",
           "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "automatische Indexanpassung",
             "Wertanpassung der Versicherungssumme",
-            "Versicherungssumme verändert sich entsprechend"
+            "Versicherungssumme verändert sich entsprechend",
+            "Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach",
+            "Versicherungssumme erhöht oder vermindert sich jährlich"
           ]
         }
       ]
@@ -186,6 +208,7 @@
           "id": "index_type",
           "label": "Indexart",
           "factRole": "DEFINITION",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Baukostenindex",
             "Verbraucherpreisindex",
@@ -223,7 +246,8 @@
           "aliases": [
             "Wohnungsinnenausbau",
             "Innenausbau der Wohnungen",
-            "Innenausbau in den Wohnungen"
+            "Innenausbau in den Wohnungen",
+            "Adaptierungen und Investitionen der Bewohner"
           ]
         }
       ]
@@ -240,7 +264,8 @@
           "aliases": [
             "Sonderausstattung einzelner Wohnungen",
             "Sonderausstattungen der Wohnungen",
-            "über die Standardausführung hinaus"
+            "über die Standardausführung hinaus",
+            "Adaptierungen und Investitionen der Bewohner"
           ]
         }
       ]
@@ -249,6 +274,7 @@
       "id": "VS-15",
       "label": "Nebengebäude namentlich in der Polizze angeführt",
       "requestedFields": [],
+      "optionalFields": ["limit"],
       "components": [
         {
           "id": "named_outbuilding",
@@ -342,24 +368,43 @@
       "id": "VS-19",
       "label": "Außenanlagen wie Wege, Beleuchtung, Bepflanzung",
       "requestedFields": [],
+      "optionalFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "componentSatisfactionPolicy": "ANY",
       "components": [
         {
           "id": "outdoor_paths",
           "label": "Wege",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["befestigte Wege", "Gehwege", "Zufahrtswege"]
+          "aliases": [
+            "befestigte Wege",
+            "Gehwege",
+            "Zufahrtswege",
+            "Außenanlagen"
+          ]
         },
         {
           "id": "outdoor_lighting",
           "label": "Außenbeleuchtung",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Außenbeleuchtung", "Beleuchtungsanlagen im Freien"]
+          "aliases": [
+            "Außenbeleuchtung",
+            "Beleuchtungsanlagen im Freien",
+            "Beleuchtungsanlagen",
+            "Beleuchtungskörper für allgemeine Räume, außen am Gebäude und im Freien"
+          ]
         },
         {
           "id": "planting",
           "label": "Bepflanzung",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Bepflanzung", "Bepflanzungen"]
+          "aliases": [
+            "Bepflanzung",
+            "Bepflanzungen",
+            "Grünflächen",
+            "Gartenanlagen",
+            "Bäume und Sträucher"
+          ]
         }
       ]
     },
@@ -367,18 +412,31 @@
       "id": "VS-20",
       "label": "Spielplatz und Spielgeräte mitversichert",
       "requestedFields": [],
+      "optionalFields": ["limit"],
       "components": [
         {
           "id": "playground",
           "label": "Spielplatz",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Spielplatz", "Spielplätze"]
+          "aliases": [
+            "Spielplatz",
+            "Spielplätze",
+            "Kinderspielplätze",
+            "Einrichtungen von Kinderspiel- und Wäscheplätzen",
+            "Spielplatzeinrichtungen"
+          ]
         },
         {
           "id": "playground_equipment",
           "label": "Spielgeräte",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Spielgerät", "Spielgeräte"]
+          "aliases": [
+            "Spielgerät",
+            "Spielgeräte",
+            "Kinderspielgeräte",
+            "Spielplatzeinrichtungen",
+            "Einrichtungen von Kinderspiel- und Wäscheplätzen"
+          ]
         }
       ]
     },
@@ -455,11 +513,13 @@
           "label": "Entsorgungskosten",
           "factRole": "COST",
           "aliases": [
+            "Entsorgungskosten",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",
             "Kosten für Sondermüll",
             "Kosten für die Behandlung von Sondermüll",
-            "Kosten für die Behandlung von gefährlichem Abfall"
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
           ]
         },
         {
@@ -467,11 +527,14 @@
           "label": "Sondermüll",
           "factRole": "INSURED_OBJECT",
           "aliases": [
+            "Sondermüll",
+            "gefährlicher Abfall",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",
             "Kosten für Sondermüll",
             "Kosten für die Behandlung von Sondermüll",
-            "Kosten für die Behandlung von gefährlichem Abfall"
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
           ]
         },
         {
@@ -479,11 +542,14 @@
           "label": "Limit der Entsorgungskosten einschließlich Sondermüll",
           "factRole": "LIMIT",
           "aliases": [
+            "Sondermüll",
+            "gefährlicher Abfall",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",
             "Kosten für Sondermüll",
             "Kosten für die Behandlung von Sondermüll",
-            "Kosten für die Behandlung von gefährlichem Abfall"
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
           ]
         }
       ]
@@ -491,7 +557,9 @@
     {
       "id": "VS-23",
       "label": "Bewegungs- und Schutzkosten",
-      "requestedFields": ["limit"],
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
       "components": [
         {
           "id": "movement_costs",
@@ -553,20 +621,24 @@
           "id": "authority_reconstruction_extra_costs",
           "label": "Behördliche Mehrkosten beim Wiederaufbau",
           "factRole": "COST",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "behördliche Mehrkosten",
             "Mehrkosten durch behördliche Auflagen",
-            "Mehrkosten infolge behördlicher Auflagen"
+            "Mehrkosten infolge behördlicher Auflagen",
+            "Mehrkosten für bauliche Verbesserungen"
           ]
         },
         {
           "id": "authority_reconstruction_extra_cost_limit",
           "label": "Limit der behördlichen Mehrkosten beim Wiederaufbau",
           "factRole": "LIMIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "behördliche Mehrkosten",
             "Mehrkosten durch behördliche Auflagen",
-            "Mehrkosten infolge behördlicher Auflagen"
+            "Mehrkosten infolge behördlicher Auflagen",
+            "Mehrkosten für bauliche Verbesserungen"
           ]
         }
       ]
@@ -648,7 +720,8 @@
     {
       "id": "VS-29",
       "label": "Mietzinsentgang, Höhe oder Berechnungsgrundlage",
-      "requestedFields": ["limit", "calculation_basis"],
+      "requestedFields": ["calculation_basis"],
+      "optionalFields": ["limit"],
       "components": [
         {
           "id": "rent_loss_amount_basis",
@@ -694,6 +767,7 @@
       "id": "VS-31",
       "label": "Hotel- oder Ersatzunterkunftskosten bei Unbewohnbarkeit",
       "requestedFields": ["limit"],
+      "optionalFields": ["duration"],
       "components": [
         {
           "id": "hotel_or_replacement_accommodation_costs",
@@ -702,14 +776,21 @@
           "aliases": [
             "Hotelkosten",
             "Ersatzunterkunftskosten",
-            "Kosten einer Ersatzunterkunft"
+            "Kosten einer Ersatzunterkunft",
+            "Mehrkosten für eine Ersatzunterkunft",
+            "Hotelzimmer / Pension"
           ]
         },
         {
           "id": "uninhabitability",
           "label": "Unbewohnbarkeit",
           "factRole": "CONDITION",
-          "aliases": ["unbewohnbar", "Unbewohnbarkeit"]
+          "aliases": [
+            "unbewohnbar",
+            "Unbewohnbarkeit",
+            "unbenutzbar",
+            "Unbenutzbarkeit"
+          ]
         },
         {
           "id": "accommodation_due_to_uninhabitability",
@@ -720,7 +801,10 @@
             "Ersatzunterkunftskosten bei Unbewohnbarkeit",
             "Kosten einer Ersatzunterkunft bei Unbewohnbarkeit",
             "Hotelkosten bei Unbenutzbarkeit",
-            "Ersatzunterkunft bei Unbenutzbarkeit"
+            "Ersatzunterkunft bei Unbenutzbarkeit",
+            "Mehrkosten für eine Ersatzunterkunft für die maximale Dauer",
+            "Ersatzunterkunft, weil",
+            "Ersatzräumlichkeiten für die Dauer der tatsächlichen Unbenutzbarkeit"
           ]
         },
         {
@@ -730,7 +814,9 @@
           "aliases": [
             "Hotelkosten",
             "Ersatzunterkunftskosten",
-            "Kosten einer Ersatzunterkunft"
+            "Kosten einer Ersatzunterkunft",
+            "Mehrkosten für eine Ersatzunterkunft",
+            "Hotelzimmer / Pension"
           ]
         }
       ]
@@ -781,20 +867,24 @@
           "id": "contingency_cover_or_automatic_increase",
           "label": "Vorsorgedeckung oder automatische Summenerhöhung",
           "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Vorsorgedeckung",
             "Vorsorgeversicherung",
-            "automatische Summenerhöhung"
+            "automatische Summenerhöhung",
+            "Vorsorge für Neu-, Zu- und Umbauten"
           ]
         },
         {
           "id": "contingency_cover_or_automatic_increase_limit",
           "label": "Limit der Vorsorgedeckung oder automatischen Summenerhöhung",
           "factRole": "LIMIT",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": [
             "Vorsorgedeckung",
             "Vorsorgeversicherung",
-            "automatische Summenerhöhung"
+            "automatische Summenerhöhung",
+            "Vorsorge für Neu-, Zu- und Umbauten"
           ]
         }
       ]
@@ -803,6 +893,8 @@
       "id": "VS-34",
       "label": "Gemeinschaftsvermögen wie Geräte und Werkzeug mitversichert",
       "requestedFields": [],
+      "optionalFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
       "components": [
         {
           "id": "community_devices",
@@ -811,7 +903,11 @@
           "aliases": [
             "Gemeinschaftsgeräte",
             "Geräte der Eigentümergemeinschaft",
-            "Geräte für die Hausbetreuung"
+            "Geräte für die Hausbetreuung",
+            "Werkzeuge, Geräte und Maschinen",
+            "Einrichtungen und Geräte in Versicherungsräumlichkeiten",
+            "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen",
+            "Einfriedungen und Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen"
           ]
         },
         {
@@ -820,7 +916,8 @@
           "factRole": "INSURED_OBJECT",
           "aliases": [
             "Werkzeug der Eigentümergemeinschaft",
-            "Werkzeuge für die Hausbetreuung"
+            "Werkzeuge für die Hausbetreuung",
+            "Werkzeuge, Geräte und Maschinen"
           ]
         }
       ]
@@ -864,7 +961,8 @@
           "aliases": [
             "Höchstentschädigung je Schadenereignis",
             "Höchstentschädigung pro Schadenereignis",
-            "maximale Entschädigung je Schadenereignis"
+            "maximale Entschädigung je Schadenereignis",
+            "Höchstentschädigung im Schadensfall"
           ]
         }
       ]

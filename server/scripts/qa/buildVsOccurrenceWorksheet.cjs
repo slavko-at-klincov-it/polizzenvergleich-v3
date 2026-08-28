@@ -31,6 +31,17 @@ function parseArguments(argv) {
 
 async function run() {
   const args = parseArguments(process.argv.slice(2));
+  const allowedArguments = new Set([
+    "pdfFile",
+    "catalogFile",
+    "output",
+    "requirementIds",
+  ]);
+  const unknownArguments = Object.keys(args).filter(
+    (argument) => !allowedArguments.has(argument)
+  );
+  if (unknownArguments.length)
+    fail(`Unbekannte Argumente: ${unknownArguments.join(",")}`);
   const pdfFile = path.resolve(args.pdfFile || "");
   const catalogFile = path.resolve(args.catalogFile || "");
   const outputFile = path.resolve(args.output || "");
@@ -56,7 +67,32 @@ async function run() {
     documentType: "pdf",
     ...extraction,
   };
-  const catalog = JSON.parse(fs.readFileSync(catalogFile, "utf8"));
+  let catalog = JSON.parse(fs.readFileSync(catalogFile, "utf8"));
+  if (args.requirementIds) {
+    const requirementIds = [
+      ...new Set(
+        args.requirementIds
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      ),
+    ];
+    if (requirementIds.length === 0) fail("--requirementIds ist leer");
+    const byId = new Map(
+      (catalog.requirements || []).map((requirement) => [
+        requirement.id,
+        requirement,
+      ])
+    );
+    const missing = requirementIds.filter((id) => !byId.has(id));
+    if (missing.length)
+      fail(`Unbekannte Requirement-IDs: ${missing.join(",")}`);
+    catalog = {
+      ...catalog,
+      catalogId: `${catalog.catalogId}:subset:${requirementIds.join(",")}`,
+      requirements: requirementIds.map((id) => byId.get(id)),
+    };
+  }
   const worksheet = buildControlledOccurrenceWorksheet({
     document,
     documentFingerprint: fingerprint,
