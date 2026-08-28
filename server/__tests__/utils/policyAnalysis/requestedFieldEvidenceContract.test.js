@@ -102,6 +102,108 @@ function textualWorksheet(requirement) {
 }
 
 describe("requestedFieldEvidenceContract", () => {
+  test.each([
+    {
+      id: "ST-01",
+      field: "threshold",
+      factRole: "DEFINITION",
+      text: "Sturm ist Wind mit Spitzengeschwindigkeiten von mehr als 60 km/h.",
+      exactText: "Wind mit Spitzengeschwindigkeiten von mehr als",
+      expected: "60 km/h",
+    },
+    {
+      id: "ST-11",
+      field: "limit",
+      factRole: "LIMIT",
+      text: "Dachrinnen und Außenablaufrohre sind bis EUR 15.000 versichert.",
+      exactText: "Dachrinnen und Außenablaufrohre",
+      expected: "EUR 15.000",
+    },
+    {
+      id: "ST-02",
+      field: "condition",
+      factRole: "CONDITION",
+      text: "Der Nachweis der Windstärke ist durch die maßgebliche Messstelle zu erbringen.",
+      exactText: "Nachweis der Windstärke",
+      expected:
+        "Der Nachweis der Windstärke ist durch die maßgebliche Messstelle zu erbringen",
+    },
+  ])(
+    "extracts the generic $field field for $id with source-bound text",
+    ({ id, field, factRole, text, exactText, expected }) => {
+      const candidateId = `candidate:${id}:${field}`;
+      const source = textualOccurrence({
+        candidateId,
+        text,
+        exactText,
+        contextStart: 700,
+      });
+      const result = materializeRequestedFieldEvidence({
+        worksheet: textualWorksheet({
+          id,
+          label: id,
+          requestedFields: [field],
+          components: [
+            {
+              id: `${field}-component`,
+              factRole,
+              occurrences: [source],
+            },
+          ],
+        }),
+        materializedCandidates: selections([candidateId, "DIRECT"]),
+      });
+      const extracted = result.requirements[0].fields[0];
+
+      expect(extracted.status).toBe(FIELD_EVIDENCE_STATUS.FOUND);
+      expect(extracted.facts[0]).toMatchObject({
+        normalizedValue: expected,
+        source: {
+          candidateId,
+          documentStart: expect.any(Number),
+          documentEnd: expect.any(Number),
+        },
+      });
+      expect(
+        text.slice(
+          extracted.facts[0].source.documentStart - 700,
+          extracted.facts[0].source.documentEnd - 700
+        )
+      ).toBe(extracted.facts[0].rawValue);
+    }
+  );
+
+  test("does not bind an unrelated date from a neighboring sentence", () => {
+    const candidateId = "candidate:VB-03:date";
+    const source = textualOccurrence({
+      candidateId,
+      text: "Vertragsbeginn ist der 01.01.2026. Die ordentliche Kündigung ist möglich.",
+      exactText: "ordentliche Kündigung",
+      contextStart: 900,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VB-03",
+        label: "Kündigungstermin",
+        requestedFields: ["date"],
+        components: [
+          {
+            id: "termination_date",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      field: "date",
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
   test("materializes the conditional nature and exact prerequisites of the WEVIG waiver clause", () => {
     const text = [
       "Wertanpassung nach dem Baukostenindex10PA0400",

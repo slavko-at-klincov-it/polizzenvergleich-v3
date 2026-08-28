@@ -282,6 +282,21 @@ er entweder eine allgemeine Systemfähigkeit hinzufügt oder eine allgemeine
 Hypothese messbar falsifiziert. Ein ausschließlich dokumentkosmetischer Fix
 ist kein Produktfortschritt.
 
+### Stand nach INC-011
+
+Schritt 1 ist technisch umgesetzt: Der neue Runner bereitet ein Dokument
+einmal vor und verwendet das private Seitenartefakt für alle acht Ansichten.
+ST ist als erster zusätzlicher Vertikalschnitt auf die gemeinsame Rollen-,
+Scope-, Wirkungs- und Wertearchitektur gehoben. Die reale LF-Gegenprobe
+korrigiert die nachweislich falsche Übertragung einer Schnee-/Eisrutsch-Ausnahme
+auf Hagel und Schneedruck; WEVIG belegt, dass der Pfad auch abweichende
+Formulierungen und andere Vertragsinhalte verarbeitet.
+
+Die technische Aktivierung von FE, LW, EL, HP, VB und WE ist damit erfolgt.
+Ihre Full-Draft-Kataloge sind dadurch jedoch noch nicht fachlich freigegeben.
+Der nächste vollständige Zielhardwarelauf ist der erste Gesamtvergleich des
+neuen Evidenzwegs gegen die eingefrorene monolithische 320-Zeilen-Baseline.
+
 ## 10. Wahrheitsquellen für weitere Chats
 
 Vor substanzieller Arbeit sind diese Quellen in dieser Reihenfolge zu prüfen:

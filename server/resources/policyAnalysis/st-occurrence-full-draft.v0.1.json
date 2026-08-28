@@ -76,18 +76,32 @@
       "id": "ST-04",
       "label": "Hagelschäden an Dach und Fassade",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": ["Schnee- und Eisrutsch"]
+      },
       "components": [
         {
-          "id": "roof",
+          "id": "hail_damage_to_roof",
           "label": "Hagelschäden am Dach",
-          "factRole": "DAMAGE",
-          "aliases": ["Hagelschäden am Dach", "Hagelschäden an Dach"]
+          "factRole": "PERIL",
+          "aliases": [
+            "Hagel",
+            "Hagelschäden am Dach",
+            "Hagelschäden an Dach",
+            "Dachbelag"
+          ]
         },
         {
-          "id": "facade",
+          "id": "hail_damage_to_facade",
           "label": "Hagelschäden an der Fassade",
-          "factRole": "DAMAGE",
-          "aliases": ["Hagelschäden an der Fassade", "Hagelschäden an Fassaden"]
+          "factRole": "PERIL",
+          "aliases": [
+            "Hagel",
+            "Hagelschäden an der Fassade",
+            "Hagelschäden an Fassaden",
+            "Hausfassade",
+            "Außenmauern"
+          ]
         }
       ]
     },
@@ -131,20 +145,30 @@
       "id": "ST-06",
       "label": "Schneedruck auf Dach und Tragkonstruktion",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": ["Schnee- und Eisrutsch"]
+      },
       "components": [
         {
-          "id": "roof",
+          "id": "snow_pressure_on_roof",
           "label": "Schneedruck auf dem Dach",
-          "factRole": "DAMAGE",
-          "aliases": ["Schneedruck auf dem Dach", "Schneedruck auf Dach"]
+          "factRole": "PERIL",
+          "aliases": [
+            "Schneedruck",
+            "Schneedruck auf dem Dach",
+            "Schneedruck auf Dach",
+            "Dachbelag"
+          ]
         },
         {
-          "id": "supporting_structure",
+          "id": "snow_pressure_on_supporting_structure",
           "label": "Schneedruck auf der Tragkonstruktion",
-          "factRole": "DAMAGE",
+          "factRole": "PERIL",
           "aliases": [
+            "Schneedruck",
             "Schneedruck auf der Tragkonstruktion",
-            "Schneedruck auf Tragkonstruktionen"
+            "Schneedruck auf Tragkonstruktionen",
+            "tragenden Dachkonstruktion"
           ]
         }
       ]
@@ -227,6 +251,9 @@
       "id": "ST-11",
       "label": "Dachrinnen und Fallrohre, eigenes Sublimit",
       "requestedFields": ["limit"],
+      "scopeRules": {
+        "narrowAliases": ["Schnee- und Eisrutsch"]
+      },
       "components": [
         {
           "id": "gutter_downpipe_sublimit",
@@ -236,7 +263,10 @@
             "Sublimit für Dachrinnen und Fallrohre",
             "Dachrinnen und Fallrohre bis zu",
             "Dachrinnen und Fallrohre auf Erstes Risiko",
-            "Dachrinnen und Außenablaufrohre bis zu"
+            "Dachrinnen und Außenablaufrohre bis zu",
+            "Dachrinnen",
+            "Außenablaufrohre",
+            "Fallrohre"
           ]
         }
       ]
@@ -560,6 +590,9 @@
       "id": "ST-27",
       "label": "Lawine und Schneerutsch",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": ["Katastrophen"]
+      },
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
@@ -575,7 +608,9 @@
           "aliases": [
             "Lawine und Schneerutsch",
             "Lawinen und Schneerutsche",
-            "Lawinen oder Schneerutsche"
+            "Lawinen oder Schneerutsche",
+            "Lawine",
+            "Lawinen"
           ]
         },
         {
@@ -585,7 +620,10 @@
           "aliases": [
             "Lawine und Schneerutsch",
             "Lawinen und Schneerutsche",
-            "Lawinen oder Schneerutsche"
+            "Lawinen oder Schneerutsche",
+            "Schnee- und Eisrutsch",
+            "Schneerutsch",
+            "Schneerutsche"
           ]
         }
       ]

@@ -417,9 +417,15 @@ function buildCategoryTableRows({
       let documentedContent = componentDescription(requirement, rowJudgements);
       const displayedFields = [
         ["condition", "Bedingung"],
+        ["scope", "Geltungsbereich"],
         ["calculation_basis", "Berechnungsgrundlage"],
+        ["calculation_method", "Berechnungsmethode"],
         ["index_type", "Indexart"],
         ["duration", "Dauer"],
+        ["interval", "Intervall"],
+        ["threshold", "Schwellenwert"],
+        ["date", "Datum"],
+        ["annual_count", "Jahresanzahl"],
       ];
       for (const [fieldName, label] of displayedFields) {
         const facts = fieldFacts(
@@ -431,14 +437,22 @@ function buildCategoryTableRows({
         if (facts.length > 0)
           documentedContent += `; ${label}: ${uniqueNormalizedValues(facts).join("; ")}`;
       }
-      const limitFacts = fieldFacts(
-        fieldResult,
-        "limit",
-        candidates,
-        normalized.id
+      const amountFields = ["limit", "limits", "amount", "deductible"].map(
+        (fieldName) => ({
+          fieldName,
+          facts: fieldFacts(fieldResult, fieldName, candidates, normalized.id),
+        })
       );
-      if (reviewStatus !== REVIEW_STATUS.BELEGT && limitFacts.length > 0)
-        documentedContent += `; Limit des Teilbelegs: ${uniqueNormalizedValues(limitFacts).join(", ")}`;
+      const amountFacts = amountFields.flatMap(({ facts }) => facts);
+      if (reviewStatus !== REVIEW_STATUS.BELEGT && amountFacts.length > 0) {
+        const partialValueLabel = amountFields.some(
+          ({ fieldName, facts }) =>
+            facts.length > 0 && !["limit", "limits"].includes(fieldName)
+        )
+          ? "Wert des Teilbelegs"
+          : "Limit des Teilbelegs";
+        documentedContent += `; ${partialValueLabel}: ${uniqueNormalizedValues(amountFacts).join(", ")}`;
+      }
       if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
         documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
 
@@ -452,8 +466,8 @@ function buildCategoryTableRows({
           ? coverageFor(rollup, coverageDecisionRequired)
           : NOT_DETERMINABLE,
         coverageAmount:
-          completeAssertion && limitFacts.length > 0
-            ? uniqueNormalizedValues(limitFacts).join(", ")
+          completeAssertion && amountFacts.length > 0
+            ? uniqueNormalizedValues(amountFacts).join(", ")
             : NOT_DETERMINABLE,
         source: sourceCell(sources),
         reviewStatus,

@@ -20,6 +20,10 @@ describe("VS full QA CLI contracts", () => {
     "server/scripts/qa/runVsCandidateTriage.cjs",
     "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
     "server/scripts/qa/materializeVsFullResult.cjs",
+    "server/scripts/qa/extractPolicyDocument.cjs",
+    "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs",
+    "server/scripts/qa/materializeCategoryFullResult.cjs",
+    "server/scripts/qa/summarizeAllCategoryRun.cjs",
   ])("rejects unknown arguments in %s", (script) => {
     const result = run(script, ["--unknownArgument", "true"]);
 

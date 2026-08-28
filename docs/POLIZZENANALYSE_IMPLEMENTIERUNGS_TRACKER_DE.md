@@ -2125,3 +2125,79 @@ NO-GO: weiterer identischer Großlauf vor einem echten All-Kategorien-Runner
 
 Vollständiger Befund:
 `docs/LF_ALL_CATEGORIES_27B_MONOLITHISCHER_BEFUND_DE.md`.
+
+## 33. INC-011 – ST-Scope-Vertikalschnitt und gemeinsamer Acht-Kategorien-Pfad
+
+```text
+Increment-ID: INC-011
+Datum: 28. August 2026
+Scope: allgemeine Rollen-, Scope- und Wertebindung; ST als erster neuer Slice
+Ziel: ein wiederverwendbarer Evidenzpfad für VS, FE, LW, ST, EL, HP, VB, WE
+```
+
+### Implementierung
+
+- Die PDF wird mit `extractPolicyDocument.cjs` einmalig als privates,
+  seitengetreues Dokumentartefakt vorbereitet.
+- `buildCategoryOccurrenceWorksheet.cjs` erzeugt daraus beliebig viele
+  Kategoriensichten, ohne die PDF erneut zu extrahieren.
+- `deterministicCategoryEvidenceRules.js` trennt allgemeine Regel, enge
+  Ausnahme, Faktrolle und Kategorieabschnitt. Die bewährten VS-Sonderregeln
+  bleiben unverändert eingebunden.
+- Eine allgemeine eindeutige Regel bleibt für eine breite Zielkomponente
+  maßgeblich; engere Ausnahmen werden separat erhalten und nicht zu einem
+  Widerspruch oder allgemeinen Ausschluss hochgezogen.
+- Eine bloße Objekt- oder Begriffsfundstelle ohne lokal gebundenen Betrag,
+  Prozentsatz oder Limitbegriff kann keine `LIMIT`-Komponente belegen.
+- Nummerierte und fortgeführte Überschriften für FE, LW, ST, EL, HP, VB und WE
+  werden als Scopehinweise weitergegeben. Eine andere Überschrift ist ein
+  Hinweis, aber ohne weiteren Rollenbeweis kein automatischer Ausschluss.
+- Generische, quellengebundene Extraktoren materialisieren Beträge,
+  Selbstbehalte, Dauer, Intervall, Schwellenwerte, Datum, Jahresanzahl und
+  textuelle Bedingungen. Die validierten VS-Spezialextraktoren bleiben
+  stabil.
+- `run-all-categories-quality.command` führt alle acht Ansichten auf demselben
+  Dokumentartefakt aus und erzeugt 320 Tabellenzeilen plus Gesamtbericht.
+
+### Reale ST-Gegenprobe
+
+Die vorhandenen seitengetreuen Extraktionen der echten LF- und
+WEVIG-Kundenläufe wurden wiederverwendet; Vertragsinhalte wurden nicht als
+Anweisungen interpretiert.
+
+```text
+LF ST vorher:     9/53 Komponenten, 13 Kandidaten
+LF ST nachher:   16/53 Komponenten, 28 Kandidaten
+WEVIG ST vorher:  5/53 Komponenten,  7 Kandidaten
+WEVIG ST nachher: 6/53 Komponenten, 13 Kandidaten
+```
+
+Kritischer LF-Teiltest (`ST-01`, `ST-04`, `ST-06`, `ST-11`, `ST-27`):
+
+```text
+8/8 atomare Komponenten formal vollständig
+0 Triage-Modellaufrufe
+0 Wirkungs-Modellaufrufe
+ST-04 Dach + Fassade: INCLUDED / GENERAL
+ST-06 Dach + Tragkonstruktion: INCLUDED / GENERAL
+ST-11 eigenes Sublimit: UNKNOWN statt falschem EXCLUDED
+ST-27 Lawine + Schnee-/Eisrutsch: beide INCLUDED, getrennte Scopes sichtbar
+```
+
+Damit sind die falschen alten LF-Urteile `ST-04 Nein`, `ST-06 Nein` und
+`ST-11 Nein` ursachengebunden korrigiert. Der WEVIG-Gegenfall erfasst außerdem
+die anders formulierten Komponenten „optische Hagelschäden“ und
+„Photovoltaikanlagen auf Grund eines Sturmschadens“. Nicht belegte verbundene
+Teile bleiben `UNKNOWN`.
+
+### Entscheidung und Grenze
+
+```text
+PASS: ST-Scope-Hypothese auf LF, WEVIG und synthetischen Gegenfällen
+PASS: gemeinsamer technischer Pfad für alle acht Ansichten
+PASS: einmalige PDF-Vorbereitung im neuen Vollrunner
+PASS: 73 Jest-Suites / 793 Tests, Lint, Syntax und Diff-Prüfung
+REVIEW_REQUIRED: frischer vollständiger Qwen-3.8-27B-Lauf auf Zielhardware
+REVIEW_REQUIRED: fachliche Oracles für FE, LW, ST, EL, HP, VB und WE
+NO CLAIM: 99 Prozent oder allgemeine fachliche Vollständigkeit
+```

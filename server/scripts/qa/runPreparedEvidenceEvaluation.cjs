@@ -165,9 +165,9 @@ async function run() {
     controlMode === "technical-review"
       ? buildTechnicalReviewControlSet({
           worksheet,
-          controlSetId: `vs-full-technical-review:${path.basename(
-            worksheetFile
-          )}`,
+          controlSetId: `${String(
+            worksheet.catalog?.categoryView || "category"
+          ).toLowerCase()}-full-technical-review:${path.basename(worksheetFile)}`,
         })
       : JSON.parse(fs.readFileSync(controlFile, "utf8"));
   const candidateTriage = triageFile
@@ -364,7 +364,7 @@ async function run() {
         ({ candidates }) => !candidates.length
       ).length,
       deterministicTargetCount: judgements.filter(({ decisionOwner }) =>
-        String(decisionOwner).startsWith("SERVER_EXPLICIT_VS_RULE:")
+        String(decisionOwner).startsWith("SERVER_EXPLICIT_")
       ).length,
       modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
       modelAttemptCount: calls.length,

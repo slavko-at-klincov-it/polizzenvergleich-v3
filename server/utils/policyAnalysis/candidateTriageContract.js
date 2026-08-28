@@ -1,8 +1,10 @@
 const TRIAGE_SCHEMA_VERSION = 6;
 const {
-  DETERMINISTIC_BINDING,
-  deterministicVsCandidateBinding,
-} = require("./deterministicVsEvidenceRules");
+  deterministicCategoryCandidateBinding,
+  expectedCategoryScopeKeys,
+  resolvedCategoryView,
+} = require("./deterministicCategoryEvidenceRules");
+const { DETERMINISTIC_BINDING } = require("./deterministicVsEvidenceRules");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -269,6 +271,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       };
     });
     const source = candidate.occurrence;
+    const categoryView = resolvedCategoryView(worksheet, candidate.requirement);
     const allCostMembers = members.every(
       (member) => member.factRole === "COST"
     );
@@ -296,6 +299,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         source.context?.text || ""
       );
     const isExplicitLiabilityScope =
+      !["HP", "VB"].includes(categoryView) &&
       allCostMembers &&
       /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB|Bauherr)\b/iu.test(
         liabilityContext
@@ -355,11 +359,14 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         basis: "NO_EXPLICIT_COST_ROLE",
       };
     }
-    const matchedNarrowAlias = scopeSentence
-      ? (candidate.requirement.scopeRules?.narrowAliases || []).find((alias) =>
-          containsNormalizedPhrase(scopeSentence, alias)
-        )
-      : null;
+    const matchedNarrowAlias = (
+      candidate.requirement.scopeRules?.narrowAliases || []
+    ).find((alias) =>
+      containsNormalizedPhrase(
+        `${source.scopeLead?.text || ""}\n${scopeSentence || ""}`,
+        alias
+      )
+    );
     const matchedNarrowScopeKey = (
       candidate.requirement.scopeRules?.narrowScopeKeys || []
     ).includes(source.sectionScopeHint?.scopeKey)
@@ -397,28 +404,43 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           : "CATALOG_NARROW_SECTION",
         matchedAlias: matchedNarrowAlias || matchedNarrowScopeKey,
       };
+    } else if (
+      source.sectionScopeHint?.scopeKey &&
+      expectedCategoryScopeKeys(worksheet.catalog?.categoryView).includes(
+        source.sectionScopeHint.scopeKey
+      )
+    ) {
+      scopeResolution = {
+        owner: "SERVER",
+        scopeMatch: SCOPE_MATCH.GENERAL,
+        basis: "MATCHING_CATEGORY_SECTION",
+        matchedAlias: source.sectionScopeHint.scopeKey,
+      };
     }
-    const deterministicVsBinding = group
+    const deterministicCategoryBinding = group
       ? null
-      : deterministicVsCandidateBinding({
-          requirementId: candidate.requirement.id,
-          componentId: candidate.component.id,
+      : deterministicCategoryCandidateBinding({
+          worksheet,
+          requirement: candidate.requirement,
+          component: candidate.component,
           occurrence: candidate.occurrence,
         });
-    if (deterministicVsBinding) {
+    if (deterministicCategoryBinding) {
       const mentionOnly =
-        deterministicVsBinding.binding === DETERMINISTIC_BINDING.MENTION_ONLY;
+        deterministicCategoryBinding.binding ===
+        DETERMINISTIC_BINDING.MENTION_ONLY;
       const narrowScope =
-        deterministicVsBinding.binding === DETERMINISTIC_BINDING.NARROW_SCOPE;
+        deterministicCategoryBinding.binding ===
+        DETERMINISTIC_BINDING.NARROW_SCOPE;
       roleResolution = {
         owner: "SERVER",
         roleMatch: mentionOnly ? ROLE_MATCH.MISMATCH : ROLE_MATCH.MATCH,
-        basis: deterministicVsBinding.basis,
+        basis: deterministicCategoryBinding.basis,
       };
       scopeResolution = {
         owner: "SERVER",
         scopeMatch: narrowScope ? SCOPE_MATCH.NARROW : SCOPE_MATCH.GENERAL,
-        basis: deterministicVsBinding.basis,
+        basis: deterministicCategoryBinding.basis,
         matchedAlias: null,
       };
     }
@@ -428,6 +450,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       modelDecisionFields.push("scopeMatch");
     targets.push({
       targetId,
+      categoryView,
       candidateIds: members.map((member) => member.candidateId),
       requirementId: candidate.requirement.id,
       requirementLabel: candidate.requirement.label,
@@ -452,7 +475,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         : null,
       roleResolution,
       scopeResolution,
-      deterministicBindingBasis: deterministicVsBinding?.basis || null,
+      deterministicBindingBasis: deterministicCategoryBinding?.basis || null,
       modelDecisionFields,
     });
   }

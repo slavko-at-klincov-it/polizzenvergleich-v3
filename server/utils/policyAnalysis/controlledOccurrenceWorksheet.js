@@ -226,6 +226,15 @@ function precedingWordWindow(text, beforeOffset, wordLimit) {
   let pageEnd = beforeOffset;
   while (pageEnd > startWord.start && /\s/u.test(text[pageEnd - 1]))
     pageEnd -= 1;
+  if (
+    pageEnd > startWord.start &&
+    /[-•]/u.test(text[pageEnd - 1]) &&
+    (pageEnd - 1 === 0 || /[\n\r]/u.test(text[pageEnd - 2]))
+  ) {
+    pageEnd -= 1;
+    while (pageEnd > startWord.start && /\s/u.test(text[pageEnd - 1]))
+      pageEnd -= 1;
+  }
   return {
     pageStart: startWord.start,
     pageEnd,
@@ -383,28 +392,53 @@ function explicitPageScopeHints(pageText) {
 }
 
 function explicitSectionHeadings(pageText) {
-  const canonicalScopeByHeading = {
-    FEUER: "FEUER_INSURANCE",
-    LEITUNGSWASSER: "LEITUNGSWASSER_INSURANCE",
-    STURM: "STURM_INSURANCE",
-    GLAS: "GLASBRUCH_INSURANCE",
-    GLASBRUCH: "GLASBRUCH_INSURANCE",
-    GLASPAUSCHAL: "GLASBRUCH_INSURANCE",
+  const canonicalScopeForHeading = (value) => {
+    const normalized = normalizeWithOffsetMap(value).normalized.replace(
+      /\s+/gu,
+      ""
+    );
+    if (normalized.includes("leitungswasser"))
+      return "LEITUNGSWASSER_INSURANCE";
+    if (normalized.includes("feuer")) return "FEUER_INSURANCE";
+    if (normalized.includes("sturm")) return "STURM_INSURANCE";
+    if (normalized.includes("elementar") || normalized.includes("katastrophen"))
+      return "ELEMENTAR_INSURANCE";
+    if (normalized.includes("haftpflicht")) return "HAFTPFLICHT_INSURANCE";
+    if (normalized.includes("wohnungseigentum"))
+      return "WOHNUNGSEIGENTUM_INSURANCE";
+    if (
+      normalized.includes("allgemeinevertragsbestimmungen") ||
+      normalized === "vertragsbestimmungen"
+    )
+      return "GENERAL_CONTRACT_TERMS";
+    if (
+      normalized.includes("glaspauschal") ||
+      normalized.includes("glasbruch") ||
+      normalized === "glasversicherung"
+    )
+      return "GLASBRUCH_INSURANCE";
+    return null;
   };
-  const pattern = /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gmu;
+  const patterns = [
+    /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gmu,
+    /^\s*\d{1,3}\.\s+([\p{L}-]+(?:\s+[\p{L}-]+)*versicherung)\s*$/gimu,
+    /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,
+    /^\s*\d{1,3}\.\s+((?:Allgemeine\s+)?Vertragsbestimmungen|Wohnungseigentum)\s*$/gimu,
+  ];
   const headings = [];
-  for (const match of String(pageText || "").matchAll(pattern)) {
-    const text = match[0].trim();
-    if (text !== text.toLocaleUpperCase("de")) continue;
-    const headingKey = match[1].toLocaleUpperCase("de").replace(/\s+/gu, "");
-    headings.push({
-      scopeKey: canonicalScopeByHeading[headingKey] || null,
-      text,
-      pageStart: match.index,
-      pageEnd: match.index + match[0].length,
-    });
+  for (const pattern of patterns) {
+    for (const match of String(pageText || "").matchAll(pattern)) {
+      const text = match[0].trim();
+      if (headings.some(({ pageStart }) => pageStart === match.index)) continue;
+      headings.push({
+        scopeKey: canonicalScopeForHeading(match[1]),
+        text,
+        pageStart: match.index,
+        pageEnd: match.index + match[0].length,
+      });
+    }
   }
-  return headings;
+  return headings.sort((left, right) => left.pageStart - right.pageStart);
 }
 
 function printedPageIndex(label) {
@@ -1171,7 +1205,7 @@ function buildControlledOccurrenceWorksheet({
               : context;
           const scopeLead = precedingWordWindow(
             page.text,
-            evidenceContext.pageStart,
+            range.originalStart,
             scopeWordsBefore
           );
           const currentSectionBoundary = page.sectionHeadings

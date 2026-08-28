@@ -140,7 +140,9 @@ async function run() {
   if (controlMode === "technical-review")
     controlSet = {
       schemaVersion: 1,
-      controlSetId: "vs-full-triage-technical-review-generated-v1",
+      controlSetId: `${String(
+        worksheet.catalog?.categoryView || "category"
+      ).toLowerCase()}-full-triage-technical-review-generated-v1`,
       reviewStatus: "REVIEW_REQUIRED",
       controls: [],
     };

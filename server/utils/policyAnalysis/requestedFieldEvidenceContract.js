@@ -372,7 +372,7 @@ const GERMAN_MONTH_NUMBERS = Object.freeze({
 function extractDurationFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const durationPattern =
-    /(?<![\p{L}\p{N}])(?:\d{1,3}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\s+Monat(?:e|en)?(?![\p{L}\p{N}])/giu;
+    /(?<![\p{L}\p{N}])(?:\d{1,3}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\s+(Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?)(?![\p{L}\p{N}])/giu;
   return [...text.matchAll(durationPattern)]
     .filter((match) => valueFollowsCandidate(occurrence, match))
     .map((match) => {
@@ -380,19 +380,36 @@ function extractDurationFacts({ occurrence, binding }) {
       const normalizedWord = rawNumber
         .normalize("NFKC")
         .toLocaleLowerCase("de");
-      const months = /^\d+$/u.test(normalizedWord)
+      const count = /^\d+$/u.test(normalizedWord)
         ? Number(normalizedWord)
         : GERMAN_MONTH_NUMBERS[normalizedWord];
-      if (!Number.isInteger(months))
+      if (!Number.isInteger(count))
         throw requestedFieldError("REQUESTED_FIELD_DURATION_INVALID", match[0]);
+      const unitText = match[1].toLocaleLowerCase("de");
+      const unit = unitText.startsWith("stunde")
+        ? "HOUR"
+        : unitText.startsWith("tag")
+          ? "DAY"
+          : unitText.startsWith("woche")
+            ? "WEEK"
+            : unitText.startsWith("monat")
+              ? "MONTH"
+              : "YEAR";
+      const labels = {
+        HOUR: ["Stunde", "Stunden"],
+        DAY: ["Tag", "Tage"],
+        WEEK: ["Woche", "Wochen"],
+        MONTH: ["Monat", "Monate"],
+        YEAR: ["Jahr", "Jahre"],
+      };
       return sourceBoundFact({
         occurrence,
         binding,
         match,
         value: {
-          normalizedValue: `${months} ${months === 1 ? "Monat" : "Monate"}`,
+          normalizedValue: `${count} ${labels[unit][count === 1 ? 0 : 1]}`,
           valueType: "DURATION",
-          unit: "MONTH",
+          unit,
         },
       });
     });
@@ -408,11 +425,123 @@ function conditionNormalized(value) {
   return whitespaceNormalized(value).replace(/[;.]+$/u, "");
 }
 
-function extractPatternFacts({ occurrence, binding, patterns }) {
+function occurrenceSentenceRange(occurrence) {
+  const { text, documentStart } = validatedContext(occurrence);
+  const relativeStart = Number(occurrence.documentStart) - documentStart;
+  const relativeEnd = Number(occurrence.documentEnd) - documentStart;
+  if (
+    !Number.isInteger(relativeStart) ||
+    !Number.isInteger(relativeEnd) ||
+    relativeStart < 0 ||
+    relativeEnd <= relativeStart ||
+    relativeEnd > text.length
+  )
+    return null;
+  let start = relativeStart;
+  while (start > 0 && !/[.!?;\n\r]/u.test(text[start - 1])) start -= 1;
+  let end = relativeEnd;
+  while (end < text.length && !/[.!?;\n\r]/u.test(text[end])) end += 1;
+  if (end < text.length) end += 1;
+  while (start < end && /\s/u.test(text[start])) start += 1;
+  while (end > start && /\s/u.test(text[end - 1])) end -= 1;
+  return end > start ? { start, end, text, documentStart } : null;
+}
+
+function extractTextualOccurrenceFact({ occurrence, binding }) {
+  const range = occurrenceSentenceRange(occurrence);
+  if (!range) return [];
+  const rawValue = range.text.slice(range.start, range.end);
+  const match = [rawValue];
+  match.index = range.start;
+  return [
+    sourceBoundFact({
+      occurrence,
+      binding,
+      match,
+      value: {
+        normalizedValue: conditionNormalized(rawValue),
+        valueType: "TEXT",
+        unit: null,
+      },
+    }),
+  ];
+}
+
+function extractDateFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    localToOccurrence: true,
+    patterns: [
+      {
+        pattern:
+          /(?<!\d)(?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2}(?!\d)/gu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+      {
+        pattern:
+          /(?<!\d)(?:Jänner|Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+(?:19|20)\d{2}(?!\d)/giu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+    ],
+  });
+}
+
+function extractThresholdFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    localToOccurrence: true,
+    patterns: [
+      {
+        pattern:
+          /(?<![\p{L}\p{N}])\d{1,3}(?:[.,]\d+)?\s*km\s*\/\s*h(?![\p{L}\p{N}])/giu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+      {
+        pattern:
+          /(?<![\p{L}\p{N}])\d{1,3}(?:[.,]\d+)?\s*(?:mm|cm|m)(?![\p{L}\p{N}])/giu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+    ],
+  });
+}
+
+function extractAnnualCountFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    localToOccurrence: true,
+    patterns: [
+      {
+        pattern:
+          /(?<![\p{L}\p{N}])(?:\d{1,3}|ein(?:e[rmn]?)?|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn)\s*(?:mal|Fälle?)\s+(?:pro|je)\s+(?:Jahr|Kalenderjahr)(?![\p{L}\p{N}])/giu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+    ],
+  });
+}
+
+function extractPatternFacts({
+  occurrence,
+  binding,
+  patterns,
+  localToOccurrence = false,
+}) {
   const { text } = validatedContext(occurrence);
+  const localRange = localToOccurrence
+    ? occurrenceSentenceRange(occurrence)
+    : null;
   const facts = [];
   for (const { pattern, normalize } of patterns) {
-    for (const match of text.matchAll(pattern))
+    for (const match of text.matchAll(pattern)) {
+      if (
+        localToOccurrence &&
+        (!localRange ||
+          match.index < localRange.start ||
+          match.index + match[0].length > localRange.end)
+      )
+        continue;
       facts.push(
         sourceBoundFact({
           occurrence,
@@ -425,6 +554,7 @@ function extractPatternFacts({ occurrence, binding, patterns }) {
           },
         })
       );
+    }
   }
   return facts.sort(
     (left, right) => left.source.documentStart - right.source.documentStart
@@ -615,7 +745,8 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
   });
 }
 
-function extractorFor(requirementId, field) {
+function extractorFor(requirement, field) {
+  const requirementId = requirement.id;
   if (requirementId === "VS-01" && field === "limit")
     return extractInsuredNewValueFacts;
   if (requirementId === "VS-02" && field === "condition")
@@ -655,6 +786,18 @@ function extractorFor(requirementId, field) {
     return extractRestorationDurationFacts;
   if (requirementId === "VS-35" && field === "condition")
     return extractRestorationConditionFacts;
+  // Keep the validated VS value contract stable. Other category views use
+  // conservative field-type extractors until a narrower category oracle
+  // promotes a specialised extractor.
+  if (requirementId.startsWith("VS-")) return null;
+  if (["limit", "limits", "amount", "deductible"].includes(field))
+    return extractBoundLimitFacts;
+  if (["duration", "interval"].includes(field)) return extractDurationFacts;
+  if (field === "threshold") return extractThresholdFacts;
+  if (field === "date") return extractDateFacts;
+  if (field === "annual_count") return extractAnnualCountFacts;
+  if (["condition", "scope", "calculation_basis"].includes(field))
+    return extractTextualOccurrenceFact;
   return null;
 }
 
@@ -697,6 +840,32 @@ function valueCoversRequirement({
     ["VS-15", "VS-19", "VS-20", "VS-34"].includes(indexed.requirement.id)
   )
     return true;
+  if (!indexed.requirement.id.startsWith("VS-")) {
+    const role = indexed.component.factRole;
+    if (
+      ["limit", "limits", "amount", "deductible"].includes(field) &&
+      ["LIMIT", "DEDUCTIBLE", "COST", "BENEFIT"].includes(role)
+    )
+      return true;
+    if (
+      ["condition", "date", "scope"].includes(field) &&
+      ["CONDITION", "DEFINITION", "DOCUMENT_STATUS"].includes(role)
+    )
+      return true;
+    if (
+      ["duration", "interval"].includes(field) &&
+      ["CONDITION", "BENEFIT", "LIMIT"].includes(role)
+    )
+      return true;
+    if (field === "threshold" && role === "DEFINITION") return true;
+    if (field === "annual_count" && ["LIMIT", "CONDITION"].includes(role))
+      return true;
+    if (
+      field === "calculation_basis" &&
+      ["BENEFIT", "CONDITION", "DEFINITION"].includes(role)
+    )
+      return true;
+  }
   const bindingGroupId = indexed.occurrence.bindingGroupId;
   if (!bindingGroupId) return false;
 
@@ -721,7 +890,7 @@ function extractPreferredFacts({
   candidateById,
   bindingByCandidateId,
 }) {
-  const extractor = extractorFor(requirement.id, field);
+  const extractor = extractorFor(requirement, field);
   if (!extractor) return [];
 
   const factsByBinding = new Map(
@@ -805,7 +974,7 @@ function materializeRequestedFieldEvidence({
         )
       : [];
     const fields = [...requestedFields, ...optionalFields].map((field) => {
-      const extractor = extractorFor(requirement.id, field);
+      const extractor = extractorFor(requirement, field);
       if (!extractor)
         return {
           field,

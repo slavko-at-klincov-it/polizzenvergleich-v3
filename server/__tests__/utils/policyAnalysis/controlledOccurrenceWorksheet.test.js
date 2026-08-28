@@ -61,6 +61,87 @@ function component(worksheet, requirementId, componentId) {
 }
 
 describe("controlledOccurrenceWorksheet", () => {
+  test("inherits a numbered storm heading and keeps the narrow clause lead for later exclusions", () => {
+    const document = documentFromPages([
+      [
+        "5. Sturmversicherung",
+        "Versichert sind Schäden durch Hagel und Schneedruck.",
+        "Zusätzlich versichert sind Schäden durch Schnee- und Eisrutsch.",
+        "Nicht versichert sind Schäden an Hausfassade und Dachbelag.",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "st-scope-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "st-scope-test",
+        categoryView: "ST",
+        requirements: [
+          {
+            id: "ST-04",
+            label: "Hagel",
+            requestedFields: [],
+            scopeRules: { narrowAliases: ["Schnee- und Eisrutsch"] },
+            components: [
+              {
+                id: "hail",
+                label: "Hagel",
+                factRole: "PERIL",
+                aliases: ["Hagel", "Hausfassade"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const [hail, facade] = worksheet.requirements[0].components[0].occurrences;
+    expect(hail.sectionScopeHint).toMatchObject({
+      scopeKey: "STURM_INSURANCE",
+      text: "5. Sturmversicherung",
+    });
+    expect(facade.sectionScopeHint.scopeKey).toBe("STURM_INSURANCE");
+    expect(facade.scopeLead.text).toContain("Schnee- und Eisrutsch");
+    expect(facade.scopeLead.text).toContain("Nicht versichert sind");
+  });
+
+  test.each([
+    ["ALLGEMEINE VERTRAGSBESTIMMUNGEN", "GENERAL_CONTRACT_TERMS"],
+    ["7. Wohnungseigentum", "WOHNUNGSEIGENTUM_INSURANCE"],
+  ])("recognizes the cross-cutting section %s", (heading, scopeKey) => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        `${heading}\nVersichert sind Schäden durch Hagel.`,
+      ]),
+      documentFingerprint: `heading-${scopeKey}`,
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "section-heading-test",
+        categoryView: "ST",
+        requirements: [
+          {
+            id: "ST-04",
+            label: "Hagel",
+            requestedFields: [],
+            components: [
+              {
+                id: "hail",
+                label: "Hagel",
+                factRole: "PERIL",
+                aliases: ["Hagel"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(
+      worksheet.requirements[0].components[0].occurrences[0].sectionScopeHint
+    ).toMatchObject({ scopeKey, text: heading });
+  });
+
   test("normalizes German characters, soft hyphens and line-break hyphenation with reversible offsets", () => {
     const original = "Müll\u00adräume und Tiefgara-\ngen";
     const normalized = normalizeWithOffsetMap(original);
@@ -503,7 +584,7 @@ describe("controlledOccurrenceWorksheet", () => {
     }
   });
 
-  test("resets inherited scope at an unknown uppercase insurance section", () => {
+  test("switches inherited storm scope to the recognized liability section", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
         "Seite 3 von 7\nSTURMVERSICHERUNG",
@@ -520,8 +601,14 @@ describe("controlledOccurrenceWorksheet", () => {
     ).occurrences;
 
     expect(occurrences).toHaveLength(2);
-    expect(occurrences[0].sectionScopeHint).toBeNull();
-    expect(occurrences[1].sectionScopeHint).toBeNull();
+    expect(occurrences[0].sectionScopeHint).toMatchObject({
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      source: "CURRENT_PAGE_HEADING",
+    });
+    expect(occurrences[1].sectionScopeHint).toMatchObject({
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      source: "PRECEDING_PAGE_HEADING",
+    });
   });
 
   test("groups different components governed by the same coordinated Kosten für phrase", () => {

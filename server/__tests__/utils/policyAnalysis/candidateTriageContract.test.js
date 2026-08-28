@@ -113,6 +113,55 @@ function response(judgements) {
 }
 
 describe("candidateTriageContract", () => {
+  test("does not misclassify an HP cost inside the liability chapter as another scope", () => {
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "HP" },
+      requirements: [
+        {
+          id: "HP-01",
+          label: "Haftpflichtkosten",
+          requestedFields: [],
+          components: [
+            {
+              id: "liability_costs",
+              label: "Kosten",
+              factRole: "COST",
+              occurrences: [
+                {
+                  candidateId: "candidate:hp-cost",
+                  matchedAlias: "Kosten",
+                  pageNumber: 1,
+                  exactText: "Kosten",
+                  documentStart: 31,
+                  documentEnd: 37,
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text: "In der Haftpflichtversicherung sind Kosten mitversichert.",
+                    documentStart: 0,
+                    documentEnd: 57,
+                  },
+                  scopeLead: { text: "HAFTPFLICHTVERSICHERUNG" },
+                  sectionScopeHint: {
+                    scopeKey: "HAFTPFLICHT_INSURANCE",
+                    text: "HAFTPFLICHTVERSICHERUNG",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(target).toMatchObject({
+      categoryView: "HP",
+      roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
+      scopeResolution: { owner: "SERVER", scopeMatch: "GENERAL" },
+    });
+  });
+
   test("keeps explicit VS07-11 roles server-terminal and rejects a generic index mention", () => {
     const worksheet = {
       candidateOnly: true,

@@ -5,9 +5,10 @@ const {
   rollupCategoryResult,
 } = require("./categoryResultContract");
 const {
-  deterministicVsCandidateBinding,
-  deterministicVsPreparedDecision,
-} = require("./deterministicVsEvidenceRules");
+  deterministicCategoryCandidateBinding,
+  deterministicCategoryPreparedDecision,
+  resolvedCategoryView,
+} = require("./deterministicCategoryEvidenceRules");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -233,9 +234,10 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
-        const deterministicBinding = deterministicVsCandidateBinding({
-          requirementId: requirement.id,
-          componentId: component.id,
+        const deterministicBinding = deterministicCategoryCandidateBinding({
+          worksheet,
+          requirement,
+          component,
           occurrence,
         });
         candidates.push({
@@ -248,6 +250,12 @@ function buildPreparedEvidenceTargets({
             occurrence.physicalPageNumber || occurrence.pageNumber,
           printedPageLabel: occurrence.printedPageLabel || null,
           exactText: occurrence.exactText,
+          documentStart: Number.isInteger(occurrence.documentStart)
+            ? occurrence.documentStart
+            : null,
+          documentEnd: Number.isInteger(occurrence.documentEnd)
+            ? occurrence.documentEnd
+            : null,
           contextUnitType: occurrence.context.unitType,
           contextText: occurrence.context.text,
           contextDocumentStart: Number.isInteger(
@@ -267,6 +275,7 @@ function buildPreparedEvidenceTargets({
       }
       return {
         targetId: `prepared-target:${requirement.id}:${component.id}`,
+        categoryView: resolvedCategoryView(worksheet, requirement),
         requirementId: requirement.id,
         requirementLabel: requirement.label,
         componentId: component.id,
@@ -385,13 +394,13 @@ function selectedScopePicture({ target, selectedCandidateIds }) {
 }
 
 /**
- * Converts an explicit deterministic VS rule into the same immutable evidence
- * judgement shape used for validated model answers. Returning null keeps the
- * target on the model path.
+ * Converts an explicit deterministic category rule into the same immutable
+ * evidence judgement shape used for validated model answers. Returning null
+ * keeps the target on the model path.
  * Role: decide. Side effects: none.
  */
 function buildDeterministicPreparedEvidenceJudgement(target) {
-  const decision = deterministicVsPreparedDecision(target);
+  const decision = deterministicCategoryPreparedDecision(target);
   if (!decision) return null;
   return {
     targetId: target.targetId,
