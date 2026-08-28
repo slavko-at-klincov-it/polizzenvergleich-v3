@@ -244,6 +244,46 @@ function extractBoundLimitFacts(options) {
   );
 }
 
+function extractOutbuildingLimitFacts(options) {
+  const facts = extractBoundLimitFacts(options);
+  const context = validatedContext(options.occurrence);
+  const occurrenceEnd = Number(options.occurrence?.documentEnd);
+  if (!Number.isInteger(occurrenceEnd)) return facts;
+  const concatenatedPattern =
+    /Erstes\s+Risiko(EUR\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])/giu;
+  for (const match of context.text.matchAll(concatenatedPattern)) {
+    const rawValue = match[1];
+    const valueMatch = [rawValue];
+    valueMatch.index = match.index + match[0].indexOf(rawValue);
+    const sourceStart = context.documentStart + valueMatch.index;
+    if (
+      !valueFollowsCandidate(options.occurrence, valueMatch) ||
+      sourceStart > occurrenceEnd + 360
+    )
+      continue;
+    facts.push(
+      sourceBoundFact({
+        occurrence: options.occurrence,
+        binding: options.binding,
+        match: valueMatch,
+        value: {
+          normalizedValue: `EUR ${rawValue.replace(/^EUR/iu, "")}`,
+          valueType: "MONEY",
+          unit: "EUR",
+        },
+      })
+    );
+  }
+  const unique = new Map();
+  for (const fact of facts) {
+    const key = `${fact.source.documentStart}:${fact.source.documentEnd}:${fact.normalizedValue}`;
+    if (!unique.has(key)) unique.set(key, fact);
+  }
+  return [...unique.values()].sort(
+    (left, right) => left.source.documentStart - right.source.documentStart
+  );
+}
+
 function extractSectionGovernorLimitFacts({ occurrence, binding }) {
   const { text, documentStart } = validatedContext(occurrence);
   const occurrenceStart = Number(occurrence.documentStart) - documentStart;
@@ -432,6 +472,53 @@ function extractCurrentValueConditionFacts({ occurrence, binding }) {
   });
 }
 
+function extractRestorationDurationFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const durationPattern =
+    /(?<![\p{L}\p{N}])(?:3|drei|dreier|dreien|dreiem)\s+Jahr(?:e|en)?(?![\p{L}\p{N}])/giu;
+  return [...text.matchAll(durationPattern)]
+    .filter((match) => valueFollowsCandidate(occurrence, match))
+    .map((match) =>
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: "3 Jahre",
+          valueType: "DURATION",
+          unit: "YEAR",
+        },
+      })
+    );
+}
+
+function extractRestorationConditionFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern:
+          /Verwendung\s+der\s+Entschädigung\s+zur\s+Wiederbeschaffung\s+oder\s+Wiederherstellung[\s\S]{0,180}?innerhalb\s+dreier\s+Jahre[\s\S]{0,100}?sichergestellt\s+ist/giu,
+        normalize: () =>
+          "Neuwertanteil nur bei gesicherter Wiederbeschaffung oder Wiederherstellung innerhalb von 3 Jahren",
+      },
+      {
+        pattern:
+          /nicht\s+innerhalb\s+dreier\s+Jahre[\s\S]{0,180}?Entschädigung\s+nach\s+dem\s+Zeitwert/giu,
+        normalize: () =>
+          "Keine Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren: Entschädigung zum Zeitwert",
+      },
+      {
+        pattern:
+          /Frist\s+f[üu]r\s+die\s+Wiederherstellung\s+um\s+die\s+Dauer\s+des\s+Deckungsprozesses\s+erstreckt/giu,
+        normalize: () =>
+          "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
+      },
+    ],
+  });
+}
+
 function extractUnderinsurancePrerequisiteFacts({ occurrence, binding }) {
   return extractPatternFacts({
     occurrence,
@@ -542,11 +629,12 @@ function extractorFor(requirementId, field) {
     return extractUnderinsurancePrerequisiteFacts;
   if (requirementId === "VS-11" && field === "index_type")
     return extractIndexTypeFacts;
+  if (requirementId === "VS-15" && field === "limit")
+    return extractOutbuildingLimitFacts;
   if (
     [
       "VS-19",
       "VS-20",
-      "VS-15",
       "VS-22",
       "VS-23",
       "VS-29",
@@ -563,6 +651,10 @@ function extractorFor(requirementId, field) {
     return extractRentLossCalculationBasisFacts;
   if (requirementId === "VS-31" && field === "duration")
     return extractDurationFacts;
+  if (requirementId === "VS-35" && field === "duration")
+    return extractRestorationDurationFacts;
+  if (requirementId === "VS-35" && field === "condition")
+    return extractRestorationConditionFacts;
   return null;
 }
 
@@ -591,6 +683,14 @@ function valueCoversRequirement({
   )
     return true;
   if (indexed.requirement.id === "VS-31" && field === "duration") return true;
+  if (
+    indexed.requirement.id === "VS-35" &&
+    ["duration", "condition"].includes(field) &&
+    ["restoration_clause", "reconstruction_period"].includes(
+      indexed.component.id
+    )
+  )
+    return true;
   if (
     field === "limit" &&
     indexed.component.factRole === "INSURED_OBJECT" &&

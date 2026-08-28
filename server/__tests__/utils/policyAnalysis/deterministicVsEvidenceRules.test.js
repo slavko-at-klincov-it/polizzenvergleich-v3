@@ -64,6 +64,24 @@ describe("deterministicVsEvidenceRules", () => {
       "Maßgeblich ist der Baukostenindex (Baumeisterarbeiten).",
       "EXPLICIT_INDEX_TYPE",
     ],
+    [
+      "VS-15",
+      "outbuilding_cover",
+      "Darüber hinaus besteht Versicherungsschutz für Nebengebäude bis maximal 5 %.",
+      "EXPLICIT_OUTBUILDING_COVER",
+    ],
+    [
+      "VS-35",
+      "restoration_clause",
+      "Der Anspruch besteht, wenn die Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung innerhalb dreier Jahre sichergestellt ist.",
+      "EXPLICIT_RESTORATION_CLAUSE",
+    ],
+    [
+      "VS-35",
+      "reconstruction_period",
+      "Wird die Sache nicht innerhalb dreier Jahre wiederhergestellt, erfolgt die Entschädigung nach dem Zeitwert.",
+      "EXPLICIT_RECONSTRUCTION_PERIOD",
+    ],
   ])(
     "binds explicit %s evidence directly",
     (requirementId, componentId, text, basis) => {
@@ -89,6 +107,49 @@ describe("deterministicVsEvidenceRules", () => {
     ).toEqual({
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,
       basis: "GENERIC_INDEX_MENTION_WITHOUT_TYPE",
+    });
+  });
+
+  test("does not treat a liability mention of an outbuilding as insured property cover", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-15",
+        componentId: "outbuilding_cover",
+        occurrence: occurrence(
+          "Die Haftpflicht umfasst Schadenersatzverpflichtungen aus Nebengebäuden auf Erstes Risiko."
+        ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "EXPLICIT_OUTBUILDING_COVER_WRONG_SCOPE",
+    });
+  });
+
+  test("keeps a bare outbuilding occurrence as a non-evidentiary mention", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-15",
+        componentId: "outbuilding_cover",
+        occurrence: occurrence("innerhalb der Gebäude und Nebengebäude"),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_OUTBUILDING_MENTION_WITHOUT_COVER",
+    });
+  });
+
+  test("keeps a generic restoration mention outside the clause as non-evidentiary", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-35",
+        componentId: "restoration_clause",
+        occurrence: occurrence(
+          "Der Gebäudeeigentümer hat vertraglich für die Wiederherstellung aufzukommen."
+        ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_RESTORATION_MENTION_WITHOUT_CLAUSE",
     });
   });
 

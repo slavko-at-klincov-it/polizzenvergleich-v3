@@ -76,11 +76,17 @@ function evaluateVsPilotOracle({
   rows,
   requestedFieldEvidence,
   selectedSources,
+  candidateIdentityMode = "STRICT",
 }) {
   if (!oracleDocument || !Array.isArray(oracleDocument.rows))
     throw oracleError("VS_ORACLE_DOCUMENT_INVALID");
   if (!Array.isArray(rows) || !Array.isArray(selectedSources))
     throw oracleError("VS_ORACLE_RESULT_INVALID");
+  if (!["STRICT", "ALLOW_ALIAS_DRIFT"].includes(candidateIdentityMode))
+    throw oracleError(
+      "VS_ORACLE_CANDIDATE_IDENTITY_MODE_INVALID",
+      candidateIdentityMode
+    );
 
   const fieldByRequirement = requestedFieldByRequirement(
     requestedFieldEvidence
@@ -185,13 +191,17 @@ function evaluateVsPilotOracle({
       reasons.push("REQUESTED_FIELD_STATUS_MISMATCH");
     if (!compareArrays(normalizedValues, expectedValues))
       reasons.push("NORMALIZED_VALUES_MISMATCH");
-    if (missingValues(valueCandidateSet.required, valueCandidateIds).length > 0)
-      reasons.push("VALUE_CANDIDATES_MISMATCH");
-    for (const candidateId of disallowedValues(
-      valueCandidateIds,
-      valueCandidateSet.allowed
-    ))
-      reasons.push(`VALUE_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    if (candidateIdentityMode === "STRICT") {
+      if (
+        missingValues(valueCandidateSet.required, valueCandidateIds).length > 0
+      )
+        reasons.push("VALUE_CANDIDATES_MISMATCH");
+      for (const candidateId of disallowedValues(
+        valueCandidateIds,
+        valueCandidateSet.allowed
+      ))
+        reasons.push(`VALUE_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    }
     for (const candidateId of valueCandidateSet.forbidden)
       if (valueCandidateIds.includes(candidateId))
         reasons.push(`FORBIDDEN_VALUE_CANDIDATE_SELECTED:${candidateId}`);
@@ -205,13 +215,15 @@ function evaluateVsPilotOracle({
     for (const page of valueSourcePageSet.forbidden)
       if (valueSourcePages.includes(page))
         reasons.push(`FORBIDDEN_VALUE_SOURCE_PAGE_SELECTED:${page}`);
-    if (missingValues(candidateSet.required, selectedCandidateIds).length > 0)
-      reasons.push("SELECTED_CANDIDATES_MISMATCH");
-    for (const candidateId of disallowedValues(
-      selectedCandidateIds,
-      candidateSet.allowed
-    ))
-      reasons.push(`SELECTED_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    if (candidateIdentityMode === "STRICT") {
+      if (missingValues(candidateSet.required, selectedCandidateIds).length > 0)
+        reasons.push("SELECTED_CANDIDATES_MISMATCH");
+      for (const candidateId of disallowedValues(
+        selectedCandidateIds,
+        candidateSet.allowed
+      ))
+        reasons.push(`SELECTED_CANDIDATE_NOT_ALLOWED:${candidateId}`);
+    }
     for (const candidateId of candidateSet.forbidden)
       if (selectedCandidateIds.includes(candidateId))
         reasons.push(`FORBIDDEN_CANDIDATE_SELECTED:${candidateId}`);
@@ -249,6 +261,7 @@ function evaluateVsPilotOracle({
 
   return {
     pass: identityReasons.length === 0 && results.every(({ pass }) => pass),
+    candidateIdentityMode,
     identityReasons,
     passedRows: results.filter(({ pass }) => pass).length,
     totalRows: results.length,

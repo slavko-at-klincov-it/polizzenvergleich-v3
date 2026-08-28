@@ -4,6 +4,9 @@ Stand: 28. August 2026
 
 Release-Tag: `v3.3.0-rc.3`
 
+> **Abgelöst:** Für neue Kundenläufe `v3.3.0-rc.4` verwenden. RC3 bleibt als
+> reproduzierbare Versuchsevidenz des ersten vollständigen 27B-Laufs erhalten.
+
 ## Zweck
 
 RC3 ersetzt RC2 ausschließlich für die robuste Ausführung des vollständigen

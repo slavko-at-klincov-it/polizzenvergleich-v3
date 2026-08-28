@@ -32,6 +32,10 @@ const PILOT_ORACLE = path.join(
   REPOSITORY_ROOT,
   "server/resources/policyAnalysis/vs-pilot-oracle.v0.1.json"
 );
+const FULL_CATALOG = path.join(
+  REPOSITORY_ROOT,
+  "server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json"
+);
 const PILOT_IDS = Object.freeze(["VS-16", "VS-17", "VS-21", "VS-28"]);
 const V321_VS_PROMPT_SHA256 =
   "0ff41d99eaa30eb516af5c60f536a39f381ce7184a46bbed4ce69525e47f466a";
@@ -150,6 +154,31 @@ function normalized(value) {
     .trim();
 }
 
+function worksheetMatchesCatalogShape(worksheet, catalog) {
+  if (
+    worksheet?.catalog?.id !== catalog?.catalogId ||
+    worksheet?.catalog?.categoryView !== catalog?.categoryView ||
+    !Array.isArray(worksheet?.requirements) ||
+    !Array.isArray(catalog?.requirements) ||
+    worksheet.requirements.length !== catalog.requirements.length
+  )
+    return false;
+  return catalog.requirements.every((expected, requirementIndex) => {
+    const observed = worksheet.requirements[requirementIndex];
+    if (
+      observed?.id !== expected.id ||
+      !Array.isArray(observed?.components) ||
+      !Array.isArray(expected?.components) ||
+      observed.components.length !== expected.components.length
+    )
+      return false;
+    return expected.components.every(
+      (component, componentIndex) =>
+        observed.components[componentIndex]?.id === component.id
+    );
+  });
+}
+
 function compareRows({
   legacyRows,
   adaptedRows,
@@ -261,6 +290,7 @@ async function main() {
   if (!args.embeddingModel) fail("--embeddingModel ist erforderlich");
 
   const categoryPrompt = fs.readFileSync(CATEGORY_PROMPT, "utf8");
+  const fullCatalog = readJson(FULL_CATALOG);
   const definitions = extractCategoryDefinitions(categoryPrompt);
   const requiredNotice = extractRequiredNotice(categoryPrompt);
   if (definitions.length !== 36)
@@ -319,6 +349,12 @@ async function main() {
     ),
     requestedFieldEvidence: requestedFields,
     selectedSources,
+    // The full catalog intentionally adds overlapping aliases and therefore
+    // may assign different opaque candidate IDs to the same bound clause.
+    // Full validation remains strict for PDF identity, row semantics, typed
+    // values and physical source pages; the dedicated pilot runner keeps the
+    // default STRICT candidate-ID contract.
+    candidateIdentityMode: "ALLOW_ALIAS_DRIFT",
   });
   const comparisons = compareRows({
     legacyRows,
@@ -348,14 +384,9 @@ async function main() {
   const expectedIds = definitions.map(({ id }) => id);
   const observedIds = worksheet.requirements.map(({ id }) => id);
   const fullCatalogPass = Boolean(
-    worksheet.catalog?.id === "vs-occurrence-full-draft-v0.2" &&
-      worksheet.catalog?.categoryView === "VS" &&
+    worksheetMatchesCatalogShape(worksheet, fullCatalog) &&
       worksheet.document?.fingerprint === pdfSha256 &&
       worksheet.requirements.length === 36 &&
-      worksheet.requirements.reduce(
-        (count, requirement) => count + requirement.components.length,
-        0
-      ) === 64 &&
       expectedIds.every((id, index) => observedIds[index] === id)
   );
   const artifactIdentityPass = Boolean(

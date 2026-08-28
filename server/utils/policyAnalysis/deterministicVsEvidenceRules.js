@@ -50,6 +50,17 @@ function boundSectionGovernorPrecedesOccurrence(occurrence) {
 }
 
 const EXPLICIT_COMPONENT_RULES = Object.freeze({
+  "VS-15:outbuilding_cover": {
+    basis: "EXPLICIT_OUTBUILDING_COVER",
+    pattern:
+      /(?:Versicherungsschutz\s+f[üu]r[\s\S]{0,260}?Nebengebäude|(?:gemeinschaftlich\s+genutzte\s+)?Nebengebäude[\s\S]{0,220}?auf\s+Erstes\s+Risiko)/iu,
+    reject: /(?:Schadenersatzverpflichtungen|Haftpflicht)/iu,
+  },
+  "VS-15:named_outbuilding_designation": {
+    basis: "EXPLICIT_NAMED_OUTBUILDING_DESIGNATION",
+    pattern:
+      /(?:namentlich\s+angef[üu]hrte\s+Nebengebäude|Nebengebäude\s+namentlich\s+in\s+der\s+Polizze\s+angef[üu]hrt)/iu,
+  },
   "VS-19:outdoor_paths": {
     basis: "EXPLICIT_OUTDOOR_PATHS",
     pattern: /Außenanlagen[\s\S]{0,900}?Gehwege/iu,
@@ -156,6 +167,16 @@ const EXPLICIT_COMPONENT_RULES = Object.freeze({
     basis: "EXPLICIT_COMMUNITY_TOOLS",
     pattern:
       /Werkzeuge,?\s+Geräte\s+und\s+Maschinen,?\s+welche\s+zur\s+Pflege\s+und\s+Wartung/iu,
+  },
+  "VS-35:restoration_clause": {
+    basis: "EXPLICIT_RESTORATION_CLAUSE",
+    pattern:
+      /(?:Verwendung\s+der\s+Entschädigung[\s\S]{0,300}?(?:Wiederbeschaffung|Wiederherstellung)|nicht\s+innerhalb\s+dreier\s+Jahre[\s\S]{0,220}?Entschädigung\s+nach\s+dem\s+Zeitwert|Frist\s+f[üu]r\s+die\s+Wiederherstellung[\s\S]{0,140}?Deckungsprozesses)/iu,
+  },
+  "VS-35:reconstruction_period": {
+    basis: "EXPLICIT_RECONSTRUCTION_PERIOD",
+    pattern:
+      /(?:innerhalb\s+dreier\s+Jahre[\s\S]{0,200}?(?:sichergestellt|wiederhergestellt)|nicht\s+innerhalb\s+dreier\s+Jahre[\s\S]{0,220}?Entschädigung\s+nach\s+dem\s+Zeitwert|Frist\s+f[üu]r\s+die\s+Wiederherstellung[\s\S]{0,140}?Deckungsprozesses)/iu,
   },
   "VS-36:maximum_indemnity_per_event": {
     basis: "EXPLICIT_MAXIMUM_INDEMNITY_PER_LOSS",
@@ -332,6 +353,20 @@ function deterministicVsCandidateBinding({
     }
   }
 
+  if (key === "VS-15:outbuilding_cover" && /Nebengebäude/iu.test(text))
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_OUTBUILDING_MENTION_WITHOUT_COVER",
+    };
+  if (
+    ["VS-35:restoration_clause", "VS-35:reconstruction_period"].includes(key) &&
+    /(?:Wiederherstellung|Wiederaufbau)/iu.test(text)
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_RESTORATION_MENTION_WITHOUT_CLAUSE",
+    };
+
   return null;
 }
 
@@ -346,6 +381,8 @@ const EFFECT_BY_COMPONENT = Object.freeze({
   "VS-11:index_type": COVERAGE_EFFECT.DEFINED,
   "VS-13:apartment_interior_fitout": COVERAGE_EFFECT.INCLUDED,
   "VS-14:apartment_special_equipment": COVERAGE_EFFECT.INCLUDED,
+  "VS-15:outbuilding_cover": COVERAGE_EFFECT.INCLUDED,
+  "VS-15:named_outbuilding_designation": COVERAGE_EFFECT.DEFINED,
   "VS-19:outdoor_paths": COVERAGE_EFFECT.INCLUDED,
   "VS-19:outdoor_lighting": COVERAGE_EFFECT.INCLUDED,
   "VS-19:planting": COVERAGE_EFFECT.INCLUDED,
@@ -369,6 +406,8 @@ const EFFECT_BY_COMPONENT = Object.freeze({
     COVERAGE_EFFECT.DEFINED,
   "VS-34:community_devices": COVERAGE_EFFECT.INCLUDED,
   "VS-34:community_tools": COVERAGE_EFFECT.INCLUDED,
+  "VS-35:restoration_clause": COVERAGE_EFFECT.DEFINED,
+  "VS-35:reconstruction_period": COVERAGE_EFFECT.DEFINED,
   "VS-36:maximum_indemnity_per_event": COVERAGE_EFFECT.INCLUDED,
 });
 

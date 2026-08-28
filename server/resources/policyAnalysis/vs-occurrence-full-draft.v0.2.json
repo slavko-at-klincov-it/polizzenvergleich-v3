@@ -277,10 +277,20 @@
       "optionalFields": ["limit"],
       "components": [
         {
-          "id": "named_outbuilding",
-          "label": "Namentlich angeführtes Nebengebäude",
+          "id": "outbuilding_cover",
+          "label": "Nebengebäude allgemein",
           "factRole": "INSURED_OBJECT",
           "aliases": ["Nebengebäude", "Nebengebäuden"]
+        },
+        {
+          "id": "named_outbuilding_designation",
+          "label": "Namentliche Anführung in der Polizze",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "namentlich angeführtes Nebengebäude",
+            "namentlich angeführte Nebengebäude",
+            "Nebengebäude namentlich in der Polizze angeführt"
+          ]
         }
       ]
     },
@@ -288,6 +298,7 @@
       "id": "VS-16",
       "label": "Garagen und Tiefgarage mitversichert",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "components": [
         {
           "id": "garage",
@@ -464,6 +475,12 @@
         }
       ],
       "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ],
         "narrowAliases": [
           "radioaktiv",
           "kontaminiert",
@@ -703,6 +720,14 @@
       "id": "VS-28",
       "label": "Mietzinsentgang, Dauer der Leistung",
       "requestedFields": ["duration"],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "rent_loss",
@@ -933,6 +958,8 @@
           "factRole": "CONDITION",
           "aliases": [
             "Wiederherstellungsklausel",
+            "9. Wiederherstellung",
+            "Wiederbeschaffung oder Wiederherstellung",
             "Wiederherstellung des Gebäudes",
             "Wiederaufbau des Gebäudes"
           ]
@@ -944,6 +971,7 @@
           "aliases": [
             "Wiederherstellungsfrist",
             "Frist für die Wiederherstellung",
+            "innerhalb dreier Jahre",
             "innerhalb von drei Jahren wiederhergestellt"
           ]
         }

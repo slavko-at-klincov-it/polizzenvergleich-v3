@@ -137,4 +137,26 @@ describe("categoryCatalogCoverageContract", () => {
       });
     }
   );
+
+  test("keeps the proven VS pilot definitions unchanged in the full catalog", () => {
+    const resources = path.join(__dirname, "../../../resources/policyAnalysis");
+    const pilot = JSON.parse(
+      fs.readFileSync(
+        path.join(resources, "vs-occurrence-pilot.v0.1.json"),
+        "utf8"
+      )
+    );
+    const full = JSON.parse(
+      fs.readFileSync(
+        path.join(resources, "vs-occurrence-full-draft.v0.2.json"),
+        "utf8"
+      )
+    );
+    const fullById = new Map(
+      full.requirements.map((requirement) => [requirement.id, requirement])
+    );
+
+    for (const requirement of pilot.requirements)
+      expect(fullById.get(requirement.id)).toEqual(requirement);
+  });
 });

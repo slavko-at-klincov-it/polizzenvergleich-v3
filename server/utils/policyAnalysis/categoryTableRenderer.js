@@ -431,16 +431,18 @@ function buildCategoryTableRows({
         if (facts.length > 0)
           documentedContent += `; ${label}: ${uniqueNormalizedValues(facts).join("; ")}`;
       }
-      if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
-        documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
-
-      const completeAssertion = reviewStatus === REVIEW_STATUS.BELEGT;
       const limitFacts = fieldFacts(
         fieldResult,
         "limit",
         candidates,
         normalized.id
       );
+      if (reviewStatus !== REVIEW_STATUS.BELEGT && limitFacts.length > 0)
+        documentedContent += `; Limit des Teilbelegs: ${uniqueNormalizedValues(limitFacts).join(", ")}`;
+      if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
+        documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
+
+      const completeAssertion = reviewStatus === REVIEW_STATUS.BELEGT;
       return Object.freeze({
         categoryId: normalized.id,
         stage: normalized.stage,

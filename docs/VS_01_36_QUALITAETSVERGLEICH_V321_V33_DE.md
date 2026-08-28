@@ -3,6 +3,36 @@
 Stand: 28. August 2026
 Abschlusslauf: `INC-009-VS-FULL-QUALITY-AB-LOCAL-4B-R07`
 
+## Ergänzung: RC4-Nachweis mit den echten 27B-Kundenartefakten
+
+Der erste vollständige RC3-Lauf am Kunden-Mac-Studio bestätigte den
+grundsätzlichen Qualitätsgewinn, zeigte aber drei schlechtere Zellen und eine
+Full-Katalog-Integrationslücke. RC4 korrigiert genau diese Befunde:
+
+- LF VS-15: allgemeine Nebengebäudedeckung und namentliche Anführung sind
+  getrennt; das 5-%-Limit bleibt als Teilbeleg sichtbar.
+- WEVIG VS-15: der allgemeine Teilbeleg einschließlich EUR 1.530.400,00 bleibt
+  sichtbar, ohne eine namentliche Anführung zu behaupten.
+- LF VS-35: die belegte Dreijahresfrist und ihre Bedingungen werden wieder
+  vollständig ausgegeben.
+- LF VS-16: die im Pilot bewährte Scope-Policy ist nun auch im Full-Katalog
+  aktiv; das Ergebnis lautet `Ja / BELEGT`.
+
+Die gespeicherten echten Qwen-3.8-27B-Triage- und Wirkungsentscheidungen wurden
+mit RC4 neu materialisiert. LF und WEVIG bestehen dabei jeweils alle vier
+Pilot-Oracle-Zeilen. Die aktualisierte quellenbezogene Bewertung lautet:
+
+| Urteil für RC4 gegenüber V3.2.1 | Gesamt |
+| ------------------------------- | -----: |
+| BESSER                          |     59 |
+| GLEICH                          |     12 |
+| UNKLAR                          |      1 |
+| SCHLECHTER                      |      0 |
+
+Dieser Replay-Nachweis verwendet echte 27B-Entscheidungen, ist aber kein
+frischer Modelllauf. Die endgültige Bestätigung erfolgt mit RC4 und denselben
+beiden PDFs am Kunden-Mac-Studio.
+
 ## Aktueller Abschlussbefund
 
 Der vollständige lokale Vergleich ist positiv. Der neue servergebundene
@@ -72,7 +102,7 @@ Qwen-3.8-27B-Vollvergleich am Kunden-Mac-Studio.
 | VS-28 | GLEICH | BESSER | LF-Dauer bleibt sechs Monate; WEVIG wird als Vorschlag mit eigener Dauer gebunden                                             |
 | VS-29 | BESSER | BESSER | Höhe oder Berechnungsgrundlage wird eigenständig statt durch Wiederholung der VS-28-Dauer beantwortet                         |
 | VS-30 | BESSER | BESSER | Mietzinsentgang wird nicht als Eigennutzer-Nutzungsausfall ausgegeben                                                         |
-| VS-31 | BESSER | BESSER | Unterkunftslimits und Leistungsdauer sind in beiden Dokumenten lokal gebunden                                                  |
+| VS-31 | BESSER | BESSER | Unterkunftslimits und Leistungsdauer sind in beiden Dokumenten lokal gebunden                                                 |
 | VS-32 | BESSER | BESSER | Miet- oder Unterkunftsfristen werden nicht als Umzugskosten übernommen                                                        |
 | VS-33 | BESSER | BESSER | Vorsorgedeckung erhält das richtige lokale 10-%- beziehungsweise EUR-6.121.600,00-Limit                                       |
 | VS-34 | GLEICH | BESSER | LF-Kerninhalt erhalten; WEVIG trennt Gemeinschaftsgeräte von nicht belegtem Werkzeug                                          |

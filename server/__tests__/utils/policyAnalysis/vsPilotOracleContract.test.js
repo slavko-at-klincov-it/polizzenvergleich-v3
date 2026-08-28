@@ -159,6 +159,39 @@ describe("vsPilotOracleContract", () => {
     );
   });
 
+  test("full-catalog mode ignores opaque candidate drift but still enforces physical pages", () => {
+    const input = validInput();
+    input.candidateIdentityMode = "ALLOW_ALIAS_DRIFT";
+    input.selectedSources[0].candidateId = "candidate:full-catalog-alias";
+    input.requestedFieldEvidence.requirements[1].fields[0].facts[0].source.candidateId =
+      "candidate:full-catalog-value-alias";
+
+    expect(evaluateVsPilotOracle(input)).toMatchObject({
+      pass: true,
+      candidateIdentityMode: "ALLOW_ALIAS_DRIFT",
+    });
+
+    input.selectedSources[0].physicalPageNumber = 2;
+    input.rows[1].source = "PDF-Seite 2: „falsche Seite“";
+    expect(evaluateVsPilotOracle(input).results[1].reasons).toEqual(
+      expect.arrayContaining([
+        "SELECTED_SOURCE_PAGES_MISMATCH",
+        "RENDERED_SOURCE_PAGES_MISMATCH",
+      ])
+    );
+
+    const forbidden = validInput();
+    forbidden.candidateIdentityMode = "ALLOW_ALIAS_DRIFT";
+    forbidden.oracleDocument = JSON.parse(JSON.stringify(ORACLE));
+    forbidden.oracleDocument.rows[1].forbiddenCandidateIds = [
+      "candidate:known-wrong-scope",
+    ];
+    forbidden.selectedSources[0].candidateId = "candidate:known-wrong-scope";
+    expect(evaluateVsPilotOracle(forbidden).results[1].reasons).toContain(
+      "FORBIDDEN_CANDIDATE_SELECTED:candidate:known-wrong-scope"
+    );
+  });
+
   test("fails when the normalized value is right but its source is wrong", () => {
     const input = validInput();
     input.requestedFieldEvidence.requirements[1].fields[0].facts[0].source = {

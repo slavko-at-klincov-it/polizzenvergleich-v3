@@ -209,6 +209,47 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test("keeps a general outbuilding clause as a sourced partial result without claiming a named building", () => {
+    const input = fixture({
+      id: "VS-15",
+      label: "Nebengebäude namentlich in der Polizze angeführt",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED, COVERAGE_EFFECT.UNKNOWN],
+      selected: [true, false],
+      candidateContext:
+        "Nebengebäude am Versicherungsgrundstück sind auf Erstes Risiko mitversichert.",
+      fieldResult: {
+        requirementId: "VS-15",
+        requestedFieldStatus: "NOT_REQUIRED",
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "EUR 1.530.400,00",
+                source: { candidateId: "candidate:0" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    input.worksheet.requirements[0].components[0].label =
+      "Nebengebäude allgemein";
+    input.worksheet.requirements[0].components[1].label =
+      "Namentliche Anführung in der Polizze";
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      documentedContent:
+        "Nebengebäude allgemein: eingeschlossen; Namentliche Anführung in der Polizze: nicht feststellbar; Limit des Teilbelegs: EUR 1.530.400,00",
+      coverage: "Nicht feststellbar",
+      coverageAmount: "Nicht feststellbar",
+      reviewStatus: "TEILBELEGT",
+      source: expect.stringContaining("PDF-Seite 3"),
+    });
+  });
+
   test("renders a complete condition answer with the valid BELEGT plus Ja combination", () => {
     const condition = {
       requirementId: "VS-08",

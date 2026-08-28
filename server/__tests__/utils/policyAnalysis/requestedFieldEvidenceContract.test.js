@@ -751,6 +751,60 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("recovers the WEVIG outbuilding amount concatenated after Erstes Risiko", () => {
+    const text =
+      "Gemeinschaftlich genutzte Nebengebäude am Versicherungsgrundstück auf Erstes RisikoEUR1.530.400,00";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs15-outbuilding",
+      text,
+      exactText: "Nebengebäude",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-15",
+        label: "Nebengebäude namentlich in der Polizze angeführt",
+        requestedFields: [],
+        optionalFields: ["limit"],
+        components: [
+          {
+            id: "outbuilding_cover",
+            label: "Nebengebäude allgemein",
+            factRole: "INSURED_OBJECT",
+            occurrences: [source],
+          },
+          {
+            id: "named_outbuilding_designation",
+            label: "Namentliche Anführung in der Polizze",
+            factRole: "DEFINITION",
+            occurrences: [],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs15-outbuilding",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_REQUIRED,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "EUR 1.530.400,00",
+              source: expect.objectContaining({
+                exactText: "EUR1.530.400,00",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
   test("does not bind later percentages as an optional VS-01 insured value", () => {
     const source = textualOccurrence({
       candidateId: "candidate:vs01-no-adjacent-value",
@@ -851,6 +905,70 @@ describe("requestedFieldEvidenceContract", () => {
           field: "condition",
           status: FIELD_EVIDENCE_STATUS.NOT_EVALUATED,
           facts: [],
+        },
+      ],
+    });
+  });
+
+  test("binds the LF three-year restoration period and its legal conditions", () => {
+    const text =
+      "Der Anspruch besteht, wenn die Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung innerhalb dreier Jahre nach dem Schadenfall sichergestellt ist. Wird eine versicherte Sache nicht innerhalb dreier Jahre ab dem Schadentag wiederhergestellt bzw. wiederbeschafft, erfolgt die Entschädigung nach dem Zeitwert. Im Falle eines Deckungsprozesses wird die Frist für die Wiederherstellung um die Dauer des Deckungsprozesses erstreckt.";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs35-period",
+      text,
+      exactText: "innerhalb dreier Jahre",
+      contextStart: 100,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-35",
+        label: "Wiederherstellungsklausel und Frist für den Wiederaufbau",
+        requestedFields: ["duration", "condition"],
+        components: [
+          {
+            id: "restoration_clause",
+            label: "Wiederherstellungsklausel",
+            factRole: "CONDITION",
+            occurrences: [],
+          },
+          {
+            id: "reconstruction_period",
+            label: "Frist für den Wiederaufbau",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections(["candidate:vs35-period", "DIRECT"]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "duration",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: expect.arrayContaining([
+            expect.objectContaining({
+              normalizedValue: "3 Jahre",
+              valueType: "DURATION",
+              unit: "YEAR",
+            }),
+          ]),
+        },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: expect.arrayContaining([
+            expect.objectContaining({
+              normalizedValue:
+                "Keine Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren: Entschädigung zum Zeitwert",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
+            }),
+          ]),
         },
       ],
     });

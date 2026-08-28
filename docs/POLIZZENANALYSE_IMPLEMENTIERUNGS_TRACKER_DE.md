@@ -2000,3 +2000,80 @@ NO CLAIM: hundertprozentige fachliche Vollständigkeit
 Der vollständige Befund und die 72-Zellen-Matrix stehen in
 `docs/VS_01_36_QUALITAETSVERGLEICH_V321_V33_DE.md`. Die privaten Laufartefakte
 liegen bewusst außerhalb des Repositories im lokalen QA-Archiv.
+
+## 31. INC-010 – RC4 nach dem vollständigen Qwen-3.8-27B-Kundenlauf
+
+```text
+Increment-ID: INC-010
+Datum: 28. August 2026
+Scope: die vier im RC3-Kundenlauf nachgewiesenen Verlust-/Integrationszellen
+Quelle: VS-FULL-QUALITY-27B-RC3.zip
+Zielrelease: v3.3.0-rc.4
+```
+
+### Befund aus RC3
+
+Der echte Kundenlauf war technisch vollständig und benötigte für beide
+Dokumente ungefähr 41 Minuten aktive Modellzeit. Gegenüber V3.2.1 ergab die
+erste Bewertung 55 bessere, zwölf gleiche, zwei unklare und drei schlechtere
+Zellen. Die Ursachen lagen nicht in fehlender PDF-Erfassung:
+
+- Pilotregeln für VS-16, VS-21 und VS-28 waren nicht in den Full-Katalog
+  übernommen worden.
+- VS-15 modellierte eine allgemeine Nebengebäudefundstelle fälschlich als
+  Beweis einer namentlichen Anführung.
+- Der sichere WEVIG-Teilbeleg für VS-15 ging einschließlich seines Betrags
+  verloren.
+- Die vorhandene LF-Wiederherstellungsklausel für VS-35 wurde nicht in Dauer
+  und Bedingungen materialisiert.
+- Der kandidatengenaue Pilot-Oracle setzte Alias-IDs des kleinen
+  Pilotkatalogs fälschlich auch für den größeren Full-Katalog voraus.
+
+### Kleine, ursachengebundene Implementierung
+
+1. Die Pilot-Scope-Regeln werden vollständig in die entsprechenden
+   Full-Katalogdefinitionen übernommen und durch einen Gleichheitstest gegen
+   erneutes Auseinanderlaufen geschützt.
+2. VS-15 besitzt getrennte Komponenten für allgemeine
+   Nebengebäudedeckung und namentliche Anführung. Nur eine ausdrückliche
+   Formulierung kann die zweite Komponente belegen.
+3. Lokal gebundene Teilbeträge bleiben im dokumentierten Inhalt sichtbar,
+   werden aber nicht als Deckungssumme einer unbelegten Gesamtanforderung
+   ausgegeben.
+4. VS-35 extrahiert ausschließlich aus der kontrollierten
+   Wiederherstellungsklausel die Dreijahresfrist, Zeitwertfolge und
+   Deckungsprozessverlängerung.
+5. Der Full-Katalog-Oracle erlaubt Alias-ID-Drift, prüft jedoch weiterhin
+   Semantik, physische Seiten, Werte, Quellen und verbotene Kandidaten. Der
+   kleine Pilotlauf bleibt kandidatengenau streng.
+
+### Nachspieltest der echten 27B-Artefakte
+
+```text
+LF:    36 Anforderungen, 65 Komponenten, 122 Kandidaten, Oracle 4/4 PASS
+WEVIG: 36 Anforderungen, 65 Komponenten, 155 Kandidaten, Oracle 4/4 PASS
+
+LF VS-15:    TEILBELEGT, 5 % sichtbar, keine falsche namentliche Anführung
+WEVIG VS-15: TEILBELEGT, EUR 1.530.400,00 sichtbar, keine falsche Benennung
+LF VS-16:    Ja / BELEGT
+LF VS-21:    Ja / BELEGT / 10 %, 15 %
+LF VS-35:    Ja / BELEGT / 3 Jahre + Bedingungen
+WEVIG VS-21: Ja / BELEGT / EUR 6.121.600,00
+```
+
+Aktualisierte Bewertung gegenüber V3.2.1:
+
+```text
+59 BESSER, 12 GLEICH, 1 UNKLAR, 0 SCHLECHTER
+```
+
+Release-Gates:
+
+```text
+PASS: 80 Jest-Suites / 876 Tests
+PASS: Lint, Syntax, Git-Diff-Prüfung und Produktionsbuild
+PASS: deterministischer Replay mit echten 27B-Entscheidungen
+GO: v3.3.0-rc.4 für den frischen kontrollierten Kundenlauf
+REVIEW_REQUIRED: frische Qwen-3.8-27B-Ausführung beider PDFs
+NO CLAIM: finale fachliche Freigabe von v3.3.0
+```
