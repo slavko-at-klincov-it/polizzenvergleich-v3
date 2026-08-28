@@ -2077,3 +2077,45 @@ GO: v3.3.0-rc.4 für den frischen kontrollierten Kundenlauf
 REVIEW_REQUIRED: frische Qwen-3.8-27B-Ausführung beider PDFs
 NO CLAIM: finale fachliche Freigabe von v3.3.0
 ```
+
+## 32. LF-Gesamtbaseline – acht monolithische Kategorieprompts mit 27B
+
+```text
+Datum: 28. August 2026
+Lauf: LF-ALL-CATEGORIES-27B-RC4-20260828-180411
+Dokument: LF IMMO
+Ansichten: VS, FE, LW, ST, EL, HP, VB, WE
+Umfang: 320 sichtbare Zeilen
+```
+
+Der Lauf ist vollständig, testet aber nicht den neuen Evidenzweg über alle
+Kategorien. Er ruft den monolithischen `pdfProvenanceLiveRun.cjs` achtmal auf.
+RC4 bezeichnet lediglich den installierten Codezustand.
+
+```text
+320/320 Zeilen erzeugt
+124/320 Zeilen formal sauber
+196/320 Zeilen mit mindestens einer Vertragsabweichung
+101 nicht seitengetreue Zitate
+115 unzulässige Missing-Formulierungen
+8 weitere Status-, Deckungs- oder Quellenfehler
+2:06:58 Stunden Wandzeit
+292.732 verarbeitete Tokens
+```
+
+Die vollständige PDF-Erfassung, alle 31 Seiten und alle 38 Chunks waren bei
+jeder Ansicht vorhanden. Die Fehler entstehen überwiegend bei monolithischer
+Schlussfolgerung und Ausgabe: enger Scope wird übertragen, bedingte Klauseln
+werden als aktiv behandelt, getrennte Rollen und Beträge werden verbunden und
+mehrteilige Kategorien verlieren Einzelwirkungen.
+
+Entscheidung:
+
+```text
+PASS: eingefrorene vollständige LF-27B-Baseline
+NO-GO: monolithischer Weg als Produkt-Gesamtlauf
+NO-GO: weiterer identischer Großlauf vor einem echten All-Kategorien-Runner
+```
+
+Vollständiger Befund:
+`docs/LF_ALL_CATEGORIES_27B_MONOLITHISCHER_BEFUND_DE.md`.
