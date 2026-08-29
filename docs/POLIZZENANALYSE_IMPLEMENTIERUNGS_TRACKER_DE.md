@@ -2965,3 +2965,29 @@ PASS: WEVIG gegenüber RC18 über alle 36 Zeilen semantisch unverändert
 PASS: RC22-Tag 139f53d7 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: andere HP-Anforderungen oder externe Holdouts automatisch freigegeben
 ```
+
+## 53. RC23: Elementarwerte im bereits deklarierten Sturm-Host-Scope abschließen
+
+LF `EL-01` und `EL-11` besaßen vollständige Werte, serverautoritäre
+`DEFINED`-Wirkungen und exakte Quellen. Beide Anforderungen führten
+`STURM_INSURANCE` bereits als zulässigen Host-Scope, verwendeten aber noch die
+allgemeine Scope-Policy und blieben deshalb sichtbar `TEILBELEGT`.
+
+RC23 aktiviert für genau diese beiden Wertanforderungen den bereits bewiesenen
+Matching-Scope-Abschluss. Ohne passende Komponente, vollständiges Pflichtfeld
+und deklarierte ScopeKeys bleibt der Vertrag fail-closed.
+
+```text
+PASS: 91 Jest-Suites / 1040 Tests und vollständiger Lint
+PASS: echter LF-EL-Replay, 36/36 Zeilen
+PASS: nur EL-01 und EL-11 verbessert
+PASS: EL-01 -> 1 %; EUR 20.000; EUR 100.000 auf Erstes Risiko
+PASS: EL-11 -> EUR 350 je Schadenfall
+PASS: übrige 34 LF-EL-Zeilen semantisch identisch
+PASS: frischer LF-EL-Lauf, 48/48 Kandidaten, 69/69 Komponenten,
+      36/36 Zeilen und 40 Quellen
+PASS: frischer WEVIG-EL-Kontrolllauf, 58/58 Kandidaten,
+      69/69 Komponenten, 36/36 Zeilen und 42 Quellen
+PASS: WEVIG gegenüber RC17 über alle 36 Zeilen semantisch unverändert
+NO CLAIM: andere Wertzeilen oder Host-Scopes automatisch freigegeben
+```
