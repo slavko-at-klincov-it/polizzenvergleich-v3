@@ -5,10 +5,16 @@
 > See [POLIZZENVERGLEICH_SETUP_DE.md](./POLIZZENVERGLEICH_SETUP_DE.md) for the
 > German deployment and acceptance guide.
 > Development must start with the current
+> [KB index and working matrix](./POLIZZENVERGLEICH_KB_INDEX.md), then follow
+> its knowledge router to the [strategy and knowledge intake](./POLIZZENVERGLEICH_WISSENSINTAKE.md)
+> for new, not yet validated inputs or to the relevant
 > [project memory](./POLIZZENVERGLEICH_PROJEKTGEDAECHTNIS.md),
 > [architecture](./POLIZZENVERGLEICH_ARCHITEKTUR.md),
 > [test evidence](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md), and
-> [decision log](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md). These files record
+> [decision log](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md). RAG-, model-, prompt-
+> and agent-flow decisions must also consult the
+> [experiment protocol](./POLIZZENVERGLEICH_EXPERIMENTPROTOKOLL.md) and the
+> [machine-readable Built-in run ledger](./experiment-ledgers/original-anythingllm-built-in-runs.v0.1.json). These files record
 > the real customer-Mac findings and supersede older inventory assumptions.
 > On a prepared Apple-Silicon Mac, run [`install.command`](./install.command)
 > for the native customer installation and automatic readiness check.
