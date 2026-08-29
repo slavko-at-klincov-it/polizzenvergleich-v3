@@ -67,6 +67,34 @@ Oracle auf altem RC11-Artefakt:
   DRAFT 34/65 Aussagen grün, beide Zielzeilen erwartungsgemäß rot
 ```
 
+## Frischer Mac-Studio-Nachweis mit Qwen 3.8 27B
+
+RC14 wurde als unveränderlicher Tag installiert. Update, integrierter Doctor,
+separater Doctor, Tag, SHA und sauberer Checkout wurden geprüft. Der frische
+WEVIG-LW-Lauf ergab:
+
+```text
+33/33 Triage-Kandidaten
+52/52 atomare Komponenten
+36/36 LW-Endzeilen
+24 ausgewählte Quellen
+65/65 DRAFT-Oracle-Aussagen bestanden
+```
+
+Gegenüber dem vollständigen RC11-WEVIG-LW-Ergebnis änderten sich genau zwei
+Zeilen:
+
+```text
+LW-05: UNGEKLÄRT -> BELEGT / Ja
+       Rohrbruch und Schaden am Rohr selbst eingeschlossen, PDF-Seite 2
+
+LW-26: UNGEKLÄRT -> TEILBELEGT
+       Rohrverstopfung und Reinigungskosten eingeschlossen, PDF-Seite 14
+       Limit weiterhin korrekt NOT_FOUND und nicht erfunden
+```
+
+Die übrigen 34 LW-Zeilen blieben semantisch identisch.
+
 ## Update
 
 ```bash
@@ -77,8 +105,8 @@ cd "$HOME/Code/polizzenvergleich-v3"
 
 ## Beweisgrenze
 
-Die serverseitige RED-/GREEN-Prüfung und der echte Zwei-Dokument-
-Seiteneffektvergleich sind positiv. Vor einer fachlichen Hochstufung der neuen
-DRAFT-Oracle-Zeilen ist zusätzlich ein frischer Qwen-3.8-27B-Lauf auf dem Mac
-Studio erforderlich. RC14 behauptet weiterhin keine mathematische
-99-Prozent-Garantie für beliebige zukünftige Polizzen.
+Die serverseitige RED-/GREEN-Prüfung, der echte Zwei-Dokument-
+Seiteneffektvergleich und der frische Qwen-3.8-27B-Lauf sind positiv. Die neuen
+Oracle-Zeilen bleiben trotzdem `DRAFT`, bis der fachliche Reviewer sie explizit
+hochstuft. RC14 behauptet weiterhin keine mathematische 99-Prozent-Garantie für
+beliebige zukünftige Polizzen.

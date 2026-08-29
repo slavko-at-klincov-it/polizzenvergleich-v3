@@ -2687,6 +2687,9 @@ PASS: echtes RC11-Artefakt-Replay für LW-05 und LW-26
 PASS: Seiteneffektprüfung über alle LF-/WEVIG-Kategorien
       genau vier beabsichtigte Overrides, keine weiteren Änderungen
 RED:  altes WEVIG-RC11-Artefakt erfüllt nur 34/65 DRAFT-Aussagen
-GO:   RC14 installieren und einen frischen WEVIG-LW-27B-Lauf ausführen
+PASS: RC14-Update und beide Doctor-Läufe auf dem Mac Studio
+PASS: frischer WEVIG-LW-27B-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen, 65/65 DRAFT-Oracle-Aussagen
+PASS: genau LW-05 und LW-26 verbessert; übrige 34 LW-Zeilen stabil
 NO CLAIM: DRAFT ist keine fachliche Freigabe und keine 99-Prozent-Garantie
 ```
