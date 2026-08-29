@@ -247,6 +247,72 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("binds an explicit reinstatement deadline and its extension authoritatively", () => {
+    const deadline = vbBindingInput({
+      requirementId: "VB-26",
+      componentId: "reinstatement_deadline",
+      text: "Die Wiederherstellung muss innerhalb dreier Jahre nach dem Schadenfall erfolgen.",
+      exactText: "Wiederherstellung",
+    });
+    const extension = vbBindingInput({
+      requirementId: "VB-26",
+      componentId: "reinstatement_deadline",
+      text: "Im Falle eines Deckungsprozesses wird die Frist für die Wiederherstellung um die Dauer des Deckungsprozesses erstreckt.",
+      exactText:
+        "Frist für die Wiederherstellung um die Dauer des Deckungsprozesses erstreckt",
+    });
+
+    expect(deterministicCategoryCandidateBinding(deadline)).toEqual({
+      binding: "DIRECT",
+      basis: "VB_26_EXPLICIT_REINSTATEMENT_DEADLINE",
+      authoritative: true,
+    });
+    expect(deterministicCategoryCandidateBinding(extension)).toEqual({
+      binding: "DIRECT",
+      basis: "VB_26_EXPLICIT_REINSTATEMENT_DEADLINE",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "VB",
+        requirementId: "VB-26",
+        componentId: "reinstatement_deadline",
+        candidates: [
+          {
+            candidateId: "candidate:deadline",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: "VB_26_EXPLICIT_REINSTATEMENT_DEADLINE",
+          },
+          {
+            candidateId: "candidate:extension",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: "VB_26_EXPLICIT_REINSTATEMENT_DEADLINE",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:deadline", "candidate:extension"],
+      coverageEffect: "DEFINED",
+      basis: "EXPLICIT_GENERAL_CONTRACT_FACT:VB:VB-26",
+    });
+  });
+
+  test.each([
+    "Die Wiederherstellung wird beschrieben. Die Kündigungsfrist beträgt drei Jahre.",
+    "Eine Wiederherstellung ist möglich, eine konkrete Frist ist nicht vereinbart.",
+  ])("does not authoritatively invent a VB-26 deadline from %s", (text) => {
+    expect(
+      deterministicCategoryCandidateBinding(
+        vbBindingInput({
+          requirementId: "VB-26",
+          componentId: "reinstatement_deadline",
+          text,
+          exactText: "Wiederherstellung",
+        })
+      )
+    ).toBeNull();
+  });
+
   test("binds an explicit HP annual aggregate multiple authoritatively", () => {
     const input = bindingInput({
       text: "Die maßgebende Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung.",

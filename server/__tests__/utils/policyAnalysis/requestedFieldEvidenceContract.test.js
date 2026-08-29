@@ -1763,6 +1763,108 @@ describe("requestedFieldEvidenceContract", () => {
     }
   );
 
+  test.each([
+    [
+      "Die Wiederherstellung muss innerhalb dreier Jahre nach dem Schadenfall erfolgen.",
+      "Wiederherstellung",
+      "dreier Jahre",
+      "3 Jahre",
+      "YEAR",
+    ],
+    [
+      "Die versicherte Sache muss innerhalb 18 Monaten wiederhergestellt werden.",
+      "innerhalb 18 Monaten wiederhergestellt",
+      "18 Monaten",
+      "18 Monate",
+      "MONTH",
+    ],
+  ])(
+    "binds a source-local reinstatement deadline from %s",
+    (text, exactText, rawValue, normalizedValue, unit) => {
+      const result = materializeRequestedFieldEvidence({
+        worksheet: textualWorksheet({
+          id: "VB-26",
+          label: "Frist für die Wiederherstellung",
+          requestedFields: ["duration"],
+          components: [
+            {
+              id: "reinstatement_deadline",
+              label: "Wiederherstellungsfrist",
+              factRole: "CONDITION",
+              occurrences: [
+                textualOccurrence({
+                  candidateId: "candidate:reinstatement-deadline",
+                  text,
+                  exactText,
+                  contextStart: 8_000,
+                }),
+              ],
+            },
+          ],
+        }),
+        materializedCandidates: selections([
+          "candidate:reinstatement-deadline",
+          "DIRECT",
+        ]),
+      });
+
+      expect(result.requirements[0]).toMatchObject({
+        requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+        fields: [
+          {
+            field: "duration",
+            status: FIELD_EVIDENCE_STATUS.FOUND,
+            facts: [
+              expect.objectContaining({
+                rawValue,
+                normalizedValue,
+                valueType: "DURATION",
+                unit,
+                source: expect.objectContaining({ exactText: rawValue }),
+              }),
+            ],
+          },
+        ],
+      });
+    }
+  );
+
+  test("does not transfer an unrelated duration into VB-26", () => {
+    const text =
+      "Die Wiederherstellung wird beschrieben. Die Kündigungsfrist beträgt drei Jahre.";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VB-26",
+        label: "Frist für die Wiederherstellung",
+        requestedFields: ["duration"],
+        components: [
+          {
+            id: "reinstatement_deadline",
+            label: "Wiederherstellungsfrist",
+            factRole: "CONDITION",
+            occurrences: [
+              textualOccurrence({
+                candidateId: "candidate:unrelated-duration",
+                text,
+                exactText: "Wiederherstellung",
+              }),
+            ],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:unrelated-duration",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      field: "duration",
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
   test("does not bind an unrelated periodic amount after a premium reference", () => {
     const text =
       "Die Gesamtprämie wird separat ausgewiesen. Vierteljährlich EUR 500 Bearbeitungskosten.";

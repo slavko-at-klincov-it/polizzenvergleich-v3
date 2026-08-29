@@ -385,6 +385,27 @@ function explicitHp11LiabilityScopeBinding({
   };
 }
 
+function isExplicitReinstatementDeadlineClause(clause) {
+  const cardinal =
+    "(?:\\d{1,3}|ein(?:e[rmn]?)?|eins|zwei(?:e[rmn])?|drei(?:e[rmn])?|vier(?:e[rmn])?|f(?:ue|ü)nf(?:e[rmn])?|sechs(?:e[rmn])?|sieben(?:e[rmn])?|acht(?:e[rmn])?|neun(?:e[rmn])?|zehn(?:e[rmn])?|elf(?:e[rmn])?|zw(?:oe|ö)lf(?:e[rmn])?)";
+  const duration = `${cardinal}\\s+(?:Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?)`;
+  const restorationSubject =
+    "(?:Wiederbeschaffung(?:\\s+oder\\s+Wiederherstellung)?|Wiederherstellung(?:\\s+oder\\s+Wiederbeschaffung)?)(?:\\s+(?:versicherter\\s+Sachen|des\\s+Gebäudes|der\\s+versicherten\\s+Sache))?";
+  return (
+    new RegExp(
+      `${restorationSubject}\\s+(?:(?:muss|hat)\\s+)?(?:innerhalb|binnen)\\s+(?:von\\s+)?${duration}`,
+      "iu"
+    ).test(clause) ||
+    new RegExp(
+      `(?:innerhalb|binnen)\\s+(?:von\\s+)?${duration}(?:\\s+(?:nach\\s+dem\\s+Schadenfall|ab\\s+dem\\s+Schadentag))?\\s+(?:wiederbeschafft|wiederhergestellt)`,
+      "iu"
+    ).test(clause) ||
+    /Frist\s+f[üu]r\s+die\s+Wiederherstellung[\s\S]{0,100}?Dauer\s+des\s+Deckungsprozesses[\s\S]{0,60}?erstreckt/iu.test(
+      clause
+    )
+  );
+}
+
 function explicitVbGeneralContractFactBinding({
   categoryView,
   requirement,
@@ -406,6 +427,12 @@ function explicitVbGeneralContractFactBinding({
     )
   )
     basis = "VB_01_EXPLICIT_CONTRACT_TERM";
+  if (
+    requirement?.id === "VB-26" &&
+    component?.id === "reinstatement_deadline" &&
+    isExplicitReinstatementDeadlineClause(clause)
+  )
+    basis = "VB_26_EXPLICIT_REINSTATEMENT_DEADLINE";
   if (
     requirement?.id === "VB-27" &&
     component?.id === "total_premium" &&
@@ -706,9 +733,9 @@ function deterministicCategoryPreparedDecision(target) {
     };
   if (
     target.categoryView === "VB" &&
-    ["VB-01", "VB-27"].includes(target.requirementId) &&
+    ["VB-01", "VB-26", "VB-27"].includes(target.requirementId) &&
     target.candidates.every(({ deterministicBindingBasis }) =>
-      /^(?:VB_01_EXPLICIT_CONTRACT_TERM|VB_27_EXPLICIT_(?:TOTAL_PREMIUM|TAX_INCLUSION))$/u.test(
+      /^(?:VB_01_EXPLICIT_CONTRACT_TERM|VB_26_EXPLICIT_REINSTATEMENT_DEADLINE|VB_27_EXPLICIT_(?:TOTAL_PREMIUM|TAX_INCLUSION))$/u.test(
         deterministicBindingBasis || ""
       )
     )

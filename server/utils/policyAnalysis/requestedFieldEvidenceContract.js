@@ -506,9 +506,12 @@ function normalizedGermanCardinal(rawValue) {
   const normalized = String(rawValue || "")
     .normalize("NFKC")
     .toLocaleLowerCase("de");
-  return /^\d+$/u.test(normalized)
-    ? Number(normalized)
-    : GERMAN_MONTH_NUMBERS[normalized];
+  if (/^\d+$/u.test(normalized)) return Number(normalized);
+  if (GERMAN_MONTH_NUMBERS[normalized]) return GERMAN_MONTH_NUMBERS[normalized];
+  const inflected = normalized.match(
+    /^(ein|zwei|drei|vier|fuenf|fünf|sechs|sieben|acht|neun|zehn|elf|zwoelf|zwölf)(?:e[rmn])?$/u
+  );
+  return inflected ? GERMAN_MONTH_NUMBERS[inflected[1]] : undefined;
 }
 
 function extractAnnualAggregateMultipleFacts({ occurrence, binding }) {
@@ -912,6 +915,69 @@ function extractRestorationDurationFacts({ occurrence, binding }) {
     );
 }
 
+function extractReinstatementDeadlineDurationFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const cardinal =
+    "(?:\\d{1,3}|ein(?:e[rmn]?)?|eins|zwei(?:e[rmn])?|drei(?:e[rmn])?|vier(?:e[rmn])?|f(?:ue|ü)nf(?:e[rmn])?|sechs(?:e[rmn])?|sieben(?:e[rmn])?|acht(?:e[rmn])?|neun(?:e[rmn])?|zehn(?:e[rmn])?|elf(?:e[rmn])?|zw(?:oe|ö)lf(?:e[rmn])?)";
+  const duration = `(?<value>${cardinal})\\s+(?<unit>Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?)`;
+  const restorationSubject =
+    "(?:Wiederbeschaffung(?:\\s+oder\\s+Wiederherstellung)?|Wiederherstellung(?:\\s+oder\\s+Wiederbeschaffung)?)(?:\\s+(?:versicherter\\s+Sachen|des\\s+Gebäudes|der\\s+versicherten\\s+Sache))?";
+  const patterns = [
+    new RegExp(
+      `${restorationSubject}\\s+(?:(?:muss|hat)\\s+)?(?:innerhalb|binnen)\\s+(?:von\\s+)?${duration}`,
+      "giu"
+    ),
+    new RegExp(
+      `(?:innerhalb|binnen)\\s+(?:von\\s+)?${duration}(?:\\s+(?:nach\\s+dem\\s+Schadenfall|ab\\s+dem\\s+Schadentag))?\\s+(?:wiederbeschafft|wiederhergestellt)`,
+      "giu"
+    ),
+  ];
+  const facts = [];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const rawValue = match.groups?.value;
+      const rawUnit = match.groups?.unit;
+      const rawDuration = rawValue && rawUnit ? `${rawValue} ${rawUnit}` : null;
+      if (!rawDuration) continue;
+      const count = normalizedGermanCardinal(rawValue);
+      if (!Number.isInteger(count) || count < 1) continue;
+      const durationMatch = [rawDuration];
+      durationMatch.index = match.index + match[0].indexOf(rawDuration);
+      if (!valueFollowsCandidate(occurrence, durationMatch)) continue;
+      const unitText = rawUnit.toLocaleLowerCase("de");
+      const unit = unitText.startsWith("stunde")
+        ? "HOUR"
+        : unitText.startsWith("tag")
+          ? "DAY"
+          : unitText.startsWith("woche")
+            ? "WEEK"
+            : unitText.startsWith("monat")
+              ? "MONTH"
+              : "YEAR";
+      const labels = {
+        HOUR: ["Stunde", "Stunden"],
+        DAY: ["Tag", "Tage"],
+        WEEK: ["Woche", "Wochen"],
+        MONTH: ["Monat", "Monate"],
+        YEAR: ["Jahr", "Jahre"],
+      };
+      facts.push(
+        sourceBoundFact({
+          occurrence,
+          binding,
+          match: durationMatch,
+          value: {
+            normalizedValue: `${count} ${labels[unit][count === 1 ? 0 : 1]}`,
+            valueType: "DURATION",
+            unit,
+          },
+        })
+      );
+    }
+  }
+  return facts;
+}
+
 function extractRestorationConditionFacts({ occurrence, binding }) {
   return extractPatternFacts({
     occurrence,
@@ -1045,6 +1111,8 @@ function extractorFor(requirement, field) {
     return extractAnnualAggregateMultipleFacts;
   if (requirementId === "VB-01" && field === "duration")
     return extractContractTermDurationFacts;
+  if (requirementId === "VB-26" && field === "duration")
+    return extractReinstatementDeadlineDurationFacts;
   if (requirementId === "VB-27" && field === "amount")
     return extractTotalPremiumFacts;
   if (requirementId === "VS-01" && field === "limit")
