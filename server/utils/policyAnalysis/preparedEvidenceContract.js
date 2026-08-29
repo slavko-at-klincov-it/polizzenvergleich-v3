@@ -34,6 +34,13 @@ const ALLOWED_TRIAGE_BINDINGS = new Set([
   "MENTION_ONLY",
   "UNRESOLVED",
 ]);
+const NON_COVERAGE_FACT_ROLES = new Set([
+  "CONDITION",
+  "DEFINITION",
+  "LIMIT",
+  "DEDUCTIBLE",
+  "DOCUMENT_STATUS",
+]);
 
 function preparedError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -675,6 +682,12 @@ function materializePreparedEvidence({ worksheet, targets, judgements }) {
     const categoryRollup = rollupCategoryResult({
       categoryId: requirement.id,
       requiredComponentIds: requirement.components.map(({ id }) => id),
+      coverageComponentIds:
+        requirement.coverageAggregationPolicy === "COVERAGE_ROLES_ONLY"
+          ? requirement.components
+              .filter(({ factRole }) => !NON_COVERAGE_FACT_ROLES.has(factRole))
+              .map(({ id }) => id)
+          : undefined,
       componentSatisfactionPolicy:
         requirement.componentSatisfactionPolicy || "ALL",
       componentResults: componentJudgements.map(

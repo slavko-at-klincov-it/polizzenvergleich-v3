@@ -78,6 +78,21 @@ function validateRequiredComponentIds(requiredComponentIds) {
   return ids;
 }
 
+function validateCoverageComponentIds(coverageComponentIds, requiredIds) {
+  if (coverageComponentIds === undefined) return requiredIds;
+  if (!Array.isArray(coverageComponentIds))
+    throw contractError("COVERAGE_COMPONENT_IDS_INVALID");
+  const ids = coverageComponentIds.map((id, index) =>
+    requireNonEmptyString(id, "COVERAGE_COMPONENT_ID_INVALID", `index ${index}`)
+  );
+  if (new Set(ids).size !== ids.length)
+    throw contractError("DUPLICATE_COVERAGE_COMPONENT_ID");
+  const unknown = ids.filter((id) => !requiredIds.includes(id));
+  if (unknown.length)
+    throw contractError("UNKNOWN_COVERAGE_COMPONENT_ID", unknown.join(", "));
+  return ids;
+}
+
 function validateComponentResult(result, index) {
   if (!result || typeof result !== "object" || Array.isArray(result))
     throw contractError("COMPONENT_RESULT_INVALID", `index ${index}`);
@@ -221,6 +236,7 @@ function rollupCategoryResult({
   requiredComponentIds,
   componentResults,
   componentSatisfactionPolicy = COMPONENT_SATISFACTION_POLICY.ALL,
+  coverageComponentIds,
 }) {
   const normalizedCategoryId = requireNonEmptyString(
     categoryId,
@@ -228,6 +244,10 @@ function rollupCategoryResult({
     "categoryId"
   );
   const requiredIds = validateRequiredComponentIds(requiredComponentIds);
+  const coverageIds = validateCoverageComponentIds(
+    coverageComponentIds,
+    requiredIds
+  );
   if (!Array.isArray(componentResults))
     throw contractError("COMPONENT_RESULTS_REQUIRED");
 
@@ -272,21 +292,37 @@ function rollupCategoryResult({
         : EVIDENCE_COMPLETENESS.NONE
       : deriveEvidenceCompleteness(orderedResults);
   const conflictState = deriveConflictState(orderedResults);
+  const coverageResults = evaluatedResults.filter(({ componentId }) =>
+    coverageIds.includes(componentId)
+  );
   const coveragePicture = deriveCoveragePicture({
+    componentResults: coverageResults,
+    evidenceCompleteness,
+    conflictState,
+  });
+  let reviewStatus = deriveReviewStatus({
     componentResults: evaluatedResults,
     evidenceCompleteness,
     conflictState,
   });
-  const reviewStatus = deriveReviewStatus({
-    componentResults: evaluatedResults,
-    evidenceCompleteness,
-    conflictState,
-  });
+  if (
+    coverageComponentIds !== undefined &&
+    reviewStatus === REVIEW_STATUS.BELEGT &&
+    evaluatedResults.some(
+      ({ componentId, coverageEffect }) =>
+        !coverageIds.includes(componentId) &&
+        coverageEffect === COVERAGE_EFFECT.OPTION_ONLY
+    )
+  )
+    reviewStatus = REVIEW_STATUS.TEILBELEGT;
 
   return Object.freeze({
     categoryId: normalizedCategoryId,
     componentResults: orderedResults,
     componentSatisfactionPolicy,
+    ...(coverageComponentIds === undefined
+      ? {}
+      : { coverageComponentIds: Object.freeze([...coverageIds]) }),
     evidenceCompleteness,
     coveragePicture,
     conflictState,

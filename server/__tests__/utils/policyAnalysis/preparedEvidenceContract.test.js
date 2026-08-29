@@ -757,4 +757,46 @@ describe("preparedEvidenceContract", () => {
       REQUESTED_FIELD_STATUS.NOT_REQUIRED
     );
   });
+
+  test("uses an explicit coverage-role aggregation policy without dropping a required condition", () => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    const requirement = worksheet.requirements[0];
+    requirement.requestedFields = [];
+    requirement.coverageAggregationPolicy = "COVERAGE_ROLES_ONLY";
+    requirement.components[0].factRole = "INSURED_OBJECT";
+    requirement.components[1].factRole = "CONDITION";
+    const targets = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+    });
+    const judgements = targets.map((target) =>
+      parseAndValidatePreparedEvidenceResponse({
+        target,
+        responseText: response(
+          target.componentId,
+          [target.candidates[0].candidateId],
+          target.factRole === "CONDITION"
+            ? COVERAGE_EFFECT.CONDITIONAL
+            : COVERAGE_EFFECT.INCLUDED
+        ),
+      })
+    );
+
+    const result = materializePreparedEvidence({
+      worksheet,
+      targets,
+      judgements,
+    });
+
+    expect(result.rollups[0]).toMatchObject({
+      coverageComponentIds: [requirement.components[0].id],
+      evidenceCompleteness: "COMPLETE",
+      coveragePicture: COVERAGE_PICTURE.INCLUDED,
+      reviewStatus: "BELEGT",
+    });
+    expect(result.judgements[1]).toMatchObject({
+      evidencePresence: "FOUND",
+      coverageEffect: COVERAGE_EFFECT.CONDITIONAL,
+    });
+  });
 });

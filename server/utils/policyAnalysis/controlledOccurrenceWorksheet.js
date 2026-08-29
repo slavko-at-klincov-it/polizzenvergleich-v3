@@ -12,8 +12,13 @@ const SAME_CANDIDATE_BINDING = "SAME_CANDIDATE_BINDING";
 const ALLOWED_SCOPE_POLICIES = new Set([
   "GENERAL_REQUIRED",
   "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+  "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
 ]);
 const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
+const ALLOWED_COVERAGE_AGGREGATION_POLICIES = new Set([
+  "ALL_COMPONENT_EFFECTS",
+  "COVERAGE_ROLES_ONLY",
+]);
 const ALLOWED_FACT_ROLES = new Set([
   "INSURED_OBJECT",
   "COST",
@@ -926,12 +931,37 @@ function validateCatalog(catalog) {
         const scopePolicy = requirement.scopePolicy || "GENERAL_REQUIRED";
         if (!ALLOWED_SCOPE_POLICIES.has(scopePolicy))
           throw worksheetError("SCOPE_POLICY_INVALID", id);
+        if (
+          scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT" &&
+          scopeRules.narrowScopeKeys.length === 0
+        )
+          throw worksheetError("DEFINITIVE_SCOPE_KEYS_REQUIRED", id);
         return scopePolicy;
       })(),
       componentSatisfactionPolicy: (() => {
         const policy = requirement.componentSatisfactionPolicy || "ALL";
         if (!ALLOWED_COMPONENT_SATISFACTION_POLICIES.has(policy))
           throw worksheetError("COMPONENT_SATISFACTION_POLICY_INVALID", id);
+        return policy;
+      })(),
+      coverageAggregationPolicy: (() => {
+        const policy =
+          requirement.coverageAggregationPolicy || "ALL_COMPONENT_EFFECTS";
+        if (!ALLOWED_COVERAGE_AGGREGATION_POLICIES.has(policy))
+          throw worksheetError("COVERAGE_AGGREGATION_POLICY_INVALID", id);
+        if (
+          policy === "COVERAGE_ROLES_ONLY" &&
+          components.every(({ factRole }) =>
+            [
+              "CONDITION",
+              "DEFINITION",
+              "LIMIT",
+              "DEDUCTIBLE",
+              "DOCUMENT_STATUS",
+            ].includes(factRole)
+          )
+        )
+          throw worksheetError("COVERAGE_ROLE_COMPONENT_REQUIRED", id);
         return policy;
       })(),
       bindingStructures,
@@ -1524,6 +1554,7 @@ function buildControlledOccurrenceWorksheet({
       scopeRules: requirement.scopeRules,
       scopePolicy: requirement.scopePolicy,
       componentSatisfactionPolicy: requirement.componentSatisfactionPolicy,
+      coverageAggregationPolicy: requirement.coverageAggregationPolicy,
       componentCount: grouped.components.length,
       components: grouped.components,
     };

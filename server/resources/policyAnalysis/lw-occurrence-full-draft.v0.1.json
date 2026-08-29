@@ -79,6 +79,7 @@
       "id": "LW-03",
       "label": "Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück",
       "requestedFields": ["scope"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
@@ -115,6 +116,7 @@
       "id": "LW-04",
       "label": "Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück",
       "requestedFields": ["scope"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",

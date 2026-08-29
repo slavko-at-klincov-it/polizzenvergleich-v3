@@ -1,5 +1,7 @@
 const catalog = require("../../../resources/policyAnalysis/vs-occurrence-pilot.v0.1.json");
 const fullCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
+const lwFullCatalog = require("../../../resources/policyAnalysis/lw-occurrence-full-draft.v0.1.json");
+const elFullCatalog = require("../../../resources/policyAnalysis/el-occurrence-full-draft.v0.1.json");
 const {
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
@@ -155,14 +157,16 @@ describe("controlledOccurrenceWorksheet", () => {
     });
 
     const occurrences = worksheet.requirements[0].components[0].occurrences;
-    expect(occurrences.map(({ variantScopeHint }) => variantScopeHint)).toEqual([
-      expect.objectContaining({ key: "C_DECKUNG" }),
-      expect.objectContaining({
-        key: "C_DECKUNG",
-        source: "PRECEDING_PAGE_HEADING",
-      }),
-      expect.objectContaining({ key: "D_DECKUNG" }),
-    ]);
+    expect(occurrences.map(({ variantScopeHint }) => variantScopeHint)).toEqual(
+      [
+        expect.objectContaining({ key: "C_DECKUNG" }),
+        expect.objectContaining({
+          key: "C_DECKUNG",
+          source: "PRECEDING_PAGE_HEADING",
+        }),
+        expect.objectContaining({ key: "D_DECKUNG" }),
+      ]
+    );
     expect(occurrences[2].fieldGovernorHint).toBeNull();
   });
 
@@ -759,12 +763,13 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "clause-activation-scope-markisen",
       catalog: markisenCatalog,
     });
-    expect(scoped.requirements[0].components[0].occurrences.at(-1).sectionScopeHint)
-      .toMatchObject({
-        scopeKey: "FEUER_INSURANCE",
-        clauseCode: "10PA0230",
-        source: "CURRENT_PAGE_HEADING",
-      });
+    expect(
+      scoped.requirements[0].components[0].occurrences.at(-1).sectionScopeHint
+    ).toMatchObject({
+      scopeKey: "FEUER_INSURANCE",
+      clauseCode: "10PA0230",
+      source: "CURRENT_PAGE_HEADING",
+    });
   });
 
   test("uses an ambiguous generic clause as a boundary without inventing one category scope", () => {
@@ -807,8 +812,10 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "ambiguous-clause-boundary",
       catalog: markisenCatalog,
     });
-    const appendixOccurrences = worksheet.requirements[0].components[0].occurrences
-      .filter(({ physicalPageNumber }) => physicalPageNumber === 2);
+    const appendixOccurrences =
+      worksheet.requirements[0].components[0].occurrences.filter(
+        ({ physicalPageNumber }) => physicalPageNumber === 2
+      );
 
     expect(appendixOccurrences).toHaveLength(2);
     for (const occurrence of appendixOccurrences)
@@ -1151,6 +1158,74 @@ describe("controlledOccurrenceWorksheet", () => {
       }
     }
   );
+
+  test("carries only the explicitly declared LW coverage aggregation policies", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: SYNTHETIC_DOCUMENT,
+      documentFingerprint: "fixture-sha256",
+      catalog: lwFullCatalog,
+    });
+    const policies = new Map(
+      worksheet.requirements.map(({ id, coverageAggregationPolicy }) => [
+        id,
+        coverageAggregationPolicy,
+      ])
+    );
+
+    expect(policies.get("LW-03")).toBe("COVERAGE_ROLES_ONLY");
+    expect(policies.get("LW-04")).toBe("COVERAGE_ROLES_ONLY");
+    expect(
+      [...policies.entries()].filter(
+        ([, policy]) => policy === "COVERAGE_ROLES_ONLY"
+      )
+    ).toHaveLength(2);
+  });
+
+  test("limits definitive matching-scope evidence to the declared EL-15 host scope", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: SYNTHETIC_DOCUMENT,
+      documentFingerprint: "fixture-sha256",
+      catalog: elFullCatalog,
+    });
+    const el13 = worksheet.requirements.find(({ id }) => id === "EL-13");
+    const el15 = worksheet.requirements.find(({ id }) => id === "EL-15");
+
+    expect(el13.scopePolicy).toBe("MATCHING_SCOPE_INCLUDED_SUFFICIENT");
+    expect(el15).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+      scopeRules: { narrowScopeKeys: ["GLASBRUCH_INSURANCE"] },
+    });
+  });
+
+  test("rejects definitive matching-scope policy without an explicit host scope", () => {
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: SYNTHETIC_DOCUMENT,
+        documentFingerprint: "fixture-sha256",
+        catalog: {
+          schemaVersion: 1,
+          catalogId: "unsafe-definitive-scope",
+          categoryView: "EL",
+          requirements: [
+            {
+              id: "EL-99",
+              label: "Unsicherer enger Scope",
+              requestedFields: [],
+              scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+              components: [
+                {
+                  id: "glass",
+                  label: "Glas",
+                  factRole: "INSURED_OBJECT",
+                  aliases: ["Garagen"],
+                },
+              ],
+            },
+          ],
+        },
+      })
+    ).toThrow("DEFINITIVE_SCOPE_KEYS_REQUIRED: EL-99");
+  });
 
   test("fails closed on an incomplete or corrupt PageMap", () => {
     expect(() =>

@@ -201,6 +201,61 @@ describe("categoryResultContract", () => {
     });
   });
 
+  test("uses condition components for completeness without letting them erase a proven coverage effect", () => {
+    const result = rollupCategoryResult({
+      categoryId: "LW-03",
+      requiredComponentIds: ["supply_pipe", "outside_on_property"],
+      coverageComponentIds: ["supply_pipe"],
+      componentResults: [
+        component("supply_pipe", COVERAGE_EFFECT.INCLUDED),
+        component("outside_on_property", COVERAGE_EFFECT.CONDITIONAL),
+      ],
+    });
+
+    expect(result).toMatchObject({
+      coverageComponentIds: ["supply_pipe"],
+      evidenceCompleteness: EVIDENCE_COMPLETENESS.COMPLETE,
+      coveragePicture: COVERAGE_PICTURE.INCLUDED,
+      conflictState: CONFLICT_STATE.NONE,
+      reviewStatus: REVIEW_STATUS.BELEGT,
+    });
+  });
+
+  test("does not turn a conditional coverage-bearing component into proven coverage", () => {
+    const result = rollupCategoryResult({
+      categoryId: "LW-03",
+      requiredComponentIds: ["supply_pipe", "outside_on_property"],
+      coverageComponentIds: ["supply_pipe"],
+      componentResults: [
+        component("supply_pipe", COVERAGE_EFFECT.CONDITIONAL),
+        component("outside_on_property", COVERAGE_EFFECT.DEFINED),
+      ],
+    });
+
+    expect(result).toMatchObject({
+      evidenceCompleteness: EVIDENCE_COMPLETENESS.COMPLETE,
+      coveragePicture: COVERAGE_PICTURE.NOT_DETERMINABLE,
+      reviewStatus: REVIEW_STATUS.BELEGT,
+    });
+  });
+
+  test("keeps an optional supporting condition partial under role-only aggregation", () => {
+    const result = rollupCategoryResult({
+      categoryId: "LW-03",
+      requiredComponentIds: ["supply_pipe", "outside_on_property"],
+      coverageComponentIds: ["supply_pipe"],
+      componentResults: [
+        component("supply_pipe", COVERAGE_EFFECT.INCLUDED),
+        component("outside_on_property", COVERAGE_EFFECT.OPTION_ONLY),
+      ],
+    });
+
+    expect(result).toMatchObject({
+      coveragePicture: COVERAGE_PICTURE.INCLUDED,
+      reviewStatus: REVIEW_STATUS.TEILBELEGT,
+    });
+  });
+
   test("keeps found but uninterpreted evidence unresolved", () => {
     const result = rollup(
       [component("wintergarten", COVERAGE_EFFECT.UNKNOWN)],
@@ -270,5 +325,19 @@ describe("categoryResultContract", () => {
         ["wintergarten"]
       )
     ).toThrow("INVALID_EVIDENCE_PRESENCE: wintergarten: POSSIBLY_FOUND");
+  });
+
+  test("rejects a coverage component outside the required component set", () => {
+    expect(() =>
+      rollupCategoryResult({
+        categoryId: "LW-03",
+        requiredComponentIds: ["supply_pipe", "outside_on_property"],
+        coverageComponentIds: ["foreign"],
+        componentResults: [
+          component("supply_pipe", COVERAGE_EFFECT.INCLUDED),
+          component("outside_on_property", COVERAGE_EFFECT.CONDITIONAL),
+        ],
+      })
+    ).toThrow("UNKNOWN_COVERAGE_COMPONENT_ID: foreign");
   });
 });

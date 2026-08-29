@@ -20,6 +20,19 @@ const CATEGORY_TABLE_HEADERS = Object.freeze([
 ]);
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
+const NON_COVERAGE_FACT_ROLES = new Set([
+  "CONDITION",
+  "DEFINITION",
+  "LIMIT",
+  "DEDUCTIBLE",
+  "DOCUMENT_STATUS",
+]);
+const DEFINITIVE_NARROW_SCOPE_EFFECTS = new Set([
+  COVERAGE_EFFECT.INCLUDED,
+  COVERAGE_EFFECT.EXCLUDED,
+  COVERAGE_EFFECT.DEFINED,
+  COVERAGE_EFFECT.CONDITIONAL,
+]);
 
 function rendererError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -411,26 +424,25 @@ function buildCategoryTableRows({
       );
       const fieldResult = fieldsByRequirement.get(normalized.id);
       const valuesComplete = fieldComplete(rollup, fieldResult, candidates);
-      const scopeComplete = rowJudgements.every(
-        ({
-          selectedScopePicture,
-          unresolvedCandidateIds = [],
-          coverageEffect,
-        }) =>
-          unresolvedCandidateIds.length === 0 &&
-          (selectedScopePicture !== "NARROW_ONLY" ||
-            (requirement.scopePolicy === "MATCHING_SCOPE_INCLUDED_SUFFICIENT" &&
-              coverageEffect === COVERAGE_EFFECT.INCLUDED))
+      const componentById = new Map(
+        requirement.components.map((component) => [component.id, component])
       );
+      const scopeComplete = rowJudgements.every((judgement) => {
+        if ((judgement.unresolvedCandidateIds || []).length > 0) return false;
+        if (judgement.selectedScopePicture !== "NARROW_ONLY") return true;
+        if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
+          return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(judgement.coverageEffect);
+        if (requirement.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT")
+          return false;
+        const factRole = componentById.get(judgement.componentId)?.factRole;
+        return NON_COVERAGE_FACT_ROLES.has(factRole)
+          ? [COVERAGE_EFFECT.DEFINED, COVERAGE_EFFECT.CONDITIONAL].includes(
+              judgement.coverageEffect
+            )
+          : judgement.coverageEffect === COVERAGE_EFFECT.INCLUDED;
+      });
       const coverageDecisionRequired = requirement.components.some(
-        ({ factRole }) =>
-          ![
-            "CONDITION",
-            "DEFINITION",
-            "LIMIT",
-            "DEDUCTIBLE",
-            "DOCUMENT_STATUS",
-          ].includes(factRole)
+        ({ factRole }) => !NON_COVERAGE_FACT_ROLES.has(factRole)
       );
       const reviewStatus = reviewFor({
         rollup,

@@ -11,6 +11,154 @@
       "approvalStatus": "DRAFT",
       "rows": [
         {
+          "categoryId": "LW-03",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Zuleitungsrohre: eingeschlossen",
+              "außerhalb des Gebäudes auf dem Grundstück: bedingt geregelt"
+            ]
+          },
+          "requestedFieldStatus": "COMPLETE",
+          "components": [
+            {
+              "componentId": "supply_pipe",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:63f0a80238c6181b7c2ae81c1a284f34b7fc4d102534b0535aa7c51704ad7c87",
+                  "candidate:9058841826f75ca9a9f7809eddcf9e4ddca02dde625c0b0f9a8dfccdb9dcbec9",
+                  "candidate:a5f020adef4ee08749a16a1b819d0e57e6339d6535e1e2117ad447e53da9c1ca"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:63f0a80238c6181b7c2ae81c1a284f34b7fc4d102534b0535aa7c51704ad7c87",
+                  "candidate:9058841826f75ca9a9f7809eddcf9e4ddca02dde625c0b0f9a8dfccdb9dcbec9",
+                  "candidate:a5f020adef4ee08749a16a1b819d0e57e6339d6535e1e2117ad447e53da9c1ca"
+                ],
+                "requiredPhysicalPages": [3, 15],
+                "allowedPhysicalPages": [3, 15]
+              }
+            },
+            {
+              "componentId": "outside_on_property",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "CONDITIONAL",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:417ccc5247e1be2bb7a278b5f2e8ea9e0cc1d82cf502e8130dca97bb70f7dfb3",
+                  "candidate:90874301b391f8db7aa700b6cbab5dd19c9a8b747669215182f14249ce4ba908"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:417ccc5247e1be2bb7a278b5f2e8ea9e0cc1d82cf502e8130dca97bb70f7dfb3",
+                  "candidate:90874301b391f8db7aa700b6cbab5dd19c9a8b747669215182f14249ce4ba908"
+                ],
+                "requiredPhysicalPages": [15],
+                "allowedPhysicalPages": [15]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:417ccc5247e1be2bb7a278b5f2e8ea9e0cc1d82cf502e8130dca97bb70f7dfb3",
+              "candidate:63f0a80238c6181b7c2ae81c1a284f34b7fc4d102534b0535aa7c51704ad7c87",
+              "candidate:9058841826f75ca9a9f7809eddcf9e4ddca02dde625c0b0f9a8dfccdb9dcbec9",
+              "candidate:90874301b391f8db7aa700b6cbab5dd19c9a8b747669215182f14249ce4ba908",
+              "candidate:a5f020adef4ee08749a16a1b819d0e57e6339d6535e1e2117ad447e53da9c1ca"
+            ],
+            "allowedCandidateIds": [
+              "candidate:417ccc5247e1be2bb7a278b5f2e8ea9e0cc1d82cf502e8130dca97bb70f7dfb3",
+              "candidate:63f0a80238c6181b7c2ae81c1a284f34b7fc4d102534b0535aa7c51704ad7c87",
+              "candidate:9058841826f75ca9a9f7809eddcf9e4ddca02dde625c0b0f9a8dfccdb9dcbec9",
+              "candidate:90874301b391f8db7aa700b6cbab5dd19c9a8b747669215182f14249ce4ba908",
+              "candidate:a5f020adef4ee08749a16a1b819d0e57e6339d6535e1e2117ad447e53da9c1ca"
+            ],
+            "requiredPhysicalPages": [3, 15],
+            "allowedPhysicalPages": [3, 15]
+          }
+        },
+        {
+          "categoryId": "LW-04",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Ableitungsrohre: eingeschlossen",
+              "außerhalb des Gebäudes auf dem Grundstück: bedingt geregelt"
+            ]
+          },
+          "requestedFieldStatus": "COMPLETE",
+          "components": [
+            {
+              "componentId": "drain_pipe",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:fdb00c5661aff9d959caa2476da5c583bd2e0cd7e13e61d634ff32a574450cdd"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:fdb00c5661aff9d959caa2476da5c583bd2e0cd7e13e61d634ff32a574450cdd"
+                ],
+                "requiredPhysicalPages": [14],
+                "allowedPhysicalPages": [14]
+              }
+            },
+            {
+              "componentId": "outside_on_property",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "CONDITIONAL",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:5c1791da7f2b76182718624842ee959480310d4e355abb673f31897b6b821d7e",
+                  "candidate:cc1ac28545ba2167648d2a4dfc7f069bc690f5ec1946d0893030302d3b772786",
+                  "candidate:f2871591751839971dac5f0889ec186e50b591a191edaa15af9178e62e6b2233"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:5c1791da7f2b76182718624842ee959480310d4e355abb673f31897b6b821d7e",
+                  "candidate:cc1ac28545ba2167648d2a4dfc7f069bc690f5ec1946d0893030302d3b772786",
+                  "candidate:f2871591751839971dac5f0889ec186e50b591a191edaa15af9178e62e6b2233"
+                ],
+                "requiredPhysicalPages": [3, 14],
+                "allowedPhysicalPages": [3, 14]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:5c1791da7f2b76182718624842ee959480310d4e355abb673f31897b6b821d7e",
+              "candidate:cc1ac28545ba2167648d2a4dfc7f069bc690f5ec1946d0893030302d3b772786",
+              "candidate:f2871591751839971dac5f0889ec186e50b591a191edaa15af9178e62e6b2233",
+              "candidate:fdb00c5661aff9d959caa2476da5c583bd2e0cd7e13e61d634ff32a574450cdd"
+            ],
+            "allowedCandidateIds": [
+              "candidate:5c1791da7f2b76182718624842ee959480310d4e355abb673f31897b6b821d7e",
+              "candidate:cc1ac28545ba2167648d2a4dfc7f069bc690f5ec1946d0893030302d3b772786",
+              "candidate:f2871591751839971dac5f0889ec186e50b591a191edaa15af9178e62e6b2233",
+              "candidate:fdb00c5661aff9d959caa2476da5c583bd2e0cd7e13e61d634ff32a574450cdd"
+            ],
+            "requiredPhysicalPages": [3, 14],
+            "allowedPhysicalPages": [3, 14]
+          }
+        },
+        {
           "categoryId": "LW-05",
           "approvalStatus": "DRAFT",
           "row": {
@@ -136,6 +284,168 @@
             ],
             "requiredPhysicalPages": [14],
             "allowedPhysicalPages": [14]
+          }
+        }
+      ]
+    },
+    {
+      "documentKey": "LF",
+      "pdfSha256": "2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62",
+      "physicalPages": 31,
+      "documentStatus": "FRAMEWORK_TERMS",
+      "approvalStatus": "DRAFT",
+      "rows": [
+        {
+          "categoryId": "EL-05",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Starkregen: eingeschlossen",
+              "Oberflächenwasser: eingeschlossen",
+              "Ohne Gewässerausuferung: geregelt"
+            ]
+          },
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "components": [
+            {
+              "componentId": "heavy_rain",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "CONDITIONAL",
+              "conflictState": "NONE",
+              "selectedScopePicture": "NARROW_ONLY",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:4a7bf80a07013595407699715800e971c6899cba59eaf92d9316032f569d2922"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:4a7bf80a07013595407699715800e971c6899cba59eaf92d9316032f569d2922"
+                ],
+                "requiredPhysicalPages": [10],
+                "allowedPhysicalPages": [10]
+              }
+            },
+            {
+              "componentId": "surface_water",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "CONDITIONAL",
+              "conflictState": "NONE",
+              "selectedScopePicture": "NARROW_ONLY",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:1564e522669539aa5f34dcfc5110ff6700e257c01a7505d4ee6526427a4d3276"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:1564e522669539aa5f34dcfc5110ff6700e257c01a7505d4ee6526427a4d3276"
+                ],
+                "requiredPhysicalPages": [10],
+                "allowedPhysicalPages": [10]
+              }
+            },
+            {
+              "componentId": "without_watercourse_overflow",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "DEFINED",
+              "documentApplicability": "CONDITIONAL",
+              "conflictState": "NONE",
+              "selectedScopePicture": "NARROW_ONLY",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:ec51b3f091e26446528256fac1c32fece413fc58c09a21e7ed5d5f995b2698af"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:ec51b3f091e26446528256fac1c32fece413fc58c09a21e7ed5d5f995b2698af"
+                ],
+                "requiredPhysicalPages": [10],
+                "allowedPhysicalPages": [10]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:1564e522669539aa5f34dcfc5110ff6700e257c01a7505d4ee6526427a4d3276",
+              "candidate:4a7bf80a07013595407699715800e971c6899cba59eaf92d9316032f569d2922",
+              "candidate:ec51b3f091e26446528256fac1c32fece413fc58c09a21e7ed5d5f995b2698af"
+            ],
+            "allowedCandidateIds": [
+              "candidate:1564e522669539aa5f34dcfc5110ff6700e257c01a7505d4ee6526427a4d3276",
+              "candidate:4a7bf80a07013595407699715800e971c6899cba59eaf92d9316032f569d2922",
+              "candidate:ec51b3f091e26446528256fac1c32fece413fc58c09a21e7ed5d5f995b2698af"
+            ],
+            "requiredPhysicalPages": [10],
+            "allowedPhysicalPages": [10]
+          }
+        },
+        {
+          "categoryId": "EL-15",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Gemischt",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Isolier- oder Sicherheitsglas: eingeschlossen",
+              "Verbundsicherheitsglas: ausgeschlossen"
+            ]
+          },
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "components": [
+            {
+              "componentId": "insulating_or_safety_glass",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "CONDITIONAL",
+              "conflictState": "NONE",
+              "selectedScopePicture": "NARROW_ONLY",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:45fae05e23f9727749b96479b36291ad26fe4b3a7cac5e465a9ffd4a19a22111",
+                  "candidate:5e8e5cb744abfa8143b0ec5189347987fc5275a38e921ab7d31620b84ad940a5"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:45fae05e23f9727749b96479b36291ad26fe4b3a7cac5e465a9ffd4a19a22111",
+                  "candidate:5e8e5cb744abfa8143b0ec5189347987fc5275a38e921ab7d31620b84ad940a5"
+                ],
+                "requiredPhysicalPages": [15],
+                "allowedPhysicalPages": [15]
+              }
+            },
+            {
+              "componentId": "resistant_laminated_safety_glass",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "EXCLUDED",
+              "documentApplicability": "CONDITIONAL",
+              "conflictState": "NONE",
+              "selectedScopePicture": "NARROW_ONLY",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:414f1667c4b7ec337aa4406670e79edeb17dc0d24dd1b0d8449d7ef8b0c663fd"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:414f1667c4b7ec337aa4406670e79edeb17dc0d24dd1b0d8449d7ef8b0c663fd"
+                ],
+                "requiredPhysicalPages": [15],
+                "allowedPhysicalPages": [15]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:414f1667c4b7ec337aa4406670e79edeb17dc0d24dd1b0d8449d7ef8b0c663fd",
+              "candidate:45fae05e23f9727749b96479b36291ad26fe4b3a7cac5e465a9ffd4a19a22111",
+              "candidate:5e8e5cb744abfa8143b0ec5189347987fc5275a38e921ab7d31620b84ad940a5"
+            ],
+            "allowedCandidateIds": [
+              "candidate:414f1667c4b7ec337aa4406670e79edeb17dc0d24dd1b0d8449d7ef8b0c663fd",
+              "candidate:45fae05e23f9727749b96479b36291ad26fe4b3a7cac5e465a9ffd4a19a22111",
+              "candidate:5e8e5cb744abfa8143b0ec5189347987fc5275a38e921ab7d31620b84ad940a5"
+            ],
+            "requiredPhysicalPages": [15],
+            "allowedPhysicalPages": [15]
           }
         }
       ]

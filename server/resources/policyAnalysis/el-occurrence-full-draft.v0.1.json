@@ -300,7 +300,7 @@
       "id": "EL-15",
       "label": "Sonderverglasung wie Isolier- oder Sicherheitsglas",
       "requestedFields": [],
-      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopePolicy": "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
       "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {

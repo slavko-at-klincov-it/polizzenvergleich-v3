@@ -2693,3 +2693,41 @@ PASS: frischer WEVIG-LW-27B-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
 PASS: genau LW-05 und LW-26 verbessert; übrige 34 LW-Zeilen stabil
 NO CLAIM: DRAFT ist keine fachliche Freigabe und keine 99-Prozent-Garantie
 ```
+
+## 45. RC15: Deckungsrollen und definitive Wirkungen im erlaubten Host-Scope
+
+Die vollständigen WEVIG-RC11- und LF-RC12-Artefakte zeigten vier Zeilen, bei
+denen Suche, Triage, atomare Wirkung, Quellenbindung und Werte bereits korrekt
+waren, die sichtbare Endzeile aber trotzdem herabgestuft wurde.
+
+Bei `LW-03` und `LW-04` waren die Rohre ausdrücklich `INCLUDED`, während die
+erforderliche Ortsbedingung korrekt `CONDITIONAL` war. Der bisherige Rollup
+ließ die Bedingung das Deckungsbild auf `NOT_DETERMINABLE` setzen. RC15 trennt
+deshalb nur für ausdrücklich katalogisierte Anforderungen die
+deckungsentscheidenden Rollen von weiterhin erforderlichen Bedingungen.
+
+Bei LF `EL-05` waren beide Gefahren eingeschlossen und die unterstützende
+Abgrenzung definiert; bei `EL-15` waren Sonderverglasungen teilweise
+eingeschlossen und eine konkrete Verbundglasart ausgeschlossen. Beide
+Sachverhalte lagen in katalogisierten, aktivierten Host-Scopes. Der Renderer
+akzeptiert nun die unterstützende Definition von `EL-05` sowie definitive
+positive und negative Wirkungen für die neue, nur bei `EL-15` deklarierte
+Scope-Policy.
+
+Die Gegenregeln sind Bestandteil des Vertrags: deckungsentscheidendes
+`CONDITIONAL`, unterstützendes `OPTION_ONLY`, `UNKNOWN`, ungelöste Kandidaten
+und nicht katalogisierte enge Scopes bleiben partiell oder ungeklärt. Die
+definitive Policy ist ohne konkrete Host-Scope-Schlüssel ungültig. `ST-27`
+bleibt als reale Negativprobe unverändert fail-closed.
+
+```text
+PASS: 91 Jest-Suites / 998 Tests
+PASS: Server-, Frontend- und Collector-Lint
+PASS: Replay aller 640 LF-/WEVIG-Endzeilen
+PASS: nur WEVIG LW-03/04 und LF EL-05/15 neu verbessert
+PASS: keine neue Endzeilenänderung in HP, FE, ST, VB oder WE
+PASS: ST-27 bleibt TEILBELEGT / Nicht feststellbar
+NEXT: unveränderlichen RC15-Tag auf Mac Studio installieren
+NEXT: frische WEVIG-LW- und LF-EL-Läufe mit qwen/qwen3.8-27b
+NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
+```

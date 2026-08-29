@@ -464,6 +464,65 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test.each([
+    ["LW-03", "Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück"],
+    ["LW-04", "Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück"],
+  ])(
+    "renders %s covered pipe subject to a complete scope condition as BELEGT plus Ja",
+    (id, label) => {
+      const scopeField = {
+        requirementId: id,
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "scope",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "außerhalb des Gebäudes auf dem Grundstück",
+                source: { candidateId: "candidate:0" },
+              },
+            ],
+          },
+        ],
+      };
+      const input = fixture({
+        id,
+        label,
+        requestedFields: ["scope"],
+        componentEffects: [
+          COVERAGE_EFFECT.INCLUDED,
+          COVERAGE_EFFECT.CONDITIONAL,
+        ],
+        selected: [true, true],
+        fieldResult: scopeField,
+      });
+      const [coveredObject, condition] =
+        input.worksheet.requirements[0].components;
+      coveredObject.factRole = "INSURED_OBJECT";
+      condition.factRole = "CONDITION";
+      input.materializedEvidence.judgements.forEach((judgement) => {
+        judgement.selectedScopePicture = "GENERAL";
+      });
+      input.materializedEvidence.rollups[0] = {
+        ...rollupCategoryResult({
+          categoryId: id,
+          requiredComponentIds: [coveredObject.id, condition.id],
+          coverageComponentIds: [coveredObject.id],
+          componentResults: input.materializedEvidence.judgements,
+        }),
+        requestedFields: ["scope"],
+      };
+
+      expect(buildCategoryTableRows(input)[0]).toMatchObject({
+        documentedContent:
+          "Bestandteil 1: eingeschlossen; Bestandteil 2: bedingt geregelt; Geltungsbereich: außerhalb des Gebäudes auf dem Grundstück",
+        coverage: "Ja",
+        reviewStatus: "BELEGT",
+      });
+    }
+  );
+
   test("keeps mixed component effects partial when a requested value is missing", () => {
     const [row] = buildCategoryTableRows(
       fixture({
@@ -499,6 +558,50 @@ describe("categoryTableRenderer", () => {
         "Bestandteil 1: eingeschlossen (engerer Geltungsbereich; Details siehe Quelle)",
       coverage: "Ja",
       reviewStatus: "BELEGT",
+    });
+  });
+
+  test("renders definitive included and excluded effects in an allowed host scope as complete mixed coverage", () => {
+    const input = fixture({
+      id: "EL-15",
+      label: "Sonderverglasung wie Isolier- oder Sicherheitsglas",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED, COVERAGE_EFFECT.EXCLUDED],
+      selected: [true, true],
+      scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+    });
+    input.worksheet.requirements[0].components.forEach((component) => {
+      component.factRole = "INSURED_OBJECT";
+    });
+    input.materializedEvidence.judgements.forEach((judgement) => {
+      judgement.selectedScopePicture = "NARROW_ONLY";
+    });
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Gemischt",
+      reviewStatus: "BELEGT",
+    });
+  });
+
+  test("keeps an optional supporting condition in narrow scope partial", () => {
+    const input = fixture({
+      id: "EL-05",
+      label: "Starkregen und Oberflächenwasser",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED, COVERAGE_EFFECT.OPTION_ONLY],
+      selected: [true, true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    });
+    const [peril, condition] = input.worksheet.requirements[0].components;
+    peril.factRole = "PERIL";
+    condition.factRole = "CONDITION";
+    input.materializedEvidence.judgements.forEach((judgement) => {
+      judgement.selectedScopePicture = "NARROW_ONLY";
+    });
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Nicht feststellbar",
+      reviewStatus: "TEILBELEGT",
     });
   });
 
