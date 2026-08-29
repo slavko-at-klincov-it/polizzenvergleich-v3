@@ -3213,3 +3213,25 @@ PASS: übrige LF-Änderungen nur bedeutungsgleiche Qwen-Textvariation
 PASS: RC32-Tag a39f90db auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Sublimit- oder Kostenreferenz beweist eine Pauschaldeckungssumme
 ```
+
+## 63. RC33: Schadenservice und Ansprechpartner gemeinsam belegen
+
+WEVIG `VB-36` blieb ungeklärt, obwohl ein lokaler Serviceblock eine
+24-Stunden-Telefonnummer, telefonische Schadenmeldung sowie Beratung und
+Hilfestellung ausdrücklich nennt. Die produktübliche Form
+`telefonische Schadenmeldung` fehlte im VB-Recall.
+
+RC33 bindet beide Rollen nur, wenn Schadenmanagement, Telefonnummer,
+Rund-um-die-Uhr-Erreichbarkeit, Schadenmeldung und Unterstützungsleistung im
+selben Kontext vorkommen. Ein gemeinsamer Ausdruck vermeidet unnötige
+Synonym- und Quellenverdopplung.
+
+```text
+PASS: 93 Jest-Suites / 1085 Tests und Server-Lint
+PASS: WEVIG-VB 22/22 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: ausschließlich VB-36 UNGEKLÄRT -> BELEGT / Ja
+PASS: übrige 35 WEVIG-VB-Zeilen exakt identisch
+PASS: LF-VB 37/37 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: LF gegenüber RC29 exakt 0 Änderungen
+NO CLAIM: allgemeine Telefonnummer oder Überschrift beweist Schadenabwicklung
+```
