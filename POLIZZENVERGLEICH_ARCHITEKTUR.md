@@ -1,6 +1,6 @@
 # Polizzenvergleich – aktuelle Architektur und Datenfluss
 
-Stand: 24. August 2026
+Stand: 25. August 2026
 Beschriebener Code: `policy-v0.3.22` (`17a556dc`)
 
 Dieses Dokument beschreibt den tatsächlich implementierten Zustand. Der als
@@ -376,6 +376,30 @@ Basisindex ready
   Server zusammengeführt und gerendert. Der Pfad hat null generative
   Modellaufrufe.
 
+### Geprüfter, nicht übernommener Rollenbinder-Entwurf
+
+Am 25. August 2026 wurde ein temporärer Spike für eine mögliche
+rollenlokale Signalbindung ausgeführt und danach vollständig aus dem
+Produktcode entfernt. Der Entwurf band positionierte Geld- und
+Bedingungssignale innerhalb derselben Evidenzspanne an geordnete harte
+Rollenanker. Seine vorgeschlagene Modulgrenze war eine reine Funktion ohne
+Datenbank-, Modell- oder Render-Seiteneffekte:
+
+```text
+positionierte Signale + Evidenzspannen + Ziel-/Konkurrenzrollen
+  -> rollenlokal zugeordnete Kandidatensignale oder leer bei Konflikt
+```
+
+Im Spike verwendeten Extractor und Targeted-Renderer dieselbe fail-closed
+Grenze für Werte und Bedingungen. Der dichte `EUR 350`-/`EUR 20.000`-Fall war
+damit grün. Das ist Evidenz für eine Lösungsrichtung, aber keine Entscheidung,
+diesen konkreten Code oder den bestehenden Branch zu übernehmen.
+
+Der aktuelle Produktcode enthält diesen Binder nicht. `FAIL-003` bleibt dort
+offen. Vor einer späteren Neuimplementierung müssen Rollenpartitionierung,
+Occurrence-Spans, Tabellen-/Fortsetzungsrelationen und unbekannte
+Rollenformulierungen im Gesamtplan gegeneinander geprüft werden.
+
 ### Weiter offen
 
 - Clause Blocks sind noch kein eigenständiger Basisindex-Baustein; beim ersten
@@ -383,6 +407,9 @@ Basisindex ready
   sein.
 - Heading-Kontinuität über physische Seiten muss kontrolliert behandelt werden.
 - Tabellenköpfe und Variantenbezüge brauchen realstrukturnahe Tests.
+- Der Rollenbinder-Entwurf muss vor einer Übernahme am 21-Seiten-
+  Realstrukturfall und am Original-PDF mit Tabellengeometrie nachgeprüft
+  werden.
 - Semantische Treffer ohne deterministisches Selbstbehalt-Signal bleiben bis
   zu einer evaluierten, kleinen Ambiguitätsprüfung bewusst unberücksichtigt.
 
@@ -404,3 +431,54 @@ Basisindex ready
 12. Kein Analysefehler darf den Basisindex oder letzten Published Snapshot
     löschen.
 13. Keine Kunden-PDFs, Storage-Dateien, Logs oder Schlüssel in Git.
+
+## 14. Experimenteller Feuerpilot: dynamische Discovery und Span-ID-Vertrag
+
+Stand 25. August 2026, uncommitteter Entwicklungszustand auf Basis
+`policy-clean-implementation` / `a1935f16`:
+
+```text
+Canonical Comparison Source mit PageMap
+  -> codebasierte dynamische Zeilen-Discovery
+       jede nichtleere Zeile als stabile Ledgerzeile terminal disponiert
+       wortgetreue Struktur-/Inhaltslabel mit stabiler ID
+       Struktur und zusätzliche Feldlabels als getrennte Views
+       kompatibles Nummerierungspräfix oder Hierarchie unresolved
+       content-addressiertes lokales Artifact je exaktem Ledger
+       Partnerkatalog bleibt getrennte View
+  -> feste FEUER-Occurrence-Enumeration
+  -> additive dokumentgebundene Dinghy-Suche
+  -> begrenzte Candidate Sources
+       Retrievalmanifest: enumeriert -> ausgewählt -> einbezogen -> verworfen
+  -> serverseitige Evidence Spans
+       SPAN-ID + Quellfingerprint + physische Seite + Originaloffset
+       exakter Originalsubstring + überlappende Langtextfenster
+       kanonische PageMap-Rückprüfung + sichtbares Overflowmanifest
+  -> Qwen: strikt drei Spalten je fester CAT-Zeile
+       CAT-ID -> SPAN-ID oder NONE -> RELEVANT/UNCLEAR/NONE
+  -> Code: NONE-Normalisierung, doppelte ID -> unresolved
+  -> kontrollierter Kategorienmatcher
+  -> source-bound Kandidaten; freie Modellfelder bleiben unvalidiert
+  -> deterministische A/B-Tabelle ohne automatisches Fachurteil
+  -> getrennt markierter Discovery-Anhang
+  -> Chat: kompakte Zähler + Artifact-ID + Span-/Retrievalmanifest
+  -> Artifact-Lifecycle: persistente In-flight-Lease + referenzbasierter GC
+```
+
+Der Modelloutput besitzt weder Zeilenmenge noch Quelle. Er darf eine
+serverseitig geplante Zeile nicht auslassen und kein Zitat oder keine Seite
+erfinden. Eine gewählte Span-ID bestätigt nur die technische Herkunft. Rolle,
+Wert, Geltungsbereich, Variante, Ausschlusswirkung und Vergleichbarkeit bleiben
+eigene Validierungsgrenzen. Dynamische Labels erhalten zunächst
+`unmapped_discovery`; sie verändern weder Partner-IDs noch A/B-Joins.
+Ein ungeklärter Nummerierungspfad bleibt auch für tiefere Nachfahren
+`unresolved`. Das vollständige Line-Ledger bleibt ein lokales sensibles
+Artefakt und wird nach Wegfall aller Chat-Referenzen zeitverzögert bereinigt.
+Lang laufende Analysen halten bis zur Chat-Persistenz eine dateibasierte Lease;
+abgebrochene Leases besitzen eine begrenzte Lebensdauer.
+
+Die verwaltete Workspace-Konfiguration bleibt Top-N 32, Temperatur 0,
+Similarity Threshold 0 und Suchmodus `default`. Der Feuerpfad begrenzt die
+semantischen Kandidaten weiterhin batchweise. Daher darf aus der Zahl 32 oder
+der dynamischen Line-Coverage keine fachliche Vollständigkeit abgeleitet
+werden.

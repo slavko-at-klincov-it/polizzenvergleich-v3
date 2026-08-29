@@ -1,6 +1,6 @@
 # Polizzenvergleich – Architekturentscheidungen und Loop-Schutz
 
-Stand: 24. August 2026
+Stand: 25. August 2026
 Entscheidungsbasis: reale Kunden-Mac-Messungen bis `policy-v0.3.22`
 
 ## 1. Verwendung
@@ -340,7 +340,7 @@ abzulehnen.
 
 ## ADR-015: Exhaustive Selbstbehalt-Abfrage vor dem Vollinventar
 
-**Status:** IMPLEMENTIERT im Entwicklungsstand nach `policy-v0.3.22`
+**Status:** IMPLEMENTIERT, fachliche Freigabe wegen Rollenassoziation `REVISE`
 
 Die gezielte Frage nach Selbstbehalten wird vor `ensureForDocuments()`
 geroutet. Sie darf keinen vollständigen Qwen-Faktenlauf starten.
@@ -384,7 +384,223 @@ und Batches zu je höchstens 8 Kandidaten begrenzt. Qwen bestätigt nur die Roll
 `Selbstbehalt`; der Server validiert das exakte Zitat, leitet Betrag und Seite
 aus dem Quellblock ab und besitzt weiterhin jede Ergebniszeile. Nicht eindeutig
 bestätigte Kandidaten werden sichtbar gemeldet und nicht als Treffer ausgegeben.
+Wird das Kandidatenbudget überschritten oder bleiben Kandidaten ungelöst, darf
+die Antwort nicht als vollständig erscheinen. Sie muss die Unvollständigkeit
+sichtbar ausweisen oder fail-closed ohne Vollständigkeitsbehauptung enden.
 
 Gemischte Anfragen wie „Selbstbehalte und Deckungsgrenzen“ dürfen den
 Selbstbehalt-Spezialpfad nicht kapern. Bis weitere vertikale Resolver existieren,
 ist dieser Pfad ausschließlich für reine Selbstbehalt-Fragen zuständig.
+
+### Empirische Korrektur aus dem 21-Seiten-Test
+
+Der lokale Realstruktur-Test vom 24. August 2026 bestätigte den Bypass des
+Vollinventars, `ledger_ready`, Neustartfestigkeit und vollständige
+Fundstellenenumeration. Er widerlegte jedoch die Annahme, dass die bisherige
+Nachbarschaftsregel Beträge und Bedingungen bereits zuverlässig verbindet.
+
+In einer dichten linearisierten Klausel standen `Selbstbehalt EUR 350` und eine
+separate `Jahreshöchstentschädigung EUR 20.000` nahe beieinander. Der Code gab
+beide Werte als Selbstbehalt aus und übernahm zusätzlich eine nicht zugehörige
+Bedingung aus demselben großen Block.
+
+Verbindliche Folgerung:
+
+1. Geldbeträge werden an den nächsten kompatiblen Rollenbegriff innerhalb der
+   gleichen Klauselspanne gebunden.
+2. `Selbstbehalt`, `Limit`, `Jahreshöchstentschädigung`, `Sublimit` und
+   `Versicherungssumme` sind harte, getrennte Rollen.
+3. Eine Nachbarzeile darf nur bei belegter Fortsetzungs- oder Tabellenrelation
+   Werte beziehungsweise Bedingungen ergänzen.
+4. Mehrdeutige Zuordnung führt zu keiner Betragsbehauptung.
+5. Ein größeres Chatmodell ist kein Ersatz für diese deterministische
+   Invariante; im reproduzierten Fehlerpfad traf Qwen keine Auswahlentscheidung.
+
+### Nicht übernommener Implementierungs-Spike vom 25. August 2026
+
+Der anonymisierte Erdbebenfall `EUR 350` versus `EUR 20.000` wurde zuerst als
+Fehler reproduziert und anschließend durch eine reine rollenlokale
+Signalbindung korrigiert. Extractor und Targeted-Renderer verwendeten im Spike
+dieselbe fail-closed Rollenregel. Die fokussierten und direkt angrenzenden
+Tests waren grün.
+
+Dieser Code wurde nach Auswertung des Experiments wieder vollständig entfernt.
+ADR-015 und `FAIL-003` bleiben im Produktcode `REVISE`. Das Experiment
+unterstützt die Hypothese einer rollenpartitionierenden, fail-closed
+Modulgrenze; es entscheidet weder ihre spätere konkrete Implementierung noch
+die allgemeine Occurrence-, Tabellen- oder Variantenarchitektur.
+
+## ADR-016: Analysephase vor neuer Implementierungsbasis
+
+**Status:** AKZEPTIERT am 25. August 2026
+
+Der aktuelle Entwicklungsbranch ist keine freigegebene Basis für weitere
+Produktimplementierung. Er enthält wertvolle Versuchsevidenz, aber auch viele
+Änderungen und einen nachweislich nicht kundenfähigen Stand. Eine unkritische
+Fortsetzung würde schwer erkennbar machen, welche Komponenten bewiesen,
+provisorisch, widersprüchlich oder überholt sind.
+
+Bis zu einem ausdrücklichen Decision-Gate gilt deshalb:
+
+1. Analyse, Wissensaufnahme, Diskussion, Testdesign und Falsifikation haben
+   Vorrang vor Produktcode.
+2. Der bestehende Branch ist Evidenzquelle, nicht automatisch Codequelle.
+3. Der am 25. August 2026 vorbereitete Branch
+   `codex/policy-clean-implementation` bleibt während der Analysephase ohne
+   Produktänderungen.
+4. Vor seiner Verwendung werden Zielvertrag, Architekturentscheidung,
+   Golden Cases, Messverträge und Übernahmeliste beschlossen.
+5. Die Git-Baseline wird ausdrücklich gewählt; weder aktueller HEAD noch ein
+   früherer Tag gelten ohne Vergleich automatisch als sauber.
+6. Erst eine neue, eindeutige Nutzerfreigabe öffnet die Implementierungsphase.
+
+Temporäre Spikes sind nur zulässig, wenn sie ausdrücklich als Experiment
+gekennzeichnet, von behaltenem Produktcode isoliert und nach Sicherung der
+Erkenntnisse entfernt werden.
+
+**Vorbereiteter historischer Worktree:** `policy-clean-implementation` wurde
+auf ausdrücklichen Nutzerwunsch aus dem offiziellen Repository
+`https://github.com/Mintplex-Labs/anything-llm.git` erstellt. Dafür wurde das
+Remote `upstream` registriert. Branch:
+`codex/policy-clean-implementation`; Tracking: `upstream/master`;
+Start-HEAD: `72aabbd15481ae405434efd4c83d46026eef1173`.
+
+Der zuvor irrtümlich aus dem projektspezifischen `origin/main` bei
+`17a556dc / policy-v0.3.22` erzeugte saubere Worktree wurde vor dieser
+Neuanlage entfernt. Er ist nicht die Basis des neuen Branches.
+
+**Nicht entschieden:** Ob der gepinnte Upstream-Commit vor der späteren
+Implementierung aktualisiert wird und welche Teile des bestehenden Codes
+übernommen, neu geschrieben oder verworfen werden.
+
+**Nachtrag zum aktuellen Status:** Später wurde in einem separaten
+Upstream-basierten Worktree der prototypische Agent-Flow-Stand `fb5198ab`
+erstellt. Das hebt die Schutzabsicht dieser ADR nicht auf. Auf Nutzerwunsch ist
+die weitere Umsetzung erneut pausiert; der Prototyp ist Versuchsevidenz und
+keine freigegebene Produktionsbasis. Die aktuelle Fortsetzungsentscheidung
+richtet sich zusätzlich nach ADR-017 und dem vollständigen Run-Ledger.
+
+## ADR-017: Built-in-Parametersuche schließen, Mehrpass-Workflow prüfen
+
+**Status:** AKZEPTIERT ALS EXPERIMENTENTSCHEIDUNG am 25. August 2026;
+konkrete Produktarchitektur noch offen
+
+Die vollständige Original-AnythingLLM-Kampagne hat Pinning, ungepinntes
+Accuracy-RAG mit BGE-M3 und Dinghy bei N6/N10, Temperatur 0,7/0,
+Default-N32 sowie Qwen/Gemma geprüft. Kein valider Lauf bestand gemeinsam die
+fachlichen Hard-Gates für Rollen, Quellen, Pflichtsektionen, Negativzustände
+und Vollständigkeit.
+
+Verbindliche Entscheidung:
+
+1. Keine weitere freie Folge aus Top-N-, Search-, Temperatur- oder
+   Generatorwechseln wird als wahrscheinlicher Root-Cause-Fix behandelt.
+2. `Dinghy + ungepinnt + Default-N32` bleibt nur
+   Breitenproxy-first-Baseline für das eine Referenzdokument, nicht
+   Produktvertrag oder universeller Embedder-Sieger.
+3. Der nächste Versuch prüft eine andere Workflowhypothese: abschnittsweise
+   Enumeration und Extraktion, getrennte Rollenbildung, deterministische
+   Quellenrekonstruktion, Pflichtanker-/Vollständigkeitsvalidierung und
+   sichtbare `unresolved`-Zustände.
+4. Ein sichtbarer Nutzerprompt darf intern mehrere kontrollierte Schritte
+   auslösen. „Ein Prompt für den Nutzer“ bedeutet nicht „ein freier
+   Modellaufruf“.
+5. Eine neue Parameterprobe ist nur zulässig, wenn sie eine neue
+   falsifizierbare Hypothese isoliert und vorher Hard-Gates sowie
+   `PROVES`/`DOES_NOT_PROVE` festlegt.
+
+Nicht entschieden sind die konkrete Umsetzung mit AnythingLLM Agent Builder,
+Agent Flows, serverseitiger Orchestrierung oder einem separaten lokalen
+Harness sowie die spätere Produktionskonfiguration für lange Dokumentpakete.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 17](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#17-original-anythingllm-vollständige-built-in-konfigurationskampagne).
+
+## ADR-018: Modell wählt servereigene Span-ID; dynamische Kategorien bleiben Discovery
+
+**Status:** BEGRENZT AKZEPTIERT ALS EXPERIMENTRICHTUNG am 25. August 2026;
+keine fachliche Kundenfreigabe
+
+Die reale FEUER-Kandidatenprobe scheiterte bei 29 von 30 formalen Fehlern am
+freien Abschreiben eines Zitats. Gleichzeitig benötigt der Partnerkatalog
+einen unabhängigen Gegenpfad für dokumenteigene Gliederungen und unbekannte
+Bezeichnungen.
+
+Verbindliche Richtung für den experimentellen Feuerpilot:
+
+1. Code erzeugt occurrence-genaue Evidence-Spans mit stabiler ID aus
+   Quellfingerprint, physischer Seite, Originaloffset und exaktem Substring;
+   die kanonische PageMap wird rückgeprüft und Overflow sichtbar manifestiert.
+2. Qwen wählt nur eine erlaubte Span-ID oder `NONE`; Zitat und physische Seite
+   werden nicht mehr vom Modell geschrieben.
+3. Code besitzt die vollständige Ergebniszeilenmenge. `NONE` und doppelte
+   Modell-IDs enden deterministisch `UNGEKLÄRT`.
+4. Dynamische Kategorien werden katalogunabhängig und wortgetreu gesammelt.
+   Sie bleiben `unmapped_discovery` und dürfen Partner-IDs, Fakten oder
+   A/B-Joins nicht automatisch verändern.
+5. Der Partnerkatalog bleibt eine priorisierte Review-/Ausgabeansicht. Der
+   spätere Vergleich verbindet Rollen und Scopes, nicht ähnlich klingende
+   Überschriften.
+6. Eine gewählte Span-ID ist nur ein `source_bound_candidate`. Bis Rollen-,
+   Scope-, Varianten- und Vertragsranggates fachlich bestanden sind, dürfen
+   freie Modellfelder weder als Dokumentfakt noch als Gleichwertigkeit oder
+   Vorteil erscheinen.
+7. Der Modellvertrag besitzt im Produktpfad genau drei Spalten:
+   `CAT-ID | Span-ID/NONE | RELEVANT/UNCLEAR/NONE`. Reichere freie
+   Faktenfelder sind in diesem Schritt unzulässig.
+8. Sampling vor der Spanbildung und Span-Overflow werden getrennt
+   manifestiert. Dynamische Vollledger werden content-addressiert einmal
+   lokal gespeichert; Chatzeilen halten nur Referenz und Kurzmetriken.
+9. Ungeklärte Nummerierungshierarchie propagiert an tiefere Nachfahren.
+   Discovery-Vollledger besitzen bis zur Chat-Persistenz eine persistente
+   In-flight-Lease und unterliegen danach einem referenzbasierten lokalen GC.
+   Abgebrochene Leases laufen zeitgebunden aus; fehlgeschlagene und gelöschte
+   Läufe dürfen keine dauerhaften, unreferenzierten Policenartefakte erzeugen.
+
+Begrenzt oder offen bleiben Rollen-, Wert-, Negations-, Varianten-,
+Vertragsrang-, Tabellen- und Querverweisbindung sowie die fachliche
+Entscheidung, wann ein Discovery-Kandidat zu einer neuen Taxonomieversion wird.
+Ein formaler Span-Pass ist kein Deckungs- oder Vergleichsbeweis.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 21](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#21-span-id-und-dynamische-discovery-iteration-im-feuerpilot).
+
+## ADR-019: Fachvorlagen werden beim normalen Workspace-Anlegen ausgewählt
+
+**Status:** UMGESETZT und lokal verifiziert am 26. August 2026; V3.2.1 auf
+Basis `v3.2.0`
+
+Die kurzlebigen Tags `v3.3.0` und `v3.3.1` ergänzten ein separates
+CLI-Script zur Workspace-Provisionierung. Dieser Bedienweg wird verworfen und
+die beiden Tags werden zurückgezogen. Die Funktion gehört in den bestehenden
+zentralen Dialog `Neuer Workspace`, nicht in einen zweiten administrativen
+Erstellpfad.
+
+Verbindlicher Vertrag:
+
+1. Die kanonische lokale Promptablage ist `kategorie-systemprompts/` mit genau
+   den acht Präfixen `VS`, `FE`, `LW`, `ST`, `EL`, `HP`, `VB` und `WE`.
+   Frühere Verweise auf einen `-v2`-Ordner oder nummerierte Dateinamen sind
+   überholt.
+2. Der Dialog erlaubt neben dem Workspace-Namen optional genau eine dieser
+   Fachvorlagen. Ohne Auswahl verwendet AnythingLLM weiterhin seinen normalen
+   Default-Systemprompt; die Anwendung darf dann keinen Fachprompt
+   unterschieben.
+3. Die Fachprompttexte werden serverseitig aus versionierten, mit V3
+   ausgelieferten Vorlagendateien gelesen. Der Browser übermittelt nur eine
+   erlaubte Vorlagen-ID, niemals einen lokalen Dateipfad oder freien
+   Systemprompt.
+4. Jeder über diesen Dialog angelegte Workspace erhält unabhängig von der
+   Fachvorlage: Workspace-Anbieter `System default`, Chatmodus `chat`,
+   Chatverlauf `1`, Temperatur `0`, Search Preference `default`, Top N `55`
+   und Ähnlichkeitsschwelle `0`/keine Einschränkung.
+5. Das globale Chat- oder Embeddingmodell wird durch die Workspace-Anlage
+   nicht verändert. Insbesondere ist keine Prüfung oder Umschaltung einer
+   Dinghy-Modell-ID Teil dieses Dialogs.
+6. Existierende Workspaces, Dokumente, Chats und globale Einstellungen werden
+   nicht migriert. Das Preset gilt nur für neu angelegte Workspaces.
+
+Die Servergrenze validiert die Vorlagen-ID und besitzt die tatsächliche
+Promptzuordnung. Damit bleiben UI, API-Erstellung und spätere weitere
+Erstellcaller konsistent; eine manipulierte Browseranfrage kann keine
+beliebige lokale Datei lesen.
