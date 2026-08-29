@@ -3119,3 +3119,26 @@ PASS: WEVIG gegenüber RC20 exakt 0 semantische Änderungen
 PASS: RC28-Tag fc59ddf0 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Mieter implizieren Wohnungseigentümer oder beliebige Bewohner
 ```
+
+## 59. RC29: Sachverständigenverfahren vollständig belegen
+
+LF `VB-24` enthielt bereits den vollständigen verfahrensrechtlichen Anspruch:
+Bei Uneinigkeit mit dem Versicherer-Gutachten darf der Versicherungsnehmer
+einen anderen Sachverständigen namhaft machen; dessen Gutachten ersetzt das
+Schiedsgutachterverfahren. Die Pipeline fand den Satz, ließ ihn aber ohne
+klassischen Deckungs-Governor modellabhängig und verlor ihn im Ergebnis.
+
+RC29 bindet nur diese vollständige Drei-Anker-Klausel. Überschriften,
+Kostenformulierungen und andere Versicherungskapitel reichen nicht. Die
+bedingte Kostentragung bleibt unverändert bedingt; deshalb bleibt die
+Gesamtzeile fachlich korrekt `TEILBELEGT`.
+
+```text
+PASS: 93 Jest-Suites / 1065 Tests und Server-Lint
+PASS: LF-VB 37/37 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: ausschließlich VB-24 um den echten Verfahrensbeleg verbessert
+PASS: übrige 35 LF-VB-Zeilen exakt identisch
+PASS: WEVIG-VB 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: WEVIG gegenüber RC28 exakt 0 Änderungen
+NO CLAIM: Überschrift oder Kostenklausel beweist ein Verfahrensrecht
+```
