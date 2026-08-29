@@ -2610,3 +2610,49 @@ GO: RC10 auf Mac Studio installieren und vollständigen WEVIG-27B-Lauf starten
 REVIEW_REQUIRED: frischer LF-Regressionslauf mit RC10
 NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
 ```
+
+## 43. RC12-LF-Gesamtregression und RC13-EL-25-Abschluss
+
+Der vollständige RC12-Lauf auf dem LF-Rahmenbedingungsdokument wurde direkt
+auf dem Mac Studio mit `qwen/qwen3.8-27b` ausgeführt:
+
+```text
+320/320 Zeilen
+381 kontrollierte Kandidaten
+234 ausgewählte Quellen
+71 BELEGT / 40 TEILBELEGT / 209 UNGEKLÄRT
+FRAMEWORK_TERMS
+```
+
+VS (36), FE (80), HP (36) und VB (36) waren vollständig byte-identisch zum
+akzeptierten RC9-LF-Ergebnis. Die übrigen Änderungen wurden anhand ihrer
+Originalquellen geprüft:
+
+- `LW-11` verwirft eine Feuer-Kapitelstelle zu elektrischen Teilen von
+  Heizungsanlagen; Heizkessel und Heizkörper bleiben durch die echte
+  Leitungswasserstelle belegt.
+- `ST-14` verwirft eine Glasversicherungsstelle zu Lichtkuppeln.
+- `WE-09` verwirft Glas-/Feuerstellen, die Fenster oder Türen versichern, aber
+  keine wohnungseigentumsrechtliche Zuordnung regeln.
+- `EL-10` wird aus der aktivierten Sturm-Katastrophendeckung vollständig
+  belegt; `EL-21` hält die Gegensprechanlage als Teilbeleg, ohne daraus eine
+  Elektronikdeckung zu erfinden.
+
+Dabei zeigte `EL-25` den einzigen verbliebenen Fehler: Die Feuer-Erweiterung
+versichert ausdrücklich böswillige Beschädigung ohne vorangegangenen Einbruch,
+wurde aber als Fremdscope verworfen. RC13 katalogisiert deshalb für genau diese
+EL-Zeile `FEUER_INSURANCE` als zulässigen engen Scope.
+
+Frische Kategorie-Läufe über den vollständigen Produktionspfad belegen:
+
+```text
+LF:    EL-25 BELEGT / Ja; nur diese eine von 36 EL-Zeilen geändert
+WEVIG: EL-25 UNGEKLÄRT; alle 36 EL-Zeilen semantisch unverändert
+PASS:  alle Artefakt- und Tabellen-Gates
+PASS:  89 Jest-Suites / 977 Tests
+PASS:  Server-, Frontend- und Collector-Lint
+```
+
+RC13 ist damit der aktuelle positive Zwei-Dokument-Kandidat. Die Aussage bleibt
+auf die vorhandenen Referenzdokumente und bekannten Befunde begrenzt; eine
+99-Prozent-Garantie setzt weiterhin vollständige fachliche Oracles voraus.

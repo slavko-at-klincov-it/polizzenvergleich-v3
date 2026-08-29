@@ -573,6 +573,8 @@
       "id": "EL-25",
       "label": "Vandalismus ohne vorangegangenen Einbruch",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "vandalism_without_burglary",

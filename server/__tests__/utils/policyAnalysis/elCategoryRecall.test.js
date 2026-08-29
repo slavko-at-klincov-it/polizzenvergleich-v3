@@ -171,6 +171,7 @@ describe("EL category recall catalog", () => {
     const expected = new Map([
       ["EL-10", "STURM_INSURANCE"],
       ["EL-21", "FEUER_INSURANCE"],
+      ["EL-25", "FEUER_INSURANCE"],
       ["EL-27", "FEUER_INSURANCE"],
       ["EL-34", "FEUER_INSURANCE"],
     ]);
@@ -184,9 +185,10 @@ describe("EL category recall catalog", () => {
         "MATCHING_SCOPE_INCLUDED_SUFFICIENT"
       );
     }
-    expect(
-      elPilotCatalog.requirements.find(({ id }) => id === "EL-34").scopeRules
-        .narrowScopeKeys
-    ).toContain("FEUER_INSURANCE");
+    for (const requirementId of ["EL-25", "EL-34"])
+      expect(
+        elPilotCatalog.requirements.find(({ id }) => id === requirementId)
+          .scopeRules.narrowScopeKeys
+      ).toContain("FEUER_INSURANCE");
   });
 });
