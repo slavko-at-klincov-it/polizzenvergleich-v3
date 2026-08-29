@@ -2992,3 +2992,33 @@ PASS: WEVIG gegenüber RC17 über alle 36 Zeilen semantisch unverändert
 PASS: RC23-Tag a776bc0e auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: andere Wertzeilen oder Host-Scopes automatisch freigegeben
 ```
+
+## 54. RC24: Allgemeine Sparten-Höchstentschädigung streng binden
+
+LF enthält im allgemeinen Vertragsteil eine 150-Prozent-Klausel, die
+ausdrücklich für die jeweilige Sparte gilt. VS verwendete sie bereits korrekt.
+ST zeigte sie nur als engen Teilbeleg; FE und LW verloren sie im Recall.
+
+RC24 erweitert Recall und Bindung gemeinsam. Nur die drei katalogisierten
+Höchstentschädigungsziele in FE, LW und ST dürfen eine allgemeine Klausel
+verwenden, und nur wenn derselbe Satz operative Höchstentschädigung,
+`jeweilige Sparte` sowie Prozentwert und Versicherungssummenbasis enthält.
+Die FE-Jahreshöchstleistung bleibt separat und offen.
+
+```text
+PASS: 92 Jest-Suites / 1054 Tests und Server-Lint
+PASS: positive FE-/LW-/ST-Varianten und adversariale Negativvarianten
+PASS: frischer LF-FE-Lauf, 27/27 Kandidaten, 138/138 Komponenten,
+      80/80 Zeilen; nur FE-F02 verbessert
+PASS: FE-F02 UNGEKLÄRT -> TEILBELEGT / Höchstentschädigung 150 %
+PASS: frischer LF-LW-Lauf, 35/35 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen; nur LW-31 verbessert
+PASS: LW-31 UNGEKLÄRT -> BELEGT / Ja / 150 %
+PASS: frischer LF-ST-Lauf, 51/51 Kandidaten, 54/54 Komponenten,
+      36/36 Zeilen; nur ST-34 verbessert
+PASS: ST-34 TEILBELEGT -> BELEGT / Ja / 150 %
+PASS: übrige 149 LF-Zeilen unverändert
+PASS: frische WEVIG-FE-/LW-/ST-Kontrollläufe, 152/152 Zeilen,
+      0 semantische Änderungen
+NO CLAIM: unbekannte Wortlaute oder externe Versicherer ohne Holdout bewiesen
+```
