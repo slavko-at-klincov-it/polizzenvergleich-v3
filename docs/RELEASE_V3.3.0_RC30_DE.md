@@ -67,6 +67,8 @@ PASS: Server-Lint, Prettier und git diff --check
 PASS: LF-Worksheet bindet die neue Fundstelle nur im Leitungswasserkapitel
 PASS: Feuerkapitel-Treffer bleibt EXPLICIT_OTHER_CATEGORY_SECTION
 PASS: frische LF- und WEVIG-LW-27B-Läufe
+PASS: Tag ca7d5e32 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Checkout bestätigt
 ```
 
 ## Update

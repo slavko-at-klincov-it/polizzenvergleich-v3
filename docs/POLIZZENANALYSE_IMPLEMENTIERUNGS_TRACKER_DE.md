@@ -3163,5 +3163,6 @@ PASS: alle drei LW-11-Komponenten quellengebunden eingeschlossen
 PASS: übrige LF-Zeilen in Status/Deckung/Betrag stabil
 PASS: WEVIG-LW 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
 PASS: WEVIG gegenüber RC21 exakt 0 Änderungen
+PASS: RC30-Tag ca7d5e32 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Heizungsnennung in fremder Sparte beweist Leitungswasserdeckung
 ```
