@@ -577,30 +577,50 @@ function extractAnnualAggregateMultipleFacts({ occurrence, binding }) {
 function extractBuildersLiabilityConstructionSumFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const pattern =
-    /Gesamtbaukosten(?:summe)?\s*((?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])/giu;
-  return [...text.matchAll(pattern)]
-    .filter((match) => {
-      const rawAmount = match[1];
-      const amountMatch = [rawAmount];
-      amountMatch.index = match.index + match[0].lastIndexOf(rawAmount);
-      return valueFollowsCandidate(occurrence, amountMatch);
-    })
-    .map((match) => {
-      const rawAmount = match[1];
-      const amountMatch = [rawAmount];
-      amountMatch.index = match.index + match[0].lastIndexOf(rawAmount);
-      return sourceBoundFact({
+    /Gesamtbaukosten(?:summe)?(?:\s+des\s+Bauvorhabens)?\s*(?:bis\s+)?(?<money>(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])(?:[\s\S]{0,80}?\boder\s+(?<percent>\d{1,3}(?:[.,]\d+)?\s*%)(?:\s+des\s+Gebäudeneuwerts)?)?/giu;
+  const facts = [];
+  for (const match of text.matchAll(pattern)) {
+    const rawMoney = match.groups?.money;
+    if (!rawMoney) continue;
+    const moneyMatch = [rawMoney];
+    moneyMatch.index = match.index + match[0].indexOf(rawMoney);
+    if (!valueFollowsCandidate(occurrence, moneyMatch)) continue;
+    facts.push(
+      sourceBoundFact({
         occurrence,
         binding,
-        match: amountMatch,
+        match: moneyMatch,
         value: {
-          normalizedValue: `EUR ${rawAmount.replace(/^(?:EUR|€)\s*/iu, "")}`,
+          normalizedValue: `EUR ${rawMoney.replace(/^(?:EUR|€)\s*/iu, "")}`,
           valueType: "MONEY",
           unit: "EUR",
           limitKind: LIMIT_KIND.CAPPED,
         },
-      });
-    });
+      })
+    );
+    const rawPercent = match.groups?.percent;
+    if (!rawPercent) continue;
+    const percentMatch = [rawPercent];
+    percentMatch.index = match.index + match[0].indexOf(rawPercent);
+    facts.push(
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match: percentMatch,
+        value: {
+          normalizedValue: `${rawPercent
+            .replace(/\s/gu, "")
+            .slice(0, -1)
+            .replace(".", ",")} %`,
+          valueType: "PERCENT",
+          unit: "%",
+          limitKind: LIMIT_KIND.CAPPED,
+          qualifier: "des Gebäudeneuwerts",
+        },
+      })
+    );
+  }
+  return facts;
 }
 
 function extractDurationFacts({ occurrence, binding }) {

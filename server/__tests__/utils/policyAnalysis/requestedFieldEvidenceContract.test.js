@@ -1033,6 +1033,39 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("keeps both alternatives of a governed HP-08 construction-cost limit", () => {
+    const candidateId = "candidate:HP-08:alternative-construction-sum";
+    const text =
+      "Bauvorhaben an der versicherten Liegenschaft mit Gesamtbaukosten des Bauvorhabens bis EUR 440.000,- oder 20% des Gebäudeneuwerts, wobei der jeweils höhere Wert gilt (Bauherrenhaftpflicht).";
+    const source = textualOccurrence({
+      candidateId,
+      text,
+      exactText: "Gesamtbaukosten des Bauvorhabens bis",
+      contextStart: 9_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "HP-08",
+        label: "Bauherrenhaftpflicht und bis zu welcher Bausumme",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "construction_sum_limit",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(
+      result.requirements[0].fields[0].facts.map(
+        ({ normalizedValue }) => normalizedValue
+      )
+    ).toEqual(["EUR 440.000", "20 %"]);
+  });
+
   test("never binds values from mention-only or unresolved candidates", () => {
     const mention = occurrence({
       candidateId: "candidate:mention",
