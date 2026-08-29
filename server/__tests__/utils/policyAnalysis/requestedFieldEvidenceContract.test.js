@@ -142,6 +142,40 @@ function variantOccurrence({
 }
 
 describe("requestedFieldEvidenceContract", () => {
+  test("keeps legal abbreviations inside one textual condition sentence", () => {
+    const candidateId = "candidate:FE-E16:legal-condition";
+    const text =
+      "Die Verletzung dieser Verpflichtungen führt nach Maßgabe des § 6 Abs. 3 und Art. 11 Abs. 2 lit. c VersVG zur Leistungsfreiheit des Versicherers. Ein anderer Satz folgt.";
+    const source = textualOccurrence({
+      candidateId,
+      text,
+      exactText: "Verletzung dieser Verpflichtungen",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "FE-E16",
+        label:
+          "Rechtsfolgen einer Obliegenheitsverletzung, Kürzung oder Leistungsfreiheit",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "obligation_breach_consequences",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[0].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue:
+          "Die Verletzung dieser Verpflichtungen führt nach Maßgabe des § 6 Abs. 3 und Art. 11 Abs. 2 lit. c VersVG zur Leistungsfreiheit des Versicherers",
+      }),
+    ]);
+  });
+
   test("keeps capped and explicitly unbounded limits separate by variant", () => {
     const cId = "candidate:LW-26:C";
     const dId = "candidate:LW-26:D";

@@ -674,6 +674,21 @@ function conditionNormalized(value) {
   return whitespaceNormalized(value).replace(/[;.]+$/u, "");
 }
 
+function protectedSentencePeriod(text, index) {
+  if (text[index] !== ".") return false;
+  const prefix = text.slice(Math.max(0, index - 16), index + 1);
+  if (/(?:\bAbs|\bArt|\blit|\bNr|\bPkt|\bPkte|\bZiff|\bca)\.$/iu.test(prefix))
+    return true;
+  const nextNonWhitespace = text.slice(index + 1).match(/\S/u)?.[0] || "";
+  return /\d/u.test(text[index - 1] || "") && /\d/u.test(nextNonWhitespace);
+}
+
+function sentenceBoundaryAt(text, index) {
+  const character = text[index];
+  if (/[!?;\n\r]/u.test(character)) return true;
+  return character === "." && !protectedSentencePeriod(text, index);
+}
+
 function occurrenceSentenceRange(occurrence) {
   const { text, documentStart } = validatedContext(occurrence);
   const relativeStart = Number(occurrence.documentStart) - documentStart;
@@ -687,9 +702,9 @@ function occurrenceSentenceRange(occurrence) {
   )
     return null;
   let start = relativeStart;
-  while (start > 0 && !/[.!?;\n\r]/u.test(text[start - 1])) start -= 1;
+  while (start > 0 && !sentenceBoundaryAt(text, start - 1)) start -= 1;
   let end = relativeEnd;
-  while (end < text.length && !/[.!?;\n\r]/u.test(text[end])) end += 1;
+  while (end < text.length && !sentenceBoundaryAt(text, end)) end += 1;
   if (end < text.length) end += 1;
   while (start < end && /\s/u.test(text[start])) start += 1;
   while (end > start && /\s/u.test(text[end - 1])) end -= 1;
