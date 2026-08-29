@@ -1630,7 +1630,9 @@
           "factRole": "CONDITION",
           "aliases": [
             "Folgen einer Obliegenheitsverletzung",
-            "Verletzung einer Obliegenheit"
+            "Verletzung einer Obliegenheit",
+            "Verletzung dieser Verpflichtungen",
+            "Verletzungen von vereinbarten Obliegenheiten"
           ]
         },
         {
