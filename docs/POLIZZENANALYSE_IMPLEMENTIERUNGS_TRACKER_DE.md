@@ -2962,5 +2962,6 @@ PASS: frischer LF-HP-Lauf, 37/37 Kandidaten, 63/63 Komponenten,
 PASS: frischer WEVIG-HP-Kontrolllauf, 23/23 Kandidaten,
       63/63 Komponenten, 36/36 Zeilen und 8 Quellen
 PASS: WEVIG gegenüber RC18 über alle 36 Zeilen semantisch unverändert
+PASS: RC22-Tag 139f53d7 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: andere HP-Anforderungen oder externe Holdouts automatisch freigegeben
 ```

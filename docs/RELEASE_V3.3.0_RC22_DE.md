@@ -53,7 +53,9 @@ WEVIG-HP-Kontrollreplay:
 ## Mac-Studio-Nachweis
 
 Der funktionale Commit `40ed3ba4` wurde sauber mit `qwen/qwen3.8-27b`
-geprüft:
+geprüft. Anschließend wurde der unveränderliche Tag `v3.3.0-rc.22` mit SHA
+`139f53d7` installiert; Update, beide Doctor-Prüfungen, Tag, SHA und sauberer
+Checkout bestanden:
 
 ```text
 LF-HP:
