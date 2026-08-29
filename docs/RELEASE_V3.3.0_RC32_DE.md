@@ -73,6 +73,8 @@ PASS: Server-Lint, Prettier und git diff --check
 PASS: reale WEVIG- und LF-Worksheets mit enger Scope-Bindung
 PASS: frische WEVIG- und LF-HP-27B-Läufe
 PASS: exakter 36-Zeilen-Diff gegen RC22
+PASS: Tag a39f90db auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Ziel-Checkout bestätigt
 ```
 
 ## Update

@@ -3210,5 +3210,6 @@ PASS: übrige 34 WEVIG-HP-Zeilen exakt identisch
 PASS: LF-HP 61/61 Kandidaten, 63/63 Komponenten, 36/36 Zeilen
 PASS: LF HP-08 bleibt BELEGT mit EUR 440.000 oder 20 % des Gebäudeneuwerts
 PASS: übrige LF-Änderungen nur bedeutungsgleiche Qwen-Textvariation
+PASS: RC32-Tag a39f90db auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Sublimit- oder Kostenreferenz beweist eine Pauschaldeckungssumme
 ```
