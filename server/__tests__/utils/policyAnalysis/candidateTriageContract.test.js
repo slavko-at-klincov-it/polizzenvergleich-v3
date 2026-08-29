@@ -237,6 +237,70 @@ describe("candidateTriageContract", () => {
     ]);
   });
 
+  test("keeps a governed VS-34 community heading server-terminal", () => {
+    const text =
+      "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen 10PG0010 Als mitversichert gelten:";
+    const worksheet = {
+      catalog: { categoryView: "VS" },
+      candidateOnly: true,
+      requirements: [
+        {
+          id: "VS-34",
+          label: "Gemeinschaftsvermögen wie Geräte und Werkzeug mitversichert",
+          requestedFields: [],
+          components: [
+            {
+              id: "community_devices",
+              label: "Gemeinschaftsgeräte",
+              factRole: "INSURED_OBJECT",
+              occurrences: [
+                {
+                  candidateId: "candidate:community-heading",
+                  matchedAlias:
+                    "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen",
+                  pageNumber: 13,
+                  documentStart: 100,
+                  documentEnd: 180,
+                  exactText:
+                    "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen",
+                  context: {
+                    unitType: "PARAGRAPH",
+                    documentStart: 100,
+                    documentEnd: 240,
+                    text,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(target).toMatchObject({
+      targetId: "candidate:community-heading",
+      roleResolution: {
+        owner: "SERVER",
+        roleMatch: "MATCH",
+        basis: "EXPLICIT_COMMUNITY_DEVICES",
+      },
+      scopeResolution: {
+        owner: "SERVER",
+        scopeMatch: "GENERAL",
+        basis: "EXPLICIT_COMMUNITY_DEVICES",
+      },
+      deterministicBindingBasis: "EXPLICIT_COMMUNITY_DEVICES",
+      modelDecisionFields: [],
+    });
+    expect(
+      deriveCandidateBinding({
+        roleMatch: target.roleResolution.roleMatch,
+        scopeMatch: target.scopeResolution.scopeMatch,
+      })
+    ).toBe(CANDIDATE_BINDING.DIRECT);
+  });
+
   test("builds a compact candidate-only payload without coverage or model-owned sources", () => {
     const payload = buildCandidateTriagePayload(WORKSHEET);
 

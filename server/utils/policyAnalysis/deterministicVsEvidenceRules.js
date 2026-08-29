@@ -161,7 +161,7 @@ const EXPLICIT_COMPONENT_RULES = Object.freeze({
   "VS-34:community_devices": {
     basis: "EXPLICIT_COMMUNITY_DEVICES",
     pattern:
-      /(?:Werkzeuge,?\s+Geräte\s+und\s+Maschinen,?\s+welche\s+zur\s+Pflege\s+und\s+Wartung|Gemeinschaftliche\s+Einrichtungen,?\s+das\s+sind\s+Einrichtungen\s+und\s+Geräte|Außenanlagen,?\s+gemeinschaftliche\s+Einrichtungen,?\s+Spielplatzeinrichtungen[\s\S]{0,120}?auf\s+Erstes\s+Risiko)/iu,
+      /(?:Werkzeuge,?\s+Geräte\s+und\s+Maschinen,?\s+welche\s+zur\s+Pflege\s+und\s+Wartung|Gemeinschaftliche\s+Einrichtungen,?\s+das\s+sind\s+Einrichtungen\s+und\s+Geräte|(?:Einfriedungen,?\s*)?Außenanlagen,?\s+gemeinschaftliche\s+Einrichtungen,?\s+Spielplatzeinrichtungen[\s\S]{0,120}?(?:auf\s+Erstes\s+Risiko|Als\s+mitversichert\s+gelten))/iu,
   },
   "VS-34:community_tools": {
     basis: "EXPLICIT_COMMUNITY_TOOLS",

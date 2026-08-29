@@ -262,6 +262,12 @@ describe("deterministicVsEvidenceRules", () => {
       "EXPLICIT_PLAYGROUND_EQUIPMENT",
     ],
     [
+      "VS-34",
+      "community_devices",
+      "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen 10PG0010 Als mitversichert gelten:",
+      "EXPLICIT_COMMUNITY_DEVICES",
+    ],
+    [
       "VS-23",
       "movement_costs",
       "Bewegungs- und Schutzkosten sind Kosten, die zur Wiederherstellung entstehen.",
@@ -305,6 +311,18 @@ describe("deterministicVsEvidenceRules", () => {
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,
       basis: "EXPLICIT_OUTDOOR_LIGHTING_WRONG_SCOPE",
     });
+  });
+
+  test("keeps a bare community-facilities heading model-owned", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-34",
+        componentId: "community_devices",
+        occurrence: occurrence(
+          "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen"
+        ),
+      })
+    ).toBeNull();
   });
 
   test("a limit role is direct only when a value follows the category phrase", () => {
