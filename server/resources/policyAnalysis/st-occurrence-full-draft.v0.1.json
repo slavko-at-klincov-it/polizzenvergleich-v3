@@ -497,6 +497,7 @@
       "id": "ST-21",
       "label": "Solarthermieanlage",
       "requestedFields": [],
+      "scopeRules": { "narrowAliases": ["Glasbruch"] },
       "components": [
         {
           "id": "solar_thermal_system",

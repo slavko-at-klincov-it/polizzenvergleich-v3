@@ -2443,3 +2443,70 @@ LW-26: BELEGT + Ja
 HP-11: UNGEKLÄRT statt falschem Ja oder falschem Nein
 WE-14: weiterhin BELEGT + Nein
 ```
+
+## 39. RC9-27B-Befund: positiver vollständiger LF-Vertikalfall
+
+Der frische vollständige RC9-Lauf auf dem LF-Rahmenbedingungsdokument war
+technisch vollständig und bestätigte die zuvor isolierten Korrekturen:
+
+```text
+320/320 Zeilen
+381 kontrollierte Kandidaten
+238 ausgewählte Quellen
+70 BELEGT / 43 TEILBELEGT / 207 UNGEKLÄRT
+qwen/qwen3.8-27b
+FRAMEWORK_TERMS
+```
+
+Gegenüber RC8 änderten sich nur vier Zeilen. `LW-26` erhielt beide
+Variantenwerte vollständig; `HP-11` wurde auf die korrekte Haftpflichtgrenze
+zurückgesetzt. `LW-22` und `ST-19` erhielten zusätzliche gültige Quellen ohne
+inhaltliche Statusänderung. VS, FE, EL, VB und WE blieben stabil. Damit ist LF
+als positiver vertikaler RC9-Fall akzeptiert, aber noch kein Beweis für eine
+beliebige zukünftige Polizze.
+
+## 40. WEVIG-RC9-Befund und RC10-Klauselscope
+
+Der vollständige WEVIG-RC9-Lauf war ebenfalls technisch vollständig:
+
+```text
+320/320 Zeilen
+369 kontrollierte Kandidaten
+225 ausgewählte Quellen
+33 BELEGT / 31 TEILBELEGT / 256 UNGEKLÄRT
+qwen/qwen3.8-27b
+PROPOSAL
+```
+
+Die Gegenprobe zeigte eine allgemeine Restursache: Klauseltexte im
+Bedingungsanhang verloren die Information, unter welcher Sparte ihre
+Besondere-Bedingungsnummer im Vorschlag aktiviert worden war. Dadurch wurden
+unter anderem ein 64er-Grundwasserausschluss zu `LW-20`, eine nur unter Feuer
+aktivierte Markisenklausel zu `ST-16`, Erdbebenformulierungen zu `HP-05` und
+`HP-21` sowie Sachspartenbelege zu WE übertragen. Zusätzlich blieb das direkt
+bei EL-04 stehende gemeinsame Limit von EUR 20.000,00 leer.
+
+RC10 bildet deshalb die Aktivierung von Klauselcodes je Versicherungssparte
+ab, trägt eindeutige und mehrfache Aktivierungsscopes bis in den Klauselanhang
+und weist fremde Sparten in FE, LW, ST, EL, HP und WE serverseitig ab.
+Katalogisierte enge Scopes und allgemeine Vertragsbestimmungen bleiben
+zulässig. Lokale Beträge im selben Gefahren-Listeneintrag werden
+quellengebunden extrahiert.
+
+Replays des exakt extrahierten WEVIG-RC9-Artefakts ergeben:
+
+```text
+LW-20, ST-16, HP-05, HP-13, HP-21: fremde Quellen MENTION_ONLY
+WE-07, WE-09, WE-12, WE-17: fremde Sachspartenquellen MENTION_ONLY
+FE-A10 und ST-21: enger Scope statt allgemeiner Vollbeleg
+EL-04: EUR 20.000,00, Requested-Field-Status COMPLETE
+```
+
+```text
+PASS: 89 Jest-Suites / 972 Tests
+PASS: Server-, Frontend- und Collector-Lint
+PASS: Syntax-, Diff- und echte WEVIG-Artefakt-Replays
+GO: RC10 auf Mac Studio installieren und vollständigen WEVIG-27B-Lauf starten
+REVIEW_REQUIRED: frischer LF-Regressionslauf mit RC10
+NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
+```

@@ -368,11 +368,15 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         alias
       )
     );
-    const matchedNarrowScopeKey = (
-      candidate.requirement.scopeRules?.narrowScopeKeys || []
-    ).includes(source.sectionScopeHint?.scopeKey)
-      ? source.sectionScopeHint.scopeKey
-      : null;
+    const observedSectionScopeKeys = [
+      source.sectionScopeHint?.scopeKey,
+      ...(source.sectionScopeHint?.scopeKeys || []),
+    ].filter(Boolean);
+    const matchedNarrowScopeKey = observedSectionScopeKeys.find((scopeKey) =>
+      (candidate.requirement.scopeRules?.narrowScopeKeys || []).includes(
+        scopeKey
+      )
+    );
     let scopeResolution = {
       owner: "MODEL",
       scopeMatch: null,
@@ -406,16 +410,22 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         matchedAlias: matchedNarrowAlias || matchedNarrowScopeKey,
       };
     } else if (
-      source.sectionScopeHint?.scopeKey &&
-      expectedCategoryScopeKeys(worksheet.catalog?.categoryView).includes(
-        source.sectionScopeHint.scopeKey
+      observedSectionScopeKeys.some((scopeKey) =>
+        expectedCategoryScopeKeys(worksheet.catalog?.categoryView).includes(
+          scopeKey
+        )
       )
     ) {
+      const matchedScopeKey = observedSectionScopeKeys.find((scopeKey) =>
+        expectedCategoryScopeKeys(worksheet.catalog?.categoryView).includes(
+          scopeKey
+        )
+      );
       scopeResolution = {
         owner: "SERVER",
         scopeMatch: SCOPE_MATCH.GENERAL,
         basis: "MATCHING_CATEGORY_SECTION",
-        matchedAlias: source.sectionScopeHint.scopeKey,
+        matchedAlias: matchedScopeKey,
       };
     }
     const deterministicCategoryBinding = group

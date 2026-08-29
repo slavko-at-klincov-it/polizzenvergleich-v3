@@ -105,14 +105,46 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
-  test("leaves a matching phrase in a different category chapter model-owned", () => {
+  test("rejects a matching phrase from an explicit different coverage chapter", () => {
     const input = bindingInput({
       text: "Versichert sind Schäden durch Hagel.",
       exactText: "Hagel",
     });
     input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
 
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+  });
+
+  test("leaves a cross-cutting general contract section model-owned", () => {
+    const input = bindingInput({
+      text: "Versichert sind Schäden durch Hagel.",
+      exactText: "Hagel",
+    });
+    input.occurrence.sectionScopeHint.scopeKey = "GENERAL_CONTRACT_TERMS";
+
     expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
+  test("rejects a clause activated in several other coverage chapters", () => {
+    const input = bindingInput({
+      text: "Versichert sind Schäden durch Hagel.",
+      exactText: "Hagel",
+    });
+    input.worksheet.catalog.categoryView = "HP";
+    input.requirement.id = "HP-01";
+    input.occurrence.sectionScopeHint = {
+      scopeKey: null,
+      scopeKeys: ["FEUER_INSURANCE", "STURM_INSURANCE"],
+      text: "Gemeinsame Sachklausel10PA0001",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
   });
 
   test("keeps a snow-and-ice-slide exclusion narrow instead of making hail generally excluded", () => {

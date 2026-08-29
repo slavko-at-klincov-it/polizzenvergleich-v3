@@ -975,6 +975,17 @@ function valueCoversRequirement({
     return true;
   if (!indexed.requirement.id.startsWith("VS-")) {
     const role = indexed.component.factRole;
+    const localListItemAmount =
+      ["limit", "limits", "amount", "deductible"].includes(field) &&
+      ["PERIL", "DAMAGE"].includes(role) &&
+      indexed.occurrence?.context?.unitType === "LIST_ITEM" &&
+      String(indexed.occurrence?.context?.text || "").includes(
+        String(indexed.occurrence?.exactText || "")
+      ) &&
+      /(?:EUR|€)\s*\d|\d{1,3}(?:[.,]\d+)?\s*%|ohne\s+betragliche\s+Beschr[aä]nkung/iu.test(
+        String(indexed.occurrence?.context?.text || "")
+      );
+    if (localListItemAmount) return true;
     if (
       ["limit", "limits", "amount", "deductible"].includes(field) &&
       ["LIMIT", "DEDUCTIBLE", "COST", "BENEFIT", "INSURED_OBJECT"].includes(

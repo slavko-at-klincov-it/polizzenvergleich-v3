@@ -1228,6 +1228,62 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("binds a local list-item limit directly to a non-VS peril", () => {
+    const source = textualOccurrence({
+      candidateId: "candidate:el04-flood-limit",
+      text: [
+        "- Hochwasser, Überschwemmung, Lawinen und Muren Jahreshöchstentschädigung",
+        "(Besondere Bedingung 64PA0061)",
+        "(EUR20.000,00)",
+      ].join("\n"),
+      exactText: "Hochwasser",
+    });
+    source.context.unitType = "LIST_ITEM";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "EL-04",
+        label: "Hochwasser und Überschwemmung",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "flood",
+            label: "Hochwasser",
+            factRole: "PERIL",
+            occurrences: [source],
+          },
+          {
+            id: "inundation",
+            label: "Überschwemmung",
+            factRole: "PERIL",
+            occurrences: [],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:el04-flood-limit",
+        "NARROW_SCOPE",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "EUR 20.000,00",
+              source: expect.objectContaining({
+                candidateId: "candidate:el04-flood-limit",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
   test("distinguishes an unsupported requested field from a searched but missing value", () => {
     const customWorksheet = worksheet();
     customWorksheet.requirements[0].requestedFields = ["condition"];

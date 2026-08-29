@@ -14,6 +14,14 @@ const CATEGORY_SCOPE_KEYS = Object.freeze({
   VB: ["GENERAL_CONTRACT_TERMS"],
   WE: ["WOHNUNGSEIGENTUM_INSURANCE"],
 });
+const STRICT_COVERAGE_CATEGORY_VIEWS = new Set([
+  "FE",
+  "LW",
+  "ST",
+  "EL",
+  "HP",
+  "WE",
+]);
 
 const POSITIVE_GOVERNORS = Object.freeze([
   /(?:Zusätzlich\s+)?versichert\s+sind(?:\s+Schäden\s+durch)?/giu,
@@ -339,23 +347,31 @@ function deterministicCategoryCandidateBinding({
     };
 
   const expectedScopeKeys = expectedCategoryScopeKeys(categoryView);
-  const observedScopeKey = occurrence?.sectionScopeHint?.scopeKey || null;
+  const observedScopeKeys = [
+    occurrence?.sectionScopeHint?.scopeKey,
+    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+  ].filter(Boolean);
   const narrowAlias = matchedNarrowAlias(requirement, occurrence);
-  const narrowScopeKey = (
-    requirement?.scopeRules?.narrowScopeKeys || []
-  ).includes(observedScopeKey)
-    ? observedScopeKey
-    : null;
+  const narrowScopeKey = observedScopeKeys.find((scopeKey) =>
+    (requirement?.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
+  );
+  const matchingScopeKey = observedScopeKeys.find((scopeKey) =>
+    expectedScopeKeys.includes(scopeKey)
+  );
   if (
-    observedScopeKey &&
+    observedScopeKeys.length > 0 &&
     expectedScopeKeys.length > 0 &&
-    !expectedScopeKeys.includes(observedScopeKey) &&
-    !narrowScopeKey
+    !matchingScopeKey &&
+    !narrowScopeKey &&
+    !narrowAlias
   )
-    // A different chapter is a scope signal, not by itself proof that the
-    // occurrence is irrelevant. Cross-cutting VB/WE rules and named perils can
-    // legitimately live inside another coverage chapter.
-    return null;
+    return STRICT_COVERAGE_CATEGORY_VIEWS.has(categoryView) &&
+      observedScopeKeys.some((scopeKey) => scopeKey.endsWith("_INSURANCE"))
+      ? {
+          binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+          basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+        }
+      : null;
 
   const polarity = clausePolarity({
     scopeLeadText: `${occurrence?.coverageGovernorHint?.text || ""}\n${

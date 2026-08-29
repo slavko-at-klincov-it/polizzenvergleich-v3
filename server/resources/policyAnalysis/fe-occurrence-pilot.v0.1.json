@@ -50,6 +50,13 @@
       "id": "FE-A10",
       "label": "Anprall fremder Fahrzeuge",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": [
+          "Anprall unbekannter Fahrzeuge",
+          "Anprall unbekannter Landfahrzeuge",
+          "Kollision mit unbekannten Landfahrzeugen"
+        ]
+      },
       "components": [
         {
           "id": "foreign_vehicle_impact",

@@ -149,13 +149,6 @@ describe("EL category recall catalog", () => {
           target.scopeResolution.scopeMatch === "NARROW"
       )
     ).toBe(true);
-    expect(
-      el27Targets.some(
-        (target) =>
-          target.contextText.includes("Vandalismusdeckung") &&
-          target.modelDecisionFields.length > 0
-      )
-    ).toBe(true);
   });
 
   test("keeps EL-16 unchanged and all aliases document-independent", () => {

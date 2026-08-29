@@ -327,6 +327,7 @@
       "label": "Wintergarten und Vitrinen",
       "requestedFields": ["limit"],
       "optionalFields": ["condition"],
+      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
       "components": [
         {
           "id": "winter_garden",

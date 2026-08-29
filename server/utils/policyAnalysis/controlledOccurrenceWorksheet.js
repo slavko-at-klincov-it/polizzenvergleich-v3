@@ -450,6 +450,82 @@ function explicitSectionHeadings(pageText) {
   return headings.sort((left, right) => left.pageStart - right.pageStart);
 }
 
+const CLAUSE_FAMILY_SCOPE_KEYS = Object.freeze({
+  12: "FEUER_INSURANCE",
+  41: "GLASBRUCH_INSURANCE",
+  62: "LEITUNGSWASSER_INSURANCE",
+  64: "STURM_INSURANCE",
+  81: "HAFTPFLICHT_INSURANCE",
+});
+
+function clauseFamilyScopeKey(clauseCode) {
+  return CLAUSE_FAMILY_SCOPE_KEYS[String(clauseCode || "").slice(0, 2)] || null;
+}
+
+// The proposal schedule activates special-condition codes inside explicit
+// coverage chapters. Preserve that link so an appendix clause cannot later be
+// treated as generally applicable merely because its text contains an alias.
+function clauseActivationScopes(pages) {
+  const scopesByClause = new Map();
+  let inheritedSectionHeading = null;
+  for (const page of pages) {
+    const printed = printedPageIndex(page.printedPageLabel);
+    if (printed?.current === 1) inheritedSectionHeading = null;
+    for (const match of page.text.matchAll(
+      /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu
+    )) {
+      const currentSectionHeading = page.sectionHeadings
+        .filter(({ pageEnd, scopeKey }) => scopeKey && pageEnd <= match.index)
+        .at(-1);
+      const scopeKey =
+        currentSectionHeading?.scopeKey || inheritedSectionHeading?.scopeKey;
+      if (!scopeKey || !scopeKey.endsWith("_INSURANCE")) continue;
+      const clauseCode = match[1].toLocaleUpperCase("de");
+      if (!scopesByClause.has(clauseCode))
+        scopesByClause.set(clauseCode, new Set());
+      scopesByClause.get(clauseCode).add(scopeKey);
+    }
+    const lastScopedHeading = page.sectionHeadings
+      .filter(({ scopeKey }) => scopeKey)
+      .at(-1);
+    if (lastScopedHeading) inheritedSectionHeading = lastScopedHeading;
+  }
+  return scopesByClause;
+}
+
+function explicitClauseSectionHeadings(pageText, activationScopes) {
+  const headings = [];
+  const linePattern = /^([^\n]*?)(\d{2}\p{Lu}{2}\d{4})\s*$/gmu;
+  for (const match of String(pageText || "").matchAll(linePattern)) {
+    const text = match[0].trim();
+    const label = match[1].trim();
+    const clauseCode = match[2].toLocaleUpperCase("de");
+    if (!label || /^[-•]/u.test(label) || /Besondere\s+Bedingung/iu.test(label))
+      continue;
+    const activatedScopes = activationScopes.get(clauseCode) || new Set();
+    const scopeKeys = [...activatedScopes].sort();
+    const activationScopeKey = scopeKeys.length === 1 ? scopeKeys[0] : null;
+    const familyScopeKey = clauseFamilyScopeKey(clauseCode);
+    const scopeKey = activationScopeKey || familyScopeKey;
+    const leading = match[0].indexOf(text);
+    headings.push({
+      scopeKey,
+      ...(scopeKeys.length > 1 ? { scopeKeys } : {}),
+      text,
+      clauseCode,
+      pageStart: match.index + leading,
+      pageEnd: match.index + leading + text.length,
+      source:
+        activationScopeKey && !familyScopeKey
+          ? "CLAUSE_ACTIVATION"
+          : familyScopeKey
+            ? "CLAUSE_FAMILY"
+            : "CLAUSE_AMBIGUOUS",
+    });
+  }
+  return headings;
+}
+
 function explicitCoverageGovernors(pageText) {
   const patterns = [
     /^\s*(?:\d+(?:\.\d+)*\.\s*)?(Nicht\s+versichert[^\n:]{0,180}(?:sind)?\s*:?)\s*$/gimu,
@@ -578,6 +654,17 @@ function validateDocument(document) {
       })),
     };
   });
+  const activationScopes = clauseActivationScopes(pages);
+  for (const page of pages)
+    page.sectionHeadings = [
+      ...page.sectionHeadings,
+      ...explicitClauseSectionHeadings(page.text, activationScopes).map(
+        (heading) => ({
+          ...heading,
+          physicalPageNumber: page.pageNumber,
+        })
+      ),
+    ].sort((left, right) => left.pageStart - right.pageStart);
   let inheritedSectionHeading = null;
   let previousPageCoverageGovernor = null;
   let inheritedVariantHeading = null;
@@ -593,7 +680,10 @@ function validateDocument(document) {
       page.sectionHeadings.length === 0 ? previousPageCoverageGovernor : null;
     if (page.sectionHeadings.length > 0) {
       const lastHeading = page.sectionHeadings.at(-1);
-      inheritedSectionHeading = lastHeading.scopeKey ? lastHeading : null;
+      inheritedSectionHeading =
+        lastHeading.scopeKey || lastHeading.scopeKeys?.length
+          ? lastHeading
+          : null;
       inheritedVariantHeading = null;
     }
     if (page.variantHeadings.length > 0)
@@ -1304,10 +1394,11 @@ function buildControlledOccurrenceWorksheet({
             scopeWordsBefore
           );
           const currentSectionBoundary = page.sectionHeadings
-            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .filter(({ pageStart }) => pageStart <= range.originalStart)
             .at(-1);
           const sectionScopeHint = currentSectionBoundary
-            ? currentSectionBoundary.scopeKey
+            ? currentSectionBoundary.scopeKey ||
+              currentSectionBoundary.scopeKeys?.length
               ? {
                   ...currentSectionBoundary,
                   source: "CURRENT_PAGE_HEADING",

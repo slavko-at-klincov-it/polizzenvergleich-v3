@@ -687,6 +687,137 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(occurrences[2].sectionScopeHint).toBeNull();
   });
 
+  test("carries a known clause-family scope across appendix pages", () => {
+    const scopeCatalog = {
+      schemaVersion: 1,
+      id: "clause-family-test",
+      categoryView: "ST",
+      requirements: [
+        {
+          id: "ST-X01",
+          label: "Garagen",
+          requestedFields: [],
+          components: [
+            {
+              id: "garage",
+              label: "Garagen",
+              factRole: "INSURED_OBJECT",
+              aliases: ["Garagen"],
+            },
+          ],
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 12 von 14\nNiederschlags- und Schmelzwasser64PA0051\nGaragen sind versichert.",
+        "Seite 13 von 14\nGaragen sind weiterhin versichert.",
+      ]),
+      documentFingerprint: "clause-family-scope-carry",
+      catalog: scopeCatalog,
+    });
+    const garages = component(worksheet, "ST-X01", "garage").occurrences;
+    expect(garages[0].sectionScopeHint).toMatchObject({
+      scopeKey: "STURM_INSURANCE",
+      clauseCode: "64PA0051",
+      source: "CURRENT_PAGE_HEADING",
+    });
+    expect(garages[1].sectionScopeHint).toMatchObject({
+      scopeKey: "STURM_INSURANCE",
+      clauseCode: "64PA0051",
+      source: "PRECEDING_PAGE_HEADING",
+    });
+  });
+
+  test("scopes a generic clause to the proposal chapter that activates it", () => {
+    const markisenCatalog = {
+      schemaVersion: 1,
+      id: "markisen-test",
+      categoryView: "ST",
+      requirements: [
+        {
+          id: "ST-16",
+          label: "Markisen",
+          requestedFields: [],
+          components: [
+            {
+              id: "awning",
+              label: "Markisen",
+              factRole: "INSURED_OBJECT",
+              aliases: ["Markisen"],
+            },
+          ],
+        },
+      ],
+    };
+    const scoped = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 1 von 7\nFEUERVERSICHERUNG\n- Markisen (Besondere Bedingung 10PA0230)",
+        "Seite 6 von 14\nMarkisen und Schirme10PA0230\nMarkisen gelten mitversichert.",
+      ]),
+      documentFingerprint: "clause-activation-scope-markisen",
+      catalog: markisenCatalog,
+    });
+    expect(scoped.requirements[0].components[0].occurrences.at(-1).sectionScopeHint)
+      .toMatchObject({
+        scopeKey: "FEUER_INSURANCE",
+        clauseCode: "10PA0230",
+        source: "CURRENT_PAGE_HEADING",
+      });
+  });
+
+  test("uses an ambiguous generic clause as a boundary without inventing one category scope", () => {
+    const markisenCatalog = {
+      schemaVersion: 1,
+      id: "ambiguous-clause-test",
+      categoryView: "ST",
+      requirements: [
+        {
+          id: "ST-X02",
+          label: "Markisen",
+          requestedFields: [],
+          components: [
+            {
+              id: "awning",
+              label: "Markisen",
+              factRole: "INSURED_OBJECT",
+              aliases: ["Markisen"],
+            },
+          ],
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Seite 1 von 7",
+          "FEUERVERSICHERUNG",
+          "- Markisen (Besondere Bedingung 10PA0230)",
+          "STURMVERSICHERUNG",
+          "- Markisen (Besondere Bedingung 10PA0230)",
+        ].join("\n"),
+        [
+          "Seite 6 von 14",
+          "Feuerspezifische Klausel12PA0141",
+          "Markisen und Schirme10PA0230",
+          "Markisen gelten mitversichert.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "ambiguous-clause-boundary",
+      catalog: markisenCatalog,
+    });
+    const appendixOccurrences = worksheet.requirements[0].components[0].occurrences
+      .filter(({ physicalPageNumber }) => physicalPageNumber === 2);
+
+    expect(appendixOccurrences).toHaveLength(2);
+    for (const occurrence of appendixOccurrences)
+      expect(occurrence.sectionScopeHint).toMatchObject({
+        scopeKey: null,
+        scopeKeys: ["FEUER_INSURANCE", "STURM_INSURANCE"],
+        clauseCode: "10PA0230",
+      });
+  });
+
   test("makes the seven WEVIG proposal positions server-owned narrow scopes", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
