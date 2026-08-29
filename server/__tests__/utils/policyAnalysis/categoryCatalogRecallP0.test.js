@@ -96,6 +96,21 @@ describe("P0 category catalog candidate recall", () => {
     ]);
   });
 
+  test("finds both roles of an explicitly labelled insurance period", () => {
+    const result = worksheet(
+      feCatalog,
+      [
+        "Der Versicherungsschutz beginnt erst mit Zugang der Polizze.",
+        "Versicherungsbeginn 19.01.2026, 0:00 Uhr, Versicherungsablauf 01.01.2037, 0:00 Uhr",
+        "FEUERVERSICHERUNG",
+      ].join("\n")
+    );
+
+    expectOccurrences(result, [
+      ["FE-F05", ["temporal_validity", "coverage_start"]],
+    ]);
+  });
+
   test("finds the six prioritised Leitungswasser clause forms", () => {
     const result = worksheet(
       lwCatalog,

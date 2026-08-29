@@ -2838,3 +2838,31 @@ PASS: frischer WEVIG-HP-Kontrolllauf, 23/23 Kandidaten,
 PASS: WEVIG HP-02 bleibt ehrlich UNGEKLÄRT / Nicht feststellbar
 NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
 ```
+
+## 49. RC19: Beschriftete Versicherungsperiode ohne Datumsabbruch
+
+Die aktuelle WEVIG-FE-Auswertung enthielt bereits die richtige Seite und die
+richtigen Startkandidaten. Der generische Satzbereich endete jedoch am ersten
+Punkt in `19.01.2026`; der Wertevertrag sah deshalb kein vollständiges Datum
+und die Ausgabe zeigte `Versicherungsbeginn 19`. Gleichzeitig fehlte
+`Versicherungsablauf` als Rollenanker für die getrennte zeitliche Geltung.
+
+RC19 behandelt keine beliebigen Zahlen als Datum. Nur eine beschriftete
+Versicherungsbeginn-Zeile liefert das Startdatum. Eine vollständige
+Start-/Ablaufzeile kann in `FE-F05` die Periodenkomponente serverautoritär
+definieren. Zugangsbedingung, Startdatum und Ablauf bleiben getrennte
+quellengebundene Fakten. Unbeschriftete Druckdaten, unvollständige Daten und
+einseitige Start-/Ablaufangaben bleiben gesperrt.
+
+```text
+PASS: 91 Jest-Suites / 1028 Tests und vollständiger Lint
+PASS: positive Periodenvarianten und adversariale Datums-Negativvarianten
+PASS: echter WEVIG-FE-27B-Replay, 36/36 Zeilen verglichen
+PASS: genau eine neue Fundstelle und ausschließlich FE-F05 verbessert
+      TEILBELEGT / "Versicherungsbeginn 19"
+      -> BELEGT / Ja / Datum 19.01.2026 / vollständige Periode
+PASS: übrige 35 FE-Zeilen unverändert
+PASS: LF-FE-Worksheet weiterhin 25 Kandidaten, keine neue Fundstelle
+PENDING: frischer WEVIG-FE- und LF-FE-Lauf mit qwen/qwen3.8-27b
+NO CLAIM: andere Datumsformen und externe Holdouts bleiben offen
+```

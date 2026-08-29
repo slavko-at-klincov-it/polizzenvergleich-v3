@@ -333,6 +333,36 @@ function explicitHp02AnnualAggregateBinding({
   };
 }
 
+function explicitFeF05InsurancePeriodBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "FE" ||
+    requirement?.id !== "FE-F05" ||
+    component?.id !== "temporal_validity" ||
+    component?.factRole !== "CONDITION"
+  )
+    return null;
+  const context = String(occurrence?.context?.text || "");
+  if (
+    !/(?:Versicherungsbeginn|Beginn\s+der\s+Versicherung)\s*:?\s*(?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2}/iu.test(
+      context
+    ) ||
+    !/(?:Versicherungsablauf|Ablauf\s+der\s+Versicherung)\s*:?\s*(?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2}/iu.test(
+      context
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "FE_F05_EXPLICIT_INSURANCE_PERIOD",
+    authoritative: true,
+  };
+}
+
 function explicitHp11LiabilityScopeBinding({
   categoryView,
   requirement,
@@ -449,6 +479,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (hp02Binding) return hp02Binding;
+
+  const feF05Binding = explicitFeF05InsurancePeriodBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (feF05Binding) return feF05Binding;
 
   const hp11Binding = explicitHp11LiabilityScopeBinding({
     categoryView,
@@ -634,6 +672,22 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    target.categoryView === "FE" &&
+    target.requirementId === "FE-F05" &&
+    target.componentId === "temporal_validity" &&
+    target.candidates.every(
+      ({ deterministicBindingBasis }) =>
+        deterministicBindingBasis === "FE_F05_EXPLICIT_INSURANCE_PERIOD"
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: "EXPLICIT_FEF05_INSURANCE_PERIOD:FE:FE-F05",
+    };
   if (
     target.categoryView === "HP" &&
     target.requirementId === "HP-02" &&

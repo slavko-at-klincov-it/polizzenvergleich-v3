@@ -733,6 +733,50 @@ function extractDateFacts({ occurrence, binding }) {
   });
 }
 
+function extractCoverageStartDateFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const pattern =
+    /(?:Versicherungsbeginn|Beginn\s+der\s+Versicherung)\s*:?\s*((?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2})(?!\d)/giu;
+  const facts = [];
+  for (const match of text.matchAll(pattern)) {
+    const rawDate = match[1];
+    const dateMatch = [rawDate];
+    dateMatch.index = match.index + match[0].lastIndexOf(rawDate);
+    facts.push(
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match: dateMatch,
+        value: {
+          normalizedValue: rawDate.replace(/\s+/gu, ""),
+          valueType: "DATE",
+          unit: null,
+        },
+      })
+    );
+  }
+  return facts;
+}
+
+function extractInsurancePeriodConditionFacts({ occurrence, binding }) {
+  return extractPatternFacts({
+    occurrence,
+    binding,
+    patterns: [
+      {
+        pattern:
+          /Der\s+Versicherungsschutz\s+beginnt\s+(?:erst\s+)?(?:mit|nach)\s+(?:Zugang|Erhalt)\s+der\s+(?:Polizze|Police)[.]/giu,
+        normalize: (value) => conditionNormalized(value),
+      },
+      {
+        pattern:
+          /(?:Versicherungsbeginn|Beginn\s+der\s+Versicherung)\s*:?\s*(?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2}(?:,\s*\d{1,2}:\d{2}\s*Uhr)?(?:,\s*(?:Versicherungsablauf|Ablauf\s+der\s+Versicherung)\s*:?\s*(?:0?[1-9]|[12]\d|3[01])[.]\s*(?:0?[1-9]|1[0-2])[.]\s*(?:19|20)\d{2}(?:,\s*\d{1,2}:\d{2}\s*Uhr)?)?/giu,
+        normalize: (value) => whitespaceNormalized(value),
+      },
+    ],
+  });
+}
+
 function extractThresholdFacts({ occurrence, binding }) {
   return extractPatternFacts({
     occurrence,
@@ -993,6 +1037,10 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
 
 function extractorFor(requirement, field) {
   const requirementId = requirement.id;
+  if (requirementId === "FE-F05" && field === "condition")
+    return extractInsurancePeriodConditionFacts;
+  if (requirementId === "FE-F05" && field === "date")
+    return extractCoverageStartDateFacts;
   if (requirementId === "HP-02" && field === "limit")
     return extractAnnualAggregateMultipleFacts;
   if (requirementId === "VB-01" && field === "duration")
@@ -1061,6 +1109,13 @@ function valueCoversRequirement({
   bindingByCandidateId,
 }) {
   if (indexed.requirement.components.length <= 1) return true;
+  if (
+    indexed.requirement.id === "FE-F05" &&
+    field === "date" &&
+    indexed.component.id === "coverage_start"
+  )
+    return true;
+  if (indexed.requirement.id === "FE-F05" && field === "date") return false;
   if (
     indexed.requirement.id === "VB-27" &&
     field === "amount" &&

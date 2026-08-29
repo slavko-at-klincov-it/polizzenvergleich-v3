@@ -755,6 +755,123 @@ describe("requestedFieldEvidenceContract", () => {
     }
   );
 
+  test("keeps a dotted coverage-start date and the complete period condition", () => {
+    const text = [
+      "Der Versicherungsschutz beginnt erst mit Zugang der Polizze.",
+      "Versicherungsbeginn 19.01.2026, 0:00 Uhr, Versicherungsablauf 01.01.2037, 0:00 Uhr",
+    ].join("\n");
+    const coverageStart = textualOccurrence({
+      candidateId: "candidate:FE-F05:coverage-start",
+      text,
+      exactText: "Versicherungsbeginn",
+      contextStart: 8_000,
+    });
+    const temporalValidity = textualOccurrence({
+      candidateId: "candidate:FE-F05:temporal-validity",
+      text,
+      exactText: "Versicherungsablauf",
+      contextStart: 8_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "FE-F05",
+        label: "Zeitliche Geltung und Beginn des Versicherungsschutzes",
+        requestedFields: ["condition", "date"],
+        components: [
+          {
+            id: "temporal_validity",
+            factRole: "CONDITION",
+            occurrences: [temporalValidity],
+          },
+          {
+            id: "coverage_start",
+            factRole: "CONDITION",
+            occurrences: [coverageStart],
+          },
+        ],
+      }),
+      materializedCandidates: selections(
+        ["candidate:FE-F05:temporal-validity", "DIRECT"],
+        ["candidate:FE-F05:coverage-start", "DIRECT"]
+      ),
+    });
+    const requirement = result.requirements[0];
+    const condition = requirement.fields.find(
+      ({ field }) => field === "condition"
+    );
+    const date = requirement.fields.find(({ field }) => field === "date");
+
+    expect(requirement.requestedFieldStatus).toBe(
+      REQUESTED_FIELD_STATUS.COMPLETE
+    );
+    expect(
+      condition.facts.map(({ normalizedValue }) => normalizedValue)
+    ).toEqual([
+      "Der Versicherungsschutz beginnt erst mit Zugang der Polizze",
+      "Versicherungsbeginn 19.01.2026, 0:00 Uhr, Versicherungsablauf 01.01.2037, 0:00 Uhr",
+    ]);
+    expect(date).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.FOUND,
+      facts: [
+        {
+          rawValue: "19.01.2026",
+          normalizedValue: "19.01.2026",
+          valueType: "DATE",
+          unit: null,
+          source: {
+            candidateId: "candidate:FE-F05:coverage-start",
+            documentStart: 8_000 + text.indexOf("19.01.2026"),
+            documentEnd:
+              8_000 + text.indexOf("19.01.2026") + "19.01.2026".length,
+            exactText: "19.01.2026",
+          },
+        },
+      ],
+    });
+  });
+
+  test.each([
+    "Seite 1, gedruckt am 29.06.2026. Versicherungsbeginn wird separat bekanntgegeben.",
+    "Versicherungsbeginn 19. Der vollständige Termin fehlt.",
+  ])("does not bind an unrelated or incomplete start date: %s", (text) => {
+    const exactText = "Versicherungsbeginn";
+    const source = textualOccurrence({
+      candidateId: `candidate:FE-F05:negative:${text}`,
+      text,
+      exactText,
+      contextStart: 9_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "FE-F05",
+        label: "Zeitliche Geltung und Beginn des Versicherungsschutzes",
+        requestedFields: ["date"],
+        components: [
+          {
+            id: "coverage_start",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        `candidate:FE-F05:negative:${text}`,
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+      fields: [
+        {
+          field: "date",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+  });
+
   test.each([
     "Die Prämie wird dreimal jährlich bezahlt.",
     "Die Pauschalversicherungssumme steht maximal dreimal zur Verfügung.",

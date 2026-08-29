@@ -308,6 +308,63 @@ describe("deterministicCategoryEvidenceRules", () => {
     expect(deterministicCategoryCandidateBinding(input)).toBeNull();
   });
 
+  test("binds a complete labelled insurance period authoritatively", () => {
+    const input = bindingInput({
+      text: "Versicherungsbeginn 19.01.2026, 0:00 Uhr, Versicherungsablauf 01.01.2037, 0:00 Uhr",
+      exactText: "Versicherungsablauf",
+    });
+    input.worksheet.catalog.categoryView = "FE";
+    input.requirement.id = "FE-F05";
+    input.component = {
+      id: "temporal_validity",
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint = null;
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "FE_F05_EXPLICIT_INSURANCE_PERIOD",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "FE",
+        requirementId: "FE-F05",
+        componentId: "temporal_validity",
+        candidates: [
+          {
+            candidateId: "candidate:insurance-period",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: "FE_F05_EXPLICIT_INSURANCE_PERIOD",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:insurance-period"],
+      coverageEffect: "DEFINED",
+      basis: "EXPLICIT_FEF05_INSURANCE_PERIOD:FE:FE-F05",
+    });
+  });
+
+  test.each([
+    "Versicherungsbeginn 19.01.2026, 0:00 Uhr",
+    "Versicherungsablauf 01.01.2037, 0:00 Uhr",
+  ])("does not bind an incomplete insurance period: %s", (text) => {
+    const input = bindingInput({
+      text,
+      exactText: text.split(" ")[0],
+    });
+    input.worksheet.catalog.categoryView = "FE";
+    input.requirement.id = "FE-F05";
+    input.component = {
+      id: "temporal_validity",
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint = null;
+
+    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
   test("rejects a clause activated in several other coverage chapters", () => {
     const input = bindingInput({
       text: "Versichert sind Schäden durch Hagel.",
