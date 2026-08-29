@@ -111,8 +111,13 @@ function variantOccurrence({
   fieldGovernorText,
   fieldGovernorStart,
 }) {
+  const base = textualOccurrence({ candidateId, text, exactText, contextStart });
   return {
-    ...textualOccurrence({ candidateId, text, exactText, contextStart }),
+    ...base,
+    context: { ...base.context, unitType: "LIST_ITEM" },
+    coverageGovernorHint: {
+      text: `Zusätzlich sind in der ${variantLabel} versichert`,
+    },
     variantScopeHint: {
       key: variantKey,
       label: variantLabel,
@@ -182,6 +187,52 @@ describe("requestedFieldEvidenceContract", () => {
         }),
       ])
     );
+  });
+
+  test("uses a server-authoritative variant binding for values after unresolved model triage", () => {
+    const candidateId = "candidate:LW-26:D:unresolved";
+    const occurrence = variantOccurrence({
+      candidateId,
+      variantKey: "D_DECKUNG",
+      variantLabel: "D-Deckung",
+      text: "Kosten der Rohrreinigung ohne betragliche Beschränkung pro Schadenfall.",
+      exactText: "Kosten der Rohrreinigung",
+      contextStart: 3_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "LW-26",
+        label: "Rohrverstopfung und Reinigungskosten",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "cleaning_costs",
+            label: "Reinigungskosten",
+            factRole: "COST",
+            occurrences: [occurrence],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "UNRESOLVED"]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            {
+              normalizedValue: "ohne betragliche Beschränkung",
+              limitKind: "UNBOUNDED",
+              qualifier: "je Schadenfall",
+              variantScope: { key: "D_DECKUNG", label: "D-Deckung" },
+              binding: "DIRECT",
+            },
+          ],
+        },
+      ],
+    });
   });
 
   test("binds a preceding list governor and stays partial until every selected variant has a value", () => {

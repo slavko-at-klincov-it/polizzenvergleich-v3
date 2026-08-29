@@ -2404,3 +2404,42 @@ Der Datenbankcheck startet Prisma deshalb nun ausdrücklich über
 `$V3_NODE_BIN`. Diese RC8-Korrektur ändert keine Analyse- oder
 Modellsemantik; sie macht lediglich den dokumentierten Standalone-Doctor
 reproduzierbar.
+
+## 38. RC8-27B-Befund: Variantenbindung und Haftpflichtgrenze
+
+Der frische vollständige RC8-Lauf war technisch vollständig:
+
+```text
+320/320 Zeilen
+381 kontrollierte Kandidaten
+233 ausgewählte Quellen
+qwen/qwen3.8-27b
+FRAMEWORK_TERMS
+```
+
+Die RC7-Korrekturen wurden bestätigt: `EL-04`, `EL-07`, `EL-16`, `HP-16`
+und `WE-14` verhalten sich wie beabsichtigt. Zwei neue Modell-/Scopegrenzen
+wurden sichtbar:
+
+1. Das Modell markierte beide expliziten D-Deckungs-Kandidaten für `LW-26`
+   als `UNRESOLVED`, obwohl Variantenüberschrift, positiver Listen-Governor
+   und lokale Klausel übereinstimmten. Solche strukturell vollständigen
+   Varianten-Listeneinträge sind nun serverautoritär; dieselbe Bindung gilt
+   auch für die Wertextraktion.
+2. `HP-11` übernahm einen Heizöltank aus der Liste versicherter Gebäudesachen
+   als Haftpflichtbeleg. Ein reines Tankobjekt ohne Haftpflicht-,
+   Gewässerschaden- oder Anlagenrisiko-Kontext ist nun nur `MENTION_ONLY`.
+
+Zusätzlich wurde die im RC8-Lauf sichtbare Reichweite von `exklusive`
+präzisiert: Der Ausdruck beendet nur den lokalen Listeneintrag und darf nicht
+auf später genannte Objekte fortwirken.
+
+Replays der exakt frischen RC8-Artefakte ergeben:
+
+```text
+LW-26: BELEGT + Ja
+       C-Deckung EUR 2.000 je Schadenfall
+       D-Deckung ohne betragliche Beschränkung je Schadenfall
+HP-11: UNGEKLÄRT statt falschem Ja oder falschem Nein
+WE-14: weiterhin BELEGT + Nein
+```

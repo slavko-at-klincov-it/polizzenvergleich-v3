@@ -289,6 +289,151 @@ describe("category semantic exceptions", () => {
     }
   );
 
+  test("an explicit variant list clause remains direct when model triage returns unresolved", () => {
+    const exactText =
+      "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen";
+    const dVariant = occurrence({
+      candidateId: "candidate:lw26:d-cleaning",
+      exactText,
+      contextText: `• die ${exactText} ohne betragliche Beschränkung pro Schadenfall.`,
+      scopeLeadText:
+        "Zusätzlich zur Grund- und C-Deckung sind in der D-Deckungsvariante versichert",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 14,
+    });
+    dVariant.context.unitType = "LIST_ITEM";
+    dVariant.coverageGovernorHint = {
+      text: "Zusätzlich zur Grund- und C-Deckung sind in der D-Deckungsvariante versichert",
+    };
+    dVariant.variantScopeHint = {
+      key: "D_DECKUNG",
+      label: "D-Deckung",
+      source: "CURRENT_PAGE_HEADING",
+    };
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "LW" },
+      requirements: [
+        {
+          id: "LW-26",
+          label: "Rohrverstopfung und Reinigungskosten",
+          requestedFields: ["limit"],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "cleaning_costs",
+              label: "Reinigungskosten",
+              factRole: "COST",
+              occurrences: [dVariant],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: dVariant,
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "LW-26",
+          componentId: "cleaning_costs",
+          candidateId: dVariant.candidateId,
+          binding: "UNRESOLVED",
+        },
+      ],
+    });
+    expect(target.candidates).toMatchObject([
+      {
+        candidateId: dVariant.candidateId,
+        candidateBinding: "DIRECT",
+        deterministicBindingBasis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      },
+    ]);
+    expect(target.unresolvedCandidateIds).toEqual([]);
+  });
+
+  test("a tank object outside a liability clause does not prove HP-11", () => {
+    const tankObject = occurrence({
+      candidateId: "candidate:hp11:building-object",
+      exactText: "Heizöltanks",
+      contextText:
+        "- Gas- und Heizöltanks zum Zweck der Beheizung des Gebäudes;",
+      scopeLeadText:
+        "Versichert sind Gebäudebestandteile und Einrichtungen; Kellerabteile, jedoch exklusive deren Inhalt;",
+      sectionScopeKey: "",
+      pageNumber: 4,
+    });
+    tankObject.context.unitType = "LIST_ITEM";
+    tankObject.coverageGovernorHint = { text: "Versichert sind" };
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "HP" },
+      requirements: [
+        {
+          id: "HP-11",
+          label: "Öltank oder vergleichbares Anlagenrisiko",
+          requestedFields: ["condition"],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "oil_tank_or_installation_risk",
+              label: "Öltank oder vergleichbares Anlagenrisiko",
+              factRole: "CONDITION",
+              occurrences: [tankObject],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: tankObject,
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "HP_11_TANK_OBJECT_WITHOUT_LIABILITY_SCOPE",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "HP-11",
+          componentId: "oil_tank_or_installation_risk",
+          candidateId: tankObject.candidateId,
+          binding: "DIRECT",
+        },
+      ],
+    });
+    expect(target.candidates).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual([
+      {
+        candidateId: tankObject.candidateId,
+        reason: "TRIAGE_MENTION_ONLY",
+      },
+    ]);
+  });
+
   test("EL-16 preserves Wintergarten inclusion and Vitrinen exclusion as separate component facts", () => {
     const winterGarden = occurrence({
       candidateId: "candidate:el16:winter-garden",

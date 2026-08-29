@@ -27,10 +27,12 @@ const POSITIVE_GOVERNORS = Object.freeze([
 const NEGATIVE_GOVERNORS = Object.freeze([
   /Nicht\s+versichert(?:\s+im\s+Rahmen[^:\n]{0,140})?\s+sind/giu,
   /nicht\s+mitversichert/giu,
-  /\b(?:jedoch\s+)?exklusive\b/giu,
   /(?:vom\s+Versicherungsschutz\s+)?ausgeschlossen/giu,
   /(?:Die\s+)?Versicherung(?:sschutz)?\s+erstreckt\s+sich\s+nicht/giu,
   /kein\s+Versicherungsschutz/giu,
+]);
+const INLINE_NEGATIVE_GOVERNORS = Object.freeze([
+  /\b(?:jedoch\s+)?exklusive\b/giu,
 ]);
 const CONDITIONAL_GOVERNORS = Object.freeze([
   /\b(?:wenn|sofern|vorausgesetzt|unter\s+der\s+Bedingung)\b/giu,
@@ -84,10 +86,13 @@ function clausePolarity({
     : String(contextText).indexOf(String(exactText || ""));
   if (!Number.isInteger(relativeStart) || relativeStart < 0)
     relativeStart = String(contextText).length;
-  const prefix = `${String(scopeLeadText || "")}\n${String(contextText).slice(
+  const localPrefix = String(contextText).slice(
     0,
     relativeStart + String(exactText || "").length
-  )}`;
+  );
+  if (lastPatternMatch(localPrefix, INLINE_NEGATIVE_GOVERNORS))
+    return "NEGATIVE";
+  const prefix = `${String(scopeLeadText || "")}\n${localPrefix}`;
   const positive = lastPatternMatch(prefix, POSITIVE_GOVERNORS);
   const negative = lastPatternMatch(prefix, NEGATIVE_GOVERNORS);
   if (!positive && !negative) return "UNKNOWN";
@@ -259,6 +264,28 @@ function explicitHp16TenantRecourseBinding({
   };
 }
 
+function explicitHp11LiabilityScopeBinding({
+  categoryView,
+  requirement,
+  occurrence,
+}) {
+  if (categoryView !== "HP" || requirement?.id !== "HP-11") return null;
+  const evidenceText = `${occurrence?.sectionScopeHint?.text || ""}\n${
+    occurrence?.coverageGovernorHint?.text || ""
+  }\n${occurrence?.scopeLead?.text || ""}\n${occurrence?.context?.text || ""}`;
+  if (
+    /(?:Gewässerschadenhaftpflicht|Haftpflicht|Anlagenrisiko|Umwelthaft)/iu.test(
+      evidenceText
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "HP_11_TANK_OBJECT_WITHOUT_LIABILITY_SCOPE",
+    authoritative: true,
+  };
+}
+
 /**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
@@ -296,6 +323,13 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (hp16Binding) return hp16Binding;
+
+  const hp11Binding = explicitHp11LiabilityScopeBinding({
+    categoryView,
+    requirement,
+    occurrence,
+  });
+  if (hp11Binding) return hp11Binding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)
@@ -337,6 +371,13 @@ function deterministicCategoryCandidateBinding({
   }\n${occurrence?.context?.text || ""}`;
   if (!factRoleMatchesGovernor(component?.factRole, polarity, evidenceText))
     return null;
+  const explicitVariantListClause = Boolean(
+    occurrence?.variantScopeHint?.key &&
+      occurrence?.variantScopeHint?.label &&
+      occurrence?.coverageGovernorHint?.text &&
+      occurrence?.context?.unitType === "LIST_ITEM" &&
+      containsPhrase(occurrence?.context?.text, occurrence?.exactText)
+  );
   return {
     binding:
       narrowAlias || narrowScopeKey
@@ -347,6 +388,7 @@ function deterministicCategoryCandidateBinding({
       : narrowScopeKey
         ? "EXPLICIT_NARROW_SECTION_SCOPE"
         : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
+    ...(explicitVariantListClause ? { authoritative: true } : {}),
   };
 }
 

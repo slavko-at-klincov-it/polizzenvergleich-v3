@@ -77,6 +77,20 @@ describe("deterministicCategoryEvidenceRules", () => {
     ).toBe("NEGATIVE");
   });
 
+  test("does not carry an inline exklusive clause into the next list item", () => {
+    expect(
+      clausePolarity({
+        scopeLeadText:
+          "Versichert sind\n- Kellerabteile, jedoch exklusive deren Inhalt;\n- gemauerte Öfen;",
+        contextText:
+          "- Gas- und Heizöltanks zum Zweck der Beheizung des Gebäudes;",
+        exactText: "Heizöltanks",
+        occurrenceStart: 1_010,
+        contextDocumentStart: 1_000,
+      })
+    ).toBe("POSITIVE");
+  });
+
   test("binds a positive hail clause directly in the storm section", () => {
     expect(
       deterministicCategoryCandidateBinding(

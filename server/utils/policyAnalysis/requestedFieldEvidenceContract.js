@@ -1,3 +1,7 @@
+const {
+  deterministicCategoryCandidateBinding,
+} = require("./deterministicCategoryEvidenceRules");
+
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
   NOT_EVALUATED: "NOT_EVALUATED",
@@ -81,7 +85,11 @@ function validateWorksheetAndIndexCandidates(worksheet) {
   return candidateById;
 }
 
-function selectedCandidateBindings({ materializedCandidates, candidateById }) {
+function selectedCandidateBindings({
+  worksheet,
+  materializedCandidates,
+  candidateById,
+}) {
   if (!Array.isArray(materializedCandidates))
     throw requestedFieldError("REQUESTED_FIELD_CANDIDATES_INVALID");
 
@@ -103,7 +111,19 @@ function selectedCandidateBindings({ materializedCandidates, candidateById }) {
         "REQUESTED_FIELD_BINDING_INVALID",
         `${candidateId}:${String(candidate.binding)}`
       );
-    bindingByCandidateId.set(candidateId, candidate.binding);
+    const indexed = candidateById.get(candidateId);
+    const deterministicBinding = deterministicCategoryCandidateBinding({
+      worksheet,
+      requirement: indexed.requirement,
+      component: indexed.component,
+      occurrence: indexed.occurrence,
+    });
+    bindingByCandidateId.set(
+      candidateId,
+      deterministicBinding?.authoritative
+        ? deterministicBinding.binding
+        : candidate.binding
+    );
   }
   return bindingByCandidateId;
 }
@@ -1129,6 +1149,7 @@ function materializeRequestedFieldEvidence({
 }) {
   const candidateById = validateWorksheetAndIndexCandidates(worksheet);
   const bindingByCandidateId = selectedCandidateBindings({
+    worksheet,
     materializedCandidates,
     candidateById,
   });
