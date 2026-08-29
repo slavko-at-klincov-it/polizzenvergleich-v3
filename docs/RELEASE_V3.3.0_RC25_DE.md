@@ -46,6 +46,11 @@ WEVIG-ST mit qwen/qwen3.8-27b:
   ST-16 und ST-17 bleiben UNGEKLÄRT
 ```
 
+Der unveränderliche Tag `v3.3.0-rc.25` wurde anschließend mit SHA
+`2689af8d4aa7250e54a9d1da5a370ccf518766d2` auf dem Mac Studio installiert.
+Update-Doctor, separate Doctor-Wiederholung, Tag-/SHA-Prüfung und sauberer
+Checkout bestanden.
+
 ## Update
 
 ```bash

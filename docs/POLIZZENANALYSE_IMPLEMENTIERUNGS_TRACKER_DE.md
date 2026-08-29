@@ -3042,5 +3042,6 @@ PASS: ausschließlich ST-16 verbessert
 PASS: ST-17 und übrige 34 LF-ST-Zeilen unverändert
 PASS: WEVIG-ST 15/15 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
 PASS: WEVIG über alle 36 Zeilen unverändert
+PASS: RC25-Tag 2689af8d auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: beliebige Beschattungsobjekte oder externe Holdouts bewiesen
 ```
