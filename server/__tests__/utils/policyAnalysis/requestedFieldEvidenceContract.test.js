@@ -177,6 +177,40 @@ describe("requestedFieldEvidenceContract", () => {
     ]);
   });
 
+  test("keeps a fallback-window condition together across connector line wraps", () => {
+    const candidateId = "candidate:FE-E16:wrapped-condition";
+    const text =
+      "Versichert gelten Verletzungen von vereinbarten Obliegenheiten gemäß Allgemeinen und\nBesonderen Bedingungen. Eine andere Regel folgt.";
+    const source = textualOccurrence({
+      candidateId,
+      text,
+      exactText: "Verletzungen von vereinbarten Obliegenheiten",
+    });
+    source.context.unitType = "WORD_WINDOW_FALLBACK";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "FE-E16",
+        label: "Rechtsfolgen einer Obliegenheitsverletzung",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "obligation_breach_consequences",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[0].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue:
+          "Versichert gelten Verletzungen von vereinbarten Obliegenheiten gemäß Allgemeinen und Besonderen Bedingungen",
+      }),
+    ]);
+  });
+
   test("keeps capped and explicitly unbounded limits separate by variant", () => {
     const cId = "candidate:LW-26:C";
     const dId = "candidate:LW-26:D";

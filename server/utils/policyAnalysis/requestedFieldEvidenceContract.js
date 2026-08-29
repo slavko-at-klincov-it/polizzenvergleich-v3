@@ -683,18 +683,25 @@ function protectedSentencePeriod(text, index) {
   return /\d/u.test(text[index - 1] || "") && /\d/u.test(nextNonWhitespace);
 }
 
+function protectedSoftLineBreak(text, index) {
+  if (!/[\n\r]/u.test(text[index])) return false;
+  const prefix = text.slice(Math.max(0, index - 24), index).trimEnd();
+  return /(?:\bund|\boder|\bsowie|\bzur|\bzum|\bder|\bdes|\bdie|\bdas|\bvon|\bim|\bin|\bmit|\bnach|\bgemäß|\bf[üu]r|\bbei|\bauf|\baus|\bdurch|\bgegen|\bohne|\bsofern|\bwenn|\bals)$/iu.test(
+    prefix
+  );
+}
+
 function sentenceBoundaryAt(text, index, { softLineBreaks = false } = {}) {
   const character = text[index];
-  if (/[\n\r]/u.test(character)) return !softLineBreaks;
+  if (/[\n\r]/u.test(character))
+    return !(softLineBreaks || protectedSoftLineBreak(text, index));
   if (/[!?;]/u.test(character)) return true;
   return character === "." && !protectedSentencePeriod(text, index);
 }
 
 function occurrenceSentenceRange(occurrence) {
   const { text, documentStart } = validatedContext(occurrence);
-  const softLineBreaks = ["PARAGRAPH", "LIST_ITEM"].includes(
-    occurrence?.context?.unitType
-  );
+  const softLineBreaks = occurrence?.context?.unitType === "PARAGRAPH";
   const relativeStart = Number(occurrence.documentStart) - documentStart;
   const relativeEnd = Number(occurrence.documentEnd) - documentStart;
   if (
