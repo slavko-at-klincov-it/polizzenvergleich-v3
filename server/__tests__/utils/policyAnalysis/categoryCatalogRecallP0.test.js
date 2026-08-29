@@ -191,6 +191,24 @@ describe("P0 category catalog candidate recall", () => {
     expectSharedGroup(result, "VB-36", ["claims_handling", "claims_contact"]);
   });
 
+  test("finds every beneficiary in the tenant recourse-waiver clause", () => {
+    const result = worksheet(
+      vbCatalog,
+      [
+        "ALLGEMEINE VERTRAGSBESTIMMUNGEN",
+        "5. Regressverzicht",
+        "Richtet sich der Ersatzanspruch gegen einen Mieter des versicherten Gebäudes, dessen Hausangestellten oder einen mit ihm in häuslicher Gemeinschaft lebenden Familienangehörigen, verzichtet der Versicherer auf seinen Regressanspruch, soweit der Mieter den Schaden weder vorsätzlich noch grob fahrlässig verursacht hat.",
+      ].join("\n")
+    );
+
+    expectOccurrences(result, [
+      ["VB-16", ["residents_recourse_waiver", "residents", "tenants"]],
+    ]);
+    expect(component(result, "VB-15", "unit_owners").occurrences).toHaveLength(
+      0
+    );
+  });
+
   test("finds coordinated apartment finishes, cellar scope and rental units", () => {
     const result = worksheet(
       weCatalog,

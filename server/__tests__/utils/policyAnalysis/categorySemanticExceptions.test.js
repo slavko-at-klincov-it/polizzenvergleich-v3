@@ -135,6 +135,100 @@ describe("category semantic exceptions", () => {
     ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.INCLUDED });
   });
 
+  test("binds all VB-16 tenant and household beneficiaries without inventing unit owners", () => {
+    const contextText =
+      "Richtet sich der Ersatzanspruch gegen einen Mieter des versicherten Gebäudes, dessen Hausangestellten oder einen mit ihm in häuslicher Gemeinschaft lebenden Familienangehörigen, verzichtet der Versicherer auf seinen Regressanspruch, soweit der Mieter den Schaden weder vorsätzlich noch grob fahrlässig verursacht hat.";
+    const components = [
+      ["residents_recourse_waiver", "Regressverzicht"],
+      [
+        "residents",
+        "mit ihm in häuslicher Gemeinschaft lebenden Familienangehörigen",
+      ],
+      ["tenants", "gegen einen Mieter des versicherten Gebäudes"],
+    ];
+
+    for (const [componentId, exactText] of components)
+      expect(
+        deterministicCategoryCandidateBinding({
+          worksheet: { catalog: { categoryView: "VB" } },
+          requirement: { id: "VB-16" },
+          component: { id: componentId, factRole: "INSURED_OBJECT" },
+          occurrence: occurrence({
+            candidateId: `candidate:vb16:${componentId}`,
+            exactText,
+            contextText,
+            scopeLeadText: "5. Regressverzicht",
+            sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+            pageNumber: 26,
+          }),
+        })
+      ).toEqual({
+        binding: "DIRECT",
+        basis: "VB_16_EXPLICIT_TENANT_RECOURSE_WAIVER",
+        authoritative: true,
+      });
+
+    for (const [componentId, exactText] of components)
+      expect(
+        deterministicCategoryPreparedDecision({
+          categoryView: "VB",
+          requirementId: "VB-16",
+          componentId,
+          factRole:
+            componentId === "residents_recourse_waiver"
+              ? "BENEFIT"
+              : "INSURED_OBJECT",
+          candidates: [
+            {
+              candidateId: `candidate:vb16:${componentId}`,
+              candidateBinding: "DIRECT",
+              deterministicBindingBasis:
+                "VB_16_EXPLICIT_TENANT_RECOURSE_WAIVER",
+              exactText,
+              contextText,
+            },
+          ],
+        })
+      ).toEqual({
+        selectedCandidateIds: [`candidate:vb16:${componentId}`],
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        basis: "EXPLICIT_VB16_TENANT_RECOURSE_WAIVER:VB:VB-16",
+      });
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "VB" } },
+        requirement: { id: "VB-15" },
+        component: { id: "unit_owners", factRole: "INSURED_OBJECT" },
+        occurrence: occurrence({
+          candidateId: "candidate:vb15:unit-owners",
+          exactText: "Mieter",
+          contextText,
+          scopeLeadText: "5. Regressverzicht",
+          sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+          pageNumber: 26,
+        }),
+      })
+    ).toBeNull();
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "VB" } },
+        requirement: { id: "VB-16" },
+        component: { id: "residents", factRole: "INSURED_OBJECT" },
+        occurrence: occurrence({
+          candidateId: "candidate:vb16:tenant-only",
+          exactText: "Mieter",
+          contextText:
+            "Richtet sich der Ersatzanspruch gegen einen Mieter des versicherten Gebäudes, verzichtet der Versicherer auf seinen Regressanspruch.",
+          scopeLeadText: "5. Regressverzicht",
+          sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+          pageNumber: 26,
+        }),
+      })
+    ).toBeNull();
+  });
+
   test("Katastrophen-bis is a positive limit governor even after a preceding narrow exclusion", () => {
     expect(
       deterministicCategoryPreparedDecision({

@@ -273,18 +273,23 @@ function explicitEl16GlassObjectBinding({
   };
 }
 
-function explicitHp16TenantRecourseBinding({
+function explicitTenantRecourseBinding({
   categoryView,
   requirement,
   component,
   occurrence,
 }) {
-  if (
-    categoryView !== "HP" ||
-    requirement?.id !== "HP-16" ||
-    !["recourse_waiver", "tenants"].includes(component?.id)
-  )
-    return null;
+  const hpTarget =
+    categoryView === "HP" &&
+    requirement?.id === "HP-16" &&
+    ["recourse_waiver", "tenants"].includes(component?.id);
+  const vbTarget =
+    categoryView === "VB" &&
+    requirement?.id === "VB-16" &&
+    ["residents_recourse_waiver", "residents", "tenants"].includes(
+      component?.id
+    );
+  if (!hpTarget && !vbTarget) return null;
   const context = String(occurrence?.context?.text || "");
   if (
     !/gegen\s+einen\s+Mieter\s+des\s+versicherten\s+Gebäudes[\s\S]{0,320}?verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
@@ -292,9 +297,16 @@ function explicitHp16TenantRecourseBinding({
     )
   )
     return null;
+  if (
+    component?.id === "residents" &&
+    !/mit\s+ihm\s+in\s+häuslicher\s+Gemeinschaft\s+lebenden\s+Familienangehörigen/iu.test(
+      context
+    )
+  )
+    return null;
   return {
     binding: DETERMINISTIC_BINDING.DIRECT,
-    basis: "HP_16_EXPLICIT_TENANT_RECOURSE_WAIVER",
+    basis: `${categoryView}_16_EXPLICIT_TENANT_RECOURSE_WAIVER`,
     authoritative: true,
   };
 }
@@ -564,13 +576,13 @@ function deterministicCategoryCandidateBinding({
   });
   if (el16Binding) return el16Binding;
 
-  const hp16Binding = explicitHp16TenantRecourseBinding({
+  const tenantRecourseBinding = explicitTenantRecourseBinding({
     categoryView,
     requirement,
     component,
     occurrence,
   });
-  if (hp16Binding) return hp16Binding;
+  if (tenantRecourseBinding) return tenantRecourseBinding;
 
   const hp02Binding = explicitHp02AnnualAggregateBinding({
     categoryView,
@@ -846,26 +858,37 @@ function deterministicCategoryPreparedDecision(target) {
       coverageEffect: COVERAGE_EFFECT.DEFINED,
       basis: `EXPLICIT_GENERAL_CONTRACT_FACT:${target.categoryView}:${target.requirementId}`,
     };
-  if (
+  const hp16Target =
     target.categoryView === "HP" &&
     target.requirementId === "HP-16" &&
-    ["recourse_waiver", "tenants"].includes(target.componentId)
-  ) {
+    ["recourse_waiver", "tenants"].includes(target.componentId);
+  const vb16Target =
+    target.categoryView === "VB" &&
+    target.requirementId === "VB-16" &&
+    ["residents_recourse_waiver", "residents", "tenants"].includes(
+      target.componentId
+    );
+  if (hp16Target || vb16Target) {
     const selectedCandidateIds = target.candidates
-      .filter(({ contextText }) =>
-        /Mieter[\s\S]{0,260}verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
-          contextText || ""
-        )
+      .filter(
+        ({ contextText }) =>
+          /Mieter[\s\S]{0,260}verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
+            contextText || ""
+          ) &&
+          (target.componentId !== "residents" ||
+            /mit\s+ihm\s+in\s+häuslicher\s+Gemeinschaft\s+lebenden\s+Familienangehörigen/iu.test(
+              contextText || ""
+            ))
       )
       .map(({ candidateId }) => candidateId);
     if (selectedCandidateIds.length > 0)
       return {
         selectedCandidateIds,
         coverageEffect:
-          target.componentId === "recourse_waiver"
+          vb16Target || target.componentId === "recourse_waiver"
             ? COVERAGE_EFFECT.INCLUDED
             : COVERAGE_EFFECT.DEFINED,
-        basis: `EXPLICIT_HP16_TENANT_RECOURSE_WAIVER:HP:HP-16`,
+        basis: `EXPLICIT_${target.categoryView}16_TENANT_RECOURSE_WAIVER:${target.categoryView}:${target.requirementId}`,
       };
   }
   if (
