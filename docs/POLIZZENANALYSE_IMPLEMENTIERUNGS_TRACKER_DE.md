@@ -3233,5 +3233,6 @@ PASS: ausschließlich VB-36 UNGEKLÄRT -> BELEGT / Ja
 PASS: übrige 35 WEVIG-VB-Zeilen exakt identisch
 PASS: LF-VB 37/37 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
 PASS: LF gegenüber RC29 exakt 0 Änderungen
+PASS: RC33-Tag 3ef0e950 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: allgemeine Telefonnummer oder Überschrift beweist Schadenabwicklung
 ```
