@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "building-insurance-water-golden-classes",
+  "version": "0.1.0-draft",
+  "status": "design_only",
+  "fixturePolicy": "synthetic_or_anonymized_only",
+  "globalExpectations": [
+    "all controlled occurrences settle without global Top-N truncation",
+    "each comparison point may yield zero to many role-separated facts",
+    "missing evidence never becomes an exclusion",
+    "document, page, offset, variant and object scopes remain isolated",
+    "ambiguous role or relation remains unresolved"
+  ],
+  "cases": [
+    {
+      "caseId": "WGC-001",
+      "title": "Innen- und Außenrohre getrennt",
+      "mustProve": "Innen positiv; außen ohne Beleg bleibt offen und wird nicht als ausgeschlossen ausgegeben."
+    },
+    {
+      "caseId": "WGC-002",
+      "title": "Grundstücks- und Übergabepunkt",
+      "mustProve": "Rohr auf versichertem Grundstück und kommunaler Leitungsabschnitt bleiben getrennte Objektscopes."
+    },
+    {
+      "caseId": "WGC-003",
+      "title": "Zu- und Ableitung mit unterschiedlicher Polarität",
+      "mustProve": "Deckung und Ausschluss werden nicht durch Themen-Dedupe zusammengeführt."
+    },
+    {
+      "caseId": "WGC-004",
+      "title": "Rohrschaden versus Nässeschaden",
+      "mustProve": "Reparatur des Rohrs und Folgeschaden sind getrennte Fakten."
+    },
+    {
+      "caseId": "WGC-005",
+      "title": "Suchkosten, Wiederherstellung und Rohrreparatur",
+      "mustProve": "Drei Kostenarten behalten eigene Deckung, Limit und Evidenz."
+    },
+    {
+      "caseId": "WGC-006",
+      "title": "Dichter Mehrbetragsblock",
+      "mustProve": "Selbstbehalt, Suchkostenlimit und Jahreshöchstleistung wechseln trotz Nähe niemals die Rolle."
+    },
+    {
+      "caseId": "WGC-007",
+      "title": "Prozent-Selbstbehalt mit Minimum und Maximum",
+      "mustProve": "Prozentsatz, Mindest- und Höchstbetrag bilden eine strukturierte Formel statt drei Selbstbehalte."
+    },
+    {
+      "caseId": "WGC-008",
+      "title": "Selbstbehalt je Ereignis und Jahresaggregat",
+      "mustProve": "Ereignis-Selbstbehalt und Jahresaggregat bleiben getrennte Rollen und Basen."
+    },
+    {
+      "caseId": "WGC-009",
+      "title": "Varianten- oder Stufentabelle",
+      "mustProve": "Basis, Plus und Premium bleiben sichtbar und nur die ausgewählte Variante gilt."
+    },
+    {
+      "caseId": "WGC-010",
+      "title": "Mehrseitige Tabelle",
+      "mustProve": "Tabellenkopf auf Vorseite wird nur über belegte Tabellenrelation an Folgezellen gebunden."
+    },
+    {
+      "caseId": "WGC-011",
+      "title": "Klauselfortsetzung über Seitenwechsel",
+      "mustProve": "Bedingung auf Folgeseite wird ausschließlich über eine belegte Fortsetzungsrelation übernommen."
+    },
+    {
+      "caseId": "WGC-012",
+      "title": "Fremder Nachbarabsatz",
+      "mustProve": "Limit einer anderen Gefahr bleibt trotz räumlicher Nähe unverbunden."
+    },
+    {
+      "caseId": "WGC-013",
+      "title": "AVB und besondere Bedingung mit Override",
+      "mustProve": "Ausschluss und Erweiterung bleiben mit Hierarchie-/Override-Relation erhalten."
+    },
+    {
+      "caseId": "WGC-014",
+      "title": "Polizzenblatt verweist auf Bedingungen",
+      "mustProve": "Baustein, Definition und Ausschluss werden über explizite Referenz verbunden, ohne Seitenfenster-Heuristik."
+    },
+    {
+      "caseId": "WGC-015",
+      "title": "Plötzliches Ereignis und schleichende Undichtheit",
+      "mustProve": "Trigger, Deckung und Allmählichkeitsausschluss bleiben getrennt."
+    },
+    {
+      "caseId": "WGC-016",
+      "title": "Frostdeckung mit Heiz- oder Entleerungspflicht",
+      "mustProve": "Obliegenheit ist kein Ausschluss und keine automatische Leistungsfreiheit."
+    },
+    {
+      "caseId": "WGC-017",
+      "title": "Leerstand und Abwesenheitsdauer",
+      "mustProve": "Dauer, Meldepflicht, Absperrpflicht und mögliche Rechtsfolge bleiben getrennt."
+    },
+    {
+      "caseId": "WGC-018",
+      "title": "Altersabzug mit enger Zielrolle",
+      "mustProve": "Abzug für Rohrreparatur wird nicht auf den gesamten Nässeschaden übertragen."
+    },
+    {
+      "caseId": "WGC-019",
+      "title": "Serienschadenregelung",
+      "mustProve": "Ursachendefinition, Zahl der Selbstbehalte und Jahreshöchstleistung bleiben getrennt."
+    },
+    {
+      "caseId": "WGC-020",
+      "title": "Trocknung und Stromkosten",
+      "mustProve": "Trocknung und Strom sind getrennte Kostenarten mit eigener Bedingung und Grenze."
+    },
+    {
+      "caseId": "WGC-021",
+      "title": "Geräte- und Anlagenabgrenzung",
+      "mustProve": "Heizkreis, Waschmaschine, Sprinkler und Aquarium werden nicht verallgemeinert."
+    },
+    {
+      "caseId": "WGC-022",
+      "title": "Regen-, Grund-, Sicker- und Rückstauwasser",
+      "mustProve": "Gefahren und Bausteine werden korrekt geroutet und nicht als ein Leitungswasserthema dedupliziert."
+    },
+    {
+      "caseId": "WGC-023",
+      "title": "Rückstauklappe und Wartungsnachweis",
+      "mustProve": "Deckungsbedingung, Obliegenheit und extern fehlender Wartungsnachweis sind drei Wissensarten."
+    },
+    {
+      "caseId": "WGC-024",
+      "title": "Schimmel oder Schwamm als Folgeschaden",
+      "mustProve": "Folgeschaden, gedecktes Ausgangsereignis und Meldefrist bleiben getrennt."
+    },
+    {
+      "caseId": "WGC-025",
+      "title": "WEG-Objektscope in einer Schadenkette",
+      "mustProve": "Steigleitung, Wohnungszuleitung, Innenausbau, Sondereigentum und Hausrat behalten getrennte Anspruchs- und Objektscopes."
+    }
+  ],
+  "mandatoryVariants": [
+    "at least one paraphrase without the word Leitungswasser",
+    "at least one OCR or hyphenation variant",
+    "at least one exact negative expression",
+    "at least one unresolved case",
+    "at least one A/B variant mismatch"
+  ]
+}

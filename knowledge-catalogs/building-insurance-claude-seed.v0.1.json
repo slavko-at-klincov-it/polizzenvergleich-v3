@@ -1,0 +1,2102 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "building-insurance-claude-seed",
+  "version": "0.1.0-candidate",
+  "status": "unvalidated_seed",
+  "capturedAt": "2026-08-25",
+  "language": "de-AT",
+  "source": {
+    "kind": "shared_ai_conversation",
+    "url": "https://claude.ai/share/926ae3e8-2c99-476b-bd04-0aaf92fd7c73",
+    "visibleConversationReviewed": true,
+    "hiddenAttachmentsReviewed": false,
+    "notes": "Nur Punktbezeichnungen wurden übernommen. Normative Zielwerte, Marktbehauptungen und Rechtsinterpretationen sind nicht als Fakten importiert."
+  },
+  "invariants": {
+    "catalogIsNotCompletenessBoundary": true,
+    "missingPointIsNotNegativeEvidence": true,
+    "additionalDocumentFindingsAllowed": true,
+    "brokerRulesAreNotDocumentFacts": true,
+    "comparisonPointMayHaveMultipleRequirementBindings": true,
+    "comparisonPointMayProduceZeroToManyFacts": true
+  },
+  "counts": {
+    "totalSourceRows": 202,
+    "comparisonPointCandidates": 190,
+    "brokerRuleCandidates": 12
+  },
+  "views": [
+    {
+      "id": "OBJECT",
+      "sourceTitle": "0. Objekt- und Vertragsgrunddaten"
+    },
+    {
+      "id": "VALUATION",
+      "sourceTitle": "1. Versicherungssumme & Bewertung"
+    },
+    {
+      "id": "FIRE",
+      "sourceTitle": "2. Feuer"
+    },
+    {
+      "id": "WATER",
+      "sourceTitle": "3. Leitungswasser"
+    },
+    {
+      "id": "STORM",
+      "sourceTitle": "4. Sturm, Hagel, Schneedruck"
+    },
+    {
+      "id": "EXTENDED",
+      "sourceTitle": "5. Elementar & Zusatzrisiken"
+    },
+    {
+      "id": "LIABILITY",
+      "sourceTitle": "6. Haus- & Grundbesitzerhaftpflicht"
+    },
+    {
+      "id": "CONTRACT",
+      "sourceTitle": "7. Vertrag, Obliegenheiten, Konditionen"
+    },
+    {
+      "id": "WEG",
+      "sourceTitle": "8. WEG-spezifische Abgrenzungsfragen"
+    }
+  ],
+  "comparisonPointCandidates": [
+    {
+      "id": "OBJ-001",
+      "viewId": "OBJECT",
+      "label": "Baujahr & Sanierungsstand",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "OBJ-002",
+      "viewId": "OBJECT",
+      "label": "Bauweise & Dachform",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "OBJ-003",
+      "viewId": "OBJECT",
+      "label": "Nutzfläche & Anzahl WE",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "OBJ-004",
+      "viewId": "OBJECT",
+      "label": "Gewerbliche Nutzung im Haus",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "OBJ-005",
+      "viewId": "OBJECT",
+      "label": "Öltank / Gewässerrisiko",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "OBJ-006",
+      "viewId": "OBJECT",
+      "label": "PV-Anlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "OBJ-007",
+      "viewId": "OBJECT",
+      "label": "E-Ladepunkte",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "OBJ-008",
+      "viewId": "OBJECT",
+      "label": "Aufzug",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "OBJ-009",
+      "viewId": "OBJECT",
+      "label": "Lage / HORA-Zone",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "OBJ-010",
+      "viewId": "OBJECT",
+      "label": "Leerstand",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "OBJ-011",
+      "viewId": "OBJECT",
+      "label": "Denkmalschutz / Schutzzone",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "OBJ-012",
+      "viewId": "OBJECT",
+      "label": "Vorschäden 5 Jahre",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "OBJ-013",
+      "viewId": "OBJECT",
+      "label": "Bisheriger Versicherer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "VAL-001",
+      "viewId": "VALUATION",
+      "label": "Neuwert vs. Zeitwert",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "VAL-002",
+      "viewId": "VALUATION",
+      "label": "Zeitwertklausel Detail",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "VAL-003",
+      "viewId": "VALUATION",
+      "label": "Summenermittlung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "VAL-004",
+      "viewId": "VALUATION",
+      "label": "m²-Satz",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "VAL-005",
+      "viewId": "VALUATION",
+      "label": "Unterversicherungsverzicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "VAL-006",
+      "viewId": "VALUATION",
+      "label": "Voraussetzungen des Verzichts",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "VAL-007",
+      "viewId": "VALUATION",
+      "label": "Indexierung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "VAL-008",
+      "viewId": "VALUATION",
+      "label": "Index-Aussetzung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "VAL-009",
+      "viewId": "VALUATION",
+      "label": "Wohnungsinnenausbau",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "VAL-010",
+      "viewId": "VALUATION",
+      "label": "Sonderausstattung einzelner WE",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "VAL-011",
+      "viewId": "VALUATION",
+      "label": "Nebengebäude",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "VAL-012",
+      "viewId": "VALUATION",
+      "label": "Einfriedungen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "VAL-013",
+      "viewId": "VALUATION",
+      "label": "Außenanlagen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "VAL-014",
+      "viewId": "VALUATION",
+      "label": "Aufräum-, Abbruch-, Entsorgungskosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "VAL-015",
+      "viewId": "VALUATION",
+      "label": "Bewegungs- & Schutzkosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "VAL-016",
+      "viewId": "VALUATION",
+      "label": "Behördliche Mehrkosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "VAL-017",
+      "viewId": "VALUATION",
+      "label": "Technologiefortschritt",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "VAL-018",
+      "viewId": "VALUATION",
+      "label": "Mietzinsentgang",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "VAL-019",
+      "viewId": "VALUATION",
+      "label": "Bezugskosten Eigennutzer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "VAL-020",
+      "viewId": "VALUATION",
+      "label": "Hotel-/Umzugskosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 20
+    },
+    {
+      "id": "VAL-021",
+      "viewId": "VALUATION",
+      "label": "Vorsorgedeckung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 21
+    },
+    {
+      "id": "VAL-022",
+      "viewId": "VALUATION",
+      "label": "Gemeinschaftsvermögen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 22
+    },
+    {
+      "id": "FIR-001",
+      "viewId": "FIRE",
+      "label": "Brand — Definition",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "FIR-002",
+      "viewId": "FIRE",
+      "label": "Blitzschlag direkt",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "FIR-003",
+      "viewId": "FIRE",
+      "label": "Überspannung / indirekter Blitz",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "FIR-004",
+      "viewId": "FIRE",
+      "label": "Explosion",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "FIR-005",
+      "viewId": "FIRE",
+      "label": "Implosion",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "FIR-006",
+      "viewId": "FIRE",
+      "label": "Verpuffung Heiz-/Gasanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "FIR-007",
+      "viewId": "FIRE",
+      "label": "Fahrzeuganprall",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "FIR-008",
+      "viewId": "FIRE",
+      "label": "Luftfahrzeuge",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "FIR-009",
+      "viewId": "FIRE",
+      "label": "Sengschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "FIR-010",
+      "viewId": "FIRE",
+      "label": "Rauch- und Rußschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "FIR-011",
+      "viewId": "FIRE",
+      "label": "Löschschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "FIR-012",
+      "viewId": "FIRE",
+      "label": "Feuerwehr- & Einsatzkosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "FIR-013",
+      "viewId": "FIRE",
+      "label": "Aufräumung nach Brand",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "FIR-014",
+      "viewId": "FIRE",
+      "label": "Brandschutzauflagen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "FIR-015",
+      "viewId": "FIRE",
+      "label": "Rauchwarnmelder / BMA",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "FIR-016",
+      "viewId": "FIRE",
+      "label": "Brandschutztüren Keller/TG",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "FIR-017",
+      "viewId": "FIRE",
+      "label": "Fahrräder/E-Bikes/Akkus",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "FIR-018",
+      "viewId": "FIRE",
+      "label": "PV-Anlage als Brandursache",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "FIR-019",
+      "viewId": "FIRE",
+      "label": "Nachbarschaftsschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "WAT-001",
+      "viewId": "WATER",
+      "label": "Zuleitungsrohre innerhalb",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "WAT-002",
+      "viewId": "WATER",
+      "label": "Ableitungsrohre innerhalb",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "WAT-003",
+      "viewId": "WATER",
+      "label": "Zu-/Ableitung außerhalb Gebäude",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "WAT-004",
+      "viewId": "WATER",
+      "label": "Rohrbruchdeckung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "WAT-005",
+      "viewId": "WATER",
+      "label": "Frostschäden an Rohren",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "WAT-006",
+      "viewId": "WATER",
+      "label": "Frost an Armaturen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "WAT-007",
+      "viewId": "WATER",
+      "label": "Leckortung / Suchkosten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "WAT-008",
+      "viewId": "WATER",
+      "label": "Wiederherstellung nach Ortung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "WAT-009",
+      "viewId": "WATER",
+      "label": "Trocknungskosten & Strom",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "WAT-010",
+      "viewId": "WATER",
+      "label": "Heizungsanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "WAT-011",
+      "viewId": "WATER",
+      "label": "Fußbodenheizung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "WAT-012",
+      "viewId": "WATER",
+      "label": "Sprinkler-/Löschanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "WAT-013",
+      "viewId": "WATER",
+      "label": "Klima-/Lüftungsanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "WAT-014",
+      "viewId": "WATER",
+      "label": "Aquarien, Wasserbetten, Waschmaschine",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "WAT-015",
+      "viewId": "WATER",
+      "label": "Regenwasser aus Fallrohren",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "WAT-016",
+      "viewId": "WATER",
+      "label": "Rückstau aus Kanal",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "WAT-017",
+      "viewId": "WATER",
+      "label": "Grund-, Sicker-, Stauwasser",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "WAT-018",
+      "viewId": "WATER",
+      "label": "Schimmel- & Schwammschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "WAT-019",
+      "viewId": "WATER",
+      "label": "Altersabzug auf Rohre",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "WAT-020",
+      "viewId": "WATER",
+      "label": "Schleichende Undichtheit über Monate",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 20
+    },
+    {
+      "id": "WAT-021",
+      "viewId": "WATER",
+      "label": "Sanierungsnachweis Steigleitungen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 21
+    },
+    {
+      "id": "WAT-022",
+      "viewId": "WATER",
+      "label": "Serienschadenregelung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 22
+    },
+    {
+      "id": "WAT-023",
+      "viewId": "WATER",
+      "label": "Absperrpflicht bei Abwesenheit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 23
+    },
+    {
+      "id": "STO-001",
+      "viewId": "STORM",
+      "label": "Windgeschwindigkeitsgrenze",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "STO-002",
+      "viewId": "STORM",
+      "label": "Nachweis der Windstärke",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "STO-003",
+      "viewId": "STORM",
+      "label": "Hagelschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "STO-004",
+      "viewId": "STORM",
+      "label": "Schneedruck",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "STO-005",
+      "viewId": "STORM",
+      "label": "Dachlawine",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "STO-006",
+      "viewId": "STORM",
+      "label": "Folgeschäden Niederschlag",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "STO-007",
+      "viewId": "STORM",
+      "label": "Provisorische Sicherung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "STO-008",
+      "viewId": "STORM",
+      "label": "Dachrinnen & Fallrohre",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "STO-009",
+      "viewId": "STORM",
+      "label": "Verblechung, Attika, Kamine",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "STO-010",
+      "viewId": "STORM",
+      "label": "Dachfenster, Lichtkuppeln",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "STO-011",
+      "viewId": "STORM",
+      "label": "Antennen, Sat-Anlagen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "STO-012",
+      "viewId": "STORM",
+      "label": "Markisen, Beschattung, Rollläden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "STO-013",
+      "viewId": "STORM",
+      "label": "PV- und Solarthermie-Anlagen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "STO-014",
+      "viewId": "STORM",
+      "label": "Wärmepumpen-Außeneinheit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "STO-015",
+      "viewId": "STORM",
+      "label": "Anprall von Bäumen/Ästen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "STO-016",
+      "viewId": "STORM",
+      "label": "Umsturz eigener Bäume",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "STO-017",
+      "viewId": "STORM",
+      "label": "Steinschlag, Felssturz, Lawine",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "STO-018",
+      "viewId": "STORM",
+      "label": "Gerüste & Baustellen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "STO-019",
+      "viewId": "STORM",
+      "label": "Wartungszustand Dach",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "EXT-001",
+      "viewId": "EXTENDED",
+      "label": "Elementar-Sublimit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "EXT-002",
+      "viewId": "EXTENDED",
+      "label": "Aggregierung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "EXT-003",
+      "viewId": "EXTENDED",
+      "label": "Hochwasser / Überschwemmung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "EXT-004",
+      "viewId": "EXTENDED",
+      "label": "Starkregen / Oberflächenwasser",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "EXT-005",
+      "viewId": "EXTENDED",
+      "label": "Rückstau aus Kanalisation",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "EXT-006",
+      "viewId": "EXTENDED",
+      "label": "Erdbeben",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "EXT-007",
+      "viewId": "EXTENDED",
+      "label": "Erdrutsch, Erdfall, Erdsenkung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "EXT-008",
+      "viewId": "EXTENDED",
+      "label": "Lawine, Schneerutsch",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "EXT-009",
+      "viewId": "EXTENDED",
+      "label": "Vulkanausbruch",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "EXT-010",
+      "viewId": "EXTENDED",
+      "label": "Glasbruch",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "EXT-011",
+      "viewId": "EXTENDED",
+      "label": "Glas — Sonderverglasung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "EXT-012",
+      "viewId": "EXTENDED",
+      "label": "Glas — Notverglasung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "EXT-013",
+      "viewId": "EXTENDED",
+      "label": "Aufzugsanlage / Maschinenbruch",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "EXT-014",
+      "viewId": "EXTENDED",
+      "label": "Haustechnik-Maschinenbruch",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "EXT-015",
+      "viewId": "EXTENDED",
+      "label": "Elektronikversicherung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "EXT-016",
+      "viewId": "EXTENDED",
+      "label": "E-Ladeinfrastruktur",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "EXT-017",
+      "viewId": "EXTENDED",
+      "label": "Photovoltaik-Allgefahren",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "EXT-018",
+      "viewId": "EXTENDED",
+      "label": "Tiefgarage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "EXT-019",
+      "viewId": "EXTENDED",
+      "label": "Vandalismus / böswillige Beschädigung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "EXT-020",
+      "viewId": "EXTENDED",
+      "label": "Graffiti-Entfernung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 20
+    },
+    {
+      "id": "EXT-021",
+      "viewId": "EXTENDED",
+      "label": "Einbruchdiebstahl allgemeine Teile",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 21
+    },
+    {
+      "id": "EXT-022",
+      "viewId": "EXTENDED",
+      "label": "Diebstahl fest verbundener Teile",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 22
+    },
+    {
+      "id": "EXT-023",
+      "viewId": "EXTENDED",
+      "label": "Schlossänderung nach Schlüsselverlust",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 23
+    },
+    {
+      "id": "EXT-024",
+      "viewId": "EXTENDED",
+      "label": "Tierschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 24
+    },
+    {
+      "id": "EXT-025",
+      "viewId": "EXTENDED",
+      "label": "Terror & Sabotage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 25
+    },
+    {
+      "id": "EXT-026",
+      "viewId": "EXTENDED",
+      "label": "Cyber / Gebäudeautomation",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 26
+    },
+    {
+      "id": "EXT-027",
+      "viewId": "EXTENDED",
+      "label": "Innere Unruhen, Streik, Aussperrung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 27
+    },
+    {
+      "id": "EXT-028",
+      "viewId": "EXTENDED",
+      "label": "Kriegs- und Kernenergierisiko",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 28
+    },
+    {
+      "id": "LIA-001",
+      "viewId": "LIABILITY",
+      "label": "Pauschaldeckungssumme",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "LIA-002",
+      "viewId": "LIABILITY",
+      "label": "Jahreshöchstleistung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "LIA-003",
+      "viewId": "LIABILITY",
+      "label": "Reine Vermögensschäden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "LIA-004",
+      "viewId": "LIABILITY",
+      "label": "Wegehalterhaftung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "LIA-005",
+      "viewId": "LIABILITY",
+      "label": "Bauwerkehaftung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "LIA-006",
+      "viewId": "LIABILITY",
+      "label": "Schneeräum- & Streupflicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "LIA-007",
+      "viewId": "LIABILITY",
+      "label": "Delegation an Dienstleister",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "LIA-008",
+      "viewId": "LIABILITY",
+      "label": "Bauherrenhaftpflicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "LIA-009",
+      "viewId": "LIABILITY",
+      "label": "Sanierungsprojekte",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "LIA-010",
+      "viewId": "LIABILITY",
+      "label": "Gewässerschadenhaftpflicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "LIA-011",
+      "viewId": "LIABILITY",
+      "label": "Umweltschäden nach B-UHG",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "LIA-012",
+      "viewId": "LIABILITY",
+      "label": "Haftpflicht der Organe",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "LIA-013",
+      "viewId": "LIABILITY",
+      "label": "Schäden Versicherter untereinander",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "LIA-014",
+      "viewId": "LIABILITY",
+      "label": "Mietermitverschulden / Regress",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "LIA-015",
+      "viewId": "LIABILITY",
+      "label": "Aufzugsanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "LIA-016",
+      "viewId": "LIABILITY",
+      "label": "Spielplatz & Gemeinschaftsflächen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "LIA-017",
+      "viewId": "LIABILITY",
+      "label": "Tiefgarage & Schrankenanlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "LIA-018",
+      "viewId": "LIABILITY",
+      "label": "Vermietung von Gemeinschaftsflächen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "LIA-019",
+      "viewId": "LIABILITY",
+      "label": "Serienschadenklausel",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "LIA-020",
+      "viewId": "LIABILITY",
+      "label": "Selbstbehalt in der Haftpflicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 20
+    },
+    {
+      "id": "LIA-021",
+      "viewId": "LIABILITY",
+      "label": "Passiver Rechtsschutz",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 21
+    },
+    {
+      "id": "LIA-022",
+      "viewId": "LIABILITY",
+      "label": "Auslandsdeckung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 22
+    },
+    {
+      "id": "CON-001",
+      "viewId": "CONTRACT",
+      "label": "Vertragslaufzeit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "CON-002",
+      "viewId": "CONTRACT",
+      "label": "Ordentliche Kündigung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "CON-003",
+      "viewId": "CONTRACT",
+      "label": "Stillschweigende Verlängerung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "CON-004",
+      "viewId": "CONTRACT",
+      "label": "Kündigung nach Schadenfall",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "CON-005",
+      "viewId": "CONTRACT",
+      "label": "Selbstbehalt je Sparte",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "CON-006",
+      "viewId": "CONTRACT",
+      "label": "Jahresmaximum Selbstbehalt",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "CON-007",
+      "viewId": "CONTRACT",
+      "label": "Verzicht auf grobe Fahrlässigkeit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "CON-008",
+      "viewId": "CONTRACT",
+      "label": "Umfang des Verzichts",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "CON-009",
+      "viewId": "CONTRACT",
+      "label": "Regressverzicht gegen Eigentümer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "CON-010",
+      "viewId": "CONTRACT",
+      "label": "Regressverzicht gegen Mieter",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "CON-011",
+      "viewId": "CONTRACT",
+      "label": "Anzeigepflicht Gefahrerhöhung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "CON-012",
+      "viewId": "CONTRACT",
+      "label": "Schadenmeldefrist",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "CON-013",
+      "viewId": "CONTRACT",
+      "label": "Rettungs- & Schadenminderungspflicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "CON-014",
+      "viewId": "CONTRACT",
+      "label": "Obliegenheiten vor Schaden",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "CON-015",
+      "viewId": "CONTRACT",
+      "label": "Wartungsnachweise",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "CON-016",
+      "viewId": "CONTRACT",
+      "label": "Leerstandsregelung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "CON-017",
+      "viewId": "CONTRACT",
+      "label": "Bauarbeiten / Gerüst",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    },
+    {
+      "id": "CON-018",
+      "viewId": "CONTRACT",
+      "label": "Sachverständigenverfahren",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 18
+    },
+    {
+      "id": "CON-019",
+      "viewId": "CONTRACT",
+      "label": "Zahlung Vorschuss",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 19
+    },
+    {
+      "id": "CON-020",
+      "viewId": "CONTRACT",
+      "label": "Wiederherstellungsklausel",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 20
+    },
+    {
+      "id": "CON-021",
+      "viewId": "CONTRACT",
+      "label": "Prämie absolut & pro m²",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 21
+    },
+    {
+      "id": "CON-022",
+      "viewId": "CONTRACT",
+      "label": "Versicherungssteuer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 22
+    },
+    {
+      "id": "CON-023",
+      "viewId": "CONTRACT",
+      "label": "Zahlungsweise",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 23
+    },
+    {
+      "id": "CON-024",
+      "viewId": "CONTRACT",
+      "label": "Verrechnung in der WEG",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 24
+    },
+    {
+      "id": "CON-025",
+      "viewId": "CONTRACT",
+      "label": "Maklervollmacht & Betreuung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 25
+    },
+    {
+      "id": "CON-026",
+      "viewId": "CONTRACT",
+      "label": "Bündelrabatt / Sanierungsrabatt",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 26
+    },
+    {
+      "id": "CON-027",
+      "viewId": "CONTRACT",
+      "label": "Angebotsbindefrist",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 27
+    },
+    {
+      "id": "WEG-001",
+      "viewId": "WEG",
+      "label": "Rechtsgrundlage",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1
+    },
+    {
+      "id": "WEG-002",
+      "viewId": "WEG",
+      "label": "Tragwerk, Dach, Fassade, Steigleitungen, Stiegenhaus",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2
+    },
+    {
+      "id": "WEG-003",
+      "viewId": "WEG",
+      "label": "Gewählte Systematik",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3
+    },
+    {
+      "id": "WEG-004",
+      "viewId": "WEG",
+      "label": "Verbesserungen einzelner WE",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4
+    },
+    {
+      "id": "WEG-005",
+      "viewId": "WEG",
+      "label": "Fenster & Außentüren",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5
+    },
+    {
+      "id": "WEG-006",
+      "viewId": "WEG",
+      "label": "Balkone, Loggien, Terrassen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6
+    },
+    {
+      "id": "WEG-007",
+      "viewId": "WEG",
+      "label": "Balkonverglasung, Markisen",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7
+    },
+    {
+      "id": "WEG-008",
+      "viewId": "WEG",
+      "label": "Kellerabteile",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8
+    },
+    {
+      "id": "WEG-009",
+      "viewId": "WEG",
+      "label": "Abgrenzung zur Haushaltsversicherung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9
+    },
+    {
+      "id": "WEG-010",
+      "viewId": "WEG",
+      "label": "Doppelversicherung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10
+    },
+    {
+      "id": "WEG-011",
+      "viewId": "WEG",
+      "label": "Deckungslücke bei fehlender HH-Polizze",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11
+    },
+    {
+      "id": "WEG-012",
+      "viewId": "WEG",
+      "label": "Vermietete Einheiten",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12
+    },
+    {
+      "id": "WEG-013",
+      "viewId": "WEG",
+      "label": "Kurzzeitvermietung (Airbnb)",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 13
+    },
+    {
+      "id": "WEG-014",
+      "viewId": "WEG",
+      "label": "Beschlusslage der WEG",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 14
+    },
+    {
+      "id": "WEG-015",
+      "viewId": "WEG",
+      "label": "Informationspflicht an Eigentümer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 15
+    },
+    {
+      "id": "WEG-016",
+      "viewId": "WEG",
+      "label": "Auszahlung im Schadenfall",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 16
+    },
+    {
+      "id": "WEG-017",
+      "viewId": "WEG",
+      "label": "Rücklage vs. Versicherung",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 17
+    }
+  ],
+  "brokerRuleCandidates": [
+    {
+      "id": "BRK-001",
+      "viewId": "BROKER_RULES",
+      "label": "Elementar-Sublimit unter 25.000 €",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 1,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-002",
+      "viewId": "BROKER_RULES",
+      "label": "Kein Unterversicherungsverzicht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 2,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-003",
+      "viewId": "BROKER_RULES",
+      "label": "Kein Verzicht auf grobe Fahrlässigkeit",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 3,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-004",
+      "viewId": "BROKER_RULES",
+      "label": "Innenausbau nicht mitversichert",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 4,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-005",
+      "viewId": "BROKER_RULES",
+      "label": "Leckortung unter 5.000 € gedeckelt",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 5,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-006",
+      "viewId": "BROKER_RULES",
+      "label": "Rückstau nur mit Klappe, ohne Wartungsnachweis der WEG",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 6,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-007",
+      "viewId": "BROKER_RULES",
+      "label": "Mietzinsentgang unter 12 Monate",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 7,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-008",
+      "viewId": "BROKER_RULES",
+      "label": "Kein Regressverzicht gegen Eigentümer",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 8,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-009",
+      "viewId": "BROKER_RULES",
+      "label": "Zeitwertklausel ab 50 % Restwert",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 9,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-010",
+      "viewId": "BROKER_RULES",
+      "label": "10-Jahres-Bindung ohne Sonderkündigungsrecht",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 10,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-011",
+      "viewId": "BROKER_RULES",
+      "label": "PV/E-Lader nicht deklariert",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 11,
+      "autoScoreAllowed": false
+    },
+    {
+      "id": "BRK-012",
+      "viewId": "BROKER_RULES",
+      "label": "Haftpflicht unter 2 Mio. €",
+      "status": "candidate_unvalidated",
+      "atomizationStatus": "pending",
+      "requirementBindings": [],
+      "allowAdditionalFindings": true,
+      "sourceOrdinal": 12,
+      "autoScoreAllowed": false
+    }
+  ]
+}

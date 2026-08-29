@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "building-insurance-water-targets",
+  "version": "0.1.0-pilot",
+  "status": "draft",
+  "invariants": {
+    "allControlledOccurrencesMustSettle": true,
+    "globalTopNAllowedForCompleteness": false,
+    "missingEvidenceIsNegativeFact": false,
+    "roleBindingRequired": true,
+    "additionalFindingsAllowed": true
+  },
+  "factRoles": [
+    "coverage",
+    "insured_object",
+    "definition",
+    "limit",
+    "deductible",
+    "condition",
+    "exclusion",
+    "obligation"
+  ],
+  "contextPolicy": {
+    "expandInOrder": [
+      "occurrence_span",
+      "table_cell_and_headers",
+      "minimal_clause",
+      "compatible_continuation",
+      "heading_scope",
+      "variant_scope",
+      "explicit_cross_reference"
+    ],
+    "wordWindowFallback": 120,
+    "pageIsProvenanceAndSafetyCapOnly": true
+  },
+  "ambiguityPolicy": "unresolved_or_evidence_bound_model_check",
+  "targets": [
+    {
+      "targetSpecId": "target.water.pipe_break",
+      "pointId": "WAT-004",
+      "strongAliases": [
+        "Rohrbruch",
+        "Rohrgebrechen",
+        "Bruchschaden an Rohrleitungen"
+      ],
+      "weakAliases": ["gebrochenes Rohr", "Schaden am Rohr"],
+      "allowedFactRoles": [
+        "coverage",
+        "insured_object",
+        "condition",
+        "exclusion",
+        "deductible"
+      ]
+    },
+    {
+      "targetSpecId": "target.water.leak_detection",
+      "pointId": "WAT-007",
+      "strongAliases": [
+        "Leckortung",
+        "Lecksuche",
+        "Rohrbruchsuche",
+        "Suchkosten"
+      ],
+      "weakAliases": ["Ortungskosten", "Kosten der Schadenlokalisierung"],
+      "allowedFactRoles": [
+        "coverage",
+        "limit",
+        "condition",
+        "exclusion",
+        "deductible"
+      ]
+    },
+    {
+      "targetSpecId": "target.water.frost",
+      "pointId": "WAT-005",
+      "strongAliases": [
+        "Frostschaden",
+        "Frostschäden",
+        "Einfrieren",
+        "Auftauen"
+      ],
+      "weakAliases": ["Frosteinwirkung"],
+      "allowedFactRoles": [
+        "coverage",
+        "insured_object",
+        "obligation",
+        "condition",
+        "exclusion",
+        "deductible"
+      ]
+    },
+    {
+      "targetSpecId": "target.water.pipe_scope",
+      "pointIds": ["WAT-001", "WAT-002", "WAT-003"],
+      "strongAliases": [
+        "Zuleitungsrohre",
+        "Ableitungsrohre",
+        "Zuleitungsleitungen",
+        "Ableitungsleitungen"
+      ],
+      "weakAliases": [
+        "Rohrleitungen innerhalb des Gebäudes",
+        "Rohrleitungen außerhalb des Gebäudes",
+        "Rohrleitungen auf dem Grundstück"
+      ],
+      "qualifiers": [
+        "innerhalb",
+        "außerhalb",
+        "Gebäude",
+        "Grundstück",
+        "Anschlusspunkt"
+      ],
+      "allowedFactRoles": [
+        "insured_object",
+        "coverage",
+        "condition",
+        "exclusion"
+      ]
+    },
+    {
+      "targetSpecId": "target.water.section_deductible",
+      "pointId": "CON-005",
+      "strongAliases": ["Selbstbehalt", "Selbstbeteiligung"],
+      "weakAliases": ["vom Versicherungsnehmer zu tragen"],
+      "requiredScopeSignals": ["Leitungswasser", "Rohrbruch", "Nässeschaden"],
+      "allowedFactRoles": ["deductible", "condition"],
+      "rejectNearbyRoles": ["limit", "annual_limit", "sum_insured", "premium"]
+    },
+    {
+      "targetSpecId": "target.water.section_limit",
+      "pointIds": ["WAT-007", "WAT-008", "WAT-009"],
+      "strongAliases": [
+        "Höchstentschädigung",
+        "Jahreshöchstentschädigung",
+        "Sublimit",
+        "auf Erstes Risiko"
+      ],
+      "requiredScopeSignals": ["Leitungswasser", "Rohrbruch", "Nässeschaden"],
+      "allowedFactRoles": ["limit", "condition"],
+      "rejectNearbyRoles": ["deductible", "premium", "unrelated_sum_insured"]
+    }
+  ],
+  "firstAcceptanceCase": {
+    "caseId": "water-dense-deductible-vs-annual-limit",
+    "mustContain": [
+      "deductible EUR 350",
+      "annual limit EUR 20000",
+      "unrelated or only partially related condition"
+    ],
+    "expected": [
+      "EUR 350 binds only to deductible",
+      "EUR 20000 binds only to limit",
+      "condition requires proven scope relation",
+      "ambiguous association remains unresolved"
+    ]
+  }
+}
