@@ -40,6 +40,7 @@ describe("ST category recall", () => {
     [
       "1. Versicherungsumfang",
       "Versichert sind Solar- und Fotovoltaikanlagen am Gebäude.",
+      "Versichert sind Markisen, Jalousien und Rollläden am Gebäude.",
       "Mitversichert sind Grundstücksbegrenzungen sowie Begrenzungen und Umzäunungen wie Mauern, Zäune.",
     ].join("\n"),
     [
@@ -140,6 +141,29 @@ describe("ST category recall", () => {
           exactText === "Solar- und Fotovoltaikanlagen"
       )
     ).toBe(true);
+  });
+
+  test("ST-16 treats blinds and roller shutters as shading systems", () => {
+    expect(component(worksheet, "ST-16", "awning").occurrences).toEqual([
+      expect.objectContaining({
+        physicalPageNumber: 1,
+        exactText: "Markisen",
+      }),
+    ]);
+    expect(
+      component(worksheet, "ST-16", "shading_system").occurrences
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          physicalPageNumber: 1,
+          exactText: "Jalousien",
+        }),
+        expect.objectContaining({
+          physicalPageNumber: 1,
+          exactText: "Rollläden",
+        }),
+      ])
+    );
   });
 
   test("ST-25 recalls tree costs while an absent branch fact remains open", () => {
