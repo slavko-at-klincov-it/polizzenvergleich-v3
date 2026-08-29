@@ -2390,3 +2390,17 @@ PASS: echte RC6-Artefakt-Replays für LW-26, LW-27 und EL-16
 PASS: echtes RC6-Artefakt-Replay für WE-14
 REVIEW_REQUIRED: frischer vollständiger 27B-Lauf mit neuem Release-Fingerprint
 ```
+
+## 37. RC8: Standalone-Doctor verwendet die gebündelte Laufzeit
+
+Beim echten RC7-Update über `ssh macstudio` bestand der im Updateprozess
+aufgerufene Doctor, weil der Build zuvor die gebündelte Node-Laufzeit in den
+`PATH` aufgenommen hatte. Ein unmittelbar danach separat gestartetes
+`doctor.command` meldete die intakte Datenbank dagegen fälschlich als nicht
+migriert: Der Prisma-Shebang `/usr/bin/env node` fand in der
+nichtinteraktiven SSH-Shell kein `node`.
+
+Der Datenbankcheck startet Prisma deshalb nun ausdrücklich über
+`$V3_NODE_BIN`. Diese RC8-Korrektur ändert keine Analyse- oder
+Modellsemantik; sie macht lediglich den dokumentierten Standalone-Doctor
+reproduzierbar.

@@ -34,7 +34,7 @@ done
 
 [ -f "$V3_REPO_DIR/server/public/_index.html" ] && ok "Produktions-Oberfläche" || bad "Produktions-Oberfläche fehlt"
 if [ -s "$V3_REPO_DIR/server/storage/anythingllm.db" ] &&
-  (cd "$V3_REPO_DIR/server" && "$V3_REPO_DIR/server/node_modules/.bin/prisma" migrate status --schema=./prisma/schema.prisma >/dev/null 2>&1); then
+  (cd "$V3_REPO_DIR/server" && "$V3_NODE_BIN" "$V3_REPO_DIR/server/node_modules/.bin/prisma" migrate status --schema=./prisma/schema.prisma >/dev/null 2>&1); then
   ok "Datenbankmigrationen aktuell"
 else
   bad "Datenbank fehlt oder Migrationen sind nicht aktuell"
