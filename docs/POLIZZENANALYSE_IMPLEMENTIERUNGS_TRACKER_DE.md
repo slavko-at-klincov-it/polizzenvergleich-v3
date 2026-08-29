@@ -3093,5 +3093,6 @@ PASS: gegenüber RC26 ausschließlich VS-34 verbessert
 PASS: VS-21 und VS-28 bleiben vollständig belegt
 PASS: übrige 33 WEVIG-VS-Zeilen semantisch identisch
 PASS: LF-Reichweite unverändert
+PASS: RC27-Tag 3334616c auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: bloße Überschriften oder unbekannte Gemeinschaftsobjekte bewiesen
 ```

@@ -58,6 +58,8 @@ PASS: Prettier und git diff --check
 PASS: echte WEVIG-Worksheet-Reichweite – genau ein neu gebundener Kandidat
 PASS: LF-Worksheet-Reichweite – kein neu gebundener Kandidat
 PASS: frischer WEVIG-VS-27B-Lauf und exakter 36-Zeilen-Vergleich
+PASS: Tag 3334616c auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Checkout bestätigt
 ```
 
 ## Update
