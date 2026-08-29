@@ -3067,5 +3067,6 @@ PASS: LF nur FE-E16 verbessert -> BELEGT / Ja; übrige 79 Zeilen stabil
 PASS: WEVIG-FE 46/46 Kandidaten, 138/138 Komponenten, 80/80 Zeilen
 PASS: WEVIG nur FE-E16 verbessert -> BELEGT / Ja; übrige 79 Zeilen stabil
 PASS: Gesetzesverweis und WEVIG-Sicherheitsausnahmen vollständig sichtbar
+PASS: RC26-Tag a58fc9d8 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: beliebige Rechtsformulierungen oder externe Holdouts bewiesen
 ```

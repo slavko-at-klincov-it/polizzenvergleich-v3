@@ -56,6 +56,11 @@ WEVIG-FE mit qwen/qwen3.8-27b:
   übrige 79 FE-Zeilen unverändert
 ```
 
+Der unveränderliche Tag `v3.3.0-rc.26` wurde anschließend mit SHA
+`a58fc9d8b1346cf1256b868a8760beb1ef521046` auf dem Mac Studio installiert.
+Update-Doctor, separate Doctor-Wiederholung, Tag-/SHA-Prüfung und sauberer
+Checkout bestanden.
+
 ## Update
 
 ```bash
