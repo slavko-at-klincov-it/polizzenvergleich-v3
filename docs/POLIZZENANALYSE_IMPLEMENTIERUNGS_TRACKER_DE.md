@@ -2766,3 +2766,36 @@ PASS: alle übrigen Kategorie-Fundstellen unverändert
 PENDING: frischer WEVIG-VB- und EL-Lauf mit qwen/qwen3.8-27b
 NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
 ```
+
+## 47. RC16-Modellbefund und RC17-Ursachenbehebung
+
+Der unveränderte RC16-Tag bestand auf dem Mac Studio Update, beide
+Doctor-Läufe und alle technischen 27B-Gates. Qualitativ blieb er jedoch rot:
+`VB-01` und `VB-27` waren weiterhin `UNGEKLÄRT`, das neue DRAFT-Oracle bestand
+nur 17 von 47 Aussagen. Die neue Suche und Abschnittsgrenze waren korrekt;
+Qwen stufte die eindeutigen Sätze trotzdem als `MENTION_ONLY` ein, sodass der
+Server sie vor Wirkung und Wertebindung entfernte. Dieser Befund verhindert,
+dass RC16 fälschlich als positiver Release gilt.
+
+RC17 ergänzt deshalb keine breite Prompt-Ausnahme, sondern drei enge
+serverprüfbare allgemeine Vertragsformen: numerische Vertragslaufzeit,
+operativ erklärte Gesamtprämie und explizite Steuerinklusion. Nur im
+VB-Allgemeinscope und nur für die passenden Komponenten werden diese Formen
+autoritativ `DIRECT / DEFINED`. Negative Formen bleiben gesperrt.
+
+Das echte RC16-27B-Artefakt wurde mit der neuen Entscheidungslogik vollständig
+replayt. Ohne einen neuen Modellaufruf änderten sich von 36 VB-Zeilen exakt
+`VB-01` und `VB-27`; `VB-02` und alle übrigen 33 Zeilen blieben semantisch
+identisch.
+
+```text
+PASS: 91 Jest-Suites / 1013 Tests und vollständiger Lint
+PASS: gezielte Candidate-, Prepared-, Werte- und Materializer-Tests
+PASS: LF-/WEVIG-Bindungsflächen-Scan
+PASS: nur vier WEVIG-VB-Kandidaten auf PDF-Seite 6 neu autoritativ
+PASS: RC16-27B-Replay, exakt VB-01 und VB-27 verbessert
+PASS: mindestens 10 Jahre; EUR 14.747,66 vierteljährlich
+PASS: 20 % und 25 % bleiben ausschließlich VB-02-Rabattwerte
+PENDING: frischer RC17-27B-Lauf und DRAFT-Oracle
+NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
+```

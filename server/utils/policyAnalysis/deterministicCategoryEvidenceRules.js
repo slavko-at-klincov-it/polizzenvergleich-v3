@@ -321,6 +321,55 @@ function explicitHp11LiabilityScopeBinding({
   };
 }
 
+function explicitVbGeneralContractFactBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "VB" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "GENERAL_CONTRACT_TERMS"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  let basis = null;
+  if (
+    requirement?.id === "VB-01" &&
+    component?.id === "contract_term" &&
+    /(?:Vertragslaufzeit|Laufzeit(?:\s+des\s+Vertrages)?)\s*(?:von\s+)?(?:mind(?:estens)?\.?\s+)?\d{1,3}\s+Jahr(?:e|en)?/iu.test(
+      clause
+    )
+  )
+    basis = "VB_01_EXPLICIT_CONTRACT_TERM";
+  if (
+    requirement?.id === "VB-27" &&
+    component?.id === "total_premium" &&
+    /Gesamtprämie[\s\S]{0,120}?\b(?:beträgt|beläuft\s+sich\s+auf)\s+(?:(?:monatlich|vierteljährlich|halbjährlich|jährlich)\s+)?(?:EUR|€)\s*\d/iu.test(
+      clause
+    )
+  )
+    basis = "VB_27_EXPLICIT_TOTAL_PREMIUM";
+  if (
+    requirement?.id === "VB-27" &&
+    component?.id === "tax_included" &&
+    (/(?:Gesamtprämie[\s\S]{0,80}?(?:inkl\.?|inklusive)\s+Steuern)/iu.test(
+      clause
+    ) ||
+      /Gesamtprämie[\s\S]{0,120}?Steuern\s+und\s+Abgaben[\s\S]{0,80}?enthalten/iu.test(
+        clause
+      ))
+  )
+    basis = "VB_27_EXPLICIT_TAX_INCLUSION";
+  return basis
+    ? {
+        binding: DETERMINISTIC_BINDING.DIRECT,
+        basis,
+        authoritative: true,
+      }
+    : null;
+}
+
 /**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
@@ -365,6 +414,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (hp11Binding) return hp11Binding;
+
+  const vbGeneralFactBinding = explicitVbGeneralContractFactBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (vbGeneralFactBinding) return vbGeneralFactBinding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)
@@ -535,6 +592,22 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    target.categoryView === "VB" &&
+    ["VB-01", "VB-27"].includes(target.requirementId) &&
+    target.candidates.every(({ deterministicBindingBasis }) =>
+      /^(?:VB_01_EXPLICIT_CONTRACT_TERM|VB_27_EXPLICIT_(?:TOTAL_PREMIUM|TAX_INCLUSION))$/u.test(
+        deterministicBindingBasis || ""
+      )
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: `EXPLICIT_GENERAL_CONTRACT_FACT:${target.categoryView}:${target.requirementId}`,
+    };
   if (
     target.categoryView === "HP" &&
     target.requirementId === "HP-16" &&

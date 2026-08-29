@@ -38,6 +38,18 @@ function bindingInput({ text, exactText, narrowAliases = [] }) {
 }
 
 describe("deterministicCategoryEvidenceRules", () => {
+  function vbBindingInput({ requirementId, componentId, text, exactText }) {
+    const input = bindingInput({ text, exactText });
+    input.worksheet.catalog.categoryView = "VB";
+    input.requirement.id = requirementId;
+    input.component = {
+      id: componentId,
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "GENERAL_CONTRACT_TERMS";
+    return input;
+  }
+
   test("uses the nearest explicit coverage governor", () => {
     const text = [
       "Versichert sind Schäden durch Hagel.",
@@ -126,6 +138,113 @@ describe("deterministicCategoryEvidenceRules", () => {
     input.occurrence.sectionScopeHint.scopeKey = "GENERAL_CONTRACT_TERMS";
 
     expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
+  test("binds an explicit general contract term authoritatively", () => {
+    expect(
+      deterministicCategoryCandidateBinding(
+        vbBindingInput({
+          requirementId: "VB-01",
+          componentId: "contract_term",
+          text: "Dauerrabatt 20 % - Laufzeit mind. 10 Jahre",
+          exactText: "Laufzeit mind.",
+        })
+      )
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "VB_01_EXPLICIT_CONTRACT_TERM",
+      authoritative: true,
+    });
+  });
+
+  test.each([
+    "Laufzeit bis zu 10 Jahre",
+    "Kündigungsfrist 10 Jahre",
+    "während der Vertragslaufzeit",
+  ])(
+    "does not authoritatively bind a non-contract duration from %s",
+    (text) => {
+      const exactText = text.includes("Vertragslaufzeit")
+        ? "Vertragslaufzeit"
+        : text.split(" ").slice(0, 2).join(" ");
+      expect(
+        deterministicCategoryCandidateBinding(
+          vbBindingInput({
+            requirementId: "VB-01",
+            componentId: "contract_term",
+            text,
+            exactText,
+          })
+        )
+      ).toBeNull();
+    }
+  );
+
+  test("binds an operative total premium and its tax statement", () => {
+    const total =
+      "Die Gesamtprämie inkl. Steuern (Bruttoprämie) beträgt vierteljährlich EUR 14.747,66.";
+    expect(
+      deterministicCategoryCandidateBinding(
+        vbBindingInput({
+          requirementId: "VB-27",
+          componentId: "total_premium",
+          text: total,
+          exactText: "Gesamtprämie inkl. Steuern",
+        })
+      )
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "VB_27_EXPLICIT_TOTAL_PREMIUM",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryCandidateBinding(
+        vbBindingInput({
+          requirementId: "VB-27",
+          componentId: "tax_included",
+          text: total,
+          exactText: "inkl. Steuern",
+        })
+      )
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "VB_27_EXPLICIT_TAX_INCLUSION",
+      authoritative: true,
+    });
+  });
+
+  test("does not bind an unrelated later periodic amount as total premium", () => {
+    expect(
+      deterministicCategoryCandidateBinding(
+        vbBindingInput({
+          requirementId: "VB-27",
+          componentId: "total_premium",
+          text: "Die Gesamtprämie wird separat ausgewiesen. Vierteljährlich EUR 500 Bearbeitungskosten.",
+          exactText: "Gesamtprämie",
+        })
+      )
+    ).toBeNull();
+  });
+
+  test("materializes only server-bound general contract facts as defined", () => {
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "VB",
+        requirementId: "VB-27",
+        componentId: "total_premium",
+        candidates: [
+          {
+            candidateId: "candidate:premium",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: "VB_27_EXPLICIT_TOTAL_PREMIUM",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:premium"],
+      coverageEffect: "DEFINED",
+      basis: "EXPLICIT_GENERAL_CONTRACT_FACT:VB:VB-27",
+    });
   });
 
   test("rejects a clause activated in several other coverage chapters", () => {

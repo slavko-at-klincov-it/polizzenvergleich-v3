@@ -65,9 +65,28 @@ WEVIG:
 
 ## Mac-Studio-Nachweis
 
-Der frische Lauf mit `qwen/qwen3.8-27b`, der vollständige 36-Zeilen-Vergleich
-für VB und die Kontrollauswertung von EL werden nach Installation des
-unveränderlichen Tags hier protokolliert.
+RC16 wurde unverändert auf dem Mac Studio installiert; Update, beide
+Doctor-Läufe, Tag, SHA und sauberer Checkout waren grün. Der frische Lauf mit
+`qwen/qwen3.8-27b` bestand zwar alle technischen Gates, verfehlte aber das
+qualitative DRAFT-Oracle:
+
+```text
+VB-Triage:       20/20 IDs und 20/20 Kontrollen
+VB-Wirkungen:    52/52 Komponenten und 52/52 Kontrollen
+VB-Endtabelle:   36/36 Zeilen
+DRAFT-Oracle:    nur 17/47 Aussagen
+
+VB-02: BELEGT / Ja, Rabatt 20 % und 25 %
+VB-01: weiterhin UNGEKLÄRT
+VB-27: weiterhin UNGEKLÄRT
+```
+
+Die Fundstellen und der neue allgemeine Scope waren korrekt. Das 27B-Modell
+stufte die operative Mindestlaufzeit, Gesamtprämie und Steuerinklusion jedoch
+weiterhin als `MENTION_ONLY` ein; der Server verwarf sie deshalb vor Wirkung
+und Wertebindung. RC16 ist damit ein dokumentierter negativer Zwischenstand
+und nicht der empfohlene Kundenkandidat. Die enge Ursachenbehebung folgt in
+RC17.
 
 ## Update
 

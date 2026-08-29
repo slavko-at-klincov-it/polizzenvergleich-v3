@@ -1011,13 +1011,25 @@ describe("controlledOccurrenceWorksheet", () => {
       });
       expect(target.modelDecisionFields).not.toContain("scopeMatch");
     }
+    const deterministicGeneralFacts = targets.filter(
+      ({ deterministicBindingBasis }) =>
+        deterministicBindingBasis?.startsWith("VB_")
+    );
+    expect(deterministicGeneralFacts).toHaveLength(4);
+    for (const target of deterministicGeneralFacts) {
+      expect(target.roleResolution).toMatchObject({
+        owner: "SERVER",
+        roleMatch: "MATCH",
+      });
+      expect(target.modelDecisionFields).toEqual([]);
+    }
     expect(
       targets.filter(
         ({ scopeResolution }) =>
           scopeResolution.basis === "MATCHING_CATEGORY_SECTION" &&
           scopeResolution.matchedAlias === "GENERAL_CONTRACT_TERMS"
       )
-    ).toHaveLength(6);
+    ).toHaveLength(2);
   });
 
   test("keeps inherited scope before and resets it after a later summary heading", () => {
