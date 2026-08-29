@@ -144,7 +144,7 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
   if (!polarity || polarity === "UNKNOWN") return false;
   if (["PERIL", "DAMAGE", "EXCLUSION"].includes(factRole)) return true;
   if (factRole === "INSURED_OBJECT")
-    return /(?:Sachen|Objekte|Gebäude|Anlagen|Einrichtungen|Bestandteile)/iu.test(
+    return /(?:Sachen|Objekte|Gebäude|Anlagen|Einrichtungen|Bestandteile|Rohre?)/iu.test(
       text
     );
   if (factRole === "COST") return /Kosten/iu.test(text);
@@ -186,6 +186,33 @@ function occurrenceClauseText(occurrence) {
   let end = occurrenceEnd;
   while (end < text.length && !/[.!?;\n\r]/u.test(text[end])) end += 1;
   return text.slice(start, end);
+}
+
+/**
+ * Recognises an operative promise or denial in the sentence that contains the
+ * exact occurrence. Unlike a carried list governor, German operative clauses
+ * often place "ersetzt" after the matched noun phrase. Side effects: none.
+ */
+function operativeCoveragePolarity(occurrence) {
+  const clause = occurrenceClauseText(occurrence);
+  if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
+  if (
+    /\b(?:werden|wird)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
+      clause
+    ) ||
+    /\b(?:kein\w*\s+Ersatz|nicht\s+(?:ersetzt|entschädigt|vergütet))\b/iu.test(
+      clause
+    )
+  )
+    return "NEGATIVE";
+  if (
+    /\b(?:es\s+)?(?:werden|wird)\b[\s\S]{0,320}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
+      clause
+    ) ||
+    /\b(?:der\s+)?Versicherer\s+leistet\s+Entschädigung\b/iu.test(clause)
+  )
+    return "POSITIVE";
+  return "UNKNOWN";
 }
 
 function explicitRoleMismatch(component, occurrence) {
@@ -373,6 +400,26 @@ function deterministicCategoryCandidateBinding({
         }
       : null;
 
+  const operativePolarity = operativeCoveragePolarity(occurrence);
+  const operativeClause = occurrenceClauseText(occurrence);
+  if (
+    matchingScopeKey &&
+    operativePolarity !== "UNKNOWN" &&
+    factRoleMatchesGovernor(
+      component?.factRole,
+      operativePolarity,
+      operativeClause
+    )
+  )
+    return {
+      binding:
+        narrowAlias || narrowScopeKey
+          ? DETERMINISTIC_BINDING.NARROW_SCOPE
+          : DETERMINISTIC_BINDING.DIRECT,
+      basis: `EXPLICIT_${operativePolarity}_OPERATIVE_COVERAGE_CLAUSE`,
+      authoritative: true,
+    };
+
   const polarity = clausePolarity({
     scopeLeadText: `${occurrence?.coverageGovernorHint?.text || ""}\n${
       occurrence?.scopeLead?.text || ""
@@ -394,6 +441,20 @@ function deterministicCategoryCandidateBinding({
       occurrence?.context?.unitType === "LIST_ITEM" &&
       containsPhrase(occurrence?.context?.text, occurrence?.exactText)
   );
+  const explicitCategoryListClause = Boolean(
+    matchingScopeKey &&
+      occurrence?.coverageGovernorHint?.text &&
+      occurrence?.context?.unitType === "LIST_ITEM" &&
+      containsPhrase(occurrence?.context?.text, occurrence?.exactText) &&
+      (lastPatternMatch(
+        occurrence.coverageGovernorHint.text,
+        POSITIVE_GOVERNORS
+      ) ||
+        lastPatternMatch(
+          occurrence.coverageGovernorHint.text,
+          NEGATIVE_GOVERNORS
+        ))
+  );
   return {
     binding:
       narrowAlias || narrowScopeKey
@@ -404,7 +465,9 @@ function deterministicCategoryCandidateBinding({
       : narrowScopeKey
         ? "EXPLICIT_NARROW_SECTION_SCOPE"
         : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
-    ...(explicitVariantListClause ? { authoritative: true } : {}),
+    ...(explicitVariantListClause || explicitCategoryListClause
+      ? { authoritative: true }
+      : {}),
   };
 }
 
@@ -418,6 +481,23 @@ function effectForCandidate(target, candidate) {
     ) &&
     !lastPatternMatch(localClause, NEGATIVE_GOVERNORS);
   if (localLimitedCoverage) return COVERAGE_EFFECT.INCLUDED;
+
+  const operativePolarity = operativeCoveragePolarity({
+    exactText: candidate.exactText,
+    documentStart: candidate.documentStart,
+    documentEnd: candidate.documentEnd,
+    context: {
+      text: candidate.contextText,
+      documentStart: candidate.contextDocumentStart,
+    },
+  });
+  if (operativePolarity === "NEGATIVE") return COVERAGE_EFFECT.EXCLUDED;
+  if (operativePolarity === "POSITIVE") {
+    if (target.factRole === "DEFINITION") return COVERAGE_EFFECT.DEFINED;
+    if (["LIMIT", "DEDUCTIBLE", "CONDITION"].includes(target.factRole))
+      return COVERAGE_EFFECT.DEFINED;
+    return COVERAGE_EFFECT.INCLUDED;
+  }
 
   const polarity = clausePolarity({
     scopeLeadText: candidate.scopeLeadText,

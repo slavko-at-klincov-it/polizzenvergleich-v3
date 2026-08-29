@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "oracleId": "category-document-lf-wevig-draft-v0.1",
+  "approvalStatus": "DRAFT",
+  "documents": [
+    {
+      "documentKey": "WEVIG",
+      "pdfSha256": "a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16",
+      "physicalPages": 21,
+      "documentStatus": "PROPOSAL",
+      "approvalStatus": "DRAFT",
+      "rows": [
+        {
+          "categoryId": "LW-05",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Rohrbruch: eingeschlossen",
+              "Schaden am Rohr selbst: eingeschlossen"
+            ]
+          },
+          "requestedFieldStatus": "NOT_REQUIRED",
+          "components": [
+            {
+              "componentId": "pipe_break",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:aede869c7c08c654c9538831702478a1e52373529dfdc46672bf201cf17c93f3"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:aede869c7c08c654c9538831702478a1e52373529dfdc46672bf201cf17c93f3"
+                ],
+                "requiredPhysicalPages": [2],
+                "allowedPhysicalPages": [2]
+              }
+            },
+            {
+              "componentId": "pipe_itself",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:4acd365f7b7fbe6503ed7340182e4cda1274fe16032ca470db4284c8a2f638c9"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:4acd365f7b7fbe6503ed7340182e4cda1274fe16032ca470db4284c8a2f638c9"
+                ],
+                "requiredPhysicalPages": [2],
+                "allowedPhysicalPages": [2]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:4acd365f7b7fbe6503ed7340182e4cda1274fe16032ca470db4284c8a2f638c9",
+              "candidate:aede869c7c08c654c9538831702478a1e52373529dfdc46672bf201cf17c93f3"
+            ],
+            "allowedCandidateIds": [
+              "candidate:4acd365f7b7fbe6503ed7340182e4cda1274fe16032ca470db4284c8a2f638c9",
+              "candidate:aede869c7c08c654c9538831702478a1e52373529dfdc46672bf201cf17c93f3"
+            ],
+            "requiredPhysicalPages": [2],
+            "allowedPhysicalPages": [2]
+          }
+        },
+        {
+          "categoryId": "LW-26",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Nicht feststellbar",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "TEILBELEGT",
+            "documentedContentIncludes": [
+              "Rohrverstopfung: eingeschlossen",
+              "Reinigungskosten: eingeschlossen"
+            ]
+          },
+          "requestedFieldStatus": "NOT_FOUND",
+          "components": [
+            {
+              "componentId": "pipe_blockage",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:46ee947898dce897011f5d5c5d9fc67cbeb0b315aae386d3f2c9f499e09c82e4"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:46ee947898dce897011f5d5c5d9fc67cbeb0b315aae386d3f2c9f499e09c82e4"
+                ],
+                "requiredPhysicalPages": [14],
+                "allowedPhysicalPages": [14]
+              }
+            },
+            {
+              "componentId": "cleaning_costs",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "INCLUDED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredCandidateIds": [
+                  "candidate:353b1495fc62bd68360706a7a229b6e089712dc1dc5c1a8bd8d661244ea766e0"
+                ],
+                "allowedCandidateIds": [
+                  "candidate:353b1495fc62bd68360706a7a229b6e089712dc1dc5c1a8bd8d661244ea766e0"
+                ],
+                "requiredPhysicalPages": [14],
+                "allowedPhysicalPages": [14]
+              }
+            }
+          ],
+          "sources": {
+            "requiredCandidateIds": [
+              "candidate:353b1495fc62bd68360706a7a229b6e089712dc1dc5c1a8bd8d661244ea766e0",
+              "candidate:46ee947898dce897011f5d5c5d9fc67cbeb0b315aae386d3f2c9f499e09c82e4"
+            ],
+            "allowedCandidateIds": [
+              "candidate:353b1495fc62bd68360706a7a229b6e089712dc1dc5c1a8bd8d661244ea766e0",
+              "candidate:46ee947898dce897011f5d5c5d9fc67cbeb0b315aae386d3f2c9f499e09c82e4"
+            ],
+            "requiredPhysicalPages": [14],
+            "allowedPhysicalPages": [14]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -108,8 +108,7 @@ describe("category semantic exceptions", () => {
           component: { id: componentId, factRole: "CONDITION" },
           occurrence: occurrence({
             candidateId: `candidate:hp16:${componentId}`,
-            exactText:
-              componentId === "tenants" ? "Mieter" : "Regressanspruch",
+            exactText: componentId === "tenants" ? "Mieter" : "Regressanspruch",
             contextText,
             scopeLeadText: "5. Regressverzicht",
             sectionScopeKey: "GENERAL_CONTRACT_TERMS",
@@ -432,6 +431,201 @@ describe("category semantic exceptions", () => {
         reason: "TRIAGE_MENTION_ONLY",
       },
     ]);
+  });
+
+  test("an explicit category list keeps covered pipe replacement when triage says unresolved", () => {
+    const pipeReplacement = occurrence({
+      candidateId: "candidate:lw05:pipe-replacement",
+      exactText: "Rohrersatz bei Rohrbruch bei allen versicherten Rohren",
+      contextText:
+        "- Rohrersatz bei Rohrbruch bei allen versicherten Rohren bis zu 15 lfm",
+      scopeLeadText: "Mitversichert gelten",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 2,
+    });
+    pipeReplacement.coverageGovernorHint = {
+      text: "Mitversichert gelten",
+      source: "CURRENT_PAGE_GOVERNOR",
+    };
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "LW" },
+      requirements: [
+        {
+          id: "LW-05",
+          label: "Rohrbruchschaden am Rohr selbst",
+          requestedFields: [],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "pipe_itself",
+              label: "Schaden am Rohr selbst",
+              factRole: "INSURED_OBJECT",
+              occurrences: [pipeReplacement],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: pipeReplacement,
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: [
+        {
+          requirementId: "LW-05",
+          componentId: "pipe_itself",
+          candidateId: pipeReplacement.candidateId,
+          binding: "UNRESOLVED",
+        },
+      ],
+    });
+    expect(target.candidates).toMatchObject([
+      {
+        candidateId: pipeReplacement.candidateId,
+        candidateBinding: "DIRECT",
+      },
+    ]);
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+      conflictState: CONFLICT_STATE.NONE,
+    });
+  });
+
+  test("an operative replacement sentence is authoritative, while denial, bare mention, and foreign scope stay distinct", () => {
+    const exactText =
+      "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren";
+    const operative = occurrence({
+      candidateId: "candidate:lw26:operative",
+      exactText,
+      contextText: `Verstopfungsbehebung62PA0070\nEs werden die ${exactText} ersetzt.`,
+      scopeLeadText: "",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 14,
+    });
+    operative.context.unitType = "WORD_WINDOW_FALLBACK";
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "LW" },
+      requirements: [
+        {
+          id: "LW-26",
+          label: "Rohrverstopfung und Reinigungskosten",
+          requestedFields: [],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "cleaning_costs",
+              label: "Reinigungskosten",
+              factRole: "COST",
+              occurrences: [operative],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: operative,
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: [
+        {
+          requirementId: "LW-26",
+          componentId: "cleaning_costs",
+          candidateId: operative.candidateId,
+          binding: "MENTION_ONLY",
+        },
+      ],
+    });
+    expect(target.candidates).toHaveLength(1);
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+    });
+
+    const denial = {
+      ...operative,
+      candidateId: "candidate:lw26:denial",
+      context: {
+        ...operative.context,
+        text: `Die ${exactText} werden nicht ersetzt.`,
+      },
+    };
+    denial.documentStart =
+      denial.context.documentStart + denial.context.text.indexOf(exactText);
+    denial.documentEnd = denial.documentStart + exactText.length;
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: denial,
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+
+    const bareMention = {
+      ...operative,
+      candidateId: "candidate:lw26:bare",
+      context: { ...operative.context, text: exactText },
+    };
+    bareMention.documentStart = bareMention.context.documentStart;
+    bareMention.documentEnd = bareMention.documentStart + exactText.length;
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: bareMention,
+      })
+    ).toBeNull();
+
+    const foreignScope = {
+      ...operative,
+      sectionScopeHint: {
+        scopeKey: "HAFTPFLICHT_INSURANCE",
+        text: "Haftpflichtversicherung",
+      },
+    };
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: foreignScope,
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
   });
 
   test("EL-16 preserves Wintergarten inclusion and Vitrinen exclusion as separate component facts", () => {

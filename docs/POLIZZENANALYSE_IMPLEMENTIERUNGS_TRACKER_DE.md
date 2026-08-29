@@ -2656,3 +2656,37 @@ PASS:  Server-, Frontend- und Collector-Lint
 RC13 ist damit der aktuelle positive Zwei-Dokument-Kandidat. Die Aussage bleibt
 auf die vorhandenen Referenzdokumente und bekannten Befunde begrenzt; eine
 99-Prozent-Garantie setzt weiterhin vollständige fachliche Oracles voraus.
+
+## 44. RC14: Operative Deckungsklauseln und messbares Dokument-Oracle
+
+Die Auswertung der vollständigen RC11-/RC12-Artefakte zeigte einen weiteren
+allgemeinen Fehler zwischen kontrollierter Suche und Wirkungsermittlung. WEVIG
+enthält für `LW-05` unter `Mitversichert gelten` einen eindeutigen Rohrersatz
+bei Rohrbruch. Für `LW-26` steht im aktivierten Leitungswasser-Klauselanhang
+ausdrücklich, dass die Kosten der Verstopfungsbeseitigung ersetzt werden. Das
+Modell stufte die vier atomaren Komponenten trotzdem als `UNRESOLVED` oder
+`MENTION_ONLY` ein; der Server verwarf daraufhin die richtigen Fundstellen.
+
+RC14 bindet deshalb nur zwei explizite, versichererneutrale Vertragsformen
+serverautoritär: lokale Listenpositionen unter einem spartengleichen
+Deckungs-Governor und operative Ersatz-/Entschädigungssätze innerhalb desselben
+Satzes. Negative operative Sätze bleiben ausgeschlossen; reine Erwähnungen und
+Fremdsparten bleiben gesperrt.
+
+Parallel wurde das fehlende Messinstrument geschaffen. Das generische sparse
+Dokument-Oracle prüft reviewer-eigene `APPROVED`- oder `DRAFT`-Erwartungen über
+Endzeilen, Komponenten, Scope, Konflikt, Dokumentgeltung, Werte/Rollen und
+Quellen. Ein Offline-CLI wertet vorhandene QA-Artefakte aus, ohne sie zu
+verändern. Die ersten WEVIG-LW-Erwartungen bleiben bis zur fachlichen Prüfung
+ausdrücklich `DRAFT`.
+
+```text
+PASS: 91 Jest-Suites / 986 Tests
+PASS: ESLint, Prettier und Diff-Check
+PASS: echtes RC11-Artefakt-Replay für LW-05 und LW-26
+PASS: Seiteneffektprüfung über alle LF-/WEVIG-Kategorien
+      genau vier beabsichtigte Overrides, keine weiteren Änderungen
+RED:  altes WEVIG-RC11-Artefakt erfüllt nur 34/65 DRAFT-Aussagen
+GO:   RC14 installieren und einen frischen WEVIG-LW-27B-Lauf ausführen
+NO CLAIM: DRAFT ist keine fachliche Freigabe und keine 99-Prozent-Garantie
+```
