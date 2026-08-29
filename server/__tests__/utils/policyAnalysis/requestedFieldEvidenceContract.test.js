@@ -145,12 +145,13 @@ describe("requestedFieldEvidenceContract", () => {
   test("keeps legal abbreviations inside one textual condition sentence", () => {
     const candidateId = "candidate:FE-E16:legal-condition";
     const text =
-      "Die Verletzung dieser Verpflichtungen führt nach Maßgabe des § 6 Abs. 3 und Art. 11 Abs. 2 lit. c VersVG zur Leistungsfreiheit des Versicherers. Ein anderer Satz folgt.";
+      "Die Verletzung dieser Verpflichtungen führt nach Maßgabe des § 6 Abs. 3 und Art. 11 Abs. 2 lit. c VersVG zur\nLeistungsfreiheit des Versicherers. Ein anderer Satz folgt.";
     const source = textualOccurrence({
       candidateId,
       text,
       exactText: "Verletzung dieser Verpflichtungen",
     });
+    source.context.unitType = "PARAGRAPH";
     const result = materializeRequestedFieldEvidence({
       worksheet: textualWorksheet({
         id: "FE-E16",

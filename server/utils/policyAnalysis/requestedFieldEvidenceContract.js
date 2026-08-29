@@ -683,14 +683,18 @@ function protectedSentencePeriod(text, index) {
   return /\d/u.test(text[index - 1] || "") && /\d/u.test(nextNonWhitespace);
 }
 
-function sentenceBoundaryAt(text, index) {
+function sentenceBoundaryAt(text, index, { softLineBreaks = false } = {}) {
   const character = text[index];
-  if (/[!?;\n\r]/u.test(character)) return true;
+  if (/[\n\r]/u.test(character)) return !softLineBreaks;
+  if (/[!?;]/u.test(character)) return true;
   return character === "." && !protectedSentencePeriod(text, index);
 }
 
 function occurrenceSentenceRange(occurrence) {
   const { text, documentStart } = validatedContext(occurrence);
+  const softLineBreaks = ["PARAGRAPH", "LIST_ITEM"].includes(
+    occurrence?.context?.unitType
+  );
   const relativeStart = Number(occurrence.documentStart) - documentStart;
   const relativeEnd = Number(occurrence.documentEnd) - documentStart;
   if (
@@ -702,9 +706,14 @@ function occurrenceSentenceRange(occurrence) {
   )
     return null;
   let start = relativeStart;
-  while (start > 0 && !sentenceBoundaryAt(text, start - 1)) start -= 1;
+  while (start > 0 && !sentenceBoundaryAt(text, start - 1, { softLineBreaks }))
+    start -= 1;
   let end = relativeEnd;
-  while (end < text.length && !sentenceBoundaryAt(text, end)) end += 1;
+  while (
+    end < text.length &&
+    !sentenceBoundaryAt(text, end, { softLineBreaks })
+  )
+    end += 1;
   if (end < text.length) end += 1;
   while (start < end && /\s/u.test(text[start])) start += 1;
   while (end > start && /\s/u.test(text[end - 1])) end -= 1;
