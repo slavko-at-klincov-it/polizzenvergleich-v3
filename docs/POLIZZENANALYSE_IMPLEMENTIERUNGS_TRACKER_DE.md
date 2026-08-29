@@ -3234,5 +3234,8 @@ PASS: übrige 35 WEVIG-VB-Zeilen exakt identisch
 PASS: LF-VB 37/37 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
 PASS: LF gegenüber RC29 exakt 0 Änderungen
 PASS: RC33-Tag 3ef0e950 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: RC33-WEVIG-Fullrun 320/320 Zeilen, 15 Verbesserungen, 0 Regressionen
+PASS: RC33-LF-Fullrun 320/320 Zeilen, 17 Verbesserungen, 0 Regressionen
+PASS: kumulativ 640/640 Zeilen und 32 Statusverbesserungen
 NO CLAIM: allgemeine Telefonnummer oder Überschrift beweist Schadenabwicklung
 ```

@@ -53,6 +53,30 @@ RC33-WEVIG-VB-FINAL-20260829-134237
 RC33-LF-VB-CONTROL-20260829-134520
 ```
 
+## Kumulative Vollabnahme RC33
+
+Nach der Kategorieabnahme wurde der exakt installierte RC33-Tag mit beiden
+Dokumenten noch einmal über alle acht Kategorien ausgeführt.
+
+```text
+WEVIG: 320/320 Zeilen, 15 Statusverbesserungen gegenüber RC11, 0 Regressionen
+LF:    320/320 Zeilen, 17 Statusverbesserungen gegenüber RC12, 0 Regressionen
+Gesamt: 640/640 Zeilen, 32 Statusverbesserungen, 0 Regressionen
+```
+
+Artefakte:
+
+```text
+RC33-WEVIG-ALL-CATEGORIES-20260829-135136
+RC33-LF-ALL-CATEGORIES-20260829-145113
+```
+
+WEVIG verbessert `VS-21`, `VS-28`, `FE-E16`, `FE-F05`, `LW-03`, `LW-04`,
+`LW-05`, `LW-08`, `LW-26`, `ST-27`, `HP-01`, `HP-08`, `VB-01`, `VB-27`
+und `VB-36`. LF verbessert `FE-E16`, `FE-F02`, `LW-08`, `LW-11`, `LW-31`,
+`ST-16`, `ST-34`, `EL-01`, `EL-05`, `EL-11`, `EL-15`, `EL-25`, `HP-02`,
+`HP-24`, `HP-27`, `VB-16` und `VB-26`.
+
 ## Technische Gates
 
 ```text
@@ -63,6 +87,7 @@ PASS: frische WEVIG- und LF-VB-27B-Läufe
 PASS: exakter 36-Zeilen-Diff gegen RC29
 PASS: Tag 3ef0e950 auf Mac Studio installiert; beide Doctor-Läufe grün
 PASS: exakter Tag/SHA und sauberer Ziel-Checkout bestätigt
+PASS: kumulative Fullruns mit 640/640 Zeilen und 0 Statusregressionen
 ```
 
 ## Update
