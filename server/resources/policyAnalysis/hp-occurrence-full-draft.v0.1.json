@@ -22,7 +22,8 @@
           "aliases": [
             "Pauschaldeckungssumme",
             "pauschale Deckungssumme",
-            "Die Pauschaldeckungssumme beträgt"
+            "Die Pauschaldeckungssumme beträgt",
+            "Pauschalversicherungssumme"
           ]
         },
         {
@@ -31,7 +32,8 @@
           "factRole": "DAMAGE",
           "aliases": [
             "Personen- und Sachschäden",
-            "Personen- und Sachschäden pauschal"
+            "Personen- und Sachschäden pauschal",
+            "Pauschalversicherungssumme"
           ]
         },
         {
@@ -40,7 +42,8 @@
           "factRole": "DAMAGE",
           "aliases": [
             "Personen- und Sachschäden",
-            "Personen- und Sachschäden pauschal"
+            "Personen- und Sachschäden pauschal",
+            "Pauschalversicherungssumme"
           ]
         }
       ]
@@ -198,7 +201,9 @@
           "aliases": [
             "Bauherrenhaftpflicht",
             "Bauherrenrisiko",
-            "Haftpflicht als Bauherr"
+            "Haftpflicht als Bauherr",
+            "Bauherr - Umbau-, Neubau- und Sanierungshaftpflichtrisiko",
+            "Sanierungshaftpflichtrisiko"
           ]
         },
         {
@@ -209,7 +214,8 @@
             "Gesamtbaukosten des Bauvorhabens bis",
             "Bausumme für Bauvorhaben",
             "Bausummengrenze der Bauherrenhaftpflicht",
-            "Baukosten des Bauvorhabens bis"
+            "Baukosten des Bauvorhabens bis",
+            "Gesamtbaukosten"
           ]
         }
       ]

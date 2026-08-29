@@ -98,6 +98,31 @@ describe("HP category candidate recall", () => {
     ).not.toMatch(/EUR|€|Prozent|%/u);
   });
 
+  test("finds compact product-summary wording for combined and builders liability limits", () => {
+    const result = worksheet(
+      [
+        "HAFTPFLICHTVERSICHERUNG",
+        "-PauschalversicherungssummeEUR3.000.000,00",
+        "Mitversichert gelten",
+        "- Bauherr - Umbau-, Neubau- und Sanierungshaftpflichtrisiko (Gesamtbaukosten EUR 1.000.000) Sublimit EUR 3.000.000,00",
+      ].join("\n"),
+      "hp-product-summary"
+    );
+
+    expectOccurrences(result, [
+      [
+        "HP-01",
+        ["combined_liability_limit", "personal_injury", "property_damage"],
+      ],
+      ["HP-08", ["builders_liability", "construction_sum_limit"]],
+    ]);
+    expectSharedGroup(result, "HP-01", ["personal_injury", "property_damage"]);
+    expect(
+      component(result, "HP-08", "construction_sum_limit").occurrences[0]
+        .context.text
+    ).toContain("Gesamtbaukosten EUR 1.000.000");
+  });
+
   test("finds narrow cleaning claims, tenant recourse and playground scope", () => {
     const result = worksheet(
       [
@@ -156,14 +181,11 @@ describe("HP category candidate recall", () => {
     expectOccurrences(result, [
       ["HP-25", ["territorial_scope"]],
       ["HP-26", ["rented_property_damage"]],
-      [
-        "HP-27",
-        ["cleaning_or_caretaking_staff", "staff_caused_damage"],
-      ],
+      ["HP-27", ["cleaning_or_caretaking_staff", "staff_caused_damage"]],
     ]);
-    expect(component(result, "HP-25", "foreign_coverage").occurrences).toHaveLength(
-      0
-    );
+    expect(
+      component(result, "HP-25", "foreign_coverage").occurrences
+    ).toHaveLength(0);
     expectSharedGroup(result, "HP-27", [
       "cleaning_or_caretaking_staff",
       "staff_caused_damage",

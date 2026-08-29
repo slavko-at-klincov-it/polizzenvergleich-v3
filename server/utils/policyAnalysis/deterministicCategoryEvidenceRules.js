@@ -345,6 +345,86 @@ function explicitHp02AnnualAggregateBinding({
   };
 }
 
+/**
+ * A labelled liability summary can state the combined sum without repeating
+ * "Personen- und Sachschäden". In that established policy notation the one
+ * Pauschalversicherungssumme is the common limit for both damage classes.
+ * Requiring the liability section and a local numeric amount prevents a
+ * generic reference to the sum from becoming coverage evidence.
+ */
+function explicitHp01CombinedLiabilitySumBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "HP" ||
+    requirement?.id !== "HP-01" ||
+    ![
+      "combined_liability_limit",
+      "personal_injury",
+      "property_damage",
+    ].includes(component?.id) ||
+    occurrence?.sectionScopeHint?.scopeKey !== "HAFTPFLICHT_INSURANCE"
+  )
+    return null;
+  if (!/Pauschalversicherungssumme/iu.test(occurrence?.exactText || ""))
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/Pauschalversicherungssumme\s*(?:beträgt\s*)?(?:EUR|€)\s*\d/iu.test(
+      clause
+    ) ||
+    /(?:Sublimit|angerechnet|Jahresh[oö]chstleistung|Versicherungsf[aä]lle\s+eines\s+Jahres)/iu.test(
+      clause
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "HP_01_COMBINED_SUM_REFERENCE_WITHOUT_STANDALONE_LIMIT",
+      authoritative: true,
+    };
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "HP_01_EXPLICIT_COMBINED_LIABILITY_SUM",
+    authoritative: true,
+  };
+}
+
+/**
+ * Binds the compact product-summary form of the builders-liability clause.
+ * Both the insured construction activity and the separate total-construction
+ * cost must occur locally; the liability sublimit alone is insufficient.
+ */
+function explicitHp08BuildersLiabilityBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "HP" ||
+    requirement?.id !== "HP-08" ||
+    !["builders_liability", "construction_sum_limit"].includes(component?.id) ||
+    occurrence?.sectionScopeHint?.scopeKey !== "HAFTPFLICHT_INSURANCE"
+  )
+    return null;
+  const clause = String(occurrence?.context?.text || "");
+  if (
+    !/Bauherr[\s\S]{0,100}?(?:Umbau|Neubau|Sanierung)shaftpflichtrisiko/iu.test(
+      clause
+    ) ||
+    !/Gesamtbaukosten\s*(?:EUR|€)\s*\d/iu.test(clause)
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "HP_08_EXPLICIT_BUILDERS_LIABILITY_AND_CONSTRUCTION_SUM",
+    authoritative: true,
+  };
+}
+
 function explicitSt27RoofAvalancheBinding({
   categoryView,
   requirement,
@@ -662,6 +742,22 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (hp02Binding) return hp02Binding;
+
+  const hp01Binding = explicitHp01CombinedLiabilitySumBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (hp01Binding) return hp01Binding;
+
+  const hp08Binding = explicitHp08BuildersLiabilityBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (hp08Binding) return hp08Binding;
 
   const st27RoofAvalancheBinding = explicitSt27RoofAvalancheBinding({
     categoryView,

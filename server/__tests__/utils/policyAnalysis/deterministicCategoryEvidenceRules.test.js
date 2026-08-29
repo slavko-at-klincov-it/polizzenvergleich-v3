@@ -197,8 +197,7 @@ describe("deterministicCategoryEvidenceRules", () => {
             {
               candidateId: `candidate:${categoryView}`,
               candidateBinding: "DIRECT",
-              deterministicBindingBasis:
-                "GENERAL_BRANCH_MAXIMUM_INDEMNITY",
+              deterministicBindingBasis: "GENERAL_BRANCH_MAXIMUM_INDEMNITY",
             },
           ],
         })
@@ -289,6 +288,29 @@ describe("deterministicCategoryEvidenceRules", () => {
       ).toBeNull();
     }
   );
+
+  test.each([
+    "Für diese Deckungserweiterung gilt ein Sublimit im Rahmen der Pauschalversicherungssumme.",
+    "Diese Kosten werden auf die Pauschalversicherungssumme angerechnet.",
+  ])("keeps an HP combined-sum reference non-evidentiary: %s", (text) => {
+    const input = bindingInput({
+      text,
+      exactText: "Pauschalversicherungssumme",
+    });
+    input.worksheet.catalog.categoryView = "HP";
+    input.requirement.id = "HP-01";
+    input.component = { id: "combined_liability_limit", factRole: "LIMIT" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      text: "HAFTPFLICHTVERSICHERUNG",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "HP_01_COMBINED_SUM_REFERENCE_WITHOUT_STANDALONE_LIMIT",
+      authoritative: true,
+    });
+  });
 
   test("binds an operative total premium and its tax statement", () => {
     const total =
@@ -462,6 +484,90 @@ describe("deterministicCategoryEvidenceRules", () => {
       basis: "EXPLICIT_HP02_ANNUAL_AGGREGATE_MULTIPLE:HP:HP-02",
     });
   });
+
+  test.each([
+    ["combined_liability_limit", "LIMIT"],
+    ["personal_injury", "DAMAGE"],
+    ["property_damage", "DAMAGE"],
+  ])(
+    "binds an explicit HP combined liability sum for %s",
+    (componentId, factRole) => {
+      const input = bindingInput({
+        text: "Pauschalversicherungssumme EUR 3.000.000,00",
+        exactText: "Pauschalversicherungssumme",
+      });
+      input.worksheet.catalog.categoryView = "HP";
+      input.requirement.id = "HP-01";
+      input.component = { id: componentId, factRole };
+      input.occurrence.sectionScopeHint = {
+        scopeKey: "HAFTPFLICHT_INSURANCE",
+        text: "HAFTPFLICHTVERSICHERUNG",
+      };
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: "HP_01_EXPLICIT_COMBINED_LIABILITY_SUM",
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each(["builders_liability", "construction_sum_limit"])(
+    "binds an explicit HP builders-liability summary for %s",
+    (componentId) => {
+      const input = bindingInput({
+        text: "Bauherr - Umbau-, Neubau- und Sanierungshaftpflichtrisiko (Gesamtbaukosten EUR\n1.000.000) Sublimit EUR 3.000.000,00",
+        exactText:
+          componentId === "construction_sum_limit"
+            ? "Gesamtbaukosten"
+            : "Sanierungshaftpflichtrisiko",
+      });
+      input.worksheet.catalog.categoryView = "HP";
+      input.requirement.id = "HP-08";
+      input.component = {
+        id: componentId,
+        factRole:
+          componentId === "construction_sum_limit" ? "LIMIT" : "BENEFIT",
+      };
+      input.occurrence.sectionScopeHint = {
+        scopeKey: "HAFTPFLICHT_INSURANCE",
+        text: "HAFTPFLICHTVERSICHERUNG",
+      };
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: "HP_08_EXPLICIT_BUILDERS_LIABILITY_AND_CONSTRUCTION_SUM",
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each([
+    ["HP-01", "Pauschalversicherungssumme EUR 3.000.000,00"],
+    [
+      "HP-08",
+      "Bauherr - Umbau-, Neubau- und Sanierungshaftpflichtrisiko Sublimit EUR 3.000.000,00",
+    ],
+  ])(
+    "does not bind incomplete or foreign-scope HP summary wording for %s",
+    (id, text) => {
+      const input = bindingInput({ text, exactText: text.split(" ")[0] });
+      input.worksheet.catalog.categoryView = "HP";
+      input.requirement.id = id;
+      input.component = {
+        id: id === "HP-01" ? "combined_liability_limit" : "builders_liability",
+        factRole: id === "HP-01" ? "LIMIT" : "BENEFIT",
+      };
+      input.occurrence.sectionScopeHint = {
+        scopeKey: id === "HP-01" ? "FEUER_INSURANCE" : "HAFTPFLICHT_INSURANCE",
+        text: id === "HP-01" ? "FEUERVERSICHERUNG" : "HAFTPFLICHTVERSICHERUNG",
+      };
+
+      expect(
+        deterministicCategoryCandidateBinding(input)?.authoritative
+      ).not.toBe(true);
+    }
+  );
 
   test.each([
     "Die Pauschalversicherungssumme steht maximal dreimal zur Verfügung.",
