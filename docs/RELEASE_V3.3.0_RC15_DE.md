@@ -67,9 +67,38 @@ ST-27 bleibt unverändert fail-closed.
 
 ## Mac-Studio-Nachweis
 
-Vor Freigabe werden mit dem unveränderlichen RC15-Tag frische
-`qwen/qwen3.8-27b`-Läufe für WEVIG-LW und LF-EL ausgeführt. Die Ergebnisse
-werden anschließend hier und im Implementierungs-Tracker dokumentiert.
+RC15 wurde als unveränderlicher Tag auf dem Mac Studio installiert. Update,
+integrierter Doctor, separater Doctor, Tag, SHA und sauberer Checkout wurden
+geprüft. Zwei frische Läufe mit `qwen/qwen3.8-27b` ergaben:
+
+```text
+WEVIG-LW:
+  33/33 Triage-Kandidaten
+  52/52 atomare Komponenten
+  36/36 Endzeilen
+  24 ausgewählte Quellen
+  127/127 DRAFT-Oracle-Aussagen
+
+LF-EL:
+  48/48 Triage-Kandidaten
+  69/69 atomare Komponenten
+  36/36 Endzeilen
+  40 ausgewählte Quellen
+  76/76 DRAFT-Oracle-Aussagen
+```
+
+Der vollständige Vergleich mit den zuletzt akzeptierten Kategorie-Läufen
+zeigt exakt die vier beabsichtigten Unterschiede:
+
+```text
+WEVIG-LW gegen RC14: nur LW-03 und LW-04 verbessert
+LF-EL gegen RC13:    nur EL-05 und EL-15 verbessert
+alle übrigen 68 Endzeilen semantisch identisch
+```
+
+Die RC14-Korrekturen bleiben erhalten: `LW-05` ist `BELEGT / Ja`; `LW-26`
+enthält beide belegten Einschlüsse, bleibt wegen des fehlenden Limits aber
+korrekt `TEILBELEGT / Nicht feststellbar`.
 
 ## Update
 

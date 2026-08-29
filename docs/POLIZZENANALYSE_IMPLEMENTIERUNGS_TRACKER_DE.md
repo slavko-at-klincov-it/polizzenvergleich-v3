@@ -2727,7 +2727,12 @@ PASS: Replay aller 640 LF-/WEVIG-Endzeilen
 PASS: nur WEVIG LW-03/04 und LF EL-05/15 neu verbessert
 PASS: keine neue Endzeilenänderung in HP, FE, ST, VB oder WE
 PASS: ST-27 bleibt TEILBELEGT / Nicht feststellbar
-NEXT: unveränderlichen RC15-Tag auf Mac Studio installieren
-NEXT: frische WEVIG-LW- und LF-EL-Läufe mit qwen/qwen3.8-27b
+PASS: RC15-Tag a8884715 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: frischer WEVIG-LW-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen, 127/127 DRAFT-Oracle-Aussagen
+PASS: frischer LF-EL-Lauf, 48/48 Kandidaten, 69/69 Komponenten,
+      36/36 Zeilen, 76/76 DRAFT-Oracle-Aussagen
+PASS: gegen die letzten akzeptierten Kategorie-Läufe exakt vier Änderungen:
+      WEVIG LW-03/04 und LF EL-05/15; alle übrigen 68 Zeilen stabil
 NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
 ```
