@@ -3020,5 +3020,6 @@ PASS: ST-34 TEILBELEGT -> BELEGT / Ja / 150 %
 PASS: übrige 149 LF-Zeilen unverändert
 PASS: frische WEVIG-FE-/LW-/ST-Kontrollläufe, 152/152 Zeilen,
       0 semantische Änderungen
+PASS: RC24-Tag 73e3218f auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: unbekannte Wortlaute oder externe Versicherer ohne Holdout bewiesen
 ```

@@ -92,6 +92,11 @@ WEVIG-FE/LW/ST:
 Damit stehen drei gezielten LF-Verbesserungen 301 unveränderte Kontrollzeilen
 gegenüber.
 
+Der unveränderliche Tag `v3.3.0-rc.24` wurde anschließend mit SHA
+`73e3218f84c093631c32eb9094b9248c876486ce` auf dem Mac Studio installiert.
+Update-Doctor, separate Doctor-Wiederholung, Tag-/SHA-Prüfung und sauberer
+Checkout bestanden.
+
 ## Update
 
 ```bash
