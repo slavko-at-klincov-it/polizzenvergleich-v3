@@ -1,0 +1,193 @@
+{
+  "schemaVersion": "0.1",
+  "campaignId": "MDP-20260826",
+  "status": "measured_revise",
+  "updatedAt": "2026-08-26",
+  "canonicalEvidence": "../POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#22-neun-dokumente-paket-mit-globalem-n32",
+  "privacy": {
+    "rawArtifactsVersioned": false,
+    "customerDocumentNamesVersioned": false,
+    "content": "anonymized aggregate metadata only"
+  },
+  "scope": {
+    "product": "AnythingLLM with LM Studio on customer Mac Studio",
+    "documents": 9,
+    "documentRelationship": "user-described common contract document package",
+    "generator": "qwen/qwen3.8-27b",
+    "vectorDatabase": "LanceDB",
+    "searchPreference": "Default",
+    "maxContextSnippetsUserReported": 32,
+    "similarityThresholdUserReported": 0,
+    "temperatureUserReported": 0,
+    "freshRun": true
+  },
+  "measurementRules": {
+    "documentPresent": "at least one complete CONTEXT block carries that source document identifier",
+    "documentPresence": "retrieval-context diversity only; not import, embedding or fact coverage",
+    "exactQuote": "after NFKC, soft-hyphen removal and whitespace normalization, the output quote is one contiguous substring of the actual model input",
+    "statusCounts": "output labels only; not factual precision or recall",
+    "inputCharacters": "serialized model input characters; not tokenizer token count"
+  },
+  "runs": [
+    {
+      "id": "MDP-20260826-VS01",
+      "task": "36-category insured-value-and-property analysis",
+      "runtimeEvidence": {
+        "modelInputLog": true,
+        "output": true,
+        "modelIdentifier": "qwen/qwen3.8-27b",
+        "contextBlocks": 32,
+        "documentsRepresented": 6,
+        "documentsExpectedUserReported": 9,
+        "anonymizedChunkDistribution": [7, 7, 6, 6, 5, 1],
+        "inputCharacters": 110597
+      },
+      "output": {
+        "rows": 36,
+        "statusCounts": {
+          "BELEGT": 15,
+          "TEILBELEGT": 0,
+          "WIDERSPRUECHLICH": 0,
+          "UNGEKLAERT": 21
+        },
+        "sourceQuoteFragments": 18,
+        "exactContiguousQuoteFragments": 6
+      },
+      "verdict": "revise_global_topn_partial_multidocument_context_and_free_quotes",
+      "doesNotProve": [
+        "that absent documents were not imported or embedded",
+        "fact recall or completeness",
+        "factual correctness of every non-exact quote",
+        "quality effect of Top-N 55"
+      ]
+    },
+    {
+      "id": "MDP-20260826-LW01",
+      "task": "36-category water-damage analysis",
+      "runtimeEvidence": {
+        "modelInputLog": true,
+        "output": true,
+        "modelIdentifier": "qwen/qwen3.8-27b",
+        "contextBlocks": 32,
+        "documentsRepresented": 7,
+        "documentsExpectedUserReported": 9,
+        "anonymizedChunkDistribution": [8, 7, 5, 5, 5, 1, 1],
+        "inputCharacters": 108305,
+        "centralWaterConditionsChunks": 1
+      },
+      "output": {
+        "rows": 36,
+        "statusCounts": {
+          "BELEGT": 16,
+          "TEILBELEGT": 5,
+          "WIDERSPRUECHLICH": 0,
+          "UNGEKLAERT": 15
+        },
+        "sourceQuoteFragments": 29,
+        "exactContiguousQuoteFragments": 2
+      },
+      "verdict": "revise_global_topn_partial_multidocument_context_scope_errors_and_free_quotes",
+      "doesNotProve": [
+        "that absent documents were not imported or embedded",
+        "an improvement over the VS run because the task and catalog differ",
+        "fact recall or completeness",
+        "factual correctness of every non-exact quote"
+      ]
+    },
+    {
+      "id": "MDP-20260826-ST01",
+      "task": "36-category storm-hail-snow-pressure analysis",
+      "runtimeEvidence": {
+        "modelInputLog": false,
+        "output": true,
+        "documentsExpectedUserReported": 9
+      },
+      "output": {
+        "rows": 36,
+        "columns": 8,
+        "idOrderComplete": true,
+        "statusCounts": {
+          "BELEGT": 11,
+          "TEILBELEGT": 6,
+          "WIDERSPRUECHLICH": 0,
+          "UNGEKLAERT": 19
+        },
+        "sourceRows": 17,
+        "sourceQuoteFragments": 25,
+        "exactContiguousQuoteFragments": null,
+        "sourceRowsWithUniqueDocumentIdentifier": 0,
+        "invalidPartialCoverageCombinations": [
+          "ST-04",
+          "ST-17",
+          "ST-18",
+          "ST-19",
+          "ST-29"
+        ]
+      },
+      "verdict": "output_only_awaiting_model_input",
+      "doesNotProve": [
+        "runtime context count or configuration",
+        "document representation or chunk distribution",
+        "literal quote grounding",
+        "fact recall, completeness or factual correctness",
+        "an improvement or regression against another category catalog"
+      ]
+    },
+    {
+      "id": "MDP-20260826-EL01",
+      "task": "36-category elemental-and-additional-risks analysis",
+      "runtimeEvidence": {
+        "modelInputLog": false,
+        "output": true,
+        "documentsExpectedUserReported": 9
+      },
+      "output": {
+        "rows": 36,
+        "columns": 8,
+        "idOrderComplete": true,
+        "statusCounts": {
+          "BELEGT": 0,
+          "TEILBELEGT": 0,
+          "WIDERSPRUECHLICH": 0,
+          "UNGEKLAERT": 36
+        },
+        "sourceRows": 2,
+        "sourceQuoteFragments": 2,
+        "exactContiguousQuoteFragments": null,
+        "sourceRowsWithUniqueDocumentIdentifier": 0,
+        "unresolvedRowsWithInvalidFallbackCells": [
+          "EL-07",
+          "EL-08"
+        ],
+        "rowsWithNarrativeNotSupportedByProvidedQuote": [
+          "EL-07",
+          "EL-08"
+        ]
+      },
+      "verdict": "output_only_awaiting_model_input",
+      "doesNotProve": [
+        "runtime context count or configuration",
+        "document representation or chunk distribution",
+        "literal quote grounding",
+        "that all requested categories are absent from the document package",
+        "fact recall, completeness or factual correctness",
+        "an improvement or regression against another category catalog"
+      ]
+    }
+  ],
+  "campaignFinding": {
+    "proven": [
+      "global Default-N32 can omit entire documents from a nine-document model input",
+      "retrieval distribution changes with the task query",
+      "free model-generated quotes frequently violate the literal quote contract",
+      "scope errors can occur even when a relevant competing clause is in the model input"
+    ],
+    "notProven": [
+      "complete import or embedding status for all nine documents",
+      "factual recall",
+      "universal behavior over other document packages",
+      "customer-ready correctness"
+    ],
+    "nextArchitectureTest": "terminal category-by-document coverage with server-owned evidence spans and document-role-aware deterministic merge"
+  }
+}

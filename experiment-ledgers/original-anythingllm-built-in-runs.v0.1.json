@@ -1,0 +1,448 @@
+{
+  "schemaVersion": "0.1",
+  "campaignId": "OAL-BUILTIN-20260824-25",
+  "status": "closed_for_parameter_tuning",
+  "updatedAt": "2026-08-25",
+  "canonicalEvidence": "../POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#17-original-anythingllm-vollständige-built-in-konfigurationskampagne",
+  "privacy": {
+    "rawArtifactsVersioned": false,
+    "content": "anonymized aggregate metadata only"
+  },
+  "scope": {
+    "product": "unmodified original AnythingLLM with LM Studio on customer Mac Studio",
+    "documentClass": "21-page residential-building-insurance proposal with conditions annex",
+    "documents": 1,
+    "prompt": "same broad one-prompt full-inventory request",
+    "workspaceVectorCount": 32,
+    "vectorDatabase": "LanceDB",
+    "similarityThreshold": 0,
+    "anythingLlmContextWindow": 65536,
+    "qwenEffectiveContextWindow": 42496,
+    "embeddingChunkCapCharacters": 8192,
+    "freshChatPerRun": true,
+    "reindexOnEmbedderChange": true
+  },
+  "measurementRules": {
+    "rowCount": "output-structure proxy; not fact recall",
+    "uniquePositionNames": "aggregation-sensitive breadth proxy; not ontology coverage",
+    "clauseCodePresence": "audit-anchor proxy; not proof that all facts or roles in a clause were extracted",
+    "serverStreamFinished": "transport completion only; finish reason and output token count were unavailable",
+    "contextMarker": "highest visible context index; does not prove every chunk body arrived byte-complete",
+    "customerReady": "requires factual, role, source, section, negative-state and completeness hard gates"
+  },
+  "settingsSemantics": {
+    "workspaceVectorCount": "namespace row count, not Top-N and not document completeness",
+    "maxContextSnippets": "Top-N cap for retrieved contexts sent toward generation",
+    "similarityNoRestriction": "threshold zero; does not expand Top-N",
+    "accuracyOptimized": "separate native reranking path; does not identify the embedder and may have a smaller candidate pool",
+    "embeddingChunkCap": "AnythingLLM characters, not LM Studio tokens",
+    "pinning": "different full-context transfer path; not comparable to unpinned retrieval",
+    "modelIdentifier": "part of AnythingLLM prompt-budget planning; wrong chat ID can cause compression even if LM Studio executes another loaded chat model",
+    "lmsPs": "current loaded-model snapshot, not historical endpoint-use proof",
+    "base64EmbeddingEncoding": "wire representation, not embedding quality",
+    "promptCache": "distinct from the vector database; audited quality runs had zero cached prompt tokens"
+  },
+  "dinghyIngestObservation": {
+    "documentSideInvocationProven": true,
+    "cleanlyPairedVisibleRequests": 9,
+    "meanSecondsPerVisibleChunk": 1.571,
+    "serialProcessingStronglySupported": true,
+    "allVectorsStoredProven": false,
+    "sepEosWarning": "non-fatal in observed calls; retrieval-quality impact unquantified"
+  },
+  "runs": [
+    {
+      "id": "OAL-01",
+      "userRun": 1,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "bge-m3",
+      "pinned": true,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 6,
+      "temperature": 0.7,
+      "reindexed": true,
+      "runtimeLog": false,
+      "output": {
+        "characters": 22138,
+        "words": 2649,
+        "rows": 67,
+        "tables": 7,
+        "uniqueClauseCodes": 49
+      },
+      "evidenceStatus": "output_audited_configuration_user_reported",
+      "verdict": "revise_not_an_embedder_benchmark",
+      "notes": [
+        "Pinned full-context path makes retrieval ranking and embedder quality non-isolatable.",
+        "No runtime log, finish reason or context-transfer proof."
+      ]
+    },
+    {
+      "id": "OAL-02",
+      "userRun": 2,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": true,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 6,
+      "temperature": 0.7,
+      "reindexed": true,
+      "runtimeLog": true,
+      "runtime": {
+        "queryEmbeddingSeconds": 1.025,
+        "uncachedPromptTokens": 25543,
+        "promptProcessingSeconds": 349.095,
+        "highestVisibleContextIndex": 0,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "characters": 7111,
+        "words": 887,
+        "rows": 16,
+        "tables": 1,
+        "uniqueClauseCodes": 0
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_semantic_compression",
+      "notes": [
+        "Output ended cleanly and was far below available headroom; visible hard truncation is unlikely.",
+        "One very large CONTEXT 0 strongly indicates pinned full-document injection, not a normal Top-N6 retrieval test."
+      ]
+    },
+    {
+      "id": "OAL-03",
+      "userRun": 3,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 6,
+      "temperature": 0.7,
+      "reindexed": false,
+      "runtimeLog": false,
+      "output": {
+        "characters": 24456,
+        "words": 3544,
+        "rows": 85,
+        "uniquePositionNames": 64,
+        "duplicateRowExtras": 21,
+        "tables": 8,
+        "uniqueClauseCodes": 39
+      },
+      "evidenceStatus": "output_audited_configuration_user_reported",
+      "verdict": "revise_partial_retrieval_and_false_negatives",
+      "notes": [
+        "The answer cited a narrow page subset and turned missing retrieval into global not-found claims.",
+        "Top-N6 behavior is consistent with the output but not runtime-proven for this run."
+      ]
+    },
+    {
+      "id": "OAL-04",
+      "userRun": 4,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "bge-m3",
+      "pinned": false,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 6,
+      "temperature": 0.7,
+      "reindexed": true,
+      "runtimeLog": true,
+      "runtime": {
+        "queryEmbeddingSeconds": 0.1,
+        "uncachedPromptTokens": 5560,
+        "promptProcessingSeconds": 68.975,
+        "chatRequestToFinishSeconds": 351.646,
+        "highestVisibleContextIndex": 5,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "rows": 26,
+        "uniquePositionNames": 26,
+        "duplicateRowExtras": 0,
+        "uniqueClauseCodes": 10
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_narrow_but_locally_detailed",
+      "notes": [
+        "Six retrieval contexts were injected.",
+        "Selected clauses were often detailed and cautious, but document breadth was low."
+      ]
+    },
+    {
+      "id": "OAL-05",
+      "userRun": 5,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "bge-m3",
+      "pinned": false,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 10,
+      "temperature": 0.7,
+      "reindexed": false,
+      "runtimeLog": true,
+      "runtime": {
+        "uncachedPromptTokens": 9322,
+        "promptProcessingSeconds": 109.5,
+        "chatRequestToFinishSeconds": 440.9,
+        "highestVisibleContextIndex": 9,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "characters": 19701,
+        "words": 2558,
+        "rows": 36,
+        "uniquePositionNames": 36,
+        "duplicateRowExtras": 0,
+        "tables": 8,
+        "uniqueClauseCodes": 26
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_topn_helped_but_incomplete",
+      "notes": [
+        "All ten N6 clause-code anchors were retained and sixteen were added.",
+        "Mandatory storm section was omitted and premium classifications remained largely unsupported."
+      ]
+    },
+    {
+      "id": "OAL-06",
+      "userRun": 6,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 10,
+      "temperature": 0.7,
+      "reindexed": true,
+      "runtimeLog": true,
+      "runtime": {
+        "queryEmbeddingSeconds": 5.707,
+        "uncachedPromptTokens": 10699,
+        "promptProcessingSeconds": 146.542,
+        "chatRequestToFinishSeconds": 576.872,
+        "highestVisibleContextIndex": 9,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "rows": 82,
+        "uniquePositionNames": 65,
+        "duplicateRowExtras": 17,
+        "uniqueClauseCodes": 42
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_high_breadth_with_critical_factual_errors",
+      "notes": [
+        "No invented clause codes, but source, premium, role and mandatory-section hard gates failed.",
+        "The tree-or-mast clause was directionally inverted and major water and terror details were missing or wrong."
+      ]
+    },
+    {
+      "id": "OAL-07",
+      "userRun": 7,
+      "generator": "qwen/qwen3.8-27b",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Accuracy Optimized",
+      "maxContextSnippets": 10,
+      "temperature": 0,
+      "reindexed": false,
+      "runtimeLog": true,
+      "runtime": {
+        "queryEmbeddingSeconds": 5.061,
+        "uncachedPromptTokens": 10699,
+        "promptProcessingSeconds": 141.043,
+        "chatRequestToFinishSeconds": 765.356,
+        "highestVisibleContextIndex": 9,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "rows": 99,
+        "uniquePositionNames": 69,
+        "duplicateRowExtras": 30,
+        "uniqueClauseCodes": 11,
+        "sourceCellsWithClauseCode": 0
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_temperature_zero_not_a_quality_fix",
+      "notes": [
+        "The retrieved package matched OAL-06 by context count and prompt-token count.",
+        "The answer was longer but duplicated and cross-assigned more content while losing audit anchors."
+      ]
+    },
+    {
+      "id": "OAL-08A",
+      "userRun": "8-first-attempt",
+      "generatorConfigured": "dinghy",
+      "generatorActuallyExecuted": "qwen_inferred_from_instrumented_repeat",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Default",
+      "maxContextSnippets": 32,
+      "temperature": 0,
+      "reindexed": false,
+      "runtimeLog": false,
+      "output": {
+        "rows": 21,
+        "uniqueClauseCodes": 6
+      },
+      "evidenceStatus": "output_audited_root_cause_inferred_from_repeat",
+      "verdict": "invalid_for_n32_quality",
+      "notes": [
+        "The output collapsed to a small pages-5-to-7 subset.",
+        "The same persisted configuration was repeated as OAL-08B, which proved the wrong chat-model contract and prompt compression."
+      ]
+    },
+    {
+      "id": "OAL-08B",
+      "userRun": "8-instrumented-repeat",
+      "generatorConfigured": "dinghy",
+      "generatorActuallyExecuted": "qwen",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Default",
+      "maxContextSnippets": 32,
+      "temperature": 0,
+      "reindexed": false,
+      "runtimeLog": true,
+      "runtime": {
+        "uncachedPromptTokens": 2450,
+        "highestVisibleContextIndex": 31,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "rows": 22,
+        "uniqueClauseCodes": 7
+      },
+      "evidenceStatus": "invalid_configuration_root_cause_proven",
+      "verdict": "invalid_for_n32_quality",
+      "notes": [
+        "AnythingLLM sent the chat request with model=dinghy while LM Studio fell through to Qwen.",
+        "The unknown chat-model contract triggered a 16384-token fallback and aggressive middle-out prompt compression."
+      ]
+    },
+    {
+      "id": "OAL-09",
+      "userRun": "8-corrected",
+      "generator": "qwen",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Default",
+      "maxContextSnippets": 32,
+      "temperature": 0,
+      "reindexed": false,
+      "runtimeLog": true,
+      "runtime": {
+        "queryEmbeddingSeconds": 3.283,
+        "uncachedPromptTokens": 29882,
+        "promptProcessingSeconds": 364.479,
+        "chatRequestToFinishSeconds": 956.062,
+        "endToEndSeconds": 959.622,
+        "highestVisibleContextIndex": 31,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "characters": 28731,
+        "words": 4080,
+        "rows": 98,
+        "uniquePositionNames": 75,
+        "duplicatePositionNameExtras": 23,
+        "exactDuplicateRows": 0,
+        "uniqueClauseCodes": 0,
+        "sourcesWithClauseOrPoint": 0,
+        "sourcesWithImpossiblePhysicalPage": 15
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_broadest_valid_qwen_run_not_auditable",
+      "notes": [
+        "Default-N32 removed a major context-delivery bottleneck and recovered many hard anchors.",
+        "All premium flags were unsupported no; source, section, role and cross-branch hard gates still failed."
+      ]
+    },
+    {
+      "id": "OAL-10",
+      "userRun": 9,
+      "generator": "gemma",
+      "embedder": "dinghy-law-4b-v1",
+      "pinned": false,
+      "searchPreference": "Default",
+      "maxContextSnippets": 32,
+      "temperature": 0,
+      "reindexed": false,
+      "runtimeLog": true,
+      "runtime": {
+        "effectiveContextWindow": 80128,
+        "queryEmbeddingSeconds": 5.414,
+        "uncachedPromptTokens": 30524,
+        "promptProcessingSeconds": 75.447,
+        "chatRequestToFinishSeconds": 628.136,
+        "endToEndSeconds": 634.155,
+        "highestVisibleContextIndex": 31,
+        "finishReasonAvailable": false
+      },
+      "output": {
+        "characters": 19107,
+        "words": 2620,
+        "rows": 45,
+        "uniquePositionNames": 37,
+        "duplicatePositionNameExtras": 8,
+        "uniqueCorrectClauseCodes": 23,
+        "malformedClauseCodes": 3,
+        "sourcesMeetingFullContract": 0
+      },
+      "evidenceStatus": "runtime_and_output_audited",
+      "verdict": "revise_faster_but_major_breadth_regression",
+      "notes": [
+        "Only the generator changed from OAL-09; the same retrieved context is strongly supported, not byte-proven.",
+        "Premium handling was more cautious, but glass facade, burglary and most water and storm facts disappeared."
+      ]
+    }
+  ],
+  "controlledComparisons": [
+    {
+      "id": "CMP-BGE-N6-N10",
+      "runs": ["OAL-04", "OAL-05"],
+      "result": "N10 increased BGE breadth proxy from 26 to 36 unique positions and clause-code proxy from 10 to 26 without losing an N6 code anchor."
+    },
+    {
+      "id": "CMP-DINGHY-N6-N10",
+      "runs": ["OAL-03", "OAL-06"],
+      "result": "Dinghy breadth proxy changed only from 64 to 65 unique positions while clause-code proxy rose from 39 to 42; comparison is weaker because OAL-03 lacks runtime logging."
+    },
+    {
+      "id": "CMP-EMBEDDER-N6",
+      "runs": ["OAL-03", "OAL-04"],
+      "result": "Dinghy was much broader; BGE was narrower but locally deeper. This evaluates the AnythingLLM pipeline, not pure embedder quality."
+    },
+    {
+      "id": "CMP-EMBEDDER-N10",
+      "runs": ["OAL-05", "OAL-06"],
+      "result": "Dinghy reached 65 unique-position and 42 clause-code proxies versus BGE 36 and 26; BGE still contributed a small set of additional water-related anchors."
+    },
+    {
+      "id": "CMP-TEMPERATURE",
+      "runs": ["OAL-06", "OAL-07"],
+      "result": "With the same ten contexts and 10699 prompt tokens, temperature zero produced a longer but more duplicated, less source-anchored and more cross-assigned answer."
+    },
+    {
+      "id": "CMP-GENERATOR-N32",
+      "runs": ["OAL-09", "OAL-10"],
+      "result": "Gemma was 33.9 percent faster end-to-end and more cautious on premium classification, but lost over half of Qwen's breadth proxy and many critical anchors."
+    }
+  ],
+  "campaignConclusions": [
+    "No tested built-in one-prompt configuration passed the customer hard gates.",
+    "Pinned runs are extraction and attention tests, not valid embedder comparisons.",
+    "For the unpinned Accuracy path, Dinghy has the higher breadth proxies for this document and current pipeline, not a universal pure-embedder win.",
+    "Increasing Top-N materially helped BGE; Dinghy was near a breadth plateau between N6 and N10.",
+    "Default-N32 delivered much broader context, but free monolithic generation still broke roles, sources, mandatory sections and negative-state semantics.",
+    "Temperature zero and generator replacement did not repair the architecture.",
+    "The next experiment class is sectioned multi-pass extraction with deterministic source and completeness validation, not more free parameter roulette."
+  ],
+  "knownConfounders": [
+    "Only one reference document was used; universality was not tested.",
+    "There was no complete fact-role oracle; row and clause-code counts are proxies.",
+    "Temperature 0.7 is stochastic and valid runs were generally not repeated.",
+    "Dinghy query text lacked the publisher-recommended task instruction.",
+    "Dinghy emitted a SEP/EOS GGUF metadata warning with unquantified retrieval impact.",
+    "Embedding chunk cap is measured in characters while LM Studio context is measured in tokens; oversize chunk truncation was not proven or excluded.",
+    "Qwen actually loaded 42496 context tokens despite AnythingLLM being configured for 65536; tested prompts fit, but output headroom and finish reason were unknown.",
+    "No chat-upload added-as-context path was tested."
+  ]
+}
