@@ -988,6 +988,51 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("binds only total construction cost, not the adjacent HP-08 liability sublimit", () => {
+    const candidateId = "candidate:HP-08:construction-sum";
+    const text =
+      "Bauherr - Umbau-, Neubau- und Sanierungshaftpflichtrisiko (Gesamtbaukosten EUR\n1.000.000) Sublimit EUR 3.000.000,00";
+    const source = textualOccurrence({
+      candidateId,
+      text,
+      exactText: "Gesamtbaukosten",
+      contextStart: 8_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "HP-08",
+        label: "Bauherrenhaftpflicht und bis zu welcher Bausumme",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "construction_sum_limit",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "EUR 1.000.000",
+              source: expect.objectContaining({
+                exactText: "EUR\n1.000.000",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
   test("never binds values from mention-only or unresolved candidates", () => {
     const mention = occurrence({
       candidateId: "candidate:mention",

@@ -569,6 +569,40 @@ function extractAnnualAggregateMultipleFacts({ occurrence, binding }) {
   return facts;
 }
 
+/**
+ * HP-08 asks for the admissible total construction cost, not the separate
+ * liability coverage sublimit that can occur in the same product-summary
+ * item. Bind only the amount grammatically governed by Gesamtbaukosten.
+ */
+function extractBuildersLiabilityConstructionSumFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const pattern =
+    /Gesamtbaukosten(?:summe)?\s*((?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])/giu;
+  return [...text.matchAll(pattern)]
+    .filter((match) => {
+      const rawAmount = match[1];
+      const amountMatch = [rawAmount];
+      amountMatch.index = match.index + match[0].lastIndexOf(rawAmount);
+      return valueFollowsCandidate(occurrence, amountMatch);
+    })
+    .map((match) => {
+      const rawAmount = match[1];
+      const amountMatch = [rawAmount];
+      amountMatch.index = match.index + match[0].lastIndexOf(rawAmount);
+      return sourceBoundFact({
+        occurrence,
+        binding,
+        match: amountMatch,
+        value: {
+          normalizedValue: `EUR ${rawAmount.replace(/^(?:EUR|€)\s*/iu, "")}`,
+          valueType: "MONEY",
+          unit: "EUR",
+          limitKind: LIMIT_KIND.CAPPED,
+        },
+      });
+    });
+}
+
 function extractDurationFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const durationPattern =
@@ -1140,6 +1174,8 @@ function extractorFor(requirement, field) {
     return extractCoverageStartDateFacts;
   if (requirementId === "HP-02" && field === "limit")
     return extractAnnualAggregateMultipleFacts;
+  if (requirementId === "HP-08" && field === "limit")
+    return extractBuildersLiabilityConstructionSumFacts;
   if (requirementId === "VB-01" && field === "duration")
     return extractContractTermDurationFacts;
   if (requirementId === "VB-26" && field === "duration")
