@@ -170,6 +170,25 @@
             "Bruchschäden an den versicherten Rohren",
             "Bruchschäden an wasserführenden Rohren",
             "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-break-at-pipe",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
+                },
+                {
+                  "prefixes": [
+                    "rohren",
+                    "rohrleitung",
+                    "leitungsrohr",
+                    "rohrsystem"
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
@@ -181,6 +200,25 @@
             "Bruchschäden an den versicherten Rohren",
             "Bruchschäden an wasserführenden Rohren",
             "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-break-at-pipe",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
+                },
+                {
+                  "prefixes": [
+                    "rohren",
+                    "rohrleitung",
+                    "leitungsrohr",
+                    "rohrsystem"
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -206,6 +244,16 @@
             "Frostschäden an wasserführenden Rohren",
             "Frost an den leitungswasserführenden Rohren",
             "Rohrbruch durch Frostschaden an den Zu- und Ableitungsrohren"
+          ],
+          "conceptSearches": [
+            {
+              "id": "frost-damage-to-pipes",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["frostschaed"] },
+                { "prefixes": ["rohr", "leitung"] }
+              ]
+            }
           ]
         },
         {
@@ -217,6 +265,16 @@
             "Frostschäden an wasserführenden Rohren",
             "Frost an den leitungswasserführenden Rohren",
             "Rohrbruch durch Frostschaden an den Zu- und Ableitungsrohren"
+          ],
+          "conceptSearches": [
+            {
+              "id": "frost-damage-to-pipes",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["frostschaed"] },
+                { "prefixes": ["rohr", "leitung"] }
+              ]
+            }
           ]
         }
       ]
@@ -297,6 +355,22 @@
             "Wiederherstellungskosten nach der Ortung",
             "Wiederherstellungskosten nach der Schadensuche",
             "Kosten der Wiederherstellung nach der Leckortung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "restoration-after-location",
+              "requiredGroups": [
+                { "prefixes": ["wiederherstell"] },
+                {
+                  "prefixes": [
+                    "suchkost",
+                    "schadenstell",
+                    "rohrbruch",
+                    "ortung"
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
@@ -308,6 +382,22 @@
             "Wiederherstellungskosten nach der Ortung",
             "Wiederherstellungskosten nach der Schadensuche",
             "Kosten der Wiederherstellung nach der Leckortung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "restoration-after-location",
+              "requiredGroups": [
+                { "prefixes": ["wiederherstell"] },
+                {
+                  "prefixes": [
+                    "suchkost",
+                    "schadenstell",
+                    "rohrbruch",
+                    "ortung"
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -401,6 +491,24 @@
             "Wasseraustritt aus Sprinkleranlagen",
             "Wasseraustritt aus Löschanlagen",
             "Sprinklerleckage"
+          ],
+          "conceptSearches": [
+            {
+              "id": "sprinkler-or-extinguishing-discharge",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": [
+                    "austritt",
+                    "austreten",
+                    "ausgetreten",
+                    "wasseraustritt",
+                    "loeschmittelaustritt"
+                  ]
+                },
+                { "prefixes": ["sprinkler", "loeschanlage"] }
+              ]
+            }
           ]
         }
       ]
@@ -419,6 +527,16 @@
             "Kältemittel aus Klimaanlagen",
             "Kondensat oder Kältemittel aus Klimaanlagen",
             "Kältemittel, welche aus Klimaanlagen bestimmungswidrig ausgetreten sind"
+          ],
+          "conceptSearches": [
+            {
+              "id": "refrigerant-or-condensate-from-air-conditioning",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["kaeltemittel", "kondensat"] },
+                { "prefixes": ["klima"] }
+              ]
+            }
           ]
         },
         {
@@ -430,6 +548,16 @@
             "Kältemittel aus Lüftungsanlagen",
             "Kondensat oder Kältemittel aus Lüftungsanlagen",
             "Kältemittel, welche aus Lüftungsanlagen bestimmungswidrig ausgetreten sind"
+          ],
+          "conceptSearches": [
+            {
+              "id": "refrigerant-or-condensate-from-ventilation",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["kaeltemittel", "kondensat"] },
+                { "prefixes": ["lueftung"] }
+              ]
+            }
           ]
         }
       ]
@@ -443,7 +571,17 @@
           "id": "aquarium_or_waterbed_water",
           "label": "Wasser aus Aquarien oder Wasserbetten",
           "factRole": "PERIL",
-          "aliases": ["Wasser aus Aquarien", "Wasser aus Wasserbetten"]
+          "aliases": ["Wasser aus Aquarien", "Wasser aus Wasserbetten"],
+          "conceptSearches": [
+            {
+              "id": "water-from-aquarium-or-waterbed",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["wasseraustritt"] },
+                { "prefixes": ["wasserbett", "aquari"] }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -678,6 +816,16 @@
             "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
             "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
             "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-cleaning-and-blockage",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["rohrreinig"] },
+                { "prefixes": ["verstopf"] }
+              ]
+            }
           ]
         },
         {
@@ -689,6 +837,16 @@
             "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
             "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
             "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-cleaning-and-blockage",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["rohrreinig"] },
+                { "prefixes": ["verstopf"] }
+              ]
+            }
           ]
         }
       ]
@@ -708,6 +866,13 @@
             "Mehrverbrauch an Wasser gegenüber dem Wasserversorgungsunternehmen",
             "nachweisliche Kosten für Leitungswasser, das bestimmungswidrig ausgetreten ist",
             "Kosten für den Wasserverlust nach einem ersatzpflichtigen Schaden"
+          ],
+          "conceptSearches": [
+            {
+              "id": "utility-water-loss-costs",
+              "maxLines": 1,
+              "requiredGroups": [{ "prefixes": ["wasserverlust"] }]
+            }
           ]
         }
       ]

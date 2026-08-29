@@ -5,6 +5,8 @@ const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
 const DEFAULT_CLAUSE_SECTION_MAX_CHARS = 6_000;
 const DEFAULT_FALLBACK_WORDS_EACH_SIDE = 120;
 const DEFAULT_SCOPE_WORDS_BEFORE = 120;
+const DEFAULT_CONCEPT_SEARCH_MAX_LINES = 3;
+const DEFAULT_CONCEPT_SEARCH_MAX_CHARS = 900;
 const SHARED_GOVERNOR = "SHARED_GOVERNOR";
 const SHARED_SPAN = "SHARED_SPAN";
 const RIGHT_HEADED_COORDINATION = "RIGHT_HEADED_COORDINATION";
@@ -183,6 +185,146 @@ function findAliasRanges(pageText, alias) {
     );
   }
   return ranges;
+}
+
+function normalizedWordRecords(text) {
+  return [...String(text || "").matchAll(/[\p{L}\p{N}]+/gu)].map((match) => ({
+    start: match.index,
+    end: match.index + match[0].length,
+    normalized: normalizeWithOffsetMap(match[0]).normalized,
+  }));
+}
+
+function conceptGroupsMatch(text, groups) {
+  const words = normalizedWordRecords(text);
+  const matchingIndexes = groups.map((group) =>
+    words
+      .map(({ normalized }, index) =>
+        group.prefixes.some((prefix) => normalized.startsWith(prefix))
+          ? index
+          : -1
+      )
+      .filter((index) => index !== -1)
+  );
+  if (matchingIndexes.some((indexes) => indexes.length === 0)) return false;
+
+  // Separate semantic atoms must be evidenced by separate source words. This
+  // prevents one compound such as "Rohrbruch" from proving both the damage
+  // and a distinct insured-pipe/object group merely because both start with
+  // "Rohr".
+  const assign = (groupIndex, usedWordIndexes) => {
+    if (groupIndex === matchingIndexes.length) return true;
+    return matchingIndexes[groupIndex].some((wordIndex) => {
+      if (usedWordIndexes.has(wordIndex)) return false;
+      const next = new Set(usedWordIndexes);
+      next.add(wordIndex);
+      return assign(groupIndex + 1, next);
+    });
+  };
+  return assign(0, new Set());
+}
+
+function nonBlankLineRanges(text) {
+  const ranges = [];
+  let start = 0;
+  let group = 0;
+  while (start <= text.length) {
+    const newline = text.indexOf("\n", start);
+    const rawEnd = newline === -1 ? text.length : newline;
+    const end =
+      rawEnd > start && text[rawEnd - 1] === "\r" ? rawEnd - 1 : rawEnd;
+    if (text.slice(start, end).trim()) ranges.push({ start, end, group });
+    else group += 1;
+    if (newline === -1) break;
+    start = newline + 1;
+  }
+  return ranges;
+}
+
+function clauseRanges(text) {
+  const ranges = [];
+  const separator = /(?:[.!?;](?=\s|$)|\s+-\s+|[\t ]{2,})/gu;
+  for (const [group, line] of nonBlankLineRanges(text).entries()) {
+    const lineText = text.slice(line.start, line.end);
+    let start = 0;
+    for (const match of lineText.matchAll(separator)) {
+      const end = /[.!?;]/u.test(match[0][0]) ? match.index + 1 : match.index;
+      if (lineText.slice(start, end).trim())
+        ranges.push({
+          start: line.start + start,
+          end: line.start + end,
+          group,
+        });
+      start = match.index + match[0].length;
+    }
+    if (lineText.slice(start).trim())
+      ranges.push({ start: line.start + start, end: line.end, group });
+  }
+  return ranges;
+}
+
+function boundedLogicalUnits(text, maxLines, maxChars) {
+  const units = [];
+  const addWindows = (ranges) => {
+    for (let index = 0; index < ranges.length; index += 1) {
+      for (let count = 1; count <= maxLines; count += 1) {
+        const first = ranges[index];
+        const last = ranges[index + count - 1];
+        if (
+          !last ||
+          last.group !== first.group ||
+          last.end - first.start > maxChars
+        )
+          break;
+        units.push({ originalStart: first.start, originalEnd: last.end });
+      }
+    }
+  };
+  addWindows(nonBlankLineRanges(text));
+  // Clause windows are additive because some PDF parsers flatten a complete
+  // page or table into one physical line.
+  addWindows(clauseRanges(text));
+  return units;
+}
+
+/**
+ * Finds candidate-only spans whose bounded logical unit contains every
+ * declared concept group. Prefixes match complete normalized word starts;
+ * they never loosen the global exact-alias word-boundary contract.
+ */
+function findConceptSearchRanges(pageText, search) {
+  const matches = boundedLogicalUnits(
+    pageText,
+    search.maxLines,
+    search.maxChars
+  )
+    .filter(({ originalStart, originalEnd }) => {
+      const unit = pageText.slice(originalStart, originalEnd);
+      return conceptGroupsMatch(unit, search.requiredGroups);
+    })
+    .sort(
+      (left, right) =>
+        left.originalEnd -
+          left.originalStart -
+          (right.originalEnd - right.originalStart) ||
+        left.originalStart - right.originalStart
+    );
+
+  const selected = [];
+  for (const match of matches) {
+    if (
+      selected.some(
+        (existing) =>
+          existing.originalStart >= match.originalStart &&
+          existing.originalEnd <= match.originalEnd
+      )
+    )
+      continue;
+    selected.push(match);
+  }
+  return selected.sort(
+    (left, right) => left.originalStart - right.originalStart
+  );
 }
 
 function buildLineRecords(text) {
@@ -750,6 +892,95 @@ function validateCatalog(catalog) {
           )
         ),
       ];
+      if (
+        component.conceptSearches !== undefined &&
+        !Array.isArray(component.conceptSearches)
+      )
+        throw worksheetError(
+          "CONCEPT_SEARCHES_INVALID",
+          `${id}:${componentId}`
+        );
+      const conceptSearchIds = new Set();
+      const conceptSearches = Array.isArray(component.conceptSearches)
+        ? component.conceptSearches.map((search, searchIndex) => {
+            const detail = `${id}:${componentId}:conceptSearches[${searchIndex}]`;
+            if (
+              !search ||
+              typeof search !== "object" ||
+              Array.isArray(search) ||
+              Object.keys(search).some(
+                (key) =>
+                  !["id", "requiredGroups", "maxLines", "maxChars"].includes(
+                    key
+                  )
+              ) ||
+              !Array.isArray(search.requiredGroups) ||
+              search.requiredGroups.length === 0
+            )
+              throw worksheetError("CONCEPT_SEARCH_INVALID", detail);
+            const searchId = requireNonEmptyString(
+              search.id,
+              "CONCEPT_SEARCH_ID_REQUIRED",
+              detail
+            );
+            if (conceptSearchIds.has(searchId))
+              throw worksheetError(
+                "CONCEPT_SEARCH_ID_DUPLICATE",
+                `${id}:${componentId}:${searchId}`
+              );
+            conceptSearchIds.add(searchId);
+            const requiredGroups = search.requiredGroups.map(
+              (group, groupIndex) => {
+                const groupDetail = `${detail}:requiredGroups[${groupIndex}]`;
+                if (
+                  !group ||
+                  typeof group !== "object" ||
+                  Array.isArray(group) ||
+                  !Array.isArray(group.prefixes) ||
+                  group.prefixes.length === 0 ||
+                  Object.keys(group).some((key) => key !== "prefixes")
+                )
+                  throw worksheetError("CONCEPT_GROUP_INVALID", groupDetail);
+                const prefixes = [
+                  ...new Set(
+                    group.prefixes.map((prefix) => {
+                      const normalized = normalizeWithOffsetMap(
+                        requireNonEmptyString(
+                          prefix,
+                          "CONCEPT_PREFIX_REQUIRED",
+                          groupDetail
+                        )
+                      ).normalized;
+                      if (normalized.length < 4 || normalized.includes(" "))
+                        throw worksheetError(
+                          "CONCEPT_PREFIX_INVALID",
+                          `${groupDetail}:${prefix}`
+                        );
+                      return normalized;
+                    })
+                  ),
+                ];
+                return { prefixes };
+              }
+            );
+            const maxLines = Number(
+              search.maxLines || DEFAULT_CONCEPT_SEARCH_MAX_LINES
+            );
+            const maxChars = Number(
+              search.maxChars || DEFAULT_CONCEPT_SEARCH_MAX_CHARS
+            );
+            if (
+              !Number.isInteger(maxLines) ||
+              maxLines < 1 ||
+              maxLines > 3 ||
+              !Number.isInteger(maxChars) ||
+              maxChars < 80 ||
+              maxChars > DEFAULT_CONCEPT_SEARCH_MAX_CHARS
+            )
+              throw worksheetError("CONCEPT_SEARCH_BOUNDS_INVALID", detail);
+            return { id: searchId, requiredGroups, maxLines, maxChars };
+          })
+        : [];
       return {
         id: componentId,
         label: requireNonEmptyString(
@@ -780,6 +1011,7 @@ function validateCatalog(catalog) {
           return contextMode;
         })(),
         aliases,
+        conceptSearches,
       };
     });
     const bindingStructures = Array.isArray(requirement.bindingStructures)
@@ -981,10 +1213,15 @@ function validateCatalog(catalog) {
 function removeOverlappingRanges(ranges) {
   const selected = [];
   for (const range of [...ranges].sort((left, right) => {
+    const priorityDifference =
+      (left.discoveryPriority || 0) - (right.discoveryPriority || 0);
+    if (priorityDifference) return priorityDifference;
+    const leftLength = left.originalEnd - left.originalStart;
+    const rightLength = right.originalEnd - right.originalStart;
     const lengthDifference =
-      right.originalEnd -
-      right.originalStart -
-      (left.originalEnd - left.originalStart);
+      (left.discoveryPriority || 0) === 0
+        ? rightLength - leftLength
+        : leftLength - rightLength;
     return lengthDifference || left.originalStart - right.originalStart;
   })) {
     const overlaps = selected.some(
@@ -1403,7 +1640,19 @@ function buildControlledOccurrenceWorksheet({
         const pageRanges = [];
         for (const alias of component.aliases) {
           for (const range of findAliasRanges(page.text, alias))
-            pageRanges.push({ ...range, matchedAlias: alias });
+            pageRanges.push({
+              ...range,
+              matchedAlias: alias,
+              discoveryPriority: 0,
+            });
+        }
+        for (const search of component.conceptSearches) {
+          for (const range of findConceptSearchRanges(page.text, search))
+            pageRanges.push({
+              ...range,
+              matchedAlias: `CONCEPT_SEARCH:${search.id}`,
+              discoveryPriority: 1,
+            });
         }
 
         for (const range of removeOverlappingRanges(pageRanges)) {
@@ -1536,6 +1785,9 @@ function buildControlledOccurrenceWorksheet({
         factRole: component.factRole,
         contextMode: component.contextMode,
         aliases: component.aliases,
+        ...(component.conceptSearches.length > 0
+          ? { conceptSearches: component.conceptSearches }
+          : {}),
         terminalState:
           occurrences.length > 0
             ? "CONTROLLED_CANDIDATES_FOUND"

@@ -1375,6 +1375,138 @@ describe("controlledOccurrenceWorksheet", () => {
     ).toThrow("DEFINITIVE_SCOPE_KEYS_REQUIRED: EL-99");
   });
 
+  test("finds a source-exact candidate from all required lexical concept groups", () => {
+    const document = documentFromPages([
+      [
+        "Leitungswasserversicherung",
+        "Versichert sind Suchkosten sowie die Kosten der Wiederherstellung",
+        "in den ursprünglichen Zustand nach einem Rohrbruch.",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "concept-search-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "concept-search-test",
+        categoryView: "LW",
+        requirements: [
+          {
+            id: "LW-09",
+            label: "Wiederherstellung nach Ortung",
+            requestedFields: [],
+            components: [
+              {
+                id: "restoration",
+                label: "Wiederherstellungskosten",
+                factRole: "COST",
+                aliases: ["Wiederherstellungskosten nach der Ortung"],
+                conceptSearches: [
+                  {
+                    id: "restoration-after-location",
+                    requiredGroups: [
+                      { prefixes: ["wiederherstell"] },
+                      { prefixes: ["suchkost", "rohrbruch", "ortung"] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+
+    expect(candidate).toMatchObject({
+      matchedAlias: "CONCEPT_SEARCH:restoration-after-location",
+      exactText: expect.stringContaining("Kosten der Wiederherstellung"),
+    });
+    expect(candidate.exactText).toContain("Suchkosten");
+    expect(
+      document.pageContent.slice(candidate.documentStart, candidate.documentEnd)
+    ).toBe(candidate.exactText);
+  });
+
+  test("keeps a component unresolved when one required concept group is absent", () => {
+    const document = documentFromPages([
+      "Leitungswasser: Kosten der Wiederherstellung nach einem Schaden.",
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "concept-search-negative-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "concept-search-negative-test",
+        categoryView: "LW",
+        requirements: [
+          {
+            id: "LW-09",
+            label: "Wiederherstellung nach Ortung",
+            requestedFields: [],
+            components: [
+              {
+                id: "restoration",
+                label: "Wiederherstellungskosten",
+                factRole: "COST",
+                aliases: ["Wiederherstellungskosten nach der Ortung"],
+                conceptSearches: [
+                  {
+                    id: "restoration-after-location",
+                    requiredGroups: [
+                      { prefixes: ["wiederherstell"] },
+                      { prefixes: ["suchkost", "rohrbruch", "ortung"] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(worksheet.requirements[0].components[0]).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
+  test("rejects unsafe or overly broad concept prefixes", () => {
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: SYNTHETIC_DOCUMENT,
+        documentFingerprint: "invalid-concept-prefix",
+        catalog: {
+          schemaVersion: 1,
+          catalogId: "invalid-concept-prefix",
+          categoryView: "LW",
+          requirements: [
+            {
+              id: "LW-99",
+              label: "Unsicherer Suchvertrag",
+              requestedFields: [],
+              components: [
+                {
+                  id: "unsafe",
+                  label: "Unsicher",
+                  factRole: "DAMAGE",
+                  aliases: ["Rohrbruch"],
+                  conceptSearches: [
+                    {
+                      id: "unsafe",
+                      requiredGroups: [{ prefixes: ["ro"] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      })
+    ).toThrow("CONCEPT_PREFIX_INVALID");
+  });
+
   test("fails closed on an incomplete or corrupt PageMap", () => {
     expect(() =>
       buildControlledOccurrenceWorksheet({
