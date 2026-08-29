@@ -1673,7 +1673,9 @@
           "factRole": "LIMIT",
           "aliases": [
             "Höchstentschädigung in der Feuerversicherung",
-            "Höchstentschädigung Feuer"
+            "Höchstentschädigung Feuer",
+            "Höchstentschädigung im Schadensfall",
+            "für die jeweilige Sparte vereinbarten Positionen"
           ]
         },
         {

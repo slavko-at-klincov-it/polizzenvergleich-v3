@@ -461,6 +461,79 @@ function explicitVbGeneralContractFactBinding({
     : null;
 }
 
+const GENERAL_BRANCH_MAXIMUM_TARGETS = Object.freeze({
+  FE: Object.freeze({
+    requirementId: "FE-F02",
+    componentId: "fire_maximum_indemnity",
+  }),
+  LW: Object.freeze({
+    requirementId: "LW-31",
+    componentId: "water_line_maximum_compensation",
+  }),
+  ST: Object.freeze({
+    requirementId: "ST-34",
+    componentId: "storm_maximum_compensation",
+  }),
+});
+
+function isGeneralBranchMaximumTarget({
+  categoryView,
+  requirementId,
+  componentId,
+}) {
+  const target = GENERAL_BRANCH_MAXIMUM_TARGETS[categoryView];
+  return Boolean(
+    target &&
+      target.requirementId === requirementId &&
+      target.componentId === componentId
+  );
+}
+
+/**
+ * Binds a cross-branch maximum only when one general-contract clause states
+ * all three grammatical anchors: operative maximum, applicability to the
+ * respective branch, and a numeric percentage of the agreed sum insured.
+ * This deliberately does not bind annual aggregates or branch-independent
+ * maximum wording. Side effects: none. Role: decide.
+ */
+function explicitGeneralBranchMaximumBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    !isGeneralBranchMaximumTarget({
+      categoryView,
+      requirementId: requirement?.id,
+      componentId: component?.id,
+    }) ||
+    component?.factRole !== "LIMIT" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "GENERAL_CONTRACT_TERMS"
+  )
+    return null;
+
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/Höchstentschädigung\s+im\s+Schadensfall[\s\S]{0,100}?beträgt/iu.test(
+      clause
+    ) ||
+    !/für\s+die\s+jeweilige\s+Sparte\s+vereinbarten\s+Positionen/iu.test(
+      clause
+    ) ||
+    !/(?:maximal|höchstens)\s+\d{1,3}(?:[.,]\d+)?\s*%\s+der\s+vereinbarten\s+Versicherungssumme/iu.test(
+      clause
+    )
+  )
+    return null;
+
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "GENERAL_BRANCH_MAXIMUM_INDEMNITY",
+    authoritative: true,
+  };
+}
+
 /**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
@@ -529,6 +602,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (vbGeneralFactBinding) return vbGeneralFactBinding;
+
+  const generalBranchMaximumBinding = explicitGeneralBranchMaximumBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (generalBranchMaximumBinding) return generalBranchMaximumBinding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)
@@ -699,6 +780,24 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    isGeneralBranchMaximumTarget({
+      categoryView: target.categoryView,
+      requirementId: target.requirementId,
+      componentId: target.componentId,
+    }) &&
+    target.candidates.every(
+      ({ deterministicBindingBasis }) =>
+        deterministicBindingBasis === "GENERAL_BRANCH_MAXIMUM_INDEMNITY"
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: `EXPLICIT_GENERAL_BRANCH_MAXIMUM:${target.categoryView}:${target.requirementId}`,
+    };
   if (
     target.categoryView === "FE" &&
     target.requirementId === "FE-F05" &&

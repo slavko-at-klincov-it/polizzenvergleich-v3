@@ -140,6 +140,116 @@ describe("deterministicCategoryEvidenceRules", () => {
     expect(deterministicCategoryCandidateBinding(input)).toBeNull();
   });
 
+  const generalBranchMaximumClause =
+    "Die Höchstentschädigung im Schadensfall beträgt inklusive aller für die jeweilige Sparte vereinbarten Positionen maximal 150 % der vereinbarten Versicherungssumme.";
+  const generalBranchMaximumTargets = [
+    ["FE", "FE-F02", "fire_maximum_indemnity"],
+    ["LW", "LW-31", "water_line_maximum_compensation"],
+    ["ST", "ST-34", "storm_maximum_compensation"],
+  ];
+
+  function generalBranchMaximumInput({
+    categoryView,
+    requirementId,
+    componentId,
+    text = generalBranchMaximumClause,
+    scopeKey = "GENERAL_CONTRACT_TERMS",
+  }) {
+    const input = bindingInput({
+      text,
+      exactText: "Höchstentschädigung im Schadensfall",
+    });
+    input.worksheet.catalog.categoryView = categoryView;
+    input.requirement.id = requirementId;
+    input.component = { id: componentId, factRole: "LIMIT" };
+    input.occurrence.sectionScopeHint.scopeKey = scopeKey;
+    return input;
+  }
+
+  test.each(generalBranchMaximumTargets)(
+    "binds the explicit general branch maximum for %s",
+    (categoryView, requirementId, componentId) => {
+      expect(
+        deterministicCategoryCandidateBinding(
+          generalBranchMaximumInput({
+            categoryView,
+            requirementId,
+            componentId,
+          })
+        )
+      ).toEqual({
+        binding: "DIRECT",
+        basis: "GENERAL_BRANCH_MAXIMUM_INDEMNITY",
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each(generalBranchMaximumTargets)(
+    "materializes the explicit general branch maximum for %s",
+    (categoryView, requirementId, componentId) => {
+      expect(
+        deterministicCategoryPreparedDecision({
+          categoryView,
+          requirementId,
+          componentId,
+          candidates: [
+            {
+              candidateId: `candidate:${categoryView}`,
+              candidateBinding: "DIRECT",
+              deterministicBindingBasis:
+                "GENERAL_BRANCH_MAXIMUM_INDEMNITY",
+            },
+          ],
+        })
+      ).toEqual({
+        selectedCandidateIds: [`candidate:${categoryView}`],
+        coverageEffect: "DEFINED",
+        basis: `EXPLICIT_GENERAL_BRANCH_MAXIMUM:${categoryView}:${requirementId}`,
+      });
+    }
+  );
+
+  test.each([
+    [
+      "a different insurance section",
+      generalBranchMaximumClause,
+      "HAFTPFLICHT_INSURANCE",
+    ],
+    [
+      "no respective-branch anchor",
+      "Die Höchstentschädigung im Schadensfall beträgt maximal 150 % der vereinbarten Versicherungssumme.",
+      "GENERAL_CONTRACT_TERMS",
+    ],
+    [
+      "no numeric maximum anchor",
+      "Die Höchstentschädigung im Schadensfall beträgt inklusive aller für die jeweilige Sparte vereinbarten Positionen.",
+      "GENERAL_CONTRACT_TERMS",
+    ],
+  ])("does not bind the general maximum with %s", (_label, text, scopeKey) => {
+    const decision = deterministicCategoryCandidateBinding(
+      generalBranchMaximumInput({
+        categoryView: "ST",
+        requirementId: "ST-34",
+        componentId: "storm_maximum_compensation",
+        text,
+        scopeKey,
+      })
+    );
+    expect(decision?.basis).not.toBe("GENERAL_BRANCH_MAXIMUM_INDEMNITY");
+  });
+
+  test("does not bind the Feuer annual aggregate from a branch maximum", () => {
+    const decision = deterministicCategoryCandidateBinding(
+      generalBranchMaximumInput({
+        categoryView: "FE",
+        requirementId: "FE-F02",
+        componentId: "fire_annual_aggregate",
+      })
+    );
+    expect(decision?.basis).not.toBe("GENERAL_BRANCH_MAXIMUM_INDEMNITY");
+  });
+
   test("binds an explicit general contract term authoritatively", () => {
     expect(
       deterministicCategoryCandidateBinding(
