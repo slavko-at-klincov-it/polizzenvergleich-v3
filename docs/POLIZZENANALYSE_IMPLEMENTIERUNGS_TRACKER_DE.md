@@ -2904,3 +2904,34 @@ PASS: frischer WEVIG-VB-Kontrolllauf, 20/20 Kandidaten,
 PASS: WEVIG VB-26 bleibt ehrlich UNGEKLÄRT / Nicht feststellbar
 NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
 ```
+
+## 51. RC21: Leckortung und Suchkosten als Alternativwortlaut behandeln
+
+`LW-08` war in LF und WEVIG nicht wegen fehlender Suche oder schwacher
+Modellklassifikation unvollständig. Beide Dokumente enthielten `Suchkosten`
+mit einem quellengebundenen Limit. Der aktive Katalog verlangte jedoch
+zusätzlich das synonyme Wort `Leckortungskosten` und erzeugte dadurch eine
+Scheinteilbelegung.
+
+RC21 setzt ausschließlich für `LW-08` die bereits vorhandene ANY-Semantik.
+Ein tatsächlich gefundener Alternativwortlaut erfüllt den Sachverhalt; nicht
+gefundene Synonyme werden dann nicht mehr als getrennte fehlende Objektfakten
+ausgegeben. Mehrere tatsächlich gefundene, abweichende Wirkungen bleiben für
+die Konfliktprüfung erhalten. Ohne Fundstelle wird nichts aktiviert.
+
+```text
+PASS: 91 Jest-Suites / 1037 Tests und vollständiger Lint
+PASS: synthetische Varianten Leckortungskosten und Suchkosten
+PASS: Zeilenvertrag BELEGT / Ja mit quellengebundenem Limit
+PASS: frischer LF-LW-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen und 25 Quellen
+PASS: gegen RC12 exakt LW-08 verbessert
+      TEILBELEGT -> BELEGT / Ja / EUR 2.500 auf Erstes Risiko
+PASS: übrige 35 LF-LW-Zeilen semantisch identisch
+PASS: frischer WEVIG-LW-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen und 24 Quellen
+PASS: gegen RC15 exakt LW-08 verbessert
+      TEILBELEGT -> BELEGT / Ja / EUR 1.500,00 auf Erstes Risiko
+PASS: übrige 35 WEVIG-LW-Zeilen semantisch identisch
+NO CLAIM: unbekannte Versicherer und Formulierungen bleiben Holdouts
+```
