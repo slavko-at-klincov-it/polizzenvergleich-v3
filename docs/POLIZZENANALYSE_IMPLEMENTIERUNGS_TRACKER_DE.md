@@ -2829,6 +2829,12 @@ PASS: echter LF-HP-27B-Replay, 36/36 Zeilen verglichen
 PASS: ausschließlich HP-02 verbessert
       TEILBELEGT / Nicht feststellbar -> BELEGT / Ja / 3-fach
 PASS: übrige 35 HP-Zeilen bytegenau unverändert
-PENDING: frischer LF-HP- und WEVIG-HP-Lauf mit qwen/qwen3.8-27b
+PASS: RC18-Tag e11db5d2 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: frischer LF-HP-Lauf, 37/37 Kandidaten, 63/63 Komponenten,
+      36/36 Zeilen und 27 Quellen
+PASS: gegen RC12 exakt HP-02 verbessert; übrige 35 Zeilen stabil
+PASS: frischer WEVIG-HP-Kontrolllauf, 23/23 Kandidaten,
+      63/63 Komponenten, 36/36 Zeilen und 0 semantische Änderungen
+PASS: WEVIG HP-02 bleibt ehrlich UNGEKLÄRT / Nicht feststellbar
 NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
 ```

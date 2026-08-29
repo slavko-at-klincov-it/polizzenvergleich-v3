@@ -59,11 +59,33 @@ Alle übrigen 35 HP-Zeilen bytegenau unverändert.
 
 ## Mac-Studio-Nachweis
 
-Noch ausständig. RC18 wird erst nach Installation des unveränderlichen Tags,
-beiden Doctor-Prüfungen und einem frischen LF-HP-Lauf mit
-`qwen/qwen3.8-27b` als Zielhardwarebefund bewertet. WEVIG-HP dient als
-Kontrolllauf, sofern die Änderung dort keinen passenden Jahresaggregatbeleg
-findet.
+RC18 wurde als unveränderlicher Tag auf dem Mac Studio installiert. Update,
+integrierter Doctor, separater Doctor, Tag, SHA und sauberer Checkout wurden
+geprüft. Zwei frische Läufe mit `qwen/qwen3.8-27b` ergaben:
+
+```text
+LF-HP:
+  37/37 Triage-Kandidaten
+  63/63 atomare Komponenten
+  36/36 Endzeilen
+  27 ausgewählte Quellen
+
+Vollständiger Vergleich gegen den akzeptierten RC12-HP-Lauf:
+  nur HP-02 verbessert
+  TEILBELEGT / Nicht feststellbar -> BELEGT / Ja / 3-fach
+  Quelle und dokumentierter Inhalt unverändert
+  übrige 35 HP-Zeilen semantisch identisch
+
+WEVIG-HP-Kontrolllauf:
+  23/23 Triage-Kandidaten
+  63/63 atomare Komponenten
+  36/36 Endzeilen
+  8 ausgewählte Quellen
+  0 semantische Änderungen gegenüber dem akzeptierten RC11-HP-Lauf
+```
+
+WEVIG `HP-02` bleibt korrekt `UNGEKLÄRT / Nicht feststellbar`; der Server
+findet dort weder Jahresaggregat noch Wert und erzeugt keinen Ersatzbeleg.
 
 ## Update
 
