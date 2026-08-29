@@ -3045,3 +3045,27 @@ PASS: WEVIG über alle 36 Zeilen unverändert
 PASS: RC25-Tag 2689af8d auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: beliebige Beschattungsobjekte oder externe Holdouts bewiesen
 ```
+
+## 56. RC26: Rechtsfolgenformulierungen und PDF-Satzfortsetzung
+
+LF und WEVIG regelten `FE-E16` vollständig, verwendeten aber nicht den engen
+Katalogwortlaut `Verletzung einer Obliegenheit`. LF formuliert eine
+Pflichtverletzung mit anschließender Leistungsfreiheit; WEVIG versichert
+Verletzungen vereinbarter Obliegenheiten und nennt danach die Grenzen der
+Deckungserweiterung.
+
+RC26 ergänzt beide Vertragsvarianten als kontrollierte Recall-Anker. Bei der
+Endprüfung wurden zwei allgemeine Layoutverluste sichtbar und behoben:
+Gesetzesabkürzungen beenden keinen Satz, und ein PDF-Umbruch nach einem klaren
+Fortsetzungswort trennt keine zusammengehörige Bedingung. Die Regel bleibt an
+strukturelle Absätze beziehungsweise grammatische Fortsetzung gebunden.
+
+```text
+PASS: 93 Jest-Suites / 1059 Tests und Server-Lint
+PASS: LF-FE 28/28 Kandidaten, 138/138 Komponenten, 80/80 Zeilen
+PASS: LF nur FE-E16 verbessert -> BELEGT / Ja; übrige 79 Zeilen stabil
+PASS: WEVIG-FE 46/46 Kandidaten, 138/138 Komponenten, 80/80 Zeilen
+PASS: WEVIG nur FE-E16 verbessert -> BELEGT / Ja; übrige 79 Zeilen stabil
+PASS: Gesetzesverweis und WEVIG-Sicherheitsausnahmen vollständig sichtbar
+NO CLAIM: beliebige Rechtsformulierungen oder externe Holdouts bewiesen
+```
