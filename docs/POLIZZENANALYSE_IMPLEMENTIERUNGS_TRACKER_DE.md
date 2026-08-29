@@ -2936,3 +2936,31 @@ PASS: übrige 35 WEVIG-LW-Zeilen semantisch identisch
 PASS: RC21-Tag 3e5a0f02 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: unbekannte Versicherer und Formulierungen bleiben Holdouts
 ```
+
+## 52. RC22: Haftpflichtbedingungen getrennt vom Deckungsbild
+
+LF `HP-24` und `HP-27` waren bereits vollständig gefunden und quellengebunden.
+Die Abwehrkosten beziehungsweise die durch Personal verursachten Schäden waren
+`INCLUDED`; die Anrechnungs- beziehungsweise Personalbedingung war korrekt
+`CONDITIONAL`. Der gemeinsame Rollup machte daraus trotzdem ein
+unbestimmbares Deckungsbild.
+
+RC22 überträgt die in RC15 bewiesene Deckungsrollen-Aggregation gezielt auf
+diese beiden katalogisierten HP-Anforderungen. Bedingungen bleiben für
+Vollständigkeit, Text und Quellen erforderlich, bestimmen aber nicht mehr die
+Polarität der eigentlichen Leistung. Fehlende Deckungskomponenten bleiben
+fail-closed.
+
+```text
+PASS: 91 Jest-Suites / 1037 Tests und vollständiger Lint
+PASS: echter LF-HP-Replay, 36/36 Zeilen
+PASS: nur HP-24 und HP-27 verbessert
+      TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
+PASS: übrige 34 LF-HP-Zeilen semantisch identisch
+PASS: frischer LF-HP-Lauf, 37/37 Kandidaten, 63/63 Komponenten,
+      36/36 Zeilen und 27 Quellen
+PASS: frischer WEVIG-HP-Kontrolllauf, 23/23 Kandidaten,
+      63/63 Komponenten, 36/36 Zeilen und 8 Quellen
+PASS: WEVIG gegenüber RC18 über alle 36 Zeilen semantisch unverändert
+NO CLAIM: andere HP-Anforderungen oder externe Holdouts automatisch freigegeben
+```
