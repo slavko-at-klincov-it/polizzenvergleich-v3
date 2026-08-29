@@ -213,7 +213,19 @@ function componentDescription(requirement, judgements) {
   const judgementByComponent = new Map(
     judgements.map((judgement) => [judgement.componentId, judgement])
   );
-  return requirement.components
+  const hasEvidencedAlternative =
+    requirement.componentSatisfactionPolicy === "ANY" &&
+    judgements.some(
+      ({ evidencePresence }) => evidencePresence === EVIDENCE_PRESENCE.FOUND
+    );
+  const displayedComponents = hasEvidencedAlternative
+    ? requirement.components.filter(
+        (component) =>
+          judgementByComponent.get(component.id)?.evidencePresence ===
+          EVIDENCE_PRESENCE.FOUND
+      )
+    : requirement.components;
+  return displayedComponents
     .map((component) => {
       const effect = judgementByComponent.get(component.id)?.coverageEffect;
       const suffix = {

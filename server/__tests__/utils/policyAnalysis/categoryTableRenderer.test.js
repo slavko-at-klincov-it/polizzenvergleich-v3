@@ -28,6 +28,7 @@ function fixture({
   fieldResult,
   candidateContext = "Aufräum- und Abbruchkosten sind bis 10 % versichert.",
   scopePolicy = "GENERAL_REQUIRED",
+  componentSatisfactionPolicy = "ALL",
 } = {}) {
   const componentIds = componentEffects.map((_, index) => `component-${index}`);
   const components = componentIds.map((componentId, index) => {
@@ -71,6 +72,7 @@ function fixture({
     categoryId: id,
     requiredComponentIds: componentIds,
     componentResults: judgements,
+    componentSatisfactionPolicy,
   });
   const requestedFieldMaterialization = fieldResult
     ? { requirements: [fieldResult] }
@@ -80,7 +82,16 @@ function fixture({
     definitions: [{ id, stage: "K", label }],
     worksheet: {
       candidateOnly: true,
-      requirements: [{ id, label, requestedFields, scopePolicy, components }],
+      requirements: [
+        {
+          id,
+          label,
+          requestedFields,
+          scopePolicy,
+          componentSatisfactionPolicy,
+          components,
+        },
+      ],
     },
     materializedEvidence: {
       judgements,
@@ -213,6 +224,45 @@ describe("categoryTableRenderer", () => {
       coverageAmount: "EUR 10.000",
       reviewStatus: "BELEGT",
     });
+  });
+
+  test("renders one evidenced LW-08 wording as complete without inventing its alternative", () => {
+    const input = fixture({
+      id: "LW-08",
+      label: "Leckortungs- und Suchkosten, Höhe des Limits",
+      requestedFields: ["limit"],
+      componentEffects: [COVERAGE_EFFECT.UNKNOWN, COVERAGE_EFFECT.INCLUDED],
+      selected: [false, true],
+      componentSatisfactionPolicy: "ANY",
+      fieldResult: {
+        requirementId: "LW-08",
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "EUR 2.500",
+                source: { candidateId: "candidate:1" },
+              },
+            ],
+          },
+        ],
+      },
+      candidateContext:
+        "Suchkosten zur Auffindung der Schadensstelle bis EUR 2.500",
+    });
+
+    const [row] = buildCategoryTableRows(input);
+
+    expect(row).toMatchObject({
+      documentedContent: expect.stringContaining("Bestandteil 2: eingeschlossen"),
+      coverage: "Ja",
+      coverageAmount: "EUR 2.500",
+      reviewStatus: "BELEGT",
+    });
+    expect(row.documentedContent).not.toContain("Bestandteil 1");
   });
 
   test("renders variant-qualified values and quotes a preceding list governor", () => {

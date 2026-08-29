@@ -255,6 +255,7 @@
       "id": "LW-08",
       "label": "Leckortungs- und Suchkosten, Höhe des Limits",
       "requestedFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
       "components": [
         {
           "id": "leak_location_costs",

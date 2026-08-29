@@ -138,6 +138,30 @@ describe("P0 category catalog candidate recall", () => {
     expectSharedGroup(result, "LW-26", ["pipe_blockage", "cleaning_costs"]);
   });
 
+  test.each([
+    ["Leckortungskosten bis EUR 2.500", "leak_location_costs"],
+    [
+      "Suchkosten zur Auffindung der Schadensstelle bis EUR 2.500",
+      "search_costs",
+    ],
+  ])(
+    "treats the LW-08 wording %s as an alternative fact",
+    (clause, expectedComponentId) => {
+      const result = worksheet(
+        lwCatalog,
+        ["LEITUNGSWASSERVERSICHERUNG", "Mitversichert gelten", clause].join(
+          "\n"
+        )
+      );
+      const requirement = result.requirements.find(({ id }) => id === "LW-08");
+
+      expect(requirement.componentSatisfactionPolicy).toBe("ANY");
+      expect(
+        component(result, "LW-08", expectedComponentId).occurrences
+      ).not.toHaveLength(0);
+    }
+  );
+
   test("finds the eight prioritised general-contract clauses", () => {
     const result = worksheet(
       vbCatalog,
