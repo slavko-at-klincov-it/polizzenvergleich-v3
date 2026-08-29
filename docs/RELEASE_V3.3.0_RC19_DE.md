@@ -49,12 +49,12 @@ Unvollständige und rollenfremde Datumsvarianten: PASS
 
 Echter WEVIG-FE-27B-Replay:
   Kandidaten 44 -> 45, genau eine neue FE-F05-Fundstelle
-  36/36 Endzeilen verglichen
+  80/80 Endzeilen verglichen
   ausschließlich FE-F05 verbessert
   TEILBELEGT / Versicherungsbeginn 19
     -> BELEGT / Ja
        vollständige Periode und Datum 19.01.2026
-  übrige 35 FE-Zeilen unverändert
+  übrige 79 FE-Zeilen unverändert
 
 LF-FE-Worksheet-Kontrolle:
   25 -> 25 Kandidaten, keine neue Fundstelle
@@ -62,9 +62,36 @@ LF-FE-Worksheet-Kontrolle:
 
 ## Mac-Studio-Nachweis
 
-Noch ausständig. RC19 wird erst nach Installation des unveränderlichen Tags,
-beiden Doctor-Prüfungen, einem frischen WEVIG-FE-Lauf mit
-`qwen/qwen3.8-27b` und einem LF-FE-Kontrollvergleich bewertet.
+Die Vorabfassung dieses Dokuments nannte irrtümlich 36 FE-Endzeilen. Der
+FE-Vertrag besitzt 80 Endzeilen; die Zahlen sind hier nach dem vollständigen
+Lauf korrigiert. Der unveränderliche RC19-Tag selbst bleibt unangetastet.
+
+RC19 wurde auf dem Mac Studio installiert. Update, integrierter Doctor,
+separater Doctor, Tag, SHA und sauberer Checkout wurden geprüft. Zwei frische
+Läufe mit `qwen/qwen3.8-27b` ergaben:
+
+```text
+WEVIG-FE:
+  45/45 Triage-Kandidaten
+  138/138 atomare Komponenten
+  80/80 Endzeilen
+  21 ausgewählte Quellen
+
+Vollständiger Vergleich gegen den akzeptierten RC11-FE-Lauf:
+  nur FE-F05 verbessert
+  TEILBELEGT / "Versicherungsbeginn 19"
+    -> BELEGT / Ja
+       Versicherungsbeginn 19.01.2026
+       Versicherungsablauf 01.01.2037
+  übrige 79 FE-Zeilen semantisch identisch
+
+LF-FE-Kontrolllauf:
+  25/25 Triage-Kandidaten
+  138/138 atomare Komponenten
+  80/80 Endzeilen
+  13 ausgewählte Quellen
+  0 semantische Änderungen gegenüber dem akzeptierten RC12-FE-Lauf
+```
 
 ## Update
 

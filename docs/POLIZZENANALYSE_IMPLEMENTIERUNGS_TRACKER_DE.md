@@ -2857,12 +2857,18 @@ einseitige Start-/Ablaufangaben bleiben gesperrt.
 ```text
 PASS: 91 Jest-Suites / 1028 Tests und vollständiger Lint
 PASS: positive Periodenvarianten und adversariale Datums-Negativvarianten
-PASS: echter WEVIG-FE-27B-Replay, 36/36 Zeilen verglichen
+PASS: echter WEVIG-FE-27B-Replay, 80/80 Zeilen verglichen
 PASS: genau eine neue Fundstelle und ausschließlich FE-F05 verbessert
       TEILBELEGT / "Versicherungsbeginn 19"
       -> BELEGT / Ja / Datum 19.01.2026 / vollständige Periode
-PASS: übrige 35 FE-Zeilen unverändert
+PASS: übrige 79 FE-Zeilen unverändert
 PASS: LF-FE-Worksheet weiterhin 25 Kandidaten, keine neue Fundstelle
-PENDING: frischer WEVIG-FE- und LF-FE-Lauf mit qwen/qwen3.8-27b
+PASS: Vorab-Dokumentationsfehler 36 FE-Zeilen -> korrekt 80 berichtigt
+PASS: RC19-Tag 56aebcb8 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: frischer WEVIG-FE-Lauf, 45/45 Kandidaten, 138/138 Komponenten,
+      80/80 Zeilen und 21 Quellen
+PASS: gegen RC11 exakt FE-F05 verbessert; übrige 79 Zeilen stabil
+PASS: frischer LF-FE-Kontrolllauf, 25/25 Kandidaten,
+      138/138 Komponenten, 80/80 Zeilen und 0 semantische Änderungen
 NO CLAIM: andere Datumsformen und externe Holdouts bleiben offen
 ```
