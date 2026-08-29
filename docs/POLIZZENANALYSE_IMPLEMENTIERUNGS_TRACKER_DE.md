@@ -3023,3 +3023,24 @@ PASS: frische WEVIG-FE-/LW-/ST-Kontrollläufe, 152/152 Zeilen,
 PASS: RC24-Tag 73e3218f auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: unbekannte Wortlaute oder externe Versicherer ohne Holdout bewiesen
 ```
+
+## 55. RC25: Jalousien und Rollläden als Beschattungseinrichtungen
+
+LF `ST-16` war kein Modell- oder Scopefehler. Dieselbe Objektliste belegte
+Markisen, Jalousien und Rollläden; `ST-17` verwendete sie bereits korrekt.
+Nur der Aliasvertrag von `ST-16/shading_system` kannte die konkreten
+Beschattungsobjekte nicht.
+
+RC25 ergänzt diese physischen Synonyme ohne Änderung an Scope oder Wirkung.
+Die WEVIG-Markisenquelle bleibt wegen ihrer Feueraktivierung in ST gesperrt.
+
+```text
+PASS: 92 Jest-Suites / 1055 Tests und Server-Lint
+PASS: LF-ST 53/53 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
+PASS: ausschließlich ST-16 verbessert
+      TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
+PASS: ST-17 und übrige 34 LF-ST-Zeilen unverändert
+PASS: WEVIG-ST 15/15 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
+PASS: WEVIG über alle 36 Zeilen unverändert
+NO CLAIM: beliebige Beschattungsobjekte oder externe Holdouts bewiesen
+```
