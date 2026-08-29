@@ -2796,6 +2796,11 @@ PASS: nur vier WEVIG-VB-Kandidaten auf PDF-Seite 6 neu autoritativ
 PASS: RC16-27B-Replay, exakt VB-01 und VB-27 verbessert
 PASS: mindestens 10 Jahre; EUR 14.747,66 vierteljährlich
 PASS: 20 % und 25 % bleiben ausschließlich VB-02-Rabattwerte
-PENDING: frischer RC17-27B-Lauf und DRAFT-Oracle
+PASS: RC17-Tag 6575af55 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: frischer WEVIG-VB-Lauf, 20/20 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen und 47/47 DRAFT-Oracle-Aussagen
+PASS: gegen RC16 exakt VB-01 und VB-27 verbessert; übrige 34 Zeilen stabil
+PASS: WEVIG-EL-Kontrolllauf, 58/58 Kandidaten, 69/69 Komponenten,
+      36/36 Zeilen und keine semantische Änderung gegenüber RC11
 NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
 ```
