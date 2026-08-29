@@ -2933,5 +2933,6 @@ PASS: frischer WEVIG-LW-Lauf, 33/33 Kandidaten, 52/52 Komponenten,
 PASS: gegen RC15 exakt LW-08 verbessert
       TEILBELEGT -> BELEGT / Ja / EUR 1.500,00 auf Erstes Risiko
 PASS: übrige 35 WEVIG-LW-Zeilen semantisch identisch
+PASS: RC21-Tag 3e5a0f02 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: unbekannte Versicherer und Formulierungen bleiben Holdouts
 ```

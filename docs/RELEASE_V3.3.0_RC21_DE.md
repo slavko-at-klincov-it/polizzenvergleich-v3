@@ -51,8 +51,9 @@ ANY-Zeilenvertrag ohne erfundene fehlende Alternative: PASS
 ## Mac-Studio-Nachweis
 
 Der funktionale Commit `147936fc` wurde sauber auf dem Mac Studio geprüft.
-Doctor, Checkout und SHA bestanden. Zwei frische Läufe mit
-`qwen/qwen3.8-27b` ergaben:
+Anschließend wurde der unveränderliche Tag `v3.3.0-rc.21` mit SHA
+`3e5a0f02` installiert. Update, beide Doctor-Prüfungen, Checkout, Tag und SHA
+bestanden. Zwei frische Läufe mit `qwen/qwen3.8-27b` ergaben:
 
 ```text
 LF-LW:
