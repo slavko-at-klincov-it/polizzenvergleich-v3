@@ -3188,3 +3188,27 @@ PASS: LF gegenüber RC25 exakt 0 Änderungen
 PASS: RC31-Tag b21f7a8b auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Vorschadenangabe oder bloße Lawinennennung beweist Deckung
 ```
+
+## 62. RC32: Haftpflichtsummen aus kompakten Produktübersichten
+
+WEVIG nennt im Haftpflichtkapitel eine eigenständige
+`Pauschalversicherungssumme` von EUR 3 Mio. und eine ausdrücklich
+mitversicherte Bauherrenhaftpflicht bis EUR 1 Mio. Gesamtbaukosten. Beide
+Zeilen blieben vollständig ungeklärt, weil die kompakten Produktformen im
+HP-Recall fehlten.
+
+RC32 erkennt diese Formen und trennt bei `HP-08` die fachlich gefragte
+Gesamtbaukostengrenze vom separaten Haftpflicht-Sublimit. Spätere bloße
+Pauschalsummen-Referenzen werden serverseitig verworfen.
+
+```text
+PASS: 93 Jest-Suites / 1079 Tests und Server-Lint
+PASS: WEVIG-HP 34/34 Kandidaten, 63/63 Komponenten, 36/36 Zeilen
+PASS: HP-01 UNGEKLÄRT -> BELEGT / Ja / EUR 3.000.000,00
+PASS: HP-08 UNGEKLÄRT -> BELEGT / Ja / EUR 1.000.000
+PASS: übrige 34 WEVIG-HP-Zeilen exakt identisch
+PASS: LF-HP 61/61 Kandidaten, 63/63 Komponenten, 36/36 Zeilen
+PASS: LF HP-08 bleibt BELEGT mit EUR 440.000 oder 20 % des Gebäudeneuwerts
+PASS: übrige LF-Änderungen nur bedeutungsgleiche Qwen-Textvariation
+NO CLAIM: Sublimit- oder Kostenreferenz beweist eine Pauschaldeckungssumme
+```
