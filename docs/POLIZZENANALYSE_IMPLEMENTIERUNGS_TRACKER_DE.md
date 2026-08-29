@@ -3185,5 +3185,6 @@ PASS: ST-27 TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
 PASS: übrige 35 WEVIG-ST-Zeilen exakt identisch
 PASS: LF-ST 53/53 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
 PASS: LF gegenüber RC25 exakt 0 Änderungen
+PASS: RC31-Tag b21f7a8b auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Vorschadenangabe oder bloße Lawinennennung beweist Deckung
 ```

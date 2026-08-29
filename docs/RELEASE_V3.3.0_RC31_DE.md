@@ -62,6 +62,8 @@ PASS: Katalog-Recall und gemeinsamer Span für beide ST-27-Rollen
 PASS: enge Positiv- und Negativtests der deterministischen Bindung
 PASS: Server-Lint, Prettier und git diff --check
 PASS: frische WEVIG- und LF-ST-27B-Läufe
+PASS: Tag b21f7a8b auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Checkout bestätigt
 ```
 
 ## Update
