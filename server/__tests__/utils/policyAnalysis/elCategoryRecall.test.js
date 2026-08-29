@@ -166,4 +166,27 @@ describe("EL category recall catalog", () => {
         /(?:\bSeite\b|\.pdf\b|\bLF\s+IMMO\b|\bGenerali\b|\bWEVIG\b)/iu
       );
   });
+
+  test("declares the activated property-module scopes used by EL supplemental cover rows", () => {
+    const expected = new Map([
+      ["EL-10", "STURM_INSURANCE"],
+      ["EL-21", "FEUER_INSURANCE"],
+      ["EL-27", "FEUER_INSURANCE"],
+      ["EL-34", "FEUER_INSURANCE"],
+    ]);
+
+    for (const [requirementId, scopeKey] of expected) {
+      const requirement = elCatalog.requirements.find(
+        ({ id }) => id === requirementId
+      );
+      expect(requirement.scopeRules.narrowScopeKeys).toContain(scopeKey);
+      expect(requirement.scopePolicy).toBe(
+        "MATCHING_SCOPE_INCLUDED_SUFFICIENT"
+      );
+    }
+    expect(
+      elPilotCatalog.requirements.find(({ id }) => id === "EL-34").scopeRules
+        .narrowScopeKeys
+    ).toContain("FEUER_INSURANCE");
+  });
 });

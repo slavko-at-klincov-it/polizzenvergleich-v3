@@ -2319,6 +2319,58 @@ REVIEW_REQUIRED: vollständige Fachoracles für alle Dokument-/Kategoriepaare
 NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
 ```
 
+## 41. RC10-27B-Befund und RC11-Nachschärfung
+
+Der frische vollständige WEVIG-RC10-Lauf war technisch vollständig:
+
+```text
+320/320 Zeilen
+369 kontrollierte Kandidaten
+190 ausgewählte Quellen
+29 BELEGT / 22 TEILBELEGT / 269 UNGEKLÄRT
+qwen/qwen3.8-27b
+PROPOSAL
+```
+
+Die mit RC10 adressierten Fremdspartenfehler wurden im echten Modelllauf
+beseitigt: `FE-A10` ist nur noch ein enger Teilbeleg, `LW-20` und `ST-16`
+sind offen, `ST-21` ist enger Teilbeleg, `EL-04` enthält das Limit von
+EUR 20.000,00, `HP-05`, `HP-13` und `HP-21` sind offen und die vier falschen
+WE-Sachspartenbelege wurden entfernt. Echte Haftpflicht- und
+Leitungswasserbelege blieben erhalten; `FE-D01`, `HP-25` und `VB-02` wurden
+vollständiger ausgewertet.
+
+Der Vollvergleich zeigte zwei begrenzte Nachschärfungen:
+
+1. Bei `VS-21` wurden zwei Haftpflichtklauseln mit dem Wort `Abbruch` als
+   allgemeiner Kostenausschluss ausgewählt, obwohl zwölf echte
+   Aufräum-/Abbruchkostenquellen vorhanden waren. Ein eindeutiger
+   Haftpflicht-Abschnitt ist für diese beiden VS-Kostenkomponenten nun
+   `MENTION_ONLY`.
+2. EL umfasst laut Produkttaxonomie auch Zusatzdeckungen. Deshalb sind die
+   aktivierten Sachsparten-Scopes für `EL-10` (64er Sturm/Katastrophe) sowie
+   `EL-21`, `EL-27` und `EL-34` (12er Feuer/Zusatzklauseln) ausdrücklich als
+   enger, zulässiger Scope katalogisiert. Die harte Fremdspartenregel bleibt
+   für nicht deklarierte Zeilen unverändert.
+
+Replays der exakt frischen RC10-Artefakte ergeben:
+
+```text
+VS-21: 2 Haftpflichttreffer verworfen, 12 echte Abbruchkostenquellen erhalten
+EL-10: 5 passende 64er-Fundstellen als enger Scope
+EL-21: 2 passende 12er-Objektfundstellen; fremde Fundstelle bleibt gesperrt
+EL-27: 9 passende 12er-Fundstellen als enger Scope
+EL-34: 11 passende 12er-Fundstellen als enger Scope
+```
+
+```text
+PASS: 89 Jest-Suites / 975 Tests
+PASS: Server-, Frontend- und Collector-Lint
+PASS: Syntax-, Diff- und echte RC10-Artefakt-Replays
+NEXT: RC11 auf Mac Studio installieren und WEVIG + LF mit 27B regressieren
+NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
+```
+
 ## 35. Betriebs-Härtung für unbeaufsichtigte All-Kategorien-Läufe
 
 `run-all-categories-quality.command` startet einen Modelllauf nur noch, wenn

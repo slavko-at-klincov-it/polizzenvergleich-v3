@@ -201,6 +201,8 @@
       "id": "EL-10",
       "label": "Vermurung",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
           "id": "mudslide",
@@ -448,6 +450,8 @@
       "id": "EL-21",
       "label": "Elektronikversicherung für Gegensprech- und Zutrittsanlagen",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "electronics_cover",
@@ -627,6 +631,7 @@
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": {
+        "narrowScopeKeys": ["FEUER_INSURANCE"],
         "narrowAliases": [
           "im Zusammenhang mit einem vollbrachten oder versuchten Einbruchdiebstahl"
         ]
@@ -820,6 +825,8 @@
       "id": "EL-34",
       "label": "Terror und Sabotage",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "terror",

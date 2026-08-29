@@ -222,6 +222,14 @@ function deterministicVsCandidateBinding({
   const text = evidenceText(occurrence);
   const key = `${requirementId}:${componentId}`;
   if (
+    ["VS-21:cleanup_costs", "VS-21:demolition_costs"].includes(key) &&
+    occurrence?.sectionScopeHint?.scopeKey === "HAFTPFLICHT_INSURANCE"
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "LIABILITY_SECTION_NOT_PROPERTY_CLEANUP_COST_COVER",
+    };
+  if (
     key === "VS-01:replacement_new_value" &&
     /(?:zum\s+Neuwert\s+zu\s+ersetzen|Wohngeb[äa]ude\s+zum\s+Neuwert|volle\s+Neuwertentsch[äa]digung\s+geleistet)/iu.test(
       text

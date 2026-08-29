@@ -138,6 +138,30 @@ describe("deterministicVsEvidenceRules", () => {
     });
   });
 
+  test.each(["cleanup_costs", "demolition_costs"])(
+    "keeps %s mentions from an activated liability clause out of VS-21 property cost cover",
+    (componentId) => {
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-21",
+          componentId,
+          occurrence: {
+            ...occurrence(
+              "Bauherr - versichert sind Schadenersatzverpflichtungen aus Abbruch-, Grab- und Bauarbeiten."
+            ),
+            sectionScopeHint: {
+              scopeKey: "HAFTPFLICHT_INSURANCE",
+              clauseCode: "81PW0160",
+            },
+          },
+        })
+      ).toEqual({
+        binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+        basis: "LIABILITY_SECTION_NOT_PROPERTY_CLEANUP_COST_COVER",
+      });
+    }
+  );
+
   test("keeps a generic restoration mention outside the clause as non-evidentiary", () => {
     expect(
       deterministicVsCandidateBinding({

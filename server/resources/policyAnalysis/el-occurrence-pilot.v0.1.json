@@ -104,6 +104,8 @@
       "id": "EL-34",
       "label": "Terror und Sabotage",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
       "components": [
         {
           "id": "terror",
