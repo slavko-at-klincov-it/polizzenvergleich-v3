@@ -3239,3 +3239,36 @@ PASS: RC33-LF-Fullrun 320/320 Zeilen, 17 Verbesserungen, 0 Regressionen
 PASS: kumulativ 640/640 Zeilen und 32 Statusverbesserungen
 NO CLAIM: allgemeine Telefonnummer oder Überschrift beweist Schadenabwicklung
 ```
+
+## 64. V3.2.1-Vollvergleich und R1-Konzeptgruppen für unbekannte Wortlaute
+
+Ein exakter WEVIG-Vollvergleich stellte den historischen monolithischen Pfad
+`v3.2.1` dem kontrollierten `v3.3.0-rc.33`-Pfad gegenüber. Alle acht
+Kategorien und 320 Tabellenzeilen wurden mit derselben PDF, demselben
+Qwen-27B-Modell und derselben Retrievalkonfiguration ausgeführt. 221
+Kernzeilen blieben gleich, 99 änderten sich. Die Änderungen enthalten sowohl
+klare Scope-/Wertbindungsverbesserungen als auch echte Kandidatenverluste und
+sind deshalb keine Qualitätsquote.
+
+Als kleinster allgemeiner Fix ergänzt Commit `27cb643a` deklarative
+lexikalische Konzeptgruppen. Sie erlauben Morphologie und Koordination in
+einer begrenzten Originalspanne, bleiben aber ausschließlich Kandidaten. Für
+LW wurden zunächst die bereits belegten Recall-Lücken aktiviert.
+
+```text
+PASS: vollständiger V3.2.1/RC33-WEVIG-Vergleich 320/320 Zeilen
+PASS: R1-Unit-/Regressionstestbestand 93 Suites / 1088 Tests
+PASS: UNIQA-LW-Mikroreferenz 8/8 Kandidatengruppen
+PASS: UNIQA-Abwesenheitskontrollen 0/16 unerwünschte Kandidaten
+PASS: WEVIG-LW auf Mac Studio / Qwen 3.8 27B 36/36 Zeilen
+PASS: genau LW-09, LW-13, LW-14 und LW-27 gegenüber RC33 verbessert
+PASS: übrige 32 WEVIG-LW-Kernzeilen unverändert
+PASS: LW-31 bleibt offen; keine Gebäudesumme als Spartenmaximum
+PASS: 4B und 27B liefern 36/36 identische Kernzeilen
+NO-GO: reine Similarity-Schwelle oder bestehende breite Alias-Triage
+NO CLAIM: 99 Prozent oder beliebige Polizzen fachlich bewiesen
+```
+
+Der vollständige Befund, die bekannten Recall-Lücken und die nächsten Gates
+stehen in
+`docs/V321_RC33_R1_GENERALISIERUNGSBEFUND_DE.md`.
