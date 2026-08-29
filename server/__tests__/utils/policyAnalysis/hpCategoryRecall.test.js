@@ -137,6 +137,10 @@ describe("HP category candidate recall", () => {
       "serial_loss_clause",
       "loss_event_definition",
     ]);
+    expect(
+      result.requirements.find(({ id }) => id === "HP-24")
+        .coverageAggregationPolicy
+    ).toBe("COVERAGE_ROLES_ONLY");
   });
 
   test("finds Austria, rented-property exclusion and cleaning damage", () => {
@@ -164,6 +168,10 @@ describe("HP category candidate recall", () => {
       "cleaning_or_caretaking_staff",
       "staff_caused_damage",
     ]);
+    expect(
+      result.requirements.find(({ id }) => id === "HP-27")
+        .coverageAggregationPolicy
+    ).toBe("COVERAGE_ROLES_ONLY");
   });
 
   test("finds only the two-year environmental tail", () => {

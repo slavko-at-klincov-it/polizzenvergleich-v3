@@ -565,6 +565,7 @@
       "id": "HP-24",
       "label": "Anrechnung der Abwehrkosten auf die Deckungssumme",
       "requestedFields": ["condition"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "components": [
         {
           "id": "defence_costs",
@@ -640,6 +641,7 @@
       "id": "HP-27",
       "label": "Schäden durch Reinigungs- oder Hausbetreuungspersonal",
       "requestedFields": [],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
