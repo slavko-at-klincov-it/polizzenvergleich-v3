@@ -3116,5 +3116,6 @@ PASS: ausschließlich VB-16 in Status/Deckung verbessert
 PASS: VB-15 weiterhin UNGEKLÄRT
 PASS: WEVIG-VB 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
 PASS: WEVIG gegenüber RC20 exakt 0 semantische Änderungen
+PASS: RC28-Tag fc59ddf0 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Mieter implizieren Wohnungseigentümer oder beliebige Bewohner
 ```

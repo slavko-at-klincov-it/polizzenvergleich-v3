@@ -68,6 +68,8 @@ PASS: Prettier und git diff --check
 PASS: LF-Worksheet – alle drei VB-16-Komponenten aus derselben realen Klausel
 PASS: WEVIG-Worksheet – kein neuer VB-15-/VB-16-Kandidat
 PASS: frische LF- und WEVIG-VB-27B-Läufe
+PASS: Tag fc59ddf0 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Checkout bestätigt
 ```
 
 ## Update
