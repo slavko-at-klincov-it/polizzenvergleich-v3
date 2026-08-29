@@ -226,6 +226,42 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test("renders a complete defined value in its declared host scope as BELEGT", () => {
+    const input = fixture({
+      id: "EL-01",
+      label: "Elementar-Sublimit pro Schadenereignis",
+      requestedFields: ["limit"],
+      componentEffects: [COVERAGE_EFFECT.DEFINED],
+      selected: [true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      fieldResult: {
+        requirementId: "EL-01",
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "EUR 20.000 auf Erstes Risiko",
+                source: { candidateId: "candidate:0" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    input.worksheet.requirements[0].components[0].factRole = "LIMIT";
+    input.materializedEvidence.judgements[0].selectedScopePicture =
+      "NARROW_ONLY";
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Ja",
+      coverageAmount: "EUR 20.000 auf Erstes Risiko",
+      reviewStatus: "BELEGT",
+    });
+  });
+
   test("renders one evidenced LW-08 wording as complete without inventing its alternative", () => {
     const input = fixture({
       id: "LW-08",

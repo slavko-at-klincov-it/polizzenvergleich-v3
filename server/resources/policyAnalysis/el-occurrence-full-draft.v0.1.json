@@ -7,6 +7,7 @@
       "id": "EL-01",
       "label": "Elementar-Sublimit pro Schadenereignis",
       "requestedFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {
@@ -216,6 +217,7 @@
       "id": "EL-11",
       "label": "Selbstbehalt in der Sparte Elementar",
       "requestedFields": ["deductible"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
       "components": [
         {

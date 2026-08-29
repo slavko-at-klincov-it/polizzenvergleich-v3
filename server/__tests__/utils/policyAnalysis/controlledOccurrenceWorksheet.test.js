@@ -1326,6 +1326,25 @@ describe("controlledOccurrenceWorksheet", () => {
     });
   });
 
+  test.each(["EL-01", "EL-11"])(
+    "%s accepts its declared storm host scope for a complete value fact",
+    (requirementId) => {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        document: SYNTHETIC_DOCUMENT,
+        documentFingerprint: "fixture-sha256",
+        catalog: elFullCatalog,
+      });
+      const requirement = worksheet.requirements.find(
+        ({ id }) => id === requirementId
+      );
+
+      expect(requirement).toMatchObject({
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+        scopeRules: { narrowScopeKeys: ["STURM_INSURANCE"] },
+      });
+    }
+  );
+
   test("rejects definitive matching-scope policy without an explicit host scope", () => {
     expect(() =>
       buildControlledOccurrenceWorksheet({
