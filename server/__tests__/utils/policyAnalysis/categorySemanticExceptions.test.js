@@ -229,6 +229,93 @@ describe("category semantic exceptions", () => {
     ).toBeNull();
   });
 
+  test("binds the complete VB-24 expert procedure right without accepting headings or cost clauses", () => {
+    const contextText =
+      "Ist der Versicherungsnehmer mit dem Gutachten des vom Versicherer bestellten Sachverständigen nicht einverstanden, so steht es dem Versicherungsnehmer auch frei, einen Sachverständigen des jeweiligen Sachgebietes namhaft zu machen. Dieses Gutachten tritt an Stelle des Schiedsgutachterverfahrens.";
+    const inputFor = (text, exactText) => ({
+      worksheet: { catalog: { categoryView: "VB" } },
+      requirement: { id: "VB-24" },
+      component: { id: "expert_procedure", factRole: "BENEFIT" },
+      occurrence: occurrence({
+        candidateId: `candidate:vb24:${exactText}`,
+        exactText,
+        contextText: text,
+        scopeLeadText: "25. Auswahl des Sachverständigen",
+        sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+        pageNumber: 30,
+      }),
+    });
+
+    expect(
+      deterministicCategoryCandidateBinding(
+        inputFor(
+          contextText,
+          "Gutachten tritt an Stelle des Schiedsgutachterverfahrens"
+        )
+      )
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "VB_24_EXPLICIT_EXPERT_PROCEDURE_RIGHT",
+      authoritative: true,
+    });
+
+    const unclassifiedSection = inputFor(
+      contextText,
+      "Gutachten tritt an Stelle des Schiedsgutachterverfahrens"
+    );
+    unclassifiedSection.occurrence.sectionScopeHint = null;
+    expect(
+      deterministicCategoryCandidateBinding(unclassifiedSection)
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "VB_24_EXPLICIT_EXPERT_PROCEDURE_RIGHT",
+    });
+
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "VB",
+        requirementId: "VB-24",
+        componentId: "expert_procedure",
+        factRole: "BENEFIT",
+        candidates: [
+          {
+            candidateId: "candidate:vb24:procedure",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: "VB_24_EXPLICIT_EXPERT_PROCEDURE_RIGHT",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:vb24:procedure"],
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+      basis: "EXPLICIT_VB24_EXPERT_PROCEDURE_RIGHT:VB:VB-24",
+    });
+
+    expect(
+      deterministicCategoryCandidateBinding(
+        inputFor(
+          "25. Auswahl des Sachverständigen",
+          "Auswahl des Sachverständigen"
+        )
+      )
+    ).toBeNull();
+    expect(
+      deterministicCategoryCandidateBinding(
+        inputFor(
+          "Der Versicherer ersetzt 80 % der Kosten des Sachverständigen.",
+          "Sachverständigen"
+        )
+      )
+    ).toBeNull();
+
+    const wrongSection = inputFor(
+      contextText,
+      "Gutachten tritt an Stelle des Schiedsgutachterverfahrens"
+    );
+    wrongSection.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+    expect(deterministicCategoryCandidateBinding(wrongSection)).toBeNull();
+  });
+
   test("Katastrophen-bis is a positive limit governor even after a preceding narrow exclusion", () => {
     expect(
       deterministicCategoryPreparedDecision({

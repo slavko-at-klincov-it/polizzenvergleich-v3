@@ -473,6 +473,50 @@ function explicitVbGeneralContractFactBinding({
     : null;
 }
 
+/**
+ * Recognises the operative VB-24 right to appoint a different expert. This is
+ * a procedural entitlement, so valid contract wording does not contain a
+ * classic coverage governor such as "mitversichert" or "ersetzt". The three
+ * anchors deliberately have to occur in the same local context to avoid
+ * turning bare headings or cost clauses into a procedure benefit.
+ */
+function explicitVb24ExpertProcedureBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "VB" ||
+    requirement?.id !== "VB-24" ||
+    component?.id !== "expert_procedure" ||
+    component?.factRole !== "BENEFIT" ||
+    (occurrence?.sectionScopeHint?.scopeKey &&
+      occurrence.sectionScopeHint.scopeKey !== "GENERAL_CONTRACT_TERMS")
+  )
+    return null;
+
+  const context = String(occurrence?.context?.text || "");
+  if (
+    !/mit\s+dem\s+Gutachten\s+des\s+vom\s+Versicherer\s+bestellten\s+Sachverständigen\s+nicht\s+einverstanden/iu.test(
+      context
+    ) ||
+    !/frei,?\s+einen\s+Sachverständigen\s+des\s+jeweiligen\s+Sachgebietes\s+namhaft\s+zu\s+machen/iu.test(
+      context
+    ) ||
+    !/Gutachten\s+tritt\s+an\s+Stelle\s+des\s+Schiedsgutachterverfahrens/iu.test(
+      context
+    )
+  )
+    return null;
+
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "VB_24_EXPLICIT_EXPERT_PROCEDURE_RIGHT",
+    authoritative: true,
+  };
+}
+
 const GENERAL_BRANCH_MAXIMUM_TARGETS = Object.freeze({
   FE: Object.freeze({
     requirementId: "FE-F02",
@@ -614,6 +658,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (vbGeneralFactBinding) return vbGeneralFactBinding;
+
+  const vb24ExpertProcedureBinding = explicitVb24ExpertProcedureBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (vb24ExpertProcedureBinding) return vb24ExpertProcedureBinding;
 
   const generalBranchMaximumBinding = explicitGeneralBranchMaximumBinding({
     categoryView,
@@ -858,6 +910,24 @@ function deterministicCategoryPreparedDecision(target) {
       coverageEffect: COVERAGE_EFFECT.DEFINED,
       basis: `EXPLICIT_GENERAL_CONTRACT_FACT:${target.categoryView}:${target.requirementId}`,
     };
+  if (
+    target.categoryView === "VB" &&
+    target.requirementId === "VB-24" &&
+    target.componentId === "expert_procedure"
+  ) {
+    const selectedCandidateIds = target.candidates
+      .filter(
+        ({ deterministicBindingBasis }) =>
+          deterministicBindingBasis === "VB_24_EXPLICIT_EXPERT_PROCEDURE_RIGHT"
+      )
+      .map(({ candidateId }) => candidateId);
+    if (selectedCandidateIds.length > 0)
+      return {
+        selectedCandidateIds,
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        basis: "EXPLICIT_VB24_EXPERT_PROCEDURE_RIGHT:VB:VB-24",
+      };
+  }
   const hp16Target =
     target.categoryView === "HP" &&
     target.requirementId === "HP-16" &&
