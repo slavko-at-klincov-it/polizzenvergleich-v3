@@ -3070,3 +3070,28 @@ PASS: Gesetzesverweis und WEVIG-Sicherheitsausnahmen vollständig sichtbar
 PASS: RC26-Tag a58fc9d8 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: beliebige Rechtsformulierungen oder externe Holdouts bewiesen
 ```
+
+## 57. RC27: modellstabile Gemeinschaftseinrichtungen
+
+Der erste frische WEVIG-VS-Lauf auf RC26 bestätigte die seit RC12
+katalogisierte Scope-Freigabe: `VS-21` und `VS-28` wurden vollständig belegt.
+Gleichzeitig bewertete Qwen die Überschrift der aktivierten
+Gemeinschaftseinrichtungen diesmal als `UNRESOLVED`. Diese zusätzliche
+Überschrift stufte `VS-34` trotz der bereits serverautoritativ gebundenen
+Gerätedefinition auf `TEILBELEGT` zurück.
+
+RC27 bindet genau die Überschriftenform mit lokal folgendem
+`Als mitversichert gelten`. Eine Überschrift ohne positiven Governor bleibt
+modelloffen. Der reale Worksheet-Vergleich zeigt genau einen neu erfassten
+WEVIG-Kandidaten und keinen LF-Kandidaten.
+
+```text
+PASS: 93 Jest-Suites / 1062 Tests und Server-Lint
+PASS: WEVIG-VS 155/155 Kandidaten, 65/65 Komponenten, 36/36 Zeilen
+PASS: gegenüber RC26 ausschließlich VS-34 verbessert
+      TEILBELEGT -> BELEGT / Ja / EUR 15.000,00 auf Erstes Risiko
+PASS: VS-21 und VS-28 bleiben vollständig belegt
+PASS: übrige 33 WEVIG-VS-Zeilen semantisch identisch
+PASS: LF-Reichweite unverändert
+NO CLAIM: bloße Überschriften oder unbekannte Gemeinschaftsobjekte bewiesen
+```
