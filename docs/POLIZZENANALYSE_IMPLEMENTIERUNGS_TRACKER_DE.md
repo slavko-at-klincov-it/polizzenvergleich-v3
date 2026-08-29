@@ -3143,3 +3143,25 @@ PASS: WEVIG gegenüber RC28 exakt 0 Änderungen
 PASS: RC29-Tag 00b60a53 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Überschrift oder Kostenklausel beweist ein Verfahrensrecht
 ```
+
+## 60. RC30: Heizungsanlage in Leitungswasser vollständig belegen
+
+LF `LW-11` hatte Heizkessel und Heizkörper bereits korrekt erkannt. Die
+ausdrücklich mitversicherte wasserführende Fußboden- und Wandheizung aus dem
+Leitungswasserkapitel wurde wegen der zusammengesetzten deutschen Benennung
+nur `LW-12`, nicht der Heizungsanlagenkomponente von `LW-11`, zugeordnet.
+
+RC30 ergänzt diese versichererneutrale Heizungsanlagenform. Die vorhandene
+Spartenprüfung bleibt maßgeblich und verwirft einen separaten Treffer aus dem
+Feuerkapitel weiterhin.
+
+```text
+PASS: 93 Jest-Suites / 1065 Tests und Server-Lint
+PASS: LF-LW 36/36 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: LW-11 TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
+PASS: alle drei LW-11-Komponenten quellengebunden eingeschlossen
+PASS: übrige LF-Zeilen in Status/Deckung/Betrag stabil
+PASS: WEVIG-LW 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: WEVIG gegenüber RC21 exakt 0 Änderungen
+NO CLAIM: Heizungsnennung in fremder Sparte beweist Leitungswasserdeckung
+```
