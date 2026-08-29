@@ -345,6 +345,33 @@ function explicitHp02AnnualAggregateBinding({
   };
 }
 
+function explicitSt27RoofAvalancheBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "ST" ||
+    requirement?.id !== "ST-27" ||
+    !["avalanche", "snow_slide"].includes(component?.id) ||
+    component?.factRole !== "PERIL" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "STURM_INSURANCE"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/Dachlawinen?\s*\(\s*Schnee\s+und\s+Eis\s*\)/iu.test(clause) ||
+    !/auf\s+[,„“"']*Erstes\s+Risiko/iu.test(clause)
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "ST_27_EXPLICIT_ROOF_AVALANCHE_SNOW_SLIDE",
+    authoritative: true,
+  };
+}
+
 function explicitFeF05InsurancePeriodBinding({
   categoryView,
   requirement,
@@ -636,6 +663,14 @@ function deterministicCategoryCandidateBinding({
   });
   if (hp02Binding) return hp02Binding;
 
+  const st27RoofAvalancheBinding = explicitSt27RoofAvalancheBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (st27RoofAvalancheBinding) return st27RoofAvalancheBinding;
+
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
     categoryView,
     requirement,
@@ -894,6 +929,25 @@ function deterministicCategoryPreparedDecision(target) {
       coverageEffect: COVERAGE_EFFECT.DEFINED,
       basis: "EXPLICIT_HP02_ANNUAL_AGGREGATE_MULTIPLE:HP:HP-02",
     };
+  if (
+    target.categoryView === "ST" &&
+    target.requirementId === "ST-27" &&
+    ["avalanche", "snow_slide"].includes(target.componentId)
+  ) {
+    const selectedCandidateIds = target.candidates
+      .filter(
+        ({ deterministicBindingBasis }) =>
+          deterministicBindingBasis ===
+          "ST_27_EXPLICIT_ROOF_AVALANCHE_SNOW_SLIDE"
+      )
+      .map(({ candidateId }) => candidateId);
+    if (selectedCandidateIds.length > 0)
+      return {
+        selectedCandidateIds,
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        basis: "EXPLICIT_ST27_ROOF_AVALANCHE_SNOW_SLIDE:ST:ST-27",
+      };
+  }
   if (
     target.categoryView === "VB" &&
     ["VB-01", "VB-26", "VB-27"].includes(target.requirementId) &&

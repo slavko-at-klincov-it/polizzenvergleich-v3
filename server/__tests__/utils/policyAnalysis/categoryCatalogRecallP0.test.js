@@ -1,5 +1,6 @@
 const feCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const lwCatalog = require("../../../resources/policyAnalysis/lw-occurrence-full-draft.v0.1.json");
+const stCatalog = require("../../../resources/policyAnalysis/st-occurrence-full-draft.v0.1.json");
 const vbCatalog = require("../../../resources/policyAnalysis/vb-occurrence-full-draft.v0.1.json");
 const weCatalog = require("../../../resources/policyAnalysis/we-occurrence-full-draft.v0.1.json");
 const {
@@ -137,6 +138,20 @@ describe("P0 category catalog candidate recall", () => {
     expectSharedGroup(result, "LW-05", ["pipe_break", "pipe_itself"]);
     expectSharedGroup(result, "LW-22", ["fungus_damage", "rot_damage"]);
     expectSharedGroup(result, "LW-26", ["pipe_blockage", "cleaning_costs"]);
+  });
+
+  test("maps a roof avalanche clause to both avalanche and snow-slide roles", () => {
+    const result = worksheet(
+      stCatalog,
+      [
+        "STURMVERSICHERUNG",
+        "Mitversichert gelten",
+        "Dachlawinen (Schnee und Eis) auf Erstes Risiko EUR 7.500,00.",
+      ].join("\n")
+    );
+
+    expectOccurrences(result, [["ST-27", ["avalanche", "snow_slide"]]]);
+    expectSharedGroup(result, "ST-27", ["avalanche", "snow_slide"]);
   });
 
   test.each([

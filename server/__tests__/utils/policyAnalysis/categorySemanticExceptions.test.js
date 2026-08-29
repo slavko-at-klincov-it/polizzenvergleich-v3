@@ -344,6 +344,70 @@ describe("category semantic exceptions", () => {
     });
   });
 
+  test("binds an explicit roof avalanche clause to both ST-27 peril roles", () => {
+    const contextText =
+      "Dachlawinen (Schnee und Eis) auf Erstes Risiko EUR 7.500,00.";
+    for (const componentId of ["avalanche", "snow_slide"]) {
+      const candidate = occurrence({
+        candidateId: `candidate:st27:${componentId}`,
+        exactText: "Dachlawinen (Schnee und Eis)",
+        contextText,
+        scopeLeadText: "Mitversichert gelten",
+        sectionScopeKey: "STURM_INSURANCE",
+        pageNumber: 4,
+      });
+      expect(
+        deterministicCategoryCandidateBinding({
+          worksheet: { catalog: { categoryView: "ST" } },
+          requirement: { id: "ST-27" },
+          component: { id: componentId, factRole: "PERIL" },
+          occurrence: candidate,
+        })
+      ).toEqual({
+        binding: "DIRECT",
+        basis: "ST_27_EXPLICIT_ROOF_AVALANCHE_SNOW_SLIDE",
+        authoritative: true,
+      });
+      expect(
+        deterministicCategoryPreparedDecision({
+          categoryView: "ST",
+          requirementId: "ST-27",
+          componentId,
+          factRole: "PERIL",
+          candidates: [
+            {
+              candidateId: candidate.candidateId,
+              candidateBinding: "DIRECT",
+              deterministicBindingBasis:
+                "ST_27_EXPLICIT_ROOF_AVALANCHE_SNOW_SLIDE",
+            },
+          ],
+        })
+      ).toEqual({
+        selectedCandidateIds: [candidate.candidateId],
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        basis: "EXPLICIT_ST27_ROOF_AVALANCHE_SNOW_SLIDE:ST:ST-27",
+      });
+    }
+
+    const incomplete = occurrence({
+      candidateId: "candidate:st27:bare-heading",
+      exactText: "Dachlawinen",
+      contextText: "Dachlawinen",
+      scopeLeadText: "Besondere Bedingungen",
+      sectionScopeKey: "STURM_INSURANCE",
+      pageNumber: 4,
+    });
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "ST" } },
+        requirement: { id: "ST-27" },
+        component: { id: "snow_slide", factRole: "PERIL" },
+        occurrence: incomplete,
+      })
+    ).toBeNull();
+  });
+
   test("a local peril limit stays affirmative despite an unrelated negative scope lead", () => {
     const decision = deterministicCategoryPreparedDecision({
       categoryView: "EL",
