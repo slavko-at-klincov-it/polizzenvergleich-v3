@@ -2872,3 +2872,29 @@ PASS: frischer LF-FE-Kontrolllauf, 25/25 Kandidaten,
       138/138 Komponenten, 80/80 Zeilen und 0 semantische Änderungen
 NO CLAIM: andere Datumsformen und externe Holdouts bleiben offen
 ```
+
+## 50. RC20: Wiederherstellungsfrist vollständig in die Endzeile übertragen
+
+LF `VB-26` war kein Such- oder Modellproblem. Das Worksheet enthielt vier
+passende Wiederherstellungsfristen und die Wirkung war bereits bedingt
+geregelt. Der angeforderte Wert `duration` blieb jedoch leer, weil die
+allgemeine Dauerextraktion `dreier Jahre` nicht normalisierte. Der Renderer
+musste die Zeile deshalb trotz richtiger Quellen auf `TEILBELEGT` begrenzen.
+
+RC20 bindet nur in `VB-26` eine grammatisch unmittelbar mit
+Wiederbeschaffung oder Wiederherstellung verbundene `innerhalb`-/`binnen`-Frist.
+Zahl, Einheit und exakter Quellspan bleiben servergebunden. Eine ausdrückliche
+Deckungsprozess-Verlängerung wird als Regel definiert, liefert allein aber
+keine erfundene Zahl. Fremde Kündigungs- oder Vertragsdauern bleiben gesperrt.
+
+```text
+PASS: 91 Jest-Suites / 1034 Tests und vollständiger Lint
+PASS: positive Zahlwort-/Ziffervarianten und adversariale Negativvarianten
+PASS: echter LF-VB-27B-Artefaktreplay, 36/36 Zeilen verglichen
+PASS: ausschließlich VB-26 verbessert
+      TEILBELEGT -> BELEGT / Ja / Dauer 3 Jahre
+PASS: übrige 35 LF-VB-Zeilen unverändert
+PASS: WEVIG-VB-Kontrollreplay, 36/36 Zeilen und 0 Änderungen
+PENDING: frischer LF-VB- und WEVIG-VB-Lauf mit qwen/qwen3.8-27b
+NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
+```
