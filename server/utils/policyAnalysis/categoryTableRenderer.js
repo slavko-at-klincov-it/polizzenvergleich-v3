@@ -110,6 +110,25 @@ function compactQuote(text, needle, maxChars = 260) {
   return normalizedText.slice(start, end).trim();
 }
 
+function sourceTextForFact(occurrence, fact) {
+  const start = Number(fact?.source?.documentStart);
+  const end = Number(fact?.source?.documentEnd);
+  const ranges = [
+    occurrence?.context,
+    occurrence?.fieldGovernorHint,
+    occurrence?.scopeLead,
+  ];
+  const containing = ranges.find(
+    (range) =>
+      typeof range?.text === "string" &&
+      Number.isInteger(range?.documentStart) &&
+      Number.isInteger(range?.documentEnd) &&
+      start >= range.documentStart &&
+      end <= range.documentEnd
+  );
+  return containing?.text || occurrence?.context?.text || occurrence?.exactText;
+}
+
 function selectedSources({
   requirementId,
   judgements,
@@ -155,8 +174,9 @@ function selectedSources({
       sources.push({ candidateId, physicalPageNumber, quote });
 
     for (const fact of candidateFieldFacts) {
+      const factSourceText = String(sourceTextForFact(occurrence, fact) || "");
       const factQuote = compactQuote(
-        contextText,
+        factSourceText,
         fact.rawValue || fact.source?.exactText
       );
       const factKey = `${physicalPageNumber}:${factQuote}`;
@@ -223,6 +243,18 @@ function uniqueNormalizedValues(facts) {
   return [...new Set(facts.map(({ normalizedValue }) => normalizedValue))];
 }
 
+function factDisplayValue(fact) {
+  const value = [fact.normalizedValue, fact.qualifier]
+    .filter(Boolean)
+    .join(" ");
+  const scopeLabel = fact.variantScope?.label || fact.componentScope?.label;
+  return scopeLabel ? `${scopeLabel}: ${value}` : value;
+}
+
+function uniqueFactDisplayValues(facts) {
+  return [...new Set(facts.map(factDisplayValue))];
+}
+
 function fieldComplete(rollup, fieldResult, candidates) {
   if (
     !Array.isArray(rollup.requestedFields) ||
@@ -276,6 +308,7 @@ function evidenceSourcesBound(requirement, judgements, candidates) {
 function coverageFor(rollup, coverageDecisionRequired) {
   if (rollup.coveragePicture === COVERAGE_PICTURE.INCLUDED) return "Ja";
   if (rollup.coveragePicture === COVERAGE_PICTURE.EXCLUDED) return "Nein";
+  if (rollup.coveragePicture === COVERAGE_PICTURE.MIXED) return "Gemischt";
   // Pure CONDITION/DEFINITION categories ask whether the requested rule is
   // documented, not whether an insured object is included. Once every
   // requested part is fully evidenced, the table contract still requires the
@@ -302,7 +335,6 @@ function reviewFor({
     rollup.evidenceCompleteness !== EVIDENCE_COMPLETENESS.COMPLETE ||
     !valuesComplete ||
     !scopeComplete ||
-    rollup.coveragePicture === COVERAGE_PICTURE.MIXED ||
     (coverageDecisionRequired &&
       rollup.coveragePicture === COVERAGE_PICTURE.NOT_DETERMINABLE)
   )
@@ -458,7 +490,7 @@ function buildCategoryTableRows({
         )
           ? "Wert des Teilbelegs"
           : "Limit des Teilbelegs";
-        documentedContent += `; ${partialValueLabel}: ${uniqueNormalizedValues(amountFacts).join(", ")}`;
+        documentedContent += `; ${partialValueLabel}: ${uniqueFactDisplayValues(amountFacts).join("; ")}`;
       }
       if (documentStatus === DOCUMENT_STATUS.PROPOSAL)
         documentedContent = `Vorschlag (PROPOSED_ONLY): ${documentedContent}`;
@@ -476,7 +508,7 @@ function buildCategoryTableRows({
           : NOT_DETERMINABLE,
         coverageAmount:
           completeAssertion && amountFacts.length > 0
-            ? uniqueNormalizedValues(amountFacts).join(", ")
+            ? uniqueFactDisplayValues(amountFacts).join("; ")
             : NOT_DETERMINABLE,
         source: sourceCell(sources),
         reviewStatus,

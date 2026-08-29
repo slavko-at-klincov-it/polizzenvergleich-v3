@@ -130,6 +130,10 @@ Für die Spalte `Deckung` sind ausschließlich diese Werte zulässig:
 - `Nein`: Die vollständige konkrete Kategorie ist ausdrücklich ausgeschlossen,
   nicht vereinbart oder nicht anwendbar. Das muss für denselben Geltungsbereich
   wörtlich belegt sein.
+- `Gemischt`: Alle verlangten Bestandteile und Geltungsbereiche sind vollständig
+  geklärt, aber verschiedene Objekte, Varianten oder Teilaspekte haben
+  unterschiedliche Wirkungen (mindestens einmal eingeschlossen und mindestens
+  einmal ausgeschlossen). Das ist kein Widerspruch.
 - `Nicht feststellbar`: Es liegt nur ein Teilbeleg, ein engerer Sonderfall, eine
   ungeklärte Bedingung, ein Widerspruch oder keine passende Fundstelle vor.
 
@@ -137,6 +141,7 @@ Es sind ausschließlich diese Kombinationen zulässig:
 
 - `BELEGT` + `Ja`
 - `BELEGT` + `Nein`
+- `BELEGT` + `Gemischt`
 - `TEILBELEGT` + `Nicht feststellbar`
 - `WIDERSPRÜCHLICH` + `Nicht feststellbar`
 - `UNGEKLÄRT` + `Nicht feststellbar`
@@ -154,7 +159,7 @@ Gib genau diese acht Spalten aus:
   Geltungsbereich, Bedingung, Einschränkung, Selbstbehalt oder Ausschluss klar
   zuordnen. Bei `TEILBELEGT` zusätzlich ausdrücklich nennen, welcher Bestandteil
   offenbleibt oder welcher engere Sonderfall belegt ist.
-- `Deckung`: Nur `Ja`, `Nein` oder `Nicht feststellbar` gemäß der
+- `Deckung`: Nur `Ja`, `Nein`, `Gemischt` oder `Nicht feststellbar` gemäß der
   Entscheidungslogik.
 - `Deckungssumme`: Nur einen unmittelbar zur Kategorie gehörenden Betrag, ein
   Limit, einen Prozentsatz oder eine ausdrücklich verlangte

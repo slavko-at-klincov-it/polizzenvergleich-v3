@@ -100,6 +100,28 @@ describe("category semantic exceptions", () => {
       ],
     };
 
+    for (const componentId of ["recourse_waiver", "tenants"])
+      expect(
+        deterministicCategoryCandidateBinding({
+          worksheet: { catalog: { categoryView: "HP" } },
+          requirement: { id: "HP-16" },
+          component: { id: componentId, factRole: "CONDITION" },
+          occurrence: occurrence({
+            candidateId: `candidate:hp16:${componentId}`,
+            exactText:
+              componentId === "tenants" ? "Mieter" : "Regressanspruch",
+            contextText,
+            scopeLeadText: "5. Regressverzicht",
+            sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+            pageNumber: 3,
+          }),
+        })
+      ).toEqual({
+        binding: "DIRECT",
+        basis: "HP_16_EXPLICIT_TENANT_RECOURSE_WAIVER",
+        authoritative: true,
+      });
+
     expect(
       deterministicCategoryPreparedDecision({
         ...base,
@@ -139,6 +161,47 @@ describe("category semantic exceptions", () => {
       selectedCandidateIds: ["candidate:el01"],
       coverageEffect: COVERAGE_EFFECT.DEFINED,
       basis: "EXPLICIT_CATEGORY_CLAUSE:EL:EL-01",
+    });
+  });
+
+  test("a local peril limit stays affirmative despite an unrelated negative scope lead", () => {
+    const decision = deterministicCategoryPreparedDecision({
+      categoryView: "EL",
+      requirementId: "EL-04",
+      componentId: "flood",
+      factRole: "PERIL",
+      candidates: [
+        {
+          candidateId: "candidate:el04:definition",
+          candidateBinding: "NARROW_SCOPE",
+          exactText: "Hochwasser",
+          contextText:
+            "- Hochwasser (unvorhersehbares Ansteigen und Überborden von Gewässern);",
+          contextDocumentStart: 5_000,
+          documentStart: 5_002,
+          scopeLeadText:
+            "Katastrophen bis 1 % der Gebäudeversicherungssumme auf Erstes Risiko, insbesondere Schäden durch",
+        },
+        {
+          candidateId: "candidate:el04:limit",
+          candidateBinding: "NARROW_SCOPE",
+          exactText: "Hochwasser",
+          contextText:
+            "Innerhalb der HQ30-Zone beträgt die Versicherungssumme bei Schäden durch Hochwasser maximal € 10.000.",
+          contextDocumentStart: 6_000,
+          documentStart: 6_081,
+          scopeLeadText: "Nicht versichert sind Schäden durch andere Gefahren.",
+        },
+      ],
+    });
+
+    expect(decision).toEqual({
+      selectedCandidateIds: [
+        "candidate:el04:definition",
+        "candidate:el04:limit",
+      ],
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+      basis: "EXPLICIT_CATEGORY_CLAUSE:EL:EL-04",
     });
   });
 

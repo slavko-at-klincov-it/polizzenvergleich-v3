@@ -61,6 +61,110 @@ function component(worksheet, requirementId, componentId) {
 }
 
 describe("controlledOccurrenceWorksheet", () => {
+  test("attaches controlled variant and list-value governors to occurrences", () => {
+    const document = documentFromPages([
+      [
+        "6.2. Deckungsvariante „C-Deckung“",
+        "Zusätzlich zur Grunddeckung sind versichert:",
+        "Folgende Haftungserweiterungen gelten mit einer Versicherungssumme von € 7.500 auf „Erstes Risiko“ mitversichert:",
+        "• die Kosten für den Wasserverlust nach einem Schaden;",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "variant-governor-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "variant-governor-test",
+        categoryView: "LW",
+        requirements: [
+          {
+            id: "LW-27",
+            label: "Wasserverlustkosten",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "water_loss",
+                label: "Wasserverlust",
+                factRole: "COST",
+                aliases: ["Kosten für den Wasserverlust"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+    expect(candidate.variantScopeHint).toMatchObject({
+      key: "C_DECKUNG",
+      label: "C-Deckung",
+      source: "CURRENT_PAGE_HEADING",
+    });
+    expect(candidate.fieldGovernorHint).toMatchObject({
+      text: expect.stringContaining("€ 7.500"),
+      source: "CURRENT_PAGE_FIELD_GOVERNOR",
+      documentStart: expect.any(Number),
+      documentEnd: expect.any(Number),
+    });
+    expect(
+      document.pageContent.slice(
+        candidate.fieldGovernorHint.documentStart,
+        candidate.fieldGovernorHint.documentEnd
+      )
+    ).toBe(candidate.fieldGovernorHint.text);
+  });
+
+  test("inherits a variant across a continued page and resets it at the next variant heading", () => {
+    const document = documentFromPages([
+      [
+        "6.2. Deckungsvariante „C-Deckung“",
+        "Folgende Erweiterungen gelten mit einer Versicherungssumme von € 7.500 mitversichert:",
+        "• Kosten für Wasserverlust;",
+      ].join("\n"),
+      "• Kosten für Wasserverlust im Folgeschaden;",
+      [
+        "6.3. Deckungsvariante „D-Deckung“",
+        "Kosten für Wasserverlust bis € 10.000 je Schadenfall.",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "variant-inheritance-fixture",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "variant-inheritance-test",
+        categoryView: "LW",
+        requirements: [
+          {
+            id: "LW-27",
+            label: "Wasserverlustkosten",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "water_loss",
+                label: "Wasserverlust",
+                factRole: "COST",
+                aliases: ["Kosten für Wasserverlust"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const occurrences = worksheet.requirements[0].components[0].occurrences;
+    expect(occurrences.map(({ variantScopeHint }) => variantScopeHint)).toEqual([
+      expect.objectContaining({ key: "C_DECKUNG" }),
+      expect.objectContaining({
+        key: "C_DECKUNG",
+        source: "PRECEDING_PAGE_HEADING",
+      }),
+      expect.objectContaining({ key: "D_DECKUNG" }),
+    ]);
+    expect(occurrences[2].fieldGovernorHint).toBeNull();
+  });
+
   test("inherits a numbered storm heading and keeps the narrow clause lead for later exclusions", () => {
     const document = documentFromPages([
       [

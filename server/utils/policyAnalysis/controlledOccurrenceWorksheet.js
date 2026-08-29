@@ -473,6 +473,44 @@ function explicitCoverageGovernors(pageText) {
   return governors.sort((left, right) => left.pageStart - right.pageStart);
 }
 
+function explicitVariantHeadings(pageText) {
+  const pattern =
+    /^[\t ]*(?:\d+(?:\.\d+)*\.\s*)?Deckungsvariante\s+[„"']?\s*([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)\s*[“"']?[\t ]*$/gimu;
+  const headings = [];
+  for (const match of String(pageText || "").matchAll(pattern)) {
+    const label = match[1].trim();
+    const text = match[0].trim();
+    const leading = match[0].indexOf(text);
+    headings.push({
+      key: normalizeWithOffsetMap(label)
+        .normalized.replace(/\s+/gu, "_")
+        .toLocaleUpperCase("de"),
+      label,
+      text,
+      pageStart: match.index + leading,
+      pageEnd: match.index + leading + text.length,
+    });
+  }
+  return headings.sort((left, right) => left.pageStart - right.pageStart);
+}
+
+function explicitFieldGovernors(pageText) {
+  const pattern =
+    /^[\t ]*((?:Folgende|Nachstehende|Die\s+folgenden)\b[\s\S]{0,500}?\b(?:Versicherungssumme|Höchstentschädigung|Limit|Sublimit)\b[\s\S]{0,250}?\b(?:mitversichert|versichert|gedeckt)\s*:)[\t ]*$/gimu;
+  const governors = [];
+  for (const match of String(pageText || "").matchAll(pattern)) {
+    if (!/(?:EUR|€)\s*\d|\d{1,3}(?:[.,]\d+)?\s*%/iu.test(match[1])) continue;
+    const text = match[1];
+    const relativeStart = match[0].indexOf(text);
+    governors.push({
+      text,
+      pageStart: match.index + relativeStart,
+      pageEnd: match.index + relativeStart + text.length,
+    });
+  }
+  return governors.sort((left, right) => left.pageStart - right.pageStart);
+}
+
 function printedPageIndex(label) {
   const match = String(label || "").match(/^Seite\s+(\d+)\s+von\s+(\d+)$/iu);
   return match ? { current: Number(match[1]), total: Number(match[2]) } : null;
@@ -526,6 +564,14 @@ function validateDocument(document) {
         ...governor,
         physicalPageNumber: pageNumber,
       })),
+      variantHeadings: explicitVariantHeadings(text).map((heading) => ({
+        ...heading,
+        physicalPageNumber: pageNumber,
+      })),
+      fieldGovernors: explicitFieldGovernors(text).map((governor) => ({
+        ...governor,
+        physicalPageNumber: pageNumber,
+      })),
       sectionHeadings: explicitSectionHeadings(text).map((heading) => ({
         ...heading,
         physicalPageNumber: pageNumber,
@@ -534,16 +580,24 @@ function validateDocument(document) {
   });
   let inheritedSectionHeading = null;
   let previousPageCoverageGovernor = null;
+  let inheritedVariantHeading = null;
   for (const page of pages) {
     const printed = printedPageIndex(page.printedPageLabel);
-    if (printed?.current === 1) inheritedSectionHeading = null;
+    if (printed?.current === 1) {
+      inheritedSectionHeading = null;
+      inheritedVariantHeading = null;
+    }
     page.inheritedSectionHeading = inheritedSectionHeading;
+    page.inheritedVariantHeading = inheritedVariantHeading;
     page.inheritedCoverageGovernor =
       page.sectionHeadings.length === 0 ? previousPageCoverageGovernor : null;
     if (page.sectionHeadings.length > 0) {
       const lastHeading = page.sectionHeadings.at(-1);
       inheritedSectionHeading = lastHeading.scopeKey ? lastHeading : null;
+      inheritedVariantHeading = null;
     }
+    if (page.variantHeadings.length > 0)
+      inheritedVariantHeading = page.variantHeadings.at(-1);
     previousPageCoverageGovernor = page.coverageGovernors.at(-1) || null;
   }
   return { pageContent, pages };
@@ -1276,6 +1330,37 @@ function buildControlledOccurrenceWorksheet({
                   source: "PRECEDING_PAGE_GOVERNOR",
                 }
               : null;
+          const currentVariantHeading = page.variantHeadings
+            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .at(-1);
+          const variantScopeHint = currentVariantHeading
+            ? { ...currentVariantHeading, source: "CURRENT_PAGE_HEADING" }
+            : !currentSectionBoundary && page.inheritedVariantHeading
+              ? {
+                  ...page.inheritedVariantHeading,
+                  source: "PRECEDING_PAGE_HEADING",
+                }
+              : null;
+          const currentFieldGovernor = page.fieldGovernors
+            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .at(-1);
+          const fieldGovernorHint =
+            currentFieldGovernor &&
+            evidenceContext.unitType === "LIST_ITEM" &&
+            currentFieldGovernor.pageEnd <= evidenceContext.pageStart &&
+            evidenceContext.pageStart - currentFieldGovernor.pageEnd <= 2_000 &&
+            (!currentVariantHeading ||
+              currentFieldGovernor.pageStart >
+                currentVariantHeading.pageStart) &&
+            (!currentSectionBoundary ||
+              currentFieldGovernor.pageStart > currentSectionBoundary.pageStart)
+              ? {
+                  ...currentFieldGovernor,
+                  documentStart: page.start + currentFieldGovernor.pageStart,
+                  documentEnd: page.start + currentFieldGovernor.pageEnd,
+                  source: "CURRENT_PAGE_FIELD_GOVERNOR",
+                }
+              : null;
           occurrences.push({
             candidateId: candidateId({
               documentFingerprint: fingerprint,
@@ -1292,6 +1377,8 @@ function buildControlledOccurrenceWorksheet({
             pageScopeHints: page.scopeHints,
             sectionScopeHint,
             coverageGovernorHint,
+            variantScopeHint,
+            fieldGovernorHint,
             pageStart: range.originalStart,
             pageEnd: range.originalEnd,
             documentStart,

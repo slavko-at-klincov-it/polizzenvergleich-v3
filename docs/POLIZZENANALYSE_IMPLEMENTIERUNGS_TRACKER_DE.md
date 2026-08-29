@@ -2318,3 +2318,75 @@ REVIEW_REQUIRED: fachlicher Vergleich der neuen 320 Zeilen mit RC5/RC4
 REVIEW_REQUIRED: vollständige Fachoracles für alle Dokument-/Kategoriepaare
 NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
 ```
+
+## 35. Betriebs-Härtung für unbeaufsichtigte All-Kategorien-Läufe
+
+`run-all-categories-quality.command` startet einen Modelllauf nur noch, wenn
+eine atomar erworbene globale Runner-Sperre vorliegt und LM Studio das exakt
+angeforderte Modell unter `/v1/models` meldet. Damit können zwei Instanzen
+desselben Großläufers nicht mehr gleichzeitig auf das lokale Chatmodell
+zugreifen.
+
+Vor der PDF-Extraktion wird `manifest.private.json` atomar angelegt. Ein Resume
+wird ausschließlich zugelassen, wenn Release-Identität, Modell,
+Modell-Tokenlimit, Dokumentstatus und SHA-256 des PDFs unverändert sind. Ein
+bereits befüllter Ausgabeordner ohne Manifest wird fail-closed abgelehnt.
+
+```text
+PASS: Shell-Vertrag für neuen Lauf und identischen Resume
+PASS: abweichendes Release, Modell, Tokenlimit, Dokumentstatus oder PDF abgelehnt
+PASS: fehlendes Modell und konkurrierender Lauf vor Ausgabeerzeugung abgelehnt
+BEGRENZUNG: SIGKILL oder Stromverlust kann eine verwaiste Sperre hinterlassen;
+            sie wird bewusst nicht automatisch übernommen.
+```
+
+## 36. RC6-27B-Befund: gemischte Objekte und variantenbezogene Werte
+
+Der vollständige RC6-Lauf auf `qwen/qwen3.8-27b` bestätigte die allgemeinen
+Recall-Gewinne, legte aber zwei bereits historisch bekannte Restlücken frei:
+
+- vollständig geklärte, unterschiedliche Objektwirkungen wurden intern als
+  `MIXED` gehalten, im sichtbaren Vertrag aber zu `TEILBELEGT` und
+  `Nicht feststellbar` herabgestuft;
+- Beträge, explizit unbegrenzte Leistungen und vorangestellte Listenlimits
+  verloren beim Rendern ihren C-/D-Variantenscope.
+
+Die Korrektur bleibt kategorienunabhängig: `COMPLETE + MIXED + NONE` wird als
+`BELEGT + Gemischt` ausgegeben; Fundstellen tragen einen strukturierten
+Variantenscope; Limits unterscheiden `CAPPED` und `UNBOUNDED`; ein expliziter
+Listen-Governor bleibt quellengebunden; die Vollständigkeit wird je ausgewählter
+Variante geprüft. Ein fehlender Wert oder ungeklärter Scope bleibt weiterhin
+`TEILBELEGT`.
+
+Deterministische Replays der echten RC6-27B-Artefakte ergeben:
+
+```text
+LW-26: C-Deckung EUR 2.000 je Schadenfall;
+       D-Deckung ohne betragliche Beschränkung je Schadenfall
+LW-27: C-Deckung EUR 7.500,00 auf Erstes Risiko;
+       D-Deckung EUR 10.000,00 je Schadenfall
+EL-16: Wintergarten eingeschlossen; Vitrinen ausgeschlossen;
+       Deckung Gemischt; Wintergarten bis 10 m² Einzelscheibengröße
+```
+
+Zusätzlich wurden drei reale Scopefehler geschlossen: Ein lokaler positiver
+Gefahrenhöchstbetrag wird nicht mehr durch einen älteren negativen Scope-Lead
+zum Ausschluss (`EL-04`), der Elementar-Einschluss von Erdbeben erhält denselben
+kontrollierten Sturm-Kapitel-Scope wie die benachbarten Katastrophenpositionen
+(`EL-07`), und der wörtliche Mieter-Regressverzicht wird bereits in der
+Kandidatenschicht serverautoritär als direkter Beleg gebunden (`HP-16`).
+
+Die abschließende RC6-Prüfung von WE zeigte außerdem eine lokale
+Polaritätsinvertierung: Der übernommene Listen-Governor `Versichert sind`
+überstimmte in `WE-14` das spätere wörtliche `jedoch exklusive deren Inhalt`.
+`exklusive` ist nun ein expliziter negativer Klausel-Governor. Das reale
+RC6-Artefakt-Replay ergibt deshalb quellengebunden `BELEGT + Nein`, während
+`WE-13` für die Kellerabteile selbst unverändert `BELEGT + Ja` bleibt.
+
+```text
+PASS: 88 Jest-Suites / 961 Tests
+PASS: Server-Lint
+PASS: echte RC6-Artefakt-Replays für LW-26, LW-27 und EL-16
+PASS: echtes RC6-Artefakt-Replay für WE-14
+REVIEW_REQUIRED: frischer vollständiger 27B-Lauf mit neuem Release-Fingerprint
+```

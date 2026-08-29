@@ -27,6 +27,7 @@ const POSITIVE_GOVERNORS = Object.freeze([
 const NEGATIVE_GOVERNORS = Object.freeze([
   /Nicht\s+versichert(?:\s+im\s+Rahmen[^:\n]{0,140})?\s+sind/giu,
   /nicht\s+mitversichert/giu,
+  /\b(?:jedoch\s+)?exklusive\b/giu,
   /(?:vom\s+Versicherungsschutz\s+)?ausgeschlossen/giu,
   /(?:Die\s+)?Versicherung(?:sschutz)?\s+erstreckt\s+sich\s+nicht/giu,
   /kein\s+Versicherungsschutz/giu,
@@ -232,6 +233,32 @@ function explicitEl16GlassObjectBinding({
   };
 }
 
+function explicitHp16TenantRecourseBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "HP" ||
+    requirement?.id !== "HP-16" ||
+    !["recourse_waiver", "tenants"].includes(component?.id)
+  )
+    return null;
+  const context = String(occurrence?.context?.text || "");
+  if (
+    !/gegen\s+einen\s+Mieter\s+des\s+versicherten\s+Gebäudes[\s\S]{0,320}?verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
+      context
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "HP_16_EXPLICIT_TENANT_RECOURSE_WAIVER",
+    authoritative: true,
+  };
+}
+
 /**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
@@ -261,6 +288,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (el16Binding) return el16Binding;
+
+  const hp16Binding = explicitHp16TenantRecourseBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (hp16Binding) return hp16Binding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)
@@ -316,6 +351,16 @@ function deterministicCategoryCandidateBinding({
 }
 
 function effectForCandidate(target, candidate) {
+  const localClause = String(candidate.contextText || "");
+  const localLimitedCoverage =
+    ["PERIL", "DAMAGE"].includes(target.factRole) &&
+    containsPhrase(localClause, candidate.exactText) &&
+    /(?:Versicherungssumme|Höchstentschädigung)\s+(?:bei|für)\s+Schäden\s+durch[\s\S]{0,180}?(?:maximal|höchstens|bis\s+(?:zu\s+)?)[\s\S]{0,80}?(?:EUR|€|%)/iu.test(
+      localClause
+    ) &&
+    !lastPatternMatch(localClause, NEGATIVE_GOVERNORS);
+  if (localLimitedCoverage) return COVERAGE_EFFECT.INCLUDED;
+
   const polarity = clausePolarity({
     scopeLeadText: candidate.scopeLeadText,
     contextText: candidate.contextText,

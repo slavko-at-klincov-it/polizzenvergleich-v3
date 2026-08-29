@@ -101,7 +101,176 @@ function textualWorksheet(requirement) {
   return { candidateOnly: true, requirements: [requirement] };
 }
 
+function variantOccurrence({
+  candidateId,
+  variantKey,
+  variantLabel,
+  text,
+  exactText,
+  contextStart,
+  fieldGovernorText,
+  fieldGovernorStart,
+}) {
+  return {
+    ...textualOccurrence({ candidateId, text, exactText, contextStart }),
+    variantScopeHint: {
+      key: variantKey,
+      label: variantLabel,
+      source: "CURRENT_PAGE_HEADING",
+    },
+    ...(fieldGovernorText
+      ? {
+          fieldGovernorHint: {
+            text: fieldGovernorText,
+            documentStart: fieldGovernorStart,
+            documentEnd: fieldGovernorStart + fieldGovernorText.length,
+            source: "CURRENT_PAGE_FIELD_GOVERNOR",
+          },
+        }
+      : {}),
+  };
+}
+
 describe("requestedFieldEvidenceContract", () => {
+  test("keeps capped and explicitly unbounded limits separate by variant", () => {
+    const cId = "candidate:LW-26:C";
+    const dId = "candidate:LW-26:D";
+    const c = variantOccurrence({
+      candidateId: cId,
+      variantKey: "C_DECKUNG",
+      variantLabel: "C-Deckung",
+      text: "Kosten der Rohrreinigung bis höchstens € 2.000,- je Schadenfall.",
+      exactText: "Kosten der Rohrreinigung",
+      contextStart: 1000,
+    });
+    const d = variantOccurrence({
+      candidateId: dId,
+      variantKey: "D_DECKUNG",
+      variantLabel: "D-Deckung",
+      text: "Kosten der Rohrreinigung ohne betragliche Beschränkung pro Schadenfall.",
+      exactText: "Kosten der Rohrreinigung",
+      contextStart: 2000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "LW-26",
+        label: "Rohrreinigung",
+        requestedFields: ["limit"],
+        components: [
+          { id: "cleaning", factRole: "COST", occurrences: [c, d] },
+        ],
+      }),
+      materializedCandidates: selections([cId, "DIRECT"], [dId, "DIRECT"]),
+    });
+
+    expect(result.requirements[0].requestedFieldStatus).toBe(
+      REQUESTED_FIELD_STATUS.COMPLETE
+    );
+    expect(result.requirements[0].fields[0].facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          normalizedValue: "EUR 2.000",
+          limitKind: "CAPPED",
+          qualifier: "je Schadenfall",
+          variantScope: expect.objectContaining({ key: "C_DECKUNG" }),
+        }),
+        expect.objectContaining({
+          normalizedValue: "ohne betragliche Beschränkung",
+          limitKind: "UNBOUNDED",
+          qualifier: "je Schadenfall",
+          variantScope: expect.objectContaining({ key: "D_DECKUNG" }),
+        }),
+      ])
+    );
+  });
+
+  test("binds a preceding list governor and stays partial until every selected variant has a value", () => {
+    const cId = "candidate:LW-27:C";
+    const dId = "candidate:LW-27:D";
+    const governor =
+      "Folgende Haftungserweiterungen gelten mit einer Versicherungssumme von € 7.500 auf „Erstes Risiko“ mitversichert:";
+    const c = variantOccurrence({
+      candidateId: cId,
+      variantKey: "C_DECKUNG",
+      variantLabel: "C-Deckung",
+      text: "Kosten für den Wasserverlust nach einem ersatzpflichtigen Schaden.",
+      exactText: "Kosten für den Wasserverlust",
+      contextStart: 1200,
+      fieldGovernorText: governor,
+      fieldGovernorStart: 1000,
+    });
+    const d = variantOccurrence({
+      candidateId: dId,
+      variantKey: "D_DECKUNG",
+      variantLabel: "D-Deckung",
+      text: "Kosten für den Wasserverlust bis höchstens € 10.000,00 je Schadenfall.",
+      exactText: "Kosten für den Wasserverlust",
+      contextStart: 2200,
+    });
+    const requirement = {
+      id: "LW-27",
+      label: "Wasserverlustkosten",
+      requestedFields: ["limit"],
+      components: [
+        { id: "water_loss", factRole: "COST", occurrences: [c, d] },
+      ],
+    };
+    const complete = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet(requirement),
+      materializedCandidates: selections([cId, "DIRECT"], [dId, "DIRECT"]),
+    });
+
+    expect(complete.requirements[0].requestedFieldStatus).toBe(
+      REQUESTED_FIELD_STATUS.COMPLETE
+    );
+    expect(complete.requirements[0].fields[0].facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          normalizedValue: "EUR 7.500",
+          qualifier: "auf Erstes Risiko",
+          variantScope: expect.objectContaining({ key: "C_DECKUNG" }),
+        }),
+        expect.objectContaining({
+          normalizedValue: "EUR 10.000,00",
+          qualifier: "je Schadenfall",
+          variantScope: expect.objectContaining({ key: "D_DECKUNG" }),
+        }),
+      ])
+    );
+
+    const dWithoutValue = {
+      ...d,
+      context: {
+        ...d.context,
+        text: "Kosten für den Wasserverlust sind versichert.",
+        documentEnd:
+          d.context.documentStart +
+          "Kosten für den Wasserverlust sind versichert.".length,
+      },
+    };
+    dWithoutValue.documentEnd =
+      dWithoutValue.documentStart + dWithoutValue.exactText.length;
+    const partial = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        ...requirement,
+        components: [
+          {
+            id: "water_loss",
+            factRole: "COST",
+            occurrences: [c, dWithoutValue],
+          },
+        ],
+      }),
+      materializedCandidates: selections([cId, "DIRECT"], [dId, "DIRECT"]),
+    });
+    expect(partial.requirements[0].fields[0].status).toBe(
+      FIELD_EVIDENCE_STATUS.PARTIAL
+    );
+    expect(partial.requirements[0].requestedFieldStatus).toBe(
+      REQUESTED_FIELD_STATUS.PARTIAL
+    );
+  });
+
   test.each([
     {
       id: "ST-01",
@@ -126,6 +295,14 @@ describe("requestedFieldEvidenceContract", () => {
       text: "Die Pauschaldeckungssumme beträgt € 2.000.000,-.",
       exactText: "Pauschaldeckungssumme",
       expected: "EUR 2.000.000",
+    },
+    {
+      id: "EL-16",
+      field: "limit",
+      factRole: "INSURED_OBJECT",
+      text: "Wintergärten sind bis zu einer Einzelscheibengröße von 10m² versichert.",
+      exactText: "Wintergärten",
+      expected: "Einzelscheibengröße bis 10 m²",
     },
     {
       id: "ST-02",

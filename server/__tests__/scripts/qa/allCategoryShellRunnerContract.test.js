@@ -13,6 +13,9 @@ const SCRIPT_PATHS = [
   "server/scripts/qa/materializeCategoryFullResult.cjs",
   "server/scripts/qa/summarizeAllCategoryRun.cjs",
 ];
+const SUPPORT_SCRIPT_PATHS = [
+  "server/scripts/qa/ensureAllCategoryRunManifest.cjs",
+];
 
 const STUB_SCRIPT = `
 const fs = require("fs");
@@ -49,33 +52,79 @@ if (script === "extractPolicyDocument.cjs") {
 }
 `;
 
+function createHarness() {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), "all-category-runner-test-")
+  );
+  const runtimeBin = path.join(root, ".runtime/node-v22.23.2/bin");
+  fs.mkdirSync(runtimeBin, { recursive: true });
+  fs.symlinkSync(process.execPath, path.join(runtimeBin, "node"));
+  fs.copyFileSync(RUNNER, path.join(root, path.basename(RUNNER)));
+  for (const relativePath of SCRIPT_PATHS) {
+    const target = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, STUB_SCRIPT);
+  }
+  for (const relativePath of SUPPORT_SCRIPT_PATHS) {
+    const target = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(REPOSITORY_ROOT, relativePath), target);
+  }
+  const fakeBin = path.join(root, "bin");
+  fs.mkdirSync(fakeBin, { recursive: true });
+  const fakeCurl = path.join(fakeBin, "curl");
+  fs.writeFileSync(
+    fakeCurl,
+    '#!/bin/sh\nprintf \'{"data":[{"id":"%s"}]}\' "${FAKE_LOADED_MODEL:-qwen/qwen3.8-27b}"\n'
+  );
+  fs.chmodSync(fakeCurl, 0o755);
+  const pdf = path.join(root, "lf.pdf");
+  const output = path.join(root, "output");
+  const home = path.join(root, "home");
+  fs.writeFileSync(pdf, "fixture");
+  return { root, pdf, output, home, fakeBin };
+}
+
+function runHarness(harness, overrides = {}) {
+  const model = overrides.model || "qwen/qwen3.8-27b";
+  const documentStatus = overrides.documentStatus || "FRAMEWORK_TERMS";
+  return spawnSync(
+    "/bin/bash",
+    [
+      path.join(harness.root, path.basename(RUNNER)),
+      overrides.pdf || harness.pdf,
+      documentStatus,
+      harness.output,
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        HOME: harness.home,
+        PATH: `${harness.fakeBin}:${process.env.PATH}`,
+        POLICY_FULL_MODEL: model,
+        POLICY_FULL_MODEL_TOKEN_LIMIT:
+          overrides.modelTokenLimit || "42496",
+        NODE_ENV: overrides.nodeEnv || "test",
+        POLICY_RUN_RELEASE_ID: overrides.releaseId || "fixture-release",
+        FAKE_LOADED_MODEL: overrides.loadedModel || model,
+      },
+    }
+  );
+}
+
 describe("all-category shell runner", () => {
-  let root;
+  let harness;
 
   afterEach(() => {
-    if (root) fs.rmSync(root, { recursive: true, force: true });
+    if (harness)
+      fs.rmSync(harness.root, { recursive: true, force: true });
   });
 
   test("extracts once and materializes every configured category", () => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), "all-category-runner-test-"));
-    const runtimeBin = path.join(root, ".runtime/node-v22.23.2/bin");
-    fs.mkdirSync(runtimeBin, { recursive: true });
-    fs.symlinkSync(process.execPath, path.join(runtimeBin, "node"));
-    fs.copyFileSync(RUNNER, path.join(root, path.basename(RUNNER)));
-    for (const relativePath of SCRIPT_PATHS) {
-      const target = path.join(root, relativePath);
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, STUB_SCRIPT);
-    }
-    const pdf = path.join(root, "lf.pdf");
-    const output = path.join(root, "output");
-    fs.writeFileSync(pdf, "fixture");
+    harness = createHarness();
 
-    const result = spawnSync(
-      "/bin/bash",
-      [path.join(root, path.basename(RUNNER)), pdf, "FRAMEWORK_TERMS", output],
-      { encoding: "utf8", env: { ...process.env, HOME: root } }
-    );
+    const result = runHarness(harness);
 
     expect(result.status).toBe(0);
     expect(
@@ -83,16 +132,108 @@ describe("all-category shell runner", () => {
     ).toHaveLength(1);
     for (const category of ["VS", "FE", "LW", "ST", "EL", "HP", "VB", "WE"])
       expect(
-        fs.existsSync(path.join(output, category, "result", "answer.md"))
+        fs.existsSync(
+          path.join(harness.output, category, "result", "answer.md")
+        )
       ).toBe(true);
-    expect(fs.existsSync(path.join(output, "summary.md"))).toBe(true);
-
-    const resumed = spawnSync(
-      "/bin/bash",
-      [path.join(root, path.basename(RUNNER)), pdf, "FRAMEWORK_TERMS", output],
-      { encoding: "utf8", env: { ...process.env, HOME: root } }
+    expect(fs.existsSync(path.join(harness.output, "summary.md"))).toBe(true);
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(harness.output, "manifest.private.json"),
+        "utf8"
+      )
     );
+    expect(manifest).toMatchObject({
+      runKind: "ALL_CATEGORIES_QUALITY",
+      releaseId: "fixture-release",
+      configuration: {
+        model: "qwen/qwen3.8-27b",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+    });
+
+    const resumed = runHarness(harness);
     expect(resumed.status).toBe(0);
     expect(resumed.stdout).toContain("ST – bereits vollständig, übersprungen");
+    expect(resumed.stdout).toContain("Resume-Kontext bestätigt");
+  });
+
+  test.each([
+    ["release", { releaseId: "other-release" }, "releaseId"],
+    [
+      "model",
+      { model: "other-model", loadedModel: "other-model" },
+      "model",
+    ],
+    ["model token limit", { modelTokenLimit: "32000" }, "modelTokenLimit"],
+    ["document status", { documentStatus: "ACTIVE" }, "documentStatus"],
+  ])("rejects resume when %s differs", (_label, overrides, mismatch) => {
+    harness = createHarness();
+    expect(runHarness(harness).status).toBe(0);
+
+    const resumed = runHarness(harness, overrides);
+
+    expect(resumed.status).toBe(1);
+    expect(resumed.stderr).toContain("Unsicherer Resume abgelehnt");
+    expect(resumed.stderr).toContain(mismatch);
+  });
+
+  test("rejects resume when PDF contents differ", () => {
+    harness = createHarness();
+    expect(runHarness(harness).status).toBe(0);
+    fs.writeFileSync(harness.pdf, "changed fixture");
+
+    const resumed = runHarness(harness);
+
+    expect(resumed.status).toBe(1);
+    expect(resumed.stderr).toContain("pdfSha256");
+  });
+
+  test("rejects an existing output without a run manifest", () => {
+    harness = createHarness();
+    fs.mkdirSync(harness.output, { recursive: true });
+    fs.writeFileSync(path.join(harness.output, "partial.txt"), "legacy data");
+
+    const result = runHarness(harness);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("enthält Daten, aber kein Manifest");
+  });
+
+  test("fails before a run when the requested model is not loaded", () => {
+    harness = createHarness();
+
+    const result = runHarness(harness, { loadedModel: "different-model" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Angefordertes Modell ist nicht geladen");
+    expect(fs.existsSync(harness.output)).toBe(false);
+  });
+
+  test("rejects a forged release identity outside the test harness", () => {
+    harness = createHarness();
+
+    const result = runHarness(harness, { nodeEnv: "production" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "POLICY_RUN_RELEASE_ID ist ausschließlich im Test-Harness zulässig"
+    );
+  });
+
+  test("rejects a concurrent run through the global atomic lock", () => {
+    harness = createHarness();
+    const lock = path.join(
+      harness.home,
+      "Library/Application Support/at.klincov.polizzenvergleich-v3/QA/.all-categories-quality.lock"
+    );
+    fs.mkdirSync(lock, { recursive: true });
+    fs.writeFileSync(path.join(lock, "owner.private.txt"), "pid=123 output=x");
+
+    const result = runHarness(harness);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("globale Modellsperre");
+    expect(fs.existsSync(harness.output)).toBe(false);
   });
 });

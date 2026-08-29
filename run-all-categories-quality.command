@@ -17,6 +17,19 @@ MODEL="${POLICY_FULL_MODEL:-qwen/qwen3.8-27b}"
 MODEL_TOKEN_LIMIT="${POLICY_FULL_MODEL_TOKEN_LIMIT:-42496}"
 DOCUMENT_KEY="$(basename "$PDF_FILE" .pdf)"
 DOCUMENT_ARTIFACT="$OUTPUT_DIR/document.private.json"
+RUN_MANIFEST="$OUTPUT_DIR/manifest.private.json"
+GLOBAL_LOCK_DIR="$PRIVATE_QA_ROOT/.all-categories-quality.lock"
+LOCK_ACQUIRED=0
+
+cleanup_global_lock() {
+  if [ "$LOCK_ACQUIRED" -eq 1 ]; then
+    rm -f "$GLOBAL_LOCK_DIR/owner.private.txt"
+    rmdir "$GLOBAL_LOCK_DIR" 2>/dev/null || true
+  fi
+}
+
+trap cleanup_global_lock EXIT
+trap 'exit 130' HUP INT TERM
 
 [ -x "$NODE_BIN" ] || {
   printf '%s\n' "Lokale Node-22-Laufzeit fehlt. Bitte zuerst install.command ausführen." >&2
@@ -43,10 +56,70 @@ fi
 }
 
 umask 077
-mkdir -p "$OUTPUT_DIR"
-export LMSTUDIO_BASE_PATH="http://127.0.0.1:1234/v1"
+mkdir -p "$PRIVATE_QA_ROOT"
+if ! mkdir "$GLOBAL_LOCK_DIR" 2>/dev/null; then
+  printf '%s\n' "Ein anderer All-Kategorien-Lauf hält bereits die globale Modellsperre: $GLOBAL_LOCK_DIR" >&2
+  if [ -f "$GLOBAL_LOCK_DIR/owner.private.txt" ]; then
+    sed 's/^/[all-categories] Sperrinhaber: /' "$GLOBAL_LOCK_DIR/owner.private.txt" >&2
+  fi
+  exit 1
+fi
+LOCK_ACQUIRED=1
+printf 'pid=%s output=%s\n' "$$" "$OUTPUT_DIR" > "$GLOBAL_LOCK_DIR/owner.private.txt"
+
+export LMSTUDIO_BASE_PATH="${LMSTUDIO_BASE_PATH:-http://127.0.0.1:1234/v1}"
 export LMSTUDIO_MODEL_PREF="$MODEL"
 export LMSTUDIO_MODEL_TOKEN_LIMIT="$MODEL_TOKEN_LIMIT"
+
+command -v curl >/dev/null 2>&1 || {
+  printf '%s\n' "curl fehlt; LM-Studio-Preflight kann nicht ausgeführt werden." >&2
+  exit 1
+}
+printf '%s\n' "[all-categories] LM Studio und Modell vorprüfen: $MODEL"
+MODEL_RESPONSE="$(curl --fail --silent --show-error \
+  --connect-timeout 5 --max-time 15 \
+  "${LMSTUDIO_BASE_PATH%/}/models")" || {
+  printf '%s\n' "LM Studio ist unter ${LMSTUDIO_BASE_PATH%/} nicht erreichbar." >&2
+  exit 1
+}
+printf '%s' "$MODEL_RESPONSE" | "$NODE_BIN" -e '
+  let body = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => { body += chunk; });
+  process.stdin.on("end", () => {
+    const requested = process.argv[1];
+    let payload;
+    try { payload = JSON.parse(body); }
+    catch { console.error("LM Studio lieferte keine gültige Modellliste."); process.exit(1); }
+    const ids = Array.isArray(payload?.data)
+      ? payload.data.map((entry) => entry?.id).filter(Boolean)
+      : [];
+    if (!ids.includes(requested)) {
+      console.error(`Angefordertes Modell ist nicht geladen: ${requested}`);
+      console.error(`Geladene Modelle: ${ids.length ? ids.join(", ") : "keine"}`);
+      process.exit(1);
+    }
+  });
+' "$MODEL"
+
+MANIFEST_ARGS=(
+  --manifest "$RUN_MANIFEST"
+  --output "$OUTPUT_DIR"
+  --repository "$SCRIPT_DIR"
+  --pdfFile "$PDF_FILE"
+  --model "$MODEL"
+  --modelTokenLimit "$MODEL_TOKEN_LIMIT"
+  --documentStatus "$DOCUMENT_STATUS"
+)
+if [ -n "${POLICY_RUN_RELEASE_ID:-}" ]; then
+  [ "${NODE_ENV:-}" = "test" ] || {
+    printf '%s\n' "POLICY_RUN_RELEASE_ID ist ausschließlich im Test-Harness zulässig." >&2
+    exit 1
+  }
+  MANIFEST_ARGS+=(--releaseId "$POLICY_RUN_RELEASE_ID")
+fi
+"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/ensureAllCategoryRunManifest.cjs" \
+  "${MANIFEST_ARGS[@]}"
 
 catalog_file() {
   case "$1" in

@@ -159,4 +159,26 @@ describe("categoryCatalogCoverageContract", () => {
     for (const requirement of pilot.requirements)
       expect(fullById.get(requirement.id)).toEqual(requirement);
   });
+
+  test.each([
+    "VS_versicherungssumme_und_versicherte_sachen.md",
+    "FE_feuer.md",
+    "LW_leitungswasser.md",
+    "ST_sturm.md",
+    "EL_elementar_und_zusatzdeckungen.md",
+    "HP_haus_und_grundbesitzhaftpflicht.md",
+    "VB_vertragsbestimmungen.md",
+    "WE_wohnungseigentum.md",
+  ])("defines the complete mixed-row contract in %s", (prompt) => {
+    const promptText = fs.readFileSync(
+      path.join(__dirname, "../../../resources/workspaceTemplates", prompt),
+      "utf8"
+    );
+
+    expect(promptText).toContain("- `Gemischt`:");
+    expect(promptText).toContain("- `BELEGT` + `Gemischt`");
+    expect(promptText).toContain(
+      "Nur `Ja`, `Nein`, `Gemischt` oder `Nicht feststellbar`"
+    );
+  });
 });

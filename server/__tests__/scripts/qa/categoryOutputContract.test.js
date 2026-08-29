@@ -82,6 +82,21 @@ describe("category output acceptance contract", () => {
     expect(validate(answer).pass).toBe(true);
   });
 
+  test("accepts only BELEGT with the fully resolved mixed coverage value", () => {
+    const mixed = ROW_1.replace(" | Ja |", " | Gemischt |");
+    expect(
+      validate([HEADER, SEPARATOR, mixed, ROW_2, NOTICE].join("\n")).pass
+    ).toBe(true);
+
+    for (const status of ["TEILBELEGT", "WIDERSPRÜCHLICH", "UNGEKLÄRT"]) {
+      const invalid = mixed.replace(" | BELEGT |", ` | ${status} |`);
+      expect(
+        validate([HEADER, SEPARATOR, invalid, ROW_2, NOTICE].join("\n"))
+          .reasons
+      ).toContain("INVALID_STATUS_COVERAGE:EL-01");
+    }
+  });
+
   test.each([
     [
       "intro",

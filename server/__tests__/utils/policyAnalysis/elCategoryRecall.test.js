@@ -76,6 +76,7 @@ describe("EL category recall catalog", () => {
       "without_watercourse_overflow",
     ]);
     expectFound(result, "EL-06", ["sewer_backflow"]);
+    expectFound(result, "EL-07", ["earthquake"]);
     expectFound(result, "EL-08", ["landslide"]);
     expectOpen(result, "EL-08", ["sinkhole", "subsidence"]);
     expectFound(result, "EL-09", ["avalanche"]);

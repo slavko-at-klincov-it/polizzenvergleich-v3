@@ -62,6 +62,21 @@ describe("deterministicCategoryEvidenceRules", () => {
     ).toBe("NEGATIVE");
   });
 
+  test("lets a local exklusive clause override a carried positive list governor", () => {
+    const text =
+      "Keller- und andere Abstellabteile samt Türen, jedoch exklusive deren Inhalt.";
+
+    expect(
+      clausePolarity({
+        scopeLeadText: "Versichert sind",
+        contextText: text,
+        exactText: "Inhalt",
+        occurrenceStart: 1_000 + text.indexOf("Inhalt"),
+        contextDocumentStart: 1_000,
+      })
+    ).toBe("NEGATIVE");
+  });
+
   test("binds a positive hail clause directly in the storm section", () => {
     expect(
       deterministicCategoryCandidateBinding(
@@ -176,6 +191,34 @@ describe("deterministicCategoryEvidenceRules", () => {
       selectedCandidateIds: ["candidate:hail-positive"],
       coverageEffect: "INCLUDED",
       basis: "EXPLICIT_CATEGORY_CLAUSE:ST:ST-04",
+    });
+  });
+
+  test("creates a terminal excluded result for basement contents named after exklusive", () => {
+    const contextText =
+      "Keller- und andere Abstellabteile oder Boxen samt dazugehörigen Türen, jedoch exklusive deren Inhalt.";
+    const exactText = contextText;
+    const target = {
+      categoryView: "WE",
+      requirementId: "WE-14",
+      factRole: "INSURED_OBJECT",
+      candidates: [
+        {
+          candidateId: "candidate:we14:basement-contents",
+          candidateBinding: "DIRECT",
+          exactText,
+          contextText,
+          contextDocumentStart: 4_000,
+          documentStart: 4_000,
+          scopeLeadText: "Versichert sind Sachen und Einrichtungen",
+        },
+      ],
+    };
+
+    expect(deterministicCategoryPreparedDecision(target)).toEqual({
+      selectedCandidateIds: ["candidate:we14:basement-contents"],
+      coverageEffect: "EXCLUDED",
+      basis: "EXPLICIT_CATEGORY_CLAUSE:WE:WE-14",
     });
   });
 });

@@ -9,7 +9,13 @@ const REQUESTED_FIELD_STATUS = Object.freeze({
 const FIELD_EVIDENCE_STATUS = Object.freeze({
   NOT_EVALUATED: "NOT_EVALUATED",
   NOT_FOUND: "NOT_FOUND",
+  PARTIAL: "PARTIAL",
   FOUND: "FOUND",
+});
+
+const LIMIT_KIND = Object.freeze({
+  CAPPED: "CAPPED",
+  UNBOUNDED: "UNBOUNDED",
 });
 
 const VALUE_BINDING = Object.freeze({
@@ -131,11 +137,23 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
       "REQUESTED_FIELD_SOURCE_RANGE_INVALID",
       occurrence.candidateId
     );
+  const variantScope = occurrence?.variantScopeHint;
   return {
     rawValue,
     normalizedValue: value.normalizedValue,
     valueType: value.valueType,
     unit: value.unit,
+    ...(value.limitKind ? { limitKind: value.limitKind } : {}),
+    ...(value.qualifier ? { qualifier: value.qualifier } : {}),
+    ...(variantScope?.key && variantScope?.label
+      ? {
+          variantScope: {
+            key: variantScope.key,
+            label: variantScope.label,
+            source: variantScope.source,
+          },
+        }
+      : {}),
     binding,
     source: {
       candidateId: occurrence.candidateId,
@@ -148,6 +166,18 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
       exactText: rawValue,
     },
   };
+}
+
+function limitQualifier(text, match) {
+  const start = Math.max(0, match.index - 100);
+  const end = Math.min(text.length, match.index + match[0].length + 140);
+  const nearby = text.slice(start, end);
+  const qualifiers = [];
+  if (/auf\s+[„“"']*\s*Erstes\s+Risiko/iu.test(nearby))
+    qualifiers.push("auf Erstes Risiko");
+  if (/\b(?:je|pro)\s+Schadenfall\b/iu.test(nearby))
+    qualifiers.push("je Schadenfall");
+  return qualifiers.join(", ");
 }
 
 function valueFollowsCandidate(occurrence, match) {
@@ -183,6 +213,8 @@ function extractLimitFacts({ occurrence, binding }) {
           normalizedValue: `EUR ${amount}`,
           valueType: "MONEY",
           unit: "EUR",
+          limitKind: LIMIT_KIND.CAPPED,
+          qualifier: limitQualifier(text, match),
         },
       })
     );
@@ -204,6 +236,8 @@ function extractLimitFacts({ occurrence, binding }) {
             normalizedValue: `EUR ${amount}`,
             valueType: "MONEY",
             unit: "EUR",
+            limitKind: LIMIT_KIND.CAPPED,
+            qualifier: limitQualifier(text, concatenatedMoney),
           },
         })
       );
@@ -227,6 +261,31 @@ function extractLimitFacts({ occurrence, binding }) {
           normalizedValue: `${numeric} %`,
           valueType: "PERCENT",
           unit: "%",
+          limitKind: LIMIT_KIND.CAPPED,
+          qualifier: limitQualifier(text, match),
+        },
+      })
+    );
+  }
+  const dimensionalPattern =
+    /Einzelscheibengr[öo]ße\s+von\s+\d{1,4}(?:[.,]\d+)?\s*m(?:²|2)(?![\p{L}\p{N}])/giu;
+  for (const match of text.matchAll(dimensionalPattern)) {
+    if (!valueFollowsCandidate(occurrence, match)) continue;
+    const dimension = match[0].match(/(\d{1,4}(?:[.,]\d+)?)\s*m(?:²|2)/iu);
+    if (!dimension) continue;
+    matches.push(
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: `Einzelscheibengröße bis ${dimension[1].replace(
+            ".",
+            ","
+          )} m²`,
+          valueType: "DIMENSION",
+          unit: "m²",
+          limitKind: LIMIT_KIND.CAPPED,
         },
       })
     );
@@ -236,12 +295,66 @@ function extractLimitFacts({ occurrence, binding }) {
   );
 }
 
+function extractUnboundedLimitFacts({ occurrence, binding }) {
+  const context = validatedContext(occurrence);
+  const occurrenceEnd = Number(occurrence?.documentEnd);
+  if (!Number.isInteger(occurrenceEnd)) return [];
+  const pattern = /ohne\s+betragliche\s+Beschr[aä]nkung/giu;
+  return [...context.text.matchAll(pattern)]
+    .filter(
+      (match) =>
+        valueFollowsCandidate(occurrence, match) &&
+        context.documentStart + match.index <= occurrenceEnd + 360
+    )
+    .map((match) =>
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: "ohne betragliche Beschränkung",
+          valueType: "LIMIT",
+          unit: null,
+          limitKind: LIMIT_KIND.UNBOUNDED,
+          qualifier: limitQualifier(context.text, match),
+        },
+      })
+    );
+}
+
+function extractFieldGovernorLimitFacts({ occurrence, binding }) {
+  const governor = occurrence?.fieldGovernorHint;
+  if (
+    typeof governor?.text !== "string" ||
+    !Number.isInteger(governor?.documentStart) ||
+    governor.documentEnd !== governor.documentStart + governor.text.length
+  )
+    return [];
+  return extractLimitFacts({
+    occurrence: {
+      ...occurrence,
+      documentStart: governor.documentStart,
+      documentEnd: governor.documentEnd,
+      context: {
+        text: governor.text,
+        documentStart: governor.documentStart,
+        documentEnd: governor.documentEnd,
+      },
+    },
+    binding,
+  });
+}
+
 function extractBoundLimitFacts(options) {
   const occurrenceEnd = Number(options.occurrence?.documentEnd);
   if (!Number.isInteger(occurrenceEnd)) return [];
-  return extractLimitFacts(options).filter(
-    (fact) => fact.source.documentStart <= occurrenceEnd + 360
-  );
+  return [
+    ...extractLimitFacts(options).filter(
+      (fact) => fact.source.documentStart <= occurrenceEnd + 360
+    ),
+    ...extractUnboundedLimitFacts(options),
+    ...extractFieldGovernorLimitFacts(options),
+  ];
 }
 
 function extractOutbuildingLimitFacts(options) {
@@ -844,7 +957,9 @@ function valueCoversRequirement({
     const role = indexed.component.factRole;
     if (
       ["limit", "limits", "amount", "deductible"].includes(field) &&
-      ["LIMIT", "DEDUCTIBLE", "COST", "BENEFIT"].includes(role)
+      ["LIMIT", "DEDUCTIBLE", "COST", "BENEFIT", "INSURED_OBJECT"].includes(
+        role
+      )
     )
       return true;
     if (
@@ -910,9 +1025,20 @@ function extractPreferredFacts({
       })
     )
       continue;
-    factsByBinding
-      .get(binding)
-      .push(...extractor({ occurrence: indexed.occurrence, binding }));
+    const facts = extractor({ occurrence: indexed.occurrence, binding }).map(
+      (fact) =>
+        indexed.component.factRole === "INSURED_OBJECT" &&
+        indexed.requirement.components.length > 1
+          ? {
+              ...fact,
+              componentScope: {
+                id: indexed.component.id,
+                label: indexed.component.label,
+              },
+            }
+          : fact
+    );
+    factsByBinding.get(binding).push(...facts);
   }
 
   const preferred = [
@@ -932,6 +1058,45 @@ function extractPreferredFacts({
   return [...unique.values()];
 }
 
+function selectedVariantScopesForField({
+  requirement,
+  field,
+  candidateById,
+  bindingByCandidateId,
+}) {
+  const scopes = new Map();
+  for (const [candidateId, binding] of bindingByCandidateId) {
+    if (!Object.values(VALUE_BINDING).includes(binding)) continue;
+    const indexed = candidateById.get(candidateId);
+    if (indexed.requirement.id !== requirement.id) continue;
+    if (
+      !valueCoversRequirement({
+        indexed,
+        field,
+        binding,
+        candidateById,
+        bindingByCandidateId,
+      })
+    )
+      continue;
+    const scope = indexed.occurrence.variantScopeHint;
+    if (scope?.key && scope?.label && !scopes.has(scope.key))
+      scopes.set(scope.key, { key: scope.key, label: scope.label });
+  }
+  return [...scopes.values()];
+}
+
+function fieldEvidenceStatus({ facts, variantScopes }) {
+  if (facts.length === 0) return FIELD_EVIDENCE_STATUS.NOT_FOUND;
+  if (variantScopes.length < 2) return FIELD_EVIDENCE_STATUS.FOUND;
+  const evidencedScopes = new Set(
+    facts.map((fact) => fact.variantScope?.key).filter(Boolean)
+  );
+  return variantScopes.every(({ key }) => evidencedScopes.has(key))
+    ? FIELD_EVIDENCE_STATUS.FOUND
+    : FIELD_EVIDENCE_STATUS.PARTIAL;
+}
+
 function aggregateRequestedFieldStatus(fields) {
   if (fields.length === 0) return REQUESTED_FIELD_STATUS.NOT_REQUIRED;
   const evaluated = fields.filter(
@@ -942,9 +1107,13 @@ function aggregateRequestedFieldStatus(fields) {
     ({ status }) => status === FIELD_EVIDENCE_STATUS.FOUND
   ).length;
   if (foundCount === fields.length) return REQUESTED_FIELD_STATUS.COMPLETE;
+  if (
+    fields.some(({ status }) => status === FIELD_EVIDENCE_STATUS.PARTIAL) ||
+    foundCount > 0
+  )
+    return REQUESTED_FIELD_STATUS.PARTIAL;
   if (evaluated.length < fields.length) return REQUESTED_FIELD_STATUS.PARTIAL;
-  if (foundCount === 0) return REQUESTED_FIELD_STATUS.NOT_FOUND;
-  return REQUESTED_FIELD_STATUS.PARTIAL;
+  return REQUESTED_FIELD_STATUS.NOT_FOUND;
 }
 
 /**
@@ -987,12 +1156,16 @@ function materializeRequestedFieldEvidence({
         candidateById,
         bindingByCandidateId,
       });
+      const variantScopes = selectedVariantScopesForField({
+        requirement,
+        field,
+        candidateById,
+        bindingByCandidateId,
+      });
       return {
         field,
-        status:
-          facts.length > 0
-            ? FIELD_EVIDENCE_STATUS.FOUND
-            : FIELD_EVIDENCE_STATUS.NOT_FOUND,
+        status: fieldEvidenceStatus({ facts, variantScopes }),
+        ...(variantScopes.length > 0 ? { variantScopes } : {}),
         facts,
       };
     });
@@ -1011,6 +1184,7 @@ function materializeRequestedFieldEvidence({
 
 module.exports = {
   FIELD_EVIDENCE_STATUS,
+  LIMIT_KIND,
   REQUESTED_FIELD_STATUS,
   VALUE_BINDING,
   materializeRequestedFieldEvidence,

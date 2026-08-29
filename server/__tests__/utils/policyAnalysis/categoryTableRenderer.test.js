@@ -215,6 +215,66 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test("renders variant-qualified values and quotes a preceding list governor", () => {
+    const governor =
+      "Folgende Erweiterungen gelten mit einer Versicherungssumme von € 7.500 auf Erstes Risiko mitversichert:";
+    const input = fixture({
+      id: "LW-27",
+      label: "Wasserverlustkosten",
+      requestedFields: ["limit"],
+      fieldResult: {
+        requirementId: "LW-27",
+        requestedFieldStatus: "COMPLETE",
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                rawValue: "€ 7.500",
+                normalizedValue: "EUR 7.500",
+                qualifier: "auf Erstes Risiko",
+                variantScope: { key: "C_DECKUNG", label: "C-Deckung" },
+                source: {
+                  candidateId: "candidate:0",
+                  documentStart: 50,
+                  documentEnd: 57,
+                },
+              },
+              {
+                rawValue: "EUR 10.000",
+                normalizedValue: "EUR 10.000",
+                qualifier: "je Schadenfall",
+                variantScope: { key: "D_DECKUNG", label: "D-Deckung" },
+                source: { candidateId: "candidate:1" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const first = input.worksheet.requirements[0].components[0].occurrences[0];
+    const amountOffset = governor.indexOf("€ 7.500");
+    first.fieldGovernorHint = {
+      text: governor,
+      documentStart: 0,
+      documentEnd: governor.length,
+    };
+    input.requestedFieldMaterialization.requirements[0].fields[0].facts[0].source.documentStart =
+      amountOffset;
+    input.requestedFieldMaterialization.requirements[0].fields[0].facts[0].source.documentEnd =
+      amountOffset + "€ 7.500".length;
+
+    const [row] = buildCategoryTableRows(input);
+    expect(row).toMatchObject({
+      coverage: "Ja",
+      coverageAmount:
+        "C-Deckung: EUR 7.500 auf Erstes Risiko; D-Deckung: EUR 10.000 je Schadenfall",
+      reviewStatus: "BELEGT",
+    });
+    expect(row.source).toContain("€ 7.500");
+  });
+
   test("renders the exact existing eight-column table with a complete included limit", () => {
     const input = fixture({ fieldResult: completeLimit() });
     const [row] = buildCategoryTableRows(input);
@@ -399,7 +459,27 @@ describe("categoryTableRenderer", () => {
     expect(row).toMatchObject({
       documentedContent:
         "Bestandteil 1: eingeschlossen; Bestandteil 2: ausgeschlossen",
+      coverage: "Gemischt",
+      reviewStatus: "BELEGT",
+    });
+  });
+
+  test("keeps mixed component effects partial when a requested value is missing", () => {
+    const [row] = buildCategoryTableRows(
+      fixture({
+        requestedFields: ["limit"],
+        componentEffects: [COVERAGE_EFFECT.INCLUDED, COVERAGE_EFFECT.EXCLUDED],
+        fieldResult: {
+          requirementId: "VS-21",
+          requestedFieldStatus: "NOT_FOUND",
+          fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
+        },
+      })
+    );
+
+    expect(row).toMatchObject({
       coverage: "Nicht feststellbar",
+      coverageAmount: "Nicht feststellbar",
       reviewStatus: "TEILBELEGT",
     });
   });

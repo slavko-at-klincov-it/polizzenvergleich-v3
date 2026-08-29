@@ -9,7 +9,12 @@ const DEFAULT_EXPECTED_HEADERS = [
   "Prüfstatus",
 ];
 
-const ALLOWED_COVERAGE = new Set(["Ja", "Nein", "Nicht feststellbar"]);
+const ALLOWED_COVERAGE = new Set([
+  "Ja",
+  "Nein",
+  "Gemischt",
+  "Nicht feststellbar",
+]);
 const ALLOWED_STATUS = new Set([
   "BELEGT",
   "TEILBELEGT",
@@ -19,6 +24,7 @@ const ALLOWED_STATUS = new Set([
 const ALLOWED_STATUS_COVERAGE = new Set([
   "BELEGT|Ja",
   "BELEGT|Nein",
+  "BELEGT|Gemischt",
   "TEILBELEGT|Nicht feststellbar",
   "WIDERSPRÜCHLICH|Nicht feststellbar",
   "UNGEKLÄRT|Nicht feststellbar",

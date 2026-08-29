@@ -144,6 +144,8 @@
       "id": "EL-07",
       "label": "Erdbeben",
       "requestedFields": [],
+      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "components": [
         {
           "id": "earthquake",
@@ -323,7 +325,8 @@
     {
       "id": "EL-16",
       "label": "Wintergarten und Vitrinen",
-      "requestedFields": ["limit", "condition"],
+      "requestedFields": ["limit"],
+      "optionalFields": ["condition"],
       "components": [
         {
           "id": "winter_garden",
