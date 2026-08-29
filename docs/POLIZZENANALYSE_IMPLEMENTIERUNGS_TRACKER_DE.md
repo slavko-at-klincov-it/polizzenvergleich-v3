@@ -3140,5 +3140,6 @@ PASS: ausschließlich VB-24 um den echten Verfahrensbeleg verbessert
 PASS: übrige 35 LF-VB-Zeilen exakt identisch
 PASS: WEVIG-VB 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
 PASS: WEVIG gegenüber RC28 exakt 0 Änderungen
+PASS: RC29-Tag 00b60a53 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Überschrift oder Kostenklausel beweist ein Verfahrensrecht
 ```

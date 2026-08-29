@@ -67,6 +67,8 @@ PASS: Server-Lint, Prettier und git diff --check
 PASS: reale LF-Vorbereitung bindet genau den vollständigen VB-24-Satz
 PASS: WEVIG-Vorbereitung erzeugt keinen VB-24-Kandidaten
 PASS: frische LF- und WEVIG-VB-27B-Läufe
+PASS: Tag 00b60a53 auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: exakter Tag/SHA und sauberer Checkout bestätigt
 ```
 
 ## Update
