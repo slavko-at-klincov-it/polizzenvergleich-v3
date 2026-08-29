@@ -2319,6 +2319,54 @@ REVIEW_REQUIRED: vollständige Fachoracles für alle Dokument-/Kategoriepaare
 NO CLAIM: 99 Prozent oder finale V3.3.0-Freigabe
 ```
 
+## 42. RC11-27B-Befund und RC12-VS-Scopeabschluss
+
+Der frische vollständige WEVIG-RC11-Lauf war technisch vollständig:
+
+```text
+320/320 Zeilen
+369 kontrollierte Kandidaten
+224 ausgewählte Quellen
+31 BELEGT / 24 TEILBELEGT / 265 UNGEKLÄRT
+qwen/qwen3.8-27b
+PROPOSAL
+```
+
+FE, LW, ST, HP, VB und WE blieben gegenüber dem positiven RC10-Befund
+byte-identisch. Die vier RC11-EL-Zeilen verhielten sich exakt wie vorgesehen:
+`EL-10` wurde vollständig belegt, `EL-21`, `EL-27` und `EL-34` erhielten nur
+die jeweils atomar vorhandenen Teilbelege. `EL-04` blieb mit EUR 20.000,00
+belegt; `EL-16` blieb ohne falschen Widerspruch offen.
+
+`VS-21` enthielt nach RC11 wieder beide echten Kostenwirkungen und den
+richtigen Betrag, blieb aber ebenso wie `VS-28` formal `TEILBELEGT`, weil der
+Renderer einen ausschließlich katalogisierten engen Sachspartenscope ohne
+Zeilenfreigabe nicht als vollständig anerkennt. Für genau diese beiden
+spartenübergreifenden Leistungszeilen gilt nun
+`MATCHING_SCOPE_INCLUDED_SUFFICIENT`. Die zugelassenen ScopeKeys waren bereits
+vorhanden; RC12 öffnet keine neue Sparte und verändert weder Kandidatensuche
+noch Modellentscheidung.
+
+Die deterministische Re-Materialisierung des vollständigen frischen
+RC11-27B-Artefakts ergibt:
+
+```text
+VS-21: BELEGT / Ja / EUR 6.121.600,00 auf Erstes Risiko
+VS-28: BELEGT / Ja / Dauer 6 Monate
+alle übrigen VS-Zeilen unverändert
+```
+
+RC12 ist deshalb ein reiner Katalog-/Rendererabschluss. Der WEVIG-Beweis kann
+gegen das frische RC11-Modellartefakt wiederholt werden; der nächste große
+Modell-Gesamtlauf wird als LF-Regressionsgate verwendet.
+
+```text
+PASS: 89 Jest-Suites / 977 Tests
+PASS: Server-, Frontend- und Collector-Lint
+PASS: exakte RC11-WEVIG-Re-Materialisierung für VS-21 und VS-28
+NEXT: RC12 deployen, remote re-materialisieren und LF vollständig regressieren
+```
+
 ## 41. RC10-27B-Befund und RC11-Nachschärfung
 
 Der frische vollständige WEVIG-RC10-Lauf war technisch vollständig:

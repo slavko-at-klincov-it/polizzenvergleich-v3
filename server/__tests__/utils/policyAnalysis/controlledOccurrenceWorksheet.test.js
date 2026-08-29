@@ -1,4 +1,5 @@
 const catalog = require("../../../resources/policyAnalysis/vs-occurrence-pilot.v0.1.json");
+const fullCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 const {
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
@@ -1133,6 +1134,23 @@ describe("controlledOccurrenceWorksheet", () => {
       buildControlledOccurrenceWorksheet(inputs)
     );
   });
+
+  test.each(["VS-21", "VS-28"])(
+    "%s accepts its declared property-module scope as complete evidence",
+    (requirementId) => {
+      for (const selectedCatalog of [catalog, fullCatalog]) {
+        const requirement = selectedCatalog.requirements.find(
+          ({ id }) => id === requirementId
+        );
+        expect(requirement.scopePolicy).toBe(
+          "MATCHING_SCOPE_INCLUDED_SUFFICIENT"
+        );
+        expect(requirement.scopeRules.narrowScopeKeys.length).toBeGreaterThan(
+          0
+        );
+      }
+    }
+  );
 
   test("fails closed on an incomplete or corrupt PageMap", () => {
     expect(() =>

@@ -57,6 +57,7 @@
       "id": "VS-21",
       "label": "Aufräum- und Abbruchkosten, Höhe des Limits",
       "requestedFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "bindingStructures": [
         {
           "type": "SHARED_GOVERNOR",
@@ -126,6 +127,7 @@
       "id": "VS-28",
       "label": "Mietzinsentgang, Dauer der Leistung",
       "requestedFields": ["duration"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": {
         "narrowScopeKeys": [
           "FEUER_INSURANCE",
