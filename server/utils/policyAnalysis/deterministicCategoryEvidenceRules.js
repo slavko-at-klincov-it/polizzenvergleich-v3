@@ -299,6 +299,40 @@ function explicitHp16TenantRecourseBinding({
   };
 }
 
+function explicitHp02AnnualAggregateBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "HP" ||
+    requirement?.id !== "HP-02" ||
+    component?.id !== "annual_aggregate_multiple" ||
+    component?.factRole !== "LIMIT" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "HAFTPFLICHT_INSURANCE"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/(?:Deckungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
+      clause
+    ) ||
+    !/(?:Versicherungsf[aä]lle\s+eines\s+Jahres|Jahresh[oö]chstleistung|Jahres(?:gesamt|aggregate))/iu.test(
+      clause
+    ) ||
+    !/(?:maximal|höchstens|bis\s+zu)\s+(?:das\s+)?(?:\d{1,2}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\s*(?:-?\s*mal|-?\s*fach(?:e[snrm]?)?)/iu.test(
+      clause
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "HP_02_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+    authoritative: true,
+  };
+}
+
 function explicitHp11LiabilityScopeBinding({
   categoryView,
   requirement,
@@ -407,6 +441,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (hp16Binding) return hp16Binding;
+
+  const hp02Binding = explicitHp02AnnualAggregateBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (hp02Binding) return hp02Binding;
 
   const hp11Binding = explicitHp11LiabilityScopeBinding({
     categoryView,
@@ -592,6 +634,22 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    target.categoryView === "HP" &&
+    target.requirementId === "HP-02" &&
+    target.componentId === "annual_aggregate_multiple" &&
+    target.candidates.every(
+      ({ deterministicBindingBasis }) =>
+        deterministicBindingBasis === "HP_02_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE"
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: "EXPLICIT_HP02_ANNUAL_AGGREGATE_MULTIPLE:HP:HP-02",
+    };
   if (
     target.categoryView === "VB" &&
     ["VB-01", "VB-27"].includes(target.requirementId) &&

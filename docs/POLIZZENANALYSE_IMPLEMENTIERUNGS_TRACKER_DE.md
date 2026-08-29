@@ -2804,3 +2804,31 @@ PASS: WEVIG-EL-Kontrolllauf, 58/58 Kandidaten, 69/69 Komponenten,
       36/36 Zeilen und keine semantische Änderung gegenüber RC11
 NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
 ```
+
+## 48. RC18: Jahresaggregat-Vielfaches als servergebundener Wert
+
+Die aktuelle LF-HP-Auswertung zeigte einen isolierten Verlust zwischen
+korrekter Evidenz und sichtbarer Zeile. `HP-02` war bereits als allgemeine,
+definierte Jahreshöchstleistung belegt; der Text `maximal dreimal` wurde aber
+nicht vom bisherigen Geld-/Prozent-/Dauer-Wertevertrag erfasst. Deshalb blieb
+die Zeile `TEILBELEGT`, obwohl die Vertragsaussage vollständig war.
+
+RC18 führt keinen LF-Wortlautparser ein. Der allgemeine Vertrag verlangt im
+selben kontrollierten Haftpflicht-Klauselkontext einen Jahresbezug, eine
+Deckungssummenbasis, einen Begrenzungsanker und ein numerisches oder
+ausgeschriebenes `mal`-/`fach`-Vielfaches. Nur `HP-02` darf daraus ein
+servergebundenes `MULTIPLE` mit exaktem Quellspan erhalten. Rollenfremde
+Zählungen, eine Summe ohne Jahresbezug und ein Jahresbezug ohne Summenbasis
+bleiben gesperrt.
+
+```text
+PASS: 91 Jest-Suites / 1021 Tests und vollständiger Lint
+PASS: positive Wort-/Zahlvarianten und adversariale Negativvarianten
+PASS: Scan über 24 aktuelle LF-/WEVIG-Worksheets, genau ein Treffer
+PASS: echter LF-HP-27B-Replay, 36/36 Zeilen verglichen
+PASS: ausschließlich HP-02 verbessert
+      TEILBELEGT / Nicht feststellbar -> BELEGT / Ja / 3-fach
+PASS: übrige 35 HP-Zeilen bytegenau unverändert
+PENDING: frischer LF-HP- und WEVIG-HP-Lauf mit qwen/qwen3.8-27b
+NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
+```

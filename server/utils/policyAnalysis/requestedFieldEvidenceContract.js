@@ -502,6 +502,70 @@ const GERMAN_MONTH_NUMBERS = Object.freeze({
   zwölf: 12,
 });
 
+function normalizedGermanCardinal(rawValue) {
+  const normalized = String(rawValue || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("de");
+  return /^\d+$/u.test(normalized)
+    ? Number(normalized)
+    : GERMAN_MONTH_NUMBERS[normalized];
+}
+
+function extractAnnualAggregateMultipleFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  if (
+    !/(?:Versicherungsf[aä]lle\s+eines\s+Jahres|Jahresh[oö]chstleistung|Jahres(?:gesamt|aggregate))/iu.test(
+      text
+    ) ||
+    !/(?:Deckungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(text)
+  )
+    return [];
+
+  const cardinal =
+    "(?:\\d{1,2}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)";
+  const multiplier = `${cardinal}\\s*(?:-?\\s*mal|-?\\s*fach(?:e[snrm]?)?)`;
+  const patterns = [
+    new RegExp(
+      `(?:maximal|höchstens|bis\\s+zu)\\s+(?:das\\s+)?(?<value>${multiplier})`,
+      "giu"
+    ),
+    new RegExp(
+      `(?:beträgt|entspricht)\\s+(?:höchstens\\s+)?(?:dem|das)?\\s*(?<value>${multiplier})(?=\\s+der\\s+(?:Deckungs|Versicherungs|Pauschal))`,
+      "giu"
+    ),
+  ];
+  const facts = [];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const rawMultiplier = match.groups?.value;
+      if (!rawMultiplier) continue;
+      const numberMatch = rawMultiplier.match(
+        new RegExp(`^(${cardinal})`, "iu")
+      );
+      if (!numberMatch) continue;
+      const count = normalizedGermanCardinal(numberMatch[1]);
+      if (!Number.isInteger(count) || count < 1) continue;
+      const valueMatch = [rawMultiplier];
+      valueMatch.index = match.index + match[0].lastIndexOf(rawMultiplier);
+      if (!valueFollowsCandidate(occurrence, valueMatch)) continue;
+      facts.push(
+        sourceBoundFact({
+          occurrence,
+          binding,
+          match: valueMatch,
+          value: {
+            normalizedValue: `${count}-fach`,
+            valueType: "MULTIPLE",
+            unit: "MULTIPLE",
+            limitKind: LIMIT_KIND.CAPPED,
+          },
+        })
+      );
+    }
+  }
+  return facts;
+}
+
 function extractDurationFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const durationPattern =
@@ -929,6 +993,8 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
 
 function extractorFor(requirement, field) {
   const requirementId = requirement.id;
+  if (requirementId === "HP-02" && field === "limit")
+    return extractAnnualAggregateMultipleFacts;
   if (requirementId === "VB-01" && field === "duration")
     return extractContractTermDurationFacts;
   if (requirementId === "VB-27" && field === "amount")

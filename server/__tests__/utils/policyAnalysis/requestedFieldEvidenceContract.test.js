@@ -700,6 +700,108 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test.each([
+    ["maximal dreimal", "dreimal", "3-fach"],
+    ["höchstens 4-mal", "4-mal", "4-fach"],
+  ])(
+    "binds the annual aggregate %s as an exact multiple",
+    (wording, rawValue, normalizedValue) => {
+      const text = `Die maßgebende Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres zusammen ${wording} zur Verfügung.`;
+      const source = textualOccurrence({
+        candidateId: `candidate:HP-02:${wording}`,
+        text,
+        exactText:
+          "Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres",
+        contextStart: 5_000,
+      });
+      const result = materializeRequestedFieldEvidence({
+        worksheet: textualWorksheet({
+          id: "HP-02",
+          label: "Jahreshöchstleistung als Vielfaches der Deckungssumme",
+          requestedFields: ["limit", "condition"],
+          components: [
+            {
+              id: "annual_aggregate_multiple",
+              factRole: "LIMIT",
+              occurrences: [source],
+            },
+          ],
+        }),
+        materializedCandidates: selections([
+          `candidate:HP-02:${wording}`,
+          "DIRECT",
+        ]),
+      });
+      const requirement = result.requirements[0];
+      const fact = requirement.fields.find(({ field }) => field === "limit")
+        .facts[0];
+
+      expect(requirement.requestedFieldStatus).toBe(
+        REQUESTED_FIELD_STATUS.COMPLETE
+      );
+      expect(fact).toMatchObject({
+        rawValue,
+        normalizedValue,
+        valueType: "MULTIPLE",
+        unit: "MULTIPLE",
+        limitKind: "CAPPED",
+        source: {
+          candidateId: `candidate:HP-02:${wording}`,
+          documentStart: 5_000 + text.indexOf(rawValue),
+          documentEnd: 5_000 + text.indexOf(rawValue) + rawValue.length,
+          exactText: rawValue,
+        },
+      });
+    }
+  );
+
+  test.each([
+    "Die Prämie wird dreimal jährlich bezahlt.",
+    "Die Pauschalversicherungssumme steht maximal dreimal zur Verfügung.",
+    "Für alle Versicherungsfälle eines Jahres sind maximal drei Meldungen zulässig.",
+  ])("does not turn an unrelated count into an HP-02 multiple: %s", (text) => {
+    const exactText = text.includes("Pauschalversicherungssumme")
+      ? "Pauschalversicherungssumme"
+      : text.includes("Versicherungsfälle")
+        ? "Versicherungsfälle eines Jahres"
+        : "dreimal jährlich";
+    const source = textualOccurrence({
+      candidateId: `candidate:HP-02:negative:${exactText}`,
+      text,
+      exactText,
+      contextStart: 7_000,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "HP-02",
+        label: "Jahreshöchstleistung als Vielfaches der Deckungssumme",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "annual_aggregate_multiple",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        `candidate:HP-02:negative:${exactText}`,
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+  });
+
   test("never binds values from mention-only or unresolved candidates", () => {
     const mention = occurrence({
       candidateId: "candidate:mention",

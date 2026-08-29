@@ -247,6 +247,67 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("binds an explicit HP annual aggregate multiple authoritatively", () => {
+    const input = bindingInput({
+      text: "Die maßgebende Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung.",
+      exactText:
+        "Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres zusammen maximal dreimal",
+    });
+    input.worksheet.catalog.categoryView = "HP";
+    input.requirement.id = "HP-02";
+    input.component = {
+      id: "annual_aggregate_multiple",
+      factRole: "LIMIT",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "HP_02_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "HP",
+        requirementId: "HP-02",
+        componentId: "annual_aggregate_multiple",
+        candidates: [
+          {
+            candidateId: "candidate:annual-aggregate",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis:
+              "HP_02_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:annual-aggregate"],
+      coverageEffect: "DEFINED",
+      basis: "EXPLICIT_HP02_ANNUAL_AGGREGATE_MULTIPLE:HP:HP-02",
+    });
+  });
+
+  test.each([
+    "Die Pauschalversicherungssumme steht maximal dreimal zur Verfügung.",
+    "Für alle Versicherungsfälle eines Jahres sind maximal drei Meldungen möglich.",
+  ])("does not authoritatively bind an incomplete HP-02 clause: %s", (text) => {
+    const input = bindingInput({
+      text,
+      exactText: text.includes("Pauschalversicherungssumme")
+        ? "Pauschalversicherungssumme"
+        : "Versicherungsfälle eines Jahres",
+    });
+    input.worksheet.catalog.categoryView = "HP";
+    input.requirement.id = "HP-02";
+    input.component = {
+      id: "annual_aggregate_multiple",
+      factRole: "LIMIT",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+
+    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
   test("rejects a clause activated in several other coverage chapters", () => {
     const input = bindingInput({
       text: "Versichert sind Schäden durch Hagel.",
