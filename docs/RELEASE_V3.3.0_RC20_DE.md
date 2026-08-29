@@ -62,9 +62,31 @@ Echter WEVIG-VB-Kontrollreplay:
 
 ## Mac-Studio-Nachweis
 
-Noch ausständig. RC20 wird erst nach Installation des unveränderlichen Tags,
-beiden Doctor-Prüfungen, einem frischen LF-VB-Lauf und einem frischen
-WEVIG-VB-Kontrolllauf mit `qwen/qwen3.8-27b` abschließend bewertet.
+RC20 wurde als unveränderlicher Tag `32bb07fb` auf dem Mac Studio installiert.
+Update, integrierter Doctor, separater Doctor, Tag, SHA und sauberer Checkout
+wurden geprüft. Zwei frische Läufe mit `qwen/qwen3.8-27b` ergaben:
+
+```text
+LF-VB:
+  35/35 Triage-Kandidaten
+  52/52 atomare Komponenten
+  36/36 Endzeilen
+  22 ausgewählte Quellen
+
+Vollständiger Vergleich gegen den akzeptierten RC12-VB-Lauf:
+  nur VB-26 verbessert
+  TEILBELEGT / Nicht feststellbar
+    -> BELEGT / Ja / Dauer: 3 Jahre
+  übrige 35 VB-Zeilen semantisch identisch
+
+WEVIG-VB-Kontrolllauf:
+  20/20 Triage-Kandidaten
+  52/52 atomare Komponenten
+  36/36 Endzeilen
+  9 ausgewählte Quellen
+  0 semantische Änderungen gegenüber dem akzeptierten RC17-VB-Lauf
+  VB-26 bleibt UNGEKLÄRT / Nicht feststellbar
+```
 
 ## Update
 

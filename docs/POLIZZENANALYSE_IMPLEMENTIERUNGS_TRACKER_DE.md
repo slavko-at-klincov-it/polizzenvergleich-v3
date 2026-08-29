@@ -2895,6 +2895,12 @@ PASS: ausschließlich VB-26 verbessert
       TEILBELEGT -> BELEGT / Ja / Dauer 3 Jahre
 PASS: übrige 35 LF-VB-Zeilen unverändert
 PASS: WEVIG-VB-Kontrollreplay, 36/36 Zeilen und 0 Änderungen
-PENDING: frischer LF-VB- und WEVIG-VB-Lauf mit qwen/qwen3.8-27b
+PASS: RC20-Tag 32bb07fb auf Mac Studio installiert; beide Doctor-Läufe grün
+PASS: frischer LF-VB-Lauf, 35/35 Kandidaten, 52/52 Komponenten,
+      36/36 Zeilen und 22 Quellen
+PASS: gegen RC12 exakt VB-26 verbessert; übrige 35 Zeilen stabil
+PASS: frischer WEVIG-VB-Kontrolllauf, 20/20 Kandidaten,
+      52/52 Komponenten, 36/36 Zeilen und 0 semantische Änderungen
+PASS: WEVIG VB-26 bleibt ehrlich UNGEKLÄRT / Nicht feststellbar
 NO CLAIM: externe Mehrversicherer-Generalisierung ohne Holdout nicht bewiesen
 ```
