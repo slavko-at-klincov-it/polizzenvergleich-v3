@@ -3166,3 +3166,24 @@ PASS: WEVIG gegenüber RC21 exakt 0 Änderungen
 PASS: RC30-Tag ca7d5e32 auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: Heizungsnennung in fremder Sparte beweist Leitungswasserdeckung
 ```
+
+## 61. RC31: Dachlawine als Schnee- und Eisrutsch belegen
+
+WEVIG `ST-27` blieb teilweise, obwohl das Sturmkapitel ausdrücklich
+`Dachlawinen (Schnee und Eis) auf Erstes Risiko` nennt. Die Taxonomie kannte
+Lawinen, aber nicht die Dachlawine als gemeinsamen Beleg für Lawine und
+Schneerutsch.
+
+RC31 ergänzt diese fachliche Synonymie und bindet sie nur mit Klammerzusatz,
+Erstrisiko-Governor und Sturm-Scope. Beide Rollen teilen denselben realen
+Klauselspan und werden serverseitig entschieden.
+
+```text
+PASS: 93 Jest-Suites / 1067 Tests und Server-Lint
+PASS: WEVIG-ST 17/17 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
+PASS: ST-27 TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
+PASS: übrige 35 WEVIG-ST-Zeilen exakt identisch
+PASS: LF-ST 53/53 Kandidaten, 54/54 Komponenten, 36/36 Zeilen
+PASS: LF gegenüber RC25 exakt 0 Änderungen
+NO CLAIM: Vorschadenangabe oder bloße Lawinennennung beweist Deckung
+```
