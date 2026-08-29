@@ -3096,3 +3096,25 @@ PASS: LF-Reichweite unverändert
 PASS: RC27-Tag 3334616c auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: bloße Überschriften oder unbekannte Gemeinschaftsobjekte bewiesen
 ```
+
+## 58. RC28: Regressverzicht für Mieter und Haushaltsangehörige
+
+LF `VB-16` enthielt bereits den vollständigen Regressverzicht gegenüber einem
+Mieter und einem mit ihm in häuslicher Gemeinschaft lebenden
+Familienangehörigen. Der VB-Katalog kannte die bei `HP-16` bereits bewiesene
+reale Formulierung nicht und fand nur die Überschrift.
+
+RC28 ergänzt die beiden Begünstigtenwortlaute und verwendet denselben engen
+Klauselvertrag für VB. Bewohner werden nur gebunden, wenn der Haushaltssatz
+im selben Kontext steht. `VB-15` bleibt ohne Wohnungseigentümerbeleg offen.
+
+```text
+PASS: 93 Jest-Suites / 1064 Tests und Server-Lint
+PASS: LF-VB 37/37 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: ausschließlich VB-16 in Status/Deckung verbessert
+      TEILBELEGT / Nicht feststellbar -> BELEGT / Ja
+PASS: VB-15 weiterhin UNGEKLÄRT
+PASS: WEVIG-VB 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen
+PASS: WEVIG gegenüber RC20 exakt 0 semantische Änderungen
+NO CLAIM: Mieter implizieren Wohnungseigentümer oder beliebige Bewohner
+```
