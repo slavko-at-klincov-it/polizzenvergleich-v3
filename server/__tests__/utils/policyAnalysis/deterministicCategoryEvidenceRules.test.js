@@ -485,6 +485,55 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test.each(["claims_handling", "claims_contact"])(
+    "binds a complete VB-36 claims-service contact block for %s",
+    (componentId) => {
+      const input = bindingInput({
+        text: "Das kostenlose Schadenmanagement: Unter 0800 204 44 00 ermöglichen wir Ihnen rund um die Uhr eine rasche und unbürokratische telefonische Schadenmeldung. Bei Problemen und Notfällen erhalten Sie Beratung und Hilfestellung.",
+        exactText: "telefonische Schadenmeldung",
+      });
+      input.worksheet.catalog.categoryView = "VB";
+      input.requirement.id = "VB-36";
+      input.component = { id: componentId, factRole: "CONDITION" };
+      input.occurrence.sectionScopeHint = {
+        scopeKey: "GENERAL_CONTRACT_TERMS",
+        text: "Allgemeines",
+      };
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: "VB_36_EXPLICIT_CLAIMS_SERVICE_AND_TELEPHONE_CONTACT",
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each([
+    "Das kostenlose Schadenmanagement wird näher beschrieben.",
+    "Unter 0800 204 44 00 erhalten Sie allgemeine Produktinformationen.",
+    "Eine telefonische Schadenmeldung ist rund um die Uhr möglich.",
+  ])("does not bind an incomplete VB-36 contact block: %s", (text) => {
+    const input = bindingInput({
+      text,
+      exactText: text.includes("Schadenmanagement")
+        ? "Schadenmanagement"
+        : text.includes("Schadenmeldung")
+          ? "telefonische Schadenmeldung"
+          : "0800 204 44 00",
+    });
+    input.worksheet.catalog.categoryView = "VB";
+    input.requirement.id = "VB-36";
+    input.component = { id: "claims_contact", factRole: "CONDITION" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "GENERAL_CONTRACT_TERMS",
+      text: "Allgemeines",
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding(input)?.authoritative
+    ).not.toBe(true);
+  });
+
   test.each([
     ["combined_liability_limit", "LIMIT"],
     ["personal_injury", "DAMAGE"],

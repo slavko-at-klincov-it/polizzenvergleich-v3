@@ -207,6 +207,23 @@ describe("P0 category catalog candidate recall", () => {
     expectSharedGroup(result, "VB-36", ["claims_handling", "claims_contact"]);
   });
 
+  test("finds claims handling and contact in a compact service block", () => {
+    const result = worksheet(
+      vbCatalog,
+      [
+        "ALLGEMEINE VERTRAGSBESTIMMUNGEN",
+        "Das kostenlose Schadenmanagement:",
+        "Unter 0800 204 44 00 ermöglichen wir Ihnen rund um die Uhr eine rasche und unbürokratische telefonische Schadenmeldung.",
+        "Bei Problemen und Notfällen erhalten Sie Beratung und Hilfestellung.",
+      ].join("\n")
+    );
+
+    expectOccurrences(result, [
+      ["VB-36", ["claims_handling", "claims_contact"]],
+    ]);
+    expectSharedGroup(result, "VB-36", ["claims_handling", "claims_contact"]);
+  });
+
   test("finds every beneficiary in the tenant recourse-waiver clause", () => {
     const result = worksheet(
       vbCatalog,

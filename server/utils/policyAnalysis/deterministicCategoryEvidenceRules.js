@@ -624,6 +624,46 @@ function explicitVb24ExpertProcedureBinding({
   };
 }
 
+/**
+ * Recognises a concrete claims-service contact block. Both the operational
+ * service and a locally stated telephone channel are mandatory so a generic
+ * mention of claims handling or an unrelated contact cannot satisfy VB-36.
+ */
+function explicitVb36ClaimsServiceBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "VB" ||
+    requirement?.id !== "VB-36" ||
+    !["claims_handling", "claims_contact"].includes(component?.id) ||
+    (occurrence?.sectionScopeHint?.scopeKey &&
+      occurrence.sectionScopeHint.scopeKey !== "GENERAL_CONTRACT_TERMS")
+  )
+    return null;
+  const context = String(occurrence?.context?.text || "");
+  if (
+    !/Schadenmanagement/iu.test(context) ||
+    !/(?:unter\s+)?(?:\+?43[\s/-]*)?0?800(?:[\s/-]*\d{2,4}){2,4}/iu.test(
+      context
+    ) ||
+    !/rund\s+um\s+die\s+Uhr[\s\S]{0,140}?telefonische\s+Schadenmeldung/iu.test(
+      context
+    ) ||
+    !/(?:Beratung\s+und\s+Hilfestellung|wir\s+kümmern\s+uns\s+um)/iu.test(
+      context
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "VB_36_EXPLICIT_CLAIMS_SERVICE_AND_TELEPHONE_CONTACT",
+    authoritative: true,
+  };
+}
+
 const GENERAL_BRANCH_MAXIMUM_TARGETS = Object.freeze({
   FE: Object.freeze({
     requirementId: "FE-F02",
@@ -797,6 +837,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (vb24ExpertProcedureBinding) return vb24ExpertProcedureBinding;
+
+  const vb36ClaimsServiceBinding = explicitVb36ClaimsServiceBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (vb36ClaimsServiceBinding) return vb36ClaimsServiceBinding;
 
   const generalBranchMaximumBinding = explicitGeneralBranchMaximumBinding({
     categoryView,

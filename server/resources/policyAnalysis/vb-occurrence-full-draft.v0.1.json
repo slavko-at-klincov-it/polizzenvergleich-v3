@@ -782,11 +782,13 @@
           "id": "claims_handling",
           "label": "Schadenabwicklung",
           "factRole": "CONDITION",
-          "aliases": [
-            "Schadenabwicklung",
-            "Abwicklung von Schadenfällen",
-            "Schadenmeldung an",
-            "nach einem Schadenfall unverzüglich seine Hausverwaltung",
+        "aliases": [
+          "Schadenabwicklung",
+          "Abwicklung von Schadenfällen",
+          "Schadenmeldung an",
+          "telefonische Schadenmeldung",
+          "kostenlose Schadenmanagement",
+          "nach einem Schadenfall unverzüglich seine Hausverwaltung",
             "über den Schadenhergang und Schadenumfang zu informieren",
             "im Zusammenhang mit der Schadenbearbeitung",
             "Feststellung und Erledigung oder Abwehr des Schadens"
@@ -796,11 +798,13 @@
           "id": "claims_contact",
           "label": "Ansprechpartner",
           "factRole": "CONDITION",
-          "aliases": [
-            "Ansprechpartner im Schadenfall",
-            "Schaden-Ansprechpartner",
-            "Kontakt im Schadenfall",
-            "nach einem Schadenfall unverzüglich seine Hausverwaltung",
+        "aliases": [
+          "Ansprechpartner im Schadenfall",
+          "Schaden-Ansprechpartner",
+          "Kontakt im Schadenfall",
+          "telefonische Schadenmeldung",
+          "kostenlose Schadenmanagement",
+          "nach einem Schadenfall unverzüglich seine Hausverwaltung",
             "zuständige Gebäudeversicherung",
             "Benachrichtigung an die Hausverwaltung"
           ]
