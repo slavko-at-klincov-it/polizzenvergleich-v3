@@ -50,7 +50,10 @@ WEVIG-EL-Kontrollreplay:
 
 ## Mac-Studio-Nachweis
 
-Der funktionale Commit `9fc53931` wurde mit `qwen/qwen3.8-27b` geprüft:
+Der funktionale Commit `9fc53931` wurde mit `qwen/qwen3.8-27b` geprüft.
+Anschließend wurde der unveränderliche Tag `v3.3.0-rc.23` mit SHA
+`a776bc0e` installiert; Update, beide Doctor-Prüfungen, Tag, SHA und sauberer
+Checkout bestanden:
 
 ```text
 LF-EL:

@@ -2989,5 +2989,6 @@ PASS: frischer LF-EL-Lauf, 48/48 Kandidaten, 69/69 Komponenten,
 PASS: frischer WEVIG-EL-Kontrolllauf, 58/58 Kandidaten,
       69/69 Komponenten, 36/36 Zeilen und 42 Quellen
 PASS: WEVIG gegenüber RC17 über alle 36 Zeilen semantisch unverändert
+PASS: RC23-Tag a776bc0e auf Mac Studio installiert; beide Doctor-Läufe grün
 NO CLAIM: andere Wertzeilen oder Host-Scopes automatisch freigegeben
 ```
