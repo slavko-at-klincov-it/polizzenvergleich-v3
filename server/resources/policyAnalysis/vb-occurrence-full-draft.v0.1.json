@@ -15,7 +15,9 @@
           "aliases": [
             "Vertragslaufzeit",
             "Vertragsdauer",
-            "Laufzeit des Vertrages"
+            "Laufzeit des Vertrages",
+            "Laufzeit mind.",
+            "Laufzeit mindestens"
           ]
         }
       ]
@@ -559,13 +561,19 @@
     {
       "id": "VB-27",
       "label": "Gesamtprämie inklusive Steuer",
-      "requestedFields": ["limit"],
+      "requestedFields": ["amount"],
       "components": [
         {
           "id": "total_premium",
           "label": "Gesamtprämie",
           "factRole": "CONDITION",
-          "aliases": ["Gesamtprämie", "Jahresgesamtprämie", "Prämie gesamt"]
+          "aliases": [
+            "Gesamtprämie",
+            "Gesamtprämie inkl. Steuern",
+            "Gesamtprämie inklusive Steuern",
+            "Jahresgesamtprämie",
+            "Prämie gesamt"
+          ]
         },
         {
           "id": "tax_included",
@@ -574,7 +582,10 @@
           "aliases": [
             "inklusive Versicherungssteuer",
             "inkl. Versicherungssteuer",
-            "einschließlich Versicherungssteuer"
+            "einschließlich Versicherungssteuer",
+            "inkl. Steuern",
+            "inklusive Steuern",
+            "Steuern und Abgaben"
           ]
         }
       ]

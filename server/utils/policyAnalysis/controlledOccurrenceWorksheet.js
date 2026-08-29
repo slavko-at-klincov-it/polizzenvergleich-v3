@@ -421,7 +421,8 @@ function explicitSectionHeadings(pageText) {
     if (
       normalized.includes("allgemeinevertragsbestimmungen") ||
       normalized === "vertragsbestimmungen" ||
-      normalized === "allgemeinerteil"
+      normalized === "allgemeinerteil" ||
+      normalized.includes("zusammenfassungspartenundpraemien")
     )
       return "GENERAL_CONTRACT_TERMS";
     if (
@@ -438,6 +439,7 @@ function explicitSectionHeadings(pageText) {
     /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,
     /^\s*\d{1,3}\.\s+((?:Allgemeine\s+)?Vertragsbestimmungen|Wohnungseigentum|Glasbruch|Ökoschutz)\s*$/gimu,
     /^\s*(?:B\.\s*)?(ALLGEMEINER\s+TEIL)\s*$/gimu,
+    /^\s*(ZUSAMMENFASSUNG\s+SPARTE\(N\)\s+UND\s+PRÄMIE\(N\))\s*$/gimu,
   ];
   const headings = [];
   for (const pattern of patterns) {
@@ -682,7 +684,12 @@ function validateDocument(document) {
     page.inheritedSectionHeading = inheritedSectionHeading;
     page.inheritedVariantHeading = inheritedVariantHeading;
     page.inheritedCoverageGovernor =
-      page.sectionHeadings.length === 0 ? previousPageCoverageGovernor : null;
+      page.sectionHeadings.length === 0 ||
+      page.sectionHeadings.some(
+        ({ scopeKey }) => scopeKey === "GENERAL_CONTRACT_TERMS"
+      )
+        ? previousPageCoverageGovernor
+        : null;
     if (page.sectionHeadings.length > 0) {
       const lastHeading = page.sectionHeadings.at(-1);
       inheritedSectionHeading =
@@ -1445,7 +1452,7 @@ function buildControlledOccurrenceWorksheet({
             .at(-1);
           const coverageGovernorHint = currentCoverageGovernor
             ? { ...currentCoverageGovernor, source: "CURRENT_PAGE_GOVERNOR" }
-            : page.inheritedCoverageGovernor
+            : !currentSectionBoundary && page.inheritedCoverageGovernor
               ? {
                   ...page.inheritedCoverageGovernor,
                   source: "PRECEDING_PAGE_GOVERNOR",

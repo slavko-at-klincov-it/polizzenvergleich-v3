@@ -2736,3 +2736,33 @@ PASS: gegen die letzten akzeptierten Kategorie-Läufe exakt vier Änderungen:
       WEVIG LW-03/04 und LF EL-05/15; alle übrigen 68 Zeilen stabil
 NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
 ```
+
+## 46. RC16: Allgemeine Vertragszusammenfassung und belegte VB-Werte
+
+Die WEVIG-Auswertung zeigte einen strukturellen Seitenübergangsfehler: Nach der
+Haftpflichtseite erbte die folgende Angebotszusammenfassung weiterhin
+`HAFTPFLICHT_INSURANCE` und `Mitversichert gelten`. Deshalb wurden allgemeine
+Vertragsfakten wie Laufzeit, Dauerrabatt und Gesamtprämie trotz vollständigem
+PDF-Kontext verworfen.
+
+RC16 führt die konkrete Zusammenfassungsüberschrift als allgemeine
+Vertragsgrenze ein. Die Governor-Vererbung ist positionsabhängig und bleibt auf
+Seiten mit dieser kontrollierten Grenze beschränkt. Die breite Überschrift
+`WICHTIGE INFORMATIONEN` wird ausdrücklich nicht global umgedeutet.
+
+Zusätzlich erhält `VB-01` eine konservative Mindestlaufzeit-Extraktion und
+`VB-27` eine operative Gesamtprämien-Extraktion. Prämie und Steuerinklusion
+bleiben zwei getrennte Pflichtfakten. Negative Tests sperren Höchstlaufzeiten,
+Kündigungsfristen, bloße Laufzeiterwähnungen sowie fremde periodische Beträge.
+
+```text
+PASS: 91 Jest-Suites / 1006 Tests
+PASS: Server-, Frontend- und Collector-Lint
+PASS: vollständiger LF-/WEVIG-Worksheet-Replay
+PASS: keine LF-Fundstellen- oder Scope-Änderung
+PASS: WEVIG-Änderungsfläche auf VB-01/02/27 und die echte gemeinsame
+      Zusammenfassungsgrenze bei EL-21 begrenzt
+PASS: alle übrigen Kategorie-Fundstellen unverändert
+PENDING: frischer WEVIG-VB- und EL-Lauf mit qwen/qwen3.8-27b
+NO CLAIM: DRAFT-Oracle ist keine fachliche Freigabe
+```

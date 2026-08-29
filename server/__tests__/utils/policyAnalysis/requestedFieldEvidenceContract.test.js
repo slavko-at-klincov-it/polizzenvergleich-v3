@@ -111,7 +111,12 @@ function variantOccurrence({
   fieldGovernorText,
   fieldGovernorStart,
 }) {
-  const base = textualOccurrence({ candidateId, text, exactText, contextStart });
+  const base = textualOccurrence({
+    candidateId,
+    text,
+    exactText,
+    contextStart,
+  });
   return {
     ...base,
     context: { ...base.context, unitType: "LIST_ITEM" },
@@ -161,9 +166,7 @@ describe("requestedFieldEvidenceContract", () => {
         id: "LW-26",
         label: "Rohrreinigung",
         requestedFields: ["limit"],
-        components: [
-          { id: "cleaning", factRole: "COST", occurrences: [c, d] },
-        ],
+        components: [{ id: "cleaning", factRole: "COST", occurrences: [c, d] }],
       }),
       materializedCandidates: selections([cId, "DIRECT"], [dId, "DIRECT"]),
     });
@@ -262,9 +265,7 @@ describe("requestedFieldEvidenceContract", () => {
       id: "LW-27",
       label: "Wasserverlustkosten",
       requestedFields: ["limit"],
-      components: [
-        { id: "water_loss", factRole: "COST", occurrences: [c, d] },
-      ],
+      components: [{ id: "water_loss", factRole: "COST", occurrences: [c, d] }],
     };
     const complete = materializeRequestedFieldEvidence({
       worksheet: textualWorksheet(requirement),
@@ -1392,5 +1393,190 @@ describe("requestedFieldEvidenceContract", () => {
         ),
       })
     ).toThrow("REQUESTED_FIELD_CANDIDATE_DUPLICATE");
+  });
+
+  test("binds a declared total premium amount in a multi-component tax-inclusive row", () => {
+    const text =
+      "Die Gesamtprämie inkl. Steuern (Bruttoprämie) beträgt vierteljährlich EUR 14.747,66. Dauerrabatt 20 %; eine andere Prämie beträgt EUR 99.999,99.";
+    const totalPremium = textualOccurrence({
+      candidateId: "candidate:total-premium",
+      text,
+      exactText: "Gesamtprämie",
+    });
+    const taxIncluded = textualOccurrence({
+      candidateId: "candidate:tax-included",
+      text,
+      exactText: "inkl. Steuern",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VB-27",
+        label: "Gesamtprämie inklusive Steuer",
+        requestedFields: ["amount"],
+        components: [
+          {
+            id: "total_premium",
+            label: "Gesamtprämie",
+            factRole: "CONDITION",
+            occurrences: [totalPremium],
+          },
+          {
+            id: "tax_included",
+            label: "Steuer inklusive",
+            factRole: "CONDITION",
+            occurrences: [taxIncluded],
+          },
+        ],
+      }),
+      materializedCandidates: selections(
+        ["candidate:total-premium", "DIRECT"],
+        ["candidate:tax-included", "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "amount",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "EUR 14.747,66",
+              valueType: "MONEY",
+              unit: "EUR",
+              qualifier: "vierteljährlich",
+              source: expect.objectContaining({
+                candidateId: "candidate:total-premium",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+    expect(result.requirements[0].fields[0].facts).toHaveLength(1);
+  });
+
+  test("preserves the minimum qualifier of a contractual term", () => {
+    const text =
+      "Dauerrabatt 20 % - Laufzeit mind. 10 Jahre. Bei vorzeitiger Beendigung gelten weitere Regeln.";
+    const contractTerm = textualOccurrence({
+      candidateId: "candidate:minimum-contract-term",
+      text,
+      exactText: "Laufzeit mind.",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VB-01",
+        label: "Vertragslaufzeit in Jahren",
+        requestedFields: ["duration"],
+        components: [
+          {
+            id: "contract_term",
+            label: "Vertragslaufzeit",
+            factRole: "CONDITION",
+            occurrences: [contractTerm],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:minimum-contract-term",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "duration",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "mindestens 10 Jahre",
+              valueType: "DURATION",
+              unit: "YEAR",
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
+  test.each([
+    ["Laufzeit bis zu 10 Jahre", "Laufzeit"],
+    ["Kündigungsfrist 10 Jahre", "Kündigungsfrist"],
+    ["während der Vertragslaufzeit", "Vertragslaufzeit"],
+  ])(
+    "does not bind a non-minimum contractual term from %s",
+    (text, exactText) => {
+      const result = materializeRequestedFieldEvidence({
+        worksheet: textualWorksheet({
+          id: "VB-01",
+          label: "Vertragslaufzeit in Jahren",
+          requestedFields: ["duration"],
+          components: [
+            {
+              id: "contract_term",
+              label: "Vertragslaufzeit",
+              factRole: "CONDITION",
+              occurrences: [
+                textualOccurrence({
+                  candidateId: "candidate:non-minimum-term",
+                  text,
+                  exactText,
+                }),
+              ],
+            },
+          ],
+        }),
+        materializedCandidates: selections([
+          "candidate:non-minimum-term",
+          "DIRECT",
+        ]),
+      });
+
+      expect(result.requirements[0].fields[0]).toMatchObject({
+        field: "duration",
+        status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+        facts: [],
+      });
+    }
+  );
+
+  test("does not bind an unrelated periodic amount after a premium reference", () => {
+    const text =
+      "Die Gesamtprämie wird separat ausgewiesen. Vierteljährlich EUR 500 Bearbeitungskosten.";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VB-27",
+        label: "Gesamtprämie inklusive Steuer",
+        requestedFields: ["amount"],
+        components: [
+          {
+            id: "total_premium",
+            label: "Gesamtprämie",
+            factRole: "CONDITION",
+            occurrences: [
+              textualOccurrence({
+                candidateId: "candidate:unrelated-periodic-amount",
+                text,
+                exactText: "Gesamtprämie",
+              }),
+            ],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:unrelated-periodic-amount",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      field: "amount",
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
   });
 });

@@ -2,6 +2,7 @@ const catalog = require("../../../resources/policyAnalysis/vs-occurrence-pilot.v
 const fullCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 const lwFullCatalog = require("../../../resources/policyAnalysis/lw-occurrence-full-draft.v0.1.json");
 const elFullCatalog = require("../../../resources/policyAnalysis/el-occurrence-full-draft.v0.1.json");
+const vbFullCatalog = require("../../../resources/policyAnalysis/vb-occurrence-full-draft.v0.1.json");
 const {
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
@@ -939,6 +940,122 @@ describe("controlledOccurrenceWorksheet", () => {
       source: "PRECEDING_PAGE_HEADING",
       physicalPageNumber: 2,
     });
+  });
+
+  test("resets inherited coverage scope and governor at proposal summary headings", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Seite 5 von 7",
+          "HAFTPFLICHTVERSICHERUNG",
+          "Mitversichert gelten",
+          "Schäden aus dem Hausbesitz.",
+        ].join("\n"),
+        [
+          "Seite 6 von 7",
+          "ZUSAMMENFASSUNG SPARTE(N) UND PRÄMIE(N)",
+          "Die Gesamtprämie inkl. Steuern (Bruttoprämie) beträgt vierteljährlich EUR 14.747,66.",
+          "In der angeführten Gesamtprämie sind sämtliche Steuern und Abgaben enthalten.",
+          "WICHTIGE INFORMATIONEN",
+          "Dauerrabatt 20 % - Laufzeit mind. 10 Jahre",
+          "Mit Rücksicht auf die vereinbarte Vertragslaufzeit wird ein Dauerrabatt gewährt.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "proposal-summary-resets-liability",
+      catalog: vbFullCatalog,
+    });
+    const totalPremium = component(
+      worksheet,
+      "VB-27",
+      "total_premium"
+    ).occurrences;
+    expect(component(worksheet, "VB-27", "total_premium").factRole).toBe(
+      "CONDITION"
+    );
+    const taxIncluded = component(
+      worksheet,
+      "VB-27",
+      "tax_included"
+    ).occurrences;
+    const contractTerm = component(
+      worksheet,
+      "VB-01",
+      "contract_term"
+    ).occurrences;
+
+    expect(totalPremium).toHaveLength(2);
+    expect(taxIncluded).toHaveLength(2);
+    expect(contractTerm).toHaveLength(2);
+    for (const occurrence of [
+      ...totalPremium,
+      ...taxIncluded,
+      ...contractTerm,
+    ]) {
+      expect(occurrence.sectionScopeHint).toMatchObject({
+        scopeKey: "GENERAL_CONTRACT_TERMS",
+        source: "CURRENT_PAGE_HEADING",
+      });
+      expect(occurrence.coverageGovernorHint).toBeNull();
+    }
+
+    const targets = buildCandidateTriagePayload(
+      worksheet
+    ).bindingTargets.filter(({ requirementId }) =>
+      ["VB-01", "VB-27"].includes(requirementId)
+    );
+    expect(targets).toHaveLength(6);
+    for (const target of targets) {
+      expect(target.scopeResolution).toMatchObject({
+        owner: "SERVER",
+        scopeMatch: "GENERAL",
+      });
+      expect(target.modelDecisionFields).not.toContain("scopeMatch");
+    }
+    expect(
+      targets.filter(
+        ({ scopeResolution }) =>
+          scopeResolution.basis === "MATCHING_CATEGORY_SECTION" &&
+          scopeResolution.matchedAlias === "GENERAL_CONTRACT_TERMS"
+      )
+    ).toHaveLength(6);
+  });
+
+  test("keeps inherited scope before and resets it after a later summary heading", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Seite 5 von 7",
+          "HAFTPFLICHTVERSICHERUNG",
+          "Mitversichert gelten",
+        ].join("\n"),
+        [
+          "Gesamtprämie EUR 1.000,00",
+          "ZUSAMMENFASSUNG SPARTE(N) UND PRÄMIE(N)",
+          "Die Gesamtprämie beträgt EUR 2.000,00",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "position-aware-summary-boundary",
+      catalog: vbFullCatalog,
+    });
+    const occurrences = component(
+      worksheet,
+      "VB-27",
+      "total_premium"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0].sectionScopeHint).toMatchObject({
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      source: "PRECEDING_PAGE_HEADING",
+    });
+    expect(occurrences[0].coverageGovernorHint).toMatchObject({
+      source: "PRECEDING_PAGE_GOVERNOR",
+    });
+    expect(occurrences[1].sectionScopeHint).toMatchObject({
+      scopeKey: "GENERAL_CONTRACT_TERMS",
+      source: "CURRENT_PAGE_HEADING",
+    });
+    expect(occurrences[1].coverageGovernorHint).toBeNull();
   });
 
   test("resets inherited liability scope at the Oekoschutz section boundary", () => {

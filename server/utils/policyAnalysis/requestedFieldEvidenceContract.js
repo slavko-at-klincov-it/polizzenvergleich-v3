@@ -548,6 +548,55 @@ function extractDurationFacts({ occurrence, binding }) {
     });
 }
 
+function extractContractTermDurationFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const pattern =
+    /(?:Vertragslaufzeit|Laufzeit(?:\s+des\s+Vertrages)?)\s*(?:von\s+)?(mind(?:estens)?\.?\s+)?(\d{1,3})\s+Jahr(?:e|en)?/giu;
+  return [...text.matchAll(pattern)]
+    .filter((match) => valueFollowsCandidate(occurrence, match))
+    .map((match) => {
+      const count = Number(match[2]);
+      if (!Number.isInteger(count))
+        throw requestedFieldError("REQUESTED_FIELD_DURATION_INVALID", match[0]);
+      return sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: `${match[1] ? "mindestens " : ""}${count} ${
+            count === 1 ? "Jahr" : "Jahre"
+          }`,
+          valueType: "DURATION",
+          unit: "YEAR",
+        },
+      });
+    });
+}
+
+function extractTotalPremiumFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const pattern =
+    /Gesamtprämie(?:\s+(?:inkl\.?|inklusive)\s+Steuern)?(?:\s+\(Bruttoprämie\))?\s+(?:beträgt|beläuft\s+sich\s+auf)\s+(?:(monatlich|vierteljährlich|halbjährlich|jährlich)\s+)?((?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?)(?![\p{L}\p{N}])/giu;
+  return [...text.matchAll(pattern)]
+    .filter((match) => valueFollowsCandidate(occurrence, match))
+    .map((match) => {
+      const rawAmount = match[2];
+      const amountMatch = [rawAmount];
+      amountMatch.index = match.index + match[0].lastIndexOf(rawAmount);
+      return sourceBoundFact({
+        occurrence,
+        binding,
+        match: amountMatch,
+        value: {
+          normalizedValue: `EUR ${rawAmount.replace(/^(?:EUR|€)\s*/iu, "")}`,
+          valueType: "MONEY",
+          unit: "EUR",
+          ...(match[1] ? { qualifier: match[1].toLocaleLowerCase("de") } : {}),
+        },
+      });
+    });
+}
+
 function whitespaceNormalized(value) {
   return String(value || "")
     .replace(/\s+/gu, " ")
@@ -880,6 +929,10 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
 
 function extractorFor(requirement, field) {
   const requirementId = requirement.id;
+  if (requirementId === "VB-01" && field === "duration")
+    return extractContractTermDurationFacts;
+  if (requirementId === "VB-27" && field === "amount")
+    return extractTotalPremiumFacts;
   if (requirementId === "VS-01" && field === "limit")
     return extractInsuredNewValueFacts;
   if (requirementId === "VS-02" && field === "condition")
@@ -942,6 +995,12 @@ function valueCoversRequirement({
   bindingByCandidateId,
 }) {
   if (indexed.requirement.components.length <= 1) return true;
+  if (
+    indexed.requirement.id === "VB-27" &&
+    field === "amount" &&
+    indexed.component.id === "total_premium"
+  )
+    return true;
   if (
     indexed.requirement.id === "VS-02" &&
     field === "condition" &&

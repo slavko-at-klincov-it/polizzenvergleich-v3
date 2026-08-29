@@ -285,6 +285,107 @@
             "requiredPhysicalPages": [14],
             "allowedPhysicalPages": [14]
           }
+        },
+        {
+          "categoryId": "VB-01",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "Nicht feststellbar",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Vertragslaufzeit: geregelt",
+              "Dauer: mindestens 10 Jahre"
+            ]
+          },
+          "requestedFieldStatus": "COMPLETE",
+          "valueExpectations": {
+            "required": [
+              {
+                "field": "duration",
+                "normalizedValue": "mindestens 10 Jahre",
+                "valueType": "DURATION",
+                "unit": "YEAR",
+                "componentId": "contract_term",
+                "physicalPageNumber": 6
+              }
+            ]
+          },
+          "components": [
+            {
+              "componentId": "contract_term",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "DEFINED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredPhysicalPages": [6],
+                "allowedPhysicalPages": [6]
+              }
+            }
+          ],
+          "sources": {
+            "requiredPhysicalPages": [6],
+            "allowedPhysicalPages": [6]
+          }
+        },
+        {
+          "categoryId": "VB-27",
+          "approvalStatus": "DRAFT",
+          "row": {
+            "coverage": "Ja",
+            "coverageAmount": "EUR 14.747,66 vierteljährlich",
+            "reviewStatus": "BELEGT",
+            "documentedContentIncludes": [
+              "Gesamtprämie: geregelt",
+              "Steuer inklusive: geregelt"
+            ]
+          },
+          "requestedFieldStatus": "COMPLETE",
+          "valueExpectations": {
+            "required": [
+              {
+                "field": "amount",
+                "normalizedValue": "EUR 14.747,66",
+                "valueType": "MONEY",
+                "unit": "EUR",
+                "qualifier": "vierteljährlich",
+                "componentId": "total_premium",
+                "physicalPageNumber": 6
+              }
+            ]
+          },
+          "components": [
+            {
+              "componentId": "total_premium",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "DEFINED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredPhysicalPages": [6],
+                "allowedPhysicalPages": [6]
+              }
+            },
+            {
+              "componentId": "tax_included",
+              "evidencePresence": "FOUND",
+              "coverageEffect": "DEFINED",
+              "documentApplicability": "PROPOSED_ONLY",
+              "conflictState": "NONE",
+              "selectedScopePicture": "GENERAL",
+              "sources": {
+                "requiredPhysicalPages": [6],
+                "allowedPhysicalPages": [6]
+              }
+            }
+          ],
+          "sources": {
+            "requiredPhysicalPages": [6],
+            "allowedPhysicalPages": [6]
+          }
         }
       ]
     },
