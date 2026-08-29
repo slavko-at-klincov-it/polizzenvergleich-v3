@@ -348,7 +348,12 @@
           "id": "heating_system",
           "label": "Heizungsanlage",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Heizungsanlage", "Heizungsanlagen"]
+          "aliases": [
+            "Heizungsanlage",
+            "Heizungsanlagen",
+            "Fußboden- und Wandheizung",
+            "Wasser führende Fußboden- und Wandheizung"
+          ]
         },
         {
           "id": "boiler",

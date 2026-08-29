@@ -127,6 +127,7 @@ describe("P0 category catalog candidate recall", () => {
 
     expectOccurrences(result, [
       ["LW-05", ["pipe_break", "pipe_itself"]],
+      ["LW-11", ["heating_system"]],
       ["LW-12", ["underfloor_heating"]],
       ["LW-18", ["sewer_backwater_assignment"]],
       ["LW-22", ["fungus_damage", "rot_damage"]],
