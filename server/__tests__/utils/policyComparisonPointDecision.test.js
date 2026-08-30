@@ -61,6 +61,8 @@ describe("policy comparison point decision", () => {
       ruleId: "INCLUDED_OVER_EXCLUDED_V1",
       reviewRequired: false,
     });
+    expect(result.reason).toContain("A ausdrücklich ausgeschlossen");
+    expect(result.reason).toContain("B eingeschlossen");
   });
 
   test("does not turn one-sided or missing evidence into an advantage", () => {
@@ -184,15 +186,16 @@ describe("policy comparison point decision", () => {
         ],
       });
 
-    expect(
-      decide(
-        [valuedAtom("a", "LIMIT", "EUR 5.000.000")],
-        [valuedAtom("b", "LIMIT", "EUR 3.000.000")]
-      )
-    ).toMatchObject({
+    const higherLimit = decide(
+      [valuedAtom("a", "LIMIT", "EUR 5.000.000")],
+      [valuedAtom("b", "LIMIT", "EUR 3.000.000")]
+    );
+    expect(higherLimit).toMatchObject({
       outcome: POINT_OUTCOME.ADVANTAGE_A,
       ruleId: "HIGHER_COVERAGE_LIMIT_V1",
     });
+    expect(higherLimit.reason).toContain("A EUR 5.000.000");
+    expect(higherLimit.reason).toContain("B EUR 3.000.000");
     expect(
       decide(
         [valuedAtom("a", "DEDUCTIBLE", "EUR 1.000")],

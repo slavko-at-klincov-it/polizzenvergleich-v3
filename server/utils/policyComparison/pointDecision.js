@@ -174,6 +174,8 @@ function comparisonKey(atom) {
 function auditSide(atom) {
   return {
     coverageEffect: atom.coverageEffect,
+    documentApplicability: atom.documentApplicability,
+    selectedScopePicture: atom.selectedScopePicture,
     values: fieldSignature(atom.fields).map(({ field, displayValue }) => ({
       field,
       value: displayValue,
@@ -308,18 +310,49 @@ function componentGroups(atoms, categoryId) {
   return groups;
 }
 
+function effectLabel(effect) {
+  return (
+    {
+      INCLUDED: "eingeschlossen",
+      EXCLUDED: "ausdrücklich ausgeschlossen",
+      DEFINED: "geregelt",
+      CONDITIONAL: "bedingt",
+      UNKNOWN: "ungeklärt",
+    }[effect] || effect
+  );
+}
+
+function displayedValues(side) {
+  return (side.values || []).map(({ value }) => value).join(", ");
+}
+
+function comparisonContext(side) {
+  return `${side.documentApplicability || "Geltung unklar"} / ${side.selectedScopePicture || "Scope unklar"}`;
+}
+
+function dimensionReason(dimension) {
+  const label = dimension.componentLabel || dimension.componentId;
+  const aValues = displayedValues(dimension.a);
+  const bValues = displayedValues(dimension.b);
+  const aContext = comparisonContext(dimension.a);
+  const bContext = comparisonContext(dimension.b);
+  const context =
+    aContext === bContext ? "" : ` (A ${aContext}; B ${bContext})`;
+  if (aValues || bValues)
+    return `${label}: A ${aValues || effectLabel(dimension.a.coverageEffect)}, B ${bValues || effectLabel(dimension.b.coverageEffect)}${context}`;
+  return `${label}: A ${effectLabel(dimension.a.coverageEffect)}, B ${effectLabel(dimension.b.coverageEffect)}${context}`;
+}
+
 function reasonFor(outcome, dimensions) {
-  const labels = dimensions
-    .map(({ componentLabel, componentId }) => componentLabel || componentId)
-    .join(", ");
+  const details = dimensions.map(dimensionReason).join("; ");
   if (outcome === POINT_OUTCOME.ADVANTAGE_A)
-    return `Vorteil Paket A bei ${labels}: Die vollständig belegten atomaren Fakten erfüllen die ausgewiesene Bewertungsregel zugunsten von A.`;
+    return `Vorteil Paket A: ${details}. Die ausgewiesene Regel bewertet diesen vollständig belegten Vergleichspunkt zugunsten von A.`;
   if (outcome === POINT_OUTCOME.ADVANTAGE_B)
-    return `Vorteil Paket B bei ${labels}: Die vollständig belegten atomaren Fakten erfüllen die ausgewiesene Bewertungsregel zugunsten von B.`;
+    return `Vorteil Paket B: ${details}. Die ausgewiesene Regel bewertet diesen vollständig belegten Vergleichspunkt zugunsten von B.`;
   if (outcome === POINT_OUTCOME.EQUIVALENT)
-    return `Gleichwertig bei ${labels}: Die vollständig belegten atomaren Fakten stimmen in allen freigegebenen Vergleichsdimensionen überein.`;
+    return `Gleichwertig: ${details}. Die vollständig belegten atomaren Fakten stimmen in allen freigegebenen Vergleichsdimensionen überein.`;
   if (outcome === POINT_OUTCOME.NOT_COMPARABLE)
-    return "Nicht direkt vergleichbar: Geltung, Scope, Variante, Werttyp, Einheit oder Betragsqualifier unterscheiden sich.";
+    return `Nicht direkt vergleichbar: ${details}. Geltung, Scope, Variante, Werttyp, Einheit oder Betragsqualifier unterscheiden sich.`;
   return "Unklar: Für diesen Vergleichspunkt fehlt eine vollständige, rangaufgelöste oder ausdrücklich freigegebene Bewertungsgrundlage.";
 }
 
