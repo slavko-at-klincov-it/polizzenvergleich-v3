@@ -255,6 +255,22 @@ function technicalSubcomponentObjectBinding(component, occurrence) {
   };
 }
 
+function comparativeReferenceCostBinding(component, occurrence) {
+  if (component?.id !== "rescue_costs") return null;
+  const context = String(occurrence?.context?.text || "");
+  if (
+    !/(?:über|oberhalb)\b[\s\S]{0,120}\bRettungskosten\b[\s\S]{0,180}(?:hinausgeh\p{L}*|übersteig\p{L}*)/iu.test(
+      context
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "EXCESS_COST_REFERENCE_NOT_RESCUE_COST_COVERAGE",
+    authoritative: true,
+  };
+}
+
 function explicitRecoursePartyMismatch({
   categoryView,
   requirement,
@@ -799,6 +815,12 @@ function deterministicCategoryCandidateBinding({
     occurrence
   );
   if (technicalSubcomponentBinding) return technicalSubcomponentBinding;
+
+  const comparativeCostReference = comparativeReferenceCostBinding(
+    component,
+    occurrence
+  );
+  if (comparativeCostReference) return comparativeCostReference;
 
   const recoursePartyMismatch = explicitRecoursePartyMismatch({
     categoryView,

@@ -423,6 +423,43 @@ describe("category semantic exceptions", () => {
     });
   });
 
+  test("costs beyond necessary rescue costs do not exclude the rescue costs used as reference", () => {
+    const referenceOnly =
+      "Kein Versicherungsschutz besteht für Aufwendungen zur Sanierung von Anlagen, die über die notwendigen Rettungskosten gemäß Art. 5 hinausgehen.";
+    const bindingFor = (contextText) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "VB" } },
+        requirement: { id: "VB-23" },
+        component: { id: "rescue_costs", factRole: "COST" },
+        occurrence: occurrence({
+          candidateId: "candidate:rescue-costs",
+          exactText: "Rettungskosten",
+          contextText,
+          scopeLeadText: contextText,
+          sectionScopeKey: "GENERAL_CONTRACT_TERMS",
+          pageNumber: 17,
+        }),
+      });
+
+    expect(bindingFor(referenceOnly)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXCESS_COST_REFERENCE_NOT_RESCUE_COST_COVERAGE",
+      authoritative: true,
+    });
+    expect(bindingFor("Rettungskosten sind ausdrücklich mitversichert.")).toMatchObject(
+      {
+        binding: "DIRECT",
+        basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      }
+    );
+    expect(bindingFor("Rettungskosten sind nicht mitversichert.")).toMatchObject(
+      {
+        binding: "DIRECT",
+        basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+      }
+    );
+  });
+
   test("binds the complete VB-24 expert procedure right without accepting headings or cost clauses", () => {
     const contextText =
       "Ist der Versicherungsnehmer mit dem Gutachten des vom Versicherer bestellten Sachverständigen nicht einverstanden, so steht es dem Versicherungsnehmer auch frei, einen Sachverständigen des jeweiligen Sachgebietes namhaft zu machen. Dieses Gutachten tritt an Stelle des Schiedsgutachterverfahrens.";
