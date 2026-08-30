@@ -278,6 +278,7 @@ async function run() {
           targetId: target.id,
           requirementId: target.requirementId,
           componentId: target.componentId,
+          semanticContract: target.semanticContract,
           chunkId: chunk.id,
           relation: "UNRESOLVED",
           quote: null,

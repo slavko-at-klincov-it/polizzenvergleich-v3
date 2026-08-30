@@ -335,6 +335,8 @@ describe("hybridCandidateFallback", () => {
           targetId: "HP-12:environmental-damage",
           requirementId: "HP-12",
           componentId: "environmental_damage",
+          semanticContract:
+            "Die Klausel regelt Versicherungsschutz für Umweltschäden.",
           chunkId: "C1",
           relation: "DIRECT_EXPLICIT",
           quote,
@@ -349,6 +351,8 @@ describe("hybridCandidateFallback", () => {
       merged.worksheet.requirements[0].components[0].occurrences[0];
     expect(occurrence).toMatchObject({
       discoveryMethod: "HYBRID_CHUNK_SEMANTIC",
+      hybridSemanticContract:
+        "Die Klausel regelt Versicherungsschutz für Umweltschäden.",
       hybridRelation: "DIRECT_EXPLICIT",
       exactText: quote,
     });
@@ -366,6 +370,9 @@ describe("hybridCandidateFallback", () => {
       "scopeMatch",
     ]);
     expect(payload.bindingTargets[0].deterministicBindingBasis).toBeNull();
+    expect(payload.bindingTargets[0].hybridSemanticContract).toBe(
+      "Die Klausel regelt Versicherungsschutz für Umweltschäden."
+    );
   });
 
   test("does not merge related-only or other-scope selections", () => {
