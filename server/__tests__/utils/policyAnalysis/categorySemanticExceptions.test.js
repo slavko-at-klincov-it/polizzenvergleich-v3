@@ -423,6 +423,171 @@ describe("category semantic exceptions", () => {
     });
   });
 
+  test("the multiline environmental-liability condition remains an intentional-damage exclusion", () => {
+    const contextText = [
+      "1.2. Abweichend von Art. 7, Pkt. 6 AHVB-W besteht Versicherungsschutz auch für Schäden an geschützten Arten, natürlichen",
+      "Lebensräumen, an Gewässern und am Boden, soweit diese in Eigentum, Besitz oder bloßer Innehabung des Versicherungsnehmers",
+      "oder dessen Angehörigen stehen und der Versicherungsnehmer oder die für ihn handelnden Personen den Schaden nicht grob",
+      "fahrlässig oder vorsätzlich herbeigeführt haben.",
+      "Diese Deckungserweiterung findet außerhalb Österreichs keine Anwendung.",
+    ].join("\n");
+    const candidate = occurrence({
+      candidateId: "candidate:hp36:real-multiline-condition",
+      exactText: "vorsätzlich herbeigeführt",
+      contextText,
+      scopeLeadText: contextText.slice(
+        0,
+        contextText.indexOf("vorsätzlich herbeigeführt")
+      ),
+      sectionScopeKey: "HAFTPFLICHT_INSURANCE",
+      pageNumber: 16,
+    });
+    const binding = deterministicCategoryCandidateBinding({
+      worksheet: { catalog: { categoryView: "HP" } },
+      requirement: { id: "HP-36" },
+      component: {
+        id: "intentional_damage_exclusion",
+        factRole: "EXCLUSION",
+      },
+      occurrence: candidate,
+    });
+
+    expect(binding).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "HP",
+        requirementId: "HP-36",
+        componentId: "intentional_damage_exclusion",
+        factRole: "EXCLUSION",
+        candidates: [
+          {
+            candidateId: candidate.candidateId,
+            candidateBinding: binding.binding,
+            deterministicBindingBasis: binding.basis,
+            exactText: candidate.exactText,
+            contextText: candidate.context.text,
+            contextDocumentStart: candidate.context.documentStart,
+            documentStart: candidate.documentStart,
+            scopeLeadText: candidate.scopeLead.text,
+          },
+        ],
+      })
+    ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.EXCLUDED });
+  });
+
+  test("LW-20 keeps a water exclusion negative and rejects a storm-section occurrence", () => {
+    const waterContext = [
+      "Nicht versichert sind Schäden, sofern nicht anders vereinbart:",
+      "a) durch Gefahren und an Sachen, die nicht als versichert angeführt sind;",
+      "c) durch Grundwasser, Überschwemmung, Hochwasser, Muren, Wasser aus Witterungsniederschlägen und Rückstau daraus;",
+    ].join("\n");
+    const waterOccurrence = occurrence({
+      candidateId: "candidate:lw20:water-exclusion",
+      exactText: "Grundwasser",
+      contextText: waterContext,
+      scopeLeadText:
+        "Nicht versichert sind Schäden, sofern nicht anders vereinbart:",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 2,
+    });
+    const waterBinding = deterministicCategoryCandidateBinding({
+      worksheet: { catalog: { categoryView: "LW" } },
+      requirement: { id: "LW-20" },
+      component: {
+        id: "ground_seepage_or_retained_water",
+        factRole: "PERIL",
+      },
+      occurrence: waterOccurrence,
+    });
+
+    expect(waterBinding).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "LW",
+        requirementId: "LW-20",
+        componentId: "ground_seepage_or_retained_water",
+        factRole: "PERIL",
+        candidates: [
+          {
+            candidateId: waterOccurrence.candidateId,
+            candidateBinding: waterBinding.binding,
+            deterministicBindingBasis: waterBinding.basis,
+            exactText: waterOccurrence.exactText,
+            contextText: waterOccurrence.context.text,
+            contextDocumentStart: waterOccurrence.context.documentStart,
+            documentStart: waterOccurrence.documentStart,
+            scopeLeadText: waterOccurrence.scopeLead.text,
+          },
+        ],
+      })
+    ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.EXCLUDED });
+
+    const stormOccurrence = occurrence({
+      candidateId: "candidate:lw20:storm-reference",
+      exactText: "Grundwasser",
+      contextText:
+        "Nicht versichert sind Schäden durch Grundwasser, Sturmflut und Rückstau aus diesen Ereignissen.",
+      scopeLeadText: "Nicht versichert sind Schäden durch",
+      sectionScopeKey: null,
+      pageNumber: 2,
+    });
+    stormOccurrence.pageScopeHints = [
+      {
+        scopeKey: "STURM_INSURANCE",
+        text: "die Sturmversicherung",
+        pageStart: 49,
+        pageEnd: 70,
+      },
+    ];
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "LW" } },
+        requirement: { id: "LW-20" },
+        component: {
+          id: "ground_seepage_or_retained_water",
+          factRole: "PERIL",
+        },
+        occurrence: stormOccurrence,
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+
+    const lateCrossReference = {
+      ...stormOccurrence,
+      candidateId: "candidate:lw20:late-cross-reference",
+      pageScopeHints: [
+        {
+          scopeKey: "STURM_INSURANCE",
+          text: "Hinweis zur Sturmversicherung",
+          pageStart: 900,
+          pageEnd: 930,
+        },
+      ],
+    };
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "LW" } },
+        requirement: { id: "LW-20" },
+        component: {
+          id: "ground_seepage_or_retained_water",
+          factRole: "PERIL",
+        },
+        occurrence: lateCrossReference,
+      })
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+  });
+
   test("costs beyond necessary rescue costs do not exclude the rescue costs used as reference", () => {
     const referenceOnly =
       "Kein Versicherungsschutz besteht für Aufwendungen zur Sanierung von Anlagen, die über die notwendigen Rettungskosten gemäß Art. 5 hinausgehen.";
@@ -446,18 +611,18 @@ describe("category semantic exceptions", () => {
       basis: "EXCESS_COST_REFERENCE_NOT_RESCUE_COST_COVERAGE",
       authoritative: true,
     });
-    expect(bindingFor("Rettungskosten sind ausdrücklich mitversichert.")).toMatchObject(
-      {
-        binding: "DIRECT",
-        basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
-      }
-    );
-    expect(bindingFor("Rettungskosten sind nicht mitversichert.")).toMatchObject(
-      {
-        binding: "DIRECT",
-        basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
-      }
-    );
+    expect(
+      bindingFor("Rettungskosten sind ausdrücklich mitversichert.")
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      bindingFor("Rettungskosten sind nicht mitversichert.")
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
   });
 
   test("binds an indirect-lightning amount across PDF line breaks without accepting an amount-less mention", () => {

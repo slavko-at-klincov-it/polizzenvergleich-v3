@@ -41,7 +41,9 @@ const NEGATIVE_GOVERNORS = Object.freeze([
 ]);
 const INLINE_NEGATIVE_GOVERNORS = Object.freeze([
   /\b(?:jedoch\s+)?exklusive\b/giu,
-  /\b(?:nicht|weder)\b[^.!?;\n\r]{0,120}\b(?:vors[aä]tzlich|Vorsatz)\b/giu,
+]);
+const MULTILINE_INTENTIONAL_NEGATIVE_GOVERNORS = Object.freeze([
+  /\b(?:nicht|weder)\b[^.!?;]{0,120}\b(?:vors[aä]tzlich|Vorsatz)\b/giu,
 ]);
 const CONDITIONAL_GOVERNORS = Object.freeze([
   /\b(?:wenn|sofern|vorausgesetzt|unter\s+der\s+Bedingung)\b/giu,
@@ -105,6 +107,14 @@ function clausePolarity({
   );
   if (lastPatternMatch(localPrefix, INLINE_NEGATIVE_GOVERNORS))
     return "NEGATIVE";
+  const multilineIntentionalPrefix = `${String(scopeLeadText || "").slice(-180)}\n${localPrefix}`;
+  if (
+    lastPatternMatch(
+      multilineIntentionalPrefix,
+      MULTILINE_INTENTIONAL_NEGATIVE_GOVERNORS
+    )
+  )
+    return "NEGATIVE";
   const prefix = `${String(scopeLeadText || "")}\n${localPrefix}`;
   const positive = lastPatternMatch(prefix, POSITIVE_GOVERNORS);
   const negative = lastPatternMatch(prefix, NEGATIVE_GOVERNORS);
@@ -125,6 +135,28 @@ function clausePolarity({
 
 function expectedCategoryScopeKeys(categoryView) {
   return CATEGORY_SCOPE_KEYS[String(categoryView || "").toUpperCase()] || [];
+}
+
+function explicitPageTitleScopeKeys(occurrence) {
+  const sectionScopeKeys = [
+    occurrence?.sectionScopeHint?.scopeKey,
+    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+  ].filter(Boolean);
+  if (sectionScopeKeys.length > 0) return [];
+  const pageScopeKeys = [
+    ...new Set(
+      (occurrence?.pageScopeHints || [])
+        .filter(
+          ({ scopeKey, pageStart, text }) =>
+            scopeKey?.endsWith("_INSURANCE") &&
+            Number.isInteger(pageStart) &&
+            pageStart <= 240 &&
+            /versicherung\b/iu.test(text || "")
+        )
+        .map(({ scopeKey }) => scopeKey)
+    ),
+  ];
+  return pageScopeKeys.length === 1 ? pageScopeKeys : [];
 }
 
 function resolvedCategoryView(worksheet, requirement) {
@@ -955,6 +987,7 @@ function deterministicCategoryCandidateBinding({
   const observedScopeKeys = [
     occurrence?.sectionScopeHint?.scopeKey,
     ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+    ...explicitPageTitleScopeKeys(occurrence),
   ].filter(Boolean);
   const narrowAlias = matchedNarrowAlias(requirement, occurrence);
   const narrowScopeKey = observedScopeKeys.find((scopeKey) =>

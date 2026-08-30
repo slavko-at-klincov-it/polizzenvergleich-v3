@@ -39,6 +39,168 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function decimalParts(value) {
+  const compact = String(value || "")
+    .replace(/[\s\u00a0]/gu, "")
+    .trim();
+  if (!/^\d[\d.,]*$/u.test(compact)) return null;
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  let decimalSeparator = null;
+  if (lastComma >= 0 && lastDot >= 0)
+    decimalSeparator = lastComma > lastDot ? "," : ".";
+  else if (lastComma >= 0 && compact.length - lastComma - 1 <= 2)
+    decimalSeparator = ",";
+  else if (lastDot >= 0 && compact.length - lastDot - 1 <= 2)
+    decimalSeparator = ".";
+  const parts = decimalSeparator
+    ? compact.split(decimalSeparator)
+    : [compact, ""];
+  const integerDigits = parts[0].replace(/[.,]/gu, "");
+  const decimalDigits = String(parts[1] || "").replace(/[.,]/gu, "");
+  if (!integerDigits || integerDigits.length > 30 || decimalDigits.length > 2)
+    return null;
+  return {
+    integer: BigInt(integerDigits),
+    fraction: BigInt(decimalDigits.padEnd(2, "0") || "0"),
+  };
+}
+
+function singleCurrencyAmount(value) {
+  const text = String(value || "");
+  const matches = [
+    ...text.matchAll(/(?:EUR|\u20ac)\s*([0-9][0-9.,\s\u00a0]*)/giu),
+    ...text.matchAll(/([0-9][0-9.,\s\u00a0]*)\s*(?:EUR|\u20ac)/giu),
+  ];
+  const amounts = unique(
+    matches
+      .map((match) => decimalParts(match[1]))
+      .filter(Boolean)
+      .map(({ integer, fraction }) => `${integer * 100n + fraction}`)
+  );
+  return amounts.length === 1 ? BigInt(amounts[0]) : null;
+}
+
+function singlePercentage(value) {
+  const percentages = unique(
+    [...String(value || "").matchAll(/([0-9]+(?:[.,][0-9]{1,2})?)\s*%/gu)]
+      .map((match) => decimalParts(match[1]))
+      .filter(Boolean)
+      .map(({ integer, fraction }) => `${integer * 100n + fraction}`)
+  );
+  return percentages.length === 1 ? BigInt(percentages[0]) : null;
+}
+
+function nativeAmountKey(value) {
+  const currency = singleCurrencyAmount(value);
+  if (currency !== null) return `EUR:${currency}`;
+  const percentage = singlePercentage(value);
+  if (percentage !== null) return `PERCENT:${percentage}`;
+  return `TEXT:${normalized(value)}`;
+}
+
+function clauseCodes(fact) {
+  return unique(
+    [
+      ...`${fact.documentedContent || ""}\n${fact.source || ""}`.matchAll(
+        /\b\d{2}[A-Z]{2}\d{4}\b/gu
+      ),
+    ].map(([code]) => code)
+  );
+}
+
+function sharedClauseCodes(facts) {
+  const sets = facts.map((fact) => new Set(clauseCodes(fact)));
+  if (sets.length === 0) return [];
+  return [...sets[0]].filter((code) =>
+    sets.slice(1).every((set) => set.has(code))
+  );
+}
+
+function amountQualifier(fact) {
+  const text = `${fact.coverageAmount || ""}\n${fact.source || ""}`;
+  const qualifiers = [];
+  if (/\b(?:Jahresh[oö]chst|pro\s+Jahr|je\s+Versicherungsjahr)\b/iu.test(text))
+    qualifiers.push("ANNUAL");
+  if (/\b(?:je|pro)\s+(?:Schadenfall|Ereignis)\b/iu.test(text))
+    qualifiers.push("EVENT");
+  if (/\bauf\s+[,„“"']*Erstes\s+Risiko\b/iu.test(text))
+    qualifiers.push("FIRST_RISK");
+  return qualifiers.sort().join("+") || "GENERAL";
+}
+
+function newBuildingValueBases(referenceEntries) {
+  return unique(
+    (referenceEntries || [])
+      .filter(({ row }) => isEvidenceRow(row))
+      .filter(({ row }) => row.categoryId === "VS-01")
+      .filter(({ row }) =>
+        /\b(?:NBW|Neubauwert|Wohngeb[aä]ude\s+zum\s+Neuwert)\b/iu.test(
+          `${row.documentedContent || ""}\n${row.source || ""}`
+        )
+      )
+      .map(({ row }) => singleCurrencyAmount(row.coverageAmount))
+      .filter((value) => value !== null)
+      .map(String)
+  ).map(BigInt);
+}
+
+function canonicalAmountKeys(facts, referenceEntries) {
+  const commonClauseCodes = sharedClauseCodes(
+    facts.filter(
+      ({ coverageAmount }) =>
+        normalized(coverageAmount) !== normalized(NOT_DETERMINABLE)
+    )
+  );
+  const commonClauseKey = commonClauseCodes.join(",");
+  const values = facts
+    .filter(
+      ({ coverageAmount }) =>
+        normalized(coverageAmount) !== normalized(NOT_DETERMINABLE)
+    )
+    .map((fact) => ({
+      fact,
+      nativeKey: nativeAmountKey(fact.coverageAmount),
+    }));
+  const bases = newBuildingValueBases(referenceEntries);
+  const currencyTargets = unique(
+    values
+      .filter(({ nativeKey }) => nativeKey.startsWith("EUR:"))
+      .map(({ nativeKey }) => nativeKey.slice(4))
+  ).map(BigInt);
+
+  return values.map(({ fact, nativeKey }) => {
+    if (!nativeKey.startsWith("PERCENT:"))
+      return commonClauseKey
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}`
+        : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
+    if (
+      !commonClauseKey ||
+      !/\b(?:des\s+NBW|vom\s+NBW|des\s+Neubauwerts?)\b/iu.test(
+        `${fact.documentedContent || ""}\n${fact.source || ""}`
+      )
+    )
+      return commonClauseKey
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}`
+        : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
+    const percentageHundredths = BigInt(nativeKey.slice("PERCENT:".length));
+    const matchingTargets = unique(
+      bases
+        .flatMap((base) =>
+          currencyTargets.filter((target) => {
+            const numerator = base * percentageHundredths;
+            const rounded = (numerator + 5_000n) / 10_000n;
+            return rounded === target;
+          })
+        )
+        .map(String)
+    );
+    return matchingTargets.length === 1
+      ? `CLAUSE:${commonClauseKey}:EUR:${matchingTargets[0]}`
+      : `CLAUSE:${commonClauseKey}:${nativeKey}`;
+  });
+}
+
 function roleLabel(role) {
   return (
     {
@@ -51,7 +213,7 @@ function roleLabel(role) {
   );
 }
 
-function summarizePackage(entries) {
+function summarizePackage(entries, { referenceEntries = entries } = {}) {
   const evidenceEntries = entries.filter(({ row }) => isEvidenceRow(row));
   if (evidenceEntries.length === 0)
     return {
@@ -85,8 +247,9 @@ function summarizePackage(entries) {
       .map(({ coverageAmount }) => coverageAmount)
       .filter((value) => normalized(value) !== normalized(NOT_DETERMINABLE))
   );
+  const amountKeys = unique(canonicalAmountKeys(facts, referenceEntries));
   const unresolvedPrecedence =
-    coverageValues.length > 1 || amountValues.length > 1;
+    coverageValues.length > 1 || amountKeys.length > 1;
   const reviewStatus = facts.some(
     ({ reviewStatus: status }) => status === "WIDERSPRÜCHLICH"
   )
@@ -112,10 +275,14 @@ function summarizePackage(entries) {
           ? coverageValues[0]
           : "Mehrere dokumentbezogene Werte – Rangfolge prüfen",
     coverageAmount:
-      amountValues.length === 0
+      amountKeys.length === 0
         ? NOT_DETERMINABLE
-        : amountValues.length === 1
-          ? amountValues[0]
+        : amountKeys.length === 1
+          ? amountValues.reduce(
+              (selected, candidate) =>
+                candidate.length > selected.length ? candidate : selected,
+              amountValues[0]
+            )
           : "Mehrere dokumentbezogene Werte – Rangfolge prüfen",
     source: facts
       .map(
@@ -199,6 +366,18 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     ...run,
     categories: readDocumentRows(run),
   }));
+  const packageEntries = Object.fromEntries(
+    ["A", "B"].map((side) => [
+      side,
+      loadedRuns
+        .filter(({ document }) => document.side === side)
+        .flatMap(({ document, categories }) =>
+          CATEGORY_ORDER.flatMap((categoryView) =>
+            categories[categoryView].map((row) => ({ document, row }))
+          )
+        ),
+    ])
+  );
   const categories = CATEGORY_ORDER.map((categoryView) => {
     const byDocument = loadedRuns.map((run) => ({
       document: run.document,
@@ -219,10 +398,12 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       });
       const first = entries[0].row;
       const packageA = summarizePackage(
-        entries.filter(({ document }) => document.side === "A")
+        entries.filter(({ document }) => document.side === "A"),
+        { referenceEntries: packageEntries.A }
       );
       const packageB = summarizePackage(
-        entries.filter(({ document }) => document.side === "B")
+        entries.filter(({ document }) => document.side === "B"),
+        { referenceEntries: packageEntries.B }
       );
       const comparison = comparePackages(packageA, packageB);
       return {

@@ -112,6 +112,149 @@ describe("policy comparison result builder", () => {
     expect(comparison.difference).toContain("nicht zulässig");
   });
 
+  test("does not invent precedence for equivalent EUR formatting", () => {
+    const packageSummary = summarizePackage([
+      {
+        document: document("a", "B", "MAIN_POLICY"),
+        row: row("VB-14", {
+          documentedContent: "Betragsgrenze grobe Fahrlässigkeit",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000,00 auf Erstes Risiko",
+          source: "PDF-Seite 1: Besondere Bedingung 10PA0460",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("b", "B", "SUPPLEMENT"),
+        row: row("VB-14", {
+          documentedContent: "Betragsgrenze grobe Fahrlässigkeit",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000",
+          source: "PDF-Seite 6: gemäß 10PA0460",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ]);
+
+    expect(packageSummary.reviewStatus).toBe("BELEGT");
+    expect(packageSummary.coverageAmount).toBe(
+      "EUR 5.000.000,00 auf Erstes Risiko"
+    );
+  });
+
+  test("keeps genuinely different EUR limits review-required", () => {
+    const packageSummary = summarizePackage([
+      {
+        document: document("a", "B"),
+        row: row("VB-14", {
+          documentedContent: "Betragsgrenze grobe Fahrlässigkeit",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000",
+          source: "PDF-Seite 1",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("b", "B"),
+        row: row("VB-14", {
+          documentedContent: "Betragsgrenze grobe Fahrlässigkeit",
+          coverage: "Ja",
+          coverageAmount: "EUR 4.000.000",
+          source: "PDF-Seite 2",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ]);
+
+    expect(packageSummary.reviewStatus).toBe("RANGFOLGE_PRÜFEN");
+  });
+
+  test("keeps equal numbers with different limit periods review-required", () => {
+    const packageSummary = summarizePackage([
+      {
+        document: document("a", "B"),
+        row: row("HP-01", {
+          documentedContent: "Limit pro Ereignis",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000 je Ereignis",
+          source: "PDF-Seite 1",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("b", "B"),
+        row: row("HP-01", {
+          documentedContent: "Jahreshöchstlimit",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000 je Versicherungsjahr",
+          source: "PDF-Seite 2",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ]);
+
+    expect(packageSummary.reviewStatus).toBe("RANGFOLGE_PRÜFEN");
+  });
+
+  test("reconciles an NBW percentage only with an exact package base", () => {
+    const absolute = {
+      document: document("a", "B", "MAIN_POLICY"),
+      row: row("VS-25", {
+        documentedContent: "Behördliche Mehrkosten",
+        coverage: "Ja",
+        coverageAmount: "EUR 1.530.400,00 auf Erstes Risiko",
+        source: "PDF-Seite 1: Besondere Bedingung 10PA0130",
+        reviewStatus: "BELEGT",
+      }),
+    };
+    const percentage = {
+      document: document("b", "B", "SUPPLEMENT"),
+      row: row("VS-25", {
+        documentedContent: "Behördliche Mehrkosten bis 5 % des NBW",
+        coverage: "Ja",
+        coverageAmount: "5 %",
+        source: "PDF-Seite 6: bis 5 % des NBW gemäß 10PA0130",
+        reviewStatus: "BELEGT",
+      }),
+    };
+    const base = {
+      document: document("a", "B", "MAIN_POLICY"),
+      row: row("VS-01", {
+        documentedContent: "Wohngebäude zum Neuwert",
+        coverage: "Ja",
+        coverageAmount: "EUR 30.608.000,00",
+        source: "PDF-Seite 1: Wohngebäude zum Neuwert",
+        reviewStatus: "BELEGT",
+      }),
+    };
+
+    expect(
+      summarizePackage([absolute, percentage], {
+        referenceEntries: [absolute, percentage, base],
+      }).reviewStatus
+    ).toBe("BELEGT");
+    expect(
+      summarizePackage([absolute, percentage], {
+        referenceEntries: [absolute, percentage],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+    expect(
+      summarizePackage([absolute, percentage], {
+        referenceEntries: [
+          absolute,
+          percentage,
+          {
+            ...base,
+            row: {
+              ...base.row,
+              categoryId: "VS-25",
+            },
+          },
+        ],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+  });
+
   test("counts one-sided evidence as a review-required difference", () => {
     const runA = writeRun(root, document("a", "A"), {
       VS: {

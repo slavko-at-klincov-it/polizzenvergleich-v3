@@ -1,6 +1,6 @@
 # V3 Polizzenanalyse – Implementierungs- und Testtracker
 
-Stand: 27. August 2026
+Stand: 30. August 2026
 
 ## 1. Zweck und verbindlicher Arbeitsmodus
 
@@ -3355,3 +3355,50 @@ Die technische Grenze und die verbleibenden MVP-Gates sind in
 `docs/POLIZZENVERGLEICH_A_B_MVP_DE.md` festgeschrieben. Besonders wichtig:
 die sequenzielle Verarbeitung skaliert bei bis zu 18 PDFs derzeit linear und
 ist noch kein Beleg für das angestrebte Laufzeitbudget.
+
+## 67. Vier falsche Rangfolge-Fälle aus dem ersten Zehn-Dokumente-Lauf
+
+Der erste vollständige Vergleich eines LF-Dokuments gegen ein neunteiliges
+WEVIG-Paket erzeugte vier `RANGFOLGE_PRÜFEN`-Fälle, die nicht alle echte
+Dokumentrangfragen waren. Die Fehler lagen in zwei getrennten Schichten:
+
+1. `VS-25` und `VB-14` verglichen Beträge nur als Anzeigetext. Dadurch galten
+   EUR 5 Mio. mit unterschiedlicher Formatierung sowie 5 % des NBW und der
+   exakt daraus berechnete Absolutbetrag als verschiedene Werte.
+2. `LW-20` und `HP-36` verwendeten noch einen älteren Runtime-Commit. Dort
+   wurde ein Sturm-Ausschluss dem Leitungswasser zugerechnet und ein durch
+   PDF-Zeilenumbruch geteilter Satz `nicht ... vorsätzlich` nicht als
+   bedingter Ausschluss erkannt.
+
+Die Korrektur ist nicht an Versicherer, Seitenzahl oder Kundenwortlaut
+gebunden. Geldbeträge werden centgenau normalisiert; Zeitraum- und
+Erstrisiko-Governors bleiben erhalten. Eine Prozent-/Absolutwert-Beziehung
+wird nur bei gemeinsamer Klausel-ID, ausdrücklichem NBW-Bezug, genau einer
+passenden Paketbasis und exakter Rechnung akzeptiert. Ein Seitentitel darf
+nur dann Scope liefern, wenn kein Abschnittsscope vorhanden ist, genau eine
+Versicherungssparte am Seitenanfang genannt wird und der Hinweis tatsächlich
+`Versicherung` enthält. Der mehrzeilige Vorsatz-Binder ist eng begrenzt;
+`exklusive` bleibt weiterhin auf den lokalen Listenpunkt beschränkt.
+
+```text
+PASS: 8 angrenzende Suites / 173 Tests auf dem Mac Studio
+PASS: Gesamtregression 98 Suites / 1.130 Tests auf dem Mac Studio
+PASS: Prettier-Prüfung der vier geänderten Code-/Testdateien
+PASS: Original-Rollup VS-25 -> TEILBELEGT / Ja / EUR 1.530.400,00
+PASS: Original-Rollup VB-14 -> BELEGT / Ja / EUR 5.000.000,00
+PASS: Original-Occurrence LW-20 Sturm -> MENTION_ONLY
+PASS: Original-Occurrence LW-20 Leitungswasser -> EXCLUDED
+PASS: Original-Occurrence HP-36 -> EXCLUDED
+OBSERVE: normaler Jest-Prozess bleibt wegen bestehendem asynchronem
+         Model-Pricing-Logger offen; --forceExit beendet nach 1.130 PASS
+BLOCKED: ESLint-9/react-plugin-Inkompatibilität der geteilten Test-Runtime;
+         kein fachlicher oder dateispezifischer Lintfehler festgestellt
+NO CLAIM: Der gespeicherte Modelllauf selbst wurde nicht nachträglich
+          umgedeutet; eine neue End-to-End-Ausführung benötigt den neuen Build
+NO CLAIM: keine 99-Prozent- oder Fremdversichererfreigabe
+```
+
+Die vier Fälle belegen allgemeine Verträge für Wertidentität, abgeleitete
+Werte, Spartenscope und bedingte Ausschlüsse. Sie beweisen nicht, dass alle
+weiteren Rang-, Ersetzungs- oder Geltungsbeziehungen eines beliebigen
+Dokumentpakets automatisch aufgelöst werden können.
