@@ -3272,3 +3272,38 @@ NO CLAIM: 99 Prozent oder beliebige Polizzen fachlich bewiesen
 Der vollständige Befund, die bekannten Recall-Lücken und die nächsten Gates
 stehen in
 `docs/V321_RC33_R1_GENERALISIERUNGSBEFUND_DE.md`.
+
+## 65. V3.3.1: breites Chunking als evidenzgebundener Kandidatenfallback
+
+Der V3.2.1/RC33-Vergleich zeigte gleichzeitig zwei Wahrheiten: Breite
+`3000/250`-Chunks gewinnen unbekannte Wortlaute zurück, dürfen aber nicht wie
+im alten monolithischen Pfad direkt Vertragsfakten oder globale
+Negativbehauptungen erzeugen. V3.3.1 kombiniert deshalb nur den
+Navigationsvorteil mit dem kontrollierten V3.3-Faktenpfad.
+
+Dinghy rankt für eine weiterhin offene atomare Komponente höchstens drei
+seitengebundene Chunks. Qwen darf je Ziel und Chunk nur einen exakten,
+eindeutigen Originalspan auswählen. Serverprüfungen erzwingen Zielanker,
+Dokumentoffset, Maximallänge und unveränderten Originaltext. Danach durchläuft
+der Span die normale Rollen-, Scope- und Wirkungsprüfung. Der breite Chunk ist
+zu keinem Zeitpunkt selbst Evidenz.
+
+Die erste Aktivierung gilt nur für die zwei Komponenten von `HP-12`. Ein
+anfangs erkannter Nachbareffekt auf `HP-25` entstand durch eine globale
+Promptänderung. Die Hybridpräzisierung wurde deshalb in einen ausschließlich
+für Hybridziele geladenen Zusatzprompt verschoben; der normale Systemprompt
+ist wieder byteidentisch zur Basis.
+
+```text
+PASS: fokussierte Verträge 4 Suites / 79 Tests
+PASS: Gesamtregression 94 Suites / 1.098 Tests unter Node 22.23.2
+PASS: WEVIG / Qwen 3.8 27B 38/38 Triage-Kandidaten
+PASS: WEVIG / Qwen 3.8 27B 63/63 Komponenten, 36/36 HP-Zeilen
+PASS: ausschließlich HP-12 von Nein zu Ja korrigiert
+PASS: übrige 35 HP-Zeilen einschließlich HP-25 exakt stabil
+PASS: lokaler 4B-Lauf mit derselben beabsichtigten HP-12-Verbesserung
+PASS: GRAWE und UNIQA jeweils 0 zugelassene Hybridkandidaten
+NO CLAIM: vollständiges Fremdversicherer-Oracle oder 99 Prozent bewiesen
+```
+
+Der Releasevertrag steht in `docs/RELEASE_V3.3.1_DE.md`.

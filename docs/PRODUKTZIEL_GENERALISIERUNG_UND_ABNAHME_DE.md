@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 28. August 2026  
+Stand: 30. August 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -191,7 +191,7 @@ Ziel: >= 99 % auf dem definierten unterstützten Dokumentkorpus
 Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 ```
 
-## 7. Belegter Stand am 28. August 2026
+## 7. Belegter Stand am 30. August 2026
 
 ### Implementiert und positiv belegt
 
@@ -199,11 +199,19 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 - acht feste Kundenansichten mit 320 IDs;
 - acht Full-Draft-Kataloge mit 533 atomaren Komponenten und Promptparität;
 - occurrence-genaue Kandidatenvorbereitung und servergebundene Evidenzbausteine;
-- vollständiger kontrollierter VS-Pfad für 36 Anforderungen auf LF und WEVIG;
-- RC4-Replay der echten 27B-Entscheidungen mit `59 BESSER`, `12 GLEICH`,
-  `1 UNKLAR`, `0 SCHLECHTER` gegenüber V3.2.1;
-- 80 Jest-Suites mit 876 Tests, Lint, Syntaxprüfung und Produktionsbuild für
-  RC4 bestanden.
+- gemeinsamer kontrollierter Evidenzpfad für alle acht Ansichten; die
+  RC33-Vollregression erzeugte auf LF und WEVIG 640/640 Zeilen mit 32
+  dokumentierten Statusverbesserungen und keiner Statusverschlechterung
+  gegenüber den eingefrorenen früheren Kontrollläufen;
+- exakter WEVIG-Vollvergleich V3.2.1 gegen RC33 über 320/320 Zeilen; die 99
+  geänderten Zeilen belegen einen Fehlertypwechsel, aber keine Qualitätsquote;
+- R1-Konzeptgruppen gewinnen lexikalisch unbekannte LW-Wortlaute als enge
+  Kandidaten zurück, ohne `LW-31` wieder fälschlich zu aktivieren;
+- V3.3.1 verwendet breite `3000/250`-Chunks und Dinghy ausschließlich als
+  Navigation zu exakten Hybridspans; auf WEVIG/Qwen 27B wird nur `HP-12`
+  korrigiert, die übrigen 35 HP-Zeilen bleiben exakt stabil;
+- 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
+  bestanden.
 
 Diese Aussagen gelten für die dokumentierten Fixtures, Artefakte und Gates.
 Eine abschließende fachliche Freigabe oder allgemeine 99-Prozent-Aussage folgt
@@ -211,16 +219,17 @@ daraus nicht.
 
 ### Teilweise belegt
 
-- EL und FE besitzen kontrollierte Pilotfälle, aber noch keinen vollständigen
-  freigegebenen End-to-End-Pfad über alle sichtbaren Zeilen;
-- die Full-Draft-Kataloge beweisen ID-, Reihenfolge- und Labelabdeckung, aber
-  noch keine vollständige Semantik, Wertbindung oder Fachrichtigkeit;
+- die Full-Draft-Kataloge und vollständigen Läufe beweisen ID-, Reihenfolge-
+  und technische Pfadabdeckung, aber noch keine vollständige Semantik,
+  Wertbindung oder Fachrichtigkeit;
+- der semantische Hybridfallback ist technisch allgemein, fachlich produktiv
+  aber zunächst nur für die zwei Komponenten von `HP-12` aktiviert;
 - LF und WEVIG decken zwei wichtige Dokumentformen ab, sind aber kein
   unabhängiges Mehrversicherer-Holdout.
 
 ### Noch offen
 
-- der neue evidenzgebundene Pfad für alle acht Ansichten und alle 320 Zeilen;
+- die fachliche Expertenabnahme aller acht Ansichten und aller 320 Zeilen;
 - Paketlogik mit einem, drei und neun Dokumenten einschließlich Nachträgen,
   Rang, Version und Ersetzung;
 - strukturierte Überschriften-, Klausel-, Tabellen- und Fortsetzungslogik über
@@ -297,6 +306,17 @@ Ihre Full-Draft-Kataloge sind dadurch jedoch noch nicht fachlich freigegeben.
 Der nächste vollständige Zielhardwarelauf ist der erste Gesamtvergleich des
 neuen Evidenzwegs gegen die eingefrorene monolithische 320-Zeilen-Baseline.
 
+### Stand nach V3.3.1
+
+Der vollständige V3.2.1/RC33-Vergleich und R1 haben den Recall-/Präzisions-
+Trade-off konkretisiert. V3.3.1 übernimmt das historische breite Chunking nur
+als begrenzte Navigation: Dinghy schlägt Chunks vor, der Server akzeptiert nur
+einen exakten zielverankerten Span, und erst die vorhandenen Rollen-, Scope-
+und Wirkungsgates dürfen daraus einen Tabellenbeleg machen. Der erste reale
+27B-Vertikalbeweis korrigiert `HP-12`, ohne die übrigen 35 HP-Zeilen zu
+verändern. Weitere Kategorien werden nicht pauschal aktiviert, sondern nur
+mit eigenen fachlichen Verträgen und Negativkontrollen.
+
 ## 10. Wahrheitsquellen für weitere Chats
 
 Vor substanzieller Arbeit sind diese Quellen in dieser Reihenfolge zu prüfen:
@@ -332,6 +352,8 @@ Dabei gelten unterschiedliche Wahrheitsebenen:
   `docs/RELEASE_V3.3.0_RC4_DE.md`
 - RC5-Releasevertrag für den gemeinsamen Acht-Kategorien-Evidenzpfad:
   `docs/RELEASE_V3.3.0_RC5_DE.md`
+- V3.3.1-Releasevertrag für den evidenzgebundenen Hybridfallback:
+  `docs/RELEASE_V3.3.1_DE.md`
 - Wissensrouter und historische Erfahrungsbasis:
   `../policy-project-documentation/POLIZZENVERGLEICH_KB_INDEX.md`
 - Entscheidungen und verworfene Richtungen:
