@@ -98,16 +98,36 @@ belegt:
 - Prisma-Migration und aktuelle Datenbankschemata;
 - Server- und Frontend-Lint sowie Frontend-Produktionsbuild;
 - gezielte Modell-, Worker- und Ergebnisverträge;
-- vollständige bestehende Jest-Regression mit 96 Suites und 1.105 Tests;
+- vollständige bestehende Jest-Regression mit 97 Suites und 1.108 Tests;
 - echte LF- und WEVIG-PDFs als Paket A/B mit Rollen- und Statuspersistenz;
 - Ablehnung einer ungültigen PDF und Entfernung ihres Uploadrestes;
 - Datenbanknachweis `comparison=2`, `indexed=0`, `parsed=0`;
-- beide UI-Sperrrichtungen im gebauten Produktionsfrontend.
+- beide UI-Sperrrichtungen im gebauten Produktionsfrontend;
+- vollständiger realer LF/WEVIG-Acht-Kategorien-Vergleich auf Qwen 3.8 27B:
+  beide Dokumentläufe mit jeweils 320/320 materialisierten Zeilen;
+- gemeinsamer Rollup mit acht Ansichten und 320 Zeilen, davon 132 als
+  fachlich prüfpflichtig gezählt;
+- Ergebnisverteilung: 188 `BEIDSEITIG_KEIN_BELEG`, 66 `NUR_A_BELEGT`,
+  18 `NUR_B_BELEGT` und 48 `UNTERSCHIED_FACHLICH_PRÜFEN`;
+- keine privaten Speicherpfade im veröffentlichten Ergebnis;
+- XLSX mit acht intakten Arbeitsblättern, 15 Spalten und exakt den erwarteten
+  Kategoriezeilen zuzüglich Kopfzeile;
+- fertiges Ergebnis im gebauten Produktionsfrontend mit acht Tabs,
+  320-Zeilen-Hinweis, aktivem Excel-Download und gesperrtem normalem
+  Chat-Upload.
 
-Der vollständige reale LF/WEVIG-Acht-Kategorien-Vergleich auf Qwen 3.8 27B
-ist zum Zeitpunkt dieser Dokumentfassung noch nicht abgeschlossen. Bis sein
-Resultat, XLSX-Artefakt und seine Laufzeit geprüft sind, ist der End-to-End-
-Vergleich als laufende Abnahme und nicht als bestanden zu führen.
+Der reale Lauf begann am 30. August 2026 um 11:51:02 Uhr und endete um
+13:53:36 Uhr (Europe/Vienna). Die gemessene Laufzeit für zwei sequenziell
+analysierte Dokumente betrug 2:02:35 Stunden. Damit besteht die technische
+End-to-End-Abnahme, das Ziel von ungefähr einer Stunde für diesen
+Zwei-Dokument-Vergleich jedoch nicht.
+
+Die 320 Ergebniszeilen sind die vollständige Abbildung der vorgegebenen
+Taxonomie, kein Nachweis von 320 gefundenen Leistungen: Im konkreten Lauf
+waren bei LF 86 und bei WEVIG 46 Zeilen als `BELEGT` materialisiert. WEVIG-WE
+blieb in allen 24 Zeilen ohne belegte Fundstelle. Ob das fachlich vollständige
+Abwesenheit oder verbleibender Recall ist, darf ohne Oracle nicht entschieden
+werden.
 
 ## 7. Offene MVP-Risiken
 
@@ -126,12 +146,10 @@ Vergleich als laufende Abnahme und nicht als bestanden zu führen.
 
 ## 8. Nächste fachliche Gates
 
-1. Den laufenden LF/WEVIG-Gesamtvergleich abschließen und 320 Zeilen,
-   Provenienz, XLSX und Laufzeit prüfen.
-2. Ein echtes Mehrdokumentpaket mit Hauptpolizze, Zusatz oder Nachtrag prüfen.
-3. Paketweite Rang-, Geltungs- und Ersetzungsregeln als atomare semantische
+1. Ein echtes Mehrdokumentpaket mit Hauptpolizze, Zusatz oder Nachtrag prüfen.
+2. Paketweite Rang-, Geltungs- und Ersetzungsregeln als atomare semantische
    Verträge implementieren und mit Positiv-/Negativvarianten testen.
-4. Laufzeit durch paketweite Wiederverwendung und gezielte Parallelisierung
+3. Laufzeit durch paketweite Wiederverwendung und gezielte Parallelisierung
    reduzieren, ohne Modell- oder Evidenzpfade unkontrolliert zu vermischen.
-5. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
+4. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
    messbare Genauigkeits- oder 99-Prozent-Aussage verwenden.

@@ -3329,15 +3329,25 @@ wird in der UI sowie als XLSX mit acht Kategorieblättern angeboten.
 PASS: neue Prisma-Migration auf isolierter Mac-Studio-Datenbank
 PASS: Server-Lint und Frontend-Lint
 PASS: Frontend-Produktionsbuild
-PASS: gezielte Vergleichsverträge 3 Suites / 8 Tests auf Vorrevision
-PASS: aktuelle gezielte Ergebnis-/Workerverträge 2 Suites / 6 Tests
-PASS: bestehende Gesamtregression 96 Suites / 1.105 Tests auf Mac Studio
+PASS: aktuelle gezielte Vergleichsverträge 4 Suites / 11 Tests
+PASS: bestehende Gesamtregression 97 Suites / 1.108 Tests auf Mac Studio
 PASS: echte LF-/WEVIG-Uploads mit Rollen- und Statuspersistenz
 PASS: ungültige PDF wird mit 415 abgewiesen und vollständig bereinigt
 PASS: Vergleichsuploads 2; Workspace-Index 0; Parserdokumente 0
 PASS: UI-Sperre Vergleich -> normaler Chat-Upload
 PASS: UI-Sperre normaler Chat-Anhang -> Paket A/B
-RUNNING: vollständiger LF/WEVIG-Vergleich mit Qwen 3.8 27B
+PASS: LF und WEVIG jeweils 320/320 materialisierte Kategoriezeilen
+PASS: gemeinsamer Rollup 8 Ansichten / 320 Zeilen / 132 Review-Fälle
+PASS: Ergebnisverteilung 188 ohne beidseitigen Beleg / 66 nur A / 18 nur B /
+      48 inhaltliche Unterschiede zur fachlichen Prüfung
+PASS: EL-16 hält Wintergarten eingeschlossen und Vitrinen ausgeschlossen als
+      getrennte Objektfakten; kein erfundener Widerspruch
+PASS: Ergebnis enthält keine privaten Speicherpfade
+PASS: XLSX 8/8 Blätter, 15 Spalten, erwartete Zeilenzahlen, ZIP-Integrität
+PASS: Produktions-UI zeigt 8 Tabs, 320 Zeilen und aktiven Excel-Download
+FAIL: Laufzeitbudget; zwei Dokumente sequenziell in 2:02:35 statt ca. 1 Stunde
+OBSERVE: LF 86/320 und WEVIG 46/320 Zeilen `BELEGT`; WEVIG-WE 0/24. Ohne
+         fachliches Oracle ist daraus weder Vollständigkeit noch Recall ableitbar.
 NO CLAIM: Dokumentrang, Ersetzung, fachlicher Vorteil oder 99 Prozent bewiesen
 ```
 
