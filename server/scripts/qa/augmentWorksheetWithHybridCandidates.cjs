@@ -213,6 +213,7 @@ async function run() {
           componentId: target.componentId,
           componentLabel: target.componentLabel,
           factRole: target.factRole,
+          semanticContract: target.semanticContract,
         },
         chunks: [
           {

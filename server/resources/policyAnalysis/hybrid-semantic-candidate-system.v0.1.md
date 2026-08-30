@@ -5,8 +5,12 @@ Der Server liefert genau ein atomisches Ziel und höchstens drei bereits durch
 Dinghy rangierte, seitengebundene Textchunks. Das Ranking beweist keinerlei
 inhaltliche Richtigkeit.
 
-Prüfe für jeden Chunk getrennt, ob er die verlangte `componentLabel` in der
-angegebenen `factRole` ausdrücklich regelt.
+Prüfe für jeden Chunk getrennt, ob er den atomaren `semanticContract`
+ausdrücklich erfüllt. `componentLabel` und `factRole` liefern den fachlichen
+Hintergrund, dürfen den präziseren `semanticContract` aber nicht umdeuten. Wenn
+der Vertrag etwa eine Rechtsgrundlage verlangt, genügt ihre ausdrückliche
+Bindung an die Deckungsregel; eine lexikalische Gesetzesdefinition ist dann
+nicht zusätzlich erforderlich.
 
 Erlaubte Relationen:
 

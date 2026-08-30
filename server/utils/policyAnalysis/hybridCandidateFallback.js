@@ -106,6 +106,7 @@ function validateHybridFallbackCatalog({ catalog, worksheet }) {
         "requirementId",
         "componentId",
         "query",
+        "semanticContract",
         "requiredQuotePrefixes",
         "mode",
         "topK",
@@ -136,6 +137,11 @@ function validateHybridFallbackCatalog({ catalog, worksheet }) {
         `${requirementId}:${componentId}`
       );
     const query = requireString(target.query, "HYBRID_QUERY_REQUIRED", detail);
+    const semanticContract = requireString(
+      target.semanticContract,
+      "HYBRID_SEMANTIC_CONTRACT_REQUIRED",
+      detail
+    );
     if (
       !Array.isArray(target.requiredQuotePrefixes) ||
       target.requiredQuotePrefixes.length === 0
@@ -170,6 +176,7 @@ function validateHybridFallbackCatalog({ catalog, worksheet }) {
       componentLabel: component.label,
       factRole: component.factRole,
       query,
+      semanticContract,
       requiredQuotePrefixes,
       mode,
       topK,

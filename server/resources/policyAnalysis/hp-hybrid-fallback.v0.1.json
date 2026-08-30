@@ -8,6 +8,7 @@
       "requirementId": "HP-12",
       "componentId": "environmental_damage",
       "query": "Umwelthaftpflicht und Umweltsanierungskostenversicherung, Versicherungsschutz für die Sanierung von Umweltschäden",
+      "semanticContract": "Die Klausel gewährt oder begrenzt ausdrücklich Versicherungsschutz für Umweltschäden, Umweltsanierung oder daraus entstehende Sanierungskosten.",
       "requiredQuotePrefixes": [
         "Umweltschad",
         "Umweltstör",
@@ -22,6 +23,7 @@
       "requirementId": "HP-12",
       "componentId": "federal_environmental_liability_act",
       "query": "Bundes-Umwelthaftungsgesetz B-UHG, Versicherungsschutz für Sanierungsverpflichtungen und Sanierungskosten",
+      "semanticContract": "Die Klausel nennt das Bundes-Umwelthaftungsgesetz oder B-UHG ausdrücklich als Rechtsgrundlage der gedeckten oder begrenzten Sanierungsverpflichtungen; eine allgemeine Gesetzesdefinition ist dafür nicht erforderlich.",
       "requiredQuotePrefixes": ["Bundes-Umwelthaftungsgesetz", "B-UHG"],
       "mode": "ADDITIVE",
       "topK": 3

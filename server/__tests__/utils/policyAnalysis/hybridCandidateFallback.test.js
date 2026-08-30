@@ -73,6 +73,8 @@ function fallbackCatalog(mode = "NO_CONTROLLED_CANDIDATE") {
         componentId: "environmental_damage",
         query:
           "Umwelthaftpflicht und Sanierungskosten nach Bundes-Umwelthaftungsgesetz",
+        semanticContract:
+          "Die Klausel regelt ausdrücklich Versicherungsschutz für Umweltschäden.",
         requiredQuotePrefixes: ["Umweltschad", "Sanierungsverpflicht"],
         mode,
         topK: 2,
