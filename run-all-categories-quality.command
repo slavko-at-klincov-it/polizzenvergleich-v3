@@ -163,7 +163,9 @@ for CATEGORY in VS FE LW ST EL HP VB WE; do
     BASE_WORKSHEET="$CATEGORY_DIR/worksheet.base.private.json"
   fi
 
-  if [ -f "$RESULT_DIR/report.json" ] && [ -f "$RESULT_DIR/answer.md" ]; then
+  if [ -f "$RESULT_DIR/report.json" ] && \
+     [ -f "$RESULT_DIR/answer.md" ] && \
+     [ -f "$RESULT_DIR/rows.private.json" ]; then
     printf '%s\n' "[all-categories] $CATEGORY – bereits vollständig, übersprungen"
     continue
   fi

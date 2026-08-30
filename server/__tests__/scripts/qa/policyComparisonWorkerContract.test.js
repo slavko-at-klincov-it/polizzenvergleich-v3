@@ -32,4 +32,13 @@ describe("policy comparison worker contract", () => {
     expect(builder).toContain("TECHNICAL_RESULT_REVIEW_REQUIRED");
     expect(builder).toContain("Ein automatischer Vorteilsschluss ist nicht zulässig");
   });
+
+  test("uses a release-bound resumable run and counts completed categories", () => {
+    expect(source).toContain("resumableRun({ sessionUuid, manifest })");
+    expect(source).toContain("run-contract.private.json");
+    expect(source).toContain("completedCategoryViews(documentOutput)");
+    expect(source).toContain("initialCompletedCategories");
+    expect(source).toContain("resumedCategories");
+    expect(source).not.toContain("const timestamp = new Date()");
+  });
 });

@@ -9,12 +9,23 @@ const { spawn } = require("child_process");
 const prisma = require("../utils/prisma");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const {
+  CATEGORY_ORDER,
   writeComparisonArtifacts,
 } = require("../utils/policyComparison/resultBuilder");
+const {
+  releaseIdentity,
+  sha256,
+} = require("../utils/policyAnalysis/runIdentity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
-const CATEGORY_COUNT = 8;
+const CATEGORY_COUNT = CATEGORY_ORDER.length;
+const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.8-27b";
+const MODEL_TOKEN_LIMIT = Number(
+  process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
+);
+const EMBEDDING_MODEL =
+  process.env.POLICY_FULL_EMBEDDING_MODEL || "dinghy-embed";
 
 async function sha256File(file) {
   const hash = crypto.createHash("sha256");
@@ -32,6 +43,79 @@ function privateDirectory(directory) {
   fs.chmodSync(directory, 0o700);
 }
 
+function writePrivateJson(file, value) {
+  const temporary = `${file}.tmp-${process.pid}`;
+  fs.writeFileSync(temporary, JSON.stringify(value, null, 2), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  fs.renameSync(temporary, file);
+  fs.chmodSync(file, 0o600);
+}
+
+function completedCategoryViews(outputDirectory) {
+  return CATEGORY_ORDER.filter((categoryView) => {
+    const resultDirectory = path.join(
+      outputDirectory,
+      categoryView,
+      "result"
+    );
+    return ["report.json", "answer.md", "rows.private.json"].every((name) =>
+      fs.existsSync(path.join(resultDirectory, name))
+    );
+  });
+}
+
+function resumableRun({ sessionUuid, manifest }) {
+  const contract = {
+    schemaVersion: 1,
+    releaseId: releaseIdentity(REPOSITORY_ROOT),
+    configuration: {
+      model: MODEL,
+      embeddingModel: EMBEDDING_MODEL,
+      modelTokenLimit: MODEL_TOKEN_LIMIT,
+    },
+    documents: manifest.documents.map(
+      ({
+        uuid,
+        side,
+        position,
+        role,
+        documentStatus,
+        originalName,
+        sha256: documentSha256,
+      }) => ({
+        uuid,
+        side,
+        position,
+        role,
+        documentStatus,
+        originalName,
+        sha256: documentSha256,
+      })
+    ),
+  };
+  const signature = sha256(JSON.stringify(contract));
+  const runRoot = path.resolve(
+    policyComparisonsPath,
+    "runs",
+    sessionUuid,
+    `resume-${signature.slice(0, 24)}`
+  );
+  if (!isWithin(policyComparisonsPath, runRoot))
+    throw new Error("COMPARISON_RUN_PATH_INVALID");
+  privateDirectory(runRoot);
+  const contractFile = path.join(runRoot, "run-contract.private.json");
+  if (fs.existsSync(contractFile)) {
+    const existing = JSON.parse(fs.readFileSync(contractFile, "utf8"));
+    if (JSON.stringify(existing) !== JSON.stringify(contract))
+      throw new Error("COMPARISON_RESUME_CONTRACT_MISMATCH");
+  } else {
+    writePrivateJson(contractFile, contract);
+  }
+  return { runRoot, signature };
+}
+
 async function updateSession(id, data) {
   await prisma.policy_comparison_sessions.update({
     where: { id },
@@ -44,6 +128,7 @@ function runDocument({
   documentStatus,
   outputDirectory,
   logFile,
+  initialCompletedCategories = [],
   onCategoryComplete = () => {},
 }) {
   return new Promise((resolve, reject) => {
@@ -68,16 +153,20 @@ function runDocument({
       ["stdout", ""],
       ["stderr", ""],
     ]);
-    const completedCategories = new Set();
+    const completedCategories = new Set(initialCompletedCategories);
     const consumeOutput = (channel, chunk) => {
       fs.writeSync(log, chunk);
       const buffered = `${lineBuffers.get(channel)}${chunk.toString("utf8")}`;
       const lines = buffered.split(/\r?\n/gu);
       lineBuffers.set(channel, lines.pop() || "");
       for (const line of lines) {
-        const match = line.match(
-          /^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u
-        );
+        const match =
+          line.match(
+            /^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u
+          ) ||
+          line.match(
+            /^\[all-categories\] (VS|FE|LW|ST|EL|HP|VB|WE) – bereits vollständig/u
+          );
         if (!match || completedCategories.has(match[1])) continue;
         completedCategories.add(match[1]);
         onCategoryComplete(match[1], completedCategories.size);
@@ -118,20 +207,20 @@ async function main() {
   )
     throw new Error("COMPARISON_INPUT_MANIFEST_INVALID");
 
-  const timestamp = new Date().toISOString().replace(/[:.]/gu, "-");
-  const runRoot = path.resolve(
-    policyComparisonsPath,
-    "runs",
-    sessionUuid,
-    timestamp
-  );
-  if (!isWithin(policyComparisonsPath, runRoot))
-    throw new Error("COMPARISON_RUN_PATH_INVALID");
-  privateDirectory(runRoot);
-  fs.writeFileSync(
-    path.join(runRoot, "input-manifest.private.json"),
-    JSON.stringify(manifest, null, 2),
-    { encoding: "utf8", mode: 0o600 }
+  const { runRoot, signature } = resumableRun({ sessionUuid, manifest });
+  writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
+  const plannedRuns = manifest.documents.map((document) => ({
+    document,
+    outputDirectory: path.join(
+      runRoot,
+      "documents",
+      `${document.side}-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`
+    ),
+  }));
+  const resumedCategories = plannedRuns.reduce(
+    (sum, { outputDirectory }) =>
+      sum + completedCategoryViews(outputDirectory).length,
+    0
   );
 
   await updateSession(session.id, {
@@ -141,12 +230,16 @@ async function main() {
       phase: "ANALYZING_DOCUMENTS",
       completedDocuments: 0,
       totalDocuments: manifest.documents.length,
+      completedCategories: resumedCategories,
+      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      resumedCategories,
       currentDocument: null,
     }),
   });
 
   const documentRuns = [];
-  for (const [index, document] of manifest.documents.entries()) {
+  for (const [index, plannedRun] of plannedRuns.entries()) {
+    const { document, outputDirectory: documentOutput } = plannedRun;
     const sourceFile = path.resolve(
       policyComparisonsPath,
       document.storagePath
@@ -158,13 +251,15 @@ async function main() {
       throw new Error(`COMPARISON_SOURCE_MISSING:${document.uuid}`);
     if ((await sha256File(sourceFile)) !== document.sha256)
       throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
+    const completedBeforeRun = completedCategoryViews(documentOutput).length;
     await updateSession(session.id, {
       progress: JSON.stringify({
         phase: "ANALYZING_DOCUMENTS",
         completedDocuments: index,
         totalDocuments: manifest.documents.length,
-        completedCategories: index * CATEGORY_COUNT,
+        completedCategories: index * CATEGORY_COUNT + completedBeforeRun,
         totalCategories: manifest.documents.length * CATEGORY_COUNT,
+        resumedCategories,
         currentCategory: null,
         currentDocument: {
           uuid: document.uuid,
@@ -173,17 +268,13 @@ async function main() {
         },
       }),
     });
-    const documentOutput = path.join(
-      runRoot,
-      "documents",
-      `${document.side}-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`
-    );
     let progressUpdates = Promise.resolve();
     await runDocument({
       file: sourceFile,
       documentStatus: document.documentStatus,
       outputDirectory: documentOutput,
       logFile: path.join(runRoot, "worker.log"),
+      initialCompletedCategories: completedCategoryViews(documentOutput),
       onCategoryComplete: (categoryView, completedInDocument) => {
         progressUpdates = progressUpdates.then(() =>
           updateSession(session.id, {
@@ -193,6 +284,7 @@ async function main() {
               totalDocuments: manifest.documents.length,
               completedCategories: index * CATEGORY_COUNT + completedInDocument,
               totalCategories: manifest.documents.length * CATEGORY_COUNT,
+              resumedCategories,
               currentCategory: categoryView,
               currentDocument: {
                 uuid: document.uuid,
@@ -215,6 +307,7 @@ async function main() {
       totalDocuments: manifest.documents.length,
       completedCategories: manifest.documents.length * CATEGORY_COUNT,
       totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      resumedCategories,
       currentCategory: null,
       currentDocument: null,
     }),
@@ -223,7 +316,7 @@ async function main() {
   await writeComparisonArtifacts({
     documentRuns,
     outputDirectory: resultDirectory,
-    metadata: { sessionUuid },
+    metadata: { sessionUuid, runSignature: signature },
   });
   const resultPath = path.relative(policyComparisonsPath, resultDirectory);
   await updateSession(session.id, {
@@ -234,6 +327,7 @@ async function main() {
       totalDocuments: manifest.documents.length,
       completedCategories: manifest.documents.length * CATEGORY_COUNT,
       totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      resumedCategories,
       currentCategory: null,
       currentDocument: null,
     }),

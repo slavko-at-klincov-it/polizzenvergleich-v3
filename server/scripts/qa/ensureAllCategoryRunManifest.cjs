@@ -2,10 +2,12 @@
 
 process.umask(0o077);
 
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
+const {
+  releaseIdentity,
+  sha256,
+} = require("../../utils/policyAnalysis/runIdentity");
 
 function fail(message) {
   console.error(`[all-category-manifest] ${message}`);
@@ -23,54 +25,8 @@ function parseArguments(argv) {
   return values;
 }
 
-function sha256(value) {
-  return crypto.createHash("sha256").update(value).digest("hex");
-}
-
 function sha256File(file) {
   return sha256(fs.readFileSync(file));
-}
-
-function git(repository, args, encoding = "utf8") {
-  const result = spawnSync("git", ["-C", repository, ...args], {
-    encoding,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (result.status !== 0)
-    fail(
-      `Release-Identität konnte nicht ermittelt werden: ${String(result.stderr || "git fehlgeschlagen").trim()}`
-    );
-  return result.stdout;
-}
-
-function releaseIdentity(repository) {
-  const head = git(repository, ["rev-parse", "HEAD"]).trim();
-  const dirtyState = git(repository, [
-    "status",
-    "--porcelain=v1",
-    "--untracked-files=normal",
-  ]);
-  if (!dirtyState) return head;
-
-  const digest = crypto.createHash("sha256");
-  digest.update(dirtyState);
-  digest.update(git(repository, ["diff", "--binary", "HEAD"], null));
-  const untracked = git(repository, [
-    "ls-files",
-    "--others",
-    "--exclude-standard",
-    "-z",
-  ])
-    .split("\0")
-    .filter(Boolean)
-    .sort();
-  for (const relativeFile of untracked) {
-    const absoluteFile = path.join(repository, relativeFile);
-    digest.update(relativeFile);
-    if (fs.existsSync(absoluteFile) && fs.statSync(absoluteFile).isFile())
-      digest.update(fs.readFileSync(absoluteFile));
-  }
-  return `${head}-dirty-${digest.digest("hex")}`;
 }
 
 function writeAtomic(file, value) {
@@ -115,7 +71,14 @@ function run() {
   const output = path.resolve(args.output);
   const pdfFile = path.resolve(args.pdfFile);
   const repository = path.resolve(args.repository);
-  const releaseId = args.releaseId || releaseIdentity(repository);
+  let releaseId = args.releaseId;
+  if (!releaseId) {
+    try {
+      releaseId = releaseIdentity(repository);
+    } catch (error) {
+      fail(error.message);
+    }
+  }
   const expected = {
     schemaVersion: 1,
     runKind: "ALL_CATEGORIES_QUALITY",

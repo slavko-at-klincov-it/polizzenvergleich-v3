@@ -200,6 +200,22 @@ describe("all-category shell runner", () => {
     expect(resumed.stderr).toContain("pdfSha256");
   });
 
+  test("does not skip a category when its rows artifact is missing", () => {
+    harness = createHarness();
+    expect(runHarness(harness).status).toBe(0);
+    fs.rmSync(path.join(harness.output, "ST/result/rows.private.json"));
+
+    const resumed = runHarness(harness);
+
+    expect(resumed.status).toBe(0);
+    expect(resumed.stdout).not.toContain(
+      "ST – bereits vollständig, übersprungen"
+    );
+    expect(
+      fs.existsSync(path.join(harness.output, "ST/result/rows.private.json"))
+    ).toBe(true);
+  });
+
   test("rejects an existing output without a run manifest", () => {
     harness = createHarness();
     fs.mkdirSync(harness.output, { recursive: true });
