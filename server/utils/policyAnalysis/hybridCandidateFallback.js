@@ -625,6 +625,17 @@ function mergeHybridSelections({ worksheet, document, selections }) {
       documentStart: selection.documentStart,
       documentEnd: selection.documentEnd,
       exactText: selection.quote,
+      context: {
+        unitType: "HYBRID_EXACT_SPAN",
+        pageStart:
+          occurrence.pageStart +
+          (selection.documentStart - occurrence.documentStart),
+        pageEnd:
+          occurrence.pageEnd + (selection.documentEnd - occurrence.documentEnd),
+        documentStart: selection.documentStart,
+        documentEnd: selection.documentEnd,
+        text: selection.quote,
+      },
     };
     sourceComponent.occurrences.push(hybridOccurrence);
     sourceComponent.occurrences.sort(

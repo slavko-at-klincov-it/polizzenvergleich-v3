@@ -5,6 +5,11 @@ const {
   buildCandidateTriagePayload,
 } = require("../../../utils/policyAnalysis/candidateTriageContract");
 const {
+  DOCUMENT_STATUS,
+  buildDeterministicPreparedEvidenceJudgement,
+  buildPreparedEvidenceTargets,
+} = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const {
   buildPageAwareRetrievalChunks,
   mergeHybridSelections,
   parseAndValidateHybridSelection,
@@ -355,6 +360,10 @@ describe("hybridCandidateFallback", () => {
         "Die Klausel regelt Versicherungsschutz für Umweltschäden.",
       hybridRelation: "DIRECT_EXPLICIT",
       exactText: quote,
+      context: {
+        unitType: "HYBRID_EXACT_SPAN",
+        text: quote,
+      },
     });
     expect(
       document.pageContent.slice(
@@ -373,6 +382,25 @@ describe("hybridCandidateFallback", () => {
     expect(payload.bindingTargets[0].hybridSemanticContract).toBe(
       "Die Klausel regelt Versicherungsschutz für Umweltschäden."
     );
+
+    const [effectTarget] = buildPreparedEvidenceTargets({
+      worksheet: merged.worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: [
+        {
+          requirementId: "HP-12",
+          componentId: "environmental_damage",
+          candidateId: occurrence.candidateId,
+          binding: "DIRECT",
+        },
+      ],
+    });
+    expect(
+      buildDeterministicPreparedEvidenceJudgement(effectTarget)
+    ).toMatchObject({
+      selectedCandidateIds: [occurrence.candidateId],
+      coverageEffect: "INCLUDED",
+    });
   });
 
   test("does not merge related-only or other-scope selections", () => {

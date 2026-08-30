@@ -503,9 +503,9 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       printedPageLabel: source.printedPageLabel || null,
       contextUnitType: source.context.unitType,
       focusText: scopeSentence || source.exactText,
-      hybridSemanticContract: isHybridSemanticCandidate
-        ? source.hybridSemanticContract
-        : null,
+      ...(isHybridSemanticCandidate
+        ? { hybridSemanticContract: source.hybridSemanticContract }
+        : {}),
       pageScopeHints: Array.isArray(source.pageScopeHints)
         ? source.pageScopeHints.map(({ scopeKey, text }) => ({
             scopeKey,
