@@ -10,6 +10,12 @@ import {
   summarizeParsedDocumentTokens,
 } from "@/utils/chatAttachmentProcessing";
 import showToast from "@/utils/toast";
+import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.cjs";
+
+const {
+  UNKNOWN_COMPARISON_DOCUMENT_COUNT,
+  isNormalChatUploadLocked,
+} = policyComparisonUploadLock;
 
 export const DndUploaderContext = createContext();
 export const REMOVE_ATTACHMENT_EVENT = "ATTACHMENT_REMOVE";
@@ -56,8 +62,12 @@ export function DnDFileUploaderProvider({
   const [files, setFiles] = useState([]);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [comparisonDocumentCount, setComparisonDocumentCount] = useState(0);
-  const comparisonDocumentCountRef = useRef(0);
+  const [comparisonDocumentCount, setComparisonDocumentCount] = useState(
+    UNKNOWN_COMPARISON_DOCUMENT_COUNT
+  );
+  const comparisonDocumentCountRef = useRef(
+    UNKNOWN_COMPARISON_DOCUMENT_COUNT
+  );
   const processingCount = countActiveDocumentUploads(files);
 
   useEffect(() => {
@@ -189,7 +199,7 @@ export function DnDFileUploaderProvider({
   }
 
   async function acceptFiles(acceptedFiles, storageFilename = null) {
-    if (comparisonDocumentCountRef.current > 0) {
+    if (isNormalChatUploadLocked(comparisonDocumentCountRef.current)) {
       showToast(
         "Der normale Chat-Upload ist gesperrt, solange Dokumente im Polizzenvergleich liegen.",
         "warning"
@@ -335,11 +345,11 @@ export default function DnDFileUploaderWrapper({ children }) {
     ready,
     dragging,
     setDragging,
-    comparisonDocumentCount = 0,
+    comparisonDocumentCount = UNKNOWN_COMPARISON_DOCUMENT_COUNT,
   } = useContext(DndUploaderContext);
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
-    disabled: !ready || comparisonDocumentCount > 0,
+    disabled: !ready || isNormalChatUploadLocked(comparisonDocumentCount),
     noClick: true,
     noKeyboard: true,
     onDragEnter: () => setDragging(true),
@@ -374,7 +384,7 @@ export default function DnDFileUploaderWrapper({ children }) {
       <input
         id="dnd-chat-file-uploader"
         {...getInputProps()}
-        disabled={!ready || comparisonDocumentCount > 0}
+        disabled={!ready || isNormalChatUploadLocked(comparisonDocumentCount)}
       />
       {children}
     </div>

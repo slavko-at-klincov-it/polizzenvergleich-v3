@@ -13,6 +13,9 @@ import PolicyComparison from "@/models/policyComparison";
 import showToast from "@/utils/toast";
 import { DndUploaderContext } from "../DnDWrapper";
 import { saveAs } from "file-saver";
+import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.cjs";
+
+const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
 
 const ROLE_LABELS = {
   MAIN_POLICY: "Hauptpolizze",
@@ -97,6 +100,7 @@ export default function PolicyComparisonPanel({
 
   useEffect(() => {
     mountedRef.current = true;
+    setComparisonDocumentCount?.(UNKNOWN_COMPARISON_DOCUMENT_COUNT);
     void loadSession();
     return () => {
       mountedRef.current = false;
