@@ -1,7 +1,7 @@
 # Polizzenvergleich A/B – technischer MVP-Vertrag
 
 Stand: 30. August 2026  
-Implementierungszweig: `codex/policy-comparison-mvp`
+Kanonischer Implementierungszweig: `codex/polizzenvergleich-v3`
 
 ## 1. Zweck
 
@@ -72,10 +72,31 @@ Vorteil. Der Vergleich unterscheidet technisch:
 - dokumentbezogene Inhalte gleich;
 - Inhalte verschieden und fachlich zu prüfen.
 
-Der Status des Gesamtergebnisses lautet deshalb
-`TECHNICAL_RESULT_REVIEW_REQUIRED`. Dokumentrang, Ersetzung, Vertragswirkung
-und der fachliche Vorteil bleiben prüfpflichtig, solange sie nicht durch eine
-eigene allgemeine Paketregel belegt sind.
+Zusätzlich besitzt jede Zeile ab Ergebnisschema V2 eine servereigene
+`pointDecision` mit den Zuständen `VORTEIL_A`, `VORTEIL_B`,
+`GLEICHWERTIG`, `NICHT_VERGLEICHBAR` und `UNKLAR`. Sie liest nicht die
+Anzeigetexte, sondern die bereits erzeugten atomaren Komponenten,
+Wirkungsurteile, Geltungs- und Scopebilder sowie typisierten Werte und
+servergebundenen Quellen.
+
+Automatisch freigegeben sind derzeit ausschließlich:
+
+- `INCLUDED` gegenüber `EXCLUDED` für dieselbe atomare Deckungskomponente;
+- ein höheres gleichartig qualifiziertes Geld-/Prozent-Deckungslimit;
+- ein niedrigerer gleichartig qualifizierter Geld-/Prozent-Selbstbehalt;
+- echte Gleichwertigkeit vollständig belegter atomarer Fakten.
+
+Jede Seite muss `BELEGT`, vollständig, konfliktfrei, rangaufgelöst und mit
+einer gültigen Quelle gebunden sein. Geltung, Scope, Variante, Werttyp,
+Einheit, Limitart und Qualifier müssen übereinstimmen. Fehlender Beleg,
+`TEILBELEGT`, Bedingungen/Optionen, Rangfragen oder gemischte Gewinner enden
+fail-closed `UNKLAR`. Unterschiedliche Vergleichsschlüssel enden
+`NICHT_VERGLEICHBAR`. Der frühere technische `outcome` bleibt additiv
+erhalten.
+
+Der Status des Gesamtergebnisses bleibt
+`TECHNICAL_RESULT_REVIEW_REQUIRED`. Es gibt keinen Gesamtsieger, keinen
+Score und keine Addition gewonnener Zeilen zu einer Vertragsempfehlung.
 
 ## 5. Bedien- und Betriebsvertrag
 
@@ -87,6 +108,9 @@ eigene allgemeine Paketregel belegt sind.
   Dokumente und zeigt aktuelles Paket, Dokument und Kategorie.
 - Abgeschlossene Ergebnisse sind in acht UI-Ansichten sichtbar und als Excel
   mit einer Tabelle pro Kategorie verfügbar.
+- Ein Lauf setzt nach Prozess- oder Rechnerunterbrechung content-addressiert
+  bei der ersten noch nicht abgeschlossenen Kategorie fort, sofern
+  Dokumente, Release und Laufvertrag unverändert sind.
 - Verwaiste private Vergleichsartefakte werden durch einen eigenen
   Hintergrundjob bereinigt.
 
@@ -116,6 +140,38 @@ belegt:
   320-Zeilen-Hinweis, aktivem Excel-Download und gesperrtem normalem
   Chat-Upload.
 
+### Punktentscheidung V2
+
+Commit `b761e3c4` ergänzt den technischen MVP additiv. Auf dem Mac Studio
+bestanden 90 Jest-Suites mit 1.039 Tests, die fokussierten
+Entscheidungsverträge mit 21 Tests, die Prettier-Prüfung und der
+Frontend-Produktionsbuild.
+
+Der unveränderte gespeicherte LF-gegen-neun-WEVIG-Lauf wurde mit der neuen
+serverseitigen Ergebnisschicht erneut materialisiert, ohne Modellantworten
+umzuschreiben:
+
+| Zustand | Zeilen |
+| --- | ---: |
+| `VORTEIL_A` | 0 |
+| `VORTEIL_B` | 1 |
+| `GLEICHWERTIG` | 7 |
+| `NICHT_VERGLEICHBAR` | 9 |
+| `UNKLAR` | 303 |
+
+Der freigegebene Vorteil ist `LW-22`: Paket A schließt Schwamm- und
+Fäulnisschäden ausdrücklich aus, Paket B schließt beide ein. Die sieben
+Gleichwertigkeiten sind `FE-A04`, `FE-A06`, `ST-04`, `ST-06`,
+`ST-16`, `ST-26` und `HP-26`. Die strenge Verteilung ist beabsichtigt:
+Ein nicht belegter oder nur ähnlich aussehender Tabellenwert darf keine
+Vorteilsaussage erzeugen.
+
+JSON verwendet Schema V2. Markdown enthält zusätzlich Prüfstatus und Quellen.
+Die bestehenden 15 XLSX-Spalten bleiben in derselben Reihenfolge; angehängt
+werden `Punktentscheidung`, `Entscheidungsbegründung` und
+`Entscheidungsregel` als Spalten P bis R. Alte Schema-V1-Ergebnisse werden in
+der UI unverändert gespeichert und sicher als `UNKLAR` dargestellt.
+
 Der reale Lauf begann am 30. August 2026 um 11:51:02 Uhr und endete um
 13:53:36 Uhr (Europe/Vienna). Die gemessene Laufzeit für zwei sequenziell
 analysierte Dokumente betrug 2:02:35 Stunden. Damit besteht die technische
@@ -137,8 +193,9 @@ werden.
 2. Die Verarbeitung läuft derzeit dokumentweise sequenziell. Ein Paket mit
    bis zu 18 PDFs kann das Ziel von ungefähr einer Stunde deutlich
    überschreiten.
-3. Resume nach Prozess- oder Rechnerabbruch fehlt; Cancel und erneuter Start
-   sind vorhanden.
+3. Resume ist technisch vorhanden. Noch zu prüfen sind absichtlich
+   inkompatible Release-/Dokumentänderungen sowie reale Unterbrechungen mitten
+   in unterschiedlichen Dokumentrollen.
 4. LF und WEVIG belegen Regression und Integration, nicht beliebige Polizzen
    und nicht das 99-Prozent-Ziel.
 5. Die Qualität des Vergleichs kann nie höher sein als die beleggebundene
@@ -146,10 +203,13 @@ werden.
 
 ## 8. Nächste fachliche Gates
 
-1. Ein echtes Mehrdokumentpaket mit Hauptpolizze, Zusatz oder Nachtrag prüfen.
+1. Den neuen Build als Release Candidate installieren und den vollständigen
+   LF-gegen-neun-WEVIG-Lauf frisch ausführen.
 2. Paketweite Rang-, Geltungs- und Ersetzungsregeln als atomare semantische
    Verträge implementieren und mit Positiv-/Negativvarianten testen.
-3. Laufzeit durch paketweite Wiederverwendung und gezielte Parallelisierung
+3. Die neue Punktentscheidung fachlich gegen die erzeugten Quellen und
+   insbesondere `LW-22` abnehmen.
+4. Laufzeit durch paketweite Wiederverwendung und gezielte Parallelisierung
    reduzieren, ohne Modell- oder Evidenzpfade unkontrolliert zu vermischen.
-4. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
+5. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
    messbare Genauigkeits- oder 99-Prozent-Aussage verwenden.

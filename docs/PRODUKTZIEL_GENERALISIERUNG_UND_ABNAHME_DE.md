@@ -14,11 +14,12 @@ zeigen konkrete Fehler und erlauben reproduzierbare Vorher-/Nachher-Vergleiche.
 Ein Erfolg auf diesen beiden Dokumenten allein beweist weder Generalisierung
 noch 99 Prozent fachliche Richtigkeit.
 
-Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der neue
-evidenzgebundene Verarbeitungspfad ist für `VS-01` bis `VS-36` weit
-fortgeschritten und auf LF/WEVIG kontrolliert verglichen. Für die anderen
-sieben Ansichten ist derselbe vollständige, validierte End-to-End-Pfad noch
-nicht vorhanden.
+Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der gemeinsame
+evidenzgebundene Verarbeitungspfad ist inzwischen für alle acht Ansichten und
+320 sichtbaren Zeilen implementiert und auf LF/WEVIG technisch kontrolliert.
+Die offene Grenze liegt nicht mehr bei einer fehlenden Ansicht, sondern bei
+fachlicher Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und
+dem Laufzeitbudget.
 
 ## 2. Verbindlicher Produktumfang
 
@@ -213,9 +214,19 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 - der persistente technische A/B-Vergleich nimmt je Paket bis zu neun private,
   nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
   erzeugt aus dem gemeinsamen Acht-Kategorien-Pfad eine UI- sowie XLSX-
-  Gegenüberstellung ohne automatischen Vorteilsschluss;
+  Gegenüberstellung;
+- Ergebnisschema V2 ergänzt eine servereigene, punktweise und fail-closed
+  Entscheidungsschicht. Sie darf Vorteile nur aus vollständigen atomaren
+  Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
+  ableiten; fehlender Beleg bleibt `UNKLAR`, und es gibt keinen
+  Gesamtsieger;
+- der gespeicherte LF-gegen-neun-WEVIG-Lauf terminiert unter diesem Vertrag
+  320/320 Zeilen mit 1 `VORTEIL_B`, 7 `GLEICHWERTIG`, 9
+  `NICHT_VERGLEICHBAR` und 303 `UNKLAR`;
 - 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
-  bestanden.
+  bestanden für V3.3.1; der additive Punktentscheidungsstand besteht auf dem
+  Mac Studio 90 Suites mit 1.039 Tests unter Node 18 sowie den
+  Frontend-Produktionsbuild.
 
 Diese Aussagen gelten für die dokumentierten Fixtures, Artefakte und Gates.
 Eine abschließende fachliche Freigabe oder allgemeine 99-Prozent-Aussage folgt
@@ -243,9 +254,10 @@ daraus nicht.
 - ein einmaliger paketweiter Vorbereitungslauf mit Wiederverwendung der Fakten
   für alle Kategorien;
 - ein kompletter Lauf auf Zielhardware innerhalb des Laufzeitbudgets;
-- Resume nach Rechner- oder Prozessabbruch sowie ein fachlich freigegebener
-  Veröffentlichungsweg; persistenter Ein-Klick-Job, Progress, Cancel und
-  privater Ergebnisdownload sind im A/B-MVP technisch umgesetzt.
+- ein fachlich freigegebener Veröffentlichungsweg; persistenter Ein-Klick-Job,
+  content-addressed Resume, Progress, Cancel und privater Ergebnisdownload
+  sind im A/B-MVP technisch umgesetzt, benötigen aber noch die frische
+  Release-Candidate-End-to-End-Abnahme.
 
 ## 8. Was der LF-Gesamtlauf bewiesen hat
 

@@ -3402,3 +3402,61 @@ Die vier Fälle belegen allgemeine Verträge für Wertidentität, abgeleitete
 Werte, Spartenscope und bedingte Ausschlüsse. Sie beweisen nicht, dass alle
 weiteren Rang-, Ersetzungs- oder Geltungsbeziehungen eines beliebigen
 Dokumentpakets automatisch aufgelöst werden können.
+
+## 68. Regelgebundene Punktentscheidung „Wer ist warum besser?“
+
+Der frühere A/B-MVP stellte Paket A und B technisch gegenüber, durfte aus
+Anzeigetexten aber keinen fachlichen Vorteil ableiten. Ergebnisschema V2
+ergänzt deshalb eine eigene reine Serverschicht. Sie liest pro
+Kategoriezeile die bereits erzeugten atomaren Komponenten aus Worksheet,
+Wirkungsmaterialisierung, Requested-Field-Fakten und servergebundenen
+Quellen.
+
+Der bestehende technische `outcome` bleibt unverändert. Additiv enthält jede
+Zeile:
+
+```json
+{
+  "pointDecision": {
+    "outcome": "VORTEIL_A | VORTEIL_B | GLEICHWERTIG | NICHT_VERGLEICHBAR | UNKLAR",
+    "reasonCode": "stabiler maschinenlesbarer Grund",
+    "reason": "konkrete A-/B-Begründung mit Wirkung oder Wert",
+    "reviewRequired": true,
+    "ruleId": "versionierte Serverregel",
+    "dimensions": []
+  }
+}
+```
+
+Freigegebene Regeln sind `INCLUDED_OVER_EXCLUDED_V1`,
+`HIGHER_COVERAGE_LIMIT_V1`, `LOWER_DEDUCTIBLE_V1`,
+`ATOMIC_COVERAGE_EQUALITY_V1` und `TYPED_VALUE_EQUALITY_V1`. Vor jeder
+Regel liegen Gates für `BELEGT`, vollständige Requested Fields,
+Konfliktfreiheit, aufgelöste Kandidaten, gültige servergebundene Quellen,
+Component/Faktrolle, Dokumentgeltung, Scope, Variante, Werttyp, Einheit,
+Limitart und Qualifier.
+
+Fail-closed bleiben ein-/beidseitig fehlende Evidenz, `TEILBELEGT`,
+`WIDERSPRÜCHLICH`, `RANGFOLGE_PRÜFEN`, Bedingungen/Optionen, unbekannte
+Bewertungsrichtung, mehrere verschiedene Dokumentfakten und gemischte
+Gewinner. Es gibt keinen Gesamtsieger und keine Gewichtung.
+
+```text
+PASS: fokussierte Entscheidung/Result/UI-Verträge 3 Suites / 21 Tests
+PASS: Gesamtregression 90 Suites / 1.039 Tests auf Mac Studio / Node 18.18.0
+PASS: Prettier der geänderten Code-/Testdateien
+PASS: Frontend-Produktionsbuild
+PASS: gespeicherter Zehn-Dokumente-Replay 320/320 Zeilen
+PASS: 1 VORTEIL_B / 7 GLEICHWERTIG / 9 NICHT_VERGLEICHBAR / 303 UNKLAR
+PASS: LW-22 B-Vorteil nur aus zwei gleichgerichteten atomaren Komponenten
+PASS: alte Schema-V1-Ergebnisse werden in der UI fail-closed UNKLAR
+PASS: XLSX behält Spalten A–O und ergänzt P–R; Markdown zeigt Status/Quellen
+NO CLAIM: kein fachliches Oracle für alle 320 Zeilen
+NO CLAIM: keine Rang-/Ersetzungsautomatik und kein Gesamtsieger
+NO CLAIM: keine 99-Prozent- oder Fremdversichererfreigabe
+```
+
+Der Replay verwendete unverändert die gespeicherten Artefakte der Session
+`5a8c6b3d-94fa-4ed9-84bc-4fff2cfa1e85`. Er beweist die neue
+Entscheidungslogik, ersetzt aber nicht den noch ausstehenden frischen
+Zehn-Dokumente-Lauf mit dem neuen Release Candidate.
