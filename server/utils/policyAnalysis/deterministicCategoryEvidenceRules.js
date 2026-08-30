@@ -27,7 +27,7 @@ const POSITIVE_GOVERNORS = Object.freeze([
   /(?:Zusätzlich\s+)?versichert\s+sind(?:\s+Schäden\s+durch)?/giu,
   /Zus[aä]tzlich[^\n]{0,160}\bversichert\b/giu,
   /(?:Als\s+)?mitversichert(?:\s+gelten)?/giu,
-  /Versicherte\s+Gefahren/giu,
+  /(?<!nicht\s)\bVersicherte\s+Gefahren/giu,
   /Versicherungsschutz\s+(?:besteht|gilt)/giu,
   /auf\s+[,„“"']*Erstes\s+Risiko/giu,
   /Katastrophen\s+bis/giu,

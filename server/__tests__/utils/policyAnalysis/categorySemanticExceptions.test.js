@@ -306,6 +306,53 @@ describe("category semantic exceptions", () => {
     ).toBeNull();
   });
 
+  test("the phrase non-insured perils cannot reopen a negative exclusion list", () => {
+    const contextText = [
+      "Nicht versichert sind Schäden, sofern nicht anders vereinbart:",
+      "a) durch nicht versicherte Gefahren;",
+      "g) durch Unterdruck (Implosion).",
+    ].join("\n");
+    const scopeLeadText =
+      "Nicht versichert sind Schäden, sofern nicht anders vereinbart:\na) durch nicht versicherte Gefahren;\ng) durch Unterdruck (";
+    const decision = deterministicCategoryCandidateBinding({
+      worksheet: { catalog: { categoryView: "FE" } },
+      requirement: { id: "FE-A08" },
+      component: { id: "implosion", factRole: "PERIL" },
+      occurrence: occurrence({
+        candidateId: "candidate:excluded-implosion",
+        exactText: "Implosion",
+        contextText,
+        scopeLeadText,
+        sectionScopeKey: "FEUER_INSURANCE",
+        pageNumber: 2,
+      }),
+    });
+
+    expect(decision).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "FE",
+        requirementId: "FE-A08",
+        componentId: "implosion",
+        factRole: "PERIL",
+        candidates: [
+          {
+            candidateId: "candidate:excluded-implosion",
+            candidateBinding: "DIRECT",
+            exactText: "Implosion",
+            contextText,
+            contextDocumentStart: 2_000,
+            documentStart: 2_000 + contextText.indexOf("Implosion"),
+            scopeLeadText,
+          },
+        ],
+      })
+    ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.EXCLUDED });
+  });
+
   test("binds the complete VB-24 expert procedure right without accepting headings or cost clauses", () => {
     const contextText =
       "Ist der Versicherungsnehmer mit dem Gutachten des vom Versicherer bestellten Sachverständigen nicht einverstanden, so steht es dem Versicherungsnehmer auch frei, einen Sachverständigen des jeweiligen Sachgebietes namhaft zu machen. Dieses Gutachten tritt an Stelle des Schiedsgutachterverfahrens.";
