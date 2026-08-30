@@ -1,7 +1,7 @@
 # Polizzenvergleich – Tests, Messwerte und Entwicklungserkenntnisse
 
-Stand: 26. August 2026
-Letzte ausgewertete Version: `policy-v0.3.22` (`17a556dc`)
+Stand: 30. August 2026
+Letzte ausgewertete Version: V3-Entwicklungsstand `db88cf6a`
 
 ## 1. Zweck
 
@@ -2610,3 +2610,56 @@ Kandidaten vor Hybrid-Nebenwirkungen.
 **Beweist nicht:** vollständige HP-Fachrichtigkeit, beliebige Polizzen,
 Multi-Dokument-Ranglogik oder 99 Prozent. GRAWE und UNIQA waren nur
 Nichtaktivierungskontrollen, keine vollständigen Expertenoracles.
+
+## 43. Vier Fehlalarme aus dem Zehn-Dokumente-Vergleich
+
+**Beobachtungsfenster:** 30. August 2026
+
+Der vollständige A/B-Lauf der Session
+`5a8c6b3d-94fa-4ed9-84bc-4fff2cfa1e85` materialisierte 3.200
+dokumentbezogene Rohzeilen und 320 Paketzeilen. Vier Paket-B-Zeilen standen
+auf `RANGFOLGE_PRÜFEN`: `VS-25`, `LW-20`, `HP-36` und `VB-14`.
+
+Der Lauf verwendete Release-ID `50130ae31ed68509ba008b28d8a22dcceea871d4`.
+Damit fehlten ihm spätere V3-Korrekturen gegen Scope-Leakage und für
+bedingte Vorsatzausschlüsse. Die gespeicherten Run-Artefakte wurden nicht
+verändert. Stattdessen wurden ihre Original-Rows und Original-Occurrences im
+isolierten Mac-Studio-Prüfworktree mit dem neuen deterministischen Code
+erneut abgespielt.
+
+| Fall | Root Cause | Ergebnis des Artefakt-Replays |
+| --- | --- | --- |
+| `VS-25` | 5 % des NBW und der exakt berechnete Absolutbetrag wurden als verschiedene Textwerte behandelt | `TEILBELEGT / Ja / EUR 1.530.400,00 auf Erstes Risiko`; kein Rangfolgenfehler |
+| `VB-14` | EUR 5 Mio. mit und ohne Dezimalstellen wurden als verschiedene Textwerte behandelt | `BELEGT / Ja / EUR 5.000.000,00 auf Erstes Risiko` |
+| `LW-20` | Ein Sturm-Ausschluss und ein Leitungswasser-Ausschluss wurden zusammengeführt | Sturmfundstelle `MENTION_ONLY`; Leitungswasserfundstelle `EXCLUDED` |
+| `HP-36` | `nicht ... vorsätzlich` war durch PDF-Zeilenumbrüche getrennt | `DIRECT / EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR / EXCLUDED` |
+
+Die erste Erweiterung des mehrzeiligen Negativbinders übernahm
+`exklusive` fälschlich in den nächsten Listenpunkt. Ein vorhandener
+Nachbartest erkannte diese Regression. Die finale Fassung erlaubt nur dem
+engen Vorsatzmuster den begrenzten Zeilenübergriff; der allgemeine
+`exklusive`-Binder bleibt lokal.
+
+| Prüfung auf Mac Studio | Ergebnis |
+| --- | ---: |
+| angrenzende Policy-Analyse-/Vergleichstests | 8/8 Suites, 173/173 Tests |
+| vollständige Jest-Regression mit definiertem Prozessabschluss | 98/98 Suites, 1.130/1.130 Tests |
+| Prettier der vier geänderten Code-/Testdateien | PASS |
+| ESLint | Infrastruktur-Blocker: ESLint 9 und vorhandenes React-Plugin sind inkompatibel |
+
+Der normale vollständige Jest-Aufruf meldet ebenfalls 1.130 bestandene
+Tests, endet aber wegen eines bestehenden asynchronen Model-Pricing-Loggers
+mit Exit 1. Mit `--forceExit` endet derselbe Bestand nach 1.130 PASS regulär.
+Dieser Prozessfehler wurde nicht als fachlicher Testfehler der vier Änderungen
+umgedeutet.
+
+**Beweist:** Die vier konkreten Fehlalarme besitzen wiederverwendbare,
+serverseitige Korrekturen: centgenaue Wertidentität, streng belegte
+NBW-Ableitung, expliziter Spartenscope und eng begrenzte mehrzeilige
+Negativ-Governors.
+
+**Beweist nicht:** dass der alte Modelllauf den neuen Code ausgeführt hat,
+dass weitere Dokumentrang- oder Ersetzungsfragen gelöst sind oder dass eine
+99-Prozent-/Fremdversichererfreigabe vorliegt. Dafür ist ein frischer Lauf mit
+versioniertem neuen Build und weiterhin ein zuvor unbekannter Expertenholdout
+erforderlich.
