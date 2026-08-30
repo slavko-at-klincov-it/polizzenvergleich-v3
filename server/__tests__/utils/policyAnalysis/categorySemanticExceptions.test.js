@@ -460,6 +460,43 @@ describe("category semantic exceptions", () => {
     );
   });
 
+  test("binds an indirect-lightning amount across PDF line breaks without accepting an amount-less mention", () => {
+    const bindingFor = (contextText) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "FE" } },
+        requirement: {
+          id: "FE-A06",
+          scopeRules: { narrowAliases: ["Erdkabel"] },
+        },
+        component: { id: "indirect_lightning_limit", factRole: "LIMIT" },
+        occurrence: occurrence({
+          candidateId: "candidate:indirect-lightning-limit",
+          exactText: "indirekter Blitzschlag",
+          contextText,
+          scopeLeadText: contextText,
+          sectionScopeKey: "FEUER_INSURANCE",
+          pageNumber: 11,
+        }),
+      });
+
+    expect(
+      bindingFor(
+        "Mitversichert ist der indirekter Blitzschlag an Erdkabel, sofern der Versicherungsnehmer dafür aufzukommen hat inklusive\nSuch-, Austausch- und Nebenkosten bis insgesamt EUR 5.000 je Schadenfall."
+      )
+    ).toMatchObject({
+      binding: "NARROW_SCOPE",
+      basis: "EXPLICIT_NARROW_CLAUSE_SCOPE",
+    });
+    expect(
+      bindingFor(
+        "Mitversichert ist der indirekter Blitzschlag an Erdkabel ohne näher bezeichnete Betragsgrenze."
+      )
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "LIMIT_TERM_WITHOUT_LOCAL_LIMIT",
+    });
+  });
+
   test("binds the complete VB-24 expert procedure right without accepting headings or cost clauses", () => {
     const contextText =
       "Ist der Versicherungsnehmer mit dem Gutachten des vom Versicherer bestellten Sachverständigen nicht einverstanden, so steht es dem Versicherungsnehmer auch frei, einen Sachverständigen des jeweiligen Sachgebietes namhaft zu machen. Dieses Gutachten tritt an Stelle des Schiedsgutachterverfahrens.";

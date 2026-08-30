@@ -82,7 +82,15 @@ describe("controlledOccurrenceWorksheet", () => {
       catalog: feFullCatalog,
     });
     const limit = component(worksheet, "FE-A06", "indirect_lightning_limit");
+    const requirement = worksheet.requirements.find(
+      ({ id }) => id === "FE-A06"
+    );
 
+    expect(requirement.scopeRules.narrowAliases).toEqual([
+      "Erdkabel",
+      "Gebäude-Elektroinstallationen",
+      "Sachen außerhalb von Gebäuden",
+    ]);
     expect(limit.occurrences).toHaveLength(1);
     expect(limit.occurrences[0]).toMatchObject({
       exactText: "indirekter Blitzschlag",

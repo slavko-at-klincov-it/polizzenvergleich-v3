@@ -67,6 +67,13 @@
       "id": "FE-A05",
       "label": "Überspannungsschäden durch indirekten Blitzschlag",
       "requestedFields": [],
+      "scopeRules": {
+        "narrowAliases": [
+          "Erdkabel",
+          "Gebäude-Elektroinstallationen",
+          "Sachen außerhalb von Gebäuden"
+        ]
+      },
       "components": [
         {
           "id": "indirect_lightning_damage",
@@ -84,6 +91,13 @@
       "id": "FE-A06",
       "label": "Betragsgrenze für Überspannungsschäden",
       "requestedFields": ["limit"],
+      "scopeRules": {
+        "narrowAliases": [
+          "Erdkabel",
+          "Gebäude-Elektroinstallationen",
+          "Sachen außerhalb von Gebäuden"
+        ]
+      },
       "components": [
         {
           "id": "indirect_lightning_limit",

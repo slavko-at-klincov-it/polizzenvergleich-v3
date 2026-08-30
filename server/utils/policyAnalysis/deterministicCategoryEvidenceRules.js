@@ -222,8 +222,19 @@ function operativeCoveragePolarity(occurrence) {
 
 function explicitRoleMismatch(component, occurrence) {
   const clause = occurrenceClauseText(occurrence);
+  const context = String(occurrence?.context?.text || "");
+  const subjectBoundIndirectLightningLimit = Boolean(
+    component?.id === "indirect_lightning_limit" &&
+      /(?:indirekter?\s+Blitzschlag|Überspannung[\s\S]{0,80}Blitzschlag)/iu.test(
+        context
+      ) &&
+      /(?:bis\s+(?:insgesamt\s+)?|mindestens\s+|maximal\s+)[\s\S]{0,100}(?:EUR|€|%|Versicherungssumme)/iu.test(
+        context
+      )
+  );
   if (
     component?.factRole === "LIMIT" &&
+    !subjectBoundIndirectLightningLimit &&
     !/(?:EUR|€|%|Höchstentschädigung|Sublimit|Versicherungssumme|auf\s+[,„“"']*Erstes\s+Risiko|bis\s+zu|maximal)/iu.test(
       clause
     )
