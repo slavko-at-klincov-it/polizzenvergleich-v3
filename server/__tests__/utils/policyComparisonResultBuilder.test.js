@@ -108,7 +108,8 @@ describe("policy comparison result builder", () => {
     const comparison = comparePackages(withEvidence, withoutEvidence);
 
     expect(comparison.outcome).toBe("NUR_A_BELEGT");
-    expect(comparison.difference).toContain("kein automatischer Vorteilsschluss");
+    expect(comparison.difference).toContain("automatischer Vorteilsschluss");
+    expect(comparison.difference).toContain("nicht zulässig");
   });
 
   test("builds all eight category views with document-level provenance", async () => {
