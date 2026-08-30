@@ -12,7 +12,9 @@ function scopedUrl(workspaceSlug, suffix = "", threadSlug = null) {
 async function responseData(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok)
-    throw new Error(data.error || `Comparison request failed (${response.status})`);
+    throw new Error(
+      data.error || `Comparison request failed (${response.status})`
+    );
   return data;
 }
 
@@ -48,11 +50,7 @@ const PolicyComparison = {
     body.append("role", role);
     body.append("documentStatus", documentStatus);
     const response = await fetch(
-      scopedUrl(
-        workspaceSlug,
-        `/${sessionUuid}/documents`,
-        threadSlug
-      ),
+      scopedUrl(workspaceSlug, `/${sessionUuid}/documents`, threadSlug),
       { method: "POST", headers: baseHeaders(), body }
     );
     return responseData(response);
@@ -97,11 +95,7 @@ const PolicyComparison = {
     return responseData(response);
   },
 
-  reset: async function ({
-    workspaceSlug,
-    threadSlug = null,
-    sessionUuid,
-  }) {
+  reset: async function ({ workspaceSlug, threadSlug = null, sessionUuid }) {
     const response = await fetch(
       scopedUrl(workspaceSlug, `/${sessionUuid}/reset`, threadSlug),
       { method: "POST", headers: baseHeaders() }
@@ -109,11 +103,7 @@ const PolicyComparison = {
     return responseData(response);
   },
 
-  start: async function ({
-    workspaceSlug,
-    threadSlug = null,
-    sessionUuid,
-  }) {
+  start: async function ({ workspaceSlug, threadSlug = null, sessionUuid }) {
     const response = await fetch(
       scopedUrl(workspaceSlug, `/${sessionUuid}/start`, threadSlug),
       { method: "POST", headers: baseHeaders() }
@@ -121,11 +111,7 @@ const PolicyComparison = {
     return responseData(response);
   },
 
-  cancel: async function ({
-    workspaceSlug,
-    threadSlug = null,
-    sessionUuid,
-  }) {
+  cancel: async function ({ workspaceSlug, threadSlug = null, sessionUuid }) {
     const response = await fetch(
       scopedUrl(workspaceSlug, `/${sessionUuid}/cancel`, threadSlug),
       { method: "POST", headers: baseHeaders() }
@@ -151,11 +137,7 @@ const PolicyComparison = {
     sessionUuid,
   }) {
     const response = await fetch(
-      scopedUrl(
-        workspaceSlug,
-        `/${sessionUuid}/download/xlsx`,
-        threadSlug
-      ),
+      scopedUrl(workspaceSlug, `/${sessionUuid}/download/xlsx`, threadSlug),
       { method: "GET", headers: baseHeaders() }
     );
     if (!response.ok) {

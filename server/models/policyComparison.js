@@ -312,8 +312,12 @@ const PolicyComparison = {
       if (!current) throw new Error("COMPARISON_SESSION_NOT_FOUND");
       if (LOCKED_STATUSES.includes(current.status))
         throw new Error("COMPARISON_SESSION_LOCKED");
-      const countA = current.documents.filter(({ side }) => side === "A").length;
-      const countB = current.documents.filter(({ side }) => side === "B").length;
+      const countA = current.documents.filter(
+        ({ side }) => side === "A"
+      ).length;
+      const countB = current.documents.filter(
+        ({ side }) => side === "B"
+      ).length;
       if (countA === 0 || countB === 0)
         throw new Error("COMPARISON_BOTH_SIDES_REQUIRED");
       const inputManifest = {

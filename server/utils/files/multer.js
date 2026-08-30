@@ -2,11 +2,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { v4 } = require("uuid");
-const {
-  normalizePath,
-  sanitizeFileName,
-  policyComparisonsPath,
-} = require(".");
+const { normalizePath, sanitizeFileName, policyComparisonsPath } = require(".");
 
 /**
  * Handle File uploads for auto-uploading.
@@ -115,11 +111,7 @@ const policyComparisonUploadStorage = multer.diskStorage({
     const sessionUuid = request.policyComparisonSession?.uuid;
     if (!sessionUuid)
       return cb(new Error("Comparison session was not authorized."));
-    const output = path.resolve(
-      policyComparisonsPath,
-      "uploads",
-      sessionUuid
-    );
+    const output = path.resolve(policyComparisonsPath, "uploads", sessionUuid);
     fs.mkdirSync(output, { recursive: true, mode: 0o700 });
     fs.chmodSync(output, 0o700);
     return cb(null, output);
@@ -145,9 +137,10 @@ function handlePolicyComparisonUpload(request, response, next) {
     limits: { fileSize: 512 * 1024 * 1024, files: 1 },
     fileFilter: (_, file, cb) => {
       const extension = path.extname(file.originalname || "").toLowerCase();
-      const allowedMime = ["application/pdf", "application/octet-stream"].includes(
-        file.mimetype
-      );
+      const allowedMime = [
+        "application/pdf",
+        "application/octet-stream",
+      ].includes(file.mimetype);
       if (extension !== ".pdf" || !allowedMime)
         return cb(new Error("Only PDF documents are allowed."));
       return cb(null, true);

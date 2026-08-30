@@ -143,7 +143,8 @@ export default function PolicyComparisonPanel({
     setBusy(true);
     try {
       for (const [index, file] of pdfs.entries()) {
-        const role = existing.length + index === 0 ? "MAIN_POLICY" : "SUPPLEMENT";
+        const role =
+          existing.length + index === 0 ? "MAIN_POLICY" : "SUPPLEMENT";
         await PolicyComparison.upload({
           workspaceSlug,
           threadSlug,
@@ -237,7 +238,10 @@ export default function PolicyComparisonPanel({
         sessionUuid: session.uuid,
       });
       setSession(data.session);
-      showToast("Der vollständige Kategorienvergleich wurde gestartet.", "success");
+      showToast(
+        "Der vollständige Kategorienvergleich wurde gestartet.",
+        "success"
+      );
     } catch (error) {
       showToast(error.message, "error");
       await loadSession();

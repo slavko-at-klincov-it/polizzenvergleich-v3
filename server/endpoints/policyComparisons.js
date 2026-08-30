@@ -11,9 +11,7 @@ const {
 const { validWorkspaceSlug } = require("../utils/middleware/validWorkspace");
 const { WorkspaceThread } = require("../models/workspaceThread");
 const { PolicyComparison } = require("../models/policyComparison");
-const {
-  handlePolicyComparisonUpload,
-} = require("../utils/files/multer");
+const { handlePolicyComparisonUpload } = require("../utils/files/multer");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const { EventLogs } = require("../models/eventLogs");
 
@@ -27,7 +25,10 @@ function safeUnlink(file) {
 }
 
 function deleteStoredDocument(document) {
-  const absolutePath = path.resolve(policyComparisonsPath, document.storagePath);
+  const absolutePath = path.resolve(
+    policyComparisonsPath,
+    document.storagePath
+  );
   if (!isWithin(policyComparisonsPath, absolutePath))
     throw new Error("COMPARISON_STORAGE_PATH_INVALID");
   safeUnlink(absolutePath);
@@ -479,7 +480,10 @@ function policyComparisonEndpoints(app) {
           session.resultPath,
           "polizzenvergleich.xlsx"
         );
-        if (!isWithin(policyComparisonsPath, workbook) || !fs.existsSync(workbook))
+        if (
+          !isWithin(policyComparisonsPath, workbook) ||
+          !fs.existsSync(workbook)
+        )
           throw new Error("COMPARISON_WORKBOOK_MISSING");
         return response.download(workbook, "Polizzenvergleich-A-B.xlsx");
       } catch (error) {

@@ -336,8 +336,7 @@ export default function DnDFileUploaderWrapper({ children }) {
     dragging,
     setDragging,
     comparisonDocumentCount = 0,
-  } =
-    useContext(DndUploaderContext);
+  } = useContext(DndUploaderContext);
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     disabled: !ready || comparisonDocumentCount > 0,

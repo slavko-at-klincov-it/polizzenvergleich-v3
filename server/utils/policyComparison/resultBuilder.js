@@ -5,7 +5,7 @@ const {
   applyHeaderStyle,
   applyZebraStriping,
   freezePanes,
-} = require("../../agents/aibitat/plugins/create-files/xlsx/utils");
+} = require("../agents/aibitat/plugins/create-files/xlsx/utils");
 
 const CATEGORY_ORDER = Object.freeze([
   "VS",
@@ -85,7 +85,8 @@ function summarizePackage(entries) {
       .map(({ coverageAmount }) => coverageAmount)
       .filter((value) => normalized(value) !== normalized(NOT_DETERMINABLE))
   );
-  const unresolvedPrecedence = coverageValues.length > 1 || amountValues.length > 1;
+  const unresolvedPrecedence =
+    coverageValues.length > 1 || amountValues.length > 1;
   const reviewStatus = facts.some(
     ({ reviewStatus: status }) => status === "WIDERSPRÜCHLICH"
   )
@@ -159,10 +160,14 @@ function comparePackages(packageA, packageB) {
       difference:
         "Nur Paket B enthält belegten Inhalt. Ein automatischer Vorteilsschluss ist nicht zulässig.",
     };
-  if (JSON.stringify(comparable(packageA)) === JSON.stringify(comparable(packageB)))
+  if (
+    JSON.stringify(comparable(packageA)) ===
+    JSON.stringify(comparable(packageB))
+  )
     return {
       outcome: "INHALTLICH_GLEICH",
-      difference: "Die belegten dokumentbezogenen Werte sind in beiden Paketen gleich.",
+      difference:
+        "Die belegten dokumentbezogenen Werte sind in beiden Paketen gleich.",
     };
   return {
     outcome: "UNTERSCHIED_FACHLICH_PRÜFEN",
@@ -181,7 +186,9 @@ function readDocumentRows(documentRun) {
       "rows.private.json"
     );
     if (!fs.existsSync(file))
-      throw new Error(`COMPARISON_CATEGORY_RESULT_MISSING:${documentRun.document.uuid}:${categoryView}`);
+      throw new Error(
+        `COMPARISON_CATEGORY_RESULT_MISSING:${documentRun.document.uuid}:${categoryView}`
+      );
     categories[categoryView] = JSON.parse(fs.readFileSync(file, "utf8"));
   }
   return categories;
@@ -197,10 +204,13 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       document: run.document,
       rows: run.categories[categoryView],
     }));
-    const rowIds = byDocument[0]?.rows.map(({ categoryId }) => categoryId) || [];
+    const rowIds =
+      byDocument[0]?.rows.map(({ categoryId }) => categoryId) || [];
     const rows = rowIds.map((categoryId) => {
       const entries = byDocument.map(({ document, rows: documentRows }) => {
-        const row = documentRows.find((candidate) => candidate.categoryId === categoryId);
+        const row = documentRows.find(
+          (candidate) => candidate.categoryId === categoryId
+        );
         if (!row)
           throw new Error(
             `COMPARISON_ROW_MISSING:${document.uuid}:${categoryId}`
@@ -281,7 +291,11 @@ function markdownResult(result) {
         row.packageA.documentedContent,
         row.packageB.documentedContent,
         row.difference,
-      ].map((value) => String(value || "").replace(/\r?\n/gu, "<br>").replace(/\|/gu, "\\|"));
+      ].map((value) =>
+        String(value || "")
+          .replace(/\r?\n/gu, "<br>")
+          .replace(/\|/gu, "\\|")
+      );
       lines.push(`| ${cells.join(" | ")} |`);
     }
     lines.push("");
@@ -344,7 +358,11 @@ async function writeWorkbook(result, outputFile) {
   fs.chmodSync(outputFile, 0o600);
 }
 
-async function writeComparisonArtifacts({ documentRuns, outputDirectory, metadata }) {
+async function writeComparisonArtifacts({
+  documentRuns,
+  outputDirectory,
+  metadata,
+}) {
   fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
   const result = buildComparisonResult(documentRuns, metadata);
   const jsonFile = path.join(outputDirectory, "comparison.private.json");

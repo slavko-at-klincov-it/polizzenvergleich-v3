@@ -7,10 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 const prisma = require("../utils/prisma");
-const {
-  isWithin,
-  policyComparisonsPath,
-} = require("../utils/files");
+const { isWithin, policyComparisonsPath } = require("../utils/files");
 const {
   writeComparisonArtifacts,
 } = require("../utils/policyComparison/resultBuilder");
@@ -122,8 +119,14 @@ async function main() {
 
   const documentRuns = [];
   for (const [index, document] of manifest.documents.entries()) {
-    const sourceFile = path.resolve(policyComparisonsPath, document.storagePath);
-    if (!isWithin(policyComparisonsPath, sourceFile) || !fs.existsSync(sourceFile))
+    const sourceFile = path.resolve(
+      policyComparisonsPath,
+      document.storagePath
+    );
+    if (
+      !isWithin(policyComparisonsPath, sourceFile) ||
+      !fs.existsSync(sourceFile)
+    )
       throw new Error(`COMPARISON_SOURCE_MISSING:${document.uuid}`);
     if ((await sha256File(sourceFile)) !== document.sha256)
       throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
