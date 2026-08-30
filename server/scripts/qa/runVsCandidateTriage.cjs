@@ -311,7 +311,6 @@ async function run() {
             "UNRESOLVED",
           ],
         }));
-      controls = evaluateCandidateTriageControls({ materialized, controlSet });
       writePrivateJson(
         outputDirectory,
         "validated-triage.private.json",
@@ -322,6 +321,13 @@ async function run() {
         "materialized-triage.private.json",
         materialized
       );
+      // A document can legitimately have no candidates for a category. The
+      // generated technical-review control set is then empty by construction,
+      // so there is nothing to evaluate and no model call is required.
+      controls =
+        controlMode === "technical-review" && materialized.length === 0
+          ? []
+          : evaluateCandidateTriageControls({ materialized, controlSet });
     } catch (error) {
       validationError = {
         code: error.code || "UNKNOWN",
