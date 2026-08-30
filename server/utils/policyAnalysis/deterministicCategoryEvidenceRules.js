@@ -94,8 +94,12 @@ function clausePolarity({
     : String(contextText).indexOf(String(exactText || ""));
   if (!Number.isInteger(relativeStart) || relativeStart < 0)
     relativeStart = String(contextText).length;
-  const localPrefix = String(contextText).slice(
-    0,
+  const context = String(contextText || "");
+  let localStart = relativeStart;
+  while (localStart > 0 && !/[.!?;\n\r]/u.test(context[localStart - 1]))
+    localStart -= 1;
+  const localPrefix = context.slice(
+    localStart,
     relativeStart + String(exactText || "").length
   );
   if (lastPatternMatch(localPrefix, INLINE_NEGATIVE_GOVERNORS))
@@ -230,6 +234,45 @@ function explicitRoleMismatch(component, occurrence) {
   )
     return "DEDUCTIBLE_TERM_WITHOUT_LOCAL_DEDUCTIBLE";
   return null;
+}
+
+function technicalSubcomponentObjectBinding(component, occurrence) {
+  if (component?.factRole !== "INSURED_OBJECT") return null;
+  const exactObject = normalize(occurrence?.exactText);
+  if (!exactObject) return null;
+  const escapedObject = exactObject.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const clause = normalize(occurrenceClauseText(occurrence));
+  const technicalReference = new RegExp(
+    `\\b(?:betaetigungs|bedienungs|steuerungs|antriebs)\\p{L}*\\s+(?:fuer|von|der|des)\\s+(?:(?:die|das|den)\\s+)?${escapedObject}\\b`,
+    "u"
+  );
+  if (!technicalReference.test(clause)) return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "TECHNICAL_SUBCOMPONENT_NOT_WHOLE_OBJECT",
+    authoritative: true,
+  };
+}
+
+function explicitRecoursePartyMismatch({
+  categoryView,
+  requirement,
+  occurrence,
+}) {
+  if (categoryView !== "VB" || requirement?.id !== "VB-15") return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/(?:Regressverzicht\s+gegenüber\s+Mietern|gegen\s+einen\s+Mieter)/iu.test(
+      clause
+    ) ||
+    /Wohnungseigentümer/iu.test(clause)
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "TENANT_RECOURSE_NOT_UNIT_OWNER_RECOURSE",
+    authoritative: true,
+  };
 }
 
 function explicitEl16GlassObjectBinding({
@@ -750,6 +793,19 @@ function deterministicCategoryCandidateBinding({
   occurrence,
 }) {
   const categoryView = resolvedCategoryView(worksheet, requirement);
+  const technicalSubcomponentBinding = technicalSubcomponentObjectBinding(
+    component,
+    occurrence
+  );
+  if (technicalSubcomponentBinding) return technicalSubcomponentBinding;
+
+  const recoursePartyMismatch = explicitRecoursePartyMismatch({
+    categoryView,
+    requirement,
+    occurrence,
+  });
+  if (recoursePartyMismatch) return recoursePartyMismatch;
+
   if (categoryView === "VS") {
     const vsDecision = deterministicVsCandidateBinding({
       requirementId: requirement?.id,

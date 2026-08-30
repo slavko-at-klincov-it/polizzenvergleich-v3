@@ -209,7 +209,11 @@ describe("category semantic exceptions", () => {
           pageNumber: 26,
         }),
       })
-    ).toBeNull();
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "TENANT_RECOURSE_NOT_UNIT_OWNER_RECOURSE",
+      authoritative: true,
+    });
 
     expect(
       deterministicCategoryCandidateBinding({
@@ -224,6 +228,79 @@ describe("category semantic exceptions", () => {
           scopeLeadText: "5. Regressverzicht",
           sectionScopeKey: "GENERAL_CONTRACT_TERMS",
           pageNumber: 26,
+        }),
+      })
+    ).toBeNull();
+  });
+
+  test("a technical control component neither includes nor excludes the whole object", () => {
+    const bindingFor = ({ candidateId, contextText, scopeLeadText }) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "VS" } },
+        requirement: { id: "VS-18" },
+        component: { id: "gates", factRole: "INSURED_OBJECT" },
+        occurrence: occurrence({
+          candidateId,
+          exactText: "Tore",
+          contextText,
+          scopeLeadText,
+          sectionScopeKey: "FEUER_INSURANCE",
+          pageNumber: 11,
+        }),
+      });
+
+    expect(
+      bindingFor({
+        candidateId: "candidate:gate-controls",
+        contextText:
+          "Sachen außerhalb von Gebäuden sind Betätigungselemente für Tore, Beleuchtungsanlagen und Alarmanlagen.",
+        scopeLeadText:
+          "Nicht mitversichert sind Sachen eines Haushalts. Sachen außerhalb von Gebäuden sind Betätigungselemente für",
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "TECHNICAL_SUBCOMPONENT_NOT_WHOLE_OBJECT",
+      authoritative: true,
+    });
+
+    expect(
+      bindingFor({
+        candidateId: "candidate:gates-included",
+        contextText: "Versichert sind Sachen und Objekte: Tore.",
+        scopeLeadText: "Versichert sind Sachen und Objekte:",
+      })
+    ).toMatchObject({ binding: "DIRECT" });
+    expect(
+      bindingFor({
+        candidateId: "candidate:gates-excluded",
+        contextText: "Nicht versichert sind Sachen und Objekte: Tore.",
+        scopeLeadText: "Nicht versichert sind Sachen und Objekte:",
+      })
+    ).toMatchObject({ binding: "DIRECT" });
+  });
+
+  test("a prior clause exclusion does not cross a newer coded clause boundary", () => {
+    const contextText = [
+      "Nicht mitversichert sind Sachen eines Haushalts.",
+      "Indirekter Blitzschlag an Sachen außerhalb von Gebäuden12PA0160",
+      "Sachen außerhalb von Gebäuden sind Betätigungselemente für Tore.",
+      "Anprall unbekannter Landfahrzeuge12PA0141",
+      "Anprall liegt vor, wenn unbekannte Fahrzeuge versicherte Einfriedungen beschädigen.",
+    ].join("\n");
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "VS" } },
+        requirement: { id: "VS-18" },
+        component: { id: "enclosures", factRole: "INSURED_OBJECT" },
+        occurrence: occurrence({
+          candidateId: "candidate:new-clause-enclosures",
+          exactText: "Einfriedungen",
+          contextText,
+          scopeLeadText:
+            "Anprall unbekannter Landfahrzeuge12PA0141\nAnprall liegt vor, wenn unbekannte Fahrzeuge versicherte",
+          sectionScopeKey: "FEUER_INSURANCE",
+          pageNumber: 11,
         }),
       })
     ).toBeNull();

@@ -693,6 +693,88 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(occurrences[2].sectionScopeHint).toBeNull();
   });
 
+  test("recognizes title-case insurance headings as category scope", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Allgemeine Bedingungen für die Glasbruchversicherung",
+          "Versichert sind Wintergartenverglasungen.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "title-case-glass-scope",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "title-case-glass-scope",
+        categoryView: "EL",
+        requirements: [
+          {
+            id: "EL-16",
+            label: "Wintergartenverglasung",
+            requestedFields: [],
+            components: [
+              {
+                id: "winter_garden",
+                label: "Wintergarten",
+                factRole: "INSURED_OBJECT",
+                aliases: ["Wintergartenverglasungen"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(
+      worksheet.requirements[0].components[0].occurrences[0]
+        .sectionScopeHint
+    ).toMatchObject({
+      scopeKey: "GLASBRUCH_INSURANCE",
+      source: "CURRENT_PAGE_HEADING",
+    });
+  });
+
+  test("does not carry a coverage governor across a new coded clause heading", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Nicht versichert sind:",
+          "- Sachen des Haushalts;",
+          "AK20 Mehrkosten durch behördliche Auflagen10PA0130",
+          "Das sind Kosten für technische Verbesserungen.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "coded-heading-governor-reset",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "coded-heading-governor-reset",
+        categoryView: "WE",
+        requirements: [
+          {
+            id: "WE-08",
+            label: "Verbesserungen über Standard",
+            requestedFields: [],
+            components: [
+              {
+                id: "upgraded_improvements",
+                label: "Verbesserungen",
+                factRole: "INSURED_OBJECT",
+                aliases: ["Verbesserungen"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const [occurrence] =
+      worksheet.requirements[0].components[0].occurrences;
+
+    expect(occurrence.scopeLead.text).toContain(
+      "AK20 Mehrkosten durch behördliche Auflagen10PA0130"
+    );
+    expect(occurrence.scopeLead.text).not.toContain("Nicht versichert");
+    expect(occurrence.coverageGovernorHint).toBeNull();
+  });
+
   test("carries a known clause-family scope across appendix pages", () => {
     const scopeCatalog = {
       schemaVersion: 1,

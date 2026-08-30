@@ -576,7 +576,7 @@ function explicitSectionHeadings(pageText) {
     return null;
   };
   const patterns = [
-    /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gmu,
+    /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gimu,
     /^\s*\d{1,3}\.\s+([\p{L}-]+(?:\s+[\p{L}-]+)*versicherung)\s*$/gimu,
     /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,
     /^\s*\d{1,3}\.\s+((?:Allgemeine\s+)?Vertragsbestimmungen|Wohnungseigentum|Glasbruch|Ökoschutz)\s*$/gimu,
@@ -1674,7 +1674,7 @@ function buildControlledOccurrenceWorksheet({
                   fallback: context,
                 })
               : context;
-          const scopeLead = precedingWordWindow(
+          const rawScopeLead = precedingWordWindow(
             page.text,
             range.originalStart,
             scopeWordsBefore
@@ -1682,6 +1682,15 @@ function buildControlledOccurrenceWorksheet({
           const currentSectionBoundary = page.sectionHeadings
             .filter(({ pageStart }) => pageStart <= range.originalStart)
             .at(-1);
+          const scopeLeadStart = Math.max(
+            rawScopeLead.pageStart,
+            currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart
+          );
+          const scopeLead = {
+            pageStart: scopeLeadStart,
+            pageEnd: rawScopeLead.pageEnd,
+            text: page.text.slice(scopeLeadStart, rawScopeLead.pageEnd),
+          };
           const sectionScopeHint = currentSectionBoundary
             ? currentSectionBoundary.scopeKey ||
               currentSectionBoundary.scopeKeys?.length
@@ -1697,7 +1706,12 @@ function buildControlledOccurrenceWorksheet({
                 }
               : null;
           const currentCoverageGovernor = page.coverageGovernors
-            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .filter(
+              ({ pageStart, pageEnd }) =>
+                pageEnd <= range.originalStart &&
+                (!currentSectionBoundary ||
+                  pageStart >= currentSectionBoundary.pageStart)
+            )
             .at(-1);
           const coverageGovernorHint = currentCoverageGovernor
             ? { ...currentCoverageGovernor, source: "CURRENT_PAGE_GOVERNOR" }
