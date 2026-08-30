@@ -10,10 +10,7 @@ function presentPointDecision(row) {
   const pointDecision = row?.pointDecision;
   if (
     pointDecision &&
-    Object.prototype.hasOwnProperty.call(
-      OUTCOME_LABELS,
-      pointDecision.outcome
-    )
+    Object.prototype.hasOwnProperty.call(OUTCOME_LABELS, pointDecision.outcome)
   )
     return {
       ...pointDecision,

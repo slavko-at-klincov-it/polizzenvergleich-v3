@@ -108,11 +108,7 @@ function writeAtomicCategory(run, categoryView, coverageEffect) {
     ])
   );
   fs.writeFileSync(
-    path.join(
-      categoryDirectory,
-      "result",
-      "requested-fields.private.json"
-    ),
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
     JSON.stringify({
       requirements: [
         {
@@ -435,10 +431,7 @@ describe("policy comparison result builder", () => {
     expect(markdown).toContain("Punktentscheidung");
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(artifacts.workbookFile);
-    const headers = workbook
-      .getWorksheet("VS")
-      .getRow(1)
-      .values.slice(1);
+    const headers = workbook.getWorksheet("VS").getRow(1).values.slice(1);
     expect(headers.slice(-3)).toEqual([
       "Punktentscheidung",
       "Entscheidungsbegründung",

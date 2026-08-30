@@ -35,8 +35,7 @@ function decimalHundredths(value) {
     separator = lastComma > lastDot ? "," : ".";
   else if (lastComma >= 0 && compact.length - lastComma - 1 <= 2)
     separator = ",";
-  else if (lastDot >= 0 && compact.length - lastDot - 1 <= 2)
-    separator = ".";
+  else if (lastDot >= 0 && compact.length - lastDot - 1 <= 2) separator = ".";
   const [integerPart, decimalPart = ""] = separator
     ? compact.split(separator)
     : [compact, ""];
@@ -142,7 +141,15 @@ function comparisonKey(atom) {
     selectedScopePicture: atom.selectedScopePicture,
     documentApplicability: atom.documentApplicability,
     fields: fieldSignature(atom.fields).map(
-      ({ field, valueType, unit, limitKind, qualifier, variantScopeKey, componentScopeKey }) => ({
+      ({
+        field,
+        valueType,
+        unit,
+        limitKind,
+        qualifier,
+        variantScopeKey,
+        componentScopeKey,
+      }) => ({
         field,
         valueType,
         unit,
@@ -189,14 +196,20 @@ function compareNumericFields(left, right, factRole) {
   const a = fieldSignature(left.fields);
   const b = fieldSignature(right.fields);
   if (a.length !== 1 || b.length !== 1) return null;
-  if (JSON.stringify({ ...a[0], value: undefined, displayValue: undefined }) !==
-      JSON.stringify({ ...b[0], value: undefined, displayValue: undefined }))
+  if (
+    JSON.stringify({ ...a[0], value: undefined, displayValue: undefined }) !==
+    JSON.stringify({ ...b[0], value: undefined, displayValue: undefined })
+  )
     return null;
-  if (!['MONEY', 'PERCENT'].includes(a[0].valueType)) return null;
+  if (!["MONEY", "PERCENT"].includes(a[0].valueType)) return null;
   if (!/^\d+$/u.test(a[0].value) || !/^\d+$/u.test(b[0].value)) return null;
   const av = BigInt(a[0].value);
   const bv = BigInt(b[0].value);
-  if (av === bv) return { outcome: POINT_OUTCOME.EQUIVALENT, ruleId: "TYPED_VALUE_EQUALITY_V1" };
+  if (av === bv)
+    return {
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "TYPED_VALUE_EQUALITY_V1",
+    };
   if (factRole === "LIMIT")
     return {
       outcome: av > bv ? POINT_OUTCOME.ADVANTAGE_A : POINT_OUTCOME.ADVANTAGE_B,
@@ -312,10 +325,7 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       "MISSING_ONE_SIDE",
       "Unklar: Nur ein Paket enthält belegten Inhalt. Fehlender Beleg bedeutet weder Ausschluss noch Nachteil."
     );
-  if (
-    packageA.reviewStatus !== "BELEGT" ||
-    packageB.reviewStatus !== "BELEGT"
-  )
+  if (packageA.reviewStatus !== "BELEGT" || packageB.reviewStatus !== "BELEGT")
     return unclear(
       "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
       `Unklar: Die Paket-Prüfstati (${packageA.reviewStatus} / ${packageB.reviewStatus}) erlauben keinen sicheren Vorteilsschluss.`
@@ -323,7 +333,9 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
 
   const groupsA = componentGroups(atomsA, categoryId);
   const groupsB = componentGroups(atomsB, categoryId);
-  const componentIds = [...new Set([...groupsA.keys(), ...groupsB.keys()])].sort();
+  const componentIds = [
+    ...new Set([...groupsA.keys(), ...groupsB.keys()]),
+  ].sort();
   if (componentIds.length === 0)
     return unclear(
       "ATOMIC_EVIDENCE_UNAVAILABLE",
@@ -368,13 +380,14 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
   if (dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.UNCLEAR))
     return unclear(
       "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",
-      reasonFor(POINT_OUTCOME.UNCLEAR, dimensions.map(({ dimension }) => dimension)),
+      reasonFor(
+        POINT_OUTCOME.UNCLEAR,
+        dimensions.map(({ dimension }) => dimension)
+      ),
       dimensions.map(({ dimension }) => dimension)
     );
   if (
-    dimensions.some(
-      ({ outcome }) => outcome === POINT_OUTCOME.NOT_COMPARABLE
-    )
+    dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.NOT_COMPARABLE)
   )
     return {
       schemaVersion: 1,

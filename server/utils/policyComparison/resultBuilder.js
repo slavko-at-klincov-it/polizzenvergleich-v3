@@ -177,7 +177,10 @@ function canonicalAmountKeys(facts, referenceEntries) {
         .map(({ fact, nativeKey }) => {
           const amount = nativeKey.slice(4);
           const qualifier = canonicalQualifier(fact);
-          return [`${amount}:${qualifier}`, { amount: BigInt(amount), qualifier }];
+          return [
+            `${amount}:${qualifier}`,
+            { amount: BigInt(amount), qualifier },
+          ];
         })
     ).values(),
   ];
@@ -464,11 +467,7 @@ function readDocumentAnalysis(documentRun) {
         path.join(categoryDirectory, "effects", "materialized.private.json")
       ),
       requestedFields: readJsonIfPresent(
-        path.join(
-          categoryDirectory,
-          "result",
-          "requested-fields.private.json"
-        )
+        path.join(categoryDirectory, "result", "requested-fields.private.json")
       ),
       targets: readJsonIfPresent(
         path.join(categoryDirectory, "effects", "targets.private.json")

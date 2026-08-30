@@ -104,10 +104,7 @@ describe("policy comparison point decision", () => {
   test("keeps conditional coverage effects and options fail-closed", () => {
     for (const coverageEffect of ["CONDITIONAL", "DEFINED", "UNKNOWN"]) {
       expect(
-        decide(
-          [atom("a", { coverageEffect })],
-          [atom("b", { coverageEffect })]
-        )
+        decide([atom("a", { coverageEffect })], [atom("b", { coverageEffect })])
       ).toMatchObject({
         outcome: POINT_OUTCOME.UNCLEAR,
         reasonCode: "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",
@@ -156,8 +153,7 @@ describe("policy comparison point decision", () => {
       atom(side, {
         componentId:
           factRole === "LIMIT" ? "coverage_limit" : "policy_deductible",
-        componentLabel:
-          factRole === "LIMIT" ? "Deckungslimit" : "Selbstbehalt",
+        componentLabel: factRole === "LIMIT" ? "Deckungslimit" : "Selbstbehalt",
         factRole,
         coverageEffect: "DEFINED",
         requestedFieldStatus: "COMPLETE",
@@ -224,21 +220,13 @@ describe("policy comparison point decision", () => {
     expect(
       decide(
         [atom("a"), second("a", "EXCLUDED")],
-        [
-          atom("b", { coverageEffect: "EXCLUDED" }),
-          second("b", "INCLUDED"),
-        ]
+        [atom("b", { coverageEffect: "EXCLUDED" }), second("b", "INCLUDED")]
       )
     ).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "MIXED_DIMENSION_WINNERS",
     });
-    expect(
-      decide(
-        [atom("a", { sources: [] })],
-        [atom("b")]
-      )
-    ).toMatchObject({
+    expect(decide([atom("a", { sources: [] })], [atom("b")])).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
     });
@@ -247,9 +235,7 @@ describe("policy comparison point decision", () => {
   test("is symmetric and insensitive to duplicate document facts and ordering", () => {
     const a = atom("a", { coverageEffect: "EXCLUDED" });
     const b = atom("b", { coverageEffect: "INCLUDED" });
-    expect(decide([a, { ...a }], [b]).outcome).toBe(
-      POINT_OUTCOME.ADVANTAGE_B
-    );
+    expect(decide([a, { ...a }], [b]).outcome).toBe(POINT_OUTCOME.ADVANTAGE_B);
     expect(decide([b], [a]).outcome).toBe(POINT_OUTCOME.ADVANTAGE_A);
   });
 });

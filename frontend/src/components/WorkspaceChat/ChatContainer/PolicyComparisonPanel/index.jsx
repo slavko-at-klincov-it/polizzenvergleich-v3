@@ -481,13 +481,11 @@ function ComparisonResult({ result }) {
         </p>
         {result.totals?.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Punktentscheidungen: A{" "}
-            {result.totals.pointDecisions.VORTEIL_A || 0} · B{" "}
-            {result.totals.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
+            Punktentscheidungen: A {result.totals.pointDecisions.VORTEIL_A || 0}{" "}
+            · B {result.totals.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
             {result.totals.pointDecisions.GLEICHWERTIG || 0} · nicht
-            vergleichbar{" "}
-            {result.totals.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
-            {result.totals.pointDecisions.UNKLAR || 0}
+            vergleichbar {result.totals.pointDecisions.NICHT_VERGLEICHBAR || 0}{" "}
+            · unklar {result.totals.pointDecisions.UNKLAR || 0}
           </p>
         )}
       </div>
