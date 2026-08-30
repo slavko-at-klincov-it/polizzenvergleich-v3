@@ -116,9 +116,7 @@ async function run() {
   process.env.LMSTUDIO_MODEL_TOKEN_LIMIT =
     args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "32768";
   const embeddingModel =
-    args.embeddingModel ||
-    process.env.EMBEDDING_MODEL_PREF ||
-    "text-embedding-dinghy-law-4b-v1";
+    args.embeddingModel || process.env.EMBEDDING_MODEL_PREF || "dinghy-embed";
   const chunkSize = Number(args.chunkSize || 3_000);
   const chunkOverlap = Number(args.chunkOverlap || 250);
   const maxAttemptsPerTarget = Number(args.maxAttemptsPerTarget || 2);
