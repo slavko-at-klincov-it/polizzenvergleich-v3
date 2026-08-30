@@ -256,7 +256,10 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         (sum, category) =>
           sum +
           category.rows.filter(
-            ({ outcome }) => outcome === "UNTERSCHIED_FACHLICH_PRÜFEN"
+            ({ outcome }) =>
+              !["INHALTLICH_GLEICH", "BEIDSEITIG_KEIN_BELEG"].includes(
+                outcome
+              )
           ).length,
         0
       ),

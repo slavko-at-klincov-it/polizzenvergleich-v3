@@ -112,6 +112,24 @@ describe("policy comparison result builder", () => {
     expect(comparison.difference).toContain("nicht zulässig");
   });
 
+  test("counts one-sided evidence as a review-required difference", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Gebäudeversicherungssumme 2 Mio. EUR",
+        coverage: "Ja",
+        coverageAmount: "2 Mio. EUR",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"));
+
+    const result = buildComparisonResult([runA, runB]);
+
+    expect(result.categories[0].rows[0].outcome).toBe("NUR_A_BELEGT");
+    expect(result.totals.reviewRequired).toBe(1);
+  });
+
   test("builds all eight category views with document-level provenance", async () => {
     const runA = writeRun(root, document("a", "A"), {
       VS: {
