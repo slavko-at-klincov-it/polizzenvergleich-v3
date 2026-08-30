@@ -16,6 +16,7 @@ const SCRIPT_PATHS = [
 ];
 const SUPPORT_SCRIPT_PATHS = [
   "server/scripts/qa/ensureAllCategoryRunManifest.cjs",
+  "server/utils/policyAnalysis/runIdentity.js",
 ];
 
 const STUB_SCRIPT = `
