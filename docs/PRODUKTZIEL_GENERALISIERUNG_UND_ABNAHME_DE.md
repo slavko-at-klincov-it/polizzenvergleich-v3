@@ -210,6 +210,10 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 - V3.3.1 verwendet breite `3000/250`-Chunks und Dinghy ausschließlich als
   Navigation zu exakten Hybridspans; auf WEVIG/Qwen 27B wird nur `HP-12`
   korrigiert, die übrigen 35 HP-Zeilen bleiben exakt stabil;
+- der persistente technische A/B-Vergleich nimmt je Paket bis zu neun private,
+  nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
+  erzeugt aus dem gemeinsamen Acht-Kategorien-Pfad eine UI- sowie XLSX-
+  Gegenüberstellung ohne automatischen Vorteilsschluss;
 - 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
   bestanden.
 
@@ -239,8 +243,9 @@ daraus nicht.
 - ein einmaliger paketweiter Vorbereitungslauf mit Wiederverwendung der Fakten
   für alle Kategorien;
 - ein kompletter Lauf auf Zielhardware innerhalb des Laufzeitbudgets;
-- persistenter Ein-Klick-Job mit Progress, Resume, Cancel und sicherer
-  Veröffentlichung.
+- Resume nach Rechner- oder Prozessabbruch sowie ein fachlich freigegebener
+  Veröffentlichungsweg; persistenter Ein-Klick-Job, Progress, Cancel und
+  privater Ergebnisdownload sind im A/B-MVP technisch umgesetzt.
 
 ## 8. Was der LF-Gesamtlauf bewiesen hat
 
@@ -317,6 +322,18 @@ und Wirkungsgates dürfen daraus einen Tabellenbeleg machen. Der erste reale
 verändern. Weitere Kategorien werden nicht pauschal aktiviert, sondern nur
 mit eigenen fachlichen Verträgen und Negativkontrollen.
 
+### Stand nach technischem A/B-MVP
+
+Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion
+umgesetzt. Paket A und B bleiben getrennt, normale Chat-Anhänge können nicht
+gleichzeitig verwendet werden, und jedes PDF durchläuft den gemeinsamen
+Acht-Kategorien-Pfad. Der serverseitige Rollup erhält Dokumentprovenienz und
+markiert ungeklärte Rangfolgen, statt einen Widerspruch oder Vorteil zu
+erfinden. Damit steht die technische Vergleichsgrenze; Paketpräzedenz,
+Ersetzung, Laufzeit für große Pakete und fachliche Holdout-Abnahme bleiben
+offen. Der genaue Implementierungs- und Abnahmevertrag steht in
+`docs/POLIZZENVERGLEICH_A_B_MVP_DE.md`.
+
 ## 10. Wahrheitsquellen für weitere Chats
 
 Vor substanzieller Arbeit sind diese Quellen in dieser Reihenfolge zu prüfen:
@@ -354,6 +371,8 @@ Dabei gelten unterschiedliche Wahrheitsebenen:
   `docs/RELEASE_V3.3.0_RC5_DE.md`
 - V3.3.1-Releasevertrag für den evidenzgebundenen Hybridfallback:
   `docs/RELEASE_V3.3.1_DE.md`
+- Technischer A/B-MVP-Vertrag, Tests und offene Paketlogik:
+  `docs/POLIZZENVERGLEICH_A_B_MVP_DE.md`
 - Wissensrouter und historische Erfahrungsbasis:
   `../policy-project-documentation/POLIZZENVERGLEICH_KB_INDEX.md`
 - Entscheidungen und verworfene Richtungen:

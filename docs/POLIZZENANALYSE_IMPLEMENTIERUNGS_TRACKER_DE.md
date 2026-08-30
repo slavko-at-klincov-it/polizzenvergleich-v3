@@ -3307,3 +3307,41 @@ NO CLAIM: vollständiges Fremdversicherer-Oracle oder 99 Prozent bewiesen
 ```
 
 Der Releasevertrag steht in `docs/RELEASE_V3.3.1_DE.md`.
+
+## 66. Persistenter Polizzenvergleich A/B als technischer MVP
+
+Die bisher manuelle Trennung in Einzelläufe, Excel-Zusammenführung und einen
+erneuten freien LLM-Vergleich ist als eigene Produktfunktion umgesetzt. Unter
+dem Chat-Eingabefeld stehen zwei eindeutig getrennte Dokumentpakete A und B
+mit jeweils bis zu neun PDFs. Rollen und Geltungsstatus bleiben je Dokument
+erhalten; die PDFs liegen ausschließlich in einer privaten Vergleichsablage
+und gelangen nicht in den Workspace-Index.
+
+Ein persistenter Worker prüft vor der Analyse die SHA-256-Identität und führt
+jedes Dokument einmal durch den bestehenden Acht-Kategorien-Evidenzpfad. Der
+serverseitige Rollup erhält dokumentbezogene Fakten und Quellen. Mehrere Werte
+führen zu `RANGFOLGE_PRÜFEN`, nicht automatisch zu `WIDERSPRÜCHLICH`. Nur
+einseitige Evidenz führt ebenfalls nicht automatisch zu einem Vorteil. Das
+Ergebnis bleibt deshalb ausdrücklich `TECHNICAL_RESULT_REVIEW_REQUIRED` und
+wird in der UI sowie als XLSX mit acht Kategorieblättern angeboten.
+
+```text
+PASS: neue Prisma-Migration auf isolierter Mac-Studio-Datenbank
+PASS: Server-Lint und Frontend-Lint
+PASS: Frontend-Produktionsbuild
+PASS: gezielte Vergleichsverträge 3 Suites / 8 Tests auf Vorrevision
+PASS: aktuelle gezielte Ergebnis-/Workerverträge 2 Suites / 6 Tests
+PASS: bestehende Gesamtregression 96 Suites / 1.105 Tests auf Mac Studio
+PASS: echte LF-/WEVIG-Uploads mit Rollen- und Statuspersistenz
+PASS: ungültige PDF wird mit 415 abgewiesen und vollständig bereinigt
+PASS: Vergleichsuploads 2; Workspace-Index 0; Parserdokumente 0
+PASS: UI-Sperre Vergleich -> normaler Chat-Upload
+PASS: UI-Sperre normaler Chat-Anhang -> Paket A/B
+RUNNING: vollständiger LF/WEVIG-Vergleich mit Qwen 3.8 27B
+NO CLAIM: Dokumentrang, Ersetzung, fachlicher Vorteil oder 99 Prozent bewiesen
+```
+
+Die technische Grenze und die verbleibenden MVP-Gates sind in
+`docs/POLIZZENVERGLEICH_A_B_MVP_DE.md` festgeschrieben. Besonders wichtig:
+die sequenzielle Verarbeitung skaliert bei bis zu 18 PDFs derzeit linear und
+ist noch kein Beleg für das angestrebte Laufzeitbudget.
