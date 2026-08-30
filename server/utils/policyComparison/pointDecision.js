@@ -126,7 +126,16 @@ function completeAtom(atom) {
     if (!Array.isArray(atom.fields) || atom.fields.length === 0) return false;
     if (
       atom.fields.some(
-        ({ status, facts }) => status !== "FOUND" || (facts || []).length === 0
+        ({ status, facts }) =>
+          status !== "FOUND" ||
+          (facts || []).length === 0 ||
+          facts.some(
+            ({ source }) =>
+              !atom.selectedCandidateIds.includes(source?.candidateId) ||
+              !Number.isInteger(source?.physicalPageNumber) ||
+              source.physicalPageNumber < 1 ||
+              String(source?.exactText || "").trim().length === 0
+          )
       )
     )
       return false;

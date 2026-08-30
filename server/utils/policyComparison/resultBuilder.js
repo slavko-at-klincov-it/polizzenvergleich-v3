@@ -399,12 +399,10 @@ function materializeAtomicFacts({
     };
     const selectedCandidateIds = judgement.selectedCandidateIds || [];
     const selectedSet = new Set(selectedCandidateIds);
-    const singleComponent = requirement?.components?.length === 1;
     const fields = (fieldResult.fields || []).map((field) => {
-      let facts = (field.facts || []).filter((fact) =>
+      const facts = (field.facts || []).filter((fact) =>
         selectedSet.has(fact.source?.candidateId)
       );
-      if (facts.length === 0 && singleComponent) facts = field.facts || [];
       return {
         field: field.field,
         status: facts.length > 0 ? field.status : "NOT_FOUND",

@@ -138,6 +138,11 @@ describe("policy comparison point decision", () => {
                 unit: "EUR",
                 limitKind: "CAPPED",
                 qualifier,
+                source: {
+                  candidateId: `candidate-${side}`,
+                  physicalPageNumber: 2,
+                  exactText: "EUR 5.000.000",
+                },
               },
             ],
           },
@@ -168,6 +173,11 @@ describe("policy comparison point decision", () => {
                 unit: "EUR",
                 limitKind: "CAPPED",
                 qualifier: "je Schadenfall",
+                source: {
+                  candidateId: `candidate-${side}`,
+                  physicalPageNumber: 2,
+                  exactText: amount,
+                },
               },
             ],
           },
@@ -227,6 +237,31 @@ describe("policy comparison point decision", () => {
       reasonCode: "MIXED_DIMENSION_WINNERS",
     });
     expect(decide([atom("a", { sources: [] })], [atom("b")])).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
+    });
+    const invalidFieldSource = atom("a", {
+      factRole: "LIMIT",
+      coverageEffect: "DEFINED",
+      requestedFieldStatus: "COMPLETE",
+      fields: [
+        {
+          field: "limit",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: "EUR 5.000.000",
+              valueType: "MONEY",
+              unit: "EUR",
+              limitKind: "CAPPED",
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      decide([invalidFieldSource], [{ ...invalidFieldSource }])
+    ).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
     });
