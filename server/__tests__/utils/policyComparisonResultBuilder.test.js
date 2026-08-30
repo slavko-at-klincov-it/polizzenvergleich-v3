@@ -1,6 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const ExcelJS = require("exceljs");
 const {
   CATEGORY_ORDER,
   buildComparisonResult,
@@ -47,6 +48,82 @@ function writeRun(root, sourceDocument, rowOverrides = {}) {
     );
   }
   return { document: sourceDocument, outputDirectory };
+}
+
+function writeAtomicCategory(run, categoryView, coverageEffect) {
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = `${categoryView}-01`;
+  const candidateId = `candidate-${run.document.uuid}-${categoryView}`;
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          id: requirementId,
+          components: [
+            {
+              id: "insured_subject",
+              label: "Versicherter Gegenstand",
+              factRole: "INSURED_OBJECT",
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId: `target-${requirementId}`,
+          requirementId,
+          componentId: "insured_subject",
+          selectedCandidateIds: [candidateId],
+          unresolvedCandidateIds: [],
+          evidencePresence: "FOUND",
+          coverageEffect,
+          conflictState: "NONE",
+          selectedScopePicture: "GENERAL",
+          documentApplicability: "CONDITIONAL",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId: `target-${requirementId}`,
+        factRole: "INSURED_OBJECT",
+        candidates: [
+          {
+            candidateId,
+            physicalPageNumber: 1,
+            exactText: "Versicherter Gegenstand",
+          },
+        ],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(
+      categoryDirectory,
+      "result",
+      "requested-fields.private.json"
+    ),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
 }
 
 describe("policy comparison result builder", () => {
@@ -196,6 +273,33 @@ describe("policy comparison result builder", () => {
     expect(packageSummary.reviewStatus).toBe("RANGFOLGE_PRÜFEN");
   });
 
+  test("keeps equal numbers with a shared clause but different periods review-required", () => {
+    const packageSummary = summarizePackage([
+      {
+        document: document("a", "B"),
+        row: row("HP-01", {
+          documentedContent: "Limit pro Ereignis",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000 je Ereignis",
+          source: "PDF-Seite 1: gemäß 81PW0031",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("b", "B"),
+        row: row("HP-01", {
+          documentedContent: "Jahreshöchstlimit",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000.000 je Versicherungsjahr",
+          source: "PDF-Seite 2: gemäß 81PW0031",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ]);
+
+    expect(packageSummary.reviewStatus).toBe("RANGFOLGE_PRÜFEN");
+  });
+
   test("reconciles an NBW percentage only with an exact package base", () => {
     const absolute = {
       document: document("a", "B", "MAIN_POLICY"),
@@ -236,6 +340,18 @@ describe("policy comparison result builder", () => {
     expect(
       summarizePackage([absolute, percentage], {
         referenceEntries: [absolute, percentage],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+    expect(
+      summarizePackage([absolute, percentage], {
+        referenceEntries: [
+          absolute,
+          percentage,
+          {
+            ...base,
+            row: { ...base.row, reviewStatus: "TEILBELEGT" },
+          },
+        ],
       }).reviewStatus
     ).toBe("RANGFOLGE_PRÜFEN");
     expect(
@@ -313,5 +429,54 @@ describe("policy comparison result builder", () => {
     expect(fs.existsSync(artifacts.markdownFile)).toBe(true);
     expect(fs.existsSync(artifacts.workbookFile)).toBe(true);
     expect(fs.statSync(artifacts.workbookFile).mode & 0o077).toBe(0);
+    const markdown = fs.readFileSync(artifacts.markdownFile, "utf8");
+    expect(markdown).toContain("A-Prüfstatus");
+    expect(markdown).toContain("A-Quellen");
+    expect(markdown).toContain("Punktentscheidung");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(artifacts.workbookFile);
+    const headers = workbook
+      .getWorksheet("VS")
+      .getRow(1)
+      .values.slice(1);
+    expect(headers.slice(-3)).toEqual([
+      "Punktentscheidung",
+      "Entscheidungsbegründung",
+      "Entscheidungsregel",
+    ]);
+  });
+
+  test("builds a point advantage from atomic evidence without replacing the technical diff", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand ausgeschlossen",
+        coverage: "Nein",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 2",
+        reviewStatus: "BELEGT",
+      },
+    });
+    writeAtomicCategory(runA, "VS", "EXCLUDED");
+    writeAtomicCategory(runB, "VS", "INCLUDED");
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
+
+    expect(result.schemaVersion).toBe(2);
+    expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "VORTEIL_B",
+      ruleId: "INCLUDED_OVER_EXCLUDED_V1",
+      reviewRequired: false,
+    });
+    expect(result.totals.pointDecisions.VORTEIL_B).toBe(1);
+    expect(result.totals.pointDecisions.UNKLAR).toBe(7);
   });
 });

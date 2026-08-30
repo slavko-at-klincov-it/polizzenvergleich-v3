@@ -14,8 +14,10 @@ import showToast from "@/utils/toast";
 import { DndUploaderContext } from "../DnDWrapper";
 import { saveAs } from "file-saver";
 import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.cjs";
+import policyComparisonResultPresenter from "@/utils/chat/policyComparisonResultPresenter.cjs";
 
 const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
+const { presentPointDecision } = policyComparisonResultPresenter;
 
 const ROLE_LABELS = {
   MAIN_POLICY: "Hauptpolizze",
@@ -477,6 +479,17 @@ function ComparisonResult({ result }) {
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
           {result.proofLimit}
         </p>
+        {result.totals?.pointDecisions && (
+          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+            Punktentscheidungen: A{" "}
+            {result.totals.pointDecisions.VORTEIL_A || 0} · B{" "}
+            {result.totals.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
+            {result.totals.pointDecisions.GLEICHWERTIG || 0} · nicht
+            vergleichbar{" "}
+            {result.totals.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
+            {result.totals.pointDecisions.UNKLAR || 0}
+          </p>
+        )}
       </div>
       <div className="flex gap-1 overflow-x-auto p-2 border-t border-zinc-700 light:border-slate-200">
         {result.categories?.map(({ categoryView }) => (
@@ -502,32 +515,62 @@ function ComparisonResult({ result }) {
               <th className="p-2 text-left">Kategorie</th>
               <th className="p-2 text-left">Paket A</th>
               <th className="p-2 text-left">Paket B</th>
-              <th className="p-2 text-left">Unterschied / Prüfhinweis</th>
+              <th className="p-2 text-left">Punktentscheidung</th>
             </tr>
           </thead>
           <tbody>
-            {category?.rows?.map((row) => (
-              <tr
-                key={row.categoryId}
-                className="border-t border-zinc-800 light:border-slate-200 align-top"
-              >
-                <td className="p-2 font-semibold whitespace-nowrap">
-                  {row.categoryId}
-                </td>
-                <td className="p-2 min-w-[170px]">{row.categoryName}</td>
-                <td className="p-2 min-w-[280px] whitespace-pre-wrap">
-                  {row.packageA.documentedContent}
-                </td>
-                <td className="p-2 min-w-[280px] whitespace-pre-wrap">
-                  {row.packageB.documentedContent}
-                </td>
-                <td className="p-2 min-w-[250px]">{row.difference}</td>
-              </tr>
-            ))}
+            {category?.rows?.map((row) => {
+              const pointDecision = presentPointDecision(row);
+              return (
+                <tr
+                  key={row.categoryId}
+                  className="border-t border-zinc-800 light:border-slate-200 align-top"
+                >
+                  <td className="p-2 font-semibold whitespace-nowrap">
+                    {row.categoryId}
+                  </td>
+                  <td className="p-2 min-w-[170px]">{row.categoryName}</td>
+                  <PackageResultCell value={row.packageA} />
+                  <PackageResultCell value={row.packageB} />
+                  <td className="p-2 min-w-[270px]">
+                    <span className="inline-flex rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-200 light:text-sky-800">
+                      {pointDecision.label}
+                    </span>
+                    <p className="mt-1.5">{pointDecision.reason}</p>
+                    <p className="mt-1 text-[10px] text-zinc-500 light:text-slate-500">
+                      Regel: {pointDecision.ruleId} · Technisch: {row.outcome}
+                    </p>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+function PackageResultCell({ value }) {
+  return (
+    <td className="p-2 min-w-[300px]">
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        <span className="rounded-full border border-zinc-600 light:border-slate-300 px-1.5 py-0.5 text-[10px] font-semibold">
+          {value.reviewStatus}
+        </span>
+        <span className="rounded-full bg-zinc-800 light:bg-slate-100 px-1.5 py-0.5 text-[10px]">
+          Deckung: {value.coverage}
+        </span>
+        <span className="rounded-full bg-zinc-800 light:bg-slate-100 px-1.5 py-0.5 text-[10px]">
+          Betrag: {value.coverageAmount}
+        </span>
+      </div>
+      <p className="whitespace-pre-wrap">{value.documentedContent}</p>
+      <details className="mt-1.5 text-[10px] text-zinc-400 light:text-slate-500">
+        <summary className="cursor-pointer">Quellen anzeigen</summary>
+        <p className="mt-1 whitespace-pre-wrap">{value.source}</p>
+      </details>
+    </td>
   );
 }
 

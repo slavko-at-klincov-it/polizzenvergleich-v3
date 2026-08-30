@@ -6,6 +6,7 @@ const {
   applyZebraStriping,
   freezePanes,
 } = require("../agents/aibitat/plugins/create-files/xlsx/utils");
+const { POINT_OUTCOME, decidePoint } = require("./pointDecision");
 
 const CATEGORY_ORDER = Object.freeze([
   "VS",
@@ -133,6 +134,7 @@ function newBuildingValueBases(referenceEntries) {
   return unique(
     (referenceEntries || [])
       .filter(({ row }) => isEvidenceRow(row))
+      .filter(({ row }) => row.reviewStatus === "BELEGT")
       .filter(({ row }) => row.categoryId === "VS-01")
       .filter(({ row }) =>
         /\b(?:NBW|Neubauwert|Wohngeb[aä]ude\s+zum\s+Neuwert)\b/iu.test(
@@ -163,16 +165,22 @@ function canonicalAmountKeys(facts, referenceEntries) {
       nativeKey: nativeAmountKey(fact.coverageAmount),
     }));
   const bases = newBuildingValueBases(referenceEntries);
-  const currencyTargets = unique(
-    values
-      .filter(({ nativeKey }) => nativeKey.startsWith("EUR:"))
-      .map(({ nativeKey }) => nativeKey.slice(4))
-  ).map(BigInt);
+  const currencyTargets = [
+    ...new Map(
+      values
+        .filter(({ nativeKey }) => nativeKey.startsWith("EUR:"))
+        .map(({ fact, nativeKey }) => {
+          const amount = nativeKey.slice(4);
+          const qualifier = amountQualifier(fact);
+          return [`${amount}:${qualifier}`, { amount: BigInt(amount), qualifier }];
+        })
+    ).values(),
+  ];
 
   return values.map(({ fact, nativeKey }) => {
     if (!nativeKey.startsWith("PERCENT:"))
       return commonClauseKey
-        ? `CLAUSE:${commonClauseKey}:${nativeKey}`
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`
         : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
     if (
       !commonClauseKey ||
@@ -181,23 +189,23 @@ function canonicalAmountKeys(facts, referenceEntries) {
       )
     )
       return commonClauseKey
-        ? `CLAUSE:${commonClauseKey}:${nativeKey}`
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`
         : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
     const percentageHundredths = BigInt(nativeKey.slice("PERCENT:".length));
     const matchingTargets = unique(
       bases
         .flatMap((base) =>
-          currencyTargets.filter((target) => {
+          currencyTargets.filter(({ amount }) => {
             const numerator = base * percentageHundredths;
             const rounded = (numerator + 5_000n) / 10_000n;
-            return rounded === target;
+            return rounded === amount;
           })
         )
-        .map(String)
+        .map(({ amount, qualifier }) => `${amount}:${qualifier}`)
     );
     return matchingTargets.length === 1
-      ? `CLAUSE:${commonClauseKey}:EUR:${matchingTargets[0]}`
-      : `CLAUSE:${commonClauseKey}:${nativeKey}`;
+      ? `CLAUSE:${commonClauseKey}:EUR:${matchingTargets[0].replace(":", ":QUALIFIER:")}`
+      : `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
   });
 }
 
@@ -343,28 +351,132 @@ function comparePackages(packageA, packageB) {
   };
 }
 
-function readDocumentRows(documentRun) {
-  const categories = {};
-  for (const categoryView of CATEGORY_ORDER) {
-    const file = path.join(
-      documentRun.outputDirectory,
-      categoryView,
-      "result",
-      "rows.private.json"
+function readJsonIfPresent(file) {
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
+function materializeAtomicFacts({
+  document,
+  worksheet,
+  materializedEvidence,
+  requestedFields,
+  targets,
+}) {
+  if (!worksheet || !materializedEvidence || !requestedFields || !targets)
+    return [];
+  const requirements = new Map(
+    (worksheet.requirements || []).map((requirement) => [
+      requirement.id,
+      requirement,
+    ])
+  );
+  const fieldResults = new Map(
+    (requestedFields.requirements || []).map((requirement) => [
+      requirement.requirementId,
+      requirement,
+    ])
+  );
+  const targetsById = new Map(
+    (targets || []).map((target) => [target.targetId, target])
+  );
+  return (materializedEvidence.judgements || []).map((judgement) => {
+    const requirement = requirements.get(judgement.requirementId);
+    const component = requirement?.components?.find(
+      ({ id }) => id === judgement.componentId
     );
+    const fieldResult = fieldResults.get(judgement.requirementId) || {
+      requestedFieldStatus: "NOT_EVALUATED",
+      fields: [],
+    };
+    const selectedCandidateIds = judgement.selectedCandidateIds || [];
+    const selectedSet = new Set(selectedCandidateIds);
+    const singleComponent = requirement?.components?.length === 1;
+    const fields = (fieldResult.fields || []).map((field) => {
+      let facts = (field.facts || []).filter((fact) =>
+        selectedSet.has(fact.source?.candidateId)
+      );
+      if (facts.length === 0 && singleComponent) facts = field.facts || [];
+      return {
+        field: field.field,
+        status: facts.length > 0 ? field.status : "NOT_FOUND",
+        facts,
+      };
+    });
+    const target = targetsById.get(judgement.targetId);
+    const sources = (target?.candidates || [])
+      .filter(({ candidateId }) => selectedSet.has(candidateId))
+      .map(
+        ({ candidateId, physicalPageNumber, printedPageLabel, exactText }) => ({
+          candidateId,
+          physicalPageNumber,
+          printedPageLabel,
+          exactText,
+        })
+      );
+    return {
+      requirementId: judgement.requirementId,
+      componentId: judgement.componentId,
+      componentLabel: component?.label || judgement.componentId,
+      factRole: component?.factRole || target?.factRole || "UNKNOWN",
+      documentUuids: [document.uuid],
+      documentRole: document.role,
+      documentStatus: document.documentStatus,
+      evidencePresence: judgement.evidencePresence,
+      coverageEffect: judgement.coverageEffect,
+      conflictState: judgement.conflictState,
+      selectedScopePicture: judgement.selectedScopePicture,
+      documentApplicability: judgement.documentApplicability,
+      selectedCandidateIds,
+      unresolvedCandidateIds: judgement.unresolvedCandidateIds || [],
+      requestedFieldStatus: fieldResult.requestedFieldStatus,
+      fields,
+      sources,
+    };
+  });
+}
+
+function readDocumentAnalysis(documentRun) {
+  const categories = {};
+  const atomicFacts = {};
+  for (const categoryView of CATEGORY_ORDER) {
+    const categoryDirectory = path.join(
+      documentRun.outputDirectory,
+      categoryView
+    );
+    const file = path.join(categoryDirectory, "result", "rows.private.json");
     if (!fs.existsSync(file))
       throw new Error(
         `COMPARISON_CATEGORY_RESULT_MISSING:${documentRun.document.uuid}:${categoryView}`
       );
     categories[categoryView] = JSON.parse(fs.readFileSync(file, "utf8"));
+    atomicFacts[categoryView] = materializeAtomicFacts({
+      document: documentRun.document,
+      worksheet: readJsonIfPresent(
+        path.join(categoryDirectory, "worksheet.private.json")
+      ),
+      materializedEvidence: readJsonIfPresent(
+        path.join(categoryDirectory, "effects", "materialized.private.json")
+      ),
+      requestedFields: readJsonIfPresent(
+        path.join(
+          categoryDirectory,
+          "result",
+          "requested-fields.private.json"
+        )
+      ),
+      targets: readJsonIfPresent(
+        path.join(categoryDirectory, "effects", "targets.private.json")
+      ),
+    });
   }
-  return categories;
+  return { categories, atomicFacts };
 }
 
 function buildComparisonResult(documentRuns, metadata = {}) {
   const loadedRuns = documentRuns.map((run) => ({
     ...run,
-    categories: readDocumentRows(run),
+    ...readDocumentAnalysis(run),
   }));
   const packageEntries = Object.fromEntries(
     ["A", "B"].map((side) => [
@@ -406,6 +518,17 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         { referenceEntries: packageEntries.B }
       );
       const comparison = comparePackages(packageA, packageB);
+      const pointDecision = decidePoint({
+        categoryId,
+        packageA,
+        packageB,
+        atomsA: loadedRuns
+          .filter(({ document }) => document.side === "A")
+          .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || []),
+        atomsB: loadedRuns
+          .filter(({ document }) => document.side === "B")
+          .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || []),
+      });
       return {
         categoryId,
         stage: first.stage,
@@ -413,12 +536,13 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         packageA,
         packageB,
         ...comparison,
+        pointDecision,
       };
     });
     return { categoryView, rows };
   });
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: "TECHNICAL_RESULT_REVIEW_REQUIRED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -442,9 +566,30 @@ function buildComparisonResult(documentRuns, metadata = {}) {
           ).length,
         0
       ),
+      pointDecisions: Object.fromEntries(
+        Object.values(POINT_OUTCOME).map((outcome) => [
+          outcome,
+          categories.reduce(
+            (sum, category) =>
+              sum +
+              category.rows.filter(
+                ({ pointDecision }) => pointDecision.outcome === outcome
+              ).length,
+            0
+          ),
+        ])
+      ),
+      pointDecisionReviewRequired: categories.reduce(
+        (sum, category) =>
+          sum +
+          category.rows.filter(
+            ({ pointDecision }) => pointDecision.reviewRequired
+          ).length,
+        0
+      ),
     },
     proofLimit:
-      "Technisches Vergleichsergebnis. Dokumentrang, Ersatzwirkung und fachlicher Vorteil bleiben prüfpflichtig, soweit sie nicht ausdrücklich belegt sind.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
 }
 
@@ -463,15 +608,21 @@ function markdownResult(result) {
     lines.push(
       `## ${category.categoryView}`,
       "",
-      "| Kategorie-ID | Kategorie | Paket A | Paket B | Unterschied / Prüfhinweis |",
-      "|---|---|---|---|---|"
+      "| Kategorie-ID | Kategorie | Paket A | A-Prüfstatus | A-Quellen | Paket B | B-Prüfstatus | B-Quellen | Punktentscheidung | Begründung | Technischer Prüfhinweis |",
+      "|---|---|---|---|---|---|---|---|---|---|---|"
     );
     for (const row of category.rows) {
       const cells = [
         row.categoryId,
         row.categoryName,
         row.packageA.documentedContent,
+        row.packageA.reviewStatus,
+        row.packageA.source,
         row.packageB.documentedContent,
+        row.packageB.reviewStatus,
+        row.packageB.source,
+        row.pointDecision.outcome,
+        row.pointDecision.reason,
         row.difference,
       ].map((value) =>
         String(value || "")
@@ -507,6 +658,13 @@ async function writeWorkbook(result, outputFile) {
       { header: "B – Prüfstatus", key: "bReview", width: 20 },
       { header: "Unterschied / Prüfhinweis", key: "difference", width: 60 },
       { header: "Vergleichsstatus", key: "outcome", width: 30 },
+      { header: "Punktentscheidung", key: "pointDecision", width: 24 },
+      {
+        header: "Entscheidungsbegründung",
+        key: "pointDecisionReason",
+        width: 65,
+      },
+      { header: "Entscheidungsregel", key: "pointDecisionRule", width: 38 },
     ];
     for (const row of category.rows) {
       sheet.addRow({
@@ -525,12 +683,15 @@ async function writeWorkbook(result, outputFile) {
         bReview: row.packageB.reviewStatus,
         difference: row.difference,
         outcome: row.outcome,
+        pointDecision: row.pointDecision.outcome,
+        pointDecisionReason: row.pointDecision.reason,
+        pointDecisionRule: row.pointDecision.ruleId,
       });
     }
     applyHeaderStyle(sheet, { fill: "FF1E3A5F", fontColor: "FFFFFFFF" });
     applyZebraStriping(sheet, "FFF3F6FA");
     freezePanes(sheet, 1, 3);
-    sheet.autoFilter = { from: "A1", to: "O1" };
+    sheet.autoFilter = { from: "A1", to: "R1" };
     sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (rowNumber === 1) return;
       row.alignment = { vertical: "top", wrapText: true };
