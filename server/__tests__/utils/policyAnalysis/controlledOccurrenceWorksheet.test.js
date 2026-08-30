@@ -763,6 +763,49 @@ describe("controlledOccurrenceWorksheet", () => {
     });
   });
 
+  test("recognizes a multiline residential-building liability conditions title", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Allgemeine Bedingungen für die",
+          "Haftpflichtversicherung für Wohngebäude",
+          "(AHVB-W 2023)",
+          "Personen, die den Schaden vorsätzlich herbeigeführt haben.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "multiline-liability-scope",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "multiline-liability-scope",
+        categoryView: "HP",
+        requirements: [
+          {
+            id: "HP-36",
+            label: "Vorsatzausschluss",
+            requestedFields: [],
+            components: [
+              {
+                id: "intentional_damage_exclusion",
+                label: "Vorsatzausschluss",
+                factRole: "EXCLUSION",
+                aliases: ["vorsätzlich herbeigeführt"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(
+      worksheet.requirements[0].components[0].occurrences[0]
+        .sectionScopeHint
+    ).toMatchObject({
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      source: "CURRENT_PAGE_HEADING",
+      text: "Allgemeine Bedingungen für die\nHaftpflichtversicherung für Wohngebäude",
+    });
+  });
+
   test("does not carry a coverage governor across a new coded clause heading", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([

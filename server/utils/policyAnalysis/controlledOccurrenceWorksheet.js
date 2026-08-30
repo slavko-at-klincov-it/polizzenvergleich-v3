@@ -576,6 +576,7 @@ function explicitSectionHeadings(pageText) {
     return null;
   };
   const patterns = [
+    /^\s*((?:Allgemeine\s+Bedingungen\s+für\s+die\s+)?Haftpflichtversicherung(?:\s+für\s+Wohngebäude)?)\s*$/gimu,
     /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gimu,
     /^\s*\d{1,3}\.\s+([\p{L}-]+(?:\s+[\p{L}-]+)*versicherung)\s*$/gimu,
     /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,
