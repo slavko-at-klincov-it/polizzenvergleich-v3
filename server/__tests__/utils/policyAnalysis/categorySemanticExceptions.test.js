@@ -353,6 +353,76 @@ describe("category semantic exceptions", () => {
     ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.EXCLUDED });
   });
 
+  test("a condition requiring damage not to be intentional proves the intentional-damage exclusion", () => {
+    const excludedContext =
+      "Versicherungsschutz besteht für Schäden, soweit der Versicherungsnehmer oder die für ihn handelnden Personen den Schaden nicht grob fahrlässig oder vorsätzlich herbeigeführt haben.";
+    const excluded = occurrence({
+      candidateId: "candidate:intentional-damage-excluded",
+      exactText: "vorsätzlich herbeigeführt",
+      contextText: excludedContext,
+      scopeLeadText: excludedContext,
+      sectionScopeKey: "HAFTPFLICHT_INSURANCE",
+      pageNumber: 16,
+    });
+    const binding = deterministicCategoryCandidateBinding({
+      worksheet: { catalog: { categoryView: "HP" } },
+      requirement: { id: "HP-36" },
+      component: {
+        id: "intentional_damage_exclusion",
+        factRole: "EXCLUSION",
+      },
+      occurrence: excluded,
+    });
+
+    expect(binding).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "HP",
+        requirementId: "HP-36",
+        componentId: "intentional_damage_exclusion",
+        factRole: "EXCLUSION",
+        candidates: [
+          {
+            candidateId: excluded.candidateId,
+            candidateBinding: "DIRECT",
+            exactText: excluded.exactText,
+            contextText: excluded.context.text,
+            contextDocumentStart: excluded.context.documentStart,
+            documentStart: excluded.documentStart,
+            scopeLeadText: excluded.scopeLead.text,
+          },
+        ],
+      })
+    ).toMatchObject({ coverageEffect: COVERAGE_EFFECT.EXCLUDED });
+
+    const includedContext =
+      "Abweichend von den Bedingungen sind vorsätzlich verursachte Schäden ausdrücklich mitversichert.";
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "HP" } },
+        requirement: { id: "HP-36" },
+        component: {
+          id: "intentional_damage_exclusion",
+          factRole: "EXCLUSION",
+        },
+        occurrence: occurrence({
+          candidateId: "candidate:intentional-damage-included",
+          exactText: "vorsätzlich verursachte Schäden",
+          contextText: includedContext,
+          scopeLeadText: includedContext,
+          sectionScopeKey: "HAFTPFLICHT_INSURANCE",
+          pageNumber: 3,
+        }),
+      })
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    });
+  });
+
   test("binds the complete VB-24 expert procedure right without accepting headings or cost clauses", () => {
     const contextText =
       "Ist der Versicherungsnehmer mit dem Gutachten des vom Versicherer bestellten Sachverständigen nicht einverstanden, so steht es dem Versicherungsnehmer auch frei, einen Sachverständigen des jeweiligen Sachgebietes namhaft zu machen. Dieses Gutachten tritt an Stelle des Schiedsgutachterverfahrens.";

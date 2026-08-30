@@ -41,6 +41,7 @@ const NEGATIVE_GOVERNORS = Object.freeze([
 ]);
 const INLINE_NEGATIVE_GOVERNORS = Object.freeze([
   /\b(?:jedoch\s+)?exklusive\b/giu,
+  /\b(?:nicht|weder)\b[^.!?;\n\r]{0,120}\b(?:vors[aä]tzlich|Vorsatz)\b/giu,
 ]);
 const CONDITIONAL_GOVERNORS = Object.freeze([
   /\b(?:wenn|sofern|vorausgesetzt|unter\s+der\s+Bedingung)\b/giu,
