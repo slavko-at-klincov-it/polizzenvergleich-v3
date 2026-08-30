@@ -164,6 +164,11 @@ function canonicalAmountKeys(facts, referenceEntries) {
       fact,
       nativeKey: nativeAmountKey(fact.coverageAmount),
     }));
+  const preserveClauseQualifier =
+    values.length > 0 &&
+    values.every(({ fact }) => amountQualifier(fact) !== "GENERAL");
+  const canonicalQualifier = (fact) =>
+    preserveClauseQualifier ? amountQualifier(fact) : "GENERAL";
   const bases = newBuildingValueBases(referenceEntries);
   const currencyTargets = [
     ...new Map(
@@ -171,7 +176,7 @@ function canonicalAmountKeys(facts, referenceEntries) {
         .filter(({ nativeKey }) => nativeKey.startsWith("EUR:"))
         .map(({ fact, nativeKey }) => {
           const amount = nativeKey.slice(4);
-          const qualifier = amountQualifier(fact);
+          const qualifier = canonicalQualifier(fact);
           return [`${amount}:${qualifier}`, { amount: BigInt(amount), qualifier }];
         })
     ).values(),
@@ -180,7 +185,7 @@ function canonicalAmountKeys(facts, referenceEntries) {
   return values.map(({ fact, nativeKey }) => {
     if (!nativeKey.startsWith("PERCENT:"))
       return commonClauseKey
-        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${canonicalQualifier(fact)}`
         : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
     if (
       !commonClauseKey ||
@@ -189,7 +194,7 @@ function canonicalAmountKeys(facts, referenceEntries) {
       )
     )
       return commonClauseKey
-        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`
+        ? `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${canonicalQualifier(fact)}`
         : `${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
     const percentageHundredths = BigInt(nativeKey.slice("PERCENT:".length));
     const matchingTargets = unique(
@@ -205,7 +210,7 @@ function canonicalAmountKeys(facts, referenceEntries) {
     );
     return matchingTargets.length === 1
       ? `CLAUSE:${commonClauseKey}:EUR:${matchingTargets[0].replace(":", ":QUALIFIER:")}`
-      : `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${amountQualifier(fact)}`;
+      : `CLAUSE:${commonClauseKey}:${nativeKey}:QUALIFIER:${canonicalQualifier(fact)}`;
   });
 }
 
