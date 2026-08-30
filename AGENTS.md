@@ -47,6 +47,22 @@ behavior from a historical repository.
 - Keep release truth, current-HEAD truth, experimental evidence, and customer
   runtime evidence explicitly separate.
 
+## Mandatory test host
+
+Run every test and validation command on the customer Mac Studio through the
+configured Tailscale SSH alias `ssh macstudio`. This includes Jest/unit,
+integration, regression, lint, formatting, build, QA, PDF-fixture, LLM,
+embedding, release, installer, and Doctor runs. Do not execute these checks on
+the local MacBook.
+
+The local workspace is limited to source inspection, editing, documentation,
+and Git preparation. Before remote validation, make the exact commit available
+on the Mac Studio and record checkout path, commit SHA, Node/runtime version,
+model IDs, and relevant run configuration. Use an isolated Mac Studio
+validation worktree when the installed customer checkout must remain stable.
+Change the installed checkout only for an explicitly authorized deployment or
+release update.
+
 ## Change and knowledge discipline
 
 Before implementation, identify the observed failure, root-cause class,
