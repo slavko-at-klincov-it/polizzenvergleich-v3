@@ -1,6 +1,7 @@
 const catalog = require("../../../resources/policyAnalysis/vs-occurrence-pilot.v0.1.json");
 const fullCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 const lwFullCatalog = require("../../../resources/policyAnalysis/lw-occurrence-full-draft.v0.1.json");
+const feFullCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const elFullCatalog = require("../../../resources/policyAnalysis/el-occurrence-full-draft.v0.1.json");
 const vbFullCatalog = require("../../../resources/policyAnalysis/vb-occurrence-full-draft.v0.1.json");
 const {
@@ -65,6 +66,35 @@ function component(worksheet, requirementId, componentId) {
 }
 
 describe("controlledOccurrenceWorksheet", () => {
+  test("binds an indirect-lightning limit to its peril clause, not an unrelated equal amount", () => {
+    const document = documentFromPages([
+      [
+        "AK05 Architekten- und Ingenieurgebühren",
+        "Mitversichert sind mindestens EUR 10.000 auf erstes Risiko für Architekten- und Ingenieurgebühren.",
+        "",
+        "FE04 Erdkabel",
+        "Mitversichert ist der indirekter Blitzschlag an Erdkabel inklusive Nebenkosten bis insgesamt EUR 5.000 je Schadenfall.",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "indirect-lightning-limit-fixture",
+      catalog: feFullCatalog,
+    });
+    const limit = component(worksheet, "FE-A06", "indirect_lightning_limit");
+
+    expect(limit.occurrences).toHaveLength(1);
+    expect(limit.occurrences[0]).toMatchObject({
+      exactText: "indirekter Blitzschlag",
+      context: {
+        text: expect.stringContaining("EUR 5.000"),
+      },
+    });
+    expect(limit.occurrences[0].context.text).not.toContain(
+      "Architekten- und Ingenieurgebühren."
+    );
+  });
+
   test("attaches controlled variant and list-value governors to occurrences", () => {
     const document = documentFromPages([
       [

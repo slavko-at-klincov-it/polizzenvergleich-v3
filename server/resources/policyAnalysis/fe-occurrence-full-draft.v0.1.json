@@ -89,7 +89,11 @@
           "id": "indirect_lightning_limit",
           "label": "Limit indirekter Blitzschlag",
           "factRole": "LIMIT",
-          "aliases": ["mindestens EUR 10.000"]
+          "aliases": [
+            "Überspannung oder Induktion infolge Blitzschlag",
+            "indirekter Blitzschlag",
+            "indirekten Blitzschlag"
+          ]
         }
       ]
     },
