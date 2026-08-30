@@ -694,6 +694,30 @@ function extractContractTermDurationFacts({ occurrence, binding }) {
     });
 }
 
+function extractExtensionPeriodDurationFacts({ occurrence, binding }) {
+  const genericFacts = extractDurationFacts({ occurrence, binding });
+  const { text } = validatedContext(occurrence);
+  const additionalFacts = [
+    ...text.matchAll(
+      /(?<![\p{L}\p{N}])ein(?:e[rmn]?)?\s+weiter(?:e[snrm]?)?\s+Jahr(?:e|en)?(?![\p{L}\p{N}])/giu
+    ),
+  ]
+    .filter((match) => valueFollowsCandidate(occurrence, match))
+    .map((match) =>
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: "1 Jahr",
+          valueType: "DURATION",
+          unit: "YEAR",
+        },
+      })
+    );
+  return [...genericFacts, ...additionalFacts];
+}
+
 function extractTotalPremiumFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const pattern =
@@ -1198,6 +1222,8 @@ function extractorFor(requirement, field) {
     return extractBuildersLiabilityConstructionSumFacts;
   if (requirementId === "VB-01" && field === "duration")
     return extractContractTermDurationFacts;
+  if (requirementId === "VB-04" && field === "duration")
+    return extractExtensionPeriodDurationFacts;
   if (requirementId === "VB-26" && field === "duration")
     return extractReinstatementDeadlineDurationFacts;
   if (requirementId === "VB-27" && field === "amount")
@@ -1277,6 +1303,8 @@ function valueCoversRequirement({
     indexed.component.id === "total_premium"
   )
     return true;
+  if (indexed.requirement.id === "VB-04" && field === "duration")
+    return indexed.component.id === "extension_period";
   if (
     indexed.requirement.id === "VS-02" &&
     field === "condition" &&

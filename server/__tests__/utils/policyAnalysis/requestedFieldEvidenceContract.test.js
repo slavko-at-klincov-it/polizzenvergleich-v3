@@ -1869,6 +1869,75 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("does not mistake the statutory maximum for the agreed extension period", () => {
+    const statutoryText =
+      "Eine Vereinbarung, nach welcher ein Versicherungsverhältnis als stillschweigend verlängert gilt, ist insoweit nichtig, als sich die Verlängerung auf mehr als ein Jahr erstreckt.";
+    const agreedText =
+      "Der Vertrag verlängert sich stillschweigend jeweils um ein weiteres Jahr.";
+    const statutoryCandidate = textualOccurrence({
+      candidateId: "candidate:statutory-extension-limit",
+      text: statutoryText,
+      exactText: "stillschweigend verlängert",
+    });
+    const agreedCandidate = textualOccurrence({
+      candidateId: "candidate:agreed-extension-period",
+      text: agreedText,
+      exactText: "jeweils um ein weiteres Jahr",
+      contextStart: 1_000,
+    });
+    const input = textualWorksheet({
+      id: "VB-04",
+      label: "Stillschweigende Verlängerung und Verlängerungszeitraum",
+      requestedFields: ["duration"],
+      components: [
+        {
+          id: "automatic_extension",
+          label: "Stillschweigende Verlängerung",
+          factRole: "CONDITION",
+          occurrences: [statutoryCandidate],
+        },
+        {
+          id: "extension_period",
+          label: "Verlängerungszeitraum",
+          factRole: "CONDITION",
+          occurrences: [agreedCandidate],
+        },
+      ],
+    });
+
+    expect(
+      materializeRequestedFieldEvidence({
+        worksheet: input,
+        materializedCandidates: selections([
+          "candidate:statutory-extension-limit",
+          "DIRECT",
+        ]),
+      }).requirements[0].fields[0]
+    ).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+    expect(
+      materializeRequestedFieldEvidence({
+        worksheet: input,
+        materializedCandidates: selections([
+          "candidate:agreed-extension-period",
+          "DIRECT",
+        ]),
+      }).requirements[0].fields[0]
+    ).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.FOUND,
+      facts: [
+        expect.objectContaining({
+          normalizedValue: "1 Jahr",
+          source: expect.objectContaining({
+            candidateId: "candidate:agreed-extension-period",
+          }),
+        }),
+      ],
+    });
+  });
+
   test.each([
     ["Laufzeit bis zu 10 Jahre", "Laufzeit"],
     ["Kündigungsfrist 10 Jahre", "Kündigungsfrist"],
