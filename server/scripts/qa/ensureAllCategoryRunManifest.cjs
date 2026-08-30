@@ -92,6 +92,7 @@ function run() {
     "releaseId",
     "pdfFile",
     "model",
+    "embeddingModel",
     "modelTokenLimit",
     "documentStatus",
   ]);
@@ -103,6 +104,7 @@ function run() {
     "repository",
     "pdfFile",
     "model",
+    "embeddingModel",
     "modelTokenLimit",
     "documentStatus",
   ]) {
@@ -120,6 +122,7 @@ function run() {
     releaseId,
     configuration: {
       model: args.model,
+      embeddingModel: args.embeddingModel,
       modelTokenLimit: Number(args.modelTokenLimit),
       documentStatus: args.documentStatus,
     },
@@ -158,6 +161,11 @@ function run() {
   if (existing.releaseId !== expected.releaseId) mismatches.push("releaseId");
   if (existing.configuration?.model !== expected.configuration.model)
     mismatches.push("model");
+  if (
+    existing.configuration?.embeddingModel !==
+    expected.configuration.embeddingModel
+  )
+    mismatches.push("embeddingModel");
   if (
     existing.configuration?.modelTokenLimit !==
     expected.configuration.modelTokenLimit

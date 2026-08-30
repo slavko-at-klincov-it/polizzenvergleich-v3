@@ -271,6 +271,8 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       };
     });
     const source = candidate.occurrence;
+    const isHybridSemanticCandidate =
+      source.discoveryMethod === "HYBRID_CHUNK_SEMANTIC";
     const categoryView = resolvedCategoryView(worksheet, candidate.requirement);
     const allCostMembers = members.every(
       (member) => member.factRole === "COST"
@@ -428,14 +430,15 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         matchedAlias: matchedScopeKey,
       };
     }
-    const deterministicCategoryBinding = group
-      ? null
-      : deterministicCategoryCandidateBinding({
-          worksheet,
-          requirement: candidate.requirement,
-          component: candidate.component,
-          occurrence: candidate.occurrence,
-        });
+    const deterministicCategoryBinding =
+      group || isHybridSemanticCandidate
+        ? null
+        : deterministicCategoryCandidateBinding({
+            worksheet,
+            requirement: candidate.requirement,
+            component: candidate.component,
+            occurrence: candidate.occurrence,
+          });
     if (deterministicCategoryBinding) {
       const mentionOnly =
         deterministicCategoryBinding.binding ===
@@ -455,6 +458,34 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         matchedAlias: null,
       };
     }
+    // Dinghy and the semantic span selector are discovery-only. Even when a
+    // selected quote sits below a matching category heading, it must not gain
+    // a server-authoritative DIRECT binding. Deterministic rejections remain
+    // authoritative; positive role/scope acceptance requires the normal Qwen
+    // triage before effects or table materialization can see the candidate.
+    if (
+      isHybridSemanticCandidate &&
+      roleResolution.owner === "SERVER" &&
+      roleResolution.roleMatch === ROLE_MATCH.MATCH
+    )
+      roleResolution = {
+        owner: "MODEL",
+        roleMatch: null,
+        basis: "HYBRID_SEMANTIC_MODEL_REQUIRED",
+      };
+    if (
+      isHybridSemanticCandidate &&
+      scopeResolution.owner === "SERVER" &&
+      [SCOPE_MATCH.GENERAL, SCOPE_MATCH.GENERAL_WITH_NARROW].includes(
+        scopeResolution.scopeMatch
+      )
+    )
+      scopeResolution = {
+        owner: "MODEL",
+        scopeMatch: null,
+        basis: "HYBRID_SEMANTIC_MODEL_REQUIRED",
+        matchedAlias: null,
+      };
     const modelDecisionFields = [];
     if (roleResolution.owner === "MODEL") modelDecisionFields.push("roleMatch");
     if (scopeResolution.owner === "MODEL")

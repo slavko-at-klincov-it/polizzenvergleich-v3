@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "hp-hybrid-fallback-v0.1",
+  "categoryView": "HP",
+  "targets": [
+    {
+      "id": "HP-12:environmental-damage",
+      "requirementId": "HP-12",
+      "componentId": "environmental_damage",
+      "query": "Umwelthaftpflicht und Umweltsanierungskostenversicherung, Versicherungsschutz für die Sanierung von Umweltschäden",
+      "requiredQuotePrefixes": [
+        "Umweltschad",
+        "Umweltstör",
+        "Umweltsanier",
+        "Sanierungsverpflicht"
+      ],
+      "mode": "ADDITIVE",
+      "topK": 3
+    },
+    {
+      "id": "HP-12:federal-environmental-liability-act",
+      "requirementId": "HP-12",
+      "componentId": "federal_environmental_liability_act",
+      "query": "Bundes-Umwelthaftungsgesetz B-UHG, Versicherungsschutz für Sanierungsverpflichtungen und Sanierungskosten",
+      "requiredQuotePrefixes": ["Bundes-Umwelthaftungsgesetz", "B-UHG"],
+      "mode": "ADDITIVE",
+      "topK": 3
+    }
+  ]
+}
