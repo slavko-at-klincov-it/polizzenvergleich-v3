@@ -482,3 +482,37 @@ Similarity Threshold 0 und Suchmodus `default`. Der Feuerpfad begrenzt die
 semantischen Kandidaten weiterhin batchweise. Daher darf aus der Zahl 32 oder
 der dynamischen Line-Coverage keine fachliche Vollständigkeit abgeleitet
 werden.
+
+## 15. Aktueller V3-Hybridfallback: breite Navigation, exakte Evidenz
+
+Stand 30. August 2026, produktiver V3-Pfad in `polizzenvergleich-v3`:
+
+```text
+kontrolliertes atomare Ziel bleibt ungelöst
+  -> seitengebundene 3000/250-Navigationschunks
+  -> Dinghy-Ranking, maximal drei Chunks je Ziel
+  -> getrennte semantische Spanauswahl je Ziel und Chunk
+  -> Server: exakter eindeutiger Originalsubstring + Zielanker + Offset
+  -> HYBRID_EXACT_SPAN, nicht der breite Chunk
+  -> normale Rollen-/Scope-Triage
+  -> normale Wirkungsprüfung
+  -> serverseitige Tabellenzeile
+```
+
+Der Embedder findet nur Navigationskandidaten. Weder Score noch Chunk erzeugen
+einen Fakt. Die Modellauswahl darf ausschließlich einen wortgetreuen,
+eindeutigen Span bis 900 Zeichen zurückgeben. Nicht exakte, erfundene,
+mehrdeutige oder nicht zielverankerte Zitate werden zu `UNRESOLVED`
+herabgestuft und nicht repariert.
+
+Hybridkandidaten bleiben in der Triage vollständig modelloffen. Ihr atomarer
+Semantikvertrag präzisiert die Rollenfrage, beweist sie aber nicht. Diese
+Präzisierung wird nur für Hybridziele an den bestehenden Systemprompt
+angehängt; normale Kandidaten verwenden byteidentisch den bisherigen Prompt.
+Modell- und Embedding-ID sind Teil des privaten Laufmanifests, und ein Resume
+mit abweichender Identität wird abgelehnt.
+
+Die technische Modulgrenze ist wiederverwendbar. Produktiv aktiviert sind in
+V3.3.1 nur die beiden Komponenten von `HP-12`. Eine Aktivierung weiterer
+Anforderungen ist eine fachliche Katalogänderung und benötigt eigene
+Positiv-, Negativ-, Nachbar- und Zielhardwarekontrollen.

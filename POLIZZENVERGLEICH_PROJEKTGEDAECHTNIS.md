@@ -479,6 +479,29 @@ ungeprüfte fachliche Kundenfreigabe. Details stehen in
 und im
 [RC33-Releasevertrag](../polizzenvergleich-v3/docs/RELEASE_V3.3.0_RC33_DE.md).
 
+### Aktueller V3-Nachweisstand: V3.3.1
+
+V3.3.1 kombiniert den Recall-Vorteil des historischen breiten Chunkings mit
+dem kontrollierten V3.3-Faktenpfad. Breite `3000/250`-Chunks und Dinghy dürfen
+nur zu einem exakten, servervalidierten Originalspan navigieren. Erst danach
+entscheiden die vorhandenen Rollen-, Scope- und Wirkungsgates; ein
+Similarity-Score oder Chunk ist niemals selbst Vertragsfakt.
+
+Der erste produktiv aktivierte Fall ist `HP-12`. Auf dem Mac Studio mit Qwen
+3.8 27B ändert sich gegenüber der kontrollierten WEVIG-Basis ausschließlich
+`HP-12` von einer falschen Negativ- zu einer belegten Positivaussage. Die
+übrigen 35 HP-Zeilen einschließlich `HP-25` bleiben exakt stabil. Lokale
+GRAWE- und UNIQA-Gegenproben ließen keine Hybridkandidaten zu; sie sind nur
+Nichtaktivierungskontrollen und keine Vertragsoracles.
+
+Der aktuelle technische Gesamtstand besteht 94 Jest-Suites und 1.098 Tests
+unter Node 22.23.2. Diese Evidenz rechtfertigt das begrenzte Release, aber
+weder eine allgemeine 99-Prozent-Aussage noch die pauschale Aktivierung des
+Fallbacks für alle offenen Kategorien. Details:
+[Tests und Erkenntnisse, Abschnitt 42](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#42-v331--evidenzgebundener-hybridfallback),
+[ADR-020](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-020-breite-chunks-nur-als-navigation-zu-exakter-evidenz) und
+[Releasevertrag](../polizzenvergleich-v3/docs/RELEASE_V3.3.1_DE.md).
+
 ### Historische Arbeitsphase: lokaler experimenteller Feuerpilot
 
 Am 25. August 2026 hatte der Nutzer diese damalige experimentelle

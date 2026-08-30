@@ -2558,3 +2558,55 @@ Die kumulative Vollabnahme des exakt installierten RC33-Tags liegt in
 technischen Gates. Gegenüber den alten Fullruns RC11/RC12 gibt es zusammen
 32 Statusverbesserungen bei 640 vollständig erzeugten Tabellenzeilen und
 keine Statusverschlechterung.
+
+## 42. V3.3.1 – evidenzgebundener Hybridfallback
+
+**Beobachtungsfenster:** 30. August 2026
+
+Der vollständige V3.2.1/RC33-Vergleich zeigte echte Recall-Verluste des engen
+Occurrence-Pfads, während der alte breite Promptweg gleichzeitig gefährliche
+Scope- und Polaritätsverbindungen erzeugte. Eine reine Similarity-Schwelle
+war ebenfalls ungeeignet: Sie erreichte nicht alle positiven Kontrollen und
+ließ fünf falsche Kandidaten zu.
+
+V3.3.1 verwendet das historische `3000/250`-Chunking deshalb nur für
+Navigation. Dinghy rankt maximal drei Chunks je atomarem Ziel; Qwen darf
+daraus nur einen exakten Originalspan wählen. Eindeutigkeit, Zielanker,
+Offset, Länge und Originalsubstring werden serverseitig geprüft. Erst danach
+laufen unverändert Rollen-/Scope-Triage, Wirkungsprüfung und Tabellenrollup.
+
+Im ersten WEVIG-27B-Versuch enthielt der gewählte Kontext noch eine
+benachbarte Ausschlussklausel. Beide Hybridziele wurden zwar als direkt
+klassifiziert, die Wirkung blieb aber fälschlich negativ. Die Root Cause war
+die Kontextgrenze, nicht Retrieval oder PDF-Erfassung. Nach Übergabe nur des
+exakten positiven Spans wurde `HP-12` korrekt positiv.
+
+Eine zweite Nebenwirkung traf `HP-25`, weil die Hybridpräzisierung zunächst
+global im gemeinsamen Triage-Prompt stand. Nach Isolation in einen nur für
+Hybridziele geladenen Zusatzprompt ist der normale Prompt-Hash wieder exakt
+identisch zur Basis.
+
+| Prüfung | Ergebnis |
+| --- | ---: |
+| fokussierte Verträge | 4/4 Suites, 79/79 Tests |
+| vollständige Regression unter Node 22.23.2 | 94/94 Suites, 1098/1098 Tests |
+| WEVIG / Qwen 3.8 27B Triage | 38/38 Kandidaten und Kontrollen |
+| WEVIG / Qwen 3.8 27B Wirkung | 63/63 Komponenten und Kontrollen |
+| WEVIG HP-Endtabelle | 36/36 Zeilen |
+| semantischer Diff zur Basis | nur `HP-12` verbessert; 35/35 stabil |
+| GRAWE-Nichtaktivierung | 0 zugelassene Hybridkandidaten |
+| UNIQA-Nichtaktivierung | 0 zugelassene Hybridkandidaten |
+
+`HP-12` wechselt von `Umweltschäden: ausgeschlossen / Nein` zu
+`Umweltschäden: eingeschlossen / Ja`. Quelle ist ausschließlich der exakte
+positive Versicherungsschutzspan auf PDF-Seite 16. `HP-25` und alle übrigen
+HP-Zeilen sind exakt identisch zur kontrollierten Basis.
+
+**Beweist:** Breite semantische Navigation kann einen realen Recall-Verlust
+zurückgewinnen, wenn ausschließlich ein servervalidierter exakter Span in die
+vorhandenen Faktengates gelangt. Die Promptisolation schützt normale
+Kandidaten vor Hybrid-Nebenwirkungen.
+
+**Beweist nicht:** vollständige HP-Fachrichtigkeit, beliebige Polizzen,
+Multi-Dokument-Ranglogik oder 99 Prozent. GRAWE und UNIQA waren nur
+Nichtaktivierungskontrollen, keine vollständigen Expertenoracles.

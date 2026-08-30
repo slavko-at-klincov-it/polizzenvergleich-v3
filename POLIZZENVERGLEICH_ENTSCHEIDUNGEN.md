@@ -604,3 +604,40 @@ Die Servergrenze validiert die Vorlagen-ID und besitzt die tatsächliche
 Promptzuordnung. Damit bleiben UI, API-Erstellung und spätere weitere
 Erstellcaller konsistent; eine manipulierte Browseranfrage kann keine
 beliebige lokale Datei lesen.
+
+## ADR-020: Breite Chunks nur als Navigation zu exakter Evidenz
+
+**Status:** AKZEPTIERT und für `HP-12` umgesetzt am 30. August 2026
+
+Der V3.2.1/RC33-Vergleich belegt, dass breite `3000/250`-Chunks unbekannte
+Wortlaute sichtbar machen, aber im monolithischen Pfad verschiedene Rollen,
+Scopes und Polaritäten unzulässig verbinden können. Reine Dinghy-Schwellen
+lieferten ebenfalls falsche positive Kandidaten und sind kein Faktenvertrag.
+
+Verbindliche Entscheidung:
+
+1. Breite page-aware Chunks und Dinghy sind nur Navigationsmittel für
+   weiterhin offene atomare Komponenten.
+2. Je Ziel werden höchstens drei Chunks geprüft. Eine globale Top-N-Liste ist
+   kein Vollständigkeits- oder Abwesenheitsbeweis.
+3. Ein Hybridkandidat benötigt einen exakten, eindeutigen Originalspan,
+   servergeprüfte Dokumentoffsets und einen zielbezogenen Wortanker.
+4. Der breite Chunk wird nicht in Triage oder Wirkung übernommen. Nur der
+   exakte Span wird als `HYBRID_EXACT_SPAN` weitergereicht.
+5. Hybridkandidaten erhalten keine deterministische Positivbindung. Sie
+   durchlaufen die normale Rollen-, Scope- und Wirkungsprüfung.
+6. Ein atomarer Hybrid-Semantikvertrag formuliert die Frage, ist aber kein
+   Beweis. Seine Promptpräzisierung darf normale Kandidaten nicht verändern.
+7. Ungültige Modellzitate enden fail-closed `UNRESOLVED`; automatische
+   Zitatreparatur ist in diesem Pfad unzulässig.
+8. Die technische Grundlage darf nur zielweise mit fachlichen Positiv-,
+   Negativ-, Nachbar- und Zielhardwarekontrollen aktiviert werden.
+
+Die erste freigegebene Aktivierung gilt für `HP-12`. Der historische,
+zurückgezogene CLI-Preset-Tag gleichen Namens war nicht veröffentlicht und
+gehört zu einer anderen, verworfenen Bedienlinie. Der am 30. August neu
+vergebene Release-Tag `v3.3.1` bezeichnet ausschließlich den aktuellen
+evidenzgebundenen V3-Pfad.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 42](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#42-v331--evidenzgebundener-hybridfallback).
