@@ -257,9 +257,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
           sum +
           category.rows.filter(
             ({ outcome }) =>
-              !["INHALTLICH_GLEICH", "BEIDSEITIG_KEIN_BELEG"].includes(
-                outcome
-              )
+              !["INHALTLICH_GLEICH", "BEIDSEITIG_KEIN_BELEG"].includes(outcome)
           ).length,
         0
       ),
