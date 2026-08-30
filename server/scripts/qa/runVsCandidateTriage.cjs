@@ -79,6 +79,7 @@ async function run() {
   const allowedArguments = new Set([
     "worksheet",
     "systemPromptFile",
+    "hybridSystemPromptFile",
     "controlFile",
     "controlMode",
     "output",
@@ -93,12 +94,18 @@ async function run() {
     fail(`Unbekannte Argumente: ${unknownArguments.join(",")}`);
   const worksheetFile = path.resolve(args.worksheet || "");
   const systemPromptFile = path.resolve(args.systemPromptFile || "");
+  const hybridSystemPromptFile = args.hybridSystemPromptFile
+    ? path.resolve(args.hybridSystemPromptFile)
+    : null;
   const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
   const controlMode = args.controlMode || "file";
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ["Systemprompt", systemPromptFile],
+    ...(hybridSystemPromptFile
+      ? [["Hybrid-Systemprompt", hybridSystemPromptFile]]
+      : []),
   ]) {
     if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
   }
@@ -134,6 +141,12 @@ async function run() {
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
+  const hybridSystemPromptAddon = hybridSystemPromptFile
+    ? fs.readFileSync(hybridSystemPromptFile, "utf8")
+    : null;
+  const hybridSystemPrompt = hybridSystemPromptAddon
+    ? `${systemPrompt.trimEnd()}\n\n${hybridSystemPromptAddon.trim()}\n`
+    : null;
   let controlSet = controlFile
     ? JSON.parse(fs.readFileSync(controlFile, "utf8"))
     : null;
@@ -154,6 +167,13 @@ async function run() {
   )
     fail(`Ungültiger Control-Reviewstatus: ${controlReviewStatus}`);
   const payload = buildCandidateTriagePayload(worksheet);
+  const hybridTargetCount = payload.bindingTargets.filter(
+    (target) => target.hybridSemanticContract
+  ).length;
+  if (hybridTargetCount > 0 && !hybridSystemPrompt)
+    fail(
+      `Worksheet enthält ${hybridTargetCount} Hybrid-Ziele, aber --hybridSystemPromptFile fehlt`
+    );
   const userPrompt = JSON.stringify(payload);
   const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
   const maxAttemptsPerTarget = Number(args.maxAttemptsPerTarget || 2);
@@ -198,7 +218,9 @@ async function run() {
           }
         : singlePayload;
       const messages = llm.constructPrompt({
-        systemPrompt,
+        systemPrompt: target.hybridSemanticContract
+          ? hybridSystemPrompt
+          : systemPrompt,
         contextTexts: [],
         chatHistory: [],
         userPrompt: JSON.stringify(retryPayload),
@@ -331,6 +353,10 @@ async function run() {
       worksheetSha256: sha256File(worksheetFile),
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
+      hybridSystemPromptPath: hybridSystemPromptFile,
+      hybridSystemPromptSha256: hybridSystemPromptFile
+        ? sha256File(hybridSystemPromptFile)
+        : null,
       controlPath: controlFile,
       controlSha256: controlFile
         ? sha256File(controlFile)
@@ -352,6 +378,7 @@ async function run() {
         (target) => target.modelDecisionFields.length === 0
       ).length,
       modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
+      hybridTargetCount,
       modelAttemptCount: calls.length,
       candidateCount: payload.bindingTargets.reduce(
         (sum, target) => sum + target.candidateIds.length,

@@ -204,6 +204,7 @@ for CATEGORY in VS FE LW ST EL HP VB WE; do
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runVsCandidateTriage.cjs" \
     --worksheet "$WORKSHEET" \
     --systemPromptFile "$TRIAGE_PROMPT" \
+    --hybridSystemPromptFile "$SCRIPT_DIR/server/resources/policyAnalysis/hybrid-candidate-triage-addon.v0.1.md" \
     --controlMode technical-review \
     --output "$TRIAGE_DIR" \
     --model "$MODEL" \

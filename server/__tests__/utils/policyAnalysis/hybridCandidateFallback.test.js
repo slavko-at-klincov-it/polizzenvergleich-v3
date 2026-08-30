@@ -133,6 +133,11 @@ describe("hybridCandidateFallback", () => {
       worksheet: matchingWorksheet,
     }).targets[0];
     expect(existingTarget.eligible).toBe(false);
+    const normalPayload = buildCandidateTriagePayload(matchingWorksheet);
+    expect(normalPayload.bindingTargets).toHaveLength(1);
+    expect(normalPayload.bindingTargets[0]).not.toHaveProperty(
+      "hybridSemanticContract"
+    );
     expect(
       validateHybridFallbackCatalog({
         catalog: fallbackCatalog("ADDITIVE"),
