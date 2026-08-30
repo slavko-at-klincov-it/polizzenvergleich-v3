@@ -82,6 +82,18 @@ pauschalen Gesamtsieger. Zulässige Zustände pro Vergleichspunkt sind mindesten
 `unklar/unresolved`. „Nur in A belegt“ bedeutet nicht automatisch „fehlt in
 B“.
 
+**Implementierungsstand 30. August 2026:** Ergebnisschema V2 setzt diese
+Arbeitsannahme als servereigene `pointDecision` um. Sie arbeitet auf
+atomaren Komponenten und typisierten Fakten, nicht auf den sichtbaren
+Tabellenstrings. Freigegeben sind derzeit nur `INCLUDED` gegenüber
+`EXCLUDED`, höheres gleichartig qualifiziertes Deckungslimit, niedrigerer
+gleichartig qualifizierter Selbstbehalt und atomare Gleichwertigkeit.
+Unvollständige, bedingte, rangunklare oder nicht scopegleiche Fakten bleiben
+`UNKLAR` beziehungsweise `NICHT_VERGLEICHBAR`. Der gespeicherte
+LF-gegen-neun-WEVIG-Replay ergab 1 Vorteil B, 7 Gleichwertigkeiten, 9 nicht
+vergleichbare und 303 unklare Zeilen. Das ist noch keine vollständige
+fachliche Abnahme.
+
 ### 2.2 Kunden- und Domänenevidenz: Gebäudeversicherung
 
 Quelle dieser Einordnung ist eine am 24. August 2026 übermittelte,

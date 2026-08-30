@@ -1,7 +1,7 @@
 # Polizzenvergleich – Tests, Messwerte und Entwicklungserkenntnisse
 
 Stand: 30. August 2026
-Letzte ausgewertete Version: V3-Entwicklungsstand `db88cf6a`
+Letzte ausgewertete Version: V3-Entwicklungsstand `b761e3c4`
 
 ## 1. Zweck
 
@@ -2663,3 +2663,50 @@ dass weitere Dokumentrang- oder Ersetzungsfragen gelöst sind oder dass eine
 99-Prozent-/Fremdversichererfreigabe vorliegt. Dafür ist ein frischer Lauf mit
 versioniertem neuen Build und weiterhin ein zuvor unbekannter Expertenholdout
 erforderlich.
+
+## 44. Regelgebundene Punktentscheidung V2
+
+**Beobachtungsfenster:** 30. August 2026  
+**Implementierungsstand:** `b761e3c4`
+
+Der bisherige Ergebnis-Builder verglich gerenderte Paketstrings. Das reichte
+für einen technischen Diff, aber nicht für ein belastbares „Wer ist warum
+besser?“. Die neue reine Serverschicht liest deshalb pro Requirement die
+atomaren Komponenten, Faktrollen, Coverage Effects, Dokumentgeltung,
+Scopebild, Requested-Field-Status, typisierte Werte, Qualifier und
+servergebundenen Quellen.
+
+Zwei zusätzliche Adversarial-Gates wurden dabei geschlossen:
+
+- Gleiche Klausel und gleicher Geldbetrag bleiben verschieden, wenn beide
+  Seiten ausdrücklich unterschiedliche Perioden wie `je Ereignis` und
+  `Jahreshöchstlimit` nennen.
+- Eine Neubauwertbasis darf nur aus einer Zeile mit Prüfstatus `BELEGT`
+  stammen. Teilbelegte oder ungeklärte Basen dürfen Prozent-/Absolutwerte
+  nicht künstlich versöhnen.
+
+| Prüfung auf Mac Studio | Ergebnis |
+| --- | ---: |
+| fokussierte Decision-/Result-/V1-UI-Verträge | 3/3 Suites, 21/21 Tests |
+| vollständige Regression, Node 18.18.0 | 90/90 Suites, 1.039/1.039 Tests |
+| Prettier der geänderten Dateien | PASS |
+| Frontend-Produktionsbuild | PASS |
+| gespeicherter Zehn-Dokumente-Replay | 320/320 Zeilen |
+| Punktentscheidungen | 0 A / 1 B / 7 gleich / 9 nicht vergleichbar / 303 unklar |
+| freigegebener Vorteil | `LW-22`: B eingeschlossen, A ausdrücklich ausgeschlossen |
+
+Die Gleichwertigkeiten betreffen `FE-A04`, `FE-A06`, `ST-04`,
+`ST-06`, `ST-16`, `ST-26` und `HP-26`. Alte Schema-V1-Ergebnisse
+werden nicht rückwirkend verändert, sondern von der UI mit dem vorhandenen
+Prüfhinweis als `UNKLAR` dargestellt.
+
+**Beweist:** Die Software kann innerhalb eines vollständig belegten,
+vergleichbaren atomaren Scopes deterministisch und quellengebunden einen
+Punktvorteil oder Gleichwertigkeit begründen. Einseitig fehlende Evidenz,
+Mixed-/Conditional-/Option-Fälle, Rangfragen, Quellenfehler,
+Periodenunterschiede und gemischte Gewinner bleiben fail-closed.
+
+**Beweist nicht:** Fachrichtigkeit aller 320 Zeilen, Rang und Ersetzung in
+beliebigen Mehrdokumentpaketen, einen Gesamtvertragssieger, das Laufzeitbudget,
+einen frischen End-to-End-Lauf des neuen Builds, unbekannte
+Versicherer-Holdouts oder 99 Prozent.

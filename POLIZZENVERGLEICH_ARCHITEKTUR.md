@@ -1,11 +1,64 @@
 # Polizzenvergleich – aktuelle Architektur und Datenfluss
 
-Stand: 25. August 2026
-Beschriebener Code: `policy-v0.3.22` (`17a556dc`)
+Stand: 30. August 2026
+Aktiver Code: `polizzenvergleich-v3`, Punktentscheidungsstand
+`b761e3c4`
 
-Dieses Dokument beschreibt den tatsächlich implementierten Zustand. Der als
-nächstes beschlossene Pfad wird ausdrücklich als **Zielarchitektur**
-gekennzeichnet. Die allgemeine AnythingLLM-Architektur bleibt unverändert.
+Die Abschnitte 1 bis 13 unterhalb des folgenden aktuellen V3-Überblicks
+beschreiben den historischen Versuchspfad `policy-v0.3.22`. Dessen
+`comparison_documents`-Slotmodell mit höchstens zwei indexierten Dokumenten
+ist **nicht** der aktive Produktpfad und darf nicht als Implementierungsbasis
+verwendet werden. Es bleibt als Versuchsevidenz für Retrieval-, Ledger- und
+Cleanup-Erkenntnisse erhalten.
+
+## 0. Aktueller V3-Datenfluss
+
+```text
+Paket A (1–9 private PDFs)      Paket B (1–9 private PDFs)
+             \                 /
+          Rolle + Geltungsstatus
+                    |
+       persistenter, resumierbarer Vergleichsjob
+                    |
+      je Dokument isoliert VS/FE/LW/ST/EL/HP/VB/WE
+                    |
+ Worksheet + atomare Komponenten + Evidence-Spans
+                    |
+ Wirkungsurteil + Requested-Field-Fakten + Quellen
+                    |
+       dokumentisolierte Tabellenzeilen
+                    |
+      paketweiser serverseitiger Rollup
+                    |
+ technischer Diff + regelgebundene pointDecision
+                    |
+       UI + privates JSON + Markdown + XLSX
+```
+
+Die PDFs bleiben in einer privaten Vergleichsablage und werden weder als
+Chat-Anhang noch als Workspace-Dokument indexiert. Jede Datei behält Seite,
+Rolle, Geltungsstatus, SHA-256 und stabile Identität. Der Laufvertrag ist
+content-addressed; bei unverändertem Dokument-/Releasevertrag setzt ein
+unterbrochener Job bei der ersten offenen Kategorie fort.
+
+Der technische Diff vergleicht weiterhin dokumentbezogene Paketdarstellungen.
+Die fachliche Punktentscheidung ist davon getrennt und arbeitet nur auf den
+atomaren Artefakten. Zulässige Resultate sind `VORTEIL_A`, `VORTEIL_B`,
+`GLEICHWERTIG`, `NICHT_VERGLEICHBAR` und `UNKLAR`. Ein Vorteil benötigt
+beidseitig vollständige, konfliktfreie, rangaufgelöste und gültig
+quellengebundene Fakten desselben Component-, Rollen-, Geltungs-, Scope-,
+Varianten-, Werttyp-, Einheiten- und Qualifier-Schlüssels sowie eine
+versionierte Serverregel. Fehlender Beleg ist kein Ausschluss. Ein
+Gesamtsieger, Score oder freie LLM-Wertung existiert nicht.
+
+Die UI zeigt pro Paket Vertragsinhalt, Deckung, Betrag, Prüfstatus und Quellen.
+Die Entscheidungsspalte zeigt Zustand, konkrete Begründung, Regel-ID und den
+älteren technischen Diagnoseausgang. Ergebnisschema V2 ist additiv;
+gespeicherte V1-Ergebnisse werden in der UI fail-closed als `UNKLAR`
+präsentiert. XLSX behält die ursprünglichen Spalten A bis O und ergänzt
+Punktentscheidung, Begründung und Regel in P bis R.
+
+## Historische Architektur ab `policy-v0.3.22`
 
 ## 1. Systemgrenzen
 

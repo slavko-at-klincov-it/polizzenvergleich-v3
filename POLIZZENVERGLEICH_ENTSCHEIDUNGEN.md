@@ -641,3 +641,44 @@ evidenzgebundenen V3-Pfad.
 
 Kanonischer Messbeleg:
 [Tests und Erkenntnisse, Abschnitt 42](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#42-v331--evidenzgebundener-hybridfallback).
+
+## ADR-021: Vorteile sind punktweise, atomar und regelgebunden
+
+**Status:** AKZEPTIERT und in V3 Ergebnisschema V2 umgesetzt am 30. August
+2026
+
+Der technische Paketrollup darf nicht aus gerenderten Tabellenstrings oder
+den Zuständen `NUR_A_BELEGT`, `NUR_B_BELEGT` und
+`UNTERSCHIED_FACHLICH_PRÜFEN` ableiten, welches Paket besser ist. In diesen
+Daten fehlen atomarer Scope, Faktrolle, Geltung, Variante, Bedingung,
+Qualifier, Dokumentrang und Ersetzung.
+
+Verbindliche Entscheidung:
+
+1. Der bestehende technische `outcome` bleibt erhalten.
+2. Eine additive servereigene `pointDecision` liest Worksheet-Komponenten,
+   Wirkungsurteile, typisierte Requested-Field-Fakten und servergebundene
+   Quellen.
+3. Jede Seite muss vollständig `BELEGT`, konfliktfrei, rangaufgelöst und
+   quellengebunden sein.
+4. Component, Faktrolle, Geltung, Scope, Variante, Werttyp, Einheit, Limitart
+   und Qualifier bilden das Comparability Gate.
+5. Freigegeben sind zunächst nur eingeschlossen gegenüber ausdrücklich
+   ausgeschlossen, höheres vergleichbares Deckungslimit, niedrigerer
+   vergleichbarer Selbstbehalt und echte atomare Gleichwertigkeit.
+6. Fehlender Beleg, Bedingungen/Optionen, mehrere abweichende Dokumentfakten,
+   unbekannte Bewertungsrichtungen und gemischte Gewinner enden
+   `UNKLAR`.
+7. Abweichende Vergleichsschlüssel enden `NICHT_VERGLEICHBAR`.
+8. Es gibt keinen Gesamtsieger, Score, Zeilenzähler als Rangfolge oder freie
+   LLM-Wertung.
+9. Alte Ergebnisschemata werden nicht umgedeutet; die UI zeigt sie fail-closed
+   als `UNKLAR`.
+
+Der erste reale Artefakt-Replay terminiert 320 Zeilen mit genau einem
+`VORTEIL_B` bei `LW-22`, sieben Gleichwertigkeiten, neun nicht
+vergleichbaren Punkten und 303 unklaren Punkten. Diese konservative Verteilung
+ist Teil des Sicherheitsvertrags, keine Recall-Regression.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 44](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#44-regelgebundene-punktentscheidung-v2).
