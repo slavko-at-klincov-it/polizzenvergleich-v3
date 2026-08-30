@@ -75,7 +75,9 @@ function runDocument({
       const lines = buffered.split(/\r?\n/gu);
       lineBuffers.set(channel, lines.pop() || "");
       for (const line of lines) {
-        const match = line.match(/^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u);
+        const match = line.match(
+          /^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u
+        );
         if (!match || completedCategories.has(match[1])) continue;
         completedCategories.add(match[1]);
         onCategoryComplete(match[1], completedCategories.size);
@@ -189,8 +191,7 @@ async function main() {
               phase: "ANALYZING_DOCUMENTS",
               completedDocuments: index,
               totalDocuments: manifest.documents.length,
-              completedCategories:
-                index * CATEGORY_COUNT + completedInDocument,
+              completedCategories: index * CATEGORY_COUNT + completedInDocument,
               totalCategories: manifest.documents.length * CATEGORY_COUNT,
               currentCategory: categoryView,
               currentDocument: {
