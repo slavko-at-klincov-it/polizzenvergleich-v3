@@ -14,6 +14,7 @@ const {
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
+const CATEGORY_COUNT = 8;
 
 async function sha256File(file) {
   const hash = crypto.createHash("sha256");
@@ -38,7 +39,13 @@ async function updateSession(id, data) {
   });
 }
 
-function runDocument({ file, documentStatus, outputDirectory, logFile }) {
+function runDocument({
+  file,
+  documentStatus,
+  outputDirectory,
+  logFile,
+  onCategoryComplete = () => {},
+}) {
   return new Promise((resolve, reject) => {
     privateDirectory(outputDirectory);
     const log = fs.openSync(logFile, "a", 0o600);
@@ -54,14 +61,33 @@ function runDocument({ file, documentStatus, outputDirectory, logFile }) {
       {
         cwd: REPOSITORY_ROOT,
         env: process.env,
-        stdio: ["ignore", log, log],
+        stdio: ["ignore", "pipe", "pipe"],
       }
     );
+    const lineBuffers = new Map([
+      ["stdout", ""],
+      ["stderr", ""],
+    ]);
+    const completedCategories = new Set();
+    const consumeOutput = (channel, chunk) => {
+      fs.writeSync(log, chunk);
+      const buffered = `${lineBuffers.get(channel)}${chunk.toString("utf8")}`;
+      const lines = buffered.split(/\r?\n/gu);
+      lineBuffers.set(channel, lines.pop() || "");
+      for (const line of lines) {
+        const match = line.match(/^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u);
+        if (!match || completedCategories.has(match[1])) continue;
+        completedCategories.add(match[1]);
+        onCategoryComplete(match[1], completedCategories.size);
+      }
+    };
+    child.stdout.on("data", (chunk) => consumeOutput("stdout", chunk));
+    child.stderr.on("data", (chunk) => consumeOutput("stderr", chunk));
     child.once("error", (error) => {
       closeLog();
       reject(error);
     });
-    child.once("exit", (code, signal) => {
+    child.once("close", (code, signal) => {
       closeLog();
       if (code === 0) return resolve();
       return reject(
@@ -135,6 +161,9 @@ async function main() {
         phase: "ANALYZING_DOCUMENTS",
         completedDocuments: index,
         totalDocuments: manifest.documents.length,
+        completedCategories: index * CATEGORY_COUNT,
+        totalCategories: manifest.documents.length * CATEGORY_COUNT,
+        currentCategory: null,
         currentDocument: {
           uuid: document.uuid,
           side: document.side,
@@ -147,12 +176,34 @@ async function main() {
       "documents",
       `${document.side}-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`
     );
+    let progressUpdates = Promise.resolve();
     await runDocument({
       file: sourceFile,
       documentStatus: document.documentStatus,
       outputDirectory: documentOutput,
       logFile: path.join(runRoot, "worker.log"),
+      onCategoryComplete: (categoryView, completedInDocument) => {
+        progressUpdates = progressUpdates.then(() =>
+          updateSession(session.id, {
+            progress: JSON.stringify({
+              phase: "ANALYZING_DOCUMENTS",
+              completedDocuments: index,
+              totalDocuments: manifest.documents.length,
+              completedCategories:
+                index * CATEGORY_COUNT + completedInDocument,
+              totalCategories: manifest.documents.length * CATEGORY_COUNT,
+              currentCategory: categoryView,
+              currentDocument: {
+                uuid: document.uuid,
+                side: document.side,
+                originalName: document.originalName,
+              },
+            }),
+          })
+        );
+      },
     });
+    await progressUpdates;
     documentRuns.push({ document, outputDirectory: documentOutput });
   }
 
@@ -161,6 +212,9 @@ async function main() {
       phase: "BUILDING_COMPARISON",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
+      completedCategories: manifest.documents.length * CATEGORY_COUNT,
+      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      currentCategory: null,
       currentDocument: null,
     }),
   });
@@ -177,6 +231,9 @@ async function main() {
       phase: "COMPLETED",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
+      completedCategories: manifest.documents.length * CATEGORY_COUNT,
+      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      currentCategory: null,
       currentDocument: null,
     }),
     resultPath,

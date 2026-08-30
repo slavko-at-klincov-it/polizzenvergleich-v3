@@ -516,7 +516,7 @@ export default function ChatContainer({
             {isMobile && <SidebarMobileHeader />}
             <WorkspaceModelPicker workspaceSlug={workspace.slug} />
             <DnDFileUploaderWrapper>
-              <div className="flex flex-col h-full w-full items-center justify-center">
+              <div className="flex flex-col h-full w-full items-center justify-[safe_center] overflow-y-auto py-6">
                 <div className="flex flex-col items-center w-full max-w-[750px]">
                   <h1 className="text-white text-xl md:text-2xl mb-11 text-center">
                     {t("main-page.greeting")}

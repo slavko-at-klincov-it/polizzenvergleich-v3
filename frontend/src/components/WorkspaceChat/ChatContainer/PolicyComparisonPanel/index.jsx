@@ -420,14 +420,23 @@ export default function PolicyComparisonPanel({
 function ComparisonProgress({ progress }) {
   const completed = progress?.completedDocuments || 0;
   const total = progress?.totalDocuments || 0;
-  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const completedCategories = progress?.completedCategories;
+  const totalCategories = progress?.totalCategories;
+  const percent =
+    totalCategories > 0
+      ? Math.round((completedCategories / totalCategories) * 100)
+      : total > 0
+        ? Math.round((completed / total) * 100)
+        : 0;
   return (
     <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2">
       <div className="flex items-center justify-between text-xs text-sky-200 light:text-sky-800">
         <span>
           {progress?.phase === "BUILDING_COMPARISON"
             ? "Vergleichstabelle wird erstellt"
-            : `Dokumentanalyse ${completed}/${total}`}
+            : totalCategories > 0
+              ? `Kategorien ${completedCategories}/${totalCategories}`
+              : `Dokumentanalyse ${completed}/${total}`}
         </span>
         <span>{percent}%</span>
       </div>
@@ -441,6 +450,7 @@ function ComparisonProgress({ progress }) {
         <p className="mt-1.5 truncate text-[11px] text-zinc-400 light:text-slate-500">
           Aktuell: Paket {progress.currentDocument.side} ·{" "}
           {progress.currentDocument.originalName}
+          {progress.currentCategory ? ` · ${progress.currentCategory}` : ""}
         </p>
       )}
     </div>
