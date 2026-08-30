@@ -12,10 +12,8 @@ import {
 import showToast from "@/utils/toast";
 import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.cjs";
 
-const {
-  UNKNOWN_COMPARISON_DOCUMENT_COUNT,
-  isNormalChatUploadLocked,
-} = policyComparisonUploadLock;
+const { UNKNOWN_COMPARISON_DOCUMENT_COUNT, isNormalChatUploadLocked } =
+  policyComparisonUploadLock;
 
 export const DndUploaderContext = createContext();
 export const REMOVE_ATTACHMENT_EVENT = "ATTACHMENT_REMOVE";
@@ -65,9 +63,7 @@ export function DnDFileUploaderProvider({
   const [comparisonDocumentCount, setComparisonDocumentCount] = useState(
     UNKNOWN_COMPARISON_DOCUMENT_COUNT
   );
-  const comparisonDocumentCountRef = useRef(
-    UNKNOWN_COMPARISON_DOCUMENT_COUNT
-  );
+  const comparisonDocumentCountRef = useRef(UNKNOWN_COMPARISON_DOCUMENT_COUNT);
   const processingCount = countActiveDocumentUploads(files);
 
   useEffect(() => {
