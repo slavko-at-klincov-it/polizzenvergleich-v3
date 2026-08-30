@@ -16,8 +16,10 @@ describe("policy comparison worker contract", () => {
   });
 
   test("uses argument arrays and the existing all-category runner", () => {
-    expect(source).toContain('const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command")');
-    expect(source).toContain('[RUNNER, file, documentStatus, outputDirectory]');
+    expect(source).toContain(
+      'const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command")'
+    );
+    expect(source).toContain("[RUNNER, file, documentStatus, outputDirectory]");
     expect(source).not.toContain("shell: true");
   });
 
@@ -30,7 +32,9 @@ describe("policy comparison worker contract", () => {
       "utf8"
     );
     expect(builder).toContain("TECHNICAL_RESULT_REVIEW_REQUIRED");
-    expect(builder).toContain("Ein automatischer Vorteilsschluss ist nicht zulässig");
+    expect(builder).toContain(
+      "Ein automatischer Vorteilsschluss ist nicht zulässig"
+    );
   });
 
   test("uses a release-bound resumable run and counts completed categories", () => {

@@ -55,11 +55,7 @@ function writePrivateJson(file, value) {
 
 function completedCategoryViews(outputDirectory) {
   return CATEGORY_ORDER.filter((categoryView) => {
-    const resultDirectory = path.join(
-      outputDirectory,
-      categoryView,
-      "result"
-    );
+    const resultDirectory = path.join(outputDirectory, categoryView, "result");
     return ["report.json", "answer.md", "rows.private.json"].every((name) =>
       fs.existsSync(path.join(resultDirectory, name))
     );
