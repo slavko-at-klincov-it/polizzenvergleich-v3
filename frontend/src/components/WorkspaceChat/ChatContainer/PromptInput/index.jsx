@@ -33,6 +33,7 @@ const MAX_EDIT_STACK_SIZE = 100;
  * @param {boolean} [props.centered] - renders in centered layout mode (for home page)
  * @param {string} [props.workspaceSlug] - workspace slug for home page context
  * @param {string} [props.threadSlug] - thread slug for home page context
+ * @param {React.ReactNode} [props.footer] - content rendered directly below the prompt form
  */
 export default function PromptInput({
   workspace = {},
@@ -43,6 +44,7 @@ export default function PromptInput({
   centered = false,
   workspaceSlug = null,
   threadSlug = null,
+  footer = null,
 }) {
   const { t } = useTranslation();
   const { showAgentCommand = true } = workspace ?? {};
@@ -317,8 +319,8 @@ export default function PromptInput({
       id="prompt-input-wrapper"
       className={
         centered
-          ? "w-full relative flex justify-center items-center"
-          : "w-full fixed md:absolute bottom-0 left-0 z-10 flex justify-center items-center pwa:pb-5"
+          ? "w-full relative flex flex-col justify-center items-center"
+          : "w-full fixed md:absolute bottom-0 left-0 z-10 flex flex-col justify-center items-center pwa:pb-5"
       }
     >
       <form
@@ -407,6 +409,7 @@ export default function PromptInput({
           </div>
         </div>
       </form>
+      {footer}
     </div>
   );
 }

@@ -33,6 +33,7 @@ const { purgeDocument } = require("../utils/files/purgeDocument");
 const { getModelTag } = require("./utils");
 const { searchWorkspaceAndThreads } = require("../utils/helpers/search");
 const { workspaceParsedFilesEndpoints } = require("./workspacesParsedFiles");
+const { policyComparisonEndpoints } = require("./policyComparisons");
 const {
   workspaceDeletionProtection,
 } = require("../utils/middleware/workspaceDeletionProtection");
@@ -1072,6 +1073,7 @@ function workspaceEndpoints(app) {
 
   // Parsed Files in separate endpoint just to keep the workspace endpoints clean
   workspaceParsedFilesEndpoints(app);
+  policyComparisonEndpoints(app);
 }
 
 module.exports = { workspaceEndpoints };

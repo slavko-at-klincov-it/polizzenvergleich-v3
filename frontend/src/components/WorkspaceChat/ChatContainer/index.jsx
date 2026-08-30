@@ -41,6 +41,7 @@ import MemoriesSidebar from "./MemoriesSidebar";
 import useChatSession from "@/hooks/useChatSession";
 import chatSessionStore from "@/utils/chat/chatSessionStore.cjs";
 import conversationScope from "@/utils/chat/conversationScope.cjs";
+import PolicyComparisonPanel from "./PolicyComparisonPanel";
 
 export default function ChatContainer({
   workspace,
@@ -529,6 +530,12 @@ export default function ChatContainer({
                     centered={true}
                     workspaceSlug={workspace.slug}
                     threadSlug={activeThreadSlug}
+                    footer={
+                      <PolicyComparisonPanel
+                        workspaceSlug={workspace.slug}
+                        threadSlug={activeThreadSlug}
+                      />
+                    }
                   />
                   <QuickActions
                     hasAvailableWorkspace={!!workspace}
@@ -596,6 +603,12 @@ export default function ChatContainer({
                   centered={false}
                   workspaceSlug={workspace.slug}
                   threadSlug={activeThreadSlug}
+                  footer={
+                    <PolicyComparisonPanel
+                      workspaceSlug={workspace.slug}
+                      threadSlug={activeThreadSlug}
+                    />
+                  }
                 />
               </div>
             </div>

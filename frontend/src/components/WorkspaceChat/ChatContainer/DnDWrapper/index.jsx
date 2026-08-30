@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useRef } from "react";
 import { v4 } from "uuid";
 import System from "@/models/system";
 import { useDropzone } from "react-dropzone";
@@ -9,6 +9,7 @@ import {
   embedParsedDocumentParts,
   summarizeParsedDocumentTokens,
 } from "@/utils/chatAttachmentProcessing";
+import showToast from "@/utils/toast";
 
 export const DndUploaderContext = createContext();
 export const REMOVE_ATTACHMENT_EVENT = "ATTACHMENT_REMOVE";
@@ -55,7 +56,13 @@ export function DnDFileUploaderProvider({
   const [files, setFiles] = useState([]);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [comparisonDocumentCount, setComparisonDocumentCount] = useState(0);
+  const comparisonDocumentCountRef = useRef(0);
   const processingCount = countActiveDocumentUploads(files);
+
+  useEffect(() => {
+    comparisonDocumentCountRef.current = comparisonDocumentCount;
+  }, [comparisonDocumentCount]);
 
   useEffect(() => {
     System.checkDocumentProcessorOnline().then((status) => setReady(status));
@@ -182,6 +189,13 @@ export function DnDFileUploaderProvider({
   }
 
   async function acceptFiles(acceptedFiles, storageFilename = null) {
+    if (comparisonDocumentCountRef.current > 0) {
+      showToast(
+        "Der normale Chat-Upload ist gesperrt, solange Dokumente im Polizzenvergleich liegen.",
+        "warning"
+      );
+      return;
+    }
     /** @type {Attachment[]} */
     const newAccepted = [];
     for (const file of acceptedFiles) {
@@ -299,7 +313,16 @@ export function DnDFileUploaderProvider({
 
   return (
     <DndUploaderContext.Provider
-      value={{ files, ready, dragging, setDragging, onDrop, parseAttachments }}
+      value={{
+        files,
+        ready,
+        dragging,
+        setDragging,
+        onDrop,
+        parseAttachments,
+        comparisonDocumentCount,
+        setComparisonDocumentCount,
+      }}
     >
       {children}
     </DndUploaderContext.Provider>
@@ -307,11 +330,17 @@ export function DnDFileUploaderProvider({
 }
 
 export default function DnDFileUploaderWrapper({ children }) {
-  const { onDrop, ready, dragging, setDragging } =
+  const {
+    onDrop,
+    ready,
+    dragging,
+    setDragging,
+    comparisonDocumentCount = 0,
+  } =
     useContext(DndUploaderContext);
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
-    disabled: !ready,
+    disabled: !ready || comparisonDocumentCount > 0,
     noClick: true,
     noKeyboard: true,
     onDragEnter: () => setDragging(true),

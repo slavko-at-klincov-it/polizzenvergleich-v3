@@ -86,6 +86,7 @@ model users {
   prompt_history               prompt_history[]
   desktop_mobile_devices       desktop_mobile_devices[]
   workspace_parsed_files       workspace_parsed_files[]
+  policy_comparison_sessions   policy_comparison_sessions[]
   memories                     memories[]
 }
 
@@ -148,6 +149,7 @@ model workspaces {
   workspace_agent_invocations  workspace_agent_invocations[]
   prompt_history               prompt_history[]
   workspace_parsed_files       workspace_parsed_files[]
+  policy_comparison_sessions   policy_comparison_sessions[]
   memories                     memories[]
 }
 
@@ -162,6 +164,7 @@ model workspace_threads {
   workspace              workspaces               @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   user                   users?                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
   workspace_parsed_files workspace_parsed_files[]
+  policy_comparison_sessions policy_comparison_sessions[]
 
   @@index([workspace_id])
   @@index([user_id])
@@ -389,6 +392,58 @@ model workspace_parsed_files {
 
   @@index([workspaceId])
   @@index([userId])
+}
+
+model policy_comparison_sessions {
+  id               Int                           @id @default(autoincrement())
+  uuid             String                        @unique
+  workspaceId      Int
+  userId           Int?
+  threadId         Int?
+  ownerKey         String
+  conversationKey  String
+  status           String                        @default("DRAFT")
+  progress         String?
+  inputManifest    String?
+  resultPath       String?
+  error            String?
+  workerPid        Int?
+  cancelRequested  Boolean                       @default(false)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime                      @default(now())
+  lastUpdatedAt    DateTime                      @default(now())
+  workspace        workspaces                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user             users?                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread           workspace_threads?            @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  documents        policy_comparison_documents[]
+
+  @@unique([workspaceId, ownerKey, conversationKey])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([threadId])
+}
+
+model policy_comparison_documents {
+  id             Int                        @id @default(autoincrement())
+  uuid           String                     @unique
+  sessionId      Int
+  side           String
+  role           String
+  documentStatus String                     @default("ACTIVE")
+  originalName   String
+  storedName     String                     @unique
+  storagePath    String
+  mimeType       String
+  byteSize       Int
+  sha256         String
+  position       Int
+  createdAt      DateTime                   @default(now())
+  lastUpdatedAt  DateTime                   @default(now())
+  session        policy_comparison_sessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, side, sha256])
+  @@index([sessionId, side, position])
 }
 
 model external_communication_connectors {

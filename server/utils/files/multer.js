@@ -2,7 +2,11 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { v4 } = require("uuid");
-const { normalizePath, sanitizeFileName } = require(".");
+const {
+  normalizePath,
+  sanitizeFileName,
+  policyComparisonsPath,
+} = require(".");
 
 /**
  * Handle File uploads for auto-uploading.
@@ -101,6 +105,60 @@ function handleFileUpload(request, response, next) {
         })
         .end();
       return;
+    }
+    next();
+  });
+}
+
+const policyComparisonUploadStorage = multer.diskStorage({
+  destination: function (request, _, cb) {
+    const sessionUuid = request.policyComparisonSession?.uuid;
+    if (!sessionUuid)
+      return cb(new Error("Comparison session was not authorized."));
+    const output = path.resolve(
+      policyComparisonsPath,
+      "uploads",
+      sessionUuid
+    );
+    fs.mkdirSync(output, { recursive: true, mode: 0o700 });
+    fs.chmodSync(output, 0o700);
+    return cb(null, output);
+  },
+  filename: function (request, file, cb) {
+    file.originalname = sanitizeFileName(
+      normalizePath(Buffer.from(file.originalname, "latin1").toString("utf8"))
+    );
+    const storedName = `${v4()}.pdf`;
+    request.policyComparisonStoredName = storedName;
+    return cb(null, storedName);
+  },
+});
+
+/**
+ * Persist one comparison PDF after the endpoint has authorized the session.
+ * The randomized private file never enters collector/hotdir or the workspace
+ * document index.
+ */
+function handlePolicyComparisonUpload(request, response, next) {
+  const upload = multer({
+    storage: policyComparisonUploadStorage,
+    limits: { fileSize: 512 * 1024 * 1024, files: 1 },
+    fileFilter: (_, file, cb) => {
+      const extension = path.extname(file.originalname || "").toLowerCase();
+      const allowedMime = ["application/pdf", "application/octet-stream"].includes(
+        file.mimetype
+      );
+      if (extension !== ".pdf" || !allowedMime)
+        return cb(new Error("Only PDF documents are allowed."));
+      return cb(null, true);
+    },
+  }).single("file");
+  upload(request, response, function (err) {
+    if (err) {
+      return response.status(400).json({
+        success: false,
+        error: `Invalid comparison upload. ${err.message}`,
+      });
     }
     next();
   });
@@ -227,4 +285,5 @@ module.exports = {
   handlePfpUpload,
   handleAudioUpload,
   handleImageGenUpload,
+  handlePolicyComparisonUpload,
 };

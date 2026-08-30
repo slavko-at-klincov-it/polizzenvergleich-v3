@@ -41,6 +41,11 @@ class BackgroundService {
       timeout: "6m",
       interval: "9hr",
     },
+    {
+      name: "cleanup-policy-comparisons",
+      timeout: "5m",
+      interval: "12hr",
+    },
   ];
 
   #memoryJobs = [

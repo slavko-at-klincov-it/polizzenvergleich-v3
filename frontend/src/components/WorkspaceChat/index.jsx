@@ -22,6 +22,7 @@ import {
 import { PENDING_HOME_MESSAGE } from "@/utils/constants";
 import useUser from "@/hooks/useUser";
 import chatSessionStore from "@/utils/chat/chatSessionStore.cjs";
+import showToast from "@/utils/toast";
 
 export default function WorkspaceChat({ loading, workspace }) {
   useWatchForAutoPlayAssistantTTSResponse();
@@ -34,6 +35,7 @@ export default function WorkspaceChat({ loading, workspace }) {
   // avoiding a skeleton/loader flash on workspace/thread switches.
   const [loaded, setLoaded] = useState(null);
   const [dragging, setDragging] = useState(false);
+  const [comparisonDocumentCount, setComparisonDocumentCount] = useState(0);
   const pendingFilesRef = useRef([]);
 
   // When the thread becomes available and we have pending files, trigger upload
@@ -49,6 +51,13 @@ export default function WorkspaceChat({ loading, workspace }) {
 
   async function handleDropWithoutThread(acceptedFiles) {
     setDragging(false);
+    if (comparisonDocumentCount > 0) {
+      showToast(
+        "Der normale Chat-Upload ist gesperrt, solange Dokumente im Polizzenvergleich liegen.",
+        "warning"
+      );
+      return;
+    }
     pendingFilesRef.current = acceptedFiles;
     const { thread } = await Workspace.threads.new(workspace.slug);
     if (thread) navigate(paths.workspace.thread(workspace.slug, thread.slug));
@@ -151,6 +160,8 @@ export default function WorkspaceChat({ loading, workspace }) {
           setDragging,
           onDrop: handleDropWithoutThread,
           parseAttachments: () => [],
+          comparisonDocumentCount,
+          setComparisonDocumentCount,
         }}
       >
         <ChatContainer

@@ -24,6 +24,10 @@ const generatedImagesPath =
   process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../storage/generated-images`)
     : path.resolve(process.env.STORAGE_DIR, `generated-images`);
+const policyComparisonsPath =
+  process.env.NODE_ENV === "development"
+    ? path.resolve(__dirname, `../../storage/policy-comparisons`)
+    : path.resolve(process.env.STORAGE_DIR, `policy-comparisons`);
 
 // Should take in a folder that is a subfolder of documents
 // eg: youtube-subject/video-123.json
@@ -957,6 +961,7 @@ module.exports = {
   hotdirPath,
   sanitizeFileName,
   generatedImagesPath,
+  policyComparisonsPath,
   saveGeneratedImage,
   generatedImageAttachments,
   GENERATED_IMAGE_FILENAME_PATTERN,
