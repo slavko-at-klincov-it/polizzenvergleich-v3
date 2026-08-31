@@ -171,7 +171,7 @@ describe("all-category shell runner", () => {
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
       productProfile: {
-        id: "CUSTOMER_CORE_5_V4",
+        id: "CUSTOMER_CORE_5_V5",
         comparisonContractId: "QUALIFIED_ABSENCE_TYPED_V1",
         categoryViews: ["VS", "FE", "LW", "ST", "EL"],
         expectedRowCount: 224,

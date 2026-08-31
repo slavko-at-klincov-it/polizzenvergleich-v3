@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "st-occurrence-full-draft-v0.3",
+  "catalogId": "st-occurrence-full-draft-v0.4",
   "categoryView": "ST",
   "requirements": [
     {
@@ -249,7 +249,7 @@
                 { "prefixes": ["schnee", "dachlawine", "eiszapfen"] },
                 { "prefixes": ["herabrutsch", "herabfall", "dachlawine"] },
                 { "prefixes": ["versichert", "eigen"] },
-                { "prefixes": ["schaden", "beschaedig"] }
+                { "prefixes": ["schaden", "schaed", "beschaedig"] }
               ]
             }
           ]
@@ -645,7 +645,7 @@
               "id": "storm-thrown-object-impact",
               "maxLines": 2,
               "requiredGroups": [
-                { "prefixes": ["gegenstand", "objekt"] },
+                { "prefixes": ["gegenstand", "gegenstaend", "objekt"] },
                 { "prefixes": ["geworfen", "geschleudert"] },
                 { "prefixes": ["versichert"] },
                 { "prefixes": ["gefahr", "sturm"] }

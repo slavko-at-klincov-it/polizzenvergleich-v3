@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.3",
+  "catalogId": "lw-occurrence-full-draft-v0.4",
   "categoryView": "LW",
   "requirements": [
     {
@@ -559,7 +559,7 @@
               "id": "damage-at-or-by-extinguishing-installation",
               "maxLines": 1,
               "requiredGroups": [
-                { "prefixes": ["schaden", "beschaedig"] },
+                { "prefixes": ["schaden", "schaed", "beschaedig"] },
                 { "prefixes": ["sprinkler", "loeschanlage"] }
               ]
             }

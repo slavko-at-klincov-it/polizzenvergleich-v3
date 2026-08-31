@@ -283,15 +283,24 @@ describe("ST category recall", () => {
       terminalState: "NO_CONTROLLED_CANDIDATE",
       occurrenceCount: 0,
     });
-    expect(
-      component(result, "ST-23", "foreign_tree_or_branch_impact").occurrences
-    ).toEqual(
+    const broaderImpactCandidates = component(
+      result,
+      "ST-23",
+      "foreign_tree_or_branch_impact"
+    ).occurrences;
+    expect(broaderImpactCandidates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           matchedAlias: "CONCEPT_SEARCH:storm-thrown-object-impact",
         }),
       ])
     );
+    expect(
+      broaderImpactCandidates.find(
+        ({ matchedAlias }) =>
+          matchedAlias === "CONCEPT_SEARCH:storm-thrown-object-impact"
+      ).exactText
+    ).not.toMatch(/Bäume|Äste/u);
   });
 
   test("rejects nearby weather, generic impact and landscaping wording", () => {

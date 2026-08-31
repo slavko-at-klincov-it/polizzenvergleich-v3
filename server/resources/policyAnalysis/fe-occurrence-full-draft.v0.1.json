@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.3",
+  "catalogId": "fe-occurrence-full-draft-v0.4",
   "categoryView": "FE",
   "requirements": [
     {
@@ -199,7 +199,7 @@
               "id": "damage-by-unknown-vehicle",
               "maxLines": 1,
               "requiredGroups": [
-                { "prefixes": ["schaden", "beschaedig"] },
+                { "prefixes": ["schaden", "schaed", "beschaedig"] },
                 { "prefixes": ["unbekannt", "fremd"] },
                 { "prefixes": ["fahrzeug", "landfahrzeug"] }
               ]
@@ -1078,7 +1078,7 @@
               "requiredGroups": [
                 { "prefixes": ["loesch"] },
                 { "prefixes": ["wasser", "loeschwasser"] },
-                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+                { "prefixes": ["schaden", "schaed", "beschaedig", "zerstoer"] }
               ]
             }
           ]
@@ -1095,7 +1095,7 @@
               "requiredGroups": [
                 { "prefixes": ["loesch"] },
                 { "prefixes": ["schaum", "loeschschaum"] },
-                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+                { "prefixes": ["schaden", "schaed", "beschaedig", "zerstoer"] }
               ]
             }
           ]
@@ -1112,7 +1112,7 @@
               "requiredGroups": [
                 { "prefixes": ["loesch"] },
                 { "prefixes": ["pulver", "loeschpulver"] },
-                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+                { "prefixes": ["schaden", "schaed", "beschaedig", "zerstoer"] }
               ]
             }
           ]
