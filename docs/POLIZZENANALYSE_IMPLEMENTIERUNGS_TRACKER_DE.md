@@ -3899,8 +3899,39 @@ Vollständige Implementierungsdokumentation:
 
 ```text
 IMPLEMENTIERT: Phase A, isolierter Phase-B-Shadowweg, Phase-C-Gates
-NICHT AUSGEFÜHRT: Tests, Lint, Build, Modelllauf, Mac-Studio-Lauf
+MAC-STUDIO TECHNISCH: e86cb782 mit 109/109 Suites, 1.255/1.255 Tests,
+                      vollständigem Lint und Frontend-Build
+MAC-STUDIO MODELL: e86cb782, Qwen 3.6, zehn LF-/WEVIG-Dokumente,
+                   2.240/2.240 Dokumentzeilen; REVIEW_REQUIRED
 NICHT ZERTIFIZIERT: alle COVERAGE_ONLY-Zeilen; Registry ist leer
 NO DEPLOY: installierter Kundenstand blieb unverändert
 NO CLAIM: keine fachliche Freigabe, kein Holdout- oder 99-Prozent-Nachweis
 ```
+
+## 77. Forward-Fixes nach dem ersten V7-Paketlauf
+
+Der erste frische V7-Lauf auf dem Mac Studio hat neben bestätigten
+Recall-Verbesserungen weitere systematische Abweichungen sichtbar gemacht.
+Diese wurden thematisch getrennt korrigiert:
+
+- explizite Triage-, Feldextraktions- und Worksheet-Rückgaben;
+- weiche PDF-Zeilenumbrüche bei Limit-Qualifiern;
+- Klauselzitate statt reiner Deckungsüberschriften;
+- enger Objekt-, Baum-/Ast- und Entsorgungsscope;
+- strukturierte B2/B3/B4-Spartenüberschriften und Kosten-Heading-Reset;
+- Kompositum `Kanalrückstau` und lokaler LW/ST-Scope;
+- explizite zonenbedingte Hochwasserfolgen einschließlich Limits.
+
+Alle Themencommits wurden mit fokussierten Jest-Verträgen und vollständigem
+Repository-Lint auf dem Mac Studio geprüft. Vor Abschluss dieser Fixserie war
+der vollständige technische Stand bei 109/109 Suites und 1.258/1.258 Tests
+sowie erfolgreichem Frontend-Build. Die exakte End-SHA wird nach diesem
+Dokumentationscommit erneut vollständig technisch und dokumentbezogen
+validiert.
+
+Offen bleibt `FE-D03`: Die generische AFB-Klausel zu Schäden durch Löschen,
+Niederreißen oder Ausräumen darf nicht durch ein einfaches `ANY` so behandelt
+werden, als wären Wasser, Schaum und Pulver jeweils belegt. Dafür ist ein
+versionierter alternativer Satisfaction-Ausdruck erforderlich. Shadow bleibt
+wegen des deaktivierten Embeddingvertrags gesperrt; Zertifizierungsregistry
+und unbekannter Holdout bleiben leer beziehungsweise nicht vorhanden.

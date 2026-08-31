@@ -11,9 +11,13 @@ Shadow-QA-Lauf bereit, und Phase C sperrt jede automatische
 `COVERAGE_ONLY`-Wirkung hinter eine leere, zeilenweise
 Zertifizierungsregistry.
 
-Auf ausdrücklichen Nutzerwunsch wurden in diesem Arbeitsschritt keine Tests,
-kein Lint, kein Build, kein Modelllauf und kein Mac-Studio-Lauf ausgeführt.
-Damit ist dies ein Implementierungsstand, keine Abnahme oder Freigabe.
+Die Implementierung wurde danach auf dem Mac Studio technisch geprüft und mit
+zehn LF-/WEVIG-Dokumenten unter Qwen 3.6 ausgeführt. Dieser Lauf war noch an
+`e86cb782` gebunden und lieferte 2.240 von 2.240 Dokumentzeilen. Er zeigte
+zugleich weitere Wert-, Scope-, Recall- und Zitatabweichungen, die in
+getrennten Forward-Fix-Commits behoben wurden. Der Lauf ist ein
+Regressionsnachweis für genau diese Dokumente, keine fachliche Abnahme,
+Holdout-Freigabe oder 99-Prozent-Aussage.
 
 ## Phase A – kontrollierter Recall
 
@@ -38,6 +42,21 @@ Zugehörige Themencommits:
 - `6b4edf67` – flektierte Recall-Stämme;
 - `c0c0dd6a` – neutrale Nullwirkung und Zertifizierungspflicht;
 - `b0065a50` – klausellokale Erdbebenwerte.
+
+Nachgelagerte Forward-Fixes:
+
+- `841d3a25`, `d9eb368a`, `1302eb34` – verlorene Triage-, Feld- und
+  Worksheet-Rückgaben wiederhergestellt;
+- `1e924cd9` – Qualifier wie „auf Erstes Risiko“ über weiche
+  PDF-Zeilenumbrüche innerhalb strukturierter Einheiten gebunden;
+- `de1b2932` – sichtbare Quellen zeigen die Klausel statt einer bloßen
+  Deckungsüberschrift;
+- `dbccd9c5`, `6ec3606b`, `78e3373a` – Fahrzeug-, Baum-/Ast- und
+  Zwischenlagerungsbelege gegen Scope-Überdehnung abgesichert;
+- `b283b12a`, `79e4a047` – strukturierte Spartentitel, Kosten-Heading-Reset
+  und Kanalrückstau erkannt;
+- `033d3d27` – zonenbedingte Hochwasserfolgen einschließlich expliziter
+  Limits modelliert.
 
 ## Phase B – Hybrid ausschließlich als Shadow-QA
 
@@ -78,7 +97,9 @@ Verbindliche Grenzen:
 Zugehöriger Themencommit: `eb109085`.
 
 Der Beispielvertrag ist deaktiviert und enthält nur Platzhalter. Es existiert
-damit keine implizite produktive Embeddingkonfiguration.
+damit keine implizite produktive Embeddingkonfiguration. Ein Live-Shadow-Lauf
+bleibt gesperrt, bis Modell-, Runtime- und Embeddingartefakte vollständig
+hashgebunden vorliegen.
 
 ## Phase C – Einzelzertifizierung
 
@@ -97,9 +118,12 @@ Definitionen werden fail-closed abgelehnt.
 
 ## Beweisgrenze und nächster Schritt
 
-Implementiert ist die technische Sicherheits- und Datenflussgrenze. Nicht
-bewiesen sind Recall-Verbesserung, False-Positive-Rate, LF-/WEVIG-
-Nichtregression, unbekannte Versicherer, Laufzeit oder fachliche Richtigkeit.
-Vor einer einzigen Registryfreigabe müssen die vorgesehenen Prüfungen auf dem
-Mac Studio und dem unbekannten Holdout tatsächlich durchgeführt und
-unabhängig geprüft werden.
+Implementiert und technisch geprüft sind die Sicherheits- und
+Datenflussgrenzen sowie die genannten Forward-Fixes. Der Mac-Studio-Lauf auf
+den bekannten LF-/WEVIG-Dokumenten belegt konkrete Verbesserungen, ersetzt
+aber weder ein unabhängiges Experten-Oracle noch einen zuvor unbekannten
+Mehrversicherer-Holdout. `FE-D03` bleibt fachlich offen: Die generische
+Löschfolgeschaden-Klausel benötigt einen Ausdruck „generisch ODER alle
+Medien“, damit Wasser nicht fälschlich auch Schaum und Pulver beweist. Vor
+einer Registryfreigabe müssen Holdout und unabhängige Prüfung tatsächlich
+bestanden sein.
