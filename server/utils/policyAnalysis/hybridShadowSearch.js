@@ -51,7 +51,10 @@ function validateBaseUrl(value) {
   const loopback = new Set(["127.0.0.1", "localhost", "::1"]).has(
     parsed.hostname
   );
-  if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && loopback))
+  if (
+    parsed.protocol !== "https:" &&
+    !(parsed.protocol === "http:" && loopback)
+  )
     throw shadowError("HYBRID_SHADOW_BASE_URL_INSECURE", text);
   if (parsed.username || parsed.password || parsed.search || parsed.hash)
     throw shadowError("HYBRID_SHADOW_BASE_URL_CREDENTIALS_FORBIDDEN");
@@ -132,13 +135,7 @@ function validateHybridShadowContract(rawContract) {
 
   exactKeys(
     rawContract.retrieval,
-    [
-      "chunkSize",
-      "chunkOverlap",
-      "topK",
-      "batchSize",
-      "minimumScore",
-    ],
+    ["chunkSize", "chunkOverlap", "topK", "batchSize", "minimumScore"],
     "HYBRID_SHADOW_RETRIEVAL_KEYS_INVALID"
   );
   const chunkSize = requiredInteger(
@@ -277,7 +274,10 @@ function loadHybridShadowContract(contractFile = null) {
 }
 
 function zeroPrimaryComponents(worksheet) {
-  if (worksheet?.candidateOnly !== true || !Array.isArray(worksheet.requirements))
+  if (
+    worksheet?.candidateOnly !== true ||
+    !Array.isArray(worksheet.requirements)
+  )
     throw shadowError("HYBRID_SHADOW_WORKSHEET_INVALID");
   const eligible = [];
   for (const requirement of worksheet.requirements) {
@@ -306,7 +306,10 @@ function zeroPrimaryComponents(worksheet) {
           "HYBRID_SHADOW_PRIMARY_TERMINAL_STATE_INVALID",
           `${requirement.id}:${component.id}`
         );
-      if (count > 0 && component.terminalState !== "CONTROLLED_CANDIDATES_FOUND")
+      if (
+        count > 0 &&
+        component.terminalState !== "CONTROLLED_CANDIDATES_FOUND"
+      )
         throw shadowError(
           "HYBRID_SHADOW_PRIMARY_TERMINAL_STATE_INVALID",
           `${requirement.id}:${component.id}`
@@ -324,15 +327,12 @@ function buildHybridShadowTargets({ worksheet, contract }) {
     const aliases = Array.isArray(component.aliases) ? component.aliases : [];
     const concepts = (component.conceptSearches || []).flatMap((search) => [
       search.label,
-      ...(search.requiredGroups || []).flatMap(({ prefixes }) => prefixes || []),
+      ...(search.requiredGroups || []).flatMap(
+        ({ prefixes }) => prefixes || []
+      ),
     ]);
     const terms = [
-      ...new Set([
-        requirement.label,
-        component.label,
-        ...aliases,
-        ...concepts,
-      ]),
+      ...new Set([requirement.label, component.label, ...aliases, ...concepts]),
     ]
       .filter((value) => typeof value === "string" && value.trim())
       .map((value) => value.trim());
@@ -468,10 +468,12 @@ function buildHybridShadowWorksheet({
   )
     throw shadowError("HYBRID_SHADOW_INPUT_SHA256_INVALID");
   const eligibleByKey = new Map(
-    zeroPrimaryComponents(primaryWorksheet).map(({ requirement, component }) => [
-      `${requirement.id}:${component.id}`,
-      { requirement, component },
-    ])
+    zeroPrimaryComponents(primaryWorksheet).map(
+      ({ requirement, component }) => [
+        `${requirement.id}:${component.id}`,
+        { requirement, component },
+      ]
+    )
   );
   const rankingByKey = new Map();
   for (const ranking of rankedTargets) {
@@ -715,9 +717,8 @@ function calculateHybridShadowMetrics(review) {
         evidence.selected && reviewLabels.relevance === label
     ).length;
   const targetCount = (label) =>
-    review.targetReviews.filter(
-      ({ labels }) => labels.confusionClass === label
-    ).length;
+    review.targetReviews.filter(({ labels }) => labels.confusionClass === label)
+      .length;
   const truePositiveCandidateCount = candidateCount("TRUE_POSITIVE");
   const falsePositiveCandidateCount = candidateCount("FALSE_POSITIVE");
   const truePositiveTargetCount = targetCount("TRUE_POSITIVE");

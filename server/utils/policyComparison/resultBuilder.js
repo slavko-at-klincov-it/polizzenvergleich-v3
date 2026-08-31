@@ -584,10 +584,7 @@ function componentSearchAudit({
     absenceMeaning: requirement?.absenceMeaning || null,
     comparisonPolicy: requirement?.absenceComparisonPolicy || null,
     absenceCertification: requirement?.absenceCertification || null,
-    requirementContract: worksheetRequirementContract(
-      worksheet,
-      requirement
-    ),
+    requirementContract: worksheetRequirementContract(worksheet, requirement),
     searchPlanId,
     documentUuid: document.uuid,
     catalogId: worksheet?.catalog?.id || null,

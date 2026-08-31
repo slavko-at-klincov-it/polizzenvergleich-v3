@@ -11,9 +11,7 @@ const {
 const {
   CATEGORY_ORDER,
 } = require("../../utils/policyComparison/productContract");
-const {
-  releaseIdentity,
-} = require("../../utils/policyAnalysis/runIdentity");
+const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 
@@ -79,7 +77,10 @@ function run() {
     );
 
   const primaryManifestFile = path.join(primaryOutput, "manifest.private.json");
-  const documentArtifactFile = path.join(primaryOutput, "document.private.json");
+  const documentArtifactFile = path.join(
+    primaryOutput,
+    "document.private.json"
+  );
   const primaryManifest = readJson(primaryManifestFile, "Primärmanifest");
   const documentArtifact = readJson(documentArtifactFile, "Dokument-Artefakt");
   const { identity: contract } = loadHybridShadowContract(args.contractFile);

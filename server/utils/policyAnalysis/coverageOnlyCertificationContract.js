@@ -1,8 +1,7 @@
 const crypto = require("crypto");
 const defaultRegistry = require("../../resources/policyAnalysis/coverage-only-certifications.v0.1.json");
 
-const CERTIFIED_NEGATIVE_SEARCH_POLICY =
-  "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1";
+const CERTIFIED_NEGATIVE_SEARCH_POLICY = "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1";
 const CERTIFIED_COMPARISON_POLICY =
   "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1";
 const ALLOWED_ABSENCE_MEANING = "COVERAGE_ONLY";
@@ -196,7 +195,10 @@ function assertCoverageOnlyCertification({
     requirement.negativeSearchPolicy !== CERTIFIED_NEGATIVE_SEARCH_POLICY ||
     requirement.absenceComparisonPolicy !== CERTIFIED_COMPARISON_POLICY
   )
-    throw certificationError("COVERAGE_CERTIFICATION_POLICY_INCOMPLETE", detail);
+    throw certificationError(
+      "COVERAGE_CERTIFICATION_POLICY_INCOMPLETE",
+      detail
+    );
 
   const certificationId = requireText(
     requirement.absenceCertificationId,
@@ -214,7 +216,10 @@ function assertCoverageOnlyCertification({
     certification.requirementDigest !==
       requirementSearchContractDigest({ catalogId, requirement })
   )
-    throw certificationError("COVERAGE_CERTIFICATION_REFERENCE_INVALID", detail);
+    throw certificationError(
+      "COVERAGE_CERTIFICATION_REFERENCE_INVALID",
+      detail
+    );
   return certification;
 }
 

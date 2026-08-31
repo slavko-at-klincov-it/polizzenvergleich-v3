@@ -77,28 +77,21 @@ function run() {
   );
   const searchReport = readJson(files.searchReport, "Shadow-Suchreport");
   const runManifest = readJson(files.runManifest, "Shadow-Laufmanifest");
-  const primaryWorksheet = readJson(
-    files.primaryWorksheet,
-    "Primär-Worksheet"
-  );
+  const primaryWorksheet = readJson(files.primaryWorksheet, "Primär-Worksheet");
   const worksheet = readJson(files.worksheet, "Shadow-Worksheet");
   const triage = readJson(files.triage, "Shadow-Triage");
   const triageReport = readJson(files.triageReport, "Shadow-Triage-Report");
   const effects = readJson(files.effects, "Shadow-Wirkungsprüfung");
-  const effectsReport = readJson(
-    files.effectsReport,
-    "Shadow-Wirkungsreport"
-  );
+  const effectsReport = readJson(files.effectsReport, "Shadow-Wirkungsreport");
   const worksheetSha256 = sha256File(files.worksheet);
   const primaryWorksheetSha256 = sha256File(files.primaryWorksheet);
   const documentArtifactSha256 = sha256File(files.documentArtifact);
   const triageSha256 = sha256File(files.triage);
   const effectsSha256 = sha256File(files.effects);
-  const {
-    identity: currentContractIdentity,
-  } = require("../../utils/policyAnalysis/hybridShadowSearch").loadHybridShadowContract(
-    files.contractFile
-  );
+  const { identity: currentContractIdentity } =
+    require("../../utils/policyAnalysis/hybridShadowSearch").loadHybridShadowContract(
+      files.contractFile
+    );
   if (
     searchReport?.artifactKind !== "HYBRID_SHADOW_SEARCH_REPORT" ||
     searchReport.shadowOnly !== true ||
@@ -123,14 +116,10 @@ function run() {
     currentContractIdentity.enabled !== true ||
     searchReport.contract?.contractSha256 !==
       currentContractIdentity.contractSha256 ||
-    searchReport.contracts?.primaryWorksheetSha256 !==
-      primaryWorksheetSha256 ||
-    searchReport.contracts?.documentArtifactSha256 !==
-      documentArtifactSha256 ||
-    worksheet.shadowSearch.primaryWorksheetSha256 !==
-      primaryWorksheetSha256 ||
-    worksheet.shadowSearch.documentArtifactSha256 !==
-      documentArtifactSha256 ||
+    searchReport.contracts?.primaryWorksheetSha256 !== primaryWorksheetSha256 ||
+    searchReport.contracts?.documentArtifactSha256 !== documentArtifactSha256 ||
+    worksheet.shadowSearch.primaryWorksheetSha256 !== primaryWorksheetSha256 ||
+    worksheet.shadowSearch.documentArtifactSha256 !== documentArtifactSha256 ||
     searchReport.contracts?.shadowWorksheetSha256 !== worksheetSha256 ||
     triageReport.contracts?.worksheetSha256 !== worksheetSha256 ||
     triageReport.contracts?.materializedTriageSha256 !== triageSha256 ||
@@ -197,14 +186,15 @@ function run() {
       });
       for (const occurrence of component.occurrences) {
         const candidateTriage = triageByCandidate.get(occurrence.candidateId);
-        if (!candidateTriage)
-          fail(`Triage fehlt: ${occurrence.candidateId}`);
+        if (!candidateTriage) fail(`Triage fehlt: ${occurrence.candidateId}`);
         if (
           occurrence.context?.text !== occurrence.exactText ||
           occurrence.context?.documentStart !== occurrence.documentStart ||
           occurrence.context?.documentEnd !== occurrence.documentEnd
         )
-          fail(`Exakte Shadow-Quote ist inkonsistent: ${occurrence.candidateId}`);
+          fail(
+            `Exakte Shadow-Quote ist inkonsistent: ${occurrence.candidateId}`
+          );
         candidates.push({
           requirementId: requirement.id,
           componentId: component.id,
@@ -274,11 +264,7 @@ function run() {
         "RELEVANT_EVIDENCE_EXISTS",
         "NO_RELEVANT_EVIDENCE_EXISTS",
       ],
-      primaryRecall: [
-        "UNREVIEWED",
-        "PRIMARY_MISS",
-        "PRIMARY_CORRECT_NULL",
-      ],
+      primaryRecall: ["UNREVIEWED", "PRIMARY_MISS", "PRIMARY_CORRECT_NULL"],
       confusionClass: [
         "UNREVIEWED",
         "TRUE_POSITIVE",

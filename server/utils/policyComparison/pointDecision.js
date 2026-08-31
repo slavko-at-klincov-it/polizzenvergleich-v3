@@ -465,7 +465,9 @@ function requirementContract({ atoms, packageSummary, categoryId }) {
     if (persisted) contracts.push(persisted);
   }
   if (contracts.length === 0) return null;
-  const signatures = new Set(contracts.map((contract) => JSON.stringify(contract)));
+  const signatures = new Set(
+    contracts.map((contract) => JSON.stringify(contract))
+  );
   if (signatures.size !== 1) return null;
   const [contract] = contracts;
   if (
@@ -474,7 +476,8 @@ function requirementContract({ atoms, packageSummary, categoryId }) {
     !Array.isArray(contract?.components) ||
     contract.components.length === 0 ||
     contract.components.some(
-      ({ id, factRole }) => !String(id || "").trim() || !String(factRole || "").trim()
+      ({ id, factRole }) =>
+        !String(id || "").trim() || !String(factRole || "").trim()
     )
   )
     return null;

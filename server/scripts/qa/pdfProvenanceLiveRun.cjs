@@ -44,8 +44,7 @@ process.env.VECTOR_DB = "lancedb";
 process.env.EMBEDDING_ENGINE = "lmstudio";
 process.env.EMBEDDING_BASE_PATH =
   process.env.EMBEDDING_BASE_PATH || "http://127.0.0.1:1234/v1";
-process.env.EMBEDDING_MODEL_PREF =
-  process.env.EMBEDDING_MODEL_PREF || "";
+process.env.EMBEDDING_MODEL_PREF = process.env.EMBEDDING_MODEL_PREF || "";
 if (!process.env.EMBEDDING_MODEL_PREF)
   fail(
     "EMBEDDING_MODEL_PREF ist für diesen historischen Legacy-Runner explizit erforderlich; V3.5.0 lädt kein Embeddingmodell mehr"

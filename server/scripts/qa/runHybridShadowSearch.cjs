@@ -6,9 +6,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { OpenAI } = require("openai");
-const {
-  releaseIdentity,
-} = require("../../utils/policyAnalysis/runIdentity");
+const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 
@@ -131,10 +129,7 @@ async function run() {
   const runManifestFile = path.resolve(args.runManifest);
   const outputDirectory = path.resolve(args.output);
   const worksheet = readJson(worksheetFile, "Primär-Worksheet");
-  const documentArtifact = readJson(
-    documentArtifactFile,
-    "Dokument-Artefakt"
-  );
+  const documentArtifact = readJson(documentArtifactFile, "Dokument-Artefakt");
   const runManifest = readJson(runManifestFile, "Shadow-Laufmanifest");
 
   const {
@@ -159,22 +154,30 @@ async function run() {
     !fs.existsSync(contract.provider.modelArtifactPath) ||
     !fs.statSync(contract.provider.modelArtifactPath).isFile()
   )
-    fail(`Embedding-Modellartefakt fehlt: ${contract.provider.modelArtifactPath}`);
+    fail(
+      `Embedding-Modellartefakt fehlt: ${contract.provider.modelArtifactPath}`
+    );
   if (
     !fs.existsSync(contract.provider.runtimeArtifactPath) ||
     !fs.statSync(contract.provider.runtimeArtifactPath).isFile()
   )
-    fail(`Embedding-Runtimeartefakt fehlt: ${contract.provider.runtimeArtifactPath}`);
+    fail(
+      `Embedding-Runtimeartefakt fehlt: ${contract.provider.runtimeArtifactPath}`
+    );
   if (
     sha256File(contract.provider.modelArtifactPath) !==
     contract.provider.modelArtifactSha256
   )
-    fail("Embedding-Modellartefakt stimmt nicht mit dem Shadow-Vertrag überein");
+    fail(
+      "Embedding-Modellartefakt stimmt nicht mit dem Shadow-Vertrag überein"
+    );
   if (
     sha256File(contract.provider.runtimeArtifactPath) !==
     contract.provider.runtimeArtifactSha256
   )
-    fail("Embedding-Runtimeartefakt stimmt nicht mit dem Shadow-Vertrag überein");
+    fail(
+      "Embedding-Runtimeartefakt stimmt nicht mit dem Shadow-Vertrag überein"
+    );
   const document = documentArtifact?.document;
   if (
     documentArtifact?.schemaVersion !== 1 ||
@@ -182,7 +185,9 @@ async function run() {
     document.sourceDocumentId !== worksheet.document?.fingerprint ||
     documentArtifact.fingerprint !== worksheet.document?.fingerprint
   )
-    fail("Dokument-Artefakt und Primär-Worksheet haben nicht dieselbe Identität");
+    fail(
+      "Dokument-Artefakt und Primär-Worksheet haben nicht dieselbe Identität"
+    );
   const primaryWorksheetSha256 = sha256File(worksheetFile);
   const documentArtifactSha256 = sha256File(documentArtifactFile);
   const manifestCategory = runManifest?.categories?.find(
@@ -197,8 +202,7 @@ async function run() {
     runManifest.shadowImplementation?.releaseId !==
       releaseIdentity(REPOSITORY_ROOT) ||
     runManifest.contract?.contractSha256 !== identity.contractSha256 ||
-    runManifest.primaryRun?.documentArtifactSha256 !==
-      documentArtifactSha256 ||
+    runManifest.primaryRun?.documentArtifactSha256 !== documentArtifactSha256 ||
     !manifestCategory ||
     path.resolve(manifestCategory.worksheetPath) !== worksheetFile ||
     manifestCategory.worksheetSha256 !== primaryWorksheetSha256

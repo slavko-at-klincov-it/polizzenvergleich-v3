@@ -1,3 +1,5 @@
+/* global module */
+
 const OUTCOME_LABELS = Object.freeze({
   VORTEIL_A: "Vorteil Paket A",
   VORTEIL_B: "Vorteil Paket B",
