@@ -3825,3 +3825,54 @@ Das Deployment ist eine technische Bereitstellung für weitere Tests. Es hebt
 das fachliche `NO GO` aus Abschnitt 73 nicht auf: Die bestätigten
 Nulltreffer-, Heading-, `ANY`-Aggregations-, Objekt-/Limit- und
 Rollen-/Statusfehler bleiben offen und Ergebnisse benötigen fachlichen Review.
+
+## 75. Interner HP-25-Katalogvertrag v0.2
+
+Der interne HP-Katalog wurde für den räumlichen Geltungsbereich von v0.1 auf
+v0.2 versioniert. Der reale Satztyp `weltweit eingetretene
+Schadenereignisse` und wiederverwendbare Umstellungen beziehungsweise
+Flexionen binden nun dieselbe servereigene Fundstelle an beide fachlich
+erforderlichen Komponenten von HP-25:
+
+```text
+territorial_scope  -> CONDITION für den angeforderten Geltungsbereich
+foreign_coverage   -> BENEFIT für die eigentliche Deckungswirkung
+```
+
+Ein `SHARED_SPAN`-Vertrag verlangt dieselbe Kandidatenbindung. Die
+Deckungsaggregation verwendet `COVERAGE_ROLES_ONLY`, während die
+Vollständigkeit weiterhin beide Komponenten benötigt. Exakte Varianten und
+eine enge Konzeptsuche aus `weltweit` plus Schadenereignis beziehungsweise
+Versicherungsfall decken bekannte Wortlaute, Umstellungen, Flexionen und eine
+typische OCR-Trennung ab. Bloße weltweite Erwähnungen oder isolierte
+Schadenereignisse bleiben ohne Kandidat; ein semantisch passender bloßer
+Hinweis wird durch `MENTION_ONLY` downstream zu keiner Deckung.
+
+Der alte Katalogname und die alte Katalog-ID wurden entfernt. Der nicht aktive
+HP-Zweig des QA-Resolvers verweist auf v0.2, ohne HP dem produktiven Profil
+hinzuzufügen. `CUSTOMER_CORE_5_V2` bleibt unverändert bei VS, FE, LW, ST und EL
+mit 224 Zeilen.
+
+Mac-Studio-Abnahme des exakten Code-Commits
+`5457309cb5531c001d3fa1705f33b11042928db9` im isolierten Repository
+`/tmp/pv3-hp25-5457309c`:
+
+```text
+PASS: 9 relevante Jest-Suites / 221 Tests
+PASS: Konzept-, exakte Positiv-, OCR-, Negativ- und Downstream-Verträge
+PASS: positiver Einschluss -> Ja/BELEGT mit servergebundener Quelle
+PASS: ausdrücklicher Ausschluss -> Nein/BELEGT mit servergebundener Quelle
+PASS: MENTION_ONLY -> Nicht feststellbar/UNGEKLÄRT
+PASS: aktives Produktprofil bleibt VS/FE/LW/ST/EL mit 224 Zeilen
+PASS: Prettier der geänderten Code-, Katalog-, Test- und Kurztrackerdateien
+PASS: Bash-Syntax des All-Kategorien-Runners
+PASS: ESLint der geänderten Tests ohne Fehler; Tests sind durch die bestehende
+      Konfiguration ignoriert und werden über Jest ausgeführt
+FULL JEST: 105/107 Suites und 1.193/1.198 Tests bestanden
+BASELINE OFFEN: VS-Legacy-Shelltest erwartet weiterhin das in V3.5.0
+                entfernte automatische Embeddingmodell
+UMGEBUNG OFFEN: isolierter FFMPEG-Test findet ohne Binärpfad kein ffmpeg
+NO MODEL RUN: keine Kunden-PDFs und kein LLM-Lauf
+NO DEPLOY: installierter Kundenstand v3.5.1 / ca2add77 blieb unverändert
+NO CLAIM: kein unbekannter HP-Holdout und kein allgemeiner Qualitätsnachweis
+```

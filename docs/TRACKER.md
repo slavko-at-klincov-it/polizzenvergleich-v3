@@ -54,9 +54,9 @@ waren fehlerhaft. Ergebnisse benötigen weiterhin fachlichen Review.
 8. Das 99-Prozent-Ziel ist erst nach einem versionierten, expertengelabelten,
    zuvor unbekannten Mehrversicherer-Holdout belegbar.
 
-## Laufender interner Katalogschritt: HP-25
+## Interner Katalogschritt: HP-25
 
-Der interne HP-Katalog wird von v0.1 auf v0.2 versioniert. HP-25 behandelt den
+Der interne HP-Katalog ist von v0.1 auf v0.2 versioniert. HP-25 behandelt den
 weltweiten räumlichen Geltungsbereich als wiederverwendbares Konzept aus
 `weltweit` plus Schadenereignis beziehungsweise Versicherungsfall. Dieselbe
 Fundstelle bindet die Rollen `territorial_scope` und `foreign_coverage`; die
@@ -67,9 +67,10 @@ OCR-Trennungen ab. Negativ- und Downstream-Tests sichern ab, dass bloße
 weltweite Erwähnungen keine Deckung werden und dass Einschluss sowie
 Ausschluss weiterhin erst aus der Evidenzklassifikation stammen.
 
-Dieser Schritt ändert weder `CUSTOMER_CORE_5_V2` noch die 224 Kundenzeilen.
-Er ist nicht deployed und beweist ohne unbekannten Holdout keine allgemeine
-HP-Qualität.
+Der Code-Commit `5457309c` ändert weder `CUSTOMER_CORE_5_V2` noch die 224
+Kundenzeilen. Im isolierten Mac-Studio-Repository bestanden 9 relevante
+Suites mit 221 Tests. Der Schritt ist nicht deployed und beweist ohne
+unbekannten Holdout keine allgemeine HP-Qualität.
 
 ## Verbindliche Lesereihenfolge
 
