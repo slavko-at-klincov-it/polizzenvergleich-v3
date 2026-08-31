@@ -88,7 +88,7 @@ done
 
 if /usr/bin/grep -RniE --exclude='run.sh' --exclude='start-server.sh' \
   --exclude='lmstudio.sh' --exclude='prepare-qwen36-model.cjs' \
-  --exclude='load-qwen36.cjs' \
+  --exclude='load-qwen36.cjs' --exclude='run-all-categories-quality.command' \
   'feuer|policyComparison|dinghy|qwen3\.8|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
@@ -108,5 +108,12 @@ fi
   "$REPO_DIR/run-vs-full-quality-ab.command"
 /usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' \
   "$REPO_DIR/run-vs-full-quality-ab.command"
+
+# Der All-Kategorien-Runner ist ebenfalls ein explizites QA-Werkzeug und kein
+# Bestandteil von Installer, LaunchAgents oder Updatepfad.
+/usr/bin/grep -Fq 'server/utils/policyComparison/productContract.js' \
+  "$REPO_DIR/run-all-categories-quality.command"
+/usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' \
+  "$REPO_DIR/run-all-categories-quality.command"
 
 printf '%s\n' "V3 macOS installer tests: PASS"
