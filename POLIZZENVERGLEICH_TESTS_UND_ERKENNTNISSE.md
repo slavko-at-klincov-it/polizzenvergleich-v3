@@ -2887,6 +2887,12 @@ LF-Hauptpolizze wurde gegen neun WEVIG-Dokumente mit ausdrücklich gesetzten
 Rollen und Geltungsstati verglichen. Der installierte Kundenstand
 `977ed40f` und seine Datenbank blieben unverändert.
 
+Keines der Dokumente war `ACTIVE`: A war `FRAMEWORK_TERMS`; B bestand aus
+einem Vorschlag sowie Rahmenbedingungen. Der Lauf vergleicht daher keinen
+aktiven Deckungsstand. Alle 57 gefundenen Atome der 42
+Dokumentationsunterschiede sind `CONDITIONAL` oder `PROPOSED_ONLY`; null
+Punktvorteile sind durch den aktiven Geltungsgate zwingend.
+
 | Prüfung | Ergebnis |
 | --- | ---: |
 | Dokumente / Textseiten | 10/10 / 108/108 |
@@ -2912,6 +2918,16 @@ ausdrücklich versicherte Suchkosten übertragen. Bei `VS-02` ist der
 40-Prozent-Wert auf EABS S. 6 zitiert, aber nicht als Restwertschwelle
 materialisiert; GenVerbund S. 7 enthält zusätzlich 20 Prozent.
 
+`VS-16` ist ebenfalls kein vollständiges PASS: Der B-Beleg
+`überdachte Abstellplätze` wird ohne ausreichende Objektbindung zu Kfz-Stell-
+und Parkplätzen erweitert und verliert sein 10-Prozent-Limit. Der Katalog
+deklariert die Komponentenerfüllung als `ANY`, die Punktentscheidung verlangt
+im gemischten Realfall dennoch jede Komponente und endet unspezifisch
+`ATOMIC_EVIDENCE_MISSING_BOTH`. Bei `LW-08` fehlt außerdem der relevante
+GenVerbund-Beleg S. 8 mit EUR 2.000; die Triage bevorzugt einen engeren
+Erdkabelbeleg. `EL-07` entscheidet zwar sicher `NICHT_VERGLEICHBAR`, verliert
+aber auf beiden Seiten vorhandene Limits und Selbstbehalte.
+
 **Beweist:** Der Fünf-Kategorien-End-to-End-Weg, der exakte 42.496-Kontext-
 Guard, die eindeutige Excelarchivierung, die Parität des XLSX zum privaten
 Ergebnis, die Provenienz der ausgegebenen Quellen und die konservative
@@ -2919,6 +2935,14 @@ Gewinnerlogik funktionieren für dieses bekannte Paket. Der gemeinsame
 Fünf-Kategorien-Artefaktvergleich ist mit 1.617,626 statt 8.206,345 Sekunden
 5,073x schneller beziehungsweise 80,29 Prozent kürzer als der historische
 Qwen-3.8-Lauf.
+
+Die summierten Providerzeiten betragen 8.128,827 gegenüber 1.541,632
+Sekunden, also 5,273x beziehungsweise 81,04 Prozent weniger, obwohl Qwen 3.6
+302 statt 266 Aufrufe und 733.084 statt 639.366 Prompttoken erhielt. Die
+Kernfelder Evidenz, Deckung und Betrag blieben je Paketseite in 216 bis 222
+von 224 Zeilen identisch. Das spricht gegen eine breite Migrationregression,
+beweist wegen der geänderten Kataloge, Callverteilung und Ergebnisverträge
+aber weder gleiche noch bessere isolierte Modellqualität.
 
 **Beweist nicht:** Vollständige semantische Suche, fachliche Richtigkeit aller
 224 Zeilen, unbekannte Versicherer, OCR, paketweite Rang-/Ersetzungslogik,
