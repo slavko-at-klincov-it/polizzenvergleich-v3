@@ -13,7 +13,7 @@ lassen, Ergebnisse in Excel nebeneinander kopieren und erneut vom LLM
 vergleichen“ durch einen reproduzierbaren technischen Job.
 
 Die Funktion ist keine LF- oder WEVIG-Sonderlogik. Sie verwendet für jedes
-Quelldokument das versionierte Kundenprofil `CUSTOMER_CORE_5_V1` mit VS, FE,
+Quelldokument das versionierte Kundenprofil `CUSTOMER_CORE_5_V2` mit VS, FE,
 LW, ST und EL und rollt dessen belegte Ergebnisse anschließend paketweise
 zusammen. Die weiterhin vorhandenen HP-, VB- und WE-Kataloge gehören nicht
 zum produktiven Vergleichslauf.
@@ -178,24 +178,31 @@ zusätzlich Prüfstatus und Quellen. Der damalige Export behielt die bestehenden
 aktuelle Kundenexport ist der in Abschnitt 5 definierte Einblatt-Vertrag;
 alte Schema-V1-Ergebnisse bleiben in der UI sicher als `UNKLAR` darstellbar.
 
-### Qualifizierter Negativbefund in Ergebnisschema V3
+### Allgemeiner kontrollierter Negativbefund in Ergebnisschema V5
 
-Ab Ergebnisschema V3 sind Faktenwirkung, Suchbefund und Vergleichswertung
+Ab Ergebnisschema V5 sind Faktenwirkung, Suchbefund und Vergleichswertung
 getrennte Achsen:
 
 ```text
-Faktenwirkung:     UNKNOWN
-Suchbefund:        NOT_FOUND_AFTER_COMPLETE_SEARCH
-Vergleichswertung: ASSUMED_NOT_INCLUDED_V1
+allgemeiner kontrollierter Nulltreffer:
+  Faktenwirkung:     UNKNOWN
+  Suchbefund:        NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH
+  Vergleichswertung: DOCUMENTATION_ONLY_V1
+
+eigens zertifizierter positiver Schutz-Suchvertrag:
+  Faktenwirkung:     UNKNOWN
+  Suchbefund:        NOT_FOUND_AFTER_COMPLETE_SEARCH
+  Vergleichswertung: ASSUMED_NOT_INCLUDED_V1
 ```
 
-Der Negativbefund ist nur zulässig, wenn der jeweilige Vergleichspunkt den
-Suchvertrag ausdrücklich freigibt, sämtliche bereitgestellten Paketdokumente
+Der allgemeine kontrollierte Nulltreffer gilt für alle 224 explizit
+klassifizierten Produktzeilen, wenn sämtliche bereitgestellten Paketdokumente
 verarbeitet wurden, jede physische Seite Text enthält, alle technischen
 Kategorie-Gates bestanden sind und jede kontrollierte Komponente ohne
 Occurrence, Kandidat, Reject oder ungelösten Treffer serverseitig terminiert.
-Alte Artefakte, Bildseiten in gemischten PDFs und nicht freigegebene
-Katalogpunkte bleiben `SEARCH_INCOMPLETE` und damit `UNKLAR`.
+Er bedeutet ausschließlich, dass der ausgewiesene kontrollierte Suchplan keine
+Fundstelle lieferte. Alte Artefakte, Bildseiten in gemischten PDFs und
+unvollständige Suchen bleiben `SEARCH_INCOMPLETE` und damit `UNKLAR`.
 
 Freigegebene Regeln:
 
@@ -203,6 +210,9 @@ Freigegebene Regeln:
   punktweise gegen qualifiziertes Nichtfinden;
 - `COMPLETE_SEARCH_ABSENCE_BOTH_V1`: beidseitiges qualifiziertes Nichtfinden
   ergibt `KEIN_DOKUMENTIERTER_VORTEIL`, nicht `GLEICHWERTIG`.
+- `QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1`: belegter Inhalt auf einer
+  Seite gegen allgemeinen kontrollierten Nulltreffer auf der anderen ergibt
+  `DOKUMENTATIONSUNTERSCHIED`, aber keinen Gewinner.
 
 Der erste freigegebene Suchvertrag ist `VS-16`. Der kontrollierte Wortschatz
 umfasst Garagen, Tiefgaragen, Garagierung, Garagenanlagen, Stell- und
@@ -244,9 +254,11 @@ werden.
    und nicht das 99-Prozent-Ziel.
 5. Die Qualität des Vergleichs kann nie höher sein als die beleggebundene
    Faktenqualität der beiden zugrunde liegenden Dokumentanalysen.
-6. `NOT_FOUND_AFTER_COMPLETE_SEARCH` ist derzeit bewusst opt-in und für
-   `VS-16` freigegeben. Weitere Punkte benötigen eigene versionierte
-   Synonymverträge sowie positive, negative und adversariale Tests.
+6. Der neutrale kontrollierte Nulltreffer ist allgemein umgesetzt. Die
+   stärkere Vergleichsannahme `ASSUMED_NOT_INCLUDED_V1` bleibt bewusst opt-in
+   und ist derzeit nur für `VS-16` zertifiziert. Weitere Schutzpunkte benötigen
+   eigene versionierte Synonym-/Konzeptverträge sowie positive, negative und
+   adversariale Tests.
 
 ## 8. Nächste fachliche Gates
 

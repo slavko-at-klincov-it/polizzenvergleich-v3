@@ -19,6 +19,10 @@ describe("policy comparison customer result presenter", () => {
   test.each([
     ["VORTEIL_A", "Vorteil Polizze A:"],
     ["VORTEIL_B", "Vorteil Polizze B:"],
+    [
+      "DOKUMENTATIONSUNTERSCHIED",
+      "Kein klarer Vorteil: Dokumentationsunterschied –",
+    ],
     ["GLEICHWERTIG", "Kein klarer Vorteil: gleichwertig –"],
     ["NICHT_VERGLEICHBAR", "Kein klarer Vorteil: nicht vergleichbar –"],
     ["UNKLAR", "Kein klarer Vorteil: ungeklärt –"],

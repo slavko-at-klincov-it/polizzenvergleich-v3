@@ -1,12 +1,14 @@
 {
-  "schemaVersion": 1,
-  "catalogId": "st-occurrence-full-draft-v0.1",
+  "schemaVersion": 2,
+  "catalogId": "st-occurrence-full-draft-v0.2",
   "categoryView": "ST",
   "requirements": [
     {
       "id": "ST-01",
       "label": "Windgeschwindigkeit, ab der ein Sturm vorliegt",
-      "requestedFields": ["threshold"],
+      "requestedFields": [
+        "threshold"
+      ],
       "components": [
         {
           "id": "storm_wind_speed_definition",
@@ -19,16 +21,23 @@
             "Sturm ist eine wetterbedingte Luftbewegung"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
     },
     {
       "id": "ST-02",
       "label": "Nachweispflicht für die Windstärke und maßgebliche Messstelle",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": ["wind_proof_duty", "measuring_station"],
+          "memberComponentIds": [
+            "wind_proof_duty",
+            "measuring_station"
+          ],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -53,12 +62,16 @@
             "Windstärke durch eine Wetterstation nachzuweisen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-03",
       "label": "Nachbarschaftsindiz als Ersatznachweis zugelassen",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "neighbourhood_indication",
@@ -70,14 +83,18 @@
             "Schäden an Nachbargebäuden als Nachweis der Windstärke"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-04",
       "label": "Hagelschäden an Dach und Fassade",
       "requestedFields": [],
       "scopeRules": {
-        "narrowAliases": ["Schnee- und Eisrutsch"]
+        "narrowAliases": [
+          "Schnee- und Eisrutsch"
+        ]
       },
       "components": [
         {
@@ -103,7 +120,9 @@
             "Außenmauern"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-05",
@@ -112,7 +131,10 @@
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": ["cosmetic_impairment", "hail"],
+          "memberComponentIds": [
+            "cosmetic_impairment",
+            "hail"
+          ],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -139,14 +161,18 @@
             "Schönheitsfehler durch Hagel"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-06",
       "label": "Schneedruck auf Dach und Tragkonstruktion",
       "requestedFields": [],
       "scopeRules": {
-        "narrowAliases": ["Schnee- und Eisrutsch"]
+        "narrowAliases": [
+          "Schnee- und Eisrutsch"
+        ]
       },
       "components": [
         {
@@ -171,12 +197,16 @@
             "tragenden Dachkonstruktion"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-07",
       "label": "Besondere Regelung für Flachdächer",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "special_rule",
@@ -187,7 +217,9 @@
             "Sonderregelung für Flachdächer"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-08",
@@ -204,12 +236,16 @@
             "Schäden an eigenen Anlagen durch Dachlawinen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-09",
       "label": "Folgeschäden durch Regen oder Schnee nach Sturmschaden am Dach",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "rain_or_snow_after_storm_roof_damage",
@@ -222,18 +258,26 @@
             "Regenwasser durch eine Öffnung infolge Sturm"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-10",
       "label": "Provisorische Notabdeckung und Sicherungsmaßnahmen",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "emergency_cover",
           "label": "provisorische Notabdeckung",
           "factRole": "COST",
-          "aliases": ["Notabdeckung", "provisorische Abdeckung", "Notdach"]
+          "aliases": [
+            "Notabdeckung",
+            "provisorische Abdeckung",
+            "Notdach"
+          ]
         },
         {
           "id": "securing_measures",
@@ -247,14 +291,20 @@
             "Sicherungs-, Aufräumungs-, Abbruch-"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
     },
     {
       "id": "ST-11",
       "label": "Dachrinnen und Fallrohre, eigenes Sublimit",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "scopeRules": {
-        "narrowAliases": ["Schnee- und Eisrutsch"]
+        "narrowAliases": [
+          "Schnee- und Eisrutsch"
+        ]
       },
       "components": [
         {
@@ -277,7 +327,9 @@
             "Dachrinnen und Außenablaufrohre bis zu"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "ST-12",
@@ -288,15 +340,23 @@
           "id": "sheet_metal_work",
           "label": "Verblechung",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Verblechung", "Verblechungen"]
+          "aliases": [
+            "Verblechung",
+            "Verblechungen"
+          ]
         },
         {
           "id": "parapet",
           "label": "Attika",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Attika", "Attiken"]
+          "aliases": [
+            "Attika",
+            "Attiken"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-13",
@@ -307,15 +367,24 @@
           "id": "chimney_head",
           "label": "Kaminköpfe",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Kamin-", "Kaminkopf", "Kaminköpfe"]
+          "aliases": [
+            "Kamin-",
+            "Kaminkopf",
+            "Kaminköpfe"
+          ]
         },
         {
           "id": "smokestack_head",
           "label": "Schornsteinköpfe",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Schornsteinkopf", "Schornsteinköpfe"]
+          "aliases": [
+            "Schornsteinkopf",
+            "Schornsteinköpfe"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-14",
@@ -326,15 +395,22 @@
           "id": "roof_window",
           "label": "Dachfenster",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Dachfenster"]
+          "aliases": [
+            "Dachfenster"
+          ]
         },
         {
           "id": "skylight_dome",
           "label": "Lichtkuppeln",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Lichtkuppel", "Lichtkuppeln"]
+          "aliases": [
+            "Lichtkuppel",
+            "Lichtkuppeln"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-15",
@@ -345,7 +421,11 @@
           "id": "antenna_system",
           "label": "Antennenanlagen",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Antennenanlage", "Antennenanlagen", "Antennen"]
+          "aliases": [
+            "Antennenanlage",
+            "Antennenanlagen",
+            "Antennen"
+          ]
         },
         {
           "id": "satellite_system",
@@ -359,7 +439,9 @@
             "Satellitenschüsseln"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-16",
@@ -370,7 +452,10 @@
           "id": "awning",
           "label": "Markisen",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Markise", "Markisen"]
+          "aliases": [
+            "Markise",
+            "Markisen"
+          ]
         },
         {
           "id": "shading_system",
@@ -388,7 +473,9 @@
             "Rolläden"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-17",
@@ -399,15 +486,24 @@
           "id": "roller_shutter",
           "label": "Rollläden",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Rollladen", "Rollläden", "Rolläden"]
+          "aliases": [
+            "Rollladen",
+            "Rollläden",
+            "Rolläden"
+          ]
         },
         {
           "id": "blind",
           "label": "Jalousien",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Jalousie", "Jalousien"]
+          "aliases": [
+            "Jalousie",
+            "Jalousien"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-18",
@@ -448,7 +544,9 @@
             "Hagel"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-19",
@@ -478,12 +576,17 @@
             "Schneedruck"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-20",
       "label": "Ertragsausfall der Photovoltaikanlage",
-      "requestedFields": ["duration", "limit"],
+      "requestedFields": [
+        "duration",
+        "limit"
+      ],
       "components": [
         {
           "id": "photovoltaic_yield_loss",
@@ -496,13 +599,19 @@
             "Ertragsausfallversicherung für Photovoltaikanlagen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-21",
       "label": "Solarthermieanlage",
       "requestedFields": [],
-      "scopeRules": { "narrowAliases": ["Glasbruch"] },
+      "scopeRules": {
+        "narrowAliases": [
+          "Glasbruch"
+        ]
+      },
       "components": [
         {
           "id": "solar_thermal_system",
@@ -519,7 +628,9 @@
             "Sonnenkollektoren"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-22",
@@ -537,7 +648,9 @@
             "Wärmepumpen-Außengeräte"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-23",
@@ -548,9 +661,14 @@
           "id": "foreign_tree_or_branch_impact",
           "label": "Anprall fremder Bäume oder Äste",
           "factRole": "PERIL",
-          "aliases": ["Anprall fremder Bäume", "Anprall fremder Äste"]
+          "aliases": [
+            "Anprall fremder Bäume",
+            "Anprall fremder Äste"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-24",
@@ -567,12 +685,16 @@
             "Schäden am Gebäude durch eigene umstürzende Bäume"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-25",
       "label": "Kosten der Baum- und Astbeseitigung",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "tree_removal_costs",
@@ -596,7 +718,9 @@
             "Beseitigung von Ästen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
     },
     {
       "id": "ST-26",
@@ -607,27 +731,39 @@
           "id": "rockfall",
           "label": "Steinschlag",
           "factRole": "PERIL",
-          "aliases": ["Steinschlag"]
+          "aliases": [
+            "Steinschlag"
+          ]
         },
         {
           "id": "rock_slide",
           "label": "Felssturz",
           "factRole": "PERIL",
-          "aliases": ["Felssturz", "Felsstürze"]
+          "aliases": [
+            "Felssturz",
+            "Felsstürze"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-27",
       "label": "Lawine und Schneerutsch",
       "requestedFields": [],
       "scopeRules": {
-        "narrowAliases": ["Katastrophen"]
+        "narrowAliases": [
+          "Katastrophen"
+        ]
       },
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": ["avalanche", "snow_slide"],
+          "memberComponentIds": [
+            "avalanche",
+            "snow_slide"
+          ],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -665,12 +801,16 @@
             "Schneerutsche"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-28",
       "label": "Sturmschäden an Gerüsten oder während Bauarbeiten",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "storm_damage_on_scaffold_or_during_construction",
@@ -682,7 +822,9 @@
             "Sturmschäden während der Bauarbeiten"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-29",
@@ -701,7 +843,9 @@
             "Mauern, Zäune"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-30",
@@ -717,12 +861,16 @@
             "Sturmschaden am Tiefgaragentor"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "ST-31",
       "label": "Wartungszustand des Daches als Obliegenheit",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "roof_maintenance_duty",
@@ -734,12 +882,17 @@
             "Dach ordnungsgemäß instand zu halten"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-32",
       "label": "Nachweis der letzten Dachrevision gefordert",
-      "requestedFields": ["condition", "date"],
+      "requestedFields": [
+        "condition",
+        "date"
+      ],
       "components": [
         {
           "id": "roof_inspection_proof",
@@ -751,12 +904,16 @@
             "Dachüberprüfung"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-33",
       "label": "Selbstbehalt in der Sparte Sturm",
-      "requestedFields": ["amount"],
+      "requestedFields": [
+        "amount"
+      ],
       "components": [
         {
           "id": "storm_deductible",
@@ -768,12 +925,16 @@
             "Selbstbehalt Sturm"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "ST-34",
       "label": "Höchstentschädigung in der Sparte Sturm",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "storm_maximum_compensation",
@@ -788,12 +949,16 @@
             "maximal 150 % der vereinbarten Versicherungssumme"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "ST-35",
       "label": "Sturmdeckung bei leerstehenden Einheiten",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "storm_coverage_for_vacant_units",
@@ -805,12 +970,16 @@
             "Sturmschäden an leerstehenden Einheiten"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "ST-36",
       "label": "Gemeinsames Sublimit für Dachaufbauten",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "shared_roof_structures_sublimit",
@@ -822,7 +991,9 @@
             "Dachaufbauten auf Erstes Risiko bis zu"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     }
   ]
 }

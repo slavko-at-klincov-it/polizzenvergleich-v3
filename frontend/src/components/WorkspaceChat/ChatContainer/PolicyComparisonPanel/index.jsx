@@ -486,6 +486,8 @@ function ComparisonResult({ result }) {
             {result.totals.pointDecisions.GLEICHWERTIG || 0} · kein
             dokumentierter Vorteil{" "}
             {result.totals.pointDecisions.KEIN_DOKUMENTIERTER_VORTEIL || 0} ·
+            Dokumentationsunterschiede{" "}
+            {result.totals.pointDecisions.DOKUMENTATIONSUNTERSCHIED || 0} ·
             nicht vergleichbar{" "}
             {result.totals.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
             {result.totals.pointDecisions.UNKLAR || 0}

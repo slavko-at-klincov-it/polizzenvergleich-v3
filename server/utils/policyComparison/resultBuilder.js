@@ -230,20 +230,34 @@ function summarizePackage(
 ) {
   const evidenceEntries = entries.filter(({ row }) => isEvidenceRow(row));
   if (evidenceEntries.length === 0) {
-    if (searchAudit?.disposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND)
+    if (
+      [
+        SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND,
+        SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
+      ].includes(searchAudit?.disposition)
+    ) {
+      const assumedNotIncluded =
+        searchAudit.comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1";
       return {
         evidenceFound: false,
         documentedContent:
-          "IM VOLLSTÄNDIG GEPRÜFTEN BEREITGESTELLTEN PAKET NICHT GEFUNDEN",
-        coverage: "Für diesen Vergleich als nicht enthalten angenommen",
+          searchAudit.disposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
+            ? "IM VOLLSTÄNDIG GEPRÜFTEN BEREITGESTELLTEN PAKET NICHT GEFUNDEN"
+            : "IM VOLLSTÄNDIGEN KONTROLLIERTEN SUCHLAUF DES BEREITGESTELLTEN PAKETS NICHT GEFUNDEN",
+        coverage: assumedNotIncluded
+          ? "Für diesen Vergleich als nicht enthalten angenommen"
+          : NOT_DETERMINABLE,
         coverageAmount: NOT_DETERMINABLE,
-        source: `Dokumentweite Suche über ${searchAudit.documentCount} Dokument(e) und ${searchAudit.physicalPagesChecked} physische Textseite(n); Suchvertrag: ${searchAudit.searchPlanIds.join(", ")}. Keine entsprechende Regelung gefunden.`,
-        reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
-        searchDisposition: SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
-        comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+        source: `Dokumentweite kontrollierte Suche über ${searchAudit.documentCount} Dokument(e) und ${searchAudit.physicalPagesChecked} physische Textseite(n); Suchplan: ${searchAudit.searchPlanIds.join(", ")}. Mit den ausgewiesenen Suchbegriffen wurde keine entsprechende Fundstelle ermittelt.`,
+        reviewStatus: assumedNotIncluded
+          ? "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG"
+          : "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: searchAudit.disposition,
+        comparisonTreatment: searchAudit.comparisonTreatment,
         searchAudit,
         facts: [],
       };
+    }
     return {
       evidenceFound: false,
       documentedContent: MISSING_EVIDENCE,
@@ -344,27 +358,30 @@ function comparable(packageSummary) {
 }
 
 function comparePackages(packageA, packageB) {
-  const absentA =
-    packageA.searchDisposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND;
-  const absentB =
-    packageB.searchDisposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND;
+  const completeNotFound = (packageSummary) =>
+    [
+      SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND,
+      SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
+    ].includes(packageSummary?.searchDisposition);
+  const absentA = completeNotFound(packageA);
+  const absentB = completeNotFound(packageB);
   if (absentA && absentB)
     return {
       outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       difference:
-        "In beiden vollständig geprüften bereitgestellten Paketen wurde keine entsprechende Regelung gefunden. Das belegt weder ausdrückliche Gleichheit noch einen ausdrücklichen Ausschluss.",
+        "In beiden vollständig kontrolliert geprüften bereitgestellten Paketen wurde mit den ausgewiesenen Suchplänen keine entsprechende Fundstelle ermittelt. Das belegt weder ausdrückliche Gleichheit noch einen ausdrücklichen Ausschluss.",
     };
   if (packageA.evidenceFound && absentB)
     return {
       outcome: "A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       difference:
-        "Paket A enthält belegten Inhalt; im vollständig geprüften bereitgestellten Paket B wurde keine entsprechende Regelung gefunden. Die Punktentscheidung darf nur die freigegebene Vergleichsannahme anwenden.",
+        "Paket A enthält belegten Inhalt; der vollständige kontrollierte Suchlauf für Paket B blieb ohne entsprechende Fundstelle. Die Punktentscheidung darf daraus nur eine ausdrücklich freigegebene fachliche Wirkung ableiten.",
     };
   if (absentA && packageB.evidenceFound)
     return {
       outcome: "B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       difference:
-        "Paket B enthält belegten Inhalt; im vollständig geprüften bereitgestellten Paket A wurde keine entsprechende Regelung gefunden. Die Punktentscheidung darf nur die freigegebene Vergleichsannahme anwenden.",
+        "Paket B enthält belegten Inhalt; der vollständige kontrollierte Suchlauf für Paket A blieb ohne entsprechende Fundstelle. Die Punktentscheidung darf daraus nur eine ausdrücklich freigegebene fachliche Wirkung ableiten.",
     };
   if (!packageA.evidenceFound && !packageB.evidenceFound)
     return {
@@ -478,11 +495,12 @@ function componentSearchAudit({
       Array.isArray(judgement?.unresolvedCandidateIds) &&
       judgement.unresolvedCandidateIds.length === 0
   );
-  const policyApproved =
-    requirement?.absenceComparisonPolicy ===
-    "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1";
-  const verified = Boolean(
-    policyApproved &&
+  const negativeSearchApproved = [
+    "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+    "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+  ].includes(requirement?.negativeSearchPolicy);
+  const completeControlledSearch = Boolean(
+    negativeSearchApproved &&
       completeCategoryTechnicalContract({
         documentArtifact,
         worksheet,
@@ -494,15 +512,32 @@ function componentSearchAudit({
       zeroCandidateTerminal &&
       serverNegativeTerminal
   );
+  const verified = Boolean(
+    completeControlledSearch &&
+      requirement?.negativeSearchPolicy ===
+        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+  );
+  const comparisonTreatment =
+    verified &&
+    requirement?.absenceComparisonPolicy ===
+      "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1"
+      ? "ASSUMED_NOT_INCLUDED_V1"
+      : completeControlledSearch
+        ? "DOCUMENTATION_ONLY_V1"
+        : null;
   return {
     disposition:
       judgement?.evidencePresence === "FOUND"
         ? SEARCH_DISPOSITION.RELEVANT_FOUND
         : verified
           ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
+          : completeControlledSearch
+            ? SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND
           : SEARCH_DISPOSITION.INCOMPLETE,
-    comparisonTreatment: verified ? "ASSUMED_NOT_INCLUDED_V1" : null,
-    policy: requirement?.absenceComparisonPolicy || null,
+    comparisonTreatment,
+    negativeSearchPolicy: requirement?.negativeSearchPolicy || null,
+    absenceMeaning: requirement?.absenceMeaning || null,
+    comparisonPolicy: requirement?.absenceComparisonPolicy || null,
     searchPlanId,
     documentUuid: document.uuid,
     catalogId: worksheet?.catalog?.id || null,
@@ -513,7 +548,8 @@ function componentSearchAudit({
     aliases: component?.aliases || [],
     conceptSearchIds: (component?.conceptSearches || []).map(({ id }) => id),
     gates: {
-      policyApproved,
+      negativeSearchApproved,
+      certifiedNegativeSearch: verified,
       completeTextExtraction: completeTextExtraction(documentArtifact),
       completeCategoryTechnicalContract: completeCategoryTechnicalContract({
         documentArtifact,
@@ -678,6 +714,14 @@ function aggregatePackageSearchAudit({
     return {
       documentUuid: run.document.uuid,
       atoms,
+      completeNotFound:
+        atoms.length > 0 &&
+        atoms.every((atom) =>
+          [
+            SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND,
+            SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
+          ].includes(atom.searchAudit?.disposition)
+        ),
       verified:
         atoms.length > 0 &&
         atoms.every(
@@ -687,6 +731,9 @@ function aggregatePackageSearchAudit({
         ),
     };
   });
+  const completeNotFound =
+    perDocument.length > 0 &&
+    perDocument.every((entry) => entry.completeNotFound);
   const verified =
     perDocument.length > 0 && perDocument.every((entry) => entry.verified);
   const audits = perDocument.flatMap(({ atoms }) =>
@@ -695,8 +742,19 @@ function aggregatePackageSearchAudit({
   return {
     disposition: verified
       ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
-      : SEARCH_DISPOSITION.INCOMPLETE,
-    comparisonTreatment: verified ? "ASSUMED_NOT_INCLUDED_V1" : null,
+      : completeNotFound
+        ? SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND
+        : SEARCH_DISPOSITION.INCOMPLETE,
+    comparisonTreatment: verified
+      ? audits.every(
+          ({ comparisonTreatment }) =>
+            comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1"
+        )
+        ? "ASSUMED_NOT_INCLUDED_V1"
+        : "DOCUMENTATION_ONLY_V1"
+      : completeNotFound
+        ? "DOCUMENTATION_ONLY_V1"
+        : null,
     documentCount: perDocument.length,
     documentUuids: perDocument.map(({ documentUuid }) => documentUuid).sort(),
     physicalPagesChecked: unique(
@@ -796,7 +854,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     return { categoryView, rows };
   });
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     status: "TECHNICAL_RESULT_REVIEW_REQUIRED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -848,7 +906,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       ),
     },
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Ein qualifiziertes Nichtfinden gilt ausschließlich für das vollständig geprüfte bereitgestellte Paket und als Vergleichsannahme, niemals als Nachweis eines ausdrücklichen Ausschlusses. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständiger kontrollierter Nulltreffer wird als Suchbefund ausgewiesen, aber nur ein eigens zertifizierter positiver Schutz-Suchvertrag darf daraus eine Vergleichsannahme ableiten. Ein ausdrücklicher Ausschluss ist damit nie belegt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
 }
 

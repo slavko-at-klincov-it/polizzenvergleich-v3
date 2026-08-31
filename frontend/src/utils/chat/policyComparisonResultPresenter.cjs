@@ -1,6 +1,7 @@
 const OUTCOME_LABELS = Object.freeze({
   VORTEIL_A: "Vorteil Paket A",
   VORTEIL_B: "Vorteil Paket B",
+  DOKUMENTATIONSUNTERSCHIED: "Dokumentationsunterschied",
   GLEICHWERTIG: "Gleichwertig",
   KEIN_DOKUMENTIERTER_VORTEIL: "Kein dokumentierter Vorteil",
   NICHT_VERGLEICHBAR: "Nicht vergleichbar",

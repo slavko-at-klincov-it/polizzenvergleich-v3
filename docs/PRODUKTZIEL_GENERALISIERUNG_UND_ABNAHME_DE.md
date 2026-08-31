@@ -17,7 +17,7 @@ noch 99 Prozent fachliche Richtigkeit.
 Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der gemeinsame
 evidenzgebundene Verarbeitungspfad besitzt weiterhin Kataloge und historische
 Regressionsevidenz für acht Ansichten. Das produktive, versionierte
-Kundenprofil `CUSTOMER_CORE_5_V1` umfasst jedoch bewusst nur VS, FE, LW, ST
+Kundenprofil `CUSTOMER_CORE_5_V2` umfasst jedoch bewusst nur VS, FE, LW, ST
 und EL mit 224 sichtbaren Zeilen. Die offene Grenze liegt bei fachlicher
 Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und dem
 Laufzeitbudget.
@@ -118,11 +118,14 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
    Teilbelege dürfen nicht zur vollständigen Bejahung hochgestuft werden.
 7. Betrag, Prozentsatz, Dauer und Bedingung müssen an die richtige Faktrolle
    und Klausel gebunden bleiben.
-8. Ein serverseitig qualifiziertes `NOT_FOUND_AFTER_COMPLETE_SEARCH` bleibt
-   auf Faktenebene `UNKNOWN`. Es darf nur für ausdrücklich freigegebene,
-   versionierte Suchverträge und nur für das vollständig geprüfte
-   bereitgestellte Paket als `ASSUMED_NOT_INCLUDED_V1` in eine punktweise
-   Vergleichsannahme eingehen; ein ausdrücklicher Ausschluss ist damit nicht
+8. Ein vollständiger kontrollierter Nulltreffer wird getrennt von seiner
+   fachlichen Wirkung gespeichert. Nicht zertifizierte Suchpläne enden als
+   `NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH` und dürfen nur einen neutralen
+   Dokumentationsunterschied begründen. Ein serverseitig qualifiziertes
+   `NOT_FOUND_AFTER_COMPLETE_SEARCH` bleibt auf Faktenebene `UNKNOWN` und darf
+   nur für ausdrücklich freigegebene, versionierte positive
+   Schutz-Suchverträge als `ASSUMED_NOT_INCLUDED_V1` in eine punktweise
+   Vergleichsannahme eingehen. Ein ausdrücklicher Ausschluss ist damit nie
    belegt.
 9. Hauptpolizze, Bedingungen und Nachträge bleiben getrennte Dokumentfakten,
    bis Rang, Geltung und Ersetzung geklärt sind.
@@ -204,7 +207,7 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 
 - kanonische physische PDF-PageMap und seitengebundene Dokumentartefakte;
 - fünf produktive Kundenansichten mit 224 IDs im Profil
-  `CUSTOMER_CORE_5_V1`;
+  `CUSTOMER_CORE_5_V2`;
 - acht erhaltene Full-Draft-Kataloge mit 533 atomaren Komponenten und
   Promptparität; HP, VB und WE sind keine produktiven Kundenansichten;
 - occurrence-genaue Kandidatenvorbereitung und servergebundene Evidenzbausteine;

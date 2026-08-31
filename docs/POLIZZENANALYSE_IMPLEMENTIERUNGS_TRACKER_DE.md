@@ -3563,7 +3563,7 @@ NO CLAIM: keine beliebigen Polizzen, kein OCR-Vollständigkeitsnachweis und
 ## 71. Fünf-Kategorien-Profil und Einblatt-Kundenexport
 
 Der produktive A/B-Lauf verwendet jetzt den versionierten Vertrag
-`CUSTOMER_CORE_5_V1`. Er analysiert ausschließlich VS, FE, LW, ST und EL und
+`CUSTOMER_CORE_5_V2`. Er analysiert ausschließlich VS, FE, LW, ST und EL und
 materialisiert damit 224 sichtbare Zeilen (36 + 80 + 36 + 36 + 36). HP, VB
 und WE werden nicht gelöscht: Ihre Kataloge und historischen Tests bleiben als
 interne Evidenz erhalten, sie werden jedoch weder gestartet noch in neue
@@ -3577,8 +3577,9 @@ Stufe K/S/V sowie danach Kategorie und Katalogreihenfolge. Kategorie-ID,
 Stufe und Name werden für Polizze A und B sichtbar wiederholt.
 
 `KI-Ergebnis` wird ausschließlich aus der servereigenen `pointDecision`
-erzeugt. Die Präsentationsschicht kennt fünf Kundensignale: Vorteil Polizze A,
-Vorteil Polizze B, gleichwertig, nicht vergleichbar und ungeklärt. Unbekannte,
+erzeugt. Die Präsentationsschicht kennt sechs Kundensignale: Vorteil Polizze A,
+Vorteil Polizze B, gleichwertig, Dokumentationsunterschied, nicht vergleichbar
+und ungeklärt. Unbekannte,
 unvollständige oder inkonsistente Regeln werden immer zu ungeklärt
 herabgestuft. Insbesondere bleibt beim qualifizierten Negativbefund sichtbar,
 dass kein ausdrücklicher Ausschluss belegt ist. Technische Outcomes, Regeln,
@@ -3610,3 +3611,60 @@ Verzeichnis `/tmp/pv3-validate-d771e47f` für Commit
 Stand und wurde nicht verändert. Der visuelle Voll-Export verwendete nur die
 bereits vorhandenen Tabellenwerte als synthetische Layout-Fixture; er ist kein
 neuer fachlicher Modelllauf.
+
+## 72. Allgemeines Prinzip für kontrolliertes Nichtfinden
+
+Das produktive Profil `CUSTOMER_CORE_5_V2` trennt ab Ergebnisschema V5 den
+technischen Nulltreffer strikt von seiner fachlichen Vergleichswirkung. Alle
+224 Zeilen besitzen einen expliziten `negativeSearchPolicy` und eine
+`absenceMeaning`. Die acht gegenseitig ausschließenden Bedeutungsgruppen sind:
+
+```text
+COVERAGE_ONLY       90
+COVERAGE_MIXED      25
+COST_COVERAGE       24
+EXCLUSION           14
+VALUE_TERM          16
+CONDITION_ONLY      44
+DEFINITION_ONLY     10
+DOCUMENT_REFERENCE   1
+```
+
+Ein technisch vollständig abgeschlossener Nulltreffer eines noch nicht
+fachlich zertifizierten Suchplans wird als
+`NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH` mit
+`DOCUMENTATION_ONLY_V1` ausgegeben. Gegen belegten Inhalt auf der anderen
+Seite entsteht die neutrale Punktentscheidung
+`DOKUMENTATIONSUNTERSCHIED` nach
+`QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1`. Insbesondere bedeuten ein
+nicht gefundenes Limit nicht unbegrenzte Deckung, ein nicht gefundener
+Selbstbehalt nicht null Euro und ein nicht gefundener Ausschluss keinen
+automatischen Vorteil.
+
+Die stärkere Stufe `NOT_FOUND_AFTER_COMPLETE_SEARCH` mit
+`ASSUMED_NOT_INCLUDED_V1` bleibt ein eigener Zertifizierungsvertrag für
+positive Schutzpositionen. `VS-16` ist weiterhin der erste und derzeit einzige
+zertifizierte Vertrag. Ein Punktvorteil verlangt zusätzlich einen aktiven,
+vollständig belegten, unbedingten Einschluss; `CONDITIONAL`, `PROPOSED_ONLY`
+und `UNKNOWN` sind dafür gesperrt.
+
+Die vorhandenen 1.326 Aliase in 381 Komponenten sind Suchkandidaten und kein
+pauschaler Beweis vollständiger Synonymabdeckung. Weitere automatische
+Schutzannahmen werden deshalb nur zeilenweise nach Alias-/Konzeptprüfung,
+Negativnachbarn und adversarialen Varianten freigegeben. Vollständige
+Dokumentverarbeitung, Text auf jeder physischen Seite, technische
+Worksheet-/Target-/Judgement-Parität und null offene Kandidaten bleiben für
+beide Nulltrefferstufen zwingend. Alte Ergebnisse werden nicht rückwirkend
+umgedeutet; das versionierte Profil und die Katalog-IDs sperren unsichere
+Resumes.
+
+```text
+IMPLEMENTIERT: zwei getrennte Achsen für Suchbefund und Vergleichswirkung
+IMPLEMENTIERT: explizite Abwesenheitssemantik für 224/224 Produktzeilen
+IMPLEMENTIERT: neutrales Kundensignal Dokumentationsunterschied
+IMPLEMENTIERT: ACTIVE-Gate vor Einschluss-gegen-Nichtfinden-Vorteil
+KATALOGE: VS v0.4; FE/LW/ST/EL v0.2; Worksheet-Schema V2
+ERGEBNIS: comparison.private.json V5; pointDecision V3
+NO CLAIM: keine fachliche Zertifizierung aller 224 Negativlexika
+NO CLAIM: keine beliebigen Polizzen und kein 99-Prozent-Nachweis
+```

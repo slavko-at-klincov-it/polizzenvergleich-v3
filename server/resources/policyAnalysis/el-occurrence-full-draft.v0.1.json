@@ -1,14 +1,20 @@
 {
-  "schemaVersion": 1,
-  "catalogId": "el-occurrence-full-draft-v0.1",
+  "schemaVersion": 2,
+  "catalogId": "el-occurrence-full-draft-v0.2",
   "categoryView": "EL",
   "requirements": [
     {
       "id": "EL-01",
       "label": "Elementar-Sublimit pro Schadenereignis",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "elemental_per_event_limit",
@@ -22,12 +28,16 @@
             "Katastrophen pro versichertem Objekt"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "EL-02",
       "label": "Elementar-Sublimit pro Versicherungsjahr",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "elemental_annual_limit",
@@ -39,13 +49,21 @@
             "Katastrophenschäden je Versicherungsjahr"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "EL-03",
       "label": "Gilt das Limit gemeinsam für alle Elementargefahren",
-      "requestedFields": ["condition"],
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "requestedFields": [
+        "condition"
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "shared_elemental_limit",
@@ -59,35 +77,54 @@
             "Katastrophen pro versichertem Objekt"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "EL-04",
       "label": "Hochwasser und Überschwemmung",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "flood",
           "label": "Hochwasser",
           "factRole": "PERIL",
-          "aliases": ["Hochwasser"]
+          "aliases": [
+            "Hochwasser"
+          ]
         },
         {
           "id": "inundation",
           "label": "Überschwemmung",
           "factRole": "PERIL",
-          "aliases": ["Überschwemmung", "Überschwemmungen"]
+          "aliases": [
+            "Überschwemmung",
+            "Überschwemmungen"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-05",
       "label": "Starkregen und Oberflächenwasser ohne Gewässerausuferung",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "heavy_rain",
@@ -119,14 +156,20 @@
             "nicht auf normalem Weg abfließt"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "EL-06",
       "label": "Rückstau aus der Kanalisation",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "sewer_backflow",
@@ -139,86 +182,138 @@
             "auftretenden Rückstau"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-07",
       "label": "Erdbeben",
       "requestedFields": [],
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "components": [
         {
           "id": "earthquake",
           "label": "Erdbeben",
           "factRole": "PERIL",
-          "aliases": ["Erdbeben", "Erdbebenschäden"]
+          "aliases": [
+            "Erdbeben",
+            "Erdbebenschäden"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-08",
       "label": "Erdrutsch, Erdfall und Erdsenkung",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "landslide",
           "label": "Erdrutsch",
           "factRole": "PERIL",
-          "aliases": ["Erdrutsch", "Erdrutschungen"]
+          "aliases": [
+            "Erdrutsch",
+            "Erdrutschungen"
+          ]
         },
         {
           "id": "sinkhole",
           "label": "Erdfall",
           "factRole": "PERIL",
-          "aliases": ["Erdfall", "Erdfälle"]
+          "aliases": [
+            "Erdfall",
+            "Erdfälle"
+          ]
         },
         {
           "id": "subsidence",
           "label": "Erdsenkung",
           "factRole": "PERIL",
-          "aliases": ["Erdsenkung", "Erdsenkungen"]
+          "aliases": [
+            "Erdsenkung",
+            "Erdsenkungen"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-09",
       "label": "Lawine",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "avalanche",
           "label": "Lawine",
           "factRole": "PERIL",
-          "aliases": ["Lawine", "Lawinen", "Lawinenschäden"]
+          "aliases": [
+            "Lawine",
+            "Lawinen",
+            "Lawinenschäden"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-10",
       "label": "Vermurung",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "mudslide",
           "label": "Vermurung",
           "factRole": "PERIL",
-          "aliases": ["Vermurung", "Vermurungen", "Muren"]
+          "aliases": [
+            "Vermurung",
+            "Vermurungen",
+            "Muren"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-11",
       "label": "Selbstbehalt in der Sparte Elementar",
-      "requestedFields": ["deductible"],
+      "requestedFields": [
+        "deductible"
+      ],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["STURM_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "STURM_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "elemental_deductible",
@@ -231,12 +326,16 @@
             "Erdbeben"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "EL-12",
       "label": "Ausschluss oder Zuschlag aufgrund der Hochwasserzone",
-      "requestedFields": ["condition"],
+      "requestedFields": [
+        "condition"
+      ],
       "components": [
         {
           "id": "flood_zone_exclusion_or_surcharge",
@@ -249,14 +348,20 @@
             "HORA Zone"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
     },
     {
       "id": "EL-13",
       "label": "Glasbruch an der Gebäudeverglasung",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "building_glazing_breakage",
@@ -269,13 +374,19 @@
             "Verglasung der versicherten Gebäude"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-14",
       "label": "Glasbruch in Stiegenhaus und Gemeinschaftsräumen",
       "requestedFields": [],
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "stairwell_glass_breakage",
@@ -296,14 +407,20 @@
             "Glasbruch in Gemeinschaftsräumen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-15",
       "label": "Sonderverglasung wie Isolier- oder Sicherheitsglas",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "insulating_or_safety_glass",
@@ -322,36 +439,63 @@
           "id": "resistant_laminated_safety_glass",
           "label": "Durchbruch- oder durchschusshemmendes Verbundsicherheitsglas",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Verbundsicherheitsglas", "Verbundsicherheitsgläser"]
+          "aliases": [
+            "Verbundsicherheitsglas",
+            "Verbundsicherheitsgläser"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-16",
       "label": "Wintergarten und Vitrinen",
-      "requestedFields": ["limit"],
-      "optionalFields": ["condition"],
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "requestedFields": [
+        "limit"
+      ],
+      "optionalFields": [
+        "condition"
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "winter_garden",
           "label": "Wintergarten",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Wintergarten", "Wintergärten"]
+          "aliases": [
+            "Wintergarten",
+            "Wintergärten"
+          ]
         },
         {
           "id": "display_case",
           "label": "Vitrinen",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Vitrine", "Vitrinen"]
+          "aliases": [
+            "Vitrine",
+            "Vitrinen"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-17",
       "label": "Kosten einer Notverglasung",
-      "requestedFields": ["limit"],
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "requestedFields": [
+        "limit"
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "emergency_glazing_costs",
@@ -373,13 +517,22 @@
             "provisorische Verglasung"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
     },
     {
       "id": "EL-18",
       "label": "Selbstbehalt oder Limit in der Glasversicherung",
-      "requestedFields": ["deductible", "limit"],
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "requestedFields": [
+        "deductible",
+        "limit"
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "glass_deductible",
@@ -405,7 +558,9 @@
             "Portale und Außenverglasungen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
     },
     {
       "id": "EL-19",
@@ -416,15 +571,23 @@
           "id": "elevator_object",
           "label": "Aufzugsanlage",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Aufzugsanlage", "Aufzugsanlagen", "Aufzüge"]
+          "aliases": [
+            "Aufzugsanlage",
+            "Aufzugsanlagen",
+            "Aufzüge"
+          ]
         },
         {
           "id": "machinery_breakdown",
           "label": "Maschinenbruch",
           "factRole": "DAMAGE",
-          "aliases": ["Maschinenbruch"]
+          "aliases": [
+            "Maschinenbruch"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-20",
@@ -444,28 +607,43 @@
           "id": "building_services_object",
           "label": "Übrige Haustechnik",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["haustechnische Anlagen", "Gebäudetechnik"]
+          "aliases": [
+            "haustechnische Anlagen",
+            "Gebäudetechnik"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-21",
       "label": "Elektronikversicherung für Gegensprech- und Zutrittsanlagen",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "electronics_cover",
           "label": "Elektronikversicherung",
           "factRole": "BENEFIT",
-          "aliases": ["Elektronikversicherung", "Elektronikdeckung"]
+          "aliases": [
+            "Elektronikversicherung",
+            "Elektronikdeckung"
+          ]
         },
         {
           "id": "intercom_system",
           "label": "Gegensprechanlage",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Gegensprechanlage", "Gegensprechanlagen"]
+          "aliases": [
+            "Gegensprechanlage",
+            "Gegensprechanlagen"
+          ]
         },
         {
           "id": "access_system",
@@ -488,7 +666,9 @@
             "Elektronikschäden an Gegensprech- und Zutrittsanlagen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "EL-22",
@@ -517,7 +697,9 @@
             "Wallboxen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-23",
@@ -528,7 +710,11 @@
           "id": "photovoltaic_all_risk",
           "label": "Allgefahrendeckung",
           "factRole": "BENEFIT",
-          "aliases": ["Allgefahrendeckung", "All-Risk-Deckung", "All Risks"]
+          "aliases": [
+            "Allgefahrendeckung",
+            "All-Risk-Deckung",
+            "All Risks"
+          ]
         },
         {
           "id": "photovoltaic_system",
@@ -552,7 +738,9 @@
             "All Risks für Photovoltaikanlagen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "EL-24",
@@ -569,28 +757,46 @@
             "Entwendung von Photovoltaikmodulen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-25",
       "label": "Vandalismus ohne vorangegangenen Einbruch",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "vandalism_without_burglary",
           "label": "Vandalismus ohne Einbruch",
           "factRole": "DAMAGE",
-          "aliases": ["böswillige Beschädigung", "erweiterter Vandalismus"]
+          "aliases": [
+            "böswillige Beschädigung",
+            "erweiterter Vandalismus"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-26",
       "label": "Graffitientfernung, Limit und Anzahl pro Jahr",
-      "requestedFields": ["limit", "annual_count"],
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "requestedFields": [
+        "limit",
+        "annual_count"
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "graffiti_removal",
@@ -606,7 +812,9 @@
           "id": "graffiti_damage",
           "label": "Graffitischäden",
           "factRole": "DAMAGE",
-          "aliases": ["Schäden durch Graffiti"]
+          "aliases": [
+            "Schäden durch Graffiti"
+          ]
         },
         {
           "id": "graffiti_limit",
@@ -627,7 +835,9 @@
             "Graffitientfernungen pro Jahr"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "EL-27",
@@ -635,7 +845,9 @@
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": {
-        "narrowScopeKeys": ["FEUER_INSURANCE"],
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ],
         "narrowAliases": [
           "im Zusammenhang mit einem vollbrachten oder versuchten Einbruchdiebstahl"
         ]
@@ -665,16 +877,25 @@
           "id": "cellar_compartments",
           "label": "Kellerabteile",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Kellerabteil", "Kellerabteile"]
+          "aliases": [
+            "Kellerabteil",
+            "Kellerabteile"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-28",
       "label": "Gebäudeschäden durch den Einbruch selbst",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "burglary_building_damage",
@@ -688,14 +909,20 @@
             "Beschädigung oder das Abhandenkommen von Gebäudebestandteilen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-29",
       "label": "Diebstahl fest mit dem Gebäude verbundener Teile",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "theft_of_fixed_building_parts",
@@ -709,7 +936,9 @@
             "Beschädigung oder das Abhandenkommen von Gebäudebestandteilen"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-30",
@@ -726,12 +955,16 @@
             "Entwendung von Außengeräten"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-31",
       "label": "Kosten der Schlossänderung nach Schlüsselverlust",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "lock_change_costs",
@@ -774,24 +1007,34 @@
             "Änderung der Schlösser"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
     },
     {
       "id": "EL-32",
       "label": "Regelung für Generalschlüssel und Schließanlage",
-      "requestedFields": ["limit"],
+      "requestedFields": [
+        "limit"
+      ],
       "components": [
         {
           "id": "master_key",
           "label": "Generalschlüssel",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Generalschlüssel", "Zentralschlüssel"]
+          "aliases": [
+            "Generalschlüssel",
+            "Zentralschlüssel"
+          ]
         },
         {
           "id": "locking_system",
           "label": "Schließanlage",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Schließanlage", "Schließanlagen"]
+          "aliases": [
+            "Schließanlage",
+            "Schließanlagen"
+          ]
         },
         {
           "id": "master_key_and_locking_system_limit",
@@ -805,7 +1048,9 @@
             "Kosten der Schließanlage"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     },
     {
       "id": "EL-33",
@@ -823,34 +1068,52 @@
             "Schäden durch Tauben"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-34",
       "label": "Terror und Sabotage",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      "scopeRules": { "narrowScopeKeys": ["FEUER_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "terror",
           "label": "Terror",
           "factRole": "PERIL",
-          "aliases": ["Terror", "Terrorakte", "Terrorismus"]
+          "aliases": [
+            "Terror",
+            "Terrorakte",
+            "Terrorismus"
+          ]
         },
         {
           "id": "sabotage",
           "label": "Sabotage",
           "factRole": "PERIL",
-          "aliases": ["Sabotage"]
+          "aliases": [
+            "Sabotage"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-35",
       "label": "Innere Unruhen, Streik und Aussperrung",
       "requestedFields": [],
-      "scopeRules": { "narrowScopeKeys": ["GLASBRUCH_INSURANCE"] },
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "civil_unrest",
@@ -869,15 +1132,23 @@
           "id": "strike",
           "label": "Streik",
           "factRole": "PERIL",
-          "aliases": ["Streik", "Streiks"]
+          "aliases": [
+            "Streik",
+            "Streiks"
+          ]
         },
         {
           "id": "lockout",
           "label": "Aussperrung",
           "factRole": "PERIL",
-          "aliases": ["Aussperrung", "Aussperrungen"]
+          "aliases": [
+            "Aussperrung",
+            "Aussperrungen"
+          ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "EL-36",
@@ -915,7 +1186,9 @@
             "Cyberattacke auf die Gebäudesteuerung"
           ]
         }
-      ]
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
     }
   ]
 }

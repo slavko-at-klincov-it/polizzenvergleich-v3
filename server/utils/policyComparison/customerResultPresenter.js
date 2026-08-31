@@ -32,6 +32,7 @@ const APPROVED_RULE_IDS = new Set([
   "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
   "INCLUDED_OVER_EXCLUDED_V1",
   "LOWER_DEDUCTIBLE_V1",
+  "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
   "TYPED_VALUE_EQUALITY_V1",
 ]);
 
@@ -95,6 +96,11 @@ function customerResultText(row) {
     return `Kein klarer Vorteil: nicht vergleichbar – ${withoutPrefix(
       decision.reason,
       "Nicht direkt vergleichbar:"
+    )}`;
+  if (decision.outcome === POINT_OUTCOME.DOCUMENTATION_DIFFERENCE)
+    return `Kein klarer Vorteil: Dokumentationsunterschied – ${withoutPrefix(
+      decision.reason,
+      "Dokumentationsunterschied:"
     )}`;
   if (decision.outcome === POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE)
     return "Kein klarer Vorteil: ungeklärt – In beiden vollständig geprüften bereitgestellten Polizzen wurde keine entsprechende Regelung gefunden. Dies belegt weder Gleichheit noch einen ausdrücklichen Ausschluss.";

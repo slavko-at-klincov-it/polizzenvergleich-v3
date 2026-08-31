@@ -1,6 +1,7 @@
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
   ADVANTAGE_B: "VORTEIL_B",
+  DOCUMENTATION_DIFFERENCE: "DOKUMENTATIONSUNTERSCHIED",
   EQUIVALENT: "GLEICHWERTIG",
   NO_DOCUMENTED_ADVANTAGE: "KEIN_DOKUMENTIERTER_VORTEIL",
   NOT_COMPARABLE: "NICHT_VERGLEICHBAR",
@@ -9,6 +10,7 @@ const POINT_OUTCOME = Object.freeze({
 
 const SEARCH_DISPOSITION = Object.freeze({
   RELEVANT_FOUND: "RELEVANT_FOUND",
+  CONTROLLED_NOT_FOUND: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
   VERIFIED_NOT_FOUND: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
   INCOMPLETE: "SEARCH_INCOMPLETE",
 });
@@ -22,7 +24,7 @@ const COVERAGE_ROLES = new Set([
 
 const DECISIVE_COVERAGE_EFFECTS = new Set(["INCLUDED", "EXCLUDED"]);
 const COVERAGE_CONDITION_MARKER =
-  /\b(?:außer|ausgenommen|sofern|wenn|soweit|vorausgesetzt|unter\s+der\s+Bedingung)\b/iu;
+  /\b(?:außer|ausgenommen|sofern|wenn|soweit|vorausgesetzt|optional|wahlweise|nur\s+bei|auf\s+Antrag|gegen\s+(?:Mehr)?prämie|unter\s+der\s+Bedingung)\b/iu;
 
 function normalized(value) {
   return String(value || "")
@@ -208,7 +210,7 @@ function auditSide(atom) {
 
 function unclear(reasonCode, reason, dimensions = []) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     outcome: POINT_OUTCOME.UNCLEAR,
     reasonCode,
     reason,
@@ -218,10 +220,16 @@ function unclear(reasonCode, reason, dimensions = []) {
   };
 }
 
-function verifiedAbsence(packageSummary) {
+function qualifiedAbsence(packageSummary) {
+  return [
+    SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND,
+    SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
+  ].includes(packageSummary?.searchDisposition);
+}
+
+function assumedNotIncluded(packageSummary) {
   return (
-    packageSummary?.searchDisposition ===
-      SEARCH_DISPOSITION.VERIFIED_NOT_FOUND &&
+    qualifiedAbsence(packageSummary) &&
     packageSummary?.comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1"
   );
 }
@@ -239,6 +247,7 @@ function includedAtomsForAbsenceRule(atoms, categoryId) {
       (atom) =>
         !COVERAGE_ROLES.has(atom.factRole) ||
         atom.coverageEffect !== "INCLUDED" ||
+        atom.documentApplicability !== "ACTIVE" ||
         !completeAtom(atom) ||
         hasConditionalCoverageSource(atom)
     )
@@ -266,7 +275,7 @@ function decideAgainstVerifiedAbsence({
   );
   const absentSide = evidencedSide === "A" ? "B" : "A";
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     outcome:
       evidencedSide === "A"
         ? POINT_OUTCOME.ADVANTAGE_A
@@ -286,6 +295,26 @@ function decideAgainstVerifiedAbsence({
       })),
       {
         categoryId,
+        side: absentSide,
+        searchDisposition: absentPackage.searchDisposition,
+        searchAudit: absentPackage.searchAudit,
+      },
+    ],
+  };
+}
+
+function documentationDifference({ evidencedSide, absentPackage }) {
+  const absentSide = evidencedSide === "A" ? "B" : "A";
+  return {
+    schemaVersion: 3,
+    outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+    reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
+    reason: `Dokumentationsunterschied: Polizze ${evidencedSide} enthält zu diesem Punkt belegten Inhalt. Im vollständigen kontrollierten Suchlauf des bereitgestellten Pakets ${absentSide} wurde mit dem ausgewiesenen Suchplan keine entsprechende Fundstelle ermittelt. Daraus folgt ohne eine gesondert freigegebene Fachregel weder ein Vor- oder Nachteil noch ein ausdrücklicher Ausschluss.`,
+    reviewRequired: false,
+    ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+    comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    dimensions: [
+      {
         side: absentSide,
         searchDisposition: absentPackage.searchDisposition,
         searchAudit: absentPackage.searchAudit,
@@ -459,21 +488,26 @@ function reasonFor(outcome, dimensions) {
 }
 
 function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
-  const absentA = verifiedAbsence(packageA);
-  const absentB = verifiedAbsence(packageB);
+  const absentA = qualifiedAbsence(packageA);
+  const absentB = qualifiedAbsence(packageB);
+  const assumedAbsentA = assumedNotIncluded(packageA);
+  const assumedAbsentB = assumedNotIncluded(packageB);
   if (absentA && absentB)
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       outcome: POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE,
       reasonCode: "VERIFIED_ABSENCE_BOTH",
       reason:
         "Kein dokumentierter Vorteil: In beiden vollständig geprüften bereitgestellten Paketen wurde nach dem ausgewiesenen versionierten Suchvertrag keine entsprechende Regelung gefunden. Dies ist weder ein Nachweis ausdrücklicher Gleichheit noch eines ausdrücklichen Ausschlusses.",
       reviewRequired: false,
       ruleId: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
-      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+      comparisonTreatment:
+        assumedAbsentA && assumedAbsentB
+          ? "ASSUMED_NOT_INCLUDED_V1"
+          : "DOCUMENTATION_ONLY_V1",
       dimensions: [],
     };
-  if (absentA && packageB?.evidenceFound) {
+  if (assumedAbsentA && packageB?.evidenceFound) {
     const decision = decideAgainstVerifiedAbsence({
       categoryId,
       evidencedPackage: packageB,
@@ -483,7 +517,7 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
     });
     if (decision) return decision;
   }
-  if (absentB && packageA?.evidenceFound) {
+  if (assumedAbsentB && packageA?.evidenceFound) {
     const decision = decideAgainstVerifiedAbsence({
       categoryId,
       evidencedPackage: packageA,
@@ -493,6 +527,16 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
     });
     if (decision) return decision;
   }
+  if (absentA && packageB?.evidenceFound)
+    return documentationDifference({
+      evidencedSide: "B",
+      absentPackage: packageA,
+    });
+  if (absentB && packageA?.evidenceFound)
+    return documentationDifference({
+      evidencedSide: "A",
+      absentPackage: packageB,
+    });
   if (!packageA?.evidenceFound && !packageB?.evidenceFound)
     return unclear(
       "MISSING_BOTH",
@@ -568,7 +612,7 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
     dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.NOT_COMPARABLE)
   )
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
       reasonCode: "COMPARABILITY_GATE_FAILED",
       reason: reasonFor(
@@ -597,7 +641,7 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
     winners.size === 1 ? [...winners][0] : POINT_OUTCOME.EQUIVALENT;
   const decisive = dimensions.filter(({ outcome: value }) => value === outcome);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     outcome,
     reasonCode:
       outcome === POINT_OUTCOME.EQUIVALENT

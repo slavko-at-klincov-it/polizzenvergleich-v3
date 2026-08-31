@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const WORKSHEET_SCHEMA_VERSION = 1;
+const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
 const DEFAULT_CLAUSE_SECTION_MAX_CHARS = 6_000;
 const DEFAULT_FALLBACK_WORDS_EACH_SIDE = 120;
@@ -19,6 +19,20 @@ const ALLOWED_SCOPE_POLICIES = new Set([
 const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
 const ALLOWED_ABSENCE_COMPARISON_POLICIES = new Set([
   "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+]);
+const ALLOWED_NEGATIVE_SEARCH_POLICIES = new Set([
+  "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+  "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+]);
+const ALLOWED_ABSENCE_MEANINGS = new Set([
+  "COVERAGE_ONLY",
+  "COVERAGE_MIXED",
+  "COST_COVERAGE",
+  "EXCLUSION",
+  "VALUE_TERM",
+  "CONDITION_ONLY",
+  "DEFINITION_ONLY",
+  "DOCUMENT_REFERENCE",
 ]);
 const ALLOWED_COVERAGE_AGGREGATION_POLICIES = new Set([
   "ALL_COMPONENT_EFFECTS",
@@ -852,7 +866,10 @@ function validateDocument(document) {
 }
 
 function validateCatalog(catalog) {
-  if (catalog?.schemaVersion !== 1 || !Array.isArray(catalog.requirements))
+  if (
+    ![1, 2].includes(catalog?.schemaVersion) ||
+    !Array.isArray(catalog.requirements)
+  )
     throw worksheetError("CATALOG_INVALID");
   const requirementIds = new Set();
   return catalog.requirements.map((requirement) => {
@@ -869,6 +886,18 @@ function validateCatalog(catalog) {
       requirement.components.length === 0
     )
       throw worksheetError("REQUIREMENT_COMPONENTS_REQUIRED", id);
+    if (
+      catalog.schemaVersion === 2 &&
+      (requirement.negativeSearchPolicy === undefined ||
+        requirement.absenceMeaning === undefined)
+    )
+      throw worksheetError("QUALIFIED_ABSENCE_CONTRACT_REQUIRED", id);
+    if (
+      requirement.absenceComparisonPolicy !== undefined &&
+      requirement.negativeSearchPolicy !==
+        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+    )
+      throw worksheetError("CERTIFIED_NEGATIVE_SEARCH_REQUIRED", id);
 
     const componentIds = new Set();
     const components = requirement.components.map((component) => {
@@ -1186,6 +1215,28 @@ function validateCatalog(catalog) {
         if (!ALLOWED_COMPONENT_SATISFACTION_POLICIES.has(policy))
           throw worksheetError("COMPONENT_SATISFACTION_POLICY_INVALID", id);
         return policy;
+      })(),
+      negativeSearchPolicy: (() => {
+        if (requirement.negativeSearchPolicy === undefined) return null;
+        const policy = requireNonEmptyString(
+          requirement.negativeSearchPolicy,
+          "NEGATIVE_SEARCH_POLICY_INVALID",
+          id
+        );
+        if (!ALLOWED_NEGATIVE_SEARCH_POLICIES.has(policy))
+          throw worksheetError("NEGATIVE_SEARCH_POLICY_INVALID", id);
+        return policy;
+      })(),
+      absenceMeaning: (() => {
+        if (requirement.absenceMeaning === undefined) return null;
+        const meaning = requireNonEmptyString(
+          requirement.absenceMeaning,
+          "ABSENCE_MEANING_INVALID",
+          id
+        );
+        if (!ALLOWED_ABSENCE_MEANINGS.has(meaning))
+          throw worksheetError("ABSENCE_MEANING_INVALID", id);
+        return meaning;
       })(),
       absenceComparisonPolicy: (() => {
         if (requirement.absenceComparisonPolicy === undefined) return null;
@@ -1842,6 +1893,12 @@ function buildControlledOccurrenceWorksheet({
       scopeRules: requirement.scopeRules,
       scopePolicy: requirement.scopePolicy,
       componentSatisfactionPolicy: requirement.componentSatisfactionPolicy,
+      ...(requirement.negativeSearchPolicy
+        ? { negativeSearchPolicy: requirement.negativeSearchPolicy }
+        : {}),
+      ...(requirement.absenceMeaning
+        ? { absenceMeaning: requirement.absenceMeaning }
+        : {}),
       ...(requirement.absenceComparisonPolicy
         ? { absenceComparisonPolicy: requirement.absenceComparisonPolicy }
         : {}),

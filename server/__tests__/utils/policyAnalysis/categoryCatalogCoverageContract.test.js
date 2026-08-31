@@ -138,7 +138,7 @@ describe("categoryCatalogCoverageContract", () => {
     }
   );
 
-  test("keeps proven VS pilot definitions unchanged except for the versioned VS-16 recall extension", () => {
+  test("keeps proven VS pilot definitions unchanged beneath the additive absence contract", () => {
     const resources = path.join(__dirname, "../../../resources/policyAnalysis");
     const pilot = JSON.parse(
       fs.readFileSync(
@@ -158,7 +158,12 @@ describe("categoryCatalogCoverageContract", () => {
 
     for (const requirement of pilot.requirements) {
       if (requirement.id !== "VS-16") {
-        expect(fullById.get(requirement.id)).toEqual(requirement);
+        const {
+          negativeSearchPolicy: _negativeSearchPolicy,
+          absenceMeaning: _absenceMeaning,
+          ...unchangedDefinition
+        } = fullById.get(requirement.id);
+        expect(unchangedDefinition).toEqual(requirement);
         continue;
       }
       const extended = fullById.get(requirement.id);
@@ -166,6 +171,8 @@ describe("categoryCatalogCoverageContract", () => {
         id: requirement.id,
         scopePolicy: requirement.scopePolicy,
         componentSatisfactionPolicy: "ANY",
+        negativeSearchPolicy: "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+        absenceMeaning: "COVERAGE_ONLY",
         absenceComparisonPolicy:
           "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
       });

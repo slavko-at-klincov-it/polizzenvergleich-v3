@@ -23,7 +23,7 @@ function atom(side, overrides = {}) {
     coverageEffect: "INCLUDED",
     conflictState: "NONE",
     selectedScopePicture: "GENERAL",
-    documentApplicability: "CONDITIONAL",
+    documentApplicability: "ACTIVE",
     selectedCandidateIds: [candidateId],
     unresolvedCandidateIds: [],
     requestedFieldStatus: "NOT_REQUIRED",
@@ -97,7 +97,7 @@ describe("policy comparison point decision", () => {
     });
 
     expect(result).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       outcome: POINT_OUTCOME.ADVANTAGE_A,
       reasonCode: "EXPLICIT_INCLUDED_OVER_VERIFIED_ABSENCE",
       ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
@@ -133,7 +133,7 @@ describe("policy comparison point decision", () => {
     );
   });
 
-  test("keeps complete absence against non-included or conditional evidence fail-closed", () => {
+  test("reports a documentation difference when complete absence faces evidence without an advantage rule", () => {
     const completeAbsence = {
       evidenceFound: false,
       reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
@@ -146,10 +146,51 @@ describe("policy comparison point decision", () => {
           packageB: completeAbsence,
         })
       ).toMatchObject({
-        outcome: POINT_OUTCOME.UNCLEAR,
-        reasonCode: "MISSING_ONE_SIDE",
+        outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+        reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
       });
     }
+  });
+
+  test("does not award inclusion over absence from inactive document states", () => {
+    const completeAbsence = {
+      evidenceFound: false,
+      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+    };
+    for (const documentApplicability of [
+      "CONDITIONAL",
+      "PROPOSED_ONLY",
+      "UNKNOWN",
+    ]) {
+      expect(
+        decide([atom("a", { documentApplicability })], [], {
+          packageB: completeAbsence,
+        })
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+        ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+      });
+    }
+  });
+
+  test("treats a general controlled zero match as documentation-only", () => {
+    const result = decide([atom("a")], [], {
+      packageB: {
+        evidenceFound: false,
+        reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      },
+    });
+
+    expect(result).toMatchObject({
+      schemaVersion: 3,
+      outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      reviewRequired: false,
+    });
   });
 
   test("blocks partial, contradictory and unresolved package states", () => {

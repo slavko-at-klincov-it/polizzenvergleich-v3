@@ -86,7 +86,7 @@ function writeAtomicCategory(run, categoryView, coverageEffect) {
           coverageEffect,
           conflictState: "NONE",
           selectedScopePicture: "GENERAL",
-          documentApplicability: "CONDITIONAL",
+          documentApplicability: "ACTIVE",
         },
       ],
     })
@@ -122,7 +122,11 @@ function writeAtomicCategory(run, categoryView, coverageEffect) {
   );
 }
 
-function writeCompleteAbsenceCategory(run, categoryView) {
+function writeCompleteAbsenceCategory(
+  run,
+  categoryView,
+  { certified = true } = {}
+) {
   const categoryDirectory = path.join(run.outputDirectory, categoryView);
   const requirementId = `${categoryView}-01`;
   const componentId = "insured_subject";
@@ -154,8 +158,16 @@ function writeCompleteAbsenceCategory(run, categoryView) {
         {
           id: requirementId,
           componentSatisfactionPolicy: "ANY",
-          absenceComparisonPolicy:
-            "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+          negativeSearchPolicy: certified
+            ? "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+            : "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_ONLY",
+          ...(certified
+            ? {
+                absenceComparisonPolicy:
+                  "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+              }
+            : {}),
           components: [
             {
               id: componentId,
@@ -536,7 +548,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V1",
+      id: "CUSTOMER_CORE_5_V2",
+      comparisonContractId: "QUALIFIED_ABSENCE_TYPED_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -626,7 +639,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(4);
+    expect(result.schemaVersion).toBe(5);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -716,6 +729,36 @@ describe("policy comparison result builder", () => {
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "MISSING_ONE_SIDE",
+    });
+  });
+
+  test("reports a general controlled zero match as a documentation difference without inventing coverage", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"));
+    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeCompleteAbsenceCategory(runB, "VS", { certified: false });
+
+    const comparisonRow = buildComparisonResult([runA, runB]).categories[0]
+      .rows[0];
+
+    expect(comparisonRow.packageB).toMatchObject({
+      searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      coverage: "Nicht feststellbar",
+      reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+    });
+    expect(comparisonRow.pointDecision).toMatchObject({
+      schemaVersion: 3,
+      outcome: "DOKUMENTATIONSUNTERSCHIED",
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+      reviewRequired: false,
     });
   });
 });

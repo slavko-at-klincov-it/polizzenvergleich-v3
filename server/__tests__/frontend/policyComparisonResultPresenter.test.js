@@ -45,4 +45,20 @@ describe("policy comparison result presenter", () => {
       legacyFallback: false,
     });
   });
+
+  test("labels a one-sided controlled zero match as documentation difference", () => {
+    expect(
+      presentPointDecision({
+        pointDecision: {
+          outcome: "DOKUMENTATIONSUNTERSCHIED",
+          reason: "Nur in Paket A dokumentiert.",
+          ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+        },
+      })
+    ).toMatchObject({
+      outcome: "DOKUMENTATIONSUNTERSCHIED",
+      label: "Dokumentationsunterschied",
+      legacyFallback: false,
+    });
+  });
 });
