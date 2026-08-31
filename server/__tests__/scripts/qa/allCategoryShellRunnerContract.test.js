@@ -132,6 +132,17 @@ describe("all-category shell runner", () => {
     if (harness) fs.rmSync(harness.root, { recursive: true, force: true });
   });
 
+  test("versions the dormant HP catalog without adding HP to the active run", () => {
+    const source = fs.readFileSync(RUNNER, "utf8");
+
+    expect(source).toContain(
+      "HP) printf '%s\\n' \"$SCRIPT_DIR/server/resources/policyAnalysis/hp-occurrence-full-draft.v0.2.json\" ;;"
+    );
+    expect(source).toContain(
+      'CATEGORY_VIEWS <<< "$("$NODE_BIN" -e \'process.stdout.write(require(process.argv[1]).CATEGORY_ORDER.join(" "))\''
+    );
+  });
+
   test("extracts once and materializes the five customer categories", () => {
     harness = createHarness();
 

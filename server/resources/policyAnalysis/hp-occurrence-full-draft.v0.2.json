@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogId": "hp-occurrence-full-draft-v0.1",
+  "catalogId": "hp-occurrence-full-draft-v0.2",
   "categoryView": "HP",
   "requirements": [
     {
@@ -600,6 +600,14 @@
       "id": "HP-25",
       "label": "Räumlicher Geltungsbereich und Auslandsdeckung",
       "requestedFields": ["scope"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["territorial_scope", "foreign_coverage"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
       "components": [
         {
           "id": "territorial_scope",
@@ -608,7 +616,35 @@
           "aliases": [
             "räumlicher Geltungsbereich",
             "örtlicher Geltungsbereich",
-            "Versicherungsschutz erstreckt sich auf Schadenfälle die in Österreich eingetreten sind"
+            "Versicherungsschutz erstreckt sich auf Schadenfälle die in Österreich eingetreten sind",
+            "weltweit eingetretene Schadenereignisse",
+            "weltweit eintretende Schadenereignisse",
+            "weltweit eingetretene Versicherungsfälle",
+            "weltweit eintretende Versicherungsfälle"
+          ],
+          "conceptSearches": [
+            {
+              "id": "worldwide-loss-events",
+              "maxLines": 2,
+              "requiredGroups": [
+                {
+                  "prefixes": [
+                    "weltweit",
+                    "weltweiter",
+                    "weltweite",
+                    "weltweiten"
+                  ]
+                },
+                {
+                  "prefixes": [
+                    "schadenereign",
+                    "schadensereign",
+                    "versicherungsfall",
+                    "versicherungsfaell"
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
@@ -619,7 +655,35 @@
             "Auslandsdeckung",
             "im Ausland",
             "weltweite Deckung",
-            "europaweite Deckung"
+            "europaweite Deckung",
+            "weltweit eingetretene Schadenereignisse",
+            "weltweit eintretende Schadenereignisse",
+            "weltweit eingetretene Versicherungsfälle",
+            "weltweit eintretende Versicherungsfälle"
+          ],
+          "conceptSearches": [
+            {
+              "id": "worldwide-loss-events",
+              "maxLines": 2,
+              "requiredGroups": [
+                {
+                  "prefixes": [
+                    "weltweit",
+                    "weltweiter",
+                    "weltweite",
+                    "weltweiten"
+                  ]
+                },
+                {
+                  "prefixes": [
+                    "schadenereign",
+                    "schadensereign",
+                    "versicherungsfall",
+                    "versicherungsfaell"
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]

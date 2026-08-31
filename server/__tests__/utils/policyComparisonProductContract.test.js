@@ -29,8 +29,10 @@ describe("policy comparison product contract", () => {
     expect(PRODUCT_PROFILE).toMatchObject({
       id: "CUSTOMER_CORE_5_V2",
       comparisonContractId: "QUALIFIED_ABSENCE_TYPED_V1",
+      categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
+    expect(PRODUCT_PROFILE.categoryCatalogIds).not.toHaveProperty("HP");
 
     for (const categoryView of CATEGORY_ORDER) {
       const catalog = JSON.parse(

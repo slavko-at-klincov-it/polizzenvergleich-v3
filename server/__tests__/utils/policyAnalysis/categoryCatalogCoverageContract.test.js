@@ -103,7 +103,7 @@ describe("categoryCatalogCoverageContract", () => {
     ["LW", "LW_leitungswasser.md", "v0.1"],
     ["ST", "ST_sturm.md", "v0.1"],
     ["EL", "EL_elementar_und_zusatzdeckungen.md", "v0.1"],
-    ["HP", "HP_haus_und_grundbesitzhaftpflicht.md", "v0.1"],
+    ["HP", "HP_haus_und_grundbesitzhaftpflicht.md", "v0.2"],
     ["VB", "VB_vertragsbestimmungen.md", "v0.1"],
     ["WE", "WE_wohnungseigentum.md", "v0.1"],
   ])(
@@ -137,6 +137,32 @@ describe("categoryCatalogCoverageContract", () => {
       });
     }
   );
+
+  test("binds the dormant HP v0.2 filename to its versioned catalog identity", () => {
+    const catalog = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          "../../../resources/policyAnalysis/hp-occurrence-full-draft.v0.2.json"
+        ),
+        "utf8"
+      )
+    );
+
+    expect(catalog).toMatchObject({
+      schemaVersion: 1,
+      catalogId: "hp-occurrence-full-draft-v0.2",
+      categoryView: "HP",
+    });
+    expect(
+      fs.existsSync(
+        path.join(
+          __dirname,
+          "../../../resources/policyAnalysis/hp-occurrence-full-draft.v0.1.json"
+        )
+      )
+    ).toBe(false);
+  });
 
   test("keeps proven VS pilot definitions unchanged beneath the additive absence contract", () => {
     const resources = path.join(__dirname, "../../../resources/policyAnalysis");

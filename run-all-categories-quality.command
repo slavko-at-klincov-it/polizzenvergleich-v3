@@ -160,6 +160,7 @@ fi
 catalog_file() {
   case "$1" in
     VS) printf '%s\n' "$SCRIPT_DIR/server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json" ;;
+    HP) printf '%s\n' "$SCRIPT_DIR/server/resources/policyAnalysis/hp-occurrence-full-draft.v0.2.json" ;;
     *) printf '%s\n' "$SCRIPT_DIR/server/resources/policyAnalysis/$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')-occurrence-full-draft.v0.1.json" ;;
   esac
 }

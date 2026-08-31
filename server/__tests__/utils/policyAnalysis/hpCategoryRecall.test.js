@@ -1,4 +1,4 @@
-const catalog = require("../../../resources/policyAnalysis/hp-occurrence-full-draft.v0.1.json");
+const catalog = require("../../../resources/policyAnalysis/hp-occurrence-full-draft.v0.2.json");
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
@@ -194,6 +194,85 @@ describe("HP category candidate recall", () => {
       result.requirements.find(({ id }) => id === "HP-27")
         .coverageAggregationPolicy
     ).toBe("COVERAGE_ROLES_ONLY");
+  });
+
+  test.each([
+    [
+      "exact policy wording",
+      "Der Versicherungsschutz bezieht sich auf weltweit eingetretene Schadenereignisse.",
+      "weltweit eingetretene Schadenereignisse",
+    ],
+    [
+      "inflected concept wording",
+      "Bei weltweit eintretenden Schadenereignissen besteht Versicherungsschutz.",
+      "CONCEPT_SEARCH:worldwide-loss-events",
+    ],
+    [
+      "reordered concept wording",
+      "Schadenereignisse, die weltweit eintreten, sind vom Versicherungsschutz umfasst.",
+      "CONCEPT_SEARCH:worldwide-loss-events",
+    ],
+  ])(
+    "binds HP-25 worldwide coverage to both semantic components for %s",
+    (_label, text, matchedAlias) => {
+      const result = worksheet(text, `hp-worldwide-${_label}`);
+      const territorial = component(
+        result,
+        "HP-25",
+        "territorial_scope"
+      ).occurrences;
+      const foreign = component(
+        result,
+        "HP-25",
+        "foreign_coverage"
+      ).occurrences;
+
+      expect(territorial).toHaveLength(1);
+      expect(foreign).toHaveLength(1);
+      expect(territorial[0].matchedAlias).toBe(matchedAlias);
+      expect(foreign[0].matchedAlias).toBe(matchedAlias);
+      expect(territorial[0].context.text).toBe(foreign[0].context.text);
+      expectSharedGroup(result, "HP-25", [
+        "territorial_scope",
+        "foreign_coverage",
+      ]);
+    }
+  );
+
+  test("normalizes an OCR-style hyphenated line break in the exact worldwide clause", () => {
+    const result = worksheet(
+      "Der Versicherungsschutz bezieht sich auf welt-\nweit eingetretene Schadenereignisse.",
+      "hp-worldwide-ocr-break"
+    );
+
+    expectOccurrences(result, [
+      ["HP-25", ["territorial_scope", "foreign_coverage"]],
+    ]);
+    expectSharedGroup(result, "HP-25", [
+      "territorial_scope",
+      "foreign_coverage",
+    ]);
+  });
+
+  test.each([
+    [
+      "worldwide portfolio without a loss event",
+      "Das Portfolio ist weltweit verteilt.",
+    ],
+    ["loss event without worldwide scope", "Schadenereignisse werden erfasst."],
+    [
+      "terms separated by a paragraph boundary",
+      "Der Versicherungsschutz gilt weltweit.\n\nSchadenereignisse werden gesondert definiert.",
+    ],
+  ])("rejects HP-25 concept candidates for %s", (_label, text) => {
+    const result = worksheet(text, `hp-worldwide-negative-${_label}`);
+
+    expect(
+      component(result, "HP-25", "territorial_scope").occurrences
+    ).toHaveLength(0);
+    expect(
+      component(result, "HP-25", "foreign_coverage").occurrences
+    ).toHaveLength(0);
   });
 
   test("finds only the two-year environmental tail", () => {
