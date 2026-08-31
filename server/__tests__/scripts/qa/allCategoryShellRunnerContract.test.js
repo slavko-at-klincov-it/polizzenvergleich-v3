@@ -171,7 +171,7 @@ describe("all-category shell runner", () => {
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
       productProfile: {
-        id: "CUSTOMER_CORE_5_V3",
+        id: "CUSTOMER_CORE_5_V4",
         comparisonContractId: "QUALIFIED_ABSENCE_TYPED_V1",
         categoryViews: ["VS", "FE", "LW", "ST", "EL"],
         expectedRowCount: 224,
@@ -181,7 +181,6 @@ describe("all-category shell runner", () => {
         documentStatus: "FRAMEWORK_TERMS",
       },
     });
-
     const resumed = runHarness(harness);
     expect(resumed.status).toBe(0);
     expect(resumed.stdout).toContain("ST – bereits vollständig, übersprungen");

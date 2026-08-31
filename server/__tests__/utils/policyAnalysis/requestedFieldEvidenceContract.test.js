@@ -1347,11 +1347,11 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
-  test("binds both the three-year trigger and the 30-percent threshold for VS-02", () => {
+  test("binds both the three-year trigger and a variable threshold for VS-02", () => {
     const clauseText =
       "Wird eine versicherte Sache nicht innerhalb dreier Jahre ab dem Schadentag wiederhergestellt bzw. wiederbeschafft, erfolgt die Entschädigung nach dem Zeitwert.";
     const thresholdText =
-      "Für instandgehaltene Gebäude gilt ein Zeitwert von mindestens 30 % und damit die volle Neuwertentschädigung.";
+      "Für instandgehaltene Gebäude gilt ein Zeitwert von zumindest 42,5 % und damit die volle Neuwertentschädigung.";
     const clause = textualOccurrence({
       candidateId: "candidate:vs02-clause",
       text: clauseText,
@@ -1361,7 +1361,7 @@ describe("requestedFieldEvidenceContract", () => {
     const threshold = textualOccurrence({
       candidateId: "candidate:vs02-threshold",
       text: thresholdText,
-      exactText: "Zeitwert von mindestens 30 %",
+      exactText: "Zeitwert von zumindest 42,5 %",
       contextStart: 500,
     });
     const result = materializeRequestedFieldEvidence({
@@ -1403,12 +1403,239 @@ describe("requestedFieldEvidenceContract", () => {
               source: { candidateId: "candidate:vs02-clause" },
             },
             {
-              normalizedValue: "Zeitwert mindestens 30 %",
+              normalizedValue: "Zeitwert mindestens 42,5 %",
               source: { candidateId: "candidate:vs02-threshold" },
             },
           ],
         },
       ],
+    });
+  });
+
+  test("keeps local coverage limit, deductible and waiting period in distinct fields", () => {
+    const text =
+      "Erdbeben ist bis EUR 20.000 je Jahr versichert. Der Selbstbehalt beträgt EUR 350 je Schadenfall. Die Wartezeit beträgt 72 Stunden.";
+    const source = textualOccurrence({
+      candidateId: "candidate:el07-local-values",
+      text,
+      exactText: "Erdbeben",
+    });
+    source.context.unitType = "CLAUSE_SECTION";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "EL-07",
+        label: "Erdbeben",
+        requestedFields: [],
+        optionalFields: ["limit", "deductible", "waiting_period"],
+        components: [
+          {
+            id: "earthquake",
+            label: "Erdbeben",
+            factRole: "PERIL",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:el07-local-values",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_REQUIRED,
+      optionalFields: ["limit", "deductible", "waiting_period"],
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "EUR 20.000",
+              qualifier: "pro Jahr",
+            }),
+          ],
+        },
+        {
+          field: "deductible",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({ normalizedValue: "EUR 350" }),
+          ],
+        },
+        {
+          field: "waiting_period",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({ normalizedValue: "72 Stunden" }),
+          ],
+        },
+      ],
+    });
+  });
+
+  test("binds each local limit only to its own component of an ANY row", () => {
+    const text =
+      "Carports sind bis EUR 75.000 je Schadenfall mitversichert. Garagen sind bis EUR 100.000 je Schadenfall mitversichert.";
+    const carport = textualOccurrence({
+      candidateId: "candidate:vs16-carport-limit",
+      text,
+      exactText: "Carports",
+    });
+    const garage = textualOccurrence({
+      candidateId: "candidate:vs16-garage-limit",
+      text,
+      exactText: "Garagen",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-16",
+        label: "Garagen, Stellplätze oder Carports",
+        requestedFields: [],
+        optionalFields: ["limit"],
+        componentSatisfactionPolicy: "ANY",
+        components: [
+          {
+            id: "garage",
+            label: "Garagen",
+            factRole: "INSURED_OBJECT",
+            occurrences: [garage],
+          },
+          {
+            id: "carport",
+            label: "Carports",
+            factRole: "INSURED_OBJECT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs16-carport-limit",
+        "DIRECT",
+      ], ["candidate:vs16-garage-limit", "DIRECT"]),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      field: "limit",
+      status: FIELD_EVIDENCE_STATUS.FOUND,
+      facts: [
+        expect.objectContaining({
+          normalizedValue: "EUR 75.000",
+          componentScope: { id: "carport", label: "Carports" },
+        }),
+        expect.objectContaining({
+          normalizedValue: "EUR 100.000",
+          componentScope: { id: "garage", label: "Garagen" },
+        }),
+      ],
+    });
+  });
+
+  test.each(["LW-30", "ST-33"])(
+    "keeps an amount on a deductible component for %s",
+    (requirementId) => {
+      const text =
+        "Der Selbstbehalt beträgt EUR 350, die Höchstentschädigung beträgt EUR 20.000.";
+      const source = textualOccurrence({
+        candidateId: `candidate:${requirementId}:deductible`,
+        text,
+        exactText: "Selbstbehalt",
+      });
+      const result = materializeRequestedFieldEvidence({
+        worksheet: textualWorksheet({
+          id: requirementId,
+          label: "Selbstbehalt",
+          requestedFields: ["amount"],
+          components: [
+            {
+              id: "deductible",
+              label: "Selbstbehalt",
+              factRole: "DEDUCTIBLE",
+              occurrences: [source],
+            },
+          ],
+        }),
+        materializedCandidates: selections([
+          `candidate:${requirementId}:deductible`,
+          "DIRECT",
+        ]),
+      });
+
+      expect(result.requirements[0].fields[0]).toMatchObject({
+        field: "amount",
+        status: FIELD_EVIDENCE_STATUS.FOUND,
+        facts: [expect.objectContaining({ normalizedValue: "EUR 350" })],
+      });
+    }
+  );
+
+  test("does not classify a neighboring duration as waiting period", () => {
+    const text =
+      "Die Wartezeit beträgt 72 Stunden. Die Leistungsdauer beträgt 12 Monate.";
+    const source = textualOccurrence({
+      candidateId: "candidate:waiting-only",
+      text,
+      exactText: "Wartezeit",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "EL-07",
+        label: "Erdbeben",
+        requestedFields: ["waiting_period"],
+        components: [
+          {
+            id: "earthquake",
+            label: "Erdbeben",
+            factRole: "PERIL",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections(["candidate:waiting-only", "DIRECT"]),
+    });
+
+    expect(result.requirements[0].fields[0].facts).toEqual([
+      expect.objectContaining({ normalizedValue: "72 Stunden" }),
+    ]);
+  });
+
+  test("rejects impossible VS-02 percentages and keeps the threshold component local", () => {
+    const text =
+      "Die Entschädigung nach dem Zeitwert gilt bei einem Zeitwert von mindestens 120 %.";
+    const threshold = textualOccurrence({
+      candidateId: "candidate:vs02-invalid-threshold",
+      text,
+      exactText: "Zeitwert von mindestens 120 %",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-02",
+        label: "Zeitwertklausel",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "current_value_clause",
+            label: "Zeitwertklausel",
+            factRole: "BENEFIT",
+            occurrences: [],
+          },
+          {
+            id: "residual_value_threshold",
+            label: "Restwertverhältnis",
+            factRole: "CONDITION",
+            occurrences: [threshold],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs02-invalid-threshold",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
     });
   });
 

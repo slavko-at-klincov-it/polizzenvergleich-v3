@@ -189,15 +189,62 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
 }
 
 function limitQualifier(text, match) {
-  const start = Math.max(0, match.index - 100);
-  const end = Math.min(text.length, match.index + match[0].length + 140);
+  let sentenceStart = match.index;
+  while (sentenceStart > 0 && !/[.!?;\n\r]/u.test(text[sentenceStart - 1]))
+    sentenceStart -= 1;
+  let sentenceEnd = match.index + match[0].length;
+  while (sentenceEnd < text.length && !/[.!?;\n\r]/u.test(text[sentenceEnd]))
+    sentenceEnd += 1;
+  const start = Math.max(sentenceStart, match.index - 100);
+  const end = Math.min(sentenceEnd, match.index + match[0].length + 140);
   const nearby = text.slice(start, end);
   const qualifiers = [];
   if (/auf\s+[„“"']*\s*Erstes\s+Risiko/iu.test(nearby))
     qualifiers.push("auf Erstes Risiko");
   if (/\b(?:je|pro)\s+Schadenfall\b/iu.test(nearby))
     qualifiers.push("je Schadenfall");
+  if (/\b(?:je|pro)\s+(?:Schaden)?ereignis\b/iu.test(nearby))
+    qualifiers.push("je Ereignis");
+  if (
+    /\b(?:Jahresh[oö]chst(?:entsch[aä]digung|grenze)|pro\s+Jahr|je\s+Jahr)\b/iu.test(
+      nearby
+    )
+  )
+    qualifiers.push("pro Jahr");
+  if (
+    /\bKumul(?:schaden)?(?:grenze|limit|h[oö]chstentsch[aä]digung)\b/iu.test(
+      nearby
+    )
+  )
+    qualifiers.push("Kumulschadengrenze");
   return qualifiers.join(", ");
+}
+
+function deductibleFact(occurrence, fact) {
+  const context = validatedContext(occurrence);
+  const relativeStart =
+    Number(fact?.source?.documentStart) - context.documentStart;
+  const relativeEnd = Number(fact?.source?.documentEnd) - context.documentStart;
+  if (!Number.isInteger(relativeStart) || !Number.isInteger(relativeEnd))
+    return false;
+  const before = context.text.slice(
+    Math.max(0, relativeStart - 100),
+    relativeStart
+  );
+  const after = context.text.slice(relativeEnd, relativeEnd + 35);
+  const markerPattern = /\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/giu;
+  const beforeMarkers = [...before.matchAll(markerPattern)];
+  const afterMarker = after.match(
+    /^[^.;:\n]{0,20}\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/iu
+  );
+  if (afterMarker) return true;
+  const lastMarker = beforeMarkers.at(-1);
+  if (!lastMarker) return false;
+  const between = before.slice(lastMarker.index + lastMarker[0].length);
+  return (
+    between.length <= 70 &&
+    !/(?:EUR|€)\s*\d|\d{1,3}(?:[.,]\d+)?\s*%/iu.test(between)
+  );
 }
 
 function valueFollowsCandidate(occurrence, match) {
@@ -375,6 +422,34 @@ function extractBoundLimitFacts(options) {
     ...extractUnboundedLimitFacts(options),
     ...extractFieldGovernorLimitFacts(options),
   ];
+}
+
+function extractCoverageLimitFacts(options) {
+  return extractBoundLimitFacts(options).filter(
+    (fact) => !deductibleFact(options.occurrence, fact)
+  );
+}
+
+function factWithinOccurrenceSentence(occurrence, fact) {
+  const range = occurrenceSentenceRange(occurrence);
+  if (!range) return false;
+  const start = Number(fact?.source?.documentStart) - range.documentStart;
+  const end = Number(fact?.source?.documentEnd) - range.documentStart;
+  return start >= range.start && end <= range.end;
+}
+
+function extractLocalCoverageLimitFacts(options) {
+  return extractCoverageLimitFacts(options).filter((fact) =>
+    factWithinOccurrenceSentence(options.occurrence, fact)
+  );
+}
+
+function extractDeductibleFacts(options) {
+  return extractBoundLimitFacts(options).filter(
+    (fact) =>
+      ["MONEY", "PERCENT"].includes(fact.valueType) &&
+      deductibleFact(options.occurrence, fact)
+  );
 }
 
 function extractOutbuildingLimitFacts(options) {
@@ -667,6 +742,46 @@ function extractDurationFacts({ occurrence, binding }) {
         },
       });
     });
+}
+
+function extractWaitingPeriodFacts(options) {
+  const { occurrence, binding } = options;
+  const { text } = validatedContext(occurrence);
+  const duration =
+    "(?<duration>(?:\\d{1,3}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\\s+(?:Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?))";
+  const patterns = [
+    new RegExp(
+      `(?:Karenz(?:frist|zeit)?|Warte(?:frist|zeit))[^.;\\n]{0,80}?${duration}`,
+      "giu"
+    ),
+    new RegExp(
+      `Versicherungsschutz\\s+beginnt\\s+(?:erst\\s+)?nach\\s+${duration}`,
+      "giu"
+    ),
+  ];
+  const facts = [];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const rawDuration = match.groups?.duration;
+      if (!rawDuration) continue;
+      const durationMatch = [rawDuration];
+      durationMatch.index = match.index + match[0].lastIndexOf(rawDuration);
+      const fact = extractDurationFacts({
+        occurrence: {
+          ...occurrence,
+          documentStart:
+            occurrence.context.documentStart + durationMatch.index,
+          documentEnd:
+            occurrence.context.documentStart +
+            durationMatch.index +
+            rawDuration.length,
+        },
+        binding,
+      }).find(({ source }) => source.exactText === rawDuration);
+      if (fact) facts.push(fact);
+    }
+  }
+  return facts;
 }
 
 function extractContractTermDurationFacts({ occurrence, binding }) {
@@ -985,7 +1100,7 @@ function extractUnderinsuranceConditionTypeFacts({ occurrence, binding }) {
   });
 }
 
-function extractCurrentValueConditionFacts({ occurrence, binding }) {
+function extractCurrentValueDurationFacts({ occurrence, binding }) {
   return extractPatternFacts({
     occurrence,
     binding,
@@ -996,12 +1111,41 @@ function extractCurrentValueConditionFacts({ occurrence, binding }) {
         normalize: () =>
           "Wiederherstellung oder Wiederbeschaffung nicht innerhalb von 3 Jahren: Entschädigung zum Zeitwert",
       },
-      {
-        pattern: /Zeitwert\s+von\s+mindestens\s+30\s*%/giu,
-        normalize: () => "Zeitwert mindestens 30 %",
-      },
     ],
   });
+  });
+}
+
+function extractResidualValueThresholdFacts({ occurrence, binding }) {
+  const { text } = validatedContext(occurrence);
+  const pattern =
+    /Zeitwert\s+(?:von\s+)?(?<comparison>mindestens|zumindest|nicht\s+weniger\s+als|weniger\s+als|unter|h[oö]chstens)\s+(?<percent>\d{1,3}(?:[.,]\d+)?)\s*%/giu;
+  const facts = [];
+  for (const match of text.matchAll(pattern)) {
+    const numeric = Number(match.groups.percent.replace(",", "."));
+    if (!Number.isFinite(numeric) || numeric <= 0 || numeric > 100) continue;
+    const comparison = /^(?:mindestens|zumindest|nicht\s+weniger\s+als)$/iu.test(
+      match.groups.comparison
+    )
+      ? "mindestens"
+      : whitespaceNormalized(match.groups.comparison);
+    facts.push(
+      sourceBoundFact({
+        occurrence,
+        binding,
+        match,
+        value: {
+          normalizedValue: `Zeitwert ${comparison} ${match.groups.percent.replace(
+            ".",
+            ","
+          )} %`,
+          valueType: "TEXT",
+          unit: null,
+        },
+      })
+    );
+  }
+  return facts;
 }
 
 function extractRestorationDurationFacts({ occurrence, binding }) {
@@ -1210,7 +1354,7 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
   });
 }
 
-function extractorFor(requirement, field) {
+function extractorFor(requirement, field, componentId = null) {
   const requirementId = requirement.id;
   if (requirementId === "FE-F05" && field === "condition")
     return extractInsurancePeriodConditionFacts;
@@ -1230,8 +1374,20 @@ function extractorFor(requirement, field) {
     return extractTotalPremiumFacts;
   if (requirementId === "VS-01" && field === "limit")
     return extractInsuredNewValueFacts;
-  if (requirementId === "VS-02" && field === "condition")
-    return extractCurrentValueConditionFacts;
+  if (
+    requirementId === "VS-02" &&
+    field === "condition" &&
+    componentId === "current_value_clause"
+  )
+    return extractCurrentValueDurationFacts;
+  if (
+    requirementId === "VS-02" &&
+    field === "condition" &&
+    componentId === "residual_value_threshold"
+  )
+    return extractResidualValueThresholdFacts;
+  if (requirementId === "VS-16" && field === "limit")
+    return extractLocalCoverageLimitFacts;
   if (requirementId === "VS-21" && field === "limit") return extractLimitFacts;
   if (requirementId === "VS-28" && field === "duration")
     return extractDurationFacts;
@@ -1271,8 +1427,19 @@ function extractorFor(requirement, field) {
   // conservative field-type extractors until a narrower category oracle
   // promotes a specialised extractor.
   if (requirementId.startsWith("VS-")) return null;
-  if (["limit", "limits", "amount", "deductible"].includes(field))
-    return extractBoundLimitFacts;
+  if (["limit", "limits"].includes(field))
+    return extractCoverageLimitFacts;
+  if (field === "amount") {
+    const roles = new Set(
+      (requirement.components || []).map(({ factRole }) => factRole)
+    );
+    if (roles.size === 1 && roles.has("DEDUCTIBLE"))
+      return extractDeductibleFacts;
+    if (roles.has("DEDUCTIBLE")) return null;
+    return extractCoverageLimitFacts;
+  }
+  if (field === "deductible") return extractDeductibleFacts;
+  if (field === "waiting_period") return extractWaitingPeriodFacts;
   if (["duration", "interval"].includes(field)) return extractDurationFacts;
   if (field === "threshold") return extractThresholdFacts;
   if (field === "date") return extractDateFacts;
@@ -1290,6 +1457,13 @@ function valueCoversRequirement({
   bindingByCandidateId,
 }) {
   if (indexed.requirement.components.length <= 1) return true;
+  if (
+    indexed.requirement.componentSatisfactionPolicy === "ANY" &&
+    ["limit", "limits", "amount", "deductible", "waiting_period"].includes(
+      field
+    )
+  )
+    return true;
   if (
     indexed.requirement.id === "FE-F05" &&
     field === "date" &&
@@ -1399,9 +1573,6 @@ function extractPreferredFacts({
   candidateById,
   bindingByCandidateId,
 }) {
-  const extractor = extractorFor(requirement, field);
-  if (!extractor) return [];
-
   const factsByBinding = new Map(
     Object.values(VALUE_BINDING).map((binding) => [binding, []])
   );
@@ -1409,6 +1580,12 @@ function extractPreferredFacts({
     if (!factsByBinding.has(binding)) continue;
     const indexed = candidateById.get(candidateId);
     if (indexed.requirement.id !== requirement.id) continue;
+    const extractor = extractorFor(
+      requirement,
+      field,
+      indexed.component.id
+    );
+    if (!extractor) continue;
     if (
       !valueCoversRequirement({
         indexed,
@@ -1538,8 +1715,10 @@ function materializeRequestedFieldEvidence({
         )
       : [];
     const fields = [...requestedFields, ...optionalFields].map((field) => {
-      const extractor = extractorFor(requirement, field);
-      if (!extractor)
+      const extractors = requirement.components
+        .map(({ id }) => extractorFor(requirement, field, id))
+        .filter(Boolean);
+      if (extractors.length === 0)
         return {
           field,
           status: FIELD_EVIDENCE_STATUS.NOT_EVALUATED,

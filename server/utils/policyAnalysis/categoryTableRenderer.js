@@ -485,6 +485,7 @@ function buildCategoryTableRows({
         ["calculation_method", "Berechnungsmethode"],
         ["index_type", "Indexart"],
         ["duration", "Dauer"],
+        ["waiting_period", "Wartezeit"],
         ["interval", "Intervall"],
         ["threshold", "Schwellenwert"],
         ["date", "Datum"],

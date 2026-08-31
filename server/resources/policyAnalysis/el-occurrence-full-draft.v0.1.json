@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.3",
+  "catalogId": "el-occurrence-full-draft-v0.4",
   "categoryView": "EL",
   "requirements": [
     {
@@ -167,6 +167,11 @@
       "id": "EL-07",
       "label": "Erdbeben",
       "requestedFields": [],
+      "optionalFields": [
+        "limit",
+        "deductible",
+        "waiting_period"
+      ],
       "scopeRules": {
         "narrowScopeKeys": ["STURM_INSURANCE"]
       },
