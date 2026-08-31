@@ -3876,3 +3876,31 @@ NO MODEL RUN: keine Kunden-PDFs und kein LLM-Lauf
 NO DEPLOY: installierter Kundenstand v3.5.1 / ca2add77 blieb unverändert
 NO CLAIM: kein unbekannter HP-Holdout und kein allgemeiner Qualitätsnachweis
 ```
+
+## 76. Dreiphasiger Recall-, Shadow- und Zertifizierungsvertrag
+
+Der Primärpfad wurde in sechs getrennten Themencommits um allgemeine
+Konzeptfamilien, semantischen Heading-Reset, rollenrichtige lokale
+Wertebindung, flektierte Suchstämme, klausellokale Erdbebenwerte und eine
+neutrale `VS-16`-Wirkung erweitert. Produktive automatische
+`COVERAGE_ONLY`-Annahmen benötigen nun eine zeilenweise Registryfreigabe; die
+Registry ist leer, daher ist aktuell keine Zeile zertifiziert.
+
+Ein neuer Hybridweg ist ausschließlich als separater, manueller
+Shadow-QA-Lauf implementiert. Er ist nicht mit Kundenworker, Primärrunner,
+Resume oder Ergebnisbildung verbunden. Breite Chunks navigieren nur;
+servereigene exakte Spannen durchlaufen anschließend den normalen Triage- und
+Evidenzvertrag. Manifest-, Release-, Modell-, Runtime-, Dokumentstatus- und
+Artefakt-Hashes verhindern fremde oder stale Kombinationen. Recall und FPR
+werden erst nach reviewer- und oraclegebundener Kennzeichnung berechnet.
+
+Vollständige Implementierungsdokumentation:
+`docs/DREIPHASEN_RECALL_SHADOW_ZERTIFIZIERUNG_2026-08-31_DE.md`.
+
+```text
+IMPLEMENTIERT: Phase A, isolierter Phase-B-Shadowweg, Phase-C-Gates
+NICHT AUSGEFÜHRT: Tests, Lint, Build, Modelllauf, Mac-Studio-Lauf
+NICHT ZERTIFIZIERT: alle COVERAGE_ONLY-Zeilen; Registry ist leer
+NO DEPLOY: installierter Kundenstand blieb unverändert
+NO CLAIM: keine fachliche Freigabe, kein Holdout- oder 99-Prozent-Nachweis
+```
