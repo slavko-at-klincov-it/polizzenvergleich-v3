@@ -1289,7 +1289,7 @@ describe("controlledOccurrenceWorksheet", () => {
           scopeResolution.basis === "MATCHING_CATEGORY_SECTION" &&
           scopeResolution.matchedAlias === "GENERAL_CONTRACT_TERMS"
       )
-    ).toHaveLength(2);
+    ).toHaveLength(6);
   });
 
   test("keeps inherited scope before and resets it after a later summary heading", () => {

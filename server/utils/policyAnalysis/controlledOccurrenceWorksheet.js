@@ -814,7 +814,7 @@ function validateDocument(document) {
     const printedPageLabels = [
       ...text.matchAll(/\bSeite\s+\d+\s+von\s+\d+\b/giu),
     ].map((match) => match[0]);
-    const validatedRequirement = {
+    return {
       pageNumber,
       physicalPageNumber: pageNumber,
       printedPageLabel:
@@ -1199,7 +1199,7 @@ function validateCatalog(catalog) {
         ],
       };
     }
-    return {
+    const validatedRequirement = {
       id,
       label: requireNonEmptyString(
         requirement.label,
