@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.5",
+  "catalogId": "el-occurrence-full-draft-v0.6",
   "categoryView": "EL",
   "requirements": [
     {
@@ -283,12 +283,16 @@
     },
     {
       "id": "EL-12",
-      "label": "Ausschluss oder Zuschlag aufgrund der Hochwasserzone",
+      "label": "Zonenbedingte Einschränkung bei Hochwasser",
       "requestedFields": ["condition"],
+      "optionalFields": ["limit"],
+      "scopeRules": {
+        "narrowScopeKeys": ["STURM_INSURANCE"]
+      },
       "components": [
         {
           "id": "flood_zone_exclusion_or_surcharge",
-          "label": "Ausschluss oder Zuschlag aufgrund der Hochwasserzone",
+          "label": "Ausschluss, Zuschlag, Limit oder Selbstbehalt aufgrund der Hochwasserzone",
           "factRole": "CONDITION",
           "aliases": [
             "Hochwasserzone",

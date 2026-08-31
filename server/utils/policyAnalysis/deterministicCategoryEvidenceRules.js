@@ -636,6 +636,43 @@ function explicitSt23GenericThrownObjectBinding({
   };
 }
 
+function explicitEl12FloodZoneConsequenceBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "EL" ||
+    requirement?.id !== "EL-12" ||
+    component?.id !== "flood_zone_exclusion_or_surcharge" ||
+    component?.factRole !== "CONDITION"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  const hasFloodZone =
+    /(?:HQ(?:30|100)[\s-]*Zone|HORA[\s-]*Zone|Hochwasser[\s-]*(?:Risiko|Gefahren)?zone|Gefahrenzone\s+Hochwasser)/iu.test(
+      clause
+    );
+  const hasFloodPeril = /(?:Hochwasser|[ÜUu]berschwemmung)/iu.test(clause);
+  const hasLocalConsequence =
+    /(?:ausgeschlossen|kein\s+Versicherungsschutz|Zuschlag|Mehrpr[aä]mie|Selbstbehalt)/iu.test(
+      clause
+    ) ||
+    /(?:Versicherungssumme|H[oö]chstentsch[aä]digung|Entsch[aä]digung)[\s\S]{0,120}(?:maximal|h[oö]chstens|bis\s+zu)\s*(?:EUR|€)?\s*\d/iu.test(
+      clause
+    );
+  if (!hasFloodZone || !hasFloodPeril || !hasLocalConsequence) return null;
+  return {
+    binding:
+      occurrence?.sectionScopeHint?.scopeKey === "STURM_INSURANCE"
+        ? DETERMINISTIC_BINDING.NARROW_SCOPE
+        : DETERMINISTIC_BINDING.DIRECT,
+    basis: "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE",
+    authoritative: true,
+  };
+}
+
 function explicitFeF05InsurancePeriodBinding({
   categoryView,
   requirement,
@@ -1023,6 +1060,15 @@ function deterministicCategoryCandidateBinding({
   );
   if (st23GenericThrownObjectBinding) return st23GenericThrownObjectBinding;
 
+  const el12FloodZoneConsequenceBinding =
+    explicitEl12FloodZoneConsequenceBinding({
+      categoryView,
+      requirement,
+      component,
+      occurrence,
+    });
+  if (el12FloodZoneConsequenceBinding) return el12FloodZoneConsequenceBinding;
+
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
     categoryView,
     requirement,
@@ -1240,6 +1286,24 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  if (
+    target.categoryView === "EL" &&
+    target.requirementId === "EL-12" &&
+    target.componentId === "flood_zone_exclusion_or_surcharge"
+  ) {
+    const selectedCandidateIds = target.candidates
+      .filter(
+        ({ deterministicBindingBasis }) =>
+          deterministicBindingBasis === "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE"
+      )
+      .map(({ candidateId }) => candidateId);
+    if (selectedCandidateIds.length > 0)
+      return {
+        selectedCandidateIds,
+        coverageEffect: COVERAGE_EFFECT.DEFINED,
+        basis: "EXPLICIT_EL12_FLOOD_ZONE_CONSEQUENCE:EL:EL-12",
+      };
+  }
   if (
     isGeneralBranchMaximumTarget({
       categoryView: target.categoryView,

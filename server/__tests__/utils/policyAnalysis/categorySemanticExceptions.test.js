@@ -54,6 +54,82 @@ function occurrence({
 }
 
 describe("category semantic exceptions", () => {
+  test("binds only explicit contractual consequences of a flood zone", () => {
+    const bindingFor = ({ contextText, exactText, sectionScopeKey }) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "EL" } },
+        requirement: { id: "EL-12" },
+        component: {
+          id: "flood_zone_exclusion_or_surcharge",
+          factRole: "CONDITION",
+        },
+        occurrence: occurrence({
+          candidateId: "candidate:el-12",
+          exactText,
+          contextText,
+          scopeLeadText: "Katastrophendeckung",
+          sectionScopeKey,
+          pageNumber: 10,
+        }),
+      });
+
+    expect(
+      bindingFor({
+        contextText:
+          "Befindet sich das versicherte Objekt innerhalb der HQ30-Zone, beträgt die Versicherungssumme bei Schäden durch Hochwasser maximal EUR 10.000.",
+        exactText:
+          "Befindet sich das versicherte Objekt innerhalb der HQ30-Zone, beträgt die Versicherungssumme bei Schäden durch Hochwasser maximal EUR 10.000",
+        sectionScopeKey: "STURM_INSURANCE",
+      })
+    ).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE",
+      authoritative: true,
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Für Hochwasser in der HORA-Zone gilt ein Prämienzuschlag.",
+        exactText: "Für Hochwasser in der HORA-Zone gilt ein Prämienzuschlag",
+        sectionScopeKey: "ELEMENTAR_INSURANCE",
+      })
+    ).toMatchObject({ binding: "DIRECT" });
+    for (const contextText of [
+      "HQ30 ist ein statistischer Kennwert für Hochwasser.",
+      "Für die Sturmzone gilt ein Zuschlag.",
+    ]) {
+      const decision = bindingFor({
+        contextText,
+        exactText: contextText.slice(0, -1),
+        sectionScopeKey: "STURM_INSURANCE",
+      });
+      expect(decision?.basis).not.toBe(
+        "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE"
+      );
+      expect(decision?.binding).not.toBe("DIRECT");
+    }
+
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "EL",
+        requirementId: "EL-12",
+        componentId: "flood_zone_exclusion_or_surcharge",
+        candidates: [
+          {
+            candidateId: "candidate:el-12",
+            candidateBinding: "NARROW_SCOPE",
+            deterministicBindingBasis:
+              "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:el-12"],
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: "EXPLICIT_EL12_FLOOD_ZONE_CONSEQUENCE:EL:EL-12",
+    });
+  });
+
   test("keeps generic storm-thrown objects non-evidentiary for tree impact", () => {
     const bindingFor = ({ contextText, exactText, matchedAlias }) =>
       deterministicCategoryCandidateBinding({

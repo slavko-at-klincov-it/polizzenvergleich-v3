@@ -114,6 +114,12 @@ describe("EL category recall catalog", () => {
       "EL-12",
       "flood_zone_exclusion_or_surcharge"
     );
+    const requirement = result.requirements.find(({ id }) => id === "EL-12");
+
+    expect(requirement.optionalFields).toContain("limit");
+    expect(requirement.scopeRules.narrowScopeKeys).toContain(
+      "STURM_INSURANCE"
+    );
 
     expect(floodZone.occurrences).toEqual(
       expect.arrayContaining([

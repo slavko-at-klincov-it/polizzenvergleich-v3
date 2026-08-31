@@ -32,7 +32,7 @@ Reihenfolge aus:
 | `EL-09` | V | Lawine |
 | `EL-10` | V | Vermurung |
 | `EL-11` | K | Selbstbehalt in der Sparte Elementar |
-| `EL-12` | K | Ausschluss oder Zuschlag aufgrund der Hochwasserzone |
+| `EL-12` | K | Zonenbedingte Einschränkung bei Hochwasser |
 | `EL-13` | S | Glasbruch an der Gebäudeverglasung |
 | `EL-14` | S | Glasbruch in Stiegenhaus und Gemeinschaftsräumen |
 | `EL-15` | S | Sonderverglasung wie Isolier- oder Sicherheitsglas |

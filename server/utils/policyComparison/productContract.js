@@ -21,7 +21,7 @@ const PRODUCT_PROFILE = Object.freeze({
     FE: "fe-occurrence-full-draft-v0.5",
     LW: "lw-occurrence-full-draft-v0.5",
     ST: "st-occurrence-full-draft-v0.4",
-    EL: "el-occurrence-full-draft-v0.5",
+    EL: "el-occurrence-full-draft-v0.6",
   }),
   expectedRowCount: EXPECTED_ROW_COUNT,
 });
