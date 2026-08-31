@@ -27,24 +27,24 @@ brauchbar, aber noch nicht als ungeprüftes Kundenergebnis freizugeben.
 
 ## 2. Identität und Ausführungsumgebung
 
-| Merkmal | Wert |
-| --- | --- |
-| Implementierungscommit | `343a665e3ffb3462fdcef5852a28ccddb64ffd1f` |
-| isolierter Mac-Studio-Checkout | `/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo` |
-| installierter Kundenstand | unverändert auf `977ed40f` |
-| Modell | `qwen/qwen3.6-35b-a3b` |
-| Laufzeitansicht | MLX 4 Bit, text-only |
-| geladener Kontext | exakt 42.496 Token |
-| Parallelität | 1 |
-| zusätzlich geladenes Embeddingmodell | keines |
-| Session | `6c3a1a8c-9e58-4965-8720-0545aabbf889` |
-| Run-Signatur | `eee75c48f18cd2726a32b582…` |
-| Produktprofil | `CUSTOMER_CORE_5_V2` |
-| Kategorien | VS, FE, LW, ST, EL |
-| Dokumente / Seiten | 10 / 108, davon 108 mit Text |
-| Dokument-Kategorie-Schritte | 50/50 |
-| Resume-Schritte | 0 |
-| Gesamtlaufzeit | 1.621,550 s = 27:01,550 |
+| Merkmal                              | Wert                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Implementierungscommit               | `343a665e3ffb3462fdcef5852a28ccddb64ffd1f`                                                                                        |
+| isolierter Mac-Studio-Checkout       | `/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo` |
+| installierter Kundenstand            | unverändert auf `977ed40f`                                                                                                        |
+| Modell                               | `qwen/qwen3.6-35b-a3b`                                                                                                            |
+| Laufzeitansicht                      | MLX 4 Bit, text-only                                                                                                              |
+| geladener Kontext                    | exakt 42.496 Token                                                                                                                |
+| Parallelität                         | 1                                                                                                                                 |
+| zusätzlich geladenes Embeddingmodell | keines                                                                                                                            |
+| Session                              | `6c3a1a8c-9e58-4965-8720-0545aabbf889`                                                                                            |
+| Run-Signatur                         | `eee75c48f18cd2726a32b582…`                                                                                                       |
+| Produktprofil                        | `CUSTOMER_CORE_5_V2`                                                                                                              |
+| Kategorien                           | VS, FE, LW, ST, EL                                                                                                                |
+| Dokumente / Seiten                   | 10 / 108, davon 108 mit Text                                                                                                      |
+| Dokument-Kategorie-Schritte          | 50/50                                                                                                                             |
+| Resume-Schritte                      | 0                                                                                                                                 |
+| Gesamtlaufzeit                       | 1.621,550 s = 27:01,550                                                                                                           |
 
 Die zehn Eingabedateien wurden als physische Kopien in die isolierte
 Auditinstanz übernommen. Ihre SHA-256-Identitäten stimmen mit den Dateien in
@@ -77,15 +77,15 @@ nicht die Vollständigkeit der gefundenen Quellen.
 
 ## 4. Ergebnisverteilung
 
-| Entscheidung | Zeilen |
-| --- | ---: |
-| Vorteil A | 0 |
-| Vorteil B | 0 |
-| Dokumentationsunterschied | 42 |
-| Gleichwertig | 5 |
-| kein dokumentierter Vorteil | 105 |
-| nicht vergleichbar | 11 |
-| unklar | 61 |
+| Entscheidung                | Zeilen |
+| --------------------------- | -----: |
+| Vorteil A                   |      0 |
+| Vorteil B                   |      0 |
+| Dokumentationsunterschied   |     42 |
+| Gleichwertig                |      5 |
+| kein dokumentierter Vorteil |    105 |
+| nicht vergleichbar          |     11 |
+| unklar                      |     61 |
 
 104 Zeilen tragen einen Reviewhinweis; die Punktentscheidung verlangt in 61
 Zeilen ausdrücklich eine Prüfung. Die fünf Gleichwertigkeiten `FE-A04`,
@@ -137,21 +137,21 @@ Zwei Grenzen sind relevant:
 
 ## 6. Fachliche Gegenprüfung der Pflichtzeilen
 
-| Zeile | Auditbefund |
-| --- | --- |
-| `VS-16` | PASS: B findet `überdachte Abstellplätze` in GenVerbund S. 10; `UNKLAR` ist konservativ. |
-| `VS-02` | FEHLER: EABS S. 6 nennt ausdrücklich 40 Prozent; das Ergebnis sagt dennoch, das Restwertverhältnis sei nicht feststellbar. GenVerbund S. 7 nennt zusätzlich 20 Prozent. Rang und Bindung beider Werte bleiben offen. |
-| `VS-21` | PASS mit offenem Rang: Quellen und Betrag sind belegt, B mischt Vorschlag und Bedingungen; `UNKLAR` ist sicher. |
-| `VS-25` | PASS mit offenem Rang: unterschiedliche Bezugsgrößen und mehrere B-Werte bleiben sichtbar; `UNKLAR` ist sicher. |
-| `VS-36` | FEHLER: ABS S. 3 nennt die Versicherungssumme als Entschädigungsgrenze. Der behauptete Dokumentationsunterschied beruht damit auf einem falschen Nulltreffer. |
-| `FE-A02` | Im Ergebnis kein unsicherer Vorteil. AFB S. 2 enthält jedoch eine stärkere unmittelbare Nutzfeuer-Ausschlussstelle als den ausgegebenen Ausschnitt; Kundentext sprachlich zu verbessern. |
-| `FE-A06` | PASS: der B-Beleg betrifft nur indirekten Blitzschaden an Erdkabeln; `UNKLAR` verhindert eine falsche Gleichsetzung. |
-| `LW-06` | PASS: beide Frostbelege gefunden; der Vorschlagsstatus von B führt korrekt zu `NICHT_VERGLEICHBAR`. |
-| `LW-08` | FEHLER: AWB S. 2 überschreibt mit `Versicherte Kosten ... Suchkosten` den vorherigen Ausschlusskontext. Das System materialisiert diesen Beleg trotzdem als ausgeschlossen. Heading-/Scope-Grenze wurde nicht zurückgesetzt; `UNKLAR` verhindert immerhin einen Gewinner. |
-| `LW-21` | PASS: kein wörtlicher Schimmelbeleg; die alte unbelegte Gleichsetzung Schimmel = Vermorschung wird vermieden. |
-| `LW-31` | FEHLER/OFFEN: die allgemeine Entschädigungsgrenze aus ABS S. 3 fehlt; ihre LW-spezifische Anwendbarkeit muss geprüft werden. Der Dokumentationsunterschied ist nicht nachgewiesen. |
-| `ST-11` | PASS: A enthält nur einen engen Ausschluss-/Reparaturkontext; kein Vorteil wird konstruiert. |
-| `EL-07` | PASS: Erdbeben wird auf beiden Seiten gefunden; Vorschlagsstatus und Bedingungen führen sicher zu `NICHT_VERGLEICHBAR`. |
+| Zeile    | Auditbefund                                                                                                                                                                                                                                                               |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VS-16`  | PASS: B findet `überdachte Abstellplätze` in GenVerbund S. 10; `UNKLAR` ist konservativ.                                                                                                                                                                                  |
+| `VS-02`  | FEHLER: EABS S. 6 nennt ausdrücklich 40 Prozent; das Ergebnis sagt dennoch, das Restwertverhältnis sei nicht feststellbar. GenVerbund S. 7 nennt zusätzlich 20 Prozent. Rang und Bindung beider Werte bleiben offen.                                                      |
+| `VS-21`  | PASS mit offenem Rang: Quellen und Betrag sind belegt, B mischt Vorschlag und Bedingungen; `UNKLAR` ist sicher.                                                                                                                                                           |
+| `VS-25`  | PASS mit offenem Rang: unterschiedliche Bezugsgrößen und mehrere B-Werte bleiben sichtbar; `UNKLAR` ist sicher.                                                                                                                                                           |
+| `VS-36`  | FEHLER: ABS S. 3 nennt die Versicherungssumme als Entschädigungsgrenze. Der behauptete Dokumentationsunterschied beruht damit auf einem falschen Nulltreffer.                                                                                                             |
+| `FE-A02` | Im Ergebnis kein unsicherer Vorteil. AFB S. 2 enthält jedoch eine stärkere unmittelbare Nutzfeuer-Ausschlussstelle als den ausgegebenen Ausschnitt; Kundentext sprachlich zu verbessern.                                                                                  |
+| `FE-A06` | PASS: der B-Beleg betrifft nur indirekten Blitzschaden an Erdkabeln; `UNKLAR` verhindert eine falsche Gleichsetzung.                                                                                                                                                      |
+| `LW-06`  | PASS: beide Frostbelege gefunden; der Vorschlagsstatus von B führt korrekt zu `NICHT_VERGLEICHBAR`.                                                                                                                                                                       |
+| `LW-08`  | FEHLER: AWB S. 2 überschreibt mit `Versicherte Kosten ... Suchkosten` den vorherigen Ausschlusskontext. Das System materialisiert diesen Beleg trotzdem als ausgeschlossen. Heading-/Scope-Grenze wurde nicht zurückgesetzt; `UNKLAR` verhindert immerhin einen Gewinner. |
+| `LW-21`  | PASS: kein wörtlicher Schimmelbeleg; die alte unbelegte Gleichsetzung Schimmel = Vermorschung wird vermieden.                                                                                                                                                             |
+| `LW-31`  | FEHLER/OFFEN: die allgemeine Entschädigungsgrenze aus ABS S. 3 fehlt; ihre LW-spezifische Anwendbarkeit muss geprüft werden. Der Dokumentationsunterschied ist nicht nachgewiesen.                                                                                        |
+| `ST-11`  | PASS: A enthält nur einen engen Ausschluss-/Reparaturkontext; kein Vorteil wird konstruiert.                                                                                                                                                                              |
+| `EL-07`  | PASS: Erdbeben wird auf beiden Seiten gefunden; Vorschlagsstatus und Bedingungen führen sicher zu `NICHT_VERGLEICHBAR`.                                                                                                                                                   |
 
 ## 7. Bestätigte Recall-Fehler außerhalb der Pflichtzeilen
 
@@ -189,13 +189,13 @@ Kategorien nicht als reiner Modellvergleich zulässig.
 Für dieselben zehn Dokumente, dieselbe Reihenfolge und die gemeinsamen fünf
 Kategorien ergibt die Summe der persistenten Dokumentartefakt-Zeitfenster:
 
-| Lauf | VS/FE/LW/ST/EL |
-| --- | ---: |
+| Lauf                       |            VS/FE/LW/ST/EL |
+| -------------------------- | ------------------------: |
 | historischer Qwen-3.8-Lauf | 8.206,345 s = 2:16:46,345 |
-| aktueller Qwen-3.6-Lauf | 1.617,626 s = 26:57,626 |
-| Differenz | 6.588,719 s weniger |
-| Faktor | 5,073x |
-| Zeitreduktion | 80,29 % |
+| aktueller Qwen-3.6-Lauf    |   1.617,626 s = 26:57,626 |
+| Differenz                  |       6.588,719 s weniger |
+| Faktor                     |                    5,073x |
+| Zeitreduktion              |                   80,29 % |
 
 Diese Messung ist ein Artefaktvergleich, kein isolierter Modellbenchmark:
 Zwischen den Läufen änderten sich zusätzlich Kataloge, Profil und
