@@ -25,11 +25,13 @@ function occurrence({
   scopeLeadText,
   sectionScopeKey,
   pageNumber,
+  matchedAlias,
 }) {
   const contextDocumentStart = 1_000 * pageNumber;
   const relativeStart = contextText.indexOf(exactText);
   return {
     candidateId,
+    ...(matchedAlias ? { matchedAlias } : {}),
     exactText,
     pageNumber,
     physicalPageNumber: pageNumber,
@@ -52,6 +54,61 @@ function occurrence({
 }
 
 describe("category semantic exceptions", () => {
+  test("keeps generic storm-thrown objects non-evidentiary for tree impact", () => {
+    const bindingFor = ({ contextText, exactText, matchedAlias }) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "ST" } },
+        requirement: { id: "ST-23" },
+        component: {
+          id: "foreign_tree_or_branch_impact",
+          factRole: "PERIL",
+        },
+        occurrence: occurrence({
+          candidateId: "candidate:st-23",
+          exactText,
+          contextText,
+          scopeLeadText: "Versichert sind Schäden durch",
+          sectionScopeKey: "STURM_INSURANCE",
+          pageNumber: 2,
+          matchedAlias,
+        }),
+      });
+
+    expect(
+      bindingFor({
+        contextText:
+          "Andere Gegenstände werden durch eine versicherte Sturmgefahr auf die versicherten Sachen geworfen.",
+        exactText:
+          "Andere Gegenstände werden durch eine versicherte Sturmgefahr auf die versicherten Sachen geworfen",
+        matchedAlias: "CONCEPT_SEARCH:storm-thrown-object-impact",
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "ST_23_GENERIC_THROWN_OBJECT_WITHOUT_REQUIRED_TREE_OR_BRANCH",
+      authoritative: true,
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Versichert sind Schäden durch stürzende Bäume des Nachbargrundstücks.",
+        exactText: "stürzende Bäume des Nachbargrundstücks",
+        matchedAlias: "CONCEPT_SEARCH:foreign-tree-or-branch-impact",
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Bäume stehen am Nachbargrundstück. Andere Gegenstände werden durch eine versicherte Sturmgefahr auf die versicherten Sachen geworfen.",
+        exactText:
+          "Andere Gegenstände werden durch eine versicherte Sturmgefahr auf die versicherten Sachen geworfen",
+        matchedAlias: "CONCEPT_SEARCH:storm-thrown-object-impact",
+      })
+    ).toMatchObject({ binding: "MENTION_ONLY" });
+  });
+
   test("keeps vehicle impact on named damaged objects narrow", () => {
     const bindingFor = ({ contextText, exactText }) =>
       deterministicCategoryCandidateBinding({

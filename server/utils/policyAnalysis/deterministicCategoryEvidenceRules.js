@@ -616,6 +616,26 @@ function explicitFeA10NamedObjectScopeBinding({
   };
 }
 
+function explicitSt23GenericThrownObjectBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "ST" ||
+    requirement?.id !== "ST-23" ||
+    component?.id !== "foreign_tree_or_branch_impact" ||
+    occurrence?.matchedAlias !== "CONCEPT_SEARCH:storm-thrown-object-impact"
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "ST_23_GENERIC_THROWN_OBJECT_WITHOUT_REQUIRED_TREE_OR_BRANCH",
+    authoritative: true,
+  };
+}
+
 function explicitFeF05InsurancePeriodBinding({
   categoryView,
   requirement,
@@ -997,6 +1017,11 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (feA10NamedObjectScopeBinding) return feA10NamedObjectScopeBinding;
+
+  const st23GenericThrownObjectBinding = explicitSt23GenericThrownObjectBinding(
+    { categoryView, requirement, component, occurrence }
+  );
+  if (st23GenericThrownObjectBinding) return st23GenericThrownObjectBinding;
 
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
     categoryView,
