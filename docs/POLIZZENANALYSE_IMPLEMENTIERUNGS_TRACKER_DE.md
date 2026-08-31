@@ -3668,3 +3668,23 @@ ERGEBNIS: comparison.private.json V5; pointDecision V3
 NO CLAIM: keine fachliche Zertifizierung aller 224 Negativlexika
 NO CLAIM: keine beliebigen Polizzen und kein 99-Prozent-Nachweis
 ```
+
+Mac-Studio-Abnahme des exakten Code-Commits
+`e3cdaecd744626cbeca4cc5054bfaa157e162e05` im isolierten Worktree
+`/tmp/pv3-validate-ff95d896`:
+
+```text
+PASS: 14 relevante Jest-Suites / 164 Tests
+PASS: Prettier für alle geänderten Produkt-, Test- und Dokumentdateien
+PASS: ESLint der fünf geänderten Serverquellen
+PASS: ESLint der geänderten JSX-Oberfläche
+PASS: Frontend-Produktionsbuild / Vite 4.5.3 / 6.170 Module
+FULL JEST: 103/105 Suites und 1.173/1.178 Tests bestanden
+BASELINE OFFEN: historischer VS-Legacy-Shelltest verlangt weiterhin das in
+                V3.5.0 bewusst entfernte Embeddingmodell
+UMGEBUNG OFFEN: isolierter FFMPEG-Test findet ohne Binärpfad kein ffmpeg
+HINWEIS: direkter ESLint-Aufruf auf dem bestehenden CommonJS-Presenter meldet
+         weiterhin module/no-undef; Jest und Prettier für die Datei bestehen
+NO MODEL RUN: keine Kunden-PDFs und kein neuer LLM-Lauf
+NO CLAIM: keine fachliche Zertifizierung aller 224 Negativlexika
+```
