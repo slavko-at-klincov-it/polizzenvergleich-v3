@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 30. August 2026
+Stand: 31. August 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -192,7 +192,7 @@ Ziel: >= 99 % auf dem definierten unterstützten Dokumentkorpus
 Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 ```
 
-## 7. Belegter Stand am 30. August 2026
+## 7. Belegter Stand am 31. August 2026
 
 ### Implementiert und positiv belegt
 
@@ -208,9 +208,14 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   geänderten Zeilen belegen einen Fehlertypwechsel, aber keine Qualitätsquote;
 - R1-Konzeptgruppen gewinnen lexikalisch unbekannte LW-Wortlaute als enge
   Kandidaten zurück, ohne `LW-31` wieder fälschlich zu aktivieren;
-- V3.3.1 verwendet breite `3000/250`-Chunks und Dinghy ausschließlich als
-  Navigation zu exakten Hybridspans; auf WEVIG/Qwen 27B wird nur `HP-12`
-  korrigiert, die übrigen 35 HP-Zeilen bleiben exakt stabil;
+- V3.3.1 verwendete breite `3000/250`-Chunks und Dinghy ausschließlich als
+  Navigation zu exakten Hybridspans; auf WEVIG/Qwen 27B wurde nur `HP-12`
+  korrigiert. V3.5.0 entfernt diesen produktiven Embeddingfallback zugunsten
+  eines einzigen Qwen-3.6-Modellzustands; die HP-12-Nichtregression ohne
+  Dinghy ist deshalb wieder ein offenes Abnahmegate;
+- der begrenzte LF-/WEVIG-VS-Modellvergleich belegt für Qwen 3.6 gegenüber
+  Qwen 3.8 eine 5,02-fache Geschwindigkeit (219,324 statt 1.101,400 Sekunden)
+  und 72/72 Kernzeilen gegen die akzeptierte RC33-VS-Basis;
 - der persistente technische A/B-Vergleich nimmt je Paket bis zu neun private,
   nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
   erzeugt aus dem gemeinsamen Acht-Kategorien-Pfad eine UI- sowie XLSX-
@@ -334,6 +339,17 @@ und Wirkungsgates dürfen daraus einen Tabellenbeleg machen. Der erste reale
 verändern. Weitere Kategorien werden nicht pauschal aktiviert, sondern nur
 mit eigenen fachlichen Verträgen und Negativkontrollen.
 
+### Stand nach V3.5.0
+
+Der produktive Betriebsvertrag lädt nur noch Qwen 3.6 35B-A3B in einer
+text-only MLX-Ansicht mit 42.496 Kontext, Parallelität 1, 8-Bit-KV-Cache und
+Thinking aus. Die VS-Entscheidung ist für die dokumentierten LF-/WEVIG-
+Payloads messbar schneller und gegen die akzeptierte VS-Basis stabil. Weil
+Dinghy und damit der HP-12-Hybridfallback entfernt wurden, ist daraus keine
+Freigabe der übrigen Kategorien ableitbar. Vollständiger Acht-Kategorienlauf,
+HP-12-Negativ-/Positivkontrollen und unbekannte Versicherer-Holdouts bleiben
+offen.
+
 ### Stand nach technischem A/B-MVP
 
 Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion
@@ -383,6 +399,8 @@ Dabei gelten unterschiedliche Wahrheitsebenen:
   `docs/RELEASE_V3.3.0_RC5_DE.md`
 - V3.3.1-Releasevertrag für den evidenzgebundenen Hybridfallback:
   `docs/RELEASE_V3.3.1_DE.md`
+- V3.5.0-Modell-, Performance- und Betriebsvertrag:
+  `docs/RELEASE_V3.5.0_DE.md`
 - Technischer A/B-MVP-Vertrag, Tests und offene Paketlogik:
   `docs/POLIZZENVERGLEICH_A_B_MVP_DE.md`
 - Wissensrouter und historische Erfahrungsbasis:

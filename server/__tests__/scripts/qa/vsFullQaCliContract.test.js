@@ -65,7 +65,7 @@ describe("VS full QA CLI contracts", () => {
       "--output",
       output,
       "--model",
-      "qwen/qwen3.8-27b",
+      "qwen/qwen3.6-35b-a3b",
       "--modelTokenLimit",
       "42496",
     ]);

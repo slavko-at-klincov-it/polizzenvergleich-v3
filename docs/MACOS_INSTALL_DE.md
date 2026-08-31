@@ -5,14 +5,16 @@ Voraussetzungen:
 - Apple-Silicon-Mac
 - angemeldete grafische macOS-Sitzung
 - Internetzugang während der ersten Installation
-- LM Studio kann später über die AnythingLLM-Oberfläche konfiguriert werden
+- LM Studio samt CLI unter `$HOME/.lmstudio/bin/lms`
+- das einmalig geladene Modell
+  `lmstudio-community/Qwen3.6-35B-A3B-MLX-4bit` (20,43 GB)
 
 ## Installation
 
 ```bash
 cd ~/Code/polizzenvergleich-v3
 git fetch origin --tags
-git checkout v3.2.0
+git checkout v3.5.0
 ./install.command
 ```
 
@@ -34,15 +36,19 @@ V1-/V2-Installationen werden weder gestoppt noch verändert.
 - `uninstall.command`: nur V3-Dienste und die V3-CLI entfernen
 
 Die Anwendungskonfiguration und Dokumente liegen ausschließlich im V3-Ordner.
-LM-Studio-Modelle werden vom Installer nicht heruntergeladen, entladen oder
-verändert.
+Das Quellmodell wird nicht automatisch heruntergeladen. Fehlt es, zeigt der
+Start den dafür notwendigen `lms get`-Befehl an. V3 erstellt daraus eine
+platzsparende reine Textansicht und lädt ausschließlich
+`qwen/qwen3.6-35b-a3b` mit 42.496 Token Kontext, Parallelität 1, 8-Bit-MLX-
+KV-Cache und ausgeschaltetem Thinking. Andere geladene Chat- oder
+Embeddingmodelle werden beim V3-Serverstart entladen.
 
 ## Update einer bestehenden V3-Installation
 
 ```bash
 cd ~/Code/polizzenvergleich-v3
 ./doctor.command
-./update.command v3.2.0
+./update.command v3.5.0
 ./doctor.command
 ```
 
@@ -52,6 +58,5 @@ PDF-Seitenprovenienz müssen Original-PDFs in einem neuen Workspace erneut
 hochgeladen und indexiert werden. Alte flache PDF-Vektoren können nicht
 nachträglich zuverlässig einer physischen Seite zugeordnet werden.
 
-Der genaue Kundentest mit den externen Kategorie-Systemprompts ist in
-`docs/RELEASE_V3.2.0_DE.md` beschrieben. Die Promptdateien werden nicht
-automatisch in der V3-Datenbank gespeichert.
+Modellentscheidung, Messwerte und noch ausstehende Abnahme stehen in
+`docs/RELEASE_V3.5.0_DE.md`.

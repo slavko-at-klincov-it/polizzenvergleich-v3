@@ -141,9 +141,9 @@ async function run() {
   process.env.LMSTUDIO_BASE_PATH =
     process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   process.env.LMSTUDIO_MODEL_PREF =
-    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen3.5-4b-mlx";
+    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen/qwen3.6-35b-a3b";
   process.env.LMSTUDIO_MODEL_TOKEN_LIMIT =
-    args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "32768";
+    args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "42496";
 
   const {
     DOCUMENT_STATUS,

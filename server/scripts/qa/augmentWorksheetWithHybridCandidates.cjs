@@ -177,11 +177,15 @@ async function run() {
   process.env.LMSTUDIO_BASE_PATH =
     process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   process.env.LMSTUDIO_MODEL_PREF =
-    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen3.5-4b-mlx";
+    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen/qwen3.6-35b-a3b";
   process.env.LMSTUDIO_MODEL_TOKEN_LIMIT =
-    args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "32768";
+    args.modelTokenLimit || process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "42496";
   const embeddingModel =
-    args.embeddingModel || process.env.EMBEDDING_MODEL_PREF || "dinghy-embed";
+    args.embeddingModel || process.env.EMBEDDING_MODEL_PREF;
+  if (!embeddingModel)
+    fail(
+      "--embeddingModel ist für den historischen Hybrid-Fallback explizit erforderlich; V3.5.0 lädt kein Embeddingmodell mehr"
+    );
   const chunkSize = Number(args.chunkSize || 3_000);
   const chunkOverlap = Number(args.chunkOverlap || 250);
   const maxChunksPerCall = Number(args.maxChunksPerCall || 1);

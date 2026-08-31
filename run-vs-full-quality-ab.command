@@ -14,13 +14,17 @@ WEVIG_PDF="$2"
 PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
 OUTPUT_DIR="${3:-$PRIVATE_QA_ROOT/VS-FULL-QUALITY-AB-$(date +%Y%m%d-%H%M%S)}"
 RESUME_MODE=false
-MODEL="${VS_FULL_MODEL:-qwen/qwen3.8-27b}"
-EMBEDDING_MODEL="${VS_FULL_EMBEDDING_MODEL:-dinghy-embed}"
+MODEL="${VS_FULL_MODEL:-qwen/qwen3.6-35b-a3b}"
+EMBEDDING_MODEL="${VS_FULL_EMBEDDING_MODEL:-}"
 MODEL_TOKEN_LIMIT="${VS_FULL_MODEL_TOKEN_LIMIT:-42496}"
 USER_PROMPT="Analysiere die vollständig im Kontext bereitgestellten Vertragsdokumente gemäß dem Systemprompt. Gib ausschließlich die definierte Tabelle für VS-01 bis VS-36 und anschließend den vorgeschriebenen Hinweis aus."
 
 [ -x "$NODE_BIN" ] || {
   printf '%s\n' "Lokale Node-22-Laufzeit fehlt. Bitte zuerst install.command ausführen." >&2
+  exit 1
+}
+[ -n "$EMBEDDING_MODEL" ] || {
+  printf '%s\n' "Dieser historische Legacy-A/B-Runner benötigt ein explizites VS_FULL_EMBEDDING_MODEL. V3.5.0 lädt standardmäßig kein Embeddingmodell mehr." >&2
   exit 1
 }
 [ -f "$LF_PDF" ] || { printf '%s\n' "LF-PDF fehlt: $LF_PDF" >&2; exit 1; }

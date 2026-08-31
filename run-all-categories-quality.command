@@ -13,9 +13,8 @@ PDF_FILE="$1"
 DOCUMENT_STATUS="${2:-FRAMEWORK_TERMS}"
 PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
 OUTPUT_DIR="${3:-$PRIVATE_QA_ROOT/ALL-CATEGORIES-QUALITY-$(date +%Y%m%d-%H%M%S)}"
-MODEL="${POLICY_FULL_MODEL:-qwen/qwen3.8-27b}"
+MODEL="${POLICY_FULL_MODEL:-qwen/qwen3.6-35b-a3b}"
 MODEL_TOKEN_LIMIT="${POLICY_FULL_MODEL_TOKEN_LIMIT:-42496}"
-EMBEDDING_MODEL="${POLICY_FULL_EMBEDDING_MODEL:-dinghy-embed}"
 DOCUMENT_KEY="$(basename "$PDF_FILE" .pdf)"
 DOCUMENT_ARTIFACT="$OUTPUT_DIR/document.private.json"
 RUN_MANIFEST="$OUTPUT_DIR/manifest.private.json"
@@ -71,13 +70,12 @@ printf 'pid=%s output=%s\n' "$$" "$OUTPUT_DIR" > "$GLOBAL_LOCK_DIR/owner.private
 export LMSTUDIO_BASE_PATH="${LMSTUDIO_BASE_PATH:-http://127.0.0.1:1234/v1}"
 export LMSTUDIO_MODEL_PREF="$MODEL"
 export LMSTUDIO_MODEL_TOKEN_LIMIT="$MODEL_TOKEN_LIMIT"
-export EMBEDDING_MODEL_PREF="$EMBEDDING_MODEL"
 
 command -v curl >/dev/null 2>&1 || {
   printf '%s\n' "curl fehlt; LM-Studio-Preflight kann nicht ausgeführt werden." >&2
   exit 1
 }
-printf '%s\n' "[all-categories] LM Studio und Modelle vorprüfen: $MODEL / $EMBEDDING_MODEL"
+printf '%s\n' "[all-categories] LM Studio und Qwen 3.6 vorprüfen: $MODEL"
 MODEL_RESPONSE="$(curl --fail --silent --show-error \
   --connect-timeout 5 --max-time 15 \
   "${LMSTUDIO_BASE_PATH%/}/models")" || {
@@ -103,7 +101,7 @@ printf '%s' "$MODEL_RESPONSE" | "$NODE_BIN" -e '
       process.exit(1);
     }
   });
-' "$MODEL" "$EMBEDDING_MODEL"
+' "$MODEL"
 
 MANIFEST_ARGS=(
   --manifest "$RUN_MANIFEST"
@@ -111,7 +109,6 @@ MANIFEST_ARGS=(
   --repository "$SCRIPT_DIR"
   --pdfFile "$PDF_FILE"
   --model "$MODEL"
-  --embeddingModel "$EMBEDDING_MODEL"
   --modelTokenLimit "$MODEL_TOKEN_LIMIT"
   --documentStatus "$DOCUMENT_STATUS"
 )
@@ -153,15 +150,10 @@ printf '%s\n' "[all-categories] Dokument einmalig vorbereiten"
 for CATEGORY in VS FE LW ST EL HP VB WE; do
   CATEGORY_DIR="$OUTPUT_DIR/$CATEGORY"
   WORKSHEET="$CATEGORY_DIR/worksheet.private.json"
-  BASE_WORKSHEET="$WORKSHEET"
   TRIAGE_DIR="$CATEGORY_DIR/triage"
   EFFECTS_DIR="$CATEGORY_DIR/effects"
   RESULT_DIR="$CATEGORY_DIR/result"
   mkdir -p "$TRIAGE_DIR" "$EFFECTS_DIR" "$RESULT_DIR"
-
-  if [ "$CATEGORY" = "HP" ]; then
-    BASE_WORKSHEET="$CATEGORY_DIR/worksheet.base.private.json"
-  fi
 
   if [ -f "$RESULT_DIR/report.json" ] && \
      [ -f "$RESULT_DIR/answer.md" ] && \
@@ -182,25 +174,7 @@ for CATEGORY in VS FE LW ST EL HP VB WE; do
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs" \
     --documentArtifact "$DOCUMENT_ARTIFACT" \
     --catalogFile "$(catalog_file "$CATEGORY")" \
-    --output "$BASE_WORKSHEET"
-
-  if [ "$CATEGORY" = "HP" ]; then
-    printf '%s\n' "[all-categories] HP – hybrider Chunk-Kandidatenfallback"
-    mkdir -p "$CATEGORY_DIR/hybrid-fallback"
-    "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/augmentWorksheetWithHybridCandidates.cjs" \
-      --worksheet "$BASE_WORKSHEET" \
-      --documentArtifact "$DOCUMENT_ARTIFACT" \
-      --fallbackCatalog "$SCRIPT_DIR/server/resources/policyAnalysis/hp-hybrid-fallback.v0.1.json" \
-      --systemPromptFile "$SCRIPT_DIR/server/resources/policyAnalysis/hybrid-semantic-candidate-system.v0.1.md" \
-      --output "$WORKSHEET" \
-      --report "$CATEGORY_DIR/hybrid-fallback/report.private.json" \
-      --model "$MODEL" \
-      --modelTokenLimit "$MODEL_TOKEN_LIMIT" \
-      --embeddingModel "$EMBEDDING_MODEL" \
-      --chunkSize 3000 \
-      --chunkOverlap 250 \
-      --maxAttemptsPerTarget 2
-  fi
+    --output "$WORKSHEET"
 
   printf '%s\n' "[all-categories] $CATEGORY – Candidate-Triage"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runVsCandidateTriage.cjs" \

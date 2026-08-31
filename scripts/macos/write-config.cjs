@@ -80,6 +80,12 @@ mergeManagedBlock(serverEnv, {
   LOCAL_ONLY_MODE: "true",
   TARGET_OCR_LANG: "deu,eng",
   DISABLE_TELEMETRY: "true",
+  LLM_PROVIDER: "lmstudio",
+  LMSTUDIO_BASE_PATH: "http://127.0.0.1:1234/v1",
+  LMSTUDIO_MODEL_PREF: "qwen/qwen3.6-35b-a3b",
+  LMSTUDIO_MODEL_TOKEN_LIMIT: "42496",
+  POLICY_FULL_MODEL: "qwen/qwen3.6-35b-a3b",
+  POLICY_FULL_MODEL_TOKEN_LIMIT: "42496",
 });
 
 mergeManagedBlock(collectorEnv, {

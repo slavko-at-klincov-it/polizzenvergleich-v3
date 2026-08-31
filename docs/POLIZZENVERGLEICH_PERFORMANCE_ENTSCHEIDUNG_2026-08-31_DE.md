@@ -16,6 +16,14 @@ gerankten Chunks desselben HP-12-Ziels. Er bündelt keine verschiedenen
 atomaren Ziele, ändert weder Ranking noch Faktvertrag und bleibt bis zum
 bestandenen A/B-Oracle standardmäßig deaktiviert.
 
+Nachtrag V3.5.0: Die anschließende direkte Modellmessung hat Qwen 3.6 als
+5,02-mal schnelleren VS-Pfad bei 72/72 Kernzeilen gegen die akzeptierte
+RC33-Basis belegt. Auf ausdrückliche Produktentscheidung wird deshalb Qwen 3.6
+zum alleinigen Modellpfad und Dinghy nicht mehr geladen. Dieser Nachtrag
+ersetzt die unten beschriebene damalige Betriebsempfehlung, Dinghy zunächst
+beizubehalten. Die fachliche Warnung bleibt gültig: HP-12 ohne Hybridfallback
+ist noch nicht erneut abgenommen.
+
 Der Canary allein kann das 60-Minuten-Ziel nicht erreichen. Ein kalter,
 erstmaliger Zehn-Dokumente-Lauf benötigt dafür eine Kombination aus
 nachgewiesener Modellbeschleunigung und wesentlich weniger Modellentscheidungen.
@@ -107,7 +115,7 @@ Primärquellen:
 - [LM Studio Qwen3.6-35B-A3B](https://lmstudio.ai/models/qwen/qwen3.6-35b-a3b)
 - [Gemma 4 26B-A4B](https://huggingface.co/google/gemma-4-26B-A4B-it)
 
-## Dinghy-Entscheidung
+## Historische Dinghy-Entscheidung vor V3.5.0
 
 Dinghy wird produktiv derzeit nicht in jeder Kategorie benötigt. Es arbeitet
 im HP-Hybridfallback für zwei additive HP-12-Ziele mit jeweils Top-3-Ranking.
@@ -123,8 +131,10 @@ Modellchurn, weil das nächste Dokument Dinghy erneut benötigt. Der Zielpfad is
 3. Dinghy einmal entladen;
 4. das Chatmodell für Spanwahl, Triage und Wirkung verwenden.
 
-Dinghy bleibt Navigation, niemals Beweis. Beleg, Seite, Offset und exakter Span
-bleiben servervalidiert.
+Dinghy blieb in diesem damaligen Zielbild Navigation, niemals Beweis. V3.5.0
+setzt stattdessen den operativen Ein-Modell-Pfad um. Beleg, Seite, Offset und
+exakter Span bleiben servervalidiert; die dadurch wieder offene HP-12-
+Nichtregression ist im V3.5.0-Releasevertrag festgehalten.
 
 ## Cache- und Invalidierungsvertrag
 

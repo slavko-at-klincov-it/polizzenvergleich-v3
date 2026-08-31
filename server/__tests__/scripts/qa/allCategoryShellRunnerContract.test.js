@@ -8,7 +8,6 @@ const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
 const SCRIPT_PATHS = [
   "server/scripts/qa/extractPolicyDocument.cjs",
   "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs",
-  "server/scripts/qa/augmentWorksheetWithHybridCandidates.cjs",
   "server/scripts/qa/runVsCandidateTriage.cjs",
   "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
   "server/scripts/qa/materializeCategoryFullResult.cjs",
@@ -36,9 +35,6 @@ if (script === "extractPolicyDocument.cjs") {
   write(output, "{}");
 } else if (script === "buildCategoryOccurrenceWorksheet.cjs") {
   write(output, "{}");
-} else if (script === "augmentWorksheetWithHybridCandidates.cjs") {
-  write(output, "{}");
-  write(argument("--report"), "{}");
 } else if (script === "runVsCandidateTriage.cjs") {
   write(path.join(output, "materialized-triage.private.json"), "[]");
   write(path.join(output, "report.json"), "{}");
@@ -80,7 +76,7 @@ function createHarness() {
   const fakeCurl = path.join(fakeBin, "curl");
   fs.writeFileSync(
     fakeCurl,
-    '#!/bin/sh\nprintf \'{"data":[{"id":"%s"},{"id":"%s"}]}\' "${FAKE_LOADED_MODEL:-qwen/qwen3.8-27b}" "${FAKE_LOADED_EMBEDDING_MODEL:-dinghy-embed}"\n'
+    '#!/bin/sh\nprintf \'{"data":[{"id":"%s"}]}\' "${FAKE_LOADED_MODEL:-qwen/qwen3.6-35b-a3b}"\n'
   );
   fs.chmodSync(fakeCurl, 0o755);
   const pdf = path.join(root, "lf.pdf");
@@ -91,8 +87,7 @@ function createHarness() {
 }
 
 function runHarness(harness, overrides = {}) {
-  const model = overrides.model || "qwen/qwen3.8-27b";
-  const embeddingModel = overrides.embeddingModel || "dinghy-embed";
+  const model = overrides.model || "qwen/qwen3.6-35b-a3b";
   const documentStatus = overrides.documentStatus || "FRAMEWORK_TERMS";
   return spawnSync(
     "/bin/bash",
@@ -109,13 +104,10 @@ function runHarness(harness, overrides = {}) {
         HOME: harness.home,
         PATH: `${harness.fakeBin}:${process.env.PATH}`,
         POLICY_FULL_MODEL: model,
-        POLICY_FULL_EMBEDDING_MODEL: embeddingModel,
         POLICY_FULL_MODEL_TOKEN_LIMIT: overrides.modelTokenLimit || "42496",
         NODE_ENV: overrides.nodeEnv || "test",
         POLICY_RUN_RELEASE_ID: overrides.releaseId || "fixture-release",
         FAKE_LOADED_MODEL: overrides.loadedModel || model,
-        FAKE_LOADED_EMBEDDING_MODEL:
-          overrides.loadedEmbeddingModel || embeddingModel,
       },
     }
   );
@@ -154,8 +146,7 @@ describe("all-category shell runner", () => {
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
       configuration: {
-        model: "qwen/qwen3.8-27b",
-        embeddingModel: "dinghy-embed",
+        model: "qwen/qwen3.6-35b-a3b",
         documentStatus: "FRAMEWORK_TERMS",
       },
     });
@@ -169,14 +160,6 @@ describe("all-category shell runner", () => {
   test.each([
     ["release", { releaseId: "other-release" }, "releaseId"],
     ["model", { model: "other-model", loadedModel: "other-model" }, "model"],
-    [
-      "embedding model",
-      {
-        embeddingModel: "other-embedding-model",
-        loadedEmbeddingModel: "other-embedding-model",
-      },
-      "embeddingModel",
-    ],
     ["model token limit", { modelTokenLimit: "32000" }, "modelTokenLimit"],
     ["document status", { documentStatus: "ACTIVE" }, "documentStatus"],
   ])("rejects resume when %s differs", (_label, overrides, mismatch) => {
@@ -235,20 +218,7 @@ describe("all-category shell runner", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Angeforderte Modelle sind nicht geladen");
-    expect(result.stderr).toContain("qwen/qwen3.8-27b");
-    expect(fs.existsSync(harness.output)).toBe(false);
-  });
-
-  test("fails before a run when the requested embedding model is not loaded", () => {
-    harness = createHarness();
-
-    const result = runHarness(harness, {
-      loadedEmbeddingModel: "different-embedding-model",
-    });
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Angeforderte Modelle sind nicht geladen");
-    expect(result.stderr).toContain("dinghy-embed");
+    expect(result.stderr).toContain("qwen/qwen3.6-35b-a3b");
     expect(fs.existsSync(harness.output)).toBe(false);
   });
 

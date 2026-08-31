@@ -669,9 +669,13 @@ async function main() {
   if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 3)
     fail("--repetitions muss zwischen 1 und 3 liegen");
   const model =
-    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen/qwen3.8-27b";
+    args.model || process.env.LMSTUDIO_MODEL_PREF || "qwen/qwen3.6-35b-a3b";
   const embeddingModel =
-    args.embeddingModel || process.env.EMBEDDING_MODEL_PREF || "dinghy-embed";
+    args.embeddingModel || process.env.EMBEDDING_MODEL_PREF;
+  if (!embeddingModel)
+    fail(
+      "--embeddingModel ist nur für den ausdrücklich angeforderten historischen Legacy-A/B-Lauf erforderlich"
+    );
   const skipLegacy = String(args.skipLegacy || "false") === "true";
   const lmStudioBasePath =
     process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";

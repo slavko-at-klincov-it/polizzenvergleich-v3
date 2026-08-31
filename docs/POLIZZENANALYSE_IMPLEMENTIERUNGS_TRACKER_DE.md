@@ -3460,3 +3460,45 @@ Der Replay verwendete unverändert die gespeicherten Artefakte der Session
 `5a8c6b3d-94fa-4ed9-84bc-4fff2cfa1e85`. Er beweist die neue
 Entscheidungslogik, ersetzt aber nicht den noch ausstehenden frischen
 Zehn-Dokumente-Lauf mit dem neuen Release Candidate.
+
+## 69. V3.5.0: produktiver Wechsel auf Qwen 3.6 35B-A3B
+
+Der produktive LM-Studio-Vertrag verwendet ab V3.5.0 ausschließlich
+`qwen/qwen3.6-35b-a3b`. Der Mac-Startpfad entlädt andere Chat- und
+Embeddingmodelle, erstellt ohne Gewichtsduplikation eine text-only MLX-Ansicht
+und lädt sie mit 42.496 Token Kontext, Parallelität 1, 8-Bit-KV-Cache,
+deaktiviertem MTP-Draft und standardmäßig ausgeschaltetem Thinking. Die
+Serverkonfiguration und alle aktiven Vergleichsrunner verwenden denselben
+Identifier und dasselbe Tokenlimit.
+
+Die Modellentscheidung beruht auf einem kontrollierten VS-Vergleich mit
+identischen LF-/WEVIG-Worksheets, Systemprompts und Payload-Hashes:
+
+```text
+Qwen 3.6: 219,324 s / 3:39,3 Modellstufen-Wandzeit
+Qwen 3.8: 1.101,400 s / 18:21,4 Modellstufen-Wandzeit
+ERGEBNIS: Qwen 3.6 ist 5,02x so schnell und benötigt 80,1 % weniger Zeit
+QUALITÄTSGATE: Qwen 3.6 72/72 VS-Kernzeilen gegen akzeptierte RC33-Basis
+FRISCHER DIREKTVERGLEICH: 71/72 Kernzeilen identisch
+WEVIG: 36/36 Kernzeilen identisch
+LF VS-21: Qwen 3.6 korrekt; frischer Qwen-3.8-Lauf verfehlte die Seite-5-Quelle
+```
+
+Dinghy wird nicht mehr automatisch geladen. Damit entfällt im produktiven
+Acht-Kategorien-Runner auch der HP-12-Hybridfallback. Resume-Manifeste und
+persistente Run-Verträge wechseln auf Schema Version 2, damit frühere
+Embeddingläufe nicht still fortgesetzt werden.
+
+```text
+IMPLEMENTIERT: Qwen-3.6-Autoload 42.496 / parallel 1 / MLX-KV 8 Bit
+IMPLEMENTIERT: Qwen-3.8- und Embedding-Autoload entfernt
+IMPLEMENTIERT: produktiver HP-Hybridfallback entfernt
+DOKUMENTIERT: VS-Speed- und Kernzeilenevidenz mit exakten Zahlen
+NICHT AUSGEFÜHRT: Tests, Lint, Build, Doctor, Installer- und neue Modellläufe
+OFFEN: vollständige Acht-Kategorien- und HP-12-Nichtregression
+NO CLAIM: keine beliebigen Polizzen und kein 99-Prozent-Nachweis
+```
+
+Die ausgelassene Validierung ist eine ausdrückliche Sequenzentscheidung: In
+diesem Schritt wurden nur Code, Versionierung und Dokumentation geändert. Die
+Abnahme folgt separat auf dem Mac Studio.

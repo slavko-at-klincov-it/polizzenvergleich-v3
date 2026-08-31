@@ -20,12 +20,10 @@ const {
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
 const CATEGORY_COUNT = CATEGORY_ORDER.length;
-const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.8-27b";
+const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.6-35b-a3b";
 const MODEL_TOKEN_LIMIT = Number(
   process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
 );
-const EMBEDDING_MODEL =
-  process.env.POLICY_FULL_EMBEDDING_MODEL || "dinghy-embed";
 
 async function sha256File(file) {
   const hash = crypto.createHash("sha256");
@@ -64,11 +62,10 @@ function completedCategoryViews(outputDirectory) {
 
 function resumableRun({ sessionUuid, manifest }) {
   const contract = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
     configuration: {
       model: MODEL,
-      embeddingModel: EMBEDDING_MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
     },
     documents: manifest.documents.map(

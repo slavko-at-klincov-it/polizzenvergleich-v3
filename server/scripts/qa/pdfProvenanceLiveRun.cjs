@@ -45,16 +45,20 @@ process.env.EMBEDDING_ENGINE = "lmstudio";
 process.env.EMBEDDING_BASE_PATH =
   process.env.EMBEDDING_BASE_PATH || "http://127.0.0.1:1234/v1";
 process.env.EMBEDDING_MODEL_PREF =
-  process.env.EMBEDDING_MODEL_PREF || "text-embedding-dinghy-law-4b-v1";
+  process.env.EMBEDDING_MODEL_PREF || "";
+if (!process.env.EMBEDDING_MODEL_PREF)
+  fail(
+    "EMBEDDING_MODEL_PREF ist für diesen historischen Legacy-Runner explizit erforderlich; V3.5.0 lädt kein Embeddingmodell mehr"
+  );
 process.env.EMBEDDING_MODEL_MAX_CHUNK_LENGTH =
   process.env.EMBEDDING_MODEL_MAX_CHUNK_LENGTH || "8192";
 process.env.LLM_PROVIDER = "lmstudio";
 process.env.LMSTUDIO_BASE_PATH =
   process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
 process.env.LMSTUDIO_MODEL_PREF =
-  process.env.LMSTUDIO_MODEL_PREF || "qwen3.5-4b-mlx";
+  process.env.LMSTUDIO_MODEL_PREF || "qwen/qwen3.6-35b-a3b";
 process.env.LMSTUDIO_MODEL_TOKEN_LIMIT =
-  process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "32768";
+  process.env.LMSTUDIO_MODEL_TOKEN_LIMIT || "42496";
 
 const repositoryRoot = path.resolve(__dirname, "../../..");
 const parsePdf = require(

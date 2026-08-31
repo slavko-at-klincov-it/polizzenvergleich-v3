@@ -11,6 +11,8 @@ for file in \
   /bin/bash -n "$file"
 done
 "${NODE_BIN:-node}" --check "$SCRIPT_DIR/write-config.cjs"
+"${NODE_BIN:-node}" --check "$SCRIPT_DIR/prepare-qwen36-model.cjs"
+"${NODE_BIN:-node}" --check "$SCRIPT_DIR/load-qwen36.cjs"
 /usr/bin/grep -A3 '^  update)' "$SCRIPT_DIR/control.sh" | /usr/bin/grep -q 'shift'
 /usr/bin/grep -A4 '^  update)' "$SCRIPT_DIR/control.sh" | /usr/bin/grep -Fq '"$@"'
 
@@ -30,6 +32,8 @@ V3_COLLECTOR_PORT=8890 \
 /usr/bin/grep -q '^COLLECTOR_API_HOST="127.0.0.1"$' "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^JWT_SECRET="preserved-secret"$' "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^LLM_PROVIDER="lmstudio"$' "$temp_dir/repo/server/.env"
+/usr/bin/grep -q '^LMSTUDIO_MODEL_PREF="qwen/qwen3.6-35b-a3b"$' "$temp_dir/repo/server/.env"
+/usr/bin/grep -q '^LMSTUDIO_MODEL_TOKEN_LIMIT="42496"$' "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^COLLECTOR_HOST="127.0.0.1"$' "$temp_dir/repo/collector/.env"
 /usr/bin/grep -q '^VITE_API_BASE="/api"$' "$temp_dir/repo/frontend/.env"
 [ "$(stat -f '%OLp' "$temp_dir/repo/server/.env")" = "600" ]
@@ -82,9 +86,10 @@ done
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
-if /usr/bin/grep -RniE --exclude='run.sh' --exclude='run-vs-pilot-ab.command' \
-  --exclude='run-vs-full-quality-ab.command' \
-  'feuer|policyComparison|dinghy|qwen|comparison_documents' \
+if /usr/bin/grep -RniE --exclude='run.sh' --exclude='start-server.sh' \
+  --exclude='lmstudio.sh' --exclude='prepare-qwen36-model.cjs' \
+  --exclude='load-qwen36.cjs' \
+  'feuer|policyComparison|dinghy|qwen3\.8|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
   exit 1
@@ -94,14 +99,14 @@ fi
 # Vergleichslogik in Installer, Servicekonfiguration oder Updatepfad tragen.
 /usr/bin/grep -Fq 'server/scripts/qa/runVsPilotAb.cjs' \
   "$REPO_DIR/run-vs-pilot-ab.command"
-/usr/bin/grep -Fq 'qwen/qwen3.8-27b' "$REPO_DIR/run-vs-pilot-ab.command"
+/usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' "$REPO_DIR/run-vs-pilot-ab.command"
 
 # Der vollständige VS-Qualitätsrunner ist ebenfalls ein explizites QA-Werkzeug
 # außerhalb des Installers. Sein Modell bleibt lokal und sein Einstiegspunkt
 # muss den 36-Kategorien-Materialisierer verwenden.
 /usr/bin/grep -Fq 'server/scripts/qa/materializeVsFullResult.cjs' \
   "$REPO_DIR/run-vs-full-quality-ab.command"
-/usr/bin/grep -Fq 'qwen/qwen3.8-27b' \
+/usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' \
   "$REPO_DIR/run-vs-full-quality-ab.command"
 
 printf '%s\n' "V3 macOS installer tests: PASS"
