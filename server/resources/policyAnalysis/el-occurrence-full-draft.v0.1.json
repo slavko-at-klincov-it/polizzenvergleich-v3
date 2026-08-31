@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.4",
+  "catalogId": "el-occurrence-full-draft-v0.5",
   "categoryView": "EL",
   "requirements": [
     {
@@ -181,6 +181,7 @@
           "id": "earthquake",
           "label": "Erdbeben",
           "factRole": "PERIL",
+          "contextMode": "CLAUSE_SECTION",
           "aliases": ["Erdbeben", "Erdbebenschäden"]
         }
       ],

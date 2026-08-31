@@ -83,6 +83,24 @@ describe("EL category recall catalog", () => {
     expectFound(result, "EL-11", ["elemental_deductible"]);
   });
 
+  test("expands only the configured earthquake component to its numbered clause", () => {
+    const result = worksheet(
+      [
+        "5. Sturmversicherung",
+        "7. Erdbeben",
+        "Erdbeben ist bis EUR 20.000 pro Jahr versichert.",
+        "Der Selbstbehalt beträgt EUR 350. Die Wartezeit beträgt 72 Stunden.",
+        "8. Lawinen",
+        "Lawinen sind gesondert geregelt.",
+      ].join("\n")
+    );
+    const earthquake = component(result, "EL-07", "earthquake").occurrences[0];
+
+    expect(earthquake.context).toMatchObject({ unitType: "CLAUSE_SECTION" });
+    expect(earthquake.context.text).toContain("Selbstbehalt beträgt EUR 350");
+    expect(earthquake.context.text).not.toContain("8. Lawinen");
+  });
+
   test("recalls HQ and flood-risk zone variants in their source scope", () => {
     const result = worksheet(
       [
