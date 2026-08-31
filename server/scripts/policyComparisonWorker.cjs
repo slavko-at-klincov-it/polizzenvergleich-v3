@@ -9,9 +9,12 @@ const { spawn } = require("child_process");
 const prisma = require("../utils/prisma");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const {
-  CATEGORY_ORDER,
   writeComparisonArtifacts,
 } = require("../utils/policyComparison/resultBuilder");
+const {
+  CATEGORY_ORDER,
+  PRODUCT_PROFILE,
+} = require("../utils/policyComparison/productContract");
 const {
   releaseIdentity,
   sha256,
@@ -62,8 +65,9 @@ function completedCategoryViews(outputDirectory) {
 
 function resumableRun({ sessionUuid, manifest }) {
   const contract = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
+    productProfile: PRODUCT_PROFILE,
     configuration: {
       model: MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
@@ -153,16 +157,18 @@ function runDocument({
       const lines = buffered.split(/\r?\n/gu);
       lineBuffers.set(channel, lines.pop() || "");
       for (const line of lines) {
-        const match =
+        const categoryView =
+          line.match(/^\[category-full-materialize\] ([A-Z]{2})\b/u)?.[1] ||
           line.match(
-            /^\[category-full-materialize\] (VS|FE|LW|ST|EL|HP|VB|WE)\b/u
-          ) ||
-          line.match(
-            /^\[all-categories\] (VS|FE|LW|ST|EL|HP|VB|WE) – bereits vollständig/u
-          );
-        if (!match || completedCategories.has(match[1])) continue;
-        completedCategories.add(match[1]);
-        onCategoryComplete(match[1], completedCategories.size);
+            /^\[all-categories\] ([A-Z]{2}) – bereits vollständig/u
+          )?.[1];
+        if (
+          !CATEGORY_ORDER.includes(categoryView) ||
+          completedCategories.has(categoryView)
+        )
+          continue;
+        completedCategories.add(categoryView);
+        onCategoryComplete(categoryView, completedCategories.size);
       }
     };
     child.stdout.on("data", (chunk) => consumeOutput("stdout", chunk));
@@ -194,8 +200,10 @@ async function main() {
     throw new Error(`COMPARISON_SESSION_NOT_QUEUED:${session.status}`);
   const manifest = JSON.parse(session.inputManifest || "null");
   if (
-    manifest?.schemaVersion !== 1 ||
+    manifest?.schemaVersion !== 2 ||
     manifest?.sessionUuid !== sessionUuid ||
+    JSON.stringify(manifest?.productProfile) !==
+      JSON.stringify(PRODUCT_PROFILE) ||
     !Array.isArray(manifest.documents)
   )
     throw new Error("COMPARISON_INPUT_MANIFEST_INVALID");
@@ -310,6 +318,7 @@ async function main() {
     documentRuns,
     outputDirectory: resultDirectory,
     metadata: { sessionUuid, runSignature: signature },
+    enforceProductProfile: true,
   });
   const resultPath = path.relative(policyComparisonsPath, resultDirectory);
   await updateSession(session.id, {

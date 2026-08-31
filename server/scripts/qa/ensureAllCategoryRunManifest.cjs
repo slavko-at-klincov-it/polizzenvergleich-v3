@@ -8,6 +8,9 @@ const {
   releaseIdentity,
   sha256,
 } = require("../../utils/policyAnalysis/runIdentity");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 
 function fail(message) {
   console.error(`[all-category-manifest] ${message}`);
@@ -78,9 +81,10 @@ function run() {
     }
   }
   const expected = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     runKind: "ALL_CATEGORIES_QUALITY",
     releaseId,
+    productProfile: PRODUCT_PROFILE,
     configuration: {
       model: args.model,
       modelTokenLimit: Number(args.modelTokenLimit),
@@ -119,6 +123,11 @@ function run() {
     mismatches.push("schemaVersion");
   if (existing.runKind !== expected.runKind) mismatches.push("runKind");
   if (existing.releaseId !== expected.releaseId) mismatches.push("releaseId");
+  if (
+    JSON.stringify(existing.productProfile) !==
+    JSON.stringify(expected.productProfile)
+  )
+    mismatches.push("productProfile");
   if (existing.configuration?.model !== expected.configuration.model)
     mismatches.push("model");
   if (

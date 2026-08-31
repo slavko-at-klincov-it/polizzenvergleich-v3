@@ -2,26 +2,17 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const {
-  applyHeaderStyle,
-  applyZebraStriping,
-  freezePanes,
-} = require("../agents/aibitat/plugins/create-files/xlsx/utils");
-const {
   POINT_OUTCOME,
   SEARCH_DISPOSITION,
   decidePoint,
 } = require("./pointDecision");
-
-const CATEGORY_ORDER = Object.freeze([
-  "VS",
-  "FE",
-  "LW",
-  "ST",
-  "EL",
-  "HP",
-  "VB",
-  "WE",
-]);
+const {
+  CATEGORY_ORDER,
+  CATEGORY_ROW_COUNTS,
+  EXPECTED_ROW_COUNT,
+  PRODUCT_PROFILE,
+} = require("./productContract");
+const { customerResultText } = require("./customerResultPresenter");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
 
@@ -805,10 +796,11 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     return { categoryView, rows };
   });
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     status: "TECHNICAL_RESULT_REVIEW_REQUIRED",
     generatedAt: new Date().toISOString(),
     ...metadata,
+    productProfile: PRODUCT_PROFILE,
     documents: loadedRuns.map(({ document }) => ({
       uuid: document.uuid,
       side: document.side,
@@ -903,71 +895,136 @@ function markdownResult(result) {
   return lines.join("\n");
 }
 
+function estimatedWrappedLines(value, width) {
+  const capacity = Math.max(8, Math.floor(width * 1.05));
+  return String(value || "")
+    .split(/\r?\n/gu)
+    .reduce((total, paragraph) => {
+      const words = paragraph.split(/\s+/gu).filter(Boolean);
+      if (words.length === 0) return total + 1;
+      let lines = 1;
+      let used = 0;
+      for (const word of words) {
+        const required = Math.min(word.length, capacity);
+        if (used > 0 && used + 1 + required > capacity) {
+          lines += 1;
+          used = required;
+        } else {
+          used += (used > 0 ? 1 : 0) + required;
+        }
+        if (word.length > capacity) {
+          lines += Math.floor((word.length - 1) / capacity);
+          used = word.length % capacity;
+        }
+      }
+      return total + lines;
+    }, 0);
+}
+
 async function writeWorkbook(result, outputFile) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Polizzenvergleich V3";
   workbook.created = new Date();
-  for (const category of result.categories) {
-    const sheet = workbook.addWorksheet(category.categoryView);
-    sheet.columns = [
-      { header: "Kategorie-ID", key: "categoryId", width: 15 },
-      { header: "Stufe", key: "stage", width: 12 },
-      { header: "Kategorie-Name", key: "categoryName", width: 35 },
-      { header: "Paket A – Vertragsinhalt", key: "aContent", width: 70 },
-      { header: "A – Deckung", key: "aCoverage", width: 24 },
-      { header: "A – Deckungssumme", key: "aAmount", width: 24 },
-      { header: "A – Quellen", key: "aSource", width: 55 },
-      { header: "A – Prüfstatus", key: "aReview", width: 20 },
-      { header: "Paket B – Vertragsinhalt", key: "bContent", width: 70 },
-      { header: "B – Deckung", key: "bCoverage", width: 24 },
-      { header: "B – Deckungssumme", key: "bAmount", width: 24 },
-      { header: "B – Quellen", key: "bSource", width: 55 },
-      { header: "B – Prüfstatus", key: "bReview", width: 20 },
-      { header: "Unterschied / Prüfhinweis", key: "difference", width: 60 },
-      { header: "Vergleichsstatus", key: "outcome", width: 30 },
-      { header: "Punktentscheidung", key: "pointDecision", width: 24 },
-      {
-        header: "Entscheidungsbegründung",
-        key: "pointDecisionReason",
-        width: 65,
-      },
-      { header: "Entscheidungsregel", key: "pointDecisionRule", width: 38 },
-      { header: "A – Dokumentbefund", key: "aSearchDisposition", width: 34 },
-      { header: "B – Dokumentbefund", key: "bSearchDisposition", width: 34 },
-    ];
-    for (const row of category.rows) {
+  const sheet = workbook.addWorksheet("Gesamtvergleich");
+  sheet.properties.defaultRowHeight = 16;
+  sheet.views = [{ state: "normal", zoomScale: 80 }];
+  sheet.columns = [
+    { header: "A_Kategorie-ID", key: "aCategoryId", width: 10.83203125 },
+    { header: "A_Stufe", key: "aStage", width: 10.83203125 },
+    { header: "A_Kategorie-Name", key: "aCategoryName", width: 56.83203125 },
+    { header: "A_Vertragsinhalt", key: "aContent", width: 42 },
+    { header: "A_Deckung", key: "aCoverage", width: 19 },
+    { header: "A_Deckungssumme", key: "aAmount", width: 20.5 },
+    { header: "A_Quelle", key: "aSource", width: 39.6640625 },
+    { header: "A_Prüfstatus", key: "aReview", width: 10.83203125 },
+    { header: "B_Kategorie-ID", key: "bCategoryId", width: 10.83203125 },
+    { header: "B_Stufe", key: "bStage", width: 10.83203125 },
+    { header: "B_Kategorie-Name", key: "bCategoryName", width: 30.33203125 },
+    { header: "B_Vertragsinhalt", key: "bContent", width: 41.83203125 },
+    { header: "B_Deckung", key: "bCoverage", width: 19.83203125 },
+    { header: "B_Deckungssumme", key: "bAmount", width: 20 },
+    { header: "B_Quelle", key: "bSource", width: 25.33203125 },
+    { header: "B_Prüfstatus", key: "bReview", width: 17.1640625 },
+    { header: "KI-Ergebnis", key: "customerResult", width: 54.33203125 },
+  ];
+  const stageOrder = new Map(
+    ["K", "S", "V"].map((stage, index) => [stage, index])
+  );
+  const workbookRows = result.categories
+    .flatMap((category, categoryIndex) =>
+      category.rows.map((row, rowIndex) => ({
+        row,
+        categoryIndex,
+        rowIndex,
+      }))
+    )
+    .sort(
+      (left, right) =>
+        (stageOrder.get(left.row.stage) ?? Number.MAX_SAFE_INTEGER) -
+          (stageOrder.get(right.row.stage) ?? Number.MAX_SAFE_INTEGER) ||
+        left.categoryIndex - right.categoryIndex ||
+        left.rowIndex - right.rowIndex
+    );
+  for (const { row } of workbookRows) {
       sheet.addRow({
-        categoryId: row.categoryId,
-        stage: row.stage,
-        categoryName: row.categoryName,
+        aCategoryId: row.categoryId,
+        aStage: row.stage,
+        aCategoryName: row.categoryName,
         aContent: row.packageA.documentedContent,
         aCoverage: row.packageA.coverage,
         aAmount: row.packageA.coverageAmount,
         aSource: row.packageA.source,
         aReview: row.packageA.reviewStatus,
+        bCategoryId: row.categoryId,
+        bStage: row.stage,
+        bCategoryName: row.categoryName,
         bContent: row.packageB.documentedContent,
         bCoverage: row.packageB.coverage,
         bAmount: row.packageB.coverageAmount,
         bSource: row.packageB.source,
         bReview: row.packageB.reviewStatus,
-        difference: row.difference,
-        outcome: row.outcome,
-        pointDecision: row.pointDecision.outcome,
-        pointDecisionReason: row.pointDecision.reason,
-        pointDecisionRule: row.pointDecision.ruleId,
-        aSearchDisposition: row.packageA.searchDisposition,
-        bSearchDisposition: row.packageB.searchDisposition,
+        customerResult: customerResultText(row),
       });
-    }
-    applyHeaderStyle(sheet, { fill: "FF1E3A5F", fontColor: "FFFFFFFF" });
-    applyZebraStriping(sheet, "FFF3F6FA");
-    freezePanes(sheet, 1, 3);
-    sheet.autoFilter = { from: "A1", to: "T1" };
-    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      if (rowNumber === 1) return;
-      row.alignment = { vertical: "top", wrapText: true };
-    });
   }
+  const wrappedColumns = new Set([4, 7, 11, 12, 14, 15, 17]);
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    row.height =
+      rowNumber === 1
+        ? 17
+        : Math.min(
+            409.6,
+            Math.max(
+              2,
+              ...[...wrappedColumns].map((columnNumber) =>
+                estimatedWrappedLines(
+                  row.getCell(columnNumber).value,
+                  sheet.getColumn(columnNumber).width
+                )
+              )
+            ) * 17
+          );
+    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+      cell.font = {
+        name: "Aptos Narrow",
+        size: 12,
+        bold: rowNumber === 1 && columnNumber === 17,
+      };
+      cell.alignment = {
+        horizontal: "left",
+        vertical: "middle",
+        wrapText: wrappedColumns.has(columnNumber),
+      };
+    });
+  });
+  sheet.autoFilter = `A1:Q${sheet.rowCount}`;
+  sheet.pageMargins = {
+    left: 0.7,
+    right: 0.7,
+    top: 0.787401575,
+    bottom: 0.787401575,
+    header: 0.3,
+    footer: 0.3,
+  };
   await workbook.xlsx.writeFile(outputFile);
   fs.chmodSync(outputFile, 0o600);
 }
@@ -976,9 +1033,22 @@ async function writeComparisonArtifacts({
   documentRuns,
   outputDirectory,
   metadata,
+  enforceProductProfile = false,
 }) {
   fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
   const result = buildComparisonResult(documentRuns, metadata);
+  if (enforceProductProfile) {
+    for (const category of result.categories) {
+      if (category.rows.length !== CATEGORY_ROW_COUNTS[category.categoryView])
+        throw new Error(
+          `COMPARISON_CATEGORY_ROW_COUNT_MISMATCH:${category.categoryView}:${category.rows.length}:${CATEGORY_ROW_COUNTS[category.categoryView]}`
+        );
+    }
+    if (result.totals.rows !== EXPECTED_ROW_COUNT)
+      throw new Error(
+        `COMPARISON_TOTAL_ROW_COUNT_MISMATCH:${result.totals.rows}:${EXPECTED_ROW_COUNT}`
+      );
+  }
   const jsonFile = path.join(outputDirectory, "comparison.private.json");
   const markdownFile = path.join(outputDirectory, "comparison.md");
   const workbookFile = path.join(outputDirectory, "polizzenvergleich.xlsx");

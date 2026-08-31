@@ -35,6 +35,7 @@ trap 'exit 130' HUP INT TERM
   printf '%s\n' "Lokale Node-22-Laufzeit fehlt. Bitte zuerst install.command ausführen." >&2
   exit 1
 }
+read -r -a CATEGORY_VIEWS <<< "$("$NODE_BIN" -e 'process.stdout.write(require(process.argv[1]).CATEGORY_ORDER.join(" "))' "$SCRIPT_DIR/server/utils/policyComparison/productContract.js")"
 [ -f "$PDF_FILE" ] || {
   printf '%s\n' "PDF fehlt: $PDF_FILE" >&2
   exit 1
@@ -147,7 +148,7 @@ printf '%s\n' "[all-categories] Dokument einmalig vorbereiten"
   --pdfFile "$PDF_FILE" \
   --output "$DOCUMENT_ARTIFACT"
 
-for CATEGORY in VS FE LW ST EL HP VB WE; do
+for CATEGORY in "${CATEGORY_VIEWS[@]}"; do
   CATEGORY_DIR="$OUTPUT_DIR/$CATEGORY"
   WORKSHEET="$CATEGORY_DIR/worksheet.private.json"
   TRIAGE_DIR="$CATEGORY_DIR/triage"

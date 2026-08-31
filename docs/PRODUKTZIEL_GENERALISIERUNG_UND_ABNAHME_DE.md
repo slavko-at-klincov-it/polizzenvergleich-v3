@@ -15,11 +15,12 @@ Ein Erfolg auf diesen beiden Dokumenten allein beweist weder Generalisierung
 noch 99 Prozent fachliche Richtigkeit.
 
 Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der gemeinsame
-evidenzgebundene Verarbeitungspfad ist inzwischen für alle acht Ansichten und
-320 sichtbaren Zeilen implementiert und auf LF/WEVIG technisch kontrolliert.
-Die offene Grenze liegt nicht mehr bei einer fehlenden Ansicht, sondern bei
-fachlicher Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und
-dem Laufzeitbudget.
+evidenzgebundene Verarbeitungspfad besitzt weiterhin Kataloge und historische
+Regressionsevidenz für acht Ansichten. Das produktive, versionierte
+Kundenprofil `CUSTOMER_CORE_5_V1` umfasst jedoch bewusst nur VS, FE, LW, ST
+und EL mit 224 sichtbaren Zeilen. Die offene Grenze liegt bei fachlicher
+Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und dem
+Laufzeitbudget.
 
 ## 2. Verbindlicher Produktumfang
 
@@ -28,7 +29,7 @@ Dokumenten bestehen, etwa Hauptpolizze, Angebot, Rahmenvereinbarung,
 allgemeinen und besonderen Bedingungen, Klauselverzeichnis sowie Feuer-,
 Sturm- oder anderen Nachträgen.
 
-Die aktuelle Kundenansicht besitzt acht fachliche Kategorien:
+Die aktuelle Kundenansicht besitzt fünf fachliche Kategorien:
 
 ```text
 VS  Versicherungssumme und versicherte Sachen
@@ -36,15 +37,14 @@ FE  Feuer
 LW  Leitungswasser
 ST  Sturm
 EL  Elementar- und Zusatzdeckungen
-HP  Haus- und Grundbesitzhaftpflicht
-VB  Vertragsbestimmungen
-WE  Wohnungseigentum
 ```
 
-Die ausgelieferten Vorlagen definieren derzeit zusammen 320 sichtbare
-Tabellenzeilen. Diese Zeilen sind feste Kunden- und Exportansichten. Sie sind
-nicht die interne Faktenstruktur und keine bewiesene Vollständigkeitsgrenze
-des Vertragsinhalts.
+Die ausgelieferten Vorlagen dieses Kundenprofils definieren zusammen 224
+sichtbare Tabellenzeilen: VS 36, FE 80, LW 36, ST 36 und EL 36. HP, VB und WE
+bleiben als interne Katalog- und historische Regressionsevidenz erhalten,
+werden aber nicht mehr im produktiven Vergleichslauf ausgeführt. Die 224
+Zeilen sind feste Kunden- und Exportansichten, nicht die interne
+Faktenstruktur und keine bewiesene Vollständigkeitsgrenze des Vertragsinhalts.
 
 Der gewünschte Bedienablauf bleibt:
 
@@ -70,7 +70,7 @@ Vertragspaket
   -> begrenzte LLM-Klassifikation nur für bekannte Kandidaten
   -> deterministische Rollen-, Scope-, Werte- und Konflikt-Gates
   -> paketisolierte atomare Vertragsfakten
-  -> Rollup in VS/FE/LW/ST/EL/HP/VB/WE
+  -> Rollup in das versionierte Kundenprofil VS/FE/LW/ST/EL
   -> serverseitig erzeugte Tabelle, Detailansicht und Export
 ```
 
@@ -203,8 +203,10 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 ### Implementiert und positiv belegt
 
 - kanonische physische PDF-PageMap und seitengebundene Dokumentartefakte;
-- acht feste Kundenansichten mit 320 IDs;
-- acht Full-Draft-Kataloge mit 533 atomaren Komponenten und Promptparität;
+- fünf produktive Kundenansichten mit 224 IDs im Profil
+  `CUSTOMER_CORE_5_V1`;
+- acht erhaltene Full-Draft-Kataloge mit 533 atomaren Komponenten und
+  Promptparität; HP, VB und WE sind keine produktiven Kundenansichten;
 - occurrence-genaue Kandidatenvorbereitung und servergebundene Evidenzbausteine;
 - gemeinsamer kontrollierter Evidenzpfad für alle acht Ansichten; die
   RC33-Vollregression erzeugte auf LF und WEVIG 640/640 Zeilen mit 32
@@ -224,16 +226,16 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   und 72/72 Kernzeilen gegen die akzeptierte RC33-VS-Basis;
 - der persistente technische A/B-Vergleich nimmt je Paket bis zu neun private,
   nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
-  erzeugt aus dem gemeinsamen Acht-Kategorien-Pfad eine UI- sowie XLSX-
-  Gegenüberstellung;
+  erzeugt aus dem produktiven Fünf-Kategorien-Profil eine UI- sowie
+  Einblatt-XLSX-Gegenüberstellung;
 - Ergebnisschema V2 ergänzt eine servereigene, punktweise und fail-closed
   Entscheidungsschicht. Sie darf Vorteile nur aus vollständigen atomaren
   Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
   ableiten; fehlender Beleg bleibt `UNKLAR`, und es gibt keinen
   Gesamtsieger;
-- der gespeicherte LF-gegen-neun-WEVIG-Lauf terminiert unter diesem Vertrag
-  320/320 Zeilen mit 1 `VORTEIL_B`, 7 `GLEICHWERTIG`, 9
-  `NICHT_VERGLEICHBAR` und 303 `UNKLAR`;
+- der historische gespeicherte LF-gegen-neun-WEVIG-Acht-Kategorien-Lauf
+  terminiert unter diesem Vertrag 320/320 Zeilen mit 1 `VORTEIL_B`, 7
+  `GLEICHWERTIG`, 9 `NICHT_VERGLEICHBAR` und 303 `UNKLAR`;
 - 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
   bestanden für V3.3.1; der additive Punktentscheidungsstand besteht auf dem
   Mac Studio 90 Suites mit 1.039 Tests unter Node 18 sowie den
@@ -255,7 +257,9 @@ daraus nicht.
 
 ### Noch offen
 
-- die fachliche Expertenabnahme aller acht Ansichten und aller 320 Zeilen;
+- die fachliche Expertenabnahme der fünf produktiven Ansichten und aller 224
+  sichtbaren Zeilen; historische Acht-Kategorien-Läufe bleiben gesonderte
+  Versuchsevidenz;
 - Paketlogik mit einem, drei und neun Dokumenten einschließlich Nachträgen,
   Rang, Version und Ersetzung;
 - strukturierte Überschriften-, Klausel-, Tabellen- und Fortsetzungslogik über
@@ -307,8 +311,10 @@ All-Kategorien-Zielwegs.
    LF-spezifisches Tuningprojekt.
 4. Jeden Slice gegen LF, WEVIG, synthetische Varianten und verfügbare
    unbekannte Holdouts prüfen.
-5. Nach allen acht Ansichten Paketläufe mit einem, drei und neun Dokumenten
-   sowie Dokumentrang/Nachträgen validieren.
+5. Nach allen fünf produktiven Ansichten Paketläufe mit einem, drei und neun
+   Dokumenten sowie Dokumentrang/Nachträgen validieren. Interne HP-, VB- und
+   WE-Forschung bleibt ein getrenntes Gate und erweitert nicht still das
+   Kundenprofil.
 6. Danach den neuen vollständigen Lauf gegen die eingefrorene monolithische
    Baseline vergleichen und Laufzeit, Genauigkeit und Stabilität messen.
 7. Erst nach bestandenem Expertenoracle und Holdout-Gate eine fachliche
@@ -321,8 +327,9 @@ ist kein Produktfortschritt.
 
 ### Stand nach INC-011
 
-Schritt 1 ist technisch umgesetzt: Der neue Runner bereitet ein Dokument
-einmal vor und verwendet das private Seitenartefakt für alle acht Ansichten.
+Schritt 1 wurde im damaligen Acht-Kategorien-Runner technisch umgesetzt: Er
+bereitete ein Dokument einmal vor und verwendete das private Seitenartefakt
+für alle acht Ansichten.
 ST ist als erster zusätzlicher Vertikalschnitt auf die gemeinsame Rollen-,
 Scope-, Wirkungs- und Wertearchitektur gehoben. Die reale LF-Gegenprobe
 korrigiert die nachweislich falsche Übertragung einer Schnee-/Eisrutsch-Ausnahme
@@ -352,20 +359,22 @@ text-only MLX-Ansicht mit 42.496 Kontext, Parallelität 1, 8-Bit-KV-Cache und
 Thinking aus. Die VS-Entscheidung ist für die dokumentierten LF-/WEVIG-
 Payloads messbar schneller und gegen die akzeptierte VS-Basis stabil. Weil
 Dinghy und damit der HP-12-Hybridfallback entfernt wurden, ist daraus keine
-Freigabe der übrigen Kategorien ableitbar. Vollständiger Acht-Kategorienlauf,
-HP-12-Negativ-/Positivkontrollen und unbekannte Versicherer-Holdouts bleiben
-offen.
+Freigabe weiterer Kategorien ableitbar. Ein vollständiger Lauf des aktuellen
+Fünf-Kategorien-Profils, die interne HP-12-Nichtregression und unbekannte
+Versicherer-Holdouts bleiben offen.
 
 ### Stand nach technischem A/B-MVP
 
 Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion
 umgesetzt. Paket A und B bleiben getrennt, normale Chat-Anhänge können nicht
-gleichzeitig verwendet werden, und jedes PDF durchläuft den gemeinsamen
-Acht-Kategorien-Pfad. Der serverseitige Rollup erhält Dokumentprovenienz und
+gleichzeitig verwendet werden, und jedes PDF durchläuft das versionierte
+Fünf-Kategorien-Profil. Der serverseitige Rollup erhält Dokumentprovenienz und
 markiert ungeklärte Rangfolgen, statt einen Widerspruch oder Vorteil zu
-erfinden. Damit steht die technische Vergleichsgrenze; Paketpräzedenz,
-Ersetzung, Laufzeit für große Pakete und fachliche Holdout-Abnahme bleiben
-offen. Der genaue Implementierungs- und Abnahmevertrag steht in
+erfinden. Der Einblatt-Export trennt die kundenlesbare Entscheidung von den
+privaten Auditdetails. Damit steht die technische Vergleichsgrenze;
+Paketpräzedenz, Ersetzung, Laufzeit für große Pakete und fachliche
+Holdout-Abnahme bleiben offen. Der genaue Implementierungs- und
+Abnahmevertrag steht in
 `docs/POLIZZENVERGLEICH_A_B_MVP_DE.md`.
 
 ## 10. Wahrheitsquellen für weitere Chats

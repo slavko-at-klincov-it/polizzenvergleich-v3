@@ -16,6 +16,7 @@ const SCRIPT_PATHS = [
 const SUPPORT_SCRIPT_PATHS = [
   "server/scripts/qa/ensureAllCategoryRunManifest.cjs",
   "server/utils/policyAnalysis/runIdentity.js",
+  "server/utils/policyComparison/productContract.js",
 ];
 
 const STUB_SCRIPT = `
@@ -120,7 +121,7 @@ describe("all-category shell runner", () => {
     if (harness) fs.rmSync(harness.root, { recursive: true, force: true });
   });
 
-  test("extracts once and materializes every configured category", () => {
+  test("extracts once and materializes the five customer categories", () => {
     harness = createHarness();
 
     const result = runHarness(harness);
@@ -129,12 +130,14 @@ describe("all-category shell runner", () => {
     expect(
       result.stdout.match(/Dokument einmalig vorbereiten/gu) || []
     ).toHaveLength(1);
-    for (const category of ["VS", "FE", "LW", "ST", "EL", "HP", "VB", "WE"])
+    for (const category of ["VS", "FE", "LW", "ST", "EL"])
       expect(
         fs.existsSync(
           path.join(harness.output, category, "result", "answer.md")
         )
       ).toBe(true);
+    for (const category of ["HP", "VB", "WE"])
+      expect(fs.existsSync(path.join(harness.output, category))).toBe(false);
     expect(fs.existsSync(path.join(harness.output, "summary.md"))).toBe(true);
     const manifest = JSON.parse(
       fs.readFileSync(
@@ -145,6 +148,11 @@ describe("all-category shell runner", () => {
     expect(manifest).toMatchObject({
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
+      productProfile: {
+        id: "CUSTOMER_CORE_5_V1",
+        categoryViews: ["VS", "FE", "LW", "ST", "EL"],
+        expectedRowCount: 224,
+      },
       configuration: {
         model: "qwen/qwen3.6-35b-a3b",
         documentStatus: "FRAMEWORK_TERMS",
@@ -182,6 +190,23 @@ describe("all-category shell runner", () => {
 
     expect(resumed.status).toBe(1);
     expect(resumed.stderr).toContain("pdfSha256");
+  });
+
+  test("rejects resume when the persisted product profile differs", () => {
+    harness = createHarness();
+    expect(runHarness(harness).status).toBe(0);
+    const manifestFile = path.join(
+      harness.output,
+      "manifest.private.json"
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+    manifest.productProfile.categoryViews.push("HP");
+    fs.writeFileSync(manifestFile, JSON.stringify(manifest));
+
+    const resumed = runHarness(harness);
+
+    expect(resumed.status).toBe(1);
+    expect(resumed.stderr).toContain("productProfile");
   });
 
   test("does not skip a category when its rows artifact is missing", () => {

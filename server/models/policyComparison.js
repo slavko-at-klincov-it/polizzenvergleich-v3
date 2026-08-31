@@ -1,6 +1,9 @@
 const prisma = require("../utils/prisma");
 const { v4: uuidv4 } = require("uuid");
 const { safeJsonParse } = require("../utils/http");
+const {
+  PRODUCT_PROFILE,
+} = require("../utils/policyComparison/productContract");
 
 const SIDES = Object.freeze(["A", "B"]);
 const DOCUMENT_ROLES = Object.freeze([
@@ -321,9 +324,10 @@ const PolicyComparison = {
       if (countA === 0 || countB === 0)
         throw new Error("COMPARISON_BOTH_SIDES_REQUIRED");
       const inputManifest = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         sessionUuid: current.uuid,
         queuedAt: new Date().toISOString(),
+        productProfile: PRODUCT_PROFILE,
         documents: current.documents.map((document) => ({
           uuid: document.uuid,
           side: document.side,

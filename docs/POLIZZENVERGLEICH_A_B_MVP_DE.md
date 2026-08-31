@@ -13,8 +13,10 @@ lassen, Ergebnisse in Excel nebeneinander kopieren und erneut vom LLM
 vergleichen“ durch einen reproduzierbaren technischen Job.
 
 Die Funktion ist keine LF- oder WEVIG-Sonderlogik. Sie verwendet für jedes
-Quelldokument den aktuellen gemeinsamen Acht-Kategorien-Evidenzpfad und rollt
-dessen belegte Ergebnisse anschließend paketweise zusammen.
+Quelldokument das versionierte Kundenprofil `CUSTOMER_CORE_5_V1` mit VS, FE,
+LW, ST und EL und rollt dessen belegte Ergebnisse anschließend paketweise
+zusammen. Die weiterhin vorhandenen HP-, VB- und WE-Kataloge gehören nicht
+zum produktiven Vergleichslauf.
 
 ## 2. Verbindlicher Ablauf
 
@@ -27,7 +29,7 @@ Paket A (1–9 PDFs)          Paket B (1–9 PDFs)
                     |
        SHA-256-Identitätsprüfung
                     |
-    je PDF einmaliger Acht-Kategorien-Lauf
+     je PDF einmaliger Fünf-Kategorien-Lauf
                     |
        dokumentisolierte Ergebnisfakten
                     |
@@ -106,18 +108,21 @@ Score und keine Addition gewonnener Zeilen zu einer Vertragsempfehlung.
   regelmäßig ab.
 - Der Fortschritt zählt in neuen Läufen die abgeschlossenen Kategorien aller
   Dokumente und zeigt aktuelles Paket, Dokument und Kategorie.
-- Abgeschlossene Ergebnisse sind in acht UI-Ansichten sichtbar und als Excel
-  mit einer Tabelle pro Kategorie verfügbar.
+- Abgeschlossene neue Ergebnisse sind in fünf UI-Ansichten sichtbar. Der
+  Kundenexport enthält genau ein Arbeitsblatt mit 224 Datenzeilen und den 17
+  Spalten des freigegebenen `Gesamtvergleich`-Formats. Technische
+  Entscheidungsdetails bleiben im privaten JSON.
 - Ein Lauf setzt nach Prozess- oder Rechnerunterbrechung content-addressiert
   bei der ersten noch nicht abgeschlossenen Kategorie fort, sofern
   Dokumente, Release und Laufvertrag unverändert sind.
 - Verwaiste private Vergleichsartefakte werden durch einen eigenen
   Hintergrundjob bereinigt.
 
-## 6. Am Mac Studio belegter Stand
+## 6. Historisch am Mac Studio belegter Acht-Kategorien-Stand
 
-Auf einer vom installierten Kundenstand getrennten Validierungsinstanz wurden
-belegt:
+Die folgenden Aussagen beschreiben den historischen Acht-Kategorien-Lauf und
+nicht den aktuellen Produktumfang. Auf einer vom installierten Kundenstand
+getrennten Validierungsinstanz wurden damals belegt:
 
 - Prisma-Migration und aktuelle Datenbankschemata;
 - Server- und Frontend-Lint sowie Frontend-Produktionsbuild;
@@ -166,11 +171,12 @@ Gleichwertigkeiten sind `FE-A04`, `FE-A06`, `ST-04`, `ST-06`,
 Ein nicht belegter oder nur ähnlich aussehender Tabellenwert darf keine
 Vorteilsaussage erzeugen.
 
-JSON verwendet Schema V2. Markdown enthält zusätzlich Prüfstatus und Quellen.
-Die bestehenden 15 XLSX-Spalten bleiben in derselben Reihenfolge; angehängt
-werden `Punktentscheidung`, `Entscheidungsbegründung` und
-`Entscheidungsregel` als Spalten P bis R. Alte Schema-V1-Ergebnisse werden in
-der UI unverändert gespeichert und sicher als `UNKLAR` dargestellt.
+JSON verwendete in diesem historischen Stand Schema V2. Markdown enthielt
+zusätzlich Prüfstatus und Quellen. Der damalige Export behielt die bestehenden
+15 XLSX-Spalten und ergänzte `Punktentscheidung`,
+`Entscheidungsbegründung` und `Entscheidungsregel` als Spalten P bis R. Der
+aktuelle Kundenexport ist der in Abschnitt 5 definierte Einblatt-Vertrag;
+alte Schema-V1-Ergebnisse bleiben in der UI sicher als `UNKLAR` darstellbar.
 
 ### Qualifizierter Negativbefund in Ergebnisschema V3
 

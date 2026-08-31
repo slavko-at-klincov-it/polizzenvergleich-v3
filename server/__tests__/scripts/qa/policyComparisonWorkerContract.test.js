@@ -43,6 +43,9 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("completedCategoryViews(documentOutput)");
     expect(source).toContain("initialCompletedCategories");
     expect(source).toContain("resumedCategories");
+    expect(source).toContain("productProfile: PRODUCT_PROFILE");
+    expect(source).toContain("manifest?.schemaVersion !== 2");
+    expect(source).toContain("enforceProductProfile: true");
     expect(source).not.toContain("const timestamp = new Date()");
   });
 });

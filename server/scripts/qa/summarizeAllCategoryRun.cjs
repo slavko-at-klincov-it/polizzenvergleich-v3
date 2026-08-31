@@ -4,6 +4,10 @@ process.umask(0o077);
 
 const fs = require("fs");
 const path = require("path");
+const {
+  CATEGORY_ORDER,
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 
 function fail(message) {
   console.error(`[all-category-summary] ${message}`);
@@ -37,8 +41,7 @@ function run() {
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
   if (!args.root) fail("--root ist erforderlich");
   const root = path.resolve(args.root);
-  const categoryViews = ["VS", "FE", "LW", "ST", "EL", "HP", "VB", "WE"];
-  const categories = categoryViews.map((categoryView) => {
+  const categories = CATEGORY_ORDER.map((categoryView) => {
     const reportFile = path.join(root, categoryView, "result", "report.json");
     const rowsFile = path.join(
       root,
@@ -65,12 +68,19 @@ function run() {
       qualityGate: report.qualityGate,
     };
   });
-  const technicalPass = categories.every(
-    ({ status }) => status === "TECHNICAL_PASS_REVIEW_REQUIRED"
-  );
+  const technicalPass =
+    categories.every(
+      ({ categoryView, status, rowCount, expectedRowCount }) =>
+        status === "TECHNICAL_PASS_REVIEW_REQUIRED" &&
+        rowCount === PRODUCT_PROFILE.categoryRowCounts[categoryView] &&
+        expectedRowCount === PRODUCT_PROFILE.categoryRowCounts[categoryView]
+    ) &&
+    categories.reduce((sum, { rowCount }) => sum + rowCount, 0) ===
+      PRODUCT_PROFILE.expectedRowCount;
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: technicalPass ? "TECHNICAL_PASS_REVIEW_REQUIRED" : "REVISE",
+    productProfile: PRODUCT_PROFILE,
     documentKey: args.documentKey || "POLICY",
     model: args.model || null,
     documentStatus: args.documentStatus || null,

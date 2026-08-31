@@ -500,22 +500,32 @@ describe("policy comparison result builder", () => {
     expect(result.totals.reviewRequired).toBe(1);
   });
 
-  test("builds all eight category views with document-level provenance", async () => {
+  test("builds the five-category customer profile with document-level provenance", async () => {
     const runA = writeRun(root, document("a", "A"), {
       VS: {
+        stage: "V",
         documentedContent: "Versicherungssumme A",
         coverage: "Ja",
         source: "PDF-Seite 1",
         reviewStatus: "BELEGT",
       },
+      FE: { stage: "K" },
+      LW: { stage: "S" },
+      ST: { stage: "S" },
+      EL: { stage: "V" },
     });
     const runB = writeRun(root, document("b", "B"), {
       VS: {
+        stage: "V",
         documentedContent: "Versicherungssumme B",
         coverage: "Ja",
         source: "PDF-Seite 2",
         reviewStatus: "BELEGT",
       },
+      FE: { stage: "K" },
+      LW: { stage: "S" },
+      ST: { stage: "S" },
+      EL: { stage: "V" },
     });
 
     const result = buildComparisonResult([runA, runB], {
@@ -524,7 +534,12 @@ describe("policy comparison result builder", () => {
     expect(result.categories.map(({ categoryView }) => categoryView)).toEqual(
       CATEGORY_ORDER
     );
-    expect(result.totals.rows).toBe(8);
+    expect(result.totals.rows).toBe(5);
+    expect(result.productProfile).toMatchObject({
+      id: "CUSTOMER_CORE_5_V1",
+      categoryViews: ["VS", "FE", "LW", "ST", "EL"],
+      expectedRowCount: 224,
+    });
     expect(result.categories[0].rows[0].packageA.facts[0]).toMatchObject({
       documentUuid: "a",
       source: "PDF-Seite 1",
@@ -546,14 +561,46 @@ describe("policy comparison result builder", () => {
     expect(markdown).toContain("Punktentscheidung");
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(artifacts.workbookFile);
-    const headers = workbook.getWorksheet("VS").getRow(1).values.slice(1);
-    expect(headers.slice(-5)).toEqual([
-      "Punktentscheidung",
-      "Entscheidungsbegründung",
-      "Entscheidungsregel",
-      "A – Dokumentbefund",
-      "B – Dokumentbefund",
+    expect(workbook.worksheets).toHaveLength(1);
+    const sheet = workbook.getWorksheet("Gesamtvergleich");
+    const headers = sheet.getRow(1).values.slice(1);
+    expect(headers).toEqual([
+      "A_Kategorie-ID",
+      "A_Stufe",
+      "A_Kategorie-Name",
+      "A_Vertragsinhalt",
+      "A_Deckung",
+      "A_Deckungssumme",
+      "A_Quelle",
+      "A_Prüfstatus",
+      "B_Kategorie-ID",
+      "B_Stufe",
+      "B_Kategorie-Name",
+      "B_Vertragsinhalt",
+      "B_Deckung",
+      "B_Deckungssumme",
+      "B_Quelle",
+      "B_Prüfstatus",
+      "KI-Ergebnis",
     ]);
+    expect(sheet.rowCount).toBe(6);
+    expect(sheet.autoFilter).toEqual("A1:Q6");
+    expect(sheet.getColumn("A").values.slice(2)).toEqual([
+      "FE-01",
+      "LW-01",
+      "ST-01",
+      "VS-01",
+      "EL-01",
+    ]);
+    expect(sheet.getCell("A2").value).toBe(sheet.getCell("I2").value);
+    expect(sheet.getCell("B2").value).toBe(sheet.getCell("J2").value);
+    expect(sheet.getCell("C2").value).toBe(sheet.getCell("K2").value);
+    expect(sheet.getCell("Q2").value).toContain("Kein klarer Vorteil:");
+    expect(sheet.getRow(1).height).toBe(17);
+    expect(sheet.getRow(2).height).toBeGreaterThanOrEqual(34);
+    expect(sheet.getRow(2).height % 17).toBe(0);
+    expect(headers).not.toContain("Entscheidungsregel");
+    expect(headers).not.toContain("Dokumentbefund");
   });
 
   test("builds a point advantage from atomic evidence without replacing the technical diff", () => {
@@ -579,7 +626,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(3);
+    expect(result.schemaVersion).toBe(4);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -587,7 +634,20 @@ describe("policy comparison result builder", () => {
       reviewRequired: false,
     });
     expect(result.totals.pointDecisions.VORTEIL_B).toBe(1);
-    expect(result.totals.pointDecisions.UNKLAR).toBe(7);
+    expect(result.totals.pointDecisions.UNKLAR).toBe(4);
+  });
+
+  test("rejects a productive export when the profile row count is incomplete", async () => {
+    const runA = writeRun(root, document("a", "A"));
+    const runB = writeRun(root, document("b", "B"));
+
+    await expect(
+      writeComparisonArtifacts({
+        documentRuns: [runA, runB],
+        outputDirectory: path.join(root, "incomplete-result"),
+        enforceProductProfile: true,
+      })
+    ).rejects.toThrow("COMPARISON_CATEGORY_ROW_COUNT_MISMATCH:VS:1:36");
   });
 
   test("turns an approved complete zero-occurrence search into an explicit comparison assumption", () => {

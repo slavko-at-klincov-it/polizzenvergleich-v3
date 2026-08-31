@@ -245,7 +245,7 @@ export default function PolicyComparisonPanel({
       });
       setSession(data.session);
       showToast(
-        "Der vollständige Kategorienvergleich wurde gestartet.",
+        "Der Vergleich der fünf Kernkategorien wurde gestartet.",
         "success"
       );
     } catch (error) {
@@ -265,7 +265,7 @@ export default function PolicyComparisonPanel({
         threadSlug,
         sessionUuid: session.uuid,
       });
-      saveAs(blob, "Polizzenvergleich-A-B.xlsx");
+      saveAs(blob, "Gesamtvergleich.xlsx");
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -399,7 +399,7 @@ export default function PolicyComparisonPanel({
                   }
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Alle Kategorien vergleichen
+                  5 Kernkategorien vergleichen
                 </button>
               )}
             </div>

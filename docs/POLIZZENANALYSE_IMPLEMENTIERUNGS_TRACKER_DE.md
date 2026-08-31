@@ -3559,3 +3559,39 @@ NO MODEL RUN: keine Kunden-PDFs und kein neuer LLM-Lauf in diesem Schritt
 NO CLAIM: keine beliebigen Polizzen, kein OCR-Vollständigkeitsnachweis und
           kein 99-Prozent-Nachweis
 ```
+
+## 71. Fünf-Kategorien-Profil und Einblatt-Kundenexport
+
+Der produktive A/B-Lauf verwendet jetzt den versionierten Vertrag
+`CUSTOMER_CORE_5_V1`. Er analysiert ausschließlich VS, FE, LW, ST und EL und
+materialisiert damit 224 sichtbare Zeilen (36 + 80 + 36 + 36 + 36). HP, VB
+und WE werden nicht gelöscht: Ihre Kataloge und historischen Tests bleiben als
+interne Evidenz erhalten, sie werden jedoch weder gestartet noch in neue
+Kundenergebnisse gerollt. Queue-, Worker-, QA- und Resume-Manifeste tragen das
+Profil explizit und lehnen alte oder abweichende Laufkontexte fail-closed ab.
+
+Der Excel-Download folgt dem manuell freigegebenen `Gesamtvergleich`-Vertrag:
+ein Arbeitsblatt, 17 Spalten, Aptos Narrow 12, Referenzbreiten, weißer
+Hintergrund, 80 Prozent Zoom, vollständiger Autofilter und Sortierung nach
+Stufe K/S/V sowie danach Kategorie und Katalogreihenfolge. Kategorie-ID,
+Stufe und Name werden für Polizze A und B sichtbar wiederholt.
+
+`KI-Ergebnis` wird ausschließlich aus der servereigenen `pointDecision`
+erzeugt. Die Präsentationsschicht kennt fünf Kundensignale: Vorteil Polizze A,
+Vorteil Polizze B, gleichwertig, nicht vergleichbar und ungeklärt. Unbekannte,
+unvollständige oder inkonsistente Regeln werden immer zu ungeklärt
+herabgestuft. Insbesondere bleibt beim qualifizierten Negativbefund sichtbar,
+dass kein ausdrücklicher Ausschluss belegt ist. Technische Outcomes, Regeln,
+Blocker und Suchaudits bleiben vollständig in `comparison.private.json` und
+werden nicht als zusätzliche Kundenspalten ausgegeben.
+
+```text
+IMPLEMENTIERT: kanonisches Profil VS/FE/LW/ST/EL mit 224 Sollzeilen
+IMPLEMENTIERT: neue Runs und Resume-Verträge profilgebunden
+IMPLEMENTIERT: ein XLSX-Blatt mit 17 freigegebenen Kundenspalten
+IMPLEMENTIERT: deterministisches, fail-closed KI-Ergebnis
+KOMPATIBILITÄT: gespeicherte alte Acht-Kategorien-Ergebnisse bleiben lesbar
+OFFEN: exakte Commit-Validierung und visueller Exportcheck auf dem Mac Studio
+NO MODEL RUN: diese Änderung benötigt keinen neuen LLM- oder Kunden-PDF-Lauf
+NO CLAIM: keine fachliche 224-Zeilen-Abnahme und kein 99-Prozent-Nachweis
+```

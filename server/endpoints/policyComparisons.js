@@ -485,7 +485,7 @@ function policyComparisonEndpoints(app) {
           !fs.existsSync(workbook)
         )
           throw new Error("COMPARISON_WORKBOOK_MISSING");
-        return response.download(workbook, "Polizzenvergleich-A-B.xlsx");
+        return response.download(workbook, "Gesamtvergleich.xlsx");
       } catch (error) {
         console.error(error.message, error);
         return response
