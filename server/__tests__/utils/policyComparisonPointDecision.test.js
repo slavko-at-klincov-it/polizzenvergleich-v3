@@ -132,7 +132,7 @@ describe("policy comparison point decision", () => {
                 candidateId: "candidate-b",
                 physicalPageNumber: 2,
                 exactText: "Holzfäule",
-                contextText: exactText,
+                conditionCheckText: exactText,
               },
             ],
           }),
@@ -140,11 +140,36 @@ describe("policy comparison point decision", () => {
       );
       expect(result).toMatchObject({
         outcome: POINT_OUTCOME.UNCLEAR,
-        reasonCode: "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",
-        ruleId: "FAIL_CLOSED_V1",
+        reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+        ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
         reviewRequired: true,
       });
+      expect(result.reason).toContain("Bedingung oder Ausnahme");
     }
+  });
+
+  test("does not mistake a peril definition for a conditional coverage promise", () => {
+    const definition =
+      "Direkter Blitzschlag ist die schädigende Kraft oder Wärmewirkung des Blitzes, wenn er unmittelbar in die versicherten Sachen einschlägt.";
+    const result = decide(
+      [atom("a")],
+      [
+        atom("b", {
+          sources: [
+            {
+              candidateId: "candidate-b",
+              physicalPageNumber: 2,
+              exactText: "Direkter Blitzschlag",
+              conditionCheckText: definition,
+            },
+          ],
+        }),
+      ]
+    );
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
   });
 
   test("treats different applicability, scope and qualifier as not comparable", () => {

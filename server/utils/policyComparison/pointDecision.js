@@ -14,8 +14,10 @@ const COVERAGE_ROLES = new Set([
 ]);
 
 const DECISIVE_COVERAGE_EFFECTS = new Set(["INCLUDED", "EXCLUDED"]);
-const COVERAGE_CONDITION_MARKER =
-  /\b(?:außer|ausgenommen|sofern|wenn|soweit|vorausgesetzt|unter\s+der\s+Bedingung)\b/iu;
+const STRONG_COVERAGE_CONDITION_MARKER =
+  /\b(?:außer|ausgenommen|so\s+ferne|sofern|soweit|vorausgesetzt|vorbehaltlich|unter\s+der\s+Bedingung|es\s+sei\s+denn)\b/iu;
+const CONDITIONAL_COVERAGE_WHEN =
+  /(?:\b(?:versichert|mitversichert|gedeckt|eingeschlossen|ausgeschlossen)\b|\b(?:Versicherungsschutz|Deckung|Entschädigung|Leistung)\b).{0,160}\b(?:wenn|falls)\b|\b(?:nur\s+(?:dann\s+)?wenn|falls)\b.{0,160}(?:\b(?:versichert|mitversichert|gedeckt|eingeschlossen|ausgeschlossen)\b|\b(?:Versicherungsschutz|Deckung|Entschädigung|Leistung)\b)/isu;
 
 function normalized(value) {
   return String(value || "")
@@ -118,12 +120,13 @@ function validSource(atom) {
 }
 
 function hasConditionalCoverageSource(atom) {
-  return (atom.sources || []).some(
-    ({ exactText, contextText, scopeLeadText }) =>
-      COVERAGE_CONDITION_MARKER.test(
-        `${exactText || ""}\n${contextText || ""}\n${scopeLeadText || ""}`
-      )
-  );
+  return (atom.sources || []).some(({ exactText, conditionCheckText }) => {
+    const text = `${exactText || ""}\n${conditionCheckText || ""}`;
+    return (
+      STRONG_COVERAGE_CONDITION_MARKER.test(text) ||
+      CONDITIONAL_COVERAGE_WHEN.test(text)
+    );
+  });
 }
 
 function completeAtom(atom) {
@@ -441,6 +444,19 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
     dimensions.push(compareDimension(foundA[0], foundB[0]));
   }
 
+  if (
+    dimensions.some(
+      ({ reasonCode }) => reasonCode === "CONDITIONAL_OR_EXCEPTION_SCOPE"
+    )
+  )
+    return {
+      ...unclear(
+        "CONDITIONAL_OR_EXCEPTION_SCOPE",
+        "Unklar: Mindestens ein gebundener Beleg enthält eine Bedingung oder Ausnahme. Ohne aufgelösten Bedingungsscope darf daraus weder ein Vorteil noch Gleichwertigkeit abgeleitet werden.",
+        dimensions.map(({ dimension }) => dimension)
+      ),
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+    };
   if (dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.UNCLEAR))
     return unclear(
       "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",

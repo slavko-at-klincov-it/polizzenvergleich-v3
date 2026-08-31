@@ -20,6 +20,33 @@ const CATEGORY_ORDER = Object.freeze([
 ]);
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
+const CONDITION_CONTEXT_RADIUS = 240;
+
+function conditionCheckText(candidate) {
+  const contextText = String(candidate?.contextText || "");
+  const contextStart = Number(candidate?.contextDocumentStart);
+  const documentStart = Number(candidate?.documentStart);
+  const documentEnd = Number(candidate?.documentEnd);
+  if (
+    !contextText ||
+    !Number.isFinite(contextStart) ||
+    !Number.isFinite(documentStart) ||
+    !Number.isFinite(documentEnd)
+  )
+    return String(candidate?.exactText || "");
+  const relativeStart = documentStart - contextStart;
+  const relativeEnd = documentEnd - contextStart;
+  if (
+    relativeStart < 0 ||
+    relativeEnd < relativeStart ||
+    relativeStart > contextText.length
+  )
+    return String(candidate?.exactText || "");
+  return contextText.slice(
+    Math.max(0, relativeStart - CONDITION_CONTEXT_RADIUS),
+    Math.min(contextText.length, relativeEnd + CONDITION_CONTEXT_RADIUS)
+  );
+}
 
 function normalized(value) {
   return String(value || "")
@@ -412,23 +439,17 @@ function materializeAtomicFacts({
     const target = targetsById.get(judgement.targetId);
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
-      .map(
-        ({
+      .map((candidate) => {
+        const { candidateId, physicalPageNumber, printedPageLabel, exactText } =
+          candidate;
+        return {
           candidateId,
           physicalPageNumber,
           printedPageLabel,
           exactText,
-          contextText,
-          scopeLeadText,
-        }) => ({
-          candidateId,
-          physicalPageNumber,
-          printedPageLabel,
-          exactText,
-          contextText,
-          scopeLeadText,
-        })
-      );
+          conditionCheckText: conditionCheckText(candidate),
+        };
+      });
     return {
       requirementId: judgement.requirementId,
       componentId: judgement.componentId,
