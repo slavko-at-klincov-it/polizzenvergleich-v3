@@ -71,6 +71,69 @@ async function embedBatches({ client, model, inputs, batchSize = 32 }) {
   return vectors;
 }
 
+function restoreFrozenRankings({
+  rankingReport,
+  documentFingerprint,
+  catalogId,
+  eligibleTargets,
+  chunks,
+  chunkSize,
+  chunkOverlap,
+}) {
+  if (
+    rankingReport?.documentFingerprint !== documentFingerprint ||
+    rankingReport?.catalogId !== catalogId ||
+    rankingReport?.configuration?.chunkSize !== chunkSize ||
+    rankingReport?.configuration?.chunkOverlap !== chunkOverlap
+  )
+    throw new Error(
+      "Frozen-Rankings gehören nicht zu Dokument, Katalog oder Chunkvertrag"
+    );
+
+  const chunksById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const rankingsByTarget = new Map(
+    (rankingReport.rankings || []).map((ranking) => [ranking.targetId, ranking])
+  );
+  if (
+    rankingsByTarget.size !== eligibleTargets.length ||
+    eligibleTargets.some((target) => !rankingsByTarget.has(target.id))
+  )
+    throw new Error(
+      "Frozen-Rankings enthalten nicht exakt die berechtigten Ziele"
+    );
+
+  return eligibleTargets.map((target) => {
+    const ranking = rankingsByTarget.get(target.id);
+    if (
+      !Array.isArray(ranking.chunks) ||
+      ranking.chunks.length !== target.topK ||
+      new Set(ranking.chunks.map((chunk) => chunk.chunkId)).size !==
+        ranking.chunks.length
+    )
+      throw new Error(
+        `Frozen-Ranking für ${target.id} ist unvollständig oder doppelt`
+      );
+    return {
+      ...target,
+      chunks: ranking.chunks.map((rankedChunk) => {
+        const chunk = chunksById.get(rankedChunk.chunkId);
+        if (!chunk || !Number.isFinite(rankedChunk.score))
+          throw new Error(
+            `Frozen-Ranking für ${target.id} referenziert ungültigen Chunk`
+          );
+        return { ...chunk, score: rankedChunk.score };
+      }),
+    };
+  });
+}
+
+function batchTargetChunks(chunks, maxChunksPerCall) {
+  const batches = [];
+  for (let start = 0; start < chunks.length; start += maxChunksPerCall)
+    batches.push(chunks.slice(start, start + maxChunksPerCall));
+  return batches;
+}
+
 async function run() {
   const args = parseArguments(process.argv.slice(2));
   const allowed = new Set([
@@ -85,6 +148,8 @@ async function run() {
     "embeddingModel",
     "chunkSize",
     "chunkOverlap",
+    "frozenRankingsReport",
+    "maxChunksPerCall",
     "maxAttemptsPerTarget",
   ]);
   const unknown = Object.keys(args).filter((key) => !allowed.has(key));
@@ -119,7 +184,14 @@ async function run() {
     args.embeddingModel || process.env.EMBEDDING_MODEL_PREF || "dinghy-embed";
   const chunkSize = Number(args.chunkSize || 3_000);
   const chunkOverlap = Number(args.chunkOverlap || 250);
+  const maxChunksPerCall = Number(args.maxChunksPerCall || 1);
   const maxAttemptsPerTarget = Number(args.maxAttemptsPerTarget || 2);
+  if (
+    !Number.isInteger(maxChunksPerCall) ||
+    maxChunksPerCall < 1 ||
+    maxChunksPerCall > 3
+  )
+    fail("--maxChunksPerCall muss zwischen 1 und 3 liegen");
   if (
     !Number.isInteger(maxAttemptsPerTarget) ||
     maxAttemptsPerTarget < 1 ||
@@ -176,33 +248,55 @@ async function run() {
     chunkSize,
     chunkOverlap,
   });
-  const embeddingClient = new OpenAI({
-    baseURL: parseLMStudioBasePath(process.env.LMSTUDIO_BASE_PATH),
-    apiKey: process.env.LMSTUDIO_AUTH_TOKEN ?? "lm-studio",
-  });
-  const chunkVectors = await embedBatches({
-    client: embeddingClient,
-    model: embeddingModel,
-    inputs: chunks.map((chunk) => chunk.text),
-  });
-  const targetVectors = await embedBatches({
-    client: embeddingClient,
-    model: embeddingModel,
-    inputs: eligibleTargets.map((target) => target.query),
-  });
-  const rankedTargets = rankChunksForTargets({
-    targets: eligibleTargets,
-    chunks,
-    targetVectors,
-    chunkVectors,
-  });
+  const frozenRankingsReportFile = args.frozenRankingsReport
+    ? path.resolve(args.frozenRankingsReport)
+    : null;
+  let rankedTargets;
+  if (frozenRankingsReportFile) {
+    rankedTargets = restoreFrozenRankings({
+      rankingReport: readJson(
+        frozenRankingsReportFile,
+        "Frozen-Rankings-Report"
+      ),
+      documentFingerprint: artifact.fingerprint,
+      catalogId: validatedCatalog.catalogId,
+      eligibleTargets,
+      chunks,
+      chunkSize,
+      chunkOverlap,
+    });
+  } else {
+    const embeddingClient = new OpenAI({
+      baseURL: parseLMStudioBasePath(process.env.LMSTUDIO_BASE_PATH),
+      apiKey: process.env.LMSTUDIO_AUTH_TOKEN ?? "lm-studio",
+    });
+    const chunkVectors = await embedBatches({
+      client: embeddingClient,
+      model: embeddingModel,
+      inputs: chunks.map((chunk) => chunk.text),
+    });
+    const targetVectors = await embedBatches({
+      client: embeddingClient,
+      model: embeddingModel,
+      inputs: eligibleTargets.map((target) => target.query),
+    });
+    rankedTargets = rankChunksForTargets({
+      targets: eligibleTargets,
+      chunks,
+      targetVectors,
+      chunkVectors,
+    });
+  }
 
   const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
   const calls = [];
   const selections = [];
+  let targetBatchCount = 0;
   for (const target of rankedTargets) {
-    for (const chunk of target.chunks) {
-      const singleChunkTarget = { ...target, chunks: [chunk] };
+    const chunkBatches = batchTargetChunks(target.chunks, maxChunksPerCall);
+    for (const chunks of chunkBatches) {
+      targetBatchCount += 1;
+      const batchTarget = { ...target, chunks };
       const payload = {
         schemaVersion: 1,
         target: {
@@ -215,13 +309,11 @@ async function run() {
           factRole: target.factRole,
           semanticContract: target.semanticContract,
         },
-        chunks: [
-          {
-            chunkId: chunk.id,
-            physicalPageNumber: chunk.physicalPageNumber,
-            text: chunk.text,
-          },
-        ],
+        chunks: chunks.map((chunk) => ({
+          chunkId: chunk.id,
+          physicalPageNumber: chunk.physicalPageNumber,
+          text: chunk.text,
+        })),
       };
       let validated = null;
       let previousError = null;
@@ -230,7 +322,7 @@ async function run() {
           ? {
               ...payload,
               retryInstruction:
-                "Die vorige Antwort war formal ungültig. Verwende die eine gelieferte chunkId genau einmal, nur eine erlaubte Relation und ausschließlich einen wortgetreuen Teilstring.",
+                "Die vorige Antwort war formal ungültig. Verwende jede gelieferte chunkId genau einmal, nur erlaubte Relationen und für akzeptierte Chunks ausschließlich einen wortgetreuen Teilstring aus dem jeweiligen Chunk.",
               previousErrorCode: previousError.code,
             }
           : payload;
@@ -252,7 +344,8 @@ async function run() {
           );
         calls.push({
           targetId: target.id,
-          chunkId: chunk.id,
+          chunkId: chunks.length === 1 ? chunks[0].id : null,
+          chunkIds: chunks.map((chunk) => chunk.id),
           attempt,
           payloadSha256: sha256(JSON.stringify(userPayload)),
           responseText: completion?.textResponse || "",
@@ -261,7 +354,7 @@ async function run() {
         try {
           validated = parseAndValidateHybridSelection({
             responseText: completion?.textResponse || "",
-            target: singleChunkTarget,
+            target: batchTarget,
             invalidEvidencePolicy: "downgrade",
           });
           break;
@@ -273,22 +366,31 @@ async function run() {
         }
       }
       if (validated) selections.push(...validated.selections);
-      else
-        selections.push({
-          targetId: target.id,
-          requirementId: target.requirementId,
-          componentId: target.componentId,
-          semanticContract: target.semanticContract,
-          chunkId: chunk.id,
-          relation: "UNRESOLVED",
-          quote: null,
-          score: chunk.score,
-          pageNumber: chunk.pageNumber,
-          documentStart: null,
-          documentEnd: null,
-          rejectedRelation: null,
-          rejectionCode: previousError?.code || "HYBRID_MODEL_OUTPUT_INVALID",
-        });
+      else {
+        if (chunks.length > 1) {
+          const error = new Error(
+            `HYBRID_BATCH_OUTPUT_INVALID: ${target.id} (${chunks.map((chunk) => chunk.id).join(",")})`
+          );
+          error.code = previousError?.code || "HYBRID_MODEL_OUTPUT_INVALID";
+          throw error;
+        }
+        for (const chunk of chunks)
+          selections.push({
+            targetId: target.id,
+            requirementId: target.requirementId,
+            componentId: target.componentId,
+            semanticContract: target.semanticContract,
+            chunkId: chunk.id,
+            relation: "UNRESOLVED",
+            quote: null,
+            score: chunk.score,
+            pageNumber: chunk.pageNumber,
+            documentStart: null,
+            documentEnd: null,
+            rejectedRelation: null,
+            rejectionCode: previousError?.code || "HYBRID_MODEL_OUTPUT_INVALID",
+          });
+      }
     }
   }
 
@@ -314,13 +416,22 @@ async function run() {
       chunkOverlap,
       topKMaximum: Math.max(...eligibleTargets.map((target) => target.topK)),
       embeddingModel,
+      rankingSource: frozenRankingsReportFile ? "FROZEN_REPORT" : "DINGHY",
+      frozenRankingsReportSha256: frozenRankingsReportFile
+        ? sha256(fs.readFileSync(frozenRankingsReportFile))
+        : null,
       chatModel: process.env.LMSTUDIO_MODEL_PREF,
       modelTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
+      maxChunksPerCall,
       maxAttemptsPerTarget,
+      maxOutputTokens: 1_024,
+      selectionBatchContract: "TARGET_CHUNKS_V2",
     },
     chunkCount: chunks.length,
     targetCount: validatedCatalog.targets.length,
     eligibleTargetCount: eligibleTargets.length,
+    targetBatchCount,
+    modelCallCount: calls.length,
     selectionCount: selections.length,
     acceptedSelectionCount: selections.filter((selection) => selection.quote)
       .length,
@@ -352,4 +463,7 @@ async function run() {
   );
 }
 
-run().catch((error) => fail(error.stack || error.message));
+if (require.main === module)
+  run().catch((error) => fail(error.stack || error.message));
+
+module.exports = { batchTargetChunks, restoreFrozenRankings };
