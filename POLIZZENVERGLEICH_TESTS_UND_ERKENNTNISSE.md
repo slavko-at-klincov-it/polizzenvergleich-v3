@@ -2833,15 +2833,15 @@ Geprüft wurde der exakte Codecommit
 Worktree `/tmp/pv3-validate-ff95d896` mit Node `v22.23.2`. Der installierte
 Kunden-Checkout blieb unverändert. Es lief kein LLM- oder Kunden-PDF-Lauf.
 
-| Prüfung                                   |                                   Ergebnis |
-| ----------------------------------------- | -----------------------------------------: |
-| fokussierte und angrenzende Verträge      |                   14 Suites / 164 Tests PASS |
-| 224-Zeilen-Abwesenheitsvertrag            |                                       PASS |
-| Prettier aller geänderten Dateien         |                                       PASS |
-| ESLint der fünf geänderten Serverquellen  |                                       PASS |
-| ESLint der geänderten JSX-Oberfläche      |                                       PASS |
-| Frontend-Produktionsbuild                 | PASS, Vite 4.5.3, 6.170 Module transformiert |
-| vollständiger Jest-Versuch                |        103/105 Suites, 1.173/1.178 Tests PASS |
+| Prüfung                                  |                                     Ergebnis |
+| ---------------------------------------- | -------------------------------------------: |
+| fokussierte und angrenzende Verträge     |                   14 Suites / 164 Tests PASS |
+| 224-Zeilen-Abwesenheitsvertrag           |                                         PASS |
+| Prettier aller geänderten Dateien        |                                         PASS |
+| ESLint der fünf geänderten Serverquellen |                                         PASS |
+| ESLint der geänderten JSX-Oberfläche     |                                         PASS |
+| Frontend-Produktionsbuild                | PASS, Vite 4.5.3, 6.170 Module transformiert |
+| vollständiger Jest-Versuch               |       103/105 Suites, 1.173/1.178 Tests PASS |
 
 Synthetisch belegt sind:
 
