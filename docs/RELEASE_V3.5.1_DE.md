@@ -60,3 +60,49 @@ veröffentlichten `main`-Stand. Der macOS-Updater:
 Der Vergleichsexport, hochgeladene Dokumente und vorhandene private
 Laufartefakte bleiben im V3-Speicher beziehungsweise im konfigurierten
 Vergleichsordner erhalten.
+
+## Deployment auf dem Mac Studio
+
+Der annotierte Tag `v3.5.1` wurde am 31. August 2026 als technischer
+Test-/Betriebsstand auf dem Kunden-Mac-Studio installiert.
+
+```text
+TAG: v3.5.1
+COMMIT: ca2add77ddee4b21099f24983774dc8b35b046d7
+INSTALLATION: /Users/michaelmischkot/Code/polizzenvergleich-v3
+VORHER: v3.4.0 / 977ed40f735762132aec5aa5cfd91a46c2c2efcf
+EXTERNE SICHERUNG:
+  /Users/michaelmischkot/Polizzenvergleich-Backups/
+  pre-v3.5.1-20260831-093731
+```
+
+Vor dem Update bestanden auf dem exakten Releasekandidaten:
+
+- der macOS-Installervertrag;
+- sieben fokussierte Vergleichssuites mit 65 Tests;
+- Bash-Syntax aller geänderten Start-/Update-/Doctorpfade;
+- Prettier der geänderten Produkt-, Test- und Dokumentdateien;
+- der Frontend-Produktionsbuild mit 6.170 Modulen im isolierten Worktree.
+
+Der offizielle Updater installierte Abhängigkeiten, erzeugte den Prisma-
+Client, baute das Produktionsfrontend mit 6.181 Modulen, sicherte die
+Produktionsdatenbank, bestätigte 41 Migrationen ohne offenen Migrationsschritt,
+führte den Seed aus, aktivierte den Build und startete beide LaunchAgents.
+
+Nach dem Update bestanden:
+
+- integrierter und separater Doctor vollständig;
+- sauberer, abgetrennter Checkout exakt auf Tag und Commit;
+- SQLite `PRAGMA quick_check` für aktuelle und externe Sicherungsdatenbank;
+- identische Bestandszahlen vor/nach Update: 8 Workspaces, 3
+  Workspace-Dokumente, 2 Vergleichssessions und 10 Vergleichsdokumente;
+- Server und Collector erreichbar und ausschließlich an Loopback gebunden;
+- ausschließlich `qwen/qwen3.6-35b-a3b`, Kontext 42.496, Parallelität 1;
+- Server-, Collector- und Frontend-Environment mit Modus 600;
+- Storage und Vergleichsexportordner mit Modus 700;
+- unveränderte vorhandene Vergleichsexporte und private
+  Vergleichsartefakte.
+
+Die fachliche Freigabegrenze dieses Dokuments bleibt durch das erfolgreiche
+Deployment unverändert: Der Stand ist technisch installiert, aber die
+bestätigten Recall-/Scopefehler sind weiterhin offen.

@@ -3781,3 +3781,47 @@ erst mit einer ausdrücklich autorisierten Bereitstellung aktiv.
 
 Vollständiger Prüfbericht:
 `docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
+
+## 74. V3.5.1: technisches Deployment mit vollständiger Rückfallsicherung
+
+Der Entwicklungsstand wurde vor dem Deployment mit dem abweichenden
+`origin/main` zusammengeführt. Dadurch bleiben die V3.4.0-RC2-Korrekturen für
+lokale Bedingungs- und Rückausnahmescopes erhalten. Der kombinierte Stand
+wurde als neuer, annotierter und vorwärts gerichteter Patchrelease
+`v3.5.1` veröffentlicht; der unveränderliche Tag `v3.5.0` wurde nicht bewegt.
+
+Vor der Aktivierung entstand bei gestoppten Diensten eine externe Kopie von
+Storage, Environmentdateien, LaunchAgents und Vergleichsexporten unter:
+
+```text
+/Users/michaelmischkot/Polizzenvergleich-Backups/
+pre-v3.5.1-20260831-093731
+```
+
+```text
+RELEASE: v3.5.1
+COMMIT: ca2add77ddee4b21099f24983774dc8b35b046d7
+VORHER: v3.4.0 / 977ed40f735762132aec5aa5cfd91a46c2c2efcf
+PASS: macOS-Installervertrag
+PASS: 7 fokussierte Suites / 65 Tests
+PASS: Bash-Syntax und Prettier der relevanten Dateien
+PASS: isolierter Frontend-Build / 6.170 Module
+PASS: Update-Build / 6.181 Module
+PASS: 41 Prisma-Migrationen / keine offene Migration
+PASS: integrierter und separater Doctor
+PASS: aktuelle und gesicherte SQLite-Datenbank quick_check = ok
+PASS: Bestandszahlen vor/nach Update identisch
+PASS: vorhandene Exporte und private Vergleichsartefakte unverändert
+PASS: nur Qwen 3.6 / 42.496 Kontext / parallel 1 geladen
+PASS: Server und Collector laufen ausschließlich auf Loopback
+```
+
+Der produktive `server/.env` enthält jetzt den dauerhaften Exportpfad
+`/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche`. Damit wird
+jede nach `COMPLETED` terminierende neue Arbeitsmappe vor Abschluss atomar und
+eindeutig benannt dort archiviert.
+
+Das Deployment ist eine technische Bereitstellung für weitere Tests. Es hebt
+das fachliche `NO GO` aus Abschnitt 73 nicht auf: Die bestätigten
+Nulltreffer-, Heading-, `ANY`-Aggregations-, Objekt-/Limit- und
+Rollen-/Statusfehler bleiben offen und Ergebnisse benötigen fachlichen Review.

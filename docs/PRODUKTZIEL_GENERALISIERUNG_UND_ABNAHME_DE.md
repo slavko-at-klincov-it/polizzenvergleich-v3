@@ -402,6 +402,20 @@ Punktentscheidung bildet die Katalogpolicy `ANY` nicht konsistent ab. Der
 konservative Endzustand `UNKLAR` verhindert zwar einen falschen Gewinner,
 heilt aber die unvollständige Tatsachenmaterialisierung nicht.
 
+### Stand nach technischem Deployment V3.5.1
+
+Der kombinierte, vorwärts gerichtete Release `v3.5.1` ist auf dem Mac Studio
+installiert. Datenbank, Dokumentbestände, private Vergleichsartefakte und
+vorhandene Exporte blieben erhalten; beide Doctor-Läufe, SQLite-Integrität,
+Loopback-Dienste und der exakte Qwen-3.6-Vertrag mit 42.496 Kontext bestanden.
+Neue fertige Vergleichsarbeitsmappen werden dauerhaft unter
+`~/Downloads/Projekt Lokale KI/Vergleiche` archiviert.
+
+Die Installation ändert den fachlichen Beweisstand nicht. Sie stellt den
+aktuellen technischen Pfad für weitere Prüfungen bereit; der Full-Run bleibt
+wegen der dokumentierten Recall-, Heading-, Komponenten- und Wertbindungsfehler
+`NO GO` für eine ungeprüfte Kundenentscheidung.
+
 ### Stand nach technischem A/B-MVP
 
 Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion
