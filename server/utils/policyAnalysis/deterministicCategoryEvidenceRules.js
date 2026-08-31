@@ -232,6 +232,17 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
 
 function occurrenceClauseText(occurrence) {
   const text = String(occurrence?.context?.text || "");
+  const softLineBreaks = occurrence?.context?.unitType === "PARAGRAPH";
+  const isBoundary = (index) => {
+    const character = text[index];
+    if (/[\n\r]/u.test(character)) return !softLineBreaks;
+    if (/[!?;]/u.test(character)) return true;
+    if (character !== ".") return false;
+    const nextNonWhitespace = text.slice(index + 1).match(/\S/u)?.[0] || "";
+    return !(
+      /\d/u.test(text[index - 1] || "") && /[\d-]/u.test(nextNonWhitespace)
+    );
+  };
   const contextStart = Number(occurrence?.context?.documentStart);
   const occurrenceStart = Number(occurrence?.documentStart) - contextStart;
   const occurrenceEnd = Number(occurrence?.documentEnd) - contextStart;
@@ -245,9 +256,9 @@ function occurrenceClauseText(occurrence) {
   )
     return String(occurrence?.exactText || "");
   let start = occurrenceStart;
-  while (start > 0 && !/[.!?;\n\r]/u.test(text[start - 1])) start -= 1;
+  while (start > 0 && !isBoundary(start - 1)) start -= 1;
   let end = occurrenceEnd;
-  while (end < text.length && !/[.!?;\n\r]/u.test(text[end])) end += 1;
+  while (end < text.length && !isBoundary(end)) end += 1;
   return text.slice(start, end);
 }
 
@@ -263,15 +274,20 @@ function operativeCoveragePolarity(occurrence) {
     /\b(?:werden|wird)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
       clause
     ) ||
+    /\b(?:sind|gelten)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\bmitversichert\b/iu.test(
+      clause
+    ) ||
     /\b(?:kein\w*\s+Ersatz|nicht\s+(?:ersetzt|entschädigt|vergütet))\b/iu.test(
       clause
-    )
+    ) ||
+    /\bnicht\s+mitversichert\b/iu.test(clause)
   )
     return "NEGATIVE";
   if (
     /\b(?:es\s+)?(?:werden|wird)\b[\s\S]{0,320}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
       clause
     ) ||
+    /\b(?:sind|gelten)\b[\s\S]{0,320}?\bmitversichert\b/iu.test(clause) ||
     /\b(?:der\s+)?Versicherer\s+leistet\s+Entschädigung\b/iu.test(clause)
   )
     return "POSITIVE";

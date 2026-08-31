@@ -601,7 +601,7 @@ describe("category semantic exceptions", () => {
       })
     ).toMatchObject({
       binding: "DIRECT",
-      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
     });
   });
 
@@ -797,13 +797,13 @@ describe("category semantic exceptions", () => {
       bindingFor("Rettungskosten sind ausdrücklich mitversichert.")
     ).toMatchObject({
       binding: "DIRECT",
-      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
     });
     expect(
       bindingFor("Rettungskosten sind nicht mitversichert.")
     ).toMatchObject({
       binding: "DIRECT",
-      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+      basis: "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
     });
   });
 

@@ -161,6 +161,58 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("binds paragraph-wrapped costs that are explicitly mitversichert", () => {
+    const text = [
+      "ST01 Entsorgung von Bäumen",
+      "Die Kosten nach einem versicherten Sturmschaden für das Sichern und Entsorgen von",
+      "Bäumen, die von einem Sturmschaden betroffen sind, sind bis EUR 3.000.- mitversichert.",
+    ].join("\n");
+    const input = bindingInput({
+      text,
+      exactText:
+        "ST01 Entsorgung von Bäumen\nDie Kosten nach einem versicherten Sturmschaden für das Sichern und Entsorgen von",
+    });
+    input.requirement.id = "ST-25";
+    input.component = { id: "tree_removal_costs", factRole: "COST" };
+    input.occurrence.context.unitType = "PARAGRAPH";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
+  test("binds paragraph-wrapped costs that are explicitly not mitversichert", () => {
+    const text = [
+      "Kosten für die Entsorgung von Bäumen",
+      "sind nach einem Sturmschaden nicht mitversichert.",
+    ].join("\n");
+    const input = bindingInput({ text, exactText: "Entsorgung von Bäumen" });
+    input.requirement.id = "ST-25";
+    input.component = { id: "tree_removal_costs", factRole: "COST" };
+    input.occurrence.context.unitType = "PARAGRAPH";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
+  test("does not carry mitversichert from the next sentence into tree costs", () => {
+    const text = [
+      "Die Kosten für die Entsorgung von Bäumen werden gesondert beschrieben.",
+      "Andere Sachen sind mitversichert.",
+    ].join("\n");
+    const input = bindingInput({ text, exactText: "Entsorgung von Bäumen" });
+    input.requirement.id = "ST-25";
+    input.component = { id: "tree_removal_costs", factRole: "COST" };
+    input.occurrence.context.unitType = "PARAGRAPH";
+
+    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
   test("rejects a matching phrase from an explicit different coverage chapter", () => {
     const input = bindingInput({
       text: "Versichert sind Schäden durch Hagel.",

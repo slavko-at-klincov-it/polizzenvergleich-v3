@@ -187,6 +187,35 @@ describe("ST category recall", () => {
     });
   });
 
+  test("ST-25 recalls disposal wording under a structured storm heading", () => {
+    const result = worksheetFromText(
+      [
+        "B3 Sturmversicherung (ST)",
+        "ST01 Entsorgung von Bäumen",
+        "Die Kosten nach einem versicherten Sturmschaden für das Sichern und Entsorgen von",
+        "Bäume, die von einem Sturmschaden betroffen sind, sind bis EUR 3.000.- mitversichert.",
+      ].join("\n")
+    );
+
+    expect(component(result, "ST-25", "tree_removal_costs")).toMatchObject({
+      terminalState: "CONTROLLED_CANDIDATES_FOUND",
+      occurrenceCount: 1,
+      occurrences: [
+        expect.objectContaining({
+          matchedAlias:
+            "CONCEPT_SEARCH:storm-related-tree-securing-or-disposal-costs",
+          sectionScopeHint: expect.objectContaining({
+            scopeKey: "STURM_INSURANCE",
+          }),
+        }),
+      ],
+    });
+    expect(component(result, "ST-25", "branch_removal_costs")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
   test("ST-29 recalls generally insured fences without inventing a storm phrase", () => {
     const fencing = component(
       worksheet,
