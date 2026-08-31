@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const crypto = require("crypto");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const repo = path.resolve(
@@ -10,6 +11,9 @@ const serverEnv = path.join(repo, "server/.env");
 const collectorEnv = path.join(repo, "collector/.env");
 const frontendEnv = path.join(repo, "frontend/.env");
 const storage = path.join(repo, "server/storage");
+const comparisonExportDirectory =
+  process.env.V3_COMPARISON_EXPORT_DIR ||
+  path.join(os.homedir(), "Downloads", "Projekt Lokale KI", "Vergleiche");
 
 function existingValue(content, key) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -64,6 +68,7 @@ for (const dir of [
   path.join(storage, "direct-uploads"),
   path.join(storage, "documents"),
   path.join(repo, "collector/hotdir"),
+  comparisonExportDirectory,
 ]) {
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   fs.chmodSync(dir, 0o700);
@@ -86,6 +91,7 @@ mergeManagedBlock(serverEnv, {
   LMSTUDIO_MODEL_TOKEN_LIMIT: "42496",
   POLICY_FULL_MODEL: "qwen/qwen3.6-35b-a3b",
   POLICY_FULL_MODEL_TOKEN_LIMIT: "42496",
+  POLICY_COMPARISON_EXPORT_DIR: comparisonExportDirectory,
 });
 
 mergeManagedBlock(collectorEnv, {

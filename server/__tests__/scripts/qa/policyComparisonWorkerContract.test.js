@@ -48,4 +48,12 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("enforceProductProfile: true");
     expect(source).not.toContain("const timestamp = new Date()");
   });
+
+  test("archives the completed workbook before marking the session complete", () => {
+    expect(source).toContain("archiveComparisonWorkbook({");
+    expect(source).toContain('"export.private.json"');
+    expect(source.indexOf("archiveComparisonWorkbook({")).toBeLessThan(
+      source.indexOf('status: "COMPLETED"')
+    );
+  });
 });

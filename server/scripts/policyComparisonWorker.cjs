@@ -16,6 +16,9 @@ const {
   PRODUCT_PROFILE,
 } = require("../utils/policyComparison/productContract");
 const {
+  archiveComparisonWorkbook,
+} = require("../utils/policyComparison/workbookArchive");
+const {
   releaseIdentity,
   sha256,
 } = require("../utils/policyAnalysis/runIdentity");
@@ -314,11 +317,20 @@ async function main() {
     }),
   });
   const resultDirectory = path.join(runRoot, "result");
-  await writeComparisonArtifacts({
+  const artifacts = await writeComparisonArtifacts({
     documentRuns,
     outputDirectory: resultDirectory,
     metadata: { sessionUuid, runSignature: signature },
     enforceProductProfile: true,
+  });
+  const archivedWorkbook = archiveComparisonWorkbook({
+    workbookFile: artifacts.workbookFile,
+    sessionUuid,
+    runSignature: signature,
+  });
+  writePrivateJson(path.join(resultDirectory, "export.private.json"), {
+    schemaVersion: 1,
+    archivedWorkbook,
   });
   const resultPath = path.relative(policyComparisonsPath, resultDirectory);
   await updateSession(session.id, {
