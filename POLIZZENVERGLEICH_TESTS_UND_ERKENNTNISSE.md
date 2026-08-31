@@ -3000,3 +3000,49 @@ Qwen-3.6-Laufzeitvertrag funktionieren auf der Kundenhardware.
 Alias-/Konzept-Recall, korrekten Klauselscope in allen Fällen, unbekannte
 Versicherer oder das 99-Prozent-Ziel. Das erfolgreiche technische Deployment
 ändert das fachliche `NO GO` aus Abschnitt 49 nicht.
+
+## 51. HP-25-Weltgeltung als interner Katalogvertrag v0.2
+
+**Codecommit:** `5457309cb5531c001d3fa1705f33b11042928db9`
+
+**Abnahmeort:** isoliertes Mac-Studio-Repository
+`/tmp/pv3-hp25-5457309c`
+
+Der reale Fehler war kein freier Modellfehler, sondern unvollständiger
+Kandidaten-Recall: Eine weltweit auf Schadenereignisse bezogene Klausel
+erreichte `foreign_coverage` nicht. HP-25 benötigt denselben Quellspan jedoch
+zweimal semantisch: als `territorial_scope` für das angeforderte Scope-Feld
+und als `foreign_coverage` für die Deckungswirkung.
+
+Der HP-Katalog ist deshalb von v0.1 auf v0.2 versioniert. Exakte Varianten und
+eine enge Konzeptsuche aus `weltweit` plus Schadenereignis beziehungsweise
+Versicherungsfall werden an beide Komponenten gebunden. `SHARED_SPAN` sichert
+die gemeinsame Fundstelle; `COVERAGE_ROLES_ONLY` verhindert, dass die
+CONDITION-Rolle selbst die Deckungswirkung bestimmt.
+
+| Prüfung                                  | Ergebnis                           |
+| ---------------------------------------- | ---------------------------------- |
+| fokussierte Verträge                     | 9 Suites / 221 Tests PASS          |
+| exakte, umgestellte und flektierte Sätze | PASS                               |
+| typische OCR-Trennung                    | PASS                               |
+| fehlende Konzeptgruppe / Absatzgrenze    | kein HP-25-Kandidat                |
+| positiver Downstream                     | `Ja` / `BELEGT`, Quelle gebunden   |
+| negativer Downstream                     | `Nein` / `BELEGT`, Quelle gebunden |
+| bloße Erwähnung                          | `Nicht feststellbar` / `UNGEKLÄRT` |
+| Produktprofil                            | weiter nur VS/FE/LW/ST/EL, 224     |
+| Format / Bash                            | PASS                               |
+| vollständiger Jest-Versuch               | 105/107 Suites, 1.193/1.198 Tests  |
+
+Die beiden bekannten Vollsuite-Ausnahmen sind unverändert: Der historische
+VS-Legacy-Runner erwartet das seit V3.5.0 entfernte automatische
+Embeddingmodell; der isolierte Collector-Test findet ohne Binärpfad kein
+`ffmpeg`. Kein Modelllauf, keine Kunden-PDF und kein Deployment waren Teil
+dieses Schritts.
+
+**Beweist:** Der wiederverwendbare HP-25-Kandidatenvertrag und seine
+servergebundene Weiterverarbeitung funktionieren für die getesteten positiven,
+negativen und adversarialen Varianten, ohne HP zu aktivieren.
+
+**Beweist nicht:** vollständige HP-Qualität, unbekannte Versicherer, beliebige
+OCR-Fehler oder das 99-Prozent-Ziel. Ein zuvor unbekannter, fachlich gelabelter
+HP-Holdout bleibt erforderlich.

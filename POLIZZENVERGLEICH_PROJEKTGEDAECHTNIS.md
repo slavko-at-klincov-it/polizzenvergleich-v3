@@ -949,3 +949,16 @@ Die Implementierung ist mit Codecommit
 validiert. 14 relevante Suites mit 164 Tests, Format, Server-/JSX-Lint und der
 Frontend-Build bestehen. Es folgt daraus weder eine fachliche
 224-Zeilen-Freigabe noch ein Fremdversicherer- oder 99-Prozent-Nachweis.
+
+## 16. HP bleibt intern; HP-25 verwendet Katalog v0.2
+
+Der interne HP-Katalog ist auf v0.2 versioniert. HP-25 bindet weltweite
+Schadenereignis- und Versicherungsfallformulierungen als gemeinsamen Span an
+`territorial_scope` und `foreign_coverage`. Die erste Rolle liefert den
+angeforderten Geltungsbereich; nur die zweite Rolle besitzt Deckungswirkung.
+
+Das aktive Profil bleibt unverändert `CUSTOMER_CORE_5_V2` mit VS, FE, LW, ST,
+EL und 224 Zeilen. HP wird weder gestartet noch exportiert. Der isolierte
+Mac-Studio-Nachweis umfasst 221 fokussierte Tests; unbekannte HP-Holdouts und
+eine fachliche HP-Freigabe bleiben offen. Details stehen in
+`POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`, Abschnitt 51.

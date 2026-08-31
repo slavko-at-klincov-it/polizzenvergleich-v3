@@ -18,7 +18,7 @@ zu lesen. Er legt verbindlich fest:
 - LF IMMO und WEVIG sind bekannte Entwicklungs- und Regressionsexemplare,
   keine ausreichende Generalisierungs- oder 99-Prozent-Evidenz.
 - Bis zu neun Paketdokumente werden im produktiven Profil
-  `CUSTOMER_CORE_5_V1` in VS, FE, LW, ST und EL mit 224 sichtbaren Zeilen
+  `CUSTOMER_CORE_5_V2` in VS, FE, LW, ST und EL mit 224 sichtbaren Zeilen
   ausgewertet; Kategorien sind Views über atomare Fakten. HP, VB und WE
   bleiben interne Katalog- und historische Regressionsevidenz.
 - Jede dokumentbezogene Korrektur muss einen allgemeinen semantischen Vertrag
