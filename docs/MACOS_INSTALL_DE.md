@@ -14,7 +14,7 @@ Voraussetzungen:
 ```bash
 cd ~/Code/polizzenvergleich-v3
 git fetch origin --tags
-git checkout v3.5.0
+git checkout v3.5.1
 ./install.command
 ```
 
@@ -48,7 +48,7 @@ Embeddingmodelle werden beim V3-Serverstart entladen.
 ```bash
 cd ~/Code/polizzenvergleich-v3
 ./doctor.command
-./update.command v3.5.0
+./update.command v3.5.1
 ./doctor.command
 ```
 
@@ -59,4 +59,4 @@ hochgeladen und indexiert werden. Alte flache PDF-Vektoren können nicht
 nachträglich zuverlässig einer physischen Seite zugeordnet werden.
 
 Modellentscheidung, Messwerte und noch ausstehende Abnahme stehen in
-`docs/RELEASE_V3.5.0_DE.md`.
+`docs/RELEASE_V3.5.1_DE.md`.

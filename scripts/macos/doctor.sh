@@ -13,7 +13,7 @@ v3_safe_repo_path
 [ "$(uname -s)/$(uname -m)" = "Darwin/arm64" ] && ok "macOS Apple Silicon" || bad "macOS arm64 erforderlich"
 [ -x "$V3_NODE_BIN" ] && ok "Lokale Node-Runtime" || bad "Node-Runtime fehlt"
 [ "$($V3_NODE_BIN --version 2>/dev/null || true)" = "v$V3_NODE_VERSION" ] && ok "Node v$V3_NODE_VERSION" || bad "Falsche Node-Version"
-[ "$V3_RELEASE_VERSION" = "3.5.0" ] && ok "Produktversion v$V3_RELEASE_VERSION" || bad "Unerwartete Produktversion"
+[ "$V3_RELEASE_VERSION" = "3.5.1" ] && ok "Produktversion v$V3_RELEASE_VERSION" || bad "Unerwartete Produktversion"
 
 for name in collector server; do
   plist="$V3_LAUNCH_AGENTS_DIR/$V3_LABEL_PREFIX.$name.plist"
