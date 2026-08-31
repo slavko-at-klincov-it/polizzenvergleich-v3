@@ -901,7 +901,7 @@ gemischte PDFs und fremde fachlich gelabelte Versicherer-Holdouts.
 
 ## 14. Aktuelles Kundenprofil und Excel-Vertrag
 
-Neue A/B-Läufe verwenden das Profil `CUSTOMER_CORE_5_V1` mit VS, FE, LW, ST
+Neue A/B-Läufe verwenden das Profil `CUSTOMER_CORE_5_V2` mit VS, FE, LW, ST
 und EL. Die sichtbare Produkttaxonomie besitzt 224 Zeilen. HP, VB und WE
 bleiben im Repository als interne Katalog- und Regressionsevidenz, werden aber
 nicht produktiv ausgeführt.
@@ -914,3 +914,38 @@ bleiben im privaten JSON. Die Mac-Studio-Abnahme des Implementierungsstands
 bestand 58 fokussierte Tests, Format, Lint, Bash-Syntax, Frontend-Build und
 einen strukturellen sowie visuellen 224-Zeilen-Exportcheck. Ein neuer
 fachlicher LLM-Lauf war nicht Bestandteil dieser Layout- und Laufvertragsänderung.
+
+## 15. Allgemeiner kontrollierter Nulltreffer und typisierte Fachwirkung
+
+Der Vergleich behandelt das Nutzerbeispiel Garage ab
+`CUSTOMER_CORE_5_V2` als Instanz eines allgemeinen Prinzips. Alle 224
+Produktzeilen besitzen einen kontrollierten Negativsuchvertrag und eine
+explizite Bedeutungsgruppe. Ein vollständiger Suchlauf ohne Treffer ist damit
+nicht mehr automatisch dasselbe wie eine unvollständige Prüfung.
+
+Die Ausgabe unterscheidet:
+
+```text
+NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH
+  -> Suchplan vollständig, kein kontrollierter Treffer
+  -> DOCUMENTATION_ONLY_V1
+  -> gegebenenfalls DOKUMENTATIONSUNTERSCHIED, kein Gewinner
+
+NOT_FOUND_AFTER_COMPLETE_SEARCH
+  -> zusätzlich zeilenweise fachlich zertifizierter Schutz-Suchvertrag
+  -> ASSUMED_NOT_INCLUDED_V1
+  -> nur bei aktivem ausdrücklichem Einschluss auf der Gegenseite punktfähig
+```
+
+Die 224 Zeilen sind in 90 reine Schutz-, 25 gemischte Schutz-, 24 Kosten-, 14
+Ausschluss-, 16 Wert-, 44 Bedingungs-, 10 Definitions- und eine
+Dokumentverweiszeile klassifiziert. Diese Taxonomie verhindert, dass fehlende
+Selbstbehalte, Limits, Ausschlüsse oder Bedingungen wie fehlender Schutz
+behandelt werden. `VS-16` bleibt der erste zertifizierte automatische
+Schutzvertrag; weitere Zeilen benötigen eine eigene Synonym-/Konzeptabnahme.
+
+Die Implementierung ist mit Codecommit
+`e3cdaecd744626cbeca4cc5054bfaa157e162e05` auf dem Mac Studio synthetisch
+validiert. 14 relevante Suites mit 164 Tests, Format, Server-/JSX-Lint und der
+Frontend-Build bestehen. Es folgt daraus weder eine fachliche
+224-Zeilen-Freigabe noch ein Fremdversicherer- oder 99-Prozent-Nachweis.

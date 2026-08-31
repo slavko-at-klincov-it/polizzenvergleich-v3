@@ -594,17 +594,21 @@ trennen. Der lokale Prüftext bleibt absichtlich außerhalb des öffentlichen
 Auditobjekts; dort erscheinen weiterhin nur Candidate-ID, physische Seite und
 exakter Originaltext.
 
-## 17. Ergebnisschema V3: separater Suchbefund und Vergleichsannahme
+## 17. Ergebnisschema V5: allgemeiner Suchbefund und typisierte Vergleichswirkung
 
-Der A/B-Result-Builder liest ab Schema V3 zusätzlich Dokumentartefakt,
+Der A/B-Result-Builder liest ab Schema V5 zusätzlich Dokumentartefakt,
 Kategoriebericht, Worksheet, Targets und materialisierte Judgements. Daraus
 entsteht pro atomarer Komponente ein servereigenes Suchaudit:
 
 ```text
 Dokument-/Seitencoverage
   + technische Kategorie-Gates
-  + versionierter opt-in Suchplan
+  + expliziter versionierter Suchplan
   + null Occurrences/Kandidaten/Rejects/Unresolved
+  -> NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH
+  -> DOCUMENTATION_ONLY_V1
+
+zusätzlich nur bei zertifiziertem positivem Schutz-Suchvertrag
   -> NOT_FOUND_AFTER_COMPLETE_SEARCH
   -> ASSUMED_NOT_INCLUDED_V1 nur in der Vergleichsschicht
 ```
@@ -621,10 +625,12 @@ Der Vergleich entscheidet anschließend eng:
   Nichtfinden -> `VORTEIL_A/B`;
 - qualifiziertes Nichtfinden auf beiden Seiten ->
   `KEIN_DOKUMENTIERTER_VORTEIL`;
+- belegter Inhalt gegen neutralen kontrollierten Nulltreffer ->
+  `DOKUMENTATIONSUNTERSCHIED` ohne Gewinner;
 - alle anderen Kombinationen -> bestehende atomare Regeln oder fail-closed
   `UNKLAR`.
 
-JSON nutzt Schema V3, `pointDecision` Schema V2. Markdown und UI verwenden die
+JSON nutzt Schema V5, `pointDecision` Schema V3. Markdown und UI verwenden die
 explizite Begründung; XLSX hängt die Suchbefunde als Spalten S/T an, ohne A–R
 umzuordnen. Alte Ergebnisse werden nicht rückwirkend qualifiziert.
 
@@ -634,7 +640,7 @@ umzuordnen. Alte Ergebnisse werden nicht rückwirkend qualifiziert.
 für neue produktive A/B-Läufe:
 
 ```text
-CUSTOMER_CORE_5_V1
+CUSTOMER_CORE_5_V2 / QUALIFIED_ABSENCE_TYPED_V1
   -> VS 36 / FE 80 / LW 36 / ST 36 / EL 36
   -> 224 sichtbare Ergebniszeilen
 ```
@@ -647,7 +653,7 @@ umgeschrieben.
 
 Der private Ergebnisbaum bleibt technisch vollständig. Nur die abgeleitete
 XLSX-Sicht wird auf ein Blatt und 17 Kundenspalten reduziert. Eine pure
-Presenterfunktion bildet die interne `pointDecision` auf fünf sichtbare
+Presenterfunktion bildet die interne `pointDecision` auf sechs sichtbare
 Kundensignale ab und degradiert unbekannte oder inkonsistente Regeln
 fail-closed zu `ungeklärt`. Damit kann eine Layoutänderung weder technische
 Auditdaten löschen noch die semantische Entscheidung neu erfinden.

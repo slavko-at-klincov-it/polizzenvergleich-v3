@@ -2825,3 +2825,52 @@ ADR-022-Ausschlussvorbehalt und die Trennung technischer Auditfelder vom
 Kunden-XLSX. Nicht belegt sind die fachliche Richtigkeit aller 224 Punkte,
 unbekannte Versicherer, OCR-Vollständigkeit, Dokumentrang/Ersetzung und das
 99-Prozent-Ziel.
+
+## 48. Allgemeiner kontrollierter Nulltreffer mit typisierter Fachwirkung
+
+Geprüft wurde der exakte Codecommit
+`e3cdaecd744626cbeca4cc5054bfaa157e162e05` auf dem Mac Studio im isolierten
+Worktree `/tmp/pv3-validate-ff95d896` mit Node `v22.23.2`. Der installierte
+Kunden-Checkout blieb unverändert. Es lief kein LLM- oder Kunden-PDF-Lauf.
+
+| Prüfung                                   |                                   Ergebnis |
+| ----------------------------------------- | -----------------------------------------: |
+| fokussierte und angrenzende Verträge      |                   14 Suites / 164 Tests PASS |
+| 224-Zeilen-Abwesenheitsvertrag            |                                       PASS |
+| Prettier aller geänderten Dateien         |                                       PASS |
+| ESLint der fünf geänderten Serverquellen  |                                       PASS |
+| ESLint der geänderten JSX-Oberfläche      |                                       PASS |
+| Frontend-Produktionsbuild                 | PASS, Vite 4.5.3, 6.170 Module transformiert |
+| vollständiger Jest-Versuch                |        103/105 Suites, 1.173/1.178 Tests PASS |
+
+Synthetisch belegt sind:
+
+- Suchbefund und Vergleichswirkung sind getrennte Achsen;
+- alle 224 Produktzeilen besitzen genau eine explizite Abwesenheitssemantik;
+- allgemeiner kontrollierter Nulltreffer gegen belegten Inhalt ergibt
+  `DOKUMENTATIONSUNTERSCHIED`, aber keinen Gewinner;
+- Limits, Selbstbehalte, Ausschlüsse, Bedingungen, Definitionen und
+  Dokumentverweise erhalten keine implizite Deckungswirkung;
+- `VS-16` bleibt als zertifizierter positiver Schutz-Suchvertrag funktionsfähig;
+- ein Vorteil gegen zertifiziertes Nichtfinden verlangt
+  `documentApplicability: ACTIVE`; `CONDITIONAL`, `PROPOSED_ONLY` und
+  `UNKNOWN` sind gesperrt;
+- textlose Seiten, unvollständige technische Gates und offene Kandidaten
+  bleiben fail-closed;
+- Produktprofil V2, Katalog-IDs, Worksheet V2, Ergebnis V5 und
+  `pointDecision` V3 verhindern stille Resume- oder Ergebnisvermischung.
+
+Der vollständige Jest-Versuch blieb in zwei sachfremden Baselines rot. Der
+historische VS-Legacy-Shelltest verlangt weiterhin ein Embeddingmodell, das
+seit V3.5.0 bewusst nicht mehr automatisch geladen wird. Der isolierte
+Collector-FFMPEG-Test fand ohne Binärpfad kein `ffmpeg`. Beide Fehler betreffen
+nicht den geänderten Such-, Vergleichs-, Presenter- oder Exportpfad; die 14
+direkt betroffenen Suites bestehen vollständig. Der direkte ESLint-Aufruf auf
+dem bestehenden CommonJS-Presenter meldet weiterhin `module/no-undef`; Jest und
+Prettier der Datei bestehen.
+
+Nicht belegt sind vollständige Synonym-/Konzeptabdeckung aller 224 Zeilen,
+fachliche Richtigkeit aller Kundenergebnisse, unbekannte Versicherer,
+Dokumentrang/Ersetzung, OCR-Qualität oder das 99-Prozent-Ziel. Die 90 reinen
+Schutzzeilen bleiben Zertifizierungskandidaten und werden nicht pauschal zu
+`ASSUMED_NOT_INCLUDED_V1` hochgestuft.

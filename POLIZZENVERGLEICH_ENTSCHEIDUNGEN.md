@@ -751,7 +751,7 @@ aber nicht zum aktuellen produktiven A/B-Lauf.
 Verbindliche Entscheidung:
 
 1. Neue Läufe verwenden ausschließlich das versionierte Profil
-   `CUSTOMER_CORE_5_V1` mit 224 Zeilen: VS 36, FE 80, LW 36, ST 36, EL 36.
+   `CUSTOMER_CORE_5_V2` mit 224 Zeilen: VS 36, FE 80, LW 36, ST 36, EL 36.
 2. Queue-, Worker-, QA-, Ergebnis- und Resume-Verträge tragen Profil-ID,
    Kategorien und Sollzeilen explizit. Abweichende alte Manifeste werden nicht
    still fortgesetzt.
@@ -773,3 +773,51 @@ Verbindliche Entscheidung:
 
 Kanonischer Messbeleg:
 [Tests und Erkenntnisse, Abschnitt 47](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#47-fünf-kategorien-profil-und-einblatt-export).
+
+## ADR-024: Kontrolliertes Nichtfinden ist allgemein, die Fachwirkung bleibt typisiert
+
+**Status:** AKZEPTIERT UND IMPLEMENTIERT, am 31. August 2026 auf dem Mac Studio
+synthetisch validiert
+
+ADR-022 bleibt für den zertifizierten `VS-16`-Schutzvertrag gültig. Verworfen
+ist jedoch die implizite Kopplung, nach der jeder technisch vollständige
+Nulltreffer zugleich `ASSUMED_NOT_INCLUDED_V1` bedeuten müsste. Garage war ein
+erster zertifizierter Anwendungsfall, keine fachliche Sonderlogik.
+
+Verbindliche Entscheidung:
+
+1. Alle 224 produktiven Zeilen deklarieren einen `negativeSearchPolicy` und
+   eine typisierte `absenceMeaning`.
+2. Ein vollständiger, aber noch nicht fachlich zertifizierter kontrollierter
+   Suchlauf ohne Treffer ergibt
+   `NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH` und
+   `DOCUMENTATION_ONLY_V1`.
+3. Belegter Inhalt auf einer Seite gegen diesen neutralen Nulltreffer ergibt
+   `DOKUMENTATIONSUNTERSCHIED`, niemals automatisch einen Gewinner.
+4. `NOT_FOUND_AFTER_COMPLETE_SEARCH` und
+   `ASSUMED_NOT_INCLUDED_V1` bleiben der stärkeren, einzeln zertifizierten
+   Stufe für positive Schutzpositionen vorbehalten.
+5. Ausschlüsse, Limits, Selbstbehalte, Bedingungen, Definitionen und
+   Dokumentverweise dürfen aus ihrem Nichtfinden keine implizite
+   Deckungswirkung ableiten. Insbesondere gilt: Selbstbehalt nicht gefunden ist
+   nicht null; Limit nicht gefunden ist nicht unbegrenzt; Ausschluss nicht
+   gefunden ist kein automatischer Vorteil.
+6. Kostenpositionen und gemischte Zeilen benötigen eigene spätere
+   Vergleichsregeln. Rollen allein schalten keine Fachwirkung frei.
+7. Ein Einschluss-gegen-zertifiziertes-Nichtfinden-Vorteil verlangt einen
+   aktiven, vollständig belegten, konfliktfreien und unbedingten Fakt.
+   `CONDITIONAL`, `PROPOSED_ONLY` und `UNKNOWN` sind gesperrt.
+8. Der allgemeine Nulltreffer behält dieselben Vollständigkeitsgates für
+   Dokumente, Textseiten, Worksheet, Targets, Judgements und offene
+   Kandidaten. Unvollständigkeit bleibt `SEARCH_INCOMPLETE`/`UNKLAR`.
+9. Die aktuellen Aliaslisten sind kontrollierte Suchpläne, aber kein
+   pauschaler Beweis vollständiger Synonymabdeckung. Weitere automatische
+   Schutzannahmen benötigen zeilenweise Alias-/Konzeptprüfung und positive,
+   negative sowie adversariale Tests.
+10. Neue Läufe verwenden `CUSTOMER_CORE_5_V2` mit
+    `QUALIFIED_ABSENCE_TYPED_V1`; alte Ergebnisse werden nicht rückwirkend
+    umgedeutet.
+
+Damit wird die Nutzerkorrektur allgemein umgesetzt, ohne den fachlich falschen
+Schluss zu ziehen, jede nicht gefundene Vertragsinformation sei ein
+ausgeschlossener Schutz.
