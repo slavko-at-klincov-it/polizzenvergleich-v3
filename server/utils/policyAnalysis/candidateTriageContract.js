@@ -271,8 +271,10 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       };
     });
     const source = candidate.occurrence;
-    const isHybridSemanticCandidate =
-      source.discoveryMethod === "HYBRID_CHUNK_SEMANTIC";
+    const isHybridSemanticCandidate = new Set([
+      "HYBRID_CHUNK_SEMANTIC",
+      "HYBRID_EXACT_SPAN_SEMANTIC",
+    ]).has(source.discoveryMethod);
     const categoryView = resolvedCategoryView(worksheet, candidate.requirement);
     const allCostMembers = members.every(
       (member) => member.factRole === "COST"

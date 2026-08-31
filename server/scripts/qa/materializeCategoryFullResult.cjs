@@ -165,6 +165,11 @@ async function main() {
     fail(`Keine gültigen ${categoryView}-Definitionen im Systemprompt`);
 
   const worksheet = readJson(files.worksheet);
+  if (
+    worksheet?.shadowSearch?.shadowOnly === true ||
+    worksheet?.catalog?.id?.includes(":hybrid-shadow:")
+  )
+    fail("HYBRID_SHADOW_WORKSHEET_FORBIDDEN_IN_CUSTOMER_MATERIALIZER");
   const documentArtifact = readJson(files.documentArtifact);
   const materializedTriage = readJson(files.triage);
   const materializedEvidence = readJson(files.effects);

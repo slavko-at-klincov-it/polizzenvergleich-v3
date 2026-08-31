@@ -37,6 +37,31 @@ describe("policy comparison worker contract", () => {
     );
   });
 
+  test("rejects shadow worksheets at the customer materialization boundary", () => {
+    const materializer = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/scripts/qa/materializeCategoryFullResult.cjs"
+      ),
+      "utf8"
+    );
+    expect(materializer).toContain(
+      "HYBRID_SHADOW_WORKSHEET_FORBIDDEN_IN_CUSTOMER_MATERIALIZER"
+    );
+    const primaryRunner = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "run-all-categories-quality.command"),
+      "utf8"
+    );
+    const shadowRunner = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "run-hybrid-shadow-quality.command"),
+      "utf8"
+    );
+    expect(source).not.toContain("hybridShadowSearch");
+    expect(primaryRunner).not.toContain("runHybridShadowSearch");
+    expect(shadowRunner).toContain("ensureHybridShadowRunManifest.cjs");
+    expect(shadowRunner).toContain("runHybridShadowSearch.cjs");
+  });
+
   test("uses a release-bound resumable run and counts completed categories", () => {
     expect(source).toContain("resumableRun({ sessionUuid, manifest })");
     expect(source).toContain("run-contract.private.json");

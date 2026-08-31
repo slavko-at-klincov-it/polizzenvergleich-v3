@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "contractId": "hybrid-shadow-local-example-v0.1",
+  "enabled": false,
+  "mode": "SHADOW_ONLY",
+  "failurePolicy": "FAIL_SHADOW_RUN",
+  "provider": {
+    "kind": "OPENAI_COMPATIBLE_EMBEDDINGS",
+    "baseUrl": "http://127.0.0.1:1234/v1",
+    "model": "REPLACE_WITH_EXPLICIT_LOADED_EMBEDDING_MODEL_ID",
+    "dimensions": 768,
+    "apiKeyEnv": null,
+    "requestTimeoutMs": 30000,
+    "modelArtifactPath": "/REPLACE_WITH_ABSOLUTE_EMBEDDING_MODEL_ARTIFACT",
+    "modelArtifactSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "runtimeRevision": "REPLACE_WITH_IMMUTABLE_RUNTIME_REVISION",
+    "runtimeArtifactPath": "/REPLACE_WITH_ABSOLUTE_EMBEDDING_RUNTIME_ARTIFACT",
+    "runtimeArtifactSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "inputNormalization": "NFKC_WHITESPACE_V1"
+  },
+  "retrieval": {
+    "chunkSize": 3000,
+    "chunkOverlap": 250,
+    "topK": 3,
+    "batchSize": 32,
+    "minimumScore": 0
+  }
+}
