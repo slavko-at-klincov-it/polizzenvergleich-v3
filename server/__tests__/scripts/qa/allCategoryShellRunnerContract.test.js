@@ -77,7 +77,16 @@ function createHarness() {
   const fakeCurl = path.join(fakeBin, "curl");
   fs.writeFileSync(
     fakeCurl,
-    '#!/bin/sh\nprintf \'{"data":[{"id":"%s"}]}\' "${FAKE_LOADED_MODEL:-qwen/qwen3.6-35b-a3b}"\n'
+    `#!/bin/sh
+case "$*" in
+  *api/v0/models*)
+    printf '{"data":[{"id":"%s","state":"loaded","loaded_context_length":%s}]}' "\${FAKE_LOADED_MODEL:-qwen/qwen3.6-35b-a3b}" "\${FAKE_LOADED_CONTEXT:-42496}"
+    ;;
+  *)
+    printf '{"data":[{"id":"%s"}]}' "\${FAKE_LOADED_MODEL:-qwen/qwen3.6-35b-a3b}"
+    ;;
+esac
+`
   );
   fs.chmodSync(fakeCurl, 0o755);
   const pdf = path.join(root, "lf.pdf");
@@ -109,6 +118,7 @@ function runHarness(harness, overrides = {}) {
         NODE_ENV: overrides.nodeEnv || "test",
         POLICY_RUN_RELEASE_ID: overrides.releaseId || "fixture-release",
         FAKE_LOADED_MODEL: overrides.loadedModel || model,
+        FAKE_LOADED_CONTEXT: overrides.loadedContext || "42496",
       },
     }
   );
@@ -191,6 +201,20 @@ describe("all-category shell runner", () => {
 
     expect(resumed.status).toBe(1);
     expect(resumed.stderr).toContain("pdfSha256");
+  });
+
+  test("rejects a loaded model with a different runtime context length", () => {
+    harness = createHarness();
+
+    const result = runHarness(harness, { loadedContext: "34560" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Falsche geladene Kontextlänge");
+    expect(result.stderr).toContain("34560");
+    expect(result.stderr).toContain("42496");
+    expect(
+      fs.existsSync(path.join(harness.output, "document.private.json"))
+    ).toBe(false);
   });
 
   test("rejects resume when the persisted product profile differs", () => {

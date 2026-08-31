@@ -104,6 +104,40 @@ printf '%s' "$MODEL_RESPONSE" | "$NODE_BIN" -e '
   });
 ' "$MODEL"
 
+LMSTUDIO_RUNTIME_ROOT="${LMSTUDIO_BASE_PATH%/v1}"
+RUNTIME_MODEL_RESPONSE="$(curl --fail --silent --show-error \
+  --connect-timeout 5 --max-time 15 \
+  "${LMSTUDIO_RUNTIME_ROOT%/}/api/v0/models")" || {
+  printf '%s\n' "LM-Studio-Runtimeinformationen sind unter ${LMSTUDIO_RUNTIME_ROOT%/}/api/v0/models nicht erreichbar." >&2
+  exit 1
+}
+printf '%s' "$RUNTIME_MODEL_RESPONSE" | "$NODE_BIN" -e '
+  let body = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => { body += chunk; });
+  process.stdin.on("end", () => {
+    const model = process.argv[1];
+    const expectedContext = Number(process.argv[2]);
+    let payload;
+    try { payload = JSON.parse(body); }
+    catch { console.error("LM Studio lieferte keine gültigen Runtimeinformationen."); process.exit(1); }
+    const loaded = Array.isArray(payload?.data)
+      ? payload.data.find((entry) => entry?.id === model && entry?.state === "loaded")
+      : null;
+    if (!loaded) {
+      console.error(`Das angeforderte Modell ist nicht im Zustand loaded: ${model}`);
+      process.exit(1);
+    }
+    if (Number(loaded.loaded_context_length) !== expectedContext) {
+      console.error(
+        `Falsche geladene Kontextlänge für ${model}: ${loaded.loaded_context_length ?? "nicht ausgewiesen"}; erwartet ${expectedContext}.`
+      );
+      process.exit(1);
+    }
+  });
+' "$MODEL" "$MODEL_TOKEN_LIMIT"
+printf '%s\n' "[all-categories] Runtime bestätigt: $MODEL mit $MODEL_TOKEN_LIMIT Token Kontext"
+
 MANIFEST_ARGS=(
   --manifest "$RUN_MANIFEST"
   --output "$OUTPUT_DIR"
