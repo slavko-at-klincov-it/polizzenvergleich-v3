@@ -2017,15 +2017,15 @@ behalten eigene exakte Quellspannen. Unbeschriftete Druckdaten, ein
 abgeschnittenes Datum und nur eine der beiden Periodengrenzen bleiben
 Negativfälle.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 91/91 Suites, 1028/1028 Tests |
-| vollständiger Lint | PASS |
-| WEVIG-FE-Kandidaten | 44 -> 45 |
+| Prüfung                        |                          Ergebnis |
+| ------------------------------ | --------------------------------: |
+| Jest                           |     91/91 Suites, 1028/1028 Tests |
+| vollständiger Lint             |                              PASS |
+| WEVIG-FE-Kandidaten            |                          44 -> 45 |
 | neue kontrollierte Fundstellen | 1, nur `FE-F05 temporal_validity` |
-| WEVIG-FE-Replay | 80/80 Zeilen |
-| geänderte Endzeilen | 1, nur `FE-F05` |
-| LF-FE-Kandidaten | unverändert 25 |
+| WEVIG-FE-Replay                |                      80/80 Zeilen |
+| geänderte Endzeilen            |                   1, nur `FE-F05` |
+| LF-FE-Kandidaten               |                    unverändert 25 |
 
 Der WEVIG-Replay wechselte `FE-F05` von `TEILBELEGT` mit abgeschnittenem
 `Versicherungsbeginn 19` zu `BELEGT / Ja` mit der vollständigen Periode und
@@ -2070,15 +2070,15 @@ Deckungsprozess-Verlängerung definiert die Regel, erzeugt allein aber keine
 numerische Dauer. Fremde Kündigungs- und Vertragsdauern sowie eine bloße
 Wiederherstellungserwähnung bestehen die Negativtests.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 91/91 Suites, 1034/1034 Tests |
-| vollständiger Lint | PASS |
-| LF-VB-Frischlauf | 35/35 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
-| LF-Endzeilenänderung | 1, nur `VB-26` |
-| übrige LF-VB-Zeilen | 35 semantisch gleich |
-| WEVIG-VB-Frischlauf | 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
-| WEVIG-Endzeilenänderungen | 0 |
+| Prüfung                   |                                          Ergebnis |
+| ------------------------- | ------------------------------------------------: |
+| Jest                      |                     91/91 Suites, 1034/1034 Tests |
+| vollständiger Lint        |                                              PASS |
+| LF-VB-Frischlauf          | 35/35 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
+| LF-Endzeilenänderung      |                                    1, nur `VB-26` |
+| übrige LF-VB-Zeilen       |                              35 semantisch gleich |
+| WEVIG-VB-Frischlauf       | 20/20 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
+| WEVIG-Endzeilenänderungen |                                                 0 |
 
 Im frischen LF-Lauf wechselte `VB-26` von
 `TEILBELEGT / Nicht feststellbar` zu `BELEGT / Ja / Dauer: 3 Jahre`. Beide
@@ -2115,17 +2115,17 @@ Nach einem Treffer rendert die Tabelle keine unbelegte Synonymalternative als
 scheinbar getrennte fehlende Objektfakt. Tatsächlich gefundene Alternativen,
 ihre Wirkungen, Konflikte, Beträge und Quellen bleiben erhalten.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 91/91 Suites, 1037/1037 Tests |
-| vollständiger Lint | PASS |
-| LF-LW-Frischlauf | 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
-| LF-Endzeilenänderung | 1, nur `LW-08` |
-| LF-Limit | EUR 2.500 auf Erstes Risiko |
-| WEVIG-LW-Frischlauf | 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
-| WEVIG-Endzeilenänderung | 1, nur `LW-08` |
-| WEVIG-Limit | EUR 1.500,00 auf Erstes Risiko |
-| Zielhardware-Installation | `v3.3.0-rc.21` / `3e5a0f02`, Doctor PASS |
+| Prüfung                   |                                          Ergebnis |
+| ------------------------- | ------------------------------------------------: |
+| Jest                      |                     91/91 Suites, 1037/1037 Tests |
+| vollständiger Lint        |                                              PASS |
+| LF-LW-Frischlauf          | 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
+| LF-Endzeilenänderung      |                                    1, nur `LW-08` |
+| LF-Limit                  |                       EUR 2.500 auf Erstes Risiko |
+| WEVIG-LW-Frischlauf       | 33/33 Kandidaten, 52/52 Komponenten, 36/36 Zeilen |
+| WEVIG-Endzeilenänderung   |                                    1, nur `LW-08` |
+| WEVIG-Limit               |                    EUR 1.500,00 auf Erstes Risiko |
+| Zielhardware-Installation |          `v3.3.0-rc.21` / `3e5a0f02`, Doctor PASS |
 
 In beiden Zielhardwareläufen wechselte ausschließlich `LW-08` von
 `TEILBELEGT / Nicht feststellbar` zu `BELEGT / Ja` mit dem jeweils eigenen
@@ -2153,16 +2153,16 @@ RC22 setzt für genau diese beiden Anforderungen die bereits in RC15 bewiesene
 Deckungsrollen-Aggregation. Bedingungen bleiben Pflichtbelege und sichtbar,
 ändern aber nicht die Polarität einer ausdrücklich eingeschlossenen Leistung.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 91/91 Suites, 1037/1037 Tests |
-| vollständiger Lint | PASS |
-| LF-HP-Frischlauf | 37/37 Kandidaten, 63/63 Komponenten, 36/36 Zeilen |
-| LF-Endzeilenänderungen | 2, nur `HP-24` und `HP-27` |
-| übrige LF-HP-Zeilen | 34 semantisch gleich |
-| WEVIG-HP-Kontrolllauf | 23/23 Kandidaten, 63/63 Komponenten, 36/36 Zeilen |
-| WEVIG-Endzeilenänderungen | 0 |
-| Zielhardware-Installation | `v3.3.0-rc.22` / `139f53d7`, Doctor PASS |
+| Prüfung                   |                                          Ergebnis |
+| ------------------------- | ------------------------------------------------: |
+| Jest                      |                     91/91 Suites, 1037/1037 Tests |
+| vollständiger Lint        |                                              PASS |
+| LF-HP-Frischlauf          | 37/37 Kandidaten, 63/63 Komponenten, 36/36 Zeilen |
+| LF-Endzeilenänderungen    |                        2, nur `HP-24` und `HP-27` |
+| übrige LF-HP-Zeilen       |                              34 semantisch gleich |
+| WEVIG-HP-Kontrolllauf     | 23/23 Kandidaten, 63/63 Komponenten, 36/36 Zeilen |
+| WEVIG-Endzeilenänderungen |                                                 0 |
+| Zielhardware-Installation |          `v3.3.0-rc.22` / `139f53d7`, Doctor PASS |
 
 **Beweist:** Unterstützende Bedingungen können kataloggesteuert von der
 Deckungspolarität getrennt werden, ohne fehlende Deckungsrollen zu erfinden.
@@ -2183,16 +2183,16 @@ RC23 aktiviert den Matching-Scope-Abschluss ausschließlich für diese beiden
 Anforderungen. Die existierenden ScopeKeys, Kandidaten und Werteextraktoren
 werden nicht erweitert.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 91/91 Suites, 1040/1040 Tests |
-| vollständiger Lint | PASS |
-| LF-EL-Frischlauf | 48/48 Kandidaten, 69/69 Komponenten, 36/36 Zeilen |
-| LF-Endzeilenänderungen | 2, nur `EL-01` und `EL-11` |
-| übrige LF-EL-Zeilen | 34 semantisch gleich |
-| WEVIG-EL-Kontrolllauf | 58/58 Kandidaten, 69/69 Komponenten, 36/36 Zeilen |
-| WEVIG-Endzeilenänderungen | 0 |
-| Zielhardware-Installation | `v3.3.0-rc.23` / `a776bc0e`, Doctor PASS |
+| Prüfung                   |                                          Ergebnis |
+| ------------------------- | ------------------------------------------------: |
+| Jest                      |                     91/91 Suites, 1040/1040 Tests |
+| vollständiger Lint        |                                              PASS |
+| LF-EL-Frischlauf          | 48/48 Kandidaten, 69/69 Komponenten, 36/36 Zeilen |
+| LF-Endzeilenänderungen    |                        2, nur `EL-01` und `EL-11` |
+| übrige LF-EL-Zeilen       |                              34 semantisch gleich |
+| WEVIG-EL-Kontrolllauf     | 58/58 Kandidaten, 69/69 Komponenten, 36/36 Zeilen |
+| WEVIG-Endzeilenänderungen |                                                 0 |
+| Zielhardware-Installation |          `v3.3.0-rc.23` / `a776bc0e`, Doctor PASS |
 
 `EL-01` trägt nun `1 %`, `EUR 20.000` und `EUR 100.000` jeweils auf Erstes
 Risiko in der Betragsspalte. `EL-11` trägt `EUR 350 je Schadenfall`. Beide
@@ -2222,15 +2222,15 @@ Höchstentschädigung, den Wortlaut `jeweilige Sparte`, einen numerischen
 Prozentsatz und die vereinbarte Versicherungssumme enthält. Der konkrete Wert
 150, Versicherer, Dateiname und Seite sind keine Aktivierungsmerkmale.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 92/92 Suites, 1054/1054 Tests |
-| Server-Lint | PASS |
-| LF-FE | nur `FE-F02` verbessert, übrige 79 Zeilen gleich |
-| LF-LW | nur `LW-31` verbessert, übrige 35 Zeilen gleich |
-| LF-ST | nur `ST-34` verbessert, übrige 35 Zeilen gleich |
-| WEVIG FE/LW/ST | 152/152 Zeilen, 0 Änderungen |
-| Zielhardware-Installation | `v3.3.0-rc.24` / `73e3218f`, Doctor PASS |
+| Prüfung                   |                                         Ergebnis |
+| ------------------------- | -----------------------------------------------: |
+| Jest                      |                    92/92 Suites, 1054/1054 Tests |
+| Server-Lint               |                                             PASS |
+| LF-FE                     | nur `FE-F02` verbessert, übrige 79 Zeilen gleich |
+| LF-LW                     |  nur `LW-31` verbessert, übrige 35 Zeilen gleich |
+| LF-ST                     |  nur `ST-34` verbessert, übrige 35 Zeilen gleich |
+| WEVIG FE/LW/ST            |                     152/152 Zeilen, 0 Änderungen |
+| Zielhardware-Installation |         `v3.3.0-rc.24` / `73e3218f`, Doctor PASS |
 
 `FE-F02` wechselt korrekt von `UNGEKLÄRT` zu `TEILBELEGT`: Die
 Höchstentschädigung Feuer mit 150 Prozent ist belegt, die getrennte
@@ -2267,12 +2267,12 @@ RC25 ergänzt Jalousie und Rollladen ausschließlich als kontrollierte
 Ausprägungen von `ST-16/shading_system`. Scope- und Wirkungsregeln ändern sich
 nicht.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 92/92 Suites, 1055/1055 Tests |
-| LF-ST | nur `ST-16` verbessert, übrige 35 Zeilen gleich |
-| WEVIG-ST | 36/36 Zeilen, 0 Änderungen |
-| Zielhardware-Installation | `v3.3.0-rc.25` / `2689af8d`, Doctor PASS |
+| Prüfung                   |                                        Ergebnis |
+| ------------------------- | ----------------------------------------------: |
+| Jest                      |                   92/92 Suites, 1055/1055 Tests |
+| LF-ST                     | nur `ST-16` verbessert, übrige 35 Zeilen gleich |
+| WEVIG-ST                  |                      36/36 Zeilen, 0 Änderungen |
+| Zielhardware-Installation |        `v3.3.0-rc.25` / `2689af8d`, Doctor PASS |
 
 LF `ST-16` wechselt von `TEILBELEGT / Nicht feststellbar` zu
 `BELEGT / Ja`. WEVIG bleibt unverändert, weil seine Markisenklausel nur in
@@ -2300,12 +2300,12 @@ Endprüfung sichtbar gewordenen Textabbrüche an `Abs.` sowie an PDF-Zeilenenden
 nach `und` oder `von` wurden strukturell korrigiert. Echte Satz- und
 Abschnittsgrenzen bleiben erhalten.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1059/1059 Tests |
-| LF-FE | nur `FE-E16` verbessert, übrige 79 Zeilen gleich |
-| WEVIG-FE | nur `FE-E16` verbessert, übrige 79 Zeilen gleich |
-| Zielhardware-Installation | `v3.3.0-rc.26` / `a58fc9d8`, Doctor PASS |
+| Prüfung                   |                                         Ergebnis |
+| ------------------------- | -----------------------------------------------: |
+| Jest                      |                    93/93 Suites, 1059/1059 Tests |
+| LF-FE                     | nur `FE-E16` verbessert, übrige 79 Zeilen gleich |
+| WEVIG-FE                  | nur `FE-E16` verbessert, übrige 79 Zeilen gleich |
+| Zielhardware-Installation |         `v3.3.0-rc.26` / `a58fc9d8`, Doctor PASS |
 
 Beide `FE-E16`-Zeilen wechseln von `TEILBELEGT` zu `BELEGT / Ja`. LF zeigt
 den vollständigen §-6-/§-62-VersVG-Satz. WEVIG zeigt sowohl die versicherten
@@ -2334,14 +2334,14 @@ Gerätedeckung auf `TEILBELEGT` herabgestuft.
 RC27 bindet nur diese enge Überschrift-Governor-Struktur serverautoritativ.
 Eine bloße Überschrift ohne positiven Governor bleibt modelloffen.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1062/1062 Tests |
-| Server-Lint | PASS |
-| WEVIG-VS | 155/155 Kandidaten, 65/65 Komponenten, 36/36 Zeilen |
-| Semantischer Diff zu RC26 | nur `VS-34` verbessert |
-| LF-Worksheet-Reichweite | kein neu gebundener Kandidat |
-| Zielhardware-Installation | `v3.3.0-rc.27` / `3334616c`, Doctor PASS |
+| Prüfung                   |                                            Ergebnis |
+| ------------------------- | --------------------------------------------------: |
+| Jest                      |                       93/93 Suites, 1062/1062 Tests |
+| Server-Lint               |                                                PASS |
+| WEVIG-VS                  | 155/155 Kandidaten, 65/65 Komponenten, 36/36 Zeilen |
+| Semantischer Diff zu RC26 |                              nur `VS-34` verbessert |
+| LF-Worksheet-Reichweite   |                        kein neu gebundener Kandidat |
+| Zielhardware-Installation |            `v3.3.0-rc.27` / `3334616c`, Doctor PASS |
 
 `VS-34` wechselt von `TEILBELEGT / Nicht feststellbar` zu
 `BELEGT / Ja / Gemeinschaftsgeräte: EUR 15.000,00 auf Erstes Risiko`.
@@ -2369,13 +2369,13 @@ RC28 überträgt den engen bestehenden Klauselvertrag auf `VB-16`. Der
 Bewohnerbeleg erfordert weiterhin die ausdrückliche Haushaltsformulierung.
 `VB-15` für Wohnungseigentümer wird nicht aus einer Mieterklausel abgeleitet.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1064/1064 Tests |
-| Server-Lint | PASS |
-| LF-VB | nur `VB-16` in Status und Deckung verbessert |
-| WEVIG-VB | 36/36 Zeilen, 0 semantische Änderungen |
-| Zielhardware-Installation | `v3.3.0-rc.28` / `fc59ddf0`, Doctor PASS |
+| Prüfung                   |                                     Ergebnis |
+| ------------------------- | -------------------------------------------: |
+| Jest                      |                93/93 Suites, 1064/1064 Tests |
+| Server-Lint               |                                         PASS |
+| LF-VB                     | nur `VB-16` in Status und Deckung verbessert |
+| WEVIG-VB                  |       36/36 Zeilen, 0 semantische Änderungen |
+| Zielhardware-Installation |     `v3.3.0-rc.28` / `fc59ddf0`, Doctor PASS |
 
 LF `VB-16` wechselt zu `BELEGT / Ja`; Regressverzicht, Bewohner und Mieter
 sind jeweils aus derselben Seite-26-Klausel gebunden. `VB-15` bleibt
@@ -2402,15 +2402,15 @@ RC29 verlangt gemeinsam drei Anker: Uneinigkeit mit dem bestellten Gutachten,
 Benennungsrecht und Ersetzung des Schiedsgutachterverfahrens. Ein Titel oder
 eine Sachverständigenkostenklausel allein reicht nicht.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1065/1065 Tests |
-| Server-Lint | PASS |
-| LF-VB | nur `VB-24` um den echten Verfahrensbeleg verbessert |
-| WEVIG-VB | 36/36 Zeilen, 0 Änderungen zu RC28 |
-| LF-Artefakt | `RC29-LF-VB-CANDIDATE-20260829-122244` |
-| WEVIG-Artefakt | `RC29-WEVIG-VB-CONTROL-20260829-122703` |
-| Zielhardware-Installation | `v3.3.0-rc.29` / `00b60a53`, Doctor PASS |
+| Prüfung                   |                                             Ergebnis |
+| ------------------------- | ---------------------------------------------------: |
+| Jest                      |                        93/93 Suites, 1065/1065 Tests |
+| Server-Lint               |                                                 PASS |
+| LF-VB                     | nur `VB-24` um den echten Verfahrensbeleg verbessert |
+| WEVIG-VB                  |                   36/36 Zeilen, 0 Änderungen zu RC28 |
+| LF-Artefakt               |               `RC29-LF-VB-CANDIDATE-20260829-122244` |
+| WEVIG-Artefakt            |              `RC29-WEVIG-VB-CONTROL-20260829-122703` |
+| Zielhardware-Installation |             `v3.3.0-rc.29` / `00b60a53`, Doctor PASS |
 
 `VB-24` bleibt korrekt `TEILBELEGT`, weil die Kostenübernahme ausdrücklich
 bedingt ist. Der dokumentierte Inhalt gewinnt aber den zuvor fehlenden
@@ -2435,15 +2435,15 @@ RC30 ergänzt die beiden realen, versichererneutralen Wortformen für die
 Heizungsanlagenkomponente. Der bestehende Sparten-Scope verwirft einen
 ähnlichen Treffer aus der Feuerversicherung weiterhin deterministisch.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1065/1065 Tests |
-| Server-Lint | PASS |
-| LF-LW | `LW-11` von `TEILBELEGT` zu `BELEGT / Ja` |
-| WEVIG-LW | 36/36 Zeilen, 0 Änderungen zu RC21 |
-| LF-Artefakt | `RC30-LF-LW-CANDIDATE-20260829-123322` |
-| WEVIG-Artefakt | `RC30-WEVIG-LW-CONTROL-20260829-123739` |
-| Zielhardware-Installation | `v3.3.0-rc.30` / `ca7d5e32`, Doctor PASS |
+| Prüfung                   |                                  Ergebnis |
+| ------------------------- | ----------------------------------------: |
+| Jest                      |             93/93 Suites, 1065/1065 Tests |
+| Server-Lint               |                                      PASS |
+| LF-LW                     | `LW-11` von `TEILBELEGT` zu `BELEGT / Ja` |
+| WEVIG-LW                  |        36/36 Zeilen, 0 Änderungen zu RC21 |
+| LF-Artefakt               |    `RC30-LF-LW-CANDIDATE-20260829-123322` |
+| WEVIG-Artefakt            |   `RC30-WEVIG-LW-CONTROL-20260829-123739` |
+| Zielhardware-Installation |  `v3.3.0-rc.30` / `ca7d5e32`, Doctor PASS |
 
 **Beweist:** Ein reales Objekt darf mehreren fachlich überlappenden
 Kategorien dienen, wenn Rollen- und Spartenscope separat geprüft bleiben.
@@ -2464,15 +2464,15 @@ serverseitige Positivbindung verlangt gemeinsam Klammerzusatz, Erstrisiko und
 Sturm-Scope. Der gemeinsame Span bleibt damit enger als eine allgemeine
 Lawinensuche.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1067/1067 Tests |
-| Server-Lint | PASS |
-| WEVIG-ST | nur `ST-27` von `TEILBELEGT` zu `BELEGT / Ja` |
-| LF-ST | 36/36 Zeilen, 0 Änderungen zu RC25 |
-| WEVIG-Artefakt | `RC31-WEVIG-ST-CANDIDATE-20260829-125259` |
-| LF-Artefakt | `RC31-LF-ST-CONTROL-20260829-125402` |
-| Zielhardware-Installation | `v3.3.0-rc.31` / `b21f7a8b`, Doctor PASS |
+| Prüfung                   |                                      Ergebnis |
+| ------------------------- | --------------------------------------------: |
+| Jest                      |                 93/93 Suites, 1067/1067 Tests |
+| Server-Lint               |                                          PASS |
+| WEVIG-ST                  | nur `ST-27` von `TEILBELEGT` zu `BELEGT / Ja` |
+| LF-ST                     |            36/36 Zeilen, 0 Änderungen zu RC25 |
+| WEVIG-Artefakt            |     `RC31-WEVIG-ST-CANDIDATE-20260829-125259` |
+| LF-Artefakt               |          `RC31-LF-ST-CONTROL-20260829-125402` |
+| Zielhardware-Installation |      `v3.3.0-rc.31` / `b21f7a8b`, Doctor PASS |
 
 **Beweist:** Ein etablierter Versicherungsbegriff kann mehrere atomare Rollen
 belegen, wenn derselbe operative Klauselspan die gemeinsame Bedeutung trägt.
@@ -2496,15 +2496,15 @@ Sublimit- und Kostenreferenzen unterschieden. Für `HP-08` wird ausschließlich
 die grammatisch an `Gesamtbaukosten` gebundene Grenze materialisiert; ein
 danebenstehendes Haftpflicht-Sublimit fließt nicht in dieses Tabellenfeld ein.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1079/1079 Tests |
-| Server-Lint | PASS |
-| WEVIG-HP | `HP-01` und `HP-08` von `UNGEKLÄRT` zu `BELEGT / Ja` |
-| LF-HP | bestehende Baukostengrenze vollständig erhalten |
-| WEVIG-Artefakt | `RC32-WEVIG-HP-CANDIDATE-20260829-131001` |
-| LF-Artefakt | `RC32-LF-HP-CONTROL-20260829-131801` |
-| Zielhardware-Installation | `v3.3.0-rc.32` / `a39f90db`, Doctor PASS |
+| Prüfung                   |                                             Ergebnis |
+| ------------------------- | ---------------------------------------------------: |
+| Jest                      |                        93/93 Suites, 1079/1079 Tests |
+| Server-Lint               |                                                 PASS |
+| WEVIG-HP                  | `HP-01` und `HP-08` von `UNGEKLÄRT` zu `BELEGT / Ja` |
+| LF-HP                     |      bestehende Baukostengrenze vollständig erhalten |
+| WEVIG-Artefakt            |            `RC32-WEVIG-HP-CANDIDATE-20260829-131001` |
+| LF-Artefakt               |                 `RC32-LF-HP-CONTROL-20260829-131801` |
+| Zielhardware-Installation |             `v3.3.0-rc.32` / `a39f90db`, Doctor PASS |
 
 WEVIG `HP-01` enthält nun EUR 3 Mio. `HP-08` enthält nur EUR 1 Mio.
 Gesamtbaukosten und nicht zusätzlich das EUR-3-Mio.-Haftpflicht-Sublimit. LF
@@ -2534,17 +2534,17 @@ Rollen. Die Positivbindung verlangt zusätzlich Schadenmanagement,
 Telefonnummer, 24-Stunden-Erreichbarkeit und Unterstützungsleistung im selben
 lokalen Kontext.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Jest | 93/93 Suites, 1085/1085 Tests |
-| Server-Lint | PASS |
-| WEVIG-VB | nur `VB-36` von `UNGEKLÄRT` zu `BELEGT / Ja` |
-| LF-VB | 36/36 Zeilen exakt unverändert |
-| WEVIG-Artefakt | `RC33-WEVIG-VB-FINAL-20260829-134237` |
-| LF-Artefakt | `RC33-LF-VB-CONTROL-20260829-134520` |
-| Zielhardware-Installation | `v3.3.0-rc.33` / `3ef0e950`, Doctor PASS |
-| WEVIG-Fullrun | 320/320 Zeilen, 15 Verbesserungen, 0 Regressionen |
-| LF-Fullrun | 320/320 Zeilen, 17 Verbesserungen, 0 Regressionen |
+| Prüfung                   |                                          Ergebnis |
+| ------------------------- | ------------------------------------------------: |
+| Jest                      |                     93/93 Suites, 1085/1085 Tests |
+| Server-Lint               |                                              PASS |
+| WEVIG-VB                  |      nur `VB-36` von `UNGEKLÄRT` zu `BELEGT / Ja` |
+| LF-VB                     |                    36/36 Zeilen exakt unverändert |
+| WEVIG-Artefakt            |             `RC33-WEVIG-VB-FINAL-20260829-134237` |
+| LF-Artefakt               |              `RC33-LF-VB-CONTROL-20260829-134520` |
+| Zielhardware-Installation |          `v3.3.0-rc.33` / `3ef0e950`, Doctor PASS |
+| WEVIG-Fullrun             | 320/320 Zeilen, 15 Verbesserungen, 0 Regressionen |
+| LF-Fullrun                | 320/320 Zeilen, 17 Verbesserungen, 0 Regressionen |
 
 **Beweist:** Ein Serviceblock kann beide Zielrollen belegen, wenn Leistung und
 konkreter Kontakt gemeinsam und quellengebunden vorkommen.
@@ -2586,16 +2586,16 @@ global im gemeinsamen Triage-Prompt stand. Nach Isolation in einen nur für
 Hybridziele geladenen Zusatzprompt ist der normale Prompt-Hash wieder exakt
 identisch zur Basis.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| fokussierte Verträge | 4/4 Suites, 79/79 Tests |
-| vollständige Regression unter Node 22.23.2 | 94/94 Suites, 1098/1098 Tests |
-| WEVIG / Qwen 3.8 27B Triage | 38/38 Kandidaten und Kontrollen |
-| WEVIG / Qwen 3.8 27B Wirkung | 63/63 Komponenten und Kontrollen |
-| WEVIG HP-Endtabelle | 36/36 Zeilen |
-| semantischer Diff zur Basis | nur `HP-12` verbessert; 35/35 stabil |
-| GRAWE-Nichtaktivierung | 0 zugelassene Hybridkandidaten |
-| UNIQA-Nichtaktivierung | 0 zugelassene Hybridkandidaten |
+| Prüfung                                    |                             Ergebnis |
+| ------------------------------------------ | -----------------------------------: |
+| fokussierte Verträge                       |              4/4 Suites, 79/79 Tests |
+| vollständige Regression unter Node 22.23.2 |        94/94 Suites, 1098/1098 Tests |
+| WEVIG / Qwen 3.8 27B Triage                |      38/38 Kandidaten und Kontrollen |
+| WEVIG / Qwen 3.8 27B Wirkung               |     63/63 Komponenten und Kontrollen |
+| WEVIG HP-Endtabelle                        |                         36/36 Zeilen |
+| semantischer Diff zur Basis                | nur `HP-12` verbessert; 35/35 stabil |
+| GRAWE-Nichtaktivierung                     |       0 zugelassene Hybridkandidaten |
+| UNIQA-Nichtaktivierung                     |       0 zugelassene Hybridkandidaten |
 
 `HP-12` wechselt von `Umweltschäden: ausgeschlossen / Nein` zu
 `Umweltschäden: eingeschlossen / Ja`. Quelle ist ausschließlich der exakte
@@ -2627,12 +2627,12 @@ verändert. Stattdessen wurden ihre Original-Rows und Original-Occurrences im
 isolierten Mac-Studio-Prüfworktree mit dem neuen deterministischen Code
 erneut abgespielt.
 
-| Fall | Root Cause | Ergebnis des Artefakt-Replays |
-| --- | --- | --- |
+| Fall    | Root Cause                                                                                     | Ergebnis des Artefakt-Replays                                                 |
+| ------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `VS-25` | 5 % des NBW und der exakt berechnete Absolutbetrag wurden als verschiedene Textwerte behandelt | `TEILBELEGT / Ja / EUR 1.530.400,00 auf Erstes Risiko`; kein Rangfolgenfehler |
-| `VB-14` | EUR 5 Mio. mit und ohne Dezimalstellen wurden als verschiedene Textwerte behandelt | `BELEGT / Ja / EUR 5.000.000,00 auf Erstes Risiko` |
-| `LW-20` | Ein Sturm-Ausschluss und ein Leitungswasser-Ausschluss wurden zusammengeführt | Sturmfundstelle `MENTION_ONLY`; Leitungswasserfundstelle `EXCLUDED` |
-| `HP-36` | `nicht ... vorsätzlich` war durch PDF-Zeilenumbrüche getrennt | `DIRECT / EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR / EXCLUDED` |
+| `VB-14` | EUR 5 Mio. mit und ohne Dezimalstellen wurden als verschiedene Textwerte behandelt             | `BELEGT / Ja / EUR 5.000.000,00 auf Erstes Risiko`                            |
+| `LW-20` | Ein Sturm-Ausschluss und ein Leitungswasser-Ausschluss wurden zusammengeführt                  | Sturmfundstelle `MENTION_ONLY`; Leitungswasserfundstelle `EXCLUDED`           |
+| `HP-36` | `nicht ... vorsätzlich` war durch PDF-Zeilenumbrüche getrennt                                  | `DIRECT / EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR / EXCLUDED`                       |
 
 Die erste Erweiterung des mehrzeiligen Negativbinders übernahm
 `exklusive` fälschlich in den nächsten Listenpunkt. Ein vorhandener
@@ -2640,12 +2640,12 @@ Nachbartest erkannte diese Regression. Die finale Fassung erlaubt nur dem
 engen Vorsatzmuster den begrenzten Zeilenübergriff; der allgemeine
 `exklusive`-Binder bleibt lokal.
 
-| Prüfung auf Mac Studio | Ergebnis |
-| --- | ---: |
-| angrenzende Policy-Analyse-/Vergleichstests | 8/8 Suites, 173/173 Tests |
-| vollständige Jest-Regression mit definiertem Prozessabschluss | 98/98 Suites, 1.130/1.130 Tests |
-| Prettier der vier geänderten Code-/Testdateien | PASS |
-| ESLint | Infrastruktur-Blocker: ESLint 9 und vorhandenes React-Plugin sind inkompatibel |
+| Prüfung auf Mac Studio                                        |                                                                       Ergebnis |
+| ------------------------------------------------------------- | -----------------------------------------------------------------------------: |
+| angrenzende Policy-Analyse-/Vergleichstests                   |                                                      8/8 Suites, 173/173 Tests |
+| vollständige Jest-Regression mit definiertem Prozessabschluss |                                                98/98 Suites, 1.130/1.130 Tests |
+| Prettier der vier geänderten Code-/Testdateien                |                                                                           PASS |
+| ESLint                                                        | Infrastruktur-Blocker: ESLint 9 und vorhandenes React-Plugin sind inkompatibel |
 
 Der normale vollständige Jest-Aufruf meldet ebenfalls 1.130 bestandene
 Tests, endet aber wegen eines bestehenden asynchronen Model-Pricing-Loggers
@@ -2685,15 +2685,15 @@ Zwei zusätzliche Adversarial-Gates wurden dabei geschlossen:
   stammen. Teilbelegte oder ungeklärte Basen dürfen Prozent-/Absolutwerte
   nicht künstlich versöhnen.
 
-| Prüfung auf Mac Studio | Ergebnis |
-| --- | ---: |
-| fokussierte Decision-/Result-/V1-UI-Verträge | 3/3 Suites, 21/21 Tests |
-| vollständige Regression, Node 18.18.0 | 90/90 Suites, 1.039/1.039 Tests |
-| Prettier der geänderten Dateien | PASS |
-| Frontend-Produktionsbuild | PASS |
-| gespeicherter Zehn-Dokumente-Replay | 320/320 Zeilen |
-| Punktentscheidungen | 0 A / 1 B / 7 gleich / 9 nicht vergleichbar / 303 unklar |
-| freigegebener Vorteil | `LW-22`: B eingeschlossen, A ausdrücklich ausgeschlossen |
+| Prüfung auf Mac Studio                       |                                                 Ergebnis |
+| -------------------------------------------- | -------------------------------------------------------: |
+| fokussierte Decision-/Result-/V1-UI-Verträge |                                  3/3 Suites, 21/21 Tests |
+| vollständige Regression, Node 18.18.0        |                          90/90 Suites, 1.039/1.039 Tests |
+| Prettier der geänderten Dateien              |                                                     PASS |
+| Frontend-Produktionsbuild                    |                                                     PASS |
+| gespeicherter Zehn-Dokumente-Replay          |                                           320/320 Zeilen |
+| Punktentscheidungen                          | 0 A / 1 B / 7 gleich / 9 nicht vergleichbar / 303 unklar |
+| freigegebener Vorteil                        | `LW-22`: B eingeschlossen, A ausdrücklich ausgeschlossen |
 
 Die Gleichwertigkeiten betreffen `FE-A04`, `FE-A06`, `ST-04`,
 `ST-06`, `ST-16`, `ST-26` und `HP-26`. Alte Schema-V1-Ergebnisse
@@ -2734,17 +2734,17 @@ blockierte aber auch `FE-A04`, weil eine weit entfernte oder definitorische
 offsetgebundenen lokalen 240-Zeichen-Kontext und trennt starke
 Ausnahme-/Bedingungsmarker von einem deckungsbezogenen `wenn/falls`.
 
-| Prüfung auf Mac Studio | Ergebnis |
-| --- | ---: |
-| fokussierte Verträge | 2/2 Suites, 23/23 Tests |
-| vollständige Regression | 90/90 Suites, 1.043/1.043 Tests |
-| Prettier | PASS |
-| frischer Artefaktreplay | 320/320 Zeilen |
-| finaler Punktentscheid | 0 A / 0 B / 4 gleich / 11 nicht vergleichbar / 305 unklar |
-| gezielte Änderungen | `LW-22`, `ST-16`, `HP-26`: gleich/älterer Vorteil -> unklar |
-| negative Kontrolle | `FE-A04` bleibt gleichwertige Gefahren-Definition |
-| XLSX | 8 Blätter, jeweils 18 Spalten A–R |
-| Installation | `v3.4.0`, Doctor PASS |
+| Prüfung auf Mac Studio  |                                                    Ergebnis |
+| ----------------------- | ----------------------------------------------------------: |
+| fokussierte Verträge    |                                     2/2 Suites, 23/23 Tests |
+| vollständige Regression |                             90/90 Suites, 1.043/1.043 Tests |
+| Prettier                |                                                        PASS |
+| frischer Artefaktreplay |                                              320/320 Zeilen |
+| finaler Punktentscheid  |   0 A / 0 B / 4 gleich / 11 nicht vergleichbar / 305 unklar |
+| gezielte Änderungen     | `LW-22`, `ST-16`, `HP-26`: gleich/älterer Vorteil -> unklar |
+| negative Kontrolle      |           `FE-A04` bleibt gleichwertige Gefahren-Definition |
+| XLSX                    |                           8 Blätter, jeweils 18 Spalten A–R |
+| Installation            |                                       `v3.4.0`, Doctor PASS |
 
 Die neue RC2-Ausgabe liegt neben der unveränderten RC1-Ausgabe im selben
 privaten Run-Verzeichnis; die persistente Session verweist auf `result-rc2`.
@@ -2760,3 +2760,42 @@ zu sperren.
 **Beweist nicht:** fachliche Richtigkeit aller 320 Zeilen, eine sichere
 Vorteilsmenge in anderen Verträgen, unbekannte Versicherer, Dokumentrang und
 Ersetzung, das Ein-Stunden-Laufzeitbudget oder 99 Prozent.
+
+## 46. Qualifizierter Negativbefund für VS-16
+
+Geprüft wurde der exakte Codecommit
+`a4e286d6395de9c921098d2883f72d4e13391f90` auf dem Mac Studio in
+`/tmp/pv3-validate-a4e286d6` mit Node `v26.7.0`, npm `11.19.0` und ohne
+Modelllauf oder Kunden-PDF.
+
+| Prüfung                                            |                       Ergebnis |
+| -------------------------------------------------- | -----------------------------: |
+| fokussierte und angrenzende Jest-Verträge          |    11/11 Suites, 189/189 Tests |
+| Prettier über alle geänderten Produkt-/Testdateien |                           PASS |
+| ESLint geänderte Serverquellen                     |                           PASS |
+| ESLint PolicyComparisonPanel                       |                           PASS |
+| Frontend-Produktionsbuild                          | PASS, Vite 4.5.3, 6.170 Module |
+
+Synthetisch belegt sind:
+
+- ausdrückliches `INCLUDED` gegen qualifiziertes Nichtfinden ergibt den
+  richtigen A-/B-Vorteil;
+- die Begründung nennt ausdrücklich, dass kein Vertragsausschluss belegt ist;
+- beidseitiges qualifiziertes Nichtfinden ergibt
+  `KEIN_DOKUMENTIERTER_VORTEIL`;
+- eine textlose physische Seite kippt den Befund auf `SEARCH_INCOMPLETE`;
+- Groß-/Kleinschreibung und PDF-Zeilentrennung funktionieren für kontrollierte
+  Garagen-/Stellplatzbegriffe;
+- Garagentor, Garagenhaftpflicht, Garagengasse und Parkverbot erzeugen keine
+  falschen Objekt-Treffer;
+- Prompt und Vollkatalog bleiben in vollständiger Zeilen-/Labelparität; der
+  historische Pilotkatalog wird nicht umgeschrieben.
+
+Der direkte ESLint-Aufruf auf der vorhandenen CommonJS-Presenterdatei meldet
+weiterhin `module/no-undef`, weil die Frontend-ESLint-Konfiguration `.cjs`
+nicht als Node/CommonJS behandelt. Die Datei wird durch Jest ausgeführt; diese
+Konfigurationswarnung ist keine neue Produktregression.
+
+Nicht belegt sind gemischte PDFs mit seitenweiser OCR, fremde
+Versichererformulierungen, Vollständigkeit aller Synonyme oder eine globale
+Aktivierung außerhalb `VS-16`.

@@ -119,15 +119,15 @@ werden oder eine Seite kann viele Sparten enthalten.
 
 **Status:** AKZEPTIERT
 
-| Komponente | Verbindliche Rolle | Darf nicht |
-| --- | --- | --- |
-| SQLite | Scope, Ledger, Checkpoints, vollständige Enumeration, Joins, atomare Veröffentlichung | semantische Bedeutung erfinden |
-| FTS5 | exakte Phrasen/Tokens und kontrollierte Präfixe | als Synonym- oder Stemmingmaschine gelten |
-| Alias-Katalog | bekannte Schreibweisen und Synonyme additiv erweitern | Vollständigkeit definieren |
-| Dinghy | Paraphrasen und unbekannte semantische Beziehungen als Kandidaten finden | sichere Negativbehauptungen liefern |
-| kleines Extraktionsmodell | kompakte, ambige Klauselgruppen klassifizieren | dauerhaft zusätzlich neben Qwen geladen werden, bevor evaluiert |
-| Qwen | schwierige Klauseln und beleggebundene Endformulierung | alle Blocks inventarisieren oder Rows auswählen |
-| Servercode | Faktenmenge, Rollen, Quellen und sämtliche Rows besitzen | unvalidierte Modellaussagen publizieren |
+| Komponente                | Verbindliche Rolle                                                                    | Darf nicht                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| SQLite                    | Scope, Ledger, Checkpoints, vollständige Enumeration, Joins, atomare Veröffentlichung | semantische Bedeutung erfinden                                  |
+| FTS5                      | exakte Phrasen/Tokens und kontrollierte Präfixe                                       | als Synonym- oder Stemmingmaschine gelten                       |
+| Alias-Katalog             | bekannte Schreibweisen und Synonyme additiv erweitern                                 | Vollständigkeit definieren                                      |
+| Dinghy                    | Paraphrasen und unbekannte semantische Beziehungen als Kandidaten finden              | sichere Negativbehauptungen liefern                             |
+| kleines Extraktionsmodell | kompakte, ambige Klauselgruppen klassifizieren                                        | dauerhaft zusätzlich neben Qwen geladen werden, bevor evaluiert |
+| Qwen                      | schwierige Klauseln und beleggebundene Endformulierung                                | alle Blocks inventarisieren oder Rows auswählen                 |
+| Servercode                | Faktenmenge, Rollen, Quellen und sämtliche Rows besitzen                              | unvalidierte Modellaussagen publizieren                         |
 
 ## ADR-006: Vollständigkeit bedeutet terminale Primärblock-Coverage
 
@@ -691,3 +691,49 @@ Recall-Regression.
 
 Kanonischer Messbeleg:
 [Tests und Erkenntnisse, Abschnitt 45](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#45-v340-frischer-zehn-dokumente-lauf-und-bedingungssichere-punktentscheidung).
+
+## ADR-022: Qualifiziertes Nichtfinden ist Vergleichsannahme, kein Ausschluss
+
+**Status:** AKZEPTIERT UND BEGRENZT, in V3 Ergebnisschema V3 für `VS-16`
+umgesetzt und am 31. August 2026 auf dem Mac Studio synthetisch validiert
+
+`ADR-021` bleibt für fehlende, alte oder unvollständig geprüfte Evidenz
+unverändert gültig. Neu ist ausschließlich ein stärkerer, separat
+maschinenlesbarer Suchbefund:
+
+```text
+coverageEffect:       UNKNOWN
+searchDisposition:    NOT_FOUND_AFTER_COMPLETE_SEARCH
+comparisonTreatment:  ASSUMED_NOT_INCLUDED_V1
+```
+
+Verbindliche Entscheidung:
+
+1. Ein `NOT_FOUND` aus der Evidenzmaterialisierung allein reicht niemals aus.
+2. Der Vergleichspunkt muss den versionierten Negativbefund ausdrücklich im
+   Katalog freigeben.
+3. Alle bereitgestellten Paketdokumente müssen identitätsgeprüft und
+   verarbeitet sein; alle physischen Seiten müssen Text enthalten.
+4. Kategoriebericht, Worksheet, Targets und Judgements müssen vollständig,
+   identitätsgebunden und ohne offene technische Gates sein.
+5. Jede kontrollierte Komponente muss mit null Occurrences, null Kandidaten,
+   null Rejects und null ungelösten Candidate-IDs serverseitig terminieren.
+6. Nur dann darf die Ausgabe „im vollständig geprüften bereitgestellten Paket
+   nicht gefunden“ lauten. Sie muss zusätzlich sagen, dass kein ausdrücklicher
+   Ausschluss belegt ist.
+7. `INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1` darf einen punktweisen Vorteil für
+   die ausdrücklich eingeschlossene Seite erzeugen.
+8. Beidseitiger qualifizierter Negativbefund ergibt
+   `KEIN_DOKUMENTIERTER_VORTEIL`, nicht `GLEICHWERTIG`.
+9. Bildseiten in gemischten PDFs, alte Artefakte, offene Kandidaten und nicht
+   freigegebene Punkte bleiben `SEARCH_INCOMPLETE` und `UNKLAR`.
+10. Die Regel gilt nur für das bereitgestellte Paket, nicht für den
+    möglicherweise außerhalb des Uploads existierenden Gesamtvertrag.
+
+Erste Freigabe ist `VS-16` mit getrennten atomaren Komponenten und exakten
+Aliasgruppen für Garage, Tiefgarage, Stell-/Parkplatz, Parkdeck und Carport.
+Rohe Präfixe wie `GARAG*` bleiben unzulässig, weil sie Nachbarbegriffe wie
+Garagentor oder Garagenhaftpflicht erfassen würden.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 46](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#46-qualifizierter-negativbefund-für-vs-16).

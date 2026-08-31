@@ -647,18 +647,18 @@ nicht abgeschlossen.
 
 Der gemessene reale Lauf hatte:
 
-| Kennzahl | Wert |
-| --- | ---: |
-| Primärblöcke gesamt | 690 |
-| deterministisch erledigt | 45 |
-| vom Modell mit Fakten validiert | 46 |
-| vom Modell als ohne Fakt bestätigt | 22 |
-| noch `ambiguous_pending` | 577 |
-| erledigt | 113 / 690, ca. 16 % |
-| Modellbatchgröße | 4 Blöcke |
-| gemessene Dauer einzelner Calls | ca. 18–73 Sekunden |
-| elf erfolgreiche Calls zusammen | ca. 446 Sekunden |
-| extrapolierter Rest | deutlich über eine Stunde |
+| Kennzahl                           |                      Wert |
+| ---------------------------------- | ------------------------: |
+| Primärblöcke gesamt                |                       690 |
+| deterministisch erledigt           |                        45 |
+| vom Modell mit Fakten validiert    |                        46 |
+| vom Modell als ohne Fakt bestätigt |                        22 |
+| noch `ambiguous_pending`           |                       577 |
+| erledigt                           |       113 / 690, ca. 16 % |
+| Modellbatchgröße                   |                  4 Blöcke |
+| gemessene Dauer einzelner Calls    |        ca. 18–73 Sekunden |
+| elf erfolgreiche Calls zusammen    |          ca. 446 Sekunden |
+| extrapolierter Rest                | deutlich über eine Stunde |
 
 Das ist kein neuer JSON- oder `unitKey`-Fehler. `v0.3.22` band die
 Modellantworten korrekt an Quellblöcke; alle beobachteten Calls wurden vom
@@ -875,3 +875,26 @@ Bei jeder fachlich relevanten Änderung müssen mindestens aktualisiert werden:
 - Entscheidung, ob ein Ansatz weitergeführt, begrenzt oder verworfen wird.
 
 Ein grünes Release-Gate ersetzt diese Aktualisierung nicht.
+
+## 13. Qualifiziertes Nichtfinden bleibt von Ausschluss getrennt
+
+Seit Ergebnisschema V3 besitzt der Vergleich neben der Vertragswirkung eine
+eigene Suchbefundachse. Gewöhnlich fehlende Evidenz bleibt unverändert offen.
+Nur ein opt-in Katalogpunkt mit vollständig belegter Dokument-, Seiten-,
+Artefakt- und Komponentenprüfung darf
+`NOT_FOUND_AFTER_COMPLETE_SEARCH` erhalten.
+
+Der erste freigegebene Vertrag ist `VS-16` für Garage, Tiefgarage,
+Stell-/Parkplatz, Parkdeck und Carport. Der sichtbare Satz lautet sinngemäß:
+Im vollständig geprüften bereitgestellten Paket wurde nach dem versionierten
+Suchvertrag keine entsprechende Regelung gefunden; für diesen Vergleich wird
+der Schutz als nicht enthalten angenommen. Ein ausdrücklicher Ausschluss ist
+damit nicht belegt.
+
+Beidseitiges Nichtfinden heißt `KEIN_DOKUMENTIERTER_VORTEIL`, nicht
+Gleichwertigkeit. Bildseiten ohne Text, alte Artefakte, offene Kandidaten und
+nicht freigegebene Kategorien bleiben `SEARCH_INCOMPLETE`/`UNKLAR`.
+
+Der Stand ist auf dem Mac Studio mit 189 relevanten synthetischen Tests,
+Formatprüfung und Frontend-Build belegt. Noch offen sind seitenweise OCR für
+gemischte PDFs und fremde fachlich gelabelte Versicherer-Holdouts.

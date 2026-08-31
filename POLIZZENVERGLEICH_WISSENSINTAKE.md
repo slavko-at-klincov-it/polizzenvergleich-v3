@@ -88,15 +88,15 @@ nicht erfüllt oder bewusst begrenzt ist:
 Nach bestandenen Hard-Gates wird jede Option von 1 bis 5 bewertet. Eine hohe
 Gesamtpunktzahl darf kein fehlgeschlagenes Hard-Gate kompensieren.
 
-| Kriterium | Gewicht |
-| --- | ---: |
-| Fachliche Korrektheit und Rollenbindung | 25 |
-| Ehrliche Evidenz- und Coverage-Grenze | 20 |
-| Kundennutzen und Bedienablauf | 15 |
-| Laufzeit und Ressourcen auf dem Kunden-Mac | 15 |
-| Erweiterbarkeit auf viele Vergleichspunkte | 10 |
-| Wartbarkeit, Testbarkeit und klare Modulverträge | 8 |
-| Betrieb, Recovery und Diagnose | 7 |
+| Kriterium                                        | Gewicht |
+| ------------------------------------------------ | ------: |
+| Fachliche Korrektheit und Rollenbindung          |      25 |
+| Ehrliche Evidenz- und Coverage-Grenze            |      20 |
+| Kundennutzen und Bedienablauf                    |      15 |
+| Laufzeit und Ressourcen auf dem Kunden-Mac       |      15 |
+| Erweiterbarkeit auf viele Vergleichspunkte       |      10 |
+| Wartbarkeit, Testbarkeit und klare Modulverträge |       8 |
+| Betrieb, Recovery und Diagnose                   |       7 |
 
 Zusätzlich wird die Evidenzqualität getrennt markiert:
 
@@ -109,38 +109,38 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 
 ## 6. Aktives Intake-Register
 
-| ID | Kurztitel | Typ | Status | Nächster Schritt |
-| --- | --- | --- | --- | --- |
-| `INT-20260824-001` | Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten | `ZIEL` | `IN_PRÜFUNG` | kommende Inputs einzeln erfassen und verbinden |
-| `INT-20260824-002` | Versionierte Wort-/Rollenmatrix als Retrievalvertrag | `IDEE` | `IN_PRÜFUNG` | TargetSpec für Selbstbehalt und Limit fachlich definieren |
-| `INT-20260824-003` | Occurrence-zentrierte strukturelle Kontextexpansion | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED` | vorhandene ADRs durch echte Offset-Occurrences implementierbar machen |
-| `INT-20260824-004` | Dokumentfluss als typisierter Relationsgraph | `IDEE` | `IN_PRÜFUNG` | minimalen In-Memory-Graph an Realstrukturfällen prüfen |
-| `INT-20260824-005` | Drei Retrievalschichten ergeben 100 Prozent Dokumentverständnis | `ANNAHME` | `GESCHLOSSEN` | nur getrennte, messbare Coverage-Verträge verwenden |
-| `INT-20260824-006` | Generischer Heuristikkern statt Regelkopien je Thema | `IDEE` | `IN_PRÜFUNG` | zuerst Selbstbehalt, danach Limits als zweiten vertikalen Beweis nutzen |
-| `INT-20260824-007` | Lokale Zielplattform AnythingLLM und LM Studio | `ZIEL` | `PROMOTED` | tatsächliche Kunden-Runtime vor Betriebsbehauptungen verifizieren |
-| `INT-20260824-008` | Beleggebundene Einzeldokumentanalyse | `ZIEL` | `PROMOTED` | Ergebnisvertrag durch fachliche Golden Cases konkretisieren |
-| `INT-20260824-009` | Dokumentisolierter A/B-Vergleich mit Detailunterschieden | `ZIEL` | `PROMOTED` | stabile Vergleichspunkte und Comparability Gate definieren |
-| `INT-20260824-010` | Gebäudeversicherung als aktueller Lieferumfang | `ZIEL` | `PROMOTED` | Kategorien, Granularität und Abnahmetiefe schärfen |
-| `INT-20260824-011` | Fachliche Bedeutung von „Vertrag A ist besser“ | `OFFENE_FRAGE` | `OFFEN` | punktweise Bewertung oder zusätzliche profilbasierte Empfehlung klären |
-| `INT-20260824-012` | Claude-Prüfkatalog als fachlicher Taxonomie-Seed | `EVIDENZHINWEIS` | `IN_PRÜFUNG` | Punkte atomisieren, deduplizieren und durch Gebäudeversicherungsexperten freigeben |
-| `INT-20260824-013` | Dokumentisolierte Analyse je Kategorie vor dem A/B-Join | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | als internen Workflow ohne manuelle Pflichtschritte konkretisieren |
-| `INT-20260824-014` | Stabile Prüfpunkt-IDs und beleggebundener Extraktionsvertrag | `IDEE` | `PROMOTED` | Kandidatenschema fachlich klassifizieren und erst danach aktivieren |
-| `INT-20260824-015` | Serielle LLM-Batches mit LLM-Selbstverifikation | `ENTSCHEIDUNGSKANDIDAT` | `GESCHLOSSEN` | nur als begrenzter Eval-Baseline, nicht als Produktionspfad verwenden |
-| `INT-20260824-016` | Deterministischer Vergleich und pauschales Punkteschema | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | deterministischen Join übernehmen, universelle Scores verwerfen |
-| `INT-20260824-017` | Generatives Inhaltsverzeichnis mit Markdown-Zeilenreferenzen | `IDEE` | `GESCHLOSSEN` | höchstens als Navigationshinweis, nie als Coverage- oder Provenienzbasis |
-| `INT-20260824-018` | Qwen-3.8-Konfiguration und 32-GB-Laufzeitannahmen | `EVIDENZHINWEIS` | `IN_PRÜFUNG` | tatsächliche LM-Studio-Runtime und A/B-Eval messen |
-| `INT-20260824-019` | Leitungswasser als erster breiter Kategorienpilot | `IDEE` | `IN_PRÜFUNG` | 25 Golden-Case-Klassen konkretisieren und nach Realstruktur-Gate ausführen |
-| `INT-20260825-020` | Analysephase vor sauberem Neuimplementierungsbranch | `ZIEL` | `PROMOTED` | vorbereiteten Branch unverändert halten und Baseline vor Implementierung bestätigen |
-| `INT-20260825-021` | Original-AnythingLLM Default-N32-Vollkontextprobe | `EVIDENZHINWEIS` | `PROMOTED` | Leitungswasser-Mehrpass statt weiterem Top-N-/Generator-Roulette prüfen |
-| `INT-20260825-022` | Vertrauliche Realpolicen als lokale strukturdiverse Testkohorte | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED` | zunächst synthetische Fälle, danach wenige lokale Entwicklungs- und Holdoutpakete |
-| `INT-20260825-023` | Partner-Katalog mit 276 Prüfpunkten und Qwen/XLSX-Kategorienlauf | `EVIDENZHINWEIS` | `IN_PRÜFUNG` | Quellkatalog gegen 202er Seed crosswalken und einen kontrollierten Challenger messen |
-| `INT-20260825-024` | Isolierter lokaler PDF-Ordner-Batch-Harness | `EVIDENZHINWEIS` | `PROMOTED` | zunächst Dry-Run und synthetische Challenger-Batches, keine Kundenfreigabe |
-| `INT-20260825-025` | Dokumenteigene Kategorien und Unterkategorien wortgetreu inventarisieren | `ZIEL` | `PROMOTED` | separaten strukturellen Inventarlauf vor dem Partner-Katalog-Crosswalk definieren |
-| `INT-20260825-026` | Strukturinventar und belegtes Inhaltsinventar strikt trennen | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED` | Struktur zuerst roh erfassen, danach rollenbezogene Inhalte aus allen Text- und Tabellenbereichen extrahieren |
-| `INT-20260825-027` | Vollständige Built-in-Konfigurationskampagne und Run-Ledger | `EVIDENZHINWEIS` | `PROMOTED` | Ledger vor jeder RAG-, Modell- oder Agentic-Entscheidung laden; Proxys nie als Faktenrecall ausgeben |
-| `INT-20260825-028` | Taxonomiegetriebener occurrence-zentrierter A/B-Zeilenworkflow | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | Strukturinventar qualitätsprüfen, Partner-Crosswalk erstellen und TargetSpec-/Row-Vertrag an Golden Cases falsifizieren |
-| `INT-20260825-029` | Zwei-Polizzen-Vergleich hat aktuelle Produktpriorität | `ZIEL` | `PROMOTED` | Strategie und Abnahme primär an dokumentisoliertem A/B-Vergleich ausrichten |
-| `INT-20260825-030` | Bidirektionaler Klauselabgleich als katalogunabhängiger Vergleichspfad | `IDEE` | `IN_PRÜFUNG` | an einem anonymisierten A/B-Paar gegen manuell markierte Klauselunterschiede falsifizieren |
+| ID                 | Kurztitel                                                                | Typ                     | Status        | Nächster Schritt                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------ | ----------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `INT-20260824-001` | Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten         | `ZIEL`                  | `IN_PRÜFUNG`  | kommende Inputs einzeln erfassen und verbinden                                                                          |
+| `INT-20260824-002` | Versionierte Wort-/Rollenmatrix als Retrievalvertrag                     | `IDEE`                  | `IN_PRÜFUNG`  | TargetSpec für Selbstbehalt und Limit fachlich definieren                                                               |
+| `INT-20260824-003` | Occurrence-zentrierte strukturelle Kontextexpansion                      | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | vorhandene ADRs durch echte Offset-Occurrences implementierbar machen                                                   |
+| `INT-20260824-004` | Dokumentfluss als typisierter Relationsgraph                             | `IDEE`                  | `IN_PRÜFUNG`  | minimalen In-Memory-Graph an Realstrukturfällen prüfen                                                                  |
+| `INT-20260824-005` | Drei Retrievalschichten ergeben 100 Prozent Dokumentverständnis          | `ANNAHME`               | `GESCHLOSSEN` | nur getrennte, messbare Coverage-Verträge verwenden                                                                     |
+| `INT-20260824-006` | Generischer Heuristikkern statt Regelkopien je Thema                     | `IDEE`                  | `IN_PRÜFUNG`  | zuerst Selbstbehalt, danach Limits als zweiten vertikalen Beweis nutzen                                                 |
+| `INT-20260824-007` | Lokale Zielplattform AnythingLLM und LM Studio                           | `ZIEL`                  | `PROMOTED`    | tatsächliche Kunden-Runtime vor Betriebsbehauptungen verifizieren                                                       |
+| `INT-20260824-008` | Beleggebundene Einzeldokumentanalyse                                     | `ZIEL`                  | `PROMOTED`    | Ergebnisvertrag durch fachliche Golden Cases konkretisieren                                                             |
+| `INT-20260824-009` | Dokumentisolierter A/B-Vergleich mit Detailunterschieden                 | `ZIEL`                  | `PROMOTED`    | stabile Vergleichspunkte und Comparability Gate definieren                                                              |
+| `INT-20260824-010` | Gebäudeversicherung als aktueller Lieferumfang                           | `ZIEL`                  | `PROMOTED`    | Kategorien, Granularität und Abnahmetiefe schärfen                                                                      |
+| `INT-20260824-011` | Fachliche Bedeutung von „Vertrag A ist besser“                           | `OFFENE_FRAGE`          | `OFFEN`       | punktweise Bewertung oder zusätzliche profilbasierte Empfehlung klären                                                  |
+| `INT-20260824-012` | Claude-Prüfkatalog als fachlicher Taxonomie-Seed                         | `EVIDENZHINWEIS`        | `IN_PRÜFUNG`  | Punkte atomisieren, deduplizieren und durch Gebäudeversicherungsexperten freigeben                                      |
+| `INT-20260824-013` | Dokumentisolierte Analyse je Kategorie vor dem A/B-Join                  | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | als internen Workflow ohne manuelle Pflichtschritte konkretisieren                                                      |
+| `INT-20260824-014` | Stabile Prüfpunkt-IDs und beleggebundener Extraktionsvertrag             | `IDEE`                  | `PROMOTED`    | Kandidatenschema fachlich klassifizieren und erst danach aktivieren                                                     |
+| `INT-20260824-015` | Serielle LLM-Batches mit LLM-Selbstverifikation                          | `ENTSCHEIDUNGSKANDIDAT` | `GESCHLOSSEN` | nur als begrenzter Eval-Baseline, nicht als Produktionspfad verwenden                                                   |
+| `INT-20260824-016` | Deterministischer Vergleich und pauschales Punkteschema                  | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | deterministischen Join übernehmen, universelle Scores verwerfen                                                         |
+| `INT-20260824-017` | Generatives Inhaltsverzeichnis mit Markdown-Zeilenreferenzen             | `IDEE`                  | `GESCHLOSSEN` | höchstens als Navigationshinweis, nie als Coverage- oder Provenienzbasis                                                |
+| `INT-20260824-018` | Qwen-3.8-Konfiguration und 32-GB-Laufzeitannahmen                        | `EVIDENZHINWEIS`        | `IN_PRÜFUNG`  | tatsächliche LM-Studio-Runtime und A/B-Eval messen                                                                      |
+| `INT-20260824-019` | Leitungswasser als erster breiter Kategorienpilot                        | `IDEE`                  | `IN_PRÜFUNG`  | 25 Golden-Case-Klassen konkretisieren und nach Realstruktur-Gate ausführen                                              |
+| `INT-20260825-020` | Analysephase vor sauberem Neuimplementierungsbranch                      | `ZIEL`                  | `PROMOTED`    | vorbereiteten Branch unverändert halten und Baseline vor Implementierung bestätigen                                     |
+| `INT-20260825-021` | Original-AnythingLLM Default-N32-Vollkontextprobe                        | `EVIDENZHINWEIS`        | `PROMOTED`    | Leitungswasser-Mehrpass statt weiterem Top-N-/Generator-Roulette prüfen                                                 |
+| `INT-20260825-022` | Vertrauliche Realpolicen als lokale strukturdiverse Testkohorte          | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | zunächst synthetische Fälle, danach wenige lokale Entwicklungs- und Holdoutpakete                                       |
+| `INT-20260825-023` | Partner-Katalog mit 276 Prüfpunkten und Qwen/XLSX-Kategorienlauf         | `EVIDENZHINWEIS`        | `IN_PRÜFUNG`  | Quellkatalog gegen 202er Seed crosswalken und einen kontrollierten Challenger messen                                    |
+| `INT-20260825-024` | Isolierter lokaler PDF-Ordner-Batch-Harness                              | `EVIDENZHINWEIS`        | `PROMOTED`    | zunächst Dry-Run und synthetische Challenger-Batches, keine Kundenfreigabe                                              |
+| `INT-20260825-025` | Dokumenteigene Kategorien und Unterkategorien wortgetreu inventarisieren | `ZIEL`                  | `PROMOTED`    | separaten strukturellen Inventarlauf vor dem Partner-Katalog-Crosswalk definieren                                       |
+| `INT-20260825-026` | Strukturinventar und belegtes Inhaltsinventar strikt trennen             | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Struktur zuerst roh erfassen, danach rollenbezogene Inhalte aus allen Text- und Tabellenbereichen extrahieren           |
+| `INT-20260825-027` | Vollständige Built-in-Konfigurationskampagne und Run-Ledger              | `EVIDENZHINWEIS`        | `PROMOTED`    | Ledger vor jeder RAG-, Modell- oder Agentic-Entscheidung laden; Proxys nie als Faktenrecall ausgeben                    |
+| `INT-20260825-028` | Taxonomiegetriebener occurrence-zentrierter A/B-Zeilenworkflow           | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | Strukturinventar qualitätsprüfen, Partner-Crosswalk erstellen und TargetSpec-/Row-Vertrag an Golden Cases falsifizieren |
+| `INT-20260825-029` | Zwei-Polizzen-Vergleich hat aktuelle Produktpriorität                    | `ZIEL`                  | `PROMOTED`    | Strategie und Abnahme primär an dokumentisoliertem A/B-Vergleich ausrichten                                             |
+| `INT-20260825-030` | Bidirektionaler Klauselabgleich als katalogunabhängiger Vergleichspfad   | `IDEE`                  | `IN_PRÜFUNG`  | an einem anonymisierten A/B-Paar gegen manuell markierte Klauselunterschiede falsifizieren                              |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -264,7 +264,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
   - prüft -> `FAIL-003`
 - Spezialistenurteil: KWIC ist eine passende Bezeichnung für die Trefferansicht.
   Die fachliche Pipeline muss `Occurrence -> Segment/Zelle -> Clause -> belegte
-  Tabellen-/Fortsetzungsrelation -> Heading/Variante` folgen; ein kleines
+Tabellen-/Fortsetzungsrelation -> Heading/Variante` folgen; ein kleines
   Wortfenster bleibt nur UI-/Diagnoseausschnitt oder Sicherheits-Fallback.
 - Hard-Gates: `BEGRENZT` – architektonisch akzeptiert, Implementierung und
   Realstrukturabnahme noch offen.
@@ -606,8 +606,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 - Ist-Wahrheit: `NEIN` – Quelle ist ein KI-generierter Chat ohne sichtbare
   fachliche Abnahme. Im geteilten Snapshot möglicherweise vorhandene Anhänge
   oder Zusatzdaten waren nicht sichtbar.
-- Quelle: paraphrasierter, öffentlich geteilter Claude-Chat, vom Benutzer am
-  24. August 2026 zur Gegenprüfung übermittelt.
+- Quelle: paraphrasierter, öffentlich geteilter Claude-Chat, vom Benutzer am 24. August 2026 zur Gegenprüfung übermittelt.
 - Gewünschter Kundennutzen und sichtbares Ergebnis: breiter Startpunkt für die
   gewünschten 250 bis 500 Detailpunkte und ein strukturierter Broker-Review.
 - Scope und ausdrückliche Nicht-Ziele: Kandidaten-Backlog; keine geschlossene
@@ -686,7 +685,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 - Riskanteste Annahme: Dass dieselbe Kategorienstruktur in jedem Dokument
   explizit vorhanden sei.
 - Nächster Prüfschritt: Workflow-Vertrag `ein Dokument -> Faktenunion ->
-  Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
+Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
 - Entscheidung: Kern übernehmen, manuelle Ausprägung verwerfen.
 - Kanonischer Ausgang: nach Bestätigung Zielarchitektur/ADR.
 
@@ -900,7 +899,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
   - widerspricht -> beworbenes Maximalfenster als praktisch verfügbares
     Kundenfenster
 - Spezialistenurteil: Aktuellen 32K-Vertrag beibehalten, bis `lms load
-  --estimate-only` und reale A/B-Läufe mehr belegen. `medium` und `low` sowie
+--estimate-only` und reale A/B-Läufe mehr belegen. `medium` und `low` sowie
   Samplingprofile werden auf identischen Golden Cases nach Korrektheit,
   Evidence Coverage, Laufzeit und Speicher verglichen. Keine ungemessene
   Systemtuning-Anweisung übernehmen.
@@ -1332,7 +1331,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
     Rohinventar; Originalschreibweise und physische Seite bleiben erhalten.
   - Eine Eltern-Kind-Beziehung darf nur aus expliziter Nummerierung,
     Überschriftenebene oder Layoutstruktur stammen; sonst `Hierarchie
-    ungeklärt`.
+ungeklärt`.
   - Inhaltlich relevante Themen, die nur im Fließtext vorkommen, sind keine
     dokumentierten Unterkategorien und dürfen im Strukturinventar nicht so
     umbenannt werden.
@@ -1345,7 +1344,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
   - eine verlustfreie Gesamtliste aller beobachteten Bezeichnungen mit
     Vorkommenszählung, ohne Originalvarianten zusammenzuziehen;
   - ein späterer separater Crosswalk `beobachtete Dokumentstruktur <->
-    Partner-Katalog` mit `gleich`, `ähnlich`, `fehlt im Partner-Katalog`,
+Partner-Katalog` mit `gleich`, `ähnlich`, `fehlt im Partner-Katalog`,
     `nur im Partner-Katalog` und `Zuordnung ungeklärt`.
 - Beziehung:
   - korrigiert_Zielinterpretation_von -> `INT-20260825-024`
@@ -2204,6 +2203,57 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
   Kontextlänge prüfen und ausreichend Ausgabebudget nachweisen.
 - Entscheidung: akzeptieren
 - Kanonischer Ausgang: Tests, Abschnitt 24; Auswertungsentscheidung D-017.
+
+## INT-20260831-001 — Qualifiziertes Nichtfinden als Vergleichsannahme
+
+- Erfasst: 2026-08-31
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `PROMOTED`
+- Aussage: Ein nach einem versionierten, vollständig ausgeführten Suchvertrag
+  nicht gefundener Vergleichspunkt darf als eigener Dokumentbefund und als
+  punktweise Annahme „für diesen Vergleich nicht enthalten“ behandelt werden,
+  ohne daraus einen ausdrücklichen Vertragsausschluss zu erfinden.
+- Ist-Wahrheit: `JA` für die implementierte opt-in Vergleichsregel bei
+  `VS-16`; `NEIN` für eine globale Abwesenheits- oder beliebige
+  Polizzenbehauptung.
+- Quelle: paraphrasierte Nutzeranforderung, V3-Codeprüfung und synthetische
+  Mac-Studio-Vertragstests; keine Kundentexte oder Kunden-PDFs übernommen.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein ausdrücklich
+  eingeschlossener Garagen-/Stellplatzschutz erhält gegenüber einem
+  vollständig geprüften Paket ohne entsprechenden kontrollierten Treffer
+  einen verständlich begründeten Punktvorteil.
+- Scope und ausdrückliche Nicht-Ziele: zunächst nur `VS-16`; kein
+  `coverageEffect: EXCLUDED`, kein Gesamtsieger, keine Aussage über nicht
+  bereitgestellte Vertragsdokumente und kein OCR-Vollständigkeitsversprechen.
+- Evidenz und Beweisgrenze: 11 relevante Suites / 189 Tests, Prettier,
+  geänderte Server-/JSX-Lintpfade und Frontend-Build auf dem Mac Studio am
+  exakten Codecommit `a4e286d6395de9c921098d2883f72d4e13391f90`.
+- Systembezug: Produkt, Datenfluss, UI, Export; verfeinert `INV-002` und
+  `INV-007`, führt `INV-008` und `ADR-022` ein.
+- Beziehungen:
+  - verfeinert -> `ADR-021`
+  - begrenzt_durch -> `INV-002`, `INV-003`, `INV-004`
+- Spezialistenurteil:
+  - Local-AI/RAG: Null Occurrences sind nur bei vollständiger Textseiten- und
+    Prozesscoverage aussagefähig; Bildseiten und offene Kandidaten bleiben
+    fail-closed.
+  - Kunde/Versicherung: Vergleichsannahme und ausdrücklicher Ausschluss müssen
+    sprachlich und maschinenlesbar getrennt bleiben.
+  - Datenschutz/Betrieb: Nur Suchplan- und Zählmetadaten werden persistiert;
+    keine neuen Kundentexte in der Knowledge Base.
+  - Kritik/Test: exakte Wortgrenzen und adversariale Nachbartreffer verhindern
+    rohe `GARAG*`-Fehlschlüsse.
+- Hard-Gates: `BEGRENZT`
+- Bewertung: 91/100 für den eng freigegebenen `VS-16`-Vertrag.
+- Evidenzqualität: `SYNTHETISCH_GETESTET` plus `GEMESSEN_KUNDENHARDWARE`
+- Riskanteste Annahme: Der kontrollierte `VS-16`-Wortschatz deckt die
+  relevanten Garagen-/Stellplatzformulierungen unbekannter Versicherer noch
+  nicht empirisch vollständig ab.
+- Nächster Prüfschritt: fremde, fachlich gelabelte Dokumentholdouts und
+  seitenweise OCR-Qualifikation für gemischte PDFs.
+- Entscheidung: begrenzt akzeptieren
+- Kanonischer Ausgang: [ADR-022](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-022-qualifiziertes-nichtfinden-ist-vergleichsannahme-kein-ausschluss),
+  Architektur Abschnitt 17, Projektgedächtnis Abschnitt 13 und Tests Abschnitt 46.
 
 ## 7. Bestätigte Produktzielkarte
 

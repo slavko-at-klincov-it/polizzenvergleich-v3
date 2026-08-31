@@ -224,16 +224,16 @@ aber kein Vollständigkeitsvertrag für „alle Selbstbehalte“ oder „alle Li
 
 ### Tabellen
 
-| Tabelle | Zweck |
-| --- | --- |
-| `comparison_document_analysis_runs` | run-scoped Staging, Version, Source-Hash und Coverage |
-| `comparison_document_clause_blocks` | alle Primärblöcke mit Seite, Offsets, Hash, Struktur und Status |
-| `comparison_document_block_signals` | positionierte deterministische Signale |
-| `comparison_document_block_embeddings` | stabile Vector-ID und Dinghy-Ledger je Block |
-| `comparison_document_inventory_items` | validierte, veröffentlichbare Vertragsfakten |
-| `comparison_document_fact_evidence` | eine oder mehrere exakte Belegspannen je Fakt |
-| `comparison_document_term_aliases` | versionierte additive Begriffsvarianten |
-| `comparison_document_clause_blocks_fts` | run-scoped FTS über Clause Blocks |
+| Tabelle                                 | Zweck                                                           |
+| --------------------------------------- | --------------------------------------------------------------- |
+| `comparison_document_analysis_runs`     | run-scoped Staging, Version, Source-Hash und Coverage           |
+| `comparison_document_clause_blocks`     | alle Primärblöcke mit Seite, Offsets, Hash, Struktur und Status |
+| `comparison_document_block_signals`     | positionierte deterministische Signale                          |
+| `comparison_document_block_embeddings`  | stabile Vector-ID und Dinghy-Ledger je Block                    |
+| `comparison_document_inventory_items`   | validierte, veröffentlichbare Vertragsfakten                    |
+| `comparison_document_fact_evidence`     | eine oder mehrere exakte Belegspannen je Fakt                   |
+| `comparison_document_term_aliases`      | versionierte additive Begriffsvarianten                         |
+| `comparison_document_clause_blocks_fts` | run-scoped FTS über Clause Blocks                               |
 
 ### Run-Invariante
 
@@ -593,3 +593,37 @@ Definitionen einer Gefahr sind von einem bedingten Deckungsversprechen zu
 trennen. Der lokale Prüftext bleibt absichtlich außerhalb des öffentlichen
 Auditobjekts; dort erscheinen weiterhin nur Candidate-ID, physische Seite und
 exakter Originaltext.
+
+## 17. Ergebnisschema V3: separater Suchbefund und Vergleichsannahme
+
+Der A/B-Result-Builder liest ab Schema V3 zusätzlich Dokumentartefakt,
+Kategoriebericht, Worksheet, Targets und materialisierte Judgements. Daraus
+entsteht pro atomarer Komponente ein servereigenes Suchaudit:
+
+```text
+Dokument-/Seitencoverage
+  + technische Kategorie-Gates
+  + versionierter opt-in Suchplan
+  + null Occurrences/Kandidaten/Rejects/Unresolved
+  -> NOT_FOUND_AFTER_COMPLETE_SEARCH
+  -> ASSUMED_NOT_INCLUDED_V1 nur in der Vergleichsschicht
+```
+
+Die Faktenachse bleibt dabei `UNKNOWN`. `EXCLUDED` ist weiterhin nur aus einer
+ausdrücklichen, quellengebundenen Ausschlussregel zulässig. Der Paketrollup
+qualifiziert einen Negativbefund nur, wenn jedes bereitgestellte Dokument für
+den Punkt vollständig negativ terminiert. Ein einzelnes fehlendes Artefakt
+oder eine physische Seite ohne Text kippt das Paket auf `SEARCH_INCOMPLETE`.
+
+Der Vergleich entscheidet anschließend eng:
+
+- vollständig belegtes, bedingungsfreies `INCLUDED` gegen qualifiziertes
+  Nichtfinden -> `VORTEIL_A/B`;
+- qualifiziertes Nichtfinden auf beiden Seiten ->
+  `KEIN_DOKUMENTIERTER_VORTEIL`;
+- alle anderen Kombinationen -> bestehende atomare Regeln oder fail-closed
+  `UNKLAR`.
+
+JSON nutzt Schema V3, `pointDecision` Schema V2. Markdown und UI verwenden die
+explizite Begründung; XLSX hängt die Suchbefunde als Spalten S/T an, ohne A–R
+umzuordnen. Alte Ergebnisse werden nicht rückwirkend qualifiziert.
