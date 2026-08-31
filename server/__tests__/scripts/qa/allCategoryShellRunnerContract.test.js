@@ -195,10 +195,7 @@ describe("all-category shell runner", () => {
   test("rejects resume when the persisted product profile differs", () => {
     harness = createHarness();
     expect(runHarness(harness).status).toBe(0);
-    const manifestFile = path.join(
-      harness.output,
-      "manifest.private.json"
-    );
+    const manifestFile = path.join(harness.output, "manifest.private.json");
     const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
     manifest.productProfile.categoryViews.push("HP");
     fs.writeFileSync(manifestFile, JSON.stringify(manifest));

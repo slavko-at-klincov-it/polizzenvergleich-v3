@@ -966,25 +966,25 @@ async function writeWorkbook(result, outputFile) {
         left.rowIndex - right.rowIndex
     );
   for (const { row } of workbookRows) {
-      sheet.addRow({
-        aCategoryId: row.categoryId,
-        aStage: row.stage,
-        aCategoryName: row.categoryName,
-        aContent: row.packageA.documentedContent,
-        aCoverage: row.packageA.coverage,
-        aAmount: row.packageA.coverageAmount,
-        aSource: row.packageA.source,
-        aReview: row.packageA.reviewStatus,
-        bCategoryId: row.categoryId,
-        bStage: row.stage,
-        bCategoryName: row.categoryName,
-        bContent: row.packageB.documentedContent,
-        bCoverage: row.packageB.coverage,
-        bAmount: row.packageB.coverageAmount,
-        bSource: row.packageB.source,
-        bReview: row.packageB.reviewStatus,
-        customerResult: customerResultText(row),
-      });
+    sheet.addRow({
+      aCategoryId: row.categoryId,
+      aStage: row.stage,
+      aCategoryName: row.categoryName,
+      aContent: row.packageA.documentedContent,
+      aCoverage: row.packageA.coverage,
+      aAmount: row.packageA.coverageAmount,
+      aSource: row.packageA.source,
+      aReview: row.packageA.reviewStatus,
+      bCategoryId: row.categoryId,
+      bStage: row.stage,
+      bCategoryName: row.categoryName,
+      bContent: row.packageB.documentedContent,
+      bCoverage: row.packageB.coverage,
+      bAmount: row.packageB.coverageAmount,
+      bSource: row.packageB.source,
+      bReview: row.packageB.reviewStatus,
+      customerResult: customerResultText(row),
+    });
   }
   const wrappedColumns = new Set([4, 7, 11, 12, 14, 15, 17]);
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {

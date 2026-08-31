@@ -41,7 +41,9 @@ describe("policy comparison customer result presenter", () => {
         "Vorteil Paket B: Garagenschutz ist in Paket B ausdrücklich eingeschlossen. In Paket A wurde keine Regelung gefunden; ein ausdrücklicher Ausschluss in Paket A ist damit nicht belegt.",
     });
     expect(text.startsWith("Vorteil Polizze B:")).toBe(true);
-    expect(text).toContain("ausdrücklicher Ausschluss in Polizze A ist damit nicht belegt");
+    expect(text).toContain(
+      "ausdrücklicher Ausschluss in Polizze A ist damit nicht belegt"
+    );
   });
 
   test("does not expose rule identifiers or search dispositions", () => {
