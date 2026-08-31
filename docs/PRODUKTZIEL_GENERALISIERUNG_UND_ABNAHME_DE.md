@@ -104,8 +104,8 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
 
 ## 4. Unveränderliche fachliche Regeln
 
-1. Fehlende Evidenz ist kein `Nein`, sondern `UNKNOWN` beziehungsweise
-   `NOT_DETERMINABLE`.
+1. Fehlende oder unvollständig geprüfte Evidenz ist kein `Nein`, sondern
+   `UNKNOWN` beziehungsweise `NOT_DETERMINABLE`.
 2. Eine bedingte Formulierung beweist nicht, dass die Leistung tatsächlich
    vereinbart wurde.
 3. Ein enger Objekt-, Gefahren-, Varianten- oder Klauselscope darf nicht auf
@@ -118,11 +118,17 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
    Teilbelege dürfen nicht zur vollständigen Bejahung hochgestuft werden.
 7. Betrag, Prozentsatz, Dauer und Bedingung müssen an die richtige Faktrolle
    und Klausel gebunden bleiben.
-8. Hauptpolizze, Bedingungen und Nachträge bleiben getrennte Dokumentfakten,
+8. Ein serverseitig qualifiziertes `NOT_FOUND_AFTER_COMPLETE_SEARCH` bleibt
+   auf Faktenebene `UNKNOWN`. Es darf nur für ausdrücklich freigegebene,
+   versionierte Suchverträge und nur für das vollständig geprüfte
+   bereitgestellte Paket als `ASSUMED_NOT_INCLUDED_V1` in eine punktweise
+   Vergleichsannahme eingehen; ein ausdrücklicher Ausschluss ist damit nicht
+   belegt.
+9. Hauptpolizze, Bedingungen und Nachträge bleiben getrennte Dokumentfakten,
    bis Rang, Geltung und Ersetzung geklärt sind.
-9. Quellen, Seiten, Werte und Ergebniszeilen gehören dem Server. Das Modell
-   darf nur begrenzte bekannte Kandidaten klassifizieren und nichts erfinden.
-10. Ein globales Top-N ist kein Vollständigkeitsbeweis für ein mehrteiliges
+10. Quellen, Seiten, Werte und Ergebniszeilen gehören dem Server. Das Modell
+    darf nur begrenzte bekannte Kandidaten klassifizieren und nichts erfinden.
+11. Ein globales Top-N ist kein Vollständigkeitsbeweis für ein mehrteiliges
     Dokumentpaket.
 
 ## 5. Generalisierungsvertrag gegen Überanpassung
@@ -167,18 +173,18 @@ Die Behauptung ist erst zulässig, wenn eine versionierte, fachlich gelabelte
 und zuvor unbekannte Holdout-Sammlung mehrerer Versicherer und Dokumentarten
 vorliegt. Gemessen werden mindestens:
 
-| Messachse | Was exakt stimmen muss |
-| --- | --- |
-| Requirement-Abdeckung | jede der erwarteten Zeilen terminiert |
-| Fakten-Recall | alle im Oracle vorhandenen relevanten atomaren Fakten gefunden |
-| Fakten-Präzision | keine erfundenen oder falsch zugeordneten Fakten |
-| Deckungswirkung | included/excluded/conditional/option/unknown korrekt |
-| Scope und Komponenten | richtiges Objekt, richtige Gefahr und richtige Variante |
-| Werte und Rollen | Betrag, Prozent, Dauer und Bedingung korrekt gebunden |
-| Paketlogik | richtiges Dokument, Rang, Version und Ersetzung berücksichtigt |
-| Provenienz | physische Seite und exakter Quellspan rekonstruierbar |
-| Stabilität | wiederholte Läufe ändern keine serverbestimmten Fakten |
-| Laufzeit/Betrieb | kompletter Lauf besteht Zielhardware- und Fehlerpfade |
+| Messachse             | Was exakt stimmen muss                                         |
+| --------------------- | -------------------------------------------------------------- |
+| Requirement-Abdeckung | jede der erwarteten Zeilen terminiert                          |
+| Fakten-Recall         | alle im Oracle vorhandenen relevanten atomaren Fakten gefunden |
+| Fakten-Präzision      | keine erfundenen oder falsch zugeordneten Fakten               |
+| Deckungswirkung       | included/excluded/conditional/option/unknown korrekt           |
+| Scope und Komponenten | richtiges Objekt, richtige Gefahr und richtige Variante        |
+| Werte und Rollen      | Betrag, Prozent, Dauer und Bedingung korrekt gebunden          |
+| Paketlogik            | richtiges Dokument, Rang, Version und Ersetzung berücksichtigt |
+| Provenienz            | physische Seite und exakter Quellspan rekonstruierbar          |
+| Stabilität            | wiederholte Läufe ändern keine serverbestimmten Fakten         |
+| Laufzeit/Betrieb      | kompletter Lauf besteht Zielhardware- und Fehlerpfade          |
 
 Ein korrektes `Nicht feststellbar` bei fehlender oder uneindeutiger Evidenz ist
 eine richtige Antwort. Eine selbstsichere, unbelegte Ja-/Nein-Antwort ist ein

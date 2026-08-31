@@ -3502,3 +3502,60 @@ NO CLAIM: keine beliebigen Polizzen und kein 99-Prozent-Nachweis
 Die ausgelassene Validierung ist eine ausdrückliche Sequenzentscheidung: In
 diesem Schritt wurden nur Code, Versionierung und Dokumentation geändert. Die
 Abnahme folgt separat auf dem Mac Studio.
+
+## 70. Qualifiziertes „im bereitgestellten Paket nicht gefunden“
+
+Die Vergleichsschicht unterscheidet ab Ergebnisschema V3 drei unabhängige
+Achsen: Vertragswirkung, Suchbefund und Vergleichsannahme. Ein vollständiger
+Negativbefund wird nicht als `EXCLUDED` gespeichert. Er bleibt
+`coverageEffect: UNKNOWN`, erhält aber
+`searchDisposition: NOT_FOUND_AFTER_COMPLETE_SEARCH` und darf für einen
+ausdrücklich freigegebenen Punkt als `ASSUMED_NOT_INCLUDED_V1` gewertet
+werden.
+
+Die Aktivierung ist fail-closed und zunächst auf `VS-16` begrenzt. Erforderlich
+sind vollständige Verarbeitung aller Paketdokumente, Text auf jeder physischen
+PDF-Seite, vollständig bestandene technische Kategorie-Gates, vollständige
+Worksheet-/Target-/Judgement-Parität und pro Komponente null Occurrences,
+Kandidaten, Rejects und ungelöste Candidate-IDs. Alte Artefakte und gemischte
+PDFs mit textlosen Bildseiten bleiben `SEARCH_INCOMPLETE`.
+
+`VS-16` verwendet den Katalogvertrag `vs-occurrence-full-draft-v0.3`,
+`componentSatisfactionPolicy: ANY` und kontrollierte getrennte Komponenten für
+Garage, Tiefgarage, Stell-/Parkplatz, Parkdeck und Carport. Exakte Wortgrenzen
+verhindern Nachbartreffer wie Garagentor, Garagenhaftpflicht, Garagengasse und
+Parkverbot.
+
+Neue Punktregeln:
+
+```text
+ausdrücklich INCLUDED gegen qualifiziert nicht gefunden
+  -> VORTEIL_A/B
+  -> INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1
+
+beidseitig qualifiziert nicht gefunden
+  -> KEIN_DOKUMENTIERTER_VORTEIL
+  -> COMPLETE_SEARCH_ABSENCE_BOTH_V1
+```
+
+Die Nutzerbegründung sagt stets, dass nur im vollständig geprüften
+bereitgestellten Paket nichts gefunden wurde und dass kein ausdrücklicher
+Ausschluss belegt ist. XLSX ergänzt die Dokumentbefunde additiv in S/T; alte
+Ergebnisse bleiben ohne Rückinterpretation `UNKLAR`.
+
+Mac-Studio-Abnahme des exakten Commits `a4e286d6395de9c921098d2883f72d4e13391f90`
+im isolierten Worktree `/tmp/pv3-validate-a4e286d6`:
+
+```text
+PASS: 11 relevante Jest-Suites / 189 Tests
+PASS: Prettier für alle 12 geänderten Produkt-, Test- und Promptdateien
+PASS: ESLint für geänderte Serverquellen und PolicyComparisonPanel
+PASS: Frontend-Produktionsbuild, Vite 4.5.3, 6.170 Module
+HINWEIS: direkter ESLint-Aufruf auf der bestehenden .cjs-Presenterdatei meldet
+         module/no-undef; die Datei wird per Jest geprüft und unverändert als
+         CommonJS geladen
+RUNTIME: Node v26.7.0 / npm 11.19.0
+NO MODEL RUN: keine Kunden-PDFs und kein neuer LLM-Lauf in diesem Schritt
+NO CLAIM: keine beliebigen Polizzen, kein OCR-Vollständigkeitsnachweis und
+          kein 99-Prozent-Nachweis
+```

@@ -151,13 +151,13 @@ Der unveränderte gespeicherte LF-gegen-neun-WEVIG-Lauf wurde mit der neuen
 serverseitigen Ergebnisschicht erneut materialisiert, ohne Modellantworten
 umzuschreiben:
 
-| Zustand | Zeilen |
-| --- | ---: |
-| `VORTEIL_A` | 0 |
-| `VORTEIL_B` | 1 |
-| `GLEICHWERTIG` | 7 |
-| `NICHT_VERGLEICHBAR` | 9 |
-| `UNKLAR` | 303 |
+| Zustand              | Zeilen |
+| -------------------- | -----: |
+| `VORTEIL_A`          |      0 |
+| `VORTEIL_B`          |      1 |
+| `GLEICHWERTIG`       |      7 |
+| `NICHT_VERGLEICHBAR` |      9 |
+| `UNKLAR`             |    303 |
 
 Der freigegebene Vorteil ist `LW-22`: Paket A schließt Schwamm- und
 Fäulnisschäden ausdrücklich aus, Paket B schließt beide ein. Die sieben
@@ -171,6 +171,44 @@ Die bestehenden 15 XLSX-Spalten bleiben in derselben Reihenfolge; angehängt
 werden `Punktentscheidung`, `Entscheidungsbegründung` und
 `Entscheidungsregel` als Spalten P bis R. Alte Schema-V1-Ergebnisse werden in
 der UI unverändert gespeichert und sicher als `UNKLAR` dargestellt.
+
+### Qualifizierter Negativbefund in Ergebnisschema V3
+
+Ab Ergebnisschema V3 sind Faktenwirkung, Suchbefund und Vergleichswertung
+getrennte Achsen:
+
+```text
+Faktenwirkung:     UNKNOWN
+Suchbefund:        NOT_FOUND_AFTER_COMPLETE_SEARCH
+Vergleichswertung: ASSUMED_NOT_INCLUDED_V1
+```
+
+Der Negativbefund ist nur zulässig, wenn der jeweilige Vergleichspunkt den
+Suchvertrag ausdrücklich freigibt, sämtliche bereitgestellten Paketdokumente
+verarbeitet wurden, jede physische Seite Text enthält, alle technischen
+Kategorie-Gates bestanden sind und jede kontrollierte Komponente ohne
+Occurrence, Kandidat, Reject oder ungelösten Treffer serverseitig terminiert.
+Alte Artefakte, Bildseiten in gemischten PDFs und nicht freigegebene
+Katalogpunkte bleiben `SEARCH_INCOMPLETE` und damit `UNKLAR`.
+
+Freigegebene Regeln:
+
+- `INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1`: ausdrücklicher Einschluss gewinnt
+  punktweise gegen qualifiziertes Nichtfinden;
+- `COMPLETE_SEARCH_ABSENCE_BOTH_V1`: beidseitiges qualifiziertes Nichtfinden
+  ergibt `KEIN_DOKUMENTIERTER_VORTEIL`, nicht `GLEICHWERTIG`.
+
+Der erste freigegebene Suchvertrag ist `VS-16`. Der kontrollierte Wortschatz
+umfasst Garagen, Tiefgaragen, Garagierung, Garagenanlagen, Stell- und
+Abstellplätze, Parkplätze, Parkdecks und Carports. Ein roher Stamm wie
+`GARAG*` wird nicht verwendet, damit Nachbartreffer wie Garagentor,
+Garagenhaftpflicht oder Garagengasse keinen Negativ- oder Positivbefund
+verfälschen.
+
+XLSX behält A bis R unverändert und ergänzt S/T um den maschinenlesbaren
+Dokumentbefund von Paket A und B. UI und Markdown nennen ausdrücklich, dass
+die Annahme nur für das bereitgestellte Paket gilt und keinen ausdrücklichen
+Ausschluss belegt.
 
 Der reale Lauf begann am 30. August 2026 um 11:51:02 Uhr und endete um
 13:53:36 Uhr (Europe/Vienna). Die gemessene Laufzeit für zwei sequenziell
@@ -200,6 +238,9 @@ werden.
    und nicht das 99-Prozent-Ziel.
 5. Die Qualität des Vergleichs kann nie höher sein als die beleggebundene
    Faktenqualität der beiden zugrunde liegenden Dokumentanalysen.
+6. `NOT_FOUND_AFTER_COMPLETE_SEARCH` ist derzeit bewusst opt-in und für
+   `VS-16` freigegeben. Weitere Punkte benötigen eigene versionierte
+   Synonymverträge sowie positive, negative und adversariale Tests.
 
 ## 8. Nächste fachliche Gates
 
