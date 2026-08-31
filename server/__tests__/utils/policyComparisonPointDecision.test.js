@@ -131,7 +131,8 @@ describe("policy comparison point decision", () => {
               {
                 candidateId: "candidate-b",
                 physicalPageNumber: 2,
-                exactText,
+                exactText: "Holzfäule",
+                contextText: exactText,
               },
             ],
           }),

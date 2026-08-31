@@ -413,11 +413,20 @@ function materializeAtomicFacts({
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
       .map(
-        ({ candidateId, physicalPageNumber, printedPageLabel, exactText }) => ({
+        ({
           candidateId,
           physicalPageNumber,
           printedPageLabel,
           exactText,
+          contextText,
+          scopeLeadText,
+        }) => ({
+          candidateId,
+          physicalPageNumber,
+          printedPageLabel,
+          exactText,
+          contextText,
+          scopeLeadText,
         })
       );
     return {

@@ -118,8 +118,11 @@ function validSource(atom) {
 }
 
 function hasConditionalCoverageSource(atom) {
-  return (atom.sources || []).some(({ exactText }) =>
-    COVERAGE_CONDITION_MARKER.test(String(exactText || ""))
+  return (atom.sources || []).some(
+    ({ exactText, contextText, scopeLeadText }) =>
+      COVERAGE_CONDITION_MARKER.test(
+        `${exactText || ""}\n${contextText || ""}\n${scopeLeadText || ""}`
+      )
   );
 }
 
