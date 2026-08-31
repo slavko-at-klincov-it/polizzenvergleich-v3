@@ -737,3 +737,39 @@ Garagentor oder Garagenhaftpflicht erfassen würden.
 
 Kanonischer Messbeleg:
 [Tests und Erkenntnisse, Abschnitt 46](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#46-qualifizierter-negativbefund-für-vs-16).
+
+## ADR-023: Produktives Fünf-Kategorien-Profil und Einblatt-Kundenexport
+
+**Status:** AKZEPTIERT und am 31. August 2026 auf dem Mac Studio synthetisch
+validiert
+
+Die manuelle Kundenvorlage definiert die gewünschte sichtbare Produktsicht:
+VS, FE, LW, ST und EL in einem einzigen Arbeitsblatt. Die drei weiteren
+internen Kataloge HP, VB und WE sind dadurch nicht fachlich verworfen, gehören
+aber nicht zum aktuellen produktiven A/B-Lauf.
+
+Verbindliche Entscheidung:
+
+1. Neue Läufe verwenden ausschließlich das versionierte Profil
+   `CUSTOMER_CORE_5_V1` mit 224 Zeilen: VS 36, FE 80, LW 36, ST 36, EL 36.
+2. Queue-, Worker-, QA-, Ergebnis- und Resume-Verträge tragen Profil-ID,
+   Kategorien und Sollzeilen explizit. Abweichende alte Manifeste werden nicht
+   still fortgesetzt.
+3. HP, VB und WE bleiben als interne Kataloge und historische Tests erhalten;
+   sie werden nicht im produktiven Runner gestartet.
+4. Der Kundenexport enthält genau ein Blatt und die 17 Spalten der
+   `Gesamtvergleich`-Vorlage. A/B-Kategorie-ID, Stufe und Name bleiben sichtbar
+   parallel.
+5. `KI-Ergebnis` wird deterministisch aus `pointDecision` erzeugt. Unbekannte,
+   unvollständige oder inkonsistente Entscheidungen werden zu `ungeklärt`
+   herabgestuft; ein freies LLM-Nachurteil ist unzulässig.
+6. Regel-IDs, technische Outcomes, Blocker und Suchaudits bleiben vollständig
+   in `comparison.private.json` und werden nicht als zusätzliche
+   Kundenspalten ausgegeben.
+7. Der qualifizierte Negativbefund nach ADR-022 muss im Kundentext weiterhin
+   sagen, dass kein ausdrücklicher Ausschluss belegt ist.
+8. Alte Acht-Kategorien-Ergebnisse werden nicht umgedeutet und bleiben über
+   ihre gespeicherten Artefakte lesbar.
+
+Kanonischer Messbeleg:
+[Tests und Erkenntnisse, Abschnitt 47](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#47-fünf-kategorien-profil-und-einblatt-export).

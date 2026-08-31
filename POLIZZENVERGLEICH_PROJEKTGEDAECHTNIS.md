@@ -898,3 +898,19 @@ nicht freigegebene Kategorien bleiben `SEARCH_INCOMPLETE`/`UNKLAR`.
 Der Stand ist auf dem Mac Studio mit 189 relevanten synthetischen Tests,
 Formatprüfung und Frontend-Build belegt. Noch offen sind seitenweise OCR für
 gemischte PDFs und fremde fachlich gelabelte Versicherer-Holdouts.
+
+## 14. Aktuelles Kundenprofil und Excel-Vertrag
+
+Neue A/B-Läufe verwenden das Profil `CUSTOMER_CORE_5_V1` mit VS, FE, LW, ST
+und EL. Die sichtbare Produkttaxonomie besitzt 224 Zeilen. HP, VB und WE
+bleiben im Repository als interne Katalog- und Regressionsevidenz, werden aber
+nicht produktiv ausgeführt.
+
+Der Excel-Download heißt `Gesamtvergleich.xlsx` und enthält ein einziges Blatt
+mit 17 Spalten. Die letzte Spalte `KI-Ergebnis` ist keine neue Modellantwort,
+sondern eine deterministische Kundendarstellung der gespeicherten
+`pointDecision`. Vollständige Regeln, Blocker, Suchbefunde und Provenienz
+bleiben im privaten JSON. Die Mac-Studio-Abnahme des Implementierungsstands
+bestand 58 fokussierte Tests, Format, Lint, Bash-Syntax, Frontend-Build und
+einen strukturellen sowie visuellen 224-Zeilen-Exportcheck. Ein neuer
+fachlicher LLM-Lauf war nicht Bestandteil dieser Layout- und Laufvertragsänderung.

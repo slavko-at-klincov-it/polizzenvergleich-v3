@@ -141,6 +141,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260825-028` | Taxonomiegetriebener occurrence-zentrierter A/B-Zeilenworkflow           | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | Strukturinventar qualitätsprüfen, Partner-Crosswalk erstellen und TargetSpec-/Row-Vertrag an Golden Cases falsifizieren |
 | `INT-20260825-029` | Zwei-Polizzen-Vergleich hat aktuelle Produktpriorität                    | `ZIEL`                  | `PROMOTED`    | Strategie und Abnahme primär an dokumentisoliertem A/B-Vergleich ausrichten                                             |
 | `INT-20260825-030` | Bidirektionaler Klauselabgleich als katalogunabhängiger Vergleichspfad   | `IDEE`                  | `IN_PRÜFUNG`  | an einem anonymisierten A/B-Paar gegen manuell markierte Klauselunterschiede falsifizieren                              |
+| `INT-20260831-031` | Fünf Kategorien und ein Einblatt-Kundenexport                            | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | fachliche 224-Zeilen-Abnahme auf unbekannten Paketen getrennt vom Layoutvertrag durchführen                             |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -2275,6 +2276,38 @@ AnythingLLM (lokale Bedien- und Workflowoberfläche)
 Eine profilbasierte Gesamtwertung ist kein bestätigter Bestandteil. Bis zur
 Klärung von `INT-20260824-011` bleibt der Vergleich punktweise und ohne
 pauschalen Gesamtsieger.
+
+## INT-20260831-031 — Fünf Kategorien und ein Einblatt-Kundenexport
+
+- Erfasst: 2026-08-31
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `PROMOTED`
+- Aussage: Der produktive A/B-Lauf soll ausschließlich VS, FE, LW, ST und EL
+  ausführen und die 224 Punkte in einem Arbeitsblatt im Stil der manuellen
+  `Gesamtvergleich`-Vorlage ausgeben.
+- Ist-Wahrheit: `JA` für die implementierte und synthetisch validierte
+  Lauf-/Exportstruktur; `NEIN` für eine fachliche 224-Zeilen-Freigabe.
+- Quelle: Nutzerangabe und lokal bereitgestellte Referenzarbeitsmappe; keine
+  Vertragsinhalte oder Kundendaten werden in der KB gespeichert.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: eine kompakte,
+  durchgehende A/B-Tabelle mit genau einem verständlichen KI-Ergebnis je
+  Vergleichspunkt.
+- Scope und ausdrückliche Nicht-Ziele: HP, VB und WE nicht produktiv starten,
+  aber Kataloge nicht löschen; kein Gesamtsieger; keine freie LLM-Nachwertung;
+  technische Auditdaten nicht aus dem privaten JSON entfernen.
+- Evidenz und Beweisgrenze: Mac-Studio-Struktur- und Layoutprüfung mit 224
+  synthetisch materialisierten Zeilen; kein neuer Modell- oder Fachlauf.
+- Systembezug: Produkt, Runner, Resume, Persistenz, UI, Export; `INV-007`,
+  `INV-008`, `INV-009`, `ADR-021`, `ADR-022`, `ADR-023`.
+- Hard-Gates: `BEGRENZT`
+- Bewertung: akzeptiert als sichtbarer Produkt- und Exportvertrag.
+- Evidenzqualität: `SYNTHETISCH_GETESTET` und `BEOBACHTET_CODE`
+- Riskanteste Annahme: Dass die fünf gewählten Ansichten den gewünschten
+  Lieferumfang dauerhaft vollständig repräsentieren.
+- Nächster Prüfschritt: fachliche 224-Zeilen-Abnahme mit versioniertem Oracle
+  und zuvor unbekannten Mehrversicherer-Paketen.
+- Entscheidung: akzeptieren und versionieren.
+- Kanonischer Ausgang: `ADR-023`, Architektur Abschnitt 18, Tests Abschnitt 47.
 
 ## 8. Vorläufige Strategiekarte aus `INT-20260824-002` bis `INT-20260824-006`
 

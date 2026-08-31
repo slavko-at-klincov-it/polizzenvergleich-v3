@@ -627,3 +627,27 @@ Der Vergleich entscheidet anschließend eng:
 JSON nutzt Schema V3, `pointDecision` Schema V2. Markdown und UI verwenden die
 explizite Begründung; XLSX hängt die Suchbefunde als Spalten S/T an, ohne A–R
 umzuordnen. Alte Ergebnisse werden nicht rückwirkend qualifiziert.
+
+## 18. Produktprofil und abgeleiteter Einblatt-Kundenexport
+
+`server/utils/policyComparison/productContract.js` ist die kanonische Quelle
+für neue produktive A/B-Läufe:
+
+```text
+CUSTOMER_CORE_5_V1
+  -> VS 36 / FE 80 / LW 36 / ST 36 / EL 36
+  -> 224 sichtbare Ergebniszeilen
+```
+
+Queue-Manifest, Worker-Run-Vertrag und QA-Resume-Manifest persistieren dieses
+Profil. Der Worker zählt den Fortschritt aus der Profillänge und lehnt vor dem
+Export jede Kategorie- oder Gesamtzeilenabweichung ab. Historische Resultate
+werden aus ihrem gespeicherten JSON gelesen und nicht auf das neue Profil
+umgeschrieben.
+
+Der private Ergebnisbaum bleibt technisch vollständig. Nur die abgeleitete
+XLSX-Sicht wird auf ein Blatt und 17 Kundenspalten reduziert. Eine pure
+Presenterfunktion bildet die interne `pointDecision` auf fünf sichtbare
+Kundensignale ab und degradiert unbekannte oder inkonsistente Regeln
+fail-closed zu `ungeklärt`. Damit kann eine Layoutänderung weder technische
+Auditdaten löschen noch die semantische Entscheidung neu erfinden.
