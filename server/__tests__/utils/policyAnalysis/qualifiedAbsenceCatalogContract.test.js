@@ -60,12 +60,12 @@ describe("qualified absence catalog contract", () => {
       ({ negativeSearchPolicy }) =>
         negativeSearchPolicy === "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
     );
-    expect(certified.map(({ id }) => id)).toEqual(["VS-16"]);
+    expect(certified).toEqual([]);
     expect(
       requirements
         .filter(({ absenceComparisonPolicy }) => absenceComparisonPolicy)
         .map(({ id }) => id)
-    ).toEqual(["VS-16"]);
+    ).toEqual([]);
   });
 
   test("keeps exclusions, values, conditions, definitions and references documentation-only", () => {
@@ -84,7 +84,7 @@ describe("qualified absence catalog contract", () => {
     expect(unsafe).toEqual([]);
   });
 
-  test("persists both search and meaning axes in worksheet schema V2", () => {
+  test("keeps VS-16 neutral until a new row certification is approved", () => {
     const requirement = catalogs[0].requirements.find(
       ({ id }) => id === "VS-16"
     );
@@ -104,10 +104,8 @@ describe("qualified absence catalog contract", () => {
       requirements: [
         {
           id: "VS-16",
-          negativeSearchPolicy: "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
           absenceMeaning: "COVERAGE_ONLY",
-          absenceComparisonPolicy:
-            "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
         },
       ],
     });
@@ -140,5 +138,29 @@ describe("qualified absence catalog contract", () => {
         },
       })
     ).toThrow("QUALIFIED_ABSENCE_CONTRACT_REQUIRED: VS-01");
+  });
+
+  test("rejects a comparison policy that has no approved registry binding", () => {
+    const source = catalogs[0].requirements.find(({ id }) => id === "VS-17");
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: document(),
+        documentFingerprint: "uncertified-fixture",
+        catalog: {
+          schemaVersion: 2,
+          catalogId: "uncertified-catalog-v1",
+          categoryView: "VS",
+          requirements: [
+            {
+              ...source,
+              negativeSearchPolicy: "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+              absenceComparisonPolicy:
+                "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+              absenceCertificationId: "missing-certification",
+            },
+          ],
+        },
+      })
+    ).toThrow("COVERAGE_CERTIFICATION_REFERENCE_INVALID");
   });
 });

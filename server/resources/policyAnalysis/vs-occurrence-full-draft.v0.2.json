@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.5",
+  "catalogId": "vs-occurrence-full-draft-v0.6",
   "categoryView": "VS",
   "requirements": [
     {
@@ -328,9 +328,11 @@
       "id": "VS-16",
       "label": "Garagen, Tiefgaragen, Stellplätze, Parkdecks oder Carports mitversichert",
       "requestedFields": [],
+      "optionalFields": [
+        "limit"
+      ],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "componentSatisfactionPolicy": "ANY",
-      "absenceComparisonPolicy": "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
       "components": [
         {
           "id": "garage",
@@ -366,8 +368,6 @@
           "label": "Kfz-Stellplätze und Parkplätze",
           "factRole": "INSURED_OBJECT",
           "aliases": [
-            "Stellplatz",
-            "Stellplätze",
             "Kfz-Stellplatz",
             "Kfz-Stellplätze",
             "KfzStellplatz",
@@ -376,16 +376,10 @@
             "KFZ Stellplätze",
             "Pkw-Stellplatz",
             "Pkw-Stellplätze",
-            "Abstellplatz",
-            "Abstellplätze",
             "Autoabstellplatz",
             "Autoabstellplätze",
             "Pkw-Abstellplatz",
             "Pkw-Abstellplätze",
-            "Parkplatz",
-            "Parkplätze",
-            "Einstellplatz",
-            "Einstellplätze",
             "Fahrzeugabstellfläche",
             "Fahrzeugabstellflächen"
           ]
@@ -408,7 +402,7 @@
           ]
         }
       ],
-      "negativeSearchPolicy": "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
       "absenceMeaning": "COVERAGE_ONLY"
     },
     {

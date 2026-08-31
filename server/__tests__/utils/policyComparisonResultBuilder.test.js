@@ -54,7 +54,8 @@ function writeAtomicCategory(
   run,
   categoryView,
   coverageEffect,
-  candidateOverrides = {}
+  candidateOverrides = {},
+  { certified = false } = {}
 ) {
   const categoryDirectory = path.join(run.outputDirectory, categoryView);
   const requirementId = `${categoryView}-01`;
@@ -62,14 +63,34 @@ function writeAtomicCategory(
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
+      catalog: { id: "synthetic-catalog-v1", categoryView },
       requirements: [
         {
           id: requirementId,
+          label: "Versicherter Gegenstand",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          negativeSearchPolicy: certified
+            ? "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+            : "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_ONLY",
+          ...(certified
+            ? {
+                absenceComparisonPolicy:
+                  "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+                absenceCertification: {
+                  certificationId: "synthetic-certification-v1",
+                  registryId: "synthetic-registry-v1",
+                  requirementDigest: "a".repeat(64),
+                },
+              }
+            : {}),
           components: [
             {
               id: "insured_subject",
               label: "Versicherter Gegenstand",
               factRole: "INSURED_OBJECT",
+              aliases: ["Versicherter Gegenstand"],
             },
           ],
         },
@@ -163,7 +184,9 @@ function writeCompleteAbsenceCategory(
       requirements: [
         {
           id: requirementId,
-          componentSatisfactionPolicy: "ANY",
+          label: "Versicherter Gegenstand",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
           negativeSearchPolicy: certified
             ? "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
             : "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -172,6 +195,11 @@ function writeCompleteAbsenceCategory(
             ? {
                 absenceComparisonPolicy:
                   "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+                absenceCertification: {
+                  certificationId: "synthetic-certification-v1",
+                  registryId: "synthetic-registry-v1",
+                  requirementDigest: "a".repeat(64),
+                },
               }
             : {}),
           components: [
@@ -554,8 +582,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V5",
-      comparisonContractId: "QUALIFIED_ABSENCE_TYPED_V1",
+      id: "CUSTOMER_CORE_5_V6",
+      comparisonContractId: "CERTIFIED_COVERAGE_ONLY_TYPED_V2",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -679,7 +707,7 @@ describe("policy comparison result builder", () => {
       },
     });
     const runB = writeRun(root, document("b", "B"));
-    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeAtomicCategory(runA, "VS", "INCLUDED", {}, { certified: true });
     writeCompleteAbsenceCategory(runB, "VS");
 
     const result = buildComparisonResult([runA, runB]);
@@ -713,7 +741,7 @@ describe("policy comparison result builder", () => {
       },
     });
     const runB = writeRun(root, document("b", "B"));
-    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeAtomicCategory(runA, "VS", "INCLUDED", {}, { certified: true });
     writeCompleteAbsenceCategory(runB, "VS");
     const documentArtifactFile = path.join(
       runB.outputDirectory,
@@ -765,6 +793,39 @@ describe("policy comparison result builder", () => {
       outcome: "DOKUMENTATIONSUNTERSCHIED",
       ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
       reviewRequired: false,
+    });
+  });
+
+  test("does not verify policy strings without persisted certification metadata", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"));
+    writeAtomicCategory(runA, "VS", "INCLUDED", {}, { certified: true });
+    writeCompleteAbsenceCategory(runB, "VS");
+    const worksheetFile = path.join(
+      runB.outputDirectory,
+      "VS",
+      "worksheet.private.json"
+    );
+    const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+    delete worksheet.requirements[0].absenceCertification;
+    fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+
+    const comparisonRow = buildComparisonResult([runA, runB]).categories[0]
+      .rows[0];
+    expect(comparisonRow.packageB).toMatchObject({
+      searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    });
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "DOKUMENTATIONSUNTERSCHIED",
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
     });
   });
 

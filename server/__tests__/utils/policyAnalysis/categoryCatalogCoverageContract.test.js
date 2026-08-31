@@ -197,10 +197,9 @@ describe("categoryCatalogCoverageContract", () => {
         id: requirement.id,
         scopePolicy: requirement.scopePolicy,
         componentSatisfactionPolicy: "ANY",
-        negativeSearchPolicy: "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1",
+        negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
         absenceMeaning: "COVERAGE_ONLY",
-        absenceComparisonPolicy:
-          "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+        optionalFields: ["limit"],
       });
       for (const pilotComponent of requirement.components) {
         const extendedComponent = extended.components.find(

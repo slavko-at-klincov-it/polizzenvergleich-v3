@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "registryId": "coverage-only-certifications-v0.1",
+  "requiredGateIds": [
+    "ALIAS_CONCEPT_FAMILY_COMPLETE",
+    "POSITIVE_NEGATIVE_ADVERSARIAL_SCOPE_MATRIX",
+    "COMPONENT_SCOPE_REVIEWED",
+    "LF_WEVIG_REGRESSION_REVIEWED",
+    "UNSEEN_INSURER_DOCUMENT_HOLDOUT",
+    "FRESH_MAC_STUDIO_PACKAGE_RUN",
+    "INDEPENDENT_ZERO_HIT_AUDIT"
+  ],
+  "certifications": []
+}

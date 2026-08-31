@@ -2,6 +2,10 @@ const crypto = require("crypto");
 const {
   semanticCoverageHeadingPolarity,
 } = require("./semanticCoverageGovernor");
+const {
+  assertCoverageOnlyCertification,
+} = require("./coverageOnlyCertificationContract");
+const coverageOnlyCertificationRegistry = require("../../resources/policyAnalysis/coverage-only-certifications.v0.1.json");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -810,7 +814,7 @@ function validateDocument(document) {
     const printedPageLabels = [
       ...text.matchAll(/\bSeite\s+\d+\s+von\s+\d+\b/giu),
     ].map((match) => match[0]);
-    return {
+    const validatedRequirement = {
       pageNumber,
       physicalPageNumber: pageNumber,
       printedPageLabel:
@@ -1264,6 +1268,15 @@ function validateCatalog(catalog) {
           throw worksheetError("ABSENCE_COMPARISON_POLICY_INVALID", id);
         return policy;
       })(),
+      ...(requirement.absenceCertificationId
+        ? {
+            absenceCertificationId: requireNonEmptyString(
+              requirement.absenceCertificationId,
+              "ABSENCE_CERTIFICATION_ID_INVALID",
+              id
+            ),
+          }
+        : {}),
       coverageAggregationPolicy: (() => {
         const policy =
           requirement.coverageAggregationPolicy || "ALL_COMPONENT_EFFECTS";
@@ -1288,6 +1301,19 @@ function validateCatalog(catalog) {
       scopeRules,
       components,
     };
+    if (validatedRequirement.absenceComparisonPolicy) {
+      const certification = assertCoverageOnlyCertification({
+        categoryView: catalog.categoryView,
+        catalogId: catalog.catalogId,
+        requirement: validatedRequirement,
+      });
+      validatedRequirement.absenceCertification = {
+        certificationId: certification.certificationId,
+        registryId: coverageOnlyCertificationRegistry.registryId,
+        requirementDigest: certification.requirementDigest,
+      };
+    }
+    return validatedRequirement;
   });
 }
 
@@ -1919,6 +1945,9 @@ function buildControlledOccurrenceWorksheet({
         : {}),
       ...(requirement.absenceComparisonPolicy
         ? { absenceComparisonPolicy: requirement.absenceComparisonPolicy }
+        : {}),
+      ...(requirement.absenceCertification
+        ? { absenceCertification: requirement.absenceCertification }
         : {}),
       coverageAggregationPolicy: requirement.coverageAggregationPolicy,
       componentCount: grouped.components.length,

@@ -3,10 +3,25 @@ const {
   decidePoint,
 } = require("../../utils/policyComparison/pointDecision");
 
+const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
+const FIXTURE_COMPONENTS = Object.freeze([
+  { id: "fungus_damage", factRole: "DAMAGE" },
+  { id: "rot_damage", factRole: "DAMAGE" },
+  { id: "coverage_limit", factRole: "LIMIT" },
+  { id: "policy_deductible", factRole: "DEDUCTIBLE" },
+  { id: "garage", factRole: "DAMAGE" },
+  { id: "carport", factRole: "DAMAGE" },
+]);
+
 function packageSummary(overrides = {}) {
   return {
     evidenceFound: true,
     reviewStatus: "BELEGT",
+    requirementContract: {
+      digest: FIXTURE_REQUIREMENT_DIGEST,
+      componentSatisfactionPolicy: "ALL",
+      components: FIXTURE_COMPONENTS,
+    },
     ...overrides,
   };
 }
@@ -27,6 +42,9 @@ function atom(side, overrides = {}) {
     selectedCandidateIds: [candidateId],
     unresolvedCandidateIds: [],
     requestedFieldStatus: "NOT_REQUIRED",
+    componentSatisfactionPolicy: "ALL",
+    requirementContractDigest: FIXTURE_REQUIREMENT_DIGEST,
+    declaredComponents: FIXTURE_COMPONENTS,
     fields: [],
     sources: [
       {
@@ -440,5 +458,97 @@ describe("policy comparison point decision", () => {
     const b = atom("b", { coverageEffect: "INCLUDED" });
     expect(decide([a, { ...a }], [b]).outcome).toBe(POINT_OUTCOME.ADVANTAGE_B);
     expect(decide([b], [a]).outcome).toBe(POINT_OUTCOME.ADVANTAGE_A);
+  });
+
+  test("compares an ANY row only through the same evidenced alternative", () => {
+    const alternative = (side, componentId, coverageEffect = "INCLUDED") =>
+      atom(side, {
+        requirementId: "LW-22",
+        componentId,
+        componentLabel: componentId,
+        componentSatisfactionPolicy: "ANY",
+        declaredComponents: FIXTURE_COMPONENTS,
+        coverageEffect,
+      });
+
+    expect(
+      decide(
+        [alternative("a", "garage")],
+        [alternative("b", "garage", "EXCLUDED")]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.ADVANTAGE_A,
+      ruleId: "INCLUDED_OVER_EXCLUDED_V1",
+    });
+
+    expect(
+      decide(
+        [alternative("a", "garage")],
+        [alternative("b", "carport")]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
+      ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
+    });
+  });
+
+  test("rejects mixed ALL and ANY component contracts", () => {
+    expect(
+      decide(
+        [atom("a", { componentSatisfactionPolicy: "ANY" })],
+        [atom("b", { componentSatisfactionPolicy: "ALL" })]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "REQUIREMENT_CONTRACT_MISMATCH",
+    });
+  });
+
+  test("rejects different ANY component universes even when both find garage", () => {
+    const universeA = [
+      { id: "garage", factRole: "DAMAGE" },
+      { id: "carport", factRole: "DAMAGE" },
+    ];
+    const universeB = [
+      { id: "garage", factRole: "DAMAGE" },
+      { id: "underground_garage", factRole: "DAMAGE" },
+    ];
+    const a = atom("a", {
+      componentId: "garage",
+      componentSatisfactionPolicy: "ANY",
+      requirementContractDigest: "b".repeat(64),
+      declaredComponents: universeA,
+    });
+    const b = atom("b", {
+      componentId: "garage",
+      componentSatisfactionPolicy: "ANY",
+      requirementContractDigest: "c".repeat(64),
+      declaredComponents: universeB,
+    });
+
+    expect(decide([a], [b])).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "REQUIREMENT_CONTRACT_MISMATCH",
+    });
+  });
+
+  test("keeps an incomplete additional ANY alternative review-required", () => {
+    const garage = (side) =>
+      atom(side, {
+        componentId: "garage",
+        componentSatisfactionPolicy: "ANY",
+      });
+    const unsafeCarport = atom("a-carport", {
+      componentId: "carport",
+      componentSatisfactionPolicy: "ANY",
+      sources: [],
+    });
+
+    expect(decide([garage("a"), unsafeCarport], [garage("b")])).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
+      reviewRequired: true,
+    });
   });
 });

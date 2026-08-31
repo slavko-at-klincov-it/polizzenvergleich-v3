@@ -74,7 +74,9 @@ function canonicalFieldFact(fact) {
     limitKind: String(fact?.limitKind || ""),
     qualifier: normalized(fact?.qualifier),
     variantScopeKey: String(fact?.variantScope?.key || ""),
-    componentScopeKey: String(fact?.componentScope?.key || ""),
+    componentScopeKey: String(
+      fact?.componentScope?.key || fact?.componentScope?.id || ""
+    ),
   };
 }
 
@@ -447,6 +449,47 @@ function componentGroups(atoms, categoryId) {
   return groups;
 }
 
+function requirementContract({ atoms, packageSummary, categoryId }) {
+  const relevant = (atoms || []).filter(
+    (atom) => atom.requirementId === categoryId
+  );
+  const contracts = relevant.map((atom) => ({
+    digest: atom.requirementContractDigest,
+    componentSatisfactionPolicy: atom.componentSatisfactionPolicy,
+    components: atom.declaredComponents,
+  }));
+  if (contracts.length === 0) {
+    const persisted =
+      packageSummary?.requirementContract ||
+      packageSummary?.searchAudit?.requirementContract;
+    if (persisted) contracts.push(persisted);
+  }
+  if (contracts.length === 0) return null;
+  const signatures = new Set(contracts.map((contract) => JSON.stringify(contract)));
+  if (signatures.size !== 1) return null;
+  const [contract] = contracts;
+  if (
+    !/^[a-f0-9]{64}$/u.test(String(contract?.digest || "")) ||
+    !["ALL", "ANY"].includes(contract?.componentSatisfactionPolicy) ||
+    !Array.isArray(contract?.components) ||
+    contract.components.length === 0 ||
+    contract.components.some(
+      ({ id, factRole }) => !String(id || "").trim() || !String(factRole || "").trim()
+    )
+  )
+    return null;
+  return contract;
+}
+
+function foundComponentIds(groups) {
+  return [...groups.entries()]
+    .filter(([, atoms]) =>
+      (atoms || []).some(({ evidencePresence }) => evidencePresence === "FOUND")
+    )
+    .map(([componentId]) => componentId)
+    .sort();
+}
+
 function effectLabel(effect) {
   return (
     {
@@ -494,6 +537,27 @@ function reasonFor(outcome, dimensions) {
 }
 
 function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
+  const contractA = requirementContract({
+    atoms: atomsA,
+    packageSummary: packageA,
+    categoryId,
+  });
+  const contractB = requirementContract({
+    atoms: atomsB,
+    packageSummary: packageB,
+    categoryId,
+  });
+  if (!contractA || !contractB)
+    return unclear(
+      "REQUIREMENT_CONTRACT_UNAVAILABLE",
+      "Unklar: Der versionierte Komponenten- und Suchvertrag ist nicht auf beiden Seiten vollständig auditierbar."
+    );
+  if (JSON.stringify(contractA) !== JSON.stringify(contractB))
+    return unclear(
+      "REQUIREMENT_CONTRACT_MISMATCH",
+      "Unklar: Die beiden Pakete wurden nicht mit demselben versionierten Komponenten- und Suchvertrag ausgewertet."
+    );
+
   const absentA = qualifiedAbsence(packageA);
   const absentB = qualifiedAbsence(packageB);
   const assumedAbsentA = assumedNotIncluded(packageA);
@@ -561,9 +625,44 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
 
   const groupsA = componentGroups(atomsA, categoryId);
   const groupsB = componentGroups(atomsB, categoryId);
-  const componentIds = [
+  const componentPolicy = contractA.componentSatisfactionPolicy;
+
+  const allComponentIds = [
     ...new Set([...groupsA.keys(), ...groupsB.keys()]),
   ].sort();
+  let componentIds = allComponentIds;
+  if (componentPolicy === "ANY") {
+    const unsafeFound = [...(atomsA || []), ...(atomsB || [])].filter(
+      (atom) =>
+        atom.requirementId === categoryId &&
+        atom.evidencePresence === "FOUND" &&
+        (!completeAtom(atom) || hasConditionalCoverageSource(atom))
+    );
+    if (unsafeFound.length > 0)
+      return unclear(
+        "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
+        "Unklar: Mindestens eine gefundene Alternative ist unvollständig, konfliktbehaftet, bedingt oder nicht eindeutig quellengebunden."
+      );
+    const foundIdsA = foundComponentIds(groupsA);
+    const foundIdsB = foundComponentIds(groupsB);
+    if (foundIdsA.length === 0 || foundIdsB.length === 0)
+      return unclear(
+        "ANY_COMPONENT_EVIDENCE_MISSING",
+        "Unklar: Die alternativ erfüllbare Zeile enthält nicht in beiden Paketen mindestens eine vollständig belegte Komponente."
+      );
+    if (JSON.stringify(foundIdsA) !== JSON.stringify(foundIdsB))
+      return {
+        schemaVersion: 3,
+        outcome: POINT_OUTCOME.NOT_COMPARABLE,
+        reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
+        reason:
+          "Nicht direkt vergleichbar: Die alternativ erfüllbare Zeile ist in den beiden Paketen durch unterschiedliche Komponenten belegt. Diese Alternativen dürfen nicht stillschweigend gleichgesetzt werden.",
+        reviewRequired: false,
+        ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
+        dimensions: [],
+      };
+    componentIds = foundIdsA;
+  }
   if (componentIds.length === 0)
     return unclear(
       "ATOMIC_EVIDENCE_UNAVAILABLE",

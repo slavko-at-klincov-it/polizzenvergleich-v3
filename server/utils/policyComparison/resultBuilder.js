@@ -13,9 +13,26 @@ const {
   PRODUCT_PROFILE,
 } = require("./productContract");
 const { customerResultText } = require("./customerResultPresenter");
+const {
+  requirementSearchContractDigest,
+} = require("../policyAnalysis/coverageOnlyCertificationContract");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
 const CONDITION_CONTEXT_RADIUS = 240;
+
+function worksheetRequirementContract(worksheet, requirement) {
+  const catalogId = String(worksheet?.catalog?.id || "").trim();
+  if (!catalogId || !requirement) return null;
+  return {
+    digest: requirementSearchContractDigest({ catalogId, requirement }),
+    componentSatisfactionPolicy:
+      requirement.componentSatisfactionPolicy || null,
+    components: (requirement.components || []).map(({ id, factRole }) => ({
+      id,
+      factRole,
+    })),
+  };
+}
 
 function conditionCheckText(candidate) {
   const contextText = String(candidate?.contextText || "");
@@ -542,7 +559,8 @@ function componentSearchAudit({
   const verified = Boolean(
     completeControlledSearch &&
       requirement?.negativeSearchPolicy ===
-        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1" &&
+      requirement?.absenceCertification?.requirementDigest
   );
   const comparisonTreatment =
     verified &&
@@ -565,6 +583,11 @@ function componentSearchAudit({
     negativeSearchPolicy: requirement?.negativeSearchPolicy || null,
     absenceMeaning: requirement?.absenceMeaning || null,
     comparisonPolicy: requirement?.absenceComparisonPolicy || null,
+    absenceCertification: requirement?.absenceCertification || null,
+    requirementContract: worksheetRequirementContract(
+      worksheet,
+      requirement
+    ),
     searchPlanId,
     documentUuid: document.uuid,
     catalogId: worksheet?.catalog?.id || null,
@@ -673,6 +696,11 @@ function materializeAtomicFacts({
       sources,
       componentSatisfactionPolicy:
         requirement?.componentSatisfactionPolicy || "ALL",
+      requirementContractDigest:
+        worksheetRequirementContract(worksheet, requirement)?.digest || null,
+      declaredComponents: (requirement?.components || []).map(
+        ({ id, factRole }) => ({ id, factRole })
+      ),
       searchAudit: componentSearchAudit({
         document,
         documentArtifact,
@@ -769,6 +797,11 @@ function aggregatePackageSearchAudit({
   const audits = perDocument.flatMap(({ atoms }) =>
     atoms.map(({ searchAudit }) => searchAudit).filter(Boolean)
   );
+  const requirementContracts = unique(
+    audits.map(({ requirementContract }) =>
+      requirementContract ? JSON.stringify(requirementContract) : null
+    )
+  ).map((value) => JSON.parse(value));
   return {
     disposition: verified
       ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
@@ -799,6 +832,8 @@ function aggregatePackageSearchAudit({
     searchPlanIds: unique(
       audits.map(({ searchPlanId }) => searchPlanId)
     ).sort(),
+    requirementContract:
+      requirementContracts.length === 1 ? requirementContracts[0] : null,
     components: audits,
   };
 }

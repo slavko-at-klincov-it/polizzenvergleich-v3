@@ -52,8 +52,8 @@ describe("VS-16 garage and parking search contract", () => {
 
     expect(worksheet.requirements[0]).toMatchObject({
       componentSatisfactionPolicy: "ANY",
-      absenceComparisonPolicy:
-        "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+      negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      optionalFields: ["limit"],
     });
     expect(component(worksheet, "garage").occurrenceCount).toBeGreaterThan(0);
     expect(
@@ -69,6 +69,8 @@ describe("VS-16 garage and parking search contract", () => {
     "Garagenhaftpflicht",
     "Garagengasse 12",
     "Parkverbot vor dem Gebäude",
+    "Der Abstellplatz für Mülltonnen ist freizuhalten.",
+    "Ein allgemeiner Stellplatz ist im Lageplan markiert.",
   ])("does not turn an adjacent word into a VS-16 object: %s", (text) => {
     const worksheet = worksheetFor(text);
     expect(worksheet.summary.occurrenceCount).toBe(0);
