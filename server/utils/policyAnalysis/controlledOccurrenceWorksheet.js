@@ -17,6 +17,9 @@ const ALLOWED_SCOPE_POLICIES = new Set([
   "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
 ]);
 const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
+const ALLOWED_ABSENCE_COMPARISON_POLICIES = new Set([
+  "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+]);
 const ALLOWED_COVERAGE_AGGREGATION_POLICIES = new Set([
   "ALL_COMPONENT_EFFECTS",
   "COVERAGE_ROLES_ONLY",
@@ -1184,6 +1187,17 @@ function validateCatalog(catalog) {
           throw worksheetError("COMPONENT_SATISFACTION_POLICY_INVALID", id);
         return policy;
       })(),
+      absenceComparisonPolicy: (() => {
+        if (requirement.absenceComparisonPolicy === undefined) return null;
+        const policy = requireNonEmptyString(
+          requirement.absenceComparisonPolicy,
+          "ABSENCE_COMPARISON_POLICY_INVALID",
+          id
+        );
+        if (!ALLOWED_ABSENCE_COMPARISON_POLICIES.has(policy))
+          throw worksheetError("ABSENCE_COMPARISON_POLICY_INVALID", id);
+        return policy;
+      })(),
       coverageAggregationPolicy: (() => {
         const policy =
           requirement.coverageAggregationPolicy || "ALL_COMPONENT_EFFECTS";
@@ -1828,6 +1842,9 @@ function buildControlledOccurrenceWorksheet({
       scopeRules: requirement.scopeRules,
       scopePolicy: requirement.scopePolicy,
       componentSatisfactionPolicy: requirement.componentSatisfactionPolicy,
+      ...(requirement.absenceComparisonPolicy
+        ? { absenceComparisonPolicy: requirement.absenceComparisonPolicy }
+        : {}),
       coverageAggregationPolicy: requirement.coverageAggregationPolicy,
       componentCount: grouped.components.length,
       components: grouped.components,

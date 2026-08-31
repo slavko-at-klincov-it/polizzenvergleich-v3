@@ -122,6 +122,121 @@ function writeAtomicCategory(run, categoryView, coverageEffect) {
   );
 }
 
+function writeCompleteAbsenceCategory(run, categoryView) {
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = `${categoryView}-01`;
+  const componentId = "insured_subject";
+  const targetId = `prepared-target:${requirementId}:${componentId}`;
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
+      },
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "synthetic-catalog-v1", categoryView },
+      document: { physicalPages: 1 },
+      summary: { componentCount: 1 },
+      requirements: [
+        {
+          id: requirementId,
+          componentSatisfactionPolicy: "ANY",
+          absenceComparisonPolicy:
+            "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+          components: [
+            {
+              id: componentId,
+              label: "Versicherter Gegenstand",
+              factRole: "INSURED_OBJECT",
+              aliases: ["Versicherter Gegenstand"],
+              terminalState: "NO_CONTROLLED_CANDIDATE",
+              occurrenceCount: 0,
+              occurrences: [],
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId,
+          requirementId,
+          componentId,
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          decisionOwner: "SERVER",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId,
+        requirementId,
+        componentId,
+        factRole: "INSURED_OBJECT",
+        candidates: [],
+        serverRejectedCandidates: [],
+        unresolvedCandidateIds: [],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
 describe("policy comparison result builder", () => {
   let root;
 
@@ -432,10 +547,12 @@ describe("policy comparison result builder", () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(artifacts.workbookFile);
     const headers = workbook.getWorksheet("VS").getRow(1).values.slice(1);
-    expect(headers.slice(-3)).toEqual([
+    expect(headers.slice(-5)).toEqual([
       "Punktentscheidung",
       "Entscheidungsbegründung",
       "Entscheidungsregel",
+      "A – Dokumentbefund",
+      "B – Dokumentbefund",
     ]);
   });
 
@@ -462,7 +579,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(2);
+    expect(result.schemaVersion).toBe(3);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -471,5 +588,74 @@ describe("policy comparison result builder", () => {
     });
     expect(result.totals.pointDecisions.VORTEIL_B).toBe(1);
     expect(result.totals.pointDecisions.UNKLAR).toBe(7);
+  });
+
+  test("turns an approved complete zero-occurrence search into an explicit comparison assumption", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"));
+    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeCompleteAbsenceCategory(runB, "VS");
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
+
+    expect(comparisonRow.packageB).toMatchObject({
+      evidenceFound: false,
+      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+    });
+    expect(comparisonRow.packageB.documentedContent).toContain(
+      "IM VOLLSTÄNDIG GEPRÜFTEN BEREITGESTELLTEN PAKET NICHT GEFUNDEN"
+    );
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "VORTEIL_A",
+      ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
+    });
+    expect(comparisonRow.pointDecision.reason).toContain(
+      "ausdrücklicher Ausschluss in Paket B ist damit nicht belegt"
+    );
+  });
+
+  test("keeps a zero-occurrence search incomplete when one physical page has no text", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"));
+    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeCompleteAbsenceCategory(runB, "VS");
+    const documentArtifactFile = path.join(
+      runB.outputDirectory,
+      "document.private.json"
+    );
+    const documentArtifact = JSON.parse(
+      fs.readFileSync(documentArtifactFile, "utf8")
+    );
+    documentArtifact.document.pdfExtraction.totalPages = 2;
+    documentArtifact.document.pdfExtraction.processedPages = 2;
+    documentArtifact.document.pdfExtraction.pagesWithText = 1;
+    documentArtifact.document.pageMap = [{ pageNumber: 1 }, { pageNumber: 2 }];
+    fs.writeFileSync(documentArtifactFile, JSON.stringify(documentArtifact));
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
+
+    expect(comparisonRow.packageB.searchDisposition).toBe("SEARCH_INCOMPLETE");
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "MISSING_ONE_SIDE",
+    });
   });
 });

@@ -19,44 +19,44 @@ Antworte ausschließlich auf Deutsch, sachlich, kompakt und quellengebunden.
 Analysiere genau diese 36 Kategorien und gib sie vollständig in genau dieser
 Reihenfolge aus:
 
-| ID | Stufe | Kategorie-Name |
-|---|---|---|
-| `VS-01` | K | Ersatzleistung zum Neuwert vorgesehen |
-| `VS-02` | K | Zeitwertklausel und ab welchem Restwertverhältnis sie greift |
-| `VS-03` | S | Entschädigung zum gemeinen Wert oder Abbruchwert geregelt |
-| `VS-04` | S | Methode der Summenermittlung (Pauschale, Index, Gutachten) |
-| `VS-05` | S | Angesetzter Quadratmetersatz für die Versicherungssumme |
-| `VS-06` | S | Zugrunde gelegte Nutzfläche in Quadratmetern |
-| `VS-07` | K | Unterversicherungsverzicht vorhanden |
-| `VS-08` | K | Unterversicherungsverzicht bedingt oder unbedingt |
-| `VS-09` | K | Voraussetzungen, an die der Unterversicherungsverzicht geknüpft ist |
-| `VS-10` | K | Automatische Indexanpassung der Versicherungssumme |
-| `VS-11` | S | Art des Index (Baukostenindex oder Verbraucherpreisindex) |
-| `VS-12` | S | Möglichkeit, die Indexanpassung auszusetzen |
-| `VS-13` | K | Wohnungsinnenausbau der einzelnen Einheiten mitversichert |
-| `VS-14` | S | Sonderausstattung einzelner Wohnungen über Standard hinaus |
-| `VS-15` | S | Nebengebäude namentlich in der Polizze angeführt |
-| `VS-16` | S | Garagen und Tiefgarage mitversichert |
-| `VS-17` | S | Müllräume, Fahrradräume, Kinderwagenräume mitversichert |
-| `VS-18` | S | Einfriedungen, Zäune, Mauern, Tore mitversichert |
-| `VS-19` | S | Außenanlagen wie Wege, Beleuchtung, Bepflanzung |
-| `VS-20` | V | Spielplatz und Spielgeräte mitversichert |
-| `VS-21` | K | Aufräum- und Abbruchkosten, Höhe des Limits |
-| `VS-22` | S | Entsorgungskosten einschließlich Sondermüll |
-| `VS-23` | S | Bewegungs- und Schutzkosten |
-| `VS-24` | V | Gerüstkosten im Schadenfall |
-| `VS-25` | K | Behördliche Mehrkosten beim Wiederaufbau |
-| `VS-26` | S | Mehrkosten aus Denkmalschutz oder Schutzzone |
-| `VS-27` | V | Klausel zum Technologiefortschritt bei Ersatz |
-| `VS-28` | K | Mietzinsentgang, Dauer der Leistung |
-| `VS-29` | S | Mietzinsentgang, Höhe oder Berechnungsgrundlage |
-| `VS-30` | S | Bezugskosten oder Nutzungsausfall für Eigennutzer |
-| `VS-31` | S | Hotel- oder Ersatzunterkunftskosten bei Unbewohnbarkeit |
-| `VS-32` | V | Umzugs- und Zwischenlagerungskosten |
-| `VS-33` | S | Vorsorgedeckung oder automatische Summenerhöhung |
-| `VS-34` | V | Gemeinschaftsvermögen wie Geräte und Werkzeug mitversichert |
-| `VS-35` | S | Wiederherstellungsklausel und Frist für den Wiederaufbau |
-| `VS-36` | K | Höchstentschädigung pro Ereignis |
+| ID      | Stufe | Kategorie-Name                                                           |
+| ------- | ----- | ------------------------------------------------------------------------ |
+| `VS-01` | K     | Ersatzleistung zum Neuwert vorgesehen                                    |
+| `VS-02` | K     | Zeitwertklausel und ab welchem Restwertverhältnis sie greift             |
+| `VS-03` | S     | Entschädigung zum gemeinen Wert oder Abbruchwert geregelt                |
+| `VS-04` | S     | Methode der Summenermittlung (Pauschale, Index, Gutachten)               |
+| `VS-05` | S     | Angesetzter Quadratmetersatz für die Versicherungssumme                  |
+| `VS-06` | S     | Zugrunde gelegte Nutzfläche in Quadratmetern                             |
+| `VS-07` | K     | Unterversicherungsverzicht vorhanden                                     |
+| `VS-08` | K     | Unterversicherungsverzicht bedingt oder unbedingt                        |
+| `VS-09` | K     | Voraussetzungen, an die der Unterversicherungsverzicht geknüpft ist      |
+| `VS-10` | K     | Automatische Indexanpassung der Versicherungssumme                       |
+| `VS-11` | S     | Art des Index (Baukostenindex oder Verbraucherpreisindex)                |
+| `VS-12` | S     | Möglichkeit, die Indexanpassung auszusetzen                              |
+| `VS-13` | K     | Wohnungsinnenausbau der einzelnen Einheiten mitversichert                |
+| `VS-14` | S     | Sonderausstattung einzelner Wohnungen über Standard hinaus               |
+| `VS-15` | S     | Nebengebäude namentlich in der Polizze angeführt                         |
+| `VS-16` | S     | Garagen, Tiefgaragen, Stellplätze, Parkdecks oder Carports mitversichert |
+| `VS-17` | S     | Müllräume, Fahrradräume, Kinderwagenräume mitversichert                  |
+| `VS-18` | S     | Einfriedungen, Zäune, Mauern, Tore mitversichert                         |
+| `VS-19` | S     | Außenanlagen wie Wege, Beleuchtung, Bepflanzung                          |
+| `VS-20` | V     | Spielplatz und Spielgeräte mitversichert                                 |
+| `VS-21` | K     | Aufräum- und Abbruchkosten, Höhe des Limits                              |
+| `VS-22` | S     | Entsorgungskosten einschließlich Sondermüll                              |
+| `VS-23` | S     | Bewegungs- und Schutzkosten                                              |
+| `VS-24` | V     | Gerüstkosten im Schadenfall                                              |
+| `VS-25` | K     | Behördliche Mehrkosten beim Wiederaufbau                                 |
+| `VS-26` | S     | Mehrkosten aus Denkmalschutz oder Schutzzone                             |
+| `VS-27` | V     | Klausel zum Technologiefortschritt bei Ersatz                            |
+| `VS-28` | K     | Mietzinsentgang, Dauer der Leistung                                      |
+| `VS-29` | S     | Mietzinsentgang, Höhe oder Berechnungsgrundlage                          |
+| `VS-30` | S     | Bezugskosten oder Nutzungsausfall für Eigennutzer                        |
+| `VS-31` | S     | Hotel- oder Ersatzunterkunftskosten bei Unbewohnbarkeit                  |
+| `VS-32` | V     | Umzugs- und Zwischenlagerungskosten                                      |
+| `VS-33` | S     | Vorsorgedeckung oder automatische Summenerhöhung                         |
+| `VS-34` | V     | Gemeinschaftsvermögen wie Geräte und Werkzeug mitversichert              |
+| `VS-35` | S     | Wiederherstellungsklausel und Frist für den Wiederaufbau                 |
+| `VS-36` | K     | Höchstentschädigung pro Ereignis                                         |
 
 ## Beleg- und Abgrenzungsregeln
 
@@ -144,7 +144,7 @@ Es sind ausschließlich diese Kombinationen zulässig:
 Gib genau diese acht Spalten aus:
 
 | Kategorie-ID | Stufe | Kategorie-Name | Belegter Vertragsinhalt | Deckung | Deckungssumme | Quelle | Prüfstatus |
-|---|---|---|---|---|---|---|---|
+| ------------ | ----- | -------------- | ----------------------- | ------- | ------------- | ------ | ---------- |
 
 - `Kategorie-ID`, `Stufe` und `Kategorie-Name`: unverändert aus dem Katalog
   übernehmen.

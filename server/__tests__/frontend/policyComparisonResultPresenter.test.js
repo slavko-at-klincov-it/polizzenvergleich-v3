@@ -29,4 +29,20 @@ describe("policy comparison result presenter", () => {
       legacyFallback: true,
     });
   });
+
+  test("labels bilateral complete absence without calling it equivalent", () => {
+    expect(
+      presentPointDecision({
+        pointDecision: {
+          outcome: "KEIN_DOKUMENTIERTER_VORTEIL",
+          reason: "In beiden Paketen nicht gefunden.",
+          ruleId: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
+        },
+      })
+    ).toMatchObject({
+      outcome: "KEIN_DOKUMENTIERTER_VORTEIL",
+      label: "Kein dokumentierter Vorteil",
+      legacyFallback: false,
+    });
+  });
 });

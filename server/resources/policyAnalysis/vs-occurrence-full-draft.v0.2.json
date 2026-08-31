@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogId": "vs-occurrence-full-draft-v0.2",
+  "catalogId": "vs-occurrence-full-draft-v0.3",
   "categoryView": "VS",
   "requirements": [
     {
@@ -296,21 +296,86 @@
     },
     {
       "id": "VS-16",
-      "label": "Garagen und Tiefgarage mitversichert",
+      "label": "Garagen, Tiefgaragen, Stellplätze, Parkdecks oder Carports mitversichert",
       "requestedFields": [],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "componentSatisfactionPolicy": "ANY",
+      "absenceComparisonPolicy": "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
       "components": [
         {
           "id": "garage",
           "label": "Garagen",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Garage", "Garagen"]
+          "aliases": [
+            "Garage",
+            "Garagen",
+            "Garagierung",
+            "Garagierungen",
+            "Garagenanlage",
+            "Garagenanlagen",
+            "Garagengebäude",
+            "Einstellgarage",
+            "Einstellgaragen",
+            "Sammelgarage",
+            "Sammelgaragen"
+          ]
         },
         {
           "id": "underground_garage",
           "label": "Tiefgarage",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Tiefgarage", "Tiefgaragen"]
+          "aliases": [
+            "Tiefgarage",
+            "Tiefgaragen",
+            "Tiefgaragenanlage",
+            "Tiefgaragenanlagen"
+          ]
+        },
+        {
+          "id": "parking_space",
+          "label": "Kfz-Stellplätze und Parkplätze",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Stellplatz",
+            "Stellplätze",
+            "Kfz-Stellplatz",
+            "Kfz-Stellplätze",
+            "KfzStellplatz",
+            "KfzStellplätze",
+            "KFZ Stellplatz",
+            "KFZ Stellplätze",
+            "Pkw-Stellplatz",
+            "Pkw-Stellplätze",
+            "Abstellplatz",
+            "Abstellplätze",
+            "Autoabstellplatz",
+            "Autoabstellplätze",
+            "Pkw-Abstellplatz",
+            "Pkw-Abstellplätze",
+            "Parkplatz",
+            "Parkplätze",
+            "Einstellplatz",
+            "Einstellplätze",
+            "Fahrzeugabstellfläche",
+            "Fahrzeugabstellflächen"
+          ]
+        },
+        {
+          "id": "parking_deck",
+          "label": "Parkdecks",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Parkdeck", "Parkdecks", "Parkebene", "Parkebenen"]
+        },
+        {
+          "id": "carport",
+          "label": "Carports",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Carport",
+            "Carports",
+            "Autounterstand",
+            "Autounterstände"
+          ]
         }
       ]
     },

@@ -138,7 +138,7 @@ describe("categoryCatalogCoverageContract", () => {
     }
   );
 
-  test("keeps the proven VS pilot definitions unchanged in the full catalog", () => {
+  test("keeps proven VS pilot definitions unchanged except for the versioned VS-16 recall extension", () => {
     const resources = path.join(__dirname, "../../../resources/policyAnalysis");
     const pilot = JSON.parse(
       fs.readFileSync(
@@ -156,8 +156,42 @@ describe("categoryCatalogCoverageContract", () => {
       full.requirements.map((requirement) => [requirement.id, requirement])
     );
 
-    for (const requirement of pilot.requirements)
-      expect(fullById.get(requirement.id)).toEqual(requirement);
+    for (const requirement of pilot.requirements) {
+      if (requirement.id !== "VS-16") {
+        expect(fullById.get(requirement.id)).toEqual(requirement);
+        continue;
+      }
+      const extended = fullById.get(requirement.id);
+      expect(extended).toMatchObject({
+        id: requirement.id,
+        scopePolicy: requirement.scopePolicy,
+        componentSatisfactionPolicy: "ANY",
+        absenceComparisonPolicy:
+          "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
+      });
+      for (const pilotComponent of requirement.components) {
+        const extendedComponent = extended.components.find(
+          ({ id }) => id === pilotComponent.id
+        );
+        expect(extendedComponent).toMatchObject({
+          id: pilotComponent.id,
+          label: pilotComponent.label,
+          factRole: pilotComponent.factRole,
+        });
+        expect(extendedComponent.aliases).toEqual(
+          expect.arrayContaining(pilotComponent.aliases)
+        );
+      }
+      expect(extended.components.map(({ id }) => id)).toEqual(
+        expect.arrayContaining([
+          "garage",
+          "underground_garage",
+          "parking_space",
+          "parking_deck",
+          "carport",
+        ])
+      );
+    }
   });
 
   test.each([

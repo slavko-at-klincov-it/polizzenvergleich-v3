@@ -2,6 +2,7 @@ const OUTCOME_LABELS = Object.freeze({
   VORTEIL_A: "Vorteil Paket A",
   VORTEIL_B: "Vorteil Paket B",
   GLEICHWERTIG: "Gleichwertig",
+  KEIN_DOKUMENTIERTER_VORTEIL: "Kein dokumentierter Vorteil",
   NICHT_VERGLEICHBAR: "Nicht vergleichbar",
   UNKLAR: "Unklar",
 });

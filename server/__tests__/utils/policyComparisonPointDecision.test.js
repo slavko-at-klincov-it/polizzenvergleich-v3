@@ -85,6 +85,73 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("prefers explicit inclusion over a complete package-wide absence without inventing an exclusion", () => {
+    const result = decide([atom("a")], [], {
+      packageB: {
+        evidenceFound: false,
+        reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+        searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+        comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+        searchAudit: { documentCount: 2, physicalPagesChecked: 80 },
+      },
+    });
+
+    expect(result).toMatchObject({
+      schemaVersion: 2,
+      outcome: POINT_OUTCOME.ADVANTAGE_A,
+      reasonCode: "EXPLICIT_INCLUDED_OVER_VERIFIED_ABSENCE",
+      ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
+      reviewRequired: false,
+    });
+    expect(result.reason).toContain(
+      "vollständig geprüften bereitgestellten Paket B"
+    );
+    expect(result.reason).toContain(
+      "ausdrücklicher Ausschluss in Paket B ist damit nicht belegt"
+    );
+  });
+
+  test("reports no documented advantage when both packages have a complete absence", () => {
+    const completeAbsence = {
+      evidenceFound: false,
+      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+    };
+    const result = decide([], [], {
+      packageA: completeAbsence,
+      packageB: completeAbsence,
+    });
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE,
+      ruleId: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
+      reviewRequired: false,
+    });
+    expect(result.reason).toContain(
+      "weder ein Nachweis ausdrücklicher Gleichheit"
+    );
+  });
+
+  test("keeps complete absence against non-included or conditional evidence fail-closed", () => {
+    const completeAbsence = {
+      evidenceFound: false,
+      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+    };
+    for (const coverageEffect of ["EXCLUDED", "CONDITIONAL", "UNKNOWN"]) {
+      expect(
+        decide([atom("a", { coverageEffect })], [], {
+          packageB: completeAbsence,
+        })
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "MISSING_ONE_SIDE",
+      });
+    }
+  });
+
   test("blocks partial, contradictory and unresolved package states", () => {
     for (const reviewStatus of [
       "TEILBELEGT",

@@ -6,7 +6,11 @@ const {
   applyZebraStriping,
   freezePanes,
 } = require("../agents/aibitat/plugins/create-files/xlsx/utils");
-const { POINT_OUTCOME, decidePoint } = require("./pointDecision");
+const {
+  POINT_OUTCOME,
+  SEARCH_DISPOSITION,
+  decidePoint,
+} = require("./pointDecision");
 
 const CATEGORY_ORDER = Object.freeze([
   "VS",
@@ -229,9 +233,26 @@ function roleLabel(role) {
   );
 }
 
-function summarizePackage(entries, { referenceEntries = entries } = {}) {
+function summarizePackage(
+  entries,
+  { referenceEntries = entries, searchAudit = null } = {}
+) {
   const evidenceEntries = entries.filter(({ row }) => isEvidenceRow(row));
-  if (evidenceEntries.length === 0)
+  if (evidenceEntries.length === 0) {
+    if (searchAudit?.disposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND)
+      return {
+        evidenceFound: false,
+        documentedContent:
+          "IM VOLLSTÄNDIG GEPRÜFTEN BEREITGESTELLTEN PAKET NICHT GEFUNDEN",
+        coverage: "Für diesen Vergleich als nicht enthalten angenommen",
+        coverageAmount: NOT_DETERMINABLE,
+        source: `Dokumentweite Suche über ${searchAudit.documentCount} Dokument(e) und ${searchAudit.physicalPagesChecked} physische Textseite(n); Suchvertrag: ${searchAudit.searchPlanIds.join(", ")}. Keine entsprechende Regelung gefunden.`,
+        reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+        searchDisposition: SEARCH_DISPOSITION.VERIFIED_NOT_FOUND,
+        comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+        searchAudit,
+        facts: [],
+      };
     return {
       evidenceFound: false,
       documentedContent: MISSING_EVIDENCE,
@@ -239,8 +260,12 @@ function summarizePackage(entries, { referenceEntries = entries } = {}) {
       coverageAmount: NOT_DETERMINABLE,
       source: MISSING_EVIDENCE,
       reviewStatus: "UNGEKLÄRT",
+      searchDisposition: SEARCH_DISPOSITION.INCOMPLETE,
+      comparisonTreatment: null,
+      searchAudit,
       facts: [],
     };
+  }
 
   const facts = evidenceEntries.map(({ document, row }) => ({
     documentUuid: document.uuid,
@@ -307,6 +332,9 @@ function summarizePackage(entries, { referenceEntries = entries } = {}) {
       )
       .join("\n"),
     reviewStatus,
+    searchDisposition: SEARCH_DISPOSITION.RELEVANT_FOUND,
+    comparisonTreatment: null,
+    searchAudit,
     facts,
   };
 }
@@ -325,6 +353,28 @@ function comparable(packageSummary) {
 }
 
 function comparePackages(packageA, packageB) {
+  const absentA =
+    packageA.searchDisposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND;
+  const absentB =
+    packageB.searchDisposition === SEARCH_DISPOSITION.VERIFIED_NOT_FOUND;
+  if (absentA && absentB)
+    return {
+      outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+      difference:
+        "In beiden vollständig geprüften bereitgestellten Paketen wurde keine entsprechende Regelung gefunden. Das belegt weder ausdrückliche Gleichheit noch einen ausdrücklichen Ausschluss.",
+    };
+  if (packageA.evidenceFound && absentB)
+    return {
+      outcome: "A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+      difference:
+        "Paket A enthält belegten Inhalt; im vollständig geprüften bereitgestellten Paket B wurde keine entsprechende Regelung gefunden. Die Punktentscheidung darf nur die freigegebene Vergleichsannahme anwenden.",
+    };
+  if (absentA && packageB.evidenceFound)
+    return {
+      outcome: "B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+      difference:
+        "Paket B enthält belegten Inhalt; im vollständig geprüften bereitgestellten Paket A wurde keine entsprechende Regelung gefunden. Die Punktentscheidung darf nur die freigegebene Vergleichsannahme anwenden.",
+    };
   if (!packageA.evidenceFound && !packageB.evidenceFound)
     return {
       outcome: "BEIDSEITIG_KEIN_BELEG",
@@ -364,12 +414,138 @@ function readJsonIfPresent(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+function completeTextExtraction(documentArtifact) {
+  const extraction = documentArtifact?.document?.pdfExtraction;
+  return Boolean(
+    documentArtifact?.schemaVersion === 1 &&
+      extraction?.complete === true &&
+      Number.isInteger(extraction.totalPages) &&
+      extraction.totalPages > 0 &&
+      extraction.processedPages === extraction.totalPages &&
+      extraction.pagesWithText === extraction.totalPages
+  );
+}
+
+function completeCategoryTechnicalContract({
+  documentArtifact,
+  worksheet,
+  materializedEvidence,
+  targets,
+  report,
+}) {
+  const componentCount = Number(worksheet?.summary?.componentCount || 0);
+  return Boolean(
+    completeTextExtraction(documentArtifact) &&
+      worksheet?.document?.physicalPages ===
+        documentArtifact.document.pdfExtraction.totalPages &&
+      ["PASS", "TECHNICAL_PASS_REVIEW_REQUIRED"].includes(report?.status) &&
+      Number.isInteger(report?.rowCount) &&
+      report.rowCount > 0 &&
+      report.rowCount === report.expectedRowCount &&
+      report?.gates &&
+      Object.values(report.gates).length > 0 &&
+      Object.values(report.gates).every(Boolean) &&
+      componentCount > 0 &&
+      materializedEvidence?.judgements?.length === componentCount &&
+      targets?.length === componentCount
+  );
+}
+
+function componentSearchAudit({
+  document,
+  documentArtifact,
+  worksheet,
+  materializedEvidence,
+  targets,
+  report,
+  requirement,
+  component,
+  judgement,
+  target,
+}) {
+  const extraction = documentArtifact?.document?.pdfExtraction || {};
+  const searchPlanId = `${worksheet?.catalog?.id || "unknown"}/${requirement?.id || judgement?.requirementId}/${component?.id || judgement?.componentId}`;
+  const zeroOccurrenceTerminal =
+    component?.terminalState === "NO_CONTROLLED_CANDIDATE" &&
+    component?.occurrenceCount === 0 &&
+    Array.isArray(component?.occurrences) &&
+    component.occurrences.length === 0;
+  const zeroCandidateTerminal =
+    Array.isArray(target?.candidates) &&
+    target.candidates.length === 0 &&
+    Array.isArray(target?.serverRejectedCandidates) &&
+    target.serverRejectedCandidates.length === 0 &&
+    Array.isArray(target?.unresolvedCandidateIds) &&
+    target.unresolvedCandidateIds.length === 0;
+  const serverNegativeTerminal = Boolean(
+    judgement?.evidencePresence === "NOT_FOUND" &&
+      judgement?.coverageEffect === "UNKNOWN" &&
+      judgement?.conflictState === "NONE" &&
+      judgement?.decisionOwner === "SERVER" &&
+      Array.isArray(judgement?.selectedCandidateIds) &&
+      judgement.selectedCandidateIds.length === 0 &&
+      Array.isArray(judgement?.unresolvedCandidateIds) &&
+      judgement.unresolvedCandidateIds.length === 0
+  );
+  const policyApproved =
+    requirement?.absenceComparisonPolicy ===
+    "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1";
+  const verified = Boolean(
+    policyApproved &&
+      completeCategoryTechnicalContract({
+        documentArtifact,
+        worksheet,
+        materializedEvidence,
+        targets,
+        report,
+      }) &&
+      zeroOccurrenceTerminal &&
+      zeroCandidateTerminal &&
+      serverNegativeTerminal
+  );
+  return {
+    disposition:
+      judgement?.evidencePresence === "FOUND"
+        ? SEARCH_DISPOSITION.RELEVANT_FOUND
+        : verified
+          ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
+          : SEARCH_DISPOSITION.INCOMPLETE,
+    comparisonTreatment: verified ? "ASSUMED_NOT_INCLUDED_V1" : null,
+    policy: requirement?.absenceComparisonPolicy || null,
+    searchPlanId,
+    documentUuid: document.uuid,
+    catalogId: worksheet?.catalog?.id || null,
+    physicalPagesChecked: completeTextExtraction(documentArtifact)
+      ? extraction.totalPages
+      : 0,
+    totalPhysicalPages: Number(extraction.totalPages || 0),
+    aliases: component?.aliases || [],
+    conceptSearchIds: (component?.conceptSearches || []).map(({ id }) => id),
+    gates: {
+      policyApproved,
+      completeTextExtraction: completeTextExtraction(documentArtifact),
+      completeCategoryTechnicalContract: completeCategoryTechnicalContract({
+        documentArtifact,
+        worksheet,
+        materializedEvidence,
+        targets,
+        report,
+      }),
+      zeroOccurrenceTerminal,
+      zeroCandidateTerminal,
+      serverNegativeTerminal,
+    },
+  };
+}
+
 function materializeAtomicFacts({
   document,
   worksheet,
   materializedEvidence,
   requestedFields,
   targets,
+  documentArtifact,
+  report,
 }) {
   if (!worksheet || !materializedEvidence || !requestedFields || !targets)
     return [];
@@ -438,11 +614,28 @@ function materializeAtomicFacts({
       requestedFieldStatus: fieldResult.requestedFieldStatus,
       fields,
       sources,
+      componentSatisfactionPolicy:
+        requirement?.componentSatisfactionPolicy || "ALL",
+      searchAudit: componentSearchAudit({
+        document,
+        documentArtifact,
+        worksheet,
+        materializedEvidence,
+        targets,
+        report,
+        requirement,
+        component,
+        judgement,
+        target,
+      }),
     };
   });
 }
 
 function readDocumentAnalysis(documentRun) {
+  const documentArtifact = readJsonIfPresent(
+    path.join(documentRun.outputDirectory, "document.private.json")
+  );
   const categories = {};
   const atomicFacts = {};
   for (const categoryView of CATEGORY_ORDER) {
@@ -456,6 +649,9 @@ function readDocumentAnalysis(documentRun) {
         `COMPARISON_CATEGORY_RESULT_MISSING:${documentRun.document.uuid}:${categoryView}`
       );
     categories[categoryView] = JSON.parse(fs.readFileSync(file, "utf8"));
+    const report = readJsonIfPresent(
+      path.join(categoryDirectory, "result", "report.json")
+    );
     atomicFacts[categoryView] = materializeAtomicFacts({
       document: documentRun.document,
       worksheet: readJsonIfPresent(
@@ -470,9 +666,62 @@ function readDocumentAnalysis(documentRun) {
       targets: readJsonIfPresent(
         path.join(categoryDirectory, "effects", "targets.private.json")
       ),
+      documentArtifact,
+      report,
     });
   }
   return { categories, atomicFacts };
+}
+
+function aggregatePackageSearchAudit({
+  loadedRuns,
+  side,
+  categoryView,
+  categoryId,
+}) {
+  const sideRuns = loadedRuns.filter(({ document }) => document.side === side);
+  const perDocument = sideRuns.map((run) => {
+    const atoms = (run.atomicFacts[categoryView] || []).filter(
+      (atom) => atom.requirementId === categoryId
+    );
+    return {
+      documentUuid: run.document.uuid,
+      atoms,
+      verified:
+        atoms.length > 0 &&
+        atoms.every(
+          (atom) =>
+            atom.searchAudit?.disposition ===
+            SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
+        ),
+    };
+  });
+  const verified =
+    perDocument.length > 0 && perDocument.every((entry) => entry.verified);
+  const audits = perDocument.flatMap(({ atoms }) =>
+    atoms.map(({ searchAudit }) => searchAudit).filter(Boolean)
+  );
+  return {
+    disposition: verified
+      ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
+      : SEARCH_DISPOSITION.INCOMPLETE,
+    comparisonTreatment: verified ? "ASSUMED_NOT_INCLUDED_V1" : null,
+    documentCount: perDocument.length,
+    documentUuids: perDocument.map(({ documentUuid }) => documentUuid).sort(),
+    physicalPagesChecked: unique(
+      audits.map(
+        ({ documentUuid, physicalPagesChecked }) =>
+          `${documentUuid}:${physicalPagesChecked}`
+      )
+    ).reduce(
+      (sum, value) => sum + Number(value.slice(value.lastIndexOf(":") + 1)),
+      0
+    ),
+    searchPlanIds: unique(
+      audits.map(({ searchPlanId }) => searchPlanId)
+    ).sort(),
+    components: audits,
+  };
 }
 
 function buildComparisonResult(documentRuns, metadata = {}) {
@@ -511,13 +760,25 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         return { document, row };
       });
       const first = entries[0].row;
+      const searchAuditA = aggregatePackageSearchAudit({
+        loadedRuns,
+        side: "A",
+        categoryView,
+        categoryId,
+      });
+      const searchAuditB = aggregatePackageSearchAudit({
+        loadedRuns,
+        side: "B",
+        categoryView,
+        categoryId,
+      });
       const packageA = summarizePackage(
         entries.filter(({ document }) => document.side === "A"),
-        { referenceEntries: packageEntries.A }
+        { referenceEntries: packageEntries.A, searchAudit: searchAuditA }
       );
       const packageB = summarizePackage(
         entries.filter(({ document }) => document.side === "B"),
-        { referenceEntries: packageEntries.B }
+        { referenceEntries: packageEntries.B, searchAudit: searchAuditB }
       );
       const comparison = comparePackages(packageA, packageB);
       const pointDecision = decidePoint({
@@ -544,7 +805,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     return { categoryView, rows };
   });
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     status: "TECHNICAL_RESULT_REVIEW_REQUIRED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -564,7 +825,11 @@ function buildComparisonResult(documentRuns, metadata = {}) {
           sum +
           category.rows.filter(
             ({ outcome }) =>
-              !["INHALTLICH_GLEICH", "BEIDSEITIG_KEIN_BELEG"].includes(outcome)
+              ![
+                "INHALTLICH_GLEICH",
+                "BEIDSEITIG_KEIN_BELEG",
+                "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+              ].includes(outcome)
           ).length,
         0
       ),
@@ -591,7 +856,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       ),
     },
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein qualifiziertes Nichtfinden gilt ausschließlich für das vollständig geprüfte bereitgestellte Paket und als Vergleichsannahme, niemals als Nachweis eines ausdrücklichen Ausschlusses. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
 }
 
@@ -667,6 +932,8 @@ async function writeWorkbook(result, outputFile) {
         width: 65,
       },
       { header: "Entscheidungsregel", key: "pointDecisionRule", width: 38 },
+      { header: "A – Dokumentbefund", key: "aSearchDisposition", width: 34 },
+      { header: "B – Dokumentbefund", key: "bSearchDisposition", width: 34 },
     ];
     for (const row of category.rows) {
       sheet.addRow({
@@ -688,12 +955,14 @@ async function writeWorkbook(result, outputFile) {
         pointDecision: row.pointDecision.outcome,
         pointDecisionReason: row.pointDecision.reason,
         pointDecisionRule: row.pointDecision.ruleId,
+        aSearchDisposition: row.packageA.searchDisposition,
+        bSearchDisposition: row.packageB.searchDisposition,
       });
     }
     applyHeaderStyle(sheet, { fill: "FF1E3A5F", fontColor: "FFFFFFFF" });
     applyZebraStriping(sheet, "FFF3F6FA");
     freezePanes(sheet, 1, 3);
-    sheet.autoFilter = { from: "A1", to: "R1" };
+    sheet.autoFilter = { from: "A1", to: "T1" };
     sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (rowNumber === 1) return;
       row.alignment = { vertical: "top", wrapText: true };
