@@ -118,7 +118,8 @@ function runHarness(harness, overrides = {}) {
         NODE_ENV: overrides.nodeEnv || "test",
         POLICY_RUN_RELEASE_ID: overrides.releaseId || "fixture-release",
         FAKE_LOADED_MODEL: overrides.loadedModel || model,
-        FAKE_LOADED_CONTEXT: overrides.loadedContext || "42496",
+        FAKE_LOADED_CONTEXT:
+          overrides.loadedContext || overrides.modelTokenLimit || "42496",
       },
     }
   );
