@@ -255,6 +255,108 @@ describe("controlledOccurrenceWorksheet", () => {
   });
 
   test.each([
+    [
+      "Versicherte Kosten gemäß Art. 3:",
+      "POSITIVE",
+      "Nicht versichert sind Kosten für die Behebung der Ursache.",
+    ],
+    [
+      "Nicht versicherte Schäden:",
+      "NEGATIVE",
+      "Versichert sind Schäden durch Naturgefahren.",
+    ],
+  ])(
+    "resets an earlier governor at the complete semantic heading %s",
+    (heading, expectedPolarity, supersededGovernor) => {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        document: documentFromPages([
+          [
+            "5. Sturmversicherung",
+            supersededGovernor,
+            heading,
+            "Suchkosten und Schäden durch Hagel bis EUR 2.000.",
+          ].join("\n"),
+        ]),
+        documentFingerprint: `semantic-governor-${expectedPolarity}`,
+        catalog: {
+          schemaVersion: 1,
+          catalogId: "semantic-governor-reset",
+          categoryView: "ST",
+          requirements: [
+            {
+              id: "ST-X01",
+              label: "Suchkosten",
+              requestedFields: [],
+              components: [
+                {
+                  id: "search_costs",
+                  label: "Suchkosten",
+                  factRole: "COST",
+                  aliases: ["Suchkosten"],
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const [occurrence] = component(
+        worksheet,
+        "ST-X01",
+        "search_costs"
+      ).occurrences;
+
+      expect(occurrence.coverageGovernorHint).toMatchObject({
+        text: heading,
+        kind: "SEMANTIC_COVERAGE_HEADING",
+        polarity: expectedPolarity,
+        source: "CURRENT_PAGE_GOVERNOR",
+      });
+      expect(occurrence.scopeLead.text).toContain(heading);
+      expect(occurrence.scopeLead.text).not.toContain(supersededGovernor);
+    }
+  );
+
+  test.each([
+    "Die versicherten Kosten umfassen Suchkosten bis EUR 2.000.",
+    "Versicherte Kosten: Suchkosten bis EUR 2.000.",
+    "Der Abschnitt beschreibt nicht versicherte Schäden und Gefahren.",
+  ])("does not promote flowing text to a semantic governor: %s", (line) => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        ["5. Sturmversicherung", line].join("\n"),
+      ]),
+      documentFingerprint: `semantic-governor-prose-${line.length}`,
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "semantic-governor-prose",
+        categoryView: "ST",
+        requirements: [
+          {
+            id: "ST-X01",
+            label: "Suchkosten",
+            requestedFields: [],
+            components: [
+              {
+                id: "search_costs",
+                label: "Suchkosten",
+                factRole: "COST",
+                aliases: ["Suchkosten"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-X01",
+      "search_costs"
+    ).occurrences;
+
+    expect(occurrence.coverageGovernorHint).toBeNull();
+  });
+
+  test.each([
     ["ALLGEMEINE VERTRAGSBESTIMMUNGEN", "GENERAL_CONTRACT_TERMS"],
     ["7. Wohnungseigentum", "WOHNUNGSEIGENTUM_INSURANCE"],
     ["7. Glasbruch", "GLASBRUCH_INSURANCE"],

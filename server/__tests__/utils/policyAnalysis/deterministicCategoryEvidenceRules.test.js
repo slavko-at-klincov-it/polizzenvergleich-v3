@@ -74,6 +74,46 @@ describe("deterministicCategoryEvidenceRules", () => {
     ).toBe("NEGATIVE");
   });
 
+  test.each([
+    ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
+    ["7.2 Versicherte Gefahren", "POSITIVE"],
+    ["Nicht versicherte Schäden:", "NEGATIVE"],
+    ["9. Nicht versicherte Kosten und Gefahren", "NEGATIVE"],
+  ])(
+    "uses the complete semantic heading %s as a %s governor",
+    (heading, expectedPolarity) => {
+      const text = "Suchkosten und Hagel werden im folgenden Absatz erläutert.";
+
+      expect(
+        clausePolarity({
+          scopeLeadText: heading,
+          contextText: text,
+          exactText: "Suchkosten",
+          occurrenceStart: 1_000 + text.indexOf("Suchkosten"),
+          contextDocumentStart: 1_000,
+        })
+      ).toBe(expectedPolarity);
+    }
+  );
+
+  test.each([
+    "Die versicherten Kosten umfassen Suchkosten.",
+    "Versicherte Kosten: Suchkosten und Nebenkosten.",
+    "Der Abschnitt beschreibt nicht versicherte Schäden und Gefahren.",
+  ])("does not use flowing text as a semantic governor: %s", (scopeLeadText) => {
+    const text = "Suchkosten werden im folgenden Absatz erläutert.";
+
+    expect(
+      clausePolarity({
+        scopeLeadText,
+        contextText: text,
+        exactText: "Suchkosten",
+        occurrenceStart: 1_000 + text.indexOf("Suchkosten"),
+        contextDocumentStart: 1_000,
+      })
+    ).toBe("UNKNOWN");
+  });
+
   test("lets a local exklusive clause override a carried positive list governor", () => {
     const text =
       "Keller- und andere Abstellabteile samt Türen, jedoch exklusive deren Inhalt.";

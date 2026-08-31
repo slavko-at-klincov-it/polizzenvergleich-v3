@@ -1,4 +1,7 @@
 const crypto = require("crypto");
+const {
+  semanticCoverageHeadingPolarity,
+} = require("./semanticCoverageGovernor");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -701,6 +704,19 @@ function explicitCoverageGovernors(pageText) {
     /^\s*(?:\d+(?:\.\d+)*\.\s*)?((?:Als\s+)?mitversichert\s+(?:sind|gelten)\s*:?)\s*$/gimu,
   ];
   const governors = [];
+  for (const line of buildLineRecords(pageText)) {
+    const polarity = semanticCoverageHeadingPolarity(line.text);
+    if (!polarity) continue;
+    const text = line.text.trim();
+    const leading = line.text.indexOf(text);
+    governors.push({
+      text,
+      pageStart: line.start + leading,
+      pageEnd: line.start + leading + text.length,
+      kind: "SEMANTIC_COVERAGE_HEADING",
+      polarity,
+    });
+  }
   for (const pattern of patterns) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0].trim();
@@ -1747,9 +1763,20 @@ function buildControlledOccurrenceWorksheet({
           const currentSectionBoundary = page.sectionHeadings
             .filter(({ pageStart }) => pageStart <= range.originalStart)
             .at(-1);
+          const currentCoverageGovernor = page.coverageGovernors
+            .filter(
+              ({ pageStart, pageEnd }) =>
+                pageEnd <= range.originalStart &&
+                (!currentSectionBoundary ||
+                  pageStart >= currentSectionBoundary.pageStart)
+            )
+            .at(-1);
           const scopeLeadStart = Math.max(
             rawScopeLead.pageStart,
-            currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart
+            currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart,
+            currentCoverageGovernor?.kind === "SEMANTIC_COVERAGE_HEADING"
+              ? currentCoverageGovernor.pageStart
+              : rawScopeLead.pageStart
           );
           const scopeLead = {
             pageStart: scopeLeadStart,
@@ -1770,14 +1797,6 @@ function buildControlledOccurrenceWorksheet({
                   source: "PRECEDING_PAGE_HEADING",
                 }
               : null;
-          const currentCoverageGovernor = page.coverageGovernors
-            .filter(
-              ({ pageStart, pageEnd }) =>
-                pageEnd <= range.originalStart &&
-                (!currentSectionBoundary ||
-                  pageStart >= currentSectionBoundary.pageStart)
-            )
-            .at(-1);
           const coverageGovernorHint = currentCoverageGovernor
             ? { ...currentCoverageGovernor, source: "CURRENT_PAGE_GOVERNOR" }
             : !currentSectionBoundary && page.inheritedCoverageGovernor

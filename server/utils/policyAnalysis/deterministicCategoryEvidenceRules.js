@@ -4,6 +4,10 @@ const {
   deterministicVsCandidateBinding,
   deterministicVsPreparedDecision,
 } = require("./deterministicVsEvidenceRules");
+const {
+  SEMANTIC_NEGATIVE_COVERAGE_HEADING,
+  SEMANTIC_POSITIVE_COVERAGE_HEADING,
+} = require("./semanticCoverageGovernor");
 
 const CATEGORY_SCOPE_KEYS = Object.freeze({
   FE: ["FEUER_INSURANCE"],
@@ -24,15 +28,16 @@ const STRICT_COVERAGE_CATEGORY_VIEWS = new Set([
 ]);
 
 const POSITIVE_GOVERNORS = Object.freeze([
+  SEMANTIC_POSITIVE_COVERAGE_HEADING,
   /(?:Zusätzlich\s+)?versichert\s+sind(?:\s+Schäden\s+durch)?/giu,
   /Zus[aä]tzlich[^\n]{0,160}\bversichert\b/giu,
   /(?:Als\s+)?mitversichert(?:\s+gelten)?/giu,
-  /(?<!nicht\s)\bVersicherte\s+Gefahren/giu,
   /Versicherungsschutz\s+(?:besteht|gilt)/giu,
   /auf\s+[,„“"']*Erstes\s+Risiko/giu,
   /Katastrophen\s+bis/giu,
 ]);
 const NEGATIVE_GOVERNORS = Object.freeze([
+  SEMANTIC_NEGATIVE_COVERAGE_HEADING,
   /Nicht\s+versichert(?:\s+im\s+Rahmen[^:\n]{0,140})?\s+sind/giu,
   /nicht\s+mitversichert/giu,
   /(?:vom\s+Versicherungsschutz\s+)?ausgeschlossen/giu,
