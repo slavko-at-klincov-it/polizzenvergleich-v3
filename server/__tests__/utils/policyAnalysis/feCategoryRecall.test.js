@@ -157,6 +157,25 @@ describe("FE category recall", () => {
     }
   });
 
+  test("recalls wrapped unknown-vehicle clauses without a document-specific phrase", () => {
+    const result = worksheetFromText(
+      [
+        "FEUERVERSICHERUNG",
+        "Beschädigung von Einfriedungen und Kulturen des",
+        "Versicherungsgrundstücks durch unbekannte Fahrzeuge;",
+        "Versichert sind Schäden durch",
+        "- unbekannte Fahrzeuge an Gebäuden und Gebäudebestandteilen.",
+      ].join("\n")
+    );
+
+    expect(component(result, "FE-A10", "foreign_vehicle_impact")).toMatchObject(
+      {
+        terminalState: "CONTROLLED_CANDIDATES_FOUND",
+        occurrenceCount: 2,
+      }
+    );
+  });
+
   test("keeps generic extinguishing wording and incomplete concept atoms open", () => {
     const result = worksheetFromText(
       [

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.4",
+  "catalogId": "fe-occurrence-full-draft-v0.5",
   "categoryView": "FE",
   "requirements": [
     {
@@ -192,7 +192,9 @@
             "Anprall fremder Fahrzeuge",
             "Anprall unbekannter Fahrzeuge",
             "Anprall unbekannter Landfahrzeuge",
-            "Kollision mit unbekannten Landfahrzeugen"
+            "Kollision mit unbekannten Landfahrzeugen",
+            "durch unbekannte Fahrzeuge",
+            "unbekannte Fahrzeuge an Gebäuden"
           ],
           "conceptSearches": [
             {

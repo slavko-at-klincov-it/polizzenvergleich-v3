@@ -52,6 +52,55 @@ function occurrence({
 }
 
 describe("category semantic exceptions", () => {
+  test("keeps vehicle impact on named damaged objects narrow", () => {
+    const bindingFor = ({ contextText, exactText }) =>
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "FE" } },
+        requirement: { id: "FE-A10" },
+        component: { id: "foreign_vehicle_impact", factRole: "PERIL" },
+        occurrence: occurrence({
+          candidateId: "candidate:fe-a10",
+          exactText,
+          contextText,
+          scopeLeadText: "B2 Feuerversicherung",
+          sectionScopeKey: "FEUER_INSURANCE",
+          pageNumber: 10,
+        }),
+      });
+
+    expect(
+      bindingFor({
+        contextText:
+          "Schäden an Einfriedungen und Kulturen sind versichert. Bei Schäden durch unbekannte Fahrzeuge gilt ein Selbstbehalt.",
+        exactText: "Schäden durch unbekannte Fahrzeuge",
+      })
+    ).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "FE_A10_NAMED_DAMAGED_OBJECT_SCOPE",
+      authoritative: true,
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Versichert sind Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge.",
+        exactText: "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Schäden an Einfriedungen sind begrenzt. Versichert sind Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge.",
+        exactText: "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    });
+  });
+
   test("a carried liability exclusion governor classifies the continued rented-property list as excluded", () => {
     const decision = deterministicCategoryPreparedDecision({
       categoryView: "HP",

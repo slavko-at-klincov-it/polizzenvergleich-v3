@@ -581,6 +581,41 @@ function explicitSt27RoofAvalancheBinding({
   };
 }
 
+function explicitFeA10NamedObjectScopeBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "FE" ||
+    requirement?.id !== "FE-A10" ||
+    component?.id !== "foreign_vehicle_impact" ||
+    component?.factRole !== "PERIL"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    /Sch[aä]den\s+an\s+(?:allen\s+)?versicherten\s+Sachen[\s\S]{0,160}(?:unbekannte|fremde)\s+(?:Land|Kraft)?fahrzeuge/iu.test(
+      clause
+    )
+  )
+    return null;
+  const localText = String(occurrence?.context?.text || "");
+  if (
+    !/(?:unbekannte|fremde)\s+(?:Land|Kraft)?fahrzeuge/iu.test(localText) ||
+    !/Sch[aä]den\s+an[\s\S]{0,180}(?:Einfriedungen|Z[aä]unen?|Mauern?|Toren?|Kulturen|Grundst[üu]cksumz[aä]unungen|Grundst[üu]cksbegrenzungen)/iu.test(
+      localText
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
+    basis: "FE_A10_NAMED_DAMAGED_OBJECT_SCOPE",
+    authoritative: true,
+  };
+}
+
 function explicitFeF05InsurancePeriodBinding({
   categoryView,
   requirement,
@@ -954,6 +989,14 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (st27RoofAvalancheBinding) return st27RoofAvalancheBinding;
+
+  const feA10NamedObjectScopeBinding = explicitFeA10NamedObjectScopeBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (feA10NamedObjectScopeBinding) return feA10NamedObjectScopeBinding;
 
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
     categoryView,
