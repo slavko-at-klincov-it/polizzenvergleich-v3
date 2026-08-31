@@ -3046,3 +3046,32 @@ negativen und adversarialen Varianten, ohne HP zu aktivieren.
 **Beweist nicht:** vollständige HP-Qualität, unbekannte Versicherer, beliebige
 OCR-Fehler oder das 99-Prozent-Ziel. Ein zuvor unbekannter, fachlich gelabelter
 HP-Holdout bleibt erforderlich.
+
+## 52. Dreiphasen-Implementierung ohne Ausführung der Abnahmegates
+
+**Codecommits:** `fc38bab8`, `5a860f8e`, `5eb66ebe`, `6b4edf67`,
+`c0c0dd6a`, `b0065a50`, `eb109085`
+
+Implementiert wurden kontrollierte Recallfamilien, semantischer Heading-Reset,
+lokale Rollen-/Wertebindung, die neutrale Rückstufung von `VS-16`, eine leere
+zeilenweise Zertifizierungsregistry sowie ein vom Kundenpfad getrennter
+Hybrid-Shadow-QA-Job. Der Shadowweg verwendet breite Chunks nur zur Navigation
+und lässt exakte servereigene Spannen durch den normalen Triage- und
+Evidenzvertrag laufen. Seine Recall-/FPR-Auswertung ist reviewer- und
+oraclegebunden.
+
+Auf ausdrücklichen Nutzerwunsch wurden für diese Implementierung keine Tests,
+kein Lint, kein Build, kein Modelllauf und kein Mac-Studio-Paketlauf
+ausgeführt. Ein read-only Senior-Code-Review meldete zunächst Risiken bei
+Runtime-Isolation, FPR-Semantik, Embeddingidentität, Manifestbindung und
+Reviewprovenienz; diese wurden vor dem Commit korrigiert. Der zweite
+read-only Review fand keinen verbleibenden P0/P1. Das ist Code-Review-Evidenz,
+keine Laufzeitevidenz.
+
+**Beweist:** nur, dass die vorgesehenen Grenzen im aktuellen Quellstand
+implementiert und getrennt dokumentiert wurden.
+
+**Beweist nicht:** syntaktische Ausführbarkeit, Testbestehen, Recallgewinn,
+False-Positive-Rate, LF-/WEVIG-Nichtregression, unbekannte Versicherer,
+Mac-Studio-Betrieb, fachliche Freigabe oder das 99-Prozent-Ziel. Die Registry
+bleibt bis zur vollständigen Gate-Ausführung leer.

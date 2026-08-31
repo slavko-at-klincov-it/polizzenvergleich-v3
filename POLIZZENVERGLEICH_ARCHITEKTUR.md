@@ -657,3 +657,50 @@ Presenterfunktion bildet die interne `pointDecision` auf sechs sichtbare
 Kundensignale ab und degradiert unbekannte oder inkonsistente Regeln
 fail-closed zu `ungeklärt`. Damit kann eine Layoutänderung weder technische
 Auditdaten löschen noch die semantische Entscheidung neu erfinden.
+
+## 19. Dreistufiger Recallvertrag und isolierter Hybrid-Shadowzweig
+
+Der aktuelle Entwicklungsstand trennt drei Verantwortungen:
+
+```text
+kontrollierter Primärpfad
+  -> allgemeine Alias-/Konzeptfamilien
+  -> semantische Heading- und Klauselgrenzen
+  -> rollenrichtige lokale Wertebindung
+
+separater Shadow-QA-Job
+  -> ausschließlich strikte Primär-Nullkomponenten
+  -> breite Embedding-Chunks nur als Navigation
+  -> erneut eingebettete exakte servereigene Quellspannen
+  -> normale Candidate-Triage und Evidenzprüfung
+  -> menschlich gelabeltes Recall-/FPR-Artefakt
+
+zeilenweise Zertifizierung
+  -> nur COVERAGE_ONLY
+  -> versionierte Gate-Evidenz und Requirement-Digest
+  -> erst danach mögliche automatische Nullwirkung
+```
+
+Der Shadow-Job ist weder Caller des Kundenworkers noch Teil des
+All-Kategorien-Runners, dessen Resume-Vertrag oder der Kundenmaterialisierung.
+Er liest einen abgeschlossenen Primärlauf und schreibt außerhalb von
+Primärlauf und Repository. Eine gemeinsame globale Modellsperre verhindert
+parallele Qwen-Nutzung. Der Kundenmaterializer besitzt zusätzlich eine
+explizite Shadow-Worksheet-Sperre.
+
+Ein nicht fortsetzbares privates Manifest bindet Shadow-Code-Release,
+Primärmanifest, Dokumentartefakt, Kategorie-Worksheets, Embeddingvertrag,
+Dokumentstatus, Qwen-Modell und Tokenlimit. Modell- und Runtimeartefakte werden
+über absolute Pfade und SHA-256 identifiziert; jede Embeddingantwort muss die
+vertragliche Modell-ID und Dimension bestätigen. Search-, Triage-, Evidence-
+und Reviewartefakte bilden eine Hashkette.
+
+Recall und False-Positive-Rate werden nicht aus Retrievalmengen abgeleitet.
+Sie bleiben bis zu vollständigen Ground-Truth-Labels leer und beziehen sich
+anschließend auf den nach normaler Triage und Evidenzprüfung tatsächlich
+ausgewählten Shadow-Pfad. Die Auswertung erzeugt ein neues Artefakt und bindet
+Quellreview-Hash, Reviewer und Oracle-Version.
+
+Der implementierte Entwicklungsvertrag ist `CUSTOMER_CORE_5_V7` /
+`CERTIFIED_COVERAGE_ONLY_TYPED_V2`. Die Zertifizierungsregistry ist leer;
+damit ist keine automatische `COVERAGE_ONLY`-Zeile freigegeben.

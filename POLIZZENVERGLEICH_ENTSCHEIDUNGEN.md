@@ -821,3 +821,37 @@ Verbindliche Entscheidung:
 Damit wird die Nutzerkorrektur allgemein umgesetzt, ohne den fachlich falschen
 Schluss zu ziehen, jede nicht gefundene Vertragsinformation sei ein
 ausgeschlossener Schutz.
+
+## ADR-025: Recall zuerst, Hybrid nur im Shadow, Fachwirkung nur nach Einzelzertifizierung
+
+**Status:** AKZEPTIERT UND IMPLEMENTIERT, noch nicht getestet oder fachlich
+abgenommen
+
+Verbindliche Entscheidung:
+
+1. Bestätigte Nulltreffer werden zuerst als wiederverwendbare Alias- und
+   Konzeptfamilien im kontrollierten Primärpfad repariert. Heading-, Klausel-
+   und Wertebindung werden als allgemeine semantische Verträge umgesetzt.
+2. Hybridretrieval ist kein produktiver Fallback. Es darf ausschließlich als
+   separater manueller Shadow-QA-Job gegen strikte Primär-Nullkomponenten
+   laufen und kein Kundenergebnis, Resume oder Workerartefakt verändern.
+3. Breite Chunks sind nur Navigation. Nur exakte servereigene Spannen mit
+   Dokument, physischer Seite und Offsets dürfen den normalen Triage- und
+   Evidenzvertrag erreichen.
+4. Embeddingmodell, Runtime, Normalisierung, Primärinputs, Shadow-Code,
+   Dokumentstatus und Folgeartefakte sind versioniert und hashgebunden.
+   Unsicherer Resume ist verboten.
+5. Recall und FPR werden getrennt, erst nach vollständigem menschlichem Review
+   und bezogen auf den final ausgewählten Shadow-Pfad berechnet.
+6. Eine automatische Nullwirkung ist nur zeilenweise für `COVERAGE_ONLY`
+   zulässig. Die Freigabe verlangt alle versionierten Gates einschließlich
+   unbekanntem Holdout, frischem Mac-Studio-Paketlauf und unabhängiger
+   Nulltrefferprüfung.
+7. `COVERAGE_MIXED`, `COST_COVERAGE`, Limits, Selbstbehalte, Bedingungen und
+   Definitionen bleiben außerhalb dieser Automatik.
+8. `VS-16` ist bis zu einer neuen Einzelabnahme neutral. Die Registry ist leer;
+   aktuell ist keine Zeile zertifiziert.
+
+Diese Entscheidung ersetzt keine Abnahme. Ohne ausgeführte Regressionen,
+Holdout und fachliche Prüfung darf weder eine Zeile freigeschaltet noch eine
+Qualitäts- oder 99-Prozent-Aussage abgeleitet werden.
