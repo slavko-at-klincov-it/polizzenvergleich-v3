@@ -2807,17 +2807,17 @@ Mac Studio in `/tmp/pv3-validate-d771e47f` mit Node `v22.23.2`. Der
 installierte Kunden-Checkout blieb unverändert. Es lief kein LLM- oder
 Kunden-PDF-Lauf.
 
-| Prüfung                                      | Ergebnis                           |
-| -------------------------------------------- | ----------------------------------:|
-| fokussierte Vertrags- und Exporttests        | 8/8 Suites, 58/58 Tests            |
-| Prettier aller geänderten Dateien            | PASS                               |
-| ESLint Produktquellen und UI                 | PASS, 0 Fehler                     |
-| Bash-Syntax                                  | PASS                               |
-| Frontend-Produktionsbuild                    | PASS, Vite 4.5.3, 6.170 Module     |
-| synthetischer Voll-Export                    | 1 Blatt, 17 Spalten, 224 Datenzeilen |
-| Kategorien                                   | VS 36 / FE 80 / LW 36 / ST 36 / EL 36 |
-| Excel-Vertrag                                | Filter A1:Q225, Zoom 80, Referenzbreiten |
-| Quick-Look-Sichtprüfung                      | PASS, keine Überlappung            |
+| Prüfung                               |                                 Ergebnis |
+| ------------------------------------- | ---------------------------------------: |
+| fokussierte Vertrags- und Exporttests |                  8/8 Suites, 58/58 Tests |
+| Prettier aller geänderten Dateien     |                                     PASS |
+| ESLint Produktquellen und UI          |                           PASS, 0 Fehler |
+| Bash-Syntax                           |                                     PASS |
+| Frontend-Produktionsbuild             |           PASS, Vite 4.5.3, 6.170 Module |
+| synthetischer Voll-Export             |     1 Blatt, 17 Spalten, 224 Datenzeilen |
+| Kategorien                            |    VS 36 / FE 80 / LW 36 / ST 36 / EL 36 |
+| Excel-Vertrag                         | Filter A1:Q225, Zoom 80, Referenzbreiten |
+| Quick-Look-Sichtprüfung               |                  PASS, keine Überlappung |
 
 Synthetisch belegt sind außerdem die fünf Kundensignale, die Degradierung
 unbekannter oder inkonsistenter Entscheidungen zu `ungeklärt`, der sichtbare
