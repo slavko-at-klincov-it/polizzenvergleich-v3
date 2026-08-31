@@ -142,6 +142,88 @@ function variantOccurrence({
 }
 
 describe("requestedFieldEvidenceContract", () => {
+  test("binds first-risk qualifiers across soft line wraps inside a list item", () => {
+    const candidateId = "candidate:VS-21:wrapped-first-risk";
+    const text =
+      "Aufräumkosten auf Erstes Risiko (Besondere Bedingung\n10PA0130)\nEUR1.530.400,00";
+    const source = occurrence({
+      candidateId,
+      requirementId: "VS-21",
+      text,
+      contextStart: 100,
+    });
+    source.context.unitType = "LIST_ITEM";
+
+    const result = materializeRequestedFieldEvidence({
+      worksheet: worksheet({ limitOccurrences: [source] }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[1].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue: "EUR 1.530.400,00",
+        qualifier: "auf Erstes Risiko",
+      }),
+    ]);
+  });
+
+  test("binds a trailing first-risk qualifier to every limit in one paragraph", () => {
+    const candidateId = "candidate:VS-21:compound-first-risk";
+    const text =
+      "Aufräumkosten bis 1% der Versicherungssumme, mindestens EUR20.000,00, maximal\nEUR100.000,00 pro versichertem Objekt – auf Erstes Risiko.";
+    const source = occurrence({
+      candidateId,
+      requirementId: "VS-21",
+      text,
+      contextStart: 500,
+    });
+
+    const result = materializeRequestedFieldEvidence({
+      worksheet: worksheet({ limitOccurrences: [source] }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[1].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue: "1 %",
+        qualifier: "auf Erstes Risiko",
+      }),
+      expect.objectContaining({
+        normalizedValue: "EUR 20.000,00",
+        qualifier: "auf Erstes Risiko",
+      }),
+      expect.objectContaining({
+        normalizedValue: "EUR 100.000,00",
+        qualifier: "auf Erstes Risiko",
+      }),
+    ]);
+  });
+
+  test("does not bind a qualifier across unstructured clause-section lines", () => {
+    const candidateId = "candidate:VS-21:separate-item";
+    const text =
+      "Frühere Leistung auf Erstes Risiko\nAufräumkosten bis EUR 5.000,00.";
+    const source = occurrence({
+      candidateId,
+      requirementId: "VS-21",
+      text,
+      contextStart: 900,
+    });
+    source.context.unitType = "CLAUSE_SECTION";
+
+    const result = materializeRequestedFieldEvidence({
+      worksheet: worksheet({ limitOccurrences: [source] }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    expect(result.requirements[1].fields[0].facts).toEqual([
+      expect.objectContaining({ normalizedValue: "EUR 5.000,00" }),
+    ]);
+    expect(result.requirements[1].fields[0].facts[0]).not.toHaveProperty(
+      "qualifier"
+    );
+  });
+
   test("keeps legal abbreviations inside one textual condition sentence", () => {
     const candidateId = "candidate:FE-E16:legal-condition";
     const text =

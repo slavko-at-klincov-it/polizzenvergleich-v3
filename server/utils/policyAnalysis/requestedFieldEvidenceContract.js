@@ -188,15 +188,27 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
   };
 }
 
-function limitQualifier(text, match) {
+function limitQualifier(text, match, occurrence) {
+  const structuredUnit = ["LIST_ITEM", "PARAGRAPH"].includes(
+    occurrence?.context?.unitType
+  );
+  const isBoundary = (index) => {
+    const character = text[index];
+    if (/[!?;]/u.test(character)) return true;
+    if (character === ".")
+      return (
+        !/\d/u.test(text[index - 1] || "") || !/\d/u.test(text[index + 1] || "")
+      );
+    return !structuredUnit && /[\n\r]/u.test(character);
+  };
   let sentenceStart = match.index;
-  while (sentenceStart > 0 && !/[.!?;\n\r]/u.test(text[sentenceStart - 1]))
+  while (sentenceStart > 0 && !isBoundary(sentenceStart - 1))
     sentenceStart -= 1;
   let sentenceEnd = match.index + match[0].length;
-  while (sentenceEnd < text.length && !/[.!?;\n\r]/u.test(text[sentenceEnd]))
+  while (sentenceEnd < text.length && !isBoundary(sentenceEnd))
     sentenceEnd += 1;
-  const start = Math.max(sentenceStart, match.index - 100);
-  const end = Math.min(sentenceEnd, match.index + match[0].length + 140);
+  const start = Math.max(sentenceStart, match.index - 240);
+  const end = Math.min(sentenceEnd, match.index + match[0].length + 240);
   const nearby = text.slice(start, end);
   const qualifiers = [];
   if (/auf\s+[„“"']*\s*Erstes\s+Risiko/iu.test(nearby))
@@ -282,7 +294,7 @@ function extractLimitFacts({ occurrence, binding }) {
           valueType: "MONEY",
           unit: "EUR",
           limitKind: LIMIT_KIND.CAPPED,
-          qualifier: limitQualifier(text, match),
+          qualifier: limitQualifier(text, match, occurrence),
         },
       })
     );
@@ -305,7 +317,7 @@ function extractLimitFacts({ occurrence, binding }) {
             valueType: "MONEY",
             unit: "EUR",
             limitKind: LIMIT_KIND.CAPPED,
-            qualifier: limitQualifier(text, concatenatedMoney),
+            qualifier: limitQualifier(text, concatenatedMoney, occurrence),
           },
         })
       );
@@ -330,7 +342,7 @@ function extractLimitFacts({ occurrence, binding }) {
           valueType: "PERCENT",
           unit: "%",
           limitKind: LIMIT_KIND.CAPPED,
-          qualifier: limitQualifier(text, match),
+          qualifier: limitQualifier(text, match, occurrence),
         },
       })
     );
@@ -384,7 +396,7 @@ function extractUnboundedLimitFacts({ occurrence, binding }) {
           valueType: "LIMIT",
           unit: null,
           limitKind: LIMIT_KIND.UNBOUNDED,
-          qualifier: limitQualifier(context.text, match),
+          qualifier: limitQualifier(context.text, match, occurrence),
         },
       })
     );
