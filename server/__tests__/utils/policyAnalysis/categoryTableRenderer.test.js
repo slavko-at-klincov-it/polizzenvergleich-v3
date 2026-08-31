@@ -126,6 +126,60 @@ function completeLimit() {
 }
 
 describe("categoryTableRenderer", () => {
+  test("quotes the server-bound clause when structural context is only a coverage heading", () => {
+    const input = fixture({
+      id: "ST-08",
+      label: "Dachlawine auf eigene Anlagen",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED],
+    });
+    const occurrence =
+      input.worksheet.requirements[0].components[0].occurrences[0];
+    const heading = "Zusätzlich versichert sind Schäden durch";
+    const exactText = `${heading}\n• Schnee- und Eisrutsch an den versicherten Gebäuden`;
+    occurrence.exactText = exactText;
+    occurrence.documentStart = 1_000;
+    occurrence.documentEnd = 1_000 + exactText.length;
+    occurrence.context = {
+      text: heading,
+      documentStart: 1_000,
+      documentEnd: 1_000 + heading.length,
+    };
+
+    const [row] = buildCategoryTableRows(input);
+
+    expect(row.source).toContain("Schnee- und Eisrutsch");
+  });
+
+  test("keeps a bounded list-item quote instead of leaking into the next item", () => {
+    const input = fixture({
+      id: "VS-32",
+      label: "Umzugs- und Zwischenlagerungskosten",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED],
+    });
+    const occurrence =
+      input.worksheet.requirements[0].components[0].occurrences[0];
+    const contextText =
+      "- Die Kosten einer sechsmonatigen Zwischenlagerung sind versichert;";
+    const leakedText = "Kosten der Wiederauffüllung der Aushubgrube";
+    const exactText = `${contextText}\n- ${leakedText}`;
+    occurrence.exactText = exactText;
+    occurrence.documentStart = 2_000;
+    occurrence.documentEnd = 2_000 + exactText.length;
+    occurrence.context = {
+      unitType: "LIST_ITEM",
+      text: contextText,
+      documentStart: 2_000,
+      documentEnd: 2_000 + contextText.length,
+    };
+
+    const [row] = buildCategoryTableRows(input);
+
+    expect(row.source).toContain("sechsmonatigen Zwischenlagerung");
+    expect(row.source).not.toContain(leakedText);
+  });
+
   test("renders fully evidenced condition-only categories as BELEGT plus Ja", () => {
     const definitions = [{ id: "VS-11", stage: "S", label: "Art des Index" }];
     const worksheet = {

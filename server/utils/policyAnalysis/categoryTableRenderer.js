@@ -123,6 +123,27 @@ function compactQuote(text, needle, maxChars = 260) {
   return normalizedText.slice(start, end).trim();
 }
 
+function selectedCandidateSourceText(occurrence) {
+  const context = occurrence?.context;
+  const contextText = String(context?.text || "").trim();
+  const exactText = String(occurrence?.exactText || "").trim();
+  const contextContainsCandidate =
+    Number.isInteger(context?.documentStart) &&
+    Number.isInteger(context?.documentEnd) &&
+    Number.isInteger(occurrence?.documentStart) &&
+    Number.isInteger(occurrence?.documentEnd)
+      ? context.documentStart <= occurrence.documentStart &&
+        context.documentEnd >= occurrence.documentEnd
+      : contextText.includes(exactText);
+  const bareCoverageGovernor =
+    /^(?:(?:Zus[aä]tzlich\s+)?versichert\s+sind(?:\s+Sch[aä]den\s+durch)?|Nicht\s+versichert\s+sind)\s*:?[\s•-]*$/iu.test(
+      contextText
+    );
+  if (!contextContainsCandidate && bareCoverageGovernor && exactText)
+    return exactText;
+  return contextText || exactText;
+}
+
 function sourceTextForFact(occurrence, fact) {
   const start = Number(fact?.source?.documentStart);
   const end = Number(fact?.source?.documentEnd);
@@ -167,9 +188,7 @@ function selectedSources({
     const physicalPageNumber = Number(
       occurrence.physicalPageNumber || occurrence.pageNumber
     );
-    const contextText = String(
-      occurrence.context?.text || occurrence.exactText || ""
-    ).trim();
+    const contextText = selectedCandidateSourceText(occurrence);
     const candidateFieldFacts = (fieldResult?.fields || []).flatMap(
       ({ facts }) =>
         (facts || []).filter(
