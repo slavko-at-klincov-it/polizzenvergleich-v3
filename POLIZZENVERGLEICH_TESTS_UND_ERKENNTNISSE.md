@@ -2893,16 +2893,16 @@ aktiven Deckungsstand. Alle 57 gefundenen Atome der 42
 Dokumentationsunterschiede sind `CONDITIONAL` oder `PROPOSED_ONLY`; null
 Punktvorteile sind durch den aktiven Geltungsgate zwingend.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| Dokumente / Textseiten | 10/10 / 108/108 |
-| Dokument-Kategorie-Schritte | 50/50 |
-| Profil / Zeilen | `CUSTOMER_CORE_5_V2` / 224 |
-| Laufzeit | 1.621,550 s = 27:01,550 |
-| Excel | 1 Blatt / 17 Spalten / 224 Datenzeilen |
-| ausgegebene Quellenzitate | 416/416 auf behaupteter Seite exakt vorhanden |
-| Vorteile A/B | 0 / 0 |
-| übrige Entscheidungen | 42 Dokumentationsunterschiede / 5 gleich / 105 ohne dokumentierten Vorteil / 11 nicht vergleichbar / 61 unklar |
+| Prüfung                     |                                                                                                       Ergebnis |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------: |
+| Dokumente / Textseiten      |                                                                                                10/10 / 108/108 |
+| Dokument-Kategorie-Schritte |                                                                                                          50/50 |
+| Profil / Zeilen             |                                                                                     `CUSTOMER_CORE_5_V2` / 224 |
+| Laufzeit                    |                                                                                        1.621,550 s = 27:01,550 |
+| Excel                       |                                                                         1 Blatt / 17 Spalten / 224 Datenzeilen |
+| ausgegebene Quellenzitate   |                                                                  416/416 auf behaupteter Seite exakt vorhanden |
+| Vorteile A/B                |                                                                                                          0 / 0 |
+| übrige Entscheidungen       | 42 Dokumentationsunterschiede / 5 gleich / 105 ohne dokumentierten Vorteil / 11 nicht vergleichbar / 61 unklar |
 
 Die neue Entscheidungsschicht ist gegenüber der älteren manuellen Excel
 deutlich sicherer. Dort waren 97 A-/B-Vorteile enthalten; 78 davon hatten auf
@@ -2973,24 +2973,23 @@ Vergleichsexporte extern unter
 gesichert. Es gab keine laufende, wartende oder zum Abbruch vorgemerkte
 Vergleichssession.
 
-| Prüfung | Ergebnis |
-| --- | ---: |
-| exakter Releasekandidat | macOS-Installervertrag PASS |
-| fokussierte Vergleichsverträge | 7 Suites / 65 Tests PASS |
-| Bash-Syntax und Prettier | PASS |
-| isolierter Frontend-Produktionsbuild | PASS, 6.170 Module |
-| Update-Produktionsbuild | PASS, 6.181 Module |
-| Prisma | 41 Migrationen, keine offen; Seed ausgeführt |
-| integrierter und separater Doctor | PASS |
-| SQLite `quick_check` aktuell / externe Sicherung | `ok` / `ok` |
-| Bestand vor/nach Update | 8 Workspaces / 3 Dokumente / 2 Sessions / 10 Vergleichsdokumente, identisch |
-| Dienste | Server und Collector aktiv, nur Loopback |
-| Modell | ausschließlich `qwen/qwen3.6-35b-a3b`, 42.496 Token, Parallelität 1 |
-| vorhandene Exporte und private Vergleichsartefakte | unverändert |
+| Prüfung                                            |                                                                    Ergebnis |
+| -------------------------------------------------- | --------------------------------------------------------------------------: |
+| exakter Releasekandidat                            |                                                 macOS-Installervertrag PASS |
+| fokussierte Vergleichsverträge                     |                                                    7 Suites / 65 Tests PASS |
+| Bash-Syntax und Prettier                           |                                                                        PASS |
+| isolierter Frontend-Produktionsbuild               |                                                          PASS, 6.170 Module |
+| Update-Produktionsbuild                            |                                                          PASS, 6.181 Module |
+| Prisma                                             |                                41 Migrationen, keine offen; Seed ausgeführt |
+| integrierter und separater Doctor                  |                                                                        PASS |
+| SQLite `quick_check` aktuell / externe Sicherung   |                                                                 `ok` / `ok` |
+| Bestand vor/nach Update                            | 8 Workspaces / 3 Dokumente / 2 Sessions / 10 Vergleichsdokumente, identisch |
+| Dienste                                            |                                    Server und Collector aktiv, nur Loopback |
+| Modell                                             |         ausschließlich `qwen/qwen3.6-35b-a3b`, 42.496 Token, Parallelität 1 |
+| vorhandene Exporte und private Vergleichsartefakte |                                                                 unverändert |
 
 Der installierte Checkout ist sauber und exakt auf dem annotierten Tag. Die
-Environment-Dateien haben Modus 600; Storage und Vergleichsexportordner Modus
-700. Neue fertige Vollvergleichsdateien werden unter
+Environment-Dateien haben Modus 600; Storage und Vergleichsexportordner Modus 700. Neue fertige Vollvergleichsdateien werden unter
 `/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche` archiviert.
 
 **Beweist:** Das versionierte Upgrade, die technische Konfiguration, der
