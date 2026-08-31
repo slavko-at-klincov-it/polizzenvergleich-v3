@@ -3461,6 +3461,42 @@ Der Replay verwendete unverändert die gespeicherten Artefakte der Session
 Entscheidungslogik, ersetzt aber nicht den noch ausstehenden frischen
 Zehn-Dokumente-Lauf mit dem neuen Release Candidate.
 
+## 68a. V3.4.0 RC2: frischer Zehn-Dokumente-Lauf und bedingungssichere Entscheidung
+
+Der RC1-Lauf auf dem Mac Studio hat den vollständigen Produktweg mit einer
+LF-Hauptpolizze gegen eine WEVIG-Hauptpolizze und acht Zusatz-/Bedingungs-
+dokumente technisch abgeschlossen. Alle 10 Dokumente, 80 Dokument-Kategorie-
+Schritte und 320 Vergleichszeilen wurden ohne Verarbeitungsfehler erzeugt.
+Der Lauf benötigte ungefähr vier Stunden und überschreitet damit das
+angestrebte Produktbudget deutlich.
+
+Die Gegenprüfung der Punktentscheidungen zeigte am Beispiel `LW-22`, dass ein
+kurzer Quellspan die direkt anschließende Rückausnahme verlieren kann. Ein
+erster breiter Kontextschutz blockierte zusätzlich eine reine Blitzschlag-
+Definition und war deshalb zu grob. RC2 bindet die Schutzprüfung an einen
+lokalen 240-Zeichen-Radius um den servergebundenen Quellspan und trennt starke
+Ausnahme-/Bedingungsmarker von einem definitorischen „wenn“.
+
+```text
+PASS: frischer RC1-Lauf 10/10 Dokumente, 80/80 Schritte, 320/320 Zeilen
+PASS: fokussierte Verträge 2 Suites / 23 Tests
+PASS: Gesamtregression 90 Suites / 1.043 Tests auf Mac Studio / Node 18.18.0
+PASS: frischer RC2-Replay 320/320 Zeilen und 8 XLSX-Blätter A–R
+PASS: 0 VORTEIL_A / 0 VORTEIL_B / 4 GLEICHWERTIG /
+      11 NICHT_VERGLEICHBAR / 305 UNKLAR
+PASS: genau LW-22, ST-16 und HP-26 werden aus unsicherer Gleichwertigkeit
+      fail-closed UNKLAR; FE-A04 bleibt korrekt GLEICHWERTIG
+PASS: älterer Replay verliert den früheren unsicheren LW-22-VORTEIL_B
+NO CLAIM: fachliche Richtigkeit aller 320 Zeilen oder beliebige Polizzen
+NO CLAIM: Laufzeitbudget; gemessener Vollaufwand derzeit ungefähr vier Stunden
+```
+
+Die Punktentscheidung ist damit als konservative fachliche Sicherheitsschicht
+technisch belegt. Ein `UNKLAR` ist hier kein fehlender Produktwert, sondern
+verhindert einen nicht beweisbaren Gewinner. Für mehr entscheidbare Punkte
+müssen Bedingungsscope, Dokumentrang und Werte fachlich atomar aufgelöst
+werden; sichtbare Zeilentexte dürfen diese Arbeit nicht ersetzen.
+
 ## 69. V3.5.0: produktiver Wechsel auf Qwen 3.6 35B-A3B
 
 Der produktive LM-Studio-Vertrag verwendet ab V3.5.0 ausschließlich

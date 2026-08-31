@@ -236,9 +236,14 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
   ableiten; fehlender Beleg bleibt `UNKLAR`, und es gibt keinen
   Gesamtsieger;
-- der historische gespeicherte LF-gegen-neun-WEVIG-Acht-Kategorien-Lauf
-  terminiert unter diesem Vertrag 320/320 Zeilen mit 1 `VORTEIL_B`, 7
-  `GLEICHWERTIG`, 9 `NICHT_VERGLEICHBAR` und 303 `UNKLAR`;
+- der frische LF-gegen-neun-WEVIG-Lauf auf dem Mac Studio verarbeitet 10/10
+  Dokumente und 80/80 Dokument-Kategorie-Schritte zu 320/320 Zeilen; der
+  bedingungssichere RC2-Replay liefert 0 `VORTEIL_A`, 0 `VORTEIL_B`, 4
+  `GLEICHWERTIG`, 11 `NICHT_VERGLEICHBAR` und 305 `UNKLAR`;
+- Bedingungen und Rückausnahmen im lokalen, an den Quellspan gebundenen
+  Klauselkontext sperren Vorteil und Gleichwertigkeit fail-closed; auf den
+  beiden gespeicherten Vollartefakten korrigiert dies `LW-22`, `ST-16` und
+  `HP-26`, ohne die reine Gefahren-Definition `FE-A04` zu sperren;
 - 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
   bestanden für V3.3.1; der additive Punktentscheidungsstand besteht auf dem
   Mac Studio 90 Suites mit 1.039 Tests unter Node 18 sowie den

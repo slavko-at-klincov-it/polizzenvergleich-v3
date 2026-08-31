@@ -50,7 +50,12 @@ function writeRun(root, sourceDocument, rowOverrides = {}) {
   return { document: sourceDocument, outputDirectory };
 }
 
-function writeAtomicCategory(run, categoryView, coverageEffect) {
+function writeAtomicCategory(
+  run,
+  categoryView,
+  coverageEffect,
+  candidateOverrides = {}
+) {
   const categoryDirectory = path.join(run.outputDirectory, categoryView);
   const requirementId = `${categoryView}-01`;
   const candidateId = `candidate-${run.document.uuid}-${categoryView}`;
@@ -102,6 +107,7 @@ function writeAtomicCategory(run, categoryView, coverageEffect) {
             candidateId,
             physicalPageNumber: 1,
             exactText: "Versicherter Gegenstand",
+            ...candidateOverrides,
           },
         ],
       },
@@ -759,6 +765,67 @@ describe("policy comparison result builder", () => {
       outcome: "DOKUMENTATIONSUNTERSCHIED",
       ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
       reviewRequired: false,
+    });
+  });
+
+  test("checks only local bound-clause context for coverage conditions", () => {
+    const evidencedRow = {
+      VS: {
+        documentedContent: "Versicherter Gegenstand",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    };
+    const runA = writeRun(root, document("a", "A"), evidencedRow);
+    const runB = writeRun(root, document("b", "B"), evidencedRow);
+    const unrelatedPrefix =
+      "außer eine andere, weit entfernte Klausel ist betroffen; " +
+      "neutraler Kontext ".repeat(30);
+    const exactText = "Versicherter Gegenstand";
+    const contextText = `${unrelatedPrefix}${exactText}`;
+    const candidate = {
+      exactText,
+      contextText,
+      contextDocumentStart: 100,
+      documentStart: 100 + unrelatedPrefix.length,
+      documentEnd: 100 + contextText.length,
+    };
+    writeAtomicCategory(runA, "VS", "INCLUDED", candidate);
+    writeAtomicCategory(runB, "VS", "INCLUDED", candidate);
+
+    const result = buildComparisonResult([runA, runB]);
+    expect(result.categories[0].rows[0].pointDecision).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
+  });
+
+  test("keeps an exception adjacent to a short evidence span fail-closed", () => {
+    const evidencedRow = {
+      VS: {
+        documentedContent: "Versicherter Gegenstand",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    };
+    const runA = writeRun(root, document("a", "A"), evidencedRow);
+    const runB = writeRun(root, document("b", "B"), evidencedRow);
+    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeAtomicCategory(runB, "VS", "INCLUDED", {
+      contextText:
+        "Versicherter Gegenstand, außer die besondere Voraussetzung fehlt",
+      contextDocumentStart: 100,
+      documentStart: 100,
+      documentEnd: 122,
+    });
+
+    const result = buildComparisonResult([runA, runB]);
+    expect(result.categories[0].rows[0].pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
     });
   });
 });
