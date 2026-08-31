@@ -3591,7 +3591,22 @@ IMPLEMENTIERT: neue Runs und Resume-Verträge profilgebunden
 IMPLEMENTIERT: ein XLSX-Blatt mit 17 freigegebenen Kundenspalten
 IMPLEMENTIERT: deterministisches, fail-closed KI-Ergebnis
 KOMPATIBILITÄT: gespeicherte alte Acht-Kategorien-Ergebnisse bleiben lesbar
-OFFEN: exakte Commit-Validierung und visueller Exportcheck auf dem Mac Studio
+PASS: 8 fokussierte Suites / 58 Tests auf dem Mac Studio
+PASS: Prettier für alle geänderten Code-, Test- und Dokumentdateien
+PASS: ESLint der geänderten Produktquellen und UI ohne Fehler; fünf
+      Testdateien werden von der bestehenden ESLint-Konfiguration ignoriert
+PASS: Bash-Syntaxvertrag und Frontend-Produktionsbuild mit 6.170 Modulen
+PASS: synthetischer Voll-Export 1 Blatt / 17 Spalten / 224 Datenzeilen
+PASS: VS 36 / FE 80 / LW 36 / ST 36 / EL 36, Filter A1:Q225, Zoom 80
+PASS: Quick-Look-Sichtprüfung ohne Spaltenüberlappung oder Zellgrenzfehler
 NO MODEL RUN: diese Änderung benötigt keinen neuen LLM- oder Kunden-PDF-Lauf
 NO CLAIM: keine fachliche 224-Zeilen-Abnahme und kein 99-Prozent-Nachweis
 ```
+
+Die Abnahme lief auf dem Mac Studio unter Node `v22.23.2` im isolierten
+Verzeichnis `/tmp/pv3-validate-d771e47f` für Commit
+`d771e47fcad6e2e61d1552711d91aae0024def03`. Der installierte Kunden-Checkout
+`/Users/michaelmischkot/Code/polizzenvergleich-v3` blieb auf seinem stabilen
+Stand und wurde nicht verändert. Der visuelle Voll-Export verwendete nur die
+bereits vorhandenen Tabellenwerte als synthetische Layout-Fixture; er ist kein
+neuer fachlicher Modelllauf.
