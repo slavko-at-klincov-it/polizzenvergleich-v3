@@ -366,6 +366,30 @@ Freigabe weiterer Kategorien ableitbar. Ein vollständiger Lauf des aktuellen
 Fünf-Kategorien-Profils, die interne HP-12-Nichtregression und unbekannte
 Versicherer-Holdouts bleiben offen.
 
+### Stand nach dem ersten Fünf-Kategorien-Vollvergleich
+
+Der isolierte Mac-Studio-Lauf vom 31. August 2026 verarbeitet mit Qwen 3.6
+alle zehn LF-/WEVIG-Dokumente, 108/108 Textseiten, 50/50 Dokument-Kategorie-
+Schritte und 224/224 Ergebniszeilen in 27:01,550. Die deterministische
+Entscheidungsschicht erzeugt 0 Vorteile A/B und verhindert damit die früheren
+Vorteile aus `BELEGT` gegen `UNGEKLÄRT`.
+
+Der Lauf widerlegt jedoch eine fachliche Vollständigkeit der allgemeinen
+Negativsuche. Unabhängig geprüfte exakte Klauseln wurden unter anderem bei
+`VS-36`, `FE-A10`, `FE-A13`, `LW-13`, `LW-18`, `ST-01`, `ST-08`, `ST-23`,
+`ST-25`, `FE-C02`, `FE-D03`, `VS-32` und `EL-12` nicht in den zugehörigen
+Nullbefund übernommen. `LW-08` zeigt zusätzlich einen Strukturfehler: Ein
+Ausschlussscope wurde über eine neue Überschrift hinweg auf ausdrücklich
+versicherte Suchkosten übertragen.
+
+Damit bedeutet „vollständiger kontrollierter Suchlauf“ derzeit ausschließlich
+die vollständige Abarbeitung des deklarierten Alias-/Kandidatenplans, nicht
+eine vollständige semantische Suche im Dokument. Bis Alias-/Konzeptbreite,
+Heading-Reset, allgemeine Vertragsgrenzen und Mehrdokumentrang nachgebessert
+und erneut auf Zielhardware auditiert sind, ist der Vollvergleich fachlich
+nicht ungeprüft kundenfreizugeben. Der vollständige Befund steht in
+`docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
+
 ### Stand nach technischem A/B-MVP
 
 Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion

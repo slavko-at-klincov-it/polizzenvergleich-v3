@@ -112,6 +112,13 @@ Score und keine Addition gewonnener Zeilen zu einer Vertragsempfehlung.
   Kundenexport enthält genau ein Arbeitsblatt mit 224 Datenzeilen und den 17
   Spalten des freigegebenen `Gesamtvergleich`-Formats. Technische
   Entscheidungsdetails bleiben im privaten JSON.
+- Vor dem persistenten Status `COMPLETED` archiviert der Worker den fertigen
+  Kundenexport atomar und unveränderlich benannt im konfigurierten
+  Vergleichsordner. Die macOS-Standardkonfiguration verwendet
+  `~/Downloads/Projekt Lokale KI/Vergleiche`; ein abweichender Zielpfad wird
+  ausschließlich über `POLICY_COMPARISON_EXPORT_DIR` gesetzt. Gleicher Inhalt
+  wird idempotent wiederverwendet, ein Namenskonflikt mit anderem Inhalt
+  bricht fail-closed ab.
 - Ein Lauf setzt nach Prozess- oder Rechnerunterbrechung content-addressiert
   bei der ersten noch nicht abgeschlossenen Kategorie fort, sofern
   Dokumente, Release und Laufvertrag unverändert sind.

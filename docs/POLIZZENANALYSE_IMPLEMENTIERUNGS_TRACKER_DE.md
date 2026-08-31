@@ -3688,3 +3688,51 @@ HINWEIS: direkter ESLint-Aufruf auf dem bestehenden CommonJS-Presenter meldet
 NO MODEL RUN: keine Kunden-PDFs und kein neuer LLM-Lauf
 NO CLAIM: keine fachliche Zertifizierung aller 224 Negativlexika
 ```
+
+## 73. Erster Qwen-3.6-Fünf-Kategorien-Vollvergleich und Recall-Audit
+
+Der aktuelle Entwicklungsstand `343a665e3ffb3462fdcef5852a28ccddb64ffd1f`
+wurde am 31. August 2026 in einer vom installierten Kundenstand getrennten
+Mac-Studio-Instanz ausgeführt. Qwen 3.6 war als einziges Modell mit exakt
+42.496 Token Kontext und Parallelität 1 geladen. Der Lauf verarbeitete die
+LF-Hauptpolizze gegen das neunteilige WEVIG-Paket mit den ausdrücklich
+gesetzten Rollen und Geltungsstati.
+
+```text
+PASS: 10/10 Dokumente, 108/108 Seiten mit Text
+PASS: 50/50 Dokument-Kategorie-Schritte, 0 Resume-Schritte
+PASS: 224/224 Ergebniszeilen, CUSTOMER_CORE_5_V2
+PASS: 1.621,550 s / 27:01,550 Gesamtwandzeit
+PASS: Excel 1 Blatt / 17 Spalten / 224 Datenzeilen
+PASS: 416/416 ausgegebene PDF-Zitate auf behaupteter Seite exakt vorhanden
+PASS: 0 Vorteile A/B; 5 Gleichwertigkeiten; 11 nicht vergleichbar
+FAIL: kontrollierte Nullsuche übersieht mehrere exakte relevante Klauseln
+FAIL: LW-08 übernimmt Ausschlussscope über eine neue Überschrift hinweg
+NO GO: keine ungeprüfte Kundenfreigabe dieses fachlichen Ergebnisses
+```
+
+Der faire gemeinsame Fünf-Kategorien-Zeitvergleich aus persistenten
+Dokumentartefakten beträgt 8.206,345 Sekunden für den historischen
+Qwen-3.8-Lauf und 1.617,626 Sekunden für Qwen 3.6. Das entspricht 5,073x und
+80,29 Prozent weniger Zeit, ist wegen zusätzlicher Katalog-/Codeänderungen
+aber kein isolierter Modellbenchmark.
+
+Bestätigte Gegenstellen zu Nullbefunden betreffen unter anderem allgemeine
+Entschädigungsgrenzen, Schäden durch unbekannte Fahrzeuge, Luftfahrzeugteile
+und -ladung, Sprinklerbetätigung, Kanalrückstau, Sturmdefinition, Dachlawine,
+geworfene Gegenstände, Baumentsorgung, Photovoltaik, Lösch-/Abbruchschäden,
+Zwischenlagerung und HQ30. Der systemische Vertrag ist daher nachzuschärfen:
+Alias-/Konzeptbreite, Klausel- und Heading-Grenzen, paketweite allgemeine
+Vertragsregeln sowie Rangbindung mehrerer Werte. Dokumentseiten dienen nur als
+Regressionsevidenz und dürfen nicht als Produktionssonderregeln eingebaut
+werden.
+
+Der Worker archiviert den fertigen Kundenexport ab dem Entwicklungscommit
+`7ab999c6` vor `COMPLETED` atomar im konfigurierten Vergleichsordner. Der
+Auditexport liegt als eindeutig benannte Datei unter
+`/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche`. Der
+installierte Kunden-Checkout blieb unverändert; die Dauerfunktion wird dort
+erst mit einer ausdrücklich autorisierten Bereitstellung aktiv.
+
+Vollständiger Prüfbericht:
+`docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
