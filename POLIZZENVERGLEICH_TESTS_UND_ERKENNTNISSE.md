@@ -2874,3 +2874,59 @@ fachliche Richtigkeit aller Kundenergebnisse, unbekannte Versicherer,
 Dokumentrang/Ersetzung, OCR-Qualität oder das 99-Prozent-Ziel. Die 90 reinen
 Schutzzeilen bleiben Zertifizierungskandidaten und werden nicht pauschal zu
 `ASSUMED_NOT_INCLUDED_V1` hochgestuft.
+
+## 49. Qwen-3.6-Fünf-Kategorien-Vollvergleich und unabhängiger Quellencheck
+
+**Beobachtungsfenster:** 31. August 2026
+
+**Entwicklungscommit:** `343a665e3ffb3462fdcef5852a28ccddb64ffd1f`
+
+Der isolierte Mac-Studio-Lauf verwendete als einziges Modell
+`qwen/qwen3.6-35b-a3b` mit exakt 42.496 Token Kontext und Parallelität 1. Die
+LF-Hauptpolizze wurde gegen neun WEVIG-Dokumente mit ausdrücklich gesetzten
+Rollen und Geltungsstati verglichen. Der installierte Kundenstand
+`977ed40f` und seine Datenbank blieben unverändert.
+
+| Prüfung | Ergebnis |
+| --- | ---: |
+| Dokumente / Textseiten | 10/10 / 108/108 |
+| Dokument-Kategorie-Schritte | 50/50 |
+| Profil / Zeilen | `CUSTOMER_CORE_5_V2` / 224 |
+| Laufzeit | 1.621,550 s = 27:01,550 |
+| Excel | 1 Blatt / 17 Spalten / 224 Datenzeilen |
+| ausgegebene Quellenzitate | 416/416 auf behaupteter Seite exakt vorhanden |
+| Vorteile A/B | 0 / 0 |
+| übrige Entscheidungen | 42 Dokumentationsunterschiede / 5 gleich / 105 ohne dokumentierten Vorteil / 11 nicht vergleichbar / 61 unklar |
+
+Die neue Entscheidungsschicht ist gegenüber der älteren manuellen Excel
+deutlich sicherer. Dort waren 97 A-/B-Vorteile enthalten; 78 davon hatten auf
+mindestens einer Seite keinen Status `BELEGT`. Der aktuelle Lauf vergibt in
+solchen offenen Fällen keinen Gewinner.
+
+Die Negativsuche ist trotzdem fachlich nicht vollständig. Unabhängige
+seitenweise PDF-Prüfung fand exakte relevante Gegenstellen unter anderem für
+`VS-36`, `FE-A10`, `FE-A13`, `LW-13`, `LW-18`, `ST-01`, `ST-02`, `ST-08`,
+`ST-23`, `ST-25`, `FE-C02`, `FE-D03`, `VS-32` und `EL-12`. Bei `LW-08`
+wurde der vor einer neuen Überschrift liegende Ausschlussscope fälschlich auf
+ausdrücklich versicherte Suchkosten übertragen. Bei `VS-02` ist der
+40-Prozent-Wert auf EABS S. 6 zitiert, aber nicht als Restwertschwelle
+materialisiert; GenVerbund S. 7 enthält zusätzlich 20 Prozent.
+
+**Beweist:** Der Fünf-Kategorien-End-to-End-Weg, der exakte 42.496-Kontext-
+Guard, die eindeutige Excelarchivierung, die Parität des XLSX zum privaten
+Ergebnis, die Provenienz der ausgegebenen Quellen und die konservative
+Gewinnerlogik funktionieren für dieses bekannte Paket. Der gemeinsame
+Fünf-Kategorien-Artefaktvergleich ist mit 1.617,626 statt 8.206,345 Sekunden
+5,073x schneller beziehungsweise 80,29 Prozent kürzer als der historische
+Qwen-3.8-Lauf.
+
+**Beweist nicht:** Vollständige semantische Suche, fachliche Richtigkeit aller
+224 Zeilen, unbekannte Versicherer, OCR, paketweite Rang-/Ersetzungslogik,
+einen isolierten reinen Modellbenchmark oder 99 Prozent. „Vollständiger
+kontrollierter Suchlauf“ bezeichnet derzeit nur die vollständige Abarbeitung
+des deklarierten Suchplans. Vor einer Kundenfreigabe müssen Alias-/Konzept-
+Recall, Heading-/Klauselgrenzen, allgemeine Vertragsgrenzen und Rollen-/Status-
+UX korrigiert und erneut frisch auditiert werden.
+
+Vollständiger Laufbericht:
+`../polizzenvergleich-v3/docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
