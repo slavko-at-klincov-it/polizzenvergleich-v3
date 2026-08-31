@@ -232,7 +232,8 @@ function deductibleFact(occurrence, fact) {
     relativeStart
   );
   const after = context.text.slice(relativeEnd, relativeEnd + 35);
-  const markerPattern = /\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/giu;
+  const markerPattern =
+    /\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/giu;
   const beforeMarkers = [...before.matchAll(markerPattern)];
   const afterMarker = after.match(
     /^[^.;:\n]{0,20}\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/iu
@@ -769,8 +770,7 @@ function extractWaitingPeriodFacts(options) {
       const fact = extractDurationFacts({
         occurrence: {
           ...occurrence,
-          documentStart:
-            occurrence.context.documentStart + durationMatch.index,
+          documentStart: occurrence.context.documentStart + durationMatch.index,
           documentEnd:
             occurrence.context.documentStart +
             durationMatch.index +
@@ -1113,7 +1113,6 @@ function extractCurrentValueDurationFacts({ occurrence, binding }) {
       },
     ],
   });
-  });
 }
 
 function extractResidualValueThresholdFacts({ occurrence, binding }) {
@@ -1124,11 +1123,12 @@ function extractResidualValueThresholdFacts({ occurrence, binding }) {
   for (const match of text.matchAll(pattern)) {
     const numeric = Number(match.groups.percent.replace(",", "."));
     if (!Number.isFinite(numeric) || numeric <= 0 || numeric > 100) continue;
-    const comparison = /^(?:mindestens|zumindest|nicht\s+weniger\s+als)$/iu.test(
-      match.groups.comparison
-    )
-      ? "mindestens"
-      : whitespaceNormalized(match.groups.comparison);
+    const comparison =
+      /^(?:mindestens|zumindest|nicht\s+weniger\s+als)$/iu.test(
+        match.groups.comparison
+      )
+        ? "mindestens"
+        : whitespaceNormalized(match.groups.comparison);
     facts.push(
       sourceBoundFact({
         occurrence,
@@ -1427,8 +1427,7 @@ function extractorFor(requirement, field, componentId = null) {
   // conservative field-type extractors until a narrower category oracle
   // promotes a specialised extractor.
   if (requirementId.startsWith("VS-")) return null;
-  if (["limit", "limits"].includes(field))
-    return extractCoverageLimitFacts;
+  if (["limit", "limits"].includes(field)) return extractCoverageLimitFacts;
   if (field === "amount") {
     const roles = new Set(
       (requirement.components || []).map(({ factRole }) => factRole)
@@ -1580,11 +1579,7 @@ function extractPreferredFacts({
     if (!factsByBinding.has(binding)) continue;
     const indexed = candidateById.get(candidateId);
     if (indexed.requirement.id !== requirement.id) continue;
-    const extractor = extractorFor(
-      requirement,
-      field,
-      indexed.component.id
-    );
+    const extractor = extractorFor(requirement, field, indexed.component.id);
     if (!extractor) continue;
     if (
       !valueCoversRequirement({

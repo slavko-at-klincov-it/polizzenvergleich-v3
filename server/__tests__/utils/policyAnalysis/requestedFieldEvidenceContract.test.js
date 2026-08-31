@@ -1459,16 +1459,12 @@ describe("requestedFieldEvidenceContract", () => {
         {
           field: "deductible",
           status: FIELD_EVIDENCE_STATUS.FOUND,
-          facts: [
-            expect.objectContaining({ normalizedValue: "EUR 350" }),
-          ],
+          facts: [expect.objectContaining({ normalizedValue: "EUR 350" })],
         },
         {
           field: "waiting_period",
           status: FIELD_EVIDENCE_STATUS.FOUND,
-          facts: [
-            expect.objectContaining({ normalizedValue: "72 Stunden" }),
-          ],
+          facts: [expect.objectContaining({ normalizedValue: "72 Stunden" })],
         },
       ],
     });
@@ -1505,14 +1501,14 @@ describe("requestedFieldEvidenceContract", () => {
             id: "carport",
             label: "Carports",
             factRole: "INSURED_OBJECT",
-            occurrences: [source],
+            occurrences: [carport],
           },
         ],
       }),
-      materializedCandidates: selections([
-        "candidate:vs16-carport-limit",
-        "DIRECT",
-      ], ["candidate:vs16-garage-limit", "DIRECT"]),
+      materializedCandidates: selections(
+        ["candidate:vs16-carport-limit", "DIRECT"],
+        ["candidate:vs16-garage-limit", "DIRECT"]
+      ),
     });
 
     expect(result.requirements[0].fields[0]).toMatchObject({
