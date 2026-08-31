@@ -114,6 +114,38 @@ describe("policy comparison point decision", () => {
     }
   });
 
+  test("keeps coverage clauses with conditions or exceptions fail-closed", () => {
+    for (const exactText of [
+      "Schäden durch Holzfäule sind ausgeschlossen, außer sie sind auf ein versichertes Ereignis zurückzuführen.",
+      "Schäden sind eingeschlossen, sofern die Leitung ordnungsgemäß gewartet wurde.",
+      "Schäden sind versichert, wenn die Anlage dauerhaft bewohnt ist.",
+      "Schäden sind gedeckt, soweit keine andere Versicherung leistet.",
+      "Schäden sind ausgenommen, vorausgesetzt der Versicherungsnehmer weist die Ursache nach.",
+    ]) {
+      const result = decide(
+        [atom("a", { coverageEffect: "EXCLUDED" })],
+        [
+          atom("b", {
+            coverageEffect: "INCLUDED",
+            sources: [
+              {
+                candidateId: "candidate-b",
+                physicalPageNumber: 2,
+                exactText,
+              },
+            ],
+          }),
+        ]
+      );
+      expect(result).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",
+        ruleId: "FAIL_CLOSED_V1",
+        reviewRequired: true,
+      });
+    }
+  });
+
   test("treats different applicability, scope and qualifier as not comparable", () => {
     expect(
       decide(

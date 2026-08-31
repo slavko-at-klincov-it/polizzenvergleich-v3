@@ -14,6 +14,8 @@ const COVERAGE_ROLES = new Set([
 ]);
 
 const DECISIVE_COVERAGE_EFFECTS = new Set(["INCLUDED", "EXCLUDED"]);
+const COVERAGE_CONDITION_MARKER =
+  /\b(?:außer|ausgenommen|sofern|wenn|soweit|vorausgesetzt|unter\s+der\s+Bedingung)\b/iu;
 
 function normalized(value) {
   return String(value || "")
@@ -112,6 +114,12 @@ function validSource(atom) {
           String(source.exactText || "").trim().length > 0
       )
     )
+  );
+}
+
+function hasConditionalCoverageSource(atom) {
+  return (atom.sources || []).some(({ exactText }) =>
+    COVERAGE_CONDITION_MARKER.test(String(exactText || ""))
   );
 }
 
@@ -248,6 +256,17 @@ function compareDimension(left, right) {
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
       reasonCode: "COMPARABILITY_KEY_DIFFERS",
       ruleId: "ATOMIC_COMPARABILITY_GATE_V1",
+      dimension,
+    };
+
+  if (
+    COVERAGE_ROLES.has(left.factRole) &&
+    (hasConditionalCoverageSource(left) || hasConditionalCoverageSource(right))
+  )
+    return {
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
       dimension,
     };
 
