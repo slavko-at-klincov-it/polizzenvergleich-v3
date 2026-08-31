@@ -12,11 +12,7 @@
           "id": "fire_definition",
           "label": "Branddefinition",
           "factRole": "DEFINITION",
-          "aliases": [
-            "das ist ein Feuer",
-            "Brand ist",
-            "Feuer ist"
-          ]
+          "aliases": ["das ist ein Feuer", "Brand ist", "Feuer ist"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -50,11 +46,7 @@
           "id": "smouldering_glowing_without_flame",
           "label": "Schwelen, Glimmen oder Glühen ohne offene Flamme",
           "factRole": "PERIL",
-          "aliases": [
-            "Schwelen",
-            "Glimmen",
-            "Glühen ohne offene Flamme"
-          ]
+          "aliases": ["Schwelen", "Glimmen", "Glühen ohne offene Flamme"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -108,9 +100,7 @@
     {
       "id": "FE-A06",
       "label": "Betragsgrenze für Überspannungsschäden",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "scopeRules": {
         "narrowAliases": [
           "Erdkabel",
@@ -161,10 +151,7 @@
           "id": "implosion",
           "label": "Implosion",
           "factRole": "PERIL",
-          "aliases": [
-            "Implosion",
-            "Implosionsschäden"
-          ]
+          "aliases": ["Implosion", "Implosionsschäden"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -179,10 +166,7 @@
           "id": "deflagration_at_heating_gas_or_firing_system",
           "label": "Verpuffung an Heiz-, Gas- oder Feuerungsanlagen",
           "factRole": "PERIL",
-          "aliases": [
-            "Verpuffung",
-            "Verpuffungsschäden"
-          ]
+          "aliases": ["Verpuffung", "Verpuffungsschäden"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -243,10 +227,7 @@
           "id": "vehicle_impact",
           "label": "Fahrzeuganprall",
           "factRole": "PERIL",
-          "aliases": [
-            "Fahrzeuganprall",
-            "Anprall von Fahrzeugen"
-          ]
+          "aliases": ["Fahrzeuganprall", "Anprall von Fahrzeugen"]
         },
         {
           "id": "underground_garage_or_driveway_scope",
@@ -338,11 +319,7 @@
           "id": "drone_damage",
           "label": "Drohnen oder unbemannte Fluggeräte",
           "factRole": "PERIL",
-          "aliases": [
-            "Drohne",
-            "Drohnen",
-            "unbemannte Fluggeräte"
-          ]
+          "aliases": ["Drohne", "Drohnen", "unbemannte Fluggeräte"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -376,10 +353,7 @@
           "id": "scorching_exclusion",
           "label": "Ausschluss von Sengschäden",
           "factRole": "EXCLUSION",
-          "aliases": [
-            "Sengschäden",
-            "Versengungsschäden"
-          ]
+          "aliases": ["Sengschäden", "Versengungsschäden"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -483,9 +457,7 @@
     {
       "id": "FE-B08",
       "label": "Zurechnung des Verhaltens von Repräsentanten und Erfüllungsgehilfen",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "representative_attribution",
@@ -512,9 +484,7 @@
     {
       "id": "FE-B09",
       "label": "Ausschluss bei Vorsatz und dessen Reichweite",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "intent_exclusion",
@@ -569,11 +539,7 @@
           "id": "nuclear_energy_exclusion",
           "label": "Ausschluss von Kernenergie",
           "factRole": "EXCLUSION",
-          "aliases": [
-            "Kernenergie",
-            "Kernreaktion",
-            "Kernspaltung"
-          ]
+          "aliases": ["Kernenergie", "Kernreaktion", "Kernspaltung"]
         },
         {
           "id": "radioactive_contamination_exclusion",
@@ -598,19 +564,13 @@
           "id": "war_exclusion",
           "label": "Ausschluss von Krieg",
           "factRole": "EXCLUSION",
-          "aliases": [
-            "Krieg",
-            "Kriegsereignisse"
-          ]
+          "aliases": ["Krieg", "Kriegsereignisse"]
         },
         {
           "id": "civil_unrest_exclusion",
           "label": "Ausschluss innerer Unruhen",
           "factRole": "EXCLUSION",
-          "aliases": [
-            "innere Unruhen",
-            "inneren Unruhen"
-          ]
+          "aliases": ["innere Unruhen", "inneren Unruhen"]
         },
         {
           "id": "government_action_exclusion",
@@ -648,9 +608,7 @@
     {
       "id": "FE-B14",
       "label": "Leistungsfreiheit bei nicht angezeigter Gefahrerhöhung",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "unreported_risk_increase_release",
@@ -685,10 +643,7 @@
           "id": "fire_barrier",
           "label": "Brandriegel",
           "factRole": "CONDITION",
-          "aliases": [
-            "Brandriegel",
-            "Brandschutzriegel"
-          ]
+          "aliases": ["Brandriegel", "Brandschutzriegel"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -774,11 +729,7 @@
           "id": "liquefied_gas_tank",
           "label": "Flüssiggastank",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Flüssiggastank",
-            "Flüssiggastanks",
-            "Flüssiggasbehälter"
-          ]
+          "aliases": ["Flüssiggastank", "Flüssiggastanks", "Flüssiggasbehälter"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -793,11 +744,7 @@
           "id": "pellet_storage",
           "label": "Pelletslager",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Pelletslager",
-            "Pelletlager",
-            "Pellets-Lager"
-          ]
+          "aliases": ["Pelletslager", "Pelletlager", "Pellets-Lager"]
         },
         {
           "id": "pellet_spontaneous_combustion",
@@ -832,10 +779,7 @@
           "id": "common_room_scope",
           "label": "Gemeinschaftsraum",
           "factRole": "CONDITION",
-          "aliases": [
-            "Gemeinschaftsraum",
-            "Gemeinschaftsräume"
-          ]
+          "aliases": ["Gemeinschaftsraum", "Gemeinschaftsräume"]
         },
         {
           "id": "sauna_or_infrared_cabin_in_common_room",
@@ -861,28 +805,19 @@
           "id": "tumble_dryer",
           "label": "Wäschetrockner",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Wäschetrockner",
-            "Trockner"
-          ]
+          "aliases": ["Wäschetrockner", "Trockner"]
         },
         {
           "id": "drying_room",
           "label": "Trockenraum",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Trockenraum",
-            "Trockenräume"
-          ]
+          "aliases": ["Trockenraum", "Trockenräume"]
         },
         {
           "id": "laundry_room_scope",
           "label": "Waschküche",
           "factRole": "CONDITION",
-          "aliases": [
-            "Waschküche",
-            "Waschküchen"
-          ]
+          "aliases": ["Waschküche", "Waschküchen"]
         },
         {
           "id": "dryer_or_drying_room_in_laundry_room",
@@ -977,20 +912,13 @@
           "id": "scaffolding",
           "label": "Gerüst",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Gerüst",
-            "Gerüste",
-            "Baugerüst"
-          ]
+          "aliases": ["Gerüst", "Gerüste", "Baugerüst"]
         },
         {
           "id": "site_equipment",
           "label": "Baustelleneinrichtung",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Baustelleneinrichtung",
-            "Baustelleneinrichtungen"
-          ]
+          "aliases": ["Baustelleneinrichtung", "Baustelleneinrichtungen"]
         },
         {
           "id": "renovation_scope",
@@ -1009,9 +937,7 @@
     {
       "id": "FE-D01",
       "label": "Feuerwehr- und Einsatzkosten, Höhe der Kostenübernahme",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
@@ -1052,9 +978,7 @@
     {
       "id": "FE-D02",
       "label": "Kostenübernahme bei Fehlalarm",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "false_alarm_costs",
@@ -1089,28 +1013,19 @@
           "id": "extinguishing_water_damage",
           "label": "Löschschäden durch Wasser",
           "factRole": "DAMAGE",
-          "aliases": [
-            "Löschwasserschäden",
-            "Schäden durch Löschwasser"
-          ]
+          "aliases": ["Löschwasserschäden", "Schäden durch Löschwasser"]
         },
         {
           "id": "extinguishing_foam_damage",
           "label": "Löschschäden durch Schaum",
           "factRole": "DAMAGE",
-          "aliases": [
-            "Schäden durch Löschschaum",
-            "Löschschaumschäden"
-          ]
+          "aliases": ["Schäden durch Löschschaum", "Löschschaumschäden"]
         },
         {
           "id": "extinguishing_powder_damage",
           "label": "Löschschäden durch Löschpulver",
           "factRole": "DAMAGE",
-          "aliases": [
-            "Schäden durch Löschpulver",
-            "Löschpulverschäden"
-          ]
+          "aliases": ["Schäden durch Löschpulver", "Löschpulverschäden"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -1155,11 +1070,7 @@
           "id": "without_own_fire",
           "label": "ohne eigenes Feuer",
           "factRole": "CONDITION",
-          "aliases": [
-            "ohne eigenes Feuer",
-            "ohne Brand",
-            "ohne Feuer"
-          ]
+          "aliases": ["ohne eigenes Feuer", "ohne Brand", "ohne Feuer"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -1187,9 +1098,7 @@
     {
       "id": "FE-D07",
       "label": "Kosten der Bewachung der Brandruine",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "fire_ruin_guarding_costs",
@@ -1218,36 +1127,25 @@
     {
       "id": "FE-D08",
       "label": "Provisorische Absicherung, Bauzaun, Absperrung",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "temporary_securing",
           "label": "Provisorische Absicherung",
           "factRole": "COST",
-          "aliases": [
-            "provisorische Absicherung",
-            "Notabsicherung"
-          ]
+          "aliases": ["provisorische Absicherung", "Notabsicherung"]
         },
         {
           "id": "temporary_construction_fence",
           "label": "Bauzaun",
           "factRole": "COST",
-          "aliases": [
-            "Bauzaun",
-            "Bauzäune"
-          ]
+          "aliases": ["Bauzaun", "Bauzäune"]
         },
         {
           "id": "temporary_barrier",
           "label": "Absperrung",
           "factRole": "COST",
-          "aliases": [
-            "provisorische Absperrung",
-            "Absperrmaßnahmen"
-          ]
+          "aliases": ["provisorische Absperrung", "Absperrmaßnahmen"]
         },
         {
           "id": "temporary_securing_cost_limit",
@@ -1269,9 +1167,7 @@
     {
       "id": "FE-D09",
       "label": "Kosten der statischen Prüfung nach dem Brand",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "post_fire_structural_inspection_costs",
@@ -1300,27 +1196,19 @@
     {
       "id": "FE-D10",
       "label": "Sachverständigen- und Havariekosten",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "expert_costs",
           "label": "Sachverständigenkosten",
           "factRole": "COST",
-          "aliases": [
-            "Sachverständigenkosten",
-            "Kosten für Sachverständige"
-          ]
+          "aliases": ["Sachverständigenkosten", "Kosten für Sachverständige"]
         },
         {
           "id": "average_adjuster_costs",
           "label": "Havariekosten",
           "factRole": "COST",
-          "aliases": [
-            "Havariekosten",
-            "Havariekommissärskosten"
-          ]
+          "aliases": ["Havariekosten", "Havariekommissärskosten"]
         },
         {
           "id": "expert_and_average_adjuster_cost_limit",
@@ -1340,9 +1228,7 @@
     {
       "id": "FE-D11",
       "label": "Dekontamination des Erdreichs durch Löschwasser",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "soil_decontamination_costs",
@@ -1409,9 +1295,7 @@
     {
       "id": "FE-D13",
       "label": "Wiederbeschaffung von Verwaltungsunterlagen und Bauplänen",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "administrative_documents_recovery",
@@ -1449,36 +1333,25 @@
     {
       "id": "FE-D14",
       "label": "Trockenlegung und Bautrocknung nach dem Löscheinsatz",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "drainage_costs",
           "label": "Trockenlegung",
           "factRole": "COST",
-          "aliases": [
-            "Trockenlegungskosten",
-            "Kosten der Trockenlegung"
-          ]
+          "aliases": ["Trockenlegungskosten", "Kosten der Trockenlegung"]
         },
         {
           "id": "building_drying_costs",
           "label": "Bautrocknung",
           "factRole": "COST",
-          "aliases": [
-            "Bautrocknung",
-            "Bautrocknungskosten"
-          ]
+          "aliases": ["Bautrocknung", "Bautrocknungskosten"]
         },
         {
           "id": "after_firefighting_condition",
           "label": "Nach Löscheinsatz",
           "factRole": "CONDITION",
-          "aliases": [
-            "nach dem Löscheinsatz",
-            "infolge des Löscheinsatzes"
-          ]
+          "aliases": ["nach dem Löscheinsatz", "infolge des Löscheinsatzes"]
         },
         {
           "id": "drying_after_firefighting",
@@ -1509,10 +1382,7 @@
     {
       "id": "FE-E01",
       "label": "Kehrintervalle des Rauchfangkehrers und Nachweispflicht",
-      "requestedFields": [
-        "interval",
-        "condition"
-      ],
+      "requestedFields": ["interval", "condition"],
       "components": [
         {
           "id": "chimney_sweep_interval",
@@ -1542,10 +1412,7 @@
     {
       "id": "FE-E02",
       "label": "Elektrobefund und vorgeschriebenes Überprüfungsintervall",
-      "requestedFields": [
-        "interval",
-        "condition"
-      ],
+      "requestedFields": ["interval", "condition"],
       "components": [
         {
           "id": "electrical_inspection_report",
@@ -1574,9 +1441,7 @@
     {
       "id": "FE-E03",
       "label": "Wartungsintervall der Heizungsanlage",
-      "requestedFields": [
-        "interval"
-      ],
+      "requestedFields": ["interval"],
       "components": [
         {
           "id": "heating_system_maintenance_interval",
@@ -1595,9 +1460,7 @@
     {
       "id": "FE-E04",
       "label": "Überprüfung der Blitzschutzanlage",
-      "requestedFields": [
-        "interval"
-      ],
+      "requestedFields": ["interval"],
       "components": [
         {
           "id": "lightning_protection_inspection",
@@ -1616,9 +1479,7 @@
     {
       "id": "FE-E05",
       "label": "Rauchwarnmelder vorgeschrieben und Wartungsnachweis gefordert",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "smoke_alarm_required",
@@ -1646,9 +1507,7 @@
     {
       "id": "FE-E06",
       "label": "Brandmeldeanlage vorausgesetzt oder prämienrelevant",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "fire_alarm_system_requirement_or_premium",
@@ -1667,9 +1526,7 @@
     {
       "id": "FE-E07",
       "label": "Brandschutztüren funktionsfähig und nicht dauerhaft offen gehalten",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "fire_door_functional",
@@ -1697,18 +1554,13 @@
     {
       "id": "FE-E08",
       "label": "Freihalten von Fluchtwegen, Stiegenhaus und Gängen",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "escape_routes_clear",
           "label": "Fluchtwege freihalten",
           "factRole": "CONDITION",
-          "aliases": [
-            "Fluchtwege freihalten",
-            "Fluchtwege sind freizuhalten"
-          ]
+          "aliases": ["Fluchtwege freihalten", "Fluchtwege sind freizuhalten"]
         },
         {
           "id": "stairwell_clear",
@@ -1723,10 +1575,7 @@
           "id": "corridors_clear",
           "label": "Gänge freihalten",
           "factRole": "CONDITION",
-          "aliases": [
-            "Gänge freihalten",
-            "Gänge sind freizuhalten"
-          ]
+          "aliases": ["Gänge freihalten", "Gänge sind freizuhalten"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -1735,9 +1584,7 @@
     {
       "id": "FE-E09",
       "label": "Rauch- und Wärmeabzugsanlage funktionsfähig",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "smoke_heat_exhaust_functional",
@@ -1757,9 +1604,7 @@
     {
       "id": "FE-E10",
       "label": "Lagerung brennbarer Stoffe in Keller und Dachboden",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "flammable_material_storage",
@@ -1800,9 +1645,7 @@
     {
       "id": "FE-E11",
       "label": "Erlaubnisscheinpflicht bei Heißarbeiten und Schweißarbeiten",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "hot_work_permit",
@@ -1818,10 +1661,7 @@
           "id": "welding_work",
           "label": "Schweißarbeiten",
           "factRole": "CONDITION",
-          "aliases": [
-            "Schweißarbeiten",
-            "Schweissarbeiten"
-          ]
+          "aliases": ["Schweißarbeiten", "Schweissarbeiten"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -1830,9 +1670,7 @@
     {
       "id": "FE-E12",
       "label": "Feuerwehrschalter oder Freischaltung der Photovoltaikanlage",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "fire_service_switch_or_pv_isolation",
@@ -1851,9 +1689,7 @@
     {
       "id": "FE-E13",
       "label": "Abstellverbot für Krafträder und E-Scooter im Stiegenhaus",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "motorcycle_or_scooter_parking_prohibition",
@@ -1884,9 +1720,7 @@
     {
       "id": "FE-E14",
       "label": "Regelung zum Laden von Akkus und E-Bikes in Keller oder Garage",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "battery_or_ebike_charging",
@@ -1915,9 +1749,7 @@
     {
       "id": "FE-E15",
       "label": "Prüfintervalle für Feuerlöscher und Löscheinrichtungen",
-      "requestedFields": [
-        "interval"
-      ],
+      "requestedFields": ["interval"],
       "components": [
         {
           "id": "fire_extinguisher_inspection_interval",
@@ -1946,9 +1778,7 @@
     {
       "id": "FE-E16",
       "label": "Rechtsfolgen einer Obliegenheitsverletzung, Kürzung oder Leistungsfreiheit",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "obligation_breach_consequences",
@@ -1978,9 +1808,7 @@
     {
       "id": "FE-F01",
       "label": "Selbstbehalt in der Sparte Feuer",
-      "requestedFields": [
-        "deductible"
-      ],
+      "requestedFields": ["deductible"],
       "components": [
         {
           "id": "fire_deductible",
@@ -1999,9 +1827,7 @@
     {
       "id": "FE-F02",
       "label": "Höchstentschädigung und Jahreshöchstleistung Feuer",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "fire_maximum_indemnity",
@@ -2030,10 +1856,7 @@
     {
       "id": "FE-F03",
       "label": "Erstrisikosumme oder Vollwertdeckung je Position",
-      "requestedFields": [
-        "limit",
-        "calculation_basis"
-      ],
+      "requestedFields": ["limit", "calculation_basis"],
       "components": [
         {
           "id": "first_loss_or_full_value_per_position",
@@ -2070,9 +1893,7 @@
     {
       "id": "FE-F04",
       "label": "Vollständige Übersicht der Sublimits in der Feuersparte",
-      "requestedFields": [
-        "limits"
-      ],
+      "requestedFields": ["limits"],
       "components": [
         {
           "id": "fire_sublimit_overview",
@@ -2091,10 +1912,7 @@
     {
       "id": "FE-F05",
       "label": "Zeitliche Geltung und Beginn des Versicherungsschutzes",
-      "requestedFields": [
-        "condition",
-        "date"
-      ],
+      "requestedFields": ["condition", "date"],
       "components": [
         {
           "id": "temporal_validity",
@@ -2125,10 +1943,7 @@
     {
       "id": "FE-F06",
       "label": "Rückwärtsdeckung vereinbart",
-      "requestedFields": [
-        "condition",
-        "date"
-      ],
+      "requestedFields": ["condition", "date"],
       "components": [
         {
           "id": "retroactive_cover",
@@ -2147,9 +1962,7 @@
     {
       "id": "FE-F07",
       "label": "Vorrang individueller Klauseln gegenüber den AVB in der Feuersparte",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "individual_clause_priority",
@@ -2168,19 +1981,13 @@
     {
       "id": "FE-F08",
       "label": "Verweise auf externe Klauselnummern und deren Verfügbarkeit",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "external_clause_reference",
           "label": "Externe Klauselnummer",
           "factRole": "DEFINITION",
-          "aliases": [
-            "gemäß Klausel",
-            "Klausel Nr.",
-            "Klauselnummer"
-          ]
+          "aliases": ["gemäß Klausel", "Klausel Nr.", "Klauselnummer"]
         },
         {
           "id": "external_clause_availability",
@@ -2199,9 +2006,7 @@
     {
       "id": "FE-F09",
       "label": "Regressrecht bei Brandstiftung durch Bewohner",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "resident_arson_recourse",
@@ -2220,9 +2025,7 @@
     {
       "id": "FE-F10",
       "label": "Feuerdeckung bei leerstehenden Einheiten",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "vacant_unit_fire_cover",

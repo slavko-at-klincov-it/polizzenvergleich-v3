@@ -894,8 +894,7 @@ function validateCatalog(catalog) {
       throw worksheetError("QUALIFIED_ABSENCE_CONTRACT_REQUIRED", id);
     if (
       requirement.absenceComparisonPolicy !== undefined &&
-      requirement.negativeSearchPolicy !==
-        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
+      requirement.negativeSearchPolicy !== "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
     )
       throw worksheetError("CERTIFIED_NEGATIVE_SEARCH_REQUIRED", id);
 

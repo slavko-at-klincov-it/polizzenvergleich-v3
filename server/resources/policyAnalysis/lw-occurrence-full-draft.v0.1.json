@@ -6,16 +6,11 @@
     {
       "id": "LW-01",
       "label": "Zuleitungsrohre innerhalb des Gebäudes gedeckt",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "supply_pipe",
-            "inside_building"
-          ],
+          "memberComponentIds": ["supply_pipe", "inside_building"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -49,16 +44,11 @@
     {
       "id": "LW-02",
       "label": "Ableitungsrohre innerhalb des Gebäudes gedeckt",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "drain_pipe",
-            "inside_building"
-          ],
+          "memberComponentIds": ["drain_pipe", "inside_building"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -92,17 +82,12 @@
     {
       "id": "LW-03",
       "label": "Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "supply_pipe",
-            "outside_on_property"
-          ],
+          "memberComponentIds": ["supply_pipe", "outside_on_property"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -136,17 +121,12 @@
     {
       "id": "LW-04",
       "label": "Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "drain_pipe",
-            "outside_on_property"
-          ],
+          "memberComponentIds": ["drain_pipe", "outside_on_property"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -184,10 +164,7 @@
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "pipe_break",
-            "pipe_itself"
-          ],
+          "memberComponentIds": ["pipe_break", "pipe_itself"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -208,11 +185,7 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "bruchschad",
-                    "bruchschaed",
-                    "rohrersatz"
-                  ]
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
                 },
                 {
                   "prefixes": [
@@ -242,11 +215,7 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "bruchschad",
-                    "bruchschaed",
-                    "rohrersatz"
-                  ]
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
                 },
                 {
                   "prefixes": [
@@ -271,10 +240,7 @@
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "frost_damage",
-            "pipes"
-          ],
+          "memberComponentIds": ["frost_damage", "pipes"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -295,15 +261,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "frostschaed"
-                  ]
+                  "prefixes": ["frostschaed"]
                 },
                 {
-                  "prefixes": [
-                    "rohr",
-                    "leitung"
-                  ]
+                  "prefixes": ["rohr", "leitung"]
                 }
               ]
             }
@@ -325,15 +286,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "frostschaed"
-                  ]
+                  "prefixes": ["frostschaed"]
                 },
                 {
-                  "prefixes": [
-                    "rohr",
-                    "leitung"
-                  ]
+                  "prefixes": ["rohr", "leitung"]
                 }
               ]
             }
@@ -378,9 +334,7 @@
     {
       "id": "LW-08",
       "label": "Leckortungs- und Suchkosten, Höhe des Limits",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "componentSatisfactionPolicy": "ANY",
       "components": [
         {
@@ -398,11 +352,7 @@
           "id": "search_costs",
           "label": "Suchkosten",
           "factRole": "COST",
-          "aliases": [
-            "Suchkosten",
-            "Kosten der Suche",
-            "Schadensuchkosten"
-          ]
+          "aliases": ["Suchkosten", "Kosten der Suche", "Schadensuchkosten"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -411,17 +361,11 @@
     {
       "id": "LW-09",
       "label": "Wiederherstellungskosten nach Ortung wie Aufstemmen und Fliesen",
-      "requestedFields": [
-        "limit",
-        "condition"
-      ],
+      "requestedFields": ["limit", "condition"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "restoration_costs",
-            "after_location"
-          ],
+          "memberComponentIds": ["restoration_costs", "after_location"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -441,9 +385,7 @@
               "id": "restoration-after-location",
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "wiederherstell"
-                  ]
+                  "prefixes": ["wiederherstell"]
                 },
                 {
                   "prefixes": [
@@ -472,9 +414,7 @@
               "id": "restoration-after-location",
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "wiederherstell"
-                  ]
+                  "prefixes": ["wiederherstell"]
                 },
                 {
                   "prefixes": [
@@ -495,9 +435,7 @@
     {
       "id": "LW-10",
       "label": "Trocknungskosten und Stromkosten für Bautrockner",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "drying_costs",
@@ -543,18 +481,13 @@
           "id": "boiler",
           "label": "Heizkessel",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Heizkessel",
-            "Heizkesseln"
-          ]
+          "aliases": ["Heizkessel", "Heizkesseln"]
         },
         {
           "id": "radiator",
           "label": "Heizkörper",
           "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Heizkörper"
-          ]
+          "aliases": ["Heizkörper"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -610,10 +543,7 @@
                   ]
                 },
                 {
-                  "prefixes": [
-                    "sprinkler",
-                    "loeschanlage"
-                  ]
+                  "prefixes": ["sprinkler", "loeschanlage"]
                 }
               ]
             }
@@ -644,15 +574,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "kaeltemittel",
-                    "kondensat"
-                  ]
+                  "prefixes": ["kaeltemittel", "kondensat"]
                 },
                 {
-                  "prefixes": [
-                    "klima"
-                  ]
+                  "prefixes": ["klima"]
                 }
               ]
             }
@@ -674,15 +599,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "kaeltemittel",
-                    "kondensat"
-                  ]
+                  "prefixes": ["kaeltemittel", "kondensat"]
                 },
                 {
-                  "prefixes": [
-                    "lueftung"
-                  ]
+                  "prefixes": ["lueftung"]
                 }
               ]
             }
@@ -701,25 +621,17 @@
           "id": "aquarium_or_waterbed_water",
           "label": "Wasser aus Aquarien oder Wasserbetten",
           "factRole": "PERIL",
-          "aliases": [
-            "Wasser aus Aquarien",
-            "Wasser aus Wasserbetten"
-          ],
+          "aliases": ["Wasser aus Aquarien", "Wasser aus Wasserbetten"],
           "conceptSearches": [
             {
               "id": "water-from-aquarium-or-waterbed",
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "wasseraustritt"
-                  ]
+                  "prefixes": ["wasseraustritt"]
                 },
                 {
-                  "prefixes": [
-                    "wasserbett",
-                    "aquari"
-                  ]
+                  "prefixes": ["wasserbett", "aquari"]
                 }
               ]
             }
@@ -769,9 +681,7 @@
     {
       "id": "LW-18",
       "label": "Rückstau aus der Kanalisation, in welcher Sparte geregelt",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "components": [
         {
           "id": "sewer_backwater_assignment",
@@ -794,9 +704,7 @@
     {
       "id": "LW-19",
       "label": "Funktionsfähige Rückstauklappe als Deckungsvoraussetzung",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "functional_backwater_valve",
@@ -821,11 +729,7 @@
           "id": "ground_seepage_or_retained_water",
           "label": "Grundwasser, Sickerwasser oder Stauwasser",
           "factRole": "PERIL",
-          "aliases": [
-            "Grundwasser",
-            "Sickerwasser",
-            "Stauwasser"
-          ]
+          "aliases": ["Grundwasser", "Sickerwasser", "Stauwasser"]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -834,16 +738,11 @@
     {
       "id": "LW-21",
       "label": "Schimmelschäden als Folge eines gedeckten Nässeschadens",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "mold_damage",
-            "covered_moisture_consequence"
-          ],
+          "memberComponentIds": ["mold_damage", "covered_moisture_consequence"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -879,10 +778,7 @@
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "fungus_damage",
-            "rot_damage"
-          ],
+          "memberComponentIds": ["fungus_damage", "rot_damage"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -920,9 +816,7 @@
     {
       "id": "LW-23",
       "label": "Altersabzug auf Rohrleitungen abhängig vom Alter",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "pipe_age_deduction",
@@ -980,16 +874,11 @@
     {
       "id": "LW-26",
       "label": "Rohrverstopfung und Reinigungskosten",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "bindingStructures": [
         {
           "type": "SHARED_SPAN",
-          "memberComponentIds": [
-            "pipe_blockage",
-            "cleaning_costs"
-          ],
+          "memberComponentIds": ["pipe_blockage", "cleaning_costs"],
           "constraint": "SAME_CANDIDATE_BINDING"
         }
       ],
@@ -1010,14 +899,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "rohrreinig"
-                  ]
+                  "prefixes": ["rohrreinig"]
                 },
                 {
-                  "prefixes": [
-                    "verstopf"
-                  ]
+                  "prefixes": ["verstopf"]
                 }
               ]
             }
@@ -1039,14 +924,10 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "rohrreinig"
-                  ]
+                  "prefixes": ["rohrreinig"]
                 },
                 {
-                  "prefixes": [
-                    "verstopf"
-                  ]
+                  "prefixes": ["verstopf"]
                 }
               ]
             }
@@ -1059,9 +940,7 @@
     {
       "id": "LW-27",
       "label": "Kosten des ausgetretenen Wassers gegenüber dem Versorger",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "utility_water_loss_costs",
@@ -1080,9 +959,7 @@
               "maxLines": 1,
               "requiredGroups": [
                 {
-                  "prefixes": [
-                    "wasserverlust"
-                  ]
+                  "prefixes": ["wasserverlust"]
                 }
               ]
             }
@@ -1095,9 +972,7 @@
     {
       "id": "LW-28",
       "label": "Sanierungsnachweis der Steigleitungen gefordert",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "riser_renovation_proof",
@@ -1116,9 +991,7 @@
     {
       "id": "LW-29",
       "label": "Serienschadenregelung in der Sparte Leitungswasser",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "components": [
         {
           "id": "water_line_serial_loss_rule",
@@ -1137,9 +1010,7 @@
     {
       "id": "LW-30",
       "label": "Selbstbehalt in der Sparte Leitungswasser",
-      "requestedFields": [
-        "amount"
-      ],
+      "requestedFields": ["amount"],
       "components": [
         {
           "id": "water_line_deductible",
@@ -1158,9 +1029,7 @@
     {
       "id": "LW-31",
       "label": "Höchstentschädigung in der Sparte Leitungswasser",
-      "requestedFields": [
-        "limit"
-      ],
+      "requestedFields": ["limit"],
       "components": [
         {
           "id": "water_line_maximum_compensation",
@@ -1181,10 +1050,7 @@
     {
       "id": "LW-32",
       "label": "Absperrpflicht bei längerer Abwesenheit",
-      "requestedFields": [
-        "condition",
-        "duration"
-      ],
+      "requestedFields": ["condition", "duration"],
       "components": [
         {
           "id": "shutoff_duty_during_extended_absence",
@@ -1203,9 +1069,7 @@
     {
       "id": "LW-33",
       "label": "Heizpflicht in der kalten Jahreszeit",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "cold_season_heating_duty",
@@ -1224,9 +1088,7 @@
     {
       "id": "LW-34",
       "label": "Regelung für leerstehende Einheiten",
-      "requestedFields": [
-        "condition"
-      ],
+      "requestedFields": ["condition"],
       "components": [
         {
           "id": "vacant_units",
@@ -1245,9 +1107,7 @@
     {
       "id": "LW-35",
       "label": "Vorgeschriebenes Wartungsintervall für Rohrleitungen",
-      "requestedFields": [
-        "interval"
-      ],
+      "requestedFields": ["interval"],
       "components": [
         {
           "id": "pipe_maintenance_interval",
@@ -1266,9 +1126,7 @@
     {
       "id": "LW-36",
       "label": "Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum",
-      "requestedFields": [
-        "scope"
-      ],
+      "requestedFields": ["scope"],
       "components": [
         {
           "id": "moisture_damage_ownership_allocation",

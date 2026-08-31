@@ -533,7 +533,7 @@ function componentSearchAudit({
           ? SEARCH_DISPOSITION.VERIFIED_NOT_FOUND
           : completeControlledSearch
             ? SEARCH_DISPOSITION.CONTROLLED_NOT_FOUND
-          : SEARCH_DISPOSITION.INCOMPLETE,
+            : SEARCH_DISPOSITION.INCOMPLETE,
     comparisonTreatment,
     negativeSearchPolicy: requirement?.negativeSearchPolicy || null,
     absenceMeaning: requirement?.absenceMeaning || null,
