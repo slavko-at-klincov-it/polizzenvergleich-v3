@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.4",
+  "catalogId": "lw-occurrence-full-draft-v0.5",
   "categoryView": "LW",
   "requirements": [
     {
@@ -336,6 +336,12 @@
       "label": "Leckortungs- und Suchkosten, Höhe des Limits",
       "requestedFields": ["limit"],
       "componentSatisfactionPolicy": "ANY",
+      "scopeRules": {
+        "narrowAliases": [
+          "Leitungswasser- und Sturmversicherung",
+          "Leitungswasser- sowie Sturmversicherung"
+        ]
+      },
       "components": [
         {
           "id": "leak_location_costs",
@@ -705,6 +711,7 @@
           "factRole": "DEFINITION",
           "aliases": [
             "Rückstau aus der Kanalisation",
+            "Kanalrückstau",
             "Kanalrückstau in der Leitungswasserversicherung",
             "Kanalrückstau in der Elementarversicherung",
             "Rückstau aus der Kanalisation in der Leitungswasserversicherung",

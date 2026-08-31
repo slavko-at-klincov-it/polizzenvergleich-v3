@@ -181,6 +181,27 @@ describe("P0 category catalog candidate recall", () => {
     );
   });
 
+  test("finds compound Kanalrückstau under a structured LW division heading", () => {
+    const result = worksheet(
+      lwCatalog,
+      [
+        "B4 Leitungswasserversicherung (LW)",
+        "LW06 Kanalrückstau nach einer Überschwemmung ist in dieser Sparte geregelt.",
+      ].join("\n")
+    );
+
+    expect(
+      component(result, "LW-18", "sewer_backwater_assignment").occurrences
+    ).toEqual([
+      expect.objectContaining({
+        matchedAlias: "Kanalrückstau",
+        sectionScopeHint: expect.objectContaining({
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+        }),
+      }),
+    ]);
+  });
+
   test("does not join unrelated sprinkler and backwater atoms across scope gaps", () => {
     const result = worksheet(
       lwCatalog,
@@ -241,6 +262,9 @@ describe("P0 category catalog candidate recall", () => {
       const requirement = result.requirements.find(({ id }) => id === "LW-08");
 
       expect(requirement.componentSatisfactionPolicy).toBe("ANY");
+      expect(requirement.scopeRules.narrowAliases).toContain(
+        "Leitungswasser- und Sturmversicherung"
+      );
       expect(
         component(result, "LW-08", expectedComponentId).occurrences
       ).not.toHaveLength(0);

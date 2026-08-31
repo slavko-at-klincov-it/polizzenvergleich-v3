@@ -19,7 +19,7 @@ const PRODUCT_PROFILE = Object.freeze({
   categoryCatalogIds: Object.freeze({
     VS: "vs-occurrence-full-draft-v0.6",
     FE: "fe-occurrence-full-draft-v0.5",
-    LW: "lw-occurrence-full-draft-v0.4",
+    LW: "lw-occurrence-full-draft-v0.5",
     ST: "st-occurrence-full-draft-v0.4",
     EL: "el-occurrence-full-draft-v0.5",
   }),
