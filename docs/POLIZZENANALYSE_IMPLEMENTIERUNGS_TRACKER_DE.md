@@ -3727,6 +3727,15 @@ Vertragsregeln sowie Rangbindung mehrerer Werte. Dokumentseiten dienen nur als
 Regressionsevidenz und dürfen nicht als Produktionssonderregeln eingebaut
 werden.
 
+Zusätzliche Routingbefunde: `VS-16` verliert beim B-Beleg die 10-Prozent-
+Grenze, erweitert `überdachte Abstellplätze` zu Kfz-Stell-/Parkplätzen und
+wird trotz `componentSatisfactionPolicy: ANY` von der Punktentscheidung wie
+ein ALL-Vertrag behandelt. `LW-08` leidet sowohl unter einem über die
+Überschrift laufenden Ausschlussscope als auch unter einer falschen
+Triagepriorität: Der einschlägige GenVerbund-Beleg mit EUR 2.000 wird
+verworfen, ein enger Erdkabelbeleg bevorzugt. `EL-07` entscheidet sicher,
+übernimmt aber vorhandene Limits und Selbstbehalte nicht in die Kundenzeile.
+
 Der Worker archiviert den fertigen Kundenexport ab dem Entwicklungscommit
 `7ab999c6` vor `COMPLETED` atomar im konfigurierten Vergleichsordner. Der
 Auditexport liegt als eindeutig benannte Datei unter

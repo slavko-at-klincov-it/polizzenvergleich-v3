@@ -390,6 +390,13 @@ und erneut auf Zielhardware auditiert sind, ist der Vollvergleich fachlich
 nicht ungeprüft kundenfreizugeben. Der vollständige Befund steht in
 `docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
 
+Auch der bisher zertifizierte `VS-16`-Pfad ist nach dem Realbefund enger zu
+prüfen: `überdachte Abstellplätze` wurde ohne ausreichende Objektbindung zu
+Kfz-Stell-/Parkplätzen erweitert, ein 10-Prozent-Limit ging verloren, und die
+Punktentscheidung bildet die Katalogpolicy `ANY` nicht konsistent ab. Der
+konservative Endzustand `UNKLAR` verhindert zwar einen falschen Gewinner,
+heilt aber die unvollständige Tatsachenmaterialisierung nicht.
+
 ### Stand nach technischem A/B-MVP
 
 Die bisher manuelle Gegenüberstellung ist als persistente Produktfunktion

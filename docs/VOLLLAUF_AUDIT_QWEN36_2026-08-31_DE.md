@@ -7,7 +7,8 @@ Bewertung: technisch erfolgreich, fachlich **nicht freigabereif**
 
 Der aktuelle Entwicklungsstand hat den vollständigen LF-gegen-WEVIG-
 Vergleich auf dem Mac Studio reproduzierbar abgeschlossen. Der Lauf ist mit
-27:01,550 Stunden deutlich schneller als der historische Qwen-3.8-Lauf. Auf
+27 Minuten 01,550 Sekunden deutlich schneller als der historische
+Qwen-3.8-Lauf. Auf
 den fünf heute gemeinsamen Kategorien beträgt die aus den persistenten
 Dokumentartefakten abgeleitete Zeitverbesserung 5,07x beziehungsweise
 80,29 Prozent weniger Wandzeit.
@@ -37,7 +38,7 @@ brauchbar, aber noch nicht als ungeprüftes Kundenergebnis freizugeben.
 | geladener Kontext                    | exakt 42.496 Token                                                                                                                |
 | Parallelität                         | 1                                                                                                                                 |
 | zusätzlich geladenes Embeddingmodell | keines                                                                                                                            |
-| Session                              | `6c3a1a8c-9e58-4965-8720-0545aabbf889`                                                                                            |
+| Session                              | wiederverwendeter Datensatz `6c3a1a8c-9e58-4965-8720-0545aabbf889`; frische Ausführung und neues Resume-Verzeichnis               |
 | Run-Signatur                         | `eee75c48f18cd2726a32b582…`                                                                                                       |
 | Produktprofil                        | `CUSTOMER_CORE_5_V2`                                                                                                              |
 | Kategorien                           | VS, FE, LW, ST, EL                                                                                                                |
@@ -93,6 +94,15 @@ Zeilen ausdrücklich eine Prüfung. Die fünf Gleichwertigkeiten `FE-A04`,
 vertretbar. Die elf Nichtvergleichbarkeiten sind konservativ durch
 Vorschlagsstatus, Bedingtheit oder abweichenden Scope gesperrt.
 
+Der Lauf ist kein Vergleich zweier bereits aktiver Polizzen. Paket A besteht
+aus `MAIN_POLICY / FRAMEWORK_TERMS`; Paket B aus einer
+`MAIN_POLICY / PROPOSAL`, einem `SUPPLEMENT / FRAMEWORK_TERMS` und sieben
+`TERMS / FRAMEWORK_TERMS`. Unter den 42 Dokumentationsunterschieden sind alle
+57 gefundenen Atome nur `CONDITIONAL` (39) oder `PROPOSED_ONLY` (18), keines
+`ACTIVE`. Null Punktvorteile sind daher nicht nur konservativ, sondern durch
+den Geltungsgate zwingend. Das Ergebnis vergleicht Rahmenbedingungen und einen
+Vorschlag, nicht zwei aktive Deckungsstände.
+
 ## 5. Routing und tatsächliche Reihenfolge
 
 Der Lauf verwendete folgenden Pfad:
@@ -117,6 +127,13 @@ Der Lauf verwendete folgenden Pfad:
 9. Vor dem Status `COMPLETED` wird das XLSX atomar in den konfigurierten
    Vergleichsordner archiviert.
 
+Der Lauf erzeugte 100 Triage-/Wirkungsreports und 302 Modellaufrufe. Alle
+Antworten stammen von Qwen 3.6. Dreizehn transparente Retries und drei
+eindeutige Candidate-ID-Reparaturen wurden protokolliert; sie betreffen weder
+`VS-16` noch die 42 Dokumentationsunterschiede. Das hundertmalige Log
+`NativeEmbedder Initialized` entsteht durch die Konstruktion eines Wrappers;
+es wurde keine Embeddingpipeline ausgeführt und kein Embeddingmodell geladen.
+
 Diese Reihenfolge ist grundsätzlich legitim: Dokumente bleiben bis zum
 Rollup isoliert, Quellen und Ranginformationen werden nicht vorzeitig
 vermischt, und die finale Gewinnerlogik ist deterministisch. Die sortierte
@@ -137,21 +154,21 @@ Zwei Grenzen sind relevant:
 
 ## 6. Fachliche Gegenprüfung der Pflichtzeilen
 
-| Zeile    | Auditbefund                                                                                                                                                                                                                                                               |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VS-16`  | PASS: B findet `überdachte Abstellplätze` in GenVerbund S. 10; `UNKLAR` ist konservativ.                                                                                                                                                                                  |
-| `VS-02`  | FEHLER: EABS S. 6 nennt ausdrücklich 40 Prozent; das Ergebnis sagt dennoch, das Restwertverhältnis sei nicht feststellbar. GenVerbund S. 7 nennt zusätzlich 20 Prozent. Rang und Bindung beider Werte bleiben offen.                                                      |
-| `VS-21`  | PASS mit offenem Rang: Quellen und Betrag sind belegt, B mischt Vorschlag und Bedingungen; `UNKLAR` ist sicher.                                                                                                                                                           |
-| `VS-25`  | PASS mit offenem Rang: unterschiedliche Bezugsgrößen und mehrere B-Werte bleiben sichtbar; `UNKLAR` ist sicher.                                                                                                                                                           |
-| `VS-36`  | FEHLER: ABS S. 3 nennt die Versicherungssumme als Entschädigungsgrenze. Der behauptete Dokumentationsunterschied beruht damit auf einem falschen Nulltreffer.                                                                                                             |
-| `FE-A02` | Im Ergebnis kein unsicherer Vorteil. AFB S. 2 enthält jedoch eine stärkere unmittelbare Nutzfeuer-Ausschlussstelle als den ausgegebenen Ausschnitt; Kundentext sprachlich zu verbessern.                                                                                  |
-| `FE-A06` | PASS: der B-Beleg betrifft nur indirekten Blitzschaden an Erdkabeln; `UNKLAR` verhindert eine falsche Gleichsetzung.                                                                                                                                                      |
-| `LW-06`  | PASS: beide Frostbelege gefunden; der Vorschlagsstatus von B führt korrekt zu `NICHT_VERGLEICHBAR`.                                                                                                                                                                       |
-| `LW-08`  | FEHLER: AWB S. 2 überschreibt mit `Versicherte Kosten ... Suchkosten` den vorherigen Ausschlusskontext. Das System materialisiert diesen Beleg trotzdem als ausgeschlossen. Heading-/Scope-Grenze wurde nicht zurückgesetzt; `UNKLAR` verhindert immerhin einen Gewinner. |
-| `LW-21`  | PASS: kein wörtlicher Schimmelbeleg; die alte unbelegte Gleichsetzung Schimmel = Vermorschung wird vermieden.                                                                                                                                                             |
-| `LW-31`  | FEHLER/OFFEN: die allgemeine Entschädigungsgrenze aus ABS S. 3 fehlt; ihre LW-spezifische Anwendbarkeit muss geprüft werden. Der Dokumentationsunterschied ist nicht nachgewiesen.                                                                                        |
-| `ST-11`  | PASS: A enthält nur einen engen Ausschluss-/Reparaturkontext; kein Vorteil wird konstruiert.                                                                                                                                                                              |
-| `EL-07`  | PASS: Erdbeben wird auf beiden Seiten gefunden; Vorschlagsstatus und Bedingungen führen sicher zu `NICHT_VERGLEICHBAR`.                                                                                                                                                   |
+| Zeile    | Auditbefund                                                                                                                                                                                                                                                                                                                                                      |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VS-16`  | TEILFEHLER: B findet GenVerbund S. 10, erweitert `überdachte Abstellplätze` aber unbelegt zu Kfz-Stell-/Parkplätzen und verliert die 10-Prozent-Grenze. Außerdem verlangt die Punktentscheidung trotz Katalogpolicy `ANY` faktisch jede Komponente. `UNKLAR` verhindert sicher einen Gewinner.                                                                   |
+| `VS-02`  | FEHLER: EABS S. 6 nennt ausdrücklich 40 Prozent; das Ergebnis sagt dennoch, das Restwertverhältnis sei nicht feststellbar. GenVerbund S. 7 nennt zusätzlich 20 Prozent. Rang und Bindung beider Werte bleiben offen.                                                                                                                                             |
+| `VS-21`  | PASS mit offenem Rang: Quellen und Betrag sind belegt, B mischt Vorschlag und Bedingungen; `UNKLAR` ist sicher.                                                                                                                                                                                                                                                  |
+| `VS-25`  | PASS mit offenem Rang: unterschiedliche Bezugsgrößen und mehrere B-Werte bleiben sichtbar; `UNKLAR` ist sicher.                                                                                                                                                                                                                                                  |
+| `VS-36`  | FEHLER: ABS S. 3 nennt die Versicherungssumme als Entschädigungsgrenze. Der behauptete Dokumentationsunterschied beruht damit auf einem falschen Nulltreffer.                                                                                                                                                                                                    |
+| `FE-A02` | Im Ergebnis kein unsicherer Vorteil. AFB S. 2 enthält jedoch eine stärkere unmittelbare Nutzfeuer-Ausschlussstelle als den ausgegebenen Ausschnitt; Kundentext sprachlich zu verbessern.                                                                                                                                                                         |
+| `FE-A06` | PASS: der B-Beleg betrifft nur indirekten Blitzschaden an Erdkabeln; `UNKLAR` verhindert eine falsche Gleichsetzung.                                                                                                                                                                                                                                             |
+| `LW-06`  | PASS: beide Frostbelege gefunden; der Vorschlagsstatus von B führt korrekt zu `NICHT_VERGLEICHBAR`.                                                                                                                                                                                                                                                              |
+| `LW-08`  | ZWEI FEHLER: AWB S. 2 überschreibt mit `Versicherte Kosten ... Suchkosten` den vorherigen Ausschlusskontext; trotzdem wird der Beleg als ausgeschlossen materialisiert. Zusätzlich verwirft die Triage den einschlägigen GenVerbund-Beleg auf S. 8 mit EUR 2.000 und bevorzugt den engeren Erdkabelbeleg auf S. 11. `UNKLAR` verhindert immerhin einen Gewinner. |
+| `LW-21`  | PASS: kein wörtlicher Schimmelbeleg; die alte unbelegte Gleichsetzung Schimmel = Vermorschung wird vermieden.                                                                                                                                                                                                                                                    |
+| `LW-31`  | FEHLER/OFFEN: die allgemeine Entschädigungsgrenze aus ABS S. 3 fehlt; ihre LW-spezifische Anwendbarkeit muss geprüft werden. Der Dokumentationsunterschied ist nicht nachgewiesen.                                                                                                                                                                               |
+| `ST-11`  | PASS: A enthält nur einen engen Ausschluss-/Reparaturkontext; kein Vorteil wird konstruiert.                                                                                                                                                                                                                                                                     |
+| `EL-07`  | ENTSCHEIDUNG PASS, WERTE TEILWEISE FEHLEND: Erdbeben wird auf beiden Seiten gefunden; Vorschlagsstatus und Bedingungen führen sicher zu `NICHT_VERGLEICHBAR`. Die Kundenzeile verliert aber vorhandene Limits und Selbstbehalte.                                                                                                                                 |
 
 ## 7. Bestätigte Recall-Fehler außerhalb der Pflichtzeilen
 
@@ -202,6 +219,28 @@ Zwischen den Läufen änderten sich zusätzlich Kataloge, Profil und
 Verarbeitungslogik. Sie bestätigt aber die Größenordnung des früheren
 kontrollierten VS-Vergleichs mit 5,02x.
 
+Eine zweite Messung direkt aus den Providerreports ergibt trotz mehr
+Modellaufrufen und Prompttoken dieselbe Größenordnung:
+
+| Providerreport         |    Qwen 3.8 |    Qwen 3.6 |
+| ---------------------- | ----------: | ----------: |
+| Modellaufrufe          |         266 |         302 |
+| Prompttoken            |     639.366 |     733.084 |
+| Completiontoken        |      18.117 |      20.081 |
+| summierte Providerzeit | 8.128,827 s | 1.541,632 s |
+
+Das entspricht 5,273x beziehungsweise 81,04 Prozent weniger Providerzeit bei
+identischen Systemprompt-Hashmengen. Auch diese Zahl ist wegen der geänderten
+Kataloge und Callverteilung kein reiner Modellbenchmark.
+
+Im direkten 224-Zeilen-Vergleich blieben die Kernfelder `evidenceFound`,
+`coverage` und `coverageAmount` je Paketseite in 216 bis 222 Zeilen identisch.
+Die stark veränderte Ergebnisverteilung stammt hauptsächlich aus der neuen
+typisierten Abwesenheits- und Präsentationslogik, nicht aus einem Nachweis,
+dass Qwen 3.6 besser extrahiert. Gleiche Modellqualität ist wegen der
+gleichzeitig geänderten Kataloge und Verträge ebenfalls nicht isoliert
+bewiesen.
+
 Die manuell kuratierte ältere `Gesamtvergleich.xlsx` enthielt 61 Vorteile für
 A und 36 für B. Bei 78 dieser 97 Vorteile war mindestens eine Seite nicht
 `BELEGT`; 58 stellten `BELEGT` gegen `UNGEKLÄRT`. Der neue Lauf reduziert
@@ -219,7 +258,8 @@ PASS  End-to-End-Ausführung, Modell-/Kontextvertrag und Persistenz
 PASS  Einblatt-XLSX, Zielordner, Inhalt-zu-JSON-Parität und Zitatprovenienz
 PASS  konservative Gewinnerlogik: 0 unbelegte Vorteile
 FAIL  fachliche Vollständigkeit kontrollierter Nulltreffer
-FAIL  Heading-/Scope-Reset bei LW-08
+FAIL  Heading-/Scope-Reset und Kandidatenpriorität bei LW-08
+FAIL  ANY-Komponentenvertrag und Objekt-/Limitbindung bei VS-16
 OPEN  automatische Rollen-/Statuszuordnung unbekannter Mehrdokumentpakete
 NO GO ungeprüfte Kundenfreigabe dieses Ergebnisses
 ```
@@ -230,10 +270,12 @@ Die richtige nächste Reihenfolge ist:
    Katalog-/Strukturregressionen aufnehmen, nicht als PDF-Seiten-Sonderregeln.
 2. Heading- und Klauselgrenzen so modellieren, dass Wirkungsscope an einer
    neuen semantischen Überschrift endet oder neu bewertet wird.
-3. Allgemeine Vertragsgrenzen paketweit als mögliche spartenübergreifende
+3. `componentSatisfactionPolicy` im Rollup und in der Punktentscheidung
+   konsistent anwenden und den `VS-16`-Objekt-/Limitbeleg enger binden.
+4. Allgemeine Vertragsgrenzen paketweit als mögliche spartenübergreifende
    Fakten routen und ihre konkrete Anwendbarkeit separat entscheiden.
-4. Rollen-/Status-UX für Mehrdokumentpakete vor dem Start verbindlich machen.
-5. Danach denselben Vollvergleich frisch auf dem Mac Studio wiederholen und
+5. Rollen-/Status-UX für Mehrdokumentpakete vor dem Start verbindlich machen.
+6. Danach denselben Vollvergleich frisch auf dem Mac Studio wiederholen und
    erst nach einem erneuten unabhängigen Quellen-/Nulltrefferaudit freigeben.
 
 Dieser Lauf beweist weder beliebige Polizzen, unbekannte Versicherer, OCR-
