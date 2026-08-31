@@ -319,12 +319,10 @@ describe("controlledOccurrenceWorksheet", () => {
   test.each([
     "Die versicherten Kosten umfassen Suchkosten bis EUR 2.000.",
     "Versicherte Kosten: Suchkosten bis EUR 2.000.",
-    "Der Abschnitt beschreibt nicht versicherte Schäden und Gefahren.",
+    "Der Abschnitt beschreibt nicht versicherte Schäden, Gefahren und Suchkosten.",
   ])("does not promote flowing text to a semantic governor: %s", (line) => {
     const worksheet = buildControlledOccurrenceWorksheet({
-      document: documentFromPages([
-        ["5. Sturmversicherung", line].join("\n"),
-      ]),
+      document: documentFromPages([["5. Sturmversicherung", line].join("\n")]),
       documentFingerprint: `semantic-governor-prose-${line.length}`,
       catalog: {
         schemaVersion: 1,
@@ -865,8 +863,7 @@ describe("controlledOccurrenceWorksheet", () => {
     });
 
     expect(
-      worksheet.requirements[0].components[0].occurrences[0]
-        .sectionScopeHint
+      worksheet.requirements[0].components[0].occurrences[0].sectionScopeHint
     ).toMatchObject({
       scopeKey: "GLASBRUCH_INSURANCE",
       source: "CURRENT_PAGE_HEADING",
@@ -907,8 +904,7 @@ describe("controlledOccurrenceWorksheet", () => {
     });
 
     expect(
-      worksheet.requirements[0].components[0].occurrences[0]
-        .sectionScopeHint
+      worksheet.requirements[0].components[0].occurrences[0].sectionScopeHint
     ).toMatchObject({
       scopeKey: "HAFTPFLICHT_INSURANCE",
       source: "CURRENT_PAGE_HEADING",
@@ -948,8 +944,7 @@ describe("controlledOccurrenceWorksheet", () => {
         ],
       },
     });
-    const [occurrence] =
-      worksheet.requirements[0].components[0].occurrences;
+    const [occurrence] = worksheet.requirements[0].components[0].occurrences;
 
     expect(occurrence.scopeLead.text).toContain(
       "AK20 Mehrkosten durch behördliche Auflagen10PA0130"

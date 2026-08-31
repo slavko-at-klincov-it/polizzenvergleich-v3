@@ -448,17 +448,26 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       const narrowScope =
         deterministicCategoryBinding.binding ===
         DETERMINISTIC_BINDING.NARROW_SCOPE;
-      roleResolution = {
-        owner: "SERVER",
-        roleMatch: mentionOnly ? ROLE_MATCH.MISMATCH : ROLE_MATCH.MATCH,
-        basis: deterministicCategoryBinding.basis,
-      };
-      scopeResolution = {
-        owner: "SERVER",
-        scopeMatch: narrowScope ? SCOPE_MATCH.NARROW : SCOPE_MATCH.GENERAL,
-        basis: deterministicCategoryBinding.basis,
-        matchedAlias: null,
-      };
+      if (
+        mentionOnly ||
+        roleResolution.owner === "MODEL" ||
+        roleResolution.roleMatch === ROLE_MATCH.UNRESOLVED
+      )
+        roleResolution = {
+          owner: "SERVER",
+          roleMatch: mentionOnly ? ROLE_MATCH.MISMATCH : ROLE_MATCH.MATCH,
+          basis: deterministicCategoryBinding.basis,
+        };
+      if (
+        scopeResolution.owner === "MODEL" ||
+        scopeResolution.scopeMatch === SCOPE_MATCH.UNRESOLVED
+      )
+        scopeResolution = {
+          owner: "SERVER",
+          scopeMatch: narrowScope ? SCOPE_MATCH.NARROW : SCOPE_MATCH.GENERAL,
+          basis: deterministicCategoryBinding.basis,
+          matchedAlias: null,
+        };
     }
     // Dinghy and the semantic span selector are discovery-only. Even when a
     // selected quote sits below a matching category heading, it must not gain

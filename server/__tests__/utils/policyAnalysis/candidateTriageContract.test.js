@@ -37,7 +37,7 @@ const WORKSHEET = {
                 documentEnd: 34,
               },
               scopeLead: {
-                text: "Versicherte Kosten:",
+                text: "Kostenübersicht:",
               },
             },
             {
@@ -315,7 +315,7 @@ describe("candidateTriageContract", () => {
           pageNumber: 5,
           focusText: "Abbruchkosten sind mitversichert.",
           pageScopeHints: [],
-          scopeLeadText: "Versicherte Kosten:",
+          scopeLeadText: "Kostenübersicht:",
         },
         {
           targetId: "candidate:liability",

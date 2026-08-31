@@ -172,11 +172,32 @@ function resolvedCategoryView(worksheet, requirement) {
   ).toUpperCase();
 }
 
+function occurrencePrecedingClauseText(occurrence) {
+  const text = String(occurrence?.context?.text || "");
+  const contextStart = Number(occurrence?.context?.documentStart);
+  let currentStart = Number(occurrence?.documentStart) - contextStart;
+  if (
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(currentStart) ||
+    currentStart <= 0
+  )
+    return "";
+  while (currentStart > 0 && !/[.!?;\n\r]/u.test(text[currentStart - 1]))
+    currentStart -= 1;
+  let end = currentStart;
+  while (end > 0 && /[\s.!?;\n\r]/u.test(text[end - 1])) end -= 1;
+  let start = end;
+  while (start > 0 && !/[.!?;\n\r]/u.test(text[start - 1])) start -= 1;
+  return text.slice(start, end);
+}
+
 function matchedNarrowAlias(requirement, occurrence) {
   const narrowAliases = requirement?.scopeRules?.narrowAliases || [];
   const scopeText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
     occurrence?.scopeLead?.text || ""
-  }\n${occurrence?.context?.text || ""}`;
+  }\n${occurrencePrecedingClauseText(occurrence)}\n${occurrenceClauseText(
+    occurrence
+  )}`;
   return (
     narrowAliases.find((alias) => containsPhrase(scopeText, alias)) || null
   );
