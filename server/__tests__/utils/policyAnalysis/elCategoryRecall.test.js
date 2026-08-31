@@ -156,7 +156,12 @@ describe("EL category recall catalog", () => {
     const pilotEl16 = elPilotCatalog.requirements.find(
       ({ id }) => id === "EL-16"
     );
-    expect(fullEl16).toEqual(pilotEl16);
+    const {
+      negativeSearchPolicy: _negativeSearchPolicy,
+      absenceMeaning: _absenceMeaning,
+      ...unchangedDefinition
+    } = fullEl16;
+    expect(unchangedDefinition).toEqual(pilotEl16);
 
     const aliases = elCatalog.requirements.flatMap((requirement) =>
       requirement.components.flatMap((candidate) => candidate.aliases)

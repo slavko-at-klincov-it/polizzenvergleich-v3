@@ -25,7 +25,14 @@ function document(text = "Ohne passenden Vertragsinhalt") {
     title: "Fixture",
     sourceDocumentId: "fixture",
     pageContent: text,
-    pages: [{ pageNumber: 1, text, start: 0, end: text.length }],
+    pageMap: [{ pageNumber: 1, start: 0, end: text.length }],
+    pdfExtraction: {
+      schemaVersion: 1,
+      totalPages: 1,
+      processedPages: 1,
+      pagesWithText: 1,
+      complete: true,
+    },
   };
 }
 
