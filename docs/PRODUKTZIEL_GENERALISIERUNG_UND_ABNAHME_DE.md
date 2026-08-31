@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 30. August 2026
+Stand: 31. August 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -220,12 +220,17 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
   ableiten; fehlender Beleg bleibt `UNKLAR`, und es gibt keinen
   Gesamtsieger;
-- der gespeicherte LF-gegen-neun-WEVIG-Lauf terminiert unter diesem Vertrag
-  320/320 Zeilen mit 1 `VORTEIL_B`, 7 `GLEICHWERTIG`, 9
-  `NICHT_VERGLEICHBAR` und 303 `UNKLAR`;
+- der frische LF-gegen-neun-WEVIG-Lauf auf dem Mac Studio verarbeitet 10/10
+  Dokumente und 80/80 Dokument-Kategorie-Schritte zu 320/320 Zeilen; der
+  bedingungssichere RC2-Replay liefert 0 `VORTEIL_A`, 0 `VORTEIL_B`, 4
+  `GLEICHWERTIG`, 11 `NICHT_VERGLEICHBAR` und 305 `UNKLAR`;
+- Bedingungen und Rückausnahmen im lokalen, an den Quellspan gebundenen
+  Klauselkontext sperren Vorteil und Gleichwertigkeit fail-closed; auf den
+  beiden gespeicherten Vollartefakten korrigiert dies `LW-22`, `ST-16` und
+  `HP-26`, ohne die reine Gefahren-Definition `FE-A04` zu sperren;
 - 94 Jest-Suites mit 1.098 Tests unter der gebündelten Node-22-Runtime
   bestanden für V3.3.1; der additive Punktentscheidungsstand besteht auf dem
-  Mac Studio 90 Suites mit 1.039 Tests unter Node 18 sowie den
+  Mac Studio 90 Suites mit 1.043 Tests unter Node 18 sowie den
   Frontend-Produktionsbuild.
 
 Diese Aussagen gelten für die dokumentierten Fixtures, Artefakte und Gates.
@@ -253,11 +258,12 @@ daraus nicht.
   Versicherer;
 - ein einmaliger paketweiter Vorbereitungslauf mit Wiederverwendung der Fakten
   für alle Kategorien;
-- ein kompletter Lauf auf Zielhardware innerhalb des Laufzeitbudgets;
+- die Reduktion des vollständigen Zehn-Dokumente-Laufs von derzeit ungefähr
+  vier Stunden auf das angestrebte Laufzeitbudget von ungefähr einer Stunde;
 - ein fachlich freigegebener Veröffentlichungsweg; persistenter Ein-Klick-Job,
   content-addressed Resume, Progress, Cancel und privater Ergebnisdownload
-  sind im A/B-MVP technisch umgesetzt, benötigen aber noch die frische
-  Release-Candidate-End-to-End-Abnahme.
+  sind im A/B-MVP technisch umgesetzt und im frischen Zehn-Dokumente-Lauf
+  technisch abgenommen; die fachliche Oracle-/Holdout-Abnahme bleibt offen.
 
 ## 8. Was der LF-Gesamtlauf bewiesen hat
 
