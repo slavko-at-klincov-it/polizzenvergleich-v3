@@ -1,14 +1,28 @@
 # Lokaler Polizzenvergleich – Einrichtung und Betrieb
 
 > [!WARNING]
-> `policy-v0.3.22` ist der aktuelle technische Referenzstand, aber die
-> vollständige Faktenanalyse ist auf dem 32-GB-Kunden-Mac noch nicht
-> produktionsreif. Ein realer Lauf hätte wegen 577 verbleibender ambiger
-> Klauselblöcke deutlich über eine Stunde benötigt. Keine weitere
-> Tiefenanalyse am Kundenrechner starten, bis der occurrence-zentrierte
-> Targeted-Pfad gemäß
-> [Projektgedächtnis](./POLIZZENVERGLEICH_PROJEKTGEDAECHTNIS.md) veröffentlicht
-> und abgenommen ist.
+> Der technisch installierte Kundenstand ist `v3.5.1` / `ca2add77`. Installation,
+> Doctor und Datenintegrität sind bestätigt; die fachliche Kundenfreigabe bleibt
+> wegen dokumentierter Recall- und Klauselscopefehler `NO GO`. Ergebnisse müssen
+> bis zu deren Behebung fachlich geprüft werden. Weder beliebige Polizzen noch
+> das 99-Prozent-Ziel sind belegt.
+
+## Aktuell installierter Kundenstand
+
+Am 31. August 2026 wurde der annotierte Tag `v3.5.1` auf dem Mac Studio unter
+`/Users/michaelmischkot/Code/polizzenvergleich-v3` installiert. Der aktive
+Modellvertrag lautet:
+
+- LM-Studio-ID `qwen/qwen3.6-35b-a3b`;
+- Qwen 3.6 MLX 4-bit als einzig geladenes Modell;
+- exakt 42.496 Token Kontext und Parallelität 1;
+- kein automatisch geladenes Qwen-3.8- oder Dinghy-Embeddingmodell;
+- automatische Ablage fertiger Vollvergleichsdateien unter
+  `/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche`.
+
+Die externe Rückfallsicherung vor dem Update liegt unter
+`/Users/michaelmischkot/Polizzenvergleich-Backups/pre-v3.5.1-20260831-093731`.
+Der vorherige Code-Rückfallpunkt ist `v3.4.0` / `977ed40f`.
 
 Diese Fork-Variante ist auf einen einfachen Ablauf für Versicherungsmakler
 ausgelegt: normal chatten oder bis zu zwei unterstützte Dokumente in den Chat
@@ -27,25 +41,24 @@ Voraussetzung ist eine einmal gestartete LM-Studio-Installation mit aktivierter
 lädt und installiert diese einzelne Terminalzeile das Produkt:
 
 ```bash
-gh repo clone slavko-at-klincov-it/anythingllm-polizzenvergleich "$HOME/Polizzenvergleich" -- --branch policy-v0.3.22 && "$HOME/Polizzenvergleich/install.command"
+gh repo clone slavko-at-klincov-it/polizzenvergleich-v3 "$HOME/Code/polizzenvergleich-v3" -- --branch v3.5.1 && "$HOME/Code/polizzenvergleich-v3/install.command"
 ```
 
 Der Installer:
 
 - prüft macOS, Apple Silicon, freien Speicher und LM Studio,
 - installiert eine eigene, geprüfte Node-Laufzeit ohne Homebrew oder `sudo`,
-- lädt standardmäßig Qwen 3.8 27B und Dinghy Law bei Bedarf; ein bereits in
-  AnythingLLM konfiguriertes lokales Chatmodell wird stattdessen übernommen,
+- lädt und prüft Qwen 3.6 MLX mit 42.496 Token Kontext und Parallelität 1,
 - erzeugt lokale Geheimnisse und schützt Konfiguration und Kundendaten,
 - baut Frontend, Server und Collector und führt Produktionsmigrationen aus,
 - richtet den lokalen Workspace `Polizzenvergleich` ohne Login ein,
 - installiert benutzerspezifische macOS-Autostartdienste,
 - führt einen Doctor-Test aus und öffnet erst danach die Oberfläche.
 
-Falls beide Modelle bereits in LM Studio vorhanden sind:
+Falls das Modell bereits in LM Studio vorhanden ist:
 
 ```bash
-"$HOME/Polizzenvergleich/install.command" --skip-model-download
+"$HOME/Code/polizzenvergleich-v3/install.command" --skip-model-download
 ```
 
 Beim ersten Lauf werden andere geladene LM-Studio-Modelle standardmäßig
@@ -85,26 +98,22 @@ Entwicklerreferenz erhalten.
 
 ## Festgelegtes Start-Setup für den 32-GB-Mac
 
-- Empfohlenes Chatmodell: Qwen 3.8 27B, MLX 4-bit, LM-Studio-Key
-  `qwen/qwen3.8-27b`, 32.768 Runtime-Tokens, Parallelität 1 und Reasoning
-  standardmäßig `off`. Das Chatmodell ist nicht
-  fest verdrahtet und kann in AnythingLLM auf ein anderes lokal installiertes
-  LM-Studio-Modell geändert werden.
-- Embeddingmodell: Dinghy-Law-4B-v1 GGUF Q6_K
+- Produktives Chatmodell: Qwen 3.6 35B A3B, MLX 4-bit, LM-Studio-Key
+  `qwen/qwen3.6-35b-a3b`, exakt 42.496 Runtime-Tokens und Parallelität 1.
+- Kein automatisch geladenes separates Embeddingmodell; der produktive
+  Vergleichspfad setzt Qwen 3.8 und Dinghy nicht voraus.
 - Modellserver: LM Studio
 - Vektordatenbank: LanceDB; andere Vektordatenbanken werden für den sicheren
   Vergleich absichtlich abgelehnt
-- Kontextfenster: zunächst 32.768 Tokens
+- Kontextfenster: exakt 42.496 Tokens; ein anderer Runtime-Wert blockiert den
+  Vergleich vor der PDF-Verarbeitung
 - OCR: Deutsch und Englisch, maximal zwei Worker
 - Suche: exakte Volltextsuche/BM25 und semantische Suche, getrennt für Dokument
   A und Dokument B
 
-Für das empfohlene Modell bleibt AnythingLLM auf 32.768 Tokens begrenzt. Aktuelle LM-Studio-MLX-Versionen
-können den effektiven Wert beim Laden durch Auto-Fit nach oben anpassen; ein
-größerer Wert in `lms ps` ist zulässig und wird nicht als AnythingLLM-Budget
-übernommen. Bei einem selbst gewählten Chatmodell muss das konfigurierte
-AnythingLLM-Fenster mindestens 4.096 Tokens betragen und darf den geladenen
-Runtime-Wert nicht überschreiten. Parallelität bleibt aus Stabilitätsgründen 1.
+Für den produktiven Vollvergleich sind Modell-ID, 42.496 Runtime-Tokens und
+Parallelität 1 Teil des fail-closed Laufzeitvertrags. Eine abweichende
+LM-Studio-Konfiguration ist für diesen Pfad nicht freigegeben.
 
 TurboQuant ist keine Voraussetzung. Es wird in diesem Stand weder benötigt
 noch von LM Studio als einfache produktive Option vorausgesetzt.

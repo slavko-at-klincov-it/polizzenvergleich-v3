@@ -2954,3 +2954,50 @@ UX korrigiert und erneut frisch auditiert werden.
 
 Vollständiger Laufbericht:
 `../polizzenvergleich-v3/docs/VOLLLAUF_AUDIT_QWEN36_2026-08-31_DE.md`.
+
+## 50. Technisches Deployment V3.5.1 auf dem Mac Studio
+
+**Deployment:** 31. August 2026
+
+**Tag:** `v3.5.1`
+
+**Installierter Commit:** `ca2add77ddee4b21099f24983774dc8b35b046d7`
+
+**Vorheriger Stand:** `v3.4.0` / `977ed40f735762132aec5aa5cfd91a46c2c2efcf`
+
+Das Update wurde über den offiziellen taggebundenen Updater in
+`/Users/michaelmischkot/Code/polizzenvergleich-v3` ausgeführt. Unmittelbar
+zuvor wurden Storage, getrennte Environment-Dateien, LaunchAgents und
+Vergleichsexporte extern unter
+`/Users/michaelmischkot/Polizzenvergleich-Backups/pre-v3.5.1-20260831-093731`
+gesichert. Es gab keine laufende, wartende oder zum Abbruch vorgemerkte
+Vergleichssession.
+
+| Prüfung | Ergebnis |
+| --- | ---: |
+| exakter Releasekandidat | macOS-Installervertrag PASS |
+| fokussierte Vergleichsverträge | 7 Suites / 65 Tests PASS |
+| Bash-Syntax und Prettier | PASS |
+| isolierter Frontend-Produktionsbuild | PASS, 6.170 Module |
+| Update-Produktionsbuild | PASS, 6.181 Module |
+| Prisma | 41 Migrationen, keine offen; Seed ausgeführt |
+| integrierter und separater Doctor | PASS |
+| SQLite `quick_check` aktuell / externe Sicherung | `ok` / `ok` |
+| Bestand vor/nach Update | 8 Workspaces / 3 Dokumente / 2 Sessions / 10 Vergleichsdokumente, identisch |
+| Dienste | Server und Collector aktiv, nur Loopback |
+| Modell | ausschließlich `qwen/qwen3.6-35b-a3b`, 42.496 Token, Parallelität 1 |
+| vorhandene Exporte und private Vergleichsartefakte | unverändert |
+
+Der installierte Checkout ist sauber und exakt auf dem annotierten Tag. Die
+Environment-Dateien haben Modus 600; Storage und Vergleichsexportordner Modus
+700. Neue fertige Vollvergleichsdateien werden unter
+`/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche` archiviert.
+
+**Beweist:** Das versionierte Upgrade, die technische Konfiguration, der
+Bestandserhalt, die Datenbankintegrität, die lokalen Dienste und der exakte
+Qwen-3.6-Laufzeitvertrag funktionieren auf der Kundenhardware.
+
+**Beweist nicht:** fachliche Richtigkeit der 224 Ergebniszeilen, vollständigen
+Alias-/Konzept-Recall, korrekten Klauselscope in allen Fällen, unbekannte
+Versicherer oder das 99-Prozent-Ziel. Das erfolgreiche technische Deployment
+ändert das fachliche `NO GO` aus Abschnitt 49 nicht.
