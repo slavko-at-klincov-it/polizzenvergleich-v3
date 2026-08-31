@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.4",
+  "catalogId": "vs-occurrence-full-draft-v0.5",
   "categoryView": "VS",
   "requirements": [
     {
@@ -998,6 +998,17 @@
             "Umzugs- und Zwischenlagerungskosten",
             "Übersiedlungs- und Zwischenlagerungskosten",
             "Umzugs- und Lagerkosten"
+          ],
+          "conceptSearches": [
+            {
+              "id": "insured-temporary-storage-costs",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["kosten"] },
+                { "prefixes": ["zwischenlager"] },
+                { "prefixes": ["versichert", "uebernimmt", "ersetzt"] }
+              ]
+            }
           ]
         },
         {
@@ -1128,6 +1139,27 @@
             "Höchstentschädigung pro Schadenereignis",
             "maximale Entschädigung je Schadenereignis",
             "Höchstentschädigung im Schadensfall"
+          ],
+          "conceptSearches": [
+            {
+              "id": "event-indemnity-cap",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["schadenereignis", "schadenfall", "ereignis"] },
+                { "prefixes": ["versicherungssumme"] },
+                { "prefixes": ["entschaedigung"] },
+                { "prefixes": ["begrenz", "maximiert"] }
+              ]
+            },
+            {
+              "id": "sum-insured-as-indemnity-boundary",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["versicherungssumme"] },
+                { "prefixes": ["grenze", "begrenz", "limit", "maximiert"] },
+                { "prefixes": ["entschaedigung", "ersatzleistung"] }
+              ]
+            }
           ]
         }
       ],

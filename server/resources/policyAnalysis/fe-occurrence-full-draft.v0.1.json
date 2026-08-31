@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.2",
+  "catalogId": "fe-occurrence-full-draft-v0.3",
   "categoryView": "FE",
   "requirements": [
     {
@@ -193,6 +193,17 @@
             "Anprall unbekannter Fahrzeuge",
             "Anprall unbekannter Landfahrzeuge",
             "Kollision mit unbekannten Landfahrzeugen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "damage-by-unknown-vehicle",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["schaden", "beschaedig"] },
+                { "prefixes": ["unbekannt", "fremd"] },
+                { "prefixes": ["fahrzeug", "landfahrzeug"] }
+              ]
+            }
           ]
         }
       ],
@@ -281,6 +292,18 @@
             "Absturz bemannter Flugkörper",
             "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
             "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "aircraft-crash-parts-and-cargo",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["absturz", "anprall"] },
+                { "prefixes": ["luftfahrzeug", "raumfahrzeug", "flugzeug"] },
+                { "prefixes": ["teil"] },
+                { "prefixes": ["ladung"] }
+              ]
+            }
           ]
         },
         {
@@ -293,6 +316,18 @@
             "Teile bemannter Flugkörper",
             "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
             "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "aircraft-crash-parts-and-cargo",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["absturz", "anprall"] },
+                { "prefixes": ["luftfahrzeug", "raumfahrzeug", "flugzeug"] },
+                { "prefixes": ["teil"] },
+                { "prefixes": ["ladung"] }
+              ]
+            }
           ]
         },
         {
@@ -304,6 +339,18 @@
             "Ladung eines Luftfahrzeuges",
             "Absturz und Anprall von Luft oder Raumfahrzeugen deren Teile bzw Ladung",
             "Absturz und Anprall von Luft- und Raumfahrzeugen deren Teilen und Ladungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "aircraft-crash-parts-and-cargo",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["absturz", "anprall"] },
+                { "prefixes": ["luftfahrzeug", "raumfahrzeug", "flugzeug"] },
+                { "prefixes": ["teil"] },
+                { "prefixes": ["ladung"] }
+              ]
+            }
           ]
         }
       ],
@@ -664,6 +711,16 @@
             "Photovoltaikanlage als vom Brand betroffene Sache",
             "Photovoltaikanlage in der Feuerdeckung",
             "Photovoltaikanlage in der Feuerversicherung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "solar-and-photovoltaic-installations",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["solar"] },
+                { "prefixes": ["fotovoltaikanlage", "photovoltaikanlage"] }
+              ]
+            }
           ]
         }
       ],
@@ -1013,19 +1070,52 @@
           "id": "extinguishing_water_damage",
           "label": "Löschschäden durch Wasser",
           "factRole": "DAMAGE",
-          "aliases": ["Löschwasserschäden", "Schäden durch Löschwasser"]
+          "aliases": ["Löschwasserschäden", "Schäden durch Löschwasser"],
+          "conceptSearches": [
+            {
+              "id": "water-specific-extinguishing-damage",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["loesch"] },
+                { "prefixes": ["wasser", "loeschwasser"] },
+                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+              ]
+            }
+          ]
         },
         {
           "id": "extinguishing_foam_damage",
           "label": "Löschschäden durch Schaum",
           "factRole": "DAMAGE",
-          "aliases": ["Schäden durch Löschschaum", "Löschschaumschäden"]
+          "aliases": ["Schäden durch Löschschaum", "Löschschaumschäden"],
+          "conceptSearches": [
+            {
+              "id": "foam-specific-extinguishing-damage",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["loesch"] },
+                { "prefixes": ["schaum", "loeschschaum"] },
+                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+              ]
+            }
+          ]
         },
         {
           "id": "extinguishing_powder_damage",
           "label": "Löschschäden durch Löschpulver",
           "factRole": "DAMAGE",
-          "aliases": ["Schäden durch Löschpulver", "Löschpulverschäden"]
+          "aliases": ["Schäden durch Löschpulver", "Löschpulverschäden"],
+          "conceptSearches": [
+            {
+              "id": "powder-specific-extinguishing-damage",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["loesch"] },
+                { "prefixes": ["pulver", "loeschpulver"] },
+                { "prefixes": ["schaden", "beschaedig", "zerstoer"] }
+              ]
+            }
+          ]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",

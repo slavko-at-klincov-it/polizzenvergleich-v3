@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.2",
+  "catalogId": "el-occurrence-full-draft-v0.3",
   "categoryView": "EL",
   "requirements": [
     {
@@ -289,6 +289,26 @@
             "Gefahrenzone Hochwasser",
             "HORA-Zone",
             "HORA Zone"
+          ],
+          "conceptSearches": [
+            {
+              "id": "hq-flood-zone",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["hq30", "hq100"] },
+                { "prefixes": ["zone"] },
+                { "prefixes": ["hochwasser", "ueberschwemm"] }
+              ]
+            },
+            {
+              "id": "flood-risk-zone",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["hochwasser", "ueberschwemm"] },
+                { "prefixes": ["risiko", "gefahr"] },
+                { "prefixes": ["zone"] }
+              ]
+            }
           ]
         }
       ],

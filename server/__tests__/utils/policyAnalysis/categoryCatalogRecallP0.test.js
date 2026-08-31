@@ -140,6 +140,75 @@ describe("P0 category catalog candidate recall", () => {
     expectSharedGroup(result, "LW-26", ["pipe_blockage", "cleaning_costs"]);
   });
 
+  test("finds sprinkler activation and sewer-network backwater in Leitungswasser scope", () => {
+    const result = worksheet(
+      lwCatalog,
+      [
+        "LEITUNGSWASSERVERSICHERUNG",
+        "Nicht versichert sind Schäden im Falle einer bestimmungsgemäßen Auslösung der Sprinkleranlage.",
+        "LW06 Rückstau aus dem Kanalnetz nach einem Schadenereignis Überschwemmung oder Hochwasser.",
+      ].join("\n")
+    );
+
+    expect(
+      component(
+        result,
+        "LW-13",
+        "sprinkler_or_extinguishing_discharge"
+      ).occurrences
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias:
+            "CONCEPT_SEARCH:sprinkler-or-extinguishing-activation",
+          sectionScopeHint: expect.objectContaining({
+            scopeKey: "LEITUNGSWASSER_INSURANCE",
+          }),
+        }),
+      ])
+    );
+    expect(
+      component(result, "LW-18", "sewer_backwater_assignment").occurrences
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias: "CONCEPT_SEARCH:backwater-from-sewer-network",
+          sectionScopeHint: expect.objectContaining({
+            scopeKey: "LEITUNGSWASSER_INSURANCE",
+          }),
+        }),
+      ])
+    );
+  });
+
+  test("does not join unrelated sprinkler and backwater atoms across scope gaps", () => {
+    const result = worksheet(
+      lwCatalog,
+      [
+        "LEITUNGSWASSERVERSICHERUNG",
+        "Die Sprinkleranlage wird jährlich gewartet.",
+        "Die bestimmungsgemäße Auslösung der Alarmanlage ist zu protokollieren.",
+        "",
+        "Ein Rückstau im Straßenverkehr ist nicht Gegenstand des Vertrags.",
+        "",
+        "Das Kanalnetz wird turnusmäßig inspiziert.",
+      ].join("\n")
+    );
+
+    expect(
+      component(result, "LW-13", "sprinkler_or_extinguishing_discharge")
+    ).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(
+      component(result, "LW-18", "sewer_backwater_assignment")
+    ).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
   test("maps a roof avalanche clause to both avalanche and snow-slide roles", () => {
     const result = worksheet(
       stCatalog,

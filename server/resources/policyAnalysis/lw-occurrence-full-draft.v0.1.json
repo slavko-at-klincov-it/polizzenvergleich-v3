@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.2",
+  "catalogId": "lw-occurrence-full-draft-v0.3",
   "categoryView": "LW",
   "requirements": [
     {
@@ -546,6 +546,22 @@
                   "prefixes": ["sprinkler", "loeschanlage"]
                 }
               ]
+            },
+            {
+              "id": "sprinkler-or-extinguishing-activation",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["ausloes", "betaetig"] },
+                { "prefixes": ["sprinkler", "loeschanlage"] }
+              ]
+            },
+            {
+              "id": "damage-at-or-by-extinguishing-installation",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["schaden", "beschaedig"] },
+                { "prefixes": ["sprinkler", "loeschanlage"] }
+              ]
             }
           ]
         }
@@ -695,6 +711,24 @@
             "Rückstau aus der Kanalisation in der Elementarversicherung",
             "dadurch verursachten Rückstau",
             "in diesem Zusammenhang auftretenden Rückstau"
+          ],
+          "conceptSearches": [
+            {
+              "id": "backwater-from-sewer-network",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["rueckstau"] },
+                { "prefixes": ["kanal", "kanalnetz", "abwasser"] }
+              ]
+            },
+            {
+              "id": "backwater-from-natural-hazard-event",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["rueckstau"] },
+                { "prefixes": ["ueberschwemm", "hochwasser", "niederschlag", "schmelzwasser"] }
+              ]
+            }
           ]
         }
       ],

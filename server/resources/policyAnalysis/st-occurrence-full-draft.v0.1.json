@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "st-occurrence-full-draft-v0.2",
+  "catalogId": "st-occurrence-full-draft-v0.3",
   "categoryView": "ST",
   "requirements": [
     {
@@ -17,6 +17,18 @@
             "Windgeschwindigkeit von mindestens",
             "Windgeschwindigkeit von mehr als",
             "Sturm ist eine wetterbedingte Luftbewegung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "storm-definition-by-peak-wind-speed",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["sturm"] },
+                { "prefixes": ["wind"] },
+                { "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"] },
+                { "prefixes": ["gilt", "bezeichnet", "definition"] }
+              ]
+            }
           ]
         }
       ],
@@ -53,6 +65,18 @@
             "Nachweis der Windstärke an der maßgeblichen Messstelle",
             "Nachweis der Windgeschwindigkeit durch eine Messstation",
             "Windstärke durch eine Wetterstation nachzuweisen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "authoritative-peak-wind-speed-source",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["feststellung", "ermittlung"] },
+                { "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"] },
+                { "prefixes": ["auskunft"] },
+                { "prefixes": ["zentralanstalt", "meteorologie", "messstelle", "wetterdienst"] }
+              ]
+            }
           ]
         }
       ],
@@ -216,6 +240,18 @@
             "Dachlawine auf eigene Anlagen",
             "Dachlawinen auf eigenen Anlagen",
             "Schäden an eigenen Anlagen durch Dachlawinen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "snow-or-ice-slide-on-insured-property",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["schnee", "dachlawine", "eiszapfen"] },
+                { "prefixes": ["herabrutsch", "herabfall", "dachlawine"] },
+                { "prefixes": ["versichert", "eigen"] },
+                { "prefixes": ["schaden", "beschaedig"] }
+              ]
+            }
           ]
         }
       ],
@@ -594,7 +630,28 @@
           "id": "foreign_tree_or_branch_impact",
           "label": "Anprall fremder Bäume oder Äste",
           "factRole": "PERIL",
-          "aliases": ["Anprall fremder Bäume", "Anprall fremder Äste"]
+          "aliases": ["Anprall fremder Bäume", "Anprall fremder Äste"],
+          "conceptSearches": [
+            {
+              "id": "foreign-tree-or-branch-impact",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["baum", "baeum", "aeste"] },
+                { "prefixes": ["anprall", "geworfen", "stuerz", "fallen"] },
+                { "prefixes": ["fremd", "nachbar"] }
+              ]
+            },
+            {
+              "id": "storm-thrown-object-impact",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["gegenstand", "objekt"] },
+                { "prefixes": ["geworfen", "geschleudert"] },
+                { "prefixes": ["versichert"] },
+                { "prefixes": ["gefahr", "sturm"] }
+              ]
+            }
+          ]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -634,6 +691,18 @@
             "Beseitigung von Bäumen",
             "Kosten für das Sichern, Entfernen bzw. Entsorgen",
             "Entfernen bzw. Entsorgen von Bäumen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "storm-related-tree-securing-or-disposal-costs",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["kosten"] },
+                { "prefixes": ["sicher", "entfern", "entsorg"] },
+                { "prefixes": ["baum", "baeum"] },
+                { "prefixes": ["sturm"] }
+              ]
+            }
           ]
         },
         {
@@ -644,6 +713,18 @@
             "Astbeseitigungskosten",
             "Kosten der Astbeseitigung",
             "Beseitigung von Ästen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "storm-related-branch-securing-or-disposal-costs",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["kosten"] },
+                { "prefixes": ["sicher", "entfern", "entsorg"] },
+                { "prefixes": ["aeste", "astb"] },
+                { "prefixes": ["sturm"] }
+              ]
+            }
           ]
         }
       ],

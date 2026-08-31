@@ -83,6 +83,55 @@ describe("EL category recall catalog", () => {
     expectFound(result, "EL-11", ["elemental_deductible"]);
   });
 
+  test("recalls HQ and flood-risk zone variants in their source scope", () => {
+    const result = worksheet(
+      [
+        "5. Sturmversicherung",
+        "Das Gebäude liegt innerhalb der HQ30-Zone; für Hochwasser gilt ein Zuschlag.",
+        "Hochwasser-Risiko-Zone: unbekannt.",
+      ].join("\n")
+    );
+    const floodZone = component(
+      result,
+      "EL-12",
+      "flood_zone_exclusion_or_surcharge"
+    );
+
+    expect(floodZone.occurrences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias: "CONCEPT_SEARCH:hq-flood-zone",
+          sectionScopeHint: expect.objectContaining({
+            scopeKey: "STURM_INSURANCE",
+          }),
+        }),
+        expect.objectContaining({
+          matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+          sectionScopeHint: expect.objectContaining({
+            scopeKey: "STURM_INSURANCE",
+          }),
+        }),
+      ])
+    );
+  });
+
+  test("does not infer a flood-zone condition from unrelated HQ or risk wording", () => {
+    const result = worksheet(
+      [
+        "5. Sturmversicherung",
+        "HQ30 ist ein statistischer Kennwert für einen Pegel.",
+        "Die Risikozone Sturm wird separat dokumentiert.",
+      ].join("\n")
+    );
+
+    expect(
+      component(result, "EL-12", "flood_zone_exclusion_or_surcharge")
+    ).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
   test("finds explicit glass objects, limits and costs without inventing common-area glass", () => {
     const result = worksheet(
       [

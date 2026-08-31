@@ -35,6 +35,14 @@ function component(worksheet, requirementId, componentId) {
     .components.find(({ id }) => id === componentId);
 }
 
+function worksheetFromText(text) {
+  return buildControlledOccurrenceWorksheet({
+    document: documentFromPages([text]),
+    documentFingerprint: "synthetic-fe-concept-recall-fingerprint",
+    catalog,
+  });
+}
+
 describe("FE category recall", () => {
   const worksheet = buildControlledOccurrenceWorksheet({
     document: documentFromPages([
@@ -92,5 +100,93 @@ describe("FE category recall", () => {
         }),
       ])
     );
+  });
+
+  test("recalls the confirmed FE concept variants inside the fire scope", () => {
+    const result = worksheetFromText(
+      [
+        "FEUERVERSICHERUNG",
+        "Versichert sind Schäden durch die Einwirkung unbekannter motorisierter Fahrzeuge.",
+        "Flugzeugabsturz ist der Absturz oder Anprall eines Raumfahrzeuges einschließlich seiner Teile und der Ladung.",
+        "Versicherte Sachen sind Solaranlagen sowie Fotovoltaikanlagen am Gebäude.",
+        "Beim Löschen mit Wasser beschädigte versicherte Sachen werden ersetzt.",
+        "Beim Löschen mit Schaum beschädigte Gebäudeteile werden ersetzt.",
+        "Beim Löschen mit Pulver zerstörte versicherte Sachen werden ersetzt.",
+      ].join("\n")
+    );
+
+    const expectedConcepts = [
+      ["FE-A10", "foreign_vehicle_impact", "damage-by-unknown-vehicle"],
+      ["FE-A13", "aircraft_crash", "aircraft-crash-parts-and-cargo"],
+      ["FE-A13", "aircraft_parts", "aircraft-crash-parts-and-cargo"],
+      ["FE-A13", "aircraft_cargo", "aircraft-crash-parts-and-cargo"],
+      [
+        "FE-C02",
+        "photovoltaic_as_damaged_object",
+        "solar-and-photovoltaic-installations",
+      ],
+      [
+        "FE-D03",
+        "extinguishing_water_damage",
+        "water-specific-extinguishing-damage",
+      ],
+      [
+        "FE-D03",
+        "extinguishing_foam_damage",
+        "foam-specific-extinguishing-damage",
+      ],
+      [
+        "FE-D03",
+        "extinguishing_powder_damage",
+        "powder-specific-extinguishing-damage",
+      ],
+    ];
+
+    for (const [requirementId, componentId, conceptId] of expectedConcepts) {
+      const recalled = component(result, requirementId, componentId);
+      expect(recalled.occurrences).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matchedAlias: `CONCEPT_SEARCH:${conceptId}`,
+            sectionScopeHint: expect.objectContaining({
+              scopeKey: "FEUER_INSURANCE",
+            }),
+          }),
+        ])
+      );
+    }
+  });
+
+  test("keeps generic extinguishing wording and incomplete concept atoms open", () => {
+    const result = worksheetFromText(
+      [
+        "FEUERVERSICHERUNG",
+        "Ersetzt wird die Wertminderung versicherter Sachen, die durch Löschen, Niederreißen oder Ausräumen beschädigt werden.",
+        "Unbekannte Fahrzeuge müssen der Polizei angezeigt werden.",
+        "Die Photovoltaikbranche nutzt Solarenergie ohne Vertragsbezug.",
+      ].join("\n")
+    );
+
+    for (const componentId of [
+      "extinguishing_water_damage",
+      "extinguishing_foam_damage",
+      "extinguishing_powder_damage",
+    ])
+      expect(component(result, "FE-D03", componentId)).toMatchObject({
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+      });
+    expect(component(result, "FE-A10", "foreign_vehicle_impact")).toMatchObject(
+      {
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+      }
+    );
+    expect(
+      component(result, "FE-C02", "photovoltaic_as_damaged_object")
+    ).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
   });
 });

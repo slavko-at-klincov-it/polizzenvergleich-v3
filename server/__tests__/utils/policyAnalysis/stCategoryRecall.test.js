@@ -35,6 +35,14 @@ function component(worksheet, requirementId, componentId) {
     .components.find(({ id }) => id === componentId);
 }
 
+function worksheetFromText(text) {
+  return buildControlledOccurrenceWorksheet({
+    document: documentFromPages([text]),
+    documentFingerprint: "synthetic-st-concept-recall-fingerprint",
+    catalog,
+  });
+}
+
 describe("ST category recall", () => {
   const document = documentFromPages([
     [
@@ -213,5 +221,102 @@ describe("ST category recall", () => {
     });
     expect(maximum.occurrences[0].context.text).toContain("150 %");
     expect(maximum.occurrences[0].context.text).toContain("jeweilige Sparte");
+  });
+
+  test("recalls the confirmed storm concepts without merging distinct roles", () => {
+    const result = worksheetFromText(
+      [
+        "5. STURMVERSICHERUNG",
+        "Als Sturm gilt ein Wind mit einer Spitzengeschwindigkeit von über 60 km/h.",
+        "Für die Feststellung der Spitzengeschwindigkeit ist die Auskunft der Zentralanstalt für Meteorologie und Geodynamik maßgebend.",
+        "Versichert sind Schäden an den versicherten Gebäuden, die durch Herabrutschen von am Dach angesammelten Schnee- und Eismassen entstehen.",
+        "Versichert sind Schäden durch stürzende Bäume des Nachbargrundstücks.",
+        "Andere Gegenstände werden durch eine versicherte Sturmgefahr auf die versicherten Sachen geworfen.",
+        "Kosten nach einem versicherten Sturmschaden für das Sichern und Entsorgen von Bäumen sind bis EUR 3.000 mitversichert.",
+      ].join("\n")
+    );
+    const expectedConcepts = [
+      [
+        "ST-01",
+        "storm_wind_speed_definition",
+        "storm-definition-by-peak-wind-speed",
+      ],
+      [
+        "ST-02",
+        "measuring_station",
+        "authoritative-peak-wind-speed-source",
+      ],
+      [
+        "ST-08",
+        "roof_avalanche_on_own_installations",
+        "snow-or-ice-slide-on-insured-property",
+      ],
+      [
+        "ST-23",
+        "foreign_tree_or_branch_impact",
+        "foreign-tree-or-branch-impact",
+      ],
+      [
+        "ST-25",
+        "tree_removal_costs",
+        "storm-related-tree-securing-or-disposal-costs",
+      ],
+    ];
+
+    for (const [requirementId, componentId, conceptId] of expectedConcepts)
+      expect(component(result, requirementId, componentId).occurrences).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matchedAlias: `CONCEPT_SEARCH:${conceptId}`,
+            sectionScopeHint: expect.objectContaining({
+              scopeKey: "STURM_INSURANCE",
+            }),
+          }),
+        ])
+      );
+
+    expect(component(result, "ST-02", "wind_proof_duty")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(component(result, "ST-25", "branch_removal_costs")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(
+      component(result, "ST-23", "foreign_tree_or_branch_impact").occurrences
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias: "CONCEPT_SEARCH:storm-thrown-object-impact",
+        }),
+      ])
+    );
+  });
+
+  test("rejects nearby weather, generic impact and landscaping wording", () => {
+    const result = worksheetFromText(
+      [
+        "5. STURMVERSICHERUNG",
+        "Die Wetterstation meldet Wind mit einer Spitzengeschwindigkeit von 40 km/h.",
+        "Die Zentralanstalt erteilt Auskunft über die allgemeine Wetterlage.",
+        "Schnee- und Eismassen rutschen vom Nachbargebäude auf fremde Sachen.",
+        "Andere Gegenstände werden neben den versicherten Sachen gelagert.",
+        "Kosten für das Entsorgen von Bäumen im Rahmen der Gartenpflege trägt der Eigentümer.",
+      ].join("\n")
+    );
+
+    for (const [requirementId, componentId] of [
+      ["ST-01", "storm_wind_speed_definition"],
+      ["ST-02", "measuring_station"],
+      ["ST-08", "roof_avalanche_on_own_installations"],
+      ["ST-23", "foreign_tree_or_branch_impact"],
+      ["ST-25", "tree_removal_costs"],
+      ["ST-25", "branch_removal_costs"],
+    ])
+      expect(component(result, requirementId, componentId)).toMatchObject({
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+      });
   });
 });
