@@ -1,13 +1,14 @@
 const HEADING_NUMBER_PREFIX = String.raw`(?:\d{1,3}(?:\.\d{1,3})*\.?\s+)?`;
 const HEADING_SUBJECT = String.raw`(?:Kosten|Sch[aä]den|Gefahren)(?:\s+(?:und|oder)\s+(?:Kosten|Sch[aä]den|Gefahren))*`;
+const HEADING_SCOPE = String.raw`(?:\s+im\s+Rahmen\s+der\s+Versicherungssumme)?`;
 const HEADING_REFERENCE = String.raw`(?:\s+(?:gem(?:[aä]ß|[aä]ss|aess)|nach)\s+(?:Art(?:ikel)?\.?|\u00a7)\s*\d+(?:\.\d+)*(?:\s*(?:Abs\.?|Absatz)\s*\d+[a-z]?)?)?`;
 
 const SEMANTIC_POSITIVE_COVERAGE_HEADING = new RegExp(
-  String.raw`^[\t ]*${HEADING_NUMBER_PREFIX}Versicherte\s+${HEADING_SUBJECT}${HEADING_REFERENCE}[\t ]*:?[\t ]*$`,
+  String.raw`^[\t ]*${HEADING_NUMBER_PREFIX}Versicherte\s+${HEADING_SUBJECT}${HEADING_SCOPE}${HEADING_REFERENCE}[\t ]*:?[\t ]*$`,
   "gimu"
 );
 const SEMANTIC_NEGATIVE_COVERAGE_HEADING = new RegExp(
-  String.raw`^[\t ]*${HEADING_NUMBER_PREFIX}Nicht\s+versicherte\s+${HEADING_SUBJECT}${HEADING_REFERENCE}[\t ]*:?[\t ]*$`,
+  String.raw`^[\t ]*${HEADING_NUMBER_PREFIX}Nicht\s+versicherte\s+${HEADING_SUBJECT}${HEADING_SCOPE}${HEADING_REFERENCE}[\t ]*:?[\t ]*$`,
   "gimu"
 );
 

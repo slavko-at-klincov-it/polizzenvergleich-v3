@@ -601,6 +601,7 @@ function explicitSectionHeadings(pageText) {
   };
   const patterns = [
     /^\s*((?:Allgemeine\s+Bedingungen\s+für\s+die\s+)?Haftpflichtversicherung(?:\s+für\s+Wohngebäude)?)\s*$/gimu,
+    /^\s*(B\d{1,2}\s+(?:Feuer|Sturm|Leitungswasser|Elementar|Haftpflicht|Glas)versicherung\s*\((?:FE|ST|LW|EL|HP|GL)\))\s*$/gimu,
     /^\s*([\p{L}-]+(?:\s+[\p{L}-]+)*)VERSICHERUNG\s*$/gimu,
     /^\s*\d{1,3}\.\s+([\p{L}-]+(?:\s+[\p{L}-]+)*versicherung)\s*$/gimu,
     /^\s*((?:ALLGEMEINE\s+)?VERTRAGSBESTIMMUNGEN|WOHNUNGSEIGENTUM)\s*$/gmu,

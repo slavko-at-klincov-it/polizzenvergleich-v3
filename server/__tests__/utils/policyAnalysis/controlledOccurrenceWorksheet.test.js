@@ -265,6 +265,11 @@ describe("controlledOccurrenceWorksheet", () => {
       "NEGATIVE",
       "Versichert sind Schäden durch Naturgefahren.",
     ],
+    [
+      "Versicherte Kosten im Rahmen der Versicherungssumme",
+      "POSITIVE",
+      "Nicht versichert sind Kosten für die Behebung der Ursache.",
+    ],
   ])(
     "resets an earlier governor at the complete semantic heading %s",
     (heading, expectedPolarity, supersededGovernor) => {
@@ -318,6 +323,7 @@ describe("controlledOccurrenceWorksheet", () => {
 
   test.each([
     "Die versicherten Kosten umfassen Suchkosten bis EUR 2.000.",
+    "Die versicherten Kosten im Rahmen der Versicherungssumme umfassen Suchkosten.",
     "Versicherte Kosten: Suchkosten bis EUR 2.000.",
     "Der Abschnitt beschreibt nicht versicherte Schäden, Gefahren und Suchkosten.",
   ])("does not promote flowing text to a semantic governor: %s", (line) => {
@@ -359,6 +365,9 @@ describe("controlledOccurrenceWorksheet", () => {
     ["7. Wohnungseigentum", "WOHNUNGSEIGENTUM_INSURANCE"],
     ["7. Glasbruch", "GLASBRUCH_INSURANCE"],
     ["B. ALLGEMEINER TEIL", "GENERAL_CONTRACT_TERMS"],
+    ["B2 Feuerversicherung (FE)", "FEUER_INSURANCE"],
+    ["B3 Sturmversicherung (ST)", "STURM_INSURANCE"],
+    ["B4 Leitungswasserversicherung (LW)", "LEITUNGSWASSER_INSURANCE"],
   ])("recognizes the cross-cutting section %s", (heading, scopeKey) => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([

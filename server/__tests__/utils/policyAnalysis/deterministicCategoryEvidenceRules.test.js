@@ -76,6 +76,10 @@ describe("deterministicCategoryEvidenceRules", () => {
 
   test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
+    [
+      "Versicherte Kosten im Rahmen der Versicherungssumme",
+      "POSITIVE",
+    ],
     ["7.2 Versicherte Gefahren", "POSITIVE"],
     ["Nicht versicherte Schäden:", "NEGATIVE"],
     ["9. Nicht versicherte Kosten und Gefahren", "NEGATIVE"],
