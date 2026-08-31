@@ -49,6 +49,28 @@ function boundSectionGovernorPrecedesOccurrence(occurrence) {
   );
 }
 
+function explicitVs32TemporaryStorageScopeBinding(occurrence) {
+  const context = occurrenceContextText(occurrence);
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceEnd = Number(occurrence?.documentEnd);
+  const relativeEnd =
+    Number.isInteger(contextStart) && Number.isInteger(occurrenceEnd)
+      ? Math.max(0, Math.min(context.length, occurrenceEnd - contextStart))
+      : context.length;
+  const precedingScope = `${String(occurrence?.scopeLead?.text || "")}\n${context.slice(0, relativeEnd)}`;
+  if (
+    !/(?:Sonderm[üu]ll|Sonderabfall|gef[aä]hrlich(?:er|em|en)?\s+Abfall|radioaktiv\s+verunreinigt|kontaminiert|Entsorgungsma[ßs]nahmen|Ablagerungsst[aä]tte|Deponierung)/iu.test(
+      precedingScope
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
+    basis: "VS_32_WASTE_OR_CONTAMINATION_STORAGE_SCOPE",
+    authoritative: true,
+  };
+}
+
 const EXPLICIT_COMPONENT_RULES = Object.freeze({
   "VS-15:outbuilding_cover": {
     basis: "EXPLICIT_OUTBUILDING_COVER",
@@ -221,6 +243,10 @@ function deterministicVsCandidateBinding({
 }) {
   const text = evidenceText(occurrence);
   const key = `${requirementId}:${componentId}`;
+  if (key === "VS-32:temporary_storage_costs") {
+    const storageScope = explicitVs32TemporaryStorageScopeBinding(occurrence);
+    if (storageScope) return storageScope;
+  }
   if (
     ["VS-21:cleanup_costs", "VS-21:demolition_costs"].includes(key) &&
     occurrence?.sectionScopeHint?.scopeKey === "HAFTPFLICHT_INSURANCE"

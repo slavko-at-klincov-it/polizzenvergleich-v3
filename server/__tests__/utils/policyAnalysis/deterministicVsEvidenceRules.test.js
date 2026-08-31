@@ -9,6 +9,64 @@ function occurrence(text) {
 }
 
 describe("deterministicVsEvidenceRules", () => {
+  test("keeps waste-related temporary storage in its narrow causal scope", () => {
+    const scopedOccurrence = ({ scopeLead = "", contextText, exactText }) => {
+      const contextStart = 2_000;
+      const relativeStart = contextText.indexOf(exactText);
+      return {
+        exactText,
+        documentStart: contextStart + relativeStart,
+        documentEnd: contextStart + relativeStart + exactText.length,
+        context: {
+          text: contextText,
+          documentStart: contextStart,
+          documentEnd: contextStart + contextText.length,
+        },
+        scopeLead: { text: scopeLead },
+      };
+    };
+    const bindingFor = (source) =>
+      deterministicVsCandidateBinding({
+        requirementId: "VS-32",
+        componentId: "temporary_storage_costs",
+        occurrence: source,
+      });
+
+    expect(
+      bindingFor(
+        scopedOccurrence({
+          contextText:
+            "Kosten für Sondermüll und gefährlichen Abfall. Die Kosten einer Zwischenlagerung übernimmt der Versicherer.",
+          exactText: "Kosten einer Zwischenlagerung",
+        })
+      )
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
+      basis: "VS_32_WASTE_OR_CONTAMINATION_STORAGE_SCOPE",
+      authoritative: true,
+    });
+    expect(
+      bindingFor(
+        scopedOccurrence({
+          scopeLead:
+            "Kontaminierte Sachen werden zur Ablagerungsstätte transportiert. Versichert sind:",
+          contextText:
+            "- Die Kosten einer sechsmonatigen Zwischenlagerung sind versichert;",
+          exactText: "Kosten einer sechsmonatigen Zwischenlagerung",
+        })
+      )
+    ).toMatchObject({ binding: DETERMINISTIC_BINDING.NARROW_SCOPE });
+    expect(
+      bindingFor(
+        scopedOccurrence({
+          contextText:
+            "Die Kosten einer Zwischenlagerung sind versichert. Ein späterer Abschnitt regelt Sondermüll.",
+          exactText: "Kosten einer Zwischenlagerung",
+        })
+      )
+    ).toBeNull();
+  });
+
   test.each([
     [
       "VS-01",
