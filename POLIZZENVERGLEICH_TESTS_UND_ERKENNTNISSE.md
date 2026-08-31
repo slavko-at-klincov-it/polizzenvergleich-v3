@@ -2710,3 +2710,53 @@ Periodenunterschiede und gemischte Gewinner bleiben fail-closed.
 beliebigen Mehrdokumentpaketen, einen Gesamtvertragssieger, das Laufzeitbudget,
 einen frischen End-to-End-Lauf des neuen Builds, unbekannte
 Versicherer-Holdouts oder 99 Prozent.
+
+## 45. V3.4.0: frischer Zehn-Dokumente-Lauf und bedingungssichere Punktentscheidung
+
+**Beobachtungsfenster:** 30.–31. August 2026
+**Release:** `v3.4.0` / `977ed40f`
+
+Der frische RC1-Lauf verwendete eine LF-Hauptpolizze als Paket A und eine
+WEVIG-Hauptpolizze samt acht Zusatz-/Bedingungsdokumenten als Paket B. Auf dem
+Mac Studio mit `qwen/qwen3.8-27b` und `dinghy-embed` wurden 10/10 Dokumente,
+80/80 Dokument-Kategorie-Schritte und 320/320 Vergleichszeilen ohne
+Verarbeitungsfehler abgeschlossen. Die Laufzeit betrug ungefähr vier Stunden.
+
+Die erste Punktentscheidung aus einem älteren Replay hatte `LW-22` als
+`VORTEIL_B` bewertet; der frische Lauf machte beide Seiten `EXCLUDED` und
+damit `GLEICHWERTIG`. Die Originalklausel enthält jedoch direkt nach
+Holzfäule, Vermorschung und Schwamm eine Rückausnahme. Beide binären
+Interpretationen waren daher als sichere Punktentscheidung zu stark.
+
+Ein erster Guard über den gesamten Kandidatenkontext korrigierte `LW-22`,
+blockierte aber auch `FE-A04`, weil eine weit entfernte oder definitorische
+„wenn“-Formulierung enthalten war. Der finale Guard verwendet nur einen
+offsetgebundenen lokalen 240-Zeichen-Kontext und trennt starke
+Ausnahme-/Bedingungsmarker von einem deckungsbezogenen `wenn/falls`.
+
+| Prüfung auf Mac Studio | Ergebnis |
+| --- | ---: |
+| fokussierte Verträge | 2/2 Suites, 23/23 Tests |
+| vollständige Regression | 90/90 Suites, 1.043/1.043 Tests |
+| Prettier | PASS |
+| frischer Artefaktreplay | 320/320 Zeilen |
+| finaler Punktentscheid | 0 A / 0 B / 4 gleich / 11 nicht vergleichbar / 305 unklar |
+| gezielte Änderungen | `LW-22`, `ST-16`, `HP-26`: gleich/älterer Vorteil -> unklar |
+| negative Kontrolle | `FE-A04` bleibt gleichwertige Gefahren-Definition |
+| XLSX | 8 Blätter, jeweils 18 Spalten A–R |
+| Installation | `v3.4.0`, Doctor PASS |
+
+Die neue RC2-Ausgabe liegt neben der unveränderten RC1-Ausgabe im selben
+privaten Run-Verzeichnis; die persistente Session verweist auf `result-rc2`.
+Es war kein neuer Modelllauf nötig, weil ausschließlich die deterministische
+Vergleichsschicht aus den vollständig gespeicherten Artefakten neu erzeugt
+wurde.
+
+**Beweist:** Der technische Upload-bis-Export-Weg funktioniert für das
+dokumentierte Zehn-Dokumente-Paket. Bedingungen und Ausnahmen verhindern
+einen nicht belegbaren Vorteil oder Gleichstand, ohne eine reine Definition
+zu sperren.
+
+**Beweist nicht:** fachliche Richtigkeit aller 320 Zeilen, eine sichere
+Vorteilsmenge in anderen Verträgen, unbekannte Versicherer, Dokumentrang und
+Ersetzung, das Ein-Stunden-Laufzeitbudget oder 99 Prozent.

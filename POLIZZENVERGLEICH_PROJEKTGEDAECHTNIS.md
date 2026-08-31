@@ -1,7 +1,8 @@
 # Polizzenvergleich – Projektgedächtnis
 
-Stand: 26. August 2026
-Dokumentationsbasis: Entwicklungsstand nach `policy-v0.3.22` (`9c6e263c`)
+Stand: 31. August 2026
+Dokumentationsbasis: stabiler V3-Release `v3.4.0` (`977ed40f`); ältere
+Abschnitte bleiben historische Versuchsevidenz
 Gültigkeit: Dieses Dokument ist der Einstiegspunkt für Entwicklung, Diagnose
 und weitere Architekturentscheidungen dieser Fork.
 
@@ -82,17 +83,19 @@ pauschalen Gesamtsieger. Zulässige Zustände pro Vergleichspunkt sind mindesten
 `unklar/unresolved`. „Nur in A belegt“ bedeutet nicht automatisch „fehlt in
 B“.
 
-**Implementierungsstand 30. August 2026:** Ergebnisschema V2 setzt diese
+**Implementierungsstand 31. August 2026:** Ergebnisschema V2 setzt diese
 Arbeitsannahme als servereigene `pointDecision` um. Sie arbeitet auf
 atomaren Komponenten und typisierten Fakten, nicht auf den sichtbaren
 Tabellenstrings. Freigegeben sind derzeit nur `INCLUDED` gegenüber
 `EXCLUDED`, höheres gleichartig qualifiziertes Deckungslimit, niedrigerer
 gleichartig qualifizierter Selbstbehalt und atomare Gleichwertigkeit.
 Unvollständige, bedingte, rangunklare oder nicht scopegleiche Fakten bleiben
-`UNKLAR` beziehungsweise `NICHT_VERGLEICHBAR`. Der gespeicherte
-LF-gegen-neun-WEVIG-Replay ergab 1 Vorteil B, 7 Gleichwertigkeiten, 9 nicht
-vergleichbare und 303 unklare Zeilen. Das ist noch keine vollständige
-fachliche Abnahme.
+`UNKLAR` beziehungsweise `NICHT_VERGLEICHBAR`. Ein frischer Lauf mit einer
+LF-Hauptpolizze gegen ein WEVIG-Paket aus neun Dokumenten terminierte 10/10
+Dokumente, 80/80 Schritte und 320/320 Zeilen. Der bedingungssichere Replay
+ergab 0 Vorteile, 4 Gleichwertigkeiten, 11 nicht vergleichbare und 305 unklare
+Zeilen. Das ist eine technische End-to-End-Abnahme dieser Fixtures, noch keine
+vollständige fachliche oder allgemeine 99-Prozent-Abnahme.
 
 ### 2.2 Kunden- und Domänenevidenz: Gebäudeversicherung
 
@@ -306,6 +309,27 @@ nicht eine garantierte rechtliche Vollprüfung. Die fachliche Endkontrolle bleib
 beim Makler.
 
 ## 4. Aktueller Gesamtstatus
+
+### Kanonischer V3-MVP-Stand am 31. August 2026
+
+Der aktive Implementierungs- und Kundenstand ist ausschließlich
+`polizzenvergleich-v3`, Release `v3.4.0` / Commit `977ed40f`. Der
+Mac-Studio-Doctor ist grün. Die Bedienkette Paket A/B ablegen, persistent
+analysieren, 320 Punkte gegenüberstellen und als UI/Markdown/XLSX ausgeben ist
+für das dokumentierte Zehn-Dokumente-Paket vollständig durchlaufen.
+
+Die punktweise „Wer ist warum besser?“-Schicht arbeitet ausschließlich auf
+atomaren, servergebundenen Fakten. Bedingungen und Ausnahmen im lokalen
+Klauselkontext sperren Vorteil und Gleichwertigkeit. Im aktuellen Fixture
+bleibt deshalb kein sicherer Vorteil übrig; das ist bewusstes Fail-Closed-
+Verhalten und kein Anlass für eine freie LLM-Wertung.
+
+Offen bleiben vor allem das Expertenoracle für alle Felder, zuvor ungesehene
+Mehrversicherer-Holdouts, Dokumentrang/Ersetzung und die Laufzeit: der frische
+Zehn-Dokumente-Lauf dauerte ungefähr vier Stunden statt des angestrebten
+Budgets von ungefähr einer Stunde. Alle folgenden historischen Abschnitte
+beschreiben frühere Baselines und dürfen diesen aktuellen V3-Stand nicht
+überschreiben.
 
 ### Was technisch funktioniert
 

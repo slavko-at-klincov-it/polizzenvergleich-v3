@@ -644,8 +644,8 @@ Kanonischer Messbeleg:
 
 ## ADR-021: Vorteile sind punktweise, atomar und regelgebunden
 
-**Status:** AKZEPTIERT und in V3 Ergebnisschema V2 umgesetzt am 30. August
-2026
+**Status:** AKZEPTIERT, in V3 Ergebnisschema V2 umgesetzt und mit `v3.4.0`
+am 31. August 2026 stabil veröffentlicht
 
 Der technische Paketrollup darf nicht aus gerenderten Tabellenstrings oder
 den Zuständen `NUR_A_BELEGT`, `NUR_B_BELEGT` und
@@ -674,11 +674,20 @@ Verbindliche Entscheidung:
    LLM-Wertung.
 9. Alte Ergebnisschemata werden nicht umgedeutet; die UI zeigt sie fail-closed
    als `UNKLAR`.
+10. Ein kurzer Quellspan darf eine unmittelbar gebundene Bedingung oder
+    Ausnahme nicht verlieren. Die Entscheidung prüft einen lokalen
+    Klauselkontext; qualifizierte Deckung endet bis zur Scope-Auflösung
+    `UNKLAR`. Weit entfernte Klauseln und reine Gefahren-Definitionen dürfen
+    diesen Guard nicht auslösen.
 
-Der erste reale Artefakt-Replay terminiert 320 Zeilen mit genau einem
-`VORTEIL_B` bei `LW-22`, sieben Gleichwertigkeiten, neun nicht
-vergleichbaren Punkten und 303 unklaren Punkten. Diese konservative Verteilung
-ist Teil des Sicherheitsvertrags, keine Recall-Regression.
+Der erste reale Artefakt-Replay mit genau einem `VORTEIL_B` bei `LW-22` wurde
+durch den frischen End-to-End-Lauf widerlegt: dieselbe Klausel wurde einmal
+binär eingeschlossen und einmal binär ausgeschlossen, obwohl sie eine
+Rückausnahme enthält. `v3.4.0` korrigiert `LW-22`, `ST-16` und `HP-26`
+fail-closed. Der frische 320-Zeilen-Replay liefert 0 Vorteile, 4
+Gleichwertigkeiten, 11 nicht vergleichbare und 305 unklare Punkte. Diese
+konservative Verteilung ist Teil des Sicherheitsvertrags, keine
+Recall-Regression.
 
 Kanonischer Messbeleg:
-[Tests und Erkenntnisse, Abschnitt 44](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#44-regelgebundene-punktentscheidung-v2).
+[Tests und Erkenntnisse, Abschnitt 45](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#45-v340-frischer-zehn-dokumente-lauf-und-bedingungssichere-punktentscheidung).

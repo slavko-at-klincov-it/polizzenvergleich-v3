@@ -569,3 +569,27 @@ Die technische Modulgrenze ist wiederverwendbar. Produktiv aktiviert sind in
 V3.3.1 nur die beiden Komponenten von `HP-12`. Eine Aktivierung weiterer
 Anforderungen ist eine fachliche Katalogänderung und benötigt eigene
 Positiv-, Negativ-, Nachbar- und Zielhardwarekontrollen.
+
+## 16. V3.4.0: lokale Klauselgrenze der Punktentscheidung
+
+Die Punktentscheidung liest keine sichtbaren Tabellenstrings. Sie
+materialisiert für jede ausgewählte atomare Quelle intern zusätzlich einen
+lokalen Kontext von höchstens 240 Zeichen vor und nach dem servergebundenen
+Originalspan. Dieser Kontext ist nur ein Sicherheitsinput und wird nicht als
+zusätzliche sichtbare Evidenz ausgegeben.
+
+```text
+ausgewählte Candidate-ID + exakter Quellspan + Dokumentoffset
+  -> lokaler Bedingungsprüftext
+  -> starke Ausnahme-/Bedingungsmarker oder deckungsbezogenes wenn/falls
+  -> FAIL_CLOSED_CONDITIONAL_SOURCE_V1
+  -> UNKLAR statt Vorteil oder Gleichwertigkeit
+```
+
+Ist der Offset ungültig, fällt die Prüfung auf den exakten Span zurück; ein
+breites Kontextfenster wird nicht blind verwendet. Damit beeinflussen weit
+entfernte Bedingungen keine unbeteiligte Vergleichsdimension. Reine
+Definitionen einer Gefahr sind von einem bedingten Deckungsversprechen zu
+trennen. Der lokale Prüftext bleibt absichtlich außerhalb des öffentlichen
+Auditobjekts; dort erscheinen weiterhin nur Candidate-ID, physische Seite und
+exakter Originaltext.
