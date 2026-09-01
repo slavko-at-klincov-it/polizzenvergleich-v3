@@ -5,7 +5,8 @@ const OUTCOME_LABELS = Object.freeze({
   VORTEIL_B: "Vorteil Paket B",
   DOKUMENTATIONSUNTERSCHIED: "Dokumentationsunterschied",
   GLEICHWERTIG: "Gleichwertig",
-  KEIN_DOKUMENTIERTER_VORTEIL: "Kein dokumentierter Vorteil",
+  KEIN_DOKUMENTIERTER_VORTEIL:
+    "In beiden Polizzen keine passende Vertragsregelung gefunden",
   NICHT_VERGLEICHBAR: "Nicht vergleichbar",
   UNKLAR: "Unklar",
 });
@@ -36,7 +37,24 @@ function presentPointDecision(row) {
   };
 }
 
+function presentComparisonMetrics(result) {
+  const totals = result?.totals || {};
+  const customerReviewRequired = Number.isInteger(
+    totals.customerReviewRequired
+  )
+    ? totals.customerReviewRequired
+    : Number.isInteger(totals.pointDecisionReviewRequired)
+      ? totals.pointDecisionReviewRequired
+      : Number(totals.pointDecisions?.UNKLAR || 0);
+  return {
+    rows: Number(totals.rows || 0),
+    customerReviewRequired,
+    legacyFallback: !Number.isInteger(totals.customerReviewRequired),
+  };
+}
+
 module.exports = {
   OUTCOME_LABELS,
+  presentComparisonMetrics,
   presentPointDecision,
 };

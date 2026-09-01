@@ -17,7 +17,8 @@ import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.
 import policyComparisonResultPresenter from "@/utils/chat/policyComparisonResultPresenter.cjs";
 
 const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
-const { presentPointDecision } = policyComparisonResultPresenter;
+const { presentComparisonMetrics, presentPointDecision } =
+  policyComparisonResultPresenter;
 
 const ROLE_LABELS = {
   MAIN_POLICY: "Hauptpolizze",
@@ -464,6 +465,7 @@ function ComparisonProgress({ progress }) {
 }
 
 function ComparisonResult({ result }) {
+  const customerMetrics = presentComparisonMetrics(result);
   const [activeCategory, setActiveCategory] = useState(
     result.categories?.[0]?.categoryView || "VS"
   );
@@ -478,6 +480,9 @@ function ComparisonResult({ result }) {
         </p>
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
           {result.proofLimit}
+        </p>
+        <p className="mt-1 text-[10px] font-semibold text-amber-200 light:text-amber-800">
+          Kundenprüfung erforderlich: {customerMetrics.customerReviewRequired}
         </p>
         {result.totals?.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">

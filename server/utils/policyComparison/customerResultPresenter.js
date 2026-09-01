@@ -25,6 +25,7 @@ const UNCLEAR_REASON_TEXT = Object.freeze({
 const APPROVED_RULE_IDS = new Set([
   "ATOMIC_COMPARABILITY_GATE_V1",
   "ATOMIC_COVERAGE_EQUALITY_V1",
+  "ANY_COMPONENT_IDENTITY_GATE_V1",
   "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
   "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
   "FAIL_CLOSED_V1",
@@ -103,7 +104,7 @@ function customerResultText(row) {
       "Dokumentationsunterschied:"
     )}`;
   if (decision.outcome === POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE)
-    return "Kein klarer Vorteil: ungeklärt – In beiden vollständig geprüften bereitgestellten Polizzen wurde keine entsprechende Regelung gefunden. Dies belegt weder Gleichheit noch einen ausdrücklichen Ausschluss.";
+    return "Kein klarer Vorteil: In beiden Polizzen wurde nach vollständiger kontrollierter Suche keine passende Vertragsregelung gefunden. Dies belegt weder Gleichheit noch einen ausdrücklichen Ausschluss.";
 
   return `Kein klarer Vorteil: ungeklärt – ${
     UNCLEAR_REASON_TEXT[decision.reasonCode] ||

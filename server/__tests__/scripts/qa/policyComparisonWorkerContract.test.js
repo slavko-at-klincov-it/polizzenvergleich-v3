@@ -23,7 +23,7 @@ describe("policy comparison worker contract", () => {
     expect(source).not.toContain("shell: true");
   });
 
-  test("writes a review-required comparison rather than an automatic advantage", () => {
+  test("derives the customer status from row-level point decisions", () => {
     const builder = fs.readFileSync(
       path.join(
         REPOSITORY_ROOT,
@@ -31,7 +31,9 @@ describe("policy comparison worker contract", () => {
       ),
       "utf8"
     );
-    expect(builder).toContain("TECHNICAL_RESULT_REVIEW_REQUIRED");
+    expect(builder).toContain("COMPARISON_RESULT_MATERIALIZED");
+    expect(builder).toContain("validateCustomerComparison");
+    expect(source).toContain("validateCustomerComparisonFile");
     expect(builder).toContain(
       "Ein automatischer Vorteilsschluss ist nicht zulässig"
     );

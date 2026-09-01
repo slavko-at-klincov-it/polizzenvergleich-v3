@@ -1,4 +1,5 @@
 const {
+  presentComparisonMetrics,
   presentPointDecision,
 } = require("../../../frontend/src/utils/chat/policyComparisonResultPresenter.cjs");
 
@@ -41,7 +42,7 @@ describe("policy comparison result presenter", () => {
       })
     ).toMatchObject({
       outcome: "KEIN_DOKUMENTIERTER_VORTEIL",
-      label: "Kein dokumentierter Vorteil",
+      label: "In beiden Polizzen keine passende Vertragsregelung gefunden",
       legacyFallback: false,
     });
   });
@@ -60,5 +61,28 @@ describe("policy comparison result presenter", () => {
       label: "Dokumentationsunterschied",
       legacyFallback: false,
     });
+  });
+
+  test("uses only the customer-review metric and never the legacy difference total", () => {
+    expect(
+      presentComparisonMetrics({
+        schemaVersion: 6,
+        totals: {
+          rows: 224,
+          customerReviewRequired: 67,
+          legacyTechnicalDifferences: 105,
+        },
+      })
+    ).toEqual({ rows: 224, customerReviewRequired: 67, legacyFallback: false });
+    expect(
+      presentComparisonMetrics({
+        schemaVersion: 5,
+        totals: {
+          rows: 224,
+          reviewRequired: 105,
+          pointDecisionReviewRequired: 67,
+        },
+      })
+    ).toEqual({ rows: 224, customerReviewRequired: 67, legacyFallback: true });
   });
 });

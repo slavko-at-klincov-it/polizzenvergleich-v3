@@ -14,6 +14,10 @@ const {
 } = require("./productContract");
 const { customerResultText } = require("./customerResultPresenter");
 const {
+  deriveCustomerMetrics,
+  validateCustomerComparison,
+} = require("./customerMetricContract");
+const {
   requirementSearchContractDigest,
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
@@ -915,9 +919,10 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     });
     return { categoryView, rows };
   });
-  return {
-    schemaVersion: 5,
-    status: "TECHNICAL_RESULT_REVIEW_REQUIRED",
+  const totals = deriveCustomerMetrics(categories);
+  const result = {
+    schemaVersion: 6,
+    status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
     productProfile: PRODUCT_PROFILE,
@@ -930,46 +935,12 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       sha256: document.sha256,
     })),
     categories,
-    totals: {
-      rows: categories.reduce((sum, category) => sum + category.rows.length, 0),
-      reviewRequired: categories.reduce(
-        (sum, category) =>
-          sum +
-          category.rows.filter(
-            ({ outcome }) =>
-              ![
-                "INHALTLICH_GLEICH",
-                "BEIDSEITIG_KEIN_BELEG",
-                "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
-              ].includes(outcome)
-          ).length,
-        0
-      ),
-      pointDecisions: Object.fromEntries(
-        Object.values(POINT_OUTCOME).map((outcome) => [
-          outcome,
-          categories.reduce(
-            (sum, category) =>
-              sum +
-              category.rows.filter(
-                ({ pointDecision }) => pointDecision.outcome === outcome
-              ).length,
-            0
-          ),
-        ])
-      ),
-      pointDecisionReviewRequired: categories.reduce(
-        (sum, category) =>
-          sum +
-          category.rows.filter(
-            ({ pointDecision }) => pointDecision.reviewRequired
-          ).length,
-        0
-      ),
-    },
+    totals,
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständiger kontrollierter Nulltreffer wird als Suchbefund ausgewiesen, aber nur ein eigens zertifizierter positiver Schutz-Suchvertrag darf daraus eine Vergleichsannahme ableiten. Ein ausdrücklicher Ausschluss ist damit nie belegt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Wenn eine passende Vertragsregelung nach vollständiger kontrollierter Suche nicht gefunden wurde, bleibt dieser Suchbefund getrennt von seiner fachlichen Wirkung. Ein ausdrücklicher Ausschluss ist damit nie belegt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
+  validateCustomerComparison(result);
+  return result;
 }
 
 function markdownResult(result) {
@@ -978,7 +949,7 @@ function markdownResult(result) {
     "",
     `Status: ${result.status}`,
     "",
-    `Zeilen: ${result.totals.rows}; fachlich zu prüfende Unterschiede: ${result.totals.reviewRequired}.`,
+    `Zeilen: ${result.totals.rows}; Kundenprüfung erforderlich: ${result.totals.customerReviewRequired}.`,
     "",
     result.proofLimit,
     "",

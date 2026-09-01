@@ -14,6 +14,15 @@ const { PolicyComparison } = require("../models/policyComparison");
 const { handlePolicyComparisonUpload } = require("../utils/files/multer");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const { EventLogs } = require("../models/eventLogs");
+const {
+  validateCustomerComparison,
+} = require("../utils/policyComparison/customerMetricContract");
+
+function readValidatedComparisonResult(resultFile) {
+  const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
+  validateCustomerComparison(result, { allowLegacy: true });
+  return result;
+}
 
 function safeUnlink(file) {
   if (!file) return;
@@ -420,7 +429,7 @@ function policyComparisonEndpoints(app) {
           throw new Error("COMPARISON_RESULT_MISSING");
         return response.status(200).json({
           success: true,
-          result: JSON.parse(fs.readFileSync(resultFile, "utf8")),
+          result: readValidatedComparisonResult(resultFile),
         });
       } catch (error) {
         console.error(error.message, error);
@@ -485,6 +494,17 @@ function policyComparisonEndpoints(app) {
           !fs.existsSync(workbook)
         )
           throw new Error("COMPARISON_WORKBOOK_MISSING");
+        const resultFile = path.resolve(
+          policyComparisonsPath,
+          session.resultPath,
+          "comparison.private.json"
+        );
+        if (
+          !isWithin(policyComparisonsPath, resultFile) ||
+          !fs.existsSync(resultFile)
+        )
+          throw new Error("COMPARISON_RESULT_MISSING");
+        readValidatedComparisonResult(resultFile);
         return response.download(workbook, "Gesamtvergleich.xlsx");
       } catch (error) {
         console.error(error.message, error);

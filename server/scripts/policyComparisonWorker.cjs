@@ -19,6 +19,9 @@ const {
   archiveComparisonWorkbook,
 } = require("../utils/policyComparison/workbookArchive");
 const {
+  validateCustomerComparisonFile,
+} = require("../utils/policyComparison/customerMetricContract");
+const {
   releaseIdentity,
   sha256,
 } = require("../utils/policyAnalysis/runIdentity");
@@ -323,6 +326,7 @@ async function main() {
     metadata: { sessionUuid, runSignature: signature },
     enforceProductProfile: true,
   });
+  validateCustomerComparisonFile(artifacts.jsonFile);
   const archivedWorkbook = archiveComparisonWorkbook({
     workbookFile: artifacts.workbookFile,
     sessionUuid,

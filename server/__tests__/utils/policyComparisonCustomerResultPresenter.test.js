@@ -26,7 +26,10 @@ describe("policy comparison customer result presenter", () => {
     ["GLEICHWERTIG", "Kein klarer Vorteil: gleichwertig –"],
     ["NICHT_VERGLEICHBAR", "Kein klarer Vorteil: nicht vergleichbar –"],
     ["UNKLAR", "Kein klarer Vorteil: ungeklärt –"],
-    ["KEIN_DOKUMENTIERTER_VORTEIL", "Kein klarer Vorteil: ungeklärt –"],
+    [
+      "KEIN_DOKUMENTIERTER_VORTEIL",
+      "Kein klarer Vorteil: In beiden Polizzen wurde nach vollständiger kontrollierter Suche keine passende Vertragsregelung gefunden.",
+    ],
   ])("maps %s to the customer signal %s", (outcome, prefix) => {
     expect(presented(outcome).startsWith(prefix)).toBe(true);
   });
@@ -66,6 +69,14 @@ describe("policy comparison customer result presenter", () => {
       presented("VORTEIL_A", { ruleId: "UNREVIEWED_RULE" }).startsWith(
         "Kein klarer Vorteil: ungeklärt –"
       )
+    ).toBe(true);
+  });
+
+  test("keeps an approved ANY comparability result customer-visible", () => {
+    expect(
+      presented("NICHT_VERGLEICHBAR", {
+        ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
+      }).startsWith("Kein klarer Vorteil: nicht vergleichbar –")
     ).toBe(true);
   });
 });

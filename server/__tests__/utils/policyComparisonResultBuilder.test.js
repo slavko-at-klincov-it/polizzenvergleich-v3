@@ -543,7 +543,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
 
     expect(result.categories[0].rows[0].outcome).toBe("NUR_A_BELEGT");
-    expect(result.totals.reviewRequired).toBe(1);
+    expect(result.totals.customerReviewRequired).toBe(1);
   });
 
   test("builds the five-category customer profile with document-level provenance", async () => {
@@ -673,7 +673,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(5);
+    expect(result.schemaVersion).toBe(6);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -682,6 +682,17 @@ describe("policy comparison result builder", () => {
     });
     expect(result.totals.pointDecisions.VORTEIL_B).toBe(1);
     expect(result.totals.pointDecisions.UNKLAR).toBe(4);
+    expect(result.totals).toMatchObject({
+      customerReviewRequired: 4,
+      noCustomerReviewRequired: 1,
+      legacyTechnicalDifferences: 1,
+    });
+    expect(
+      Object.values(result.totals.pointDecisions).reduce(
+        (sum, count) => sum + count,
+        0
+      )
+    ).toBe(result.totals.rows);
   });
 
   test("rejects a productive export when the profile row count is incomplete", async () => {
@@ -779,8 +790,8 @@ describe("policy comparison result builder", () => {
     writeAtomicCategory(runA, "VS", "INCLUDED");
     writeCompleteAbsenceCategory(runB, "VS", { certified: false });
 
-    const comparisonRow = buildComparisonResult([runA, runB]).categories[0]
-      .rows[0];
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
 
     expect(comparisonRow.packageB).toMatchObject({
       searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
@@ -794,6 +805,10 @@ describe("policy comparison result builder", () => {
       ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
       reviewRequired: false,
     });
+    expect(result.totals.customerReviewRequired).toBe(
+      result.totals.pointDecisions.UNKLAR
+    );
+    expect(result.totals).not.toHaveProperty("reviewRequired");
   });
 
   test("does not verify policy strings without persisted certification metadata", () => {
