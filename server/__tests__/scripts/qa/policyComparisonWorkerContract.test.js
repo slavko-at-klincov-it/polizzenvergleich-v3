@@ -62,6 +62,23 @@ describe("policy comparison worker contract", () => {
     expect(shadowRunner).toContain("runHybridShadowSearch.cjs");
   });
 
+  test("keeps the bounded two-phase pilot outside the primary worker", () => {
+    const pilotSearch = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/scripts/qa/runHybridShadowPilotSearch.cjs"
+      ),
+      "utf8"
+    );
+    expect(source).not.toContain("runHybridShadowPilotSearch");
+    expect(pilotSearch).toContain("buildPageAwareRetrievalChunks");
+    expect(pilotSearch).toContain("HYBRID_SHADOW_PILOT_SEARCH_COMPLETE");
+    expect(pilotSearch).toContain("sharedDocumentChunkCount");
+    expect(pilotSearch).not.toContain("groundTruth");
+    expect(pilotSearch).not.toContain("acceptedExactQuoteSha256");
+    expect(pilotSearch).not.toContain("knownAdversarialQuoteSha256");
+  });
+
   test("uses a release-bound resumable run and counts completed categories", () => {
     expect(source).toContain("resumableRun({ sessionUuid, manifest })");
     expect(source).toContain("run-contract.private.json");
