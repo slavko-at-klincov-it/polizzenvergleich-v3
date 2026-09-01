@@ -568,6 +568,65 @@ describe("controlledOccurrenceWorksheet", () => {
     });
   });
 
+  test.each([
+    ["Versichert sind:", "INCLUDED"],
+    ["Nicht versichert sind:", "EXCLUDED"],
+  ])(
+    "isolates middle-dot PDF list items while retaining the %s governor",
+    (governor, expectedPolarity) => {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        document: documentFromPages([
+          [
+            governor,
+            "·Jalousien und Rollläden (nicht Sonnensegel und nicht Markisen);",
+            "·Solar- und Photovoltaikanlagen;",
+          ].join("\n"),
+        ]),
+        documentFingerprint: `middle-dot-list-${expectedPolarity}`,
+        catalog: {
+          schemaVersion: 1,
+          catalogId: "middle-dot-list-test",
+          categoryView: "ST",
+          requirements: [
+            {
+              id: "ST-21",
+              label: "Solarthermieanlagen",
+              requestedFields: [],
+              components: [
+                {
+                  id: "solar_thermal_system",
+                  label: "Solarthermieanlagen",
+                  factRole: "INSURED_OBJECT",
+                  aliases: ["Solar- und Photovoltaikanlagen"],
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const [occurrence] = component(
+        worksheet,
+        "ST-21",
+        "solar_thermal_system"
+      ).occurrences;
+
+      expect(occurrence.context).toMatchObject({
+        unitType: "LIST_ITEM",
+        text: "·Solar- und Photovoltaikanlagen;",
+      });
+      expect(occurrence.scopeLead.text).toBe(
+        "·Solar- und Photovoltaikanlagen;"
+      );
+      expect(occurrence.scopeLead.text).not.toContain("nicht Sonnensegel");
+      expect(occurrence.coverageGovernorHint).toMatchObject({
+        text: governor,
+        kind: "SEMANTIC_COVERAGE_HEADING",
+        polarity: expectedPolarity,
+        source: "CURRENT_PAGE_GOVERNOR",
+      });
+    }
+  );
+
   test("expands catalog-authorized occurrences to a numbered clause section only", () => {
     const sectionCatalog = {
       schemaVersion: 1,

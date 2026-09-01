@@ -372,7 +372,7 @@ function isBlankLine(line) {
 }
 
 function isBulletLine(line) {
-  return /^\s*[-•](?:\s+|(?=\p{L}))/u.test(line.text);
+  return /^\s*[-•·](?:\s+|(?=\p{L}))/u.test(line.text);
 }
 
 function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
@@ -406,7 +406,7 @@ function precedingWordWindow(text, beforeOffset, wordLimit) {
     pageEnd -= 1;
   if (
     pageEnd > startWord.start &&
-    /[-•]/u.test(text[pageEnd - 1]) &&
+    /[-•·]/u.test(text[pageEnd - 1]) &&
     (pageEnd - 1 === 0 || /[\n\r]/u.test(text[pageEnd - 2]))
   ) {
     pageEnd -= 1;
@@ -675,7 +675,7 @@ function explicitClauseSectionHeadings(pageText, activationScopes) {
     const text = match[0].trim();
     const label = match[1].trim();
     const clauseCode = match[2].toLocaleUpperCase("de");
-    if (!label || /^[-•]/u.test(label) || /Besondere\s+Bedingung/iu.test(label))
+    if (!label || /^[-•·]/u.test(label) || /Besondere\s+Bedingung/iu.test(label))
       continue;
     const activatedScopes = activationScopes.get(clauseCode) || new Set();
     const scopeKeys = [...activatedScopes].sort();
@@ -1800,6 +1800,9 @@ function buildControlledOccurrenceWorksheet({
             .at(-1);
           const scopeLeadStart = Math.max(
             rawScopeLead.pageStart,
+            evidenceContext.unitType === "LIST_ITEM"
+              ? evidenceContext.pageStart
+              : rawScopeLead.pageStart,
             currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart,
             currentCoverageGovernor?.kind === "SEMANTIC_COVERAGE_HEADING"
               ? currentCoverageGovernor.pageStart
