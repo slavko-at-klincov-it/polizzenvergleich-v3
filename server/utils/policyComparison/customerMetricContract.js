@@ -1,5 +1,8 @@
 const { POINT_OUTCOME } = require("./pointDecision");
 const { validatePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  packageReviewCustomerExplanation,
+} = require("./customerResultPresenter");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -315,7 +318,25 @@ function customerSafeComparisonReadView(result) {
   });
   const totals = { ...(result?.totals || {}) };
   delete totals.reviewRequired;
-  return { ...result, totals, customerMetrics };
+  const categories = Array.isArray(result?.categories)
+    ? result.categories.map((category) => ({
+        ...category,
+        rows: (category.rows || []).map((row) => {
+          const explanation = packageReviewCustomerExplanation(
+            row.pointDecision
+          );
+          if (!explanation) return row;
+          return {
+            ...row,
+            pointDecision: {
+              ...row.pointDecision,
+              reason: explanation,
+            },
+          };
+        }),
+      }))
+    : result?.categories;
+  return { ...result, categories, totals, customerMetrics };
 }
 
 module.exports = {

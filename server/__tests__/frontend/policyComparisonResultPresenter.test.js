@@ -180,4 +180,46 @@ describe("policy comparison result presenter", () => {
       storedMetricDiscrepancy: true,
     });
   });
+
+  test("labels package review blockers without multiplying their row count", () => {
+    const metrics = presentComparisonMetrics({
+      schemaVersion: 7,
+      categories: [
+        {
+          categoryView: "VS",
+          rows: [
+            {
+              categoryId: "VS-01",
+              pointDecision: {
+                outcome: "UNKLAR",
+                reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+                reviewRequired: true,
+              },
+            },
+          ],
+        },
+      ],
+      totals: {
+        rows: 1,
+        customerReviewRequired: 1,
+        pointDecisions: {
+          VORTEIL_A: 0,
+          VORTEIL_B: 0,
+          DOKUMENTATIONSUNTERSCHIED: 0,
+          GLEICHWERTIG: 0,
+          KEIN_DOKUMENTIERTER_VORTEIL: 0,
+          NICHT_VERGLEICHBAR: 0,
+          UNKLAR: 1,
+        },
+      },
+    });
+    expect(metrics.customerReviewRequired).toBe(1);
+    expect(metrics.customerReviewBreakdown).toEqual([
+      {
+        reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+        label: "Offene Teilpunkte in mindestens einer Polizze",
+        count: 1,
+      },
+    ]);
+  });
 });

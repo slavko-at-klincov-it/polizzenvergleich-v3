@@ -13,7 +13,7 @@ const OUTCOME_LABELS = Object.freeze({
 
 const REVIEW_REASON_LABELS = Object.freeze({
   PACKAGE_REVIEW_STATUS_BLOCKS_DECISION:
-    "Mindestens ein Paket-Prüfstatus blockiert die Entscheidung",
+    "Offene Teilpunkte in mindestens einer Polizze",
   MISSING_BOTH: "Auf beiden Seiten fehlt ein belastbarer Beleg",
   MISSING_ONE_SIDE: "Nur eine Seite enthält einen belastbaren Beleg",
   ATOMIC_DOCUMENT_RANK_UNRESOLVED: "Dokumentrang oder Ersetzung ungeklärt",

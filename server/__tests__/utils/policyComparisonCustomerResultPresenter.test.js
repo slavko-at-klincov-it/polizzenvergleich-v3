@@ -1,5 +1,6 @@
 const {
   customerResultText,
+  packageReviewCustomerExplanation,
 } = require("../../utils/policyComparison/customerResultPresenter");
 
 function presented(outcome, overrides = {}) {
@@ -16,6 +17,37 @@ function presented(outcome, overrides = {}) {
 }
 
 describe("policy comparison customer result presenter", () => {
+  function auditEntry(code, side = "B", overrides = {}) {
+    return {
+      code,
+      side,
+      level: "COMPONENT",
+      requirementId: "VS-01",
+      componentId: "component",
+      factRole: "BENEFIT",
+      documentUuids: ["document-b"],
+      observed: null,
+      ...overrides,
+    };
+  }
+
+  function packageReviewDecision(blockers, signals = []) {
+    return {
+      outcome: "UNKLAR",
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      reason: "Generischer technischer Text.",
+      reviewRequired: true,
+      ruleId: "FAIL_CLOSED_V1",
+      packageReviewAudit: {
+        schemaVersion: 1,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        packageStatuses: { A: "BELEGT", B: "TEILBELEGT" },
+        blockers,
+        signals,
+      },
+    };
+  }
+
   test.each([
     ["VORTEIL_A", "Vorteil Polizze A:"],
     ["VORTEIL_B", "Vorteil Polizze B:"],
@@ -78,5 +110,59 @@ describe("policy comparison customer result presenter", () => {
         ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
       }).startsWith("Kein klarer Vorteil: nicht vergleichbar –")
     ).toBe(true);
+  });
+
+  test("explains package blockers per policy without exposing technical identifiers", () => {
+    const decision = packageReviewDecision([
+      auditEntry("MISSING_REQUIRED_COMPONENT"),
+      auditEntry("FIELD_INCOMPLETE"),
+    ]);
+    const text = customerResultText({ pointDecision: decision });
+    expect(text).toContain("Polizze B:");
+    expect(text).toContain("erforderlicher Teilpunkt");
+    expect(text).toContain("Werte, Limits");
+    expect(text).not.toContain("MISSING_REQUIRED_COMPONENT");
+    expect(text).not.toContain("document-b");
+    expect(text).not.toContain("component");
+  });
+
+  test("deduplicates hint families and ignores applicability signals", () => {
+    const decision = packageReviewDecision(
+      [
+        auditEntry("UNKNOWN_COVERAGE_EFFECT"),
+        auditEntry("COVERAGE_EFFECT_NOT_DECISIVE"),
+      ],
+      [auditEntry("PROPOSED_ONLY")]
+    );
+    const explanation = packageReviewCustomerExplanation(decision);
+    expect(
+      explanation.match(/Vertragswirkung eines Teilpunkts/gu)
+    ).toHaveLength(1);
+    expect(explanation).not.toContain("PROPOSED_ONLY");
+  });
+
+  test("separates A and B hints without creating additional review counts", () => {
+    const explanation = packageReviewCustomerExplanation(
+      packageReviewDecision([
+        auditEntry("SCOPE_INCOMPLETE", "A", {
+          documentUuids: ["document-a"],
+        }),
+        auditEntry("UNRESOLVED_CANDIDATE", "B"),
+      ])
+    );
+    expect(explanation).toContain("Polizze A:");
+    expect(explanation).toContain("Polizze B:");
+    expect(explanation).toContain("nicht zusätzlich gezählt");
+  });
+
+  test("falls back to the generic text for an invalid audit", () => {
+    const text = customerResultText({
+      pointDecision: packageReviewDecision([
+        auditEntry("UNKNOWN_FUTURE_BLOCKER"),
+      ]),
+    });
+    expect(text).toContain(
+      "Mindestens ein Prüfstatus lässt noch keine sichere Bewertung zu."
+    );
   });
 });

@@ -22,6 +22,31 @@ const UNCLEAR_REASON_TEXT = Object.freeze({
   MIXED_DIMENSION_WINNERS:
     "Einzelne Teilaspekte sprechen für unterschiedliche Polizzen; daraus folgt kein einheitlicher Vorteil.",
 });
+const PACKAGE_REVIEW_AUDIT_CONTRACT_ID = "PACKAGE_REVIEW_BLOCKERS_V1";
+const PACKAGE_REVIEW_HINTS = Object.freeze({
+  MISSING_REQUIRED_COMPONENT:
+    "Mindestens ein erforderlicher Teilpunkt ist nicht vollständig belegt.",
+  UNKNOWN_COVERAGE_EFFECT:
+    "Die Vertragswirkung eines Teilpunkts ist noch nicht eindeutig bestimmbar.",
+  COVERAGE_EFFECT_NOT_DECISIVE:
+    "Die Vertragswirkung eines Teilpunkts ist noch nicht eindeutig bestimmbar.",
+  FIELD_INCOMPLETE:
+    "Angeforderte Werte, Limits oder sonstige Angaben sind noch nicht vollständig gebunden.",
+  SCOPE_INCOMPLETE:
+    "Eine Fundstelle gilt nur für einen engeren oder noch nicht eindeutig abgegrenzten Deckungsumfang.",
+  SOURCE_BINDING_INCOMPLETE:
+    "Eine mögliche Fundstelle ist noch nicht eindeutig als Beleg bestätigt.",
+  UNRESOLVED_CANDIDATE:
+    "Eine mögliche Fundstelle ist noch nicht eindeutig als Beleg bestätigt.",
+  MULTIPLE_ATOMS_SAME_COMPONENT:
+    "Mehrere Dokumentangaben zum selben Teilpunkt sind noch nicht eindeutig eingeordnet.",
+  UNRESOLVED_DOCUMENT_PRECEDENCE:
+    "Mehrere Dokumentangaben zum selben Teilpunkt sind noch nicht eindeutig eingeordnet.",
+  CONFLICTING_COVERAGE:
+    "Mehrere Dokumentangaben zum selben Teilpunkt sind noch nicht eindeutig eingeordnet.",
+  UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER:
+    "Der offene Prüfgrund konnte technisch noch nicht genauer eingeordnet werden.",
+});
 const APPROVED_RULE_IDS = new Set([
   "ATOMIC_COMPARABILITY_GATE_V1",
   "ATOMIC_COVERAGE_EQUALITY_V1",
@@ -65,6 +90,34 @@ function withoutPrefix(value, prefix) {
   return text.startsWith(prefix) ? text.slice(prefix.length).trim() : text;
 }
 
+function packageReviewCustomerExplanation(pointDecision) {
+  if (pointDecision?.reasonCode !== "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION")
+    return null;
+  const audit = pointDecision?.packageReviewAudit;
+  if (
+    audit?.schemaVersion !== 1 ||
+    audit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID ||
+    !Array.isArray(audit.blockers) ||
+    audit.blockers.length === 0
+  )
+    return null;
+
+  const bySide = new Map([
+    ["A", new Set()],
+    ["B", new Set()],
+  ]);
+  for (const blocker of audit.blockers) {
+    const hint = PACKAGE_REVIEW_HINTS[blocker?.code];
+    if (!hint || !bySide.has(blocker?.side)) return null;
+    bySide.get(blocker.side).add(hint);
+  }
+  const sideTexts = [...bySide.entries()]
+    .filter(([, hints]) => hints.size > 0)
+    .map(([side, hints]) => `Polizze ${side}: ${[...hints].join(" ")}`);
+  if (sideTexts.length === 0) return null;
+  return `${sideTexts.join(" ")} Mehrere Hinweise innerhalb derselben Vergleichszeile werden nicht zusätzlich gezählt.`;
+}
+
 function customerResultText(row) {
   const decision = row?.pointDecision;
   const validOutcome = Object.values(POINT_OUTCOME).includes(decision?.outcome);
@@ -106,11 +159,16 @@ function customerResultText(row) {
   if (decision.outcome === POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE)
     return "Kein klarer Vorteil: In beiden Polizzen wurde nach vollständiger kontrollierter Suche keine passende Vertragsregelung gefunden. Dies belegt weder Gleichheit noch einen ausdrücklichen Ausschluss.";
 
+  const packageReviewExplanation = packageReviewCustomerExplanation(decision);
   return `Kein klarer Vorteil: ungeklärt – ${
+    packageReviewExplanation ||
     UNCLEAR_REASON_TEXT[decision.reasonCode] ||
     customerLanguage(decision.reason) ||
     "Für diesen Vergleichspunkt fehlt eine sichere Bewertungsgrundlage."
   }`;
 }
 
-module.exports = { customerResultText };
+module.exports = {
+  customerResultText,
+  packageReviewCustomerExplanation,
+};

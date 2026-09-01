@@ -494,12 +494,23 @@ function ComparisonResult({ result }) {
           </p>
         )}
         {customerMetrics.customerReviewBreakdown.length > 0 && (
-          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Prüfgründe:{" "}
-            {customerMetrics.customerReviewBreakdown
-              .map(({ label, count }) => `${label}: ${count}`)
-              .join(" · ")}
-          </p>
+          <>
+            <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+              Prüfgründe:{" "}
+              {customerMetrics.customerReviewBreakdown
+                .map(({ label, count }) => `${label}: ${count}`)
+                .join(" · ")}
+            </p>
+            {customerMetrics.customerReviewBreakdown.some(
+              ({ reasonCode }) =>
+                reasonCode === "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
+            ) && (
+              <p className="mt-1 text-[10px] text-zinc-400 light:text-slate-500">
+                Mehrere Hinweise innerhalb derselben Vergleichszeile werden
+                nicht zusätzlich gezählt.
+              </p>
+            )}
+          </>
         )}
         {customerMetrics.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">

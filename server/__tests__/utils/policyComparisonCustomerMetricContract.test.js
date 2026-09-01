@@ -285,4 +285,24 @@ describe("policy comparison customer metric contract", () => {
       pointDecisions: { UNKLAR: 1 },
     });
   });
+
+  test("adds a non-mutating customer explanation to a validated V7 read view", () => {
+    const result = schema7PackageResult();
+    result.categories[0].rows[0].pointDecision.reason =
+      "Generischer technischer Text.";
+    const original = JSON.parse(JSON.stringify(result));
+    const view = customerSafeComparisonReadView(result);
+    expect(view.categories[0].rows[0].pointDecision.reason).toContain(
+      "Polizze A:"
+    );
+    expect(view.categories[0].rows[0].pointDecision.reason).toContain(
+      "nicht zusätzlich gezählt"
+    );
+    expect(result).toEqual(original);
+    expect(view.customerMetrics).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+      pointDecisions: { UNKLAR: 1 },
+    });
+  });
 });
