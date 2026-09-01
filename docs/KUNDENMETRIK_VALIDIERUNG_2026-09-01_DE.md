@@ -71,17 +71,17 @@ Die folgende Aufteilung wird ohne manuelle fachliche Umgruppierung direkt aus
 `pointDecision.reasonCode` jeder einzelnen Zeile abgeleitet. Die Gruppen sind
 dadurch gegenseitig ausschließend und summieren sich maschinell geprüft zu 67:
 
-| Gespeicherter Blockiergrund | Eindeutige Zeilen |
-|---|---:|
-| Mindestens ein Paket-Prüfstatus blockiert (`PACKAGE_REVIEW_STATUS_BLOCKS_DECISION`) | 39 |
-| Auf beiden Seiten fehlt ein belastbarer Beleg (`MISSING_BOTH`) | 9 |
-| Nur eine Seite enthält einen belastbaren Beleg (`MISSING_ONE_SIDE`) | 7 |
-| Dokumentrang oder Ersetzung ungeklärt (`ATOMIC_DOCUMENT_RANK_UNRESOLVED`) | 3 |
-| Erforderlicher Teilpunkt unvollständig (`ATOMIC_EVIDENCE_INCOMPLETE`) | 3 |
-| Freigegebene Vergleichsregel fehlt (`NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`) | 3 |
-| Erforderliche alternative Teilpunkte unvollständig (`ANY_COMPONENT_EVIDENCE_INCOMPLETE`) | 2 |
-| Bedingung oder Ausnahmebereich ungeklärt (`CONDITIONAL_OR_EXCEPTION_SCOPE`) | 1 |
-| **Gesamt** | **67** |
+| Gespeicherter Blockiergrund                                                              | Eindeutige Zeilen |
+| ---------------------------------------------------------------------------------------- | ----------------: |
+| Mindestens ein Paket-Prüfstatus blockiert (`PACKAGE_REVIEW_STATUS_BLOCKS_DECISION`)      |                39 |
+| Auf beiden Seiten fehlt ein belastbarer Beleg (`MISSING_BOTH`)                           |                 9 |
+| Nur eine Seite enthält einen belastbaren Beleg (`MISSING_ONE_SIDE`)                      |                 7 |
+| Dokumentrang oder Ersetzung ungeklärt (`ATOMIC_DOCUMENT_RANK_UNRESOLVED`)                |                 3 |
+| Erforderlicher Teilpunkt unvollständig (`ATOMIC_EVIDENCE_INCOMPLETE`)                    |                 3 |
+| Freigegebene Vergleichsregel fehlt (`NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`)               |                 3 |
+| Erforderliche alternative Teilpunkte unvollständig (`ANY_COMPONENT_EVIDENCE_INCOMPLETE`) |                 2 |
+| Bedingung oder Ausnahmebereich ungeklärt (`CONDITIONAL_OR_EXCEPTION_SCOPE`)              |                 1 |
+| **Gesamt**                                                                               |            **67** |
 
 Die frühere Aussage `16 + 18 + weitere Klassen` war eine nachträgliche
 manuelle Umgruppierung ohne persistierte Mitgliedsliste. Sie wird deshalb
