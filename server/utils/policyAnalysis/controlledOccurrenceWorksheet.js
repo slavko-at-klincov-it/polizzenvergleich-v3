@@ -371,8 +371,17 @@ function isBlankLine(line) {
   return line.text.trim().length === 0;
 }
 
+function bulletLineMetadata(line) {
+  const match = String(line?.text || "").match(
+    /^([\t ]*)([-•·])(?:\s+|(?=\p{L}))/u
+  );
+  return match
+    ? { indentation: match[1], marker: match[2] }
+    : null;
+}
+
 function isBulletLine(line) {
-  return /^\s*[-•·](?:\s+|(?=\p{L}))/u.test(line.text);
+  return bulletLineMetadata(line) !== null;
 }
 
 function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
@@ -420,24 +429,40 @@ function precedingWordWindow(text, beforeOffset, wordLimit) {
   };
 }
 
-function precedingListGovernorWindow(text, listItemStart, fallback) {
+function precedingListGovernorWindow(text, listItemStart, fallback, floor) {
   const lines = buildLineRecords(text);
   const listItemLineIndex = lines.findIndex(
     ({ start, end }) => listItemStart >= start && listItemStart <= end
   );
-  if (listItemLineIndex === -1 || !isBulletLine(lines[listItemLineIndex]))
-    return fallback;
+  const currentBullet = bulletLineMetadata(lines[listItemLineIndex]);
+  if (listItemLineIndex === -1 || !currentBullet) return fallback;
 
   let firstSiblingIndex = listItemLineIndex;
   for (let index = listItemLineIndex - 1; index >= 0; index -= 1) {
-    if (isBlankLine(lines[index])) break;
-    if (isBulletLine(lines[index])) firstSiblingIndex = index;
+    const line = lines[index];
+    if (isBlankLine(line) || line.end <= floor.pageEnd) break;
+    const bullet = bulletLineMetadata(line);
+    if (!bullet) continue;
+    if (
+      bullet.indentation === currentBullet.indentation &&
+      bullet.marker === currentBullet.marker
+    ) {
+      firstSiblingIndex = index;
+      continue;
+    }
+    if (
+      bullet.indentation.length > currentBullet.indentation.length &&
+      bullet.indentation.startsWith(currentBullet.indentation)
+    )
+      continue;
+    break;
   }
 
   let pageEnd = Math.min(fallback.pageEnd, lines[firstSiblingIndex].start);
-  while (pageEnd > fallback.pageStart && /\s/u.test(text[pageEnd - 1]))
+  const minimumPageStart = Math.max(fallback.pageStart, floor.pageStart);
+  while (pageEnd > minimumPageStart && /\s/u.test(text[pageEnd - 1]))
     pageEnd -= 1;
-  const pageStart = Math.min(fallback.pageStart, pageEnd);
+  const pageStart = Math.min(minimumPageStart, pageEnd);
   return {
     pageStart,
     pageEnd,
@@ -500,6 +525,7 @@ function structuralContext({
 }
 
 function isClauseSectionHeading(line) {
+  if (isBulletLine(line)) return false;
   const text = String(line?.text || "");
   return (
     /^\s*\d{1,3}\.\s+\p{L}/u.test(text) ||
@@ -1811,19 +1837,6 @@ function buildControlledOccurrenceWorksheet({
                   fallback: context,
                 })
               : context;
-          const precedingScopeLead = precedingWordWindow(
-            page.text,
-            range.originalStart,
-            scopeWordsBefore
-          );
-          const rawScopeLead =
-            evidenceContext.unitType === "LIST_ITEM"
-              ? precedingListGovernorWindow(
-                  page.text,
-                  range.originalStart,
-                  precedingScopeLead
-                )
-              : precedingScopeLead;
           const currentSectionBoundary = page.sectionHeadings
             .filter(({ pageStart }) => pageStart <= range.originalStart)
             .at(-1);
@@ -1835,6 +1848,27 @@ function buildControlledOccurrenceWorksheet({
                   pageStart >= currentSectionBoundary.pageStart)
             )
             .at(-1);
+          const scopeFloor = [
+            currentSectionBoundary,
+            currentCoverageGovernor,
+          ]
+            .filter(Boolean)
+            .sort((left, right) => left.pageStart - right.pageStart)
+            .at(-1) || { pageStart: 0, pageEnd: 0 };
+          const precedingScopeLead = precedingWordWindow(
+            page.text,
+            range.originalStart,
+            scopeWordsBefore
+          );
+          const rawScopeLead =
+            context.unitType === "LIST_ITEM"
+              ? precedingListGovernorWindow(
+                  page.text,
+                  context.pageStart,
+                  precedingScopeLead,
+                  scopeFloor
+                )
+              : precedingScopeLead;
           const scopeLeadStart = Math.max(
             rawScopeLead.pageStart,
             currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart,

@@ -65,6 +65,30 @@ function component(worksheet, requirementId, componentId) {
     .components.find(({ id }) => id === componentId);
 }
 
+function singleSolarComponentCatalog(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    catalogId: "middle-dot-list-test",
+    categoryView: "ST",
+    requirements: [
+      {
+        id: "ST-21",
+        label: "Solarthermieanlagen",
+        requestedFields: [],
+        components: [
+          {
+            id: "solar_thermal_system",
+            label: "Solarthermieanlagen",
+            factRole: "INSURED_OBJECT",
+            aliases: ["Solar- und Photovoltaikanlagen"],
+            ...overrides,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 describe("controlledOccurrenceWorksheet", () => {
   test("binds an indirect-lightning limit to its peril clause, not an unrelated equal amount", () => {
     const document = documentFromPages([
@@ -569,8 +593,8 @@ describe("controlledOccurrenceWorksheet", () => {
   });
 
   test.each([
-    ["Versichert sind:", "INCLUDED"],
-    ["Nicht versichert sind:", "EXCLUDED"],
+    ["Versicherte Schäden:", "POSITIVE"],
+    ["Nicht versicherte Schäden:", "NEGATIVE"],
   ])(
     "isolates middle-dot PDF list items while retaining the %s governor",
     (governor, expectedPolarity) => {
@@ -583,26 +607,7 @@ describe("controlledOccurrenceWorksheet", () => {
           ].join("\n"),
         ]),
         documentFingerprint: `middle-dot-list-${expectedPolarity}`,
-        catalog: {
-          schemaVersion: 1,
-          catalogId: "middle-dot-list-test",
-          categoryView: "ST",
-          requirements: [
-            {
-              id: "ST-21",
-              label: "Solarthermieanlagen",
-              requestedFields: [],
-              components: [
-                {
-                  id: "solar_thermal_system",
-                  label: "Solarthermieanlagen",
-                  factRole: "INSURED_OBJECT",
-                  aliases: ["Solar- und Photovoltaikanlagen"],
-                },
-              ],
-            },
-          ],
-        },
+        catalog: singleSolarComponentCatalog(),
       });
       const [occurrence] = component(
         worksheet,
@@ -618,10 +623,165 @@ describe("controlledOccurrenceWorksheet", () => {
       expect(occurrence.scopeLead.text).not.toContain("nicht Sonnensegel");
       expect(occurrence.coverageGovernorHint).toMatchObject({
         text: governor,
+        kind: "SEMANTIC_COVERAGE_HEADING",
+        polarity: expectedPolarity,
         source: "CURRENT_PAGE_GOVERNOR",
       });
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+      expect(target).toMatchObject({
+        contextUnitType: "LIST_ITEM",
+        contextText: "·Solar- und Photovoltaikanlagen;",
+      });
+      expect(target.scopeLeadText).toContain(governor);
+      expect(`${target.scopeLeadText}\n${target.contextText}`).not.toContain(
+        "nicht Sonnensegel"
+      );
     }
   );
+
+  test("isolates a wrapped middle-dot item from an earlier sibling amount", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Versicherte Schäden:",
+          "·Jalousien bis EUR 50.000;",
+          "·Solar- und",
+          " Photovoltaikanlagen bis EUR 5.000;",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "wrapped-middle-dot-list",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.context).toMatchObject({
+      unitType: "LIST_ITEM",
+      text: "·Solar- und\n Photovoltaikanlagen bis EUR 5.000;",
+    });
+    expect(occurrence.scopeLead.text).toBe("Versicherte Schäden:");
+    expect(`${occurrence.scopeLead.text}\n${occurrence.context.text}`).not.toContain(
+      "EUR 50.000"
+    );
+  });
+
+  test("stops list-sibling trimming at a newer coded section without a blank line", () => {
+    const document = documentFromPages([
+      [
+        "Nicht versicherte Schäden:",
+        "·Jalousien und Markisen;",
+        "Haustechnische Anlagen10PA0130",
+        "·Solar- und Photovoltaikanlagen;",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "middle-dot-coded-section-boundary",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.scopeLead.text).toBe(
+      "Haustechnische Anlagen10PA0130"
+    );
+    expect(occurrence.scopeLead.pageStart).toBeLessThanOrEqual(
+      occurrence.scopeLead.pageEnd
+    );
+    expect(
+      document.pageContent.slice(
+        occurrence.scopeLead.documentStart,
+        occurrence.scopeLead.documentEnd
+      )
+    ).toBe(occurrence.scopeLead.text);
+    expect(occurrence.scopeLead.text).not.toContain("Nicht versicherte");
+  });
+
+  test("preserves a parent bullet while removing a preceding nested sibling", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Zusätzlich versichert:",
+          "• Haustechnische Anlagen:",
+          "  ·Jalousien und Markisen;",
+          "  ·Solar- und Photovoltaikanlagen;",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "nested-middle-dot-list",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.context.text).toBe(
+      "  ·Solar- und Photovoltaikanlagen;"
+    );
+    expect(occurrence.scopeLead.text).toContain("• Haustechnische Anlagen:");
+    expect(occurrence.scopeLead.text).not.toContain("Jalousien und Markisen");
+  });
+
+  test("does not treat a coded middle-dot list item as a clause-section heading", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "·Haustechnische Anlagen10PA0130",
+          " Solar- und Photovoltaikanlagen sind beschrieben.",
+          "11. Nächste Klausel",
+          "Anderer Inhalt.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "middle-dot-clause-heading",
+      catalog: singleSolarComponentCatalog({ contextMode: "CLAUSE_SECTION" }),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.context.unitType).toBe("LIST_ITEM");
+    expect(occurrence.context.text).not.toContain("Nächste Klausel");
+  });
+
+  test("carries a semantic governor to a wrapped middle-dot item on only the continued page", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Versicherte Schäden:",
+        "·Solar- und\n Photovoltaikanlagen;",
+        "STURMVERSICHERUNG\n·Solar- und Photovoltaikanlagen;",
+      ]),
+      documentFingerprint: "cross-page-middle-dot-governor",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const occurrences = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0]).toMatchObject({
+      context: {
+        unitType: "LIST_ITEM",
+        text: "·Solar- und\n Photovoltaikanlagen;",
+      },
+      coverageGovernorHint: {
+        text: "Versicherte Schäden:",
+        polarity: "POSITIVE",
+        source: "PRECEDING_PAGE_GOVERNOR",
+      },
+    });
+    expect(occurrences[1].coverageGovernorHint).toBeNull();
+  });
 
   test("expands catalog-authorized occurrences to a numbered clause section only", () => {
     const sectionCatalog = {
