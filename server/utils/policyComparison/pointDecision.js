@@ -551,9 +551,23 @@ function reasonFor(outcome, dimensions) {
 
 function cleanNotFoundAtom(atom) {
   const fields = atom.fields || [];
+  const requestedFields = atom.requestedFields || [];
+  const canonicalRequestedFields = [
+    ...new Set(requestedFields.map((field) => String(field || "").trim())),
+  ].sort();
+  const canonicalObservedFields = [
+    ...new Set(fields.map(({ field }) => String(field || "").trim())),
+  ].sort();
+  const validRequestedFieldNames =
+    canonicalRequestedFields.length === requestedFields.length &&
+    canonicalRequestedFields.every(Boolean);
   const requestedFieldsClean =
     (atom.requestedFieldStatus === "NOT_FOUND" &&
       fields.length > 0 &&
+      validRequestedFieldNames &&
+      JSON.stringify(canonicalObservedFields) ===
+        JSON.stringify(canonicalRequestedFields) &&
+      canonicalObservedFields.length === fields.length &&
       fields.every(
         ({ field, status, facts }) =>
           String(field || "").trim().length > 0 &&
@@ -561,7 +575,9 @@ function cleanNotFoundAtom(atom) {
           Array.isArray(facts) &&
           facts.length === 0
       )) ||
-    (atom.requestedFieldStatus === "NOT_REQUIRED" && fields.length === 0);
+    (atom.requestedFieldStatus === "NOT_REQUIRED" &&
+      requestedFields.length === 0 &&
+      fields.length === 0);
   return (
     atom.evidencePresence === "NOT_FOUND" &&
     atom.coverageEffect === "UNKNOWN" &&

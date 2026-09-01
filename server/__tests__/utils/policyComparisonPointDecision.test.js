@@ -110,6 +110,7 @@ function scopeLimitAtom(side, selectedScopePicture, overrides = {}) {
     documentApplicability: "CONDITIONAL",
     selectedCandidateIds: candidateIds,
     requestedFieldStatus: "COMPLETE",
+    requestedFields: ["limit"],
     requirementContractDigest: SOLE_SCOPE_REQUIREMENT_DIGEST,
     declaredComponents: SOLE_SCOPE_COMPONENTS,
     fields: [
@@ -465,6 +466,14 @@ describe("policy comparison point decision", () => {
       { selectedScopePicture: "NARROW_ONLY" },
       { documentApplicability: "CONDITIONAL" },
       { requestedFieldStatus: "COMPLETE", fields: [] },
+      { requestedFields: [] },
+      { requestedFields: ["other_limit"] },
+      { requestedFields: ["limit", "limit"] },
+      {
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: ["limit"],
+        fields: [],
+      },
     ];
 
     expect(
