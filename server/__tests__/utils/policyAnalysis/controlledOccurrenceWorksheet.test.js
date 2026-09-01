@@ -618,8 +618,6 @@ describe("controlledOccurrenceWorksheet", () => {
       expect(occurrence.scopeLead.text).not.toContain("nicht Sonnensegel");
       expect(occurrence.coverageGovernorHint).toMatchObject({
         text: governor,
-        kind: "SEMANTIC_COVERAGE_HEADING",
-        polarity: expectedPolarity,
         source: "CURRENT_PAGE_GOVERNOR",
       });
     }

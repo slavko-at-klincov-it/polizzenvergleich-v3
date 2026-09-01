@@ -1816,7 +1816,7 @@ function buildControlledOccurrenceWorksheet({
             evidenceContext.unitType === "LIST_ITEM"
               ? precedingListGovernorWindow(
                   page.text,
-                  evidenceContext.pageStart,
+                  range.originalStart,
                   precedingScopeLead
                 )
               : precedingScopeLead;
