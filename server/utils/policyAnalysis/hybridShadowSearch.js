@@ -320,33 +320,73 @@ function zeroPrimaryComponents(worksheet) {
   return eligible;
 }
 
-function buildHybridShadowTargets({ worksheet, contract }) {
+function allowedZeroPrimaryComponents({ worksheet, allowedTargets }) {
+  const eligible = zeroPrimaryComponents(worksheet);
+  if (allowedTargets === null || allowedTargets === undefined) return eligible;
+  if (!Array.isArray(allowedTargets))
+    throw shadowError("HYBRID_SHADOW_ALLOWED_TARGETS_INVALID");
+  const eligibleByKey = new Map(
+    eligible.map(({ requirement, component }) => [
+      `${requirement.id}:${component.id}`,
+      { requirement, component },
+    ])
+  );
+  const seen = new Set();
+  return allowedTargets.map((allowedTarget) => {
+    const requirementId = requiredString(
+      allowedTarget?.requirementId,
+      "HYBRID_SHADOW_ALLOWED_REQUIREMENT_REQUIRED"
+    );
+    const componentId = requiredString(
+      allowedTarget?.componentId,
+      "HYBRID_SHADOW_ALLOWED_COMPONENT_REQUIRED"
+    );
+    const key = `${requirementId}:${componentId}`;
+    if (seen.has(key))
+      throw shadowError("HYBRID_SHADOW_ALLOWED_TARGET_DUPLICATE", key);
+    seen.add(key);
+    const eligibleTarget = eligibleByKey.get(key);
+    if (!eligibleTarget)
+      throw shadowError("HYBRID_SHADOW_ALLOWED_TARGET_NOT_PRIMARY_NULL", key);
+    return { ...eligibleTarget, pilotCase: allowedTarget };
+  });
+}
+
+function buildHybridShadowTargets({ worksheet, contract, allowedTargets }) {
   if (!contract?.enabled)
     throw shadowError("HYBRID_SHADOW_CONTRACT_NOT_ENABLED");
-  return zeroPrimaryComponents(worksheet).map(({ requirement, component }) => {
-    const aliases = Array.isArray(component.aliases) ? component.aliases : [];
-    const concepts = (component.conceptSearches || []).flatMap((search) => [
-      search.label,
-      ...(search.requiredGroups || []).flatMap(
-        ({ prefixes }) => prefixes || []
-      ),
-    ]);
-    const terms = [
-      ...new Set([requirement.label, component.label, ...aliases, ...concepts]),
-    ]
-      .filter((value) => typeof value === "string" && value.trim())
-      .map((value) => value.trim());
-    return {
-      id: `hybrid-shadow-target:${requirement.id}:${component.id}`,
-      requirementId: requirement.id,
-      componentId: component.id,
-      query: terms.join("; ").slice(0, 4000),
-      semanticContract:
-        `Nur explizite Vertragsaussagen zu ${requirement.label} / ${component.label}. ` +
-        "Rolle, versichertes Objekt, Sparte, Geltungsbereich, Bedingung und Begrenzung müssen aus dem exakten Quelltext geprüft werden. Ähnliche Begriffe allein genügen nicht.",
-      topK: contract.retrieval.topK,
-    };
-  });
+  return allowedZeroPrimaryComponents({ worksheet, allowedTargets }).map(
+    ({ requirement, component, pilotCase }) => {
+      const aliases = Array.isArray(component.aliases) ? component.aliases : [];
+      const concepts = (component.conceptSearches || []).flatMap((search) => [
+        search.label,
+        ...(search.requiredGroups || []).flatMap(
+          ({ prefixes }) => prefixes || []
+        ),
+      ]);
+      const terms = [
+        ...new Set([
+          requirement.label,
+          component.label,
+          ...aliases,
+          ...concepts,
+        ]),
+      ]
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim());
+      return {
+        id: `hybrid-shadow-target:${requirement.id}:${component.id}`,
+        requirementId: requirement.id,
+        componentId: component.id,
+        pilotCaseId: pilotCase?.caseId || null,
+        query: terms.join("; ").slice(0, 4000),
+        semanticContract:
+          `Nur explizite Vertragsaussagen zu ${requirement.label} / ${component.label}. ` +
+          "Rolle, versichertes Objekt, Sparte, Geltungsbereich, Bedingung und Begrenzung müssen aus dem exakten Quelltext geprüft werden. Ähnliche Begriffe allein genügen nicht.",
+        topK: contract.retrieval.topK,
+      };
+    }
+  );
 }
 
 function verifyRankedChunk({ document, chunk }) {
@@ -461,6 +501,8 @@ function buildHybridShadowWorksheet({
   contractIdentity,
   primaryWorksheetSha256,
   documentArtifactSha256,
+  allowedTargets,
+  pilotIdentity = null,
 }) {
   if (
     !/^[a-f0-9]{64}$/u.test(primaryWorksheetSha256 || "") ||
@@ -468,7 +510,10 @@ function buildHybridShadowWorksheet({
   )
     throw shadowError("HYBRID_SHADOW_INPUT_SHA256_INVALID");
   const eligibleByKey = new Map(
-    zeroPrimaryComponents(primaryWorksheet).map(
+    allowedZeroPrimaryComponents({
+      worksheet: primaryWorksheet,
+      allowedTargets,
+    }).map(
       ({ requirement, component }) => [
         `${requirement.id}:${component.id}`,
         { requirement, component },
@@ -601,6 +646,7 @@ function buildHybridShadowWorksheet({
       primaryWorksheetSha256,
       documentArtifactSha256,
       contract: contractIdentity,
+      ...(pilotIdentity ? { pilot: pilotIdentity } : {}),
     },
   };
 }

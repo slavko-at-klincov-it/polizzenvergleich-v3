@@ -152,6 +152,50 @@ describe("hybridShadowSearch", () => {
     ]);
   });
 
+  test("targets only the explicit pilot allowlist without leaking oracle labels", () => {
+    const { worksheet } = fixture();
+    const oracleHash = "d".repeat(64);
+    const targets = buildHybridShadowTargets({
+      worksheet,
+      contract: contract(),
+      allowedTargets: [
+        {
+          caseId: "pilot-positive-01",
+          requirementId: "EL-01",
+          componentId: "coverage",
+          controlClass: "POSITIVE",
+          groundTruth: "RELEVANT_EVIDENCE_EXISTS",
+          acceptedExactQuoteSha256: [oracleHash],
+          note: "Dieser Text darf die Suche nicht beeinflussen.",
+        },
+      ],
+    });
+
+    expect(targets).toHaveLength(1);
+    expect(targets[0].pilotCaseId).toBe("pilot-positive-01");
+    expect(JSON.stringify(targets)).not.toContain(oracleHash);
+    expect(JSON.stringify(targets)).not.toContain("groundTruth");
+    expect(JSON.stringify(targets)).not.toContain("controlClass");
+    expect(JSON.stringify(targets)).not.toContain("Dieser Text");
+  });
+
+  test("rejects an allowlisted component that is not a primary null", () => {
+    const { worksheet } = fixture();
+    expect(() =>
+      buildHybridShadowTargets({
+        worksheet,
+        contract: contract(),
+        allowedTargets: [
+          {
+            caseId: "not-null",
+            requirementId: "EL-01",
+            componentId: "existing",
+          },
+        ],
+      })
+    ).toThrow("HYBRID_SHADOW_ALLOWED_TARGET_NOT_PRIMARY_NULL");
+  });
+
   test("builds an exact-offset shadow worksheet without mutating primary", () => {
     const { document, worksheet, text } = fixture();
     const before = JSON.parse(JSON.stringify(worksheet));
