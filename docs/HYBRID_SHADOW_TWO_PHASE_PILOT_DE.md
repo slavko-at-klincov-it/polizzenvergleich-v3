@@ -45,6 +45,11 @@ Der Lauf ist fail-closed:
    mit 42.496 Token Kontext her. Der Lauf gilt erst dann als fertig, wenn der
    Qwen-Zustand erneut verifiziert wurde.
 
+Der auf dem Mac Studio real ausgewiesene Dinghy-Kontext beträgt 2.048 Token.
+Der Runner fordert und verifiziert deshalb exakt 2.048 Token. Die
+Retrievalchunks sind zusätzlich auf 3.000 Zeichen, die exakten Prüfspans auf
+1.200 Zeichen begrenzt.
+
 ## Oracle-Klassen
 
 - `POSITIVE`: bestätigte Primär-Miss-Fundstelle; erwartete Downstream-Auswahl.
