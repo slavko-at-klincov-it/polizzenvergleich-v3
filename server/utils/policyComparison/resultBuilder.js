@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const {
-  POINT_OUTCOME,
   SEARCH_DISPOSITION,
   decidePoint,
 } = require("./pointDecision");
