@@ -7,13 +7,15 @@ const {
 function row(
   categoryId,
   outcome,
-  legacyOutcome = "UNTERSCHIED_FACHLICH_PRÜFEN"
+  legacyOutcome = "UNTERSCHIED_FACHLICH_PRÜFEN",
+  reasonCode = outcome === "UNKLAR" ? "MISSING_ONE_SIDE" : "TEST_DECISION"
 ) {
   return {
     categoryId,
     outcome: legacyOutcome,
     pointDecision: {
       outcome,
+      reasonCode,
       reviewRequired: outcome === "UNKLAR",
     },
   };
@@ -42,6 +44,10 @@ describe("policy comparison customer metric contract", () => {
       rows: 3,
       customerReviewRequired: 1,
       noCustomerReviewRequired: 2,
+      customerReviewByReasonCode: { MISSING_ONE_SIDE: 1 },
+      customerReviewRowKeysByReasonCode: {
+        MISSING_ONE_SIDE: ["VS:VS-01"],
+      },
       legacyTechnicalDifferences: 2,
     });
     expect(result.totals).not.toHaveProperty("reviewRequired");
@@ -61,6 +67,17 @@ describe("policy comparison customer metric contract", () => {
       (value) => (value.totals.pointDecisions.UNKLAR = 0),
     ],
     [
+      "stored review reason count",
+      (value) => (value.totals.customerReviewByReasonCode.MISSING_ONE_SIDE = 2),
+    ],
+    [
+      "stored review reason membership",
+      (value) =>
+        value.totals.customerReviewRowKeysByReasonCode.MISSING_ONE_SIDE.push(
+          "VS:VS-99"
+        ),
+    ],
+    [
       "row review flag",
       (value) =>
         (value.categories[0].rows[0].pointDecision.reviewRequired = false),
@@ -78,6 +95,15 @@ describe("policy comparison customer metric contract", () => {
     const result = resultFor([row("VS-01", "UNKLAR")]);
     mutate(result);
     expect(() => validateCustomerComparison(result)).toThrow(/^COMPARISON_/u);
+  });
+
+  test("requires every unclear row to have one auditable reason group", () => {
+    const result = resultFor([row("VS-01", "UNKLAR")]);
+    result.categories[0].rows[0].pointDecision.reasonCode = "";
+    result.totals = deriveCustomerMetrics(result.categories);
+    expect(() => validateCustomerComparison(result)).toThrow(
+      "COMPARISON_CUSTOMER_REVIEW_REASON_MISSING"
+    );
   });
 
   test("allows stored V5 results only through the explicit legacy adapter", () => {

@@ -487,6 +487,19 @@ function ComparisonResult({ result }) {
             ? "nicht verfügbar"
             : customerMetrics.customerReviewRequired}
         </p>
+        {customerMetrics.storedMetricDiscrepancy && (
+          <p className="mt-1 text-[10px] font-semibold text-red-200 light:text-red-800">
+            Gespeicherte Kennzahl widerspricht den sichtbaren Zeilen. Angezeigt
+            wird die unabhängig nachgezählte Zeilenzahl.
+          </p>
+        )}
+        {customerMetrics.customerReviewBreakdown.length > 0 && (
+          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+            Prüfgründe: {customerMetrics.customerReviewBreakdown
+              .map(({ label, count }) => `${label}: ${count}`)
+              .join(" · ")}
+          </p>
+        )}
         {result.totals?.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             Punktentscheidungen: A {result.totals.pointDecisions.VORTEIL_A || 0}{" "}

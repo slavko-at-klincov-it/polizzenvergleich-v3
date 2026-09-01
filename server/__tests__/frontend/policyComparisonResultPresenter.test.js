@@ -74,7 +74,8 @@ describe("policy comparison result presenter", () => {
               {
                 pointDecision: {
                   outcome: "UNKLAR",
-                  reviewRequired: true,
+                  reasonCode: "MISSING_ONE_SIDE",
+                  reviewRequired: false,
                 },
               },
             ],
@@ -89,6 +90,13 @@ describe("policy comparison result presenter", () => {
     ).toEqual({
       rows: 1,
       customerReviewRequired: 1,
+      customerReviewBreakdown: [
+        {
+          reasonCode: "MISSING_ONE_SIDE",
+          label: "Nur eine Seite enthält einen belastbaren Beleg",
+          count: 1,
+        },
+      ],
       legacyFallback: false,
       storedMetricDiscrepancy: false,
     });
@@ -110,6 +118,13 @@ describe("policy comparison result presenter", () => {
     ).toEqual({
       rows: 1,
       customerReviewRequired: 1,
+      customerReviewBreakdown: [
+        {
+          reasonCode: "LEGACY_RESULT_WITHOUT_POINT_DECISION",
+          label: "Anderer Prüfgrund",
+          count: 1,
+        },
+      ],
       legacyFallback: true,
       storedMetricDiscrepancy: true,
     });

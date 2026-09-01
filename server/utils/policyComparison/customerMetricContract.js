@@ -1,6 +1,6 @@
 const { POINT_OUTCOME } = require("./pointDecision");
 
-const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V1";
+const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
 const LEGACY_NON_DIFFERENCE_OUTCOMES = new Set([
   "INHALTLICH_GLEICH",
@@ -26,6 +26,21 @@ function deriveCustomerMetrics(categories) {
   const customerReviewRequired = rows.filter(
     ({ pointDecision }) => pointDecision?.reviewRequired === true
   ).length;
+  const customerReviewRowKeysByReasonCode = {};
+  for (const row of rows) {
+    if (row.pointDecision?.outcome !== POINT_OUTCOME.UNCLEAR) continue;
+    const reasonCode = String(row.pointDecision?.reasonCode || "").trim();
+    if (!customerReviewRowKeysByReasonCode[reasonCode])
+      customerReviewRowKeysByReasonCode[reasonCode] = [];
+    customerReviewRowKeysByReasonCode[reasonCode].push(
+      `${row.categoryView}:${row.categoryId}`
+    );
+  }
+  const customerReviewByReasonCode = Object.fromEntries(
+    Object.entries(customerReviewRowKeysByReasonCode)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([reasonCode, rowKeys]) => [reasonCode, rowKeys.length])
+  );
   const legacyTechnicalDifferences = rows.filter(
     ({ outcome }) => !LEGACY_NON_DIFFERENCE_OUTCOMES.has(outcome)
   ).length;
@@ -34,6 +49,8 @@ function deriveCustomerMetrics(categories) {
     rows: rows.length,
     customerReviewRequired,
     noCustomerReviewRequired: rows.length - customerReviewRequired,
+    customerReviewByReasonCode,
+    customerReviewRowKeysByReasonCode,
     legacyTechnicalDifferences,
     pointDecisions,
   };
@@ -94,6 +111,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   const recomputedOutcomes = Object.fromEntries(
     POINT_OUTCOMES.map((outcome) => [outcome, 0])
   );
+  const recomputedReviewRowKeysByReasonCode = {};
   let recomputedReview = 0;
   let recomputedLegacyDifferences = 0;
 
@@ -114,6 +132,14 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         reviewRequired,
       ]);
     if (reviewRequired) recomputedReview += 1;
+    if (reviewRequired) {
+      const reasonCode = String(row.pointDecision?.reasonCode || "").trim();
+      if (!reasonCode)
+        validationError("COMPARISON_CUSTOMER_REVIEW_REASON_MISSING", [rowKey]);
+      if (!recomputedReviewRowKeysByReasonCode[reasonCode])
+        recomputedReviewRowKeysByReasonCode[reasonCode] = [];
+      recomputedReviewRowKeysByReasonCode[reasonCode].push(rowKey);
+    }
     const legacyDifference = !LEGACY_NON_DIFFERENCE_OUTCOMES.has(row.outcome);
     if (legacyDifference) recomputedLegacyDifferences += 1;
   }
@@ -131,6 +157,31 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     JSON.stringify(totals.pointDecisions) !== JSON.stringify(recomputedOutcomes)
   )
     validationError("COMPARISON_POINT_DECISION_AGGREGATE_MISMATCH");
+
+  const recomputedReviewByReasonCode = Object.fromEntries(
+    Object.entries(recomputedReviewRowKeysByReasonCode)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([reasonCode, rowKeys]) => [reasonCode, rowKeys.length])
+  );
+  if (
+    JSON.stringify(totals.customerReviewByReasonCode) !==
+    JSON.stringify(recomputedReviewByReasonCode)
+  )
+    validationError("COMPARISON_CUSTOMER_REVIEW_REASON_AGGREGATE_MISMATCH");
+  if (
+    JSON.stringify(totals.customerReviewRowKeysByReasonCode) !==
+    JSON.stringify(recomputedReviewRowKeysByReasonCode)
+  )
+    validationError("COMPARISON_CUSTOMER_REVIEW_REASON_MEMBERSHIP_MISMATCH");
+  const reasonTotal = Object.values(recomputedReviewByReasonCode).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+  if (reasonTotal !== recomputedReview)
+    validationError("COMPARISON_CUSTOMER_REVIEW_REASON_TOTAL_MISMATCH", [
+      reasonTotal,
+      recomputedReview,
+    ]);
 
   const exactMetrics = {
     rows: rows.length,
