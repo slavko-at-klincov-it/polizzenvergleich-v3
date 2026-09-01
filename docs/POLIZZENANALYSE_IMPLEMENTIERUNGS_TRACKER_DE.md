@@ -3986,3 +3986,82 @@ NO MODEL RUN: bestehendes Vergleichsartefakt nur deterministisch neu aggregiert
 NO DEPLOY: installierter Kundenstand unverändert
 NO CLAIM: keine fachliche Vorteilskorrektur in diesem Inkrement
 ```
+
+## 79. Paket-first-Nachfolgevertrag V8
+
+Am 2. September 2026 wurde die fachliche Bedeutung von Paket A und Paket B
+präzisiert. Die Upload-Zuordnung des Benutzers definiert zwei
+gleichberechtigte Gebäudeversicherungspakete. Aus der bloßen
+Dokumentklassifikation abgeleitete Stati sind Herkunftsmetadaten und dürfen
+einen inhaltlich passenden Vergleich nicht allein sperren. Inhaltlich belegte
+Optionalität oder Bedingung sowie Wirkung, Wert, Scope, Variante, Version,
+Widerspruch und Ersetzung bleiben unverändert entscheidungsrelevant.
+
+Ausgangsbasis ist der Favoritenlauf `CANDIDATE-FE-A06-FA780902-20260901-223450`
+auf Commit `fa78090269a23e0f45223546fc9b57f10e78f843` mit 224 Zeilen, 26:47
+Wandzeit und den Kundenmetriken `0/0/38/6/99/14/67`. Der lokale
+Implementierungsstart ist Commit `00d4d2ad56ab4361f20d754643c77813dada8e79`.
+Eine datenbasierte Prüfung des Favoritenartefakts ergab:
+
+- alle 99 Zeilen `KEIN_DOKUMENTIERTER_VORTEIL` sind beidseitig qualifizierte,
+  vollständige Nulltreffer; je Zeile stimmen der A/B-Requirement- und
+  Suchvertrag überein;
+- von 38 Dokumentationsunterschieden besitzen 17 genau eine im Artefakt als
+  `BELEGT`, `coverage=Ja` geführte Fundseite und eine qualifiziert fundlose
+  Gegenseite. Davon sind zunächst nur 9 reine `COVERAGE_ONLY`-Positionen
+  mechanische Kandidaten: 7 für A und 2 für B;
+- die übrigen 8 dieser 17 sind 4 `COVERAGE_MIXED`- und 4
+  `VALUE_TERM`-Positionen und benötigen eigene Richtungsverträge;
+- 4 vollständige Ausschlüsse, 1 gemischter Fall und 16 Teilbelege dürfen
+  nicht in diesen positiven Pfad gelangen;
+- die 67 Kundenreviewzeilen bleiben eine eigenständige Ursachenmenge. Sie
+  dürfen nicht zusammen mit den 99 beidseitigen Nulltreffern als
+  Kundenreviewzahl ausgegeben werden; eine Addition ist nur für eine
+  ausdrücklich benannte Union der disjunkten Mengen zulässig.
+
+Geplante, getrennt zu commitende Inkremente:
+
+1. `PAV8-01`: semantische Schutzmarker für Warte-/Karenzbedingungen sowie
+   bestimmungsgemäße gegenüber bestimmungswidriger Ereignisvariante;
+2. `PAV8-02`: aus der Dokumentklassifikation abgeleitete Stati als
+   Vergleichsmetadatum behandeln und semantisch identische Beitragsfakten nur
+   in der abgeleiteten Vergleichsdimension provenienzerhaltend gruppieren;
+3. `PAV8-03a`: beidseitige qualifizierte Abwesenheit als
+   Vergleichsgleichheit darstellen;
+4. `PAV8-03b`: vollständigen positiven `COVERAGE_ONLY`-Einseitenfund gegenüber
+   qualifizierter Abwesenheit als Vorteil entscheiden;
+5. `PAV8-04+`: die verbleibenden Ausschluss-, Misch-, Teilbeleg-, Wert-,
+   Selbstbehalt-, Bedingungs- und Definitionsfälle nur über eigene typisierte
+   Richtungsverträge bearbeiten;
+6. Discovery/Crosswalk getrennt von der festen Kundenansicht ausbauen; eine
+   freie Strukturinventur darf die 224 Zeilen nicht ungeprüft ersetzen.
+
+Sicherheitsgrenzen:
+
+- `documentApplicability` darf nicht blind aus einem Vergleichsschlüssel
+  entfernt werden; sonst gehen Quellen, Bedingungen und Varianten verloren;
+- unbekannte bloße Dokumentart darf nicht sperren; unbekannte Klauselwirkung,
+  unbekannter Scope oder inhaltlich belegte Optionalität bleiben fail-closed;
+- unterschiedliche Werte oder semantische Inhalte werden nie durch
+  Statusneutralität gleichgesetzt;
+- Rohfakten werden nie vereinigt oder überschrieben; alle Dokument-UUIDs,
+  Quellen und Statuswerte bleiben erhalten;
+- `bestimmungsgemäße Auslösung` und `bestimmungswidriger Austritt` sind
+  unterschiedliche Ereignisvarianten;
+- ein Warte-/Karenzzeit-Fakt darf nicht mit einer bedingungslosen Deckung
+  gleichgesetzt werden;
+- Nulltreffer ändern niemals den Rohfakt zu `EXCLUDED`.
+
+Jedes Verhaltensinkrement erhält seinen eigenen Commit, fokussierte positive,
+negative und adversariale Verträge, eine Validierung im isolierten
+Mac-Studio-Checkout und anschließend einen vollständigen Zehn-Dokument-Lauf.
+Favoritenvergleich, Laufzeit, Commit, Modelle, Konfiguration und Artefakthashes
+werden im Fehler- und Fixarbeitsplan protokolliert. Der installierte
+Kundencheckout bleibt ohne ausdrückliche Deployment-Freigabe unverändert.
+
+```text
+VERTRAG: als V8-Nachfolgevertrag dokumentiert, im V7-Code noch nicht vollständig implementiert
+BASELINE: fa780902 / 224 Zeilen / 26:47 / 0-0-38-6-99-14-67
+NO DEPLOY: installierter Kundenstand bleibt unverändert
+NO CLAIM: Projektionen sind keine Messergebnisse; maßgeblich ist jeder neue Lauf
+```

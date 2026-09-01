@@ -1,6 +1,6 @@
 # Polizzenvergleich A/B – technischer MVP-Vertrag
 
-Stand: 30. August 2026  
+Stand: 2. September 2026
 Kanonischer Implementierungszweig: `codex/polizzenvergleich-v3`
 
 ## 1. Zweck
@@ -12,8 +12,14 @@ Funktion ersetzt den bisherigen manuellen Ablauf „Kategorie einzeln laufen
 lassen, Ergebnisse in Excel nebeneinander kopieren und erneut vom LLM
 vergleichen“ durch einen reproduzierbaren technischen Job.
 
+Die Upload-Zuordnung ist fachlich bindend: A und B sind zwei
+gleichberechtigte Gebäudeversicherungspakete. Angebot, Polizze, Vertrag,
+Zusatzdokument, Nachtrag, Rahmenvereinbarung und Bedingungen sind innerhalb
+der gewählten Seite zulässige Evidenzquellen. Die Dokumentart ist Provenienz,
+nicht selbst das Vergleichsurteil.
+
 Die Funktion ist keine LF- oder WEVIG-Sonderlogik. Sie verwendet für jedes
-Quelldokument das versionierte Kundenprofil `CUSTOMER_CORE_5_V2` mit VS, FE,
+Quelldokument das versionierte Kundenprofil `CUSTOMER_CORE_5_V7` mit VS, FE,
 LW, ST und EL und rollt dessen belegte Ergebnisse anschließend paketweise
 zusammen. Die weiterhin vorhandenen HP-, VB- und WE-Kataloge gehören nicht
 zum produktiven Vergleichslauf.
@@ -56,7 +62,11 @@ Pro Dokument werden mindestens gespeichert:
 
 Diese Metadaten verhindern noch keine fachlich falsche Rangentscheidung. Sie
 sorgen dafür, dass die spätere Paketlogik die Dokumente nicht vorher
-untrennbar vermischt.
+untrennbar vermischt. Aus der bloßen Dokumentklassifikation abgeleitete Stati
+dürfen semantisch identische Beitragsfakten nicht allein blockieren.
+Dokumentidentität, unterschiedliche Inhalte, Werte, Scopes, Bedingungen,
+Varianten, Wirkungen sowie Versions- und Ersetzungskonflikte bleiben davon
+unberührt. Rohfakten werden nicht vereinigt oder überschrieben.
 
 ## 4. Vergleichssemantik und Beweisgrenze
 
@@ -66,18 +76,37 @@ werden nicht automatisch als Widerspruch behandelt, sondern mit
 `RANGFOLGE_PRÜFEN` markiert. Ein echter bereits im Dokumentlauf ausgewiesener
 Widerspruch bleibt sichtbar.
 
-Auch eine nur auf einer Seite belegte Leistung erzeugt keinen automatischen
-Vorteil. Der Vergleich unterscheidet technisch:
+Nach dem beschlossenen V8-Nachfolgevertrag soll eine nur auf einer Seite
+vollständig positiv belegte reine Deckungsleistung einen Vorteil erzeugen,
+wenn die andere Seite denselben versionierten Requirement-Vertrag vollständig
+kontrolliert ohne Fund durchlaufen hat. Bedingungen, Werte und gemischte
+Anforderungen benötigen eigene Richtungsverträge. Der Vergleich
+unterscheidet technisch:
 
 - beidseitig kein Beleg;
 - nur A oder nur B belegt;
 - dokumentbezogene Inhalte gleich;
 - Inhalte verschieden und fachlich zu prüfen.
 
+Ein beidseitiger qualifizierter Nulltreffer wird auf Vergleichsebene als
+`GLEICHWERTIG` gewertet: in beiden vollständig kontrolliert geprüften Paketen
+nicht enthalten beziehungsweise nicht geregelt. Die Rohfakten bleiben
+`UNKNOWN`; es wird kein ausdrücklicher Ausschluss erfunden. Ausschlüsse,
+gemischte Wirkungen, Teilbelege, unvollständige Suchen und unbekannte
+Klauselwirkung oder unbekannter Scope bleiben außerhalb dieses automatischen
+Vorteilspfads. Eine bloß unbekannte Dokumentart darf allein nicht sperren.
+
+Dieser Nachfolgevertrag ist im aktuellen V7-Code noch nicht vollständig
+implementiert. V7 liefert für allgemeine beidseitige Nulltreffer weiterhin
+`KEIN_DOKUMENTIERTER_VORTEIL` und für den allgemeinen Einseitenfund
+`DOKUMENTATIONSUNTERSCHIED`. Erst bestandene Mac-Studio-Läufe dürfen diese
+Istbeschreibung ändern.
+
 Zusätzlich besitzt jede Zeile ab Ergebnisschema V2 eine servereigene
-`pointDecision` mit den Zuständen `VORTEIL_A`, `VORTEIL_B`,
-`GLEICHWERTIG`, `NICHT_VERGLEICHBAR` und `UNKLAR`. Sie liest nicht die
-Anzeigetexte, sondern die bereits erzeugten atomaren Komponenten,
+`pointDecision`. Das aktuelle Ergebnisschema V7 kennt die sieben Zustände
+`VORTEIL_A`, `VORTEIL_B`, `DOKUMENTATIONSUNTERSCHIED`, `GLEICHWERTIG`,
+`KEIN_DOKUMENTIERTER_VORTEIL`, `NICHT_VERGLEICHBAR` und `UNKLAR`. Sie liest
+nicht die Anzeigetexte, sondern die bereits erzeugten atomaren Komponenten,
 Wirkungsurteile, Geltungs- und Scopebilder sowie typisierten Werte und
 servergebundenen Quellen.
 
@@ -271,13 +300,14 @@ werden.
 
 ## 8. Nächste fachliche Gates
 
-1. Den neuen Build als Release Candidate installieren und den vollständigen
-   LF-gegen-neun-WEVIG-Lauf frisch ausführen.
-2. Paketweite Rang-, Geltungs- und Ersetzungsregeln als atomare semantische
-   Verträge implementieren und mit Positiv-/Negativvarianten testen.
-3. Die neue Punktentscheidung fachlich gegen die erzeugten Quellen und
-   insbesondere `LW-22` abnehmen.
+1. Die neuen Paketvergleichsverträge in kleinen, getrennten Commits
+   implementieren.
+2. Jeden Commit in einem isolierten Mac-Studio-Checkout fokussiert prüfen und
+   danach den vollständigen LF-gegen-neun-WEVIG-Lauf frisch ausführen.
+3. Die neue Punktentscheidung gegen alle geänderten Quellen sowie bekannte
+   False-Negative- und adversariale Kontrollen abnehmen.
 4. Laufzeit durch paketweite Wiederverwendung und gezielte Parallelisierung
    reduzieren, ohne Modell- oder Evidenzpfade unkontrolliert zu vermischen.
-5. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
+5. Erst nach ausdrücklicher Freigabe einen bestandenen Stand deployen.
+6. Erst danach unbekannte, fachlich gelabelte Versicherer-Holdouts für eine
    messbare Genauigkeits- oder 99-Prozent-Aussage verwenden.

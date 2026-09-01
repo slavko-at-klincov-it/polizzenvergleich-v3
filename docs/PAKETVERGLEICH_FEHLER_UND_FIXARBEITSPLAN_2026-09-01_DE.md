@@ -1586,3 +1586,151 @@ Weitere Änderungen an diesen Kandidaten ohne neue fachliche Evidenz würden
 die Sicherheitsgrenze lockern, aber kein aussagekräftigeres, belegtes Ergebnis
 erzeugen. Deshalb endet diese Kandidatenserie hier mit einem kleinen echten
 Gewinn und einer dokumentierten NO-GO-Grenze für jede übrige Variante.
+
+## 19. Paket-first-Korrektur: Dokumentart ist kein Vergleichsblocker
+
+### 19.1 Korrigierter fachlicher Auftrag
+
+Paket A und Paket B werden durch die Upload-Zuordnung des Benutzers definiert.
+Beide Seiten enthalten Gebäudeversicherungsunterlagen und dürfen beliebige
+unterstützte Mischungen aus Angebot, Polizze, Vertrag, Zusatzpolizze,
+Zusatzvertrag, Nachtrag, Rahmenvereinbarung und Bedingungen enthalten. Die
+Dokumentart darf einen gefundenen Inhalt weder allein abwerten noch eine
+Vergleichsentscheidung allein blockieren.
+
+Damit werden die früheren Arbeitsinvarianten 1, 7 und 8 dieses historischen
+Dokuments nur in folgendem Umfang ersetzt:
+
+- aus der bloßen Dokumentklassifikation abgeleitete Stati sind
+  Provenienzmetadaten;
+- Dokumentidentität und Rohfakten bleiben vollständig erhalten;
+- unterschiedliche Inhalte, Wirkungen, Werte, Bedingungen, Scopes, Varianten,
+  Versionen, Widersprüche und Ersetzungen bleiben getrennt;
+- unbekannte bloße Dokumentart darf nicht sperren; unbekannte Klauselwirkung,
+  unbekannter Scope und inhaltlich belegte Optionalität bleiben fail-closed;
+- Rohfakten werden niemals vereinigt oder überschrieben. Nur die abgeleitete
+  Vergleichsdimension darf semantisch identische Beitragsfakten gruppieren;
+  alle Dokument-UUIDs, Quellen und Rohstatus bleiben erhalten.
+
+### 19.2 Fakten aus dem aktuellen Favoritenlauf
+
+Geprüfte Quelle:
+
+```text
+Run: CANDIDATE-FE-A06-FA780902-20260901-223450
+Commit: fa78090269a23e0f45223546fc9b57f10e78f843
+Wandzeit: 26:47
+Zeilen: 224
+Kundenmetriken: A 0 / B 0 / Doku 38 / Gleich 6 / Null 99 /
+               Nicht vergleichbar 14 / Unklar 67
+```
+
+Die drei auffälligen Mengen sind disjunkt als Ergebniszeilen. Sie dürfen nicht
+ohne benannte Metrik und insbesondere nicht als Kundenreviewzahl addiert
+werden; für eine ausdrücklich definierte Union ist ihre Summe zulässig:
+
+1. **99 beidseitige Nulltreffer:** In allen 99 Zeilen wurden beide Pakete je
+   Zeile unter demselben Requirement-Vertrag vollständig kontrolliert geprüft;
+   auf keiner Seite wurde ein passender Fakt gefunden. Auf Vergleichsebene
+   sollen diese Zeilen künftig `GLEICHWERTIG` heißen: beidseitig nicht
+   enthalten oder nicht geregelt. Auf Faktenebene bleibt die Wirkung
+   `UNKNOWN`; ein ausdrücklicher Ausschluss wird nicht behauptet.
+2. **38 einseitige Dokumentationsunterschiede:** 19 besitzen nur auf A, 19 nur
+   auf B einen Fund. Davon sind 17 im gespeicherten Artefakt als
+   `evidenceFound=true`, `BELEGT`, `coverage=Ja` geführt; ihre fachliche
+   Quellenrichtigkeit ist noch nicht unabhängig abgenommen. Zunächst sind nur
+   9 reine `COVERAGE_ONLY`-Positionen mechanische Kandidaten: 7 auf A
+   (`VS-13`, `VS-14`, `VS-16`, `ST-29`, `EL-25`, `EL-28`, `EL-29`) und 2 auf
+   B (`FE-A09`, `ST-05`). Vier `COVERAGE_MIXED`-Fälle (`LW-01` bis `LW-04`)
+   und vier `VALUE_TERM`-Fälle (`FE-F03`, `LW-31`, `ST-34`, `EL-01`)
+   benötigen eigene Richtungsverträge. Die übrigen 21 bestehen aus 4
+   vollständigen Ausschlüssen, 1 gemischten Fall und 16 Teilbelegen.
+3. **67 unklare Zeilen:** 40 Paketstatus-Blocker, 9 beidseitig fehlende
+   belastbare Evidenz, 7 einseitig fehlende Evidenz, 3 Rangfälle, 3
+   unvollständige atomare Anforderungen, 3 fehlende Vergleichsregeln, 1
+   unvollständige Alternative und 1 ungeklärter Bedingungs-/Ausnahmescope.
+   Diese 67 sind die tatsächliche Kundenreviewmenge des Favoritenlaufs.
+
+### 19.3 Versionierte Zielverträge
+
+`PACKAGE_MEMBER_DOCUMENT_STATUS_METADATA_V1`:
+
+- `ACTIVE`, `FRAMEWORK_TERMS` und `PROPOSED_ONLY` sind für die
+  Vergleichsidentität semantisch passender Fakten gleichwertig;
+- Rohstatus, Dokument-UUIDs, Quellen, Kandidaten und Auditpfade bleiben
+  erhalten;
+- Status-only-Beitragsfakten werden ausschließlich in der abgeleiteten
+  Vergleichsdimension kanonisch und permutationsstabil gruppiert;
+- Unterschiede in Wirkung, Wert, Scope, Bedingung, Ereignisvariante oder
+  Feldinhalt bleiben getrennt;
+- unbekannte Klauselwirkung oder unbekannter Scope bleibt ein Blocker; eine
+  bloß unbekannte Dokumentart nicht.
+
+`EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1`:
+
+- beide Seiten besitzen qualifizierte Abwesenheit unter demselben
+  versionierten Requirement- und Suchvertrag;
+- alle Paketdokumente und Textseiten sind erfasst;
+- keine Seite enthält einen gefundenen Fakt;
+- Ergebnis ist `GLEICHWERTIG`, nicht zwei behauptete Ausschlüsse.
+
+`COMPLETE_POSITIVE_POINT_OVER_CONTROLLED_ABSENCE_V1`:
+
+- die Gegenseite besitzt qualifizierte Abwesenheit;
+- der Zeilenvertrag ist `COVERAGE_ONLY`; Bedingungen, Werte und gemischte
+  Anforderungen benötigen eigene Richtungsverträge;
+- die Fundseite ist `BELEGT`, serverseitig `Ja`, quellengebunden,
+  konfliktfrei und komponentenvollständig;
+- bei `ALL` ist jede deklarierte Komponente erfüllt; bei `ANY` mindestens eine
+  zulässige Alternative und alle tatsächlich gefundenen Komponenten sauber;
+- keine Ausschlussrolle und keine Wirkung `EXCLUDED` oder `UNKNOWN`;
+- bekannte Dokumentarten und -stati dürfen den Pfad nicht sperren;
+- Teilbeleg, gemischte Wirkung, Konflikt oder unbekannte Geltung sperren.
+
+### 19.4 Sicherheitsabhängigkeiten vor der Statusneutralität
+
+Die Realquellen zeigen zwei Semantikgrenzen, die der bisherige Statusblocker
+teilweise verdeckt. Vor einer Statusvereinigung müssen sie in den atomaren
+Vergleichsschlüssel aufgenommen werden:
+
+- Warte- und Karenzbedingungen gegenüber bedingungsloser Geltung;
+- `bestimmungsgemäße Auslösung` gegenüber `bestimmungswidrigem Austritt` als
+  unterschiedliche Ereignisvarianten.
+
+Insbesondere darf `LW-13` nicht zu einem Vorteil werden: A beschreibt die
+bestimmungsgemäße Auslösung als Ausschluss, B den bestimmungswidrigen Austritt
+als Einschluss. Das ist keine identische Ereignisvariante. Ein bloßes Löschen
+von `documentApplicability` aus dem Schlüssel wäre daher fachlich falsch.
+
+### 19.5 Reihenfolge und Messvertrag
+
+1. Semantikmarker implementieren, committen, fokussiert auf dem Mac Studio
+   validieren und vollständigen Lauf ausführen.
+2. Dokumentstatus-neutralen, provenienzerhaltenden Merge implementieren,
+   committen und ebenso vollständig messen.
+3. Beidseitige kontrollierte Abwesenheit implementieren und messen.
+4. Vollständigen positiven `COVERAGE_ONLY`-Einseitenfund gegen kontrollierte
+   Abwesenheit implementieren und messen.
+5. Erst danach `COVERAGE_MIXED`, `VALUE_TERM` und die verbleibenden 21
+   einseitigen Fälle jeweils über eigene Richtungsverträge typisieren.
+
+Nach jedem Verhaltensthema werden gegen den unmittelbaren Favoriten und den
+letzten guten Lauf mindestens protokolliert:
+
+- exakter Commit, Remote-Checkout, Node-, Modell- und Konfigurationsvertrag;
+- fokussierte und adversariale Tests;
+- Start, Ende und Wandzeit des vollständigen Laufs;
+- 224-Zeilen-Hard-Gate und Kundenmetriken;
+- zeilenweises Delta mit Regel-ID und Kundenerklärung;
+- Dokument-, Worksheet-, Report-, JSON-, Markdown- und XLSX-Hashes;
+- jede unerwartete Änderung außerhalb der kausal erwarteten Zeilen.
+
+Die aus dem gespeicherten Artefakt abgeleitete erste mechanische Projektion
+nach beidseitiger Abwesenheitsgleichheit und ausschließlich den 9 reinen
+`COVERAGE_ONLY`-Kandidaten lautet `A 7 / B 2 / Doku 29 / Gleich 105 / Null 0 /
+Nicht vergleichbar 14 / Unklar 67`. Sie ist ausdrücklich keine Messung und
+keine fachliche Quellenabnahme. Die 8 `COVERAGE_MIXED`-/`VALUE_TERM`-Fälle
+werden erst nach eigenen Verträgen projiziert. Die
+Dokumentstatus-Neutralität besitzt wegen der genannten
+Semantikabhängigkeiten eine eigene, erst durch den frischen Lauf gültige
+Delta-Matrix.

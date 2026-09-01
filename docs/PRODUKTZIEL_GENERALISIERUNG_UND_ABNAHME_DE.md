@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 31. August 2026
+Stand: 2. September 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -17,7 +17,7 @@ noch 99 Prozent fachliche Richtigkeit.
 Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der gemeinsame
 evidenzgebundene Verarbeitungspfad besitzt weiterhin Kataloge und historische
 Regressionsevidenz für acht Ansichten. Das produktive, versionierte
-Kundenprofil `CUSTOMER_CORE_5_V2` umfasst jedoch bewusst nur VS, FE, LW, ST
+Kundenprofil `CUSTOMER_CORE_5_V7` umfasst jedoch bewusst nur VS, FE, LW, ST
 und EL mit 224 sichtbaren Zeilen. Die offene Grenze liegt bei fachlicher
 Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und dem
 Laufzeitbudget.
@@ -28,6 +28,16 @@ Ein Vertragsdokumentpaket kann aus einem bis zu neun zusammengehörigen
 Dokumenten bestehen, etwa Hauptpolizze, Angebot, Rahmenvereinbarung,
 allgemeinen und besonderen Bedingungen, Klauselverzeichnis sowie Feuer-,
 Sturm- oder anderen Nachträgen.
+
+Paket A und Paket B werden ausschließlich durch die Upload-Zuordnung des
+Benutzers gebildet. Beide Seiten sind gleichberechtigte
+Gebäudeversicherungs-Pakete. Ein Paket darf jede unterstützte Mischung aus
+Angeboten, Polizzen, Verträgen, Zusatzpolizzen, Zusatzverträgen, Nachträgen,
+Rahmenvereinbarungen und Bedingungen enthalten. Die Dokumentart darf einen
+gefundenen Inhalt weder allein abwerten noch einen Vergleich allein sperren.
+Sie bleibt als Herkunftsmetadatum sichtbar. Echte Unterschiede bei Inhalt,
+Wert, Scope, Bedingung, Variante, Version, Widerspruch oder Ersetzung bleiben
+entscheidungsrelevant.
 
 Die aktuelle Kundenansicht besitzt fünf fachliche Kategorien:
 
@@ -105,7 +115,11 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
 ## 4. Unveränderliche fachliche Regeln
 
 1. Fehlende oder unvollständig geprüfte Evidenz ist kein `Nein`, sondern
-   `UNKNOWN` beziehungsweise `NOT_DETERMINABLE`.
+   `UNKNOWN` beziehungsweise `NOT_DETERMINABLE`. Davon getrennt darf ein
+   vollständig kontrolliert geprüfter Paket-Nulltreffer auf Vergleichsebene
+   als „für diesen Vergleich nicht enthalten beziehungsweise nicht geregelt“
+   gewertet werden, ohne auf Faktenebene einen ausdrücklichen Ausschluss zu
+   behaupten.
 2. Eine bedingte Formulierung beweist nicht, dass die Leistung tatsächlich
    vereinbart wurde.
 3. Ein enger Objekt-, Gefahren-, Varianten- oder Klauselscope darf nicht auf
@@ -119,20 +133,37 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
 7. Betrag, Prozentsatz, Dauer und Bedingung müssen an die richtige Faktrolle
    und Klausel gebunden bleiben.
 8. Ein vollständiger kontrollierter Nulltreffer wird getrennt von seiner
-   fachlichen Wirkung gespeichert. Nicht zertifizierte Suchpläne enden als
-   `NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH` und dürfen nur einen neutralen
-   Dokumentationsunterschied begründen. Ein serverseitig qualifiziertes
-   `NOT_FOUND_AFTER_COMPLETE_SEARCH` bleibt auf Faktenebene `UNKNOWN` und darf
-   nur für ausdrücklich freigegebene, versionierte positive
-   Schutz-Suchverträge als `ASSUMED_NOT_INCLUDED_V1` in eine punktweise
-   Vergleichsannahme eingehen. Ein ausdrücklicher Ausschluss ist damit nie
-   belegt.
-9. Hauptpolizze, Bedingungen und Nachträge bleiben getrennte Dokumentfakten,
-   bis Rang, Geltung und Ersetzung geklärt sind.
+   fachlichen Wirkung gespeichert. Sind derselbe versionierte Such- und
+   Requirement-Vertrag sowie alle Paketdokumente vollständig geprüft und
+   wurde auf beiden Seiten nichts gefunden, lautet die Vergleichsentscheidung
+   `GLEICHWERTIG`: beidseitig für diesen Vergleich nicht enthalten oder nicht
+   geregelt. Ist genau eine Seite vollständig positiv, komponentenvollständig,
+   konfliktfrei und quellengebunden belegt und die andere Seite qualifiziert
+   ohne Fund, erhält die belegte Seite den Vorteil. Ausschluss, gemischte
+   Wirkung, Teilbeleg, unvollständige Suche oder unbekannte Dokumentgeltung
+   dürfen diesen Vorteilspfad nicht verwenden. Ein ausdrücklicher Ausschluss
+   wird durch einen Nulltreffer nie belegt.
+9. Alle vom Benutzer Paket A oder B zugeordneten unterstützten Dokumentarten
+   sind gleichberechtigte Evidenzquellen. Nur aus der Dokumentklassifikation
+   abgeleitete Stati wie `vertragswirksam`, `Rahmenbedingung` und
+   `Vorschlag/Angebot` sind Vergleichsmetadaten. Rohfakten werden niemals
+   vereinigt oder überschrieben; ausschließlich die abgeleitete
+   Vergleichsdimension darf semantisch identische Beitragsfakten kanonisch
+   gruppieren und muss dabei alle Dokument-UUIDs, Quellen und Rohstatus
+   erhalten. Inhaltlich belegte Optionalität, Bedingung, zeitliche Geltung,
+   unterschiedliche Werte, Scopes, Varianten und Wirkungen sowie echte
+   Versions-, Widerspruchs- oder Ersetzungskonflikte bleiben getrennt und
+   gegebenenfalls fail-closed.
 10. Quellen, Seiten, Werte und Ergebniszeilen gehören dem Server. Das Modell
     darf nur begrenzte bekannte Kandidaten klassifizieren und nichts erfinden.
 11. Ein globales Top-N ist kein Vollständigkeitsbeweis für ein mehrteiliges
     Dokumentpaket.
+
+Die Regeln 8 und 9 beschreiben den am 2. September beschlossenen
+Nachfolgevertrag. Der aktuelle V7-Code setzt ihn noch nicht vollständig um.
+Bis ein entsprechender Commit im isolierten Mac-Studio-Checkout und in einem
+frischen vollständigen Lauf bestanden hat, bleibt die gespeicherte
+V7-Entscheidungsschicht die Implementierungswahrheit.
 
 ## 5. Generalisierungsvertrag gegen Überanpassung
 
@@ -201,13 +232,14 @@ Ziel: >= 99 % auf dem definierten unterstützten Dokumentkorpus
 Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 ```
 
-## 7. Belegter Stand am 31. August 2026
+## 7. Belegter Stand am 2. September 2026
 
 ### Implementiert und positiv belegt
 
 - kanonische physische PDF-PageMap und seitengebundene Dokumentartefakte;
 - fünf produktive Kundenansichten mit 224 IDs im Profil
-  `CUSTOMER_CORE_5_V2`;
+  `CUSTOMER_CORE_5_V7` und Vergleichsvertrag
+  `CERTIFIED_COVERAGE_ONLY_TYPED_V2`;
 - acht erhaltene Full-Draft-Kataloge mit 533 atomaren Komponenten und
   Promptparität; HP, VB und WE sind keine produktiven Kundenansichten;
 - occurrence-genaue Kandidatenvorbereitung und servergebundene Evidenzbausteine;
@@ -231,10 +263,12 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
   erzeugt aus dem produktiven Fünf-Kategorien-Profil eine UI- sowie
   Einblatt-XLSX-Gegenüberstellung;
-- Ergebnisschema V2 ergänzt eine servereigene, punktweise und fail-closed
-  Entscheidungsschicht. Sie darf Vorteile nur aus vollständigen atomaren
+- das aktuelle Ergebnisschema V7 enthält die seit V2 servereigene, punktweise
+  und fail-closed Entscheidungsschicht sowie sieben fachliche Outcomes. Sie
+  darf im implementierten V7-Stand Vorteile nur aus vollständigen atomaren
   Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
-  ableiten; fehlender Beleg bleibt `UNKLAR`, und es gibt keinen
+  ableiten; der allgemeine Einseitenfund bleibt bis zum bestandenen
+  Nachfolgevertrag ein Dokumentationsunterschied, und es gibt keinen
   Gesamtsieger;
 - der frische LF-gegen-neun-WEVIG-Lauf auf dem Mac Studio verarbeitet 10/10
   Dokumente und 80/80 Dokument-Kategorie-Schritte zu 320/320 Zeilen; der
