@@ -700,7 +700,11 @@ function explicitClauseSectionHeadings(pageText, activationScopes) {
     const text = match[0].trim();
     const label = match[1].trim();
     const clauseCode = match[2].toLocaleUpperCase("de");
-    if (!label || /^[-•·]/u.test(label) || /Besondere\s+Bedingung/iu.test(label))
+    if (
+      !label ||
+      /^[-•·]/u.test(label) ||
+      /Besondere\s+Bedingung/iu.test(label)
+    )
       continue;
     const activatedScopes = activationScopes.get(clauseCode) || new Set();
     const scopeKeys = [...activatedScopes].sort();
