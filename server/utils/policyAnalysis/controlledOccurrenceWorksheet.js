@@ -18,6 +18,8 @@ const SHARED_GOVERNOR = "SHARED_GOVERNOR";
 const SHARED_SPAN = "SHARED_SPAN";
 const RIGHT_HEADED_COORDINATION = "RIGHT_HEADED_COORDINATION";
 const SAME_CANDIDATE_BINDING = "SAME_CANDIDATE_BINDING";
+const OBJECT_CLASSIFICATION_CONTEXT_CONTRACT =
+  "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1";
 const ALLOWED_SCOPE_POLICIES = new Set([
   "GENERAL_REQUIRED",
   "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
@@ -799,6 +801,69 @@ function explicitCoverageGovernors(pageText) {
   return governors.sort((left, right) => left.pageStart - right.pageStart);
 }
 
+function objectClassificationKind(subject) {
+  const normalized = String(subject || "")
+    .normalize("NFKC")
+    .replace(/^\s*\d+(?:\.\d+)*\.?\s+/u, "")
+    .trim();
+  if (
+    /\b(?:versichert|mitversichert|ausgeschlossen|gedeckt|versicherungsschutz|schäden?|gefahren?|kosten|entschädigung|selbstbehalt|limits?|obliegenheiten?|vorschäden?|dokumente?)\b/iu.test(
+      normalized
+    )
+  )
+    return "COVERAGE_OR_OTHER";
+  return /\b(?:anlagen?|adaptierungen?|haustechnik|gebäude(?:bestandteile|zubehör)?|bestandteile?|zubehör|einrichtungen?|objekte?|sachen?|bauwerke?|verglasungen?|zahlungsmittel)\b/iu.test(
+    normalized
+  )
+    ? "OBJECT"
+    : "OTHER";
+}
+
+function explicitObjectClassificationGovernors(pageText) {
+  const lines = buildLineRecords(pageText);
+  const governors = [];
+  const addGovernor = ({ subjectLine, terminalLine, subject }) => {
+    const textStart = subjectLine.start + subjectLine.text.search(/\S/u);
+    const terminalTrimmed = terminalLine.text.trimEnd();
+    const pageEnd = terminalLine.start + terminalTrimmed.length;
+    const classificationKind = objectClassificationKind(subject);
+    governors.push({
+      text: pageText.slice(textStart, pageEnd),
+      subject: subject.trim(),
+      pageStart: textStart,
+      pageEnd,
+      kind: "OBJECT_CLASSIFICATION_BOUNDARY",
+      classificationKind,
+      ...(classificationKind === "OBJECT"
+        ? { contractId: OBJECT_CLASSIFICATION_CONTEXT_CONTRACT }
+        : {}),
+    });
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const sameLine = line.text.match(/^\s*(.+?)\s*,?\s+das\s+sind\s*:\s*$/iu);
+    if (sameLine) {
+      addGovernor({
+        subjectLine: line,
+        terminalLine: line,
+        subject: sameLine[1],
+      });
+      continue;
+    }
+    const next = lines[index + 1];
+    if (
+      !line.text.trim() ||
+      !next ||
+      !/^\s*das\s+sind\s*:\s*$/iu.test(next.text)
+    )
+      continue;
+    addGovernor({ subjectLine: line, terminalLine: next, subject: line.text });
+    index += 1;
+  }
+  return governors.sort((left, right) => left.pageStart - right.pageStart);
+}
+
 function explicitVariantHeadings(pageText) {
   const pattern =
     /^[\t ]*(?:\d+(?:\.\d+)*\.\s*)?Deckungsvariante\s+[„"']?\s*([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)\s*[“"']?[\t ]*$/gimu;
@@ -890,6 +955,21 @@ function validateDocument(document) {
         ...governor,
         physicalPageNumber: pageNumber,
       })),
+      objectClassificationGovernors: explicitObjectClassificationGovernors(
+        text
+      ).map((governor) => ({
+        ...governor,
+        physicalPageNumber: pageNumber,
+        documentStart: start + governor.pageStart,
+        documentEnd: start + governor.pageEnd,
+      })),
+      clauseBoundaries: buildLineRecords(text)
+        .filter(isClauseSectionHeading)
+        .map((line) => ({
+          kind: "CLAUSE_BOUNDARY",
+          pageStart: line.start,
+          pageEnd: line.end,
+        })),
       variantHeadings: explicitVariantHeadings(text).map((heading) => ({
         ...heading,
         physicalPageNumber: pageNumber,
@@ -918,14 +998,18 @@ function validateDocument(document) {
   let inheritedSectionHeading = null;
   let previousPageCoverageGovernor = null;
   let inheritedVariantHeading = null;
+  let inheritedObjectClassificationGovernor = null;
   for (const page of pages) {
     const printed = printedPageIndex(page.printedPageLabel);
     if (printed?.current === 1) {
       inheritedSectionHeading = null;
       inheritedVariantHeading = null;
+      inheritedObjectClassificationGovernor = null;
     }
     page.inheritedSectionHeading = inheritedSectionHeading;
     page.inheritedVariantHeading = inheritedVariantHeading;
+    page.inheritedObjectClassificationGovernor =
+      inheritedObjectClassificationGovernor;
     page.inheritedCoverageGovernor =
       page.sectionHeadings.length === 0 ||
       page.sectionHeadings.some(
@@ -944,6 +1028,29 @@ function validateDocument(document) {
     if (page.variantHeadings.length > 0)
       inheritedVariantHeading = page.variantHeadings.at(-1);
     previousPageCoverageGovernor = page.coverageGovernors.at(-1) || null;
+    const lastObjectClassificationBoundary = [
+      ...page.objectClassificationGovernors,
+      ...page.sectionHeadings.map((heading) => ({
+        ...heading,
+        kind: "SECTION_BOUNDARY",
+      })),
+      ...page.coverageGovernors.map((governor) => ({
+        ...governor,
+        kind: "COVERAGE_BOUNDARY",
+      })),
+      ...page.clauseBoundaries,
+    ]
+      .sort(
+        (left, right) =>
+          left.pageStart - right.pageStart || left.pageEnd - right.pageEnd
+      )
+      .at(-1);
+    inheritedObjectClassificationGovernor =
+      lastObjectClassificationBoundary?.kind ===
+        "OBJECT_CLASSIFICATION_BOUNDARY" &&
+      lastObjectClassificationBoundary.classificationKind === "OBJECT"
+        ? lastObjectClassificationBoundary
+        : null;
   }
   return { pageContent, pages };
 }
@@ -1855,6 +1962,24 @@ function buildControlledOccurrenceWorksheet({
                   pageStart >= currentSectionBoundary.pageStart)
             )
             .at(-1);
+          const currentObjectClassificationBoundary = [
+            ...page.objectClassificationGovernors,
+            ...page.sectionHeadings.map((heading) => ({
+              ...heading,
+              kind: "SECTION_BOUNDARY",
+            })),
+            ...page.coverageGovernors.map((governor) => ({
+              ...governor,
+              kind: "COVERAGE_BOUNDARY",
+            })),
+            ...page.clauseBoundaries,
+          ]
+            .filter(({ pageEnd }) => pageEnd <= range.originalStart)
+            .sort(
+              (left, right) =>
+                left.pageStart - right.pageStart || left.pageEnd - right.pageEnd
+            )
+            .at(-1);
           const scopeFloor = [currentSectionBoundary, currentCoverageGovernor]
             .filter(Boolean)
             .sort((left, right) => left.pageStart - right.pageStart)
@@ -1907,6 +2032,27 @@ function buildControlledOccurrenceWorksheet({
                   source: "PRECEDING_PAGE_GOVERNOR",
                 }
               : null;
+          const activeObjectClassificationGovernor =
+            currentObjectClassificationBoundary?.kind ===
+              "OBJECT_CLASSIFICATION_BOUNDARY" &&
+            currentObjectClassificationBoundary.classificationKind === "OBJECT"
+              ? {
+                  ...currentObjectClassificationBoundary,
+                  source: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+                }
+              : !currentObjectClassificationBoundary &&
+                  page.inheritedObjectClassificationGovernor
+                ? {
+                    ...page.inheritedObjectClassificationGovernor,
+                    source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION",
+                  }
+                : null;
+          const objectClassificationGovernorHint =
+            activeObjectClassificationGovernor &&
+            context.unitType === "LIST_ITEM" &&
+            context.text.includes(pageContent.slice(documentStart, documentEnd))
+              ? activeObjectClassificationGovernor
+              : null;
           const currentVariantHeading = page.variantHeadings
             .filter(({ pageEnd }) => pageEnd <= range.originalStart)
             .at(-1);
@@ -1954,6 +2100,7 @@ function buildControlledOccurrenceWorksheet({
             pageScopeHints: page.scopeHints,
             sectionScopeHint,
             coverageGovernorHint,
+            objectClassificationGovernorHint,
             variantScopeHint,
             fieldGovernorHint,
             pageStart: range.originalStart,

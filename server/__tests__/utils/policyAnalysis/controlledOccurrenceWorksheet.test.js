@@ -779,6 +779,103 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(occurrences[1].coverageGovernorHint).toBeNull();
   });
 
+  test("binds a two-line object classification heading to a local list item", () => {
+    const document = documentFromPages([
+      [
+        "1.3 Haustechnische Anlagen und Adaptierungen",
+        "das sind:",
+        "·Solar- und Photovoltaikanlagen;",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "same-page-object-classification",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.objectClassificationGovernorHint).toMatchObject({
+      contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+      classificationKind: "OBJECT",
+      subject: "1.3 Haustechnische Anlagen und Adaptierungen",
+      source: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      physicalPageNumber: 1,
+    });
+    const hint = occurrence.objectClassificationGovernorHint;
+    expect(
+      document.pageContent.slice(hint.documentStart, hint.documentEnd)
+    ).toBe(hint.text);
+  });
+
+  test("carries an object classification to exactly one continued page", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "1.3 Haustechnische Anlagen und Adaptierungen\ndas sind:",
+        "·Solar- und Photovoltaikanlagen;",
+        "·Solar- und Photovoltaikanlagen;",
+      ]),
+      documentFingerprint: "cross-page-object-classification",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const occurrences = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrences[0].objectClassificationGovernorHint).toMatchObject({
+      source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION",
+      physicalPageNumber: 1,
+    });
+    expect(occurrences[1].objectClassificationGovernorHint).toBeNull();
+  });
+
+  test.each([
+    "Versicherte Sachen, das sind:",
+    "Nicht versicherte Schäden, das sind:",
+    "Vorschäden, das sind:",
+    "Kosten, das sind:",
+  ])("does not treat %s as an object classification", (heading) => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [heading, "·Solar- und Photovoltaikanlagen;"].join("\n"),
+      ]),
+      documentFingerprint: `non-object-classification-${heading}`,
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.objectClassificationGovernorHint).toBeNull();
+  });
+
+  test("resets an inherited object classification at a newer classification boundary", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "1.3 Haustechnische Anlagen und Adaptierungen\ndas sind:",
+        ["Vorschäden, das sind:", "·Solar- und Photovoltaikanlagen;"].join(
+          "\n"
+        ),
+      ]),
+      documentFingerprint: "object-classification-reset",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.objectClassificationGovernorHint).toBeNull();
+  });
+
   test("expands catalog-authorized occurrences to a numbered clause section only", () => {
     const sectionCatalog = {
       schemaVersion: 1,
