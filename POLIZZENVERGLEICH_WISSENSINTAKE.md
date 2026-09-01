@@ -2309,6 +2309,59 @@ pauschalen Gesamtsieger.
 - Entscheidung: akzeptieren und versionieren.
 - Kanonischer Ausgang: `ADR-023`, Architektur Abschnitt 18, Tests Abschnitt 47.
 
+## INT-20260901-032 — Jede Zeile entscheidet und einseitig belegter Schutz kann gewinnen
+
+- Erfasst: 2026-09-01
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `IN_PRÜFUNG`
+- Aussage: Jede sichtbare Vergleichszeile soll ein verständliches Ergebnis
+  liefern. Wenn ein positiver Schutz in genau einer Polizze belegt ist und in
+  der anderen nach einem vollständig validierten Alias-/Konzept-Suchvertrag
+  keine passende Regelung gefunden wird, soll die belegte Seite als
+  punktweiser Vorteil ausgewiesen werden. Der Text muss gleichzeitig sichtbar
+  sagen, dass auf der anderen Seite nichts gefunden und kein ausdrücklicher
+  Ausschluss belegt wurde.
+- Ist-Wahrheit: Der allgemeine Mechanismus für zertifizierte Schutzpositionen
+  existiert, aber die produktive Registry ist leer. Der Wunsch ist deshalb
+  noch nicht für die 224 Zeilen aktiviert.
+- Quelle: ausdrückliche Nutzerkorrektur nach dem V7-Fünferlauf.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Jede Zeile ist verständlich
+  entschieden; einseitig dokumentierter Schutz verschwindet nicht hinter
+  einer neutralen technischen Meldung.
+- Scope und ausdrückliche Nicht-Ziele: Kein erfundener Gewinner bei echter
+  Gleichheit, unterschiedlichen Scopes, gemischten Gewinnern oder
+  unvollständiger Suche. Nicht gefundene Limits, Selbstbehalte, Ausschlüsse,
+  Bedingungen oder Definitionen erhalten ohne eigenen typisierten Vertrag
+  keine automatische Vorteilsrichtung.
+- Evidenz und Beweisgrenze: Nutzeranforderung plus aktueller
+  `ASSUMED_NOT_INCLUDED`-Mechanismus; produktive Zeilenfreigaben und unbekannte
+  Holdouts fehlen.
+- Systembezug: Punktentscheidung, Negativsuchvertrag, Registry, UI, XLSX,
+  Produktcharter; `INV-002`, `INV-007`, `INV-008`, `ADR-021`, `ADR-022`,
+  `ADR-024`.
+- Beziehungen:
+  - verfeinert -> `INT-20260831-031`
+  - hängt_ab_von -> zeilenweise Alias-/Konzept-, Scope- und Holdout-Prüfung
+- Spezialistenurteil:
+  - Local-AI/RAG: Suchvollständigkeit muss digest- und paketgebunden sein.
+  - Kunde/Versicherung: „nicht gefunden“ und „ausgeschlossen“ bleiben sichtbar
+    getrennt; die Vergleichsannahme darf trotzdem einen punktweisen Vorteil
+    tragen.
+  - Datenschutz/Betrieb: keine neue externe Verarbeitung erforderlich.
+  - Kritik/Test: Eine pauschale Aktivierung aller Zeilen würde bekannte
+    False-Negatives in falsche Vorteile umwandeln.
+- Hard-Gates: `BEGRENZT`
+- Bewertung: als Zielrichtung bestätigt; Aktivierung weiterhin zeilenweise.
+- Evidenzqualität: `NUTZERANGABE` und `BEOBACHTET_CODE`
+- Riskanteste Annahme: Dass ein als vollständig geltender Suchvertrag keine
+  relevante unbekannte Formulierung übersieht.
+- Nächster Prüfschritt: Versionierten Vergleichsvertrag V4 implementieren und
+  reine Schutzpositionen einzeln gegen positive, negative, adversariale und
+  unbekannte Dokumentvarianten zertifizieren.
+- Entscheidung: Richtung akzeptieren, produktive Zeilenaktivierung begrenzen.
+- Kanonischer Ausgang: Entscheidung/Charter-Update nach erster bestandener
+  Einzelzertifizierung.
+
 ## 8. Vorläufige Strategiekarte aus `INT-20260824-002` bis `INT-20260824-006`
 
 Status: `IN_PRÜFUNG`; dies ist eine verknüpfte Arbeitshypothese, keine neue
