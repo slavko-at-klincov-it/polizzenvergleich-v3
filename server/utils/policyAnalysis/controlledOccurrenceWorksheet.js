@@ -420,6 +420,31 @@ function precedingWordWindow(text, beforeOffset, wordLimit) {
   };
 }
 
+function precedingListGovernorWindow(text, listItemStart, fallback) {
+  const lines = buildLineRecords(text);
+  const listItemLineIndex = lines.findIndex(
+    ({ start, end }) => listItemStart >= start && listItemStart <= end
+  );
+  if (listItemLineIndex === -1 || !isBulletLine(lines[listItemLineIndex]))
+    return fallback;
+
+  let firstSiblingIndex = listItemLineIndex;
+  for (let index = listItemLineIndex - 1; index >= 0; index -= 1) {
+    if (isBlankLine(lines[index])) break;
+    if (isBulletLine(lines[index])) firstSiblingIndex = index;
+  }
+
+  let pageEnd = Math.min(fallback.pageEnd, lines[firstSiblingIndex].start);
+  while (pageEnd > fallback.pageStart && /\s/u.test(text[pageEnd - 1]))
+    pageEnd -= 1;
+  const pageStart = Math.min(fallback.pageStart, pageEnd);
+  return {
+    pageStart,
+    pageEnd,
+    text: text.slice(pageStart, pageEnd),
+  };
+}
+
 function structuralContext({
   pageText,
   occurrenceStart,
@@ -1782,11 +1807,19 @@ function buildControlledOccurrenceWorksheet({
                   fallback: context,
                 })
               : context;
-          const rawScopeLead = precedingWordWindow(
+          const precedingScopeLead = precedingWordWindow(
             page.text,
             range.originalStart,
             scopeWordsBefore
           );
+          const rawScopeLead =
+            evidenceContext.unitType === "LIST_ITEM"
+              ? precedingListGovernorWindow(
+                  page.text,
+                  evidenceContext.pageStart,
+                  precedingScopeLead
+                )
+              : precedingScopeLead;
           const currentSectionBoundary = page.sectionHeadings
             .filter(({ pageStart }) => pageStart <= range.originalStart)
             .at(-1);
@@ -1800,9 +1833,6 @@ function buildControlledOccurrenceWorksheet({
             .at(-1);
           const scopeLeadStart = Math.max(
             rawScopeLead.pageStart,
-            evidenceContext.unitType === "LIST_ITEM"
-              ? evidenceContext.pageStart
-              : rawScopeLead.pageStart,
             currentSectionBoundary?.pageStart ?? rawScopeLead.pageStart,
             currentCoverageGovernor?.kind === "SEMANTIC_COVERAGE_HEADING"
               ? currentCoverageGovernor.pageStart

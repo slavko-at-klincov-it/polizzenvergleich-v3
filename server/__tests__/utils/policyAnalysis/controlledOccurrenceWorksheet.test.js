@@ -614,9 +614,7 @@ describe("controlledOccurrenceWorksheet", () => {
         unitType: "LIST_ITEM",
         text: "·Solar- und Photovoltaikanlagen;",
       });
-      expect(occurrence.scopeLead.text).toBe(
-        "·Solar- und Photovoltaikanlagen;"
-      );
+      expect(occurrence.scopeLead.text).toBe(governor);
       expect(occurrence.scopeLead.text).not.toContain("nicht Sonnensegel");
       expect(occurrence.coverageGovernorHint).toMatchObject({
         text: governor,
