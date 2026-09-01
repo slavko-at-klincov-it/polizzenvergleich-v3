@@ -1169,3 +1169,142 @@ Falls die Realquelle oder Dokumentbeziehung das erwartete Urteil nicht
 eindeutig trägt, wird kein Outcome entsperrt. Dann bleibt `LW-12` offen und
 der Befund wird als fehlender Vertrag beziehungsweise fehlendes Oracle
 dokumentiert, statt die Sicherheitsgrenze pauschal zu lockern.
+
+## 14. Einzelklassifikation der zehn aussichtsreichsten PBR-01-Kandidaten
+
+Die zehn Kandidaten wurden nicht als gemeinsamer Lockerungsblock behandelt.
+Jede Zeile wurde gegen gespeicherte Atome, Dokumentstatus, Scope, Rang,
+Komponentenvertrag und den produktiven Entscheidungsweg geprüft.
+
+| Zeile | Befund | Freigabe | Benötigter wiederverwendbarer Vertrag |
+| --- | --- | --- | --- |
+| `FE-A05` | Mehrere Atome, Rollen und Scope-Stufen auf B; kein eindeutiger atomarer Vergleich | NO-GO | Objekt-Scope-Set und Dokumentrang gemeinsam binden |
+| `FE-A06` | Ein einziger Scope-Unterschied bei sonst vollständigen Atomen ist eng entscheidbar | GO, noch nicht umgesetzt | `SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` |
+| `FE-D01` | Feldvollständigkeit, Aggregation und Dokumentrang gleichzeitig offen | NO-GO | typisierte Feld- und Rangauflösung |
+| `LW-26` | erforderliches B-Limit fehlt | NO-GO | belastbare lokale Limitbindung |
+| `LW-12` | Fund gilt nur für maximal eine Heizungsschleife/Reparaturbedingung | NO-GO | `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1` |
+| `ST-17` | Objektliste, Governor, Limit und Dokumentbeziehung vermischt | NO-GO | Objektklassifikation plus Rang und Limit |
+| `ST-25` | beide Seiten belegen Baumkosten, aber nicht die erforderlichen Astkosten | NO-GO | keine Lockerung; `ALL` bleibt korrekt |
+| `FE-D05` | Rauch-/Rußtrigger kann „ohne eigenes Feuer“ semantisch implizieren, aber nicht als bloßes Alias | GO nur für spätere Semantik | versionierter Ausdrucks-/Implikationsvertrag |
+| `ST-21` | EABS-Objektliste wurde durch vorherige lokale Negation fälschlich als `EXCLUDED` bewertet | MUST-FIX der Evidenzwirkung; kein Vorteil | getrennte Listen- und Objektklassifikationsverträge |
+| `ST-27` | bestehende Lawinenquelle und Gruppenlimit auffindbar, Ausgang bleibt wegen Ontologie/Rang offen | GO für Quellenwahl, NO-GO für Ausgang | Gruppenlimit-, Ontologie- und Rangvertrag |
+
+Abhängigkeiten und Nicht-Ziele:
+
+- `FE-A06` darf nur freigeschaltet werden, wenn beide Seiten genau denselben
+  Ein-Komponenten-`ALL`-Vertrag, je genau ein vollständiges Atom und keinerlei
+  Rang-, Konflikt- oder Unresolved-Signal besitzen. Der einzige Auditblocker
+  muss komponentengenau `SCOPE_INCOMPLETE` sein. Ziel wäre ausschließlich
+  `NICHT_VERGLEICHBAR`, niemals ein Vorteil.
+- `FE-D05` darf nicht über zusätzliche Wortaliasse gelöst werden. Ursache,
+  Objekt, Trigger und Negation müssen in einem versionierten Ausdruck
+  gemeinsam ausgewertet werden.
+- `ST-21` und `ST-16` teilen die technische Ursache: Ein lokaler
+  Klammerausschluss in einem vorherigen oder demselben Listenpunkt darf nicht
+  als globale Wirkung auf andere definierte Objekte übertragen werden.
+- Kein Kandidat beweist derzeit einen neuen Vorteil A oder B. Fehlende oder
+  neutrale Definitionsevidenz darf weiterhin keinen Vorteil erzeugen.
+
+## 15. RUN-CANDIDATE-LIST-BOUNDARY-2AC7D41A
+
+```text
+Status: REVISE / unvollständig; ausdrücklich kein Favoritenlauf
+Commit: 2ac7d41a486060ed367a89ef9aa20a371e62e8df
+Mac-Studio-Checkout:
+/private/tmp/pv3-list-boundary-5d295ec3-pvGiTw/repo
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+CANDIDATE-LIST-BOUNDARY-2AC7D41A-20260901-204322
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Temperatur: 0
+Inputmanifest SHA-256:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Erhaltene Laufzeit bis Abbruch: ungefähr 29:50
+Fertig: neun Dokumente plus DOC-10/VS, FE und LW = 48/50 Kategorien
+Fehlend: DOC-10/ST, DOC-10/EL, Paketvergleich, 224-Zeilen-Auswertung, XLSX
+```
+
+Reproduzierbarer DOC-10/ST-Befund:
+
+- Worksheet-SHA-256:
+  `b586a12be1504fc7520ebc2ed3fb72fa06dbd627674300e7fa02ae7e6bb6a579`;
+- Triage: `TECHNICAL_PASS_REVIEW_REQUIRED`, 18/18 Entscheidungen formal
+  bestanden;
+- Effects: `REVISE` mit
+  `PREPARED_MISSING_EVIDENCE_INCONSISTENT: prepared-target:ST-16:shading_system`;
+- zwei erhaltene interne Modellversuche lieferten bei Temperatur null
+  identisch `selectedCandidateIds: []`, `coverageEffect: EXCLUDED`;
+- gleichzeitig existierten zwei gültige direkte Kandidaten: `Jalousien`
+  (PDF-Seite 4, Dokumentoffset 9167–9176) und `Rollläden` (9181–9190);
+- der nun korrekt isolierte Quelltext lautet sinngemäß `Jalousien und
+  Rollläden ... (nicht Sonnensegel und nicht Markisen)`. Die Negation betrifft
+  nicht Jalousien und Rollläden;
+- der fail-closed Validator verhinderte korrekt die Materialisierung des
+  unbelegten Ausschlusses;
+- `ST-21` wurde nach diesem Abbruch nicht mehr fachlich bewertet. Aus zwei
+  gefundenen Solar-/Photovoltaik-Kandidaten darf daher noch kein neues
+  Ergebnis abgeleitet werden.
+
+Ein äußerer Wiederholungsversuch wurde als Operatorbeobachtung gesehen, ist
+aber nicht als separates, hashbares Artefakt erhalten. Belastbar gespeichert
+sind die zwei identischen internen Zielversuche. Der Lauf darf weder als
+vollständige Laufzeit noch als Qualitätsbaseline verwendet werden.
+
+## 16. Listen- und Objektklassifikations-Forward-Fixes
+
+### Listenbegrenzung
+
+Commits in Ausführungsreihenfolge:
+
+- `5d295ec3`: mittlere Punkt-Bullets als echte Listenelemente;
+- `13cf565a`: List-Governor ohne Geschwisterüberlauf;
+- `ef46939d`: Scope-Trim nur für echte Bullets;
+- `2ac7d41a`: Formatfix;
+- `70ca7ad0`: verschachtelte, umbrochene und seitenübergreifende Listen;
+- `3c6b8dea`: Listenkontext endet vor neuer Klausel;
+- `59da7187`: rückwärts gelesene Listenabstammung endet an neuer Klausel;
+- `db203389`: abschließende Formatierung.
+
+Mac-Studio-Validierung für `db203389`: Node `22.23.2`, 74/74
+Worksheet-Varianten bestanden, Prettier bestanden. Ein eigener vollständiger
+Lauf für `70ca7ad0` wurde nicht wiederholt, weil die konkrete ST-16-Eingabe
+gegenüber dem reproduzierbar abgebrochenen 2ac-Lauf unverändert blieb. Ein
+weiterer 30-Minuten-Lauf hätte voraussichtlich denselben Abbruch, aber keinen
+Paketvergleich erzeugt.
+
+### Objektklassifikation
+
+Zwei getrennte Verträge verhindern, dass Definition und Deckung vermischt
+werden:
+
+1. `CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1` transportiert eine
+   syntaktisch und semantisch geprüfte Objektgruppenüberschrift mit exakten
+   Offsets höchstens auf die unmittelbar folgende PDF-Seite. Eine neue
+   Klausel, Coverage-Grenze, andere `das sind:`-Klassifikation oder ein neues
+   gedrucktes Dokument setzt sie zurück.
+2. `OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1` wählt ausschließlich
+   reine `INSURED_OBJECT`-Kandidaten aus einer solchen Liste aus und gibt
+   `DEFINED` zurück. Der Vertrag erzeugt weder `INCLUDED` noch `EXCLUDED`,
+   keine Requested-Field-Freigabe und keinen Vorteil.
+
+Commits:
+
+- `07ee48e1`: versionierter Objektklassifikationskontext und Varianten;
+- `ac6a1edf`: gebeugte Coverage-Überschriften wie „Versicherte Sachen“ sicher
+  ausgeschlossen;
+- `01bf9e7f`: neutrale Prepared-Evidenzentscheidung, Mischkandidaten bleiben
+  modelloffen.
+
+Mac-Studio-Nachweise:
+
+- Kontextvertrag: 81/81 Varianten plus Prettier bestanden;
+- kumulierte Entscheidungspfade: 234/234 Tests in Worksheet,
+  Deterministic-Category, Prepared-Evidence und Requested-Field bestanden;
+- erwartetes Real-Orakel für EABS/ST-16: beide exakten Kandidaten ausgewählt,
+  `DEFINED`, kein Ausschluss;
+- erwartetes Real-Orakel für EABS/ST-21: Objektdefinition bleibt neutral und
+  darf keine Deckung oder Vorteilspromotion auslösen;
+- jede darüber hinaus geänderte Paketzeile ist zunächst `REVISE`, bis ihr
+  Atom-, Quellen-, Scope- und Rangdelta erklärt wurde.
