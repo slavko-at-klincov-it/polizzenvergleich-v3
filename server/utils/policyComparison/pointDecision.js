@@ -1,3 +1,5 @@
+const { derivePackageReviewAudit } = require("./packageReviewAudit");
+
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
   ADVANTAGE_B: "VORTEIL_B",
@@ -621,10 +623,19 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       "Unklar: Nur ein Paket enthält belegten Inhalt. Fehlender Beleg bedeutet weder Ausschluss noch Nachteil."
     );
   if (packageA.reviewStatus !== "BELEGT" || packageB.reviewStatus !== "BELEGT")
-    return unclear(
-      "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
-      `Unklar: Die Paket-Prüfstati (${packageA.reviewStatus} / ${packageB.reviewStatus}) erlauben keinen sicheren Vorteilsschluss.`
-    );
+    return {
+      ...unclear(
+        "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+        `Unklar: Die Paket-Prüfstati (${packageA.reviewStatus} / ${packageB.reviewStatus}) erlauben keinen sicheren Vorteilsschluss.`
+      ),
+      packageReviewAudit: derivePackageReviewAudit({
+        categoryId,
+        packageA,
+        packageB,
+        atomsA,
+        atomsB,
+      }),
+    };
 
   const groupsA = componentGroups(atomsA, categoryId);
   const groupsB = componentGroups(atomsB, categoryId);

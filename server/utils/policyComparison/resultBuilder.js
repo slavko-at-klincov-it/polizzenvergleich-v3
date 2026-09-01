@@ -693,6 +693,11 @@ function materializeAtomicFacts({
       sources,
       componentSatisfactionPolicy:
         requirement?.componentSatisfactionPolicy || "ALL",
+      coverageAggregationPolicy: requirement?.coverageAggregationPolicy || null,
+      scopePolicy: requirement?.scopePolicy || null,
+      requestedFields: Array.isArray(requirement?.requestedFields)
+        ? [...requirement.requestedFields]
+        : [],
       requirementContractDigest:
         worksheetRequirementContract(worksheet, requirement)?.digest || null,
       declaredComponents: (requirement?.components || []).map(
@@ -917,7 +922,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,

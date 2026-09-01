@@ -32,6 +32,44 @@ function resultFor(rows) {
   };
 }
 
+function packageAuditBlocker(code, documentUuid = "document-a") {
+  return {
+    code,
+    side: "A",
+    level: "PACKAGE",
+    requirementId: "VS-01",
+    componentId: null,
+    factRole: null,
+    documentUuids: [documentUuid],
+    observed: null,
+  };
+}
+
+function schema7PackageResult() {
+  const reviewRow = row(
+    "VS-01",
+    "UNKLAR",
+    "UNTERSCHIED_FACHLICH_PRÜFEN",
+    "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
+  );
+  reviewRow.packageA = { reviewStatus: "TEILBELEGT" };
+  reviewRow.packageB = { reviewStatus: "BELEGT" };
+  reviewRow.pointDecision.packageReviewAudit = {
+    schemaVersion: 1,
+    contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+    packageStatuses: { A: "TEILBELEGT", B: "BELEGT" },
+    blockers: [packageAuditBlocker("UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER")],
+    signals: [],
+  };
+  const result = resultFor([reviewRow]);
+  result.schemaVersion = 7;
+  result.documents = [
+    { uuid: "document-a", side: "A" },
+    { uuid: "document-b", side: "B" },
+  ];
+  return result;
+}
+
 describe("policy comparison customer metric contract", () => {
   test("derives customer review only from unclear point decisions", () => {
     const result = resultFor([
@@ -122,6 +160,51 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(result)).toThrow(
       "COMPARISON_CUSTOMER_REVIEW_REASON_MISSING"
     );
+  });
+
+  test("requires a canonical package review audit for every schema V7 package blocker", () => {
+    const result = schema7PackageResult();
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+    });
+
+    const missing = schema7PackageResult();
+    delete missing.categories[0].rows[0].pointDecision.packageReviewAudit;
+    expect(() => validateCustomerComparison(missing)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_SCHEMA_MISMATCH"
+    );
+
+    const foreignDocument = schema7PackageResult();
+    foreignDocument.categories[0].rows[0].pointDecision.packageReviewAudit.blockers[0].documentUuids =
+      ["foreign-document"];
+    expect(() => validateCustomerComparison(foreignDocument)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_DOCUMENT_UUID_UNKNOWN"
+    );
+
+    const duplicate = schema7PackageResult();
+    duplicate.categories[0].rows[0].pointDecision.packageReviewAudit.blockers.push(
+      {
+        ...duplicate.categories[0].rows[0].pointDecision.packageReviewAudit
+          .blockers[0],
+      }
+    );
+    expect(() => validateCustomerComparison(duplicate)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_ENTRIES_NOT_CANONICAL"
+    );
+  });
+
+  test("counts multiple private blockers as one customer review row", () => {
+    const result = schema7PackageResult();
+    result.categories[0].rows[0].pointDecision.packageReviewAudit.blockers = [
+      packageAuditBlocker("CONFLICTING_COVERAGE"),
+      packageAuditBlocker("UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER"),
+    ];
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+      pointDecisions: { UNKLAR: 1 },
+    });
   });
 
   test("allows stored V5 results only through the explicit legacy adapter", () => {

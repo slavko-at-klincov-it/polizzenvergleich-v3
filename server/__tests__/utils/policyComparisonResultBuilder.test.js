@@ -676,7 +676,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(6);
+    expect(result.schemaVersion).toBe(7);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -696,6 +696,61 @@ describe("policy comparison result builder", () => {
         0
       )
     ).toBe(result.totals.rows);
+  });
+
+  test("persists schema V7 package review diagnostics without changing the customer outcome", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      VS: {
+        documentedContent: "Teilweise belegter Gegenstand",
+        coverage: "Nicht feststellbar",
+        source: "PDF-Seite 1",
+        reviewStatus: "TEILBELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B"), {
+      VS: {
+        documentedContent: "Versicherter Gegenstand eingeschlossen",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeAtomicCategory(runB, "VS", "INCLUDED");
+    const worksheetFile = path.join(
+      runA.outputDirectory,
+      "VS",
+      "worksheet.private.json"
+    );
+    const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+    worksheet.requirements[0].scopePolicy = "GENERAL_REQUIRED";
+    fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
+
+    expect(result.schemaVersion).toBe(7);
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      reviewRequired: true,
+      packageReviewAudit: {
+        schemaVersion: 1,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        packageStatuses: { A: "TEILBELEGT", B: "BELEGT" },
+      },
+    });
+    expect(comparisonRow.pointDecision.packageReviewAudit.blockers).toEqual([
+      expect.objectContaining({
+        code: "UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER",
+        side: "A",
+        documentUuids: ["a"],
+      }),
+    ]);
+    expect(result.totals).toMatchObject({
+      rows: 5,
+      customerReviewRequired: 5,
+    });
   });
 
   test("rejects a productive export when the profile row count is incomplete", async () => {

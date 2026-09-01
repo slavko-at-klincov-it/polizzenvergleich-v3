@@ -1,4 +1,5 @@
 const { POINT_OUTCOME } = require("./pointDecision");
+const { validatePackageReviewAudit } = require("./packageReviewAudit");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -160,6 +161,16 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     POINT_OUTCOMES.map((outcome) => [outcome, []])
   );
   const recomputedReviewRowKeysByReasonCode = {};
+  const allowedDocumentUuidsBySide = Object.fromEntries(
+    ["A", "B"].map((side) => [
+      side,
+      new Set(
+        (result?.documents || [])
+          .filter((document) => document.side === side)
+          .map(({ uuid }) => uuid)
+      ),
+    ])
+  );
   let recomputedReview = 0;
   let recomputedLegacyDifferences = 0;
 
@@ -188,7 +199,24 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       if (!recomputedReviewRowKeysByReasonCode[reasonCode])
         recomputedReviewRowKeysByReasonCode[reasonCode] = [];
       recomputedReviewRowKeysByReasonCode[reasonCode].push(rowKey);
+      if (
+        Number(result.schemaVersion) >= 7 &&
+        reasonCode === "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
+      )
+        validatePackageReviewAudit(row.pointDecision?.packageReviewAudit, {
+          categoryId: row.categoryId,
+          packageAStatus: row.packageA?.reviewStatus,
+          packageBStatus: row.packageB?.reviewStatus,
+          allowedDocumentUuidsBySide,
+        });
     }
+    if (
+      Number(result.schemaVersion) >= 7 &&
+      row.pointDecision?.reasonCode !==
+        "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION" &&
+      row.pointDecision?.packageReviewAudit !== undefined
+    )
+      validationError("COMPARISON_PACKAGE_REVIEW_AUDIT_UNEXPECTED", [rowKey]);
     if (!LEGACY_TECHNICAL_OUTCOMES.has(row.outcome))
       validationError("COMPARISON_LEGACY_TECHNICAL_OUTCOME_INVALID", [
         rowKey,

@@ -38,7 +38,10 @@ function atom(side, overrides = {}) {
     coverageEffect: "INCLUDED",
     conflictState: "NONE",
     selectedScopePicture: "GENERAL",
+    scopePolicy: "GENERAL_REQUIRED",
     documentApplicability: "ACTIVE",
+    documentRole: "MAIN_POLICY",
+    documentStatus: "FRAMEWORK_TERMS",
     selectedCandidateIds: [candidateId],
     unresolvedCandidateIds: [],
     requestedFieldStatus: "NOT_REQUIRED",
@@ -225,8 +228,130 @@ describe("policy comparison point decision", () => {
       ).toMatchObject({
         outcome: POINT_OUTCOME.UNCLEAR,
         reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+        packageReviewAudit: {
+          schemaVersion: 1,
+          contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        },
       });
     }
+  });
+
+  test("persists typed package blockers without changing the outer decision", () => {
+    const missing = atom("a", {
+      evidencePresence: "NOT_FOUND",
+      coverageEffect: "UNKNOWN",
+      selectedScopePicture: "UNKNOWN",
+      documentApplicability: "UNKNOWN",
+      selectedCandidateIds: [],
+      sources: [],
+    });
+    const result = decide([missing], [atom("b")], {
+      packageA: {
+        reviewStatus: "TEILBELEGT",
+        facts: [
+          {
+            documentUuid: "document-a",
+            reviewStatus: "TEILBELEGT",
+          },
+        ],
+      },
+    });
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      reviewRequired: true,
+      ruleId: "FAIL_CLOSED_V1",
+      packageReviewAudit: {
+        schemaVersion: 1,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        packageStatuses: { A: "TEILBELEGT", B: "BELEGT" },
+      },
+    });
+    expect(result.packageReviewAudit.blockers).toHaveLength(1);
+    expect(result.packageReviewAudit.blockers[0]).toMatchObject({
+      code: "MISSING_REQUIRED_COMPONENT",
+      side: "A",
+      level: "COMPONENT",
+      requirementId: "LW-22",
+      componentId: "fungus_damage",
+      documentUuids: ["document-a"],
+    });
+    expect(
+      result.packageReviewAudit.blockers.map(({ code }) => code)
+    ).not.toContain("UNKNOWN_COVERAGE_EFFECT");
+  });
+
+  test("keeps applicability as a signal and requirement fields as one blocker", () => {
+    const proposed = atom("a", {
+      documentApplicability: "PROPOSED_ONLY",
+      documentStatus: "PROPOSAL",
+      requestedFieldStatus: "NOT_FOUND",
+    });
+    const result = decide([proposed], [atom("b")], {
+      packageA: {
+        reviewStatus: "TEILBELEGT",
+        facts: [
+          {
+            documentUuid: "document-a",
+            reviewStatus: "TEILBELEGT",
+          },
+        ],
+      },
+    });
+
+    expect(result.packageReviewAudit.blockers).toEqual([
+      expect.objectContaining({
+        code: "FIELD_INCOMPLETE",
+        side: "A",
+        level: "REQUIREMENT",
+        componentId: null,
+      }),
+    ]);
+    expect(result.packageReviewAudit.signals).toEqual([
+      expect.objectContaining({
+        code: "PROPOSED_ONLY",
+        side: "A",
+        level: "COMPONENT",
+      }),
+    ]);
+  });
+
+  test("does not call an absent ANY alternative a missing required component", () => {
+    const anyContract = {
+      digest: FIXTURE_REQUIREMENT_DIGEST,
+      componentSatisfactionPolicy: "ANY",
+      components: FIXTURE_COMPONENTS,
+    };
+    const found = atom("a", {
+      componentSatisfactionPolicy: "ANY",
+    });
+    const absentAlternative = atom("a", {
+      componentId: "rot_damage",
+      componentLabel: "Fäulnisschäden",
+      componentSatisfactionPolicy: "ANY",
+      evidencePresence: "NOT_FOUND",
+      coverageEffect: "UNKNOWN",
+      selectedScopePicture: "UNKNOWN",
+      documentApplicability: "UNKNOWN",
+      selectedCandidateIds: [],
+      sources: [],
+    });
+    const result = decide(
+      [found, absentAlternative],
+      [atom("b", { componentSatisfactionPolicy: "ANY" })],
+      {
+        packageA: {
+          reviewStatus: "TEILBELEGT",
+          requirementContract: anyContract,
+        },
+        packageB: { requirementContract: anyContract },
+      }
+    );
+
+    expect(
+      result.packageReviewAudit.blockers.map(({ code }) => code)
+    ).not.toContain("MISSING_REQUIRED_COMPONENT");
   });
 
   test("keeps conditional coverage effects and options fail-closed", () => {
@@ -482,10 +607,7 @@ describe("policy comparison point decision", () => {
     });
 
     expect(
-      decide(
-        [alternative("a", "garage")],
-        [alternative("b", "carport")]
-      )
+      decide([alternative("a", "garage")], [alternative("b", "carport")])
     ).toMatchObject({
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
       reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
