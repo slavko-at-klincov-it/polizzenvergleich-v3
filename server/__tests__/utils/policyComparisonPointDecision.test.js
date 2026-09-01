@@ -747,6 +747,160 @@ describe("policy comparison point decision", () => {
     }
   });
 
+  test("keeps waiting and karenz periods fail-closed without matching neighbouring words", () => {
+    for (const conditionCheckText of [
+      "Der Versicherungsschutz beginnt erst nach Ablauf der Karenzfrist.",
+      "Für diese Deckung gilt eine Wartezeit von 72 Stunden.",
+    ]) {
+      const result = decide(
+        [atom("a")],
+        [
+          atom("b", {
+            sources: [
+              {
+                candidateId: "candidate-b",
+                physicalPageNumber: 2,
+                exactText: "Versicherte Gefahr",
+                conditionCheckText,
+              },
+            ],
+          }),
+        ]
+      );
+      expect(result).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+        ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+      });
+    }
+
+    for (const exactText of [
+      "Das Wartezimmer ist kein versichertes Objekt.",
+      "Für diese Deckung besteht keine Karenzfrist.",
+      "Der Versicherungsschutz gilt ohne Wartezeit.",
+      "Die Wartefrist entfällt.",
+    ]) {
+      expect(
+        decide(
+          [atom("a")],
+          [
+            atom("b", {
+              sources: [
+                {
+                  candidateId: "candidate-b",
+                  physicalPageNumber: 2,
+                  exactText,
+                },
+              ],
+            }),
+          ]
+        )
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+      });
+    }
+  });
+
+  test("separates intended operation from unintended events in bound source text", () => {
+    const sourcedAtom = (side, exactText) =>
+      atom(side, {
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText,
+          },
+        ],
+      });
+
+    const differentModes = decide(
+      [
+        sourcedAtom(
+          "a",
+          "Schäden infolge einer bestimmungsgemäßen Auslösung der Sprinkleranlage."
+        ),
+      ],
+      [
+        sourcedAtom(
+          "b",
+          "Löschmittel kann aus der Anlage bestimmungswidrig austreten."
+        ),
+      ]
+    );
+    expect(differentModes).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "COMPARABILITY_GATE_FAILED",
+      ruleId: "ATOMIC_COMPARABILITY_GATE_V1",
+    });
+    expect(differentModes.dimensions[0]).toMatchObject({
+      a: { operationalEventMode: "INTENDED_OPERATION" },
+      b: { operationalEventMode: "UNINTENDED_EVENT" },
+    });
+    expect(differentModes.reason).toContain(
+      "bestimmungsgemäßer Betrieb oder Auslösung"
+    );
+    expect(differentModes.reason).not.toContain("INTENDED_OPERATION");
+
+    const sameMode = decide(
+      [sourcedAtom("a", "Bestimmungsgemäße Auslösung der Sprinkleranlage.")],
+      [sourcedAtom("b", "Die Sprinkleranlage löst bestimmungsgemäß aus.")]
+    );
+    expect(sameMode).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
+    expect(sameMode.dimensions[0]).toMatchObject({
+      a: { operationalEventMode: "INTENDED_OPERATION" },
+      b: { operationalEventMode: "INTENDED_OPERATION" },
+    });
+
+    const deduplicatedSameMode = decide(
+      [
+        sourcedAtom("a", "Bestimmungsgemäße Auslösung der Sprinkleranlage."),
+        sourcedAtom("a", "Die Sprinkleranlage löst bestimmungsgemäß aus."),
+      ],
+      [sourcedAtom("b", "Bestimmungsgemäße Aktivierung der Sprinkleranlage.")]
+    );
+    expect(deduplicatedSameMode).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
+
+    for (const exactText of [
+      "Die Sprinkleranlage löst bestimmungsgemäß nicht aus.",
+      "Löschmittel tritt nicht bestimmungswidrig aus der Anlage aus.",
+      "Bestimmungsgemäß. Die Auslösung wird separat beschrieben.",
+    ]) {
+      const negatedOrSeparated = decide(
+        [atom("a")],
+        [sourcedAtom("b", exactText)]
+      );
+      expect(negatedOrSeparated).toMatchObject({
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+      });
+      expect(negatedOrSeparated.dimensions[0]).toMatchObject({
+        b: { operationalEventMode: "UNSPECIFIED" },
+      });
+    }
+
+    expect(
+      decide(
+        [atom("a")],
+        [
+          sourcedAtom(
+            "b",
+            "Die Bestimmung gemäß Paragraph 4 definiert den Versicherungsort."
+          ),
+        ]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
+  });
+
   test("does not mistake a peril definition for a conditional coverage promise", () => {
     const definition =
       "Direkter Blitzschlag ist die schädigende Kraft oder Wärmewirkung des Blitzes, wenn er unmittelbar in die versicherten Sachen einschlägt.";

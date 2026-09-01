@@ -1193,4 +1193,67 @@ describe("policy comparison result builder", () => {
       ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
     });
   });
+
+  test("keeps a bound karenz clause fail-closed through the result builder", () => {
+    const evidencedRow = {
+      VS: {
+        documentedContent: "Versicherte Gefahr",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    };
+    const runA = writeRun(root, document("a", "A"), evidencedRow);
+    const runB = writeRun(root, document("b", "B"), evidencedRow);
+    writeAtomicCategory(runA, "VS", "INCLUDED", {
+      exactText: "Die Gefahr ist versichert.",
+    });
+    writeAtomicCategory(runB, "VS", "INCLUDED", {
+      exactText: "Die Gefahr ist versichert.",
+      contextText:
+        "Die Gefahr ist versichert. Der Versicherungsschutz beginnt frühestens nach Ablauf der Karenzfrist.",
+      contextDocumentStart: 100,
+      documentStart: 100,
+      documentEnd: 125,
+    });
+
+    const result = buildComparisonResult([runA, runB]);
+    expect(result.categories[0].rows[0].pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+    });
+  });
+
+  test("keeps different operational event modes non-comparable through the result builder", () => {
+    const evidencedRow = {
+      VS: {
+        documentedContent: "Sprinklerereignis",
+        coverage: "Ja",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    };
+    const runA = writeRun(root, document("a", "A"), evidencedRow);
+    const runB = writeRun(root, document("b", "B"), evidencedRow);
+    writeAtomicCategory(runA, "VS", "INCLUDED", {
+      exactText: "Bestimmungsgemäße Auslösung der Sprinkleranlage.",
+    });
+    writeAtomicCategory(runB, "VS", "INCLUDED", {
+      exactText: "Löschmittel tritt bestimmungswidrig aus der Anlage aus.",
+    });
+
+    const result = buildComparisonResult([runA, runB]);
+    expect(result.categories[0].rows[0].pointDecision).toMatchObject({
+      outcome: "NICHT_VERGLEICHBAR",
+      reasonCode: "COMPARABILITY_GATE_FAILED",
+      ruleId: "ATOMIC_COMPARABILITY_GATE_V1",
+      dimensions: [
+        {
+          a: { operationalEventMode: "INTENDED_OPERATION" },
+          b: { operationalEventMode: "UNINTENDED_EVENT" },
+        },
+      ],
+    });
+  });
 });
