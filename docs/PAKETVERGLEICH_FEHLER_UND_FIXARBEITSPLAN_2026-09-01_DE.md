@@ -1179,7 +1179,7 @@ Komponentenvertrag und den produktiven Entscheidungsweg geprüft.
 | Zeile | Befund | Freigabe | Benötigter wiederverwendbarer Vertrag |
 | --- | --- | --- | --- |
 | `FE-A05` | Mehrere Atome, Rollen und Scope-Stufen auf B; kein eindeutiger atomarer Vergleich | NO-GO | Objekt-Scope-Set und Dokumentrang gemeinsam binden |
-| `FE-A06` | Ein einziger Scope-Unterschied bei sonst vollständigen Atomen ist eng entscheidbar | GO, noch nicht umgesetzt | `SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` |
+| `FE-A06` | Ein einziger Scope-Unterschied bei sonst vollständigen Atomen ist eng entscheidbar | GO, umgesetzt und im Vollauf bestätigt | `SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` |
 | `FE-D01` | Feldvollständigkeit, Aggregation und Dokumentrang gleichzeitig offen | NO-GO | typisierte Feld- und Rangauflösung |
 | `LW-26` | erforderliches B-Limit fehlt | NO-GO | belastbare lokale Limitbindung |
 | `LW-12` | Fund gilt nur für maximal eine Heizungsschleife/Reparaturbedingung | NO-GO | `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1` |
@@ -1408,3 +1408,171 @@ Entscheidung: **GO als Korrektheitsbaseline**, aber nicht als numerisch
 günstigerer Review-Favorit. Die bekannte falsche Gleichwertigkeit darf nicht
 zurückkehren. Der folgende FE-A06-Kandidat wird deshalb gegen diesen Lauf und
 zusätzlich gegen PBR-01.2/`4edca52a` verglichen.
+
+## 18. FE-A06: einzelner Scope-Blocker wird atomar nicht vergleichbar
+
+### 18.1 Fachlicher Vertrag und Sicherheitsgrenze
+
+Der Kandidat wurde nicht über eine allgemeine Lockerung des Paketstatus
+gelöst. Stattdessen wurde der versionierte Vertrag
+`SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` eingeführt. Er darf
+ausschließlich `NICHT_VERGLEICHBAR` liefern; Vorteil, Gleichwertigkeit oder
+ein ausdrücklicher Ausschluss können dadurch nicht entstehen.
+
+Die Regel greift nur, wenn sämtliche folgenden Bedingungen gemeinsam erfüllt
+sind:
+
+- beide Seiten besitzen gefundene, relevante Evidenz ohne besonderes
+  `comparisonTreatment`;
+- die Paketstatus sind exakt `BELEGT` und `TEILBELEGT`;
+- beide Seiten verwenden denselben Ein-Komponenten-`ALL`-Vertrag mit gleicher
+  Komponentenrolle und gleichem Vertragsdigest;
+- pro Seite existiert genau ein vollständiges gefundenes Atom; alle übrigen
+  Atome und angeforderten Felder sind kontrolliert `NOT_FOUND`;
+- Konflikt, Unresolved-Kandidat und Dokumentrangproblem fehlen;
+- der gefundene Inhalt, seine Dokument-UUID, der Paketstatus und der
+  beitragende Fakt sind exakt miteinander gebunden;
+- beide Seiten verlangen `GENERAL_REQUIRED`, die ausgewählten Scopes sind
+  aber exakt `GENERAL` gegen `NARROW_ONLY`;
+- der einzige Paketblocker ist komponentengenau `SCOPE_INCOMPLETE`; ein
+  optionales Bedingungssignal muss exakt denselben Fakt beschreiben;
+- die normale Dimensionsprüfung bestätigt anschließend
+  `COMPARABILITY_KEY_DIFFERS`.
+
+Ein unvollständiger oder unbekannter Nullpfad, mehrere gefundene Atome, ein
+zweiter Blocker oder eine abweichende Dokumentbindung führen weiterhin
+fail-closed zu `UNKLAR`.
+
+### 18.2 Getrennte Commits und fokussierte Mac-Studio-Validierung
+
+Commits in Ausführungsreihenfolge:
+
+- `a3e60008`: enger Vergleichsvertrag für einen alleinigen Scope-Blocker;
+- `6d6518f6`: kontrollierte `NOT_FOUND`-Felder in den Vertrag einbeziehen;
+- `0233b42d`: vollständigen Abwesenheitsvertrag der Felder validieren;
+- `a36dcccd`: realen V7-Paketpfad des Scope-Falls prüfen;
+- `ad88b00f`: Feld-, Null- und adversariale Gegenpfade schließen;
+- `fa780902`: ausschließlich Formatierung des geprüften Vertrags.
+
+Exakte abschließende Remote-Validierung:
+
+```text
+Commit: fa78090269a23e0f45223546fc9b57f10e78f843
+Checkout: /private/tmp/pv3-fe-a06-fa780902-m9mku2/repo
+Node: 22.23.2
+Tests: 6 Suites, 85/85 bestanden
+Prettier: bestanden
+Git-Status des isolierten Checkouts: sauber
+```
+
+Die Tests decken den realen Ein-Fund-plus-acht-Nichtfunde-Paketpfad sowie
+positive, negative, adversariale, Feld-, Audit-, Rang-, Konflikt- und
+V7-Präsentationsvarianten ab. Eine unabhängige statische Abschlussprüfung
+meldete keine P1- oder P2-Feststellung.
+
+### 18.3 Vollständiger Mac-Studio-Lauf
+
+```text
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+CANDIDATE-FE-A06-FA780902-20260901-223450
+
+Commit: fa78090269a23e0f45223546fc9b57f10e78f843
+Checkout: /private/tmp/pv3-fe-a06-fa780902-m9mku2/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Erster Start: 2026-09-01T20:34:50Z
+Erster Versuch: PRE_DOCUMENT_DEPENDENCY_ABORT
+Validierter Neustart: 2026-09-01T20:35:38Z
+Ende: 2026-09-01T21:02:25Z
+Wandzeit des validierten Laufs: 26:47
+Inputmanifest SHA-256:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Hard-Gate: PASS, 10 Dokumente, 50 Kategorien, 224 Paketzeilen
+Strict V7: PASS
+Run-Signatur:
+1b3bf66f63a19dd6d2328702ee1516df23a4c75bc7b0eed8547aafb74ffc6926
+JSON SHA-256:
+52ce41d2246203eabaa4c34814d3744d938b87cf11813ec707d889bece9d0ff4
+Markdown SHA-256:
+e19d18c05e39bad90ab149d1a46b37f4690b31e8fa88a22e5e97b59f59e1e4d0
+XLSX SHA-256:
+a276925b62baa721750642fcbfa84c271275cec2aa582d0017c43ea2a9b71c3b
+```
+
+Der erste Versuch erreichte keine Dokumentanalyse. Ursache war ausschließlich
+eine fehlende auflösbare ESM-Abhängigkeit `pdf-parse` im frisch isolierten
+Checkout. Nach Wiederherstellung der bereits verwendeten isolierten
+Abhängigkeitsbindung startete der Lauf neu. Der abgebrochene Versuch wird
+weder als Qualitätslauf noch als Laufzeitmessung verwendet; er veränderte den
+installierten Kundencheckout nicht.
+
+Kundenmetriken des validierten Laufs:
+
+```text
+Vorteil A/B: 0 / 0
+Dokumentationsunterschied: 38
+Gleichwertig: 6
+Kein dokumentierter Vorteil: 99
+Nicht vergleichbar: 14
+Unklar/Kundenprüfung: 67
+Paketstatus-Blocker: 40
+```
+
+### 18.4 Exakte Abgrenzung gegen die Favoritenläufe
+
+Gegen den unmittelbaren Objektneutralitäts-Favoriten `f11b5572` änderte sich
+im kundenrelevanten Ergebnis genau eine Zeile:
+
+```text
+FE-A06
+vorher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION /
+         FAIL_CLOSED_V1 / Kundenprüfung=true
+nachher: NICHT_VERGLEICHBAR / COMPARABILITY_GATE_FAILED /
+         SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1 /
+         Kundenprüfung=false
+```
+
+Die beiden Evidenzseiten selbst blieben `BELEGT` und `TEILBELEGT`. Neu ist
+nicht mehr Evidenz, sondern die zulässige Aussage, dass das allgemeine
+A-Limit `1 %` plus `EUR 10.000` nicht direkt mit dem nur für einen engeren
+Scope belegten B-Limit `EUR 5.000` gereiht werden darf.
+
+Kausale Kontrollen:
+
+- alle zehn `document.private.json` sind bytegenau identisch zu `f11b5572`;
+- alle 50 `worksheet.private.json` sind bytegenau identisch;
+- alle zehn Einzel-`report.json` sind bytegenau identisch;
+- das XLSX behält ein Blatt, 225 Zeilen und 17 Spalten;
+- im XLSX änderte sich exakt eine Zelle: `Gesamtvergleich!Q15`, die
+  Kundenerklärung für `FE-A06`;
+- kein anderer Ergebniszustand, Reviewstatus oder Regelpfad änderte sich.
+
+Die kumulierte kundenrelevante Zustandsprojektion unterscheidet sich vom
+älteren `4edca52a` in genau drei Zeilen: `VS-19` besitzt einen transparenteren
+Paketstatusgrund, `FE-C02` ist wegen der korrigierten Objektdefinition nicht
+mehr fälschlich gleichwertig, und `FE-A06` ist nun nicht vergleichbar. Gegen
+PBR-01.2 kommt als vierte technische Zustandsänderung der präzisere
+`ST-16`-Reviewstatus hinzu. Keine dieser Änderungen erzeugt einen Vorteil.
+
+### 18.5 Abschlussentscheidung über alle Kandidaten
+
+**GO als neuer Korrektheits- und Review-Favorit.** Gegen `f11b5572` wurde ein
+echter, eng begrenzter Reviewfall ohne Evidenz- oder Ergebnisdrift entschieden:
+Kundenprüfung `68 -> 67`, Paketstatus-Blocker `41 -> 40`, nicht vergleichbar
+`13 -> 14`. Die Wandzeit `26:47` liegt praktisch auf dem Niveau des direkten
+Favoriten `26:43`.
+
+Damit ist die in Abschnitt 14 untersuchte Kandidatenmenge vollständig
+entschieden. Für `FE-A05`, `FE-D01`, `LW-26`, `LW-12`, `ST-17`, `ST-25` und
+`ST-27` existiert ohne neue semantische Verträge beziehungsweise belastbare
+Dokumentorakel kein sicherer Outcome-Fix. `ST-21` wurde bereits auf neutrale
+Objektdefinition korrigiert, darf aber keinen Vorteil erzeugen. `FE-D05`
+bleibt ein späterer Semantik- und Implikationsspike und darf nicht als bloße
+Aliasergänzung umgesetzt werden.
+
+Weitere Änderungen an diesen Kandidaten ohne neue fachliche Evidenz würden
+die Sicherheitsgrenze lockern, aber kein aussagekräftigeres, belegtes Ergebnis
+erzeugen. Deshalb endet diese Kandidatenserie hier mit einem kleinen echten
+Gewinn und einer dokumentierten NO-GO-Grenze für jede übrige Variante.
