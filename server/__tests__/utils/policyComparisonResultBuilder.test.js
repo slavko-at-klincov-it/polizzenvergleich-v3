@@ -543,7 +543,10 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
 
     expect(result.categories[0].rows[0].outcome).toBe("NUR_A_BELEGT");
-    expect(result.totals.customerReviewRequired).toBe(1);
+    expect(result.totals.customerReviewRequired).toBe(5);
+    expect(result.totals.customerReviewRequired).toBe(
+      result.totals.pointDecisions.UNKLAR
+    );
   });
 
   test("builds the five-category customer profile with document-level provenance", async () => {
