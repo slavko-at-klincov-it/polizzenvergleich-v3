@@ -67,22 +67,51 @@ describe("policy comparison result presenter", () => {
     expect(
       presentComparisonMetrics({
         schemaVersion: 6,
+        categories: [
+          {
+            categoryView: "VS",
+            rows: [
+              {
+                pointDecision: {
+                  outcome: "UNKLAR",
+                  reviewRequired: true,
+                },
+              },
+            ],
+          },
+        ],
         totals: {
-          rows: 224,
-          customerReviewRequired: 67,
+          rows: 1,
+          customerReviewRequired: 1,
           legacyTechnicalDifferences: 105,
         },
       })
-    ).toEqual({ rows: 224, customerReviewRequired: 67, legacyFallback: false });
+    ).toEqual({
+      rows: 1,
+      customerReviewRequired: 1,
+      legacyFallback: false,
+      storedMetricDiscrepancy: false,
+    });
     expect(
       presentComparisonMetrics({
         schemaVersion: 5,
+        categories: [
+          {
+            categoryView: "VS",
+            rows: [{ difference: "Altes Ergebnis ohne Punktentscheidung" }],
+          },
+        ],
         totals: {
-          rows: 224,
+          rows: 1,
           reviewRequired: 105,
-          pointDecisionReviewRequired: 67,
+          pointDecisionReviewRequired: 0,
         },
       })
-    ).toEqual({ rows: 224, customerReviewRequired: 67, legacyFallback: true });
+    ).toEqual({
+      rows: 1,
+      customerReviewRequired: 1,
+      legacyFallback: true,
+      storedMetricDiscrepancy: true,
+    });
   });
 });

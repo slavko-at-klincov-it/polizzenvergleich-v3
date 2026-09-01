@@ -39,15 +39,29 @@ function presentPointDecision(row) {
 
 function presentComparisonMetrics(result) {
   const totals = result?.totals || {};
-  const customerReviewRequired = Number.isInteger(totals.customerReviewRequired)
+  const rows = (result?.categories || []).flatMap(
+    ({ rows: categoryRows }) => categoryRows || []
+  );
+  const customerReviewRequired =
+    rows.length > 0
+      ? rows.filter((row) => presentPointDecision(row).reviewRequired).length
+      : null;
+  const storedCustomerReview = Number.isInteger(totals.customerReviewRequired)
     ? totals.customerReviewRequired
     : Number.isInteger(totals.pointDecisionReviewRequired)
       ? totals.pointDecisionReviewRequired
-      : Number(totals.pointDecisions?.UNKLAR || 0);
+      : Number.isInteger(totals.pointDecisions?.UNKLAR)
+        ? totals.pointDecisions.UNKLAR
+        : null;
+  const schemaVersion = Number(result?.schemaVersion);
   return {
-    rows: Number(totals.rows || 0),
+    rows: rows.length > 0 ? rows.length : Number(totals.rows || 0),
     customerReviewRequired,
-    legacyFallback: !Number.isInteger(totals.customerReviewRequired),
+    legacyFallback: !Number.isFinite(schemaVersion) || schemaVersion < 6,
+    storedMetricDiscrepancy:
+      storedCustomerReview === null || customerReviewRequired === null
+        ? null
+        : storedCustomerReview !== customerReviewRequired,
   };
 }
 

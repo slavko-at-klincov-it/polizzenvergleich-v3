@@ -43,9 +43,41 @@ function validationError(code, details = []) {
   throw new Error([code, ...details].join(":"));
 }
 
+function deriveLegacyCustomerReview(result) {
+  const rows = comparisonRows(result?.categories);
+  if (rows.length === 0)
+    return {
+      legacy: true,
+      metricContractId: null,
+      rows: null,
+      customerReviewRequired: null,
+      storedMetricDiscrepancy: null,
+    };
+  const customerReviewRequired = rows.filter(({ pointDecision }) => {
+    if (!pointDecision) return true;
+    if (!POINT_OUTCOMES.includes(pointDecision.outcome)) return true;
+    return pointDecision.outcome === POINT_OUTCOME.UNCLEAR;
+  }).length;
+  const storedMetric = Number.isInteger(
+    result?.totals?.pointDecisionReviewRequired
+  )
+    ? result.totals.pointDecisionReviewRequired
+    : Number.isInteger(result?.totals?.pointDecisions?.[POINT_OUTCOME.UNCLEAR])
+      ? result.totals.pointDecisions[POINT_OUTCOME.UNCLEAR]
+      : null;
+  return {
+    legacy: true,
+    metricContractId: null,
+    rows: rows.length,
+    customerReviewRequired,
+    storedMetricDiscrepancy:
+      storedMetric === null ? null : storedMetric !== customerReviewRequired,
+  };
+}
+
 function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   if (Number(result?.schemaVersion) < 6) {
-    if (allowLegacy) return { legacy: true, metricContractId: null };
+    if (allowLegacy) return deriveLegacyCustomerReview(result);
     validationError("COMPARISON_METRIC_SCHEMA_UNSUPPORTED", [
       result?.schemaVersion,
     ]);
@@ -140,6 +172,7 @@ module.exports = {
   METRIC_CONTRACT_ID,
   POINT_OUTCOMES,
   deriveCustomerMetrics,
+  deriveLegacyCustomerReview,
   validateCustomerComparison,
   validateCustomerComparisonFile,
 };

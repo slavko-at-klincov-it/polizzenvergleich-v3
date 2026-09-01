@@ -85,9 +85,37 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(legacy)).toThrow(
       "COMPARISON_METRIC_SCHEMA_UNSUPPORTED"
     );
+    expect(validateCustomerComparison(legacy, { allowLegacy: true })).toEqual(
+      {
+        legacy: true,
+        metricContractId: null,
+        rows: null,
+        customerReviewRequired: null,
+        storedMetricDiscrepancy: null,
+      }
+    );
+  });
+
+  test("recomputes legacy review from rows and treats missing point decisions fail-closed", () => {
+    const legacy = {
+      schemaVersion: 5,
+      categories: [
+        {
+          categoryView: "VS",
+          rows: [
+            row("VS-01", "GLEICHWERTIG"),
+            { categoryId: "VS-02", outcome: "INHALTLICH_GLEICH" },
+          ],
+        },
+      ],
+      totals: { pointDecisionReviewRequired: 0 },
+    };
     expect(validateCustomerComparison(legacy, { allowLegacy: true })).toEqual({
       legacy: true,
       metricContractId: null,
+      rows: 2,
+      customerReviewRequired: 1,
+      storedMetricDiscrepancy: true,
     });
   });
 });
