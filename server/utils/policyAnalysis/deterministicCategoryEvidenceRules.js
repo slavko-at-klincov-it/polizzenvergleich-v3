@@ -1302,6 +1302,31 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  const objectClassificationCandidates = target.candidates.filter(
+    ({ objectClassificationContractId }) =>
+      objectClassificationContractId ===
+      "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1"
+  );
+  if (
+    target.factRole === "INSURED_OBJECT" &&
+    (target.unresolvedCandidateIds || []).length === 0 &&
+    objectClassificationCandidates.length === target.candidates.length &&
+    objectClassificationCandidates.every(
+      ({ contextUnitType, contextText, exactText }) =>
+        contextUnitType === "LIST_ITEM" &&
+        String(contextText || "").includes(String(exactText || "")) &&
+        !/\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|eingeschlossen|gedeckt|versicherungsschutz)\b/iu.test(
+          contextText || ""
+        )
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
+    };
   if (
     target.categoryView === "EL" &&
     target.requirementId === "EL-12" &&

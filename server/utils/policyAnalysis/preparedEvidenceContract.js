@@ -278,6 +278,8 @@ function buildPreparedEvidenceTargets({
           )
             ? occurrence.context.documentStart
             : null,
+          objectClassificationContractId:
+            occurrence.objectClassificationGovernorHint?.contractId || null,
           scopeLeadText: governingScopeLead(
             `${occurrence.coverageGovernorHint?.text || ""}\n${
               occurrence.scopeLead?.text || ""

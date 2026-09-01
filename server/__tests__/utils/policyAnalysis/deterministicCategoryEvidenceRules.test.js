@@ -931,4 +931,62 @@ describe("deterministicCategoryEvidenceRules", () => {
       basis: "EXPLICIT_CATEGORY_CLAUSE:WE:WE-14",
     });
   });
+
+  test("treats a pure object-classification list as defined, not covered", () => {
+    const target = {
+      categoryView: "ST",
+      requirementId: "ST-16",
+      componentId: "shading_system",
+      factRole: "INSURED_OBJECT",
+      unresolvedCandidateIds: [],
+      candidates: ["Jalousien", "Rollläden"].map((exactText) => ({
+        candidateId: `candidate:${exactText}`,
+        candidateBinding: "DIRECT",
+        exactText,
+        contextUnitType: "LIST_ITEM",
+        contextText:
+          "·Jalousien und Rollläden inklusive Antriebselemente (nicht Sonnensegel und nicht Markisen);",
+        objectClassificationContractId:
+          "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+      })),
+    };
+
+    expect(deterministicCategoryPreparedDecision(target)).toEqual({
+      selectedCandidateIds: ["candidate:Jalousien", "candidate:Rollläden"],
+      coverageEffect: "DEFINED",
+      basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
+    });
+  });
+
+  test("keeps mixed object-classification and coverage candidates model-owned", () => {
+    const target = {
+      categoryView: "ST",
+      requirementId: "ST-21",
+      componentId: "solar_thermal_system",
+      factRole: "INSURED_OBJECT",
+      unresolvedCandidateIds: [],
+      candidates: [
+        {
+          candidateId: "candidate:definition",
+          candidateBinding: "DIRECT",
+          exactText: "Solaranlagen",
+          contextUnitType: "LIST_ITEM",
+          contextText: "·Solaranlagen;",
+          objectClassificationContractId:
+            "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+        },
+        {
+          candidateId: "candidate:coverage",
+          candidateBinding: "DIRECT",
+          exactText: "Solaranlagen",
+          contextUnitType: "PARAGRAPH",
+          contextText: "Solaranlagen sind mitversichert.",
+          scopeLeadText: "Versicherte Sachen:",
+          objectClassificationContractId: null,
+        },
+      ],
+    };
+
+    expect(deterministicCategoryPreparedDecision(target)).toBeNull();
+  });
 });

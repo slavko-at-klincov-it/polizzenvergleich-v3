@@ -222,6 +222,63 @@ describe("preparedEvidenceContract", () => {
     });
   });
 
+  test("materializes a pure object-classification list as a neutral definition", () => {
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "ST" },
+      requirements: [
+        {
+          id: "ST-16",
+          label: "Jalousien und Rollläden",
+          requestedFields: [],
+          components: [
+            {
+              id: "shading_system",
+              label: "Beschattungssysteme",
+              factRole: "INSURED_OBJECT",
+              occurrences: ["Jalousien", "Rollläden"].map((exactText) => ({
+                candidateId: `candidate:${exactText}`,
+                exactText,
+                objectClassificationGovernorHint: {
+                  contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+                },
+                context: {
+                  unitType: "LIST_ITEM",
+                  text: "·Jalousien und Rollläden (nicht Sonnensegel und nicht Markisen);",
+                },
+              })),
+            },
+          ],
+        },
+      ],
+    };
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: ["Jalousien", "Rollläden"].map((exactText) => ({
+        requirementId: "ST-16",
+        componentId: "shading_system",
+        candidateId: `candidate:${exactText}`,
+        binding: "DIRECT",
+      })),
+    });
+
+    expect(target.candidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          objectClassificationContractId:
+            "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+        }),
+      ])
+    );
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      selectedCandidateIds: ["candidate:Jalousien", "candidate:Rollläden"],
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      evidencePresence: "FOUND",
+      decisionOwner: "SERVER_OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
+    });
+  });
+
   test("uses complete candidate triage to keep only direct and narrow effect candidates", () => {
     const triage = [
       {
