@@ -503,8 +503,9 @@ function ComparisonResult({ result }) {
         )}
         {customerMetrics.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Punktentscheidungen: A {customerMetrics.pointDecisions.VORTEIL_A || 0}{" "}
-            · B {customerMetrics.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
+            Punktentscheidungen: A{" "}
+            {customerMetrics.pointDecisions.VORTEIL_A || 0} · B{" "}
+            {customerMetrics.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
             {customerMetrics.pointDecisions.GLEICHWERTIG || 0} · kein
             dokumentierter Vorteil{" "}
             {customerMetrics.pointDecisions.KEIN_DOKUMENTIERTER_VORTEIL || 0} ·

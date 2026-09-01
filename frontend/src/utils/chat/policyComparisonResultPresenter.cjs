@@ -115,8 +115,7 @@ function presentComparisonMetrics(result) {
         count,
       })),
     legacyFallback: !Number.isFinite(schemaVersion) || schemaVersion < 6,
-    storedMetricDiscrepancy:
-      rows.length === 0 ? null : storedMetricDiscrepancy,
+    storedMetricDiscrepancy: rows.length === 0 ? null : storedMetricDiscrepancy,
   };
 }
 

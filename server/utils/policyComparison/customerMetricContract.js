@@ -104,8 +104,8 @@ function deriveLegacyCustomerReview(result) {
   const pointDecisions = Object.fromEntries(
     POINT_OUTCOMES.map((outcome) => [
       outcome,
-      pointDecisionRows.filter(({ normalizedOutcome }) =>
-        normalizedOutcome === outcome
+      pointDecisionRows.filter(
+        ({ normalizedOutcome }) => normalizedOutcome === outcome
       ).length,
     ])
   );
