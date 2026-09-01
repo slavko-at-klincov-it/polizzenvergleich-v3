@@ -592,6 +592,39 @@ bleiben stabil, private Blockercodes werden zusätzlich gezählt. Dadurch
 bleiben die 67er-Kundenmetrik und historische Reason-Mitgliedschaften
 vergleichbar.
 
+Implementierungsstand seit Commit
+`766125f7e4a2adde955bd6f5218bb899f543397c`:
+
+- `server/utils/policyComparison/customerResultPresenter.js:8-118` ordnet
+  ausschließlich validierte Blockercodes festen deutschen Erklärfamilien zu,
+  gruppiert sie nach Polizze A/B und dedupliziert gleiche Familien innerhalb
+  derselben Seite;
+- Signale wie `PROPOSED_ONLY` und `CONDITIONAL_APPLICABILITY` werden bewusst
+  nicht als zusätzliche Kundenprobleme dargestellt;
+- `server/utils/policyComparison/customerMetricContract.js:315-348`
+  validiert zuerst das vollständige V7-Ergebnis und erzeugt danach eine neue,
+  nicht mutierende Kundenlesesicht; ausschließlich der Begründungstext der 39
+  Paketstatuszeilen wird darin ersetzt;
+- das gespeicherte private Ergebnis, der äußere Reasoncode, das Outcome,
+  `reviewRequired`, die 67er-Kundenmetrik und alle Mitgliedslisten bleiben
+  unverändert;
+- die Excel-Ausgabe nutzt dieselbe validierte Kundenlesesicht. Dadurch können
+  UI und XLSX nicht unabhängig voneinander eigene Blockerlogik entwickeln;
+- `frontend/src/utils/chat/policyComparisonResultPresenter.cjs:15-16`
+  bezeichnet die Gruppe als „Offene Teilpunkte in mindestens einer Polizze“;
+- `frontend/src/components/WorkspaceChat/ChatContainer/PolicyComparisonPanel/index.jsx:506-510`
+  stellt klar, dass mehrere Hinweise in derselben Zeile nicht zusätzlich
+  gezählt werden;
+- unbekannte, fehlende oder ungültige Audits fallen fail-closed auf den
+  bisherigen generischen Kundentext zurück;
+- technische Codes, Dokument-UUIDs und Kandidaten-IDs werden nicht in den
+  Kundentext übernommen.
+
+Damit wurde PBR-01.2 als Darstellungs- und Nachvollziehbarkeitsfix umgesetzt,
+nicht als fachliche Freischaltung. Die detaillierten Blocker bleiben im
+privaten Audit vollständig erhalten; Kunden sehen nur kontrollierte, stabile
+Begriffsfamilien.
+
 ### Fix PBR-01.3: dokumentbezogene Zulässigkeit für die zehn Mischfälle
 
 Kein globales Lockerungsgate. Pro Komponente muss nachgewiesen werden, dass
@@ -970,6 +1003,95 @@ Anlaufbeobachtungen:
   Extraktion schloss dennoch mit 15 Seiten ab. Diese Warnung bleibt unter
   Beobachtung.
 
+### RUN-PBR-01.2
+
+```text
+Status: Full Run und Favoritenvergleich bestanden
+Fix-Commit: 766125f7e4a2adde955bd6f5218bb899f543397c
+Mac-Studio-Checkout:
+/private/tmp/pv3-pbr012-766125f7-3woHDq/repo
+Mac-Studio-Gitstatus nach Lauf und Nachvalidierung: sauber
+Profil: CUSTOMER_CORE_5_V7
+Vergleichsvertrag: CERTIFIED_COVERAGE_ONLY_TYPED_V2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Parallelität: 1; zehn Dokumente strikt seriell
+Dinghy: not-loaded
+Dokumente/Kategorien/Paketzeilen: 10 / 50 / 224
+Wandzeit: 1.827 s = 30:27
+Run-Signatur:
+2e444b76f36a1c2b8d70b68748567a4131975f7ca30f5cdd791a098333291323
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+PBR-01-2-766125F7-20260901-185258
+
+Inputmanifest SHA-256:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Paketvertrag SHA-256:
+d2555257835a1ca1cf90e71b0a142d05d0ea0055ce744ca05d2e89895885909c
+comparison.private.json SHA-256:
+0cc0f18180eadde357ea42edaddec88878200856e29467875d7fe07825727710
+comparison.md SHA-256:
+e1b3b9e7d630de179aeea1c9133d211e1e15cf37c0b3d2b995e73e45629bea47
+polizzenvergleich.xlsx SHA-256:
+2bf40c1980d09c861ee626764d5825580aa195e53bb28a820f395dda7f22b19a
+package-report.private.json SHA-256:
+0c515c6669235cfec8c5906412debfead0f3e58c9187e84ef1f6172143e35018
+
+Produktiver V7-Validator: PASS
+Zeilen-/Outcome-/Reason-Recount: PASS
+224 eindeutige Zeilenschlüssel: PASS
+Outcome-Mitgliedschaften gegen d973977f: exakt identisch
+Review-Reason-Mitgliedschaften gegen d973977f: exakt identisch
+Entscheidungsprojektion gegen d973977f: 0 Übergänge
+Entscheidungsprojektion gegen 63ecc750: 0 Übergänge
+Entscheidungsprojektion gegen PBR-01.1: 0 Übergänge
+vollständiger Kategorienbaum gegen PBR-01.1: byte-inhaltlich identisch
+
+Vorteil A/B: 0 / 0
+Dokumentationsunterschied: 38
+Gleichwertig: 7
+Kein dokumentierter Vorteil: 99
+Nicht vergleichbar: 13
+Unklar/Kundenprüfung: 67
+Paketstatus-Blocker: 39
+Audits auf Paketstatuszeilen: 39/39
+fehlende Audits: 0
+UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER: 0 Records / 0 Zeilen
+
+Validierte Kundenlesesicht:
+39/39 Paketstatuszeilen mit seitenspezifischer Erklärung
+39/39 mit Hinweis, dass Mehrfachhinweise nicht zusätzlich gezählt werden
+0 technische Code-/UUID-/Kandidaten-ID-Leaks
+Quellergebnis durch die Transformation nicht mutiert
+
+Excel-Gegenprüfung PBR-01.1 -> PBR-01.2:
+ein Blatt „Gesamtvergleich“
+225 Zeilen inklusive Kopfzeile
+17 Spalten
+genau 39 geänderte Zellen
+alle 39 Änderungen ausschließlich in Spalte 17 „KI-Ergebnis“
+185/185 übrige Datenzeilen zellgleich
+39/39 verständliche Paketblockererklärungen
+0 technische Code-/UUID-/Kandidaten-ID-Leaks
+
+Favoriten-Laufzeitdelta zu d973977f: +21 s, ungefähr +1,2 Prozent
+Laufzeitdelta zu PBR-01.1: -18 s
+Entscheidung: GO für PBR-01.2; weiterhin keine fachliche Freischaltung
+```
+
+Warum sich die Hashes trotz identischer Entscheidungen unterscheiden:
+
+- das private V7-Ergebnis enthält seit PBR-01.1 zusätzlich den versionierten
+  Paketreviewaudit und laufgebundene Metadaten;
+- PBR-01.2 lässt den vollständigen Kategorienbaum gegenüber PBR-01.1
+  unverändert;
+- die XLSX-Datei ändert sich absichtlich, weil genau die 39 generischen
+  Begründungen verständlich ersetzt werden;
+- der identische Markdown-Hash gegenüber PBR-01.1 ist erwartet, weil der
+  gespeicherte technische Reasontext nicht mutiert wird.
+
 ## 11. Weitere Arbeitspakete der 67 Reviewzeilen
 
 Diese Pakete werden strikt in der gespeicherten Reihenfolge bearbeitet, sobald
@@ -1005,23 +1127,45 @@ Favoriten-Run-Vergleich.
 - Ein neuer Vorteil ist erst dann eine Verbesserung, wenn seine Atomfakten,
   Quellen, Geltung, Vergleichsregel und fachliche Richtigkeit unabhängig
   geprüft sind.
+- Eine erneute Quellprüfung der 39 Paketstatuszeilen fand keine Zeile, die
+  ohne neuen semantischen Vertrag sicher zu einem Vorteil oder einer anderen
+  Endentscheidung freigeschaltet werden kann. Das ist kein Beweis, dass alle
+  39 fachlich unentscheidbar sind; es ist ein Beweis, dass die bestehende
+  Atombindung noch nicht genügt, um den heutigen Guard gefahrlos zu entfernen.
+- Besonders aussichtsreich, aber noch nicht freigabereif, sind unter anderem:
+  `LW-12` mit einem auf maximal eine Heizungsschleife begrenzten Fund,
+  `ST-25` mit fehlender `branch_removal_costs`-Komponente,
+  `ST-17` mit Definitions-/Dokumentrangfrage, `FE-D05` mit fehlendem
+  `without_own_fire`-Teilpunkt sowie `FE-A05`, `FE-A06`, `FE-D01`, `LW-26`,
+  `ST-21` und `ST-27` mit Scope-, Vorschlags-, Wert- oder Rangbindungen.
+- Diese Fälle dürfen nicht über eine gemeinsame Lockerung gelöst werden. Ein
+  erster enger Folgevertrag könnte für `LW-12` die semantische Form
+  `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1` abbilden. Er muss den
+  Wortlaut „maximal eine Heizungsschleife“ als gebundenes Scope-Limit, die
+  Rollen Definition versus Deckung sowie Dokumentgeltung und Rang gemeinsam
+  prüfen.
 
 ## 13. Aktueller nächster Schritt
 
-```text
-PBR-01.2 als kleinen Darstellungsfix vorbereiten:
-die bereits validierten privaten Blockercodes verständlich auswertbar machen,
-ohne die 67er-Kundenmetrik, Outcomeentscheidung oder XLSX-Struktur zu ändern.
-```
+PBR-01.1 und PBR-01.2 sind umgesetzt und durch je einen vollständigen
+Mac-Studio-Lauf abgesichert. Der nächste sichere Schritt ist nicht das
+globale Entfernen des Paketstatus-Guards, sondern die Einzelanalyse des ersten
+engen semantischen Vertrags aus PBR-01.3/PBR-01.4.
 
-Vor einer Implementierung von PBR-01.2:
+Vorgesehene Reihenfolge:
 
-```text
-festlegen, ob die Diagnose nur in einem privaten technischen Report oder
-zusätzlich als verständlicher, nicht zählender Hinweis in UI/XLSX erscheint
--> keine neue Reviewzeile und keine Vervielfachung der Kennzahl
--> eigener Commit
--> exakter isolierter Mac-Studio-Checkout
--> vollständiger V7-Lauf
--> erneuter Favoritenvergleich und Protokollierung in Abschnitt 10
-```
+1. `LW-12` vollständig auf Atom-, Scope-, Wert- und Dokumentrangebene gegen
+   die Realquellen rekonstruieren;
+2. den wiederverwendbaren Vertrag
+   `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1` spezifizieren;
+3. vor Codeänderung positive, negative, adversariale und Scopevarianten sowie
+   das erwartete LF-/WEVIG-Oracleurteil dokumentieren;
+4. erst danach einen kleinen Codefix committen;
+5. wieder einen isolierten vollständigen Mac-Studio-Lauf durchführen und
+   Outcome-, Reason-, Zeilen- und XLSX-Delta gegen `d973977f`, `63ecc750` und
+   den unmittelbar vorherigen Fixrun protokollieren.
+
+Falls die Realquelle oder Dokumentbeziehung das erwartete Urteil nicht
+eindeutig trägt, wird kein Outcome entsperrt. Dann bleibt `LW-12` offen und
+der Befund wird als fehlender Vertrag beziehungsweise fehlendes Oracle
+dokumentiert, statt die Sicherheitsgrenze pauschal zu lockern.
