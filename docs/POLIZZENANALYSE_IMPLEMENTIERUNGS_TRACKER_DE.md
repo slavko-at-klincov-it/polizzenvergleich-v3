@@ -3951,10 +3951,12 @@ Einzelzeilen nachgezählt; fehlende Punktentscheidungen bleiben fail-closed
 kundenprüfpflichtig.
 
 Worker, Ergebnisendpunkt und XLSX-Download validieren neue Ergebnisse vor
-Weitergabe. Doppelte Zeilen, unbekannte Outcomes, widersprüchliche Reviewflags,
-fehlende Blockiergründe und manipulierte Aggregate oder Gruppenmitgliedschaften
-stoppen fail-closed. Die Oberfläche zählt die sichtbaren Zeilen erneut, zeigt
-die Kundenreviewzahl ausdrücklich und warnt bei einer gespeicherten Abweichung.
+Weitergabe. Doppelte Zeilen, unbekannte fachliche oder technische Outcomes,
+widersprüchliche Reviewflags, fehlende Blockiergründe und manipulierte Aggregate
+oder Gruppenmitgliedschaften stoppen fail-closed. Alte API-Antworten entfernen
+den mehrdeutigen Zähler und liefern eine getrennte normalisierte Kundenmetrik.
+Die Oberfläche zählt Zeilen, alle sieben Outcomes und Reviewgründe unabhängig
+neu und warnt bei einer gespeicherten Abweichung.
 Beidseitig nicht gefundene passende Vertragsregelungen werden verständlich
 benannt und nicht mehr als ungeklärt formuliert.
 
@@ -3970,13 +3972,14 @@ Vollständiger Prüfbericht:
 IMPLEMENTIERT: zeilenbasierte Kundenmetrik, unabhängige Neuberechnung,
                Worker-/API-/Download-Gate, UI-Recount und Legacy-Adapter
 PASS: Real-Artefakt-Replay 224/224 und Kundenreview 67
-PASS: 5 fokussierte Suites / 52 Tests auf 66e537a8
-PASS: Blockiergrundzähler und eindeutige Zeilenmitgliedschaften
+PASS: 5 fokussierte Suites / 55 Tests auf 66aabfe4
+PASS: Blockiergrund- und Outcomezähler mit eindeutigen Zeilenmitgliedschaften
+PASS: Server-/UI-Parität im Replay des echten 224-Zeilen-Artefakts
 PASS: Prettier und Frontend-ESLint der geänderten Produktquellen
 PASS: Frontend-Build / 6.170 Module
 BASELINE-PARITÄT: auf Baseline und neuem Stand dieselben 20 Fehlsuites
                   und 3 Fehltests; neuer Stand ergänzt 1 grüne Suite
-                  und 13 grüne Tests
+                  und 16 grüne Tests
 BLOCKED: Server-ESLint bricht bereits auf unverändertem Baselinecode wegen
          ESLint-9-/React-Plugin-Inkompatibilität ab
 NO MODEL RUN: bestehendes Vergleichsartefakt nur deterministisch neu aggregiert

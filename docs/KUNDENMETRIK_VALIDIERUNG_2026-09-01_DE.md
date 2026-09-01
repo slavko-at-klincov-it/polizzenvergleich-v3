@@ -99,7 +99,7 @@ Validator prüft Gruppenmitgliedschaft, Summengleichheit und Überschneidungsfre
 Validierter Entwicklungsstand:
 
 ```text
-Commit: 66e537a849c7958c0daad2421a2e94d6ac8af277
+Commit: 66aabfe4b405c676ba072a06c7404b72cf2b1758
 Checkout: /private/tmp/pv3-metric-2ed516a6
 Runtime der Prüfungen: Node v26.7.0
 Produktprofil des Replay-Artefakts: CUSTOMER_CORE_5_V7
@@ -116,7 +116,10 @@ PASS: noCustomerReviewRequired = 157
 PASS: sieben Punktoutcomes summieren sich exakt zu 224
 PASS: acht Blockiergrundgruppen summieren sich exakt zu 67
 PASS: jede Gruppe enthält ihre eindeutigen Zeilenschlüssel
-PASS: 5 fokussierte Suites / 52 Tests
+PASS: alle sieben Ergebnisgruppen enthalten zusammen exakt 224 eindeutige Zeilenschlüssel
+PASS: Server-Normalisierung und unabhängige UI-Neuberechnung sind wertgleich
+PASS: Legacy-Antworten entfernen den mehrdeutigen Schlüssel reviewRequired
+PASS: 5 fokussierte Suites / 55 Tests
 PASS: Manipulationsfälle für Summe, Flag, Outcome, Zeilenidentität, Status,
       Blockiergrundzähler und Gruppenmitgliedschaft
 PASS: Prettier aller geänderten Dateien
@@ -132,7 +135,7 @@ eine grüne Suite und 13 grüne Tests:
 
 ```text
 Baseline d973977f: 91/111 Suites, 1.070/1.073 Tests
-Stand 66e537a8:    92/112 Suites, 1.083/1.086 Tests
+Stand 66aabfe4:    92/112 Suites, 1.086/1.089 Tests
 ```
 
 Die offenen Baselinefehler betreffen unter anderem die bekannte Node-26-
