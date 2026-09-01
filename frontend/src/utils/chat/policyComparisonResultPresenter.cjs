@@ -18,12 +18,10 @@ const REVIEW_REASON_LABELS = Object.freeze({
   MISSING_ONE_SIDE: "Nur eine Seite enthält einen belastbaren Beleg",
   ATOMIC_DOCUMENT_RANK_UNRESOLVED: "Dokumentrang oder Ersetzung ungeklärt",
   ATOMIC_EVIDENCE_INCOMPLETE: "Erforderlicher Teilpunkt unvollständig",
-  NO_APPROVED_RULE_FOR_ALL_DIMENSIONS:
-    "Freigegebene Vergleichsregel fehlt",
+  NO_APPROVED_RULE_FOR_ALL_DIMENSIONS: "Freigegebene Vergleichsregel fehlt",
   ANY_COMPONENT_EVIDENCE_INCOMPLETE:
     "Erforderliche alternative Teilpunkte unvollständig",
-  CONDITIONAL_OR_EXCEPTION_SCOPE:
-    "Bedingung oder Ausnahmebereich ungeklärt",
+  CONDITIONAL_OR_EXCEPTION_SCOPE: "Bedingung oder Ausnahmebereich ungeklärt",
 });
 
 function presentPointDecision(row) {
@@ -58,7 +56,9 @@ function presentComparisonMetrics(result) {
     ({ rows: categoryRows }) => categoryRows || []
   );
   const presentedRows = rows.map((row) => presentPointDecision(row));
-  const reviewRows = presentedRows.filter(({ outcome }) => outcome === "UNKLAR");
+  const reviewRows = presentedRows.filter(
+    ({ outcome }) => outcome === "UNKLAR"
+  );
   const customerReviewRequired = rows.length > 0 ? reviewRows.length : null;
   const customerReviewByReasonCode = reviewRows.reduce(
     (counts, { reasonCode }) => {

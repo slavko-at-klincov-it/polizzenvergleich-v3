@@ -495,7 +495,8 @@ function ComparisonResult({ result }) {
         )}
         {customerMetrics.customerReviewBreakdown.length > 0 && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Prüfgründe: {customerMetrics.customerReviewBreakdown
+            Prüfgründe:{" "}
+            {customerMetrics.customerReviewBreakdown
               .map(({ label, count }) => `${label}: ${count}`)
               .join(" · ")}
           </p>
