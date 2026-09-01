@@ -101,11 +101,16 @@ Produktprofil: CUSTOMER_CORE_5_V7
 Kategorien: VS, FE, LW, ST, EL
 Dokumente: 10
 sichtbare Vergleichszeilen: 224
+gespeichertes Ergebnisschema: V5
 ```
 
 Der spätere Stand `66aabfe4` beziehungsweise `df3348c0` wurde auf dem Mac
 Studio deterministisch gegen dieses Artefakt neu aggregiert und validiert. Es
 gab seitdem noch keinen neuen vollständigen Modelllauf auf `df3348c0`.
+Der aktuelle Quellbaum erzeugt Ergebnisschema V6. Aussagen über das
+eingefrorene V5-Artefakt und Aussagen über den aktuellen Implementierungsstand
+werden deshalb getrennt gehalten; das Originalartefakt wird nicht
+rückwirkend überschrieben.
 
 ### 3.2 Verbindliche Kundenmetriken
 
@@ -717,21 +722,118 @@ Abbruch- und Revertkriterien:
 
 ## 9. Favoriten- und Baseline-Reports
 
-Vor dem ersten neuen Full Run werden die vom Nutzer verwendeten
-Favoriten-Reports auf dem Mac Studio read-only inventarisiert und hier mit
-Pfad, Commit, Profil, Modell, Laufzeit, Artefakt-SHA und Ergebnisverteilung
-eingetragen. Bis diese Bindung vollständig ist, darf kein Report stillschweigend
-als „letzter guter Lauf“ bezeichnet werden.
+Die Favoriten- und Baseline-Artefakte wurden auf dem Mac Studio read-only
+inventarisiert. Sie haben unterschiedliche Beweisrollen und dürfen nicht als
+ein gemeinsames Oracle behandelt werden.
 
-Bereits gebundene technische Baselines:
+### 9.1 Primäre Qualitätsbaseline: `d973977f`
 
-| Baseline | Commit | Zweck | Ergebnisgrenze |
-| --- | --- | --- | --- |
-| erster Qwen-3.6-V2-Vollvergleich | `343a665e` | 27:01-Laufzeit- und Provenienzbaseline | älteres Profil und ältere Fachlogik |
-| aktueller V7-Real-Run | `d973977f` | 224-Zeilen- und aktuelle 39/67-Fehlerbaseline | vor Kundenmetrikfixes |
-| Metrik-Replay | `66aabfe4` | korrekte 67er-Kundenmetrik und UI-/Serverparität | kein neuer Modelllauf |
+```text
+Commit:
+d973977f54b9d21a08bf34bdcde85e6d4e3cf047
 
-Die bestätigte Favoritenliste wird vor PBR-01.1-Full-Run ergänzt.
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+COMBINED-LIVE-SHADOW-D973977F-20260901-093350
+
+Profil: CUSTOMER_CORE_5_V7
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Dokumente/Kategorien/Paketzeilen: 10 / 50 / 224
+Primärlaufzeit: 1.806 s = ungefähr 30:06
+Run-Signatur:
+94da3d184e8015826e7fbad09560fa8593f54427e07ba89d292fb38db768e122
+
+comparison.private.json SHA-256:
+3cc0ec829897a0674fe9183301b54dfb6f534935ebb1f45fcf925bdbb9cbbe4f
+comparison.md SHA-256:
+a505c46ed85dfcbab0518c179988785e0fc7094c2139baece180da7c5fb9a391
+polizzenvergleich.xlsx SHA-256:
+8280e192fa39cf38ed2ca1b9810a246c2cf76f0b4a82e735d9f26f00bc2c52a2
+```
+
+Dies ist die primäre Qualitäts- und aktuelle Fehlerbaseline. Sie enthält die
+verbindliche 224er-Outcomeverteilung sowie 67 Review- und 39
+Paketstatuszeilen.
+
+### 9.2 Eingefrorene Reproduzierbarkeitsbaseline: `63ecc750`
+
+```text
+Commit:
+63ecc750f0663e6cb771ffd8ef13a153ddada4cc
+Tag:
+baseline/v7-63ecc750-20260901
+
+Rerun-Root:
+/private/tmp/pv3-63ecc750-rerun-20260901-0619
+
+exportiertes XLSX:
+/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+Gesamtvergleich-rerun-63ecc750-20260901-0619.xlsx
+XLSX SHA-256:
+e0529ef09467d9b2912b9f71603065c8a2cbafd2eca2ce7eb5299af4f0bd7742
+Run-Signatur:
+f98d66666dcd80bf07f4d98600530aed9e546d9c32a3906cf4d10f5d9c422645
+Markdown SHA-256:
+a505c46ed85dfcbab0518c179988785e0fc7094c2139baece180da7c5fb9a391
+```
+
+Diese Baseline besitzt dieselben 224 Entscheidungen wie `d973977f` und ist
+zusätzlich als Git-Bundle und Run-ZIP außerhalb des Arbeitscheckouts gesichert.
+Sie dient als Rückfall- und Reproduzierbarkeitskontrolle, nicht als neues
+fachliches Oracle.
+
+### 9.3 Historische Laufzeitbaseline: `343a665e`
+
+```text
+Gesamtzeit: 27:01,550
+Dokumente: 10/10
+Paketzeilen: 224/224
+```
+
+Dieser Lauf verwendet ein älteres Profil und ältere Fachlogik mit bekannten
+Recallfehlern. Er ist ausschließlich eine Performance-Orientierung. Ein neuer
+Lauf darf fachlich besser und geringfügig langsamer sein. Die vom Nutzer
+genannte akzeptable Obergrenze von ungefähr 30 bis 40 Minuten bleibt zu
+beobachten.
+
+### 9.4 Metrik-Replay: `66aabfe4`
+
+Das Replay beweist die korrekte Kundenreviewzahl 67 sowie Server-/UI-Parität.
+Es ist kein Modell-Full-Run und darf nicht zur Aussage über Recall,
+Extraktionsqualität oder Laufzeit verwendet werden.
+
+### 9.5 Shadow-Report: getrennte Diagnose
+
+```text
+XLSX:
+/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+Live-Shadow-Gesamtvergleich-d973977f-20260901-093350.xlsx
+SHA-256:
+1319d313d4a3a971d88583f46d16f04e4dd5480ce9f721e9d4b4aad18c8428ae
+Shadowzeit: ungefähr 6:03,5
+Gesamtsequenz Primär + Shadow: ungefähr 37:26
+Pipeline-Recall im Pilot: 4/7
+Selection-FPR auf True-Null: 0/3
+adversariale Ablehnung: 3/6
+```
+
+Shadow bleibt ein Add-on-Audit und darf weder Primärergebnis noch
+Favoritenbaseline ersetzen.
+
+### 9.6 Kuratierte Goldstandarddateien
+
+`Goldstandard-Codex-Draft-LF-WEVIG-5-Kategorien-v0.1.xlsx` sowie die getrennten
+LF-/WEVIG-Dateien sind hilfreiche kuratierte Arbeitsreferenzen. Sie sind aber
+kein vollständig expertengelabeltes Oracle und werden deshalb nur
+zeilenbezogen als Gegenprüfung verwendet.
+
+### 9.7 Verbindlicher Vergleich jedes neuen Runs
+
+Jeder neue Code-Fix-Run wird mindestens gegen `d973977f` und `63ecc750`
+verglichen. `343a665e` liefert nur die historische Zeitgrenze. Shadow und
+kuratierte Goldstandarddateien werden getrennt ausgewiesen.
 
 ## 10. Run-Protokoll
 
@@ -749,6 +851,7 @@ Kein dokumentierter Vorteil: 99
 Nicht vergleichbar: 13
 Unklar: 67
 Paketstatus-Blocker: 39
+Primärlaufzeit: ungefähr 30:06
 Artefakt-SHA: 3cc0ec829897a0674fe9183301b54dfb6f534935ebb1f45fcf925bdbb9cbbe4f
 ```
 
