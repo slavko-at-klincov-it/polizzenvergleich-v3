@@ -170,8 +170,10 @@ phase_finished="$(now_ms)"
 QWEN_UNLOAD_MS="$(elapsed_ms "$phase_started" "$phase_finished")"
 
 phase_started="$(now_ms)"
-"$NODE_BIN" "$SCRIPT_DIR/scripts/macos/load-dinghy-shadow.cjs" \
-  "$LMSTUDIO_SDK" "$DINGHY_MODEL_KEY" "$DINGHY_IDENTIFIER" "$DINGHY_CONTEXT"
+"$LMS_BIN" load "$DINGHY_MODEL_KEY" \
+  --identifier "$DINGHY_IDENTIFIER" \
+  --context-length "$DINGHY_CONTEXT" \
+  --yes
 verify_model_state "$DINGHY_IDENTIFIER" embeddings loaded "$DINGHY_CONTEXT"
 phase_finished="$(now_ms)"
 DINGHY_LOAD_MS="$(elapsed_ms "$phase_started" "$phase_finished")"

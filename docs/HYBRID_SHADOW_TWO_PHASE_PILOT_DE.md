@@ -72,7 +72,7 @@ in dieser Reihenfolge aus:
 ```text
 Manifest und Primär-Hashes binden
 → Qwen gezielt entladen
-→ Dinghy laden und Zustand prüfen
+→ Dinghy über die LM-Studio-CLI mit explizitem Kontext laden und Zustand prüfen
 → alle Embedding-Suchen
 → Search-Completion und Hash-Gate
 → Dinghy gezielt entladen
