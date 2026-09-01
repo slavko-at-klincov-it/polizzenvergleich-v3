@@ -7,12 +7,15 @@ function pilotFixture() {
   return {
     schemaVersion: 1,
     pilotId: "shadow-pilot-test-v1",
+    approvalStatus: "DRAFT",
     oracleVersion: "oracle-test-v1",
     reviewerId: "test-reviewer",
     documents: [
       {
         primaryOutput: "/tmp/primary-test",
+        primaryReleaseId: "1".repeat(40),
         documentFingerprint: "a".repeat(64),
+        documentArtifactSha256: "b".repeat(64),
         cases: Array.from({ length: 10 }, (_, index) => {
           const positive = index < 4;
           const adversarial = index >= 4 && index < 7;
@@ -21,6 +24,7 @@ function pilotFixture() {
             categoryView: "EL",
             requirementId: `EL-${String(index + 1).padStart(2, "0")}`,
             componentId: "coverage",
+            primaryWorksheetSha256: "c".repeat(64),
             controlClass: positive
               ? "POSITIVE"
               : adversarial
@@ -121,6 +125,8 @@ describe("hybridShadowPilot", () => {
       trueNullCaseCount: 3,
       recallAt1: 0.25,
       recallAt3: 1,
+      rawRecallAt1: 0.25,
+      rawRecallAt3: 1,
       retrievalFalsePositiveRate: 1 / 3,
       knownAdversarialRetrievalAt3: 1,
     });

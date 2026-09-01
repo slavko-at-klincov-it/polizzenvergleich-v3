@@ -65,6 +65,7 @@ function validateHybridShadowPilot(rawPilot) {
     [
       "schemaVersion",
       "pilotId",
+      "approvalStatus",
       "oracleVersion",
       "reviewerId",
       "documents",
@@ -76,6 +77,8 @@ function validateHybridShadowPilot(rawPilot) {
       "HYBRID_SHADOW_PILOT_SCHEMA_INVALID",
       String(rawPilot.schemaVersion)
     );
+  if (!new Set(["DRAFT", "APPROVED"]).has(rawPilot.approvalStatus))
+    throw pilotError("HYBRID_SHADOW_PILOT_APPROVAL_STATUS_INVALID");
   if (!Array.isArray(rawPilot.documents) || rawPilot.documents.length === 0)
     throw pilotError("HYBRID_SHADOW_PILOT_DOCUMENTS_INVALID");
 
@@ -85,7 +88,13 @@ function validateHybridShadowPilot(rawPilot) {
   const documents = rawPilot.documents.map((document, documentIndex) => {
     exactKeys(
       document,
-      ["primaryOutput", "documentFingerprint", "cases"],
+      [
+        "primaryOutput",
+        "primaryReleaseId",
+        "documentFingerprint",
+        "documentArtifactSha256",
+        "cases",
+      ],
       "HYBRID_SHADOW_PILOT_DOCUMENT_KEYS_INVALID"
     );
     const primaryOutput = requiredString(
@@ -100,6 +109,14 @@ function validateHybridShadowPilot(rawPilot) {
     const documentFingerprint = validateSha256(
       document.documentFingerprint,
       "HYBRID_SHADOW_PILOT_DOCUMENT_FINGERPRINT_INVALID"
+    );
+    const documentArtifactSha256 = validateSha256(
+      document.documentArtifactSha256,
+      "HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_SHA256_INVALID"
+    );
+    const primaryReleaseId = requiredString(
+      document.primaryReleaseId,
+      "HYBRID_SHADOW_PILOT_PRIMARY_RELEASE_ID_REQUIRED"
     );
     if (
       documentFingerprints.has(documentFingerprint) ||
@@ -125,6 +142,7 @@ function validateHybridShadowPilot(rawPilot) {
           "categoryView",
           "requirementId",
           "componentId",
+          "primaryWorksheetSha256",
           "controlClass",
           "groundTruth",
           "expectedCandidateDisposition",
@@ -158,6 +176,10 @@ function validateHybridShadowPilot(rawPilot) {
       const componentId = requiredString(
         pilotCase.componentId,
         "HYBRID_SHADOW_PILOT_COMPONENT_REQUIRED"
+      );
+      const primaryWorksheetSha256 = validateSha256(
+        pilotCase.primaryWorksheetSha256,
+        "HYBRID_SHADOW_PILOT_WORKSHEET_SHA256_INVALID"
       );
       const targetKey = `${categoryView}:${requirementId}:${componentId}`;
       if (targetKeys.has(targetKey))
@@ -253,6 +275,7 @@ function validateHybridShadowPilot(rawPilot) {
         categoryView,
         requirementId,
         componentId,
+        primaryWorksheetSha256,
         controlClass: pilotCase.controlClass,
         groundTruth: pilotCase.groundTruth,
         expectedCandidateDisposition: pilotCase.expectedCandidateDisposition,
@@ -273,7 +296,9 @@ function validateHybridShadowPilot(rawPilot) {
     });
     return {
       primaryOutput: path.resolve(primaryOutput),
+      primaryReleaseId,
       documentFingerprint,
+      documentArtifactSha256,
       cases,
     };
   });
@@ -307,6 +332,7 @@ function validateHybridShadowPilot(rawPilot) {
       rawPilot.pilotId,
       "HYBRID_SHADOW_PILOT_ID_REQUIRED"
     ),
+    approvalStatus: rawPilot.approvalStatus,
     oracleVersion: requiredString(
       rawPilot.oracleVersion,
       "HYBRID_SHADOW_PILOT_ORACLE_VERSION_REQUIRED"
@@ -338,6 +364,7 @@ function loadHybridShadowPilot(pilotFile) {
     identity: {
       schemaVersion: pilot.schemaVersion,
       pilotId: pilot.pilotId,
+      approvalStatus: pilot.approvalStatus,
       oracleVersion: pilot.oracleVersion,
       reviewerId: pilot.reviewerId,
       caseCount: pilot.caseCount,
@@ -388,6 +415,9 @@ function calculateHybridShadowPilotRetrievalMetrics({ pilot, searchReports }) {
 
   const caseResults = cases.map((pilotCase) => {
     const ranking = rankingByCaseId.get(pilotCase.caseId);
+    const rankedHashes = ranking.spans.map(
+      ({ exactQuoteSha256 }) => exactQuoteSha256
+    );
     const rankedAcceptedHashes = ranking.spans
       .filter(({ accepted }) => accepted)
       .map(({ exactQuoteSha256 }) => exactQuoteSha256);
@@ -397,6 +427,14 @@ function calculateHybridShadowPilotRetrievalMetrics({ pilot, searchReports }) {
       controlClass: pilotCase.controlClass,
       groundTruth: pilotCase.groundTruth,
       acceptedRetrievalCount: rankedAcceptedHashes.length,
+      rawRecallAt1:
+        pilotCase.controlClass === "POSITIVE"
+          ? rankedHashes.slice(0, 1).some((digest) => oracle.has(digest))
+          : null,
+      rawRecallAt3:
+        pilotCase.controlClass === "POSITIVE"
+          ? rankedHashes.slice(0, 3).some((digest) => oracle.has(digest))
+          : null,
       recallAt1:
         pilotCase.controlClass === "POSITIVE"
           ? rankedAcceptedHashes.slice(0, 1).some((digest) => oracle.has(digest))
@@ -441,6 +479,12 @@ function calculateHybridShadowPilotRetrievalMetrics({ pilot, searchReports }) {
       trueNull.filter(({ adversarialFalsePositive }) =>
         Boolean(adversarialFalsePositive)
       ).length / trueNull.length,
+    rawRecallAt1:
+      positives.filter(({ rawRecallAt1 }) => rawRecallAt1).length /
+      positives.length,
+    rawRecallAt3:
+      positives.filter(({ rawRecallAt3 }) => rawRecallAt3).length /
+      positives.length,
     knownAdversarialRetrievalAt3:
       adversarial.filter(({ knownAdversarialRetrievedAt3 }) =>
         Boolean(knownAdversarialRetrievedAt3)

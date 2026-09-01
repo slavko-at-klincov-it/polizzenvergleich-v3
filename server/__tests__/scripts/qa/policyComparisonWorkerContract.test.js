@@ -63,6 +63,10 @@ describe("policy comparison worker contract", () => {
   });
 
   test("keeps the bounded two-phase pilot outside the primary worker", () => {
+    const primaryRunner = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "run-all-categories-quality.command"),
+      "utf8"
+    );
     const pilotSearch = fs.readFileSync(
       path.join(
         REPOSITORY_ROOT,
@@ -77,6 +81,16 @@ describe("policy comparison worker contract", () => {
     expect(pilotSearch).not.toContain("groundTruth");
     expect(pilotSearch).not.toContain("acceptedExactQuoteSha256");
     expect(pilotSearch).not.toContain("knownAdversarialQuoteSha256");
+    const pilotRunner = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "run-hybrid-shadow-pilot.command"),
+      "utf8"
+    );
+    expect(primaryRunner).not.toContain("run-hybrid-shadow-pilot");
+    expect(pilotRunner).toContain("verifyHybridShadowPilotSearchGate.cjs");
+    expect(pilotRunner.indexOf("runHybridShadowPilotSearch.cjs")).toBeLessThan(
+      pilotRunner.indexOf("runHybridShadowPilotQwenPhase.cjs")
+    );
+    expect(pilotRunner).toContain("RESTORE_QWEN=1");
   });
 
   test("uses a release-bound resumable run and counts completed categories", () => {

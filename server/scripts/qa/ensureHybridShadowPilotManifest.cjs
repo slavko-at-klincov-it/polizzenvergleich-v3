@@ -114,7 +114,10 @@ function run() {
         primaryManifest.configuration?.documentStatus
       ) ||
       documentArtifact?.schemaVersion !== 1 ||
-      documentArtifact.fingerprint !== pilotDocument.documentFingerprint
+      documentArtifact.fingerprint !== pilotDocument.documentFingerprint ||
+      primaryManifest.releaseId !== pilotDocument.primaryReleaseId ||
+      sha256File(documentArtifactFile) !==
+        pilotDocument.documentArtifactSha256
     )
       fail(`Primärlauf ${documentIndex + 1} ist nicht pilotfähig`);
 
@@ -143,6 +146,13 @@ function run() {
       });
       if (selectedCases.length === 0)
         fail(`${categoryView} enthält keinen Pilotfall`);
+      if (
+        selectedCases.some(
+          ({ primaryWorksheetSha256 }) =>
+            primaryWorksheetSha256 !== sha256File(worksheetFile)
+        )
+      )
+        fail(`${categoryView}-Worksheet stimmt nicht mit dem Oracle überein`);
       buildHybridShadowTargets({
         worksheet,
         contract,
