@@ -9,6 +9,9 @@ const {
   summarizePackage,
   writeComparisonArtifacts,
 } = require("../../utils/policyComparison/resultBuilder");
+const {
+  validateCustomerComparison,
+} = require("../../utils/policyComparison/customerMetricContract");
 
 function row(categoryId, overrides = {}) {
   return {
@@ -143,6 +146,107 @@ function writeAtomicCategory(
           requestedFields: [],
           requestedFieldStatus: "NOT_REQUIRED",
           fields: [],
+        },
+      ],
+    })
+  );
+}
+
+function writeScopeLimitCategory(run, selectedScopePicture) {
+  const categoryView = "FE";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "FE-01";
+  const componentId = "indirect_lightning_limit";
+  const candidateId = `candidate-${run.document.uuid}-${categoryView}`;
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "synthetic-scope-catalog-v1", categoryView },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Betragsgrenze für Überspannungsschäden",
+          requestedFields: ["limit"],
+          componentSatisfactionPolicy: "ALL",
+          scopePolicy: "GENERAL_REQUIRED",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "VALUE_TERM",
+          components: [
+            {
+              id: componentId,
+              label: "Limit indirekter Blitzschlag",
+              factRole: "LIMIT",
+              aliases: ["indirekter Blitzschlag"],
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId: `target-${requirementId}`,
+          requirementId,
+          componentId,
+          selectedCandidateIds: [candidateId],
+          unresolvedCandidateIds: [],
+          evidencePresence: "FOUND",
+          coverageEffect: "DEFINED",
+          conflictState: "NONE",
+          selectedScopePicture,
+          documentApplicability: "CONDITIONAL",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId: `target-${requirementId}`,
+        factRole: "LIMIT",
+        candidates: [
+          {
+            candidateId,
+            physicalPageNumber: 1,
+            exactText: "Indirekter Blitzschlag bis EUR 5.000 je Schadenfall",
+          },
+        ],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: ["limit"],
+          requestedFieldStatus: "COMPLETE",
+          fields: [
+            {
+              field: "limit",
+              status: "FOUND",
+              facts: [
+                {
+                  normalizedValue: "EUR 5.000",
+                  valueType: "MONEY",
+                  unit: "EUR",
+                  limitKind: "CAPPED",
+                  qualifier: "je Schadenfall",
+                  source: {
+                    candidateId,
+                    physicalPageNumber: 1,
+                    exactText: "EUR 5.000",
+                  },
+                },
+              ],
+            },
+          ],
         },
       ],
     })
@@ -750,6 +854,53 @@ describe("policy comparison result builder", () => {
     expect(result.totals).toMatchObject({
       rows: 5,
       customerReviewRequired: 5,
+    });
+  });
+
+  test("materializes a sole scope blocker as a validated V7 non-comparable result", () => {
+    const runA = writeRun(root, document("a", "A"), {
+      FE: {
+        documentedContent: "Allgemeines Limit für indirekten Blitzschlag",
+        coverage: "Ja",
+        coverageAmount: "EUR 5.000",
+        source: "PDF-Seite 1",
+        reviewStatus: "BELEGT",
+      },
+    });
+    const runB = writeRun(root, document("b", "B", "SUPPLEMENT"), {
+      FE: {
+        documentedContent: "Limit nur für Erdkabel",
+        coverage: "Nicht feststellbar",
+        coverageAmount: "Nicht feststellbar",
+        source: "PDF-Seite 1",
+        reviewStatus: "TEILBELEGT",
+      },
+    });
+    writeScopeLimitCategory(runA, "GENERAL");
+    writeScopeLimitCategory(runB, "NARROW_ONLY");
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories.find(
+      ({ categoryView }) => categoryView === "FE"
+    ).rows[0];
+
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "NICHT_VERGLEICHBAR",
+      reasonCode: "COMPARABILITY_GATE_FAILED",
+      ruleId: "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1",
+      reviewRequired: false,
+    });
+    expect(comparisonRow.pointDecision).not.toHaveProperty(
+      "packageReviewAudit"
+    );
+    expect(result.totals).toMatchObject({
+      rows: 5,
+      customerReviewRequired: 4,
+      noCustomerReviewRequired: 1,
+    });
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 5,
+      customerReviewRequired: 4,
     });
   });
 
