@@ -476,7 +476,7 @@ function ComparisonResult({ result }) {
     <div className="mt-3 rounded-xl border border-emerald-500/30 overflow-hidden">
       <div className="px-3 py-2 bg-emerald-500/10">
         <p className="text-xs font-semibold text-emerald-200 light:text-emerald-800">
-          Technisches Ergebnis · {result.totals?.rows || 0} Kategorienzeilen
+          Technisches Ergebnis · {customerMetrics.rows} Kategorienzeilen
         </p>
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
           {result.proofLimit}
@@ -501,18 +501,18 @@ function ComparisonResult({ result }) {
               .join(" · ")}
           </p>
         )}
-        {result.totals?.pointDecisions && (
+        {customerMetrics.pointDecisions && (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Punktentscheidungen: A {result.totals.pointDecisions.VORTEIL_A || 0}{" "}
-            · B {result.totals.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
-            {result.totals.pointDecisions.GLEICHWERTIG || 0} · kein
+            Punktentscheidungen: A {customerMetrics.pointDecisions.VORTEIL_A || 0}{" "}
+            · B {customerMetrics.pointDecisions.VORTEIL_B || 0} · gleichwertig{" "}
+            {customerMetrics.pointDecisions.GLEICHWERTIG || 0} · kein
             dokumentierter Vorteil{" "}
-            {result.totals.pointDecisions.KEIN_DOKUMENTIERTER_VORTEIL || 0} ·
+            {customerMetrics.pointDecisions.KEIN_DOKUMENTIERTER_VORTEIL || 0} ·
             Dokumentationsunterschiede{" "}
-            {result.totals.pointDecisions.DOKUMENTATIONSUNTERSCHIED || 0} ·
+            {customerMetrics.pointDecisions.DOKUMENTATIONSUNTERSCHIED || 0} ·
             nicht vergleichbar{" "}
-            {result.totals.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
-            {result.totals.pointDecisions.UNKLAR || 0}
+            {customerMetrics.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
+            {customerMetrics.pointDecisions.UNKLAR || 0}
           </p>
         )}
       </div>

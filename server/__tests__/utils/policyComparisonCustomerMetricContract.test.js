@@ -1,5 +1,6 @@
 const {
   METRIC_CONTRACT_ID,
+  customerSafeComparisonReadView,
   deriveCustomerMetrics,
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
@@ -49,6 +50,15 @@ describe("policy comparison customer metric contract", () => {
         MISSING_ONE_SIDE: ["VS:VS-01"],
       },
       legacyTechnicalDifferences: 2,
+      pointDecisionRowKeysByOutcome: {
+        VORTEIL_A: [],
+        VORTEIL_B: [],
+        DOKUMENTATIONSUNTERSCHIED: ["VS:VS-02"],
+        GLEICHWERTIG: [],
+        KEIN_DOKUMENTIERTER_VORTEIL: ["VS:VS-03"],
+        NICHT_VERGLEICHBAR: [],
+        UNKLAR: ["VS:VS-01"],
+      },
     });
     expect(result.totals).not.toHaveProperty("reviewRequired");
     expect(validateCustomerComparison(result)).toMatchObject({
@@ -65,6 +75,10 @@ describe("policy comparison customer metric contract", () => {
     [
       "stored outcome total",
       (value) => (value.totals.pointDecisions.UNKLAR = 0),
+    ],
+    [
+      "stored outcome membership",
+      (value) => value.totals.pointDecisionRowKeysByOutcome.UNKLAR.pop(),
     ],
     [
       "stored review reason count",
@@ -91,6 +105,10 @@ describe("policy comparison customer metric contract", () => {
       "materialization status",
       (value) => (value.status = "CUSTOMER_RESULT_COMPLETE"),
     ],
+    [
+      "legacy technical outcome",
+      (value) => (value.categories[0].rows[0].outcome = "UNKNOWN_VALUE"),
+    ],
   ])("rejects a manipulated %s", (_label, mutate) => {
     const result = resultFor([row("VS-01", "UNKLAR")]);
     mutate(result);
@@ -116,6 +134,9 @@ describe("policy comparison customer metric contract", () => {
       metricContractId: null,
       rows: null,
       customerReviewRequired: null,
+      noCustomerReviewRequired: null,
+      pointDecisions: null,
+      pointDecisionRowKeysByOutcome: null,
       storedMetricDiscrepancy: null,
     });
   });
@@ -139,7 +160,46 @@ describe("policy comparison customer metric contract", () => {
       metricContractId: null,
       rows: 2,
       customerReviewRequired: 1,
+      noCustomerReviewRequired: 1,
+      pointDecisions: {
+        VORTEIL_A: 0,
+        VORTEIL_B: 0,
+        DOKUMENTATIONSUNTERSCHIED: 0,
+        GLEICHWERTIG: 1,
+        KEIN_DOKUMENTIERTER_VORTEIL: 0,
+        NICHT_VERGLEICHBAR: 0,
+        UNKLAR: 1,
+      },
+      pointDecisionRowKeysByOutcome: {
+        VORTEIL_A: [],
+        VORTEIL_B: [],
+        DOKUMENTATIONSUNTERSCHIED: [],
+        GLEICHWERTIG: ["VS:VS-01"],
+        KEIN_DOKUMENTIERTER_VORTEIL: [],
+        NICHT_VERGLEICHBAR: [],
+        UNKLAR: ["VS:VS-02"],
+      },
       storedMetricDiscrepancy: true,
+    });
+  });
+
+  test("returns a customer-safe legacy read view without the ambiguous total", () => {
+    const legacy = {
+      schemaVersion: 5,
+      categories: [
+        {
+          categoryView: "VS",
+          rows: [{ categoryId: "VS-01", outcome: "INHALTLICH_GLEICH" }],
+        },
+      ],
+      totals: { rows: 1, reviewRequired: 105 },
+    };
+    const view = customerSafeComparisonReadView(legacy);
+    expect(view.totals).not.toHaveProperty("reviewRequired");
+    expect(view.customerMetrics).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+      pointDecisions: { UNKLAR: 1 },
     });
   });
 });

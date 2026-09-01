@@ -7,6 +7,14 @@ const LEGACY_NON_DIFFERENCE_OUTCOMES = new Set([
   "BEIDSEITIG_KEIN_BELEG",
   "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
 ]);
+const LEGACY_TECHNICAL_OUTCOMES = new Set([
+  ...LEGACY_NON_DIFFERENCE_OUTCOMES,
+  "A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+  "B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+  "NUR_A_BELEGT",
+  "NUR_B_BELEGT",
+  "UNTERSCHIED_FACHLICH_PRÜFEN",
+]);
 
 function comparisonRows(categories) {
   return (categories || []).flatMap(({ categoryView, rows }) =>
@@ -21,6 +29,14 @@ function deriveCustomerMetrics(categories) {
       outcome,
       rows.filter(({ pointDecision }) => pointDecision?.outcome === outcome)
         .length,
+    ])
+  );
+  const pointDecisionRowKeysByOutcome = Object.fromEntries(
+    POINT_OUTCOMES.map((outcome) => [
+      outcome,
+      rows
+        .filter(({ pointDecision }) => pointDecision?.outcome === outcome)
+        .map(({ categoryView, categoryId }) => `${categoryView}:${categoryId}`),
     ])
   );
   const customerReviewRequired = rows.filter(
@@ -53,6 +69,7 @@ function deriveCustomerMetrics(categories) {
     customerReviewRowKeysByReasonCode,
     legacyTechnicalDifferences,
     pointDecisions,
+    pointDecisionRowKeysByOutcome,
   };
 }
 
@@ -68,6 +85,9 @@ function deriveLegacyCustomerReview(result) {
       metricContractId: null,
       rows: null,
       customerReviewRequired: null,
+      noCustomerReviewRequired: null,
+      pointDecisions: null,
+      pointDecisionRowKeysByOutcome: null,
       storedMetricDiscrepancy: null,
     };
   const customerReviewRequired = rows.filter(({ pointDecision }) => {
@@ -75,6 +95,28 @@ function deriveLegacyCustomerReview(result) {
     if (!POINT_OUTCOMES.includes(pointDecision.outcome)) return true;
     return pointDecision.outcome === POINT_OUTCOME.UNCLEAR;
   }).length;
+  const pointDecisionRows = rows.map((row) => ({
+    ...row,
+    normalizedOutcome: POINT_OUTCOMES.includes(row.pointDecision?.outcome)
+      ? row.pointDecision.outcome
+      : POINT_OUTCOME.UNCLEAR,
+  }));
+  const pointDecisions = Object.fromEntries(
+    POINT_OUTCOMES.map((outcome) => [
+      outcome,
+      pointDecisionRows.filter(({ normalizedOutcome }) =>
+        normalizedOutcome === outcome
+      ).length,
+    ])
+  );
+  const pointDecisionRowKeysByOutcome = Object.fromEntries(
+    POINT_OUTCOMES.map((outcome) => [
+      outcome,
+      pointDecisionRows
+        .filter(({ normalizedOutcome }) => normalizedOutcome === outcome)
+        .map(({ categoryView, categoryId }) => `${categoryView}:${categoryId}`),
+    ])
+  );
   const storedMetric = Number.isInteger(
     result?.totals?.pointDecisionReviewRequired
   )
@@ -87,6 +129,9 @@ function deriveLegacyCustomerReview(result) {
     metricContractId: null,
     rows: rows.length,
     customerReviewRequired,
+    noCustomerReviewRequired: rows.length - customerReviewRequired,
+    pointDecisions,
+    pointDecisionRowKeysByOutcome,
     storedMetricDiscrepancy:
       storedMetric === null ? null : storedMetric !== customerReviewRequired,
   };
@@ -111,6 +156,9 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   const recomputedOutcomes = Object.fromEntries(
     POINT_OUTCOMES.map((outcome) => [outcome, 0])
   );
+  const recomputedOutcomeRowKeys = Object.fromEntries(
+    POINT_OUTCOMES.map((outcome) => [outcome, []])
+  );
   const recomputedReviewRowKeysByReasonCode = {};
   let recomputedReview = 0;
   let recomputedLegacyDifferences = 0;
@@ -124,6 +172,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     if (!POINT_OUTCOMES.includes(outcome))
       validationError("COMPARISON_POINT_OUTCOME_INVALID", [rowKey, outcome]);
     recomputedOutcomes[outcome] += 1;
+    recomputedOutcomeRowKeys[outcome].push(rowKey);
     const reviewRequired = row.pointDecision?.reviewRequired;
     if (reviewRequired !== (outcome === "UNKLAR"))
       validationError("COMPARISON_CUSTOMER_REVIEW_INVARIANT_VIOLATION", [
@@ -140,6 +189,11 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         recomputedReviewRowKeysByReasonCode[reasonCode] = [];
       recomputedReviewRowKeysByReasonCode[reasonCode].push(rowKey);
     }
+    if (!LEGACY_TECHNICAL_OUTCOMES.has(row.outcome))
+      validationError("COMPARISON_LEGACY_TECHNICAL_OUTCOME_INVALID", [
+        rowKey,
+        row.outcome,
+      ]);
     const legacyDifference = !LEGACY_NON_DIFFERENCE_OUTCOMES.has(row.outcome);
     if (legacyDifference) recomputedLegacyDifferences += 1;
   }
@@ -157,6 +211,11 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     JSON.stringify(totals.pointDecisions) !== JSON.stringify(recomputedOutcomes)
   )
     validationError("COMPARISON_POINT_DECISION_AGGREGATE_MISMATCH");
+  if (
+    JSON.stringify(totals.pointDecisionRowKeysByOutcome) !==
+    JSON.stringify(recomputedOutcomeRowKeys)
+  )
+    validationError("COMPARISON_POINT_DECISION_MEMBERSHIP_MISMATCH");
 
   const recomputedReviewByReasonCode = Object.fromEntries(
     Object.entries(recomputedReviewRowKeysByReasonCode)
@@ -208,6 +267,9 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     metricContractId: METRIC_CONTRACT_ID,
     rows: rows.length,
     customerReviewRequired: recomputedReview,
+    noCustomerReviewRequired: rows.length - recomputedReview,
+    pointDecisions: recomputedOutcomes,
+    pointDecisionRowKeysByOutcome: recomputedOutcomeRowKeys,
   };
 }
 
@@ -219,11 +281,22 @@ function validateCustomerComparisonFile(file, options) {
   );
 }
 
+function customerSafeComparisonReadView(result) {
+  const customerMetrics = validateCustomerComparison(result, {
+    allowLegacy: true,
+  });
+  const totals = { ...(result?.totals || {}) };
+  delete totals.reviewRequired;
+  return { ...result, totals, customerMetrics };
+}
+
 module.exports = {
   METRIC_CONTRACT_ID,
   POINT_OUTCOMES,
+  LEGACY_TECHNICAL_OUTCOMES,
   deriveCustomerMetrics,
   deriveLegacyCustomerReview,
+  customerSafeComparisonReadView,
   validateCustomerComparison,
   validateCustomerComparisonFile,
 };

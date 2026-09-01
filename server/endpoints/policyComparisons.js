@@ -15,13 +15,12 @@ const { handlePolicyComparisonUpload } = require("../utils/files/multer");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const { EventLogs } = require("../models/eventLogs");
 const {
-  validateCustomerComparison,
+  customerSafeComparisonReadView,
 } = require("../utils/policyComparison/customerMetricContract");
 
 function readValidatedComparisonResult(resultFile) {
   const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
-  validateCustomerComparison(result, { allowLegacy: true });
-  return result;
+  return customerSafeComparisonReadView(result);
 }
 
 function safeUnlink(file) {

@@ -72,6 +72,7 @@ describe("policy comparison result presenter", () => {
             categoryView: "VS",
             rows: [
               {
+                categoryId: "VS-01",
                 pointDecision: {
                   outcome: "UNKLAR",
                   reasonCode: "MISSING_ONE_SIDE",
@@ -85,11 +86,38 @@ describe("policy comparison result presenter", () => {
           rows: 1,
           customerReviewRequired: 1,
           legacyTechnicalDifferences: 105,
+          pointDecisions: {
+            VORTEIL_A: 0,
+            VORTEIL_B: 0,
+            DOKUMENTATIONSUNTERSCHIED: 0,
+            GLEICHWERTIG: 0,
+            KEIN_DOKUMENTIERTER_VORTEIL: 0,
+            NICHT_VERGLEICHBAR: 0,
+            UNKLAR: 1,
+          },
         },
       })
     ).toEqual({
       rows: 1,
       customerReviewRequired: 1,
+      pointDecisions: {
+        VORTEIL_A: 0,
+        VORTEIL_B: 0,
+        DOKUMENTATIONSUNTERSCHIED: 0,
+        GLEICHWERTIG: 0,
+        KEIN_DOKUMENTIERTER_VORTEIL: 0,
+        NICHT_VERGLEICHBAR: 0,
+        UNKLAR: 1,
+      },
+      pointDecisionRowKeysByOutcome: {
+        VORTEIL_A: [],
+        VORTEIL_B: [],
+        DOKUMENTATIONSUNTERSCHIED: [],
+        GLEICHWERTIG: [],
+        KEIN_DOKUMENTIERTER_VORTEIL: [],
+        NICHT_VERGLEICHBAR: [],
+        UNKLAR: ["VS:VS-01"],
+      },
       customerReviewBreakdown: [
         {
           reasonCode: "MISSING_ONE_SIDE",
@@ -106,7 +134,12 @@ describe("policy comparison result presenter", () => {
         categories: [
           {
             categoryView: "VS",
-            rows: [{ difference: "Altes Ergebnis ohne Punktentscheidung" }],
+            rows: [
+              {
+                categoryId: "VS-01",
+                difference: "Altes Ergebnis ohne Punktentscheidung",
+              },
+            ],
           },
         ],
         totals: {
@@ -118,6 +151,24 @@ describe("policy comparison result presenter", () => {
     ).toEqual({
       rows: 1,
       customerReviewRequired: 1,
+      pointDecisions: {
+        VORTEIL_A: 0,
+        VORTEIL_B: 0,
+        DOKUMENTATIONSUNTERSCHIED: 0,
+        GLEICHWERTIG: 0,
+        KEIN_DOKUMENTIERTER_VORTEIL: 0,
+        NICHT_VERGLEICHBAR: 0,
+        UNKLAR: 1,
+      },
+      pointDecisionRowKeysByOutcome: {
+        VORTEIL_A: [],
+        VORTEIL_B: [],
+        DOKUMENTATIONSUNTERSCHIED: [],
+        GLEICHWERTIG: [],
+        KEIN_DOKUMENTIERTER_VORTEIL: [],
+        NICHT_VERGLEICHBAR: [],
+        UNKLAR: ["VS:VS-01"],
+      },
       customerReviewBreakdown: [
         {
           reasonCode: "LEGACY_RESULT_WITHOUT_POINT_DECISION",

@@ -52,10 +52,27 @@ function presentPointDecision(row) {
 
 function presentComparisonMetrics(result) {
   const totals = result?.totals || {};
-  const rows = (result?.categories || []).flatMap(
-    ({ rows: categoryRows }) => categoryRows || []
+  const rows = (result?.categories || []).flatMap(({ categoryView, rows }) =>
+    (rows || []).map((row) => ({ ...row, categoryView }))
   );
-  const presentedRows = rows.map((row) => presentPointDecision(row));
+  const presentedRows = rows.map((row) => ({
+    ...presentPointDecision(row),
+    rowKey: `${row.categoryView}:${row.categoryId}`,
+  }));
+  const pointDecisionRowKeysByOutcome = Object.fromEntries(
+    Object.keys(OUTCOME_LABELS).map((outcome) => [
+      outcome,
+      presentedRows
+        .filter((row) => row.outcome === outcome)
+        .map(({ rowKey }) => rowKey),
+    ])
+  );
+  const pointDecisions = Object.fromEntries(
+    Object.entries(pointDecisionRowKeysByOutcome).map(([outcome, rowKeys]) => [
+      outcome,
+      rowKeys.length,
+    ])
+  );
   const reviewRows = presentedRows.filter(
     ({ outcome }) => outcome === "UNKLAR"
   );
@@ -76,9 +93,20 @@ function presentComparisonMetrics(result) {
         ? totals.pointDecisions.UNKLAR
         : null;
   const schemaVersion = Number(result?.schemaVersion);
+  const storedPointDecisions = totals.pointDecisions || {};
+  const storedMetricDiscrepancy =
+    rows.length > 0 &&
+    (Number(totals.rows) !== rows.length ||
+      storedCustomerReview !== customerReviewRequired ||
+      Object.keys(OUTCOME_LABELS).some(
+        (outcome) =>
+          Number(storedPointDecisions[outcome]) !== pointDecisions[outcome]
+      ));
   return {
     rows: rows.length > 0 ? rows.length : Number(totals.rows || 0),
     customerReviewRequired,
+    pointDecisions,
+    pointDecisionRowKeysByOutcome,
     customerReviewBreakdown: Object.entries(customerReviewByReasonCode)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([reasonCode, count]) => ({
@@ -88,9 +116,7 @@ function presentComparisonMetrics(result) {
       })),
     legacyFallback: !Number.isFinite(schemaVersion) || schemaVersion < 6,
     storedMetricDiscrepancy:
-      storedCustomerReview === null || customerReviewRequired === null
-        ? null
-        : storedCustomerReview !== customerReviewRequired,
+      rows.length === 0 ? null : storedMetricDiscrepancy,
   };
 }
 
