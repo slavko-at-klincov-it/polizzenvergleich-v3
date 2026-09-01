@@ -663,9 +663,9 @@ describe("controlledOccurrenceWorksheet", () => {
       text: "·Solar- und\n Photovoltaikanlagen bis EUR 5.000;",
     });
     expect(occurrence.scopeLead.text).toBe("Versicherte Schäden:");
-    expect(`${occurrence.scopeLead.text}\n${occurrence.context.text}`).not.toContain(
-      "EUR 50.000"
-    );
+    expect(
+      `${occurrence.scopeLead.text}\n${occurrence.context.text}`
+    ).not.toContain("EUR 50.000");
   });
 
   test("stops list-sibling trimming at a newer coded section without a blank line", () => {
@@ -688,9 +688,7 @@ describe("controlledOccurrenceWorksheet", () => {
       "solar_thermal_system"
     ).occurrences;
 
-    expect(occurrence.scopeLead.text).toBe(
-      "Haustechnische Anlagen10PA0130"
-    );
+    expect(occurrence.scopeLead.text).toBe("Haustechnische Anlagen10PA0130");
     expect(occurrence.scopeLead.pageStart).toBeLessThanOrEqual(
       occurrence.scopeLead.pageEnd
     );
@@ -722,9 +720,7 @@ describe("controlledOccurrenceWorksheet", () => {
       "solar_thermal_system"
     ).occurrences;
 
-    expect(occurrence.context.text).toBe(
-      "  ·Solar- und Photovoltaikanlagen;"
-    );
+    expect(occurrence.context.text).toBe("  ·Solar- und Photovoltaikanlagen;");
     expect(occurrence.scopeLead.text).toContain("• Haustechnische Anlagen:");
     expect(occurrence.scopeLead.text).not.toContain("Jalousien und Markisen");
   });

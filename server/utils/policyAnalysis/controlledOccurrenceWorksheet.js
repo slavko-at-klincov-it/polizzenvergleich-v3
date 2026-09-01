@@ -375,9 +375,7 @@ function bulletLineMetadata(line) {
   const match = String(line?.text || "").match(
     /^([\t ]*)([-•·])(?:\s+|(?=\p{L}))/u
   );
-  return match
-    ? { indentation: match[1], marker: match[2] }
-    : null;
+  return match ? { indentation: match[1], marker: match[2] } : null;
 }
 
 function isBulletLine(line) {
@@ -492,10 +490,7 @@ function structuralContext({
       unitType = "LIST_ITEM";
       break;
     }
-    if (
-      index < occurrenceLineIndex &&
-      isClauseSectionHeading(lines[index])
-    ) {
+    if (index < occurrenceLineIndex && isClauseSectionHeading(lines[index])) {
       startLine = index;
       break;
     }
@@ -1860,10 +1855,7 @@ function buildControlledOccurrenceWorksheet({
                   pageStart >= currentSectionBoundary.pageStart)
             )
             .at(-1);
-          const scopeFloor = [
-            currentSectionBoundary,
-            currentCoverageGovernor,
-          ]
+          const scopeFloor = [currentSectionBoundary, currentCoverageGovernor]
             .filter(Boolean)
             .sort((left, right) => left.pageStart - right.pageStart)
             .at(-1) || { pageStart: 0, pageEnd: 0 };
