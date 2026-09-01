@@ -498,7 +498,12 @@ function structuralContext({
 
   let endLine = occurrenceLineIndex;
   for (let index = occurrenceLineIndex + 1; index < lines.length; index += 1) {
-    if (isBlankLine(lines[index]) || isBulletLine(lines[index])) break;
+    if (
+      isBlankLine(lines[index]) ||
+      isBulletLine(lines[index]) ||
+      isClauseSectionHeading(lines[index])
+    )
+      break;
     endLine = index;
   }
 
