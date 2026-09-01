@@ -85,15 +85,13 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(legacy)).toThrow(
       "COMPARISON_METRIC_SCHEMA_UNSUPPORTED"
     );
-    expect(validateCustomerComparison(legacy, { allowLegacy: true })).toEqual(
-      {
-        legacy: true,
-        metricContractId: null,
-        rows: null,
-        customerReviewRequired: null,
-        storedMetricDiscrepancy: null,
-      }
-    );
+    expect(validateCustomerComparison(legacy, { allowLegacy: true })).toEqual({
+      legacy: true,
+      metricContractId: null,
+      rows: null,
+      customerReviewRequired: null,
+      storedMetricDiscrepancy: null,
+    });
   });
 
   test("recomputes legacy review from rows and treats missing point decisions fail-closed", () => {
