@@ -542,6 +542,28 @@ describe("policy comparison point decision", () => {
           ],
         }),
       },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            requestedFields: ["limit", "duration"],
+          }),
+        ],
+      },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            requestedFields: ["limit", "limit"],
+          }),
+        ],
+      },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          }),
+        ],
+      },
     ];
 
     for (const fixture of cases)

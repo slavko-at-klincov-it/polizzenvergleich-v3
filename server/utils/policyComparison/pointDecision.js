@@ -591,6 +591,32 @@ function cleanNotFoundAtom(atom) {
   );
 }
 
+function completeRequestedFieldContract(atom) {
+  const requestedFields = atom.requestedFields || [];
+  const fields = atom.fields || [];
+  if (atom.requestedFieldStatus === "NOT_REQUIRED")
+    return requestedFields.length === 0 && fields.length === 0;
+  if (atom.requestedFieldStatus !== "COMPLETE") return false;
+  const canonicalRequestedFields = [
+    ...new Set(requestedFields.map((field) => String(field || "").trim())),
+  ].sort();
+  const canonicalObservedFields = [
+    ...new Set(fields.map(({ field }) => String(field || "").trim())),
+  ].sort();
+  return (
+    canonicalRequestedFields.length > 0 &&
+    canonicalRequestedFields.length === requestedFields.length &&
+    canonicalRequestedFields.every(Boolean) &&
+    canonicalObservedFields.length === fields.length &&
+    JSON.stringify(canonicalObservedFields) ===
+      JSON.stringify(canonicalRequestedFields) &&
+    fields.every(
+      ({ status, facts }) =>
+        status === "FOUND" && Array.isArray(facts) && facts.length > 0
+    )
+  );
+}
+
 function soleContributingFactMatchesAtom(packageSummary, atom) {
   const facts = packageSummary?.facts || [];
   const documentUuids = [...new Set(atom.documentUuids || [])].sort();
@@ -690,6 +716,8 @@ function decideSoleScopeReviewBlockerAsNonComparable({
   if (
     !completeAtom(left) ||
     !completeAtom(right) ||
+    !completeRequestedFieldContract(left) ||
+    !completeRequestedFieldContract(right) ||
     left.scopePolicy !== "GENERAL_REQUIRED" ||
     right.scopePolicy !== "GENERAL_REQUIRED" ||
     new Set([left.selectedScopePicture, right.selectedScopePicture]).size !==

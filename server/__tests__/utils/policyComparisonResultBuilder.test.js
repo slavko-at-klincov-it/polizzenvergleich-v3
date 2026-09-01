@@ -253,6 +253,81 @@ function writeScopeLimitCategory(run, selectedScopePicture) {
   );
 }
 
+function writeScopeLimitNotFoundCategory(run) {
+  const categoryView = "FE";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "FE-01";
+  const componentId = "indirect_lightning_limit";
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "synthetic-scope-catalog-v1", categoryView },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Betragsgrenze für Überspannungsschäden",
+          requestedFields: ["limit"],
+          componentSatisfactionPolicy: "ALL",
+          scopePolicy: "GENERAL_REQUIRED",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "VALUE_TERM",
+          components: [
+            {
+              id: componentId,
+              label: "Limit indirekter Blitzschlag",
+              factRole: "LIMIT",
+              aliases: ["indirekter Blitzschlag"],
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId: `target-${requirementId}`,
+          requirementId,
+          componentId,
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId: `target-${requirementId}`,
+        factRole: "LIMIT",
+        candidates: [],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: ["limit"],
+          requestedFieldStatus: "NOT_FOUND",
+          fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
+        },
+      ],
+    })
+  );
+}
+
 function writeCompleteAbsenceCategory(
   run,
   categoryView,
@@ -878,8 +953,16 @@ describe("policy comparison result builder", () => {
     });
     writeScopeLimitCategory(runA, "GENERAL");
     writeScopeLimitCategory(runB, "NARROW_ONLY");
+    const nullRuns = Array.from({ length: 8 }, (_, index) => {
+      const run = writeRun(
+        root,
+        document(`n${index + 1}`, "B", "TERMS")
+      );
+      writeScopeLimitNotFoundCategory(run);
+      return run;
+    });
 
-    const result = buildComparisonResult([runA, runB]);
+    const result = buildComparisonResult([runA, runB, ...nullRuns]);
     const comparisonRow = result.categories.find(
       ({ categoryView }) => categoryView === "FE"
     ).rows[0];
