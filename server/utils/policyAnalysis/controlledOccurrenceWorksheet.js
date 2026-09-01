@@ -807,7 +807,7 @@ function objectClassificationKind(subject) {
     .replace(/^\s*\d+(?:\.\d+)*\.?\s+/u, "")
     .trim();
   if (
-    /\b(?:versichert|mitversichert|ausgeschlossen|gedeckt|versicherungsschutz|schäden?|gefahren?|kosten|entschädigung|selbstbehalt|limits?|obliegenheiten?|vorschäden?|dokumente?)\b/iu.test(
+    /\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|gedeckt|versicherungsschutz|schäden?|gefahren?|kosten|entschädigung|selbstbehalt|limits?|obliegenheiten?|vorschäden?|dokumente?)\b/iu.test(
       normalized
     )
   )
