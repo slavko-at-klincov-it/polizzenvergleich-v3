@@ -3935,3 +3935,51 @@ werden, als wären Wasser, Schaum und Pulver jeweils belegt. Dafür ist ein
 versionierter alternativer Satisfaction-Ausdruck erforderlich. Shadow bleibt
 wegen des deaktivierten Embeddingvertrags gesperrt; Zertifizierungsregistry
 und unbekannter Holdout bleiben leer beziehungsweise nicht vorhanden.
+
+## 78. Selbstvalidierende Kundenreview-Metrik
+
+Ein V7-Laufergebnis wies gleichzeitig einen historischen technischen
+Differenzzähler von 105 und 67 tatsächlich unklare Punktentscheidungen aus.
+Der technische Zähler war im Markdown fälschlich als fachlich zu prüfende
+Unterschiede benannt und durfte nicht als Kundenreviewzahl verwendet werden.
+
+Ab Ergebnisschema V6 gilt `CUSTOMER_COMPARISON_METRICS_V2`.
+`customerReviewRequired` wird ausschließlich aus den eindeutigen Zeilen mit
+`pointDecision.outcome == UNKLAR` abgeleitet. Der unpräzise V5-Schlüssel
+`reviewRequired` wird nicht fortgeführt. Alte Ergebnisse werden aus ihren
+Einzelzeilen nachgezählt; fehlende Punktentscheidungen bleiben fail-closed
+kundenprüfpflichtig.
+
+Worker, Ergebnisendpunkt und XLSX-Download validieren neue Ergebnisse vor
+Weitergabe. Doppelte Zeilen, unbekannte Outcomes, widersprüchliche Reviewflags,
+fehlende Blockiergründe und manipulierte Aggregate oder Gruppenmitgliedschaften
+stoppen fail-closed. Die Oberfläche zählt die sichtbaren Zeilen erneut, zeigt
+die Kundenreviewzahl ausdrücklich und warnt bei einer gespeicherten Abweichung.
+Beidseitig nicht gefundene passende Vertragsregelungen werden verständlich
+benannt und nicht mehr als ungeklärt formuliert.
+
+Der neutrale Materialisierungsstatus lautet ab V6
+`COMPARISON_RESULT_MATERIALIZED`. Historische Trackerabschnitte mit
+`TECHNICAL_RESULT_REVIEW_REQUIRED` beschreiben ausschließlich ältere
+Ergebnisschemata.
+
+Vollständiger Prüfbericht:
+`docs/KUNDENMETRIK_VALIDIERUNG_2026-09-01_DE.md`.
+
+```text
+IMPLEMENTIERT: zeilenbasierte Kundenmetrik, unabhängige Neuberechnung,
+               Worker-/API-/Download-Gate, UI-Recount und Legacy-Adapter
+PASS: Real-Artefakt-Replay 224/224 und Kundenreview 67
+PASS: 5 fokussierte Suites / 52 Tests auf 66e537a8
+PASS: Blockiergrundzähler und eindeutige Zeilenmitgliedschaften
+PASS: Prettier und Frontend-ESLint der geänderten Produktquellen
+PASS: Frontend-Build / 6.170 Module
+BASELINE-PARITÄT: auf Baseline und neuem Stand dieselben 20 Fehlsuites
+                  und 3 Fehltests; neuer Stand ergänzt 1 grüne Suite
+                  und 13 grüne Tests
+BLOCKED: Server-ESLint bricht bereits auf unverändertem Baselinecode wegen
+         ESLint-9-/React-Plugin-Inkompatibilität ab
+NO MODEL RUN: bestehendes Vergleichsartefakt nur deterministisch neu aggregiert
+NO DEPLOY: installierter Kundenstand unverändert
+NO CLAIM: keine fachliche Vorteilskorrektur in diesem Inkrement
+```

@@ -96,9 +96,11 @@ fail-closed `UNKLAR`. Unterschiedliche Vergleichsschlüssel enden
 `NICHT_VERGLEICHBAR`. Der frühere technische `outcome` bleibt additiv
 erhalten.
 
-Der Status des Gesamtergebnisses bleibt
-`TECHNICAL_RESULT_REVIEW_REQUIRED`. Es gibt keinen Gesamtsieger, keinen
-Score und keine Addition gewonnener Zeilen zu einer Vertragsempfehlung.
+Ab Ergebnisschema V6 ist der neutrale Status
+`COMPARISON_RESULT_MATERIALIZED`. Die gesonderte Kundenreviewzahl wird
+ausschließlich aus Zeilen mit `pointDecision.outcome == UNKLAR` berechnet.
+Es gibt keinen Gesamtsieger, keinen Score und keine Addition gewonnener Zeilen
+zu einer Vertragsempfehlung.
 
 ## 5. Bedien- und Betriebsvertrag
 
