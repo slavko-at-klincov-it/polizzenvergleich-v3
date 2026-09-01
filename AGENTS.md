@@ -60,7 +60,8 @@ queue size, advantage total, timing, or run comparison to the user:
    aggregate merely because it is present in the result schema.
 3. Independently reconcile the recomputed groups to the declared total. Every
    reported partition must state whether its groups are mutually exclusive or
-   overlapping.
+   overlapping. Every subgroup count must carry its exact grain and persisted
+   member keys; without those keys it is not reportable as a verified fact.
 4. Compare the recomputed metric with every stored aggregate and every
    customer-facing rendering that names the same concept. If they disagree,
    stop and report the discrepancy before using any of them as a fact.
