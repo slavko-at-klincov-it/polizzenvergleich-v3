@@ -1,10 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
-const {
-  SEARCH_DISPOSITION,
-  decidePoint,
-} = require("./pointDecision");
+const { SEARCH_DISPOSITION, decidePoint } = require("./pointDecision");
 const {
   CATEGORY_ORDER,
   CATEGORY_ROW_COUNTS,
