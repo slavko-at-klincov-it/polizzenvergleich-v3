@@ -1017,16 +1017,6 @@ describe("deterministicCategoryEvidenceRules", () => {
       coverageEffect: "DEFINED",
       basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
     });
-    expect(
-      deterministicCategoryPreparedDecision({
-        ...target,
-        candidates: [{ ...candidate, objectClassificationContractId: null }],
-      })
-    ).toEqual({
-      selectedCandidateIds: [candidate.candidateId],
-      coverageEffect: "INCLUDED",
-      basis: "EXPLICIT_VS_RULE:VS-19",
-    });
     const trueCoverageCandidate = {
       ...candidate,
       candidateId: "candidate:insured-outdoor-lighting",
@@ -1034,6 +1024,16 @@ describe("deterministicCategoryEvidenceRules", () => {
       contextDocumentStart: 6_000,
       objectClassificationContractId: null,
     };
+    expect(
+      deterministicCategoryPreparedDecision({
+        ...target,
+        candidates: [trueCoverageCandidate],
+      })
+    ).toEqual({
+      selectedCandidateIds: [trueCoverageCandidate.candidateId],
+      coverageEffect: "INCLUDED",
+      basis: "EXPLICIT_VS_RULE:VS-19",
+    });
     expect(
       deterministicCategoryPreparedDecision({
         ...target,
