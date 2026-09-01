@@ -4,6 +4,10 @@ const {
 } = require("../../utils/policyComparison/pointDecision");
 
 const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
+const SOLE_SCOPE_REQUIREMENT_DIGEST = "f".repeat(64);
+const SOLE_SCOPE_COMPONENTS = Object.freeze([
+  { id: "indirect_lightning_limit", factRole: "LIMIT" },
+]);
 const FIXTURE_COMPONENTS = Object.freeze([
   { id: "fungus_damage", factRole: "DAMAGE" },
   { id: "rot_damage", factRole: "DAMAGE" },
@@ -65,6 +69,106 @@ function decide(atomsA, atomsB, overrides = {}) {
     categoryId: "LW-22",
     packageA: packageSummary(overrides.packageA),
     packageB: packageSummary(overrides.packageB),
+    atomsA,
+    atomsB,
+  });
+}
+
+function scopeLimitPackage(side, reviewStatus, overrides = {}) {
+  return packageSummary({
+    reviewStatus,
+    searchDisposition: "RELEVANT_FOUND",
+    comparisonTreatment: null,
+    requirementContract: {
+      digest: SOLE_SCOPE_REQUIREMENT_DIGEST,
+      componentSatisfactionPolicy: "ALL",
+      components: SOLE_SCOPE_COMPONENTS,
+    },
+    facts: [
+      {
+        documentUuid: `scope-document-${side}`,
+        reviewStatus,
+      },
+    ],
+    ...overrides,
+  });
+}
+
+function scopeLimitAtom(side, selectedScopePicture, overrides = {}) {
+  const candidateIds =
+    side === "a" ? [`scope-${side}-1`, `scope-${side}-2`] : [`scope-${side}-1`];
+  const values = side === "a" ? ["1 %", "EUR 10.000"] : ["EUR 5.000"];
+  return atom(side, {
+    requirementId: "FE-A06",
+    componentId: "indirect_lightning_limit",
+    componentLabel: "Limit indirekter Blitzschlag",
+    factRole: "LIMIT",
+    documentUuids: [`scope-document-${side}`],
+    coverageEffect: "DEFINED",
+    selectedScopePicture,
+    scopePolicy: "GENERAL_REQUIRED",
+    documentApplicability: "CONDITIONAL",
+    selectedCandidateIds: candidateIds,
+    requestedFieldStatus: "COMPLETE",
+    requirementContractDigest: SOLE_SCOPE_REQUIREMENT_DIGEST,
+    declaredComponents: SOLE_SCOPE_COMPONENTS,
+    fields: [
+      {
+        field: "limit",
+        status: "FOUND",
+        facts: values.map((value, index) => ({
+          normalizedValue: value,
+          valueType: value.includes("%") ? "PERCENT" : "MONEY",
+          unit: value.includes("%") ? "%" : "EUR",
+          limitKind: "CAPPED",
+          qualifier: "je Schadenfall",
+          source: {
+            candidateId: candidateIds[Math.min(index, candidateIds.length - 1)],
+            physicalPageNumber: 7,
+            exactText: value,
+          },
+        })),
+      },
+    ],
+    sources: candidateIds.map((candidateId) => ({
+      candidateId,
+      physicalPageNumber: 7,
+      exactText: "Betragsgrenze für indirekten Blitzschlag",
+    })),
+    ...overrides,
+  });
+}
+
+function cleanScopeNotFoundAtom(side, documentUuid, overrides = {}) {
+  return scopeLimitAtom(side, "UNKNOWN", {
+    documentUuids: [documentUuid],
+    evidencePresence: "NOT_FOUND",
+    coverageEffect: "UNKNOWN",
+    selectedScopePicture: "UNKNOWN",
+    documentApplicability: "UNKNOWN",
+    selectedCandidateIds: [],
+    unresolvedCandidateIds: [],
+    requestedFieldStatus: "NOT_FOUND",
+    fields: [],
+    sources: [],
+    ...overrides,
+  });
+}
+
+function decideScopeFixture(overrides = {}) {
+  const atomsA = overrides.atomsA || [scopeLimitAtom("a", "GENERAL")];
+  const atomsB = overrides.atomsB || [
+    scopeLimitAtom("b", "NARROW_ONLY"),
+    ...Array.from({ length: 8 }, (_, index) =>
+      cleanScopeNotFoundAtom("b", `scope-zero-b-${index + 1}`)
+    ),
+  ];
+  return decidePoint({
+    categoryId: "FE-A06",
+    packageA:
+      overrides.packageA || scopeLimitPackage("a", "BELEGT"),
+    packageB:
+      overrides.packageB || scopeLimitPackage("b", "TEILBELEGT"),
     atomsA,
     atomsB,
   });
@@ -234,6 +338,222 @@ describe("policy comparison point decision", () => {
         },
       });
     }
+  });
+
+  test("resolves the sole general-versus-narrow scope blocker as not comparable", () => {
+    const result = decideScopeFixture();
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "COMPARABILITY_GATE_FAILED",
+      ruleId: "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1",
+      reviewRequired: false,
+    });
+    expect(result.dimensions).toHaveLength(1);
+    expect(result).not.toHaveProperty("packageReviewAudit");
+    expect(result.reason).toContain("Polizze A");
+    expect(result.reason).toContain("Polizze B");
+    expect(result.reason).not.toMatch(/GENERAL|NARROW_ONLY/u);
+    expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_A);
+    expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    expect(result.outcome).not.toBe(POINT_OUTCOME.EQUIVALENT);
+  });
+
+  test("applies the sole scope contract symmetrically and to active facts", () => {
+    const narrowA = scopeLimitAtom("a", "NARROW_ONLY");
+    const generalB = scopeLimitAtom("b", "GENERAL");
+    const symmetric = decideScopeFixture({
+      packageA: scopeLimitPackage("a", "TEILBELEGT"),
+      packageB: scopeLimitPackage("b", "BELEGT"),
+      atomsA: [narrowA],
+      atomsB: [generalB],
+    });
+    expect(symmetric).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      ruleId: "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1",
+    });
+    expect(symmetric.reason).toContain(
+      "Polizze B für einen allgemeinen Deckungsumfang"
+    );
+
+    const active = decideScopeFixture({
+      atomsA: [
+        scopeLimitAtom("a", "GENERAL", {
+          documentApplicability: "ACTIVE",
+        }),
+      ],
+      atomsB: [
+        scopeLimitAtom("b", "NARROW_ONLY", {
+          documentApplicability: "ACTIVE",
+        }),
+      ],
+    });
+    expect(active).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reviewRequired: false,
+    });
+  });
+
+  test("keeps other package statuses, contracts and scope pictures fail-closed", () => {
+    const cases = [
+      {
+        packageA: scopeLimitPackage("a", "TEILBELEGT"),
+        packageB: scopeLimitPackage("b", "TEILBELEGT"),
+      },
+      { packageB: scopeLimitPackage("b", "RANGFOLGE_PRÜFEN") },
+      {
+        packageB: scopeLimitPackage("b", "TEILBELEGT", {
+          searchDisposition: "SEARCH_INCOMPLETE",
+        }),
+      },
+      {
+        packageB: scopeLimitPackage("b", "TEILBELEGT", {
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        }),
+      },
+      { atomsB: [scopeLimitAtom("b", "GENERAL")] },
+      { atomsB: [scopeLimitAtom("b", "UNKNOWN")] },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+          }),
+        ],
+      },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            documentApplicability: "PROPOSED_ONLY",
+          }),
+        ],
+      },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            coverageEffect: "CONDITIONAL",
+          }),
+        ],
+      },
+    ];
+
+    for (const fixture of cases)
+      expect(decideScopeFixture(fixture)).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+        reviewRequired: true,
+      });
+  });
+
+  test("rejects hidden extra evidence and dirty null atoms", () => {
+    const extraFound = scopeLimitAtom("b-extra", "NARROW_ONLY", {
+      documentUuids: ["scope-extra-document"],
+      selectedCandidateIds: ["scope-extra-candidate"],
+      sources: [
+        {
+          candidateId: "scope-extra-candidate",
+          physicalPageNumber: 9,
+          exactText: "weiterer enger Beleg",
+        },
+      ],
+    });
+    const dirtyNullVariants = [
+      { selectedCandidateIds: ["hidden-candidate"] },
+      {
+        sources: [
+          {
+            candidateId: "hidden-candidate",
+            physicalPageNumber: 1,
+            exactText: "verborgene Quelle",
+          },
+        ],
+      },
+      { coverageEffect: "DEFINED" },
+      { conflictState: "ACTIVE_SAME_SCOPE" },
+      { unresolvedCandidateIds: ["hidden-candidate"] },
+      { selectedScopePicture: "NARROW_ONLY" },
+      { documentApplicability: "CONDITIONAL" },
+    ];
+
+    expect(
+      decideScopeFixture({
+        atomsB: [scopeLimitAtom("b", "NARROW_ONLY"), extraFound],
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+    });
+
+    for (const dirty of dirtyNullVariants)
+      expect(
+        decideScopeFixture({
+          atomsB: [
+            scopeLimitAtom("b", "NARROW_ONLY"),
+            cleanScopeNotFoundAtom("b", "scope-dirty-zero", dirty),
+          ],
+        })
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      });
+  });
+
+  test("rejects incomplete sources, contract atoms and contributing facts", () => {
+    const cases = [
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            sources: [],
+          }),
+        ],
+      },
+      {
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            requirementContractDigest: "e".repeat(64),
+          }),
+        ],
+      },
+      {
+        packageB: scopeLimitPackage("b", "TEILBELEGT", {
+          facts: [
+            {
+              documentUuid: "different-document",
+              reviewStatus: "TEILBELEGT",
+            },
+          ],
+        }),
+      },
+      {
+        packageB: scopeLimitPackage("b", "TEILBELEGT", {
+          facts: [
+            {
+              documentUuid: "scope-document-b",
+              reviewStatus: "BELEGT",
+            },
+          ],
+        }),
+      },
+      {
+        packageB: scopeLimitPackage("b", "TEILBELEGT", {
+          facts: [
+            {
+              documentUuid: "scope-document-b",
+              reviewStatus: "TEILBELEGT",
+            },
+            {
+              documentUuid: "second-document",
+              reviewStatus: "TEILBELEGT",
+            },
+          ],
+        }),
+      },
+    ];
+
+    for (const fixture of cases)
+      expect(decideScopeFixture(fixture)).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      });
   });
 
   test("persists typed package blockers without changing the outer decision", () => {

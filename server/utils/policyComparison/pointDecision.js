@@ -1,4 +1,10 @@
-const { derivePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  BLOCKER_CODE,
+  PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
+  PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
+  SIGNAL_CODE,
+  derivePackageReviewAudit,
+} = require("./packageReviewAudit");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -29,6 +35,8 @@ const STRONG_COVERAGE_CONDITION_MARKER =
   /\b(?:außer|ausgenommen|so\s+ferne|sofern|soweit|vorausgesetzt|vorbehaltlich|unter\s+der\s+Bedingung|es\s+sei\s+denn)\b/iu;
 const CONDITIONAL_COVERAGE_WHEN =
   /(?:\b(?:versichert|mitversichert|gedeckt|eingeschlossen|ausgeschlossen)\b|\b(?:Versicherungsschutz|Deckung|Entschädigung|Leistung)\b).{0,160}\b(?:wenn|falls)\b|\b(?:nur\s+(?:dann\s+)?wenn|falls)\b.{0,160}(?:\b(?:versichert|mitversichert|gedeckt|eingeschlossen|ausgeschlossen)\b|\b(?:Versicherungsschutz|Deckung|Entschädigung|Leistung)\b)/isu;
+const SOLE_SCOPE_REVIEW_RULE_ID =
+  "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1";
 
 function normalized(value) {
   return String(value || "")
@@ -541,6 +549,184 @@ function reasonFor(outcome, dimensions) {
   return "Unklar: Für diesen Vergleichspunkt fehlt eine vollständige, rangaufgelöste oder ausdrücklich freigegebene Bewertungsgrundlage.";
 }
 
+function cleanNotFoundAtom(atom) {
+  return (
+    atom.evidencePresence === "NOT_FOUND" &&
+    atom.coverageEffect === "UNKNOWN" &&
+    atom.conflictState === "NONE" &&
+    atom.selectedScopePicture === "UNKNOWN" &&
+    atom.documentApplicability === "UNKNOWN" &&
+    (atom.selectedCandidateIds || []).length === 0 &&
+    (atom.unresolvedCandidateIds || []).length === 0 &&
+    (atom.sources || []).length === 0 &&
+    (atom.fields || []).length === 0
+  );
+}
+
+function soleContributingFactMatchesAtom(packageSummary, atom) {
+  const facts = packageSummary?.facts || [];
+  const documentUuids = [...new Set(atom.documentUuids || [])].sort();
+  return (
+    facts.length === 1 &&
+    documentUuids.length === 1 &&
+    facts[0]?.documentUuid === documentUuids[0] &&
+    facts[0]?.reviewStatus === packageSummary.reviewStatus
+  );
+}
+
+function auditEntryMatchesAtom(entry, { code, side, categoryId, atom }) {
+  return (
+    entry?.code === code &&
+    entry?.side === side &&
+    entry?.level === "COMPONENT" &&
+    entry?.requirementId === categoryId &&
+    entry?.componentId === atom.componentId &&
+    entry?.factRole === atom.factRole &&
+    JSON.stringify(entry?.documentUuids) ===
+      JSON.stringify([...new Set(atom.documentUuids || [])].sort()) &&
+    entry?.observed?.selectedScopePicture === atom.selectedScopePicture &&
+    entry?.observed?.scopePolicy === atom.scopePolicy &&
+    (entry?.observed?.unresolvedCandidateIds || []).length === 0
+  );
+}
+
+function decideSoleScopeReviewBlockerAsNonComparable({
+  categoryId,
+  packageA,
+  packageB,
+  atomsA,
+  atomsB,
+  contract,
+  packageReviewAudit,
+}) {
+  if (
+    packageA?.evidenceFound !== true ||
+    packageB?.evidenceFound !== true ||
+    packageA?.searchDisposition !== SEARCH_DISPOSITION.RELEVANT_FOUND ||
+    packageB?.searchDisposition !== SEARCH_DISPOSITION.RELEVANT_FOUND ||
+    ![null, undefined, ""].includes(packageA?.comparisonTreatment) ||
+    ![null, undefined, ""].includes(packageB?.comparisonTreatment) ||
+    ![
+      [packageA?.reviewStatus, packageB?.reviewStatus],
+      [packageB?.reviewStatus, packageA?.reviewStatus],
+    ].some(
+      ([completeStatus, partialStatus]) =>
+        completeStatus === "BELEGT" && partialStatus === "TEILBELEGT"
+    ) ||
+    contract?.componentSatisfactionPolicy !== "ALL" ||
+    contract.components?.length !== 1
+  )
+    return null;
+
+  const [{ id: componentId, factRole }] = contract.components;
+  const relevantA = (atomsA || []).filter(
+    (atom) => atom.requirementId === categoryId
+  );
+  const relevantB = (atomsB || []).filter(
+    (atom) => atom.requirementId === categoryId
+  );
+  if (
+    relevantA.length === 0 ||
+    relevantB.length === 0 ||
+    [...relevantA, ...relevantB].some(
+      (atom) =>
+        atom.componentId !== componentId ||
+        atom.factRole !== factRole ||
+        atom.requirementContractDigest !== contract.digest ||
+        atom.conflictState !== "NONE" ||
+        (atom.unresolvedCandidateIds || []).length > 0
+    )
+  )
+    return null;
+
+  const foundA = relevantA.filter(
+    ({ evidencePresence }) => evidencePresence === "FOUND"
+  );
+  const foundB = relevantB.filter(
+    ({ evidencePresence }) => evidencePresence === "FOUND"
+  );
+  if (
+    foundA.length !== 1 ||
+    foundB.length !== 1 ||
+    relevantA.some(
+      (atom) => atom !== foundA[0] && !cleanNotFoundAtom(atom)
+    ) ||
+    relevantB.some(
+      (atom) => atom !== foundB[0] && !cleanNotFoundAtom(atom)
+    )
+  )
+    return null;
+
+  const [left] = foundA;
+  const [right] = foundB;
+  if (
+    !completeAtom(left) ||
+    !completeAtom(right) ||
+    left.scopePolicy !== "GENERAL_REQUIRED" ||
+    right.scopePolicy !== "GENERAL_REQUIRED" ||
+    new Set([left.selectedScopePicture, right.selectedScopePicture]).size !==
+      2 ||
+    ![left.selectedScopePicture, right.selectedScopePicture].every((scope) =>
+      ["GENERAL", "NARROW_ONLY"].includes(scope)
+    ) ||
+    left.coverageEffect !== right.coverageEffect ||
+    left.documentApplicability !== right.documentApplicability ||
+    !["ACTIVE", "CONDITIONAL"].includes(left.documentApplicability) ||
+    !soleContributingFactMatchesAtom(packageA, left) ||
+    !soleContributingFactMatchesAtom(packageB, right)
+  )
+    return null;
+
+  const narrowSide =
+    left.selectedScopePicture === "NARROW_ONLY" ? "A" : "B";
+  const generalSide = narrowSide === "A" ? "B" : "A";
+  const narrowAtom = narrowSide === "A" ? left : right;
+  if (
+    packageReviewAudit?.schemaVersion !==
+      PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION ||
+    packageReviewAudit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID ||
+    packageReviewAudit?.blockers?.length !== 1 ||
+    !auditEntryMatchesAtom(packageReviewAudit.blockers[0], {
+      code: BLOCKER_CODE.SCOPE_INCOMPLETE,
+      side: narrowSide,
+      categoryId,
+      atom: narrowAtom,
+    })
+  )
+    return null;
+
+  const expectedSignals =
+    narrowAtom.documentApplicability === "CONDITIONAL" ? 1 : 0;
+  if (
+    packageReviewAudit?.signals?.length !== expectedSignals ||
+    (expectedSignals === 1 &&
+      !auditEntryMatchesAtom(packageReviewAudit.signals[0], {
+        code: SIGNAL_CODE.CONDITIONAL_APPLICABILITY,
+        side: narrowSide,
+        categoryId,
+        atom: narrowAtom,
+      }))
+  )
+    return null;
+
+  const comparison = compareDimension(left, right);
+  if (
+    comparison.outcome !== POINT_OUTCOME.NOT_COMPARABLE ||
+    comparison.reasonCode !== "COMPARABILITY_KEY_DIFFERS"
+  )
+    return null;
+
+  return {
+    schemaVersion: 3,
+    outcome: POINT_OUTCOME.NOT_COMPARABLE,
+    reasonCode: "COMPARABILITY_GATE_FAILED",
+    reason: `Nicht direkt vergleichbar: ${comparison.dimension.componentLabel || componentId} ist in Polizze ${generalSide} für einen allgemeinen Deckungsumfang und in Polizze ${narrowSide} nur für einen engeren Deckungsumfang belegt. Angaben aus diesen unterschiedlichen Geltungsbereichen dürfen weder gleichgesetzt noch zu einem Vorteil gereiht werden.`,
+    reviewRequired: false,
+    ruleId: SOLE_SCOPE_REVIEW_RULE_ID,
+    dimensions: [comparison.dimension],
+  };
+}
+
 function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
   const contractA = requirementContract({
     atoms: atomsA,
@@ -622,20 +808,32 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       "MISSING_ONE_SIDE",
       "Unklar: Nur ein Paket enthält belegten Inhalt. Fehlender Beleg bedeutet weder Ausschluss noch Nachteil."
     );
-  if (packageA.reviewStatus !== "BELEGT" || packageB.reviewStatus !== "BELEGT")
+  if (packageA.reviewStatus !== "BELEGT" || packageB.reviewStatus !== "BELEGT") {
+    const packageReviewAudit = derivePackageReviewAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+    });
+    const scopeDecision = decideSoleScopeReviewBlockerAsNonComparable({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      contract: contractA,
+      packageReviewAudit,
+    });
+    if (scopeDecision) return scopeDecision;
     return {
       ...unclear(
         "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
         `Unklar: Die Paket-Prüfstati (${packageA.reviewStatus} / ${packageB.reviewStatus}) erlauben keinen sicheren Vorteilsschluss.`
       ),
-      packageReviewAudit: derivePackageReviewAudit({
-        categoryId,
-        packageA,
-        packageB,
-        atomsA,
-        atomsB,
-      }),
+      packageReviewAudit,
     };
+  }
 
   const groupsA = componentGroups(atomsA, categoryId);
   const groupsB = componentGroups(atomsB, categoryId);

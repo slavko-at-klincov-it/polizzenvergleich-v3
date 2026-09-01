@@ -112,6 +112,20 @@ describe("policy comparison customer result presenter", () => {
     ).toBe(true);
   });
 
+  test("keeps the approved sole-scope result customer-visible", () => {
+    const text = presented("NICHT_VERGLEICHBAR", {
+      reason:
+        "Nicht direkt vergleichbar: Das Limit ist in Polizze A allgemein und in Polizze B nur für einen engeren Deckungsumfang belegt.",
+      ruleId: "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1",
+      reviewRequired: false,
+    });
+    expect(text.startsWith("Kein klarer Vorteil: nicht vergleichbar –")).toBe(
+      true
+    );
+    expect(text).not.toContain("SOLE_SCOPE_REVIEW");
+    expect(text).not.toMatch(/GENERAL|NARROW_ONLY/u);
+  });
+
   test("explains package blockers per policy without exposing technical identifiers", () => {
     const decision = packageReviewDecision([
       auditEntry("MISSING_REQUIRED_COMPONENT"),
