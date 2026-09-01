@@ -702,12 +702,8 @@ function decideSoleScopeReviewBlockerAsNonComparable({
   if (
     foundA.length !== 1 ||
     foundB.length !== 1 ||
-    relevantA.some(
-      (atom) => atom !== foundA[0] && !cleanNotFoundAtom(atom)
-    ) ||
-    relevantB.some(
-      (atom) => atom !== foundB[0] && !cleanNotFoundAtom(atom)
-    )
+    relevantA.some((atom) => atom !== foundA[0] && !cleanNotFoundAtom(atom)) ||
+    relevantB.some((atom) => atom !== foundB[0] && !cleanNotFoundAtom(atom))
   )
     return null;
 
@@ -733,13 +729,11 @@ function decideSoleScopeReviewBlockerAsNonComparable({
   )
     return null;
 
-  const narrowSide =
-    left.selectedScopePicture === "NARROW_ONLY" ? "A" : "B";
+  const narrowSide = left.selectedScopePicture === "NARROW_ONLY" ? "A" : "B";
   const generalSide = narrowSide === "A" ? "B" : "A";
   const narrowAtom = narrowSide === "A" ? left : right;
   if (
-    packageReviewAudit?.schemaVersion !==
-      PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION ||
+    packageReviewAudit?.schemaVersion !== PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION ||
     packageReviewAudit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID ||
     packageReviewAudit?.blockers?.length !== 1 ||
     !auditEntryMatchesAtom(packageReviewAudit.blockers[0], {
@@ -864,7 +858,10 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       "MISSING_ONE_SIDE",
       "Unklar: Nur ein Paket enthält belegten Inhalt. Fehlender Beleg bedeutet weder Ausschluss noch Nachteil."
     );
-  if (packageA.reviewStatus !== "BELEGT" || packageB.reviewStatus !== "BELEGT") {
+  if (
+    packageA.reviewStatus !== "BELEGT" ||
+    packageB.reviewStatus !== "BELEGT"
+  ) {
     const packageReviewAudit = derivePackageReviewAudit({
       categoryId,
       packageA,

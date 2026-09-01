@@ -166,10 +166,8 @@ function decideScopeFixture(overrides = {}) {
   ];
   return decidePoint({
     categoryId: "FE-A06",
-    packageA:
-      overrides.packageA || scopeLimitPackage("a", "BELEGT"),
-    packageB:
-      overrides.packageB || scopeLimitPackage("b", "TEILBELEGT"),
+    packageA: overrides.packageA || scopeLimitPackage("a", "BELEGT"),
+    packageB: overrides.packageB || scopeLimitPackage("b", "TEILBELEGT"),
     atomsA,
     atomsB,
   });

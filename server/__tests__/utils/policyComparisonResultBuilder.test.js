@@ -954,10 +954,7 @@ describe("policy comparison result builder", () => {
     writeScopeLimitCategory(runA, "GENERAL");
     writeScopeLimitCategory(runB, "NARROW_ONLY");
     const nullRuns = Array.from({ length: 8 }, (_, index) => {
-      const run = writeRun(
-        root,
-        document(`n${index + 1}`, "B", "TERMS")
-      );
+      const run = writeRun(root, document(`n${index + 1}`, "B", "TERMS"));
       writeScopeLimitNotFoundCategory(run);
       return run;
     });
