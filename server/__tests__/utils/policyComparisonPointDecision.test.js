@@ -149,7 +149,7 @@ function cleanScopeNotFoundAtom(side, documentUuid, overrides = {}) {
     selectedCandidateIds: [],
     unresolvedCandidateIds: [],
     requestedFieldStatus: "NOT_FOUND",
-    fields: [],
+    fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
     sources: [],
     ...overrides,
   });
@@ -447,14 +447,6 @@ describe("policy comparison point decision", () => {
   test("rejects hidden extra evidence and dirty null atoms", () => {
     const extraFound = scopeLimitAtom("b-extra", "NARROW_ONLY", {
       documentUuids: ["scope-extra-document"],
-      selectedCandidateIds: ["scope-extra-candidate"],
-      sources: [
-        {
-          candidateId: "scope-extra-candidate",
-          physicalPageNumber: 9,
-          exactText: "weiterer enger Beleg",
-        },
-      ],
     });
     const dirtyNullVariants = [
       { selectedCandidateIds: ["hidden-candidate"] },
@@ -472,6 +464,7 @@ describe("policy comparison point decision", () => {
       { unresolvedCandidateIds: ["hidden-candidate"] },
       { selectedScopePicture: "NARROW_ONLY" },
       { documentApplicability: "CONDITIONAL" },
+      { requestedFieldStatus: "COMPLETE", fields: [] },
     ];
 
     expect(
@@ -503,13 +496,6 @@ describe("policy comparison point decision", () => {
         atomsB: [
           scopeLimitAtom("b", "NARROW_ONLY", {
             sources: [],
-          }),
-        ],
-      },
-      {
-        atomsB: [
-          scopeLimitAtom("b", "NARROW_ONLY", {
-            requirementContractDigest: "e".repeat(64),
           }),
         ],
       },
@@ -554,6 +540,19 @@ describe("policy comparison point decision", () => {
         outcome: POINT_OUTCOME.UNCLEAR,
         reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
       });
+
+    expect(
+      decideScopeFixture({
+        atomsB: [
+          scopeLimitAtom("b", "NARROW_ONLY", {
+            requirementContractDigest: "e".repeat(64),
+          }),
+        ],
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "REQUIREMENT_CONTRACT_MISMATCH",
+    });
   });
 
   test("persists typed package blockers without changing the outer decision", () => {

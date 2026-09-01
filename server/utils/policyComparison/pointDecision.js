@@ -550,6 +550,18 @@ function reasonFor(outcome, dimensions) {
 }
 
 function cleanNotFoundAtom(atom) {
+  const fields = atom.fields || [];
+  const requestedFieldsClean =
+    (atom.requestedFieldStatus === "NOT_FOUND" &&
+      fields.length > 0 &&
+      fields.every(
+        ({ field, status, facts }) =>
+          String(field || "").trim().length > 0 &&
+          status === "NOT_FOUND" &&
+          Array.isArray(facts) &&
+          facts.length === 0
+      )) ||
+    (atom.requestedFieldStatus === "NOT_REQUIRED" && fields.length === 0);
   return (
     atom.evidencePresence === "NOT_FOUND" &&
     atom.coverageEffect === "UNKNOWN" &&
@@ -559,7 +571,7 @@ function cleanNotFoundAtom(atom) {
     (atom.selectedCandidateIds || []).length === 0 &&
     (atom.unresolvedCandidateIds || []).length === 0 &&
     (atom.sources || []).length === 0 &&
-    (atom.fields || []).length === 0
+    requestedFieldsClean
   );
 }
 
