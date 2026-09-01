@@ -876,6 +876,58 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(occurrence.objectClassificationGovernorHint).toBeNull();
   });
 
+  test.each([
+    ["Nicht als Betriebsinhalt gelten:", "Betriebsinhalt"],
+    [
+      "Nicht als Gebäude oder Gebäudebestandteile zählen:",
+      "Gebäude oder Gebäudebestandteile",
+    ],
+  ])(
+    "treats %s as neutral exclusion from an object class",
+    (heading, subject) => {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        document: documentFromPages([
+          [heading, "·Solar- und Photovoltaikanlagen;"].join("\n"),
+        ]),
+        documentFingerprint: `excluded-object-class-${subject}`,
+        catalog: singleSolarComponentCatalog(),
+      });
+      const [occurrence] = component(
+        worksheet,
+        "ST-21",
+        "solar_thermal_system"
+      ).occurrences;
+
+      expect(occurrence.objectClassificationGovernorHint).toMatchObject({
+        contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+        classificationKind: "OBJECT",
+        membership: "EXCLUDED_FROM_CLASS",
+        subject,
+        source: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      });
+    }
+  );
+
+  test("does not neutralize a coverage-bearing exclusion disguised as classification", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Nicht als versicherte Sachen gelten:",
+          "·Solar- und Photovoltaikanlagen;",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "coverage-bearing-class-exclusion",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "ST-21",
+      "solar_thermal_system"
+    ).occurrences;
+
+    expect(occurrence.objectClassificationGovernorHint).toBeNull();
+  });
+
   test("expands catalog-authorized occurrences to a numbered clause section only", () => {
     const sectionCatalog = {
       schemaVersion: 1,

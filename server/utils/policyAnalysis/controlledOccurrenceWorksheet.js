@@ -812,7 +812,7 @@ function objectClassificationKind(subject) {
     )
   )
     return "COVERAGE_OR_OTHER";
-  return /\b(?:anlagen?|adaptierungen?|haustechnik|gebäude(?:bestandteile|zubehör)?|bestandteile?|zubehör|einrichtungen?|objekte?|sachen?|bauwerke?|verglasungen?|zahlungsmittel)\b/iu.test(
+  return /\b(?:anlagen?|adaptierungen?|haustechnik|gebäude(?:bestandteile|zubehör)?|bestandteile?|zubehör|einrichtungen?|objekte?|sachen?|bauwerke?|verglasungen?|zahlungsmittel|betriebsinhalt)\b/iu.test(
     normalized
   )
     ? "OBJECT"
@@ -822,7 +822,12 @@ function objectClassificationKind(subject) {
 function explicitObjectClassificationGovernors(pageText) {
   const lines = buildLineRecords(pageText);
   const governors = [];
-  const addGovernor = ({ subjectLine, terminalLine, subject }) => {
+  const addGovernor = ({
+    subjectLine,
+    terminalLine,
+    subject,
+    membership = "MEMBER_OF_CLASS",
+  }) => {
     const textStart = subjectLine.start + subjectLine.text.search(/\S/u);
     const terminalTrimmed = terminalLine.text.trimEnd();
     const pageEnd = terminalLine.start + terminalTrimmed.length;
@@ -834,6 +839,7 @@ function explicitObjectClassificationGovernors(pageText) {
       pageEnd,
       kind: "OBJECT_CLASSIFICATION_BOUNDARY",
       classificationKind,
+      membership,
       ...(classificationKind === "OBJECT"
         ? { contractId: OBJECT_CLASSIFICATION_CONTEXT_CONTRACT }
         : {}),
@@ -848,6 +854,18 @@ function explicitObjectClassificationGovernors(pageText) {
         subjectLine: line,
         terminalLine: line,
         subject: sameLine[1],
+      });
+      continue;
+    }
+    const excludedFromClass = line.text.match(
+      /^\s*Nicht\s+als\s+(.+?)\s+(?:gelten|gilt|zählen|zählt)\s*:\s*$/iu
+    );
+    if (excludedFromClass) {
+      addGovernor({
+        subjectLine: line,
+        terminalLine: line,
+        subject: excludedFromClass[1],
+        membership: "EXCLUDED_FROM_CLASS",
       });
       continue;
     }
