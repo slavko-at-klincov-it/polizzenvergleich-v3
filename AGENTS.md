@@ -9,10 +9,12 @@ contract packages. Do not build an LF-IMMO-specific parser. LF IMMO and WEVIG
 are known development and regression fixtures, not proof that the engine
 generalizes to arbitrary insurers, document layouts, or contract packages.
 
-The current customer contract consists of up to nine input documents per
-contract package and eight output views (`VS`, `FE`, `LW`, `ST`, `EL`, `HP`,
-`VB`, `WE`) with 320 currently defined visible rows. Categories are views over
-atomic facts; they are not the internal fact identity.
+The current productive customer contract consists of up to nine input
+documents per contract package and five output views (`VS`, `FE`, `LW`, `ST`,
+`EL`) with 224 defined visible rows. `HP`, `VB`, and `WE` remain historical or
+internal regression evidence and are not part of the productive customer
+profile. Categories are views over atomic facts; they are not the internal
+fact identity.
 
 Before substantive work, read completely:
 
@@ -42,10 +44,51 @@ behavior from a historical repository.
 - The server owns evidence, facts, values, sources, and rendered rows. The LLM
   may classify bounded ambiguity but may not invent candidates, sources,
   pages, values, or rows.
-- A formal table pass, 320 generated rows, a successful model call, or success
+- A formal table pass, 224 generated rows, a successful model call, or success
   on LF and WEVIG is not a fachlicher correctness or 99-percent proof.
 - Keep release truth, current-HEAD truth, experimental evidence, and customer
   runtime evidence explicitly separate.
+
+## Mandatory metric-truth protocol
+
+Before reporting any count, percentage, status total, quality metric, review
+queue size, advantage total, timing, or run comparison to the user:
+
+1. Bind the statement to the exact run artifact, commit SHA, profile version,
+   and relevant artifact SHA-256.
+2. Recompute the metric from row- or case-level records; do not trust a stored
+   aggregate merely because it is present in the result schema.
+3. Independently reconcile the recomputed groups to the declared total. Every
+   reported partition must state whether its groups are mutually exclusive or
+   overlapping.
+4. Compare the recomputed metric with every stored aggregate and every
+   customer-facing rendering that names the same concept. If they disagree,
+   stop and report the discrepancy before using any of them as a fact.
+5. Preserve the metric's exact meaning. Never rename a legacy technical
+   difference counter, audit signal, search status, or internal blocker as a
+   customer-review count.
+6. Separate observed facts, deterministic derivations, simulations, and
+   hypotheses explicitly. Simulated values must never be phrased as current
+   product results.
+7. Use customer-readable wording in the visible answer. Define unavoidable
+   technical terms once, and do not use internal shorthand such as
+   `Nulltreffer` as though it were a customer concept.
+
+For comparison runs, the mandatory reconciliation is at least:
+
+```text
+all visible rows
+= advantage A
++ advantage B
++ documentation difference
++ equivalent
++ no matching provision found on either side
++ not comparable
++ unclear
+```
+
+The customer-review count is derived only from row-level point decisions whose
+outcome is `UNKLAR`. Audit-only differences must be reported separately.
 
 ## Mandatory test host
 
