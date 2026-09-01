@@ -4,10 +4,16 @@ const { performance } = require("perf_hooks");
 const { OpenAI } = require("openai");
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return new Promise((resolve, reject) => {
+    const digest = crypto.createHash("sha256");
+    const stream = fs.createReadStream(file);
+    stream.on("error", reject);
+    stream.on("data", (chunk) => digest.update(chunk));
+    stream.on("end", () => resolve(digest.digest("hex")));
+  });
 }
 
-function verifyHybridShadowRuntimeArtifacts(contract) {
+async function verifyHybridShadowRuntimeArtifacts(contract) {
   for (const [label, file, expectedSha256] of [
     [
       "EMBEDDING_MODEL",
@@ -22,7 +28,7 @@ function verifyHybridShadowRuntimeArtifacts(contract) {
   ]) {
     if (!fs.existsSync(file) || !fs.statSync(file).isFile())
       throw new Error(`HYBRID_SHADOW_${label}_ARTIFACT_MISSING: ${file}`);
-    if (sha256File(file) !== expectedSha256)
+    if ((await sha256File(file)) !== expectedSha256)
       throw new Error(`HYBRID_SHADOW_${label}_ARTIFACT_SHA256_MISMATCH`);
   }
 }

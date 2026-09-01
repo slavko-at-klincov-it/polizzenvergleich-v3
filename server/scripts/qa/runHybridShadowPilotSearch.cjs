@@ -117,7 +117,7 @@ async function run() {
     throw new Error("HYBRID_SHADOW_PILOT_SEARCH_OUTPUT_INVALID");
   if (fs.existsSync(output))
     throw new Error("HYBRID_SHADOW_PILOT_SEARCH_OUTPUT_EXISTS");
-  verifyHybridShadowRuntimeArtifacts(contract);
+  await verifyHybridShadowRuntimeArtifacts(contract);
   const loadedRuntime = await verifyLoadedEmbeddingModel(contract);
   const client = createEmbeddingClient(contract);
   const searchStartedAt = new Date().toISOString();

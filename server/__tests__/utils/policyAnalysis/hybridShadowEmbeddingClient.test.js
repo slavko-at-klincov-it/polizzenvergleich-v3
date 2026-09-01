@@ -1,7 +1,12 @@
 const {
   embedBatches,
+  verifyHybridShadowRuntimeArtifacts,
   verifyLoadedEmbeddingModel,
 } = require("../../../utils/policyAnalysis/hybridShadowEmbeddingClient");
+const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 function contract() {
   return {
@@ -72,5 +77,31 @@ describe("hybridShadowEmbeddingClient", () => {
       expect.objectContaining({ label: "fixture", start: 0, inputCount: 2 }),
       expect.objectContaining({ label: "fixture", start: 2, inputCount: 1 }),
     ]);
+  });
+
+  test("verifies model artifacts through a streaming digest", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "shadow-hash-"));
+    const modelFile = path.join(directory, "model.bin");
+    const runtimeFile = path.join(directory, "runtime.bin");
+    fs.writeFileSync(modelFile, "model-fixture");
+    fs.writeFileSync(runtimeFile, "runtime-fixture");
+    const digest = (file) =>
+      crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+    const checkedContract = {
+      provider: {
+        modelArtifactPath: modelFile,
+        modelArtifactSha256: digest(modelFile),
+        runtimeArtifactPath: runtimeFile,
+        runtimeArtifactSha256: digest(runtimeFile),
+      },
+    };
+
+    try {
+      await expect(
+        verifyHybridShadowRuntimeArtifacts(checkedContract)
+      ).resolves.toBeUndefined();
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
