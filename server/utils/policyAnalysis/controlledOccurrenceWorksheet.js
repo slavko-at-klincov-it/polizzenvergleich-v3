@@ -492,6 +492,13 @@ function structuralContext({
       unitType = "LIST_ITEM";
       break;
     }
+    if (
+      index < occurrenceLineIndex &&
+      isClauseSectionHeading(lines[index])
+    ) {
+      startLine = index;
+      break;
+    }
     if (index < occurrenceLineIndex && isBlankLine(lines[index])) break;
     startLine = index;
   }
