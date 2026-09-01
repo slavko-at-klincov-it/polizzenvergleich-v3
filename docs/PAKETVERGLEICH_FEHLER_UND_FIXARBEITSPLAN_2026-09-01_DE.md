@@ -1308,3 +1308,103 @@ Mac-Studio-Nachweise:
   darf keine Deckung oder Vorteilspromotion auslösen;
 - jede darüber hinaus geänderte Paketzeile ist zunächst `REVISE`, bis ihr
   Atom-, Quellen-, Scope- und Rangdelta erklärt wurde.
+
+## 17. Vollständiger Lauf der erweiterten Objektneutralität
+
+Nach den ersten Objektklassifikationsverträgen wurden zwei zusätzliche
+sprachliche Varianten und eine Prioritätsgrenze getrennt umgesetzt:
+
+- `9a0f535f`: negative Zugehörigkeitsaussagen wie „Nicht als Betriebsinhalt
+  gelten“ oder „Nicht als Gebäude zählen“ bleiben Objektklassifikation statt
+  Versicherungsausschluss;
+- `3fac56de`: der neutrale Objektvertrag hat Vorrang vor älteren
+  VS-Sonderregeln, damit eine Definition nicht nachträglich wieder als
+  Deckung ausgegeben wird;
+- `f11b5572`: positive Gegenprobe, dass eine echte Klausel „Mitversichert
+  sind ...“ weiterhin Deckung bleibt.
+
+Fokussierte Mac-Studio-Validierung vor dem Vollauf:
+
+```text
+Commit: f11b55728386790c900c2c862f0687b1d20b959d
+Checkout: /private/tmp/pv3-object-class-9a0f535f-A360UH/repo
+Node: 22.23.2
+Tests: 268/268 bestanden
+Prettier: bestanden
+```
+
+Vollständiger Lauf:
+
+```text
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+CANDIDATE-OBJECT-NEUTRALITY-F11B5572-20260901-220150
+
+Commit: f11b55728386790c900c2c862f0687b1d20b959d
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Start: 2026-09-01T20:01:50Z
+Ende: 2026-09-01T20:28:33Z
+Wandzeit: 26:43
+Inputmanifest SHA-256:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Hard-Gate: PASS, 10 Dokumente, 50 Kategorien, 224 Paketzeilen
+Strict V7: PASS
+Run-Signatur:
+62c494f7eb22eb784f7a570c996dcf0a35db93851101bb0541e3cf2b9c4dd1ba
+JSON SHA-256:
+5d34e5910f40c664821bd5475bf1ee6d32fa75e5c61721f3c96bcaf1ce123088
+Markdown SHA-256:
+9458c04fde0af00c919ad90f7f22009bf2065b1554c5eb79119aab6f3a2eece5
+XLSX SHA-256:
+a9c36c5fa3b75a912ad19bc9a337f5efac9ffee8d79a73a8a2c4e25f78d022be
+```
+
+Kundenmetriken:
+
+```text
+Vorteil A/B: 0 / 0
+Dokumentationsunterschied: 38
+Gleichwertig: 6
+Kein dokumentierter Vorteil: 99
+Nicht vergleichbar: 13
+Unklar/Kundenprüfung: 68
+Paketstatus-Blocker: 41
+```
+
+Exakter Vergleich zum unmittelbar vorherigen Vollauf `4edca52a`:
+
+- unveränderte Anzahl Vorteile, Dokumentationsunterschiede,
+  Nichtvergleichbarkeiten und beidseitige kontrollierte Nichtfunde;
+- `FE-C02` wechselt von `GLEICHWERTIG` auf `UNKLAR`; damit sinkt
+  `GLEICHWERTIG` von 7 auf 6 und die Kundenprüfung steigt von 67 auf 68;
+- `VS-19` bleibt `UNKLAR`, der technische Grund wechselt aber von einem
+  unvollständigen `ANY`-Fakt auf den transparenten Paketstatusblocker;
+- keine weitere Paketentscheidung änderte sich.
+
+Die Änderung von `FE-C02` ist kein Recallverlust. Die EABS-Fundstelle
+beschreibt, welche Photovoltaikanlagen zu einer Objektklasse zählen. Sie ist
+keine eigenständige Feuerdeckung. Die alte Gleichwertigkeit beruhte auf dem
+falschen `INCLUDED`; der neue Zustand `DEFINED` entfernt diese unbelegte
+Kundenaussage. Damit ist die höhere Reviewzahl fachlich ehrlicher als die
+numerisch günstigere 67 des Vorgängers.
+
+Atom- und XLSX-Abgrenzung:
+
+- exakt 12 Atome änderten sich, ausschließlich im erwarteten EABS-Dokument
+  `DOC-10-759b582e-bb83-40c0-9b2a-4b917f0c7e03`;
+- die betroffenen Atome liegen in `VS-18`, `VS-19`, `FE-C02`, `ST-15`,
+  `ST-16`, `ST-18`, `ST-19`, `ST-21`, `EL-16`, `EL-20` und `EL-23`;
+- `ST-21` enthält nun die beiden echten Solar-/Photovoltaik-Definitionen als
+  `DEFINED`, ohne daraus Deckung oder einen Vorteil zu erzeugen;
+- der XLSX-Vergleich zu `4edca52a` behält ein Blatt, 225 Zeilen und 17
+  Spalten; 13 Zellen in fünf Zeilen (`VS-18`, `VS-19`, `FE-C02`, `ST-21`,
+  `EL-20`) änderten sich;
+- keine Änderung außerhalb des kausal erwarteten EABS-Dokuments wurde
+  gefunden.
+
+Entscheidung: **GO als Korrektheitsbaseline**, aber nicht als numerisch
+günstigerer Review-Favorit. Die bekannte falsche Gleichwertigkeit darf nicht
+zurückkehren. Der folgende FE-A06-Kandidat wird deshalb gegen diesen Lauf und
+zusätzlich gegen PBR-01.2/`4edca52a` verglichen.
