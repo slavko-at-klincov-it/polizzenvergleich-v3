@@ -1289,17 +1289,7 @@ function effectForCandidate(target, candidate) {
   return COVERAGE_EFFECT.INCLUDED;
 }
 
-/**
- * Creates a server-terminal decision only when every surviving candidate has
- * an explicit clause governor and all candidates agree on one effect.
- * Ambiguous/mixed wording remains model-owned. Side effects: none. Role:
- * decide.
- */
-function deterministicCategoryPreparedDecision(target) {
-  if (String(target?.categoryView || "") === "VS") {
-    const vsDecision = deterministicVsPreparedDecision(target);
-    if (vsDecision) return vsDecision;
-  }
+function objectClassificationPreparedDecision(target) {
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
   const objectClassificationCandidates = target.candidates.filter(
@@ -1307,8 +1297,7 @@ function deterministicCategoryPreparedDecision(target) {
       objectClassificationContractId ===
       "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1"
   );
-  if (
-    target.factRole === "INSURED_OBJECT" &&
+  return target.factRole === "INSURED_OBJECT" &&
     (target.unresolvedCandidateIds || []).length === 0 &&
     objectClassificationCandidates.length === target.candidates.length &&
     objectClassificationCandidates.every(
@@ -1319,14 +1308,39 @@ function deterministicCategoryPreparedDecision(target) {
           contextText || ""
         )
     )
-  )
-    return {
-      selectedCandidateIds: target.candidates.map(
-        ({ candidateId }) => candidateId
+    ? {
+        selectedCandidateIds: target.candidates.map(
+          ({ candidateId }) => candidateId
+        ),
+        coverageEffect: COVERAGE_EFFECT.DEFINED,
+        basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
+      }
+    : null;
+}
+
+/**
+ * Creates a server-terminal decision only when every surviving candidate has
+ * an explicit clause governor and all candidates agree on one effect.
+ * Ambiguous/mixed wording remains model-owned. Side effects: none. Role:
+ * decide.
+ */
+function deterministicCategoryPreparedDecision(target) {
+  const objectClassificationDecision =
+    objectClassificationPreparedDecision(target);
+  if (objectClassificationDecision) return objectClassificationDecision;
+  if (String(target?.categoryView || "") === "VS") {
+    const vsDecision = deterministicVsPreparedDecision({
+      ...target,
+      candidates: (target.candidates || []).filter(
+        ({ objectClassificationContractId }) =>
+          objectClassificationContractId !==
+          "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1"
       ),
-      coverageEffect: COVERAGE_EFFECT.DEFINED,
-      basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
-    };
+    });
+    if (vsDecision) return vsDecision;
+  }
+  if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
+    return null;
   if (
     target.categoryView === "EL" &&
     target.requirementId === "EL-12" &&

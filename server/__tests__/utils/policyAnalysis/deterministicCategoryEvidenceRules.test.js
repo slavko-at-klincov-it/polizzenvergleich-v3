@@ -76,10 +76,7 @@ describe("deterministicCategoryEvidenceRules", () => {
 
   test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
-    [
-      "Versicherte Kosten im Rahmen der Versicherungssumme",
-      "POSITIVE",
-    ],
+    ["Versicherte Kosten im Rahmen der Versicherungssumme", "POSITIVE"],
     ["7.2 Versicherte Gefahren", "POSITIVE"],
     ["Nicht versicherte Schäden:", "NEGATIVE"],
     ["9. Nicht versicherte Kosten und Gefahren", "NEGATIVE"],
@@ -104,19 +101,22 @@ describe("deterministicCategoryEvidenceRules", () => {
     "Die versicherten Kosten umfassen Suchkosten.",
     "Versicherte Kosten: Suchkosten und Nebenkosten.",
     "Der Abschnitt beschreibt nicht versicherte Schäden und Gefahren.",
-  ])("does not use flowing text as a semantic governor: %s", (scopeLeadText) => {
-    const text = "Suchkosten werden im folgenden Absatz erläutert.";
+  ])(
+    "does not use flowing text as a semantic governor: %s",
+    (scopeLeadText) => {
+      const text = "Suchkosten werden im folgenden Absatz erläutert.";
 
-    expect(
-      clausePolarity({
-        scopeLeadText,
-        contextText: text,
-        exactText: "Suchkosten",
-        occurrenceStart: 1_000 + text.indexOf("Suchkosten"),
-        contextDocumentStart: 1_000,
-      })
-    ).toBe("UNKNOWN");
-  });
+      expect(
+        clausePolarity({
+          scopeLeadText,
+          contextText: text,
+          exactText: "Suchkosten",
+          occurrenceStart: 1_000 + text.indexOf("Suchkosten"),
+          contextDocumentStart: 1_000,
+        })
+      ).toBe("UNKNOWN");
+    }
+  );
 
   test("lets a local exklusive clause override a carried positive list governor", () => {
     const text =
@@ -988,5 +988,61 @@ describe("deterministicCategoryEvidenceRules", () => {
     };
 
     expect(deterministicCategoryPreparedDecision(target)).toBeNull();
+  });
+
+  test("keeps a VS object definition neutral before applying legacy VS coverage rules", () => {
+    const candidate = {
+      candidateId: "candidate:outdoor-lighting",
+      candidateBinding: "DIRECT",
+      deterministicBindingBasis: "EXPLICIT_OUTDOOR_LIGHTING",
+      exactText: "Beleuchtungsanlagen",
+      contextUnitType: "LIST_ITEM",
+      contextText:
+        "·Außenanlagen, Firmenschilder, Antennenanlagen und Beleuchtungsanlagen;",
+      contextDocumentStart: 5_000,
+      objectClassificationContractId:
+        "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+    };
+    const target = {
+      categoryView: "VS",
+      requirementId: "VS-19",
+      componentId: "outdoor_lighting",
+      factRole: "INSURED_OBJECT",
+      unresolvedCandidateIds: [],
+      candidates: [candidate],
+    };
+
+    expect(deterministicCategoryPreparedDecision(target)).toEqual({
+      selectedCandidateIds: [candidate.candidateId],
+      coverageEffect: "DEFINED",
+      basis: "OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        ...target,
+        candidates: [{ ...candidate, objectClassificationContractId: null }],
+      })
+    ).toEqual({
+      selectedCandidateIds: [candidate.candidateId],
+      coverageEffect: "INCLUDED",
+      basis: "EXPLICIT_VS_RULE:VS-19",
+    });
+    const trueCoverageCandidate = {
+      ...candidate,
+      candidateId: "candidate:insured-outdoor-lighting",
+      contextText: "Mitversichert sind Außenbeleuchtungsanlagen.",
+      contextDocumentStart: 6_000,
+      objectClassificationContractId: null,
+    };
+    expect(
+      deterministicCategoryPreparedDecision({
+        ...target,
+        candidates: [candidate, trueCoverageCandidate],
+      })
+    ).toEqual({
+      selectedCandidateIds: [trueCoverageCandidate.candidateId],
+      coverageEffect: "INCLUDED",
+      basis: "EXPLICIT_VS_RULE:VS-19",
+    });
   });
 });
