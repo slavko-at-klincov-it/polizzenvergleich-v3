@@ -4,7 +4,11 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 
-function row(categoryId, outcome, legacyOutcome = "UNTERSCHIED_FACHLICH_PRÜFEN") {
+function row(
+  categoryId,
+  outcome,
+  legacyOutcome = "UNTERSCHIED_FACHLICH_PRÜFEN"
+) {
   return {
     categoryId,
     outcome: legacyOutcome,
@@ -48,11 +52,28 @@ describe("policy comparison customer metric contract", () => {
   });
 
   test.each([
-    ["stored customer review", (value) => (value.totals.customerReviewRequired = 2)],
-    ["stored outcome total", (value) => (value.totals.pointDecisions.UNKLAR = 0)],
-    ["row review flag", (value) => (value.categories[0].rows[0].pointDecision.reviewRequired = false)],
-    ["duplicate row identity", (value) => value.categories[0].rows.push({ ...value.categories[0].rows[0] })],
-    ["materialization status", (value) => (value.status = "CUSTOMER_RESULT_COMPLETE")],
+    [
+      "stored customer review",
+      (value) => (value.totals.customerReviewRequired = 2),
+    ],
+    [
+      "stored outcome total",
+      (value) => (value.totals.pointDecisions.UNKLAR = 0),
+    ],
+    [
+      "row review flag",
+      (value) =>
+        (value.categories[0].rows[0].pointDecision.reviewRequired = false),
+    ],
+    [
+      "duplicate row identity",
+      (value) =>
+        value.categories[0].rows.push({ ...value.categories[0].rows[0] }),
+    ],
+    [
+      "materialization status",
+      (value) => (value.status = "CUSTOMER_RESULT_COMPLETE"),
+    ],
   ])("rejects a manipulated %s", (_label, mutate) => {
     const result = resultFor([row("VS-01", "UNKLAR")]);
     mutate(result);
@@ -64,8 +85,9 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(legacy)).toThrow(
       "COMPARISON_METRIC_SCHEMA_UNSUPPORTED"
     );
-    expect(
-      validateCustomerComparison(legacy, { allowLegacy: true })
-    ).toEqual({ legacy: true, metricContractId: null });
+    expect(validateCustomerComparison(legacy, { allowLegacy: true })).toEqual({
+      legacy: true,
+      metricContractId: null,
+    });
   });
 });

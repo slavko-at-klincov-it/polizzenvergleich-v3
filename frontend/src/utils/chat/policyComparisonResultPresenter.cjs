@@ -39,9 +39,7 @@ function presentPointDecision(row) {
 
 function presentComparisonMetrics(result) {
   const totals = result?.totals || {};
-  const customerReviewRequired = Number.isInteger(
-    totals.customerReviewRequired
-  )
+  const customerReviewRequired = Number.isInteger(totals.customerReviewRequired)
     ? totals.customerReviewRequired
     : Number.isInteger(totals.pointDecisionReviewRequired)
       ? totals.pointDecisionReviewRequired
