@@ -517,25 +517,51 @@ unresolvedCandidateIds
 blockerCodes
 ```
 
-Vorgeschlagene versionierte Blockercodes:
+Implementierte versionierte Blockercodes in
+`PACKAGE_REVIEW_BLOCKERS_V1`:
 
 ```text
 MISSING_REQUIRED_COMPONENT
 UNKNOWN_COVERAGE_EFFECT
+COVERAGE_EFFECT_NOT_DECISIVE
 FIELD_INCOMPLETE
 SCOPE_INCOMPLETE
-PROPOSED_ONLY
-CONDITIONAL_APPLICABILITY
 SOURCE_BINDING_INCOMPLETE
 UNRESOLVED_CANDIDATE
 MULTIPLE_ATOMS_SAME_COMPONENT
 UNRESOLVED_DOCUMENT_PRECEDENCE
 CONFLICTING_COVERAGE
-REQUIREMENT_CONTRACT_MISMATCH
+UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER
 ```
 
-Wichtig: `PROPOSED_ONLY` ist zunächst ein auditierbares Geltungssignal, nicht
-automatisch der primäre Blocker.
+Implementierte Signalcodes:
+
+```text
+PROPOSED_ONLY
+CONDITIONAL_APPLICABILITY
+```
+
+Wichtig: `PROPOSED_ONLY` und `CONDITIONAL_APPLICABILITY` sind auditierbare
+Geltungssignale, nicht automatisch primäre Blocker.
+
+Implementierungsstand seit Commit
+`1fb797d38035392a3e21c38b2e0cf65d80c5ef3f`:
+
+- neues reines Diagnosemodul
+  `server/utils/policyComparison/packageReviewAudit.js`;
+- `pointDecision.js` ruft die Diagnose ausschließlich im bereits bestehenden
+  Guard `PACKAGE_REVIEW_STATUS_BLOCKS_DECISION` auf;
+- äußerer Outcome, Reasoncode, Reviewflag, Regel-ID und Dimensionen bleiben
+  unverändert;
+- `resultBuilder.js` persistiert zusätzlich
+  `coverageAggregationPolicy`, `scopePolicy` und `requestedFields` in den
+  Atomen und schreibt Ergebnisschema V7;
+- `customerMetricContract.js` validiert den V7-Audit fail-closed gegen Seite,
+  Requirement, Komponente, Dokument-UUID, Atomzustand, bekannte Codes sowie
+  kanonische Sortierung;
+- V6 bleibt ohne Audit lesbar; eine In-place-Migration alter Artefakte findet
+  nicht statt;
+- UI, Markdowntext und 17-spaltige XLSX-Struktur wurden nicht erweitert.
 
 Abnahmekriterien:
 
@@ -858,11 +884,91 @@ Artefakt-SHA: 3cc0ec829897a0674fe9183301b54dfb6f534935ebb1f45fcf925bdbb9cbbe4f
 ### RUN-PBR-01.1
 
 ```text
-Status: noch nicht gestartet
-Fix-Commit: offen
-Erwartung: identische 224 Kundenentscheidungen; zusätzliche private,
-           komponentenbezogene Blockerdiagnose für 39/39 Zeilen
+Status: Full Run und Favoritenvergleich bestanden
+Fix-Commit: 1fb797d38035392a3e21c38b2e0cf65d80c5ef3f
+Mac-Studio-Checkout:
+/private/tmp/pv3-pbr-1fb797d3-xTgyGV/repo
+Mac-Studio-Gitstatus vor und nach dem Lauf: sauber
+Node: v22.23.2
+Profil: CUSTOMER_CORE_5_V7
+Vergleichsvertrag: CERTIFIED_COVERAGE_ONLY_TYPED_V2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42.496
+Parallelität: 1; zehn Dokumente strikt seriell
+Dinghy: not-loaded
+Dokumente/Kategorien/Paketzeilen: 10 / 50 / 224
+erfolgreicher Lauf: ungefähr 18:10:07 bis 18:40:52 Europe/Vienna
+Wandzeit: 1.845 s = 30:45
+Run-Signatur:
+9203011830b10a2f2bad7ee8e3f92607feb3dd6e8fbe57bbda12d61e6e7618fc
+Run-Root:
+/Users/michaelmischkot/Library/Application Support/
+at.klincov.polizzenvergleich-v3/QA/
+PBR-01-1-1FB797D3-20260901-180917
+
+Inputmanifest SHA-256:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Paketvertrag SHA-256:
+b3da785b5f5be6dfcbb96cb078ade4a04520a2eba8c1a6534201ee71eee86158
+comparison.private.json SHA-256:
+febf5c2ef91fe6ec19f80bd127ff52ecd0910578267185ead21d1f1ac51c8853
+comparison.md SHA-256:
+e1b3b9e7d630de179aeea1c9133d211e1e15cf37c0b3d2b995e73e45629bea47
+polizzenvergleich.xlsx SHA-256:
+4e7983b028dbe96d07f670fd00f2a10d8871c273c171c5f6a772a4dea297b128
+
+Produktiver V7-Validator: PASS
+Zeilen-/Outcome-/Reason-Recount: PASS
+Outcome-Mitgliedschaften gegen d973977f: exakt identisch
+Review-Reason-Mitgliedschaften gegen d973977f: exakt identisch
+Entscheidungsprojektion gegen d973977f: 0 Übergänge
+Vergleich gegen 63ecc750: dieselben 224 Kundenentscheidungen bestätigt
+
+Vorteil A/B: 0 / 0
+Dokumentationsunterschied: 38
+Gleichwertig: 7
+Kein dokumentierter Vorteil: 99
+Nicht vergleichbar: 13
+Unklar/Kundenprüfung: 67
+Paketstatus-Blocker: 39
+Audits auf Paketstatuszeilen: 39/39
+fehlende Audits: 0
+Audits außerhalb des Sammelgrunds: 0
+UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER: 0 Records / 0 Zeilen
+
+Blockerverteilung, Records / eindeutige Zeilen:
+COVERAGE_EFFECT_NOT_DECISIVE: 10 / 8
+FIELD_INCOMPLETE: 17 / 14
+MISSING_REQUIRED_COMPONENT: 75 / 24
+MULTIPLE_ATOMS_SAME_COMPONENT: 13 / 12
+SCOPE_INCOMPLETE: 12 / 9
+UNRESOLVED_CANDIDATE: 2 / 2
+UNRESOLVED_DOCUMENT_PRECEDENCE: 2 / 2
+
+Signalverteilung, Records / eindeutige Zeilen:
+CONDITIONAL_APPLICABILITY: 69 / 35
+PROPOSED_ONLY: 20 / 17
+
+Favoriten-Laufzeitdelta zu d973977f: +39 s, ungefähr +2,2 Prozent
+historische 27:01-Laufzeit: nur Performancebeobachtung, kein Qualitätsoracle
+Entscheidung: GO für den Diagnosevertrag; keine fachliche Freischaltung
 ```
+
+Anlaufbeobachtungen:
+
+- Der erste Wrapperversuch stoppte vor Dokument 1 wegen des in Zsh
+  schreibgeschützten Variablennamens `status`; kein Modellaufruf und kein
+  fachliches Artefakt entstanden.
+- Der zweite Versuch stoppte ebenfalls vor dem ersten Modellaufruf, weil dem
+  Unit-Test-Dependency-Symlink das Collector-Paket `pdf-parse` fehlte. Der
+  isolierte Checkout erhielt danach einen Symlink auf den unveränderten
+  installierten `collector/node_modules`-Baum.
+- Die Laufzeit ist daher nicht vollständig hermetisch bezüglich
+  Dependencies; Quellcode, Release-ID, Manifest, Modell, Kontext und PDFs
+  waren dagegen exakt gebunden.
+- Beim GenVerbund-PDF meldete der Parser `TT: undefined function: 21`; die
+  Extraktion schloss dennoch mit 15 Seiten ab. Diese Warnung bleibt unter
+  Beobachtung.
 
 ## 11. Weitere Arbeitspakete der 67 Reviewzeilen
 
@@ -903,18 +1009,19 @@ Favoriten-Run-Vergleich.
 ## 13. Aktueller nächster Schritt
 
 ```text
-PBR-01.1 implementieren:
-typisierte private Blockerdiagnose aus bereits vorhandenen Atomen,
-ohne Paketstatus, Outcome oder Kundentabelle zu lockern.
+PBR-01.2 als kleinen Darstellungsfix vorbereiten:
+die bereits validierten privaten Blockercodes verständlich auswertbar machen,
+ohne die 67er-Kundenmetrik, Outcomeentscheidung oder XLSX-Struktur zu ändern.
 ```
 
-Danach:
+Vor einer Implementierung von PBR-01.2:
 
 ```text
-eigener Commit
+festlegen, ob die Diagnose nur in einem privaten technischen Report oder
+zusätzlich als verständlicher, nicht zählender Hinweis in UI/XLSX erscheint
+-> keine neue Reviewzeile und keine Vervielfachung der Kennzahl
+-> eigener Commit
 -> exakter isolierter Mac-Studio-Checkout
 -> vollständiger V7-Lauf
--> Vergleich mit allen bestätigten Favoriten-/Baseline-Reports
--> Protokollierung in Abschnitt 10
--> Entscheidung über PBR-01.2 oder Revert
+-> erneuter Favoritenvergleich und Protokollierung in Abschnitt 10
 ```
