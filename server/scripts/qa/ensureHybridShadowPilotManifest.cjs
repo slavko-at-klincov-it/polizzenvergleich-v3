@@ -46,6 +46,10 @@ function sha256File(file) {
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
 function writePrivateJson(file, value) {
   const temporary = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(temporary, JSON.stringify(value, null, 2), {
@@ -153,6 +157,27 @@ function run() {
         )
       )
         fail(`${categoryView}-Worksheet stimmt nicht mit dem Oracle überein`);
+      for (const pilotCase of selectedCases) {
+        for (const range of [
+          ...pilotCase.acceptedSourceRanges,
+          ...pilotCase.knownAdversarialSourceRanges,
+        ]) {
+          const page = documentArtifact.document?.pageMap?.find(
+            ({ pageNumber }) => pageNumber === range.physicalPageNumber
+          );
+          const exactText = documentArtifact.document?.pageContent?.slice(
+            range.documentStart,
+            range.documentEnd
+          );
+          if (
+            !page ||
+            range.documentStart < page.start ||
+            range.documentEnd > page.end ||
+            sha256(exactText || "") !== range.exactQuoteSha256
+          )
+            fail(`Oracle-Quellbereich ist ungültig: ${pilotCase.caseId}`);
+        }
+      }
       buildHybridShadowTargets({
         worksheet,
         contract,

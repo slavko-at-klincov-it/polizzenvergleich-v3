@@ -8,6 +8,7 @@ const path = require("path");
 const {
   calculateHybridShadowPilotRetrievalMetrics,
   loadHybridShadowPilot,
+  sourceLocationMatchesRange,
 } = require("../../utils/policyAnalysis/hybridShadowPilot");
 
 function fail(message) {
@@ -161,17 +162,22 @@ function run() {
         `${ranking.requirementId}:${ranking.componentId}`
       );
       if (!effect) fail(`Wirkung fehlt für Pilotfall ${ranking.caseId}`);
-      const selectedQuoteSha256 = effect.selectedCandidateIds.map(
+      const selectedSources = effect.selectedCandidateIds.map(
         (candidateId) => {
           const occurrence = occurrenceById.get(candidateId);
           if (!occurrence)
             fail(`Ausgewählter Kandidat fehlt: ${candidateId}`);
-          return sha256(occurrence.exactText);
+          return {
+            physicalPageNumber: occurrence.physicalPageNumber,
+            documentStart: occurrence.documentStart,
+            documentEnd: occurrence.documentEnd,
+            exactQuoteSha256: sha256(occurrence.exactText),
+          };
         }
       );
       casePipelineById.set(ranking.caseId, {
         selectedCandidateCount: effect.selectedCandidateIds.length,
-        selectedQuoteSha256,
+        selectedSources,
         evidencePresence: effect.evidencePresence,
         coverageEffect: effect.coverageEffect,
       });
@@ -207,9 +213,10 @@ function run() {
     fail("Qwen-Pipeline enthält nicht alle Pilotfälle");
   const caseResults = cases.map((pilotCase) => {
     const pipeline = casePipelineById.get(pilotCase.caseId);
-    const accepted = new Set(pilotCase.acceptedExactQuoteSha256);
-    const selectedAcceptedQuote = pipeline.selectedQuoteSha256.some((digest) =>
-      accepted.has(digest)
+    const selectedAcceptedQuote = pipeline.selectedSources.some((source) =>
+      pilotCase.acceptedSourceRanges.some((range) =>
+        sourceLocationMatchesRange(source, range)
+      )
     );
     return {
       caseId: pilotCase.caseId,
@@ -221,7 +228,7 @@ function run() {
       expectedCandidateDisposition: pilotCase.expectedCandidateDisposition,
       downstreamExpectation: pilotCase.downstreamExpectation,
       selectedCandidateCount: pipeline.selectedCandidateCount,
-      selectedQuoteSha256: pipeline.selectedQuoteSha256,
+      selectedSources: pipeline.selectedSources,
       pipelineRecovered:
         pilotCase.controlClass === "POSITIVE" ? selectedAcceptedQuote : null,
       adversarialRejected:

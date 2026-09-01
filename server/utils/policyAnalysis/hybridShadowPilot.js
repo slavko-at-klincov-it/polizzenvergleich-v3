@@ -59,6 +59,51 @@ function validateSha256(value, code) {
   return value;
 }
 
+function validateSourceRanges(value, code, caseId) {
+  if (!Array.isArray(value)) throw pilotError(code, caseId);
+  return value.map((range, rangeIndex) => {
+    exactKeys(
+      range,
+      [
+        "physicalPageNumber",
+        "documentStart",
+        "documentEnd",
+        "exactQuoteSha256",
+      ],
+      "HYBRID_SHADOW_PILOT_SOURCE_RANGE_KEYS_INVALID"
+    );
+    if (
+      !Number.isInteger(range.physicalPageNumber) ||
+      range.physicalPageNumber < 1 ||
+      !Number.isInteger(range.documentStart) ||
+      range.documentStart < 0 ||
+      !Number.isInteger(range.documentEnd) ||
+      range.documentEnd <= range.documentStart
+    )
+      throw pilotError(
+        "HYBRID_SHADOW_PILOT_SOURCE_RANGE_INVALID",
+        `${caseId}:${rangeIndex}`
+      );
+    return {
+      physicalPageNumber: range.physicalPageNumber,
+      documentStart: range.documentStart,
+      documentEnd: range.documentEnd,
+      exactQuoteSha256: validateSha256(
+        range.exactQuoteSha256,
+        "HYBRID_SHADOW_PILOT_SOURCE_RANGE_SHA256_INVALID"
+      ),
+    };
+  });
+}
+
+function sourceLocationMatchesRange(source, range) {
+  return (
+    source.physicalPageNumber === range.physicalPageNumber &&
+    source.documentStart >= range.documentStart &&
+    source.documentEnd <= range.documentEnd
+  );
+}
+
 function validateHybridShadowPilot(rawPilot) {
   exactKeys(
     rawPilot,
@@ -147,8 +192,8 @@ function validateHybridShadowPilot(rawPilot) {
           "groundTruth",
           "expectedCandidateDisposition",
           "downstreamExpectation",
-          "acceptedExactQuoteSha256",
-          "knownAdversarialQuoteSha256",
+          "acceptedSourceRanges",
+          "knownAdversarialSourceRanges",
           "note",
         ],
         "HYBRID_SHADOW_PILOT_CASE_KEYS_INVALID"
@@ -209,47 +254,27 @@ function validateHybridShadowPilot(rawPilot) {
           "HYBRID_SHADOW_PILOT_DOWNSTREAM_EXPECTATION_INVALID",
           caseId
         );
-      if (!Array.isArray(pilotCase.acceptedExactQuoteSha256))
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_ORACLE_QUOTES_INVALID",
-          caseId
-        );
-      if (!Array.isArray(pilotCase.knownAdversarialQuoteSha256))
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_ADVERSARIAL_QUOTES_INVALID",
-          caseId
-        );
-      const acceptedExactQuoteSha256 = [
-        ...new Set(
-          pilotCase.acceptedExactQuoteSha256.map((digest) =>
-            validateSha256(
-              digest,
-              "HYBRID_SHADOW_PILOT_ORACLE_QUOTE_SHA256_INVALID"
-            )
-          )
-        ),
-      ];
-      const knownAdversarialQuoteSha256 = [
-        ...new Set(
-          pilotCase.knownAdversarialQuoteSha256.map((digest) =>
-            validateSha256(
-              digest,
-              "HYBRID_SHADOW_PILOT_ADVERSARIAL_QUOTE_SHA256_INVALID"
-            )
-          )
-        ),
-      ];
+      const acceptedSourceRanges = validateSourceRanges(
+        pilotCase.acceptedSourceRanges,
+        "HYBRID_SHADOW_PILOT_ORACLE_RANGES_INVALID",
+        caseId
+      );
+      const knownAdversarialSourceRanges = validateSourceRanges(
+        pilotCase.knownAdversarialSourceRanges,
+        "HYBRID_SHADOW_PILOT_ADVERSARIAL_RANGES_INVALID",
+        caseId
+      );
       const positive = pilotCase.controlClass === "POSITIVE";
       const adversarial = pilotCase.controlClass === "ADVERSARIAL";
       const trueNull = pilotCase.controlClass === "TRUE_NULL";
       if (
         positive !==
           (pilotCase.groundTruth === "RELEVANT_EVIDENCE_EXISTS") ||
-        (positive && acceptedExactQuoteSha256.length === 0) ||
-        (!positive && acceptedExactQuoteSha256.length !== 0) ||
-        (positive && knownAdversarialQuoteSha256.length !== 0) ||
-        (adversarial && knownAdversarialQuoteSha256.length === 0) ||
-        (trueNull && knownAdversarialQuoteSha256.length !== 0) ||
+        (positive && acceptedSourceRanges.length === 0) ||
+        (!positive && acceptedSourceRanges.length !== 0) ||
+        (positive && knownAdversarialSourceRanges.length !== 0) ||
+        (adversarial && knownAdversarialSourceRanges.length === 0) ||
+        (trueNull && knownAdversarialSourceRanges.length !== 0) ||
         (positive &&
           !new Set(["SUFFICIENT", "RELEVANT_NARROW"]).has(
             pilotCase.expectedCandidateDisposition
@@ -280,8 +305,8 @@ function validateHybridShadowPilot(rawPilot) {
         groundTruth: pilotCase.groundTruth,
         expectedCandidateDisposition: pilotCase.expectedCandidateDisposition,
         downstreamExpectation: pilotCase.downstreamExpectation,
-        acceptedExactQuoteSha256,
-        knownAdversarialQuoteSha256,
+        acceptedSourceRanges,
+        knownAdversarialSourceRanges,
         note:
           pilotCase.note === null
             ? null
@@ -415,44 +440,59 @@ function calculateHybridShadowPilotRetrievalMetrics({ pilot, searchReports }) {
 
   const caseResults = cases.map((pilotCase) => {
     const ranking = rankingByCaseId.get(pilotCase.caseId);
-    const rankedHashes = ranking.spans.map(
-      ({ exactQuoteSha256 }) => exactQuoteSha256
+    const rankedSpans = ranking.spans;
+    const rankedAcceptedSpans = ranking.spans.filter(
+      ({ accepted }) => accepted
     );
-    const rankedAcceptedHashes = ranking.spans
-      .filter(({ accepted }) => accepted)
-      .map(({ exactQuoteSha256 }) => exactQuoteSha256);
-    const oracle = new Set(pilotCase.acceptedExactQuoteSha256);
+    const matchesAny = (span, ranges) =>
+      ranges.some((range) => sourceLocationMatchesRange(span, range));
     return {
       caseId: pilotCase.caseId,
       controlClass: pilotCase.controlClass,
       groundTruth: pilotCase.groundTruth,
-      acceptedRetrievalCount: rankedAcceptedHashes.length,
+      acceptedRetrievalCount: rankedAcceptedSpans.length,
       rawRecallAt1:
         pilotCase.controlClass === "POSITIVE"
-          ? rankedHashes.slice(0, 1).some((digest) => oracle.has(digest))
+          ? rankedSpans
+              .slice(0, 1)
+              .some((span) =>
+                matchesAny(span, pilotCase.acceptedSourceRanges)
+              )
           : null,
       rawRecallAt3:
         pilotCase.controlClass === "POSITIVE"
-          ? rankedHashes.slice(0, 3).some((digest) => oracle.has(digest))
+          ? rankedSpans
+              .slice(0, 3)
+              .some((span) =>
+                matchesAny(span, pilotCase.acceptedSourceRanges)
+              )
           : null,
       recallAt1:
         pilotCase.controlClass === "POSITIVE"
-          ? rankedAcceptedHashes.slice(0, 1).some((digest) => oracle.has(digest))
+          ? rankedAcceptedSpans
+              .slice(0, 1)
+              .some((span) =>
+                matchesAny(span, pilotCase.acceptedSourceRanges)
+              )
           : null,
       recallAt3:
         pilotCase.controlClass === "POSITIVE"
-          ? rankedAcceptedHashes.slice(0, 3).some((digest) => oracle.has(digest))
+          ? rankedAcceptedSpans
+              .slice(0, 3)
+              .some((span) =>
+                matchesAny(span, pilotCase.acceptedSourceRanges)
+              )
           : null,
       adversarialFalsePositive:
         pilotCase.controlClass === "TRUE_NULL"
-          ? rankedAcceptedHashes.length > 0
+          ? rankedAcceptedSpans.length > 0
           : null,
       knownAdversarialRetrievedAt3:
         pilotCase.controlClass === "ADVERSARIAL"
-          ? rankedAcceptedHashes
+          ? rankedAcceptedSpans
               .slice(0, 3)
-              .some((digest) =>
-                new Set(pilotCase.knownAdversarialQuoteSha256).has(digest)
+              .some((span) =>
+                matchesAny(span, pilotCase.knownAdversarialSourceRanges)
               )
           : null,
     };
@@ -500,5 +540,6 @@ module.exports = {
   calculateHybridShadowPilotRetrievalMetrics,
   loadHybridShadowPilot,
   pilotCasesForWorksheet,
+  sourceLocationMatchesRange,
   validateHybridShadowPilot,
 };

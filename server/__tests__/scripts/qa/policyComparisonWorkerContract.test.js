@@ -79,8 +79,8 @@ describe("policy comparison worker contract", () => {
     expect(pilotSearch).toContain("HYBRID_SHADOW_PILOT_SEARCH_COMPLETE");
     expect(pilotSearch).toContain("sharedDocumentChunkCount");
     expect(pilotSearch).not.toContain("groundTruth");
-    expect(pilotSearch).not.toContain("acceptedExactQuoteSha256");
-    expect(pilotSearch).not.toContain("knownAdversarialQuoteSha256");
+    expect(pilotSearch).not.toContain("acceptedSourceRanges");
+    expect(pilotSearch).not.toContain("knownAdversarialSourceRanges");
     const pilotRunner = fs.readFileSync(
       path.join(REPOSITORY_ROOT, "run-hybrid-shadow-pilot.command"),
       "utf8"

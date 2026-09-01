@@ -28,7 +28,7 @@ Der Lauf ist fail-closed:
 
 1. Das Pilot-Oracle muss 10 bis 20 eindeutige Fälle und alle Primärlauf-Hashes
    enthalten.
-2. Oracle-Labels und erwartete Quote-Hashes werden nie in Suchquery,
+2. Oracle-Labels und hashgebundene Quellbereiche werden nie in Suchquery,
    Shadow-Worksheet oder Qwen-Prompt übernommen.
 3. Dinghy verarbeitet alle ausgewählten Dokumente vollständig, bevor Qwen
    geladen wird.
