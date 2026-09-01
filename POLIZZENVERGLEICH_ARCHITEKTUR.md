@@ -704,3 +704,37 @@ Quellreview-Hash, Reviewer und Oracle-Version.
 Der implementierte Entwicklungsvertrag ist `CUSTOMER_CORE_5_V7` /
 `CERTIFIED_COVERAGE_ONLY_TYPED_V2`. Die Zertifizierungsregistry ist leer;
 damit ist keine automatische `COVERAGE_ONLY`-Zeile freigegeben.
+
+## 20. Zielvertrag V8: paketbezogene Vergleichswirkung
+
+Der am 2. September 2026 bestätigte Produktvertrag trennt erstmals strikt
+Dokumentprovenienz und Vergleichswirkung:
+
+```text
+Uploadzuordnung A/B
+  -> Paketmitgliedschaft bestimmt Vergleichsseite
+  -> Dokumenttyp, Status, UUID, Seite und Span bleiben Provenienz
+  -> Klauselinhalt bestimmt Wirkung, Scope, Wert, Bedingung und Konflikt
+  -> vollständiger Paket-Nullfund bleibt Rohwirkung UNKNOWN
+  -> getrennte Vergleichsachse: für diesen Vergleich nicht enthalten
+  -> typisierte Zeilenrichtung erzeugt Gleichheit oder punktweisen Vorteil
+```
+
+`documentStatus` und `documentApplicability` werden nicht gelöscht. Sie dürfen
+in einem neuen Ergebnisvertrag aber allein weder Atomidentität noch
+Vergleichsschlüssel oder Reviewstatus unterscheiden. Inhaltliche Aussagen wie
+„optional gegen Mehrprämie“, „nicht vereinbart“, „ersetzt“ oder
+„ausgeschlossen“ bleiben davon unberührt und müssen aus dem gebundenen
+Klauselspan folgen.
+
+Die neue Nullfundwirkung benötigt eine eigene maschinenlesbare Achse. Sie darf
+nur aus einem vollständigen paketweiten Suchaudit entstehen und niemals
+`coverageEffect: EXCLUDED` materialisieren. Beidseitige vollständige
+Abwesenheit ist eine Gleichwertigkeit der Abwesenheit; positiver vollständiger
+Einschluss gegen vollständige Abwesenheit ist ein punktweiser Vorteil. Für
+negative, numerische, gemischte und partielle Zeilen entscheidet eine eigene
+versionierte Bewertungsrichtung.
+
+Dieser Abschnitt beschreibt das beschlossene Ziel. Der aktuelle V7-Code und
+der letzte FE-A06-Lauf verwenden noch den früheren Vertrag. Implementierung,
+Tests, Ergebnis-ID und Mac-Studio-Nachweis stehen aus.

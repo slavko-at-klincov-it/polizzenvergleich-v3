@@ -142,6 +142,8 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260825-029` | Zwei-Polizzen-Vergleich hat aktuelle Produktpriorität                    | `ZIEL`                  | `PROMOTED`    | Strategie und Abnahme primär an dokumentisoliertem A/B-Vergleich ausrichten                                             |
 | `INT-20260825-030` | Bidirektionaler Klauselabgleich als katalogunabhängiger Vergleichspfad   | `IDEE`                  | `IN_PRÜFUNG`  | an einem anonymisierten A/B-Paar gegen manuell markierte Klauselunterschiede falsifizieren                              |
 | `INT-20260831-031` | Fünf Kategorien und ein Einblatt-Kundenexport                            | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | fachliche 224-Zeilen-Abnahme auf unbekannten Paketen getrennt vom Layoutvertrag durchführen                             |
+| `INT-20260901-032` | Jede Zeile entscheidet und einseitig belegter Schutz kann gewinnen       | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | durch den bestätigten Paketvergleichsvertrag `INT-20260902-033` konkretisieren                                           |
+| `INT-20260902-033` | Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich   | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Vergleichsvertrag V8 schrittweise implementieren und auf dem Mac Studio abnehmen                                        |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -2361,6 +2363,74 @@ pauschalen Gesamtsieger.
 - Entscheidung: Richtung akzeptieren, produktive Zeilenaktivierung begrenzen.
 - Kanonischer Ausgang: Entscheidung/Charter-Update nach erster bestandener
   Einzelzertifizierung.
+
+## INT-20260902-033 — Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich
+
+- Erfasst: 2026-09-02
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `PROMOTED`
+- Aussage: Paket A und Paket B sind jeweils die vom Nutzer bereitgestellten
+  Gebäudeversicherungsunterlagen. Angebot, Polizze, Vertrag,
+  Rahmenvereinbarung, Zusatzvertrag, Zusatzangebot, Bedingungen oder Nachtrag
+  bestimmen nur die Provenienz, nicht die grundsätzliche Vergleichswirkung.
+  Ein vollständiger kontrollierter Paket-Nullfund bedeutet auf der getrennten
+  Vergleichsachse „für diesen Vergleich nicht enthalten“. Beidseitig ergibt
+  das eine Gleichwertigkeit der Abwesenheit; ein positiver vollständiger und
+  scopepassender Beleg auf nur einer Seite ergibt einen punktweisen Vorteil.
+- Ist-Wahrheit: `NEIN` für den aktuellen V7-Code; die Produktregel ist
+  bestätigt, Implementierung und Mac-Studio-Abnahme stehen aus.
+- Quelle: ausdrückliche Nutzerkorrektur vom 2. September 2026 nach der
+  gemeinsamen Prüfung der 99 beidseitigen Nullfunde, 38 einseitigen Funde,
+  14 Nichtvergleichbarkeiten und 67 offenen Zeilen.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Dokumenttyp darf echte
+  Paketunterschiede nicht verdecken. Jede vollständig geprüfte Zeile erklärt
+  klar Einschluss, beidseitige Abwesenheit, Vorteil oder verbleibenden
+  fachlichen Blocker.
+- Scope und ausdrückliche Nicht-Ziele: `coverageEffect` bleibt auf
+  Rohfaktenebene unverändert; ein Nullfund ist kein ausdrücklicher Ausschluss.
+  Unvollständige Suche, offene Kandidaten, inhaltliche Optionalität,
+  Ausschlüsse, enger Scope, Widerspruch und explizite Ersetzung bleiben
+  sichtbar. Limits, Selbstbehalte, Ausschlüsse, Bedingungen, Definitionen und
+  gemischte Zeilen benötigen eine typisierte Bewertungsrichtung.
+- Evidenz und Beweisgrenze: Im gebundenen V7-Run sind 99/99
+  `KEIN_DOKUMENTIERTER_VORTEIL` beidseitige vollständige Nullfunde. Die 38
+  Dokumentationsunterschiede bestehen aus 17 vollständig positiven
+  Einschlüssen, vier Ausschlüssen, einer gemischten und 16 partiellen Zeilen.
+  32/67 offene Zeilen enthalten Angebotsfakten, aber keine der 40
+  Paketstatuszeilen wird allein dadurch blockiert.
+- Systembezug: Produktvertrag, Paketmanifest, Prepared Evidence,
+  Paketrollup, Punktentscheidung, Kundendarstellung, XLSX und Metriken;
+  präzisiert `INV-007`, ersetzt die allgemeine Neutralwirkung aus `INV-008`
+  und führt `INV-010` ein.
+- Beziehungen:
+  - erweitert_und_korrigiert -> `INT-20260901-032`
+  - präzisiert -> `ADR-021`, `ADR-022`, `ADR-024`
+  - nutzt_später -> `INT-20260825-025`, `INT-20260825-026`,
+    `INT-20260825-030`
+- Spezialistenurteil:
+  - Local-AI/RAG: Nur ein vollständig ausgeführter, paket- und
+    digestgebundener Suchvertrag darf die Nullfundwirkung aktivieren.
+  - Kunde/Versicherung: Vergleichsseite entsteht durch Uploadzuordnung; der
+    Dokumenttyp allein darf einen belegten Paketinhalt nicht entwerten.
+  - Datenschutz/Betrieb: Dokumenttyp, Quelle, Seite und Span bleiben private
+    Provenienz; keine externe Verarbeitung ist erforderlich.
+  - Kritik/Test: Zeilenrichtung und A/B-Swap-Symmetrie müssen verhindern,
+    dass ein Ausschluss, Teilbeleg oder niedrigeres Limit als Vorteil der
+    falschen Seite erscheint.
+- Hard-Gates: `OFFEN`
+- Bewertung: als verbindlicher Produktvertrag akzeptiert; Umsetzung offen.
+- Evidenzqualität: `NUTZERANGABE` plus `BEOBACHTET_CODE` plus
+  `GEMESSEN_KUNDENHARDWARE`
+- Riskanteste Annahme: False-Negatives eines als vollständig behandelten
+  Alias-/Konzeptvertrags würden direkt die sichtbare Vergleichsentscheidung
+  verändern.
+- Nächster Prüfschritt: neuen versionierten Vergleichsvertrag mit
+  Dokumenttypmatrix, vollständigem/inkomplettem Nullfund, A/B-Swap,
+  Ausschluss-, Scope-, Wert- und adversarialen Varianten implementieren und
+  anschließend den gebundenen Fünfkategorienlauf wiederholen.
+- Entscheidung: akzeptieren und schrittweise implementieren.
+- Kanonischer Ausgang: `ADR-026`, Architektur Abschnitt 20,
+  Projektgedächtnis Abschnitt 17 und aktualisierter Produktcharter.
 
 ## 8. Vorläufige Strategiekarte aus `INT-20260824-002` bis `INT-20260824-006`
 

@@ -855,3 +855,56 @@ Verbindliche Entscheidung:
 Diese Entscheidung ersetzt keine Abnahme. Ohne ausgeführte Regressionen,
 Holdout und fachliche Prüfung darf weder eine Zeile freigeschaltet noch eine
 Qualitäts- oder 99-Prozent-Aussage abgeleitet werden.
+
+## ADR-026: Vergleichspaket vor Dokumenttyp und vollständiger Paket-Nullfund als Vergleichswirkung
+
+**Status:** AKZEPTIERT ALS PRODUKTVERTRAG, IMPLEMENTIERUNG UND MAC-STUDIO-ABNAHME OFFEN
+
+Diese Entscheidung präzisiert ADR-021 und ersetzt die widersprechenden Teile
+von ADR-022 und ADR-024 für neue Ergebnisverträge. Alte Runs und gespeicherte
+Ergebnisse bleiben an ihre damalige Vertrags-ID gebunden.
+
+Verbindliche Entscheidung:
+
+1. Paket A und Paket B sind jeweils die vom Nutzer für den Vergleich
+   bereitgestellten Gebäudeversicherungsunterlagen. Ein Paket darf Angebot,
+   Polizze, Vertrag, Rahmenvereinbarung, Zusatzpolizze, Zusatzvertrag,
+   Zusatzangebot, Bedingungen, Klauselverzeichnis und Nachtrag kombinieren.
+2. Die Paketzuordnung bestimmt die Vergleichsseite. Dokumenttyp und
+   Dokumentstatus bleiben als Provenienz erhalten, bilden allein aber weder
+   einen Comparability Key noch einen Vorteils-, Gleichheits- oder
+   Reviewblocker.
+3. Entscheidend bleibt der Klauselinhalt. Ausdrückliche Optionalität,
+   Nichtvereinbarung, Ausschluss, enger Scope, Widerspruch, Version und
+   nachgewiesene Ersetzung dürfen die Wirkung weiterhin begrenzen.
+4. Mehrere Paketdokumente dürfen gemeinsam belegen. Sie bleiben mit Identität,
+   Typ, Seite und Span getrennt. Dokumenttyp allein bestimmt keinen Rang.
+5. Ein vollständiger kontrollierter Paket-Nullfund bleibt auf Faktenebene
+   `coverageEffect: UNKNOWN`. Auf der getrennten Vergleichsachse erhält er den
+   versionierten Sinn „für diesen Vergleich nicht enthalten“. Ein
+   ausdrücklicher Ausschluss wird damit nicht behauptet.
+6. Vollständiger Paket-Nullfund auf beiden Seiten ergibt eine ausdrückliche
+   Gleichwertigkeit der Abwesenheit, nicht die Behauptung gleicher positiver
+   Deckung.
+7. Ein positiver, vollständiger, konfliktfreier und scopepassender Beleg auf
+   einer Seite gegen vollständigen Paket-Nullfund auf der anderen ergibt den
+   punktweisen Vorteil der belegten Seite. Das gilt unabhängig davon, ob der
+   positive Beleg aus Angebot, Polizze oder Zusatzdokument stammt.
+8. Limits, Selbstbehalte, Ausschlüsse, Bedingungen, Definitionen,
+   Dokumentverweise, gemischte und partielle Zeilen benötigen eine
+   versionierte Bewertungsrichtung. Nichtfinden bedeutet dort nicht
+   automatisch unbegrenzt, Selbstbehalt null oder fehlender Ausschluss.
+9. `SEARCH_INCOMPLETE`, OCR-/Textlücken, offene Occurrences, Kandidaten,
+   Rejects, Komponenten, Konflikte oder abweichende Scopes bleiben
+   `UNKLAR` beziehungsweise `NICHT_VERGLEICHBAR`.
+10. Die neue Semantik benötigt eine neue Produkt-/Ergebnisvertrags-ID. Alte
+    Artefakte werden niemals rückwirkend umgedeutet.
+11. Dokumenteigene Struktur-Discovery ergänzt den festen Katalog über einen
+    Crosswalk und separat sichtbare zusätzliche Klauseln. Unvollständige
+    Überschrifteninventare ersetzen keine bestehenden Ergebniszeilen.
+
+Abnahmegates sind synthetische Dokumenttypmatrix, vollständiger und
+unvollständiger Nullfund, A/B-Swap-Symmetrie, positive, negative,
+adversariale, Ausschluss-, Scope-, Wert-, Konflikt- und Ersetzungsvarianten
+sowie ein gebundener Mac-Studio-Fünfkategorienlauf mit unabhängiger Prüfung
+aller neu entstandenen Vorteile.

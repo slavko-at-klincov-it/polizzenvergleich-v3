@@ -962,3 +962,31 @@ EL und 224 Zeilen. HP wird weder gestartet noch exportiert. Der isolierte
 Mac-Studio-Nachweis umfasst 221 fokussierte Tests; unbekannte HP-Holdouts und
 eine fachliche HP-Freigabe bleiben offen. Details stehen in
 `POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`, Abschnitt 51.
+
+## 17. Bestätigter Paketvergleichsvertrag vom 2. September 2026
+
+Paket A und Paket B sind vom Nutzer frei zusammengestellte
+Gebäudeversicherungs-Vergleichspakete. Angebot, Polizze, Vertrag,
+Rahmenvereinbarung und Zusatzdokumente gehören gleichwertig zur jeweiligen
+Vergleichsseite. Ihr Dokumenttyp bleibt Provenienz, darf aber allein keinen
+Punkt blockieren oder entwerten.
+
+Für neue Ergebnisverträge gilt ein vollständig kontrollierter Paket-Nullfund
+auf der Vergleichsachse als „für diesen Vergleich nicht enthalten“, während
+die Rohwirkung `UNKNOWN` und die Aussage „kein ausdrücklicher Ausschluss
+belegt“ erhalten bleiben. Beidseitige vollständige Abwesenheit soll als solche
+gleichwertig ausgegeben werden. Ein positiver vollständiger und scopepassender
+Beleg gegen vollständige Abwesenheit soll den punktweisen Vorteil der
+belegten Seite ergeben.
+
+Der gebundene V7-Run belegt die Größenordnung des Wechsels: 99 Zeilen sind
+beidseitige vollständige Nullfunde; 38 Zeilen besitzen einen einseitigen Fund,
+davon 17 vollständig positive Einschlüsse, vier Ausschlüsse, eine gemischte
+und 16 partielle Zeilen. Die Dokumenttypneutralität allein löst keine der 40
+Paketstatuszeilen, projiziert aber `VS-07` und `LW-05` als voraussichtlich
+gleichwertig.
+
+Status: Produktregel bestätigt, Code noch nicht umgestellt. Nächster Schritt
+ist die getrennte Implementierung von Dokumenttypneutralität und
+Nullfundwirkung mit jeweils eigenem Commit, Mac-Studio-Test und gebundenem
+Fünfkategorienlauf. Historische Runs bleiben unverändert.
