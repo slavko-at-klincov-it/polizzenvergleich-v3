@@ -1549,6 +1549,16 @@ Kausale Kontrollen:
   Kundenerklärung für `FE-A06`;
 - kein anderer Ergebniszustand, Reviewstatus oder Regelpfad änderte sich.
 
+Eine zweite, unabhängige Read-only-Auswertung prüfte alle 224 Zeilen und 890
+Dokumentartefakte pro Lauf. Neben den oben genannten fachlichen Dateien waren
+auch Triage-Antworten, materialisierte Triage, Effects-Ziele, materialisierte
+Effects, Quellenauswahl, angeforderte Felder, Ergebniszeilen und Ergebnistext
+inhaltlich beziehungsweise bytegenau unverändert. Die 155 verbleibenden
+Datei-Hashunterschiede betrafen ausschließlich Laufzeitmetriken, Zeitstempel,
+Release-ID sowie Lauf- und temporäre Pfade. `packageA`, `packageB`, der
+Legacy-Ausgang und der Legacy-Differenztext änderten sich in keiner der 224
+Zeilen.
+
 Die kumulierte kundenrelevante Zustandsprojektion unterscheidet sich vom
 älteren `4edca52a` in genau drei Zeilen: `VS-19` besitzt einen transparenteren
 Paketstatusgrund, `FE-C02` ist wegen der korrigierten Objektdefinition nicht
