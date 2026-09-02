@@ -64,7 +64,7 @@ function explicitVs35LocalClauseBinding(key, occurrence) {
   const immediatelyBefore = textImmediatelyBeforeOccurrence(occurrence);
   if (!localText || immediatelyBefore === null) return null;
   if (
-    /(?:nicht\s+(?:vorausgesetzt|erforderlich)|keine\s+Voraussetzung|optional|wahlweise|sofern\s+besonders\s+vereinbart)[\s\S]{0,160}$/iu.test(
+    /(?:setzt\s+nicht\s+voraus|nicht\s+(?:vorausgesetzt|erforderlich)|keine\s+Voraussetzung|optional|wahlweise|sofern\s+besonders\s+vereinbart)[\s\S]{0,160}$/iu.test(
       immediatelyBefore
     )
   )
