@@ -2541,8 +2541,7 @@ function buildControlledOccurrenceWorksheet({
                         structuralUnits,
                         occurrencePage: page,
                         context: {
-                          documentStart:
-                            page.start + evidenceContext.pageStart,
+                          documentStart: page.start + evidenceContext.pageStart,
                           documentEnd: page.start + evidenceContext.pageEnd,
                         },
                       }),
