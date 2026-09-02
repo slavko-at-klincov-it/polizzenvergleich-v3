@@ -668,7 +668,7 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
   const operationalCoverage =
     /\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|eingeschlossen|gedeckt|versicherungsschutz|nicht\s+versichert|kein(?:e|en|er|es)?\s+deckung)\b/iu;
   const conditionalOrOptional =
-    /\b(?:sofern|soweit|wenn|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|auf\s+wunsch|gegen\s+(?:mehrpr[aä]mie|mehrbeitrag|zuschlag)|besonders\s+vereinbart)\b/iu;
+    /\b(?:sofern|soweit|wenn|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|auf\s+wunsch|nur\s+bei\s+vereinbarung|gegen\s+(?:mehrpr[aä]mie|mehrbeitrag|zuschlag)|besonders\s+vereinbart)\b/iu;
   const nonCoverageDuty =
     /\b(?:gefahrenerh[oö]hung|anzeige(?:pflicht)?|melden|meldepflicht|obliegenheit)\b/iu;
   const valueOrOverride =
