@@ -65,11 +65,8 @@ describe("FE category recall", () => {
 
   test("FE-E16 recalls causal and coverage-extension obligation wording", () => {
     expect(
-      component(
-        worksheet,
-        "FE-E16",
-        "obligation_breach_consequences"
-      ).occurrences
+      component(worksheet, "FE-E16", "obligation_breach_consequences")
+        .occurrences
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -86,11 +83,7 @@ describe("FE category recall", () => {
 
   test("FE-E16 keeps the resulting release from liability as a separate fact", () => {
     expect(
-      component(
-        worksheet,
-        "FE-E16",
-        "benefit_reduction_or_release"
-      ).occurrences
+      component(worksheet, "FE-E16", "benefit_reduction_or_release").occurrences
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -194,10 +187,7 @@ describe("FE category recall", () => {
               requiredGroups: [
                 { prefixes: ["sauna", "infrarotkabin"] },
                 {
-                  prefixes: [
-                    "gemeinschaftsraum",
-                    "gemeinschaftseinricht",
-                  ],
+                  prefixes: ["gemeinschaftsraum", "gemeinschaftseinricht"],
                 },
               ],
               maxLines: 2,
@@ -239,8 +229,7 @@ describe("FE category recall", () => {
       occurrenceCount: 1,
     });
     expect(recalled.occurrences[0]).toMatchObject({
-      matchedAlias:
-        "CONCEPT_SEARCH:sauna-or-infrared-cabin-in-common-facility",
+      matchedAlias: "CONCEPT_SEARCH:sauna-or-infrared-cabin-in-common-facility",
     });
   });
 

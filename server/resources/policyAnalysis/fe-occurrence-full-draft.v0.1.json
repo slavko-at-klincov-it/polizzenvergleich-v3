@@ -845,10 +845,7 @@
               "requiredGroups": [
                 { "prefixes": ["sauna", "infrarotkabin"] },
                 {
-                  "prefixes": [
-                    "gemeinschaftsraum",
-                    "gemeinschaftseinricht"
-                  ]
+                  "prefixes": ["gemeinschaftsraum", "gemeinschaftseinricht"]
                 }
               ],
               "maxLines": 2,
