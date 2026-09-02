@@ -299,6 +299,54 @@ describe("policy comparison point decision", () => {
     }
   });
 
+  test("validates every raw contributor before deduplicating against absence", () => {
+    const completeAbsence = {
+      evidenceFound: false,
+      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
+      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
+      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+    };
+    const unsafeContributors = [
+      atom("a-option", {
+        sources: [
+          {
+            candidateId: "candidate-a-option",
+            physicalPageNumber: 2,
+            exactText: "Der Baustein ist optional eingeschlossen.",
+          },
+        ],
+      }),
+      atom("a-condition", {
+        sources: [
+          {
+            candidateId: "candidate-a-condition",
+            physicalPageNumber: 2,
+            exactText: "Der Schutz gilt, sofern die Anlage gewartet wird.",
+          },
+        ],
+      }),
+      atom("a-conflict", { conflictState: "ACTIVE_SAME_SCOPE" }),
+      atom("a-unresolved", {
+        unresolvedCandidateIds: ["candidate-unresolved"],
+      }),
+      atom("a-source", { sources: [] }),
+    ];
+
+    for (const unsafe of unsafeContributors) {
+      for (const evidencedAtoms of [
+        [atom("a-safe"), unsafe],
+        [unsafe, atom("a-safe")],
+      ]) {
+        expect(
+          decide(evidencedAtoms, [], { packageB: completeAbsence })
+        ).toMatchObject({
+          outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+          ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+        });
+      }
+    }
+  });
+
   test("treats a general controlled zero match as documentation-only", () => {
     const result = decide([atom("a")], [], {
       packageB: {
@@ -743,7 +791,65 @@ describe("policy comparison point decision", () => {
         ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
         reviewRequired: true,
       });
-      expect(result.reason).toContain("Bedingung oder Ausnahme");
+      expect(result.reason).toContain("Bedingung, Ausnahme oder Optionalität");
+    }
+  });
+
+  test("keeps explicit coverage options fail-closed without matching negated controls", () => {
+    for (const exactText of [
+      "Der Deckungsbaustein ist optional eingeschlossen.",
+      "Die Erweiterung ist wahlweise mitversichert.",
+      "Der Schutz gilt gegen Mehrprämie.",
+      "Die Gefahr ist auf ausdrücklichen Wunsch mitversichert.",
+      "Die Gefahr kann eingeschlossen werden.",
+      "Der Schutz besteht nur bei gesonderter Vereinbarung.",
+    ]) {
+      expect(
+        decide(
+          [atom("a")],
+          [
+            atom("b", {
+              sources: [
+                {
+                  candidateId: "candidate-b",
+                  physicalPageNumber: 2,
+                  exactText,
+                },
+              ],
+            }),
+          ]
+        )
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+        ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+      });
+    }
+
+    for (const exactText of [
+      "Der Deckungsbaustein ist nicht optional, sondern eingeschlossen.",
+      "Der Schutz ist ohne Mehrprämie eingeschlossen.",
+      "Keine gesonderte Vereinbarung ist erforderlich.",
+    ]) {
+      expect(
+        decide(
+          [atom("a")],
+          [
+            atom("b", {
+              sources: [
+                {
+                  candidateId: "candidate-b",
+                  physicalPageNumber: 2,
+                  exactText,
+                },
+              ],
+            }),
+          ]
+        )
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+      });
     }
   });
 

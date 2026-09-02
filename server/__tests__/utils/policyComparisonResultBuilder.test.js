@@ -764,8 +764,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V7",
-      comparisonContractId: "CERTIFIED_COVERAGE_ONLY_TYPED_V2",
+      id: "CUSTOMER_CORE_5_V8_OPTIONALITY_GUARD",
+      comparisonContractId: "OPTIONALITY_GUARDED_TYPED_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
