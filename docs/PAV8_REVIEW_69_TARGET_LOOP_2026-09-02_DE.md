@@ -100,12 +100,13 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `3/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
+Status: `4/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
 echten gezielten Ergebnisweg als `VORTEIL_B`, `EL-11` als
-`NICHT_VERGLEICHBAR` und `FE-C12` als `GLEICHWERTIG` ohne Review entschieden.
-`EL-06` und `EL-12` haben jeweils den gebundenen Zehn-Dokument-Pipeline-Probe
-bestanden, benötigen aber noch die Bestätigung im späteren konsistenten
-Vollvergleich. Zwei Fälle bleiben ohne bestandenen Kandidaten offen.
+`NICHT_VERGLEICHBAR`, `FE-C12` als `GLEICHWERTIG` und `LW-20` in Schritt A als
+`DOKUMENTATIONSUNTERSCHIED` ohne Review entschieden. `EL-06` und `EL-12` haben
+jeweils den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber
+noch die Bestätigung im späteren konsistenten Vollvergleich. Ein Fall bleibt
+ohne bestandenen Kandidaten offen: `VS-35`.
 
 ```text
 VS-35
@@ -2016,3 +2017,166 @@ akzeptierten gezielten Deltas würde die noch unbestätigte Projektion von
 Das ist ausdrücklich keine neue 224-Zeilen-Gesamtmetrik. Ein voller
 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der installierte
 Kundenstand blieb unverändert.
+
+### 10.14 LW-20 Schritt A – Fremdrollen terminal trennen, echten Ausschluss erhalten
+
+#### 10.14.1 Fehlerbild und enger semantischer Vertrag
+
+Die aktuelle LW-v0.8-Suche findet über alle zehn Dokumente genau fünf
+Occurrences für `LW-20 / ground_seepage_or_retained_water / PERIL`:
+
+```text
+DOC-01, Seite 22: Behandlungskosten für nicht versicherte Sachen,
+                  darunter Wasser inklusive Grundwasser
+DOC-02, Seite 20: zwei Grundwasserstellen im Sturm-/Niederschlagswasserscope
+DOC-08, Seite 2:  eine Grundwasserstelle im Sturmversicherungsscope
+DOC-09, Seite 2:  ausdrücklicher Ausschluss durch Grundwasser in den
+                  Leitungswasserbedingungen
+```
+
+DOC-01 benennt Grundwasser als zu behandelnden Stoff nach einem Schaden, nicht
+als versicherte oder ausgeschlossene Gefahr. Die drei Stellen in DOC-02 und
+DOC-08 sind auf die Sturmversicherung begrenzt und beantworten LW-20 nicht.
+Nur DOC-09 ist eine echte Leitungswasserregelung und muss als `EXCLUDED`
+erhalten bleiben. Alias-Recall oder ein zusätzliches Modell waren deshalb
+nicht das Problem; die fehlende terminale Provenienz der vier bereits richtig
+als `MENTION_ONLY` erkannten Fremdstellen blockierte den Paketrollup.
+
+Der neue Vertrag ist ausschließlich an
+`LW / LW-20 / ground_seepage_or_retained_water / PERIL / COVERAGE_ONLY`
+gebunden:
+
+```text
+Terminalvertrag:
+DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_V1
+Entscheidungsbasis:
+LW20_NON_TARGET_GROUNDWATER_OCCURRENCE
+Scope-Proof:
+LW20_LOCAL_ROLE_OR_STORM_SCOPE_V1
+Terminal-Gate:
+deterministicLw20NonTargetOccurrenceTerminal
+```
+
+Akzeptiert werden nur zwei eng nachprüfbare Fremdrollen:
+
+1. ein scope-loser Absatz über Behandlungskosten nicht versicherter Sachen mit
+   Wasser inklusive Grundwasser, Luft und Erdreich und ohne lokale Formulierung
+   `Schäden durch Grundwasser`;
+2. eine Grundwasserschaden- oder -ausschlussstelle unter einem exakt aktuellen
+   Sturmheading oder einem Heading der unmittelbar vorhergehenden physischen
+   Seite.
+
+Quellenoffset, exakter Alias, physische Seite, Candidate-ID, Scopequelle,
+Scope-Key und Occurrence-Digest sind gebunden. Leitungswasserscope,
+Rohrbruch-/Rohrgebrechenbezug, größere Seitendistanz, falsche Seite, falsche
+Offsets, positive, negative, optionale und gemischte echte LW-Regelungen
+bleiben fail-closed. Der ResultBuilder rekonstruiert Text- und Scope-Proof aus
+der Occurrence erneut. Für diesen Vertrag ist ausschließlich Provenienzschema
+V3 zulässig; ein V2-Downgrade wird verworfen.
+
+Produkt- und Testcommits:
+
+```text
+d670652e fix(analysis): certify LW-20 non-target occurrences
+72a8d77f style(analysis): format LW-20 terminal proof
+dd1d599d test(analysis): assert LW-20 audit blocker codes
+```
+
+Das Produktprofil wurde auf
+`CUSTOMER_CORE_5_V23_LW20_NON_TARGET_TERMINAL` erhöht. Katalog, Aliasfamilie,
+Komponentenvertrag und Suchstrategie bleiben unverändert LW v0.8.
+
+#### 10.14.2 Mac-Studio-Regression
+
+```text
+Commit: dd1d599deab4fd6389ca9f9fbc5b8384a5dad377
+Worktree: /private/tmp/pv3-validate-dd1d599d
+Formatprüfung: PASS
+Fokussierte Suites: 8/8 PASS
+Fokussierte Tests: 276/276 PASS
+Breite Regression: 46 Suites und 894 Tests PASS
+```
+
+Vier weitere breite Suites mit 25 Tests besitzen dieselben bereits vor LW-20
+protokollierten historischen Fixturefehler:
+
+- drei Target-QA-/Worksheet-Manifests erwarten eine ältere FE-Katalogbindung;
+- die statische Bedeutungsverteilung erwartet noch `25 COVERAGE_MIXED` und
+  `91 COVERAGE_ONLY` statt der bereits vorher aktuellen `24` und `92`.
+
+Dateien, Fehlerzahl und Fehlersignaturen entsprechen dem dokumentierten
+Vorherlauf; LW-20 erzeugt keine neue breite Regression.
+
+#### 10.14.3 Echter gezielter Zehn-Dokument-Lauf und unabhängiger Replay
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-20-AFTER-DD1D599D-20260902
+Target-Selection-Digest:
+aca3828b4d208c20b8f932311e4ec13011f006bb636e58575fa88d2c9507c718
+Summary:
+summary.private.json
+Summary-Digest:
+1f4331d9ff861b2133de79f84ad7b6f5d34b688e27d4322774f113e913757efd
+Produzentenskript-Digest:
+9dc2f286691fc0323228a906949cdeaa432028f2bcf4b18da6228392d7c7e0b5
+```
+
+Der Lauf erzeugte aus den unveränderten zehn PAV8-Dokumentartefakten neue
+Ein-Zeilen-Worksheets mit dem aktuellen
+`lw-occurrence-full-draft-v0.8`-Vertrag. Alle zehn Triage- und alle zehn
+Prepared-Evidence-Phasen bestanden formal. Es gab null Triage- und null
+Evidence-Qwen-Aufrufe.
+
+Der getrennte Replay-Prozess prüfte Dateimodus `0600`, den auflösbaren Commit,
+den Produzentenskript-Hash, alle Dokument-, Worksheet-, Triage-, Effects- und
+Target-Hashes sowie alle technischen Gates. Danach rekonstruierte er mit den
+produktiven Funktionen erneut Atome, Paketzusammenfassungen und `decidePoint`.
+Seine reale Occurrence-Matrix lautet:
+
+```text
+Rohoccurrences: 5
+Terminal verworfen: 4
+Terminal-Dokumente: DOC-01, DOC-02, DOC-08
+Terminalseiten: DOC-01 S.22; DOC-02 S.20 zweimal; DOC-08 S.2
+Ausgewählte relevante Kandidaten: 1
+Ausgewähltes Dokument: DOC-09, S.2
+Wirkung DOC-09: EXCLUDED
+```
+
+Die produktive Paketentscheidung lautet:
+
+```text
+Paket A: vollständiger kontrollierter Nichtfund
+Paket B: ausdrücklicher Ausschluss durch Grundwasser
+Entscheidung: DOKUMENTATIONSUNTERSCHIED
+Reason: QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE
+Regel: QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2
+Review erforderlich: nein
+```
+
+Das revisionssicher belegte Schritt-A-Delta ist damit:
+
+```text
+LW-20: UNKLAR / MISSING_ONE_SIDE / Review
+    -> DOKUMENTATIONSUNTERSCHIED / QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE
+       / kein Review
+```
+
+Unter Einbeziehung aller bisher akzeptierten gezielten Deltas verschiebt sich
+die weiterhin unbestätigte Projektion von
+`Dokumentationsunterschied 33 / Unklar 64` auf
+`Dokumentationsunterschied 34 / Unklar 63`. Das ist keine neue
+224-Zeilen-Gesamtmetrik.
+
+Schritt B bleibt absichtlich ein eigener Fix: Nach der vom Benutzer
+festgelegten Vergleichssemantik können ein kontrolliert fundloses Paket und
+ein Paket mit ausdrücklichem, paketweit nicht aufgehobenem Ausschluss beide
+als `nicht gedeckt` und damit als `GLEICHWERTIG` bewertet werden. Dafür ist ein
+eigener versionierter, zeilenspezifischer Vergleichsvertrag mit
+Override-/Konfliktprüfung nötig. Eine globale Gleichsetzung von `NOT_FOUND`
+und `EXCLUDED` ist verboten, weil sie bei unvollständiger Suche oder späterer
+positiver Ersatzregel falsche Gleichheit erzeugen würde.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
