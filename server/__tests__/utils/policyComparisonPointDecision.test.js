@@ -1009,8 +1009,8 @@ describe("policy comparison point decision", () => {
       TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID;
     legacyV2Foreign.summary.searchAudit.components[0].terminalRejectionAudit.rejectionDigestSha256 =
       legacyTerminalRejectionSetDigestV2(
-        legacyV2Foreign.summary.searchAudit.components[0]
-          .terminalRejectionAudit.rejections
+        legacyV2Foreign.summary.searchAudit.components[0].terminalRejectionAudit
+          .rejections
       );
     expect(
       decidePoint({

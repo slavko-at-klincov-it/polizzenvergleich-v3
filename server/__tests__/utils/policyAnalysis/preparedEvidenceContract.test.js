@@ -152,8 +152,7 @@ describe("preparedEvidenceContract", () => {
         candidateId: occurrence.candidateId,
         reason: "TRIAGE_MENTION_ONLY",
         terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
-        occurrenceDigestContractId:
-          TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+        occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
         decisionOwner: "SERVER",
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         physicalPageNumber: 2,

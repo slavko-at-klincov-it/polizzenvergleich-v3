@@ -563,8 +563,7 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
           reason: "TRIAGE_MENTION_ONLY",
           terminalRejectionContractId:
             "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
-          occurrenceDigestContractId:
-            TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+          occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
           decisionOwner: "SERVER",
           decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
           physicalPageNumber: 3,
@@ -1628,12 +1627,10 @@ describe("policy comparison result builder", () => {
         proofMode:
           "ALL_OCCURRENCES_DETERMINISTICALLY_NON_CONTRACTUAL_RISK_INFORMATION",
         rejectedOccurrenceCount: 1,
-        rejectionDigestContractId:
-          TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+        rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
         rejections: [
           expect.objectContaining({
-            occurrenceDigestContractId:
-              TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
             sectionScopeSource: "CURRENT_PAGE_HEADING",
             observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
             scopeProofMode:
@@ -1684,9 +1681,9 @@ describe("policy comparison result builder", () => {
       ).not.toHaveProperty(
         "deterministicNonContractualRiskInformationTerminal"
       );
-      expect(
-        tamperedRow.packageB.searchAudit.components[0]
-      ).not.toHaveProperty("terminalRejectionAudit");
+      expect(tamperedRow.packageB.searchAudit.components[0]).not.toHaveProperty(
+        "terminalRejectionAudit"
+      );
       expect(tamperedRow.pointDecision).toMatchObject({
         outcome: "UNKLAR",
         reasonCode: "MISSING_BOTH",

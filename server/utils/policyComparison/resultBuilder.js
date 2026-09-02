@@ -590,8 +590,7 @@ function deterministicTerminalRejectionAudit({
       const occurrence = occurrenceById.get(rejection?.candidateId);
       const occurrencePage =
         occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
-      const sectionScopeSource =
-        occurrence?.sectionScopeHint?.source || null;
+      const sectionScopeSource = occurrence?.sectionScopeHint?.source || null;
       return (
         rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
         rejection?.terminalRejectionContractId !== certifiedTarget.contractId ||
