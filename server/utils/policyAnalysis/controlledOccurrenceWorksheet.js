@@ -863,6 +863,10 @@ function explicitObjectClassificationGovernors(pageText) {
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    // Blank PDF-extraction lines cannot declare an object class. Skipping
+    // them before the deliberately permissive subject grammar also prevents
+    // overlapping whitespace branches from backtracking over long padding.
+    if (isBlankLine(line)) continue;
     const sameLine = line.text.match(/^\s*(.+?)\s*,?\s+das\s+sind\s*:\s*$/iu);
     if (sameLine) {
       addGovernor({
