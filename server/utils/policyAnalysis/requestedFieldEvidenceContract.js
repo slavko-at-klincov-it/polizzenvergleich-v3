@@ -1463,6 +1463,48 @@ function extractRestorationConditionFacts({ occurrence, binding }) {
         normalize: () =>
           "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
       },
+      {
+        pattern:
+          /Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+zur\s+Gänze\s+sichergestellt/giu,
+        normalize: () =>
+          "Gesamtentschädigung nur bei vollständig gesicherter Wiederherstellung oder Wiederbeschaffung",
+      },
+      {
+        pattern:
+          /Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+(?:binnen|innerhalb(?:\s+von)?)\s+(?:3|drei|dreier)\s+Jahren?\s+ab\s+dem\s+(?:Eintritt\s+des\s+Schadenereignisses|Schadendatum|Schadentag)\s+erfolgt/giu,
+        normalize: () =>
+          "Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren ab dem Schadenereignis",
+      },
+      {
+        pattern:
+          /Frist\s+gilt\s+auch\s+gewahrt,?\s+wenn[\s\S]{0,100}?bindende\s+Wiederherstellungs-?\s*(?:bzw\.?|oder)\s*Wiederbeschaffungsaufträge\s+erteilt\s+werden/giu,
+        normalize: () =>
+          "Wiederherstellungsfrist wird durch bindende Wiederherstellungs- oder Wiederbeschaffungsaufträge gewahrt",
+      },
+      {
+        pattern:
+          /Wiederherstellung\s+eines\s+Gebäudes[\s\S]{0,100}?innerhalb\s+der\s+Europäischen\s+Union\s+erfolgt/giu,
+        normalize: () =>
+          "Gebäudewiederherstellung an bisheriger oder anderer Stelle innerhalb der Europäischen Union",
+      },
+      {
+        pattern:
+          /wiederbeschafften\s+(?:bzw\.?|oder)\s+wiederhergestellten\s+Sachen\s+dem\s+gleichen\s+Betriebs-?\s*(?:bzw\.?|oder)\s*Verwendungszweck\s+dienen/giu,
+        normalize: () =>
+          "Wiederbeschaffte oder wiederhergestellte Sachen müssen dem gleichen Betriebs- oder Verwendungszweck dienen",
+      },
+      {
+        pattern:
+          /Im\s+Falle\s+eines\s+Deckungsprozesses\s+wird\s+diese\s+Frist\s+um\s+die\s+Dauer\s+dieses\s+Prozesses\s+erstreckt/giu,
+        normalize: () =>
+          "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
+      },
+      {
+        pattern:
+          /Werden\s+die\s+angeführten\s+Voraussetzungen\s+nicht\s+erfüllt,[\s\S]{0,180}?für\s+Gebäude[\s\S]{0,180}?(?:Verkehrswertes|Zeitwert)/giu,
+        normalize: () =>
+          "Bei Nichterfüllung der Wiederherstellungsbedingungen gilt für Gebäude höchstens Verkehrs- oder Zeitwertentschädigung",
+      },
     ],
   });
 }

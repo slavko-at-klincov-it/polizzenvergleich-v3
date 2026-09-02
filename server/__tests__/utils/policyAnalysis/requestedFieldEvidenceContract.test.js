@@ -2151,6 +2151,88 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("binds the EABS three-year restoration period and separate legal conditions", () => {
+    const text =
+      "9.3 Allgemeine Bestimmungen zur Entschädigung. 9.3.1 Entschädigungsleistung. Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass: a) die Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt ist. b) die Wiederherstellung eines Gebäudes an der bisherigen Stelle oder an anderer Stelle innerhalb der Europäischen Union erfolgt. c) die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren ab dem Eintritt des Schadenereignisses erfolgt. Diese Frist gilt auch gewahrt, wenn innerhalb dieser Frist bindende Wiederherstellungs- bzw. Wiederbeschaffungsaufträge erteilt werden. d) die wiederbeschafften bzw. wiederhergestellten Sachen dem gleichen Betriebs- bzw. Verwendungszweck dienen. Werden die angeführten Voraussetzungen nicht erfüllt, hat der Versicherungsnehmer für Gebäude bei Zerstörung Anspruch auf Ersatz des Verkehrswertes, höchstens jedoch den Zeitwert des Gebäudes. Im Falle eines Deckungsprozesses wird diese Frist um die Dauer dieses Prozesses erstreckt.";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs35-eabs-period",
+      text,
+      exactText:
+        "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren",
+      contextStart: 200,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-35",
+        label: "Wiederherstellungsklausel und Frist für den Wiederaufbau",
+        requestedFields: ["duration", "condition"],
+        components: [
+          {
+            id: "reconstruction_period",
+            label: "Frist für den Wiederaufbau",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs35-eabs-period",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "duration",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue: "3 Jahre",
+              valueType: "DURATION",
+              unit: "YEAR",
+            }),
+          ],
+        },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: expect.arrayContaining([
+            expect.objectContaining({
+              normalizedValue:
+                "Gesamtentschädigung nur bei vollständig gesicherter Wiederherstellung oder Wiederbeschaffung",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren ab dem Schadenereignis",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Wiederherstellungsfrist wird durch bindende Wiederherstellungs- oder Wiederbeschaffungsaufträge gewahrt",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Gebäudewiederherstellung an bisheriger oder anderer Stelle innerhalb der Europäischen Union",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Wiederbeschaffte oder wiederhergestellte Sachen müssen dem gleichen Betriebs- oder Verwendungszweck dienen",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
+            }),
+            expect.objectContaining({
+              normalizedValue:
+                "Bei Nichterfüllung der Wiederherstellungsbedingungen gilt für Gebäude höchstens Verkehrs- oder Zeitwertentschädigung",
+            }),
+          ]),
+        },
+      ],
+    });
+  });
+
   test("rejects unknown or duplicate candidate selections fail-closed", () => {
     const source = occurrence({
       candidateId: "candidate:known",
