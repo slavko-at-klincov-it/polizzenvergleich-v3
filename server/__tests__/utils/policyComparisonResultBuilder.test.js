@@ -922,7 +922,8 @@ function writeLw20AbsenceCategory(
   const exactText = "Grundwasser";
   const contextStart = pageMap[21].start;
   const relativeStart = contextText.indexOf(exactText);
-  const sectionText = "Allgemeine Bedingungen für die Leitungswasserversicherung";
+  const sectionText =
+    "Allgemeine Bedingungen für die Leitungswasserversicherung";
   const sectionStart = contextText.indexOf(sectionText);
   const governorText =
     "Nicht versichert sind Schäden, sofern nicht anders vereinbart:";
@@ -1084,8 +1085,7 @@ function writeLw20AbsenceCategory(
                 contextText,
                 contextDocumentStart: contextStart,
                 candidateBinding: "DIRECT",
-                deterministicBindingBasis:
-                  "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+                deterministicBindingBasis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
                 binding: "DIRECT",
                 role: "COVERAGE",
                 scopePicture: "GENERAL",
@@ -2308,8 +2308,7 @@ describe("policy comparison result builder", () => {
         .find(({ categoryView }) => categoryView === "LW")
         .rows.find(({ categoryId }) => categoryId === "LW-20");
       const audit =
-        comparisonRow.pointDecision
-          .lw20AbsenceDefaultExclusionEqualityAudit;
+        comparisonRow.pointDecision.lw20AbsenceDefaultExclusionEqualityAudit;
 
       expect(comparisonRow.pointDecision).toMatchObject({
         schemaVersion: 6,
@@ -2344,8 +2343,7 @@ describe("policy comparison result builder", () => {
 
     const mutations = [
       (result) => {
-        result.categories[2].rows[0].pointDecision
-          .lw20AbsenceDefaultExclusionEqualityAudit.assessmentDigest =
+        result.categories[2].rows[0].pointDecision.lw20AbsenceDefaultExclusionEqualityAudit.assessmentDigest =
           "a".repeat(64);
       },
       (result) => {
@@ -2360,8 +2358,8 @@ describe("policy comparison result builder", () => {
         const audit =
           result.categories[2].rows[0].pointDecision
             .lw20AbsenceDefaultExclusionEqualityAudit;
-        audit.exclusion.projectedAtoms[0].searchAudit
-          .lw20DefaultExclusionOverrideAudit.status = "REVIEW_REQUIRED";
+        audit.exclusion.projectedAtoms[0].searchAudit.lw20DefaultExclusionOverrideAudit.status =
+          "REVIEW_REQUIRED";
       },
       (result) => {
         result.documents[1].sha256 = "f".repeat(64);
@@ -2382,9 +2380,9 @@ describe("policy comparison result builder", () => {
         const audit =
           result.categories[2].rows[0].pointDecision
             .lw20AbsenceDefaultExclusionEqualityAudit;
-        audit.exclusion.projectedAtoms
-          .find(({ evidencePresence }) => evidencePresence === "FOUND")
-          .searchAudit.lw20DefaultExclusionSourceAudit.source.itemPageStart += 1;
+        audit.exclusion.projectedAtoms.find(
+          ({ evidencePresence }) => evidencePresence === "FOUND"
+        ).searchAudit.lw20DefaultExclusionSourceAudit.source.itemPageStart += 1;
       },
       (result) => {
         result.documents = {};
@@ -2478,8 +2476,7 @@ describe("policy comparison result builder", () => {
     });
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "GLEICHWERTIG",
-      reasonCode:
-        "EQUAL_LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION",
+      reasonCode: "EQUAL_LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION",
       ruleId:
         "LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION_EQUALITY_V1",
       reviewRequired: false,

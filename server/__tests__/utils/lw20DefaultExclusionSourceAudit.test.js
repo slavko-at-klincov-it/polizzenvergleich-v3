@@ -11,8 +11,7 @@ function sha256(value) {
 function sourceFixture({
   itemC = "c) durch Grundwasser, Sickerwasser oder Stauwasser;",
   sectionText = "Allgemeine Bedingungen für die Leitungswasserversicherung",
-  governorText =
-    "Nicht versichert sind Schäden, so ferne nicht anders vereinbart:",
+  governorText = "Nicht versichert sind Schäden, so ferne nicht anders vereinbart:",
 } = {}) {
   const pageText = [
     sectionText,
@@ -183,14 +182,21 @@ describe("LW-20 artifact-bound default exclusion source audit", () => {
   });
 
   test.each([
-    ["wrong scope policy", (fixture) => (fixture.requirement.scopePolicy = "ANY")],
+    [
+      "wrong scope policy",
+      (fixture) => (fixture.requirement.scopePolicy = "ANY"),
+    ],
     [
       "duplicate target candidate",
-      (fixture) => fixture.target.candidates.push(copy(fixture.target.candidates[0])),
+      (fixture) =>
+        fixture.target.candidates.push(copy(fixture.target.candidates[0])),
     ],
     [
       "duplicate worksheet occurrence",
-      (fixture) => fixture.component.occurrences.push(copy(fixture.component.occurrences[0])),
+      (fixture) =>
+        fixture.component.occurrences.push(
+          copy(fixture.component.occurrences[0])
+        ),
     ],
     [
       "candidate offset mismatch",

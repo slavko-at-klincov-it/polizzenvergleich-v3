@@ -89,7 +89,9 @@ function validRequirementContract(contract) {
   return Boolean(
     /^[a-f0-9]{64}$/u.test(String(contract?.digest || "")) &&
       contract?.componentSatisfactionPolicy === "ALL" &&
-      sameJson(contract?.components, [{ id: COMPONENT_ID, factRole: FACT_ROLE }])
+      sameJson(contract?.components, [
+        { id: COMPONENT_ID, factRole: FACT_ROLE },
+      ])
   );
 }
 
@@ -199,10 +201,10 @@ function validB1OverrideAudit(audit, component, expectedDocumentSha256) {
 
   if (
     audit.candidateSetDigestSha256 !==
-      domainDigest(
-        "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_CANDIDATE_SET_V2",
-        []
-      )
+    domainDigest(
+      "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_CANDIDATE_SET_V2",
+      []
+    )
   )
     return false;
   const { assessmentDigestSha256, ...base } = audit;
@@ -652,8 +654,7 @@ function buildLw20AbsenceDefaultExclusionEqualityAudit({
   };
 
   const base = {
-    schemaVersion:
-      LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_AUDIT_SCHEMA_VERSION,
+    schemaVersion: LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_AUDIT_SCHEMA_VERSION,
     contractId: LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_AUDIT_CONTRACT_ID,
     categoryId,
     absentSide,
@@ -713,8 +714,7 @@ function lw20AbsenceDefaultExclusionEqualityDecision(audit) {
     reason: `Gleichwertig: Polizze ${audit.absentSide} besitzt einen vollständig kontrollierten Nichtfund; Polizze ${audit.excludedSide} enthält einen paketweit nicht aufgehobenen Standardausschluss. In beiden Polizzen ist damit für LW-20 keine dokumentierte Deckung belegt. Der kontrollierte Nichtfund von Polizze ${audit.absentSide} wird dabei ausdrücklich nicht als Ausschluss dargestellt.`,
     reviewRequired: false,
     ruleId: LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_RULE_ID,
-    comparisonTreatment:
-      LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT,
+    comparisonTreatment: LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT,
     lw20AbsenceDefaultExclusionEqualityAudit: audit,
     dimensions: [],
   };

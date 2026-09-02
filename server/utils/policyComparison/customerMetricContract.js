@@ -138,7 +138,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function deriveLegacyCustomerReview(result) {

@@ -732,15 +732,14 @@ function componentSearchAudit({
       requirementId: requirement?.id,
       componentId: component?.id,
     });
-  const lw20DefaultExclusionSourceAudit =
-    buildLw20DefaultExclusionSourceAudit({
-      document,
-      documentArtifact,
-      requirement,
-      component,
-      judgement,
-      target,
-    });
+  const lw20DefaultExclusionSourceAudit = buildLw20DefaultExclusionSourceAudit({
+    document,
+    documentArtifact,
+    requirement,
+    component,
+    judgement,
+    target,
+  });
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
       judgement?.coverageEffect === "UNKNOWN" &&
