@@ -332,6 +332,191 @@ describe("preparedEvidenceContract", () => {
     }
   });
 
+  test("server-certifies only locally proven LW-25 mentions inherited from the liability section", () => {
+    const inheritedLiabilitySection = {
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+      text: "8. Gebäude- und Grundstückshaftpflichtversicherung",
+      physicalPageNumber: 17,
+      source: "PRECEDING_PAGE_HEADING",
+    };
+    const gradualMoistureExclusion = {
+      candidateId: "candidate:liability-gradual-moisture-exclusion",
+      matchedAlias: "allmähliche Einwirkung von Feuchtigkeit",
+      pageNumber: 20,
+      physicalPageNumber: 20,
+      documentStart: 40742,
+      documentEnd: 40780,
+      exactText: "allmähliche Einwirkung von Feuchtigkeit",
+      context: {
+        unitType: "PARAGRAPH",
+        text: "Kein Ersatz wird geleistet für Schäden an der Außenseite des Gebäudes wie am Dach, an Fassaden, Fenstern und Türen und durch allmähliche Einwirkung von Feuchtigkeit.",
+      },
+      scopeLead: {
+        text: "Kein Ersatz wird geleistet für Schäden an der Außenseite des Gebäudes.",
+      },
+      pageScopeHints: [],
+      sectionScopeHint: inheritedLiabilitySection,
+    };
+    const gradualLiabilityInclusion = {
+      candidateId: "candidate:liability-gradual-damage-inclusion",
+      matchedAlias: "Allmählichkeitsschäden",
+      pageNumber: 20,
+      physicalPageNumber: 20,
+      documentStart: 41440,
+      documentEnd: 41464,
+      exactText: "Allmählichkeitsschäden",
+      context: {
+        unitType: "LIST_ITEM",
+        text: "Allmählichkeitsschäden. Der Versicherungsschutz bezieht sich in Abänderung von Art. 7.11 AHVB auch auf Schadenersatzverpflichtungen wegen Schäden an Sachen.",
+      },
+      scopeLead: { text: "Allmählichkeitsschäden" },
+      pageScopeHints: [],
+      sectionScopeHint: inheritedLiabilitySection,
+    };
+    const worksheetFor = (occurrences, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "LW" },
+      requirements: [
+        {
+          id: overrides.requirementId || "LW-25",
+          label: "Ausschluss allmählicher oder schleichender Einwirkung",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: overrides.absenceMeaning || "EXCLUSION",
+          components: [
+            {
+              id:
+                overrides.componentId || "gradual_or_creeping_exclusion",
+              label: "Ausschluss allmählicher oder schleichender Einwirkung",
+              factRole: overrides.factRole || "EXCLUSION",
+              occurrences,
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (occurrences, overrides = {}) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(occurrences, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: occurrences.map((occurrence) => ({
+          requirementId: overrides.requirementId || "LW-25",
+          componentId:
+            overrides.componentId || "gradual_or_creeping_exclusion",
+          candidateId: occurrence.candidateId,
+          binding: "MENTION_ONLY",
+        })),
+      })[0];
+
+    const target = targetFor([
+      gradualMoistureExclusion,
+      gradualLiabilityInclusion,
+    ]);
+    expect(target.candidates).toEqual([]);
+    expect(target.unresolvedCandidateIds).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual(
+      expect.arrayContaining(
+        [gradualMoistureExclusion, gradualLiabilityInclusion].map(
+          (occurrence) =>
+            expect.objectContaining({
+              candidateId: occurrence.candidateId,
+              reason: "TRIAGE_MENTION_ONLY",
+              terminalRejectionContractId:
+                "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+              decisionOwner: "SERVER",
+              decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+              physicalPageNumber: 20,
+              sectionScopeSource: "PRECEDING_PAGE_HEADING",
+              observedScopeKeys: ["HAFTPFLICHT_INSURANCE"],
+              scopeProofMode:
+                "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
+              occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+            })
+        )
+      )
+    );
+
+    const adversarial = [
+      {
+        ...gradualMoistureExclusion,
+        sectionScopeHint: {
+          ...inheritedLiabilitySection,
+          source: "CURRENT_PAGE_HEADING",
+        },
+      },
+      {
+        ...gradualMoistureExclusion,
+        sectionScopeHint: {
+          ...inheritedLiabilitySection,
+          text: "Allgemeine Bedingungen für die Haftpflichtversicherung",
+        },
+      },
+      {
+        ...gradualMoistureExclusion,
+        sectionScopeHint: {
+          ...inheritedLiabilitySection,
+          physicalPageNumber: 16,
+        },
+      },
+      {
+        ...gradualMoistureExclusion,
+        context: {
+          ...gradualMoistureExclusion.context,
+          text: `${gradualMoistureExclusion.context.text} Dies gilt auch für Leitungswasserschäden.`,
+        },
+      },
+      {
+        ...gradualMoistureExclusion,
+        context: {
+          unitType: "PARAGRAPH",
+          text: "Kein Ersatz wird für allmähliche Einwirkung von Feuchtigkeit geleistet.",
+        },
+        scopeLead: { text: "Kein Ersatz wird geleistet." },
+      },
+      {
+        ...gradualLiabilityInclusion,
+        context: {
+          unitType: "LIST_ITEM",
+          text: "Allmählichkeitsschäden sind allgemein beschrieben.",
+        },
+      },
+      {
+        ...gradualMoistureExclusion,
+        pageScopeHints: [
+          {
+            scopeKey: "LEITUNGSWASSER_INSURANCE",
+            text: "Leitungswasserversicherung",
+          },
+        ],
+      },
+    ];
+    for (const occurrence of adversarial) {
+      const rejected = targetFor([occurrence]);
+      expect(rejected.candidates).toEqual([]);
+      expect(rejected.serverRejectedCandidates).toEqual([
+        {
+          candidateId: occurrence.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+        },
+      ]);
+    }
+
+    for (const overrides of [
+      { requirementId: "LW-24" },
+      { componentId: "other_component" },
+      { factRole: "DAMAGE" },
+      { absenceMeaning: "COVERAGE_ONLY" },
+    ]) {
+      const rejected = targetFor([gradualMoistureExclusion], overrides);
+      expect(rejected.serverRejectedCandidates).toEqual([
+        {
+          candidateId: gradualMoistureExclusion.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+        },
+      ]);
+    }
+  });
+
   test("does not treat a Pauschalversicherungssumme label as the VS-04 building-sum calculation method", () => {
     const worksheet = {
       candidateOnly: true,

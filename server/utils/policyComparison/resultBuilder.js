@@ -18,6 +18,7 @@ const {
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  certifiedTerminalTarget,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
@@ -547,9 +548,15 @@ function deterministicTerminalRejectionAudit({
   component,
   target,
 }) {
+  const certifiedTarget = certifiedTerminalTarget({
+    categoryView: String(requirement?.id || "").split("-")[0],
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
   const occurrences = component?.occurrences;
   const rejections = target?.serverRejectedCandidates;
   if (
+    !certifiedTarget ||
     !Array.isArray(occurrences) ||
     occurrences.length === 0 ||
     component?.occurrenceCount !== occurrences.length ||
@@ -582,12 +589,15 @@ function deterministicTerminalRejectionAudit({
           DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
         rejection?.decisionOwner !== "SERVER" ||
         rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
-        rejection?.sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        rejection?.sectionScopeSource !==
+          certifiedTarget.sectionScopeSource ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
         !Array.isArray(rejection?.observedScopeKeys) ||
         rejection.observedScopeKeys.length !== 1 ||
-        !String(rejection.observedScopeKeys[0] || "").endsWith("_INSURANCE") ||
+        rejection.observedScopeKeys[0] !== certifiedTarget.otherScopeKey ||
+        (rejection?.scopeProofMode || null) !==
+          certifiedTarget.scopeProofMode ||
         rejection?.occurrenceDigestSha256 !==
           terminalOccurrenceDigest({
             ...occurrenceById.get(rejection?.candidateId),
