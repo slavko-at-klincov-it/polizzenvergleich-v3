@@ -63,6 +63,10 @@ function schema7PackageResult() {
   };
   const result = resultFor([reviewRow]);
   result.schemaVersion = 7;
+  result.productProfile = {
+    id: "CUSTOMER_CORE_5_V8_OPTIONALITY_GUARD",
+    comparisonContractId: "OPTIONALITY_GUARDED_TYPED_V1",
+  };
   result.documents = [
     { uuid: "document-a", side: "A" },
     { uuid: "document-b", side: "B" },
@@ -205,6 +209,103 @@ describe("policy comparison customer metric contract", () => {
       customerReviewRequired: 1,
       pointDecisions: { UNKLAR: 1 },
     });
+  });
+
+  test("requires V2 package audits for the current status-metadata profile", () => {
+    const current = schema7PackageResult();
+    current.schemaVersion = 8;
+    current.productProfile = {
+      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+    };
+    expect(() => validateCustomerComparison(current)).toThrow(
+      "COMPARISON_PACKAGE_REVIEW_AUDIT_VERSION_MISMATCH"
+    );
+
+    current.categories[0].rows[0].pointDecision.packageReviewAudit = {
+      ...current.categories[0].rows[0].pointDecision.packageReviewAudit,
+      schemaVersion: 2,
+      contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
+    };
+    expect(validateCustomerComparison(current)).toMatchObject({
+      customerReviewRequired: 1,
+    });
+
+    current.categories[0].rows[0].pointDecision.packageReviewAudit.blockers[0].observed =
+      {
+        evidencePresence: "FOUND",
+        documentStatus: "PROPOSAL",
+        documentApplicability: "PROPOSED_ONLY",
+        comparisonApplicability: null,
+      };
+    expect(() => validateCustomerComparison(current)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_APPLICABILITY_MISMATCH"
+    );
+
+    const missingObserved = schema7PackageResult();
+    missingObserved.schemaVersion = 8;
+    missingObserved.productProfile = {
+      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+    };
+    missingObserved.categories[0].rows[0].pointDecision.packageReviewAudit = {
+      ...missingObserved.categories[0].rows[0].pointDecision.packageReviewAudit,
+      schemaVersion: 2,
+      contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
+      blockers: [
+        {
+          ...missingObserved.categories[0].rows[0].pointDecision
+            .packageReviewAudit.blockers[0],
+          level: "COMPONENT",
+          componentId: "component",
+          factRole: "BENEFIT",
+          observed: null,
+        },
+      ],
+    };
+    expect(() => validateCustomerComparison(missingObserved)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_OBSERVED_REQUIRED"
+    );
+
+    missingObserved.categories[0].rows[0].pointDecision.packageReviewAudit.blockers[0].observed =
+      {
+        evidencePresence: "FOUND",
+        documentStatus: "ACTIVE",
+        documentApplicability: "UNKNOWN",
+        comparisonApplicability: null,
+      };
+    expect(() => validateCustomerComparison(missingObserved)).toThrow(
+      "PACKAGE_REVIEW_AUDIT_STATUS_PAIR_UNACCOUNTED"
+    );
+  });
+
+  test.each([
+    ["missing profile", null],
+    [
+      "current id without current contract",
+      {
+        id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+        comparisonContractId: "PACKAGE_FIRST_TYPED_V1",
+      },
+    ],
+    [
+      "current contract without current id",
+      {
+        id: "CUSTOMER_CORE_5_V7_PACKAGE_REVIEW_AUDIT",
+        comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+      },
+    ],
+    [
+      "unknown id and contract",
+      { id: "UNKNOWN_PROFILE", comparisonContractId: "UNKNOWN_CONTRACT" },
+    ],
+  ])("rejects %s for schema V8", (_label, productProfile) => {
+    const result = schema7PackageResult();
+    result.schemaVersion = 8;
+    result.productProfile = productProfile;
+    expect(() => validateCustomerComparison(result)).toThrow(
+      /^COMPARISON_PRODUCT_PROFILE_/u
+    );
   });
 
   test("allows stored V5 results only through the explicit legacy adapter", () => {

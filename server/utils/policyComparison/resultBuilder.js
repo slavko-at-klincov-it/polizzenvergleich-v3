@@ -388,6 +388,32 @@ function summarizePackage(
   };
 }
 
+function comparableDocumentedContent(fact) {
+  const text = String(fact?.documentedContent || "");
+  const prefix = {
+    PROPOSAL: "Vorschlag (PROPOSED_ONLY):",
+    FRAMEWORK_TERMS: "Rahmenbedingung (FRAMEWORK_TERMS):",
+  }[fact?.documentStatus];
+  return prefix && text.startsWith(prefix)
+    ? text.slice(prefix.length).trimStart()
+    : text;
+}
+
+function statusNeutralComparable(packageSummary) {
+  const unique = new Map();
+  for (const fact of packageSummary.facts) {
+    const comparableFact = {
+      documentedContent: normalized(comparableDocumentedContent(fact)),
+      coverage: normalized(fact.coverage),
+      coverageAmount: normalized(fact.coverageAmount),
+    };
+    unique.set(JSON.stringify(comparableFact), comparableFact);
+  }
+  return [...unique.values()].sort((left, right) =>
+    JSON.stringify(left).localeCompare(JSON.stringify(right), "de-AT")
+  );
+}
+
 function comparable(packageSummary) {
   return packageSummary.facts
     .map((fact) => ({
@@ -445,9 +471,17 @@ function comparePackages(packageA, packageB) {
       difference:
         "Nur Paket B enthält belegten Inhalt. Ein automatischer Vorteilsschluss ist nicht zulässig.",
     };
+  const comparableView =
+    packageA.reviewStatus === "BELEGT" &&
+    packageB.reviewStatus === "BELEGT" &&
+    [...packageA.facts, ...packageB.facts].some(({ documentStatus }) =>
+      ["FRAMEWORK_TERMS", "PROPOSAL"].includes(documentStatus)
+    )
+      ? statusNeutralComparable
+      : comparable;
   if (
-    JSON.stringify(comparable(packageA)) ===
-    JSON.stringify(comparable(packageB))
+    JSON.stringify(comparableView(packageA)) ===
+    JSON.stringify(comparableView(packageB))
   )
     return {
       outcome: "INHALTLICH_GLEICH",
@@ -698,6 +732,11 @@ function materializeAtomicFacts({
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]
         : [],
+      optionalFields: Array.isArray(requirement?.optionalFields)
+        ? requirement.optionalFields.filter(
+            (field) => !(requirement?.requestedFields || []).includes(field)
+          )
+        : [],
       requirementContractDigest:
         worksheetRequirementContract(worksheet, requirement)?.digest || null,
       declaredComponents: (requirement?.components || []).map(
@@ -922,7 +961,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,

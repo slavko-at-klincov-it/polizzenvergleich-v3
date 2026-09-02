@@ -9,6 +9,14 @@ const {
   hasConditionalOrOptionalCoverageSource,
   operationalEventMode,
 } = require("./comparisonAtomSemantics");
+const {
+  PACKAGE_MEMBER,
+  atomEventMode,
+  atomHasConditionalOrOptionalSource,
+  canonicalComparisonAtoms,
+  comparisonAtomComplete,
+  comparisonFieldSignature,
+} = require("./comparisonAtomCanonicalization");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -198,6 +206,38 @@ function comparisonKey(atom) {
   });
 }
 
+function canonicalComparisonKey(atom) {
+  return JSON.stringify({
+    componentId: atom.componentId,
+    factRole: atom.factRole,
+    selectedScopePicture: atom.selectedScopePicture,
+    scopePolicy: atom.scopePolicy,
+    comparisonApplicability: atom.comparisonApplicability,
+    operationalEventMode: atomEventMode(atom),
+    fields: comparisonFieldSignature(atom).map(
+      ({
+        field,
+        fieldStatus,
+        valueType,
+        unit,
+        limitKind,
+        qualifier,
+        variantScopeKey,
+        componentScopeKey,
+      }) => ({
+        field,
+        fieldStatus,
+        valueType,
+        unit,
+        limitKind,
+        qualifier,
+        variantScopeKey,
+        componentScopeKey,
+      })
+    ),
+  });
+}
+
 function auditSide(atom) {
   return {
     coverageEffect: atom.coverageEffect,
@@ -216,6 +256,31 @@ function auditSide(atom) {
         exactText,
       })
     ),
+  };
+}
+
+function canonicalAuditSide(atom) {
+  return {
+    coverageEffect: atom.coverageEffect,
+    comparisonApplicability: atom.comparisonApplicability,
+    documentApplicability: atom.comparisonApplicability,
+    selectedScopePicture: atom.selectedScopePicture,
+    scopePolicy: atom.scopePolicy,
+    operationalEventMode: atomEventMode(atom),
+    values: comparisonFieldSignature(atom).map(({ field, displayValue }) => ({
+      field,
+      value: displayValue,
+    })),
+    documentUuids: [...new Set(atom.documentUuids || [])].sort(),
+    sources: (atom.sources || []).map(
+      ({ candidateId, physicalPageNumber, exactText, conditionCheckText }) => ({
+        candidateId,
+        physicalPageNumber,
+        exactText,
+        ...(conditionCheckText ? { conditionCheckText } : {}),
+      })
+    ),
+    contributors: atom.comparisonContributors,
   };
 }
 
@@ -333,9 +398,13 @@ function documentationDifference({ evidencedSide, absentPackage }) {
   };
 }
 
-function compareNumericFields(left, right, factRole) {
-  const a = fieldSignature(left.fields);
-  const b = fieldSignature(right.fields);
+function compareNumericFields(left, right, factRole, canonical = false) {
+  const a = canonical
+    ? comparisonFieldSignature(left)
+    : fieldSignature(left.fields);
+  const b = canonical
+    ? comparisonFieldSignature(right)
+    : fieldSignature(right.fields);
   if (a.length !== 1 || b.length !== 1) return null;
   if (
     JSON.stringify({ ...a[0], value: undefined, displayValue: undefined }) !==
@@ -364,16 +433,17 @@ function compareNumericFields(left, right, factRole) {
   return null;
 }
 
-function compareDimension(left, right) {
+function compareDimension(left, right, { canonical = false } = {}) {
   const dimension = {
     categoryId: left.requirementId,
     componentId: left.componentId,
     componentLabel: left.componentLabel,
     factRole: left.factRole,
-    a: auditSide(left),
-    b: auditSide(right),
+    a: canonical ? canonicalAuditSide(left) : auditSide(left),
+    b: canonical ? canonicalAuditSide(right) : auditSide(right),
   };
-  if (comparisonKey(left) !== comparisonKey(right))
+  const keyFor = canonical ? canonicalComparisonKey : comparisonKey;
+  if (keyFor(left) !== keyFor(right))
     return {
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
       reasonCode: "COMPARABILITY_KEY_DIFFERS",
@@ -382,9 +452,13 @@ function compareDimension(left, right) {
     };
 
   if (
-    COVERAGE_ROLES.has(left.factRole) &&
-    (hasConditionalOrOptionalCoverageSource(left) ||
-      hasConditionalOrOptionalCoverageSource(right))
+    (canonical || COVERAGE_ROLES.has(left.factRole)) &&
+    ((canonical
+      ? atomHasConditionalOrOptionalSource(left)
+      : hasConditionalOrOptionalCoverageSource(left)) ||
+      (canonical
+        ? atomHasConditionalOrOptionalSource(right)
+        : hasConditionalOrOptionalCoverageSource(right)))
   )
     return {
       outcome: POINT_OUTCOME.UNCLEAR,
@@ -420,7 +494,7 @@ function compareDimension(left, right) {
   }
 
   if (left.coverageEffect === right.coverageEffect) {
-    const numeric = compareNumericFields(left, right, left.factRole);
+    const numeric = compareNumericFields(left, right, left.factRole, canonical);
     if (numeric)
       return {
         ...numeric,
@@ -520,7 +594,11 @@ function comparisonContext(side) {
       MIXED_OPERATION_MODES: "mehrere Ereignisvarianten",
     }[side.operationalEventMode] || "";
   const eventMode = eventModeLabel ? ` / ${eventModeLabel}` : "";
-  return `${side.documentApplicability || "Geltung unklar"} / ${side.selectedScopePicture || "Scope unklar"}${eventMode}`;
+  const applicability =
+    side.comparisonApplicability === PACKAGE_MEMBER
+      ? "Paketmitglied"
+      : side.documentApplicability || "Geltung unklar";
+  return `${applicability} / ${side.selectedScopePicture || "Scope unklar"}${eventMode}`;
 }
 
 function dimensionReason(dimension) {
@@ -936,16 +1014,22 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
 
   const dimensions = [];
   for (const componentId of componentIds) {
-    const foundA = uniqueAtoms(
-      (groupsA.get(componentId) || []).filter(
-        ({ evidencePresence }) => evidencePresence === "FOUND"
-      )
+    const rawFoundA = (groupsA.get(componentId) || []).filter(
+      ({ evidencePresence }) => evidencePresence === "FOUND"
     );
-    const foundB = uniqueAtoms(
-      (groupsB.get(componentId) || []).filter(
-        ({ evidencePresence }) => evidencePresence === "FOUND"
-      )
+    const rawFoundB = (groupsB.get(componentId) || []).filter(
+      ({ evidencePresence }) => evidencePresence === "FOUND"
     );
+    const canonical = [...rawFoundA, ...rawFoundB].some(
+      ({ documentStatus, documentApplicability }) =>
+        documentStatus !== "ACTIVE" || documentApplicability !== "ACTIVE"
+    );
+    const foundA = canonical
+      ? canonicalComparisonAtoms(rawFoundA)
+      : uniqueAtoms(rawFoundA);
+    const foundB = canonical
+      ? canonicalComparisonAtoms(rawFoundB)
+      : uniqueAtoms(rawFoundB);
     if (foundA.length === 0 || foundB.length === 0)
       return unclear(
         foundA.length === 0 && foundB.length === 0
@@ -960,13 +1044,14 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
         "Unklar: Mehrere unterschiedliche Dokumentfakten betreffen dieselbe Komponente; Rang oder Ersetzung ist nicht belegt.",
         dimensions
       );
-    if (!completeAtom(foundA[0]) || !completeAtom(foundB[0]))
+    const completeFor = canonical ? comparisonAtomComplete : completeAtom;
+    if (!completeFor(foundA[0]) || !completeFor(foundB[0]))
       return unclear(
         "ATOMIC_EVIDENCE_INCOMPLETE",
         "Unklar: Mindestens ein atomarer Fakt ist unvollständig, konfliktbehaftet oder nicht mit einer gültigen Quelle gebunden.",
         dimensions
       );
-    dimensions.push(compareDimension(foundA[0], foundB[0]));
+    dimensions.push(compareDimension(foundA[0], foundB[0], { canonical }));
   }
 
   if (

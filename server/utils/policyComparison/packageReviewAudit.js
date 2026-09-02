@@ -1,5 +1,13 @@
-const PACKAGE_REVIEW_AUDIT_CONTRACT_ID = "PACKAGE_REVIEW_BLOCKERS_V1";
-const PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION = 1;
+const {
+  PACKAGE_MEMBER,
+  comparisonApplicability,
+  semanticComparisonAtomKey,
+} = require("./comparisonAtomCanonicalization");
+
+const PACKAGE_REVIEW_AUDIT_CONTRACT_ID = "PACKAGE_REVIEW_BLOCKERS_V2";
+const PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION = 2;
+const LEGACY_PACKAGE_REVIEW_AUDIT_CONTRACT_ID = "PACKAGE_REVIEW_BLOCKERS_V1";
+const LEGACY_PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION = 1;
 
 const BLOCKER_CODE = Object.freeze({
   MISSING_REQUIRED_COMPONENT: "MISSING_REQUIRED_COMPONENT",
@@ -12,6 +20,8 @@ const BLOCKER_CODE = Object.freeze({
   MULTIPLE_ATOMS_SAME_COMPONENT: "MULTIPLE_ATOMS_SAME_COMPONENT",
   UNRESOLVED_DOCUMENT_PRECEDENCE: "UNRESOLVED_DOCUMENT_PRECEDENCE",
   CONFLICTING_COVERAGE: "CONFLICTING_COVERAGE",
+  DOCUMENT_STATUS_APPLICABILITY_MISMATCH:
+    "DOCUMENT_STATUS_APPLICABILITY_MISMATCH",
   UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER: "UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER",
 });
 
@@ -60,6 +70,7 @@ function observedAtom(atom) {
     documentApplicability: String(atom?.documentApplicability || ""),
     documentRole: String(atom?.documentRole || ""),
     documentStatus: String(atom?.documentStatus || ""),
+    comparisonApplicability: comparisonApplicability(atom),
     selectedCandidateIds: strings(atom?.selectedCandidateIds),
     unresolvedCandidateIds: strings(atom?.unresolvedCandidateIds),
   };
@@ -91,17 +102,7 @@ function canonicalEntries(entries) {
 }
 
 function comparisonAtomKey(atom) {
-  return JSON.stringify({
-    componentId: atom?.componentId,
-    factRole: atom?.factRole,
-    evidencePresence: atom?.evidencePresence,
-    coverageEffect: atom?.coverageEffect,
-    conflictState: atom?.conflictState,
-    requestedFieldStatus: atom?.requestedFieldStatus,
-    selectedScopePicture: atom?.selectedScopePicture,
-    documentApplicability: atom?.documentApplicability,
-    fields: atom?.fields || [],
-  });
+  return semanticComparisonAtomKey(atom);
 }
 
 function validSource(atom) {
@@ -233,6 +234,19 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
       signals.push(
         auditEntry({
           code: SIGNAL_CODE.CONDITIONAL_APPLICABILITY,
+          side,
+          level: LEVEL.COMPONENT,
+          categoryId,
+          atom,
+        })
+      );
+    if (
+      atom.evidencePresence === "FOUND" &&
+      comparisonApplicability(atom) !== PACKAGE_MEMBER
+    )
+      blockers.push(
+        auditEntry({
+          code: BLOCKER_CODE.DOCUMENT_STATUS_APPLICABILITY_MISMATCH,
           side,
           level: LEVEL.COMPONENT,
           categoryId,
@@ -407,7 +421,13 @@ function derivePackageReviewAudit({
 
 function validateEntries(
   entries,
-  { categoryId, allowedCodes, blockedSides, allowedDocumentUuidsBySide }
+  {
+    categoryId,
+    allowedCodes,
+    blockedSides,
+    allowedDocumentUuidsBySide,
+    validateComparisonApplicability,
+  }
 ) {
   if (!Array.isArray(entries))
     auditError("PACKAGE_REVIEW_AUDIT_ARRAY_REQUIRED");
@@ -444,6 +464,21 @@ function validateEntries(
       auditError("PACKAGE_REVIEW_AUDIT_COMPONENT_REQUIRED");
     if (entry.level !== LEVEL.COMPONENT && entry.componentId !== null)
       auditError("PACKAGE_REVIEW_AUDIT_COMPONENT_FORBIDDEN");
+    if (
+      validateComparisonApplicability &&
+      entry.level === LEVEL.COMPONENT &&
+      !entry.observed
+    )
+      auditError("PACKAGE_REVIEW_AUDIT_OBSERVED_REQUIRED", [entry.side]);
+    const derivedComparisonApplicability = entry.observed
+      ? comparisonApplicability(entry.observed)
+      : null;
+    if (
+      validateComparisonApplicability &&
+      entry.observed !== null &&
+      entry.observed?.comparisonApplicability !== derivedComparisonApplicability
+    )
+      auditError("PACKAGE_REVIEW_AUDIT_APPLICABILITY_MISMATCH", [entry.side]);
   }
 }
 
@@ -451,10 +486,21 @@ function validatePackageReviewAudit(
   audit,
   { categoryId, packageAStatus, packageBStatus, allowedDocumentUuidsBySide }
 ) {
-  if (audit?.schemaVersion !== PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION)
+  const knownContractBySchema = new Map([
+    [PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION, PACKAGE_REVIEW_AUDIT_CONTRACT_ID],
+    [
+      LEGACY_PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
+      LEGACY_PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
+    ],
+  ]);
+  if (!knownContractBySchema.has(audit?.schemaVersion))
     auditError("PACKAGE_REVIEW_AUDIT_SCHEMA_MISMATCH", [audit?.schemaVersion]);
-  if (audit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID)
-    auditError("PACKAGE_REVIEW_AUDIT_CONTRACT_MISMATCH", [audit?.contractId]);
+  const expectedContract = knownContractBySchema.get(audit.schemaVersion);
+  if (audit?.contractId !== expectedContract)
+    auditError("PACKAGE_REVIEW_AUDIT_CONTRACT_MISMATCH", [
+      audit?.contractId,
+      expectedContract,
+    ]);
   if (
     audit?.packageStatuses?.A !== packageAStatus ||
     audit?.packageStatuses?.B !== packageBStatus
@@ -473,13 +519,39 @@ function validatePackageReviewAudit(
     allowedCodes: new Set(Object.values(BLOCKER_CODE)),
     blockedSides,
     allowedDocumentUuidsBySide,
+    validateComparisonApplicability:
+      audit.schemaVersion === PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
   });
   validateEntries(audit.signals, {
     categoryId,
     allowedCodes: new Set(Object.values(SIGNAL_CODE)),
     blockedSides,
     allowedDocumentUuidsBySide,
+    validateComparisonApplicability:
+      audit.schemaVersion === PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
   });
+  if (audit.schemaVersion === PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION) {
+    const invalidObservedEntries = [...audit.blockers, ...audit.signals].filter(
+      (entry) =>
+        entry.observed?.evidencePresence === "FOUND" &&
+        comparisonApplicability(entry.observed) !== PACKAGE_MEMBER
+    );
+    for (const entry of invalidObservedEntries) {
+      const accountedFor = audit.blockers.some(
+        (blocker) =>
+          blocker.code ===
+            BLOCKER_CODE.DOCUMENT_STATUS_APPLICABILITY_MISMATCH &&
+          blocker.side === entry.side &&
+          blocker.componentId === entry.componentId &&
+          JSON.stringify(blocker.documentUuids) ===
+            JSON.stringify(entry.documentUuids)
+      );
+      if (!accountedFor)
+        auditError("PACKAGE_REVIEW_AUDIT_STATUS_PAIR_UNACCOUNTED", [
+          entry.side,
+        ]);
+    }
+  }
   for (const side of blockedSides) {
     if (!audit.blockers.some((blocker) => blocker.side === side))
       auditError("PACKAGE_REVIEW_AUDIT_BLOCKED_SIDE_MISSING", [side]);
@@ -489,6 +561,8 @@ function validatePackageReviewAudit(
 
 module.exports = {
   BLOCKER_CODE,
+  LEGACY_PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
+  LEGACY_PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
   PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
   PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
   SIGNAL_CODE,

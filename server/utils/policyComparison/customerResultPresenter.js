@@ -22,7 +22,10 @@ const UNCLEAR_REASON_TEXT = Object.freeze({
   MIXED_DIMENSION_WINNERS:
     "Einzelne Teilaspekte sprechen für unterschiedliche Polizzen; daraus folgt kein einheitlicher Vorteil.",
 });
-const PACKAGE_REVIEW_AUDIT_CONTRACT_ID = "PACKAGE_REVIEW_BLOCKERS_V1";
+const PACKAGE_REVIEW_AUDIT_CONTRACTS = new Map([
+  [1, "PACKAGE_REVIEW_BLOCKERS_V1"],
+  [2, "PACKAGE_REVIEW_BLOCKERS_V2"],
+]);
 const PACKAGE_REVIEW_HINTS = Object.freeze({
   MISSING_REQUIRED_COMPONENT:
     "Mindestens ein erforderlicher Teilpunkt ist nicht vollständig belegt.",
@@ -44,6 +47,8 @@ const PACKAGE_REVIEW_HINTS = Object.freeze({
     "Mehrere Dokumentangaben zum selben Teilpunkt sind noch nicht eindeutig eingeordnet.",
   CONFLICTING_COVERAGE:
     "Mehrere Dokumentangaben zum selben Teilpunkt sind noch nicht eindeutig eingeordnet.",
+  DOCUMENT_STATUS_APPLICABILITY_MISMATCH:
+    "Dokumentstatus und Geltungsart eines Teilpunkts passen noch nicht eindeutig zusammen.",
   UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER:
     "Der offene Prüfgrund konnte technisch noch nicht genauer eingeordnet werden.",
 });
@@ -96,8 +101,9 @@ function packageReviewCustomerExplanation(pointDecision) {
     return null;
   const audit = pointDecision?.packageReviewAudit;
   if (
-    audit?.schemaVersion !== 1 ||
-    audit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID ||
+    !PACKAGE_REVIEW_AUDIT_CONTRACTS.has(audit?.schemaVersion) ||
+    audit?.contractId !==
+      PACKAGE_REVIEW_AUDIT_CONTRACTS.get(audit?.schemaVersion) ||
     !Array.isArray(audit.blockers) ||
     audit.blockers.length === 0
   )

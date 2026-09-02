@@ -45,10 +45,12 @@ function atom(side, overrides = {}) {
     scopePolicy: "GENERAL_REQUIRED",
     documentApplicability: "ACTIVE",
     documentRole: "MAIN_POLICY",
-    documentStatus: "FRAMEWORK_TERMS",
+    documentStatus: "ACTIVE",
     selectedCandidateIds: [candidateId],
     unresolvedCandidateIds: [],
     requestedFieldStatus: "NOT_REQUIRED",
+    requestedFields: [],
+    optionalFields: [],
     componentSatisfactionPolicy: "ALL",
     requirementContractDigest: FIXTURE_REQUIREMENT_DIGEST,
     declaredComponents: FIXTURE_COMPONENTS,
@@ -108,6 +110,7 @@ function scopeLimitAtom(side, selectedScopePicture, overrides = {}) {
     selectedScopePicture,
     scopePolicy: "GENERAL_REQUIRED",
     documentApplicability: "CONDITIONAL",
+    documentStatus: "FRAMEWORK_TERMS",
     selectedCandidateIds: candidateIds,
     requestedFieldStatus: "COMPLETE",
     requestedFields: ["limit"],
@@ -174,6 +177,114 @@ function decideScopeFixture(overrides = {}) {
 }
 
 describe("policy comparison point decision", () => {
+  test("keeps active facts raw and compares framework and proposal facts as package members", () => {
+    const statusAtoms = [
+      atom("active"),
+      atom("framework", {
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+      }),
+      atom("proposal", {
+        documentStatus: "PROPOSAL",
+        documentApplicability: "PROPOSED_ONLY",
+      }),
+    ];
+    const activeResult = decide([atom("left")], [statusAtoms[0]]);
+    expect(activeResult).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      dimensions: [
+        {
+          a: { documentApplicability: "ACTIVE" },
+          b: { documentApplicability: "ACTIVE" },
+        },
+      ],
+    });
+    expect(activeResult.dimensions[0].a).not.toHaveProperty(
+      "comparisonApplicability"
+    );
+    for (const right of statusAtoms.slice(1)) {
+      const result = decide([atom("left")], [right]);
+      expect(result).toMatchObject({
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        reviewRequired: false,
+        dimensions: [
+          {
+            a: { comparisonApplicability: "PACKAGE_MEMBER" },
+            b: {
+              comparisonApplicability: "PACKAGE_MEMBER",
+              documentApplicability: "PACKAGE_MEMBER",
+              contributors: [
+                expect.objectContaining({
+                  documentStatus: right.documentStatus,
+                  documentApplicability: right.documentApplicability,
+                }),
+              ],
+            },
+          },
+        ],
+      });
+    }
+  });
+
+  test("fails closed for equal invalid status pairs and never bypasses TEILBELEGT", () => {
+    const invalidA = atom("invalid-a", {
+      documentStatus: "PROPOSAL",
+      documentApplicability: "ACTIVE",
+    });
+    const invalidB = atom("invalid-b", {
+      documentStatus: "PROPOSAL",
+      documentApplicability: "ACTIVE",
+    });
+    expect(decide([invalidA], [invalidB])).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
+    });
+    expect(
+      decide(
+        [atom("active-unknown-a", { documentApplicability: "UNKNOWN" })],
+        [atom("active-unknown-b", { documentApplicability: "UNKNOWN" })]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
+    });
+    expect(
+      decide([atom("partial-a")], [atom("partial-b")], {
+        packageA: { reviewStatus: "TEILBELEGT" },
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+    });
+  });
+
+  test("keeps the three-contributor decision permutation-stable", () => {
+    const contributors = [
+      atom("active"),
+      atom("framework", {
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+      }),
+      atom("proposal", {
+        documentStatus: "PROPOSAL",
+        documentApplicability: "PROPOSED_ONLY",
+      }),
+    ];
+    const permutations = contributors.flatMap((first, firstIndex) =>
+      contributors
+        .filter((_, index) => index !== firstIndex)
+        .flatMap((second, secondIndex, remaining) => [
+          [first, second, remaining[1 - secondIndex]],
+        ])
+    );
+    const decisions = permutations.map((atomsB) =>
+      decide([atom("left")], atomsB)
+    );
+    expect(new Set(decisions.map(JSON.stringify)).size).toBe(1);
+    expect(decisions[0].outcome).toBe(POINT_OUTCOME.EQUIVALENT);
+    expect(decisions[0].dimensions[0].b.contributors).toHaveLength(3);
+  });
+
   test("prefers explicit inclusion over explicit exclusion in the same atomic scope", () => {
     const result = decide(
       [atom("a", { coverageEffect: "EXCLUDED" })],
@@ -283,13 +394,13 @@ describe("policy comparison point decision", () => {
       searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
       comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
     };
-    for (const documentApplicability of [
-      "CONDITIONAL",
-      "PROPOSED_ONLY",
-      "UNKNOWN",
+    for (const [documentStatus, documentApplicability] of [
+      ["FRAMEWORK_TERMS", "CONDITIONAL"],
+      ["PROPOSAL", "PROPOSED_ONLY"],
+      ["ACTIVE", "UNKNOWN"],
     ]) {
       expect(
-        decide([atom("a", { documentApplicability })], [], {
+        decide([atom("a", { documentStatus, documentApplicability })], [], {
           packageB: completeAbsence,
         })
       ).toMatchObject({
@@ -380,8 +491,8 @@ describe("policy comparison point decision", () => {
         outcome: POINT_OUTCOME.UNCLEAR,
         reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
         packageReviewAudit: {
-          schemaVersion: 1,
-          contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+          schemaVersion: 2,
+          contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
         },
       });
     }
@@ -427,11 +538,13 @@ describe("policy comparison point decision", () => {
       atomsA: [
         scopeLimitAtom("a", "GENERAL", {
           documentApplicability: "ACTIVE",
+          documentStatus: "ACTIVE",
         }),
       ],
       atomsB: [
         scopeLimitAtom("b", "NARROW_ONLY", {
           documentApplicability: "ACTIVE",
+          documentStatus: "ACTIVE",
         }),
       ],
     });
@@ -659,8 +772,8 @@ describe("policy comparison point decision", () => {
       reviewRequired: true,
       ruleId: "FAIL_CLOSED_V1",
       packageReviewAudit: {
-        schemaVersion: 1,
-        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        schemaVersion: 2,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
         packageStatuses: { A: "TEILBELEGT", B: "BELEGT" },
       },
     });
@@ -710,6 +823,44 @@ describe("policy comparison point decision", () => {
         side: "A",
         level: "COMPONENT",
       }),
+    ]);
+  });
+
+  test("does not turn package-member status variants into a multiple-atom blocker", () => {
+    const active = atom("status-active");
+    const proposal = atom("status-proposal", {
+      documentStatus: "PROPOSAL",
+      documentApplicability: "PROPOSED_ONLY",
+    });
+    const result = decide([proposal, active], [atom("b")], {
+      packageA: {
+        reviewStatus: "TEILBELEGT",
+        facts: [
+          {
+            documentUuid: "document-status-active",
+            reviewStatus: "TEILBELEGT",
+          },
+          {
+            documentUuid: "document-status-proposal",
+            reviewStatus: "TEILBELEGT",
+          },
+        ],
+      },
+    });
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      packageReviewAudit: {
+        schemaVersion: 2,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
+      },
+    });
+    expect(result.packageReviewAudit.blockers.map(({ code }) => code)).toEqual([
+      "UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER",
+    ]);
+    expect(result.packageReviewAudit.signals.map(({ code }) => code)).toEqual([
+      "PROPOSED_ONLY",
     ]);
   });
 
@@ -1030,14 +1181,7 @@ describe("policy comparison point decision", () => {
       ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
     });
   });
-  test("treats different applicability, scope and qualifier as not comparable", () => {
-    expect(
-      decide(
-        [atom("a")],
-        [atom("b", { documentApplicability: "PROPOSED_ONLY" })]
-      )
-    ).toMatchObject({ outcome: POINT_OUTCOME.NOT_COMPARABLE });
-
+  test("treats different scope and qualifier as not comparable", () => {
     const limit = (side, qualifier) =>
       atom(side, {
         componentId: "coverage_limit",
@@ -1045,6 +1189,7 @@ describe("policy comparison point decision", () => {
         factRole: "LIMIT",
         coverageEffect: "DEFINED",
         requestedFieldStatus: "COMPLETE",
+        requestedFields: ["limit"],
         fields: [
           {
             field: "limit",
@@ -1080,6 +1225,7 @@ describe("policy comparison point decision", () => {
         factRole,
         coverageEffect: "DEFINED",
         requestedFieldStatus: "COMPLETE",
+        requestedFields: ["limit"],
         fields: [
           {
             field: "limit",
@@ -1120,6 +1266,48 @@ describe("policy comparison point decision", () => {
     ).toMatchObject({
       outcome: POINT_OUTCOME.ADVANTAGE_B,
       ruleId: "LOWER_DEDUCTIBLE_V1",
+    });
+
+    const conditionalLimit = valuedAtom("conditional", "LIMIT", "EUR 6.000");
+    conditionalLimit.documentStatus = "FRAMEWORK_TERMS";
+    conditionalLimit.documentApplicability = "CONDITIONAL";
+    conditionalLimit.sources = [
+      {
+        candidateId: "candidate-conditional",
+        physicalPageNumber: 2,
+        exactText: "Das Limit gilt gegen eine Mehrprämie.",
+      },
+    ];
+    expect(
+      decide([conditionalLimit], [valuedAtom("plain", "LIMIT", "EUR 5.000")])
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+    });
+
+    const conditionalDeductible = valuedAtom(
+      "conditional-deductible",
+      "DEDUCTIBLE",
+      "EUR 1.000"
+    );
+    conditionalDeductible.documentStatus = "PROPOSAL";
+    conditionalDeductible.documentApplicability = "PROPOSED_ONLY";
+    conditionalDeductible.sources = [
+      {
+        candidateId: "candidate-conditional-deductible",
+        physicalPageNumber: 2,
+        exactText: "Der Selbstbehalt gilt gegen eine Mehrprämie.",
+      },
+    ];
+    expect(
+      decide(
+        [conditionalDeductible],
+        [valuedAtom("plain-deductible", "DEDUCTIBLE", "EUR 500")]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
     });
   });
 
@@ -1163,6 +1351,7 @@ describe("policy comparison point decision", () => {
       factRole: "LIMIT",
       coverageEffect: "DEFINED",
       requestedFieldStatus: "COMPLETE",
+      requestedFields: ["limit"],
       fields: [
         {
           field: "limit",

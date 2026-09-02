@@ -31,7 +31,7 @@ describe("policy comparison customer result presenter", () => {
     };
   }
 
-  function packageReviewDecision(blockers, signals = []) {
+  function packageReviewDecision(blockers, signals = [], schemaVersion = 1) {
     return {
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
@@ -39,8 +39,8 @@ describe("policy comparison customer result presenter", () => {
       reviewRequired: true,
       ruleId: "FAIL_CLOSED_V1",
       packageReviewAudit: {
-        schemaVersion: 1,
-        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        schemaVersion,
+        contractId: `PACKAGE_REVIEW_BLOCKERS_V${schemaVersion}`,
         packageStatuses: { A: "BELEGT", B: "TEILBELEGT" },
         blockers,
         signals,
@@ -155,6 +155,15 @@ describe("policy comparison customer result presenter", () => {
     expect(explanation).not.toContain("PROPOSED_ONLY");
   });
 
+  test("presents current V2 and historical V1 package audits identically", () => {
+    const blockers = [auditEntry("MISSING_REQUIRED_COMPONENT")];
+    expect(
+      packageReviewCustomerExplanation(packageReviewDecision(blockers, [], 2))
+    ).toBe(
+      packageReviewCustomerExplanation(packageReviewDecision(blockers, [], 1))
+    );
+  });
+
   test("separates A and B hints without creating additional review counts", () => {
     const explanation = packageReviewCustomerExplanation(
       packageReviewDecision([
@@ -178,5 +187,29 @@ describe("policy comparison customer result presenter", () => {
     expect(text).toContain(
       "Mindestens ein Prüfstatus lässt noch keine sichere Bewertung zu."
     );
+  });
+
+  test.each([
+    [
+      "missing audit version",
+      { schemaVersion: undefined, contractId: undefined },
+    ],
+    [
+      "unknown audit version",
+      { schemaVersion: 3, contractId: "PACKAGE_REVIEW_BLOCKERS_V3" },
+    ],
+    [
+      "mismatched audit contract",
+      { schemaVersion: 2, contractId: "PACKAGE_REVIEW_BLOCKERS_V1" },
+    ],
+  ])("fails closed for %s", (_label, auditOverrides) => {
+    const decision = packageReviewDecision([
+      auditEntry("MISSING_REQUIRED_COMPONENT"),
+    ]);
+    decision.packageReviewAudit = {
+      ...decision.packageReviewAudit,
+      ...auditOverrides,
+    };
+    expect(packageReviewCustomerExplanation(decision)).toBeNull();
   });
 });

@@ -721,6 +721,7 @@ module.exports = {
   DOCUMENT_STATUS,
   PREPARED_EVIDENCE_SCHEMA_VERSION,
   REQUESTED_FIELD_STATUS,
+  applicabilityFor,
   buildDeterministicPreparedEvidenceJudgement,
   buildPreparedEvidenceTargets,
   buildSinglePreparedEvidencePayload,

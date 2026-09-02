@@ -1,8 +1,13 @@
 const { POINT_OUTCOME } = require("./pointDecision");
-const { validatePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
+  PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
+  validatePackageReviewAudit,
+} = require("./packageReviewAudit");
 const {
   packageReviewCustomerExplanation,
 } = require("./customerResultPresenter");
+const { PRODUCT_PROFILE } = require("./productContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -149,6 +154,20 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     ]);
   }
   const totals = result?.totals;
+  const productProfileId = String(result?.productProfile?.id || "");
+  const comparisonContractId = String(
+    result?.productProfile?.comparisonContractId || ""
+  );
+  if (Number(result.schemaVersion) >= 8) {
+    if (
+      productProfileId !== PRODUCT_PROFILE.id ||
+      comparisonContractId !== PRODUCT_PROFILE.comparisonContractId
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  }
   if (totals?.metricContractId !== METRIC_CONTRACT_ID)
     validationError("COMPARISON_METRIC_CONTRACT_MISMATCH", [
       totals?.metricContractId,
@@ -205,13 +224,24 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       if (
         Number(result.schemaVersion) >= 7 &&
         reasonCode === "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
-      )
+      ) {
+        const packageReviewAudit = row.pointDecision?.packageReviewAudit;
+        if (
+          Number(result.schemaVersion) >= 8 &&
+          (packageReviewAudit?.schemaVersion !==
+            PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION ||
+            packageReviewAudit?.contractId !== PACKAGE_REVIEW_AUDIT_CONTRACT_ID)
+        )
+          validationError("COMPARISON_PACKAGE_REVIEW_AUDIT_VERSION_MISMATCH", [
+            rowKey,
+          ]);
         validatePackageReviewAudit(row.pointDecision?.packageReviewAudit, {
           categoryId: row.categoryId,
           packageAStatus: row.packageA?.reviewStatus,
           packageBStatus: row.packageB?.reviewStatus,
           allowedDocumentUuidsBySide,
         });
+      }
     }
     if (
       Number(result.schemaVersion) >= 7 &&

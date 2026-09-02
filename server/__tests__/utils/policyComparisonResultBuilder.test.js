@@ -63,6 +63,11 @@ function writeAtomicCategory(
   const categoryDirectory = path.join(run.outputDirectory, categoryView);
   const requirementId = `${categoryView}-01`;
   const candidateId = `candidate-${run.document.uuid}-${categoryView}`;
+  const documentApplicability = {
+    ACTIVE: "ACTIVE",
+    FRAMEWORK_TERMS: "CONDITIONAL",
+    PROPOSAL: "PROPOSED_ONLY",
+  }[run.document.documentStatus];
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
@@ -73,6 +78,7 @@ function writeAtomicCategory(
           label: "Versicherter Gegenstand",
           requestedFields: [],
           componentSatisfactionPolicy: "ALL",
+          scopePolicy: "GENERAL_REQUIRED",
           negativeSearchPolicy: certified
             ? "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1"
             : "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -115,7 +121,7 @@ function writeAtomicCategory(
           coverageEffect,
           conflictState: "NONE",
           selectedScopePicture: "GENERAL",
-          documentApplicability: "ACTIVE",
+          documentApplicability,
         },
       ],
     })
@@ -158,6 +164,11 @@ function writeScopeLimitCategory(run, selectedScopePicture) {
   const requirementId = "FE-01";
   const componentId = "indirect_lightning_limit";
   const candidateId = `candidate-${run.document.uuid}-${categoryView}`;
+  const documentApplicability = {
+    ACTIVE: "ACTIVE",
+    FRAMEWORK_TERMS: "CONDITIONAL",
+    PROPOSAL: "PROPOSED_ONLY",
+  }[run.document.documentStatus];
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
@@ -198,7 +209,7 @@ function writeScopeLimitCategory(run, selectedScopePicture) {
           coverageEffect: "DEFINED",
           conflictState: "NONE",
           selectedScopePicture,
-          documentApplicability: "CONDITIONAL",
+          documentApplicability,
         },
       ],
     })
@@ -525,6 +536,172 @@ describe("policy comparison result builder", () => {
     expect(comparison.difference).toContain("nicht zulässig");
   });
 
+  test("neutralizes only matching server status prefixes in the derived legacy comparison", () => {
+    const packageA = {
+      evidenceFound: true,
+      reviewStatus: "BELEGT",
+      facts: [
+        {
+          documentedContent: "Gebäudeschutz ist eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000",
+          documentStatus: "ACTIVE",
+        },
+      ],
+    };
+    const packageB = {
+      evidenceFound: true,
+      reviewStatus: "BELEGT",
+      facts: [
+        {
+          documentedContent:
+            "Vorschlag (PROPOSED_ONLY): Gebäudeschutz ist eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000",
+          documentStatus: "PROPOSAL",
+        },
+        {
+          documentedContent:
+            "Rahmenbedingung (FRAMEWORK_TERMS): Gebäudeschutz ist eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "EUR 5.000",
+          documentStatus: "FRAMEWORK_TERMS",
+        },
+      ],
+    };
+    const rawBefore = JSON.stringify(packageB.facts);
+    expect(comparePackages(packageA, packageB).outcome).toBe(
+      "INHALTLICH_GLEICH"
+    );
+    expect(JSON.stringify(packageB.facts)).toBe(rawBefore);
+
+    expect(
+      comparePackages(packageA, {
+        ...packageB,
+        reviewStatus: "TEILBELEGT",
+      }).outcome
+    ).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
+
+    expect(
+      comparePackages(packageA, {
+        evidenceFound: true,
+        reviewStatus: "BELEGT",
+        facts: [packageA.facts[0], { ...packageA.facts[0] }],
+      }).outcome
+    ).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
+
+    const mismatchedPrefix = {
+      evidenceFound: true,
+      reviewStatus: "BELEGT",
+      facts: [
+        {
+          ...packageB.facts[0],
+          documentStatus: "ACTIVE",
+        },
+      ],
+    };
+    expect(comparePackages(packageA, mismatchedPrefix).outcome).toBe(
+      "UNTERSCHIED_FACHLICH_PRÜFEN"
+    );
+  });
+
+  test("materializes active, framework and proposal facts as one BELEGT package-member comparison", () => {
+    const rowOverrides = (prefix = "") =>
+      Object.fromEntries(
+        CATEGORY_ORDER.map((categoryView) => [
+          categoryView,
+          {
+            documentedContent: `${prefix}Versicherter Gegenstand`,
+            coverage: "Ja",
+            source: "PDF-Seite 1",
+            reviewStatus: "BELEGT",
+          },
+        ])
+      );
+    const activeRun = writeRun(root, document("active", "A"), rowOverrides());
+    const proposalRun = writeRun(
+      root,
+      {
+        ...document("proposal", "B", "OTHER"),
+        documentStatus: "PROPOSAL",
+      },
+      rowOverrides("Vorschlag (PROPOSED_ONLY): ")
+    );
+    const frameworkRun = writeRun(
+      root,
+      {
+        ...document("framework", "B", "TERMS"),
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+      rowOverrides("Rahmenbedingung (FRAMEWORK_TERMS): ")
+    );
+    for (const run of [activeRun, proposalRun, frameworkRun])
+      for (const categoryView of CATEGORY_ORDER)
+        writeAtomicCategory(run, categoryView, "INCLUDED");
+
+    for (const run of [activeRun, proposalRun, frameworkRun]) {
+      const worksheetFile = path.join(
+        run.outputDirectory,
+        "VS",
+        "worksheet.private.json"
+      );
+      const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+      worksheet.requirements[0].optionalFields = ["limit"];
+      fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+      const requestedFieldsFile = path.join(
+        run.outputDirectory,
+        "VS",
+        "result",
+        "requested-fields.private.json"
+      );
+      const requested = JSON.parse(
+        fs.readFileSync(requestedFieldsFile, "utf8")
+      );
+      requested.requirements[0].optionalFields = ["limit"];
+      requested.requirements[0].fields = [
+        { field: "limit", status: "NOT_FOUND", facts: [] },
+      ];
+      fs.writeFileSync(requestedFieldsFile, JSON.stringify(requested));
+    }
+
+    const result = buildComparisonResult([
+      activeRun,
+      proposalRun,
+      frameworkRun,
+    ]);
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 5,
+      customerReviewRequired: 0,
+    });
+    for (const row of result.categories.flatMap(({ rows }) => rows)) {
+      expect(row).toMatchObject({
+        outcome: "INHALTLICH_GLEICH",
+        packageA: { reviewStatus: "BELEGT" },
+        packageB: { reviewStatus: "BELEGT" },
+        pointDecision: {
+          outcome: "GLEICHWERTIG",
+          reviewRequired: false,
+        },
+      });
+      expect(row.pointDecision.dimensions[0].b.contributors).toHaveLength(2);
+      expect(
+        row.pointDecision.dimensions[0].b.contributors.map(
+          ({ documentStatus }) => documentStatus
+        )
+      ).toEqual(["FRAMEWORK_TERMS", "PROPOSAL"]);
+    }
+    expect(
+      result.categories.find(({ categoryView }) => categoryView === "VS")
+        .rows[0].pointDecision.dimensions[0].b.contributors[0]
+    ).toMatchObject({
+      optionalFields: ["limit"],
+      fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
+    });
+    expect(
+      result.categories[0].rows[0].packageB.facts[0].documentedContent
+    ).toMatch(/^(?:Vorschlag|Rahmenbedingung)/u);
+  });
+
   test("does not invent precedence for equivalent EUR formatting", () => {
     const packageSummary = summarizePackage([
       {
@@ -764,8 +941,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V8_OPTIONALITY_GUARD",
-      comparisonContractId: "OPTIONALITY_GUARDED_TYPED_V1",
+      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -855,7 +1032,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(7);
+    expect(result.schemaVersion).toBe(8);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -877,7 +1054,7 @@ describe("policy comparison result builder", () => {
     ).toBe(result.totals.rows);
   });
 
-  test("persists schema V7 package review diagnostics without changing the customer outcome", () => {
+  test("persists schema V8 package review diagnostics without changing the customer outcome", () => {
     const runA = writeRun(root, document("a", "A"), {
       VS: {
         documentedContent: "Teilweise belegter Gegenstand",
@@ -908,14 +1085,14 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(7);
+    expect(result.schemaVersion).toBe(8);
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
       reviewRequired: true,
       packageReviewAudit: {
-        schemaVersion: 1,
-        contractId: "PACKAGE_REVIEW_BLOCKERS_V1",
+        schemaVersion: 2,
+        contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
         packageStatuses: { A: "TEILBELEGT", B: "BELEGT" },
       },
     });
@@ -932,7 +1109,7 @@ describe("policy comparison result builder", () => {
     });
   });
 
-  test("materializes a sole scope blocker as a validated V7 non-comparable result", () => {
+  test("materializes a sole scope blocker as a validated V8 non-comparable result", () => {
     const runA = writeRun(root, document("a", "A"), {
       FE: {
         documentedContent: "Allgemeines Limit für indirekten Blitzschlag",
