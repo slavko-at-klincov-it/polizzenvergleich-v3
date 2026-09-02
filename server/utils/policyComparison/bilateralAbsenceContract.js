@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
@@ -35,6 +36,7 @@ const DETERMINISTIC_TERMINAL_GATES = Object.freeze([
   "deterministicOutOfCategoryTerminal",
   "deterministicNonContractualRiskInformationTerminal",
   "deterministicPostLossScaffoldingCostTerminal",
+  "deterministicLw20NonTargetOccurrenceTerminal",
 ]);
 
 function stableValue(value) {
@@ -108,8 +110,10 @@ function validDeterministicTerminalRejection(component, categoryId) {
   if (
     !target ||
     (!legacyV1 && !legacyV2 && !currentV3) ||
-    (target.contractId ===
-      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID &&
+    ([
+      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+      DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+    ].includes(target.contractId) &&
       !currentV3) ||
     (legacyV1 &&
       target.contractId !==

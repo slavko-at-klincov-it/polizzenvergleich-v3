@@ -13,6 +13,8 @@ const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2";
 const DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_V1";
+const DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_V1";
 const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
   "TERMINAL_OCCURRENCE_PROVENANCE_V3";
 const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
@@ -22,12 +24,24 @@ const FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS =
 const FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE =
   "OCCURRENCE_LOCAL_POST_LOSS_GLASS_REPAIR_COST_V1";
 const OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE = "OCCURRENCE_LOCAL_CLAUSE";
+const LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS =
+  "LW20_NON_TARGET_GROUNDWATER_OCCURRENCE";
+const LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE =
+  "LW20_LOCAL_ROLE_OR_STORM_SCOPE_V1";
 
 const POST_LOSS_SCAFFOLDING_COST_TARGETS = Object.freeze({
   "FE:FE-C12:scaffolding": Object.freeze({
     factRole: "INSURED_OBJECT",
     absenceMeaning: "COVERAGE_MIXED",
     scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  }),
+});
+
+const LW20_NON_TARGET_OCCURRENCE_TARGETS = Object.freeze({
+  "LW:LW-20:ground_seepage_or_retained_water": Object.freeze({
+    factRole: "PERIL",
+    absenceMeaning: "COVERAGE_ONLY",
+    scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   }),
 });
 
@@ -109,6 +123,25 @@ function targetKey(categoryView, requirementId, componentId) {
 
 function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
   const key = targetKey(categoryView, requirementId, componentId);
+  const lw20NonTargetContract = LW20_NON_TARGET_OCCURRENCE_TARGETS[key];
+  if (lw20NonTargetContract)
+    return Object.freeze({
+      contractId:
+        DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+      auditProofMode:
+        "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",
+      terminalGate: "deterministicLw20NonTargetOccurrenceTerminal",
+      factRole: lw20NonTargetContract.factRole,
+      absenceMeaning: lw20NonTargetContract.absenceMeaning,
+      allowedObservedScopeKeys: ["STURM_INSURANCE"],
+      sectionScopeSources: [
+        "CURRENT_PAGE_HEADING",
+        "PRECEDING_PAGE_HEADING",
+        OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      ],
+      scopeProofMode: lw20NonTargetContract.scopeProofMode,
+    });
   const postLossScaffoldingCostContract =
     POST_LOSS_SCAFFOLDING_COST_TARGETS[key];
   if (postLossScaffoldingCostContract)
@@ -190,6 +223,16 @@ function feC12ObservedScopeKeys(occurrence) {
   );
 }
 
+function lw20ObservedScopeKeys(occurrence) {
+  return canonicalStrings(
+    [
+      occurrence?.sectionScopeHint?.scopeKey,
+      ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+      ...(occurrence?.pageScopeHints || []).map(({ scopeKey }) => scopeKey),
+    ].filter(Boolean)
+  );
+}
+
 function terminalTargetAcceptsObservedScopes(target, scopes) {
   const canonical = canonicalStrings(scopes);
   return Boolean(
@@ -208,6 +251,26 @@ function terminalTargetAcceptsScopeProof(
   target,
   { sectionScopeSource, observedScopeKeys: scopes }
 ) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
+  ) {
+    const canonical = canonicalStrings(scopes);
+    if (
+      !Array.isArray(scopes) ||
+      JSON.stringify(canonical) !== JSON.stringify(scopes)
+    )
+      return false;
+    if (sectionScopeSource === OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE)
+      return canonical.length === 0;
+    return (
+      ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
+        sectionScopeSource
+      ) &&
+      canonical.length === 1 &&
+      canonical[0] === "STURM_INSURANCE"
+    );
+  }
   if (
     target?.contractId ===
     DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
@@ -347,7 +410,91 @@ function feC12PostLossScaffoldingCostProof(occurrence) {
   };
 }
 
+/**
+ * Proves either a scope-less treatment-cost role mismatch or a tightly bound
+ * storm-section occurrence. Neither proof says anything about LW-20 coverage;
+ * it only certifies that the occurrence is not an LW-20 peril clause.
+ * Role: classify. Side effects: none.
+ */
+function lw20NonTargetOccurrenceProof(occurrence) {
+  const exactText = String(occurrence?.exactText || "");
+  const matchedAlias = String(occurrence?.matchedAlias || "");
+  const localClause = occurrenceLocalClauseText(occurrence);
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  if (
+    !/^(?:Grundwasser|Sickerwasser|Stauwasser)$/iu.test(exactText) ||
+    matchedAlias !== exactText ||
+    !localClause ||
+    !localClause.includes(exactText) ||
+    !Number.isInteger(occurrencePage) ||
+    String(occurrence?.candidateId || "").length === 0 ||
+    !Array.isArray(occurrence?.pageScopeHints)
+  )
+    return null;
+
+  const scopes = lw20ObservedScopeKeys(occurrence);
+  const section = occurrence?.sectionScopeHint || null;
+  const treatmentCostRole = Boolean(
+    section === null &&
+      scopes.length === 0 &&
+      occurrence?.context?.unitType === "PARAGRAPH" &&
+      /Kosten\s+f[üu]r\s+die\s+Behandlung\s+von\s+nicht\s+versicherten\s+Sachen/iu.test(
+        localClause
+      ) &&
+      /Wasser\s*\(\s*inkl\.\s*Grundwasser\s*\)[\s\S]{0,100}?Luft\s+und\s+Erdreich/iu.test(
+        localClause
+      ) &&
+      /werden\s+nicht\s+ersetzt/iu.test(localClause) &&
+      !/Sch[aä]den\s+durch\s+(?:Grundwasser|Sickerwasser|Stauwasser)/iu.test(
+        localClause
+      )
+  );
+  if (treatmentCostRole)
+    return {
+      physicalPageNumber: occurrencePage,
+      sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      observedScopeKeys: [],
+    };
+
+  if (
+    section?.scopeKey !== "STURM_INSURANCE" ||
+    scopes.length !== 1 ||
+    scopes[0] !== "STURM_INSURANCE" ||
+    !["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
+      section?.source
+    ) ||
+    !Number.isInteger(section?.physicalPageNumber)
+  )
+    return null;
+  const pageDistance = occurrencePage - section.physicalPageNumber;
+  if (
+    (section.source === "CURRENT_PAGE_HEADING" && pageDistance !== 0) ||
+    (section.source === "PRECEDING_PAGE_HEADING" && pageDistance !== 1) ||
+    !/(?:Sturmversicherung|Niederschlags-\s*und\s*Schmelzwasser|Hochwasser,\s*Überschwemmung,\s*Lawinen\s*und\s*Muren)/iu.test(
+      String(section.text || "")
+    ) ||
+    !/(?:Sch[aä]den|versicherten\s+Sachen)[\s\S]{0,100}?durch\s+Grundwasser|durch\s+Grundwasser[\s\S]{0,80}?(?:Grundfeuchte|Sturmflut|R[üu]ckstau)/iu.test(
+      localClause
+    ) ||
+    /(?:Leitungswasser(?:versicherung|schaden)?|Rohrbruch|Rohrgebrechen)/iu.test(
+      localClause
+    )
+  )
+    return null;
+  return {
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: section.source,
+    observedScopeKeys: scopes,
+  };
+}
+
 function terminalOccurrenceProof(target, occurrence) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
+  )
+    return lw20NonTargetOccurrenceProof(occurrence);
   if (
     target?.contractId ===
     DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
@@ -668,6 +815,57 @@ function certifyPostLossScaffoldingCostTerminalRejection({
   };
 }
 
+function certifyLw20NonTargetOccurrenceTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+  deterministicBinding,
+}) {
+  const contract =
+    LW20_NON_TARGET_OCCURRENCE_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  const acceptedBinding = Boolean(
+    deterministicBinding?.binding === "MENTION_ONLY" &&
+      [
+        "EXPLICIT_OTHER_CATEGORY_SECTION",
+        "LW20_TREATMENT_COST_OBJECT_NOT_GROUNDWATER_PERIL",
+      ].includes(deterministicBinding?.basis)
+  );
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning ||
+    !acceptedBinding
+  )
+    return null;
+  const proof = lw20NonTargetOccurrenceProof(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!proof || !terminalTargetAcceptsScopeProof(target, proof)) return null;
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+    physicalPageNumber: proof.physicalPageNumber,
+    sectionScopeSource: proof.sectionScopeSource,
+    observedScopeKeys: proof.observedScopeKeys,
+    scopeProofMode: contract.scopeProofMode,
+    occurrenceDigestSha256: terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: contract.scopeProofMode,
+    }),
+  };
+}
+
 function certifyNonContractualRiskInformationTerminalRejection({
   categoryView,
   requirement,
@@ -750,6 +948,7 @@ function certifyNonContractualRiskInformationTerminalRejection({
 
 function certifyDeterministicTerminalRejection(input) {
   return (
+    certifyLw20NonTargetOccurrenceTerminalRejection(input) ||
     certifyPostLossScaffoldingCostTerminalRejection(input) ||
     certifyOtherCategoryTerminalRejection(input) ||
     certifyNonContractualRiskInformationTerminalRejection(input)
@@ -757,6 +956,7 @@ function certifyDeterministicTerminalRejection(input) {
 }
 
 module.exports = {
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
@@ -764,11 +964,14 @@ module.exports = {
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+  LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+  LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
   feC12PostLossScaffoldingCostProof,
+  lw20NonTargetOccurrenceProof,
   legacyTerminalRejectionSetDigestV1,
   legacyTerminalRejectionSetDigestV2,
   terminalOccurrenceProof,

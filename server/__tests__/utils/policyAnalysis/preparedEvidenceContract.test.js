@@ -13,10 +13,13 @@ const {
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 const {
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+  LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+  LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
 } = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
@@ -647,6 +650,208 @@ describe("preparedEvidenceContract", () => {
       documentEnd: realForms[2].occurrence.documentEnd + 1,
     };
     expect(targetFor(offsetTampered).candidates).toHaveLength(1);
+  });
+
+  test("server-certifies only the four real LW-20 non-target occurrence forms", () => {
+    const occurrenceFrom = ({
+      candidateId,
+      text,
+      exactText = "Grundwasser",
+      unitType = "LIST_ITEM",
+      physicalPageNumber,
+      sectionScopeHint = null,
+      pageScopeHints = [],
+    }) => {
+      const contextDocumentStart = physicalPageNumber * 10_000;
+      const relativeStart = text.indexOf(exactText);
+      if (relativeStart < 0) throw new Error("FIXTURE_EXACT_TEXT_MISSING");
+      return {
+        candidateId,
+        matchedAlias: exactText,
+        pageNumber: physicalPageNumber,
+        physicalPageNumber,
+        documentStart: contextDocumentStart + relativeStart,
+        documentEnd: contextDocumentStart + relativeStart + exactText.length,
+        exactText,
+        context: {
+          unitType,
+          documentStart: contextDocumentStart,
+          documentEnd: contextDocumentStart + text.length,
+          text,
+        },
+        scopeLead: { text },
+        pageScopeHints,
+        sectionScopeHint,
+      };
+    };
+    const worksheetFor = (occurrences, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "LW" },
+      requirements: [
+        {
+          id: overrides.requirementId || "LW-20",
+          label: "Grundwasser, Sickerwasser oder Stauwasser",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
+          components: [
+            {
+              id:
+                overrides.componentId || "ground_seepage_or_retained_water",
+              label: "Grundwasser, Sickerwasser oder Stauwasser",
+              factRole: overrides.factRole || "PERIL",
+              occurrences,
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (occurrences, overrides = {}) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(occurrences, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: occurrences.map((occurrence) => ({
+          requirementId: overrides.requirementId || "LW-20",
+          componentId:
+            overrides.componentId || "ground_seepage_or_retained_water",
+          candidateId: occurrence.candidateId,
+          binding: overrides.triageBinding || "DIRECT",
+        })),
+      })[0];
+
+    const currentStormSection = (text, physicalPageNumber) => ({
+      scopeKey: "STURM_INSURANCE",
+      text,
+      source: "CURRENT_PAGE_HEADING",
+      physicalPageNumber,
+    });
+    const realForms = [
+      occurrenceFrom({
+        candidateId: "candidate:lw20:treatment-cost",
+        physicalPageNumber: 22,
+        unitType: "PARAGRAPH",
+        text: "Die Kosten für die Behandlung von nicht versicherten Sachen, z.B. Wasser (inkl. Grundwasser), Luft und Erdreich, werden nicht ersetzt, auch dann nicht, wenn sie mit versicherten Sachen vermischt werden.",
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:lw20:storm-inherited",
+        physicalPageNumber: 20,
+        text: "an den versicherten Sachen durch Grundwasser und Grundfeuchte;",
+        sectionScopeHint: {
+          scopeKey: "STURM_INSURANCE",
+          text: "Niederschlags- und Schmelzwasser 64PA0051",
+          source: "PRECEDING_PAGE_HEADING",
+          physicalPageNumber: 19,
+        },
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:lw20:storm-current-proposal",
+        physicalPageNumber: 20,
+        text: "Schäden an den versicherten Sachen durch Grundwasser, Grundfeuchte, Sturmflut und dauernde Witterungseinflüsse;",
+        sectionScopeHint: currentStormSection(
+          "Hochwasser, Überschwemmung, Lawinen und Muren 64PA0061",
+          20
+        ),
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:lw20:storm-current-terms",
+        physicalPageNumber: 2,
+        text: "Nicht versichert sind Schäden durch Grundwasser, Sturmflut, Rückstau aus diesen Ereignissen sowie Grundfeuchtigkeit.",
+        sectionScopeHint: currentStormSection(
+          "Allgemeine Bedingungen für die Sturmversicherung",
+          2
+        ),
+        pageScopeHints: [
+          { scopeKey: "STURM_INSURANCE", text: "die Sturmversicherung" },
+        ],
+      }),
+    ];
+    const target = targetFor(realForms);
+    expect(target.candidates).toEqual([]);
+    expect(target.unresolvedCandidateIds).toEqual([]);
+    expect(target.serverRejectedCandidates).toHaveLength(4);
+    expect(target.serverRejectedCandidates).toEqual(
+      expect.arrayContaining(
+        realForms.map((occurrence) =>
+          expect.objectContaining({
+            candidateId: occurrence.candidateId,
+            reason: "TRIAGE_MENTION_ONLY",
+            terminalRejectionContractId:
+              DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            decisionOwner: "SERVER",
+            decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+            physicalPageNumber: occurrence.physicalPageNumber,
+            scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+            occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          })
+        )
+      )
+    );
+    expect(target.serverRejectedCandidates[0]).toMatchObject({
+      sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      observedScopeKeys: [],
+    });
+
+    const relevant = [
+      "Versichert sind Schäden durch Grundwasser.",
+      "Nicht versichert sind Schäden durch Grundwasser.",
+      "Schäden durch Grundwasser sind optional mitversichert.",
+      "Schäden durch Grundwasser sind mitversichert, Behandlungskosten für Erdreich jedoch nicht.",
+    ];
+    for (const [index, text] of relevant.entries()) {
+      const occurrence = occurrenceFrom({
+        candidateId: `candidate:lw20:relevant:${index}`,
+        physicalPageNumber: 2,
+        text,
+        sectionScopeHint: {
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+          text: "Allgemeine Bedingungen für die Leitungswasserversicherung",
+          source: "CURRENT_PAGE_HEADING",
+          physicalPageNumber: 2,
+        },
+      });
+      expect(targetFor([occurrence]).serverRejectedCandidates).not.toEqual([
+        expect.objectContaining({
+          terminalRejectionContractId:
+            DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+        }),
+      ]);
+    }
+
+    for (const occurrence of [
+      {
+        ...realForms[1],
+        sectionScopeHint: {
+          ...realForms[1].sectionScopeHint,
+          physicalPageNumber: 18,
+        },
+      },
+      {
+        ...realForms[2],
+        sectionScopeHint: {
+          ...realForms[2].sectionScopeHint,
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+        },
+      },
+      {
+        ...realForms[2],
+        physicalPageNumber: 21,
+        pageNumber: 21,
+      },
+      {
+        ...realForms[0],
+        documentStart: realForms[0].documentStart + 1,
+        documentEnd: realForms[0].documentEnd + 1,
+      },
+    ]) {
+      const adversarialTarget = targetFor([occurrence]);
+      expect(adversarialTarget.serverRejectedCandidates).not.toEqual([
+        expect.objectContaining({
+          terminalRejectionContractId:
+            DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+        }),
+      ]);
+    }
   });
 
   test("server-certifies only locally proven LW-25 mentions inherited from the liability section", () => {

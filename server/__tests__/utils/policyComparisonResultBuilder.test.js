@@ -17,10 +17,13 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+  LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+  LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
@@ -894,6 +897,210 @@ function writeFeC12AbsenceCategory(run, { postLossCost = false } = {}) {
   );
 }
 
+function writeLw20AbsenceCategory(
+  run,
+  { treatmentCost = false, excluded = false } = {}
+) {
+  const categoryView = "LW";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "LW-20";
+  const componentId = "ground_seepage_or_retained_water";
+  const contextText = excluded
+    ? "Nicht versichert sind Schäden durch Grundwasser, Sickerwasser oder Stauwasser."
+    : "Die Kosten für die Behandlung von nicht versicherten Sachen, z.B. Wasser (inkl. Grundwasser), Luft und Erdreich, werden nicht ersetzt, auch dann nicht, wenn sie mit versicherten Sachen vermischt werden.";
+  const exactText = "Grundwasser";
+  const contextStart = 46_775;
+  const relativeStart = contextText.indexOf(exactText);
+  const occurrence = {
+    candidateId: `candidate:lw20-${excluded ? "excluded" : "treatment-cost"}:${run.document.uuid}`,
+    matchedAlias: exactText,
+    pageNumber: 22,
+    physicalPageNumber: 22,
+    documentStart: contextStart + relativeStart,
+    documentEnd: contextStart + relativeStart + exactText.length,
+    exactText,
+    context: {
+      unitType: "PARAGRAPH",
+      documentStart: contextStart,
+      documentEnd: contextStart + contextText.length,
+      text: contextText,
+    },
+    scopeLead: { text: contextText.slice(0, relativeStart) },
+    pageScopeHints: excluded
+      ? [
+          {
+            scopeKey: "LEITUNGSWASSER_INSURANCE",
+            text: "Allgemeine Bedingungen für die Leitungswasserversicherung",
+          },
+        ]
+      : [],
+    sectionScopeHint: excluded
+      ? {
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+          text: "Allgemeine Bedingungen für die Leitungswasserversicherung",
+          source: "CURRENT_PAGE_HEADING",
+          physicalPageNumber: 22,
+        }
+      : null,
+  };
+  const rejection = {
+    candidateId: occurrence.candidateId,
+    reason: "TRIAGE_MENTION_ONLY",
+    terminalRejectionContractId:
+      DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+    physicalPageNumber: 22,
+    sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+    observedScopeKeys: [],
+    scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+    occurrenceDigestSha256: terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+    }),
+  };
+
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 22,
+          processedPages: 22,
+          pagesWithText: 22,
+          complete: true,
+        },
+      },
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "lw-occurrence-full-draft-v0.8", categoryView },
+      document: { physicalPages: 22 },
+      summary: { componentCount: 1 },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Grundwasser, Sickerwasser oder Stauwasser",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_ONLY",
+          components: [
+            {
+              id: componentId,
+              label: "Grundwasser, Sickerwasser oder Stauwasser",
+              factRole: "PERIL",
+              aliases: ["Grundwasser", "Sickerwasser", "Stauwasser"],
+              terminalState: treatmentCost || excluded
+                ? "CONTROLLED_CANDIDATES_FOUND"
+                : "NO_CONTROLLED_CANDIDATE",
+              occurrenceCount: treatmentCost || excluded ? 1 : 0,
+              occurrences: treatmentCost || excluded ? [occurrence] : [],
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId: `prepared-target:${requirementId}:${componentId}`,
+          requirementId,
+          componentId,
+          selectedCandidateIds: excluded ? [occurrence.candidateId] : [],
+          unresolvedCandidateIds: [],
+          evidencePresence: excluded ? "FOUND" : "NOT_FOUND",
+          coverageEffect: excluded ? "EXCLUDED" : "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: excluded ? "GENERAL" : "UNKNOWN",
+          documentApplicability: excluded ? "ACTIVE" : "UNKNOWN",
+          decisionOwner: "SERVER",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId: `prepared-target:${requirementId}:${componentId}`,
+        requirementId,
+        componentId,
+        factRole: "PERIL",
+        candidates: excluded
+          ? [
+              {
+                ...occurrence,
+                binding: "DIRECT",
+                role: "COVERAGE",
+                scopePicture: "GENERAL",
+                effect: "EXCLUDED",
+              },
+            ]
+          : [],
+        serverRejectedCandidates: treatmentCost ? [rejection] : [],
+        unresolvedCandidateIds: [],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "rows.private.json"),
+    JSON.stringify([
+      row(
+        requirementId,
+        excluded
+          ? {
+              documentedContent: contextText,
+              coverage: "Nein",
+              source: `S. ${occurrence.physicalPageNumber}: ${contextText}`,
+              reviewStatus: "BELEGT",
+            }
+          : {}
+      ),
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: excluded ? "PASS" : "TECHNICAL_PASS_REVIEW_REQUIRED",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
 describe("policy comparison result builder", () => {
   test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
     const candidateId = "candidate:fe-c07-result-builder";
@@ -1497,7 +1704,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V22_FE_C12_POST_LOSS_SCAFFOLDING_TERMINAL",
+      id: "CUSTOMER_CORE_5_V23_LW20_NON_TARGET_TERMINAL",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
@@ -2026,6 +2233,116 @@ describe("policy comparison result builder", () => {
     expect(tamperedRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "MISSING_BOTH",
+    });
+  });
+
+  test("revalidates LW-20 non-target terminals and reports the excluded counterpart as a documentation difference", () => {
+    const runA = writeRun(root, document("a", "A"));
+    const runB = writeRun(root, document("b", "B"));
+    writeLw20AbsenceCategory(runA, { treatmentCost: true });
+    writeLw20AbsenceCategory(runB, { excluded: true });
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories
+      .find(({ categoryView }) => categoryView === "LW")
+      .rows.find(({ categoryId }) => categoryId === "LW-20");
+    const componentAudit = comparisonRow.packageA.searchAudit.components[0];
+
+    expect(componentAudit).toMatchObject({
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      gates: {
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+        deterministicLw20NonTargetOccurrenceTerminal: true,
+      },
+      terminalRejectionAudit: {
+        schemaVersion: 3,
+        contractId:
+          DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+        requirementId: "LW-20",
+        componentId: "ground_seepage_or_retained_water",
+        decisionOwner: "SERVER",
+        decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+        proofMode:
+          "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",
+        rejectedOccurrenceCount: 1,
+        rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+        rejections: [
+          expect.objectContaining({
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+            observedScopeKeys: [],
+            scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+          }),
+        ],
+      },
+    });
+    expect(comparisonRow.packageB).toMatchObject({
+      evidenceFound: true,
+      coverage: "Nein",
+    });
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "DOKUMENTATIONSUNTERSCHIED",
+      reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
+      reviewRequired: false,
+      unilateralCoverageAbsenceAudit: {
+        eligible: false,
+        absentSide: "A",
+        evidencedSide: "B",
+      },
+    });
+    expect(() => validateCustomerComparison(result)).not.toThrow();
+
+    const targetsFile = path.join(
+      runA.outputDirectory,
+      "LW",
+      "effects",
+      "targets.private.json"
+    );
+    const worksheetFile = path.join(
+      runA.outputDirectory,
+      "LW",
+      "worksheet.private.json"
+    );
+    const targets = JSON.parse(fs.readFileSync(targetsFile, "utf8"));
+    const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+    const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+    occurrence.context.text = occurrence.context.text.replace(
+      "nicht versicherten Sachen",
+      "versicherten Sachen"
+    );
+    occurrence.context.documentEnd =
+      occurrence.context.documentStart + occurrence.context.text.length;
+    const rejection = targets[0].serverRejectedCandidates[0];
+    rejection.occurrenceDigestSha256 = terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+    });
+    fs.writeFileSync(targetsFile, JSON.stringify(targets));
+    fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+
+    const tamperedResult = buildComparisonResult([runA, runB]);
+    const tamperedRow = tamperedResult.categories
+      .find(({ categoryView }) => categoryView === "LW")
+      .rows.find(({ categoryId }) => categoryId === "LW-20");
+    expect(tamperedRow.packageA.searchAudit.components[0]).toMatchObject({
+      disposition: "SEARCH_INCOMPLETE",
+      gates: {
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+      },
+    });
+    expect(
+      tamperedRow.packageA.searchAudit.components[0].gates
+    ).not.toHaveProperty("deterministicLw20NonTargetOccurrenceTerminal");
+    expect(
+      tamperedRow.packageA.searchAudit.components[0]
+    ).not.toHaveProperty("terminalRejectionAudit");
+    expect(tamperedRow.pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "MISSING_ONE_SIDE",
+      reviewRequired: true,
     });
   });
 

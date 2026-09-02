@@ -3,9 +3,12 @@ const {
   decidePoint,
 } = require("../../utils/policyComparison/pointDecision");
 const {
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+  LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
@@ -1665,6 +1668,206 @@ describe("policy comparison point decision", () => {
       Object.keys(audit).forEach((key) => delete audit[key]);
       Object.assign(audit, original);
     }
+  });
+
+  test("accepts LW-20 non-target absence only as schema v3 and keeps an explicit exclusion ineligible for advantage", () => {
+    const categoryId = "LW-20";
+    const component = {
+      id: "ground_seepage_or_retained_water",
+      factRole: "PERIL",
+    };
+    const requirementContract = {
+      digest: "9".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const searchPlanId = `fixture/${categoryId}/${component.id}`;
+    const rejection = {
+      candidateId: "candidate:lw20-treatment-cost",
+      terminalRejectionContractId:
+        DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+      decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+      occurrenceDigestSha256: "5".repeat(64),
+      physicalPageNumber: 22,
+      sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      observedScopeKeys: [],
+      scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+    };
+    const terminalAudit = {
+      schemaVersion: 3,
+      contractId:
+        DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      requirementId: categoryId,
+      componentId: component.id,
+      decisionOwner: "SERVER",
+      decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
+      proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",
+      rejectedOccurrenceCount: 1,
+      rejectedCandidateIds: [rejection.candidateId],
+      rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+      rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+      rejections: [rejection],
+    };
+    const absenceCell = {
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      absenceMeaning: "COVERAGE_ONLY",
+      comparisonPolicy: null,
+      absenceCertification: null,
+      requirementContract,
+      searchPlanId,
+      documentUuid: "lw20-absence-a",
+      catalogId: "fixture",
+      physicalPagesChecked: 22,
+      totalPhysicalPages: 22,
+      aliases: ["Grundwasser", "Sickerwasser", "Stauwasser"],
+      conceptSearchIds: [],
+      terminalRejectionAudit: terminalAudit,
+      gates: {
+        negativeSearchApproved: true,
+        certifiedNegativeSearch: false,
+        completeTextExtraction: true,
+        completeCategoryTechnicalContract: true,
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+        serverNegativeTerminal: true,
+        deterministicLw20NonTargetOccurrenceTerminal: true,
+      },
+    };
+    const foundCell = {
+      ...JSON.parse(JSON.stringify(absenceCell)),
+      disposition: "RELEVANT_FOUND",
+      comparisonTreatment: null,
+      documentUuid: "lw20-exclusion-b",
+      terminalRejectionAudit: undefined,
+      gates: {
+        negativeSearchApproved: true,
+        certifiedNegativeSearch: false,
+        completeTextExtraction: true,
+        completeCategoryTechnicalContract: true,
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+        serverNegativeTerminal: false,
+      },
+    };
+    const packageA = packageSummary({
+      evidenceFound: false,
+      coverage: "Nicht feststellbar",
+      facts: [],
+      reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+      searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      requirementContract,
+      searchAudit: {
+        disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        documentCount: 1,
+        documentUuids: [absenceCell.documentUuid],
+        physicalPagesChecked: 22,
+        searchPlanIds: [searchPlanId],
+        requirementContract,
+        components: [absenceCell],
+      },
+    });
+    const packageB = packageSummary({
+      evidenceFound: true,
+      coverage: "Nein",
+      facts: [
+        {
+          documentUuid: foundCell.documentUuid,
+          coverage: "Nein",
+          reviewStatus: "BELEGT",
+        },
+      ],
+      reviewStatus: "BELEGT",
+      searchDisposition: "RELEVANT_FOUND",
+      comparisonTreatment: null,
+      requirementContract,
+      searchAudit: {
+        disposition: "SEARCH_INCOMPLETE",
+        comparisonTreatment: null,
+        documentCount: 1,
+        documentUuids: [foundCell.documentUuid],
+        physicalPagesChecked: 22,
+        searchPlanIds: [searchPlanId],
+        requirementContract,
+        components: [foundCell],
+      },
+    });
+    const atomFor = (side, searchAudit, overrides) =>
+      atom(side, {
+        requirementId: categoryId,
+        componentId: component.id,
+        componentLabel: "Grundwasser, Sickerwasser oder Stauwasser",
+        factRole: component.factRole,
+        documentUuids: [searchAudit.documentUuid],
+        requirementContractDigest: requirementContract.digest,
+        declaredComponents: requirementContract.components,
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: [],
+        optionalFields: [],
+        fields: [],
+        searchAudit,
+        ...overrides,
+      });
+    const atomsA = [
+      atomFor("A", absenceCell, {
+        evidencePresence: "NOT_FOUND",
+        coverageEffect: "UNKNOWN",
+        conflictState: "NONE",
+        selectedScopePicture: "UNKNOWN",
+        documentApplicability: "UNKNOWN",
+        selectedCandidateIds: [],
+        unresolvedCandidateIds: [],
+        sources: [],
+      }),
+    ];
+    const atomsB = [
+      atomFor("B", foundCell, {
+        evidencePresence: "FOUND",
+        coverageEffect: "EXCLUDED",
+        conflictState: "NONE",
+        selectedScopePicture: "GENERAL",
+        documentApplicability: "ACTIVE",
+        selectedCandidateIds: ["candidate:lw20-exclusion"],
+        unresolvedCandidateIds: [],
+        sources: [
+          {
+            candidateId: "candidate:lw20-exclusion",
+            physicalPageNumber: 2,
+            exactText: "Nicht versichert sind Schäden durch Grundwasser.",
+          },
+        ],
+      }),
+    ];
+    const decideLw20 = () =>
+      decidePoint({ categoryId, packageA, packageB, atomsA, atomsB });
+
+    expect(decideLw20()).toMatchObject({
+      outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+      reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
+      reviewRequired: false,
+      unilateralCoverageAbsenceAudit: {
+        eligible: false,
+        absentSide: "A",
+        evidencedSide: "B",
+        blockers: expect.arrayContaining(["PACKAGE_NOT_FULLY_PROVEN_INCLUDED"]),
+      },
+    });
+
+    terminalAudit.schemaVersion = 2;
+    delete terminalAudit.rejectionDigestContractId;
+    terminalAudit.rejectionDigestSha256 = legacyTerminalRejectionSetDigestV2(
+      terminalAudit.rejections
+    );
+    expect(decideLw20()).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE",
+      reviewRequired: true,
+    });
   });
 
   test("keeps a multi-document bilateral absence audit stable under input permutations", () => {

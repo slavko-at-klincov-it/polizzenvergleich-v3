@@ -382,6 +382,50 @@ function comparativeReferenceCostBinding(component, occurrence) {
   };
 }
 
+/**
+ * A groundwater word can name the material whose treatment costs are denied,
+ * rather than the peril that caused insured damage. Keep that role mismatch
+ * out of LW-20 without converting the denial into an LW coverage decision.
+ * Role: classify. Side effects: none.
+ */
+function lw20TreatmentCostRoleMismatchBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "LW" ||
+    requirement?.id !== "LW-20" ||
+    component?.id !== "ground_seepage_or_retained_water" ||
+    component?.factRole !== "PERIL" ||
+    occurrence?.context?.unitType !== "PARAGRAPH"
+  )
+    return null;
+  const clause = String(occurrence?.context?.text || "");
+  if (
+    !/^(?:Grundwasser|Sickerwasser|Stauwasser)$/iu.test(
+      String(occurrence?.exactText || "")
+    ) ||
+    !/Kosten\s+f[üu]r\s+die\s+Behandlung\s+von\s+nicht\s+versicherten\s+Sachen/iu.test(
+      clause
+    ) ||
+    !/Wasser\s*\(\s*inkl\.\s*Grundwasser\s*\)[\s\S]{0,100}?Luft\s+und\s+Erdreich/iu.test(
+      clause
+    ) ||
+    !/werden\s+nicht\s+ersetzt/iu.test(clause) ||
+    /Sch[aä]den\s+durch\s+(?:Grundwasser|Sickerwasser|Stauwasser)/iu.test(
+      clause
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "LW20_TREATMENT_COST_OBJECT_NOT_GROUNDWATER_PERIL",
+    authoritative: true,
+  };
+}
+
 function explicitRecoursePartyMismatch({
   categoryView,
   requirement,
@@ -1212,6 +1256,15 @@ function deterministicCategoryCandidateBinding({
     occurrence
   );
   if (comparativeCostReference) return comparativeCostReference;
+
+  const lw20TreatmentCostRoleMismatch =
+    lw20TreatmentCostRoleMismatchBinding({
+      categoryView,
+      requirement,
+      component,
+      occurrence,
+    });
+  if (lw20TreatmentCostRoleMismatch) return lw20TreatmentCostRoleMismatch;
 
   const recoursePartyMismatch = explicitRecoursePartyMismatch({
     categoryView,

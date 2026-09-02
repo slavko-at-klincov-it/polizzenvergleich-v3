@@ -896,6 +896,34 @@ describe("category semantic exceptions", () => {
       binding: "DIRECT",
       basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
     });
+
+    const treatmentCostContext =
+      "Die Kosten für die Behandlung von nicht versicherten Sachen, z.B. Wasser (inkl. Grundwasser), Luft und Erdreich, werden nicht ersetzt, auch dann nicht, wenn sie mit versicherten Sachen vermischt werden.";
+    const treatmentCostOccurrence = occurrence({
+      candidateId: "candidate:lw20:treatment-cost-role",
+      exactText: "Grundwasser",
+      contextText: treatmentCostContext,
+      scopeLeadText: treatmentCostContext.slice(0, 90),
+      sectionScopeKey: null,
+      pageNumber: 22,
+    });
+    treatmentCostOccurrence.context.unitType = "PARAGRAPH";
+    treatmentCostOccurrence.sectionScopeHint = null;
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "LW" } },
+        requirement: { id: "LW-20" },
+        component: {
+          id: "ground_seepage_or_retained_water",
+          factRole: "PERIL",
+        },
+        occurrence: treatmentCostOccurrence,
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "LW20_TREATMENT_COST_OBJECT_NOT_GROUNDWATER_PERIL",
+      authoritative: true,
+    });
     expect(
       deterministicCategoryPreparedDecision({
         categoryView: "LW",
@@ -975,6 +1003,34 @@ describe("category semantic exceptions", () => {
       binding: "DIRECT",
       basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
     });
+
+    for (const contextText of [
+      "Versichert sind Schäden durch Grundwasser.",
+      "Nicht versichert sind Schäden durch Grundwasser.",
+      "Schäden durch Grundwasser sind optional mitversichert.",
+      "Schäden durch Grundwasser sind mitversichert, nicht jedoch Behandlungskosten für Erdreich.",
+    ]) {
+      const targetOccurrence = occurrence({
+        candidateId: `candidate:lw20:relevant:${contextText.length}`,
+        exactText: "Grundwasser",
+        contextText,
+        scopeLeadText: contextText,
+        sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+        pageNumber: 2,
+      });
+      targetOccurrence.sectionScopeHint.source = "CURRENT_PAGE_HEADING";
+      targetOccurrence.sectionScopeHint.physicalPageNumber = 2;
+      const binding = deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "LW" } },
+        requirement: { id: "LW-20" },
+        component: {
+          id: "ground_seepage_or_retained_water",
+          factRole: "PERIL",
+        },
+        occurrence: targetOccurrence,
+      });
+      expect(binding?.binding).not.toBe("MENTION_ONLY");
+    }
   });
 
   test("costs beyond necessary rescue costs do not exclude the rescue costs used as reference", () => {

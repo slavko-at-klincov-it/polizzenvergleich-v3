@@ -22,6 +22,7 @@ const {
 } = require("../policyAnalysis/feC07ConditionAbsenceAudit");
 const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
@@ -713,6 +714,10 @@ function componentSearchAudit({
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
   );
+  const deterministicLw20NonTargetOccurrenceTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
+  );
   const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
@@ -802,6 +807,9 @@ function componentSearchAudit({
         : {}),
       ...(deterministicPostLossScaffoldingCostTerminal
         ? { deterministicPostLossScaffoldingCostTerminal: true }
+        : {}),
+      ...(deterministicLw20NonTargetOccurrenceTerminal
+        ? { deterministicLw20NonTargetOccurrenceTerminal: true }
         : {}),
     },
   };

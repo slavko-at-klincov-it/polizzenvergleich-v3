@@ -27,7 +27,7 @@ describe("policy comparison product contract", () => {
     });
     expect(EXPECTED_ROW_COUNT).toBe(224);
     expect(PRODUCT_PROFILE).toMatchObject({
-      id: "CUSTOMER_CORE_5_V22_FE_C12_POST_LOSS_SCAFFOLDING_TERMINAL",
+      id: "CUSTOMER_CORE_5_V23_LW20_NON_TARGET_TERMINAL",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
