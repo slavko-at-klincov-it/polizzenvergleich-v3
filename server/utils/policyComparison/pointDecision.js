@@ -471,6 +471,20 @@ function compareNumericFields(left, right, factRole, canonical = false) {
   return null;
 }
 
+function coverageFieldComparisonRole(left, right, canonical) {
+  const a = canonical
+    ? comparisonFieldSignature(left)
+    : fieldSignature(left.fields);
+  const b = canonical
+    ? comparisonFieldSignature(right)
+    : fieldSignature(right.fields);
+  if (a.length !== 1 || b.length !== 1 || a[0].field !== b[0].field)
+    return null;
+  if (["limit", "limits", "amount"].includes(a[0].field)) return "LIMIT";
+  if (a[0].field === "deductible") return "DEDUCTIBLE";
+  return null;
+}
+
 function comparisonDimension(left, right, { canonical = false } = {}) {
   return {
     categoryId: left.requirementId,
@@ -514,7 +528,36 @@ function compareDimension(left, right, { canonical = false } = {}) {
     COVERAGE_ROLES.has(left.factRole) &&
     [...effects].every((effect) => DECISIVE_COVERAGE_EFFECTS.has(effect))
   ) {
-    if (left.coverageEffect === right.coverageEffect)
+    if (left.coverageEffect === right.coverageEffect) {
+      const leftFields = canonical
+        ? comparisonFieldSignature(left)
+        : fieldSignature(left.fields);
+      const rightFields = canonical
+        ? comparisonFieldSignature(right)
+        : fieldSignature(right.fields);
+      if (JSON.stringify(leftFields) !== JSON.stringify(rightFields)) {
+        const fieldRole = coverageFieldComparisonRole(left, right, canonical);
+        const numeric = fieldRole
+          ? compareNumericFields(left, right, fieldRole, canonical)
+          : null;
+        if (numeric)
+          return {
+            ...numeric,
+            reasonCode:
+              numeric.outcome === POINT_OUTCOME.EQUIVALENT
+                ? "EQUIVALENT_TYPED_VALUE"
+                : numeric.ruleId === "LOWER_DEDUCTIBLE_V1"
+                  ? "LOWER_DEDUCTIBLE"
+                  : "HIGHER_COVERAGE_LIMIT",
+            dimension,
+          };
+        return {
+          outcome: POINT_OUTCOME.UNCLEAR,
+          reasonCode: "COVERAGE_FIELDS_DIFFER",
+          ruleId: "FAIL_CLOSED_COVERAGE_FIELD_DIFFERENCE_V1",
+          dimension,
+        };
+      }
       return {
         outcome: POINT_OUTCOME.EQUIVALENT,
         reasonCode:
@@ -524,6 +567,7 @@ function compareDimension(left, right, { canonical = false } = {}) {
         ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
         dimension,
       };
+    }
     return {
       outcome:
         left.coverageEffect === "INCLUDED"

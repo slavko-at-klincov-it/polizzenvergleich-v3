@@ -279,6 +279,153 @@ function canonicalAmountKeys(facts, referenceEntries) {
   });
 }
 
+const PACKAGE_AMOUNT_FIELD_NAMES = new Set([
+  "limit",
+  "limits",
+  "amount",
+  "deductible",
+]);
+
+function explicitComponentScopedAmountComparison(
+  facts,
+  atomicFacts,
+  referenceEntries,
+  categoryId
+) {
+  const amountBearingFacts = facts.filter(
+    ({ coverageAmount }) =>
+      normalized(coverageAmount) !== normalized(NOT_DETERMINABLE)
+  );
+  if (amountBearingFacts.length === 0) return null;
+  const atoms = (atomicFacts || []).filter(
+    ({ evidencePresence }) => evidencePresence === "FOUND"
+  );
+  if (
+    atoms.length === 0 ||
+    !categoryId ||
+    !atoms.every(
+      (atom) =>
+        atom.componentSatisfactionPolicy === "ANY" &&
+        atom.requirementId === categoryId
+    )
+  )
+    return null;
+  const factsByDocument = new Map();
+  for (const fact of facts) {
+    if (!fact.documentUuid || factsByDocument.has(fact.documentUuid)) return null;
+    factsByDocument.set(fact.documentUuid, fact);
+  }
+
+  const entries = [];
+  for (const atom of atoms) {
+    if (
+      !atom.componentId ||
+      !Array.isArray(atom.documentUuids) ||
+      atom.documentUuids.length !== 1 ||
+      !factsByDocument.has(atom.documentUuids[0])
+    )
+      return null;
+    for (const field of atom.fields || []) {
+      if (!PACKAGE_AMOUNT_FIELD_NAMES.has(field?.field)) continue;
+      if (field?.status !== "FOUND") continue;
+      for (const fact of field.facts || []) {
+        if (
+          fact?.componentScope?.id !== atom.componentId ||
+          typeof fact?.componentScope?.label !== "string" ||
+          !fact.componentScope.label.trim() ||
+          typeof fact?.normalizedValue !== "string" ||
+          !fact.normalizedValue.trim()
+        )
+          return null;
+        const componentLabel =
+          String(fact.componentScope.label || atom.componentLabel || "").trim() ||
+          atom.componentId;
+        const value = [fact.normalizedValue, fact.qualifier]
+          .filter(Boolean)
+          .join(" ");
+        const atomLocalText = (atom.sources || [])
+          .map(({ conditionCheckText, exactText }) =>
+            String(conditionCheckText || exactText || "")
+          )
+          .filter(Boolean)
+          .join("\n");
+        for (const documentUuid of atom.documentUuids) {
+          if (!documentUuid) return null;
+          entries.push({
+            componentId: atom.componentId,
+            componentLabel,
+            documentUuid,
+            value,
+            displayValue: `${componentLabel}: ${value}`,
+            atomLocalText,
+          });
+        }
+      }
+    }
+  }
+  if (entries.length === 0) return null;
+  if (
+    JSON.stringify(unique(entries.map(({ documentUuid }) => documentUuid)).sort()) !==
+    JSON.stringify(
+      unique(amountBearingFacts.map(({ documentUuid }) => documentUuid)).sort()
+    )
+  )
+    return null;
+
+  for (const fact of amountBearingFacts) {
+    const actual = unique(
+      String(fact.coverageAmount)
+        .split(/\s*;\s*/u)
+        .map(normalized)
+    ).sort();
+    const expected = unique(
+      entries
+        .filter(({ documentUuid }) => documentUuid === fact.documentUuid)
+        .map(({ displayValue }) => normalized(displayValue))
+    ).sort();
+    if (
+      expected.length === 0 ||
+      JSON.stringify(actual) !== JSON.stringify(expected)
+    )
+      return null;
+  }
+
+  const components = unique(entries.map(({ componentId }) => componentId))
+    .sort((left, right) => left.localeCompare(right, "de-AT"))
+    .map((componentId) => {
+      const componentEntries = entries.filter(
+        (entry) => entry.componentId === componentId
+      );
+      const comparisonFacts = componentEntries.map((entry) => {
+        return {
+          coverageAmount: entry.value,
+          documentedContent: entry.atomLocalText,
+          source: entry.atomLocalText,
+        };
+      });
+      return {
+        componentId,
+        componentLabel: componentEntries[0].componentLabel,
+        canonicalAmountKeys: unique(
+          canonicalAmountKeys(comparisonFacts, referenceEntries)
+        ).sort(),
+        displayValues: unique(
+          componentEntries.map(({ displayValue }) => displayValue)
+        ).sort((left, right) => left.localeCompare(right, "de-AT")),
+      };
+    });
+  return {
+    contractId: "ANY_EXPLICIT_COMPONENT_SCOPED_PACKAGE_AMOUNT_PRECEDENCE_V1",
+    conflict: components.some(
+      ({ canonicalAmountKeys: keys }) => keys.length > 1
+    ),
+    components,
+    displayValues: unique(entries.map(({ displayValue }) => displayValue)).sort(
+      (left, right) => left.localeCompare(right, "de-AT")
+    ),
+  };
+}
+
 function roleLabel(role) {
   return (
     {
@@ -293,7 +440,7 @@ function roleLabel(role) {
 
 function summarizePackage(
   entries,
-  { referenceEntries = entries, searchAudit = null } = {}
+  { referenceEntries = entries, searchAudit = null, atomicFacts = [] } = {}
 ) {
   const evidenceEntries = entries.filter(({ row }) => isEvidenceRow(row));
   if (evidenceEntries.length === 0) {
@@ -361,8 +508,19 @@ function summarizePackage(
       .filter((value) => normalized(value) !== normalized(NOT_DETERMINABLE))
   );
   const amountKeys = unique(canonicalAmountKeys(facts, referenceEntries));
+  const componentAmountComparison = explicitComponentScopedAmountComparison(
+    facts,
+    atomicFacts,
+    referenceEntries,
+    unique(evidenceEntries.map(({ row }) => row.categoryId)).length === 1
+      ? evidenceEntries[0].row.categoryId
+      : null
+  );
+  const amountConflict = componentAmountComparison
+    ? componentAmountComparison.conflict
+    : amountKeys.length > 1;
   const unresolvedPrecedence =
-    coverageValues.length > 1 || amountKeys.length > 1;
+    coverageValues.length > 1 || amountConflict;
   const reviewStatus = facts.some(
     ({ reviewStatus: status }) => status === "WIDERSPRÜCHLICH"
   )
@@ -390,7 +548,11 @@ function summarizePackage(
     coverageAmount:
       amountKeys.length === 0
         ? NOT_DETERMINABLE
-        : amountKeys.length === 1
+        : componentAmountComparison
+          ? componentAmountComparison.conflict
+            ? "Mehrere komponentenbezogene Werte – Rangfolge prüfen"
+            : componentAmountComparison.displayValues.join("; ")
+          : amountKeys.length === 1
           ? amountValues.reduce(
               (selected, candidate) =>
                 candidate.length > selected.length ? candidate : selected,
@@ -406,6 +568,9 @@ function summarizePackage(
     reviewStatus,
     searchDisposition: SEARCH_DISPOSITION.RELEVANT_FOUND,
     comparisonTreatment: null,
+    ...(componentAmountComparison
+      ? { amountComparison: componentAmountComparison }
+      : {}),
     searchAudit,
     facts,
   };
@@ -1152,13 +1317,29 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         categoryView,
         categoryId,
       });
+      const atomsA = loadedRuns
+        .filter(({ document }) => document.side === "A")
+        .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || [])
+        .filter(({ requirementId }) => requirementId === categoryId);
+      const atomsB = loadedRuns
+        .filter(({ document }) => document.side === "B")
+        .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || [])
+        .filter(({ requirementId }) => requirementId === categoryId);
       const packageA = summarizePackage(
         entries.filter(({ document }) => document.side === "A"),
-        { referenceEntries: packageEntries.A, searchAudit: searchAuditA }
+        {
+          referenceEntries: packageEntries.A,
+          searchAudit: searchAuditA,
+          atomicFacts: atomsA,
+        }
       );
       const packageB = summarizePackage(
         entries.filter(({ document }) => document.side === "B"),
-        { referenceEntries: packageEntries.B, searchAudit: searchAuditB }
+        {
+          referenceEntries: packageEntries.B,
+          searchAudit: searchAuditB,
+          atomicFacts: atomsB,
+        }
       );
       const comparison = comparePackages(packageA, packageB);
       const expectedDocumentsA = loadedRuns
@@ -1171,12 +1352,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         categoryId,
         packageA,
         packageB,
-        atomsA: loadedRuns
-          .filter(({ document }) => document.side === "A")
-          .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || []),
-        atomsB: loadedRuns
-          .filter(({ document }) => document.side === "B")
-          .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || []),
+        atomsA,
+        atomsB,
         expectedDocumentsA,
         expectedDocumentsB,
       });

@@ -3672,6 +3672,53 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("compares typed limits before declaring included coverage equivalent", () => {
+    const includedWithLimit = (side, amount) =>
+      atom(side, {
+        requestedFieldStatus: "COMPLETE",
+        requestedFields: ["limit"],
+        fields: [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: amount,
+                valueType: "MONEY",
+                unit: "EUR",
+                limitKind: "CAPPED",
+                qualifier: "auf Erstes Risiko",
+                source: {
+                  candidateId: `candidate-${side}`,
+                  physicalPageNumber: 2,
+                  exactText: amount,
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+    expect(
+      decide(
+        [includedWithLimit("a", "EUR 15.000")],
+        [includedWithLimit("b", "EUR 10.000")]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.ADVANTAGE_A,
+      ruleId: "HIGHER_COVERAGE_LIMIT_V1",
+    });
+    expect(
+      decide(
+        [includedWithLimit("a", "EUR 10.000")],
+        [includedWithLimit("b", "EUR 10.000")]
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+    });
+  });
+
   test("blocks mixed winners and invalid server-bound sources", () => {
     const second = (side, effect) =>
       atom(side, {

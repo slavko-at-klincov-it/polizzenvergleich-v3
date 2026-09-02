@@ -1566,6 +1566,186 @@ describe("policy comparison result builder", () => {
     expect(packageSummary.reviewStatus).toBe("RANGFOLGE_PRÜFEN");
   });
 
+  test("does not invent precedence between amounts of different ANY components", () => {
+    const amountAtom = ({
+      componentId,
+      componentLabel,
+      documentUuid,
+      value,
+    }) => ({
+      requirementId: "VS-19",
+      componentId,
+      componentLabel,
+      documentUuids: [documentUuid],
+      componentSatisfactionPolicy: "ANY",
+      evidencePresence: "FOUND",
+      fields: [
+        {
+          field: "limit",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: value,
+              qualifier: "auf Erstes Risiko",
+              componentScope: { id: componentId, label: componentLabel },
+            },
+          ],
+        },
+      ],
+    });
+    const entries = [
+      {
+        document: document("proposal", "B"),
+        row: row("VS-19", {
+          documentedContent: "Bepflanzung eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "Bepflanzung: EUR 15.000 auf Erstes Risiko",
+          source: "PDF-Seite 2",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("supplement", "B", "SUPPLEMENT"),
+        row: row("VS-19", {
+          documentedContent: "Wege eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "Wege: EUR 10.000 auf Erstes Risiko",
+          source: "PDF-Seite 10",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ];
+    const atomicFacts = [
+      amountAtom({
+        componentId: "outdoor_paths",
+        componentLabel: "Wege",
+        documentUuid: "supplement",
+        value: "EUR 10.000",
+      }),
+      amountAtom({
+        componentId: "planting",
+        componentLabel: "Bepflanzung",
+        documentUuid: "proposal",
+        value: "EUR 15.000",
+      }),
+    ];
+    const packageSummary = summarizePackage(entries, { atomicFacts });
+
+    expect(packageSummary).toMatchObject({
+      reviewStatus: "BELEGT",
+      coverageAmount:
+        "Bepflanzung: EUR 15.000 auf Erstes Risiko; Wege: EUR 10.000 auf Erstes Risiko",
+      amountComparison: {
+        contractId:
+          "ANY_EXPLICIT_COMPONENT_SCOPED_PACKAGE_AMOUNT_PRECEDENCE_V1",
+        conflict: false,
+      },
+    });
+    expect(
+      summarizePackage(entries, {
+        atomicFacts: [
+          { ...atomicFacts[0], requirementId: "VS-18" },
+          atomicFacts[1],
+        ],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+    const missingScope = {
+      ...atomicFacts[0],
+      fields: [
+        {
+          ...atomicFacts[0].fields[0],
+          facts: [
+            {
+              ...atomicFacts[0].fields[0].facts[0],
+              componentScope: undefined,
+            },
+          ],
+        },
+      ],
+    };
+    expect(
+      summarizePackage(entries, {
+        atomicFacts: [missingScope, atomicFacts[1]],
+      })
+    ).toMatchObject({
+      reviewStatus: "RANGFOLGE_PRÜFEN",
+      coverageAmount: "Mehrere dokumentbezogene Werte – Rangfolge prüfen",
+    });
+    expect(
+      summarizePackage(entries, {
+        atomicFacts: [
+          { ...atomicFacts[0], documentUuids: ["orphan"] },
+          atomicFacts[1],
+        ],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+  });
+
+  test("keeps different amounts of the same ANY component review-required", () => {
+    const entries = [
+      {
+        document: document("a", "B"),
+        row: row("VS-19", {
+          documentedContent: "Wege eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "Wege: EUR 10.000",
+          source: "PDF-Seite 1",
+          reviewStatus: "BELEGT",
+        }),
+      },
+      {
+        document: document("b", "B", "SUPPLEMENT"),
+        row: row("VS-19", {
+          documentedContent: "Wege eingeschlossen",
+          coverage: "Ja",
+          coverageAmount: "Wege: EUR 15.000",
+          source: "PDF-Seite 2",
+          reviewStatus: "BELEGT",
+        }),
+      },
+    ];
+    const atom = (documentUuid, value, includeScope = true) => ({
+      requirementId: "VS-19",
+      componentId: "outdoor_paths",
+      componentLabel: "Wege",
+      documentUuids: [documentUuid],
+      componentSatisfactionPolicy: "ANY",
+      evidencePresence: "FOUND",
+      fields: [
+        {
+          field: "limit",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: value,
+              ...(includeScope
+                ? { componentScope: { id: "outdoor_paths", label: "Wege" } }
+                : {}),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      summarizePackage(entries, {
+        atomicFacts: [atom("a", "EUR 10.000"), atom("b", "EUR 15.000")],
+      })
+    ).toMatchObject({
+      reviewStatus: "RANGFOLGE_PRÜFEN",
+      coverageAmount: "Mehrere komponentenbezogene Werte – Rangfolge prüfen",
+      amountComparison: { conflict: true },
+    });
+    expect(
+      summarizePackage(entries, {
+        atomicFacts: [
+          atom("a", "EUR 10.000", false),
+          atom("b", "EUR 15.000"),
+        ],
+      }).reviewStatus
+    ).toBe("RANGFOLGE_PRÜFEN");
+  });
+
   test("keeps equal numbers with different limit periods review-required", () => {
     const packageSummary = summarizePackage([
       {
@@ -1748,9 +1928,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V37_VS19_OBJECT_CLASS_SCOPE_LEAD",
+      id: "CUSTOMER_CORE_5_V38_ANY_EXPLICIT_COMPONENT_AMOUNT_PRECEDENCE",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_V7",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_AMOUNT_V8",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
