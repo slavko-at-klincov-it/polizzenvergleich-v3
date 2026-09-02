@@ -207,7 +207,14 @@ describe("preparedEvidenceContract", () => {
       sectionScopeHint: {
         ...occurrence.sectionScopeHint,
         source: "PRECEDING_PAGE_HEADING",
+        physicalPageNumber: 1,
       },
+      pageScopeHints: [
+        {
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+          text: "Leitungswasserversicherung",
+        },
+      ],
     };
     const elTarget = targetFor(elementarCrossReference, {
       categoryView: "EL",
@@ -220,10 +227,18 @@ describe("preparedEvidenceContract", () => {
       expect.objectContaining({
         candidateId: elementarCrossReference.candidateId,
         candidateBinding: "NARROW_SCOPE",
-        deterministicBindingBasis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+        deterministicBindingBasis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2",
       }),
     ]);
     expect(elTarget.serverRejectedCandidates).toEqual([]);
+    expect(buildDeterministicPreparedEvidenceJudgement(elTarget)).toMatchObject(
+      {
+        selectedCandidateIds: [elementarCrossReference.candidateId],
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        selectedScopePicture: "NARROW_ONLY",
+        decisionOwner: "SERVER_EL06_EXPLICIT_LOCAL_FLOOD_COVERAGE_V2:EL:EL-06",
+      }
+    );
   });
 
   test("server-certifies ST-14 light domes only inside a locally governed current glass section", () => {

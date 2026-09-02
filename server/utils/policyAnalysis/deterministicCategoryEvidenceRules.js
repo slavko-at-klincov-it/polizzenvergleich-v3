@@ -690,7 +690,7 @@ function explicitEl12FloodZoneConsequenceBinding({
 }
 
 /**
- * EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1
+ * EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2
  *
  * A clause can live below a carried foreign branch heading while explicitly
  * assigning its effect to a different peril. The local assignment is allowed
@@ -714,38 +714,79 @@ function explicitEl06LocalTargetScopeRebinding({
   )
     return null;
 
+  const occurrencePage = Number(occurrence?.physicalPageNumber);
+  const headingPage = Number(occurrence?.sectionScopeHint?.physicalPageNumber);
+  const sectionScopeKeys = [
+    occurrence?.sectionScopeHint?.scopeKey,
+    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+  ].filter(Boolean);
+  const pageScopeKeys = (occurrence?.pageScopeHints || [])
+    .map(({ scopeKey }) => scopeKey)
+    .filter(Boolean);
+  if (
+    !Number.isInteger(occurrencePage) ||
+    !Number.isInteger(headingPage) ||
+    occurrencePage - headingPage !== 1 ||
+    sectionScopeKeys.length !== 1 ||
+    sectionScopeKeys[0] !== "LEITUNGSWASSER_INSURANCE" ||
+    pageScopeKeys.length === 0 ||
+    pageScopeKeys.some((scopeKey) => scopeKey !== "LEITUNGSWASSER_INSURANCE")
+  )
+    return null;
+
   const clause = occurrenceClauseText(occurrence);
   if (!containsPhrase(clause, occurrence?.exactText)) return null;
   if (/\n\s*\n/u.test(clause)) return null;
-  if (
-    !/Kanalr[uü]ckstau\s+nach\s+einer\s+[ÜUu]berschwemmung/iu.test(clause) ||
-    !/im\s+Rahmen\s+(?:der\s+)?(?:VS|Versicherung)\s+f[üu]r\s+(?:Hochwasser\s*(?:\/|und|oder)\s*[ÜUu]berschwemmung|[ÜUu]berschwemmung\s*(?:\/|und|oder)\s*Hochwasser)/iu.test(
+  const hasSubjectBoundPositiveRule =
+    /(?:Sch[aä]den\s+aus\s+einem\s+Kanalr[uü]ckstau\s+nach\s+einer\s+[ÜUu]berschwemmung\s+sind|Kanalr[uü]ckstau\s+nach\s+einer\s+[ÜUu]berschwemmung\s+(?:ist|gilt))\s+im\s+Rahmen\s+(?:der\s+)?(?:VS|Versicherung)\s+f[üu]r\s+(?:Hochwasser\s*(?:\/|und|oder)\s*[ÜUu]berschwemmung|[ÜUu]berschwemmung\s*(?:\/|und|oder)\s*Hochwasser)\s+mitversichert\b/iu.test(
       clause
-    )
-  )
-    return null;
-  if (
-    /\b(?:wahlweise|optional|auf\s+(?:ausdr[üu]cklichen\s+)?Wunsch|sofern\s+(?:beantragt|vereinbart)|gegen\s+(?:Mehrpr[aä]mie|Pr[aä]mienzuschlag))\b/iu.test(
+    );
+  const hasFailClosedQualifier =
+    /\b(?:nicht|weder|kein(?:e|en|er|es)?|keinesfalls|ausgeschlossen|au[ßs]er|ausgenommen|sofern|soweit|wenn|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|auf\s+(?:ausdr[uü]cklichen\s+)?Wunsch|gegen\s+(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag|Zusatzpr[aä]mie)|nur\s+(?:wenn|bei)|unter\s+der\s+Bedingung|es\s+sei\s+denn|gesondert(?:e|en|er|es)?\s+Vereinbarung|besonder(?:e|en|er|es)?\s+Vereinbarung|ausdr[uü]cklich(?:e|en|er|es)?\s+Vereinbarung)\b/iu.test(
       clause
     ) ||
     /\bkann\b[\s\S]{0,120}\b(?:mitversichert|eingeschlossen)\s+werden\b/iu.test(
       clause
-    )
-  )
-    return null;
-  const operativePolarity = operativeCoveragePolarity(occurrence);
-  const explicitSingularPositive =
-    /\b(?:ist|gilt)\b[\s\S]{0,180}\bmitversichert\b/iu.test(clause) &&
-    !/\b(?:nicht|kein(?:e|en|er|es)?)\b[\s\S]{0,120}\bmitversichert\b/iu.test(
-      clause
     );
-  if (operativePolarity !== "POSITIVE" && !explicitSingularPositive)
-    return null;
+  if (!hasSubjectBoundPositiveRule || hasFailClosedQualifier) return null;
 
   return {
     binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
-    basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+    basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2",
     authoritative: true,
+  };
+}
+
+function el06LocalTargetPreparedDecision(target) {
+  const isTarget =
+    target?.categoryView === "EL" &&
+    target?.requirementId === "EL-06" &&
+    target?.componentId === "sewer_backflow" &&
+    target?.factRole === "PERIL";
+  if (!isTarget) return undefined;
+  if (
+    !Array.isArray(target.candidates) ||
+    target.candidates.length === 0 ||
+    (target.unresolvedCandidateIds || []).length > 0 ||
+    target.candidates.some(
+      ({ candidateBinding, deterministicBindingBasis }) =>
+        candidateBinding !== DETERMINISTIC_BINDING.NARROW_SCOPE ||
+        deterministicBindingBasis !== "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2"
+    )
+  )
+    return null;
+  const clauseKeys = new Set(
+    target.candidates.map(({ contextDocumentStart, contextText }) =>
+      JSON.stringify([contextDocumentStart, String(contextText || "")])
+    )
+  );
+  if (clauseKeys.size !== 1) return null;
+  return {
+    selectedCandidateIds: target.candidates.map(
+      ({ candidateId }) => candidateId
+    ),
+    coverageEffect: COVERAGE_EFFECT.INCLUDED,
+    basis: "EL06_EXPLICIT_LOCAL_FLOOD_COVERAGE_V2:EL:EL-06",
   };
 }
 
@@ -1468,6 +1509,8 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  const el06Decision = el06LocalTargetPreparedDecision(target);
+  if (el06Decision !== undefined) return el06Decision;
   const lw25Decision = lw25GradualDamageInclusionPreparedDecision(target);
   if (lw25Decision !== undefined) return lw25Decision;
   if (
