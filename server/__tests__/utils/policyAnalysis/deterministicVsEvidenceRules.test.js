@@ -608,6 +608,34 @@ describe("deterministicVsEvidenceRules", () => {
     });
   });
 
+  test("keeps generic outdoor facilities from proving VS-19 paths", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-19",
+        componentId: "outdoor_paths",
+        occurrence: occurrence(
+          "Außenanlagen wie Müllsammelplätze, Beleuchtungsanlagen und Fahnenstangen"
+        ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_OUTDOOR_FACILITIES_WITHOUT_PATHS",
+      authoritative: true,
+    });
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-19",
+        componentId: "outdoor_paths",
+        occurrence: occurrence(
+          "Außenanlagen einschließlich befestigter Gehwege"
+        ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_OUTDOOR_PATHS",
+    });
+  });
+
   test("keeps a bare community-facilities heading model-owned", () => {
     expect(
       deterministicVsCandidateBinding({

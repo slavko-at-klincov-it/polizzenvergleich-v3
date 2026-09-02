@@ -493,6 +493,7 @@ function deterministicVsCandidateBinding({
     return {
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,
       basis: "GENERIC_OUTDOOR_FACILITIES_WITHOUT_PATHS",
+      authoritative: true,
     };
   if (
     key === "VS-19:planting" &&
