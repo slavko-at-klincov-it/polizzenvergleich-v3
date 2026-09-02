@@ -20,6 +20,21 @@ const RIGHT_HEADED_COORDINATION = "RIGHT_HEADED_COORDINATION";
 const SAME_CANDIDATE_BINDING = "SAME_CANDIDATE_BINDING";
 const OBJECT_CLASSIFICATION_CONTEXT_CONTRACT =
   "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1";
+const FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID =
+  "FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_V1";
+const MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE = 4_096;
+const FOLLOWING_STRUCTURAL_BOUNDARY_KIND = Object.freeze({
+  LIST_ITEM: "LIST_ITEM",
+  PARAGRAPH: "PARAGRAPH",
+  SECTION_HEADING: "SECTION_HEADING",
+  COVERAGE_GOVERNOR: "COVERAGE_GOVERNOR",
+  CLAUSE_HEADING: "CLAUSE_HEADING",
+  EOF: "EOF",
+  TOO_DISTANT: "TOO_DISTANT",
+});
+const ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS = new Set(
+  Object.values(FOLLOWING_STRUCTURAL_BOUNDARY_KIND)
+);
 const ALLOWED_SCOPE_POLICIES = new Set([
   "GENERAL_REQUIRED",
   "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
@@ -1073,6 +1088,370 @@ function validateDocument(document) {
   return { pageContent, pages };
 }
 
+function lineContainingOffset(lines, offset) {
+  return (
+    lines.find(({ start, end }) => offset >= start && offset <= end) || null
+  );
+}
+
+function structuralMarkerForLine(page, line) {
+  const markers = [
+    ...page.sectionHeadings.map((marker) => ({
+      ...marker,
+      boundaryKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.SECTION_HEADING,
+      priority: 0,
+    })),
+    ...page.coverageGovernors.map((marker) => ({
+      ...marker,
+      boundaryKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.COVERAGE_GOVERNOR,
+      priority: 1,
+    })),
+    ...page.clauseBoundaries.map((marker) => ({
+      ...marker,
+      text: page.text.slice(marker.pageStart, marker.pageEnd),
+      boundaryKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.CLAUSE_HEADING,
+      priority: 2,
+    })),
+  ]
+    .filter(
+      ({ pageStart, pageEnd }) =>
+        pageStart < line.end && pageEnd > line.start
+    )
+    .sort(
+      (left, right) =>
+        left.priority - right.priority ||
+        left.pageStart - right.pageStart ||
+        left.pageEnd - right.pageEnd
+    );
+  const selected = markers[0] || null;
+  if (!selected) return null;
+  const declaredText = String(selected.text || "");
+  const declaredRange = page.text.slice(
+    selected.pageStart,
+    selected.pageEnd
+  );
+  const relativeTextStart = declaredRange.indexOf(declaredText);
+  if (declaredText && relativeTextStart >= 0)
+    return {
+      ...selected,
+      pageStart: selected.pageStart + relativeTextStart,
+      pageEnd: selected.pageStart + relativeTextStart + declaredText.length,
+      text: declaredText,
+    };
+  return selected;
+}
+
+function printedPageHeaderEnd(page) {
+  if (!page.printedPageLabel) return 0;
+  const lines = buildLineRecords(page.text);
+  const labelStart = page.text.indexOf(page.printedPageLabel);
+  if (labelStart < 0) return 0;
+  return lineContainingOffset(lines, labelStart)?.end || 0;
+}
+
+function structuralUnitsForPage(page) {
+  const lines = buildLineRecords(page.text);
+  const units = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (isBlankLine(line)) continue;
+
+    const marker = structuralMarkerForLine(page, line);
+    if (marker) {
+      units.push({
+        kind: marker.boundaryKind,
+        pageStart: marker.pageStart,
+        pageEnd: marker.pageEnd,
+      });
+      continue;
+    }
+
+    let endIndex = index;
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex];
+      if (
+        isBlankLine(nextLine) ||
+        isBulletLine(nextLine) ||
+        structuralMarkerForLine(page, nextLine)
+      )
+        break;
+      endIndex = nextIndex;
+    }
+    const firstNonWhitespace = line.text.search(/\S/u);
+    const pageStart = line.start + Math.max(firstNonWhitespace, 0);
+    const lastText = lines[endIndex].text.trimEnd();
+    const pageEnd = lines[endIndex].start + lastText.length;
+    units.push({
+      kind: isBulletLine(line)
+        ? FOLLOWING_STRUCTURAL_BOUNDARY_KIND.LIST_ITEM
+        : FOLLOWING_STRUCTURAL_BOUNDARY_KIND.PARAGRAPH,
+      pageStart,
+      pageEnd,
+    });
+    index = endIndex;
+  }
+  return units;
+}
+
+function followingStructuralUnitIndex(pages) {
+  return pages.flatMap((page) => {
+    const headerEnd = printedPageHeaderEnd(page);
+    return structuralUnitsForPage(page).map((unit) => ({
+      ...unit,
+      physicalPageNumber: page.physicalPageNumber,
+      documentStart: page.start + unit.pageStart,
+      documentEnd: page.start + unit.pageEnd,
+      crossPageEligible: unit.pageStart >= headerEnd,
+    }));
+  });
+}
+
+function firstFollowingStructuralUnit({
+  structuralUnits,
+  originDocumentEnd,
+  originPhysicalPageNumber,
+}) {
+  let lower = 0;
+  let upper = structuralUnits.length;
+  while (lower < upper) {
+    const middle = Math.floor((lower + upper) / 2);
+    if (structuralUnits[middle].documentStart < originDocumentEnd)
+      lower = middle + 1;
+    else upper = middle;
+  }
+  for (let index = lower; index < structuralUnits.length; index += 1) {
+    const unit = structuralUnits[index];
+    if (
+      unit.physicalPageNumber === originPhysicalPageNumber ||
+      (unit.physicalPageNumber > originPhysicalPageNumber &&
+        unit.crossPageEligible)
+    )
+      return unit;
+  }
+  return null;
+}
+
+/**
+ * Captures the first structural unit after one occurrence context. Cross-page
+ * print headers remain byte-for-byte visible in skippedRaw while the next
+ * semantic unit is selected after the printed page-label line. Role:
+ * provenance. Side effects: none.
+ */
+function followingStructuralBoundaryProof({
+  pageContent,
+  pages,
+  structuralUnits,
+  occurrencePage,
+  context,
+}) {
+  const originDocumentStart = Number(context?.documentStart);
+  const originDocumentEnd = Number(context?.documentEnd);
+  const originPageIndex = pages.findIndex(
+    ({ physicalPageNumber }) =>
+      physicalPageNumber === occurrencePage.physicalPageNumber
+  );
+  if (
+    !Number.isInteger(originDocumentStart) ||
+    !Number.isInteger(originDocumentEnd) ||
+    originDocumentEnd < originDocumentStart ||
+    originPageIndex < 0
+  )
+    throw worksheetError("FOLLOWING_BOUNDARY_ORIGIN_INVALID");
+
+  const unit = firstFollowingStructuralUnit({
+    structuralUnits,
+    originDocumentEnd,
+    originPhysicalPageNumber: occurrencePage.physicalPageNumber,
+  });
+  if (unit) {
+    const documentStart = unit.documentStart;
+    const documentEnd = unit.documentEnd;
+    if (documentStart < originDocumentEnd)
+      throw worksheetError("FOLLOWING_BOUNDARY_OVERLAPS_ORIGIN");
+    const gapLength = documentStart - originDocumentEnd;
+    const boundaryLength = documentEnd - documentStart;
+    const inspectedSpanLength = documentEnd - originDocumentEnd;
+    if (inspectedSpanLength > MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE) {
+      const skippedDocumentEnd = Math.min(
+        documentStart,
+        originDocumentEnd + MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+      );
+      return {
+        contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+        origin: {
+          physicalPageNumber: occurrencePage.physicalPageNumber,
+          documentStart: originDocumentStart,
+          documentEnd: originDocumentEnd,
+        },
+        kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT,
+        observedKind: unit.kind,
+        reason:
+          gapLength > MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+            ? "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX"
+            : boundaryLength > MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+              ? "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX"
+              : "FOLLOWING_BOUNDARY_SPAN_EXCEEDS_MAX",
+        maximumDistance: MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
+        physicalPageNumber: unit.physicalPageNumber,
+        documentStart,
+        documentEnd,
+        text: null,
+        textSha256: crypto
+          .createHash("sha256")
+          .update(pageContent.slice(documentStart, documentEnd))
+          .digest("hex"),
+        skippedRaw: {
+          documentStart: originDocumentEnd,
+          documentEnd: skippedDocumentEnd,
+          complete: skippedDocumentEnd === documentStart,
+          text: pageContent.slice(originDocumentEnd, skippedDocumentEnd),
+        },
+      };
+    }
+    const unitText = pageContent.slice(documentStart, documentEnd);
+    return {
+      contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+      origin: {
+        physicalPageNumber: occurrencePage.physicalPageNumber,
+        documentStart: originDocumentStart,
+        documentEnd: originDocumentEnd,
+      },
+      kind: unit.kind,
+      physicalPageNumber: unit.physicalPageNumber,
+      documentStart,
+      documentEnd,
+      text: unitText,
+      skippedRaw: {
+        documentStart: originDocumentEnd,
+        documentEnd: documentStart,
+        complete: true,
+        text: pageContent.slice(originDocumentEnd, documentStart),
+      },
+    };
+  }
+
+  const eofOffset = pageContent.length;
+  if (eofOffset < originDocumentEnd)
+    throw worksheetError("FOLLOWING_BOUNDARY_EOF_OVERLAPS_ORIGIN");
+  if (
+    eofOffset - originDocumentEnd >
+    MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+  ) {
+    const skippedDocumentEnd =
+      originDocumentEnd + MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE;
+    return {
+      contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+      origin: {
+        physicalPageNumber: occurrencePage.physicalPageNumber,
+        documentStart: originDocumentStart,
+        documentEnd: originDocumentEnd,
+      },
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT,
+      observedKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF,
+      reason: "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX",
+      maximumDistance: MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
+      physicalPageNumber: pages.at(-1).physicalPageNumber,
+      documentStart: eofOffset,
+      documentEnd: eofOffset,
+      text: null,
+      textSha256: crypto.createHash("sha256").update("").digest("hex"),
+      skippedRaw: {
+        documentStart: originDocumentEnd,
+        documentEnd: skippedDocumentEnd,
+        complete: false,
+        text: pageContent.slice(originDocumentEnd, skippedDocumentEnd),
+      },
+    };
+  }
+  return {
+    contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+    origin: {
+      physicalPageNumber: occurrencePage.physicalPageNumber,
+      documentStart: originDocumentStart,
+      documentEnd: originDocumentEnd,
+    },
+    kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF,
+    physicalPageNumber: pages.at(-1).physicalPageNumber,
+    documentStart: eofOffset,
+    documentEnd: eofOffset,
+    text: "",
+    skippedRaw: {
+      documentStart: originDocumentEnd,
+      documentEnd: eofOffset,
+      complete: true,
+      text: pageContent.slice(originDocumentEnd, eofOffset),
+    },
+  };
+}
+
+function validFollowingStructuralBoundaryProof(occurrence) {
+  const context = occurrence?.context;
+  const proof = context?.followingStructuralBoundaryProof;
+  const skipped = proof?.skippedRaw;
+  const origin = proof?.origin;
+  if (
+    proof?.contractId !== FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID ||
+    !ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS.has(proof?.kind) ||
+    !Number.isInteger(occurrence?.physicalPageNumber) ||
+    !Number.isInteger(context?.documentStart) ||
+    !Number.isInteger(context?.documentEnd) ||
+    origin?.physicalPageNumber !== occurrence.physicalPageNumber ||
+    origin?.documentStart !== context.documentStart ||
+    origin?.documentEnd !== context.documentEnd ||
+    !Number.isInteger(proof?.physicalPageNumber) ||
+    proof.physicalPageNumber < occurrence.physicalPageNumber ||
+    !Number.isInteger(proof?.documentStart) ||
+    !Number.isInteger(proof?.documentEnd) ||
+    proof.documentStart < context.documentEnd ||
+    proof.documentEnd < proof.documentStart ||
+    skipped?.documentStart !== context.documentEnd ||
+    !Number.isInteger(skipped?.documentEnd) ||
+    skipped.documentEnd < skipped.documentStart ||
+    skipped.documentEnd > proof.documentStart ||
+    typeof skipped?.complete !== "boolean" ||
+    typeof skipped?.text !== "string" ||
+    skipped.text.length !== skipped.documentEnd - skipped.documentStart
+  )
+    return false;
+  if (proof.kind === FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT)
+    return Boolean(
+      [
+        "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX",
+        "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX",
+        "FOLLOWING_BOUNDARY_SPAN_EXCEEDS_MAX",
+      ].includes(proof.reason) &&
+        proof.maximumDistance ===
+          MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+        ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS.has(proof.observedKind) &&
+        proof.observedKind !==
+          FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT &&
+        proof.text === null &&
+        /^[a-f0-9]{64}$/u.test(String(proof.textSha256 || "")) &&
+        skipped.text.length <=
+          MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+        skipped.complete === (skipped.documentEnd === proof.documentStart) &&
+        (proof.reason === "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX"
+          ? proof.documentStart - context.documentEnd >
+            MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+          : proof.reason === "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX"
+            ? proof.documentEnd - proof.documentStart >
+              MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+            : proof.documentEnd - context.documentEnd >
+              MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE)
+    );
+  if (
+    typeof proof?.text !== "string" ||
+    proof.text.length !== proof.documentEnd - proof.documentStart ||
+    skipped.complete !== true ||
+    skipped.documentEnd !== proof.documentStart ||
+    Object.prototype.hasOwnProperty.call(proof, "textSha256")
+  )
+    return false;
+  return proof.kind === FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF
+    ? proof.documentStart === proof.documentEnd && proof.text === ""
+    : proof.documentEnd > proof.documentStart && proof.text.trim().length > 0;
+}
+
 function validateCatalog(catalog) {
   if (
     ![1, 2].includes(catalog?.schemaVersion) ||
@@ -1922,6 +2301,7 @@ function buildControlledOccurrenceWorksheet({
     "documentFingerprint"
   );
   const { pageContent, pages } = validateDocument(document);
+  const structuralUnits = followingStructuralUnitIndex(pages);
   const requirements = validateCatalog(catalog);
   const sourceDocumentId = String(
     document.sourceDocumentId || document.id || fingerprint
@@ -2133,6 +2513,17 @@ function buildControlledOccurrenceWorksheet({
               documentStart: page.start + evidenceContext.pageStart,
               documentEnd: page.start + evidenceContext.pageEnd,
               text: evidenceContext.text,
+              followingStructuralBoundaryProof:
+                followingStructuralBoundaryProof({
+                  pageContent,
+                  pages,
+                  structuralUnits,
+                  occurrencePage: page,
+                  context: {
+                    documentStart: page.start + evidenceContext.pageStart,
+                    documentEnd: page.start + evidenceContext.pageEnd,
+                  },
+                }),
             },
             scopeLead: {
               pageStart: scopeLead.pageStart,
@@ -2242,8 +2633,12 @@ module.exports = {
   DEFAULT_CONTEXT_MAX_CHARS,
   DEFAULT_FALLBACK_WORDS_EACH_SIDE,
   DEFAULT_SCOPE_WORDS_BEFORE,
+  FOLLOWING_STRUCTURAL_BOUNDARY_KIND,
+  FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+  MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
   WORKSHEET_SCHEMA_VERSION,
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
   normalizeWithOffsetMap,
+  validFollowingStructuralBoundaryProof,
 };

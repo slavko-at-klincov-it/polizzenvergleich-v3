@@ -6,12 +6,19 @@ const elFullCatalog = require("../../../resources/policyAnalysis/el-occurrence-f
 const vbFullCatalog = require("../../../resources/policyAnalysis/vb-occurrence-full-draft.v0.1.json");
 const {
   buildControlledOccurrenceWorksheet,
+  FOLLOWING_STRUCTURAL_BOUNDARY_KIND,
+  FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+  MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
   findAliasRanges,
   normalizeWithOffsetMap,
+  validFollowingStructuralBoundaryProof,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 const {
   buildCandidateTriagePayload,
 } = require("../../../utils/policyAnalysis/candidateTriageContract");
+const {
+  terminalOccurrenceDigest,
+} = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 function documentFromPages(pages) {
   let pageContent = "";
@@ -89,7 +96,257 @@ function singleSolarComponentCatalog(overrides = {}) {
   };
 }
 
+function followingBoundaryCatalog() {
+  return {
+    schemaVersion: 1,
+    catalogId: "following-structural-boundary-test",
+    categoryView: "EL",
+    requirements: [
+      {
+        id: "EL-QA",
+        label: "Following structural boundary QA",
+        requestedFields: [],
+        components: [
+          {
+            id: "target",
+            label: "Target",
+            factRole: "CONDITION",
+            aliases: ["Zielbegriff"],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function followingBoundaryOccurrence(pages, fingerprint = "boundary-proof") {
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document: documentFromPages(pages),
+    documentFingerprint: fingerprint,
+    catalog: followingBoundaryCatalog(),
+  });
+  return worksheet.requirements[0].components[0].occurrences[0];
+}
+
 describe("controlledOccurrenceWorksheet", () => {
+  test("records the next same-page list item with exact skipped source provenance", () => {
+    const document = documentFromPages([
+      "- Zielbegriff ist reine Information.\n\n- Unmittelbarer Folgepunkt\nFortsetzung des Folgepunkts",
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "same-page-list-boundary",
+      catalog: followingBoundaryCatalog(),
+    });
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof).toMatchObject({
+      contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+      origin: {
+        physicalPageNumber: 1,
+        documentStart: candidate.context.documentStart,
+        documentEnd: candidate.context.documentEnd,
+      },
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.LIST_ITEM,
+      physicalPageNumber: 1,
+      text: "- Unmittelbarer Folgepunkt\nFortsetzung des Folgepunkts",
+    });
+    expect(
+      document.pageContent.slice(proof.documentStart, proof.documentEnd)
+    ).toBe(proof.text);
+    expect(
+      document.pageContent.slice(
+        proof.skippedRaw.documentStart,
+        proof.skippedRaw.documentEnd
+      )
+    ).toBe(proof.skippedRaw.text);
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test.each([
+    ["STURMVERSICHERUNG", FOLLOWING_STRUCTURAL_BOUNDARY_KIND.SECTION_HEADING],
+    [
+      "2. Nächster Abschnitt",
+      FOLLOWING_STRUCTURAL_BOUNDARY_KIND.CLAUSE_HEADING,
+    ],
+  ])("classifies a following %s heading", (heading, expectedKind) => {
+    const candidate = followingBoundaryOccurrence([
+      `- Zielbegriff\n${heading}\nNachfolgender Inhalt`,
+    ]);
+
+    expect(candidate.context.followingStructuralBoundaryProof).toMatchObject({
+      kind: expectedKind,
+      physicalPageNumber: 1,
+      text: heading,
+    });
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("crosses a physical page and retains the complete skipped print header", () => {
+    const document = documentFromPages([
+      "- Zielbegriff",
+      [
+        "Version Druckdokument: 12.05.2026",
+        "Vorgangsnummer 12345",
+        "Seite 2 von 2",
+        "Mitversichert gelten",
+        "- Folgepunkt",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "cross-page-print-header-boundary",
+      catalog: followingBoundaryCatalog(),
+    });
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof).toMatchObject({
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.COVERAGE_GOVERNOR,
+      physicalPageNumber: 2,
+      text: "Mitversichert gelten",
+      skippedRaw: {
+        documentStart: candidate.context.documentEnd,
+        documentEnd: proof.documentStart,
+        text: expect.stringContaining("Version Druckdokument: 12.05.2026"),
+      },
+    });
+    expect(proof.skippedRaw.text).toContain("Seite 2 von 2");
+    expect(
+      document.pageContent.slice(
+        proof.skippedRaw.documentStart,
+        proof.skippedRaw.documentEnd
+      )
+    ).toBe(proof.skippedRaw.text);
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("uses the first list item on a following page without a print header", () => {
+    const candidate = followingBoundaryOccurrence([
+      "- Zielbegriff",
+      "\n- Cross-Page-Folgepunkt\nFortsetzung",
+    ]);
+
+    expect(candidate.context.followingStructuralBoundaryProof).toMatchObject({
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.LIST_ITEM,
+      physicalPageNumber: 2,
+      text: "- Cross-Page-Folgepunkt\nFortsetzung",
+    });
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("records a deterministic EOF boundary after the final occurrence", () => {
+    const candidate = followingBoundaryOccurrence(["- Zielbegriff"]);
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof).toMatchObject({
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF,
+      physicalPageNumber: 1,
+      documentStart: candidate.context.documentEnd,
+      documentEnd: candidate.context.documentEnd,
+      text: "",
+      skippedRaw: {
+        documentStart: candidate.context.documentEnd,
+        documentEnd: candidate.context.documentEnd,
+        text: "",
+      },
+    });
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("bounds a distant EOF proof instead of copying the remaining document", () => {
+    const candidate = followingBoundaryOccurrence([
+      `- Zielbegriff\n${" ".repeat(
+        MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE + 500
+      )}`,
+    ]);
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof).toMatchObject({
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT,
+      observedKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF,
+      reason: "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX",
+      maximumDistance: MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
+      text: null,
+      textSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      skippedRaw: {
+        complete: false,
+        text: expect.any(String),
+      },
+    });
+    expect(proof.skippedRaw.text).toHaveLength(
+      MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+    );
+    expect(JSON.stringify(proof).length).toBeLessThan(
+      MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE + 1_000
+    );
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("uses UTF-16 code-unit offsets for Unicode boundary provenance", () => {
+    const candidate = followingBoundaryOccurrence([
+      "- Zielbegriff 😀\n\n- Folgepunkt 😀",
+    ]);
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof.text).toContain("😀");
+    expect(proof.text.length).toBe(proof.documentEnd - proof.documentStart);
+    expect(proof.skippedRaw.text.length).toBe(
+      proof.skippedRaw.documentEnd - proof.skippedRaw.documentStart
+    );
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
+  test("rejects overlapping or tampered following-boundary proofs", () => {
+    const candidate = followingBoundaryOccurrence([
+      "- Zielbegriff\n\n- Folgepunkt",
+    ]);
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+
+    const overlapping = JSON.parse(JSON.stringify(candidate));
+    overlapping.context.followingStructuralBoundaryProof.documentStart =
+      overlapping.context.documentEnd - 1;
+    expect(validFollowingStructuralBoundaryProof(overlapping)).toBe(false);
+
+    const tamperedText = JSON.parse(JSON.stringify(candidate));
+    tamperedText.context.followingStructuralBoundaryProof.text +=
+      " manipuliert";
+    expect(validFollowingStructuralBoundaryProof(tamperedText)).toBe(false);
+
+    const tamperedOrigin = JSON.parse(JSON.stringify(candidate));
+    tamperedOrigin.context.followingStructuralBoundaryProof.origin.documentEnd -=
+      1;
+    expect(validFollowingStructuralBoundaryProof(tamperedOrigin)).toBe(false);
+
+    const provenanceTamper = JSON.parse(JSON.stringify(candidate));
+    provenanceTamper.context.followingStructuralBoundaryProof.text =
+      provenanceTamper.context.followingStructuralBoundaryProof.text.replace(
+        "Folgepunkt",
+        "FolgepunkX"
+      );
+    expect(validFollowingStructuralBoundaryProof(provenanceTamper)).toBe(true);
+    expect(terminalOccurrenceDigest(provenanceTamper)).not.toBe(
+      terminalOccurrenceDigest(candidate)
+    );
+  });
+
+  test("does not include following content in stable candidate identities", () => {
+    const first = followingBoundaryOccurrence(
+      ["- Zielbegriff\n- Folgepunkt A"],
+      "stable-boundary-candidate"
+    );
+    const second = followingBoundaryOccurrence(
+      ["- Zielbegriff\n- Folgepunkt B"],
+      "stable-boundary-candidate"
+    );
+
+    expect(first.candidateId).toBe(second.candidateId);
+    expect(first.context.followingStructuralBoundaryProof.text).not.toBe(
+      second.context.followingStructuralBoundaryProof.text
+    );
+  });
+
   test("binds an indirect-lightning limit to its peril clause, not an unrelated equal amount", () => {
     const document = documentFromPages([
       [
