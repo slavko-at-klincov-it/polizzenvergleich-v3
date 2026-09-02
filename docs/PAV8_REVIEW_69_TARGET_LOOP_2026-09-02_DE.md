@@ -2191,6 +2191,59 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.21 LW-12 Schritt A – aktuelle Reproduktion der Definitionsblockade
+
+`LW-12` wurde nach Abschluss von VS-08 auf dem aktuellen Produktprofil neu aus
+allen zehn Paketdokumenten aufgebaut. Der Fall ist kein Recallfehler:
+
+```text
+Paket A: BELEGT / INCLUDED / GENERAL
+Paket B: TEILBELEGT
+Paket B, Quelle 1: INCLUDED / GENERAL
+Paket B, Quelle 2: DEFINED / GENERAL
+```
+
+Die eingeschlossene B-Quelle versichert Bruchschäden an den Rohrleitungen einer
+wasserführenden Fußbodenheizung. Die zweite B-Quelle definiert ausschließlich,
+dass Fußbodenheizung beziehungsweise -kühlung ein mit Wasser oder
+Frostschutzbeigabe betriebenes Rohr- und Schlauchsystem im Gebäude ist. Diese
+Definition ist kein Ausschluss und widerspricht dem positiven Deckungsbeleg
+nicht.
+
+Das aktuelle Ergebnis bleibt dennoch:
+
+```text
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+Blocker: COVERAGE_EFFECT_NOT_DECISIVE
+betroffen: ausschließlich die B-Definition
+```
+
+Echter Ausgangsartefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-12-BASELINE-E66B2E37-20260903
+Commit: e66b2e378aeee8aa3d1f94fab1454c495d171950
+Summary-Digest: 16ca5785386f338f9b4912e25906d15d69022dfae3d23fbb8efcbc90f2fd9e5e
+Target-Selection-Digest: 2ea41a9d219ab73ad92e6534eac1b512d7047332cce8fb330e92d78a75b06e85
+Producer-Digest: 388c1773835d7e1b86f63b496425929770b0e012a235230e3296a5175cd3089e
+Triage-Qwen-Aufrufe: 1
+Evidence-Qwen-Aufrufe: 1
+Serverseitige Terminals: 7
+```
+
+Der erforderliche Fix darf `DEFINED` nicht global ignorieren. Er muss eng
+belegen, dass innerhalb genau dieser Deckungskomponente bereits mindestens ein
+vollständiger `INCLUDED`-Fakt je Paket existiert, alle übrigen Funde reine
+Objektdefinitionen ohne Ausschluss-, Bedingungs- oder Aufhebungswirkung sind
+und das vollständige Dokumentinventar unter demselben Suchvertrag geprüft
+wurde. Gemischte positive und negative Wirkungen, enger Scope, offene
+Kandidaten, unvollständige Quellenbindung oder unbekannte Definitionstypen
+müssen weiterhin fail-closed bleiben.
+
+Schritt A verändert noch kein Ergebnis. Ein voller 224-Zeilen-Lauf und ein
+Deployment wurden nicht durchgeführt; der installierte Kundenstand blieb
+unverändert.
+
 ### 10.20 VS-08 Schritt A – fehlende 25-Prozent-Bedingung wiederfinden
 
 #### 10.20.1 Reproduzierter Ausgangsfehler
