@@ -8,7 +8,10 @@ const {
 } = require("../../utils/policyComparison/resultBuilder");
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(file))
+    .digest("hex");
 }
 
 function readJson(file) {
@@ -18,11 +21,7 @@ function readJson(file) {
 async function main() {
   const [inputManifestFile, sourceRunRoot, outputDirectory, sessionUuid] =
     process.argv.slice(2);
-  for (const candidate of [
-    inputManifestFile,
-    sourceRunRoot,
-    outputDirectory,
-  ]) {
+  for (const candidate of [inputManifestFile, sourceRunRoot, outputDirectory]) {
     if (!candidate || !path.isAbsolute(candidate))
       throw new Error("ABSOLUTE_PATHS_REQUIRED");
   }
@@ -30,14 +29,20 @@ async function main() {
   if (fs.existsSync(outputDirectory)) throw new Error("OUTPUT_ALREADY_EXISTS");
 
   const inputManifest = readJson(inputManifestFile);
-  if (!Array.isArray(inputManifest?.documents) || inputManifest.documents.length < 1)
+  if (
+    !Array.isArray(inputManifest?.documents) ||
+    inputManifest.documents.length < 1
+  )
     throw new Error("INPUT_MANIFEST_INVALID");
 
   const runBySha = new Map();
   for (const name of fs.readdirSync(sourceRunRoot)) {
     const runDirectory = path.join(sourceRunRoot, name);
     const manifestFile = path.join(runDirectory, "manifest.private.json");
-    if (!fs.statSync(runDirectory).isDirectory() || !fs.existsSync(manifestFile))
+    if (
+      !fs.statSync(runDirectory).isDirectory() ||
+      !fs.existsSync(manifestFile)
+    )
       continue;
     const manifest = readJson(manifestFile);
     const documentSha256 = String(manifest?.document?.sha256 || "");
