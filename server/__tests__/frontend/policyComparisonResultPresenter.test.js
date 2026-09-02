@@ -47,6 +47,23 @@ describe("policy comparison result presenter", () => {
     });
   });
 
+  test("labels the audited bilateral absence decision as comparison equality", () => {
+    expect(
+      presentPointDecision({
+        pointDecision: {
+          outcome: "GLEICHWERTIG",
+          reason:
+            "Gleichwertig für diesen Vergleichspunkt: In beiden Polizzen wurde keine passende Vertragsregelung gefunden.",
+          ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+        },
+      })
+    ).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      label: "Gleichwertig",
+      legacyFallback: false,
+    });
+  });
+
   test("labels a one-sided controlled zero match as documentation difference", () => {
     expect(
       presentPointDecision({

@@ -66,6 +66,114 @@ function atom(side, overrides = {}) {
   };
 }
 
+function controlledAbsence(side, overrides = {}) {
+  const documentUuids = overrides.documentUuids || [`absence-document-${side}`];
+  const searchPlanIds = FIXTURE_COMPONENTS.map(
+    ({ id }) => `fixture/LW-22/${id}`
+  );
+  const audits = documentUuids.flatMap((documentUuid) =>
+    FIXTURE_COMPONENTS.map(({ id }) => ({
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      absenceMeaning: "COVERAGE_ONLY",
+      comparisonPolicy: null,
+      absenceCertification: null,
+      requirementContract: {
+        digest: FIXTURE_REQUIREMENT_DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: FIXTURE_COMPONENTS,
+      },
+      searchPlanId: `fixture/LW-22/${id}`,
+      documentUuid,
+      catalogId: "fixture",
+      physicalPagesChecked: 12,
+      totalPhysicalPages: 12,
+      aliases: [id],
+      conceptSearchIds: [],
+      gates: {
+        negativeSearchApproved: true,
+        certifiedNegativeSearch: false,
+        completeTextExtraction: true,
+        completeCategoryTechnicalContract: true,
+        zeroOccurrenceTerminal: true,
+        zeroCandidateTerminal: true,
+        serverNegativeTerminal: true,
+      },
+    }))
+  );
+  const summary = packageSummary({
+    evidenceFound: false,
+    facts: [],
+    reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+    searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+    comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    searchAudit: {
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+      documentCount: documentUuids.length,
+      documentUuids,
+      physicalPagesChecked: 12 * documentUuids.length,
+      searchPlanIds,
+      requirementContract: {
+        digest: FIXTURE_REQUIREMENT_DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: FIXTURE_COMPONENTS,
+      },
+      components: audits,
+    },
+    ...overrides.packageSummary,
+  });
+  const atoms = audits.map((searchAudit) => {
+    const component = FIXTURE_COMPONENTS.find(({ id }) =>
+      searchAudit.searchPlanId.endsWith(`/${id}`)
+    );
+    return atom(side, {
+      componentId: component.id,
+      componentLabel: component.id,
+      factRole: component.factRole,
+      documentUuids: [searchAudit.documentUuid],
+      evidencePresence: "NOT_FOUND",
+      coverageEffect: "UNKNOWN",
+      selectedScopePicture: "UNKNOWN",
+      documentApplicability: "UNKNOWN",
+      selectedCandidateIds: [],
+      unresolvedCandidateIds: [],
+      sources: [],
+      searchAudit,
+    });
+  });
+  return { summary, atoms };
+}
+
+function certifyAbsence(absence) {
+  absence.summary.reviewStatus = "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG";
+  absence.summary.searchDisposition = "NOT_FOUND_AFTER_COMPLETE_SEARCH";
+  absence.summary.comparisonTreatment = "ASSUMED_NOT_INCLUDED_V1";
+  absence.summary.searchAudit.disposition = "NOT_FOUND_AFTER_COMPLETE_SEARCH";
+  absence.summary.searchAudit.comparisonTreatment = "ASSUMED_NOT_INCLUDED_V1";
+  for (const component of absence.summary.searchAudit.components) {
+    component.disposition = "NOT_FOUND_AFTER_COMPLETE_SEARCH";
+    component.comparisonTreatment = "ASSUMED_NOT_INCLUDED_V1";
+    component.gates.certifiedNegativeSearch = true;
+  }
+  return absence;
+}
+
+function replaceAbsenceRequirementContract(absence, requirementContract) {
+  absence.summary.requirementContract = requirementContract;
+  absence.summary.searchAudit.requirementContract = requirementContract;
+  for (const component of absence.summary.searchAudit.components)
+    component.requirementContract = requirementContract;
+  for (const atomValue of absence.atoms) {
+    atomValue.requirementContractDigest = requirementContract.digest;
+    atomValue.componentSatisfactionPolicy =
+      requirementContract.componentSatisfactionPolicy;
+    atomValue.declaredComponents = requirementContract.components;
+  }
+  return absence;
+}
+
 function decide(atomsA, atomsB, overrides = {}) {
   return decidePoint({
     categoryId: "LW-22",
@@ -346,26 +454,222 @@ describe("policy comparison point decision", () => {
     );
   });
 
-  test("reports no documented advantage when both packages have a complete absence", () => {
-    const completeAbsence = {
-      evidenceFound: false,
-      reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
-      searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
-      comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
-    };
-    const result = decide([], [], {
-      packageA: completeAbsence,
-      packageB: completeAbsence,
+  test("reports comparison equality when both packages have the same fully audited absence", () => {
+    const absenceA = controlledAbsence("a");
+    const absenceB = controlledAbsence("b", {
+      documentUuids: ["absence-document-b-1", "absence-document-b-2"],
+    });
+    const result = decide(absenceA.atoms, absenceB.atoms, {
+      packageA: absenceA.summary,
+      packageB: absenceB.summary,
     });
 
     expect(result).toMatchObject({
-      outcome: POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE,
-      ruleId: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
+      schemaVersion: 4,
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
       reviewRequired: false,
     });
     expect(result.reason).toContain(
-      "weder ein Nachweis ausdrücklicher Gleichheit"
+      "weder einen ausdrücklichen Ausschluss noch eine inhaltlich identische Deckung"
     );
+    expect(result.bilateralAbsenceAudit.sides).toHaveLength(2);
+  });
+
+  test("keeps a multi-document bilateral absence audit stable under input permutations", () => {
+    const absenceA = controlledAbsence("a", {
+      documentUuids: ["absence-document-a-1", "absence-document-a-2"],
+    });
+    const absenceB = controlledAbsence("b", {
+      documentUuids: ["absence-document-b-1", "absence-document-b-2"],
+    });
+    const original = decide(absenceA.atoms, absenceB.atoms, {
+      packageA: absenceA.summary,
+      packageB: absenceB.summary,
+    });
+    absenceA.atoms.reverse();
+    absenceB.atoms.reverse();
+    absenceA.summary.searchAudit.components.reverse();
+    absenceB.summary.searchAudit.components.reverse();
+    const permuted = decide(absenceA.atoms, absenceB.atoms, {
+      packageA: absenceA.summary,
+      packageB: absenceB.summary,
+    });
+    expect(permuted).toEqual(original);
+  });
+
+  test("accepts matching certified bilateral absence and rejects mixed dispositions", () => {
+    const certifiedA = certifyAbsence(controlledAbsence("a"));
+    const certifiedB = certifyAbsence(controlledAbsence("b"));
+    expect(
+      decide(certifiedA.atoms, certifiedB.atoms, {
+        packageA: certifiedA.summary,
+        packageB: certifiedB.summary,
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+    });
+
+    const controlled = controlledAbsence("b-controlled");
+    expect(
+      decide(certifiedA.atoms, controlled.atoms, {
+        packageA: certifiedA.summary,
+        packageB: controlled.summary,
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
+  });
+
+  test("requires every declared ANY alternative in every package document", () => {
+    const anyContract = {
+      digest: "b".repeat(64),
+      componentSatisfactionPolicy: "ANY",
+      components: FIXTURE_COMPONENTS,
+    };
+    const absenceA = replaceAbsenceRequirementContract(
+      controlledAbsence("a-any"),
+      anyContract
+    );
+    const absenceB = replaceAbsenceRequirementContract(
+      controlledAbsence("b-any", {
+        documentUuids: ["absence-document-b-any-1", "absence-document-b-any-2"],
+      }),
+      anyContract
+    );
+    expect(
+      decide(absenceA.atoms, absenceB.atoms, {
+        packageA: absenceA.summary,
+        packageB: absenceB.summary,
+      })
+    ).toMatchObject({ outcome: POINT_OUTCOME.EQUIVALENT });
+
+    absenceB.atoms.pop();
+    absenceB.summary.searchAudit.components.pop();
+    expect(
+      decide(absenceA.atoms, absenceB.atoms, {
+        packageA: absenceA.summary,
+        packageB: absenceB.summary,
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
+  });
+
+  test.each([
+    [
+      "optional-only field",
+      {
+        requestedFields: [],
+        optionalFields: ["limit"],
+        requestedFieldStatus: "NOT_REQUIRED",
+        fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
+      },
+    ],
+    [
+      "required and optional fields",
+      {
+        requestedFields: ["condition"],
+        optionalFields: ["limit"],
+        requestedFieldStatus: "NOT_FOUND",
+        fields: [
+          { field: "condition", status: "NOT_FOUND", facts: [] },
+          { field: "limit", status: "NOT_FOUND", facts: [] },
+        ],
+      },
+    ],
+    [
+      "complete-zero search with not-evaluated required field aggregate",
+      {
+        requestedFields: ["condition"],
+        optionalFields: [],
+        requestedFieldStatus: "NOT_EVALUATED",
+        fields: [{ field: "condition", status: "NOT_FOUND", facts: [] }],
+      },
+    ],
+  ])("accepts clean bilateral absence with %s", (_label, fieldState) => {
+    const absenceA = controlledAbsence("a");
+    const absenceB = controlledAbsence("b");
+    Object.assign(absenceA.atoms[0], fieldState);
+    Object.assign(absenceB.atoms[0], fieldState);
+    expect(
+      decide(absenceA.atoms, absenceB.atoms, {
+        packageA: absenceA.summary,
+        packageB: absenceB.summary,
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+    });
+  });
+
+  test.each([
+    ["optional field marked found", { status: "FOUND", facts: [] }],
+    [
+      "optional field with a fact",
+      { status: "NOT_FOUND", facts: [{ rawValue: "EUR 1.000" }] },
+    ],
+  ])("rejects bilateral absence with %s", (_label, fieldOverride) => {
+    const absenceA = controlledAbsence("a");
+    const absenceB = controlledAbsence("b");
+    for (const absence of [absenceA, absenceB]) {
+      Object.assign(absence.atoms[0], {
+        optionalFields: ["limit"],
+        requestedFieldStatus: "NOT_REQUIRED",
+        fields: [{ field: "limit", ...fieldOverride }],
+      });
+    }
+    expect(
+      decide(absenceA.atoms, absenceB.atoms, {
+        packageA: absenceA.summary,
+        packageB: absenceB.summary,
+      })
+    ).toMatchObject({ outcome: POINT_OUTCOME.UNCLEAR });
+  });
+
+  test.each([
+    ["missing audit", (absence) => delete absence.summary.searchAudit],
+    [
+      "incomplete extraction",
+      (absence) =>
+        (absence.summary.searchAudit.components[0].gates.completeTextExtraction =
+          false),
+    ],
+    [
+      "different search plan",
+      (absence) => {
+        absence.summary.searchAudit.searchPlanIds[0] =
+          "fixture/LW-22/different";
+        absence.summary.searchAudit.components[0].searchPlanId =
+          "fixture/LW-22/different";
+        absence.atoms[0].searchAudit.searchPlanId = "fixture/LW-22/different";
+      },
+    ],
+    [
+      "hidden found atom",
+      (absence) => {
+        absence.atoms[0].evidencePresence = "FOUND";
+        absence.atoms[0].coverageEffect = "INCLUDED";
+      },
+    ],
+  ])("fails closed for bilateral absence with %s", (_label, mutate) => {
+    const absenceA = controlledAbsence("a");
+    const absenceB = controlledAbsence("b");
+    mutate(absenceB);
+    expect(
+      decide(absenceA.atoms, absenceB.atoms, {
+        packageA: absenceA.summary,
+        packageB: absenceB.summary,
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+      reviewRequired: true,
+    });
   });
 
   test("reports a documentation difference when complete absence faces evidence without an advantage rule", () => {

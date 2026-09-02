@@ -17,6 +17,12 @@ const {
   comparisonAtomComplete,
   comparisonFieldSignature,
 } = require("./comparisonAtomCanonicalization");
+const {
+  BILATERAL_ABSENCE_REASON_CODE,
+  BILATERAL_ABSENCE_RULE_ID,
+  BILATERAL_ABSENCE_TREATMENT,
+  buildBilateralAbsenceAudit,
+} = require("./bilateralAbsenceContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -881,19 +887,26 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
   const absentB = qualifiedAbsence(packageB);
   const assumedAbsentA = assumedNotIncluded(packageA);
   const assumedAbsentB = assumedNotIncluded(packageB);
-  if (absentA && absentB)
+  const bilateralAbsenceAudit = buildBilateralAbsenceAudit({
+    categoryId,
+    packageA,
+    packageB,
+    atomsA,
+    atomsB,
+    requirementContractA: contractA,
+    requirementContractB: contractB,
+  });
+  if (bilateralAbsenceAudit)
     return {
-      schemaVersion: 3,
-      outcome: POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE,
-      reasonCode: "VERIFIED_ABSENCE_BOTH",
+      schemaVersion: 4,
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: BILATERAL_ABSENCE_REASON_CODE,
       reason:
-        "Kein dokumentierter Vorteil: In beiden vollständig geprüften bereitgestellten Paketen wurde nach dem ausgewiesenen versionierten Suchvertrag keine entsprechende Regelung gefunden. Dies ist weder ein Nachweis ausdrücklicher Gleichheit noch eines ausdrücklichen Ausschlusses.",
+        "Gleichwertig: In beiden vollständig kontrolliert geprüften bereitgestellten Polizzen wurde für diesen Vergleichspunkt unter demselben versionierten Komponenten- und Suchvertrag keine passende Vertragsregelung gefunden. Beide Polizzen besitzen damit dieselbe dokumentierte Fundlage. Dies behauptet weder einen ausdrücklichen Ausschluss noch eine inhaltlich identische Deckung.",
       reviewRequired: false,
-      ruleId: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
-      comparisonTreatment:
-        assumedAbsentA && assumedAbsentB
-          ? "ASSUMED_NOT_INCLUDED_V1"
-          : "DOCUMENTATION_ONLY_V1",
+      ruleId: BILATERAL_ABSENCE_RULE_ID,
+      comparisonTreatment: BILATERAL_ABSENCE_TREATMENT,
+      bilateralAbsenceAudit,
       dimensions: [],
     };
   if (assumedAbsentA && packageB?.evidenceFound) {

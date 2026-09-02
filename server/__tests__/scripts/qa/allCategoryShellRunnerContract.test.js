@@ -171,8 +171,8 @@ describe("all-category shell runner", () => {
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
       productProfile: {
-        id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
-        comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+        id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
+        comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
         categoryViews: ["VS", "FE", "LW", "ST", "EL"],
         expectedRowCount: 224,
       },

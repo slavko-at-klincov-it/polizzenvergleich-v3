@@ -279,6 +279,31 @@ describe("policy comparison customer metric contract", () => {
     );
   });
 
+  test("requires the V9 bilateral-absence profile while preserving V8 history", () => {
+    const current = schema7PackageResult();
+    current.schemaVersion = 9;
+    current.productProfile = {
+      id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
+      comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
+    };
+    current.categories[0].rows[0].pointDecision.packageReviewAudit = {
+      ...current.categories[0].rows[0].pointDecision.packageReviewAudit,
+      schemaVersion: 2,
+      contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
+    };
+    expect(validateCustomerComparison(current)).toMatchObject({
+      customerReviewRequired: 1,
+    });
+
+    current.productProfile = {
+      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+    };
+    expect(() => validateCustomerComparison(current)).toThrow(
+      "COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH"
+    );
+  });
+
   test.each([
     ["missing profile", null],
     [

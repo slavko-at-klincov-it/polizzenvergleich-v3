@@ -85,6 +85,22 @@ describe("policy comparison customer result presenter", () => {
     );
   });
 
+  test("presents bilateral absence as comparison equality without claiming equal coverage", () => {
+    const text = presented("GLEICHWERTIG", {
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reason:
+        "Gleichwertig: In beiden vollständig kontrolliert geprüften bereitgestellten Polizzen wurde keine passende Vertragsregelung gefunden. Dies behauptet weder einen ausdrücklichen Ausschluss noch eine inhaltlich identische Deckung.",
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+    });
+    expect(text).toContain(
+      "In beiden vollständig kontrolliert geprüften bereitgestellten Polizzen wurde keine passende Vertragsregelung gefunden"
+    );
+    expect(text).toContain(
+      "weder einen ausdrücklichen Ausschluss noch eine inhaltlich identische Deckung"
+    );
+    expect(text).not.toContain("Gleichwertig: Gleichwertig:");
+  });
+
   test("does not expose rule identifiers or search dispositions", () => {
     const text = presented("UNKLAR", {
       reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",

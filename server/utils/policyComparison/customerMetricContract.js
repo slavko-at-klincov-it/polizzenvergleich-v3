@@ -8,6 +8,13 @@ const {
   packageReviewCustomerExplanation,
 } = require("./customerResultPresenter");
 const { PRODUCT_PROFILE } = require("./productContract");
+const {
+  BILATERAL_ABSENCE_REASON_CODE,
+  BILATERAL_ABSENCE_RULE_ID,
+  BILATERAL_ABSENCE_TREATMENT,
+  buildBilateralAbsenceAudit,
+  validateBilateralAbsenceAudit,
+} = require("./bilateralAbsenceContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -24,6 +31,10 @@ const LEGACY_TECHNICAL_OUTCOMES = new Set([
   "NUR_B_BELEGT",
   "UNTERSCHIED_FACHLICH_PRÜFEN",
 ]);
+const HISTORICAL_SCHEMA_8_PROFILE = Object.freeze({
+  id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
+  comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+});
 
 function comparisonRows(categories) {
   return (categories || []).flatMap(({ categoryView, rows }) =>
@@ -158,7 +169,16 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   const comparisonContractId = String(
     result?.productProfile?.comparisonContractId || ""
   );
-  if (Number(result.schemaVersion) >= 8) {
+  if (Number(result.schemaVersion) === 8) {
+    if (
+      productProfileId !== HISTORICAL_SCHEMA_8_PROFILE.id ||
+      comparisonContractId !== HISTORICAL_SCHEMA_8_PROFILE.comparisonContractId
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) >= 9) {
     if (
       productProfileId !== PRODUCT_PROFILE.id ||
       comparisonContractId !== PRODUCT_PROFILE.comparisonContractId
@@ -214,6 +234,63 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         reviewRequired,
       ]);
     if (reviewRequired) recomputedReview += 1;
+    const bilateralAbsenceDecision =
+      row.pointDecision?.ruleId === BILATERAL_ABSENCE_RULE_ID ||
+      row.pointDecision?.reasonCode === BILATERAL_ABSENCE_REASON_CODE ||
+      row.pointDecision?.comparisonTreatment === BILATERAL_ABSENCE_TREATMENT ||
+      row.pointDecision?.bilateralAbsenceAudit !== undefined ||
+      row.outcome === "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN";
+    const expectedBilateralAbsenceAudit = buildBilateralAbsenceAudit({
+      categoryId: row.categoryId,
+      packageA: row.packageA,
+      packageB: row.packageB,
+      requirementContractA:
+        row.packageA?.requirementContract ||
+        row.packageA?.searchAudit?.requirementContract,
+      requirementContractB:
+        row.packageB?.requirementContract ||
+        row.packageB?.searchAudit?.requirementContract,
+      expectedDocumentUuidsA: [...allowedDocumentUuidsBySide.A],
+      expectedDocumentUuidsB: [...allowedDocumentUuidsBySide.B],
+    });
+    if (
+      Number(result.schemaVersion) >= 9 &&
+      Boolean(expectedBilateralAbsenceAudit) !== bilateralAbsenceDecision
+    )
+      validationError("COMPARISON_BILATERAL_ABSENCE_DECISION_OMISSION", [
+        rowKey,
+      ]);
+    if (Number(result.schemaVersion) >= 9 && bilateralAbsenceDecision) {
+      if (
+        outcome !== POINT_OUTCOME.EQUIVALENT ||
+        row.pointDecision?.ruleId !== BILATERAL_ABSENCE_RULE_ID ||
+        row.pointDecision?.reasonCode !== BILATERAL_ABSENCE_REASON_CODE ||
+        row.pointDecision?.comparisonTreatment !==
+          BILATERAL_ABSENCE_TREATMENT ||
+        row.pointDecision?.reviewRequired !== false ||
+        row.outcome !== "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN" ||
+        row.pointDecision?.schemaVersion !== 4 ||
+        !Array.isArray(row.pointDecision?.dimensions) ||
+        row.pointDecision.dimensions.length !== 0
+      )
+        validationError("COMPARISON_BILATERAL_ABSENCE_DECISION_INVALID", [
+          rowKey,
+        ]);
+      try {
+        validateBilateralAbsenceAudit(row.pointDecision.bilateralAbsenceAudit, {
+          categoryId: row.categoryId,
+          packageA: row.packageA,
+          packageB: row.packageB,
+          expectedDocumentUuidsA: [...allowedDocumentUuidsBySide.A],
+          expectedDocumentUuidsB: [...allowedDocumentUuidsBySide.B],
+        });
+      } catch (error) {
+        validationError("COMPARISON_BILATERAL_ABSENCE_AUDIT_INVALID", [
+          rowKey,
+          error.message,
+        ]);
+      }
+    }
     if (reviewRequired) {
       const reasonCode = String(row.pointDecision?.reasonCode || "").trim();
       if (!reasonCode)

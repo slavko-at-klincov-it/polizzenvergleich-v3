@@ -27,8 +27,8 @@ describe("policy comparison product contract", () => {
     });
     expect(EXPECTED_ROW_COUNT).toBe(224);
     expect(PRODUCT_PROFILE).toMatchObject({
-      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
-      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+      id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
+      comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });

@@ -941,8 +941,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
-      comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
+      id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
+      comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -1032,7 +1032,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(8);
+    expect(result.schemaVersion).toBe(9);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -1085,7 +1085,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(8);
+    expect(result.schemaVersion).toBe(9);
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
@@ -1275,6 +1275,69 @@ describe("policy comparison result builder", () => {
       result.totals.pointDecisions.UNKLAR
     );
     expect(result.totals).not.toHaveProperty("reviewRequired");
+  });
+
+  test("materializes bilateral complete controlled absence as comparison equality with an audit", () => {
+    const runA = writeRun(root, document("a", "A"));
+    const runB = writeRun(root, document("b", "B"));
+    writeCompleteAbsenceCategory(runA, "VS", { certified: false });
+    writeCompleteAbsenceCategory(runB, "VS", { certified: false });
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories[0].rows[0];
+
+    expect(result.schemaVersion).toBe(9);
+    expect(comparisonRow).toMatchObject({
+      outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+      pointDecision: {
+        schemaVersion: 4,
+        outcome: "GLEICHWERTIG",
+        reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+        ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+        comparisonTreatment: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+        reviewRequired: false,
+      },
+    });
+    expect(comparisonRow.pointDecision.bilateralAbsenceAudit).toMatchObject({
+      schemaVersion: 1,
+      contractId: "BILATERAL_QUALIFIED_ABSENCE_AUDIT_V1",
+      categoryId: "VS-01",
+    });
+    expect(comparisonRow.packageA.coverage).toBe("Nicht feststellbar");
+    expect(comparisonRow.packageB.coverage).toBe("Nicht feststellbar");
+
+    for (const mutate of [
+      (tampered) =>
+        delete tampered.categories[0].rows[0].pointDecision
+          .bilateralAbsenceAudit,
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.ruleId =
+          "ATOMIC_COVERAGE_EQUALITY_V1"),
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.bilateralAbsenceAudit.sides[0].physicalPagesChecked += 1),
+      (tampered) =>
+        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction =
+          false),
+      (tampered) => {
+        const decision = tampered.categories[0].rows[0].pointDecision;
+        decision.outcome = "KEIN_DOKUMENTIERTER_VORTEIL";
+        decision.reasonCode = "VERIFIED_ABSENCE_BOTH";
+        decision.ruleId = "COMPLETE_SEARCH_ABSENCE_BOTH_V1";
+        decision.comparisonTreatment = "DOCUMENTATION_ONLY_V1";
+        delete decision.bilateralAbsenceAudit;
+      },
+      (tampered) =>
+        tampered.documents.push({
+          ...tampered.documents.find(({ side }) => side === "B"),
+          uuid: "unrepresented-package-document",
+        }),
+    ]) {
+      const tampered = JSON.parse(JSON.stringify(result));
+      mutate(tampered);
+      expect(() => validateCustomerComparison(tampered)).toThrow(
+        /^COMPARISON_BILATERAL_ABSENCE_/u
+      );
+    }
   });
 
   test("does not verify policy strings without persisted certification metadata", () => {
