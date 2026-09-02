@@ -24,6 +24,9 @@ const {
   buildLw20DefaultExclusionOverrideAudit,
 } = require("../policyAnalysis/lw20DefaultExclusionOverrideAudit");
 const {
+  buildLw20DefaultExclusionSourceAudit,
+} = require("../policyAnalysis/lw20DefaultExclusionSourceAudit");
+const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
@@ -729,6 +732,15 @@ function componentSearchAudit({
       requirementId: requirement?.id,
       componentId: component?.id,
     });
+  const lw20DefaultExclusionSourceAudit =
+    buildLw20DefaultExclusionSourceAudit({
+      document,
+      documentArtifact,
+      requirement,
+      component,
+      judgement,
+      target,
+    });
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
       judgement?.coverageEffect === "UNKNOWN" &&
@@ -797,6 +809,9 @@ function componentSearchAudit({
     ...(terminalRejectionAudit ? { terminalRejectionAudit } : {}),
     ...(lw20DefaultExclusionOverrideAudit
       ? { lw20DefaultExclusionOverrideAudit }
+      : {}),
+    ...(lw20DefaultExclusionSourceAudit
+      ? { lw20DefaultExclusionSourceAudit }
       : {}),
     gates: {
       negativeSearchApproved,
@@ -1170,7 +1185,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     categories,
     totals,
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Der Negativbefund belegt dabei nie einen ausdrücklichen Ausschluss. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Ausschließlich für LW-20 darf ein vollständiger kontrollierter Nichtfund mit einem belegten, paketweit nicht aufgehobenen Standardausschluss als gleiche dokumentierte Nichtdeckung bewertet werden; der Negativbefund wird dabei niemals in einen ausdrücklichen Ausschluss umgeschrieben. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
   validateCustomerComparison(result);
   return result;

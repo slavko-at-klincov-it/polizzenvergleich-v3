@@ -32,6 +32,10 @@ const {
   buildUnilateralCoverageAbsenceAudit,
 } = require("./unilateralCoverageAbsenceContract");
 const {
+  buildLw20AbsenceDefaultExclusionEqualityAudit,
+  lw20AbsenceDefaultExclusionEqualityDecision,
+} = require("./lw20AbsenceDefaultExclusionEqualityContract");
+const {
   compareStormDefinitionThreshold,
 } = require("./stormDefinitionThresholdContract");
 const {
@@ -958,6 +962,20 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       bilateralAbsenceAudit,
       dimensions: [],
     };
+  const lw20AbsenceDefaultExclusionEqualityAudit =
+    buildLw20AbsenceDefaultExclusionEqualityAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
+    });
+  if (lw20AbsenceDefaultExclusionEqualityAudit)
+    return lw20AbsenceDefaultExclusionEqualityDecision(
+      lw20AbsenceDefaultExclusionEqualityAudit
+    );
   const unilateralCoverageAbsenceAudit = buildUnilateralCoverageAbsenceAudit({
     categoryId,
     packageA,

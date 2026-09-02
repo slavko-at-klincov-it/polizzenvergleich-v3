@@ -26,6 +26,13 @@ const {
   UNILATERAL_DOCUMENTATION_RULE_ID,
   validateUnilateralCoverageAbsenceAudit,
 } = require("./unilateralCoverageAbsenceContract");
+const {
+  LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_REASON_CODE,
+  LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_RULE_ID,
+  LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT,
+  lw20AbsenceDefaultExclusionEqualityDecision,
+  validateLw20AbsenceDefaultExclusionEqualityAudit,
+} = require("./lw20AbsenceDefaultExclusionEqualityContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -118,6 +125,20 @@ function deriveCustomerMetrics(categories) {
 
 function validationError(code, details = []) {
   throw new Error([code, ...details].join(":"));
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])])
+  );
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
 function deriveLegacyCustomerReview(result) {
@@ -244,6 +265,32 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     POINT_OUTCOMES.map((outcome) => [outcome, []])
   );
   const recomputedReviewRowKeysByReasonCode = {};
+  const manifestDocuments = Array.isArray(result?.documents)
+    ? result.documents
+    : [];
+  const validManifestDocuments = manifestDocuments.every(
+    (document) =>
+      document &&
+      typeof document === "object" &&
+      !Array.isArray(document) &&
+      typeof document.uuid === "string" &&
+      document.uuid === document.uuid.trim() &&
+      document.uuid.length > 0 &&
+      ["A", "B"].includes(document.side) &&
+      /^[a-f0-9]{64}$/u.test(String(document.sha256 || ""))
+  );
+  const manifestDocumentUuids = validManifestDocuments
+    ? manifestDocuments.map(({ uuid }) => uuid)
+    : [];
+  if (
+    Number(result.schemaVersion) >= 11 &&
+    (!Array.isArray(result?.documents) ||
+      !validManifestDocuments ||
+      new Set(manifestDocumentUuids).size !== manifestDocumentUuids.length ||
+      !manifestDocuments.some(({ side }) => side === "A") ||
+      !manifestDocuments.some(({ side }) => side === "B"))
+  )
+    validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID");
   const allowedDocumentUuidsBySide = Object.fromEntries(
     ["A", "B"].map((side) => [
       side,
@@ -334,6 +381,63 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     }
     if (Number(result.schemaVersion) >= 10) {
       const oneSidedDirection = ONE_SIDED_TECHNICAL_OUTCOMES.get(row.outcome);
+      const lw20EqualityDecision =
+        row.pointDecision?.ruleId ===
+          LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_RULE_ID ||
+        row.pointDecision?.reasonCode ===
+          LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_REASON_CODE ||
+        row.pointDecision?.comparisonTreatment ===
+          LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT ||
+        row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
+          undefined;
+      if (lw20EqualityDecision) {
+        const audit =
+          row.pointDecision.lw20AbsenceDefaultExclusionEqualityAudit;
+        try {
+          validateLw20AbsenceDefaultExclusionEqualityAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            expectedDocumentUuidsA: [...allowedDocumentUuidsBySide.A],
+            expectedDocumentUuidsB: [...allowedDocumentUuidsBySide.B],
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+          });
+        } catch (error) {
+          validationError("COMPARISON_LW20_EQUALITY_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const direction = oneSidedDirection || [];
+        const reconstructed =
+          lw20AbsenceDefaultExclusionEqualityDecision(audit);
+        if (
+          row.categoryView !== "LW" ||
+          row.categoryId !== "LW-20" ||
+          direction[0] !== audit?.excludedSide ||
+          direction[1] !== audit?.absentSide ||
+          outcome !== POINT_OUTCOME.EQUIVALENT ||
+          row.pointDecision?.schemaVersion !== 6 ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.ruleId !==
+            LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_RULE_ID ||
+          row.pointDecision?.reasonCode !==
+            LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_REASON_CODE ||
+          row.pointDecision?.comparisonTreatment !==
+            LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT ||
+          row.pointDecision?.bilateralAbsenceAudit !== undefined ||
+          row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_LW20_EQUALITY_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
       const unilateralDecision =
         row.pointDecision?.ruleId === UNILATERAL_COVERAGE_RULE_ID ||
         row.pointDecision?.ruleId === UNILATERAL_DOCUMENTATION_RULE_ID ||
@@ -355,7 +459,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       );
       if (
         Boolean(oneSidedDirection) !== unilateralDecision &&
-        !directionalAuditFailedClosed
+        !directionalAuditFailedClosed &&
+        !lw20EqualityDecision
       )
         validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
       if (oneSidedDirection && unilateralDecision) {
