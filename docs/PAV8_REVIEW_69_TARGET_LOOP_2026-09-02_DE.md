@@ -59,8 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `1/40 TARGET-E2E ACCEPTED`. `VS-15` ist abgeschlossen; 39 Fälle der
-ursprünglichen Familie bleiben offen.
+Status: `2/40 TARGET-E2E ACCEPTED`. `VS-15` und `LW-12` sind abgeschlossen;
+38 Fälle der ursprünglichen Familie bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -70,9 +70,9 @@ ST-15, ST-16, ST-17, ST-18, ST-19, ST-21, ST-25, ST-27
 EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
-Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15` gehört
-nach dem in Abschnitt 10.19 dokumentierten Zielnachweis nicht mehr zur
-operativen Restliste.
+Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15` und
+`LW-12` gehören nach den in Abschnitt 10.19 beziehungsweise 10.21
+dokumentierten Zielnachweisen nicht mehr zur operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
