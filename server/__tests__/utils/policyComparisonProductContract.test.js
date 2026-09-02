@@ -27,8 +27,9 @@ describe("policy comparison product contract", () => {
     });
     expect(EXPECTED_ROW_COUNT).toBe(224);
     expect(PRODUCT_PROFILE).toMatchObject({
-      id: "CUSTOMER_CORE_5_V25_LW20_ALIAS_FREE_OVERRIDE_AUDIT",
-      comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
+      id: "CUSTOMER_CORE_5_V26_LW20_DEFAULT_EXCLUSION_EQUALITY",
+      comparisonContractId:
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_V2",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });

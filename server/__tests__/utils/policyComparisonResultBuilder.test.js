@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -50,7 +51,7 @@ function document(uuid, side, role = "MAIN_POLICY") {
     role,
     documentStatus: "ACTIVE",
     originalName: `${uuid}.pdf`,
-    sha256: uuid.repeat(64).slice(0, 64),
+    sha256: crypto.createHash("sha256").update(uuid).digest("hex"),
   };
 }
 
@@ -906,11 +907,26 @@ function writeLw20AbsenceCategory(
   const requirementId = "LW-20";
   const componentId = "ground_seepage_or_retained_water";
   const contextText = excluded
-    ? "Nicht versichert sind Schäden durch Grundwasser, Sickerwasser oder Stauwasser."
+    ? "Allgemeine Bedingungen für die Leitungswasserversicherung\nNicht versichert sind Schäden, sofern nicht anders vereinbart:\na) durch andere Gefahren;\nb) vor Vertragsbeginn entstandene Schäden, auch wenn sie später sichtbar werden;\nc) durch Grundwasser, Sickerwasser oder Stauwasser;\nd) durch Erdbeben."
     : "Die Kosten für die Behandlung von nicht versicherten Sachen, z.B. Wasser (inkl. Grundwasser), Luft und Erdreich, werden nicht ersetzt, auch dann nicht, wenn sie mit versicherten Sachen vermischt werden.";
+  const artifactPageTexts = Array.from({ length: 22 }, (_, index) =>
+    index === 21 ? contextText : `Dokumentseite ${index + 1}`
+  );
+  let pageContent = "";
+  const pageMap = artifactPageTexts.map((text, index) => {
+    if (pageContent) pageContent += "\n\f\n";
+    const start = pageContent.length;
+    pageContent += text;
+    return { pageNumber: index + 1, start, end: pageContent.length };
+  });
   const exactText = "Grundwasser";
-  const contextStart = 46_775;
+  const contextStart = pageMap[21].start;
   const relativeStart = contextText.indexOf(exactText);
+  const sectionText = "Allgemeine Bedingungen für die Leitungswasserversicherung";
+  const sectionStart = contextText.indexOf(sectionText);
+  const governorText =
+    "Nicht versichert sind Schäden, sofern nicht anders vereinbart:";
+  const governorStart = contextText.indexOf(governorText);
   const occurrence = {
     candidateId: `candidate:lw20-${excluded ? "excluded" : "treatment-cost"}:${run.document.uuid}`,
     matchedAlias: exactText,
@@ -919,6 +935,8 @@ function writeLw20AbsenceCategory(
     documentStart: contextStart + relativeStart,
     documentEnd: contextStart + relativeStart + exactText.length,
     exactText,
+    pageStart: relativeStart,
+    pageEnd: relativeStart + exactText.length,
     context: {
       unitType: "PARAGRAPH",
       documentStart: contextStart,
@@ -937,9 +955,20 @@ function writeLw20AbsenceCategory(
     sectionScopeHint: excluded
       ? {
           scopeKey: "LEITUNGSWASSER_INSURANCE",
-          text: "Allgemeine Bedingungen für die Leitungswasserversicherung",
+          text: sectionText,
           source: "CURRENT_PAGE_HEADING",
           physicalPageNumber: 22,
+          pageStart: sectionStart,
+          pageEnd: sectionStart + sectionText.length,
+        }
+      : null,
+    coverageGovernorHint: excluded
+      ? {
+          text: governorText,
+          source: "CURRENT_PAGE_GOVERNOR",
+          physicalPageNumber: 22,
+          pageStart: governorStart,
+          pageEnd: governorStart + governorText.length,
         }
       : null,
   };
@@ -960,17 +989,6 @@ function writeLw20AbsenceCategory(
       scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
     }),
   };
-
-  const artifactPageTexts = Array.from({ length: 22 }, (_, index) =>
-    index === 21 ? contextText : `Dokumentseite ${index + 1}`
-  );
-  let pageContent = "";
-  const pageMap = artifactPageTexts.map((text, index) => {
-    if (pageContent) pageContent += "\n\f\n";
-    const start = pageContent.length;
-    pageContent += text;
-    return { pageNumber: index + 1, start, end: pageContent.length };
-  });
 
   fs.writeFileSync(
     path.join(run.outputDirectory, "document.private.json"),
@@ -1038,7 +1056,13 @@ function writeLw20AbsenceCategory(
           coverageEffect: excluded ? "EXCLUDED" : "UNKNOWN",
           conflictState: "NONE",
           selectedScopePicture: excluded ? "GENERAL" : "UNKNOWN",
-          documentApplicability: excluded ? "ACTIVE" : "UNKNOWN",
+          documentApplicability: excluded
+            ? {
+                ACTIVE: "ACTIVE",
+                FRAMEWORK_TERMS: "CONDITIONAL",
+                PROPOSAL: "PROPOSED_ONLY",
+              }[run.document.documentStatus]
+            : "UNKNOWN",
           decisionOwner: "SERVER",
         },
       ],
@@ -1056,6 +1080,11 @@ function writeLw20AbsenceCategory(
           ? [
               {
                 ...occurrence,
+                contextText,
+                contextDocumentStart: contextStart,
+                candidateBinding: "DIRECT",
+                deterministicBindingBasis:
+                  "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
                 binding: "DIRECT",
                 role: "COVERAGE",
                 scopePicture: "GENERAL",
@@ -1718,8 +1747,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V25_LW20_ALIAS_FREE_OVERRIDE_AUDIT",
-      comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
+      id: "CUSTOMER_CORE_5_V26_LW20_DEFAULT_EXCLUSION_EQUALITY",
+      comparisonContractId:
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_V2",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -2251,6 +2281,128 @@ describe("policy comparison result builder", () => {
       outcome: "UNKLAR",
       reasonCode: "MISSING_BOTH",
     });
+  });
+
+  test("equates LW-20 controlled absence with one unoverridden package default exclusion in both directions", () => {
+    let firstResult;
+    for (const fixture of [
+      { absentSide: "A", absentUuid: "a", termsUuid: "b", proposalUuid: "c" },
+      { absentSide: "B", absentUuid: "d", termsUuid: "e", proposalUuid: "f" },
+    ]) {
+      const excludedSide = fixture.absentSide === "A" ? "B" : "A";
+      const absentDocument = document(fixture.absentUuid, fixture.absentSide);
+      const termsDocument = document(fixture.termsUuid, excludedSide, "TERMS");
+      termsDocument.documentStatus = "FRAMEWORK_TERMS";
+      const proposalDocument = document(fixture.proposalUuid, excludedSide);
+      proposalDocument.documentStatus = "PROPOSAL";
+      const absentRun = writeRun(root, absentDocument);
+      const termsRun = writeRun(root, termsDocument);
+      const proposalRun = writeRun(root, proposalDocument);
+      writeLw20AbsenceCategory(absentRun, { treatmentCost: true });
+      writeLw20AbsenceCategory(termsRun, { excluded: true });
+      writeLw20AbsenceCategory(proposalRun);
+
+      const result = buildComparisonResult([absentRun, termsRun, proposalRun]);
+      const comparisonRow = result.categories
+        .find(({ categoryView }) => categoryView === "LW")
+        .rows.find(({ categoryId }) => categoryId === "LW-20");
+      const audit =
+        comparisonRow.pointDecision
+          .lw20AbsenceDefaultExclusionEqualityAudit;
+
+      expect(comparisonRow.pointDecision).toMatchObject({
+        schemaVersion: 6,
+        outcome: "GLEICHWERTIG",
+        reasonCode:
+          "EQUAL_LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION",
+        ruleId:
+          "LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION_EQUALITY_V1",
+        reviewRequired: false,
+        dimensions: [],
+      });
+      expect(comparisonRow.pointDecision.reason).toBe(
+        `Gleichwertig: Polizze ${fixture.absentSide} besitzt einen vollständig kontrollierten Nichtfund; Polizze ${excludedSide} enthält einen paketweit nicht aufgehobenen Standardausschluss. In beiden Polizzen ist damit für LW-20 keine dokumentierte Deckung belegt. Der kontrollierte Nichtfund von Polizze ${fixture.absentSide} wird dabei ausdrücklich nicht als Ausschluss dargestellt.`
+      );
+      expect(audit).toMatchObject({
+        absentSide: fixture.absentSide,
+        excludedSide,
+        searchPlanIds: [
+          "lw-occurrence-full-draft-v0.8/LW-20/ground_seepage_or_retained_water",
+        ],
+        absence: { projectedAtoms: expect.any(Array) },
+        exclusion: {
+          projectedAtoms: expect.any(Array),
+          overrideAuditCount: 2,
+        },
+      });
+      expect(audit.absence.projectedAtoms).toHaveLength(1);
+      expect(audit.exclusion.projectedAtoms).toHaveLength(2);
+      expect(() => validateCustomerComparison(result)).not.toThrow();
+      firstResult ||= result;
+    }
+
+    const mutations = [
+      (result) => {
+        result.categories[2].rows[0].pointDecision
+          .lw20AbsenceDefaultExclusionEqualityAudit.assessmentDigest =
+          "a".repeat(64);
+      },
+      (result) => {
+        const audit =
+          result.categories[2].rows[0].pointDecision
+            .lw20AbsenceDefaultExclusionEqualityAudit;
+        audit.exclusion.projectedAtoms.find(
+          ({ evidencePresence }) => evidencePresence === "FOUND"
+        ).coverageEffect = "INCLUDED";
+      },
+      (result) => {
+        const audit =
+          result.categories[2].rows[0].pointDecision
+            .lw20AbsenceDefaultExclusionEqualityAudit;
+        audit.exclusion.projectedAtoms[0].searchAudit
+          .lw20DefaultExclusionOverrideAudit.status = "REVIEW_REQUIRED";
+      },
+      (result) => {
+        result.documents[1].sha256 = "f".repeat(64);
+      },
+      (result) => {
+        result.documents[2].uuid = result.documents[1].uuid;
+      },
+      (result) => {
+        result.categories[2].rows[0].pointDecision.reason = "Gleichwertig.";
+      },
+      (result) => {
+        result.categories[2].rows[0].pointDecision.uncontracted = true;
+      },
+      (result) => {
+        result.categories[2].rows[0].pointDecision.bilateralAbsenceAudit = {};
+      },
+      (result) => {
+        const audit =
+          result.categories[2].rows[0].pointDecision
+            .lw20AbsenceDefaultExclusionEqualityAudit;
+        audit.exclusion.projectedAtoms
+          .find(({ evidencePresence }) => evidencePresence === "FOUND")
+          .searchAudit.lw20DefaultExclusionSourceAudit.source.itemPageStart += 1;
+      },
+      (result) => {
+        result.documents = {};
+      },
+      (result) => {
+        result.documents = result.documents.filter(({ side }) => side === "A");
+      },
+      (result) => {
+        result.documents.push(null);
+      },
+      (result) => {
+        result.documents[0].uuid = ` ${result.documents[0].uuid}`;
+      },
+    ];
+    for (const mutate of mutations) {
+      const tampered = JSON.parse(JSON.stringify(firstResult));
+      mutate(tampered);
+      expect(() => validateCustomerComparison(tampered)).toThrow();
+    }
   });
 
   test("revalidates LW-20 non-target terminals and reports the excluded counterpart as a documentation difference", () => {
