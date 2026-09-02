@@ -1,8 +1,11 @@
 const crypto = require("crypto");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   legacyTerminalRejectionSetDigestV1,
+  legacyTerminalRejectionSetDigestV2,
   terminalRejectionSetDigest,
   terminalTargetAcceptsObservedScopes,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
@@ -79,16 +82,26 @@ function validDeterministicTerminalRejection(component, categoryId) {
   );
   const ids = canonicalStrings(audit?.rejectedCandidateIds);
   const legacyV1 = audit?.schemaVersion === 1;
-  const currentV2 = audit?.schemaVersion === 2;
+  const legacyV2 = audit?.schemaVersion === 2;
+  const currentV3 = audit?.schemaVersion === 3;
   const digestFor = legacyV1
     ? legacyTerminalRejectionSetDigestV1
-    : terminalRejectionSetDigest;
+    : legacyV2
+      ? legacyTerminalRejectionSetDigestV2
+      : terminalRejectionSetDigest;
   if (
     !target ||
-    (!legacyV1 && !currentV2) ||
+    (!legacyV1 && !legacyV2 && !currentV3) ||
     (legacyV1 &&
       target.contractId !==
         DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID) ||
+    (currentV3
+      ? audit?.rejectionDigestContractId !==
+        TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID
+      : Object.prototype.hasOwnProperty.call(
+          audit || {},
+          "rejectionDigestContractId"
+        )) ||
     declaredComponent?.factRole !== target.factRole ||
     component?.absenceMeaning !== target.absenceMeaning ||
     component?.gates?.zeroOccurrenceTerminal !== false ||
@@ -121,6 +134,13 @@ function validDeterministicTerminalRejection(component, categoryId) {
               "terminalRejectionContractId"
             )
           : rejection?.terminalRejectionContractId !== target?.contractId) ||
+        (currentV3
+          ? rejection?.occurrenceDigestContractId !==
+            TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID
+          : Object.prototype.hasOwnProperty.call(
+              rejection,
+              "occurrenceDigestContractId"
+            )) ||
         rejection?.decisionBasis !== target?.decisionBasis ||
         !/^[a-f0-9]{64}$/u.test(
           String(rejection?.occurrenceDigestSha256 || "")

@@ -12,6 +12,10 @@ const {
   materializePreparedEvidence,
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const {
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  terminalOccurrenceDigest,
+} = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 const WORKSHEET = {
   candidateOnly: true,
@@ -148,6 +152,8 @@ describe("preparedEvidenceContract", () => {
         candidateId: occurrence.candidateId,
         reason: "TRIAGE_MENTION_ONLY",
         terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+        occurrenceDigestContractId:
+          TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
         decisionOwner: "SERVER",
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         physicalPageNumber: 2,
@@ -156,6 +162,25 @@ describe("preparedEvidenceContract", () => {
         occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
       }),
     ]);
+    const certifiedOccurrenceDigest =
+      target.serverRejectedCandidates[0].occurrenceDigestSha256;
+    expect(
+      terminalOccurrenceDigest({
+        ...occurrence,
+        context: {
+          ...occurrence.context,
+          text: `${occurrence.context.text} Diese Regel gilt ebenso für Feuerschäden.`,
+        },
+      })
+    ).not.toBe(certifiedOccurrenceDigest);
+    expect(
+      terminalOccurrenceDigest({
+        ...occurrence,
+        scopeLead: {
+          text: `${occurrence.scopeLead.text} Feuerversicherung`,
+        },
+      })
+    ).not.toBe(certifiedOccurrenceDigest);
 
     const adversarial = [
       {

@@ -397,6 +397,7 @@ describe("materializeTargetedQaOverlay", () => {
           ...persisted.serverRejectedCandidates[0],
           terminalRejectionContractId:
             "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+          occurrenceDigestContractId: "TERMINAL_OCCURRENCE_PROVENANCE_V3",
           decisionOwner: "SERVER",
           decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
           physicalPageNumber: 2,
@@ -469,6 +470,7 @@ describe("materializeTargetedQaOverlay", () => {
           ...stPersisted.serverRejectedCandidates[0],
           terminalRejectionContractId:
             "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+          occurrenceDigestContractId: "TERMINAL_OCCURRENCE_PROVENANCE_V3",
           decisionOwner: "SERVER",
           decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
           physicalPageNumber: 15,

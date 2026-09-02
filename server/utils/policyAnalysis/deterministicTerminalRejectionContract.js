@@ -4,6 +4,10 @@ const DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
 const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1";
+const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
+  "TERMINAL_OCCURRENCE_PROVENANCE_V3";
+const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
+  "TERMINAL_REJECTION_SET_PROVENANCE_V3";
 
 const CERTIFIED_TARGETS = Object.freeze({
   "FE:FE-B13:pre_inception_damage_exclusion": Object.freeze({
@@ -169,43 +173,85 @@ function sha256(value) {
 function terminalOccurrenceDigest(occurrence) {
   const scopeProofMode = occurrence?.scopeProofMode || null;
   return sha256({
-    candidateId: occurrence?.candidateId || null,
-    matchedAlias: occurrence?.matchedAlias || null,
-    physicalPageNumber:
-      occurrence?.physicalPageNumber || occurrence?.pageNumber || null,
-    documentStart: Number.isInteger(occurrence?.documentStart)
-      ? occurrence.documentStart
-      : null,
-    documentEnd: Number.isInteger(occurrence?.documentEnd)
-      ? occurrence.documentEnd
-      : null,
-    exactText: occurrence?.exactText || null,
-    sectionScopeHint: occurrence?.sectionScopeHint || null,
-    pageScopeHints: occurrence?.pageScopeHints || [],
-    ...(scopeProofMode
-      ? {
-          scopeProofMode,
-          context: occurrence?.context || null,
-          scopeLead: occurrence?.scopeLead || null,
-        }
-      : {}),
+    digestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    occurrence: {
+      candidateId: occurrence?.candidateId || null,
+      matchedAlias: occurrence?.matchedAlias || null,
+      physicalPageNumber:
+        occurrence?.physicalPageNumber || occurrence?.pageNumber || null,
+      documentStart: Number.isInteger(occurrence?.documentStart)
+        ? occurrence.documentStart
+        : null,
+      documentEnd: Number.isInteger(occurrence?.documentEnd)
+        ? occurrence.documentEnd
+        : null,
+      exactText: occurrence?.exactText || null,
+      sectionScopeHint: occurrence?.sectionScopeHint || null,
+      pageScopeHints: occurrence?.pageScopeHints || [],
+      context: occurrence?.context || null,
+      scopeLead: occurrence?.scopeLead || null,
+      ...(scopeProofMode ? { scopeProofMode } : {}),
+    },
   });
 }
 
 function terminalRejectionSetDigest(rejections) {
+  return sha256({
+    digestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+    rejections: [...(rejections || [])]
+      .map(
+        ({
+          candidateId,
+          terminalRejectionContractId,
+          occurrenceDigestContractId,
+          decisionBasis,
+          occurrenceDigestSha256,
+          physicalPageNumber,
+          sectionScopeSource,
+          observedScopeKeys: scopes,
+          scopeProofMode,
+        }) => ({
+          candidateId,
+          terminalRejectionContractId: terminalRejectionContractId || null,
+          occurrenceDigestContractId: occurrenceDigestContractId || null,
+          decisionBasis,
+          occurrenceDigestSha256,
+          physicalPageNumber: Number.isInteger(physicalPageNumber)
+            ? physicalPageNumber
+            : null,
+          sectionScopeSource: sectionScopeSource || null,
+          observedScopeKeys: scopes,
+          ...(scopeProofMode ? { scopeProofMode } : {}),
+        })
+      )
+      .sort((left, right) =>
+        String(left.candidateId || "").localeCompare(
+          String(right.candidateId || ""),
+          "de-AT"
+        )
+      ),
+  });
+}
+
+/**
+ * Reconstructs the immutable digest written by terminal-rejection audit
+ * schema v1. It intentionally omits the per-rejection contract id because
+ * that field did not exist in persisted v1 audit entries. New writes must use
+ * terminalRejectionSetDigest and schema v3. Role: compatibility. Side effects:
+ * none.
+ */
+function legacyTerminalRejectionSetDigestV1(rejections) {
   return sha256(
     [...(rejections || [])]
       .map(
         ({
           candidateId,
-          terminalRejectionContractId,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
           scopeProofMode,
         }) => ({
           candidateId,
-          terminalRejectionContractId: terminalRejectionContractId || null,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
@@ -222,24 +268,25 @@ function terminalRejectionSetDigest(rejections) {
 }
 
 /**
- * Reconstructs the immutable digest written by terminal-rejection audit
- * schema v1. It intentionally omits the per-rejection contract id because
- * that field did not exist in persisted v1 audit entries. New writes must use
- * terminalRejectionSetDigest and schema v2. Role: compatibility. Side effects:
- * none.
+ * Reconstructs the schema-v2 rejection-set digest written immediately before
+ * schema v3. V2 bound the per-rejection terminal contract id, but not page,
+ * section source, or an occurrence-digest contract id. New writes must use
+ * terminalRejectionSetDigest. Role: compatibility. Side effects: none.
  */
-function legacyTerminalRejectionSetDigestV1(rejections) {
+function legacyTerminalRejectionSetDigestV2(rejections) {
   return sha256(
     [...(rejections || [])]
       .map(
         ({
           candidateId,
+          terminalRejectionContractId,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
           scopeProofMode,
         }) => ({
           candidateId,
+          terminalRejectionContractId: terminalRejectionContractId || null,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
@@ -352,6 +399,7 @@ function certifyOtherCategoryTerminalRejection({
   return {
     terminalRejectionContractId:
       DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     decisionOwner: "SERVER",
     decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
     physicalPageNumber: occurrencePage,
@@ -418,6 +466,7 @@ function certifyNonContractualRiskInformationTerminalRejection({
   return {
     terminalRejectionContractId:
       DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     decisionOwner: "SERVER",
     decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
     physicalPageNumber: occurrencePage,
@@ -438,9 +487,12 @@ function certifyDeterministicTerminalRejection(input) {
 module.exports = {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
   legacyTerminalRejectionSetDigestV1,
+  legacyTerminalRejectionSetDigestV2,
   terminalTargetAcceptsObservedScopes,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,

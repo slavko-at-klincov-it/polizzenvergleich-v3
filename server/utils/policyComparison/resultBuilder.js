@@ -19,6 +19,8 @@ const {
 const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,
@@ -584,10 +586,17 @@ function deterministicTerminalRejectionAudit({
     occurrenceIds.length !== occurrences.length ||
     rejectionIds.length !== rejections.length ||
     JSON.stringify(occurrenceIds) !== JSON.stringify(rejectionIds) ||
-    rejections.some(
-      (rejection) =>
+    rejections.some((rejection) => {
+      const occurrence = occurrenceById.get(rejection?.candidateId);
+      const occurrencePage =
+        occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+      const sectionScopeSource =
+        occurrence?.sectionScopeHint?.source || null;
+      return (
         rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
         rejection?.terminalRejectionContractId !== certifiedTarget.contractId ||
+        rejection?.occurrenceDigestContractId !==
+          TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID ||
         rejection?.decisionOwner !== "SERVER" ||
         rejection?.decisionBasis !== certifiedTarget.decisionBasis ||
         !certifiedTarget.sectionScopeSources.includes(
@@ -595,6 +604,8 @@ function deterministicTerminalRejectionAudit({
         ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
+        rejection.physicalPageNumber !== occurrencePage ||
+        rejection?.sectionScopeSource !== sectionScopeSource ||
         !terminalTargetAcceptsObservedScopes(
           certifiedTarget,
           rejection?.observedScopeKeys
@@ -603,17 +614,18 @@ function deterministicTerminalRejectionAudit({
           certifiedTarget.scopeProofMode ||
         rejection?.occurrenceDigestSha256 !==
           terminalOccurrenceDigest({
-            ...occurrenceById.get(rejection?.candidateId),
+            ...occurrence,
             ...(rejection?.scopeProofMode
               ? { scopeProofMode: rejection.scopeProofMode }
               : {}),
           })
-    )
+      );
+    })
   )
     return null;
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     contractId: certifiedTarget.contractId,
     requirementId: requirement?.id || null,
     componentId: component?.id || null,
@@ -622,12 +634,14 @@ function deterministicTerminalRejectionAudit({
     proofMode: certifiedTarget.auditProofMode,
     rejectedOccurrenceCount: rejections.length,
     rejectedCandidateIds: rejectionIds,
+    rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
     rejectionDigestSha256: terminalRejectionSetDigest(rejections),
     rejections: rejections
       .map(
         ({
           candidateId,
           terminalRejectionContractId,
+          occurrenceDigestContractId,
           decisionBasis,
           occurrenceDigestSha256,
           physicalPageNumber,
@@ -637,6 +651,7 @@ function deterministicTerminalRejectionAudit({
         }) => ({
           candidateId,
           terminalRejectionContractId,
+          occurrenceDigestContractId,
           decisionBasis,
           occurrenceDigestSha256,
           physicalPageNumber,
