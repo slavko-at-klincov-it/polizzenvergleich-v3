@@ -557,8 +557,7 @@ function validateVs15QualifierAbsenceAudit(audit, options) {
     atomsA: sideA?.projectedAtoms,
     atomsB: sideB?.projectedAtoms,
   });
-  if (!expected)
-    throw new Error("VS15_QUALIFIER_ABSENCE_AUDIT_NOT_QUALIFIED");
+  if (!expected) throw new Error("VS15_QUALIFIER_ABSENCE_AUDIT_NOT_QUALIFIED");
   if (!sameJson(audit, expected))
     throw new Error("VS15_QUALIFIER_ABSENCE_AUDIT_MISMATCH");
   return true;
