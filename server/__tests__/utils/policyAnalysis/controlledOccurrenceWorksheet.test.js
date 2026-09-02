@@ -210,6 +210,8 @@ describe("controlledOccurrenceWorksheet", () => {
       physicalPageNumber: 1,
       text: heading,
     });
+    if (heading === "STURMVERSICHERUNG")
+      expect(candidate.sectionScopeHint).toBeNull();
     expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
   });
 
