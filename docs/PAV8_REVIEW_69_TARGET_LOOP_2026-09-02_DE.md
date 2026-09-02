@@ -122,7 +122,8 @@ positiven Gegenbeleg wird dessen Seite zum Vorteil.
 
 ### R69-D – Vergleichsregel fehlt: 4
 
-Status: `2/4 ACCEPTED`, offen bleiben `VS-08` und `FE-A01`
+Status: `3/4 ACCEPTED`, offen bleibt `VS-08`. `FE-A01` ist im echten
+Zehn-Dokument-Zielweg als `VORTEIL_B` ohne Review entschieden.
 
 ```text
 VS-08, VS-10, FE-A01, ST-01
@@ -2182,6 +2183,136 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
+
+### 10.18 FE-A01 – breitere Branddefinition
+
+#### 10.18.1 Ausgangsfehler und fachliche Ordnung
+
+`FE-A01` war trotz beidseitig vollständig belegter Branddefinition
+`UNKLAR / NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`. Recall, Triage,
+Dokumentgeltung und Quellenbindung waren nicht defekt. Es fehlte ausschließlich
+eine freigegebene Regel für zwei unterschiedliche Definitionen:
+
+```text
+A, DOC-01, physische Seite 7:
+Brand ist ein Feuer, das sich bestimmungswidrig ausbreitet.
+
+B, DOC-06, physische Seite 2:
+Brand ist ein Feuer, das bestimmungswidrig entsteht und/oder sich
+bestimmungswidrig ausbreitet (Schadenfeuer).
+```
+
+Der B-Begriff ist eine echte Obermenge: Er akzeptiert bestimmungswidriges
+Entstehen oder bestimmungswidrige Ausbreitung. A nennt nur die Ausbreitung.
+Das ist ein fachlich begründeter Vorteil und kein Schluss aus einer fehlenden
+Fundstelle.
+
+#### 10.18.2 Vergleichsvertrag und Schutzgrenzen
+
+Der neue Vertrag
+`FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1` greift ausschließlich bei:
+
+- Requirement `FE-A01`, Komponente `fire_definition`, Rolle `DEFINITION`;
+- vollständig gefundenem, konfliktfreiem und quellengebundenem Atom;
+- Wirkung `DEFINED`, allgemeinem Scope und identischem Requirement-Vertrag;
+- keinem Requested Field oder Optionalfeld;
+- exakt einer der zwei bekannten Klauselgrammatiken `SPREAD_ONLY` oder
+  `ARISE_OR_SPREAD` in allen beitragenden Quellen.
+
+Die zweite Form gewinnt gegen die erste; zwei identische bekannte Formen sind
+gleichwertig. Negation, Ausschluss, Optionalität, reine UND-Verknüpfung,
+unbekannte Definition, falsche Rolle/Komponente, Narrow Scope, ungelöste oder
+widersprüchliche Quellen bleiben fail-closed. Ein kleiner Audit speichert die
+beiden erkannten Definitionsmodi und die Gewinnerseite in der Dimension.
+
+Betroffene Produktionsgrenzen:
+
+```text
+server/utils/policyComparison/fireDefinitionComparisonContract.js
+server/utils/policyComparison/pointDecision.js
+server/utils/policyComparison/customerResultPresenter.js
+server/utils/policyComparison/productContract.js
+server/utils/policyComparison/resultBuilder.js
+```
+
+Das Produktprofil lautet danach:
+
+```text
+CUSTOMER_CORE_5_V29_FE_A01_FIRE_DEFINITION
+PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_V3
+```
+
+#### 10.18.3 Commits und Mac-Studio-Prüfung
+
+```text
+d8642aeb Add FE-A01 fire definition comparator
+d6a3b113 style(comparison): format fire definition tests
+005274c4 fix(comparison): order FE-A01 fire definitions
+80bc8f13 fix(product): expose FE-A01 definition comparison
+4666b84b style(comparison): format FE-A01 integration
+```
+
+Der erste Mac-Lauf stoppte vor den Tests an der Formatprüfung der neuen
+Testdatei. Der zweite Integrationslauf stoppte ebenfalls vor den Tests an zwei
+Formatstellen. Beide wurden als reine Forward-Fix-Commits erhalten.
+
+Finale Commitprüfung:
+
+```text
+Commit: 4666b84bcc1be870cfbd72d2e7eb23bbcb37de02
+Worktree: /private/tmp/pv3-validate-4666b84b
+Node: 22.23.2
+Formatprüfung: PASS
+Fokussierte Suites: 5/5 PASS
+Fokussierte Tests: 145/145 PASS
+```
+
+#### 10.18.4 Echter Zehn-Dokument-Zielrun
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-A01-4666B84B-20260902-R2
+Summary-SHA-256:
+e1afe81c24f1c8f62c61ed7d62bddc8018f64932c0dbd4e2cdee6d02e3433c58
+Target-Selection-Digest:
+988f5d9bfe51e26c177ede936f64f81bb0a8c68817fd1562e5a7a859d708a680
+Producer-SHA-256:
+459e0811dfe8de10d288904843c49e88c6ea5bb5b8d1c84bb150fa68e67af98d
+Dokumente: 10
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Serverseitig terminal entschiedene Komponenten: 8
+Paket A: Ja / BELEGT
+Paket B: Ja / BELEGT
+Punktentscheidung: VORTEIL_B
+Regel: FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1
+Kundenreview: nein
+```
+
+Die erste Producer-Ausführung wurde nach dem ersten Dokument durch den noch
+von VS-35 übernommenen QA-Guard `atoms.length === 2` abgebrochen. FE-A01 hat
+vertragsgemäß genau ein Atom; die korrigierte, gehashte R2-Probe verlangt
+exakt ein Atom. Das war ein Fehler im temporären QA-Producer, nicht in der
+Produktlogik und kein teilweise akzeptierter Vergleichslauf.
+
+Das belegte Delta ist:
+
+```text
+FE-A01 vorher: UNKLAR / Review
+FE-A01 nachher: VORTEIL_B / kein Review
+```
+
+Unter Einbeziehung der zuvor akzeptierten gezielten Deltas lautet die noch
+nicht durch einen neuen 224-Zeilen-Vollrun bestätigte Projektion:
+
+```text
+VORTEIL_A 2, VORTEIL_B 3, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 116, NICHT_VERGLEICHBAR 9, UNKLAR 61.
+Kundenreview: 61; ohne Kundenreview: 163.
+```
+
+Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
+durchgeführt; der installierte Kundenstand blieb unverändert.
 
 ### 10.17 VS-35 – Wiederherstellungsklausel und Wiederaufbaufrist
 
