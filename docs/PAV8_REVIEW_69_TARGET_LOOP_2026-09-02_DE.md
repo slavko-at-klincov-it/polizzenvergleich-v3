@@ -100,10 +100,11 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `2/7 PIPELINE-KANDIDATEN`. `EL-06` und `EL-12` haben jeweils den
-gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber noch die
-Bestätigung im späteren konsistenten Vollvergleich. Fünf Fälle bleiben ohne
-bestandenen Kandidaten offen.
+Status: `1/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
+echten gezielten Ergebnisweg als `VORTEIL_B` entschieden. `EL-06` und `EL-12`
+haben jeweils den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen
+aber noch die Bestätigung im späteren konsistenten Vollvergleich. Vier Fälle
+bleiben ohne bestandenen Kandidaten offen.
 
 ```text
 VS-35
@@ -1623,13 +1624,136 @@ vorangegangene technisch inhaltsgleiche Minimalprobe ohne
 ausdrücklich nicht als revisionssicherer Nachweis und wird hier nicht als
 Abnahmegrundlage verwendet.
 
-Damit sind Suche, Triage und Pflichtfeldbindung für die beiden echten Funde
-geschlossen. Der verbleibende Fehler liegt ausschließlich in der
-Vergleichsregel: Die allgemeine Logik sortiert Zahlen derzeit nur bei
-`LIMIT`- oder `DEDUCTIBLE`-Atomen und blockiert bedingte Deckungsquellen. Für
-FE-C07 muss deshalb separat und eng bewiesen werden, ob `10 %` bei identischer
-Bezugsgröße und identischem First-Risk-Qualifier trotz der nur auf der
-niedrigeren Seite dokumentierten Zusatzbedingung als Vorteil B gereiht werden
-darf. Bis dieser Vertrag implementiert und adversarial geprüft ist, wird kein
-neues Zeilenergebnis behauptet. Das installierte Kundensystem blieb
+Damit waren Suche, Triage und Pflichtfeldbindung für die beiden echten Funde
+geschlossen. Der damals noch offene Fehler lag ausschließlich in der
+Vergleichsregel: Die allgemeine Logik sortierte Zahlen nur bei `LIMIT`- oder
+`DEDUCTIBLE`-Atomen und blockierte bedingte Deckungsquellen.
+
+#### 10.11.1 Zertifizierter Bedingungs-Nichtfund
+
+Die folgenden kleinen Commits schließen die lokale Bedingungsprüfung, ohne
+den allgemeinen Nichtfundvertrag aufzuweichen:
+
+```text
+697f9d99 feat(analysis): certify FE-C07 clause condition absence
+29781432 style(analysis): format FE-C07 absence audit
+2a0da4cc fix(analysis): accept FE-C07 unrelated lighting exclusion
+```
+
+Der neue Audit gilt nur für `FE-C07`. Er verlangt einen vollständigen,
+absatzlokalen und bejahenden Sauna-/Infrarotkabinen-Vertragssatz, dieselbe
+Objektbindung, genau einen qualifizierten Prozentwert, eine eindeutige
+Bezugsgröße und keine zusätzliche Bedingung oder Referenz im geprüften
+Klauselbereich. Die Formulierung `ausgenommen Beleuchtungskörper` wird nur
+deshalb zugelassen, weil sie nachweislich ein anderes Objekt ausschließt; sie
+darf weder als Sauna-Bedingung noch als allgemeine Freigabe interpretiert
+werden.
+
+Mac-Studio-Nachweis:
+
+```text
+Worktree: /private/tmp/pv3-validate-2a0da4cc
+Relevante Tests: 172/172 PASS
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-ABSENCE-AUDIT-2A0DA4CC-20260902
+Summary-Digest:
+8f73a22b33a58153b0b9c1630d2be2d6fc1c810a6bbe40edff15e76e6464927a
+
+DOC-01: 5 %, condition FOUND, kein Nichtfund-Audit
+DOC-03: 10 %, condition NOT_FOUND, gültiger Nichtfund-Audit
+DOC-03 Klauselbereich: 28307–29016
+DOC-03 Klausel-Digest:
+43da5de1763793cd6e9553bf44abdcf3df59bb02da34a7e49539f48c81c2c4bb
+```
+
+Die generische Diagnose `comparisonConditionalOrOptional: true` auf DOC-03
+stammte aus dem breiten generischen Bedingungsfenster und der dort enthaltenen
+Beleuchtungskörper-Ausnahme. Der spezialisierte Vollklausel-Audit grenzt diesen
+Hinweis korrekt auf das andere Objekt ein. Die generische Diagnose wurde nicht
+global abgeschwächt.
+
+#### 10.11.2 Enger Prozentlimit-Vergleich und Provenienzbindung
+
+Der gerichtete Vergleich wurde anschließend komponentengenau ergänzt und nach
+einem adversarialen Review weiter verschärft:
+
+```text
+3401a4c8 feat(comparison): rank certified FE-C07 percentage limits
+798ba9cc style(comparison): format FE-C07 dominance contract
+8af63c54 fix(comparison): bind FE-C07 limits to audited clauses
+94d58167 style(test): format FE-C07 provenance cases
+d4362984 fix(comparison): fail closed on invalid FE-C07 limits
+8ca0da2f style(comparison): format FE-C07 null guard
+6d9173ec test(comparison): expose FE-C07 atom materialization proof
+222606a9 style(test): format FE-C07 atom proof
+```
+
+Der Vertrag `FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1` entscheidet nur,
+wenn beide Seiten genau einen kanonischen Kandidaten besitzen, dieselbe
+Komponente, Deckungswirkung, Bezugsgröße und First-Risk-Qualifikation belegt
+sind und der höhere Prozentwert direkt an den vollständig auditierten
+Klauselbereich gebunden ist. Kandidat, Seite, Textspanne, exakter Prozenttext,
+typisierter Wert und Klauselwert müssen übereinstimmen. Fremdwerte,
+seitenübergreifende oder kandidatenübergreifende Bindungen, zusätzliche Marker
+auf der höheren Seite sowie manipulierte Audits scheitern geschlossen.
+
+Mac-Studio-Nachweise:
+
+```text
+Worktree: /private/tmp/pv3-validate-8ca0da2f
+Vergleichs-, Provenienz- und angrenzende Tests: 232/232 PASS
+
+Worktree: /private/tmp/pv3-validate-222606a9
+Zusätzlicher Atom-Materialisierungsnachweis: 233/233 PASS
+```
+
+Der zusätzliche Produktionsgrenzentest beweist, dass ein gültiger Audit in das
+tatsächlich verglichene Atom übernommen und ein manipulierter Audit bereits
+bei der Materialisierung entfernt wird.
+
+#### 10.11.3 Echtes gezieltes End-to-End-Ergebnis
+
+Der reale Neuaufbau verwendete die versioniert ausgewählten FE-C07-Ziele, die
+offizielle Candidate-Triage, die offizielle Prepared-Evidence-Auswertung, die
+tatsächliche Tabellen- und Atommaterialisierung sowie `decidePoint`:
+
+```text
+Produzent fachlicher Effekte:
+8ca0da2f2fa1ddbfb635b30df032e7f8e382f916
+Entscheidungs-/Grenztest-Commit:
+222606a919ddc7d98164670a281b04370c7b3f6e
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-E2E-8CA0DA2F-20260902
+Entscheidungsartefakt:
+decision-222606a9/summary.private.json
+Target-Selection-Digest:
+ffb5d6e64686be09cb6526c6f5eb62c3b77f4eebb45a4873476c8842a391c418
+Summary-Digest:
+7cc244d89721199cdc888d517a84af77682549122e7ecd899dd457462c4ade8f
+
+DOC-01: BELEGT, INCLUDED, GENERAL, COMPLETE, 5 %, condition FOUND
+DOC-03: BELEGT, INCLUDED, GENERAL, COMPLETE, 10 %, condition NOT_FOUND,
+        gültiger Klausel-Nichtfund-Audit
+Paketstatus A/B: BELEGT / BELEGT
+Entscheidung: VORTEIL_B
+Review erforderlich: nein
+Regel: FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1
+Tatsächliche Qwen-Aufrufe: 0
+```
+
+Damit ist für den gezielten Fall revisionssicher belegt:
+
+```text
+FE-C07: UNKLAR -> VORTEIL_B
+```
+
+Das ist noch keine neue 224-Zeilen-Gesamtmetrik. Der vereinbarte Vollvergleich
+folgt erst nach Abschluss der gezielten Fehlerfamilien. Als beobachtete, aber
+für diesen normalen In-Process-Entscheidungsweg nicht blockierende
+Härtungsgrenze bleibt: `customerMetricContract` rekonstruiert den
+FE-C07-Vergleichsaudit nach der Materialisierung nicht nochmals unabhängig.
+Eine spätere Härtung muss dafür einen allgemeinen, nicht FE-spezifisch
+duplizierten Auditvertrag verwenden. Das installierte Kundensystem blieb
 unverändert; es gab kein Deployment.
