@@ -1845,3 +1845,139 @@ Nächster eigenständiger Verhaltensfix bleibt `PAV8-02`. Er darf nur die
 abgeleitete beidseitige Vergleichsdimension statusneutralisieren; Rohfakten,
 Abwesenheitspfad, Bedingungen, Optionalität, Konflikte, Scope, Werte,
 Ereignisvarianten und Contributor-Provenienz bleiben fail-closed.
+
+### 19.8 Messergebnis PAV8-02
+
+Status: **GO als notwendiger Paket-first-Unterbau, NO-GO als neuer
+Ergebnisfavorit**
+
+Commit `52f0c497086b467869691be0acfefa393535ca16` behandelt die aus der
+Dokumentklassifikation abgeleiteten Stati ausschließlich in der abgeleiteten
+Vergleichsdimension als Paketmetadatum. Die Rohfakten bleiben unverändert und
+behalten Dokument-UUID, Quelle, Offsets, Rohstatus, Geltung und vollständige
+Contributor-Provenienz. Eine Kanonisierung ist nur für gefundene, beidseitig
+`BELEGT` geführte Fakten mit semantisch identischen Werten, Rollen, Wirkungen,
+Scopes, Varianten, Bedingungen sowie angeforderten und optionalen Feldern
+zulässig. Abwesenheit, Teilbeleg, Konflikt, Rangproblem, unterschiedliche
+Werte, echte Optionalität und Bedingung bleiben fail-closed.
+
+Fokussierte Validierung im isolierten Mac-Studio-Checkout
+`/private/tmp/pv3-pav8-02-52f0c497-IbPiZn/repo`:
+
+- Node `22.23.2`, Prettier bestanden;
+- 8 Suites und 145/145 Tests bestanden;
+- positive, negative, adversariale und permutationsstabile Statusvarianten;
+- vollständige Rohprovenienz und Audit V2;
+- Scope-, Wert-, Limit-, Selbstbehalt-, Bedingungs-, Optionalitäts-,
+  Abwesenheits- und Paketreview-Gegenpfade;
+- Schema-8-, Profil-, Presenter-, Metrik- und Shell-Runner-Verträge.
+
+Vollständiger Zehn-Dokument-Lauf:
+
+```text
+Run: PAV8-02-52F0C497-20260902-035452
+Commit: 52f0c497086b467869691be0acfefa393535ca16
+Checkout: /private/tmp/pv3-pav8-02-52f0c497-IbPiZn/repo
+Node: 22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start UTC: 2026-09-02T01:54:52Z
+Dokumentanalyse abgeschlossen: 2026-09-02T02:21:39Z
+Paketartefakt abgeschlossen: 2026-09-02T02:21:51Z
+Wandzeit bis vollständigem Paketartefakt: 26:59
+Dokumente: 10/10, jeweils 224/224
+Paketzeilen: 224/224
+Kundenmetriken: A 0 / B 0 / Doku 38 / Gleich 10 / Null 99 /
+               Nicht vergleichbar 8 / Unklar 69
+Kundenreview: 69; ohne Kundenreview: 155
+Schema: 8
+Profil: CUSTOMER_CORE_5_V8_STATUS_METADATA
+Vertrag: PACKAGE_FIRST_STATUS_METADATA_TYPED_V1
+```
+
+Der Runner hatte den leeren Zielordner `PACKAGE-COMPARISON` vor der
+deterministischen Materialisierung angelegt. Deshalb stoppte ausschließlich
+der erste Exportversuch mit `OUTPUT_ALREADY_EXISTS`, nachdem bereits alle zehn
+Dokumente vollständig analysiert waren. Der nachweislich leere Ordner wurde
+mit `rmdir` entfernt und nur die deterministische Paketmaterialisierung erneut
+ausgeführt. Kein Dokument und kein Modellaufruf wurde wiederholt.
+
+Exaktes Delta gegen PAV8-01b und den Favoriten:
+
+- Kundenmetrik `0/0/38/6/99/14/67 -> 0/0/38/10/99/8/69`;
+- vier echte Statusblocker-Auflösungen zu `GLEICHWERTIG`: `LW-05`, `LW-06`,
+  `EL-10`, `EL-13`;
+- `VS-29` wird von `UNKLAR` zu eindeutig `NICHT_VERGLEICHBAR`, weil die
+  getrennte Prüfung optionaler Felder den unvollständigen Feldpfad nicht mehr
+  fälschlich vor die Inhaltsdifferenz stellt;
+- `VS-08` und `VS-10` werden nach Entfernung des Statushindernisses korrekt
+  `UNKLAR`, weil für die verbleibenden Dimensionen keine freigegebene
+  Vergleichsregel existiert;
+- `VS-20` und `EL-09` werden korrekt `UNKLAR`, weil nun die zuvor vom
+  Statusblocker verdeckte Bedingungssemantik sichtbar wird; `EL-09` enthält
+  ausdrücklich eine Karenzfrist von 21 Tagen und darf nicht gleichwertig
+  werden;
+- `FE-A07` bleibt `UNKLAR`; nur der Grund wird präziser von einer fehlenden
+  allgemeinen Regel auf Bedingungs-/Ausnahmescope eingegrenzt;
+- Kundenreview schaltet für `VS-08`, `VS-10`, `VS-20`, `EL-09` ein und für
+  `VS-29`, `LW-05` aus; netto `67 -> 69`;
+- alle 40 `PACKAGE_REVIEW_STATUS_BLOCKS_DECISION`, alle 99 beidseitig
+  qualifizierten Nulltreffer und alle 38 Dokumentationsunterschiede behalten
+  exakt ihre Zeilenmitgliedschaften;
+- `LW-13` sowie `VS-09`, `VS-11`, `VS-28`, `VS-34`, `FE-A06` und `EL-07`
+  bleiben wegen Ereignisvariante, Wert, Scope oder Inhalt geschützt
+  `NICHT_VERGLEICHBAR`;
+- 224/224 Paket-A- und 224/224 Paket-B-Zusammenfassungen sind bytegenau
+  unverändert;
+- 65 private Entscheidungen ändern sich erwartbar durch Audit V2,
+  Kanonisierung und Contributor-Provenienz; genau 10 Entscheidungssignaturen
+  und 20 Kundentexte ändern sich gegen PAV8-01b;
+- in der XLSX ändern sich ausschließlich 20 Zellen der KI-Ergebnisspalte:
+  `Q5`, `Q6`, `Q7`, `Q11`, `Q32`, `Q67`, `Q75`, `Q78`, `Q86`, `Q89`,
+  `Q109`, `Q134`, `Q139`, `Q160`, `Q171`, `Q173`, `Q189`, `Q214`, `Q219`,
+  `Q220`; gegen den älteren Favoriten zusätzlich die bereits bekannte
+  PAV8-01b-Änderung `Q144`.
+
+Der unabhängige Dokumentartefakt-Audit bestätigt keine Modell-, Such-,
+Extraktions- oder Evidenzdrift:
+
+- 890/890 gemeinsame Dokumentartefakte, davon 725 byteidentisch;
+- 10/10 `document.private.json` byteidentisch;
+- je 50/50 Worksheets, materialisierte und validierte Triagen,
+  Wirkungsartefakte, Ziel- und Quellenauswahlen, Ergebniszeilen und
+  Feldextraktionen byteidentisch;
+- die 165 übrigen Unterschiede bestehen ausschließlich aus 45
+  Laufzeitmetriken, 100 Laufzeit-/Pfadangaben, 10 erwarteten Profilreports und
+  10 Manifest-Provenienzen;
+- 329 gefundene Rohatome besitzen 251-mal
+  `FRAMEWORK_TERMS/CONDITIONAL` und 78-mal `PROPOSAL/PROPOSED_ONLY`; es gibt
+  0 Status-/Geltungs-Mismatches, und alle Rohstatus und Quellen bleiben in den
+  Contributors erhalten.
+
+Artefakte:
+
+```text
+Inputmanifest: 50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Run-Signatur: c9edceeb43bb0395dfcd6d404497eb2a2347b3b742de3d43147656755b6e2368
+package-contract: cc2a59913eaa27a867c7556e54250257eaec95af368b6f8f9780a93f03edaf55
+package-report: 3d0e33d6ff4b64e95e8b81131391954333c3d6c99600f5c620c164c746b21e78
+comparison JSON: 050adbfa9315fd3ac9174500a5267e1bac4d564686a0136f4a49e4db632adc58
+comparison Markdown: 65de0d5c33376dca439311f8ba9e540619ffb5b89768bcda3cd9c30cce3d5950
+XLSX: 87741c94e238afc918338efd7e00b54260475be73d4d39c3a4796df4e6eb1560
+```
+
+Die Wandzeit liegt 16 Sekunden über PAV8-01b und 12 Sekunden über dem
+Favoriten; das ist kein belastbarer Performanceunterschied. Der operative
+Runner schrieb bei diesem Lauf versehentlich kein dauerhaftes
+`full-run.private.log`. Ergebnisartefakte, Manifeste, Hashes und
+Vollständigkeitsgates sind vorhanden und geprüft; der vollständige
+Konsolenwarnungsstrom ist jedoch nicht nachträglich als Datei auditierbar.
+Diese Log-Lücke betrifft die Nachvollziehbarkeit des Operators, nicht die
+Ergebnisberechnung, und muss beim nächsten Vollrun geschlossen werden.
+
+Der installierte Kundencheckout blieb sauber und unverändert auf
+`c7d3b16d400ea4d65b558ef091781da5df82d610`. Es erfolgte kein Deployment.
+PAV8-02 bleibt als notwendige Architekturgrundlage erhalten, wird wegen
+`Review 67 -> 69` aber nicht zum neuen Ergebnisfavoriten erklärt. Die
+fehlenden Richtungsverträge für `VS-08`, `VS-10`, `VS-20` und `EL-09` dürfen
+nicht durch Rückkehr zum falschen Dokumentstatusblocker verdeckt werden.

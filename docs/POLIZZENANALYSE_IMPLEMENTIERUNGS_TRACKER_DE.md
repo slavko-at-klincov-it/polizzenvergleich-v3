@@ -4268,3 +4268,65 @@ LIMIT: kein echter positiver Optionalitätsmarker im aktuellen Fünferkorpus
 NO DEPLOY: installierter Kundenstand unverändert
 NEXT: PAV8-02 – Statusmetadatum und provenienzerhaltende Vergleichsgruppierung
 ```
+
+## 82. PAV8-02 – Dokumentstatus als Paketmetadatum
+
+Commit `52f0c497086b467869691be0acfefa393535ca16` implementiert den
+versionierten Vergleichsvertrag `PACKAGE_FIRST_STATUS_METADATA_TYPED_V1` im
+Profil `CUSTOMER_CORE_5_V8_STATUS_METADATA`. Semantisch identische gefundene
+Paketfakten werden nur in der abgeleiteten Vergleichsdimension über
+`ACTIVE`, `FRAMEWORK_TERMS` und `PROPOSED_ONLY` gruppiert. Rohfakten,
+Dokument-UUIDs, Quellen, Offsets, Status, Geltung und Contributor-Provenienz
+bleiben unverändert. Bedingungen, Optionalität, Wirkung, Wert, Scope,
+Variante, Konflikt, Abwesenheit, Teilbeleg und Paketreview bleiben
+entscheidungsrelevant und fail-closed.
+
+Mac-Studio-Validierung im isolierten Checkout
+`/private/tmp/pv3-pav8-02-52f0c497-IbPiZn/repo` auf Node `22.23.2`:
+
+- Prettier bestanden;
+- 8 fokussierte Suites, 145/145 Tests bestanden;
+- Schema 8, Audit V2, Profil-, Metrik-, Presenter- und Shell-Verträge grün;
+- positive, negative, adversariale und permutationsstabile Provenienz-,
+  Optionalitäts-, Bedingungs-, Wert-, Scope- und Abwesenheitskontrollen grün.
+
+Vollrun `PAV8-02-52F0C497-20260902-035452` mit
+`qwen/qwen3.6-35b-a3b`, Kontext `42496`, von
+`2026-09-02T01:54:52Z` bis `2026-09-02T02:21:51Z`: 10/10 Dokumente mit
+jeweils 224/224 Zeilen, Paket 224/224, Wandzeit `26:59`. Ein vorzeitig
+angelegter, nachweislich leerer Exportordner verursachte nach den zehn
+vollständigen Analysen einmal `OUTPUT_ALREADY_EXISTS`; nur die
+deterministische Paketmaterialisierung wurde nach `rmdir` wiederholt.
+
+Gemessen wurde `0/0/38/10/99/8/69`, Kundenreview 69. Gegen PAV8-01b:
+
+- `LW-05`, `LW-06`, `EL-10`, `EL-13` werden korrekt `GLEICHWERTIG`;
+- `VS-29` wird eindeutig `NICHT_VERGLEICHBAR`;
+- `VS-08`, `VS-10`, `VS-20`, `EL-09` werden nach Sichtbarwerden der
+  verbleibenden Regel- beziehungsweise Bedingungslücke korrekt `UNKLAR`;
+- `FE-A07` bleibt unklar mit präziserem Bedingungsgrund;
+- netto steigt Kundenreview `67 -> 69`; deshalb kein neuer Ergebnisfavorit;
+- die 99 qualifizierten beidseitigen Nulltreffer, 38
+  Dokumentationsunterschiede und 40 Paketreviewzeilen bleiben exakt stabil;
+- 224/224 Paket-A/B-Zusammenfassungen bleiben byteidentisch.
+
+Der 890-Artefakt-Audit weist keine Modell-, Such-, Extraktions- oder
+Evidenzdrift aus: 725 Dateien byteidentisch; alle 10 Dokumentextraktionen und
+alle je 50 Worksheets, Triagen, Wirkungs-, Quellen-, Ergebniszeilen- und
+Feldartefakte byteidentisch. Die übrigen 165 Deltas sind vollständig
+Laufmetriken, Pfade, Profilreports und Manifest-Provenienz. In der XLSX ändern
+sich gegen PAV8-01b genau 20 Zellen und ausschließlich Spalte Q.
+
+```text
+Run-Signatur: c9edceeb43bb0395dfcd6d404497eb2a2347b3b742de3d43147656755b6e2368
+comparison JSON: 050adbfa9315fd3ac9174500a5267e1bac4d564686a0136f4a49e4db632adc58
+comparison Markdown: 65de0d5c33376dca439311f8ba9e540619ffb5b89768bcda3cd9c30cce3d5950
+XLSX: 87741c94e238afc918338efd7e00b54260475be73d4d39c3a4796df4e6eb1560
+PASS: fokussierte Verträge und vollständiger Mac-Studio-Lauf
+PASS: keine Modell-/Evidenzdrift und keine Paketreview-/Absenzumgehung
+GO: notwendiger Paket-first-Unterbau
+NO-GO: kein neuer Ergebnisfavorit wegen Kundenreview 67 -> 69
+LIMIT: kein dauerhaftes full-run.private.log für diesen Operatorlauf
+NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
+NEXT: PAV8-03a – beidseitige qualifizierte Abwesenheit als Gleichheit
+```
