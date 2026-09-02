@@ -23,6 +23,7 @@ function packageDocuments() {
   return Array.from({ length: 10 }, (_, index) => ({
     uuid: `fixture-uuid-${String(index + 1).padStart(2, "0")}`,
     sha256: ["a", "b", "c", "d", "e"][index % 5].repeat(64),
+    documentStatus: index === 0 ? "FRAMEWORK_TERMS" : "PROPOSAL",
   }));
 }
 
@@ -47,15 +48,8 @@ function fixture() {
   const packageDirectory = path.join(baselineRoot, "PACKAGE-COMPARISON");
   fs.mkdirSync(packageDirectory, { recursive: true });
   const documents = packageDocuments();
-  fs.writeFileSync(
-    path.join(packageDirectory, "package-contract.private.json"),
-    JSON.stringify({ documents })
-  );
-  fs.writeFileSync(
-    path.join(packageDirectory, "comparison.private.json"),
-    "comparison-bytes"
-  );
   const documentArtifactBytesByUuid = {};
+  const releaseId = "fixture-baseline-release";
   documents.forEach((document, index) => {
     const directory = path.join(
       baselineRoot,
@@ -73,8 +67,28 @@ function fixture() {
       path.join(directory, "document.private.json"),
       artifactBytes
     );
+    const primaryManifestBytes = Buffer.from(
+      JSON.stringify({
+        releaseId,
+        configuration: { documentStatus: document.documentStatus },
+        document: { sha256: document.sha256 },
+      })
+    );
+    fs.writeFileSync(
+      path.join(directory, "manifest.private.json"),
+      primaryManifestBytes
+    );
+    document.primaryManifestSha256 = sha256(primaryManifestBytes);
     documentArtifactBytesByUuid[document.uuid] = artifactBytes;
   });
+  fs.writeFileSync(
+    path.join(packageDirectory, "package-contract.private.json"),
+    JSON.stringify({ releaseId, documents })
+  );
+  fs.writeFileSync(
+    path.join(packageDirectory, "comparison.private.json"),
+    "comparison-bytes"
+  );
   return {
     root,
     repositoryRoot,
@@ -250,6 +264,42 @@ describe("ensure targeted QA manifest CLI", () => {
     expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
       "TARGETED_QA_DOCUMENT_ARTIFACT_INVALID"
     );
+  });
+
+  test("rejects primary manifest hash and identity drift", () => {
+    const directory = path.join(
+      value.baselineRoot,
+      `DOC-01-${value.documents[0].uuid}`
+    );
+    const primaryManifest = path.join(directory, "manifest.private.json");
+    fs.appendFileSync(primaryManifest, " ");
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_PRIMARY_MANIFEST_SHA_MISMATCH"
+    );
+
+    const identityValue = fixture();
+    const identityDirectory = path.join(
+      identityValue.baselineRoot,
+      `DOC-01-${identityValue.documents[0].uuid}`
+    );
+    const identityManifest = path.join(
+      identityDirectory,
+      "manifest.private.json"
+    );
+    const identity = JSON.parse(fs.readFileSync(identityManifest, "utf8"));
+    identity.document.sha256 = "0".repeat(64);
+    const identityBytes = Buffer.from(JSON.stringify(identity));
+    fs.writeFileSync(identityManifest, identityBytes);
+    const packageFile = path.join(
+      identityValue.baselineRoot,
+      "PACKAGE-COMPARISON/package-contract.private.json"
+    );
+    const packageContract = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+    packageContract.documents[0].primaryManifestSha256 = sha256(identityBytes);
+    fs.writeFileSync(packageFile, JSON.stringify(packageContract));
+    expect(() =>
+      run(runArguments(identityValue), dependencies(identityValue, []))
+    ).toThrow("TARGETED_QA_PRIMARY_MANIFEST_IDENTITY_MISMATCH");
   });
 
   test("rejects registry drift before calling the builder", () => {

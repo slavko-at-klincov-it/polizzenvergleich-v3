@@ -167,6 +167,7 @@ function resolveDocumentArtifactBytes({
   return Object.fromEntries(
     expectedDirectoryNames.map((directoryName, index) => {
       const uuid = uuids[index];
+      const packageDocument = packageContract.documents[index];
       const directory = path.join(baseline, directoryName);
       if (
         fsImpl.lstatSync(directory).isSymbolicLink() ||
@@ -193,6 +194,43 @@ function resolveDocumentArtifactBytes({
       if (!isWithin(realDocumentDirectory, realArtifactFile))
         throw cliError(
           "TARGETED_QA_DOCUMENT_ARTIFACT_SCOPE_INVALID",
+          directoryName
+        );
+      const primaryManifestFile = path.join(
+        realDocumentDirectory,
+        "manifest.private.json"
+      );
+      if (
+        !fsImpl.existsSync(primaryManifestFile) ||
+        fsImpl.lstatSync(primaryManifestFile).isSymbolicLink() ||
+        !fsImpl.statSync(primaryManifestFile).isFile()
+      )
+        throw cliError("TARGETED_QA_PRIMARY_MANIFEST_INVALID", directoryName);
+      const primaryManifestBytes = fsImpl.readFileSync(primaryManifestFile);
+      if (
+        sha256(primaryManifestBytes) !== packageDocument.primaryManifestSha256
+      )
+        throw cliError(
+          "TARGETED_QA_PRIMARY_MANIFEST_SHA_MISMATCH",
+          directoryName
+        );
+      let primaryManifest;
+      try {
+        primaryManifest = JSON.parse(primaryManifestBytes.toString("utf8"));
+      } catch {
+        throw cliError(
+          "TARGETED_QA_PRIMARY_MANIFEST_JSON_INVALID",
+          directoryName
+        );
+      }
+      if (
+        primaryManifest.releaseId !== packageContract.releaseId ||
+        primaryManifest.document?.sha256 !== packageDocument.sha256 ||
+        primaryManifest.configuration?.documentStatus !==
+          packageDocument.documentStatus
+      )
+        throw cliError(
+          "TARGETED_QA_PRIMARY_MANIFEST_IDENTITY_MISMATCH",
           directoryName
         );
       return [uuid, fsImpl.readFileSync(realArtifactFile)];
