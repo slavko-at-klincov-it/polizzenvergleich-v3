@@ -2733,7 +2733,11 @@ describe("requestedFieldEvidenceContract", () => {
       expect(materializeFeC07(source)).toMatchObject({
         requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
         fields: [
-          { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+          {
+            field: "limit",
+            status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+            facts: [],
+          },
           {
             field: "condition",
             status: FIELD_EVIDENCE_STATUS.NOT_FOUND,

@@ -506,7 +506,8 @@ function feC07SourceUnits(occurrence) {
   const context = validatedFeC07Unit(occurrence.context);
   const units = [];
   if (occurrence.context.unitType === "PARAGRAPH") {
-    const relativeOccurrenceEnd = occurrence.documentEnd - context.documentStart;
+    const relativeOccurrenceEnd =
+      occurrence.documentEnd - context.documentStart;
     const positive = [
       ...context.text.matchAll(new RegExp(FE_C07_LOCAL_POSITIVE, "giu")),
     ]
@@ -620,8 +621,7 @@ function extractFeC07ConditionFacts({ occurrence, binding }) {
   if (matches.length !== 1 || !matches[0].groups?.condition) return [];
   const rawCondition = matches[0].groups.condition;
   const conditionMatch = [rawCondition];
-  conditionMatch.index =
-    matches[0].index + matches[0][0].indexOf(rawCondition);
+  conditionMatch.index = matches[0].index + matches[0][0].indexOf(rawCondition);
   return [
     sourceBoundFeC07Fact({
       occurrence,
