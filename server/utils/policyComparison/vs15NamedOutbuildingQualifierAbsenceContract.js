@@ -19,7 +19,7 @@ const VS15_QUALIFIER_ABSENCE_TREATMENT =
 const CATEGORY_ID = "VS-15";
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const REQUIREMENT_CONTRACT_DIGEST =
-  "e41f8b54a382ea000cb1891a4afee6e2eafe0f25a137126d89940faddef3c427";
+  "3618160e324ac0eac1d3d8805cd6206b0cdacb2f2f9b2370457a620bbc1cc51c";
 const COVER_COMPONENT_ID = "outbuilding_cover";
 const QUALIFIER_COMPONENT_ID = "named_outbuilding_designation";
 const DECLARED_COMPONENTS = Object.freeze([

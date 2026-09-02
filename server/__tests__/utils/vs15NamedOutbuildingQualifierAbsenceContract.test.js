@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const {
   VS15_QUALIFIER_ABSENCE_AUDIT_CONTRACT_ID,
   VS15_QUALIFIER_ABSENCE_REASON_CODE,
@@ -15,6 +18,9 @@ const {
 const {
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
+const {
+  requirementSearchContractDigest,
+} = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const CATEGORY_ID = "VS-15";
@@ -200,6 +206,29 @@ function fixture() {
 }
 
 describe("VS-15 bilateral controlled qualifier absence contract", () => {
+  test("binds the production contract to the current catalog requirement", () => {
+    const catalog = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          "../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json"
+        ),
+        "utf8"
+      )
+    );
+    const requirement = catalog.requirements.find(
+      ({ id }) => id === CATEGORY_ID
+    );
+
+    expect(catalog.catalogId).toBe(CATALOG_ID);
+    expect(
+      requirementSearchContractDigest({
+        catalogId: catalog.catalogId,
+        requirement,
+      })
+    ).toBe(VS15_REQUIREMENT_CONTRACT_DIGEST);
+  });
+
   test("binds complete package searches and returns equality without inventing an exclusion", () => {
     const input = fixture();
     const audit = buildVs15QualifierAbsenceAudit(input);
