@@ -1715,7 +1715,10 @@ describe("preparedEvidenceContract", () => {
       },
       { candidate: occurrence, overrides: { requirementId: "LW-11" } },
       { candidate: occurrence, overrides: { factRole: "CONDITION" } },
-      { candidate: occurrence, overrides: { absenceMeaning: "CONDITION_ONLY" } },
+      {
+        candidate: occurrence,
+        overrides: { absenceMeaning: "CONDITION_ONLY" },
+      },
     ];
     for (const { candidate, overrides } of adversarial) {
       const unresolved = targetFor(candidate, overrides);

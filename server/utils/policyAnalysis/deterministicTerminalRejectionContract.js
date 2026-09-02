@@ -151,9 +151,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
       factRole: objectClassificationContract.factRole,
       absenceMeaning: objectClassificationContract.absenceMeaning,
       allowedObservedScopeKeys: [],
-      sectionScopeSources: [
-        "CURRENT_PAGE_OBJECT_CLASSIFICATION",
-      ],
+      sectionScopeSources: ["CURRENT_PAGE_OBJECT_CLASSIFICATION"],
       scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
       occurrenceDigestContractId:
         COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
