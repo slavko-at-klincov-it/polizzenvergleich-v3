@@ -1,4 +1,8 @@
 const { materializePreparedEvidence } = require("./preparedEvidenceContract");
+const {
+  assertTargetRequirementSelection,
+  selectionDigest,
+} = require("./targetRequirementSelection");
 
 const TARGETED_QA_OVERLAY_SCHEMA_VERSION = 1;
 const TARGETED_QA_OVERLAY_CONTRACT_ID = "TARGETED_QA_CATEGORY_OVERLAY_V1";
@@ -42,10 +46,24 @@ function mergeRequirementOwnedArray({
   requirementIdOf,
   code,
   requireExactTargetSet = true,
+  requireExactBaselineSet = true,
 }) {
   const baselineByKey = assertUniqueObjects(baselineValues, keyOf, code);
   const targetedByKey = assertUniqueObjects(targetedValues, keyOf, code);
   const targetSet = new Set(targetRequirementIds);
+  const baselineSet = new Set(baselineRequirementOrder);
+  if (requireExactBaselineSet) {
+    assertExactRequirementSet(
+      baselineValues,
+      baselineRequirementOrder,
+      requirementIdOf,
+      `${code}_BASELINE_SET_MISMATCH`
+    );
+  } else if (
+    baselineValues.some((value) => !baselineSet.has(requirementIdOf(value)))
+  ) {
+    throw overlayError(`${code}_BASELINE_SET_MISMATCH`);
+  }
   if (requireExactTargetSet) {
     assertExactRequirementSet(
       targetedValues,
@@ -101,6 +119,164 @@ function targetKey(value) {
   return `${value?.requirementId || ""}\u0000${value?.componentId || ""}`;
 }
 
+function assertExactIdentity(left, right, code) {
+  if (selectionDigest(left) !== selectionDigest(right))
+    throw overlayError(code);
+}
+
+function worksheetCandidateIndex(worksheet, code) {
+  const index = new Map();
+  for (const requirement of worksheet.requirements || []) {
+    for (const component of requirement.components || []) {
+      for (const occurrence of component.occurrences || []) {
+        const candidateId = String(occurrence?.candidateId || "");
+        if (!candidateId || index.has(candidateId))
+          throw overlayError(code, candidateId || "candidate");
+        index.set(candidateId, {
+          requirementId: requirement.id,
+          componentId: component.id,
+          occurrence,
+        });
+      }
+    }
+  }
+  return index;
+}
+
+function assertTargetChain({
+  categoryView,
+  documentStatus,
+  worksheet,
+  targets,
+  judgements,
+  code,
+}) {
+  const candidateIndex = worksheetCandidateIndex(
+    worksheet,
+    `${code}_CANDIDATE`
+  );
+  const targetByKey = assertUniqueObjects(targets, targetKey, `${code}_TARGET`);
+  const judgementByKey = assertUniqueObjects(
+    judgements,
+    targetKey,
+    `${code}_JUDGEMENT`
+  );
+  const expectedKeys = [];
+  for (const requirement of worksheet.requirements) {
+    for (const component of requirement.components || []) {
+      const key = targetKey({
+        requirementId: requirement.id,
+        componentId: component.id,
+      });
+      expectedKeys.push(key);
+      const target = targetByKey.get(key);
+      const judgement = judgementByKey.get(key);
+      const expectedTargetId = `prepared-target:${requirement.id}:${component.id}`;
+      if (
+        !target ||
+        !judgement ||
+        target.targetId !== expectedTargetId ||
+        judgement.targetId !== expectedTargetId ||
+        target.categoryView !== categoryView ||
+        target.documentStatus !== documentStatus ||
+        target.requirementLabel !== requirement.label ||
+        target.componentLabel !== component.label ||
+        target.factRole !== component.factRole
+      )
+        throw overlayError(`${code}_IDENTITY`, key);
+
+      const acceptedIds = (target.candidates || []).map(
+        ({ candidateId }) => candidateId
+      );
+      const rejectedIds = (target.serverRejectedCandidates || []).map(
+        ({ candidateId }) => candidateId
+      );
+      const unresolvedIds = target.unresolvedCandidateIds || [];
+      const ownedOccurrences = (component.occurrences || []).map(
+        ({ candidateId }) => candidateId
+      );
+      if (
+        !Array.isArray(target.candidates) ||
+        !Array.isArray(target.serverRejectedCandidates) ||
+        !Array.isArray(target.unresolvedCandidateIds) ||
+        new Set([...acceptedIds, ...rejectedIds]).size !==
+          acceptedIds.length + rejectedIds.length ||
+        new Set(unresolvedIds).size !== unresolvedIds.length ||
+        unresolvedIds.some(
+          (candidateId) => !rejectedIds.includes(candidateId)
+        ) ||
+        [...acceptedIds, ...rejectedIds].sort().join("\n") !==
+          [...ownedOccurrences].sort().join("\n")
+      )
+        throw overlayError(`${code}_CANDIDATE_PARTITION`, key);
+      for (const candidateId of [...acceptedIds, ...rejectedIds]) {
+        const owner = candidateIndex.get(candidateId);
+        if (
+          owner?.requirementId !== requirement.id ||
+          owner?.componentId !== component.id
+        )
+          throw overlayError(`${code}_CANDIDATE_OWNERSHIP`, candidateId);
+      }
+      for (const candidate of target.candidates) {
+        const occurrence = candidateIndex.get(
+          candidate.candidateId
+        )?.occurrence;
+        if (
+          candidate.exactText !== occurrence?.exactText ||
+          candidate.physicalPageNumber !==
+            (occurrence?.physicalPageNumber || occurrence?.pageNumber)
+        )
+          throw overlayError(
+            `${code}_CANDIDATE_SOURCE_MISMATCH`,
+            candidate.candidateId
+          );
+      }
+      if (
+        !Array.isArray(judgement.selectedCandidateIds) ||
+        !Array.isArray(judgement.unresolvedCandidateIds) ||
+        judgement.selectedCandidateIds.some(
+          (candidateId) => !acceptedIds.includes(candidateId)
+        ) ||
+        judgement.unresolvedCandidateIds.join("\n") !== unresolvedIds.join("\n")
+      )
+        throw overlayError(`${code}_JUDGEMENT_BINDING`, key);
+    }
+  }
+  if (
+    [...targetByKey.keys()].sort().join("\n") !==
+      [...expectedKeys].sort().join("\n") ||
+    [...judgementByKey.keys()].sort().join("\n") !==
+      [...expectedKeys].sort().join("\n")
+  )
+    throw overlayError(`${code}_COMPONENT_SET_MISMATCH`);
+}
+
+function assertTargetResultReport({
+  report,
+  document,
+  categoryView,
+  targetRequirementIds,
+  targeted,
+}) {
+  if (
+    report?.contractId !== "TARGETED_QA_CATEGORY_RESULT_V1" ||
+    report?.runKind !== "TARGETED_QA_ONLY" ||
+    report?.status !== "TECHNICAL_PASS_REVIEW_REQUIRED" ||
+    report?.categoryView !== categoryView ||
+    report?.document?.uuid !== document.uuid ||
+    report?.document?.sha256 !== document.sha256 ||
+    report?.document?.documentStatus !== document.documentStatus ||
+    report?.requirementIds?.join("\n") !== targetRequirementIds.join("\n") ||
+    report?.rowCount !== targetRequirementIds.length ||
+    report?.tableContract?.pass !== true ||
+    report?.outputSemanticDigests?.rowsSha256 !==
+      selectionDigest(targeted.rows) ||
+    report?.outputSemanticDigests?.requestedFieldsSha256 !==
+      selectionDigest(targeted.requestedFields)
+  )
+    throw overlayError("TARGETED_OVERLAY_RESULT_REPORT_MISMATCH");
+}
+
 /**
  * Composes one complete category analysis from an immutable full baseline and
  * one validated targeted-QA projection. Only manifest-owned requirements may
@@ -110,6 +286,7 @@ function targetKey(value) {
 function materializeTargetedQaCategoryOverlay({
   categoryView,
   targetRequirementIds,
+  document,
   baseline,
   targeted,
 }) {
@@ -126,6 +303,12 @@ function materializeTargetedQaCategoryOverlay({
     throw overlayError("TARGETED_OVERLAY_REQUIREMENT_IDS_INVALID");
   assertObject(baseline, "TARGETED_OVERLAY_BASELINE_INVALID");
   assertObject(targeted, "TARGETED_OVERLAY_TARGET_INVALID");
+  if (
+    !document?.uuid ||
+    !/^[a-f0-9]{64}$/u.test(document?.sha256 || "") ||
+    !document?.documentStatus
+  )
+    throw overlayError("TARGETED_OVERLAY_DOCUMENT_INVALID");
   const baselineWorksheet = assertObject(
     baseline.worksheet,
     "TARGETED_OVERLAY_BASELINE_WORKSHEET_INVALID"
@@ -139,13 +322,34 @@ function materializeTargetedQaCategoryOverlay({
     targetedWorksheet.catalog?.categoryView !== categoryView
   )
     throw overlayError("TARGETED_OVERLAY_WORKSHEET_CATEGORY_MISMATCH");
+  assertExactIdentity(
+    baselineWorksheet.catalog,
+    targetedWorksheet.catalog,
+    "TARGETED_OVERLAY_WORKSHEET_CATALOG_MISMATCH"
+  );
+  assertExactIdentity(
+    baselineWorksheet.document,
+    targetedWorksheet.document,
+    "TARGETED_OVERLAY_WORKSHEET_DOCUMENT_MISMATCH"
+  );
+  if (
+    baselineWorksheet.document?.fingerprint !== document.sha256 ||
+    baselineWorksheet.document?.sourceDocumentId !== document.sha256
+  )
+    throw overlayError("TARGETED_OVERLAY_WORKSHEET_DOCUMENT_IDENTITY_INVALID");
   if (Object.hasOwn(baselineWorksheet, "targetRequirementSelection"))
     throw overlayError("TARGETED_OVERLAY_BASELINE_TARGET_MARKER_FORBIDDEN");
-  if (
-    targetedWorksheet.targetRequirementSelection?.requirementIds?.join("\n") !==
-    targetRequirementIds.join("\n")
-  )
+  const selection = assertTargetRequirementSelection(targetedWorksheet);
+  if (selection?.requirementIds?.join("\n") !== targetRequirementIds.join("\n"))
     throw overlayError("TARGETED_OVERLAY_TARGET_SELECTION_MISMATCH");
+
+  assertTargetResultReport({
+    report: targeted.report,
+    document,
+    categoryView,
+    targetRequirementIds,
+    targeted,
+  });
 
   const baselineRequirements = assertUniqueObjects(
     baselineWorksheet.requirements,
@@ -185,6 +389,7 @@ function materializeTargetedQaCategoryOverlay({
     requirementIdOf: ({ requirementId }) => requirementId,
     code: "TARGETED_OVERLAY_BINDING_GROUPS_INVALID",
     requireExactTargetSet: false,
+    requireExactBaselineSet: false,
   });
   const worksheet = {
     ...baselineWorksheet,
@@ -202,6 +407,22 @@ function materializeTargetedQaCategoryOverlay({
     keyOf: ({ categoryId }) => categoryId,
     requirementIdOf: ({ categoryId }) => categoryId,
     code: "TARGETED_OVERLAY_ROWS_INVALID",
+  });
+  assertTargetChain({
+    categoryView,
+    documentStatus: document.documentStatus,
+    worksheet: baselineWorksheet,
+    targets: baseline.targets,
+    judgements: baseline.materializedEvidence?.judgements,
+    code: "TARGETED_OVERLAY_BASELINE_CHAIN",
+  });
+  assertTargetChain({
+    categoryView,
+    documentStatus: document.documentStatus,
+    worksheet: targetedWorksheet,
+    targets: targeted.targets,
+    judgements: targeted.materializedEvidence?.judgements,
+    code: "TARGETED_OVERLAY_TARGET_CHAIN",
   });
   const targets = mergeRequirementOwnedArray({
     baselineValues: baseline.targets,
