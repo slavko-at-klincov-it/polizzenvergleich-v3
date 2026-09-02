@@ -2245,8 +2245,7 @@ describe("requestedFieldEvidenceContract", () => {
     const period = textualOccurrence({
       candidateId: "candidate:vs35-shared-period",
       text,
-      exactText:
-        "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren",
+      exactText: "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren",
       contextStart: 500,
     });
     const result = materializeRequestedFieldEvidence({
