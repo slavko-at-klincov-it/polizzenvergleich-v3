@@ -1186,7 +1186,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V19_FE_C07_REQUESTED_FIELDS",
+      id: "CUSTOMER_CORE_5_V20_FE_C07_CONDITION_ABSENCE_AUDIT",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,

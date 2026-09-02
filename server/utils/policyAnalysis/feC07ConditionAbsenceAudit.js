@@ -13,7 +13,7 @@ const SCOPED_OBJECT =
 const QUALIFIED_LIMIT =
   /bis\s+zu\s+jeweils\s+\d{1,3}(?:[.,]\d+)?\s*%\s+der\s+Geb[aä]udeversicherungs-?\s*summe\s+auf\s+[,„“"']*Erstes\s+Risiko/giu;
 const ALLOWED_OTHER_OBJECT_EXCLUSION =
-  /\(\s*ausgenommen\s+Beleuchtungskörper\s*\)/giu;
+  /\(\s*ausgenommen\s+Beleuchtungskörper(?:\s+im\s+Freien)?\s*\)/giu;
 const RESTRICTIVE_OR_REFERENCED_CLAUSE =
   /(?:\b(?:wenn|falls|sofern|soweit|vorausgesetzt|vorbehaltlich|Voraussetzung(?:en)?|Bedingung(?:en)?|gem[aä]ß|laut)\b|nach\s+Ma[ßs]gabe|nur\s+(?:dann\s+)?(?:wenn|falls|sofern|soweit|insoweit|bei)|unter\s+der\s+(?:Voraussetzung|Bedingung)|gegen\s+(?:eine?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|\b(?:optional|wahlweise)\b|\bkann\b[\s\S]{0,100}\b(?:mitversichert|eingeschlossen)\s+werden\b|\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen)\b)/iu;
 
