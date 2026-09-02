@@ -45,15 +45,15 @@ function worksheetFromText(text) {
 
 describe("ST category recall", () => {
   test("keeps an explicitly included matching ST-27 scope decision-ready", () => {
-    expect(
-      catalog.requirements.find(({ id }) => id === "ST-27")
-    ).toMatchObject({
-      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-      components: [
-        { id: "avalanche", factRole: "PERIL" },
-        { id: "snow_slide", factRole: "PERIL" },
-      ],
-    });
+    expect(catalog.requirements.find(({ id }) => id === "ST-27")).toMatchObject(
+      {
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+        components: [
+          { id: "avalanche", factRole: "PERIL" },
+          { id: "snow_slide", factRole: "PERIL" },
+        ],
+      }
+    );
   });
 
   const document = documentFromPages([
