@@ -2180,3 +2180,171 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
+
+### 10.15 LW-20 Schritt B1 – paketweiter Audit auf Aufhebung des Default-Ausschlusses
+
+#### 10.15.1 Warum Schritt A noch nicht für Gleichwertigkeit reichte
+
+Der echte Fund in DOC-09 ist ein allgemeiner Ausschluss in den
+Leitungswasserbedingungen:
+
+```text
+Nicht versichert sind Schäden, so ferne nicht anders vereinbart:
+...
+c) durch Grundwasser ...
+```
+
+Die Formulierung `so ferne nicht anders vereinbart` bedeutet, dass der
+Ausschluss nur dann als Paketwirkung verwendet werden darf, wenn kein anderes
+Paketdokument ihn aufhebt. Dokumenttyp, Rolle oder Rang allein beweisen das
+nicht. Deshalb wurde vor der eigentlichen Vergleichsregel ein eigener
+serverseitiger Volltextaudit eingeführt. Er verändert selbst weder Deckung noch
+Vergleichsergebnis.
+
+Der erste Auditvertrag V1 war absichtlich fail-closed, aber im echten Paket zu
+breit. Er erzeugte 33 Review-Kandidaten:
+
+```text
+POINT_OR_ARTICLE: 21
+LEITUNGSWASSER:     7
+AWB:                4
+DIRECT_LW20:        1
+CODE:               0
+```
+
+32 Treffer waren fremde Artikel, Haftpflicht-, Kündigungs-, Hypothekar- oder
+andere Leitungswasserregelungen. Der einzige direkte Grundwassertreffer lag im
+bereits durch den LW-20-V3-Terminalvertrag nachgewiesenen Sturmscope. Zusätzlich
+fehlten beim V1-Muster für `lit.` Wortgrenzen; dadurch konnte das Wort
+`Facility` fälschlich als `lit. y` enden. Diese reale Messung widerlegt die
+Verwendung allgemeiner AWB-/Artikelverweise als LW-20-Blocker.
+
+#### 10.15.2 V2-Vertrag und Abhängigkeiten
+
+Der produktive Audit V2 ist exakt gebunden an:
+
+```text
+Requirement: LW-20
+Komponente: ground_seepage_or_retained_water
+Rolle: PERIL
+Absenzbedeutung im Vergleich: COVERAGE_ONLY
+Audit: LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_AUDIT_V2
+Patternvertrag: LW20_DEFAULT_EXCLUSION_ALIAS_FREE_REFERENCE_FAMILIES_V2
+Produktprofil: CUSTOMER_CORE_5_V25_LW20_ALIAS_FREE_OVERRIDE_AUDIT
+```
+
+Direkte Begriffe wie Grundwasser, Sickerwasser und Stauwasser wurden aus dem
+Override-Audit entfernt. Sie bleiben ausschließlich Eigentum der normalen
+Occurrence-, Triage-, Scope- und Evidenzpipeline. Dadurch wird der bewiesene
+Sturmscope nicht ein zweites Mal ohne Scopeverständnis bewertet.
+
+Ein aliasfreier Override-Kandidat entsteht nur innerhalb derselben gebundenen
+`PARAGRAPH`- oder `LIST_ITEM`-Einheit und nur für eine der drei Familien:
+
+1. Leitungswasseranker plus Ausschlusslocator plus exakt `lit./Buchstabe/
+   Punkt/Ziffer c` plus Aufhebungswirkung;
+2. Leitungswasseranker plus zitierte Default-Form
+   `Nicht versichert sind Schäden, sofern/so ferne nicht anders vereinbart`
+   plus Aufhebungswirkung;
+3. Leitungswasseranker plus `alle/sämtliche Ausschlüsse oder
+   Ausschlussbestimmungen` plus Aufhebungswirkung.
+
+Zulässige Wirkungen sind eng auf `aufgehoben`, `gestrichen`, `außer Kraft`,
+`findet keine Anwendung`, `nicht anzuwenden` und `ersetzt durch` begrenzt.
+Locator und Wirkung dürfen höchstens 160 UTF-16-Zeichen auseinanderliegen;
+die Struktureinheit ist auf 600 Zeichen begrenzt. Seiten-, Absatz-, Listen-
+und Headinggrenzen dürfen nicht übersprungen werden. `nicht aufgehoben` und
+`keinesfalls gestrichen` werden ausdrücklich abgelehnt.
+
+Der Audit bindet Dokument-UUID, PDF-SHA, semantischen Dokumentartefakt-Digest,
+PageContent- und PageMap-Digest, physische Seitenzahl, Patternvertrag sowie bei
+Treffern Unit-/Match-Offsets, exakten Text und Kandidatendigest. Die bestehende
+Struktureinheitserkennung wurde aus
+`controlledOccurrenceWorksheet.js` wiederverwendet; es entstand kein zweiter
+abweichender Absatzparser.
+
+Betroffene Produktionsgrenzen:
+
+```text
+server/utils/policyAnalysis/lw20DefaultExclusionOverrideAudit.js
+server/utils/policyAnalysis/controlledOccurrenceWorksheet.js
+server/utils/policyComparison/resultBuilder.js
+server/utils/policyComparison/productContract.js
+```
+
+Der Audit wird nur im exakten LW-20-Komponenten-`searchAudit` materialisiert.
+Alle anderen Kategorien und Komponenten bleiben unverändert.
+
+#### 10.15.3 Commits und Mac-Studio-Regression
+
+```text
+93a0322a fix(analysis): audit LW-20 exclusion overrides
+eaa06297 fix(analysis): reject negated LW-20 override phrases
+517bcf19 style(analysis): format LW-20 override audit tests
+cdafd0a9 fix(analysis): bind LW-20 override references to clauses
+fbee7b62 style(analysis): format LW-20 alias-free audit
+```
+
+Der erste fokussierte Mac-Lauf fand die zu enge Negationsbindung. Der erste
+echte Paketlauf fand danach die 33 fachfremden V1-Kandidaten. Beide Befunde
+wurden als Forward-Fixes erhalten und nicht durch History-Umschreiben
+verdeckt.
+
+Finale Validierung:
+
+```text
+Commit: fbee7b62bd919ff1ae48d000450f2c337138339b
+Worktree: /private/tmp/pv3-validate-fbee7b62
+Formatprüfung: PASS
+Fokussierte Suites: 4/4 PASS
+Fokussierte Tests: 133/133 PASS
+Breite Regression: 47 Suites und 901 Tests PASS
+```
+
+Die exakt gleichen vier historischen Fixture-Suites mit 25 Tests bleiben rot:
+
+- drei Target-QA-/Worksheet-Manifests erwarten die alte FE-Katalogbindung;
+- eine statische Bedeutungsverteilung erwartet weiterhin
+  `25 COVERAGE_MIXED / 91 COVERAGE_ONLY` statt `24 / 92`.
+
+Es entstand keine neue breite Fehlersignatur.
+
+#### 10.15.4 Echter Zehn-Dokument-Audit und unabhängiger Replay
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-20-OVERRIDE-AUDIT-V2-FBEE7B62-20260902
+Summary-Digest:
+c055baa954c7108f8c5fc31f09f94ea3d6fd19849cdec13b6b17971fa3722650
+Target-Selection-Digest:
+aca3828b4d208c20b8f932311e4ec13011f006bb636e58575fa88d2c9507c718
+Dokumente: 10
+Physische Seiten im Override-Audit: 108
+Zielgebundene Override-Kandidaten: 0
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+```
+
+Der getrennte Replay baute jedes Atom erneut aus dem unveränderten
+Dokumentartefakt, Worksheet, Triage-, Evidence- und Targetartefakt auf. Danach
+rekonstruierte er alle zehn Override-Audits und prüfte Identität, Seitenzahl,
+Offsets, Status, Kandidatenzahl und Assessment-Digest. Alle zehn Dokumente
+lieferten `NO_OVERRIDE_REFERENCE_FOUND` mit null Kandidaten.
+
+Schritt B1 hat absichtlich kein Kundenergebnis geändert:
+
+```text
+Vor B1: DOKUMENTATIONSUNTERSCHIED / kein Review
+Nach B1: DOKUMENTATIONSUNTERSCHIED / kein Review
+```
+
+Damit ist nun erstmals revisionssicher belegt, dass die zehn bereitgestellten
+Paketdokumente weder eine direkte positive LW-20-Regel noch einen eng an den
+Default-Ausschluss gebundenen aliasfreien Aufhebungsverweis enthalten. Erst
+dieser Befund erlaubt Schritt B2: einen eigenen LW-20-Vertrag für
+`kontrollierter Nichtfund` gegen `paketweit nicht aufgehobener
+Default-Ausschluss`. Eine globale Gleichsetzung von Nichtfund und Ausschluss
+bleibt verboten.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
