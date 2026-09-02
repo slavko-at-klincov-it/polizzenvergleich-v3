@@ -81,7 +81,7 @@ Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
 ### R69-B – Beidseitig fehlender Beleg: 9
 
-Status: `OPEN`
+Status: `1/9 ACCEPTED`; `FE-B13` ist abgeschlossen, acht Fälle bleiben offen
 
 ```text
 VS-04
@@ -853,3 +853,120 @@ ST-01-Stand ändert sich exakt eine Zeile. Die 155 eingefrorenen
 Nicht-Review-Zeilen bleiben vollständig identisch. Der Overlay bleibt
 QA-only, nicht publishbar, nicht deploybar und ist kein Beleg für beliebige
 Versicherer oder Dokumente.
+
+### 10.3 FE-B13 – Fremdspartenfund als ehrlicher terminaler Reject
+
+Ursache: Paket A besaß bereits einen vollständigen kontrollierten Nullbefund.
+In Paket B waren acht der neun Dokumente ebenfalls echte Zero-Terminals. Nur
+das Dokument `7ee81362-b5e8-421c-8eb9-6eec505bf6a0` enthielt einmal den
+Wortlaut „vor Beginn des Versicherungsschutzes“. Diese Klausel steht auf
+physischer Seite 2 unter der aktuellen Überschrift „Allgemeine Bedingungen
+für die Leitungswasserversicherung“; Seiten- und Abschnittsscope sind beide
+eindeutig `LEITUNGSWASSER_INSURANCE`. Sie schließt vorvertragliche
+Leitungswasserschäden aus und belegt keinen Feuer-Ausschluss.
+
+Die deterministische Triage erkannte dies bereits als
+`MENTION_ONLY / EXPLICIT_OTHER_CATEGORY_SECTION`. Der Prepared-Target verlor
+danach jedoch Basis und Scope und speicherte nur `TRIAGE_MENTION_ONLY`.
+`componentSearchAudit` akzeptierte kontrollierte Fundlosigkeit ausschließlich
+bei null Roh-Occurrences und null Rejections. Deshalb blieb Paket B trotz
+vollständig erklärtem Fremdspartenfund `SEARCH_INCOMPLETE` und FE-B13 fiel in
+`MISSING_BOTH`.
+
+Commit `576acf27` führt den engen Vertrag
+`DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1` ein. Er ist in V1 ausschließlich
+für `FE / FE-B13 / pre_inception_damage_exclusion / EXCLUSION` aktiv und
+verlangt:
+
+- die bestehende Suchpolitik
+  `REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1` und
+  `absenceMeaning=EXCLUSION`;
+- einen eindeutigen aktuellen Leitungswasserabschnitt und denselben
+  Page-Scope;
+- den konkreten vorvertraglichen Ausschlusswortlaut;
+- keinen Feuer-Cross-Reference-Wortlaut;
+- null zugelassene und null ungelöste Kandidaten;
+- vollständige 1:1-Zuordnung aller Roh-Occurrences zu servereigenen Rejects;
+- Bindung von Kandidaten-ID, Alias, physischer Seite, Offsets, exaktem Text
+  und Scopehints über einen SHA-256-Occurrence-Digest;
+- einen separaten Rejection-Set-Digest und vollständige Provenienz im
+  Search-Audit.
+
+Die alten Tatsachen-Gates werden nicht umgeschrieben:
+`zeroOccurrenceTerminal=false` und `zeroCandidateTerminal=false`. Der neue
+Proof-Mode heißt stattdessen
+`ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY`. Das bilaterale
+Abwesenheitsaudit akzeptiert diesen alternativen Beweis nur für FE-B13 und
+prüft die gesamte Provenienz erneut.
+
+Der harte Gegenfall `EL-06` bleibt gesperrt. Dort steht zwar eine Klausel
+unter Leitungswasser, sie regelt aber ausdrücklich Kanalrückstau nach
+Überschwemmung/Hochwasser und ist damit für Elementardeckung relevant. Eine
+allgemeine Regel „fremde Überschrift = Nichtfund“ wäre fachlich falsch. Die
+Tests enthalten deshalb Page-Scope-Mischung, veraltete
+`PRECEDING_PAGE_HEADING`, Feuer-Cross-Reference, modellseitige Kandidaten,
+Digest-Tampering und den EL-06-Wortlaut als Ablehnungsfälle.
+
+Der vorhandene 69er-Targetrun enthielt naturgemäß noch nicht die neue
+Rejection-Provenienz. Commit `a55edb61` erweitert deshalb ausschließlich den
+QA-Overlay-Guard: Er darf servereigene `NOT_FOUND`-Targets nur dann mit neu
+berechneter Provenienz auffrischen, wenn Kandidatenpartition, IDs, Gründe,
+Judgement und alle übrigen Targetfelder identisch bleiben. Jede Änderung an
+zugelassenen Kandidaten, Modellurteil, Wirkung oder Scope bricht weiter hart
+ab. Im realen Lauf wurde exakt ein Target aufgefrischt:
+`FE-B13:pre_inception_damage_exclusion` in DOC-09/FE.
+
+```text
+Fachcommit: 576acf273a2b890ef8580857daeb0c04298ba487
+Mac-Studio-Fachsuites: 176/176 PASS
+QA-Guard-Commit: a55edb61d7e2651128e7e9e607338fb537f37da1
+Mac-Studio-QA-Suites: 114/114 PASS
+Overlay: /private/tmp/pav8-overlay-feb13-a55edb61-JG6RBX/overlay
+Delta gegenüber akzeptiertem VS-10-Overlay: exakt FE:FE-B13
+FE-B13: UNKLAR -> GLEICHWERTIG
+EL-06: unverändert UNKLAR / MISSING_ONE_SIDE
+Nicht-Target-Dokumentinstanzen: 1.550/1.550 identisch
+Finale Nicht-Target-Zeilen: 155/155 identisch
+Geänderte Nicht-Target-Zeilen: 0
+Comparison SHA-256: c2f1958e8c32bad1cecf2f6434630b84d2e546fde9ba924fa34cf3825c9cd522
+Guard SHA-256: 3d86a7179be323ee55e529c2f1d271472422a28692ab4db0d815118cbd5a1c3d
+```
+
+Kumulierte Metrik:
+
+```text
+VORTEIL_A 2, VORTEIL_B 2, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 113, NICHT_VERGLEICHBAR 8, UNKLAR 66.
+Kundenreview: 66; ohne Kundenreview: 158.
+```
+
+Bewertung: Kandidat angenommen. Die Aussage ist ausschließlich gleiche
+dokumentierte Fundlage nach vollständiger kontrollierter Suche. Sie behauptet
+weder einen ausdrücklichen Ausschluss noch identische Deckung.
+
+### 10.4 VS-04 – kein Nullfall, noch nicht gefixt
+
+VS-04 wurde als erster Eintrag der beidseitigen Fehlfundgruppe untersucht,
+aber bewusst nicht über den Abwesenheitsvertrag abgeschlossen. Paket A hat
+neun lexikalische Kandidaten, Paket B vier. Viele sind echte Fremdtreffer:
+Haftpflicht-Pauschalsummen oder ein Sachverständigengutachten zur
+Schadenabwicklung beweisen keine Methode zur Ermittlung der
+Gebäudeversicherungssumme. Diese Ablehnungen sind korrekt.
+
+Der Inhalt ist dennoch nicht sicher absent. Die bereits gebundenen VS-10-
+Quellen nennen auf beiden Seiten eine Anpassung der Versicherungssumme nach
+dem Baukostenindex. Paket A nennt zusätzlich eine Beziehung zwischen
+Neuwertschätzgutachten und Versicherungssumme. Das VS-04-Label fordert
+ausdrücklich „Pauschale, Index, Gutachten“, die aktuelle Aliasfamilie sucht
+diese aktiven Methoden aber nicht ausreichend. Zusätzlich existiert für das
+Pflichtfeld `calculation_method` noch kein spezialisierter Extractor. Selbst
+ein richtiger neuer Fund könnte deshalb derzeit nicht vollständig typisiert
+werden.
+
+Bewertung: `NO-FIX` für bilaterale Abwesenheit; eine solche Änderung wäre
+inhaltlich falsch. Der spätere VS-04-Fix braucht einen versionierten
+Methodenvertrag mit aktiven Index-, Gutachten- und echten
+Pauschalmethodenmustern, Haftpflicht-/Schadengutachten-Negativscopes und einer
+deterministischen Normalform für `calculation_method`. Erst ein gezielter
+Replay darf entscheiden, ob beide Pakete über die Indexmethode gleichwertig
+sind oder Paket A eine zusätzliche aktive Gutachtenmethode besitzt.
