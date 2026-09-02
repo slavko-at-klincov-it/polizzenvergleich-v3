@@ -9,6 +9,21 @@ function occurrence(text) {
   return { context: { text } };
 }
 
+function sourceOccurrence({ text, exactText, contextStart = 1_000 }) {
+  const relativeStart = text.indexOf(exactText);
+  if (relativeStart < 0) throw new Error("TEST_EXACT_TEXT_MISSING");
+  return {
+    exactText,
+    documentStart: contextStart + relativeStart,
+    documentEnd: contextStart + relativeStart + exactText.length,
+    context: {
+      text,
+      documentStart: contextStart,
+      documentEnd: contextStart + text.length,
+    },
+  };
+}
+
 describe("deterministicVsEvidenceRules", () => {
   test("keeps resident adaptations separate from above-standard apartment equipment", () => {
     const requirement = (id) =>
@@ -307,6 +322,71 @@ describe("deterministicVsEvidenceRules", () => {
         occurrence: occurrence(
           "Der Gebäudeeigentümer hat vertraglich für die Wiederherstellung aufzukommen."
         ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_RESTORATION_MENTION_WITHOUT_CLAUSE",
+    });
+  });
+
+  test.each([
+    [
+      "restoration_clause",
+      "Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt",
+      "Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass die Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt ist.",
+      "EXPLICIT_RESTORATION_CLAUSE",
+    ],
+    [
+      "reconstruction_period",
+      "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren",
+      "Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren ab dem Eintritt des Schadenereignisses erfolgt.",
+      "EXPLICIT_RECONSTRUCTION_PERIOD",
+    ],
+  ])(
+    "binds the local EABS VS-35 %s phrase",
+    (componentId, exactText, text, basis) => {
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-35",
+          componentId,
+          occurrence: sourceOccurrence({ text, exactText }),
+        })
+      ).toEqual({
+        binding: DETERMINISTIC_BINDING.DIRECT,
+        basis,
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each([
+    "Die Kosten der Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt gespeicherter Daten werden ersetzt.",
+    "Die Entschädigungsleistung setzt nicht voraus, dass die Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt ist.",
+    "Die Entschädigungsleistung nennt optional die Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt.",
+  ])("does not bind an adversarial restoration phrase: %s", (text) => {
+    const exactText =
+      "Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt";
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-35",
+        componentId: "restoration_clause",
+        occurrence: sourceOccurrence({ text, exactText }),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "GENERIC_RESTORATION_MENTION_WITHOUT_CLAUSE",
+    });
+  });
+
+  test("does not bind an earlier generic occurrence from a later real clause", () => {
+    const exactText = "Wiederbeschaffung oder Wiederherstellung";
+    const text =
+      "Kosten für Datenträger richten sich nach Wiederbeschaffung oder Wiederherstellung. Später gilt: Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren erfolgt.";
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-35",
+        componentId: "restoration_clause",
+        occurrence: sourceOccurrence({ text, exactText }),
       })
     ).toEqual({
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,

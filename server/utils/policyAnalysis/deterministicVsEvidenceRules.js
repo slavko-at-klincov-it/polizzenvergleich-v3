@@ -47,10 +47,28 @@ function occurrenceLocalText(occurrence, before = 420, after = 320) {
   );
 }
 
+function textImmediatelyBeforeOccurrence(occurrence, length = 220) {
+  const context = occurrenceContextText(occurrence);
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart);
+  if (!Number.isInteger(contextStart) || !Number.isInteger(occurrenceStart))
+    return null;
+  const relativeStart = occurrenceStart - contextStart;
+  if (relativeStart < 0 || relativeStart > context.length) return null;
+  return context.slice(Math.max(0, relativeStart - length), relativeStart);
+}
+
 function explicitVs35LocalClauseBinding(key, occurrence) {
   const exactText = String(occurrence?.exactText || "").trim();
   const localText = occurrenceLocalText(occurrence);
-  if (!localText) return null;
+  const immediatelyBefore = textImmediatelyBeforeOccurrence(occurrence);
+  if (!localText || immediatelyBefore === null) return null;
+  if (
+    /(?:nicht\s+(?:vorausgesetzt|erforderlich)|keine\s+Voraussetzung|optional|wahlweise|sofern\s+besonders\s+vereinbart)[\s\S]{0,160}$/iu.test(
+      immediatelyBefore
+    )
+  )
+    return null;
   const compensationGovernor =
     /(?:Entschädigungsleistung|Gesamtentschädigung|Neuwertentschädigung|Zeitwertentschädigung)[\s\S]{0,420}?(?:Voraussetzungen?|Anspruch|sichergestellt|Wiederherstellung|Wiederbeschaffung)/iu.test(
       localText
