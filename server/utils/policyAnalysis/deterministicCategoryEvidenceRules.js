@@ -764,9 +764,15 @@ function el06LocalTargetPreparedDecision(target) {
     target?.componentId === "sewer_backflow" &&
     target?.factRole === "PERIL";
   if (!isTarget) return undefined;
+  const localRebindingCandidates = (target.candidates || []).filter(
+    ({ deterministicBindingBasis }) =>
+      deterministicBindingBasis === "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2"
+  );
+  if (localRebindingCandidates.length === 0) return undefined;
   if (
     !Array.isArray(target.candidates) ||
     target.candidates.length === 0 ||
+    localRebindingCandidates.length !== target.candidates.length ||
     (target.unresolvedCandidateIds || []).length > 0 ||
     target.candidates.some(
       ({ candidateBinding, deterministicBindingBasis }) =>

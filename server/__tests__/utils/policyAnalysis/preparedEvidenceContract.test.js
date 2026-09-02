@@ -239,6 +239,23 @@ describe("preparedEvidenceContract", () => {
         decisionOwner: "SERVER_EL06_EXPLICIT_LOCAL_FLOOD_COVERAGE_V2:EL:EL-06",
       }
     );
+
+    const existingNarrowTarget = {
+      ...elTarget,
+      candidates: elTarget.candidates.map((candidate) => ({
+        ...candidate,
+        deterministicBindingBasis: "EXPLICIT_NARROW_SECTION_SCOPE",
+        contextText:
+          "Versichert sind Schäden durch Überschwemmungen sowie durch in diesem Zusammenhang auftretenden Rückstau.",
+      })),
+    };
+    expect(
+      buildDeterministicPreparedEvidenceJudgement(existingNarrowTarget)
+    ).toMatchObject({
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+      selectedScopePicture: "NARROW_ONLY",
+      decisionOwner: "SERVER_EXPLICIT_CATEGORY_CLAUSE:EL:EL-06",
+    });
   });
 
   test("server-certifies ST-14 light domes only inside a locally governed current glass section", () => {
