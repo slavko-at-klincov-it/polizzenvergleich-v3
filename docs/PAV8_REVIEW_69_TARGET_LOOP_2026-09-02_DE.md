@@ -100,10 +100,10 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `1/7 PIPELINE-KANDIDAT`. `EL-06` hat den gebundenen
-Zehn-Dokument-Pipeline-Probe bestanden, benötigt aber noch die Bestätigung im
-späteren konsistenten Vollvergleich. Sechs Fälle bleiben ohne bestandenen
-Kandidaten offen.
+Status: `2/7 PIPELINE-KANDIDATEN`. `EL-06` und `EL-12` haben jeweils den
+gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber noch die
+Bestätigung im späteren konsistenten Vollvergleich. Fünf Fälle bleiben ohne
+bestandenen Kandidaten offen.
 
 ```text
 VS-35
@@ -1373,3 +1373,108 @@ aber noch keine neue 224-Zeilen-Gesamtmetrik. Erwartet wird im späteren
 konsistenten Vollvergleich `EL-06: UNKLAR -> GLEICHWERTIG`; bis dahin bleibt
 die offizielle akzeptierte Metrik unverändert. Das installierte Kundensystem
 blieb unangetastet und es erfolgte kein Deployment.
+
+### 10.10 EL-12 – Vertragsfolge versus reine Hochwasser-Risikoinformation
+
+Ausgangsfehler: EL-12 war kein fehlender Suchbegriff. Paket A und Paket B
+enthielten je eine kontrollierte Fundstelle mit vollständig verschiedener
+fachlicher Rolle:
+
+- Paket A, DOC-01, physische Seite 10: echte HQ30-Vertragsbedingung. Befindet
+  sich das versicherte Objekt innerhalb der HQ30-Zone, ist die
+  Versicherungssumme bei Hochwasserschäden auf `EUR 10.000` begrenzt.
+- Paket B, DOC-02, physische Seite 3: ausschließlich die
+  Standort-Risikoinformation `Hochwasser-Risiko-Zone: unbekannt`. Im selben
+  Listenblock stehen Vorschaden- und Risikodaten, aber keine Deckung, kein
+  Ausschluss, kein Zuschlag, kein Selbstbehalt und kein Limit.
+
+Der Ausgangszustand hatte drei getrennte Ursachen. Der A-Beleg war bereits
+`FOUND + DEFINED`, blieb wegen der strukturellen Sturmüberschrift aber
+`NARROW_ONLY / TEILBELEGT`. Der B-Infotext wurde vom Modell als
+`NARROW_SCOPE` in den Target-Pool gelassen und danach ohne Auswahl verworfen;
+ohne servereigenen Terminalbeweis blieb die Suche trotzdem unvollständig. Eine
+neue Vorteilsregel wäre fachlich falsch, weil ein fehlender Zonenhinweis weder
+Hochwassergrunddeckung noch ein besseres Limit beweist.
+
+Die Korrektur wurde in zwei fachliche Commits getrennt:
+
+1. Commit `6acad314` setzt ausschließlich EL-12 auf die vorhandene generische
+   Scope-Policy `MATCHING_SCOPE_DEFINITIVE_SUFFICIENT`. Der EL-Katalog wurde
+   revisionsrichtig von v0.6 auf v0.7 und das Produktprofil auf
+   `CUSTOMER_CORE_5_V16_EL12_SCOPE_PRECISION` erhöht. Alte PAV8-v0.6-Manifeste
+   bleiben historische Verträge und werden nicht umgedeutet.
+2. Commit `d614fa08` ergänzt den eigenen Vertrag
+   `DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1`. Er akzeptiert
+   nur `EL / EL-12 / flood_zone_exclusion_or_surcharge / CONDITION`, den
+   kontrollierten Concept-Search-Treffer und den lokal gebundenen Wert
+   `Hochwasser-Risiko-Zone: unbekannt`. Seite, Offsets, Alias, exakter Text,
+   Kontext, beide Scopehints, Contract-ID und Proof-Mode sind digestgebunden.
+   HQ-/HORA-Einstufung, Deckung, Ausschluss, Zuschlag, Prämie, Selbstbehalt,
+   Versicherungssumme, Limit, Bedingung und gemischte Vorkommen bleiben
+   fail-closed Kandidaten. Die bestehenden Fremdspartenverträge für FE-B13,
+   ST-14 und LW-25 behalten ihre eigene ID und Semantik.
+
+Mac-Studio-Nachweise für Schritt 1:
+
+```text
+Commit: 6acad31459178bf23f2bf3c386a46b213f2c121e
+Worktree: /private/tmp/pv3-validate-6acad314
+Prettier: PASS
+Scope-, Recall-, Renderer-, Produkt- und Runner-Suites: 202/202 PASS
+Realer A-Render-Probe-Digest:
+8f49c8eca26f1c1a9d05717bb37c035832f106ba3fc6c1788745196f2e9116c5
+DOC-01/EL-12 vorher: TEILBELEGT, Deckung/Wert nicht feststellbar
+DOC-01/EL-12 nachher: BELEGT, Deckung Ja, EUR 10.000
+Pflichtfeld condition: FOUND; optionales Feld limit: FOUND
+Quelle unverändert: physische PDF-Seite 10
+```
+
+Mac-Studio-Nachweise für Schritt 2:
+
+```text
+Commit: d614fa083db80bd46214e1154a05b4dbd5fb1f17
+Worktree: /private/tmp/pv3-validate-d614fa08
+Prettier: PASS
+Prepared-, Terminal-, Paket-, Vergleichs- und Overlay-Suites: 205/205 PASS
+Baseline-Paket-SHA-256:
+2b390be8aa5597a9990735151b5458e023c9b561134e4c1023f5e6a765479173
+Katalog: el-occurrence-full-draft-v0.7
+Target-Selection-Digest:
+26a9e234b79513bfa3f35bb5530d41a607da3abee1ea2042043874b284bcff67
+Zehn-Dokument-Pipeline-Probe-Digest:
+74e6ebe8c64b6cac29ebe07efe5bf1a4001f3cdab05d98592be548a4ba6eb23d
+```
+
+Der reale komponentengenaue Probe ergab:
+
+```text
+Paket A / DOC-01 / Seite 10:
+1 Occurrence, 1 NARROW_SCOPE-Kandidat, 0 Rejects, 0 ungelöst.
+Urteil: FOUND + DEFINED + NONE + NARROW_ONLY + CONDITIONAL.
+Owner: SERVER_EXPLICIT_EL12_FLOOD_ZONE_CONSEQUENCE:EL:EL-12.
+
+Paket B / DOC-02 / Seite 3:
+1 Occurrence, 0 Kandidaten, 1 servereigener terminaler Reject, 0 ungelöst.
+Reject-Basis: EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION.
+Observed scopes: LEITUNGSWASSER_INSURANCE + STURM_INSURANCE.
+Urteil: NOT_FOUND + UNKNOWN + NONE + UNKNOWN.
+
+Übrige acht B-Dokumente:
+0 Occurrences, 0 Kandidaten, unveränderte kontrollierte Nullfundlage.
+```
+
+Vergleichsgrenze: Der bestehende qualifizierte Abwesenheitsvertrag kann eine
+vollständig belegte `CONDITION/DEFINED`-Seite gegen eine vollständig
+kontrollierte `CONDITION_ONLY`-Abwesenheit bereits ohne Kundenreview als
+`DOKUMENTATIONSUNTERSCHIED` abschließen. Er darf daraus absichtlich keinen
+Vorteil ableiten. Ein späterer `VORTEIL_B` würde mindestens beidseitig belegte
+Hochwassergrunddeckung, dieselbe tatsächlich anwendbare Risikozone und einen
+positiv belegten besseren wirksamen B-Wert benötigen; ein B-Nichtfund reicht
+dafür nicht.
+
+Bewertung: **Pipeline-Kandidat bestanden.** Erwartet wird im späteren
+konsistenten Vollvergleich
+`EL-12: UNKLAR -> DOKUMENTATIONSUNTERSCHIED`. Diese Ergebnis- und
+Gesamtmetrik wird bis zum echten Vollvergleich nicht als gemessene
+Produktionszahl ausgewiesen. Das installierte Kundensystem blieb unverändert;
+es gab kein Deployment.
