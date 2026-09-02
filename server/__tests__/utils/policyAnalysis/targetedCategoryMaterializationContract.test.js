@@ -33,6 +33,8 @@ const CATALOG_FILES = {
 const PROMPT_BYTES = fs.readFileSync(
   path.resolve(__dirname, "../../../resources/workspaceTemplates/ST_sturm.md")
 );
+const TRIAGE_PROMPT_BYTES = Buffer.from("fixture targeted triage prompt");
+const EFFECTS_PROMPT_BYTES = Buffer.from("fixture targeted effects prompt");
 const RUN_SIGNATURE =
   "e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e";
 
@@ -155,8 +157,14 @@ function execution() {
             categoryView === "ST"
               ? sha256(PROMPT_BYTES)
               : ["1", "2", "3", "4", "5"][index].repeat(64),
-          triage: ["a", "b", "c", "d", "e"][index].repeat(64),
-          effects: ["f", "e", "d", "c", "b"][index].repeat(64),
+          triage:
+            categoryView === "ST"
+              ? sha256(TRIAGE_PROMPT_BYTES)
+              : ["a", "b", "c", "d", "e"][index].repeat(64),
+          effects:
+            categoryView === "ST"
+              ? sha256(EFFECTS_PROMPT_BYTES)
+              : ["f", "e", "d", "c", "b"][index].repeat(64),
           hybridAddon: ["5", "4", "3", "2", "1"][index].repeat(64),
         },
       ])
@@ -250,6 +258,7 @@ function fixture() {
     contracts: {
       worksheetSha256: sha256(worksheetBytes),
       systemPromptSha256: promptHashes.triage,
+      hybridSystemPromptSha256: null,
       materializedTriageSha256: sha256(materializedTriageBytes),
       expectedTargetSelectionDigestSha256: selectionDigestSha256,
       targetSelectionDigestSha256: selectionDigestSha256,
@@ -286,6 +295,8 @@ function fixture() {
     categoryView: "ST",
     catalogBytes,
     categoryPromptBytes: Buffer.from(PROMPT_BYTES),
+    triagePromptBytes: Buffer.from(TRIAGE_PROMPT_BYTES),
+    effectsPromptBytes: Buffer.from(EFFECTS_PROMPT_BYTES),
     documentArtifactBytes: raw(documentArtifact),
     worksheetBytes,
     triageReportBytes: raw(triageReport),
@@ -422,6 +433,24 @@ describe("targeted category materialization input contract", () => {
     expect(() => assertTargetedCategoryMaterializationInputs(prompt)).toThrow(
       "TARGETED_CATEGORY_PROMPT_SHA_MISMATCH"
     );
+
+    const triagePrompt = fixture();
+    triagePrompt.triagePromptBytes = Buffer.concat([
+      triagePrompt.triagePromptBytes,
+      Buffer.from(" "),
+    ]);
+    expect(() =>
+      assertTargetedCategoryMaterializationInputs(triagePrompt)
+    ).toThrow("TARGETED_CATEGORY_TRIAGE_PROMPT_SHA_MISMATCH");
+
+    const effectsPrompt = fixture();
+    effectsPrompt.effectsPromptBytes = Buffer.concat([
+      effectsPrompt.effectsPromptBytes,
+      Buffer.from(" "),
+    ]);
+    expect(() =>
+      assertTargetedCategoryMaterializationInputs(effectsPrompt)
+    ).toThrow("TARGETED_CATEGORY_EFFECTS_PROMPT_SHA_MISMATCH");
 
     const document = fixture();
     document.documentArtifactBytes = rewriteJson(

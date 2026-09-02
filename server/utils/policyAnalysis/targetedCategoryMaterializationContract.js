@@ -114,6 +114,8 @@ function assertTargetedCategoryMaterializationInputs({
   categoryView,
   catalogBytes,
   categoryPromptBytes,
+  triagePromptBytes,
+  effectsPromptBytes,
   documentArtifactBytes,
   worksheetBytes,
   triageReportBytes,
@@ -164,6 +166,24 @@ function assertTargetedCategoryMaterializationInputs({
     manifest.execution.promptSha256ByCategory[categoryView].category
   )
     throw contractError("TARGETED_CATEGORY_PROMPT_SHA_MISMATCH");
+  const triagePromptRaw = rawBytes(
+    triagePromptBytes,
+    "TARGETED_CATEGORY_TRIAGE_PROMPT_BYTES_REQUIRED"
+  );
+  if (
+    sha256(triagePromptRaw) !==
+    manifest.execution.promptSha256ByCategory[categoryView].triage
+  )
+    throw contractError("TARGETED_CATEGORY_TRIAGE_PROMPT_SHA_MISMATCH");
+  const effectsPromptRaw = rawBytes(
+    effectsPromptBytes,
+    "TARGETED_CATEGORY_EFFECTS_PROMPT_BYTES_REQUIRED"
+  );
+  if (
+    sha256(effectsPromptRaw) !==
+    manifest.execution.promptSha256ByCategory[categoryView].effects
+  )
+    throw contractError("TARGETED_CATEGORY_EFFECTS_PROMPT_SHA_MISMATCH");
 
   const documentArtifact = parseJsonBytes(
     documentArtifactBytes,
@@ -227,6 +247,7 @@ function assertTargetedCategoryMaterializationInputs({
     triageReport.validation?.formalPass !== true ||
     triageReport.controls?.pass !== true ||
     triageReport.completion?.responseModelComplete !== true ||
+    triageReport.contracts?.hybridSystemPromptSha256 !== null ||
     triageReport.contracts?.materializedTriageSha256 !==
       materializedTriageSha256
   )
