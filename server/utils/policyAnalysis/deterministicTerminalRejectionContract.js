@@ -626,8 +626,7 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
   const classificationPage = hint?.physicalPageNumber || null;
   const relativeStart = occurrence?.documentStart - context?.documentStart;
   const relativeEnd = occurrence?.documentEnd - context?.documentStart;
-  const classificationToContextGap =
-    context?.documentStart - hint?.documentEnd;
+  const classificationToContextGap = context?.documentStart - hint?.documentEnd;
   const scopeLeadText = String(occurrence?.scopeLead?.text || "");
   const scopeLeadResetAtClassification = Boolean(
     target?.allowPrecedingScopeLeadReset === true &&
