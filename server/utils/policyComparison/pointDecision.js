@@ -31,6 +31,9 @@ const {
   UNILATERAL_DOCUMENTATION_RULE_ID,
   buildUnilateralCoverageAbsenceAudit,
 } = require("./unilateralCoverageAbsenceContract");
+const {
+  compareStormDefinitionThreshold,
+} = require("./stormDefinitionThresholdContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -512,6 +515,14 @@ function compareDimension(left, right, { canonical = false } = {}) {
   }
 
   if (left.coverageEffect === right.coverageEffect) {
+    const stormDefinition = compareStormDefinitionThreshold(left, right);
+    if (stormDefinition)
+      return {
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        reasonCode: "EQUIVALENT_STORM_DEFINITION_THRESHOLD",
+        ruleId: stormDefinition.ruleId,
+        dimension,
+      };
     const numeric = compareNumericFields(left, right, left.factRole, canonical);
     if (numeric)
       return {

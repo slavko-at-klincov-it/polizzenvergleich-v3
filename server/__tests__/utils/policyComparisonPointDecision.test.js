@@ -1840,6 +1840,120 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("compares only fully typed ST-01 peak-wind definitions as equal", () => {
+    const component = {
+      id: "storm_wind_speed_definition",
+      factRole: "DEFINITION",
+    };
+    const contract = {
+      digest: "7".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const definitionAtom = (side, value, conditionCheckText) =>
+      atom(side, {
+        requirementId: "ST-01",
+        componentId: component.id,
+        componentLabel: "Sturmdefinition anhand der Windgeschwindigkeit",
+        factRole: component.factRole,
+        coverageEffect: "DEFINED",
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+        requestedFieldStatus: "COMPLETE",
+        requestedFields: ["threshold"],
+        requirementContractDigest: contract.digest,
+        declaredComponents: contract.components,
+        fields: [
+          {
+            field: "threshold",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: value,
+                valueType: "TEXT",
+                unit: null,
+                source: {
+                  candidateId: `candidate-${side}`,
+                  physicalPageNumber: 2,
+                  exactText: value,
+                },
+              },
+            ],
+          },
+        ],
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: "Sturmdefinition",
+            conditionCheckText,
+          },
+        ],
+      });
+    const decideDefinition = (left, right) =>
+      decidePoint({
+        categoryId: "ST-01",
+        packageA: packageSummary({ requirementContract: contract }),
+        packageB: packageSummary({ requirementContract: contract }),
+        atomsA: [left],
+        atomsB: [right],
+      });
+
+    expect(
+      decideDefinition(
+        definitionAtom(
+          "storm-a",
+          "60 km/h",
+          "Sturm ist Wind mit Spitzengeschwindigkeiten von mehr als 60 km/h."
+        ),
+        definitionAtom(
+          "storm-b",
+          "60 km/h",
+          "Als Sturm gilt Wind mit einer Spitzengeschwindigkeit von mehr als 60 km/h."
+        )
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "ALL_ATOMIC_DIMENSIONS_EQUIVALENT",
+      ruleId: "STORM_DEFINITION_THRESHOLD_EQUALITY_V1",
+      reviewRequired: false,
+    });
+
+    for (const [rightValue, rightText] of [
+      [
+        "75 km/h",
+        "Als Sturm gilt Wind mit einer Spitzengeschwindigkeit von mehr als 75 km/h.",
+      ],
+      [
+        "60 km/h",
+        "Als Sturm gilt Wind mit einer Spitzengeschwindigkeit von mindestens 60 km/h.",
+      ],
+      [
+        "60 m/s",
+        "Als Sturm gilt Wind mit einer Spitzengeschwindigkeit von mehr als 60 m/s.",
+      ],
+      [
+        "60 km/h",
+        "Als Sturm gilt mittlere Windgeschwindigkeit von mehr als 60 km/h.",
+      ],
+      [
+        "60 km/h",
+        "Sofern bestätigt, gilt Wind mit einer Spitzengeschwindigkeit von mehr als 60 km/h als Sturm.",
+      ],
+    ]) {
+      expect(
+        decideDefinition(
+          definitionAtom(
+            "control-a",
+            "60 km/h",
+            "Sturm ist Wind mit Spitzengeschwindigkeiten von mehr als 60 km/h."
+          ),
+          definitionAtom("control-b", rightValue, rightText)
+        ).outcome
+      ).not.toBe(POINT_OUTCOME.EQUIVALENT);
+    }
+  });
+
   test("recognizes equivalent inclusions and explicit exclusions", () => {
     expect(decide([atom("a")], [atom("b")])).toMatchObject({
       outcome: POINT_OUTCOME.EQUIVALENT,
