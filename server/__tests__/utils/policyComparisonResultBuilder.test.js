@@ -1020,6 +1020,7 @@ function writeLw20AbsenceCategory(
           id: requirementId,
           label: "Grundwasser, Sickerwasser oder Stauwasser",
           requestedFields: [],
+          scopePolicy: "GENERAL_REQUIRED",
           componentSatisfactionPolicy: "ALL",
           negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
           absenceMeaning: "COVERAGE_ONLY",
