@@ -54,7 +54,10 @@ function sameJson(left, right) {
 }
 
 function sha256(value) {
-  return crypto.createHash("sha256").update(stableStringify(value)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(stableStringify(value))
+    .digest("hex");
 }
 
 function domainDigest(domain, value) {
@@ -436,7 +439,11 @@ function buildVs08ConditionConsensusAudit({
     requirementContract: requirementContractB,
     documents: expectedDocumentsB,
   });
-  if (!sideA || !sideB || !sameJson(sideA.conditionValues, sideB.conditionValues))
+  if (
+    !sideA ||
+    !sideB ||
+    !sameJson(sideA.conditionValues, sideB.conditionValues)
+  )
     return null;
 
   const base = {

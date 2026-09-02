@@ -232,10 +232,7 @@ describe("VS-08 package condition consensus contract", () => {
         input.atomsB[0].requirementContractDigest = "0".repeat(64);
       },
     ],
-    [
-      "missing document inventory",
-      (input) => input.expectedDocumentsB.pop(),
-    ],
+    ["missing document inventory", (input) => input.expectedDocumentsB.pop()],
     [
       "unresolved candidate",
       (input) => input.atomsB[0].unresolvedCandidateIds.push("candidate:open"),
