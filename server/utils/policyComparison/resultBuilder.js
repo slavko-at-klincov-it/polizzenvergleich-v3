@@ -961,7 +961,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 9,
+    schemaVersion: 10,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -977,7 +977,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     categories,
     totals,
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Wenn eine passende Vertragsregelung nach vollständiger kontrollierter Suche nicht gefunden wurde, bleibt dieser Suchbefund getrennt von seiner fachlichen Wirkung. Ein ausdrücklicher Ausschluss ist damit nie belegt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Der Negativbefund belegt dabei nie einen ausdrücklichen Ausschluss. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
   validateCustomerComparison(result);
   return result;

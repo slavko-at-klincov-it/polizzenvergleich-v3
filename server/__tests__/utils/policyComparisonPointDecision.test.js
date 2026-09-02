@@ -146,6 +146,139 @@ function controlledAbsence(side, overrides = {}) {
   return { summary, atoms };
 }
 
+function qualifiedOneSidedFixture({ evidencedSide = "A" } = {}) {
+  const component = { id: "insured_subject", factRole: "INSURED_OBJECT" };
+  const requirementContract = {
+    digest: "c".repeat(64),
+    componentSatisfactionPolicy: "ALL",
+    components: [component],
+  };
+  const categoryId = "VS-13";
+  const foundDocumentUuid = `found-${evidencedSide.toLowerCase()}`;
+  const absentSide = evidencedSide === "A" ? "B" : "A";
+  const absentDocumentUuid = `absent-${absentSide.toLowerCase()}`;
+  const searchPlanId = `fixture/${categoryId}/${component.id}`;
+  const searchCell = ({ documentUuid, found }) => ({
+    disposition: found
+      ? "RELEVANT_FOUND"
+      : "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+    comparisonTreatment: found ? null : "DOCUMENTATION_ONLY_V1",
+    negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+    absenceMeaning: "COVERAGE_ONLY",
+    comparisonPolicy: null,
+    absenceCertification: null,
+    requirementContract,
+    searchPlanId,
+    documentUuid,
+    catalogId: "fixture",
+    physicalPagesChecked: 12,
+    totalPhysicalPages: 12,
+    aliases: ["Versicherter Gegenstand"],
+    conceptSearchIds: [],
+    gates: {
+      negativeSearchApproved: true,
+      certifiedNegativeSearch: false,
+      completeTextExtraction: true,
+      completeCategoryTechnicalContract: true,
+      zeroOccurrenceTerminal: !found,
+      zeroCandidateTerminal: !found,
+      serverNegativeTerminal: !found,
+    },
+  });
+  const foundAudit = searchCell({ documentUuid: foundDocumentUuid, found: true });
+  const absentAudit = searchCell({
+    documentUuid: absentDocumentUuid,
+    found: false,
+  });
+  const summary = ({ documentUuid, found, audit }) =>
+    packageSummary({
+      evidenceFound: found,
+      coverage: found ? "Ja" : "Nicht feststellbar",
+      facts: found
+        ? [
+            {
+              documentUuid,
+              coverage: "Ja",
+              reviewStatus: "BELEGT",
+            },
+          ]
+        : [],
+      reviewStatus: found
+        ? "BELEGT"
+        : "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+      searchDisposition: found
+        ? "RELEVANT_FOUND"
+        : "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      comparisonTreatment: found ? null : "DOCUMENTATION_ONLY_V1",
+      requirementContract,
+      searchAudit: {
+        disposition: found
+          ? "RELEVANT_FOUND"
+          : "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: found ? null : "DOCUMENTATION_ONLY_V1",
+        documentCount: 1,
+        documentUuids: [documentUuid],
+        physicalPagesChecked: 12,
+        searchPlanIds: [searchPlanId],
+        requirementContract,
+        components: [audit],
+      },
+    });
+  const foundAtom = atom("qualified-found", {
+    requirementId: categoryId,
+    componentId: component.id,
+    componentLabel: "Versicherter Gegenstand",
+    factRole: component.factRole,
+    documentUuids: [foundDocumentUuid],
+    requirementContractDigest: requirementContract.digest,
+    declaredComponents: requirementContract.components,
+    selectedCandidateIds: ["candidate-qualified-found"],
+    sources: [
+      {
+        candidateId: "candidate-qualified-found",
+        physicalPageNumber: 2,
+        exactText: "Der Versicherte Gegenstand ist eingeschlossen.",
+      },
+    ],
+    searchAudit: foundAudit,
+  });
+  const absentAtom = atom("qualified-absent", {
+    requirementId: categoryId,
+    componentId: component.id,
+    componentLabel: "Versicherter Gegenstand",
+    factRole: component.factRole,
+    documentUuids: [absentDocumentUuid],
+    evidencePresence: "NOT_FOUND",
+    coverageEffect: "UNKNOWN",
+    conflictState: "NONE",
+    selectedScopePicture: "UNKNOWN",
+    documentApplicability: "UNKNOWN",
+    requirementContractDigest: requirementContract.digest,
+    declaredComponents: requirementContract.components,
+    selectedCandidateIds: [],
+    unresolvedCandidateIds: [],
+    sources: [],
+    searchAudit: absentAudit,
+  });
+  const foundPackage = summary({
+    documentUuid: foundDocumentUuid,
+    found: true,
+    audit: foundAudit,
+  });
+  const absentPackage = summary({
+    documentUuid: absentDocumentUuid,
+    found: false,
+    audit: absentAudit,
+  });
+  return {
+    categoryId,
+    packageA: evidencedSide === "A" ? foundPackage : absentPackage,
+    packageB: evidencedSide === "B" ? foundPackage : absentPackage,
+    atomsA: evidencedSide === "A" ? [foundAtom] : [absentAtom],
+    atomsB: evidencedSide === "B" ? [foundAtom] : [absentAtom],
+  };
+}
+
 function certifyAbsence(absence) {
   absence.summary.reviewStatus = "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG";
   absence.summary.searchDisposition = "NOT_FOUND_AFTER_COMPLETE_SEARCH";
@@ -428,30 +561,60 @@ describe("policy comparison point decision", () => {
     });
   });
 
-  test("prefers explicit inclusion over a complete package-wide absence without inventing an exclusion", () => {
-    const result = decide([atom("a")], [], {
-      packageB: {
-        evidenceFound: false,
-        reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
-        searchDisposition: "NOT_FOUND_AFTER_COMPLETE_SEARCH",
-        comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
-        searchAudit: { documentCount: 2, physicalPagesChecked: 80 },
+  test.each(["A", "B"])(
+    "prefers a fully audited pure inclusion on side %s over qualified absence",
+    (evidencedSide) => {
+      const fixture = qualifiedOneSidedFixture({ evidencedSide });
+      const result = decidePoint(fixture);
+
+      expect(result).toMatchObject({
+        schemaVersion: 5,
+        outcome:
+          evidencedSide === "A"
+            ? POINT_OUTCOME.ADVANTAGE_A
+            : POINT_OUTCOME.ADVANTAGE_B,
+        reasonCode: "INCLUDED_OVER_QUALIFIED_ABSENCE",
+        ruleId: "INCLUDED_OVER_QUALIFIED_ABSENCE_V1",
+        reviewRequired: false,
+        unilateralCoverageAbsenceAudit: {
+          schemaVersion: 1,
+          contractId: "QUALIFIED_COVERAGE_OVER_ABSENCE_AUDIT_V1",
+          eligible: true,
+          evidencedSide,
+        },
+      });
+      expect(result.reason).toContain("keine entsprechende Regelung gefunden");
+      expect(result.reason).toContain("ausdrücklicher Ausschluss");
+    }
+  );
+
+  test("keeps ANY requirements blocked in the first directional contract", () => {
+    const fixture = qualifiedOneSidedFixture();
+    for (const packageValue of [fixture.packageA, fixture.packageB]) {
+      packageValue.requirementContract.componentSatisfactionPolicy = "ANY";
+      packageValue.searchAudit.requirementContract.componentSatisfactionPolicy =
+        "ANY";
+      packageValue.searchAudit.components[0].requirementContract.componentSatisfactionPolicy =
+        "ANY";
+    }
+    fixture.atomsA[0].componentSatisfactionPolicy = "ANY";
+    fixture.atomsA[0].declaredComponents =
+      fixture.packageA.requirementContract.components;
+    fixture.atomsB[0].componentSatisfactionPolicy = "ANY";
+    fixture.atomsB[0].declaredComponents =
+      fixture.packageB.requirementContract.components;
+    const result = decidePoint(fixture);
+    expect(result).toMatchObject({
+      schemaVersion: 5,
+      outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
+      unilateralCoverageAbsenceAudit: {
+        eligible: false,
+        blockerCodes: expect.arrayContaining([
+          "REQUIREMENT_NOT_PURE_ALL_COVERAGE",
+        ]),
       },
     });
-
-    expect(result).toMatchObject({
-      schemaVersion: 3,
-      outcome: POINT_OUTCOME.ADVANTAGE_A,
-      reasonCode: "EXPLICIT_INCLUDED_OVER_VERIFIED_ABSENCE",
-      ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
-      reviewRequired: false,
-    });
-    expect(result.reason).toContain(
-      "vollständig geprüften bereitgestellten Paket B"
-    );
-    expect(result.reason).toContain(
-      "ausdrücklicher Ausschluss in Paket B ist damit nicht belegt"
-    );
   });
 
   test("reports comparison equality when both packages have the same fully audited absence", () => {

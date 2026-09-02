@@ -15,6 +15,14 @@ const {
   buildBilateralAbsenceAudit,
   validateBilateralAbsenceAudit,
 } = require("./bilateralAbsenceContract");
+const {
+  UNILATERAL_COVERAGE_REASON_CODE,
+  UNILATERAL_COVERAGE_RULE_ID,
+  UNILATERAL_COVERAGE_TREATMENT,
+  UNILATERAL_DOCUMENTATION_REASON_CODE,
+  UNILATERAL_DOCUMENTATION_RULE_ID,
+  validateUnilateralCoverageAbsenceAudit,
+} = require("./unilateralCoverageAbsenceContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -35,6 +43,14 @@ const HISTORICAL_SCHEMA_8_PROFILE = Object.freeze({
   id: "CUSTOMER_CORE_5_V8_STATUS_METADATA",
   comparisonContractId: "PACKAGE_FIRST_STATUS_METADATA_TYPED_V1",
 });
+const HISTORICAL_SCHEMA_9_PROFILE = Object.freeze({
+  id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
+  comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
+});
+const ONE_SIDED_TECHNICAL_OUTCOMES = new Map([
+  ["A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["A", "B"]],
+  ["B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["B", "A"]],
+]);
 
 function comparisonRows(categories) {
   return (categories || []).flatMap(({ categoryView, rows }) =>
@@ -178,7 +194,17 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         productProfileId,
         comparisonContractId,
       ]);
-  } else if (Number(result.schemaVersion) >= 9) {
+  } else if (Number(result.schemaVersion) === 9) {
+    if (
+      productProfileId !== HISTORICAL_SCHEMA_9_PROFILE.id ||
+      comparisonContractId !==
+        HISTORICAL_SCHEMA_9_PROFILE.comparisonContractId
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) >= 10) {
     if (
       productProfileId !== PRODUCT_PROFILE.id ||
       comparisonContractId !== PRODUCT_PROFILE.comparisonContractId
@@ -289,6 +315,64 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           rowKey,
           error.message,
         ]);
+      }
+    }
+    if (Number(result.schemaVersion) >= 10) {
+      const oneSidedDirection = ONE_SIDED_TECHNICAL_OUTCOMES.get(row.outcome);
+      const unilateralDecision =
+        row.pointDecision?.ruleId === UNILATERAL_COVERAGE_RULE_ID ||
+        row.pointDecision?.ruleId === UNILATERAL_DOCUMENTATION_RULE_ID ||
+        row.pointDecision?.reasonCode === UNILATERAL_COVERAGE_REASON_CODE ||
+        row.pointDecision?.comparisonTreatment ===
+          UNILATERAL_COVERAGE_TREATMENT ||
+        row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined;
+      if (Boolean(oneSidedDirection) !== unilateralDecision)
+        validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
+      if (oneSidedDirection) {
+        const [evidencedSide, absentSide] = oneSidedDirection;
+        const audit = row.pointDecision.unilateralCoverageAbsenceAudit;
+        try {
+          validateUnilateralCoverageAbsenceAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            expectedDocumentUuidsA: [...allowedDocumentUuidsBySide.A],
+            expectedDocumentUuidsB: [...allowedDocumentUuidsBySide.B],
+          });
+        } catch (error) {
+          validationError("COMPARISON_UNILATERAL_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        if (
+          audit?.evidencedSide !== evidencedSide ||
+          audit?.absentSide !== absentSide ||
+          row.pointDecision?.schemaVersion !== 5 ||
+          row.pointDecision?.reviewRequired !== false
+        )
+          validationError("COMPARISON_UNILATERAL_DECISION_INVALID", [rowKey]);
+        const expectedOutcome =
+          evidencedSide === "A"
+            ? POINT_OUTCOME.ADVANTAGE_A
+            : POINT_OUTCOME.ADVANTAGE_B;
+        if (audit.eligible) {
+          if (
+            outcome !== expectedOutcome ||
+            row.pointDecision.ruleId !== UNILATERAL_COVERAGE_RULE_ID ||
+            row.pointDecision.reasonCode !== UNILATERAL_COVERAGE_REASON_CODE ||
+            row.pointDecision.comparisonTreatment !==
+              UNILATERAL_COVERAGE_TREATMENT
+          )
+            validationError("COMPARISON_UNILATERAL_WINNER_INVALID", [rowKey]);
+        } else if (
+          outcome !== POINT_OUTCOME.DOCUMENTATION_DIFFERENCE ||
+          row.pointDecision.ruleId !== UNILATERAL_DOCUMENTATION_RULE_ID ||
+          row.pointDecision.reasonCode !==
+            UNILATERAL_DOCUMENTATION_REASON_CODE ||
+          row.pointDecision.comparisonTreatment !== "DOCUMENTATION_ONLY_V1"
+        )
+          validationError("COMPARISON_UNILATERAL_BLOCKED_INVALID", [rowKey]);
       }
     }
     if (reviewRequired) {

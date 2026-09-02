@@ -23,6 +23,14 @@ const {
   BILATERAL_ABSENCE_TREATMENT,
   buildBilateralAbsenceAudit,
 } = require("./bilateralAbsenceContract");
+const {
+  UNILATERAL_COVERAGE_REASON_CODE,
+  UNILATERAL_COVERAGE_RULE_ID,
+  UNILATERAL_COVERAGE_TREATMENT,
+  UNILATERAL_DOCUMENTATION_REASON_CODE,
+  UNILATERAL_DOCUMENTATION_RULE_ID,
+  buildUnilateralCoverageAbsenceAudit,
+} = require("./unilateralCoverageAbsenceContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -309,73 +317,29 @@ function qualifiedAbsence(packageSummary) {
   ].includes(packageSummary?.searchDisposition);
 }
 
-function assumedNotIncluded(packageSummary) {
-  return (
-    qualifiedAbsence(packageSummary) &&
-    packageSummary?.comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1"
-  );
-}
-
-function includedAtomsForAbsenceRule(atoms, categoryId) {
-  const rawFound = (atoms || []).filter(
-    (atom) =>
-      atom.requirementId === categoryId && atom.evidencePresence === "FOUND"
-  );
-  if (rawFound.length === 0) return null;
-  if (
-    rawFound.some(
-      (atom) =>
-        !COVERAGE_ROLES.has(atom.factRole) ||
-        atom.coverageEffect !== "INCLUDED" ||
-        atom.documentApplicability !== "ACTIVE" ||
-        !completeAtom(atom) ||
-        hasConditionalOrOptionalCoverageSource(atom)
-    )
-  )
-    return null;
-  const found = uniqueAtoms(rawFound);
-  const counts = new Map();
-  for (const atom of found)
-    counts.set(atom.componentId, (counts.get(atom.componentId) || 0) + 1);
-  if ([...counts.values()].some((count) => count !== 1)) return null;
-  return found;
-}
-
-function decideAgainstVerifiedAbsence({
-  categoryId,
-  evidencedPackage,
-  absentPackage,
-  evidencedAtoms,
+function documentationDifference({
   evidencedSide,
+  absentPackage,
+  unilateralCoverageAbsenceAudit,
 }) {
-  if (evidencedPackage?.reviewStatus !== "BELEGT") return null;
-  const found = includedAtomsForAbsenceRule(evidencedAtoms, categoryId);
-  if (!found) return null;
-  const labels = [...new Set(found.map((atom) => atom.componentLabel))].join(
-    ", "
-  );
   const absentSide = evidencedSide === "A" ? "B" : "A";
   return {
-    schemaVersion: 3,
-    outcome:
-      evidencedSide === "A"
-        ? POINT_OUTCOME.ADVANTAGE_A
-        : POINT_OUTCOME.ADVANTAGE_B,
-    reasonCode: "EXPLICIT_INCLUDED_OVER_VERIFIED_ABSENCE",
-    reason: `Vorteil Paket ${evidencedSide}: ${labels || categoryId} ${found.length === 1 ? "ist" : "sind"} in Paket ${evidencedSide} ausdrücklich eingeschlossen. Im vollständig geprüften bereitgestellten Paket ${absentSide} wurde nach dem ausgewiesenen versionierten Volltext-, Begriffs- und Definitionssuchvertrag keine entsprechende Regelung gefunden; der Schutz wird deshalb für diesen Vergleich als nicht enthalten gewertet. Ein ausdrücklicher Ausschluss in Paket ${absentSide} ist damit nicht belegt.`,
+    schemaVersion: unilateralCoverageAbsenceAudit ? 5 : 3,
+    outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
+    reasonCode: unilateralCoverageAbsenceAudit
+      ? UNILATERAL_DOCUMENTATION_REASON_CODE
+      : "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
+    reason: `Dokumentationsunterschied: Polizze ${evidencedSide} enthält zu diesem Punkt belegten Inhalt. Im vollständigen kontrollierten Suchlauf des bereitgestellten Pakets ${absentSide} wurde mit dem ausgewiesenen Suchplan keine entsprechende Fundstelle ermittelt. Daraus folgt ohne eine gesondert freigegebene Fachregel weder ein Vor- oder Nachteil noch ein ausdrücklicher Ausschluss.`,
     reviewRequired: false,
-    ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
-    comparisonTreatment: "ASSUMED_NOT_INCLUDED_V1",
+    ruleId: unilateralCoverageAbsenceAudit
+      ? UNILATERAL_DOCUMENTATION_RULE_ID
+      : "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+    comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    ...(unilateralCoverageAbsenceAudit
+      ? { unilateralCoverageAbsenceAudit }
+      : {}),
     dimensions: [
-      ...found.map((atom) => ({
-        categoryId,
-        componentId: atom.componentId,
-        componentLabel: atom.componentLabel,
-        factRole: atom.factRole,
-        [evidencedSide.toLocaleLowerCase("en-US")]: auditSide(atom),
-      })),
       {
-        categoryId,
         side: absentSide,
         searchDisposition: absentPackage.searchDisposition,
         searchAudit: absentPackage.searchAudit,
@@ -384,18 +348,52 @@ function decideAgainstVerifiedAbsence({
   };
 }
 
-function documentationDifference({ evidencedSide, absentPackage }) {
-  const absentSide = evidencedSide === "A" ? "B" : "A";
+function decideQualifiedCoverageOverAbsence({
+  categoryId,
+  packageA,
+  packageB,
+  unilateralCoverageAbsenceAudit,
+}) {
+  const evidencedSide = unilateralCoverageAbsenceAudit.evidencedSide;
+  const absentSide = unilateralCoverageAbsenceAudit.absentSide;
+  const evidencedPackage = evidencedSide === "A" ? packageA : packageB;
+  const absentPackage = absentSide === "A" ? packageA : packageB;
+  if (!unilateralCoverageAbsenceAudit.eligible)
+    return documentationDifference({
+      evidencedSide,
+      absentPackage,
+      unilateralCoverageAbsenceAudit,
+    });
+  const labels = unilateralCoverageAbsenceAudit.evidenced.canonicalComponents
+    .map(({ componentLabel, componentId }) => componentLabel || componentId)
+    .join(", ");
   return {
-    schemaVersion: 3,
-    outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-    reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
-    reason: `Dokumentationsunterschied: Polizze ${evidencedSide} enthält zu diesem Punkt belegten Inhalt. Im vollständigen kontrollierten Suchlauf des bereitgestellten Pakets ${absentSide} wurde mit dem ausgewiesenen Suchplan keine entsprechende Fundstelle ermittelt. Daraus folgt ohne eine gesondert freigegebene Fachregel weder ein Vor- oder Nachteil noch ein ausdrücklicher Ausschluss.`,
+    schemaVersion: 5,
+    outcome:
+      evidencedSide === "A"
+        ? POINT_OUTCOME.ADVANTAGE_A
+        : POINT_OUTCOME.ADVANTAGE_B,
+    reasonCode: UNILATERAL_COVERAGE_REASON_CODE,
+    reason: `Vorteil Polizze ${evidencedSide}: ${labels || categoryId} ${unilateralCoverageAbsenceAudit.evidenced.canonicalComponents.length === 1 ? "ist" : "sind"} in Polizze ${evidencedSide} vollständig belegt und eingeschlossen. Im vollständigen kontrollierten Suchlauf der bereitgestellten Polizze ${absentSide} wurde unter demselben versionierten Komponenten- und Suchvertrag keine entsprechende Regelung gefunden. Für diesen Vergleich wird der dokumentierte Schutz deshalb Polizze ${evidencedSide} zugerechnet. Ein ausdrücklicher Ausschluss in Polizze ${absentSide} ist damit nicht belegt.`,
     reviewRequired: false,
-    ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
-    comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    ruleId: UNILATERAL_COVERAGE_RULE_ID,
+    comparisonTreatment: UNILATERAL_COVERAGE_TREATMENT,
+    unilateralCoverageAbsenceAudit,
     dimensions: [
+      ...unilateralCoverageAbsenceAudit.evidenced.canonicalComponents.map(
+        (component) => ({
+          categoryId,
+          componentId: component.componentId,
+          componentLabel: component.componentLabel,
+          factRole: component.factRole,
+          coverageEffect: component.coverageEffect,
+          selectedScopePicture: component.selectedScopePicture,
+          scopePolicy: component.scopePolicy,
+          documentUuids: component.documentUuids,
+        })
+      ),
       {
+        categoryId,
         side: absentSide,
         searchDisposition: absentPackage.searchDisposition,
         searchAudit: absentPackage.searchAudit,
@@ -885,8 +883,6 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
 
   const absentA = qualifiedAbsence(packageA);
   const absentB = qualifiedAbsence(packageB);
-  const assumedAbsentA = assumedNotIncluded(packageA);
-  const assumedAbsentB = assumedNotIncluded(packageB);
   const bilateralAbsenceAudit = buildBilateralAbsenceAudit({
     categoryId,
     packageA,
@@ -909,36 +905,31 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       bilateralAbsenceAudit,
       dimensions: [],
     };
-  if (assumedAbsentA && packageB?.evidenceFound) {
-    const decision = decideAgainstVerifiedAbsence({
+  const unilateralCoverageAbsenceAudit =
+    buildUnilateralCoverageAbsenceAudit({
       categoryId,
-      evidencedPackage: packageB,
-      absentPackage: packageA,
-      evidencedAtoms: atomsB,
-      evidencedSide: "B",
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
     });
-    if (decision) return decision;
-  }
-  if (assumedAbsentB && packageA?.evidenceFound) {
-    const decision = decideAgainstVerifiedAbsence({
+  if (unilateralCoverageAbsenceAudit)
+    return decideQualifiedCoverageOverAbsence({
       categoryId,
-      evidencedPackage: packageA,
-      absentPackage: packageB,
-      evidencedAtoms: atomsA,
-      evidencedSide: "A",
+      packageA,
+      packageB,
+      unilateralCoverageAbsenceAudit,
     });
-    if (decision) return decision;
-  }
-  if (absentA && packageB?.evidenceFound)
-    return documentationDifference({
-      evidencedSide: "B",
-      absentPackage: packageA,
-    });
-  if (absentB && packageA?.evidenceFound)
-    return documentationDifference({
-      evidencedSide: "A",
-      absentPackage: packageB,
-    });
+  if (
+    (absentA && packageB?.evidenceFound) ||
+    (absentB && packageA?.evidenceFound)
+  )
+    return unclear(
+      "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE",
+      "Unklar: Der einseitige Fund und der kontrollierte Negativbefund konnten nicht gemeinsam unter dem gehärteten Richtungsvertrag rekonstruiert werden."
+    );
   if (!packageA?.evidenceFound && !packageB?.evidenceFound)
     return unclear(
       "MISSING_BOTH",

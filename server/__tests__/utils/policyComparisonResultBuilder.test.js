@@ -158,6 +158,51 @@ function writeAtomicCategory(
   );
 }
 
+function writeFoundSearchSupport(run, categoryView) {
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
+      },
+    })
+  );
+  const worksheetFile = path.join(
+    categoryDirectory,
+    "worksheet.private.json"
+  );
+  const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  worksheet.document = { physicalPages: 1 };
+  worksheet.summary = { componentCount: 1 };
+  fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: "PASS",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
 function writeScopeLimitCategory(run, selectedScopePicture) {
   const categoryView = "FE";
   const categoryDirectory = path.join(run.outputDirectory, categoryView);
@@ -941,8 +986,8 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
-      comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
+      id: "CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION",
+      comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -1032,7 +1077,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(9);
+    expect(result.schemaVersion).toBe(10);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -1085,7 +1130,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(9);
+    expect(result.schemaVersion).toBe(10);
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
@@ -1185,6 +1230,7 @@ describe("policy comparison result builder", () => {
     });
     const runB = writeRun(root, document("b", "B"));
     writeAtomicCategory(runA, "VS", "INCLUDED", {}, { certified: true });
+    writeFoundSearchSupport(runA, "VS");
     writeCompleteAbsenceCategory(runB, "VS");
 
     const result = buildComparisonResult([runA, runB]);
@@ -1201,10 +1247,10 @@ describe("policy comparison result builder", () => {
     );
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_A",
-      ruleId: "INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1",
+      ruleId: "INCLUDED_OVER_QUALIFIED_ABSENCE_V1",
     });
     expect(comparisonRow.pointDecision.reason).toContain(
-      "ausdrücklicher Ausschluss in Paket B ist damit nicht belegt"
+      "ausdrücklicher Ausschluss in Polizze B ist damit nicht belegt"
     );
   });
 
@@ -1243,7 +1289,7 @@ describe("policy comparison result builder", () => {
     });
   });
 
-  test("reports a general controlled zero match as a documentation difference without inventing coverage", () => {
+  test("reports a qualified pure inclusion over controlled absence as a documented advantage", () => {
     const runA = writeRun(root, document("a", "A"), {
       VS: {
         documentedContent: "Versicherter Gegenstand eingeschlossen",
@@ -1254,6 +1300,7 @@ describe("policy comparison result builder", () => {
     });
     const runB = writeRun(root, document("b", "B"));
     writeAtomicCategory(runA, "VS", "INCLUDED");
+    writeFoundSearchSupport(runA, "VS");
     writeCompleteAbsenceCategory(runB, "VS", { certified: false });
 
     const result = buildComparisonResult([runA, runB]);
@@ -1266,11 +1313,45 @@ describe("policy comparison result builder", () => {
       reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
     });
     expect(comparisonRow.pointDecision).toMatchObject({
-      schemaVersion: 3,
-      outcome: "DOKUMENTATIONSUNTERSCHIED",
-      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+      schemaVersion: 5,
+      outcome: "VORTEIL_A",
+      ruleId: "INCLUDED_OVER_QUALIFIED_ABSENCE_V1",
+      reasonCode: "INCLUDED_OVER_QUALIFIED_ABSENCE",
       reviewRequired: false,
+      unilateralCoverageAbsenceAudit: {
+        schemaVersion: 1,
+        contractId: "QUALIFIED_COVERAGE_OVER_ABSENCE_AUDIT_V1",
+        eligible: true,
+        evidencedSide: "A",
+        absentSide: "B",
+      },
     });
+    expect(comparisonRow.pointDecision.reason).toContain(
+      "keine entsprechende Regelung gefunden"
+    );
+    expect(comparisonRow.pointDecision.reason).toContain(
+      "ausdrücklicher Ausschluss in Polizze B ist damit nicht belegt"
+    );
+    for (const mutate of [
+      (tampered) =>
+        delete tampered.categories[0].rows[0].pointDecision
+          .unilateralCoverageAbsenceAudit,
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision
+          .unilateralCoverageAbsenceAudit.eligible = false),
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.ruleId =
+          "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2"),
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision
+          .unilateralCoverageAbsenceAudit.absence.physicalPagesChecked += 1),
+    ]) {
+      const tampered = JSON.parse(JSON.stringify(result));
+      mutate(tampered);
+      expect(() => validateCustomerComparison(tampered)).toThrow(
+        /^COMPARISON_UNILATERAL_/u
+      );
+    }
     expect(result.totals.customerReviewRequired).toBe(
       result.totals.pointDecisions.UNKLAR
     );
@@ -1286,7 +1367,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(9);
+    expect(result.schemaVersion).toBe(10);
     expect(comparisonRow).toMatchObject({
       outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       pointDecision: {

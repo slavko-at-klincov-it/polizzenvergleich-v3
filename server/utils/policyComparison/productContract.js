@@ -12,8 +12,8 @@ const EXPECTED_ROW_COUNT = Object.values(CATEGORY_ROW_COUNTS).reduce(
   0
 );
 const PRODUCT_PROFILE = Object.freeze({
-  id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
-  comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
+  id: "CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION",
+  comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
   categoryViews: CATEGORY_ORDER,
   categoryRowCounts: CATEGORY_ROW_COUNTS,
   categoryCatalogIds: Object.freeze({
