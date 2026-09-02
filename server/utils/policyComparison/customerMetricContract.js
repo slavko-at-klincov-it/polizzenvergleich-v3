@@ -40,6 +40,12 @@ const {
   validateVs15QualifierAbsenceAudit,
   vs15QualifierAbsenceDecision,
 } = require("./vs15NamedOutbuildingQualifierAbsenceContract");
+const {
+  VS08_CONDITION_CONSENSUS_REASON_CODE,
+  VS08_CONDITION_CONSENSUS_RULE_ID,
+  validateVs08ConditionConsensusAudit,
+  vs08ConditionConsensusDecision,
+} = require("./vs08UnderinsuranceConditionConsensusContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -488,6 +494,50 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           !sameJson(row.pointDecision, reconstructed)
         )
           validationError("COMPARISON_VS15_QUALIFIER_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
+      const vs08ConditionConsensusDecisionDetected =
+        row.pointDecision?.ruleId === VS08_CONDITION_CONSENSUS_RULE_ID ||
+        row.pointDecision?.reasonCode ===
+          VS08_CONDITION_CONSENSUS_REASON_CODE ||
+        row.pointDecision?.vs08ConditionConsensusAudit !== undefined;
+      if (vs08ConditionConsensusDecisionDetected) {
+        const audit = row.pointDecision.vs08ConditionConsensusAudit;
+        try {
+          validateVs08ConditionConsensusAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+          });
+        } catch (error) {
+          validationError("COMPARISON_VS08_CONDITION_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = vs08ConditionConsensusDecision(audit);
+        if (
+          !validDocumentManifest ||
+          row.categoryView !== "VS" ||
+          row.categoryId !== "VS-08" ||
+          outcome !== POINT_OUTCOME.EQUIVALENT ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.bilateralAbsenceAudit !== undefined ||
+          row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined ||
+          row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
+            undefined ||
+          row.pointDecision?.vs15QualifierAbsenceAudit !== undefined ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_VS08_CONDITION_DECISION_INVALID", [
             rowKey,
           ]);
       }

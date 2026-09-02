@@ -2,6 +2,7 @@ const {
   VS08_CONDITION_CONSENSUS_RULE_ID,
   VS08_REQUIREMENT_CONTRACT_DIGEST,
   buildVs08ConditionConsensusAudit,
+  validateVs08ConditionConsensusAudit,
   vs08ConditionConsensusDecision,
 } = require("../../utils/policyComparison/vs08UnderinsuranceConditionConsensusContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
@@ -222,6 +223,17 @@ describe("VS-08 package condition consensus contract", () => {
         conditionValues: ["bedingt"],
       }),
     });
+  });
+
+  test("reconstructs the immutable audit and rejects tampering", () => {
+    const input = fixture();
+    const audit = buildVs08ConditionConsensusAudit(input);
+
+    expect(validateVs08ConditionConsensusAudit(audit, input)).toBe(true);
+    audit.sides[1].controlledZeroCount += 1;
+    expect(() => validateVs08ConditionConsensusAudit(audit, input)).toThrow(
+      "VS08_CONDITION_CONSENSUS_AUDIT_MISMATCH"
+    );
   });
 
   test.each([

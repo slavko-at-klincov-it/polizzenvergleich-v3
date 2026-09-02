@@ -466,6 +466,20 @@ function buildVs08ConditionConsensusAudit({
   };
 }
 
+function validateVs08ConditionConsensusAudit(audit, options) {
+  const sideA = audit?.sides?.find(({ side }) => side === "A");
+  const sideB = audit?.sides?.find(({ side }) => side === "B");
+  const expected = buildVs08ConditionConsensusAudit({
+    ...options,
+    atomsA: sideA?.projectedAtoms,
+    atomsB: sideB?.projectedAtoms,
+  });
+  if (!expected) throw new Error("VS08_CONDITION_CONSENSUS_AUDIT_NOT_QUALIFIED");
+  if (!sameJson(audit, expected))
+    throw new Error("VS08_CONDITION_CONSENSUS_AUDIT_MISMATCH");
+  return true;
+}
+
 function vs08ConditionConsensusDecision(audit) {
   if (
     audit?.contractId !== VS08_CONDITION_CONSENSUS_AUDIT_CONTRACT_ID ||
@@ -493,5 +507,6 @@ module.exports = {
   VS08_CONDITION_CONSENSUS_RULE_ID,
   VS08_REQUIREMENT_CONTRACT_DIGEST: REQUIREMENT_CONTRACT_DIGEST,
   buildVs08ConditionConsensusAudit,
+  validateVs08ConditionConsensusAudit,
   vs08ConditionConsensusDecision,
 };
