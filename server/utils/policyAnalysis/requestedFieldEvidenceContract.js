@@ -1,6 +1,10 @@
 const {
   deterministicCategoryCandidateBinding,
 } = require("./deterministicCategoryEvidenceRules");
+const {
+  FE_C07_COMPONENT_ID,
+  buildFeC07ConditionAbsenceAudit,
+} = require("./feC07ConditionAbsenceAudit");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
@@ -443,7 +447,6 @@ function extractCoverageLimitFacts(options) {
   );
 }
 
-const FE_C07_COMPONENT_ID = "sauna_or_infrared_cabin_in_common_room";
 const FE_C07_LIMIT_QUALIFIER =
   "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme";
 const FE_C07_SCOPED_OBJECT =
@@ -1870,6 +1873,32 @@ function selectedVariantScopesForField({
   return [...scopes.values()];
 }
 
+function requestedFieldAbsenceAudit({
+  requirement,
+  field,
+  candidateById,
+  bindingByCandidateId,
+}) {
+  if (requirement.id !== "FE-C07" || field !== "condition") return null;
+  const audits = [];
+  for (const [candidateId, binding] of bindingByCandidateId) {
+    if (![VALUE_BINDING.DIRECT, VALUE_BINDING.NARROW_SCOPE].includes(binding))
+      continue;
+    const indexed = candidateById.get(candidateId);
+    if (
+      indexed?.requirement?.id !== requirement.id ||
+      indexed?.component?.id !== FE_C07_COMPONENT_ID
+    )
+      continue;
+    const audit = buildFeC07ConditionAbsenceAudit({
+      occurrence: indexed.occurrence,
+      binding,
+    });
+    if (audit) audits.push(audit);
+  }
+  return audits.length === 1 ? audits[0] : null;
+}
+
 function fieldEvidenceStatus({ facts, variantScopes }) {
   if (facts.length === 0) return FIELD_EVIDENCE_STATUS.NOT_FOUND;
   if (variantScopes.length < 2) return FIELD_EVIDENCE_STATUS.FOUND;
@@ -1950,10 +1979,20 @@ function materializeRequestedFieldEvidence({
         candidateById,
         bindingByCandidateId,
       });
+      const absenceAudit =
+        facts.length === 0
+          ? requestedFieldAbsenceAudit({
+              requirement,
+              field,
+              candidateById,
+              bindingByCandidateId,
+            })
+          : null;
       return {
         field,
         status: fieldEvidenceStatus({ facts, variantScopes }),
         ...(variantScopes.length > 0 ? { variantScopes } : {}),
+        ...(absenceAudit ? { absenceAudit } : {}),
         facts,
       };
     });

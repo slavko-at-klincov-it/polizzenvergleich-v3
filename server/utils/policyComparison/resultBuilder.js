@@ -836,9 +836,15 @@ function materializeAtomicFacts({
       const facts = (field.facts || []).filter((fact) =>
         selectedSet.has(fact.source?.candidateId)
       );
+      const absenceAudit = selectedSet.has(
+        field.absenceAudit?.source?.candidateId
+      )
+        ? field.absenceAudit
+        : null;
       return {
         field: field.field,
         status: facts.length > 0 ? field.status : "NOT_FOUND",
+        ...(facts.length === 0 && absenceAudit ? { absenceAudit } : {}),
         facts,
       };
     });

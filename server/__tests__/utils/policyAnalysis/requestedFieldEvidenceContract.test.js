@@ -3,6 +3,10 @@ const {
   REQUESTED_FIELD_STATUS,
   materializeRequestedFieldEvidence,
 } = require("../../../utils/policyAnalysis/requestedFieldEvidenceContract");
+const {
+  FE_C07_CONDITION_ABSENCE_AUDIT_CONTRACT_ID,
+  validFeC07ConditionAbsenceAudit,
+} = require("../../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 
 function occurrence({
   candidateId,
@@ -2605,7 +2609,8 @@ describe("requestedFieldEvidenceContract", () => {
       contextStart: 30_000,
     });
 
-    expect(materializeFeC07(source)).toMatchObject({
+    const requirement = materializeFeC07(source);
+    expect(requirement).toMatchObject({
       requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
       fields: [
         {
@@ -2627,10 +2632,83 @@ describe("requestedFieldEvidenceContract", () => {
         {
           field: "condition",
           status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          absenceAudit: {
+            contractId: FE_C07_CONDITION_ABSENCE_AUDIT_CONTRACT_ID,
+            assertion: "NO_ADDITIONAL_CONDITION_IN_GOVERNING_CLAUSE",
+            requirementId: "FE-C07",
+            componentId: "sauna_or_infrared_cabin_in_common_room",
+            binding: "DIRECT",
+            source: expect.objectContaining({
+              candidateId: source.candidateId,
+              physicalPageNumber: 10,
+              documentStart: source.context.documentStart,
+              documentEnd: source.context.documentEnd,
+              exactText: source.context.text,
+            }),
+          },
           facts: [],
         },
       ],
     });
+    const audit = requirement.fields.find(
+      ({ field }) => field === "condition"
+    ).absenceAudit;
+    expect(validFeC07ConditionAbsenceAudit(audit)).toBe(true);
+    expect(audit.source.exactTextSha256).toMatch(/^[a-f0-9]{64}$/u);
+  });
+
+  test("does not certify FE-C07 condition absence when the full paragraph references another condition", () => {
+    const contextText = [
+      "AW03 Gemeinschaftseinrichtungen",
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko.",
+      "Das sind Gemeinschaftsräume wie Saunen und Fitnessräume.",
+      "Die Mitversicherung richtet sich gemäß den Voraussetzungen in Abschnitt X.",
+    ].join(" ");
+    const source = feC07Occurrence({
+      candidateId: "candidate:fe-c07:referenced-condition",
+      contextText,
+      exactText: "Gemeinschaftsräume wie Saunen",
+      contextStart: 35_000,
+    });
+
+    const requirement = materializeFeC07(source);
+    expect(requirement).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        { field: "limit", status: FIELD_EVIDENCE_STATUS.FOUND },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+    expect(requirement.fields[1]).not.toHaveProperty("absenceAudit");
+  });
+
+  test("rejects a tampered FE-C07 condition-absence audit", () => {
+    const contextText =
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen und Fitnessräume.";
+    const source = feC07Occurrence({
+      candidateId: "candidate:fe-c07:absence-audit-tamper",
+      contextText,
+      exactText: "Gemeinschaftsräume wie Saunen",
+      contextStart: 36_000,
+    });
+    const audit = materializeFeC07(source).fields[1].absenceAudit;
+    expect(validFeC07ConditionAbsenceAudit(audit)).toBe(true);
+    expect(
+      validFeC07ConditionAbsenceAudit({
+        ...audit,
+        source: { ...audit.source, documentEnd: audit.source.documentEnd + 1 },
+      })
+    ).toBe(false);
+    expect(
+      validFeC07ConditionAbsenceAudit({
+        ...audit,
+        source: { ...audit.source, exactTextSha256: "0".repeat(64) },
+      })
+    ).toBe(false);
   });
 
   test.each([
