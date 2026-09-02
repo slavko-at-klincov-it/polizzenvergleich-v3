@@ -936,7 +936,7 @@ describe("deterministicCategoryEvidenceRules", () => {
       categoryView: "LW",
       requirementId: "LW-25",
       componentId: "gradual_or_creeping_exclusion",
-      factRole: "EXCLUSION",
+      factRole: "DAMAGE",
       unresolvedCandidateIds: [],
       candidates,
     };
@@ -977,7 +977,7 @@ describe("deterministicCategoryEvidenceRules", () => {
         categoryView: "LW",
         requirementId: "LW-25",
         componentId: "gradual_or_creeping_exclusion",
-        factRole: "EXCLUSION",
+        factRole: "DAMAGE",
         unresolvedCandidateIds: [],
         candidates,
       })
@@ -1006,7 +1006,7 @@ describe("deterministicCategoryEvidenceRules", () => {
         categoryView: "LW",
         requirementId: "LW-25",
         componentId: "gradual_or_creeping_exclusion",
-        factRole: "EXCLUSION",
+        factRole: "DAMAGE",
         unresolvedCandidateIds: [],
         candidates,
       })

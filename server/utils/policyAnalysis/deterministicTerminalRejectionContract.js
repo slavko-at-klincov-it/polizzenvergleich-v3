@@ -5,8 +5,8 @@ const DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID =
 
 const CERTIFIED_TARGETS = Object.freeze({
   "FE:FE-B13:pre_inception_damage_exclusion": Object.freeze({
-    factRole: "EXCLUSION",
-    absenceMeaning: "EXCLUSION",
+    factRole: "DAMAGE",
+    absenceMeaning: "COVERAGE_ONLY",
     otherScopeKey: "LEITUNGSWASSER_INSURANCE",
     exactClause: /\bvor\s+Beginn\s+des\s+Versicherungsschutzes\b/iu,
     targetCrossReference:

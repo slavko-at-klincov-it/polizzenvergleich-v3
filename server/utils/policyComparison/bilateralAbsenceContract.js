@@ -104,7 +104,7 @@ function validDeterministicTerminalRejection(component, categoryId) {
         ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
-        rejection?.sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        !target.sectionScopeSources.includes(rejection?.sectionScopeSource) ||
         (rejection?.scopeProofMode || null) !== target.scopeProofMode ||
         !Array.isArray(rejection?.observedScopeKeys) ||
         rejection.observedScopeKeys.length !== 1 ||

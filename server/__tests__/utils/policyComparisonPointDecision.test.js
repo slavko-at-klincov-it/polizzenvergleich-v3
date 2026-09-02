@@ -594,6 +594,103 @@ describe("policy comparison point decision", () => {
     }
   );
 
+  test("awards LW-25 inclusion over a fully explained liability-only absence", () => {
+    const fixture = qualifiedOneSidedFixture({ evidencedSide: "B" });
+    const categoryId = "LW-25";
+    const component = {
+      id: "gradual_or_creeping_exclusion",
+      factRole: "DAMAGE",
+    };
+    const requirementContract = {
+      digest: "8".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    fixture.categoryId = categoryId;
+    for (const packageValue of [fixture.packageA, fixture.packageB]) {
+      packageValue.requirementContract = requirementContract;
+      packageValue.searchAudit.requirementContract = requirementContract;
+      packageValue.searchAudit.searchPlanIds = [
+        `fixture/${categoryId}/${component.id}`,
+      ];
+      const [searchCell] = packageValue.searchAudit.components;
+      searchCell.requirementContract = requirementContract;
+      searchCell.searchPlanId = `fixture/${categoryId}/${component.id}`;
+      searchCell.absenceMeaning = "COVERAGE_ONLY";
+    }
+    const atoms = [...fixture.atomsA, ...fixture.atomsB];
+    for (const atomValue of atoms) {
+      atomValue.requirementId = categoryId;
+      atomValue.componentId = component.id;
+      atomValue.componentLabel = "Allmähliche Schäden und Langzeiteinwirkung";
+      atomValue.factRole = component.factRole;
+      atomValue.requirementContractDigest = requirementContract.digest;
+      atomValue.declaredComponents = requirementContract.components;
+    }
+    const foundAtom = fixture.atomsB[0];
+    foundAtom.documentRole = "SUPPLEMENT";
+    foundAtom.documentStatus = "FRAMEWORK_TERMS";
+    foundAtom.documentApplicability = "CONDITIONAL";
+
+    const absentCell = fixture.packageA.searchAudit.components[0];
+    const rejections = [
+      {
+        candidateId: "candidate:lw25:inherited-liability",
+        decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+        occurrenceDigestSha256: "1".repeat(64),
+        physicalPageNumber: 20,
+        sectionScopeSource: "PRECEDING_PAGE_HEADING",
+        observedScopeKeys: ["HAFTPFLICHT_INSURANCE"],
+        scopeProofMode:
+          "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
+      },
+      {
+        candidateId: "candidate:lw25:current-liability",
+        decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+        occurrenceDigestSha256: "2".repeat(64),
+        physicalPageNumber: 20,
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["HAFTPFLICHT_INSURANCE"],
+        scopeProofMode:
+          "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
+      },
+    ];
+    absentCell.gates.zeroOccurrenceTerminal = false;
+    absentCell.gates.zeroCandidateTerminal = false;
+    absentCell.gates.deterministicOutOfCategoryTerminal = true;
+    absentCell.terminalRejectionAudit = {
+      schemaVersion: 1,
+      contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+      requirementId: categoryId,
+      componentId: component.id,
+      decisionOwner: "SERVER",
+      decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+      proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+      rejectedOccurrenceCount: rejections.length,
+      rejectedCandidateIds: rejections.map(({ candidateId }) => candidateId),
+      rejectionDigestSha256: terminalRejectionSetDigest(rejections),
+      rejections,
+    };
+
+    expect(decidePoint(fixture)).toMatchObject({
+      outcome: POINT_OUTCOME.ADVANTAGE_B,
+      reasonCode: "INCLUDED_OVER_QUALIFIED_ABSENCE",
+      ruleId: "INCLUDED_OVER_QUALIFIED_ABSENCE_V1",
+      reviewRequired: false,
+      unilateralCoverageAbsenceAudit: {
+        eligible: true,
+        evidencedSide: "B",
+        absentSide: "A",
+      },
+    });
+
+    rejections[0].sectionScopeSource = "OTHER";
+    expect(decidePoint(fixture)).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE",
+    });
+  });
+
   test("keeps ANY requirements blocked in the first directional contract", () => {
     const fixture = qualifiedOneSidedFixture();
     for (const packageValue of [fixture.packageA, fixture.packageB]) {

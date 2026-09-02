@@ -387,12 +387,12 @@ describe("preparedEvidenceContract", () => {
           label: "Ausschluss allmählicher oder schleichender Einwirkung",
           requestedFields: [],
           negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
-          absenceMeaning: overrides.absenceMeaning || "EXCLUSION",
+          absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
           components: [
             {
               id: overrides.componentId || "gradual_or_creeping_exclusion",
               label: "Ausschluss allmählicher oder schleichender Einwirkung",
-              factRole: overrides.factRole || "EXCLUSION",
+              factRole: overrides.factRole || "DAMAGE",
               occurrences,
             },
           ],
@@ -521,8 +521,8 @@ describe("preparedEvidenceContract", () => {
     for (const overrides of [
       { requirementId: "LW-24" },
       { componentId: "other_component" },
-      { factRole: "DAMAGE" },
-      { absenceMeaning: "COVERAGE_ONLY" },
+      { factRole: "EXCLUSION" },
+      { absenceMeaning: "EXCLUSION" },
     ]) {
       const rejected = targetFor([gradualMoistureExclusion], overrides);
       expect(rejected.serverRejectedCandidates).toEqual([

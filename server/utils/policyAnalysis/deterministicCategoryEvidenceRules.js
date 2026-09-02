@@ -1323,7 +1323,7 @@ function lw25GradualDamageInclusionPreparedDecision(target) {
     target?.categoryView === "LW" &&
     target?.requirementId === "LW-25" &&
     target?.componentId === "gradual_or_creeping_exclusion" &&
-    target?.factRole === "EXCLUSION";
+    target?.factRole === "DAMAGE";
   if (!isTarget) return undefined;
   if (
     !Array.isArray(target.candidates) ||
