@@ -1140,9 +1140,7 @@ describe("policy comparison point decision", () => {
         requirementContract,
         searchPlanId,
         documentUuid,
-        catalogId: historicalV1
-          ? "el-occurrence-full-draft-v0.7"
-          : "fixture",
+        catalogId: historicalV1 ? "el-occurrence-full-draft-v0.7" : "fixture",
         physicalPagesChecked: 3,
         totalPhysicalPages: 3,
         aliases: ["Hochwasser-Risiko-Zone"],
