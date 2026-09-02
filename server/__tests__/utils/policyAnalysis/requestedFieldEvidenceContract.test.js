@@ -141,6 +141,63 @@ function variantOccurrence({
   };
 }
 
+function feC07Occurrence({
+  candidateId,
+  contextText,
+  exactText,
+  contextStart = 10_000,
+  unitType = "PARAGRAPH",
+  scopeLeadText = null,
+  scopeLeadStart = 8_000,
+}) {
+  const exactStart = contextText.indexOf(exactText);
+  const source = {
+    candidateId,
+    pageNumber: 10,
+    physicalPageNumber: 10,
+    exactText,
+    documentStart: contextStart + exactStart,
+    documentEnd: contextStart + exactStart + exactText.length,
+    context: {
+      unitType,
+      text: contextText,
+      documentStart: contextStart,
+      documentEnd: contextStart + contextText.length,
+    },
+  };
+  if (scopeLeadText !== null)
+    source.scopeLead = {
+      text: scopeLeadText,
+      documentStart: scopeLeadStart,
+      documentEnd: scopeLeadStart + scopeLeadText.length,
+    };
+  return source;
+}
+
+function feC07Worksheet(source) {
+  return textualWorksheet({
+    id: "FE-C07",
+    label: "Sauna oder Infrarotkabine in Gemeinschaftsräumen",
+    requestedFields: ["limit"],
+    optionalFields: ["condition"],
+    components: [
+      {
+        id: "sauna_or_infrared_cabin_in_common_room",
+        label: "Sauna oder Infrarotkabine in Gemeinschaftsräumen",
+        factRole: "INSURED_OBJECT",
+        occurrences: [source],
+      },
+    ],
+  });
+}
+
+function materializeFeC07(source) {
+  return materializeRequestedFieldEvidence({
+    worksheet: feC07Worksheet(source),
+    materializedCandidates: selections([source.candidateId, "DIRECT"]),
+  }).requirements[0];
+}
+
 describe("requestedFieldEvidenceContract", () => {
   test("binds first-risk qualifiers across soft line wraps inside a list item", () => {
     const candidateId = "candidate:VS-21:wrapped-first-risk";
@@ -2471,4 +2528,219 @@ describe("requestedFieldEvidenceContract", () => {
       facts: [],
     });
   });
+
+  test("binds the FE-C07 list-governor limit and condition to exact source ranges", () => {
+    const scopeLeadText =
+      "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist:\n• bis zu jeweils 5% der Gebäudeversicherungssumme auf „Erstes Risiko“";
+    const contextText =
+      "- Einrichtungen von Gemeinschaftsräumen wie z.B. Saunen, Fitnessräume und Schwimmbäder;";
+    const source = feC07Occurrence({
+      candidateId: "candidate:fe-c07:list-governor",
+      contextText,
+      exactText: "Gemeinschaftsräumen wie z.B. Saunen,",
+      contextStart: 20_000,
+      unitType: "LIST_ITEM",
+      scopeLeadText,
+      scopeLeadStart: 19_700,
+    });
+
+    const requirement = materializeFeC07(source);
+
+    expect(requirement).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              rawValue: "5%",
+              normalizedValue: "5 %",
+              valueType: "PERCENT",
+              unit: "%",
+              limitKind: "CAPPED",
+              qualifier:
+                "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme",
+              source: expect.objectContaining({
+                candidateId: source.candidateId,
+                physicalPageNumber: 10,
+                exactText: "5%",
+                documentStart:
+                  source.scopeLead.documentStart + scopeLeadText.indexOf("5%"),
+              }),
+            }),
+          ],
+        },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              normalizedValue:
+                "der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist",
+              valueType: "TEXT",
+              source: expect.objectContaining({
+                candidateId: source.candidateId,
+                exactText:
+                  "der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist",
+              }),
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
+  test("binds the FE-C07 paragraph-local limit without importing later exclusions", () => {
+    const contextText = [
+      "AW03 Gemeinschaftseinrichtungen",
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko.",
+      "Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+      "sowie Beleuchtungskörper (ausgenommen Beleuchtungskörper im Freien).",
+    ].join(" ");
+    const source = feC07Occurrence({
+      candidateId: "candidate:fe-c07:local-paragraph",
+      contextText,
+      exactText: "Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+      contextStart: 30_000,
+    });
+
+    expect(materializeFeC07(source)).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              rawValue: "10%",
+              normalizedValue: "10 %",
+              qualifier:
+                "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme",
+              source: expect.objectContaining({
+                candidateId: source.candidateId,
+                exactText: "10%",
+              }),
+            }),
+          ],
+        },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+  });
+
+  test.each([
+    [
+      "wrong reference base",
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Inhaltsversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+    [
+      "missing first-risk qualifier",
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+    [
+      "optional additional cover",
+      "Gemeinschaftseinrichtungen können gegen Mehrprämie bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko mitversichert werden. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+    [
+      "optional premodifier",
+      "Optional mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+    [
+      "negated cover",
+      "Nicht mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+    [
+      "limit in a following paragraph",
+      "Das sind Gemeinschaftsräume wie Saunen, Fitnessräume.\n\nMitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko.",
+    ],
+    [
+      "ambiguous duplicate limits",
+      "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko oder bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen, Fitnessräume",
+    ],
+  ])("rejects an FE-C07 %s limit", (_label, contextText) => {
+    const exactText = "Das sind Gemeinschaftsräume wie Saunen, Fitnessräume";
+    const source = feC07Occurrence({
+      candidateId: `candidate:fe-c07:${_label}`,
+      contextText,
+      exactText,
+      contextStart: 40_000,
+    });
+
+    expect(materializeFeC07(source)).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+      fields: [
+        { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+          facts: [],
+        },
+      ],
+    });
+  });
+
+  test("does not transfer an FE-C07 limit across a distant list-governor boundary", () => {
+    const scopeLeadText =
+      "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist: bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko";
+    const contextText =
+      "- Einrichtungen von Gemeinschaftsräumen wie z.B. Saunen und Fitnessräumen";
+    const source = feC07Occurrence({
+      candidateId: "candidate:fe-c07:distant-governor",
+      contextText,
+      exactText: "Gemeinschaftsräumen wie z.B. Saunen",
+      contextStart: 50_000,
+      unitType: "LIST_ITEM",
+      scopeLeadText,
+      scopeLeadStart: 48_000,
+    });
+
+    expect(
+      source.context.documentStart - source.scopeLead.documentEnd
+    ).toBeGreaterThan(512);
+    expect(materializeFeC07(source).fields).toEqual([
+      { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+      {
+        field: "condition",
+        status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+        facts: [],
+      },
+    ]);
+  });
+
+  test.each(["occurrence range", "scope-lead range"])(
+    "fails closed when the FE-C07 %s provenance is tampered",
+    (tamperTarget) => {
+      const scopeLeadText =
+        "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist: bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko";
+      const source = feC07Occurrence({
+        candidateId: `candidate:fe-c07:tampered-${tamperTarget}`,
+        contextText:
+          "- Einrichtungen von Gemeinschaftsräumen wie z.B. Saunen und Fitnessräumen",
+        exactText: "Gemeinschaftsräumen wie z.B. Saunen",
+        contextStart: 60_000,
+        unitType: "LIST_ITEM",
+        scopeLeadText,
+        scopeLeadStart: 59_500,
+      });
+      if (tamperTarget === "occurrence range") source.documentStart += 1;
+      else source.scopeLead.documentEnd += 1;
+
+      expect(materializeFeC07(source)).toMatchObject({
+        requestedFieldStatus: REQUESTED_FIELD_STATUS.NOT_FOUND,
+        fields: [
+          { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+          {
+            field: "condition",
+            status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+            facts: [],
+          },
+        ],
+      });
+    }
+  );
 });

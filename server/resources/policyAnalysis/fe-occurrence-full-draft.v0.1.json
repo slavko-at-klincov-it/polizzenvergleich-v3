@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.6",
+  "catalogId": "fe-occurrence-full-draft-v0.7",
   "categoryView": "FE",
   "requirements": [
     {
@@ -821,7 +821,8 @@
     {
       "id": "FE-C07",
       "label": "Sauna oder Infrarotkabine in Gemeinschaftsräumen",
-      "requestedFields": [],
+      "requestedFields": ["limit"],
+      "optionalFields": ["condition"],
       "components": [
         {
           "id": "sauna_or_infrared_cabin_in_common_room",

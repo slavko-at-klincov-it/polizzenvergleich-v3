@@ -443,6 +443,200 @@ function extractCoverageLimitFacts(options) {
   );
 }
 
+const FE_C07_COMPONENT_ID = "sauna_or_infrared_cabin_in_common_room";
+const FE_C07_LIMIT_QUALIFIER =
+  "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme";
+const FE_C07_SCOPED_OBJECT =
+  /(?:Gemeinschaftsr[aä]um(?:e|en)?[\s\S]{0,100}?(?:Saun\p{L}*|Infrarotkabin\p{L}*)|(?:Saun\p{L}*|Infrarotkabin\p{L}*)[\s\S]{0,100}?Gemeinschaftsr[aä]um(?:e|en)?)/iu;
+const FE_C07_LIMIT =
+  /bis\s+zu\s+jeweils\s+(?<percent>\d{1,3}(?:[.,]\d+)?\s*%)\s+der\s+Geb[aä]udeversicherungs-?\s*summe\s+auf\s+[,„“"']*Erstes\s+Risiko/iu;
+const FE_C07_LOCAL_POSITIVE =
+  /Mitversichert\s+sind\s+Gemeinschaftseinrichtungen/iu;
+const FE_C07_LIST_POSITIVE = /Zus[aä]tzlich\s+sind\s+mitversichert,/iu;
+const FE_C07_UNSAFE_CLAUSE =
+  /(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen|gegen\s+(?:eine?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|optional|wahlweise|kann[\s\S]{0,100}(?:mitversichert|eingeschlossen)\s+werden|Haftpflichtversicherung|Schadenersatzverpflichtungen|\bAHVB\b)/iu;
+const FE_C07_LIST_CONDITION =
+  /wenn\s+(?<condition>(?:der\s+)?Versicherungsnehmer\s+und\s*\/\s*oder\s+Geb[aä]udeeigent[uü]mer[\s\S]{0,180}?f[uü]r\s+den\s+eingetretenen\s+Schaden\s+ersatzpflichtig\s+ist\s+und\s+das\s+Geb[aä]ude\s+gegen\s+die\s+angef[uü]hrte\s+Gefahr\s+versichert\s+ist)\s*:/iu;
+
+function validatedFeC07Unit(unit) {
+  const text = unit?.text;
+  const documentStart = Number(unit?.documentStart);
+  const documentEnd = Number(unit?.documentEnd);
+  return typeof text === "string" &&
+    Number.isInteger(documentStart) &&
+    Number.isInteger(documentEnd) &&
+    documentStart >= 0 &&
+    documentEnd === documentStart + text.length
+    ? { text, documentStart, documentEnd }
+    : null;
+}
+
+function feC07OccurrenceIsSourceExact(occurrence) {
+  const context = validatedFeC07Unit(occurrence?.context);
+  const documentStart = Number(occurrence?.documentStart);
+  const documentEnd = Number(occurrence?.documentEnd);
+  const exactText = String(occurrence?.exactText || "");
+  if (
+    !context ||
+    !exactText ||
+    !Number.isInteger(documentStart) ||
+    !Number.isInteger(documentEnd) ||
+    documentStart < context.documentStart ||
+    documentEnd > context.documentEnd ||
+    documentEnd !== documentStart + exactText.length
+  )
+    return false;
+  return (
+    context.text.slice(
+      documentStart - context.documentStart,
+      documentEnd - context.documentStart
+    ) === exactText && FE_C07_SCOPED_OBJECT.test(exactText)
+  );
+}
+
+function feC07PositiveIsAffirmative(text, index) {
+  const prefix = text.slice(Math.max(0, index - 32), index);
+  return !/(?:nicht(?:\s+mehr)?|weder|kein(?:e|en|er|es)?|optional|wahlweise|gegen\s+(?:eine?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag))\s*$/iu.test(
+    prefix
+  );
+}
+
+function feC07SourceUnits(occurrence) {
+  if (!feC07OccurrenceIsSourceExact(occurrence)) return [];
+  const context = validatedFeC07Unit(occurrence.context);
+  const units = [];
+  if (occurrence.context.unitType === "PARAGRAPH") {
+    const relativeOccurrenceEnd = occurrence.documentEnd - context.documentStart;
+    const positive = [
+      ...context.text.matchAll(new RegExp(FE_C07_LOCAL_POSITIVE, "giu")),
+    ]
+      .filter(
+        (match) =>
+          match.index < relativeOccurrenceEnd &&
+          feC07PositiveIsAffirmative(context.text, match.index)
+      )
+      .at(-1);
+    if (positive) {
+      const text = context.text.slice(positive.index, relativeOccurrenceEnd);
+      if (!FE_C07_UNSAFE_CLAUSE.test(text))
+        units.push({
+          text,
+          documentStart: context.documentStart + positive.index,
+          documentEnd: context.documentStart + relativeOccurrenceEnd,
+          kind: "LOCAL_PARAGRAPH",
+        });
+    }
+  }
+
+  const scopeLead = validatedFeC07Unit(occurrence.scopeLead);
+  if (
+    occurrence.context.unitType === "LIST_ITEM" &&
+    scopeLead &&
+    scopeLead.documentEnd <= context.documentStart &&
+    context.documentStart - scopeLead.documentEnd <= 512 &&
+    FE_C07_LIST_POSITIVE.test(scopeLead.text) &&
+    FE_C07_LIST_CONDITION.test(scopeLead.text)
+  ) {
+    const positives = [
+      ...scopeLead.text.matchAll(new RegExp(FE_C07_LIST_POSITIVE, "giu")),
+    ];
+    const start = positives.at(-1)?.index;
+    if (
+      Number.isInteger(start) &&
+      feC07PositiveIsAffirmative(scopeLead.text, start)
+    ) {
+      const text = scopeLead.text.slice(start);
+      if (!FE_C07_UNSAFE_CLAUSE.test(text))
+        units.push({
+          text,
+          documentStart: scopeLead.documentStart + start,
+          documentEnd: scopeLead.documentEnd,
+          kind: "LIST_GOVERNOR",
+        });
+    }
+  }
+  return units;
+}
+
+function sourceBoundFeC07Fact({ occurrence, binding, unit, match, value }) {
+  return sourceBoundFact({
+    occurrence: {
+      ...occurrence,
+      documentStart: unit.documentStart,
+      documentEnd: unit.documentEnd,
+      context: {
+        unitType: unit.kind === "LIST_GOVERNOR" ? "LIST_ITEM" : "PARAGRAPH",
+        text: unit.text,
+        documentStart: unit.documentStart,
+        documentEnd: unit.documentEnd,
+      },
+    },
+    binding,
+    match,
+    value,
+  });
+}
+
+function extractFeC07LimitFacts({ occurrence, binding }) {
+  const facts = [];
+  for (const unit of feC07SourceUnits(occurrence)) {
+    const matches = [...unit.text.matchAll(new RegExp(FE_C07_LIMIT, "giu"))];
+    if (matches.length !== 1) continue;
+    const fullMatch = matches[0];
+    const rawPercent = fullMatch.groups?.percent;
+    if (!rawPercent) continue;
+    const percentMatch = [rawPercent];
+    percentMatch.index = fullMatch.index + fullMatch[0].indexOf(rawPercent);
+    facts.push(
+      sourceBoundFeC07Fact({
+        occurrence,
+        binding,
+        unit,
+        match: percentMatch,
+        value: {
+          normalizedValue: `${rawPercent
+            .replace(/\s*%$/u, "")
+            .replace(".", ",")} %`,
+          valueType: "PERCENT",
+          unit: "%",
+          limitKind: LIMIT_KIND.CAPPED,
+          qualifier: FE_C07_LIMIT_QUALIFIER,
+        },
+      })
+    );
+  }
+  return facts.length === 1 ? facts : [];
+}
+
+function extractFeC07ConditionFacts({ occurrence, binding }) {
+  const listGovernors = feC07SourceUnits(occurrence).filter(
+    ({ kind }) => kind === "LIST_GOVERNOR"
+  );
+  if (listGovernors.length !== 1) return [];
+  const [unit] = listGovernors;
+  const matches = [
+    ...unit.text.matchAll(new RegExp(FE_C07_LIST_CONDITION, "giu")),
+  ];
+  if (matches.length !== 1 || !matches[0].groups?.condition) return [];
+  const rawCondition = matches[0].groups.condition;
+  const conditionMatch = [rawCondition];
+  conditionMatch.index =
+    matches[0].index + matches[0][0].indexOf(rawCondition);
+  return [
+    sourceBoundFeC07Fact({
+      occurrence,
+      binding,
+      unit,
+      match: conditionMatch,
+      value: {
+        normalizedValue: conditionNormalized(rawCondition),
+        valueType: "TEXT",
+        unit: null,
+      },
+    }),
+  ];
+}
+
 function factWithinOccurrenceSentence(occurrence, fact) {
   const range = occurrenceSentenceRange(occurrence);
   if (!range) return false;
@@ -1368,6 +1562,18 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
 
 function extractorFor(requirement, field, componentId = null) {
   const requirementId = requirement.id;
+  if (
+    requirementId === "FE-C07" &&
+    componentId === FE_C07_COMPONENT_ID &&
+    field === "limit"
+  )
+    return extractFeC07LimitFacts;
+  if (
+    requirementId === "FE-C07" &&
+    componentId === FE_C07_COMPONENT_ID &&
+    field === "condition"
+  )
+    return extractFeC07ConditionFacts;
   if (requirementId === "FE-F05" && field === "condition")
     return extractInsurancePeriodConditionFacts;
   if (requirementId === "FE-F05" && field === "date")
@@ -1695,7 +1901,8 @@ function aggregateRequestedFieldStatus(fields) {
 }
 
 /**
- * Binds deterministic VS pilot values to server-owned candidate sources.
+ * Binds deterministic requested-field values to server-owned candidate
+ * sources under requirement-specific extraction contracts.
  * Inputs: a controlled occurrence worksheet and materialized triage bindings.
  * Output: per-requirement limit/duration facts with exact source ranges.
  * Side effects: none. It never reads values or source metadata from the model.
