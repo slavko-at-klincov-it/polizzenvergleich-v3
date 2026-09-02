@@ -2189,6 +2189,121 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.20 VS-08 Schritt A – fehlende 25-Prozent-Bedingung wiederfinden
+
+#### 10.20.1 Reproduzierter Ausgangsfehler
+
+Der unveränderte Zielproducer auf Commit `0dd2a7ae` lieferte für `VS-08`
+beidseitig `BELEGT`, aber noch:
+
+```text
+UNKLAR / NO_APPROVED_RULE_FOR_ALL_DIMENSIONS / Review erforderlich
+```
+
+Die Quellprüfung zeigte zusätzlich einen echten Recallfehler: In einem
+Zusatzvertrag von Paket B steht ein weiterer Unterversicherungsverzicht bis zu
+einer Abweichung von 25 Prozent zwischen Versicherungs- beziehungsweise
+Höchsthaftungssumme und Versicherungswert. Die bestehende VS-08-Suche fand
+diese Klausel nicht, obwohl dieselbe Quelle im benachbarten VS-07-Kontext
+bereits sichtbar war. Vor jeder Vergleichsentscheidung musste daher zuerst
+das Komponenten-Inventar vervollständigt werden.
+
+#### 10.20.2 Enger semantischer Recallvertrag
+
+Der VS-Katalog `v0.10` ergänzt für die bestehende Komponente
+`underinsurance_waiver_condition` den Konzeptvertrag
+`underinsurance-waiver-deviation-condition`. Ein Treffer verlangt innerhalb
+derselben kontrollierten Einheit gemeinsam:
+
+```text
+Verzicht + Unterversicherung +
+(Versicherungssumme oder Höchsthaftungssumme) +
+Versicherungswert + Abweichung
+```
+
+Nur eine tatsächlich wirkende Verzichtsklausel darf direkt an die Komponente
+gebunden werden. Negierter oder lediglich optional angebotener Verzicht bleibt
+`MENTION_ONLY`. Die Feldextraktion materialisiert die gefundene Klausel als
+bedingte Regel. Es gibt keine Versicherer-, Seiten- oder Dokumentnamenregel.
+
+Commits:
+
+```text
+c7768f0b fix(analysis): recall VS-08 deviation conditions
+99d27b3b style(analysis): format VS-08 recall fixtures
+2f81371c test(analysis): align VS-08 recall expectations
+af25c12f style(qa): format VS-08 registry fixture
+```
+
+Die letzten beiden Commits ändern ausschließlich Testannahmen und Format. Der
+Occurrence-Kontext fällt ohne erkannte Klauselüberschrift korrekt auf den
+vollständigen `PARAGRAPH` zurück; der Katalogmigrationstest vergleicht nur den
+historischen Ausgangsstand `v0.7` mit dem aktuellen Stand `v0.10`.
+
+#### 10.20.3 Mac-Studio-Validierung und echter Paketbefund
+
+```text
+Commit: af25c12f1fa8bb5c2aa1bc63c48e338d6012b302
+Worktree: /private/tmp/pv3-validate-af25c12f
+Formatprüfung: PASS
+Fokussierte Suites: 10/10 PASS
+Fokussierte Tests: 331/331 PASS
+```
+
+Echter Zielartefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-08-RECALL-AF25C12F-20260902
+Summary-Digest: 7ab0cdfc12fe0ad42a31bd6a7dc1da5dcfc8e961d25d59573ea9ba917a57a5b6
+Target-Selection-Digest: 87d5eb4070d61e6fac5ca800d433edfe0554bee68a1481e2b30001d1cc3c4061
+Producer-Digest: 566a9116f07827ca1c6b1bcf46d7651fe63267f4de9396901daf3e51d7db0f44
+Dokumente: 10
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Serverseitige Terminals: 7
+```
+
+Der echte Lauf findet nun in Paket B beide einschlägigen Quellen:
+
+1. die Ausnahmeregeln der Wertanpassungsklausel einschließlich der
+   Mehrfachversicherungsbeschränkung;
+2. den zusätzlichen Verzicht bei höchstens 25 Prozent Abweichung.
+
+Damit ist Schritt A erfolgreich: Die zuvor übersehene Klausel wird mit exaktem
+Text, Dokument, physischer Seite und Offsets gebunden. Das Ergebnis bleibt
+absichtlich noch nicht akzeptiert:
+
+```text
+Vorher: UNKLAR / NO_APPROVED_RULE_FOR_ALL_DIMENSIONS
+Nachher: UNKLAR / ATOMIC_DOCUMENT_RANK_UNRESOLVED
+```
+
+Der neue Reason Code ist fachlich präziser. Es fehlt nicht länger Evidenz;
+vielmehr enthält Paket B zwei unterschiedliche Bedingungen derselben
+Komponente, deren Ergänzungs-, Alternativ- oder Ersetzungsverhältnis noch nicht
+belegt ist. Diese Rangfrage darf nicht durch Auswahl nur einer Klausel verdeckt
+werden. Schritt B muss deshalb die Bedingungsregime und ihr Verhältnis eng
+typisieren; erst danach ist eine belastbare Aussage wie `NICHT_VERGLEICHBAR`
+zulässig.
+
+Als Katalogregression wurde `VS-15` unter `v0.10` erneut vollständig auf den
+zehn Paketdokumenten ausgeführt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-15-V010-AF25C12F-20260903
+Summary-Digest: 5bfefdd5fbd1a425ebddfa0fa797f66826597e57d6952bea1c53d385178eebe8
+Target-Selection-Digest: c13008279873ba564bde8a9f4cd969d90594db233032cb5b8e34a604f938e918
+Producer-Digest: 6ace38a2a92014a9763051ee26ab9b680189d7b8d23fb56928359983a0df5f14
+Ergebnis: GLEICHWERTIG
+Review erforderlich: nein
+Triage-/Evidence-Qwen-Aufrufe: 0/0
+```
+
+Die bereits akzeptierte VS-15-Entscheidung bleibt damit unter dem neuen
+Katalog unverändert. `VS-08` wird noch nicht aus R69-A entfernt. Ein voller
+224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der installierte
+Kundenstand blieb unverändert.
+
 ### 10.19 VS-15 – allgemeiner Nebengebäudeschutz und fehlende namentliche Anführung
 
 #### 10.19.1 Reale Ursache
