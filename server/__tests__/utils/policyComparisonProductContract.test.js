@@ -27,7 +27,7 @@ describe("policy comparison product contract", () => {
     });
     expect(EXPECTED_ROW_COUNT).toBe(224);
     expect(PRODUCT_PROFILE).toMatchObject({
-      id: "CUSTOMER_CORE_5_V32_VS08_CONDITION_CONSENSUS",
+      id: "CUSTOMER_CORE_5_V33_LW12_OBJECT_CLASSIFICATION_TERMINAL",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_V6",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],

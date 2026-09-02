@@ -15,8 +15,12 @@ const DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_V1";
 const DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_V1";
+const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_V1";
 const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
   "TERMINAL_OCCURRENCE_PROVENANCE_V3";
+const COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID =
+  "TERMINAL_OCCURRENCE_PROVENANCE_V4_OBJECT_CLASSIFICATION";
 const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
   "TERMINAL_REJECTION_SET_PROVENANCE_V3";
 const FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS =
@@ -28,6 +32,17 @@ const LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS =
   "LW20_NON_TARGET_GROUNDWATER_OCCURRENCE";
 const LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE =
   "LW20_LOCAL_ROLE_OR_STORM_SCOPE_V1";
+const COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS =
+  "PURE_OBJECT_CLASSIFICATION_IS_NOT_OPERATIONAL_COVERAGE";
+const COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE =
+  "LOCAL_PURE_OBJECT_CLASSIFICATION_V1";
+
+const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
+  "LW:LW-12:underfloor_heating": Object.freeze({
+    factRole: "INSURED_OBJECT",
+    absenceMeaning: "COVERAGE_ONLY",
+  }),
+});
 
 const POST_LOSS_SCAFFOLDING_COST_TARGETS = Object.freeze({
   "FE:FE-C12:scaffolding": Object.freeze({
@@ -123,6 +138,26 @@ function targetKey(categoryView, requirementId, componentId) {
 
 function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
   const key = targetKey(categoryView, requirementId, componentId);
+  const objectClassificationContract =
+    COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS[key];
+  if (objectClassificationContract)
+    return Object.freeze({
+      contractId:
+        DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
+      decisionBasis: COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
+      auditProofMode:
+        "ALL_OCCURRENCES_DETERMINISTICALLY_PURE_OBJECT_CLASSIFICATIONS",
+      terminalGate: "deterministicCoverageOnlyObjectClassificationTerminal",
+      factRole: objectClassificationContract.factRole,
+      absenceMeaning: objectClassificationContract.absenceMeaning,
+      allowedObservedScopeKeys: [],
+      sectionScopeSources: [
+        "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      ],
+      scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+      occurrenceDigestContractId:
+        COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+    });
   const lw20NonTargetContract = LW20_NON_TARGET_OCCURRENCE_TARGETS[key];
   if (lw20NonTargetContract)
     return Object.freeze({
@@ -140,6 +175,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
         OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
       ],
       scopeProofMode: lw20NonTargetContract.scopeProofMode,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     });
   const postLossScaffoldingCostContract =
     POST_LOSS_SCAFFOLDING_COST_TARGETS[key];
@@ -158,6 +194,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
         OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
       ],
       scopeProofMode: postLossScaffoldingCostContract.scopeProofMode,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     });
   const otherCategoryContract = CERTIFIED_TARGETS[key];
   if (otherCategoryContract)
@@ -178,6 +215,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
         ]
       ),
       scopeProofMode: otherCategoryContract.scopeProofMode || null,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     });
   const riskInformationContract = NON_CONTRACTUAL_RISK_INFORMATION_TARGETS[key];
   if (!riskInformationContract) return null;
@@ -197,6 +235,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
     ]),
     sectionScopeSources: [riskInformationContract.sectionScopeSource],
     scopeProofMode: riskInformationContract.scopeProofMode,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   });
 }
 
@@ -250,6 +289,15 @@ function terminalTargetAcceptsScopeProof(
   target,
   { sectionScopeSource, observedScopeKeys: scopes }
 ) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
+  )
+    return Boolean(
+      target.sectionScopeSources.includes(sectionScopeSource) &&
+        Array.isArray(scopes) &&
+        scopes.length === 0
+    );
   if (
     target?.contractId ===
     DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
@@ -488,7 +536,82 @@ function lw20NonTargetOccurrenceProof(occurrence) {
   };
 }
 
+/**
+ * Proves that a candidate is only a member of a locally declared object
+ * class. The proof is deliberately narrower than the worksheet's general
+ * object-classification hint: it rejects any operational, conditional,
+ * optional, excluded, or duty-bearing wording. Role: classify. Side effects:
+ * none.
+ */
+function coverageOnlyObjectClassificationProof(occurrence) {
+  const hint = occurrence?.objectClassificationGovernorHint;
+  const context = occurrence?.context;
+  const exactText = String(occurrence?.exactText || "");
+  const contextText = String(context?.text || "");
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  const classificationPage = hint?.physicalPageNumber || null;
+  const relativeStart = occurrence?.documentStart - context?.documentStart;
+  const relativeEnd = occurrence?.documentEnd - context?.documentStart;
+  const localText = `${hint?.text || ""}\n${hint?.subject || ""}\n${
+    occurrence?.coverageGovernorHint?.text || ""
+  }\n${occurrence?.scopeLead?.text || ""}\n${contextText}`;
+  const operationalCoverage =
+    /\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|eingeschlossen|gedeckt|versicherungsschutz|nicht\s+versichert|kein(?:e|en|er|es)?\s+deckung)\b/iu;
+  const conditionalOrOptional =
+    /\b(?:sofern|soweit|wenn|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|auf\s+wunsch|gegen\s+(?:mehrpr[aä]mie|mehrbeitrag|zuschlag)|besonders\s+vereinbart)\b/iu;
+  const nonCoverageDuty =
+    /\b(?:gefahrenerh[oö]hung|anzeige(?:pflicht)?|melden|meldepflicht|obliegenheit)\b/iu;
+  const valueOrOverride =
+    /(?:\b(?:limit|h[oö]chstentsch[aä]digung|versicherungssumme|selbstbehalt|vorrang|nachtrag|ersetzt|abweichend)\b|\bEUR\b|€|\d\s*%)/iu;
+  if (
+    hint?.contractId !== "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1" ||
+    hint?.kind !== "OBJECT_CLASSIFICATION_BOUNDARY" ||
+    hint?.classificationKind !== "OBJECT" ||
+    hint?.membership !== "MEMBER_OF_CLASS" ||
+    hint?.source !== "CURRENT_PAGE_OBJECT_CLASSIFICATION" ||
+    !/\b(?:haustechnische\s+anlagen|adaptierungen?|geb[aä]udebestandteile|geb[aä]udezubeh[oö]r|bestandteile|zubeh[oö]r|einrichtungen|sachen)\b/iu.test(
+      String(hint?.subject || "")
+    ) ||
+    context?.unitType !== "LIST_ITEM" ||
+    !exactText ||
+    !Number.isInteger(relativeStart) ||
+    !Number.isInteger(relativeEnd) ||
+    relativeStart < 0 ||
+    relativeEnd <= relativeStart ||
+    contextText.slice(relativeStart, relativeEnd) !== exactText ||
+    String(occurrence?.candidateId || "").length === 0 ||
+    !Number.isInteger(hint?.documentStart) ||
+    !Number.isInteger(hint?.documentEnd) ||
+    hint.documentEnd <= hint.documentStart ||
+    hint.documentEnd > occurrence.documentStart ||
+    !Number.isInteger(occurrencePage) ||
+    !Number.isInteger(classificationPage) ||
+    classificationPage !== occurrencePage ||
+    occurrence?.sectionScopeHint !== null ||
+    occurrence?.coverageGovernorHint !== null ||
+    String(occurrence?.scopeLead?.text || "").trim() !== "" ||
+    !Array.isArray(occurrence?.pageScopeHints) ||
+    occurrence.pageScopeHints.length !== 0 ||
+    operationalCoverage.test(localText) ||
+    conditionalOrOptional.test(localText) ||
+    nonCoverageDuty.test(localText) ||
+    valueOrOverride.test(localText)
+  )
+    return null;
+  return {
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: hint.source,
+    observedScopeKeys: [],
+  };
+}
+
 function terminalOccurrenceProof(target, occurrence) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
+  )
+    return coverageOnlyObjectClassificationProof(occurrence);
   if (
     target?.contractId ===
     DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
@@ -525,10 +648,20 @@ function sha256(value) {
     .digest("hex");
 }
 
-function terminalOccurrenceDigest(occurrence) {
+function terminalOccurrenceDigest(
+  occurrence,
+  digestContractId = TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID
+) {
+  if (
+    ![
+      TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+      COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+    ].includes(digestContractId)
+  )
+    throw new Error("TERMINAL_OCCURRENCE_DIGEST_CONTRACT_INVALID");
   const scopeProofMode = occurrence?.scopeProofMode || null;
   return sha256({
-    digestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    digestContractId,
     occurrence: {
       candidateId: occurrence?.candidateId || null,
       matchedAlias: occurrence?.matchedAlias || null,
@@ -545,6 +678,14 @@ function terminalOccurrenceDigest(occurrence) {
       pageScopeHints: occurrence?.pageScopeHints || [],
       context: occurrence?.context || null,
       scopeLead: occurrence?.scopeLead || null,
+      ...(digestContractId ===
+      COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID
+        ? {
+            objectClassificationGovernorHint:
+              occurrence?.objectClassificationGovernorHint || null,
+            coverageGovernorHint: occurrence?.coverageGovernorHint || null,
+          }
+        : {}),
       ...(scopeProofMode ? { scopeProofMode } : {}),
     },
   });
@@ -945,8 +1086,55 @@ function certifyNonContractualRiskInformationTerminalRejection({
   };
 }
 
+function certifyCoverageOnlyObjectClassificationTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  const contract =
+    COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning
+  )
+    return null;
+  const proof = coverageOnlyObjectClassificationProof(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!proof || !terminalTargetAcceptsScopeProof(target, proof)) return null;
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId:
+      COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
+    physicalPageNumber: proof.physicalPageNumber,
+    sectionScopeSource: proof.sectionScopeSource,
+    observedScopeKeys: proof.observedScopeKeys,
+    scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+    occurrenceDigestSha256: terminalOccurrenceDigest(
+      {
+        ...occurrence,
+        scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+      },
+      COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID
+    ),
+  };
+}
+
 function certifyDeterministicTerminalRejection(input) {
   return (
+    certifyCoverageOnlyObjectClassificationTerminalRejection(input) ||
     certifyLw20NonTargetOccurrenceTerminalRejection(input) ||
     certifyPostLossScaffoldingCostTerminalRejection(input) ||
     certifyOtherCategoryTerminalRejection(input) ||
@@ -955,6 +1143,10 @@ function certifyDeterministicTerminalRejection(input) {
 }
 
 module.exports = {
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,

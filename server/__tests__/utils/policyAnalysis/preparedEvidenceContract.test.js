@@ -13,6 +13,10 @@ const {
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 const {
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+  COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
@@ -1533,6 +1537,191 @@ describe("preparedEvidenceContract", () => {
       evidencePresence: "FOUND",
       decisionOwner: "SERVER_OBJECT_CLASSIFICATION_IS_NOT_GLOBAL_COVERAGE_V1",
     });
+  });
+
+  test("terminally rejects only the certified LW-12 pure object classification", () => {
+    const contextText =
+      "·Fußbodenheizung/Kühlung, Wandheizung/Kühlung ist ein Rohr- und Schlauchsystem innerhalb eines Gebäudes, das der Raumheizung oder Kühlung dient und mit Wasser betrieben wird;";
+    const contextStart = 8_060;
+    const exactText = "Fußbodenheizung";
+    const occurrenceStart = contextStart + contextText.indexOf(exactText);
+    const occurrence = {
+      candidateId: "candidate:lw12:pure-definition",
+      matchedAlias: exactText,
+      pageNumber: 3,
+      physicalPageNumber: 3,
+      documentStart: occurrenceStart,
+      documentEnd: occurrenceStart + exactText.length,
+      exactText,
+      pageScopeHints: [],
+      sectionScopeHint: null,
+      coverageGovernorHint: null,
+      objectClassificationGovernorHint: {
+        text: "1.3 Haustechnische Anlagen und Adaptierungen\ndas sind:",
+        subject: "1.3 Haustechnische Anlagen und Adaptierungen",
+        kind: "OBJECT_CLASSIFICATION_BOUNDARY",
+        classificationKind: "OBJECT",
+        membership: "MEMBER_OF_CLASS",
+        contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+        physicalPageNumber: 3,
+        documentStart: 7_278,
+        documentEnd: 7_331,
+        source: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      },
+      context: {
+        unitType: "LIST_ITEM",
+        documentStart: contextStart,
+        documentEnd: contextStart + contextText.length,
+        text: contextText,
+      },
+      scopeLead: { text: "" },
+    };
+    const targetFor = (candidate, overrides = {}) => {
+      const requirementId = overrides.requirementId || "LW-12";
+      const componentId = overrides.componentId || "underfloor_heating";
+      return buildPreparedEvidenceTargets({
+        worksheet: {
+          candidateOnly: true,
+          catalog: { categoryView: overrides.categoryView || "LW" },
+          requirements: [
+            {
+              id: requirementId,
+              label: "Fußbodenheizung mitversichert",
+              requestedFields: [],
+              negativeSearchPolicy:
+                overrides.negativeSearchPolicy ||
+                "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+              absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
+              components: [
+                {
+                  id: componentId,
+                  label: "Fußbodenheizung",
+                  factRole: overrides.factRole || "INSURED_OBJECT",
+                  occurrences: [candidate],
+                },
+              ],
+            },
+          ],
+        },
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId,
+            componentId,
+            candidateId: candidate.candidateId,
+            binding: "DIRECT",
+          },
+        ],
+      })[0];
+    };
+
+    const target = targetFor(occurrence);
+    expect(target.candidates).toEqual([]);
+    expect(target.unresolvedCandidateIds).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual([
+      expect.objectContaining({
+        candidateId: occurrence.candidateId,
+        reason: "TRIAGE_MENTION_ONLY",
+        terminalRejectionContractId:
+          DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
+        occurrenceDigestContractId:
+          COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+        decisionOwner: "SERVER",
+        decisionBasis: COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
+        physicalPageNumber: 3,
+        sectionScopeSource: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+        observedScopeKeys: [],
+        scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+        occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      }),
+    ]);
+    const certifiedDigest =
+      target.serverRejectedCandidates[0].occurrenceDigestSha256;
+    expect(
+      terminalOccurrenceDigest(
+        {
+          ...occurrence,
+          objectClassificationGovernorHint: {
+            ...occurrence.objectClassificationGovernorHint,
+            documentEnd: 7_332,
+          },
+          scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+        },
+        COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID
+      )
+    ).not.toBe(certifiedDigest);
+    expect(
+      terminalOccurrenceDigest(
+        {
+          ...occurrence,
+          coverageGovernorHint: { text: "Versichert sind:" },
+          scopeProofMode: COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+        },
+        COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID
+      )
+    ).not.toBe(certifiedDigest);
+
+    const adversarial = [
+      {
+        candidate: {
+          ...occurrence,
+          objectClassificationGovernorHint: {
+            ...occurrence.objectClassificationGovernorHint,
+            membership: "EXCLUDED_FROM_CLASS",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          objectClassificationGovernorHint: {
+            ...occurrence.objectClassificationGovernorHint,
+            source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION",
+            physicalPageNumber: 2,
+          },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          coverageGovernorHint: { text: "Versicherte Sachen, das sind:" },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          context: {
+            ...occurrence.context,
+            text: contextText.replace("ist ein", "ist mitversichert und ein"),
+            documentEnd:
+              occurrence.context.documentEnd + " mitversichert und".length,
+          },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          context: {
+            ...occurrence.context,
+            text: contextText.replace(
+              "ist ein",
+              "ist bei einer Gefahrenerhöhung zu melden und ein"
+            ),
+            documentEnd:
+              occurrence.context.documentEnd +
+              " bei einer Gefahrenerhöhung zu melden und".length,
+          },
+        },
+      },
+      { candidate: occurrence, overrides: { requirementId: "LW-11" } },
+      { candidate: occurrence, overrides: { factRole: "CONDITION" } },
+      { candidate: occurrence, overrides: { absenceMeaning: "CONDITION_ONLY" } },
+    ];
+    for (const { candidate, overrides } of adversarial) {
+      const unresolved = targetFor(candidate, overrides);
+      expect(unresolved.serverRejectedCandidates).toEqual([]);
+      expect(unresolved.candidates).toHaveLength(1);
+    }
   });
 
   test("uses complete candidate triage to keep only direct and narrow effect candidates", () => {

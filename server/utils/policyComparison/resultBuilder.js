@@ -27,11 +27,11 @@ const {
   buildLw20DefaultExclusionSourceAudit,
 } = require("../policyAnalysis/lw20DefaultExclusionSourceAudit");
 const {
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
-  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   terminalOccurrenceProof,
@@ -609,7 +609,7 @@ function deterministicTerminalRejectionAudit({
         rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
         rejection?.terminalRejectionContractId !== certifiedTarget.contractId ||
         rejection?.occurrenceDigestContractId !==
-          TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID ||
+          certifiedTarget.occurrenceDigestContractId ||
         rejection?.decisionOwner !== "SERVER" ||
         rejection?.decisionBasis !== certifiedTarget.decisionBasis ||
         !certifiedTarget.sectionScopeSources.includes(
@@ -624,12 +624,15 @@ function deterministicTerminalRejectionAudit({
         (rejection?.scopeProofMode || null) !==
           certifiedTarget.scopeProofMode ||
         rejection?.occurrenceDigestSha256 !==
-          terminalOccurrenceDigest({
-            ...occurrence,
-            ...(rejection?.scopeProofMode
-              ? { scopeProofMode: rejection.scopeProofMode }
-              : {}),
-          })
+          terminalOccurrenceDigest(
+            {
+              ...occurrence,
+              ...(rejection?.scopeProofMode
+                ? { scopeProofMode: rejection.scopeProofMode }
+                : {}),
+            },
+            certifiedTarget.occurrenceDigestContractId
+          )
       );
     })
   )
@@ -711,6 +714,10 @@ function componentSearchAudit({
   const deterministicOutOfCategoryTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID
+  );
+  const deterministicCoverageOnlyObjectClassificationTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
   );
   const deterministicNonContractualRiskInformationTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
@@ -828,6 +835,9 @@ function componentSearchAudit({
       serverNegativeTerminal,
       ...(deterministicOutOfCategoryTerminal
         ? { deterministicOutOfCategoryTerminal: true }
+        : {}),
+      ...(deterministicCoverageOnlyObjectClassificationTerminal
+        ? { deterministicCoverageOnlyObjectClassificationTerminal: true }
         : {}),
       ...(deterministicNonContractualRiskInformationTerminal
         ? { deterministicNonContractualRiskInformationTerminal: true }
