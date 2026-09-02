@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "st-occurrence-full-draft-v0.5",
+  "catalogId": "st-occurrence-full-draft-v0.6",
   "categoryView": "ST",
   "requirements": [
     {
@@ -789,6 +789,7 @@
       "id": "ST-27",
       "label": "Lawine und Schneerutsch",
       "requestedFields": [],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": {
         "narrowAliases": ["Katastrophen"]
       },
