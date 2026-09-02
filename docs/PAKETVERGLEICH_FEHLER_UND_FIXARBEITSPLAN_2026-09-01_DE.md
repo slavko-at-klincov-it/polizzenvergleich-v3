@@ -2299,13 +2299,13 @@ Code- und Datenabhängigkeiten:
 
 Der deterministische Replay und der Vollrun geben exakt fünf Zeilen frei:
 
-| ID | Ergebnis | belegte Komponente | enge Grenze |
-| --- | --- | --- | --- |
-| `VS-13` | Vorteil A | Wohnungsinnenausbau | reines `INSURED_OBJECT`, allgemeiner Scope |
-| `VS-14` | Vorteil A | Sonderausstattung einzelner Wohnungen | reines `INSURED_OBJECT`, allgemeiner Scope |
-| `FE-A09` | Vorteil B | Verpuffung an Heiz-, Gas- oder Feuerungsanlagen | reines `PERIL`, allgemeiner Scope |
-| `ST-05` | Vorteil B | optische Beeinträchtigung **und** Hagel | beide `ALL`-Komponenten gemeinsam; kein Limitvergleich |
-| `EL-25` | Vorteil A | Vandalismus ohne Einbruch | nur belegter enger Scope; kein allgemeinerer Schutz behauptet |
+| ID       | Ergebnis  | belegte Komponente                              | enge Grenze                                                   |
+| -------- | --------- | ----------------------------------------------- | ------------------------------------------------------------- |
+| `VS-13`  | Vorteil A | Wohnungsinnenausbau                             | reines `INSURED_OBJECT`, allgemeiner Scope                    |
+| `VS-14`  | Vorteil A | Sonderausstattung einzelner Wohnungen           | reines `INSURED_OBJECT`, allgemeiner Scope                    |
+| `FE-A09` | Vorteil B | Verpuffung an Heiz-, Gas- oder Feuerungsanlagen | reines `PERIL`, allgemeiner Scope                             |
+| `ST-05`  | Vorteil B | optische Beeinträchtigung **und** Hagel         | beide `ALL`-Komponenten gemeinsam; kein Limitvergleich        |
+| `EL-25`  | Vorteil A | Vandalismus ohne Einbruch                       | nur belegter enger Scope; kein allgemeinerer Schutz behauptet |
 
 Die übrigen 33 Einseitenzeilen bleiben Dokumentationsunterschiede und tragen
 konkrete Blockiercodes. Davon sind zehn `COVERAGE_ONLY`-Fälle:
@@ -2450,3 +2450,151 @@ Offene Härtungsgrenzen vor einer Releasefreigabe:
 - 69 Zeilen bleiben unverändert reviewpflichtig.
 - Der installierte Kundencheckout blieb sauber und unverändert auf
   `c7d3b16d400ea4d65b558ef091781da5df82d610`; kein Deployment.
+
+## 22. PAV8-03c/03d – Kundentext und VS-14-Präzisionskorrektur
+
+### 22.1 Korrektur des vorläufigen PAV8-03b-Urteils
+
+PAV8-03b bleibt als technisch reproduzierbare Zwischenstufe erhalten, darf
+aber nicht als fachlicher Favorit gelesen werden. Die nachgelagerte
+Einzelfundprüfung zeigte, dass `VS-14` denselben Text wie `VS-13` verwendete:
+
+```text
+Adaptierungen und Investitionen der Bewohner
+```
+
+Dieser Text belegt Wohnungsinnenausbau (`VS-13`), aber nicht automatisch
+Sonderausstattung einzelner Wohnungen **über die Standardausführung hinaus**
+(`VS-14`). Von den fünf PAV8-03b-Vorteilen waren deshalb vier fachlich
+plausibel; `VS-14` war eine Fehlzuordnung. Die frühere Formulierung
+"GO als neue technische Vergleichsbasis" bezeichnet nur die technische
+Funktionsfähigkeit des neuen Richtungsvertrags und wird hiermit für den
+fachlichen Favoritenstatus ausdrücklich eingeschränkt.
+
+### 22.2 PAV8-03c – isolierte Kundentextkorrektur
+
+Commit `69386053` änderte nur die kundensichtbare Formulierung:
+
+- Mehrkomponentenfälle werden grammatisch gemeinsam benannt;
+- `NARROW_ONLY` wird ausdrücklich als engerer Geltungsbereich beschrieben;
+- keine Entscheidungs-, Evidenz-, Such- oder Reviewlogik wurde verändert.
+
+Mac-Studio-Vollrun:
+
+```text
+Run: PAV8-03C-TEXT-69386053-20260902-064500
+Commit: 69386053
+Start UTC: 2026-09-02T04:43:13Z
+Ende UTC: 2026-09-02T05:10:01Z
+Wandzeit: 26:48
+Dokumente: 10/10, jeweils 224/224 Zeilen
+Metrik: 3/2/33/109/0/8/69
+```
+
+Gegen PAV8-03b änderten sich ausschließlich die Begründungstexte von
+`ST-05` und `EL-25`. Alle 224 Entscheidungen, Paketdaten und die
+Reviewmitgliedschaft blieben gleich. Die unabhängige Fachprüfung dieses
+Laufs entdeckte danach die VS-14-Fehlzuordnung.
+
+### 22.3 PAV8-03d – explizite Sonderausstattung über Standard
+
+Commit `2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b` setzt den kleinsten
+generalisierten Fix um:
+
+- VS-14 akzeptiert nur noch einen expliziten Beleg für wohnungsbezogene
+  Sonderausstattung oberhalb der Standardausführung;
+- der allgemeine Text zu Adaptierungen und Investitionen der Bewohner bleibt
+  VS-13 zugeordnet und beweist VS-14 nicht mehr;
+- negative, definitorische, getrennte und adversariale Texte bleiben
+  fail-closed;
+- VS-Katalog `v0.7`, Produktprofil
+  `CUSTOMER_CORE_5_V11_VS_SPECIAL_EQUIPMENT_PRECISION` und Ergebnisschema 11
+  werden gemeinsam gebunden;
+- die historische Schema-10-Profilbindung bleibt validierbar.
+
+Mac-Studio-Prüfung vor dem Vollrun:
+
+```text
+Prettier: bestanden
+Fokussierte Suites: 13/13 bestanden
+Tests: 307/307 bestanden
+Checkout: /private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo
+Node: 22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+```
+
+Signierter Vollrun:
+
+```text
+Run: PAV8-03D-VS14-2D964B45-20260902-073000
+Commit: 2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b
+Start UTC: 2026-09-02T05:17:46Z
+Ende UTC: 2026-09-02T05:44:38Z
+Wandzeit: 26:52
+Dokumente: 10/10, jeweils 224/224 Zeilen
+Paket: 224/224 Zeilen
+Metrik: 2/2/33/110/0/8/69
+Kundenreview: 69; ohne Kundenreview: 155
+```
+
+Exakter Vergleich gegen PAV8-03c:
+
+- genau ein Outcome ändert sich: `VS-14`, von `VORTEIL_A` zu
+  `GLEICHWERTIG`;
+- Paket A wechselt bei VS-14 vom unzutreffenden Fund zum vollständig
+  kontrollierten Nichtfund; Paket B bleibt kontrollierter Nichtfund;
+- `VS-13`, `EL-25`, `FE-A09` und `ST-05` bleiben als vier fachlich plausible
+  Richtungsentscheidungen erhalten;
+- alle 69 Reviewzeilen und ihre Mitgliedschaft bleiben exakt unverändert;
+- außerhalb der 36 VS-Zeilen gibt es keine Byteänderung;
+- die 36 VS-Zeilen tragen erwartungsgemäß die neue Katalogversion und daraus
+  abgeleitete Digests. Nach Normalisierung dieser Versions- und Hashwerte ist
+  VS-14 die einzige semantisch geänderte Zeile;
+- die zehn Dokumentobjekte sind byteidentisch;
+- das Laufprotokoll enthält zehn Abschlüsse, genau eine bekannte nicht fatale
+  PDF-Warnung und keinen tatsächlichen Fehler.
+
+Formale Provenienz:
+
+```text
+Run-Signatur: e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e
+Inputmanifest: 50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+full-run.log: e302c2ff3a2fe64de8cbfb070d79d9a052a7a64e7f6f88b1cf0933e5154b4527
+package-contract: 2b390be8aa5597a9990735151b5458e023c9b561134e4c1023f5e6a765479173
+package-report: 3b1b7047dd1977f9c99738ac5892029ae40b11576635e2d6b1b104bfb7771b9e
+comparison JSON: 4b0714d8d0667cdcd5d52c1f5377e2c65dd6a7fd47530c2ac95f8244b6d7c6b5
+comparison Markdown: ae1474543db724e544693d24a11551001e12f41d328fe3cb7fbba13ad075e87d
+XLSX: a1b2396bd732aa73942b9286f375f6db2acd8d056a8b1f9bbb3c6b65dcc1bbac
+```
+
+Die Run-Signatur wurde aus dem signierten Paketvertrag erneut berechnet und
+stimmt exakt. Comparison JSON und Package Report tragen dieselbe Signatur;
+die drei im Report festgehaltenen Artefakthashes stimmen mit den Dateien
+überein. Der Package Report wiederholt die Kundenreviewzahl nicht als
+eigenes Feld. Maßgeblich und validiert ist
+`comparison.totals.customerReviewRequired = 69`. Diese unvollständige
+QA-Metadatenprojektion ändert keine Kundenzeile und keine Signaturbindung,
+muss aber beim nächsten versionierten Run-Report-Builder explizit auf den
+aktuellen Feldnamen `customerReviewRequired` umgestellt werden.
+
+### 22.4 Entscheidung und verbleibende Grenze
+
+PAV8-03d ist **GO als neue technische und fachliche Vergleichsbasis** für
+die bisher umgesetzten PAV8-Themen. Gegen PAV8-03c wurde eine konkrete
+Fehlfreigabe entfernt, ohne einen der vier bestätigten Vorteile oder eine
+andere Kategorie zu verändern. Die Laufzeit liegt bei `26:52` und damit im
+gleichen operativen Bereich wie die vorherigen Fünferläufe. Für eine
+vollständige formale Releaseprovenienz bleibt der eben genannte
+Package-Report-Feldfix offen; der Vergleich selbst und seine Kundenmetrik
+sind davon nicht betroffen.
+
+Diese Entscheidung ist kein allgemeiner 99-Prozent-Nachweis. Weiterhin
+bleiben 69 Zeilen reviewpflichtig. Ihre nächsten Fixfamilien müssen getrennt
+nach Paketprüfstatus, fehlenden Belegen, Dokumentrang, unvollständigen
+Teilkomponenten, Vergleichsregeln und Bedingungs-/Ausnahmebereich bearbeitet
+werden. Insbesondere `VS-16`, Ausschlüsse, Mischdeckungen, Kosten, Werte,
+Limits und Bedingungen bleiben außerhalb des engen PAV8-03-Vertrags.
+
+Der installierte Kundencheckout blieb sauber und unverändert auf
+`c7d3b16d400ea4d65b558ef091781da5df82d610`. Es erfolgte kein Deployment.

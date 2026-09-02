@@ -4494,3 +4494,89 @@ LIMIT: 69 Reviewzeilen unverändert
 NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
 NEXT: VS-16 als eigener ANY-Alternativenvertrag; danach typisierte Familien
 ```
+
+## 85. PAV8-03c/03d – Textpräzision und VS-14-Fachkorrektur
+
+Die unabhängige Einzelfundprüfung nach PAV8-03b verwarf `VS-14` als
+fachlichen Vorteil. Der verwendete Text "Adaptierungen und Investitionen der
+Bewohner" beweist `VS-13` (Wohnungsinnenausbau), aber nicht ohne Weiteres
+`VS-14` (Sonderausstattung einzelner Wohnungen über Standard). PAV8-03b ist
+damit eine reproduzierbare technische Zwischenstufe, aber kein fachlicher
+Favorit mit fünf bestätigten Vorteilen.
+
+Commit `69386053` korrigierte zunächst isoliert die Kundentexte für
+Mehrkomponenten- und `NARROW_ONLY`-Fälle. Der Vollrun
+`PAV8-03C-TEXT-69386053-20260902-064500` dauerte `26:48`; nur die
+Begründungstexte von `ST-05` und `EL-25` änderten sich. Ergebnis,
+Paketdaten und Reviewmitgliedschaft blieben bei `3/2/33/109/0/8/69`.
+
+Commit `2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b` trennt danach die
+Konzeptfamilien:
+
+- VS-13 behält Adaptierungen und Investitionen der Bewohner;
+- VS-14 verlangt explizite wohnungsbezogene Sonderausstattung oberhalb der
+  Standardausführung;
+- Katalog `vs-occurrence-full-draft-v0.7`, Profil
+  `CUSTOMER_CORE_5_V11_VS_SPECIAL_EQUIPMENT_PRECISION` und Schema 11 sind
+  gemeinsam versioniert;
+- Schema 10 bleibt historisch gebunden und validierbar.
+
+Mac-Studio-Gates:
+
+```text
+Prettier: PASS
+Fokussierte Suites: 13/13 PASS
+Tests: 307/307 PASS
+Vollrun: PAV8-03D-VS14-2D964B45-20260902-073000
+Dokumente: 10/10, jeweils 224/224
+Paket: 224/224
+Wandzeit: 26:52
+Ergebnis: 2/2/33/110/0/8/69
+Review: 69 -> 69, identische Mitgliedschaft
+```
+
+Gegen PAV8-03c ändert sich genau ein Outcome:
+
+```text
+VS-14: VORTEIL_A -> GLEICHWERTIG
+Paket A: unzutreffender Fund -> vollständig kontrollierter Nichtfund
+Paket B: vollständig kontrollierter Nichtfund -> unverändert
+```
+
+`VS-13` und `EL-25` bleiben Vorteil A; `FE-A09` und `ST-05` bleiben Vorteil
+B. Alle Nicht-VS-Zeilen sind byteidentisch. Die 36 VS-Zeilen tragen die neue
+Katalogversion und neue abgeleitete Digests; nach Entfernung dieser reinen
+Versions-/Hashunterschiede bleibt VS-14 die einzige semantische Änderung.
+Die zehn Dokumentobjekte sind byteidentisch.
+
+Die erstmals für diesen Lauf vollständig materialisierte formale
+Paketprovenienz ist konsistent:
+
+```text
+Run-Signatur: e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e
+package-contract: 2b390be8aa5597a9990735151b5458e023c9b561134e4c1023f5e6a765479173
+package-report: 3b1b7047dd1977f9c99738ac5892029ae40b11576635e2d6b1b104bfb7771b9e
+comparison JSON: 4b0714d8d0667cdcd5d52c1f5377e2c65dd6a7fd47530c2ac95f8244b6d7c6b5
+comparison Markdown: ae1474543db724e544693d24a11551001e12f41d328fe3cb7fbba13ad075e87d
+XLSX: a1b2396bd732aa73942b9286f375f6db2acd8d056a8b1f9bbb3c6b65dcc1bbac
+```
+
+Die Signatur wurde unabhängig neu berechnet; Comparison und Report tragen
+dieselbe Signatur, und alle Reporthashes stimmen mit ihren Ergebnisdateien
+überein. Das Log enthält zehn Abschlüsse, eine bekannte nicht fatale
+PDF-Warnung und keinen tatsächlichen Lauf- oder Modellfehler. Der Package
+Report wiederholt die Reviewzahl wegen einer veralteten Feldprojektion noch
+nicht; der autoritative und validierte Wert steht in
+`comparison.totals.customerReviewRequired = 69`. Der nächste versionierte
+Run-Report-Builder muss dieses Feld explizit übernehmen.
+
+```text
+GO: PAV8-03d ist die neue technische und fachliche Vergleichsbasis
+PASS: eine falsche VS-14-Freigabe entfernt
+PASS: vier bestätigte Richtungsentscheidungen erhalten
+PASS: keine Review-, Dokument- oder Nicht-VS-Semantikdrift
+LIMIT: 69 Reviewzeilen unverändert
+LIMIT: Package Report wiederholt customerReviewRequired noch nicht
+NO DEPLOY: installierter Kundenstand sauber auf c7d3b16d
+NEXT: Reviewfamilien einzeln und mit eigenem Vertrag abarbeiten
+```
