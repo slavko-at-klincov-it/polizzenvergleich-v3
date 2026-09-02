@@ -100,11 +100,12 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `1/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
-echten gezielten Ergebnisweg als `VORTEIL_B` entschieden. `EL-06` und `EL-12`
-haben jeweils den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen
-aber noch die Bestätigung im späteren konsistenten Vollvergleich. Vier Fälle
-bleiben ohne bestandenen Kandidaten offen.
+Status: `2/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
+echten gezielten Ergebnisweg als `VORTEIL_B`, `EL-11` als
+`NICHT_VERGLEICHBAR` ohne Review entschieden. `EL-06` und `EL-12` haben jeweils
+den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber noch die
+Bestätigung im späteren konsistenten Vollvergleich. Drei Fälle bleiben ohne
+bestandenen Kandidaten offen.
 
 ```text
 VS-35
@@ -1775,3 +1776,97 @@ FE-C07-Vergleichsaudit nach der Materialisierung nicht nochmals unabhängig.
 Eine spätere Härtung muss dafür einen allgemeinen, nicht FE-spezifisch
 duplizierten Auditvertrag verwenden. Das installierte Kundensystem blieb
 unverändert; es gab kein Deployment.
+
+### 10.12 EL-11 – Elementar-Selbstbehalt: echter beidseitiger Wertfund
+
+Die Baseline war kein Alias- oder Recallfehler. Sie enthielt sechs
+`Erdbeben`-Occurrences in den zehn Dokumenten, verwarf aber den echten
+Selbstbehalt des Pakets B fälschlich als bloße Erwähnung:
+
+- Paket A, DOC-01, physische Seite 10: `€ 350,- pro Schadenfall`;
+- Paket B, DOC-02, physische Seite 4: `Selbstbehalt EUR 350,00` im positiv
+  regierten Erdbeben-Listeneintrag;
+- drei weitere B-Vorkommen auf Seite 19 sind Definitionen oder
+  Kumulereignistext ohne lokalen Selbstbehalt;
+- das B-Vorkommen in DOC-09 steht in einer Leitungswasserausschlussklausel und
+  ist ebenfalls kein Elementar-Selbstbehalt.
+
+Der bereits vor dieser Einzelabnahme implementierte Vertrag
+`EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1` stammt aus diesen Commits:
+
+```text
+2f7b1cbf fix(analysis): bind explicit EL-11 deductible schedule
+569b109b test(analysis): preserve EL-11 source provenance assertion
+```
+
+Er gilt nur für `EL-11 / elemental_deductible / DEDUCTIBLE`, verlangt einen
+positiv regierten strukturierten Listeneintrag im Elementar- oder Sturmscope,
+genau einen Selbstbehaltsmarker und genau einen lokal daran gebundenen Geld-
+oder Prozentwert. Negation, Optionalität, Mehrprämie, mehrere Werte und fremde
+Sparten bleiben ausgeschlossen. Die Semikolongrenze verhindert konkret, dass
+die im selben B-Listeneintrag genannte Jahreshöchstentschädigung von
+`EUR 20.000,00` als Selbstbehalt übernommen wird.
+
+Mac-Studio-Regression auf dem aktuellen Quellstand:
+
+```text
+Validierungscommit: 347cd39c466698239a0e433dea8f256f440f570d
+Worktree: /private/tmp/pv3-validate-347cd39c
+Relevante Analyse-, Feld-, Result- und Vergleichssuites: 337/337 PASS
+```
+
+Der erste offizielle Recall-Audit unter
+`EL-11-RECALL-347CD39C-20260902` wurde erwartungsgemäß mit `FAILED` beendet.
+Das ist kein EL-11-Fachfehler: Dieser historische Guard akzeptiert gegenüber
+der v0.6-Baseline ausschließlich eine einzige geänderte Anforderung. Der
+aktuelle EL-v0.8-Katalog enthält inzwischen mehrere andere bereits
+dokumentierte Korrekturen, insbesondere EL-12. Das historische v0.6-Manifest
+wurde deshalb nicht umgeschrieben oder gelockert.
+
+Stattdessen wurde ein neuer Ein-Zeilen-Targetvertrag aus dem aktuellen
+EL-v0.8-Katalog erzeugt und auf allen zehn exakt gebundenen
+Baseline-Dokumentartefakten ausgeführt:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/EL-11-E2E-347CD39C-20260902
+Katalog: el-occurrence-full-draft-v0.8
+Target-Selection-Digest:
+a2ab297de748cd5fabd129aff1366a11bf714c156ad64f1659617f8c10db773f
+Entscheidungsartefakt:
+decision-347cd39c/summary.private.json
+Summary-Digest:
+d64a6cd8e8ee96dc795a418f20279f93f406b61d20e88a73366fed435827fcb1
+
+Dokumente: 10/10
+Rohoccurrences: 6
+Triage: 10/10 TECHNICAL_PASS_REVIEW_REQUIRED
+Prepared Evidence: 10/10 TECHNICAL_PASS_REVIEW_REQUIRED
+Tatsächliche Triage-Modellaufrufe: 0
+Tatsächliche Evidence-Modellaufrufe: 0
+
+Paket A: BELEGT / Ja / EUR 350 je Schadenfall
+Paket B: BELEGT / Ja / EUR 350,00
+Entscheidung: NICHT_VERGLEICHBAR
+Review erforderlich: nein
+Regel: ATOMIC_COMPARABILITY_GATE_V1
+```
+
+Der Summary-Digest wurde in einem getrennten Prozess erneut berechnet, die
+Datei als `0600` geprüft und beide angegebenen Git-Commits als echte Objekte
+aufgelöst. Das gezielte, belegbare Delta lautet daher:
+
+```text
+EL-11: UNKLAR / MISSING_ONE_SIDE / Review
+    -> NICHT_VERGLEICHBAR / COMPARABILITY_GATE_FAILED / kein Review
+```
+
+`GLEICHWERTIG` wäre mit den vorhandenen Dokumenten eine zusätzliche fachliche
+Annahme: Nur A nennt ausdrücklich den Bezugsqualifier `je Schadenfall`. B
+dokumentiert denselben Betrag, aber keinen Bezugsqualifier. Der Wertfund ist
+damit repariert und vollständig sichtbar; die Vergleichslogik erfindet B den
+fehlenden Qualifier nicht. Eine spätere Fachfreigabe könnte dafür einen eigenen
+versionierten Vergleichsvertrag definieren, darf aber nicht durch globale
+Qualifier-Ignorierung ersetzt werden. Das ist noch keine neue
+224-Zeilen-Gesamtmetrik. Das installierte Kundensystem blieb unverändert; es
+gab kein Deployment.
