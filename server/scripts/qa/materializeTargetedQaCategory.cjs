@@ -227,8 +227,7 @@ function run(
   );
   if (
     isWithin(repository, resolvedOutput) ||
-    isWithin(baseline, resolvedOutput) ||
-    isWithin(phase, resolvedOutput)
+    isWithin(baseline, resolvedOutput)
   )
     throw cliError("TARGETED_RESULT_CLI_OUTPUT_SCOPE_INVALID");
 
@@ -291,6 +290,12 @@ function run(
   );
   if (!isWithin(phase, phasePair))
     throw cliError("TARGETED_RESULT_CLI_PHASE_PAIR_INVALID");
+  const pairResultOutput = path.join(phasePair, "result");
+  if (
+    isWithin(phase, resolvedOutput) &&
+    path.resolve(resolvedOutput) !== path.resolve(pairResultOutput)
+  )
+    throw cliError("TARGETED_RESULT_CLI_OUTPUT_SCOPE_INVALID");
 
   const result = materializeResultFn({
     manifest,

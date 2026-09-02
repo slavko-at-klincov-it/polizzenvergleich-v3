@@ -175,6 +175,34 @@ describe("materialize one targeted QA category CLI", () => {
     });
   });
 
+  test("allows only the fixed pair result directory inside the phase root", () => {
+    const pairResult = path.join(
+      value.phaseRoot,
+      `DOC-01-${value.documentUuid}`,
+      value.categoryView,
+      "result"
+    );
+
+    expect(
+      run({ ...args(value), output: pairResult }, dependencies(value, []))
+        .output
+    ).toBe(path.join(fs.realpathSync(path.dirname(pairResult)), "result"));
+    expect(() =>
+      run(
+        {
+          ...args(value),
+          output: path.join(
+            value.phaseRoot,
+            `DOC-01-${value.documentUuid}`,
+            value.categoryView,
+            "triage-result"
+          ),
+        },
+        dependencies(value, [])
+      )
+    ).toThrow("TARGETED_RESULT_CLI_OUTPUT_SCOPE_INVALID");
+  });
+
   test("resumes only byte-identical output without rewriting it", () => {
     const deps = dependencies(value, []);
     run(args(value), deps);
