@@ -3,8 +3,16 @@ const {
   decidePoint,
 } = require("../../utils/policyComparison/pointDecision");
 const {
+  legacyTerminalRejectionSetDigestV1,
   terminalRejectionSetDigest,
 } = require("../../utils/policyAnalysis/deterministicTerminalRejectionContract");
+const {
+  customerSafeComparisonReadView,
+  deriveCustomerMetrics,
+} = require("../../utils/policyComparison/customerMetricContract");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 
 const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
 const SOLE_SCOPE_REQUIREMENT_DIGEST = "f".repeat(64);
@@ -661,7 +669,7 @@ describe("policy comparison point decision", () => {
     absentCell.gates.zeroCandidateTerminal = false;
     absentCell.gates.deterministicOutOfCategoryTerminal = true;
     absentCell.terminalRejectionAudit = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
       requirementId: categoryId,
       componentId: component.id,
@@ -814,12 +822,20 @@ describe("policy comparison point decision", () => {
       componentSatisfactionPolicy: "ALL",
       components: [component],
     };
-    const absence = (side, { foreignRejection = false } = {}) => {
+    const absence = (
+      side,
+      { foreignRejection = false, legacyAudit = false } = {}
+    ) => {
       const documentUuid = `fe-b13-${side}`;
       const searchPlanId = `fixture/FE-B13/${component.id}`;
       const rejection = {
         candidateId: `candidate:foreign-${side}`,
-        terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+        ...(legacyAudit
+          ? {}
+          : {
+              terminalRejectionContractId:
+                "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+            }),
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         occurrenceDigestSha256: "1".repeat(64),
         physicalPageNumber: 2,
@@ -828,7 +844,7 @@ describe("policy comparison point decision", () => {
       };
       const terminalRejectionAudit = foreignRejection
         ? {
-            schemaVersion: 1,
+            schemaVersion: legacyAudit ? 1 : 2,
             contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
             requirementId: "FE-B13",
             componentId: component.id,
@@ -837,7 +853,9 @@ describe("policy comparison point decision", () => {
             proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
             rejectedOccurrenceCount: 1,
             rejectedCandidateIds: [rejection.candidateId],
-            rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+            rejectionDigestSha256: legacyAudit
+              ? legacyTerminalRejectionSetDigestV1([rejection])
+              : terminalRejectionSetDigest([rejection]),
             rejections: [rejection],
           }
         : null;
@@ -931,6 +949,69 @@ describe("policy comparison point decision", () => {
       ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
       reviewRequired: false,
     });
+
+    const legacyForeign = absence("legacy", {
+      foreignRejection: true,
+      legacyAudit: true,
+    });
+    const legacyDecision = decidePoint({
+      categoryId: "FE-B13",
+      packageA: zero.summary,
+      packageB: legacyForeign.summary,
+      atomsA: [zero.atom],
+      atomsB: [legacyForeign.atom],
+    });
+    expect(legacyDecision).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+    const legacyCategories = [
+      {
+        categoryView: "FE",
+        rows: [
+          {
+            categoryId: "FE-B13",
+            outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+            packageA: zero.summary,
+            packageB: legacyForeign.summary,
+            pointDecision: legacyDecision,
+          },
+        ],
+      },
+    ];
+    expect(
+      customerSafeComparisonReadView({
+        schemaVersion: 11,
+        status: "COMPARISON_RESULT_MATERIALIZED",
+        productProfile: PRODUCT_PROFILE,
+        documents: [
+          { uuid: "fe-b13-a", side: "A" },
+          { uuid: "fe-b13-legacy", side: "B" },
+        ],
+        categories: legacyCategories,
+        totals: deriveCustomerMetrics(legacyCategories),
+      }).customerMetrics
+    ).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 0,
+      pointDecisions: { GLEICHWERTIG: 1 },
+    });
+
+    legacyForeign.summary.searchAudit.components[0].terminalRejectionAudit.rejections[0].terminalRejectionContractId =
+      "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
+    expect(
+      decidePoint({
+        categoryId: "FE-B13",
+        packageA: zero.summary,
+        packageB: legacyForeign.summary,
+        atomsA: [zero.atom],
+        atomsB: [legacyForeign.atom],
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
     foreign.summary.searchAudit.components[0].terminalRejectionAudit.rejectionDigestSha256 =
       "2".repeat(64);
     expect(decideAbsence()).toMatchObject({
@@ -967,7 +1048,7 @@ describe("policy comparison point decision", () => {
       };
       const terminalRejectionAudit = riskInformation
         ? {
-            schemaVersion: 1,
+            schemaVersion: 2,
             contractId:
               "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
             requirementId: categoryId,
@@ -1116,6 +1197,21 @@ describe("policy comparison point decision", () => {
           terminalRejectionSetDigest(cell.terminalRejectionAudit.rejections);
       },
       (cell) => {
+        delete cell.terminalRejectionAudit.rejections[0]
+          .terminalRejectionContractId;
+        cell.terminalRejectionAudit.rejectionDigestSha256 =
+          terminalRejectionSetDigest(cell.terminalRejectionAudit.rejections);
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.schemaVersion = 1;
+        delete cell.terminalRejectionAudit.rejections[0]
+          .terminalRejectionContractId;
+        cell.terminalRejectionAudit.rejectionDigestSha256 =
+          legacyTerminalRejectionSetDigestV1(
+            cell.terminalRejectionAudit.rejections
+          );
+      },
+      (cell) => {
         cell.terminalRejectionAudit.rejections[0].occurrenceDigestSha256 =
           "5".repeat(64);
       },
@@ -1175,7 +1271,7 @@ describe("policy comparison point decision", () => {
           ...(rejection
             ? {
                 terminalRejectionAudit: {
-                  schemaVersion: 1,
+                  schemaVersion: 2,
                   contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
                   requirementId: categoryId,
                   componentId: component.id,

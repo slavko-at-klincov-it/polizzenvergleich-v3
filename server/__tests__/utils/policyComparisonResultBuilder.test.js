@@ -1614,7 +1614,7 @@ describe("policy comparison result builder", () => {
         deterministicNonContractualRiskInformationTerminal: true,
       },
       terminalRejectionAudit: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         contractId:
           "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
         requirementId: "EL-12",

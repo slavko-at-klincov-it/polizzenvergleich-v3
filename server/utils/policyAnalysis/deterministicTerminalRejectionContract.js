@@ -222,6 +222,40 @@ function terminalRejectionSetDigest(rejections) {
 }
 
 /**
+ * Reconstructs the immutable digest written by terminal-rejection audit
+ * schema v1. It intentionally omits the per-rejection contract id because
+ * that field did not exist in persisted v1 audit entries. New writes must use
+ * terminalRejectionSetDigest and schema v2. Role: compatibility. Side effects:
+ * none.
+ */
+function legacyTerminalRejectionSetDigestV1(rejections) {
+  return sha256(
+    [...(rejections || [])]
+      .map(
+        ({
+          candidateId,
+          decisionBasis,
+          occurrenceDigestSha256,
+          observedScopeKeys: scopes,
+          scopeProofMode,
+        }) => ({
+          candidateId,
+          decisionBasis,
+          occurrenceDigestSha256,
+          observedScopeKeys: scopes,
+          ...(scopeProofMode ? { scopeProofMode } : {}),
+        })
+      )
+      .sort((left, right) =>
+        String(left.candidateId || "").localeCompare(
+          String(right.candidateId || ""),
+          "de-AT"
+        )
+      )
+  );
+}
+
+/**
  * Certifies one raw occurrence under one target-specific terminal rejection
  * contract. Each target is enabled individually and must prove its complete
  * local semantic boundary. Role: validate. Side effects: none.
@@ -406,6 +440,7 @@ module.exports = {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
+  legacyTerminalRejectionSetDigestV1,
   terminalTargetAcceptsObservedScopes,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,

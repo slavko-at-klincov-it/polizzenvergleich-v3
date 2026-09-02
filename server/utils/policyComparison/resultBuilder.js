@@ -613,7 +613,7 @@ function deterministicTerminalRejectionAudit({
     return null;
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: certifiedTarget.contractId,
     requirementId: requirement?.id || null,
     componentId: component?.id || null,
