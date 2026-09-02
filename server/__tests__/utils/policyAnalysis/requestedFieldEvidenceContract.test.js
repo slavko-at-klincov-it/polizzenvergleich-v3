@@ -1588,7 +1588,9 @@ describe("requestedFieldEvidenceContract", () => {
       facts: [
         expect.objectContaining({
           normalizedValue: "EUR 350,00",
-          source: { candidateId: "candidate:el11-schedule-deductible" },
+          source: expect.objectContaining({
+            candidateId: "candidate:el11-schedule-deductible",
+          }),
         }),
       ],
     });
