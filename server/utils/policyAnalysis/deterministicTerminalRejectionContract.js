@@ -213,6 +213,8 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
       allowedObjectClassificationSubjects:
         objectClassificationContract.allowedSubjects,
       allowedExactTexts: objectClassificationContract.allowedExactTexts || null,
+      scopeLeadTargetConcept:
+        objectClassificationContract.scopeLeadTargetConcept || null,
       maximumClassificationToContextGap:
         objectClassificationContract.maximumClassificationToContextGap ?? null,
       allowPrecedingScopeLeadReset:
