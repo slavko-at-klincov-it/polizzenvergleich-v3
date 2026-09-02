@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  certifiedTerminalTarget,
   terminalRejectionSetDigest,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
 
@@ -62,10 +63,19 @@ function validDeterministicTerminalRejection(component, categoryId) {
   const componentId = String(component?.searchPlanId || "")
     .split("/")
     .pop();
+  const target = certifiedTerminalTarget({
+    categoryView: String(categoryId || "").split("-")[0],
+    requirementId: categoryId,
+    componentId,
+  });
+  const declaredComponent = component?.requirementContract?.components?.find(
+    ({ id }) => id === componentId
+  );
   const ids = canonicalStrings(audit?.rejectedCandidateIds);
   if (
-    categoryId !== "FE-B13" ||
-    componentId !== "pre_inception_damage_exclusion" ||
+    !target ||
+    declaredComponent?.factRole !== target.factRole ||
+    component?.absenceMeaning !== target.absenceMeaning ||
     component?.gates?.zeroOccurrenceTerminal !== false ||
     component?.gates?.zeroCandidateTerminal !== false ||
     component?.gates?.deterministicOutOfCategoryTerminal !== true ||
@@ -95,9 +105,10 @@ function validDeterministicTerminalRejection(component, categoryId) {
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
         rejection?.sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        (rejection?.scopeProofMode || null) !== target.scopeProofMode ||
         !Array.isArray(rejection?.observedScopeKeys) ||
         rejection.observedScopeKeys.length !== 1 ||
-        !String(rejection.observedScopeKeys[0] || "").endsWith("_INSURANCE")
+        rejection.observedScopeKeys[0] !== target.otherScopeKey
     )
   )
     return false;

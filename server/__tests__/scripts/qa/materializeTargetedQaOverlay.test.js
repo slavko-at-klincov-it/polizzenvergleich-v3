@@ -456,6 +456,61 @@ describe("materializeTargetedQaOverlay", () => {
         judgements: [{ ...judgement, decisionOwner: "MODEL" }],
       })
     ).toThrow("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_UNSAFE");
+
+    const stPersisted = {
+      ...persisted,
+      requirementId: "ST-14",
+      componentId: "skylight_dome",
+    };
+    const stRebuilt = {
+      ...stPersisted,
+      serverRejectedCandidates: [
+        {
+          ...stPersisted.serverRejectedCandidates[0],
+          terminalRejectionContractId:
+            "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+          decisionOwner: "SERVER",
+          decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+          physicalPageNumber: 15,
+          sectionScopeSource: "CURRENT_PAGE_HEADING",
+          observedScopeKeys: ["GLASBRUCH_INSURANCE"],
+          scopeProofMode: "CURRENT_SECTION_PLUS_LOCAL_FOREIGN_COVERAGE_V1",
+          occurrenceDigestSha256: "b".repeat(64),
+        },
+      ],
+    };
+    const stJudgement = {
+      ...judgement,
+      requirementId: "ST-14",
+      componentId: "skylight_dome",
+    };
+    expect(
+      safeServerTargetRefresh({
+        persistedTargets: [stPersisted],
+        rebuiltTargets: [stRebuilt],
+        judgements: [stJudgement],
+      })
+    ).toMatchObject({
+      targets: [stRebuilt],
+      refreshedKeys: ["ST-14:skylight_dome"],
+    });
+    expect(() =>
+      safeServerTargetRefresh({
+        persistedTargets: [stPersisted],
+        rebuiltTargets: [
+          {
+            ...stRebuilt,
+            serverRejectedCandidates: [
+              {
+                ...stRebuilt.serverRejectedCandidates[0],
+                scopeProofMode: "UNRECOGNIZED_PROFILE",
+              },
+            ],
+          },
+        ],
+        judgements: [stJudgement],
+      })
+    ).toThrow("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_PROVENANCE");
   });
 
   test("rejects unknown and relative CLI arguments", () => {

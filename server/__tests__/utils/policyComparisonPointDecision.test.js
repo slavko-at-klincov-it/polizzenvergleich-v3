@@ -839,6 +839,158 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("accepts the ST-14 glass-section terminal proof and rejects proof-profile tampering", () => {
+    const categoryId = "ST-14";
+    const components = [
+      { id: "roof_window", factRole: "INSURED_OBJECT" },
+      { id: "skylight_dome", factRole: "INSURED_OBJECT" },
+    ];
+    const requirementContract = {
+      digest: "9".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components,
+    };
+    const packageFor = (side, { foreignSkylight = false } = {}) => {
+      const documentUuid = `st-14-${side}`;
+      const searchCells = components.map((component) => {
+        const searchPlanId = `fixture/${categoryId}/${component.id}`;
+        const isForeign = foreignSkylight && component.id === "skylight_dome";
+        const rejection = isForeign
+          ? {
+              candidateId: `candidate:glass-${side}`,
+              decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+              occurrenceDigestSha256: "3".repeat(64),
+              physicalPageNumber: 2,
+              sectionScopeSource: "CURRENT_PAGE_HEADING",
+              observedScopeKeys: ["GLASBRUCH_INSURANCE"],
+              scopeProofMode: "CURRENT_SECTION_PLUS_LOCAL_FOREIGN_COVERAGE_V1",
+            }
+          : null;
+        return {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_ONLY",
+          comparisonPolicy: null,
+          absenceCertification: null,
+          requirementContract,
+          searchPlanId,
+          documentUuid,
+          catalogId: "fixture",
+          physicalPagesChecked: 3,
+          totalPhysicalPages: 3,
+          aliases: [component.id],
+          conceptSearchIds: [],
+          ...(rejection
+            ? {
+                terminalRejectionAudit: {
+                  schemaVersion: 1,
+                  contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+                  requirementId: categoryId,
+                  componentId: component.id,
+                  decisionOwner: "SERVER",
+                  decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+                  proofMode:
+                    "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+                  rejectedOccurrenceCount: 1,
+                  rejectedCandidateIds: [rejection.candidateId],
+                  rejectionDigestSha256: terminalRejectionSetDigest([
+                    rejection,
+                  ]),
+                  rejections: [rejection],
+                },
+              }
+            : {}),
+          gates: {
+            negativeSearchApproved: true,
+            certifiedNegativeSearch: false,
+            completeTextExtraction: true,
+            completeCategoryTechnicalContract: true,
+            zeroOccurrenceTerminal: !isForeign,
+            zeroCandidateTerminal: !isForeign,
+            serverNegativeTerminal: true,
+            ...(isForeign ? { deterministicOutOfCategoryTerminal: true } : {}),
+          },
+        };
+      });
+      const searchPlanIds = searchCells.map(({ searchPlanId }) => searchPlanId);
+      const summary = packageSummary({
+        evidenceFound: false,
+        facts: [],
+        reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        requirementContract,
+        searchAudit: {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          documentCount: 1,
+          documentUuids: [documentUuid],
+          physicalPagesChecked: 3,
+          searchPlanIds,
+          requirementContract,
+          components: searchCells,
+        },
+      });
+      const atoms = searchCells.map((searchAudit) => {
+        const component = components.find(({ id }) =>
+          searchAudit.searchPlanId.endsWith(`/${id}`)
+        );
+        return atom(side, {
+          requirementId: categoryId,
+          componentId: component.id,
+          componentLabel: component.id,
+          factRole: component.factRole,
+          documentUuids: [documentUuid],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          requestedFields: [],
+          optionalFields: [],
+          componentSatisfactionPolicy: "ALL",
+          requirementContractDigest: requirementContract.digest,
+          declaredComponents: requirementContract.components,
+          fields: [],
+          sources: [],
+          searchAudit,
+        });
+      });
+      return { summary, atoms };
+    };
+
+    const zero = packageFor("a");
+    const foreign = packageFor("b", { foreignSkylight: true });
+    const decideAbsence = () =>
+      decidePoint({
+        categoryId,
+        packageA: zero.summary,
+        packageB: foreign.summary,
+        atomsA: zero.atoms,
+        atomsB: foreign.atoms,
+      });
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const foreignAudit =
+      foreign.summary.searchAudit.components[1].terminalRejectionAudit;
+    foreignAudit.rejections[0].scopeProofMode = "UNKNOWN_PROFILE";
+    foreignAudit.rejectionDigestSha256 = terminalRejectionSetDigest(
+      foreignAudit.rejections
+    );
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
+  });
+
   test("keeps a multi-document bilateral absence audit stable under input permutations", () => {
     const absenceA = controlledAbsence("a", {
       documentUuids: ["absence-document-a-1", "absence-document-a-2"],

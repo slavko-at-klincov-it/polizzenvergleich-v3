@@ -392,6 +392,7 @@ function safeServerTargetRefresh({
         physicalPageNumber,
         sectionScopeSource,
         observedScopeKeys,
+        scopeProofMode,
         occurrenceDigestSha256,
         ...newOriginalFields
       } = newRejection;
@@ -407,6 +408,9 @@ function safeServerTargetRefresh({
         !Array.isArray(observedScopeKeys) ||
         observedScopeKeys.length !== 1 ||
         !String(observedScopeKeys[0] || "").endsWith("_INSURANCE") ||
+        (scopeProofMode !== undefined &&
+          scopeProofMode !==
+            "CURRENT_SECTION_PLUS_LOCAL_FOREIGN_COVERAGE_V1") ||
         !/^[a-f0-9]{64}$/u.test(String(occurrenceDigestSha256 || ""))
       )
         throw overlayCliError(

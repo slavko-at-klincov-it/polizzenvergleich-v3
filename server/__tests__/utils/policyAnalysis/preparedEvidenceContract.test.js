@@ -204,6 +204,134 @@ describe("preparedEvidenceContract", () => {
     expect(elTarget.serverRejectedCandidates).toEqual([]);
   });
 
+  test("server-certifies ST-14 light domes only inside a locally governed current glass section", () => {
+    const occurrence = {
+      candidateId: "candidate:glass-light-dome",
+      matchedAlias: "Lichtkuppeln",
+      pageNumber: 15,
+      physicalPageNumber: 15,
+      documentStart: 29442,
+      documentEnd: 29454,
+      exactText: "Lichtkuppeln",
+      context: {
+        unitType: "LIST_ITEM",
+        text: "Firmenschilder, Reklameanlagen, Lichtkuppeln und dergleichen.",
+      },
+      scopeLead: {
+        text: "7. Glasbruch. Versichert sind die Sachen im Rahmen der Gebäude-Glaspauschale:",
+      },
+      pageScopeHints: [],
+      sectionScopeHint: {
+        scopeKey: "GLASBRUCH_INSURANCE",
+        text: "7. Glasbruch",
+        physicalPageNumber: 15,
+        source: "CURRENT_PAGE_HEADING",
+      },
+    };
+    const worksheetFor = (candidate, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "ST" },
+      requirements: [
+        {
+          id: overrides.requirementId || "ST-14",
+          label: "Dachfenster und Lichtkuppeln",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
+          components: [
+            {
+              id: overrides.componentId || "skylight_dome",
+              label: "Lichtkuppeln",
+              factRole: overrides.factRole || "INSURED_OBJECT",
+              occurrences: [candidate],
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (candidate, overrides = {}) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(candidate, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId: overrides.requirementId || "ST-14",
+            componentId: overrides.componentId || "skylight_dome",
+            candidateId: candidate.candidateId,
+            binding: "MENTION_ONLY",
+          },
+        ],
+      })[0];
+
+    expect(targetFor(occurrence)).toMatchObject({
+      candidates: [],
+      unresolvedCandidateIds: [],
+      serverRejectedCandidates: [
+        {
+          candidateId: occurrence.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+          terminalRejectionContractId:
+            "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+          decisionOwner: "SERVER",
+          decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+          physicalPageNumber: 15,
+          sectionScopeSource: "CURRENT_PAGE_HEADING",
+          observedScopeKeys: ["GLASBRUCH_INSURANCE"],
+          scopeProofMode: "CURRENT_SECTION_PLUS_LOCAL_FOREIGN_COVERAGE_V1",
+          occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        },
+      ],
+    });
+
+    const adversarial = [
+      {
+        candidate: {
+          ...occurrence,
+          sectionScopeHint: {
+            ...occurrence.sectionScopeHint,
+            source: "PRECEDING_PAGE_HEADING",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          context: {
+            ...occurrence.context,
+            text: "Lichtkuppeln sind auch gegen Sturm und Hagel versichert.",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          scopeLead: { text: "Bauteile: Glasdächer und Lichtkuppeln." },
+        },
+      },
+      {
+        candidate: {
+          ...occurrence,
+          pageScopeHints: [
+            { scopeKey: "STURM_INSURANCE", text: "Sturmversicherung" },
+          ],
+        },
+      },
+      { overrides: { requirementId: "ST-13" } },
+      { overrides: { factRole: "DEFINITION" } },
+      { overrides: { absenceMeaning: "EXCLUSION" } },
+    ];
+    for (const { candidate = occurrence, overrides = {} } of adversarial) {
+      const target = targetFor(candidate, overrides);
+      expect(target.candidates).toHaveLength(0);
+      expect(target.serverRejectedCandidates).toEqual([
+        {
+          candidateId: candidate.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+        },
+      ]);
+    }
+  });
+
   test("does not treat a Pauschalversicherungssumme label as the VS-04 building-sum calculation method", () => {
     const worksheet = {
       candidateOnly: true,

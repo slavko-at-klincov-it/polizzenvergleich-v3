@@ -589,7 +589,12 @@ function deterministicTerminalRejectionAudit({
         rejection.observedScopeKeys.length !== 1 ||
         !String(rejection.observedScopeKeys[0] || "").endsWith("_INSURANCE") ||
         rejection?.occurrenceDigestSha256 !==
-          terminalOccurrenceDigest(occurrenceById.get(rejection?.candidateId))
+          terminalOccurrenceDigest({
+            ...occurrenceById.get(rejection?.candidateId),
+            ...(rejection?.scopeProofMode
+              ? { scopeProofMode: rejection.scopeProofMode }
+              : {}),
+          })
     )
   )
     return null;
@@ -614,6 +619,7 @@ function deterministicTerminalRejectionAudit({
           physicalPageNumber,
           sectionScopeSource,
           observedScopeKeys,
+          scopeProofMode,
         }) => ({
           candidateId,
           decisionBasis,
@@ -621,6 +627,7 @@ function deterministicTerminalRejectionAudit({
           physicalPageNumber,
           sectionScopeSource,
           observedScopeKeys,
+          ...(scopeProofMode ? { scopeProofMode } : {}),
         })
       )
       .sort((left, right) =>
