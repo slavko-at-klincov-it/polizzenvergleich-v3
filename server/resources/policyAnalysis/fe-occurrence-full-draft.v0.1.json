@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.5",
+  "catalogId": "fe-occurrence-full-draft-v0.6",
   "categoryView": "FE",
   "requirements": [
     {
@@ -824,36 +824,41 @@
       "requestedFields": [],
       "components": [
         {
-          "id": "sauna_or_infrared_cabin",
-          "label": "Sauna oder Infrarotkabine",
-          "factRole": "INSURED_OBJECT",
-          "aliases": [
-            "Sauna",
-            "Saunaanlage",
-            "Infrarotkabine",
-            "Infrarot-Kabine"
-          ]
-        },
-        {
-          "id": "common_room_scope",
-          "label": "Gemeinschaftsraum",
-          "factRole": "CONDITION",
-          "aliases": ["Gemeinschaftsraum", "Gemeinschaftsräume"]
-        },
-        {
           "id": "sauna_or_infrared_cabin_in_common_room",
           "label": "Sauna oder Infrarotkabine im Gemeinschaftsraum",
-          "factRole": "CONDITION",
+          "factRole": "INSURED_OBJECT",
           "aliases": [
             "Sauna im Gemeinschaftsraum",
+            "Sauna in einem Gemeinschaftsraum",
             "Sauna in Gemeinschaftsräumen",
+            "Saunen in Gemeinschaftsräumen",
             "Infrarotkabine im Gemeinschaftsraum",
-            "Infrarotkabine in Gemeinschaftsräumen"
+            "Infrarotkabine in einem Gemeinschaftsraum",
+            "Infrarotkabine in Gemeinschaftsräumen",
+            "Infrarotkabinen in Gemeinschaftsräumen",
+            "Gemeinschaftssauna",
+            "Gemeinschaftssaunen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "sauna-or-infrared-cabin-in-common-facility",
+              "requiredGroups": [
+                { "prefixes": ["sauna", "infrarotkabin"] },
+                {
+                  "prefixes": [
+                    "gemeinschaftsraum",
+                    "gemeinschaftseinricht"
+                  ]
+                }
+              ],
+              "maxLines": 2,
+              "maxChars": 280
+            }
           ]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
-      "absenceMeaning": "COVERAGE_MIXED"
+      "absenceMeaning": "COVERAGE_ONLY"
     },
     {
       "id": "FE-C08",

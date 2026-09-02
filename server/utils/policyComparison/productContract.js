@@ -12,13 +12,13 @@ const EXPECTED_ROW_COUNT = Object.values(CATEGORY_ROW_COUNTS).reduce(
   0
 );
 const PRODUCT_PROFILE = Object.freeze({
-  id: "CUSTOMER_CORE_5_V16_EL12_SCOPE_PRECISION",
+  id: "CUSTOMER_CORE_5_V17_FE_C07_SCOPED_INSURED_OBJECT",
   comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
   categoryViews: CATEGORY_ORDER,
   categoryRowCounts: CATEGORY_ROW_COUNTS,
   categoryCatalogIds: Object.freeze({
     VS: "vs-occurrence-full-draft-v0.7",
-    FE: "fe-occurrence-full-draft-v0.5",
+    FE: "fe-occurrence-full-draft-v0.6",
     LW: "lw-occurrence-full-draft-v0.8",
     ST: "st-occurrence-full-draft-v0.5",
     EL: "el-occurrence-full-draft-v0.7",

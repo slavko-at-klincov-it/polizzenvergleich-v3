@@ -2,6 +2,9 @@ const catalog = require("../../../resources/policyAnalysis/fe-occurrence-full-dr
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  buildCandidateTriagePayload,
+} = require("../../../utils/policyAnalysis/candidateTriageContract");
 
 function documentFromPages(pages) {
   let pageContent = "";
@@ -174,6 +177,176 @@ describe("FE category recall", () => {
         occurrenceCount: 2,
       }
     );
+  });
+
+  test("models FE-C07 as one pure scoped insured object", () => {
+    const requirement = catalog.requirements.find(({ id }) => id === "FE-C07");
+
+    expect(requirement).toMatchObject({
+      absenceMeaning: "COVERAGE_ONLY",
+      components: [
+        {
+          id: "sauna_or_infrared_cabin_in_common_room",
+          factRole: "INSURED_OBJECT",
+          conceptSearches: [
+            {
+              id: "sauna-or-infrared-cabin-in-common-facility",
+              requiredGroups: [
+                { prefixes: ["sauna", "infrarotkabin"] },
+                {
+                  prefixes: [
+                    "gemeinschaftsraum",
+                    "gemeinschaftseinricht",
+                  ],
+                },
+              ],
+              maxLines: 2,
+              maxChars: 280,
+            },
+          ],
+        },
+      ],
+    });
+    expect(requirement.components).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      "the real reversed community-facility list",
+      [
+        "AW03 Gemeinschaftseinrichtungen",
+        "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko.",
+        "Das sind Gemeinschaftsräume wie Saunen, Fitnessräume, Schwimmbäder, Wasch- und Trockenräume;",
+      ].join("\n"),
+    ],
+    [
+      "a reversed infrared-cabin formulation",
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert ist in den Gemeinschaftsräumen jeweils eine Infrarotkabine.",
+      ].join("\n"),
+    ],
+  ])("recalls FE-C07 from %s", (_label, text) => {
+    const result = worksheetFromText(text);
+    const recalled = component(
+      result,
+      "FE-C07",
+      "sauna_or_infrared_cabin_in_common_room"
+    );
+
+    expect(recalled).toMatchObject({
+      terminalState: "CONTROLLED_CANDIDATES_FOUND",
+      occurrenceCount: 1,
+    });
+    expect(recalled.occurrences[0]).toMatchObject({
+      matchedAlias:
+        "CONCEPT_SEARCH:sauna-or-infrared-cabin-in-common-facility",
+    });
+  });
+
+  test.each([
+    [
+      "a liability-only sauna",
+      "HAFTPFLICHTVERSICHERUNG\nSchadenersatzverpflichtungen aus Betrieb und Pflege einer Sauna sind versichert.",
+    ],
+    [
+      "a sauna in a private unit",
+      "FEUERVERSICHERUNG\nEine Sauna in einer Privatwohnung wird beschrieben.",
+    ],
+    [
+      "common rooms without the insured object",
+      "FEUERVERSICHERUNG\nGemeinschaftsräume wie Fitnessräume und Waschküchen sind mitversichert.",
+    ],
+    [
+      "concept atoms in separate paragraphs",
+      "FEUERVERSICHERUNG\nGemeinschaftsräume sind mitversichert.\n\nEine Sauna verursacht Schadenersatzverpflichtungen.",
+    ],
+  ])("does not bind FE-C07 across %s", (_label, text) => {
+    const recalled = component(
+      worksheetFromText(text),
+      "FE-C07",
+      "sauna_or_infrared_cabin_in_common_room"
+    );
+
+    expect(recalled).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
+  test.each([
+    [
+      "explicit negation",
+      "Saunen in Gemeinschaftsräumen sind nicht versichert.",
+      "nicht versichert",
+    ],
+    [
+      "optional additional-premium wording",
+      "Saunen in Gemeinschaftsräumen können gegen Mehrprämie eingeschlossen werden.",
+      "gegen Mehrprämie",
+    ],
+  ])(
+    "preserves %s in the FE-C07 candidate for fail-closed triage",
+    (_label, clause, marker) => {
+      const recalled = component(
+        worksheetFromText(["FEUERVERSICHERUNG", clause].join("\n")),
+        "FE-C07",
+        "sauna_or_infrared_cabin_in_common_room"
+      );
+
+      expect(recalled.occurrences).toHaveLength(1);
+      expect(recalled.occurrences[0].context.text).toContain(marker);
+    }
+  );
+
+  test("keeps a same-line liability occurrence in foreign scope for model triage", () => {
+    const result = worksheetFromText(
+      [
+        "HAFTPFLICHTVERSICHERUNG",
+        "Schadenersatzverpflichtungen aus Saunen in Gemeinschaftsräumen sind gedeckt.",
+      ].join("\n")
+    );
+    const recalled = component(
+      result,
+      "FE-C07",
+      "sauna_or_infrared_cabin_in_common_room"
+    );
+    const target = buildCandidateTriagePayload(result).bindingTargets.find(
+      ({ requirementId }) => requirementId === "FE-C07"
+    );
+
+    expect(recalled.occurrences[0].sectionScopeHint).toMatchObject({
+      scopeKey: "HAFTPFLICHT_INSURANCE",
+    });
+    expect(target).toMatchObject({
+      sectionScopeHint: { scopeKey: "HAFTPFLICHT_INSURANCE" },
+      scopeResolution: {
+        owner: "MODEL",
+        scopeMatch: null,
+        basis: "MODEL_REQUIRED",
+      },
+    });
+  });
+
+  test("binds an affirmative FE-C07 clause to the matching fire section", () => {
+    const result = worksheetFromText(
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert sind Saunen in Gemeinschaftsräumen.",
+      ].join("\n")
+    );
+    const target = buildCandidateTriagePayload(result).bindingTargets.find(
+      ({ requirementId }) => requirementId === "FE-C07"
+    );
+
+    expect(target).toMatchObject({
+      sectionScopeHint: { scopeKey: "FEUER_INSURANCE" },
+      scopeResolution: {
+        owner: "SERVER",
+        scopeMatch: "GENERAL",
+        basis: "MATCHING_CATEGORY_SECTION",
+      },
+    });
   });
 
   test("keeps generic extinguishing wording and incomplete concept atoms open", () => {
