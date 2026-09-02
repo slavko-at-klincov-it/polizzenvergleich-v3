@@ -3643,8 +3643,7 @@ describe("policy comparison point decision", () => {
       dimensions: [
         {
           comparisonAudit: {
-            contractId:
-              "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_AUDIT_V1",
+            contractId: "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_AUDIT_V1",
             definitionA: "SPREAD_ONLY",
             definitionB: "ARISE_OR_SPREAD",
             winnerSide: "B",

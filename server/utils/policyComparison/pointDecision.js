@@ -42,9 +42,7 @@ const {
   compareAutomaticIndexAdjustmentPresence,
 } = require("./automaticIndexAdjustmentComparisonContract");
 const { compareFeC07LimitDominance } = require("./feC07LimitDominanceContract");
-const {
-  compareFireDefinition,
-} = require("./fireDefinitionComparisonContract");
+const { compareFireDefinition } = require("./fireDefinitionComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
