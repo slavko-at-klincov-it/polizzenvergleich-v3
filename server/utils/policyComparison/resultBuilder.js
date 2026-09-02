@@ -1143,6 +1143,12 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         { referenceEntries: packageEntries.B, searchAudit: searchAuditB }
       );
       const comparison = comparePackages(packageA, packageB);
+      const expectedDocumentsA = loadedRuns
+        .filter(({ document }) => document.side === "A")
+        .map(({ document }) => document);
+      const expectedDocumentsB = loadedRuns
+        .filter(({ document }) => document.side === "B")
+        .map(({ document }) => document);
       const pointDecision = decidePoint({
         categoryId,
         packageA,
@@ -1153,6 +1159,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         atomsB: loadedRuns
           .filter(({ document }) => document.side === "B")
           .flatMap(({ atomicFacts }) => atomicFacts[categoryView] || []),
+        expectedDocumentsA,
+        expectedDocumentsB,
       });
       return {
         categoryId,

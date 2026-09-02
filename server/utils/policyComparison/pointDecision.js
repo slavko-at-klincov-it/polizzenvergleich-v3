@@ -43,6 +43,10 @@ const {
 } = require("./automaticIndexAdjustmentComparisonContract");
 const { compareFeC07LimitDominance } = require("./feC07LimitDominanceContract");
 const { compareFireDefinition } = require("./fireDefinitionComparisonContract");
+const {
+  buildVs15QualifierAbsenceAudit,
+  vs15QualifierAbsenceDecision,
+} = require("./vs15NamedOutbuildingQualifierAbsenceContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -945,7 +949,15 @@ function decideSoleScopeReviewBlockerAsNonComparable({
   };
 }
 
-function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
+function decidePoint({
+  categoryId,
+  packageA,
+  packageB,
+  atomsA,
+  atomsB,
+  expectedDocumentsA,
+  expectedDocumentsB,
+}) {
   const contractA = requirementContract({
     atoms: atomsA,
     packageSummary: packageA,
@@ -1050,6 +1062,19 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       atomsA,
       atomsB,
     });
+    const vs15QualifierAbsenceAudit = buildVs15QualifierAbsenceAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
+      expectedDocumentsA,
+      expectedDocumentsB,
+    });
+    if (vs15QualifierAbsenceAudit)
+      return vs15QualifierAbsenceDecision(vs15QualifierAbsenceAudit);
     const scopeDecision = decideSoleScopeReviewBlockerAsNonComparable({
       categoryId,
       packageA,

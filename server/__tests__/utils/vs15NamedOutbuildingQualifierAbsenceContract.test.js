@@ -7,6 +7,9 @@ const {
   validateVs15QualifierAbsenceAudit,
   vs15QualifierAbsenceDecision,
 } = require("../../utils/policyComparison/vs15NamedOutbuildingQualifierAbsenceContract");
+const {
+  decidePoint,
+} = require("../../utils/policyComparison/pointDecision");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const CATEGORY_ID = "VS-15";
@@ -234,6 +237,30 @@ describe("VS-15 bilateral controlled qualifier absence contract", () => {
     expect(vs15QualifierAbsenceDecision(audit).reason).toContain(
       "nicht als ausdrücklicher Ausschluss"
     );
+  });
+
+  test("consumes only the qualified VS-15 package-review blocker", () => {
+    const input = fixture();
+    expect(decidePoint(input)).toMatchObject({
+      schemaVersion: 7,
+      outcome: "GLEICHWERTIG",
+      reasonCode: VS15_QUALIFIER_ABSENCE_REASON_CODE,
+      ruleId: VS15_QUALIFIER_ABSENCE_RULE_ID,
+      reviewRequired: false,
+      comparisonTreatment:
+        "EQUAL_VS15_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH_V1",
+      vs15QualifierAbsenceAudit: {
+        contractId: VS15_QUALIFIER_ABSENCE_AUDIT_CONTRACT_ID,
+      },
+    });
+
+    const blocked = fixture();
+    blocked.expectedDocumentsB.pop();
+    expect(decidePoint(blocked)).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      reviewRequired: true,
+    });
   });
 
   test.each([
