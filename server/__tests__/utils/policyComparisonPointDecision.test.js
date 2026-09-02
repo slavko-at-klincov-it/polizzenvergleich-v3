@@ -1222,7 +1222,7 @@ describe("policy comparison point decision", () => {
       reviewRequired: false,
     });
 
-    const zero = packageFor("a");
+    const zero = packageFor("a", { historicalV1: true });
     const historicalV1 = packageFor("b", {
       riskInformation: true,
       historicalV1: true,
