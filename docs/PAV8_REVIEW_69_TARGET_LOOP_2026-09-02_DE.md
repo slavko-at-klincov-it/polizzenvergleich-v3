@@ -2412,6 +2412,46 @@ mehr Suche oder Paketbetrag:
   Atom. Ohne typisierten Gefahr-/Subobjekt-/Ersetzungsscope darf daraus weder
   Rang, Gleichheit noch Vorteil erfunden werden.
 
+#### 10.22.6 Lokale statt paketweite Bedingungsprüfung
+
+Der `ANY`-Pfad blockierte zunächst die gesamte Zeile, sobald irgendein
+gefundenes Atom einen Bedingungs- oder Ausnahmemarker enthielt. Diese Prüfung
+war redundant: `compareDimension` prüft denselben Marker bereits je konkrete
+Komponente und bleibt dort fail-closed. Der globale Gate verhinderte dagegen
+die präzisere Diagnose mehrerer unterschiedlicher Paketbeiträge.
+
+`7f4dcdfd fix(comparison): localize ANY condition review` entfernte nur den
+globalen Vorab-Gate. Unvollständige Atome, abweichende `ANY`-Komponentenmengen,
+lokale Bedingungen und mehrere unterschiedliche Atome bleiben weiterhin
+blockiert. Der Produktvertrag wurde auf V39 versioniert.
+
+```text
+Commit: 7f4dcdfd9c65c16fef6b7701247a26f61527cf4f
+Produktprofil: CUSTOMER_CORE_5_V39_ANY_COMPONENT_LOCAL_CONDITION_GATE
+Formatprüfung: PASS
+Fokussierte Suites: 4/4 PASS
+Fokussierte Tests: 116/116 PASS
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-19-LOCAL-CONDITION-7F4DCDFD-20260903
+Summary-Digest:
+fef5c2d30a2eec2c662ad05c80c42e1685e90a290cc97f7e1788a2bdbbe5d3d7
+Producer v04 SHA-256:
+c8cc4617bd8484942312910813ab17a36bf56e4e51e6670b3e1e76cba47007c0
+
+Paket A: BELEGT
+Paket B: BELEGT
+Punktentscheidung:
+UNKLAR / ATOMIC_DOCUMENT_RANK_UNRESOLVED
+```
+
+Der verbliebene Blocker ist damit exakt eingegrenzt: Nicht mehr ein
+unspezifischer Bedingungsmarker, sondern die tatsächlich unterschiedlichen
+Paketbeiträge zu `outdoor_paths` und `outdoor_lighting` verhindern die
+eindeutige atomare Paarbildung. Ob diese Beiträge additiv, enger, ersetzend
+oder nur gefahrenbezogen nebeneinander gelten, ist in den heutigen Atomen
+nicht typisiert.
+
 Die unbestätigte Gesamtprojektion bleibt deshalb unverändert bei:
 
 ```text
