@@ -12,13 +12,13 @@ const EXPECTED_ROW_COUNT = Object.values(CATEGORY_ROW_COUNTS).reduce(
   0
 );
 const PRODUCT_PROFILE = Object.freeze({
-  id: "CUSTOMER_CORE_5_V30_VS15_QUALIFIER_ABSENCE",
+  id: "CUSTOMER_CORE_5_V31_VS08_CONDITION_RECALL",
   comparisonContractId:
-    "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_V4",
+    "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_RECALL_V5",
   categoryViews: CATEGORY_ORDER,
   categoryRowCounts: CATEGORY_ROW_COUNTS,
   categoryCatalogIds: Object.freeze({
-    VS: "vs-occurrence-full-draft-v0.9",
+    VS: "vs-occurrence-full-draft-v0.10",
     FE: "fe-occurrence-full-draft-v0.7",
     LW: "lw-occurrence-full-draft-v0.8",
     ST: "st-occurrence-full-draft-v0.5",

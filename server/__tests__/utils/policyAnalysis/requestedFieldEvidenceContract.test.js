@@ -731,6 +731,44 @@ describe("requestedFieldEvidenceContract", () => {
     );
   });
 
+  test("materializes a percentage-deviation waiver as conditional", () => {
+    const text =
+      "Der Versicherer verzichtet auf den Einwand einer Unterversicherung, soweit die Versicherungssumme um nicht mehr als 20 % vom Versicherungswert abweicht.";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs08-percentage-condition",
+      text,
+      exactText: "soweit die Versicherungssumme",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-08",
+        label: "Bedingter Unterversicherungsverzicht",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "underinsurance_waiver_condition",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs08-percentage-condition",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "condition",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [expect.objectContaining({ normalizedValue: "bedingt" })],
+        },
+      ],
+    });
+  });
+
   test.each([
     [
       "Die Aufwertung erfolgt nach dem Baukostenindex für den Wohnungs- und Siedlungsbau.",

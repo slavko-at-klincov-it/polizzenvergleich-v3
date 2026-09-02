@@ -1305,6 +1305,11 @@ function extractUnderinsuranceConditionTypeFacts({ occurrence, binding }) {
           /bezieht\s+sich\s+der\s+Verzicht\s+auf\s+den\s+Einwand\s+der\s+Unterversicherung\s+nur/giu,
         normalize: () => "bedingt",
       },
+      {
+        pattern:
+          /verzichtet[\s\S]{0,180}?auf\s+den\s+Einwand\s+(?:einer\s+)?Unterversicherung[\s\S]{0,220}?soweit[\s\S]{0,120}?Versicherungssumme[\s\S]{0,160}?um\s+nicht\s+mehr\s+als\s+\d+(?:[.,]\d+)?\s*%[\s\S]{0,80}?vom\s+Versicherungswert\s+abweich\w*/giu,
+        normalize: () => "bedingt",
+      },
     ],
   });
 }

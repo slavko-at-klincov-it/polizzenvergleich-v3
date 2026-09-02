@@ -434,7 +434,18 @@ function deterministicVsCandidateBinding({
 
   if (
     key === "VS-08:underinsurance_waiver_condition" &&
-    /(?:f[üu]r\s+alle\s+jene\s+Objekte,\s+f[üu]r\s+die|im\s+Schadenfall\s+nur\s+Anwendung,\s+wenn|bezieht\s+sich\s+der\s+Verzicht[\s\S]{0,100}?nur)/iu.test(
+    /(?:verzichtet\s+nicht|kein\s+Verzicht|Verzicht[\s\S]{0,80}?(?:aufgehoben|entf[äa]llt|findet\s+nicht\s+statt)|(?:kann|k[öo]nnte|wahlweise)[\s\S]{0,100}?verzicht)/iu.test(
+      text
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "NEGATED_OR_OPTIONAL_UNDERINSURANCE_WAIVER",
+    };
+
+  if (
+    key === "VS-08:underinsurance_waiver_condition" &&
+    /(?:f[üu]r\s+alle\s+jene\s+Objekte,\s+f[üu]r\s+die|im\s+Schadenfall\s+nur\s+Anwendung,\s+wenn|bezieht\s+sich\s+der\s+Verzicht[\s\S]{0,100}?nur|verzichtet[\s\S]{0,180}?auf\s+den\s+Einwand\s+(?:einer\s+)?Unterversicherung[\s\S]{0,220}?soweit[\s\S]{0,120}?Versicherungssumme[\s\S]{0,160}?um\s+nicht\s+mehr\s+als\s+\d+(?:[.,]\d+)?\s*%[\s\S]{0,80}?vom\s+Versicherungswert\s+abweich)/iu.test(
       text
     )
   )

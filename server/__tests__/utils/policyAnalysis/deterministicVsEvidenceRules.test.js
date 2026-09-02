@@ -30,7 +30,7 @@ describe("deterministicVsEvidenceRules", () => {
       vsCatalog.requirements.find((candidate) => candidate.id === id);
     const aliases = (id) => requirement(id).components[0].aliases;
 
-    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.9");
+    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.10");
     expect(aliases("VS-13")).toContain(
       "Adaptierungen und Investitionen der Bewohner"
     );
@@ -135,6 +135,12 @@ describe("deterministicVsEvidenceRules", () => {
       "EXPLICIT_UNDERINSURANCE_CONDITION",
     ],
     [
+      "VS-08",
+      "underinsurance_waiver_condition",
+      "Der Versicherer verzichtet auf den Einwand einer Unterversicherung, soweit die Versicherungssumme um nicht mehr als 15 % vom Versicherungswert abweicht.",
+      "EXPLICIT_UNDERINSURANCE_CONDITION",
+    ],
+    [
       "VS-09",
       "underinsurance_waiver_prerequisites",
       "Der Schutz gilt für Objekte, für die ein Neuwertschätzgutachten besteht.",
@@ -194,6 +200,34 @@ describe("deterministicVsEvidenceRules", () => {
       ).toEqual({ binding: DETERMINISTIC_BINDING.DIRECT, basis });
     }
   );
+
+  test("does not treat a bare sum-deviation statement as a waiver condition", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-08",
+        componentId: "underinsurance_waiver_condition",
+        occurrence: occurrence(
+          "Die Versicherungssumme darf um nicht mehr als 25 % vom Versicherungswert abweichen."
+        ),
+      })
+    ).toBeNull();
+  });
+
+  test.each([
+    "Der Versicherer verzichtet nicht auf den Einwand einer Unterversicherung, soweit die Versicherungssumme um nicht mehr als 25 % vom Versicherungswert abweicht.",
+    "Der Versicherer kann wahlweise auf den Einwand einer Unterversicherung verzichten, soweit die Versicherungssumme um nicht mehr als 25 % vom Versicherungswert abweicht.",
+  ])("keeps negated or optional deviation clauses out of direct evidence", (text) => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-08",
+        componentId: "underinsurance_waiver_condition",
+        occurrence: occurrence(text),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "NEGATED_OR_OPTIONAL_UNDERINSURANCE_WAIVER",
+    });
+  });
 
   test("keeps a generic Baukostenindex occurrence out of the index-type facts", () => {
     expect(

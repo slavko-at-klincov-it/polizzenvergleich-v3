@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.9",
+  "catalogId": "vs-occurrence-full-draft-v0.10",
   "categoryView": "VS",
   "requirements": [
     {
@@ -167,6 +167,25 @@
             "für die Dauer von ca. 3 Jahren",
             "im Schadenfall nur Anwendung, wenn",
             "bezieht sich der Verzicht auf den Einwand der Unterversicherung nur"
+          ],
+          "conceptSearches": [
+            {
+              "id": "underinsurance-waiver-deviation-condition",
+              "maxLines": 3,
+              "maxChars": 900,
+              "requiredGroups": [
+                { "prefixes": ["verzicht"] },
+                { "prefixes": ["unterversicher"] },
+                {
+                  "prefixes": [
+                    "versicherungssumm",
+                    "hoechsthaftungssumm"
+                  ]
+                },
+                { "prefixes": ["versicherungswert"] },
+                { "prefixes": ["abweich"] }
+              ]
+            }
           ]
         }
       ],
