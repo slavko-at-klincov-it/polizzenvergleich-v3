@@ -1735,6 +1735,7 @@ describe("preparedEvidenceContract", () => {
       subject = "Gebäude oder Gebäudebestandteile",
       membership = "EXCLUDED_FROM_CLASS",
       source = "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      boundaryText = null,
       contextText = "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, Taubengitter);",
       scopeLead = {
         documentStart: 1_311,
@@ -1758,7 +1759,7 @@ describe("preparedEvidenceContract", () => {
         sectionScopeHint: null,
         coverageGovernorHint: null,
         objectClassificationGovernorHint: {
-          text: `Nicht als ${subject} zählen:`,
+          text: boundaryText || `Nicht als ${subject} zählen:`,
           subject,
           kind: "OBJECT_CLASSIFICATION_BOUNDARY",
           classificationKind: "OBJECT",
@@ -1876,6 +1877,7 @@ describe("preparedEvidenceContract", () => {
       occurrenceFor({ membership: "MEMBER_OF_CLASS" }),
       occurrenceFor({ subject: "Gebäude" }),
       occurrenceFor({ source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION" }),
+      occurrenceFor({ boundaryText: "Sonstige Objektliste:" }),
       occurrenceFor({
         contextText: "·Beleuchtungsanlagen sind mitversichert.",
       }),

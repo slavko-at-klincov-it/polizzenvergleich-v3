@@ -585,6 +585,21 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
     .replace(/^\s*\d+(?:\.\d+)*\.?\s*/u, "")
     .replace(/\s+/gu, " ")
     .trim();
+  const normalizedHintText = String(hint?.text || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
+  const exclusionBoundaryMatches =
+    target?.contractId !==
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID ||
+    ["gelten", "gilt", "zählen", "zählt"].some(
+      (verb) =>
+        normalizedHintText.localeCompare(
+          `Nicht als ${normalizedSubject} ${verb}:`,
+          "de-AT",
+          { sensitivity: "accent" }
+        ) === 0
+    );
   const occurrencePage =
     occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
   const classificationPage = hint?.physicalPageNumber || null;
@@ -619,6 +634,7 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
     hint?.membership !== target?.objectClassificationMembership ||
     hint?.source !== "CURRENT_PAGE_OBJECT_CLASSIFICATION" ||
     !target?.allowedObjectClassificationSubjects?.includes(normalizedSubject) ||
+    !exclusionBoundaryMatches ||
     context?.unitType !== "LIST_ITEM" ||
     !exactText ||
     !Number.isInteger(relativeStart) ||
