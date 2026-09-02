@@ -314,6 +314,21 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
   });
 
+  test("handles a padded nonblank unit without object-governor backtracking", () => {
+    const candidate = followingBoundaryOccurrence([
+      `- Zielbegriff\nX${" ".repeat(
+        MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE + 500
+      )}`,
+    ]);
+    const proof = candidate.context.followingStructuralBoundaryProof;
+
+    expect(proof).toMatchObject({
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.PARAGRAPH,
+      text: "X",
+    });
+    expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
+  });
+
   test("uses UTF-16 code-unit offsets for Unicode boundary provenance", () => {
     const candidate = followingBoundaryOccurrence([
       "- Zielbegriff 😀\n\n- Folgepunkt 😀",

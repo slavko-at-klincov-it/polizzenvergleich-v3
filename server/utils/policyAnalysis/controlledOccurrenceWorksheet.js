@@ -867,12 +867,15 @@ function explicitObjectClassificationGovernors(pageText) {
     // them before the deliberately permissive subject grammar also prevents
     // overlapping whitespace branches from backtracking over long padding.
     if (isBlankLine(line)) continue;
-    const sameLine = line.text.match(/^\s*(.+?)\s*,?\s+das\s+sind\s*:\s*$/iu);
-    if (sameLine) {
+    const sameLineSuffix = line.text.match(/,?\s+das\s+sind\s*:\s*$/iu);
+    const sameLineSubject = sameLineSuffix
+      ? line.text.slice(0, sameLineSuffix.index).trim()
+      : "";
+    if (sameLineSubject) {
       addGovernor({
         subjectLine: line,
         terminalLine: line,
-        subject: sameLine[1],
+        subject: sameLineSubject,
       });
       continue;
     }
