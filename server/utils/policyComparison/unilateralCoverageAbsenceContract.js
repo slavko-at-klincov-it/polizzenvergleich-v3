@@ -503,9 +503,13 @@ function buildUnilateralCoverageAbsenceAudit({
 
 function validateUnilateralCoverageAbsenceAudit(audit, options) {
   const atomsA =
-    audit?.evidencedSide === "A" ? audit?.evidenced?.evidencedAtoms : [];
+    audit?.evidencedSide === "A"
+      ? audit?.evidenced?.evidencedAtoms
+      : undefined;
   const atomsB =
-    audit?.evidencedSide === "B" ? audit?.evidenced?.evidencedAtoms : [];
+    audit?.evidencedSide === "B"
+      ? audit?.evidenced?.evidencedAtoms
+      : undefined;
   const expected = buildUnilateralCoverageAbsenceAudit({
     ...options,
     atomsA,
