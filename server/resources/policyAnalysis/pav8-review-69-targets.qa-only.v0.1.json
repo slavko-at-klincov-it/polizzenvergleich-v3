@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "registryId": "pav8-review-69-targets-qa-only-v0.1",
+  "status": "TARGETED_QA_ONLY",
+  "documentSpecificQaOnly": true,
+  "productionRule": false,
+  "publishable": false,
+  "deployable": false,
+  "sourceDocumentationPath": "docs/PAV8_REVIEW_69_TARGET_LOOP_2026-09-02_DE.md",
+  "baseline": {
+    "runId": "PAV8-03D-VS14-2D964B45-20260902-073000",
+    "runSignatureSha256": "e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e",
+    "packageContractSha256": "2b390be8aa5597a9990735151b5458e023c9b561134e4c1023f5e6a765479173",
+    "comparisonSha256": "4b0714d8d0667cdcd5d52c1f5377e2c65dd6a7fd47530c2ac95f8244b6d7c6b5",
+    "codeCommitSha": "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b",
+    "documentedWorkingStateCommitSha": "c6462b481cb666ee3701a236cbf5fb63e1da5743"
+  },
+  "canonicalCategoryOrder": ["VS", "FE", "LW", "ST", "EL"],
+  "expectedRequirementCount": 69,
+  "expectedDistribution": {
+    "VS": 19,
+    "FE": 14,
+    "LW": 10,
+    "ST": 13,
+    "EL": 13
+  },
+  "categoryTargets": [
+    {
+      "categoryView": "VS",
+      "catalogId": "vs-occurrence-full-draft-v0.7",
+      "requirementIds": [
+        "VS-01",
+        "VS-02",
+        "VS-04",
+        "VS-07",
+        "VS-08",
+        "VS-10",
+        "VS-15",
+        "VS-18",
+        "VS-19",
+        "VS-20",
+        "VS-21",
+        "VS-22",
+        "VS-23",
+        "VS-24",
+        "VS-25",
+        "VS-31",
+        "VS-33",
+        "VS-35",
+        "VS-36"
+      ]
+    },
+    {
+      "categoryView": "FE",
+      "catalogId": "fe-occurrence-full-draft-v0.5",
+      "requirementIds": [
+        "FE-A01",
+        "FE-A05",
+        "FE-A07",
+        "FE-A10",
+        "FE-B09",
+        "FE-B13",
+        "FE-C02",
+        "FE-C07",
+        "FE-C12",
+        "FE-D01",
+        "FE-D05",
+        "FE-E16",
+        "FE-F05",
+        "FE-F08"
+      ]
+    },
+    {
+      "categoryView": "LW",
+      "catalogId": "lw-occurrence-full-draft-v0.5",
+      "requirementIds": [
+        "LW-07",
+        "LW-08",
+        "LW-11",
+        "LW-12",
+        "LW-18",
+        "LW-20",
+        "LW-22",
+        "LW-25",
+        "LW-26",
+        "LW-27"
+      ]
+    },
+    {
+      "categoryView": "ST",
+      "catalogId": "st-occurrence-full-draft-v0.4",
+      "requirementIds": [
+        "ST-01",
+        "ST-10",
+        "ST-13",
+        "ST-14",
+        "ST-15",
+        "ST-16",
+        "ST-17",
+        "ST-18",
+        "ST-19",
+        "ST-21",
+        "ST-23",
+        "ST-25",
+        "ST-27"
+      ]
+    },
+    {
+      "categoryView": "EL",
+      "catalogId": "el-occurrence-full-draft-v0.6",
+      "requirementIds": [
+        "EL-04",
+        "EL-05",
+        "EL-06",
+        "EL-08",
+        "EL-09",
+        "EL-11",
+        "EL-12",
+        "EL-16",
+        "EL-17",
+        "EL-19",
+        "EL-21",
+        "EL-27",
+        "EL-35"
+      ]
+    }
+  ]
+}
