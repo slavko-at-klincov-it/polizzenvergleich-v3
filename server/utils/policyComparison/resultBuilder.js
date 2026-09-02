@@ -27,6 +27,7 @@ const {
   buildLw20DefaultExclusionSourceAudit,
 } = require("../policyAnalysis/lw20DefaultExclusionSourceAudit");
 const {
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
@@ -719,6 +720,10 @@ function componentSearchAudit({
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
   );
+  const deterministicCoverageOnlyObjectClassExclusionTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID
+  );
   const deterministicNonContractualRiskInformationTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
@@ -838,6 +843,9 @@ function componentSearchAudit({
         : {}),
       ...(deterministicCoverageOnlyObjectClassificationTerminal
         ? { deterministicCoverageOnlyObjectClassificationTerminal: true }
+        : {}),
+      ...(deterministicCoverageOnlyObjectClassExclusionTerminal
+        ? { deterministicCoverageOnlyObjectClassExclusionTerminal: true }
         : {}),
       ...(deterministicNonContractualRiskInformationTerminal
         ? { deterministicNonContractualRiskInformationTerminal: true }

@@ -13,9 +13,12 @@ const {
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 const {
+  COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS,
+  COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
   COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS,
   COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
   COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE,
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
@@ -1722,6 +1725,191 @@ describe("preparedEvidenceContract", () => {
     ];
     for (const { candidate, overrides } of adversarial) {
       const unresolved = targetFor(candidate, overrides);
+      expect(unresolved.serverRejectedCandidates).toEqual([]);
+      expect(unresolved.candidates).toHaveLength(1);
+    }
+  });
+
+  test("terminally rejects only certified VS-19 local object-class exclusions", () => {
+    const occurrenceFor = ({
+      subject = "Gebäude oder Gebäudebestandteile",
+      membership = "EXCLUDED_FROM_CLASS",
+      source = "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+      contextText =
+        "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, Taubengitter);",
+      scopeLead = {
+        documentStart: 1_311,
+        documentEnd: 1_756,
+        text: "1.1 Gebäude, das sind versicherte Bauwerke und Bestandteile.",
+      },
+      candidateId = "candidate:vs19:object-class-exclusion",
+    } = {}) => {
+      const contextStart = 2_172;
+      const exactText = "Beleuchtungsanlagen";
+      const occurrenceStart = contextStart + contextText.indexOf(exactText);
+      return {
+        candidateId,
+        matchedAlias: exactText,
+        pageNumber: 2,
+        physicalPageNumber: 2,
+        documentStart: occurrenceStart,
+        documentEnd: occurrenceStart + exactText.length,
+        exactText,
+        pageScopeHints: [],
+        sectionScopeHint: null,
+        coverageGovernorHint: null,
+        objectClassificationGovernorHint: {
+          text: `Nicht als ${subject} zählen:`,
+          subject,
+          kind: "OBJECT_CLASSIFICATION_BOUNDARY",
+          classificationKind: "OBJECT",
+          membership,
+          contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
+          physicalPageNumber: 2,
+          documentStart: 2_121,
+          documentEnd: 2_171,
+          source,
+        },
+        context: {
+          unitType: "LIST_ITEM",
+          documentStart: contextStart,
+          documentEnd: contextStart + contextText.length,
+          text: contextText,
+        },
+        scopeLead,
+      };
+    };
+    const targetFor = (candidate, overrides = {}) => {
+      const requirementId = overrides.requirementId || "VS-19";
+      const componentId = overrides.componentId || "outdoor_lighting";
+      return buildPreparedEvidenceTargets({
+        worksheet: {
+          candidateOnly: true,
+          catalog: { categoryView: overrides.categoryView || "VS" },
+          requirements: [
+            {
+              id: requirementId,
+              label: "Außenanlagen wie Wege, Beleuchtung, Bepflanzung",
+              requestedFields: [],
+              negativeSearchPolicy:
+                "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+              absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
+              components: [
+                {
+                  id: componentId,
+                  label: "Außenbeleuchtung",
+                  factRole: overrides.factRole || "INSURED_OBJECT",
+                  occurrences: [candidate],
+                },
+              ],
+            },
+          ],
+        },
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId,
+            componentId,
+            candidateId: candidate.candidateId,
+            binding: "DIRECT",
+          },
+        ],
+      })[0];
+    };
+
+    for (const occurrence of [
+      occurrenceFor(),
+      occurrenceFor({
+        subject: "Betriebsinhalt",
+        scopeLead: { documentStart: 1_758, documentEnd: 1_758, text: "" },
+        candidateId: "candidate:vs19:business-contents-exclusion",
+      }),
+    ]) {
+      const target = targetFor(occurrence);
+      expect(target.candidates).toEqual([]);
+      expect(target.unresolvedCandidateIds).toEqual([]);
+      expect(target.serverRejectedCandidates).toEqual([
+        expect.objectContaining({
+          candidateId: occurrence.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+          terminalRejectionContractId:
+            DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
+          occurrenceDigestContractId:
+            COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID,
+          decisionOwner: "SERVER",
+          decisionBasis: COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS,
+          physicalPageNumber: 2,
+          sectionScopeSource: "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+          observedScopeKeys: [],
+          scopeProofMode: COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
+          occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        }),
+      ]);
+    }
+
+    const valid = occurrenceFor();
+    const certifiedDigest =
+      targetFor(valid).serverRejectedCandidates[0].occurrenceDigestSha256;
+    for (const tamperedOccurrence of [
+      {
+        ...valid,
+        objectClassificationGovernorHint: {
+          ...valid.objectClassificationGovernorHint,
+          membership: "MEMBER_OF_CLASS",
+        },
+      },
+      {
+        ...valid,
+        scopeLead: { ...valid.scopeLead, documentEnd: 1_755 },
+      },
+    ]) {
+      expect(
+        terminalOccurrenceDigest(
+          {
+            ...tamperedOccurrence,
+            scopeProofMode:
+              COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
+          },
+          COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID
+        )
+      ).not.toBe(certifiedDigest);
+    }
+    const adversarial = [
+      occurrenceFor({ membership: "MEMBER_OF_CLASS" }),
+      occurrenceFor({ subject: "Gebäude" }),
+      occurrenceFor({ source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION" }),
+      occurrenceFor({
+        contextText: "·Beleuchtungsanlagen sind mitversichert.",
+      }),
+      occurrenceFor({
+        contextText: "·Beleuchtungsanlagen, sofern besonders vereinbart.",
+      }),
+      occurrenceFor({
+        contextText: "·Beleuchtungsanlagen bis EUR 10.000.",
+      }),
+      occurrenceFor({
+        scopeLead: {
+          documentStart: 2_100,
+          documentEnd: 2_150,
+          text: "Versicherte Gebäude",
+        },
+      }),
+      occurrenceFor({
+        scopeLead: { documentStart: 0, documentEnd: 0, text: "Versichert" },
+      }),
+    ];
+    for (const candidate of adversarial) {
+      const unresolved = targetFor(candidate);
+      expect(unresolved.serverRejectedCandidates).toEqual([]);
+      expect(unresolved.candidates).toHaveLength(1);
+    }
+    for (const overrides of [
+      { requirementId: "VS-18" },
+      { componentId: "outdoor_paths" },
+      { factRole: "CONDITION" },
+      { absenceMeaning: "CONDITION_ONLY" },
+    ]) {
+      const unresolved = targetFor(valid, overrides);
       expect(unresolved.serverRejectedCandidates).toEqual([]);
       expect(unresolved.candidates).toHaveLength(1);
     }

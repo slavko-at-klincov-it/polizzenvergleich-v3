@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const {
+  DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
@@ -33,6 +34,7 @@ const QUALIFIED_ABSENCE = Object.freeze({
   },
 });
 const DETERMINISTIC_TERMINAL_GATES = Object.freeze([
+  "deterministicCoverageOnlyObjectClassExclusionTerminal",
   "deterministicCoverageOnlyObjectClassificationTerminal",
   "deterministicOutOfCategoryTerminal",
   "deterministicNonContractualRiskInformationTerminal",
@@ -112,6 +114,7 @@ function validDeterministicTerminalRejection(component, categoryId) {
     !target ||
     (!legacyV1 && !legacyV2 && !currentV3) ||
     ([
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
       DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
       DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
       DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
