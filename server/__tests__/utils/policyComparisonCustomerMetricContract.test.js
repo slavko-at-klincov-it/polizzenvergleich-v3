@@ -304,6 +304,30 @@ describe("policy comparison customer metric contract", () => {
     );
   });
 
+  test("keeps schema 10 bound to its historical profile after the V11 catalog change", () => {
+    const historical = schema7PackageResult();
+    historical.schemaVersion = 10;
+    historical.productProfile = {
+      id: "CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION",
+      comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
+    };
+    historical.categories[0].rows[0].pointDecision.packageReviewAudit = {
+      ...historical.categories[0].rows[0].pointDecision.packageReviewAudit,
+      schemaVersion: 2,
+      contractId: "PACKAGE_REVIEW_BLOCKERS_V2",
+    };
+
+    expect(validateCustomerComparison(historical)).toMatchObject({
+      customerReviewRequired: 1,
+    });
+
+    historical.productProfile.id =
+      "CUSTOMER_CORE_5_V11_VS_SPECIAL_EQUIPMENT_PRECISION";
+    expect(() => validateCustomerComparison(historical)).toThrow(
+      "COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH"
+    );
+  });
+
   test.each([
     ["missing profile", null],
     [

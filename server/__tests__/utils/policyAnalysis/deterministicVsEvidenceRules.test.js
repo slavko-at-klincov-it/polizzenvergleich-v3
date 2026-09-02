@@ -3,12 +3,27 @@ const {
   deterministicVsCandidateBinding,
   deterministicVsPreparedDecision,
 } = require("../../../utils/policyAnalysis/deterministicVsEvidenceRules");
+const vsCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
 function occurrence(text) {
   return { context: { text } };
 }
 
 describe("deterministicVsEvidenceRules", () => {
+  test("keeps resident adaptations separate from above-standard apartment equipment", () => {
+    const requirement = (id) =>
+      vsCatalog.requirements.find((candidate) => candidate.id === id);
+    const aliases = (id) => requirement(id).components[0].aliases;
+
+    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.7");
+    expect(aliases("VS-13")).toContain(
+      "Adaptierungen und Investitionen der Bewohner"
+    );
+    expect(aliases("VS-14")).not.toContain(
+      "Adaptierungen und Investitionen der Bewohner"
+    );
+  });
+
   test("keeps waste-related temporary storage in its narrow causal scope", () => {
     const scopedOccurrence = ({ scopeLead = "", contextText, exactText }) => {
       const contextStart = 2_000;
@@ -123,6 +138,18 @@ describe("deterministicVsEvidenceRules", () => {
       "EXPLICIT_INDEX_TYPE",
     ],
     [
+      "VS-13",
+      "apartment_interior_fitout",
+      "Versichert sind: - Adaptierungen und Investitionen der Bewohner;",
+      "EXPLICIT_RESIDENT_INTERIOR_ADAPTATIONS",
+    ],
+    [
+      "VS-14",
+      "apartment_special_equipment",
+      "Versichert ist die Sonderausstattung einzelner Wohnungen, soweit diese über die Standardausführung hinausgeht.",
+      "EXPLICIT_APARTMENT_SPECIAL_EQUIPMENT_ABOVE_STANDARD",
+    ],
+    [
       "VS-15",
       "outbuilding_cover",
       "Darüber hinaus besteht Versicherungsschutz für Nebengebäude bis maximal 5 %.",
@@ -195,6 +222,58 @@ describe("deterministicVsEvidenceRules", () => {
       basis: "GENERIC_OUTBUILDING_MENTION_WITHOUT_COVER",
     });
   });
+
+  test("does not promote resident adaptations to above-standard apartment equipment", () => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-14",
+        componentId: "apartment_special_equipment",
+        occurrence: occurrence(
+          "Versichert sind: - Adaptierungen und Investitionen der Bewohner;"
+        ),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "RESIDENT_ADAPTATIONS_DO_NOT_PROVE_ABOVE_STANDARD_EQUIPMENT",
+    });
+  });
+
+  test.each([
+    [
+      "Sonderausstattung einzelner Wohnungen ist nicht versichert, auch wenn sie über die Standardausführung hinausgeht.",
+      "EXPLICIT_APARTMENT_SPECIAL_EQUIPMENT_ABOVE_STANDARD_WRONG_SCOPE",
+    ],
+    [
+      "Definition: Sonderausstattung einzelner Wohnungen bezeichnet Ausführungen über die Standardausführung hinaus.",
+      "EXPLICIT_APARTMENT_SPECIAL_EQUIPMENT_ABOVE_STANDARD_WRONG_SCOPE",
+    ],
+  ])(
+    "keeps negative or definitional special-equipment wording non-evidentiary",
+    (text, basis) => {
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-14",
+          componentId: "apartment_special_equipment",
+          occurrence: occurrence(text),
+        })
+      ).toEqual({ binding: DETERMINISTIC_BINDING.MENTION_ONLY, basis });
+    }
+  );
+
+  test.each([
+    "Sonderausstattung einzelner Wohnungen wird erwähnt. In einer anderen Klausel ist eine Leistung über die Standardausführung hinaus versichert.",
+  ])(
+    "does not join separated special-equipment and above-standard clauses",
+    (text) => {
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-14",
+          componentId: "apartment_special_equipment",
+          occurrence: occurrence(text),
+        })
+      ).toBeNull();
+    }
+  );
 
   test.each(["cleanup_costs", "demolition_costs"])(
     "keeps %s mentions from an activated liability clause out of VS-21 property cost cover",

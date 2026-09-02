@@ -50,6 +50,10 @@ const HISTORICAL_SCHEMA_9_PROFILE = Object.freeze({
   id: "CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY",
   comparisonContractId: "PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1",
 });
+const HISTORICAL_SCHEMA_10_PROFILE = Object.freeze({
+  id: "CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION",
+  comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
+});
 const ONE_SIDED_TECHNICAL_OUTCOMES = new Map([
   ["A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["A", "B"]],
   ["B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["B", "A"]],
@@ -206,7 +210,16 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         productProfileId,
         comparisonContractId,
       ]);
-  } else if (Number(result.schemaVersion) >= 10) {
+  } else if (Number(result.schemaVersion) === 10) {
+    if (
+      productProfileId !== HISTORICAL_SCHEMA_10_PROFILE.id ||
+      comparisonContractId !== HISTORICAL_SCHEMA_10_PROFILE.comparisonContractId
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) >= 11) {
     if (
       productProfileId !== PRODUCT_PROFILE.id ||
       comparisonContractId !== PRODUCT_PROFILE.comparisonContractId

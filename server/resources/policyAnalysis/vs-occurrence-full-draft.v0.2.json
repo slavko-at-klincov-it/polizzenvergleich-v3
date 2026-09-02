@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.6",
+  "catalogId": "vs-occurrence-full-draft-v0.7",
   "categoryView": "VS",
   "requirements": [
     {
@@ -290,8 +290,7 @@
           "aliases": [
             "Sonderausstattung einzelner Wohnungen",
             "Sonderausstattungen der Wohnungen",
-            "über die Standardausführung hinaus",
-            "Adaptierungen und Investitionen der Bewohner"
+            "über die Standardausführung hinaus"
           ]
         }
       ],
@@ -328,9 +327,7 @@
       "id": "VS-16",
       "label": "Garagen, Tiefgaragen, Stellplätze, Parkdecks oder Carports mitversichert",
       "requestedFields": [],
-      "optionalFields": [
-        "limit"
-      ],
+      "optionalFields": ["limit"],
       "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "componentSatisfactionPolicy": "ANY",
       "components": [

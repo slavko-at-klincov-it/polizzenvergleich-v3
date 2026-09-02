@@ -93,9 +93,11 @@ const EXPLICIT_COMPONENT_RULES = Object.freeze({
     reject: /(?:Vorsorge|unerkannt\s+getätigte)/iu,
   },
   "VS-14:apartment_special_equipment": {
-    basis: "EXPLICIT_RESIDENT_SPECIAL_ADAPTATIONS",
-    pattern: /-\s*Adaptierungen\s+und\s+Investitionen\s+der\s+Bewohner\s*;/iu,
-    reject: /(?:Vorsorge|unerkannt\s+getätigte)/iu,
+    basis: "EXPLICIT_APARTMENT_SPECIAL_EQUIPMENT_ABOVE_STANDARD",
+    pattern:
+      /(?=[\s\S]{0,800}\b(?:versichert|mitversichert|eingeschlossen|Versicherungsschutz)\b)[\s\S]{0,800}?(?:Sonderausstattung(?:en)?(?:\s+einzelner|\s+der)?\s+Wohnungen?[^.;\n]{0,220}(?:über\s+(?:die\s+)?Standardausführung\s+hinaus|übersteigt?\s+(?:die\s+)?Standardausführung)|(?:über\s+(?:die\s+)?Standardausführung\s+hinaus|übersteigt?\s+(?:die\s+)?Standardausführung)[^.;\n]{0,220}Sonderausstattung(?:en)?(?:\s+einzelner|\s+der)?\s+Wohnungen?)/iu,
+    reject:
+      /(?:nicht\s+(?:mit)?versichert|ausgeschlossen|keine\s+Deckung|Vorsorge|unerkannt\s+getätigte|Begriffsbestimmung|Definition)/iu,
   },
   "VS-19:outdoor_lighting": {
     basis: "EXPLICIT_OUTDOOR_LIGHTING",
@@ -360,6 +362,14 @@ function deterministicVsCandidateBinding({
     return {
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,
       basis: "GREEN_AREA_BOUNDARY_NOT_PLANTING_COVER",
+    };
+  if (
+    key === "VS-14:apartment_special_equipment" &&
+    /Adaptierungen\s+und\s+Investitionen\s+der\s+Bewohner/iu.test(text)
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "RESIDENT_ADAPTATIONS_DO_NOT_PROVE_ABOVE_STANDARD_EQUIPMENT",
     };
 
   const sourceRuleKey = LIMIT_RULE_SOURCE[key] || key;
