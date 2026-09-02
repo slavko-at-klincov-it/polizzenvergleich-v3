@@ -16,6 +16,9 @@ const {
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
 } = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
+const {
+  FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+} = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 
 const WORKSHEET = {
   candidateOnly: true,
@@ -613,6 +616,7 @@ describe("preparedEvidenceContract", () => {
   });
 
   test("server-certifies only non-contractual EL-12 risk information without a contractual consequence", () => {
+    const boundaryText = "Mitversichert gelten";
     const riskInformation = {
       candidateId: "candidate:el12-risk-information",
       matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
@@ -623,7 +627,28 @@ describe("preparedEvidenceContract", () => {
       exactText: "Hochwasser-Risiko-Zone: unbekannt",
       context: {
         unitType: "LIST_ITEM",
+        documentStart: 4_000,
+        documentEnd: 4_200,
         text: "- Risikoinformation zum Versicherungsort\nAnzahl Vorschäden Hochwasser, Überschwemmungen, Lawinen oder Muren: keine Vorschäden\nHochwasser-Risiko-Zone: unbekannt",
+        followingStructuralBoundaryProof: {
+          contractId: FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+          origin: {
+            physicalPageNumber: 3,
+            documentStart: 4_000,
+            documentEnd: 4_200,
+          },
+          kind: "COVERAGE_GOVERNOR",
+          physicalPageNumber: 4,
+          documentStart: 4_201,
+          documentEnd: 4_201 + boundaryText.length,
+          text: boundaryText,
+          skippedRaw: {
+            documentStart: 4_200,
+            documentEnd: 4_201,
+            complete: true,
+            text: "\n",
+          },
+        },
       },
       scopeLead: {
         text: "STURMVERSICHERUNG\nVersicherte Variante: Premiumschutz",
@@ -656,6 +681,8 @@ describe("preparedEvidenceContract", () => {
               id: overrides.componentId || "flood_zone_exclusion_or_surcharge",
               label: "Hochwasserzone: Ausschluss oder Zuschlag",
               factRole: overrides.factRole || "CONDITION",
+              followingStructuralBoundaryProofContractId:
+                FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
               occurrences,
             },
           ],
@@ -683,14 +710,14 @@ describe("preparedEvidenceContract", () => {
           candidateId: riskInformation.candidateId,
           reason: "TRIAGE_MENTION_ONLY",
           terminalRejectionContractId:
-            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
           decisionOwner: "SERVER",
           decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
           physicalPageNumber: 3,
           sectionScopeSource: "CURRENT_PAGE_HEADING",
           observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
           scopeProofMode:
-            "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+            "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
           occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
         },
       ],
@@ -757,6 +784,34 @@ describe("preparedEvidenceContract", () => {
       ],
       serverRejectedCandidates: [],
     });
+
+    for (const [index, followingText] of [
+      "Nach Einzelprüfung ist eine Annahme möglich.",
+      "Bei unbekannter Zone gilt ein Prämienzuschlag.",
+    ].entries()) {
+      const followingConsequence = {
+        ...riskInformation,
+        candidateId: `candidate:el12-following-consequence-${index}`,
+        context: {
+          ...riskInformation.context,
+          followingStructuralBoundaryProof: {
+            ...riskInformation.context.followingStructuralBoundaryProof,
+            kind: "PARAGRAPH",
+            physicalPageNumber: 3,
+            documentEnd: 4_201 + followingText.length,
+            text: followingText,
+          },
+        },
+      };
+      expect(targetFor([followingConsequence])).toMatchObject({
+        candidates: [
+          expect.objectContaining({
+            candidateId: followingConsequence.candidateId,
+          }),
+        ],
+        serverRejectedCandidates: [],
+      });
+    }
 
     const actualClause = contractualOccurrences[0];
     expect(targetFor([riskInformation, actualClause])).toMatchObject({

@@ -2257,6 +2257,13 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(el12).toMatchObject({
       scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
       scopeRules: { narrowScopeKeys: ["STURM_INSURANCE"] },
+      components: [
+        expect.objectContaining({
+          id: "flood_zone_exclusion_or_surcharge",
+          followingStructuralBoundaryProofContractId:
+            FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+        }),
+      ],
     });
     expect(el13.scopePolicy).toBe("MATCHING_SCOPE_INCLUDED_SUFFICIENT");
     expect(el15).toMatchObject({

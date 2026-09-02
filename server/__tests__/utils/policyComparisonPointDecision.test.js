@@ -1095,7 +1095,7 @@ describe("policy comparison point decision", () => {
       const rejection = {
         candidateId: `candidate:risk-information-${side}`,
         terminalRejectionContractId:
-          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
         occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
         decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
         occurrenceDigestSha256: "4".repeat(64),
@@ -1103,13 +1103,13 @@ describe("policy comparison point decision", () => {
         sectionScopeSource: "CURRENT_PAGE_HEADING",
         observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
         scopeProofMode:
-          "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+          "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
       };
       const terminalRejectionAudit = riskInformation
         ? {
             schemaVersion: 3,
             contractId:
-              "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+              "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
             requirementId: categoryId,
             componentId: component.id,
             decisionOwner: "SERVER",

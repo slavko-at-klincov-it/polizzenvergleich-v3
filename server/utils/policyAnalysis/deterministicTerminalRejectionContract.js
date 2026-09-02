@@ -1,9 +1,16 @@
 const crypto = require("crypto");
+const {
+  FOLLOWING_STRUCTURAL_BOUNDARY_KIND,
+  FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+  validFollowingStructuralBoundaryProof,
+} = require("./controlledOccurrenceWorksheet");
 
 const DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
-const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
+const LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1";
+const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2";
 const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
   "TERMINAL_OCCURRENCE_PROVENANCE_V3";
 const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
@@ -75,8 +82,10 @@ const NON_CONTRACTUAL_RISK_INFORMATION_TARGETS = Object.freeze({
       /\bRisikoinformation(?:en)?\s+zum\s+Versicherungsort\b/iu,
     contractualConsequenceRule:
       /(?:\b(?:HQ\s*\d+|HORA|ausgeschlossen|nicht\s+(?:mit)?versichert|kein\s+Versicherungsschutz|(?:mit)?versichert|eingeschlossen|mitgedeckt|gedeckt|Zuschlag|Pr[aä]mienzuschlag|Mehrpr[aä]mie|Pr[aä]mie|Beitrag|Selbstbehalt|Versicherungssumme|H[oö]chstentsch[aä]digung|Entsch[aä]digungsleistung|Entsch[aä]digungsgrenze|Sublimit|Limit|Deckung|Bedingung|wenn|sofern|vorausgesetzt|maximal|h[oö]chstens|bis\s+zu)\b|(?:EUR|€|\d\s*%))/iu,
+    underwritingWorkflowRule:
+      /\b(?:Annahme|Einzelpr[uü]fung|R[uü]cksprache|Risikopr[uü]fung|Freigabe|Zeichnung|Tarifierung|Vorbehalt|Sondervereinbarung)\b/iu,
     scopeProofMode:
-      "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+      "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
   }),
 });
 
@@ -427,9 +436,19 @@ function certifyNonContractualRiskInformationTerminalRejection({
   const sectionPage = occurrence?.sectionScopeHint?.physicalPageNumber || null;
   const exactText = String(occurrence?.exactText || "");
   const localText = `${occurrence?.scopeLead?.text || ""}\n${occurrence?.context?.text || ""}`;
+  const followingProof = occurrence?.context?.followingStructuralBoundaryProof;
+  const followingSemanticText = [
+    FOLLOWING_STRUCTURAL_BOUNDARY_KIND.LIST_ITEM,
+    FOLLOWING_STRUCTURAL_BOUNDARY_KIND.PARAGRAPH,
+  ].includes(followingProof?.kind)
+    ? String(followingProof?.text || "")
+    : "";
+  const unownedFollowingText = `${followingProof?.skippedRaw?.text || ""}\n${followingSemanticText}`;
   if (
     !contract ||
     component?.factRole !== contract.factRole ||
+    component?.followingStructuralBoundaryProofContractId !==
+      FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID ||
     requirement?.negativeSearchPolicy !==
       "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
     requirement?.absenceMeaning !== contract.absenceMeaning ||
@@ -448,6 +467,12 @@ function certifyNonContractualRiskInformationTerminalRejection({
     !contract.exactRiskInformation.test(localText) ||
     !contract.localRiskInformationRule.test(localText) ||
     contract.contractualConsequenceRule.test(localText) ||
+    contract.underwritingWorkflowRule.test(localText) ||
+    !validFollowingStructuralBoundaryProof(occurrence) ||
+    followingProof?.kind ===
+      FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT ||
+    contract.contractualConsequenceRule.test(unownedFollowingText) ||
+    contract.underwritingWorkflowRule.test(unownedFollowingText) ||
     String(occurrence?.candidateId || "").length === 0
   )
     return null;
@@ -487,6 +512,7 @@ function certifyDeterministicTerminalRejection(input) {
 module.exports = {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,

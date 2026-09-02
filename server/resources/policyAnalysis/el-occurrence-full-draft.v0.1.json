@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.7",
+  "catalogId": "el-occurrence-full-draft-v0.8",
   "categoryView": "EL",
   "requirements": [
     {
@@ -291,6 +291,7 @@
           "id": "flood_zone_exclusion_or_surcharge",
           "label": "Ausschluss, Zuschlag, Limit oder Selbstbehalt aufgrund der Hochwasserzone",
           "factRole": "CONDITION",
+          "followingStructuralBoundaryProofContractId": "FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_V1",
           "aliases": [
             "Hochwasserzone",
             "Gefahrenzone Hochwasser",

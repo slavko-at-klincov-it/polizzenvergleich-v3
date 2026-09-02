@@ -536,7 +536,28 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
     exactText: "Hochwasser-Risiko-Zone: unbekannt",
     context: {
       unitType: "LIST_ITEM",
+      documentStart: 4_000,
+      documentEnd: 4_200,
       text: "- Risikoinformation zum Versicherungsort\nAnzahl Vorschäden Hochwasser, Überschwemmungen, Lawinen oder Muren: keine Vorschäden\nHochwasser-Risiko-Zone: unbekannt",
+      followingStructuralBoundaryProof: {
+        contractId: "FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_V1",
+        origin: {
+          physicalPageNumber: 3,
+          documentStart: 4_000,
+          documentEnd: 4_200,
+        },
+        kind: "EOF",
+        physicalPageNumber: 3,
+        documentStart: 4_200,
+        documentEnd: 4_200,
+        text: "",
+        skippedRaw: {
+          documentStart: 4_200,
+          documentEnd: 4_200,
+          complete: true,
+          text: "",
+        },
+      },
     },
     scopeLead: {
       text: "STURMVERSICHERUNG\nVersicherte Variante: Premiumschutz",
@@ -555,14 +576,14 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
     },
   };
   const scopeProofMode =
-    "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1";
+    "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2";
   const serverRejectedCandidates = riskInformation
     ? [
         {
           candidateId: occurrence.candidateId,
           reason: "TRIAGE_MENTION_ONLY",
           terminalRejectionContractId:
-            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
           occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
           decisionOwner: "SERVER",
           decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
@@ -597,7 +618,7 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
-      catalog: { id: "el-occurrence-full-draft-v0.7", categoryView },
+      catalog: { id: "el-occurrence-full-draft-v0.8", categoryView },
       document: { physicalPages: 3 },
       summary: { componentCount: 1 },
       requirements: [
@@ -613,6 +634,8 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
               id: componentId,
               label: "Hochwasserzone: Ausschluss oder Zuschlag",
               factRole: "CONDITION",
+              followingStructuralBoundaryProofContractId:
+                "FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_V1",
               aliases: ["Hochwasser-Risiko-Zone"],
               conceptSearches: [{ id: "flood-risk-zone" }],
               terminalState: riskInformation
@@ -1619,7 +1642,7 @@ describe("policy comparison result builder", () => {
       terminalRejectionAudit: {
         schemaVersion: 3,
         contractId:
-          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
         requirementId: "EL-12",
         componentId: "flood_zone_exclusion_or_surcharge",
         decisionOwner: "SERVER",
@@ -1634,7 +1657,7 @@ describe("policy comparison result builder", () => {
             sectionScopeSource: "CURRENT_PAGE_HEADING",
             observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
             scopeProofMode:
-              "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+              "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
           }),
         ],
       },
@@ -1704,7 +1727,7 @@ describe("policy comparison result builder", () => {
         terminalOccurrenceDigest({
           ...occurrence,
           scopeProofMode:
-            "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+            "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
         });
     });
   });
