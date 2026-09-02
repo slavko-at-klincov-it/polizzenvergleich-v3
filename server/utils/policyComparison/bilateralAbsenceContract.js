@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
@@ -8,7 +9,7 @@ const {
   legacyTerminalRejectionSetDigestV1,
   legacyTerminalRejectionSetDigestV2,
   terminalRejectionSetDigest,
-  terminalTargetAcceptsObservedScopes,
+  terminalTargetAcceptsScopeProof,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
 
 const BILATERAL_ABSENCE_AUDIT_SCHEMA_VERSION = 1;
@@ -33,6 +34,7 @@ const QUALIFIED_ABSENCE = Object.freeze({
 const DETERMINISTIC_TERMINAL_GATES = Object.freeze([
   "deterministicOutOfCategoryTerminal",
   "deterministicNonContractualRiskInformationTerminal",
+  "deterministicPostLossScaffoldingCostTerminal",
 ]);
 
 function stableValue(value) {
@@ -106,6 +108,9 @@ function validDeterministicTerminalRejection(component, categoryId) {
   if (
     !target ||
     (!legacyV1 && !legacyV2 && !currentV3) ||
+    (target.contractId ===
+      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID &&
+      !currentV3) ||
     (legacyV1 &&
       target.contractId !==
         DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID) ||
@@ -162,12 +167,11 @@ function validDeterministicTerminalRejection(component, categoryId) {
         ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
-        !target.sectionScopeSources.includes(rejection?.sectionScopeSource) ||
-        (rejection?.scopeProofMode || null) !== expectedScopeProofMode ||
-        !terminalTargetAcceptsObservedScopes(
-          target,
-          rejection?.observedScopeKeys
-        )
+        !terminalTargetAcceptsScopeProof(target, {
+          sectionScopeSource: rejection?.sectionScopeSource,
+          observedScopeKeys: rejection?.observedScopeKeys,
+        }) ||
+        (rejection?.scopeProofMode || null) !== expectedScopeProofMode
     )
   )
     return false;

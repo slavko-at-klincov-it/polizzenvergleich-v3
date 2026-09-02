@@ -3,6 +3,10 @@ const {
   decidePoint,
 } = require("../../utils/policyComparison/pointDecision");
 const {
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   legacyTerminalRejectionSetDigestV1,
@@ -1478,6 +1482,192 @@ describe("policy comparison point decision", () => {
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "MISSING_BOTH",
     });
+  });
+
+  test("accepts only a current occurrence-local FE-C12 post-loss cost terminal proof", () => {
+    const categoryId = "FE-C12";
+    const components = [
+      { id: "scaffolding", factRole: "INSURED_OBJECT" },
+      { id: "site_equipment", factRole: "INSURED_OBJECT" },
+      { id: "renovation_scope", factRole: "CONDITION" },
+    ];
+    const requirementContract = {
+      digest: "8".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components,
+    };
+    const packageFor = (side, { terminalScaffold = false } = {}) => {
+      const documentUuid = `fe-c12-${side}`;
+      const searchCells = components.map((component) => {
+        const searchPlanId = `fixture/${categoryId}/${component.id}`;
+        const terminal = terminalScaffold && component.id === "scaffolding";
+        const rejection = terminal
+          ? {
+              candidateId: `candidate:post-loss-scaffold-${side}`,
+              terminalRejectionContractId:
+                DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+              occurrenceDigestContractId:
+                TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+              decisionBasis:
+                FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+              occurrenceDigestSha256: "4".repeat(64),
+              physicalPageNumber: 7,
+              sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+              observedScopeKeys: [],
+              scopeProofMode:
+                FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+            }
+          : null;
+        return {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_MIXED",
+          comparisonPolicy: null,
+          absenceCertification: null,
+          requirementContract,
+          searchPlanId,
+          documentUuid,
+          catalogId: "fixture",
+          physicalPagesChecked: 12,
+          totalPhysicalPages: 12,
+          aliases: [component.id],
+          conceptSearchIds: [],
+          ...(terminal
+            ? {
+                terminalRejectionAudit: {
+                  schemaVersion: 3,
+                  contractId:
+                    DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+                  requirementId: categoryId,
+                  componentId: component.id,
+                  decisionOwner: "SERVER",
+                  decisionBasis:
+                    FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+                  proofMode:
+                    "ALL_OCCURRENCES_DETERMINISTICALLY_POST_LOSS_SCAFFOLDING_COSTS",
+                  rejectedOccurrenceCount: 1,
+                  rejectedCandidateIds: [rejection.candidateId],
+                  rejectionDigestContractId:
+                    TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+                  rejectionDigestSha256: terminalRejectionSetDigest([
+                    rejection,
+                  ]),
+                  rejections: [rejection],
+                },
+              }
+            : {}),
+          gates: {
+            negativeSearchApproved: true,
+            certifiedNegativeSearch: false,
+            completeTextExtraction: true,
+            completeCategoryTechnicalContract: true,
+            zeroOccurrenceTerminal: !terminal,
+            zeroCandidateTerminal: !terminal,
+            serverNegativeTerminal: true,
+            ...(terminal
+              ? { deterministicPostLossScaffoldingCostTerminal: true }
+              : {}),
+          },
+        };
+      });
+      const searchPlanIds = searchCells.map(({ searchPlanId }) => searchPlanId);
+      const summary = packageSummary({
+        evidenceFound: false,
+        facts: [],
+        reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        requirementContract,
+        searchAudit: {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          documentCount: 1,
+          documentUuids: [documentUuid],
+          physicalPagesChecked: 12,
+          searchPlanIds,
+          requirementContract,
+          components: searchCells,
+        },
+      });
+      const atoms = searchCells.map((searchAudit) => {
+        const component = components.find(({ id }) =>
+          searchAudit.searchPlanId.endsWith(`/${id}`)
+        );
+        return atom(side, {
+          requirementId: categoryId,
+          componentId: component.id,
+          componentLabel: component.id,
+          factRole: component.factRole,
+          documentUuids: [documentUuid],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          requestedFields: [],
+          optionalFields: [],
+          componentSatisfactionPolicy: "ALL",
+          requirementContractDigest: requirementContract.digest,
+          declaredComponents: requirementContract.components,
+          fields: [],
+          sources: [],
+          searchAudit,
+        });
+      });
+      return { summary, atoms };
+    };
+
+    const zero = packageFor("a");
+    const terminal = packageFor("b", { terminalScaffold: true });
+    const decideAbsence = () =>
+      decidePoint({
+        categoryId,
+        packageA: zero.summary,
+        packageB: terminal.summary,
+        atomsA: zero.atoms,
+        atomsB: terminal.atoms,
+      });
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const audit =
+      terminal.summary.searchAudit.components[0].terminalRejectionAudit;
+    const mutations = [
+      (currentAudit) => {
+        currentAudit.rejections[0].sectionScopeSource = "CURRENT_PAGE_HEADING";
+      },
+      (currentAudit) => {
+        currentAudit.rejections[0].observedScopeKeys = [
+          "GLASBRUCH_INSURANCE",
+        ];
+      },
+      (currentAudit) => {
+        currentAudit.rejections[0].scopeProofMode = "UNKNOWN_PROFILE";
+      },
+      (currentAudit) => {
+        currentAudit.schemaVersion = 2;
+      },
+    ];
+    for (const mutate of mutations) {
+      const original = JSON.parse(JSON.stringify(audit));
+      mutate(audit);
+      audit.rejectionDigestSha256 = terminalRejectionSetDigest(
+        audit.rejections
+      );
+      expect(decideAbsence()).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "MISSING_BOTH",
+      });
+      Object.keys(audit).forEach((key) => delete audit[key]);
+      Object.assign(audit, original);
+    }
   });
 
   test("keeps a multi-document bilateral absence audit stable under input permutations", () => {

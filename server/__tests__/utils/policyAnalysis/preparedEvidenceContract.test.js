@@ -13,6 +13,10 @@ const {
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 const {
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
 } = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
@@ -411,6 +415,237 @@ describe("preparedEvidenceContract", () => {
         },
       ]);
     }
+  });
+
+  test("server-certifies only occurrence-local FE-C12 post-loss scaffolding costs", () => {
+    const glassSection = {
+      scopeKey: "GLASBRUCH_INSURANCE",
+      text: "7. Glasbruch",
+      physicalPageNumber: 15,
+      source: "CURRENT_PAGE_HEADING",
+    };
+    const occurrenceFrom = ({
+      candidateId,
+      text,
+      exactText,
+      unitType = "PARAGRAPH",
+      sectionScopeHint = null,
+      pageScopeHints = [],
+      physicalPageNumber = 15,
+    }) => {
+      const contextDocumentStart = 30_000;
+      const relativeStart = text.indexOf(exactText);
+      if (relativeStart < 0) throw new Error("FIXTURE_EXACT_TEXT_MISSING");
+      return {
+        candidateId,
+        matchedAlias: exactText,
+        pageNumber: physicalPageNumber,
+        physicalPageNumber,
+        documentStart: contextDocumentStart + relativeStart,
+        documentEnd: contextDocumentStart + relativeStart + exactText.length,
+        exactText,
+        context: {
+          unitType,
+          documentStart: contextDocumentStart,
+          documentEnd: contextDocumentStart + text.length,
+          text,
+        },
+        scopeLead: { text: "Zusätzlich versichert sind" },
+        pageScopeHints,
+        sectionScopeHint,
+      };
+    };
+    const worksheetFor = (candidate, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "FE" },
+      requirements: [
+        {
+          id: overrides.requirementId || "FE-C12",
+          label: "Gerüst und Baustelleneinrichtung während Sanierungen",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: overrides.absenceMeaning || "COVERAGE_MIXED",
+          components: [
+            {
+              id: overrides.componentId || "scaffolding",
+              label: "Gerüst",
+              factRole: overrides.factRole || "INSURED_OBJECT",
+              occurrences: [candidate],
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (candidate, overrides = {}) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(candidate, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId: overrides.requirementId || "FE-C12",
+            componentId: overrides.componentId || "scaffolding",
+            candidateId: candidate.candidateId,
+            binding: "DIRECT",
+          },
+        ],
+      })[0];
+
+    const realForms = [
+      {
+        occurrence: occurrenceFrom({
+          candidateId: "candidate:fe-c12:replacement-scaffold-cost",
+          text: "Kosten für Gerüste, die zur Ersatzausführung erforderlich sind;",
+          exactText: "Gerüste",
+          unitType: "LIST_ITEM",
+          sectionScopeHint: glassSection,
+        }),
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["GLASBRUCH_INSURANCE"],
+      },
+      {
+        occurrence: occurrenceFrom({
+          candidateId: "candidate:fe-c12:glass-loss-scaffold-cost",
+          text: "GL04 Gerüstkosten\nMitversichert sind Gerüst- und Krankosten nach einem ersatzpflichtigen Glasschaden.",
+          exactText: "Gerüst",
+          sectionScopeHint: {
+            ...glassSection,
+            text: "GL03 Folgeschäden aus Glasbruch",
+            physicalPageNumber: 14,
+          },
+          physicalPageNumber: 14,
+        }),
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["GLASBRUCH_INSURANCE"],
+      },
+      {
+        occurrence: occurrenceFrom({
+          candidateId: "candidate:fe-c12:insured-glass-repair-cost",
+          text: [
+            "9.1.9 Für andere Sachen wird der Versicherungswert ersetzt.",
+            "9.1.10für versicherte Gläser",
+            "werden die ortsüblichen Reparaturkosten inklusive erforderlicher Notverglasung oder Notverschalung, Kosten für notwendige Gerüste sowie Entfernung von Hindernissen ersetzt.",
+            "9.1.11für besonders vereinbarte Sachen wird Ersatz geleistet.",
+          ].join("\n"),
+          exactText: "Gerüste",
+          unitType: "WORD_WINDOW_FALLBACK",
+          physicalPageNumber: 7,
+        }),
+        sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+        observedScopeKeys: [],
+      },
+    ];
+
+    for (const { occurrence, sectionScopeSource, observedScopeKeys } of realForms)
+      expect(targetFor(occurrence)).toMatchObject({
+        candidates: [],
+        unresolvedCandidateIds: [],
+        serverRejectedCandidates: [
+          {
+            candidateId: occurrence.candidateId,
+            reason: "TRIAGE_MENTION_ONLY",
+            terminalRejectionContractId:
+              DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+            occurrenceDigestContractId:
+              TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            decisionOwner: "SERVER",
+            decisionBasis:
+              FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+            physicalPageNumber: occurrence.physicalPageNumber,
+            sectionScopeSource,
+            observedScopeKeys,
+            scopeProofMode:
+              FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+            occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          },
+        ],
+      });
+
+    const failClosed = [
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:positive-renovation-object",
+        text: "Während Sanierungsarbeiten sind Gerüste und Baustelleneinrichtungen mitversichert.",
+        exactText: "Gerüste",
+        sectionScopeHint: {
+          ...glassSection,
+          scopeKey: "FEUER_INSURANCE",
+          text: "FEUERVERSICHERUNG",
+        },
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:excluded-renovation-object",
+        text: "Gerüste und Baustelleneinrichtungen sind während Sanierungen nicht versichert.",
+        exactText: "Gerüste",
+        sectionScopeHint: {
+          ...glassSection,
+          scopeKey: "FEUER_INSURANCE",
+          text: "FEUERVERSICHERUNG",
+        },
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:optional-scaffold",
+        text: "Gerüstkosten können gegen Mehrprämie eingeschlossen werden.",
+        exactText: "Gerüst",
+        sectionScopeHint: glassSection,
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:mixed-glass-and-renovation",
+        text: "Während Sanierungen sind Gerüste versichert; Kosten für Gerüste nach einem Glasschaden werden ebenfalls ersetzt.",
+        exactText: "Gerüste",
+        sectionScopeHint: glassSection,
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:ambiguous-cost",
+        text: "Gerüstkosten werden ersetzt.",
+        exactText: "Gerüst",
+        sectionScopeHint: null,
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:inherited-glass-scope",
+        text: "Kosten für Gerüste zur Ersatzausführung werden ersetzt.",
+        exactText: "Gerüste",
+        sectionScopeHint: {
+          ...glassSection,
+          source: "PRECEDING_PAGE_HEADING",
+        },
+      }),
+      occurrenceFrom({
+        candidateId: "candidate:fe-c12:mixed-page-scope",
+        text: "Kosten für Gerüste zur Ersatzausführung werden ersetzt.",
+        exactText: "Gerüste",
+        sectionScopeHint: glassSection,
+        pageScopeHints: [
+          { scopeKey: "STURM_INSURANCE", text: "Sturmversicherung" },
+        ],
+      }),
+    ];
+    for (const occurrence of failClosed) {
+      const target = targetFor(occurrence);
+      expect(target.serverRejectedCandidates).not.toEqual([
+        expect.objectContaining({
+          terminalRejectionContractId:
+            DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+        }),
+      ]);
+      expect(target.candidates).toHaveLength(1);
+    }
+
+    for (const overrides of [
+      { requirementId: "FE-C11" },
+      { componentId: "site_equipment" },
+      { factRole: "COST" },
+      { absenceMeaning: "COVERAGE_ONLY" },
+    ]) {
+      const target = targetFor(realForms[0].occurrence, overrides);
+      expect(target.candidates).toHaveLength(1);
+      expect(target.serverRejectedCandidates).toEqual([]);
+    }
+
+    const offsetTampered = {
+      ...realForms[2].occurrence,
+      documentStart: realForms[2].occurrence.documentStart + 1,
+      documentEnd: realForms[2].occurrence.documentEnd + 1,
+    };
+    expect(targetFor(offsetTampered).candidates).toHaveLength(1);
   });
 
   test("server-certifies only locally proven LW-25 mentions inherited from the liability section", () => {

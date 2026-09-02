@@ -8,6 +8,10 @@ const {
   SEMANTIC_NEGATIVE_COVERAGE_HEADING,
   SEMANTIC_POSITIVE_COVERAGE_HEADING,
 } = require("./semanticCoverageGovernor");
+const {
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+  feC12PostLossScaffoldingCostProof,
+} = require("./deterministicTerminalRejectionContract");
 
 const CATEGORY_SCOPE_KEYS = Object.freeze({
   FE: ["FEUER_INSURANCE"],
@@ -320,6 +324,28 @@ function explicitRoleMismatch(component, occurrence) {
   )
     return "DEDUCTIBLE_TERM_WITHOUT_LOCAL_DEDUCTIBLE";
   return null;
+}
+
+function explicitFeC12PostLossScaffoldingCostBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "FE" ||
+    requirement?.id !== "FE-C12" ||
+    component?.id !== "scaffolding" ||
+    component?.factRole !== "INSURED_OBJECT" ||
+    requirement?.absenceMeaning !== "COVERAGE_MIXED" ||
+    !feC12PostLossScaffoldingCostProof(occurrence)
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+    authoritative: true,
+  };
 }
 
 function technicalSubcomponentObjectBinding(component, occurrence) {
@@ -1337,6 +1363,16 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (generalBranchMaximumBinding) return generalBranchMaximumBinding;
+
+  const feC12PostLossScaffoldingCostBinding =
+    explicitFeC12PostLossScaffoldingCostBinding({
+      categoryView,
+      requirement,
+      component,
+      occurrence,
+    });
+  if (feC12PostLossScaffoldingCostBinding)
+    return feC12PostLossScaffoldingCostBinding;
 
   const roleMismatch = explicitRoleMismatch(component, occurrence);
   if (roleMismatch)

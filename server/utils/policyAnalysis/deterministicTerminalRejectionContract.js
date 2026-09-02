@@ -11,10 +11,25 @@ const LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
   "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1";
 const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2";
+const DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_V1";
 const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
   "TERMINAL_OCCURRENCE_PROVENANCE_V3";
 const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
   "TERMINAL_REJECTION_SET_PROVENANCE_V3";
+const FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS =
+  "POST_LOSS_GLASS_REPAIR_SCAFFOLDING_COST_NOT_INSURED_OBJECT";
+const FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE =
+  "OCCURRENCE_LOCAL_POST_LOSS_GLASS_REPAIR_COST_V1";
+const OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE = "OCCURRENCE_LOCAL_CLAUSE";
+
+const POST_LOSS_SCAFFOLDING_COST_TARGETS = Object.freeze({
+  "FE:FE-C12:scaffolding": Object.freeze({
+    factRole: "INSURED_OBJECT",
+    absenceMeaning: "COVERAGE_MIXED",
+    scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  }),
+});
 
 const CERTIFIED_TARGETS = Object.freeze({
   "FE:FE-B13:pre_inception_damage_exclusion": Object.freeze({
@@ -94,6 +109,25 @@ function targetKey(categoryView, requirementId, componentId) {
 
 function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
   const key = targetKey(categoryView, requirementId, componentId);
+  const postLossScaffoldingCostContract =
+    POST_LOSS_SCAFFOLDING_COST_TARGETS[key];
+  if (postLossScaffoldingCostContract)
+    return Object.freeze({
+      contractId:
+        DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+      decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+      auditProofMode:
+        "ALL_OCCURRENCES_DETERMINISTICALLY_POST_LOSS_SCAFFOLDING_COSTS",
+      terminalGate: "deterministicPostLossScaffoldingCostTerminal",
+      factRole: postLossScaffoldingCostContract.factRole,
+      absenceMeaning: postLossScaffoldingCostContract.absenceMeaning,
+      allowedObservedScopeKeys: ["GLASBRUCH_INSURANCE"],
+      sectionScopeSources: [
+        "CURRENT_PAGE_HEADING",
+        OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      ],
+      scopeProofMode: postLossScaffoldingCostContract.scopeProofMode,
+    });
   const otherCategoryContract = CERTIFIED_TARGETS[key];
   if (otherCategoryContract)
     return Object.freeze({
@@ -159,6 +193,166 @@ function terminalTargetAcceptsObservedScopes(target, scopes) {
         target.allowedObservedScopeKeys.includes(scope)
       )
   );
+}
+
+function terminalTargetAcceptsScopeProof(
+  target,
+  { sectionScopeSource, observedScopeKeys: scopes }
+) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
+  ) {
+    const canonical = canonicalStrings(scopes);
+    if (
+      !Array.isArray(scopes) ||
+      JSON.stringify(canonical) !== JSON.stringify(scopes)
+    )
+      return false;
+    if (sectionScopeSource === "CURRENT_PAGE_HEADING")
+      return (
+        canonical.length === 1 && canonical[0] === "GLASBRUCH_INSURANCE"
+      );
+    return (
+      sectionScopeSource === OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE &&
+      canonical.length === 0
+    );
+  }
+  return Boolean(
+    target?.sectionScopeSources?.includes(sectionScopeSource) &&
+      terminalTargetAcceptsObservedScopes(target, scopes)
+  );
+}
+
+function occurrenceLocalClauseText(occurrence) {
+  const text = String(occurrence?.context?.text || "");
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart) - contextStart;
+  const occurrenceEnd = Number(occurrence?.documentEnd) - contextStart;
+  if (
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd) ||
+    occurrenceStart < 0 ||
+    occurrenceEnd <= occurrenceStart ||
+    occurrenceEnd > text.length ||
+    text.slice(occurrenceStart, occurrenceEnd) !==
+      String(occurrence?.exactText || "")
+  )
+    return null;
+
+  const numberedBoundaries = [];
+  for (const match of text.matchAll(/(?:^|\n)\s*\d+(?:\.\d+)+(?![\d.])/gu))
+    numberedBoundaries.push(match.index + (match[0].startsWith("\n") ? 1 : 0));
+  const precedingBoundary = numberedBoundaries
+    .filter((index) => index <= occurrenceStart)
+    .at(-1);
+  const followingBoundary = numberedBoundaries.find(
+    (index) => index > occurrenceStart
+  );
+  if (Number.isInteger(precedingBoundary))
+    return text.slice(precedingBoundary, followingBoundary ?? text.length);
+
+  if (
+    ["LIST_ITEM", "PARAGRAPH"].includes(occurrence?.context?.unitType) &&
+    text.length <= 1_000
+  )
+    return text;
+  return text.slice(
+    Math.max(0, occurrenceStart - 320),
+    Math.min(text.length, occurrenceEnd + 320)
+  );
+}
+
+/**
+ * Proves that one FE-C12 scaffolding occurrence is a post-loss repair-cost
+ * role, not an insured scaffolding object during renovation. The proof is
+ * occurrence-local and fails closed on target scope, option, exclusion,
+ * mixed scope, or incomplete provenance. Role: classify. Side effects: none.
+ */
+function feC12PostLossScaffoldingCostProof(occurrence) {
+  const exactText = String(occurrence?.exactText || "");
+  const matchedAlias = String(occurrence?.matchedAlias || "");
+  const localClause = occurrenceLocalClauseText(occurrence);
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  if (
+    !/^(?:Bau)?Gerüste?$/iu.test(exactText) ||
+    !/^(?:Bau)?Gerüste?$/iu.test(matchedAlias) ||
+    !localClause ||
+    !localClause.includes(exactText) ||
+    !Number.isInteger(occurrencePage) ||
+    String(occurrence?.candidateId || "").length === 0 ||
+    !Array.isArray(occurrence?.pageScopeHints)
+  )
+    return null;
+
+  const costRole =
+    /(?:\bGerüst(?:e)?kosten\b|\bGerüst(?:e)?\s*-\s*und\s+Krankosten\b|\bKosten\s+(?:für|der)\s+(?:(?:unbedingt\s+)?(?:notwendig|erforderlich)\p{L}*\s+){0,2}(?:Bau)?Gerüste?\b)/iu;
+  const targetScope =
+    /\b(?:Sanier\p{L}*|Renovier\p{L}*|Umbau\p{L}*|Instandsetz\p{L}*|Baustelleneinricht\p{L}*|Baustellenanlag\p{L}*|Bauhilfseinricht\p{L}*|Baucontainer\p{L}*|Bauger[aä]t\p{L}*|Bauarbeiten?)\b/iu;
+  const conditionalOrNegative =
+    /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+Versicherungsschutz|gegen\s+(?:Mehr|Zusatz)pr[aä]mie|optional|wahlweise|sofern|wenn|vorausgesetzt|besonders\s+vereinbart|nur\s+bei\s+Vereinbarung)\b/iu;
+  const explicitInsuredObject =
+    /(?:\b(?:versichert\s+sind|mitversichert\s+(?:sind|gelten))\s+(?:auch\s+)?(?:die\s+)?(?:Bau)?Gerüste?\b(?!\s*-\s*und\s+Krankosten)|\b(?:Bau)?Gerüste?\b[\s\S]{0,80}\b(?:gelten\s+als\s+versicherte\s+Sachen|sind\s+(?:mit)?versichert)\b)/iu;
+  if (
+    !costRole.test(localClause) ||
+    targetScope.test(localClause) ||
+    conditionalOrNegative.test(localClause) ||
+    explicitInsuredObject.test(localClause)
+  )
+    return null;
+
+  const scopes = observedScopeKeys(occurrence);
+  const sectionScope = occurrence?.sectionScopeHint || null;
+  const explicitCurrentGlassSection = Boolean(
+    sectionScope?.scopeKey === "GLASBRUCH_INSURANCE" &&
+      sectionScope?.source === "CURRENT_PAGE_HEADING" &&
+      scopes.length === 1 &&
+      scopes[0] === "GLASBRUCH_INSURANCE"
+  );
+  const postLossPurpose =
+    /\b(?:Ersatzausführung|Glasschaden|Glasbruch|Reparatur\p{L}*|Notverglasung|Notverschalung|Wiederherstellung|ersetzt)\b/iu;
+  const localGlassObject =
+    /\b(?:versicherte\s+Gläser|Glasschaden|Glasbruch|Notverglasung|Notverschalung)\b/iu;
+  const localRepairEffect =
+    /\b(?:Reparatur\p{L}*|Ersatzausführung|Wiederherstellung|ersetzt)\b/iu;
+
+  if (explicitCurrentGlassSection) {
+    if (!postLossPurpose.test(localClause)) return null;
+    return {
+      physicalPageNumber: occurrencePage,
+      sectionScopeSource: "CURRENT_PAGE_HEADING",
+      observedScopeKeys: scopes,
+    };
+  }
+  if (
+    sectionScope !== null ||
+    scopes.length !== 0 ||
+    !localGlassObject.test(localClause) ||
+    !localRepairEffect.test(localClause)
+  )
+    return null;
+  return {
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+    observedScopeKeys: [],
+  };
+}
+
+function terminalOccurrenceProof(target, occurrence) {
+  if (
+    target?.contractId ===
+    DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
+  )
+    return feC12PostLossScaffoldingCostProof(occurrence);
+  const proof = {
+    physicalPageNumber:
+      occurrence?.physicalPageNumber || occurrence?.pageNumber || null,
+    sectionScopeSource: occurrence?.sectionScopeHint?.source || null,
+    observedScopeKeys: observedScopeKeys(occurrence),
+  };
+  return terminalTargetAcceptsScopeProof(target, proof) ? proof : null;
 }
 
 function stableValue(value) {
@@ -420,6 +614,53 @@ function certifyOtherCategoryTerminalRejection({
   };
 }
 
+function certifyPostLossScaffoldingCostTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+  deterministicBinding,
+}) {
+  const contract =
+    POST_LOSS_SCAFFOLDING_COST_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning ||
+    deterministicBinding?.binding !== "MENTION_ONLY" ||
+    deterministicBinding?.basis !==
+      FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS
+  )
+    return null;
+  const proof = feC12PostLossScaffoldingCostProof(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!proof || !terminalTargetAcceptsScopeProof(target, proof)) return null;
+  const digestOccurrence = {
+    ...occurrence,
+    scopeProofMode: contract.scopeProofMode,
+  };
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+    physicalPageNumber: proof.physicalPageNumber,
+    sectionScopeSource: proof.sectionScopeSource,
+    observedScopeKeys: proof.observedScopeKeys,
+    scopeProofMode: contract.scopeProofMode,
+    occurrenceDigestSha256: terminalOccurrenceDigest(digestOccurrence),
+  };
+}
+
 function certifyNonContractualRiskInformationTerminalRejection({
   categoryView,
   requirement,
@@ -502,6 +743,7 @@ function certifyNonContractualRiskInformationTerminalRejection({
 
 function certifyDeterministicTerminalRejection(input) {
   return (
+    certifyPostLossScaffoldingCostTerminalRejection(input) ||
     certifyOtherCategoryTerminalRejection(input) ||
     certifyNonContractualRiskInformationTerminalRejection(input)
   );
@@ -510,13 +752,20 @@ function certifyDeterministicTerminalRejection(input) {
 module.exports = {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
+  OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
+  feC12PostLossScaffoldingCostProof,
   legacyTerminalRejectionSetDigestV1,
   legacyTerminalRejectionSetDigestV2,
+  terminalOccurrenceProof,
+  terminalTargetAcceptsScopeProof,
   terminalTargetAcceptsObservedScopes,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,

@@ -23,12 +23,13 @@ const {
 const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
+  terminalOccurrenceProof,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,
-  terminalTargetAcceptsObservedScopes,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
@@ -592,10 +593,12 @@ function deterministicTerminalRejectionAudit({
     JSON.stringify(occurrenceIds) !== JSON.stringify(rejectionIds) ||
     rejections.some((rejection) => {
       const occurrence = occurrenceById.get(rejection?.candidateId);
-      const occurrencePage =
-        occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
-      const sectionScopeSource = occurrence?.sectionScopeHint?.source || null;
+      const occurrenceProof = terminalOccurrenceProof(
+        certifiedTarget,
+        occurrence
+      );
       return (
+        !occurrenceProof ||
         rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
         rejection?.terminalRejectionContractId !== certifiedTarget.contractId ||
         rejection?.occurrenceDigestContractId !==
@@ -607,12 +610,11 @@ function deterministicTerminalRejectionAudit({
         ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
-        rejection.physicalPageNumber !== occurrencePage ||
-        rejection?.sectionScopeSource !== sectionScopeSource ||
-        !terminalTargetAcceptsObservedScopes(
-          certifiedTarget,
-          rejection?.observedScopeKeys
-        ) ||
+        rejection.physicalPageNumber !== occurrenceProof.physicalPageNumber ||
+        rejection?.sectionScopeSource !==
+          occurrenceProof.sectionScopeSource ||
+        JSON.stringify(rejection?.observedScopeKeys) !==
+          JSON.stringify(occurrenceProof.observedScopeKeys) ||
         (rejection?.scopeProofMode || null) !==
           certifiedTarget.scopeProofMode ||
         rejection?.occurrenceDigestSha256 !==
@@ -708,6 +710,10 @@ function componentSearchAudit({
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
   );
+  const deterministicPostLossScaffoldingCostTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
+  );
   const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
@@ -794,6 +800,9 @@ function componentSearchAudit({
         : {}),
       ...(deterministicNonContractualRiskInformationTerminal
         ? { deterministicNonContractualRiskInformationTerminal: true }
+        : {}),
+      ...(deterministicPostLossScaffoldingCostTerminal
+        ? { deterministicPostLossScaffoldingCostTerminal: true }
         : {}),
     },
   };

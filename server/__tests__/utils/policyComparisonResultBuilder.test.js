@@ -17,6 +17,10 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+  FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+  OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
@@ -722,6 +726,176 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
   );
 }
 
+function writeFeC12AbsenceCategory(run, { postLossCost = false } = {}) {
+  const categoryView = "FE";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "FE-C12";
+  const componentIds = ["scaffolding", "site_equipment", "renovation_scope"];
+  const contextText =
+    "9.1.10 Für versicherte Gläser werden Reparaturkosten, Kosten für notwendige Gerüste und Notverglasung ersetzt.\n9.1.11 Besonders vereinbarte Leistungen";
+  const exactText = "Gerüste";
+  const relativeStart = contextText.indexOf(exactText);
+  const contextStart = 7_000;
+  const occurrence = {
+    candidateId: `candidate:fe-c12-post-loss:${run.document.uuid}`,
+    matchedAlias: exactText,
+    pageNumber: 7,
+    physicalPageNumber: 7,
+    documentStart: contextStart + relativeStart,
+    documentEnd: contextStart + relativeStart + exactText.length,
+    exactText,
+    context: {
+      unitType: "PARAGRAPH",
+      documentStart: contextStart,
+      documentEnd: contextStart + contextText.length,
+      text: contextText,
+    },
+    scopeLead: null,
+    pageScopeHints: [],
+    sectionScopeHint: null,
+  };
+  const rejection = {
+    candidateId: occurrence.candidateId,
+    reason: "TRIAGE_MENTION_ONLY",
+    terminalRejectionContractId:
+      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+    physicalPageNumber: 7,
+    sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+    observedScopeKeys: [],
+    scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+    occurrenceDigestSha256: terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+    }),
+  };
+
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 7,
+          processedPages: 7,
+          pagesWithText: 7,
+          complete: true,
+        },
+      },
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "fe-occurrence-full-draft-v0.7", categoryView },
+      document: { physicalPages: 7 },
+      summary: { componentCount: componentIds.length },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Gerüste und Baustelleneinrichtung",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_MIXED",
+          components: componentIds.map((componentId) => ({
+            id: componentId,
+            label: componentId,
+            factRole:
+              componentId === "renovation_scope"
+                ? "CONDITION"
+                : "INSURED_OBJECT",
+            aliases: [componentId === "scaffolding" ? "Gerüste" : componentId],
+            terminalState:
+              postLossCost && componentId === "scaffolding"
+                ? "CONTROLLED_CANDIDATES_FOUND"
+                : "NO_CONTROLLED_CANDIDATE",
+            occurrenceCount:
+              postLossCost && componentId === "scaffolding" ? 1 : 0,
+            occurrences:
+              postLossCost && componentId === "scaffolding" ? [occurrence] : [],
+          })),
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: componentIds.map((componentId) => ({
+        targetId: `prepared-target:${requirementId}:${componentId}`,
+        requirementId,
+        componentId,
+        selectedCandidateIds: [],
+        unresolvedCandidateIds: [],
+        evidencePresence: "NOT_FOUND",
+        coverageEffect: "UNKNOWN",
+        conflictState: "NONE",
+        selectedScopePicture: "UNKNOWN",
+        documentApplicability: "UNKNOWN",
+        decisionOwner: "SERVER",
+      })),
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify(
+      componentIds.map((componentId) => ({
+        targetId: `prepared-target:${requirementId}:${componentId}`,
+        requirementId,
+        componentId,
+        factRole:
+          componentId === "renovation_scope"
+            ? "CONDITION"
+            : "INSURED_OBJECT",
+        candidates: [],
+        serverRejectedCandidates:
+          postLossCost && componentId === "scaffolding" ? [rejection] : [],
+        unresolvedCandidateIds: [],
+      }))
+    )
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "rows.private.json"),
+    JSON.stringify([row(requirementId)])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
 describe("policy comparison result builder", () => {
   test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
     const candidateId = "candidate:fe-c07-result-builder";
@@ -1325,7 +1499,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V21_FE_C07_LIMIT_DOMINANCE",
+      id: "CUSTOMER_CORE_5_V22_FE_C12_POST_LOSS_SCAFFOLDING_TERMINAL",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
@@ -1757,6 +1931,106 @@ describe("policy comparison result builder", () => {
         /^COMPARISON_BILATERAL_ABSENCE_/u
       );
     }
+  });
+
+  test("revalidates an occurrence-bound FE-C12 post-loss-cost terminal audit from files", () => {
+    const runA = writeRun(root, document("a", "A"));
+    const runB = writeRun(root, document("b", "B"));
+    writeFeC12AbsenceCategory(runA);
+    writeFeC12AbsenceCategory(runB, { postLossCost: true });
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories
+      .find(({ categoryView }) => categoryView === "FE")
+      .rows.find(({ categoryId }) => categoryId === "FE-C12");
+    const componentAudit = comparisonRow.packageB.searchAudit.components.find(
+      ({ componentId }) => componentId === "scaffolding"
+    );
+    expect(componentAudit).toMatchObject({
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      gates: {
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+        deterministicPostLossScaffoldingCostTerminal: true,
+      },
+      terminalRejectionAudit: {
+        schemaVersion: 3,
+        contractId:
+          DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+        requirementId: "FE-C12",
+        componentId: "scaffolding",
+        decisionOwner: "SERVER",
+        decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+        proofMode:
+          "ALL_OCCURRENCES_DETERMINISTICALLY_POST_LOSS_SCAFFOLDING_COSTS",
+        rejectedOccurrenceCount: 1,
+        rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+        rejections: [
+          expect.objectContaining({
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+            observedScopeKeys: [],
+            scopeProofMode:
+              FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+          }),
+        ],
+      },
+    });
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const targetsFile = path.join(
+      runB.outputDirectory,
+      "FE",
+      "effects",
+      "targets.private.json"
+    );
+    const worksheetFile = path.join(
+      runB.outputDirectory,
+      "FE",
+      "worksheet.private.json"
+    );
+    const targets = JSON.parse(fs.readFileSync(targetsFile, "utf8"));
+    const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+    const occurrence = worksheet.requirements[0].components.find(
+      ({ id }) => id === "scaffolding"
+    ).occurrences[0];
+    occurrence.context.text = occurrence.context.text.replace(
+      "Gerüste und Notverglasung",
+      "Gerüste bei Sanierungsarbeiten und Notverglasung"
+    );
+    occurrence.context.documentEnd =
+      occurrence.context.documentStart + occurrence.context.text.length;
+    const rejection = targets.find(
+      ({ componentId }) => componentId === "scaffolding"
+    ).serverRejectedCandidates[0];
+    rejection.occurrenceDigestSha256 = terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+    });
+    fs.writeFileSync(targetsFile, JSON.stringify(targets));
+    fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+
+    const tamperedResult = buildComparisonResult([runA, runB]);
+    const tamperedRow = tamperedResult.categories
+      .find(({ categoryView }) => categoryView === "FE")
+      .rows.find(({ categoryId }) => categoryId === "FE-C12");
+    const tamperedComponent =
+      tamperedRow.packageB.searchAudit.components.find(
+        ({ componentId }) => componentId === "scaffolding"
+      );
+    expect(tamperedComponent.disposition).toBe("SEARCH_INCOMPLETE");
+    expect(tamperedComponent.gates).not.toHaveProperty(
+      "deterministicPostLossScaffoldingCostTerminal"
+    );
+    expect(tamperedComponent).not.toHaveProperty("terminalRejectionAudit");
+    expect(tamperedRow.pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "MISSING_BOTH",
+    });
   });
 
   test("materializes only an occurrence-bound EL-12 risk-information terminal audit", () => {
