@@ -19,44 +19,44 @@ Antworte ausschließlich auf Deutsch, sachlich, kompakt und quellengebunden.
 Analysiere genau diese 36 Kategorien und gib sie vollständig in genau dieser
 Reihenfolge aus:
 
-| ID | Stufe | Kategorie-Name |
-|---|---|---|
-| `LW-01` | S | Zuleitungsrohre innerhalb des Gebäudes gedeckt |
-| `LW-02` | S | Ableitungsrohre innerhalb des Gebäudes gedeckt |
-| `LW-03` | K | Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück |
-| `LW-04` | S | Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück |
-| `LW-05` | K | Rohrbruchschaden am Rohr selbst, nicht nur Nässefolgeschaden |
-| `LW-06` | S | Frostschäden an Rohrleitungen |
-| `LW-07` | S | Frostschäden an Armaturen und Sanitärkeramik |
-| `LW-08` | K | Leckortungs- und Suchkosten, Höhe des Limits |
-| `LW-09` | K | Wiederherstellungskosten nach Ortung wie Aufstemmen und Fliesen |
-| `LW-10` | S | Trocknungskosten und Stromkosten für Bautrockner |
-| `LW-11` | S | Heizungsanlage einschließlich Kessel und Heizkörper mitversichert |
-| `LW-12` | S | Fußbodenheizung mitversichert |
-| `LW-13` | S | Wasseraustritt aus Sprinkler- oder Löschanlagen |
-| `LW-14` | S | Kondensat oder Kältemittel aus Klima- und Lüftungsanlagen |
-| `LW-15` | V | Wasser aus Aquarien oder Wasserbetten |
-| `LW-16` | S | Wasser aus Haushaltsgeräten wie Waschmaschine oder Geschirrspüler |
-| `LW-17` | V | Innenliegende Regenfallrohre |
-| `LW-18` | K | Rückstau aus der Kanalisation, in welcher Sparte geregelt |
-| `LW-19` | K | Funktionsfähige Rückstauklappe als Deckungsvoraussetzung |
-| `LW-20` | S | Grundwasser, Sickerwasser oder Stauwasser |
-| `LW-21` | S | Schimmelschäden als Folge eines gedeckten Nässeschadens |
-| `LW-22` | S | Schwamm- und Fäulnisschäden |
-| `LW-23` | K | Altersabzug auf Rohrleitungen abhängig vom Alter |
-| `LW-24` | K | Verzicht auf Altersabzug vereinbart |
-| `LW-25` | K | Ausschluss allmählicher oder schleichender Einwirkung |
-| `LW-26` | V | Rohrverstopfung und Reinigungskosten |
-| `LW-27` | V | Kosten des ausgetretenen Wassers gegenüber dem Versorger |
-| `LW-28` | S | Sanierungsnachweis der Steigleitungen gefordert |
-| `LW-29` | S | Serienschadenregelung in der Sparte Leitungswasser |
-| `LW-30` | K | Selbstbehalt in der Sparte Leitungswasser |
-| `LW-31` | S | Höchstentschädigung in der Sparte Leitungswasser |
-| `LW-32` | S | Absperrpflicht bei längerer Abwesenheit |
-| `LW-33` | S | Heizpflicht in der kalten Jahreszeit |
-| `LW-34` | S | Regelung für leerstehende Einheiten |
-| `LW-35` | V | Vorgeschriebenes Wartungsintervall für Rohrleitungen |
-| `LW-36` | K | Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum |
+| ID      | Stufe | Kategorie-Name                                                            |
+| ------- | ----- | ------------------------------------------------------------------------- |
+| `LW-01` | S     | Zuleitungsrohre innerhalb des Gebäudes gedeckt                            |
+| `LW-02` | S     | Ableitungsrohre innerhalb des Gebäudes gedeckt                            |
+| `LW-03` | K     | Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück                 |
+| `LW-04` | S     | Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück                 |
+| `LW-05` | K     | Rohrbruchschaden am Rohr selbst, nicht nur Nässefolgeschaden              |
+| `LW-06` | S     | Frostschäden an Rohrleitungen                                             |
+| `LW-07` | S     | Frostschäden an Armaturen und Sanitärkeramik                              |
+| `LW-08` | K     | Leckortungs- und Suchkosten, Höhe des Limits                              |
+| `LW-09` | K     | Wiederherstellungskosten nach Ortung wie Aufstemmen und Fliesen           |
+| `LW-10` | S     | Trocknungskosten und Stromkosten für Bautrockner                          |
+| `LW-11` | S     | Heizungsanlage einschließlich Kessel und Heizkörper mitversichert         |
+| `LW-12` | S     | Fußbodenheizung mitversichert                                             |
+| `LW-13` | S     | Wasseraustritt aus Sprinkler- oder Löschanlagen                           |
+| `LW-14` | S     | Kondensat oder Kältemittel aus Klima- und Lüftungsanlagen                 |
+| `LW-15` | V     | Wasser aus Aquarien oder Wasserbetten                                     |
+| `LW-16` | S     | Wasser aus Haushaltsgeräten wie Waschmaschine oder Geschirrspüler         |
+| `LW-17` | V     | Innenliegende Regenfallrohre                                              |
+| `LW-18` | K     | Rückstau aus der Kanalisation, in welcher Sparte geregelt                 |
+| `LW-19` | K     | Funktionsfähige Rückstauklappe als Deckungsvoraussetzung                  |
+| `LW-20` | S     | Grundwasser, Sickerwasser oder Stauwasser                                 |
+| `LW-21` | S     | Schimmelschäden als Folge eines gedeckten Nässeschadens                   |
+| `LW-22` | S     | Schwamm- und Fäulnisschäden                                               |
+| `LW-23` | K     | Altersabzug auf Rohrleitungen abhängig vom Alter                          |
+| `LW-24` | K     | Verzicht auf Altersabzug vereinbart                                       |
+| `LW-25` | K     | Allmähliche Schäden und Langzeiteinwirkung                                |
+| `LW-26` | V     | Rohrverstopfung und Reinigungskosten                                      |
+| `LW-27` | V     | Kosten des ausgetretenen Wassers gegenüber dem Versorger                  |
+| `LW-28` | S     | Sanierungsnachweis der Steigleitungen gefordert                           |
+| `LW-29` | S     | Serienschadenregelung in der Sparte Leitungswasser                        |
+| `LW-30` | K     | Selbstbehalt in der Sparte Leitungswasser                                 |
+| `LW-31` | S     | Höchstentschädigung in der Sparte Leitungswasser                          |
+| `LW-32` | S     | Absperrpflicht bei längerer Abwesenheit                                   |
+| `LW-33` | S     | Heizpflicht in der kalten Jahreszeit                                      |
+| `LW-34` | S     | Regelung für leerstehende Einheiten                                       |
+| `LW-35` | V     | Vorgeschriebenes Wartungsintervall für Rohrleitungen                      |
+| `LW-36` | K     | Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum |
 
 ## Beleg- und Abgrenzungsregeln
 
@@ -149,7 +149,7 @@ Es sind ausschließlich diese Kombinationen zulässig:
 Gib genau diese acht Spalten aus:
 
 | Kategorie-ID | Stufe | Kategorie-Name | Belegter Vertragsinhalt | Deckung | Deckungssumme | Quelle | Prüfstatus |
-|---|---|---|---|---|---|---|---|
+| ------------ | ----- | -------------- | ----------------------- | ------- | ------------- | ------ | ---------- |
 
 - `Kategorie-ID`, `Stufe` und `Kategorie-Name`: unverändert aus dem Katalog
   übernehmen.

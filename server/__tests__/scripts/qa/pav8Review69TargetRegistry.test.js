@@ -74,7 +74,7 @@ describe("PAV8 69-row targeted QA registry", () => {
       );
       expect(target).toBeDefined();
       const historicalCatalogMigrations = {
-        LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.6"],
+        LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.7"],
         ST: ["st-occurrence-full-draft-v0.4", "st-occurrence-full-draft-v0.5"],
       };
       if (historicalCatalogMigrations[categoryView]) {

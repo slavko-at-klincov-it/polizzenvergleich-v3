@@ -322,7 +322,7 @@ describe("policy comparison customer metric contract", () => {
     });
 
     historical.productProfile.id =
-      "CUSTOMER_CORE_5_V13_ST13_LW25_RECALL_PRECISION";
+      "CUSTOMER_CORE_5_V14_ST13_LW25_EFFECT_PRECISION";
     expect(() => validateCustomerComparison(historical)).toThrow(
       "COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH"
     );

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.6",
+  "catalogId": "lw-occurrence-full-draft-v0.7",
   "categoryView": "LW",
   "requirements": [
     {
@@ -901,12 +901,12 @@
     },
     {
       "id": "LW-25",
-      "label": "Ausschluss allmählicher oder schleichender Einwirkung",
+      "label": "Allmähliche Schäden und Langzeiteinwirkung",
       "requestedFields": [],
       "components": [
         {
           "id": "gradual_or_creeping_exclusion",
-          "label": "Ausschluss allmählicher oder schleichender Einwirkung",
+          "label": "Allmähliche Schäden und Langzeiteinwirkung",
           "factRole": "EXCLUSION",
           "aliases": [
             "Allmählichkeitsschaden",
