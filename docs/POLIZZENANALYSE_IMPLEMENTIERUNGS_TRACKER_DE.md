@@ -4669,3 +4669,44 @@ LIMIT: Target-Materializer, 224-Overlay und 155-Guard fehlen
 NO DEPLOY: installierter Kundencheckout unverändert
 NEXT: QA-only Manifest-CLI mit externem Registry- und Manifest-Digest-Gate
 ```
+
+## 88. Trusted Target Manifest CLI V2
+
+Commit `b5a2157046a4b1171af80152664d7d821072d6b3` implementiert den festen
+QA-Einstieg für den PAV8-69er-Lauf. Der Manifestvertrag wurde wegen der neuen
+Phasenprompt- und Hybridmodusfelder von V1 auf V2 erhöht.
+
+Die CLI lädt Registry, Kataloge und Prompts nur aus fest definierten
+Repositorypfaden, prüft den committed Registry-SHA, ermittelt Release und
+Node selbst und bindet Modell sowie 42.496 Kontexttoken. Je Kategorie werden
+Workspace-, Triage-, Effects- und Hybrid-Addon-Prompt getrennt gehasht;
+Hybrid bleibt explizit deaktiviert.
+
+Pfad-, Resume- und Schreibgrenzen sind fail-closed:
+
+- nur absolute Baseline-/Outputpfade;
+- physische Realpath-Prüfung gegen Repository und Baseline;
+- keine Output- oder Manifest-Symlinks;
+- exklusive Neuanlage und atomare No-Clobber-Publikation;
+- identischer Resume ohne Dateiänderung;
+- fremde, leere, zusätzliche oder abweichende Ausgabe wird abgelehnt.
+
+Mac Studio:
+
+```text
+227/227 direkte und angrenzende Prüfungen PASS
+Reale PAV8-Erstanlage und Resume PASS
+Manifest-Datei: d88d1fc077460fc9f4c4adc22044c05e9b8150ae1831f36822fd95da55ff905d
+Manifest-Digest: 9da51e813953f456e958ed501d6ec6bf546ea4f1b86a7f05bb8e5ea8a9d77f75
+A:1/B:9; Targets VS19/FE14/LW10/ST13/EL13
+Modell-/Embedding-Aufrufe: keine
+```
+
+```text
+PASS: feste Registry-/Katalog-/Prompt-/Runtime-Identität
+PASS: reale private Create-/Resume-Grenze
+LIMIT: Target-Artefaktmaterialisierung und externe Consumer-Prüfung fehlen
+LIMIT: 224-Overlay und 155-Guard fehlen
+NO DEPLOY: Kundencheckout unverändert auf c7d3b16d
+NEXT: separater privater Target-Materializer mit verpflichtendem Expected-Digest
+```

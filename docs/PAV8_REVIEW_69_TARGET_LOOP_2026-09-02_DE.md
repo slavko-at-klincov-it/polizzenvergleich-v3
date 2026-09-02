@@ -277,10 +277,11 @@ Nach jedem Verhaltenscommit:
 
 ## 9. Fortschrittsprotokoll
 
-| Inkrement           | Commit     | Ziel-IDs      | Vorher    | Nachher   | 155-Guard     | Mac Studio                      | Entscheidung |
-| ------------------- | ---------- | ------------- | --------- | --------- | ------------- | ------------------------------- | ------------ |
-| Target Selection V1 | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend   | `PASS`       |
-| Target Manifest V1  | `e15dc228` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 218/218 plus reale PAV8-Bindung | `PASS`       |
+| Inkrement               | Commit     | Ziel-IDs      | Vorher    | Nachher   | 155-Guard     | Mac Studio                                | Entscheidung |
+| ----------------------- | ---------- | ------------- | --------- | --------- | ------------- | ----------------------------------------- | ------------ |
+| Target Selection V1     | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend             | `PASS`       |
+| Target Manifest V1      | `e15dc228` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 218/218 plus reale PAV8-Bindung           | `PASS`       |
+| Trusted Manifest CLI V2 | `b5a21570` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 227/227 plus reale Create-/Resume-Prüfung | `PASS`       |
 
 Kein Deployment während dieses Loops. Der installierte Kundencheckout bleibt
 bis zu einer ausdrücklichen Freigabe unverändert.
@@ -379,3 +380,58 @@ erwarteten SHA
 prüfen, reale Prompt-SHAs und Runtimewerte selbst bestimmen und den erzeugten
 Manifest-Digest beim Materialisieren verpflichtend als externe Erwartung
 weiterreichen. Erst danach beginnt die Target-Artefaktmaterialisierung.
+
+### 9.3 Trusted Manifest CLI V2 – Ergebnis
+
+Commit `b5a2157046a4b1171af80152664d7d821072d6b3` schließt den offenen
+Trust-Anchor und erhöht den inkompatibel erweiterten Manifestvertrag
+ordnungsgemäß auf Schema 2 / `TARGETED_QA_MANIFEST_V2`.
+
+Die produktive QA-CLI akzeptiert ausschließlich:
+
+```text
+--baselineRoot --output --model --modelTokenLimit
+```
+
+Repository, Registry, fünf Kataloge, alle Kategorie-/Triage-/Effects-Prompts,
+der deaktivierte Hybrid-Addon-Prompt und der Manifestname sind fest
+vorgegeben. Der Registry-Rohbytehash wird gegen
+`1499605578113e9d287ea83861dc567694046c7482ce380fe23d92ee075bad1e`
+geprüft. Der reale Commit und Node werden von der CLI selbst ermittelt.
+
+Zwei unabhängige Reviews führten vor der Freigabe zu zusätzlichen Gates:
+
+- physische statt nur lexikalische Pfadprüfung; Symlink-Umleitungen in
+  Repository oder Baseline werden abgelehnt;
+- atomare No-Clobber-Veröffentlichung per privater Tempdatei, Hard Link,
+  Datei- und Verzeichnis-`fsync`;
+- bereits vorhandene leere, fremde, korrupte oder zusätzliche Ausgaben
+  werden nicht übernommen;
+- ein identischer Resume validiert alle Quellen erneut und schreibt das
+  Manifest nicht neu;
+- `hybridShadowEnabled` ist fest `false`; eine spätere Aktivierung benötigt
+  eine neue Manifestidentität.
+
+Mac-Studio-Nachweis:
+
+```text
+Commit: b5a2157046a4b1171af80152664d7d821072d6b3
+Prettier: 4/4 PASS
+Direkte CLI-/Manifest-/Selection-/Registry-Prüfungen: 36/36 PASS
+Angrenzende Materializer-/Worker-/Worksheet-/Triage-/Evidence-Prüfungen: 191/191 PASS
+Gesamt: 227/227 PASS
+Reale Erstanlage: PASS
+Identischer realer Resume ohne Rewrite: PASS
+Dokumentmatrix: A:0 + B:0..8
+Targetverteilung: 19/14/10/13/13
+Manifestdatei SHA-256: d88d1fc077460fc9f4c4adc22044c05e9b8150ae1831f36822fd95da55ff905d
+Interner Manifest-Digest: 9da51e813953f456e958ed501d6ec6bf546ea4f1b86a7f05bb8e5ea8a9d77f75
+Ausgabe: /private/tmp/pav8-targeted-qa-manifest-b5a21570
+Rechte: Verzeichnis 0700, Manifest 0600
+Modell-/Embedding-Aufrufe: keine
+```
+
+Der installierte Kundencheckout blieb sauber und unverändert auf
+`c7d3b16d400ea4d65b558ef091781da5df82d610`. Als nächste Boundary muss der
+Target-Materializer den internen Manifest-Digest sowie die komplette
+Execution-/Promptidentität erneut als externe Erwartung verlangen.
