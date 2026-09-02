@@ -458,3 +458,52 @@ Modell-/Embedding-Aufrufe: keine
 Der noch fehlende Target-Materializer muss beide Reportfelder gegen den
 Manifest-Selection-Digest prüfen; ein intern nur selbstkonsistenter Report ist
 nicht ausreichend.
+
+### 9.5 Target-Input-Grenze und Manifest V3
+
+Die Commits `07a81b0d`, `fce036ed`, `122ba6d4`, `5aee6ff9` und `b5792a4e`
+schließen die Provenienzkette vor der eigentlichen Target-Materialisierung:
+
+- Triage und Effects persistieren Modell-ID und deklariertes Kontextlimit;
+- beide Phasen persistieren zusätzlich den tatsächlich laufenden Release und
+  die Node-Version;
+- Kategorie-, Triage- und Effects-Prompt werden als echte Rohbytes gegen das
+  Manifest geprüft; bei deaktiviertem Hybridlauf muss der Hybrid-Prompthash im
+  Triage-Report `null` sein;
+- Worksheet, Triage, Effects und Selected Sources sind durch exakte
+  Rohbytehashes miteinander verbunden;
+- der Consumer baut das Target-Worksheet aus Dokumentartefakt, Katalog und den
+  69 kanonischen Anforderungen neu auf und verlangt semantische Parität;
+- Manifest Schema 3 / `TARGETED_QA_MANIFEST_V3` verankert für jede UUID den
+  exakten Rohbytehash von `document.private.json`;
+- die CLI akzeptiert am PAV8-Baselinepfad ausschließlich die zehn erwarteten
+  Verzeichnisse `DOC-01-<uuid>` bis `DOC-10-<uuid>` in Paketreihenfolge und
+  lehnt fehlende, zusätzliche, falsch nummerierte oder symlink-basierte
+  Artefakte ab;
+- UUID, Seite, Position, PDF-SHA und Artefakt-SHA müssen gemeinsam passen. Zwei
+  identische PDF-Uploads bleiben dadurch über ihre UUID unterscheidbar.
+
+Mac-Studio-Nachweis im isolierten Checkout:
+
+```text
+Commit: b5792a4ef20fb1bc1432876a7df07e0c377a7270
+Node: 22.23.2
+Prettier: PASS
+Fokussierte Manifest-/CLI-/Materializer-/Selection-Prüfungen: 50/50 PASS
+Reale V3-Erstanlage: PASS
+Identischer realer Resume ohne Rewrite: PASS
+Dokumente mit Artefakthash: 10/10
+Targets: 69
+Manifestdatei SHA-256: 4978df6e49f006633822cc808bd6c819b36660f0291f3f54ca95d134d228e52e
+Interner Manifest-Digest: 842243b889c71f167b7d0b6a0b557712aac2b6cf733a6b625f192e12b0ede887
+Ausgabe: /private/tmp/pav8-targeted-qa-manifest-v3-b5792a4e
+Dateirechte: 0600
+Modell-/Embedding-Aufrufe: keine
+```
+
+Beweisgrenze: Schema 3 friert die exakten Artefaktbytes ab dem Zeitpunkt der
+Manifest-Erzeugung ein. Es kann nicht rückwirkend kryptografisch beweisen,
+dass ein lokaler Akteur die historische Run-Ablage davor nie verändert hat.
+Für den nächsten Schritt muss der Runner zusätzlich die aktuellen Artefakte
+gegen die vorhandenen Baseline-Worksheets neu aufbauen; erst danach dürfen die
+69 neuen Target-Artefakte erzeugt werden.

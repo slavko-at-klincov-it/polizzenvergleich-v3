@@ -4728,3 +4728,27 @@ Mac Studio: Prettier PASS; 80/80 direkte Prüfungen PASS
 Modell-/Embedding-Aufrufe: keine
 NEXT: Target-Materializer prüft Manifest-, Phase- und Artefakthashkette
 ```
+
+## 90. Target-Input-Provenienz und Dokumentartefakt-Hash V3
+
+Die QA-only Consumer-Grenze prüft Manifest, extern erwartete Execution,
+Katalog- und Prompt-Rohbytes, den deterministischen Target-Worksheet-Neubau
+sowie die komplette Triage-/Effects-/Sources-Hashkette. Die Phasenreports
+tragen nun Release-ID, Node-Version, Modell-ID und Kontextlimit.
+
+Manifest V3 ergänzt pro Paket-UUID den exakten Rohbytehash des zugehörigen
+`document.private.json`. Die Manifest-CLI löst am PAV8-Pfad ausschließlich die
+zehn erwarteten `DOC-01-<uuid>` bis `DOC-10-<uuid>` auf und lehnt Matrixdrift,
+Mehrdeutigkeit und Symlinks fail-closed ab. Der Consumer bindet UUID,
+Paketposition, PDF-SHA und Artefakt-SHA gemeinsam.
+
+```text
+Commit: b5792a4ef20fb1bc1432876a7df07e0c377a7270
+Mac Studio: Prettier PASS; 50/50 fokussierte Prüfungen PASS
+Reales V3-Manifest: 10/10 Artefakte, 69 Targets, Resume unverändert PASS
+Manifest-Datei: 4978df6e49f006633822cc808bd6c819b36660f0291f3f54ca95d134d228e52e
+Manifest-Digest: 842243b889c71f167b7d0b6a0b557712aac2b6cf733a6b625f192e12b0ede887
+NO DEPLOY: Kundencheckout unverändert
+LIMIT: keine rückwirkende kryptografische Aussage über Änderungen vor V3-Erzeugung
+NEXT: Baseline-Worksheet-Neubau, privater Target-Materializer, 224-Overlay und 155-Guard
+```
