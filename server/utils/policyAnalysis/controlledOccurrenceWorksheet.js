@@ -1114,8 +1114,7 @@ function structuralMarkerForLine(page, line) {
     })),
   ]
     .filter(
-      ({ pageStart, pageEnd }) =>
-        pageStart < line.end && pageEnd > line.start
+      ({ pageStart, pageEnd }) => pageStart < line.end && pageEnd > line.start
     )
     .sort(
       (left, right) =>
@@ -1126,10 +1125,7 @@ function structuralMarkerForLine(page, line) {
   const selected = markers[0] || null;
   if (!selected) return null;
   const declaredText = String(selected.text || "");
-  const declaredRange = page.text.slice(
-    selected.pageStart,
-    selected.pageEnd
-  );
+  const declaredRange = page.text.slice(selected.pageStart, selected.pageEnd);
   const relativeTextStart = declaredRange.indexOf(declaredText);
   if (declaredText && relativeTextStart >= 0)
     return {
@@ -1420,15 +1416,12 @@ function validFollowingStructuralBoundaryProof(occurrence) {
         "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX",
         "FOLLOWING_BOUNDARY_SPAN_EXCEEDS_MAX",
       ].includes(proof.reason) &&
-        proof.maximumDistance ===
-          MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+        proof.maximumDistance === MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
         ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS.has(proof.observedKind) &&
-        proof.observedKind !==
-          FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT &&
+        proof.observedKind !== FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT &&
         proof.text === null &&
         /^[a-f0-9]{64}$/u.test(String(proof.textSha256 || "")) &&
-        skipped.text.length <=
-          MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+        skipped.text.length <= MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
         skipped.complete === (skipped.documentEnd === proof.documentStart) &&
         (proof.reason === "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX"
           ? proof.documentStart - context.documentEnd >

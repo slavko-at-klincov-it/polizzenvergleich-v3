@@ -315,8 +315,7 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(validFollowingStructuralBoundaryProof(tamperedText)).toBe(false);
 
     const tamperedOrigin = JSON.parse(JSON.stringify(candidate));
-    tamperedOrigin.context.followingStructuralBoundaryProof.origin.documentEnd -=
-      1;
+    tamperedOrigin.context.followingStructuralBoundaryProof.origin.documentEnd -= 1;
     expect(validFollowingStructuralBoundaryProof(tamperedOrigin)).toBe(false);
 
     const provenanceTamper = JSON.parse(JSON.stringify(candidate));
