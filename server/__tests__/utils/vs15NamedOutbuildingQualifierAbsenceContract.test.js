@@ -302,12 +302,10 @@ describe("VS-15 bilateral controlled qualifier absence contract", () => {
 
     for (const mutate of [
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision.reason =
-          "Gleichwertig."),
+        (tampered.categories[0].rows[0].pointDecision.reason = "Gleichwertig."),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.vs15QualifierAbsenceAudit.sides[0].qualifierControlledZeroCount += 1),
-      (tampered) =>
-        (tampered.documents[0].sha256 = "f".repeat(64)),
+      (tampered) => (tampered.documents[0].sha256 = "f".repeat(64)),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
           "ATOMIC_COVERAGE_EQUALITY_V1"),
