@@ -642,16 +642,14 @@ describe("deterministicVsEvidenceRules", () => {
       "Außenanlagen einschließlich Bodenbefestigungen",
       "Außenanlagen einschließlich Zufahrtswege",
     ]) {
-      expect(
-        deterministicVsCandidateBinding({
-          requirementId: "VS-19",
-          componentId: "outdoor_paths",
-          occurrence: sourceOccurrence({ text, exactText: "Außenanlagen" }),
-        })
-      ).not.toMatchObject({
-        basis: "GENERIC_OUTDOOR_FACILITIES_WITHOUT_PATHS",
-        authoritative: true,
+      const decision = deterministicVsCandidateBinding({
+        requirementId: "VS-19",
+        componentId: "outdoor_paths",
+        occurrence: sourceOccurrence({ text, exactText: "Außenanlagen" }),
       });
+      expect(decision?.basis).not.toBe(
+        "GENERIC_OUTDOOR_FACILITIES_WITHOUT_PATHS"
+      );
     }
   });
 
