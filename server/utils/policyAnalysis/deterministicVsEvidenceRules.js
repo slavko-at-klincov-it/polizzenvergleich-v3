@@ -22,6 +22,68 @@ function occurrenceContextText(occurrence) {
   return String(occurrence?.context?.text || "");
 }
 
+function occurrenceLocalText(occurrence, before = 420, after = 320) {
+  const context = occurrenceContextText(occurrence);
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart);
+  const occurrenceEnd = Number(occurrence?.documentEnd);
+  if (
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd)
+  )
+    return null;
+  const relativeStart = occurrenceStart - contextStart;
+  const relativeEnd = occurrenceEnd - contextStart;
+  if (
+    relativeStart < 0 ||
+    relativeEnd < relativeStart ||
+    relativeEnd > context.length
+  )
+    return null;
+  return context.slice(
+    Math.max(0, relativeStart - before),
+    Math.min(context.length, relativeEnd + after)
+  );
+}
+
+function explicitVs35LocalClauseBinding(key, occurrence) {
+  const exactText = String(occurrence?.exactText || "").trim();
+  const localText = occurrenceLocalText(occurrence);
+  if (!localText) return null;
+  const compensationGovernor =
+    /(?:Entschädigungsleistung|Gesamtentschädigung|Neuwertentschädigung|Zeitwertentschädigung)[\s\S]{0,420}?(?:Voraussetzungen?|Anspruch|sichergestellt|Wiederherstellung|Wiederbeschaffung)/iu.test(
+      localText
+    );
+  if (!compensationGovernor) return null;
+  if (
+    key === "VS-35:restoration_clause" &&
+    /^(?:die\s+)?Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+zur\s+Gänze\s+sichergestellt$/iu.test(
+      exactText
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RESTORATION_CLAUSE",
+      authoritative: true,
+    };
+  if (
+    key === "VS-35:reconstruction_period" &&
+    /^(?:die\s+)?Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+(?:binnen|innerhalb(?:\s+von)?)\s+(?:3|drei|dreier)\s+Jahren?$/iu.test(
+      exactText
+    ) &&
+    /(?:binnen|innerhalb(?:\s+von)?)\s+(?:3|drei|dreier)\s+Jahren?[\s\S]{0,180}?(?:erfolgt|bindende[\s\S]{0,100}?Aufträge)/iu.test(
+      localText
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RECONSTRUCTION_PERIOD",
+      authoritative: true,
+    };
+  return null;
+}
+
 function explicitAutomaticIndexAdjustment(text) {
   const positive =
     /(?:Aufwertung\s+der\s+Geb[äa]udeversicherungssummen\s+und\s+Pr[äa]mien\s+erfolgt\s+nach|Versicherungssumme\s+erh[öo]ht\s+oder\s+vermindert\s+sich\s+j[äa]hrlich)/iu.test(
@@ -256,6 +318,8 @@ function deterministicVsCandidateBinding({
 }) {
   const text = evidenceText(occurrence);
   const key = `${requirementId}:${componentId}`;
+  const vs35LocalBinding = explicitVs35LocalClauseBinding(key, occurrence);
+  if (vs35LocalBinding) return vs35LocalBinding;
   if (key === "VS-32:temporary_storage_costs") {
     const storageScope = explicitVs32TemporaryStorageScopeBinding(occurrence);
     if (storageScope) return storageScope;
