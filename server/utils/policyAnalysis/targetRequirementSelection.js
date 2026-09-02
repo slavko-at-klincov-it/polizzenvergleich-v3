@@ -68,6 +68,116 @@ function assertRequirementCategory({ categoryView, requirementId }) {
     );
 }
 
+function exactKeys(value, expectedKeys, code) {
+  const actual = Object.keys(value || {}).sort();
+  const expected = [...expectedKeys].sort();
+  if (
+    actual.length !== expected.length ||
+    actual.some((key, index) => key !== expected[index])
+  )
+    throw selectionError(code, actual.join(","));
+}
+
+/**
+ * Verifies a standalone target-selection contract before another QA contract
+ * persists or forwards its digest. Role: boundary. Side effects: none.
+ */
+function assertTargetRequirementSelectionContract(
+  selection,
+  {
+    expectedCatalogId = null,
+    expectedCategoryView = null,
+    expectedSelectionDigestSha256 = null,
+  } = {}
+) {
+  if (!selection || typeof selection !== "object" || Array.isArray(selection))
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_REQUIRED");
+  exactKeys(
+    selection,
+    [
+      "schemaVersion",
+      "contractId",
+      "catalogId",
+      "categoryView",
+      "requirementIds",
+      "requirementContracts",
+      "requirementCount",
+      "selectionDigestSha256",
+    ],
+    "TARGET_REQUIREMENT_SELECTION_CONTRACT_KEYS_INVALID"
+  );
+  if (
+    selection.schemaVersion !== TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION ||
+    selection.contractId !== TARGET_REQUIREMENT_SELECTION_CONTRACT_ID
+  )
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_CONTRACT_INVALID");
+
+  const catalogId = requiredText(
+    selection.catalogId,
+    "TARGET_REQUIREMENT_SELECTION_CATALOG_ID_REQUIRED"
+  );
+  const categoryView = requiredText(
+    selection.categoryView,
+    "TARGET_REQUIREMENT_SELECTION_CATEGORY_REQUIRED"
+  );
+  if (
+    !Array.isArray(selection.requirementIds) ||
+    !Array.isArray(selection.requirementContracts) ||
+    selection.requirementIds.length === 0
+  )
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_IDS_INVALID");
+
+  const requirementIds = selection.requirementIds.map((requirementId) =>
+    requiredText(requirementId, "TARGET_REQUIREMENT_SELECTION_ID_INVALID")
+  );
+  for (const requirementId of requirementIds)
+    assertRequirementCategory({ categoryView, requirementId });
+  if (
+    new Set(requirementIds).size !== requirementIds.length ||
+    selection.requirementCount !== requirementIds.length ||
+    selection.requirementContracts.length !== requirementIds.length
+  )
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH");
+
+  for (const [index, contract] of selection.requirementContracts.entries()) {
+    exactKeys(
+      contract,
+      ["requirementId", "searchContractDigestSha256"],
+      "TARGET_REQUIREMENT_SELECTION_REQUIREMENT_CONTRACT_KEYS_INVALID"
+    );
+    if (
+      contract.requirementId !== requirementIds[index] ||
+      !/^[a-f0-9]{64}$/u.test(contract.searchContractDigestSha256 || "")
+    )
+      throw selectionError(
+        "TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH"
+      );
+  }
+
+  const digestContract = {
+    schemaVersion: selection.schemaVersion,
+    contractId: selection.contractId,
+    catalogId,
+    categoryView,
+    requirementIds,
+    requirementContracts: selection.requirementContracts,
+  };
+  if (selection.selectionDigestSha256 !== selectionDigest(digestContract))
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_DIGEST_MISMATCH");
+  if (expectedCatalogId && catalogId !== expectedCatalogId)
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_CATALOG_MISMATCH");
+  if (expectedCategoryView && categoryView !== expectedCategoryView)
+    throw selectionError("TARGET_REQUIREMENT_SELECTION_CATEGORY_MISMATCH");
+  if (
+    expectedSelectionDigestSha256 &&
+    selection.selectionDigestSha256 !== expectedSelectionDigestSha256
+  )
+    throw selectionError(
+      "TARGET_REQUIREMENT_SELECTION_EXPECTED_DIGEST_MISMATCH"
+    );
+  return selection;
+}
+
 /**
  * Selects complete requirement contracts for a QA-only targeted run. The
  * canonical catalog identity and the original requirement objects are kept
@@ -162,29 +272,12 @@ function assertTargetRequirementSelection(
   }
   if (!worksheet?.catalog || !Array.isArray(worksheet.requirements))
     throw selectionError("TARGET_REQUIREMENT_WORKSHEET_INVALID");
-
-  const catalogId = requiredText(
-    selection.catalogId,
-    "TARGET_REQUIREMENT_SELECTION_CATALOG_ID_REQUIRED"
-  );
-  const categoryView = requiredText(
-    selection.categoryView,
-    "TARGET_REQUIREMENT_SELECTION_CATEGORY_REQUIRED"
-  );
-  if (
-    selection.schemaVersion !== TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION ||
-    selection.contractId !== TARGET_REQUIREMENT_SELECTION_CONTRACT_ID
-  )
-    throw selectionError("TARGET_REQUIREMENT_SELECTION_CONTRACT_INVALID");
-  if (worksheet.catalog.id !== catalogId)
-    throw selectionError("TARGET_REQUIREMENT_SELECTION_CATALOG_MISMATCH");
-  if (worksheet.catalog.categoryView !== categoryView)
-    throw selectionError("TARGET_REQUIREMENT_SELECTION_CATEGORY_MISMATCH");
-  if (
-    !Array.isArray(selection.requirementIds) ||
-    !Array.isArray(selection.requirementContracts)
-  )
-    throw selectionError("TARGET_REQUIREMENT_SELECTION_IDS_INVALID");
+  assertTargetRequirementSelectionContract(selection, {
+    expectedCatalogId: worksheet.catalog.id,
+    expectedCategoryView: worksheet.catalog.categoryView,
+    expectedSelectionDigestSha256,
+  });
+  const categoryView = selection.categoryView;
 
   const worksheetRequirementIds = worksheet.requirements.map((requirement) =>
     requiredText(
@@ -198,35 +291,11 @@ function assertTargetRequirementSelection(
     new Set(worksheetRequirementIds).size !== worksheetRequirementIds.length ||
     selection.requirementCount !== worksheetRequirementIds.length ||
     selection.requirementIds.length !== worksheetRequirementIds.length ||
-    selection.requirementContracts.length !== worksheetRequirementIds.length ||
     selection.requirementIds.some(
       (requirementId, index) => requirementId !== worksheetRequirementIds[index]
-    ) ||
-    selection.requirementContracts.some(
-      (contract, index) =>
-        contract?.requirementId !== worksheetRequirementIds[index] ||
-        !/^[a-f0-9]{64}$/u.test(contract?.searchContractDigestSha256 || "")
     )
   )
     throw selectionError("TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH");
-
-  const digestContract = {
-    schemaVersion: selection.schemaVersion,
-    contractId: selection.contractId,
-    catalogId,
-    categoryView,
-    requirementIds: selection.requirementIds,
-    requirementContracts: selection.requirementContracts,
-  };
-  if (selection.selectionDigestSha256 !== selectionDigest(digestContract))
-    throw selectionError("TARGET_REQUIREMENT_SELECTION_DIGEST_MISMATCH");
-  if (
-    expectedSelectionDigestSha256 &&
-    selection.selectionDigestSha256 !== expectedSelectionDigestSha256
-  )
-    throw selectionError(
-      "TARGET_REQUIREMENT_SELECTION_EXPECTED_DIGEST_MISMATCH"
-    );
   return selection;
 }
 
@@ -234,6 +303,7 @@ module.exports = {
   TARGET_REQUIREMENT_SELECTION_CONTRACT_ID,
   TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION,
   assertTargetRequirementSelection,
+  assertTargetRequirementSelectionContract,
   selectTargetRequirements,
   selectionDigest,
 };

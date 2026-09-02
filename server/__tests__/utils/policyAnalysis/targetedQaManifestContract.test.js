@@ -1,0 +1,406 @@
+const fs = require("fs");
+const path = require("path");
+const {
+  PRODUCT_PROFILE,
+} = require("../../../utils/policyComparison/productContract");
+const { sha256 } = require("../../../utils/policyAnalysis/runIdentity");
+const {
+  EXPECTED_DOCUMENT_COUNT,
+  EXPECTED_REQUIREMENT_COUNT,
+  TARGETED_QA_RUN_KIND,
+  assertTargetedQaManifest,
+  buildTargetedQaManifest,
+} = require("../../../utils/policyAnalysis/targetedQaManifestContract");
+
+const RESOURCES = path.resolve(__dirname, "../../../resources/policyAnalysis");
+const REGISTRY_FILE = path.join(
+  RESOURCES,
+  "pav8-review-69-targets.qa-only.v0.1.json"
+);
+const CATALOG_FILES = {
+  VS: "vs-occurrence-full-draft.v0.2.json",
+  FE: "fe-occurrence-full-draft.v0.1.json",
+  LW: "lw-occurrence-full-draft.v0.1.json",
+  ST: "st-occurrence-full-draft.v0.1.json",
+  EL: "el-occurrence-full-draft.v0.1.json",
+};
+const RUN_SIGNATURE =
+  "e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e";
+
+function copy(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function jsonBytes(value) {
+  return Buffer.from(JSON.stringify(value));
+}
+
+function sourceRegistry() {
+  return JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+}
+
+function catalogBytes() {
+  return Object.fromEntries(
+    Object.entries(CATALOG_FILES).map(([categoryView, filename]) => [
+      categoryView,
+      fs.readFileSync(path.join(RESOURCES, filename)),
+    ])
+  );
+}
+
+function packageDocument(side, position, ordinal) {
+  const shaCharacter = ["a", "b", "c", "d", "e", "f"][ordinal % 6];
+  const manifestCharacter = ["f", "e", "d", "c", "b", "a"][ordinal % 6];
+  return {
+    uuid: `${side.toLowerCase()}-document-${position}`,
+    side,
+    position,
+    role:
+      side === "A" || position === 0
+        ? "MAIN_POLICY"
+        : position === 1
+          ? "SUPPLEMENT"
+          : "TERMS",
+    documentStatus:
+      side === "B" && position === 0 ? "PROPOSAL" : "FRAMEWORK_TERMS",
+    originalName: `${side}-${position}.pdf`,
+    sha256: shaCharacter.repeat(64),
+    primaryManifestSha256: manifestCharacter.repeat(64),
+  };
+}
+
+function packageContract() {
+  return {
+    schemaVersion: 1,
+    runKind: "ISOLATED_PACKAGE_QA",
+    releaseId: "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b",
+    productProfile: copy(PRODUCT_PROFILE),
+    sourceInputManifest: {
+      file: "/private/qa/input-manifest.private.json",
+      sha256: "1".repeat(64),
+    },
+    documents: [
+      packageDocument("A", 0, 0),
+      ...Array.from({ length: 9 }, (_, index) =>
+        packageDocument("B", index, index + 1)
+      ),
+    ],
+    runSignature: RUN_SIGNATURE,
+  };
+}
+
+function reviewKeys(registry) {
+  return registry.categoryTargets.flatMap(({ categoryView, requirementIds }) =>
+    requirementIds.map((requirementId) => `${categoryView}:${requirementId}`)
+  );
+}
+
+function comparison(packageValue, registry) {
+  return {
+    schemaVersion: 11,
+    runSignature: RUN_SIGNATURE,
+    productProfile: copy(packageValue.productProfile),
+    documents: packageValue.documents.map(
+      ({
+        uuid,
+        side,
+        role,
+        documentStatus,
+        originalName,
+        sha256: documentSha,
+      }) => ({
+        uuid,
+        side,
+        role,
+        documentStatus,
+        originalName,
+        sha256: documentSha,
+      })
+    ),
+    categories: packageValue.productProfile.categoryViews.map(
+      (categoryView) => ({
+        categoryView,
+        rows: Array(
+          packageValue.productProfile.categoryRowCounts[categoryView]
+        ).fill(null),
+      })
+    ),
+    totals: {
+      rows: 224,
+      customerReviewRequired: 69,
+      noCustomerReviewRequired: 155,
+      customerReviewRowKeysByReasonCode: {
+        TARGETED_REVIEW: reviewKeys(registry),
+      },
+      pointDecisionRowKeysByOutcome: {
+        UNKLAR: reviewKeys(registry),
+      },
+    },
+  };
+}
+
+function execution() {
+  return {
+    releaseId: "targeted-working-tree",
+    model: "qwen/qwen3.6-35b-a3b",
+    context: 42496,
+    nodeVersion: "22.23.2",
+    promptSha256ByCategory: Object.fromEntries(
+      PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
+        categoryView,
+        ["a", "b", "c", "d", "e"][index].repeat(64),
+      ])
+    ),
+  };
+}
+
+function inputs({
+  mutatePackage = () => {},
+  mutateComparison = () => {},
+  mutateRegistry = () => {},
+  mutateCatalogs = () => {},
+  executionValue = execution(),
+} = {}) {
+  const registry = sourceRegistry();
+  const packageValue = packageContract();
+  mutatePackage(packageValue);
+  const comparisonValue = comparison(packageValue, registry);
+  mutateComparison(comparisonValue);
+  const packageContractBytes = jsonBytes(packageValue);
+  const baselineComparisonBytes = jsonBytes(comparisonValue);
+  registry.baseline.packageContractSha256 = sha256(packageContractBytes);
+  registry.baseline.comparisonSha256 = sha256(baselineComparisonBytes);
+  registry.baseline.runSignatureSha256 = RUN_SIGNATURE;
+  mutateRegistry(registry);
+  const catalogBytesByCategory = catalogBytes();
+  mutateCatalogs(catalogBytesByCategory);
+  return {
+    qaRegistryBytes: jsonBytes(registry),
+    packageContractBytes,
+    baselineComparisonBytes,
+    catalogBytesByCategory,
+    execution: executionValue,
+  };
+}
+
+describe("targeted QA manifest raw trust boundary", () => {
+  test("accepts the exact A:0 plus B:0..8 and 69-target baseline", () => {
+    const manifest = buildTargetedQaManifest(inputs());
+
+    expect(manifest).toMatchObject({
+      runKind: TARGETED_QA_RUN_KIND,
+      executionPolicy: {
+        productMutationAllowed: false,
+        fullMaterializerAllowed: false,
+      },
+      documentMatrix: {
+        expectedDocumentCount: EXPECTED_DOCUMENT_COUNT,
+        sideCounts: { A: 1, B: 9 },
+      },
+      execution: execution(),
+    });
+    expect(manifest.categoryTargets).toHaveLength(5);
+    expect(
+      manifest.categoryTargets.reduce(
+        (sum, target) => sum + target.requirementIds.length,
+        0
+      )
+    ).toBe(EXPECTED_REQUIREMENT_COUNT);
+    expect(
+      manifest.documentMatrix.documents.map(
+        ({ side, position }) => `${side}:${position}`
+      )
+    ).toEqual([
+      "A:0",
+      "B:0",
+      "B:1",
+      "B:2",
+      "B:3",
+      "B:4",
+      "B:5",
+      "B:6",
+      "B:7",
+      "B:8",
+    ]);
+    expect(assertTargetedQaManifest(copy(manifest))).toEqual(manifest);
+  });
+
+  test("rejects package and comparison byte tampering before JSON parsing", () => {
+    const packageTamper = inputs();
+    packageTamper.packageContractBytes = Buffer.concat([
+      packageTamper.packageContractBytes,
+      Buffer.from(" "),
+    ]);
+    expect(() => buildTargetedQaManifest(packageTamper)).toThrow(
+      "TARGETED_QA_PACKAGE_BYTES_SHA_MISMATCH"
+    );
+
+    const comparisonTamper = inputs();
+    comparisonTamper.baselineComparisonBytes = Buffer.concat([
+      comparisonTamper.baselineComparisonBytes,
+      Buffer.from(" "),
+    ]);
+    expect(() => buildTargetedQaManifest(comparisonTamper)).toThrow(
+      "TARGETED_QA_COMPARISON_BYTES_SHA_MISMATCH"
+    );
+  });
+
+  test("rejects 9/11 and every A/B matrix drift", () => {
+    const mutations = [
+      (value) => value.documents.pop(),
+      (value) =>
+        value.documents.push(packageDocument("B", 9, value.documents.length)),
+      (value) => {
+        value.documents[0].side = "B";
+      },
+      (value) => {
+        value.documents[1].position = 1;
+      },
+      (value) => value.documents.reverse(),
+      (value) => {
+        value.documents[1].role = "UNKNOWN";
+      },
+      (value) => {
+        value.documents[1].documentStatus = "UNKNOWN";
+      },
+      (value) => {
+        value.documents[1].sha256 = "invalid";
+      },
+      (value) => {
+        value.documents[1].primaryManifestSha256 = "invalid";
+      },
+    ];
+    for (const mutatePackage of mutations)
+      expect(() => buildTargetedQaManifest(inputs({ mutatePackage }))).toThrow(
+        /^TARGETED_QA_/u
+      );
+  });
+
+  test("rejects baseline release and package profile drift", () => {
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutatePackage: (value) => {
+            value.releaseId = "different-release";
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_BASELINE_RELEASE_MISMATCH");
+
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutatePackage: (value) => {
+            value.productProfile.categoryViews.reverse();
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_PROFILE_CATEGORY_ORDER_MISMATCH");
+
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutatePackage: (value) => {
+            value.productProfile.categoryCatalogIds.ST =
+              "st-occurrence-full-draft-other";
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_PROFILE_CATALOG_MISMATCH: ST");
+  });
+
+  test("rejects registry target and distribution tampering", () => {
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutateRegistry: (registry) => {
+            registry.categoryTargets[0].requirementIds[0] = "VS-03";
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_COMPARISON_REVIEW_MEMBERSHIP_MISMATCH");
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutateRegistry: (registry) => {
+            registry.expectedDistribution.VS = 18;
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_REGISTRY_DISTRIBUTION_INVALID");
+  });
+
+  test("rejects canonical catalog raw and semantic contract tampering", () => {
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutateCatalogs: (catalogs) => {
+            catalogs.VS = Buffer.concat([catalogs.VS, Buffer.from(" ")]);
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_CATALOG_SHA_MISMATCH: VS");
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutateCatalogs: (catalogs) => {
+            const parsed = JSON.parse(catalogs.ST.toString("utf8"));
+            parsed.requirements[0].components[0].aliases.push("tampered");
+            catalogs.ST = jsonBytes(parsed);
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_CATALOG_SHA_MISMATCH: ST");
+  });
+
+  test("rejects comparison projection, totals and review membership drift", () => {
+    const comparisonMutations = [
+      (value) => {
+        value.documents[0].uuid = "other";
+      },
+      (value) => {
+        value.documents[0].role = "SUPPLEMENT";
+      },
+      (value) => value.documents.reverse(),
+      (value) => {
+        value.totals.rows = 223;
+      },
+      (value) => {
+        value.totals.customerReviewRequired = 68;
+      },
+      (value) => {
+        value.totals.noCustomerReviewRequired = 156;
+      },
+      (value) => {
+        value.totals.customerReviewRowKeysByReasonCode.TARGETED_REVIEW.pop();
+      },
+      (value) => {
+        value.totals.pointDecisionRowKeysByOutcome.UNKLAR.pop();
+      },
+    ];
+    for (const mutateComparison of comparisonMutations)
+      expect(() =>
+        buildTargetedQaManifest(inputs({ mutateComparison }))
+      ).toThrow(/^TARGETED_QA_/u);
+  });
+
+  test("binds node and per-category prompts through expected execution gates", () => {
+    const manifest = buildTargetedQaManifest(inputs());
+    expect(() =>
+      assertTargetedQaManifest(manifest, {
+        expectedManifestDigestSha256: manifest.manifestDigestSha256,
+        expectedExecution: execution(),
+      })
+    ).not.toThrow();
+    const wrongNode = execution();
+    wrongNode.nodeVersion = "22.0.0";
+    expect(() =>
+      assertTargetedQaManifest(manifest, { expectedExecution: wrongNode })
+    ).toThrow("TARGETED_QA_EXPECTED_EXECUTION_MISMATCH");
+    const missingPrompt = execution();
+    delete missingPrompt.promptSha256ByCategory.EL;
+    expect(() =>
+      buildTargetedQaManifest(inputs({ executionValue: missingPrompt }))
+    ).toThrow("TARGETED_QA_EXECUTION_PROMPTS_INVALID");
+  });
+});
