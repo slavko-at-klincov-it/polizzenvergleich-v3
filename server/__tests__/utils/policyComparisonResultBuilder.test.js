@@ -2406,7 +2406,7 @@ describe("policy comparison result builder", () => {
     }
   });
 
-  test("revalidates LW-20 non-target terminals and reports the excluded counterpart as a documentation difference", () => {
+  test("revalidates LW-20 non-target terminals and equates the bound default exclusion", () => {
     const runA = writeRun(root, document("a", "A"));
     const runB = writeRun(root, document("b", "B"));
     writeLw20AbsenceCategory(runA, { treatmentCost: true });
@@ -2477,14 +2477,15 @@ describe("policy comparison result builder", () => {
       candidateCount: 0,
     });
     expect(comparisonRow.pointDecision).toMatchObject({
-      outcome: "DOKUMENTATIONSUNTERSCHIED",
-      reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
-      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
+      outcome: "GLEICHWERTIG",
+      reasonCode:
+        "EQUAL_LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION",
+      ruleId:
+        "LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION_EQUALITY_V1",
       reviewRequired: false,
-      unilateralCoverageAbsenceAudit: {
-        eligible: false,
+      lw20AbsenceDefaultExclusionEqualityAudit: {
         absentSide: "A",
-        evidencedSide: "B",
+        excludedSide: "B",
       },
     });
     expect(() => validateCustomerComparison(result)).not.toThrow();
