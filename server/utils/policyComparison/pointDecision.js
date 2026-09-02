@@ -34,6 +34,9 @@ const {
 const {
   compareStormDefinitionThreshold,
 } = require("./stormDefinitionThresholdContract");
+const {
+  compareAutomaticIndexAdjustmentPresence,
+} = require("./automaticIndexAdjustmentComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -515,6 +518,17 @@ function compareDimension(left, right, { canonical = false } = {}) {
   }
 
   if (left.coverageEffect === right.coverageEffect) {
+    const automaticIndexAdjustment = compareAutomaticIndexAdjustmentPresence(
+      left,
+      right
+    );
+    if (automaticIndexAdjustment)
+      return {
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        reasonCode: "EQUIVALENT_AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE",
+        ruleId: automaticIndexAdjustment.ruleId,
+        dimension,
+      };
     const stormDefinition = compareStormDefinitionThreshold(left, right);
     if (stormDefinition)
       return {

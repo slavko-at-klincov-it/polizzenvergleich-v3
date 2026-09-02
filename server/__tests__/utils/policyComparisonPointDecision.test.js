@@ -1840,6 +1840,180 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("compares only active, fieldless VS-10 index-adjustment presence as equal", () => {
+    const component = {
+      id: "automatic_index_adjustment",
+      factRole: "CONDITION",
+    };
+    const contract = {
+      digest: "8".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const indexAtom = (side, conditionCheckText, overrides = {}) =>
+      atom(side, {
+        requirementId: "VS-10",
+        componentId: component.id,
+        componentLabel: "Automatische Indexanpassung der Versicherungssumme",
+        factRole: component.factRole,
+        coverageEffect: "INCLUDED",
+        selectedScopePicture: "GENERAL",
+        scopePolicy: "GENERAL_REQUIRED",
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: [],
+        optionalFields: [],
+        requirementContractDigest: contract.digest,
+        componentSatisfactionPolicy: contract.componentSatisfactionPolicy,
+        declaredComponents: contract.components,
+        fields: [],
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: "Indexvereinbarung",
+            conditionCheckText,
+          },
+        ],
+        ...overrides,
+      });
+    const decideIndex = (left, right) =>
+      decidePoint({
+        categoryId: "VS-10",
+        packageA: packageSummary({ requirementContract: contract }),
+        packageB: packageSummary({ requirementContract: contract }),
+        atomsA: [left],
+        atomsB: [right],
+      });
+    const activeA =
+      "Die Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex für den Wohnungs- und Siedlungsbau.";
+    const activeB =
+      "Wertanpassung nach dem Baukostenindex. Die Versicherungssumme erhöht oder vermindert sich jährlich bei Hauptfälligkeit der Prämie, frühestens jedoch zwei Monate nach Abschluss.";
+
+    expect(
+      decideIndex(
+        indexAtom("index-a", activeA, {
+          documentStatus: "FRAMEWORK_TERMS",
+          documentApplicability: "CONDITIONAL",
+        }),
+        indexAtom("index-b", activeB, {
+          documentStatus: "FRAMEWORK_TERMS",
+          documentApplicability: "CONDITIONAL",
+        })
+      )
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "ALL_ATOMIC_DIMENSIONS_EQUIVALENT",
+      ruleId: "AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_V1",
+      reviewRequired: false,
+    });
+
+    for (const [label, rightText] of [
+      [
+        "trailing negation",
+        "Die Versicherungssumme erhöht oder vermindert sich jährlich nicht nach dem Baukostenindex.",
+      ],
+      [
+        "optional",
+        "Die Versicherungssumme kann auf Antrag jährlich nach dem Baukostenindex angepasst werden.",
+      ],
+      [
+        "premium only",
+        "Die Prämie wird jährlich automatisch nach dem Baukostenindex angepasst.",
+      ],
+      [
+        "manual",
+        "Die Versicherungssumme wird nach einer manuellen Neubewertung anhand des Baukostenindex neu festgesetzt.",
+      ],
+      [
+        "historical",
+        "Historisch wurde die Versicherungssumme jährlich nach dem Baukostenindex angepasst.",
+      ],
+      [
+        "wrong object",
+        "Die Hausratversicherungssumme wird jährlich automatisch nach dem Baukostenindex angepasst.",
+      ],
+      ["heading only", "Indexvereinbarung zur Versicherungssumme"],
+    ]) {
+      expect(
+        decideIndex(
+          indexAtom("control-a", activeA),
+          indexAtom(label, rightText)
+        ).outcome
+      ).not.toBe(POINT_OUTCOME.EQUIVALENT);
+    }
+
+    expect(
+      decideIndex(
+        indexAtom("effect-a", activeA),
+        indexAtom("effect-b", activeB, { coverageEffect: "CONDITIONAL" })
+      ).outcome
+    ).not.toBe(POINT_OUTCOME.EQUIVALENT);
+    expect(
+      decideIndex(
+        indexAtom("component-a", activeA),
+        indexAtom("component-b", activeB, {
+          componentId: "other_condition",
+        })
+      ).outcome
+    ).not.toBe(POINT_OUTCOME.EQUIVALENT);
+  });
+
+  test("rejects mixed active and inactive VS-10 comparison contributors", () => {
+    const component = {
+      id: "automatic_index_adjustment",
+      factRole: "CONDITION",
+    };
+    const contract = {
+      digest: "9".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const indexAtom = (side, text, documentUuid) =>
+      atom(side, {
+        requirementId: "VS-10",
+        componentId: component.id,
+        componentLabel: "Automatische Indexanpassung der Versicherungssumme",
+        factRole: component.factRole,
+        coverageEffect: "INCLUDED",
+        documentUuids: [documentUuid],
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+        selectedScopePicture: "GENERAL",
+        scopePolicy: "GENERAL_REQUIRED",
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: [],
+        optionalFields: [],
+        requirementContractDigest: contract.digest,
+        componentSatisfactionPolicy: contract.componentSatisfactionPolicy,
+        declaredComponents: contract.components,
+        fields: [],
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: "Indexvereinbarung",
+            conditionCheckText: text,
+          },
+        ],
+      });
+    const active =
+      "Die Versicherungssumme erhöht oder vermindert sich jährlich nach dem Baukostenindex.";
+    const inactive =
+      "Die Versicherungssumme erhöht oder vermindert sich jährlich nicht nach dem Baukostenindex.";
+    const result = decidePoint({
+      categoryId: "VS-10",
+      packageA: packageSummary({ requirementContract: contract }),
+      packageB: packageSummary({ requirementContract: contract }),
+      atomsA: [indexAtom("active-a", active, "document-a")],
+      atomsB: [
+        indexAtom("active-b", active, "document-b"),
+        indexAtom("inactive-b", inactive, "document-c"),
+      ],
+    });
+
+    expect(result.outcome).toBe(POINT_OUTCOME.UNCLEAR);
+  });
+
   test("compares only fully typed ST-01 peak-wind definitions as equal", () => {
     const component = {
       id: "storm_wind_speed_definition",
