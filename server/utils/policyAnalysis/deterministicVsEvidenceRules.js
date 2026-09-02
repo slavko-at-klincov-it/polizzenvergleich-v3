@@ -488,7 +488,7 @@ function deterministicVsCandidateBinding({
   if (
     key === "VS-19:outdoor_paths" &&
     /^Außenanlagen$/iu.test(String(occurrence?.exactText || "").trim()) &&
-    !/(?:Gehwege|befestigte\s+(?:Wege|Flächen)|Zufahrtswege|Asphaltierungen|Bodenbefestigungen)/iu.test(
+    !/(?:Gehwege|befestigt(?:e|er|en|em|es)?\s+(?:Wege|Flächen)|Zufahrtswege|Asphaltierungen|Bodenbefestigungen)/iu.test(
       occurrenceContextText(occurrence)
     )
   )
