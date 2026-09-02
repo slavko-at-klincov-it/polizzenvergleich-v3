@@ -4752,3 +4752,44 @@ NO DEPLOY: Kundencheckout unverändert
 LIMIT: keine rückwirkende kryptografische Aussage über Änderungen vor V3-Erzeugung
 NEXT: Baseline-Worksheet-Neubau, privater Target-Materializer, 224-Overlay und 155-Guard
 ```
+
+## 91. Baseline-Rebuild, private Target-Materialisierung und All-50-Runner
+
+Die QA-Kette für die 69 PAV8-Reviewzeilen ist bis unmittelbar vor dem realen
+Modelllauf geschlossen:
+
+1. `ece288a6` prüft jeden primären Baseline-Manifest-Hash gegen den
+   Paketvertrag und bindet Release, PDF-SHA und Dokumentstatus.
+2. `4ca4aa86` baut die 50 vollständigen Baseline-Worksheets deterministisch
+   neu; die reale Mac-Studio-Prüfung ergab 50/50 semantische Parität.
+3. `7ae4233c` projiziert daraus ausschließlich die kanonischen 69 Targets.
+4. `65c12278` rekonstruiert alle selektierten Quellen samt Seite, Offset,
+   exaktem Text, Kontext und Candidate-Ownership.
+5. `07fbfb51` veröffentlicht ein privates, exakt resumierbares Paket aus
+   50 Dokument/Kategorie-Paaren und 101 Dateien.
+6. `30e1eda9` materialisiert daraus QA-only Rows, Requested Fields, Markdown
+   und einen nicht veröffentlichbaren Report.
+7. `9108fd6c` ergänzt die streng gebundene Einzel-CLI; `7e651202` erlaubt im
+   Phasenroot ausschließlich deren festen `result`-Unterordner.
+8. `63942e0d` orchestriert alle 50 Paare sequenziell unter der globalen
+   Modellsperre.
+
+Der Runner akzeptiert nur ein einziges geladenes Qwen-LLM mit exakt gebundenem
+Kontext. Ein geladener Embedder ist verboten. Es gibt keine Hybridargumente,
+keinen automatischen Modellwechsel und keine Kandidaten-ID-Reparatur. Jede
+Resume-Phase wird anhand ihrer Release-, Runtime-, Prompt-, Worksheet-,
+Selection- und Ergebnisartefakthashes erneut geprüft.
+
+```text
+Reale Baseline-Neubauten: 50/50 PASS
+Prepared Target-Paare: 50
+Target-Instanzen: 690
+Candidate-belegte Komponenten: 283
+Candidate-Vorkommen: 663
+Runner-Commit: 63942e0d723e9d57bc34d537b9273eba27094945
+Mac Studio: Prettier PASS; 32/32 fokussierte/angrenzende Tests PASS
+LIMIT: realer 50-Paar-Modelllauf und Ergebnisdelta noch offen
+LIMIT: 224-Overlay und 155-Nicht-Review-Guard noch offen
+NO DEPLOY: installierter Kundencheckout unverändert
+NEXT: Finales Manifest/Prepared-Paket am dokumentierten Commit erzeugen und All-50-Lauf starten
+```

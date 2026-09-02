@@ -507,3 +507,82 @@ dass ein lokaler Akteur die historische Run-Ablage davor nie verändert hat.
 Für den nächsten Schritt muss der Runner zusätzlich die aktuellen Artefakte
 gegen die vorhandenen Baseline-Worksheets neu aufbauen; erst danach dürfen die
 69 neuen Target-Artefakte erzeugt werden.
+
+### 9.6 Baseline-Neubau und Target-Worksheet-Paket
+
+Die Commits `ece288a6`, `4ca4aa86`, `7ae4233c`, `65c12278` und `07fbfb51`
+schließen die Lücke zwischen eingefrorenem Dokumentartefakt und neuem
+Target-Worksheet:
+
+- jeder historische `manifest.private.json`-Rohbytehash muss dem gebundenen
+  Paketvertrag entsprechen; Release, PDF-SHA und Dokumentstatus werden erneut
+  geprüft;
+- alle 50 historischen Dokument/Kategorie-Worksheets werden aus den
+  verankerten Dokumentbytes und aktuellen Katalogbytes vollständig neu gebaut
+  und semantisch mit der Baseline verglichen;
+- erst nach dieser 50/50-Parität werden ausschließlich die 69 registrierten
+  Anforderungen projiziert;
+- Candidate-Ownership, physische Seite, Offsets, exakter Text und Kontext
+  werden für jede selektierte Quelle aus dem Dokumentartefakt rekonstruiert;
+- das vorbereitete Paket enthält genau 10 Dokumente × 5 Kategorien, private
+  0600-Dateien und einen 0700-Ausgaberoot; fremde oder abweichende Resume-Daten
+  werden abgelehnt.
+
+Reale Mac-Studio-Gegenprobe vor dem Modelllauf:
+
+```text
+Historische Worksheet-Neubauten: 50/50 semantisch identisch
+Full-Requirement-Zahlen: VS=36, FE=80, LW=36, ST=36, EL=36
+Target-Paare: 50
+Target-Instanzen: 690 (= 69 Anforderungen × 10 Dokumente)
+Candidate-belegte Komponenten: 283
+Komponenten ohne Kandidat: 1027
+Candidate-Vorkommen: 663
+Prepared-Dateien: 101
+Modell-/Embedding-Aufrufe: keine
+```
+
+Der Befund ist wichtig für spätere Diagnosen: Eine Zielzeile kann in einzelnen
+Dokumenten mehrere Komponenten und Kandidaten besitzen. `69` ist daher die
+Zahl der Vergleichszeilen, nicht die Zahl der Modellentscheidungen.
+
+### 9.7 Private Ergebnismaterialisierung und 50-Paar-Runner
+
+Die Commits `30e1eda9`, `9108fd6c`, `7e651202` und `63942e0d` führen den
+QA-only Ausführungspfad bis zum privaten Ergebnis fort:
+
+- der Result-Contract baut Triage, Evidence, Selected Sources,
+  Requested Fields und Tabellenzeilen aus ihren gebundenen Rohbytes neu auf;
+- pro Dokument/Kategorie werden ausschließlich
+  `rows.private.json`, `requested-fields.private.json`, `answer.private.md`
+  und `report.private.json` ausgegeben;
+- der erlaubte interne Zielpfad ist exakt
+  `DOC-<nn>-<uuid>/<Kategorie>/result`; Triage und Effects können nicht als
+  Result-Ziel überschrieben werden;
+- der All-50-Runner führt fest `10 × (VS, FE, LW, ST, EL)` sequenziell aus,
+  hält dabei die bestehende globale Modellsperre und verwendet ein bereits
+  geladenes Qwen-Modell ohne Modellwechsel;
+- ein geladener Embedder, ein zweites geladenes Modell, falsches Modell oder
+  falsches Kontextlimit führen vor dem ersten Modellaufruf zum Abbruch;
+- Hybrid-Prompt und Hybrid-Suche werden nicht übergeben;
+  `allowUniqueCandidateIdRepair` ist fest `false`;
+- Triage, Effects und Result werden nur bei übereinstimmenden Release-, Node-,
+  Modell-, Prompt-, Worksheet-, Selection- und Artefakthashes fortgesetzt;
+- Lauf und Resultate sind ausdrücklich `TARGETED_QA_ONLY`, nicht
+  veröffentlichbar und nicht deploybar.
+
+Mac-Studio-Nachweis für den Runner-Commit:
+
+```text
+Commit: 63942e0d723e9d57bc34d537b9273eba27094945
+Prettier: PASS
+Fokussierte und angrenzende Suites: 32/32 PASS
+Geladener Modellzustand vor Realrun:
+  qwen/qwen3.6-35b-a3b, LLM, Kontext 42496
+Geladene Embeddingmodelle: 0
+NO DEPLOY: installierter Kundencheckout unverändert
+```
+
+Noch nicht bewiesen sind die tatsächlichen 50 Modellphasen dieses finalen
+Commits, der 69-Zeilen-Vorher/Nachher-Vergleich, das 224-Zeilen-Overlay und der
+155-Zeilen-Nicht-Review-Guard. Diese Nachweise folgen in dieser Reihenfolge.
