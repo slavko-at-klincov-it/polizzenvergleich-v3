@@ -100,12 +100,12 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `2/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
+Status: `3/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
 echten gezielten Ergebnisweg als `VORTEIL_B`, `EL-11` als
-`NICHT_VERGLEICHBAR` ohne Review entschieden. `EL-06` und `EL-12` haben jeweils
-den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber noch die
-Bestätigung im späteren konsistenten Vollvergleich. Drei Fälle bleiben ohne
-bestandenen Kandidaten offen.
+`NICHT_VERGLEICHBAR` und `FE-C12` als `GLEICHWERTIG` ohne Review entschieden.
+`EL-06` und `EL-12` haben jeweils den gebundenen Zehn-Dokument-Pipeline-Probe
+bestanden, benötigen aber noch die Bestätigung im späteren konsistenten
+Vollvergleich. Zwei Fälle bleiben ohne bestandenen Kandidaten offen.
 
 ```text
 VS-35
@@ -1870,3 +1870,149 @@ versionierten Vergleichsvertrag definieren, darf aber nicht durch globale
 Qualifier-Ignorierung ersetzt werden. Das ist noch keine neue
 224-Zeilen-Gesamtmetrik. Das installierte Kundensystem blieb unverändert; es
 gab kein Deployment.
+
+### 10.13 FE-C12 – Gerüstdeckung versus Gerüstkosten nach Glasbruch
+
+#### 10.13.1 Fehlerursache und enger Vertrag
+
+Der Vorherlauf enthielt in `scaffolding` drei Rohoccurrences:
+
+```text
+DOC-01, Seite 15: Kosten für Gerüste zur Ersatzausführung
+DOC-03, Seite 14: Gerüst- und Krankosten nach einem Glasschaden
+DOC-10, Seite 7: Kosten für notwendige Gerüste bei der Glasreparatur
+```
+
+Alle drei Stellen belegen Kosten für ein Hilfsgerüst nach einem Glasschaden,
+nicht das gesuchte versicherte Objekt `Gerüst` während einer Sanierung.
+`site_equipment` und `renovation_scope` besitzen in allen zehn Dokumenten null
+Occurrences. Der konkrete Vorherfehler war, dass die scope-lose lokale
+DOC-10-Klausel als positive Objektdeckung materialisiert wurde. Dadurch
+entstand künstlich `MISSING_ONE_SIDE`.
+
+Die Korrektur ist ausschließlich an
+`FE / FE-C12 / scaffolding / INSURED_OBJECT / COVERAGE_MIXED` gebunden:
+
+```text
+Binding-Basis:
+POST_LOSS_GLASS_REPAIR_SCAFFOLDING_COST_NOT_INSURED_OBJECT
+Terminalvertrag:
+DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_V1
+Scope-Proof:
+OCCURRENCE_LOCAL_POST_LOSS_GLASS_REPAIR_COST_V1
+Terminal-Gate:
+deterministicPostLossScaffoldingCostTerminal
+```
+
+Der Vertrag verlangt eine quellenexakte Occurrence, gültige Offsets, Seite,
+Candidate-ID und eine lokale Kostenrolle. Er akzeptiert entweder einen
+aktuellen Glasbruchabschnitt oder die nachweisbar lokale scope-lose
+Glas-Reparaturklausel von DOC-10. Echte Gerüstdeckung während Sanierung,
+Baustelleneinrichtung, Negation, Optionalität, Mehrprämie, gemischte Klauseln,
+unvollständige Offsets sowie fremde oder geerbte Scopes bleiben fail-closed.
+Der ResultBuilder rekonstruiert den semantischen Proof erneut aus der
+Occurrence; ein gemeinsam manipulierter Worksheet-Text und neu berechneter
+Hash reicht nicht aus.
+
+Produkt- und Implementierungscommits:
+
+```text
+99647cbf fix(analysis): reject FE-C12 post-loss scaffold costs
+b60fa978 style(analysis): format FE-C12 terminal proof
+43fb9cc9 fix(analysis): preserve scope-less FE-C12 proof
+```
+
+Weil sich die vertrauenswürdige kundenrelevante Entscheidungssemantik ändert,
+wurde das Produktprofil auf
+`CUSTOMER_CORE_5_V22_FE_C12_POST_LOSS_SCAFFOLDING_TERMINAL` erhöht. Der
+FE-Katalog bleibt unverändert `fe-occurrence-full-draft-v0.7`; Alias,
+Komponenten und Suchvertrag wurden nicht gelockert.
+
+#### 10.13.2 Mac-Studio-Regression
+
+```text
+Commit: 43fb9cc9b889c80d17a65a3a090009d3b88f4c0c
+Worktree: /private/tmp/pv3-validate-43fb9cc9
+Formatprüfung: PASS
+Fokussierte Suites: 6/6 PASS
+Fokussierte Tests: 193/193 PASS
+Breite Regression: 42 Suites und 873 Tests PASS
+```
+
+Vier weitere Suites mit 25 Tests scheitern mit historischen Fixturefehlern.
+Sie wurden zusätzlich unverändert auf dem Vorhercommit
+`347cd39c466698239a0e433dea8f256f440f570d` ausgeführt und scheitern dort mit
+denselben 25 Fehlern:
+
+- das historische Target-QA-Manifest bindet eine ältere FE-Katalogversion;
+- eine statische Verteilung erwartet noch `25 COVERAGE_MIXED` und
+  `91 COVERAGE_ONLY`, obwohl der bereits vorher aktuelle Katalog `24` und
+  `92` enthält.
+
+Die historischen Verträge wurden nicht umgeschrieben oder gelockert. Der
+FE-C12-Fix erzeugt gegenüber dem Vorhercommit keine zusätzliche breite
+Regression.
+
+#### 10.13.3 Echter gezielter Zehn-Dokument-Lauf
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C12-AFTER-43FB9CC9-20260902
+Target-Selection-Digest:
+05cfcc56fa63a086c5beb44e3557810c42d27a1afc804905bf8d1ada9c0c8dff
+Entscheidungsartefakt:
+decision-43fb9cc9/summary.private.json
+Summary-Digest:
+92b2fd87446a3d83e278714820f59433768b0021c2bfc2ac9225e4e8d819987d
+```
+
+Der Lauf bindet alle zehn Dokumente und denselben FE-C12-Suchvertrag wie der
+Vorherlauf:
+
+```text
+Triage: 10/10 formal PASS
+Prepared Evidence: 10/10 formal PASS
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Triage-Serverterminals: 3
+Evidence-Serverterminals: 30/30 Komponenten
+DOC-01: CURRENT_PAGE_HEADING / GLASBRUCH_INSURANCE
+DOC-03: CURRENT_PAGE_HEADING / GLASBRUCH_INSURANCE
+DOC-10: OCCURRENCE_LOCAL_CLAUSE / leerer Heading-Scope
+```
+
+Die tatsächlichen produktiven Atom-, Paketzusammenfassungs- und
+`decidePoint`-Funktionen ergeben:
+
+```text
+Paket A: vollständige kontrollierte Suche, keine passende Vertragsregelung
+Paket B: vollständige kontrollierte Suche, keine passende Vertragsregelung
+Entscheidung: GLEICHWERTIG
+Reason: EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH
+Review erforderlich: nein
+Regel: EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1
+```
+
+Die Summary-Datei besitzt Modus `0600`. Ihr SHA-256 wurde in einem getrennten
+Prozess erneut berechnet. Derselbe getrennte Prozess löste den Commit als
+echtes Git-Objekt auf, prüfte den Hash des transienten Produzentenskripts und
+rekonstruierte aus allen zehn gespeicherten Atomartefakten mit dem produktiven
+`decidePoint` erneut exakt `GLEICHWERTIG`, `reviewRequired: false` und dieselbe
+Regel.
+
+Das revisionssicher belegte Delta lautet:
+
+```text
+FE-C12: UNKLAR / MISSING_ONE_SIDE / Review
+     -> GLEICHWERTIG / EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH / kein Review
+```
+
+Dies behauptet nicht, dass beide Pakete eine Gerüstdeckung enthalten. Es
+behauptet die nach vollständiger kontrollierter Suche gleiche dokumentierte
+Fundlage: In beiden Paketen wurde für den dreiteiligen FE-C12-Vertrag keine
+passende Sanierungs-Gerüstregelung gefunden. Unter Einbeziehung aller bisher
+akzeptierten gezielten Deltas würde die noch unbestätigte Projektion von
+`Gleichwertig 114 / Unklar 65` auf `Gleichwertig 115 / Unklar 64` wechseln.
+Das ist ausdrücklich keine neue 224-Zeilen-Gesamtmetrik. Ein voller
+224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der installierte
+Kundenstand blieb unverändert.
