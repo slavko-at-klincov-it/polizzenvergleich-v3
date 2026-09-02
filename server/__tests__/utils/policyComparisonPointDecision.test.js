@@ -16,6 +16,9 @@ const {
 const {
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
+const {
+  buildFeC07ConditionAbsenceAudit,
+} = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 
 const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
 const SOLE_SCOPE_REQUIREMENT_DIGEST = "f".repeat(64);
@@ -2612,6 +2615,251 @@ describe("policy comparison point decision", () => {
     ).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+    });
+  });
+
+  describe("FE-C07 certified local limit dominance", () => {
+    const component = {
+      id: "sauna_or_infrared_cabin_in_common_room",
+      factRole: "INSURED_OBJECT",
+    };
+    const requirementContract = {
+      digest: "7".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const restriction =
+      "der Versicherungsnehmer und/oder Gebäudeeigentümer für den eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist";
+
+    function localClause(percent, suffix = "") {
+      return `AW03 Gemeinschaftseinrichtungen Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils ${percent}% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen und Fitnessräume.${suffix}`;
+    }
+
+    function absenceAudit(side, percent, suffix = "") {
+      const text = localClause(percent, suffix);
+      const exactText = "Gemeinschaftsräume wie Saunen";
+      const occurrenceStart = text.indexOf(exactText);
+      return buildFeC07ConditionAbsenceAudit({
+        binding: "DIRECT",
+        occurrence: {
+          candidateId: `candidate-fe-c07-${side}`.replace(
+            "candidate-",
+            "candidate:"
+          ),
+          pageNumber: 4,
+          physicalPageNumber: 4,
+          exactText,
+          documentStart: 10_000 + occurrenceStart,
+          documentEnd: 10_000 + occurrenceStart + exactText.length,
+          context: {
+            unitType: "PARAGRAPH",
+            text,
+            documentStart: 10_000,
+            documentEnd: 10_000 + text.length,
+          },
+        },
+      });
+    }
+
+    function feC07Atom(
+      side,
+      percent,
+      conditionMode,
+      { suffix = "", qualifier, ...overrides } = {}
+    ) {
+      const candidateId = `candidate:fe-c07-${side}`;
+      const fields = [
+        {
+          field: "limit",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: `${percent} %`,
+              valueType: "PERCENT",
+              unit: "%",
+              limitKind: "CAPPED",
+              qualifier:
+                qualifier ||
+                "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme",
+              source: {
+                candidateId,
+                physicalPageNumber: 4,
+                exactText: `${percent}%`,
+              },
+            },
+          ],
+        },
+      ];
+      if (conditionMode === "ABSENT")
+        fields.push({
+          field: "condition",
+          status: "NOT_FOUND",
+          facts: [],
+          absenceAudit: absenceAudit(side, percent, suffix),
+        });
+      else
+        fields.push({
+          field: "condition",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: restriction,
+              valueType: "TEXT",
+              unit: null,
+              source: {
+                candidateId,
+                physicalPageNumber: 4,
+                exactText: restriction,
+              },
+            },
+          ],
+        });
+      return atom(side, {
+        requirementId: "FE-C07",
+        componentId: component.id,
+        componentLabel: "Sauna oder Infrarotkabine im Gemeinschaftsraum",
+        factRole: component.factRole,
+        requirementContractDigest: requirementContract.digest,
+        declaredComponents: requirementContract.components,
+        requestedFieldStatus: "COMPLETE",
+        requestedFields: ["limit"],
+        optionalFields: ["condition"],
+        selectedCandidateIds: [candidateId],
+        fields,
+        sources: [
+          {
+            candidateId,
+            physicalPageNumber: 4,
+            exactText: "Gemeinschaftsräume wie Saunen",
+            conditionCheckText:
+              conditionMode === "ABSENT"
+                ? localClause(percent, suffix)
+                : `Zusätzlich sind mitversichert, wenn ${restriction}: Gemeinschaftsräume wie Saunen`,
+          },
+        ],
+        ...overrides,
+      });
+    }
+
+    function decideFeC07(left, right) {
+      return decidePoint({
+        categoryId: "FE-C07",
+        packageA: packageSummary({ requirementContract }),
+        packageB: packageSummary({ requirementContract }),
+        atomsA: [left],
+        atomsB: [right],
+      });
+    }
+
+    test("awards B for the real 5%-restricted versus 10%-certified shape", () => {
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED"),
+        feC07Atom("b", 10, "ABSENT", {
+          suffix:
+            " Außenanlagen umfassen Beleuchtungsanlagen (ausgenommen Beleuchtungskörper).",
+          documentStatus: "FRAMEWORK_TERMS",
+          documentApplicability: "CONDITIONAL",
+          documentRole: "SUPPLEMENTAL_CONTRACT",
+        })
+      );
+      expect(result).toMatchObject({
+        outcome: POINT_OUTCOME.ADVANTAGE_B,
+        reasonCode: "ALL_DECISIVE_DIMENSIONS_FAVOR_ONE_SIDE",
+        reviewRequired: false,
+        ruleId: "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
+      });
+      expect(result.reason).toContain("B 10 %");
+      expect(result.reason).toContain("A 5 %");
+      expect(result.reason).toContain("ohne zusätzliche Bedingung");
+      expect(result.dimensions[0].comparisonAudit).toMatchObject({
+        winnerSide: "B",
+        higherConditionMode: "CERTIFIED_LOCAL_ABSENCE",
+        lowerConditionMode: "KNOWN_LIABILITY_AND_PERIL_RESTRICTION",
+      });
+    });
+
+    test("works symmetrically for A on active documents", () => {
+      expect(
+        decideFeC07(
+          feC07Atom("a", 12, "ABSENT"),
+          feC07Atom("b", 6, "RESTRICTED")
+        )
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.ADVANTAGE_A,
+        ruleId: "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
+      });
+    });
+
+    test.each([
+      [
+        "equal values",
+        () => [
+          feC07Atom("a", 10, "RESTRICTED"),
+          feC07Atom("b", 10, "ABSENT"),
+        ],
+      ],
+      [
+        "different reference qualifier",
+        () => [
+          feC07Atom("a", 5, "RESTRICTED"),
+          feC07Atom("b", 10, "ABSENT", {
+            qualifier:
+              "jeweils; auf Erstes Risiko; Bezugsgröße Inhaltsversicherungssumme",
+          }),
+        ],
+      ],
+      [
+        "out-of-range percentage",
+        () => [
+          feC07Atom("a", 5, "RESTRICTED"),
+          feC07Atom("b", 101, "ABSENT"),
+        ],
+      ],
+      [
+        "referenced condition in higher clause",
+        () => [
+          feC07Atom("a", 5, "RESTRICTED"),
+          feC07Atom("b", 10, "ABSENT", {
+            suffix: " Die Mitversicherung gilt gemäß Abschnitt X.",
+          }),
+        ],
+      ],
+      [
+        "higher side remains restricted",
+        () => [
+          feC07Atom("a", 5, "RESTRICTED"),
+          feC07Atom("b", 10, "RESTRICTED"),
+        ],
+      ],
+    ])("fails closed for %s", (_label, fixture) => {
+      const [left, right] = fixture();
+      const result = decideFeC07(left, right);
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_A);
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    });
+
+    test("fails closed when the higher clause audit is tampered", () => {
+      const higher = feC07Atom("b", 10, "ABSENT");
+      higher.fields[1].absenceAudit = {
+        ...higher.fields[1].absenceAudit,
+        source: {
+          ...higher.fields[1].absenceAudit.source,
+          exactTextSha256: "0".repeat(64),
+        },
+      };
+      expect(
+        decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher)
+      ).toMatchObject({ outcome: POINT_OUTCOME.UNCLEAR });
+    });
+
+    test("fails closed on multiple limit facts", () => {
+      const higher = feC07Atom("b", 10, "ABSENT");
+      higher.fields[0].facts.push({ ...higher.fields[0].facts[0] });
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED"),
+        higher
+      );
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
     });
   });
 

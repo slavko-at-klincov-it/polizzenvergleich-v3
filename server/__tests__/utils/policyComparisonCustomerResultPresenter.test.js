@@ -128,6 +128,17 @@ describe("policy comparison customer result presenter", () => {
     ).toBe(true);
   });
 
+  test("keeps the certified FE-C07 limit advantage customer-visible", () => {
+    expect(
+      presented("VORTEIL_B", {
+        reason:
+          "Vorteil Paket B: Sauna im Gemeinschaftsraum: B 10 %, A 5 %; die höhere Seite ist durch eine vollständig geprüfte lokale Klausel ohne zusätzliche Bedingung belegt.",
+        ruleId: "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
+        reviewRequired: false,
+      }).startsWith("Vorteil Polizze B:")
+    ).toBe(true);
+  });
+
   test("keeps the approved sole-scope result customer-visible", () => {
     const text = presented("NICHT_VERGLEICHBAR", {
       reason:

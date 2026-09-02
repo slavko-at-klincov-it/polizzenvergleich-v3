@@ -37,6 +37,9 @@ const {
 const {
   compareAutomaticIndexAdjustmentPresence,
 } = require("./automaticIndexAdjustmentComparisonContract");
+const {
+  compareFeC07LimitDominance,
+} = require("./feC07LimitDominanceContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -457,8 +460,8 @@ function compareNumericFields(left, right, factRole, canonical = false) {
   return null;
 }
 
-function compareDimension(left, right, { canonical = false } = {}) {
-  const dimension = {
+function comparisonDimension(left, right, { canonical = false } = {}) {
+  return {
     categoryId: left.requirementId,
     componentId: left.componentId,
     componentLabel: left.componentLabel,
@@ -466,6 +469,10 @@ function compareDimension(left, right, { canonical = false } = {}) {
     a: canonical ? canonicalAuditSide(left) : auditSide(left),
     b: canonical ? canonicalAuditSide(right) : auditSide(right),
   };
+}
+
+function compareDimension(left, right, { canonical = false } = {}) {
+  const dimension = comparisonDimension(left, right, { canonical });
   const keyFor = canonical ? canonicalComparisonKey : comparisonKey;
   if (keyFor(left) !== keyFor(right))
     return {
@@ -650,6 +657,15 @@ function dimensionReason(dimension) {
   const bValues = displayedValues(dimension.b);
   const aContext = comparisonContext(dimension.a);
   const bContext = comparisonContext(dimension.b);
+  const feC07Audit = dimension.comparisonAudit;
+  if (
+    feC07Audit?.contractId ===
+    "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_AUDIT_V1"
+  ) {
+    const winner = feC07Audit.winnerSide;
+    const loser = winner === "A" ? "B" : "A";
+    return `${label}: ${winner} ${feC07Audit.higherValue}, ${loser} ${feC07Audit.lowerValue}; die höhere Seite ist durch eine vollständig geprüfte lokale Klausel ohne zusätzliche Bedingung belegt`;
+  }
   const context =
     aContext === bContext ? "" : ` (A ${aContext}; B ${bContext})`;
   if (aValues || bValues)
@@ -1087,12 +1103,34 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
         dimensions
       );
     const completeFor = canonical ? comparisonAtomComplete : completeAtom;
-    if (!completeFor(foundA[0]) || !completeFor(foundB[0]))
+    const feC07LimitDominance = compareFeC07LimitDominance(
+      foundA[0],
+      foundB[0]
+    );
+    if (
+      !feC07LimitDominance &&
+      (!completeFor(foundA[0]) || !completeFor(foundB[0]))
+    )
       return unclear(
         "ATOMIC_EVIDENCE_INCOMPLETE",
         "Unklar: Mindestens ein atomarer Fakt ist unvollständig, konfliktbehaftet oder nicht mit einer gültigen Quelle gebunden.",
         dimensions
       );
+    if (feC07LimitDominance) {
+      dimensions.push({
+        outcome:
+          feC07LimitDominance.winnerSide === "A"
+            ? POINT_OUTCOME.ADVANTAGE_A
+            : POINT_OUTCOME.ADVANTAGE_B,
+        reasonCode: "HIGHER_COVERAGE_LIMIT",
+        ruleId: feC07LimitDominance.ruleId,
+        dimension: {
+          ...comparisonDimension(foundA[0], foundB[0], { canonical }),
+          comparisonAudit: feC07LimitDominance.audit,
+        },
+      });
+      continue;
+    }
     dimensions.push(compareDimension(foundA[0], foundB[0], { canonical }));
   }
 
