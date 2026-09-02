@@ -14,12 +14,9 @@ const {
 const UNILATERAL_COVERAGE_AUDIT_SCHEMA_VERSION = 1;
 const UNILATERAL_COVERAGE_AUDIT_CONTRACT_ID =
   "QUALIFIED_COVERAGE_OVER_ABSENCE_AUDIT_V1";
-const UNILATERAL_COVERAGE_RULE_ID =
-  "INCLUDED_OVER_QUALIFIED_ABSENCE_V1";
-const UNILATERAL_COVERAGE_REASON_CODE =
-  "INCLUDED_OVER_QUALIFIED_ABSENCE";
-const UNILATERAL_COVERAGE_TREATMENT =
-  "INCLUDED_OVER_QUALIFIED_ABSENCE_V1";
+const UNILATERAL_COVERAGE_RULE_ID = "INCLUDED_OVER_QUALIFIED_ABSENCE_V1";
+const UNILATERAL_COVERAGE_REASON_CODE = "INCLUDED_OVER_QUALIFIED_ABSENCE";
+const UNILATERAL_COVERAGE_TREATMENT = "INCLUDED_OVER_QUALIFIED_ABSENCE_V1";
 const UNILATERAL_DOCUMENTATION_RULE_ID =
   "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2";
 const UNILATERAL_DOCUMENTATION_REASON_CODE =
@@ -256,7 +253,9 @@ function evidenceSideAssessment({
   const pagesPerDocument = new Map();
   for (const component of audit?.components || []) {
     const pair = `${component?.documentUuid || ""}\u0000${component?.searchPlanId || ""}`;
-    const componentId = String(component?.searchPlanId || "").split("/").at(-1);
+    const componentId = String(component?.searchPlanId || "")
+      .split("/")
+      .at(-1);
     if (
       !expectedPairs.delete(pair) ||
       !completeSearchCell(component, requirementContract, {
@@ -376,10 +375,7 @@ function evidenceSideAssessment({
   const foundDocumentUuids = [
     ...new Set(foundAtoms.flatMap(({ documentUuids: values }) => values || [])),
   ].sort();
-  if (
-    !factDocumentUuids ||
-    !sameJson(factDocumentUuids, foundDocumentUuids)
-  )
+  if (!factDocumentUuids || !sameJson(factDocumentUuids, foundDocumentUuids))
     blockers.add("PACKAGE_FACT_BINDING_INVALID");
 
   const canonicalBlockers = [...blockers].sort();
@@ -503,13 +499,9 @@ function buildUnilateralCoverageAbsenceAudit({
 
 function validateUnilateralCoverageAbsenceAudit(audit, options) {
   const atomsA =
-    audit?.evidencedSide === "A"
-      ? audit?.evidenced?.evidencedAtoms
-      : undefined;
+    audit?.evidencedSide === "A" ? audit?.evidenced?.evidencedAtoms : undefined;
   const atomsB =
-    audit?.evidencedSide === "B"
-      ? audit?.evidenced?.evidencedAtoms
-      : undefined;
+    audit?.evidencedSide === "B" ? audit?.evidenced?.evidencedAtoms : undefined;
   const expected = buildUnilateralCoverageAbsenceAudit({
     ...options,
     atomsA,

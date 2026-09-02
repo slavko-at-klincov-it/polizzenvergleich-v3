@@ -197,8 +197,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   } else if (Number(result.schemaVersion) === 9) {
     if (
       productProfileId !== HISTORICAL_SCHEMA_9_PROFILE.id ||
-      comparisonContractId !==
-        HISTORICAL_SCHEMA_9_PROFILE.comparisonContractId
+      comparisonContractId !== HISTORICAL_SCHEMA_9_PROFILE.comparisonContractId
     )
       validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
         productProfileId,

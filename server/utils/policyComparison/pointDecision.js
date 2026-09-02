@@ -905,16 +905,15 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
       bilateralAbsenceAudit,
       dimensions: [],
     };
-  const unilateralCoverageAbsenceAudit =
-    buildUnilateralCoverageAbsenceAudit({
-      categoryId,
-      packageA,
-      packageB,
-      atomsA,
-      atomsB,
-      requirementContractA: contractA,
-      requirementContractB: contractB,
-    });
+  const unilateralCoverageAbsenceAudit = buildUnilateralCoverageAbsenceAudit({
+    categoryId,
+    packageA,
+    packageB,
+    atomsA,
+    atomsB,
+    requirementContractA: contractA,
+    requirementContractB: contractB,
+  });
   if (unilateralCoverageAbsenceAudit)
     return decideQualifiedCoverageOverAbsence({
       categoryId,

@@ -177,10 +177,7 @@ function writeFoundSearchSupport(run, categoryView) {
       },
     })
   );
-  const worksheetFile = path.join(
-    categoryDirectory,
-    "worksheet.private.json"
-  );
+  const worksheetFile = path.join(categoryDirectory, "worksheet.private.json");
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
   worksheet.document = { physicalPages: 1 };
   worksheet.summary = { componentCount: 1 };
@@ -1337,14 +1334,13 @@ describe("policy comparison result builder", () => {
         delete tampered.categories[0].rows[0].pointDecision
           .unilateralCoverageAbsenceAudit,
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision
-          .unilateralCoverageAbsenceAudit.eligible = false),
+        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible =
+          false),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
           "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2"),
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision
-          .unilateralCoverageAbsenceAudit.absence.physicalPagesChecked += 1),
+        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.absence.physicalPagesChecked += 1),
     ]) {
       const tampered = JSON.parse(JSON.stringify(result));
       mutate(tampered);

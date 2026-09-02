@@ -185,7 +185,10 @@ function qualifiedOneSidedFixture({ evidencedSide = "A" } = {}) {
       serverNegativeTerminal: !found,
     },
   });
-  const foundAudit = searchCell({ documentUuid: foundDocumentUuid, found: true });
+  const foundAudit = searchCell({
+    documentUuid: foundDocumentUuid,
+    found: true,
+  });
   const absentAudit = searchCell({
     documentUuid: absentDocumentUuid,
     found: false,
