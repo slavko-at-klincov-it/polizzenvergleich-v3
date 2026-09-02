@@ -2309,6 +2309,26 @@ describe("requestedFieldEvidenceContract", () => {
         "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
       ],
     },
+    {
+      name: "LF compensation cap and building-specific prior-state exclusion",
+      candidateId: "candidate:vs35-lf-scope-axes",
+      exactText: "Entschädigungsleistung ist jedoch mit jenem Betrag begrenzt",
+      text: "Gebäude, die sich bei Eintritt des Schadenfalles in Bau befinden oder bereits errichtet sind, gelten nicht als Wiederherstellung. Die Entschädigungsleistung ist jedoch mit jenem Betrag begrenzt, der sich beim Wiederaufbau bzw. der Wiederherstellung an derselben Stelle und im gleichen Umfang ergeben würde.",
+      expected: [
+        "Bereits in Bau befindliche oder errichtete Gebäude gelten nicht als Wiederherstellung",
+        "Wiederherstellungsentschädigung ist auf den Betrag am bisherigen Ort und im gleichen Umfang begrenzt",
+      ],
+    },
+    {
+      name: "EABS compensation cap and item-specific prior-state exclusion",
+      candidateId: "candidate:vs35-eabs-scope-axes",
+      exactText: "Verwendung der Entschädigung für Sachen",
+      text: "Die Verwendung der Entschädigung für Sachen, die zur Zeit des Eintritts des Schadenereignisses bereits vorhanden oder bestellt waren oder sich in Herstellung befanden, gilt nicht als Wiederherstellung bzw. Wiederbeschaffung. Die Entschädigungsleistung ist jedoch mit jenem Betrag begrenzt, der sich bei Wiederaufbau bzw. Wiederherstellung an der bisherigen Stelle und im gleichen Umfang ergeben hätte.",
+      expected: [
+        "Bereits vorhandene, bestellte oder in Herstellung befindliche Sachen gelten nicht als Wiederherstellung oder Wiederbeschaffung",
+        "Wiederherstellungsentschädigung ist auf den Betrag am bisherigen Ort und im gleichen Umfang begrenzt",
+      ],
+    },
   ])("extracts $name", ({ candidateId, exactText, text, expected }) => {
     const source = textualOccurrence({ candidateId, text, exactText });
     const result = materializeRequestedFieldEvidence({

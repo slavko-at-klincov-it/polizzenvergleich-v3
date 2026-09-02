@@ -1512,6 +1512,24 @@ function extractRestorationConditionFacts({ occurrence, binding }) {
       },
       {
         pattern:
+          /Entschädigungsleistung\s+ist\s+jedoch\s+mit\s+jenem\s+Betrag\s+begrenzt,?\s+der\s+sich\s+bei(?:m)?\s+Wiederaufbau\s+(?:bzw\.?|oder)\s+(?:der\s+)?Wiederherstellung\s+an\s+der(?:selben|\s+bisherigen)\s+Stelle\s+und\s+im\s+gleichen\s+Umfang\s+ergeben\s+(?:würde|hätte)/giu,
+        normalize: () =>
+          "Wiederherstellungsentschädigung ist auf den Betrag am bisherigen Ort und im gleichen Umfang begrenzt",
+      },
+      {
+        pattern:
+          /Gebäude,?\s+die\s+sich\s+(?:bei\s+Eintritt\s+des\s+Schadenfalles\s+)?in\s+Bau\s+befinden\s+oder\s+bereits\s+errichtet\s+sind,?\s+gelten\s+nicht\s+als\s+Wiederherstellung/giu,
+        normalize: () =>
+          "Bereits in Bau befindliche oder errichtete Gebäude gelten nicht als Wiederherstellung",
+      },
+      {
+        pattern:
+          /Verwendung\s+der\s+Entschädigung\s+für\s+Sachen,?\s+die[\s\S]{0,100}?bereits\s+vorhanden\s+oder\s+bestellt\s+waren\s+oder\s+sich\s+in\s+Herstellung\s+befanden,?\s+gilt\s+nicht\s+als\s+Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung/giu,
+        normalize: () =>
+          "Bereits vorhandene, bestellte oder in Herstellung befindliche Sachen gelten nicht als Wiederherstellung oder Wiederbeschaffung",
+      },
+      {
+        pattern:
           /Im\s+Falle\s+eines\s+Deckungsprozesses\s+wird\s+diese\s+Frist\s+um\s+die\s+Dauer\s+dieses\s+Prozesses\s+erstreckt/giu,
         normalize: () =>
           "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
