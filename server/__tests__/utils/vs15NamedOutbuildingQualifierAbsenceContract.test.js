@@ -1,6 +1,3 @@
-const fs = require("fs");
-const path = require("path");
-
 const {
   VS15_QUALIFIER_ABSENCE_AUDIT_CONTRACT_ID,
   VS15_QUALIFIER_ABSENCE_REASON_CODE,
@@ -21,6 +18,10 @@ const {
 const {
   requirementSearchContractDigest,
 } = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
+const {
+  buildControlledOccurrenceWorksheet,
+} = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const fullVsCatalog = require("../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const CATEGORY_ID = "VS-15";
@@ -207,23 +208,35 @@ function fixture() {
 
 describe("VS-15 bilateral controlled qualifier absence contract", () => {
   test("binds the production contract to the current catalog requirement", () => {
-    const catalog = JSON.parse(
-      fs.readFileSync(
-        path.join(
-          __dirname,
-          "../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json"
+    const text = "Nebengebäude";
+    const worksheet = buildControlledOccurrenceWorksheet({
+      documentFingerprint: "a".repeat(64),
+      catalog: {
+        ...fullVsCatalog,
+        requirements: fullVsCatalog.requirements.filter(
+          ({ id }) => id === CATEGORY_ID
         ),
-        "utf8"
-      )
-    );
-    const requirement = catalog.requirements.find(
-      ({ id }) => id === CATEGORY_ID
-    );
+      },
+      document: {
+        sourceDocumentId: "a".repeat(64),
+        title: "vs15-contract-fixture.pdf",
+        pageContent: text,
+        pageMap: [{ pageNumber: 1, start: 0, end: text.length }],
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
+      },
+    });
+    const requirement = worksheet.requirements[0];
 
-    expect(catalog.catalogId).toBe(CATALOG_ID);
+    expect(worksheet.catalog.id).toBe(CATALOG_ID);
     expect(
       requirementSearchContractDigest({
-        catalogId: catalog.catalogId,
+        catalogId: worksheet.catalog.id,
         requirement,
       })
     ).toBe(VS15_REQUIREMENT_CONTRACT_DIGEST);
