@@ -1471,6 +1471,12 @@ function extractRestorationConditionFacts({ occurrence, binding }) {
       },
       {
         pattern:
+          /gesichert\s+ist,?\s+dass\s+die\s+Entschädigung\s+zur\s+Gänze\s+f[üu]r\s+die\s+Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+verwendet\s+wird/giu,
+        normalize: () =>
+          "Gesamtentschädigung nur bei vollständig gesicherter Wiederherstellung oder Wiederbeschaffung",
+      },
+      {
+        pattern:
           /Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+(?:binnen|innerhalb(?:\s+von)?)\s+(?:3|drei|dreier)\s+Jahren?\s+ab\s+dem\s+(?:Eintritt\s+des\s+Schadenereignisses|Schadendatum|Schadentag)\s+erfolgt/giu,
         normalize: () =>
           "Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren ab dem Schadenereignis",
@@ -1492,6 +1498,17 @@ function extractRestorationConditionFacts({ occurrence, binding }) {
           /wiederbeschafften\s+(?:bzw\.?|oder)\s+wiederhergestellten\s+Sachen\s+dem\s+gleichen\s+Betriebs-?\s*(?:bzw\.?|oder)\s*Verwendungszweck\s+dienen/giu,
         normalize: () =>
           "Wiederbeschaffte oder wiederhergestellte Sachen müssen dem gleichen Betriebs- oder Verwendungszweck dienen",
+      },
+      {
+        pattern:
+          /F[üu]r\s+die\s+Wiederherstellung\s+gen[üu]gt\s+es,?\s+wenn[\s\S]{0,160}?Gebäude\s+hergestellt\s+werden,?\s+die\s+dem\s+gleichen\s+Zweck\s+dienen/giu,
+        normalize: () =>
+          "Wiederbeschaffte oder wiederhergestellte Sachen müssen dem gleichen Betriebs- oder Verwendungszweck dienen",
+      },
+      {
+        pattern:
+          /Wiederaufbau\s+(?:bzw\.?|oder)\s+die\s+Wiederherstellung[\s\S]{0,160}?innerhalb\s+Österreichs\s+erfolgen/giu,
+        normalize: () => "Gebäudewiederherstellung innerhalb Österreichs",
       },
       {
         pattern:

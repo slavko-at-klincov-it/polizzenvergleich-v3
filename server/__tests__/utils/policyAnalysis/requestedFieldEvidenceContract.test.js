@@ -2286,6 +2286,57 @@ describe("requestedFieldEvidenceContract", () => {
     ]);
   });
 
+  test.each([
+    {
+      name: "LF purpose and Austrian restoration territory",
+      candidateId: "candidate:vs35-lf-axes",
+      exactText: "Für die Wiederherstellung genügt es",
+      text: "Für die Wiederherstellung genügt es, wenn für zerstörte oder beschädigte Gebäude wieder Gebäude hergestellt werden, die dem gleichen Zweck dienen. Der Wiederaufbau bzw. die Wiederherstellung kann auch ohne Vorliegen eines behördlichen Wiederaufbauverbotes innerhalb Österreichs erfolgen.",
+      expected: [
+        "Wiederbeschaffte oder wiederhergestellte Sachen müssen dem gleichen Betriebs- oder Verwendungszweck dienen",
+        "Gebäudewiederherstellung innerhalb Österreichs",
+      ],
+    },
+    {
+      name: "EABS secured use and litigation extension",
+      candidateId: "candidate:vs35-eabs-axes",
+      exactText:
+        "Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet",
+      text: "Den Anspruch auf Gesamtentschädigung erwirbt der Versicherungsnehmer nur, wenn gesichert ist, dass die Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet wird und die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren ab dem Schadendatum erfolgt. Im Falle eines Deckungsprozesses wird diese Frist um die Dauer dieses Prozesses erstreckt.",
+      expected: [
+        "Gesamtentschädigung nur bei vollständig gesicherter Wiederherstellung oder Wiederbeschaffung",
+        "Wiederherstellung oder Wiederbeschaffung innerhalb von 3 Jahren ab dem Schadenereignis",
+        "Wiederherstellungsfrist verlängert sich um die Dauer eines Deckungsprozesses",
+      ],
+    },
+  ])("extracts $name", ({ candidateId, exactText, text, expected }) => {
+    const source = textualOccurrence({ candidateId, text, exactText });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-35",
+        label: "Wiederherstellungsklausel und Frist für den Wiederaufbau",
+        requestedFields: ["condition"],
+        components: [
+          {
+            id: "restoration_clause",
+            label: "Wiederherstellungsklausel",
+            factRole: "CONDITION",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([candidateId, "DIRECT"]),
+    });
+
+    const condition = result.requirements[0].fields.find(
+      ({ field }) => field === "condition"
+    );
+    expect(condition.status).toBe(FIELD_EVIDENCE_STATUS.FOUND);
+    expect(
+      condition.facts.map(({ normalizedValue }) => normalizedValue)
+    ).toEqual(expect.arrayContaining(expected));
+  });
+
   test("rejects unknown or duplicate candidate selections fail-closed", () => {
     const source = occurrence({
       candidateId: "candidate:known",
