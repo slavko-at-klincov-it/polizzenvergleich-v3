@@ -88,7 +88,7 @@ function atom({ documentUuid, found, pages, conditionText }) {
     documentApplicability: found ? "ACTIVE" : "UNKNOWN",
     selectedCandidateIds: found ? [candidateId] : [],
     unresolvedCandidateIds: [],
-    requestedFieldStatus: found ? "COMPLETE" : "INCOMPLETE",
+    requestedFieldStatus: found ? "COMPLETE" : "NOT_FOUND",
     requestedFields: ["condition"],
     optionalFields: [],
     fields: [

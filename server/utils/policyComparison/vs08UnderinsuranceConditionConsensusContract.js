@@ -260,7 +260,7 @@ function cleanNotFoundAtom(atom, requirementContract, searchCell) {
       sameJson(atom?.selectedCandidateIds, []) &&
       sameJson(atom?.unresolvedCandidateIds, []) &&
       sameJson(atom?.sources, []) &&
-      atom?.requestedFieldStatus === "INCOMPLETE" &&
+      atom?.requestedFieldStatus === "NOT_FOUND" &&
       sameJson(atom?.requestedFields, ["condition"]) &&
       sameJson(atom?.optionalFields, []) &&
       sameJson(atom?.fields, [
