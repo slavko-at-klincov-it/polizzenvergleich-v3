@@ -1748,7 +1748,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V35_ANY_COMPLETE_IDENTITY_PRECEDENCE",
+      id: "CUSTOMER_CORE_5_V36_VS19_PATH_CLASS_EXCLUSION_TERMINAL",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_V7",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],

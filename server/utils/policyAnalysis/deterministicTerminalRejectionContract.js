@@ -71,6 +71,7 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     membership: "EXCLUDED_FROM_CLASS",
     allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
     allowedExactTexts: ["Beleuchtungsanlagen"],
+    maximumClassificationToContextGap: 16,
     allowPrecedingScopeLeadReset: true,
   }),
   "VS:VS-19:outdoor_paths": Object.freeze({
@@ -86,6 +87,7 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     membership: "EXCLUDED_FROM_CLASS",
     allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
     allowedExactTexts: ["Außenanlagen"],
+    maximumClassificationToContextGap: 16,
     allowPrecedingScopeLeadReset: true,
   }),
 });
@@ -203,6 +205,8 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
       allowedObjectClassificationSubjects:
         objectClassificationContract.allowedSubjects,
       allowedExactTexts: objectClassificationContract.allowedExactTexts || null,
+      maximumClassificationToContextGap:
+        objectClassificationContract.maximumClassificationToContextGap ?? null,
       allowPrecedingScopeLeadReset:
         objectClassificationContract.allowPrecedingScopeLeadReset,
     });
@@ -622,6 +626,8 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
   const classificationPage = hint?.physicalPageNumber || null;
   const relativeStart = occurrence?.documentStart - context?.documentStart;
   const relativeEnd = occurrence?.documentEnd - context?.documentStart;
+  const classificationToContextGap =
+    context?.documentStart - hint?.documentEnd;
   const scopeLeadText = String(occurrence?.scopeLead?.text || "");
   const scopeLeadResetAtClassification = Boolean(
     target?.allowPrecedingScopeLeadReset === true &&
@@ -666,6 +672,11 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
     !Number.isInteger(hint?.documentEnd) ||
     hint.documentEnd <= hint.documentStart ||
     hint.documentEnd > occurrence.documentStart ||
+    (Number.isInteger(target?.maximumClassificationToContextGap) &&
+      (!Number.isInteger(classificationToContextGap) ||
+        classificationToContextGap < 0 ||
+        classificationToContextGap >
+          target.maximumClassificationToContextGap)) ||
     !Number.isInteger(occurrencePage) ||
     !Number.isInteger(classificationPage) ||
     classificationPage !== occurrencePage ||

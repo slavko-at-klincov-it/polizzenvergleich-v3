@@ -1830,6 +1830,15 @@ describe("preparedEvidenceContract", () => {
         exactText: "Außenanlagen",
         candidateId: "candidate:vs19:outdoor-path-class-exclusion",
       }),
+      occurrenceFor({
+        subject: "Betriebsinhalt",
+        boundaryText: "Nicht als Betriebsinhalt gelten:",
+        contextText:
+          "·Außenanlagen (Firmenschilder, Beleuchtungsanlagen und befestigte Flächen);",
+        exactText: "Außenanlagen",
+        scopeLead: { documentStart: 1_758, documentEnd: 1_758, text: "" },
+        candidateId: "candidate:vs19:business-path-class-exclusion",
+      }),
     ]) {
       const target = targetFor(
         occurrence,
@@ -1923,6 +1932,48 @@ describe("preparedEvidenceContract", () => {
     ];
     for (const candidate of adversarial) {
       const unresolved = targetFor(candidate);
+      expect(unresolved.serverRejectedCandidates).toEqual([]);
+      expect(unresolved.candidates).toHaveLength(1);
+    }
+    for (const candidate of [
+      occurrenceFor({
+        contextText: "·Gehwege und befestigte Flächen;",
+        exactText: "Gehwege",
+      }),
+      occurrenceFor({
+        contextText: "·Bodenbefestigungen des Versicherungsgrundstücks;",
+        exactText: "Bodenbefestigungen",
+      }),
+      occurrenceFor({
+        contextText: "·Außenanlagen sind mitversichert;",
+        exactText: "Außenanlagen",
+      }),
+      occurrenceFor({
+        contextText: "·Außenanlagen, sofern besonders vereinbart;",
+        exactText: "Außenanlagen",
+      }),
+      occurrenceFor({
+        contextText: "·Außenanlagen bis EUR 10.000;",
+        exactText: "Außenanlagen",
+      }),
+      {
+        ...occurrenceFor({
+          contextText: "·Außenanlagen;",
+          exactText: "Außenanlagen",
+        }),
+        context: {
+          ...occurrenceFor({
+            contextText: "·Außenanlagen;",
+            exactText: "Außenanlagen",
+          }).context,
+          documentStart: 2_200,
+          documentEnd: 2_216,
+        },
+        documentStart: 2_201,
+        documentEnd: 2_213,
+      },
+    ]) {
+      const unresolved = targetFor(candidate, { componentId: "outdoor_paths" });
       expect(unresolved.serverRejectedCandidates).toEqual([]);
       expect(unresolved.candidates).toHaveLength(1);
     }
