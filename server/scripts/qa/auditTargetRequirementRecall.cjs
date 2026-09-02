@@ -17,7 +17,7 @@ const {
 } = require("../../utils/policyComparison/productContract");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
-const CONTRACT_ID = "TARGET_REQUIREMENT_RECALL_AUDIT_V1";
+const CONTRACT_ID = "TARGET_REQUIREMENT_RECALL_AUDIT_V2";
 const CATALOG_FILES = Object.freeze({
   VS: "server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json",
   FE: "server/resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json",
@@ -358,10 +358,13 @@ function run(
     baselineWorksheetContracts: true,
     currentCatalogMatchesProductProfile: true,
     onlySelectedRequirementChanged,
+  };
+  const findings = {
     allCurrentComponentsTerminalZero,
+    occurrenceDelta: currentOccurrenceCount - baselineOccurrenceCount,
   };
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: CONTRACT_ID,
     runKind: "TARGET_REQUIREMENT_RECALL_AUDIT_ONLY",
     status: Object.values(gates).every(Boolean)
@@ -402,6 +405,7 @@ function run(
       currentOccurrences: currentOccurrenceCount,
     },
     gates,
+    findings,
     candidateConclusion: allCurrentComponentsTerminalZero
       ? "CONTROLLED_OCCURRENCE_ZERO_ON_BOTH_SIDES"
       : "CURRENT_OCCURRENCES_REQUIRE_FURTHER_TRIAGE",

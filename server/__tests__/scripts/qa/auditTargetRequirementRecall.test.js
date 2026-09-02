@@ -42,7 +42,7 @@ function writeJson(file, value) {
   fs.writeFileSync(file, JSON.stringify(value, null, 2));
 }
 
-function fixture() {
+function fixture({ positiveCurrentOccurrence = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "target-recall-audit-"));
   const baselineRoot = path.join(root, "baseline");
   const output = path.join(root, "audit", "report.private.json");
@@ -52,14 +52,15 @@ function fixture() {
     .find(({ id }) => id === "ST-13")
     .components.find(({ id }) => id === "chimney_head").aliases = [
     "Kamin-",
-    "Kaminkopf",
     "Kaminköpfe",
   ];
   const specs = [
     {
       uuid: "11111111-1111-4111-8111-111111111111",
       side: "A",
-      text: "STURMVERSICHERUNG\nKeine Regelung zu Dachfenstern.",
+      text: positiveCurrentOccurrence
+        ? "STURMVERSICHERUNG\nVersichert sind Schäden am Kaminkopf."
+        : "STURMVERSICHERUNG\nKeine Regelung zu Dachfenstern.",
     },
     {
       uuid: "22222222-2222-4222-8222-222222222222",
@@ -153,7 +154,7 @@ describe("auditTargetRequirementRecall", () => {
         releaseIdentityFn: () => "fixture-release",
       });
       expect(report).toMatchObject({
-        contractId: "TARGET_REQUIREMENT_RECALL_AUDIT_V1",
+        contractId: "TARGET_REQUIREMENT_RECALL_AUDIT_V2",
         status: "TECHNICAL_PASS_REVIEW_REQUIRED",
         customerMaterializationAllowed: false,
         publishable: false,
@@ -173,7 +174,10 @@ describe("auditTargetRequirementRecall", () => {
         },
         gates: {
           onlySelectedRequirementChanged: true,
+        },
+        findings: {
           allCurrentComponentsTerminalZero: true,
+          occurrenceDelta: -1,
         },
         candidateConclusion: "CONTROLLED_OCCURRENCE_ZERO_ON_BOTH_SIDES",
       });
@@ -191,6 +195,36 @@ describe("auditTargetRequirementRecall", () => {
           releaseIdentityFn: () => "fixture-release",
         })
       ).toThrow("TARGET_RECALL_OUTPUT_EXISTS");
+    } finally {
+      fs.rmSync(value.root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports positive recall as a finding without failing the audit gates", () => {
+    const value = fixture({ positiveCurrentOccurrence: true });
+    try {
+      const report = run(value.args, {
+        repositoryRoot: path.resolve(__dirname, "../../../.."),
+        releaseIdentityFn: () => "fixture-release",
+      });
+      expect(report).toMatchObject({
+        status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+        counts: {
+          baselineOccurrences: 1,
+          currentOccurrences: 1,
+        },
+        gates: {
+          onlySelectedRequirementChanged: true,
+        },
+        findings: {
+          allCurrentComponentsTerminalZero: false,
+          occurrenceDelta: 0,
+        },
+        candidateConclusion: "CURRENT_OCCURRENCES_REQUIRE_FURTHER_TRIAGE",
+      });
+      expect(report.gates).not.toHaveProperty(
+        "allCurrentComponentsTerminalZero"
+      );
     } finally {
       fs.rmSync(value.root, { recursive: true, force: true });
     }
