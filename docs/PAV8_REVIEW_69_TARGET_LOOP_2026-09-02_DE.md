@@ -100,13 +100,15 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `4/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
+Status: `5/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
 echten gezielten Ergebnisweg als `VORTEIL_B`, `EL-11` als
 `NICHT_VERGLEICHBAR`, `FE-C12` als `GLEICHWERTIG` und `LW-20` nach Schritt B2
-als `GLEICHWERTIG` ohne Review entschieden. `EL-06` und `EL-12` haben
+als `GLEICHWERTIG` ohne Review entschieden. `VS-35` ist nach vollständiger
+beidseitiger Achsenbindung als `NICHT_VERGLEICHBAR` ohne Review entschieden:
+B besitzt den weiteren Wiederherstellungsort, zugleich unterscheiden sich die
+Vorzustands- und Nichterfüllungsbedingungen. `EL-06` und `EL-12` haben
 jeweils den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber
-noch die Bestätigung im späteren konsistenten Vollvergleich. Ein Fall bleibt
-ohne bestandenen Kandidaten offen: `VS-35`.
+noch die Bestätigung im späteren konsistenten Vollvergleich.
 
 ```text
 VS-35
@@ -2180,6 +2182,149 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
+
+### 10.17 VS-35 – Wiederherstellungsklausel und Wiederaufbaufrist
+
+#### 10.17.1 Ausgangsfehler und Ursachenbaum
+
+`VS-35` war in der Ausgangsbewertung `UNKLAR`. Die Diagnose trennte vier
+unabhängige Ursachen, die nicht mit einer einzelnen zusätzlichen Aliaszeile
+behoben werden konnten:
+
+1. einzelne reale Klauselformen waren im kontrollierten Recall-Vertrag nicht
+   enthalten;
+2. lokal zusammengehörige Klauselteile wurden nicht immer als maßgebliche
+   Bedingung an die VS-35-Komponenten gebunden;
+3. der Requested-Field-Deduplizierer entfernte einen geteilten Fristfakt aus
+   der zweiten Pflichtkomponente, weil sein Schlüssel die Komponenten-ID nicht
+   enthielt;
+4. nach vollständiger Evidenzbindung fehlte weiterhin eine Fachregel, die die
+   unterschiedlichen Bedingungsbündel sicher zu einem Gesamtsieger ordnen
+   könnte.
+
+Direkt betroffene Produktionsgrenzen:
+
+```text
+server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json
+server/utils/policyAnalysis/deterministicVsEvidenceRules.js
+server/utils/policyAnalysis/requestedFieldEvidenceContract.js
+server/utils/policyComparison/productContract.js
+server/utils/policyComparison/pointDecision.js
+```
+
+Die produktive Regel blieb allgemein semantisch: Sie bindet
+Wiederherstellungszweck, gesicherte Entschädigungsverwendung, Frist,
+Deckungsprozess, Wiederherstellungsort, Entschädigungsobergrenze und
+Vorzustandsdefinitionen. Weder Versicherername, konkrete Seite noch
+Kunden-Dokument-UUID entscheiden über den Treffer.
+
+#### 10.17.2 Kleine Forward-Fix-Commits
+
+```text
+701c38bb fix(policy): add versioned VS-35 clause recall
+0e1e657d fix(analysis): bind local VS-35 clauses
+0c9f495d test(analysis): guard VS-35 local clause binding
+12f7e360 fix(qa): harden VS-35 negation and history
+d503a041 fix(analysis): extract VS-35 condition axes
+111cb8b3 style(analysis): format VS-35 field test
+6855cfde fix(analysis): retain VS-35 facts per component
+8c0750ad style(analysis): format VS-35 deduplication test
+e2ee0355 fix(policy): add VS-35 axis recall
+7e381559 fix(analysis): bind VS-35 comparison axes
+d6878b6e fix(analysis): extract VS-35 symmetric axes
+61406484 fix(analysis): extract remaining VS-35 scope axes
+```
+
+Die letzte Ergänzung materialisiert zwei zuvor nur im Rohtext sichtbare
+Achsen source-bound:
+
+- Entschädigungsobergrenze: Betrag eines Wiederaufbaus am bisherigen Ort und
+  im gleichen Umfang;
+- Vorzustandsdefinition: bei A gebäudespezifisch `in Bau / bereits
+  errichtet`, bei B sachbezogen `vorhanden / bestellt / in Herstellung` und
+  zusätzlich für Wiederbeschaffung.
+
+Die beiden Vorzustandsformen werden absichtlich nicht zu demselben
+Normalwert verschmolzen. Ihr jeweiliger Gegenstands- und Wirkungsscope bleibt
+sichtbar, damit eine spätere Vergleichsregel keinen falschen Vorteil erzeugt.
+
+#### 10.17.3 Mac-Studio-Prüfungen
+
+Alle Ausführungen liefen im isolierten Mac-Studio-Worktree; der installierte
+Kundencheckout wurde nicht verändert.
+
+Letzte Commitprüfung:
+
+```text
+Commit: 61406484bc40207731ea76357b94be2fc771d887
+Worktree: /private/tmp/pv3-validate-61406484
+Node: 22.23.2
+Formatprüfung: PASS
+Fokussierte Suites: 3/3 PASS
+Fokussierte Tests: 141/141 PASS
+Modell-/Embedding-Aufrufe: keine
+```
+
+Echte gebundene Zehn-Dokument-Zielprobe:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-35-61406484-20260902
+Commit: 61406484bc40207731ea76357b94be2fc771d887
+Produktprofil: CUSTOMER_CORE_5_V28_VS35_AXIS_RECALL
+Katalog: vs-occurrence-full-draft-v0.9
+Summary-SHA-256:
+059f3c4d43023a51abbea224d007f785ad0f37bcf301f0057cdb403ff334cd80
+Target-Selection-Digest:
+7d2ec786cf7f6f793b8a1966ae6b16f2521f75b535553e52c2b3a5b83ce39db8
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Serverseitig terminal entschiedene Komponenten: 16
+Paket A: Ja / BELEGT
+Paket B: Ja / BELEGT
+Punktentscheidung: NICHT_VERGLEICHBAR / COMPARABILITY_GATE_FAILED
+Kundenreview: nein
+```
+
+Gegenüber dem Ausgangsfall ist die Zeile damit nicht mehr unklar und fordert
+kein Kundenreview. Die konservative Projektion für den späteren Vollrun sinkt
+von `Unklar 63` auf `Unklar 62` und steigt von `Nicht vergleichbar 8` auf
+`Nicht vergleichbar 9`. Das ist ausdrücklich noch keine neue 224-Zeilen-
+Gesamtmetrik.
+
+#### 10.17.4 Warum kein künstlicher Vorteil B freigeschaltet wurde
+
+Die gebundenen Achsen ergeben kein einseitig dominierendes Gesamtpaket:
+
+```text
+Achse                              A                         B
+Frist                              3 Jahre                   3 Jahre
+gleicher Zweck                     belegt                    belegt
+Deckungsprozess verlängert Frist   belegt                    belegt
+Orts-/Umfang-Obergrenze            belegt                    belegt
+Wiederherstellungsgebiet           Österreich                Europäische Union
+bindender Auftrag wahrt Frist      nicht als Achse belegt    belegt
+Vorzustandsdefinition              Gebäude                   Sachen; zusätzlich bestellt
+Folge bei Nichterfüllung            Zeitwert                  Verkehrswert, höchstens Zeitwert
+```
+
+Die EU-Regel ist für den Gebäudewiederherstellungsort eine echte Erweiterung
+gegenüber Österreich. B enthält außerdem eine günstige Fristwahrung durch
+bindende Aufträge. Gleichzeitig ist Bs Vorzustandsausschluss breiter und die
+Nichterfüllungsfolge kann unter dem Zeitwert liegen. Diese gegenläufigen
+Bedingungen dürfen weder ignoriert noch durch bloßes Zählen der günstigen
+Achsen kompensiert werden.
+
+Ein eigener Dominanzvertrag wurde deshalb nach Quellprüfung und zwei
+unabhängigen Code-/Adversarialreviews verworfen. Zulässig wäre er erst für
+einen künftigen Fall, in dem Frist, Zweck, Cap, Vorzustandsdefinition,
+Prozessverlängerung und Nichterfüllungsfolge semantisch gleich sind und nur
+der explizite Ortsbereich `Österreich -> EU` erweitert wird. Für die aktuelle
+Dokumentpaarung ist `NICHT_VERGLEICHBAR` die belegte fachliche Endentscheidung,
+nicht ein verbliebener Such- oder Reviewfehler.
+
+Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
+durchgeführt.
 
 ### 10.16 LW-20 Schritt B2 – kontrollierten Nichtfund und gebundenen Default-Ausschluss gleichsetzen
 
