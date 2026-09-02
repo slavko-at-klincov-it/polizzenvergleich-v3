@@ -1737,6 +1737,7 @@ describe("preparedEvidenceContract", () => {
       source = "CURRENT_PAGE_OBJECT_CLASSIFICATION",
       boundaryText = null,
       contextText = "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, Taubengitter);",
+      exactText = "Beleuchtungsanlagen",
       scopeLead = {
         documentStart: 1_311,
         documentEnd: 1_756,
@@ -1745,7 +1746,6 @@ describe("preparedEvidenceContract", () => {
       candidateId = "candidate:vs19:object-class-exclusion",
     } = {}) => {
       const contextStart = 2_172;
-      const exactText = "Beleuchtungsanlagen";
       const occurrenceStart = contextStart + contextText.indexOf(exactText);
       return {
         candidateId,
@@ -1820,11 +1820,23 @@ describe("preparedEvidenceContract", () => {
       occurrenceFor(),
       occurrenceFor({
         subject: "Betriebsinhalt",
+        boundaryText: "Nicht als Betriebsinhalt gelten:",
         scopeLead: { documentStart: 1_758, documentEnd: 1_758, text: "" },
         candidateId: "candidate:vs19:business-contents-exclusion",
       }),
+      occurrenceFor({
+        contextText:
+          "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, befestigte Flächen);",
+        exactText: "Außenanlagen",
+        candidateId: "candidate:vs19:outdoor-path-class-exclusion",
+      }),
     ]) {
-      const target = targetFor(occurrence);
+      const target = targetFor(
+        occurrence,
+        occurrence.exactText === "Außenanlagen"
+          ? { componentId: "outdoor_paths" }
+          : {}
+      );
       expect(target.candidates).toEqual([]);
       expect(target.unresolvedCandidateIds).toEqual([]);
       expect(target.serverRejectedCandidates).toEqual([
@@ -1878,6 +1890,10 @@ describe("preparedEvidenceContract", () => {
       occurrenceFor({ subject: "Gebäude" }),
       occurrenceFor({ source: "PRECEDING_PAGE_OBJECT_CLASSIFICATION" }),
       occurrenceFor({ boundaryText: "Sonstige Objektliste:" }),
+      occurrenceFor({
+        contextText: "·Beleuchtungskörper im Freien;",
+        exactText: "Beleuchtungskörper",
+      }),
       occurrenceFor({
         contextText: "·Beleuchtungsanlagen sind mitversichert.",
       }),

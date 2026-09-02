@@ -70,6 +70,22 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     absenceMeaning: "COVERAGE_ONLY",
     membership: "EXCLUDED_FROM_CLASS",
     allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
+    allowedExactTexts: ["Beleuchtungsanlagen"],
+    allowPrecedingScopeLeadReset: true,
+  }),
+  "VS:VS-19:outdoor_paths": Object.freeze({
+    contractId:
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
+    decisionBasis: COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS,
+    auditProofMode:
+      "ALL_OCCURRENCES_DETERMINISTICALLY_PURE_OBJECT_CLASS_EXCLUSIONS",
+    scopeProofMode: COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
+    terminalGate: "deterministicCoverageOnlyObjectClassExclusionTerminal",
+    factRole: "INSURED_OBJECT",
+    absenceMeaning: "COVERAGE_ONLY",
+    membership: "EXCLUDED_FROM_CLASS",
+    allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
+    allowedExactTexts: ["Außenanlagen"],
     allowPrecedingScopeLeadReset: true,
   }),
 });
@@ -186,6 +202,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
       objectClassificationMembership: objectClassificationContract.membership,
       allowedObjectClassificationSubjects:
         objectClassificationContract.allowedSubjects,
+      allowedExactTexts: objectClassificationContract.allowedExactTexts || null,
       allowPrecedingScopeLeadReset:
         objectClassificationContract.allowPrecedingScopeLeadReset,
     });
@@ -634,6 +651,8 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
     hint?.membership !== target?.objectClassificationMembership ||
     hint?.source !== "CURRENT_PAGE_OBJECT_CLASSIFICATION" ||
     !target?.allowedObjectClassificationSubjects?.includes(normalizedSubject) ||
+    (Array.isArray(target?.allowedExactTexts) &&
+      !target.allowedExactTexts.includes(exactText.normalize("NFKC").trim())) ||
     !exclusionBoundaryMatches ||
     context?.unitType !== "LIST_ITEM" ||
     !exactText ||
