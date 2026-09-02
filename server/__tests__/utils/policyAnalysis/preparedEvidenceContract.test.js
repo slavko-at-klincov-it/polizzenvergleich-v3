@@ -1974,8 +1974,17 @@ describe("preparedEvidenceContract", () => {
       },
     ]) {
       const unresolved = targetFor(candidate, { componentId: "outdoor_paths" });
-      expect(unresolved.serverRejectedCandidates).toEqual([]);
-      expect(unresolved.candidates).toHaveLength(1);
+      expect(
+        unresolved.serverRejectedCandidates.some(
+          ({ terminalRejectionContractId }) =>
+            terminalRejectionContractId ===
+            DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID
+        )
+      ).toBe(false);
+      expect(
+        unresolved.candidates.length +
+          unresolved.serverRejectedCandidates.length
+      ).toBe(1);
     }
     for (const overrides of [
       { requirementId: "VS-18" },

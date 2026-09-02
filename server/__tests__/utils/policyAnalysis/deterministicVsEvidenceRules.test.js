@@ -641,6 +641,7 @@ describe("deterministicVsEvidenceRules", () => {
       "Außenanlagen einschließlich befestigter Flächen",
       "Außenanlagen einschließlich Bodenbefestigungen",
       "Außenanlagen einschließlich Zufahrtswege",
+      "Außenanlagen sind mitversichert",
     ]) {
       const decision = deterministicVsCandidateBinding({
         requirementId: "VS-19",
