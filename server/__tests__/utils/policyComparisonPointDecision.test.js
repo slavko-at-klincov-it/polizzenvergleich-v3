@@ -1853,7 +1853,9 @@ describe("policy comparison point decision", () => {
         eligible: false,
         absentSide: "A",
         evidencedSide: "B",
-        blockers: expect.arrayContaining(["PACKAGE_NOT_FULLY_PROVEN_INCLUDED"]),
+        blockerCodes: expect.arrayContaining([
+          "PACKAGE_NOT_FULLY_PROVEN_INCLUDED",
+        ]),
       },
     });
 
