@@ -118,16 +118,32 @@ describe("FE-A01 fire-definition comparison contract", () => {
   });
 
   test.each([
-    ["negated definition", "Brand ist kein Feuer, das sich bestimmungswidrig ausbreitet.", {}],
-    ["negated origin", "Brand ist ein Feuer, das nicht bestimmungswidrig entsteht und/oder sich bestimmungswidrig ausbreitet.", {}],
+    [
+      "negated definition",
+      "Brand ist kein Feuer, das sich bestimmungswidrig ausbreitet.",
+      {},
+    ],
+    [
+      "negated origin",
+      "Brand ist ein Feuer, das nicht bestimmungswidrig entsteht und/oder sich bestimmungswidrig ausbreitet.",
+      {},
+    ],
     ["excluded context", `Nicht versichert: ${ARISE_OR_SPREAD}`, {}],
     ["optional context", `Optional vereinbar: ${ARISE_OR_SPREAD}`, {}],
-    ["conjunctive form", "Brand ist ein Feuer, das bestimmungswidrig entsteht und sich bestimmungswidrig ausbreitet.", {}],
+    [
+      "conjunctive form",
+      "Brand ist ein Feuer, das bestimmungswidrig entsteht und sich bestimmungswidrig ausbreitet.",
+      {},
+    ],
     ["unknown form", "Brand ist ein Feuer, das bestimmungsgemäß entsteht.", {}],
     ["other role", ARISE_OR_SPREAD, { factRole: "PERIL" }],
     ["other component", ARISE_OR_SPREAD, { componentId: "fire_damage" }],
     ["narrow scope", ARISE_OR_SPREAD, { selectedScopePicture: "NARROW_ONLY" }],
-    ["unresolved evidence", ARISE_OR_SPREAD, { unresolvedCandidateIds: ["candidate-review"] }],
+    [
+      "unresolved evidence",
+      ARISE_OR_SPREAD,
+      { unresolvedCandidateIds: ["candidate-review"] },
+    ],
   ])("fails closed for %s", (_label, text, overrides) => {
     expect(
       compareFireDefinition(
