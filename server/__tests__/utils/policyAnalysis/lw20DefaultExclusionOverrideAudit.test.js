@@ -209,9 +209,9 @@ describe("LW-20 default-exclusion override audit", () => {
     expect(tamper((changed) => (changed.candidates[0].unitType = "PAGE"))).toBe(
       false
     );
-    expect(tamper((changed) => (changed.candidates[0].documentStart += 1))).toBe(
-      false
-    );
+    expect(
+      tamper((changed) => (changed.candidates[0].documentStart += 1))
+    ).toBe(false);
     expect(
       tamper((changed) => (changed.candidateSetDigestSha256 = "a".repeat(64)))
     ).toBe(false);

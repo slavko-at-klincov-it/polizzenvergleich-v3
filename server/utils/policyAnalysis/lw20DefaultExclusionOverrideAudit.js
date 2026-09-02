@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  structuralContext,
-} = require("./controlledOccurrenceWorksheet");
+const { structuralContext } = require("./controlledOccurrenceWorksheet");
 
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_SCHEMA_VERSION = 2;
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_CONTRACT_ID =
@@ -23,8 +21,7 @@ const LW_ANCHOR_SOURCE =
   "\\b(?:Leitungswasserversicherung|Leitungswasserbedingungen|Bedingungen\\s+f(?:u|ü)r\\s+die\\s+Leitungswasserversicherung)\\b";
 const EXCLUSION_SOURCE =
   "\\b(?:Ausschluss|Ausschl(?:u|ü)sse|Ausschlussbestimmungen|nicht\\s+versicherte[nr]?\\s+Sch(?:a|ä)den)\\b";
-const ITEM_C_SOURCE =
-  "\\b(?:lit(?:era)?\\.?|Buchstabe|Punkt|Ziffer)\\s*c\\b";
+const ITEM_C_SOURCE = "\\b(?:lit(?:era)?\\.?|Buchstabe|Punkt|Ziffer)\\s*c\\b";
 const DEFAULT_HEADING_SOURCE =
   "\\bNicht\\s+versichert\\s+sind\\s+Sch(?:a|ä)den\\s*,?\\s*(?:sofern|so\\s+ferne?)\\s+nicht\\s+anders\\s+vereinbart\\b";
 const COMPLETE_EXCLUSION_SOURCE =
@@ -184,10 +181,12 @@ function matchingFamily(unitText, action) {
       allMatches(unitText, source)
     );
     if (locatorGroups.some((matches) => matches.length === 0)) continue;
-    const locators = locatorGroups.map((matches) =>
-      [...matches].sort(
-        (left, right) => spanDistance(left, action) - spanDistance(right, action)
-      )[0]
+    const locators = locatorGroups.map(
+      (matches) =>
+        [...matches].sort(
+          (left, right) =>
+            spanDistance(left, action) - spanDistance(right, action)
+        )[0]
     );
     if (
       locators.every(
@@ -200,7 +199,13 @@ function matchingFamily(unitText, action) {
   return null;
 }
 
-function candidateProjection({ page, action, context, match, documentIdentity }) {
+function candidateProjection({
+  page,
+  action,
+  context,
+  match,
+  documentIdentity,
+}) {
   const unitDocumentStart = page.documentStart + context.pageStart;
   const unitDocumentEnd = page.documentStart + context.pageEnd;
   const relativeStarts = [
