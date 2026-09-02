@@ -139,6 +139,17 @@ describe("policy comparison customer result presenter", () => {
     ).toBe(true);
   });
 
+  test("keeps the source-bound FE-A01 definition advantage customer-visible", () => {
+    const text = presented("VORTEIL_B", {
+      reason:
+        "Vorteil Paket B: Die Branddefinition umfasst bestimmungswidriges Entstehen oder Ausbreiten; Polizze A nennt nur die bestimmungswidrige Ausbreitung.",
+      ruleId: "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1",
+      reviewRequired: false,
+    });
+    expect(text.startsWith("Vorteil Polizze B:")).toBe(true);
+    expect(text).toContain("bestimmungswidriges Entstehen oder Ausbreiten");
+  });
+
   test("keeps the approved sole-scope result customer-visible", () => {
     const text = presented("NICHT_VERGLEICHBAR", {
       reason:
