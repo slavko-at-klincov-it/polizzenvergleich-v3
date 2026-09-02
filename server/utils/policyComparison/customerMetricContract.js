@@ -284,15 +284,13 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   const manifestDocumentUuids = validManifestDocuments
     ? manifestDocuments.map(({ uuid }) => uuid)
     : [];
-  if (
-    Number(result.schemaVersion) >= 11 &&
-    (!Array.isArray(result?.documents) ||
-      !validManifestDocuments ||
-      new Set(manifestDocumentUuids).size !== manifestDocumentUuids.length ||
-      !manifestDocuments.some(({ side }) => side === "A") ||
-      !manifestDocuments.some(({ side }) => side === "B"))
-  )
-    validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID");
+  const validLw20DocumentManifest = Boolean(
+    Array.isArray(result?.documents) &&
+      validManifestDocuments &&
+      new Set(manifestDocumentUuids).size === manifestDocumentUuids.length &&
+      manifestDocuments.some(({ side }) => side === "A") &&
+      manifestDocuments.some(({ side }) => side === "B")
+  );
   const allowedDocumentUuidsBySide = Object.fromEntries(
     ["A", "B"].map((side) => [
       side,
@@ -393,6 +391,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
           undefined;
       if (lw20EqualityDecision) {
+        if (!validLw20DocumentManifest)
+          validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
         const audit =
           row.pointDecision.lw20AbsenceDefaultExclusionEqualityAudit;
         try {
