@@ -282,6 +282,7 @@ Nach jedem Verhaltenscommit:
 | Target Selection V1     | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend             | `PASS`       |
 | Target Manifest V1      | `e15dc228` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 218/218 plus reale PAV8-Bindung           | `PASS`       |
 | Trusted Manifest CLI V2 | `b5a21570` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 227/227 plus reale Create-/Resume-Prüfung | `PASS`       |
+| Phase Digest Gate       | `3663b850` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 80/80 direkte Phasenprüfungen             | `PASS`       |
 
 Kein Deployment während dieses Loops. Der installierte Kundencheckout bleibt
 bis zu einer ausdrücklichen Freigabe unverändert.
@@ -435,3 +436,25 @@ Der installierte Kundencheckout blieb sauber und unverändert auf
 `c7d3b16d400ea4d65b558ef091781da5df82d610`. Als nächste Boundary muss der
 Target-Materializer den internen Manifest-Digest sowie die komplette
 Execution-/Promptidentität erneut als externe Erwartung verlangen.
+
+### 9.4 Phase Digest Gate – Ergebnis
+
+Commit `3663b850fc7067e65612276b8be486ed13bfb61b` reicht den extern erwarteten
+Target-Selection-Digest verpflichtend durch Candidate Triage und Prepared
+Evidence. Ein Target-Worksheet ohne externen Digest sowie ein Full-Worksheet
+mit Target-Digest werden vor der Modellinstanz fail-closed abgelehnt.
+
+Beide Phasenreports speichern den erwarteten und den tatsächlich im Worksheet
+beobachteten Digest. Der unveränderte Full-Pfad bleibt ohne Marker und Digest
+kompatibel.
+
+```text
+Mac Studio Commit: 3663b850fc7067e65612276b8be486ed13bfb61b
+Prettier: 3/3 PASS
+Direkte Selection-/Triage-/Evidence-/CLI-Prüfungen: 80/80 PASS
+Modell-/Embedding-Aufrufe: keine
+```
+
+Der noch fehlende Target-Materializer muss beide Reportfelder gegen den
+Manifest-Selection-Digest prüfen; ein intern nur selbstkonsistenter Report ist
+nicht ausreichend.

@@ -4710,3 +4710,21 @@ LIMIT: 224-Overlay und 155-Guard fehlen
 NO DEPLOY: Kundencheckout unverändert auf c7d3b16d
 NEXT: separater privater Target-Materializer mit verpflichtendem Expected-Digest
 ```
+
+## 89. Target-Selection-Digest durch beide Modellphasen
+
+Commit `3663b850fc7067e65612276b8be486ed13bfb61b` ergänzt beide bestehenden
+Phasen-CLIs um `--expectedTargetSelectionDigestSha256`.
+
+- Target-Worksheet ohne externe Erwartung: Abbruch vor Modellinstanz;
+- Full-Worksheet mit Target-Erwartung: Abbruch;
+- Digestformat und Worksheet-Digest müssen exakt passen;
+- erwarteter und beobachteter Digest werden in Triage- und Effects-Report
+  persistiert;
+- Full-Worksheet ohne Targetmarker bleibt unverändert kompatibel.
+
+```text
+Mac Studio: Prettier PASS; 80/80 direkte Prüfungen PASS
+Modell-/Embedding-Aufrufe: keine
+NEXT: Target-Materializer prüft Manifest-, Phase- und Artefakthashkette
+```
