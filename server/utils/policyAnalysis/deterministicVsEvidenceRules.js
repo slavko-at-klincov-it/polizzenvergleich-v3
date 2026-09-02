@@ -487,8 +487,10 @@ function deterministicVsCandidateBinding({
 
   if (
     key === "VS-19:outdoor_paths" &&
-    /Außenanlagen/iu.test(text) &&
-    !/Gehwege/iu.test(text)
+    /^Außenanlagen$/iu.test(String(occurrence?.exactText || "").trim()) &&
+    !/(?:Gehwege|befestigte\s+(?:Wege|Flächen)|Zufahrtswege|Asphaltierungen|Bodenbefestigungen)/iu.test(
+      occurrenceContextText(occurrence)
+    )
   )
     return {
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,

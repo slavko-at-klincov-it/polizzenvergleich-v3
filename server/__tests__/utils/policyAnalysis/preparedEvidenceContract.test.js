@@ -1919,16 +1919,9 @@ describe("preparedEvidenceContract", () => {
       expect(unresolved.serverRejectedCandidates).toEqual([]);
       expect(unresolved.candidates).toHaveLength(1);
     }
-    const otherComponent = targetFor(valid, {
-      componentId: "outdoor_paths",
-    });
-    expect(otherComponent.candidates).toEqual([]);
-    expect(otherComponent.serverRejectedCandidates).toEqual([
-      {
-        candidateId: valid.candidateId,
-        reason: "TRIAGE_MENTION_ONLY",
-      },
-    ]);
+    const otherComponent = targetFor(valid, { componentId: "outdoor_paths" });
+    expect(otherComponent.serverRejectedCandidates).toEqual([]);
+    expect(otherComponent.candidates).toHaveLength(1);
   });
 
   test("uses complete candidate triage to keep only direct and narrow effect candidates", () => {

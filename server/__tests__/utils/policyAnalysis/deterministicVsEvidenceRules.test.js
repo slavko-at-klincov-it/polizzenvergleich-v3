@@ -613,9 +613,10 @@ describe("deterministicVsEvidenceRules", () => {
       deterministicVsCandidateBinding({
         requirementId: "VS-19",
         componentId: "outdoor_paths",
-        occurrence: occurrence(
-          "Außenanlagen wie Müllsammelplätze, Beleuchtungsanlagen und Fahnenstangen"
-        ),
+        occurrence: sourceOccurrence({
+          text: "Außenanlagen wie Müllsammelplätze, Beleuchtungsanlagen und Fahnenstangen",
+          exactText: "Außenanlagen",
+        }),
       })
     ).toEqual({
       binding: DETERMINISTIC_BINDING.MENTION_ONLY,
@@ -626,14 +627,32 @@ describe("deterministicVsEvidenceRules", () => {
       deterministicVsCandidateBinding({
         requirementId: "VS-19",
         componentId: "outdoor_paths",
-        occurrence: occurrence(
-          "Außenanlagen einschließlich befestigter Gehwege"
-        ),
+        occurrence: sourceOccurrence({
+          text: "Außenanlagen einschließlich befestigter Gehwege",
+          exactText: "Außenanlagen",
+        }),
       })
     ).toEqual({
       binding: DETERMINISTIC_BINDING.DIRECT,
       basis: "EXPLICIT_OUTDOOR_PATHS",
     });
+    for (const text of [
+      "Außenanlagen einschließlich Asphaltierungen",
+      "Außenanlagen einschließlich befestigter Flächen",
+      "Außenanlagen einschließlich Bodenbefestigungen",
+      "Außenanlagen einschließlich Zufahrtswege",
+    ]) {
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-19",
+          componentId: "outdoor_paths",
+          occurrence: sourceOccurrence({ text, exactText: "Außenanlagen" }),
+        })
+      ).not.toMatchObject({
+        basis: "GENERIC_OUTDOOR_FACILITIES_WITHOUT_PATHS",
+        authoritative: true,
+      });
+    }
   });
 
   test("keeps a bare community-facilities heading model-owned", () => {
