@@ -800,10 +800,8 @@ describe("policy comparison result builder", () => {
                     candidateId,
                     physicalPageNumber: 4,
                     exactText: "10%",
-                    documentStart:
-                      10_000 + clause.indexOf("10%"),
-                    documentEnd:
-                      10_000 + clause.indexOf("10%") + "10%".length,
+                    documentStart: 10_000 + clause.indexOf("10%"),
+                    documentEnd: 10_000 + clause.indexOf("10%") + "10%".length,
                   },
                 },
               ],
@@ -829,8 +827,7 @@ describe("policy comparison result builder", () => {
             contextText: clause,
             contextDocumentStart: 10_000,
             documentStart: 10_000 + occurrenceStart,
-            documentEnd:
-              10_000 + occurrenceStart + occurrenceExactText.length,
+            documentEnd: 10_000 + occurrenceStart + occurrenceExactText.length,
           },
         ],
       },
@@ -852,9 +849,7 @@ describe("policy comparison result builder", () => {
     const [atom] = materializeAtomicFacts(input);
     expect(atom.fields[1].absenceAudit).toEqual(absenceAudit);
 
-    const tamperedRequestedFields = JSON.parse(
-      JSON.stringify(requestedFields)
-    );
+    const tamperedRequestedFields = JSON.parse(JSON.stringify(requestedFields));
     tamperedRequestedFields.requirements[0].fields[1].absenceAudit.source.exactTextSha256 =
       "0".repeat(64);
     const [tamperedAtom] = materializeAtomicFacts({
