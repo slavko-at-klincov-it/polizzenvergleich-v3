@@ -47,6 +47,10 @@ const {
   buildVs15QualifierAbsenceAudit,
   vs15QualifierAbsenceDecision,
 } = require("./vs15NamedOutbuildingQualifierAbsenceContract");
+const {
+  buildVs08ConditionConsensusAudit,
+  vs08ConditionConsensusDecision,
+} = require("./vs08UnderinsuranceConditionConsensusContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1093,6 +1097,20 @@ function decidePoint({
       packageReviewAudit,
     };
   }
+
+  const vs08ConditionConsensusAudit = buildVs08ConditionConsensusAudit({
+    categoryId,
+    packageA,
+    packageB,
+    atomsA,
+    atomsB,
+    requirementContractA: contractA,
+    requirementContractB: contractB,
+    expectedDocumentsA,
+    expectedDocumentsB,
+  });
+  if (vs08ConditionConsensusAudit)
+    return vs08ConditionConsensusDecision(vs08ConditionConsensusAudit);
 
   const groupsA = componentGroups(atomsA, categoryId);
   const groupsB = componentGroups(atomsB, categoryId);

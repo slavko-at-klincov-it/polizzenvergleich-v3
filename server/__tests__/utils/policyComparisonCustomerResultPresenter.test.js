@@ -120,6 +120,20 @@ describe("policy comparison customer result presenter", () => {
     ).toBe(true);
   });
 
+  test("keeps the approved VS-08 condition consensus customer-visible", () => {
+    const text = presented("GLEICHWERTIG", {
+      reasonCode: "EQUAL_VS08_PACKAGE_CONDITION_CONSENSUS",
+      reason:
+        "Gleichwertig: Der Unterversicherungsverzicht ist in beiden vollständig kontrolliert geprüften Paketen bedingt. Unterschiedliche konkrete Voraussetzungen werden getrennt unter VS-09 verglichen.",
+      ruleId: "VS08_EQUAL_PACKAGE_CONDITION_CONSENSUS_V1",
+      reviewRequired: false,
+    });
+
+    expect(text).toContain("Unterversicherungsverzicht");
+    expect(text).toContain("bedingt");
+    expect(text).not.toContain("VS08_EQUAL_PACKAGE_CONDITION_CONSENSUS_V1");
+  });
+
   test("keeps an approved ANY comparability result customer-visible", () => {
     expect(
       presented("NICHT_VERGLEICHBAR", {
