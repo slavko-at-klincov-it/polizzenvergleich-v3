@@ -1593,6 +1593,23 @@ function validateCatalog(catalog) {
             return { id: searchId, requiredGroups, maxLines, maxChars };
           })
         : [];
+      const followingStructuralBoundaryProofContractId =
+        component.followingStructuralBoundaryProofContractId === undefined
+          ? null
+          : requireNonEmptyString(
+              component.followingStructuralBoundaryProofContractId,
+              "FOLLOWING_BOUNDARY_PROOF_CONTRACT_REQUIRED",
+              `${id}:${componentId}`
+            );
+      if (
+        followingStructuralBoundaryProofContractId !== null &&
+        followingStructuralBoundaryProofContractId !==
+          FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID
+      )
+        throw worksheetError(
+          "FOLLOWING_BOUNDARY_PROOF_CONTRACT_INVALID",
+          `${id}:${componentId}:${followingStructuralBoundaryProofContractId}`
+        );
       return {
         id: componentId,
         label: requireNonEmptyString(
@@ -1624,6 +1641,9 @@ function validateCatalog(catalog) {
         })(),
         aliases,
         conceptSearches,
+        ...(followingStructuralBoundaryProofContractId
+          ? { followingStructuralBoundaryProofContractId }
+          : {}),
       };
     });
     const bindingStructures = Array.isArray(requirement.bindingStructures)
@@ -2294,8 +2314,14 @@ function buildControlledOccurrenceWorksheet({
     "documentFingerprint"
   );
   const { pageContent, pages } = validateDocument(document);
-  const structuralUnits = followingStructuralUnitIndex(pages);
   const requirements = validateCatalog(catalog);
+  const structuralUnits = requirements.some((requirement) =>
+    requirement.components.some(
+      (component) => component.followingStructuralBoundaryProofContractId
+    )
+  )
+    ? followingStructuralUnitIndex(pages)
+    : [];
   const sourceDocumentId = String(
     document.sourceDocumentId || document.id || fingerprint
   );
@@ -2506,17 +2532,22 @@ function buildControlledOccurrenceWorksheet({
               documentStart: page.start + evidenceContext.pageStart,
               documentEnd: page.start + evidenceContext.pageEnd,
               text: evidenceContext.text,
-              followingStructuralBoundaryProof:
-                followingStructuralBoundaryProof({
-                  pageContent,
-                  pages,
-                  structuralUnits,
-                  occurrencePage: page,
-                  context: {
-                    documentStart: page.start + evidenceContext.pageStart,
-                    documentEnd: page.start + evidenceContext.pageEnd,
-                  },
-                }),
+              ...(component.followingStructuralBoundaryProofContractId
+                ? {
+                    followingStructuralBoundaryProof:
+                      followingStructuralBoundaryProof({
+                        pageContent,
+                        pages,
+                        structuralUnits,
+                        occurrencePage: page,
+                        context: {
+                          documentStart:
+                            page.start + evidenceContext.pageStart,
+                          documentEnd: page.start + evidenceContext.pageEnd,
+                        },
+                      }),
+                  }
+                : {}),
             },
             scopeLead: {
               pageStart: scopeLead.pageStart,
@@ -2536,6 +2567,12 @@ function buildControlledOccurrenceWorksheet({
         aliases: component.aliases,
         ...(component.conceptSearches.length > 0
           ? { conceptSearches: component.conceptSearches }
+          : {}),
+        ...(component.followingStructuralBoundaryProofContractId
+          ? {
+              followingStructuralBoundaryProofContractId:
+                component.followingStructuralBoundaryProofContractId,
+            }
           : {}),
         terminalState:
           occurrences.length > 0

@@ -73,6 +73,8 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
         contextMode: component.contextMode || "STRUCTURAL",
         aliases: component.aliases || [],
         conceptSearches: component.conceptSearches || [],
+        followingStructuralBoundaryProofContractId:
+          component.followingStructuralBoundaryProofContractId || null,
       })),
     },
   };

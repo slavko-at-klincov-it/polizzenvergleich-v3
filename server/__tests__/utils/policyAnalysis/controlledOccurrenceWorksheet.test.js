@@ -112,6 +112,8 @@ function followingBoundaryCatalog() {
             label: "Target",
             factRole: "CONDITION",
             aliases: ["Zielbegriff"],
+            followingStructuralBoundaryProofContractId:
+              FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
           },
         ],
       },
@@ -129,6 +131,34 @@ function followingBoundaryOccurrence(pages, fingerprint = "boundary-proof") {
 }
 
 describe("controlledOccurrenceWorksheet", () => {
+  test("keeps following-boundary provenance opt-in per component", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages(["Solar- und Photovoltaikanlagen"]),
+      documentFingerprint: "boundary-proof-opt-in",
+      catalog: singleSolarComponentCatalog(),
+    });
+    const [candidate] = worksheet.requirements[0].components[0].occurrences;
+
+    expect(candidate.context).not.toHaveProperty(
+      "followingStructuralBoundaryProof"
+    );
+    expect(worksheet.requirements[0].components[0]).not.toHaveProperty(
+      "followingStructuralBoundaryProofContractId"
+    );
+  });
+
+  test("rejects an unknown following-boundary proof contract", () => {
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: documentFromPages(["Solar- und Photovoltaikanlagen"]),
+        documentFingerprint: "boundary-proof-invalid-contract",
+        catalog: singleSolarComponentCatalog({
+          followingStructuralBoundaryProofContractId: "UNKNOWN_V1",
+        }),
+      })
+    ).toThrow("FOLLOWING_BOUNDARY_PROOF_CONTRACT_INVALID");
+  });
+
   test("records the next same-page list item with exact skipped source provenance", () => {
     const document = documentFromPages([
       "- Zielbegriff ist reine Information.\n\n- Unmittelbarer Folgepunkt\nFortsetzung des Folgepunkts",
