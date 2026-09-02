@@ -1121,16 +1121,16 @@ function decidePoint({
   ].sort();
   let componentIds = allComponentIds;
   if (componentPolicy === "ANY") {
-    const unsafeFound = [...(atomsA || []), ...(atomsB || [])].filter(
+    const incompleteFound = [...(atomsA || []), ...(atomsB || [])].filter(
       (atom) =>
         atom.requirementId === categoryId &&
         atom.evidencePresence === "FOUND" &&
-        (!completeAtom(atom) || hasConditionalOrOptionalCoverageSource(atom))
+        !completeAtom(atom)
     );
-    if (unsafeFound.length > 0)
+    if (incompleteFound.length > 0)
       return unclear(
         "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
-        "Unklar: Mindestens eine gefundene Alternative ist unvollständig, konfliktbehaftet, bedingt oder nicht eindeutig quellengebunden."
+        "Unklar: Mindestens eine gefundene Alternative ist unvollständig, konfliktbehaftet oder nicht eindeutig quellengebunden."
       );
     const foundIdsA = foundComponentIds(groupsA);
     const foundIdsB = foundComponentIds(groupsB);
@@ -1147,9 +1147,20 @@ function decidePoint({
         reason:
           "Nicht direkt vergleichbar: Die alternativ erfüllbare Zeile ist in den beiden Paketen durch unterschiedliche Komponenten belegt. Diese Alternativen dürfen nicht stillschweigend gleichgesetzt werden.",
         reviewRequired: false,
-        ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
+        ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
         dimensions: [],
       };
+    const conditionalFound = [...(atomsA || []), ...(atomsB || [])].filter(
+      (atom) =>
+        atom.requirementId === categoryId &&
+        atom.evidencePresence === "FOUND" &&
+        hasConditionalOrOptionalCoverageSource(atom)
+    );
+    if (conditionalFound.length > 0)
+      return unclear(
+        "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
+        "Unklar: Mindestens eine beidseitig gefundene Alternative enthält eine nicht aufgelöste Bedingung, Ausnahme oder Optionalität."
+      );
     componentIds = foundIdsA;
   }
   if (componentIds.length === 0)

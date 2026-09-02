@@ -3753,7 +3753,7 @@ describe("policy comparison point decision", () => {
     ).toMatchObject({
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
       reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
-      ruleId: "ANY_COMPONENT_IDENTITY_GATE_V1",
+      ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
     });
   });
 
@@ -3810,6 +3810,65 @@ describe("policy comparison point decision", () => {
     });
 
     expect(decide([garage("a"), unsafeCarport], [garage("b")])).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
+      reviewRequired: true,
+    });
+  });
+
+  test("resolves complete differing ANY alternatives before conditional review", () => {
+    const alternative = (side, componentId, conditional = false) =>
+      atom(side, {
+        componentId,
+        componentLabel: componentId,
+        componentSatisfactionPolicy: "ANY",
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: componentId,
+            ...(conditional
+              ? { conditionCheckText: `${componentId}, sofern vereinbart` }
+              : {}),
+          },
+        ],
+      });
+    const a = [
+      alternative("a", "garage"),
+      alternative("a-carport", "carport", true),
+    ];
+    const b = [alternative("b", "garage")];
+
+    expect(decide(a, b)).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
+      ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
+      reviewRequired: false,
+    });
+    expect(decide(b, a)).toMatchObject({
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "ANY_ALTERNATIVE_SCOPE_DIFFERS",
+      ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
+      reviewRequired: false,
+    });
+  });
+
+  test("keeps matching conditional ANY alternatives review-required", () => {
+    const conditional = (side) =>
+      atom(side, {
+        componentId: "garage",
+        componentSatisfactionPolicy: "ANY",
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: "Garage",
+            conditionCheckText: "Garage, sofern besonders vereinbart",
+          },
+        ],
+      });
+
+    expect(decide([conditional("a")], [conditional("b")])).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
       reviewRequired: true,
