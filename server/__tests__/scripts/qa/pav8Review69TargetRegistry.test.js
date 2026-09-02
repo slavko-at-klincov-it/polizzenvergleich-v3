@@ -73,9 +73,14 @@ describe("PAV8 69-row targeted QA registry", () => {
         (candidate) => candidate.categoryView === categoryView
       );
       expect(target).toBeDefined();
-      if (categoryView === "ST") {
-        expect(target.catalogId).toBe("st-occurrence-full-draft-v0.4");
-        expect(catalog.catalogId).toBe("st-occurrence-full-draft-v0.5");
+      const historicalCatalogMigrations = {
+        LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.6"],
+        ST: ["st-occurrence-full-draft-v0.4", "st-occurrence-full-draft-v0.5"],
+      };
+      if (historicalCatalogMigrations[categoryView]) {
+        expect([target.catalogId, catalog.catalogId]).toEqual(
+          historicalCatalogMigrations[categoryView]
+        );
       } else expect(target.catalogId).toBe(catalog.catalogId);
       expect(target.requirementIds).toHaveLength(expectedCount);
       expect(

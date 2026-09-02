@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.5",
+  "catalogId": "lw-occurrence-full-draft-v0.6",
   "categoryView": "LW",
   "requirements": [
     {
@@ -733,7 +733,14 @@
               "maxLines": 2,
               "requiredGroups": [
                 { "prefixes": ["rueckstau"] },
-                { "prefixes": ["ueberschwemm", "hochwasser", "niederschlag", "schmelzwasser"] }
+                {
+                  "prefixes": [
+                    "ueberschwemm",
+                    "hochwasser",
+                    "niederschlag",
+                    "schmelzwasser"
+                  ]
+                }
               ]
             }
           ]
@@ -902,6 +909,11 @@
           "label": "Ausschluss allmählicher oder schleichender Einwirkung",
           "factRole": "EXCLUSION",
           "aliases": [
+            "Allmählichkeitsschaden",
+            "Allmählichkeitsschäden",
+            "Schäden durch Langzeiteinwirkung",
+            "Langzeitschaden",
+            "Langzeitschäden",
             "allmähliche Einwirkung von Feuchtigkeit",
             "allmählicher Einwirkung von Feuchtigkeit",
             "schleichende Einwirkung",

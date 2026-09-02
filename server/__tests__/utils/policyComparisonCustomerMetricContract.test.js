@@ -322,7 +322,7 @@ describe("policy comparison customer metric contract", () => {
     });
 
     historical.productProfile.id =
-      "CUSTOMER_CORE_5_V12_ST13_CHIMNEY_HEAD_PRECISION";
+      "CUSTOMER_CORE_5_V13_ST13_LW25_RECALL_PRECISION";
     expect(() => validateCustomerComparison(historical)).toThrow(
       "COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH"
     );
