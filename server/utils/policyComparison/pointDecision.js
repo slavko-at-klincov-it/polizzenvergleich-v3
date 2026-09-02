@@ -363,9 +363,24 @@ function decideQualifiedCoverageOverAbsence({
       absentPackage,
       unilateralCoverageAbsenceAudit,
     });
-  const labels = unilateralCoverageAbsenceAudit.evidenced.canonicalComponents
-    .map(({ componentLabel, componentId }) => componentLabel || componentId)
-    .join(", ");
+  const components =
+    unilateralCoverageAbsenceAudit.evidenced.canonicalComponents;
+  const labels = components.map(
+    ({ componentLabel, componentId }) => componentLabel || componentId
+  );
+  const subject =
+    labels.length === 1
+      ? labels[0]
+      : `Die Teilpunkte ${labels.map((label) => `„${label}“`).join(" und ")}`;
+  const narrowScope = components.some(
+    ({ selectedScopePicture }) => selectedScopePicture === "NARROW_ONLY"
+  );
+  const inclusionScope = narrowScope
+    ? " für den im Beleg ausgewiesenen engeren Deckungsumfang"
+    : "";
+  const allocationScope = narrowScope
+    ? "Für genau diesen engeren Deckungsumfang"
+    : "Für diesen Vergleich";
   return {
     schemaVersion: 5,
     outcome:
@@ -373,7 +388,7 @@ function decideQualifiedCoverageOverAbsence({
         ? POINT_OUTCOME.ADVANTAGE_A
         : POINT_OUTCOME.ADVANTAGE_B,
     reasonCode: UNILATERAL_COVERAGE_REASON_CODE,
-    reason: `Vorteil Polizze ${evidencedSide}: ${labels || categoryId} ${unilateralCoverageAbsenceAudit.evidenced.canonicalComponents.length === 1 ? "ist" : "sind"} in Polizze ${evidencedSide} vollständig belegt und eingeschlossen. Im vollständigen kontrollierten Suchlauf der bereitgestellten Polizze ${absentSide} wurde unter demselben versionierten Komponenten- und Suchvertrag keine entsprechende Regelung gefunden. Für diesen Vergleich wird der dokumentierte Schutz deshalb Polizze ${evidencedSide} zugerechnet. Ein ausdrücklicher Ausschluss in Polizze ${absentSide} ist damit nicht belegt.`,
+    reason: `Vorteil Polizze ${evidencedSide}: ${subject || categoryId} ${components.length === 1 ? "ist" : "sind"}${inclusionScope} in Polizze ${evidencedSide} vollständig belegt und eingeschlossen. Im vollständigen kontrollierten Suchlauf der bereitgestellten Polizze ${absentSide} wurde unter demselben versionierten Komponenten- und Suchvertrag keine entsprechende Regelung gefunden. ${allocationScope} wird der dokumentierte Schutz deshalb Polizze ${evidencedSide} zugerechnet. Ein ausdrücklicher Ausschluss in Polizze ${absentSide} ist damit nicht belegt.`,
     reviewRequired: false,
     ruleId: UNILATERAL_COVERAGE_RULE_ID,
     comparisonTreatment: UNILATERAL_COVERAGE_TREATMENT,

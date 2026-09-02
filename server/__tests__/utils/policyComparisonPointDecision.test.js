@@ -620,6 +620,65 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("states the exact narrow scope in a directional customer reason", () => {
+    const fixture = qualifiedOneSidedFixture();
+    fixture.atomsA[0].selectedScopePicture = "NARROW_ONLY";
+    fixture.atomsA[0].scopePolicy = "MATCHING_SCOPE_INCLUDED_SUFFICIENT";
+    const result = decidePoint(fixture);
+    expect(result.outcome).toBe(POINT_OUTCOME.ADVANTAGE_A);
+    expect(result.reason).toContain(
+      "für den im Beleg ausgewiesenen engeren Deckungsumfang"
+    );
+    expect(result.reason).toContain("Für genau diesen engeren Deckungsumfang");
+  });
+
+  test("renders multiple required winner components as grammatical Teilpunkte", () => {
+    const fixture = qualifiedOneSidedFixture();
+    const secondComponent = { id: "hail", factRole: "PERIL" };
+    const contract = fixture.packageA.requirementContract;
+    contract.components.push(secondComponent);
+    const addComponent = ({ packageValue, atoms, found }) => {
+      const baseAtom = atoms[0];
+      const secondAtom = JSON.parse(JSON.stringify(baseAtom));
+      secondAtom.componentId = secondComponent.id;
+      secondAtom.componentLabel = "durch Hagel";
+      secondAtom.factRole = secondComponent.factRole;
+      secondAtom.declaredComponents = contract.components;
+      secondAtom.searchAudit.requirementContract = contract;
+      secondAtom.searchAudit.searchPlanId = "fixture/VS-13/hail";
+      if (found) {
+        secondAtom.selectedCandidateIds = ["candidate-qualified-hail"];
+        secondAtom.sources = [
+          {
+            candidateId: "candidate-qualified-hail",
+            physicalPageNumber: 2,
+            exactText: "Optische Schäden durch Hagel sind eingeschlossen.",
+          },
+        ];
+      }
+      baseAtom.declaredComponents = contract.components;
+      baseAtom.searchAudit.requirementContract = contract;
+      packageValue.searchAudit.searchPlanIds.push("fixture/VS-13/hail");
+      packageValue.searchAudit.components.push(secondAtom.searchAudit);
+      atoms.push(secondAtom);
+    };
+    addComponent({
+      packageValue: fixture.packageA,
+      atoms: fixture.atomsA,
+      found: true,
+    });
+    addComponent({
+      packageValue: fixture.packageB,
+      atoms: fixture.atomsB,
+      found: false,
+    });
+    const result = decidePoint(fixture);
+    expect(result.outcome).toBe(POINT_OUTCOME.ADVANTAGE_A);
+    expect(result.reason).toContain(
+      "Die Teilpunkte „durch Hagel“ und „Versicherter Gegenstand“ sind"
+    );
+  });
+
   test("reports comparison equality when both packages have the same fully audited absence", () => {
     const absenceA = controlledAbsence("a");
     const absenceB = controlledAbsence("b", {
