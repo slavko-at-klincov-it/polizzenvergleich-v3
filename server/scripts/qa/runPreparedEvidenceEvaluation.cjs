@@ -353,6 +353,7 @@ async function run() {
     model: {
       provider: "LMStudioLLM",
       id: process.env.LMSTUDIO_MODEL_PREF,
+      declaredTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
       temperature: 0,
       seed: null,
     },

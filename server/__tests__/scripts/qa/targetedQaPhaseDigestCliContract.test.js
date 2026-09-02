@@ -35,6 +35,9 @@ describe("targeted QA phase digest CLI boundary", () => {
       expect(script).toContain(
         "expectedTargetSelectionDigestSha256,\n      targetSelectionDigestSha256:"
       );
+      expect(script).toContain(
+        "declaredTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT)"
+      );
     }
   );
 });
