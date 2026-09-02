@@ -5,6 +5,9 @@ const {
   resolvedCategoryView,
 } = require("./deterministicCategoryEvidenceRules");
 const { DETERMINISTIC_BINDING } = require("./deterministicVsEvidenceRules");
+const {
+  assertTargetRequirementSelection,
+} = require("./targetRequirementSelection");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -111,6 +114,7 @@ function exactKeys(value, expectedKeys, code) {
 }
 
 function worksheetCandidates(worksheet) {
+  assertTargetRequirementSelection(worksheet);
   if (
     worksheet?.candidateOnly !== true ||
     !Array.isArray(worksheet.requirements)
@@ -554,7 +558,13 @@ function normalizeCandidateTriageResponse(responseText) {
  * Reduces a private occurrence worksheet to the only fields Qwen may inspect.
  * Role: transform. Side effects: none.
  */
-function buildCandidateTriagePayload(worksheet) {
+function buildCandidateTriagePayload(
+  worksheet,
+  { expectedTargetSelectionDigestSha256 = null } = {}
+) {
+  assertTargetRequirementSelection(worksheet, {
+    expectedSelectionDigestSha256: expectedTargetSelectionDigestSha256,
+  });
   const candidates = worksheetCandidates(worksheet);
   const bindingGroups = worksheetBindingGroups(worksheet, candidates);
   return {

@@ -12,6 +12,10 @@ const {
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  assertTargetRequirementSelection,
+  selectTargetRequirements,
+} = require("../../utils/policyAnalysis/targetRequirementSelection");
 
 function fail(message) {
   console.error(`[vs-occurrence-worksheet] ${message}`);
@@ -68,39 +72,27 @@ async function run() {
     ...extraction,
   };
   let catalog = JSON.parse(fs.readFileSync(catalogFile, "utf8"));
+  let targetRequirementSelection = null;
   if (args.requirementIds) {
-    const requirementIds = [
-      ...new Set(
-        args.requirementIds
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-      ),
-    ];
-    if (requirementIds.length === 0) fail("--requirementIds ist leer");
-    const byId = new Map(
-      (catalog.requirements || []).map((requirement) => [
-        requirement.id,
-        requirement,
-      ])
-    );
-    const missing = requirementIds.filter((id) => !byId.has(id));
-    if (missing.length)
-      fail(`Unbekannte Requirement-IDs: ${missing.join(",")}`);
-    catalog = {
-      ...catalog,
-      catalogId: `${catalog.catalogId}:subset:${requirementIds.join(",")}`,
-      requirements: requirementIds.map((id) => byId.get(id)),
-    };
+    const selected = selectTargetRequirements({
+      catalog,
+      requirementIds: args.requirementIds,
+    });
+    catalog = selected.catalog;
+    targetRequirementSelection = selected.selection;
   }
   const worksheet = buildControlledOccurrenceWorksheet({
     document,
     documentFingerprint: fingerprint,
     catalog,
   });
+  const outputWorksheet = targetRequirementSelection
+    ? { ...worksheet, targetRequirementSelection }
+    : worksheet;
+  assertTargetRequirementSelection(outputWorksheet);
 
   fs.mkdirSync(path.dirname(outputFile), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(outputFile, JSON.stringify(worksheet, null, 2), {
+  fs.writeFileSync(outputFile, JSON.stringify(outputWorksheet, null, 2), {
     encoding: "utf8",
     mode: 0o600,
   });
@@ -111,4 +103,4 @@ async function run() {
   );
 }
 
-run().catch((error) => fail(error.stack || error.message));
+run().catch((error) => fail(error.message));

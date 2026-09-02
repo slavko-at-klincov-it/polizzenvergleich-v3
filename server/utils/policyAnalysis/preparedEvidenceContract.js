@@ -9,6 +9,9 @@ const {
   deterministicCategoryPreparedDecision,
   resolvedCategoryView,
 } = require("./deterministicCategoryEvidenceRules");
+const {
+  assertTargetRequirementSelection,
+} = require("./targetRequirementSelection");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -70,7 +73,10 @@ function applicabilityFor(documentStatus, evidencePresence) {
   throw preparedError("PREPARED_DOCUMENT_STATUS_INVALID", documentStatus);
 }
 
-function validateWorksheet(worksheet) {
+function validateWorksheet(worksheet, expectedTargetSelectionDigestSha256) {
+  assertTargetRequirementSelection(worksheet, {
+    expectedSelectionDigestSha256: expectedTargetSelectionDigestSha256,
+  });
   if (
     worksheet?.candidateOnly !== true ||
     !Array.isArray(worksheet.requirements)
@@ -202,8 +208,9 @@ function buildPreparedEvidenceTargets({
   worksheet,
   documentStatus,
   candidateTriage = null,
+  expectedTargetSelectionDigestSha256 = null,
 }) {
-  validateWorksheet(worksheet);
+  validateWorksheet(worksheet, expectedTargetSelectionDigestSha256);
   applicabilityFor(documentStatus, EVIDENCE_PRESENCE.FOUND);
   const triageById = validateCandidateTriage({ worksheet, candidateTriage });
   return worksheet.requirements.flatMap((requirement) =>
