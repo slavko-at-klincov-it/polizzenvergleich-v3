@@ -94,7 +94,7 @@ describe("ST category recall", () => {
       physicalPageNumber: 3,
       sectionScopeHint: { scopeKey: "STURM_INSURANCE" },
     });
-    expect(damage.occurrences[0].scopeLead.text).toContain(
+    expect(damage.occurrences[0].context.text).toContain(
       "Schnee- und Eisrutsch"
     );
     expect(damage.occurrences[0].context.text).toContain("Nicht versichert");
