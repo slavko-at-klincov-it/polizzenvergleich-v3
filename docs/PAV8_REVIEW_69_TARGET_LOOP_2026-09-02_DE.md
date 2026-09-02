@@ -81,7 +81,8 @@ Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
 ### R69-B – Beidseitig fehlender Beleg: 9
 
-Status: `1/9 ACCEPTED`; `FE-B13` ist abgeschlossen, acht Fälle bleiben offen
+Status: `2/9 ACCEPTED`; `FE-B13` und `ST-14` sind abgeschlossen, sieben Fälle
+bleiben offen
 
 ```text
 VS-04
@@ -873,10 +874,11 @@ bei null Roh-Occurrences und null Rejections. Deshalb blieb Paket B trotz
 vollständig erklärtem Fremdspartenfund `SEARCH_INCOMPLETE` und FE-B13 fiel in
 `MISSING_BOTH`.
 
-Commit `576acf27` führt den engen Vertrag
-`DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1` ein. Er ist in V1 ausschließlich
-für `FE / FE-B13 / pre_inception_damage_exclusion / EXCLUSION` aktiv und
-verlangt:
+Commit `576acf27` führte den engen Vertrag
+`DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1` ein. In diesem ersten Stand war er
+ausschließlich für
+`FE / FE-B13 / pre_inception_damage_exclusion / EXCLUSION` aktiv und
+verlangte:
 
 - die bestehende Suchpolitik
   `REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1` und
@@ -896,8 +898,10 @@ Die alten Tatsachen-Gates werden nicht umgeschrieben:
 `zeroOccurrenceTerminal=false` und `zeroCandidateTerminal=false`. Der neue
 Proof-Mode heißt stattdessen
 `ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY`. Das bilaterale
-Abwesenheitsaudit akzeptiert diesen alternativen Beweis nur für FE-B13 und
-prüft die gesamte Provenienz erneut.
+Abwesenheitsaudit akzeptierte diesen alternativen Beweis zunächst nur für
+FE-B13 und prüfte die gesamte Provenienz erneut. Seit dem separat geprüften
+ST-14-Commit in Abschnitt 10.5 erfolgt diese Freigabe über eine gemeinsame,
+zielgebundene Registry; FE-B13 behält unverändert seinen engeren Vertrag.
 
 Der harte Gegenfall `EL-06` bleibt gesperrt. Dort steht zwar eine Klausel
 unter Leitungswasser, sie regelt aber ausdrücklich Kanalrückstau nach
@@ -970,3 +974,124 @@ Pauschalmethodenmustern, Haftpflicht-/Schadengutachten-Negativscopes und einer
 deterministischen Normalform für `calculation_method`. Erst ein gezielter
 Replay darf entscheiden, ob beide Pakete über die Indexmethode gleichwertig
 sind oder Paket A eine zusätzliche aktive Gutachtenmethode besitzt.
+
+### 10.5 ST-14 – Lichtkuppeln im Glasbruchabschnitt
+
+Ursache: `ST-14` besteht aus den beiden Pflichtkomponenten `roof_window` und
+`skylight_dome`. Für `roof_window` lag auf beiden Seiten bereits eine
+vollständig kontrollierte Nullsuche vor. Nur zwei Rohfundstellen für
+„Lichtkuppeln“ verhinderten den Abschluss:
+
+- Paket A, Dokument `4417a01f-7f73-44de-979a-3dcf9e65ca63`, physische Seite
+  15, aktuelle Überschrift „7. Glasbruch“. Der lokale Lead lautet
+  „Versichert sind im Rahmen der Gebäude-Glaspauschale ...“; die Fundstelle
+  steht in einer Liste mit Firmenschildern und Reklameanlagen.
+- Paket B, Dokument `c0dc339c-bf7c-4f4c-82a3-1eb84cfaee47`, physische Seite
+  2, aktuelle Überschrift „Allgemeine Bedingungen für die
+  Glasbruchversicherung“. Der lokale Text versichert Gebäudeverglasungen,
+  Glasdächer und Lichtkuppeln gegen Glasbruch.
+
+Beide Fundstellen belegen Glasdeckung, aber keine Sturmdeckung. Die
+deterministische Triage hatte sie deshalb bereits korrekt als
+`MENTION_ONLY / EXPLICIT_OTHER_CATEGORY_SECTION` abgelehnt. Wie zuvor bei
+FE-B13 fehlte jedoch ein revisionsfester terminaler Beweis. Die Rohtreffer
+blieben dadurch `SEARCH_INCOMPLETE`; aus zwei vollständig erklärbaren
+Fremdspartenfunden entstand fälschlich `MISSING_BOTH`.
+
+Commit `03294001` erweitert den vorhandenen Fremdspartenvertrag nur um das
+registrierte Ziel `ST / ST-14 / skylight_dome`. Die Freigabe verlangt:
+
+- `factRole=INSURED_OBJECT`, `absenceMeaning=COVERAGE_ONLY` und dieselbe
+  vollständige kontrollierte Suchpolitik;
+- exakt „Lichtkuppel“ beziehungsweise „Lichtkuppeln“;
+- genau einen Scope `GLASBRUCH_INSURANCE` aus einer aktuellen
+  `CURRENT_PAGE_HEADING`, nicht aus einer geerbten Überschrift;
+- einen lokalen positiven Glasdeckungs-Governor aus „versichert sind“ und
+  Glasbruch-, Glasversicherungs-, Glaspauschal- oder Verglasungswortlaut;
+- keinen lokalen Sturm-, Hagel-, Schneedruck-, Felssturz-, Steinschlag-,
+  Erdrutsch- oder Lawinenverweis;
+- null zugelassene und null ungelöste Kandidaten sowie die vollständige
+  1:1-Reject-Kette;
+- den Proof-Mode
+  `CURRENT_SECTION_PLUS_LOCAL_FOREIGN_COVERAGE_V1`;
+- einen erweiterten Occurrence-Digest, der für diesen Proof-Mode zusätzlich
+  Kontext und lokalen Scope-Lead bindet;
+- erneute Prüfung von Ziel, Rolle, Abwesenheitsbedeutung, Fremdscope,
+  Proof-Mode und Rejection-Set-Digest im bilateralen Abwesenheitsaudit.
+
+Der Vertrag leitet aus Glasdeckung keinen Sturm-Ausschluss ab. Er erklärt nur,
+warum diese beiden konkreten Glasfundstellen keine Treffer der ST-14-Suche
+sind. Die abschließende Aussage lautet deshalb gleiche dokumentierte
+Fundlage nach vollständiger kontrollierter Suche, nicht „Lichtkuppeln sind
+generell unversichert“.
+
+Adversarial geprüft wurden veraltete Überschriften, gemischte Glas-/Sturmscopes,
+lokale Sturm- und Hagelerweiterungen, bloße Bauteillisten ohne positiven
+Glasdeckungs-Governor, falsche Kategorie, falsche Rolle, falsche
+Abwesenheitsbedeutung, unbekannter Proof-Mode und Digest-Manipulation. Der
+frühere harte Gegenfall `EL-06` bleibt unverändert `UNKLAR / MISSING_ONE_SIDE`.
+
+```text
+Fachcommit: 03294001d9646774b98d699dfdb0d7cb20419530
+Mac-Studio-Worktree: /private/tmp/pv3-validate-03294001
+Runtime: Node 22.23.2
+Mac-Studio-Suites: 109/109 PASS
+Overlay: /private/tmp/pav8-overlay-st14-03294001-xRNC9X/overlay
+Delta gegenüber akzeptiertem FE-B13-Overlay: exakt ST:ST-14
+ST-14: UNKLAR -> GLEICHWERTIG
+Aufgefrischte ST-14-Targets: exakt DOC-01/ST und DOC-04/ST,
+jeweils ST-14:skylight_dome
+EL-06: unverändert UNKLAR / MISSING_ONE_SIDE
+Nicht-Target-Dokumentinstanzen: 1.550/1.550 identisch
+Finale Nicht-Target-Zeilen: 155/155 identisch
+Geänderte Nicht-Target-Zeilen: 0
+Comparison SHA-256: a713c1b71a90e28bb889c4d912b5d76674d5f936e7748d95a3826c5b4200302e
+Guard SHA-256: 39187daa9036a119cf9916246f5bf3c76b04d5bc4f67dcbae8419d7e1fb7b40f
+```
+
+Kumulierte Metrik:
+
+```text
+VORTEIL_A 2, VORTEIL_B 2, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 114, NICHT_VERGLEICHBAR 8, UNKLAR 65.
+Kundenreview: 65; ohne Kundenreview: 159.
+MISSING_BOTH: 7.
+```
+
+Bewertung: Kandidat angenommen. Gegenüber dem zuletzt akzeptierten Overlay
+ändert sich exakt `ST:ST-14`; alle anderen 223 finalen Vergleichszeilen sind
+inkrementell identisch. Der QA-Overlay bleibt nicht publishbar und nicht
+deploybar.
+
+### 10.6 Bereits analysierte nächste Suchkandidaten
+
+Die parallele Rohbelegprüfung ergab folgende Grenzen für die nächsten
+Einzelfixes:
+
+- `ST-13`: derzeit sicherster nächste Mikrofix. Der unqualifizierte Alias
+  `Kamin-` trifft in DOC-03, physische Seite 12, den Feuerbegriff
+  „Kaminbrand“. Das ist weder Kamin-/Schornsteinkopf noch Sturmdeckung. Der
+  Fix muss die Ellipse „Kamin- und/oder Schornsteinköpfe“ erhalten, darf aber
+  `Kaminbrand` nicht mehr matchen. Weil dies die Roh-Occurrence-Menge ändert,
+  ist ein echter gezielter ST-13-Replay erforderlich; ein bloßer
+  Provenienz-Overlay wäre unzulässig.
+- `ST-10`: kein Nullfall. Paket A enthält Sicherungs-/Aufräumungs-/Abbruchkosten
+  in einem mehrspartigen Deckungsabschnitt; Paket B enthält in EABS
+  „Sicherungskosten“ und „Notverschalung“. Nötig sind Mehrsparten-Heading-
+  Reset, semantische Aliase und lokale Limitbindung. Nicht als Mikrofix
+  terminalisieren.
+- `ST-23`: vorläufig `NO-FIX`. „Andere Gegenstände werden durch eine
+  versicherte Gefahr geworfen“ beweist nicht sicher den geforderten Anprall
+  fremder Bäume oder Äste. Eine Promotion braucht fachliche Freigabe für diese
+  Äquivalenz.
+- `FE-B09`: kein Nullfall. Paket B enthält in ABS 2015 einen echten
+  Vorsatzausschluss mit Leistungsfreiheit, der wegen zu enger Wortstellungs-
+  Aliase fehlt. Benötigt werden ein enger Konzeptvertrag aus Vorsatz,
+  Herbeiführung und Leistungseffekt sowie die paketweite AFB-zu-ABS-
+  Anwendbarkeit. Erwartung erst nach Replay; ein Vorteil B ist plausibel,
+  aber noch nicht bewiesen.
+- `FE-F08`: kein kleiner Alias- oder Nullfix. Paket B enthält zahlreiche
+  Codes „Besondere Bedingung ...“ und ein Klauselverzeichnis. Erforderlich ist
+  ein paketweiter Klauselcode-Resolver für Referenz, vorhandenen Klauseltext,
+  Produktvariante, Anwendbarkeit und Dokumentrang. Ein
+  `KLAUSELVERZEICHNIS` allein beweist keine vollständige Verfügbarkeit.
