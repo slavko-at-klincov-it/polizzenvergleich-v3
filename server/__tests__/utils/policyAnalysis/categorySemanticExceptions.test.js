@@ -54,6 +54,80 @@ function occurrence({
 }
 
 describe("category semantic exceptions", () => {
+  test("rebinds EL-06 only through an explicit local flood-coverage clause", () => {
+    const bindingFor = (contextText, exactText = "Kanalrückstau") => {
+      const candidate = occurrence({
+        candidateId: "candidate:el06:local-target-scope",
+        exactText,
+        contextText,
+        scopeLeadText: "LW06",
+        sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+        pageNumber: 13,
+      });
+      candidate.context.unitType = "PARAGRAPH";
+      candidate.sectionScopeHint.source = "PRECEDING_PAGE_HEADING";
+      return deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "EL" } },
+        requirement: {
+          id: "EL-06",
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+        },
+        component: { id: "sewer_backflow", factRole: "PERIL" },
+        occurrence: candidate,
+      });
+    };
+
+    for (const contextText of [
+      "LW06 Kanalrückstau\nSchäden aus einem Kanalrückstau nach einer Überschwemmung sind im Rahmen der VS für Hochwasser/Überschwemmung mitversichert",
+      "Kanalrückstau nach einer Überschwemmung ist im Rahmen der Versicherung für Überschwemmung und Hochwasser mitversichert.",
+    ]) {
+      expect(bindingFor(contextText)).toEqual({
+        binding: "NARROW_SCOPE",
+        basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+        authoritative: true,
+      });
+    }
+
+    for (const contextText of [
+      "LW06 Kanalrückstau nach einer Überschwemmung ist im Rahmen der VS für Hochwasser/Überschwemmung nicht mitversichert.",
+      "LW06 Kanalrückstau nach einer Überschwemmung ist im Rahmen der VS für Hochwasser/Überschwemmung wahlweise mitversichert.",
+      "LW06 Kanalrückstau nach einer Überschwemmung; siehe Versicherung für Hochwasser/Überschwemmung.",
+      "LW06 Kanalrückstau nach einer Überschwemmung.\n\nIm Rahmen der VS für Hochwasser/Überschwemmung sind Schäden mitversichert.",
+      "LW06 Kanalrückstau ist mitversichert.",
+    ]) {
+      expect(bindingFor(contextText)).toEqual({
+        binding: "MENTION_ONLY",
+        basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+      });
+    }
+
+    const currentHeading = occurrence({
+      candidateId: "candidate:el06:current-heading",
+      exactText: "Kanalrückstau",
+      contextText:
+        "Kanalrückstau nach einer Überschwemmung ist im Rahmen der VS für Hochwasser/Überschwemmung mitversichert.",
+      scopeLeadText: "Leitungswasserversicherung",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 13,
+    });
+    currentHeading.context.unitType = "PARAGRAPH";
+    currentHeading.sectionScopeHint.source = "CURRENT_PAGE_HEADING";
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "EL" } },
+        requirement: {
+          id: "EL-06",
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+        },
+        component: { id: "sewer_backflow", factRole: "PERIL" },
+        occurrence: currentHeading,
+      })
+    ).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+  });
+
   test("binds only explicit contractual consequences of a flood zone", () => {
     const bindingFor = ({ contextText, exactText, sectionScopeKey }) =>
       deterministicCategoryCandidateBinding({

@@ -118,7 +118,7 @@ describe("preparedEvidenceContract", () => {
             {
               id: overrides.componentId || "pre_inception_damage_exclusion",
               label: "Ausschluss vorvertraglicher Schäden",
-              factRole: "EXCLUSION",
+              factRole: overrides.factRole || "EXCLUSION",
               occurrences: [candidate],
             },
           ],
@@ -135,7 +135,7 @@ describe("preparedEvidenceContract", () => {
             componentId:
               overrides?.componentId || "pre_inception_damage_exclusion",
             candidateId: candidate.candidateId,
-            binding: "DIRECT",
+            binding: overrides?.triageBinding || "DIRECT",
           },
         ],
       })[0];
@@ -186,21 +186,44 @@ describe("preparedEvidenceContract", () => {
       expect(rejected.serverRejectedCandidates).toEqual([]);
     }
 
+    const elementarContext =
+      "LW06 Kanalrückstau\nSchäden aus einem Kanalrückstau nach einer Überschwemmung sind im Rahmen der VS für Hochwasser/Überschwemmung mitversichert";
+    const elementarContextStart = 38_950;
+    const elementarOccurrenceStart =
+      elementarContextStart + elementarContext.indexOf("Kanalrückstau");
     const elementarCrossReference = {
       ...occurrence,
       exactText: "Kanalrückstau",
       matchedAlias: "Kanalrückstau",
+      documentStart: elementarOccurrenceStart,
+      documentEnd: elementarOccurrenceStart + "Kanalrückstau".length,
       context: {
         ...occurrence.context,
-        text: "Schäden aus einem Kanalrückstau nach einer Überschwemmung sind im Rahmen der Versicherungssumme für Hochwasser mitversichert.",
+        unitType: "PARAGRAPH",
+        text: elementarContext,
+        documentStart: elementarContextStart,
+        documentEnd: elementarContextStart + elementarContext.length,
+      },
+      sectionScopeHint: {
+        ...occurrence.sectionScopeHint,
+        source: "PRECEDING_PAGE_HEADING",
       },
     };
     const elTarget = targetFor(elementarCrossReference, {
       categoryView: "EL",
       requirementId: "EL-06",
       componentId: "sewer_backflow",
+      factRole: "PERIL",
+      triageBinding: "MENTION_ONLY",
     });
-    expect(elTarget.candidates).toHaveLength(1);
+    expect(elTarget.candidates).toEqual([
+      expect.objectContaining({
+        candidateId: elementarCrossReference.candidateId,
+        candidateBinding: "NARROW_SCOPE",
+        deterministicBindingBasis:
+          "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+      }),
+    ]);
     expect(elTarget.serverRejectedCandidates).toEqual([]);
   });
 

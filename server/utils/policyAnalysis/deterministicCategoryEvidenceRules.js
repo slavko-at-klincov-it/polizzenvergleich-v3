@@ -689,6 +689,59 @@ function explicitEl12FloodZoneConsequenceBinding({
   };
 }
 
+/**
+ * EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1
+ *
+ * A clause can live below a carried foreign branch heading while explicitly
+ * assigning its effect to a different peril. The local assignment is allowed
+ * to override the carried heading only when the same bounded paragraph states
+ * both the causal backflow relation and active flood coverage. Side effects:
+ * none.
+ */
+function explicitEl06LocalTargetScopeRebinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "EL" ||
+    requirement?.id !== "EL-06" ||
+    component?.id !== "sewer_backflow" ||
+    component?.factRole !== "PERIL" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "LEITUNGSWASSER_INSURANCE" ||
+    occurrence?.sectionScopeHint?.source !== "PRECEDING_PAGE_HEADING"
+  )
+    return null;
+
+  const clause = occurrenceClauseText(occurrence);
+  if (!containsPhrase(clause, occurrence?.exactText)) return null;
+  if (/\n\s*\n/u.test(clause)) return null;
+  if (
+    !/Kanalr[uü]ckstau\s+nach\s+einer\s+[ÜUu]berschwemmung/iu.test(clause) ||
+    !/im\s+Rahmen\s+(?:der\s+)?(?:VS|Versicherung)\s+f[üu]r\s+(?:Hochwasser\s*(?:\/|und|oder)\s*[ÜUu]berschwemmung|[ÜUu]berschwemmung\s*(?:\/|und|oder)\s*Hochwasser)/iu.test(
+      clause
+    )
+  )
+    return null;
+  if (
+    /\b(?:wahlweise|optional|auf\s+(?:ausdr[üu]cklichen\s+)?Wunsch|sofern\s+(?:beantragt|vereinbart)|gegen\s+(?:Mehrpr[aä]mie|Pr[aä]mienzuschlag))\b/iu.test(
+      clause
+    ) ||
+    /\bkann\b[\s\S]{0,120}\b(?:mitversichert|eingeschlossen)\s+werden\b/iu.test(
+      clause
+    )
+  )
+    return null;
+  if (operativeCoveragePolarity(occurrence) !== "POSITIVE") return null;
+
+  return {
+    binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
+    basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+    authoritative: true,
+  };
+}
+
 function explicitFeF05InsurancePeriodBinding({
   categoryView,
   requirement,
@@ -1084,6 +1137,15 @@ function deterministicCategoryCandidateBinding({
       occurrence,
     });
   if (el12FloodZoneConsequenceBinding) return el12FloodZoneConsequenceBinding;
+
+  const el06LocalTargetScopeRebinding =
+    explicitEl06LocalTargetScopeRebinding({
+      categoryView,
+      requirement,
+      component,
+      occurrence,
+    });
+  if (el06LocalTargetScopeRebinding) return el06LocalTargetScopeRebinding;
 
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
     categoryView,
