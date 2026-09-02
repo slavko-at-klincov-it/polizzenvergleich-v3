@@ -391,7 +391,7 @@ describe("VS-15 bilateral controlled qualifier absence contract", () => {
         expectedDocumentsA: input.expectedDocumentsA,
         expectedDocumentsB: input.expectedDocumentsB,
       })
-    ).toThrow("VS15_QUALIFIER_ABSENCE_AUDIT_NOT_QUALIFIED");
+    ).toThrow("VS15_QUALIFIER_ABSENCE_AUDIT_MISMATCH");
   });
 
   test("does not turn an arbitrary object into a customer decision", () => {
