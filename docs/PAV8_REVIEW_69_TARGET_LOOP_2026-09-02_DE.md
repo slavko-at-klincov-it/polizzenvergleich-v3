@@ -277,9 +277,10 @@ Nach jedem Verhaltenscommit:
 
 ## 9. Fortschrittsprotokoll
 
-| Inkrement           | Commit     | Ziel-IDs      | Vorher    | Nachher   | 155-Guard     | Mac Studio                    | Entscheidung |
-| ------------------- | ---------- | ------------- | --------- | --------- | ------------- | ----------------------------- | ------------ |
-| Target Selection V1 | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend | `PASS`       |
+| Inkrement           | Commit     | Ziel-IDs      | Vorher    | Nachher   | 155-Guard     | Mac Studio                      | Entscheidung |
+| ------------------- | ---------- | ------------- | --------- | --------- | ------------- | ------------------------------- | ------------ |
+| Target Selection V1 | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend   | `PASS`       |
+| Target Manifest V1  | `e15dc228` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 218/218 plus reale PAV8-Bindung | `PASS`       |
 
 Kein Deployment während dieses Loops. Der installierte Kundencheckout bleibt
 bis zu einer ausdrücklichen Freigabe unverändert.
@@ -325,3 +326,56 @@ Noch nicht bewiesen sind Target-Paketmaterialisierung, die vollständige
 10-Dokument-Matrix, das 224-Zeilen-Overlay und der 155-Zeilen-Guard. Diese
 Grenzen bilden das nächste kleine Inkrement. Der installierte Kundencheckout
 blieb sauber und unverändert auf `c7d3b16d`.
+
+### 9.2 Target Manifest V1 – Ergebnis
+
+Commit `e15dc228b82692a9befd7ed57f4a352eea26248f` führt einen privaten,
+nicht publizierbaren Manifestvertrag für genau den PAV8-03D-Target-Lauf ein.
+Der Builder akzeptiert Paketvertrag, Baseline-Vergleich, Registry und Kataloge
+nur als Rohbytes. Paket und Vergleich werden vor dem JSON-Parsing gehasht und
+gegen die Registry gebunden.
+
+Der Vertrag erzwingt:
+
+- den Baseline-Commit `2d964b45`, die Run-Signatur sowie Paket- und
+  Vergleichshash;
+- genau zehn Dokumente in der Matrix `A:0` und `B:0..8`, einschließlich
+  Rollen, Stati, Namen, Dokument-SHAs und `primaryManifestSha256`;
+- das Produktprofil mit 224 Zeilen sowie exakt 69 Review- und 155
+  Nicht-Review-Zeilen;
+- dieselben 69 Zeilen in Reviewmenge und Ergebnis `UNKLAR`;
+- die Registry-Verteilung `VS 19 / FE 14 / LW 10 / ST 13 / EL 13`;
+- die Rohbyte-SHAs aller fünf kanonischen Kataloge und daraus intern neu
+  erzeugte Target-Selections;
+- neuen Commit, Modell, Kontext, Node-Version und Prompt-SHA je Kategorie;
+- `TARGETED_QA_ONLY`, keine Produktmutation und keinen Full-Materializer.
+
+Mac-Studio-Prüfung im isolierten Checkout
+`/private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo`:
+
+```text
+Commit: e15dc228b82692a9befd7ed57f4a352eea26248f
+Node: 22.23.2
+Prettier: 3/3 PASS
+Direkte Manifest-/Selection-/Registry-Prüfungen: 27/27 PASS
+Full-Materializer-/Worker-Grenzen: 18/18 PASS
+Worksheet-/Triage-/Evidence-/Katalog-Prüfungen: 173/173 PASS
+Gesamt in diesem Inkrement: 218/218 PASS
+Realer PAV8-Manifestaufbau: PASS
+Manifest-Digest der Strukturprüfung: 14909319b0ef2b8a33ad7c60f03175c853f0ab93492f873d370b6e4c82aa8e5e
+Modell-/Embedding-Aufrufe: keine
+```
+
+Die reale Gegenprobe bestätigte `A:1/B:9`, die Zielverteilung
+`19/14/10/13/13` und die drei erwarteten Baseline-Hashes. Der Digest dieser
+Strukturprüfung enthält absichtlich synthetische gültige Prompt-SHAs; der
+nächste Runner-Einstieg muss die echten Promptdateien selbst hashen und darf
+diesen Struktur-Digest deshalb nicht als Laufmanifest wiederverwenden.
+
+Noch offen ist der feste CLI-Trust-Anchor: Der nächste kleine Commit muss die
+Registry ausschließlich vom versionierten Repositorypfad laden, deren
+erwarteten SHA
+`1499605578113e9d287ea83861dc567694046c7482ce380fe23d92ee075bad1e`
+prüfen, reale Prompt-SHAs und Runtimewerte selbst bestimmen und den erzeugten
+Manifest-Digest beim Materialisieren verpflichtend als externe Erwartung
+weiterreichen. Erst danach beginnt die Target-Artefaktmaterialisierung.

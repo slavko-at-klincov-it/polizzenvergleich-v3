@@ -4625,3 +4625,47 @@ LIMIT: Target-Manifest/Materializer, 10-Dokument-Gate, 224-Overlay und 155-Guard
 NO DEPLOY: installierter Kundenstand unverändert
 NEXT: QA-Target-Manifest und vollständige Dokumentmatrix implementieren
 ```
+
+## 87. QA Target Manifest V1 – PAV8-Byte- und Matrixbindung
+
+Commit `e15dc228b82692a9befd7ed57f4a352eea26248f` ergänzt einen privaten
+Manifestvertrag für den 69er-Target-Loop. Die erste Fassung wurde nach einem
+unabhängigen Senior-Review vor dem Commit verworfen, weil Hashwerte nur als
+Strings übernommen, die Dokumentmatrix vom Aufrufer gewählt und Selections
+nicht gegen Katalogdateien authentifiziert worden wären.
+
+Die korrigierte Fassung:
+
+- hasht Registry, Paketvertrag, Baseline-Vergleich und fünf Kataloge aus
+  Rohbytes;
+- parst Paket und Vergleich erst nach bestandenem Registry-Hashabgleich;
+- bindet Baseline-Commit, Run-Signatur, Produktprofil und
+  Vergleichsdokumentprojektion;
+- erzwingt `A:0 + B:0..8`, `224/69/155` und dieselben 69 Review-/UNKLAR-Keys;
+- baut alle fünf Selections aus den kanonischen Katalogbytes und den 69
+  Registry-IDs intern neu auf;
+- bindet neue Release-, Modell-, Kontext-, Node- und Promptidentität;
+- bleibt `TARGETED_QA_ONLY` und kann weder den Produktworker noch einen
+  vollständigen Kundenmaterializer aufrufen.
+
+Mac-Studio-Nachweis auf exakt diesem Commit:
+
+```text
+Prettier: PASS (3 Dateien)
+Manifest/Selection/Registry: 27/27 PASS
+Full-Materializer/Worker-Grenzen: 18/18 PASS
+Worksheet/Triage/Evidence/Katalog: 173/173 PASS
+Realer PAV8-Bytevertrag: PASS
+Dokumentmatrix: A=1, B=9
+Targetverteilung: VS=19, FE=14, LW=10, ST=13, EL=13
+Modell-/Embedding-Aufrufe: keine
+```
+
+```text
+PASS: reale PAV8-Paket-/Comparison-/Katalogstruktur kann fail-closed gebunden werden
+PASS: 218/218 direkte und angrenzende Mac-Studio-Prüfungen
+LIMIT: fester Registrypfad/-SHA und reale Prompt-/Runtimeermittlung fehlen noch im CLI
+LIMIT: Target-Materializer, 224-Overlay und 155-Guard fehlen
+NO DEPLOY: installierter Kundencheckout unverändert
+NEXT: QA-only Manifest-CLI mit externem Registry- und Manifest-Digest-Gate
+```
