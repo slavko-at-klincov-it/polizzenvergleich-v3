@@ -2244,6 +2244,121 @@ Schritt A verändert noch kein Ergebnis. Ein voller 224-Zeilen-Lauf und ein
 Deployment wurden nicht durchgeführt; der installierte Kundenstand blieb
 unverändert.
 
+#### 10.21.2 Forward-Fix – reine Objektdefinition vor dem Paket-Rollup terminal ausscheiden
+
+Die erste Arbeitshypothese aus Schritt A sah eine LW-12-Sonderregel im
+Vergleich vor. Die anschließende Prüfung des vollständigen Datenflusses hat
+diese Lösung verworfen: Der Vergleich war korrekt blockiert, weil die
+Dokumentanalyse die reine Objektdefinition als zweiten `DEFINED`-Deckungsfakt
+materialisierte. Eine Vergleichsausnahme hätte diese falsche Rolle nur später
+verdeckt und einen unnötigen zeilenspezifischen Vergleichspfad geschaffen.
+
+Der umgesetzte Fix sitzt deshalb an der vorhandenen serverautoritativen
+Terminalgrenze. Er ist ausschließlich für
+`LW:LW-12:underfloor_heating / INSURED_OBJECT / COVERAGE_ONLY` zertifiziert.
+Eine Fundstelle wird nur dann als Nicht-Deckungsfund ausgesondert, wenn alle
+folgenden Bedingungen gleichzeitig bewiesen sind:
+
+```text
+Objektklassifikationsvertrag:
+  CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1
+Klassifikation:
+  OBJECT / MEMBER_OF_CLASS
+Quelle:
+  CURRENT_PAGE_OBJECT_CLASSIFICATION
+Kontext:
+  LIST_ITEM, gleiche physische Seite, exakte Candidate-/Kontext-Offsets
+Scope:
+  keine Section-, Page- oder Coverage-Governors; leerer Scope-Lead
+Inhalt:
+  keine positive/negative Deckung, Bedingung, Option, Pflicht,
+  Wert-/Limitangabe oder Aufhebungswirkung
+```
+
+`EXCLUDED_FROM_CLASS`, geerbte Klassifikationen von einer vorigen Seite,
+`Versicherte Sachen, das sind`, echte Einschluss- oder Ausschlussklauseln,
+Gefahrerhöhungs-/Meldepflichttexte, Bedingungen, Optionen, Limits,
+Selbstbehalte und Overrides bleiben ausdrücklich nichtterminal. Andere
+Requirements, Rollen oder Absenzbedeutungen sind nicht freigeschaltet.
+
+Der neue Occurrence-Provenienzvertrag
+`TERMINAL_OCCURRENCE_PROVENANCE_V4_OBJECT_CLASSIFICATION` bindet zusätzlich
+den vollständigen Objektklassifikations- und Coverage-Governor. Eine Änderung
+an Contract-ID, Membership, Seite, Offsets, Klassifikation oder
+Coverage-Governor verändert damit den Hash. Die bestehenden V3-Digests und
+Terminalverträge bleiben byteinhaltlich kompatibel.
+
+Commits:
+
+```text
+9fe9506b fix(analysis): reject LW-12 object-only definitions
+ec9135e2 style(analysis): format LW-12 terminal contract
+```
+
+Mac-Studio-Validierung des exakten Commits:
+
+```text
+Commit: ec9135e27bee413a6a91f37910b2cd94f5b9736f
+Worktree: /private/tmp/pv3-validate-ec9135e2
+Formatprüfung: PASS
+Fokussierte Suites: 6/6 PASS
+Fokussierte Tests: 233/233 PASS
+Breite Regression: 45 Suites und 931 Tests PASS
+```
+
+Die vier bereits vorher protokollierten historischen Fixture-Suites besitzen
+unverändert dieselben 25 Fehler: drei Manifests erwarten die alte
+Katalogbindung, eine statische Verteilung erwartet weiterhin
+`25 COVERAGE_MIXED / 91 COVERAGE_ONLY` statt `24 / 92`. Es entstand keine neue
+Fehlersignatur.
+
+Echter gezielter Zehn-Dokument-Lauf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-12-OBJECT-EC9135E2-20260903
+Summary-Digest:
+46b2cfae7af7a88b27b22c7eec90e574fb98e5373452109c8037746e7729fc42
+Target-Selection-Digest:
+2ea41a9d219ab73ad92e6534eac1b512d7047332cce8fb330e92d78a75b06e85
+Producer-Digest:
+388c1773835d7e1b86f63b496425929770b0e012a235230e3296a5175cd3089e
+Dokumente: 10
+Triage-Qwen-Aufrufe: 1
+Evidence-Qwen-Aufrufe: 1
+Serverseitige Terminals: 8
+```
+
+Das gespeicherte DOC-10-Audit bindet genau einen verworfenen Kandidaten mit
+V4-Occurrence-Digest und V3-Rejection-Set-Digest. Der echte B-Einschluss aus
+DOC-09 Seite 3 bleibt unverändert erhalten. Das revisionssicher belegte Delta
+ist:
+
+```text
+Vorher:
+A BELEGT / B TEILBELEGT
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Nachher:
+A BELEGT / B BELEGT
+GLEICHWERTIG / ALL_ATOMIC_DIMENSIONS_EQUIVALENT / Review nein
+Regel: ATOMIC_COVERAGE_EQUALITY_V1
+```
+
+Der Fix behauptet für die reine Definition weder Einschluss noch Ausschluss.
+Er entfernt nur ihre falsche Verwendung als operativen Deckungsfakt; das
+Kundenergebnis stammt anschließend aus den zwei echten Einschlussbelegen.
+
+R69-A steht damit bei `2/40` abgeschlossenen Kandidaten; `38` bleiben offen.
+Unter Einbeziehung aller akzeptierten gezielten Deltas ändert sich die noch
+nicht durch einen neuen 224-Zeilen-Vollrun bestätigte Projektion von
+`Gleichwertig 118 / Unklar 59` auf `Gleichwertig 119 / Unklar 58`. Vorteil A,
+Vorteil B, Dokumentationsunterschied und Nicht vergleichbar bleiben in dieser
+Projektion unverändert.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
 ### 10.20 VS-08 Schritt A – fehlende 25-Prozent-Bedingung wiederfinden
 
 #### 10.20.1 Reproduzierter Ausgangsfehler
