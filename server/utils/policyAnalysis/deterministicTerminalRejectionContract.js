@@ -180,6 +180,16 @@ function observedScopeKeys(occurrence) {
   ]);
 }
 
+function feC12ObservedScopeKeys(occurrence) {
+  return canonicalStrings(
+    [
+      occurrence?.sectionScopeHint?.scopeKey,
+      ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+      ...(occurrence?.pageScopeHints || []).map(({ scopeKey }) => scopeKey),
+    ].filter(Boolean)
+  );
+}
+
 function terminalTargetAcceptsObservedScopes(target, scopes) {
   const canonical = canonicalStrings(scopes);
   return Boolean(
@@ -300,7 +310,7 @@ function feC12PostLossScaffoldingCostProof(occurrence) {
   )
     return null;
 
-  const scopes = observedScopeKeys(occurrence);
+  const scopes = feC12ObservedScopeKeys(occurrence);
   const sectionScope = occurrence?.sectionScopeHint || null;
   const explicitCurrentGlassSection = Boolean(
     sectionScope?.scopeKey === "GLASBRUCH_INSURANCE" &&

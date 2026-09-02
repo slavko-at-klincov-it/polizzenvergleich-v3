@@ -1942,7 +1942,7 @@ describe("policy comparison result builder", () => {
       .find(({ categoryView }) => categoryView === "FE")
       .rows.find(({ categoryId }) => categoryId === "FE-C12");
     const componentAudit = comparisonRow.packageB.searchAudit.components.find(
-      ({ componentId }) => componentId === "scaffolding"
+      ({ searchPlanId }) => searchPlanId.endsWith("/scaffolding")
     );
     expect(componentAudit).toMatchObject({
       disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
@@ -2016,7 +2016,7 @@ describe("policy comparison result builder", () => {
       .find(({ categoryView }) => categoryView === "FE")
       .rows.find(({ categoryId }) => categoryId === "FE-C12");
     const tamperedComponent = tamperedRow.packageB.searchAudit.components.find(
-      ({ componentId }) => componentId === "scaffolding"
+      ({ searchPlanId }) => searchPlanId.endsWith("/scaffolding")
     );
     expect(tamperedComponent.disposition).toBe("SEARCH_INCOMPLETE");
     expect(tamperedComponent.gates).not.toHaveProperty(
