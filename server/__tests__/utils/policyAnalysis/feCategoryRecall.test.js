@@ -185,9 +185,13 @@ describe("FE category recall", () => {
             {
               id: "sauna-or-infrared-cabin-in-common-facility",
               requiredGroups: [
-                { prefixes: ["sauna", "infrarotkabin"] },
+                { prefixes: ["saun", "infrarotkabin"] },
                 {
-                  prefixes: ["gemeinschaftsraum", "gemeinschaftseinricht"],
+                  prefixes: [
+                    "gemeinschaftsraum",
+                    "gemeinschaftsraeum",
+                    "gemeinschaftseinricht",
+                  ],
                 },
               ],
               maxLines: 2,
@@ -288,7 +292,7 @@ describe("FE category recall", () => {
     }
   );
 
-  test("keeps a same-line liability occurrence in foreign scope for model triage", () => {
+  test("keeps a same-line liability occurrence in server-owned foreign scope", () => {
     const result = worksheetFromText(
       [
         "HAFTPFLICHTVERSICHERUNG",
@@ -310,9 +314,9 @@ describe("FE category recall", () => {
     expect(target).toMatchObject({
       sectionScopeHint: { scopeKey: "HAFTPFLICHT_INSURANCE" },
       scopeResolution: {
-        owner: "MODEL",
-        scopeMatch: null,
-        basis: "MODEL_REQUIRED",
+        owner: "SERVER",
+        scopeMatch: "GENERAL",
+        basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
       },
     });
   });

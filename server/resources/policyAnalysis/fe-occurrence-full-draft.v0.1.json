@@ -843,9 +843,13 @@
             {
               "id": "sauna-or-infrared-cabin-in-common-facility",
               "requiredGroups": [
-                { "prefixes": ["sauna", "infrarotkabin"] },
+                { "prefixes": ["saun", "infrarotkabin"] },
                 {
-                  "prefixes": ["gemeinschaftsraum", "gemeinschaftseinricht"]
+                  "prefixes": [
+                    "gemeinschaftsraum",
+                    "gemeinschaftsraeum",
+                    "gemeinschaftseinricht"
+                  ]
                 }
               ],
               "maxLines": 2,
