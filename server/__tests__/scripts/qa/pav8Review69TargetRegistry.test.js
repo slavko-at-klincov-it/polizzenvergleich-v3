@@ -74,7 +74,7 @@ describe("PAV8 69-row targeted QA registry", () => {
       );
       expect(target).toBeDefined();
       const historicalCatalogMigrations = {
-        VS: ["vs-occurrence-full-draft-v0.7", "vs-occurrence-full-draft-v0.8"],
+        VS: ["vs-occurrence-full-draft-v0.7", "vs-occurrence-full-draft-v0.9"],
         FE: ["fe-occurrence-full-draft-v0.5", "fe-occurrence-full-draft-v0.7"],
         LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.8"],
         ST: ["st-occurrence-full-draft-v0.4", "st-occurrence-full-draft-v0.5"],

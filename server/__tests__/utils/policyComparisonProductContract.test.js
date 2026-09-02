@@ -27,7 +27,7 @@ describe("policy comparison product contract", () => {
     });
     expect(EXPECTED_ROW_COUNT).toBe(224);
     expect(PRODUCT_PROFILE).toMatchObject({
-      id: "CUSTOMER_CORE_5_V27_VS35_RECALL",
+      id: "CUSTOMER_CORE_5_V28_VS35_AXIS_RECALL",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_V2",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
