@@ -37,9 +37,7 @@ const {
 const {
   compareAutomaticIndexAdjustmentPresence,
 } = require("./automaticIndexAdjustmentComparisonContract");
-const {
-  compareFeC07LimitDominance,
-} = require("./feC07LimitDominanceContract");
+const { compareFeC07LimitDominance } = require("./feC07LimitDominanceContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",

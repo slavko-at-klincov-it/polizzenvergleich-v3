@@ -2793,10 +2793,7 @@ describe("policy comparison point decision", () => {
     test.each([
       [
         "equal values",
-        () => [
-          feC07Atom("a", 10, "RESTRICTED"),
-          feC07Atom("b", 10, "ABSENT"),
-        ],
+        () => [feC07Atom("a", 10, "RESTRICTED"), feC07Atom("b", 10, "ABSENT")],
       ],
       [
         "different reference qualifier",
@@ -2810,10 +2807,7 @@ describe("policy comparison point decision", () => {
       ],
       [
         "out-of-range percentage",
-        () => [
-          feC07Atom("a", 5, "RESTRICTED"),
-          feC07Atom("b", 101, "ABSENT"),
-        ],
+        () => [feC07Atom("a", 5, "RESTRICTED"), feC07Atom("b", 101, "ABSENT")],
       ],
       [
         "referenced condition in higher clause",
@@ -2855,10 +2849,7 @@ describe("policy comparison point decision", () => {
     test("fails closed on multiple limit facts", () => {
       const higher = feC07Atom("b", 10, "ABSENT");
       higher.fields[0].facts.push({ ...higher.fields[0].facts[0] });
-      const result = decideFeC07(
-        feC07Atom("a", 5, "RESTRICTED"),
-        higher
-      );
+      const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher);
       expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
     });
   });

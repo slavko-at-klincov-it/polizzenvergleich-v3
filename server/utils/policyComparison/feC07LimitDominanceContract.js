@@ -5,9 +5,7 @@ const {
   atomEventMode,
   comparisonAtomComplete,
 } = require("./comparisonAtomCanonicalization");
-const {
-  hasOptionalCoverageSource,
-} = require("./comparisonAtomSemantics");
+const { hasOptionalCoverageSource } = require("./comparisonAtomSemantics");
 
 const FE_C07_LIMIT_DOMINANCE_RULE_ID =
   "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1";
@@ -87,7 +85,8 @@ function percentHundredths(value) {
     .trim()
     .match(/^(\d{1,3})(?:[.,](\d{1,2}))?\s*%$/u);
   if (!match) return null;
-  const amount = BigInt(match[1]) * 100n + BigInt((match[2] || "").padEnd(2, "0"));
+  const amount =
+    BigInt(match[1]) * 100n + BigInt((match[2] || "").padEnd(2, "0"));
   return amount > 0n && amount <= 10_000n ? amount : null;
 }
 
@@ -175,13 +174,13 @@ function sideEvidence(atom, { higher }) {
       return null;
     const fields = fieldMap(part);
     const limit = fields ? exactLimit(part, fields) : null;
-    const condition = fields
-      ? exactCondition(part, fields, { higher })
-      : null;
+    const condition = fields ? exactCondition(part, fields, { higher }) : null;
     if (!limit || !condition) return null;
     evidence.push({ limit, condition });
   }
-  const valueKeys = new Set(evidence.map(({ limit }) => limit.value.toString()));
+  const valueKeys = new Set(
+    evidence.map(({ limit }) => limit.value.toString())
+  );
   const conditionModes = new Set(
     evidence.map(({ condition }) => condition.mode)
   );
