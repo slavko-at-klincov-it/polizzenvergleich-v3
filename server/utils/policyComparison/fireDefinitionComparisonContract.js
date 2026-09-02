@@ -7,6 +7,8 @@ const {
 
 const FIRE_DEFINITION_COMPARISON_RULE_ID =
   "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1";
+const FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID =
+  "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_AUDIT_V1";
 const FIRE_DEFINITION_SPREAD_ONLY = "SPREAD_ONLY";
 const FIRE_DEFINITION_ARISE_OR_SPREAD = "ARISE_OR_SPREAD";
 const FIRE_DEFINITION_COMPONENT_ID = "fire_definition";
@@ -160,35 +162,35 @@ function compareFireDefinition(left, right) {
   const leftSignature = sideSignature(left);
   const rightSignature = sideSignature(right);
   if (!leftSignature || !rightSignature) return null;
-  if (leftSignature === rightSignature)
-    return {
-      equivalent: true,
-      winnerSide: null,
-      ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
-    };
+  let winnerSide = null;
   if (
     leftSignature === FIRE_DEFINITION_ARISE_OR_SPREAD &&
     rightSignature === FIRE_DEFINITION_SPREAD_ONLY
   )
-    return {
-      equivalent: false,
-      winnerSide: "A",
-      ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
-    };
-  if (
+    winnerSide = "A";
+  else if (
     leftSignature === FIRE_DEFINITION_SPREAD_ONLY &&
     rightSignature === FIRE_DEFINITION_ARISE_OR_SPREAD
   )
-    return {
-      equivalent: false,
-      winnerSide: "B",
-      ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
-    };
-  return null;
+    winnerSide = "B";
+  else if (leftSignature !== rightSignature) return null;
+  return {
+    equivalent: winnerSide === null,
+    winnerSide,
+    ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
+    audit: {
+      schemaVersion: 1,
+      contractId: FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
+      definitionA: leftSignature,
+      definitionB: rightSignature,
+      winnerSide,
+    },
+  };
 }
 
 module.exports = {
   FIRE_DEFINITION_ARISE_OR_SPREAD,
+  FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
   FIRE_DEFINITION_COMPARISON_RULE_ID,
   FIRE_DEFINITION_SPREAD_ONLY,
   compareFireDefinition,

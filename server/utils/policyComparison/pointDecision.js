@@ -42,6 +42,9 @@ const {
   compareAutomaticIndexAdjustmentPresence,
 } = require("./automaticIndexAdjustmentComparisonContract");
 const { compareFeC07LimitDominance } = require("./feC07LimitDominanceContract");
+const {
+  compareFireDefinition,
+} = require("./fireDefinitionComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -546,6 +549,23 @@ function compareDimension(left, right, { canonical = false } = {}) {
         ruleId: stormDefinition.ruleId,
         dimension,
       };
+    const fireDefinition = compareFireDefinition(left, right);
+    if (fireDefinition)
+      return {
+        outcome: fireDefinition.equivalent
+          ? POINT_OUTCOME.EQUIVALENT
+          : fireDefinition.winnerSide === "A"
+            ? POINT_OUTCOME.ADVANTAGE_A
+            : POINT_OUTCOME.ADVANTAGE_B,
+        reasonCode: fireDefinition.equivalent
+          ? "EQUIVALENT_FIRE_DEFINITION_SCOPE"
+          : "BROADER_FIRE_DEFINITION_SCOPE",
+        ruleId: fireDefinition.ruleId,
+        dimension: {
+          ...dimension,
+          comparisonAudit: fireDefinition.audit,
+        },
+      };
     const numeric = compareNumericFields(left, right, left.factRole, canonical);
     if (numeric)
       return {
@@ -667,6 +687,17 @@ function dimensionReason(dimension) {
     const winner = feC07Audit.winnerSide;
     const loser = winner === "A" ? "B" : "A";
     return `${label}: ${winner} ${feC07Audit.higherValue}, ${loser} ${feC07Audit.lowerValue}; die höhere Seite ist durch eine vollständig geprüfte lokale Klausel ohne zusätzliche Bedingung belegt`;
+  }
+  if (
+    feC07Audit?.contractId ===
+    "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_AUDIT_V1"
+  ) {
+    const labels = {
+      SPREAD_ONLY: "Brand bei bestimmungswidriger Ausbreitung",
+      ARISE_OR_SPREAD:
+        "Brand bei bestimmungswidrigem Entstehen oder bestimmungswidriger Ausbreitung",
+    };
+    return `${label}: A ${labels[feC07Audit.definitionA]}, B ${labels[feC07Audit.definitionB]}`;
   }
   const context =
     aContext === bContext ? "" : ` (A ${aContext}; B ${bContext})`;

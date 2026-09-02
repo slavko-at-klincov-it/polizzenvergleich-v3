@@ -3586,6 +3586,77 @@ describe("policy comparison point decision", () => {
     }
   });
 
+  test("awards FE-A01 to the explicitly broader arise-or-spread definition", () => {
+    const component = { id: "fire_definition", factRole: "DEFINITION" };
+    const contract = {
+      digest: "6".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const definitionAtom = (side, conditionCheckText) =>
+      atom(side, {
+        requirementId: "FE-A01",
+        componentId: component.id,
+        componentLabel: "Branddefinition",
+        factRole: component.factRole,
+        coverageEffect: "DEFINED",
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: [],
+        optionalFields: [],
+        fields: [],
+        requirementContractDigest: contract.digest,
+        declaredComponents: contract.components,
+        sources: [
+          {
+            candidateId: `candidate-${side}`,
+            physicalPageNumber: 2,
+            exactText: "Brand ist ein Feuer",
+            conditionCheckText,
+          },
+        ],
+      });
+    const result = decidePoint({
+      categoryId: "FE-A01",
+      packageA: packageSummary({ requirementContract: contract }),
+      packageB: packageSummary({ requirementContract: contract }),
+      atomsA: [
+        definitionAtom(
+          "fire-a",
+          "Brand das ist ein Feuer, das sich bestimmungswidrig ausbreitet."
+        ),
+      ],
+      atomsB: [
+        definitionAtom(
+          "fire-b",
+          "Brand ist ein Feuer, das bestimmungswidrig entsteht und/oder sich bestimmungswidrig ausbreitet (Schadenfeuer)."
+        ),
+      ],
+    });
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.ADVANTAGE_B,
+      reasonCode: "ALL_DECISIVE_DIMENSIONS_FAVOR_ONE_SIDE",
+      ruleId: "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1",
+      reviewRequired: false,
+      dimensions: [
+        {
+          comparisonAudit: {
+            contractId:
+              "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_AUDIT_V1",
+            definitionA: "SPREAD_ONLY",
+            definitionB: "ARISE_OR_SPREAD",
+            winnerSide: "B",
+          },
+        },
+      ],
+    });
+    expect(result.reason).toContain(
+      "B Brand bei bestimmungswidrigem Entstehen oder bestimmungswidriger Ausbreitung"
+    );
+  });
+
   test("recognizes equivalent inclusions and explicit exclusions", () => {
     expect(decide([atom("a")], [atom("b")])).toMatchObject({
       outcome: POINT_OUTCOME.EQUIVALENT,

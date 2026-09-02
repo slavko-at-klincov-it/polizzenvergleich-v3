@@ -1,4 +1,5 @@
 const {
+  FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
   FIRE_DEFINITION_COMPARISON_RULE_ID,
   compareFireDefinition,
 } = require("../../utils/policyComparison/fireDefinitionComparisonContract");
@@ -63,6 +64,13 @@ describe("FE-A01 fire-definition comparison contract", () => {
       equivalent: false,
       winnerSide: "B",
       ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
+      audit: {
+        schemaVersion: 1,
+        contractId: FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
+        definitionA: "SPREAD_ONLY",
+        definitionB: "ARISE_OR_SPREAD",
+        winnerSide: "B",
+      },
     });
     expect(
       compareFireDefinition(
@@ -73,6 +81,13 @@ describe("FE-A01 fire-definition comparison contract", () => {
       equivalent: false,
       winnerSide: "A",
       ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
+      audit: {
+        schemaVersion: 1,
+        contractId: FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
+        definitionA: "ARISE_OR_SPREAD",
+        definitionB: "SPREAD_ONLY",
+        winnerSide: "A",
+      },
     });
   });
 
@@ -88,6 +103,15 @@ describe("FE-A01 fire-definition comparison contract", () => {
         equivalent: true,
         winnerSide: null,
         ruleId: FIRE_DEFINITION_COMPARISON_RULE_ID,
+        audit: {
+          schemaVersion: 1,
+          contractId: FIRE_DEFINITION_COMPARISON_AUDIT_CONTRACT_ID,
+          definitionA:
+            definition === SPREAD_ONLY ? "SPREAD_ONLY" : "ARISE_OR_SPREAD",
+          definitionB:
+            definition === SPREAD_ONLY ? "SPREAD_ONLY" : "ARISE_OR_SPREAD",
+          winnerSide: null,
+        },
       });
     }
   );
