@@ -2232,6 +2232,61 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("preserves a shared VS-35 duration for both selected components", () => {
+    const text =
+      "Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass die Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt ist und die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren ab dem Eintritt des Schadenereignisses erfolgt.";
+    const restoration = textualOccurrence({
+      candidateId: "candidate:vs35-shared-restoration",
+      text,
+      exactText:
+        "Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt",
+      contextStart: 500,
+    });
+    const period = textualOccurrence({
+      candidateId: "candidate:vs35-shared-period",
+      text,
+      exactText:
+        "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren",
+      contextStart: 500,
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-35",
+        label: "Wiederherstellungsklausel und Frist für den Wiederaufbau",
+        requestedFields: ["duration", "condition"],
+        components: [
+          {
+            id: "restoration_clause",
+            label: "Wiederherstellungsklausel",
+            factRole: "CONDITION",
+            occurrences: [restoration],
+          },
+          {
+            id: "reconstruction_period",
+            label: "Frist für den Wiederaufbau",
+            factRole: "CONDITION",
+            occurrences: [period],
+          },
+        ],
+      }),
+      materializedCandidates: selections(
+        ["candidate:vs35-shared-restoration", "DIRECT"],
+        ["candidate:vs35-shared-period", "DIRECT"]
+      ),
+    });
+
+    const duration = result.requirements[0].fields.find(
+      ({ field }) => field === "duration"
+    );
+    expect(duration.facts).toHaveLength(2);
+    expect(
+      duration.facts.map(({ source }) => source.candidateId).sort()
+    ).toEqual([
+      "candidate:vs35-shared-period",
+      "candidate:vs35-shared-restoration",
+    ]);
+  });
+
   test("rejects unknown or duplicate candidate selections fail-closed", () => {
     const source = occurrence({
       candidateId: "candidate:known",

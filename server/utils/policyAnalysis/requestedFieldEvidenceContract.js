@@ -1876,11 +1876,16 @@ function extractPreferredFacts({
   ];
   const unique = new Map();
   for (const fact of preferred) {
+    const componentDeduplicationScope =
+      requirement.id === "VS-35"
+        ? candidateById.get(fact.source?.candidateId)?.component?.id || ""
+        : "";
     const key = [
       fact.binding,
       fact.source.documentStart,
       fact.source.documentEnd,
       fact.normalizedValue,
+      componentDeduplicationScope,
     ].join(":");
     if (!unique.has(key)) unique.set(key, fact);
   }
