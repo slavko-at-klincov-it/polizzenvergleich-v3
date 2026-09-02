@@ -535,7 +535,11 @@ describe("preparedEvidenceContract", () => {
       },
     ];
 
-    for (const { occurrence, sectionScopeSource, observedScopeKeys } of realForms)
+    for (const {
+      occurrence,
+      sectionScopeSource,
+      observedScopeKeys,
+    } of realForms)
       expect(targetFor(occurrence)).toMatchObject({
         candidates: [],
         unresolvedCandidateIds: [],
@@ -545,16 +549,13 @@ describe("preparedEvidenceContract", () => {
             reason: "TRIAGE_MENTION_ONLY",
             terminalRejectionContractId:
               DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
-            occurrenceDigestContractId:
-              TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
             decisionOwner: "SERVER",
-            decisionBasis:
-              FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+            decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
             physicalPageNumber: occurrence.physicalPageNumber,
             sectionScopeSource,
             observedScopeKeys,
-            scopeProofMode:
-              FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+            scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
             occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
           },
         ],

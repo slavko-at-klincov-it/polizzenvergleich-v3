@@ -113,8 +113,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
     POST_LOSS_SCAFFOLDING_COST_TARGETS[key];
   if (postLossScaffoldingCostContract)
     return Object.freeze({
-      contractId:
-        DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+      contractId: DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
       decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
       auditProofMode:
         "ALL_OCCURRENCES_DETERMINISTICALLY_POST_LOSS_SCAFFOLDING_COSTS",
@@ -210,9 +209,7 @@ function terminalTargetAcceptsScopeProof(
     )
       return false;
     if (sectionScopeSource === "CURRENT_PAGE_HEADING")
-      return (
-        canonical.length === 1 && canonical[0] === "GLASBRUCH_INSURANCE"
-      );
+      return canonical.length === 1 && canonical[0] === "GLASBRUCH_INSURANCE";
     return (
       sectionScopeSource === OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE &&
       canonical.length === 0

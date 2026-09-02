@@ -611,8 +611,7 @@ function deterministicTerminalRejectionAudit({
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
         rejection.physicalPageNumber !== occurrenceProof.physicalPageNumber ||
-        rejection?.sectionScopeSource !==
-          occurrenceProof.sectionScopeSource ||
+        rejection?.sectionScopeSource !== occurrenceProof.sectionScopeSource ||
         JSON.stringify(rejection?.observedScopeKeys) !==
           JSON.stringify(occurrenceProof.observedScopeKeys) ||
         (rejection?.scopeProofMode || null) !==

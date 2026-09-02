@@ -851,9 +851,7 @@ function writeFeC12AbsenceCategory(run, { postLossCost = false } = {}) {
         requirementId,
         componentId,
         factRole:
-          componentId === "renovation_scope"
-            ? "CONDITION"
-            : "INSURED_OBJECT",
+          componentId === "renovation_scope" ? "CONDITION" : "INSURED_OBJECT",
         candidates: [],
         serverRejectedCandidates:
           postLossCost && componentId === "scaffolding" ? [rejection] : [],
@@ -1970,8 +1968,7 @@ describe("policy comparison result builder", () => {
             occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
             sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
             observedScopeKeys: [],
-            scopeProofMode:
-              FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
+            scopeProofMode: FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
           }),
         ],
       },
@@ -2018,10 +2015,9 @@ describe("policy comparison result builder", () => {
     const tamperedRow = tamperedResult.categories
       .find(({ categoryView }) => categoryView === "FE")
       .rows.find(({ categoryId }) => categoryId === "FE-C12");
-    const tamperedComponent =
-      tamperedRow.packageB.searchAudit.components.find(
-        ({ componentId }) => componentId === "scaffolding"
-      );
+    const tamperedComponent = tamperedRow.packageB.searchAudit.components.find(
+      ({ componentId }) => componentId === "scaffolding"
+    );
     expect(tamperedComponent.disposition).toBe("SEARCH_INCOMPLETE");
     expect(tamperedComponent.gates).not.toHaveProperty(
       "deterministicPostLossScaffoldingCostTerminal"

@@ -1508,8 +1508,7 @@ describe("policy comparison point decision", () => {
                 DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
               occurrenceDigestContractId:
                 TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
-              decisionBasis:
-                FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
+              decisionBasis: FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
               occurrenceDigestSha256: "4".repeat(64),
               physicalPageNumber: 7,
               sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
@@ -1644,9 +1643,7 @@ describe("policy comparison point decision", () => {
         currentAudit.rejections[0].sectionScopeSource = "CURRENT_PAGE_HEADING";
       },
       (currentAudit) => {
-        currentAudit.rejections[0].observedScopeKeys = [
-          "GLASBRUCH_INSURANCE",
-        ];
+        currentAudit.rejections[0].observedScopeKeys = ["GLASBRUCH_INSURANCE"];
       },
       (currentAudit) => {
         currentAudit.rejections[0].scopeProofMode = "UNKNOWN_PROFILE";
