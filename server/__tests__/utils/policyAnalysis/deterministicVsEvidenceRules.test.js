@@ -342,6 +342,30 @@ describe("deterministicVsEvidenceRules", () => {
       "Die Entschädigungsleistung wird unter den Voraussetzungen erbracht, dass die Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren ab dem Eintritt des Schadenereignisses erfolgt.",
       "EXPLICIT_RECONSTRUCTION_PERIOD",
     ],
+    [
+      "restoration_clause",
+      "Für die Wiederherstellung genügt es",
+      "Für die Wiederherstellung genügt es, wenn für zerstörte oder beschädigte Gebäude wieder Gebäude hergestellt werden, die dem gleichen Zweck dienen.",
+      "EXPLICIT_RESTORATION_CLAUSE",
+    ],
+    [
+      "restoration_clause",
+      "Wiederaufbau bzw. die Wiederherstellung kann auch",
+      "Der Wiederaufbau bzw. die Wiederherstellung kann auch ohne Vorliegen eines behördlichen Wiederaufbauverbotes innerhalb Österreichs erfolgen.",
+      "EXPLICIT_RESTORATION_CLAUSE",
+    ],
+    [
+      "restoration_clause",
+      "Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet",
+      "Den Anspruch auf Gesamtentschädigung erwirbt der Versicherungsnehmer nur, wenn gesichert ist, dass die Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet wird.",
+      "EXPLICIT_RESTORATION_CLAUSE",
+    ],
+    [
+      "reconstruction_period",
+      "diese Frist um die Dauer dieses Prozesses erstreckt",
+      "Der Anspruch auf Gesamtentschädigung setzt die Wiederherstellung binnen drei Jahren voraus. Im Falle eines Deckungsprozesses wird diese Frist um die Dauer dieses Prozesses erstreckt.",
+      "EXPLICIT_RECONSTRUCTION_PERIOD",
+    ],
   ])(
     "binds the local EABS VS-35 %s phrase",
     (componentId, exactText, text, basis) => {

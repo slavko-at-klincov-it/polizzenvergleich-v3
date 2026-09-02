@@ -22,7 +22,7 @@ function occurrenceContextText(occurrence) {
   return String(occurrence?.context?.text || "");
 }
 
-function occurrenceLocalText(occurrence, before = 420, after = 320) {
+function occurrenceLocalText(occurrence, before = 620, after = 420) {
   const context = occurrenceContextText(occurrence);
   const contextStart = Number(occurrence?.context?.documentStart);
   const occurrenceStart = Number(occurrence?.documentStart);
@@ -69,6 +69,46 @@ function explicitVs35LocalClauseBinding(key, occurrence) {
     )
   )
     return null;
+  if (
+    key === "VS-35:restoration_clause" &&
+    /^F[üu]r\s+die\s+Wiederherstellung\s+gen[üu]gt\s+es$/iu.test(exactText) &&
+    /zerstörte\s+oder\s+beschädigte\s+Gebäude[\s\S]{0,180}?gleichen\s+Zweck\s+dienen/iu.test(
+      localText
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RESTORATION_CLAUSE",
+      authoritative: true,
+    };
+  if (
+    key === "VS-35:restoration_clause" &&
+    /^Wiederaufbau\s+(?:bzw\.?|oder)\s+die\s+Wiederherstellung\s+kann\s+auch$/iu.test(
+      exactText
+    ) &&
+    /Wiederaufbau[\s\S]{0,100}?Wiederherstellung[\s\S]{0,160}?innerhalb\s+Österreichs\s+erfolgen/iu.test(
+      localText
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RESTORATION_CLAUSE",
+      authoritative: true,
+    };
+  if (
+    key === "VS-35:reconstruction_period" &&
+    /^diese\s+Frist\s+um\s+die\s+Dauer\s+dieses\s+Prozesses\s+erstreckt$/iu.test(
+      exactText
+    ) &&
+    /Im\s+Falle\s+eines\s+Deckungsprozesses[\s\S]{0,140}?diese\s+Frist[\s\S]{0,100}?erstreckt/iu.test(
+      localText
+    )
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RECONSTRUCTION_PERIOD",
+      authoritative: true,
+    };
   const compensationGovernor =
     /(?:Entschädigungsleistung|Gesamtentschädigung|Neuwertentschädigung|Zeitwertentschädigung)[\s\S]{0,420}?(?:Voraussetzungen?|Anspruch|sichergestellt|Wiederherstellung|Wiederbeschaffung)/iu.test(
       localText
@@ -76,7 +116,7 @@ function explicitVs35LocalClauseBinding(key, occurrence) {
   if (!compensationGovernor) return null;
   if (
     key === "VS-35:restoration_clause" &&
-    /^(?:die\s+)?Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+zur\s+Gänze\s+sichergestellt$/iu.test(
+    /^(?:(?:die\s+)?Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+zur\s+Gänze\s+sichergestellt|Entschädigung\s+zur\s+Gänze\s+f[üu]r\s+die\s+Wiederherstellung\s+(?:bzw\.?|oder)\s+Wiederbeschaffung\s+verwendet)$/iu.test(
       exactText
     )
   )
