@@ -277,9 +277,51 @@ Nach jedem Verhaltenscommit:
 
 ## 9. Fortschrittsprotokoll
 
-| Inkrement           | Commit | Ziel-IDs      | Vorher    | Nachher | 155-Guard | Mac Studio | Entscheidung  |
-| ------------------- | ------ | ------------- | --------- | ------- | --------- | ---------- | ------------- |
-| Target Selection V1 | offen  | Infrastruktur | 69 Review | offen   | offen     | offen      | `IN_PROGRESS` |
+| Inkrement           | Commit     | Ziel-IDs      | Vorher    | Nachher   | 155-Guard     | Mac Studio                    | Entscheidung |
+| ------------------- | ---------- | ------------- | --------- | --------- | ------------- | ----------------------------- | ------------ |
+| Target Selection V1 | `bba9670d` | Infrastruktur | 69 Review | 69 Review | nicht berührt | 203/203 direkt und angrenzend | `PASS`       |
 
 Kein Deployment während dieses Loops. Der installierte Kundencheckout bleibt
 bis zu einer ausdrücklichen Freigabe unverändert.
+
+### 9.1 Target Selection V1 – Ergebnis
+
+Der bisherige `--requirementIds`-Pfad war kein zulässiger Target-Runner, weil
+er `:subset:<ids>` an die fachliche `catalogId` angehängt und damit
+Requirement-/Zertifizierungsidentitäten verändert hat. Commit `bba9670d`
+trennt nun fachlichen Vertrag und QA-Auswahl:
+
+- kanonische `catalogId`, Katalogreihenfolge und vollständige
+  Requirement-Objekte bleiben erhalten;
+- ein versionierter Selection-Digest bindet Kategorie, Ziel-IDs und die
+  kanonischen `requirementSearchContractDigest`-Werte;
+- Triage und Prepared Evidence können den extern erwarteten Selection-Digest
+  verlangen und lehnen fehlende oder manipulierte Provenienz fail-closed ab;
+- leere, unbekannte, doppelte oder kategoriefremde IDs werden abgelehnt;
+- reale `VS-16`-/`VS-21`-/`VS-23`-Verträge beweisen `ANY`-, Binding-Group-,
+  Candidate- und Requirement-Digest-Parität zum Full-Worksheet;
+- ein synthetischer zertifizierter Schema-2-Vertrag beweist, dass nur die
+  kanonische Katalog-ID akzeptiert wird.
+
+Mac-Studio-Prüfung im isolierten Checkout
+`/private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo`:
+
+```text
+Commit: bba9670d5f314df50f4ffb43c710d2cb9818b0fe
+Node: 22.23.2
+Modellaufrufe: keine
+Prettier: 6/6 PASS
+Direkte Vertragsprüfungen: 88/88 PASS
+Angrenzende Worksheet-/Materializer-Prüfungen: 115/115 PASS
+Breite Policy-Analysis-Suite: 574/575 PASS
+```
+
+Der einzige breite Fehler (`ST-11`-ScopeLead-Erwartung) wurde auf dem
+unveränderten Favoriten-Commit `2d964b45` identisch reproduziert. Er ist damit
+kein Regressionssignal von Target Selection V1 und wird getrennt als
+vorhandener Test-/Vertragsbefund behandelt.
+
+Noch nicht bewiesen sind Target-Paketmaterialisierung, die vollständige
+10-Dokument-Matrix, das 224-Zeilen-Overlay und der 155-Zeilen-Guard. Diese
+Grenzen bilden das nächste kleine Inkrement. Der installierte Kundencheckout
+blieb sauber und unverändert auf `c7d3b16d`.

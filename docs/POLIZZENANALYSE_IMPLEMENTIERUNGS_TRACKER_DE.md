@@ -4580,3 +4580,48 @@ LIMIT: Package Report wiederholt customerReviewRequired noch nicht
 NO DEPLOY: installierter Kundenstand sauber auf c7d3b16d
 NEXT: Reviewfamilien einzeln und mit eigenem Vertrag abarbeiten
 ```
+
+## 86. QA Target Selection V1 – kanonische Teilmengenidentität
+
+Commit `bba9670d5f314df50f4ffb43c710d2cb9818b0fe` ersetzt den unsicheren
+QA-Teilmengenpfad, der bisher `:subset:<ids>` an die fachliche `catalogId`
+angehängt hatte. Zielauswahl und Fachvertrag sind jetzt getrennt:
+
+- die kanonische Katalog-ID und vollständigen Requirement-Objekte bleiben
+  unverändert;
+- die Auswahl folgt immer der Katalogreihenfolge;
+- ein versionierter Selection-Digest bindet Ziel-IDs und die jeweiligen
+  `requirementSearchContractDigest`-Werte;
+- Triage und Prepared Evidence unterstützen einen extern erwarteten Digest
+  und sperren fehlende oder manipulierte Target-Provenienz;
+- Leerwerte, unbekannte IDs, Duplikate und Kategorievermischungen scheitern
+  fail-closed;
+- Full-vs-Target-Parität ist für einzelne Triage-/Prepared-Evidence-Payloads,
+  reale `ANY`-Requirements und Binding Groups sowie einen synthetischen
+  zertifizierten Schema-2-Vertrag abgesichert.
+
+Mac-Studio-Nachweis:
+
+```text
+Checkout: /private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo
+Commit: bba9670d5f314df50f4ffb43c710d2cb9818b0fe
+Runtime: Node.js 22.23.2
+Prettier: 6/6 PASS
+Direkte Suites: 88/88 PASS
+Angrenzende Suites: 115/115 PASS
+Breite Policy-Analysis-Suite: 574/575 PASS
+Baseline-Gegenprobe ST-11 auf 2d964b45: identisch FAIL
+Modell-/Embedding-Aufrufe: keine
+```
+
+Der eine rote ST-11-Test betrifft ausschließlich eine schon am Favoriten
+abweichende `scopeLead`-Erwartung und wurde durch diesen Commit nicht erzeugt.
+Der installierte Kundencheckout blieb sauber auf `c7d3b16d`.
+
+```text
+PASS: kanonische Target-Auswahl und Downstream-Digest-Grenze
+PASS: keine Regression in den direkt oder angrenzend betroffenen Suites
+LIMIT: Target-Manifest/Materializer, 10-Dokument-Gate, 224-Overlay und 155-Guard fehlen
+NO DEPLOY: installierter Kundenstand unverändert
+NEXT: QA-Target-Manifest und vollständige Dokumentmatrix implementieren
+```
