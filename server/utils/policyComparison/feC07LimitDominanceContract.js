@@ -206,9 +206,8 @@ function sideEvidence(atom, { higher }) {
       return null;
     const fields = fieldMap(part);
     const limit = fields ? exactLimit(part, fields) : null;
-    const condition = fields && limit
-      ? exactCondition(part, fields, limit, { higher })
-      : null;
+    const condition =
+      fields && limit ? exactCondition(part, fields, limit, { higher }) : null;
     if (!limit || !condition) return null;
     evidence.push({ limit, condition });
   }
