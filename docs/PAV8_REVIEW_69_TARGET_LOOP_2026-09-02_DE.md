@@ -1,6 +1,6 @@
 # PAV8 – Target-Loop für die 69 Reviewzeilen
 
-Stand: 2. September 2026  
+Stand: 3. September 2026
 Baseline: `PAV8-03D-VS14-2D964B45-20260902-073000`  
 Fachlicher Code: `2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b`  
 Dokumentierter Arbeitsstand bei Beginn: `c6462b481cb666ee3701a236cbf5fb63e1da5743`
@@ -127,18 +127,20 @@ positiven Gegenbeleg wird dessen Seite zum Vorteil.
 
 ### R69-D – Vergleichsregel fehlt: 4
 
-Status: `3/4 ACCEPTED`, offen bleibt `VS-08`. `FE-A01` ist im echten
-Zehn-Dokument-Zielweg als `VORTEIL_B` ohne Review entschieden.
+Status: `4/4 TARGET-E2E ACCEPTED`. `FE-A01` ist im echten
+Zehn-Dokument-Zielweg als `VORTEIL_B` ohne Review entschieden. `VS-08` ist
+nach vervollständigtem Recall und paketweitem Bedingungskonsens als
+`GLEICHWERTIG` ohne Review entschieden.
 
 ```text
 VS-08, VS-10, FE-A01, ST-01
 ```
 
-Erste Kandidaten: `ST-01`, danach `VS-10`. Beide besitzen bereits
-vollständige Atome; bei `ST-01` ist auf beiden Seiten `60 km/h` gebunden.
-`VS-08` enthält unterschiedliche konkrete Bedingungen, `FE-A01`
-unterschiedliche Definitionswortlaute. Diese beiden dürfen nicht allein aus
-gleicher Wirkung gleichgesetzt werden.
+`ST-01` und `VS-10` besitzen vollständige Atome; bei `ST-01` ist auf beiden
+Seiten `60 km/h` gebunden. Für `VS-08` ist die geprüfte Dimension ausschließlich
+`bedingt oder unbedingt`. Die unterschiedlichen konkreten Voraussetzungen
+bleiben in `VS-09` erhalten und werden durch die VS-08-Gleichheit nicht
+gleichgesetzt.
 
 ### R69-E – Bedingung oder Ausnahme ungeklärt: 4
 
@@ -2278,12 +2280,12 @@ Vorher: UNKLAR / NO_APPROVED_RULE_FOR_ALL_DIMENSIONS
 Nachher: UNKLAR / ATOMIC_DOCUMENT_RANK_UNRESOLVED
 ```
 
-Der neue Reason Code ist fachlich präziser. Es fehlt nicht länger Evidenz;
-vielmehr enthält Paket B zwei unterschiedliche Bedingungen derselben
-Komponente, deren Ergänzungs-, Alternativ- oder Ersetzungsverhältnis noch nicht
-belegt ist. Diese Rangfrage darf nicht durch Auswahl nur einer Klausel verdeckt
-werden. Schritt B muss deshalb die Bedingungsregime und ihr Verhältnis eng
-typisieren; erst danach ist eine belastbare Aussage wie `NICHT_VERGLEICHBAR`
+Der neue Reason Code war diagnostisch präziser, aber noch keine korrekte
+fachliche Endentscheidung. Paket B enthält zwei Quellen derselben Komponente.
+Für die konkrete VS-08-Frage ist deren Rang jedoch entscheidungsinvariant:
+Mit oder ohne die zusätzliche Quelle bleibt der Verzicht in Paket B bedingt.
+Die Unterschiede der Voraussetzungen gehören in die getrennte Zeile `VS-09`.
+Eine Auswahl oder Löschung einer der beiden Quellen ist weder nötig noch
 zulässig.
 
 Als Katalogregression wurde `VS-15` unter `v0.10` erneut vollständig auf den
@@ -2300,9 +2302,107 @@ Triage-/Evidence-Qwen-Aufrufe: 0/0
 ```
 
 Die bereits akzeptierte VS-15-Entscheidung bleibt damit unter dem neuen
-Katalog unverändert. `VS-08` wird noch nicht aus R69-A entfernt. Ein voller
-224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der installierte
-Kundenstand blieb unverändert.
+Katalog unverändert.
+
+#### 10.20.4 Paketweiter Konsensvertrag und finale Entscheidung
+
+Der zweite Fix führt keine globale Deduplizierung von CONDITION-Atomen und
+keine Dokumentrangannahme ein. Er ist ausschließlich an folgende endliche
+Klassifikationsdimension gebunden:
+
+```text
+Kategorie: VS-08
+Katalog: vs-occurrence-full-draft-v0.10
+Komponente: underinsurance_waiver_condition
+Rolle: CONDITION
+Feld: condition
+zulässiger Konsenswert: bedingt
+```
+
+Der Vertrag verlangt auf beiden Seiten das vollständige Dokumentmanifest,
+genau eine Suchzelle und ein Rohatom pro Dokument, vollständige Seitenprüfung,
+denselben Requirement-Digest, GENERAL-Scope, konfliktfreie und direkt
+quellengebundene Funde sowie kontrollierte Nullzustände für alle übrigen
+Dokumente. Alle gefundenen Quellen bleiben einzeln im Audit erhalten. Sobald
+eine Quelle `unbedingt`, negiert, optional, unvollständig, scopefremd oder
+konfliktbehaftet ist, greift die Regel nicht und der bisherige Fail-closed-Weg
+bleibt erhalten.
+
+Die konkreten Bedingungen werden weder zusammengeführt noch als identisch
+behauptet. Der Konsens besagt nur: Alle für VS-08 gefundenen Quellen ordnen den
+Verzicht als bedingt ein. Angebot, Hauptpolizze und Zusatzvertrag dürfen dabei
+gemeinsam beitragen, ohne dass eine nicht bewiesene Ersetzungsrangfolge
+erfunden wird.
+
+Commits:
+
+```text
+3d54b942 fix(comparison): resolve VS-08 condition consensus
+56eaa1b8 style(comparison): format VS-08 consensus contract
+ab92171b fix(comparison): accept audited VS-08 null fields
+bc4daa07 fix(comparison): validate VS-08 consensus audits
+106804e0 style(comparison): format VS-08 audit validation
+```
+
+Der kleine Forward-Fix `ab92171b` beruht auf einer realen Artefaktabweichung:
+Ein vollständig kontrollierter Nullfund besitzt im materialisierten Atom den
+Feldstatus `NOT_FOUND`, nicht `INCOMPLETE`. Die Änderung lockert keine
+Fundentscheidung; alle Terminal- und Vollständigkeitsgates bleiben zwingend.
+
+Finale Mac-Studio-Validierung:
+
+```text
+Commit: 106804e0a03b4ec4170d068c66a8a773d9ee6935
+Worktree: /private/tmp/pv3-validate-106804e0
+Produktprofil: CUSTOMER_CORE_5_V32_VS08_CONDITION_CONSENSUS
+Formatprüfung: PASS
+Fokussierte Suites: 11/11 PASS
+Fokussierte Tests: 344/344 PASS
+```
+
+Die Tests enthalten insbesondere Gegenbelege für alten Contract-Digest,
+fehlendes Dokumentinventar, offene Kandidaten, `bedingt` gegen `unbedingt`,
+negierte Quelle, gemischte Wirkung, unvollständige Seitenaudits sowie
+Manipulation eines gespeicherten Audits.
+
+Finaler echter Zielartefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-08-FINAL-106804E0-20260903
+Summary-Digest: 669553d3a0e3718eb40e66cf44ecdf7e0c39ed7be569058231fe8f2972a3999c
+Target-Selection-Digest: 87d5eb4070d61e6fac5ca800d433edfe0554bee68a1481e2b30001d1cc3c4061
+Producer-Digest: 9e56c6d596985836c0feb0b24e889201d3076e04b1e850eac9f61752abd26984
+Assessment-Digest: 48f143a7ad2650986e752c4366ae14aae98e9f2177942b56077f398cf3a4a6c8
+Dokumente: 10
+Paket A: 1 bedingter Fund
+Paket B: 2 bedingte Funde, 7 kontrollierte Null-Suchzellen
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Serverseitige Terminals: 7
+Ergebnis: GLEICHWERTIG
+Review erforderlich: nein
+```
+
+Der unabhängige Replay rekonstruierte Audit und Entscheidung aus dem
+Dokumentmanifest und den gespeicherten Rohatomen identisch. Ein absichtlich
+veränderter `foundAtomCount` wurde mit
+`VS08_CONDITION_CONSENSUS_AUDIT_MISMATCH` abgelehnt.
+
+Finale VS-15-Regression auf demselben Commit:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-15-V010-106804E0-20260903
+Summary-Digest: 17a1fa7f7f7e80c5cef4d3b290693b7c52f81b6ae25ea56ba19955a1d48ccd51
+Ergebnis: GLEICHWERTIG
+Review erforderlich: nein
+Triage-/Evidence-Qwen-Aufrufe: 0/0
+```
+
+Damit ist `VS-08` abgeschlossen. Die fortgeschriebene, noch nicht durch einen
+neuen 224-Zeilen-Vollvergleich bestätigte Projektion ändert sich ausschließlich
+von `Gleichwertig 117 / Unklar 60` auf `Gleichwertig 118 / Unklar 59`.
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
 
 ### 10.19 VS-15 – allgemeiner Nebengebäudeschutz und fehlende namentliche Anführung
 
