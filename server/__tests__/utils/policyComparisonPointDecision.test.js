@@ -216,7 +216,7 @@ function qualifiedOneSidedFixture({ evidencedSide = "A" } = {}) {
       requirementContract,
       searchAudit: {
         disposition: found
-          ? "RELEVANT_FOUND"
+          ? "SEARCH_INCOMPLETE"
           : "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
         comparisonTreatment: found ? null : "DOCUMENTATION_ONLY_V1",
         documentCount: 1,
@@ -838,7 +838,7 @@ describe("policy comparison point decision", () => {
     });
   });
 
-  test("reports a documentation difference when complete absence faces evidence without an advantage rule", () => {
+  test("fails closed when absence faces evidence without a reconstructable joint audit", () => {
     const completeAbsence = {
       evidenceFound: false,
       reviewStatus: "NICHT_GEFUNDEN_NACH_VOLLSTÄNDIGER_PRÜFUNG",
@@ -851,8 +851,8 @@ describe("policy comparison point decision", () => {
           packageB: completeAbsence,
         })
       ).toMatchObject({
-        outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-        reasonCode: "QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE",
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE",
       });
     }
   });
@@ -874,8 +874,8 @@ describe("policy comparison point decision", () => {
           packageB: completeAbsence,
         })
       ).toMatchObject({
-        outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-        ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+        outcome: POINT_OUTCOME.UNCLEAR,
+        ruleId: "FAIL_CLOSED_V1",
       });
     }
   });
@@ -921,14 +921,14 @@ describe("policy comparison point decision", () => {
         expect(
           decide(evidencedAtoms, [], { packageB: completeAbsence })
         ).toMatchObject({
-          outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-          ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+          outcome: POINT_OUTCOME.UNCLEAR,
+          ruleId: "FAIL_CLOSED_V1",
         });
       }
     }
   });
 
-  test("treats a general controlled zero match as documentation-only", () => {
+  test("fails closed for a controlled zero match without its joint audit", () => {
     const result = decide([atom("a")], [], {
       packageB: {
         evidenceFound: false,
@@ -940,9 +940,9 @@ describe("policy comparison point decision", () => {
 
     expect(result).toMatchObject({
       schemaVersion: 3,
-      outcome: POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-      comparisonTreatment: "DOCUMENTATION_ONLY_V1",
-      reviewRequired: false,
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE",
+      reviewRequired: true,
     });
   });
 

@@ -1446,7 +1446,7 @@ describe("policy comparison result builder", () => {
     });
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "DOKUMENTATIONSUNTERSCHIED",
-      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
+      ruleId: "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
     });
   });
 

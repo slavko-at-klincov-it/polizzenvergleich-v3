@@ -356,7 +356,6 @@ function decideQualifiedCoverageOverAbsence({
 }) {
   const evidencedSide = unilateralCoverageAbsenceAudit.evidencedSide;
   const absentSide = unilateralCoverageAbsenceAudit.absentSide;
-  const evidencedPackage = evidencedSide === "A" ? packageA : packageB;
   const absentPackage = absentSide === "A" ? packageA : packageB;
   if (!unilateralCoverageAbsenceAudit.eligible)
     return documentationDifference({
@@ -1131,5 +1130,6 @@ function decidePoint({ categoryId, packageA, packageB, atomsA, atomsB }) {
 module.exports = {
   POINT_OUTCOME,
   SEARCH_DISPOSITION,
+  decideQualifiedCoverageOverAbsence,
   decidePoint,
 };

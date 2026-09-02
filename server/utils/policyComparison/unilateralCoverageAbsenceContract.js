@@ -193,6 +193,7 @@ function evidenceSideAssessment({
   if (!validRequirementContract(requirementContract))
     blockers.add("REQUIREMENT_NOT_PURE_ALL_COVERAGE");
   if (
+    packageSummary?.searchDisposition !== "RELEVANT_FOUND" ||
     packageSummary?.evidenceFound !== true ||
     packageSummary?.coverage !== "Ja" ||
     packageSummary?.reviewStatus !== "BELEGT" ||
@@ -224,6 +225,8 @@ function evidenceSideAssessment({
     : null;
   if (
     !audit ||
+    audit.disposition !== "SEARCH_INCOMPLETE" ||
+    audit.comparisonTreatment != null ||
     !sameJson(audit.requirementContract, requirementContract) ||
     !Number.isInteger(audit.documentCount) ||
     audit.documentCount < 1 ||

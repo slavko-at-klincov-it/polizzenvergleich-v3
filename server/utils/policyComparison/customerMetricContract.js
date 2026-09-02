@@ -1,4 +1,7 @@
-const { POINT_OUTCOME } = require("./pointDecision");
+const {
+  POINT_OUTCOME,
+  decideQualifiedCoverageOverAbsence,
+} = require("./pointDecision");
 const {
   PACKAGE_REVIEW_AUDIT_CONTRACT_ID,
   PACKAGE_REVIEW_AUDIT_SCHEMA_VERSION,
@@ -322,12 +325,27 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         row.pointDecision?.ruleId === UNILATERAL_COVERAGE_RULE_ID ||
         row.pointDecision?.ruleId === UNILATERAL_DOCUMENTATION_RULE_ID ||
         row.pointDecision?.reasonCode === UNILATERAL_COVERAGE_REASON_CODE ||
+        row.pointDecision?.reasonCode ===
+          UNILATERAL_DOCUMENTATION_REASON_CODE ||
         row.pointDecision?.comparisonTreatment ===
           UNILATERAL_COVERAGE_TREATMENT ||
         row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined;
-      if (Boolean(oneSidedDirection) !== unilateralDecision)
+      const directionalAuditFailedClosed = Boolean(
+        oneSidedDirection &&
+          !unilateralDecision &&
+          outcome === POINT_OUTCOME.UNCLEAR &&
+          row.pointDecision?.schemaVersion === 3 &&
+          row.pointDecision?.reasonCode ===
+            "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE" &&
+          row.pointDecision?.ruleId === "FAIL_CLOSED_V1" &&
+          row.pointDecision?.reviewRequired === true
+      );
+      if (
+        Boolean(oneSidedDirection) !== unilateralDecision &&
+        !directionalAuditFailedClosed
+      )
         validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
-      if (oneSidedDirection) {
+      if (oneSidedDirection && unilateralDecision) {
         const [evidencedSide, absentSide] = oneSidedDirection;
         const audit = row.pointDecision.unilateralCoverageAbsenceAudit;
         try {
@@ -372,6 +390,20 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           row.pointDecision.comparisonTreatment !== "DOCUMENTATION_ONLY_V1"
         )
           validationError("COMPARISON_UNILATERAL_BLOCKED_INVALID", [rowKey]);
+        const reconstructedDecision = decideQualifiedCoverageOverAbsence({
+          categoryId: row.categoryId,
+          packageA: row.packageA,
+          packageB: row.packageB,
+          unilateralCoverageAbsenceAudit: audit,
+        });
+        if (
+          row.pointDecision.reason !== reconstructedDecision.reason ||
+          JSON.stringify(row.pointDecision.dimensions) !==
+            JSON.stringify(reconstructedDecision.dimensions)
+        )
+          validationError("COMPARISON_UNILATERAL_PRESENTATION_MISMATCH", [
+            rowKey,
+          ]);
       }
     }
     if (reviewRequired) {
