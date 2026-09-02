@@ -1593,9 +1593,12 @@ PageMap-Quelldokumenten und die echte Candidate-Triage ergaben:
 
 ```text
 QA-Artefakt:
-/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-TARGETED-4041A650-20260902
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-TARGETED-4041A650-V2-20260902
+Katalog: fe-occurrence-full-draft-v0.7
+Target-Selection-Digest:
+ffb5d6e64686be09cb6526c6f5eb62c3b77f4eebb45a4873476c8842a391c418
 Summary-Digest:
-f3eb505d6ca330a68c5c4686125cb9d30ccccd2780eb2938a52f19c4daae3b05
+9891e7d048191d2b290300eea1d9b7df6cb884992e7a79dec7adb070f0c219dd
 Modellkonfiguration: qwen/qwen3.6-35b-a3b, Kontext 42496
 
 DOC-01: 1 Ziel, DIRECT, Pflichtfeldstatus COMPLETE
@@ -1613,7 +1616,12 @@ Die null Modellaufrufe sind kein ausgelassener Prüfschritt: Bei beiden Zielen
 waren Rollen- und Scopeentscheidung bereits vollständig servereigen. Der
 Triagevertrag leitete deshalb `DIRECT` deterministisch ab; ein Modellurteil
 wäre weder nötig noch zulässig gewesen. Das Artefakt ist ein
-komponentengenauer Pipeline-Probe und keine neue 224-Zeilen-Gesamtmetrik.
+komponentengenauer Pipeline-Probe mit versioniertem FE-v0.7-Katalog und
+digestgebundener Zielauswahl, aber keine neue 224-Zeilen-Gesamtmetrik. Eine
+vorangegangene technisch inhaltsgleiche Minimalprobe ohne
+`targetRequirementSelection` bleibt als Vorlauf erhalten, gilt aber
+ausdrücklich nicht als revisionssicherer Nachweis und wird hier nicht als
+Abnahmegrundlage verwendet.
 
 Damit sind Suche, Triage und Pflichtfeldbindung für die beiden echten Funde
 geschlossen. Der verbleibende Fehler liegt ausschließlich in der
