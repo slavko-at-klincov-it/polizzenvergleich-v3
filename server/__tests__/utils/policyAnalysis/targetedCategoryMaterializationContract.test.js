@@ -182,13 +182,47 @@ function realManifest() {
   registry.baseline.packageContractSha256 = sha256(packageContractBytes);
   registry.baseline.comparisonSha256 = sha256(baselineComparisonBytes);
   registry.baseline.runSignatureSha256 = RUN_SIGNATURE;
-  return buildTargetedQaManifest({
-    qaRegistryBytes: raw(registry),
-    packageContractBytes,
-    baselineComparisonBytes,
-    catalogBytesByCategory: catalogBytesByCategory(),
-    execution: execution(),
-  });
+  const documentArtifactBytesByUuid = Object.fromEntries(
+    packageContract.documents.map((document) => [
+      document.uuid,
+      raw({
+        schemaVersion: 1,
+        fingerprint: document.sha256,
+        document: {
+          id: document.sha256,
+          sourceDocumentId: document.sha256,
+          title: "target.pdf",
+          documentType: "pdf",
+          pageContent: "Kein kontrollierter Suchbegriff in diesem Dokument.",
+          pageMap: [
+            {
+              pageNumber: 1,
+              start: 0,
+              end: "Kein kontrollierter Suchbegriff in diesem Dokument.".length,
+            },
+          ],
+          pdfExtraction: {
+            schemaVersion: 1,
+            totalPages: 1,
+            processedPages: 1,
+            pagesWithText: 1,
+            complete: true,
+          },
+        },
+      }),
+    ])
+  );
+  return {
+    manifest: buildTargetedQaManifest({
+      qaRegistryBytes: raw(registry),
+      packageContractBytes,
+      baselineComparisonBytes,
+      catalogBytesByCategory: catalogBytesByCategory(),
+      documentArtifactBytesByUuid,
+      execution: execution(),
+    }),
+    documentArtifactBytesByUuid,
+  };
 }
 
 function rewriteJson(input, mutate) {
@@ -198,7 +232,7 @@ function rewriteJson(input, mutate) {
 }
 
 function fixture() {
-  const manifest = realManifest();
+  const { manifest, documentArtifactBytesByUuid } = realManifest();
   const target = manifest.categoryTargets.find(
     ({ categoryView }) => categoryView === "ST"
   );
@@ -207,27 +241,10 @@ function fixture() {
     catalog: JSON.parse(catalogBytes.toString("utf8")),
     requirementIds: target.requirementIds,
   });
-  const fingerprint = manifest.documentMatrix.documents[0].sha256;
-  const pageContent = "Kein kontrollierter Suchbegriff in diesem Dokument.";
-  const documentArtifact = {
-    schemaVersion: 1,
-    fingerprint,
-    document: {
-      id: fingerprint,
-      sourceDocumentId: fingerprint,
-      title: "target.pdf",
-      documentType: "pdf",
-      pageContent,
-      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
-      pdfExtraction: {
-        schemaVersion: 1,
-        totalPages: 1,
-        processedPages: 1,
-        pagesWithText: 1,
-        complete: true,
-      },
-    },
-  };
+  const documentArtifactBytes =
+    documentArtifactBytesByUuid[manifest.documentMatrix.documents[0].uuid];
+  const documentArtifact = JSON.parse(documentArtifactBytes.toString("utf8"));
+  const fingerprint = documentArtifact.fingerprint;
   const worksheet = {
     ...buildControlledOccurrenceWorksheet({
       document: documentArtifact.document,
@@ -293,11 +310,12 @@ function fixture() {
     expectedManifestDigestSha256: manifest.manifestDigestSha256,
     expectedExecution: copy(manifest.execution),
     categoryView: "ST",
+    documentUuid: manifest.documentMatrix.documents[0].uuid,
     catalogBytes,
     categoryPromptBytes: Buffer.from(PROMPT_BYTES),
     triagePromptBytes: Buffer.from(TRIAGE_PROMPT_BYTES),
     effectsPromptBytes: Buffer.from(EFFECTS_PROMPT_BYTES),
-    documentArtifactBytes: raw(documentArtifact),
+    documentArtifactBytes,
     worksheetBytes,
     triageReportBytes: raw(triageReport),
     materializedTriageBytes,
@@ -308,7 +326,7 @@ function fixture() {
 }
 
 describe("targeted category materialization input contract", () => {
-  test("binds real Manifest V2, execution, rebuilt worksheet and report chain", () => {
+  test("binds real Manifest V3, execution, rebuilt worksheet and report chain", () => {
     const input = fixture();
     const result = assertTargetedCategoryMaterializationInputs(input);
     const target = input.manifest.categoryTargets.find(
@@ -461,13 +479,63 @@ describe("targeted category materialization input contract", () => {
       }
     );
     expect(() => assertTargetedCategoryMaterializationInputs(document)).toThrow(
-      "TARGETED_CATEGORY_DOCUMENT_NOT_IN_MANIFEST"
+      "TARGETED_CATEGORY_DOCUMENT_IDENTITY_MISMATCH"
     );
+
+    const documentUuid = fixture();
+    documentUuid.documentUuid =
+      documentUuid.manifest.documentMatrix.documents[1].uuid;
+    expect(() =>
+      assertTargetedCategoryMaterializationInputs(documentUuid)
+    ).toThrow("TARGETED_CATEGORY_DOCUMENT_IDENTITY_MISMATCH");
 
     const executionMismatch = fixture();
     executionMismatch.expectedExecution.modelTokenLimit = 32000;
     expect(() =>
       assertTargetedCategoryMaterializationInputs(executionMismatch)
     ).toThrow("TARGETED_QA_EXPECTED_EXECUTION_MISMATCH");
+  });
+
+  test("rejects a coherently rebuilt chain from tampered document content", () => {
+    const input = fixture();
+    const artifact = JSON.parse(input.documentArtifactBytes.toString("utf8"));
+    artifact.document.pageContent = "Manipulierter Dokumentinhalt.";
+    artifact.document.pageMap = [
+      {
+        pageNumber: 1,
+        start: 0,
+        end: artifact.document.pageContent.length,
+      },
+    ];
+    input.documentArtifactBytes = raw(artifact);
+
+    const target = input.manifest.categoryTargets.find(
+      ({ categoryView }) => categoryView === input.categoryView
+    );
+    const selected = selectTargetRequirements({
+      catalog: JSON.parse(input.catalogBytes.toString("utf8")),
+      requirementIds: target.requirementIds,
+    });
+    input.worksheetBytes = raw({
+      ...buildControlledOccurrenceWorksheet({
+        document: artifact.document,
+        documentFingerprint: artifact.fingerprint,
+        catalog: selected.catalog,
+      }),
+      targetRequirementSelection: selected.selection,
+    });
+    input.triageReportBytes = rewriteJson(input.triageReportBytes, (report) => {
+      report.contracts.worksheetSha256 = sha256(input.worksheetBytes);
+    });
+    input.effectsReportBytes = rewriteJson(
+      input.effectsReportBytes,
+      (report) => {
+        report.contracts.worksheetSha256 = sha256(input.worksheetBytes);
+      }
+    );
+
+    expect(() => assertTargetedCategoryMaterializationInputs(input)).toThrow(
+      "TARGETED_CATEGORY_DOCUMENT_ARTIFACT_SHA_MISMATCH"
+    );
   });
 });

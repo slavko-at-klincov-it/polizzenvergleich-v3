@@ -5,8 +5,8 @@ const {
   selectionDigest,
 } = require("./targetRequirementSelection");
 
-const TARGETED_QA_MANIFEST_SCHEMA_VERSION = 2;
-const TARGETED_QA_MANIFEST_CONTRACT_ID = "TARGETED_QA_MANIFEST_V2";
+const TARGETED_QA_MANIFEST_SCHEMA_VERSION = 3;
+const TARGETED_QA_MANIFEST_CONTRACT_ID = "TARGETED_QA_MANIFEST_V3";
 const TARGETED_QA_RUN_KIND = "TARGETED_QA_ONLY";
 const BASELINE_PACKAGE_RUN_KIND = "ISOLATED_PACKAGE_QA";
 const EXPECTED_DOCUMENT_COUNT = 10;
@@ -612,6 +612,50 @@ function buildCategoryTargets({ registry, catalogBytesByCategory }) {
   });
 }
 
+function buildDocumentMatrixDocuments({
+  packageDocuments,
+  documentArtifactBytesByUuid,
+}) {
+  if (
+    !documentArtifactBytesByUuid ||
+    typeof documentArtifactBytesByUuid !== "object" ||
+    Array.isArray(documentArtifactBytesByUuid)
+  )
+    throw manifestError("TARGETED_QA_DOCUMENT_ARTIFACT_BYTES_INVALID");
+  const expectedUuids = packageDocuments.map(({ uuid }) => uuid);
+  const observedUuids = Object.keys(documentArtifactBytesByUuid);
+  if (
+    observedUuids.length !== expectedUuids.length ||
+    [...observedUuids]
+      .sort()
+      .some((uuid, index) => uuid !== [...expectedUuids].sort()[index])
+  )
+    throw manifestError("TARGETED_QA_DOCUMENT_ARTIFACT_MATRIX_INVALID");
+  return packageDocuments.map((document) => {
+    const artifactBytes = rawBuffer(
+      documentArtifactBytesByUuid[document.uuid],
+      "TARGETED_QA_DOCUMENT_ARTIFACT_BYTES_INVALID"
+    );
+    const artifact = parseJsonBytes(
+      artifactBytes,
+      "TARGETED_QA_DOCUMENT_ARTIFACT_JSON_INVALID"
+    );
+    if (
+      artifact?.schemaVersion !== 1 ||
+      artifact.fingerprint !== document.sha256 ||
+      artifact.document?.sourceDocumentId !== document.sha256
+    )
+      throw manifestError(
+        "TARGETED_QA_DOCUMENT_ARTIFACT_IDENTITY_MISMATCH",
+        document.uuid
+      );
+    return {
+      ...document,
+      documentArtifactSha256: sha256(artifactBytes),
+    };
+  });
+}
+
 function digestContract(manifest) {
   const { manifestDigestSha256: _digest, ...contract } = manifest;
   return contract;
@@ -622,6 +666,7 @@ function buildTargetedQaManifest({
   packageContractBytes,
   baselineComparisonBytes,
   catalogBytesByCategory,
+  documentArtifactBytesByUuid,
   execution,
 }) {
   const registryRaw = rawBuffer(
@@ -662,6 +707,10 @@ function buildTargetedQaManifest({
     registry,
     catalogBytesByCategory,
   });
+  const matrixDocuments = buildDocumentMatrixDocuments({
+    packageDocuments: packageContract.documents,
+    documentArtifactBytesByUuid,
+  });
   const canonicalExecutionConfig = canonicalExecution(
     execution,
     registry.canonicalCategoryOrder
@@ -689,8 +738,8 @@ function buildTargetedQaManifest({
     documentMatrix: {
       expectedDocumentCount: EXPECTED_DOCUMENT_COUNT,
       sideCounts: { A: 1, B: 9 },
-      documents: packageContract.documents,
-      documentMatrixDigestSha256: selectionDigest(packageContract.documents),
+      documents: matrixDocuments,
+      documentMatrixDigestSha256: selectionDigest(matrixDocuments),
     },
     categoryTargets,
   };
@@ -811,10 +860,18 @@ function assertTargetedQaManifest(
       EXPECTED_DOCUMENT_COUNT ||
     JSON.stringify(manifest.documentMatrix?.sideCounts) !==
       JSON.stringify({ A: 1, B: 9 }) ||
-    JSON.stringify(manifest.documentMatrix?.documents) !==
-      JSON.stringify(packageContract.documents) ||
+    !Array.isArray(manifest.documentMatrix?.documents) ||
+    manifest.documentMatrix.documents.length !== EXPECTED_DOCUMENT_COUNT ||
+    manifest.documentMatrix.documents.some((document, index) => {
+      const { documentArtifactSha256, ...packageDocument } = document || {};
+      return (
+        JSON.stringify(packageDocument) !==
+          JSON.stringify(packageContract.documents[index]) ||
+        !/^[a-f0-9]{64}$/u.test(documentArtifactSha256 || "")
+      );
+    }) ||
     manifest.documentMatrix?.documentMatrixDigestSha256 !==
-      selectionDigest(packageContract.documents)
+      selectionDigest(manifest.documentMatrix.documents)
   )
     throw manifestError("TARGETED_QA_DOCUMENT_MATRIX_MISMATCH");
   if (

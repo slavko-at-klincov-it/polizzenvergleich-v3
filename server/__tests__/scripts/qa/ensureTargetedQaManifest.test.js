@@ -19,6 +19,13 @@ function copyFile(source, destination) {
   fs.writeFileSync(destination, fs.readFileSync(source));
 }
 
+function packageDocuments() {
+  return Array.from({ length: 10 }, (_, index) => ({
+    uuid: `fixture-uuid-${String(index + 1).padStart(2, "0")}`,
+    sha256: ["a", "b", "c", "d", "e"][index % 5].repeat(64),
+  }));
+}
+
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "targeted-qa-cli-"));
   const repositoryRoot = path.join(root, "repo");
@@ -39,20 +46,43 @@ function fixture() {
   const baselineRoot = path.join(root, BASELINE_RUN_ID);
   const packageDirectory = path.join(baselineRoot, "PACKAGE-COMPARISON");
   fs.mkdirSync(packageDirectory, { recursive: true });
+  const documents = packageDocuments();
   fs.writeFileSync(
     path.join(packageDirectory, "package-contract.private.json"),
-    "package-bytes"
+    JSON.stringify({ documents })
   );
   fs.writeFileSync(
     path.join(packageDirectory, "comparison.private.json"),
     "comparison-bytes"
   );
+  const documentArtifactBytesByUuid = {};
+  documents.forEach((document, index) => {
+    const directory = path.join(
+      baselineRoot,
+      `DOC-${String(index + 1).padStart(2, "0")}-${document.uuid}`
+    );
+    fs.mkdirSync(directory);
+    const artifactBytes = Buffer.from(
+      JSON.stringify({
+        schemaVersion: 1,
+        fingerprint: document.sha256,
+        document: { sourceDocumentId: document.sha256 },
+      })
+    );
+    fs.writeFileSync(
+      path.join(directory, "document.private.json"),
+      artifactBytes
+    );
+    documentArtifactBytesByUuid[document.uuid] = artifactBytes;
+  });
   return {
     root,
     repositoryRoot,
     baselineRoot,
     output: path.join(root, "output"),
     fixturePaths,
+    documents,
+    documentArtifactBytesByUuid,
   };
 }
 
@@ -73,6 +103,11 @@ function dependencies(value, capture) {
       registrySha256: sha256(inputs.qaRegistryBytes),
       packageSha256: sha256(inputs.packageContractBytes),
       comparisonSha256: sha256(inputs.baselineComparisonBytes),
+      documentArtifactSha256ByUuid: Object.fromEntries(
+        Object.entries(inputs.documentArtifactBytesByUuid).map(
+          ([uuid, artifactBytes]) => [uuid, sha256(artifactBytes)]
+        )
+      ),
       catalogSha256ByCategory: Object.fromEntries(
         CATEGORY_ORDER.map((categoryView) => [
           categoryView,
@@ -152,7 +187,69 @@ describe("ensure targeted QA manifest CLI", () => {
     expect(capture[0].execution.promptSha256ByCategory.VS.hybridAddon).toBe(
       capture[0].execution.promptSha256ByCategory.FE.hybridAddon
     );
+    expect(Object.keys(capture[0].documentArtifactBytesByUuid)).toEqual(
+      value.documents.map(({ uuid }) => uuid)
+    );
+    for (const document of value.documents)
+      expect(capture[0].documentArtifactBytesByUuid[document.uuid]).toEqual(
+        value.documentArtifactBytesByUuid[document.uuid]
+      );
     expect(fs.statSync(result.manifestFile).mode & 0o777).toBe(0o600);
+  });
+
+  test("rejects missing, extra and ambiguously numbered document directories", () => {
+    const missing = path.join(
+      value.baselineRoot,
+      `DOC-01-${value.documents[0].uuid}`
+    );
+    fs.renameSync(missing, `${missing}.missing`);
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_DOCUMENT_DIRECTORY_MATRIX_INVALID"
+    );
+    fs.renameSync(`${missing}.missing`, missing);
+
+    const extra = path.join(value.baselineRoot, "DOC-11-unexpected");
+    fs.mkdirSync(extra);
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_DOCUMENT_DIRECTORY_MATRIX_INVALID"
+    );
+    fs.rmdirSync(extra);
+
+    const expected = path.join(
+      value.baselineRoot,
+      `DOC-02-${value.documents[1].uuid}`
+    );
+    const wrongNumber = path.join(
+      value.baselineRoot,
+      `DOC-03-${value.documents[1].uuid}`
+    );
+    fs.renameSync(expected, wrongNumber);
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_DOCUMENT_DIRECTORY_MATRIX_INVALID"
+    );
+  });
+
+  test("rejects symlinked document directories and artifacts", () => {
+    const directory = path.join(
+      value.baselineRoot,
+      `DOC-01-${value.documents[0].uuid}`
+    );
+    const movedDirectory = path.join(value.root, "moved-document-directory");
+    fs.renameSync(directory, movedDirectory);
+    fs.symlinkSync(movedDirectory, directory, "dir");
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_DOCUMENT_DIRECTORY_INVALID"
+    );
+    fs.unlinkSync(directory);
+    fs.renameSync(movedDirectory, directory);
+
+    const artifact = path.join(directory, "document.private.json");
+    const movedArtifact = path.join(value.root, "moved-document.private.json");
+    fs.renameSync(artifact, movedArtifact);
+    fs.symlinkSync(movedArtifact, artifact);
+    expect(() => run(runArguments(value), dependencies(value, []))).toThrow(
+      "TARGETED_QA_DOCUMENT_ARTIFACT_INVALID"
+    );
   });
 
   test("rejects registry drift before calling the builder", () => {

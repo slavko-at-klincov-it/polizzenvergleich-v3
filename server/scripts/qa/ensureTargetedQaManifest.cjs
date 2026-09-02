@@ -126,6 +126,80 @@ function requiredFileBytes(file, fsImpl) {
   return fsImpl.readFileSync(file);
 }
 
+function resolveDocumentArtifactBytes({
+  baseline,
+  packageContractBytes,
+  fsImpl,
+}) {
+  let packageContract;
+  try {
+    packageContract = JSON.parse(packageContractBytes.toString("utf8"));
+  } catch {
+    throw cliError("TARGETED_QA_PACKAGE_JSON_INVALID");
+  }
+  if (
+    !Array.isArray(packageContract?.documents) ||
+    packageContract.documents.length !== 10
+  )
+    throw cliError("TARGETED_QA_DOCUMENT_DIRECTORY_MATRIX_INVALID");
+  const uuids = packageContract.documents.map(({ uuid }) => String(uuid || ""));
+  if (
+    new Set(uuids).size !== uuids.length ||
+    uuids.some((uuid) => !/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(uuid))
+  )
+    throw cliError("TARGETED_QA_DOCUMENT_DIRECTORY_UUID_INVALID");
+  const expectedDirectoryNames = uuids.map(
+    (uuid, index) => `DOC-${String(index + 1).padStart(2, "0")}-${uuid}`
+  );
+  const observedDirectoryNames = fsImpl
+    .readdirSync(baseline)
+    .filter((entry) => /^DOC-/u.test(entry));
+  if (
+    observedDirectoryNames.length !== expectedDirectoryNames.length ||
+    [...observedDirectoryNames]
+      .sort()
+      .some(
+        (entry, index) => entry !== [...expectedDirectoryNames].sort()[index]
+      )
+  )
+    throw cliError("TARGETED_QA_DOCUMENT_DIRECTORY_MATRIX_INVALID");
+
+  return Object.fromEntries(
+    expectedDirectoryNames.map((directoryName, index) => {
+      const uuid = uuids[index];
+      const directory = path.join(baseline, directoryName);
+      if (
+        fsImpl.lstatSync(directory).isSymbolicLink() ||
+        !fsImpl.statSync(directory).isDirectory()
+      )
+        throw cliError("TARGETED_QA_DOCUMENT_DIRECTORY_INVALID", directoryName);
+      const realDocumentDirectory = fsImpl.realpathSync(directory);
+      if (!isWithin(baseline, realDocumentDirectory))
+        throw cliError(
+          "TARGETED_QA_DOCUMENT_DIRECTORY_SCOPE_INVALID",
+          directoryName
+        );
+      const artifactFile = path.join(
+        realDocumentDirectory,
+        "document.private.json"
+      );
+      if (
+        !fsImpl.existsSync(artifactFile) ||
+        fsImpl.lstatSync(artifactFile).isSymbolicLink() ||
+        !fsImpl.statSync(artifactFile).isFile()
+      )
+        throw cliError("TARGETED_QA_DOCUMENT_ARTIFACT_INVALID", directoryName);
+      const realArtifactFile = fsImpl.realpathSync(artifactFile);
+      if (!isWithin(realDocumentDirectory, realArtifactFile))
+        throw cliError(
+          "TARGETED_QA_DOCUMENT_ARTIFACT_SCOPE_INVALID",
+          directoryName
+        );
+      return [uuid, fsImpl.readFileSync(realArtifactFile)];
+    })
+  );
+}
+
 function realDirectory(
   directory,
   code,
@@ -265,11 +339,17 @@ function run(
     promptSha256ByCategory,
     hybridShadowEnabled: false,
   };
+  const packageContractBytes = requiredFileBytes(packageContractFile, fsImpl);
   const manifest = buildManifestFn({
     qaRegistryBytes,
-    packageContractBytes: requiredFileBytes(packageContractFile, fsImpl),
+    packageContractBytes,
     baselineComparisonBytes: requiredFileBytes(comparisonFile, fsImpl),
     catalogBytesByCategory,
+    documentArtifactBytesByUuid: resolveDocumentArtifactBytes({
+      baseline,
+      packageContractBytes,
+      fsImpl,
+    }),
     execution,
   });
   assertManifestFn(manifest, {
@@ -328,5 +408,6 @@ module.exports = {
   fixedSourcePaths,
   main,
   parseArguments,
+  resolveDocumentArtifactBytes,
   run,
 };

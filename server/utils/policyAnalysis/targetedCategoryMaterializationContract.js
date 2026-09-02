@@ -54,7 +54,12 @@ function selectedTarget(manifest, categoryView) {
   return matches[0];
 }
 
-function selectedDocument(manifest, artifact) {
+function selectedDocument(
+  manifest,
+  artifact,
+  documentArtifactSha256,
+  documentUuid
+) {
   if (
     artifact?.schemaVersion !== 1 ||
     typeof artifact.fingerprint !== "string" ||
@@ -65,14 +70,19 @@ function selectedDocument(manifest, artifact) {
   )
     throw contractError("TARGETED_CATEGORY_DOCUMENT_ARTIFACT_INVALID");
   const matches = manifest.documentMatrix.documents.filter(
-    (document) => document.sha256 === artifact.fingerprint
+    (document) => document.uuid === documentUuid
   );
   if (matches.length !== 1)
     throw contractError(
       "TARGETED_CATEGORY_DOCUMENT_NOT_IN_MANIFEST",
-      artifact.fingerprint
+      documentUuid
     );
-  return matches[0];
+  const [document] = matches;
+  if (document.sha256 !== artifact.fingerprint)
+    throw contractError("TARGETED_CATEGORY_DOCUMENT_IDENTITY_MISMATCH");
+  if (document.documentArtifactSha256 !== documentArtifactSha256)
+    throw contractError("TARGETED_CATEGORY_DOCUMENT_ARTIFACT_SHA_MISMATCH");
+  return document;
 }
 
 function assertCommonReport({
@@ -112,6 +122,7 @@ function assertTargetedCategoryMaterializationInputs({
   expectedManifestDigestSha256,
   expectedExecution,
   categoryView,
+  documentUuid,
   catalogBytes,
   categoryPromptBytes,
   triagePromptBytes,
@@ -189,7 +200,17 @@ function assertTargetedCategoryMaterializationInputs({
     documentArtifactBytes,
     "TARGETED_CATEGORY_DOCUMENT_ARTIFACT_JSON_INVALID"
   );
-  const document = selectedDocument(manifest, documentArtifact);
+  const document = selectedDocument(
+    manifest,
+    documentArtifact,
+    sha256(
+      rawBytes(
+        documentArtifactBytes,
+        "TARGETED_CATEGORY_DOCUMENT_ARTIFACT_BYTES_REQUIRED"
+      )
+    ),
+    documentUuid
+  );
   const rebuiltWorksheet = {
     ...buildControlledOccurrenceWorksheet({
       document: documentArtifact.document,

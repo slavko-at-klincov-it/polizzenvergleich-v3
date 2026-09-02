@@ -162,6 +162,24 @@ function execution() {
   };
 }
 
+function documentArtifactBytes(packageValue) {
+  return Object.fromEntries(
+    packageValue.documents.map((document) => [
+      document.uuid,
+      jsonBytes({
+        schemaVersion: 1,
+        fingerprint: document.sha256,
+        document: {
+          sourceDocumentId: document.sha256,
+          pageContent: "fixture",
+          pageMap: [{ pageNumber: 1, start: 0, end: 7 }],
+          pdfExtraction: { complete: true },
+        },
+      }),
+    ])
+  );
+}
+
 function inputs({
   mutatePackage = () => {},
   mutateComparison = () => {},
@@ -187,6 +205,7 @@ function inputs({
     packageContractBytes,
     baselineComparisonBytes,
     catalogBytesByCategory,
+    documentArtifactBytesByUuid: documentArtifactBytes(packageValue),
     execution: executionValue,
   };
 }
@@ -232,7 +251,65 @@ describe("targeted QA manifest raw trust boundary", () => {
       "B:7",
       "B:8",
     ]);
+    expect(
+      manifest.documentMatrix.documents.every(({ documentArtifactSha256 }) =>
+        /^[a-f0-9]{64}$/u.test(documentArtifactSha256)
+      )
+    ).toBe(true);
     expect(assertTargetedQaManifest(copy(manifest))).toEqual(manifest);
+  });
+
+  test("binds all ten exact document artifact byte hashes and identities", () => {
+    const source = inputs();
+    const manifest = buildTargetedQaManifest(source);
+    for (const document of manifest.documentMatrix.documents)
+      expect(document.documentArtifactSha256).toBe(
+        sha256(source.documentArtifactBytesByUuid[document.uuid])
+      );
+
+    const byteTamper = inputs();
+    const uuid = Object.keys(byteTamper.documentArtifactBytesByUuid)[0];
+    byteTamper.documentArtifactBytesByUuid[uuid] = Buffer.concat([
+      byteTamper.documentArtifactBytesByUuid[uuid],
+      Buffer.from(" "),
+    ]);
+    const tamperedManifest = buildTargetedQaManifest(byteTamper);
+    expect(
+      tamperedManifest.documentMatrix.documents.find(
+        (document) => document.uuid === uuid
+      ).documentArtifactSha256
+    ).toBe(sha256(byteTamper.documentArtifactBytesByUuid[uuid]));
+    const manifestFieldTamper = copy(manifest);
+    manifestFieldTamper.documentMatrix.documents[0].documentArtifactSha256 =
+      "0".repeat(64);
+    expect(() => assertTargetedQaManifest(manifestFieldTamper)).toThrow(
+      /^TARGETED_QA_/u
+    );
+
+    const missing = inputs();
+    delete missing.documentArtifactBytesByUuid[
+      Object.keys(missing.documentArtifactBytesByUuid)[0]
+    ];
+    expect(() => buildTargetedQaManifest(missing)).toThrow(
+      "TARGETED_QA_DOCUMENT_ARTIFACT_MATRIX_INVALID"
+    );
+
+    const extra = inputs();
+    extra.documentArtifactBytesByUuid.extra = jsonBytes({});
+    expect(() => buildTargetedQaManifest(extra)).toThrow(
+      "TARGETED_QA_DOCUMENT_ARTIFACT_MATRIX_INVALID"
+    );
+
+    const identity = inputs();
+    const identityUuid = Object.keys(identity.documentArtifactBytesByUuid)[0];
+    const artifact = JSON.parse(
+      identity.documentArtifactBytesByUuid[identityUuid].toString("utf8")
+    );
+    artifact.fingerprint = "0".repeat(64);
+    identity.documentArtifactBytesByUuid[identityUuid] = jsonBytes(artifact);
+    expect(() => buildTargetedQaManifest(identity)).toThrow(
+      `TARGETED_QA_DOCUMENT_ARTIFACT_IDENTITY_MISMATCH: ${identityUuid}`
+    );
   });
 
   test("rejects package and comparison byte tampering before JSON parsing", () => {
