@@ -38,6 +38,8 @@ describe("targeted QA phase digest CLI boundary", () => {
       expect(script).toContain(
         "declaredTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT)"
       );
+      expect(script).toContain("releaseId: releaseIdentity(REPOSITORY_ROOT)");
+      expect(script).toContain("nodeVersion: process.versions.node");
     }
   );
 });

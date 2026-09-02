@@ -5,6 +5,9 @@ process.umask(0o077);
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
+
+const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 
 function fail(message) {
   console.error(`[prepared-evidence] ${message}`);
@@ -350,6 +353,10 @@ async function run() {
       : "REVISE",
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
+    implementation: {
+      releaseId: releaseIdentity(REPOSITORY_ROOT),
+      nodeVersion: process.versions.node,
+    },
     model: {
       provider: "LMStudioLLM",
       id: process.env.LMSTUDIO_MODEL_PREF,

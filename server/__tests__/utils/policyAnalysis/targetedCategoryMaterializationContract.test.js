@@ -236,6 +236,10 @@ function fixture() {
   const selectionDigestSha256 = target.expectedTargetSelectionDigestSha256;
   const triageReport = {
     status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+    implementation: {
+      releaseId: manifest.execution.releaseId,
+      nodeVersion: manifest.execution.nodeVersion,
+    },
     model: {
       id: manifest.execution.model,
       declaredTokenLimit: manifest.execution.modelTokenLimit,
@@ -253,6 +257,10 @@ function fixture() {
   };
   const effectsReport = {
     status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+    implementation: {
+      releaseId: manifest.execution.releaseId,
+      nodeVersion: manifest.execution.nodeVersion,
+    },
     model: {
       id: manifest.execution.model,
       declaredTokenLimit: manifest.execution.modelTokenLimit,
@@ -371,6 +379,18 @@ describe("targeted category materialization input contract", () => {
           input.effectsReportBytes,
           (report) => {
             report.model.declaredTokenLimit = 32000;
+          }
+        );
+      },
+      "TARGETED_CATEGORY_EFFECTS_EXECUTION_MISMATCH",
+    ],
+    [
+      "effects implementation release",
+      (input) => {
+        input.effectsReportBytes = rewriteJson(
+          input.effectsReportBytes,
+          (report) => {
+            report.implementation.releaseId = "foreign-release";
           }
         );
       },

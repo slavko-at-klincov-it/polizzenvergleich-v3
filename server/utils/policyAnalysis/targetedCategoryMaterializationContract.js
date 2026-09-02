@@ -86,6 +86,8 @@ function assertCommonReport({
   if (!ACCEPTED_REPORT_STATUSES.has(report?.status))
     throw contractError(`TARGETED_CATEGORY_${kind}_STATUS_INVALID`);
   if (
+    report.implementation?.releaseId !== execution.releaseId ||
+    report.implementation?.nodeVersion !== execution.nodeVersion ||
     report.model?.id !== execution.model ||
     report.model?.declaredTokenLimit !== execution.modelTokenLimit
   )
