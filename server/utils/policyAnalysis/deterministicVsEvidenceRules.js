@@ -28,7 +28,7 @@ function explicitAutomaticIndexAdjustment(text) {
       text
     );
   if (!positive) return false;
-  return !/(?:\bkeine?\s+(?:automatische\s+)?(?:Aufwertung|Wertanpassung|Indexanpassung)\b|\b(?:Aufwertung|Wertanpassung|Indexanpassung)\b[\s\S]{0,100}\b(?:entf[aä]llt|aufgehoben|ausgesetzt|findet\s+nicht\s+statt)\b|\b(?:kann|wahlweise)\b[\s\S]{0,100}\b(?:angepasst|aufgewertet|indexiert)\b|\b(?:auf\s+Antrag|nach\s+Zustimmung|gegen\s+(?:eine\s+)?Mehrpr[aä]mie|sofern[\s\S]{0,80}\bvereinbart)\b)/iu.test(
+  return !/(?:\bkeine?\s+(?:automatische\s+)?(?:Aufwertung|Wertanpassung|Indexanpassung)\b|\b(?:Aufwertung|Wertanpassung|Indexanpassung)\b[\s\S]{0,100}\b(?:entf[aä]llt|aufgehoben|ausgesetzt|findet\s+nicht\s+statt)\b|\b(?:erh[öo]ht|vermindert|angepasst|aufgewertet|indexiert)\b[\s\S]{0,40}\bnicht\b|\b(?:kann|wahlweise)\b[\s\S]{0,100}\b(?:angepasst|aufgewertet|indexiert)\b|\b(?:auf\s+Antrag|nach\s+Zustimmung|gegen\s+(?:eine\s+)?Mehrpr[aä]mie|sofern[\s\S]{0,80}\bvereinbart)\b)/iu.test(
     text
   );
 }

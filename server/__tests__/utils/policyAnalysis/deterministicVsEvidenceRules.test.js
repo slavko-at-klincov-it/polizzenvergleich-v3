@@ -328,6 +328,7 @@ describe("deterministicVsEvidenceRules", () => {
     "Keine Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex.",
     "Die Indexanpassung ist aufgehoben. Historisch: Die Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex.",
     "Die Indexanpassung ist ausgesetzt; die Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex nicht mehr.",
+    "Die Versicherungssumme erhöht oder vermindert sich jährlich nicht.",
     "Die Versicherungssumme erhöht oder vermindert sich jährlich nur auf Antrag.",
     "Gegen eine Mehrprämie gilt: Die Versicherungssumme erhöht oder vermindert sich jährlich.",
   ])("rejects a negated or optional VS-10 mechanism: %s", (text) => {
