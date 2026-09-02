@@ -4155,3 +4155,116 @@ PASS: erwartete LW-13-Abgrenzung; keine unerwartete Ergebnisänderung
 NO DEPLOY: installierter Kundenstand unverändert
 NEXT: PAV8-02 – Statusmetadatum und provenienzerhaltende Vergleichsgruppierung
 ```
+
+## 81. PAV8-01b – Schutz ausdrücklicher Deckungsoptionen
+
+Die unabhängige Vorprüfung von PAV8-02 zeigte eine zusätzliche
+Sicherheitsabhängigkeit: Ein statusneutraler Vergleich darf eine ausdrücklich
+optionale Deckung nicht als festen Einschluss behandeln. Dieser Schutz wurde
+deshalb als eigenes, kausal messbares Inkrement vor PAV8-02 umgesetzt.
+
+Commit `c2e3a155060c04e63d6956c9f24ffb192a082586` erkennt gebundene
+Formulierungen wie `optional`, `wahlweise`, `gegen Mehrprämie`, `auf Wunsch`,
+`kann eingeschlossen werden` und `nur bei gesonderter Vereinbarung`.
+Markerlokale Negativkontrollen verhindern unter anderem Treffer auf `nicht
+optional`, `nicht wahlweise`, `nicht auf Wunsch`, `kann nicht eingeschlossen
+werden` und `ohne Mehrprämie`. Alle rohen Fundatome werden vor einer
+Deduplizierung vollständig auf Rolle, Wirkung, aktive Geltung, Quellen,
+Konflikte, Bedingungen und Optionalität geprüft. Damit kann ein unsicheres
+Duplikat nicht mehr durch seine Eingabereihenfolge verdeckt werden.
+
+Das Verhalten ist unter dem neuen Produktprofil
+`CUSTOMER_CORE_5_V8_OPTIONALITY_GUARD` und dem Vergleichsvertrag
+`OPTIONALITY_GUARDED_TYPED_V1` versioniert. Fokussierte Validierung im
+isolierten Mac-Studio-Checkout
+`/private/tmp/pv3-pav8-01b-c2e3a155/repo`:
+
+- 8 Suites und 121/121 Tests bestanden;
+- positive, negative, adversariale und permutationsstabile
+  Optionalitätsvarianten bestanden;
+- Point Decision, Result Builder, Kundenmetriken, Presenter,
+  Produktvertrag, Frontend-Presenter und Shell-Runner bestanden;
+- Prettier bestand; der isolierte Checkout blieb sauber;
+- der fokussierte Jest-Harness lief mit Node `26.7.0`, der Produktlauf mit
+  der gebündelten Runtime Node `22.23.2`.
+
+Ein erster Laufversuch
+`PAV8-01B-C2E3A155-20260902-024046` endete vor der ersten Analyse wegen
+einer im isolierten Checkout noch fehlenden
+`collector/node_modules`-Verknüpfung (`pdf-parse`). Das war ein reiner
+Checkout-Aufbaufehler; es entstand kein Vergleichsergebnis und der
+installierte Kundencheckout wurde nicht berührt. Nach Ergänzung der
+isolierten Abhängigkeitsverknüpfung lief derselbe Commit vollständig:
+
+```text
+Run: PAV8-01B-C2E3A155-20260902-024400
+Commit: c2e3a155060c04e63d6956c9f24ffb192a082586
+Checkout: /private/tmp/pv3-pav8-01b-c2e3a155/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start UTC: 2026-09-02T00:42:50Z
+Ende UTC: 2026-09-02T01:09:33Z
+Wandzeit: 26:43
+Dokumente: 10/10, jeweils 224/224
+Paketzeilen: 224/224
+Kundenmetriken: A 0 / B 0 / Doku 38 / Gleich 6 / Null 99 /
+               Nicht vergleichbar 14 / Unklar 67
+Kundenreview: 67; ohne Kundenreview: 157
+Strict-Gate: PASS
+```
+
+Der unabhängig doppelt ausgeführte Delta-Audit gegen PAV8-01 und den
+Favoriten ergab:
+
+- 0 Änderungen an Outcome, Reason-Code, Rule-ID oder Review-Flag in 224
+  Zeilen;
+- alle Reviewgrundzähler und deren Zeilenmitgliedschaften sind identisch;
+- 224/224 Paket-A- und 224/224 Paket-B-Zusammenfassungen sowie alle Zeilen
+  außerhalb der privaten Entscheidung sind gegen PAV8-01 identisch;
+- nur `LW-22` erhielt einen präziseren generischen Grundtext: `Bedingung oder
+  Ausnahme` wurde zu `Bedingung, Ausnahme oder Optionalität`, und
+  `Bedingungsscope` zu `Geltungsscope`. Die Entscheidung bleibt unverändert
+  `UNKLAR`, `CONDITIONAL_OR_EXCEPTION_SCOPE`,
+  `FAIL_CLOSED_CONDITIONAL_SOURCE_V1`, kundenprüfpflichtig;
+- im Markdown änderte sich nur `LW-22`, in der XLSX exakt
+  `Gesamtvergleich!Q144`. Gegen den Favoriten bestehen zusätzlich nur die
+  bereits abgenommene `LW-13`-Erklärung in `Q139` und die privaten
+  PAV8-01-Auditfelder;
+- der produktive Optionalitätshelper fand in allen realen `FOUND`-Atomen
+  dieses Pakets 0 optionale Marker. Der neue Schutz ist für diesen Korpus
+  daher dormant: regressionsfrei, aber noch nicht durch einen echten
+  positiven Dokumentfall belegt;
+- von 890 gemeinsamen Dokumentartefakten sind 725 byteidentisch. Die 165
+  Unterschiede bestehen ausschließlich aus 45 Answer-Dateien mit
+  Laufzeitmetriken, 100 Kategorie-Reports mit Laufzeiten/Pfaden, 10
+  Dokumentreports mit der neuen Profil-/Vertrags-ID und 10 Manifesten mit
+  Zeit, Release und Profil;
+- Worksheets, materialisierte und validierte Triagen, Effects,
+  Quellenauswahlen, Ergebniszeilen und Requested Fields sind jeweils 50/50,
+  `document.private.json` 10/10 byteidentisch;
+- eine bekannte nichtfatale PDF-Warnung `TT: undefined function: 21` trat
+  einmal auf; alle Dokumente und Paketzeilen wurden dennoch vollständig
+  materialisiert.
+
+Artefakte:
+
+```text
+Run-Signatur: 6935a154d89af5276aaa744de1097693a9a822a559adf4e7000fa37fd8748828
+package-contract: 81621b97014ee211b6882d7838591cb7ae4999e555d727362840489f5040e465
+package-report: 65cb96dfbda53f8f4421220d7a892370e001071856d74b5a32c2197b4865518f
+comparison JSON: 22867def8512b46fc793bfdc8d51ba0915397da21546716021d9ce20ab37b251
+comparison Markdown: 92438cc2d55972f1182a6d24d3df91b0bb8ecd64b30f892edb244757445cf289
+XLSX: ab11e6868622b4a265a9dd069c8a638c0827d48300a0d2f914e4447bfa675fc7
+```
+
+Die Wandzeit liegt 4 Sekunden unter dem Favoriten und 13 Sekunden unter
+PAV8-01; das ist kein belastbarer Performanceunterschied. Der installierte
+Kundencheckout blieb sauber und unverändert auf `c7d3b16d...`.
+
+```text
+PASS: fokussierte Optionalitäts- und Adversarialverträge
+PASS: vollständiger Mac-Studio-Lauf ohne fachliche Regression
+LIMIT: kein echter positiver Optionalitätsmarker im aktuellen Fünferkorpus
+NO DEPLOY: installierter Kundenstand unverändert
+NEXT: PAV8-02 – Statusmetadatum und provenienzerhaltende Vergleichsgruppierung
+```

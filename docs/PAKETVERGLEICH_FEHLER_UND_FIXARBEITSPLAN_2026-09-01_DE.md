@@ -1790,3 +1790,58 @@ XLSX: 8a6c6eb9631a99e5701787f592971dd051083d49d59dcab86cca6db0132d33bb
 
 Der installierte Kundencheckout blieb auf `c7d3b16d...`; es erfolgte kein
 Deployment. Nächster eigenständiger Fix ist `PAV8-02`.
+
+### 19.7 Messergebnis PAV8-01b
+
+Status: **GO als zusätzlicher Schutzvertrag, kein neuer Ergebnisfavorit**
+
+Die Senior-/Junior-Gegenprüfung von PAV8-02 identifizierte vor der
+Statusneutralität einen fehlenden Fail-closed-Vertrag für ausdrückliche
+Deckungsoptionen. Er wurde bewusst als eigenes Inkrement
+`c2e3a155060c04e63d6956c9f24ffb192a082586` umgesetzt. Positive Marker
+(`optional`, `wahlweise`, `gegen Mehrprämie`, `auf Wunsch`, einschließbare
+Bausteine und gesonderte Vereinbarung), markerlokale Negativkontrollen und
+die Prüfung aller Rohatome vor jeder Deduplizierung sind damit Teil des
+versionierten Vertrags `OPTIONALITY_GUARDED_TYPED_V1`.
+
+Im isolierten Mac-Studio-Checkout
+`/private/tmp/pv3-pav8-01b-c2e3a155/repo` bestanden 8 fokussierte Suites mit
+121/121 Tests und Prettier. Der vollständige Lauf
+`PAV8-01B-C2E3A155-20260902-024400` verwendete Node `22.23.2`,
+`qwen/qwen3.6-35b-a3b`, Kontext `42496`, lief von
+`2026-09-02T00:42:50Z` bis `2026-09-02T01:09:33Z` und benötigte `26:43`.
+
+Der Strict-Gate bestand mit 224/224 Zeilen. Die Kundenmetrik ist exakt
+unverändert `0/0/38/6/99/14/67`; Kundenreview bleibt 67. Zwei unabhängige
+Delta-Auswertungen bestätigten 0 Änderungen an Outcome, Reason-Code,
+Rule-ID, Review-Flag, Reviewgrundmitgliedschaften oder Paket-
+Zusammenfassungen. Gegen PAV8-01 änderte sich nur der generische Grundtext
+von `LW-22`, ohne dessen unklare Entscheidung zu verändern. Das entspricht
+in der XLSX exakt `Gesamtvergleich!Q144`.
+
+Wichtig für die Beweisgrenze: Der produktive Helper erkannte in den realen
+`FOUND`-Atomen dieses Fünferpakets keinen Optionalitätsmarker. Der Vollrun
+belegt damit die Regressionsfreiheit, aber nicht die positive Wirkung an
+einem echten optionalen Kundenbeleg. Diese Wirkung ist derzeit durch die
+fokussierten positiven, negativen, adversarialen und permutationsstabilen
+Vertragstests belegt.
+
+Von 890 Dokumentartefakten sind 725 byteidentisch. Alle 165 Unterschiede
+sind auf Laufzeitmetriken, Laufpfade, Zeitstempel oder die erwartete neue
+Profil-/Vertragsversion begrenzt. Die fachlich kritischen Worksheets,
+Triagen, Effects, Quellenauswahlen, Ergebniszeilen und Feldextraktionen sind
+vollständig byteidentisch. Eine bekannte nichtfatale PDF-Warnung trat einmal
+auf. Der installierte Kundencheckout blieb auf `c7d3b16d...`; kein
+Deployment.
+
+```text
+Run-Signatur: 6935a154d89af5276aaa744de1097693a9a822a559adf4e7000fa37fd8748828
+comparison JSON: 22867def8512b46fc793bfdc8d51ba0915397da21546716021d9ce20ab37b251
+comparison Markdown: 92438cc2d55972f1182a6d24d3df91b0bb8ecd64b30f892edb244757445cf289
+XLSX: ab11e6868622b4a265a9dd069c8a638c0827d48300a0d2f914e4447bfa675fc7
+```
+
+Nächster eigenständiger Verhaltensfix bleibt `PAV8-02`. Er darf nur die
+abgeleitete beidseitige Vergleichsdimension statusneutralisieren; Rohfakten,
+Abwesenheitspfad, Bedingungen, Optionalität, Konflikte, Scope, Werte,
+Ereignisvarianten und Contributor-Provenienz bleiben fail-closed.
