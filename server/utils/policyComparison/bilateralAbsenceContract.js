@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
@@ -84,6 +85,19 @@ function validDeterministicTerminalRejection(component, categoryId) {
   const legacyV1 = audit?.schemaVersion === 1;
   const legacyV2 = audit?.schemaVersion === 2;
   const currentV3 = audit?.schemaVersion === 3;
+  const historicalEl12V1 = Boolean(
+    currentV3 &&
+      categoryId === "EL-12" &&
+      component?.catalogId === "el-occurrence-full-draft-v0.7" &&
+      audit?.contractId ===
+        LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
+  );
+  const expectedTerminalContractId = historicalEl12V1
+    ? LEGACY_DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
+    : target?.contractId;
+  const expectedScopeProofMode = historicalEl12V1
+    ? "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1"
+    : target?.scopeProofMode;
   const digestFor = legacyV1
     ? legacyTerminalRejectionSetDigestV1
     : legacyV2
@@ -111,7 +125,7 @@ function validDeterministicTerminalRejection(component, categoryId) {
       (gate) =>
         gate !== target?.terminalGate && component?.gates?.[gate] !== undefined
     ) ||
-    audit?.contractId !== target?.contractId ||
+    audit?.contractId !== expectedTerminalContractId ||
     audit?.requirementId !== categoryId ||
     audit?.componentId !== componentId ||
     audit?.decisionOwner !== "SERVER" ||
@@ -133,7 +147,8 @@ function validDeterministicTerminalRejection(component, categoryId) {
               rejection,
               "terminalRejectionContractId"
             )
-          : rejection?.terminalRejectionContractId !== target?.contractId) ||
+          : rejection?.terminalRejectionContractId !==
+            expectedTerminalContractId) ||
         (currentV3
           ? rejection?.occurrenceDigestContractId !==
             TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID
@@ -148,7 +163,7 @@ function validDeterministicTerminalRejection(component, categoryId) {
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
         !target.sectionScopeSources.includes(rejection?.sectionScopeSource) ||
-        (rejection?.scopeProofMode || null) !== target.scopeProofMode ||
+        (rejection?.scopeProofMode || null) !== expectedScopeProofMode ||
         !terminalTargetAcceptsObservedScopes(
           target,
           rejection?.observedScopeKeys

@@ -1089,26 +1089,33 @@ describe("policy comparison point decision", () => {
       componentSatisfactionPolicy: "ALL",
       components: [component],
     };
-    const packageFor = (side, { riskInformation = false } = {}) => {
+    const packageFor = (
+      side,
+      { riskInformation = false, historicalV1 = false } = {}
+    ) => {
       const documentUuid = `el-12-${side}`;
       const searchPlanId = `fixture/${categoryId}/${component.id}`;
+      const terminalContractId = historicalV1
+        ? "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1"
+        : "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2";
+      const scopeProofMode = historicalV1
+        ? "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1"
+        : "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2";
       const rejection = {
         candidateId: `candidate:risk-information-${side}`,
-        terminalRejectionContractId:
-          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
+        terminalRejectionContractId: terminalContractId,
         occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
         decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
         occurrenceDigestSha256: "4".repeat(64),
         physicalPageNumber: 3,
         sectionScopeSource: "CURRENT_PAGE_HEADING",
         observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
-        scopeProofMode: "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
+        scopeProofMode,
       };
       const terminalRejectionAudit = riskInformation
         ? {
             schemaVersion: 3,
-            contractId:
-              "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2",
+            contractId: terminalContractId,
             requirementId: categoryId,
             componentId: component.id,
             decisionOwner: "SERVER",
@@ -1133,7 +1140,9 @@ describe("policy comparison point decision", () => {
         requirementContract,
         searchPlanId,
         documentUuid,
-        catalogId: "fixture",
+        catalogId: historicalV1
+          ? "el-occurrence-full-draft-v0.7"
+          : "fixture",
         physicalPagesChecked: 3,
         totalPhysicalPages: 3,
         aliases: ["Hochwasser-Risiko-Zone"],
@@ -1212,6 +1221,25 @@ describe("policy comparison point decision", () => {
       outcome: POINT_OUTCOME.EQUIVALENT,
       reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
       ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+      reviewRequired: false,
+    });
+
+    const zero = packageFor("a");
+    const historicalV1 = packageFor("b", {
+      riskInformation: true,
+      historicalV1: true,
+    });
+    expect(
+      decidePoint({
+        categoryId,
+        packageA: zero.summary,
+        packageB: historicalV1.summary,
+        atomsA: [zero.atom],
+        atomsB: [historicalV1.atom],
+      })
+    ).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
       reviewRequired: false,
     });
 
