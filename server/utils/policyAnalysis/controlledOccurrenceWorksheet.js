@@ -491,6 +491,7 @@ function structuralContext({
   occurrenceEnd,
   maxChars,
   fallbackWordsEachSide,
+  followingBoundaryLineStarts = new Set(),
 }) {
   const lines = buildLineRecords(pageText);
   const occurrenceLineIndex = lines.findIndex(
@@ -520,7 +521,8 @@ function structuralContext({
     if (
       isBlankLine(lines[index]) ||
       isBulletLine(lines[index]) ||
-      isClauseSectionHeading(lines[index])
+      isClauseSectionHeading(lines[index]) ||
+      followingBoundaryLineStarts.has(lines[index].start)
     )
       break;
     endLine = index;
@@ -1035,6 +1037,8 @@ function validateDocument(document) {
         })
       ),
     ].sort((left, right) => left.pageStart - right.pageStart);
+  for (const page of pages)
+    page.structuralBoundaryLineStarts = structuralBoundaryLineStarts(page);
   let inheritedSectionHeading = null;
   let previousPageCoverageGovernor = null;
   let inheritedVariantHeading = null;
@@ -1098,6 +1102,24 @@ function validateDocument(document) {
 function lineContainingOffset(lines, offset) {
   return (
     lines.find(({ start, end }) => offset >= start && offset <= end) || null
+  );
+}
+
+function structuralBoundaryLineStarts(page) {
+  const ranges = [
+    ...page.sectionHeadings,
+    ...page.coverageGovernors,
+    ...page.clauseBoundaries,
+  ];
+  return new Set(
+    buildLineRecords(page.text)
+      .filter((line) =>
+        ranges.some(
+          ({ pageStart, pageEnd }) =>
+            pageStart < line.end && pageEnd > line.start
+        )
+      )
+      .map(({ start }) => start)
   );
 }
 
@@ -2365,6 +2387,7 @@ function buildControlledOccurrenceWorksheet({
             occurrenceEnd: range.originalEnd,
             maxChars: contextMaxChars,
             fallbackWordsEachSide,
+            followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
           });
           const evidenceContext =
             component.contextMode === CONTEXT_MODE.CLAUSE_SECTION
