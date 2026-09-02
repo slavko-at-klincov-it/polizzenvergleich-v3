@@ -4793,3 +4793,30 @@ LIMIT: 224-Overlay und 155-Nicht-Review-Guard noch offen
 NO DEPLOY: installierter Kundencheckout unverändert
 NEXT: Finales Manifest/Prepared-Paket am dokumentierten Commit erzeugen und All-50-Lauf starten
 ```
+
+## 92. Result-Replay für servernormalisierte Wirkung idempotent
+
+Der erste reale All-50-Versuch am Commit `8f5661dc` stoppte nach neun
+vollständigen Paaren korrekt bei `Dokument 2 / EL`. Zwei EL-04-Judgements
+waren vom Server aus dem Modellrohwert `DEFINED` auf `INCLUDED` normalisiert
+worden. Die QA-Kontrollwiedergabe verwendete fälschlich den bereits
+normalisierten Wert als neuen Rohwert und aktivierte dadurch erneut die
+Positive-Scope-Union. Die persistierte Auswahl mit zwei Kandidaten wurde beim
+Replay auf vier erweitert und deshalb zurecht als ungleich abgelehnt.
+
+Commit `b0a1a9d38995d3646b623cd94720150eb37dbcf8` rekonstruiert nur für den
+gebundenen Owner `MODEL_SELECTION_SERVER_EFFECT_RULE` den ursprünglichen
+`DEFINED`-Wert und lässt denselben normalen Prepared-Evidence-Vertrag erneut
+laufen. Es gibt keine Änderung an Candidate Search, Triage, fachlicher
+Wirkungsnormalisierung oder Kundenmaterialisierung.
+
+```text
+Abgebrochener Lauf: /private/tmp/pav8-final-8f5661dc-ld66Er
+Vollständige Paare vor Abbruch: 9/50
+Betroffene Targets: EL-04:flood, EL-04:inundation
+Mac Studio: 38/38 direkte/angrenzende Tests PASS
+PASS: adversariale Mehrkandidaten-Replayprüfung
+NO PRODUCT SEMANTIC CHANGE
+NO DEPLOY
+NEXT: neues commitgebundenes Manifest/Prepared-Paket und kompletter Target-Lauf
+```

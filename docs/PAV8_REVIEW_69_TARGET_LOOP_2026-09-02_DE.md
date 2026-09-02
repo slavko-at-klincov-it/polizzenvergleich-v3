@@ -586,3 +586,47 @@ NO DEPLOY: installierter Kundencheckout unverändert
 Noch nicht bewiesen sind die tatsächlichen 50 Modellphasen dieses finalen
 Commits, der 69-Zeilen-Vorher/Nachher-Vergleich, das 224-Zeilen-Overlay und der
 155-Zeilen-Nicht-Review-Guard. Diese Nachweise folgen in dieser Reihenfolge.
+
+### 9.8 Erster All-50-Versuch: kontrollierter Replay-Abbruch
+
+Der erste reale Modellversuch am Commit `8f5661dc` wurde nach 9 vollständig
+materialisierten Paaren beim zehnten Paar `Dokument 2 / EL` fail-closed
+gestoppt:
+
+```text
+Pfad: /private/tmp/pav8-final-8f5661dc-ld66Er
+Vollständige Paare: Dokument 1 = VS/FE/LW/ST/EL; Dokument 2 = VS/FE/LW/ST
+Abbruch: TARGETED_RESULT_MODEL_JUDGEMENT_MISMATCH
+Betroffen: prepared-target:EL-04:flood und :inundation
+```
+
+Die Rohartefakte zeigten keinen fachlichen Modellfehler. Beide Komponenten
+hatten eine serverseitig normalisierte Entscheidung:
+
+```text
+Rohwirkung des Modells: DEFINED
+Persistierte Wirkung nach Serverregel: INCLUDED
+Decision Owner: MODEL_SELECTION_SERVER_EFFECT_RULE
+Persistierte Auswahl: jeweils 2 Kandidaten
+Fehlerhaftes Replay: behandelte INCLUDED erneut als Modellrohwert und
+                    erweiterte dadurch auf jeweils 4 Kandidaten
+```
+
+Commit `b0a1a9d3` korrigiert ausschließlich die Kontrollwiedergabe. Bei diesem
+expliziten Decision Owner wird für die Replay-Validierung der belegte Rohwert
+`DEFINED` rekonstruiert; danach muss dieselbe Servernormalisierung wieder exakt
+die persistierte Semantik erzeugen. Andere Decision Owner bleiben unverändert.
+Der Fehlercode enthält künftig zusätzlich die konkrete Target-ID.
+
+```text
+Commit: b0a1a9d38995d3646b623cd94720150eb37dbcf8
+Mac Studio: Prettier PASS
+Target-Result, Prepared-Evidence, Einzel-CLI und All-50-Runner: 38/38 PASS
+Adversarial: DEFINED->INCLUDED plus zusätzlicher Narrow-Scope-Kandidat PASS
+Produktsemantik geändert: nein
+Kundenergebnis geändert: nein
+```
+
+Wegen der Release-Bindung dürfen die neun Ergebnisse des abgebrochenen Laufs
+nicht unter dem neuen Commit fortgesetzt werden. Der nächste Lauf erhält ein
+neues Manifest, neue Worksheets und einen neuen Ausgabepfad.
