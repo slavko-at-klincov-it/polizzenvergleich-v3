@@ -106,6 +106,7 @@ async function run() {
     "documentStatus",
     "maxAttemptsPerTarget",
     "allowUniqueCandidateIdRepair",
+    "expectedTargetSelectionDigestSha256",
   ]);
   const unknownArguments = Object.keys(args).filter(
     (argument) => !allowedArguments.has(argument)
@@ -160,6 +161,25 @@ async function run() {
   } = require("../../utils/policyAnalysis/preparedEvidenceControls");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const expectedTargetSelectionDigestSha256 =
+    args.expectedTargetSelectionDigestSha256 || null;
+  if (
+    expectedTargetSelectionDigestSha256 &&
+    !/^[a-f0-9]{64}$/u.test(expectedTargetSelectionDigestSha256)
+  )
+    fail("--expectedTargetSelectionDigestSha256 muss ein SHA-256 sein");
+  if (
+    worksheet.targetRequirementSelection &&
+    !expectedTargetSelectionDigestSha256
+  )
+    fail("Target-Worksheet erfordert --expectedTargetSelectionDigestSha256");
+  if (
+    !worksheet.targetRequirementSelection &&
+    expectedTargetSelectionDigestSha256
+  )
+    fail(
+      "--expectedTargetSelectionDigestSha256 ist nur für Target-Worksheets zulässig"
+    );
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
   const controlSet =
     controlMode === "technical-review"
@@ -183,6 +203,7 @@ async function run() {
     worksheet,
     documentStatus,
     candidateTriage,
+    expectedTargetSelectionDigestSha256,
   });
   const llm = new LMStudioLLM(null, process.env.LMSTUDIO_MODEL_PREF);
   const allowUniqueCandidateIdRepair =
@@ -356,6 +377,9 @@ async function run() {
             path.join(outputDirectory, "selected-sources.private.json")
           )
         : null,
+      expectedTargetSelectionDigestSha256,
+      targetSelectionDigestSha256:
+        worksheet.targetRequirementSelection?.selectionDigestSha256 || null,
     },
     input: {
       requirementCount: worksheet.requirements.length,

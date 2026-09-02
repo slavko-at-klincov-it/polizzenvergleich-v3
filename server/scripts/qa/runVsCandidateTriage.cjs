@@ -86,6 +86,7 @@ async function run() {
     "model",
     "modelTokenLimit",
     "maxAttemptsPerTarget",
+    "expectedTargetSelectionDigestSha256",
   ]);
   const unknownArguments = Object.keys(args).filter(
     (argument) => !allowedArguments.has(argument)
@@ -140,6 +141,25 @@ async function run() {
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const expectedTargetSelectionDigestSha256 =
+    args.expectedTargetSelectionDigestSha256 || null;
+  if (
+    expectedTargetSelectionDigestSha256 &&
+    !/^[a-f0-9]{64}$/u.test(expectedTargetSelectionDigestSha256)
+  )
+    fail("--expectedTargetSelectionDigestSha256 muss ein SHA-256 sein");
+  if (
+    worksheet.targetRequirementSelection &&
+    !expectedTargetSelectionDigestSha256
+  )
+    fail("Target-Worksheet erfordert --expectedTargetSelectionDigestSha256");
+  if (
+    !worksheet.targetRequirementSelection &&
+    expectedTargetSelectionDigestSha256
+  )
+    fail(
+      "--expectedTargetSelectionDigestSha256 ist nur für Target-Worksheets zulässig"
+    );
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
   const hybridSystemPromptAddon = hybridSystemPromptFile
     ? fs.readFileSync(hybridSystemPromptFile, "utf8")
@@ -166,7 +186,9 @@ async function run() {
     )
   )
     fail(`Ungültiger Control-Reviewstatus: ${controlReviewStatus}`);
-  const payload = buildCandidateTriagePayload(worksheet);
+  const payload = buildCandidateTriagePayload(worksheet, {
+    expectedTargetSelectionDigestSha256,
+  });
   const hybridTargetCount = payload.bindingTargets.filter(
     (target) => target.hybridSemanticContract
   ).length;
@@ -374,6 +396,9 @@ async function run() {
           )
         : null,
       payloadSha256: sha256(userPrompt),
+      expectedTargetSelectionDigestSha256,
+      targetSelectionDigestSha256:
+        worksheet.targetRequirementSelection?.selectionDigestSha256 || null,
     },
     input: {
       requirementCount: new Set(
