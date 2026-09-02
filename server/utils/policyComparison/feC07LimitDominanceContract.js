@@ -16,6 +16,8 @@ const FE_C07_LIMIT_QUALIFIER =
   "jeweils; auf erstes risiko; bezugsgröße gebäudeversicherungssumme";
 const FE_C07_KNOWN_RESTRICTION =
   "der versicherungsnehmer und/oder gebäudeeigentümer für den eingetretenen schaden ersatzpflichtig ist und das gebäude gegen die angeführte gefahr versichert ist";
+const FE_C07_QUALIFIED_LIMIT =
+  /bis\s+zu\s+jeweils\s+(?<percent>\d{1,3}(?:[.,]\d+)?\s*%)\s+der\s+Geb[aä]udeversicherungs-?\s*summe\s+auf\s+[,„“"']*Erstes\s+Risiko/giu;
 
 function normalized(value) {
   return String(value || "")
@@ -115,17 +117,41 @@ function exactLimit(contributor, fields) {
   return {
     value,
     displayValue: String(fact.normalizedValue || fact.rawValue),
+    source: fact.source,
   };
 }
 
-function exactCondition(contributor, fields, { higher }) {
+function limitMatchesAbsenceAudit(limit, audit) {
+  const source = audit?.source;
+  const matches = [
+    ...String(source?.exactText || "").matchAll(FE_C07_QUALIFIED_LIMIT),
+  ];
+  if (matches.length !== 1 || !matches[0].groups?.percent) return false;
+  const rawPercent = matches[0].groups.percent;
+  const relativeStart = matches[0].index + matches[0][0].indexOf(rawPercent);
+  const documentStart = source.documentStart + relativeStart;
+  return (
+    percentHundredths(rawPercent) === limit.value &&
+    limit.source?.candidateId === source.candidateId &&
+    limit.source?.physicalPageNumber === source.physicalPageNumber &&
+    Number.isInteger(limit.source?.documentStart) &&
+    Number.isInteger(limit.source?.documentEnd) &&
+    limit.source.documentStart === documentStart &&
+    limit.source.documentEnd === documentStart + rawPercent.length &&
+    limit.source.exactText === rawPercent
+  );
+}
+
+function exactCondition(contributor, fields, limit, { higher }) {
   const condition = fields.get("condition");
   if (!condition || !Array.isArray(condition.facts)) return null;
   if (condition.status === "NOT_FOUND" && condition.facts.length === 0) {
     const audit = condition.absenceAudit;
     if (
       !validFeC07ConditionAbsenceAudit(audit) ||
-      !contributor.selectedCandidateIds?.includes(audit.source.candidateId)
+      contributor.selectedCandidateIds[0] !== audit.source.candidateId ||
+      !limitMatchesAbsenceAudit(limit, audit) ||
+      hasOptionalCoverageSource(contributor)
     )
       return null;
     return {
@@ -147,7 +173,8 @@ function exactCondition(contributor, fields, { higher }) {
     ![null, undefined].includes(fact?.unit) ||
     normalized(fact?.normalizedValue || fact?.rawValue) !==
       FE_C07_KNOWN_RESTRICTION ||
-    !contributor.selectedCandidateIds?.includes(fact?.source?.candidateId)
+    fact?.source?.candidateId !== limit.source?.candidateId ||
+    fact?.source?.physicalPageNumber !== limit.source?.physicalPageNumber
   )
     return null;
   return { mode: "KNOWN_LIABILITY_AND_PERIL_RESTRICTION" };
@@ -168,13 +195,20 @@ function sideEvidence(atom, { higher }) {
       !exactStrings(part?.requestedFields, ["limit"]) ||
       !exactStrings(part?.optionalFields, ["condition"]) ||
       !Array.isArray(part?.selectedCandidateIds) ||
-      part.selectedCandidateIds.length === 0 ||
+      part.selectedCandidateIds.length !== 1 ||
+      !Array.isArray(part?.sources) ||
+      part.sources.length === 0 ||
+      part.sources.some(
+        (source) => source?.candidateId !== part.selectedCandidateIds[0]
+      ) ||
       part?.complete === false
     )
       return null;
     const fields = fieldMap(part);
     const limit = fields ? exactLimit(part, fields) : null;
-    const condition = fields ? exactCondition(part, fields, { higher }) : null;
+    const condition = fields
+      ? exactCondition(part, fields, limit, { higher })
+      : null;
     if (!limit || !condition) return null;
     evidence.push({ limit, condition });
   }

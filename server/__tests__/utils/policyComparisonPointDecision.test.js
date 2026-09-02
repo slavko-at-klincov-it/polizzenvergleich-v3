@@ -2668,6 +2668,9 @@ describe("policy comparison point decision", () => {
       { suffix = "", qualifier, ...overrides } = {}
     ) {
       const candidateId = `candidate:fe-c07-${side}`;
+      const clauseText = localClause(percent, suffix);
+      const rawPercent = `${percent}%`;
+      const limitStart = 10_000 + clauseText.indexOf(rawPercent);
       const fields = [
         {
           field: "limit",
@@ -2684,7 +2687,9 @@ describe("policy comparison point decision", () => {
               source: {
                 candidateId,
                 physicalPageNumber: 4,
-                exactText: `${percent}%`,
+                exactText: rawPercent,
+                documentStart: limitStart,
+                documentEnd: limitStart + rawPercent.length,
               },
             },
           ],
@@ -2710,6 +2715,8 @@ describe("policy comparison point decision", () => {
                 candidateId,
                 physicalPageNumber: 4,
                 exactText: restriction,
+                documentStart: 9_000,
+                documentEnd: 9_000 + restriction.length,
               },
             },
           ],
@@ -2746,8 +2753,8 @@ describe("policy comparison point decision", () => {
         categoryId: "FE-C07",
         packageA: packageSummary({ requirementContract }),
         packageB: packageSummary({ requirementContract }),
-        atomsA: [left],
-        atomsB: [right],
+        atomsA: Array.isArray(left) ? left : [left],
+        atomsB: Array.isArray(right) ? right : [right],
       });
     }
 
@@ -2851,6 +2858,64 @@ describe("policy comparison point decision", () => {
       higher.fields[0].facts.push({ ...higher.fields[0].facts[0] });
       const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher);
       expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    });
+
+    test("fails closed when a 10% fact is combined with a 5% clause audit", () => {
+      const higher = feC07Atom("b", 10, "ABSENT");
+      higher.fields[1].absenceAudit = absenceAudit("b", 5);
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED"),
+        higher
+      );
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    });
+
+    test("fails closed when limit and audit can be selected from different candidates", () => {
+      const higher = feC07Atom("b", 10, "ABSENT");
+      higher.selectedCandidateIds.push("candidate:fe-c07-other");
+      higher.sources.push({
+        candidateId: "candidate:fe-c07-other",
+        physicalPageNumber: 4,
+        exactText: "Zusätzliche Fundstelle",
+      });
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED"),
+        higher
+      );
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    });
+
+    test("fails closed when the limit range is outside the audited clause value", () => {
+      const higher = feC07Atom("b", 10, "ABSENT");
+      higher.fields[0].facts[0].source.documentStart += 1;
+      higher.fields[0].facts[0].source.documentEnd += 1;
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED"),
+        higher
+      );
+      expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+    });
+
+    test("accepts multiple canonical contributors only when every clause is independently certified", () => {
+      const framework = {
+        documentStatus: "FRAMEWORK_TERMS",
+        documentApplicability: "CONDITIONAL",
+        documentRole: "SUPPLEMENTAL_CONTRACT",
+      };
+      const result = decideFeC07(
+        feC07Atom("a", 5, "RESTRICTED", framework),
+        [
+          feC07Atom("b1", 10, "ABSENT", framework),
+          feC07Atom("b2", 10, "ABSENT", framework),
+        ]
+      );
+      expect(result).toMatchObject({
+        outcome: POINT_OUTCOME.ADVANTAGE_B,
+        ruleId: "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
+      });
+      expect(
+        result.dimensions[0].comparisonAudit.higherClauseAudits
+      ).toHaveLength(2);
     });
   });
 

@@ -2662,7 +2662,7 @@ describe("requestedFieldEvidenceContract", () => {
       "AW03 Gemeinschaftseinrichtungen",
       "Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko.",
       "Das sind Gemeinschaftsräume wie Saunen und Fitnessräume.",
-      "Die Mitversicherung richtet sich gemäß den Voraussetzungen in Abschnitt X.",
+      "Die Mitversicherung richtet sich gemäß Abschnitt X.",
     ].join(" ");
     const source = feC07Occurrence({
       candidateId: "candidate:fe-c07:referenced-condition",

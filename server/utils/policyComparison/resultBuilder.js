@@ -17,6 +17,10 @@ const {
   requirementSearchContractDigest,
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
 const {
+  FE_C07_COMPONENT_ID,
+  validFeC07ConditionAbsenceAudit,
+} = require("../policyAnalysis/feC07ConditionAbsenceAudit");
+const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
@@ -836,11 +840,16 @@ function materializeAtomicFacts({
       const facts = (field.facts || []).filter((fact) =>
         selectedSet.has(fact.source?.candidateId)
       );
-      const absenceAudit = selectedSet.has(
-        field.absenceAudit?.source?.candidateId
-      )
-        ? field.absenceAudit
-        : null;
+      const absenceAudit =
+        requirement?.id === "FE-C07" &&
+        component?.id === FE_C07_COMPONENT_ID &&
+        field.field === "condition" &&
+        field.status === "NOT_FOUND" &&
+        facts.length === 0 &&
+        selectedSet.has(field.absenceAudit?.source?.candidateId) &&
+        validFeC07ConditionAbsenceAudit(field.absenceAudit)
+          ? field.absenceAudit
+          : null;
       return {
         field: field.field,
         status: facts.length > 0 ? field.status : "NOT_FOUND",
