@@ -81,10 +81,12 @@ Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
 ### R69-B – Beidseitig fehlender Beleg: 9
 
-Status: `2/9 ACCEPTED`, `1/9 RECALL-KANDIDAT`; `FE-B13` und `ST-14` sind
-abgeschlossen. `ST-13` hat den isolierten Recall-Audit bestanden, benötigt
-aber noch die Bestätigung im späteren konsistenten Vollvergleich. Sechs Fälle
-bleiben ohne bestandenen Recall-Kandidaten offen.
+Status: `2/9 ACCEPTED`, `1/9 RECALL-KANDIDAT`,
+`1/9 PIPELINE-KANDIDAT`; `FE-B13` und `ST-14` sind abgeschlossen. `ST-13`
+hat den isolierten Recall-Audit bestanden. `LW-25` hat Recall, A-Scope,
+B-Wirkung und den gerichteten Vergleichsvertrag bestanden. Beide Kandidaten
+benötigen noch die Bestätigung im späteren konsistenten Vollvergleich. Fünf
+Fälle bleiben ohne bestandenen Kandidaten offen.
 
 ```text
 VS-04
@@ -1177,3 +1179,105 @@ sind sturmversichert“ bleiben daher zeilenweit unvollständig. Ob beide Wörte
 regionale Synonyme sind und deshalb ein gemeinsames Objektkonzept oder `ANY`
 benötigen, ist eine eigene Fachentscheidung und wurde nicht mit dem
 lexikalischen Mikrofix vermischt.
+
+### 10.8 LW-25 – Allmählichkeit als positive Deckungsdimension
+
+Ausgangsfehler: Der historische LW-25-Vertrag suchte fast ausschließlich
+Ausschlussformulierungen. Dadurch blieb die ausdrückliche Klausel in Paket B,
+DOC-03, physische Seite 12, unsichtbar:
+
+```text
+LW01 Allmählichkeitsschäden
+Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind generell
+mitversichert.
+```
+
+Der gebundene Zehnerbestand enthält damit keinen beidseitigen Nullfall. Die
+Rohfundstellen verteilen sich nach dem Recall-Fix wie folgt:
+
+- Paket A, DOC-01: zwei Treffer auf physischer Seite 20. Beide gehören
+  ausschließlich zur Gebäude- und Grundstückshaftpflicht. Der erste erbt die
+  Überschrift von Seite 17; der zweite steht unter der aktuellen Überschrift
+  „Entschädigung aus der Haftpflichtversicherung“ und bindet ausdrücklich
+  AHVB/Schadenersatzverpflichtungen.
+- Paket B, DOC-03/SUPPLEMENT: drei Treffer im selben Leitungswasserabsatz:
+  einmal der Klauseltitel, einmal „Allmählichkeitsschäden“ im Satz und einmal
+  „Schäden durch Langzeiteinwirkung“. Alle drei liegen unter der aktuellen
+  Überschrift `B4 Leitungswasserversicherung (LW)`.
+
+Der Fix wurde deshalb in getrennten Verträgen umgesetzt:
+
+1. Commit `b902c20c` ergänzt ausschließlich die kontrollierten Begriffe
+   `Allmählichkeitsschaden/-schäden`, `Schäden durch Langzeiteinwirkung` und
+   `Langzeitschaden/-schäden`; Holzfäule, Schwamm, Vermorschung, Korrosion und
+   Verschleiß bleiben außerhalb von LW-25.
+2. Commit `ae780a14` trennt technische Audit-Gates von fachlichen
+   Recall-Findings. Neue Rohfundstellen sind damit kein künstlicher
+   Auditfehler mehr, sondern werden zur weiteren Triage ausgewiesen.
+3. Commits `1323e584` und `8041735c` zertifizieren die zwei A-Treffer als
+   Haftpflicht-Fremdfunde. Der zweite Commit korrigiert einen im Agentenreview
+   gefundenen Testfehler: Die beiden realen Fundstellen besitzen zwei
+   unterschiedliche Heading-Quellen und werden deshalb über zwei getrennte,
+   seitengebundene Scope-Beweise geprüft.
+4. Commit `f99e178d` führt
+   `LW25_EXPLICIT_GRADUAL_DAMAGE_INCLUSION_V1` ein. Nur ein einzelner lokaler
+   Klauselcluster mit beiden Atomen und der unbedingten Wirkung „sind
+   [generell] mitversichert“ wird serverseitig `INCLUDED`. Negation,
+   Bedingung, Ausnahme, Option, Mehrprämie, getrennte Klauselcluster und
+   unvollständige Atome bleiben fail-closed.
+5. Commit `024848f2` neutralisiert die Kundenbezeichnung. Dadurch entsteht
+   nicht mehr die irreführende Ausgabe „Ausschluss ...: eingeschlossen“.
+6. Commit `6cfc25f0` modelliert LW-25 semantisch als `DAMAGE` mit
+   `absenceMeaning=COVERAGE_ONLY`. Das ist kein bloßes Rendering: Die Zeile
+   fragt jetzt fachlich nach Deckung allmählicher Schäden und kann sowohl
+   positive Einschlussklauseln als auch ausdrückliche Ausschlüsse korrekt
+   abbilden. Der vorhandene gerichtete Vertrag darf dadurch eine vollständig
+   belegte Inclusion gegen vollständigen kontrollierten Nichtfund werten.
+7. Commit `8438c3a4` korrigiert eine vom Mac-Test gefundene zu breite
+   Registry-Änderung. FE-B13 behält `EXCLUSION/EXCLUSION`; nur LW-25 erhält
+   `DAMAGE/COVERAGE_ONLY`.
+
+Realer Mac-Studio-Stand:
+
+```text
+Endcommit: 8438c3a4b32a284d933af675873c0f5f0db1c0a3
+Mac-Studio-Worktree: /private/tmp/pv3-validate-8438c3a4
+Runtime: Node 22.23.2
+Fokussierte Abschluss-Suites: 197/197 PASS
+Recall-Audit: /private/tmp/pav8-recall-lw25-8438c3a4-YDkrlN/requirement-recall.private.json
+Dokumente: 10/10
+Physische Seiten: 108
+Paketseiten: A=1 Dokument, B=9 Dokumente
+Rohfundstellen alt -> neu: 1 -> 5
+Andere Requirements je Dokument: unverändert
+Katalog: lw-occurrence-full-draft-v0.8
+Katalog-SHA-256: d2a5265594a3cf89a6a1c6364b189b1ad51ebf0faa2a7914fc2d2df9f3fa5bad
+Requirement-SHA-256: 4ede2ad4e8c9780ce8c8681ba850eb75aebe5a8e3f07946c8996405668fa9224
+Report-Digest: 837651f76af365d72934d98382632000fc2e5a2ec7b0c8094472f57806a5d216
+Datei-SHA-256: d181888bf826a3b02f4b93aacc0611803fea9f2bf8a1c6ef0f49f8fd8e704b92
+```
+
+Der reale komponentengenaue Pipeline-Probe auf demselben Commit ergab:
+
+```text
+Paket A / DOC-01: 2 Occurrences, 0 Kandidaten, 2 terminale Haftpflicht-Rejects,
+0 ungelöste Kandidaten.
+Paket B / DOC-03: 3 Occurrences, 3 DIRECT-Kandidaten, 0 Rejects,
+0 ungelöste Kandidaten.
+B-Urteil: FOUND + INCLUDED + NONE + GENERAL.
+B-Entscheidungseigner:
+SERVER_LW25_EXPLICIT_GRADUAL_DAMAGE_INCLUSION_V1:LW:LW-25.
+```
+
+Der gerichtete Vergleichstest bildet zusätzlich exakt die reale Struktur ab:
+zwei verschieden geerbte/aktuelle Haftpflicht-Rejects auf A sowie eine
+`SUPPLEMENT / FRAMEWORK_TERMS / CONDITIONAL`-Inclusion auf B. Ergebnis des
+gehärteten Vertrags: `VORTEIL_B / INCLUDED_OVER_QUALIFIED_ABSENCE`, ohne
+Kundenreview. Manipulation einer Heading-Quelle sperrt die Entscheidung
+wieder fail-closed.
+
+Bewertung: **Pipeline-Kandidat bestanden.** Erwartet wird im späteren
+konsistenten Vollvergleich `LW-25: UNKLAR -> VORTEIL_B`. Dieser Vorteil und
+die daraus folgende Gesamtmetrik werden bis zum echten Vollvergleich nicht
+als gemessene Produktionszahl ausgewiesen. Das installierte Kundensystem
+wurde nicht verändert und es erfolgte kein Deployment.
