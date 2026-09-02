@@ -319,6 +319,113 @@ function readTargetArtifacts(files, fsImpl, root) {
   };
 }
 
+function safeServerTargetRefresh({
+  persistedTargets,
+  rebuiltTargets,
+  judgements,
+}) {
+  if (
+    !Array.isArray(persistedTargets) ||
+    !Array.isArray(rebuiltTargets) ||
+    !Array.isArray(judgements) ||
+    persistedTargets.length !== rebuiltTargets.length
+  )
+    throw overlayCliError("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_INVALID");
+  const persistedByKey = new Map(
+    persistedTargets.map((target) => [
+      `${target?.requirementId || ""}\u0000${target?.componentId || ""}`,
+      target,
+    ])
+  );
+  const judgementByKey = new Map(
+    judgements.map((judgement) => [
+      `${judgement?.requirementId || ""}\u0000${judgement?.componentId || ""}`,
+      judgement,
+    ])
+  );
+  if (
+    persistedByKey.size !== persistedTargets.length ||
+    judgementByKey.size !== judgements.length
+  )
+    throw overlayCliError("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_DUPLICATE");
+
+  const refreshedKeys = [];
+  for (const rebuilt of rebuiltTargets) {
+    const key = `${rebuilt?.requirementId || ""}\u0000${rebuilt?.componentId || ""}`;
+    const persisted = persistedByKey.get(key);
+    const judgement = judgementByKey.get(key);
+    if (!persisted || !judgement)
+      throw overlayCliError(
+        "TARGETED_OVERLAY_SERVER_TARGET_REFRESH_IDENTITY",
+        key
+      );
+    if (JSON.stringify(persisted) === JSON.stringify(rebuilt)) continue;
+
+    const { serverRejectedCandidates: persistedRejections, ...persistedCore } =
+      persisted;
+    const { serverRejectedCandidates: rebuiltRejections, ...rebuiltCore } =
+      rebuilt;
+    if (
+      JSON.stringify(persistedCore) !== JSON.stringify(rebuiltCore) ||
+      !Array.isArray(persistedRejections) ||
+      !Array.isArray(rebuiltRejections) ||
+      persistedRejections.length !== rebuiltRejections.length ||
+      judgement.decisionOwner !== "SERVER" ||
+      judgement.evidencePresence !== "NOT_FOUND" ||
+      judgement.coverageEffect !== "UNKNOWN" ||
+      judgement.conflictState !== "NONE" ||
+      judgement.selectedCandidateIds?.length !== 0 ||
+      judgement.unresolvedCandidateIds?.length !== 0
+    )
+      throw overlayCliError(
+        "TARGETED_OVERLAY_SERVER_TARGET_REFRESH_UNSAFE",
+        key
+      );
+
+    for (let index = 0; index < persistedRejections.length; index += 1) {
+      const oldRejection = persistedRejections[index];
+      const newRejection = rebuiltRejections[index];
+      const {
+        terminalRejectionContractId,
+        decisionOwner,
+        decisionBasis,
+        physicalPageNumber,
+        sectionScopeSource,
+        observedScopeKeys,
+        occurrenceDigestSha256,
+        ...newOriginalFields
+      } = newRejection;
+      if (
+        JSON.stringify(oldRejection) !== JSON.stringify(newOriginalFields) ||
+        terminalRejectionContractId !==
+          "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1" ||
+        decisionOwner !== "SERVER" ||
+        decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+        !Number.isInteger(physicalPageNumber) ||
+        physicalPageNumber < 1 ||
+        sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        !Array.isArray(observedScopeKeys) ||
+        observedScopeKeys.length !== 1 ||
+        !String(observedScopeKeys[0] || "").endsWith("_INSURANCE") ||
+        !/^[a-f0-9]{64}$/u.test(String(occurrenceDigestSha256 || ""))
+      )
+        throw overlayCliError(
+          "TARGETED_OVERLAY_SERVER_TARGET_REFRESH_PROVENANCE",
+          key
+        );
+    }
+    refreshedKeys.push(key.replace("\u0000", ":"));
+  }
+  if (persistedByKey.size !== rebuiltTargets.length)
+    throw overlayCliError("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_SET");
+  return {
+    targets: rebuiltTargets,
+    refreshedKeys: refreshedKeys.sort(),
+    persistedTargetsSha256: selectionDigest(persistedTargets),
+    refreshedTargetsSha256: selectionDigest(rebuiltTargets),
+  };
+}
+
 function validateTargetPair({
   artifacts,
   files,
@@ -362,6 +469,11 @@ function validateTargetPair({
     candidateTriage: artifacts.triage,
     expectedTargetSelectionDigestSha256:
       categoryTarget.expectedTargetSelectionDigestSha256,
+  });
+  const targetRefresh = safeServerTargetRefresh({
+    persistedTargets: artifacts.targets,
+    rebuiltTargets,
+    judgements: artifacts.materializedEvidence?.judgements,
   });
   if (
     pairSummary?.documentUuid !== document.uuid ||
@@ -409,13 +521,13 @@ function validateTargetPair({
     effectsReport.contracts?.expectedTargetSelectionDigestSha256 !==
       categoryTarget.expectedTargetSelectionDigestSha256 ||
     effectsReport.contracts?.targetSelectionDigestSha256 !==
-      categoryTarget.expectedTargetSelectionDigestSha256 ||
-    selectionDigest(rebuiltTargets) !== selectionDigest(artifacts.targets)
+      categoryTarget.expectedTargetSelectionDigestSha256
   )
     throw overlayCliError(
       "TARGETED_OVERLAY_TARGET_PAIR_CONTRACT_MISMATCH",
       `${document.uuid}:${categoryTarget.categoryView}`
     );
+  return targetRefresh;
 }
 
 function categoryQaReport({
@@ -677,7 +789,7 @@ function run(
             "TARGETED_OVERLAY_PAIR_SUMMARY_MISSING",
             `${document.uuid}:${categoryView}`
           );
-        validateTargetPair({
+        const targetRefresh = validateTargetPair({
           artifacts: targetArtifacts,
           files: targetFiles,
           pairSummary,
@@ -688,6 +800,7 @@ function run(
           fsImpl,
           targetRoot,
         });
+        targetArtifacts.targets = targetRefresh.targets;
         const worksheetRebuild = assertBaselineWorksheetRebuildFn({
           manifest,
           expectedManifestDigestSha256: manifest.manifestDigestSha256,
@@ -818,6 +931,11 @@ function run(
             baselineWorksheetRebuild: true,
             targetContract: true,
             nonTargetArtifactIdentity: true,
+          },
+          serverTargetRefresh: {
+            refreshedKeys: targetRefresh.refreshedKeys,
+            persistedTargetsSha256: targetRefresh.persistedTargetsSha256,
+            refreshedTargetsSha256: targetRefresh.refreshedTargetsSha256,
           },
           hashes,
         });
@@ -969,4 +1087,5 @@ module.exports = {
   main,
   parseArguments,
   run,
+  safeServerTargetRefresh,
 };

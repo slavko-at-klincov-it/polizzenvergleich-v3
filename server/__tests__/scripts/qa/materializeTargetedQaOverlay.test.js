@@ -12,6 +12,7 @@ const {
 const {
   parseArguments,
   run,
+  safeServerTargetRefresh,
 } = require("../../../scripts/qa/materializeTargetedQaOverlay.cjs");
 
 const CATEGORY_COUNTS = { VS: 36, FE: 80, LW: 36, ST: 36, EL: 36 };
@@ -376,6 +377,87 @@ function dependencies(
 }
 
 describe("materializeTargetedQaOverlay", () => {
+  test("refreshes only server-owned NOT_FOUND rejection provenance", () => {
+    const persisted = {
+      requirementId: "FE-B13",
+      componentId: "pre_inception_damage_exclusion",
+      candidates: [],
+      unresolvedCandidateIds: [],
+      serverRejectedCandidates: [
+        {
+          candidateId: "candidate:water",
+          reason: "TRIAGE_MENTION_ONLY",
+        },
+      ],
+    };
+    const rebuilt = {
+      ...persisted,
+      serverRejectedCandidates: [
+        {
+          ...persisted.serverRejectedCandidates[0],
+          terminalRejectionContractId:
+            "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+          decisionOwner: "SERVER",
+          decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+          physicalPageNumber: 2,
+          sectionScopeSource: "CURRENT_PAGE_HEADING",
+          observedScopeKeys: ["LEITUNGSWASSER_INSURANCE"],
+          occurrenceDigestSha256: "a".repeat(64),
+        },
+      ],
+    };
+    const judgement = {
+      requirementId: "FE-B13",
+      componentId: "pre_inception_damage_exclusion",
+      decisionOwner: "SERVER",
+      evidencePresence: "NOT_FOUND",
+      coverageEffect: "UNKNOWN",
+      conflictState: "NONE",
+      selectedCandidateIds: [],
+      unresolvedCandidateIds: [],
+    };
+
+    expect(
+      safeServerTargetRefresh({
+        persistedTargets: [persisted],
+        rebuiltTargets: [rebuilt],
+        judgements: [judgement],
+      })
+    ).toMatchObject({
+      targets: [rebuilt],
+      refreshedKeys: ["FE-B13:pre_inception_damage_exclusion"],
+    });
+    expect(() =>
+      safeServerTargetRefresh({
+        persistedTargets: [persisted],
+        rebuiltTargets: [
+          {
+            ...rebuilt,
+            candidates: [{ candidateId: "candidate:water" }],
+          },
+        ],
+        judgements: [judgement],
+      })
+    ).toThrow("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_UNSAFE");
+    expect(() =>
+      safeServerTargetRefresh({
+        persistedTargets: [persisted],
+        rebuiltTargets: [
+          {
+            ...rebuilt,
+            serverRejectedCandidates: [
+              {
+                ...rebuilt.serverRejectedCandidates[0],
+                observedScopeKeys: ["FEUER_INSURANCE"],
+              },
+            ],
+          },
+        ],
+        judgements: [{ ...judgement, decisionOwner: "MODEL" }],
+      })
+    ).toThrow("TARGETED_OVERLAY_SERVER_TARGET_REFRESH_UNSAFE");
+  });
+
   test("rejects unknown and relative CLI arguments", () => {
     expect(() => parseArguments(["--unknown", "x"])).toThrow(
       "TARGETED_OVERLAY_ARGUMENT_UNKNOWN"
