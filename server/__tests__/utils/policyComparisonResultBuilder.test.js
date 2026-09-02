@@ -2277,9 +2277,8 @@ describe("policy comparison result builder", () => {
         document: {
           uuid: "a",
           sha256: runA.document.sha256,
-          documentArtifactDigestSha256: expect.stringMatching(
-            /^[a-f0-9]{64}$/u
-          ),
+          documentArtifactDigestSha256:
+            expect.stringMatching(/^[a-f0-9]{64}$/u),
           physicalPagesChecked: 22,
           totalPhysicalPages: 22,
         },

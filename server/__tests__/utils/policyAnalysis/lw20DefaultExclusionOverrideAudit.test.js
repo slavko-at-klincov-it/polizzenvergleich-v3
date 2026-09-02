@@ -69,9 +69,7 @@ describe("LW-20 default-exclusion override audit", () => {
       document: {
         uuid: input.document.uuid,
         sha256: input.document.sha256,
-        documentArtifactDigestSha256: expect.stringMatching(
-          /^[a-f0-9]{64}$/u
-        ),
+        documentArtifactDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
         physicalPagesChecked: 7,
         totalPhysicalPages: 7,
       },
@@ -195,9 +193,9 @@ describe("LW-20 default-exclusion override audit", () => {
     expect(
       tamper((changed) => (changed.status = NO_OVERRIDE_REFERENCE_FOUND))
     ).toBe(false);
-    expect(tamper((changed) => (changed.candidates[0].documentStart += 1))).toBe(
-      false
-    );
+    expect(
+      tamper((changed) => (changed.candidates[0].documentStart += 1))
+    ).toBe(false);
     expect(
       tamper((changed) => (changed.candidateSetDigestSha256 = "a".repeat(64)))
     ).toBe(false);
