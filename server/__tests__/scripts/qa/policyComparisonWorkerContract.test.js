@@ -50,6 +50,9 @@ describe("policy comparison worker contract", () => {
     expect(materializer).toContain(
       "HYBRID_SHADOW_WORKSHEET_FORBIDDEN_IN_CUSTOMER_MATERIALIZER"
     );
+    expect(materializer).toContain(
+      "TARGET_REQUIREMENT_WORKSHEET_FORBIDDEN_IN_FULL_MATERIALIZER"
+    );
     const primaryRunner = fs.readFileSync(
       path.join(REPOSITORY_ROOT, "run-all-categories-quality.command"),
       "utf8"
@@ -59,6 +62,7 @@ describe("policy comparison worker contract", () => {
       "utf8"
     );
     expect(source).not.toContain("hybridShadowSearch");
+    expect(source).not.toContain("TARGETED_QA_ONLY");
     expect(primaryRunner).not.toContain("runHybridShadowSearch");
     expect(shadowRunner).toContain("ensureHybridShadowRunManifest.cjs");
     expect(shadowRunner).toContain("runHybridShadowSearch.cjs");

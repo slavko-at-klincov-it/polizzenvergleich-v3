@@ -17,6 +17,21 @@ function run(script, args) {
 }
 
 describe("VS full QA CLI contracts", () => {
+  test("rejects target worksheets at both full materializer boundaries", () => {
+    for (const script of [
+      "server/scripts/qa/materializeCategoryFullResult.cjs",
+      "server/scripts/qa/materializeVsFullResult.cjs",
+    ]) {
+      const source = fs.readFileSync(
+        path.join(REPOSITORY_ROOT, script),
+        "utf8"
+      );
+      expect(source).toContain(
+        "TARGET_REQUIREMENT_WORKSHEET_FORBIDDEN_IN_FULL_MATERIALIZER"
+      );
+    }
+  });
+
   test.each([
     "server/scripts/qa/buildVsOccurrenceWorksheet.cjs",
     "server/scripts/qa/runVsCandidateTriage.cjs",

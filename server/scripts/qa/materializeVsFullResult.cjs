@@ -297,6 +297,8 @@ async function main() {
     fail(`36 VS-Definitionen erwartet, erhalten: ${definitions.length}`);
 
   const worksheet = readJson(files.worksheet);
+  if (worksheet?.targetRequirementSelection)
+    fail("TARGET_REQUIREMENT_WORKSHEET_FORBIDDEN_IN_FULL_MATERIALIZER");
   const materializedTriage = readJson(files.triage);
   const materializedEvidence = readJson(files.effects);
   const selectedSources = readJson(files.sources);

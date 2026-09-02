@@ -121,44 +121,44 @@ describe("generic category full materializer", () => {
       },
     });
     const output = path.join(root, "result");
+    const cliArguments = [
+      SCRIPT,
+      "--categoryView",
+      "ST",
+      "--documentKey",
+      "fixture",
+      "--pdf",
+      pdfFile,
+      "--documentArtifact",
+      artifactFile,
+      "--promptFile",
+      PROMPT_FILE,
+      "--catalogFile",
+      CATALOG_FILE,
+      "--worksheet",
+      worksheetFile,
+      "--triage",
+      triageFile,
+      "--triageReport",
+      triageReportFile,
+      "--effects",
+      effectsFile,
+      "--effectsReport",
+      effectsReportFile,
+      "--sources",
+      sourcesFile,
+      "--documentStatus",
+      "FRAMEWORK_TERMS",
+      "--model",
+      model,
+      "--output",
+      output,
+    ];
 
-    const result = spawnSync(
-      process.execPath,
-      [
-        SCRIPT,
-        "--categoryView",
-        "ST",
-        "--documentKey",
-        "fixture",
-        "--pdf",
-        pdfFile,
-        "--documentArtifact",
-        artifactFile,
-        "--promptFile",
-        PROMPT_FILE,
-        "--catalogFile",
-        CATALOG_FILE,
-        "--worksheet",
-        worksheetFile,
-        "--triage",
-        triageFile,
-        "--triageReport",
-        triageReportFile,
-        "--effects",
-        effectsFile,
-        "--effectsReport",
-        effectsReportFile,
-        "--sources",
-        sourcesFile,
-        "--documentStatus",
-        "FRAMEWORK_TERMS",
-        "--model",
-        model,
-        "--output",
-        output,
-      ],
-      { encoding: "utf8", cwd: REPOSITORY_ROOT }
-    );
+    const result = spawnSync(process.execPath, cliArguments, {
+      encoding: "utf8",
+      cwd: REPOSITORY_ROOT,
+    });
 
     expect(result.status).toBe(0);
     const report = JSON.parse(
@@ -178,5 +178,22 @@ describe("generic category full materializer", () => {
         tableContract: true,
       },
     });
+
+    worksheet.targetRequirementSelection = {
+      contractId: "QA_TARGET_REQUIREMENT_SELECTION_V1",
+    };
+    writeJson(worksheetFile, worksheet);
+    const targetOutput = path.join(root, "target-result");
+    const targetArguments = [...cliArguments];
+    targetArguments[targetArguments.length - 1] = targetOutput;
+    const targetResult = spawnSync(process.execPath, targetArguments, {
+      encoding: "utf8",
+      cwd: REPOSITORY_ROOT,
+    });
+    expect(targetResult.status).toBe(1);
+    expect(targetResult.stderr).toContain(
+      "TARGET_REQUIREMENT_WORKSHEET_FORBIDDEN_IN_FULL_MATERIALIZER"
+    );
+    expect(fs.existsSync(targetOutput)).toBe(false);
   });
 });

@@ -165,6 +165,8 @@ async function main() {
     fail(`Keine gültigen ${categoryView}-Definitionen im Systemprompt`);
 
   const worksheet = readJson(files.worksheet);
+  if (worksheet?.targetRequirementSelection)
+    fail("TARGET_REQUIREMENT_WORKSHEET_FORBIDDEN_IN_FULL_MATERIALIZER");
   if (
     worksheet?.shadowSearch?.shadowOnly === true ||
     worksheet?.catalog?.id?.includes(":hybrid-shadow:")
