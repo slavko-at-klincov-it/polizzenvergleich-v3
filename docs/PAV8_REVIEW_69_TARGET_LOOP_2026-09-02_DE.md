@@ -59,7 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `OPEN`
+Status: `1/40 TARGET-E2E ACCEPTED`. `VS-15` ist abgeschlossen; 39 Fälle der
+ursprünglichen Familie bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -68,6 +69,10 @@ LW-07, LW-08, LW-11, LW-12, LW-18, LW-26, LW-27
 ST-15, ST-16, ST-17, ST-18, ST-19, ST-21, ST-25, ST-27
 EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
+
+Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15` gehört
+nach dem in Abschnitt 10.19 dokumentierten Zielnachweis nicht mehr zur
+operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
@@ -2182,6 +2187,174 @@ und `EXCLUDED` ist verboten, weil sie bei unvollständiger Suche oder späterer
 positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+### 10.19 VS-15 – allgemeiner Nebengebäudeschutz und fehlende namentliche Anführung
+
+#### 10.19.1 Reale Ursache
+
+`VS-15` war kein Recallfehler. Die kontrollierte Primärsuche erzeugte für alle
+zehn Dokumente und beide Komponenten vollständige Atome:
+
+```text
+Komponente outbuilding_cover:
+  Polizze A: 1 belegter Einschluss, Limit 5 % der Gebäudeversicherungssumme
+  Polizze B: 1 belegter Einschluss, Limit EUR 1.530.400
+
+Komponente named_outbuilding_designation:
+  Polizze A: 1/1 vollständiger kontrollierter Nichtfund
+  Polizze B: 9/9 vollständige kontrollierte Nichtfunde
+```
+
+Der Katalog verlangt beide Komponenten mit `componentSatisfactionPolicy=ALL`.
+Deshalb blieben beide Pakete trotz belegtem allgemeinem Nebengebäudeschutz auf
+`TEILBELEGT`. Der generische Paket-Gate erzeugte genau zwei Blocker, je einen
+`MISSING_REQUIRED_COMPONENT` für die namentliche Anführung, und fiel danach
+korrekt auf `PACKAGE_REVIEW_STATUS_BLOCKS_DECISION` zurück.
+
+Die fachlich enge Auflösung lautet ausschließlich: Für die abgefragte
+namentliche Anführung besitzen beide Pakete dieselbe vollständig kontrollierte
+Fundlage. Der Nichtfund wird weder als ausdrücklicher Ausschluss noch als
+Beweis identischer allgemeiner Nebengebäudedeckung bezeichnet. Insbesondere
+werden die verschiedenen Limits `5 %` und `EUR 1.530.400` nicht gleichgesetzt.
+
+#### 10.19.2 Versionierter Vertrag und betroffene Abhängigkeiten
+
+Der neue Vertrag ist gebunden an:
+
+```text
+Kategorie: VS-15
+Katalog: vs-occurrence-full-draft-v0.9
+Komponentenvertrag-Digest:
+3618160e324ac0eac1d3d8805cd6206b0cdacb2f2f9b2370457a620bbc1cc51c
+Komponenten: outbuilding_cover / INSURED_OBJECT
+              named_outbuilding_designation / DEFINITION
+Komponentenpolitik: ALL
+Aggregationspolitik: ALL_COMPONENT_EFFECTS
+Negativsuche: REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1
+Absenzbedeutung: COVERAGE_MIXED
+```
+
+Der Audit bindet für beide Seiten das vollständige Dokumentmanifest mit UUID
+und PDF-SHA, alle Suchzellen, Seitenzahlen, Suchplan-IDs, Aliase, Gates,
+Requirement-Vertrag, Atome, Quellen, Kandidaten und abgeleiteten Digests. Er
+fordert mindestens einen vollständigen, quellengebundenen allgemeinen
+Nebengebäude-Einschluss je Seite und einen terminalen kontrollierten Nichtfund
+der Namenskomponente in jedem Paketdokument. Konflikte, offene Kandidaten,
+enger Scope, Ausschlüsse, ein tatsächlicher Namensfund, Dokumentlücken oder
+Vertragsdrift führen fail-closed zurück in den bestehenden Reviewpfad.
+
+Betroffene Produktionsgrenzen:
+
+```text
+server/utils/policyComparison/vs15NamedOutbuildingQualifierAbsenceContract.js
+server/utils/policyComparison/pointDecision.js
+server/utils/policyComparison/resultBuilder.js
+server/utils/policyComparison/customerMetricContract.js
+server/utils/policyComparison/customerResultPresenter.js
+server/utils/policyComparison/productContract.js
+```
+
+Die Hookposition liegt ausschließlich innerhalb des bereits blockierten
+Package-Review-Zweigs: nach Erzeugung des Paket-Audits und vor dem generischen
+Fail-closed-Ergebnis. Andere Kategorien, andere VS-15-Blocker und alle bereits
+entscheidbaren Zeilen werden dadurch nicht umgangen.
+
+Das Kundenprofil wurde auf folgende gemeinsame Vertragsidentität angehoben:
+
+```text
+CUSTOMER_CORE_5_V30_VS15_QUALIFIER_ABSENCE
+PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_V4
+```
+
+#### 10.19.3 Forward-Fix-Verlauf und Kontrollbefunde
+
+```text
+d3e1ad66 feat(comparison): add VS-15 qualifier absence contract
+92609d07 style(comparison): format VS-15 absence contract
+5301f23b test(comparison): expect VS-15 audit mismatch
+6e430f49 fix(comparison): resolve VS-15 qualifier absence
+62479afb style(comparison): format VS-15 integration test
+9fc6ef43 fix(product): validate VS-15 qualifier equality
+3a577aa8 style(test): format VS-15 customer validation
+f0b0cd33 fix(comparison): bind VS-15 to current catalog
+cd1d8740 test(comparison): derive VS-15 worksheet digest
+0dd2a7ae fix(comparison): bind VS-15 aggregation policy
+```
+
+Der erste echte Lauf auf `3a577aa8` blieb bewusst `UNKLAR`. Er legte zwei
+Fixture-Lücken offen:
+
+1. Der Vertrag war auf den vollständigen Katalog-Suchvertragsdigest `e41f…`
+   statt auf den tatsächlich in Vergleichsatomen persistierten, aus dem
+   normalisierten Worksheet abgeleiteten Komponentenvertragsdigest `3618…`
+   gebunden.
+2. Die Fixture modellierte `coverageAggregationPolicy=null`; reale Atome
+   tragen explizit `ALL_COMPONENT_EFFECTS`.
+
+Beide Abweichungen wurden in getrennten Commits korrigiert. Der Digest bleibt
+statisch gepinnt, damit eine spätere Katalogänderung nicht still akzeptiert
+wird. Die Fixture leitet ihren Kontrollwert jetzt über denselben
+Worksheet-Pfad wie die Produktion ab. `null` oder eine andere
+Aggregationspolitik wird adversarial abgelehnt.
+
+Finale Mac-Studio-Regression:
+
+```text
+Commit: 0dd2a7ae48a3090cbc5341c06cca6f6421e32476
+Worktree: /private/tmp/pv3-validate-0dd2a7ae
+Formatprüfung: PASS
+Suites: 6/6 PASS
+Tests: 180/180 PASS
+```
+
+Geprüft wurden der spezialisierte Vertrag, `pointDecision`, `resultBuilder`,
+Kundenmetrik, Kundendarstellung und Produktprofil. Die Manipulationstests
+umfassen unter anderem Digestdrift, Manifestfehler, fehlende Dokumente,
+unvollständige Suche, Aliasdrift, Aggregationsdrift, Narrow-Scope, Ausschluss,
+offene Kandidaten, Quellenmismatch und gespeicherte Auditmanipulation.
+
+#### 10.19.4 Echter Zehn-Dokument-Lauf
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-15-0DD2A7AE-20260902
+Summary-Digest:
+372bb413f87eb3a2cf018006372d25577f099c900a63fe64497cda6d3b88a9a3
+Target-Selection-Digest:
+823d19540ad77ac35a5b13b73dc80bf41c27061ebb0b077517533e304feab78d
+Producer-Script-Digest:
+4d5f95c243dedd655e7bb177103ef894c746869b0dc8f150095ef259dab31b8b
+Dokumente: 10 (A: 1, B: 9)
+Atome: 20
+Physische Seiten: 108
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+Serverseitige Evidenzterminals: 18
+Wandzeit: 6 Sekunden
+```
+
+Revisionssicheres Zieldelta:
+
+```text
+Vorher:
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review erforderlich
+
+Nachher:
+GLEICHWERTIG
+EQUAL_VS15_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH
+Review erforderlich: nein
+```
+
+Unter Einbeziehung aller zuvor akzeptierten gezielten Deltas lautet die noch
+nicht durch einen neuen 224-Zeilen-Vollrun bestätigte Projektion:
+
+```text
+VORTEIL_A 2, VORTEIL_B 3, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 117, NICHT_VERGLEICHBAR 9, UNKLAR 60.
+```
+
+Ein Deployment und ein 224-Zeilen-Vollrun wurden nicht durchgeführt. Der
 installierte Kundenstand blieb unverändert.
 
 ### 10.18 FE-A01 – breitere Branddefinition
