@@ -227,7 +227,7 @@ function commonAtom(atom, componentId, requirementContract, searchCell) {
       atom?.factRole === COMPONENTS[componentId].factRole &&
       atom?.requirementContractDigest === requirementContract.digest &&
       atom?.componentSatisfactionPolicy === "ALL" &&
-      atom?.coverageAggregationPolicy == null &&
+      atom?.coverageAggregationPolicy === "ALL_COMPONENT_EFFECTS" &&
       atom?.scopePolicy === "GENERAL_REQUIRED" &&
       sameJson(atom?.declaredComponents, DECLARED_COMPONENTS) &&
       Array.isArray(atom?.documentUuids) &&

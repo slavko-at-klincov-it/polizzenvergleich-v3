@@ -128,7 +128,7 @@ function atom({ documentUuid, componentId, found = false, pages = 3 }) {
         ]
       : [],
     componentSatisfactionPolicy: "ALL",
-    coverageAggregationPolicy: null,
+    coverageAggregationPolicy: "ALL_COMPONENT_EFFECTS",
     requirementContractDigest: VS15_REQUIREMENT_CONTRACT_DIGEST,
     declaredComponents: clone(COMPONENTS),
     searchAudit: cell,
@@ -450,6 +450,12 @@ describe("VS-15 bilateral controlled qualifier absence contract", () => {
         input.atomsA.find(
           ({ componentId }) => componentId === COVER_COMPONENT_ID
         ).coverageEffect = "EXCLUDED";
+      },
+    ],
+    [
+      "missing aggregation policy",
+      (input) => {
+        input.atomsA[0].coverageAggregationPolicy = null;
       },
     ],
     [
