@@ -72,8 +72,8 @@ describe("LW-20 default-exclusion override audit", () => {
         documentArtifactDigestSha256: expect.stringMatching(
           /^[a-f0-9]{64}$/u
         ),
-        physicalPagesChecked: 5,
-        totalPhysicalPages: 5,
+        physicalPagesChecked: 7,
+        totalPhysicalPages: 7,
       },
       patternFamilyContract: {
         contractId: LW20_DEFAULT_EXCLUSION_OVERRIDE_PATTERN_CONTRACT_ID,

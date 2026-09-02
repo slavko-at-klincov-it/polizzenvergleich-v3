@@ -180,7 +180,7 @@ function hasUnnegatedPositiveCoverage(text) {
       match.index + match[0].length + 32
     );
     if (
-      !/(?:\bnicht\b|\bkeine[nmrs]?\b|\bohne\b|\bkeinesfalls\b)(?:\s+\p{L}+){0,2}\s*$/iu.test(
+      !/(?:\bnicht\b|\bkeine[nmrs]?\b|\bohne\b|\bkeinesfalls\b)(?:[\s,;:]+\p{L}+){0,4}[\s,;:]*$/iu.test(
         prefix
       ) &&
       !/^\s*(?:nicht|keine[nmrs]?|keinesfalls)\b/iu.test(suffix)
