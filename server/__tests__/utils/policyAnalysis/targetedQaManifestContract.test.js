@@ -7,6 +7,8 @@ const { sha256 } = require("../../../utils/policyAnalysis/runIdentity");
 const {
   EXPECTED_DOCUMENT_COUNT,
   EXPECTED_REQUIREMENT_COUNT,
+  TARGETED_QA_MANIFEST_CONTRACT_ID,
+  TARGETED_QA_MANIFEST_SCHEMA_VERSION,
   TARGETED_QA_RUN_KIND,
   assertTargetedQaManifest,
   buildTargetedQaManifest,
@@ -143,14 +145,20 @@ function execution() {
   return {
     releaseId: "targeted-working-tree",
     model: "qwen/qwen3.6-35b-a3b",
-    context: 42496,
+    modelTokenLimit: 42496,
     nodeVersion: "22.23.2",
     promptSha256ByCategory: Object.fromEntries(
       PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
         categoryView,
-        ["a", "b", "c", "d", "e"][index].repeat(64),
+        {
+          category: ["a", "b", "c", "d", "e"][index].repeat(64),
+          triage: ["f", "e", "d", "c", "b"][index].repeat(64),
+          effects: ["1", "2", "3", "4", "5"][index].repeat(64),
+          hybridAddon: ["5", "4", "3", "2", "1"][index].repeat(64),
+        },
       ])
     ),
+    hybridShadowEnabled: false,
   };
 }
 
@@ -188,6 +196,8 @@ describe("targeted QA manifest raw trust boundary", () => {
     const manifest = buildTargetedQaManifest(inputs());
 
     expect(manifest).toMatchObject({
+      schemaVersion: TARGETED_QA_MANIFEST_SCHEMA_VERSION,
+      contractId: TARGETED_QA_MANIFEST_CONTRACT_ID,
       runKind: TARGETED_QA_RUN_KIND,
       executionPolicy: {
         productMutationAllowed: false,
@@ -398,7 +408,7 @@ describe("targeted QA manifest raw trust boundary", () => {
       assertTargetedQaManifest(manifest, { expectedExecution: wrongNode })
     ).toThrow("TARGETED_QA_EXPECTED_EXECUTION_MISMATCH");
     const missingPrompt = execution();
-    delete missingPrompt.promptSha256ByCategory.EL;
+    delete missingPrompt.promptSha256ByCategory.EL.hybridAddon;
     expect(() =>
       buildTargetedQaManifest(inputs({ executionValue: missingPrompt }))
     ).toThrow("TARGETED_QA_EXECUTION_PROMPTS_INVALID");

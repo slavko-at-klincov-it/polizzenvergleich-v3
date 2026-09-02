@@ -5,8 +5,8 @@ const {
   selectionDigest,
 } = require("./targetRequirementSelection");
 
-const TARGETED_QA_MANIFEST_SCHEMA_VERSION = 1;
-const TARGETED_QA_MANIFEST_CONTRACT_ID = "TARGETED_QA_MANIFEST_V1";
+const TARGETED_QA_MANIFEST_SCHEMA_VERSION = 2;
+const TARGETED_QA_MANIFEST_CONTRACT_ID = "TARGETED_QA_MANIFEST_V2";
 const TARGETED_QA_RUN_KIND = "TARGETED_QA_ONLY";
 const BASELINE_PACKAGE_RUN_KIND = "ISOLATED_PACKAGE_QA";
 const EXPECTED_DOCUMENT_COUNT = 10;
@@ -509,22 +509,46 @@ function validateComparison({ comparison, packageContract, registry }) {
 function canonicalExecution(execution, categoryOrder) {
   exactKeys(
     execution,
-    ["releaseId", "model", "context", "nodeVersion", "promptSha256ByCategory"],
+    [
+      "releaseId",
+      "model",
+      "modelTokenLimit",
+      "nodeVersion",
+      "promptSha256ByCategory",
+      "hybridShadowEnabled",
+    ],
     "TARGETED_QA_EXECUTION_INVALID"
   );
-  if (!Number.isInteger(execution.context) || execution.context < 1)
+  if (
+    !Number.isInteger(execution.modelTokenLimit) ||
+    execution.modelTokenLimit < 1
+  )
     throw manifestError("TARGETED_QA_EXECUTION_CONTEXT_INVALID");
+  if (execution.hybridShadowEnabled !== false)
+    throw manifestError("TARGETED_QA_HYBRID_SHADOW_FORBIDDEN");
   exactKeys(
     execution.promptSha256ByCategory,
     categoryOrder,
     "TARGETED_QA_EXECUTION_PROMPTS_INVALID"
   );
   const promptSha256ByCategory = {};
-  for (const categoryView of categoryOrder)
-    promptSha256ByCategory[categoryView] = sha256Text(
-      execution.promptSha256ByCategory[categoryView],
-      "TARGETED_QA_EXECUTION_PROMPT_SHA_INVALID"
+  for (const categoryView of categoryOrder) {
+    const promptSet = execution.promptSha256ByCategory[categoryView];
+    exactKeys(
+      promptSet,
+      ["category", "triage", "effects", "hybridAddon"],
+      "TARGETED_QA_EXECUTION_PROMPTS_INVALID"
     );
+    promptSha256ByCategory[categoryView] = Object.fromEntries(
+      ["category", "triage", "effects", "hybridAddon"].map((promptRole) => [
+        promptRole,
+        sha256Text(
+          promptSet[promptRole],
+          "TARGETED_QA_EXECUTION_PROMPT_SHA_INVALID"
+        ),
+      ])
+    );
+  }
   return {
     releaseId: requiredText(
       execution.releaseId,
@@ -534,12 +558,13 @@ function canonicalExecution(execution, categoryOrder) {
       execution.model,
       "TARGETED_QA_EXECUTION_MODEL_REQUIRED"
     ),
-    context: execution.context,
+    modelTokenLimit: execution.modelTokenLimit,
     nodeVersion: requiredText(
       execution.nodeVersion,
       "TARGETED_QA_EXECUTION_NODE_VERSION_REQUIRED"
     ),
     promptSha256ByCategory,
+    hybridShadowEnabled: false,
   };
 }
 
