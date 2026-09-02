@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.6",
+  "catalogId": "el-occurrence-full-draft-v0.7",
   "categoryView": "EL",
   "requirements": [
     {
@@ -167,11 +167,7 @@
       "id": "EL-07",
       "label": "Erdbeben",
       "requestedFields": [],
-      "optionalFields": [
-        "limit",
-        "deductible",
-        "waiting_period"
-      ],
+      "optionalFields": ["limit", "deductible", "waiting_period"],
       "scopeRules": {
         "narrowScopeKeys": ["STURM_INSURANCE"]
       },
@@ -286,6 +282,7 @@
       "label": "Zonenbedingte Einschränkung bei Hochwasser",
       "requestedFields": ["condition"],
       "optionalFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
       "scopeRules": {
         "narrowScopeKeys": ["STURM_INSURANCE"]
       },

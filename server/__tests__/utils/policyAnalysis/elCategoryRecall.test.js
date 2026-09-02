@@ -117,9 +117,10 @@ describe("EL category recall catalog", () => {
     const requirement = result.requirements.find(({ id }) => id === "EL-12");
 
     expect(requirement.optionalFields).toContain("limit");
-    expect(requirement.scopeRules.narrowScopeKeys).toContain(
-      "STURM_INSURANCE"
+    expect(requirement.scopePolicy).toBe(
+      "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT"
     );
+    expect(requirement.scopeRules.narrowScopeKeys).toContain("STURM_INSURANCE");
 
     expect(floodZone.occurrences).toEqual(
       expect.arrayContaining([

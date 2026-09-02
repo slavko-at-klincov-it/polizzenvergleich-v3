@@ -171,7 +171,7 @@ describe("all-category shell runner", () => {
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
       productProfile: {
-        id: "CUSTOMER_CORE_5_V15_ST13_LW25_COVERAGE_PRECISION",
+        id: "CUSTOMER_CORE_5_V16_EL12_SCOPE_PRECISION",
         comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
         categoryViews: ["VS", "FE", "LW", "ST", "EL"],
         expectedRowCount: 224,

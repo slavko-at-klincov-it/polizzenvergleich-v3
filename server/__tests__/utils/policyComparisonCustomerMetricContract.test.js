@@ -321,8 +321,7 @@ describe("policy comparison customer metric contract", () => {
       customerReviewRequired: 1,
     });
 
-    historical.productProfile.id =
-      "CUSTOMER_CORE_5_V15_ST13_LW25_COVERAGE_PRECISION";
+    historical.productProfile.id = "CUSTOMER_CORE_5_V16_EL12_SCOPE_PRECISION";
     expect(() => validateCustomerComparison(historical)).toThrow(
       "COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH"
     );

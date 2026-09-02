@@ -1939,15 +1939,20 @@ describe("controlledOccurrenceWorksheet", () => {
     ).toHaveLength(2);
   });
 
-  test("limits definitive matching-scope evidence to the declared EL-15 host scope", () => {
+  test("limits definitive matching-scope evidence to each declared EL host scope", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: SYNTHETIC_DOCUMENT,
       documentFingerprint: "fixture-sha256",
       catalog: elFullCatalog,
     });
+    const el12 = worksheet.requirements.find(({ id }) => id === "EL-12");
     const el13 = worksheet.requirements.find(({ id }) => id === "EL-13");
     const el15 = worksheet.requirements.find(({ id }) => id === "EL-15");
 
+    expect(el12).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+      scopeRules: { narrowScopeKeys: ["STURM_INSURANCE"] },
+    });
     expect(el13.scopePolicy).toBe("MATCHING_SCOPE_INCLUDED_SUFFICIENT");
     expect(el15).toMatchObject({
       scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
