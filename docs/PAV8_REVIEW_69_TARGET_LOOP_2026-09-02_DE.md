@@ -1557,3 +1557,71 @@ gewünschte Richtung für `Vertragsbedingung auf A / kontrollierter Nichtfund au
 B` explizit abbilden; dieser Forward-Fix erfindet diese Vergleichswertung nicht
 innerhalb des Suchvertrags. Das installierte Kundensystem blieb unverändert;
 es gab kein Deployment.
+
+### 10.11 FE-C07 – Sauna/IR-Kabine: Feld- und Triage-Nachweis
+
+Die reale Ausgangslage ist beidseitige Deckung mit unterschiedlich hohem,
+aber fachlich gleich qualifiziertem Prozentlimit:
+
+- Paket A, DOC-01, physische Seite 4: `5 %` der
+  Gebäudeversicherungssumme, jeweils auf Erstes Risiko; zusätzlich ist lokal
+  eine Ersatzpflicht-/Gefahrenbedingung belegt.
+- Paket B, DOC-03, physische Seite 10: `10 %` derselben Bezugsgröße, ebenfalls
+  jeweils auf Erstes Risiko; im lokalen Fundbereich wurde keine zusätzliche
+  Bedingung gefunden.
+
+Die Such- und Feldkorrektur wurde in `6e7fb287` umgesetzt und in `4041a650`
+formatiert. Sie gilt ausschließlich für `FE-C07` und die Katalogkomponente
+`sauna_or_infrared_cabin_in_common_room`. Das Pflichtfeld ist `limit`, das
+optionale Diagnosefeld `condition`. Der Extraktor akzeptiert nur die beiden
+belegten lokalen Syntaxfamilien und bindet Werte ausschließlich an die
+servereigene Kandidatenquelle. Fremde Prozentwerte, entfernte Listengovernor,
+abweichende Bezugsgrößen und manipulierte Provenienz bleiben fail-closed.
+
+Mac-Studio-Vertragsnachweis:
+
+```text
+Commit: 4041a650fec793ed132618c63b9593eeb0fb87f3
+Worktree: /private/tmp/pv3-validate-4041a650
+Prettier: PASS
+Requested-Field-, FE-Recall-, Worksheet-, Prepared-, Result- und
+Produktvertrag-Suites: 244/244 PASS
+```
+
+Der anschließende komponentengenaue Neuaufbau aus den gespeicherten
+PageMap-Quelldokumenten und die echte Candidate-Triage ergaben:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-TARGETED-4041A650-20260902
+Summary-Digest:
+f3eb505d6ca330a68c5c4686125cb9d30ccccd2780eb2938a52f19c4daae3b05
+Modellkonfiguration: qwen/qwen3.6-35b-a3b, Kontext 42496
+
+DOC-01: 1 Ziel, DIRECT, Pflichtfeldstatus COMPLETE
+limit: FOUND, 5 %, PERCENT, CAPPED, Offsets 6078–6080
+condition: FOUND, Offsets 5892–6055
+
+DOC-03: 1 Ziel, DIRECT, Pflichtfeldstatus COMPLETE
+limit: FOUND, 10 %, PERCENT, CAPPED, Offsets 28401–28404
+condition: NOT_FOUND
+
+Tatsächliche Qwen-Aufrufe: 0
+```
+
+Die null Modellaufrufe sind kein ausgelassener Prüfschritt: Bei beiden Zielen
+waren Rollen- und Scopeentscheidung bereits vollständig servereigen. Der
+Triagevertrag leitete deshalb `DIRECT` deterministisch ab; ein Modellurteil
+wäre weder nötig noch zulässig gewesen. Das Artefakt ist ein
+komponentengenauer Pipeline-Probe und keine neue 224-Zeilen-Gesamtmetrik.
+
+Damit sind Suche, Triage und Pflichtfeldbindung für die beiden echten Funde
+geschlossen. Der verbleibende Fehler liegt ausschließlich in der
+Vergleichsregel: Die allgemeine Logik sortiert Zahlen derzeit nur bei
+`LIMIT`- oder `DEDUCTIBLE`-Atomen und blockiert bedingte Deckungsquellen. Für
+FE-C07 muss deshalb separat und eng bewiesen werden, ob `10 %` bei identischer
+Bezugsgröße und identischem First-Risk-Qualifier trotz der nur auf der
+niedrigeren Seite dokumentierten Zusatzbedingung als Vorteil B gereiht werden
+darf. Bis dieser Vertrag implementiert und adversarial geprüft ist, wird kein
+neues Zeilenergebnis behauptet. Das installierte Kundensystem blieb
+unverändert; es gab kein Deployment.
