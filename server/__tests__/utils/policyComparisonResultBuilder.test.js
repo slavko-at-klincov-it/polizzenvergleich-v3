@@ -6,9 +6,13 @@ const {
   CATEGORY_ORDER,
   buildComparisonResult,
   comparePackages,
+  materializeAtomicFacts,
   summarizePackage,
   writeComparisonArtifacts,
 } = require("../../utils/policyComparison/resultBuilder");
+const {
+  buildFeC07ConditionAbsenceAudit,
+} = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
@@ -719,6 +723,146 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
 }
 
 describe("policy comparison result builder", () => {
+  test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
+    const candidateId = "candidate:fe-c07-result-builder";
+    const clause =
+      "AW03 Gemeinschaftseinrichtungen Mitversichert sind Gemeinschaftseinrichtungen bis zu jeweils 10% der Gebäudeversicherungssumme auf Erstes Risiko. Das sind Gemeinschaftsräume wie Saunen und Fitnessräume.";
+    const occurrenceExactText = "Gemeinschaftsräume wie Saunen";
+    const occurrenceStart = clause.indexOf(occurrenceExactText);
+    const absenceAudit = buildFeC07ConditionAbsenceAudit({
+      binding: "DIRECT",
+      occurrence: {
+        candidateId,
+        physicalPageNumber: 4,
+        exactText: occurrenceExactText,
+        documentStart: 10_000 + occurrenceStart,
+        documentEnd: 10_000 + occurrenceStart + occurrenceExactText.length,
+        context: {
+          unitType: "PARAGRAPH",
+          text: clause,
+          documentStart: 10_000,
+          documentEnd: 10_000 + clause.length,
+        },
+      },
+    });
+    const worksheet = {
+      catalog: { id: "fe-occurrence-full-draft-v0.7" },
+      requirements: [
+        {
+          id: "FE-C07",
+          requestedFields: ["limit"],
+          optionalFields: ["condition"],
+          componentSatisfactionPolicy: "ALL",
+          components: [
+            {
+              id: "sauna_or_infrared_cabin_in_common_room",
+              label: "Sauna im Gemeinschaftsraum",
+              factRole: "INSURED_OBJECT",
+            },
+          ],
+        },
+      ],
+    };
+    const materializedEvidence = {
+      judgements: [
+        {
+          targetId: "target:fe-c07",
+          requirementId: "FE-C07",
+          componentId: "sauna_or_infrared_cabin_in_common_room",
+          evidencePresence: "FOUND",
+          coverageEffect: "INCLUDED",
+          conflictState: "NONE",
+          selectedScopePicture: "GENERAL",
+          documentApplicability: "CONDITIONAL",
+          selectedCandidateIds: [candidateId],
+          unresolvedCandidateIds: [],
+        },
+      ],
+    };
+    const requestedFields = {
+      requirements: [
+        {
+          requirementId: "FE-C07",
+          requestedFieldStatus: "COMPLETE",
+          fields: [
+            {
+              field: "limit",
+              status: "FOUND",
+              facts: [
+                {
+                  normalizedValue: "10 %",
+                  valueType: "PERCENT",
+                  unit: "%",
+                  limitKind: "CAPPED",
+                  qualifier:
+                    "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme",
+                  source: {
+                    candidateId,
+                    physicalPageNumber: 4,
+                    exactText: "10%",
+                    documentStart:
+                      10_000 + clause.indexOf("10%"),
+                    documentEnd:
+                      10_000 + clause.indexOf("10%") + "10%".length,
+                  },
+                },
+              ],
+            },
+            {
+              field: "condition",
+              status: "NOT_FOUND",
+              facts: [],
+              absenceAudit,
+            },
+          ],
+        },
+      ],
+    };
+    const targets = [
+      {
+        targetId: "target:fe-c07",
+        candidates: [
+          {
+            candidateId,
+            physicalPageNumber: 4,
+            exactText: occurrenceExactText,
+            contextText: clause,
+            contextDocumentStart: 10_000,
+            documentStart: 10_000 + occurrenceStart,
+            documentEnd:
+              10_000 + occurrenceStart + occurrenceExactText.length,
+          },
+        ],
+      },
+    ];
+    const input = {
+      document: {
+        uuid: "document-fe-c07",
+        role: "SUPPLEMENTAL_CONTRACT",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+      worksheet,
+      materializedEvidence,
+      requestedFields,
+      targets,
+      documentArtifact: null,
+      report: null,
+    };
+
+    const [atom] = materializeAtomicFacts(input);
+    expect(atom.fields[1].absenceAudit).toEqual(absenceAudit);
+
+    const tamperedRequestedFields = JSON.parse(
+      JSON.stringify(requestedFields)
+    );
+    tamperedRequestedFields.requirements[0].fields[1].absenceAudit.source.exactTextSha256 =
+      "0".repeat(64);
+    const [tamperedAtom] = materializeAtomicFacts({
+      ...input,
+      requestedFields: tamperedRequestedFields,
+    });
+    expect(tamperedAtom.fields[1]).not.toHaveProperty("absenceAudit");
+  });
   let root;
 
   beforeEach(() => {

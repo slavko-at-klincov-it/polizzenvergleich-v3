@@ -1363,6 +1363,7 @@ module.exports = {
   CATEGORY_ORDER,
   buildComparisonResult,
   comparePackages,
+  materializeAtomicFacts,
   summarizePackage,
   writeComparisonArtifacts,
 };
