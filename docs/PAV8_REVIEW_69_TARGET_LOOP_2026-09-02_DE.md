@@ -102,8 +102,8 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 Status: `4/7 TARGET-E2E ACCEPTED`, `2/7 PIPELINE-KANDIDATEN`. `FE-C07` ist im
 echten gezielten Ergebnisweg als `VORTEIL_B`, `EL-11` als
-`NICHT_VERGLEICHBAR`, `FE-C12` als `GLEICHWERTIG` und `LW-20` in Schritt A als
-`DOKUMENTATIONSUNTERSCHIED` ohne Review entschieden. `EL-06` und `EL-12` haben
+`NICHT_VERGLEICHBAR`, `FE-C12` als `GLEICHWERTIG` und `LW-20` nach Schritt B2
+als `GLEICHWERTIG` ohne Review entschieden. `EL-06` und `EL-12` haben
 jeweils den gebundenen Zehn-Dokument-Pipeline-Probe bestanden, benötigen aber
 noch die Bestätigung im späteren konsistenten Vollvergleich. Ein Fall bleibt
 ohne bestandenen Kandidaten offen: `VS-35`.
@@ -2180,6 +2180,190 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
+
+### 10.16 LW-20 Schritt B2 – kontrollierten Nichtfund und gebundenen Default-Ausschluss gleichsetzen
+
+#### 10.16.1 Fachliche Entscheidung und bewusst enge Grenze
+
+Schritt B2 setzt ausschließlich folgenden nachgewiesenen Zustand gleich:
+
+```text
+eine Paketseite: vollständiger kontrollierter Nichtfund für LW-20
+andere Paketseite: ausdrücklicher LW-20-Default-Ausschluss
+gesamtes Paket: kein zielgebundener Aufhebungs- oder Ersatzhinweis
+Ergebnis: GLEICHWERTIG / kein Review
+```
+
+Der Nichtfund wird weder technisch noch in der Kundenerklärung in einen
+ausdrücklichen Ausschluss umgeschrieben. Die Vergleichsaussage lautet nur,
+dass in beiden bereitgestellten Paketen keine dokumentierte Deckung für
+LW-20 belegt ist. Diese Regel ist nicht global und gilt weder für andere
+Kategorien noch für unvollständige Suchen, positive/bedingte Gegenbelege,
+Konflikte oder ungeklärte Scopes.
+
+Dokumentarten sind kein künstliches Zulassungsgate. Position A und Position B
+bilden jeweils das vom Benutzer hochgeladene Versicherungspaket; ein Paket
+kann aus Angebot, Polizze, Vertrag, Zusatzdokument oder Bedingungen bestehen.
+Deshalb wurde der erste Entwurf korrigiert: Er verlangte ohne fachlichen Grund
+mindestens ein `PROPOSAL`-Dokument auf der Ausschlussseite. Der finale Vertrag
+verlangt stattdessen nur die beweisbare Paketzugehörigkeit und die tatsächliche
+Geltung des Ausschlussatoms (`ACTIVE` oder korrektes
+`CONDITIONAL/FRAMEWORK_TERMS/TERMS`).
+
+#### 10.16.2 Verhinderter Fehlfix aus der ersten Implementierung
+
+Der erste B2-Entwurf prüfte den Ausschlusstext aus `exactText` plus dem auf 240
+Zeichen begrenzten `conditionCheckText`. Der adversariale Review und der reale
+DOC-09-Targetdatensatz zeigten zwei Fehler:
+
+1. Der reale gespeicherte Kurzkontext beginnt erst mit
+   `chäden, so ferne nicht anders vereinbart` und enthält deshalb nicht den
+   vollständigen Governor `Nicht versichert sind Schäden ...`.
+2. Im benachbarten Listenpunkt b) steht `auch wenn`. Eine Prüfung des gesamten
+   Nachbarschaftsfensters hätte diese fremde Bedingung fälschlich dem
+   Zielpunkt c) zugeordnet.
+
+Dieser Entwurf wurde vor einem produktiven Commit verworfen. Der finale Fix
+vergrößert kein globales Textfenster, sondern erzeugt einen eigenen
+serverseitigen Source-Audit aus den bereits validierten Rohartefakten.
+
+#### 10.16.3 Artefaktgebundener Source-Audit
+
+Der neue Vertrag
+`LW20_DEFAULT_EXCLUSION_SOURCE_AUDIT_V1` wird nur für
+`LW-20 / ground_seepage_or_retained_water / PERIL` erzeugt. Er verlangt:
+
+- exakt einen ausgewählten Kandidaten und keine ungelösten Kandidaten;
+- `FOUND / EXCLUDED / NONE / GENERAL`;
+- `scopePolicy = GENERAL_REQUIRED`;
+- dieselbe eindeutige Candidate-ID in Worksheet-Occurrence und vorbereitetem
+  Target;
+- direkte Bindung und den serverseitigen negativen Klausel-Governor;
+- vollständige PDF-Extraktion und übereinstimmende Dokument-UUID/PDF-SHA;
+- exakten Originaltext an Dokumentoffset und physischer Seite;
+- exakten Kontext an seinen Originaloffsets;
+- einen auf der Seite gebundenen Leitungswasser-Heading-Scope;
+- den vollständigen Governor
+  `Nicht versichert sind Schäden, sofern/so ferne nicht anders vereinbart`;
+- den eigenen Listenpunkt c), in dem der ausgewählte Grundwasser-,
+  Sickerwasser- oder Stauwasserbegriff liegt;
+- keine zusätzliche Bedingung und keinen positiven Override innerhalb genau
+  dieses Zielpunkts.
+
+Eine Bedingung in einem Geschwisterpunkt blockiert nicht. Eine Bedingung oder
+Formulierung wie `mitversichert`, `eingeschlossen`, `nicht ausgeschlossen`
+oder `abweichend ... versichert` im Zielpunkt blockiert fail-closed.
+
+Der Audit persistiert und bindet Dokument-UUID/PDF-SHA, Artefaktdigest,
+physische Seite, Seitengrenzen und Seitendigest, Candidate-ID, Exact-
+Textoffsets und -digest, Kontextgrenzen und -digest, Governorgrenzen und
+-digest, Listenpunktgrenzen und -digest sowie Scopegrenzen und -digest. Der
+Vergleichsvalidator bindet den Dokument-SHA zusätzlich an das
+Ergebnismanifest und rekonstruiert die vollständige Entscheidung. Zusätzliche
+unvertragliche Felder, parallele alte Audits, doppelte Manifest-UUIDs, leere
+Manifestseiten oder geänderte Source-Audits werden abgelehnt.
+
+Betroffene Produktionsgrenzen:
+
+```text
+server/utils/policyAnalysis/lw20DefaultExclusionSourceAudit.js
+server/utils/policyComparison/lw20AbsenceDefaultExclusionEqualityContract.js
+server/utils/policyComparison/pointDecision.js
+server/utils/policyComparison/customerMetricContract.js
+server/utils/policyComparison/customerResultPresenter.js
+server/utils/policyComparison/resultBuilder.js
+server/utils/policyComparison/productContract.js
+```
+
+Produktprofil und Vergleichsvertrag:
+
+```text
+CUSTOMER_CORE_5_V26_LW20_DEFAULT_EXCLUSION_EQUALITY
+PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_V2
+```
+
+#### 10.16.4 Commits und Mac-Studio-Regression
+
+```text
+3b367d56 fix(comparison): certify LW-20 default exclusion equality
+17837d99 test(comparison): cover LW-20 exclusion equality guards
+5088baed test(comparison): bind LW-20 fixture scope
+0fd2fde2 test(comparison): update LW-20 terminal expectation
+73df258d style(comparison): format LW-20 equality contract
+54aeffce fix(comparison): scope LW-20 manifest validation
+```
+
+Der erste fokussierte Mac-Lauf entdeckte eine fehlende Scope-Angabe in der
+synthetischen Integrationsfixture. Der erste breite Lauf entdeckte anschließend
+eine zu globale Manifestvalidierung in einer bestehenden Schema-11-
+Hilfsansicht. Beide Befunde wurden mit getrennten Forward-Fix-Commits behoben;
+Produktlogik wurde nicht zurückgebaut.
+
+Finale Validierung:
+
+```text
+Commit: 54aeffce9d24f4cfe36757e2d2a87162244de3f2
+Worktree: /private/tmp/pv3-validate-54aeffce
+Formatprüfung: PASS
+Fokussierte Suites: 4/4 PASS
+Fokussierte Tests: 115/115 PASS
+Breite Regression: 47 Suites und 902 Tests PASS
+```
+
+Die exakt gleichen vier historischen Fixture-Suites mit 25 Tests bleiben rot:
+
+- drei Target-QA-/Worksheet-Manifests erwarten die alte FE-Katalogbindung;
+- eine statische Bedeutungsverteilung erwartet weiterhin
+  `25 COVERAGE_MIXED / 91 COVERAGE_ONLY` statt `24 / 92`.
+
+Es entstand keine neue breite Fehlersignatur.
+
+#### 10.16.5 Echter Zehn-Dokument-Lauf und unabhängiger Rohartefakt-Replay
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-20-B2-54AEFFCE-20260902
+Summary-Digest:
+f8f58f20e1e4e800add3f976d02a07af3b32b3c44e658a0d26f996438e1cb73d
+Target-Selection-Digest:
+aca3828b4d208c20b8f932311e4ec13011f006bb636e58575fa88d2c9507c718
+Dokumente: 10
+Neu aufgebaute Atome im Replay: 10
+Gebundene Default-Ausschluss-Source-Audits: 1
+Source-Audit-Dokument: DOC-09
+Triage-Qwen-Aufrufe: 0
+Evidence-Qwen-Aufrufe: 0
+```
+
+Der getrennte Replay las erneut die zehn unveränderten PDF-Textartefakte,
+Worksheets, Triage-, Evidence- und Targetartefakte. Er prüfte alle gespeicherten
+Dateihashes und technischen Gates, erzeugte die Requested-Field-Ergebnisse,
+Tabellenzeilen und Atome erneut und verglich sie byteinhaltlich mit den
+gespeicherten Records. Danach rekonstruierte er beide Pakete und die
+Punktentscheidung und validierte den B2-Audit gegen alle Dokument-UUIDs und
+PDF-SHAs des Eingabemanifests.
+
+Das revisionssicher belegte B2-Delta ist:
+
+```text
+LW-20 Schritt A/B1:
+DOKUMENTATIONSUNTERSCHIED / QUALIFIED_SEARCH_DOCUMENTATION_DIFFERENCE
+
+LW-20 Schritt B2:
+GLEICHWERTIG
+EQUAL_LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION
+Review erforderlich: nein
+```
+
+Unter Einbeziehung aller bisher akzeptierten gezielten Deltas verschiebt B2
+die weiterhin unbestätigte Projektion von
+`Dokumentationsunterschied 34 / Gleichwertig 115 / Unklar 63` auf
+`Dokumentationsunterschied 33 / Gleichwertig 116 / Unklar 63`. Es handelt sich
+nicht um eine neue 224-Zeilen-Gesamtmetrik. Der vollständige Vergleichslauf
+bleibt bis zum Abschluss der gezielten Fehlerfamilien zurückgestellt.
+
+Ein Deployment wurde nicht durchgeführt; der installierte Kundenstand blieb
+unverändert.
 
 ### 10.15 LW-20 Schritt B1 – paketweiter Audit auf Aufhebung des Default-Ausschlusses
 
