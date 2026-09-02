@@ -177,9 +177,7 @@ describe("category semantic exceptions", () => {
         exactText: contextText.slice(0, -1),
         sectionScopeKey: "STURM_INSURANCE",
       });
-      expect(decision?.basis).not.toBe(
-        "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE"
-      );
+      expect(decision?.basis).not.toBe("EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE");
       expect(decision?.binding).not.toBe("DIRECT");
     }
 
@@ -192,8 +190,7 @@ describe("category semantic exceptions", () => {
           {
             candidateId: "candidate:el-12",
             candidateBinding: "NARROW_SCOPE",
-            deterministicBindingBasis:
-              "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE",
+            deterministicBindingBasis: "EL_12_EXPLICIT_FLOOD_ZONE_CONSEQUENCE",
           },
         ],
       })
@@ -290,7 +287,8 @@ describe("category semantic exceptions", () => {
       bindingFor({
         contextText:
           "Versichert sind Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge.",
-        exactText: "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
+        exactText:
+          "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
       })
     ).toEqual({
       binding: "DIRECT",
@@ -300,7 +298,8 @@ describe("category semantic exceptions", () => {
       bindingFor({
         contextText:
           "Schäden an Einfriedungen sind begrenzt. Versichert sind Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge.",
-        exactText: "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
+        exactText:
+          "Schäden an allen versicherten Sachen durch unbekannte Fahrzeuge",
       })
     ).toEqual({
       binding: "DIRECT",

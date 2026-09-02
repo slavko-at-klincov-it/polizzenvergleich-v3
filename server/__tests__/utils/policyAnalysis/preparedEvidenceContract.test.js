@@ -220,8 +220,7 @@ describe("preparedEvidenceContract", () => {
       expect.objectContaining({
         candidateId: elementarCrossReference.candidateId,
         candidateBinding: "NARROW_SCOPE",
-        deterministicBindingBasis:
-          "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
+        deterministicBindingBasis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1",
       }),
     ]);
     expect(elTarget.serverRejectedCandidates).toEqual([]);

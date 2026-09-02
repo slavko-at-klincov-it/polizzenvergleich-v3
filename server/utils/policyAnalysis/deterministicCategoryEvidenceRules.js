@@ -733,7 +733,14 @@ function explicitEl06LocalTargetScopeRebinding({
     )
   )
     return null;
-  if (operativeCoveragePolarity(occurrence) !== "POSITIVE") return null;
+  const operativePolarity = operativeCoveragePolarity(occurrence);
+  const explicitSingularPositive =
+    /\b(?:ist|gilt)\b[\s\S]{0,180}\bmitversichert\b/iu.test(clause) &&
+    !/\b(?:nicht|kein(?:e|en|er|es)?)\b[\s\S]{0,120}\bmitversichert\b/iu.test(
+      clause
+    );
+  if (operativePolarity !== "POSITIVE" && !explicitSingularPositive)
+    return null;
 
   return {
     binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
@@ -1138,13 +1145,12 @@ function deterministicCategoryCandidateBinding({
     });
   if (el12FloodZoneConsequenceBinding) return el12FloodZoneConsequenceBinding;
 
-  const el06LocalTargetScopeRebinding =
-    explicitEl06LocalTargetScopeRebinding({
-      categoryView,
-      requirement,
-      component,
-      occurrence,
-    });
+  const el06LocalTargetScopeRebinding = explicitEl06LocalTargetScopeRebinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
   if (el06LocalTargetScopeRebinding) return el06LocalTargetScopeRebinding;
 
   const feF05Binding = explicitFeF05InsurancePeriodBinding({
