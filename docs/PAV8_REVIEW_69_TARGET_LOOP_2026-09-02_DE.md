@@ -100,7 +100,10 @@ beidseitiger qualifizierter Nichtfund oder tatsächliche Fundstellen.
 
 ### R69-C – Einseitig fehlender Beleg: 7
 
-Status: `OPEN`
+Status: `1/7 PIPELINE-KANDIDAT`. `EL-06` hat den gebundenen
+Zehn-Dokument-Pipeline-Probe bestanden, benötigt aber noch die Bestätigung im
+späteren konsistenten Vollvergleich. Sechs Fälle bleiben ohne bestandenen
+Kandidaten offen.
 
 ```text
 VS-35
@@ -1281,3 +1284,92 @@ konsistenten Vollvergleich `LW-25: UNKLAR -> VORTEIL_B`. Dieser Vorteil und
 die daraus folgende Gesamtmetrik werden bis zum echten Vollvergleich nicht
 als gemessene Produktionszahl ausgewiesen. Das installierte Kundensystem
 wurde nicht verändert und es erfolgte kein Deployment.
+
+### 10.9 EL-06 – lokaler Hochwasserscope unter Leitungswasserüberschrift
+
+Ausgangsfehler: Paket A besaß bereits einen vollständigen EL-06-Beleg. Paket B
+enthielt in DOC-03 auf physischer Seite 13 ebenfalls die ausdrückliche Klausel:
+
+```text
+LW06 Kanalrückstau
+Schäden aus einem Kanalrückstau nach einer Überschwemmung sind im Rahmen der
+VS für Hochwasser/Überschwemmung mitversichert.
+```
+
+Die beiden kontrollierten Vorkommen im Titel und im Satz erbten jedoch die
+Leitungswasserüberschrift von Seite 12. Der generische Scopevertrag wertete
+sie deshalb als Fremdspartenfund. Paket B blieb trotz des ausdrücklich lokal
+genannten Hochwasserscopes ohne Kandidat; die Vergleichszeile endete als
+`MISSING_ONE_SIDE / UNKLAR`.
+
+Der Fix besteht aus vier getrennten Commits und zwei realen
+Validierungsschleifen:
+
+1. Commit `11f2c176` führt den engen Vertrag
+   `EL_06_LOCAL_TARGET_SCOPE_REBINDING_V1` ein. Er ist ausschließlich für
+   `EL / EL-06 / sewer_backflow / PERIL` aktiv und verlangt im selben Absatz
+   Kanalrückstau nach Überschwemmung, eine ausdrückliche Zuordnung zur
+   Hochwasser-/Überschwemmungsversicherung und positive Deckungswirkung.
+2. Commit `4cb2f38a` ergänzt die positive Singularform als separaten
+   Forward-Fix und bringt alle drei betroffenen Dateien in den auf dem Mac
+   Studio geprüften Formatstand.
+3. Die unabhängige Gegenprüfung fand danach zwei noch zu breite Grenzen:
+   Eine geerbte Leitungswasserüberschrift war zeitlich nicht begrenzt; außerdem
+   war die Singularform nicht eng genug an das EL-06-Subjekt gebunden. Commit
+   `34f75690` ersetzt den Vertrag deshalb durch V2. V2 verlangt exakt eine
+   Seite Abstand zur geerbten Überschrift, ausschließlich beobachtete
+   Leitungswasserscopes, einen subjektgebundenen positiven Gesamtsatz und
+   verwirft Negation, Ausschluss, Bedingung, Ausnahme, Option, Mehrbeitrag und
+   getrennte Klauseln. Dieselbe V2-Identität besitzt einen eigenen
+   deterministischen Prepared-Evidence-Vertrag.
+4. Der erste reale Zehner-Probe auf `34f75690` stoppte korrekt: Der neue
+   Prepared-Interceptor fing auch den bereits gültigen A-Kandidaten mit der
+   älteren generischen Basis `EXPLICIT_NARROW_SECTION_SCOPE` ab. Commit
+   `f964b293` lässt den V2-Interceptor nur eingreifen, wenn mindestens ein
+   V2-Kandidat vorhanden ist. Ein vollständig vorhandener V1-/generischer
+   EL-06-Pfad fällt weiter in die bestehende Wirkungsermittlung. Eine eigene
+   Regression schützt diesen A-Pfad.
+
+Der Endstand wurde im isolierten Mac-Studio-Worktree geprüft:
+
+```text
+Endcommit: f964b293a97fb98d173f920a6b93829e70d38e72
+Mac-Studio-Worktree: /private/tmp/pv3-validate-f964b293
+Runtime: Node 22.23.2
+Prettier: PASS
+Direkte, angrenzende, Atom-, Vergleichs- und Overlay-Suites: 242/242 PASS
+Baseline-Paket-SHA-256:
+2b390be8aa5597a9990735151b5458e023c9b561134e4c1023f5e6a765479173
+Katalog: el-occurrence-full-draft-v0.6
+Target-Selection-Digest:
+49e44646352e5a5a3243eed598284b3e2b8c68cb26c088a5022f6bdea30dd493
+Pipeline-Probe-Digest:
+6666f097d19e3d49a49342cdb80ebaa4a337974809cf4e711abc315f7b359bce
+```
+
+Der reale komponentengenaue Probe über alle zehn Paketdokumente ergab:
+
+```text
+Paket A / DOC-01 / Seite 10:
+1 Occurrence, 1 NARROW_SCOPE-Kandidat, 0 Rejects, 0 ungelöst.
+Urteil: FOUND + INCLUDED + NONE + NARROW_ONLY + CONDITIONAL.
+Owner: SERVER_EXPLICIT_CATEGORY_CLAUSE:EL:EL-06.
+
+Paket B / DOC-03 / Seite 13:
+2 Occurrences, 2 NARROW_SCOPE-Kandidaten, 0 Rejects, 0 ungelöst.
+Basis beider Kandidaten: EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2.
+Urteil: FOUND + INCLUDED + NONE + NARROW_ONLY + CONDITIONAL.
+Owner: SERVER_EL06_EXPLICIT_LOCAL_FLOOD_COVERAGE_V2:EL:EL-06.
+
+Übrige acht B-Dokumente:
+0 Occurrences, 0 Kandidaten, unveränderte kontrollierte Nullfundlage.
+```
+
+Systemgrenze: Der bestehende sichere Overlay-Refresh darf diesen Kandidaten
+nicht in den alten All-50-Lauf einschleusen, weil sich die Candidate-Partition
+und das Judgement von DOC-03 tatsächlich ändern. Das ist beabsichtigt. Der
+Zehner-Probe beweist den vollständigen serverseitigen Analysepfad für EL-06,
+aber noch keine neue 224-Zeilen-Gesamtmetrik. Erwartet wird im späteren
+konsistenten Vollvergleich `EL-06: UNKLAR -> GLEICHWERTIG`; bis dahin bleibt
+die offizielle akzeptierte Metrik unverändert. Das installierte Kundensystem
+blieb unangetastet und es erfolgte kein Deployment.
