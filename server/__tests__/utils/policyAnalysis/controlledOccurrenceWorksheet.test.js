@@ -323,8 +323,10 @@ describe("controlledOccurrenceWorksheet", () => {
     const proof = candidate.context.followingStructuralBoundaryProof;
 
     expect(proof).toMatchObject({
-      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.PARAGRAPH,
-      text: "X",
+      kind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT,
+      observedKind: FOLLOWING_STRUCTURAL_BOUNDARY_KIND.EOF,
+      reason: "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX",
+      text: null,
     });
     expect(validFollowingStructuralBoundaryProof(candidate)).toBe(true);
   });
