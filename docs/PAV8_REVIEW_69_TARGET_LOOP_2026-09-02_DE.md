@@ -630,3 +630,90 @@ Kundenergebnis geändert: nein
 Wegen der Release-Bindung dürfen die neun Ergebnisse des abgebrochenen Laufs
 nicht unter dem neuen Commit fortgesetzt werden. Der nächste Lauf erhält ein
 neues Manifest, neue Worksheets und einen neuen Ausgabepfad.
+
+### 9.9 Vollständiger gebundener All-50-Lauf
+
+Der neu angelegte Lauf am Release `422a4662` schloss alle 50
+Dokument/Kategorie-Paare ohne technischen Abbruch ab. Er verwendete exakt das
+bereits geladene Modell `qwen/qwen3.6-35b-a3b` mit Kontext `42496`; ein in LM
+Studio geladenes Embeddingmodell war nicht vorhanden und der Hybridpfad blieb
+deaktiviert.
+
+```text
+Release: 422a4662759e11f70ea6a085f60feddd7f415d66
+Manifest-Digest: d0a140a3c9b076a9c0dbcf511b05d97b615985e348c35387e80fc99fc241d593
+Manifestdatei: /private/tmp/pav8-final-422a4662-4SjFOO/manifest/targeted-qa-manifest.private.json
+Run: /private/tmp/pav8-final-422a4662-4SjFOO/run
+Run-Summary SHA-256: fe49a998ed6c876610ead2d4445ed54dcf50a8720da01f382166dcb4e18c3b2e
+Paare: 50/50
+Resume-Paare: 0
+Wandzeit: 1.167.263 ms (ca. 19 min 27 s)
+Modellaufrufe/-versuche: 236/236
+Prompt-Tokens: 522.079
+Completion-Tokens: 14.751
+Gesamt-Tokens: 536.830
+Modellzeit: 1.110,992 s
+```
+
+Der exakte Vergleich der 690 gezielten Dokument-Zeilen-Instanzen mit der
+Baseline ergab noch keine fachliche Veränderung:
+
+```text
+Geändert: 0/690
+Unverändert: 690/690
+BELEGT: 74 -> 74
+TEILBELEGT: 79 -> 79
+UNGEKLÄRT: 537 -> 537
+VS/FE/LW/ST/EL geändert: 0/190, 0/140, 0/100, 0/130, 0/130
+```
+
+Das ist kein Qualitätsgewinn, sondern der notwendige Reproduzierbarkeitsbeleg:
+Der gezielte Ausführungspfad verändert das Ergebnis ohne fachlichen Fix nicht.
+
+### 9.10 Privates 224-Zeilen-Overlay und zweistufiger 155-Guard
+
+Die Commits `33836154`, `f4e87200` und `1ed9db0d` führen die 69 gezielten
+Ergebnisse wieder in eine vollständige, ausschließlich private QA-Analyse
+zurück. Vor dem Merge werden Dokument, Katalog, vollständiger
+Target-Selection-Vertrag, Candidate-Partition, Target-/Judgement-Ownership,
+Triage-, Evidence-, Rows- und Requested-Fields-Hashes erneut gebunden.
+
+Der Guard arbeitet auf zwei Ebenen:
+
+1. In jedem der 50 Dokument/Kategorie-Paare müssen alle nicht gezielten Rows,
+   Worksheet-Requirements, Binding Groups, Judgements, Rollups, Targets und
+   Requested Fields exakt der Baseline entsprechen.
+2. Nach dem echten `buildComparisonResult` müssen zusätzlich alle 155 finalen
+   Nicht-Review-Vergleichszeilen exakt der gebundenen Baseline entsprechen.
+
+Der Orchestrator schreibt keine Markdown- oder XLSX-Kundenausgabe. Er erzeugt
+nur einen privaten Minimal-Overlay-Root mit `comparison.private.json` und
+`overlay-guard.private.json`.
+
+```text
+Overlay-Release: 1ed9db0de19cae289f63a49adf16159e5ad450b8
+Mac-Studio-Suites: 34/34 PASS
+Realer Overlay-Root: /private/tmp/pav8-overlay-1ed9db0d-BPDR0X/overlay
+Paare: 50/50
+Target-Zeilen: 69
+Nicht-Target-Zeilen: 155
+Target-Dokumentinstanzen: 690
+Nicht-Target-Dokumentinstanzen: 1.550/1.550 identisch
+Finale Nicht-Target-Vergleichszeilen: 155/155 identisch
+Geänderte Nicht-Target-Zeilen: 0
+Geänderte Target-Zeilen: 0/69
+Comparison SHA-256: a57fddfa487136eeda0e8b29c09c5ae9462ff699ed0b938f1c2543d0ee1d9b35
+Guard SHA-256: f02bce23588f2fa44750ff883747a4234b970dca72bf4d2c8da3b725be2cabd9
+```
+
+Die Vergleichszahlen bleiben deshalb bewusst unverändert:
+
+```text
+VORTEIL_A 2, VORTEIL_B 2, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 110, NICHT_VERGLEICHBAR 8, UNKLAR 69.
+```
+
+Ab jetzt darf jeder fachliche Kandidat nur über dieses Overlay bewertet
+werden. Jede Abweichung in einer der 155 geschützten Zeilen ist ein harter
+Abbruch; ein vollständiger 224-Zeilen-Kundenlauf erfolgt erst nach Abschluss
+aller gezielten Fehlerfamilien.
