@@ -1552,6 +1552,54 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("keeps an EL-11 annual maximum out of the local deductible field", () => {
+    const text =
+      "Erdbeben Jahreshöchstentschädigung; Selbstbehalt EUR 350,00 (Besondere Bedingung 64PA0021) (EUR 20.000,00)";
+    const source = textualOccurrence({
+      candidateId: "candidate:el11-schedule-deductible",
+      text,
+      exactText: "Erdbeben",
+    });
+    source.context.unitType = "LIST_ITEM";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "EL-11",
+        label: "Selbstbehalt bei Elementarschäden",
+        requestedFields: ["deductible"],
+        components: [
+          {
+            id: "elemental_deductible",
+            label: "Selbstbehalt",
+            factRole: "DEDUCTIBLE",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:el11-schedule-deductible",
+        "NARROW_SCOPE",
+      ]),
+    });
+
+    const [deductibleField] = result.requirements[0].fields;
+    expect(deductibleField).toMatchObject({
+      field: "deductible",
+      status: FIELD_EVIDENCE_STATUS.FOUND,
+      facts: [
+        expect.objectContaining({
+          normalizedValue: "EUR 350,00",
+          source: { candidateId: "candidate:el11-schedule-deductible" },
+        }),
+      ],
+    });
+    expect(deductibleField.facts).toHaveLength(1);
+    expect(
+      deductibleField.facts.some((fact) =>
+        String(fact.normalizedValue).includes("20.000")
+      )
+    ).toBe(false);
+  });
+
   test("binds each local limit only to its own component of an ANY row", () => {
     const text =
       "Carports sind bis EUR 75.000 je Schadenfall mitversichert. Garagen sind bis EUR 100.000 je Schadenfall mitversichert.";

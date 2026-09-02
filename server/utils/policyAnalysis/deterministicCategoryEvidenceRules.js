@@ -690,6 +690,87 @@ function explicitEl12FloodZoneConsequenceBinding({
 }
 
 /**
+ * EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1
+ *
+ * A compact schedule item may place the peril and its deductible on opposite
+ * sides of a semicolon. Bind only one locally labelled deductible value from
+ * the same positively governed list item. Side effects: none.
+ */
+function explicitPerilDeductibleScheduleItemBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "EL" ||
+    requirement?.id !== "EL-11" ||
+    component?.id !== "elemental_deductible" ||
+    component?.factRole !== "DEDUCTIBLE" ||
+    occurrence?.context?.unitType !== "LIST_ITEM" ||
+    !["ELEMENTAR_INSURANCE", "STURM_INSURANCE"].includes(
+      occurrence?.sectionScopeHint?.scopeKey
+    )
+  )
+    return null;
+
+  const item = String(occurrence?.context?.text || "");
+  const governor = `${occurrence?.coverageGovernorHint?.text || ""}\n${
+    occurrence?.scopeLead?.text || ""
+  }`;
+  const reject = () => ({
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "EL_11_DEDUCTIBLE_SCHEDULE_ITEM_NOT_PROVEN",
+    authoritative: true,
+  });
+  if (
+    !containsPhrase(item, occurrence?.exactText) ||
+    !/^erdbeben$/u.test(normalize(occurrence?.exactText)) ||
+    !/(?:Als\s+)?mitversichert(?:\s+gelten)?|Versichert\s+sind/iu.test(
+      governor
+    ) ||
+    /\b(?:nicht|kein(?:e|en|er|es)?|keinesfalls|entf[aä]llt|optional|wahlweise|auf\s+(?:ausdr[uü]cklichen\s+)?Wunsch|gegen\s+(?:Mehrpr[aä]mie|Mehrbeitrag|Zuschlag)|sofern\s+(?:beantragt|vereinbart))\b/iu.test(
+      item
+    )
+  )
+    return reject();
+
+  const markerPattern =
+    /\b(?:Selbstbehalt|Selbstbeteiligung|SB|Eigenbehalt)\b/giu;
+  const markers = [...item.matchAll(markerPattern)];
+  if (markers.length !== 1) return reject();
+  const afterMarker = item.slice(
+    markers[0].index + markers[0][0].length,
+    markers[0].index + markers[0][0].length + 180
+  );
+  const boundaryIndexes = [
+    afterMarker.search(/;/u),
+    afterMarker.search(/\(\s*Besondere\s+Bedingung\b/iu),
+    afterMarker.search(/\n\s*[-•]/u),
+  ].filter((index) => index >= 0);
+  const localValueText = afterMarker.slice(
+    0,
+    boundaryIndexes.length > 0 ? Math.min(...boundaryIndexes) : undefined
+  );
+  const deductibleValues = [
+    ...localValueText.matchAll(
+      /(?<![\p{L}\p{N}])(?:(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{1,2})?|\d{1,3}(?:[.,]\d+)?\s*%)(?![\p{L}\p{N}])/giu
+    ),
+  ];
+  if (deductibleValues.length !== 1 || deductibleValues[0].index > 70)
+    return reject();
+
+  return {
+    binding:
+      occurrence.sectionScopeHint.scopeKey === "STURM_INSURANCE"
+        ? DETERMINISTIC_BINDING.NARROW_SCOPE
+        : DETERMINISTIC_BINDING.DIRECT,
+    basis: "EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1",
+    authoritative: true,
+  };
+}
+
+/**
  * EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2
  *
  * A clause can live below a carried foreign branch heading while explicitly
@@ -1191,6 +1272,16 @@ function deterministicCategoryCandidateBinding({
       occurrence,
     });
   if (el12FloodZoneConsequenceBinding) return el12FloodZoneConsequenceBinding;
+
+  const perilDeductibleScheduleItemBinding =
+    explicitPerilDeductibleScheduleItemBinding({
+      categoryView,
+      requirement,
+      component,
+      occurrence,
+    });
+  if (perilDeductibleScheduleItemBinding)
+    return perilDeductibleScheduleItemBinding;
 
   const el06LocalTargetScopeRebinding = explicitEl06LocalTargetScopeRebinding({
     categoryView,

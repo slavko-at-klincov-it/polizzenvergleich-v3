@@ -249,6 +249,92 @@ describe("category semantic exceptions", () => {
     });
   });
 
+  test("binds exactly one explicit earthquake deductible from its governed schedule item", () => {
+    const bindingFor = ({
+      contextText,
+      governorText = "Mitversichert gelten",
+      sectionScopeKey = "STURM_INSURANCE",
+      unitType = "LIST_ITEM",
+    }) => {
+      const candidate = occurrence({
+        candidateId: "candidate:el-11:earthquake-deductible",
+        exactText: "Erdbeben",
+        contextText,
+        scopeLeadText: governorText,
+        sectionScopeKey,
+        pageNumber: 4,
+      });
+      candidate.context.unitType = unitType;
+      candidate.coverageGovernorHint = { text: governorText };
+      return deterministicCategoryCandidateBinding({
+        worksheet: { catalog: { categoryView: "EL" } },
+        requirement: { id: "EL-11" },
+        component: {
+          id: "elemental_deductible",
+          factRole: "DEDUCTIBLE",
+        },
+        occurrence: candidate,
+      });
+    };
+
+    const realScheduleItem =
+      "Erdbeben Jahreshöchstentschädigung; Selbstbehalt EUR 350,00 (Besondere Bedingung 64PA0021) (EUR 20.000,00)";
+    expect(bindingFor({ contextText: realScheduleItem })).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1",
+      authoritative: true,
+    });
+    expect(
+      bindingFor({
+        contextText:
+          "Erdbeben; Selbstbeteiligung 5 % (Besondere Bedingung 64PA0021)",
+        governorText: "Versichert sind",
+        sectionScopeKey: "ELEMENTAR_INSURANCE",
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1",
+      authoritative: true,
+    });
+
+    for (const testCase of [
+      {
+        contextText: realScheduleItem,
+        governorText: "",
+      },
+      {
+        contextText: "Erdbeben; kein Selbstbehalt EUR 350,00",
+      },
+      {
+        contextText: "Erdbeben; wahlweise Selbstbehalt EUR 350,00",
+      },
+      {
+        contextText: "Erdbeben; Selbstbehalt EUR 350,00 oder EUR 500,00",
+      },
+      {
+        contextText: "Erdbeben Jahreshöchstentschädigung EUR 20.000,00",
+      },
+    ])
+      expect(bindingFor(testCase)).toEqual({
+        binding: "MENTION_ONLY",
+        basis: "EL_11_DEDUCTIBLE_SCHEDULE_ITEM_NOT_PROVEN",
+        authoritative: true,
+      });
+
+    expect(
+      bindingFor({
+        contextText: realScheduleItem,
+        unitType: "PARAGRAPH",
+      })?.basis
+    ).not.toBe("EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1");
+    expect(
+      bindingFor({
+        contextText: realScheduleItem,
+        sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      })?.basis
+    ).not.toBe("EXPLICIT_PERIL_DEDUCTIBLE_SCHEDULE_ITEM_V1");
+  });
+
   test("keeps generic storm-thrown objects non-evidentiary for tree impact", () => {
     const bindingFor = ({ contextText, exactText, matchedAlias }) =>
       deterministicCategoryCandidateBinding({
