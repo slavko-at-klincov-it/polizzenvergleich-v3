@@ -81,8 +81,10 @@ Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
 ### R69-B – Beidseitig fehlender Beleg: 9
 
-Status: `2/9 ACCEPTED`; `FE-B13` und `ST-14` sind abgeschlossen, sieben Fälle
-bleiben offen
+Status: `2/9 ACCEPTED`, `1/9 RECALL-KANDIDAT`; `FE-B13` und `ST-14` sind
+abgeschlossen. `ST-13` hat den isolierten Recall-Audit bestanden, benötigt
+aber noch die Bestätigung im späteren konsistenten Vollvergleich. Sechs Fälle
+bleiben ohne bestandenen Recall-Kandidaten offen.
 
 ```text
 VS-04
@@ -1095,3 +1097,83 @@ Einzelfixes:
   ein paketweiter Klauselcode-Resolver für Referenz, vorhandenen Klauseltext,
   Produktvariante, Anwendbarkeit und Dokumentrang. Ein
   `KLAUSELVERZEICHNIS` allein beweist keine vollständige Verfügbarkeit.
+
+### 10.7 ST-13 – enger Recall-Kandidat für Kamin-/Schornsteinköpfe
+
+Ursache: Der Alias `Kamin-` war kein Interpunktionsvertrag. Die kontrollierte
+Aliasnormalisierung entfernte den Bindestrich und suchte dadurch das
+eigenständige Wort `Kamin`. Im gebundenen Paket B entstand genau eine falsche
+Rohfundstelle: DOC-03, physische Seite 12, exakter Span „Kamin“ in
+„FE08 Kaminbrand – Versichert sind Schäden am Kamin durch einen Brand ...“.
+Die rechte Wortgrenze verhinderte zwar einen Teiltreffer innerhalb von
+„Kaminbrand“, nicht aber das spätere selbständige Körperwort. Alle übrigen
+ST-13-Komponenten und Dokumente waren bereits rohfundlos.
+
+Commit `a56132e3` entfernt den nackten Alias und ersetzt ihn ausschließlich
+durch:
+
+- direkte Flexionen von `Kaminkopf` und `Schornsteinkopf`;
+- vollständige koordinierte Phrasen für „Kamin- und“, „und/oder“, „oder“,
+  „sowie“, „bzw.“ und Slash-Schreibweise;
+- die entsprechenden Dativ-Pluralformen „...köpfen“.
+
+Ein Concept-Search wurde bewusst nicht ergänzt. Ein bloßes gemeinsames
+Textfenster aus `kamin*` und `schornsteinkopf*` könnte den Ellipsenbindestrich
+und die Koordination nicht beweisen. Es würde etwa einen Kaminbrand neben
+einem echten Schornsteinkopf fälschlich zu zwei Komponenten aufwerten.
+
+Positive Kontrollen decken alle freigegebenen Koordinations- und
+Flexionsformen sowie direkte Kopfbegriffe ab. Negative Kontrollen enthalten
+Kaminbrand, Schornsteinbrand, Kaminschleifen, Innenputz des Kamins, mehrere
+Kamine, Kaminrohr, Kamin-/Lüftungsanlagen, Kaminsanierung und Kaminaufsatz.
+23 fokussierte ST-13-Tests und die breiteren Katalog-/Produktvertrags-Suites
+sind auf dem Mac Studio grün.
+
+Da der kontrollierte Suchvertrag geändert wurde, wurde der ST-Katalog
+revisionsrichtig von `st-occurrence-full-draft-v0.4` auf `v0.5` und das
+Produktprofil auf `CUSTOMER_CORE_5_V12_ST13_CHIMNEY_HEAD_PRECISION` erhöht.
+Das historische 69er-v0.4-Manifest und sein Overlay bleiben unverändert. Eine
+Mischung aus v0.4- und v0.5-Suchplänen wäre kein ehrlicher kumulativer
+Vergleich.
+
+Commit `425cc032` ergänzt deshalb den privaten Vertrag
+`TARGET_REQUIREMENT_RECALL_AUDIT_V1`. Er bindet den SHA-256 des historischen
+Baseline-Paketvertrags, die zehn Dokument-UUIDs, Seiten, Dokumentartefakte,
+Primary-Manifeste, alten Worksheets, aktuellen Katalog und Release-Commit.
+Er vergleicht alle Requirements pro Dokument und verlangt, dass ausschließlich
+das ausgewählte Requirement abweicht. Der Audit materialisiert weder
+Evidenzwirkung noch Vergleich, Vorteil oder Kundenergebnis.
+
+Realer Mac-Studio-Audit:
+
+```text
+Fachcommit: a56132e350817e31e4012624758aa3c4e57cbac9
+Test-Korrekturcommit: 6a81dced16f402646dc17214321394cf52664674
+Recall-Audit-Commit: 425cc03209991ce013e82f88c475248e9cbb32d2
+Mac-Studio-Worktree: /private/tmp/pv3-validate-425cc032
+Mac-Studio-Fachsuites nach Testkorrektur: 117/117 PASS
+Mac-Studio-Recall-Audit-Suite: 3/3 PASS
+Audit: /private/tmp/pav8-recall-st13-425cc032-6ZvT0F/requirement-recall.private.json
+Dokumente: 10/10
+Physische Seiten: 108
+Paketseiten: A=1 Dokument, B=9 Dokumente
+Rohfundstellen alt -> neu: 1 -> 0
+Einziger Occurrence-Delta: DOC-03/B, exakter alter Span „Kamin“, 1 -> 0
+Andere Requirements je Dokument: unverändert
+Alle aktuellen ST-13-Komponenten: terminaler kontrollierter Nullfund
+Report-Digest: 5467cffe6fd059b3ef61ee95a8352f382b5b9c81ed9b72c7ae468fbc24a947ab
+Datei-SHA-256: 02a3212cd475e7dac3a731ba8c2759db4a6bd6c1904296528e57cfe183c791a5
+```
+
+Bewertung: **Recall-Kandidat bestanden, Vergleichsannahme noch offen.** Der
+gebundene Zehner-Audit beweist den erwarteten eng isolierten Suchdelta. Er
+beweist noch nicht die finale Zeilenentscheidung. Erwartet wird im späteren
+konsistenten v0.5-Vollvergleich `ST-13: UNKLAR -> GLEICHWERTIG` und damit
+Review `65 -> 64`; diese Metrik wird bis dahin nicht als Fakt ausgewiesen.
+
+Separates fachliches Risiko: `ST-13` verwendet weiterhin `ALL` für
+`chimney_head` und `smokestack_head`. Einzelne echte Sätze wie „Kaminköpfe
+sind sturmversichert“ bleiben daher zeilenweit unvollständig. Ob beide Wörter
+regionale Synonyme sind und deshalb ein gemeinsames Objektkonzept oder `ANY`
+benötigen, ist eine eigene Fachentscheidung und wurde nicht mit dem
+lexikalischen Mikrofix vermischt.
