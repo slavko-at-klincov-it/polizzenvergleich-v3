@@ -371,7 +371,12 @@ describe("preparedEvidenceContract", () => {
       },
       scopeLead: { text: "Allmählichkeitsschäden" },
       pageScopeHints: [],
-      sectionScopeHint: inheritedLiabilitySection,
+      sectionScopeHint: {
+        scopeKey: "HAFTPFLICHT_INSURANCE",
+        text: "Entschädigung aus der Haftpflichtversicherung",
+        physicalPageNumber: 20,
+        source: "CURRENT_PAGE_HEADING",
+      },
     };
     const worksheetFor = (occurrences, overrides = {}) => ({
       candidateOnly: true,
@@ -385,8 +390,7 @@ describe("preparedEvidenceContract", () => {
           absenceMeaning: overrides.absenceMeaning || "EXCLUSION",
           components: [
             {
-              id:
-                overrides.componentId || "gradual_or_creeping_exclusion",
+              id: overrides.componentId || "gradual_or_creeping_exclusion",
               label: "Ausschluss allmählicher oder schleichender Einwirkung",
               factRole: overrides.factRole || "EXCLUSION",
               occurrences,
@@ -401,8 +405,7 @@ describe("preparedEvidenceContract", () => {
         documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
         candidateTriage: occurrences.map((occurrence) => ({
           requirementId: overrides.requirementId || "LW-25",
-          componentId:
-            overrides.componentId || "gradual_or_creeping_exclusion",
+          componentId: overrides.componentId || "gradual_or_creeping_exclusion",
           candidateId: occurrence.candidateId,
           binding: "MENTION_ONLY",
         })),
@@ -426,7 +429,7 @@ describe("preparedEvidenceContract", () => {
               decisionOwner: "SERVER",
               decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
               physicalPageNumber: 20,
-              sectionScopeSource: "PRECEDING_PAGE_HEADING",
+              sectionScopeSource: occurrence.sectionScopeHint.source,
               observedScopeKeys: ["HAFTPFLICHT_INSURANCE"],
               scopeProofMode:
                 "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
@@ -442,6 +445,20 @@ describe("preparedEvidenceContract", () => {
         sectionScopeHint: {
           ...inheritedLiabilitySection,
           source: "CURRENT_PAGE_HEADING",
+        },
+      },
+      {
+        ...gradualLiabilityInclusion,
+        sectionScopeHint: {
+          ...gradualLiabilityInclusion.sectionScopeHint,
+          text: "Allgemeine Bedingungen für die Haftpflichtversicherung",
+        },
+      },
+      {
+        ...gradualLiabilityInclusion,
+        sectionScopeHint: {
+          ...gradualLiabilityInclusion.sectionScopeHint,
+          physicalPageNumber: 19,
         },
       },
       {

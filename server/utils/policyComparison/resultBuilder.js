@@ -589,8 +589,9 @@ function deterministicTerminalRejectionAudit({
           DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
         rejection?.decisionOwner !== "SERVER" ||
         rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
-        rejection?.sectionScopeSource !==
-          certifiedTarget.sectionScopeSource ||
+        !certifiedTarget.sectionScopeSources.includes(
+          rejection?.sectionScopeSource
+        ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
         !Array.isArray(rejection?.observedScopeKeys) ||

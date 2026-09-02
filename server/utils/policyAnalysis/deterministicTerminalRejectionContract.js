@@ -29,18 +29,29 @@ const CERTIFIED_TARGETS = Object.freeze({
     factRole: "EXCLUSION",
     absenceMeaning: "EXCLUSION",
     otherScopeKey: "HAFTPFLICHT_INSURANCE",
-    sectionScopeSource: "PRECEDING_PAGE_HEADING",
-    sectionHeadingRule:
-      /\bGeb[aä]ude-\s*und\s+Grundst[uü]ckshaftpflichtversicherung\b/iu,
-    maxInheritedPageDistance: 3,
+    sectionScopeProofs: Object.freeze([
+      Object.freeze({
+        source: "PRECEDING_PAGE_HEADING",
+        headingRule:
+          /\bGeb[aä]ude-\s*und\s+Grundst[uü]ckshaftpflichtversicherung\b/iu,
+        minimumPageDistance: 1,
+        maximumPageDistance: 3,
+      }),
+      Object.freeze({
+        source: "CURRENT_PAGE_HEADING",
+        headingRule:
+          /\bEntsch[aä]digung\s+aus\s+der\s+Haftpflichtversicherung\b/iu,
+        minimumPageDistance: 0,
+        maximumPageDistance: 0,
+      }),
+    ]),
     exactClause:
       /\b(?:Allm[aä]hlichkeitssch[aä]den?|Sch[aä]den\s+durch\s+Langzeiteinwirkung|Langzeitsch[aä]den?|allm[aä]hliche(?:r)?\s+Einwirkung\s+von\s+Feuchtigkeit|schleichende(?:r)?\s+Einwirkung)\b/iu,
     targetCrossReference:
       /\b(?:Leitungswasser(?:versicherung|sch[aä]den?)?|Rohr(?:bruch|gebrechen)|Zu-\s*und\s+Ableitungsrohre?|wasserf[uü]hrende\s+Rohre?|Armaturen?)\b/iu,
     localForeignRule:
       /(?:\bKein\s+Ersatz\s+wird\s+geleistet\b[\s\S]{0,260}\bAu[ßs]enseite\s+des\s+Geb[aä]udes\b|\bAllm[aä]hlichkeitssch[aä]den?\b[\s\S]{0,500}\b(?:AHVB|Schadenersatzverpflichtungen)\b)/iu,
-    scopeProofMode:
-      "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
+    scopeProofMode: "INHERITED_LIABILITY_SECTION_PLUS_LOCAL_FOREIGN_CLAUSE_V1",
   }),
 });
 
@@ -56,8 +67,11 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
     factRole: contract.factRole,
     absenceMeaning: contract.absenceMeaning,
     otherScopeKey: contract.otherScopeKey,
-    sectionScopeSource:
-      contract.sectionScopeSource || "CURRENT_PAGE_HEADING",
+    sectionScopeSources: canonicalStrings(
+      contract.sectionScopeProofs?.map(({ source }) => source) || [
+        contract.sectionScopeSource || "CURRENT_PAGE_HEADING",
+      ]
+    ),
     scopeProofMode: contract.scopeProofMode || null,
   });
 }
@@ -158,7 +172,33 @@ function certifyDeterministicTerminalRejection({
 }) {
   const contract =
     CERTIFIED_TARGETS[targetKey(categoryView, requirement?.id, component?.id)];
-  const sectionScopeSource =
+  const sectionScopeSource = occurrence?.sectionScopeHint?.source || null;
+  const sectionScopeProof = contract?.sectionScopeProofs
+    ? contract.sectionScopeProofs.find(
+        ({ source, headingRule, minimumPageDistance, maximumPageDistance }) => {
+          if (sectionScopeSource !== source) return false;
+          if (
+            !headingRule.test(String(occurrence?.sectionScopeHint?.text || ""))
+          )
+            return false;
+          const occurrencePage =
+            occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+          const sectionPage =
+            occurrence?.sectionScopeHint?.physicalPageNumber || null;
+          if (
+            !Number.isInteger(occurrencePage) ||
+            !Number.isInteger(sectionPage)
+          )
+            return false;
+          const pageDistance = occurrencePage - sectionPage;
+          return (
+            pageDistance >= minimumPageDistance &&
+            pageDistance <= maximumPageDistance
+          );
+        }
+      )
+    : null;
+  const expectedSectionScopeSource =
     contract?.sectionScopeSource || "CURRENT_PAGE_HEADING";
   if (
     !contract ||
@@ -168,7 +208,9 @@ function certifyDeterministicTerminalRejection({
     requirement?.absenceMeaning !== contract.absenceMeaning ||
     deterministicBinding?.binding !== "MENTION_ONLY" ||
     deterministicBinding?.basis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
-    occurrence?.sectionScopeHint?.source !== sectionScopeSource ||
+    (contract.sectionScopeProofs
+      ? !sectionScopeProof
+      : sectionScopeSource !== expectedSectionScopeSource) ||
     occurrence?.sectionScopeHint?.scopeKey !== contract.otherScopeKey ||
     !Array.isArray(occurrence?.pageScopeHints) ||
     (contract.requirePageScopeHint && occurrence.pageScopeHints.length === 0)
@@ -191,11 +233,13 @@ function certifyDeterministicTerminalRejection({
       !contract.localCoverageObject.test(localCoverageText)) ||
     (contract.localForeignRule &&
       !contract.localForeignRule.test(localCoverageText)) ||
-    (contract.sectionHeadingRule &&
+    (!contract.sectionScopeProofs &&
+      contract.sectionHeadingRule &&
       !contract.sectionHeadingRule.test(
         String(occurrence?.sectionScopeHint?.text || "")
       )) ||
-    (contract.maxInheritedPageDistance &&
+    (!contract.sectionScopeProofs &&
+      contract.maxInheritedPageDistance &&
       (!Number.isInteger(sectionPage) ||
         !Number.isInteger(occurrencePage) ||
         occurrencePage <= sectionPage ||
