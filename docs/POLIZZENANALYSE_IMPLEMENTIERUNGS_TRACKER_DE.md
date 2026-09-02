@@ -4426,3 +4426,71 @@ LIMIT: weiterhin 0 Richtungsentscheidungen und 69 Reviewzeilen
 NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
 NEXT: einseitig belegte Inhalte als eigener geprüfter Richtungsvertrag
 ```
+
+## 84. PAV8-03b – qualifizierter einseitiger Einschluss
+
+Geprüfter Gesamtstand `45591f76afce85142d3fc4feaeb31a474559bca1`
+implementiert Schema 10 mit:
+
+```text
+CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION
+PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1
+QUALIFIED_COVERAGE_OVER_ABSENCE_AUDIT_V1
+INCLUDED_OVER_QUALIFIED_ABSENCE_V1
+QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2
+```
+
+Der Vertrag bewertet jede technische Einseitenzeile. Nur eine vollständig
+belegte, reine `ALL`-Coverage aus `INCLUDED`-Komponenten darf gegenüber der
+unter demselben Vertrag vollständig kontrolliert fundlosen Gegenseite einen
+Vorteil erhalten. Scope, Rolle, Quellen, Dokumentstatus/-geltung,
+Komponentenmatrix, Seiten, Bedingungen, Optionalität, Felder und rohe
+Contributor bleiben gebunden. Der Kundentext behauptet auf der Gegenseite
+nur „keine entsprechende Regelung gefunden“, niemals einen ausdrücklichen
+Ausschluss.
+
+Mac-Studio-Prüfung im isolierten Checkout
+`/private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo`:
+
+- Prettier bestanden;
+- 9 Suites / 154 Tests bestanden;
+- Richtungen A/B, Blocker, Manipulation, Kundentext, Dimensionen,
+  Fail-closed und historische Schema-9-Bindung geprüft;
+- Replay auf PAV8-03a: exakt fünf erwartete Outcomeänderungen, 38 Audits,
+  keine Paket-/Roh-/Reviewänderung;
+- Vollrun `PAV8-03B-45591F76-20260902-061200`, 10/10 Dokumente mit je
+  224/224 Zeilen, Paket 224/224, Qwen `qwen/qwen3.6-35b-a3b`, Kontext 42496,
+  Wandzeit `26:42`;
+- Vollrun und Replay: byteidentische Kategorien und zellwertgleiche XLSX;
+  360/360 semantische Dokumentartefakte byteidentisch zu PAV8-03a.
+
+Ergebnis:
+
+```text
+PAV8-03a: 0/0/38/109/0/8/69
+PAV8-03b: 3/2/33/109/0/8/69
+Vorteil A: VS-13, VS-14, EL-25
+Vorteil B: FE-A09, ST-05
+XLSX: nur Q8, Q69, Q88, Q182, Q213 geändert
+Review: 69 -> 69, identische Mitgliedschaft
+```
+
+`VS-16` bleibt getrennt: Der aktuelle Vertrag sperrt `ANY`, weil sichere
+Parkplatzalternativen und eine bedingte Garagenalternative nicht ohne
+eigenen Alternativenvertrag vermischt werden dürfen. Die weiteren 32
+blockierten Einseitenzeilen benötigen Teilkomponenten-, Ausschluss-,
+Kosten-/Deckungs-, Mischdeckungs-, Wert-/Limit- oder Bedingungsverträge.
+
+```text
+Run-Signatur: 03458fce1550cea41c5e20f8a49ececbf85c687307065ad4d5b59beaa239052f
+comparison JSON: a91e9043372807ca6c827a50c88b1eaab3ed7f07455fcafd32cec31fa89c8942
+comparison Markdown: 16ff9e714659df4969b26cf402628f3716132cbe06fb585dae502c914c16221e
+XLSX: 34ae559191b5d9130790ccdc69a84ad0213ed6279d2f2c5f5f0d01b50c3624d9
+PASS: fokussierte Verträge, Replay und vollständiger Mac-Studio-Lauf
+PASS: erstmals fünf sichere Richtungsvorteile ohne Roh-/Reviewdrift
+GO: neue technische Vergleichsbasis
+LIMIT: VS-16 und 32 weitere Einseitenfälle bleiben typisiert blockiert
+LIMIT: 69 Reviewzeilen unverändert
+NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
+NEXT: VS-16 als eigener ANY-Alternativenvertrag; danach typisierte Familien
+```

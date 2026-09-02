@@ -2215,3 +2215,238 @@ Nächster eigenständiger Verhaltensfix ist die sichere Richtungsentscheidung
 für die 38 einseitig dokumentierten Punkte. Er darf nur nach einem eigenen
 versionierten Vertrag, adversarialen Kontrollen, Commit und vollständigem
 Mac-Studio-Lauf erfolgen.
+
+## 21. PAV8-03b – qualifizierter einseitiger Einschluss
+
+### 21.1 Fehlerbild und enge fachliche Aussage
+
+PAV8-03a ließ alle 38 Zeilen mit einem belegten Inhalt auf genau einer Seite
+als `DOKUMENTATIONSUNTERSCHIED` stehen. Die fundlose Gegenseite war in allen
+38 Fällen bereits über jedes bereitgestellte Dokument, jede deklarierte
+Komponente und jede physische Textseite vollständig kontrolliert. Es fehlte
+aber ein eigener Vertrag, der auch die Fundseite komponenten-, rollen-,
+scope-, bedingungs- und provenienzgenau qualifiziert.
+
+PAV8-03b erlaubt jetzt ausschließlich folgende enge Aussage:
+
+- Eine Seite weist jede deklarierte `ALL`-Komponente eines reinen
+  `COVERAGE_ONLY`-Vergleichspunkts vollständig als `INCLUDED` nach.
+- Die andere Seite besitzt unter demselben versionierten Komponenten- und
+  Suchvertrag einen qualifizierten vollständigen Negativsuchbefund.
+- Dann erhält die belegte Seite für genau diesen Vergleichspunkt einen
+  dokumentierten Vorteil.
+- Der Kundentext sagt ausdrücklich, dass auf der Gegenseite keine
+  entsprechende Regelung gefunden wurde und damit kein ausdrücklicher
+  Ausschluss bewiesen ist.
+
+Angebot, Polizze, Rahmenbedingung und Zusatzdokument werden weiterhin als
+Bestandteile der jeweiligen Gebäuderversicherungsposition behandelt. Der
+Dokumenttyp ist kein pauschaler Rangfilter. Status und Geltung bleiben als
+Provenienz erhalten und müssen lediglich ein gültiges Paketmitglied bilden.
+
+### 21.2 Implementierter Vertrag und Abhängigkeiten
+
+Commitkette des geprüften Stands:
+
+```text
+dca1dfb5c754eeea9eb449b82285a955f65e2b69  Grundimplementierung
+bb0277153c9322f9c795a0b8aa3d8cdbf020c536  Auditrekonstruktion korrigiert
+4759758444471b3fd128653736c8fcf4df97d08a  Formatierung
+d9f684fcc8b7e6a042ad3279db202b19ea2d35e5  Fail-closed- und Presenterbindung
+ed1b7cc978e9362226f5f673fbcc471386c80635  Replaywerkzeug
+45591f76afce85142d3fc4feaeb31a474559bca1  geprüfter Gesamtstand
+```
+
+Produktvertrag:
+
+```text
+Schema: 10
+Profil: CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION
+Vergleichsvertrag: PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1
+Audit: QUALIFIED_COVERAGE_OVER_ABSENCE_AUDIT_V1
+Vorteilsregel: INCLUDED_OVER_QUALIFIED_ABSENCE_V1
+Blockierte Regel: QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2
+```
+
+Code- und Datenabhängigkeiten:
+
+- `unilateralCoverageAbsenceContract.js` baut und rekonstruiert den neuen
+  Audit; die qualifizierte Gegenseite verwendet unverändert die gehärtete
+  Seitenprojektion aus `bilateralAbsenceContract.js`.
+- Die Fundseite benötigt `BELEGT`, Deckung `Ja`, vollständige
+  Dokument-mal-Komponenten-Suchmatrix, reine Coverage-Rollen, ausschließlich
+  `INCLUDED`, vollständige Quellenbindung, gültigen Paketstatus, vollständige
+  deklarierte Komponenten sowie keine Bedingung, Ausnahme oder Optionalität.
+- `pointDecision.js` entfernt den alten schwächeren
+  `INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1`-Produktionspfad. Jede der 38
+  Einseitenzeilen erhält entweder einen qualifizierten Vorteil, einen
+  auditierten V2-Dokumentationsunterschied oder bei nicht rekonstruierbarem
+  Audit einen ehrlichen `UNKLAR`-Fail-closed-Ausgang.
+- `customerMetricContract.js` erzwingt für Schema 10 den Audit auf jeder
+  technischen Einseitenzeile, rekonstruiert ihn aus den Paketdaten und den
+  eingebetteten Fundatomen und bindet Outcome, Richtung, Regel, Kundentext
+  und Dimensionsausgabe exakt daran. Schema 9 bleibt an sein historisches
+  Profil gebunden.
+- `customerResultPresenter.js` lässt ausschließlich die versionierten neuen
+  Regeln zu. `resultBuilder.js` und `productContract.js` heben Ergebnis und
+  Profil gemeinsam auf Version 10.
+- `materializeStoredComparisonReplay.js` materialisiert gespeicherte
+  Dokumentartefakte erneut, ohne sie zu verändern. So kann eine reine
+  Vergleichsregel vor einem weiteren Modelllauf deterministisch geprüft
+  werden.
+
+### 21.3 Freigegebene und blockierte Varianten
+
+Der deterministische Replay und der Vollrun geben exakt fünf Zeilen frei:
+
+| ID | Ergebnis | belegte Komponente | enge Grenze |
+| --- | --- | --- | --- |
+| `VS-13` | Vorteil A | Wohnungsinnenausbau | reines `INSURED_OBJECT`, allgemeiner Scope |
+| `VS-14` | Vorteil A | Sonderausstattung einzelner Wohnungen | reines `INSURED_OBJECT`, allgemeiner Scope |
+| `FE-A09` | Vorteil B | Verpuffung an Heiz-, Gas- oder Feuerungsanlagen | reines `PERIL`, allgemeiner Scope |
+| `ST-05` | Vorteil B | optische Beeinträchtigung **und** Hagel | beide `ALL`-Komponenten gemeinsam; kein Limitvergleich |
+| `EL-25` | Vorteil A | Vandalismus ohne Einbruch | nur belegter enger Scope; kein allgemeinerer Schutz behauptet |
+
+Die übrigen 33 Einseitenzeilen bleiben Dokumentationsunterschiede und tragen
+konkrete Blockiercodes. Davon sind zehn `COVERAGE_ONLY`-Fälle:
+
+- `VS-16`: `ANY`-Vertrag; sichere Parkplatzalternativen und bedingte
+  Garagenalternative dürfen in diesem ersten `ALL`-Vertrag nicht vermischt
+  oder selektiv herausgepickt werden;
+- `VS-17`, `LW-14`, `EL-20`, `EL-34`: fehlende Teilkomponenten,
+  nicht definitive Wirkung oder zusätzlich ungeklärter Dokumentrang;
+- `FE-A08`: belegte Wirkung ist `EXCLUDED`, nicht positiver Einschluss;
+- `ST-29`, `EL-28`, `EL-29`: Bedingungs-, Ausnahme- oder
+  Subsidiaritätsbindung;
+- `EL-15`: gemischte Wirkungen `INCLUDED` und `EXCLUDED`.
+
+Weitere 23 Zeilen benötigen eigene typisierte Folgeverträge und dürfen nicht
+über den allgemeinen Einschlusspfad entschieden werden:
+
+- Ausschluss: `FE-A02`, `FE-B02`, `FE-B11`, `FE-B12`;
+- Kosten/Deckung: `VS-32`, `FE-D10`, `LW-09`;
+- gemischte Deckung: `FE-C08`, `LW-01`, `LW-02`, `LW-03`, `LW-04`,
+  `ST-11`, `EL-23`, `EL-26`;
+- Wert/Limit: `FE-F02`, `FE-F03`, `LW-31`, `ST-34`, `EL-01`, `EL-18`;
+- Bedingung: `ST-02`, `EL-03`.
+
+`VS-16` bleibt bewusst der nächste getrennte Kandidat. Zwei unabhängige
+Audits kamen zur selben Rohdatenlage, aber zu unterschiedlichen
+Freigabegrenzen: einmal vollständige Sperre wegen `ANY`, einmal mögliche
+Freigabe ausschließlich über die sicheren Alternativen `underground_garage`
+und `parking_space`. Ohne eigenen `ANY`-Vertrag wird keine der beiden
+Interpretationen in den sicheren Kern aufgenommen.
+
+### 21.4 Mac-Studio-Prüfung und deterministischer Replay
+
+Isolierter Checkout:
+`/private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo`, final exakt auf Commit
+`45591f76afce85142d3fc4feaeb31a474559bca1`, Node `22.23.2` für den
+Produktlauf.
+
+- Prettier: bestanden;
+- 9 fokussierte Suites: bestanden;
+- 154/154 Tests: bestanden;
+- positive Richtung A und B: bestanden;
+- `ANY`, unvollständige gemeinsame Audits, inaktive oder widersprüchliche
+  Rohbeiträge: fail-closed;
+- fehlende, manipulierte oder richtungsverkehrte Audits: abgelehnt;
+- manipulierter Kundentext oder manipulierte Dimensionen: abgelehnt;
+- historische Schema-9-Profilbindung: erhalten.
+
+Ein erster Teststand hatte 149/154 grüne Tests. Die fünf Abweichungen waren
+alte Erwartungen, die unvollständige synthetische Einseitenlagen noch als
+Dokumentationsunterschied zuließen. Der gehärtete Vertrag verlangt in diesem
+Fall jetzt korrekt `UNKLAR`; erst ein vollständig rekonstruierter Audit darf
+Vorteil oder V2-Dokumentationsunterschied liefern.
+
+Replay auf den unveränderten PAV8-03a-Dokumentartefakten:
+
+```text
+Run: PAV8-03B-REPLAY-45591F76-20260902-060000
+Ergebnis: 3/2/33/109/0/8/69
+Geänderte Punktentscheidungen: 38
+Geänderte Outcomes: 5
+Paket-A/B-Änderungen: 0
+Technische Altentscheidungen: 0
+Einseitige Audits: 38, davon freigegeben: 5
+XLSX-Zelländerungen: Q8, Q69, Q88, Q182, Q213
+```
+
+### 21.5 Vollrun, exaktes Delta und Entscheidung
+
+Zwei Operatorstarts endeten nachweislich vor jedem fachlichen Modellaufruf:
+
+- `PAV8-03B-45591F76-20260902-061000`: Shell-Quoting-Fehler vor Anlage eines
+  Dokumentlaufs;
+- `PAV8-03B-45591F76-20260902-061100`: fehlender isolierter
+  Collector-Dependency-Link beim PDF-Loader, vor Dokumentanalyse.
+
+Beide sind in eigenen Operatorprotokollen als Preflightfehler markiert. Der
+erfolgreiche getrennte Vollrun:
+
+```text
+Run: PAV8-03B-45591F76-20260902-061200
+Commit: 45591f76afce85142d3fc4feaeb31a474559bca1
+Checkout: /private/tmp/pv3-pav8-03b-dca1dfb5-7sIPQu/repo
+Node: 22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start UTC: 2026-09-02T04:00:58Z
+Ende UTC: 2026-09-02T04:27:40Z
+Wandzeit: 26:42
+Dokumente: 10/10, jeweils 224/224 Zeilen
+Paket: 224/224 Zeilen
+Metrik: 3/2/33/109/0/8/69
+Kundenreview: 69; ohne Kundenreview: 155
+```
+
+Gegen PAV8-03a:
+
+- genau fünf Outcomes wechseln
+  `DOKUMENTATIONSUNTERSCHIED -> VORTEIL_A/B`;
+- genau 38 Punktentscheidungen ändern sich, weil alle Einseitenfälle nun
+  ihren positiven oder blockierten Audit tragen;
+- Paket A/B, technische Altentscheidungen und Reviewmitgliedschaft bleiben
+  exakt unverändert;
+- 360/360 geprüfte semantische Dokumentartefakte sind byteidentisch;
+- Vollrun und Replay besitzen byteidentische `categories` und exakt gleiche
+  XLSX-Zellwerte;
+- gegen PAV8-03a ändern sich ausschließlich die fünf Zellen `Q8`, `Q69`,
+  `Q88`, `Q182`, `Q213`; Zeilenhöhen und Spaltenbreiten bleiben gleich;
+- das dauerhafte Log enthält 932 Zeilen, 10 Dokumentstarts, 10 Abschlüsse,
+  eine bekannte nicht fatale PDF-Warnung und keinen Fehler;
+- Laufzeit `26:42`: 10 Sekunden schneller als PAV8-03a und 5 Sekunden
+  schneller als der historische `26:47`-Favorit; nicht signifikant.
+
+```text
+Inputmanifest: 50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Run-Signatur: 03458fce1550cea41c5e20f8a49ececbf85c687307065ad4d5b59beaa239052f
+full-run.log: d4a6874afbf0e46369b59a0fda629116e0f68d9594cb6333318447dba13b5e2d
+package-contract: 17a0ae3ac0c6b4946791cb656064fdd3f9959f2a04f637f8aeeedda4fe68c2c9
+package-report: 2e846e564e594c3d21191878359a7521c568192da5e1e2ffffb31776c10f03eb
+comparison JSON: a91e9043372807ca6c827a50c88b1eaab3ed7f07455fcafd32cec31fa89c8942
+comparison Markdown: 16ff9e714659df4969b26cf402628f3716132cbe06fb585dae502c914c16221e
+XLSX: 34ae559191b5d9130790ccdc69a84ad0213ed6279d2f2c5f5f0d01b50c3624d9
+```
+
+PAV8-03b ist **GO als neue technische Vergleichsbasis**: Zum ersten Mal
+werden eng belegte einseitige Deckungen als Vorteile ausgegeben, ohne Suche,
+Rohdaten, Paketfakten oder Reviewmenge zu verändern. Es ist kein Deployment
+und kein allgemeiner Zuverlässigkeitsnachweis.
+
+Offene Härtungsgrenzen vor einer Releasefreigabe:
+
+- Die fundlosen Rohatome werden beim Datei-Replay nicht doppelt im neuen
+  Audit persistiert; die vollständige Paket-Suchmatrix wird rekonstruiert,
+  während die Rohatomprüfung beim ursprünglichen Build stattfindet.
+- Ein vollständig kohärent manipuliertes privates Ergebnis könnte den
+  reduzierten Requirement-Digest und `COVERAGE_ONLY` gemeinsam verändern.
+  Paketvertrag und Artefakthashes erkennen normale Änderungen; für maximale
+  Dateiselbstprüfung sollte ein späterer Validator zusätzlich gegen den
+  vertrauenswürdigen Katalogvertrag binden.
+- `VS-16`, Ausschlüsse, gemischte Deckung, Kosten, Werte, Limits und
+  Bedingungen benötigen getrennte, typisierte Verträge.
+- 69 Zeilen bleiben unverändert reviewpflichtig.
+- Der installierte Kundencheckout blieb sauber und unverändert auf
+  `c7d3b16d400ea4d65b558ef091781da5df82d610`; kein Deployment.
