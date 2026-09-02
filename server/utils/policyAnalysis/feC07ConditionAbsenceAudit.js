@@ -41,8 +41,10 @@ function exactSourceUnit(occurrence) {
     occurrenceStart < documentStart ||
     occurrenceEnd > documentEnd ||
     occurrenceEnd !== occurrenceStart + occurrenceExactText.length ||
-    text.slice(occurrenceStart - documentStart, occurrenceEnd - documentStart) !==
-      occurrenceExactText ||
+    text.slice(
+      occurrenceStart - documentStart,
+      occurrenceEnd - documentStart
+    ) !== occurrenceExactText ||
     !SCOPED_OBJECT.test(occurrenceExactText)
   )
     return null;
