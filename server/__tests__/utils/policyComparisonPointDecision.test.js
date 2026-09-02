@@ -1102,8 +1102,7 @@ describe("policy comparison point decision", () => {
         physicalPageNumber: 3,
         sectionScopeSource: "CURRENT_PAGE_HEADING",
         observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
-        scopeProofMode:
-          "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
+        scopeProofMode: "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
       };
       const terminalRejectionAudit = riskInformation
         ? {

@@ -84,8 +84,7 @@ const NON_CONTRACTUAL_RISK_INFORMATION_TARGETS = Object.freeze({
       /(?:\b(?:HQ\s*\d+|HORA|ausgeschlossen|nicht\s+(?:mit)?versichert|kein\s+Versicherungsschutz|(?:mit)?versichert|eingeschlossen|mitgedeckt|gedeckt|Zuschlag|Pr[aä]mienzuschlag|Mehrpr[aä]mie|Pr[aä]mie|Beitrag|Selbstbehalt|Versicherungssumme|H[oö]chstentsch[aä]digung|Entsch[aä]digungsleistung|Entsch[aä]digungsgrenze|Sublimit|Limit|Deckung|Bedingung|wenn|sofern|vorausgesetzt|maximal|h[oö]chstens|bis\s+zu)\b|(?:EUR|€|\d\s*%))/iu,
     underwritingWorkflowRule:
       /\b(?:Annahme|Einzelpr[uü]fung|R[uü]cksprache|Risikopr[uü]fung|Freigabe|Zeichnung|Tarifierung|Vorbehalt|Sondervereinbarung)\b/iu,
-    scopeProofMode:
-      "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
+    scopeProofMode: "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2",
   }),
 });
 
@@ -469,8 +468,7 @@ function certifyNonContractualRiskInformationTerminalRejection({
     contract.contractualConsequenceRule.test(localText) ||
     contract.underwritingWorkflowRule.test(localText) ||
     !validFollowingStructuralBoundaryProof(occurrence) ||
-    followingProof?.kind ===
-      FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT ||
+    followingProof?.kind === FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT ||
     contract.contractualConsequenceRule.test(unownedFollowingText) ||
     contract.underwritingWorkflowRule.test(unownedFollowingText) ||
     String(occurrence?.candidateId || "").length === 0

@@ -575,8 +575,7 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
       source: "CURRENT_PAGE_HEADING",
     },
   };
-  const scopeProofMode =
-    "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2";
+  const scopeProofMode = "CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2";
   const serverRejectedCandidates = riskInformation
     ? [
         {
