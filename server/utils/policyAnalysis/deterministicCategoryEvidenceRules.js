@@ -1318,6 +1318,65 @@ function objectClassificationPreparedDecision(target) {
     : null;
 }
 
+function lw25GradualDamageInclusionPreparedDecision(target) {
+  const isTarget =
+    target?.categoryView === "LW" &&
+    target?.requirementId === "LW-25" &&
+    target?.componentId === "gradual_or_creeping_exclusion" &&
+    target?.factRole === "EXCLUSION";
+  if (!isTarget) return undefined;
+  if (
+    !Array.isArray(target.candidates) ||
+    target.candidates.length === 0 ||
+    (target.unresolvedCandidateIds || []).length > 0 ||
+    target.candidates.some(
+      ({ candidateBinding, deterministicBindingBasis, contextUnitType }) =>
+        candidateBinding !== DETERMINISTIC_BINDING.DIRECT ||
+        deterministicBindingBasis !==
+          "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE" ||
+        contextUnitType !== "PARAGRAPH"
+    )
+  )
+    return null;
+
+  const clauseKeys = new Set(
+    target.candidates.map(({ contextDocumentStart, contextText }) =>
+      JSON.stringify([contextDocumentStart, String(contextText || "")])
+    )
+  );
+  if (clauseKeys.size !== 1) return null;
+  const clause = String(target.candidates[0].contextText || "");
+  const exactTexts = target.candidates.map(({ exactText }) =>
+    String(exactText || "")
+  );
+  const hasBothRequiredAtoms =
+    exactTexts.some((text) => /^Allm[aä]hlichkeitssch[aä]den$/iu.test(text)) &&
+    exactTexts.some((text) =>
+      /^Sch[aä]den\s+durch\s+Langzeiteinwirkung$/iu.test(text)
+    );
+  const hasExactPositiveRule =
+    /\bAllm[aä]hlichkeitssch[aä]den\b\s+und\s+\bSch[aä]den\s+durch\s+Langzeiteinwirkung\b\s+sind\s+(?:generell\s+)?mitversichert\b/iu.test(
+      clause
+    );
+  const hasFailClosedQualifier =
+    /\b(?:nicht|kein(?:e|en|er|es)?|keinesfalls|ausgeschlossen|au[ßs]er|ausgenommen|sofern|soweit|wenn|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|auf\s+Wunsch|gegen\s+(?:Mehrpr[aä]mie|Mehrbeitrag|Zuschlag)|nur\s+(?:wenn|bei)|unter\s+der\s+Bedingung|es\s+sei\s+denn|gesondert(?:e|en|er|es)?\s+Vereinbarung|besonder(?:e|en|er|es)?\s+Vereinbarung|ausdr[uü]cklich(?:e|en|er|es)?\s+Vereinbarung)\b/iu.test(
+      clause
+    ) ||
+    /\bkann\b[\s\S]{0,120}\b(?:mitversichert|eingeschlossen)\s+werden\b/iu.test(
+      clause
+    );
+  if (!hasBothRequiredAtoms || !hasExactPositiveRule || hasFailClosedQualifier)
+    return null;
+
+  return {
+    selectedCandidateIds: target.candidates.map(
+      ({ candidateId }) => candidateId
+    ),
+    coverageEffect: COVERAGE_EFFECT.INCLUDED,
+    basis: "LW25_EXPLICIT_GRADUAL_DAMAGE_INCLUSION_V1:LW:LW-25",
+  };
+}
+
 /**
  * Creates a server-terminal decision only when every surviving candidate has
  * an explicit clause governor and all candidates agree on one effect.
@@ -1341,6 +1400,8 @@ function deterministicCategoryPreparedDecision(target) {
   }
   if (!Array.isArray(target?.candidates) || target.candidates.length === 0)
     return null;
+  const lw25Decision = lw25GradualDamageInclusionPreparedDecision(target);
+  if (lw25Decision !== undefined) return lw25Decision;
   if (
     target.categoryView === "EL" &&
     target.requirementId === "EL-12" &&

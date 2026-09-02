@@ -904,6 +904,115 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("certifies the complete unconditional LW-25 inclusion clause", () => {
+    const contextText = [
+      "LW01 Allmählichkeitsschäden",
+      "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind generell mitversichert",
+      '(z.B. Montageklammer in der Leitung und über längerem Zeitraum "tropft" es ins Mauerwerk).',
+    ].join("\n");
+    const candidates = [
+      ["heading", "Allmählichkeitsschäden", 0],
+      ["body", "Allmählichkeitsschäden", 1],
+      ["long-term", "Schäden durch Langzeiteinwirkung", 0],
+    ].map(([id, exactText, occurrenceIndex]) => {
+      let documentStart = 4_000 - 1;
+      for (let index = 0; index <= occurrenceIndex; index += 1)
+        documentStart =
+          contextText.indexOf(exactText, documentStart - 4_000 + 1) + 4_000;
+      return {
+        candidateId: `candidate:lw25:${id}`,
+        candidateBinding: "DIRECT",
+        deterministicBindingBasis:
+          "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+        exactText,
+        contextUnitType: "PARAGRAPH",
+        contextText,
+        contextDocumentStart: 4_000,
+        documentStart,
+        scopeLeadText: "B4 Leitungswasserversicherung (LW)",
+      };
+    });
+    const target = {
+      categoryView: "LW",
+      requirementId: "LW-25",
+      componentId: "gradual_or_creeping_exclusion",
+      factRole: "EXCLUSION",
+      unresolvedCandidateIds: [],
+      candidates,
+    };
+
+    expect(deterministicCategoryPreparedDecision(target)).toEqual({
+      selectedCandidateIds: candidates.map(({ candidateId }) => candidateId),
+      coverageEffect: "INCLUDED",
+      basis: "LW25_EXPLICIT_GRADUAL_DAMAGE_INCLUSION_V1:LW:LW-25",
+    });
+  });
+
+  test.each([
+    "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind nicht mitversichert.",
+    "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind sofern vereinbart mitversichert.",
+    "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind optional mitversichert.",
+    "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind gegen Mehrprämie mitversichert.",
+    "Allmählichkeitsschäden sind generell mitversichert.",
+  ])("keeps the unsafe LW-25 wording model-owned: %s", (contextText) => {
+    const candidates = [
+      "Allmählichkeitsschäden",
+      "Schäden durch Langzeiteinwirkung",
+    ]
+      .filter((exactText) => contextText.includes(exactText))
+      .map((exactText, index) => ({
+        candidateId: `candidate:lw25:unsafe:${index}`,
+        candidateBinding: "DIRECT",
+        deterministicBindingBasis:
+          "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+        exactText,
+        contextUnitType: "PARAGRAPH",
+        contextText,
+        contextDocumentStart: 5_000,
+        documentStart: 5_000 + contextText.indexOf(exactText),
+      }));
+
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "LW",
+        requirementId: "LW-25",
+        componentId: "gradual_or_creeping_exclusion",
+        factRole: "EXCLUSION",
+        unresolvedCandidateIds: [],
+        candidates,
+      })
+    ).toBeNull();
+  });
+
+  test("keeps split or mixed LW-25 candidate clusters model-owned", () => {
+    const contextText =
+      "Allmählichkeitsschäden und Schäden durch Langzeiteinwirkung sind generell mitversichert.";
+    const candidates = [
+      "Allmählichkeitsschäden",
+      "Schäden durch Langzeiteinwirkung",
+    ].map((exactText, index) => ({
+      candidateId: `candidate:lw25:split:${index}`,
+      candidateBinding: "DIRECT",
+      deterministicBindingBasis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      exactText,
+      contextUnitType: "PARAGRAPH",
+      contextText,
+      contextDocumentStart: 6_000 + index,
+      documentStart: 6_000 + contextText.indexOf(exactText),
+    }));
+
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "LW",
+        requirementId: "LW-25",
+        componentId: "gradual_or_creeping_exclusion",
+        factRole: "EXCLUSION",
+        unresolvedCandidateIds: [],
+        candidates,
+      })
+    ).toBeNull();
+  });
+
   test("creates a terminal excluded result for basement contents named after exklusive", () => {
     const contextText =
       "Keller- und andere Abstellabteile oder Boxen samt dazugehörigen Türen, jedoch exklusive deren Inhalt.";
