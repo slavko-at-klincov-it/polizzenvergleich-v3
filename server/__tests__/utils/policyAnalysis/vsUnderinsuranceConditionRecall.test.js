@@ -33,7 +33,7 @@ function component(worksheet) {
 }
 
 describe("VS-08 percentage-deviation condition recall", () => {
-  test.each(["10 %", "25,5 %"]) (
+  test.each(["10 %", "25,5 %"])(
     "finds a source-bound waiver threshold with %s deviation",
     (threshold) => {
       const worksheet = worksheetFor(

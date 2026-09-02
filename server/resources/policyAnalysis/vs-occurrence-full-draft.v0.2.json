@@ -177,10 +177,7 @@
                 { "prefixes": ["verzicht"] },
                 { "prefixes": ["unterversicher"] },
                 {
-                  "prefixes": [
-                    "versicherungssumm",
-                    "hoechsthaftungssumm"
-                  ]
+                  "prefixes": ["versicherungssumm", "hoechsthaftungssumm"]
                 },
                 { "prefixes": ["versicherungswert"] },
                 { "prefixes": ["abweich"] }
