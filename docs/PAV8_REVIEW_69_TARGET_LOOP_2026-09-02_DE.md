@@ -1478,3 +1478,82 @@ konsistenten Vollvergleich
 Gesamtmetrik wird bis zum echten Vollvergleich nicht als gemessene
 Produktionszahl ausgewiesen. Das installierte Kundensystem blieb unverändert;
 es gab kein Deployment.
+
+#### 10.10a Forward-Fix: Folgegrenze vollständig provenance-gebunden
+
+Die unabhängige Nachprüfung des ersten EL-12-Terminalvertrags zeigte eine
+Restlücke: Der lokale Listenblock war zwar digestgebunden, der unmittelbar
+folgende Absatz beziehungsweise die nächste physische Seite aber noch nicht.
+Damit konnte V1 nicht beweisen, dass eine Vertragsfolge außerhalb des kleinen
+Kontextfensters fehlte. Die Korrektur erfolgte ohne globale Aktivierung:
+
+- `1e2826e0`, `66a5d4ac`, `864e44e2`, `21853e07`: generischer, aber je
+  Komponente opt-in-pflichtiger Strukturgrenzbeweis;
+- `7e1583a7`, `24576848`, `c364c3b2`: Behebung und adversariale Absicherung
+  einer dabei sichtbar gewordenen Regex-Laufzeitfalle auf langen
+  PDF-Leerraumzeilen;
+- `8b4154c5`, `ddd51705`: strukturelle Fundkontexte enden an bereits
+  erkannten Abschnitts- und Deckungsgrenzen; generische
+  Versicherungsüberschriften bleiben strikt zeilengebunden;
+- `4a38ae91`, `48206de6`, `3c05eb11`: EL-12 optiert als einzige neue
+  Katalogkomponente ein. Neue Writes verwenden
+  `DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2` und
+  `CURRENT_RISK_INFORMATION_WITH_STRUCTURAL_BOUNDARY_V2`;
+- `821e0b01`, `a697bf83`, `75a68050`, `13edcb34`: historische V1-Audits
+  bleiben ausschließlich zusammen mit ihrem alten EL-Katalog v0.7 lesbar.
+  Sie können nicht als neuer v0.8/V2-Nachweis ausgegeben oder unter einem
+  aktuellen Suchplan umgedeutet werden.
+
+V2 akzeptiert den Risikoinformationsblock nur bei gültiger vollständiger
+Folgegrenze. `TOO_DISTANT`, unvollständige Provenienz, manipulierte Offsets,
+eine folgende ungebundene Vertragsfolge sowie Wörter wie `Annahme`,
+`Einzelprüfung`, `Rücksprache`, `Zuschlag`, `Selbstbehalt` oder `Limit` führen
+fail-closed zurück in den normalen Kandidatenweg. Eine neue eindeutig
+erkannte Abschnitts- oder Deckungsüberschrift bildet dagegen eine echte
+Grenze und wird nicht dem vorherigen Risikoinformationsblock zugerechnet.
+
+Mac-Studio-Nachweise:
+
+```text
+Infrastruktur-HEAD: ddd51705
+Worktree: /private/tmp/pv3-validate-ddd51705
+Worksheet-, Triage- und Produktvertrag: 136/136 PASS
+
+EL-12-HEAD: 3c05eb11
+Worktree: /private/tmp/pv3-validate-3c05eb11
+EL-12-, Prepared-, Vergleichs-, Renderer- und Produkt-Suites: 243/243 PASS
+
+Historische Lesekompatibilität-HEAD: 13edcb34
+Worktree: /private/tmp/pv3-validate-13edcb34
+Point-Decision und Result-Builder: 84/84 PASS
+```
+
+Der reale Neuaufbau ausschließlich der EL-12-Komponente aus den gespeicherten
+PageMap-Quelldokumenten aller zehn Paketdokumente ergab auf `3c05eb11`:
+
+```text
+Katalog: el-occurrence-full-draft-v0.8
+Probe-Digest:
+65b37f9555b3577e584f4d0e51206caf0b751f25810df9f9b9f798b4b16cf5ef
+
+DOC-01 / Seite 10:
+1 echte HQ30-Vertragsbedingung, 1 Kandidat, 0 Rejects, 0 ungelöst.
+
+DOC-02 / Seite 3 -> Seite 4:
+1 Risikoinformationsblock, Folgegrenze `Mitversichert gelten`,
+0 Kandidaten, 1 servereigener V2-Reject, 0 ungelöst.
+Occurrence-Digest:
+a2aecbbaf11f1950e7300ca2bcba2e6911fbcbab12da7aa68d3359ee2dda636f
+
+DOC-03 bis DOC-10:
+0 Occurrences, 0 Kandidaten, 0 Rejects, 0 ungelöst.
+```
+
+Damit ist die EL-12-Such- und Terminalursache komponentengenau geschlossen.
+Noch nicht gemessen ist die neue 224-Zeilen-Gesamtmetrik; nach der vereinbarten
+Arbeitsweise folgt der Vollvergleich erst nach Abschluss der gezielten
+Fehlerfamilien. Die spätere Ergebnisregel muss zusätzlich die vom Auftraggeber
+gewünschte Richtung für `Vertragsbedingung auf A / kontrollierter Nichtfund auf
+B` explizit abbilden; dieser Forward-Fix erfindet diese Vergleichswertung nicht
+innerhalb des Suchvertrags. Das installierte Kundensystem blieb unverändert;
+es gab kein Deployment.
