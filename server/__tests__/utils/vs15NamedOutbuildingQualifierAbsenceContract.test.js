@@ -7,9 +7,7 @@ const {
   validateVs15QualifierAbsenceAudit,
   vs15QualifierAbsenceDecision,
 } = require("../../utils/policyComparison/vs15NamedOutbuildingQualifierAbsenceContract");
-const {
-  decidePoint,
-} = require("../../utils/policyComparison/pointDecision");
+const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const CATEGORY_ID = "VS-15";
