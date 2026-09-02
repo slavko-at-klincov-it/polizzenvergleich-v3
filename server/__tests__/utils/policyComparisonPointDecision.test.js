@@ -2,6 +2,9 @@ const {
   POINT_OUTCOME,
   decidePoint,
 } = require("../../utils/policyComparison/pointDecision");
+const {
+  terminalRejectionSetDigest,
+} = require("../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
 const SOLE_SCOPE_REQUIREMENT_DIGEST = "f".repeat(64);
@@ -700,6 +703,140 @@ describe("policy comparison point decision", () => {
       "weder einen ausdrücklichen Ausschluss noch eine inhaltlich identische Deckung"
     );
     expect(result.bilateralAbsenceAudit.sides).toHaveLength(2);
+  });
+
+  test("accepts an honest FE-B13 foreign-category terminal proof without rewriting it as zero occurrences", () => {
+    const component = {
+      id: "pre_inception_damage_exclusion",
+      factRole: "EXCLUSION",
+    };
+    const requirementContract = {
+      digest: "d".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const absence = (side, { foreignRejection = false } = {}) => {
+      const documentUuid = `fe-b13-${side}`;
+      const searchPlanId = `fixture/FE-B13/${component.id}`;
+      const rejection = {
+        candidateId: `candidate:foreign-${side}`,
+        decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+        occurrenceDigestSha256: "1".repeat(64),
+        physicalPageNumber: 2,
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["LEITUNGSWASSER_INSURANCE"],
+      };
+      const terminalRejectionAudit = foreignRejection
+        ? {
+            schemaVersion: 1,
+            contractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+            requirementId: "FE-B13",
+            componentId: component.id,
+            decisionOwner: "SERVER",
+            decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+            proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+            rejectedOccurrenceCount: 1,
+            rejectedCandidateIds: [rejection.candidateId],
+            rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+            rejections: [rejection],
+          }
+        : null;
+      const searchAudit = {
+        disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+        absenceMeaning: "EXCLUSION",
+        comparisonPolicy: null,
+        absenceCertification: null,
+        requirementContract,
+        searchPlanId,
+        documentUuid,
+        catalogId: "fixture",
+        physicalPagesChecked: 3,
+        totalPhysicalPages: 3,
+        aliases: ["vor Beginn des Versicherungsschutzes"],
+        conceptSearchIds: [],
+        ...(terminalRejectionAudit ? { terminalRejectionAudit } : {}),
+        gates: {
+          negativeSearchApproved: true,
+          certifiedNegativeSearch: false,
+          completeTextExtraction: true,
+          completeCategoryTechnicalContract: true,
+          zeroOccurrenceTerminal: !foreignRejection,
+          zeroCandidateTerminal: !foreignRejection,
+          serverNegativeTerminal: true,
+          ...(foreignRejection
+            ? { deterministicOutOfCategoryTerminal: true }
+            : {}),
+        },
+      };
+      return {
+        summary: packageSummary({
+          evidenceFound: false,
+          facts: [],
+          reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+          searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          requirementContract,
+          searchAudit: {
+            disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+            comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+            documentCount: 1,
+            documentUuids: [documentUuid],
+            physicalPagesChecked: 3,
+            searchPlanIds: [searchPlanId],
+            requirementContract,
+            components: [searchAudit],
+          },
+        }),
+        atom: atom(side, {
+          requirementId: "FE-B13",
+          componentId: component.id,
+          componentLabel: "Ausschluss vorvertraglicher Schäden",
+          factRole: component.factRole,
+          documentUuids: [documentUuid],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          requestedFields: [],
+          optionalFields: [],
+          componentSatisfactionPolicy: "ALL",
+          requirementContractDigest: requirementContract.digest,
+          declaredComponents: requirementContract.components,
+          fields: [],
+          sources: [],
+          searchAudit,
+        }),
+      };
+    };
+    const zero = absence("a");
+    const foreign = absence("b", { foreignRejection: true });
+    const decideAbsence = () =>
+      decidePoint({
+        categoryId: "FE-B13",
+        packageA: zero.summary,
+        packageB: foreign.summary,
+        atomsA: [zero.atom],
+        atomsB: [foreign.atom],
+      });
+
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+      reviewRequired: false,
+    });
+    foreign.summary.searchAudit.components[0].terminalRejectionAudit.rejectionDigestSha256 =
+      "2".repeat(64);
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
   });
 
   test("keeps a multi-document bilateral absence audit stable under input permutations", () => {

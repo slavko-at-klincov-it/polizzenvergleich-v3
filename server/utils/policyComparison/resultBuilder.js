@@ -16,6 +16,11 @@ const {
 const {
   requirementSearchContractDigest,
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
+const {
+  DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  terminalOccurrenceDigest,
+  terminalRejectionSetDigest,
+} = require("../policyAnalysis/deterministicTerminalRejectionContract");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
 const CONDITION_CONTEXT_RADIUS = 240;
@@ -537,6 +542,93 @@ function completeCategoryTechnicalContract({
   );
 }
 
+function deterministicTerminalRejectionAudit({
+  requirement,
+  component,
+  target,
+}) {
+  const occurrences = component?.occurrences;
+  const rejections = target?.serverRejectedCandidates;
+  if (
+    !Array.isArray(occurrences) ||
+    occurrences.length === 0 ||
+    component?.occurrenceCount !== occurrences.length ||
+    !Array.isArray(target?.candidates) ||
+    target.candidates.length !== 0 ||
+    !Array.isArray(target?.unresolvedCandidateIds) ||
+    target.unresolvedCandidateIds.length !== 0 ||
+    !Array.isArray(rejections) ||
+    rejections.length !== occurrences.length
+  )
+    return null;
+
+  const occurrenceIds = [
+    ...new Set(occurrences.map(({ candidateId }) => candidateId)),
+  ].sort();
+  const rejectionIds = [
+    ...new Set(rejections.map(({ candidateId }) => candidateId)),
+  ].sort();
+  const occurrenceById = new Map(
+    occurrences.map((occurrence) => [occurrence.candidateId, occurrence])
+  );
+  if (
+    occurrenceIds.length !== occurrences.length ||
+    rejectionIds.length !== rejections.length ||
+    JSON.stringify(occurrenceIds) !== JSON.stringify(rejectionIds) ||
+    rejections.some(
+      (rejection) =>
+        rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
+        rejection?.terminalRejectionContractId !==
+          DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
+        rejection?.decisionOwner !== "SERVER" ||
+        rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+        rejection?.sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        !Number.isInteger(rejection?.physicalPageNumber) ||
+        rejection.physicalPageNumber < 1 ||
+        !Array.isArray(rejection?.observedScopeKeys) ||
+        rejection.observedScopeKeys.length !== 1 ||
+        !String(rejection.observedScopeKeys[0] || "").endsWith("_INSURANCE") ||
+        rejection?.occurrenceDigestSha256 !==
+          terminalOccurrenceDigest(occurrenceById.get(rejection?.candidateId))
+    )
+  )
+    return null;
+
+  return {
+    schemaVersion: 1,
+    contractId: DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+    requirementId: requirement?.id || null,
+    componentId: component?.id || null,
+    decisionOwner: "SERVER",
+    decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+    rejectedOccurrenceCount: rejections.length,
+    rejectedCandidateIds: rejectionIds,
+    rejectionDigestSha256: terminalRejectionSetDigest(rejections),
+    rejections: rejections
+      .map(
+        ({
+          candidateId,
+          decisionBasis,
+          occurrenceDigestSha256,
+          physicalPageNumber,
+          sectionScopeSource,
+          observedScopeKeys,
+        }) => ({
+          candidateId,
+          decisionBasis,
+          occurrenceDigestSha256,
+          physicalPageNumber,
+          sectionScopeSource,
+          observedScopeKeys,
+        })
+      )
+      .sort((left, right) =>
+        left.candidateId.localeCompare(right.candidateId, "de-AT")
+      ),
+  };
+}
+
 function componentSearchAudit({
   document,
   documentArtifact,
@@ -563,6 +655,12 @@ function componentSearchAudit({
     target.serverRejectedCandidates.length === 0 &&
     Array.isArray(target?.unresolvedCandidateIds) &&
     target.unresolvedCandidateIds.length === 0;
+  const terminalRejectionAudit = deterministicTerminalRejectionAudit({
+    requirement,
+    component,
+    target,
+  });
+  const deterministicOutOfCategoryTerminal = Boolean(terminalRejectionAudit);
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
       judgement?.coverageEffect === "UNKNOWN" &&
@@ -586,8 +684,8 @@ function componentSearchAudit({
         targets,
         report,
       }) &&
-      zeroOccurrenceTerminal &&
-      zeroCandidateTerminal &&
+      ((zeroOccurrenceTerminal && zeroCandidateTerminal) ||
+        deterministicOutOfCategoryTerminal) &&
       serverNegativeTerminal
   );
   const verified = Boolean(
@@ -628,6 +726,7 @@ function componentSearchAudit({
     totalPhysicalPages: Number(extraction.totalPages || 0),
     aliases: component?.aliases || [],
     conceptSearchIds: (component?.conceptSearches || []).map(({ id }) => id),
+    ...(terminalRejectionAudit ? { terminalRejectionAudit } : {}),
     gates: {
       negativeSearchApproved,
       certifiedNegativeSearch: verified,
@@ -642,6 +741,9 @@ function componentSearchAudit({
       zeroOccurrenceTerminal,
       zeroCandidateTerminal,
       serverNegativeTerminal,
+      ...(deterministicOutOfCategoryTerminal
+        ? { deterministicOutOfCategoryTerminal: true }
+        : {}),
     },
   };
 }

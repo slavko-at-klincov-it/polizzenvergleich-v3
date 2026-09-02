@@ -10,6 +10,9 @@ const {
   resolvedCategoryView,
 } = require("./deterministicCategoryEvidenceRules");
 const {
+  certifyDeterministicTerminalRejection,
+} = require("./deterministicTerminalRejectionContract");
+const {
   assertTargetRequirementSelection,
 } = require("./targetRequirementSelection");
 
@@ -227,17 +230,27 @@ function buildPreparedEvidenceTargets({
           component,
           occurrence,
         });
+        const terminalRejection = certifyDeterministicTerminalRejection({
+          categoryView: resolvedCategoryView(worksheet, requirement),
+          requirement,
+          component,
+          occurrence,
+          deterministicBinding,
+        });
         // A very small set of category rules is server-authoritative because
         // the clause itself explicitly governs the exact atomic component.
         // This prevents a model MENTION_ONLY result from discarding that
         // evidence while leaving all ordinary triage decisions untouched.
-        const candidateBinding = deterministicBinding?.authoritative
-          ? deterministicBinding.binding
-          : triagedCandidateBinding;
+        const candidateBinding = terminalRejection
+          ? "MENTION_ONLY"
+          : deterministicBinding?.authoritative
+            ? deterministicBinding.binding
+            : triagedCandidateBinding;
         if (candidateBinding === "MENTION_ONLY") {
           serverRejectedCandidates.push({
             candidateId: occurrence.candidateId,
             reason: "TRIAGE_MENTION_ONLY",
+            ...(terminalRejection || {}),
           });
           continue;
         }

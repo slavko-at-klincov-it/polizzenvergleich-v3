@@ -1,4 +1,8 @@
 const crypto = require("crypto");
+const {
+  DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+  terminalRejectionSetDigest,
+} = require("../policyAnalysis/deterministicTerminalRejectionContract");
 
 const BILATERAL_ABSENCE_AUDIT_SCHEMA_VERSION = 1;
 const BILATERAL_ABSENCE_AUDIT_CONTRACT_ID =
@@ -51,6 +55,65 @@ function canonicalStrings(values) {
 
 function sameJson(left, right) {
   return stableStringify(left) === stableStringify(right);
+}
+
+function validDeterministicTerminalRejection(component, categoryId) {
+  const audit = component?.terminalRejectionAudit;
+  const componentId = String(component?.searchPlanId || "")
+    .split("/")
+    .pop();
+  const ids = canonicalStrings(audit?.rejectedCandidateIds);
+  if (
+    categoryId !== "FE-B13" ||
+    componentId !== "pre_inception_damage_exclusion" ||
+    component?.gates?.zeroOccurrenceTerminal !== false ||
+    component?.gates?.zeroCandidateTerminal !== false ||
+    component?.gates?.deterministicOutOfCategoryTerminal !== true ||
+    audit?.schemaVersion !== 1 ||
+    audit?.contractId !== DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
+    audit?.requirementId !== categoryId ||
+    audit?.componentId !== componentId ||
+    audit?.decisionOwner !== "SERVER" ||
+    audit?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+    audit?.proofMode !== "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY" ||
+    !Number.isInteger(audit?.rejectedOccurrenceCount) ||
+    audit.rejectedOccurrenceCount < 1 ||
+    !ids ||
+    ids.length !== audit.rejectedOccurrenceCount ||
+    !Array.isArray(audit?.rejections) ||
+    audit.rejections.length !== audit.rejectedOccurrenceCount ||
+    !/^[a-f0-9]{64}$/u.test(String(audit?.rejectionDigestSha256 || "")) ||
+    audit.rejectionDigestSha256 !==
+      terminalRejectionSetDigest(audit.rejections) ||
+    audit.rejections.some(
+      (rejection) =>
+        !ids.includes(rejection?.candidateId) ||
+        rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+        !/^[a-f0-9]{64}$/u.test(
+          String(rejection?.occurrenceDigestSha256 || "")
+        ) ||
+        !Number.isInteger(rejection?.physicalPageNumber) ||
+        rejection.physicalPageNumber < 1 ||
+        rejection?.sectionScopeSource !== "CURRENT_PAGE_HEADING" ||
+        !Array.isArray(rejection?.observedScopeKeys) ||
+        rejection.observedScopeKeys.length !== 1 ||
+        !String(rejection.observedScopeKeys[0] || "").endsWith("_INSURANCE")
+    )
+  )
+    return false;
+  return true;
+}
+
+function validComponentTerminal(component, categoryId) {
+  const zeroTerminal = Boolean(
+    component?.gates?.zeroOccurrenceTerminal === true &&
+      component?.gates?.zeroCandidateTerminal === true &&
+      component?.gates?.deterministicOutOfCategoryTerminal === undefined &&
+      component?.terminalRejectionAudit === undefined
+  );
+  return (
+    zeroTerminal || validDeterministicTerminalRejection(component, categoryId)
+  );
 }
 
 function validRequirementContract(contract) {
@@ -223,8 +286,7 @@ function qualifiedSideProjection({
       component.gates?.certifiedNegativeSearch !== policy.certified ||
       component.gates?.completeTextExtraction !== true ||
       component.gates?.completeCategoryTechnicalContract !== true ||
-      component.gates?.zeroOccurrenceTerminal !== true ||
-      component.gates?.zeroCandidateTerminal !== true ||
+      !validComponentTerminal(component, categoryId) ||
       component.gates?.serverNegativeTerminal !== true
     )
       return null;

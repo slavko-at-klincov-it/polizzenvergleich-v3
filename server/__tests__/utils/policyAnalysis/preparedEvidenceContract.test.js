@@ -75,6 +75,135 @@ function response(componentId, selectedCandidateIds, coverageEffect) {
 }
 
 describe("preparedEvidenceContract", () => {
+  test("server-certifies only the exact FE-B13 occurrence from a current foreign section", () => {
+    const occurrence = {
+      candidateId: "candidate:pre-inception-water",
+      matchedAlias: "vor Beginn des Versicherungsschutzes",
+      pageNumber: 2,
+      physicalPageNumber: 2,
+      documentStart: 1835,
+      documentEnd: 1871,
+      exactText: "vor Beginn des Versicherungsschutzes",
+      context: {
+        unitType: "WORD_WINDOW_FALLBACK",
+        text: "Nicht versichert sind Leitungswasserschäden, die vor Beginn des Versicherungsschutzes ursprünglich entstanden sind.",
+      },
+      scopeLead: {
+        text: "Allgemeine Bedingungen für die Leitungswasserversicherung. Nicht versichert sind Schäden:",
+      },
+      pageScopeHints: [
+        {
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+          text: "die Leitungswasserversicherung",
+        },
+      ],
+      sectionScopeHint: {
+        scopeKey: "LEITUNGSWASSER_INSURANCE",
+        text: "Allgemeine Bedingungen für die Leitungswasserversicherung",
+        physicalPageNumber: 2,
+        source: "CURRENT_PAGE_HEADING",
+      },
+    };
+    const worksheetFor = (candidate, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "FE" },
+      requirements: [
+        {
+          id: overrides.requirementId || "FE-B13",
+          label: "Ausschluss vorvertraglicher Schäden",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "EXCLUSION",
+          components: [
+            {
+              id: overrides.componentId || "pre_inception_damage_exclusion",
+              label: "Ausschluss vorvertraglicher Schäden",
+              factRole: "EXCLUSION",
+              occurrences: [candidate],
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (candidate, overrides) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(candidate, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId: overrides?.requirementId || "FE-B13",
+            componentId:
+              overrides?.componentId || "pre_inception_damage_exclusion",
+            candidateId: candidate.candidateId,
+            binding: "DIRECT",
+          },
+        ],
+      })[0];
+
+    const target = targetFor(occurrence);
+    expect(target.candidates).toEqual([]);
+    expect(target.unresolvedCandidateIds).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual([
+      expect.objectContaining({
+        candidateId: occurrence.candidateId,
+        reason: "TRIAGE_MENTION_ONLY",
+        terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
+        decisionOwner: "SERVER",
+        decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+        physicalPageNumber: 2,
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["LEITUNGSWASSER_INSURANCE"],
+        occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      }),
+    ]);
+
+    const adversarial = [
+      {
+        ...occurrence,
+        sectionScopeHint: {
+          ...occurrence.sectionScopeHint,
+          source: "PRECEDING_PAGE_HEADING",
+        },
+      },
+      {
+        ...occurrence,
+        pageScopeHints: [
+          ...occurrence.pageScopeHints,
+          { scopeKey: "FEUER_INSURANCE", text: "Feuerversicherung" },
+        ],
+      },
+      {
+        ...occurrence,
+        context: {
+          ...occurrence.context,
+          text: "Die Regel gilt auch für die Feuerversicherung: Schäden vor Beginn des Versicherungsschutzes sind nicht versichert.",
+        },
+      },
+    ];
+    for (const candidate of adversarial) {
+      const rejected = targetFor(candidate);
+      expect(rejected.candidates).toHaveLength(1);
+      expect(rejected.serverRejectedCandidates).toEqual([]);
+    }
+
+    const elementarCrossReference = {
+      ...occurrence,
+      exactText: "Kanalrückstau",
+      matchedAlias: "Kanalrückstau",
+      context: {
+        ...occurrence.context,
+        text: "Schäden aus einem Kanalrückstau nach einer Überschwemmung sind im Rahmen der Versicherungssumme für Hochwasser mitversichert.",
+      },
+    };
+    const elTarget = targetFor(elementarCrossReference, {
+      categoryView: "EL",
+      requirementId: "EL-06",
+      componentId: "sewer_backflow",
+    });
+    expect(elTarget.candidates).toHaveLength(1);
+    expect(elTarget.serverRejectedCandidates).toEqual([]);
+  });
+
   test("does not treat a Pauschalversicherungssumme label as the VS-04 building-sum calculation method", () => {
     const worksheet = {
       candidateOnly: true,
