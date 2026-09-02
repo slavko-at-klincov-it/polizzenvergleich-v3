@@ -2191,6 +2191,242 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.22 VS-19 – Objektklassifikation und komponentenbezogene Paketbeträge
+
+#### 10.22.1 Ausgangsfehler und unveränderte Zielgrenze
+
+VS-19 beschreibt drei alternativ erfüllbare Teilpunkte:
+
+```text
+outdoor_paths     Wege
+outdoor_lighting  Außenbeleuchtung
+planting          Bepflanzung
+componentSatisfactionPolicy: ANY
+```
+
+Der Target-Loop verwendete weiterhin dieselben zehn Dokumentartefakte aus
+`PAV8-03D-VS14-2D964B45-20260902-073000`. Angebote, Polizzen,
+Rahmenbedingungen und Zusatzverträge wurden dabei als gemeinsame Dokumente
+ihres Pakets A beziehungsweise B behandelt. Der Dokumentstatus allein war
+weder Ausschluss- noch Entscheidungsgrund.
+
+Der Startlauf unter dem bis dahin aktuellen Code hatte Paket A als `BELEGT`,
+Paket B aber nur als `TEILBELEGT` beziehungsweise nach Zwischenfixes als
+`RANGFOLGE_PRÜFEN` ausgewiesen. Zwei voneinander unabhängige Ursachen wurden
+nachgewiesen:
+
+1. DOC10 enthielt unter den Überschriften `Nicht als Gebäude oder
+   Gebäudebestandteile zählen` und `Nicht als Betriebsinhalt gelten` reine
+   Objektklassifikationen. Sie waren keine operative Deckung für Wege oder
+   Beleuchtung, wurden aber als Fund weitergereicht.
+2. Der Paket-Rollup verglich `EUR 15.000` für Bepflanzung und `EUR 10.000`
+   für Wege zeilenweit und erzeugte daraus fälschlich einen
+   Dokumentrangkonflikt. Die Beträge gehörten zu verschiedenen
+   `ANY`-Komponenten und konkurrierten nicht miteinander.
+
+#### 10.22.2 Objektklassen-Terminal und Präambelbindung
+
+Der neue Terminalvertrag ist ausschließlich für die beiden zertifizierten
+VS-19-Komponenten `outdoor_paths` und `outdoor_lighting` aktiv. Er akzeptiert
+nur:
+
+- `EXCLUDED_FROM_CLASS` unter einer aktuellen Objektklassengrenze;
+- exakt zugelassene Subjects und Zieltexte;
+- eine lokale `LIST_ITEM`-Einheit mit konsistenten Offsets;
+- höchstens 16 Zeichen zwischen Klassengrenze und Listeneinheit;
+- keinen operativen Deckungs-, Bedingungs-, Pflicht-, Wert- oder
+  Ersetzungstext.
+
+Die generische Präambel
+`Versicherungsschutz besteht ausschließlich für jene Sachen, die in der
+Polizze angeführt sind` darf nur unter dem vollständigen Resetproof aus dem
+Scantext entfernt werden. Der übrige Scope-Lead bleibt vollständig aktiv.
+Sobald dort ein Zielbegriff, weiterer Deckungssatz, Ausschluss, eine Bedingung
+oder ein Wert vorkommt, greift der Terminal nicht. Rohtext und Offsets bleiben
+im Occurrence-Digest unverändert gebunden.
+
+Versionierte Verträge:
+
+```text
+DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_V2
+LOCAL_PURE_OBJECT_CLASS_EXCLUSION_V2_GENERIC_LISTING_PREAMBLE
+TERMINAL_OCCURRENCE_PROVENANCE_V5_OBJECT_CLASSIFICATION_SCOPE_LEAD
+GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE_BEFORE_OBJECT_CLASS_BOUNDARY_V1
+```
+
+Relevante Commits dieser Teilstrecke:
+
+```text
+5dd792ab fix(analysis): reject VS-19 object-class exclusions
+cec452a0 fix(analysis): harden VS-19 scope reset proof
+8a547ae9 fix(analysis): bind VS-19 exclusion boundary text
+585584b8 fix(analysis): reject generic VS-19 path mentions
+0380e29f test(analysis): bind VS-19 path rejection boundary
+0987e119 fix(analysis): preserve VS-19 path semantics
+cfc2c276 test(analysis): allow VS-19 path synonyms
+2fd7ddc9 fix(analysis): cover inflected VS-19 path terms
+995965e6 fix(comparison): resolve complete ANY identity differences
+1cc28d37 fix(analysis): reject VS-19 path class exclusions
+656273b8 fix(analysis): harden VS-19 path exclusion terminal
+f56a9631 style(analysis): format VS-19 path terminal
+b639d09f fix(analysis): preserve covered VS-19 outdoor facilities
+45b01ef1 fix(analysis): neutralize generic VS-19 listing preamble
+bba65246 fix(analysis): bind VS-19 preamble target guard
+692ddfbd fix(analysis): reject conditional VS-19 preamble scope
+```
+
+Der erste Mac-Test von `45b01ef1` fand, dass der neue Target-Guard nicht aus
+dem zertifizierten Zielobjekt weitergereicht wurde. `bba65246` band ihn an den
+Proof. Der nächste Test fand die noch nicht erfasste Form `nur bei
+Vereinbarung`; `692ddfbd` schloss auch diese Bedingung fail-closed. Diese
+Forward-Fixes wurden nicht aus der Historie entfernt.
+
+#### 10.22.3 Reales Ergebnis nach der Objektklassenkorrektur
+
+```text
+Commit: 692ddfbd400486b17db721076fd1a33885da4e63
+Worktree: /private/tmp/pv3-vs19-scopelead-JKGTts/repo
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-19-SCOPELEAD-692DDFBD-20260903
+Summary-Digest:
+394748b6ccd7f5c68a580495892de9f4537f4118750025701ca61701653c8df5
+Target-Selection-Digest:
+47ea37f3aac68f97c9d9ff750f5570c0c95578c89809626de77c50626102d1dd
+Producer v03 SHA-256:
+b126663f7ff2d00c6124a704318043865d6ed189875608b8b40ff177bd5c51cc
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Qwen-Aufrufe: 6
+Evidence-Qwen-Aufrufe: 2
+Server-Terminalkomponenten: 22
+```
+
+DOC10 terminalisierte vier reine Klassifikations-Occurrences: je zwei für
+Wege und Beleuchtung unter den beiden genannten Objektklassengrenzen. Nur die
+erste Wege-Occurrence benötigte die generische Präambelbehandlung. DOC10
+lieferte danach für alle drei VS-19-Komponenten `NOT_FOUND/UNKNOWN`.
+
+Paket B blieb zunächst `RANGFOLGE_PRÜFEN`, nun ausschließlich wegen des
+komponentenblinden Betragsrollups und mehrerer Atome für Wege und Beleuchtung.
+
+#### 10.22.4 Explizit komponentengebundener Betragsrollup
+
+Der Rollup wurde nicht global gelockert. Der neue Vertrag greift nur, wenn
+alle folgenden Bedingungen rekonstruiert werden:
+
+- `componentSatisfactionPolicy === ANY`;
+- exakt dieselbe Requirement-ID wie die Dokumentzeile;
+- pro Rohatom genau eine Dokument-UUID und pro UUID genau eine beitragende
+  Dokumentzeile;
+- explizites, passendes `componentScope.id` und Label am Requested-Field-Fakt;
+- exakte Rekonstruktion der gerenderten Betragszelle pro Dokument;
+- atomlokaler Quellenkontext für die Betragskanonisierung;
+- identische Dokumentmengen auf Zeilen- und Atomseite.
+
+Jede fehlende, fremde, verwaiste oder mehrdeutige Bindung fällt auf die
+bisherige dokumentweite Rangprüfung zurück. Unterschiedliche Werte innerhalb
+derselben Komponente bleiben ebenfalls `RANGFOLGE_PRÜFEN`. Andere `ANY`-Rollen
+ohne expliziten `componentScope`, zum Beispiel heutige COST-/LIMIT-Fälle,
+werden durch diesen Vertrag bewusst nicht entsperrt.
+
+Der nachgelagerte Vergleicher wurde gleichzeitig gehärtet: Gleiche
+`INCLUDED`-Wirkung darf bei unterschiedlichen typisierten Feldern nicht mehr
+vorzeitig `GLEICHWERTIG` ergeben. Ein einzelnes typisiertes Limit wird zuerst
+verglichen; nicht freigegebene oder mehrdeutige Feldunterschiede bleiben
+`UNKLAR`.
+
+```text
+ANY_EXPLICIT_COMPONENT_SCOPED_PACKAGE_AMOUNT_PRECEDENCE_V1
+Produktprofil: CUSTOMER_CORE_5_V38_ANY_EXPLICIT_COMPONENT_AMOUNT_PRECEDENCE
+Vergleichsvertrag: ...ANY_IDENTITY_AMOUNT_V8
+
+c9515527 fix(comparison): scope ANY amounts by component
+29f4eb8e style(comparison): format component amount rollup
+```
+
+#### 10.22.5 Mac-Studio-Validierung und zweiter Real-Lauf
+
+```text
+Finaler Commit dieser Teilstrecke:
+29f4eb8e5f57f726560196815171e1d37549d932
+Isolierter Worktree:
+/private/tmp/pv3-vs19-amount-LOqa66/repo
+Node: v22.23.2
+Formatprüfung: PASS
+Fokussierte Suites: 5/5 PASS
+Fokussierte Tests: 146/146 PASS
+
+Breite Utils-Regression:
+93 Suites / 1390 Tests PASS
+4 bekannte Fixture-Suites / 25 Tests FAIL
+Neue Fehlersignatur: keine
+```
+
+Die vier bekannten roten Suites sind unverändert
+`targetedCategoryMaterializationContract`, `targetedQaManifestContract`,
+`baselineWorksheetRebuildContract` und `qualifiedAbsenceCatalogContract`.
+Sie erwarten historische FE-Katalogbindungen beziehungsweise die alte
+statische Bedeutungsverteilung.
+
+Der erste Lauf-Producer v03 reichte die Atome noch nicht an den neuen
+`summarizePackage`-Parameter weiter. Für den zweiten Lauf wurde deshalb v04
+erstellt und separat gehasht:
+
+```text
+Producer v04 SHA-256:
+c8cc4617bd8484942312910813ab17a36bf56e4e51e6670b3e1e76cba47007c0
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-19-COMPONENT-AMOUNT-29F4EB8E-20260903
+Summary-Digest:
+2d4f3711e5ac3b44e98a3669d75a3bf95bce15523e1071d6f8e0ca30276cec8b
+```
+
+Reales Delta:
+
+```text
+Paket A: BELEGT -> BELEGT
+Paket B: RANGFOLGE_PRÜFEN -> BELEGT
+Betrag B vorher: Mehrere dokumentbezogene Werte – Rangfolge prüfen
+Betrag B jetzt:
+Bepflanzung: EUR 15.000,00 auf Erstes Risiko;
+Wege: EUR 10.000 auf Erstes Risiko
+
+Punktentscheidung vorher:
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+
+Punktentscheidung jetzt:
+UNKLAR / ANY_COMPONENT_EVIDENCE_INCOMPLETE
+```
+
+Damit sind beide nachgewiesenen technischen VS-19-Fehler behoben. VS-19 ist
+aber noch nicht fachlich entscheidbar. Die verbliebene Unklarheit ist nicht
+mehr Suche oder Paketbetrag:
+
+- A enthält echte engere Scopes, unter anderem Beleuchtungsanlagen ohne
+  Beleuchtungskörper und Bepflanzung ohne Waldbestände beziehungsweise nur im
+  Zusammenhang eines ersatzpflichtigen Gebäudeschadens;
+- B enthält einen echten Eigentumsvorbehalt für Bäume/Sträucher und mehrere
+  nicht semantisch identische Beiträge aus Vorschlag und Zusatzvertrag;
+- B besitzt für Wege und Beleuchtung jeweils mehr als ein unterschiedliches
+  Atom. Ohne typisierten Gefahr-/Subobjekt-/Ersetzungsscope darf daraus weder
+  Rang, Gleichheit noch Vorteil erfunden werden.
+
+Die unbestätigte Gesamtprojektion bleibt deshalb unverändert bei:
+
+```text
+Vorteil A: 2
+Vorteil B: 3
+Dokumentationsunterschied: 33
+Gleichwertig: 119
+Nicht vergleichbar: 9
+Unklar / Kundenreview: 58
+```
+
+Dies ist keine neue 224-Zeilen-Gesamtmessung. Ein Deployment und ein voller
+224-Zeilen-Lauf wurden nicht durchgeführt; der installierte Kundenstand blieb
+unverändert.
+
 ### 10.21 LW-12 Schritt A – aktuelle Reproduktion der Definitionsblockade
 
 `LW-12` wurde nach Abschluss von VS-08 auf dem aktuellen Produktprofil neu aus
