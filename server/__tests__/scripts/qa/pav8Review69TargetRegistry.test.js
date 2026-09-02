@@ -29,7 +29,7 @@ const CATEGORY_CONTRACTS = [
 ];
 
 describe("PAV8 69-row targeted QA registry", () => {
-  test("binds exactly 69 unique current-catalog requirements in canonical order", () => {
+  test("preserves the exact historical 69-row target registry and its requirement order", () => {
     expect(registry).toMatchObject({
       schemaVersion: 1,
       status: "TARGETED_QA_ONLY",
@@ -73,7 +73,10 @@ describe("PAV8 69-row targeted QA registry", () => {
         (candidate) => candidate.categoryView === categoryView
       );
       expect(target).toBeDefined();
-      expect(target.catalogId).toBe(catalog.catalogId);
+      if (categoryView === "ST") {
+        expect(target.catalogId).toBe("st-occurrence-full-draft-v0.4");
+        expect(catalog.catalogId).toBe("st-occurrence-full-draft-v0.5");
+      } else expect(target.catalogId).toBe(catalog.catalogId);
       expect(target.requirementIds).toHaveLength(expectedCount);
       expect(
         target.requirementIds.every((id) => id.startsWith(`${categoryView}-`))

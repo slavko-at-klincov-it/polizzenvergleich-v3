@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "st-occurrence-full-draft-v0.4",
+  "catalogId": "st-occurrence-full-draft-v0.5",
   "categoryView": "ST",
   "requirements": [
     {
@@ -25,7 +25,9 @@
               "requiredGroups": [
                 { "prefixes": ["sturm"] },
                 { "prefixes": ["wind"] },
-                { "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"] },
+                {
+                  "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"]
+                },
                 { "prefixes": ["gilt", "bezeichnet", "definition"] }
               ]
             }
@@ -72,9 +74,18 @@
               "maxLines": 2,
               "requiredGroups": [
                 { "prefixes": ["feststellung", "ermittlung"] },
-                { "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"] },
+                {
+                  "prefixes": ["spitzengeschwindigkeit", "windgeschwindigkeit"]
+                },
                 { "prefixes": ["auskunft"] },
-                { "prefixes": ["zentralanstalt", "meteorologie", "messstelle", "wetterdienst"] }
+                {
+                  "prefixes": [
+                    "zentralanstalt",
+                    "meteorologie",
+                    "messstelle",
+                    "wetterdienst"
+                  ]
+                }
               ]
             }
           ]
@@ -367,13 +378,35 @@
           "id": "chimney_head",
           "label": "Kaminköpfe",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Kamin-", "Kaminkopf", "Kaminköpfe"]
+          "aliases": [
+            "Kaminkopf",
+            "Kaminköpfe",
+            "Kaminkopfes",
+            "Kaminköpfen",
+            "Kamin- und Schornsteinköpfe",
+            "Kamin- und/oder Schornsteinköpfe",
+            "Kamin- oder Schornsteinköpfe",
+            "Kamin- sowie Schornsteinköpfe",
+            "Kamin- bzw. Schornsteinköpfe",
+            "Kamin-/Schornsteinköpfe",
+            "Kamin- und Schornsteinköpfen",
+            "Kamin- und/oder Schornsteinköpfen",
+            "Kamin- oder Schornsteinköpfen",
+            "Kamin- sowie Schornsteinköpfen",
+            "Kamin- bzw. Schornsteinköpfen",
+            "Kamin-/Schornsteinköpfen"
+          ]
         },
         {
           "id": "smokestack_head",
           "label": "Schornsteinköpfe",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Schornsteinkopf", "Schornsteinköpfe"]
+          "aliases": [
+            "Schornsteinkopf",
+            "Schornsteinköpfe",
+            "Schornsteinkopfes",
+            "Schornsteinköpfen"
+          ]
         }
       ],
       "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",

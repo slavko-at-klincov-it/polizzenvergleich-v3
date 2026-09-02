@@ -88,11 +88,7 @@ describe("ST category recall", () => {
   });
 
   test("ST-11 recalls the exclusion only under the narrow snow-slide scope", () => {
-    const damage = component(
-      worksheet,
-      "ST-11",
-      "gutter_downpipe_damage"
-    );
+    const damage = component(worksheet, "ST-11", "gutter_downpipe_damage");
     expect(damage.occurrences).toHaveLength(1);
     expect(damage.occurrences[0]).toMatchObject({
       physicalPageNumber: 3,
@@ -103,9 +99,111 @@ describe("ST category recall", () => {
     );
     expect(damage.occurrences[0].context.text).toContain("Nicht versichert");
     expect(
-      component(worksheet, "ST-11", "gutter_downpipe_sublimit")
-        .terminalState
+      component(worksheet, "ST-11", "gutter_downpipe_sublimit").terminalState
     ).toBe("NO_CONTROLLED_CANDIDATE");
+  });
+
+  test.each([
+    "Kamin- und Schornsteinköpfe",
+    "Kamin- und/oder Schornsteinköpfe",
+    "Kamin- oder Schornsteinköpfe",
+    "Kamin- sowie Schornsteinköpfe",
+    "Kamin- bzw. Schornsteinköpfe",
+    "Kamin-/Schornsteinköpfe",
+    "Kamin- und Schornsteinköpfen",
+    "Kamin- und/oder Schornsteinköpfen",
+    "Kamin- oder Schornsteinköpfen",
+    "Kamin- sowie Schornsteinköpfen",
+    "Kamin- bzw. Schornsteinköpfen",
+    "Kamin-/Schornsteinköpfen",
+  ])("ST-13 recalls the coordinated chimney-head form %s", (wording) => {
+    const result = worksheetFromText(
+      ["5. STURMVERSICHERUNG", `Versichert sind ${wording}.`].join("\n")
+    );
+
+    expect(component(result, "ST-13", "chimney_head").occurrences).toEqual([
+      expect.objectContaining({
+        matchedAlias: wording,
+        exactText: wording,
+      }),
+    ]);
+    expect(component(result, "ST-13", "smokestack_head").occurrences).toEqual([
+      expect.objectContaining({
+        matchedAlias: expect.stringMatching(/^Schornsteink[öo]pf/u),
+        exactText: expect.stringMatching(/^Schornsteink[öo]pf/u),
+      }),
+    ]);
+  });
+
+  test("ST-13 preserves direct head terms without promoting a fire-clause chimney", () => {
+    const direct = worksheetFromText(
+      [
+        "5. STURMVERSICHERUNG",
+        "Versichert sind Kaminköpfe und Schornsteinköpfe.",
+      ].join("\n")
+    );
+    expect(component(direct, "ST-13", "chimney_head").occurrences).toEqual([
+      expect.objectContaining({ exactText: "Kaminköpfe" }),
+    ]);
+    expect(component(direct, "ST-13", "smokestack_head").occurrences).toEqual([
+      expect.objectContaining({ exactText: "Schornsteinköpfe" }),
+    ]);
+
+    const fireClause = worksheetFromText(
+      [
+        "FEUERVERSICHERUNG",
+        "FE08 Kaminbrand",
+        "Versichert sind Schäden am Kamin durch einen Brand, der sich innerhalb des Kamins entwickelt.",
+      ].join("\n")
+    );
+    expect(component(fireClause, "ST-13", "chimney_head")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(component(fireClause, "ST-13", "smokestack_head")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
+  test("ST-13 does not infer a chimney head from Kaminbrand beside a real smokestack head", () => {
+    const result = worksheetFromText(
+      [
+        "5. STURMVERSICHERUNG",
+        "Kaminbrand und Schornsteinköpfe werden getrennt behandelt.",
+      ].join("\n")
+    );
+    expect(component(result, "ST-13", "chimney_head")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(component(result, "ST-13", "smokestack_head").occurrences).toEqual([
+      expect.objectContaining({ exactText: "Schornsteinköpfe" }),
+    ]);
+  });
+
+  test.each([
+    "Kaminbrand",
+    "Schornsteinbrand",
+    "Kaminschleifen",
+    "Innenputz des Kamins",
+    "drei Kamine",
+    "Kaminrohr",
+    "Kamin- und Lüftungsanlagen",
+    "Kaminsanierung",
+    "Kaminaufsatz",
+  ])("ST-13 does not promote the non-head wording %s", (wording) => {
+    const result = worksheetFromText(
+      ["FEUERVERSICHERUNG", `Versichert sind ${wording}.`].join("\n")
+    );
+    expect(component(result, "ST-13", "chimney_head")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+    expect(component(result, "ST-13", "smokestack_head")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
   });
 
   test("ST-18 recalls the photovoltaic object and both storm and hail perils", () => {
@@ -158,9 +256,7 @@ describe("ST category recall", () => {
         exactText: "Markisen",
       }),
     ]);
-    expect(
-      component(worksheet, "ST-16", "shading_system").occurrences
-    ).toEqual(
+    expect(component(worksheet, "ST-16", "shading_system").occurrences).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           physicalPageNumber: 1,
@@ -179,12 +275,12 @@ describe("ST category recall", () => {
       terminalState: "CONTROLLED_CANDIDATES_FOUND",
       occurrenceCount: 1,
     });
-    expect(
-      component(worksheet, "ST-25", "branch_removal_costs")
-    ).toMatchObject({
-      terminalState: "NO_CONTROLLED_CANDIDATE",
-      occurrenceCount: 0,
-    });
+    expect(component(worksheet, "ST-25", "branch_removal_costs")).toMatchObject(
+      {
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+      }
+    );
   });
 
   test("ST-25 recalls disposal wording under a structured storm heading", () => {
@@ -217,11 +313,7 @@ describe("ST category recall", () => {
   });
 
   test("ST-29 recalls generally insured fences without inventing a storm phrase", () => {
-    const fencing = component(
-      worksheet,
-      "ST-29",
-      "storm_damage_to_fencing"
-    );
+    const fencing = component(worksheet, "ST-29", "storm_damage_to_fencing");
     expect(
       fencing.occurrences.some(
         ({ physicalPageNumber }) => physicalPageNumber === 1
@@ -235,11 +327,7 @@ describe("ST category recall", () => {
   });
 
   test("ST-34 recalls the per-division 150-percent maximum in general terms", () => {
-    const maximum = component(
-      worksheet,
-      "ST-34",
-      "storm_maximum_compensation"
-    );
+    const maximum = component(worksheet, "ST-34", "storm_maximum_compensation");
     expect(maximum.occurrences.length).toBeGreaterThan(0);
     expect(maximum.occurrences[0]).toMatchObject({
       physicalPageNumber: 5,
@@ -270,11 +358,7 @@ describe("ST category recall", () => {
         "storm_wind_speed_definition",
         "storm-definition-by-peak-wind-speed",
       ],
-      [
-        "ST-02",
-        "measuring_station",
-        "authoritative-peak-wind-speed-source",
-      ],
+      ["ST-02", "measuring_station", "authoritative-peak-wind-speed-source"],
       [
         "ST-08",
         "roof_avalanche_on_own_installations",
