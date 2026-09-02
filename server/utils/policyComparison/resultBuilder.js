@@ -21,6 +21,9 @@ const {
   validFeC07ConditionAbsenceAudit,
 } = require("../policyAnalysis/feC07ConditionAbsenceAudit");
 const {
+  buildLw20DefaultExclusionOverrideAudit,
+} = require("../policyAnalysis/lw20DefaultExclusionOverrideAudit");
+const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
@@ -719,6 +722,13 @@ function componentSearchAudit({
       DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
   );
   const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
+  const lw20DefaultExclusionOverrideAudit =
+    buildLw20DefaultExclusionOverrideAudit({
+      document,
+      documentArtifact,
+      requirementId: requirement?.id,
+      componentId: component?.id,
+    });
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
       judgement?.coverageEffect === "UNKNOWN" &&
@@ -785,6 +795,9 @@ function componentSearchAudit({
     aliases: component?.aliases || [],
     conceptSearchIds: (component?.conceptSearches || []).map(({ id }) => id),
     ...(terminalRejectionAudit ? { terminalRejectionAudit } : {}),
+    ...(lw20DefaultExclusionOverrideAudit
+      ? { lw20DefaultExclusionOverrideAudit }
+      : {}),
     gates: {
       negativeSearchApproved,
       certifiedNegativeSearch: verified,

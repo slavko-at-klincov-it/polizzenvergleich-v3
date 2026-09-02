@@ -961,6 +961,17 @@ function writeLw20AbsenceCategory(
     }),
   };
 
+  const artifactPageTexts = Array.from({ length: 22 }, (_, index) =>
+    index === 21 ? contextText : `Dokumentseite ${index + 1}`
+  );
+  let pageContent = "";
+  const pageMap = artifactPageTexts.map((text, index) => {
+    if (pageContent) pageContent += "\n\f\n";
+    const start = pageContent.length;
+    pageContent += text;
+    return { pageNumber: index + 1, start, end: pageContent.length };
+  });
+
   fs.writeFileSync(
     path.join(run.outputDirectory, "document.private.json"),
     JSON.stringify({
@@ -968,6 +979,8 @@ function writeLw20AbsenceCategory(
       fingerprint: run.document.sha256,
       document: {
         sourceDocumentId: run.document.sha256,
+        pageContent,
+        pageMap,
         pdfExtraction: {
           schemaVersion: 1,
           totalPages: 22,
@@ -1705,7 +1718,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V23_LW20_NON_TARGET_TERMINAL",
+      id: "CUSTOMER_CORE_5_V24_LW20_OVERRIDE_AUDIT",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
@@ -2181,6 +2194,9 @@ describe("policy comparison result builder", () => {
         ],
       },
     });
+    expect(componentAudit).not.toHaveProperty(
+      "lw20DefaultExclusionOverrideAudit"
+    );
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "GLEICHWERTIG",
       reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
@@ -2251,6 +2267,25 @@ describe("policy comparison result builder", () => {
 
     expect(componentAudit).toMatchObject({
       disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      lw20DefaultExclusionOverrideAudit: {
+        schemaVersion: 1,
+        contractId: "LW20_FULL_DOCUMENT_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_V1",
+        requirementId: "LW-20",
+        componentId: "ground_seepage_or_retained_water",
+        decisionOwner: "SERVER",
+        status: "NO_OVERRIDE_REFERENCE_FOUND",
+        document: {
+          uuid: "a",
+          sha256: runA.document.sha256,
+          documentArtifactDigestSha256: expect.stringMatching(
+            /^[a-f0-9]{64}$/u
+          ),
+          physicalPagesChecked: 22,
+          totalPhysicalPages: 22,
+        },
+        candidateCount: 0,
+        candidates: [],
+      },
       gates: {
         zeroOccurrenceTerminal: false,
         zeroCandidateTerminal: false,
@@ -2280,6 +2315,14 @@ describe("policy comparison result builder", () => {
     expect(comparisonRow.packageB).toMatchObject({
       evidenceFound: true,
       coverage: "Nein",
+    });
+    expect(
+      comparisonRow.packageB.searchAudit.components[0]
+        .lw20DefaultExclusionOverrideAudit
+    ).toMatchObject({
+      status: "NO_OVERRIDE_REFERENCE_FOUND",
+      document: { uuid: "b", sha256: runB.document.sha256 },
+      candidateCount: 0,
     });
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "DOKUMENTATIONSUNTERSCHIED",
