@@ -76,7 +76,6 @@ describe("PAV8 69-row targeted QA registry", () => {
       const historicalCatalogMigrations = {
         VS: [
           "vs-occurrence-full-draft-v0.7",
-          "vs-occurrence-full-draft-v0.9",
           "vs-occurrence-full-draft-v0.10",
         ],
         FE: ["fe-occurrence-full-draft-v0.5", "fe-occurrence-full-draft-v0.7"],

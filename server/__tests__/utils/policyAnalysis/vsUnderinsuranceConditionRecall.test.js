@@ -48,7 +48,7 @@ describe("VS-08 percentage-deviation condition recall", () => {
             matchedAlias:
               "CONCEPT_SEARCH:underinsurance-waiver-deviation-condition",
             context: expect.objectContaining({
-              unitType: "CLAUSE_SECTION",
+              unitType: "PARAGRAPH",
               text: expect.stringContaining("vom Versicherungswert abweichen"),
             }),
           }),
