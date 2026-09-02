@@ -117,16 +117,16 @@ rückwirkend überschrieben.
 Die sieben Ergebnisgruppen sind gegenseitig ausschließend und summieren sich
 zu 224:
 
-| Ergebnis | Zeilen |
-| --- | ---: |
-| Vorteil A | 0 |
-| Vorteil B | 0 |
-| Dokumentationsunterschied | 38 |
-| Gleichwertig | 7 |
-| Kein dokumentierter Vorteil | 99 |
-| Nicht vergleichbar | 13 |
-| Unklar | 67 |
-| **Gesamt** | **224** |
+| Ergebnis                    |  Zeilen |
+| --------------------------- | ------: |
+| Vorteil A                   |       0 |
+| Vorteil B                   |       0 |
+| Dokumentationsunterschied   |      38 |
+| Gleichwertig                |       7 |
+| Kein dokumentierter Vorteil |      99 |
+| Nicht vergleichbar          |      13 |
+| Unklar                      |      67 |
+| **Gesamt**                  | **224** |
 
 Nur die 67 Zeilen mit `pointDecision.outcome == UNKLAR` sind
 Kundenreviewzeilen. Die frühere Zahl 105 war ein historischer technischer
@@ -134,17 +134,17 @@ Differenzzähler und darf nicht mehr als Reviewzahl verwendet werden.
 
 Die 67 Reviewzeilen besitzen folgende persistierte, disjunkte Reason-Gruppen:
 
-| Gespeicherter Reasoncode | Zeilen | Bearbeitungsstatus |
-| --- | ---: | --- |
-| `PACKAGE_REVIEW_STATUS_BLOCKS_DECISION` | 39 | in diesem Dokument vollständig erstanalysiert |
-| `MISSING_BOTH` | 9 | noch einzeln zu analysieren |
-| `MISSING_ONE_SIDE` | 7 | noch einzeln zu analysieren |
-| `ATOMIC_DOCUMENT_RANK_UNRESOLVED` | 3 | noch einzeln zu analysieren |
-| `ATOMIC_EVIDENCE_INCOMPLETE` | 3 | noch einzeln zu analysieren |
-| `NO_APPROVED_RULE_FOR_ALL_DIMENSIONS` | 3 | noch einzeln zu analysieren |
-| `ANY_COMPONENT_EVIDENCE_INCOMPLETE` | 2 | noch einzeln zu analysieren |
-| `CONDITIONAL_OR_EXCEPTION_SCOPE` | 1 | noch einzeln zu analysieren |
-| **Gesamt** | **67** | |
+| Gespeicherter Reasoncode                | Zeilen | Bearbeitungsstatus                            |
+| --------------------------------------- | -----: | --------------------------------------------- |
+| `PACKAGE_REVIEW_STATUS_BLOCKS_DECISION` |     39 | in diesem Dokument vollständig erstanalysiert |
+| `MISSING_BOTH`                          |      9 | noch einzeln zu analysieren                   |
+| `MISSING_ONE_SIDE`                      |      7 | noch einzeln zu analysieren                   |
+| `ATOMIC_DOCUMENT_RANK_UNRESOLVED`       |      3 | noch einzeln zu analysieren                   |
+| `ATOMIC_EVIDENCE_INCOMPLETE`            |      3 | noch einzeln zu analysieren                   |
+| `NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`   |      3 | noch einzeln zu analysieren                   |
+| `ANY_COMPONENT_EVIDENCE_INCOMPLETE`     |      2 | noch einzeln zu analysieren                   |
+| `CONDITIONAL_OR_EXCEPTION_SCOPE`        |      1 | noch einzeln zu analysieren                   |
+| **Gesamt**                              | **67** |                                               |
 
 Diese Reason-Gruppen dürfen nicht mit darunterliegenden Komponenten- oder
 Dokumentproblemen addiert werden. Eine Vergleichszeile kann intern mehrere
@@ -167,23 +167,23 @@ reviewStatus != BELEGT.
 
 Statusverteilung:
 
-| Paket A / Paket B | Zeilen |
-| --- | ---: |
-| `BELEGT / TEILBELEGT` | 22 |
-| `TEILBELEGT / TEILBELEGT` | 14 |
-| `TEILBELEGT / BELEGT` | 1 |
-| `BELEGT / RANGFOLGE_PRÜFEN` | 2 |
-| **Gesamt** | **39** |
+| Paket A / Paket B           | Zeilen |
+| --------------------------- | -----: |
+| `BELEGT / TEILBELEGT`       |     22 |
+| `TEILBELEGT / TEILBELEGT`   |     14 |
+| `TEILBELEGT / BELEGT`       |      1 |
+| `BELEGT / RANGFOLGE_PRÜFEN` |      2 |
+| **Gesamt**                  | **39** |
 
 Kategorieverteilung:
 
-| Kategorie | Zeilen |
-| --- | ---: |
-| VS | 8 |
-| FE | 7 |
-| LW | 7 |
-| ST | 8 |
-| EL | 9 |
+| Kategorie  | Zeilen |
+| ---------- | -----: |
+| VS         |      8 |
+| FE         |      7 |
+| LW         |      7 |
+| ST         |      8 |
+| EL         |      9 |
 | **Gesamt** | **39** |
 
 ### 4.2 Exakte Entstehungskette im Code
@@ -288,27 +288,27 @@ Mitgliedschaftslisten.
 Die Zeilenangaben sind an den Anlagestand gebunden und müssen nach jedem Fix
 neu ermittelt werden. Funktionsnamen bleiben die stabilere Referenz.
 
-| Verantwortung | Datei / Bereich am Anlagestand |
-| --- | --- |
-| atomare Judgements zu Requirement-Rollups | `server/utils/policyAnalysis/preparedEvidenceContract.js:647-715`, `materializePreparedEvidence` |
-| Dokumentstatus aus Vollständigkeit, Wert, Scope und Wirkung | `server/utils/policyAnalysis/categoryTableRenderer.js:365-386`, `reviewFor` |
-| Tabellenzeilen aus Dokumentrollup | `server/utils/policyAnalysis/categoryTableRenderer.js:404-590`, `buildCategoryTableRows` |
-| Paketstatus aus allen beitragenden Dokumentzeilen | `server/utils/policyComparison/resultBuilder.js:271-388`, `summarizePackage` |
-| Atome aus Worksheet, Wirkung, Feldern und Quellen | `server/utils/policyComparison/resultBuilder.js:615-715`, `materializeAtomicFacts` |
-| Paketmaterialisierung und Aufruf der Punktentscheidung | `server/utils/policyComparison/resultBuilder.js:838-939`, `buildComparisonResult` |
-| Vollständigkeit eines Entscheidungsatoms | `server/utils/policyComparison/pointDecision.js:117-169`, `validSource`, `completeAtom` |
-| gegenwärtiger Paketstatus-Frühabbruch | `server/utils/policyComparison/pointDecision.js:623-627`, `decidePoint` |
-| nachgelagerte Komponenten-/Atomgates | `server/utils/policyComparison/pointDecision.js:629-707`, `decidePoint` |
-| Outcome-, Review- und Reason-Mitgliedschaften erzeugen | `server/utils/policyComparison/customerMetricContract.js:25-73`, `deriveCustomerMetrics` |
-| gespeicherte Kundenmetriken unabhängig validieren | `server/utils/policyComparison/customerMetricContract.js:140-273`, `validateCustomerComparison` |
-| XLSX-Kundentext für ungeklärte Gründe | `server/utils/policyComparison/customerResultPresenter.js:3-24,68-113` |
-| UI-Nachzählung und Reason-Labels | `frontend/src/utils/chat/policyComparisonResultPresenter.cjs:3-25,53-119` |
-| grober bestehender Point-Decision-Testvertrag | `server/__tests__/utils/policyComparisonPointDecision.test.js:214-230` |
-| Paket-/Atom-/Totals-Integrationstests | `server/__tests__/utils/policyComparisonResultBuilder.test.js` |
-| Metrik-Manipulations- und Paritätstests | `server/__tests__/utils/policyComparisonCustomerMetricContract.test.js` |
-| XLSX-Presenter-Vertrag | `server/__tests__/utils/policyComparisonCustomerResultPresenter.test.js` |
-| unabhängiger Frontend-Presenter-Vertrag | `server/__tests__/frontend/policyComparisonResultPresenter.test.js` |
-| Worker-Lifecycle-Vertrag | `server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js` |
+| Verantwortung                                               | Datei / Bereich am Anlagestand                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| atomare Judgements zu Requirement-Rollups                   | `server/utils/policyAnalysis/preparedEvidenceContract.js:647-715`, `materializePreparedEvidence` |
+| Dokumentstatus aus Vollständigkeit, Wert, Scope und Wirkung | `server/utils/policyAnalysis/categoryTableRenderer.js:365-386`, `reviewFor`                      |
+| Tabellenzeilen aus Dokumentrollup                           | `server/utils/policyAnalysis/categoryTableRenderer.js:404-590`, `buildCategoryTableRows`         |
+| Paketstatus aus allen beitragenden Dokumentzeilen           | `server/utils/policyComparison/resultBuilder.js:271-388`, `summarizePackage`                     |
+| Atome aus Worksheet, Wirkung, Feldern und Quellen           | `server/utils/policyComparison/resultBuilder.js:615-715`, `materializeAtomicFacts`               |
+| Paketmaterialisierung und Aufruf der Punktentscheidung      | `server/utils/policyComparison/resultBuilder.js:838-939`, `buildComparisonResult`                |
+| Vollständigkeit eines Entscheidungsatoms                    | `server/utils/policyComparison/pointDecision.js:117-169`, `validSource`, `completeAtom`          |
+| gegenwärtiger Paketstatus-Frühabbruch                       | `server/utils/policyComparison/pointDecision.js:623-627`, `decidePoint`                          |
+| nachgelagerte Komponenten-/Atomgates                        | `server/utils/policyComparison/pointDecision.js:629-707`, `decidePoint`                          |
+| Outcome-, Review- und Reason-Mitgliedschaften erzeugen      | `server/utils/policyComparison/customerMetricContract.js:25-73`, `deriveCustomerMetrics`         |
+| gespeicherte Kundenmetriken unabhängig validieren           | `server/utils/policyComparison/customerMetricContract.js:140-273`, `validateCustomerComparison`  |
+| XLSX-Kundentext für ungeklärte Gründe                       | `server/utils/policyComparison/customerResultPresenter.js:3-24,68-113`                           |
+| UI-Nachzählung und Reason-Labels                            | `frontend/src/utils/chat/policyComparisonResultPresenter.cjs:3-25,53-119`                        |
+| grober bestehender Point-Decision-Testvertrag               | `server/__tests__/utils/policyComparisonPointDecision.test.js:214-230`                           |
+| Paket-/Atom-/Totals-Integrationstests                       | `server/__tests__/utils/policyComparisonResultBuilder.test.js`                                   |
+| Metrik-Manipulations- und Paritätstests                     | `server/__tests__/utils/policyComparisonCustomerMetricContract.test.js`                          |
+| XLSX-Presenter-Vertrag                                      | `server/__tests__/utils/policyComparisonCustomerResultPresenter.test.js`                         |
+| unabhängiger Frontend-Presenter-Vertrag                     | `server/__tests__/frontend/policyComparisonResultPresenter.test.js`                              |
+| Worker-Lifecycle-Vertrag                                    | `server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js`                             |
 
 Bei PBR-01.1 dürfen Änderungen voraussichtlich auf `pointDecision.js`, einen
 kleinen Diagnosevertrag und die fokussierten Vergleichstests begrenzt werden.
@@ -1176,18 +1176,18 @@ Die zehn Kandidaten wurden nicht als gemeinsamer Lockerungsblock behandelt.
 Jede Zeile wurde gegen gespeicherte Atome, Dokumentstatus, Scope, Rang,
 Komponentenvertrag und den produktiven Entscheidungsweg geprüft.
 
-| Zeile | Befund | Freigabe | Benötigter wiederverwendbarer Vertrag |
-| --- | --- | --- | --- |
-| `FE-A05` | Mehrere Atome, Rollen und Scope-Stufen auf B; kein eindeutiger atomarer Vergleich | NO-GO | Objekt-Scope-Set und Dokumentrang gemeinsam binden |
-| `FE-A06` | Ein einziger Scope-Unterschied bei sonst vollständigen Atomen ist eng entscheidbar | GO, umgesetzt und im Vollauf bestätigt | `SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` |
-| `FE-D01` | Feldvollständigkeit, Aggregation und Dokumentrang gleichzeitig offen | NO-GO | typisierte Feld- und Rangauflösung |
-| `LW-26` | erforderliches B-Limit fehlt | NO-GO | belastbare lokale Limitbindung |
-| `LW-12` | Fund gilt nur für maximal eine Heizungsschleife/Reparaturbedingung | NO-GO | `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1` |
-| `ST-17` | Objektliste, Governor, Limit und Dokumentbeziehung vermischt | NO-GO | Objektklassifikation plus Rang und Limit |
-| `ST-25` | beide Seiten belegen Baumkosten, aber nicht die erforderlichen Astkosten | NO-GO | keine Lockerung; `ALL` bleibt korrekt |
-| `FE-D05` | Rauch-/Rußtrigger kann „ohne eigenes Feuer“ semantisch implizieren, aber nicht als bloßes Alias | GO nur für spätere Semantik | versionierter Ausdrucks-/Implikationsvertrag |
-| `ST-21` | EABS-Objektliste wurde durch vorherige lokale Negation fälschlich als `EXCLUDED` bewertet | MUST-FIX der Evidenzwirkung; kein Vorteil | getrennte Listen- und Objektklassifikationsverträge |
-| `ST-27` | bestehende Lawinenquelle und Gruppenlimit auffindbar, Ausgang bleibt wegen Ontologie/Rang offen | GO für Quellenwahl, NO-GO für Ausgang | Gruppenlimit-, Ontologie- und Rangvertrag |
+| Zeile    | Befund                                                                                          | Freigabe                                  | Benötigter wiederverwendbarer Vertrag                  |
+| -------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------ |
+| `FE-A05` | Mehrere Atome, Rollen und Scope-Stufen auf B; kein eindeutiger atomarer Vergleich               | NO-GO                                     | Objekt-Scope-Set und Dokumentrang gemeinsam binden     |
+| `FE-A06` | Ein einziger Scope-Unterschied bei sonst vollständigen Atomen ist eng entscheidbar              | GO, umgesetzt und im Vollauf bestätigt    | `SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1` |
+| `FE-D01` | Feldvollständigkeit, Aggregation und Dokumentrang gleichzeitig offen                            | NO-GO                                     | typisierte Feld- und Rangauflösung                     |
+| `LW-26`  | erforderliches B-Limit fehlt                                                                    | NO-GO                                     | belastbare lokale Limitbindung                         |
+| `LW-12`  | Fund gilt nur für maximal eine Heizungsschleife/Reparaturbedingung                              | NO-GO                                     | `INSURED_OBJECT_COVERAGE_WITH_BOUND_SCOPE_LIMIT_V1`    |
+| `ST-17`  | Objektliste, Governor, Limit und Dokumentbeziehung vermischt                                    | NO-GO                                     | Objektklassifikation plus Rang und Limit               |
+| `ST-25`  | beide Seiten belegen Baumkosten, aber nicht die erforderlichen Astkosten                        | NO-GO                                     | keine Lockerung; `ALL` bleibt korrekt                  |
+| `FE-D05` | Rauch-/Rußtrigger kann „ohne eigenes Feuer“ semantisch implizieren, aber nicht als bloßes Alias | GO nur für spätere Semantik               | versionierter Ausdrucks-/Implikationsvertrag           |
+| `ST-21`  | EABS-Objektliste wurde durch vorherige lokale Negation fälschlich als `EXCLUDED` bewertet       | MUST-FIX der Evidenzwirkung; kein Vorteil | getrennte Listen- und Objektklassifikationsverträge    |
+| `ST-27`  | bestehende Lawinenquelle und Gruppenlimit auffindbar, Ausgang bleibt wegen Ontologie/Rang offen | GO für Quellenwahl, NO-GO für Ausgang     | Gruppenlimit-, Ontologie- und Rangvertrag              |
 
 Abhängigkeiten und Nicht-Ziele:
 
@@ -1239,7 +1239,7 @@ Reproduzierbarer DOC-10/ST-Befund:
 - gleichzeitig existierten zwei gültige direkte Kandidaten: `Jalousien`
   (PDF-Seite 4, Dokumentoffset 9167–9176) und `Rollläden` (9181–9190);
 - der nun korrekt isolierte Quelltext lautet sinngemäß `Jalousien und
-  Rollläden ... (nicht Sonnensegel und nicht Markisen)`. Die Negation betrifft
+Rollläden ... (nicht Sonnensegel und nicht Markisen)`. Die Negation betrifft
   nicht Jalousien und Rollläden;
 - der fail-closed Validator verhinderte korrekt die Materialisierung des
   unbelegten Ausschlusses;
@@ -1981,3 +1981,237 @@ PAV8-02 bleibt als notwendige Architekturgrundlage erhalten, wird wegen
 `Review 67 -> 69` aber nicht zum neuen Ergebnisfavoriten erklärt. Die
 fehlenden Richtungsverträge für `VS-08`, `VS-10`, `VS-20` und `EL-09` dürfen
 nicht durch Rückkehr zum falschen Dokumentstatusblocker verdeckt werden.
+
+## 20. PAV8-03a – beidseitig vollständig kontrollierter Nichtfund
+
+### 20.1 Fehlerbild und fachliche Grenze
+
+PAV8-02 enthielt 99 Zeilen mit dem Kundenergebnis
+`KEIN_DOKUMENTIERTER_VORTEIL`. Die Rohdaten dieser 99 Zeilen zeigten jedoch
+nicht 99 offene oder unvollständig geprüfte Fälle. Für beide hochgeladenen
+Polizzenpositionen waren sämtliche zum jeweiligen Katalogpunkt gehörenden
+Dokumente und Komponenten unter demselben versionierten Suchvertrag
+vollständig kontrolliert worden, ohne dass eine passende Vertragsregelung
+gefunden wurde.
+
+Der Fehler lag damit in der letzten Vergleichsabbildung: Die bereits
+feststehende Gleichheit des dokumentierten Suchzustands wurde nicht als
+Punktvergleich ausgegeben. PAV8-03a behebt ausschließlich diesen Fall.
+
+Die neue Aussage ist eng begrenzt:
+
+- `GLEICHWERTIG` bedeutet hier: Beide Polizzen besitzen für diesen
+  Vergleichspunkt dieselbe vollständig kontrollierte dokumentierte Fundlage.
+- Sie bedeutet nicht, dass beide Polizzen eine positive Deckung enthalten.
+- Sie bedeutet nicht, dass ein ausdrücklicher Ausschluss nachgewiesen ist.
+- Sie bedeutet nicht, dass außerhalb der bereitgestellten Dokumente keine
+  weitere Regelung existieren kann.
+- Ein einseitiger Fund, ein Teilfund, ein Rangproblem, eine Bedingung, ein
+  Konflikt oder ein unvollständiger Suchlauf bleibt von diesem Vertrag
+  ausgeschlossen.
+
+### 20.2 Wiederverwendbarer Vertrag und Codeabhängigkeiten
+
+Verhaltenscommit:
+`9564bcb77b368c684182111d83215167bec96661`
+(`fix(comparison): equalize qualified bilateral absence`).
+
+Der neue allgemeine Vertrag ist nicht an LF, WEVIG, einen Versicherer, eine
+Seite oder eine konkrete Kundenformulierung gebunden:
+
+- `server/utils/policyComparison/bilateralAbsenceContract.js`
+  baut und validiert den Auditvertrag
+  `BILATERAL_QUALIFIED_ABSENCE_AUDIT_V1`;
+- `server/utils/policyComparison/pointDecision.js` verwendet die Regel
+  `EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1` erst nach erfolgreicher
+  Vertragsbildung;
+- `server/utils/policyComparison/resultBuilder.js` liefert dafür die
+  dokument- und komponentengenaue Suchprovenienz;
+- `server/utils/policyComparison/customerMetricContract.js` berechnet den
+  erwarteten Audit unabhängig aus den Paketdaten neu und erzwingt die
+  Entscheidung in beide Richtungen: Ein qualifizierter Fall darf weder
+  ausgelassen noch ohne Qualifikation behauptet werden;
+- `server/utils/policyComparison/customerResultPresenter.js` lässt die neue
+  Regel kundenseitig zu, ohne technische IDs als Ergebnistext auszugeben;
+- `server/utils/policyComparison/productContract.js` und
+  `server/utils/policyComparison/resultBuilder.js` versionieren das Ergebnis
+  als Schema 9, Profil
+  `CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY` und Vergleichsvertrag
+  `PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1`.
+
+Eine Seite qualifiziert nur, wenn alle folgenden Bindungen gleichzeitig
+belegt sind:
+
+1. Die Paketzusammenfassung enthält keinen Fund und keine übernommenen
+   Fakten.
+2. Der Suchstatus ist vollständig und ausschließlich
+   `CONTROLLED_NOT_FOUND` oder vollständig
+   `VERIFIED_NOT_FOUND`; Mischzustände werden abgelehnt.
+3. Die Vergleichsbehandlung ist auf beiden Seiten identisch und passt zum
+   Suchstatus.
+4. Der Anforderungsvertrag besitzt denselben Digest, dieselben Komponenten,
+   Rollen sowie dieselbe `ALL`- oder `ANY`-Semantik.
+5. Jedes bereitgestellte Dokument der betreffenden Polizzenseite kommt genau
+   einmal je erforderlicher Komponente vor; fehlende oder zusätzliche
+   Dokument-UUIDs sperren die Regel.
+6. Katalog-, Kategorie-, Komponenten- und Suchplan-ID sind kanonisch
+   gebunden.
+7. Seitenzahl, geprüfte physische Seiten, Kandidaten-, Triage-, Wirkungs- und
+   Feldprüfgates sind vollständig.
+8. Die Rohatome enthalten keine ausgewählten oder ungelösten Kandidaten,
+   Quellen, Konflikte oder positive Wirkungen.
+9. Angeforderte und optionale Felder sind vollständig an den
+   Anforderungsvertrag gebunden; der materialisierte saubere
+   `NOT_EVALUATED`-Nullpfad bleibt nur erlaubt, wenn alle Atomfelder
+   tatsächlich `NOT_FOUND` sind.
+10. Der Audit wird kanonisch und reihenfolgeunabhängig gehasht und im
+    Kundenvalidator bytegenau gegen eine Neuberechnung geprüft.
+
+Damit können weder ein unvollständiges `ANY`, ein fehlendes Dokument, eine
+falsche Plan-ID, ein Teilbeleg noch ein manipuliertes Audit als Gleichheit
+durchrutschen.
+
+### 20.3 Prüfungen vor dem Vollrun
+
+Isolierter Mac-Studio-Checkout:
+`/private/tmp/pv3-pav8-03a-9564bcb7-Ty1KwF/repo`, exakt auf Commit
+`9564bcb77b368c684182111d83215167bec96661`.
+
+- Prettier: bestanden;
+- 9 fokussierte Suites: bestanden;
+- 167/167 Tests: bestanden;
+- positive kontrollierte und zertifizierte Nichtfundvarianten: bestanden;
+- gemischte kontrollierte/zertifizierte Zustände: korrekt abgelehnt;
+- vollständige `ANY`-Alternativen: bestanden;
+- fehlende `ANY`-Alternative: korrekt abgelehnt;
+- fehlende oder zusätzliche Dokumente, Plan-, Digest-, Komponenten-,
+  Feld-, Kandidaten-, Scope- und Audit-Manipulationen: fail-closed;
+- Reihenfolgevarianten über mehrere Dokumente: stabil.
+
+Ein deterministischer In-Memory-Replay von `buildComparisonResult()` auf den
+unveränderten PAV8-02-Dokumentartefakten ergab vor dem Modelllauf:
+
+```text
+Zeilen: 224
+Erwartete Metrik: 0/0/38/109/0/8/69
+Geänderte Punktentscheidungen: 99
+Davon unerwartet: 0
+Rohzeilen geändert: 0
+Review: 69 -> 69, identische Zeilenmitgliedschaft
+Paket-A/B-Zusammenfassungen geändert: 0
+Technische Altentscheidungen geändert: 0
+```
+
+### 20.4 Vollständiger Mac-Studio-Lauf
+
+Der erste Operatorstart
+`PAV8-03A-9564BCB7-20260902-045311` stoppte vor dem ersten Modellaufruf, weil
+das wiederverwendete Inputmanifest relative Uploadpfade enthält und der
+isolierte Checkout zunächst keine absolute Speicherbasis ergänzte. Der
+Abbruch ist im Operatorprotokoll als
+`preflight_before_model_call` dokumentiert. Es wurden keine
+Dokumentergebnisse erzeugt und kein Kundencheckout verändert.
+
+Nach read-only Prüfung aller zehn absoluten Quelldateien und SHA-256-Werte
+lief der getrennte vollständige Run:
+
+```text
+Run: PAV8-03A-9564BCB7-20260902-045443
+Commit: 9564bcb77b368c684182111d83215167bec96661
+Checkout: /private/tmp/pv3-pav8-03a-9564bcb7-Ty1KwF/repo
+Node: 22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start UTC: 2026-09-02T02:54:43Z
+Abschluss UTC: 2026-09-02T03:21:35Z
+Wandzeit: 26:52
+Dokumente: 10/10, jeweils 224/224 Zeilen
+Paket: 224/224 Zeilen
+Schema: 9
+Profil: CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY
+Vertrag: PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1
+Kundenmetrik: A 0 / B 0 / Doku 38 / Gleich 109 / Null 0 /
+              Nicht vergleichbar 8 / Unklar 69
+Kundenreview: 69; ohne Kundenreview: 155
+```
+
+Die Wandzeit ist sieben Sekunden kürzer als PAV8-02 (`26:59`) und fünf
+Sekunden länger als der historische Favorit (`26:47`). Das ist kein
+belastbarer Performanceunterschied.
+
+### 20.5 Exaktes Delta
+
+Gegen PAV8-02:
+
+- exakt 99 Outcomes ändern sich von `KEIN_DOKUMENTIERTER_VORTEIL` zu
+  `GLEICHWERTIG`;
+- alle 99 und nur diese 99 Entscheidungen tragen Regel, Grund, Behandlung
+  und Audit des neuen Vertrags;
+- `VORTEIL_A`, `VORTEIL_B`, `DOKUMENTATIONSUNTERSCHIED`,
+  `NICHT_VERGLEICHBAR` und `UNKLAR` behalten exakt ihre
+  Zeilenmitgliedschaften;
+- Kundenreview bleibt exakt 69 mit identischer Zeilenmitgliedschaft;
+- 224/224 Paket-A- und 224/224 Paket-B-Zusammenfassungen bleiben
+  byteidentisch;
+- außerhalb der Punktentscheidung ändern sich 0/224 Vergleichszeilen;
+- technische Altentscheidungen ändern sich 0-mal;
+- die XLSX ändert genau 99 Zellwerte und ausschließlich in Spalte Q; Höhe,
+  Breite und alle anderen Zellwerte bleiben unverändert.
+
+Gegen den historischen Favoriten ändert sich die Metrik von
+`0/0/38/6/99/14/67` auf `0/0/38/109/0/8/69`. Davon stammen 99 Änderungen
+aus PAV8-03a und die übrigen fachlichen Änderungen aus PAV8-01b/PAV8-02.
+In der XLSX unterscheiden sich 120 Zellwerte, weiterhin ausschließlich in
+Spalte Q.
+
+Der vollständige Dokumentartefakt-Audit gegen PAV8-02 bestätigt:
+
+- 890/890 gemeinsame Dokumentartefakte;
+- 725 byteidentisch;
+- 410/410 fachlich relevante Extraktions-, Worksheet-, Triage-, Wirkungs-,
+  Quellen-, Ergebniszeilen- und Feldartefakte byteidentisch;
+- 0 fachliche Dokumentartefaktdifferenzen;
+- die 165 übrigen Deltas bestehen erneut ausschließlich aus 45
+  Laufantwort-/Zeitdateien, 100 Laufreports, 10 Manifest-Provenienzen und 10
+  Dokumentreports.
+
+Damit ist belegt, dass die neue Kennzahl nicht durch neue Modellantworten,
+andere Evidenz oder veränderte Suche entstand, sondern ausschließlich durch
+die neue, versionierte Paketvergleichsregel.
+
+### 20.6 Artefakte, Entscheidung und Restgrenze
+
+```text
+Inputmanifest: 50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Run-Signatur: 7f9f92d2c69bf371a77505f5585f2bf046a86f717fc4f714341e483a394f7215
+full-run.log: 900d82b41fa7e2eff07c8a340df93cc5e5932cf060b443c9f7d637e12dd32ce8
+package-contract: 6a63de2ca390e129b2c59d843103468b93c849c26037cac883d11575895c85f2
+package-report: a8e02e60f984e037d2eade191a21d548b5053bc1f0aadff3388a3a07d3eab745
+comparison JSON: 91eec292a8e7835797707e2fb2171c4c5603d9a94cc2d0573a9c153ca21e1c18
+comparison Markdown: d617b89c285c9aa94685bb6618b01115d0f09415ec02e6f9d55b2b642bc25d62
+XLSX: d317bf137c3b2397d3f002156b9118ffc62439e07083453d55115c0cd67b9715
+```
+
+PAV8-03a ist **GO** und ersetzt PAV8-02 als aktuelle technische
+Vergleichsbasis, weil es dessen vollständige Rohdaten und Reviewmenge
+unverändert lässt, aber den 99-Zeilen-Nullbucket durch ein ehrliches
+Vergleichsergebnis ersetzt. Es ist noch kein finales Kundenergebnis:
+
+- Die aggregierten 109 Gleichwertigkeiten müssen in jeder Auswertung als
+  `99 x gleiche dokumentierte Fundlage nach vollständigem beidseitigem
+Nichtfund` und `10 x positiv beziehungsweise inhaltlich belegte
+Gleichwertigkeit` getrennt ausgewiesen werden. Sie dürfen nie pauschal als
+  109 identische Deckungen bezeichnet werden.
+- `VORTEIL_A` und `VORTEIL_B` bleiben 0, weil der nächste eigenständige
+  Richtungsvertrag für einseitig belegte Inhalte noch nicht umgesetzt ist;
+- 69 Zeilen bleiben reviewpflichtig und müssen grundweise in getrennten
+  kleinen Fixes bearbeitet werden;
+- die neue Gleichheit darf nicht als positive Deckungsgleichheit oder
+  Ausschlussnachweis gelesen werden;
+- der installierte Kundencheckout blieb sauber und unverändert auf
+  `c7d3b16d400ea4d65b558ef091781da5df82d610`; kein Deployment.
+
+Nächster eigenständiger Verhaltensfix ist die sichere Richtungsentscheidung
+für die 38 einseitig dokumentierten Punkte. Er darf nur nach einem eigenen
+versionierten Vertrag, adversarialen Kontrollen, Commit und vollständigem
+Mac-Studio-Lauf erfolgen.

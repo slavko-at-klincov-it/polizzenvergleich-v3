@@ -4222,7 +4222,7 @@ Favoriten ergab:
 - 224/224 Paket-A- und 224/224 Paket-B-Zusammenfassungen sowie alle Zeilen
   außerhalb der privaten Entscheidung sind gegen PAV8-01 identisch;
 - nur `LW-22` erhielt einen präziseren generischen Grundtext: `Bedingung oder
-  Ausnahme` wurde zu `Bedingung, Ausnahme oder Optionalität`, und
+Ausnahme` wurde zu `Bedingung, Ausnahme oder Optionalität`, und
   `Bedingungsscope` zu `Geltungsscope`. Die Entscheidung bleibt unverändert
   `UNKLAR`, `CONDITIONAL_OR_EXCEPTION_SCOPE`,
   `FAIL_CLOSED_CONDITIONAL_SOURCE_V1`, kundenprüfpflichtig;
@@ -4329,4 +4329,100 @@ NO-GO: kein neuer Ergebnisfavorit wegen Kundenreview 67 -> 69
 LIMIT: kein dauerhaftes full-run.private.log für diesen Operatorlauf
 NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
 NEXT: PAV8-03a – beidseitige qualifizierte Abwesenheit als Gleichheit
+```
+
+## 83. PAV8-03a – qualifizierte bilaterale Abwesenheit
+
+Commit `9564bcb77b368c684182111d83215167bec96661` implementiert den
+allgemeinen Auditvertrag `BILATERAL_QUALIFIED_ABSENCE_AUDIT_V1` und die
+Entscheidungsregel `EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1`. Der Vertrag
+ordnet eine Zeile nur dann `GLEICHWERTIG` zu, wenn beide bereitgestellten
+Polizzenpositionen unter demselben versionierten Anforderungs- und
+Suchvertrag vollständig kontrolliert wurden und auf beiden Seiten keine
+passende Vertragsregelung gefunden wurde.
+
+Die Aussage betrifft ausschließlich die Gleichheit der dokumentierten
+Fundlage. Sie behauptet weder positiven Deckungsgleichstand noch einen
+ausdrücklichen Ausschluss. Einseitige Funde, Teilbelege, Konflikte,
+Rangprobleme, Bedingungen, unvollständige `ANY`-Alternativen, fehlende
+Dokumente, abweichende Komponenten-/Planbindungen oder unreine Rohatome
+bleiben fail-closed.
+
+Produktversion:
+
+```text
+Schema: 9
+Profil: CUSTOMER_CORE_5_V9_BILATERAL_ABSENCE_EQUALITY
+Vergleichsvertrag: PACKAGE_FIRST_BILATERAL_ABSENCE_EQUALITY_V1
+Audit: BILATERAL_QUALIFIED_ABSENCE_AUDIT_V1
+Regel: EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1
+```
+
+Mac-Studio-Prüfung im isolierten Checkout
+`/private/tmp/pv3-pav8-03a-9564bcb7-Ty1KwF/repo`:
+
+- Prettier bestanden;
+- 9 Suites / 167 Tests bestanden;
+- kontrollierte, zertifizierte, gemischte, `ALL`-, vollständige und
+  unvollständige `ANY`-Varianten geprüft;
+- Dokument-, Komponenten-, Plan-, Digest-, Feld-, Seiten-, Kandidaten-,
+  Scope-, Reihenfolge- und Auditmanipulationen fail-closed;
+- In-Memory-Replay auf PAV8-02: exakt 99 erwartete Umklassifizierungen,
+  0 Rohänderungen, Reviewmenge 69 unverändert.
+
+Vollrun:
+
+```text
+Run: PAV8-03A-9564BCB7-20260902-045443
+Commit: 9564bcb77b368c684182111d83215167bec96661
+Node: 22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start: 2026-09-02T02:54:43Z
+Ende: 2026-09-02T03:21:35Z
+Wandzeit: 26:52
+Dokumente: 10/10 mit je 224/224 Zeilen
+Paket: 224/224 Zeilen
+Metrik: 0/0/38/109/0/8/69
+Kundenreview: 69
+```
+
+Der erste getrennte Startordner
+`PAV8-03A-9564BCB7-20260902-045311` brach vor jedem Modellaufruf ab, weil
+ein relativer Manifestpfad im isolierten Checkout noch nicht gegen die
+absolute Uploadbasis aufgelöst war. Der erfolgreiche Lauf verifizierte vorab
+alle zehn Quelldateien und SHA-256-Werte. Das vollständige Konsolenprotokoll
+des erfolgreichen Laufs wurde erstmals dauerhaft in
+`full-run.private.log` gespeichert.
+
+Exaktes Delta gegen PAV8-02:
+
+- `0/0/38/10/99/8/69 -> 0/0/38/109/0/8/69`;
+- genau 99 und nur 99 Outcomes wechseln
+  `KEIN_DOKUMENTIERTER_VORTEIL -> GLEICHWERTIG`;
+- Review bleibt 69 mit identischer Mitgliedschaft;
+- Paket A/B, technische Altentscheidungen und alle nicht betroffenen
+  Punktentscheidungen bleiben unverändert;
+- 410/410 fachlich relevante Dokumentartefakte byteidentisch;
+- 99 XLSX-Zellwerte ändern sich, ausschließlich Spalte Q; keine Höhen-,
+  Breiten- oder weiteren Zellwertänderungen;
+- Laufzeitdifferenz zu PAV8-02: minus 7 Sekunden, nicht signifikant.
+
+Berichtspflicht: Die 109 Gleichwertigkeiten bestehen aus 99 gleichen
+dokumentierten Fundlagen nach vollständigem beidseitigem Nichtfund und 10
+positiv beziehungsweise inhaltlich belegten Gleichwertigkeiten. Die
+Gesamtsumme darf nicht als 109 identische Deckungen kommuniziert werden.
+
+```text
+Run-Signatur: 7f9f92d2c69bf371a77505f5585f2bf046a86f717fc4f714341e483a394f7215
+full-run.log: 900d82b41fa7e2eff07c8a340df93cc5e5932cf060b443c9f7d637e12dd32ce8
+comparison JSON: 91eec292a8e7835797707e2fb2171c4c5603d9a94cc2d0573a9c153ca21e1c18
+comparison Markdown: d617b89c285c9aa94685bb6618b01115d0f09415ec02e6f9d55b2b642bc25d62
+XLSX: d317bf137c3b2397d3f002156b9118ffc62439e07083453d55115c0cd67b9715
+PASS: fokussierte Verträge, Replay und vollständiger Mac-Studio-Lauf
+PASS: keine Modell-, Such-, Extraktions-, Evidenz- oder Reviewdrift
+GO: aktuelle technische Vergleichsbasis
+LIMIT: weiterhin 0 Richtungsentscheidungen und 69 Reviewzeilen
+NO DEPLOY: installierter Kundenstand unverändert c7d3b16d
+NEXT: einseitig belegte Inhalte als eigener geprüfter Richtungsvertrag
 ```
