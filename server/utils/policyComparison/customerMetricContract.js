@@ -33,6 +33,13 @@ const {
   lw20AbsenceDefaultExclusionEqualityDecision,
   validateLw20AbsenceDefaultExclusionEqualityAudit,
 } = require("./lw20AbsenceDefaultExclusionEqualityContract");
+const {
+  VS15_QUALIFIER_ABSENCE_REASON_CODE,
+  VS15_QUALIFIER_ABSENCE_RULE_ID,
+  VS15_QUALIFIER_ABSENCE_TREATMENT,
+  validateVs15QualifierAbsenceAudit,
+  vs15QualifierAbsenceDecision,
+} = require("./vs15NamedOutbuildingQualifierAbsenceContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -284,7 +291,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   const manifestDocumentUuids = validManifestDocuments
     ? manifestDocuments.map(({ uuid }) => uuid)
     : [];
-  const validLw20DocumentManifest = Boolean(
+  const validDocumentManifest = Boolean(
     Array.isArray(result?.documents) &&
       validManifestDocuments &&
       new Set(manifestDocumentUuids).size === manifestDocumentUuids.length &&
@@ -391,7 +398,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
           undefined;
       if (lw20EqualityDecision) {
-        if (!validLw20DocumentManifest)
+        if (!validDocumentManifest)
           validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
         const audit =
           row.pointDecision.lw20AbsenceDefaultExclusionEqualityAudit;
@@ -437,6 +444,50 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           !sameJson(row.pointDecision, reconstructed)
         )
           validationError("COMPARISON_LW20_EQUALITY_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
+      const vs15QualifierAbsenceDecisionDetected =
+        row.pointDecision?.ruleId === VS15_QUALIFIER_ABSENCE_RULE_ID ||
+        row.pointDecision?.reasonCode === VS15_QUALIFIER_ABSENCE_REASON_CODE ||
+        row.pointDecision?.comparisonTreatment ===
+          VS15_QUALIFIER_ABSENCE_TREATMENT ||
+        row.pointDecision?.vs15QualifierAbsenceAudit !== undefined;
+      if (vs15QualifierAbsenceDecisionDetected) {
+        const audit = row.pointDecision.vs15QualifierAbsenceAudit;
+        try {
+          validateVs15QualifierAbsenceAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+          });
+        } catch (error) {
+          validationError("COMPARISON_VS15_QUALIFIER_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = vs15QualifierAbsenceDecision(audit);
+        if (
+          !validDocumentManifest ||
+          row.categoryView !== "VS" ||
+          row.categoryId !== "VS-15" ||
+          outcome !== POINT_OUTCOME.EQUIVALENT ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.bilateralAbsenceAudit !== undefined ||
+          row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined ||
+          row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
+            undefined ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_VS15_QUALIFIER_DECISION_INVALID", [
             rowKey,
           ]);
       }

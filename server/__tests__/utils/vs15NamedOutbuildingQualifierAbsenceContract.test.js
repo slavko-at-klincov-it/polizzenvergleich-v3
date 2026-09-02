@@ -8,6 +8,13 @@ const {
   vs15QualifierAbsenceDecision,
 } = require("../../utils/policyComparison/vs15NamedOutbuildingQualifierAbsenceContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
+const {
+  deriveCustomerMetrics,
+  validateCustomerComparison,
+} = require("../../utils/policyComparison/customerMetricContract");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.9";
 const CATEGORY_ID = "VS-15";
@@ -259,6 +266,58 @@ describe("VS-15 bilateral controlled qualifier absence contract", () => {
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
       reviewRequired: true,
     });
+  });
+
+  test("revalidates the exact VS-15 decision before customer delivery", () => {
+    const input = fixture();
+    const pointDecision = decidePoint(input);
+    const categories = [
+      {
+        categoryView: "VS",
+        rows: [
+          {
+            categoryId: CATEGORY_ID,
+            outcome: "UNTERSCHIED_FACHLICH_PRÜFEN",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision,
+          },
+        ],
+      },
+    ];
+    const result = {
+      schemaVersion: 11,
+      status: "COMPARISON_RESULT_MATERIALIZED",
+      productProfile: PRODUCT_PROFILE,
+      documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
+      categories,
+      totals: deriveCustomerMetrics(categories),
+    };
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 0,
+      pointDecisions: { GLEICHWERTIG: 1 },
+    });
+
+    for (const mutate of [
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.reason =
+          "Gleichwertig."),
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.vs15QualifierAbsenceAudit.sides[0].qualifierControlledZeroCount += 1),
+      (tampered) =>
+        (tampered.documents[0].sha256 = "f".repeat(64)),
+      (tampered) =>
+        (tampered.categories[0].rows[0].pointDecision.ruleId =
+          "ATOMIC_COVERAGE_EQUALITY_V1"),
+    ]) {
+      const tampered = clone(result);
+      mutate(tampered);
+      expect(() => validateCustomerComparison(tampered)).toThrow(
+        /^COMPARISON_VS15_QUALIFIER_/u
+      );
+    }
   });
 
   test.each([

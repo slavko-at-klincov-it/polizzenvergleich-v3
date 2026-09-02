@@ -150,6 +150,19 @@ describe("policy comparison customer result presenter", () => {
     expect(text).toContain("bestimmungswidriges Entstehen oder Ausbreiten");
   });
 
+  test("keeps the verified VS-15 qualifier equality customer-visible", () => {
+    const text = presented("GLEICHWERTIG", {
+      reason:
+        "Gleichwertig für die abgefragte namentliche Anführung: In beiden vollständig kontrolliert geprüften Polizzen wurde bei belegtem allgemeinem Nebengebäudeschutz keine namentliche Anführung eines Nebengebäudes gefunden. Unterschiedliche Limits des allgemeinen Nebengebäudeschutzes werden dadurch nicht gleichgesetzt.",
+      ruleId:
+        "VS15_EQUAL_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH_V1",
+      reviewRequired: false,
+    });
+    expect(text.startsWith("Kein klarer Vorteil: gleichwertig –")).toBe(true);
+    expect(text).toContain("namentliche Anführung");
+    expect(text).toContain("Unterschiedliche Limits");
+  });
+
   test("keeps the approved sole-scope result customer-visible", () => {
     const text = presented("NICHT_VERGLEICHBAR", {
       reason:
