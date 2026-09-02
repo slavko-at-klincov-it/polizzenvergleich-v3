@@ -1194,17 +1194,6 @@ function decidePoint({
         ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
         dimensions: [],
       };
-    const conditionalFound = [...(atomsA || []), ...(atomsB || [])].filter(
-      (atom) =>
-        atom.requirementId === categoryId &&
-        atom.evidencePresence === "FOUND" &&
-        hasConditionalOrOptionalCoverageSource(atom)
-    );
-    if (conditionalFound.length > 0)
-      return unclear(
-        "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
-        "Unklar: Mindestens eine beidseitig gefundene Alternative enthält eine nicht aufgelöste Bedingung, Ausnahme oder Optionalität."
-      );
     componentIds = foundIdsA;
   }
   if (componentIds.length === 0)

@@ -3917,7 +3917,8 @@ describe("policy comparison point decision", () => {
 
     expect(decide([conditional("a")], [conditional("b")])).toMatchObject({
       outcome: POINT_OUTCOME.UNCLEAR,
-      reasonCode: "ANY_COMPONENT_EVIDENCE_INCOMPLETE",
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
       reviewRequired: true,
     });
   });
