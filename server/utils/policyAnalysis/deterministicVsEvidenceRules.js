@@ -22,6 +22,17 @@ function occurrenceContextText(occurrence) {
   return String(occurrence?.context?.text || "");
 }
 
+function explicitAutomaticIndexAdjustment(text) {
+  const positive =
+    /(?:Aufwertung\s+der\s+Geb[äa]udeversicherungssummen\s+und\s+Pr[äa]mien\s+erfolgt\s+nach|Versicherungssumme\s+erh[öo]ht\s+oder\s+vermindert\s+sich\s+j[äa]hrlich)/iu.test(
+      text
+    );
+  if (!positive) return false;
+  return !/(?:\bkeine?\s+(?:automatische\s+)?(?:Aufwertung|Wertanpassung|Indexanpassung)\b|\b(?:Aufwertung|Wertanpassung|Indexanpassung)\b[\s\S]{0,100}\b(?:entf[aä]llt|aufgehoben|ausgesetzt|findet\s+nicht\s+statt)\b|\b(?:kann|wahlweise)\b[\s\S]{0,100}\b(?:angepasst|aufgewertet|indexiert)\b|\b(?:auf\s+Antrag|nach\s+Zustimmung|gegen\s+(?:eine\s+)?Mehrpr[aä]mie|sofern[\s\S]{0,80}\bvereinbart)\b)/iu.test(
+    text
+  );
+}
+
 function boundLimitFollowsOccurrence(occurrence) {
   const context = occurrenceContextText(occurrence);
   const contextStart = Number(occurrence?.context?.documentStart);
@@ -323,9 +334,7 @@ function deterministicVsCandidateBinding({
 
   if (
     key === "VS-10:automatic_index_adjustment" &&
-    /(?:Aufwertung\s+der\s+Geb[äa]udeversicherungssummen\s+und\s+Pr[äa]mien\s+erfolgt\s+nach|Versicherungssumme\s+erh[öo]ht\s+oder\s+vermindert\s+sich\s+j[äa]hrlich)/iu.test(
-      text
-    )
+    explicitAutomaticIndexAdjustment(text)
   )
     return {
       binding: DETERMINISTIC_BINDING.DIRECT,

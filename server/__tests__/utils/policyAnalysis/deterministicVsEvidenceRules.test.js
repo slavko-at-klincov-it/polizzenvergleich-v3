@@ -324,6 +324,22 @@ describe("deterministicVsEvidenceRules", () => {
     ).toBeNull();
   });
 
+  test.each([
+    "Keine Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex.",
+    "Die Indexanpassung ist aufgehoben. Historisch: Die Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex.",
+    "Die Indexanpassung ist ausgesetzt; die Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach dem Baukostenindex nicht mehr.",
+    "Die Versicherungssumme erhöht oder vermindert sich jährlich nur auf Antrag.",
+    "Gegen eine Mehrprämie gilt: Die Versicherungssumme erhöht oder vermindert sich jährlich.",
+  ])("rejects a negated or optional VS-10 mechanism: %s", (text) => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-10",
+        componentId: "automatic_index_adjustment",
+        occurrence: occurrence(text),
+      })
+    ).toBeNull();
+  });
+
   test("owns a prepared effect only for candidates carrying a matching deterministic binding", () => {
     const target = {
       requirementId: "VS-10",
