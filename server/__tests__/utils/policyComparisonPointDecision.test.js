@@ -1094,7 +1094,10 @@ describe("policy comparison point decision", () => {
       { riskInformation = false, historicalV1 = false } = {}
     ) => {
       const documentUuid = `el-12-${side}`;
-      const searchPlanId = `fixture/${categoryId}/${component.id}`;
+      const catalogId = historicalV1
+        ? "el-occurrence-full-draft-v0.7"
+        : "fixture";
+      const searchPlanId = `${catalogId}/${categoryId}/${component.id}`;
       const terminalContractId = historicalV1
         ? "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1"
         : "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V2";
@@ -1140,7 +1143,7 @@ describe("policy comparison point decision", () => {
         requirementContract,
         searchPlanId,
         documentUuid,
-        catalogId: historicalV1 ? "el-occurrence-full-draft-v0.7" : "fixture",
+        catalogId,
         physicalPagesChecked: 3,
         totalPhysicalPages: 3,
         aliases: ["Hochwasser-Risiko-Zone"],
