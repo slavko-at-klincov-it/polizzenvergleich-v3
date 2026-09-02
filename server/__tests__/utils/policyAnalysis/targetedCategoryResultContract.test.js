@@ -27,6 +27,7 @@ const {
 const {
   TARGETED_CATEGORY_RESULT_CONTRACT_ID,
   materializeTargetedCategoryResult,
+  replayModelPreparedEvidenceJudgement,
 } = require("../../../utils/policyAnalysis/targetedCategoryResultContract");
 const {
   rebuildTargetedSelectedSources,
@@ -181,7 +182,14 @@ function fixture() {
     categoryPromptBytes: Buffer.from(prompt),
   };
   assertTargetedCategoryMaterializationInputs.mockReturnValue(inputContract);
-  return { input, inputContract };
+  return {
+    input,
+    inputContract,
+    worksheet,
+    targets,
+    materializedTriage,
+    documentArtifact,
+  };
 }
 
 describe("targeted category result contract", () => {
@@ -232,6 +240,55 @@ describe("targeted category result contract", () => {
     expect(assertTargetedCategoryMaterializationInputs).toHaveBeenCalledWith(
       input
     );
+  });
+
+  test("replays a server-normalized model effect without expanding a narrow candidate", () => {
+    const selectedCandidateIds = ["candidate:direct"];
+    const target = {
+      targetId: "prepared-target:EL-04:flood",
+      requirementId: "EL-04",
+      componentId: "flood",
+      factRole: "PERIL",
+      documentStatus: DOCUMENT_STATUS.ACTIVE,
+      unresolvedCandidateIds: [],
+      candidates: [
+        {
+          candidateId: selectedCandidateIds[0],
+          candidateBinding: "DIRECT",
+          scopeLeadText: "Versichert sind Schäden durch Hochwasser.",
+          contextText: "Versichert sind Schäden durch Hochwasser.",
+        },
+        {
+          candidateId: "candidate:narrow",
+          candidateBinding: "NARROW_SCOPE",
+          scopeLeadText: "Mitversichert gelten Hochwasserschäden.",
+          contextText: "Mitversichert gelten Hochwasserschäden.",
+        },
+      ],
+    };
+    const judgement = parseAndValidatePreparedEvidenceResponse({
+      responseText: JSON.stringify({
+        schemaVersion: 1,
+        componentId: target.componentId,
+        selectedCandidateIds,
+        coverageEffect: "DEFINED",
+        conflictState: "NONE",
+      }),
+      target,
+      allowUniqueCandidateIdRepair: false,
+    });
+    expect(judgement).toMatchObject({
+      selectedCandidateIds,
+      coverageEffect: "INCLUDED",
+      decisionOwner: "MODEL_SELECTION_SERVER_EFFECT_RULE",
+    });
+    expect(
+      replayModelPreparedEvidenceJudgement({ judgement, target })
+    ).toMatchObject({
+      selectedCandidateIds,
+      coverageEffect: "INCLUDED",
+      decisionOwner: "MODEL_SELECTION_SERVER_EFFECT_RULE",
+    });
   });
 
   test.each([

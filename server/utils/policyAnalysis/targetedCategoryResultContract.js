@@ -50,8 +50,9 @@ function parseJsonBytes(value, code) {
   }
 }
 
-function assertParity(left, right, code) {
-  if (selectionDigest(left) !== selectionDigest(right)) throw resultError(code);
+function assertParity(left, right, code, detail = "") {
+  if (selectionDigest(left) !== selectionDigest(right))
+    throw resultError(code, detail);
 }
 
 function sourceDocumentsFromArtifact(artifact) {
@@ -95,6 +96,25 @@ function semanticJudgement(judgement) {
     selectedScopePicture: judgement.selectedScopePicture,
     documentApplicability: judgement.documentApplicability,
   };
+}
+
+function replayModelPreparedEvidenceJudgement({ judgement, target }) {
+  const replayCoverageEffect =
+    judgement.decisionOwner === "MODEL_SELECTION_SERVER_EFFECT_RULE" &&
+    judgement.coverageEffect === "INCLUDED"
+      ? "DEFINED"
+      : judgement.coverageEffect;
+  return parseAndValidatePreparedEvidenceResponse({
+    responseText: JSON.stringify({
+      schemaVersion: 1,
+      componentId: judgement.componentId,
+      selectedCandidateIds: judgement.selectedCandidateIds,
+      coverageEffect: replayCoverageEffect,
+      conflictState: judgement.conflictState,
+    }),
+    target,
+    allowUniqueCandidateIdRepair: false,
+  });
 }
 
 function assertJudgements({ targets, materializedEvidence }) {
@@ -147,21 +167,15 @@ function assertJudgements({ targets, materializedEvidence }) {
         "TARGETED_RESULT_MODEL_JUDGEMENT_INVALID",
         target.targetId
       );
-    const validated = parseAndValidatePreparedEvidenceResponse({
-      responseText: JSON.stringify({
-        schemaVersion: 1,
-        componentId: judgement.componentId,
-        selectedCandidateIds: judgement.selectedCandidateIds,
-        coverageEffect: judgement.coverageEffect,
-        conflictState: judgement.conflictState,
-      }),
+    const validated = replayModelPreparedEvidenceJudgement({
+      judgement,
       target,
-      allowUniqueCandidateIdRepair: false,
     });
     assertParity(
       semanticJudgement(judgement),
       semanticJudgement(validated),
-      "TARGETED_RESULT_MODEL_JUDGEMENT_MISMATCH"
+      "TARGETED_RESULT_MODEL_JUDGEMENT_MISMATCH",
+      target.targetId
     );
   }
   const missing = targets
@@ -367,4 +381,5 @@ module.exports = {
   TARGETED_CATEGORY_RESULT_CONTRACT_ID,
   TARGETED_CATEGORY_RESULT_SCHEMA_VERSION,
   materializeTargetedCategoryResult,
+  replayModelPreparedEvidenceJudgement,
 };
