@@ -1738,10 +1738,7 @@ describe("policy comparison result builder", () => {
     });
     expect(
       summarizePackage(entries, {
-        atomicFacts: [
-          atom("a", "EUR 10.000", false),
-          atom("b", "EUR 15.000"),
-        ],
+        atomicFacts: [atom("a", "EUR 10.000", false), atom("b", "EUR 15.000")],
       }).reviewStatus
     ).toBe("RANGFOLGE_PRÜFEN");
   });

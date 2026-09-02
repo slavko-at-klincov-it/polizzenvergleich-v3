@@ -312,7 +312,8 @@ function explicitComponentScopedAmountComparison(
     return null;
   const factsByDocument = new Map();
   for (const fact of facts) {
-    if (!fact.documentUuid || factsByDocument.has(fact.documentUuid)) return null;
+    if (!fact.documentUuid || factsByDocument.has(fact.documentUuid))
+      return null;
     factsByDocument.set(fact.documentUuid, fact);
   }
 
@@ -338,8 +339,9 @@ function explicitComponentScopedAmountComparison(
         )
           return null;
         const componentLabel =
-          String(fact.componentScope.label || atom.componentLabel || "").trim() ||
-          atom.componentId;
+          String(
+            fact.componentScope.label || atom.componentLabel || ""
+          ).trim() || atom.componentId;
         const value = [fact.normalizedValue, fact.qualifier]
           .filter(Boolean)
           .join(" ");
@@ -365,7 +367,9 @@ function explicitComponentScopedAmountComparison(
   }
   if (entries.length === 0) return null;
   if (
-    JSON.stringify(unique(entries.map(({ documentUuid }) => documentUuid)).sort()) !==
+    JSON.stringify(
+      unique(entries.map(({ documentUuid }) => documentUuid)).sort()
+    ) !==
     JSON.stringify(
       unique(amountBearingFacts.map(({ documentUuid }) => documentUuid)).sort()
     )
@@ -519,8 +523,7 @@ function summarizePackage(
   const amountConflict = componentAmountComparison
     ? componentAmountComparison.conflict
     : amountKeys.length > 1;
-  const unresolvedPrecedence =
-    coverageValues.length > 1 || amountConflict;
+  const unresolvedPrecedence = coverageValues.length > 1 || amountConflict;
   const reviewStatus = facts.some(
     ({ reviewStatus: status }) => status === "WIDERSPRÜCHLICH"
   )
@@ -553,12 +556,12 @@ function summarizePackage(
             ? "Mehrere komponentenbezogene Werte – Rangfolge prüfen"
             : componentAmountComparison.displayValues.join("; ")
           : amountKeys.length === 1
-          ? amountValues.reduce(
-              (selected, candidate) =>
-                candidate.length > selected.length ? candidate : selected,
-              amountValues[0]
-            )
-          : "Mehrere dokumentbezogene Werte – Rangfolge prüfen",
+            ? amountValues.reduce(
+                (selected, candidate) =>
+                  candidate.length > selected.length ? candidate : selected,
+                amountValues[0]
+              )
+            : "Mehrere dokumentbezogene Werte – Rangfolge prüfen",
     source: facts
       .map(
         (fact) =>
