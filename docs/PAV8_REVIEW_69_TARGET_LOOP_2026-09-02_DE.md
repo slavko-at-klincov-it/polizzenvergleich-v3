@@ -59,7 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `2/40 TARGET-E2E ACCEPTED`. `VS-15` und `LW-12` sind abgeschlossen;
+Status: `3/40 TARGET-E2E ACCEPTED`. `VS-15`, `LW-12` und `ST-27` sind
+abgeschlossen;
 38 Fälle der ursprünglichen Familie bleiben offen.
 
 ```text
@@ -2187,6 +2188,113 @@ eigener versionierter, zeilenspezifischer Vergleichsvertrag mit
 Override-/Konfliktprüfung nötig. Eine globale Gleichsetzung von `NOT_FOUND`
 und `EXCLUDED` ist verboten, weil sie bei unvollständiger Suche oder späterer
 positiver Ersatzregel falsche Gleichheit erzeugen würde.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+### 10.23 ST-27 – passender enger Einschlussscope ist vollständige Evidenz
+
+#### 10.23.1 Ausgangsfehler
+
+ST-27 verlangt beide Gefahrenkomponenten `avalanche` und `snow_slide`.
+Der kontrollierte Lauf hatte beide Komponenten in beiden Paketen bereits
+gefunden. Trotzdem blieb Paket A `TEILBELEGT`, weil die ausdrückliche
+Lawinenaufnahme als `NARROW_ONLY` klassifiziert war und die bisherige globale
+Defaultregel für vollständige Evidenz zwingend `GENERAL` verlangte.
+
+Das war kein Recallfehler und kein fehlender Dokumentrang:
+
+```text
+Paket A:
+  Lawine       INCLUDED / NARROW_ONLY
+  Schneerutsch INCLUDED / GENERAL
+Paket B:
+  Lawine       INCLUDED / GENERAL
+  Schneerutsch INCLUDED / GENERAL
+Vorherige Entscheidung:
+  UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+  Blocker A Lawine: SCOPE_INCOMPLETE
+```
+
+Eine engere, aber exakt zur Komponente gehörende positive Deckung darf für die
+Evidenzvollständigkeit nicht als fehlend behandelt werden. Sie darf zugleich
+nicht auf allgemeinen Schutz hochgestuft werden. Der Katalogvertrag von ST-27
+wurde deshalb ausschließlich auf
+`MATCHING_SCOPE_INCLUDED_SUFFICIENT` gesetzt. Dadurch wird der gefundene enge
+Scope entscheidungsfähig und bleibt als `NARROW_ONLY` im Atom und Audit
+erhalten. Andere ST-Zeilen und nicht positive Wirkungen behalten ihre
+bisherigen Regeln.
+
+Versionierung und Commits:
+
+```text
+ST-Katalog: st-occurrence-full-draft-v0.6
+Produktprofil: CUSTOMER_CORE_5_V40_ST27_MATCHING_INCLUDED_SCOPE
+974b7b5b fix(analysis): accept matching ST-27 included scope
+a7aacd90 style(analysis): format ST-27 scope test
+```
+
+#### 10.23.2 Mac-Studio-Validierung und realer Ziellauf
+
+Die erste Formatprüfung von `974b7b5b` meldete ausschließlich die neue
+ST-27-Testdatei. Der separate Forward-Fix `a7aacd90` korrigierte diese
+Formatierung; es wurde keine Historie umgeschrieben. Danach liefen auf dem
+Mac Studio:
+
+```text
+Commit: a7aacd9039743b21ec65374046f357bef1c7f3a5
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Node: v22.23.2 aus dem installierten Audit-Runtime
+Formatprüfung: PASS
+Fokussierte Suites: 5/5 PASS
+Fokussierte Tests: 180/180 PASS
+```
+
+Der echte Ziellauf baute ST-27 anschließend für alle zehn unveränderten
+Kundendokumente neu auf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/ST-27-MATCHING-SCOPE-A7AACD90-20260903
+Summary-Digest:
+c906df87f3a5356ee101593e071bd3c98a6aef4aff4cc114fac962b1d2d72dcb
+Target-Selection-Digest:
+4d99bd3de39f636198a70af525352755731e1433b65a10290ba634d0e482d96f
+Producer-Digest:
+6f2269062204daae77530b0394d94093d40ca7305ad4a8e7b05fe84d6a1e6405
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Qwen-Aufrufe: 6
+Evidence-Qwen-Aufrufe: 0
+Server-Terminalkomponenten: 14
+```
+
+Revisionssicheres Delta:
+
+```text
+Vorher:
+A TEILBELEGT / B BELEGT
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Nachher:
+A BELEGT / B BELEGT
+NICHT_VERGLEICHBAR / COMPARABILITY_GATE_FAILED / Review nein
+Regel: ATOMIC_COMPARABILITY_GATE_V1
+```
+
+Der Abschluss ist fachlich begründet: Die Lawinenkomponente ist auf A enger
+und auf B allgemein eingeschlossen; die Schneerutschkomponente ist auf beiden
+Seiten allgemein eingeschlossen. Der Fix erfindet weder einen fehlenden Fund
+noch einen Vorteil, sondern macht den tatsächlich gefundenen Scope für den
+bestehenden atomaren Vergleich nutzbar.
+
+R69-A steht damit bei `3/40` abgeschlossenen Kandidaten; `37` bleiben offen.
+Unter Einbeziehung aller akzeptierten gezielten Deltas verschiebt sich die
+noch nicht durch einen frischen 224-Zeilen-Vollrun bestätigte Projektion von
+`Nicht vergleichbar 9 / Unklar 58` auf
+`Nicht vergleichbar 10 / Unklar 57`. Alle übrigen Ergebnisgruppen bleiben
+unverändert.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
