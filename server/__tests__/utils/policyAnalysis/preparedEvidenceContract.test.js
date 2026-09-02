@@ -1867,6 +1867,60 @@ describe("preparedEvidenceContract", () => {
       ]);
     }
 
+    const genericPolicyListingPreamble =
+      "Definition und Zuordnung. Versicherungsschutz besteht\n" +
+      "ausschließlich für jene Sachen, die in der Polizze angeführt sind.\n";
+    const realShapedPathClassification = occurrenceFor({
+      contextText:
+        "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, befestigte Flächen wie Asphalt, verlegte Platten, betonierte Flächen);",
+      exactText: "Außenanlagen",
+      scopeLead: {
+        documentStart: 1_218,
+        documentEnd: 1_756,
+        text:
+          genericPolicyListingPreamble +
+          "1.1 Gebäude, das sind Bauwerke und konstruktive Bestandteile, die mit dem Boden fest verbunden sind.",
+      },
+      candidateId: "candidate:vs19:real-shaped-policy-listing-preamble",
+    });
+    expect(
+      targetFor(realShapedPathClassification, {
+        componentId: "outdoor_paths",
+      }).serverRejectedCandidates
+    ).toEqual([
+      expect.objectContaining({
+        candidateId: realShapedPathClassification.candidateId,
+        scopeLeadTreatment:
+          "GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE_BEFORE_OBJECT_CLASS_BOUNDARY_V1",
+      }),
+    ]);
+
+    for (const unsafeScopeLead of [
+      `${genericPolicyListingPreamble}Außenanlagen sind Sachen im Sinne dieses Abschnitts.`,
+      `${genericPolicyListingPreamble}Die Außenanlagen sind mitversichert.`,
+      `${genericPolicyListingPreamble}Weitere Sachen sind nicht versichert.`,
+      `${genericPolicyListingPreamble}Weitere Sachen gelten nur bei Vereinbarung.`,
+      `${genericPolicyListingPreamble}Weitere Sachen bis EUR 10.000.`,
+      `${genericPolicyListingPreamble}${genericPolicyListingPreamble}1.1 Gebäude sind Bauwerke.`,
+      "Versicherungsschutz gilt ausschließlich für jene Sachen, die in der Polizze angeführt sind.",
+    ]) {
+      const candidate = occurrenceFor({
+        contextText: "·Außenanlagen;",
+        exactText: "Außenanlagen",
+        scopeLead: {
+          documentStart: 1_218,
+          documentEnd: 1_756,
+          text: unsafeScopeLead,
+        },
+        candidateId: `candidate:vs19:unsafe-preamble:${unsafeScopeLead.length}`,
+      });
+      const unresolved = targetFor(candidate, {
+        componentId: "outdoor_paths",
+      });
+      expect(unresolved.serverRejectedCandidates).toEqual([]);
+      expect(unresolved.candidates).toHaveLength(1);
+    }
+
     const valid = occurrenceFor();
     const certifiedDigest =
       targetFor(valid).serverRejectedCandidates[0].occurrenceDigestSha256;

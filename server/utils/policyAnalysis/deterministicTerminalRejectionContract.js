@@ -18,11 +18,11 @@ const DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID =
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_V1";
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID =
-  "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_V1";
+  "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_V2";
 const TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID =
   "TERMINAL_OCCURRENCE_PROVENANCE_V3";
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_OCCURRENCE_DIGEST_CONTRACT_ID =
-  "TERMINAL_OCCURRENCE_PROVENANCE_V4_OBJECT_CLASSIFICATION";
+  "TERMINAL_OCCURRENCE_PROVENANCE_V5_OBJECT_CLASSIFICATION_SCOPE_LEAD";
 const TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID =
   "TERMINAL_REJECTION_SET_PROVENANCE_V3";
 const FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS =
@@ -41,7 +41,11 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE =
 const COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS =
   "PURE_OBJECT_CLASS_EXCLUSION_IS_NOT_OPERATIONAL_COVERAGE";
 const COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE =
-  "LOCAL_PURE_OBJECT_CLASS_EXCLUSION_V1";
+  "LOCAL_PURE_OBJECT_CLASS_EXCLUSION_V2_GENERIC_LISTING_PREAMBLE";
+const GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE_TREATMENT =
+  "GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE_BEFORE_OBJECT_CLASS_BOUNDARY_V1";
+const GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE =
+  /(?:Definition\s+und\s+Zuordnung\.\s*)?Versicherungsschutz\s+besteht\s+ausschlie(?:ß|ss)lich\s+f(?:ü|u)r\s+jene\s+Sachen,\s+die\s+in\s+der\s+Polizze\s+angef(?:ü|u)hrt\s+sind\.\s*/iu;
 
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
   "LW:LW-12:underfloor_heating": Object.freeze({
@@ -71,6 +75,8 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     membership: "EXCLUDED_FROM_CLASS",
     allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
     allowedExactTexts: ["Beleuchtungsanlagen"],
+    scopeLeadTargetConcept:
+      /\b(?:Au(?:ß|ss)enbeleuchtung|Beleuchtungsanlagen?|Beleuchtungsk(?:ö|o)rper)\b/iu,
     maximumClassificationToContextGap: 16,
     allowPrecedingScopeLeadReset: true,
   }),
@@ -87,6 +93,8 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     membership: "EXCLUDED_FROM_CLASS",
     allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
     allowedExactTexts: ["Außenanlagen"],
+    scopeLeadTargetConcept:
+      /\b(?:Au(?:ß|ss)enanlagen?|Gehwege?|Zufahrtswege?|befestigte(?:n|r|s)?\s+(?:Wege?|Fl(?:ä|a)chen?)|Bodenbefestigungen?|Asphalt(?:ierungen?)?|verlegte(?:n|r|s)?\s+Fl(?:ä|a)chen?|betonierte(?:n|r|s)?\s+Fl(?:ä|a)chen?)\b/iu,
     maximumClassificationToContextGap: 16,
     allowPrecedingScopeLeadReset: true,
   }),
@@ -638,9 +646,23 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
       occurrence.scopeLead.documentEnd > occurrence.scopeLead.documentStart &&
       occurrence.scopeLead.documentEnd <= hint?.documentStart
   );
+  const genericListingPreambleMatches = scopeLeadText.match(
+    new RegExp(GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE, "giu")
+  );
+  const neutralizeGenericListingPreamble = Boolean(
+    target?.contractId ===
+      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID &&
+      scopeLeadResetAtClassification &&
+      genericListingPreambleMatches?.length === 1 &&
+      target?.scopeLeadTargetConcept instanceof RegExp &&
+      !target.scopeLeadTargetConcept.test(scopeLeadText)
+  );
+  const scopeLeadScanText = neutralizeGenericListingPreamble
+    ? scopeLeadText.replace(GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE, "")
+    : scopeLeadText;
   const localText = `${hint?.text || ""}\n${hint?.subject || ""}\n${
     occurrence?.coverageGovernorHint?.text || ""
-  }\n${scopeLeadText}\n${contextText}`;
+  }\n${scopeLeadScanText}\n${contextText}`;
   const operationalCoverage =
     /\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|eingeschlossen|gedeckt|versicherungsschutz|nicht\s+versichert|kein(?:e|en|er|es)?\s+deckung)\b/iu;
   const conditionalOrOptional =
@@ -694,6 +716,9 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
     physicalPageNumber: occurrencePage,
     sectionScopeSource: hint.source,
     observedScopeKeys: [],
+    scopeLeadTreatment: neutralizeGenericListingPreamble
+      ? GENERIC_POLICY_LISTING_ELIGIBILITY_PREAMBLE_TREATMENT
+      : null,
   };
 }
 
@@ -799,6 +824,7 @@ function terminalRejectionSetDigest(rejections) {
           sectionScopeSource,
           observedScopeKeys: scopes,
           scopeProofMode,
+          scopeLeadTreatment,
         }) => ({
           candidateId,
           terminalRejectionContractId: terminalRejectionContractId || null,
@@ -811,6 +837,7 @@ function terminalRejectionSetDigest(rejections) {
           sectionScopeSource: sectionScopeSource || null,
           observedScopeKeys: scopes,
           ...(scopeProofMode ? { scopeProofMode } : {}),
+          ...(scopeLeadTreatment ? { scopeLeadTreatment } : {}),
         })
       )
       .sort((left, right) =>
@@ -1214,6 +1241,7 @@ function certifyCoverageOnlyObjectClassificationTerminalRejection({
     sectionScopeSource: proof.sectionScopeSource,
     observedScopeKeys: proof.observedScopeKeys,
     scopeProofMode: target.scopeProofMode,
+    scopeLeadTreatment: proof.scopeLeadTreatment,
     occurrenceDigestSha256: terminalOccurrenceDigest(
       {
         ...occurrence,
