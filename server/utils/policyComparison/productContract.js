@@ -12,7 +12,7 @@ const EXPECTED_ROW_COUNT = Object.values(CATEGORY_ROW_COUNTS).reduce(
   0
 );
 const PRODUCT_PROFILE = Object.freeze({
-  id: "CUSTOMER_CORE_5_V40_ST27_MATCHING_INCLUDED_SCOPE",
+  id: "CUSTOMER_CORE_5_V41_LW07_SANITARY_FIXTURE_RECALL",
   comparisonContractId:
     "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_V9",
   categoryViews: CATEGORY_ORDER,
@@ -20,7 +20,7 @@ const PRODUCT_PROFILE = Object.freeze({
   categoryCatalogIds: Object.freeze({
     VS: "vs-occurrence-full-draft-v0.10",
     FE: "fe-occurrence-full-draft-v0.7",
-    LW: "lw-occurrence-full-draft-v0.8",
+    LW: "lw-occurrence-full-draft-v0.9",
     ST: "st-occurrence-full-draft-v0.6",
     EL: "el-occurrence-full-draft-v0.8",
   }),

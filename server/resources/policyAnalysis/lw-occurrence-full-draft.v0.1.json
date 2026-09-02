@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.8",
+  "catalogId": "lw-occurrence-full-draft-v0.9",
   "categoryView": "LW",
   "requirements": [
     {
@@ -324,7 +324,13 @@
             "Frostschäden an Sanitärkeramik",
             "Frostschäden an Sanitäranlagen",
             "Frost an den leitungswasserführenden Rohren und Sanitäranlagen",
-            "Frost an den leitungswasserführenden Rohren und/oder angeschlossenen Einrichtungen innerhalb des Versicherungsgrundstücks, deren Armaturen und Sanitäranlagen"
+            "Frost an den leitungswasserführenden Rohren und/oder angeschlossenen Einrichtungen innerhalb des Versicherungsgrundstücks, deren Armaturen und Sanitäranlagen",
+            "WC-Schale",
+            "WC-Schalen",
+            "Toilettenbecken",
+            "Klosettbecken",
+            "Sanitärgegenstände",
+            "Sanitäreinrichtungen"
           ]
         }
       ],

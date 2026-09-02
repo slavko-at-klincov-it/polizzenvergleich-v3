@@ -34,6 +34,50 @@ function component(worksheet, requirementId, componentId) {
 
 describe("LW category recall", () => {
   test.each([
+    "WC-Schale",
+    "WC-Schalen",
+    "Toilettenbecken",
+    "Klosettbecken",
+    "Sanitärgegenstände",
+    "Sanitäreinrichtungen",
+  ])("LW-07 recalls the sanitary fixture form %s", (wording) => {
+    const clause = `Ersatz oder Reparatur von ${wording} auch ohne Rohrgebrechen`;
+    const worksheet = worksheetFromText(
+      ["Leitungswasserversicherung", clause].join("\n")
+    );
+    const result = component(worksheet, "LW-07", "sanitary_ceramics");
+
+    expect(result.occurrences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias: wording,
+          exactText: wording,
+          context: expect.objectContaining({
+            text: expect.stringContaining(clause),
+          }),
+        }),
+      ])
+    );
+  });
+
+  test.each([
+    "WC-Sitz",
+    "WC-Spülkasten",
+    "Keramikfliesen",
+    "Sanitärreinigung",
+    "Siphon",
+  ])("LW-07 does not promote the unapproved fixture wording %s", (wording) => {
+    const worksheet = worksheetFromText(
+      ["Leitungswasserversicherung", wording].join("\n")
+    );
+
+    expect(component(worksheet, "LW-07", "sanitary_ceramics")).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+    });
+  });
+
+  test.each([
     "Allmählichkeitsschaden",
     "Allmählichkeitsschäden",
     "Schäden durch Langzeiteinwirkung",
