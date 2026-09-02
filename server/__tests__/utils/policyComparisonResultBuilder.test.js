@@ -12,6 +12,9 @@ const {
 const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
+const {
+  terminalOccurrenceDigest,
+} = require("../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 function row(categoryId, overrides = {}) {
   return {
@@ -496,6 +499,181 @@ function writeCompleteAbsenceCategory(
         },
       ],
     })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
+function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
+  const categoryView = "EL";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "EL-12";
+  const componentId = "flood_zone_exclusion_or_surcharge";
+  const targetId = `prepared-target:${requirementId}:${componentId}`;
+  const occurrence = {
+    candidateId: `candidate:el12-risk-information:${run.document.uuid}`,
+    matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+    pageNumber: 3,
+    physicalPageNumber: 3,
+    documentStart: 4_120,
+    documentEnd: 4_154,
+    exactText: "Hochwasser-Risiko-Zone: unbekannt",
+    context: {
+      unitType: "LIST_ITEM",
+      text: "- Risikoinformation zum Versicherungsort\nAnzahl Vorschäden Hochwasser, Überschwemmungen, Lawinen oder Muren: keine Vorschäden\nHochwasser-Risiko-Zone: unbekannt",
+    },
+    scopeLead: {
+      text: "STURMVERSICHERUNG\nVersicherte Variante: Premiumschutz",
+    },
+    pageScopeHints: [
+      {
+        scopeKey: "LEITUNGSWASSER_INSURANCE",
+        text: "Die Leitungswasserversicherung",
+      },
+    ],
+    sectionScopeHint: {
+      scopeKey: "STURM_INSURANCE",
+      text: "STURMVERSICHERUNG",
+      physicalPageNumber: 3,
+      source: "CURRENT_PAGE_HEADING",
+    },
+  };
+  const scopeProofMode =
+    "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1";
+  const serverRejectedCandidates = riskInformation
+    ? [
+        {
+          candidateId: occurrence.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+          terminalRejectionContractId:
+            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+          decisionOwner: "SERVER",
+          decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+          physicalPageNumber: 3,
+          sectionScopeSource: "CURRENT_PAGE_HEADING",
+          observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
+          scopeProofMode,
+          occurrenceDigestSha256: terminalOccurrenceDigest({
+            ...occurrence,
+            scopeProofMode,
+          }),
+        },
+      ]
+    : [];
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 3,
+          processedPages: 3,
+          pagesWithText: 3,
+          complete: true,
+        },
+      },
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "el-occurrence-full-draft-v0.7", categoryView },
+      document: { physicalPages: 3 },
+      summary: { componentCount: 1 },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Hochwasserzone: Ausschluss oder Zuschlag",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "CONDITION_ONLY",
+          components: [
+            {
+              id: componentId,
+              label: "Hochwasserzone: Ausschluss oder Zuschlag",
+              factRole: "CONDITION",
+              aliases: ["Hochwasser-Risiko-Zone"],
+              conceptSearches: [{ id: "flood-risk-zone" }],
+              terminalState: riskInformation
+                ? "CONTROLLED_CANDIDATES_FOUND"
+                : "NO_CONTROLLED_CANDIDATE",
+              occurrenceCount: riskInformation ? 1 : 0,
+              occurrences: riskInformation ? [occurrence] : [],
+            },
+          ],
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: [
+        {
+          targetId,
+          requirementId,
+          componentId,
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          decisionOwner: "SERVER",
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify([
+      {
+        targetId,
+        requirementId,
+        componentId,
+        factRole: "CONDITION",
+        candidates: [],
+        serverRejectedCandidates,
+        unresolvedCandidateIds: [],
+      },
+    ])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "rows.private.json"),
+    JSON.stringify([row(requirementId)])
   );
   fs.writeFileSync(
     path.join(categoryDirectory, "result", "report.json"),
@@ -1415,6 +1593,84 @@ describe("policy comparison result builder", () => {
         /^COMPARISON_BILATERAL_ABSENCE_/u
       );
     }
+  });
+
+  test("materializes only an occurrence-bound EL-12 risk-information terminal audit", () => {
+    const runA = writeRun(root, document("a", "A"));
+    const runB = writeRun(root, document("b", "B"));
+    writeEl12AbsenceCategory(runA);
+    writeEl12AbsenceCategory(runB, { riskInformation: true });
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories
+      .find(({ categoryView }) => categoryView === "EL")
+      .rows.find(({ categoryId }) => categoryId === "EL-12");
+    const componentAudit = comparisonRow.packageB.searchAudit.components[0];
+    expect(componentAudit).toMatchObject({
+      disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+      gates: {
+        zeroOccurrenceTerminal: false,
+        zeroCandidateTerminal: false,
+        deterministicNonContractualRiskInformationTerminal: true,
+      },
+      terminalRejectionAudit: {
+        schemaVersion: 1,
+        contractId:
+          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+        requirementId: "EL-12",
+        componentId: "flood_zone_exclusion_or_surcharge",
+        decisionOwner: "SERVER",
+        decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+        proofMode:
+          "ALL_OCCURRENCES_DETERMINISTICALLY_NON_CONTRACTUAL_RISK_INFORMATION",
+        rejectedOccurrenceCount: 1,
+        rejections: [
+          expect.objectContaining({
+            sectionScopeSource: "CURRENT_PAGE_HEADING",
+            observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
+            scopeProofMode:
+              "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+          }),
+        ],
+      },
+    });
+    expect(componentAudit.gates).not.toHaveProperty(
+      "deterministicOutOfCategoryTerminal"
+    );
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const targetsFile = path.join(
+      runB.outputDirectory,
+      "EL",
+      "effects",
+      "targets.private.json"
+    );
+    const targets = JSON.parse(fs.readFileSync(targetsFile, "utf8"));
+    targets[0].serverRejectedCandidates[0].occurrenceDigestSha256 = "0".repeat(
+      64
+    );
+    fs.writeFileSync(targetsFile, JSON.stringify(targets));
+    const tamperedResult = buildComparisonResult([runA, runB]);
+    const tamperedRow = tamperedResult.categories
+      .find(({ categoryView }) => categoryView === "EL")
+      .rows.find(({ categoryId }) => categoryId === "EL-12");
+    expect(tamperedRow.packageB.searchAudit.components[0].disposition).toBe(
+      "SEARCH_INCOMPLETE"
+    );
+    expect(
+      tamperedRow.packageB.searchAudit.components[0].gates
+    ).not.toHaveProperty("deterministicNonContractualRiskInformationTerminal");
+    expect(tamperedRow.packageB.searchAudit.components[0]).not.toHaveProperty(
+      "terminalRejectionAudit"
+    );
+    expect(tamperedRow.pointDecision).toMatchObject({
+      outcome: "UNKLAR",
+      reasonCode: "MISSING_BOTH",
+    });
   });
 
   test("does not verify policy strings without persisted certification metadata", () => {

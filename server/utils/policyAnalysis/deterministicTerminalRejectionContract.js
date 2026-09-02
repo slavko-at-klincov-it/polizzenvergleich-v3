@@ -2,6 +2,8 @@ const crypto = require("crypto");
 
 const DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
+const DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1";
 
 const CERTIFIED_TARGETS = Object.freeze({
   "FE:FE-B13:pre_inception_damage_exclusion": Object.freeze({
@@ -55,24 +57,69 @@ const CERTIFIED_TARGETS = Object.freeze({
   }),
 });
 
+const NON_CONTRACTUAL_RISK_INFORMATION_TARGETS = Object.freeze({
+  "EL:EL-12:flood_zone_exclusion_or_surcharge": Object.freeze({
+    factRole: "CONDITION",
+    absenceMeaning: "CONDITION_ONLY",
+    matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+    sectionScopeKey: "STURM_INSURANCE",
+    sectionScopeSource: "CURRENT_PAGE_HEADING",
+    sectionHeadingRule: /\bSturmversicherung\b/iu,
+    exactRiskInformation:
+      /\bHochwasser[\s-]*Risiko[\s-]*Zone\s*:\s*unbekannt\b/iu,
+    localRiskInformationRule:
+      /\bRisikoinformation(?:en)?\s+zum\s+Versicherungsort\b/iu,
+    contractualConsequenceRule:
+      /(?:\b(?:HQ\s*\d+|HORA|ausgeschlossen|nicht\s+(?:mit)?versichert|kein\s+Versicherungsschutz|(?:mit)?versichert|eingeschlossen|mitgedeckt|gedeckt|Zuschlag|Pr[aä]mienzuschlag|Mehrpr[aä]mie|Pr[aä]mie|Beitrag|Selbstbehalt|Versicherungssumme|H[oö]chstentsch[aä]digung|Entsch[aä]digungsleistung|Entsch[aä]digungsgrenze|Sublimit|Limit|Deckung|Bedingung|wenn|sofern|vorausgesetzt|maximal|h[oö]chstens|bis\s+zu)\b|(?:EUR|€|\d\s*%))/iu,
+    scopeProofMode:
+      "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+  }),
+});
+
 function targetKey(categoryView, requirementId, componentId) {
   return `${categoryView || ""}:${requirementId || ""}:${componentId || ""}`;
 }
 
 function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
-  const contract =
-    CERTIFIED_TARGETS[targetKey(categoryView, requirementId, componentId)];
-  if (!contract) return null;
+  const key = targetKey(categoryView, requirementId, componentId);
+  const otherCategoryContract = CERTIFIED_TARGETS[key];
+  if (otherCategoryContract)
+    return Object.freeze({
+      contractId: DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+      decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+      auditProofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+      terminalGate: "deterministicOutOfCategoryTerminal",
+      factRole: otherCategoryContract.factRole,
+      absenceMeaning: otherCategoryContract.absenceMeaning,
+      requiredObservedScopeKey: otherCategoryContract.otherScopeKey,
+      allowedObservedScopeKeys: [otherCategoryContract.otherScopeKey],
+      sectionScopeSources: canonicalStrings(
+        otherCategoryContract.sectionScopeProofs?.map(
+          ({ source }) => source
+        ) || [
+          otherCategoryContract.sectionScopeSource || "CURRENT_PAGE_HEADING",
+        ]
+      ),
+      scopeProofMode: otherCategoryContract.scopeProofMode || null,
+    });
+  const riskInformationContract = NON_CONTRACTUAL_RISK_INFORMATION_TARGETS[key];
+  if (!riskInformationContract) return null;
   return Object.freeze({
-    factRole: contract.factRole,
-    absenceMeaning: contract.absenceMeaning,
-    otherScopeKey: contract.otherScopeKey,
-    sectionScopeSources: canonicalStrings(
-      contract.sectionScopeProofs?.map(({ source }) => source) || [
-        contract.sectionScopeSource || "CURRENT_PAGE_HEADING",
-      ]
-    ),
-    scopeProofMode: contract.scopeProofMode || null,
+    contractId:
+      DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
+    decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+    auditProofMode:
+      "ALL_OCCURRENCES_DETERMINISTICALLY_NON_CONTRACTUAL_RISK_INFORMATION",
+    terminalGate: "deterministicNonContractualRiskInformationTerminal",
+    factRole: riskInformationContract.factRole,
+    absenceMeaning: riskInformationContract.absenceMeaning,
+    requiredObservedScopeKey: riskInformationContract.sectionScopeKey,
+    allowedObservedScopeKeys: canonicalStrings([
+      riskInformationContract.sectionScopeKey,
+      "LEITUNGSWASSER_INSURANCE",
+    ]),
+    sectionScopeSources: [riskInformationContract.sectionScopeSource],
+    scopeProofMode: riskInformationContract.scopeProofMode,
   });
 }
 
@@ -86,6 +133,20 @@ function observedScopeKeys(occurrence) {
     ...(occurrence?.sectionScopeHint?.scopeKeys || []),
     ...(occurrence?.pageScopeHints || []).map(({ scopeKey }) => scopeKey),
   ]);
+}
+
+function terminalTargetAcceptsObservedScopes(target, scopes) {
+  const canonical = canonicalStrings(scopes);
+  return Boolean(
+    target &&
+      Array.isArray(scopes) &&
+      JSON.stringify(canonical) === JSON.stringify(scopes) &&
+      canonical.every((scope) => scope.endsWith("_INSURANCE")) &&
+      canonical.includes(target.requiredObservedScopeKey) &&
+      canonical.every((scope) =>
+        target.allowedObservedScopeKeys.includes(scope)
+      )
+  );
 }
 
 function stableValue(value) {
@@ -137,12 +198,14 @@ function terminalRejectionSetDigest(rejections) {
       .map(
         ({
           candidateId,
+          terminalRejectionContractId,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
           scopeProofMode,
         }) => ({
           candidateId,
+          terminalRejectionContractId: terminalRejectionContractId || null,
           decisionBasis,
           occurrenceDigestSha256,
           observedScopeKeys: scopes,
@@ -159,11 +222,11 @@ function terminalRejectionSetDigest(rejections) {
 }
 
 /**
- * Certifies one raw occurrence as exclusively belonging to a different
- * insurance category. Each target is enabled individually; a foreign heading
- * alone is never sufficient. Role: validate. Side effects: none.
+ * Certifies one raw occurrence under one target-specific terminal rejection
+ * contract. Each target is enabled individually and must prove its complete
+ * local semantic boundary. Role: validate. Side effects: none.
  */
-function certifyDeterministicTerminalRejection({
+function certifyOtherCategoryTerminalRejection({
   categoryView,
   requirement,
   component,
@@ -267,10 +330,83 @@ function certifyDeterministicTerminalRejection({
   };
 }
 
+function certifyNonContractualRiskInformationTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  const contract =
+    NON_CONTRACTUAL_RISK_INFORMATION_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  const sectionPage = occurrence?.sectionScopeHint?.physicalPageNumber || null;
+  const exactText = String(occurrence?.exactText || "");
+  const localText = `${occurrence?.scopeLead?.text || ""}\n${occurrence?.context?.text || ""}`;
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning ||
+    occurrence?.matchedAlias !== contract.matchedAlias ||
+    occurrence?.context?.unitType !== "LIST_ITEM" ||
+    occurrence?.sectionScopeHint?.scopeKey !== contract.sectionScopeKey ||
+    occurrence?.sectionScopeHint?.source !== contract.sectionScopeSource ||
+    !contract.sectionHeadingRule.test(
+      String(occurrence?.sectionScopeHint?.text || "")
+    ) ||
+    !Number.isInteger(occurrencePage) ||
+    !Number.isInteger(sectionPage) ||
+    occurrencePage !== sectionPage ||
+    !Array.isArray(occurrence?.pageScopeHints) ||
+    !contract.exactRiskInformation.test(exactText) ||
+    !contract.exactRiskInformation.test(localText) ||
+    !contract.localRiskInformationRule.test(localText) ||
+    contract.contractualConsequenceRule.test(localText) ||
+    String(occurrence?.candidateId || "").length === 0
+  )
+    return null;
+
+  const scopes = observedScopeKeys(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!terminalTargetAcceptsObservedScopes(target, scopes)) return null;
+  const digestOccurrence = {
+    ...occurrence,
+    scopeProofMode: contract.scopeProofMode,
+  };
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: contract.sectionScopeSource,
+    observedScopeKeys: scopes,
+    scopeProofMode: contract.scopeProofMode,
+    occurrenceDigestSha256: terminalOccurrenceDigest(digestOccurrence),
+  };
+}
+
+function certifyDeterministicTerminalRejection(input) {
+  return (
+    certifyOtherCategoryTerminalRejection(input) ||
+    certifyNonContractualRiskInformationTerminalRejection(input)
+  );
+}
+
 module.exports = {
+  DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
+  terminalTargetAcceptsObservedScopes,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,
 };

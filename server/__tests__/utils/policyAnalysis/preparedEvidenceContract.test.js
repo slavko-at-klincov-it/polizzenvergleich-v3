@@ -588,6 +588,230 @@ describe("preparedEvidenceContract", () => {
     }
   });
 
+  test("server-certifies only non-contractual EL-12 risk information without a contractual consequence", () => {
+    const riskInformation = {
+      candidateId: "candidate:el12-risk-information",
+      matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      pageNumber: 3,
+      physicalPageNumber: 3,
+      documentStart: 4_120,
+      documentEnd: 4_154,
+      exactText: "Hochwasser-Risiko-Zone: unbekannt",
+      context: {
+        unitType: "LIST_ITEM",
+        text: "- Risikoinformation zum Versicherungsort\nAnzahl Vorschäden Hochwasser, Überschwemmungen, Lawinen oder Muren: keine Vorschäden\nHochwasser-Risiko-Zone: unbekannt",
+      },
+      scopeLead: {
+        text: "STURMVERSICHERUNG\nVersicherte Variante: Premiumschutz",
+      },
+      pageScopeHints: [
+        {
+          scopeKey: "LEITUNGSWASSER_INSURANCE",
+          text: "Die Leitungswasserversicherung",
+        },
+      ],
+      sectionScopeHint: {
+        scopeKey: "STURM_INSURANCE",
+        text: "STURMVERSICHERUNG",
+        physicalPageNumber: 3,
+        source: "CURRENT_PAGE_HEADING",
+      },
+    };
+    const worksheetFor = (occurrences, overrides = {}) => ({
+      candidateOnly: true,
+      catalog: { categoryView: overrides.categoryView || "EL" },
+      requirements: [
+        {
+          id: overrides.requirementId || "EL-12",
+          label: "Hochwasserzone: Ausschluss oder Zuschlag",
+          requestedFields: [],
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: overrides.absenceMeaning || "CONDITION_ONLY",
+          components: [
+            {
+              id: overrides.componentId || "flood_zone_exclusion_or_surcharge",
+              label: "Hochwasserzone: Ausschluss oder Zuschlag",
+              factRole: overrides.factRole || "CONDITION",
+              occurrences,
+            },
+          ],
+        },
+      ],
+    });
+    const targetFor = (occurrences, overrides = {}) =>
+      buildPreparedEvidenceTargets({
+        worksheet: worksheetFor(occurrences, overrides),
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: occurrences.map((occurrence) => ({
+          requirementId: overrides.requirementId || "EL-12",
+          componentId:
+            overrides.componentId || "flood_zone_exclusion_or_surcharge",
+          candidateId: occurrence.candidateId,
+          binding: "NARROW_SCOPE",
+        })),
+      })[0];
+
+    expect(targetFor([riskInformation])).toMatchObject({
+      candidates: [],
+      unresolvedCandidateIds: [],
+      serverRejectedCandidates: [
+        {
+          candidateId: riskInformation.candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+          terminalRejectionContractId:
+            "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+          decisionOwner: "SERVER",
+          decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+          physicalPageNumber: 3,
+          sectionScopeSource: "CURRENT_PAGE_HEADING",
+          observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
+          scopeProofMode:
+            "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+          occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        },
+      ],
+    });
+
+    const contractualOccurrences = [
+      {
+        exactText:
+          "Schäden durch Hochwasser HQ30 sind bis maximal EUR 10.000 versichert.",
+        matchedAlias: "CONCEPT_SEARCH:hq-flood-zone",
+      },
+      {
+        exactText:
+          "In der HORA-Zone Rot besteht kein Versicherungsschutz gegen Hochwasser.",
+        matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      },
+      {
+        exactText:
+          "Für die Hochwasser-Risiko-Zone wird ein Prämienzuschlag vereinbart.",
+        matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      },
+      {
+        exactText:
+          "Für die Hochwasser-Risiko-Zone gilt ein Selbstbehalt von EUR 5.000.",
+        matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      },
+      {
+        exactText: "Die Hochwasser-Risiko-Zone ist in der Deckung versichert.",
+        matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      },
+      {
+        exactText:
+          "Bedingung: Wenn die Hochwasser-Risiko-Zone unbekannt ist, gilt ein Zuschlag.",
+        matchedAlias: "CONCEPT_SEARCH:flood-risk-zone",
+      },
+    ].map((values, index) => ({
+      ...riskInformation,
+      ...values,
+      candidateId: `candidate:el12-contractual-${index}`,
+      context: {
+        unitType: "LIST_ITEM",
+        text: `Risikoinformation zum Versicherungsort\n${values.exactText}`,
+      },
+    }));
+    for (const occurrence of contractualOccurrences) {
+      const target = targetFor([occurrence]);
+      expect(target.candidates).toHaveLength(1);
+      expect(target.serverRejectedCandidates).toEqual([]);
+    }
+
+    const mixedRiskInformation = {
+      ...riskInformation,
+      candidateId: "candidate:el12-mixed-risk-information",
+      context: {
+        ...riskInformation.context,
+        text: `${riskInformation.context.text}\nBei unbekannter Zone gilt ein Zuschlag.`,
+      },
+    };
+    expect(targetFor([mixedRiskInformation])).toMatchObject({
+      candidates: [
+        expect.objectContaining({
+          candidateId: mixedRiskInformation.candidateId,
+        }),
+      ],
+      serverRejectedCandidates: [],
+    });
+
+    const actualClause = contractualOccurrences[0];
+    expect(targetFor([riskInformation, actualClause])).toMatchObject({
+      candidates: [
+        expect.objectContaining({ candidateId: actualClause.candidateId }),
+      ],
+      serverRejectedCandidates: [
+        expect.objectContaining({ candidateId: riskInformation.candidateId }),
+      ],
+    });
+
+    const adversarial = [
+      {
+        candidate: {
+          ...riskInformation,
+          sectionScopeHint: {
+            ...riskInformation.sectionScopeHint,
+            source: "PRECEDING_PAGE_HEADING",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...riskInformation,
+          sectionScopeHint: {
+            ...riskInformation.sectionScopeHint,
+            scopeKey: "ELEMENTAR_INSURANCE",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...riskInformation,
+          sectionScopeHint: {
+            ...riskInformation.sectionScopeHint,
+            text: "LEITUNGSWASSERVERSICHERUNG",
+          },
+        },
+      },
+      {
+        candidate: {
+          ...riskInformation,
+          sectionScopeHint: {
+            ...riskInformation.sectionScopeHint,
+            physicalPageNumber: 2,
+          },
+        },
+      },
+      {
+        candidate: {
+          ...riskInformation,
+          exactText: "Hochwasser-Risiko-Zone: offen",
+          context: {
+            ...riskInformation.context,
+            text: riskInformation.context.text.replace("unbekannt", "offen"),
+          },
+        },
+      },
+      {
+        candidate: {
+          ...riskInformation,
+          pageScopeHints: [
+            ...riskInformation.pageScopeHints,
+            { scopeKey: "GLASBRUCH_INSURANCE", text: "Glasbruch" },
+          ],
+        },
+      },
+      { overrides: { requirementId: "EL-11" } },
+      { overrides: { componentId: "other_component" } },
+      { overrides: { factRole: "DEFINITION" } },
+      { overrides: { absenceMeaning: "COVERAGE_ONLY" } },
+    ];
+    for (const { candidate = riskInformation, overrides = {} } of adversarial) {
+      const target = targetFor([candidate], overrides);
+      expect(target.candidates).toHaveLength(1);
+      expect(target.serverRejectedCandidates).toEqual([]);
+    }
+  });
+
   test("does not treat a Pauschalversicherungssumme label as the VS-04 building-sum calculation method", () => {
     const worksheet = {
       candidateOnly: true,

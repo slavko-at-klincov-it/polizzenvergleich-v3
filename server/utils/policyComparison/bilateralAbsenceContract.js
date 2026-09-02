@@ -1,8 +1,8 @@
 const crypto = require("crypto");
 const {
-  DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   certifiedTerminalTarget,
   terminalRejectionSetDigest,
+  terminalTargetAcceptsObservedScopes,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
 
 const BILATERAL_ABSENCE_AUDIT_SCHEMA_VERSION = 1;
@@ -24,6 +24,10 @@ const QUALIFIED_ABSENCE = Object.freeze({
     certified: true,
   },
 });
+const DETERMINISTIC_TERMINAL_GATES = Object.freeze([
+  "deterministicOutOfCategoryTerminal",
+  "deterministicNonContractualRiskInformationTerminal",
+]);
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -78,14 +82,18 @@ function validDeterministicTerminalRejection(component, categoryId) {
     component?.absenceMeaning !== target.absenceMeaning ||
     component?.gates?.zeroOccurrenceTerminal !== false ||
     component?.gates?.zeroCandidateTerminal !== false ||
-    component?.gates?.deterministicOutOfCategoryTerminal !== true ||
+    component?.gates?.[target?.terminalGate] !== true ||
+    DETERMINISTIC_TERMINAL_GATES.some(
+      (gate) =>
+        gate !== target?.terminalGate && component?.gates?.[gate] !== undefined
+    ) ||
     audit?.schemaVersion !== 1 ||
-    audit?.contractId !== DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
+    audit?.contractId !== target?.contractId ||
     audit?.requirementId !== categoryId ||
     audit?.componentId !== componentId ||
     audit?.decisionOwner !== "SERVER" ||
-    audit?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
-    audit?.proofMode !== "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY" ||
+    audit?.decisionBasis !== target?.decisionBasis ||
+    audit?.proofMode !== target?.auditProofMode ||
     !Number.isInteger(audit?.rejectedOccurrenceCount) ||
     audit.rejectedOccurrenceCount < 1 ||
     !ids ||
@@ -98,7 +106,8 @@ function validDeterministicTerminalRejection(component, categoryId) {
     audit.rejections.some(
       (rejection) =>
         !ids.includes(rejection?.candidateId) ||
-        rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+        rejection?.terminalRejectionContractId !== target?.contractId ||
+        rejection?.decisionBasis !== target?.decisionBasis ||
         !/^[a-f0-9]{64}$/u.test(
           String(rejection?.occurrenceDigestSha256 || "")
         ) ||
@@ -106,9 +115,10 @@ function validDeterministicTerminalRejection(component, categoryId) {
         rejection.physicalPageNumber < 1 ||
         !target.sectionScopeSources.includes(rejection?.sectionScopeSource) ||
         (rejection?.scopeProofMode || null) !== target.scopeProofMode ||
-        !Array.isArray(rejection?.observedScopeKeys) ||
-        rejection.observedScopeKeys.length !== 1 ||
-        rejection.observedScopeKeys[0] !== target.otherScopeKey
+        !terminalTargetAcceptsObservedScopes(
+          target,
+          rejection?.observedScopeKeys
+        )
     )
   )
     return false;
@@ -119,7 +129,9 @@ function validComponentTerminal(component, categoryId) {
   const zeroTerminal = Boolean(
     component?.gates?.zeroOccurrenceTerminal === true &&
       component?.gates?.zeroCandidateTerminal === true &&
-      component?.gates?.deterministicOutOfCategoryTerminal === undefined &&
+      DETERMINISTIC_TERMINAL_GATES.every(
+        (gate) => component?.gates?.[gate] === undefined
+      ) &&
       component?.terminalRejectionAudit === undefined
   );
   return (

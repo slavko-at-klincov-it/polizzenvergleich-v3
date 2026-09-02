@@ -636,6 +636,7 @@ describe("policy comparison point decision", () => {
     const rejections = [
       {
         candidateId: "candidate:lw25:inherited-liability",
+        terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         occurrenceDigestSha256: "1".repeat(64),
         physicalPageNumber: 20,
@@ -646,6 +647,7 @@ describe("policy comparison point decision", () => {
       },
       {
         candidateId: "candidate:lw25:current-liability",
+        terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         occurrenceDigestSha256: "2".repeat(64),
         physicalPageNumber: 20,
@@ -817,6 +819,7 @@ describe("policy comparison point decision", () => {
       const searchPlanId = `fixture/FE-B13/${component.id}`;
       const rejection = {
         candidateId: `candidate:foreign-${side}`,
+        terminalRejectionContractId: "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
         decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
         occurrenceDigestSha256: "1".repeat(64),
         physicalPageNumber: 2,
@@ -936,6 +939,195 @@ describe("policy comparison point decision", () => {
     });
   });
 
+  test("accepts only an untampered EL-12 non-contractual risk-information terminal proof", () => {
+    const categoryId = "EL-12";
+    const component = {
+      id: "flood_zone_exclusion_or_surcharge",
+      factRole: "CONDITION",
+    };
+    const requirementContract = {
+      digest: "7".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const packageFor = (side, { riskInformation = false } = {}) => {
+      const documentUuid = `el-12-${side}`;
+      const searchPlanId = `fixture/${categoryId}/${component.id}`;
+      const rejection = {
+        candidateId: `candidate:risk-information-${side}`,
+        terminalRejectionContractId:
+          "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+        decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+        occurrenceDigestSha256: "4".repeat(64),
+        physicalPageNumber: 3,
+        sectionScopeSource: "CURRENT_PAGE_HEADING",
+        observedScopeKeys: ["LEITUNGSWASSER_INSURANCE", "STURM_INSURANCE"],
+        scopeProofMode:
+          "CURRENT_RISK_INFORMATION_WITHOUT_CONTRACTUAL_CONSEQUENCE_V1",
+      };
+      const terminalRejectionAudit = riskInformation
+        ? {
+            schemaVersion: 1,
+            contractId:
+              "DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_V1",
+            requirementId: categoryId,
+            componentId: component.id,
+            decisionOwner: "SERVER",
+            decisionBasis: "EXPLICIT_NON_CONTRACTUAL_RISK_INFORMATION",
+            proofMode:
+              "ALL_OCCURRENCES_DETERMINISTICALLY_NON_CONTRACTUAL_RISK_INFORMATION",
+            rejectedOccurrenceCount: 1,
+            rejectedCandidateIds: [rejection.candidateId],
+            rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+            rejections: [rejection],
+          }
+        : null;
+      const searchAudit = {
+        disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+        absenceMeaning: "CONDITION_ONLY",
+        comparisonPolicy: null,
+        absenceCertification: null,
+        requirementContract,
+        searchPlanId,
+        documentUuid,
+        catalogId: "fixture",
+        physicalPagesChecked: 3,
+        totalPhysicalPages: 3,
+        aliases: ["Hochwasser-Risiko-Zone"],
+        conceptSearchIds: ["flood-risk-zone"],
+        ...(terminalRejectionAudit ? { terminalRejectionAudit } : {}),
+        gates: {
+          negativeSearchApproved: true,
+          certifiedNegativeSearch: false,
+          completeTextExtraction: true,
+          completeCategoryTechnicalContract: true,
+          zeroOccurrenceTerminal: !riskInformation,
+          zeroCandidateTerminal: !riskInformation,
+          serverNegativeTerminal: true,
+          ...(riskInformation
+            ? { deterministicNonContractualRiskInformationTerminal: true }
+            : {}),
+        },
+      };
+      const summary = packageSummary({
+        evidenceFound: false,
+        facts: [],
+        reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        requirementContract,
+        searchAudit: {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          documentCount: 1,
+          documentUuids: [documentUuid],
+          physicalPagesChecked: 3,
+          searchPlanIds: [searchPlanId],
+          requirementContract,
+          components: [searchAudit],
+        },
+      });
+      const absenceAtom = atom(side, {
+        requirementId: categoryId,
+        componentId: component.id,
+        componentLabel: "Hochwasserzone: Ausschluss oder Zuschlag",
+        factRole: component.factRole,
+        documentUuids: [documentUuid],
+        evidencePresence: "NOT_FOUND",
+        coverageEffect: "UNKNOWN",
+        conflictState: "NONE",
+        selectedScopePicture: "UNKNOWN",
+        documentApplicability: "UNKNOWN",
+        selectedCandidateIds: [],
+        unresolvedCandidateIds: [],
+        requestedFieldStatus: "NOT_REQUIRED",
+        requestedFields: [],
+        optionalFields: [],
+        componentSatisfactionPolicy: "ALL",
+        requirementContractDigest: requirementContract.digest,
+        declaredComponents: requirementContract.components,
+        fields: [],
+        sources: [],
+        searchAudit,
+      });
+      return { summary, atom: absenceAtom };
+    };
+    const decisionFor = (mutate) => {
+      const zero = packageFor("a");
+      const riskInformation = packageFor("b", { riskInformation: true });
+      if (mutate) mutate(riskInformation.summary.searchAudit.components[0]);
+      return decidePoint({
+        categoryId,
+        packageA: zero.summary,
+        packageB: riskInformation.summary,
+        atomsA: [zero.atom],
+        atomsB: [riskInformation.atom],
+      });
+    };
+
+    expect(decisionFor()).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      ruleId: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+      reviewRequired: false,
+    });
+
+    const tampering = [
+      (cell) => {
+        cell.terminalRejectionAudit.contractId =
+          "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.decisionBasis =
+          "EXPLICIT_OTHER_CATEGORY_SECTION";
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.proofMode =
+          "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY";
+      },
+      (cell) => {
+        cell.gates.deterministicNonContractualRiskInformationTerminal = false;
+      },
+      (cell) => {
+        cell.gates.deterministicOutOfCategoryTerminal = false;
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.rejections[0].observedScopeKeys = [
+          "LEITUNGSWASSER_INSURANCE",
+        ];
+        cell.terminalRejectionAudit.rejectionDigestSha256 =
+          terminalRejectionSetDigest(cell.terminalRejectionAudit.rejections);
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.rejections[0].observedScopeKeys.reverse();
+        cell.terminalRejectionAudit.rejectionDigestSha256 =
+          terminalRejectionSetDigest(cell.terminalRejectionAudit.rejections);
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.rejections[0].sectionScopeSource =
+          "PRECEDING_PAGE_HEADING";
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.rejections[0].scopeProofMode =
+          "UNKNOWN_PROFILE";
+        cell.terminalRejectionAudit.rejectionDigestSha256 =
+          terminalRejectionSetDigest(cell.terminalRejectionAudit.rejections);
+      },
+      (cell) => {
+        cell.terminalRejectionAudit.rejections[0].occurrenceDigestSha256 =
+          "5".repeat(64);
+      },
+    ];
+    for (const mutate of tampering) {
+      expect(decisionFor(mutate)).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "MISSING_BOTH",
+      });
+    }
+  });
+
   test("accepts the ST-14 glass-section terminal proof and rejects proof-profile tampering", () => {
     const categoryId = "ST-14";
     const components = [
@@ -955,6 +1147,8 @@ describe("policy comparison point decision", () => {
         const rejection = isForeign
           ? {
               candidateId: `candidate:glass-${side}`,
+              terminalRejectionContractId:
+                "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1",
               decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
               occurrenceDigestSha256: "3".repeat(64),
               physicalPageNumber: 2,

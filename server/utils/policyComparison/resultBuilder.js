@@ -17,10 +17,12 @@ const {
   requirementSearchContractDigest,
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
 const {
+  DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   certifiedTerminalTarget,
   terminalOccurrenceDigest,
   terminalRejectionSetDigest,
+  terminalTargetAcceptsObservedScopes,
 } = require("../policyAnalysis/deterministicTerminalRejectionContract");
 const MISSING_EVIDENCE = "keine belegte Fundstelle gefunden";
 const NOT_DETERMINABLE = "Nicht feststellbar";
@@ -585,18 +587,18 @@ function deterministicTerminalRejectionAudit({
     rejections.some(
       (rejection) =>
         rejection?.reason !== "TRIAGE_MENTION_ONLY" ||
-        rejection?.terminalRejectionContractId !==
-          DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID ||
+        rejection?.terminalRejectionContractId !== certifiedTarget.contractId ||
         rejection?.decisionOwner !== "SERVER" ||
-        rejection?.decisionBasis !== "EXPLICIT_OTHER_CATEGORY_SECTION" ||
+        rejection?.decisionBasis !== certifiedTarget.decisionBasis ||
         !certifiedTarget.sectionScopeSources.includes(
           rejection?.sectionScopeSource
         ) ||
         !Number.isInteger(rejection?.physicalPageNumber) ||
         rejection.physicalPageNumber < 1 ||
-        !Array.isArray(rejection?.observedScopeKeys) ||
-        rejection.observedScopeKeys.length !== 1 ||
-        rejection.observedScopeKeys[0] !== certifiedTarget.otherScopeKey ||
+        !terminalTargetAcceptsObservedScopes(
+          certifiedTarget,
+          rejection?.observedScopeKeys
+        ) ||
         (rejection?.scopeProofMode || null) !==
           certifiedTarget.scopeProofMode ||
         rejection?.occurrenceDigestSha256 !==
@@ -612,12 +614,12 @@ function deterministicTerminalRejectionAudit({
 
   return {
     schemaVersion: 1,
-    contractId: DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
+    contractId: certifiedTarget.contractId,
     requirementId: requirement?.id || null,
     componentId: component?.id || null,
     decisionOwner: "SERVER",
-    decisionBasis: "EXPLICIT_OTHER_CATEGORY_SECTION",
-    proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_OUT_OF_CATEGORY",
+    decisionBasis: certifiedTarget.decisionBasis,
+    proofMode: certifiedTarget.auditProofMode,
     rejectedOccurrenceCount: rejections.length,
     rejectedCandidateIds: rejectionIds,
     rejectionDigestSha256: terminalRejectionSetDigest(rejections),
@@ -625,6 +627,7 @@ function deterministicTerminalRejectionAudit({
       .map(
         ({
           candidateId,
+          terminalRejectionContractId,
           decisionBasis,
           occurrenceDigestSha256,
           physicalPageNumber,
@@ -633,6 +636,7 @@ function deterministicTerminalRejectionAudit({
           scopeProofMode,
         }) => ({
           candidateId,
+          terminalRejectionContractId,
           decisionBasis,
           occurrenceDigestSha256,
           physicalPageNumber,
@@ -678,7 +682,15 @@ function componentSearchAudit({
     component,
     target,
   });
-  const deterministicOutOfCategoryTerminal = Boolean(terminalRejectionAudit);
+  const deterministicOutOfCategoryTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID
+  );
+  const deterministicNonContractualRiskInformationTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
+  );
+  const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
       judgement?.coverageEffect === "UNKNOWN" &&
@@ -703,7 +715,7 @@ function componentSearchAudit({
         report,
       }) &&
       ((zeroOccurrenceTerminal && zeroCandidateTerminal) ||
-        deterministicOutOfCategoryTerminal) &&
+        deterministicRejectionTerminal) &&
       serverNegativeTerminal
   );
   const verified = Boolean(
@@ -761,6 +773,9 @@ function componentSearchAudit({
       serverNegativeTerminal,
       ...(deterministicOutOfCategoryTerminal
         ? { deterministicOutOfCategoryTerminal: true }
+        : {}),
+      ...(deterministicNonContractualRiskInformationTerminal
+        ? { deterministicNonContractualRiskInformationTerminal: true }
         : {}),
     },
   };
