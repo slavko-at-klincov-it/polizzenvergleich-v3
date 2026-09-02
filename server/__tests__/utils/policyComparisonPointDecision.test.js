@@ -2863,10 +2863,7 @@ describe("policy comparison point decision", () => {
     test("fails closed when a 10% fact is combined with a 5% clause audit", () => {
       const higher = feC07Atom("b", 10, "ABSENT");
       higher.fields[1].absenceAudit = absenceAudit("b", 5);
-      const result = decideFeC07(
-        feC07Atom("a", 5, "RESTRICTED"),
-        higher
-      );
+      const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher);
       expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
     });
 
@@ -2878,10 +2875,7 @@ describe("policy comparison point decision", () => {
         physicalPageNumber: 4,
         exactText: "Zusätzliche Fundstelle",
       });
-      const result = decideFeC07(
-        feC07Atom("a", 5, "RESTRICTED"),
-        higher
-      );
+      const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher);
       expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
     });
 
@@ -2889,10 +2883,7 @@ describe("policy comparison point decision", () => {
       const higher = feC07Atom("b", 10, "ABSENT");
       higher.fields[0].facts[0].source.documentStart += 1;
       higher.fields[0].facts[0].source.documentEnd += 1;
-      const result = decideFeC07(
-        feC07Atom("a", 5, "RESTRICTED"),
-        higher
-      );
+      const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED"), higher);
       expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
     });
 
@@ -2902,13 +2893,10 @@ describe("policy comparison point decision", () => {
         documentApplicability: "CONDITIONAL",
         documentRole: "SUPPLEMENTAL_CONTRACT",
       };
-      const result = decideFeC07(
-        feC07Atom("a", 5, "RESTRICTED", framework),
-        [
-          feC07Atom("b1", 10, "ABSENT", framework),
-          feC07Atom("b2", 10, "ABSENT", framework),
-        ]
-      );
+      const result = decideFeC07(feC07Atom("a", 5, "RESTRICTED", framework), [
+        feC07Atom("b1", 10, "ABSENT", framework),
+        feC07Atom("b2", 10, "ABSENT", framework),
+      ]);
       expect(result).toMatchObject({
         outcome: POINT_OUTCOME.ADVANTAGE_B,
         ruleId: "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
