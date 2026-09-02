@@ -696,8 +696,7 @@ describe("preparedEvidenceContract", () => {
           absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
           components: [
             {
-              id:
-                overrides.componentId || "ground_seepage_or_retained_water",
+              id: overrides.componentId || "ground_seepage_or_retained_water",
               label: "Grundwasser, Sickerwasser oder Stauwasser",
               factRole: overrides.factRole || "PERIL",
               occurrences,

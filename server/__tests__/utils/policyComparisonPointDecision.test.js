@@ -1696,8 +1696,7 @@ describe("policy comparison point decision", () => {
     };
     const terminalAudit = {
       schemaVersion: 3,
-      contractId:
-        DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      contractId: DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
       requirementId: categoryId,
       componentId: component.id,
       decisionOwner: "SERVER",

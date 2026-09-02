@@ -126,8 +126,7 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
   const lw20NonTargetContract = LW20_NON_TARGET_OCCURRENCE_TARGETS[key];
   if (lw20NonTargetContract)
     return Object.freeze({
-      contractId:
-        DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      contractId: DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
       decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
       auditProofMode:
         "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",

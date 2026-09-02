@@ -1257,13 +1257,12 @@ function deterministicCategoryCandidateBinding({
   );
   if (comparativeCostReference) return comparativeCostReference;
 
-  const lw20TreatmentCostRoleMismatch =
-    lw20TreatmentCostRoleMismatchBinding({
-      categoryView,
-      requirement,
-      component,
-      occurrence,
-    });
+  const lw20TreatmentCostRoleMismatch = lw20TreatmentCostRoleMismatchBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
   if (lw20TreatmentCostRoleMismatch) return lw20TreatmentCostRoleMismatch;
 
   const recoursePartyMismatch = explicitRecoursePartyMismatch({

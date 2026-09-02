@@ -998,9 +998,10 @@ function writeLw20AbsenceCategory(
               label: "Grundwasser, Sickerwasser oder Stauwasser",
               factRole: "PERIL",
               aliases: ["Grundwasser", "Sickerwasser", "Stauwasser"],
-              terminalState: treatmentCost || excluded
-                ? "CONTROLLED_CANDIDATES_FOUND"
-                : "NO_CONTROLLED_CANDIDATE",
+              terminalState:
+                treatmentCost || excluded
+                  ? "CONTROLLED_CANDIDATES_FOUND"
+                  : "NO_CONTROLLED_CANDIDATE",
               occurrenceCount: treatmentCost || excluded ? 1 : 0,
               occurrences: treatmentCost || excluded ? [occurrence] : [],
             },
@@ -2263,8 +2264,7 @@ describe("policy comparison result builder", () => {
         componentId: "ground_seepage_or_retained_water",
         decisionOwner: "SERVER",
         decisionBasis: LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
-        proofMode:
-          "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",
+        proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_GROUNDWATER",
         rejectedOccurrenceCount: 1,
         rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
         rejections: [
@@ -2336,9 +2336,9 @@ describe("policy comparison result builder", () => {
     expect(
       tamperedRow.packageA.searchAudit.components[0].gates
     ).not.toHaveProperty("deterministicLw20NonTargetOccurrenceTerminal");
-    expect(
-      tamperedRow.packageA.searchAudit.components[0]
-    ).not.toHaveProperty("terminalRejectionAudit");
+    expect(tamperedRow.packageA.searchAudit.components[0]).not.toHaveProperty(
+      "terminalRejectionAudit"
+    );
     expect(tamperedRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "MISSING_ONE_SIDE",
