@@ -717,3 +717,55 @@ Ab jetzt darf jeder fachliche Kandidat nur über dieses Overlay bewertet
 werden. Jede Abweichung in einer der 155 geschützten Zeilen ist ein harter
 Abbruch; ein vollständiger 224-Zeilen-Kundenlauf erfolgt erst nach Abschluss
 aller gezielten Fehlerfamilien.
+
+## 10. Fachliche Kandidaten
+
+### 10.1 ST-01 – Sturmdefinition nach Windgeschwindigkeit
+
+Ursache: Beide Pakete enthielten einen vollständigen, konfliktfreien und
+quellengebundenen Definitionsfakt mit demselben Schwellenwert `60 km/h`. Die
+Entscheidungslogik kannte aber nur Gleichheit von Einschluss/Ausschluss sowie
+typisierte Geld-/Prozentwerte. Ein `DEFINITION`-Fakt mit `TEXT`-Feld fiel daher
+trotz inhaltlicher Gleichheit in `NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`.
+
+Eine generische Definitionstext-Gleichheit wurde bewusst nicht freigegeben:
+Der alte Feldwert allein unterscheidet weder `mehr als 60 km/h` von
+`mindestens 60 km/h` noch Spitzenwind von Mittelwind. Commit `e7fad32f`
+führt deshalb den engen Vertrag
+`STORM_DEFINITION_THRESHOLD_EQUALITY_V1` ein. Er verlangt:
+
+- exakt `ST-01 / storm_wind_speed_definition / DEFINITION`;
+- beidseitig `DEFINED` und vollständig quellengebunden;
+- genau ein gefundenes Feld `threshold` im Format km/h;
+- Spitzenwind als Messbasis und den Operator `GT` (`mehr als`, `über`, `>`);
+- identischen Schwellenwert;
+- keine Bedingung, Optionalität, Negation oder abweichenden Feldscope.
+
+Andere Werte, Operatoren, Einheiten oder Messbasen bleiben fail-closed. Der
+Mac-Studio-Test enthält positive unterschiedliche Wortlaute sowie
+adversariale Kontrollen für `75 km/h`, `mindestens`, `m/s`, Mittelwind und
+bedingte Definitionen.
+
+```text
+Commit: e7fad32f45bd0629ba2076bd5ee88303a50328be
+Mac-Studio-Suites: 77/77 PASS
+Overlay: /private/tmp/pav8-overlay-st01-e7fad32f-1cLJjx/overlay
+Geänderte Target-Zeilen: exakt 1/69 = ST:ST-01
+ST-01: UNKLAR -> GLEICHWERTIG
+Nicht-Target-Dokumentinstanzen: 1.550/1.550 identisch
+Finale Nicht-Target-Zeilen: 155/155 identisch
+Geänderte Nicht-Target-Zeilen: 0
+Comparison SHA-256: e45c8149fca68f2e258d8cb7d200cbc9c819de072315f3bd1ff3918c03075e99
+Guard SHA-256: 47c5fa8409c733f32bcdb6b3d2c5e59d5f44ef15ea4319612f40b2e2b07284d3
+```
+
+Metrikänderung:
+
+```text
+GLEICHWERTIG: 110 -> 111
+UNKLAR: 69 -> 68
+Alle anderen Point-Decision-Zahlen unverändert.
+```
+
+Bewertung: Kandidat angenommen. Er korrigiert genau die beabsichtigte Zeile
+und verändert keinen der 155 geschützten Vergleichspunkte.
