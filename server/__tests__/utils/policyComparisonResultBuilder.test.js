@@ -1748,7 +1748,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V26_LW20_DEFAULT_EXCLUSION_EQUALITY",
+      id: "CUSTOMER_CORE_5_V27_VS35_RECALL",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_V2",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],

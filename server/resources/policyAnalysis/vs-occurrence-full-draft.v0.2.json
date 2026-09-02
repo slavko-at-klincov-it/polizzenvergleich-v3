@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.7",
+  "catalogId": "vs-occurrence-full-draft-v0.8",
   "categoryView": "VS",
   "requirements": [
     {
@@ -1097,6 +1097,7 @@
             "Wiederherstellungsklausel",
             "9. Wiederherstellung",
             "Wiederbeschaffung oder Wiederherstellung",
+            "Wiederherstellung bzw. Wiederbeschaffung zur Gänze sichergestellt",
             "Wiederherstellung des Gebäudes",
             "Wiederaufbau des Gebäudes"
           ]
@@ -1109,7 +1110,8 @@
             "Wiederherstellungsfrist",
             "Frist für die Wiederherstellung",
             "innerhalb dreier Jahre",
-            "innerhalb von drei Jahren wiederhergestellt"
+            "innerhalb von drei Jahren wiederhergestellt",
+            "Wiederherstellung bzw. Wiederbeschaffung binnen drei Jahren"
           ]
         }
       ],
