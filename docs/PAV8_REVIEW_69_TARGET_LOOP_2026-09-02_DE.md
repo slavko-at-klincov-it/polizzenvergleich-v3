@@ -1720,18 +1720,22 @@ tatsächliche Tabellen- und Atommaterialisierung sowie `decidePoint`:
 
 ```text
 Produzent fachlicher Effekte:
-8ca0da2f2fa1ddbfb635b30df032e7f8e382f916
+8ca0da2fba66c817879a625925ed84bc127910ab
 Entscheidungs-/Grenztest-Commit:
-222606a919ddc7d98164670a281b04370c7b3f6e
+222606a9aae14cf8db8d7d8f4a0fdee61d7a83c6
 
 QA-Artefakt:
 /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C07-E2E-8CA0DA2F-20260902
-Entscheidungsartefakt:
+Ursprüngliches Entscheidungsartefakt:
 decision-222606a9/summary.private.json
+Korrigierter Entscheidungs-Replay:
+replay-347cd39c/summary.private.json
+Replay-/Validierungscommit:
+347cd39c466698239a0e433dea8f256f440f570d
 Target-Selection-Digest:
 ffb5d6e64686be09cb6526c6f5eb62c3b77f4eebb45a4873476c8842a391c418
-Summary-Digest:
-7cc244d89721199cdc888d517a84af77682549122e7ecd899dd457462c4ade8f
+Korrigierter Replay-Digest:
+bea08f310d83bf81c7e464a5fb10ea974819b9ac1368a0033003fdf5110ed510
 
 DOC-01: BELEGT, INCLUDED, GENERAL, COMPLETE, 5 %, condition FOUND
 DOC-03: BELEGT, INCLUDED, GENERAL, COMPLETE, 10 %, condition NOT_FOUND,
@@ -1742,6 +1746,20 @@ Review erforderlich: nein
 Regel: FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1
 Tatsächliche Qwen-Aufrufe: 0
 ```
+
+Provenienzkorrektur: Das ursprüngliche Summary enthielt zwar die oben erneut
+reproduzierte Entscheidung, aber zwei nicht auflösbare ausgeschriebene
+40-stellige Commit-SHAs. Die achtstelligen Präfixe waren richtig; ihre
+ausgeschriebenen Fortsetzungen waren falsch. Deshalb gilt der ursprüngliche
+Summary-Digest
+`7cc244d89721199cdc888d517a84af77682549122e7ecd899dd457462c4ade8f`
+nicht als Commit-Provenienznachweis. Der neue Replay wurde im isolierten
+Mac-Studio-Worktree `/private/tmp/pv3-validate-347cd39c` ausgeführt. Er bindet
+die Rohbytehashes beider gespeicherten Dokument-/Atomartefakte, löst alle drei
+angegebenen Commits als echte Git-Objekte auf und rekonstruiert mit dem
+tatsächlichen `decidePoint` erneut exakt `VORTEIL_B`, `reviewRequired: false`
+und dieselbe Regel. Sein Digest wurde anschließend in einem getrennten Prozess
+neu berechnet und die Datei mit Modus `0600` geprüft.
 
 Damit ist für den gezielten Fall revisionssicher belegt:
 
