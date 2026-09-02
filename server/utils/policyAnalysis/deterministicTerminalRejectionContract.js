@@ -69,10 +69,7 @@ const COVERAGE_ONLY_OBJECT_CLASSIFICATION_TARGETS = Object.freeze({
     factRole: "INSURED_OBJECT",
     absenceMeaning: "COVERAGE_ONLY",
     membership: "EXCLUDED_FROM_CLASS",
-    allowedSubjects: [
-      "Gebäude oder Gebäudebestandteile",
-      "Betriebsinhalt",
-    ],
+    allowedSubjects: ["Gebäude oder Gebäudebestandteile", "Betriebsinhalt"],
     allowPrecedingScopeLeadReset: true,
   }),
 });
@@ -606,7 +603,7 @@ function coverageOnlyObjectClassificationProof(occurrence, target) {
   );
   const localText = `${hint?.text || ""}\n${hint?.subject || ""}\n${
     occurrence?.coverageGovernorHint?.text || ""
-  }\n${scopeLeadResetAtClassification ? "" : scopeLeadText}\n${contextText}`;
+  }\n${scopeLeadText}\n${contextText}`;
   const operationalCoverage =
     /\b(?:versichert(?:e|en|er|es)?|mitversichert|ausgeschlossen|eingeschlossen|gedeckt|versicherungsschutz|nicht\s+versichert|kein(?:e|en|er|es)?\s+deckung)\b/iu;
   const conditionalOrOptional =

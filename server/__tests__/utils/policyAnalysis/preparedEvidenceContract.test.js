@@ -1735,12 +1735,11 @@ describe("preparedEvidenceContract", () => {
       subject = "Gebäude oder Gebäudebestandteile",
       membership = "EXCLUDED_FROM_CLASS",
       source = "CURRENT_PAGE_OBJECT_CLASSIFICATION",
-      contextText =
-        "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, Taubengitter);",
+      contextText = "·Außenanlagen am Gebäude oder freistehend auf dem Versicherungsgrundstück (Firmenschilder, Beleuchtungsanlagen, Taubengitter);",
       scopeLead = {
         documentStart: 1_311,
         documentEnd: 1_756,
-        text: "1.1 Gebäude, das sind versicherte Bauwerke und Bestandteile.",
+        text: "1.1 Gebäude, das sind Bauwerke und konstruktive Bestandteile.",
       },
       candidateId = "candidate:vs19:object-class-exclusion",
     } = {}) => {
@@ -1791,8 +1790,7 @@ describe("preparedEvidenceContract", () => {
               id: requirementId,
               label: "Außenanlagen wie Wege, Beleuchtung, Bepflanzung",
               requestedFields: [],
-              negativeSearchPolicy:
-                "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+              negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
               absenceMeaning: overrides.absenceMeaning || "COVERAGE_ONLY",
               components: [
                 {
@@ -1896,6 +1894,13 @@ describe("preparedEvidenceContract", () => {
       }),
       occurrenceFor({
         scopeLead: { documentStart: 0, documentEnd: 0, text: "Versichert" },
+      }),
+      occurrenceFor({
+        scopeLead: {
+          documentStart: 1_311,
+          documentEnd: 1_756,
+          text: "Beleuchtungsanlagen sind nicht versichert.",
+        },
       }),
     ];
     for (const candidate of adversarial) {
