@@ -2699,5 +2699,6 @@ module.exports = {
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
   normalizeWithOffsetMap,
+  structuralContext,
   validFollowingStructuralBoundaryProof,
 };

@@ -46,21 +46,18 @@ function fixture(pages) {
 }
 
 describe("LW-20 default-exclusion override audit", () => {
-  test("flags direct, code, AWB, Leitungswasser and point cross-reference forms for review", () => {
+  test("flags only structure-bound alias-free references for review", () => {
     const input = fixture([
-      "Abweichend vom Ausschluss sind Schäden durch Grundwasser mitversichert.",
-      "In Erweiterung der Klausel LW 123 gilt ein zusätzlicher Deckungsbaustein.",
-      "Abweichend von den AWB 2024 wird der Deckungsumfang erweitert.",
-      "In Erweiterung der Allgemeinen Bedingungen für die Leitungswasserversicherung gilt dieser Zusatzbaustein.",
-      "Abweichend von Punkt 2 lit. c gelten Schäden durch aufsteigendes Wasser als mitversichert.",
-      "Der Ausschluss nach Artikel 7 Absatz 3 findet keine Anwendung.",
-      "Entgegen Ziffer 4.2 sind Schäden durch Wasser aus dem Erdreich gedeckt.",
+      "In den Leitungswasserbedingungen wird der Ausschluss gemäß lit. c aufgehoben.",
+      'Die Regel "Nicht versichert sind Schäden, sofern nicht anders vereinbart" der Leitungswasserversicherung wird gestrichen.',
+      "Sämtliche Ausschlussbestimmungen der Leitungswasserversicherung werden außer Kraft gesetzt.",
+      "Punkt c der nicht versicherten Schäden in der Leitungswasserversicherung findet keine Anwendung.",
     ]);
 
     const audit = buildLw20DefaultExclusionOverrideAudit(input);
 
     expect(audit).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       contractId: LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_CONTRACT_ID,
       requirementId: "LW-20",
       componentId: "ground_seepage_or_retained_water",
@@ -70,32 +67,37 @@ describe("LW-20 default-exclusion override audit", () => {
         uuid: input.document.uuid,
         sha256: input.document.sha256,
         documentArtifactDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
-        physicalPagesChecked: 7,
-        totalPhysicalPages: 7,
+        physicalPagesChecked: 4,
+        totalPhysicalPages: 4,
       },
       patternFamilyContract: {
         contractId: LW20_DEFAULT_EXCLUSION_OVERRIDE_PATTERN_CONTRACT_ID,
         digestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
       },
+      candidateCount: 4,
     });
     expect(new Set(audit.candidates.map(({ familyId }) => familyId))).toEqual(
       new Set([
-        "DIRECT_LW20_POSITIVE_OVERRIDE_V1",
-        "CODE_CROSS_REFERENCE_OVERRIDE_V1",
-        "AWB_CROSS_REFERENCE_OVERRIDE_V1",
-        "LEITUNGSWASSER_CROSS_REFERENCE_OVERRIDE_V1",
-        "POINT_OR_ARTICLE_CROSS_REFERENCE_OVERRIDE_V1",
+        "LW20_ITEM_C_EXCLUSION_OVERRIDE_REFERENCE_V2",
+        "LW20_DEFAULT_HEADING_OVERRIDE_REFERENCE_V2",
+        "LW20_COMPLETE_EXCLUSION_BLOCK_OVERRIDE_V2",
       ])
     );
-    expect(audit.candidateCount).toBe(audit.candidates.length);
     for (const candidate of audit.candidates) {
-      expect(candidate.physicalPageNumber).toBeGreaterThanOrEqual(1);
+      expect(["PARAGRAPH", "LIST_ITEM"]).toContain(candidate.unitType);
+      expect(candidate.unitDocumentStart).toBeLessThanOrEqual(
+        candidate.documentStart
+      );
+      expect(candidate.unitDocumentEnd).toBeGreaterThanOrEqual(
+        candidate.documentEnd
+      );
       expect(
         input.documentArtifact.document.pageContent.slice(
           candidate.documentStart,
           candidate.documentEnd
         )
       ).toBe(candidate.exactText);
+      expect(candidate.unitTextSha256).toMatch(/^[a-f0-9]{64}$/u);
       expect(candidate.candidateDigestSha256).toMatch(/^[a-f0-9]{64}$/u);
     }
     expect(validateLw20DefaultExclusionOverrideAudit({ audit, ...input })).toBe(
@@ -103,31 +105,28 @@ describe("LW-20 default-exclusion override audit", () => {
     );
   });
 
-  test("certifies zero candidates for an exclusion and unrelated references", () => {
+  test("does not duplicate direct LW-20 occurrence analysis", () => {
     const input = fixture([
+      "Schäden durch Grundwasser sind mitversichert.",
       "Nicht versichert sind Schäden durch Grundwasser, Sickerwasser oder Stauwasser.",
-      "Versicherungsschutz besteht nicht für Grundwasser.",
-      "Behandlungskosten für Wasser inklusive Grundwasser, Luft und Erdreich werden nicht ersetzt.",
-      "Die AWB 2024 gelten für diesen Vertrag.",
-      "Allgemeine Bedingungen für die Leitungswasserversicherung.",
+      "Im Sturmbaustein sind Schäden durch Grundwasser gedeckt.",
     ]);
 
-    const audit = buildLw20DefaultExclusionOverrideAudit(input);
-
-    expect(audit).toMatchObject({
+    expect(buildLw20DefaultExclusionOverrideAudit(input)).toMatchObject({
       status: NO_OVERRIDE_REFERENCE_FOUND,
       candidateCount: 0,
       candidates: [],
     });
-    expect(validateLw20DefaultExclusionOverrideAudit({ audit, ...input })).toBe(
-      true
-    );
   });
 
-  test("does not join negated or cross-page fragments into a positive override", () => {
+  test("dismisses generic references and the former Facility false positive", () => {
     const input = fixture([
-      "Grundwasser ist keinesfalls mitversichert. Schäden durch Grundwasser",
-      "sind mitversichert.",
+      "Abweichend von Art. 7 gelten Umweltschäden als mitversichert.",
+      "In Erweiterung der AWB sind Rohrbruchschäden gedeckt.",
+      "In Erweiterung der Leitungswasserversicherung sind Silikonfugen mitversichert.",
+      "Mitversichert sind Pflichten des Facility Managements.",
+      "Abs. 1 Satz 1 ist nicht anzuwenden.",
+      "Punkt c wird ersetzt durch eine besondere Vereinbarung.",
     ]);
 
     expect(buildLw20DefaultExclusionOverrideAudit(input)).toMatchObject({
@@ -136,24 +135,36 @@ describe("LW-20 default-exclusion override audit", () => {
     });
   });
 
-  test("flags alias-free replacement and non-application references", () => {
+  test("does not join anchors, locators and actions across structural boundaries", () => {
     const input = fixture([
-      "Punkt 2 lit. c wird ersetzt durch eine besondere Vereinbarung.",
-      "Der Ausschluss gemäß Art. 4 findet keine Anwendung.",
+      "Leitungswasserbedingungen und Ausschluss gemäß lit. c.\n\nDer Ausschluss wird aufgehoben.",
+      "Leitungswasserversicherung und Ausschluss gemäß lit. c.",
+      "Dieser Ausschluss wird aufgehoben.",
     ]);
 
     expect(buildLw20DefaultExclusionOverrideAudit(input)).toMatchObject({
-      status: REVIEW_REQUIRED,
-      candidateCount: 2,
-      candidates: [
-        { familyId: "POINT_OR_ARTICLE_CROSS_REFERENCE_OVERRIDE_V1" },
-        { familyId: "POINT_OR_ARTICLE_CROSS_REFERENCE_OVERRIDE_V1" },
-      ],
+      status: NO_OVERRIDE_REFERENCE_FOUND,
+      candidateCount: 0,
+    });
+  });
+
+  test("rejects negated removal wording", () => {
+    const input = fixture([
+      "Der Ausschluss gemäß lit. c der Leitungswasserbedingungen wird nicht aufgehoben.",
+      "Der Ausschluss gemäß lit. c der Leitungswasserbedingungen wird keinesfalls gestrichen.",
+      "Der Ausschluss gemäß lit. c der Leitungswasserbedingungen gilt unverändert und bleibt aufrecht.",
+    ]);
+
+    expect(buildLw20DefaultExclusionOverrideAudit(input)).toMatchObject({
+      status: NO_OVERRIDE_REFERENCE_FOUND,
+      candidateCount: 0,
     });
   });
 
   test("is target-bound and refuses incomplete document artifacts", () => {
-    const input = fixture(["Schäden durch Grundwasser sind mitversichert."]);
+    const input = fixture([
+      "Der Ausschluss gemäß lit. c der Leitungswasserbedingungen wird aufgehoben.",
+    ]);
     expect(
       buildLw20DefaultExclusionOverrideAudit({
         ...input,
@@ -178,8 +189,10 @@ describe("LW-20 default-exclusion override audit", () => {
     expect(buildLw20DefaultExclusionOverrideAudit(incomplete)).toBeNull();
   });
 
-  test("strict validation rejects status, offset, digest and shape tampering", () => {
-    const input = fixture(["Grundwasser ist mitversichert."]);
+  test("strict validation rejects status, unit, offset, digest and shape tampering", () => {
+    const input = fixture([
+      "Der Ausschluss gemäß lit. c der Leitungswasserbedingungen wird aufgehoben.",
+    ]);
     const audit = buildLw20DefaultExclusionOverrideAudit(input);
     const tamper = (mutate) => {
       const changed = JSON.parse(JSON.stringify(audit));
@@ -193,9 +206,12 @@ describe("LW-20 default-exclusion override audit", () => {
     expect(
       tamper((changed) => (changed.status = NO_OVERRIDE_REFERENCE_FOUND))
     ).toBe(false);
-    expect(
-      tamper((changed) => (changed.candidates[0].documentStart += 1))
-    ).toBe(false);
+    expect(tamper((changed) => (changed.candidates[0].unitType = "PAGE"))).toBe(
+      false
+    );
+    expect(tamper((changed) => (changed.candidates[0].documentStart += 1))).toBe(
+      false
+    );
     expect(
       tamper((changed) => (changed.candidateSetDigestSha256 = "a".repeat(64)))
     ).toBe(false);

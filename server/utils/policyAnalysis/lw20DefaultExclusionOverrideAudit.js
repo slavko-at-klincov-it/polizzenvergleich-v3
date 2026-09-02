@@ -1,74 +1,49 @@
 const crypto = require("crypto");
+const {
+  structuralContext,
+} = require("./controlledOccurrenceWorksheet");
 
-const LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_SCHEMA_VERSION = 1;
+const LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_SCHEMA_VERSION = 2;
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_CONTRACT_ID =
-  "LW20_FULL_DOCUMENT_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_V1";
+  "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_AUDIT_V2";
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_PATTERN_CONTRACT_ID =
-  "LW20_DEFAULT_EXCLUSION_OVERRIDE_PATTERN_FAMILIES_V1";
+  "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_REFERENCE_FAMILIES_V2";
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_DECISION_BASIS =
-  "FULL_DOCUMENT_LW20_DEFAULT_EXCLUSION_OVERRIDE_REFERENCE_SCAN";
+  "STRUCTURE_BOUND_ALIAS_FREE_LW20_DEFAULT_EXCLUSION_OVERRIDE_SCAN";
 const LW20_REQUIREMENT_ID = "LW-20";
 const LW20_COMPONENT_ID = "ground_seepage_or_retained_water";
 const NO_OVERRIDE_REFERENCE_FOUND = "NO_OVERRIDE_REFERENCE_FOUND";
 const REVIEW_REQUIRED = "REVIEW_REQUIRED";
+const MAX_STRUCTURAL_UNIT_CHARS = 600;
+const FALLBACK_WORDS_EACH_SIDE = 60;
+const MAX_LOCATOR_ACTION_DISTANCE = 160;
+const ALLOWED_UNIT_TYPES = new Set(["PARAGRAPH", "LIST_ITEM"]);
 
-const WATER_TERM =
-  "(?:Grundwasser|Sickerwasser|Stauwasser|dr(?:u|ü)ckendes\\s+Wasser|aufsteigend(?:es|em|en|er)\\s+Wasser|Wasser\\s+aus\\s+(?:dem\\s+)?(?:Erdreich|Untergrund|Boden))";
-const POSITIVE_COVERAGE =
-  "(?:mitversichert|mit\\s+versichert|mitgedeckt|mit\\s+gedeckt|gedeckt|eingeschlossen|Versicherungsschutz\\s+(?:ist|besteht|erstreckt\\s+sich|umfasst)|Deckung(?:sschutz)?\\s+(?:ist|besteht|umfasst)|(?:gilt|gelten)\\s+als\\s+(?:mit)?(?:versichert|gedeckt)|sind\\s+(?:versichert|gedeckt)|werden\\s+(?:versichert|gedeckt))";
-const CODE_REFERENCE =
-  "(?:(?:Klausel|Code|Deckungsbaustein|Baustein|Besondere\\s+Bedingung)\\s*(?:Nr\\.?\\s*)?[A-ZÄÖÜ]{0,8}[-./ ]?\\d{1,6}[A-Z0-9./-]*|(?:BB|BVB)\\s*[A-ZÄÖÜ]{0,6}[-./ ]?\\d{1,6}[A-Z0-9./-]*)";
-const AWB_REFERENCE =
-  "(?:AWB(?:\\s*[-/]?\\s*\\d{2,4})?|Allgemeine\\s+Versicherungsbedingungen)";
-const LEITUNGSWASSER_REFERENCE =
-  "(?:(?:Allgemeine|Besondere)\\s+Bedingungen\\s+für\\s+die\\s+Leitungswasserversicherung|Leitungswasser(?:versicherung)?s?bedingungen|Leitungswasserversicherung)";
-const POINT_OR_ARTICLE_REFERENCE =
-  "(?:(?:Art(?:ikel)?|Punkt|Ziffer|Abs(?:atz)?)\\.?\\s*\\d{1,4}(?:[.)/-]\\d{1,4})?(?:\\s*(?:lit(?:era)?\\.?\\s*[a-z]|Abs\\.?\\s*\\d{1,3}))?|lit(?:era)?\\.?\\s*[a-z])";
-const STRONG_REFERENCE_OVERRIDE_CUE =
-  "(?:abweichend(?:\\s+von)?|entgegen|unter\\s+Aufhebung|(?:wird|werden|ist|sind)\\s+(?:aufgehoben|gestrichen|außer\\s+Kraft\\s+gesetzt)|(?:findet|finden)\\s+keine\\s+Anwendung|nicht\\s+anzuwenden|ersetzt\\s+durch|in\\s+Erweiterung|über\\s+(?:den|die|das)\\s+[^.\\n]{0,80}?hinaus|zusätzlich\\s+(?:mitversichert|eingeschlossen|gedeckt)|(?:gilt|gelten|ist|sind|wird|werden)[^.\\n]{0,80}?(?:mitversichert|eingeschlossen|gedeckt))";
-
-function bidirectional(left, right, distance) {
-  return `(?:${left}[\\s\\S]{0,${distance}}?${right}|${right}[\\s\\S]{0,${distance}}?${left})`;
-}
+const LW_ANCHOR_SOURCE =
+  "\\b(?:Leitungswasserversicherung|Leitungswasserbedingungen|Bedingungen\\s+f(?:u|ü)r\\s+die\\s+Leitungswasserversicherung)\\b";
+const EXCLUSION_SOURCE =
+  "\\b(?:Ausschluss|Ausschl(?:u|ü)sse|Ausschlussbestimmungen|nicht\\s+versicherte[nr]?\\s+Sch(?:a|ä)den)\\b";
+const ITEM_C_SOURCE =
+  "\\b(?:lit(?:era)?\\.?|Buchstabe|Punkt|Ziffer)\\s*c\\b";
+const DEFAULT_HEADING_SOURCE =
+  "\\bNicht\\s+versichert\\s+sind\\s+Sch(?:a|ä)den\\s*,?\\s*(?:sofern|so\\s+ferne?)\\s+nicht\\s+anders\\s+vereinbart\\b";
+const COMPLETE_EXCLUSION_SOURCE =
+  "\\b(?:s(?:a|ä)mtliche|alle)\\s+(?:Ausschl(?:u|ü)sse|Ausschlussbestimmungen)\\b";
+const OVERRIDE_ACTION_SOURCE =
+  "\\b(?:aufgehoben|gestrichen|au(?:ss|ß)er\\s+Kraft(?:\\s+gesetzt)?|findet\\s+keine\\s+Anwendung|nicht\\s+anzuwenden|ersetzt\\s+durch)\\b";
 
 const PATTERN_FAMILIES = Object.freeze([
   Object.freeze({
-    id: "DIRECT_LW20_POSITIVE_OVERRIDE_V1",
-    source: bidirectional(WATER_TERM, POSITIVE_COVERAGE, 180),
-    flags: "giu",
-    matchPolicy: "UNNEGATED_POSITIVE_COVERAGE_V1",
+    id: "LW20_ITEM_C_EXCLUSION_OVERRIDE_REFERENCE_V2",
+    locatorSources: Object.freeze([EXCLUSION_SOURCE, ITEM_C_SOURCE]),
   }),
   Object.freeze({
-    id: "CODE_CROSS_REFERENCE_OVERRIDE_V1",
-    source: bidirectional(CODE_REFERENCE, STRONG_REFERENCE_OVERRIDE_CUE, 260),
-    flags: "giu",
-    matchPolicy: "LOCAL_CROSS_REFERENCE_REVIEW_V1",
+    id: "LW20_DEFAULT_HEADING_OVERRIDE_REFERENCE_V2",
+    locatorSources: Object.freeze([DEFAULT_HEADING_SOURCE]),
   }),
   Object.freeze({
-    id: "AWB_CROSS_REFERENCE_OVERRIDE_V1",
-    source: bidirectional(AWB_REFERENCE, STRONG_REFERENCE_OVERRIDE_CUE, 260),
-    flags: "giu",
-    matchPolicy: "LOCAL_CROSS_REFERENCE_REVIEW_V1",
-  }),
-  Object.freeze({
-    id: "LEITUNGSWASSER_CROSS_REFERENCE_OVERRIDE_V1",
-    source: bidirectional(
-      LEITUNGSWASSER_REFERENCE,
-      STRONG_REFERENCE_OVERRIDE_CUE,
-      260
-    ),
-    flags: "giu",
-    matchPolicy: "LOCAL_CROSS_REFERENCE_REVIEW_V1",
-  }),
-  Object.freeze({
-    id: "POINT_OR_ARTICLE_CROSS_REFERENCE_OVERRIDE_V1",
-    source: bidirectional(
-      POINT_OR_ARTICLE_REFERENCE,
-      STRONG_REFERENCE_OVERRIDE_CUE,
-      260
-    ),
-    flags: "giu",
-    matchPolicy: "LOCAL_CROSS_REFERENCE_REVIEW_V1",
+    id: "LW20_COMPLETE_EXCLUSION_BLOCK_OVERRIDE_V2",
+    locatorSources: Object.freeze([COMPLETE_EXCLUSION_SOURCE]),
   }),
 ]);
 
@@ -95,8 +70,16 @@ function domainDigest(domain, value) {
 }
 
 const PATTERN_FAMILY_PROJECTION = Object.freeze(
-  PATTERN_FAMILIES.map(({ id, source, flags, matchPolicy }) =>
-    Object.freeze({ id, source, flags, matchPolicy })
+  PATTERN_FAMILIES.map(({ id, locatorSources }) =>
+    Object.freeze({
+      id,
+      locatorSources,
+      anchorSource: LW_ANCHOR_SOURCE,
+      actionSource: OVERRIDE_ACTION_SOURCE,
+      maxStructuralUnitChars: MAX_STRUCTURAL_UNIT_CHARS,
+      maxLocatorActionDistance: MAX_LOCATOR_ACTION_DISTANCE,
+      allowedUnitTypes: [...ALLOWED_UNIT_TYPES].sort(),
+    })
   )
 );
 const LW20_DEFAULT_EXCLUSION_OVERRIDE_PATTERN_FAMILY_DIGEST_SHA256 =
@@ -171,38 +154,84 @@ function exactDocumentPages({ document, documentArtifact }) {
   };
 }
 
-function hasUnnegatedPositiveCoverage(text) {
-  const positive = new RegExp(POSITIVE_COVERAGE, "giu");
-  for (const match of text.matchAll(positive)) {
-    const prefix = text.slice(Math.max(0, match.index - 48), match.index);
-    const suffix = text.slice(
-      match.index + match[0].length,
-      match.index + match[0].length + 32
-    );
-    if (
-      !/(?:\bnicht\b|\bkeine[nmrs]?\b|\bohne\b|\bkeinesfalls\b)(?:[\s,;:]+\p{L}+){0,4}[\s,;:]*$/iu.test(
-        prefix
-      ) &&
-      !/^\s*(?:nicht|keine[nmrs]?|keinesfalls)\b/iu.test(suffix)
-    )
-      return true;
-  }
-  return false;
+function allMatches(text, source) {
+  return [...text.matchAll(new RegExp(source, "giu"))].map((match) => ({
+    start: match.index,
+    end: match.index + match[0].length,
+    text: match[0],
+  }));
 }
 
-function candidateProjection({ familyId, page, match, documentIdentity }) {
-  const documentStart = page.documentStart + match.index;
-  const exactText = match[0];
+function spanDistance(left, right) {
+  if (left.end < right.start) return right.start - left.end;
+  if (right.end < left.start) return left.start - right.end;
+  return 0;
+}
+
+function negatedOverrideAction(unitText, action) {
+  if (/^(?:nicht\s+anzuwenden|findet\s+keine\s+Anwendung)$/iu.test(action.text))
+    return false;
+  const prefix = unitText.slice(Math.max(0, action.start - 48), action.start);
+  return /\b(?:nicht|keinesfalls)\s*$/iu.test(prefix);
+}
+
+function matchingFamily(unitText, action) {
+  if (negatedOverrideAction(unitText, action)) return null;
+  const anchors = allMatches(unitText, LW_ANCHOR_SOURCE);
+  if (anchors.length === 0) return null;
+  for (const family of PATTERN_FAMILIES) {
+    const locatorGroups = family.locatorSources.map((source) =>
+      allMatches(unitText, source)
+    );
+    if (locatorGroups.some((matches) => matches.length === 0)) continue;
+    const locators = locatorGroups.map((matches) =>
+      [...matches].sort(
+        (left, right) => spanDistance(left, action) - spanDistance(right, action)
+      )[0]
+    );
+    if (
+      locators.every(
+        (locator) =>
+          spanDistance(locator, action) <= MAX_LOCATOR_ACTION_DISTANCE
+      )
+    )
+      return { family, anchor: anchors[0], locators };
+  }
+  return null;
+}
+
+function candidateProjection({ page, action, context, match, documentIdentity }) {
+  const unitDocumentStart = page.documentStart + context.pageStart;
+  const unitDocumentEnd = page.documentStart + context.pageEnd;
+  const relativeStarts = [
+    match.anchor.start,
+    ...match.locators.map(({ start }) => start),
+    action.start,
+  ];
+  const relativeEnds = [
+    match.anchor.end,
+    ...match.locators.map(({ end }) => end),
+    action.end,
+  ];
+  const matchStart = Math.min(...relativeStarts);
+  const matchEnd = Math.max(...relativeEnds);
+  const documentStart = unitDocumentStart + matchStart;
+  const documentEnd = unitDocumentStart + matchEnd;
+  const exactText = context.text.slice(matchStart, matchEnd);
   const projection = {
-    familyId,
+    familyId: match.family.id,
     physicalPageNumber: page.physicalPageNumber,
+    unitType: context.unitType,
+    unitDocumentStart,
+    unitDocumentEnd,
+    unitTextSha256: sha256(context.text),
     documentStart,
-    documentEnd: documentStart + exactText.length,
+    documentEnd,
     exactText,
     exactTextSha256: sha256(exactText),
   };
   const candidateDigestSha256 = domainDigest(
-    "LW20_DEFAULT_EXCLUSION_OVERRIDE_CANDIDATE_V1",
+    "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_CANDIDATE_V2",
     { document: documentIdentity, candidate: projection }
   );
   return {
@@ -216,25 +245,34 @@ function scanCandidates(pages, documentIdentity) {
   const candidates = [];
   const identities = new Set();
   for (const page of pages) {
-    for (const family of PATTERN_FAMILIES) {
-      const pattern = new RegExp(family.source, family.flags);
-      for (const match of page.text.matchAll(pattern)) {
-        if (
-          family.matchPolicy === "UNNEGATED_POSITIVE_COVERAGE_V1" &&
-          !hasUnnegatedPositiveCoverage(match[0])
-        )
-          continue;
-        const candidate = candidateProjection({
-          familyId: family.id,
-          page,
-          match,
-          documentIdentity,
-        });
-        const identity = `${candidate.familyId}\u0000${candidate.documentStart}\u0000${candidate.documentEnd}`;
-        if (identities.has(identity)) continue;
-        identities.add(identity);
-        candidates.push(candidate);
-      }
+    for (const pageAction of allMatches(page.text, OVERRIDE_ACTION_SOURCE)) {
+      const context = structuralContext({
+        pageText: page.text,
+        occurrenceStart: pageAction.start,
+        occurrenceEnd: pageAction.end,
+        maxChars: MAX_STRUCTURAL_UNIT_CHARS,
+        fallbackWordsEachSide: FALLBACK_WORDS_EACH_SIDE,
+        followingBoundaryLineStarts: new Set(),
+      });
+      if (!ALLOWED_UNIT_TYPES.has(context.unitType)) continue;
+      const action = {
+        ...pageAction,
+        start: pageAction.start - context.pageStart,
+        end: pageAction.end - context.pageStart,
+      };
+      const match = matchingFamily(context.text, action);
+      if (!match) continue;
+      const candidate = candidateProjection({
+        page,
+        action,
+        context,
+        match,
+        documentIdentity,
+      });
+      const identity = `${candidate.familyId}\u0000${candidate.documentStart}\u0000${candidate.documentEnd}`;
+      if (identities.has(identity)) continue;
+      identities.add(identity);
+      candidates.push(candidate);
     }
   }
   return candidates.sort(
@@ -246,9 +284,10 @@ function scanCandidates(pages, documentIdentity) {
 }
 
 /**
- * Scans one complete server-owned document artifact for wording or references
- * that could override the default LW-20 groundwater exclusion. A hit is only
- * a review signal; this contract never decides coverage or equivalence.
+ * Scans one complete server-owned document artifact for an alias-free,
+ * structure-bound reference that could remove the default LW-20 exclusion.
+ * Direct peril wording remains owned by the normal occurrence pipeline. A hit
+ * is only a review signal; this contract never decides coverage or equality.
  * Role: deterministic evidence audit. Side effects: none.
  */
 function buildLw20DefaultExclusionOverrideAudit({
@@ -284,17 +323,17 @@ function buildLw20DefaultExclusionOverrideAudit({
       uuid: exactDocument.documentUuid,
       sha256: exactDocument.documentSha256,
       documentArtifactDigestSha256: domainDigest(
-        "LW20_OVERRIDE_DOCUMENT_ARTIFACT_V1",
+        "LW20_OVERRIDE_DOCUMENT_ARTIFACT_V2",
         documentArtifact
       ),
       physicalPagesChecked: exactDocument.pages.length,
       totalPhysicalPages: exactDocument.pages.length,
       pageContentSha256: domainDigest(
-        "LW20_OVERRIDE_PAGE_CONTENT_V1",
+        "LW20_OVERRIDE_PAGE_CONTENT_V2",
         exactDocument.pageContent
       ),
       pageMapSha256: domainDigest(
-        "LW20_OVERRIDE_PAGE_MAP_V1",
+        "LW20_OVERRIDE_PAGE_MAP_V2",
         exactDocument.pageMap
       ),
     },
@@ -307,7 +346,7 @@ function buildLw20DefaultExclusionOverrideAudit({
     candidateCount: candidates.length,
     candidates,
     candidateSetDigestSha256: domainDigest(
-      "LW20_DEFAULT_EXCLUSION_OVERRIDE_CANDIDATE_SET_V1",
+      "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_CANDIDATE_SET_V2",
       candidates
     ),
   };

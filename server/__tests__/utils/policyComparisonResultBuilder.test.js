@@ -1718,7 +1718,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V24_LW20_OVERRIDE_AUDIT",
+      id: "CUSTOMER_CORE_5_V25_LW20_ALIAS_FREE_OVERRIDE_AUDIT",
       comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
@@ -2268,8 +2268,8 @@ describe("policy comparison result builder", () => {
     expect(componentAudit).toMatchObject({
       disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
       lw20DefaultExclusionOverrideAudit: {
-        schemaVersion: 1,
-        contractId: "LW20_FULL_DOCUMENT_DEFAULT_EXCLUSION_OVERRIDE_AUDIT_V1",
+        schemaVersion: 2,
+        contractId: "LW20_DEFAULT_EXCLUSION_ALIAS_FREE_OVERRIDE_AUDIT_V2",
         requirementId: "LW-20",
         componentId: "ground_seepage_or_retained_water",
         decisionOwner: "SERVER",
