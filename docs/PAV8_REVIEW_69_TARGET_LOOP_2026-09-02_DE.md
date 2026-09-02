@@ -109,7 +109,7 @@ positiven Gegenbeleg wird dessen Seite zum Vorteil.
 
 ### R69-D – Vergleichsregel fehlt: 4
 
-Status: `OPEN`
+Status: `2/4 ACCEPTED`, offen bleiben `VS-08` und `FE-A01`
 
 ```text
 VS-08, VS-10, FE-A01, ST-01
@@ -769,3 +769,87 @@ Alle anderen Point-Decision-Zahlen unverändert.
 
 Bewertung: Kandidat angenommen. Er korrigiert genau die beabsichtigte Zeile
 und verändert keinen der 155 geschützten Vergleichspunkte.
+
+### 10.2 VS-10 – Vorhandensein der automatischen Indexanpassung
+
+Ursache: Beide Pakete enthielten bereits einen vollständigen,
+konfliktfreien und quellengebundenen Fakt für
+`automatic_index_adjustment`. Paket A regelt die Aufwertung der
+Gebäudeversicherungssummen nach dem Baukostenindex; Paket B regelt die
+jährliche Erhöhung oder Verminderung der Versicherungssumme nach dem
+Baukostenindex. Beide Atome waren `INCLUDED`, `GENERAL`, `PACKAGE_MEMBER`
+und feldlos. Die Vergleichslogik besaß aber keine freigegebene Regel für die
+Rolle `CONDITION` und fiel deshalb in
+`NO_APPROVED_RULE_FOR_ALL_DIMENSIONS`.
+
+Die fachliche Aussage ist absichtlich eng: Gleichwertig ist nur das
+**Vorhandensein einer aktiven automatischen Indexanpassung der
+Versicherungssumme**. Die Regel behauptet ausdrücklich nicht, dass Indexart,
+Rhythmus, Beginn, Richtung oder Berechnung identisch sind. Indexart und
+Aussetzung besitzen getrennte Katalogzeilen (`VS-11`, `VS-12`).
+
+Vor der Vergleichsfreigabe wurden zwei Erkennungslücken getrennt gehärtet:
+
+- Commit `377b2df0` verwirft negierte, aufgehobene, ausgesetzte, optionale,
+  antrags-, zustimmungs- oder mehrprämienabhängige Mechanismen;
+- Commit `ef4c4c65` verwirft zusätzlich nachgestellte Negationen wie
+  „erhöht oder vermindert sich jährlich nicht“.
+
+Beide Sicherheitscommits wurden auf dem Mac Studio gegen die deterministische
+Kandidatenbindung und den Prepared-Evidence-Vertrag geprüft. Der zweite Stand
+bestand 65/65 Tests; der erste Stand zuvor 64/64.
+
+Commit `6521b53d` führt danach den versionierten Vergleichsvertrag
+`AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_V1` ein. Er verlangt:
+
+- exakt `VS-10 / automatic_index_adjustment / CONDITION`;
+- denselben versionierten Ein-Komponenten-Vertrag mit `ALL`;
+- beidseitig `INCLUDED`, `GENERAL_REQUIRED` und `GENERAL`;
+- feldlos `NOT_REQUIRED` ohne angeforderte oder optionale Felder;
+- vollständige, konfliktfreie und rangaufgelöste Atome mit gültigen Quellen;
+- in jeder kanonisch zusammengeführten Quelle eine aktive indexgebundene
+  Anpassung der Gebäudeversicherungssumme beziehungsweise
+  Versicherungssumme;
+- keine Negation, Aufhebung, Aussetzung, Optionalität, Bedingung, Antrag,
+  Zustimmung, Mehrprämie, gesonderte Vereinbarung, manuelle oder einmalige
+  Neubewertung und keinen bloß historischen Wortlaut;
+- keine reine Prämienindexierung, Überschrift, Indexerwähnung oder Regelung
+  eines anderen Versicherungsgegenstands.
+
+Adversarial geprüft wurden insbesondere nachgestellte Negation, optionale
+Anpassung, reine Prämienindexierung, manuelle Neubewertung, historischer
+Wortlaut, Hausrat statt Gebäude, reine Überschrift, abweichende Wirkung,
+andere Komponente sowie gemischte aktive und inaktive Contributors. Die
+positiven Kontrollen verwenden die beiden realen unterschiedlichen
+Formulierungsfamilien. Der Mac-Studio-Stand bestand 85/85 Vergleichs-,
+Kanonisierungs- und Ergebnisaufbau-Tests.
+
+```text
+Sicherheitscommit 1: 377b2df0c511b2fca92e317779ff4c0851fae24b
+Sicherheitscommit 2: ef4c4c65354de3d5953c5ed6abdcd795fae3ed4c
+Vergleichscommit: 6521b53d41e472775aa5470b751b3157c4cd67fd
+Mac-Studio-Suites: 85/85 PASS
+Overlay: /private/tmp/pav8-overlay-vs10-6521b53d-rerun-AwC5Cn/overlay
+Delta gegenüber akzeptiertem ST-01-Overlay: exakt VS:VS-10
+VS-10: UNKLAR -> GLEICHWERTIG
+Target-Deltas gegenüber Ausgangsbaseline: ST:ST-01 und VS:VS-10
+Nicht-Target-Dokumentinstanzen: 1.550/1.550 identisch
+Finale Nicht-Target-Zeilen: 155/155 identisch
+Geänderte Nicht-Target-Zeilen: 0
+Comparison SHA-256: 3b4e607ebabe64b131f4568b083d7ef12e62a5a510caddae36c2d780adf5f446
+Guard SHA-256: 96710bab547eaf19a63c9a7e91d52c5d182e9ae1003f3cb4b1217704550002e7
+```
+
+Kumulierte Metrik nach ST-01 und VS-10:
+
+```text
+VORTEIL_A 2, VORTEIL_B 2, DOKUMENTATIONSUNTERSCHIED 33,
+GLEICHWERTIG 112, NICHT_VERGLEICHBAR 8, UNKLAR 67.
+Kundenreview: 67; ohne Kundenreview: 157.
+```
+
+Bewertung: Kandidat angenommen. Gegenüber dem vorherigen akzeptierten
+ST-01-Stand ändert sich exakt eine Zeile. Die 155 eingefrorenen
+Nicht-Review-Zeilen bleiben vollständig identisch. Der Overlay bleibt
+QA-only, nicht publishbar, nicht deploybar und ist kein Beleg für beliebige
+Versicherer oder Dokumente.
