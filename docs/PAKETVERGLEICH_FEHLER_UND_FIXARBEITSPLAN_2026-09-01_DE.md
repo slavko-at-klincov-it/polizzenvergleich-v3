@@ -1734,3 +1734,59 @@ werden erst nach eigenen Verträgen projiziert. Die
 Dokumentstatus-Neutralität besitzt wegen der genannten
 Semantikabhängigkeiten eine eigene, erst durch den frischen Lauf gültige
 Delta-Matrix.
+
+### 19.6 Messergebnis PAV8-01
+
+Status: **GO als Sicherheitsinkrement, kein neuer Ergebnisfavorit**
+
+Commit `30e5c3f7299f297f86f54b344f19814e70d9de4b` wurde im isolierten
+Mac-Studio-Checkout `/private/tmp/pv3-pav8-01-30e5c3f7/repo` auf Node
+`22.23.2` fokussiert und anschließend mit allen zehn Dokumenten geprüft.
+Sechs Suites und 92/92 Tests sowie Prettier bestanden. Der vollständige Lauf
+`PAV8-01-30E5C3F7-20260902-014244` verwendete
+`qwen/qwen3.6-35b-a3b`, Kontext `42496`, lief von
+`2026-09-01T23:43:41Z` bis `2026-09-02T00:10:37Z` und benötigte `26:56`.
+
+Das 224-Zeilen-Hard-Gate und der V7-Strict-Gate bestanden. Die Kundenmetrik
+blieb bei `0/0/38/6/99/14/67`; Kundenreview blieb exakt 67. Das ist für dieses
+reine Schutzinkrement das erwartete Ergebnis und keine gescheiterte
+Verbesserung.
+
+Der vollständige Favoritenvergleich ergab:
+
+- 10/10 Dokument-JSONs und 10/10 Einzelreports byteidentisch zu `fa780902`;
+- 224/224 A-Paketobjekte, 224/224 B-Paketobjekte und alle Zeilen ohne die
+  private Entscheidung JSON-identisch;
+- 0 Änderungen bei Outcome, Reason-Code, Rule-ID oder Review-Flag;
+- 0 Änderungen an den Mitgliedschaften der 67 Reviewgründe;
+- 62 neue Auditfelder in 23 privaten Entscheidungen und 31 Dimensionen; 22
+  Zeilen nur `UNSPECIFIED`, genau zwei gebundene nicht-neutrale Modi in
+  `LW-13`;
+- `LW-13` bleibt wegen verschiedener Ereignisvarianten nicht vergleichbar;
+  die Erklärung unterscheidet nun A `bestimmungsgemäße Auslösung` von B
+  `bestimmungswidrigem Austritt`;
+- `EL-09` bleibt bis `PAV8-02` unverändert, weil dort weiterhin nur der
+  Klassifikationsstatus den Vergleich trennt;
+- nach Entfernung flüchtiger Laufmetadaten und neutraler
+  `UNSPECIFIED`-Materialisierung existiert kein weiteres semantisches Delta.
+  Im Markdown änderte sich exakt die `LW-13`-Zeile, im XLSX exakt
+  `Gesamtvergleich!Q139`;
+- von 890 geprüften Dokumentartefakten sind 735 byteidentisch. Die 155
+  übrigen Hashdifferenzen sind vollständig durch Laufmetriken,
+  Laufzeit-/Pfadangaben und Manifestmetadaten erklärt; nach Normalisierung
+  sind auch sie inhaltlich identisch.
+
+Damit ist belegt, dass PAV8-01 die vor PAV8-02 benötigte Schutzgrenze setzt,
+ohne Suche, Extraktion oder bestehende Ergebnisse zu verschlechtern. Die
+Laufzeitabweichung von +9 Sekunden gegenüber `26:47` beträgt rund 0,6 Prozent
+und ist nicht als Performanceänderung zu werten.
+
+```text
+Run-Signatur: bb687dacee5c3ae09cdb575f4e13a6811c16ab97558d67dc601733e7682ecc0f
+comparison JSON: fe303a95acc3edff5d9a7271110dbfa1214a77815bf54c76c425c1a16e51691d
+comparison Markdown: 7a6be19708df20dcce8d82fc7b84eea60b307e52ef21d4a7abaab0fb78d2a277
+XLSX: 8a6c6eb9631a99e5701787f592971dd051083d49d59dcab86cca6db0132d33bb
+```
+
+Der installierte Kundencheckout blieb auf `c7d3b16d...`; es erfolgte kein
+Deployment. Nächster eigenständiger Fix ist `PAV8-02`.

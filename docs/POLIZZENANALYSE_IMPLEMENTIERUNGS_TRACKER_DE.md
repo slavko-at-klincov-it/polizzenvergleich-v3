@@ -4065,3 +4065,93 @@ BASELINE: fa780902 / 224 Zeilen / 26:47 / 0-0-38-6-99-14-67
 NO DEPLOY: installierter Kundenstand bleibt unverändert
 NO CLAIM: Projektionen sind keine Messergebnisse; maßgeblich ist jeder neue Lauf
 ```
+
+## 80. PAV8-01 – Schutz der Bedingungs- und Ereignissemantik
+
+Commit `30e5c3f7299f297f86f54b344f19814e70d9de4b` implementiert ausschließlich
+die vor der Statusneutralität erforderlichen Semantikschutzmarker. Aktive
+Warte-/Karenzbedingungen werden erkannt, ausdrücklich negierte Formen nicht.
+Außerdem werden `bestimmungsgemäßer Betrieb oder Auslösung` und
+`bestimmungswidriges Ereignis` als verschiedene gebundene Ereignisvarianten
+im atomaren Vergleichsschlüssel und Audit geführt. Rohfakten, Suche,
+Extraktion und Dokumentklassifikation bleiben unverändert.
+
+Validierung im isolierten Mac-Studio-Checkout
+`/private/tmp/pv3-pav8-01-30e5c3f7/repo` auf Node `22.23.2`:
+
+- 6 fokussierte Suites mit 92/92 bestandenen Tests;
+- positive, negative und adversariale Varianten einschließlich negierter
+  Karenz-/Warteformulierungen, `Wartezimmer`, Satzgrenzen und negierter
+  Ereignisformulierungen;
+- Point-Decision-, Result-Builder-, Customer-Presenter-,
+  Customer-Metric-, Product-Contract- und Frontend-Presenter-Suite grün;
+- Prettier vollständig grün; isolierter Checkout anschließend sauber.
+
+Vollständiger Zehn-Dokument-Lauf:
+
+```text
+Run: PAV8-01-30E5C3F7-20260902-014244
+Commit: 30e5c3f7299f297f86f54b344f19814e70d9de4b
+Checkout: /private/tmp/pv3-pav8-01-30e5c3f7/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Start UTC: 2026-09-01T23:43:41Z
+Ende UTC: 2026-09-02T00:10:37Z
+Wandzeit: 26:56
+Dokumente: 10/10, jeweils 224/224
+Paketzeilen: 224/224
+Kundenmetriken: A 0 / B 0 / Doku 38 / Gleich 6 / Null 99 /
+               Nicht vergleichbar 14 / Unklar 67
+Kundenreview: 67; ohne Kundenreview: 157
+V7-Strict-Gate: PASS
+```
+
+Der Favoritenvergleich gegen `fa780902` ist kausal sauber:
+
+- alle 10 `document.private.json` und alle 10 `report.json` sind bytegenau
+  identisch; es gibt keine Modell-, Extraktions- oder Suchdrift;
+- alle 224 `packageA`- und 224 `packageB`-Objekte sowie alle 224 Zeilen nach
+  Ausblendung von `pointDecision` sind JSON-identisch;
+- Outcome, Reason-Code, Rule-ID und Review-Flag sind in allen 224 Zeilen
+  unverändert;
+- die 67 Reviewgründe besitzen exakt dieselben Mitgliedschaften und Zähler;
+- 23 private Entscheidungen erhielten über 31 Dimensionen zusammen 62 neue
+  `operationalEventMode`-Auditfelder; 22 Zeilen enthalten ausschließlich den
+  neutralen Wert `UNSPECIFIED`, nur `LW-13` besitzt zwei nicht-neutrale Modi;
+- `LW-13` bleibt korrekt `NICHT_VERGLEICHBAR`: A betrifft die
+  bestimmungsgemäße Auslösung, B den bestimmungswidrigen Austritt. Die
+  Kundenerklärung nennt diese Abgrenzung jetzt ausdrücklich;
+- `EL-09` bleibt in diesem Inkrement unverändert `NICHT_VERGLEICHBAR`, weil
+  die Dokumentstatusdifferenz erst Gegenstand von `PAV8-02` ist;
+- der einzige normalisierte semantische Artefaktdelta ist damit die
+  Ereignisvarianten-Provenienz und Erklärung von `LW-13`. Im Markdown änderte
+  sich exakt eine Zeile, im XLSX exakt `Gesamtvergleich!Q139`;
+- von 890 geprüften Dokumentartefakten waren 735 byteidentisch. Die 155
+  übrigen Hashdifferenzen bestanden ausschließlich aus 45 Laufmetriken, 100
+  Laufzeit-/Pfadangaben und 10 Manifest-Metadaten; nach deren Ausblendung
+  waren auch diese 155 inhaltlich identisch. Insbesondere waren 50/50
+  Worksheets, Triagen, Wirkungsartefakte, Quellenauswahlen, Ergebniszeilen
+  und Feldextraktionen identisch.
+
+Artefakte:
+
+```text
+Run-Signatur: bb687dacee5c3ae09cdb575f4e13a6811c16ab97558d67dc601733e7682ecc0f
+package-contract: 48b18f7e9fb2f09118057e01b274eec6e90b1b0d8b101fcdcfeed386335ff9f8
+package-report: f0ac7d58cedd230e451b0eac3bbb9e3d0bab32e0f8d3d89445e08c1891e7e201
+comparison JSON: fe303a95acc3edff5d9a7271110dbfa1214a77815bf54c76c425c1a16e51691d
+comparison Markdown: 7a6be19708df20dcce8d82fc7b84eea60b307e52ef21d4a7abaab0fb78d2a277
+XLSX: 8a6c6eb9631a99e5701787f592971dd051083d49d59dcab86cca6db0132d33bb
+```
+
+Die Wandzeit liegt 9 Sekunden beziehungsweise rund 0,6 Prozent über dem
+Favoriten `26:47`; daraus folgt kein belastbarer Performanceunterschied.
+Der installierte Kundencheckout blieb unverändert auf `c7d3b16d...`.
+
+```text
+PASS: Schutzmarker und adversariale Verträge
+PASS: vollständiger Mac-Studio-Lauf ohne Analyse-/Modelldrift
+PASS: erwartete LW-13-Abgrenzung; keine unerwartete Ergebnisänderung
+NO DEPLOY: installierter Kundenstand unverändert
+NEXT: PAV8-02 – Statusmetadatum und provenienzerhaltende Vergleichsgruppierung
+```
