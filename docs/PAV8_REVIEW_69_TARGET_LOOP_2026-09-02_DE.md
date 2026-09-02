@@ -2467,6 +2467,51 @@ Dies ist keine neue 224-Zeilen-Gesamtmessung. Ein Deployment und ein voller
 224-Zeilen-Lauf wurden nicht durchgeführt; der installierte Kundenstand blieb
 unverändert.
 
+#### 10.22.7 Adversariale Prüfung des verbleibenden Rangblockers: NO-GO
+
+Zwei voneinander unabhängige Codeprüfungen haben die naheliegende Abkürzung
+`mehrere vollständige INCLUDED-Atome => NICHT_VERGLEICHBAR` verworfen. Die
+vorhandenen Eigenschaften `complete`, `sourceBindingValid`,
+`conflictState: NONE` und unterschiedliche semantische Schlüssel beweisen nur,
+dass die einzelnen Fakten intern gültig sind. Sie beweisen nicht, dass
+mehrere Paketdokumente additiv nebeneinander gelten oder dass keine
+nachfolgende Vereinbarung eine frühere ersetzt.
+
+Das reale VS-19-Artefakt enthält genau die gefährlichen Gegenbeispiele:
+
+- für Wege eine allgemeine Aufnahme ohne Betrag neben einer allgemeinen
+  Aufnahme mit EUR 10.000 und Bedingungsmarkern;
+- für Außenbeleuchtung eine unbedingte Aufnahme neben einer bedingten Aufnahme
+  mit ansonsten gleichem Scope;
+- strukturell kompatible A-B-Paare, die wegen der noch nicht typisierten
+  Bedingungs-, Gefahren- oder Ersetzungsbeziehung nicht sicher als
+  `NICHT_VERGLEICHBAR` abgeschlossen werden dürfen.
+
+Der Rangblocker betrifft in der aktuell belegbaren Projektion drei Zeilen:
+`VS-01`, `VS-07` und `VS-19`. Ein globaler Shortcut würde daher auch zwei
+andere Anforderungen verändern. Selbst eine Beschränkung auf `ANY` würde zwar
+VS-01 und VS-07 aussparen, aber die fehlende Paketbeziehung von VS-19 nicht
+beweisen.
+
+Eine spätere sichere Freigabe benötigt mindestens einen expliziten,
+auditierbaren Dokumentbeziehungsvertrag wie `COEXISTING`, `ADDITIVE` oder
+`NO_REPLACEMENT_APPLICABLE`, vollständig typisierte Vergleichsachsen und die
+Prüfung aller A×B-Atompaarungen. Sobald ein Paar gleichwertig, vorteilhaft,
+kompatibel oder weiterhin unklar ist, muss die Zeile unklar bleiben. Der
+heutige Atomvertrag besitzt keinen solchen Dokumentbeziehungsnachweis.
+
+Entscheidung für den aktuellen Loop:
+
+```text
+VS-19 bleibt UNKLAR / ATOMIC_DOCUMENT_RANK_UNRESOLVED.
+Kein künstliches NICHT_VERGLEICHBAR.
+Kein Vorteil ohne nachweisbare Paketbeziehung.
+```
+
+Damit sind die Such-, Objektklassifikations-, Betrags- und globale
+Bedingungsfehler von VS-19 behoben. Der verbleibende Rest ist eine echte,
+präzise bezeichnete Modellierungslücke und kein weiterer sicherer Kleinstfix.
+
 ### 10.21 LW-12 Schritt A – aktuelle Reproduktion der Definitionsblockade
 
 `LW-12` wurde nach Abschluss von VS-08 auf dem aktuellen Produktprofil neu aus
