@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "lw-occurrence-full-draft-v0.9",
+  "catalogId": "lw-occurrence-full-draft-v0.10",
   "categoryView": "LW",
   "requirements": [
     {
@@ -323,6 +323,10 @@
           "aliases": [
             "Frostschäden an Sanitärkeramik",
             "Frostschäden an Sanitäranlagen",
+            "Frostschaden an angeschlossenen Einrichtungen",
+            "Frostschäden an angeschlossenen Einrichtungen",
+            "Frost an angeschlossenen Einrichtungen",
+            "Schäden an angeschlossenen Einrichtungen und Armaturen anlässlich Rohrbruch, Rohrbruch durch Korrosion und Frostschaden",
             "Frost an den leitungswasserführenden Rohren und Sanitäranlagen",
             "Frost an den leitungswasserführenden Rohren und/oder angeschlossenen Einrichtungen innerhalb des Versicherungsgrundstücks, deren Armaturen und Sanitäranlagen",
             "WC-Schale",

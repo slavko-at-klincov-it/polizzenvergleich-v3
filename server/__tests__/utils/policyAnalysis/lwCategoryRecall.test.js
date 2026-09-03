@@ -61,11 +61,35 @@ describe("LW category recall", () => {
   });
 
   test.each([
+    "Frostschaden an angeschlossenen Einrichtungen",
+    "Frostschäden an angeschlossenen Einrichtungen",
+    "Frost an angeschlossenen Einrichtungen",
+    "Schäden an angeschlossenen Einrichtungen und Armaturen anlässlich Rohrbruch, Rohrbruch durch Korrosion und Frostschaden",
+  ])("LW-07 binds connected sanitary fixtures to frost in %s", (wording) => {
+    const worksheet = worksheetFromText(
+      ["Leitungswasserversicherung", wording].join("\n")
+    );
+
+    expect(
+      component(worksheet, "LW-07", "sanitary_ceramics").occurrences
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          matchedAlias: wording,
+          exactText: wording,
+        }),
+      ])
+    );
+  });
+
+  test.each([
     "WC-Sitz",
     "WC-Spülkasten",
     "Keramikfliesen",
     "Sanitärreinigung",
     "Siphon",
+    "angeschlossene elektrische Einrichtungen",
+    "Reparatur angeschlossener Einrichtungen nach Überspannung",
   ])("LW-07 does not promote the unapproved fixture wording %s", (wording) => {
     const worksheet = worksheetFromText(
       ["Leitungswasserversicherung", wording].join("\n")

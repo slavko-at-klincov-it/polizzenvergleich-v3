@@ -32,7 +32,7 @@ const LW20_ABSENCE_DEFAULT_EXCLUSION_EQUALITY_TREATMENT =
 const CATEGORY_ID = "LW-20";
 const COMPONENT_ID = "ground_seepage_or_retained_water";
 const FACT_ROLE = "PERIL";
-const CATALOG_ID = "lw-occurrence-full-draft-v0.9";
+const CATALOG_ID = "lw-occurrence-full-draft-v0.10";
 const SEARCH_PLAN_ID = `${CATALOG_ID}/${CATEGORY_ID}/${COMPONENT_ID}`;
 const OVERRIDE_FAMILY_IDS = Object.freeze([
   "LW20_ITEM_C_EXCLUSION_OVERRIDE_REFERENCE_V2",
