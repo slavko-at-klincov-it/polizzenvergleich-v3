@@ -283,6 +283,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
   test("requires source atoms or an independently stored source digest", () => {
     const input = fixture();
     const audit = buildVs22HazardousWastePortfolioAudit(input);
+    const sourceAtomDigestReplay = buildVs22SourceAtomDigestReplay(input);
     const validationOptions = {
       categoryId: input.categoryId,
       packageA: input.packageA,
@@ -299,9 +300,21 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     expect(() =>
       validateVs22HazardousWastePortfolioAudit(audit, {
         ...validationOptions,
-        sourceAtomDigestReplay: buildVs22SourceAtomDigestReplay(input),
+        sourceAtomDigestReplay,
       })
     ).not.toThrow();
+
+    const tampered = JSON.parse(JSON.stringify(audit));
+    tampered.sides.A.projectedAtoms.find(
+      ({ componentId }) => componentId === "hazardous_waste"
+    ).sources[0].exactText = "Allgemeine Entsorgungskosten";
+    coherentlyRehash(tampered);
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(tampered, {
+        ...validationOptions,
+        sourceAtomDigestReplay,
+      })
+    ).toThrow("VS22_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
   });
 
   test.each([
