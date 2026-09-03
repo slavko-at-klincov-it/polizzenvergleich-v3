@@ -307,12 +307,18 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       /Beginn\s+der\s+Aufräumungs-\s+und\s+Reparaturarbeiten/iu.test(
         source.context?.text || ""
       );
-    const isExplicitLiabilityScope =
-      !["HP", "VB"].includes(categoryView) &&
-      allCostMembers &&
-      /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB|Bauherr)\b/iu.test(
+    const isVs22NonDisposalScope =
+      candidate.requirement.id === "VS-22" &&
+      /(?:\bSchadenersatzverpflichtungen\b|\bUmweltstörung\b|Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung)/iu.test(
         liabilityContext
       );
+    const isExplicitLiabilityScope =
+      !["HP", "VB"].includes(categoryView) &&
+      (isVs22NonDisposalScope ||
+        (allCostMembers &&
+          /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB|Bauherr)\b/iu.test(
+            liabilityContext
+          )));
     const isVs04LiabilitySum =
       candidate.requirement.id === "VS-04" &&
       (source.exactText?.trim().toLocaleLowerCase("de-AT") ===
@@ -340,9 +346,11 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         roleMatch: ROLE_MATCH.MISMATCH,
         basis: isVs04LiabilitySum
           ? "VS04_LIABILITY_SUM_NOT_BUILDING_SUM_METHOD"
-          : isExplicitLiabilityScope
-            ? "LIABILITY_NOT_INSURED_COST"
-            : "CLEANUP_WORK_START_NOT_COST",
+          : isVs22NonDisposalScope
+            ? "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST"
+            : isExplicitLiabilityScope
+              ? "LIABILITY_NOT_INSURED_COST"
+              : "CLEANUP_WORK_START_NOT_COST",
       };
     } else if (allCostMembers && group) {
       roleResolution = {

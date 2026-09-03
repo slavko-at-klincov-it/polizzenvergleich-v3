@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.12",
+  "catalogId": "vs-occurrence-full-draft-v0.13",
   "categoryView": "VS",
   "requirements": [
     {
@@ -697,6 +697,10 @@
           "aliases": [
             "Sondermüll",
             "gefährlicher Abfall",
+            "gefährlichen Abfall",
+            "gefährliche Abfälle",
+            "gefährlichen Abfällen",
+            "gefährlicher Abfälle",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",
             "Kosten für Sondermüll",
@@ -712,6 +716,10 @@
           "aliases": [
             "Sondermüll",
             "gefährlicher Abfall",
+            "gefährlichen Abfall",
+            "gefährliche Abfälle",
+            "gefährlichen Abfällen",
+            "gefährlicher Abfälle",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",
             "Kosten für Sondermüll",

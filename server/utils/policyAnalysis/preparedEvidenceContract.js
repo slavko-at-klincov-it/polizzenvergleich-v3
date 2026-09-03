@@ -179,6 +179,14 @@ function serverScopeRejection({
   )
     return "VS_04_SUM_LABEL_NOT_BUILDING_SUM_METHOD";
   if (
+    worksheet.catalog?.categoryView === "VS" &&
+    requirement.id === "VS-22" &&
+    /(?:\bSchadenersatzverpflichtungen\b|\bUmweltstörung\b|Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung)/iu.test(
+      evidenceText
+    )
+  )
+    return "VS_22_OTHER_SCOPE_LIABILITY_OR_STORAGE";
+  if (
     worksheet.catalog?.categoryView === "EL" &&
     /\bSchadenersatzverpflichtungen\b/iu.test(evidenceText)
   )

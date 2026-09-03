@@ -1408,6 +1408,65 @@ describe("preparedEvidenceContract", () => {
     ]);
   });
 
+  test("rejects a VS-22 hazardous-waste occurrence from liability and temporary-storage scope", () => {
+    const text =
+      "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "VS" },
+      requirements: [
+        {
+          id: "VS-22",
+          label: "Entsorgungskosten einschließlich Sondermüll",
+          requestedFields: ["limit"],
+          components: [
+            {
+              id: "hazardous_waste",
+              label: "Sondermüll",
+              factRole: "INSURED_OBJECT",
+              occurrences: [
+                {
+                  candidateId: "candidate:liability-storage",
+                  matchedAlias: "gefährlichen Abfällen",
+                  pageNumber: 5,
+                  exactText: "gefährlichen Abfällen",
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text,
+                  },
+                  scopeLead: {
+                    text: "Haftpflichtversicherung für Umweltstörungen",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "VS-22",
+          componentId: "hazardous_waste",
+          candidateId: "candidate:liability-storage",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(target.candidates).toEqual([]);
+    expect(target.serverRejectedCandidates).toEqual([
+      {
+        candidateId: "candidate:liability-storage",
+        reason: "VS_22_OTHER_SCOPE_LIABILITY_OR_STORAGE",
+      },
+    ]);
+  });
+
   test("materializes explicit VS evidence without asking the model to select or classify it", () => {
     const worksheet = {
       candidateOnly: true,

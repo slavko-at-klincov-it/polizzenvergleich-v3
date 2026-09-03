@@ -520,6 +520,73 @@ describe("candidateTriageContract", () => {
     ).toThrow("TRIAGE_SINGLE_TARGET_SERVER_TERMINAL");
   });
 
+  test("rejects a VS-22 hazardous-waste inflection from a liability storage carveback", () => {
+    const text =
+      "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "VS" },
+      requirements: [
+        {
+          id: "VS-22",
+          label: "Entsorgungskosten einschließlich Sondermüll",
+          requestedFields: ["limit"],
+          components: [
+            {
+              id: "hazardous_waste",
+              label: "Sondermüll",
+              factRole: "INSURED_OBJECT",
+              occurrences: [
+                {
+                  candidateId: "candidate:liability-storage",
+                  matchedAlias: "gefährlichen Abfällen",
+                  pageNumber: 5,
+                  exactText: "gefährlichen Abfällen",
+                  documentStart: text.indexOf("gefährlichen Abfällen"),
+                  documentEnd:
+                    text.indexOf("gefährlichen Abfällen") +
+                    "gefährlichen Abfällen".length,
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text,
+                    documentStart: 0,
+                    documentEnd: text.length,
+                  },
+                  scopeLead: {
+                    text: "Haftpflichtversicherung für Umweltstörungen",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+    expect(target).toMatchObject({
+      targetId: "candidate:liability-storage",
+      roleResolution: {
+        owner: "SERVER",
+        roleMatch: "MISMATCH",
+        basis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+      },
+      scopeResolution: {
+        owner: "SERVER",
+        scopeMatch: "OTHER_SCOPE",
+        basis: "EXPLICIT_LIABILITY_SCOPE",
+      },
+      modelDecisionFields: [],
+    });
+    expect(
+      deriveCandidateBinding({
+        roleMatch: target.roleResolution.roleMatch,
+        scopeMatch: target.scopeResolution.scopeMatch,
+      })
+    ).toBe(CANDIDATE_BINDING.MENTION_ONLY);
+  });
+
   test("attests a coordinated cost governor even when the exact alias is only Abbruch", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     const occurrence = worksheet.requirements[0].components[0].occurrences[0];
