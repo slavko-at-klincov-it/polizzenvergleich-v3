@@ -7,6 +7,10 @@ const {
   REVIEW_STATUS,
 } = require("./categoryResultContract");
 const { DOCUMENT_STATUS } = require("./preparedEvidenceContract");
+const {
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
+} = require("./controlledOccurrenceWorksheet");
 
 const CATEGORY_TABLE_HEADERS = Object.freeze([
   "Kategorie-ID",
@@ -151,9 +155,23 @@ function verifiedExactClauseCodeGovernor(occurrence, fact) {
   const sourceStart = Number(fact?.source?.documentStart);
   const sourceEnd = Number(fact?.source?.documentEnd);
   const contract = fact?.exactClauseCodeFieldGovernor;
+  const codePattern =
+    /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu;
+  const moneyPattern =
+    /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
   return (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
-    (hint) =>
-      hint.contractId === "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1" &&
+    (hint) => {
+      const codes =
+        typeof hint?.text === "string"
+          ? [...hint.text.matchAll(codePattern)]
+          : [];
+      const amounts =
+        typeof hint?.text === "string"
+          ? [...hint.text.matchAll(moneyPattern)]
+          : [];
+      return (
+        hint.contractId === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID &&
+      hint.policy === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY &&
       contract?.contractId === hint.contractId &&
       contract?.clauseCode === hint.clauseCode &&
       contract?.documentFingerprint === hint.documentFingerprint &&
@@ -162,17 +180,31 @@ function verifiedExactClauseCodeGovernor(occurrence, fact) {
       Number.isInteger(hint.physicalPageNumber) &&
       hint.physicalPageNumber >= 1 &&
       hint.physicalPageNumber <= occurrence?.worksheetPhysicalPages &&
+      hint.pageBoundaryPhysicalPageNumber === hint.physicalPageNumber &&
+      Number.isInteger(hint.pageDocumentStart) &&
+      hint.pageDocumentStart >= 0 &&
+      Number.isInteger(hint.pageDocumentEnd) &&
+      hint.pageDocumentEnd >= hint.pageDocumentStart &&
+      hint.pageDocumentEnd <= occurrence?.worksheetPageContentLength &&
       Number.isInteger(hint.documentStart) &&
-      hint.documentStart >= 0 &&
+      hint.documentStart >= hint.pageDocumentStart &&
       Number.isInteger(hint.documentEnd) &&
-      hint.documentEnd <= occurrence?.worksheetPageContentLength &&
+      hint.documentEnd <= hint.pageDocumentEnd &&
       hint.documentEnd === hint.documentStart + hint.text?.length &&
+      codes.length === 1 &&
+      codes[0][1].toLocaleUpperCase("de") ===
+        String(hint.clauseCode || "").toLocaleUpperCase("de") &&
+      amounts.length === 1 &&
+      hint.amountText === amounts[0][0] &&
+      hint.amountDocumentStart === hint.documentStart + amounts[0].index &&
       sourceStart === hint.amountDocumentStart &&
       sourceEnd === hint.amountDocumentEnd &&
       sourceEnd === sourceStart + hint.amountText?.length &&
       fact?.source?.exactText === hint.amountText &&
       fact?.rawValue === hint.amountText &&
       Number(fact?.source?.physicalPageNumber) === hint.physicalPageNumber
+      );
+    }
   );
 }
 

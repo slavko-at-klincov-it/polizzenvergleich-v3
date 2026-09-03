@@ -874,10 +874,14 @@ describe("categoryTableRenderer", () => {
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
         contractId: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1",
+        policy: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
         clauseCode: "12PA0130",
         documentFingerprint: fingerprint,
         scopeKey: "FEUER_INSURANCE",
         physicalPageNumber: 1,
+        pageBoundaryPhysicalPageNumber: 1,
+        pageDocumentStart: 0,
+        pageDocumentEnd: 10_000,
         documentStart: governorStart,
         documentEnd: governorStart + governorText.length,
         text: governorText,
@@ -928,10 +932,14 @@ describe("categoryTableRenderer", () => {
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
         contractId: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1",
+        policy: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
         clauseCode: "12PA0130",
         documentFingerprint: fingerprint,
         scopeKey: "FEUER_INSURANCE",
         physicalPageNumber: 1,
+        pageBoundaryPhysicalPageNumber: 1,
+        pageDocumentStart: 0,
+        pageDocumentEnd: 10_000,
         documentStart: governorStart,
         documentEnd: governorStart + governorText.length,
         text: governorText,
@@ -963,6 +971,13 @@ describe("categoryTableRenderer", () => {
     expect(row.reviewStatus).toBe("TEILBELEGT");
     expect(row.source).not.toContain("PDF-Seite 999");
     expect(row.source).not.toContain("EUR6.121.600,00");
+
+    fieldResult.fields[0].facts[0].source.physicalPageNumber = 1;
+    occurrence.exactClauseCodeFieldGovernorHints[0].policy =
+      "UNTRUSTED_POLICY";
+    const [policyTamperedRow] = buildCategoryTableRows(input);
+    expect(policyTamperedRow.coverageAmount).toBe("Nicht feststellbar");
+    expect(policyTamperedRow.source).not.toContain("EUR6.121.600,00");
   });
 
   test("keeps same-page clause body and exact governor as separate sources", () => {
@@ -983,10 +998,14 @@ describe("categoryTableRenderer", () => {
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
         contractId: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1",
+        policy: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
         clauseCode: "12PA0130",
         documentFingerprint: fingerprint,
         scopeKey: "FEUER_INSURANCE",
         physicalPageNumber: 3,
+        pageBoundaryPhysicalPageNumber: 3,
+        pageDocumentStart: 0,
+        pageDocumentEnd: 10_000,
         documentStart: governorStart,
         documentEnd: governorStart + governorText.length,
         text: governorText,

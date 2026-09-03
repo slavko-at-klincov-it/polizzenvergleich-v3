@@ -17,6 +17,15 @@ const {
   DOCUMENT_STATUS,
   buildPreparedEvidenceTargets,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const {
+  CONFLICT_STATE,
+  COVERAGE_EFFECT,
+  EVIDENCE_PRESENCE,
+  rollupCategoryResult,
+} = require("../../../utils/policyAnalysis/categoryResultContract");
+const {
+  buildCategoryTableRows,
+} = require("../../../utils/policyAnalysis/categoryTableRenderer");
 
 function documentFromPages(pages) {
   let pageContent = "";
@@ -153,7 +162,11 @@ describe("VS-22 exact clause-code field governor", () => {
       ])
     );
 
-    const field = materialize(worksheet, materializedTriage);
+    const requestedFieldMaterialization = materializeRequestedFieldEvidence({
+      worksheet,
+      materializedCandidates: materializedTriage,
+    });
+    const field = requestedFieldMaterialization.requirements[0].fields[0];
     expect(field.status).toBe(FIELD_EVIDENCE_STATUS.FOUND);
     expect(field.facts).toEqual([
       expect.objectContaining({
@@ -173,6 +186,74 @@ describe("VS-22 exact clause-code field governor", () => {
         }),
       }),
     ]);
+
+    const selectedCandidateIds = prepared.find(
+      ({ componentId }) => componentId === "disposal_costs"
+    ).candidates.map(({ candidateId }) => candidateId);
+    const judgements = [
+      {
+        requirementId: "VS-22",
+        componentId: "disposal_costs",
+        selectedCandidateIds,
+        unresolvedCandidateIds: [],
+        evidencePresence: EVIDENCE_PRESENCE.FOUND,
+        coverageEffect: COVERAGE_EFFECT.INCLUDED,
+        conflictState: CONFLICT_STATE.NONE,
+      },
+      ...["hazardous_waste", "hazardous_waste_cost_limit"].map(
+        (componentId) => ({
+          requirementId: "VS-22",
+          componentId,
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          evidencePresence: EVIDENCE_PRESENCE.NOT_FOUND,
+          coverageEffect: COVERAGE_EFFECT.UNKNOWN,
+          conflictState: CONFLICT_STATE.NONE,
+        })
+      ),
+    ];
+    const rollup = rollupCategoryResult({
+      categoryId: "VS-22",
+      requiredComponentIds: worksheet.requirements[0].components.map(
+        ({ id }) => id
+      ),
+      componentResults: judgements,
+      componentSatisfactionPolicy: "ALL",
+    });
+    const render = (fieldMaterialization) =>
+      buildCategoryTableRows({
+        definitions: [
+          {
+            id: "VS-22",
+            stage: "S",
+            label: "Entsorgungskosten einschließlich Sondermüll",
+          },
+        ],
+        worksheet,
+        materializedEvidence: {
+          judgements,
+          rollups: [{ ...rollup, requestedFields: ["limit"] }],
+        },
+        requestedFieldMaterialization: fieldMaterialization,
+        documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      })[0];
+    const row = render(requestedFieldMaterialization);
+    expect(row).toMatchObject({
+      coverage: "Nicht feststellbar",
+      coverageAmount: "Nicht feststellbar",
+      reviewStatus: "TEILBELEGT",
+    });
+    expect(row.documentedContent).toContain("EUR 6.121.600,00");
+    expect(row.source).toContain("PDF-Seite 2");
+    expect(row.source).toContain("PDF-Seite 1");
+
+    const tamperedFieldMaterialization = structuredClone(
+      requestedFieldMaterialization
+    );
+    tamperedFieldMaterialization.requirements[0].fields[0].facts[0].source.physicalPageNumber =
+      2;
+    const tamperedRow = render(tamperedFieldMaterialization);
+    expect(tamperedRow.documentedContent).not.toContain("EUR 6.121.600,00");
   });
 
   test("retains equal values for each explicitly activated insurance scope", () => {
