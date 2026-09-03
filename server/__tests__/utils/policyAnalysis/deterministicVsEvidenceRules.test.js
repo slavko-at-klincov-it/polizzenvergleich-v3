@@ -793,4 +793,69 @@ describe("deterministicVsEvidenceRules", () => {
       basis: "EXPLICIT_AUTHORITY_RECONSTRUCTION_COSTS_WITHOUT_BOUND_LIMIT",
     });
   });
+
+  test.each([
+    "authority_reconstruction_extra_costs",
+    "authority_reconstruction_extra_cost_limit",
+  ])(
+    "keeps a pure VS-25 sum-equalization allocation out of %s",
+    (componentId) => {
+      const phrase = "Mehrkosten durch behördliche Auflagen";
+      const text =
+        "Sind Gebäude und Inhalt gegen die gleiche Gefahr versichert, wird diese Versicherung in den Summenausgleich einbezogen.\n" +
+        `c) gelten die ${phrase} für Gebäude und Inhalt gemeinsam summarisch versichert.\n` +
+        "Alle anderen Positionen, die auf Erstes Risiko versichert sind, sind vom Summenausgleich ausgeschlossen.";
+
+      expect(
+        deterministicVsCandidateBinding({
+          requirementId: "VS-25",
+          componentId,
+          occurrence: sourceOccurrence({ text, exactText: phrase }),
+        })
+      ).toEqual({
+        binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+        basis: "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT",
+        authoritative: true,
+      });
+    }
+  );
+
+  test("does not suppress a VS-25 grant with its own local first-risk limit", () => {
+    const phrase = "Mehrkosten durch behördliche Auflagen";
+    const text =
+      "Die Versicherung wird in den Summenausgleich einbezogen.\n" +
+      `${phrase} sind bis 5 % des NBW auf Erstes Risiko mitversichert.`;
+
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-25",
+        componentId: "authority_reconstruction_extra_costs",
+        occurrence: sourceOccurrence({ text, exactText: phrase }),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_AUTHORITY_RECONSTRUCTION_COSTS",
+    });
+  });
+
+  test("does not authorize a VS-25 allocation rejection for invalid offsets", () => {
+    const phrase = "Mehrkosten durch behördliche Auflagen";
+    const text =
+      "Die Versicherung wird in den Summenausgleich einbezogen.\n" +
+      `c) gelten die ${phrase} für Gebäude und Inhalt gemeinsam summarisch versichert.`;
+    const invalid = sourceOccurrence({ text, exactText: phrase });
+    invalid.documentStart += 1;
+    invalid.documentEnd += 1;
+
+    const decision = deterministicVsCandidateBinding({
+      requirementId: "VS-25",
+      componentId: "authority_reconstruction_extra_costs",
+      occurrence: invalid,
+    });
+    expect(
+      decision?.basis ===
+        "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT" &&
+        decision?.authoritative === true
+    ).toBe(false);
+  });
 });

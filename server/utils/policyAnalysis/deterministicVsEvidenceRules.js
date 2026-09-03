@@ -203,6 +203,69 @@ function boundSectionGovernorPrecedesOccurrence(occurrence) {
   );
 }
 
+function exactOccurrenceUnit(occurrence) {
+  const context = occurrenceContextText(occurrence);
+  const exactText = String(occurrence?.exactText || "");
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart);
+  const occurrenceEnd = Number(occurrence?.documentEnd);
+  if (
+    !exactText ||
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd)
+  )
+    return null;
+  const relativeStart = occurrenceStart - contextStart;
+  const relativeEnd = occurrenceEnd - contextStart;
+  if (
+    relativeStart < 0 ||
+    relativeEnd < relativeStart ||
+    relativeEnd > context.length ||
+    context.slice(relativeStart, relativeEnd) !== exactText
+  )
+    return null;
+  const preceding = context.slice(0, relativeStart);
+  const following = context.slice(relativeEnd);
+  const priorBoundary = Math.max(
+    preceding.lastIndexOf("\n"),
+    preceding.lastIndexOf(";"),
+    preceding.lastIndexOf(".")
+  );
+  const nextBoundaryOffset = following.search(/[;\n.]/u);
+  const unitEnd =
+    nextBoundaryOffset === -1
+      ? context.length
+      : relativeEnd + nextBoundaryOffset + 1;
+  return {
+    preceding,
+    text: context.slice(priorBoundary + 1, unitEnd),
+  };
+}
+
+function explicitVs25PureSumEqualizationAllocation(occurrence) {
+  const unit = exactOccurrenceUnit(occurrence);
+  if (!unit) return null;
+  if (
+    !/^Mehrkosten\s+(?:durch|infolge)\s+behördliche(?:r)?\s+Auflagen$/iu.test(
+      String(occurrence.exactText).trim()
+    ) ||
+    !/\bSummenausgleich\b/iu.test(unit.preceding.slice(-600)) ||
+    !/gelten\s+die\s+Mehrkosten\s+(?:durch|infolge)\s+behördliche(?:r)?\s+Auflagen\s+f[üu]r\s+Gebäude\s+und\s+Inhalt\s+gemeinsam\s+summarisch\s+versichert/iu.test(
+      unit.text
+    ) ||
+    /(?:\bmitversichert\b|\bersetzt\b|\bEntschädigung\b|\bauf\s+Erstes\s+Risiko\b|\b(?:EUR|Euro)\b|€|\d\s*%)/iu.test(
+      unit.text
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT",
+    authoritative: true,
+  };
+}
+
 function explicitVs32TemporaryStorageScopeBinding(occurrence) {
   const context = occurrenceContextText(occurrence);
   const contextStart = Number(occurrence?.context?.documentStart);
@@ -399,6 +462,15 @@ function deterministicVsCandidateBinding({
 }) {
   const text = evidenceText(occurrence);
   const key = `${requirementId}:${componentId}`;
+  if (
+    [
+      "VS-25:authority_reconstruction_extra_costs",
+      "VS-25:authority_reconstruction_extra_cost_limit",
+    ].includes(key)
+  ) {
+    const allocation = explicitVs25PureSumEqualizationAllocation(occurrence);
+    if (allocation) return allocation;
+  }
   const vs35LocalBinding = explicitVs35LocalClauseBinding(key, occurrence);
   if (vs35LocalBinding) return vs35LocalBinding;
   if (
