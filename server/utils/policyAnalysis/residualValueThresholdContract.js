@@ -106,7 +106,7 @@ function residualValueThresholdForOccurrence(occurrence) {
     return null;
   return (
     parseResidualValueThresholdClauses(text).find(
-      (match) => match.start <= relativeStart && match.end >= relativeEnd
+      (match) => match.start < relativeEnd && match.end > relativeStart
     ) || null
   );
 }

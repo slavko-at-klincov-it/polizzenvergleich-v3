@@ -82,4 +82,17 @@ describe("VS-02 residual value threshold contract", () => {
       )
     ).toBeNull();
   });
+
+  test("accepts a concept span that wraps the complete parsed clause", () => {
+    const text =
+      "Versichert und zum Neuwert zu ersetzen, sofern der Zeitwert der Sachen zumindest 20 % des Neuwertes betragen hat. Danach gilt eine andere Regel.";
+    expect(
+      residualValueThresholdForOccurrence(
+        occurrence(
+          text,
+          "Versichert und zum Neuwert zu ersetzen, sofern der Zeitwert der Sachen zumindest 20 % des Neuwertes betragen hat. Danach"
+        )
+      )
+    ).toMatchObject({ thresholdPercent: 20 });
+  });
 });
