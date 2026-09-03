@@ -1,8 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const {
-  PRODUCT_PROFILE,
-} = require("../../../utils/policyComparison/productContract");
+  PAV8_BASELINE_CATALOG_SHA256,
+  PAV8_BASELINE_COMMIT,
+  PAV8_BASELINE_PRODUCT_PROFILE,
+  pav8BaselineCatalogBytes,
+} = require("../../fixtures/policyAnalysis/pav8BaselineFixture");
 const { sha256 } = require("../../../utils/policyAnalysis/runIdentity");
 const {
   EXPECTED_DOCUMENT_COUNT,
@@ -14,18 +17,10 @@ const {
   buildTargetedQaManifest,
 } = require("../../../utils/policyAnalysis/targetedQaManifestContract");
 
-const RESOURCES = path.resolve(__dirname, "../../../resources/policyAnalysis");
 const REGISTRY_FILE = path.join(
-  RESOURCES,
+  path.resolve(__dirname, "../../../resources/policyAnalysis"),
   "pav8-review-69-targets.qa-only.v0.1.json"
 );
-const CATALOG_FILES = {
-  VS: "vs-occurrence-full-draft.v0.2.json",
-  FE: "fe-occurrence-full-draft.v0.1.json",
-  LW: "lw-occurrence-full-draft.v0.1.json",
-  ST: "st-occurrence-full-draft.v0.1.json",
-  EL: "el-occurrence-full-draft.v0.1.json",
-};
 const RUN_SIGNATURE =
   "e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e";
 
@@ -39,15 +34,6 @@ function jsonBytes(value) {
 
 function sourceRegistry() {
   return JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
-}
-
-function catalogBytes() {
-  return Object.fromEntries(
-    Object.entries(CATALOG_FILES).map(([categoryView, filename]) => [
-      categoryView,
-      fs.readFileSync(path.join(RESOURCES, filename)),
-    ])
-  );
 }
 
 function packageDocument(side, position, ordinal) {
@@ -75,8 +61,8 @@ function packageContract() {
   return {
     schemaVersion: 1,
     runKind: "ISOLATED_PACKAGE_QA",
-    releaseId: "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b",
-    productProfile: copy(PRODUCT_PROFILE),
+    releaseId: PAV8_BASELINE_COMMIT,
+    productProfile: copy(PAV8_BASELINE_PRODUCT_PROFILE),
     sourceInputManifest: {
       file: "/private/qa/input-manifest.private.json",
       sha256: "1".repeat(64),
@@ -148,7 +134,7 @@ function execution() {
     modelTokenLimit: 42496,
     nodeVersion: "22.23.2",
     promptSha256ByCategory: Object.fromEntries(
-      PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
+      PAV8_BASELINE_PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
         categoryView,
         {
           category: ["a", "b", "c", "d", "e"][index].repeat(64),
@@ -198,7 +184,7 @@ function inputs({
   registry.baseline.comparisonSha256 = sha256(baselineComparisonBytes);
   registry.baseline.runSignatureSha256 = RUN_SIGNATURE;
   mutateRegistry(registry);
-  const catalogBytesByCategory = catalogBytes();
+  const catalogBytesByCategory = pav8BaselineCatalogBytes();
   mutateCatalogs(catalogBytesByCategory);
   return {
     qaRegistryBytes: jsonBytes(registry),
@@ -211,6 +197,16 @@ function inputs({
 }
 
 describe("targeted QA manifest raw trust boundary", () => {
+  test("keeps the historical PAV8 catalog snapshots byte-bound", () => {
+    const catalogs = pav8BaselineCatalogBytes();
+    for (const [categoryView, bytes] of Object.entries(catalogs)) {
+      expect(sha256(bytes)).toBe(PAV8_BASELINE_CATALOG_SHA256[categoryView]);
+      expect(JSON.parse(bytes.toString("utf8")).catalogId).toBe(
+        PAV8_BASELINE_PRODUCT_PROFILE.categoryCatalogIds[categoryView]
+      );
+    }
+  });
+
   test("accepts the exact A:0 plus B:0..8 and 69-target baseline", () => {
     const manifest = buildTargetedQaManifest(inputs());
 
@@ -373,6 +369,18 @@ describe("targeted QA manifest raw trust boundary", () => {
         })
       )
     ).toThrow("TARGETED_QA_BASELINE_RELEASE_MISMATCH");
+
+    expect(() =>
+      buildTargetedQaManifest(
+        inputs({
+          mutatePackage: (value) => {
+            value.productProfile.trustAnchors = {
+              feC02ValidatedWorksheetRequirementV1: "0".repeat(64),
+            };
+          },
+        })
+      )
+    ).toThrow("TARGETED_QA_PRODUCT_PROFILE_INVALID");
 
     expect(() =>
       buildTargetedQaManifest(

@@ -1,0 +1,1187 @@
+{
+  "schemaVersion": 2,
+  "catalogId": "lw-occurrence-full-draft-v0.5",
+  "categoryView": "LW",
+  "requirements": [
+    {
+      "id": "LW-01",
+      "label": "Zuleitungsrohre innerhalb des Gebäudes gedeckt",
+      "requestedFields": ["scope"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["supply_pipe", "inside_building"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "supply_pipe",
+          "label": "Zuleitungsrohre",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Zuleitungsrohre innerhalb des versicherten Gebäudes",
+            "Zuleitungsrohren innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohren innerhalb des versicherten Gebäudes"
+          ]
+        },
+        {
+          "id": "inside_building",
+          "label": "innerhalb des Gebäudes",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Zuleitungsrohre innerhalb des versicherten Gebäudes",
+            "Zuleitungsrohren innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohren innerhalb des versicherten Gebäudes"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-02",
+      "label": "Ableitungsrohre innerhalb des Gebäudes gedeckt",
+      "requestedFields": ["scope"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["drain_pipe", "inside_building"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "drain_pipe",
+          "label": "Ableitungsrohre",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Ableitungsrohren innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohren innerhalb des versicherten Gebäudes"
+          ]
+        },
+        {
+          "id": "inside_building",
+          "label": "innerhalb des Gebäudes",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Ableitungsrohren innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohre innerhalb des versicherten Gebäudes",
+            "Zu- und Ableitungsrohren innerhalb des versicherten Gebäudes"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-03",
+      "label": "Zuleitungsrohre außerhalb des Gebäudes auf dem Grundstück",
+      "requestedFields": ["scope"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["supply_pipe", "outside_on_property"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "supply_pipe",
+          "label": "Zuleitungsrohre",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Zuleitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zuleitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück"
+          ]
+        },
+        {
+          "id": "outside_on_property",
+          "label": "außerhalb des Gebäudes auf dem Grundstück",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Zuleitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zuleitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-04",
+      "label": "Ableitungsrohre außerhalb des Gebäudes auf dem Grundstück",
+      "requestedFields": ["scope"],
+      "coverageAggregationPolicy": "COVERAGE_ROLES_ONLY",
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["drain_pipe", "outside_on_property"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "drain_pipe",
+          "label": "Ableitungsrohre",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück"
+          ]
+        },
+        {
+          "id": "outside_on_property",
+          "label": "außerhalb des Gebäudes auf dem Grundstück",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohre außerhalb des versicherten Gebäudes am Versicherungsgrundstück",
+            "Zu- und Ableitungsrohren außerhalb des versicherten Gebäudes am Versicherungsgrundstück"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-05",
+      "label": "Rohrbruchschaden am Rohr selbst, nicht nur Nässefolgeschaden",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["pipe_break", "pipe_itself"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "pipe_break",
+          "label": "Rohrbruch",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Rohrersatz bei Rohrbruch bei allen versicherten Rohren",
+            "Bruchschäden an den versicherten Rohren",
+            "Bruchschäden an wasserführenden Rohren",
+            "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-break-at-pipe",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
+                },
+                {
+                  "prefixes": [
+                    "rohren",
+                    "rohrleitung",
+                    "leitungsrohr",
+                    "rohrsystem"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pipe_itself",
+          "label": "Schaden am Rohr selbst",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Rohrersatz bei Rohrbruch bei allen versicherten Rohren",
+            "Bruchschäden an den versicherten Rohren",
+            "Bruchschäden an wasserführenden Rohren",
+            "Bruch von wasserführenden Rohren innerhalb des Versicherungsgrundstückes"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-break-at-pipe",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["bruchschad", "bruchschaed", "rohrersatz"]
+                },
+                {
+                  "prefixes": [
+                    "rohren",
+                    "rohrleitung",
+                    "leitungsrohr",
+                    "rohrsystem"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-06",
+      "label": "Frostschäden an Rohrleitungen",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["frost_damage", "pipes"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "frost_damage",
+          "label": "Frostschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Frostschäden an Rohrleitungen",
+            "Frostschäden an wasserführenden Rohren",
+            "Frost an den leitungswasserführenden Rohren",
+            "Rohrbruch durch Frostschaden an den Zu- und Ableitungsrohren"
+          ],
+          "conceptSearches": [
+            {
+              "id": "frost-damage-to-pipes",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["frostschaed"]
+                },
+                {
+                  "prefixes": ["rohr", "leitung"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pipes",
+          "label": "Rohrleitungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Frostschäden an Rohrleitungen",
+            "Frostschäden an wasserführenden Rohren",
+            "Frost an den leitungswasserführenden Rohren",
+            "Rohrbruch durch Frostschaden an den Zu- und Ableitungsrohren"
+          ],
+          "conceptSearches": [
+            {
+              "id": "frost-damage-to-pipes",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["frostschaed"]
+                },
+                {
+                  "prefixes": ["rohr", "leitung"]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-07",
+      "label": "Frostschäden an Armaturen und Sanitärkeramik",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "fittings",
+          "label": "Frostschäden an Armaturen",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Frostschäden an Armaturen",
+            "Frost an den leitungswasserführenden Rohren und deren Armaturen",
+            "Frostschaden an angeschlossenen Einrichtungen und Armaturen",
+            "Schäden an angeschlossenen Einrichtungen und Armaturen anlässlich Rohrbruch, Rohrbruch durch Korrosion und Frostschaden",
+            "Frost an den leitungswasserführenden Rohren und/oder angeschlossenen Einrichtungen innerhalb des Versicherungsgrundstücks, deren Armaturen"
+          ]
+        },
+        {
+          "id": "sanitary_ceramics",
+          "label": "Frostschäden an Sanitärkeramik",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Frostschäden an Sanitärkeramik",
+            "Frostschäden an Sanitäranlagen",
+            "Frost an den leitungswasserführenden Rohren und Sanitäranlagen",
+            "Frost an den leitungswasserführenden Rohren und/oder angeschlossenen Einrichtungen innerhalb des Versicherungsgrundstücks, deren Armaturen und Sanitäranlagen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-08",
+      "label": "Leckortungs- und Suchkosten, Höhe des Limits",
+      "requestedFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
+      "scopeRules": {
+        "narrowAliases": [
+          "Leitungswasser- und Sturmversicherung",
+          "Leitungswasser- sowie Sturmversicherung"
+        ]
+      },
+      "components": [
+        {
+          "id": "leak_location_costs",
+          "label": "Leckortungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Leckortungskosten",
+            "Leckortungs-",
+            "Kosten der Leckortung",
+            "Leckortung"
+          ]
+        },
+        {
+          "id": "search_costs",
+          "label": "Suchkosten",
+          "factRole": "COST",
+          "aliases": ["Suchkosten", "Kosten der Suche", "Schadensuchkosten"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "LW-09",
+      "label": "Wiederherstellungskosten nach Ortung wie Aufstemmen und Fliesen",
+      "requestedFields": ["limit", "condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["restoration_costs", "after_location"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "restoration_costs",
+          "label": "Wiederherstellungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Wiederherstellungskosten nach der Leckortung",
+            "Wiederherstellungskosten nach der Ortung",
+            "Wiederherstellungskosten nach der Schadensuche",
+            "Kosten der Wiederherstellung nach der Leckortung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "restoration-after-location",
+              "requiredGroups": [
+                {
+                  "prefixes": ["wiederherstell"]
+                },
+                {
+                  "prefixes": [
+                    "suchkost",
+                    "schadenstell",
+                    "rohrbruch",
+                    "ortung"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "after_location",
+          "label": "nach der Ortung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wiederherstellungskosten nach der Leckortung",
+            "Wiederherstellungskosten nach der Ortung",
+            "Wiederherstellungskosten nach der Schadensuche",
+            "Kosten der Wiederherstellung nach der Leckortung"
+          ],
+          "conceptSearches": [
+            {
+              "id": "restoration-after-location",
+              "requiredGroups": [
+                {
+                  "prefixes": ["wiederherstell"]
+                },
+                {
+                  "prefixes": [
+                    "suchkost",
+                    "schadenstell",
+                    "rohrbruch",
+                    "ortung"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "LW-10",
+      "label": "Trocknungskosten und Stromkosten für Bautrockner",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "drying_costs",
+          "label": "Trocknungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Trocknungskosten",
+            "Kosten der Trocknung",
+            "Bautrocknungskosten"
+          ]
+        },
+        {
+          "id": "dryer_electricity_costs",
+          "label": "Stromkosten für Bautrockner",
+          "factRole": "COST",
+          "aliases": [
+            "Stromkosten für Bautrockner",
+            "Stromkosten der Trocknungsgeräte",
+            "Strommehrkosten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "LW-11",
+      "label": "Heizungsanlage einschließlich Kessel und Heizkörper mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "heating_system",
+          "label": "Heizungsanlage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Heizungsanlage",
+            "Heizungsanlagen",
+            "Fußboden- und Wandheizung",
+            "Wasser führende Fußboden- und Wandheizung"
+          ]
+        },
+        {
+          "id": "boiler",
+          "label": "Heizkessel",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Heizkessel", "Heizkesseln"]
+        },
+        {
+          "id": "radiator",
+          "label": "Heizkörper",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Heizkörper"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-12",
+      "label": "Fußbodenheizung mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "underfloor_heating",
+          "label": "Fußbodenheizung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Fußbodenheizung",
+            "Fußbodenheizungen",
+            "Fußboden- und Wandheizung",
+            "Wasser führende Fußboden- und Wandheizung",
+            "Fußbodenheizungsanlagen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-13",
+      "label": "Wasseraustritt aus Sprinkler- oder Löschanlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "sprinkler_or_extinguishing_discharge",
+          "label": "Wasseraustritt aus Sprinkler- oder Löschanlagen",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Wasseraustritt aus Sprinkleranlagen",
+            "Wasseraustritt aus Löschanlagen",
+            "Sprinklerleckage"
+          ],
+          "conceptSearches": [
+            {
+              "id": "sprinkler-or-extinguishing-discharge",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": [
+                    "austritt",
+                    "austreten",
+                    "ausgetreten",
+                    "wasseraustritt",
+                    "loeschmittelaustritt"
+                  ]
+                },
+                {
+                  "prefixes": ["sprinkler", "loeschanlage"]
+                }
+              ]
+            },
+            {
+              "id": "sprinkler-or-extinguishing-activation",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["ausloes", "betaetig"] },
+                { "prefixes": ["sprinkler", "loeschanlage"] }
+              ]
+            },
+            {
+              "id": "damage-at-or-by-extinguishing-installation",
+              "maxLines": 1,
+              "requiredGroups": [
+                { "prefixes": ["schaden", "schaed", "beschaedig"] },
+                { "prefixes": ["sprinkler", "loeschanlage"] }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-14",
+      "label": "Kondensat oder Kältemittel aus Klima- und Lüftungsanlagen",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "condensate_or_refrigerant_from_air_conditioning",
+          "label": "Kondensat oder Kältemittel aus Klimaanlagen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Kondensat aus Klimaanlagen",
+            "Kältemittel aus Klimaanlagen",
+            "Kondensat oder Kältemittel aus Klimaanlagen",
+            "Kältemittel, welche aus Klimaanlagen bestimmungswidrig ausgetreten sind"
+          ],
+          "conceptSearches": [
+            {
+              "id": "refrigerant-or-condensate-from-air-conditioning",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["kaeltemittel", "kondensat"]
+                },
+                {
+                  "prefixes": ["klima"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "condensate_or_refrigerant_from_ventilation",
+          "label": "Kondensat oder Kältemittel aus Lüftungsanlagen",
+          "factRole": "PERIL",
+          "aliases": [
+            "Kondensat aus Lüftungsanlagen",
+            "Kältemittel aus Lüftungsanlagen",
+            "Kondensat oder Kältemittel aus Lüftungsanlagen",
+            "Kältemittel, welche aus Lüftungsanlagen bestimmungswidrig ausgetreten sind"
+          ],
+          "conceptSearches": [
+            {
+              "id": "refrigerant-or-condensate-from-ventilation",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["kaeltemittel", "kondensat"]
+                },
+                {
+                  "prefixes": ["lueftung"]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-15",
+      "label": "Wasser aus Aquarien oder Wasserbetten",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "aquarium_or_waterbed_water",
+          "label": "Wasser aus Aquarien oder Wasserbetten",
+          "factRole": "PERIL",
+          "aliases": ["Wasser aus Aquarien", "Wasser aus Wasserbetten"],
+          "conceptSearches": [
+            {
+              "id": "water-from-aquarium-or-waterbed",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["wasseraustritt"]
+                },
+                {
+                  "prefixes": ["wasserbett", "aquari"]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-16",
+      "label": "Wasser aus Haushaltsgeräten wie Waschmaschine oder Geschirrspüler",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "household_appliance_water",
+          "label": "Wasser aus Haushaltsgeräten",
+          "factRole": "PERIL",
+          "aliases": [
+            "Wasser aus Haushaltsgeräten",
+            "Wasseraustritt aus Haushaltsgeräten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-17",
+      "label": "Innenliegende Regenfallrohre",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "internal_rainwater_downpipe",
+          "label": "innenliegende Regenfallrohre",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "innenliegende Regenfallrohre",
+            "innenliegendes Regenfallrohr",
+            "Regenfallrohre innerhalb des Gebäudes"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-18",
+      "label": "Rückstau aus der Kanalisation, in welcher Sparte geregelt",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "sewer_backwater_assignment",
+          "label": "Spartenzuordnung für Rückstau aus der Kanalisation",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Rückstau aus der Kanalisation",
+            "Kanalrückstau",
+            "Kanalrückstau in der Leitungswasserversicherung",
+            "Kanalrückstau in der Elementarversicherung",
+            "Rückstau aus der Kanalisation in der Leitungswasserversicherung",
+            "Rückstau aus der Kanalisation in der Elementarversicherung",
+            "dadurch verursachten Rückstau",
+            "in diesem Zusammenhang auftretenden Rückstau"
+          ],
+          "conceptSearches": [
+            {
+              "id": "backwater-from-sewer-network",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["rueckstau"] },
+                { "prefixes": ["kanal", "kanalnetz", "abwasser"] }
+              ]
+            },
+            {
+              "id": "backwater-from-natural-hazard-event",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["rueckstau"] },
+                { "prefixes": ["ueberschwemm", "hochwasser", "niederschlag", "schmelzwasser"] }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "LW-19",
+      "label": "Funktionsfähige Rückstauklappe als Deckungsvoraussetzung",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "functional_backwater_valve",
+          "label": "funktionsfähige Rückstauklappe",
+          "factRole": "CONDITION",
+          "aliases": [
+            "funktionsfähige Rückstauklappe",
+            "funktionierende Rückstauklappe",
+            "ordnungsgemäß funktionierende Rückstauklappe"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-20",
+      "label": "Grundwasser, Sickerwasser oder Stauwasser",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "ground_seepage_or_retained_water",
+          "label": "Grundwasser, Sickerwasser oder Stauwasser",
+          "factRole": "PERIL",
+          "aliases": ["Grundwasser", "Sickerwasser", "Stauwasser"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-21",
+      "label": "Schimmelschäden als Folge eines gedeckten Nässeschadens",
+      "requestedFields": ["condition"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["mold_damage", "covered_moisture_consequence"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "mold_damage",
+          "label": "Schimmelschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Schimmelschäden als Folge eines versicherten Nässeschadens",
+            "Schimmelschäden als Folge eines gedeckten Nässeschadens",
+            "Schimmelbildung als Folge eines versicherten Nässeschadens"
+          ]
+        },
+        {
+          "id": "covered_moisture_consequence",
+          "label": "Folge eines gedeckten Nässeschadens",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Schimmelschäden als Folge eines versicherten Nässeschadens",
+            "Schimmelschäden als Folge eines gedeckten Nässeschadens",
+            "Schimmelbildung als Folge eines versicherten Nässeschadens"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-22",
+      "label": "Schwamm- und Fäulnisschäden",
+      "requestedFields": [],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["fungus_damage", "rot_damage"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "fungus_damage",
+          "label": "Schwammschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Schwammschaden",
+            "Schwammschäden",
+            "Schwamm",
+            "Schwamm- und Vermorschungsschäden",
+            "Schwammbildung",
+            "Schäden durch Holzfäule Schwamm- und Vermorschungsschäden"
+          ]
+        },
+        {
+          "id": "rot_damage",
+          "label": "Fäulnisschäden",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Fäulnisschaden",
+            "Fäulnisschäden",
+            "Fäulnis",
+            "Holzfäule",
+            "Vermorschungsschäden",
+            "Schäden durch Holzfäule Schwamm- und Vermorschungsschäden"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "LW-23",
+      "label": "Altersabzug auf Rohrleitungen abhängig vom Alter",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "pipe_age_deduction",
+          "label": "Altersabzug auf Rohrleitungen abhängig vom Alter",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Altersabzug auf Rohrleitungen abhängig vom Alter",
+            "Altersabzug je nach Alter der Rohrleitung",
+            "Abzug wegen des Alters der Rohrleitung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-24",
+      "label": "Verzicht auf Altersabzug vereinbart",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "age_deduction_waiver",
+          "label": "Verzicht auf Altersabzug",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Verzicht auf Altersabzug",
+            "kein Altersabzug",
+            "ohne Altersabzug"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-25",
+      "label": "Ausschluss allmählicher oder schleichender Einwirkung",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "gradual_or_creeping_exclusion",
+          "label": "Ausschluss allmählicher oder schleichender Einwirkung",
+          "factRole": "EXCLUSION",
+          "aliases": [
+            "allmähliche Einwirkung von Feuchtigkeit",
+            "allmählicher Einwirkung von Feuchtigkeit",
+            "schleichende Einwirkung",
+            "schleichender Einwirkung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "EXCLUSION"
+    },
+    {
+      "id": "LW-26",
+      "label": "Rohrverstopfung und Reinigungskosten",
+      "requestedFields": ["limit"],
+      "bindingStructures": [
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["pipe_blockage", "cleaning_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "components": [
+        {
+          "id": "pipe_blockage",
+          "label": "Rohrverstopfung",
+          "factRole": "DAMAGE",
+          "aliases": [
+            "Kosten der Rohrreinigung nach der Beseitigung von Verstopfungen",
+            "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
+            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
+            "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-cleaning-and-blockage",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["rohrreinig"]
+                },
+                {
+                  "prefixes": ["verstopf"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cleaning_costs",
+          "label": "Reinigungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Kosten der Rohrreinigung nach der Beseitigung von Verstopfungen",
+            "Rohrreinigungskosten zur Beseitigung von Verstopfungen",
+            "Kosten für die Beseitigung von Verstopfungen an den versicherten wasserführenden Rohren",
+            "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen"
+          ],
+          "conceptSearches": [
+            {
+              "id": "pipe-cleaning-and-blockage",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["rohrreinig"]
+                },
+                {
+                  "prefixes": ["verstopf"]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "LW-27",
+      "label": "Kosten des ausgetretenen Wassers gegenüber dem Versorger",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "utility_water_loss_costs",
+          "label": "Kosten des ausgetretenen Wassers gegenüber dem Versorger",
+          "factRole": "COST",
+          "aliases": [
+            "Kosten des ausgetretenen Wassers gegenüber dem Wasserversorger",
+            "Wasserverlustkosten des Wasserversorgers",
+            "Mehrverbrauch an Wasser gegenüber dem Wasserversorgungsunternehmen",
+            "nachweisliche Kosten für Leitungswasser, das bestimmungswidrig ausgetreten ist",
+            "Kosten für den Wasserverlust nach einem ersatzpflichtigen Schaden"
+          ],
+          "conceptSearches": [
+            {
+              "id": "utility-water-loss-costs",
+              "maxLines": 1,
+              "requiredGroups": [
+                {
+                  "prefixes": ["wasserverlust"]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "LW-28",
+      "label": "Sanierungsnachweis der Steigleitungen gefordert",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "riser_renovation_proof",
+          "label": "Sanierungsnachweis der Steigleitungen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Sanierungsnachweis der Steigleitungen",
+            "Nachweis der Sanierung der Steigleitungen",
+            "Sanierung der Steigleitungen nachzuweisen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-29",
+      "label": "Serienschadenregelung in der Sparte Leitungswasser",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "water_line_serial_loss_rule",
+          "label": "Serienschadenregelung in der Sparte Leitungswasser",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Serienschadenregelung in der Leitungswasserversicherung",
+            "Serienschadenklausel für Leitungswasserschäden",
+            "Serienschäden in der Leitungswasserversicherung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "LW-30",
+      "label": "Selbstbehalt in der Sparte Leitungswasser",
+      "requestedFields": ["amount"],
+      "components": [
+        {
+          "id": "water_line_deductible",
+          "label": "Selbstbehalt in der Sparte Leitungswasser",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "Selbstbehalt in der Leitungswasserversicherung",
+            "Selbstbehalt für Leitungswasserschäden",
+            "Selbstbehalt Leitungswasser"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
+    },
+    {
+      "id": "LW-31",
+      "label": "Höchstentschädigung in der Sparte Leitungswasser",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "water_line_maximum_compensation",
+          "label": "Höchstentschädigung in der Sparte Leitungswasser",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höchstentschädigung in der Leitungswasserversicherung",
+            "Höchstentschädigung für Leitungswasserschäden",
+            "Entschädigungsgrenze Leitungswasser",
+            "Höchstentschädigung im Schadensfall",
+            "für die jeweilige Sparte vereinbarten Positionen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
+    },
+    {
+      "id": "LW-32",
+      "label": "Absperrpflicht bei längerer Abwesenheit",
+      "requestedFields": ["condition", "duration"],
+      "components": [
+        {
+          "id": "shutoff_duty_during_extended_absence",
+          "label": "Absperrpflicht bei längerer Abwesenheit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "bei längerer Abwesenheit die Wasserzufuhr abzusperren",
+            "bei längerer Abwesenheit den Haupthahn abzusperren",
+            "Wasserzufuhr während längerer Abwesenheit abzusperren"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-33",
+      "label": "Heizpflicht in der kalten Jahreszeit",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "cold_season_heating_duty",
+          "label": "Heizpflicht in der kalten Jahreszeit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "in der kalten Jahreszeit ausreichend zu beheizen",
+            "während der Heizperiode ausreichend zu beheizen",
+            "Heizpflicht in der kalten Jahreszeit"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-34",
+      "label": "Regelung für leerstehende Einheiten",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "vacant_units",
+          "label": "leerstehende Einheiten",
+          "factRole": "CONDITION",
+          "aliases": [
+            "leerstehende Einheiten",
+            "leerstehenden Einheiten",
+            "Leerstand"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-35",
+      "label": "Vorgeschriebenes Wartungsintervall für Rohrleitungen",
+      "requestedFields": ["interval"],
+      "components": [
+        {
+          "id": "pipe_maintenance_interval",
+          "label": "Wartungsintervall für Rohrleitungen",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wartungsintervall für Rohrleitungen",
+            "Rohrleitungen regelmäßig zu warten",
+            "regelmäßige Wartung der Rohrleitungen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "LW-36",
+      "label": "Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum",
+      "requestedFields": ["scope"],
+      "components": [
+        {
+          "id": "moisture_damage_ownership_allocation",
+          "label": "Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Abgrenzung des Nässeschadens zwischen Gemeinschafts- und Wohnungseigentum",
+            "Zuordnung des Nässeschadens zum Gemeinschaftseigentum oder Wohnungseigentum",
+            "Nässeschäden am Gemeinschaftseigentum und Wohnungseigentum"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    }
+  ]
+}

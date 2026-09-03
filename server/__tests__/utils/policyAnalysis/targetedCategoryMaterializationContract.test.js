@@ -1,8 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const {
-  PRODUCT_PROFILE,
-} = require("../../../utils/policyComparison/productContract");
+  PAV8_BASELINE_COMMIT,
+  PAV8_BASELINE_PRODUCT_PROFILE,
+  pav8BaselineCatalogBytes,
+} = require("../../fixtures/policyAnalysis/pav8BaselineFixture");
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
@@ -23,13 +25,6 @@ const REGISTRY_FILE = path.join(
   RESOURCES,
   "pav8-review-69-targets.qa-only.v0.1.json"
 );
-const CATALOG_FILES = {
-  VS: "vs-occurrence-full-draft.v0.2.json",
-  FE: "fe-occurrence-full-draft.v0.1.json",
-  LW: "lw-occurrence-full-draft.v0.1.json",
-  ST: "st-occurrence-full-draft.v0.1.json",
-  EL: "el-occurrence-full-draft.v0.1.json",
-};
 const PROMPT_BYTES = fs.readFileSync(
   path.resolve(__dirname, "../../../resources/workspaceTemplates/ST_sturm.md")
 );
@@ -44,15 +39,6 @@ function raw(value) {
 
 function copy(value) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function catalogBytesByCategory() {
-  return Object.fromEntries(
-    Object.entries(CATALOG_FILES).map(([categoryView, file]) => [
-      categoryView,
-      fs.readFileSync(path.join(RESOURCES, file)),
-    ])
-  );
 }
 
 function packageDocument(side, position, ordinal) {
@@ -80,8 +66,8 @@ function sourcePackage() {
   return {
     schemaVersion: 1,
     runKind: "ISOLATED_PACKAGE_QA",
-    releaseId: "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b",
-    productProfile: copy(PRODUCT_PROFILE),
+    releaseId: PAV8_BASELINE_COMMIT,
+    productProfile: copy(PAV8_BASELINE_PRODUCT_PROFILE),
     sourceInputManifest: {
       file: "/private/qa/input-manifest.private.json",
       sha256: "1".repeat(64),
@@ -150,7 +136,7 @@ function execution() {
     modelTokenLimit: 42496,
     nodeVersion: "22.23.2",
     promptSha256ByCategory: Object.fromEntries(
-      PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
+      PAV8_BASELINE_PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
         categoryView,
         {
           category:
@@ -217,7 +203,7 @@ function realManifest() {
       qaRegistryBytes: raw(registry),
       packageContractBytes,
       baselineComparisonBytes,
-      catalogBytesByCategory: catalogBytesByCategory(),
+      catalogBytesByCategory: pav8BaselineCatalogBytes(),
       documentArtifactBytesByUuid,
       execution: execution(),
     }),
@@ -236,7 +222,7 @@ function fixture() {
   const target = manifest.categoryTargets.find(
     ({ categoryView }) => categoryView === "ST"
   );
-  const catalogBytes = catalogBytesByCategory().ST;
+  const catalogBytes = pav8BaselineCatalogBytes().ST;
   const selected = selectTargetRequirements({
     catalog: JSON.parse(catalogBytes.toString("utf8")),
     requirementIds: target.requirementIds,

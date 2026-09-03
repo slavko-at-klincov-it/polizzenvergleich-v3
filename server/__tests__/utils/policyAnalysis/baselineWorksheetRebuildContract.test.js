@@ -1,8 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const {
-  PRODUCT_PROFILE,
-} = require("../../../utils/policyComparison/productContract");
+  PAV8_BASELINE_COMMIT,
+  PAV8_BASELINE_PRODUCT_PROFILE,
+  pav8BaselineCatalogBytes,
+} = require("../../fixtures/policyAnalysis/pav8BaselineFixture");
 const {
   BASELINE_WORKSHEET_REBUILD_CONTRACT_ID,
   assertBaselineWorksheetRebuild,
@@ -23,13 +25,6 @@ const REGISTRY_FILE = path.join(
   RESOURCES,
   "pav8-review-69-targets.qa-only.v0.1.json"
 );
-const CATALOG_FILES = {
-  VS: "vs-occurrence-full-draft.v0.2.json",
-  FE: "fe-occurrence-full-draft.v0.1.json",
-  LW: "lw-occurrence-full-draft.v0.1.json",
-  ST: "st-occurrence-full-draft.v0.1.json",
-  EL: "el-occurrence-full-draft.v0.1.json",
-};
 const RUN_SIGNATURE =
   "e3fa86164b0a027dbc219681bd308a1f7e027e0e5297f70b122feebf4e18d55e";
 
@@ -39,15 +34,6 @@ function raw(value) {
 
 function copy(value) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function catalogs() {
-  return Object.fromEntries(
-    Object.entries(CATALOG_FILES).map(([categoryView, filename]) => [
-      categoryView,
-      fs.readFileSync(path.join(RESOURCES, filename)),
-    ])
-  );
 }
 
 function packageDocument(side, position, ordinal) {
@@ -75,8 +61,8 @@ function packageContract() {
   return {
     schemaVersion: 1,
     runKind: "ISOLATED_PACKAGE_QA",
-    releaseId: "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b",
-    productProfile: copy(PRODUCT_PROFILE),
+    releaseId: PAV8_BASELINE_COMMIT,
+    productProfile: copy(PAV8_BASELINE_PRODUCT_PROFILE),
     sourceInputManifest: {
       file: "/private/input-manifest.private.json",
       sha256: "1".repeat(64),
@@ -138,7 +124,7 @@ function execution() {
     modelTokenLimit: 42496,
     nodeVersion: "22.23.2",
     promptSha256ByCategory: Object.fromEntries(
-      PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
+      PAV8_BASELINE_PRODUCT_PROFILE.categoryViews.map((categoryView, index) => [
         categoryView,
         {
           category: ["1", "2", "3", "4", "5"][index].repeat(64),
@@ -195,7 +181,7 @@ function fixture() {
   registry.baseline.packageContractSha256 = sha256(packageBytes);
   registry.baseline.comparisonSha256 = sha256(comparisonBytes);
   registry.baseline.runSignatureSha256 = RUN_SIGNATURE;
-  const catalogBytesByCategory = catalogs();
+  const catalogBytesByCategory = pav8BaselineCatalogBytes();
   const manifest = buildTargetedQaManifest({
     qaRegistryBytes: raw(registry),
     packageContractBytes: packageBytes,
@@ -253,7 +239,9 @@ describe("baseline worksheet rebuild contract", () => {
         position: 0,
       },
     });
-    expect(result.requirementCount).toBe(PRODUCT_PROFILE.categoryRowCounts.ST);
+    expect(result.requirementCount).toBe(
+      PAV8_BASELINE_PRODUCT_PROFILE.categoryRowCounts.ST
+    );
     expect(result.semanticWorksheetDigestSha256).toMatch(/^[a-f0-9]{64}$/u);
   });
 

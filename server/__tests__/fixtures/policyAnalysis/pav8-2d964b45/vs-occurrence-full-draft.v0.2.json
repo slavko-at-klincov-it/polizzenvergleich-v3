@@ -1,0 +1,1161 @@
+{
+  "schemaVersion": 2,
+  "catalogId": "vs-occurrence-full-draft-v0.7",
+  "categoryView": "VS",
+  "requirements": [
+    {
+      "id": "VS-01",
+      "label": "Ersatzleistung zum Neuwert vorgesehen",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "components": [
+        {
+          "id": "replacement_new_value",
+          "label": "Ersatzleistung zum Neuwert",
+          "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Ersatz zum Neuwert",
+            "Entschädigung zum Neuwert",
+            "Neuwertentschädigung",
+            "zum Neuwert zu ersetzen",
+            "Wohngebäude zum Neuwert"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-02",
+      "label": "Zeitwertklausel und ab welchem Restwertverhältnis sie greift",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "current_value_clause",
+          "label": "Zeitwertklausel",
+          "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Zeitwertklausel",
+            "Entschädigung zum Zeitwert",
+            "Zeitwert ersetzt",
+            "Entschädigung nach dem Zeitwert",
+            "nicht innerhalb dreier Jahre ab dem Schadentag"
+          ]
+        },
+        {
+          "id": "residual_value_threshold",
+          "label": "Restwertverhältnis",
+          "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Restwertverhältnis",
+            "Zeitwert mindestens",
+            "Zeitwert weniger als",
+            "Zeitwert von mindestens 30 %"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-03",
+      "label": "Entschädigung zum gemeinen Wert oder Abbruchwert geregelt",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "market_or_demolition_value",
+          "label": "Gemeiner Wert oder Abbruchwert",
+          "factRole": "BENEFIT",
+          "aliases": ["gemeinen Wert", "gemeiner Wert", "Abbruchwert"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-04",
+      "label": "Methode der Summenermittlung (Pauschale, Index, Gutachten)",
+      "requestedFields": ["calculation_method"],
+      "components": [
+        {
+          "id": "sum_calculation_method",
+          "label": "Methode der Summenermittlung",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Summenermittlung",
+            "Ermittlung der Versicherungssumme",
+            "Pauschalversicherungssumme",
+            "Sachverständigengutachten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "VS-05",
+      "label": "Angesetzter Quadratmetersatz für die Versicherungssumme",
+      "requestedFields": ["calculation_basis"],
+      "components": [
+        {
+          "id": "square_metre_rate",
+          "label": "Quadratmetersatz",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "Quadratmetersatz",
+            "je m² Nutzfläche",
+            "pro m² Nutzfläche",
+            "EUR/m²"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "VS-06",
+      "label": "Zugrunde gelegte Nutzfläche in Quadratmetern",
+      "requestedFields": ["calculation_basis"],
+      "components": [
+        {
+          "id": "usable_area",
+          "label": "Nutzfläche in Quadratmetern",
+          "factRole": "DEFINITION",
+          "aliases": ["Nutzfläche in m²", "m² Nutzfläche", "Nutzfläche beträgt"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "VS-07",
+      "label": "Unterversicherungsverzicht vorhanden",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "underinsurance_waiver",
+          "label": "Unterversicherungsverzicht",
+          "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Unterversicherungsverzicht",
+            "Einwand der Unterversicherung",
+            "Verzicht auf den Einwand der Unterversicherung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-08",
+      "label": "Unterversicherungsverzicht bedingt oder unbedingt",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "underinsurance_waiver_condition",
+          "label": "Bedingung des Unterversicherungsverzichts",
+          "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Unterversicherungsverzicht gilt",
+            "Unterversicherungsverzicht besteht",
+            "Einwand der Unterversicherung verzichtet",
+            "für die Dauer von ca. 3 Jahren",
+            "im Schadenfall nur Anwendung, wenn",
+            "bezieht sich der Verzicht auf den Einwand der Unterversicherung nur"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "VS-09",
+      "label": "Voraussetzungen, an die der Unterversicherungsverzicht geknüpft ist",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "underinsurance_waiver_prerequisites",
+          "label": "Voraussetzungen des Unterversicherungsverzichts",
+          "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Voraussetzung für den Unterversicherungsverzicht",
+            "Unterversicherungsverzicht unter der Voraussetzung",
+            "Verzicht auf den Einwand der Unterversicherung, wenn",
+            "für die ein Neuwertschätzgutachten besteht",
+            "Versicherungssumme dem Neuwert des Gutachtens entspricht",
+            "im Schadenfall nur Anwendung, wenn",
+            "Bei Bestehen mehrfacher Versicherungen für dasselbe Interesse"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "VS-10",
+      "label": "Automatische Indexanpassung der Versicherungssumme",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "automatic_index_adjustment",
+          "label": "Automatische Indexanpassung",
+          "factRole": "CONDITION",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "automatische Indexanpassung",
+            "Wertanpassung der Versicherungssumme",
+            "Versicherungssumme verändert sich entsprechend",
+            "Aufwertung der Gebäudeversicherungssummen und Prämien erfolgt nach",
+            "Versicherungssumme erhöht oder vermindert sich jährlich"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "VS-11",
+      "label": "Art des Index (Baukostenindex oder Verbraucherpreisindex)",
+      "requestedFields": ["index_type"],
+      "components": [
+        {
+          "id": "index_type",
+          "label": "Indexart",
+          "factRole": "DEFINITION",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Baukostenindex",
+            "Verbraucherpreisindex",
+            "Baukosten-Index"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "DEFINITION_ONLY"
+    },
+    {
+      "id": "VS-12",
+      "label": "Möglichkeit, die Indexanpassung auszusetzen",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "index_suspension",
+          "label": "Aussetzung der Indexanpassung",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Indexanpassung aussetzen",
+            "Wertanpassung aussetzen",
+            "Wertanpassung widersprechen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "VS-13",
+      "label": "Wohnungsinnenausbau der einzelnen Einheiten mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "apartment_interior_fitout",
+          "label": "Wohnungsinnenausbau",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Wohnungsinnenausbau",
+            "Innenausbau der Wohnungen",
+            "Innenausbau in den Wohnungen",
+            "Adaptierungen und Investitionen der Bewohner"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-14",
+      "label": "Sonderausstattung einzelner Wohnungen über Standard hinaus",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "apartment_special_equipment",
+          "label": "Sonderausstattung einzelner Wohnungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Sonderausstattung einzelner Wohnungen",
+            "Sonderausstattungen der Wohnungen",
+            "über die Standardausführung hinaus"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-15",
+      "label": "Nebengebäude namentlich in der Polizze angeführt",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "components": [
+        {
+          "id": "outbuilding_cover",
+          "label": "Nebengebäude allgemein",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Nebengebäude", "Nebengebäuden"]
+        },
+        {
+          "id": "named_outbuilding_designation",
+          "label": "Namentliche Anführung in der Polizze",
+          "factRole": "DEFINITION",
+          "aliases": [
+            "namentlich angeführtes Nebengebäude",
+            "namentlich angeführte Nebengebäude",
+            "Nebengebäude namentlich in der Polizze angeführt"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-16",
+      "label": "Garagen, Tiefgaragen, Stellplätze, Parkdecks oder Carports mitversichert",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "componentSatisfactionPolicy": "ANY",
+      "components": [
+        {
+          "id": "garage",
+          "label": "Garagen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Garage",
+            "Garagen",
+            "Garagierung",
+            "Garagierungen",
+            "Garagenanlage",
+            "Garagenanlagen",
+            "Garagengebäude",
+            "Einstellgarage",
+            "Einstellgaragen",
+            "Sammelgarage",
+            "Sammelgaragen"
+          ]
+        },
+        {
+          "id": "underground_garage",
+          "label": "Tiefgarage",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Tiefgarage",
+            "Tiefgaragen",
+            "Tiefgaragenanlage",
+            "Tiefgaragenanlagen"
+          ]
+        },
+        {
+          "id": "parking_space",
+          "label": "Kfz-Stellplätze und Parkplätze",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Kfz-Stellplatz",
+            "Kfz-Stellplätze",
+            "KfzStellplatz",
+            "KfzStellplätze",
+            "KFZ Stellplatz",
+            "KFZ Stellplätze",
+            "Pkw-Stellplatz",
+            "Pkw-Stellplätze",
+            "Autoabstellplatz",
+            "Autoabstellplätze",
+            "Pkw-Abstellplatz",
+            "Pkw-Abstellplätze",
+            "Fahrzeugabstellfläche",
+            "Fahrzeugabstellflächen"
+          ]
+        },
+        {
+          "id": "parking_deck",
+          "label": "Parkdecks",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Parkdeck", "Parkdecks", "Parkebene", "Parkebenen"]
+        },
+        {
+          "id": "carport",
+          "label": "Carports",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Carport",
+            "Carports",
+            "Autounterstand",
+            "Autounterstände"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-17",
+      "label": "Müllräume, Fahrradräume, Kinderwagenräume mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "waste_room",
+          "label": "Müllräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Müllraum", "Müllräume"]
+        },
+        {
+          "id": "bicycle_room",
+          "label": "Fahrradräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Fahrradraum",
+            "Fahrradräume",
+            "Fahrradabstellraum",
+            "Fahrradabstellräume"
+          ]
+        },
+        {
+          "id": "stroller_room",
+          "label": "Kinderwagenräume",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Kinderwagenraum", "Kinderwagenräume"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-18",
+      "label": "Einfriedungen, Zäune, Mauern, Tore mitversichert",
+      "requestedFields": [],
+      "components": [
+        {
+          "id": "enclosures",
+          "label": "Einfriedungen",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Einfriedung", "Einfriedungen"]
+        },
+        {
+          "id": "fences",
+          "label": "Zäune",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Zaun", "Zäune"]
+        },
+        {
+          "id": "walls",
+          "label": "Mauern",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Mauer", "Mauern"]
+        },
+        {
+          "id": "gates",
+          "label": "Tore",
+          "factRole": "INSURED_OBJECT",
+          "aliases": ["Tor", "Tore"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-19",
+      "label": "Außenanlagen wie Wege, Beleuchtung, Bepflanzung",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "componentSatisfactionPolicy": "ANY",
+      "components": [
+        {
+          "id": "outdoor_paths",
+          "label": "Wege",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "befestigte Wege",
+            "Gehwege",
+            "Zufahrtswege",
+            "Außenanlagen"
+          ]
+        },
+        {
+          "id": "outdoor_lighting",
+          "label": "Außenbeleuchtung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Außenbeleuchtung",
+            "Beleuchtungsanlagen im Freien",
+            "Beleuchtungsanlagen",
+            "Beleuchtungskörper für allgemeine Räume, außen am Gebäude und im Freien"
+          ]
+        },
+        {
+          "id": "planting",
+          "label": "Bepflanzung",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Bepflanzung",
+            "Bepflanzungen",
+            "Grünflächen",
+            "Gartenanlagen",
+            "Bäume und Sträucher"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-20",
+      "label": "Spielplatz und Spielgeräte mitversichert",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "components": [
+        {
+          "id": "playground",
+          "label": "Spielplatz",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Spielplatz",
+            "Spielplätze",
+            "Kinderspielplätze",
+            "Einrichtungen von Kinderspiel- und Wäscheplätzen",
+            "Spielplatzeinrichtungen"
+          ]
+        },
+        {
+          "id": "playground_equipment",
+          "label": "Spielgeräte",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Spielgerät",
+            "Spielgeräte",
+            "Kinderspielgeräte",
+            "Spielplatzeinrichtungen",
+            "Einrichtungen von Kinderspiel- und Wäscheplätzen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-21",
+      "label": "Aufräum- und Abbruchkosten, Höhe des Limits",
+      "requestedFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "bindingStructures": [
+        {
+          "type": "SHARED_GOVERNOR",
+          "governorAliases": ["Kosten für"],
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        },
+        {
+          "type": "SHARED_SPAN",
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        },
+        {
+          "type": "RIGHT_HEADED_COORDINATION",
+          "headSuffixes": ["kosten"],
+          "memberComponentIds": ["cleanup_costs", "demolition_costs"],
+          "constraint": "SAME_CANDIDATE_BINDING"
+        }
+      ],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ],
+        "narrowAliases": [
+          "radioaktiv",
+          "kontaminiert",
+          "Sondermüll",
+          "gefährlicher Abfall",
+          "gefährlichem Abfall",
+          "Problemstoffe",
+          "Problemstoffen"
+        ]
+      },
+      "components": [
+        {
+          "id": "cleanup_costs",
+          "label": "Aufräumkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Aufräumung",
+            "Aufräumungen",
+            "Aufräumungs-",
+            "Aufräumungskosten",
+            "Aufräumungsarbeiten",
+            "Aufräum-",
+            "Aufräum- und Abbruchkosten",
+            "Aufräum-, Abbruch- und Feuerlöschkosten"
+          ]
+        },
+        {
+          "id": "demolition_costs",
+          "label": "Abbruchkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Abbruch",
+            "Abbruchkosten",
+            "Aufräum- und Abbruchkosten",
+            "Aufräum-, Abbruch- und Feuerlöschkosten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-22",
+      "label": "Entsorgungskosten einschließlich Sondermüll",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "disposal_costs",
+          "label": "Entsorgungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Entsorgungskosten",
+            "Entsorgungskosten von Sondermüll",
+            "Entsorgungskosten für Sondermüll",
+            "Kosten für Sondermüll",
+            "Kosten für die Behandlung von Sondermüll",
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
+          ]
+        },
+        {
+          "id": "hazardous_waste",
+          "label": "Sondermüll",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Sondermüll",
+            "gefährlicher Abfall",
+            "Entsorgungskosten von Sondermüll",
+            "Entsorgungskosten für Sondermüll",
+            "Kosten für Sondermüll",
+            "Kosten für die Behandlung von Sondermüll",
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
+          ]
+        },
+        {
+          "id": "hazardous_waste_cost_limit",
+          "label": "Limit der Entsorgungskosten einschließlich Sondermüll",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Sondermüll",
+            "gefährlicher Abfall",
+            "Entsorgungskosten von Sondermüll",
+            "Entsorgungskosten für Sondermüll",
+            "Kosten für Sondermüll",
+            "Kosten für die Behandlung von Sondermüll",
+            "Kosten für die Behandlung von gefährlichem Abfall",
+            "Mehrkosten für die Behandlung von gefährlichem Abfall"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-23",
+      "label": "Bewegungs- und Schutzkosten",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
+      "components": [
+        {
+          "id": "movement_costs",
+          "label": "Bewegungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Bewegungs- und Schutzkosten",
+            "Bewegungs-, Schutz-",
+            "Bewegungs-, Schutz- und Reinigungskosten"
+          ]
+        },
+        {
+          "id": "protection_costs",
+          "label": "Schutzkosten",
+          "factRole": "COST",
+          "aliases": [
+            "Bewegungs- und Schutzkosten",
+            "Bewegungs-, Schutz-",
+            "Bewegungs-, Schutz- und Reinigungskosten"
+          ]
+        },
+        {
+          "id": "movement_and_protection_cost_limit",
+          "label": "Limit der Bewegungs- und Schutzkosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Bewegungs- und Schutzkosten",
+            "Bewegungs-, Schutz-",
+            "Bewegungs-, Schutz- und Reinigungskosten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-24",
+      "label": "Gerüstkosten im Schadenfall",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "scaffolding_costs",
+          "label": "Gerüstkosten",
+          "factRole": "COST",
+          "aliases": ["Gerüstkosten", "Kosten für Gerüste"]
+        },
+        {
+          "id": "scaffolding_cost_limit",
+          "label": "Limit der Gerüstkosten",
+          "factRole": "LIMIT",
+          "aliases": ["Gerüstkosten", "Kosten für Gerüste"]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-25",
+      "label": "Behördliche Mehrkosten beim Wiederaufbau",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "authority_reconstruction_extra_costs",
+          "label": "Behördliche Mehrkosten beim Wiederaufbau",
+          "factRole": "COST",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "behördliche Mehrkosten",
+            "Mehrkosten durch behördliche Auflagen",
+            "Mehrkosten infolge behördlicher Auflagen",
+            "Mehrkosten für bauliche Verbesserungen"
+          ]
+        },
+        {
+          "id": "authority_reconstruction_extra_cost_limit",
+          "label": "Limit der behördlichen Mehrkosten beim Wiederaufbau",
+          "factRole": "LIMIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "behördliche Mehrkosten",
+            "Mehrkosten durch behördliche Auflagen",
+            "Mehrkosten infolge behördlicher Auflagen",
+            "Mehrkosten für bauliche Verbesserungen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-26",
+      "label": "Mehrkosten aus Denkmalschutz oder Schutzzone",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "heritage_or_protection_zone_extra_costs",
+          "label": "Mehrkosten aus Denkmalschutz oder Schutzzone",
+          "factRole": "COST",
+          "aliases": [
+            "Mehrkosten durch Denkmalschutz",
+            "Mehrkosten aufgrund von Denkmalschutzauflagen",
+            "Mehrkosten in Schutzzonen",
+            "Mehrkosten aufgrund von Schutzzonenauflagen"
+          ]
+        },
+        {
+          "id": "heritage_or_protection_zone_extra_cost_limit",
+          "label": "Limit der Mehrkosten aus Denkmalschutz oder Schutzzone",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Mehrkosten durch Denkmalschutz",
+            "Mehrkosten aufgrund von Denkmalschutzauflagen",
+            "Mehrkosten in Schutzzonen",
+            "Mehrkosten aufgrund von Schutzzonenauflagen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-27",
+      "label": "Klausel zum Technologiefortschritt bei Ersatz",
+      "requestedFields": ["condition"],
+      "components": [
+        {
+          "id": "technology_progress_replacement",
+          "label": "Technologiefortschritt bei Ersatz",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Technologiefortschritt",
+            "technischer Fortschritt bei Wiederherstellung",
+            "technisch gleichwertige Nachfolgeausführung"
+          ]
+        },
+        {
+          "id": "technology_progress_replacement_condition",
+          "label": "Bedingung der Technologiefortschrittsklausel",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Technologiefortschritt",
+            "technischer Fortschritt bei Wiederherstellung",
+            "technisch gleichwertige Nachfolgeausführung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-28",
+      "label": "Mietzinsentgang, Dauer der Leistung",
+      "requestedFields": ["duration"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
+      "components": [
+        {
+          "id": "rent_loss",
+          "label": "Mietzinsentgang",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Mietzinsentgang",
+            "Mietverlust",
+            "Mietausfall",
+            "Entgang von Mietzinseinnahmen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-29",
+      "label": "Mietzinsentgang, Höhe oder Berechnungsgrundlage",
+      "requestedFields": ["calculation_basis"],
+      "optionalFields": ["limit"],
+      "components": [
+        {
+          "id": "rent_loss_amount_basis",
+          "label": "Höhe oder Berechnungsgrundlage des Mietzinsentgangs",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Mietzinsentgang",
+            "Mietverlust",
+            "Mietausfall",
+            "Entgang von Mietzinseinnahmen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
+    },
+    {
+      "id": "VS-30",
+      "label": "Bezugskosten oder Nutzungsausfall für Eigennutzer",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "owner_occupier_replacement_costs_or_loss",
+          "label": "Bezugskosten oder Nutzungsausfall für Eigennutzer",
+          "factRole": "BENEFIT",
+          "aliases": [
+            "Nutzungsausfall für Eigennutzer",
+            "Ersatzwohnung für Eigennutzer",
+            "Bezugskosten einer Ersatzwohnung"
+          ]
+        },
+        {
+          "id": "owner_occupier_replacement_costs_or_loss_limit",
+          "label": "Limit für Bezugskosten oder Nutzungsausfall für Eigennutzer",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Nutzungsausfall für Eigennutzer",
+            "Ersatzwohnung für Eigennutzer",
+            "Bezugskosten einer Ersatzwohnung"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-31",
+      "label": "Hotel- oder Ersatzunterkunftskosten bei Unbewohnbarkeit",
+      "requestedFields": ["limit"],
+      "optionalFields": ["duration"],
+      "components": [
+        {
+          "id": "hotel_or_replacement_accommodation_costs",
+          "label": "Hotel- oder Ersatzunterkunftskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Hotelkosten",
+            "Ersatzunterkunftskosten",
+            "Kosten einer Ersatzunterkunft",
+            "Mehrkosten für eine Ersatzunterkunft",
+            "Hotelzimmer / Pension"
+          ]
+        },
+        {
+          "id": "uninhabitability",
+          "label": "Unbewohnbarkeit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "unbewohnbar",
+            "Unbewohnbarkeit",
+            "unbenutzbar",
+            "Unbenutzbarkeit"
+          ]
+        },
+        {
+          "id": "accommodation_due_to_uninhabitability",
+          "label": "Unterkunftskosten aufgrund von Unbewohnbarkeit",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Hotelkosten bei Unbewohnbarkeit",
+            "Ersatzunterkunftskosten bei Unbewohnbarkeit",
+            "Kosten einer Ersatzunterkunft bei Unbewohnbarkeit",
+            "Hotelkosten bei Unbenutzbarkeit",
+            "Ersatzunterkunft bei Unbenutzbarkeit",
+            "Mehrkosten für eine Ersatzunterkunft für die maximale Dauer",
+            "Ersatzunterkunft, weil",
+            "Ersatzräumlichkeiten für die Dauer der tatsächlichen Unbenutzbarkeit"
+          ]
+        },
+        {
+          "id": "accommodation_cost_limit",
+          "label": "Limit der Hotel- oder Ersatzunterkunftskosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Hotelkosten",
+            "Ersatzunterkunftskosten",
+            "Kosten einer Ersatzunterkunft",
+            "Mehrkosten für eine Ersatzunterkunft",
+            "Hotelzimmer / Pension"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-32",
+      "label": "Umzugs- und Zwischenlagerungskosten",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "moving_costs",
+          "label": "Umzugskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Umzugs- und Zwischenlagerungskosten",
+            "Übersiedlungs- und Zwischenlagerungskosten",
+            "Umzugs- und Lagerkosten"
+          ]
+        },
+        {
+          "id": "temporary_storage_costs",
+          "label": "Zwischenlagerungskosten",
+          "factRole": "COST",
+          "aliases": [
+            "Umzugs- und Zwischenlagerungskosten",
+            "Übersiedlungs- und Zwischenlagerungskosten",
+            "Umzugs- und Lagerkosten"
+          ],
+          "conceptSearches": [
+            {
+              "id": "insured-temporary-storage-costs",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["kosten"] },
+                { "prefixes": ["zwischenlager"] },
+                { "prefixes": ["versichert", "uebernimmt", "ersetzt"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "moving_and_temporary_storage_cost_limit",
+          "label": "Limit der Umzugs- und Zwischenlagerungskosten",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Umzugs- und Zwischenlagerungskosten",
+            "Übersiedlungs- und Zwischenlagerungskosten",
+            "Umzugs- und Lagerkosten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COST_COVERAGE"
+    },
+    {
+      "id": "VS-33",
+      "label": "Vorsorgedeckung oder automatische Summenerhöhung",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "contingency_cover_or_automatic_increase",
+          "label": "Vorsorgedeckung oder automatische Summenerhöhung",
+          "factRole": "BENEFIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Vorsorgedeckung",
+            "Vorsorgeversicherung",
+            "automatische Summenerhöhung",
+            "Vorsorge für Neu-, Zu- und Umbauten"
+          ]
+        },
+        {
+          "id": "contingency_cover_or_automatic_increase_limit",
+          "label": "Limit der Vorsorgedeckung oder automatischen Summenerhöhung",
+          "factRole": "LIMIT",
+          "contextMode": "CLAUSE_SECTION",
+          "aliases": [
+            "Vorsorgedeckung",
+            "Vorsorgeversicherung",
+            "automatische Summenerhöhung",
+            "Vorsorge für Neu-, Zu- und Umbauten"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_MIXED"
+    },
+    {
+      "id": "VS-34",
+      "label": "Gemeinschaftsvermögen wie Geräte und Werkzeug mitversichert",
+      "requestedFields": [],
+      "optionalFields": ["limit"],
+      "componentSatisfactionPolicy": "ANY",
+      "components": [
+        {
+          "id": "community_devices",
+          "label": "Gemeinschaftsgeräte",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Gemeinschaftsgeräte",
+            "Geräte der Eigentümergemeinschaft",
+            "Geräte für die Hausbetreuung",
+            "Werkzeuge, Geräte und Maschinen",
+            "Einrichtungen und Geräte in Versicherungsräumlichkeiten",
+            "Einfriedungen, Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen",
+            "Einfriedungen und Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen"
+          ]
+        },
+        {
+          "id": "community_tools",
+          "label": "Werkzeug der Gemeinschaft",
+          "factRole": "INSURED_OBJECT",
+          "aliases": [
+            "Werkzeug der Eigentümergemeinschaft",
+            "Werkzeuge für die Hausbetreuung",
+            "Werkzeuge, Geräte und Maschinen"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "COVERAGE_ONLY"
+    },
+    {
+      "id": "VS-35",
+      "label": "Wiederherstellungsklausel und Frist für den Wiederaufbau",
+      "requestedFields": ["duration", "condition"],
+      "components": [
+        {
+          "id": "restoration_clause",
+          "label": "Wiederherstellungsklausel",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wiederherstellungsklausel",
+            "9. Wiederherstellung",
+            "Wiederbeschaffung oder Wiederherstellung",
+            "Wiederherstellung des Gebäudes",
+            "Wiederaufbau des Gebäudes"
+          ]
+        },
+        {
+          "id": "reconstruction_period",
+          "label": "Frist für den Wiederaufbau",
+          "factRole": "CONDITION",
+          "aliases": [
+            "Wiederherstellungsfrist",
+            "Frist für die Wiederherstellung",
+            "innerhalb dreier Jahre",
+            "innerhalb von drei Jahren wiederhergestellt"
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "CONDITION_ONLY"
+    },
+    {
+      "id": "VS-36",
+      "label": "Höchstentschädigung pro Ereignis",
+      "requestedFields": ["limit"],
+      "components": [
+        {
+          "id": "maximum_indemnity_per_event",
+          "label": "Höchstentschädigung pro Ereignis",
+          "factRole": "LIMIT",
+          "aliases": [
+            "Höchstentschädigung je Schadenereignis",
+            "Höchstentschädigung pro Schadenereignis",
+            "maximale Entschädigung je Schadenereignis",
+            "Höchstentschädigung im Schadensfall"
+          ],
+          "conceptSearches": [
+            {
+              "id": "event-indemnity-cap",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["schadenereignis", "schadenfall", "ereignis"] },
+                { "prefixes": ["versicherungssumme"] },
+                { "prefixes": ["entschaedigung"] },
+                { "prefixes": ["begrenz", "maximiert"] }
+              ]
+            },
+            {
+              "id": "sum-insured-as-indemnity-boundary",
+              "maxLines": 2,
+              "requiredGroups": [
+                { "prefixes": ["versicherungssumme"] },
+                { "prefixes": ["grenze", "begrenz", "limit", "maximiert"] },
+                { "prefixes": ["entschaedigung", "ersatzleistung"] }
+              ]
+            }
+          ]
+        }
+      ],
+      "negativeSearchPolicy": "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+      "absenceMeaning": "VALUE_TERM"
+    }
+  ]
+}
