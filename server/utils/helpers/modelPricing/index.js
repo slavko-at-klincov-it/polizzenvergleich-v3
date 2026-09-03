@@ -145,7 +145,7 @@ class ModelPricing {
   /** @type {Record<string, Record<string, string>>} - lazy bedrock normalization index per provider */
   #normalizedIndexes = {};
 
-  constructor({ backgroundRefresh = true } = {}) {
+  constructor() {
     if (ModelPricing.instance) return ModelPricing.instance;
     ModelPricing.instance = this;
 
@@ -153,7 +153,7 @@ class ModelPricing {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     this.#loadFromDisk();
-    if ((this.#isCacheStale() || !this.#pricing) && backgroundRefresh) {
+    if (this.#isCacheStale() || !this.#pricing) {
       this.#refresh()
         .then(() => {
           if (this.#pricing) logPrecached();
@@ -327,9 +327,7 @@ class ModelPricing {
   }
 }
 
-const MODEL_PRICING = new ModelPricing({
-  backgroundRefresh: process.env.NODE_ENV !== "test",
-});
+const MODEL_PRICING = new ModelPricing();
 
 /**
  * Enriches a metrics object with inputCost, outputCost, and totalCost (USD).

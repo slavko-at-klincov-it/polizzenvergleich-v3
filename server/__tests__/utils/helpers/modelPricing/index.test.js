@@ -51,14 +51,17 @@ describe("ModelPricing", () => {
   });
 
   describe("cache mechanics", () => {
-    it("does not start the module singleton refresh in the test runtime", async () => {
-      const fetchSpy = jest.fn();
-      global.fetch = fetchSpy;
+    it("suppresses asynchronous precache success logs in the test runtime", async () => {
+      mockFetchWith(okResponse(FIXTURE));
+      const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
-      require("../../../../utils/helpers/modelPricing");
-      await flushRefresh();
-
-      expect(fetchSpy).not.toHaveBeenCalled();
+      try {
+        freshInstance();
+        await flushRefresh();
+        expect(logSpy).not.toHaveBeenCalled();
+      } finally {
+        logSpy.mockRestore();
+      }
     });
 
     it("fetches the remote pricing data and writes the disk cache", async () => {
