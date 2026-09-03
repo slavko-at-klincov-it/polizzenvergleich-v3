@@ -591,7 +591,9 @@ function extractScaffoldingCostLimitFacts(options) {
   const occurrenceStart = Number(options.occurrence?.documentStart);
   const occurrenceEnd = Number(options.occurrence?.documentEnd);
   if (
-    !["LIST_ITEM", "PARAGRAPH"].includes(options.occurrence?.context?.unitType) ||
+    !["LIST_ITEM", "PARAGRAPH"].includes(
+      options.occurrence?.context?.unitType
+    ) ||
     !Number.isInteger(occurrenceStart) ||
     !Number.isInteger(occurrenceEnd) ||
     occurrenceStart < context.documentStart ||
