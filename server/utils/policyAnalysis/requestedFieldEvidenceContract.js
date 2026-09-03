@@ -183,6 +183,24 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
     ...(value.comparisonBasis
       ? { comparisonBasis: value.comparisonBasis }
       : {}),
+    ...(value.comparisonBasisEvidence
+      ? {
+          comparisonBasisSource: {
+            candidateId: occurrence.candidateId,
+            pageNumber: occurrence.pageNumber,
+            physicalPageNumber:
+              occurrence.physicalPageNumber || occurrence.pageNumber,
+            printedPageLabel: occurrence.printedPageLabel || null,
+            documentStart:
+              context.documentStart + value.comparisonBasisEvidence.index,
+            documentEnd:
+              context.documentStart +
+              value.comparisonBasisEvidence.index +
+              value.comparisonBasisEvidence.exactText.length,
+            exactText: value.comparisonBasisEvidence.exactText,
+          },
+        }
+      : {}),
     ...(variantScope?.key && variantScope?.label
       ? {
           variantScope: {
@@ -251,15 +269,28 @@ function limitQualifier(text, match, occurrence) {
 }
 
 function limitComparisonBasis(text, match) {
-  const nearby = text.slice(
-    Math.max(0, match.index - 180),
-    Math.min(text.length, match.index + match[0].length + 180)
-  );
-  if (/\b(?:des|vom)\s+(?:NBW|Neubauwert)\b/iu.test(nearby))
-    return "BUILDING_NEW_VALUE_INSURANCE_SUM";
-  if (/\bGebäudeversicherungssumme\b/iu.test(nearby))
-    return "BUILDING_INSURANCE_SUM";
-  return null;
+  const nearbyStart = Math.max(0, match.index - 180);
+  const nearbyEnd = Math.min(text.length, match.index + match[0].length + 180);
+  const nearby = text.slice(nearbyStart, nearbyEnd);
+  const candidates = [
+    {
+      comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
+      match: nearby.match(/\b(?:des|vom)\s+(?:NBW|Neubauwert)\b/iu),
+    },
+    {
+      comparisonBasis: "BUILDING_INSURANCE_SUM",
+      match: nearby.match(/\bGebäudeversicherungssumme\b/iu),
+    },
+  ].filter(({ match: basisMatch }) => basisMatch);
+  if (candidates.length !== 1) return null;
+  const candidate = candidates[0];
+  return {
+    comparisonBasis: candidate.comparisonBasis,
+    comparisonBasisEvidence: {
+      index: nearbyStart + candidate.match.index,
+      exactText: candidate.match[0],
+    },
+  };
 }
 
 function deductibleFact(occurrence, fact) {
@@ -325,7 +356,7 @@ function extractLimitFacts({ occurrence, binding }) {
           unit: "EUR",
           limitKind: LIMIT_KIND.CAPPED,
           qualifier: limitQualifier(text, match, occurrence),
-          comparisonBasis: limitComparisonBasis(text, match),
+          ...(limitComparisonBasis(text, match) || {}),
         },
       })
     );
@@ -349,7 +380,7 @@ function extractLimitFacts({ occurrence, binding }) {
             unit: "EUR",
             limitKind: LIMIT_KIND.CAPPED,
             qualifier: limitQualifier(text, concatenatedMoney, occurrence),
-            comparisonBasis: limitComparisonBasis(text, concatenatedMoney),
+            ...(limitComparisonBasis(text, concatenatedMoney) || {}),
           },
         })
       );
@@ -375,7 +406,7 @@ function extractLimitFacts({ occurrence, binding }) {
           unit: "%",
           limitKind: LIMIT_KIND.CAPPED,
           qualifier: limitQualifier(text, match, occurrence),
-          comparisonBasis: limitComparisonBasis(text, match),
+          ...(limitComparisonBasis(text, match) || {}),
         },
       })
     );

@@ -411,18 +411,24 @@ function directFieldFactsValid(atom, signature) {
   return facts.every((fact) => {
     const source = fact?.source;
     const expectedUnit = fact.valueType === "MONEY" ? "EUR" : "%";
-    const percentageBasisLocallyBound =
+    const basisSource = fact?.comparisonBasisSource;
+    const percentageBasisLocallyBound = Boolean(
       fact.valueType !== "PERCENT" ||
-      (atom.sources || []).some((atomSource) => {
-        if (!selectedCandidateIds.has(atomSource?.candidateId)) return false;
-        const local = localSourceWindow(atomSource);
-        const targetClause = local?.fromAnchor.slice(0, 240) || "";
-        return fact.comparisonBasis === "BUILDING_NEW_VALUE_INSURANCE_SUM"
-          ? /\b(?:NBW|Neubauwert(?:es|s)?)\b/iu.test(targetClause)
-          : fact.comparisonBasis === "BUILDING_INSURANCE_SUM"
-            ? /\bGebäudeversicherungssumme\b/iu.test(targetClause)
-            : false;
-      });
+        (basisSource &&
+          selectedCandidateIds.has(basisSource.candidateId) &&
+          basisSource.candidateId === source?.candidateId &&
+          basisSource.physicalPageNumber === source?.physicalPageNumber &&
+          Number.isInteger(basisSource.documentStart) &&
+          Number.isInteger(basisSource.documentEnd) &&
+          basisSource.documentStart >= 0 &&
+          basisSource.documentEnd > basisSource.documentStart &&
+          (fact.comparisonBasis === "BUILDING_NEW_VALUE_INSURANCE_SUM"
+            ? /\b(?:des|vom)\s+(?:NBW|Neubauwert)\b/iu.test(
+                basisSource.exactText
+              )
+            : fact.comparisonBasis === "BUILDING_INSURANCE_SUM" &&
+              /\bGebäudeversicherungssumme\b/iu.test(basisSource.exactText)))
+    );
     return Boolean(
       fact?.binding === "DIRECT" &&
         fact?.valueType === signature.valueType &&

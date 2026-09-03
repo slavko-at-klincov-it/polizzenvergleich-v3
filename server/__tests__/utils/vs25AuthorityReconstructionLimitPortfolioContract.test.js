@@ -103,6 +103,25 @@ function limitAtom(sourceDocument, sourceText, fact) {
           {
             ...fact,
             binding: "DIRECT",
+            ...(fact.comparisonBasis
+              ? {
+                  comparisonBasisSource: {
+                    candidateId: atom.selectedCandidateIds[0],
+                    physicalPageNumber: 1,
+                    documentStart: 60,
+                    documentEnd:
+                      fact.comparisonBasis ===
+                      "BUILDING_NEW_VALUE_INSURANCE_SUM"
+                        ? 67
+                        : 86,
+                    exactText:
+                      fact.comparisonBasis ===
+                      "BUILDING_NEW_VALUE_INSURANCE_SUM"
+                        ? "des NBW"
+                        : "Gebäudeversicherungssumme",
+                  },
+                }
+              : {}),
             source: {
               candidateId: atom.selectedCandidateIds[0],
               physicalPageNumber: 1,
@@ -530,10 +549,9 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       },
     ],
     [
-      "typed percentage basis without local wording",
+      "typed percentage basis without bound basis source",
       (input) => {
-        input.atomsB[3].sources[0].conditionCheckText =
-          "Mehrkosten durch behördliche Auflagen bis 5 % gemäß 10PA0130";
+        delete input.atomsB[3].fields[0].facts[0].comparisonBasisSource;
       },
     ],
     [

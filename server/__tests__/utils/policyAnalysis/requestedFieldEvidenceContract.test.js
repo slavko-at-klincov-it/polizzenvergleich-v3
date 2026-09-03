@@ -2130,6 +2130,10 @@ describe("requestedFieldEvidenceContract", () => {
               limitKind: "CAPPED",
               qualifier: "auf Erstes Risiko",
               comparisonBasis: "BUILDING_INSURANCE_SUM",
+              comparisonBasisSource: expect.objectContaining({
+                candidateId: "candidate:vs33-governor",
+                exactText: "Gebäudeversicherungssumme",
+              }),
               source: expect.objectContaining({
                 candidateId: "candidate:vs33-governor",
               }),
