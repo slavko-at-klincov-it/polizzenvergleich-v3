@@ -348,11 +348,13 @@ function canonicalStrings(values) {
 }
 
 function observedScopeKeys(occurrence) {
-  return canonicalStrings([
-    occurrence?.sectionScopeHint?.scopeKey,
-    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
-    ...(occurrence?.pageScopeHints || []).map(({ scopeKey }) => scopeKey),
-  ]);
+  return canonicalStrings(
+    [
+      occurrence?.sectionScopeHint?.scopeKey,
+      ...(occurrence?.sectionScopeHint?.scopeKeys || []),
+      ...(occurrence?.pageScopeHints || []).map(({ scopeKey }) => scopeKey),
+    ].filter(Boolean)
+  );
 }
 
 function feC12ObservedScopeKeys(occurrence) {
