@@ -87,6 +87,7 @@
           "id": "indirect_lightning_damage",
           "label": "Indirekter Blitzschlag",
           "factRole": "DAMAGE",
+          "nestedListContinuationProofContractId": "NESTED_LIST_CONTINUATION_PROOF_V1",
           "aliases": [
             "indirekter Blitzschlag",
             "indirekten Blitzschlag",

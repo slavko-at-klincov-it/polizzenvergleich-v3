@@ -9,6 +9,7 @@ const {
   FOLLOWING_STRUCTURAL_BOUNDARY_KIND,
   FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
   MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
+  NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
   findAliasRanges,
   normalizeWithOffsetMap,
   validFollowingStructuralBoundaryProof,
@@ -89,6 +90,34 @@ function singleSolarComponentCatalog(overrides = {}) {
             factRole: "INSURED_OBJECT",
             aliases: ["Solar- und Photovoltaikanlagen"],
             ...overrides,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function structuralListContextCatalog(
+  proofContractId = NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
+) {
+  return {
+    schemaVersion: 1,
+    catalogId: "structural-list-context-test",
+    categoryView: "QA",
+    requirements: [
+      {
+        id: "QA-LIST",
+        label: "Structural list context",
+        requestedFields: [],
+        components: [
+          {
+            id: "target",
+            label: "Target",
+            factRole: "CONDITION",
+            aliases: ["Zielklausel"],
+            ...(proofContractId
+              ? { nestedListContinuationProofContractId: proofContractId }
+              : {}),
           },
         ],
       },
@@ -855,6 +884,212 @@ describe("controlledOccurrenceWorksheet", () => {
       "- Tiefgara-\ngen sind ausgeschlossen."
     );
     expect(occurrence.context.text).not.toContain("Garageneinrichtungen");
+  });
+
+  test("proves a parent sublist continuation while keeping the occurrence context page-local", () => {
+    const firstPage = [
+      "• Zielklausel gilt für die folgenden Sachen an",
+      "- erster untergeordneter Gegenstand;",
+      "- zweiter untergeordneter Gegenstand;",
+    ].join("\n");
+    const secondPage = [
+      "Seite 2",
+      "- dritter untergeordneter Gegenstand;",
+      "- vierter untergeordneter Gegenstand.",
+      "",
+      "• Gleichrangiger Folgepunkt bleibt getrennt.",
+    ].join("\n");
+    const separator = "\n\n[DOCUMENT_PAGE 2]\n";
+    const document = {
+      ...documentFromPages([firstPage, secondPage]),
+      pageContent: `${firstPage}${separator}${secondPage}`,
+      pageMap: [
+        { pageNumber: 1, start: 0, end: firstPage.length },
+        {
+          pageNumber: 2,
+          start: firstPage.length + separator.length,
+          end: firstPage.length + separator.length + secondPage.length,
+        },
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "continued-nested-list",
+      catalog: structuralListContextCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "QA-LIST",
+      "target"
+    ).occurrences;
+    expect(component(worksheet, "QA-LIST", "target")).toMatchObject({
+      nestedListContinuationProofContractId:
+        NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
+    });
+
+    expect(occurrence.context).toMatchObject({
+      unitType: "LIST_ITEM",
+      text: "• Zielklausel gilt für die folgenden Sachen an",
+    });
+    expect(occurrence.context.pageEnd).toBeLessThanOrEqual(firstPage.length);
+    expect(occurrence.context.documentEnd).toBeLessThanOrEqual(
+      document.pageMap[0].end
+    );
+
+    const proof = occurrence.nestedListContinuationProof;
+    expect(proof).toMatchObject({
+      contractId: "NESTED_LIST_CONTINUATION_PROOF_V1",
+      boundary: { kind: "BLANK_LINE", physicalPageNumber: 2 },
+      segments: [
+        {
+          kind: "PARENT_WITH_SUBLIST",
+          physicalPageNumber: 1,
+        },
+        {
+          kind: "CONTINUED_SUBLIST",
+          physicalPageNumber: 2,
+        },
+      ],
+    });
+    expect(proof.segments[0].text).toContain(
+      "- zweiter untergeordneter Gegenstand;"
+    );
+    expect(proof.segments[1].text).toContain(
+      "- vierter untergeordneter Gegenstand."
+    );
+    expect(proof.segments[1].text).not.toContain(
+      "Gleichrangiger Folgepunkt"
+    );
+    expect(proof.pagePrelude).toMatchObject({
+      kind: "PAGE_FURNITURE",
+      physicalPageNumber: 2,
+      text: "Seite 2\n",
+    });
+    for (const segment of proof.segments)
+      expect(
+        document.pageContent.slice(
+          segment.documentStart,
+          segment.documentEnd
+        )
+      ).toBe(segment.text);
+    expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
+  });
+
+  test("keeps nested-list continuation provenance opt-in per component", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "• Zielklausel gilt für:\n  - erster Gegenstand;",
+        "  - fortgesetzter Gegenstand.",
+      ]),
+      documentFingerprint: "nested-list-proof-opt-out",
+      catalog: structuralListContextCatalog(null),
+    });
+    const target = component(worksheet, "QA-LIST", "target");
+
+    expect(target).not.toHaveProperty(
+      "nestedListContinuationProofContractId"
+    );
+    expect(target.occurrences[0]).not.toHaveProperty(
+      "nestedListContinuationProof"
+    );
+  });
+
+  test("opts only the declared FE-A05 component into nested-list continuation provenance", () => {
+    const optedIn = feFullCatalog.requirements.flatMap((requirement) =>
+      requirement.components
+        .filter(
+          ({ nestedListContinuationProofContractId }) =>
+            nestedListContinuationProofContractId ===
+            NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
+        )
+        .map((item) => `${requirement.id}:${item.id}`)
+    );
+
+    expect(optedIn).toEqual(["FE-A05:indirect_lightning_damage"]);
+  });
+
+  test("rejects an unknown nested-list continuation proof contract", () => {
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: documentFromPages(["• Zielklausel gilt für:"]),
+        documentFingerprint: "nested-list-proof-invalid-contract",
+        catalog: structuralListContextCatalog("UNKNOWN_V1"),
+      })
+    ).toThrow("NESTED_LIST_CONTINUATION_PROOF_CONTRACT_INVALID");
+  });
+
+  test("stops a parent list context at the next same-level sibling", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "• Zielklausel gilt für:",
+          "  - untergeordneter Gegenstand;",
+          "• Gleichrangiger Folgepunkt bleibt getrennt.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "nested-list-sibling-boundary",
+      catalog: structuralListContextCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "QA-LIST",
+      "target"
+    ).occurrences;
+
+    expect(occurrence.context.text).toBe("• Zielklausel gilt für:");
+    expect(occurrence.context.text).not.toContain(
+      "Gleichrangiger Folgepunkt"
+    );
+    expect(occurrence.nestedListContinuationProof).toBeUndefined();
+  });
+
+  test("does not reinterpret a differently marked sibling as a subordinate list after a closed parent sentence", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "• Die Zielklausel ist abschließend beschrieben.",
+          "- Eigenständiger Folgepunkt mit anderem Marker.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "mixed-marker-adversarial",
+      catalog: structuralListContextCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "QA-LIST",
+      "target"
+    ).occurrences;
+
+    expect(occurrence.context.text).toBe(
+      "• Die Zielklausel ist abschließend beschrieben."
+    );
+    expect(occurrence.nestedListContinuationProof).toBeUndefined();
+  });
+
+  test("does not cross a page when a heading precedes a possible subordinate bullet", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "• Zielklausel gilt für:",
+          "  - untergeordneter Gegenstand;",
+        ].join("\n"),
+        [
+          "Seite 2",
+          "2. Neue Vertragssektion",
+          "  - ähnlich formatierter, aber fremder Gegenstand.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "nested-list-heading-boundary",
+      catalog: structuralListContextCatalog(),
+    });
+    const [occurrence] = component(
+      worksheet,
+      "QA-LIST",
+      "target"
+    ).occurrences;
+
+    expect(occurrence.context.text).toBe("• Zielklausel gilt für:");
+    expect(occurrence.nestedListContinuationProof).toBeUndefined();
   });
 
   test("recognizes PDF bullets even when extraction removes the space after the dash", () => {

@@ -9,6 +9,9 @@ const coverageOnlyCertificationRegistry = require("../../resources/policyAnalysi
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
+const NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID =
+  "NESTED_LIST_CONTINUATION_PROOF_V1";
+const MAX_NESTED_LIST_CONTINUATION_PROOF_CHARS = 3_200;
 const DEFAULT_CLAUSE_SECTION_MAX_CHARS = 6_000;
 const DEFAULT_FALLBACK_WORDS_EACH_SIDE = 120;
 const DEFAULT_SCOPE_WORDS_BEFORE = 120;
@@ -403,6 +406,270 @@ function bulletLineMetadata(line) {
 
 function isBulletLine(line) {
   return bulletLineMetadata(line) !== null;
+}
+
+function opensSubordinateList(text) {
+  const trimmed = String(text || "").trimEnd();
+  return trimmed.endsWith(":") || !/[.!?;]$/u.test(trimmed);
+}
+
+function isFirstSubordinateBullet(parent, candidate, parentText) {
+  if (!parent || !candidate) return false;
+  if (
+    candidate.indentation.length > parent.indentation.length &&
+    candidate.indentation.startsWith(parent.indentation)
+  )
+    return true;
+  return (
+    candidate.indentation === parent.indentation &&
+    candidate.marker !== parent.marker &&
+    opensSubordinateList(parentText)
+  );
+}
+
+function isSubordinateBullet(parent, firstChild, candidate) {
+  if (!parent || !firstChild || !candidate) return false;
+  return (
+    (candidate.indentation.length > parent.indentation.length &&
+      candidate.indentation.startsWith(parent.indentation)) ||
+    (candidate.indentation === firstChild.indentation &&
+      candidate.marker === firstChild.marker)
+  );
+}
+
+function isCanonicalPageGap(gap, nextPageNumber) {
+  const match = String(gap || "").match(
+    /^\s*(?:\[DOCUMENT_PAGE\s+(\d+)\]\s*)?$/u
+  );
+  return Boolean(
+    match && (!match[1] || Number(match[1]) === Number(nextPageNumber))
+  );
+}
+
+function isPageFurnitureLine(line) {
+  return /^\s*Seite\s+\d+(?:\s+von\s+\d+)?\s*$/iu.test(
+    String(line?.text || "")
+  );
+}
+
+function sourceSegment(page, pageStart, pageEnd, kind) {
+  const text = page.text.slice(pageStart, pageEnd);
+  return {
+    kind,
+    physicalPageNumber: page.physicalPageNumber,
+    pageStart,
+    pageEnd,
+    documentStart: page.start + pageStart,
+    documentEnd: page.start + pageEnd,
+    text,
+    sha256: crypto.createHash("sha256").update(text).digest("hex"),
+  };
+}
+
+function boundaryProof(page, line, kind) {
+  const pageStart = line?.start ?? page.text.length;
+  const pageEnd = line?.end ?? page.text.length;
+  const text = line?.text || "";
+  const boundary = {
+    kind,
+    physicalPageNumber: page.physicalPageNumber,
+    pageStart,
+    pageEnd,
+    documentStart: page.start + pageStart,
+    documentEnd: page.start + pageEnd,
+    text,
+  };
+  return {
+    ...boundary,
+    sha256: crypto
+      .createHash("sha256")
+      .update(JSON.stringify(boundary))
+      .digest("hex"),
+  };
+}
+
+/**
+ * Records a source-exact, page-segmented continuation proof for an opted-in
+ * parent list item. It neither enlarges occurrence.context nor implies a
+ * coverage effect; consumers must validate and interpret the proof separately.
+ */
+function nestedListContinuationProof({
+  pageContent,
+  page,
+  nextPage,
+  occurrenceStart,
+  followingBoundaryLineStarts = new Set(),
+}) {
+  if (
+    !nextPage ||
+    Number(nextPage.pageNumber) !== Number(page.pageNumber) + 1 ||
+    !isCanonicalPageGap(
+      pageContent.slice(page.end, nextPage.start),
+      nextPage.pageNumber
+    )
+  )
+    return null;
+
+  const currentLines = buildLineRecords(page.text);
+  const occurrenceLineIndex = currentLines.findIndex(
+    ({ start, end }) => occurrenceStart >= start && occurrenceStart <= end
+  );
+  if (occurrenceLineIndex === -1) return null;
+  let parentLineIndex = occurrenceLineIndex;
+  while (parentLineIndex >= 0 && !isBulletLine(currentLines[parentLineIndex])) {
+    if (
+      parentLineIndex < occurrenceLineIndex &&
+      (isBlankLine(currentLines[parentLineIndex]) ||
+        isClauseSectionHeading(currentLines[parentLineIndex]))
+    )
+      return null;
+    parentLineIndex -= 1;
+  }
+  const parentBullet = bulletLineMetadata(currentLines[parentLineIndex]);
+  if (!parentBullet) return null;
+
+  let firstChildBullet = null;
+  let currentEndLine = occurrenceLineIndex;
+  for (
+    let index = occurrenceLineIndex + 1;
+    index < currentLines.length;
+    index += 1
+  ) {
+    const line = currentLines[index];
+    if (
+      isBlankLine(line) ||
+      (firstChildBullet && isPageFurnitureLine(line)) ||
+      isClauseSectionHeading(line) ||
+      followingBoundaryLineStarts.has(line.start)
+    )
+      return null;
+    const bullet = bulletLineMetadata(line);
+    if (bullet) {
+      if (!firstChildBullet) {
+        const parentText = page.text.slice(
+          currentLines[parentLineIndex].start,
+          line.start
+        );
+        if (!isFirstSubordinateBullet(parentBullet, bullet, parentText))
+          return null;
+        firstChildBullet = bullet;
+      } else if (!isSubordinateBullet(parentBullet, firstChildBullet, bullet))
+        return null;
+    }
+    currentEndLine = index;
+  }
+  if (!firstChildBullet) return null;
+
+  const lines = buildLineRecords(nextPage.text);
+  let index = 0;
+  while (
+    index < lines.length &&
+    (isBlankLine(lines[index]) || isPageFurnitureLine(lines[index]))
+  )
+    index += 1;
+  if (index >= lines.length) return null;
+
+  const firstContinuationBullet = bulletLineMetadata(lines[index]);
+  if (
+    nextPage.structuralBoundaryLineStarts.has(lines[index].start) ||
+    isClauseSectionHeading(lines[index]) ||
+    !isSubordinateBullet(
+      parentBullet,
+      firstChildBullet,
+      firstContinuationBullet
+    )
+  )
+    return null;
+
+  const continuationStartLine = index;
+  let endLine = index;
+  let boundary = null;
+  for (index += 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (isBlankLine(line)) {
+      boundary = boundaryProof(nextPage, line, "BLANK_LINE");
+      break;
+    }
+    if (
+      isClauseSectionHeading(line) ||
+      nextPage.structuralBoundaryLineStarts.has(line.start)
+    ) {
+      boundary = boundaryProof(nextPage, line, "STRUCTURAL_HEADING");
+      break;
+    }
+    const bullet = bulletLineMetadata(line);
+    if (
+      bullet &&
+      !isSubordinateBullet(parentBullet, firstChildBullet, bullet)
+    ) {
+      boundary = boundaryProof(nextPage, line, "SIBLING_LIST_ITEM");
+      break;
+    }
+    endLine = index;
+  }
+  boundary ||= boundaryProof(nextPage, null, "PAGE_END");
+
+  const segments = [
+    sourceSegment(
+      page,
+      currentLines[parentLineIndex].start,
+      currentLines[currentEndLine].end,
+      "PARENT_WITH_SUBLIST"
+    ),
+    sourceSegment(
+      nextPage,
+      lines[continuationStartLine].start,
+      lines[endLine].end,
+      "CONTINUED_SUBLIST"
+    ),
+  ];
+  const documentStart = segments[0].documentStart;
+  const documentEnd = segments[1].documentEnd;
+  if (
+    documentEnd - documentStart > MAX_NESTED_LIST_CONTINUATION_PROOF_CHARS
+  )
+    return null;
+  const gapText = pageContent.slice(page.end, nextPage.start);
+  const gap = {
+    documentStart: page.end,
+    documentEnd: nextPage.start,
+    text: gapText,
+    sha256: crypto.createHash("sha256").update(gapText).digest("hex"),
+  };
+  const pagePrelude = sourceSegment(
+    nextPage,
+    0,
+    lines[continuationStartLine].start,
+    "PAGE_FURNITURE"
+  );
+  const digestPayload = {
+    contractId: NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
+    segments: segments.map(
+      ({ kind, physicalPageNumber, documentStart, documentEnd, sha256 }) => ({
+        kind,
+        physicalPageNumber,
+        documentStart,
+        documentEnd,
+        sha256,
+      })
+    ),
+    gapSha256: gap.sha256,
+    pagePreludeSha256: pagePrelude.sha256,
+    boundarySha256: boundary.sha256,
+  };
+  return {
+    contractId: NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
+    documentStart,
+    documentEnd,
+    segments,
+    gap,
+    pagePrelude,
+    boundary,
+    proofDigest: crypto
+      .createHash("sha256")
+      .update(JSON.stringify(digestPayload))
+      .digest("hex"),
+  };
 }
 
 function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
@@ -1820,6 +2087,23 @@ function validateCatalog(catalog) {
           "FOLLOWING_BOUNDARY_PROOF_CONTRACT_INVALID",
           `${id}:${componentId}:${followingStructuralBoundaryProofContractId}`
         );
+      const nestedListContinuationProofContractId =
+        component.nestedListContinuationProofContractId === undefined
+          ? null
+          : requireNonEmptyString(
+              component.nestedListContinuationProofContractId,
+              "NESTED_LIST_CONTINUATION_PROOF_CONTRACT_REQUIRED",
+              `${id}:${componentId}`
+            );
+      if (
+        nestedListContinuationProofContractId !== null &&
+        nestedListContinuationProofContractId !==
+          NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
+      )
+        throw worksheetError(
+          "NESTED_LIST_CONTINUATION_PROOF_CONTRACT_INVALID",
+          `${id}:${componentId}:${nestedListContinuationProofContractId}`
+        );
       const fieldGovernorPolicy =
         component.fieldGovernorPolicy === undefined
           ? null
@@ -1869,6 +2153,9 @@ function validateCatalog(catalog) {
         conceptSearches,
         ...(followingStructuralBoundaryProofContractId
           ? { followingStructuralBoundaryProofContractId }
+          : {}),
+        ...(nestedListContinuationProofContractId
+          ? { nestedListContinuationProofContractId }
           : {}),
         ...(fieldGovernorPolicy ? { fieldGovernorPolicy } : {}),
       };
@@ -2800,6 +3087,18 @@ function buildControlledOccurrenceWorksheet({
                     : sectionScopeHint.scopeKey === scopeKey
                 )
               : [];
+          const listContinuationProof =
+            component.nestedListContinuationProofContractId ===
+            NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
+              ? nestedListContinuationProof({
+                  pageContent,
+                  page,
+                  nextPage: pages[page.pageNumber] || null,
+                  occurrenceStart: range.originalStart,
+                  followingBoundaryLineStarts:
+                    page.structuralBoundaryLineStarts,
+                })
+              : null;
           occurrences.push({
             candidateId: candidateId({
               documentFingerprint: fingerprint,
@@ -2827,6 +3126,11 @@ function buildControlledOccurrenceWorksheet({
             documentStart,
             documentEnd,
             exactText: pageContent.slice(documentStart, documentEnd),
+            ...(listContinuationProof
+              ? {
+                  nestedListContinuationProof: listContinuationProof,
+                }
+              : {}),
             context: {
               unitType: evidenceContext.unitType,
               pageStart: evidenceContext.pageStart,
@@ -2873,6 +3177,12 @@ function buildControlledOccurrenceWorksheet({
           ? {
               followingStructuralBoundaryProofContractId:
                 component.followingStructuralBoundaryProofContractId,
+            }
+          : {}),
+        ...(component.nestedListContinuationProofContractId
+          ? {
+              nestedListContinuationProofContractId:
+                component.nestedListContinuationProofContractId,
             }
           : {}),
         ...(component.fieldGovernorPolicy
@@ -2981,6 +3291,7 @@ module.exports = {
   EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
   EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
   MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
+  NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
   WORKSHEET_SCHEMA_VERSION,
   buildControlledOccurrenceWorksheet,
   findAliasRanges,
