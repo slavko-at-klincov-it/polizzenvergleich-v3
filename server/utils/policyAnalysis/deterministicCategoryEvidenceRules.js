@@ -1440,9 +1440,16 @@ function deterministicCategoryCandidateBinding({
     ...explicitPageTitleScopeKeys(occurrence),
   ].filter(Boolean);
   const narrowAlias = matchedNarrowAlias(requirement, occurrence);
-  const narrowScopeKey = observedScopeKeys.find((scopeKey) =>
-    (requirement?.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
-  );
+  const observedNarrowScopeKeys = [
+    ...new Set(
+      observedScopeKeys.filter((scopeKey) =>
+        (requirement?.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
+      )
+    ),
+  ];
+  const narrowScopeKey =
+    observedNarrowScopeKeys.length === 1 ? observedNarrowScopeKeys[0] : null;
+  const ambiguousNarrowScope = observedNarrowScopeKeys.length > 1;
   const matchingScopeKey = observedScopeKeys.find((scopeKey) =>
     expectedScopeKeys.includes(scopeKey)
   );
@@ -1474,10 +1481,12 @@ function deterministicCategoryCandidateBinding({
   )
     return {
       binding:
-        narrowAlias || narrowScopeKey
+        narrowAlias || narrowScopeKey || ambiguousNarrowScope
           ? DETERMINISTIC_BINDING.NARROW_SCOPE
           : DETERMINISTIC_BINDING.DIRECT,
-      basis: `EXPLICIT_${operativePolarity}_OPERATIVE_COVERAGE_CLAUSE`,
+      basis: ambiguousNarrowScope
+        ? "AMBIGUOUS_NARROW_SECTION_SCOPE"
+        : `EXPLICIT_${operativePolarity}_OPERATIVE_COVERAGE_CLAUSE`,
       ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
       authoritative: true,
     };
@@ -1519,16 +1528,20 @@ function deterministicCategoryCandidateBinding({
   );
   return {
     binding:
-      narrowAlias || narrowScopeKey
+      narrowAlias || narrowScopeKey || ambiguousNarrowScope
         ? DETERMINISTIC_BINDING.NARROW_SCOPE
         : DETERMINISTIC_BINDING.DIRECT,
-    basis: narrowAlias
-      ? "EXPLICIT_NARROW_CLAUSE_SCOPE"
-      : narrowScopeKey
-        ? "EXPLICIT_NARROW_SECTION_SCOPE"
-        : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
+    basis: ambiguousNarrowScope
+      ? "AMBIGUOUS_NARROW_SECTION_SCOPE"
+      : narrowAlias
+        ? "EXPLICIT_NARROW_CLAUSE_SCOPE"
+        : narrowScopeKey
+          ? "EXPLICIT_NARROW_SECTION_SCOPE"
+          : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
     ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
-    ...(explicitVariantListClause || explicitCategoryListClause
+    ...(ambiguousNarrowScope ||
+    explicitVariantListClause ||
+    explicitCategoryListClause
       ? { authoritative: true }
       : {}),
   };

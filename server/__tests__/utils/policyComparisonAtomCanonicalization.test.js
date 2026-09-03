@@ -362,4 +362,45 @@ describe("comparison atom canonicalization", () => {
       }),
     ]);
   });
+
+  test("requires VS-24 narrow scope keys to match every selected source", () => {
+    const valid = rawAtom("vs24", {
+      requirementId: "VS-24",
+      componentId: "scaffolding_costs",
+      factRole: "COST",
+      coverageEffect: "INCLUDED",
+      selectedScopePicture: "NARROW_ONLY",
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      comparisonScopeKeys: ["GLASBRUCH_INSURANCE"],
+      sources: [
+        {
+          candidateId: "candidate-vs24",
+          candidateBinding: "NARROW_SCOPE",
+          comparisonScopeKey: "GLASBRUCH_INSURANCE",
+          physicalPageNumber: 3,
+          exactText: "Gerüstkosten",
+        },
+      ],
+    });
+
+    expect(completeRawComparisonAtom(valid)).toBe(true);
+    expect(
+      completeRawComparisonAtom({ ...valid, comparisonScopeKeys: [] })
+    ).toBe(false);
+    expect(
+      completeRawComparisonAtom({
+        ...valid,
+        comparisonScopeKeys: ["FEUER_INSURANCE"],
+      })
+    ).toBe(false);
+    expect(
+      completeRawComparisonAtom({
+        ...valid,
+        comparisonScopeKeys: [
+          "FEUER_INSURANCE",
+          "GLASBRUCH_INSURANCE",
+        ],
+      })
+    ).toBe(false);
+  });
 });

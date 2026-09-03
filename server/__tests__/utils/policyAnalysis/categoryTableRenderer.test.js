@@ -703,6 +703,35 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test("keeps VS-24 partial until one declared comparison scope is proven", () => {
+    const input = fixture({
+      id: "VS-24",
+      label: "Gerüstkosten im Schadenfall",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED],
+      selected: [true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    });
+    input.worksheet.requirements[0].scopeRules = {
+      narrowScopeKeys: ["FEUER_INSURANCE", "GLASBRUCH_INSURANCE"],
+    };
+    input.worksheet.requirements[0].components[0].factRole = "COST";
+    const [judgement] = input.materializedEvidence.judgements;
+    judgement.selectedScopePicture = "NARROW_ONLY";
+    judgement.comparisonScopeKeys = [];
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Nicht feststellbar",
+      reviewStatus: "TEILBELEGT",
+    });
+
+    judgement.comparisonScopeKeys = ["GLASBRUCH_INSURANCE"];
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Ja",
+      reviewStatus: "BELEGT",
+    });
+  });
+
   test("renders definitive included and excluded effects in an allowed host scope as complete mixed coverage", () => {
     const input = fixture({
       id: "EL-15",

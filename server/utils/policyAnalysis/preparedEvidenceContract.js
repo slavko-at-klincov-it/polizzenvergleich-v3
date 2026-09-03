@@ -453,6 +453,19 @@ function selectedScopePicture({ target, selectedCandidateIds }) {
   return "UNKNOWN";
 }
 
+function selectedComparisonScopeEvidence({ target, selectedCandidateIds }) {
+  const selected = new Set(selectedCandidateIds);
+  const comparisonScopeKeys = [
+    ...new Set(
+      target.candidates
+        .filter(({ candidateId }) => selected.has(candidateId))
+        .map(({ comparisonScopeKey }) => comparisonScopeKey)
+        .filter(Boolean)
+    ),
+  ].sort();
+  return comparisonScopeKeys.length > 0 ? { comparisonScopeKeys } : {};
+}
+
 /**
  * Converts an explicit deterministic category rule into the same immutable
  * evidence judgement shape used for validated model answers. Returning null
@@ -473,6 +486,10 @@ function buildDeterministicPreparedEvidenceJudgement(target) {
     coverageEffect: decision.coverageEffect,
     conflictState: CONFLICT_STATE.NONE,
     selectedScopePicture: selectedScopePicture({
+      target,
+      selectedCandidateIds: decision.selectedCandidateIds,
+    }),
+    ...selectedComparisonScopeEvidence({
       target,
       selectedCandidateIds: decision.selectedCandidateIds,
     }),
@@ -630,6 +647,10 @@ function parseAndValidatePreparedEvidenceResponse({
     coverageEffect: normalizedEffect.coverageEffect,
     conflictState: parsed.conflictState,
     selectedScopePicture: selectedScopePicture({
+      target,
+      selectedCandidateIds,
+    }),
+    ...selectedComparisonScopeEvidence({
       target,
       selectedCandidateIds,
     }),

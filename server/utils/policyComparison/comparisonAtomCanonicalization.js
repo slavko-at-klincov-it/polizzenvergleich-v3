@@ -183,6 +183,23 @@ function validComparisonScope(atom) {
   )
     return false;
   if (atom.selectedScopePicture !== "NARROW_ONLY") return true;
+  if (atom.requirementId === "VS-24") {
+    const scopeKeys = strings(atom.comparisonScopeKeys);
+    const selectedIds = new Set(atom.selectedCandidateIds || []);
+    const selectedSources = (atom.sources || []).filter(({ candidateId }) =>
+      selectedIds.has(candidateId)
+    );
+    if (
+      scopeKeys.length !== 1 ||
+      selectedSources.length === 0 ||
+      selectedSources.some(
+        ({ candidateBinding, comparisonScopeKey }) =>
+          candidateBinding !== "NARROW_SCOPE" ||
+          comparisonScopeKey !== scopeKeys[0]
+      )
+    )
+      return false;
+  }
   if (atom.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
     return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(atom.coverageEffect);
   if (atom.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT") return false;

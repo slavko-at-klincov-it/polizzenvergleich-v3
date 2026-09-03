@@ -534,6 +534,14 @@ function buildCategoryTableRows({
       const scopeComplete = rowJudgements.every((judgement) => {
         if ((judgement.unresolvedCandidateIds || []).length > 0) return false;
         if (judgement.selectedScopePicture !== "NARROW_ONLY") return true;
+        if (
+          normalized.id === "VS-24" &&
+          (judgement.comparisonScopeKeys?.length !== 1 ||
+            !requirement.scopeRules?.narrowScopeKeys?.includes(
+              judgement.comparisonScopeKeys[0]
+            ))
+        )
+          return false;
         if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
           return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(judgement.coverageEffect);
         if (requirement.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT")

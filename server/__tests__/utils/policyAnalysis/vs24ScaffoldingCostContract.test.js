@@ -87,6 +87,7 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     expect(requirement).toMatchObject({
       requestedFields: [],
       optionalFields: ["limit"],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       scopeRules: {
         narrowScopeKeys: expect.arrayContaining([
           "FEUER_INSURANCE",
@@ -235,5 +236,44 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
         expect.objectContaining({ comparisonScopeKey: "GLASBRUCH_INSURANCE" }),
       ])
     );
+  });
+
+  test("keeps multiple declared danger scopes ambiguous", () => {
+    const worksheet = worksheetFor(
+      "Glasbruchversicherung\nMitversichert sind Gerüstkosten."
+    );
+    const { requirement: selectedRequirement, component, occurrence } =
+      occurrenceFor(worksheet);
+    occurrence.sectionScopeHint.scopeKeys = [
+      "GLASBRUCH_INSURANCE",
+      "FEUER_INSURANCE",
+    ];
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: selectedRequirement,
+        component,
+        occurrence,
+      })
+    ).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "AMBIGUOUS_NARROW_SECTION_SCOPE",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.ACTIVE,
+      candidateTriage: selectedCandidates(worksheet).map((candidate) => ({
+        ...candidate,
+        binding: "NARROW_SCOPE",
+      })),
+    });
+    expect(target.candidates[0]).toMatchObject({
+      candidateBinding: "NARROW_SCOPE",
+      deterministicBindingBasis: "AMBIGUOUS_NARROW_SECTION_SCOPE",
+    });
+    expect(target.candidates[0]).not.toHaveProperty("comparisonScopeKey");
   });
 });

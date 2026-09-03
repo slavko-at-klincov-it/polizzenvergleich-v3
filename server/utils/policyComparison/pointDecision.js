@@ -157,12 +157,17 @@ function fieldSignature(fields) {
     );
 }
 
+function comparisonScopeKeys(atom) {
+  return [...new Set((atom?.comparisonScopeKeys || []).filter(Boolean))].sort();
+}
+
 function atomSignature(atom) {
   return JSON.stringify({
     componentId: atom.componentId,
     factRole: atom.factRole,
     coverageEffect: atom.coverageEffect,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: comparisonScopeKeys(atom),
     documentApplicability: atom.documentApplicability,
     operationalEventMode: operationalEventMode(atom),
     requestedFieldStatus: atom.requestedFieldStatus,
@@ -228,6 +233,7 @@ function comparisonKey(atom) {
     componentId: atom.componentId,
     factRole: atom.factRole,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: comparisonScopeKeys(atom),
     documentApplicability: atom.documentApplicability,
     operationalEventMode: operationalEventMode(atom),
     fields: fieldSignature(atom.fields).map(
@@ -257,6 +263,7 @@ function canonicalComparisonKey(atom) {
     componentId: atom.componentId,
     factRole: atom.factRole,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: comparisonScopeKeys(atom),
     scopePolicy: atom.scopePolicy,
     comparisonApplicability: atom.comparisonApplicability,
     operationalEventMode: atomEventMode(atom),
@@ -289,6 +296,7 @@ function auditSide(atom) {
     coverageEffect: atom.coverageEffect,
     documentApplicability: atom.documentApplicability,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: comparisonScopeKeys(atom),
     operationalEventMode: operationalEventMode(atom),
     values: fieldSignature(atom.fields).map(({ field, displayValue }) => ({
       field,
@@ -311,6 +319,7 @@ function canonicalAuditSide(atom) {
     comparisonApplicability: atom.comparisonApplicability,
     documentApplicability: atom.comparisonApplicability,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: comparisonScopeKeys(atom),
     scopePolicy: atom.scopePolicy,
     operationalEventMode: atomEventMode(atom),
     values: comparisonFieldSignature(atom).map(({ field, displayValue }) => ({
