@@ -491,10 +491,11 @@ function sideAssessment({
   )
     return null;
 
+  const atomProjection = projectedAtoms(relevant);
   const byComponent = Object.fromEntries(
     VS22_COMPONENTS.map(({ id }) => [
       id,
-      relevant.filter((atom) => atom.componentId === id),
+      atomProjection.filter((atom) => atom.componentId === id),
     ])
   );
   const includedDisposal = byComponent.disposal_costs.filter(
@@ -509,8 +510,6 @@ function sideAssessment({
     )
   )
     return null;
-  const atomProjection = projectedAtoms(relevant);
-
   if (mode === "INCLUDED") {
     const hazardousWaste = byComponent.hazardous_waste.filter(
       safeHazardousCoverageAtom

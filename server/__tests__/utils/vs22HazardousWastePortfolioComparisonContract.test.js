@@ -325,6 +325,34 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     ).toThrow("VS22_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
   });
 
+  test("canonicalizes proof arrays before replay-only validation", () => {
+    const canonicalInput = fixture();
+    const permutedInput = {
+      ...canonicalInput,
+      atomsB: [...canonicalInput.atomsB].reverse(),
+    };
+    const canonicalAudit =
+      buildVs22HazardousWastePortfolioAudit(canonicalInput);
+    const permutedAudit =
+      buildVs22HazardousWastePortfolioAudit(permutedInput);
+    const sourceAtomDigestReplay =
+      buildVs22SourceAtomDigestReplay(permutedInput);
+
+    expect(permutedAudit).toEqual(canonicalAudit);
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(permutedAudit, {
+        categoryId: permutedInput.categoryId,
+        packageA: permutedInput.packageA,
+        packageB: permutedInput.packageB,
+        requirementContractA: contract,
+        requirementContractB: contract,
+        expectedDocumentsA: permutedInput.expectedDocumentsA,
+        expectedDocumentsB: permutedInput.expectedDocumentsB,
+        sourceAtomDigestReplay,
+      })
+    ).not.toThrow();
+  });
+
   test("replays the customer result against the private row digest and strips it from the read view", () => {
     const input = fixture();
     const audit = buildVs22HazardousWastePortfolioAudit(input);
