@@ -762,8 +762,7 @@ function buildMembershipConditionScopeQualificationReplay({
   )
     return null;
   const contract = canonicalFeC02ComparisonContract();
-  const requirementContractDigest =
-    canonicalFeC02RequirementContractDigest();
+  const requirementContractDigest = canonicalFeC02RequirementContractDigest();
   const sides = {
     A: qualificationSideProjection({
       side: "A",

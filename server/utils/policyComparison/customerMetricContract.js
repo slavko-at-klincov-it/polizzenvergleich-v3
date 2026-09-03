@@ -749,26 +749,21 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       if (Number(result.schemaVersion) >= 13) {
         const isFeC02Row =
           row.categoryView === "FE" && row.categoryId === "FE-C02";
-        if (
-          row.membershipConditionScopeSourceAtomDigestReplay !== undefined
-        )
-          validationError(
-            "COMPARISON_FE_C02_LEGACY_SOURCE_REPLAY_UNEXPECTED",
-            [rowKey]
-          );
+        if (row.membershipConditionScopeSourceAtomDigestReplay !== undefined)
+          validationError("COMPARISON_FE_C02_LEGACY_SOURCE_REPLAY_UNEXPECTED", [
+            rowKey,
+          ]);
         if (!isFeC02Row && membershipConditionScopeQualificationReplayPresent)
-          validationError(
-            "COMPARISON_FE_C02_QUALIFICATION_REPLAY_ORPHANED",
-            [rowKey]
-          );
+          validationError("COMPARISON_FE_C02_QUALIFICATION_REPLAY_ORPHANED", [
+            rowKey,
+          ]);
         if (isFeC02Row) {
           if (!validDocumentManifest)
             validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
           if (!membershipConditionScopeQualificationReplayPresent)
-            validationError(
-              "COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED",
-              [rowKey]
-            );
+            validationError("COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED", [
+              rowKey,
+            ]);
           let reconstructedAudit;
           try {
             reconstructedAudit =
@@ -784,10 +779,10 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
                 ),
               });
           } catch (error) {
-            validationError(
-              "COMPARISON_FE_C02_QUALIFICATION_REPLAY_INVALID",
-              [rowKey, error.message]
-            );
+            validationError("COMPARISON_FE_C02_QUALIFICATION_REPLAY_INVALID", [
+              rowKey,
+              error.message,
+            ]);
           }
           if (reconstructedAudit) {
             const reconstructedDecision =
