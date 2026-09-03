@@ -2191,6 +2191,206 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.27 VS-18 – Einfriedungsfamilie: Recall verbessert, Hierarchie noch offen
+
+#### 10.27.1 Aktueller gebundener Ausgangslauf
+
+VS-18 wurde nach den VS-02- und atomlokalen Integritätskorrekturen auf dem
+aktuellen V46-Stand neu erzeugt:
+
+```text
+Commit: 3193f50c574f976431c22076726ce2deaf2a5972
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-18-BASELINE-3193F50C-20260903
+
+summarySha256:
+3d36a5d7b173c2307c549c22139a38f668ba787cf07dce206283e5568a8553a7
+
+selectionDigest:
+f46a40c499d8e6fb9cf326a32fa0380de5dc9db6ccf95156feaca41727e51070
+
+Paket A: TEILBELEGT
+Paket B: TEILBELEGT
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+```
+
+Der Katalog modellierte die Zeile als vier implizite `ALL`-Komponenten mit
+rein wörtlichen Aliasen:
+
+```text
+enclosures: Einfriedung(en)
+fences: Zaun/Zäune
+walls: Mauer(n)
+gates: Tor(e)
+```
+
+Das ist für die tatsächliche Vertragssprache zu eng. Reale Dokumente nutzen
+für dieselbe Objektfamilie auch `Grundstücksbegrenzungen`,
+`Grundstücksumzäunungen` und `Umzäunungen`.
+
+Die unabhängige Dokumentprüfung bestätigte:
+
+- Paket A, physische Seite 4: ausdrücklich zusätzlich mitversichert sind
+  `Grundstücksbegrenzungen sowie Begrenzungen und Umzäunungen ... wie Mauern,
+  Zäune`;
+- Paket B, GenVerbund, physische Seiten 9 bis 10: Versicherungsschutz für
+  künstliche und natürliche `Einfriedungen, Umzäunungen` sowie AW02-
+  Entschädigung für Einfriedungen;
+- Paket B, Angebot, physische Seite 13: `Als mitversichert gelten:
+  Einfriedungen, Außenanlagen gemäß Definition EABS`;
+- Paket B, EABS, physische Seite 2: Definition von Einfriedungen als Sicht-
+  oder Zutrittsschutz samt Schranken und Toren.
+
+Die EABS-Stelle ist allein nur eine Definition. Erst der explizit auf diese
+Definition verweisende Einschluss im Angebot kann den definierten Objektscope
+fachlich aktivieren. Der aktuelle Code besitzt diese paketweite Relation noch
+nicht.
+
+#### 10.27.2 Kleiner kontrollierter Recall-Schritt
+
+Commit `33314452` ergänzte nur die belegten Synonymfamilien:
+
+- `enclosures`: Grundstücksbegrenzung(en), Grundstücksumzäunung(en),
+  `Begrenzungen und Umzäunungen`;
+- `fences`: Umzäunung(en), Grundstücksumzäunung(en).
+
+Der VS-Katalog wurde auf `v0.12`, das Produktprofil zunächst auf V47
+angehoben. `Mauerwerk`, Gebäudeaußenmauer, Toröffnungsanlage und
+Betätigungselemente wurden bewusst nicht als Ersatzaliase aufgenommen. Diese
+Wörter bezeichnen andere Objekte oder nur technische Teilkomponenten.
+
+Die Katalogmigration erforderte außerdem die neuen, auf dem Mac Studio
+berechneten VS-08- und VS-15-Vertragsdigests. Diese sind in `e9bc2449` und
+`8dc032a5` getrennt gebunden; `8619e1f4` enthält nur Formatter-Ausgabe.
+
+Mac-Studio-Prüfung:
+
+```text
+Commit: 8dc032a59390a50f82691de60c3e398e698c8e35
+Format: bestanden
+Tests: 7 Suites / 142 Tests bestanden
+```
+
+Der isolierte reale Ziellauf bestätigte genau die erwartete Verbesserung:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-18-RECALL-8DC032A5-20260903
+
+summarySha256:
+ba8516691be81ee449cb0d8973d6808575c9a0914778a1f12a21c6f818f2550c
+
+selectionDigest:
+5bc5925fb699be95ff52275be2121ac521ef575ea191830f6f24bcdaf1217cdb
+
+Aufrufe: Triage 15 / Effects 4
+Server-Terminals: 32
+```
+
+Gegenüber dem Ausgangslauf wurden zwei falsche Nullkomponenten beseitigt:
+
+- Paket A `enclosures`: jetzt FOUND / INCLUDED;
+- Paket B `fences`: jetzt FOUND / INCLUDED.
+
+VS-18 blieb erwartungsgemäß `TEILBELEGT / TEILBELEGT`, `UNKLAR`, Review ja.
+
+#### 10.27.3 Eindeutige paketweite Fehlerdiagnose
+
+Der Ziellauf zeigte außerdem, dass eine tatsächlich paketweit fehlende
+Komponente einmal pro Dokument als eigener Blocker ausgegeben wurde. Das
+verfälschte zwar nicht die Zahl der Kundenreview-Zeilen, blähte aber die
+interne Ursachenliste auf. Commit `162f08b5` konsolidiert einen
+`MISSING_REQUIRED_COMPONENT`-Blocker deshalb einmal pro Paket und Komponente,
+fasst alle betroffenen Dokument-UUIDs darin zusammen und unterdrückt ihn,
+solange dieselbe Komponente einen ungelösten Kandidaten besitzt. Commit
+`e91f2723` enthält nur die Mac-Studio-Formatierung. Produktprofil: V48.
+
+Mac-Studio-Prüfung:
+
+```text
+Commit: e91f2723c791a9d72e08abda1a46b4b4587d91bc
+Pfad: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Format: bestanden
+Tests: 5 Suites / 163 Tests bestanden
+```
+
+Finaler Diagnoselauf dieser Stufe:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-18-DIAGNOSTIC-E91F2723-20260903
+
+summarySha256:
+f7847aefb0cdd7ef53d718937d3ec3a614ff553402e3a1d505a5497173a15ad3
+
+selectionDigest:
+5bc5925fb699be95ff52275be2121ac521ef575ea191830f6f24bcdaf1217cdb
+
+Paket A: TEILBELEGT
+Paket B: TEILBELEGT
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Verbleibende eindeutige Blocker:
+- A: gates fehlt;
+- B: walls fehlt;
+- B: enclosures ist in EABS zusätzlich nur DEFINED;
+- B: gates ist in EABS nur DEFINED;
+- B: mehrere unterschiedliche enclosures-Atome.
+```
+
+Die drei alten B-`walls`-Blocker wurden korrekt zu einem Blocker mit drei
+Dokument-UUIDs zusammengeführt. Damit beschreibt die Diagnose jetzt fünf
+verschiedene fachliche Ursachen statt sieben Einträge mit Duplikaten.
+
+#### 10.27.4 Noch nicht sicher freigegebener Folgeschritt
+
+Ein pauschales `componentSatisfactionPolicy: ANY` wurde ausdrücklich
+verworfen. Sonst könnte ein enger Tor-, Feuer- oder Einbruchbeleg die gesamte
+Einfriedungszeile erfüllen.
+
+Für den fachlich erwarteten Deckungsvergleich braucht es stattdessen einen
+versionierten Hierarchie- und Definitionsvertrag:
+
+```text
+Einfriedung / Grundstücksbegrenzung
+  -> Zaun / Umzäunung
+  -> Einfriedungsmauer
+  -> Tor / Schranke
+```
+
+Die Oberklasse darf Untertypen nur dann erfüllen, wenn eine breite positive
+Deckung und entweder ein offener Beispielmarker oder eine ausdrücklich
+referenzierte Definition den Umfang quellengebunden beweisen. Ein einzelner
+Untertyp darf nie rückwärts die gesamte Oberklasse erfüllen. `DEFINED` darf
+erst gemeinsam mit dem darauf verweisenden `INCLUDED`-Fakt wirksam werden.
+
+Bis dieser Paketvertrag implementiert und mit positiven, negativen,
+adversarialen und Scope-Varianten geprüft ist, bleibt VS-18 offen. Der
+R69-A-Stand bleibt `5/40`; ein Vollrun und ein Deployment wurden nicht
+durchgeführt.
+
+Betroffene produktive Grenzen:
+
+```text
+Katalog/Aliase:
+server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json:468-515
+
+Occurrence-Suche:
+server/utils/policyAnalysis/controlledOccurrenceWorksheet.js:2359-2381
+
+Technische Teilkomponenten-Abwehr:
+server/utils/policyAnalysis/deterministicCategoryEvidenceRules.js:351-366
+
+Atommaterialisierung/Paketaggregation:
+server/utils/policyComparison/resultBuilder.js
+
+Paketblocker:
+server/utils/policyComparison/packageReviewAudit.js:155-370
+
+Entscheidungsregeln:
+server/utils/policyComparison/pointDecision.js
+```
+
 ### 10.26 VS-02 – variable Zeitwertschwellen gefunden, echter Vertragsrang bleibt offen
 
 #### 10.26.1 Ausgangsfehler
