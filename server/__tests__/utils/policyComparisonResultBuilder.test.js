@@ -2446,9 +2446,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V95_FE_C02_ORDERED_MEMBERSHIP_CONDITIONS",
+      id: "CUSTOMER_CORE_5_V96_FE_C02_COVERAGE_CONDITION_FORMULA",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_ORDERED_MEMBERSHIP_CONDITIONS_V56",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_COVERAGE_CONDITION_FORMULA_V57",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -3780,5 +3780,152 @@ describe("policy comparison result builder", () => {
     expect(() => materialize(worksheet, mismatchedArtifact)).toThrow(
       "OBJECT_MEMBERSHIP_SUPPORT_DOCUMENT_ARTIFACT_INVALID"
     );
+  });
+
+  test("materializes only generally scoped FE-C02 condition-formula targets", () => {
+    const prerequisite =
+      "Versicherungsschutz gemäß der nachstehend angeführten Leistungsinformation besteht unter der Voraussetzung, dass diese Sparten versichert werden und die versicherten Sachen sich im Eigentum des Versicherungsnehmers und / oder Gebäudeeigentümers befinden und / oder dieser vertraglich für die Wiederbeschaffung / Wiederherstellung aufzukommen hat.";
+    const generalGovernor = "Versichert sind";
+    const generalTarget = "Solar- und Fotovoltaikanlagen";
+    const narrowGovernor =
+      "Zusätzlich versichert sind Schäden durch Überspannung oder Induktion infolge Blitzschlag";
+    const narrowTarget = "Solar- und Fotovoltaikanlagen";
+    const pageContent = [
+      prerequisite,
+      "",
+      generalGovernor,
+      `- ${generalTarget};`,
+      "",
+      narrowGovernor,
+      `- ${narrowTarget};`,
+    ].join("\n");
+    const fingerprint = crypto
+      .createHash("sha256")
+      .update(pageContent)
+      .digest("hex");
+    const documentArtifact = {
+      schemaVersion: 1,
+      fingerprint,
+      document: {
+        sourceDocumentId: fingerprint,
+        title: "Source-bound FE-C02 condition formula fixture",
+        pageContent,
+        pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
+      },
+    };
+    const feC02Catalog = {
+      ...feFullCatalog,
+      requirements: [
+        feFullCatalog.requirements.find(({ id }) => id === "FE-C02"),
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentArtifact.document,
+      documentFingerprint: fingerprint,
+      catalog: feC02Catalog,
+    });
+    const generalGovernorStart = pageContent.indexOf(generalGovernor);
+    const generalTargetStart = pageContent.indexOf(generalTarget);
+    const narrowGovernorStart = pageContent.indexOf(narrowGovernor);
+    const narrowTargetStart = pageContent.lastIndexOf(narrowTarget);
+    const candidate = ({
+      candidateId,
+      exactText,
+      documentStart,
+      governorText,
+      governorStart,
+    }) => ({
+      candidateId,
+      physicalPageNumber: 1,
+      exactText,
+      documentStart,
+      documentEnd: documentStart + exactText.length,
+      coverageGovernorHint: {
+        physicalPageNumber: 1,
+        pageStart: governorStart,
+        pageEnd: governorStart + governorText.length,
+        text: governorText,
+      },
+    });
+    const candidates = [
+      candidate({
+        candidateId: "candidate:fe-c02:general",
+        exactText: generalTarget,
+        documentStart: generalTargetStart,
+        governorText: generalGovernor,
+        governorStart: generalGovernorStart,
+      }),
+      candidate({
+        candidateId: "candidate:fe-c02:narrow-lightning",
+        exactText: narrowTarget,
+        documentStart: narrowTargetStart,
+        governorText: narrowGovernor,
+        governorStart: narrowGovernorStart,
+      }),
+    ];
+    const [atom] = materializeAtomicFacts({
+      document: {
+        uuid: "document-fe-c02-condition-formula",
+        role: "TERMS",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+      worksheet,
+      materializedEvidence: {
+        judgements: [
+          {
+            targetId: "target:fe-c02",
+            requirementId: "FE-C02",
+            componentId: "photovoltaic_as_damaged_object",
+            evidencePresence: "FOUND",
+            coverageEffect: "INCLUDED",
+            conflictState: "NONE",
+            selectedScopePicture: "GENERAL",
+            documentApplicability: "CONDITIONAL",
+            selectedCandidateIds: candidates.map(({ candidateId }) =>
+              candidateId
+            ),
+            unresolvedCandidateIds: [],
+          },
+        ],
+      },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "FE-C02",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
+        ],
+      },
+      targets: [{ targetId: "target:fe-c02", candidates }],
+      documentArtifact,
+      report: null,
+    });
+
+    expect(atom.supportingCoverageConditionFormulaProofs).toHaveLength(1);
+    expect(atom.supportingCoverageConditionFormulaProofs[0]).toMatchObject({
+      formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
+      satisfaction: "NOT_EVALUATED",
+      readyForDecision: false,
+      targets: [
+        {
+          candidateId: "candidate:fe-c02:general",
+          exactText: generalTarget,
+          coverageGovernorSpan: { exactText: generalGovernor },
+        },
+      ],
+    });
+    expect(
+      atom.supportingCoverageConditionFormulaProofs[0].targets.map(
+        ({ candidateId }) => candidateId
+      )
+    ).not.toContain("candidate:fe-c02:narrow-lightning");
   });
 });

@@ -74,6 +74,13 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
               requirement.supportingObjectMembershipEvidenceContracts,
           }
         : {}),
+      ...(requirement?.supportingCoverageConditionFormulaEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingCoverageConditionFormulaEvidenceContracts:
+              requirement.supportingCoverageConditionFormulaEvidenceContracts,
+          }
+        : {}),
       ...(requirement?.supportingScopedPackageReferenceEvidenceContracts
         ?.length > 0
         ? {

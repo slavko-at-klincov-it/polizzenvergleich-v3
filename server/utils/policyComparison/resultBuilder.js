@@ -48,6 +48,9 @@ const {
   buildSourceBoundReferencedTermsIdentityProofs,
 } = require("../policyAnalysis/referencedTermsIdentityEvidenceContract");
 const {
+  buildSourceBoundCoverageConditionFormulaProof,
+} = require("../policyAnalysis/coverageConditionFormulaEvidenceContract");
+const {
   buildSupportingObjectMembershipProofsFromArtifact,
 } = require("../policyAnalysis/controlledOccurrenceWorksheet");
 const {
@@ -1366,6 +1369,21 @@ function materializeAtomicFacts({
       }
     }
     const target = targetsById.get(judgement.targetId);
+    const selectedTargetCandidates = (target?.candidates || []).filter(
+      ({ candidateId }) => selectedSet.has(candidateId)
+    );
+    const supportingCoverageConditionFormulaProofs = (
+      requirement?.supportingCoverageConditionFormulaEvidenceContracts || []
+    )
+      .map((contract) =>
+        buildSourceBoundCoverageConditionFormulaProof({
+          contract,
+          documentArtifact,
+          targetCandidates: selectedTargetCandidates,
+        })
+      )
+      .filter(Boolean)
+      .sort((left, right) => left.proofDigest.localeCompare(right.proofDigest));
     const supportingObjectMembershipProofs = (() => {
       const contracts =
         requirement?.supportingObjectMembershipEvidenceContracts || [];
@@ -1428,8 +1446,7 @@ function materializeAtomicFacts({
         throw new Error("REFERENCED_TERMS_IDENTITY_PROOF_REPLAY_INVALID");
       return JSON.parse(JSON.stringify(actual));
     })();
-    const sources = (target?.candidates || [])
-      .filter(({ candidateId }) => selectedSet.has(candidateId))
+    const sources = selectedTargetCandidates
       .map((candidate) => {
         const {
           candidateId,
@@ -1491,6 +1508,14 @@ function materializeAtomicFacts({
             supportingObjectMembershipEvidenceContracts:
               requirement.supportingObjectMembershipEvidenceContracts,
             supportingObjectMembershipProofs,
+          }
+        : {}),
+      ...(requirement?.supportingCoverageConditionFormulaEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingCoverageConditionFormulaEvidenceContracts:
+              requirement.supportingCoverageConditionFormulaEvidenceContracts,
+            supportingCoverageConditionFormulaProofs,
           }
         : {}),
       ...(requirement?.supportingScopedPackageReferenceEvidenceContracts

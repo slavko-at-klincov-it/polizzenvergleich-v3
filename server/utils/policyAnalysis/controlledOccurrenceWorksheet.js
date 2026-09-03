@@ -25,6 +25,9 @@ const {
 const {
   validatePackageActivatedObjectMembershipAuditContract,
 } = require("./packageActivatedObjectMembershipAuditContract");
+const {
+  validateCoverageConditionFormulaContract,
+} = require("./coverageConditionFormulaEvidenceContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2342,6 +2345,26 @@ function validateCatalog(catalog) {
         requirement.supportingObjectMembershipEvidenceContracts,
         `${id}:supportingObjectMembershipEvidenceContracts`
       );
+    const supportingCoverageConditionFormulaEvidenceContracts = Array.isArray(
+      requirement.supportingCoverageConditionFormulaEvidenceContracts
+    )
+      ? requirement.supportingCoverageConditionFormulaEvidenceContracts.map(
+          (contract, index) =>
+            validateCoverageConditionFormulaContract(
+              contract,
+              `${id}:supportingCoverageConditionFormulaEvidenceContracts[${index}]`
+            )
+        )
+      : [];
+    if (
+      requirement.supportingCoverageConditionFormulaEvidenceContracts !==
+        undefined &&
+      supportingCoverageConditionFormulaEvidenceContracts.length === 0
+    )
+      throw worksheetError(
+        "COVERAGE_CONDITION_FORMULA_CONTRACTS_INVALID",
+        id
+      );
     const supportingScopedPackageReferenceEvidenceContracts = Array.isArray(
       requirement.supportingScopedPackageReferenceEvidenceContracts
     )
@@ -2617,6 +2640,9 @@ function validateCatalog(catalog) {
       ...(componentFamilyContract ? { componentFamilyContract } : {}),
       ...(supportingObjectMembershipEvidenceContracts.length > 0
         ? { supportingObjectMembershipEvidenceContracts }
+        : {}),
+      ...(supportingCoverageConditionFormulaEvidenceContracts.length > 0
+        ? { supportingCoverageConditionFormulaEvidenceContracts }
         : {}),
       ...(supportingScopedPackageReferenceEvidenceContracts.length > 0
         ? { supportingScopedPackageReferenceEvidenceContracts }
@@ -3584,6 +3610,13 @@ function buildControlledOccurrenceWorksheet({
             supportingObjectMembershipEvidenceContracts:
               requirement.supportingObjectMembershipEvidenceContracts,
             supportingObjectMembershipProofs,
+          }
+        : {}),
+      ...(requirement.supportingCoverageConditionFormulaEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingCoverageConditionFormulaEvidenceContracts:
+              requirement.supportingCoverageConditionFormulaEvidenceContracts,
           }
         : {}),
       ...(requirement.supportingScopedPackageReferenceEvidenceContracts

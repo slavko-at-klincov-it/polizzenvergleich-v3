@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.19",
+  "catalogId": "fe-occurrence-full-draft-v0.20",
   "categoryView": "FE",
   "requirements": [
     {
@@ -767,6 +767,100 @@
       "id": "FE-C02",
       "label": "Photovoltaikanlage als vom Brand betroffene Sache mitversichert",
       "requestedFields": [],
+      "supportingCoverageConditionFormulaEvidenceContracts": [
+        {
+          "contractId": "SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_V1",
+          "formulaKey": "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
+          "sourcePolicy": "GLOBAL_GOVERNOR_BEFORE_TARGETS_V1",
+          "targetScopePolicy": "GENERAL_DIRECT_TARGET_V1",
+          "targetCoverageGovernorAliases": [
+            "Versichert sind",
+            "Als versichert gelten"
+          ],
+          "governorRequiredGroups": [
+            ["Versicherungsschutz", "Deckungsschutz"],
+            [
+              "Leistungsinformation",
+              "nachstehende Leistungen",
+              "nachstehenden Leistungen"
+            ],
+            ["Voraussetzung", "Voraussetzungen"]
+          ],
+          "formula": {
+            "kind": "OPERATOR",
+            "operator": "AND",
+            "operatorAliases": ["und"],
+            "operands": [
+              {
+                "kind": "PREDICATE",
+                "predicateKey": "SECTION_INSURED",
+                "actorBinding": null,
+                "actorCombination": null,
+                "forbiddenAliases": [
+                  "nicht versichert",
+                  "nicht vereinbart"
+                ],
+                "requiredGroups": [
+                  ["Sparten", "Versicherungssparten"],
+                  [
+                    "versichert werden",
+                    "vereinbart sind",
+                    "sind vereinbart"
+                  ]
+                ]
+              },
+              {
+                "kind": "OPERATOR",
+                "operator": "OR",
+                "operatorAliases": ["und / oder", "oder"],
+                "operands": [
+                  {
+                    "kind": "PREDICATE",
+                    "predicateKey": "OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER",
+                    "actorBinding": "POLICYHOLDER_OR_BUILDING_OWNER",
+                    "actorCombination": {
+                      "operator": "OR",
+                      "operatorAliases": ["und / oder", "oder"],
+                      "leftGroupIndex": 2,
+                      "rightGroupIndex": 3
+                    },
+                    "forbiddenAliases": [
+                      "nicht im Eigentum",
+                      "kein Eigentum"
+                    ],
+                    "requiredGroups": [
+                      ["versicherten Sachen", "versicherte Sachen"],
+                      ["Eigentum"],
+                      ["Versicherungsnehmers", "Versicherungsnehmer"],
+                      ["Gebäudeeigentümers", "Gebäudeeigentümer"],
+                      ["befinden", "stehen"]
+                    ]
+                  },
+                  {
+                    "kind": "PREDICATE",
+                    "predicateKey": "ANAPHORIC_CONTRACTUAL_REPLACEMENT_OR_REINSTATEMENT_OBLIGATION",
+                    "actorBinding": "ANAPHORIC_TO_PRECEDING_OWNER_GROUP",
+                    "actorCombination": null,
+                    "forbiddenAliases": [
+                      "nicht aufzukommen",
+                      "keine Verpflichtung"
+                    ],
+                    "requiredGroups": [
+                      ["dieser"],
+                      ["vertraglich"],
+                      [
+                        "Wiederbeschaffung / Wiederherstellung",
+                        "Wiederbeschaffung oder Wiederherstellung"
+                      ],
+                      ["aufzukommen hat", "aufkommen muss"]
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
       "supportingObjectMembershipEvidenceContracts": [
         {
           "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5",
