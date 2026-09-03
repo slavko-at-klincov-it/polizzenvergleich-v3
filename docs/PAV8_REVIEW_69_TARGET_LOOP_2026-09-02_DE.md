@@ -2287,6 +2287,69 @@ Spanidentität vollständig validiert sind. Eine feldlose Summenausgleichs-
 klausel darf dadurch nicht still mit einem fremden Limit vervollständigt
 werden.
 
+#### 10.28.3 Fix 2 – Feldprojektion innerhalb validierter Binding Groups
+
+Die Analyse deckte eine zuvor im sichtbaren Zeilenstatus verborgene
+Atomlücke auf: Der gemeinsame Limitspan einer koordinierten Phrase wurde nur
+dem Kandidaten `cleanup_costs`, nicht dem zweiten ausgewählten Kandidaten
+`demolition_costs` derselben Binding Group zugeordnet. Das betraf sowohl die
+LF-Prozentwerte als auch die vier gefahrenspezifischen WEVIG-Geldbeträge.
+
+Der neue generische Vertrag
+`DECLARED_BINDING_GROUP_FIELD_APPLICABILITY_V1` erhält die ursprüngliche
+Feldquelle und Candidate-ID. Er projiziert das Feld nur auf ein ausgewähltes
+Schwestermitglied, wenn Requirement, deklarierte Gruppe, Gruppentyp,
+`SAME_CANDIDATE_BINDING`, Komponente, physische Seite und der gemeinsame
+Kontextbereich vollständig übereinstimmen und der exakte Feldspan innerhalb
+jedes beteiligten Kontextes liegt. Andere Requirements, Komponenten, Seiten,
+unselektierte Kandidaten und außerhalb liegende Zahlen werden abgewiesen.
+
+```text
+Fachcommit: f086146aebe6c91a7d1dbe74b4b4eab65e1f1f9d
+Format-Forward-Fix: d5a74814d7c94204139116fa005d5f36b2909b0a
+Produktprofil: CUSTOMER_CORE_5_V51_BINDING_GROUP_FIELDS
+Vergleichsvertrag: ...VS21_COST_ROLE_BINDING_GROUP_FIELDS_V12
+Mac-Studio-Formatprüfung: PASS
+Mac-Studio-Suites: 8/8 PASS
+Mac-Studio-Tests: 335/335 PASS
+```
+
+Der erneute vollständige VS-21-Ziellauf auf allen zehn Kundendokumenten
+belegt:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-21-BINDING-FIELDS-D5A74814-20260903
+Summary-Digest:
+df0e21b30408d611970ff0265a01e5fbb47811c4bb1d6d1b563fd0d8ee165aa0
+Target-Selection-Digest:
+52367916ba9973a34f26d4e91098bada32b74aace24516347bad0188ec4f9a4b
+Triage-Qwen-Aufrufe: 5
+Evidence-Qwen-Aufrufe: 5
+```
+
+Atomarer Vorher-/Nachher-Nachweis:
+
+```text
+Paket A, LF:
+cleanup_costs    COMPLETE: 10 %, 15 %
+demolition_costs NOT_FOUND -> COMPLETE: 10 %, 15 %
+
+Paket B, Vorschlag:
+cleanup_costs    COMPLETE: viermal EUR 6.121.600,00 je Gefahr
+demolition_costs NOT_FOUND -> COMPLETE: viermal EUR 6.121.600,00 je Gefahr
+
+Paket B, EABS-Summengemeinschaft:
+cleanup_costs    NOT_FOUND, unverändert
+demolition_costs NOT_FOUND, unverändert
+```
+
+Der verbleibende Kundenblocker ist weiterhin ausschließlich
+`FIELD_INCOMPLETE` für die EABS-Summengemeinschaft. Der Fix hat dieser Klausel
+kein fremdes Limit zugeschrieben. Das sichtbare Ergebnis bleibt deshalb
+vorerst `UNKLAR / Review`; R69-A und die Gesamtprojektion ändern sich in
+diesem Zwischenschritt nicht.
+
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
