@@ -3075,3 +3075,119 @@ implementiert und getrennt dokumentiert wurden.
 False-Positive-Rate, LF-/WEVIG-Nichtregression, unbekannte Versicherer,
 Mac-Studio-Betrieb, fachliche Freigabe oder das 99-Prozent-Ziel. Die Registry
 bleibt bis zur vollständigen Gate-Ausführung leer.
+
+## 53. LF-IMMO-Referenzschema und gerichteter 1-gegen-9-Gegenstückpilot
+
+**Versuch:** 4. September 2026
+
+**Codecommit:** `e6c6cd4de0aea697186b6dc84c05b5f9595785a9`
+
+**Abnahmeort:** isolierter Mac-Studio-Checkout
+`/Users/michaelmischkot/Code/validation-worktrees/lf-reference-e6c6cd4d`
+
+Der Nutzer wollte zusätzlich zur allgemeinen Geiss-/Fachansicht eine am
+Kundenprodukt orientierte Lesart prüfen: LF IMMO steht auf Seite A als
+Referenz; in den neun Dokumenten von Paket B wird das jeweilige fachliche
+Gegenstück gesucht. Der Versuch wurde absichtlich als QA-only-View umgesetzt.
+Er ändert weder das produktive Fünf-Kategorien-Profil noch atomare
+Faktenidentitäten oder Entscheidungsregeln.
+
+Die tatsächlich im Zehn-Dokumente-Run verwendete LF-Datei hat 31 physische
+Seiten und den SHA-256
+`2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62`.
+Ein älteres Strukturartefakt mit 40 Seiten gehört damit nicht zur identischen
+Run-Eingabe und wurde nicht als Quellenvertrag verwendet. Alle 35
+Referenzpunkte wurden stattdessen an einen exakten Textanker auf einer der 31
+physischen Seiten gebunden.
+
+Das LF-Schema v0.1 umfasst zehn Referenzansichten:
+
+| ID      | LF-orientierte Ansicht                                      | Punkte |
+| ------- | ------------------------------------------------------------ | -----: |
+| `LF-PR` | Produktgrundlage und Geltungsvoraussetzungen                  |      2 |
+| `LF-VS` | Versicherte Gebäude, Sachen und Grundstücksbestandteile      |      4 |
+| `LF-KO` | Spartenübergreifende Kosten und Ertragsausfälle              |      3 |
+| `LF-FE` | Feuerversicherung                                             |      4 |
+| `LF-ST` | Sturm und Elementargefahren                                   |      4 |
+| `LF-LW` | Leitungswasser und Deckungsvarianten                          |      5 |
+| `LF-GL` | Glasbruch                                                     |      3 |
+| `LF-HP` | Gebäude- und Grundstückshaftpflicht                           |      3 |
+| `LF-OK` | Ökoschutz, zeitliche und örtliche Geltung                     |      2 |
+| `LF-AV` | Allgemeine Entschädigungs- und Vertragsbestimmungen           |      5 |
+
+Der Runner zerlegte die neun B-Dokumente in 228 seitengebundene Fenster,
+verwendete `text-embedding-dinghy-law-4b-v1` zur Kandidatensuche und
+`qwen/qwen3.6-35b-a3b` zur begrenzten Gegenstückklassifikation. Zulässige
+Stati waren `DIRECT_COUNTERPART`, `PARTIAL_COUNTERPART`, `RELATED_ONLY`,
+`NO_COUNTERPART_IN_CANDIDATES` und `UNCLEAR`. Quellen-IDs waren
+servervorgegeben; ein Match ohne Quelle oder eine erfundene ID ließ den Lauf
+fail-closed abbrechen. Der erste Lauf deckte dadurch einen strukturellen
+Modellwiderspruch auf und speicherte kein Ergebnis. Nach einer expliziten
+Korrekturrunde im Promptvertrag bestand der zweite Lauf ohne Retry.
+
+```text
+Run: LF-REFERENCE-E6C6CD4D-20260903T230549Z
+Dokumente: 1 auf A / 9 auf B
+LF-Referenzpunkte: 35
+B-Kandidatenfenster: 228
+ausgewählte B-Zitate: 58
+Embeddingzeit: 141,831 s
+Chatzeit: 364,440 s
+Prompt-/Completiontoken: 92.588 / 5.430
+Rohstatus: 16 DIRECT / 14 PARTIAL / 0 RELATED / 5 NO_COUNTERPART / 0 UNCLEAR
+```
+
+Die Statussummen sind Modellrohdaten und keine fachliche Trefferquote. Eine
+unabhängige Stichprobe fand sofort mindestens vier Qualitätsprobleme:
+
+1. `LF-VS-02` wurde als `NO_COUNTERPART_IN_CANDIDATES` ausgegeben, obwohl die
+   WEVIG-Musterberechnung auf den physischen Seiten 2, 3 und 4
+   `Gemeinschaftlich genutzte Nebengebäude ... auf Erstes Risiko` nennt. Das
+   ist ein bestätigter Retrieval-Miss; Limit und Gewächshausfrage wären danach
+   getrennt als Komponenten zu prüfen.
+2. `LF-GL-01` blieb `PARTIAL_COUNTERPART`, obwohl WEVIG Seite 5 ausdrücklich
+   `Einzelscheiben bis m²: 10` enthält. Der relevante Produktbeleg erreichte
+   die Top-5-Kandidaten nicht.
+3. `LF-HP-03` wurde als `DIRECT_COUNTERPART` bezeichnet, obwohl die Begründung
+   den verlangten Selbstbehalt unzulässig aus einer Summenbegrenzung
+   ableitete. Ein Limit ist kein Selbstbehalt; ohne gebundenen
+   Selbstbehaltsbeleg ist höchstens `PARTIAL_COUNTERPART` gerechtfertigt.
+4. `LF-GL-03` wurde als vollständig direkt bezeichnet, die ausgewählten
+   Quellen und die Begründung decken aber Bewachung nicht ab. Ein allgemeiner
+   Bewachungsbeleg an anderer Stelle darf nicht nachträglich als ausgewählte
+   Glasquelle unterstellt werden.
+
+**Ergebnis:** Die LF-orientierte A-nach-B-Darstellung ist als zusätzliche
+kundennähere Navigation sinnvoll. Das Schema selbst lässt sich sauber an das
+Referenzprodukt binden, und viele einfache Gegenstücke wurden plausibel über
+mehrere B-Dokumente gefunden. Der aktuelle Top-5-Retrieval- plus freie
+Kategorieklassifikationsschritt ist jedoch nicht ausreichend, um vollständige
+oder fachlich verlässliche Gegenstückaussagen zu liefern. Der Versuch bestätigt
+erneut `INV-003` und `FAIL-005`: global begrenzte Kandidaten dürfen keinen
+paketweiten Negativbefund begründen.
+
+Für eine nächste Version muss jeder LF-Punkt in verpflichtende Komponenten
+wie Objekt, Gefahr, Faktrolle, Bedingung, Limit, Selbstbehalt und Ausschluss
+zerlegt werden. Jede Komponente benötigt eine paketweite kontrollierte Suche,
+und `DIRECT_COUNTERPART` darf nur aus vollständig belegten
+Komponentenverträgen abgeleitet werden. Zusätzlich bleibt ein separater
+B-only-Entdeckungslauf nötig, weil eine LF-gesteuerte Sicht Besonderheiten des
+Gegenpakets systematisch nicht sieht.
+
+Private Ergebnisartefakte auf dem Mac Studio:
+
+```text
+/Users/michaelmischkot/Polizzenvergleich-QA/LF-REFERENCE-E6C6CD4D-20260904/lf-reference-counterpart.private.json
+SHA-256 8105b47d3e721bce39dc94aa65dcf3beb37ea99ecac020d3638da76091899fae
+
+/Users/michaelmischkot/Polizzenvergleich-QA/LF-REFERENCE-E6C6CD4D-20260904/lf-reference-counterpart.md
+SHA-256 8aa4815131a459b103dba2023af0991ebacffb9ecb7bd52e275254933acaeebe
+```
+
+**Beweist:** Die exakte 31-Seiten-/SHA-Bindung, das QA-only-Schema, der
+gerichtete 1-gegen-9-Datenfluss, die servervorgegebenen Quellen-IDs und die
+Fail-Closed-Ausgabeverträge funktionieren für diesen bekannten Lauf.
+
+**Beweist nicht:** fachliche Richtigkeit der 35 Rohstatus, vollständigen
+Paket-Recall, korrekte Werte- und Rollenbindung, LF-Vollständigkeit,
+Besonderheiten nur auf B, unbekannte Versicherer oder das 99-Prozent-Ziel.

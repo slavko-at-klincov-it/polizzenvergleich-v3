@@ -1,6 +1,6 @@
 # Polizzenvergleich – KB-Index und Arbeitsmatrix
 
-Stand: 31. August 2026
+Stand: 4. September 2026
 
 Dieser Index ist der kurze Einstieg vor jeder projektbezogenen Antwort,
 Diagnose, Planung oder Änderung. Er ersetzt weder Quellcode und Tests noch die
@@ -53,6 +53,12 @@ Ein Dokumentheader ist keine Garantie, dass die gesamte Datei nur denselben
 Stand beschreibt. Neuere datierte Evidenz darf ältere Annahmen widerlegen,
 muss aber ausdrücklich als Release-, Entwicklungs- oder Versuchsaussage
 gekennzeichnet werden.
+
+Jüngster QA-Nachtrag: Das LF-IMMO-Referenzschema und der gerichtete
+1-gegen-9-Gegenstückpilot sind als begrenzte Versuchsevidenz in
+[Tests und Erkenntnisse, Abschnitt 53](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#53-lf-immo-referenzschema-und-gerichteter-1-gegen-9-gegenstückpilot)
+dokumentiert. Die Referenzsicht ist nicht produktiv und ersetzt weder die
+allgemeinen atomaren Faktenverträge noch paketweite kontrollierte Suche.
 
 ## 2. Schnelllage
 
