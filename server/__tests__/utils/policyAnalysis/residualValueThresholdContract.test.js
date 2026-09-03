@@ -40,17 +40,20 @@ describe("VS-02 residual value threshold contract", () => {
       "NEW_VALUE",
       "NEW_VALUE_MINIMUM_THRESHOLD",
     ],
-  ])("normalizes a complete threshold clause: %s", (text, thresholdPercent, referenceBase, clauseMode) => {
-    expect(parseResidualValueThresholdClauses(text)).toEqual([
-      expect.objectContaining({
-        contractId: RESIDUAL_VALUE_THRESHOLD_CONTRACT_ID,
-        thresholdPercent,
-        referenceBase,
-        clauseMode,
-        comparison: "MINIMUM",
-      }),
-    ]);
-  });
+  ])(
+    "normalizes a complete threshold clause: %s",
+    (text, thresholdPercent, referenceBase, clauseMode) => {
+      expect(parseResidualValueThresholdClauses(text)).toEqual([
+        expect.objectContaining({
+          contractId: RESIDUAL_VALUE_THRESHOLD_CONTRACT_ID,
+          thresholdPercent,
+          referenceBase,
+          clauseMode,
+          comparison: "MINIMUM",
+        }),
+      ]);
+    }
+  );
 
   test.each([
     "Der Zeitwert wird aus dem Neuwert abzüglich Alter und Abnützung ermittelt.",
@@ -74,7 +77,9 @@ describe("VS-02 residual value threshold contract", () => {
       )
     ).toMatchObject({ thresholdPercent: 40 });
     expect(
-      residualValueThresholdForOccurrence(occurrence(text, "Versicherungssumme"))
+      residualValueThresholdForOccurrence(
+        occurrence(text, "Versicherungssumme")
+      )
     ).toBeNull();
   });
 });

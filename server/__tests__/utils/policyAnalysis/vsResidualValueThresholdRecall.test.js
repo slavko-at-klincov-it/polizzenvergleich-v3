@@ -29,8 +29,7 @@ function thresholdOccurrences(text) {
   });
   return worksheet.requirements
     .find(({ id }) => id === "VS-02")
-    .components.find(({ id }) => id === "residual_value_threshold")
-    .occurrences;
+    .components.find(({ id }) => id === "residual_value_threshold").occurrences;
 }
 
 describe("VS-02 residual value threshold recall", () => {

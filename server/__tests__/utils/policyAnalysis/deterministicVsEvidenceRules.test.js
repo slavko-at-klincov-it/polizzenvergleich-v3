@@ -237,7 +237,9 @@ describe("deterministicVsEvidenceRules", () => {
     "Die Versicherungssumme weicht um 20 % vom Versicherungswert ab.",
     "Die Grenze von 40 % gilt nicht; ersetzt wird unabhängig davon zum Neuwert.",
   ])("does not bind a non-threshold VS-02 percentage: %s", (text) => {
-    const exactText = text.match(/(?:Zeitwert|Restwerte|Versicherungssumme|Grenze)/u)[0];
+    const exactText = text.match(
+      /(?:Zeitwert|Restwerte|Versicherungssumme|Grenze)/u
+    )[0];
     expect(
       deterministicVsCandidateBinding({
         requirementId: "VS-02",

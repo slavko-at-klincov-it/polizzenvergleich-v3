@@ -44,8 +44,7 @@ const THRESHOLD_PATTERNS = Object.freeze([
 ]);
 
 function normalizedReference(value) {
-  if (/Neuherstellungskosten/iu.test(value || ""))
-    return "REPLACEMENT_COST";
+  if (/Neuherstellungskosten/iu.test(value || "")) return "REPLACEMENT_COST";
   if (/Neuwert/iu.test(value || "")) return "NEW_VALUE";
   return "IMPLICIT_NEW_VALUE";
 }
