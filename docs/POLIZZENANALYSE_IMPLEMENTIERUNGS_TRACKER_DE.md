@@ -5270,3 +5270,38 @@ sourcegebunden überein. Offen bleiben deren paketweiter Join, typisierte
 Forttragung der drei Membership-Bedingungen, Gegenbeweis-/Konfliktprüfung und
 Dokumentpräzedenz. Der nächste Commit materialisiert diese Lage nur als Audit;
 er ändert kein Kundenergebnis. Kein Vollrun und kein Deployment.
+
+## 108. FE-C02 – Paketaktivierungskette vollständig, Wirkung weiter gesperrt
+
+`e96c1179e`/`476d71401` materialisieren die bisher getrennten Proofs in
+`PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1`. Der Vertrag verbindet nur
+denselben dynamischen Referenzschlüssel, exakt gerichtete Membership-Kanten und
+konfliktfreie, vollständig replayte Quellproofs. Er besitzt bewusst keine
+Regel `DEFINED -> INCLUDED` und setzt `readyForDecision` selbst bei einer
+vollständigen Kette auf `false`.
+
+```text
+Mac Studio: Format PASS; 12 Suites / 340 Tests PASS
+Commit: 476d71401d1f3b410c550162f642daaefec06543
+Artefakt: QA/FE-C02-PACKAGE-AUDIT-476D7140-20260903
+Summary: 1031550333b4925e70f8dfc849ba4e5cdfc9219ccf885729f256aae6f0ce6e30
+Target Selection: 150778e3ad58d488ec08f884a8b0e63d85c6d3bd4cca5a5a02f7acf9998e4e12
+B: EABS@2023, beide gerichteten Kanten, keine Konflikte
+B-Status: COMPLETE_SOURCE_CHAIN_REQUIRES_TYPED_CONDITION_AND_PRECEDENCE
+A-Status: INCOMPLETE_SOURCE_CHAIN
+Ergebnis-/Call-/Terminal-Delta: keines
+```
+
+Der Lauf belegt damit erstmals die vollständige B-Quellkette, aber noch nicht
+deren konkrete Deckungswirkung. Als nächste getrennte Forward-Fixes sind
+erforderlich:
+
+1. die Quellbedingungen `Eigentum`, `nachweisliche Wiederherstellungspflicht`
+   und `im Gebäudeneuwert enthalten` als typisierte, sourcegebundene Prädikate
+   erhalten und auswerten;
+2. danach die gemeinsame Geltung und Dokumentpräzedenz zwischen der
+   Feuer-Polizzenreferenz und EABS 2023 prüfen;
+3. erst nach einem weiteren realen Zehn-Dokument-Replay entscheiden, ob und
+   unter welchen Bedingungen die Kette `INCLUDED` tragen darf.
+
+Keine Ergebnisfreigabe, kein 224-Zeilen-Vollrun und kein Deployment.

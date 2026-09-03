@@ -2365,6 +2365,75 @@ unverändert. Nächster Schritt ist ein outcome-neutraler Kettenaudit mit
 explizitem Rest-Gate für Bedingungen, Konflikt und Rang. Kein Vollrun und kein
 Deployment.
 
+## 10.46 FE-C02 – aktivierte Objektkette paketweit auditiert
+
+`e96c1179e` ergänzt den outcome-neutralen Vertrag
+`PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1`; `476d71401` enthält nur die
+separate Formatkorrektur. Der Audit darf keine Deckungswirkung erzeugen. Er
+verknüpft ausschließlich bereits gegen die Originaldokumentartefakte replayte
+Nachweise über folgende exakte Schlüssel und gerichtete Kanten:
+
+```text
+Feuerabschnitt + Gebäude + EABS-Referenz
+  -> gleicher dynamisch gelesener Referenzschlüssel EABS@2023
+  -> EABS-Titelblock auf dem referenzierten Bedingungsdokument
+  -> PHOTOVOLTAIC_INSTALLATION -> BUILDING_TECHNICAL_INSTALLATION
+  -> BUILDING_TECHNICAL_INSTALLATION -> BUILDING
+```
+
+Ein Ausschluss auf derselben gerichteten Kante, ein nicht eindeutiger
+Referenzschlüssel, eine fehlende Kante oder ein nicht konfliktfreier
+Membership-Proof lässt den Vertrag fail-closed enden. Dokumentrolle,
+Versicherername, Dateiname und fest codierte Ausgabe sind keine Join-Kriterien.
+
+Mac-Studio-Validierung:
+
+```text
+Commit: 476d71401d1f3b410c550162f642daaefec06543
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Format: PASS
+Fokussierte Regression: 12 Suites / 340 Tests PASS
+Artefakt: QA/FE-C02-PACKAGE-AUDIT-476D7140-20260903
+Summary: 1031550333b4925e70f8dfc849ba4e5cdfc9219ccf885729f256aae6f0ce6e30
+Target Selection: 150778e3ad58d488ec08f884a8b0e63d85c6d3bd4cca5a5a02f7acf9998e4e12
+```
+
+Der echte Lauf über alle zehn Paketdokumente rekonstruiert auf Seite B genau
+eine vollständige, konfliktfreie Kette. Die scopespezifische Referenz liegt in
+B/DOC-02, die EABS-Identität und beide Membership-Kanten liegen in B/DOC-10.
+Der Audit bindet sie über `EABS@2023`. Die Elternkante erhält weiterhin den
+vollständigen qualifizierenden Quelltext mit Eigentum, nachweislicher
+Wiederherstellungspflicht und Einschluss in den Gebäudeneuwert. Status:
+`COMPLETE_SOURCE_CHAIN_REQUIRES_TYPED_CONDITION_AND_PRECEDENCE`.
+
+Seite A besitzt keine solche Paketkette und endet deshalb mit
+`INCOMPLETE_SOURCE_CHAIN`. Das ist noch kein Negativnachweis für A, weil der
+Audit nur die konkrete Aktivierungskette von B prüft.
+
+Delta zum unmittelbar vorherigen favorisierten FE-C02-Lauf
+`QA/FE-C02-TERMS-IDENTITY-73F09DF5-20260903`:
+
+```text
+Ergebnis vorher/nachher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION (unverändert)
+Paket A vorher/nachher: Ja / BELEGT (unverändert)
+Paket B vorher/nachher: Nicht feststellbar / TEILBELEGT (unverändert)
+Triage-Aufrufe vorher/nachher: 2 / 2
+Effects-Aufrufe vorher/nachher: 0 / 0
+Server-Rejects vorher/nachher: 4 / 4
+Deterministische Evidence-Terminals vorher/nachher: 8 / 8
+Neuer Befund: vollständige B-Paketkette, noch nicht entscheidungswirksam
+```
+
+Die noch offenen, jetzt präzise eingegrenzten Gates sind
+`TYPED_CONDITIONS` und `DOCUMENT_PRECEDENCE`. Erst müssen die drei Bedingungen
+semantisch typisiert und gegen den konkreten Versicherungsfall ausgewertet
+werden; danach muss die Rangfolge beziehungsweise gemeinsame Geltung von
+Polizze und referenzierten Bedingungen sourcegebunden geprüft werden. Bis dahin
+bleibt `readyForDecision=false`. Kein Vollrun und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne
