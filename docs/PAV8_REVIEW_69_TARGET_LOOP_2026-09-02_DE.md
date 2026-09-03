@@ -59,9 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `3/40 TARGET-E2E ACCEPTED`. `VS-15`, `LW-12` und `ST-27` sind
-abgeschlossen;
-38 Fälle der ursprünglichen Familie bleiben offen.
+Status: `4/40 TARGET-E2E ACCEPTED`. `VS-15`, `LW-07`, `LW-12` und `ST-27`
+sind abgeschlossen; 36 Fälle der ursprünglichen Familie bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -2188,6 +2187,164 @@ eigener versionierter, zeilenspezifischer Vergleichsvertrag mit
 Override-/Konfliktprüfung nötig. Eine globale Gleichsetzung von `NOT_FOUND`
 und `EXCLUDED` ist verboten, weil sie bei unvollständiger Suche oder späterer
 positiver Ersatzregel falsche Gleichheit erzeugen würde.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+### 10.24 LW-07 – Sanitärkeramik über operative Frostklausel wiederfinden
+
+#### 10.24.1 Ausgangsfehler und verworfener falscher Vorteil
+
+Der aktuelle Ausgangslauf bestätigte zunächst das historische Bild:
+
+```text
+Paket A: BELEGT
+  Armaturen INCLUDED / GENERAL
+  Sanitärkeramik INCLUDED / GENERAL
+Paket B: TEILBELEGT
+  Armaturen INCLUDED / GENERAL
+  Sanitärkeramik NOT_FOUND
+Entscheidung:
+  UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+```
+
+Ein zunächst erwogener Vertrag
+`A vollständig belegt + B kontrollierter Komponenten-Nichtfund => Vorteil A`
+wurde nach unabhängiger Gegenprüfung verworfen. DOC-02/B enthält auf
+physischer Seite 3 ausdrücklich:
+
+```text
+Schäden an angeschlossenen Einrichtungen und Armaturen anlässlich Rohrbruch,
+Rohrbruch durch Korrosion und Frostschaden ...
+Ersatz oder die Reparatur von WC-Schalen, Ventilen und Siphonen, auch ohne
+Rohrgebrechen
+```
+
+Auf physischer Seite 14 steht zusätzlich unter der Frostklausel, dass
+angeschlossene Einrichtungen innerhalb von Gebäuden mitversichert sind. Der
+gespeicherte Nichtfund war damit kein belastbarer Beweis fehlender Deckung,
+sondern eine zu enge Objekt- und Beziehungsfamilie. Eine sofortige
+Vorteilsfreigabe hätte einen falschen `VORTEIL_A` erzeugt.
+
+Ausgangsreproduktion:
+
+```text
+Commit: 34bd998548fb4999e425c975e82597939cdd9088
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-07-BASELINE-34BD9985-20260903
+Summary-Digest:
+71a06107954958bbb63a946f729f0aa194ee1030a323f43bdb4638c11f0b5345
+Target-Selection-Digest:
+eedeb613d78b0354b64d50c1da175ed5340ddb85b9fc1fdb6fd395125989cc95
+```
+
+#### 10.24.2 Erste Stufe – Sanitärgegenstände auffindbar, aber kein Delta
+
+Der erste kleine Recall-Fix ergänzte die allgemeine Sanitärkeramik-Familie um
+`WC-Schale`, `WC-Schalen`, `Toilettenbecken`, `Klosettbecken`,
+`Sanitärgegenstände` und `Sanitäreinrichtungen`. Ungeprüfte Begriffe wie
+`Siphon`, `WC-Sitz`, `WC-Spülkasten`, `Keramikfliesen` und
+`Sanitärreinigung` blieben negative Kontrollen.
+
+Im echten Lauf wurde `WC-Schalen` korrekt als direkter Kandidat gebunden.
+Qwen übernahm den isolierten Listeneintrag `Ersatz oder Reparatur ... auch
+ohne Rohrgebrechen` aber nicht als Beleg für die enger bezeichnete
+Frostschaden-Komponente. Das war die richtige fail-closed Entscheidung. Die
+Zeile blieb `UNKLAR`; es wurde kein Vorteil erzwungen.
+
+```text
+08455fc2 fix(analysis): recall LW-07 sanitary fixtures
+994c9101 test(qa): advance LW target catalog pair
+fd288ffe test(qa): advance ST target catalog pair
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-07-SANITARY-FD288FFE-20260903
+Summary-Digest:
+771aa57121fbb9f4f94bfb6452a64203ff2d8e10737a5a1cee636dfa842375f2
+Target-Selection-Digest:
+346ad3ce1093635aeb0c2ce37b273b6d53106ac7a17e60b60392b6be33032ddc
+Producer-Digest:
+473c4c812eae10b68da38a8dc22041de86f8ab191a4bd4b9ff5b196f0f4776f0
+Ergebnisdelta: keines
+```
+
+Die beiden Registry-Commits sind reine Forward-Fixes aus den Mac-Gates. Der
+erste Testlauf fand den erwarteten historischen/aktuellen LW-Katalogvergleich
+noch auf `v0.8`; der zweite deckte dieselbe bereits zuvor überholte
+ST-Erwartung `v0.5` statt `v0.6` auf. Es wurde keine Historie umgeschrieben.
+
+#### 10.24.3 Zweite Stufe – Frost und angeschlossene Einrichtungen lokal binden
+
+Der zweite kleine Fix erweitert nicht die Deckungsentscheidung, sondern nur
+den kontrollierten Recall um operative, in derselben Klausel gebundene
+Formulierungen:
+
+```text
+Frostschaden an angeschlossenen Einrichtungen
+Frostschäden an angeschlossenen Einrichtungen
+Frost an angeschlossenen Einrichtungen
+Schäden an angeschlossenen Einrichtungen und Armaturen anlässlich
+Rohrbruch, Rohrbruch durch Korrosion und Frostschaden
+```
+
+Allgemeine Nennungen angeschlossener elektrischer Einrichtungen oder eine
+Reparatur nach Überspannung bleiben ohne Frostbezug fundlos. Ein
+`CLAUSE_SECTION`-Scope war nicht nötig: Gefahr, Schaden und Objekt stehen in
+der produktiven B-Fundstelle bereits innerhalb derselben `LIST_ITEM`-Einheit.
+
+Versionierung und Validierung:
+
+```text
+Commit: cd06f4d570fff5fa5923e7d0357ac6ad2a90ef35
+LW-Katalog: lw-occurrence-full-draft-v0.10
+Produktprofil: CUSTOMER_CORE_5_V42_LW07_CONNECTED_FIXTURE_RECALL
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Formatprüfung: PASS
+Fokussierte Suites: 5/5 PASS
+Fokussierte Tests: 158/158 PASS
+```
+
+Realer Zehn-Dokument-Ziellauf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LW-07-CONNECTED-FIXTURE-CD06F4D5-20260903
+Summary-Digest:
+422f34825e17d1ae264328dba396c55a7d7adec3d55cd32b5fac32e270a1b4c6
+Target-Selection-Digest:
+bb0a911ebc3fbbef95b9f524a638dd92518083950c6651e071ef959d5c8ae670
+Producer-Digest:
+79e3444bc91c5b34d096b2aba98a51e3b869644b0f94b3dce7dd3ba33bd916f0
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Qwen-Aufrufe: 3
+Evidence-Qwen-Aufrufe: 2
+Server-Terminalkomponenten: 16
+```
+
+Revisionssicheres Delta:
+
+```text
+Vorher:
+A BELEGT / B TEILBELEGT
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Nachher:
+A BELEGT / B BELEGT
+GLEICHWERTIG / ALL_ATOMIC_DIMENSIONS_EQUIVALENT / Review nein
+Regel: ATOMIC_COVERAGE_EQUALITY_V1
+```
+
+Beide Komponenten sind nun beidseitig quellengebunden `INCLUDED / GENERAL`.
+Dokumentstatus `FRAMEWORK_TERMS` auf A und `PROPOSAL` auf B wird korrekt nur
+als Paketprovenienz erhalten und blockiert den Gebäudepaketvergleich nicht.
+
+R69-A steht damit bei `4/40` abgeschlossenen Kandidaten; `36` bleiben offen.
+Die noch nicht durch einen frischen 224-Zeilen-Vollrun bestätigte Projektion
+verschiebt sich von `Gleichwertig 119 / Unklar 57` auf
+`Gleichwertig 120 / Unklar 56`. Alle übrigen Ergebnisgruppen bleiben
+unverändert.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
