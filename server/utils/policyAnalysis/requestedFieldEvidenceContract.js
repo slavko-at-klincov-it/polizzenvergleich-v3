@@ -459,6 +459,10 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     typeof governor?.text === "string"
       ? [...governor.text.matchAll(moneyPattern)]
       : [];
+  const canonicalPageBoundary = worksheet?.document?.pageBoundaries?.find(
+    ({ physicalPageNumber }) =>
+      physicalPageNumber === governor?.physicalPageNumber
+  );
   if (
     governor?.contractId !== EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID ||
     governor?.policy !== EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY ||
@@ -472,6 +476,8 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     governor.physicalPageNumber < 1 ||
     governor.physicalPageNumber > worksheet?.document?.physicalPages ||
     governor?.pageBoundaryPhysicalPageNumber !== governor.physicalPageNumber ||
+    canonicalPageBoundary?.documentStart !== governor?.pageDocumentStart ||
+    canonicalPageBoundary?.documentEnd !== governor?.pageDocumentEnd ||
     !Number.isInteger(governor?.pageDocumentStart) ||
     !Number.isInteger(governor?.pageDocumentEnd) ||
     governor.pageDocumentStart < 0 ||
@@ -2256,4 +2262,5 @@ module.exports = {
   REQUESTED_FIELD_STATUS,
   VALUE_BINDING,
   materializeRequestedFieldEvidence,
+  validatedExactClauseCodeGovernor,
 };

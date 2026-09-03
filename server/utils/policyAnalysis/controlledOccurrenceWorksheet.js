@@ -2879,6 +2879,11 @@ function buildControlledOccurrenceWorksheet({
         .update(pageContent)
         .digest("hex"),
       pageContentLength: pageContent.length,
+      pageBoundaries: pages.map(({ physicalPageNumber, start, end }) => ({
+        physicalPageNumber,
+        documentStart: start,
+        documentEnd: end,
+      })),
     },
     summary: {
       requirementCount: worksheetRequirements.length,

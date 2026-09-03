@@ -439,6 +439,16 @@ describe("VS-22 exact clause-code field governor", () => {
     ["physical page", (hint) => (hint.physicalPageNumber = 999)],
     ["valid but false physical page", (hint) => (hint.physicalPageNumber = 2)],
     [
+      "coherently false page metadata",
+      (hint, worksheet) => {
+        const pageTwo = worksheet.document.pageBoundaries[1];
+        hint.physicalPageNumber = 2;
+        hint.pageBoundaryPhysicalPageNumber = 2;
+        hint.pageDocumentStart = pageTwo.documentStart;
+        hint.pageDocumentEnd = pageTwo.documentEnd;
+      },
+    ],
+    [
       "page boundary physical page",
       (hint) => (hint.pageBoundaryPhysicalPageNumber = 2),
     ],
@@ -455,7 +465,7 @@ describe("VS-22 exact clause-code field governor", () => {
     ]);
     const hint = component(worksheet, "disposal_costs").occurrences.at(-1)
       .exactClauseCodeFieldGovernorHints[0];
-    tamper(hint);
+    tamper(hint, worksheet);
     expect(materialize(worksheet)).toMatchObject({
       status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
       facts: [],

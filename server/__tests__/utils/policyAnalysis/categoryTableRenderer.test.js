@@ -870,6 +870,14 @@ describe("categoryTableRenderer", () => {
       fingerprint,
       physicalPages: 10,
       pageContentLength: 10_000,
+      pageBoundaries: [
+        { physicalPageNumber: 1, documentStart: 0, documentEnd: 10_000 },
+      ],
+    };
+    occurrence.sectionScopeHint = {
+      clauseCode: "12PA0130",
+      scopeKey: "FEUER_INSURANCE",
+      scopeKeys: ["FEUER_INSURANCE"],
     };
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
@@ -928,6 +936,14 @@ describe("categoryTableRenderer", () => {
       fingerprint,
       physicalPages: 10,
       pageContentLength: 10_000,
+      pageBoundaries: [
+        { physicalPageNumber: 1, documentStart: 0, documentEnd: 10_000 },
+      ],
+    };
+    occurrence.sectionScopeHint = {
+      clauseCode: "12PA0130",
+      scopeKey: "FEUER_INSURANCE",
+      scopeKeys: ["FEUER_INSURANCE"],
     };
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
@@ -977,6 +993,18 @@ describe("categoryTableRenderer", () => {
     const [policyTamperedRow] = buildCategoryTableRows(input);
     expect(policyTamperedRow.coverageAmount).toBe("Nicht feststellbar");
     expect(policyTamperedRow.source).not.toContain("EUR6.121.600,00");
+
+    occurrence.exactClauseCodeFieldGovernorHints[0].policy =
+      "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1";
+    occurrence.sectionScopeHint.scopeKeys = ["LEITUNGSWASSER_INSURANCE"];
+    const [scopeTamperedRow] = buildCategoryTableRows(input);
+    expect(scopeTamperedRow.source).not.toContain("EUR6.121.600,00");
+
+    occurrence.sectionScopeHint.scopeKeys = ["FEUER_INSURANCE"];
+    occurrence.exactClauseCodeFieldGovernorHints[0].text =
+      governorText.replace("Aufräumkosten", "Nicht gedeckt");
+    const [negativeTamperedRow] = buildCategoryTableRows(input);
+    expect(negativeTamperedRow.source).not.toContain("EUR6.121.600,00");
   });
 
   test("keeps same-page clause body and exact governor as separate sources", () => {
@@ -993,6 +1021,14 @@ describe("categoryTableRenderer", () => {
       fingerprint,
       physicalPages: 10,
       pageContentLength: 10_000,
+      pageBoundaries: [
+        { physicalPageNumber: 3, documentStart: 0, documentEnd: 10_000 },
+      ],
+    };
+    occurrence.sectionScopeHint = {
+      clauseCode: "12PA0130",
+      scopeKey: "FEUER_INSURANCE",
+      scopeKeys: ["FEUER_INSURANCE"],
     };
     occurrence.exactClauseCodeFieldGovernorHints = [
       {
