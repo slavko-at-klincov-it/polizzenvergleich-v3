@@ -798,6 +798,53 @@ describe("controlledOccurrenceWorksheet", () => {
     ).toMatchObject({ scopeKey, text: heading });
   });
 
+  test("keeps trimmed section-heading text and source offsets identical", () => {
+    const pageText = [
+      "Einleitung",
+      "   7. Glasbruch   ",
+      "Versichert sind Schäden durch Glasbruch.",
+    ].join("\n");
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([pageText]),
+      documentFingerprint: "trimmed-heading-source-offsets",
+      catalog: {
+        schemaVersion: 1,
+        catalogId: "trimmed-heading-source-offsets",
+        categoryView: "VS",
+        requirements: [
+          {
+            id: "VS-24",
+            label: "Gerüstkosten",
+            requestedFields: [],
+            components: [
+              {
+                id: "scaffolding_costs",
+                label: "Gerüstkosten",
+                factRole: "COST",
+                aliases: ["Glasbruch"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const [occurrence] = component(
+      worksheet,
+      "VS-24",
+      "scaffolding_costs"
+    ).occurrences;
+    const section = occurrence.sectionScopeHint;
+
+    expect(section).toMatchObject({
+      scopeKey: "GLASBRUCH_INSURANCE",
+      text: "7. Glasbruch",
+    });
+    expect(pageText.slice(section.pageStart, section.pageEnd)).toBe(
+      section.text
+    );
+    expect(section.pageEnd - section.pageStart).toBe(section.text.length);
+  });
+
   test("normalizes German characters, soft hyphens and line-break hyphenation with reversible offsets", () => {
     const original = "Müll\u00adräume und Tiefgara-\ngen";
     const normalized = normalizeWithOffsetMap(original);

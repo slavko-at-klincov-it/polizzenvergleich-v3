@@ -1111,11 +1111,12 @@ function explicitSectionHeadings(pageText) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0].trim();
       if (headings.some(({ pageStart }) => pageStart === match.index)) continue;
+      const leading = match[0].indexOf(text);
       headings.push({
         scopeKey: canonicalScopeForHeading(match[1]),
         text,
-        pageStart: match.index,
-        pageEnd: match.index + match[0].length,
+        pageStart: match.index + leading,
+        pageEnd: match.index + leading + text.length,
       });
     }
   }
