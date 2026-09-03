@@ -242,7 +242,7 @@ describe("source-bound coverage-condition formula evidence", () => {
   test("supports catalogued wording variants rather than one customer phrase", () => {
     const variant =
       "Deckungsschutz für die nachstehenden Leistungen besteht unter folgenden Voraussetzungen: " +
-      "Die Versicherungssparten sind vereinbart und versicherte Sachen stehen im Eigentum des " +
+      "Die Versicherungssparten sind vereinbart und versicherte Sachen sich im Eigentum des " +
       "Versicherungsnehmer und/oder Gebäudeeigentümer oder dieser vertraglich für die " +
       "Wiederbeschaffung oder Wiederherstellung aufkommen muss.";
     const value = fixture({ governor: variant });
