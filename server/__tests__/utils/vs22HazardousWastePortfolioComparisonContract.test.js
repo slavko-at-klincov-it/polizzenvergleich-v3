@@ -149,7 +149,11 @@ function packageFixture(side, mode, documentCount) {
     searchDisposition: "RELEVANT_FOUND",
     comparisonTreatment: null,
     requirementContract: contract,
-    facts: [{ coverage: mode === "INCLUDED" ? "Ja" : "Nicht feststellbar" }],
+    facts: documents.map(({ uuid }) => ({
+      documentUuid: uuid,
+      coverage: mode === "INCLUDED" ? "Ja" : "Nicht feststellbar",
+      reviewStatus: mode === "INCLUDED" ? "BELEGT" : "TEILBELEGT",
+    })),
     searchAudit: {
       disposition: "SEARCH_INCOMPLETE",
       comparisonTreatment: null,
