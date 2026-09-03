@@ -176,6 +176,19 @@ function comparisonScopeKeys(atom) {
   return [...new Set((atom?.comparisonScopeKeys || []).filter(Boolean))].sort();
 }
 
+function asymmetricMissingNarrowScopeProof(left, right) {
+  const leftKeys = comparisonScopeKeys(left);
+  const rightKeys = comparisonScopeKeys(right);
+  return (
+    (left?.selectedScopePicture === "NARROW_ONLY" &&
+      leftKeys.length === 0 &&
+      rightKeys.length > 0) ||
+    (right?.selectedScopePicture === "NARROW_ONLY" &&
+      rightKeys.length === 0 &&
+      leftKeys.length > 0)
+  );
+}
+
 function atomSignature(atom) {
   return JSON.stringify({
     componentId: atom.componentId,
@@ -535,6 +548,13 @@ function comparisonDimension(left, right, { canonical = false } = {}) {
 function compareDimension(left, right, { canonical = false } = {}) {
   const dimension = comparisonDimension(left, right, { canonical });
   const keyFor = canonical ? canonicalComparisonKey : comparisonKey;
+  if (asymmetricMissingNarrowScopeProof(left, right))
+    return {
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",
+      ruleId: "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
+      dimension,
+    };
   if (keyFor(left) !== keyFor(right))
     return {
       outcome: POINT_OUTCOME.NOT_COMPARABLE,
@@ -1419,6 +1439,20 @@ function decidePoint({
         dimensions.map(({ dimension }) => dimension)
       ),
       ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+    };
+  if (
+    dimensions.some(
+      ({ reasonCode }) =>
+        reasonCode === "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE"
+    )
+  )
+    return {
+      ...unclear(
+        "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",
+        "Unklar: Für mindestens einen engeren Deckungsbeleg fehlt der source-gebundene Vergleichsscope. Ein nur einseitig belegter Scope-Schlüssel ist kein gesicherter fachlicher Unterschied.",
+        dimensions.map(({ dimension }) => dimension)
+      ),
+      ruleId: "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
     };
   if (dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.UNCLEAR))
     return unclear(

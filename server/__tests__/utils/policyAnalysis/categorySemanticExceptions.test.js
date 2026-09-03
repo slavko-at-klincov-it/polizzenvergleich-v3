@@ -77,7 +77,10 @@ describe("category semantic exceptions", () => {
         worksheet: { catalog: { categoryView: "EL" } },
         requirement: {
           id: "EL-06",
-          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          scopeRules: {
+            narrowAliases: [],
+            narrowScopeKeys: ["STURM_INSURANCE"],
+          },
         },
         component: { id: "sewer_backflow", factRole: "PERIL" },
         occurrence: candidate,
@@ -91,6 +94,7 @@ describe("category semantic exceptions", () => {
       expect(bindingFor(contextText)).toEqual({
         binding: "NARROW_SCOPE",
         basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2",
+        comparisonScopeKey: "STURM_INSURANCE",
         authoritative: true,
       });
     }

@@ -289,7 +289,7 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
-        const comparisonScopeKey =
+        const deterministicComparisonScopeKey =
           deterministicBinding?.binding === candidateBinding &&
           candidateBinding === "NARROW_SCOPE" &&
           (requirement?.scopeRules?.narrowScopeKeys || []).includes(
@@ -297,6 +297,22 @@ function buildPreparedEvidenceTargets({
           )
             ? deterministicBinding.comparisonScopeKey
             : null;
+        const sectionScopeHint = occurrence?.sectionScopeHint;
+        const sectionComparisonScopeKey =
+          candidateBinding === "NARROW_SCOPE" &&
+          ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
+            sectionScopeHint?.source
+          ) &&
+          Number.isInteger(sectionScopeHint?.physicalPageNumber) &&
+          sectionScopeHint.physicalPageNumber > 0 &&
+          String(sectionScopeHint?.text || "").trim().length > 0 &&
+          (requirement?.scopeRules?.narrowScopeKeys || []).includes(
+            sectionScopeHint?.scopeKey
+          )
+            ? sectionScopeHint.scopeKey
+            : null;
+        const comparisonScopeKey =
+          deterministicComparisonScopeKey || sectionComparisonScopeKey;
         const nestedListContinuationRequired = Boolean(
           occurrence.objectScopeProof?.assertions?.some(
             ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"

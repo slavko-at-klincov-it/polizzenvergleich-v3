@@ -901,9 +901,14 @@ function explicitEl06LocalTargetScopeRebinding({
     );
   if (!hasSubjectBoundPositiveRule || hasFailClosedQualifier) return null;
 
+  const narrowScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+  const [comparisonScopeKey] = narrowScopeKeys;
+  if (!comparisonScopeKey || narrowScopeKeys.length !== 1) return null;
+
   return {
     binding: DETERMINISTIC_BINDING.NARROW_SCOPE,
     basis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2",
+    comparisonScopeKey,
     authoritative: true,
   };
 }

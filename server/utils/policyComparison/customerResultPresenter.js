@@ -17,6 +17,8 @@ const UNCLEAR_REASON_TEXT = Object.freeze({
     "Mehrere unterschiedliche Dokumentangaben betreffen denselben Punkt; Vorrang oder Ersetzung ist noch nicht geklärt.",
   ATOMIC_EVIDENCE_INCOMPLETE:
     "Mindestens ein erforderlicher Einzelfakt ist unvollständig, widersprüchlich oder nicht eindeutig mit einer Quelle belegt.",
+  COMPARISON_SCOPE_PROVENANCE_INCOMPLETE:
+    "Für mindestens einen engeren Deckungsbeleg fehlt die eindeutige Zuordnung des Vergleichsumfangs. Ein nur einseitig belegter Umfang ist noch kein gesicherter fachlicher Unterschied.",
   NO_APPROVED_RULE_FOR_ALL_DIMENSIONS:
     "Nicht alle belegten Unterschiede können mit einer freigegebenen Vergleichsregel sicher bewertet werden.",
   MIXED_DIMENSION_WINNERS:
@@ -58,6 +60,7 @@ const APPROVED_RULE_IDS = new Set([
   "ANY_COMPONENT_IDENTITY_GATE_V1",
   "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
   "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
+  "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
   "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
   "FAIL_CLOSED_V1",
   "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1",

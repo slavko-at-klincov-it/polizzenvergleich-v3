@@ -99,6 +99,91 @@ function response(componentId, selectedCandidateIds, coverageEffect) {
 }
 
 describe("preparedEvidenceContract", () => {
+  test.each([
+    ["EL-09", "avalanche", "Lawinen"],
+    ["EL-10", "mudslide", "Muren"],
+  ])(
+    "preserves the source-bound narrow scope for %s selected candidates",
+    (requirementId, componentId, exactText) => {
+      const occurrence = {
+        candidateId: `candidate:${requirementId}:storm-section`,
+        matchedAlias: exactText,
+        pageNumber: 20,
+        physicalPageNumber: 20,
+        documentStart: 82_000,
+        documentEnd: 82_000 + exactText.length,
+        exactText,
+        context: {
+          unitType: "PARAGRAPH",
+          text: `Hochwasser, Überschwemmung, Lawinen und Muren64PA0061\n${exactText} werden im Bedingungswerk definiert.`,
+        },
+        scopeLead: { text: "1. Versicherte Gefahren" },
+        pageScopeHints: [],
+        sectionScopeHint: {
+          scopeKey: "STURM_INSURANCE",
+          text: "Hochwasser, Überschwemmung, Lawinen und Muren64PA0061",
+          clauseCode: "64PA0061",
+          physicalPageNumber: 20,
+          source: "CURRENT_PAGE_HEADING",
+        },
+      };
+      const targetFor = (candidate, binding = "NARROW_SCOPE") =>
+        buildPreparedEvidenceTargets({
+          worksheet: {
+            candidateOnly: true,
+            catalog: { categoryView: "EL" },
+            requirements: [
+              {
+                id: requirementId,
+                label: requirementId,
+                requestedFields: [],
+                scopeRules: { narrowScopeKeys: ["STURM_INSURANCE"] },
+                components: [
+                  {
+                    id: componentId,
+                    label: componentId,
+                    factRole: "PERIL",
+                    occurrences: [candidate],
+                  },
+                ],
+              },
+            ],
+          },
+          documentStatus: DOCUMENT_STATUS.PROPOSAL,
+          candidateTriage: [
+            {
+              requirementId,
+              componentId,
+              candidateId: candidate.candidateId,
+              binding,
+            },
+          ],
+        })[0];
+
+      expect(targetFor(occurrence).candidates).toEqual([
+        expect.objectContaining({
+          candidateId: occurrence.candidateId,
+          candidateBinding: "NARROW_SCOPE",
+          comparisonScopeKey: "STURM_INSURANCE",
+        }),
+      ]);
+
+      const unboundHeading = {
+        ...occurrence,
+        sectionScopeHint: {
+          ...occurrence.sectionScopeHint,
+          source: "MODEL_INFERRED",
+        },
+      };
+      expect(targetFor(unboundHeading).candidates[0]).not.toHaveProperty(
+        "comparisonScopeKey"
+      );
+      expect(targetFor(occurrence, "DIRECT").candidates[0]).not.toHaveProperty(
+        "comparisonScopeKey"
+      );
+    }
+  );
+
   test("server-certifies only the exact FE-B13 occurrence from a current foreign section", () => {
     const occurrence = {
       candidateId: "candidate:pre-inception-water",
@@ -138,6 +223,7 @@ describe("preparedEvidenceContract", () => {
           requestedFields: [],
           negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
           absenceMeaning: "EXCLUSION",
+          ...(overrides.scopeRules ? { scopeRules: overrides.scopeRules } : {}),
           components: [
             {
               id: overrides.componentId || "pre_inception_damage_exclusion",
@@ -266,12 +352,14 @@ describe("preparedEvidenceContract", () => {
       componentId: "sewer_backflow",
       factRole: "PERIL",
       triageBinding: "MENTION_ONLY",
+      scopeRules: { narrowScopeKeys: ["STURM_INSURANCE"] },
     });
     expect(elTarget.candidates).toEqual([
       expect.objectContaining({
         candidateId: elementarCrossReference.candidateId,
         candidateBinding: "NARROW_SCOPE",
         deterministicBindingBasis: "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2",
+        comparisonScopeKey: "STURM_INSURANCE",
       }),
     ]);
     expect(elTarget.serverRejectedCandidates).toEqual([]);

@@ -23,6 +23,9 @@ const {
   deriveCustomerMetrics,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  customerResultText,
+} = require("../../utils/policyComparison/customerResultPresenter");
+const {
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
 const {
@@ -805,6 +808,89 @@ describe("policy comparison point decision", () => {
       })
     ).toThrow("UNILATERAL_COVERAGE_ABSENCE_AUDIT_MISMATCH");
   });
+
+  test.each([
+    ["EL-06", "sewer_backflow"],
+    ["EL-09", "avalanche"],
+    ["EL-10", "mudslide"],
+  ])(
+    "fails closed when only one %s narrow atom has source-bound scope provenance",
+    (categoryId, componentId) => {
+      const digest = "b".repeat(64);
+      const components = [{ id: componentId, factRole: "PERIL" }];
+      const packageFor = () =>
+        packageSummary({
+          requirementContract: {
+            digest,
+            componentSatisfactionPolicy: "ALL",
+            components,
+          },
+        });
+      const scopedAtom = (side, comparisonScopeKeys) => {
+        const candidateId = `candidate-${side}`;
+        return atom(side, {
+          requirementId: categoryId,
+          componentId,
+          componentLabel: componentId,
+          factRole: "PERIL",
+          selectedScopePicture: "NARROW_ONLY",
+          scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+          comparisonScopeKeys,
+          requirementContractDigest: digest,
+          declaredComponents: components,
+          sources: [
+            {
+              candidateId,
+              physicalPageNumber: 2,
+              exactText: "Versicherte Gefahr",
+              candidateBinding: "NARROW_SCOPE",
+              ...(comparisonScopeKeys.length === 1
+                ? { comparisonScopeKey: comparisonScopeKeys[0] }
+                : {}),
+            },
+          ],
+        });
+      };
+      const decideScopes = (leftKeys, rightKeys) =>
+        decidePoint({
+          categoryId,
+          packageA: packageFor(),
+          packageB: packageFor(),
+          atomsA: [scopedAtom("a", leftKeys)],
+          atomsB: [scopedAtom("b", rightKeys)],
+        });
+
+      const missingRight = decideScopes(["STURM_INSURANCE"], []);
+      expect(missingRight).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",
+        ruleId: "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
+        reviewRequired: true,
+      });
+      expect(customerResultText({ pointDecision: missingRight })).toContain(
+        "fehlt die eindeutige Zuordnung des Vergleichsumfangs"
+      );
+      expect(decideScopes([], ["STURM_INSURANCE"])).toMatchObject({
+        outcome: POINT_OUTCOME.UNCLEAR,
+        reasonCode: "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",
+        reviewRequired: true,
+      });
+      expect(
+        decideScopes(["STURM_INSURANCE"], ["STURM_INSURANCE"])
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.EQUIVALENT,
+        reasonCode: "ALL_ATOMIC_DIMENSIONS_EQUIVALENT",
+        reviewRequired: false,
+      });
+      expect(
+        decideScopes(["STURM_INSURANCE"], ["FEUER_INSURANCE"])
+      ).toMatchObject({
+        outcome: POINT_OUTCOME.NOT_COMPARABLE,
+        reasonCode: "COMPARABILITY_GATE_FAILED",
+        reviewRequired: false,
+      });
+    }
+  );
 
   test("renders multiple required winner components as grammatical Teilpunkte", () => {
     const fixture = qualifiedOneSidedFixture();
