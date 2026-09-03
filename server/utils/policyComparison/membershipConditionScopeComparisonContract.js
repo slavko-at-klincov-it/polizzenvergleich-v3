@@ -11,9 +11,7 @@ const {
   validateCoverageConditionFormulaContract,
 } = require("../policyAnalysis/coverageConditionFormulaEvidenceContract");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
-const {
-  FE_C02_REQUIREMENT_CONTRACT_DIGEST,
-} = require("./productContract");
+const { FE_C02_REQUIREMENT_CONTRACT_DIGEST } = require("./productContract");
 const {
   COMPARISON_POLICY,
   DOCUMENT_RESOLUTION_POLICY,
