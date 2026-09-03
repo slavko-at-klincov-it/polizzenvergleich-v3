@@ -317,6 +317,12 @@ function semanticComparisonAtomKey(atom) {
     optionalFields: strings(atom?.optionalFields),
     selectedScopePicture: atom?.selectedScopePicture,
     comparisonScopeKeys: strings(atom?.comparisonScopeKeys),
+    objectScopeEvidenceContract: stableValue(
+      atom?.objectScopeEvidenceContract || null
+    ),
+    objectScopeIdentityComparisonContract: stableValue(
+      atom?.objectScopeIdentityComparisonContract || null
+    ),
     scopePolicy: atom?.scopePolicy,
     comparisonApplicability: comparisonApplicability(atom),
     operationalEventMode: operationalEventMode(atom),
@@ -342,6 +348,12 @@ function comparisonContributor(atom) {
     conflictState: String(atom?.conflictState || ""),
     selectedScopePicture: String(atom?.selectedScopePicture || ""),
     comparisonScopeKeys: strings(atom?.comparisonScopeKeys),
+    objectScopeEvidenceContract: stableValue(
+      atom?.objectScopeEvidenceContract || null
+    ),
+    objectScopeIdentityComparisonContract: stableValue(
+      atom?.objectScopeIdentityComparisonContract || null
+    ),
     scopePolicy: String(atom?.scopePolicy || ""),
     requestedFieldStatus: String(atom?.requestedFieldStatus || ""),
     requestedFields: strings(atom?.requestedFields),
@@ -384,6 +396,12 @@ function canonicalComparisonAtom(atoms, key) {
     conflictState: representative.conflictState,
     selectedScopePicture: representative.selectedScopePicture,
     comparisonScopeKeys: strings(representative.comparisonScopeKeys),
+    objectScopeEvidenceContract: stableValue(
+      representative.objectScopeEvidenceContract || null
+    ),
+    objectScopeIdentityComparisonContract: stableValue(
+      representative.objectScopeIdentityComparisonContract || null
+    ),
     scopePolicy: representative.scopePolicy,
     requestedFieldStatus: representative.requestedFieldStatus,
     requestedFields: strings(representative.requestedFields),

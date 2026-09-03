@@ -78,6 +78,11 @@ const {
   buildMembershipConditionScopeComparisonAudit,
   membershipConditionScopeComparisonDecision,
 } = require("./membershipConditionScopeComparisonContract");
+const {
+  OBJECT_SCOPE_IDENTITY,
+  OBJECT_SCOPE_IDENTITY_COMPARISON_RULE_ID,
+  compareObjectScopeIdentity,
+} = require("./objectScopeIdentityComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -554,6 +559,48 @@ function compareDimension(left, right, { canonical = false } = {}) {
       reasonCode: "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",
       ruleId: "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
       dimension,
+    };
+  const objectScopeIdentityOptIn = Boolean(
+    left?.objectScopeIdentityComparisonContract ||
+      right?.objectScopeIdentityComparisonContract
+  );
+  if (
+    objectScopeIdentityOptIn &&
+    ((canonical
+      ? atomHasConditionalOrOptionalSource(left)
+      : hasConditionalOrOptionalCoverageSource(left)) ||
+      (canonical
+        ? atomHasConditionalOrOptionalSource(right)
+        : hasConditionalOrOptionalCoverageSource(right)))
+  )
+    return {
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "CONDITIONAL_OR_EXCEPTION_SCOPE",
+      ruleId: "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+      dimension,
+    };
+  const objectScopeIdentity = compareObjectScopeIdentity(left, right);
+  if (objectScopeIdentity?.identity === OBJECT_SCOPE_IDENTITY.INCOMPLETE)
+    return {
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "OBJECT_SCOPE_PROVENANCE_INCOMPLETE",
+      ruleId: "FAIL_CLOSED_OBJECT_SCOPE_IDENTITY_V1",
+      dimension: {
+        ...dimension,
+        ...(objectScopeIdentity.audit
+          ? { comparisonAudit: objectScopeIdentity.audit }
+          : {}),
+      },
+    };
+  if (objectScopeIdentity?.identity === OBJECT_SCOPE_IDENTITY.DIFFERENT)
+    return {
+      outcome: POINT_OUTCOME.NOT_COMPARABLE,
+      reasonCode: "OBJECT_SCOPE_KEYS_DIFFER",
+      ruleId: OBJECT_SCOPE_IDENTITY_COMPARISON_RULE_ID,
+      dimension: {
+        ...dimension,
+        comparisonAudit: objectScopeIdentity.audit,
+      },
     };
   if (keyFor(left) !== keyFor(right))
     return {
@@ -1454,6 +1501,19 @@ function decidePoint({
       ),
       ruleId: "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
     };
+  if (
+    dimensions.some(
+      ({ reasonCode }) => reasonCode === "OBJECT_SCOPE_PROVENANCE_INCOMPLETE"
+    )
+  )
+    return {
+      ...unclear(
+        "OBJECT_SCOPE_PROVENANCE_INCOMPLETE",
+        "Unklar: Für mindestens eine Seite fehlt genau ein vollständiger, source-gebundener Objektgeltungsbeleg.",
+        dimensions.map(({ dimension }) => dimension)
+      ),
+      ruleId: "FAIL_CLOSED_OBJECT_SCOPE_IDENTITY_V1",
+    };
   if (dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.UNCLEAR))
     return unclear(
       "NO_APPROVED_RULE_FOR_ALL_DIMENSIONS",
@@ -1466,18 +1526,31 @@ function decidePoint({
   if (
     dimensions.some(({ outcome }) => outcome === POINT_OUTCOME.NOT_COMPARABLE)
   )
-    return {
-      schemaVersion: 3,
-      outcome: POINT_OUTCOME.NOT_COMPARABLE,
-      reasonCode: "COMPARABILITY_GATE_FAILED",
-      reason: reasonFor(
-        POINT_OUTCOME.NOT_COMPARABLE,
-        dimensions.map(({ dimension }) => dimension)
-      ),
-      reviewRequired: false,
-      ruleId: "ATOMIC_COMPARABILITY_GATE_V1",
-      dimensions: dimensions.map(({ dimension }) => dimension),
-    };
+    return dimensions.some(
+      ({ reasonCode }) => reasonCode === "OBJECT_SCOPE_KEYS_DIFFER"
+    )
+      ? {
+          schemaVersion: 3,
+          outcome: POINT_OUTCOME.NOT_COMPARABLE,
+          reasonCode: "OBJECT_SCOPE_KEYS_DIFFER",
+          reason:
+            "Nicht direkt vergleichbar: Die vollständig belegten Objektgeltungsbereiche unterscheiden sich.",
+          reviewRequired: false,
+          ruleId: OBJECT_SCOPE_IDENTITY_COMPARISON_RULE_ID,
+          dimensions: dimensions.map(({ dimension }) => dimension),
+        }
+      : {
+          schemaVersion: 3,
+          outcome: POINT_OUTCOME.NOT_COMPARABLE,
+          reasonCode: "COMPARABILITY_GATE_FAILED",
+          reason: reasonFor(
+            POINT_OUTCOME.NOT_COMPARABLE,
+            dimensions.map(({ dimension }) => dimension)
+          ),
+          reviewRequired: false,
+          ruleId: "ATOMIC_COMPARABILITY_GATE_V1",
+          dimensions: dimensions.map(({ dimension }) => dimension),
+        };
 
   const winners = new Set(
     dimensions

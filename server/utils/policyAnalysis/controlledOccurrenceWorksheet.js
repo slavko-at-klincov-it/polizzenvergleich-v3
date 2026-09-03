@@ -31,6 +31,9 @@ const {
 const {
   validateMembershipConditionScopeComparisonContract,
 } = require("./membershipConditionScopeComparisonDefinition");
+const {
+  validateObjectScopeIdentityComparisonContract,
+} = require("../policyComparison/objectScopeIdentityComparisonContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2256,6 +2259,13 @@ function validateCatalog(catalog) {
           "OBJECT_SCOPE_EVIDENCE_REQUIREMENT_INVALID",
           `${id}:${componentId}`
         );
+      const objectScopeIdentityComparisonContract =
+        component.objectScopeIdentityComparisonContract === undefined
+          ? null
+          : validateObjectScopeIdentityComparisonContract(
+              component.objectScopeIdentityComparisonContract,
+              objectScopeEvidenceContract
+            );
       const objectMembershipEvidenceContracts =
         validateObjectMembershipContracts(
           component.objectMembershipEvidenceContracts,
@@ -2316,6 +2326,9 @@ function validateCatalog(catalog) {
           : {}),
         ...(objectScopeEvidenceContract ? { objectScopeEvidenceContract } : {}),
         ...(objectScopeEvidenceRequired ? { objectScopeEvidenceRequired } : {}),
+        ...(objectScopeIdentityComparisonContract
+          ? { objectScopeIdentityComparisonContract }
+          : {}),
         ...(objectMembershipEvidenceContracts.length > 0
           ? { objectMembershipEvidenceContracts }
           : {}),
@@ -3614,6 +3627,12 @@ function buildControlledOccurrenceWorksheet({
           : {}),
         ...(component.objectScopeEvidenceRequired
           ? { objectScopeEvidenceRequired: true }
+          : {}),
+        ...(component.objectScopeIdentityComparisonContract
+          ? {
+              objectScopeIdentityComparisonContract:
+                component.objectScopeIdentityComparisonContract,
+            }
           : {}),
         ...(component.objectMembershipEvidenceContracts?.length > 0
           ? {

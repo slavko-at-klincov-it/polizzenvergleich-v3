@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "el-occurrence-full-draft-v0.8",
+  "catalogId": "el-occurrence-full-draft-v0.9",
   "categoryView": "EL",
   "requirements": [
     {
@@ -336,6 +336,52 @@
           "id": "building_glazing_breakage",
           "label": "Glasbruch an der Gebäudeverglasung",
           "factRole": "DAMAGE",
+          "objectScopeEvidenceContract": {
+            "contractId": "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+            "allowedEvidenceSources": [
+              "STRUCTURAL_LOCAL_CONTEXT",
+              "NESTED_LIST_CONTINUATION"
+            ],
+            "families": [
+              {
+                "objectScopeKey": "ALL_INSURED_BUILDING_GLAZING",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      [
+                        "Verglasung der versicherten Gebäude, insbesondere",
+                        "Verglasungen der versicherten Gebäude, insbesondere"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "objectScopeKey": "COMMON_ACCESS_AREA_BUILDING_GLAZING",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      [
+                        "Gebäudeverglasung von allgemein zugänglichen Bereichen",
+                        "Gebäudeverglasungen von allgemein zugänglichen Bereichen"
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "objectScopeIdentityComparisonContract": {
+            "contractId": "SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1",
+            "allowedObjectScopeKeys": [
+              "ALL_INSURED_BUILDING_GLAZING",
+              "COMMON_ACCESS_AREA_BUILDING_GLAZING"
+            ],
+            "comparisonPolicy": "EXACT_SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_V1",
+            "satisfactionPolicy": "EXACTLY_ONE_CONFLICT_FREE_SCOPE_KEY_PER_SIDE"
+          },
           "aliases": [
             "Glasbruch an Gebäudeverglasungen",
             "Bruch der Gebäudeverglasung",

@@ -1580,6 +1580,13 @@ function materializeAtomicFacts({
         ...(candidateBinding ? { candidateBinding } : {}),
         ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
         ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+        ...(candidate.objectScopeProof
+          ? {
+              objectScopeProof: JSON.parse(
+                JSON.stringify(candidate.objectScopeProof)
+              ),
+            }
+          : {}),
         ...(candidate.objectMembershipProof
           ? {
               objectMembershipProof: JSON.parse(
@@ -1658,6 +1665,15 @@ function materializeAtomicFacts({
         ? {
             membershipConditionScopeComparisonContract:
               requirement.membershipConditionScopeComparisonContract,
+          }
+        : {}),
+      ...(component?.objectScopeEvidenceContract
+        ? { objectScopeEvidenceContract: component.objectScopeEvidenceContract }
+        : {}),
+      ...(component?.objectScopeIdentityComparisonContract
+        ? {
+            objectScopeIdentityComparisonContract:
+              component.objectScopeIdentityComparisonContract,
           }
         : {}),
       scopePolicy: requirement?.scopePolicy || null,

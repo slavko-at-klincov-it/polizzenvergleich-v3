@@ -19,6 +19,8 @@ const UNCLEAR_REASON_TEXT = Object.freeze({
     "Mindestens ein erforderlicher Einzelfakt ist unvollständig, widersprüchlich oder nicht eindeutig mit einer Quelle belegt.",
   COMPARISON_SCOPE_PROVENANCE_INCOMPLETE:
     "Für mindestens einen engeren Deckungsbeleg fehlt die eindeutige Zuordnung des Vergleichsumfangs. Ein nur einseitig belegter Umfang ist noch kein gesicherter fachlicher Unterschied.",
+  OBJECT_SCOPE_PROVENANCE_INCOMPLETE:
+    "Für mindestens eine Polizze fehlt die eindeutige Zuordnung des versicherten Objektumfangs.",
   NO_APPROVED_RULE_FOR_ALL_DIMENSIONS:
     "Nicht alle belegten Unterschiede können mit einer freigegebenen Vergleichsregel sicher bewertet werden.",
   MIXED_DIMENSION_WINNERS:
@@ -62,6 +64,7 @@ const APPROVED_RULE_IDS = new Set([
   "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1",
   "FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1",
   "FAIL_CLOSED_CONDITIONAL_SOURCE_V1",
+  "FAIL_CLOSED_OBJECT_SCOPE_IDENTITY_V1",
   "FAIL_CLOSED_V1",
   "FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1",
   "FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1",
@@ -76,6 +79,7 @@ const APPROVED_RULE_IDS = new Set([
   "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1",
   "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
   "SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1",
+  "SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1",
   "TYPED_VALUE_EQUALITY_V1",
   "VS08_EQUAL_PACKAGE_CONDITION_CONSENSUS_V1",
   "VS15_EQUAL_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH_V1",

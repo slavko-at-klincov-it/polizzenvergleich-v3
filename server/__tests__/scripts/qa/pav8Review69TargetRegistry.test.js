@@ -81,7 +81,7 @@ describe("PAV8 69-row targeted QA registry", () => {
         ],
         LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.10"],
         ST: ["st-occurrence-full-draft-v0.4", "st-occurrence-full-draft-v0.6"],
-        EL: ["el-occurrence-full-draft-v0.6", "el-occurrence-full-draft-v0.8"],
+        EL: ["el-occurrence-full-draft-v0.6", "el-occurrence-full-draft-v0.9"],
       };
       if (historicalCatalogMigrations[categoryView]) {
         expect([target.catalogId, catalog.catalogId]).toEqual(

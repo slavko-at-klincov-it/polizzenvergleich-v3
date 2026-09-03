@@ -132,6 +132,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
         ...(component.objectScopeEvidenceRequired
           ? { objectScopeEvidenceRequired: true }
           : {}),
+        ...(component.objectScopeIdentityComparisonContract
+          ? {
+              objectScopeIdentityComparisonContract:
+                component.objectScopeIdentityComparisonContract,
+            }
+          : {}),
         ...(component.objectMembershipEvidenceContracts?.length > 0
           ? {
               objectMembershipEvidenceContracts:

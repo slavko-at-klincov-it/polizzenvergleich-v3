@@ -2897,7 +2897,24 @@ describe("controlledOccurrenceWorksheet", () => {
         }),
       ],
     });
-    expect(el13.scopePolicy).toBe("MATCHING_SCOPE_INCLUDED_SUFFICIENT");
+    expect(el13).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      components: [
+        expect.objectContaining({
+          id: "building_glazing_breakage",
+          objectScopeEvidenceContract: {
+            contractId: "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+          },
+          objectScopeIdentityComparisonContract: {
+            contractId: "SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1",
+            allowedObjectScopeKeys: [
+              "ALL_INSURED_BUILDING_GLAZING",
+              "COMMON_ACCESS_AREA_BUILDING_GLAZING",
+            ],
+          },
+        }),
+      ],
+    });
     expect(el15).toMatchObject({
       scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
       scopeRules: { narrowScopeKeys: ["GLASBRUCH_INSURANCE"] },

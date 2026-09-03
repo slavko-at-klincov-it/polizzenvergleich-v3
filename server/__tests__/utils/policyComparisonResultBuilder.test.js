@@ -24,6 +24,9 @@ const {
   buildControlledOccurrenceWorksheet,
 } = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 const {
+  buildSourceBoundObjectScopeProof,
+} = require("../../utils/policyAnalysis/objectScopeEvidenceContract");
+const {
   DOCUMENT_STATUS,
   buildPreparedEvidenceTargets,
 } = require("../../utils/policyAnalysis/preparedEvidenceContract");
@@ -645,7 +648,7 @@ function writeEl12AbsenceCategory(run, { riskInformation = false } = {}) {
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
-      catalog: { id: "el-occurrence-full-draft-v0.8", categoryView },
+      catalog: { id: "el-occurrence-full-draft-v0.9", categoryView },
       document: { physicalPages: 3 },
       summary: { componentCount: 1 },
       requirements: [
@@ -1344,6 +1347,148 @@ function writeLw20AbsenceCategory(
 }
 
 describe("policy comparison result builder", () => {
+  test("carries a validated selected object-scope proof into its comparison atom", () => {
+    const text =
+      "Verglasung der versicherten Gebäude, insbesondere Fassadenverglasung.";
+    const objectScopeEvidenceContract = {
+      contractId: "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+      allowedEvidenceSources: [
+        "STRUCTURAL_LOCAL_CONTEXT",
+        "NESTED_LIST_CONTINUATION",
+      ],
+      families: [
+        {
+          objectScopeKey: "ALL_INSURED_BUILDING_GLAZING",
+          patterns: [
+            {
+              sourceKinds: ["STRUCTURAL_LOCAL_CONTEXT"],
+              allOf: [["Verglasung der versicherten Gebäude, insbesondere"]],
+            },
+          ],
+        },
+        {
+          objectScopeKey: "COMMON_ACCESS_AREA_BUILDING_GLAZING",
+          patterns: [
+            {
+              sourceKinds: ["STRUCTURAL_LOCAL_CONTEXT"],
+              allOf: [
+                ["Gebäudeverglasung von allgemein zugänglichen Bereichen"],
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const objectScopeIdentityComparisonContract = {
+      contractId: "SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1",
+      allowedObjectScopeKeys: [
+        "ALL_INSURED_BUILDING_GLAZING",
+        "COMMON_ACCESS_AREA_BUILDING_GLAZING",
+      ],
+      comparisonPolicy: "EXACT_SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_V1",
+      satisfactionPolicy:
+        "EXACTLY_ONE_CONFLICT_FREE_SCOPE_KEY_PER_SIDE",
+    };
+    const occurrence = {
+      candidateId: "candidate:el-13",
+      physicalPageNumber: 2,
+      exactText: "Verglasung der versicherten Gebäude",
+      documentStart: 100,
+      documentEnd: 137,
+      context: {
+        unitType: "LIST_ITEM",
+        documentStart: 100,
+        documentEnd: 100 + text.length,
+        text,
+      },
+    };
+    occurrence.objectScopeProof = buildSourceBoundObjectScopeProof({
+      contract: objectScopeEvidenceContract,
+      occurrence,
+    });
+    const worksheet = {
+      catalog: { id: "el-occurrence-full-draft-v0.9" },
+      requirements: [
+        {
+          id: "EL-13",
+          label: "Glasbruch an der Gebäudeverglasung",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          components: [
+            {
+              id: "building_glazing_breakage",
+              label: "Glasbruch an der Gebäudeverglasung",
+              factRole: "DAMAGE",
+              aliases: ["Verglasung der versicherten Gebäude"],
+              objectScopeEvidenceContract,
+              objectScopeIdentityComparisonContract,
+              occurrences: [occurrence],
+            },
+          ],
+        },
+      ],
+    };
+    const [atom] = materializeAtomicFacts({
+      document: {
+        uuid: "document-el-13",
+        role: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+      },
+      worksheet,
+      materializedEvidence: {
+        judgements: [
+          {
+            targetId: "target:el-13",
+            requirementId: "EL-13",
+            componentId: "building_glazing_breakage",
+            evidencePresence: "FOUND",
+            coverageEffect: "INCLUDED",
+            conflictState: "NONE",
+            selectedScopePicture: "NARROW_ONLY",
+            documentApplicability: "ACTIVE",
+            selectedCandidateIds: [occurrence.candidateId],
+            unresolvedCandidateIds: [],
+          },
+        ],
+      },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "EL-13",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
+        ],
+      },
+      targets: [
+        {
+          targetId: "target:el-13",
+          candidates: [
+            {
+              ...occurrence,
+              contextText: text,
+              contextDocumentStart: 100,
+            },
+          ],
+        },
+      ],
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(atom).toMatchObject({
+      objectScopeEvidenceContract,
+      objectScopeIdentityComparisonContract,
+      sources: [
+        {
+          objectScopeProof: {
+            objectScopeKeys: ["ALL_INSURED_BUILDING_GLAZING"],
+          },
+        },
+      ],
+    });
+  });
+
   test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
     const candidateId = "candidate:fe-c07-result-builder";
     const clause =
@@ -2453,9 +2598,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V102_SPECIALIZED_QUALIFICATION_REPLAY",
+      id: "CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_FE_A01_FE_C07_SOURCE_BOUND_QUALIFICATION_REPLAY_FE_A09_REQUIRED_OBJECT_SCOPE_V63",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_FE_A01_FE_C07_SOURCE_BOUND_QUALIFICATION_REPLAY_FE_A09_REQUIRED_OBJECT_SCOPE_EL13_OBJECT_SCOPE_IDENTITY_V64",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
