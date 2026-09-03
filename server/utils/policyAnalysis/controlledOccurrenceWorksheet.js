@@ -653,6 +653,18 @@ function explicitPageScopeHints(pageText) {
 }
 
 function explicitSectionHeadings(pageText) {
+  const combinedScopeKeysForHeading = (value) =>
+    [
+      ["FEUER_INSURANCE", /\bFeuer/iu],
+      ["STURM_INSURANCE", /\bSturm/iu],
+      ["LEITUNGSWASSER_INSURANCE", /\bLeitungswasser/iu],
+      ["ELEMENTAR_INSURANCE", /\b(?:Elementar|Katastrophen)/iu],
+      ["HAFTPFLICHT_INSURANCE", /\bHaftpflicht/iu],
+      ["GLASBRUCH_INSURANCE", /\b(?:Glasbruch|Glas)/iu],
+    ]
+      .filter(([, pattern]) => pattern.test(value))
+      .map(([scopeKey]) => scopeKey)
+      .sort();
   const canonicalScopeForHeading = (value) => {
     const normalized = normalizeWithOffsetMap(value).normalized.replace(
       /\s+/gu,
@@ -693,6 +705,21 @@ function explicitSectionHeadings(pageText) {
     /^\s*(ZUSAMMENFASSUNG\s+SPARTE\(N\)\s+UND\s+PRÄMIE\(N\))\s*$/gimu,
   ];
   const headings = [];
+  for (const match of String(pageText || "").matchAll(
+    /^([\t ]*(?:\d{1,3}\.[\t ]+)?Versicherungsumfang[\t ]+[^\n]{0,160}versicherung)[\t ]*$/gimu
+  )) {
+    const text = match[1].trim();
+    const scopeKeys = combinedScopeKeysForHeading(text);
+    if (scopeKeys.length < 2) continue;
+    const leading = match[0].indexOf(text);
+    headings.push({
+      scopeKey: null,
+      scopeKeys,
+      text,
+      pageStart: match.index + leading,
+      pageEnd: match.index + leading + text.length,
+    });
+  }
   for (const pattern of patterns) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0].trim();

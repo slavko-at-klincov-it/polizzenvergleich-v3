@@ -1505,6 +1505,37 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(occurrences[2].sectionScopeHint).toBeNull();
   });
 
+  test("resets inherited liability at a combined building-coverage heading", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 5\n8. Grundstückshaftpflichtversicherung\nSchadenersatzverpflichtungen sind versichert.",
+        [
+          "Seite 6",
+          "3. Versicherungsumfang Feuer-, Sturm- und Leitungswasserversicherung",
+          "Zusätzlich sind bis zu jeweils 10 % der Gebäudeversicherungssumme mitversichert:",
+          "- Mehrkosten für bauliche Verbesserungen aufgrund gesetzlicher, baupolizeilicher oder technischer Vorschriften;",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "combined-building-coverage-resets-liability",
+      catalog,
+    });
+    const occurrence = component(
+      worksheet,
+      "VS-25",
+      "authority_reconstruction_extra_costs"
+    ).occurrences[0];
+
+    expect(occurrence.sectionScopeHint).toMatchObject({
+      scopeKey: null,
+      scopeKeys: [
+        "FEUER_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+      source: "CURRENT_PAGE_HEADING",
+    });
+  });
+
   test("recognizes title-case insurance headings as category scope", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
