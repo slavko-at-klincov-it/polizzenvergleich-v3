@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.18",
+  "catalogId": "fe-occurrence-full-draft-v0.19",
   "categoryView": "FE",
   "requirements": [
     {
@@ -783,7 +783,7 @@
             "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
           ],
           "conditionEvidenceContract": {
-            "contractId": "SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_V1",
+            "contractId": "SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_V2",
             "conditionSetKey": "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
             "sourcePolicy": "MEMBER_CONTEXT_AFTER_MEMBER_SPAN_V1",
             "combinationPolicy": "ALL_CONJUNCTIVE_SAME_CONTEXT_V1",
