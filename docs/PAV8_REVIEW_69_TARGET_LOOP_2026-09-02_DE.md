@@ -2253,6 +2253,30 @@ Wiederherstellungspflicht und Aufnahme im Gebäudeneuwert. Eine globale oder
 FE-C02-lokale Umdeutung `DEFINED -> INCLUDED` bleibt verboten. Kein voller
 224-Zeilen-Lauf und kein Deployment.
 
+### 10.41 FE-C02 – qualifizierender Listenpunkt vollständig erhalten
+
+`996ea4be0` ersetzt den Membership-Proof durch den versionierten Vertrag
+`SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2`; `3a35c2924` enthält nur die vom
+Mac-Studio-Formatter verlangte Testformatierung. V2 bindet neben Mitglieds-
+und Klassenspans auch den vollständigen strukturellen Listenpunkt als
+`memberContextSpan`. Dadurch kann die nächste Kante ihre kumulativen
+Bedingungen beweissicher weiterreichen, statt nur den Objektnamen zu kennen.
+
+```text
+Commit: 3a35c292488ab18f16ecc13d2af3cf7e9bd7b161
+Mac Studio: Format PASS; 8 Suites / 239 Tests PASS
+Artefakt: QA/FE-C02-QUALIFIER-3A35C292-20260903
+Summary-SHA: 7c428399e5b9906d68c44de842b08bba6a705f0328623ebbe65ea51e852350e6
+Selection-SHA: 9f8c6d31457dd7f175c507189a06ebcde166c23bd97b81a1550d8c7653bcb9d6
+Ergebnisdelta: keines
+Call-/Terminal-Delta: keines
+```
+
+Im realen B-Atom sind beide vollständigen Listenpunkte samt eigenem SHA
+vorhanden. Die Bedingungskette selbst entsteht erst mit der noch fehlenden
+Elternkante `BUILDING_TECHNICAL_INSTALLATION -> BUILDING`; deshalb bleibt
+`FE-C02` korrekt `UNKLAR`. Kein Vollrun und kein Deployment.
+
 ### 10.38 FE-A05 Schritt 2c2 – Effects-Runner an Originalartefakte gebunden
 
 Der Selected-Source-Replay ist jetzt in die tatsächliche Effects-Ausführung

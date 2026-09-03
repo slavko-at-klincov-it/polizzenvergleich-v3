@@ -5144,3 +5144,22 @@ Offen bleibt der outcome-neutrale Paket-Audit für die vollständige Kette
 einschließlich Editionsmatch, Bedingungen, Konflikt und Rang. Erst danach darf
 ein eigener Entscheidungsvertrag vor dem allgemeinen Paketstatus-Gate geprüft
 werden. R69-A bleibt `10/40`; kein Vollrun und kein Deployment.
+
+## 103. FE-C02 Membership V2 – Qualifier-Provenienz ergänzt
+
+`996ea4be0`/`3a35c2924` versionieren den Membership-Beweis auf V2 und binden
+den vollständigen Listenpunkt samt Seite, Offsets und SHA als
+`memberContextSpan`. Das Ergebnis bleibt unverändert; die Erweiterung ist die
+Voraussetzung, um Bedingungen der nächsten gerichteten Elternkante ohne
+Textverlust fortzutragen.
+
+```text
+Mac Studio: Format PASS; 8 Suites / 239 Tests PASS
+Artefakt: QA/FE-C02-QUALIFIER-3A35C292-20260903
+Summary: 7c428399e5b9906d68c44de842b08bba6a705f0328623ebbe65ea51e852350e6
+Ergebnis-/Call-/Terminal-Delta: keines
+```
+
+Nächster Schritt ist die outcome-neutrale Extraktion von
+`BUILDING_TECHNICAL_INSTALLATION -> BUILDING` aus demselben aktiven
+Bedingungsdokument. Kein Vollrun und kein Deployment.
