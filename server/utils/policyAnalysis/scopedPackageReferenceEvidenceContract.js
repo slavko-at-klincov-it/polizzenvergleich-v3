@@ -191,8 +191,9 @@ function normalizeWithOffsets(value) {
   return { text: characters.join(""), offsets };
 }
 
-function aliasSpans(sourceText, values) {
+function aliasSpans(sourceText, values, { allowedJoinedSuffixes = [] } = {}) {
   const source = normalizeWithOffsets(sourceText);
+  const normalizedJoinedSuffixes = allowedJoinedSuffixes.map(normalizedText);
   const matches = [];
   values.forEach((alias, aliasIndex) => {
     const normalizedAlias = normalizeWithOffsets(alias).text;
@@ -201,7 +202,13 @@ function aliasSpans(sourceText, values) {
       const end = start + normalizedAlias.length;
       const before = source.text[start - 1] || "";
       const after = source.text[end] || "";
-      if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after))
+      const allowedJoinedSuffix = normalizedJoinedSuffixes.some((suffix) =>
+        source.text.startsWith(suffix, end)
+      );
+      if (
+        !/[\p{L}\p{N}]/u.test(before) &&
+        (!/[\p{L}\p{N}]/u.test(after) || allowedJoinedSuffix)
+      )
         matches.push({
           matchedAlias: alias,
           aliasIndex,
@@ -297,8 +304,8 @@ function allDocumentLines(identity) {
   );
 }
 
-function matchingLineSpans(line, values) {
-  return aliasSpans(line.text, values).map((match) => ({
+function matchingLineSpans(line, values, options) {
+  return aliasSpans(line.text, values, options).map((match) => ({
     ...match,
     documentStart: line.documentStart + match.start,
     documentEnd: line.documentStart + match.end,
@@ -351,7 +358,9 @@ function proofForScope({
   const objectMatches = scopedLines.flatMap((line) =>
     NEGATIVE_OR_OPTIONAL.test(line.text)
       ? []
-      : matchingLineSpans(line, contract.coveredObjectAliases).map((match) => ({
+      : matchingLineSpans(line, contract.coveredObjectAliases, {
+          allowedJoinedSuffixes: ["EUR"],
+        }).map((match) => ({
           line,
           match,
         }))

@@ -64,7 +64,7 @@ function positiveArtifact() {
     [
       "FEUERVERSICHERUNG",
       "Versicherte Variante: Premiumschutz",
-      "-Wohngebäude zum Neuwert EUR 30.608.000,00",
+      "-Wohngebäude zum NeuwertEUR30.608.000,00",
     ].join("\n"),
     [
       "Allgemeine Bedingungen",
@@ -138,6 +138,12 @@ describe("source-bound scoped package-reference evidence", () => {
       "ambiguous reference edition",
       [
         "FEUERVERSICHERUNG\n-Wohngebäude zum Neuwert\n-Ergänzende allgemeine Bedingungen für die Sachversicherung (EABS 2023 ersetzt EABS 2024)",
+      ],
+    ],
+    [
+      "arbitrary joined object suffix",
+      [
+        "FEUERVERSICHERUNG\n-Wohngebäude zum Neuwertig\n-Ergänzende allgemeine Bedingungen für die Sachversicherung (EABS 2023)",
       ],
     ],
   ])("fails closed for %s", (_label, pages) => {
