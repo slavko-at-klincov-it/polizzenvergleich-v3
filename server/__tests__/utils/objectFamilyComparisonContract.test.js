@@ -38,6 +38,7 @@ function atom(side, componentId, overrides = {}) {
     coverageEffect: "INCLUDED",
     conflictState: "NONE",
     selectedScopePicture: "GENERAL",
+    scopePolicy: "GENERAL_REQUIRED",
     documentApplicability: "ACTIVE",
     selectedCandidateIds: [candidateId],
     unresolvedCandidateIds: [],
