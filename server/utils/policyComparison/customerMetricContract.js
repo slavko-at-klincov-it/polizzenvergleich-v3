@@ -66,6 +66,9 @@ const {
   validateVs25AuthorityLimitPortfolioAudit,
   vs25AuthorityLimitPortfolioDecision,
 } = require("./vs25AuthorityReconstructionLimitPortfolioContract");
+const {
+  validatePackageActivatedObjectMembershipAudit,
+} = require("../policyAnalysis/packageActivatedObjectMembershipAuditContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -834,6 +837,41 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           packageBStatus: row.packageB?.reviewStatus,
           allowedDocumentUuidsBySide,
         });
+        const activatedMembershipAudit =
+          row.pointDecision?.packageActivatedObjectMembershipAudit;
+        if (
+          Number(result.schemaVersion) >= 11 &&
+          row.categoryId === "FE-C02" &&
+          (!activatedMembershipAudit ||
+            JSON.stringify(Object.keys(activatedMembershipAudit).sort()) !==
+              JSON.stringify(["A", "B"]))
+        )
+          validationError("COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_REQUIRED", [
+            rowKey,
+          ]);
+        if (activatedMembershipAudit !== undefined) {
+          try {
+            validatePackageActivatedObjectMembershipAudit(
+              activatedMembershipAudit.A,
+              {
+                categoryId: row.categoryId,
+                allowedDocumentUuids: allowedDocumentUuidsBySide.A,
+              }
+            );
+            validatePackageActivatedObjectMembershipAudit(
+              activatedMembershipAudit.B,
+              {
+                categoryId: row.categoryId,
+                allowedDocumentUuids: allowedDocumentUuidsBySide.B,
+              }
+            );
+          } catch (error) {
+            validationError("COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_INVALID", [
+              rowKey,
+              error.message,
+            ]);
+          }
+        }
       }
     }
     if (
@@ -843,6 +881,14 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       row.pointDecision?.packageReviewAudit !== undefined
     )
       validationError("COMPARISON_PACKAGE_REVIEW_AUDIT_UNEXPECTED", [rowKey]);
+    if (
+      row.pointDecision?.reasonCode !==
+        "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION" &&
+      row.pointDecision?.packageActivatedObjectMembershipAudit !== undefined
+    )
+      validationError("COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_UNEXPECTED", [
+        rowKey,
+      ]);
     if (!LEGACY_TECHNICAL_OUTCOMES.has(row.outcome))
       validationError("COMPARISON_LEGACY_TECHNICAL_OUTCOME_INVALID", [
         rowKey,

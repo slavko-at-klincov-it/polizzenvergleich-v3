@@ -4,6 +4,15 @@ const {
   deriveCustomerMetrics,
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
+const {
+  derivePackageReviewAudit,
+} = require("../../utils/policyComparison/packageReviewAudit");
+const {
+  buildPackageActivatedObjectMembershipAudit,
+} = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
 
 function row(
   categoryId,
@@ -72,6 +81,109 @@ function schema7PackageResult() {
     { uuid: "document-b", side: "B" },
   ];
   return result;
+}
+
+function currentFeC02PackageResult() {
+  const activatedContract = {
+    contractId: "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1",
+    targetObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+    coveredObjectKey: "BUILDING",
+    membershipPath: [
+      "PHOTOVOLTAIC_INSTALLATION",
+      "BUILDING_TECHNICAL_INSTALLATION",
+      "BUILDING",
+    ],
+    perilScopeKey: "FEUER_INSURANCE",
+    referenceFamilyKey: "EABS",
+    conditionPolicy: "PRESERVE_SOURCE_CONDITIONS_V1",
+    conflictPolicy: "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1",
+  };
+  const atomA = {
+    requirementId: "FE-C02",
+    documentUuids: ["document-a"],
+    conflictState: "NONE",
+    unresolvedCandidateIds: [],
+    packageActivatedObjectMembershipAuditContract: activatedContract,
+  };
+  const atomB = {
+    requirementId: "FE-C02",
+    componentId: "photovoltaic_as_damaged_object",
+    factRole: "INSURED_OBJECT",
+    documentUuids: ["document-b"],
+    evidencePresence: "FOUND",
+    coverageEffect: "DEFINED",
+    conflictState: "NONE",
+    requestedFieldStatus: "NOT_REQUIRED",
+    selectedScopePicture: "GENERAL",
+    scopePolicy: "GENERAL_REQUIRED",
+    documentApplicability: "CONDITIONAL",
+    documentRole: "TERMS",
+    documentStatus: "FRAMEWORK_TERMS",
+    selectedCandidateIds: ["candidate-b"],
+    unresolvedCandidateIds: [],
+    sources: [
+      {
+        candidateId: "candidate-b",
+        physicalPageNumber: 1,
+        exactText: "Photovoltaikanlagen",
+      },
+    ],
+    packageActivatedObjectMembershipAuditContract: activatedContract,
+  };
+  const packageA = { coverage: "Ja", reviewStatus: "BELEGT", facts: [] };
+  const packageB = {
+    coverage: "Nicht feststellbar",
+    reviewStatus: "TEILBELEGT",
+    facts: [
+      {
+        documentUuid: "document-b",
+        reviewStatus: "TEILBELEGT",
+      },
+    ],
+  };
+  const reviewRow = row(
+    "FE-C02",
+    "UNKLAR",
+    "UNTERSCHIED_FACHLICH_PRÜFEN",
+    "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
+  );
+  reviewRow.packageA = packageA;
+  reviewRow.packageB = packageB;
+  reviewRow.pointDecision = {
+    ...reviewRow.pointDecision,
+    schemaVersion: 3,
+    ruleId: "FAIL_CLOSED_V1",
+    dimensions: [],
+    packageReviewAudit: derivePackageReviewAudit({
+      categoryId: "FE-C02",
+      packageA,
+      packageB,
+      atomsA: [atomA],
+      atomsB: [atomB],
+    }),
+    packageActivatedObjectMembershipAudit: {
+      A: buildPackageActivatedObjectMembershipAudit({
+        categoryId: "FE-C02",
+        atoms: [atomA],
+      }),
+      B: buildPackageActivatedObjectMembershipAudit({
+        categoryId: "FE-C02",
+        atoms: [atomB],
+      }),
+    },
+  };
+  const categories = [{ categoryView: "FE", rows: [reviewRow] }];
+  return {
+    schemaVersion: 11,
+    status: "COMPARISON_RESULT_MATERIALIZED",
+    productProfile: PRODUCT_PROFILE,
+    documents: [
+      { uuid: "document-a", side: "A", sha256: "a".repeat(64) },
+      { uuid: "document-b", side: "B", sha256: "b".repeat(64) },
+    ],
+    categories,
+    totals: deriveCustomerMetrics(categories),
+  };
 }
 
 describe("policy comparison customer metric contract", () => {
@@ -195,6 +307,28 @@ describe("policy comparison customer metric contract", () => {
     );
     expect(() => validateCustomerComparison(duplicate)).toThrow(
       "PACKAGE_REVIEW_AUDIT_ENTRIES_NOT_CANONICAL"
+    );
+  });
+
+  test("requires and validates the FE-C02 package-membership audit", () => {
+    const result = currentFeC02PackageResult();
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+    });
+
+    const missing = currentFeC02PackageResult();
+    delete missing.categories[0].rows[0].pointDecision
+      .packageActivatedObjectMembershipAudit;
+    expect(() => validateCustomerComparison(missing)).toThrow(
+      "COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_REQUIRED"
+    );
+
+    const tampered = currentFeC02PackageResult();
+    tampered.categories[0].rows[0].pointDecision.packageActivatedObjectMembershipAudit.B.status =
+      "COMPLETE_SOURCE_CHAIN_REQUIRES_TYPED_CONDITION_AND_PRECEDENCE";
+    expect(() => validateCustomerComparison(tampered)).toThrow(
+      "COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_INVALID"
     );
   });
 

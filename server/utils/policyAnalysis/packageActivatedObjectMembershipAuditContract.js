@@ -35,6 +35,68 @@ function digest(value) {
     .digest("hex");
 }
 
+function exactObjectKeys(value, expected, code) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    JSON.stringify(Object.keys(value).sort()) !==
+      JSON.stringify([...expected].sort())
+  )
+    throw auditError(code);
+}
+
+function validateDocumentUuids(values, allowedDocumentUuids) {
+  if (
+    !Array.isArray(values) ||
+    values.length === 0 ||
+    values.some((value) => !String(value || "").trim()) ||
+    JSON.stringify(values) !== JSON.stringify([...new Set(values)].sort())
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_DOCUMENT_UUIDS_INVALID");
+  if (
+    allowedDocumentUuids &&
+    values.some((value) => !allowedDocumentUuids.has(value))
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_DOCUMENT_UUID_UNKNOWN");
+}
+
+function validateProofDigest(value) {
+  if (!/^[a-f0-9]{64}$/u.test(String(value || "")))
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PROOF_DIGEST_INVALID");
+}
+
+function validateMemberContextSpan(span) {
+  exactObjectKeys(
+    span,
+    [
+      "source",
+      "physicalPageNumber",
+      "documentStart",
+      "documentEnd",
+      "exactText",
+      "sha256",
+    ],
+    "PACKAGE_MEMBERSHIP_AUDIT_CONTEXT_SPAN_INVALID"
+  );
+  if (
+    span.source !== "STRUCTURAL_LIST_ITEM" ||
+    !Number.isInteger(span.physicalPageNumber) ||
+    span.physicalPageNumber < 1 ||
+    !Number.isInteger(span.documentStart) ||
+    !Number.isInteger(span.documentEnd) ||
+    span.documentEnd <= span.documentStart ||
+    typeof span.exactText !== "string" ||
+    span.exactText.length !== span.documentEnd - span.documentStart ||
+    digestText(span.exactText) !== span.sha256
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONTEXT_SPAN_INVALID");
+}
+
+function digestText(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
 function requiredConceptKey(value, detail) {
   const key = String(value || "").trim();
   if (!/^[A-Z][A-Z0-9_]*$/u.test(key))
@@ -342,6 +404,250 @@ function buildPackageActivatedObjectMembershipAudit({ categoryId, atoms }) {
   return { ...payload, auditDigest: digest(payload) };
 }
 
+function validateProjectedProofEntries(entries, allowedDocumentUuids) {
+  if (!Array.isArray(entries))
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_ARRAY_INVALID");
+  const digests = [];
+  for (const entry of entries) {
+    exactObjectKeys(
+      entry,
+      ["documentUuids", "documentRole", "documentStatus", "proofDigest"],
+      "PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_ENTRY_INVALID"
+    );
+    validateDocumentUuids(entry.documentUuids, allowedDocumentUuids);
+    validateProofDigest(entry.proofDigest);
+    if (
+      ![entry.documentRole, entry.documentStatus].every(
+        (value) => value === null || (typeof value === "string" && value.trim())
+      )
+    )
+      throw auditError("PACKAGE_MEMBERSHIP_AUDIT_DOCUMENT_METADATA_INVALID");
+    digests.push(entry.proofDigest);
+  }
+  if (
+    JSON.stringify(digests) !==
+    JSON.stringify([...new Set(digests)].sort())
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_NOT_CANONICAL");
+}
+
+function validateMembershipPathEvidence(
+  evidence,
+  contract,
+  allowedDocumentUuids
+) {
+  if (
+    !Array.isArray(evidence) ||
+    evidence.length !== contract.membershipPath.length - 1
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_EVIDENCE_INVALID");
+  evidence.forEach((edge, index) => {
+    exactObjectKeys(
+      edge,
+      ["memberObjectKey", "classObjectKey", "entries"],
+      "PACKAGE_MEMBERSHIP_AUDIT_PATH_EDGE_INVALID"
+    );
+    if (
+      edge.memberObjectKey !== contract.membershipPath[index] ||
+      edge.classObjectKey !== contract.membershipPath[index + 1] ||
+      !Array.isArray(edge.entries)
+    )
+      throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_EDGE_INVALID");
+    const digests = [];
+    for (const entry of edge.entries) {
+      exactObjectKeys(
+        entry,
+        ["documentUuids", "proofDigest", "memberContextSpan"],
+        "PACKAGE_MEMBERSHIP_AUDIT_PATH_ENTRY_INVALID"
+      );
+      validateDocumentUuids(entry.documentUuids, allowedDocumentUuids);
+      validateProofDigest(entry.proofDigest);
+      validateMemberContextSpan(entry.memberContextSpan);
+      digests.push(entry.proofDigest);
+    }
+    if (
+      JSON.stringify(digests) !==
+      JSON.stringify([...new Set(digests)].sort())
+    )
+      throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_NOT_CANONICAL");
+  });
+}
+
+function validateConflicts(conflicts, contract, allowedDocumentUuids) {
+  if (!Array.isArray(conflicts))
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICTS_INVALID");
+  const requiredEdges = new Set(
+    contract.membershipPath
+      .slice(0, -1)
+      .map(
+        (memberObjectKey, index) =>
+          `${memberObjectKey}->${contract.membershipPath[index + 1]}`
+      )
+  );
+  const digests = [];
+  for (const conflict of conflicts) {
+    exactObjectKeys(
+      conflict,
+      ["documentUuids", "proofDigest", "edge"],
+      "PACKAGE_MEMBERSHIP_AUDIT_CONFLICT_INVALID"
+    );
+    validateDocumentUuids(conflict.documentUuids, allowedDocumentUuids);
+    validateProofDigest(conflict.proofDigest);
+    if (
+      conflict.edge?.relation !== "EXCLUDED_FROM_CLASS" ||
+      !requiredEdges.has(
+        `${conflict.edge?.memberObjectKey}->${conflict.edge?.classObjectKey}`
+      )
+    )
+      throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICT_EDGE_INVALID");
+    digests.push(conflict.proofDigest);
+  }
+  if (
+    JSON.stringify(digests) !==
+    JSON.stringify([...new Set(digests)].sort())
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICTS_NOT_CANONICAL");
+}
+
+function validatePackageActivatedObjectMembershipAudit(
+  audit,
+  { categoryId, allowedDocumentUuids } = {}
+) {
+  const ambiguousContract =
+    audit?.status === AMBIGUOUS_SOURCE_CHAIN &&
+    audit?.reasonCode === "AUDIT_CONTRACT_AMBIGUOUS";
+  exactObjectKeys(
+    audit,
+    ambiguousContract
+      ? [
+          "schemaVersion",
+          "contractId",
+          "categoryId",
+          "readyForDecision",
+          "status",
+          "reasonCode",
+          "remainingGates",
+          "auditDigest",
+        ]
+      : [
+          "schemaVersion",
+          "contractId",
+          "categoryId",
+          "readyForDecision",
+          "status",
+          "reasonCode",
+          "contract",
+          "referenceKey",
+          "evidence",
+          "remainingGates",
+          "auditDigest",
+        ],
+    "PACKAGE_MEMBERSHIP_AUDIT_SHAPE_INVALID"
+  );
+  if (
+    audit.schemaVersion !==
+      PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_SCHEMA_VERSION ||
+    audit.contractId !==
+      PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID ||
+    audit.categoryId !== categoryId ||
+    audit.readyForDecision !== false
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_IDENTITY_INVALID");
+  validateProofDigest(audit.auditDigest);
+  const { auditDigest, ...payload } = audit;
+  if (digest(payload) !== auditDigest)
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_DIGEST_MISMATCH");
+  if (ambiguousContract) {
+    if (
+      JSON.stringify(audit.remainingGates) !==
+      JSON.stringify(["CONTRACT_IDENTITY"])
+    )
+      throw auditError("PACKAGE_MEMBERSHIP_AUDIT_GATES_INVALID");
+    return audit;
+  }
+
+  const contract = validatePackageActivatedObjectMembershipAuditContract(
+    audit.contract,
+    categoryId
+  );
+  exactObjectKeys(
+    audit.evidence,
+    ["references", "identities", "membershipPath", "conflicts"],
+    "PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_INVALID"
+  );
+  validateProjectedProofEntries(audit.evidence.references, allowedDocumentUuids);
+  validateProjectedProofEntries(audit.evidence.identities, allowedDocumentUuids);
+  validateMembershipPathEvidence(
+    audit.evidence.membershipPath,
+    contract,
+    allowedDocumentUuids
+  );
+  validateConflicts(audit.evidence.conflicts, contract, allowedDocumentUuids);
+
+  const missing = [];
+  if (audit.evidence.references.length === 0)
+    missing.push("SCOPED_PACKAGE_REFERENCE");
+  if (audit.evidence.identities.length === 0)
+    missing.push("REFERENCED_TERMS_IDENTITY");
+  audit.evidence.membershipPath.forEach((edge) => {
+    if (edge.entries.length === 0)
+      missing.push(
+        `MEMBERSHIP:${edge.memberObjectKey}->${edge.classObjectKey}`
+      );
+  });
+  const ambiguous =
+    audit.evidence.references.length > 1 ||
+    audit.evidence.identities.length > 1 ||
+    audit.evidence.membershipPath.some(({ entries }) => entries.length > 1);
+  const expectedByStatus = {
+    [COMPLETE_SOURCE_CHAIN]: {
+      reasonCode: "SOURCE_CHAIN_COMPLETE_OUTCOME_LOCKED",
+      gates: ["TYPED_CONDITIONS", "DOCUMENT_PRECEDENCE"],
+      valid:
+        missing.length === 0 &&
+        !ambiguous &&
+        audit.evidence.conflicts.length === 0 &&
+        typeof audit.referenceKey === "string",
+    },
+    [INCOMPLETE_SOURCE_CHAIN]: {
+      reasonCode: "SOURCE_CHAIN_COMPONENT_MISSING",
+      gates: missing,
+      valid: missing.length > 0,
+    },
+    [AMBIGUOUS_SOURCE_CHAIN]: {
+      reasonCode: "MULTIPLE_SOURCE_PATHS",
+      gates: ["SOURCE_DISAMBIGUATION"],
+      valid: ambiguous,
+    },
+    [REFERENCE_KEY_MISMATCH]: {
+      reasonCode: "REFERENCE_AND_IDENTITY_KEY_DIFFER",
+      gates: ["REFERENCE_IDENTITY_MATCH"],
+      valid: missing.length === 0 && !ambiguous && audit.referenceKey === null,
+    },
+    [CONFLICTING_MEMBERSHIP]: {
+      reasonCode: "MEMBERSHIP_CONFLICT_OR_UNRESOLVED_SOURCE",
+      gates: ["CONFLICT_RESOLUTION"],
+      valid: missing.length === 0,
+    },
+  };
+  const expected = expectedByStatus[audit.status];
+  if (
+    !expected ||
+    !expected.valid ||
+    audit.reasonCode !== expected.reasonCode ||
+    JSON.stringify(audit.remainingGates) !== JSON.stringify(expected.gates)
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_STATUS_INVALID");
+  if (
+    audit.referenceKey !== null &&
+    !new RegExp(`^${contract.referenceFamilyKey}@[\\p{L}\\p{N}._/-]+$`, "u").test(
+      audit.referenceKey
+    )
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_REFERENCE_KEY_INVALID");
+  return audit;
+}
+
 module.exports = {
   AMBIGUOUS_SOURCE_CHAIN,
   COMPLETE_SOURCE_CHAIN,
@@ -353,5 +659,6 @@ module.exports = {
   PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_SCHEMA_VERSION,
   REFERENCE_KEY_MISMATCH,
   buildPackageActivatedObjectMembershipAudit,
+  validatePackageActivatedObjectMembershipAudit,
   validatePackageActivatedObjectMembershipAuditContract,
 };

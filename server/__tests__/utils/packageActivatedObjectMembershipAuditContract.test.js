@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   COMPLETE_SOURCE_CHAIN,
   CONFLICTING_MEMBERSHIP,
@@ -5,6 +6,7 @@ const {
   PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID,
   REFERENCE_KEY_MISMATCH,
   buildPackageActivatedObjectMembershipAudit,
+  validatePackageActivatedObjectMembershipAudit,
   validatePackageActivatedObjectMembershipAuditContract,
 } = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
 
@@ -31,6 +33,7 @@ function membershipProof(
   classObjectKey,
   relation = "MEMBER_OF_CLASS"
 ) {
+  const exactText = `${memberObjectKey} unter allen Quellbedingungen`;
   return {
     proofDigest: digestCharacter.repeat(64),
     edge: {
@@ -38,11 +41,12 @@ function membershipProof(
       memberObjectKey,
       classObjectKey,
       memberContextSpan: {
+        source: "STRUCTURAL_LIST_ITEM",
         physicalPageNumber: 2,
         documentStart: 100,
-        documentEnd: 160,
-        exactText: `${memberObjectKey} unter allen Quellbedingungen`,
-        sha256: "f".repeat(64),
+        documentEnd: 100 + exactText.length,
+        exactText,
+        sha256: crypto.createHash("sha256").update(exactText).digest("hex"),
       },
     },
   };
@@ -132,6 +136,34 @@ describe("package-activated object-membership audit", () => {
     ).toContain("Quellbedingungen");
     expect(audit.auditDigest).toMatch(/^[a-f0-9]{64}$/u);
     expect(audit).not.toHaveProperty("coverageEffect");
+    expect(
+      validatePackageActivatedObjectMembershipAudit(audit, {
+        categoryId: "FE-C02",
+        allowedDocumentUuids: new Set(["proposal", "terms"]),
+      })
+    ).toBe(audit);
+  });
+
+  test("rejects changed audit fields and document UUIDs at the customer boundary", () => {
+    const audit = buildPackageActivatedObjectMembershipAudit({
+      categoryId: "FE-C02",
+      atoms: atoms(),
+    });
+    const tampered = JSON.parse(JSON.stringify(audit));
+    tampered.status = INCOMPLETE_SOURCE_CHAIN;
+    expect(() =>
+      validatePackageActivatedObjectMembershipAudit(tampered, {
+        categoryId: "FE-C02",
+        allowedDocumentUuids: new Set(["proposal", "terms"]),
+      })
+    ).toThrow("PACKAGE_MEMBERSHIP_AUDIT_DIGEST_MISMATCH");
+
+    expect(() =>
+      validatePackageActivatedObjectMembershipAudit(audit, {
+        categoryId: "FE-C02",
+        allowedDocumentUuids: new Set(["proposal"]),
+      })
+    ).toThrow("PACKAGE_MEMBERSHIP_AUDIT_DOCUMENT_UUID_UNKNOWN");
   });
 
   test("fails closed when reference and identity editions differ", () => {
