@@ -5522,10 +5522,12 @@ kann der Doctor keinen ungetaggten oder nur namensgleichen Checkout mehr als
 gültigen Release melden.
 
 ```text
-Ausgangs-HEAD: dc1fa925ccf8c5678e285b13996f2c11c8faa411
+Release-Vorbereitungs-Ausgangs-HEAD: dc1fa925ccf8c5678e285b13996f2c11c8faa411
+Aktuelle Release-Codebasis: 97e3140b4dee734feb611861e9205408759c089e
 Installierter Kundenstand: c7d3b16d400ea4d65b558ef091781da5df82d610
 Geplanter Release: v3.6.0
 Produktprofil: CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY
+Vergleichsvertrag: V62
 Ergebnisschema: 14
 Main: noch nicht aktualisiert
 Tag: noch nicht erstellt
@@ -5533,10 +5535,11 @@ Deployment: noch nicht begonnen
 ```
 
 Vor `main`, Tag und Deployment folgen vollständige Regression,
-Produktionsbuild, FE-C02-Replay, frischer Zehn-Dokument-/224-Zeilen-Vollrun,
-unabhängiger Metrik- und Favoritenvergleich sowie eine externe
-Kundendatensicherung. Jeder rote Befund stoppt die Release-Kette vor dem
-Deployment.
+Produktionsbuild, FE-A01-, FE-C02- und FE-C07-Entscheidungs-,
+Qualifikations- und Auslassungsreplays, VS-08-Worksheet-Trust-Anchor-Prüfung,
+frischer Zehn-Dokument-/224-Zeilen-Vollrun, unabhängiger Metrik- und
+Favoritenvergleich sowie eine externe Kundendatensicherung. Jeder rote Befund
+stoppt die Release-Kette vor dem Deployment.
 
 Der nachgelagerte Release-Review erweitert das Gate um drei Invarianten:
 

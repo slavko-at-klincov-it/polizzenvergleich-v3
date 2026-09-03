@@ -41,7 +41,8 @@ Code-Commit auf dem Mac Studio folgende Gates bestanden hat:
 1. Repository-, Format-, Syntax-, Installer- und Updaterverträge;
 2. vollständige relevante Unit- und Integrationsregression;
 3. Produktionsbuild des Frontends;
-4. gezielte FE-C02-Entscheidungs- und Auslassungsreplays;
+4. gezielte FE-A01-, FE-C02- und FE-C07-Entscheidungs-, Qualifikations- und
+   Auslassungsreplays sowie die VS-08-Worksheet-Trust-Anchor-Prüfung;
 5. frischer Zehn-Dokument-/224-Zeilen-Vollvergleich mit unabhängig neu
    berechneten Kundenmetriken und Vergleich gegen den Favoritenlauf
    `PAV8-03D-VS14-2D964B45-20260902-073000`;
@@ -69,6 +70,16 @@ externe Sicherung von Storage, SQLite-Datenbank, aktivem Frontend,
 Konfiguration, LaunchAgents und vorhandenen Vergleichsexporten erstellt. Bei
 einem roten Gate wird weder `main` veröffentlicht noch der Kundenstand
 verändert.
+
+## Aktueller Kandidatenstand
+
+Die Release-Codebasis reicht bis zum Formatabschluss `97e3140b4`; die
+Release-Dokumentation baut danach ausschließlich additiv darauf auf. Aktiv
+sind Produktprofil `CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY`,
+Vergleichsvertrag V62 und Ergebnisschema 14. Ein frischer vollständiger
+224-Zeilen-Lauf auf dem abschließenden Dokumentationscommit steht noch aus.
+Bis zu dessen erfolgreicher Abnahme bleibt der Status
+`RELEASE_CANDIDATE_IN_VALIDATION`; es gibt noch keine Deploymentfreigabe.
 
 ## Abnahmeprotokoll
 
