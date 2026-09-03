@@ -35,7 +35,8 @@ function exactRequirementContract(contract) {
   return Boolean(
     contract?.digest === VS25_REQUIREMENT_CONTRACT_DIGEST_SHA256 &&
       contract?.componentSatisfactionPolicy === "ALL" &&
-      JSON.stringify(contract?.components) === JSON.stringify(EXPECTED_COMPONENTS)
+      JSON.stringify(contract?.components) ===
+        JSON.stringify(EXPECTED_COMPONENTS)
   );
 }
 
@@ -95,8 +96,7 @@ function sourceSemanticsValid(atom) {
     return (
       /(?:behördliche\s+Mehrkosten|Mehrkosten\s+(?:durch|infolge)\s+behördliche[rs]?\s+Auflagen|Mehrkosten\s+für\s+bauliche\s+Verbesserungen)/iu.test(
         source.exactText
-      ) &&
-      !LOCAL_CONDITION_MARKER.test(local)
+      ) && !LOCAL_CONDITION_MARKER.test(local)
     );
   });
 }
@@ -134,12 +134,7 @@ function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
 
 function exactFoundCostAtom(atom, expectedDocument) {
   return Boolean(
-    exactAtomContract(
-      atom,
-      expectedDocument,
-      VS25_COST_COMPONENT_ID,
-      "COST"
-    ) &&
+    exactAtomContract(atom, expectedDocument, VS25_COST_COMPONENT_ID, "COST") &&
       atom?.evidencePresence === "FOUND" &&
       atom?.coverageEffect === "INCLUDED" &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
@@ -200,11 +195,13 @@ function exactVs01ReferenceAtom(atom, expectedDocumentUuids) {
 
 function clauseCodes(atom) {
   return strings(
-    (atom?.sources || []).flatMap((source) => [
-      ...String(source.conditionCheckText || "").matchAll(
-        /\b\d{2}[A-Z]{2}\d{4}\b/gu
-      ),
-    ]).map(([code]) => code)
+    (atom?.sources || [])
+      .flatMap((source) => [
+        ...String(source.conditionCheckText || "").matchAll(
+          /\b\d{2}[A-Z]{2}\d{4}\b/gu
+        ),
+      ])
+      .map(([code]) => code)
   );
 }
 
@@ -228,9 +225,7 @@ function limitPresentation(atom) {
     displayValue: field.displayValue,
     qualifier: field.qualifier,
     basis:
-      field.valueType === "PERCENT"
-        ? "BUILDING_NEW_VALUE_INSURANCE_SUM"
-        : null,
+      field.valueType === "PERCENT" ? "BUILDING_NEW_VALUE_INSURANCE_SUM" : null,
     clauseCodes: clauseCodes(atom),
     selectedCandidateIds: strings(atom.selectedCandidateIds),
     sources: atom.sources.map(
@@ -249,8 +244,7 @@ function reconciliationValid(reconciliation, money, percentage) {
     reconciliation?.schemaVersion !== 1 ||
     reconciliation?.contractId !== VS25_RECONCILIATION_CONTRACT_ID ||
     reconciliation?.categoryId !== VS25_CATEGORY_ID ||
-    reconciliation?.comparisonBasis !==
-      "BUILDING_NEW_VALUE_INSURANCE_SUM" ||
+    reconciliation?.comparisonBasis !== "BUILDING_NEW_VALUE_INSURANCE_SUM" ||
     reconciliation?.currency?.documentUuid !== money.documentUuid ||
     reconciliation?.currency?.amountMinor !== money.value ||
     reconciliation?.percentage?.documentUuid !== percentage.documentUuid ||
@@ -265,10 +259,7 @@ function reconciliationValid(reconciliation, money, percentage) {
   const commonCodes = money.clauseCodes.filter((code) =>
     percentage.clauseCodes.includes(code)
   );
-  if (
-    commonCodes.length !== 1 ||
-    reconciliation.clauseCode !== commonCodes[0]
-  )
+  if (commonCodes.length !== 1 || reconciliation.clauseCode !== commonCodes[0])
     return false;
   const base = BigInt(reconciliation.base.amountMinor);
   const percent = BigInt(percentage.value);
@@ -348,7 +339,8 @@ function sidePortfolio({
     )
   )
     return null;
-  if (money.length === 0 && packageSummary.vs25AmountReconciliation) return null;
+  if (money.length === 0 && packageSummary.vs25AmountReconciliation)
+    return null;
 
   const effectiveQualifier =
     money.length === 1
@@ -421,8 +413,7 @@ function buildVs25AuthorityLimitPortfolioAudit({
     schemaVersion: 1,
     contractId: VS25_AUTHORITY_LIMIT_PORTFOLIO_AUDIT_CONTRACT_ID,
     categoryId: VS25_CATEGORY_ID,
-    requirementContractDigestSha256:
-      VS25_REQUIREMENT_CONTRACT_DIGEST_SHA256,
+    requirementContractDigestSha256: VS25_REQUIREMENT_CONTRACT_DIGEST_SHA256,
     comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
     sides: { A: sideA, B: sideB },
     winnerSide: valueA === valueB ? null : valueA > valueB ? "A" : "B",

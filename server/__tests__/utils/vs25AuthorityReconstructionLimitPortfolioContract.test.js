@@ -279,21 +279,33 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
   });
 
   test.each([
-    ["one-cent mismatch", (input) => {
-      input.packageB.vs25AmountReconciliation.calculation.documentedAmountMinor =
-        "153040001";
-    }],
-    ["missing new-value reference", (input) => {
-      input.referenceAtomsA = [];
-    }],
-    ["mismatched clause", (input) => {
-      input.atomsB[3].sources[0].conditionCheckText =
-        "Mehrkosten durch behördliche Auflagen bis 5 % des NBW gemäß 10PA9999";
-    }],
-    ["local condition", (input) => {
-      input.atomsA[0].sources[0].conditionCheckText =
-        "Mehrkosten durch behördliche Auflagen nur wenn gesondert vereinbart";
-    }],
+    [
+      "one-cent mismatch",
+      (input) => {
+        input.packageB.vs25AmountReconciliation.calculation.documentedAmountMinor =
+          "153040001";
+      },
+    ],
+    [
+      "missing new-value reference",
+      (input) => {
+        input.referenceAtomsA = [];
+      },
+    ],
+    [
+      "mismatched clause",
+      (input) => {
+        input.atomsB[3].sources[0].conditionCheckText =
+          "Mehrkosten durch behördliche Auflagen bis 5 % des NBW gemäß 10PA9999";
+      },
+    ],
+    [
+      "local condition",
+      (input) => {
+        input.atomsA[0].sources[0].conditionCheckText =
+          "Mehrkosten durch behördliche Auflagen nur wenn gesondert vereinbart";
+      },
+    ],
   ])("fails closed for %s", (_label, mutate) => {
     const input = fixture();
     mutate(input);
