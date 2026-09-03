@@ -521,12 +521,16 @@ describe("candidateTriageContract", () => {
   });
 
   test.each([
-    ["disposal_costs", "COST"],
-    ["hazardous_waste", "INSURED_OBJECT"],
-    ["hazardous_waste_cost_limit", "LIMIT"],
+    ["disposal_costs", "COST", "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST"],
+    [
+      "hazardous_waste",
+      "INSURED_OBJECT",
+      "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+    ],
+    ["hazardous_waste_cost_limit", "LIMIT", "LIMIT_TERM_WITHOUT_LOCAL_LIMIT"],
   ])(
     "rejects a VS-22 liability storage carveback for %s",
-    (componentId, factRole) => {
+    (componentId, factRole, expectedRoleBasis) => {
       const text =
         "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
       const worksheet = {
@@ -576,7 +580,7 @@ describe("candidateTriageContract", () => {
         roleResolution: {
           owner: "SERVER",
           roleMatch: "MISMATCH",
-          basis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+          basis: expectedRoleBasis,
         },
         scopeResolution: {
           owner: "SERVER",
