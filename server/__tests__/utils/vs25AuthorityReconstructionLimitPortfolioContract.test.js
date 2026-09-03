@@ -210,11 +210,7 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       unit: "%",
       limitKind: "CAPPED",
     }),
-    absentAtom(
-      docBAbsent,
-      "authority_reconstruction_extra_costs",
-      "COST"
-    ),
+    absentAtom(docBAbsent, "authority_reconstruction_extra_costs", "COST"),
     absentAtom(
       docBAbsent,
       "authority_reconstruction_extra_cost_limit",
