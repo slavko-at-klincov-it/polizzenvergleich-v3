@@ -78,9 +78,9 @@ function searchCell({ documentUuid, componentId, found }) {
     comparisonPolicy: null,
     absenceCertification: null,
     requirementContract: contract,
-    searchPlanId: `vs-occurrence-full-draft-v0.15/VS-22/${componentId}`,
+    searchPlanId: `vs-occurrence-full-draft-v0.16/VS-22/${componentId}`,
     documentUuid,
-    catalogId: "vs-occurrence-full-draft-v0.15",
+    catalogId: "vs-occurrence-full-draft-v0.16",
     physicalPagesChecked: 5,
     totalPhysicalPages: 5,
     aliases: [componentId],
@@ -209,7 +209,7 @@ function packageFixture(side, mode, documentCount) {
       documentUuids: documents.map(({ uuid }) => uuid).sort(),
       physicalPagesChecked: documents.length * 5,
       searchPlanIds: components
-        .map(({ id }) => `vs-occurrence-full-draft-v0.15/VS-22/${id}`)
+        .map(({ id }) => `vs-occurrence-full-draft-v0.16/VS-22/${id}`)
         .sort(),
       requirementContract: contract,
       components: searchComponents,

@@ -11,7 +11,7 @@ const {
 } = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
 const fullVsCatalog = require("../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
-const CATALOG_ID = "vs-occurrence-full-draft-v0.15";
+const CATALOG_ID = "vs-occurrence-full-draft-v0.16";
 const CATEGORY_ID = "VS-08";
 const COMPONENT_ID = "underinsurance_waiver_condition";
 const COMPONENTS = [{ id: COMPONENT_ID, factRole: "CONDITION" }];

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.15",
+  "catalogId": "vs-occurrence-full-draft-v0.16",
   "categoryView": "VS",
   "requirements": [
     {
@@ -779,18 +779,13 @@
     {
       "id": "VS-24",
       "label": "Gerüstkosten im Schadenfall",
-      "requestedFields": ["limit"],
+      "requestedFields": [],
+      "optionalFields": ["limit"],
       "components": [
         {
           "id": "scaffolding_costs",
           "label": "Gerüstkosten",
           "factRole": "COST",
-          "aliases": ["Gerüstkosten", "Kosten für Gerüste"]
-        },
-        {
-          "id": "scaffolding_cost_limit",
-          "label": "Limit der Gerüstkosten",
-          "factRole": "LIMIT",
           "aliases": ["Gerüstkosten", "Kosten für Gerüste"]
         }
       ],

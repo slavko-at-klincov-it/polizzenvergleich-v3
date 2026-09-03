@@ -17,7 +17,7 @@ const {
 } = require("../policyAnalysis/preparedEvidenceContract");
 
 const VS22_CATEGORY_ID = "VS-22";
-const VS22_CATALOG_ID = "vs-occurrence-full-draft-v0.15";
+const VS22_CATALOG_ID = "vs-occurrence-full-draft-v0.16";
 const VS22_REQUIREMENT_CONTRACT_DIGEST =
   "7022516926810b8ca7f891566e03c72ebe274c4342541012ecf5480fe55ffadb";
 const VS22_COMPONENTS = Object.freeze([

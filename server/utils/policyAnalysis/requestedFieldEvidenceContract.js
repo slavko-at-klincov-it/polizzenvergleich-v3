@@ -1839,6 +1839,7 @@ function extractorFor(requirement, field, component = null) {
       "VS-20",
       "VS-22",
       "VS-23",
+      "VS-24",
       "VS-29",
       "VS-31",
       "VS-34",
