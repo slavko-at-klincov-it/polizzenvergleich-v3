@@ -5525,8 +5525,8 @@ gültigen Release melden.
 Ausgangs-HEAD: dc1fa925ccf8c5678e285b13996f2c11c8faa411
 Installierter Kundenstand: c7d3b16d400ea4d65b558ef091781da5df82d610
 Geplanter Release: v3.6.0
-Produktprofil: CUSTOMER_CORE_5_V99_FE_C02_QUALIFICATION_REPLAY
-Ergebnisschema: 13
+Produktprofil: CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY
+Ergebnisschema: 14
 Main: noch nicht aktualisiert
 Tag: noch nicht erstellt
 Deployment: noch nicht begonnen
@@ -5550,3 +5550,44 @@ Positive, fehlende, leichtgewichtige, fremde-HEAD-, Dirty-Checkout- und
 nicht-auf-main-veröffentlichte Tagvarianten werden im macOS-Vertragstest
 getrennt geprüft. Das spätere Deploymentprotokoll entsteht nach der Abnahme in
 einem eigenen Commit; der geprüfte Release-Tag bleibt unveränderlich.
+
+### Release-Härtung vor dem finalen Vollrun
+
+Der erste isolierte Zehn-Dokument-Lauf auf dem Mac Studio verarbeitete alle 50
+Kategorien, scheiterte danach jedoch beim Vergleichsaufbau an zwei
+Replay-/Projektionsfehlern. Die anschließenden kleinen Forward-Fixes wurden
+einzeln versioniert:
+
+- `5a9709e6d` kanonisiert VS-22-Replay-Proofs;
+- `b6993994c` erhält einseitige Scope-Provenienz im Replay;
+- `b244f7d67` erhält enge Scope-Provenienz im Vergleich;
+- `495297ca4` akzeptiert nur nachweisbar zugeordnete enge Überschriften;
+- `0c3e85498` bindet VS-08 an den normalisierten Worksheet-Trust-Anchor;
+- `3a0ef494e` ergänzt die quellgebundene Qualifikationswiedergabe für FE-A01
+  und FE-C07;
+- `603a5552d` lässt mehrdeutige Mehrfach-Scope-Zuordnungen bewusst ungelöst;
+- `97e3140b4` behebt ausschließlich die danach gemeldeten
+  Formatabweichungen.
+
+Ein gespeicherter Replay des ersten Vollruns ist auf dem gehärteten Stand
+vollständig validierbar und ergibt 224 Zeilen mit 5 Vorteilen für A, 5
+Vorteilen für B, 34 Dokumentationsunterschieden, 122 Gleichwertigkeiten, 12
+nicht vergleichbaren und 46 unklaren Zeilen. Dieses Ergebnis beweist nur die
+deterministische Wiederverarbeitung der alten Analyseartefakte. Es ersetzt
+nicht den noch ausstehenden frischen Vollrun, weil die alten Artefakte die neu
+eingeführte Scope-Provenienz nicht enthalten können.
+
+Die zehn konkreten Vorteile wurden unabhängig gegen ihre gespeicherten Quellen
+geprüft. Die zuvor vorhandenen vier Vorteile bleiben erhalten. Ein
+Regression-Audit fand danach die Scope-Fälle EL-06, EL-09 und EL-10; die oben
+genannten Scope-Fixes behandeln deren gemeinsame Ursache fail-closed. VS-21
+bleibt dagegen absichtlich unklar, weil seine vorhandenen Fundstellen dem
+Haftpflicht- und nicht dem benötigten Gebäudeschaden-Scope zugeordnet sind.
+
+Der letzte vollständige statische Lauf vor `603a5552d` zeigte genau einen
+fachlichen Fehler bei einer mehrdeutigen VS-24-Scope-Zuordnung sowie drei
+reine ffmpeg-PATH-Fehler der SSH-Umgebung. `603a5552d` behebt den fachlichen
+Fehler; der gezielte Mac-Studio-Rerun bestand mit 4 Suites und 94 Tests. Der
+abschließende vollständige Test-, Lint-, Installer- und Buildlauf sowie der
+frische Zehn-Dokument-/224-Zeilen-Lauf bleiben harte Gates vor `main`, Tag und
+Deployment.

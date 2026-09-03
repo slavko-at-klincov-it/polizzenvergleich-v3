@@ -22,8 +22,13 @@ Enthalten sind insbesondere:
   Limit-, Kosten- und Definitionsfälle;
 - sourcegebundene private Audits und Replays gegen Auslassung oder
   Manipulation;
-- der aktuelle Produktvertrag `CUSTOMER_CORE_5_V99_FE_C02_QUALIFICATION_REPLAY`
-  mit Ergebnisschema 13;
+- der aktuelle Produktvertrag
+  `CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY` mit Ergebnisschema
+  14;
+- die quellgebundene Qualifikationswiedergabe für FE-A01 und FE-C07 sowie der
+  normalisierte Worksheet-Trust-Anchor für VS-08;
+- die fail-closed abgesicherte Weitergabe enger Scope-Provenienz ohne
+  künstliche Scope-Zuordnung bei mehrdeutigen Überschriften;
 - weiterhin fünf Kundenansichten mit zusammen 224 sichtbaren Zeilen;
 - weiterhin ausschließlich Qwen 3.6 MLX mit 42.496 Token Kontext und
   Parallelität 1 im produktiven Pfad.
