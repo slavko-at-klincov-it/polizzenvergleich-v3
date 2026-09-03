@@ -59,9 +59,9 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `7/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `FE-A10`,
-`LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 33 Fälle der ursprünglichen Familie
-bleiben offen.
+Status: `8/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `VS-22`,
+`FE-A10`, `LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 32 Fälle der
+ursprünglichen Familie bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -72,9 +72,9 @@ EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
 Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
-`VS-18`, `VS-21` und `LW-12` gehören nach den in Abschnitt 10.19, 10.27,
-10.28 beziehungsweise 10.21 dokumentierten Zielnachweisen nicht mehr zur
-operativen Restliste.
+`VS-18`, `VS-21`, `VS-22` und `LW-12` gehören nach den in Abschnitt 10.19,
+10.27, 10.28, 10.29 beziehungsweise 10.21 dokumentierten Zielnachweisen nicht
+mehr zur operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
@@ -3066,6 +3066,149 @@ für `COVERAGE_MIXED` besitzt. Phase 3A beweist nur den vollständigen Nichtfund
 sie behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit in
 Paket B. Der folgende, getrennte Phase-3B-Commit darf daraus einen Vorteil für
 Paket A nur zusammen mit A-Sondermülldeckung und A-Sondermülllimit ableiten.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+#### 10.29.7 Phase 3B – paketweiter Sondermüllvergleich abgeschlossen und gehärtet
+
+Phase 3B baut ausschließlich auf dem in 10.29.6 belegten vollständigen
+Nichtfund von Paket B auf. Der neue Vergleichsvertrag entscheidet VS-22 nur,
+wenn eine Seite eine quellengebundene Sondermülldeckung mit mindestens einem
+typisierten Sondermülllimit besitzt und die andere Seite die kontrollierte
+Paketprüfung für die fehlenden Pflichtkomponenten vollständig bestanden hat.
+Er behauptet auf der Nichtfundseite weder einen ausdrücklichen Ausschluss noch
+ein Null-Euro-Limit.
+
+Die erste funktionsfähige Portfoliofassung wurde anschließend in kleinen,
+getrennten Forward-Fixes gehärtet:
+
+```text
+f95afc5f8 fix(comparison): decide VS-22 hazardous waste portfolio
+8946e75dc test(comparison): bind VS-22 portfolio fixture documents
+197a22d44 style(comparison): format VS-22 portfolio contract
+f5a6f1423 test(comparison): harden VS-22 portfolio replay
+c365359d3 style(comparison): format VS-22 replay tests
+7dbe27a31 fix(comparison): bind VS-22 atoms to document status
+c838b92c9 fix(comparison): bind VS-22 limits to waste evidence
+f7b262be2 style(comparison): format VS-22 semantic binding
+d8f709759 fix(comparison): attest VS-22 hazardous limit provenance
+bce5cffb8 style(comparison): format VS-22 provenance tests
+4de46058c fix(comparison): anchor VS-22 audit replay externally
+550a88bf8 fix(comparison): require direct basis only for VS-22 limits
+1df8e1d7b style(comparison): format VS-22 replay validation
+bdf2c0462 test(comparison): accept VS-22 replay rejection codes
+342af830e test(comparison): reject rehashed VS-22 replay drift
+d366e54c2 test(comparison): replay VS-22 through customer validation
+```
+
+Die endgültigen Gates binden:
+
+1. Dokument-UUID, PDF-SHA, Seite, Paketseite, Dokumentrolle und
+   Dokumentstatus an das unveränderte Eingabemanifest;
+2. `documentApplicability` deterministisch an Status und Evidenzfund, ohne
+   Angebot, Rahmenbedingung oder Nachtrag als Paketmitglied auszuschließen;
+3. jeden Sondermüll-Limitwert an einen ausgewählten Kandidaten derselben
+   Seite und Seite mit Sondermülllexem sowie an
+   `DIRECT / EXPLICIT_HAZARDOUS_WASTE_COSTS`;
+4. nur `MONEY`/`EUR` oder `PERCENT`/`%` mit `limitKind: CAPPED`;
+5. die Gewinnerseite gegen aktivierungsoptionale oder mehrprämienpflichtige
+   Quellen;
+6. den Audit-Digest gegen einen getrennt aus den ursprünglichen Atomen
+   berechneten privaten Replay-Digest;
+7. die Kundenmetrik gegen diesen Replay, wobei die sichere Kundenansicht das
+   private Replay-Feld wieder entfernt.
+
+Mehrere Limits sind erlaubt, wenn jedes Limit diese Gates selbständig erfüllt.
+Das ist für den realen A-Bestand fachlich notwendig: `3 %`, `1,5 %` und
+`EUR 7.300` sind drei eigenständige, direkte Sublimits aus verschiedenen
+Klauseln. Ebenso werden Formulierungen wie „sofern im Rahmen der Nebenkosten
+keine ausreichende Deckung“ nicht als unangenommene Vertragsoption behandelt;
+sie qualifizieren die Leistungsreaktion. Eine pauschale Bedingungsablehnung
+oder eine Ein-Limit-Regel würde echte Deckung verwerfen.
+
+Ein zwischenzeitlicher Lauf hat genau einen zu strengen eigenen Gatefehler
+sichtbar gemacht:
+
+```text
+VS-22-ATTEST-BCE5CFFB-20260903
+Summary-Digest:
+c77147f70fc6b7413119130775a430396820c5e6db447b8d09e603534c3e727e
+Ergebnis: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+```
+
+Die Ursache war die Forderung nach einem deterministischen Bindungsgrund für
+jede Deckungsquelle. Ein realer, textlich und seitengenau richtiger
+Deckungskandidat besitzt diese Metadaten nicht. `550a88bf8` beschränkt die
+strenge `DIRECT`-Forderung deshalb auf die gefährlichen Limits; Text-, Scope-,
+Manifest- und Optionalitätsgates der Deckungsquelle bleiben erhalten. Der
+Fehllauf wurde nicht als Erfolg gewertet.
+
+Der abschließende exakte Mac-Studio-Nachweis lautet:
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: d366e54c2e304fc47d51c5eae55cd98b89f2085e
+Runtime: Node v22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Produktprofil: CUSTOMER_CORE_5_V59_VS22_HAZARDOUS_WASTE_PORTFOLIO_HARDENED
+Auditvertrag: VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2
+Replayvertrag: VS22_SOURCE_ATOM_DIGEST_REPLAY_V1
+
+Fokussierte Prüfung: 4/4 Suites PASS, 80/80 Tests PASS
+Breite Utils-Regression: 104/107 Suites PASS, 1545/1569 Tests PASS
+Bekannte historische Fixture-Fehler: 3 Suites / 24 Tests
+Fehlersignatur: TARGETED_QA_PROFILE_CATALOG_MISMATCH: VS
+Neue fachliche Fehlersignatur: keine
+Adversarialer Abschlussreview: GO
+```
+
+Der verbindliche letzte Zehn-Dokumente-Lauf lautet:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-CUSTOMER-REPLAY-D366E54C-20260903
+Summary-Digest:
+168614be7d8b410a7065cba29a000e0a4ef6278bd026dd1a4f114e344d328920
+Target-Selection-Digest:
+2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
+Producer-Digest:
+5dace643910fd40b0c5866bb5273f72923f28ad3d5bf23f459202b076a725e4d
+Triage-Qwen-Aufrufe: 3
+Evidence-Qwen-Aufrufe: 3
+Triage-Serverablehnungen: 38
+Evidence-Serverterminals: 25
+
+Paket A: Ja / BELEGT
+Paket B: Nicht feststellbar / TEILBELEGT
+Vorher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+Nachher: VORTEIL_A
+Grund: INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE
+Review erforderlich: nein
+```
+
+Die mehrfach wiederholten Zwischenläufe `VS-22-PORTFOLIO-197A22D4`,
+`VS-22-STATUS-7DBE27A3`, `VS-22-SEMANTIC-F7B262BE`,
+`VS-22-REPLAY-BDF2C046` und `VS-22-FINAL-342AF830` bestätigten denselben
+gerichteten Endzustand, ausgenommen den oben erläuterten absichtlichen
+Fail-Closed-Zwischenstand. Der letzte Lauf prüft zusätzlich den privaten
+Replay durch den echten Customer-Metric-Pfad.
+
+Die verbleibende Grenze ist ausdrücklich dokumentiert: Der getrennte
+SHA-256-Replay schützt die interne Revisionskonsistenz und erkennt Drift
+zwischen ursprünglichen Atomen und Audit. Er ist kein kryptografischer
+Manipulationsschutz gegen einen Angreifer, der eine alleinstehende JSON-Datei
+und sämtliche ungekeyten Digests vollständig neu schreibt. Ein HMAC oder ein
+externer unveränderlicher Audit-Speicher wäre eine eigene Produktanforderung,
+nicht Teil dieses Kandidaten.
+
+VS-22 ist damit als achter R69-A-Kandidat abgeschlossen. Die noch nicht durch
+einen frischen 224-Zeilen-Vollrun bestätigte Projektion verschiebt sich von
+`VORTEIL_A 2 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 12 / UNKLAR 53` auf
+`VORTEIL_A 3 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 12 / UNKLAR 52`. R69-A steht damit bei
+`8/40`; `32` Fälle der Ausgangsfamilie bleiben offen.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
