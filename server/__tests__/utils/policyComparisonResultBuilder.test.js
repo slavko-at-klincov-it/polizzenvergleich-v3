@@ -3765,6 +3765,20 @@ describe("policy comparison result builder", () => {
       "OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID"
     );
 
+    const missing = JSON.parse(JSON.stringify(worksheet));
+    missing.requirements[0].supportingObjectMembershipProofs = [];
+    expect(() => materialize(missing)).toThrow(
+      "OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID"
+    );
+
+    const duplicate = JSON.parse(JSON.stringify(worksheet));
+    duplicate.requirements[0].supportingObjectMembershipProofs.push(
+      duplicate.requirements[0].supportingObjectMembershipProofs[0]
+    );
+    expect(() => materialize(duplicate)).toThrow(
+      "OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID"
+    );
+
     const mismatchedArtifact = JSON.parse(JSON.stringify(documentArtifact));
     mismatchedArtifact.document.sourceDocumentId = "f".repeat(64);
     expect(() => materialize(worksheet, mismatchedArtifact)).toThrow(

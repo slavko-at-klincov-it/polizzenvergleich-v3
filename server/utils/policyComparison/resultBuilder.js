@@ -1382,7 +1382,7 @@ function materializeAtomicFacts({
       );
       if (JSON.stringify(actual) !== JSON.stringify(expected))
         throw new Error("OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID");
-      return JSON.parse(JSON.stringify(actual));
+      return JSON.parse(JSON.stringify(expected));
     })();
     const supportingScopedPackageReferenceProofs = (() => {
       const contracts =
