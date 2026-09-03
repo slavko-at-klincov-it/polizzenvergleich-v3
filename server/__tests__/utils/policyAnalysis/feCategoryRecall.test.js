@@ -395,7 +395,9 @@ describe("FE category recall", () => {
   test("binds FE-C02 to its versioned membership condition-scope comparison", () => {
     const requirement = catalog.requirements.find(({ id }) => id === "FE-C02");
 
-    expect(requirement.membershipConditionScopeComparisonContract).toMatchObject({
+    expect(
+      requirement.membershipConditionScopeComparisonContract
+    ).toMatchObject({
       contractId: "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1",
       componentId: "photovoltaic_as_damaged_object",
       targetObjectKey: "PHOTOVOLTAIC_INSTALLATION",

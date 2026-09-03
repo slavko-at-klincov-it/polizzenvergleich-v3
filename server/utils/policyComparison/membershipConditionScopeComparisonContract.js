@@ -38,7 +38,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function sha256(value) {
@@ -105,8 +107,10 @@ function formulaValue(formula, valuation) {
 }
 
 function implicationSatisfied(valuation, implication) {
-  return !valuation[implication.antecedentPredicateKey] ||
-    valuation[implication.consequentPredicateKey];
+  return (
+    !valuation[implication.antecedentPredicateKey] ||
+    valuation[implication.consequentPredicateKey]
+  );
 }
 
 /**
@@ -162,7 +166,7 @@ function compareBooleanConditionFormulas({
   let rightNotLeftWitness = null;
   for (let mask = 0; mask < 2 ** predicateKeys.length; mask += 1) {
     const valuation = Object.fromEntries(
-      predicateKeys.map((key, index) => [key, Boolean(mask & 2 ** index)])
+      predicateKeys.map((key, index) => [key, Boolean(mask & (2 ** index))])
     );
     if (!implications.every((rule) => implicationSatisfied(valuation, rule)))
       continue;
@@ -382,8 +386,13 @@ function directSideAssessment({
     contract
   );
   if (!requirementContractDigest) return null;
-  const found = relevant.filter(({ evidencePresence }) => evidencePresence === "FOUND");
-  if (found.length !== 1 || relevant.some((atom) => atom !== found[0] && !cleanNonFinding(atom)))
+  const found = relevant.filter(
+    ({ evidencePresence }) => evidencePresence === "FOUND"
+  );
+  if (
+    found.length !== 1 ||
+    relevant.some((atom) => atom !== found[0] && !cleanNonFinding(atom))
+  )
     return null;
   const atom = found[0];
   if (
@@ -454,7 +463,9 @@ function exactDocumentResolution(audit, contract, documents) {
     audit.evidence.membershipPath.some(({ entries }) => entries.length !== 1)
   )
     return null;
-  const documentByUuid = new Map(documents.map((document) => [document.uuid, document]));
+  const documentByUuid = new Map(
+    documents.map((document) => [document.uuid, document])
+  );
   for (const entry of [...reference, ...identity]) {
     if (entry.documentUuids.length === 0) return null;
     for (const uuid of entry.documentUuids) {
@@ -511,8 +522,13 @@ function membershipSideAssessment({
     contract
   );
   if (!requirementContractDigest) return null;
-  const found = relevant.filter(({ evidencePresence }) => evidencePresence === "FOUND");
-  if (found.length !== 1 || relevant.some((atom) => atom !== found[0] && !cleanNonFinding(atom)))
+  const found = relevant.filter(
+    ({ evidencePresence }) => evidencePresence === "FOUND"
+  );
+  if (
+    found.length !== 1 ||
+    relevant.some((atom) => atom !== found[0] && !cleanNonFinding(atom))
+  )
     return null;
   const atom = found[0];
   if (
@@ -531,7 +547,10 @@ function membershipSideAssessment({
     )
   )
     return null;
-  const audit = buildPackageActivatedObjectMembershipAudit({ categoryId, atoms });
+  const audit = buildPackageActivatedObjectMembershipAudit({
+    categoryId,
+    atoms,
+  });
   if (!audit) return null;
   try {
     validatePackageActivatedObjectMembershipAudit(audit, {
@@ -542,7 +561,11 @@ function membershipSideAssessment({
     return null;
   }
   const condition = membershipConditionEvidence(audit, contract);
-  const documentResolution = exactDocumentResolution(audit, contract, documents);
+  const documentResolution = exactDocumentResolution(
+    audit,
+    contract,
+    documents
+  );
   if (!condition || !documentResolution) return null;
   const normalizedFormula = {
     kind: "OPERATOR",
@@ -653,7 +676,8 @@ function buildMembershipConditionScopeComparisonAudit({
 }) {
   let validatedContract;
   try {
-    validatedContract = validateMembershipConditionScopeComparisonContract(contract);
+    validatedContract =
+      validateMembershipConditionScopeComparisonContract(contract);
   } catch {
     return null;
   }
@@ -697,9 +721,7 @@ function buildMembershipConditionScopeComparisonAudit({
     membership = membershipAssessment;
   }
   if (!directSide) return null;
-  if (
-    direct.requirementContractDigest !== membership.requirementContractDigest
-  )
+  if (direct.requirementContractDigest !== membership.requirementContractDigest)
     return null;
   let packageReviewAudit;
   try {

@@ -19,7 +19,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function exactKeys(value, keys, code) {
@@ -66,8 +68,7 @@ function validateMembershipConditionScopeComparisonContract(contract) {
     "MEMBERSHIP_CONDITION_SCOPE_CONTRACT_INVALID"
   );
   if (
-    contract.contractId !==
-      MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID ||
+    contract.contractId !== MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID ||
     contract.comparisonPolicy !== COMPARISON_POLICY ||
     contract.satisfactionPolicy !== SATISFACTION_POLICY ||
     contract.documentResolutionPolicy !== DOCUMENT_RESOLUTION_POLICY ||
@@ -85,11 +86,12 @@ function validateMembershipConditionScopeComparisonContract(contract) {
     contract.membershipRequiredPredicateKeys.length > MAX_PREDICATES
   )
     throw new Error("MEMBERSHIP_CONDITION_SCOPE_PREDICATES_INVALID");
-  const membershipRequiredPredicateKeys = contract.membershipRequiredPredicateKeys
-    .map((key) =>
-      conceptKey(key, "MEMBERSHIP_CONDITION_SCOPE_PREDICATE_INVALID")
-    )
-    .sort();
+  const membershipRequiredPredicateKeys =
+    contract.membershipRequiredPredicateKeys
+      .map((key) =>
+        conceptKey(key, "MEMBERSHIP_CONDITION_SCOPE_PREDICATE_INVALID")
+      )
+      .sort();
   if (
     new Set(membershipRequiredPredicateKeys).size !==
       membershipRequiredPredicateKeys.length ||

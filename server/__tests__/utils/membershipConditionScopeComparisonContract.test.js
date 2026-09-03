@@ -58,8 +58,7 @@ function contract() {
       },
     ],
     comparisonPolicy: "BOOLEAN_IMPLICATION_ALL_VALID_ASSIGNMENTS_V1",
-    satisfactionPolicy:
-      "CONTRACT_SCOPE_ONLY_NOT_REAL_WORLD_SATISFACTION_V1",
+    satisfactionPolicy: "CONTRACT_SCOPE_ONLY_NOT_REAL_WORLD_SATISFACTION_V1",
     documentResolutionPolicy:
       "UNIQUE_COMPLEMENTARY_REFERENCE_IDENTITY_NO_CONTENT_CONFLICT_V1",
     winnerPolicy: "LESS_RESTRICTIVE_PREREQUISITE_FORMULA_WINS_V1",
@@ -81,9 +80,7 @@ function directFormulaEvidence() {
     operator(
       "OR",
       predicate("OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER"),
-      predicate(
-        "ANAPHORIC_CONTRACTUAL_REPLACEMENT_OR_REINSTATEMENT_OBLIGATION"
-      )
+      predicate("ANAPHORIC_CONTRACTUAL_REPLACEMENT_OR_REINSTATEMENT_OBLIGATION")
     )
   );
 }
@@ -99,9 +96,9 @@ function membershipFormula() {
 }
 
 function formulaProof() {
-  const formulaEvidenceContract = feCatalog.requirements
-    .find(({ id }) => id === "FE-C02")
-    .supportingCoverageConditionFormulaEvidenceContracts[0];
+  const formulaEvidenceContract = feCatalog.requirements.find(
+    ({ id }) => id === "FE-C02"
+  ).supportingCoverageConditionFormulaEvidenceContracts[0];
   const body = {
     schemaVersion: 1,
     contractId: SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
@@ -212,9 +209,9 @@ function membershipProof(
 }
 
 function commonAtom(document, overrides = {}) {
-  const formulaEvidenceContract = feCatalog.requirements
-    .find(({ id }) => id === "FE-C02")
-    .supportingCoverageConditionFormulaEvidenceContracts[0];
+  const formulaEvidenceContract = feCatalog.requirements.find(
+    ({ id }) => id === "FE-C02"
+  ).supportingCoverageConditionFormulaEvidenceContracts[0];
   return {
     requirementId: "FE-C02",
     componentId: "photovoltaic_as_damaged_object",
@@ -300,11 +297,7 @@ function membershipAtoms(referenceDocument, termsDocument) {
         },
       ],
       supportingObjectMembershipProofs: [
-        membershipProof(
-          "d",
-          "BUILDING_TECHNICAL_INSTALLATION",
-          "BUILDING"
-        ),
+        membershipProof("d", "BUILDING_TECHNICAL_INSTALLATION", "BUILDING"),
       ],
       supportingReferencedTermsIdentityProofs: [
         {
@@ -457,9 +450,7 @@ describe("membership condition-scope comparison contract", () => {
       broaderConditionScopeSide: "B",
       narrowerConditionScopeSide: "A",
       packageReviewAudit: {
-        blockers: [
-          { code: "COVERAGE_EFFECT_NOT_DECISIVE", side: "A" },
-        ],
+        blockers: [{ code: "COVERAGE_EFFECT_NOT_DECISIVE", side: "A" }],
       },
     });
   });
@@ -477,9 +468,7 @@ describe("membership condition-scope comparison contract", () => {
       broaderConditionScopeSide: "A",
       sides: {
         A: {
-          documentManifest: [
-            { role: "PROPOSAL", documentStatus: "PROPOSAL" },
-          ],
+          documentManifest: [{ role: "PROPOSAL", documentStatus: "PROPOSAL" }],
         },
       },
     });
@@ -501,7 +490,9 @@ describe("membership condition-scope comparison contract", () => {
     delete tamperedFormulaBody.proofDigest;
     formulaTamper.atomsA[0].supportingCoverageConditionFormulaProofs[0].proofDigest =
       sha256(tamperedFormulaBody);
-    expect(buildMembershipConditionScopeComparisonAudit(formulaTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(formulaTamper)
+    ).toBeNull();
 
     const formulaContractTamper = fixture();
     formulaContractTamper.atomsA[0].supportingCoverageConditionFormulaEvidenceContracts[0].formula.operands[1].operator =
@@ -512,12 +503,16 @@ describe("membership condition-scope comparison contract", () => {
 
     const conditionTamper = fixture();
     conditionTamper.atomsB[1].supportingObjectMembershipProofs[0].edge.conditionEvidence.predicates.pop();
-    expect(buildMembershipConditionScopeComparisonAudit(conditionTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(conditionTamper)
+    ).toBeNull();
 
     const editionTamper = fixture();
     editionTamper.atomsB[1].supportingReferencedTermsIdentityProofs[0].reference.referenceKey =
       "EABS@2024";
-    expect(buildMembershipConditionScopeComparisonAudit(editionTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(editionTamper)
+    ).toBeNull();
   });
 
   test("rejects document metadata tamper without using role or status as winner policy", () => {
@@ -530,25 +525,33 @@ describe("membership condition-scope comparison contract", () => {
     const contractTamper = fixture();
     contractTamper.atomsB[0].membershipConditionScopeComparisonContract.winnerPolicy =
       "TAMPERED";
-    expect(buildMembershipConditionScopeComparisonAudit(contractTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(contractTamper)
+    ).toBeNull();
 
     const digestTamper = fixture();
     digestTamper.atomsB[0].requirementContractDigest = "e".repeat(64);
-    expect(buildMembershipConditionScopeComparisonAudit(digestTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(digestTamper)
+    ).toBeNull();
 
     const missingDigest = fixture();
     delete missingDigest.atomsB[0].requirementContractDigest;
-    expect(buildMembershipConditionScopeComparisonAudit(missingDigest)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(missingDigest)
+    ).toBeNull();
 
     const shapeTamper = fixture();
     shapeTamper.atomsA[0].declaredComponents[0].factRole = "COVERAGE";
-    expect(buildMembershipConditionScopeComparisonAudit(shapeTamper)).toBeNull();
+    expect(
+      buildMembershipConditionScopeComparisonAudit(shapeTamper)
+    ).toBeNull();
   });
 
   test("validates the side-neutral catalog contract and canonical implications", () => {
-    expect(validateMembershipConditionScopeComparisonContract(contract())).toEqual(
-      contract()
-    );
+    expect(
+      validateMembershipConditionScopeComparisonContract(contract())
+    ).toEqual(contract());
     const nonCanonical = contract();
     nonCanonical.membershipRequiredPredicateKeys.reverse();
     expect(() =>
