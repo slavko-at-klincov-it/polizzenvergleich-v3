@@ -103,8 +103,8 @@ function fixture() {
     packageB: { evidenceFound: true, reviewStatus: "BELEGT" },
     atomsA: [foundAtom("A", documentsA[0]), absentAtom(documentsA[1])],
     atomsB: [foundAtom("B", documentsB[0]), absentAtom(documentsB[1])],
-    requirementContractA: requirementContract,
-    requirementContractB: requirementContract,
+    requirementContractA: JSON.parse(JSON.stringify(requirementContract)),
+    requirementContractB: JSON.parse(JSON.stringify(requirementContract)),
     expectedDocumentsA: documentsA,
     expectedDocumentsB: documentsB,
   };
