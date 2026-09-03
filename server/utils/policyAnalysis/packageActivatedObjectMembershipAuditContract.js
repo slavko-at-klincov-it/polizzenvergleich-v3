@@ -424,10 +424,7 @@ function validateProjectedProofEntries(entries, allowedDocumentUuids) {
       throw auditError("PACKAGE_MEMBERSHIP_AUDIT_DOCUMENT_METADATA_INVALID");
     digests.push(entry.proofDigest);
   }
-  if (
-    JSON.stringify(digests) !==
-    JSON.stringify([...new Set(digests)].sort())
-  )
+  if (JSON.stringify(digests) !== JSON.stringify([...new Set(digests)].sort()))
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_NOT_CANONICAL");
 }
 
@@ -466,8 +463,7 @@ function validateMembershipPathEvidence(
       digests.push(entry.proofDigest);
     }
     if (
-      JSON.stringify(digests) !==
-      JSON.stringify([...new Set(digests)].sort())
+      JSON.stringify(digests) !== JSON.stringify([...new Set(digests)].sort())
     )
       throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_NOT_CANONICAL");
   });
@@ -502,10 +498,7 @@ function validateConflicts(conflicts, contract, allowedDocumentUuids) {
       throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICT_EDGE_INVALID");
     digests.push(conflict.proofDigest);
   }
-  if (
-    JSON.stringify(digests) !==
-    JSON.stringify([...new Set(digests)].sort())
-  )
+  if (JSON.stringify(digests) !== JSON.stringify([...new Set(digests)].sort()))
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICTS_NOT_CANONICAL");
 }
 
@@ -575,8 +568,14 @@ function validatePackageActivatedObjectMembershipAudit(
     ["references", "identities", "membershipPath", "conflicts"],
     "PACKAGE_MEMBERSHIP_AUDIT_EVIDENCE_INVALID"
   );
-  validateProjectedProofEntries(audit.evidence.references, allowedDocumentUuids);
-  validateProjectedProofEntries(audit.evidence.identities, allowedDocumentUuids);
+  validateProjectedProofEntries(
+    audit.evidence.references,
+    allowedDocumentUuids
+  );
+  validateProjectedProofEntries(
+    audit.evidence.identities,
+    allowedDocumentUuids
+  );
   validateMembershipPathEvidence(
     audit.evidence.membershipPath,
     contract,
@@ -640,9 +639,10 @@ function validatePackageActivatedObjectMembershipAudit(
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_STATUS_INVALID");
   if (
     audit.referenceKey !== null &&
-    !new RegExp(`^${contract.referenceFamilyKey}@[\\p{L}\\p{N}._/-]+$`, "u").test(
-      audit.referenceKey
-    )
+    !new RegExp(
+      `^${contract.referenceFamilyKey}@[\\p{L}\\p{N}._/-]+$`,
+      "u"
+    ).test(audit.referenceKey)
   )
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_REFERENCE_KEY_INVALID");
   return audit;
