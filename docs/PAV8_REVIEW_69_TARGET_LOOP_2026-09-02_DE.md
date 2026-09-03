@@ -2194,6 +2194,58 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+## 10.42 FE-C02 – reale Elternkante auf zehn Dokumenten
+
+Der zielgebundene Mac-Studio-Lauf auf dem exakten Commit `70c18d2cb` hat die
+neu persistierte, weiterhin wirkungsneutrale Elternkante erstmals gegen alle
+zehn Paketdokumente ausgeführt.
+
+```text
+Commit: 70c18d2cb06b9823ca6b8639f347d6cd3e3a55e6
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Artefakt: QA/FE-C02-PARENT-70C18D2C-20260903
+Summary-SHA: 6cefb22c4b86f7fe0c007c784a3fb4bf76de94a6a74e5840c0af05deb75b78f2
+Target-Selection-SHA: f3c201fa0c7921bdee91f50a70e7871bbe24459a51fe21aa8b2904b335b40892
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Aufrufe: 2
+Effects-Aufrufe: 0
+Triage-Serverablehnungen: 4
+Evidence-Terminals: 8
+```
+
+Ergebnis und Laufkosten blieben gegenüber der FE-C02-Baseline unverändert:
+
+```text
+A: BELEGT / INCLUDED
+B: TEILBELEGT / DEFINED
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+```
+
+In B/DOC-10 entstand genau ein zusätzlicher Elternnachweis:
+
+```text
+BUILDING_TECHNICAL_INSTALLATION --MEMBER_OF_CLASS--> BUILDING
+Mitglied: PDF-Seite 2, Offset 1894–1916, „Haustechnische Anlagen“
+Klasse: PDF-Seite 2, Offset 1343–1350, „Gebäude“
+Klassifikation: Offset 1340–1433
+Proof-Digest: 07cbeab49ad0980f9b372a316d9406dd14590ab84683198c4df77c43a08e1713
+```
+
+Der `memberContextSpan` enthält alle drei fachlich erforderlichen, kumulativen
+Bedingungen: Eigentum des Gebäudeeigentümers, dessen nachweisliche Pflicht zur
+Wiederherstellung und Aufnahme in den Gebäudeneuwert. Der Lauf hat aber auch
+eine neue, begrenzte Boundary-Abweichung sichtbar gemacht: Der Kontext endet
+erst nach dem Beginn der folgenden Klassifikationsüberschrift `Nicht als
+Gebäude oder Gebäudebestandteile zählen:`. Ursache ist, dass
+`structuralBoundaryLineStarts()` Objektklassifikations-Governors noch nicht als
+Folgegrenze führt. Die Kante und die drei Bedingungen sind sourcegebunden,
+aber der Kontext ist noch nicht minimal. Deshalb bleibt jede Ergebnisfreigabe
+gesperrt, bis diese Grenze separat korrigiert und erneut real geprüft wurde.
+
+Kein Vollrun, keine Ergebnisänderung und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne

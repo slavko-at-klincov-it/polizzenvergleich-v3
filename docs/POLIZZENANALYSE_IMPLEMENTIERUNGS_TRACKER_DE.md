@@ -5163,3 +5163,33 @@ Ergebnis-/Call-/Terminal-Delta: keines
 Nächster Schritt ist die outcome-neutrale Extraktion von
 `BUILDING_TECHNICAL_INSTALLATION -> BUILDING` aus demselben aktiven
 Bedingungsdokument. Kein Vollrun und kein Deployment.
+
+## 104. FE-C02 Membership V3 – Elternkante real belegt
+
+`68ad285f3` bis `70c18d2cb` erweitern den FE-C02-Vertrag um die gerichtete,
+sourcegebundene Unterstützungskante
+`BUILDING_TECHNICAL_INSTALLATION -> BUILDING`. Sie wird ohne künstliche
+Vergleichskomponente aus demselben kontrollierten Worksheet-Parser gewonnen,
+im Requirement- und Zertifizierungsdigest gebunden und als outcome-neutraler
+Atomnachweis persistiert.
+
+```text
+Commit: 70c18d2cb06b9823ca6b8639f347d6cd3e3a55e6
+Mac Studio: Format PASS; 8 Suites / 239 Tests PASS
+Artefakt: QA/FE-C02-PARENT-70C18D2C-20260903
+Summary: 6cefb22c4b86f7fe0c007c784a3fb4bf76de94a6a74e5840c0af05deb75b78f2
+Target Selection: f3c201fa0c7921bdee91f50a70e7871bbe24459a51fe21aa8b2904b335b40892
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+Aufrufe: unverändert 2 Triage / 0 Effects
+Persistierte Elternkanten in B: 1
+```
+
+Der reale Proof trägt alle drei Bedingungen des Listenpunkts. Seine
+Kontextspanne schließt derzeit jedoch bereits die unmittelbar folgende
+Objektklassifikationsüberschrift ein. Das ist kein falscher Membership-Fund,
+aber eine unnötig weite Beleggrenze. Vor dem Paket-Audit wird deshalb
+`structuralBoundaryLineStarts()` so gehärtet, dass ein neuer
+Objektklassifikations-Governor die vorherige Listeneinheit beendet. Erst ein
+erneuter Zehn-Dokument-Lauf darf diesen Punkt schließen.
+
+Kein Vollrun, keine Ergebnisfreigabe und kein Deployment.
