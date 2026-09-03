@@ -3087,6 +3087,29 @@ function buildSupportingObjectMembershipProofs({
   ].sort((left, right) => left.proofDigest.localeCompare(right.proofDigest));
 }
 
+function buildSupportingObjectMembershipProofsFromArtifact({
+  documentArtifact,
+  categoryView,
+  catalogId,
+  requirement,
+}) {
+  const fingerprint = documentArtifact?.fingerprint;
+  const document = documentArtifact?.document;
+  if (
+    documentArtifact?.schemaVersion !== 1 ||
+    !/^[a-f0-9]{64}$/u.test(String(fingerprint || "")) ||
+    document?.sourceDocumentId !== fingerprint
+  )
+    throw worksheetError("OBJECT_MEMBERSHIP_SUPPORT_DOCUMENT_ARTIFACT_INVALID");
+  return buildSupportingObjectMembershipProofs({
+    document,
+    documentFingerprint: fingerprint,
+    categoryView,
+    catalogId,
+    requirement,
+  });
+}
+
 /**
  * Enumerates controlled aliases across every physical page and creates a
  * candidate-only worksheet for inspection before any LLM call.
@@ -3651,6 +3674,7 @@ module.exports = {
   WORKSHEET_SCHEMA_VERSION,
   buildControlledOccurrenceWorksheet,
   buildSupportingObjectMembershipProofs,
+  buildSupportingObjectMembershipProofsFromArtifact,
   findAliasRanges,
   normalizeWithOffsetMap,
   structuralContext,

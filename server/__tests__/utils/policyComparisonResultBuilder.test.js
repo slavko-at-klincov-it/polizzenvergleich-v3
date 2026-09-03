@@ -3706,7 +3706,7 @@ describe("policy comparison result builder", () => {
         candidates: [occurrence],
       },
     ];
-    const materialize = (worksheetValue) =>
+    const materialize = (worksheetValue, documentArtifactValue = documentArtifact) =>
       materializeAtomicFacts({
         document: {
           uuid: "document-fe-c02",
@@ -3740,7 +3740,7 @@ describe("policy comparison result builder", () => {
           ],
         },
         targets,
-        documentArtifact,
+        documentArtifact: documentArtifactValue,
         report: null,
       });
     const [atom] = materialize(worksheet);
@@ -3763,6 +3763,12 @@ describe("policy comparison result builder", () => {
       "manipuliert";
     expect(() => materialize(tampered)).toThrow(
       "OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID"
+    );
+
+    const mismatchedArtifact = JSON.parse(JSON.stringify(documentArtifact));
+    mismatchedArtifact.document.sourceDocumentId = "f".repeat(64);
+    expect(() => materialize(worksheet, mismatchedArtifact)).toThrow(
+      "OBJECT_MEMBERSHIP_SUPPORT_DOCUMENT_ARTIFACT_INVALID"
     );
   });
 });

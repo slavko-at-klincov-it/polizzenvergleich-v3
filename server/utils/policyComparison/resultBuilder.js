@@ -48,7 +48,7 @@ const {
   buildSourceBoundReferencedTermsIdentityProofs,
 } = require("../policyAnalysis/referencedTermsIdentityEvidenceContract");
 const {
-  buildSupportingObjectMembershipProofs,
+  buildSupportingObjectMembershipProofsFromArtifact,
 } = require("../policyAnalysis/controlledOccurrenceWorksheet");
 const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
@@ -1371,9 +1371,8 @@ function materializeAtomicFacts({
         requirement?.supportingObjectMembershipEvidenceContracts || [];
       const proofs = requirement?.supportingObjectMembershipProofs || [];
       if (contracts.length === 0) return [];
-      const expected = buildSupportingObjectMembershipProofs({
-        document: documentArtifact?.document,
-        documentFingerprint: documentArtifact?.fingerprint,
+      const expected = buildSupportingObjectMembershipProofsFromArtifact({
+        documentArtifact,
         categoryView: worksheet?.catalog?.categoryView,
         catalogId: worksheet?.catalog?.id,
         requirement,
