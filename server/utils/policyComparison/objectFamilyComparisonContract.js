@@ -117,8 +117,16 @@ function buildObjectFamilyCoverageAudit({
     !validFamilyContract(right, requirementContractB?.components)
   )
     return null;
-  const sideA = sideFamilyProof({ categoryId, atoms: atomsA, familyContract: left });
-  const sideB = sideFamilyProof({ categoryId, atoms: atomsB, familyContract: left });
+  const sideA = sideFamilyProof({
+    categoryId,
+    atoms: atomsA,
+    familyContract: left,
+  });
+  const sideB = sideFamilyProof({
+    categoryId,
+    atoms: atomsB,
+    familyContract: left,
+  });
   if (!sideA || !sideB) return null;
   return {
     schemaVersion: 1,

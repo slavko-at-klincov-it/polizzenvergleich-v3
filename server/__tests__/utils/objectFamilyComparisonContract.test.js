@@ -1,9 +1,7 @@
 const {
   buildObjectFamilyCoverageAudit,
 } = require("../../utils/policyComparison/objectFamilyComparisonContract");
-const {
-  decidePoint,
-} = require("../../utils/policyComparison/pointDecision");
+const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 
 const digest = "a".repeat(64);
 const components = [
