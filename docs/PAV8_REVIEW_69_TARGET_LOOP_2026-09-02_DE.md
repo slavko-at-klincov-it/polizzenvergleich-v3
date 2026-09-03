@@ -2285,6 +2285,48 @@ Ergebnis-, Call- oder Terminal-Delta. Der Boundary-Fix verändert ausschließlic
 die Belegpräzision. Nächster Schritt bleibt der outcome-neutrale
 Aktivierungs-/Referenz-Audit. Kein Vollrun und kein Deployment.
 
+## 10.44 FE-C02 – Feuerabschnitt und EABS-Referenz sourcegebunden
+
+`b4b97c74c` führt den outcome-neutralen Vertrag
+`SOURCE_BOUND_SCOPED_PACKAGE_REFERENCE_EVIDENCE_V1` ein. Er kann nur dann
+einen Proof erzeugen, wenn ein Top-Level-Feuerabschnitt zugleich genau einen
+nicht negierten Gebäudeanker und genau eine Bedingungsreferenz mit einer aus
+dem Quelltext extrahierten Edition enthält. Die nächste Spartengrenze beendet
+den Suchraum. Der Vertrag enthält keine Deckungswirkung und verändert weder
+Paketstatus noch Entscheidung.
+
+Der erste reale Lauf auf `9246c4135` erzeugte null Proofs. Der unabhängige
+Quelltext-Replay lokalisierte die Ursache auf die PDF-Verklebung
+`Wohngebäude zum NeuwertEUR30.608.000,00`. `e0e1fccf2` erlaubt deshalb nur den
+expliziten, getesteten Anschluss des Währungstokens `EUR`; beliebige
+Teilwortsuffixe bleiben ausgeschlossen.
+
+```text
+Finaler Commit: e0e1fccf27a1498492ad4a5b31eea64e45c18c9e
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Mac Studio: Format PASS; 9 Suites / 247 Tests PASS
+Artefakt: QA/FE-C02-SCOPED-REFERENCE-E0E1FCCF-20260903
+Summary-SHA: 12c933b31b79242d9cfd6a44828fd297e9415444caf663aed57aaa288bd00dc0
+Target-Selection-SHA: c1b1dbfb8c029e6b0417b53cd9f0e5b1aec553bae83dc45bb5467a0c1714f84d
+```
+
+Der Zehn-Dokument-Lauf erzeugt genau einen Proof in B/DOC-02:
+
+```text
+Scope: FEUER_INSURANCE, Seite 1, Offset 1250–1267
+Objekt: BUILDING, Seite 1, Offset 1331–1354
+Objektkontext: „-Wohngebäude zum NeuwertEUR30.608.000,00“
+Referenz: EABS@2023, Seite 2, Offset 5066–5137
+Nächste Spartengrenze: LEITUNGSWASSERVERSICHERUNG, Offset 5138–5164
+Proof-Digest: 5bfa2686a9a3a7a2432bc5d9032d528c9165d2c017311b4f43f101fe3cfd5cbf
+```
+
+Keine der weiteren EABS-Nennungen unter Leitungswasser, Sturm oder
+Haftpflicht wurde dem Feuerproof zugeschlagen. Das Ergebnis bleibt
+`A BELEGT / B TEILBELEGT / UNKLAR`; Calls und Terminals bleiben `2 / 0 / 4 /
+8`. Offen ist die getrennte Identitätsprüfung des tatsächlich hochgeladenen
+Bedingungsdokuments. Kein Vollrun und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne

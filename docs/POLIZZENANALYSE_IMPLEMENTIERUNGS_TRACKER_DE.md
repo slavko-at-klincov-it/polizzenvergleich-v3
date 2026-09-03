@@ -5217,3 +5217,31 @@ persistiert. Offen sind weiterhin Feuer-/Gebäudeaktivierung, exakter
 EABS-Referenz-/Editionsmatch, Konfliktfreiheit und Rang. Diese werden im
 nächsten Schritt zunächst nur als Audit materialisiert; die Entscheidung
 bleibt unverändert. Kein Vollrun und kein Deployment.
+
+## 106. FE-C02 – scopespezifische Paketreferenz belegt
+
+`b4b97c74c`/`ad8e6b09c`/`9246c4135` implementieren und härten
+`SOURCE_BOUND_SCOPED_PACKAGE_REFERENCE_EVIDENCE_V1`; `e0e1fccf2` ergänzt den
+eng begrenzten PDF-Join `NeuwertEUR`. Der Proof bindet Feuerüberschrift,
+versichertes Gebäude, Referenztitel, Kürzel, quellgelesene Edition,
+vollständige Referenzzeile und nächste Spartengrenze an Originalbytes, Seite,
+Offsets und SHA. ResultBuilder replayt die Worksheet-Proofs gegen das
+servereigene Dokumentartefakt, bevor sie ins Atom gelangen.
+
+```text
+Mac Studio: Format PASS; 9 Suites / 247 Tests PASS
+Erster Real-Lauf: QA/FE-C02-SCOPED-REFERENCE-9246C413-20260903
+Erster Lauf: 0 Proofs; reale PDF-Verklebung NeuwertEUR erkannt
+Finaler Real-Lauf: QA/FE-C02-SCOPED-REFERENCE-E0E1FCCF-20260903
+Summary: 12c933b31b79242d9cfd6a44828fd297e9415444caf663aed57aaa288bd00dc0
+Target Selection: c1b1dbfb8c029e6b0417b53cd9f0e5b1aec553bae83dc45bb5467a0c1714f84d
+Final: genau 1 Proof, nur B/DOC-02, FEUER_INSURANCE, EABS@2023
+Proof: 5bfa2686a9a3a7a2432bc5d9032d528c9165d2c017311b4f43f101fe3cfd5cbf
+Ergebnis-/Call-/Terminal-Delta: keines
+```
+
+Der Proof belegt noch nicht, dass B/DOC-10 genau die referenzierte EABS-Ausgabe
+ist. Nächster getrennter Schritt ist deshalb
+`SOURCE_BOUND_REFERENCED_TERMS_IDENTITY_EVIDENCE_V1`. Dateiname,
+Dokumentrolle und feste Edition bleiben als Join-Kriterien verboten. Kein
+Vollrun und kein Deployment.
