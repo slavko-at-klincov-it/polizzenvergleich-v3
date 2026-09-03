@@ -2527,6 +2527,45 @@ der von der Evidenzauswahl gewählten Proofs. Erst danach werden Objekt, Ort,
 Nutzung, Installation und Bedingungen zu einer Vergleichsrelation verbunden.
 R69-A bleibt `10/40`; kein Gesamtvollrun und kein Deployment.
 
+### 10.36 FE-A05 Schritt 2b – interne Candidate-Provenienz ohne Promptänderung
+
+`be7b27c25` erhält den validierten Objekt-Scope-Proof im serverinternen
+Prepared Candidate. Ein Parent-Listenproof wird nur mitgeführt, wenn eine
+tatsächlich erzeugte Assertion aus dessen Fortsetzungssegment stammt.
+`fc2bd524f` versioniert diese interne Artefaktsemantik als Produktprofil V84.
+
+Vor dem Modellaufruf wird eine eigene Payload-Projektion aufgebaut, die
+`objectScopeProof` und `nestedListContinuationProof` vollständig entfernt.
+Gegen dasselbe Target ohne Provenienz ist die JSON-Payload bytegleich. Weder
+Qwen noch das materialisierte Judgement erhalten die neuen Felder; daher
+bleiben Tokenmenge, Auswahlvertrag und fachlicher Outcome unverändert. Ein
+intern inkonsistenter Parent-Proof wird fail-closed nicht in den Candidate
+übernommen.
+
+Mac-Studio-Nachweis:
+
+```text
+Commit: fc2bd524f63c8f2a89111ee6a13faf5692fa1586
+Profil: CUSTOMER_CORE_5_V84_FE_A05_INTERNAL_SCOPE_PROVENANCE
+Fokussiert/angrenzend: 199/199 PASS
+Artefakt: QA/FE-A05-A06-INTERNAL-SCOPE-FC2BD524-20260903
+Summary: d15d807dfac2f01717b95bad2293de33b8743d066b533bfc887a8f0fd3aaf390
+Selection: 387784fb7b4506bd9cad04dbeaf127280e03cf593cc7e98cd25f865c55be0120
+Producer: e570458308a3bc4707015ccba18746ea3706aaf89d40a31d8c4465205e6f7e63
+Triage-/Evidence-Aufrufe: 3/1
+Server-Rejects/-Terminals: 11/15
+FE-A05: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Im realen Lauf enthalten die internen Targets einen Scope-Proof in A/DOC-01,
+zwei in B/DOC-02 und einen in B/DOC-03. Die gespeicherten Modellnachrichten
+enthalten null Vorkommen der drei Provenienzfelder. Auch
+`selected-sources.private.json` enthält sie noch absichtlich nicht: Für diese
+Trust Boundary fehlen dem bisherigen Effects-CLI die autoritativen
+Dokumentbytes. Der nächste Schritt macht das Dokumentartefakt bei
+Object-Scope-Opt-in verpflichtend und replayt nur ausgewählte Proofs gegen die
+Originalbytes. R69-A bleibt `10/40`; kein Gesamtvollrun und kein Deployment.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache

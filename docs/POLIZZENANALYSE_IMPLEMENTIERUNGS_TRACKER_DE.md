@@ -5020,3 +5020,26 @@ Nächster Schritt: den Proof serverseitig nur über ausgewählte Candidate-IDs
 in die atomare Source-Provenienz weiterreichen, ohne Prompt, Atomidentität,
 Paketstatus oder Ergebnis zu ändern. R69-A bleibt `10/40`; kein Vollrun und
 kein Deployment.
+
+## 98. FE-A05 interne Prepared-Provenienz – Modellpfad bleibt bytegleich
+
+`be7b27c25` kopiert validierte Objekt-Scope-Proofs in serverinterne Prepared
+Candidates und führt den Parent-Listenproof nur bei echten Nested-Assertions
+mit. Die Modellprojektion entfernt beide Provenienzfelder; Payload und
+materialisiertes Judgement bleiben gegenüber dem provenienzfreien Target
+unverändert. `fc2bd524f` versioniert den Schritt als Profil V84.
+
+```text
+Commit: fc2bd524f63c8f2a89111ee6a13faf5692fa1586
+Mac-Studio fokussiert: 199/199 PASS
+Artefakt: QA/FE-A05-A06-INTERNAL-SCOPE-FC2BD524-20260903
+Summary: d15d807dfac2f01717b95bad2293de33b8743d066b533bfc887a8f0fd3aaf390
+Target-Proofs: A/DOC-01 1; B/DOC-02 2; B/DOC-03 1
+Modellnachrichten: 0 Provenienzfelder
+Selected Sources: 0 Provenienzfelder, bis Originalbyte-Replay ergänzt ist
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Nächster Schritt: Object-Scope-konditionalen `--documentArtifact`-Input im
+Effects-CLI und ausgewählten Source-Replay gegen Originalbytes/PageMap
+ergänzen. R69-A bleibt `10/40`; kein Vollrun und kein Deployment.
