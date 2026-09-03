@@ -35,9 +35,7 @@ function fixture({
       ? "1.3Haustechnische Anlagen und Adaptierungen\ndas sind:"
       : "Nicht als Haustechnische Anlagen und Adaptierungen gelten:";
   const item = "·Solar- und Photovoltaikanlagen;";
-  const pages = precedingPage
-    ? [heading, item]
-    : [`${heading}\n${item}`];
+  const pages = precedingPage ? [heading, item] : [`${heading}\n${item}`];
   let pageContent = "";
   const pageMap = pages.map((text, index) => {
     const start = pageContent.length;
@@ -97,40 +95,41 @@ describe("source-bound object-membership evidence contract", () => {
     [OBJECT_MEMBERSHIP.MEMBER_OF_CLASS, false],
     [OBJECT_MEMBERSHIP.MEMBER_OF_CLASS, true],
     [OBJECT_MEMBERSHIP.EXCLUDED_FROM_CLASS, false],
-  ])("builds a directed %s edge from exact source spans", (membership, precedingPage) => {
-    const value = fixture({ membership, precedingPage });
-    const proof = buildSourceBoundObjectMembershipProof({
-      contract: contract(membership),
-      ...value,
-    });
+  ])(
+    "builds a directed %s edge from exact source spans",
+    (membership, precedingPage) => {
+      const value = fixture({ membership, precedingPage });
+      const proof = buildSourceBoundObjectMembershipProof({
+        contract: contract(membership),
+        ...value,
+      });
 
-    expect(proof).toMatchObject({
-      schemaVersion: 1,
-      contractId: SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
-      documentFingerprint: value.documentArtifact.fingerprint,
-      edge: {
-        relation: membership,
-        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
-        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
-        memberSpan: {
-          candidateId: value.occurrence.candidateId,
-          exactText: "Photovoltaikanlagen",
+      expect(proof).toMatchObject({
+        schemaVersion: 1,
+        contractId: SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+        documentFingerprint: value.documentArtifact.fingerprint,
+        edge: {
+          relation: membership,
+          memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+          classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+          memberSpan: {
+            candidateId: value.occurrence.candidateId,
+            exactText: "Photovoltaikanlagen",
+          },
+          classSpan: {
+            source: value.occurrence.objectClassificationGovernorHint.source,
+            exactText: "Haustechnische Anlagen und Adaptierungen",
+          },
+          classificationSpan: {
+            exactText: value.occurrence.objectClassificationGovernorHint.text,
+          },
         },
-        classSpan: {
-          source:
-            value.occurrence.objectClassificationGovernorHint.source,
-          exactText: "Haustechnische Anlagen und Adaptierungen",
-        },
-        classificationSpan: {
-          exactText:
-            value.occurrence.objectClassificationGovernorHint.text,
-        },
-      },
-    });
-    expect(proof).not.toHaveProperty("coverageEffect");
-    expect(proof.edge).not.toHaveProperty("coverageEffect");
-    expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
-  });
+      });
+      expect(proof).not.toHaveProperty("coverageEffect");
+      expect(proof.edge).not.toHaveProperty("coverageEffect");
+      expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
+    }
+  );
 
   test("binds catalog vocabulary and direction into the proof digest", () => {
     const value = fixture();

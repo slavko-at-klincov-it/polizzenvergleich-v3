@@ -133,8 +133,7 @@ function validateObjectMembershipEvidenceContract(
     detail
   );
   if (
-    contract.contractId !==
-    SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID
+    contract.contractId !== SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID
   )
     throw membershipError("OBJECT_MEMBERSHIP_CONTRACT_ID_INVALID", detail);
   if (!Object.values(OBJECT_MEMBERSHIP).includes(contract.membership))

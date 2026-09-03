@@ -795,10 +795,7 @@
               "membership": "MEMBER_OF_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
-              "memberAliases": [
-                "Photovoltaikanlagen",
-                "Fotovoltaikanlagen"
-              ],
+              "memberAliases": ["Photovoltaikanlagen", "Fotovoltaikanlagen"],
               "classAliases": [
                 "Haustechnische Anlagen",
                 "Haustechnische Anlagen und Adaptierungen"
@@ -813,10 +810,7 @@
               "membership": "EXCLUDED_FROM_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUSINESS_CONTENT",
-              "memberAliases": [
-                "Photovoltaikanlagen",
-                "Fotovoltaikanlagen"
-              ],
+              "memberAliases": ["Photovoltaikanlagen", "Fotovoltaikanlagen"],
               "classAliases": ["Betriebsinhalt"],
               "allowedClassificationSources": [
                 "CURRENT_PAGE_OBJECT_CLASSIFICATION",

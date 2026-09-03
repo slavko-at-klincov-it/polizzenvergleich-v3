@@ -1604,8 +1604,8 @@ describe("controlledOccurrenceWorksheet", () => {
 
     expect(occurrences).toHaveLength(2);
     expect(
-      occurrences.map(({ objectMembershipProof }) =>
-        objectMembershipProof?.edge
+      occurrences.map(
+        ({ objectMembershipProof }) => objectMembershipProof?.edge
       )
     ).toEqual([
       expect.objectContaining({
