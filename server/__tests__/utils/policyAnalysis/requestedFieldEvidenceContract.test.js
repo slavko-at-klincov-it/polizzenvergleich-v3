@@ -2127,6 +2127,9 @@ describe("requestedFieldEvidenceContract", () => {
           facts: [
             expect.objectContaining({
               normalizedValue: "10 %",
+              limitKind: "CAPPED",
+              qualifier: "auf Erstes Risiko",
+              comparisonBasis: "BUILDING_INSURANCE_SUM",
               source: expect.objectContaining({
                 candidateId: "candidate:vs33-governor",
               }),

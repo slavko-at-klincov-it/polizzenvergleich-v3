@@ -180,6 +180,9 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
     unit: value.unit,
     ...(value.limitKind ? { limitKind: value.limitKind } : {}),
     ...(value.qualifier ? { qualifier: value.qualifier } : {}),
+    ...(value.comparisonBasis
+      ? { comparisonBasis: value.comparisonBasis }
+      : {}),
     ...(variantScope?.key && variantScope?.label
       ? {
           variantScope: {
@@ -247,6 +250,18 @@ function limitQualifier(text, match, occurrence) {
   return qualifiers.join(", ");
 }
 
+function limitComparisonBasis(text, match) {
+  const nearby = text.slice(
+    Math.max(0, match.index - 180),
+    Math.min(text.length, match.index + match[0].length + 180)
+  );
+  if (/\b(?:des|vom)\s+(?:NBW|Neubauwert)\b/iu.test(nearby))
+    return "BUILDING_NEW_VALUE_INSURANCE_SUM";
+  if (/\bGebäudeversicherungssumme\b/iu.test(nearby))
+    return "BUILDING_INSURANCE_SUM";
+  return null;
+}
+
 function deductibleFact(occurrence, fact) {
   const context = validatedContext(occurrence);
   const relativeStart =
@@ -310,6 +325,7 @@ function extractLimitFacts({ occurrence, binding }) {
           unit: "EUR",
           limitKind: LIMIT_KIND.CAPPED,
           qualifier: limitQualifier(text, match, occurrence),
+          comparisonBasis: limitComparisonBasis(text, match),
         },
       })
     );
@@ -333,6 +349,7 @@ function extractLimitFacts({ occurrence, binding }) {
             unit: "EUR",
             limitKind: LIMIT_KIND.CAPPED,
             qualifier: limitQualifier(text, concatenatedMoney, occurrence),
+            comparisonBasis: limitComparisonBasis(text, concatenatedMoney),
           },
         })
       );
@@ -358,6 +375,7 @@ function extractLimitFacts({ occurrence, binding }) {
           unit: "%",
           limitKind: LIMIT_KIND.CAPPED,
           qualifier: limitQualifier(text, match, occurrence),
+          comparisonBasis: limitComparisonBasis(text, match),
         },
       })
     );
@@ -908,6 +926,9 @@ function extractSectionGovernorLimitFacts({ occurrence, binding }) {
         normalizedValue: "10 %",
         valueType: "PERCENT",
         unit: "%",
+        limitKind: LIMIT_KIND.CAPPED,
+        qualifier: "auf Erstes Risiko",
+        comparisonBasis: "BUILDING_INSURANCE_SUM",
       },
     }),
   ];

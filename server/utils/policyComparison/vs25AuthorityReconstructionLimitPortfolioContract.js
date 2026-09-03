@@ -209,16 +209,20 @@ function clauseCodes(atom) {
 
 function limitPresentation(atom) {
   const field = comparisonFieldSignature(atom)[0];
-  const sourceText = (atom.sources || [])
-    .map((source) => localSourceText(source))
-    .join("\n");
+  const typedBases = strings(
+    (atom.fields || [])
+      .flatMap(({ facts }) => facts || [])
+      .map(({ comparisonBasis }) => comparisonBasis)
+  );
   if (field.valueType === "PERCENT") {
-    const basis = /\b(?:des|vom)\s+(?:NBW|Neubauwert)\b/iu.test(sourceText)
-      ? "BUILDING_NEW_VALUE_INSURANCE_SUM"
-      : /\bGebäudeversicherungssumme\b/iu.test(sourceText)
-        ? "BUILDING_NEW_VALUE_INSURANCE_SUM"
-        : null;
-    if (!basis) return null;
+    if (
+      typedBases.length !== 1 ||
+      ![
+        "BUILDING_INSURANCE_SUM",
+        "BUILDING_NEW_VALUE_INSURANCE_SUM",
+      ].includes(typedBases[0])
+    )
+      return null;
   }
   return {
     documentUuid: atom.documentUuids[0],
@@ -226,8 +230,7 @@ function limitPresentation(atom) {
     value: field.value,
     displayValue: field.displayValue,
     qualifier: field.qualifier,
-    basis:
-      field.valueType === "PERCENT" ? "BUILDING_NEW_VALUE_INSURANCE_SUM" : null,
+    basis: field.valueType === "PERCENT" ? typedBases[0] : null,
     clauseCodes: clauseCodes(atom),
     selectedCandidateIds: strings(atom.selectedCandidateIds),
     sources: atom.sources.map(
@@ -347,11 +350,7 @@ function sidePortfolio({
   const effectiveQualifier =
     money.length === 1
       ? "FIRST_RISK"
-      : /\b(?:auf\s+[,„“"']*Erstes\s+Risiko)\b/iu.test(
-            percentages[0].sources
-              .map(({ conditionCheckText }) => conditionCheckText)
-              .join("\n")
-          )
+      : percentages[0].qualifier === "auf erstes risiko"
         ? "FIRST_RISK"
         : null;
   if (effectiveQualifier !== "FIRST_RISK") return null;

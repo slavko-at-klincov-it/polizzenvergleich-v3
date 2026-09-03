@@ -190,6 +190,9 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       normalizedValue: `${Number(aPercent) / 100} %`,
       valueType: "PERCENT",
       unit: "%",
+      limitKind: "CAPPED",
+      qualifier: "auf Erstes Risiko",
+      comparisonBasis: "BUILDING_INSURANCE_SUM",
     }),
   ];
   const atomsB = [
@@ -209,6 +212,7 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       valueType: "PERCENT",
       unit: "%",
       limitKind: "CAPPED",
+      comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
     }),
     absentAtom(docBAbsent, "authority_reconstruction_extra_costs", "COST"),
     absentAtom(
