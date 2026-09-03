@@ -36,7 +36,10 @@ function readJson(file, label) {
 }
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(file))
+    .digest("hex");
 }
 
 function sha256(value) {
@@ -252,12 +255,7 @@ async function verifyQwenLoaded({ baseUrl, model, modelTokenLimit }) {
 
 async function run() {
   const args = parseArguments(process.argv.slice(2));
-  const allowed = new Set([
-    "manifest",
-    "pilotFile",
-    "searchGate",
-    "output",
-  ]);
+  const allowed = new Set(["manifest", "pilotFile", "searchGate", "output"]);
   const unknown = Object.keys(args).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
   for (const required of allowed)
@@ -361,8 +359,7 @@ async function run() {
       ),
       buildPreparedEvidenceArguments({
         category,
-        documentArtifactPath:
-          documentArtifactBinding.documentArtifactPath,
+        documentArtifactPath: documentArtifactBinding.documentArtifactPath,
         effectsPrompt,
         effectsOutput,
         triageOutput,

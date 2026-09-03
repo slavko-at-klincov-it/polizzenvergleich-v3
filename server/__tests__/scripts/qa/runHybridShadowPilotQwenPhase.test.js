@@ -17,10 +17,7 @@ function fixture() {
     path.join(os.tmpdir(), "hybrid-shadow-qwen-binding-")
   );
   const documentFingerprint = "a".repeat(64);
-  const documentArtifactPath = path.join(
-    directory,
-    "document.private.json"
-  );
+  const documentArtifactPath = path.join(directory, "document.private.json");
   const documentArtifact = {
     schemaVersion: 1,
     fingerprint: documentFingerprint,
@@ -182,7 +179,9 @@ describe("hybrid shadow Qwen document artifact binding", () => {
         manifest: input.manifest,
         category: input.category,
       })
-    ).toThrow(/HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_(?:CHANGED|IDENTITY_MISMATCH)/u);
+    ).toThrow(
+      /HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_(?:CHANGED|IDENTITY_MISMATCH)/u
+    );
 
     fs.rmSync(input.directory, { recursive: true, force: true });
   });
