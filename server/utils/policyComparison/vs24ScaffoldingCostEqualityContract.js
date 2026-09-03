@@ -34,7 +34,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function sha256(value) {
@@ -350,7 +352,8 @@ function validateVs24ScaffoldingCostEqualityAudit(audit, options) {
     atomsA: audit?.sides?.A?.projectedAtoms,
     atomsB: audit?.sides?.B?.projectedAtoms,
   });
-  if (!expected) throw new Error("VS24_SCAFFOLDING_COST_EQUALITY_NOT_QUALIFIED");
+  if (!expected)
+    throw new Error("VS24_SCAFFOLDING_COST_EQUALITY_NOT_QUALIFIED");
   if (!sameJson(audit, expected))
     throw new Error("VS24_SCAFFOLDING_COST_EQUALITY_AUDIT_MISMATCH");
   return true;
