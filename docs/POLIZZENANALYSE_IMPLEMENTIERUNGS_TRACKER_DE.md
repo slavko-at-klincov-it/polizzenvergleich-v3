@@ -5373,3 +5373,40 @@ Der Fix entfernt einen falschen technischen Blocker, gibt aber bewusst noch
 keine Deckungswirkung frei. Offen sind nun nur der Vergleich der drei
 Membership-Voraussetzungen mit dem A-Nachweis und die Dokumentpräzedenz der
 paketweit verbundenen EABS-Ausgabe. Kein Vollrun und kein Deployment.
+
+## 112. FE-C02 – globale A-Bedingungsformel vollständig belegt
+
+`d2aee5541` bis `1a15bc7b8` implementieren und härten den eigenständigen
+`SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_V1`. `0f163b8ba` bis `263796c06`
+verdrahten ihn katalog-, Worksheet-, Requirement-Digest- und atomweit. Der
+ResultBuilder baut den Proof aus autoritativen Worksheet-Occurrences neu und
+prüft deren Identität gegen die selektierten Prepared Targets; der Modellinput
+erhält keine neuen privaten Felder.
+
+Der Mac-Studio-Gate fand und der Forward-Fix `6da7e4778` korrigierte einen
+allgemeinen Source-Offsetfehler: Regex-basierte Coverage-Governors hatten
+getrimmten Text, aber ungetrimmte Offsets. Text und Span sind nun wieder
+identisch replaybar.
+
+```text
+Commit: 263796c062cf8a2303cf898dd31eb1962084187a
+Mac Studio: Format PASS; 8 Suites / 237 Tests PASS
+Artefakt: QA/FE-C02-COVERAGE-FORMULA-263796C0-20260903
+Summary: d574b61e8fbff01add62045d4b00f63af60728a35f1eb4c2cca67b3e49faa36a
+Target Selection: 12456418ad9653cbc51a411e54b9cfdb5f651a29604c0cef33ce5c8bb9136fae
+A-Formelproofs: genau 1, nur DOC-01
+Governor: Seite 3
+Allgemeines PV-Ziel: Seite 4
+Proof: 775c662243dfe64a13b045e158b2a64ee729363c0667c21bcc506fe22bfb01c7
+Enger Blitz-/Überspannungs-Treffer im Proof: nein
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+Aufrufe: unverändert 2 Triage / 0 Effects
+```
+
+Damit sind beide Vertragsformeln sourcegebunden verfügbar: A als globale
+Boolesche Formel und B als vollständige konjunktive Membership-Bedingungsmenge.
+Offen ist nur noch ein eigener, side-neutraler Vergleichsvertrag. Er darf
+`satisfaction=NOT_EVALUATED` nicht zu einer Tatsachenbehauptung über das
+konkrete Gebäude umdeuten. Zulässig ist ausschließlich der Schluss, dass A
+einen breiteren vertraglichen Voraussetzungsscope besitzt, wenn `B => A`, aber
+nicht `A => B` beweisbar ist. Kein Vollrun und kein Deployment.

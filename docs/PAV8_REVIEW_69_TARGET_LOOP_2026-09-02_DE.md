@@ -2194,6 +2194,123 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.50 FE-C02 – globale A-Voraussetzungsformel sourcegebunden
+
+#### 10.50.1 Ausgangslage und enger Fixumfang
+
+Nach der vollständigen Typisierung der B-Membership-Bedingungen war FE-C02
+weiter `UNKLAR`. B besaß eine vollständige EABS@2023-Quellkette mit drei
+kumulativen Voraussetzungen; auf A fehlte dagegen der maschinenlesbare Bezug
+zwischen dem globalen Voraussetzungssatz und dem allgemeinen
+Photovoltaik-Listenpunkt. Der zweite A-Treffer lag unter dem engeren Scope
+`Überspannung oder Induktion infolge Blitzschlag` und durfte den allgemeinen
+Vergleich nicht tragen.
+
+Der neue Vertrag
+`SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_V1` materialisiert deshalb nur:
+
+```text
+SECTION_INSURED
+AND (
+  OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER
+  OR ANAPHORIC_CONTRACTUAL_REPLACEMENT_OR_REINSTATEMENT_OBLIGATION
+)
+```
+
+Er bindet den vollständigen Governor, alle Prädikatgruppen, Booleschen
+Operatoren, Actor-OR-Verknüpfung, Zielkandidaten, Coverage-Governor, Seiten,
+Offsets, exakte Quelltexte und Digests. `satisfaction` bleibt
+`NOT_EVALUATED`, `readyForDecision` bleibt `false`; der Vertrag verändert
+weder Coverage-Effekt noch Punktentscheidung.
+
+#### 10.50.2 Reale Integrationsfehler und Forward-Fixes
+
+Die ResultBuilder-Erstintegration löste die ausgewählten Kandidaten zunächst
+aus `targets.private.json`. Ein unabhängiger Senior-Review zeigte vor der
+Freigabe, dass dieser Modellvertrag den internen `coverageGovernorHint` mit
+Absicht nicht transportiert. Der Forward-Fix löst selektierte IDs daher gegen
+die autoritativen Worksheet-Occurrences auf und vergleicht Kandidaten-ID,
+physische Seite, Dokument-Offsets und exakten Text mit dem Prepared Target.
+Fehlende, doppelte oder abweichende Kandidaten brechen fail-closed mit
+`COVERAGE_CONDITION_FORMULA_TARGET_REPLAY_INVALID` ab. Der Qwen-Payload blieb
+unverändert.
+
+Der erste Mac-Studio-Integrationstest legte anschließend einen allgemeinen
+Offsetfehler im Regex-Fallback der Coverage-Governors offen: `text` war
+getrimmt, `pageStart/pageEnd` enthielten aber führende Zeilenumbrüche. Damit
+musste jeder source-exakte Replay ablehnen. `6da7e4778` berechnet die Offsets
+nun aus dem tatsächlich getrimmten Text. Die Korrektur ist dokument- und
+versichererunabhängig; keine fachliche Wirkung wurde erweitert.
+
+```text
+0f163b8ba feat(analysis): persist coverage condition formulas
+4bbc928f7 fix(analysis): replay condition formula sources
+f69d99416 style(analysis): format condition formula integration
+0f77885e9 test(analysis): model narrow photovoltaic scope
+6da7e4778 fix(analysis): bind trimmed coverage governors
+263796c06 test(analysis): assert exact photovoltaic span
+```
+
+#### 10.50.3 Mac-Studio-Gate und echter Zehn-Dokument-Lauf
+
+```text
+Validierungscommit:
+263796c062cf8a2303cf898dd31eb1962084187a
+Mac-Studio-Worktree:
+/private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontextlimit: 42496
+Format: PASS
+Fokussierte Suites: 8/8 PASS
+Fokussierte Tests: 237/237 PASS
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-C02-COVERAGE-FORMULA-263796C0-20260903
+Summary-Digest:
+d574b61e8fbff01add62045d4b00f63af60728a35f1eb4c2cca67b3e49faa36a
+Target-Selection-Digest:
+12456418ad9653cbc51a411e54b9cfdb5f651a29604c0cef33ce5c8bb9136fae
+Triage-Qwen-Aufrufe: 2
+Evidence-Qwen-Aufrufe: 0
+Triage-Terminalablehnungen: 4
+Evidence-Serverterminals: 8
+```
+
+Der reale A-Proof ist eindeutig:
+
+```text
+Dokument: 4417a01f-7f73-44de-979a-3dcf9e65ca63
+Governor-Seite: 3
+Ziel-Seite: 4
+Zieltext: - Solar- und Fotovoltaikanlagen;
+Ziel-Governor: Versichert sind
+Proof-Digest: 775c662243dfe64a13b045e158b2a64ee729363c0667c21bcc506fe22bfb01c7
+Proof-Ziele: 1
+Enge Blitz-/Überspannungs-Fundstelle im Proof: nein
+B-Formelproofs dieses Typs: 0
+```
+
+Delta zum favorisierten Lauf
+`FE-C02-TYPED-CONDITIONS-755F5D37-20260903`:
+
+```text
+A globaler Voraussetzungsscope: nicht typisiert -> vollständig sourcegebunden
+B drei Membership-Bedingungen: unverändert vollständig
+A Paket: BELEGT -> BELEGT
+B Paket: TEILBELEGT -> TEILBELEGT
+Punktentscheidung: UNKLAR -> UNKLAR
+Review erforderlich: ja -> ja
+Qwen-Aufrufe: 2/0 -> 2/0
+```
+
+Die unveränderte Entscheidung ist beabsichtigt: Der Schritt beweist nur die
+A-Formel. Der nächste getrennte Vertrag vergleicht A-OR und B-AND als
+vertragliche Voraussetzungsscopes. Dokumentrolle oder `PROPOSAL` dürfen dabei
+nicht blockieren; nur ein echter Quellen-, Editions-, Ersatz-, Scope- oder
+Inhaltskonflikt darf fail-closed bleiben. Kein Vollrun und kein Deployment.
+
 ## 10.49 FE-C02 – Membership-Voraussetzungen sourcegebunden typisiert
 
 `809ac148c`/`d853a8cc8` ergänzen für die Elternkante
