@@ -399,6 +399,42 @@ describe("deterministicVsEvidenceRules", () => {
     }
   );
 
+  test("rejects a demolition-state clause without rejecting demolition costs", () => {
+    const nonCost = sourceOccurrence({
+      text: "Der Verkehrswert ist maßgeblich. Ein Gebäude ist dauernd entwertet, wenn es zum Abbruch bestimmt oder für seinen Betriebszweck nicht mehr verwendbar ist.",
+      exactText: "Abbruch",
+    });
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-21",
+        componentId: "demolition_costs",
+        occurrence: nonCost,
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "DEMOLITION_STATE_NOT_DEMOLITION_COST",
+      authoritative: true,
+    });
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-21",
+        componentId: "cleanup_costs",
+        occurrence: nonCost,
+      })
+    ).toBeNull();
+
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-21",
+        componentId: "demolition_costs",
+        occurrence: sourceOccurrence({
+          text: "Die Kosten für den Abbruch eines zum Abbruch bestimmten Gebäudes sind bis 15 % versichert.",
+          exactText: "Abbruch",
+        }),
+      })
+    ).toBeNull();
+  });
+
   test("keeps a generic restoration mention outside the clause as non-evidentiary", () => {
     expect(
       deterministicVsCandidateBinding({

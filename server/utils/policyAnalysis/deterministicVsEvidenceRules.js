@@ -61,6 +61,26 @@ function textImmediatelyBeforeOccurrence(occurrence, length = 220) {
   return context.slice(Math.max(0, relativeStart - length), relativeStart);
 }
 
+function explicitVs21NonCostDemolitionState(occurrence) {
+  const exactText = String(occurrence?.exactText || "").trim();
+  const localText = occurrenceLocalText(occurrence, 220, 180);
+  if (exactText !== "Abbruch" || !localText) return false;
+  if (
+    /\b(?:Aufr(?:ä|a)um|Abbruch|Feuerl(?:ö|o)sch)\p{L}*kosten\b|\bKosten\s+(?:f(?:ü|u)r|der)\b/iu.test(
+      localText
+    )
+  )
+    return false;
+  return Boolean(
+    /\b(?:dauernd\s+entwertet|Verkehrswert|Betriebszweck)\b/iu.test(
+      localText
+    ) &&
+      /\b(?:zum|f(?:ü|u)r\s+den)\s+Abbruch\s+(?:bestimmt|vorgesehen)\b/iu.test(
+        localText
+      )
+  );
+}
+
 function explicitVs35LocalClauseBinding(key, occurrence) {
   const exactText = String(occurrence?.exactText || "").trim();
   const localText = occurrenceLocalText(occurrence);
@@ -381,6 +401,15 @@ function deterministicVsCandidateBinding({
   const key = `${requirementId}:${componentId}`;
   const vs35LocalBinding = explicitVs35LocalClauseBinding(key, occurrence);
   if (vs35LocalBinding) return vs35LocalBinding;
+  if (
+    key === "VS-21:demolition_costs" &&
+    explicitVs21NonCostDemolitionState(occurrence)
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "DEMOLITION_STATE_NOT_DEMOLITION_COST",
+      authoritative: true,
+    };
   if (key === "VS-32:temporary_storage_costs") {
     const storageScope = explicitVs32TemporaryStorageScopeBinding(occurrence);
     if (storageScope) return storageScope;
