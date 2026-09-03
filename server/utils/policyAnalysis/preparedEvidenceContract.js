@@ -347,8 +347,7 @@ function buildPreparedEvidenceTargets({
             ? deterministicBinding.comparisonScopeKey
             : null;
         const sectionComparisonScopeKey =
-          candidateBinding === "NARROW_SCOPE" &&
-          sourceBoundComparisonScopeKey
+          candidateBinding === "NARROW_SCOPE" && sourceBoundComparisonScopeKey
             ? sourceBoundComparisonScopeKey
             : null;
         const comparisonScopeKey =

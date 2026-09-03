@@ -114,8 +114,7 @@ function candidateIdentity(atom, source, document) {
     !Number.isInteger(source?.documentStart) ||
     !Number.isInteger(source?.documentEnd) ||
     source.documentStart < 0 ||
-    source.documentEnd !==
-      source.documentStart + exactText.length ||
+    source.documentEnd !== source.documentStart + exactText.length ||
     source.exactTextSha256 !== sha256Text(exactText) ||
     !Number.isInteger(source?.conditionCheckDocumentStart) ||
     !Number.isInteger(source?.conditionCheckDocumentEnd) ||
@@ -212,8 +211,7 @@ function exactAtomBinding(atom, document, contract) {
   );
   if (!sameJson(selected, sourceIds)) return false;
   return atom.sources.every(
-    (source) =>
-      source.candidateId === candidateIdentity(atom, source, document)
+    (source) => source.candidateId === candidateIdentity(atom, source, document)
   );
 }
 

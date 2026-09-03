@@ -1559,9 +1559,7 @@ function materializeAtomicFacts({
         printedPageLabel,
         exactText,
         conditionCheckText: conditionSource.text,
-        ...(document.sha256
-          ? { documentFingerprint: document.sha256 }
-          : {}),
+        ...(document.sha256 ? { documentFingerprint: document.sha256 } : {}),
         ...(Number.isInteger(physicalPageNumber)
           ? { candidateIdentityPageNumber: physicalPageNumber }
           : {}),
