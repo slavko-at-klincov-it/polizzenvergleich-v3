@@ -170,7 +170,7 @@ describe("package-activated object-membership audit", () => {
     });
     expect(
       audit.evidence.membershipPath[1].entries[0].memberContextSpan.exactText
-    ).toContain("Quellbedingungen");
+    ).toContain("im Eigentum des Gebäudeeigentümers");
     expect(audit.auditDigest).toMatch(/^[a-f0-9]{64}$/u);
     expect(audit).not.toHaveProperty("coverageEffect");
     expect(
