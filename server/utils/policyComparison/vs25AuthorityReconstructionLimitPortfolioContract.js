@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   PACKAGE_MEMBER,
   comparisonApplicability,
@@ -19,6 +20,8 @@ const VS25_EQUAL_RELATIVE_LIMIT_REASON_CODE =
   "EQUAL_AUTHORITY_RECONSTRUCTION_RELATIVE_LIMIT";
 const VS25_RECONCILIATION_CONTRACT_ID =
   "VS25_NBW_PERCENT_CURRENCY_RECONCILIATION_AUDIT_V1";
+const VS25_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
+  "VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_V1";
 const VS01_COMPONENT_ID = "replacement_new_value";
 const EXPECTED_COMPONENTS = Object.freeze([
   { id: VS25_COST_COMPONENT_ID, factRole: "COST" },
@@ -26,9 +29,86 @@ const EXPECTED_COMPONENTS = Object.freeze([
 ]);
 const LOCAL_CONDITION_MARKER =
   /\b(?:nur\s+wenn|sofern|soweit|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|gegen\s+(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|gesondert(?:e|en|er|es)?\s+Vereinbarung)\b/iu;
+const PREFIX_CONDITION_MARKER =
+  /\b(?:nur\s+wenn|sofern|falls|vorausgesetzt|vorbehaltlich|optional|wahlweise|gegen\s+(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|gesondert(?:e|en|er|es)?\s+Vereinbarung)\b[^.!?;\n]{0,160}$/iu;
 
 function strings(values) {
   return [...new Set((values || []).map(String).filter(Boolean))].sort();
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])])
+  );
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+}
+
+function sha256(value) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex");
+}
+
+function projectedAtoms(atoms, requirementId) {
+  return (atoms || [])
+    .filter((atom) => atom?.requirementId === requirementId)
+    .map((atom) => JSON.parse(JSON.stringify(atom)))
+    .sort((left, right) =>
+      JSON.stringify(stableValue(left)).localeCompare(
+        JSON.stringify(stableValue(right)),
+        "de-AT"
+      )
+    );
+}
+
+function buildVs25SourceAtomDigestReplay({
+  categoryId,
+  atomsA,
+  atomsB,
+  referenceAtomsA,
+  referenceAtomsB,
+}) {
+  if (categoryId !== VS25_CATEGORY_ID) return null;
+  const projections = {
+    A: {
+      targetAtoms: projectedAtoms(atomsA, VS25_CATEGORY_ID),
+      referenceAtoms: projectedAtoms(referenceAtomsA, "VS-01"),
+    },
+    B: {
+      targetAtoms: projectedAtoms(atomsB, VS25_CATEGORY_ID),
+      referenceAtoms: projectedAtoms(referenceAtomsB, "VS-01"),
+    },
+  };
+  if (
+    projections.A.targetAtoms.length === 0 ||
+    projections.B.targetAtoms.length === 0 ||
+    projections.A.referenceAtoms.length === 0 ||
+    projections.B.referenceAtoms.length === 0
+  )
+    return null;
+  return {
+    schemaVersion: 1,
+    contractId: VS25_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
+    categoryId: VS25_CATEGORY_ID,
+    sourceAtomDigestsSha256: {
+      A: {
+        targetAtoms: sha256(projections.A.targetAtoms),
+        referenceAtoms: sha256(projections.A.referenceAtoms),
+      },
+      B: {
+        targetAtoms: sha256(projections.B.targetAtoms),
+        referenceAtoms: sha256(projections.B.referenceAtoms),
+      },
+    },
+  };
 }
 
 function exactRequirementContract(contract) {
@@ -82,21 +162,29 @@ function sourceBindingValid(atom) {
   );
 }
 
-function localSourceText(source) {
+function localSourceWindow(source) {
   const text = String(source?.conditionCheckText || "");
   const exactText = String(source?.exactText || "");
   const index = text.indexOf(exactText);
-  return index >= 0 ? text.slice(index) : exactText;
+  if (index < 0) return null;
+  const prefix = text.slice(Math.max(0, index - 180), index);
+  const localPrefix = prefix.slice(
+    Math.max(prefix.lastIndexOf("."), prefix.lastIndexOf(";"), prefix.lastIndexOf("\n")) + 1
+  );
+  return { fromAnchor: text.slice(index), prefix: localPrefix };
 }
 
 function sourceSemanticsValid(atom) {
   if (!sourceBindingValid(atom)) return false;
   return atom.sources.every((source) => {
-    const local = localSourceText(source);
+    const local = localSourceWindow(source);
     return (
+      local &&
       /(?:behördliche\s+Mehrkosten|Mehrkosten\s+(?:durch|infolge)\s+behördliche[rs]?\s+Auflagen|Mehrkosten\s+für\s+bauliche\s+Verbesserungen)/iu.test(
         source.exactText
-      ) && !LOCAL_CONDITION_MARKER.test(local)
+      ) &&
+      !LOCAL_CONDITION_MARKER.test(local.fromAnchor) &&
+      !PREFIX_CONDITION_MARKER.test(local.prefix)
     );
   });
 }
@@ -122,13 +210,35 @@ function exactAtomContract(atom, expectedDocument, componentId, factRole) {
 }
 
 function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
+  const searchAudit = atom?.searchAudit;
+  const controlledAbsence =
+    searchAudit?.disposition === "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH" &&
+    searchAudit?.comparisonTreatment === "DOCUMENTATION_ONLY_V1" &&
+    searchAudit?.gates?.certifiedNegativeSearch === false;
+  const certifiedAbsence =
+    searchAudit?.disposition === "VERIFIED_NOT_FOUND" &&
+    searchAudit?.comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1" &&
+    searchAudit?.gates?.certifiedNegativeSearch === true;
   return Boolean(
     exactAtomContract(atom, expectedDocument, componentId, factRole) &&
       atom?.evidencePresence === "NOT_FOUND" &&
       atom?.coverageEffect === "UNKNOWN" &&
       atom?.selectedScopePicture === "UNKNOWN" &&
       (atom?.selectedCandidateIds || []).length === 0 &&
-      (atom?.sources || []).length === 0
+      (atom?.sources || []).length === 0 &&
+      searchAudit?.documentUuid === expectedDocument.uuid &&
+      String(searchAudit?.searchPlanId || "").endsWith(`/${componentId}`) &&
+      exactRequirementContract(searchAudit?.requirementContract) &&
+      (controlledAbsence || certifiedAbsence) &&
+      Number.isInteger(searchAudit?.physicalPagesChecked) &&
+      searchAudit.physicalPagesChecked > 0 &&
+      searchAudit.physicalPagesChecked === searchAudit.totalPhysicalPages &&
+      searchAudit?.gates?.negativeSearchApproved === true &&
+      searchAudit?.gates?.completeTextExtraction === true &&
+      searchAudit?.gates?.completeCategoryTechnicalContract === true &&
+      searchAudit?.gates?.zeroOccurrenceTerminal === true &&
+      searchAudit?.gates?.zeroCandidateTerminal === true &&
+      searchAudit?.gates?.serverNegativeTerminal === true
   );
 }
 
@@ -243,7 +353,43 @@ function limitPresentation(atom) {
   };
 }
 
-function reconciliationValid(reconciliation, money, percentage) {
+function vs01BaseAtomProof(atom, amountMinor) {
+  const signature = comparisonFieldSignature(atom);
+  if (
+    signature.length !== 1 ||
+    signature[0]?.valueType !== "MONEY" ||
+    signature[0]?.value !== amountMinor
+  )
+    return null;
+  const moneyFacts = (atom?.fields || [])
+    .filter(({ field, status }) => field === "limit" && status === "FOUND")
+    .flatMap(({ facts }) => facts || [])
+    .filter(({ valueType }) => valueType === "MONEY");
+  if (moneyFacts.length === 0) return null;
+  return {
+    requirementContractDigest: atom.requirementContractDigest,
+    documentUuid: atom.documentUuids[0],
+    documentRole: atom.documentRole,
+    documentStatus: atom.documentStatus,
+    documentApplicability: atom.documentApplicability,
+    selectedCandidateIds: strings(atom.selectedCandidateIds),
+    valueSources: moneyFacts.map(({ normalizedValue, source }) => ({
+      normalizedValue,
+      candidateId: source?.candidateId,
+      physicalPageNumber: source?.physicalPageNumber,
+      documentStart: source?.documentStart,
+      documentEnd: source?.documentEnd,
+      exactText: source?.exactText,
+    })),
+  };
+}
+
+function reconciliationValid(
+  reconciliation,
+  money,
+  percentage,
+  newValueReferences
+) {
   if (
     reconciliation?.schemaVersion !== 1 ||
     reconciliation?.contractId !== VS25_RECONCILIATION_CONTRACT_ID ||
@@ -256,6 +402,7 @@ function reconciliationValid(reconciliation, money, percentage) {
     reconciliation?.calculation?.documentedAmountMinor !== money.value ||
     reconciliation?.calculation?.calculatedAmountMinor !== money.value ||
     reconciliation?.calculation?.remainder !== "0" ||
+    reconciliation?.calculation?.divisor !== "10000" ||
     reconciliation?.currency?.qualifier !== "FIRST_RISK" ||
     !/^\d+$/u.test(reconciliation?.base?.amountMinor || "")
   )
@@ -268,7 +415,20 @@ function reconciliationValid(reconciliation, money, percentage) {
   const base = BigInt(reconciliation.base.amountMinor);
   const percent = BigInt(percentage.value);
   const amount = BigInt(money.value);
-  return base * percent === amount * 10_000n;
+  const numerator = base * percent;
+  const matchingReferences = newValueReferences.filter(
+    (atom) =>
+      atom.documentUuids[0] === reconciliation.base.documentUuid &&
+      sameJson(
+        vs01BaseAtomProof(atom, reconciliation.base.amountMinor),
+        reconciliation.base.atomProof
+      )
+  );
+  return Boolean(
+    matchingReferences.length === 1 &&
+      reconciliation.calculation.numerator === numerator.toString() &&
+      numerator === amount * 10_000n
+  );
 }
 
 function sidePortfolio({
@@ -339,7 +499,8 @@ function sidePortfolio({
     !reconciliationValid(
       packageSummary.vs25AmountReconciliation,
       money[0],
-      percentages[0]
+      percentages[0],
+      newValueReferences
     )
   )
     return null;
@@ -366,6 +527,12 @@ function sidePortfolio({
     newValueReferenceDocumentUuids: strings(
       newValueReferences.flatMap(({ documentUuids }) => documentUuids)
     ),
+    projectedAtoms: projectedAtoms(relevant, VS25_CATEGORY_ID),
+    projectedReferenceAtoms: projectedAtoms(referenceAtoms, "VS-01"),
+    projectedAtomDigestsSha256: {
+      targetAtoms: sha256(projectedAtoms(relevant, VS25_CATEGORY_ID)),
+      referenceAtoms: sha256(projectedAtoms(referenceAtoms, "VS-01")),
+    },
     ...(money.length === 1
       ? { reconciliation: packageSummary.vs25AmountReconciliation }
       : {}),
@@ -448,12 +615,51 @@ function vs25AuthorityLimitPortfolioDecision(audit) {
   };
 }
 
+function validateVs25AuthorityLimitPortfolioAudit(audit, options) {
+  const replay = options?.sourceAtomDigestReplay;
+  if (
+    replay?.schemaVersion !== 1 ||
+    replay?.contractId !== VS25_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID ||
+    replay?.categoryId !== VS25_CATEGORY_ID
+  )
+    throw new Error("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_REQUIRED");
+  for (const side of ["A", "B"]) {
+    const replayDigests = replay?.sourceAtomDigestsSha256?.[side];
+    const auditSide = audit?.sides?.[side];
+    if (
+      !/^[a-f0-9]{64}$/u.test(replayDigests?.targetAtoms || "") ||
+      !/^[a-f0-9]{64}$/u.test(replayDigests?.referenceAtoms || "") ||
+      auditSide?.projectedAtomDigestsSha256?.targetAtoms !==
+        replayDigests.targetAtoms ||
+      auditSide?.projectedAtomDigestsSha256?.referenceAtoms !==
+        replayDigests.referenceAtoms ||
+      sha256(auditSide?.projectedAtoms) !== replayDigests.targetAtoms ||
+      sha256(auditSide?.projectedReferenceAtoms) !== replayDigests.referenceAtoms
+    )
+      throw new Error("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
+  }
+  const expected = buildVs25AuthorityLimitPortfolioAudit({
+    ...options,
+    atomsA: audit?.sides?.A?.projectedAtoms,
+    atomsB: audit?.sides?.B?.projectedAtoms,
+    referenceAtomsA: audit?.sides?.A?.projectedReferenceAtoms,
+    referenceAtomsB: audit?.sides?.B?.projectedReferenceAtoms,
+  });
+  if (!expected) throw new Error("VS25_AUTHORITY_LIMIT_NOT_QUALIFIED");
+  if (!sameJson(audit, expected))
+    throw new Error("VS25_AUTHORITY_LIMIT_AUDIT_MISMATCH");
+  return true;
+}
+
 module.exports = {
   VS25_AUTHORITY_LIMIT_PORTFOLIO_AUDIT_CONTRACT_ID,
   VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
   VS25_EQUAL_RELATIVE_LIMIT_REASON_CODE,
   VS25_HIGHER_RELATIVE_LIMIT_REASON_CODE,
   VS25_REQUIREMENT_CONTRACT_DIGEST_SHA256,
+  VS25_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
+  buildVs25SourceAtomDigestReplay,
   buildVs25AuthorityLimitPortfolioAudit,
+  validateVs25AuthorityLimitPortfolioAudit,
   vs25AuthorityLimitPortfolioDecision,
 };

@@ -1,6 +1,8 @@
 const {
   VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+  buildVs25SourceAtomDigestReplay,
   buildVs25AuthorityLimitPortfolioAudit,
+  validateVs25AuthorityLimitPortfolioAudit,
 } = require("../../utils/policyComparison/vs25AuthorityReconstructionLimitPortfolioContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 
@@ -102,7 +104,7 @@ function limitAtom(sourceDocument, sourceText, fact) {
 }
 
 function absentAtom(sourceDocument, componentId, factRole) {
-  return {
+  const atom = {
     ...commonAtom(sourceDocument, componentId, factRole, ""),
     documentApplicability: "UNKNOWN",
     evidencePresence: "NOT_FOUND",
@@ -113,6 +115,31 @@ function absentAtom(sourceDocument, componentId, factRole) {
     fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
     sources: [],
   };
+  atom.searchAudit = {
+    disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+    comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+    negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+    absenceMeaning: "COST_COVERAGE",
+    requirementContract: {
+      digest: DIGEST,
+      componentSatisfactionPolicy: "ALL",
+      components: COMPONENTS,
+    },
+    searchPlanId: `VS-25/${componentId}`,
+    documentUuid: sourceDocument.uuid,
+    physicalPagesChecked: 3,
+    totalPhysicalPages: 3,
+    gates: {
+      negativeSearchApproved: true,
+      certifiedNegativeSearch: false,
+      completeTextExtraction: true,
+      completeCategoryTechnicalContract: true,
+      zeroOccurrenceTerminal: true,
+      zeroCandidateTerminal: true,
+      serverNegativeTerminal: true,
+    },
+  };
+  return atom;
 }
 
 function newValueAtom(sourceDocument, amount = null) {
@@ -239,6 +266,24 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       base: {
         documentUuid: "b-money",
         amountMinor: "3060800000",
+        atomProof: {
+          requirementContractDigest: undefined,
+          documentUuid: "b-money",
+          documentRole: "MAIN_POLICY",
+          documentStatus: "PROPOSAL",
+          documentApplicability: "PROPOSED_ONLY",
+          selectedCandidateIds: ["b-money-vs01"],
+          valueSources: [
+            {
+              normalizedValue: "EUR 30.608.000,00",
+              candidateId: "b-money-vs01",
+              physicalPageNumber: 1,
+              documentStart: 10,
+              documentEnd: 26,
+              exactText: "EUR 30.608.000,00",
+            },
+          ],
+        },
       },
       percentage: {
         documentUuid: "b-percent",
@@ -250,6 +295,8 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
         qualifier: "FIRST_RISK",
       },
       calculation: {
+        numerator: "1530400000000",
+        divisor: "10000",
         calculatedAmountMinor: "153040000",
         documentedAmountMinor: "153040000",
         remainder: "0",
@@ -303,6 +350,47 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
     });
   });
 
+  test("replays target and VS-01 reference atoms and rejects tampering", () => {
+    const input = fixture();
+    const audit = buildVs25AuthorityLimitPortfolioAudit({
+      ...input,
+      requirementContractA: {
+        digest: DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: COMPONENTS,
+      },
+      requirementContractB: {
+        digest: DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: COMPONENTS,
+      },
+    });
+    const replay = buildVs25SourceAtomDigestReplay(input);
+    const options = {
+      ...input,
+      requirementContractA: {
+        digest: DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: COMPONENTS,
+      },
+      requirementContractB: {
+        digest: DIGEST,
+        componentSatisfactionPolicy: "ALL",
+        components: COMPONENTS,
+      },
+      sourceAtomDigestReplay: replay,
+    };
+
+    expect(validateVs25AuthorityLimitPortfolioAudit(audit, options)).toBe(
+      true
+    );
+    const tampered = JSON.parse(JSON.stringify(audit));
+    tampered.sides.B.projectedReferenceAtoms[0].coverageEffect = "EXCLUDED";
+    expect(() =>
+      validateVs25AuthorityLimitPortfolioAudit(tampered, options)
+    ).toThrow("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
+  });
+
   test.each([
     [
       "one-cent mismatch",
@@ -329,6 +417,29 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       (input) => {
         input.atomsA[0].sources[0].conditionCheckText =
           "Mehrkosten durch behördliche Auflagen nur wenn gesondert vereinbart";
+      },
+    ],
+    [
+      "prefix condition",
+      (input) => {
+        input.atomsA[0].sources[0].conditionCheckText =
+          "Nur wenn gesondert vereinbart: Mehrkosten durch behördliche Auflagen";
+      },
+    ],
+    [
+      "incomplete absence search",
+      (input) => {
+        input.atomsB[4].searchAudit.disposition = "SEARCH_INCOMPLETE";
+        input.atomsB[4].searchAudit.comparisonTreatment = null;
+        input.atomsB[4].searchAudit.gates.zeroOccurrenceTerminal = false;
+      },
+    ],
+    [
+      "unbound reconstruction base",
+      (input) => {
+        input.packageB.vs25AmountReconciliation.base.atomProof.selectedCandidateIds = [
+          "different-vs01",
+        ];
       },
     ],
   ])("fails closed for %s", (_label, mutate) => {

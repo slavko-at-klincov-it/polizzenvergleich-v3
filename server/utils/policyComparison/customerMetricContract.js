@@ -59,6 +59,13 @@ const {
   validateVs24ScaffoldingCostEqualityAudit,
   vs24ScaffoldingCostEqualityDecision,
 } = require("./vs24ScaffoldingCostEqualityContract");
+const {
+  VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+  VS25_EQUAL_RELATIVE_LIMIT_REASON_CODE,
+  VS25_HIGHER_RELATIVE_LIMIT_REASON_CODE,
+  validateVs25AuthorityLimitPortfolioAudit,
+  vs25AuthorityLimitPortfolioDecision,
+} = require("./vs25AuthorityReconstructionLimitPortfolioContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -666,6 +673,60 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
             rowKey,
           ]);
       }
+      const vs25AuthorityLimitPortfolioDecisionDetected =
+        row.pointDecision?.ruleId === VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID ||
+        [
+          VS25_HIGHER_RELATIVE_LIMIT_REASON_CODE,
+          VS25_EQUAL_RELATIVE_LIMIT_REASON_CODE,
+        ].includes(row.pointDecision?.reasonCode) ||
+        row.pointDecision?.vs25AuthorityLimitPortfolioAudit !== undefined;
+      if (vs25AuthorityLimitPortfolioDecisionDetected) {
+        if (!validDocumentManifest)
+          validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
+        const audit = row.pointDecision.vs25AuthorityLimitPortfolioAudit;
+        try {
+          validateVs25AuthorityLimitPortfolioAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            requirementContractA:
+              row.packageA?.requirementContract ||
+              row.packageA?.searchAudit?.requirementContract,
+            requirementContractB:
+              row.packageB?.requirementContract ||
+              row.packageB?.searchAudit?.requirementContract,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+            sourceAtomDigestReplay: row.vs25SourceAtomDigestReplay,
+          });
+        } catch (error) {
+          validationError("COMPARISON_VS25_PORTFOLIO_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = vs25AuthorityLimitPortfolioDecision(audit);
+        const expectedOutcome = audit?.winnerSide
+          ? audit.winnerSide === "A"
+            ? POINT_OUTCOME.ADVANTAGE_A
+            : POINT_OUTCOME.ADVANTAGE_B
+          : POINT_OUTCOME.EQUIVALENT;
+        if (
+          row.categoryView !== "VS" ||
+          row.categoryId !== "VS-25" ||
+          outcome !== expectedOutcome ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_VS25_PORTFOLIO_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
           !unilateralDecision &&
@@ -681,7 +742,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         !directionalAuditFailedClosed &&
         !lw20EqualityDecision &&
         !vs22HazardousWastePortfolioDecisionDetected &&
-        !vs24ScaffoldingCostEqualityDecisionDetected
+        !vs24ScaffoldingCostEqualityDecisionDetected &&
+        !vs25AuthorityLimitPortfolioDecisionDetected
       )
         validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
       if (oneSidedDirection && unilateralDecision) {
@@ -886,6 +948,7 @@ function customerSafeComparisonReadView(result) {
           const {
             vs22SourceAtomDigestReplay: _privateVs22Replay,
             vs24SourceAtomDigestReplay: _privateVs24Replay,
+            vs25SourceAtomDigestReplay: _privateVs25Replay,
             ...publicRow
           } = row;
           const explanation = packageReviewCustomerExplanation(
