@@ -2445,6 +2445,189 @@ GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 12 / UNKLAR 53`.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.29 VS-22 – Entsorgungskosten einschließlich Sondermüll
+
+#### 10.29.1 Fehlerbild, Quellenbefund und Change-Brief
+
+Der gebundene Ausgangslauf auf `2656487020e288ab3c415823a23652b79bbc8c85`
+endete für VS-22 bei `UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review`.
+Paket A war vollständig belegt; Paket B enthielt allgemeine
+Entsorgungskosten, aber keine als VS-Sachdeckung gebundene allgemeine
+Sondermüllkomponente und kein daran gebundenes Sondermülllimit.
+
+```text
+Baseline-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-BASELINE-26564870-20260903
+Baseline-Summary-Digest:
+98bb50bb22e1f16238958541699022532fcc70c9b8f9b1f00df05f02c85e80fd
+Baseline-Selection-Digest:
+0d0a8bceda173603ec83c323f22b474ea83fba502d8a5c72419e1b7adae890cc
+Baseline-Katalog: vs-occurrence-full-draft-v0.12
+Baseline-Qwen-Aufrufe: Triage 2 / Evidence 2
+```
+
+Die Quellenprüfung trennt vier fachliche Ebenen:
+
+1. Paket A enthält allgemeine und spartengebundene Kosten für Sondermüll,
+   gefährlichen Abfall beziehungsweise Problemstoffe. Die Fundstellen tragen
+   unterschiedliche Gefahren-, Bedingungs-, Prozent- und Euro-Limits.
+2. Paket B enthält allgemeine Entsorgungskosten und einen engen Teilfall für
+   radioaktiv kontaminiertes Erdreich. Das ist nicht automatisch eine
+   allgemeine Sondermüll-Mehrkostendeckung.
+3. Der Vorschlag in Paket B nennt bei mehreren Sparten EUR 6.121.600 und den
+   Klauselcode `12PA0130`; die spätere Klausel definiert die
+   Entsorgungskosten. Der bisherige Feldvertrag kann Betrag und Klausel über
+   diesen exakten Code noch nicht dokumentweit verbinden.
+4. DOC-07 enthält den Wortlaut `gefährlichen Abfall- und Problemstoffen`,
+   jedoch im Haftpflicht-/Umweltschadenabschnitt als Ausnahme von einem
+   Ausschluss für kurzfristige Zwischenlagerung. Das ist weder positive
+   Gebäudesachdeckung noch ein Entsorgungskostenlimit.
+
+```text
+Nutzerproblem / gewünschtes Ergebnis:
+  VS-22 vollständig finden und korrekt vergleichen, ohne fremde Haftpflicht-
+  oder Nachbarwerte als Deckung beziehungsweise Limit auszugeben.
+Root-Cause-Klasse:
+  Datenfindung + Scope/Rolle + lokale und dokumentweite Wertbindung.
+Betroffene Invarianten:
+  INV-003, INV-004, INV-007, INV-008 und INV-010.
+Callers und Datenfluss:
+  VS-Katalog -> Controlled Occurrences -> Candidate Triage -> Prepared
+  Evidence -> Requested Fields -> Paket-Rollup -> Point Decision.
+Persistenz/UI/Jobs:
+  Katalog-, Produkt- und Vergleichsvertrags-ID ändern sich; Rohfakten werden
+  nicht gelöscht. Kundenzeile und Export ändern sich erst nach einem
+  bestandenen terminalen Vergleichsvertrag.
+Verworfener ähnlicher Ansatz:
+  allgemeine Entsorgung als Sondermüll behandeln, nächstgelegene Zahl binden,
+  DOC-07 positiv übernehmen oder B-Nullfund als ausdrücklichen Ausschluss
+  darstellen.
+Scope Phase 1:
+  nur kontrollierte deutsche Flexionen und occurrence-lokaler Fremdscope.
+Nicht-Ziel Phase 1:
+  kein Vorteil, keine Limitdominanz, keine Reviewfreigabe.
+Riskanteste Annahme:
+  ein weit gefasster Haftpflichtmarker könnte eine spätere positive
+  Sachkostenklausel überfärben.
+Messbare Verbesserung:
+  DOC-07 wird gefunden und serverterminal verworfen; bisherige Entscheidung
+  und restliche zehn Dokumente bleiben fachlich unverändert.
+Abbruchgrenze:
+  positiver Sachkosten-Scope wird verworfen oder VS-22 wird ohne vollständige
+  Scope-/Werttypisierung reviewfrei.
+Beweisgrenze:
+  LF/WEVIG plus synthetische Varianten beweisen noch keine unbekannten
+  Versicherer.
+```
+
+#### 10.29.2 Phase 1 – kontrollierter Flexions-Recall und lokaler Fremdscope
+
+Die erste Implementierung in `6ca3ff5e` ergänzte die fehlenden Flexionen,
+war aber noch nicht freigabefähig. Eine unabhängige Gegenprüfung fand vor dem
+Mac-Lauf, dass `Schadenersatzverpflichtungen` oder `Umweltstörung` irgendwo im
+breiten Kontext auch einen späteren positiven Sachkostensatz hätten verwerfen
+können. Der Forward-Fix `60508274` führte deshalb den gemeinsamen Vertrag
+`vs22WasteScopeContract.js` ein:
+
+- Scope-Rejects verwenden nur den Satz der exakten Occurrence oder eine
+  strukturell erkannte `HAFTPFLICHT_INSURANCE`-Section;
+- der DOC-07-nahe Zwischenlagerungs-Carveback ist explizit und lokal gebunden;
+- breite Kontextwörter allein besitzen keine terminale Wirkung;
+- ein nachfolgender positiver Sachkostensatz bleibt nach einem
+  Haftpflichtsatz erhalten;
+- allgemeine Entsorgung und radioaktiv kontaminiertes Erdreich werden nicht
+  zu allgemeinem Sondermüll hochgestuft;
+- alle drei VS-22-Komponenten werden im Fremdscope geprüft;
+- der reale Mini-Pfad Aliasfund -> Triage -> Prepared Evidence ist als
+  Regression abgedeckt.
+
+Der Katalog ist wegen der erweiterten Flexionsfamilie als
+`vs-occurrence-full-draft-v0.14` versioniert. Das Produktprofil lautet
+`CUSTOMER_CORE_5_V56_VS22_LOCAL_WASTE_SCOPE`, der Vergleichsvertrag endet auf
+`VS22_LOCAL_WASTE_SCOPE_V17`. Die an die Katalog-ID gebundenen VS-08- und
+VS-15-Requirement-Digests wurden neu berechnet; andernfalls hätten deren
+bestehende Vergleichsverträge trotz unveränderter Fachzeile fail-closed
+versagt.
+
+Die Mac-Studio-Schleife machte zwei weitere Probleme sichtbar:
+
+1. Die auf dem Mac verbindliche Prettier-Version verlangte die in
+   `fb1f2939` isoliert übernommene Formatierung zweier Katalogverbraucher.
+2. Der erste Testlauf auf `fb1f2939` ergab 228/234 PASS. Neben einem
+   fehlerhaften Testzugriff auf `target.componentId` wurden die neue
+   Abfall-Pluralform, Haftpflichtkomposita und die durch die neue Katalog-ID
+   geänderten VS-08-/VS-15-Digests korrigiert (`0901eb37`). Der danach einzige
+   rote Test war eine falsche Erwartung: Die Limit-Occurrence wurde korrekt
+   terminal verworfen, aber mit dem präziseren bestehenden Grund
+   `LIMIT_TERM_WITHOUT_LOCAL_LIMIT`. `4d207917` korrigierte nur diese
+   Testerwartung.
+
+```text
+Recall-Commit: 6ca3ff5e2700eeba840af055aae5f7100d76441a
+Lokaler-Scope-Forward-Fix: 6050827496dc779c6c5231bd96d116176effcec1
+Mac-Format-Commit: fb1f293946ff71b5fe31849d423059f06a3cecb7
+Validierungs-Forward-Fix: 0901eb37055138819495abe0cbf443b7a28a932a
+Test-Forward-Fix: 4d20791796b5a9e505624df510230781b09c3e43
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Mac-Studio-Commit: 4d20791796b5a9e505624df510230781b09c3e43
+Runtime: Node v22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Modell-Tokenlimit: 42496
+Mac-Studio-Formatprüfung: PASS
+Mac-Studio-Suites: 10/10 PASS
+Mac-Studio-Tests: 234/234 PASS
+```
+
+Der frische Zehn-Dokumente-Lauf lautet:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-INFLECTION-SCOPE-4D207917-20260903
+Summary-Digest:
+32f7c961479fa6cd74fe1a6f89bf06b7e9f0afaad8c29084408f5c9e586f5f52
+Target-Selection-Digest:
+afad90266976dd26712addf53b809e1d8abe6040be093201971518c2f8151d60
+Producer-Digest:
+b1b150e5d91bedb42346e9b41de315912598425be3838257b61270184788e0ea
+Qwen-Aufrufe: Triage 3 / Evidence 3
+```
+
+DOC-07 erzeugt jetzt exakt zwei kontrollierte Occurrences auf physischer
+PDF-Seite 5: `hazardous_waste` und `hazardous_waste_cost_limit`. Der
+Dokumentreport weist `serverTerminalTargetCount = 2`, `modelTargetCount = 0`,
+`modelAttemptCount = 0` und `executionMode = SERVER_ONLY` aus. Beide werden
+als `MENTION_ONLY` verworfen; Prepared Evidence enthält keine ausgewählte
+Quelle und materialisiert für diese Komponenten weiterhin `NOT_FOUND /
+UNKNOWN`.
+
+Der aggregierte Transient-Producer meldet daneben
+`triageServerRejected = 0`, weil er fälschlich das Feld `decisionOwner` aus
+der materialisierten Triage liest, obwohl dieses dort nicht persistiert wird.
+Für die fachliche Aussage gilt deshalb der dokumentlokale, gehashte
+Triage-Report mit zwei Server-Terminals. Diese Kennzahl darf künftig nicht als
+Nullzahl ausgegeben werden; der nächste Producer muss
+`report.input.serverTerminalTargetCount` summieren.
+
+```text
+Vorher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+Nachher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+Paket A: BELEGT / Ja
+Paket B: TEILBELEGT / nicht feststellbar
+Neue echte Fundstellen: 2, beide Fremdscope und serverterminal
+R69-A: unverändert 7/40 abgeschlossen, 33 offen
+```
+
+Phase 1 ist damit als Recall-/Präzisionsverbesserung akzeptiert, aber VS-22
+ist ausdrücklich noch nicht abgeschlossen. Der nächste Einzelkandidat ist
+die generische, fail-closed Bindung eines Betrags an eine Klausel über einen
+exakten, dokumentweit identischen Klauselcode. Sie muss Betrag und
+Klauselinhalt im selben Dokument halten, fremde Codes, mehrere widersprüchliche
+Werte, Nachbarpositionen, Selbstbehalte und dokumentübergreifende Joins
+ablehnen. Erst danach darf das typisierte VS-22-Portfolio bewertet werden.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
 ### 10.27 VS-18 – Einfriedungsfamilie: gerichtete Oberklasse abgeschlossen
 
 #### 10.27.1 Aktueller gebundener Ausgangslauf
