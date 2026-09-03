@@ -1420,9 +1420,7 @@ function materializeAtomicFacts({
             supportingObjectMembershipEvidenceContracts:
               requirement.supportingObjectMembershipEvidenceContracts,
             supportingObjectMembershipProofs: JSON.parse(
-              JSON.stringify(
-                requirement.supportingObjectMembershipProofs || []
-              )
+              JSON.stringify(requirement.supportingObjectMembershipProofs || [])
             ),
           }
         : {}),

@@ -3699,9 +3699,7 @@ describe("policy comparison result builder", () => {
             supportingObjectMembershipEvidenceContracts: [
               { contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3" },
             ],
-            supportingObjectMembershipProofs: [
-              supportingObjectMembershipProof,
-            ],
+            supportingObjectMembershipProofs: [supportingObjectMembershipProof],
             components: [
               {
                 id: "photovoltaic_as_damaged_object",

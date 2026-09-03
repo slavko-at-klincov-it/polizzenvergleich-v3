@@ -2988,7 +2988,8 @@ function buildSupportingObjectMembershipProofs({
   catalogId,
   requirement,
 }) {
-  const contracts = requirement.supportingObjectMembershipEvidenceContracts || [];
+  const contracts =
+    requirement.supportingObjectMembershipEvidenceContracts || [];
   if (contracts.length === 0) return [];
   const supportCatalog = {
     schemaVersion: 1,
