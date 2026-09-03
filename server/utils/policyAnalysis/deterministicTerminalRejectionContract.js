@@ -1248,7 +1248,6 @@ function certifyVs22NonTargetWasteOccurrenceTerminalRejection({
   requirement,
   component,
   occurrence,
-  deterministicBinding,
 }) {
   const contract =
     VS22_NON_TARGET_WASTE_OCCURRENCE_TARGETS[
@@ -1260,8 +1259,7 @@ function certifyVs22NonTargetWasteOccurrenceTerminalRejection({
     requirement?.negativeSearchPolicy !==
       "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
     requirement?.absenceMeaning !== contract.absenceMeaning ||
-    deterministicBinding?.binding !== "MENTION_ONLY" ||
-    deterministicBinding?.basis !== VS22_OTHER_SCOPE_BASIS
+    !isVs22LiabilityOrStorageOccurrence(occurrence)
   )
     return null;
   const proof = vs22NonTargetWasteOccurrenceProof(occurrence);
