@@ -781,6 +781,7 @@
       "label": "Gerüstkosten im Schadenfall",
       "requestedFields": [],
       "optionalFields": ["limit"],
+      "scopePolicy": "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       "scopeRules": {
         "narrowScopeKeys": [
           "FEUER_INSURANCE",

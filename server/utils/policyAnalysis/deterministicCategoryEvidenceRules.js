@@ -1478,6 +1478,7 @@ function deterministicCategoryCandidateBinding({
           ? DETERMINISTIC_BINDING.NARROW_SCOPE
           : DETERMINISTIC_BINDING.DIRECT,
       basis: `EXPLICIT_${operativePolarity}_OPERATIVE_COVERAGE_CLAUSE`,
+      ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
       authoritative: true,
     };
 
@@ -1526,6 +1527,7 @@ function deterministicCategoryCandidateBinding({
       : narrowScopeKey
         ? "EXPLICIT_NARROW_SECTION_SCOPE"
         : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
+    ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
     ...(explicitVariantListClause || explicitCategoryListClause
       ? { authoritative: true }
       : {}),

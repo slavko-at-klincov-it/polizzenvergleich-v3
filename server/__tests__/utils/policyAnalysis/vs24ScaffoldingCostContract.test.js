@@ -7,6 +7,13 @@ const {
   REQUESTED_FIELD_STATUS,
   materializeRequestedFieldEvidence,
 } = require("../../../utils/policyAnalysis/requestedFieldEvidenceContract");
+const {
+  deterministicCategoryCandidateBinding,
+} = require("../../../utils/policyAnalysis/deterministicCategoryEvidenceRules");
+const {
+  DOCUMENT_STATUS,
+  buildPreparedEvidenceTargets,
+} = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 
 const requirement = fullCatalog.requirements.find(({ id }) => id === "VS-24");
 
@@ -59,6 +66,18 @@ function requestedFieldsFor(text) {
       worksheet,
       materializedCandidates: selectedCandidates(worksheet),
     }).requirements[0],
+  };
+}
+
+function occurrenceFor(worksheet, exactText = "Gerüstkosten") {
+  const component = worksheet.requirements[0].components[0];
+  const occurrence = component.occurrences.find(
+    (candidate) => candidate.exactText === exactText
+  );
+  return {
+    requirement: worksheet.requirements[0],
+    component,
+    occurrence,
   };
 }
 
@@ -145,5 +164,75 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     const { result } = requestedFieldsFor(text);
 
     expect(result.fields[0]).toMatchObject({ status: "NOT_FOUND", facts: [] });
+  });
+
+  test.each([
+    ["Feuerversicherung", "FEUER_INSURANCE"],
+    ["Leitungswasserversicherung", "LEITUNGSWASSER_INSURANCE"],
+    ["Sturmversicherung", "STURM_INSURANCE"],
+    ["Glasbruchversicherung", "GLASBRUCH_INSURANCE"],
+  ])(
+    "preserves the exact declared comparison scope under %s",
+    (heading, expectedScopeKey) => {
+      const worksheet = worksheetFor(
+        `${heading}\nGerüstkosten sind nach einem ersatzpflichtigen Schaden mitversichert.`
+      );
+      const { requirement: selectedRequirement, component, occurrence } =
+        occurrenceFor(worksheet);
+
+      expect(
+        deterministicCategoryCandidateBinding({
+          worksheet,
+          requirement: selectedRequirement,
+          component,
+          occurrence,
+        })
+      ).toMatchObject({
+        binding: "NARROW_SCOPE",
+        comparisonScopeKey: expectedScopeKey,
+      });
+
+      const [target] = buildPreparedEvidenceTargets({
+        worksheet,
+        documentStatus: DOCUMENT_STATUS.ACTIVE,
+        candidateTriage: selectedCandidates(worksheet).map((candidate) => ({
+          ...candidate,
+          binding: "NARROW_SCOPE",
+        })),
+      });
+      expect(target.candidates).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            candidateId: occurrence.candidateId,
+            candidateBinding: "NARROW_SCOPE",
+            comparisonScopeKey: expectedScopeKey,
+          }),
+        ])
+      );
+    }
+  );
+
+  test("does not expose an undeclared comparison scope key", () => {
+    const worksheet = worksheetFor(
+      "Glasbruchversicherung\nGerüstkosten sind nach einem ersatzpflichtigen Glasschaden mitversichert."
+    );
+    worksheet.requirements[0].scopeRules.narrowScopeKeys = [
+      "FEUER_INSURANCE",
+    ];
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.ACTIVE,
+      candidateTriage: selectedCandidates(worksheet).map((candidate) => ({
+        ...candidate,
+        binding: "NARROW_SCOPE",
+      })),
+    });
+
+    expect(target.candidates).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ comparisonScopeKey: "GLASBRUCH_INSURANCE" }),
+      ])
+    );
   });
 });

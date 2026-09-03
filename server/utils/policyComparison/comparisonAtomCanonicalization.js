@@ -11,7 +11,7 @@ const {
 
 const PACKAGE_MEMBER = "PACKAGE_MEMBER";
 const CANONICAL_COMPARISON_ATOM_CONTRACT_ID =
-  "PACKAGE_MEMBER_CANONICAL_ATOM_V1";
+  "PACKAGE_MEMBER_CANONICAL_ATOM_V2";
 const VALID_COMPARISON_SCOPES = new Set([
   "GENERAL",
   "NARROW_ONLY",
@@ -299,6 +299,7 @@ function semanticComparisonAtomKey(atom) {
     requestedFields: strings(atom?.requestedFields),
     optionalFields: strings(atom?.optionalFields),
     selectedScopePicture: atom?.selectedScopePicture,
+    comparisonScopeKeys: strings(atom?.comparisonScopeKeys),
     scopePolicy: atom?.scopePolicy,
     comparisonApplicability: comparisonApplicability(atom),
     operationalEventMode: operationalEventMode(atom),
@@ -323,6 +324,7 @@ function comparisonContributor(atom) {
     coverageEffect: String(atom?.coverageEffect || ""),
     conflictState: String(atom?.conflictState || ""),
     selectedScopePicture: String(atom?.selectedScopePicture || ""),
+    comparisonScopeKeys: strings(atom?.comparisonScopeKeys),
     scopePolicy: String(atom?.scopePolicy || ""),
     requestedFieldStatus: String(atom?.requestedFieldStatus || ""),
     requestedFields: strings(atom?.requestedFields),
@@ -364,6 +366,7 @@ function canonicalComparisonAtom(atoms, key) {
     coverageEffect: representative.coverageEffect,
     conflictState: representative.conflictState,
     selectedScopePicture: representative.selectedScopePicture,
+    comparisonScopeKeys: strings(representative.comparisonScopeKeys),
     scopePolicy: representative.scopePolicy,
     requestedFieldStatus: representative.requestedFieldStatus,
     requestedFields: strings(representative.requestedFields),

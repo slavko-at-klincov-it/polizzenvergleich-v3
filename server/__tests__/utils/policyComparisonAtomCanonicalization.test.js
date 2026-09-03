@@ -331,4 +331,35 @@ describe("comparison atom canonicalization", () => {
     ])
       expect(canonicalComparisonAtoms(atoms)).toHaveLength(3);
   });
+
+  test("keeps exact narrow comparison scopes separate and preserves their provenance", () => {
+    const glass = rawAtom("glass", {
+      factRole: "COST",
+      coverageEffect: "INCLUDED",
+      selectedScopePicture: "NARROW_ONLY",
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      comparisonScopeKeys: ["GLASBRUCH_INSURANCE"],
+    });
+    const fire = rawAtom("fire", {
+      factRole: "COST",
+      coverageEffect: "INCLUDED",
+      selectedScopePicture: "NARROW_ONLY",
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      comparisonScopeKeys: ["FEUER_INSURANCE"],
+    });
+
+    expect(semanticComparisonAtomKey(glass)).not.toBe(
+      semanticComparisonAtomKey(fire)
+    );
+    expect(canonicalComparisonAtoms([glass, fire])).toEqual([
+      expect.objectContaining({
+        comparisonProjectionContractId: "PACKAGE_MEMBER_CANONICAL_ATOM_V2",
+        comparisonScopeKeys: ["FEUER_INSURANCE"],
+      }),
+      expect.objectContaining({
+        comparisonProjectionContractId: "PACKAGE_MEMBER_CANONICAL_ATOM_V2",
+        comparisonScopeKeys: ["GLASBRUCH_INSURANCE"],
+      }),
+    ]);
+  });
 });

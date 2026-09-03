@@ -285,12 +285,21 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
+        const comparisonScopeKey =
+          deterministicBinding?.binding === candidateBinding &&
+          candidateBinding === "NARROW_SCOPE" &&
+          (requirement?.scopeRules?.narrowScopeKeys || []).includes(
+            deterministicBinding?.comparisonScopeKey
+          )
+            ? deterministicBinding.comparisonScopeKey
+            : null;
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
           ...(deterministicBinding?.binding === candidateBinding
             ? { deterministicBindingBasis: deterministicBinding.basis }
             : {}),
+          ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
           physicalPageNumber:
             occurrence.physicalPageNumber || occurrence.pageNumber,
           printedPageLabel: occurrence.printedPageLabel || null,

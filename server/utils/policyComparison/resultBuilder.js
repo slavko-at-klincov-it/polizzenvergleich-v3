@@ -1148,6 +1148,7 @@ function materializeAtomicFacts({
           exactText,
           candidateBinding,
           deterministicBindingBasis,
+          comparisonScopeKey,
         } = candidate;
         return {
           candidateId,
@@ -1157,8 +1158,12 @@ function materializeAtomicFacts({
           conditionCheckText: conditionCheckText(candidate),
           ...(candidateBinding ? { candidateBinding } : {}),
           ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
+          ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
         };
       });
+    const comparisonScopeKeys = unique(
+      sources.map(({ comparisonScopeKey }) => comparisonScopeKey)
+    ).sort();
     return {
       requirementId: judgement.requirementId,
       componentId: judgement.componentId,
@@ -1177,6 +1182,7 @@ function materializeAtomicFacts({
       requestedFieldStatus,
       fields,
       sources,
+      ...(comparisonScopeKeys.length > 0 ? { comparisonScopeKeys } : {}),
       componentSatisfactionPolicy:
         requirement?.componentSatisfactionPolicy || "ALL",
       coverageAggregationPolicy: requirement?.coverageAggregationPolicy || null,
