@@ -20,6 +20,10 @@ const {
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  DOCUMENT_STATUS,
+  buildPreparedEvidenceTargets,
+} = require("../../utils/policyAnalysis/preparedEvidenceContract");
 const feFullCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const {
   validateCustomerComparison,
@@ -3694,6 +3698,7 @@ describe("policy comparison result builder", () => {
     });
     const requirement = worksheet.requirements[0];
     expect(requirement.supportingObjectMembershipProofs).toHaveLength(1);
+    delete requirement.supportingCoverageConditionFormulaEvidenceContracts;
     const occurrence = {
       candidateId: "candidate:fe-c02:pv",
       physicalPageNumber: 1,
@@ -3790,15 +3795,14 @@ describe("policy comparison result builder", () => {
     const narrowGovernor =
       "Zusätzlich versichert sind Schäden durch Überspannung oder Induktion infolge Blitzschlag";
     const narrowTarget = "Solar- und Fotovoltaikanlagen";
-    const pageContent = [
-      prerequisite,
-      "",
-      generalGovernor,
+    const firstPage = [prerequisite, "", generalGovernor].join("\n");
+    const secondPage = [
       `- ${generalTarget};`,
       "",
       narrowGovernor,
       `- ${narrowTarget};`,
     ].join("\n");
+    const pageContent = `${firstPage}\n${secondPage}`;
     const fingerprint = crypto
       .createHash("sha256")
       .update(pageContent)
@@ -3810,12 +3814,19 @@ describe("policy comparison result builder", () => {
         sourceDocumentId: fingerprint,
         title: "Source-bound FE-C02 condition formula fixture",
         pageContent,
-        pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+        pageMap: [
+          { pageNumber: 1, start: 0, end: firstPage.length },
+          {
+            pageNumber: 2,
+            start: firstPage.length + 1,
+            end: pageContent.length,
+          },
+        ],
         pdfExtraction: {
           schemaVersion: 1,
-          totalPages: 1,
-          processedPages: 1,
-          pagesWithText: 1,
+          totalPages: 2,
+          processedPages: 2,
+          pagesWithText: 2,
           complete: true,
         },
       },
@@ -3831,83 +3842,91 @@ describe("policy comparison result builder", () => {
       documentFingerprint: fingerprint,
       catalog: feC02Catalog,
     });
-    const generalGovernorStart = pageContent.indexOf(generalGovernor);
-    const generalTargetStart = pageContent.indexOf(generalTarget);
-    const narrowGovernorStart = pageContent.indexOf(narrowGovernor);
-    const narrowTargetStart = pageContent.lastIndexOf(narrowTarget);
-    const candidate = ({
-      candidateId,
-      exactText,
-      documentStart,
-      governorText,
-      governorStart,
-    }) => ({
-      candidateId,
-      physicalPageNumber: 1,
-      exactText,
-      documentStart,
-      documentEnd: documentStart + exactText.length,
+    const occurrences = worksheet.requirements[0].components[0].occurrences;
+    expect(occurrences).toHaveLength(2);
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: occurrences.map(({ candidateId }) => ({
+        requirementId: "FE-C02",
+        componentId: "photovoltaic_as_damaged_object",
+        candidateId,
+        binding: "DIRECT",
+      })),
+    });
+    const candidates = preparedTarget.candidates;
+    const generalOccurrence = occurrences.find(
+      ({ coverageGovernorHint }) =>
+        coverageGovernorHint?.text === generalGovernor
+    );
+    const narrowOccurrence = occurrences.find(
+      ({ coverageGovernorHint }) =>
+        coverageGovernorHint?.text === narrowGovernor
+    );
+    const generalCandidate = candidates.find(
+      ({ candidateId }) => candidateId === generalOccurrence.candidateId
+    );
+    const narrowCandidate = candidates.find(
+      ({ candidateId }) => candidateId === narrowOccurrence.candidateId
+    );
+    expect(generalOccurrence).toMatchObject({
+      physicalPageNumber: 2,
       coverageGovernorHint: {
         physicalPageNumber: 1,
-        pageStart: governorStart,
-        pageEnd: governorStart + governorText.length,
-        text: governorText,
+        text: generalGovernor,
+        source: "PRECEDING_PAGE_GOVERNOR",
       },
     });
-    const candidates = [
-      candidate({
-        candidateId: "candidate:fe-c02:general",
-        exactText: generalTarget,
-        documentStart: generalTargetStart,
-        governorText: generalGovernor,
-        governorStart: generalGovernorStart,
-      }),
-      candidate({
-        candidateId: "candidate:fe-c02:narrow-lightning",
-        exactText: narrowTarget,
-        documentStart: narrowTargetStart,
-        governorText: narrowGovernor,
-        governorStart: narrowGovernorStart,
-      }),
-    ];
-    const [atom] = materializeAtomicFacts({
-      document: {
-        uuid: "document-fe-c02-condition-formula",
-        role: "TERMS",
-        documentStatus: "FRAMEWORK_TERMS",
+    expect(narrowOccurrence).toMatchObject({
+      physicalPageNumber: 2,
+      coverageGovernorHint: {
+        physicalPageNumber: 2,
+        text: narrowGovernor,
+        source: "CURRENT_PAGE_GOVERNOR",
       },
-      worksheet,
-      materializedEvidence: {
-        judgements: [
-          {
-            targetId: "target:fe-c02",
-            requirementId: "FE-C02",
-            componentId: "photovoltaic_as_damaged_object",
-            evidencePresence: "FOUND",
-            coverageEffect: "INCLUDED",
-            conflictState: "NONE",
-            selectedScopePicture: "GENERAL",
-            documentApplicability: "CONDITIONAL",
-            selectedCandidateIds: candidates.map(({ candidateId }) =>
-              candidateId
-            ),
-            unresolvedCandidateIds: [],
-          },
-        ],
-      },
-      requestedFields: {
-        requirements: [
-          {
-            requirementId: "FE-C02",
-            requestedFieldStatus: "NOT_REQUIRED",
-            fields: [],
-          },
-        ],
-      },
-      targets: [{ targetId: "target:fe-c02", candidates }],
-      documentArtifact,
-      report: null,
     });
+    expect(generalCandidate).not.toHaveProperty("coverageGovernorHint");
+    expect(narrowCandidate).not.toHaveProperty("coverageGovernorHint");
+    const materialize = (targetValue = preparedTarget) =>
+      materializeAtomicFacts({
+        document: {
+          uuid: "document-fe-c02-condition-formula",
+          role: "TERMS",
+          documentStatus: "FRAMEWORK_TERMS",
+        },
+        worksheet,
+        materializedEvidence: {
+          judgements: [
+            {
+              targetId: "target:fe-c02",
+              requirementId: "FE-C02",
+              componentId: "photovoltaic_as_damaged_object",
+              evidencePresence: "FOUND",
+              coverageEffect: "INCLUDED",
+              conflictState: "NONE",
+              selectedScopePicture: "GENERAL",
+              documentApplicability: "CONDITIONAL",
+              selectedCandidateIds: candidates.map(({ candidateId }) =>
+                candidateId
+              ),
+              unresolvedCandidateIds: [],
+            },
+          ],
+        },
+        requestedFields: {
+          requirements: [
+            {
+              requirementId: "FE-C02",
+              requestedFieldStatus: "NOT_REQUIRED",
+              fields: [],
+            },
+          ],
+        },
+        targets: [{ ...targetValue, targetId: "target:fe-c02" }],
+        documentArtifact,
+        report: null,
+      });
+    const [atom] = materialize();
 
     expect(atom.supportingCoverageConditionFormulaProofs).toHaveLength(1);
     expect(atom.supportingCoverageConditionFormulaProofs[0]).toMatchObject({
@@ -3916,9 +3935,13 @@ describe("policy comparison result builder", () => {
       readyForDecision: false,
       targets: [
         {
-          candidateId: "candidate:fe-c02:general",
+          candidateId: generalCandidate.candidateId,
           exactText: generalTarget,
-          coverageGovernorSpan: { exactText: generalGovernor },
+          physicalPageNumber: 2,
+          coverageGovernorSpan: {
+            exactText: generalGovernor,
+            physicalPageNumber: 1,
+          },
         },
       ],
     });
@@ -3926,6 +3949,12 @@ describe("policy comparison result builder", () => {
       atom.supportingCoverageConditionFormulaProofs[0].targets.map(
         ({ candidateId }) => candidateId
       )
-    ).not.toContain("candidate:fe-c02:narrow-lightning");
+    ).not.toContain(narrowCandidate.candidateId);
+
+    const tamperedTarget = JSON.parse(JSON.stringify(preparedTarget));
+    tamperedTarget.candidates[0].documentEnd += 1;
+    expect(() => materialize(tamperedTarget)).toThrow(
+      "COVERAGE_CONDITION_FORMULA_TARGET_REPLAY_INVALID"
+    );
   });
 });

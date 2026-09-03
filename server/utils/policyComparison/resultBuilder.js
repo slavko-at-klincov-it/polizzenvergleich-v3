@@ -1372,6 +1372,34 @@ function materializeAtomicFacts({
     const selectedTargetCandidates = (target?.candidates || []).filter(
       ({ candidateId }) => selectedSet.has(candidateId)
     );
+    const sourceBoundFormulaCandidates = (() => {
+      const contracts =
+        requirement?.supportingCoverageConditionFormulaEvidenceContracts || [];
+      if (contracts.length === 0) return [];
+      if (
+        selectedSet.size !== selectedCandidateIds.length ||
+        selectedTargetCandidates.length !== selectedSet.size
+      )
+        throw new Error("COVERAGE_CONDITION_FORMULA_TARGET_REPLAY_INVALID");
+      const occurrences = component?.occurrences || [];
+      return selectedTargetCandidates.map((candidate) => {
+        const matches = occurrences.filter(
+          ({ candidateId }) => candidateId === candidate.candidateId
+        );
+        if (matches.length !== 1)
+          throw new Error("COVERAGE_CONDITION_FORMULA_TARGET_REPLAY_INVALID");
+        const [occurrence] = matches;
+        if (
+          candidate.physicalPageNumber !==
+            (occurrence.physicalPageNumber || occurrence.pageNumber) ||
+          candidate.documentStart !== occurrence.documentStart ||
+          candidate.documentEnd !== occurrence.documentEnd ||
+          candidate.exactText !== occurrence.exactText
+        )
+          throw new Error("COVERAGE_CONDITION_FORMULA_TARGET_REPLAY_INVALID");
+        return occurrence;
+      });
+    })();
     const supportingCoverageConditionFormulaProofs = (
       requirement?.supportingCoverageConditionFormulaEvidenceContracts || []
     )
@@ -1379,7 +1407,7 @@ function materializeAtomicFacts({
         buildSourceBoundCoverageConditionFormulaProof({
           contract,
           documentArtifact,
-          targetCandidates: selectedTargetCandidates,
+          targetCandidates: sourceBoundFormulaCandidates,
         })
       )
       .filter(Boolean)

@@ -213,4 +213,30 @@ describe("coverage-only certification contract", () => {
     expect(objectScopeDigest).not.toBe(baseDigest);
     expect(mutatedObjectScopeDigest).not.toBe(objectScopeDigest);
   });
+
+  test("binds coverage-condition formula contracts into the requirement digest", () => {
+    const requirement = coverageOnlyRequirement();
+    const contract = {
+      contractId: "SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_V1",
+      formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
+    };
+    const first = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        supportingCoverageConditionFormulaEvidenceContracts: [contract],
+      },
+    });
+    const second = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        supportingCoverageConditionFormulaEvidenceContracts: [
+          { ...contract, formulaKey: "MUTATED_FORMULA" },
+        ],
+      },
+    });
+
+    expect(first).not.toBe(second);
+  });
 });
