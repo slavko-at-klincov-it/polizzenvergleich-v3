@@ -654,9 +654,7 @@ describe("membership condition-scope comparison contract", () => {
       replay.projectedAtomsBySide.A[0]
         .membershipConditionScopeComparisonContract
     );
-    replay.projectedAtomDigestsSha256.A = sha256(
-      replay.projectedAtomsBySide.A
-    );
+    replay.projectedAtomDigestsSha256.A = sha256(replay.projectedAtomsBySide.A);
     const { replayDigestSha256: _discarded, ...body } = replay;
     replay.replayDigestSha256 = sha256(body);
 
