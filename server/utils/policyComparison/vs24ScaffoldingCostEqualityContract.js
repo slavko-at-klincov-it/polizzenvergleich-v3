@@ -118,8 +118,7 @@ function exactFoundAtom(atom, expectedDocument) {
   return Boolean(
     source?.candidateId === atom.selectedCandidateIds[0] &&
       source?.candidateBinding === "NARROW_SCOPE" &&
-      source?.deterministicBindingBasis ===
-        "EXPLICIT_NARROW_SECTION_SCOPE" &&
+      source?.deterministicBindingBasis === "EXPLICIT_NARROW_SECTION_SCOPE" &&
       source?.comparisonScopeKey === VS24_SCOPE_KEY &&
       Number.isInteger(source?.physicalPageNumber) &&
       source.physicalPageNumber > 0 &&
@@ -251,8 +250,7 @@ function buildVs24ScaffoldingCostEqualityAudit({
     schemaVersion: 1,
     contractId: VS24_SCAFFOLDING_COST_EQUALITY_AUDIT_CONTRACT_ID,
     categoryId: VS24_CATEGORY_ID,
-    requirementContractDigestSha256:
-      VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256,
+    requirementContractDigestSha256: VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256,
     sides: { A: sideA, B: sideB },
   };
 }

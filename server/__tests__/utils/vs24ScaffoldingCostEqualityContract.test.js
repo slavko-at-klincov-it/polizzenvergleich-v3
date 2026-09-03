@@ -2,9 +2,7 @@ const {
   VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256,
   buildVs24ScaffoldingCostEqualityAudit,
 } = require("../../utils/policyComparison/vs24ScaffoldingCostEqualityContract");
-const {
-  decidePoint,
-} = require("../../utils/policyComparison/pointDecision");
+const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 
 const components = [{ id: "scaffolding_costs", factRole: "COST" }];
 const requirementContract = {
@@ -103,14 +101,8 @@ function fixture() {
     categoryId: "VS-24",
     packageA: { evidenceFound: true, reviewStatus: "BELEGT" },
     packageB: { evidenceFound: true, reviewStatus: "BELEGT" },
-    atomsA: [
-      foundAtom("A", documentsA[0]),
-      absentAtom(documentsA[1]),
-    ],
-    atomsB: [
-      foundAtom("B", documentsB[0]),
-      absentAtom(documentsB[1]),
-    ],
+    atomsA: [foundAtom("A", documentsA[0]), absentAtom(documentsA[1])],
+    atomsB: [foundAtom("B", documentsB[0]), absentAtom(documentsB[1])],
     requirementContractA: requirementContract,
     requirementContractB: requirementContract,
     expectedDocumentsA: documentsA,
@@ -138,7 +130,10 @@ describe("VS-24 scaffolding cost equality contract", () => {
   });
 
   test.each([
-    ["a missing scope key", (input) => (input.atomsA[0].comparisonScopeKeys = [])],
+    [
+      "a missing scope key",
+      (input) => (input.atomsA[0].comparisonScopeKeys = []),
+    ],
     [
       "a different scope key",
       (input) => {
@@ -148,13 +143,11 @@ describe("VS-24 scaffolding cost equality contract", () => {
     ],
     [
       "multiple scopes",
-      (input) =>
-        input.atomsA[0].comparisonScopeKeys.push("FEUER_INSURANCE"),
+      (input) => input.atomsA[0].comparisonScopeKeys.push("FEUER_INSURANCE"),
     ],
     [
       "a model-only scope",
-      (input) =>
-        delete input.atomsA[0].sources[0].deterministicBindingBasis,
+      (input) => delete input.atomsA[0].sources[0].deterministicBindingBasis,
     ],
     [
       "a local money limit",
