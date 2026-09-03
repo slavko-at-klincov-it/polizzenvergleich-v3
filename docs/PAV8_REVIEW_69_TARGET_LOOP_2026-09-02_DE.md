@@ -2978,6 +2978,98 @@ Das Hardening verbessert die Vertrauensgrenze, nicht die Zeilenentscheidung.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+#### 10.29.6 Phase 3A – DOC-07-Fremdscope terminal und paketweiter Nichtfund vollständig
+
+Vor der Portfolioentscheidung wurde die letzte unvollständige B-Suchzelle
+geschlossen. DOC-07 enthält zwar die Wörter `gefährlichen Abfall`, aber nur in
+einer Haftpflichtklausel zur kurzfristigen Zwischenlagerung. Dieser Fund darf
+weder als Gebäude-Sondermülldeckung verwendet werden noch die kontrollierte
+Suche dauerhaft offenlassen.
+
+Der neue Terminalvertrag ist exakt opt-in für:
+
+```text
+VS-22 / hazardous_waste / INSURED_OBJECT / COVERAGE_MIXED
+VS-22 / hazardous_waste_cost_limit / LIMIT / COVERAGE_MIXED
+Contract: DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_V1
+Proof: VS22_LOCAL_LIABILITY_OR_STORAGE_SCOPE_V1
+```
+
+Er bindet exakten Treffertext, Kandidaten-ID, Dokumentoffsets, lokalen
+Kontext-Slice, physische Seite, Headingquelle, beobachtete Scopes sowie
+Occurrence- und Rejection-Set-Digests. `CURRENT_PAGE_HEADING` ist nur auf
+derselben physischen Seite zulässig; ein `PRECEDING_PAGE_HEADING` höchstens
+eine bis drei Seiten davor. Der rein lokale Zwischenlagerungsweg ist nur ohne
+Section- und Page-Scope-Hinweis zulässig. Sach- oder Gebäudeversicherungs-
+Rückverweise sowie gemischte Scopes bleiben fail-closed.
+
+Die unabhängige Gegenprüfung fand und schloss vor Abnahme vier Restlücken:
+
+1. ungültige Occurrence-Offets durften nicht auf `exactText` zurückfallen;
+2. der lokale Weg durfte vorhandene Scopes nicht durch `[]` ersetzen;
+3. Current- und Preceding-Heading brauchten getrennte Abstandsvorgaben;
+4. der bilaterale Validator musste Gate und V3-only-Contract ausdrücklich
+   kennen.
+
+Commits:
+
+```text
+1fe175b4 fix(analysis): certify VS-22 non-target waste mentions
+df338a25 fix(analysis): derive VS-22 terminal from source proof
+b628e437 fix(analysis): harden VS-22 terminal validation
+30a66d25 fix(analysis): preserve empty VS-22 scope evidence
+0e663ef2 style(analysis): format VS-22 terminal hardening
+6b329bbb test(analysis): verify VS-22 terminal rebuild
+c9cd0f27 style(analysis): format VS-22 rebuild test
+```
+
+Mac-Studio-Validierung des akzeptierten Stands:
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: c9cd0f2799fc2427c5bb465c2a2f78c1ed38bf5c
+Runtime: Node v22.23.2
+Fokussierte Terminal-Suites: 5/5 PASS, 179/179 Tests PASS
+Dateibasierter Rebuild: 3/3 Suites PASS, 128/128 Tests PASS
+Breite Utils-Regression: 103/106 Suites PASS, 1524/1548 Tests PASS
+Bekannte historische Fixture-Fehler: 3 Suites / 24 Tests
+Neue fachliche Fehlersignatur: keine
+```
+
+Realer Zehn-Dokument-Nachweis:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-NON-TARGET-WASTE-C9CD0F27-20260903
+Summary-Digest:
+1efa4b5e3dcee449856c89abceea667ecb26c8dad66ff7a7790661ba43e33014
+Source-Input-Manifest-Digest:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Target-Selection-Digest:
+2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
+Producer-Digest:
+5dace643910fd40b0c5866bb5273f72923f28ad3d5bf23f459202b076a725e4d
+Qwen-Aufrufe: Triage 3 / Evidence 3
+```
+
+Das messbare Ergebnis ist jetzt vollständig:
+
+```text
+Paket B / hazardous_waste: 9/9 Dokumente kontrolliert ohne Zielbeleg
+Paket B / hazardous_waste_cost_limit: 9/9 Dokumente kontrolliert ohne Zielbeleg
+DOC-07: je Komponente 1 haftpflichtgebundener Fremdscope terminal verworfen
+```
+
+Die Zeile bleibt in diesem Zwischenschritt absichtlich `UNKLAR`, weil der
+allgemeine Vergleich noch keine komponentenspezifische Portfolioentscheidung
+für `COVERAGE_MIXED` besitzt. Phase 3A beweist nur den vollständigen Nichtfund;
+sie behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit in
+Paket B. Der folgende, getrennte Phase-3B-Commit darf daraus einen Vorteil für
+Paket A nur zusammen mit A-Sondermülldeckung und A-Sondermülllimit ableiten.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
 ### 10.27 VS-18 – Einfriedungsfamilie: gerichtete Oberklasse abgeschlossen
 
 #### 10.27.1 Aktueller gebundener Ausgangslauf
