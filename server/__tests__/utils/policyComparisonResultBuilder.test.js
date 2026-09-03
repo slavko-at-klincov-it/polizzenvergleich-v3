@@ -2266,17 +2266,96 @@ describe("policy comparison result builder", () => {
         reviewStatus: "BELEGT",
       }),
     };
+    const baseAtom = {
+      requirementId: "VS-01",
+      componentId: "replacement_new_value",
+      factRole: "BENEFIT",
+      documentUuids: ["a"],
+      documentRole: "MAIN_POLICY",
+      documentStatus: "ACTIVE",
+      documentApplicability: "ACTIVE",
+      evidencePresence: "FOUND",
+      coverageEffect: "INCLUDED",
+      conflictState: "NONE",
+      selectedCandidateIds: ["base-candidate"],
+      unresolvedCandidateIds: [],
+      requirementContractDigest: "vs01-contract",
+      fields: [
+        {
+          field: "limit",
+          status: "FOUND",
+          facts: [
+            {
+              normalizedValue: "EUR 30.608.000,00",
+              valueType: "MONEY",
+              source: {
+                candidateId: "base-candidate",
+                physicalPageNumber: 1,
+                documentStart: 10,
+                documentEnd: 26,
+                exactText: "EUR 30.608.000,00",
+              },
+            },
+          ],
+        },
+      ],
+      sources: [
+        {
+          candidateId: "base-candidate",
+          physicalPageNumber: 1,
+          exactText: "Wohngebäude zum Neuwert",
+        },
+      ],
+    };
 
-    expect(
-      summarizePackage([absolute, percentage], {
-        referenceEntries: [absolute, percentage, base],
-      }).reviewStatus
-    ).toBe("BELEGT");
+    const reconciled = summarizePackage([absolute, percentage], {
+      referenceEntries: [absolute, percentage, base],
+      referenceAtomicFacts: [baseAtom],
+    });
+    expect(reconciled.reviewStatus).toBe("BELEGT");
+    expect(reconciled.vs25AmountReconciliation).toMatchObject({
+      schemaVersion: 1,
+      contractId: "VS25_NBW_PERCENT_CURRENCY_RECONCILIATION_AUDIT_V1",
+      categoryId: "VS-25",
+      comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
+      clauseCode: "10PA0130",
+      base: {
+        documentUuid: "a",
+        amountMinor: "3060800000",
+      },
+      percentage: {
+        documentUuid: "b",
+        percentageHundredths: "500",
+      },
+      currency: {
+        documentUuid: "a",
+        amountMinor: "153040000",
+        qualifier: "FIRST_RISK",
+      },
+      calculation: {
+        calculatedAmountMinor: "153040000",
+        documentedAmountMinor: "153040000",
+        remainder: "0",
+      },
+    });
     expect(
       summarizePackage([absolute, percentage], {
         referenceEntries: [absolute, percentage],
       }).reviewStatus
     ).toBe("RANGFOLGE_PRÜFEN");
+    expect(
+      summarizePackage([absolute, percentage], {
+        referenceEntries: [
+          absolute,
+          percentage,
+          {
+            ...base,
+            document: document("different-document", "B", "MAIN_POLICY"),
+          },
+        ],
+        referenceAtomicFacts: [baseAtom],
+      }).vs25AmountReconciliation
+    ).toBeUndefined();
     expect(
       summarizePackage([absolute, percentage], {
         referenceEntries: [
@@ -2363,9 +2442,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V69_COMBINED_SCOPE_HEADING_PRECISION",
+      id: "CUSTOMER_CORE_5_V70_VS25_AMOUNT_RECONCILIATION_AUDIT",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_V30",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_AUDIT_V31",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });

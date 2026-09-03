@@ -224,6 +224,192 @@ function newBuildingValueBases(referenceEntries) {
   ).map(BigInt);
 }
 
+function vs01BaseAtomProof(referenceAtomicFacts, { documentUuid, amountMinor }) {
+  const atoms = (referenceAtomicFacts || []).filter(
+    (atom) =>
+      atom?.requirementId === "VS-01" &&
+      atom?.componentId === "replacement_new_value" &&
+      atom?.factRole === "BENEFIT" &&
+      atom?.evidencePresence === "FOUND" &&
+      atom?.coverageEffect === "INCLUDED" &&
+      atom?.conflictState === "NONE" &&
+      (atom?.unresolvedCandidateIds || []).length === 0 &&
+      Array.isArray(atom?.documentUuids) &&
+      atom.documentUuids.length === 1 &&
+      atom.documentUuids[0] === documentUuid
+  );
+  if (atoms.length !== 1) return null;
+  const atom = atoms[0];
+  const moneyFacts = (atom.fields || [])
+    .filter(({ field, status }) => field === "limit" && status === "FOUND")
+    .flatMap(({ facts }) => facts || [])
+    .filter(({ valueType, normalizedValue }) =>
+      valueType === "MONEY" && singleCurrencyAmount(normalizedValue) !== null
+    );
+  const amounts = unique(
+    moneyFacts.map(({ normalizedValue }) =>
+      singleCurrencyAmount(normalizedValue).toString()
+    )
+  );
+  if (amounts.length !== 1 || amounts[0] !== amountMinor.toString()) return null;
+  if (
+    !Array.isArray(atom.selectedCandidateIds) ||
+    atom.selectedCandidateIds.length === 0 ||
+    atom.selectedCandidateIds.some(
+      (candidateId) =>
+        !atom.sources?.some(
+          (source) =>
+            source.candidateId === candidateId &&
+            Number.isInteger(source.physicalPageNumber) &&
+            source.physicalPageNumber > 0 &&
+            String(source.exactText || "").trim()
+        )
+    )
+  )
+    return null;
+  return {
+    requirementContractDigest: atom.requirementContractDigest,
+    documentUuid,
+    documentRole: atom.documentRole,
+    documentStatus: atom.documentStatus,
+    documentApplicability: atom.documentApplicability,
+    selectedCandidateIds: [...atom.selectedCandidateIds].sort(),
+    valueSources: moneyFacts.map(({ normalizedValue, source }) => ({
+      normalizedValue,
+      candidateId: source?.candidateId,
+      physicalPageNumber: source?.physicalPageNumber,
+      documentStart: source?.documentStart,
+      documentEnd: source?.documentEnd,
+      exactText: source?.exactText,
+    })),
+  };
+}
+
+function newBuildingValueBaseReferences(
+  referenceEntries,
+  referenceAtomicFacts
+) {
+  return (referenceEntries || [])
+    .filter(({ row }) => isEvidenceRow(row))
+    .filter(({ row }) => row.reviewStatus === "BELEGT")
+    .filter(({ row }) => row.categoryId === "VS-01")
+    .filter(({ row }) =>
+      /\b(?:NBW|Neubauwert|Wohngeb[aä]ude\s+zum\s+Neuwert)\b/iu.test(
+        `${row.documentedContent || ""}\n${row.source || ""}`
+      )
+    )
+    .map(({ document, row }) => {
+      const documentUuid = String(document?.uuid || "");
+      const amountMinor = singleCurrencyAmount(row.coverageAmount);
+      return {
+        documentUuid,
+        documentRole: String(document?.role || ""),
+        documentStatus: String(document?.documentStatus || ""),
+        amountMinor,
+        coverageAmount: String(row.coverageAmount || ""),
+        documentedContent: String(row.documentedContent || ""),
+        source: String(row.source || ""),
+        reviewStatus: row.reviewStatus,
+        atomProof:
+          documentUuid && amountMinor !== null
+            ? vs01BaseAtomProof(referenceAtomicFacts, {
+                documentUuid,
+                amountMinor,
+              })
+            : null,
+      };
+    })
+    .filter(
+      ({ documentUuid, amountMinor, atomProof }) =>
+        documentUuid && amountMinor !== null && atomProof
+    );
+}
+
+function vs25AuthorityLimitReconciliationAudit({
+  categoryId,
+  facts,
+  referenceEntries,
+  referenceAtomicFacts,
+}) {
+  if (categoryId !== "VS-25") return null;
+  const amountFacts = facts.filter(
+    ({ coverageAmount }) =>
+      normalized(coverageAmount) !== normalized(NOT_DETERMINABLE)
+  );
+  const currencyFacts = amountFacts
+    .map((fact) => ({
+      ...fact,
+      amountMinor: singleCurrencyAmount(fact.coverageAmount),
+    }))
+    .filter(({ amountMinor }) => amountMinor !== null);
+  const percentageFacts = amountFacts
+    .map((fact) => ({
+      ...fact,
+      percentageHundredths: singlePercentage(fact.coverageAmount),
+    }))
+    .filter(({ percentageHundredths }) => percentageHundredths !== null);
+  if (currencyFacts.length !== 1 || percentageFacts.length !== 1) return null;
+
+  const currencyFact = currencyFacts[0];
+  const percentageFact = percentageFacts[0];
+  const commonCodes = sharedClauseCodes([currencyFact, percentageFact]);
+  if (
+    commonCodes.length !== 1 ||
+    !/\b(?:des\s+NBW|vom\s+NBW|des\s+Neubauwerts?)\b/iu.test(
+      `${percentageFact.documentedContent || ""}\n${percentageFact.source || ""}`
+    )
+  )
+    return null;
+
+  const bases = newBuildingValueBaseReferences(
+    referenceEntries,
+    referenceAtomicFacts
+  ).filter(({ documentUuid }) => documentUuid === currencyFact.documentUuid);
+  if (bases.length !== 1) return null;
+  const base = bases[0];
+  const numerator = base.amountMinor * percentageFact.percentageHundredths;
+  if (
+    numerator % 10_000n !== 0n ||
+    numerator / 10_000n !== currencyFact.amountMinor
+  )
+    return null;
+
+  return {
+    schemaVersion: 1,
+    contractId: "VS25_NBW_PERCENT_CURRENCY_RECONCILIATION_AUDIT_V1",
+    categoryId: "VS-25",
+    comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
+    clauseCode: commonCodes[0],
+    base: {
+      ...base,
+      amountMinor: base.amountMinor.toString(),
+    },
+    percentage: {
+      documentUuid: percentageFact.documentUuid,
+      coverageAmount: percentageFact.coverageAmount,
+      percentageHundredths: percentageFact.percentageHundredths.toString(),
+      qualifier: amountQualifier(percentageFact),
+      documentedContent: percentageFact.documentedContent,
+      source: percentageFact.source,
+    },
+    currency: {
+      documentUuid: currencyFact.documentUuid,
+      coverageAmount: currencyFact.coverageAmount,
+      amountMinor: currencyFact.amountMinor.toString(),
+      qualifier: amountQualifier(currencyFact),
+      documentedContent: currencyFact.documentedContent,
+      source: currencyFact.source,
+    },
+    calculation: {
+      numerator: numerator.toString(),
+      divisor: "10000",
+      calculatedAmountMinor: (numerator / 10_000n).toString(),
+      documentedAmountMinor: currencyFact.amountMinor.toString(),
+      remainder: (numerator % 10_000n).toString(),
+    },
+  };
+}
+
 function canonicalAmountKeys(facts, referenceEntries) {
   const commonClauseCodes = sharedClauseCodes(
     facts.filter(
@@ -459,7 +645,12 @@ function roleLabel(role) {
 
 function summarizePackage(
   entries,
-  { referenceEntries = entries, searchAudit = null, atomicFacts = [] } = {}
+  {
+    referenceEntries = entries,
+    searchAudit = null,
+    atomicFacts = [],
+    referenceAtomicFacts = atomicFacts,
+  } = {}
 ) {
   const evidenceEntries = entries.filter(({ row }) => isEvidenceRow(row));
   if (evidenceEntries.length === 0) {
@@ -527,13 +718,19 @@ function summarizePackage(
       .filter((value) => normalized(value) !== normalized(NOT_DETERMINABLE))
   );
   const amountKeys = unique(canonicalAmountKeys(facts, referenceEntries));
+  const categoryIds = unique(evidenceEntries.map(({ row }) => row.categoryId));
+  const categoryId = categoryIds.length === 1 ? categoryIds[0] : null;
+  const vs25AmountReconciliation = vs25AuthorityLimitReconciliationAudit({
+    categoryId,
+    facts,
+    referenceEntries,
+    referenceAtomicFacts,
+  });
   const componentAmountComparison = explicitComponentScopedAmountComparison(
     facts,
     atomicFacts,
     referenceEntries,
-    unique(evidenceEntries.map(({ row }) => row.categoryId)).length === 1
-      ? evidenceEntries[0].row.categoryId
-      : null
+    categoryId
   );
   const amountConflict = componentAmountComparison
     ? componentAmountComparison.conflict
@@ -588,6 +785,9 @@ function summarizePackage(
     comparisonTreatment: null,
     ...(componentAmountComparison
       ? { amountComparison: componentAmountComparison }
+      : {}),
+    ...(vs25AmountReconciliation
+      ? { vs25AmountReconciliation }
       : {}),
     searchAudit,
     facts,
@@ -1361,6 +1561,18 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         ),
     ])
   );
+  const packageAtomicFacts = Object.fromEntries(
+    ["A", "B"].map((side) => [
+      side,
+      loadedRuns
+        .filter(({ document }) => document.side === side)
+        .flatMap(({ atomicFacts }) =>
+          CATEGORY_ORDER.flatMap((categoryView) =>
+            atomicFacts[categoryView] || []
+          )
+        ),
+    ])
+  );
   const categories = CATEGORY_ORDER.map((categoryView) => {
     const byDocument = loadedRuns.map((run) => ({
       document: run.document,
@@ -1404,6 +1616,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         entries.filter(({ document }) => document.side === "A"),
         {
           referenceEntries: packageEntries.A,
+          referenceAtomicFacts: packageAtomicFacts.A,
           searchAudit: searchAuditA,
           atomicFacts: atomsA,
         }
@@ -1412,6 +1625,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         entries.filter(({ document }) => document.side === "B"),
         {
           referenceEntries: packageEntries.B,
+          referenceAtomicFacts: packageAtomicFacts.B,
           searchAudit: searchAuditB,
           atomicFacts: atomsB,
         }
