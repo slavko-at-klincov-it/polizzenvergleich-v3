@@ -59,7 +59,9 @@ describe("VS-36 symbolic maximum-indemnity limit contract", () => {
   test("binds the numeric event limit to the building insurance sum", () => {
     const text =
       "Die Höchstentschädigung im Schadensfall beträgt inklusive aller Positionen maximal 150 % der vereinbarten Versicherungssumme für das Gebäude.";
-    expect(vs36MaximumIndemnityLimitForOccurrence(occurrence(text))).toMatchObject({
+    expect(
+      vs36MaximumIndemnityLimitForOccurrence(occurrence(text))
+    ).toMatchObject({
       match: expect.objectContaining({ 0: "150 %" }),
       value: {
         normalizedValue: "150 %",

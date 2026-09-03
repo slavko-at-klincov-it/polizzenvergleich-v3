@@ -77,21 +77,16 @@ function overlapsOccurrence(match, context) {
 }
 
 function numericEventLimit(context) {
-  const matches = [...context.text.matchAll(NUMERIC_EVENT_LIMIT_PATTERN)].filter(
-    (match) => overlapsOccurrence(match, context)
-  );
+  const matches = [
+    ...context.text.matchAll(NUMERIC_EVENT_LIMIT_PATTERN),
+  ].filter((match) => overlapsOccurrence(match, context));
   if (matches.length !== 1) return null;
   const clauseMatch = matches[0];
   const rawPercentage = String(clauseMatch.groups?.percentage || "");
   const rawBasis = String(clauseMatch.groups?.basis || "");
   const percentageOffset = clauseMatch[0].indexOf(rawPercentage);
   const basisOffset = clauseMatch[0].indexOf(rawBasis);
-  if (
-    !rawPercentage ||
-    !rawBasis ||
-    percentageOffset < 0 ||
-    basisOffset < 0
-  )
+  if (!rawPercentage || !rawBasis || percentageOffset < 0 || basisOffset < 0)
     return null;
   const match = [rawPercentage];
   match.index = clauseMatch.index + percentageOffset;
@@ -142,7 +137,9 @@ function vs36SymbolicLimitForOccurrence(occurrence) {
 function vs36MaximumIndemnityLimitForOccurrence(occurrence) {
   const context = validOccurrenceContext(occurrence);
   if (!context) return null;
-  return numericEventLimit(context) || vs36SymbolicLimitForOccurrence(occurrence);
+  return (
+    numericEventLimit(context) || vs36SymbolicLimitForOccurrence(occurrence)
+  );
 }
 
 module.exports = {
