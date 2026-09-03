@@ -263,7 +263,9 @@ describe("VS-22 hazardous-waste inflection recall", () => {
       pageScopeHints: [],
     };
 
-    expect(vs22NonTargetWasteOccurrenceProof(liabilityOccurrence)).not.toBeNull();
+    expect(
+      vs22NonTargetWasteOccurrenceProof(liabilityOccurrence)
+    ).not.toBeNull();
     expect(
       vs22NonTargetWasteOccurrenceProof({
         ...liabilityOccurrence,

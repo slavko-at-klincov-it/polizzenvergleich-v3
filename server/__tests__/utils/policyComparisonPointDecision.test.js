@@ -1719,8 +1719,7 @@ describe("policy comparison point decision", () => {
                 requirementId: categoryId,
                 componentId: component.id,
                 decisionOwner: "SERVER",
-                decisionBasis:
-                  "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+                decisionBasis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
                 proofMode:
                   "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
                 rejectedOccurrenceCount: 1,
