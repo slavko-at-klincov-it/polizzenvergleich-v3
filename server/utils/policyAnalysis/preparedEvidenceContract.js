@@ -88,6 +88,11 @@ function sourceBoundOccurrenceComparisonScopeKey({ occurrence, requirement }) {
   const allowedKeys = requirement?.scopeRules?.narrowScopeKeys || [];
   const occurrencePage = Number(occurrence?.physicalPageNumber);
   const section = occurrence?.sectionScopeHint;
+  const declaredSectionKeys = [
+    ...new Set(
+      [section?.scopeKey, ...(section?.scopeKeys || [])].filter(Boolean)
+    ),
+  ];
   const sectionText = String(section?.text || "");
   const sectionPage = Number(section?.physicalPageNumber);
   const sectionStart = Number(section?.pageStart);
@@ -99,6 +104,8 @@ function sourceBoundOccurrenceComparisonScopeKey({ occurrence, requirement }) {
     section?.source === "PRECEDING_PAGE_HEADING" &&
     sectionPage < occurrencePage;
   if (
+    declaredSectionKeys.length === 1 &&
+    declaredSectionKeys[0] === section?.scopeKey &&
     allowedKeys.includes(section?.scopeKey) &&
     Number.isInteger(occurrencePage) &&
     occurrencePage > 0 &&

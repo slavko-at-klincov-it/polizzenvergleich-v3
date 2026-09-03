@@ -189,6 +189,10 @@ describe("preparedEvidenceContract", () => {
           ...occurrence.sectionScopeHint,
           pageEnd: occurrence.sectionScopeHint.pageEnd + 1,
         },
+        {
+          ...occurrence.sectionScopeHint,
+          scopeKeys: ["STURM_INSURANCE", "FEUER_INSURANCE"],
+        },
       ]) {
         expect(
           targetFor({
