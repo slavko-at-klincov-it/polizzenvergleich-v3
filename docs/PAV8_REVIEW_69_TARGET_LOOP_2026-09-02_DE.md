@@ -2194,6 +2194,54 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+## 10.49 FE-C02 – Membership-Voraussetzungen sourcegebunden typisiert
+
+`809ac148c`/`d853a8cc8` ergänzen für die Elternkante
+`BUILDING_TECHNICAL_INSTALLATION -> BUILDING` drei kataloggesteuerte
+Voraussetzungsprädikate. `3d2cd4dd6` korrigiert anschließend einen im ersten
+Mac-Studio-Lauf belegten Matcherfehler: Mehrfach vorkommende Akteurswörter
+werden nicht mehr global als mehrdeutig gewertet, sondern müssen je Prädikat
+genau eine vollständige geordnete Aliasfolge bilden. Zwei vollständige Folgen,
+fehlende Gruppen, lokale Negation und disjunktive Verknüpfung bleiben
+fail-closed. `b8b376913` versioniert die geänderte Semantik als
+`SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_V2`, FE-Katalog v0.19 und
+Produktprofil V95/V56; `755f5d374` korrigiert die veraltete Audit-Fixture.
+
+```text
+Finaler Commit: 755f5d3749b7a3e50cab4b9fde4dbeae65b1f87f
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b; Kontext 42496
+Formatprüfung: PASS
+Fokussierte Suites: 11/11 PASS
+Fokussierte Tests: 356/356 PASS
+Artefakt: QA/FE-C02-TYPED-CONDITIONS-755F5D37-20260903
+Summary: 87311f05b74d02cc99a59b2cd7b4a73dabd38e6ab87c8b7d17f061e3cb9c0b04
+Target Selection: cd204b9df65eba2588e15c9812d41459ba7d3f31a19bc58bb141ac8f6e6b974b
+Aufrufe: 2 Triage / 0 Effects
+Server: 4 Triage-Rejects / 8 Evidence-Terminals
+```
+
+Delta zum letzten freigegebenen FE-C02-Ziellauf:
+
+```text
+A-Audit: weiterhin INCOMPLETE_SOURCE_CHAIN
+B-Audit vorher: COMPLETE_SOURCE_CHAIN_REQUIRES_TYPED_CONDITION_AND_PRECEDENCE
+B-Audit jetzt: COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS_OUTCOME_LOCKED
+B-Conditions: 3/3 COMPLETE, konjunktiv, unnegiert, sourcegebunden
+Kundenergebnis: weiterhin UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+Paketstatus: weiterhin A BELEGT / B TEILBELEGT
+Call-Delta: keines
+```
+
+Die drei Klauseln belegen Vertragsvoraussetzungen, nicht deren tatsächliche
+Erfüllung. Deshalb bleibt `satisfaction=NOT_EVALUATED` und
+`readyForDecision=false`. Als nächste getrennte Schritte fehlen ausschließlich
+`MEMBERSHIP_CONDITION_SCOPE_COMPARISON` und `DOCUMENT_PRECEDENCE`. Erst nach
+deren sourcegebundener Prüfung darf entschieden werden, ob der B-Proof
+`DEFINED` zu einer Deckungswirkung anheben kann. Kein Vollrun und kein
+Deployment.
+
 ## 10.42 FE-C02 – reale Elternkante auf zehn Dokumenten
 
 Der zielgebundene Mac-Studio-Lauf auf dem exakten Commit `70c18d2cb` hat die

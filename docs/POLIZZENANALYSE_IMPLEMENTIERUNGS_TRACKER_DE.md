@@ -5348,3 +5348,28 @@ Der technische Audit-Unterbau ist nun replay- und exportseitig abgesichert.
 Als nächster fachlicher Einzelbaustein folgt die outcome-neutrale Typisierung
 der drei sourcegebundenen Membership-Bedingungen. Kein Vollrun, kein
 Deployment.
+
+## 111. FE-C02 – typisierte Membership-Voraussetzungen vollständig
+
+`809ac148c` bis `755f5d374` führen die drei Voraussetzungen der realen
+Haustechnik-Elternkante als eigene sourcegebundene Prädikate fort. Der erste
+Mac-Studio-Lauf deckte eine globale Alias-Eindeutigkeitsannahme auf;
+`3d2cd4dd6` ersetzt sie durch eine auf zwei Möglichkeiten gesättigte Suche
+nach vollständigen geordneten Gruppenfolgen. Die Matchersemantik ist als
+Condition-Vertrag V2, FE-Katalog v0.19 und Produktprofil V95/V56 versioniert.
+
+```text
+Commit: 755f5d3749b7a3e50cab4b9fde4dbeae65b1f87f
+Mac Studio: Format PASS; 11 Suites / 356 Tests PASS
+Artefakt: QA/FE-C02-TYPED-CONDITIONS-755F5D37-20260903
+Summary: 87311f05b74d02cc99a59b2cd7b4a73dabd38e6ab87c8b7d17f061e3cb9c0b04
+Target Selection: cd204b9df65eba2588e15c9812d41459ba7d3f31a19bc58bb141ac8f6e6b974b
+B: 3/3 Bedingungen COMPLETE; keine Negation; Konjunktion belegt
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+Aufrufe: unverändert 2 Triage / 0 Effects
+```
+
+Der Fix entfernt einen falschen technischen Blocker, gibt aber bewusst noch
+keine Deckungswirkung frei. Offen sind nun nur der Vergleich der drei
+Membership-Voraussetzungen mit dem A-Nachweis und die Dokumentpräzedenz der
+paketweit verbundenen EABS-Ausgabe. Kein Vollrun und kein Deployment.
