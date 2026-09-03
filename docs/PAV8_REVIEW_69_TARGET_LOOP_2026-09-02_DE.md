@@ -2234,12 +2234,12 @@ Die unabhängige Dokumentprüfung bestätigte:
 
 - Paket A, physische Seite 4: ausdrücklich zusätzlich mitversichert sind
   `Grundstücksbegrenzungen sowie Begrenzungen und Umzäunungen ... wie Mauern,
-  Zäune`;
+Zäune`;
 - Paket B, GenVerbund, physische Seiten 9 bis 10: Versicherungsschutz für
   künstliche und natürliche `Einfriedungen, Umzäunungen` sowie AW02-
   Entschädigung für Einfriedungen;
 - Paket B, Angebot, physische Seite 13: `Als mitversichert gelten:
-  Einfriedungen, Außenanlagen gemäß Definition EABS`;
+Einfriedungen, Außenanlagen gemäß Definition EABS`;
 - Paket B, EABS, physische Seite 2: Definition von Einfriedungen als Sicht-
   oder Zutrittsschutz samt Schranken und Toren.
 
@@ -3093,7 +3093,7 @@ Paket B aber nur als `TEILBELEGT` beziehungsweise nach Zwischenfixes als
 nachgewiesen:
 
 1. DOC10 enthielt unter den Überschriften `Nicht als Gebäude oder
-   Gebäudebestandteile zählen` und `Nicht als Betriebsinhalt gelten` reine
+Gebäudebestandteile zählen` und `Nicht als Betriebsinhalt gelten` reine
    Objektklassifikationen. Sie waren keine operative Deckung für Wege oder
    Beleuchtung, wurden aber als Fund weitergereicht.
 2. Der Paket-Rollup verglich `EUR 15.000` für Bepflanzung und `EUR 10.000`
@@ -4126,7 +4126,7 @@ Achsen source-bound:
 - Entschädigungsobergrenze: Betrag eines Wiederaufbaus am bisherigen Ort und
   im gleichen Umfang;
 - Vorzustandsdefinition: bei A gebäudespezifisch `in Bau / bereits
-  errichtet`, bei B sachbezogen `vorhanden / bestellt / in Herstellung` und
+errichtet`, bei B sachbezogen `vorhanden / bestellt / in Herstellung` und
   zusätzlich für Wiederbeschaffung.
 
 Die beiden Vorzustandsformen werden absichtlich nicht zu demselben
@@ -4456,12 +4456,12 @@ Ein aliasfreier Override-Kandidat entsteht nur innerhalb derselben gebundenen
 `PARAGRAPH`- oder `LIST_ITEM`-Einheit und nur für eine der drei Familien:
 
 1. Leitungswasseranker plus Ausschlusslocator plus exakt `lit./Buchstabe/
-   Punkt/Ziffer c` plus Aufhebungswirkung;
+Punkt/Ziffer c` plus Aufhebungswirkung;
 2. Leitungswasseranker plus zitierte Default-Form
    `Nicht versichert sind Schäden, sofern/so ferne nicht anders vereinbart`
    plus Aufhebungswirkung;
 3. Leitungswasseranker plus `alle/sämtliche Ausschlüsse oder
-   Ausschlussbestimmungen` plus Aufhebungswirkung.
+Ausschlussbestimmungen` plus Aufhebungswirkung.
 
 Zulässige Wirkungen sind eng auf `aufgehoben`, `gestrichen`, `außer Kraft`,
 `findet keine Anwendung`, `nicht anzuwenden` und `ersetzt durch` begrenzt.
