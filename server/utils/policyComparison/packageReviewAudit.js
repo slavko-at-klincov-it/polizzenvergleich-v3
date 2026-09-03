@@ -196,6 +196,11 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
     );
 
   const satisfactionPolicy = relevant[0]?.componentSatisfactionPolicy || "ALL";
+  const packageFoundComponentIds = new Set(
+    relevant
+      .filter(({ evidencePresence }) => evidencePresence === "FOUND")
+      .map(({ componentId }) => componentId)
+  );
   const anyAlternativeFound =
     satisfactionPolicy === "ANY" &&
     relevant.some(({ evidencePresence }) => evidencePresence === "FOUND");
@@ -267,7 +272,11 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
       continue;
     }
     if (atom.evidencePresence !== "FOUND") {
-      if (satisfactionPolicy === "ALL" && !anyAlternativeFound)
+      if (
+        satisfactionPolicy === "ALL" &&
+        !anyAlternativeFound &&
+        !packageFoundComponentIds.has(atom.componentId)
+      )
         blockers.push(
           auditEntry({
             code: BLOCKER_CODE.MISSING_REQUIRED_COMPONENT,

@@ -2489,6 +2489,44 @@ describe("policy comparison point decision", () => {
     ).not.toContain("UNKNOWN_COVERAGE_EFFECT");
   });
 
+  test("does not report a component missing when another package document proves it", () => {
+    const found = atom("found", {
+      documentUuids: ["document-found"],
+    });
+    const localAbsence = atom("absent", {
+      documentUuids: ["document-absent"],
+      evidencePresence: "NOT_FOUND",
+      coverageEffect: "UNKNOWN",
+      selectedScopePicture: "UNKNOWN",
+      documentApplicability: "UNKNOWN",
+      selectedCandidateIds: [],
+      sources: [],
+    });
+    const result = decide([found, localAbsence], [atom("b")], {
+      packageA: {
+        reviewStatus: "TEILBELEGT",
+        facts: [
+          {
+            documentUuid: "document-found",
+            reviewStatus: "TEILBELEGT",
+          },
+          {
+            documentUuid: "document-absent",
+            reviewStatus: "TEILBELEGT",
+          },
+        ],
+      },
+    });
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+    });
+    expect(result.packageReviewAudit.blockers.map(({ code }) => code)).toEqual([
+      "UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER",
+    ]);
+  });
+
   test("keeps applicability as a signal and requirement fields as one blocker", () => {
     const proposed = atom("a", {
       documentApplicability: "PROPOSED_ONLY",
