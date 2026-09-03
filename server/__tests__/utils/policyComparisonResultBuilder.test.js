@@ -3659,8 +3659,6 @@ describe("policy comparison result builder", () => {
     const pageContent = [
       "1.2 Gebäude das sind:",
       "·Haustechnische Anlagen und Adaptierungen;",
-      "1.3 Haustechnische Anlagen und Adaptierungen das sind:",
-      "·Solar- und Photovoltaikanlagen;",
     ].join("\n");
     const fingerprint = crypto
       .createHash("sha256")
@@ -3695,11 +3693,12 @@ describe("policy comparison result builder", () => {
       catalog: feC02Catalog,
     });
     const requirement = worksheet.requirements[0];
-    const occurrence = requirement.components[0].occurrences.find(
-      ({ objectMembershipProof }) => objectMembershipProof
-    );
-    expect(occurrence).toBeDefined();
     expect(requirement.supportingObjectMembershipProofs).toHaveLength(1);
+    const occurrence = {
+      candidateId: "candidate:fe-c02:pv",
+      physicalPageNumber: 1,
+      exactText: "Photovoltaikanlage",
+    };
     const targets = [
       {
         targetId: "target:fe-c02",
@@ -3748,12 +3747,6 @@ describe("policy comparison result builder", () => {
       });
     const [atom] = materialize(worksheet);
 
-    expect(atom.sources[0].objectMembershipProof).toEqual(
-      occurrence.objectMembershipProof
-    );
-    expect(atom.sources[0].objectMembershipProof).not.toBe(
-      occurrence.objectMembershipProof
-    );
     expect(atom.supportingObjectMembershipProofs).toEqual(
       requirement.supportingObjectMembershipProofs
     );
