@@ -2794,6 +2794,187 @@ Umbenennung allgemeiner Entsorgungskosten oder durch Auswahl eines beliebigen
 Dokuments entfernt werden; sie benötigen einen eigenen Rang-/Portfoliovertrag
 oder einen bestätigten kontrollierten Nichtfund.
 
+#### 10.29.4 Unabhängiger Review und Hardening der Phase 2
+
+Ein unabhängiger Review stufte `98d676cc` trotz grünem Zieltest zunächst als
+NO-GO ein. Der echte DOC-02-Lauf war zwar fachlich richtig, aber sechs
+adversariale beziehungsweise wiederverwendbare Vertragsgrenzen waren noch
+nicht vollständig abgesichert:
+
+1. Ein lokaler Ausschluss oder eine Optionsformulierung innerhalb eines
+   positiven Sammel-Governors hätte als Aktivierung gelten können.
+2. Von mehreren Aktivierungen desselben Codes hätte eine ungültige Position
+   verworfen und eine zweite gültige Position trotzdem gewählt werden können.
+3. Gleiche Beträge mit widersprüchlichen Qualifiern hätten als identisch
+   gegolten.
+4. Seite und Dokumentoffsets waren noch nicht gegen die Worksheet-Grenzen
+   geprüft.
+5. Der Renderer konnte für den Cross-Page-Wert einen unvollständig
+   nachgewiesenen Hint-Text verwenden.
+6. Bei einem künftigen Same-Page-Join hätte der Renderer die inhaltliche
+   Klauselquelle zugunsten der Wertquelle unterdrückt.
+
+`ae42f2a2` und `aef3ef30` schließen diese Grenzen fail-closed:
+
+- lokale `nicht versichert`-, Ausschluss-, Ausnahme-, Options-, Wahl- und
+  Mehrprämienformulierungen sperren den Code-Governor;
+- jede ungültige Aktivierungsposition sperrt alle Aktivierungswerte dieses
+  Codes im Dokument, statt eine günstige Teilmenge auszuwählen;
+- Betrag, Qualifier, Limitart und Einheit müssen bei Mehrfachaktivierungen
+  identisch sein;
+- physische Seite, Gesamtseitenzahl, Dokumentlänge, Governor- und
+  Betragsoffsets werden nochmals im Requested-Field-Vertrag geprüft;
+- der Renderer akzeptiert den Werttext und seine Seite nur bei exakter
+  Übereinstimmung von Worksheet-Fingerprint, Code, Scope, Betragstext und
+  Betragsoffsets;
+- für jeden validierten Exact-Code-Fakt bleiben Klausel- und Wertquelle
+  sichtbar, auch wenn beide auf derselben physischen Seite liegen;
+- manipulierte Cross-Page-Fakten werden nicht als Deckungssumme gerendert.
+
+Der zweite Senior-Review fand zusätzlich, dass der Katalogbump den bestehenden
+VS-08-Konsensvertrag ohne aktuellen Requirement-Digest still deaktiviert
+hätte. `aef3ef30` ergänzt deshalb einen nicht selbstreferenziellen
+Integrationstest gegen den aktuellen VS-Katalog. Der erste dabei eingesetzte
+externe Digest war nicht der Digest des tatsächlich validierten aktuellen
+Katalogobjekts; der Mac-Test ermittelte reproduzierbar
+`b7a27985064b74516ef6baf7feea47014a4e5b368bc01c27106c4aedec160778`.
+`f7cf1102` bindet genau diesen Wert und trennt im Test die absichtlich
+mehrdeutige Mehrsparten-Feldprüfung vom positiven echten Triage-/Prepared-Pfad.
+
+```text
+Trust-Hardening: ae42f2a25109fa52a3e59f4a7c760d63bb13f4d5
+Renderer-/VS-08-Fix: aef3ef302d9814e5d20e35ac5d988d542d60a7dc
+Mac-Format-Forward-Fix: 739281892acac63b0276138bd143f5ad3cbd9ac2
+Validierungs-Pin-Fix: f7cf11020a4a521254be558db74ae32734430363
+Mac-Studio-Formatprüfung: PASS
+Fokussierte Suites: 11/11 PASS
+Fokussierte Tests: 457/457 PASS
+Breite Utils-Regression: 103/106 Suites PASS, 1512/1536 Tests PASS
+Bekannte historische Fixture-Fehler: 3 Suites / 24 Tests
+Neue fachliche Fehlersignatur: keine
+```
+
+Nur der nach dem Hardening erneut erzeugte Lauf ist der finale
+Phase-2-Nachweis:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-CLAUSE-GOVERNOR-F7CF1102-20260903
+Summary-Digest:
+783ba411f89c8fc525cb39cf76de91ee86fa21f278bdc014af42c7105ba93fb5
+Input-Selection-Digest:
+960a58def6f84180ba8469a9601123d14b24f3348e24a49e2f11541696d2e92a
+Target-Selection-Digest:
+2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
+Producer-Digest:
+5dace643910fd40b0c5866bb5273f72923f28ad3d5bf23f459202b076a725e4d
+Qwen-Aufrufe: Triage 3 / Evidence 3
+Serverterminale Triage-Ziele: 38
+Serverterminale Evidence-Komponenten: 25
+```
+
+Der finale Lauf reproduziert exakt die vier DOC-02-Wertbindungen und alle
+Body-/Wertquellen. Gegenüber dem Zwischenlauf ändert sich keine fachliche
+Zeile. Das Hardening verhindert ausschließlich unzulässige künftige
+Aktivierungen, manipulierte Feldquellen und die unbemerkte Abschaltung des
+bereits akzeptierten VS-08-Vertrags.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+#### 10.29.5 Abschluss des unabhängigen Hardening-Audits
+
+Der in 10.29.4 zunächst als final bezeichnete Stand `f7cf1102` wurde nach
+einer weiteren unabhängigen adversarialen Prüfung ausdrücklich **nicht** als
+Abschluss akzeptiert. Der Gegenleser fand fünf wiederverwendbare Restlücken:
+
+1. `kein Versicherungsschutz`, `nicht gedeckt` und `nicht eingeschlossen`
+   waren noch keine lokalen Negativmarker;
+2. die bereits im Aktivierungsindex zulässige Kurzform `(12PA0130)` wurde im
+   Wert-Governor noch nicht als konkurrierende Aktivierung erkannt;
+3. Seitennummer und Dokumentoffset waren nur gegen Gesamtseitenzahl und
+   Gesamtlänge, nicht gegen eine kanonische Seitengrenze geprüft;
+4. Feldmaterialisierung und Renderer hatten zwei ähnlich aussehende, aber
+   unterschiedlich strenge Validatoren;
+5. der Regressionstest endete vor der echten Tabellenzeile.
+
+Die folgenden Forward-Fixes schließen diese Grenzen, ohne den akzeptierten
+DOC-02-Fund oder andere Komponenten umzudeuten:
+
+```text
+98c990eb fix(analysis): harden exact clause activation provenance
+14b7d761 style(analysis): format clause provenance hardening
+5c8f4a9f fix(analysis): verify clause provenance through rendering
+06e0029d style(analysis): format renderer provenance verification
+6ee250c9 fix(analysis): bind clause evidence to canonical page map
+336912fc style(analysis): format canonical page validation
+```
+
+Der Worksheet-Vertrag persistiert nun für jede physische PDF-Seite die
+kanonischen Dokumentgrenzen. Der Hint enthält weiterhin seine lokale
+Seitennummer und seine lokalen Grenzen, wird aber zusätzlich gegen diese
+Worksheet-PageMap geprüft. Dadurch scheitert auch eine gemeinsam manipulierte
+Kombination aus formal gültiger Seitennummer und dazu passend umgeschriebenen
+Hint-Grenzen. Die Materialisierung exportiert ihren einzigen
+`validatedExactClauseCodeGovernor`; der Renderer verwendet exakt diese
+Funktion und prüft anschließend nur noch die zusätzliche Bindung zwischen
+validiertem Hint, materialisiertem Fakt und gerenderter Quelle. Eine spätere
+Drift zwischen beiden Vertrauensgrenzen ist damit entfernt.
+
+Ergänzte Gegenproben:
+
+- drei weitere lokale Negativformulierungen;
+- widersprüchliche Lang- und Kurzform desselben Klauselcodes;
+- falsche, aber existente physische Seite;
+- gemeinsam verfälschte Seitennummer und Hint-Grenzen;
+- falsche Governor-Policy;
+- falscher Clause-Scope im Renderer;
+- negativer Governor-Text im Renderer;
+- echter Pfad `Worksheet -> Candidate Triage -> Prepared Evidence ->
+  Requested Fields -> Category Table Renderer` plus manipulierte Gegenprobe.
+
+Mac-Studio-Validierung des akzeptierten Quellstands:
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: 336912fc435c96c974ccf5e081e25aa1c89012dd
+Runtime: Node v22.23.2
+Formatprüfung: PASS
+Fokussierte Suites: 2/2 PASS
+Fokussierte Tests: 62/62 PASS
+Breite Utils-Regression: 103/106 Suites PASS, 1519/1543 Tests PASS
+Bekannte historische Fixture-Fehler: 3 Suites / 24 Tests
+Neue fachliche Fehlersignatur: keine
+Unabhängiger adversarialer Re-Review: GO, keine Must-fixes offen
+```
+
+Der neue, auf exakt diesem Commit erzeugte Zehn-Dokument-Nachweis ersetzt den
+in 10.29.4 genannten F7CF-Lauf als maßgeblichen Phase-2-Lauf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-CLAUSE-GOVERNOR-336912FC-20260903
+Summary-Digest:
+c0d0637f94624d9e36c01dad50900633c5ad170951cf7f2575acc9dfaabbcdeb
+Input-Selection-Digest:
+960a58def6f84180ba8469a9601123d14b24f3348e24a49e2f11541696d2e92a
+Target-Selection-Digest:
+2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
+Producer-Digest:
+5dace643910fd40b0c5866bb5273f72923f28ad3d5bf23f459202b076a725e4d
+Qwen-Aufrufe: Triage 3 / Evidence 3
+Serverterminale Triage-Ziele: 38
+Serverterminale Evidence-Komponenten: 25
+```
+
+Das Fachresultat ist gegenüber dem letzten akzeptierten Fund erwartungsgemäß
+stabil: DOC-02 behält vier korrekt gefahrgebundene Betragsfakten zu allgemeinen
+Entsorgungskosten; `hazardous_waste` und `hazardous_waste_cost_limit` bleiben
+`NOT_FOUND`. Paket A bleibt `BELEGT / Ja`, Paket B `TEILBELEGT / Nicht
+feststellbar`, die Zeile bleibt vor dem nächsten typisierten Portfolio- und
+Nichtfundschritt `UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review`.
+Das Hardening verbessert die Vertrauensgrenze, nicht die Zeilenentscheidung.
+
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
