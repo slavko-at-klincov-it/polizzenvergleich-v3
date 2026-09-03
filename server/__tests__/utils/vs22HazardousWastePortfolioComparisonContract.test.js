@@ -150,9 +150,10 @@ function atomFor({ side, documentUuid, component, mode, index }) {
             candidateId,
             physicalPageNumber: 5,
             candidateBinding: "DIRECT",
-            deterministicBindingBasis: isLimit || component.id === "hazardous_waste"
-              ? "EXPLICIT_HAZARDOUS_WASTE_COSTS"
-              : "EXPLICIT_DISPOSAL_COSTS",
+            deterministicBindingBasis:
+              isLimit || component.id === "hazardous_waste"
+                ? "EXPLICIT_HAZARDOUS_WASTE_COSTS"
+                : "EXPLICIT_DISPOSAL_COSTS",
             exactText:
               component.id === "disposal_costs"
                 ? "Entsorgungskosten sind mitversichert"
@@ -403,8 +404,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
         const atom = input.atomsA.find(
           ({ componentId }) => componentId === "hazardous_waste_cost_limit"
         );
-        atom.sources[0].deterministicBindingBasis =
-          "EXPLICIT_DISPOSAL_COSTS";
+        atom.sources[0].deterministicBindingBasis = "EXPLICIT_DISPOSAL_COSTS";
       },
     ],
     [
