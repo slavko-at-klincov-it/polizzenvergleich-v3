@@ -177,8 +177,11 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
       const worksheet = worksheetFor(
         `${heading}\nGerüstkosten sind nach einem ersatzpflichtigen Schaden mitversichert.`
       );
-      const { requirement: selectedRequirement, component, occurrence } =
-        occurrenceFor(worksheet);
+      const {
+        requirement: selectedRequirement,
+        component,
+        occurrence,
+      } = occurrenceFor(worksheet);
 
       expect(
         deterministicCategoryCandidateBinding({
@@ -216,9 +219,7 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     const worksheet = worksheetFor(
       "Glasbruchversicherung\nGerüstkosten sind nach einem ersatzpflichtigen Glasschaden mitversichert."
     );
-    worksheet.requirements[0].scopeRules.narrowScopeKeys = [
-      "FEUER_INSURANCE",
-    ];
+    worksheet.requirements[0].scopeRules.narrowScopeKeys = ["FEUER_INSURANCE"];
 
     const [target] = buildPreparedEvidenceTargets({
       worksheet,
