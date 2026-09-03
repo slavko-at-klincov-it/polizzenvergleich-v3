@@ -292,6 +292,12 @@ function sourceBoundSpan({
   );
 }
 
+function withoutHeadingNumber(value) {
+  const text = String(value || "");
+  const prefix = text.match(/^\s*\d+(?:\.\d+)*\.?\s*/u)?.[0] || "";
+  return { text: text.slice(prefix.length), offset: prefix.length };
+}
+
 function relationTextMatches({ membership, subjectText, headingText }) {
   const text = normalizedText(headingText);
   const subject = normalizedText(subjectText);
@@ -331,11 +337,20 @@ function buildSourceBoundObjectMembershipProof({
     occurrence.exactText,
     validated.memberAliases
   );
+  const subjectWithoutNumber = withoutHeadingNumber(hint.subject);
   const classAlias = validated.classAliases.find((alias) =>
-    firstAliasSpan(hint.subject, [alias])
+    firstAliasSpan(subjectWithoutNumber.text, [alias])
   );
-  const classMatch = classAlias
-    ? firstAliasSpan(hint.text, [classAlias])
+  const headingWithoutNumber = withoutHeadingNumber(hint.text);
+  const localClassMatch = classAlias
+    ? firstAliasSpan(headingWithoutNumber.text, [classAlias])
+    : null;
+  const classMatch = localClassMatch
+    ? {
+        ...localClassMatch,
+        start: localClassMatch.start + headingWithoutNumber.offset,
+        end: localClassMatch.end + headingWithoutNumber.offset,
+      }
     : null;
   if (
     !memberMatch ||

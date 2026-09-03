@@ -34,6 +34,10 @@ function fixture({
     membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
       ? "1.3Haustechnische Anlagen und Adaptierungen\ndas sind:"
       : "Nicht als Haustechnische Anlagen und Adaptierungen gelten:";
+  const subject =
+    membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
+      ? "1.3Haustechnische Anlagen und Adaptierungen"
+      : "Haustechnische Anlagen und Adaptierungen";
   const item = "·Solar- und Photovoltaikanlagen;";
   const pages = precedingPage ? [heading, item] : [`${heading}\n${item}`];
   let pageContent = "";
@@ -63,7 +67,7 @@ function fixture({
     objectClassificationGovernorHint: {
       contractId: "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1",
       text: heading,
-      subject: "1.3Haustechnische Anlagen und Adaptierungen",
+      subject,
       kind: "OBJECT_CLASSIFICATION_BOUNDARY",
       classificationKind: "OBJECT",
       membership,
