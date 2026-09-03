@@ -126,7 +126,7 @@ describe("VS-24 scaffolding cost equality contract", () => {
   test("certifies equal glass-loss coverage without inventing an unlimited limit", () => {
     expect(buildVs24ScaffoldingCostEqualityAudit(fixture())).toMatchObject({
       schemaVersion: 1,
-      contractId: "VS24_GLASS_LOSS_SCAFFOLDING_COST_EQUALITY_AUDIT_V1",
+      contractId: "VS24_GLASS_LOSS_SCAFFOLDING_COST_EQUALITY_AUDIT_V2",
       categoryId: "VS-24",
       sides: {
         A: {
@@ -170,6 +170,36 @@ describe("VS-24 scaffolding cost equality contract", () => {
       "a local percentage limit",
       (input) =>
         (input.atomsA[0].sources[0].conditionCheckText += " Bis 50 %."),
+    ],
+    [
+      "a currency-free numeric cap",
+      (input) =>
+        (input.atomsA[0].sources[0].conditionCheckText +=
+          " Begrenzt auf 7.500 je Schadenfall."),
+    ],
+    [
+      "a written percentage cap",
+      (input) =>
+        (input.atomsA[0].sources[0].conditionCheckText +=
+          " Höchstens fünfundzwanzig Prozent."),
+    ],
+    [
+      "an insurance-sum boundary",
+      (input) =>
+        (input.atomsA[0].sources[0].conditionCheckText +=
+          " Im Rahmen der Gebäudeversicherungssumme."),
+    ],
+    [
+      "an indirect limit reference",
+      (input) =>
+        (input.atomsA[0].sources[0].conditionCheckText +=
+          " Die Entschädigung erfolgt gemäß Position 17."),
+    ],
+    [
+      "an explicit unlimited statement",
+      (input) =>
+        (input.atomsA[0].sources[0].conditionCheckText +=
+          " Gerüstkosten sind unlimitiert gedeckt."),
     ],
     [
       "an optional clause",

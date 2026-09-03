@@ -12,14 +12,14 @@ const VS24_SCOPE_KEY = "GLASBRUCH_INSURANCE";
 const VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256 =
   "2ccf74464a4dbc28c3855e771ba3ae9918f73da28dd5181235941a5c2ee0495d";
 const VS24_SCAFFOLDING_COST_EQUALITY_AUDIT_CONTRACT_ID =
-  "VS24_GLASS_LOSS_SCAFFOLDING_COST_EQUALITY_AUDIT_V1";
+  "VS24_GLASS_LOSS_SCAFFOLDING_COST_EQUALITY_AUDIT_V2";
 const VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID =
   "VS24_EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT_V1";
 const VS24_SCAFFOLDING_COST_EQUALITY_REASON_CODE =
   "EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT";
 
 const LOCAL_LIMIT_MARKER =
-  /(?:\b(?:eur|euro|sublimit|höchstentschädigung)\b|€|\d(?:[\d.,\s]*\d)?\s*%|\bbis\s+(?:zu\s+)?(?:\d|eur|euro|€)|\bhöchstens\b|\bmaximal\b|\bbetraglich(?:e|en|er|es)?\s+(?:beschränkt|unbeschränkt|begrenzung|beschränkung)\b)/iu;
+  /(?:\b(?:eur|euro|sublimit|höchstentschädigung)\b|€|\d(?:[\d.,\s]*\d)?\s*%|\b(?:ein(?:s|e|en)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf|dreizehn|vierzehn|fünfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig|dreißig|vierzig|fünfzig|sechzig|siebzig|achtzig|neunzig|hundert|\p{L}+und\p{L}+)\s+prozent\b|\bbis\s+(?:zu\s+)?(?:\d|eur|euro|€)|\b(?:begrenzt|beschränkt|limitiert)\s+(?:auf|mit)\s+\d|\bhöchstens\b|\bmaximal\b|\b(?:unbegrenzt|unbeschränkt|unlimitiert)\b|\bohne\s+(?:betragsmäßige\s+)?(?:höchst)?grenze\b|\bim\s+rahmen\s+der\s+(?:gebäude)?versicherungssumme\b|\b(?:gemäß|laut|entsprechend)\s+(?:position|punkt|ziffer|klausel|artikel)\b|\bbetraglich(?:e|en|er|es)?\s+(?:beschränkt|unbeschränkt|begrenzung|beschränkung)\b)/iu;
 const VS24_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
   "VS24_SOURCE_ATOM_DIGEST_REPLAY_V1";
 
