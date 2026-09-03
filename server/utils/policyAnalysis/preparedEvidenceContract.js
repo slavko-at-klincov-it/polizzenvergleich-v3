@@ -84,6 +84,37 @@ function applicabilityFor(documentStatus, evidencePresence) {
   throw preparedError("PREPARED_DOCUMENT_STATUS_INVALID", documentStatus);
 }
 
+function sourceBoundOccurrenceComparisonScopeKey({ occurrence, requirement }) {
+  const allowedKeys = requirement?.scopeRules?.narrowScopeKeys || [];
+  const occurrencePage = Number(occurrence?.physicalPageNumber);
+  const section = occurrence?.sectionScopeHint;
+  const sectionText = String(section?.text || "");
+  const sectionPage = Number(section?.physicalPageNumber);
+  const sectionStart = Number(section?.pageStart);
+  const sectionEnd = Number(section?.pageEnd);
+  const currentPageRelation =
+    section?.source === "CURRENT_PAGE_HEADING" &&
+    sectionPage === occurrencePage;
+  const precedingPageRelation =
+    section?.source === "PRECEDING_PAGE_HEADING" &&
+    sectionPage < occurrencePage;
+  if (
+    allowedKeys.includes(section?.scopeKey) &&
+    Number.isInteger(occurrencePage) &&
+    occurrencePage > 0 &&
+    Number.isInteger(sectionPage) &&
+    sectionPage > 0 &&
+    (currentPageRelation || precedingPageRelation) &&
+    Number.isInteger(sectionStart) &&
+    sectionStart >= 0 &&
+    Number.isInteger(sectionEnd) &&
+    sectionEnd - sectionStart === sectionText.length &&
+    sectionText.trim().length > 0
+  )
+    return section.scopeKey;
+  return null;
+}
+
 function validateWorksheet(worksheet, expectedTargetSelectionDigestSha256) {
   assertTargetRequirementSelection(worksheet, {
     expectedSelectionDigestSha256: expectedTargetSelectionDigestSha256,
@@ -289,27 +320,29 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
+        const sourceBoundComparisonScopeKey =
+          sourceBoundOccurrenceComparisonScopeKey({
+            occurrence,
+            requirement,
+          });
+        const localTargetScopeRebinding =
+          deterministicBinding?.basis ===
+          "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2";
         const deterministicComparisonScopeKey =
           deterministicBinding?.binding === candidateBinding &&
           candidateBinding === "NARROW_SCOPE" &&
           (requirement?.scopeRules?.narrowScopeKeys || []).includes(
             deterministicBinding?.comparisonScopeKey
-          )
+          ) &&
+          (localTargetScopeRebinding ||
+            deterministicBinding.comparisonScopeKey ===
+              sourceBoundComparisonScopeKey)
             ? deterministicBinding.comparisonScopeKey
             : null;
-        const sectionScopeHint = occurrence?.sectionScopeHint;
         const sectionComparisonScopeKey =
           candidateBinding === "NARROW_SCOPE" &&
-          ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
-            sectionScopeHint?.source
-          ) &&
-          Number.isInteger(sectionScopeHint?.physicalPageNumber) &&
-          sectionScopeHint.physicalPageNumber > 0 &&
-          String(sectionScopeHint?.text || "").trim().length > 0 &&
-          (requirement?.scopeRules?.narrowScopeKeys || []).includes(
-            sectionScopeHint?.scopeKey
-          )
-            ? sectionScopeHint.scopeKey
+          sourceBoundComparisonScopeKey
+            ? sourceBoundComparisonScopeKey
             : null;
         const comparisonScopeKey =
           deterministicComparisonScopeKey || sectionComparisonScopeKey;

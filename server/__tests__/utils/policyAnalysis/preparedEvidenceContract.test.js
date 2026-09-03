@@ -123,6 +123,8 @@ describe("preparedEvidenceContract", () => {
           scopeKey: "STURM_INSURANCE",
           text: "Hochwasser, Überschwemmung, Lawinen und Muren64PA0061",
           clauseCode: "64PA0061",
+          pageStart: 1_283,
+          pageEnd: 1_336,
           physicalPageNumber: 20,
           source: "CURRENT_PAGE_HEADING",
         },
@@ -178,6 +180,23 @@ describe("preparedEvidenceContract", () => {
       expect(targetFor(unboundHeading).candidates[0]).not.toHaveProperty(
         "comparisonScopeKey"
       );
+      for (const invalidSectionScopeHint of [
+        {
+          ...occurrence.sectionScopeHint,
+          physicalPageNumber: 19,
+        },
+        {
+          ...occurrence.sectionScopeHint,
+          pageEnd: occurrence.sectionScopeHint.pageEnd + 1,
+        },
+      ]) {
+        expect(
+          targetFor({
+            ...occurrence,
+            sectionScopeHint: invalidSectionScopeHint,
+          }).candidates[0]
+        ).not.toHaveProperty("comparisonScopeKey");
+      }
       expect(targetFor(occurrence, "DIRECT").candidates[0]).not.toHaveProperty(
         "comparisonScopeKey"
       );
