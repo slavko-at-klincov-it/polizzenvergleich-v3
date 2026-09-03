@@ -1086,6 +1086,36 @@ function materializeAtomicFacts({
         facts,
       };
     });
+    const requestedFieldNames = Array.isArray(requirement?.requestedFields)
+      ? requirement.requestedFields
+      : [];
+    const requestedAtomFields = fields.filter(({ field }) =>
+      requestedFieldNames.includes(field)
+    );
+    const evaluatedRequestedAtomFields = requestedAtomFields.filter(
+      ({ status }) => status !== "NOT_EVALUATED"
+    );
+    const foundRequestedAtomFieldCount = requestedAtomFields.filter(
+      ({ status }) => status === "FOUND"
+    ).length;
+    let requestedFieldStatus = "NOT_REQUIRED";
+    if (requestedAtomFields.length > 0) {
+      if (evaluatedRequestedAtomFields.length === 0) {
+        requestedFieldStatus = "NOT_EVALUATED";
+      } else if (
+        foundRequestedAtomFieldCount === requestedAtomFields.length
+      ) {
+        requestedFieldStatus = "COMPLETE";
+      } else if (
+        requestedAtomFields.some(({ status }) => status === "PARTIAL") ||
+        foundRequestedAtomFieldCount > 0 ||
+        evaluatedRequestedAtomFields.length < requestedAtomFields.length
+      ) {
+        requestedFieldStatus = "PARTIAL";
+      } else {
+        requestedFieldStatus = "NOT_FOUND";
+      }
+    }
     const target = targetsById.get(judgement.targetId);
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
@@ -1115,7 +1145,7 @@ function materializeAtomicFacts({
       documentApplicability: judgement.documentApplicability,
       selectedCandidateIds,
       unresolvedCandidateIds: judgement.unresolvedCandidateIds || [],
-      requestedFieldStatus: fieldResult.requestedFieldStatus,
+      requestedFieldStatus,
       fields,
       sources,
       componentSatisfactionPolicy:

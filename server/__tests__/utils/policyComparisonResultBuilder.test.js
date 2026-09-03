@@ -1281,6 +1281,125 @@ describe("policy comparison result builder", () => {
     });
     expect(tamperedAtom.fields[1]).not.toHaveProperty("absenceAudit");
   });
+
+  test("derives requested-field status from facts bound to each atom", () => {
+    const worksheet = {
+      catalog: { id: "synthetic-catalog-v1" },
+      requirements: [
+        {
+          id: "VS-02",
+          requestedFields: ["condition"],
+          components: [
+            { id: "first_clause", factRole: "CONDITION" },
+            { id: "second_clause", factRole: "CONDITION" },
+          ],
+        },
+      ],
+    };
+    const materializedEvidence = {
+      judgements: [
+        {
+          targetId: "target:first",
+          requirementId: "VS-02",
+          componentId: "first_clause",
+          evidencePresence: "FOUND",
+          coverageEffect: "CONDITIONAL",
+          conflictState: "NONE",
+          selectedScopePicture: "GENERAL",
+          documentApplicability: "ACTIVE",
+          selectedCandidateIds: ["candidate:first"],
+          unresolvedCandidateIds: [],
+        },
+        {
+          targetId: "target:second",
+          requirementId: "VS-02",
+          componentId: "second_clause",
+          evidencePresence: "FOUND",
+          coverageEffect: "CONDITIONAL",
+          conflictState: "NONE",
+          selectedScopePicture: "GENERAL",
+          documentApplicability: "ACTIVE",
+          selectedCandidateIds: ["candidate:second"],
+          unresolvedCandidateIds: [],
+        },
+      ],
+    };
+    const requestedFields = {
+      requirements: [
+        {
+          requirementId: "VS-02",
+          requestedFieldStatus: "COMPLETE",
+          fields: [
+            {
+              field: "condition",
+              status: "FOUND",
+              facts: [
+                {
+                  normalizedValue: "three years",
+                  valueType: "TEXT",
+                  source: {
+                    candidateId: "candidate:first",
+                    physicalPageNumber: 1,
+                    exactText: "three years",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const targets = [
+      {
+        targetId: "target:first",
+        candidates: [
+          {
+            candidateId: "candidate:first",
+            physicalPageNumber: 1,
+            exactText: "three years",
+          },
+        ],
+      },
+      {
+        targetId: "target:second",
+        candidates: [
+          {
+            candidateId: "candidate:second",
+            physicalPageNumber: 2,
+            exactText: "forty percent",
+          },
+        ],
+      },
+    ];
+
+    const atoms = materializeAtomicFacts({
+      document: {
+        uuid: "document-vs-02",
+        role: "TERMS",
+        documentStatus: "ACTIVE",
+      },
+      worksheet,
+      materializedEvidence,
+      requestedFields,
+      targets,
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(
+      atoms.map(({ componentId, requestedFieldStatus }) => ({
+        componentId,
+        requestedFieldStatus,
+      }))
+    ).toEqual([
+      { componentId: "first_clause", requestedFieldStatus: "COMPLETE" },
+      { componentId: "second_clause", requestedFieldStatus: "NOT_FOUND" },
+    ]);
+    expect(atoms[1].fields).toEqual([
+      { field: "condition", status: "NOT_FOUND", facts: [] },
+    ]);
+  });
+
   let root;
 
   beforeEach(() => {
@@ -1925,7 +2044,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V45_PACKAGE_UNION_REVIEW_AUDIT",
+      id: "CUSTOMER_CORE_5_V46_ATOM_LOCAL_FIELD_STATUS",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_V9",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
