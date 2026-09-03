@@ -74,7 +74,10 @@ describe("VS-18 enclosure family recall", () => {
     "Die Begrenzung der Versicherungssumme beträgt 15.000 Euro.",
     "Das Mauerwerk ist gegen Feuchtigkeit abzudichten.",
     "Die Toröffnungsanlage und ihre Betätigungselemente werden gewartet.",
-  ])("does not create enclosure-family candidates from adjacent wording: %s", (text) => {
-    expect(worksheetFor(text).summary.occurrenceCount).toBe(0);
-  });
+  ])(
+    "does not create enclosure-family candidates from adjacent wording: %s",
+    (text) => {
+      expect(worksheetFor(text).summary.occurrenceCount).toBe(0);
+    }
+  );
 });
