@@ -91,6 +91,7 @@ function runHarness(harness, extraEnvironment = {}) {
       env: {
         ...process.env,
         HOME: harness.home,
+        VS_FULL_EMBEDDING_MODEL: "fixture/embedding-model",
         ...extraEnvironment,
       },
     }
