@@ -1584,7 +1584,11 @@ describe("requestedFieldEvidenceContract", () => {
               source: { candidateId: "candidate:vs02-clause" },
             },
             {
-              normalizedValue: "Zeitwert mindestens 42,5 %",
+              normalizedValue: "42.5",
+              valueType: "PERCENT",
+              unit: "%",
+              qualifier:
+                "MINIMUM_RESIDUAL_VALUE_FOR_NEW_VALUE:IMPLICIT_NEW_VALUE",
               source: { candidateId: "candidate:vs02-threshold" },
             },
           ],

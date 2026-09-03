@@ -7,7 +7,7 @@ const {
 } = require("../../utils/policyComparison/vs08UnderinsuranceConditionConsensusContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 
-const CATALOG_ID = "vs-occurrence-full-draft-v0.10";
+const CATALOG_ID = "vs-occurrence-full-draft-v0.11";
 const CATEGORY_ID = "VS-08";
 const COMPONENT_ID = "underinsurance_waiver_condition";
 const COMPONENTS = [{ id: COMPONENT_ID, factRole: "CONDITION" }];

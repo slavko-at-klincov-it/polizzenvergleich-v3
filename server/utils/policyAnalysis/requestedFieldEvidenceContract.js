@@ -5,6 +5,10 @@ const {
   FE_C07_COMPONENT_ID,
   buildFeC07ConditionAbsenceAudit,
 } = require("./feC07ConditionAbsenceAudit");
+const {
+  RESIDUAL_VALUE_THRESHOLD_QUALIFIER,
+  residualValueThresholdForOccurrence,
+} = require("./residualValueThresholdContract");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
@@ -1330,36 +1334,21 @@ function extractCurrentValueDurationFacts({ occurrence, binding }) {
 }
 
 function extractResidualValueThresholdFacts({ occurrence, binding }) {
-  const { text } = validatedContext(occurrence);
-  const pattern =
-    /Zeitwert\s+(?:von\s+)?(?<comparison>mindestens|zumindest|nicht\s+weniger\s+als|weniger\s+als|unter|h[oö]chstens)\s+(?<percent>\d{1,3}(?:[.,]\d+)?)\s*%/giu;
-  const facts = [];
-  for (const match of text.matchAll(pattern)) {
-    const numeric = Number(match.groups.percent.replace(",", "."));
-    if (!Number.isFinite(numeric) || numeric <= 0 || numeric > 100) continue;
-    const comparison =
-      /^(?:mindestens|zumindest|nicht\s+weniger\s+als)$/iu.test(
-        match.groups.comparison
-      )
-        ? "mindestens"
-        : whitespaceNormalized(match.groups.comparison);
-    facts.push(
-      sourceBoundFact({
-        occurrence,
-        binding,
-        match,
-        value: {
-          normalizedValue: `Zeitwert ${comparison} ${match.groups.percent.replace(
-            ".",
-            ","
-          )} %`,
-          valueType: "TEXT",
-          unit: null,
-        },
-      })
-    );
-  }
-  return facts;
+  const parsed = residualValueThresholdForOccurrence(occurrence);
+  if (!parsed) return [];
+  return [
+    sourceBoundFact({
+      occurrence,
+      binding,
+      match: { 0: parsed.rawValue, index: parsed.start },
+      value: {
+        normalizedValue: parsed.normalizedPercent,
+        valueType: "PERCENT",
+        unit: "%",
+        qualifier: `${RESIDUAL_VALUE_THRESHOLD_QUALIFIER}:${parsed.referenceBase}`,
+      },
+    }),
+  ];
 }
 
 function extractRestorationDurationFacts({ occurrence, binding }) {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.10",
+  "catalogId": "vs-occurrence-full-draft-v0.11",
   "categoryView": "VS",
   "requirements": [
     {
@@ -54,6 +54,25 @@
             "Zeitwert mindestens",
             "Zeitwert weniger als",
             "Zeitwert von mindestens 30 %"
+          ],
+          "conceptSearches": [
+            {
+              "id": "residual-value-threshold-clause",
+              "requiredGroups": [
+                { "prefixes": ["zeitwert"] },
+                { "prefixes": ["neuwert", "neuherstellung"] },
+                {
+                  "prefixes": [
+                    "mindestens",
+                    "zumindest",
+                    "weniger",
+                    "unter"
+                  ]
+                }
+              ],
+              "maxLines": 3,
+              "maxChars": 600
+            }
           ]
         }
       ],

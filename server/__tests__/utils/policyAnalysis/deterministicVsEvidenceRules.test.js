@@ -30,7 +30,7 @@ describe("deterministicVsEvidenceRules", () => {
       vsCatalog.requirements.find((candidate) => candidate.id === id);
     const aliases = (id) => requirement(id).components[0].aliases;
 
-    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.10");
+    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.11");
     expect(aliases("VS-13")).toContain(
       "Adaptierungen und Investitionen der Bewohner"
     );
@@ -195,11 +195,57 @@ describe("deterministicVsEvidenceRules", () => {
         deterministicVsCandidateBinding({
           requirementId,
           componentId,
-          occurrence: occurrence(text),
+          occurrence:
+            requirementId === "VS-02" &&
+            componentId === "residual_value_threshold"
+              ? sourceOccurrence({
+                  text,
+                  exactText: "Zeitwert von mindestens 30 %",
+                })
+              : occurrence(text),
         })
       ).toEqual({ binding: DETERMINISTIC_BINDING.DIRECT, basis });
     }
   );
+
+  test.each([
+    [
+      "Liegt der Zeitwert der Sachen unter 40 % der Neuherstellungskosten, wird maximal der Zeitwert ersetzt.",
+      "Zeitwert der Sachen unter 40 % der Neuherstellungskosten",
+    ],
+    [
+      "Sämtliche zum Neuwert versicherte Gebäude und Sachen sind zum Neuwert zu ersetzen, sofern der Zeitwert der versicherten Gebäude und Sachen im Schadenzeitpunkt zumindest 20 % des Neuwertes betragen hat.",
+      "Zeitwert der versicherten Gebäude und Sachen im Schadenzeitpunkt zumindest 20 % des Neuwertes",
+    ],
+  ])("binds a source-local variable VS-02 threshold: %s", (text, exactText) => {
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-02",
+        componentId: "residual_value_threshold",
+        occurrence: sourceOccurrence({ text, exactText }),
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.DIRECT,
+      basis: "EXPLICIT_RESIDUAL_VALUE_THRESHOLD",
+    });
+  });
+
+  test.each([
+    "Der Zeitwert wird aus dem Neuwert abzüglich Alter und Abnützung ermittelt.",
+    "Der Zeitwert beträgt 40 %.",
+    "Restwerte bis 15 % des Neuwertes werden ersetzt.",
+    "Die Versicherungssumme weicht um 20 % vom Versicherungswert ab.",
+    "Die Grenze von 40 % gilt nicht; ersetzt wird unabhängig davon zum Neuwert.",
+  ])("does not bind a non-threshold VS-02 percentage: %s", (text) => {
+    const exactText = text.match(/(?:Zeitwert|Restwerte|Versicherungssumme|Grenze)/u)[0];
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-02",
+        componentId: "residual_value_threshold",
+        occurrence: sourceOccurrence({ text, exactText }),
+      })
+    ).toBeNull();
+  });
 
   test("does not treat a bare sum-deviation statement as a waiver condition", () => {
     expect(

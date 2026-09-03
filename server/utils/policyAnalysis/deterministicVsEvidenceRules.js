@@ -1,4 +1,7 @@
 const { COVERAGE_EFFECT } = require("./categoryResultContract");
+const {
+  residualValueThresholdForOccurrence,
+} = require("./residualValueThresholdContract");
 
 const DETERMINISTIC_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -414,7 +417,7 @@ function deterministicVsCandidateBinding({
 
   if (
     key === "VS-02:residual_value_threshold" &&
-    /Zeitwert\s+von\s+mindestens\s+30\s*%/iu.test(text)
+    residualValueThresholdForOccurrence(occurrence)
   )
     return {
       binding: DETERMINISTIC_BINDING.DIRECT,
