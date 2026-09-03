@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.11",
+  "catalogId": "vs-occurrence-full-draft-v0.12",
   "categoryView": "VS",
   "requirements": [
     {
@@ -473,13 +473,28 @@
           "id": "enclosures",
           "label": "Einfriedungen",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Einfriedung", "Einfriedungen"]
+          "aliases": [
+            "Einfriedung",
+            "Einfriedungen",
+            "Grundstücksbegrenzung",
+            "Grundstücksbegrenzungen",
+            "Grundstücksumzäunung",
+            "Grundstücksumzäunungen",
+            "Begrenzungen und Umzäunungen"
+          ]
         },
         {
           "id": "fences",
           "label": "Zäune",
           "factRole": "INSURED_OBJECT",
-          "aliases": ["Zaun", "Zäune"]
+          "aliases": [
+            "Zaun",
+            "Zäune",
+            "Umzäunung",
+            "Umzäunungen",
+            "Grundstücksumzäunung",
+            "Grundstücksumzäunungen"
+          ]
         },
         {
           "id": "walls",

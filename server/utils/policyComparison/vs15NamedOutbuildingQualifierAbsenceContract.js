@@ -17,7 +17,7 @@ const VS15_QUALIFIER_ABSENCE_TREATMENT =
   "EQUAL_VS15_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH_V1";
 
 const CATEGORY_ID = "VS-15";
-const CATALOG_ID = "vs-occurrence-full-draft-v0.11";
+const CATALOG_ID = "vs-occurrence-full-draft-v0.12";
 const REQUIREMENT_CONTRACT_DIGEST =
   "6606a5e9c8ab3f019cbce3682948b155c6d1b56b70d508f0f0bfe9d851dec584";
 const COVER_COMPONENT_ID = "outbuilding_cover";
