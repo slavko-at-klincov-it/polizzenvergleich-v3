@@ -72,23 +72,15 @@ function component(worksheet, id) {
   );
 }
 
-function materialize(worksheet) {
-  const materializedCandidates = buildCandidateTriagePayload(
-    worksheet
-  ).bindingTargets.flatMap((target) =>
-    target.members.map((member) => ({
-      requirementId: target.requirementId,
-      componentId: member.componentId,
-      candidateId: member.candidateId,
-      binding: deriveCandidateBinding({
-        roleMatch: target.roleResolution.roleMatch,
-        scopeMatch: target.scopeResolution.scopeMatch,
-      }),
-    }))
-  );
+function materialize(worksheet, materializedCandidates = null) {
+  const selections =
+    materializedCandidates ||
+    component(worksheet, "disposal_costs").occurrences.map(
+      ({ candidateId }) => ({ candidateId, binding: "DIRECT" })
+    );
   return materializeRequestedFieldEvidence({
     worksheet,
-    materializedCandidates,
+    materializedCandidates: selections,
   }).requirements[0].fields[0];
 }
 
@@ -158,7 +150,7 @@ describe("VS-22 exact clause-code field governor", () => {
       ])
     );
 
-    const field = materialize(worksheet);
+    const field = materialize(worksheet, materializedTriage);
     expect(field.status).toBe(FIELD_EVIDENCE_STATUS.FOUND);
     expect(field.facts).toEqual([
       expect.objectContaining({
