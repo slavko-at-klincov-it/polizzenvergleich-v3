@@ -5719,3 +5719,23 @@ separater Doctor bestanden. Datenbankintegrität, Bestandszahlen, 23 Exporte,
 Loopback-Dienste und der ausschließliche Qwen-Laufzeitvertrag blieben erhalten.
 Die vollständigen Hashes und die weiterhin geltende Beweisgrenze stehen im
 Releaseprotokoll `docs/RELEASE_V3.6.0_DE.md`.
+
+## 119. QA-only LF-Referenzschema und 1-gegen-9-Gegenstückpilot
+
+Auf Nutzerwunsch wurde am 4. September 2026 zusätzlich zur allgemeinen
+produktiven Kategorienlogik eine kundennähere LF-IMMO-Referenzsicht erprobt.
+Der Katalog `LF_IMMO_REFERENCE_COUNTERPART_PILOT_V1` bindet 35 Punkte in zehn
+Ansichten an die exakte 31-seitige LF-Datei. Commit `e6c6cd4de0` bestand im
+isolierten Mac-Studio-Checkout 5/5 fokussierte Tests, Prettier und ESLint.
+
+Der echte Lauf mit LF auf A und den neun WEVIG-/Bedingungsdokumenten auf B
+beendete 35/35 Punkte. Die Modellrohdaten lauteten 16 direkte, 14 partielle und
+5 nicht in den Kandidaten gefundene Gegenstücke. Eine unabhängige Stichprobe
+belegte jedoch zwei Retrieval-Misses und mindestens zwei überzogene
+Direktzuordnungen. Der Ansatz ist deshalb als zusätzliche Referenznavigation
+sinnvoll, aber noch nicht als produktiver Ersatz für atomare Fakten- und
+Komponentenverträge freigegeben.
+
+Kanonische Messung, Fehleranalyse und Beweisgrenze:
+`../policy-project-documentation/POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`,
+Abschnitt 53.
