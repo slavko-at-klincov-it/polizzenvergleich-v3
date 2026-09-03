@@ -88,6 +88,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
               requirement.supportingReferencedTermsIdentityEvidenceContracts,
           }
         : {}),
+      ...(requirement?.packageActivatedObjectMembershipAuditContract
+        ? {
+            packageActivatedObjectMembershipAuditContract:
+              requirement.packageActivatedObjectMembershipAuditContract,
+          }
+        : {}),
       bindingStructures: requirement?.bindingStructures || [],
       components: (requirement?.components || []).map((component) => ({
         id: component.id,

@@ -1490,6 +1490,12 @@ function materializeAtomicFacts({
             supportingReferencedTermsIdentityProofs,
           }
         : {}),
+      ...(requirement?.packageActivatedObjectMembershipAuditContract
+        ? {
+            packageActivatedObjectMembershipAuditContract:
+              requirement.packageActivatedObjectMembershipAuditContract,
+          }
+        : {}),
       scopePolicy: requirement?.scopePolicy || null,
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]

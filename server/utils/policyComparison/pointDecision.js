@@ -6,6 +6,9 @@ const {
   derivePackageReviewAudit,
 } = require("./packageReviewAudit");
 const {
+  buildPackageActivatedObjectMembershipAudit,
+} = require("../policyAnalysis/packageActivatedObjectMembershipAuditContract");
+const {
   hasConditionalOrOptionalCoverageSource,
   operationalEventMode,
 } = require("./comparisonAtomSemantics");
@@ -1214,6 +1217,16 @@ function decidePoint({
       atomsA,
       atomsB,
     });
+    const packageActivatedObjectMembershipAudit = {
+      A: buildPackageActivatedObjectMembershipAudit({
+        categoryId,
+        atoms: atomsA,
+      }),
+      B: buildPackageActivatedObjectMembershipAudit({
+        categoryId,
+        atoms: atomsB,
+      }),
+    };
     const vs15QualifierAbsenceAudit = buildVs15QualifierAbsenceAudit({
       categoryId,
       packageA,
@@ -1243,6 +1256,10 @@ function decidePoint({
         `Unklar: Die Paket-Prüfstati (${packageA.reviewStatus} / ${packageB.reviewStatus}) erlauben keinen sicheren Vorteilsschluss.`
       ),
       packageReviewAudit,
+      ...(packageActivatedObjectMembershipAudit.A ||
+      packageActivatedObjectMembershipAudit.B
+        ? { packageActivatedObjectMembershipAudit }
+        : {}),
     };
   }
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.16",
+  "catalogId": "fe-occurrence-full-draft-v0.17",
   "categoryView": "FE",
   "requirements": [
     {
@@ -811,6 +811,20 @@
           "referenceCodeAliases": ["EABS"]
         }
       ],
+      "packageActivatedObjectMembershipAuditContract": {
+        "contractId": "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1",
+        "targetObjectKey": "PHOTOVOLTAIC_INSTALLATION",
+        "coveredObjectKey": "BUILDING",
+        "membershipPath": [
+          "PHOTOVOLTAIC_INSTALLATION",
+          "BUILDING_TECHNICAL_INSTALLATION",
+          "BUILDING"
+        ],
+        "perilScopeKey": "FEUER_INSURANCE",
+        "referenceFamilyKey": "EABS",
+        "conditionPolicy": "PRESERVE_SOURCE_CONDITIONS_V1",
+        "conflictPolicy": "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1"
+      },
       "components": [
         {
           "id": "photovoltaic_as_damaged_object",

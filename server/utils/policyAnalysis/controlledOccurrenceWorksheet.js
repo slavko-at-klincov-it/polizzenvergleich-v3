@@ -22,6 +22,9 @@ const {
   buildSourceBoundReferencedTermsIdentityProofs,
   validateReferencedTermsIdentityEvidenceContract,
 } = require("./referencedTermsIdentityEvidenceContract");
+const {
+  validatePackageActivatedObjectMembershipAuditContract,
+} = require("./packageActivatedObjectMembershipAuditContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2373,6 +2376,13 @@ function validateCatalog(catalog) {
       supportingReferencedTermsIdentityEvidenceContracts.length === 0
     )
       throw worksheetError("REFERENCED_TERMS_IDENTITY_CONTRACTS_INVALID", id);
+    const packageActivatedObjectMembershipAuditContract =
+      requirement.packageActivatedObjectMembershipAuditContract === undefined
+        ? null
+        : validatePackageActivatedObjectMembershipAuditContract(
+            requirement.packageActivatedObjectMembershipAuditContract,
+            `${id}:packageActivatedObjectMembershipAuditContract`
+          );
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -2613,6 +2623,9 @@ function validateCatalog(catalog) {
         : {}),
       ...(supportingReferencedTermsIdentityEvidenceContracts.length > 0
         ? { supportingReferencedTermsIdentityEvidenceContracts }
+        : {}),
+      ...(packageActivatedObjectMembershipAuditContract
+        ? { packageActivatedObjectMembershipAuditContract }
         : {}),
       bindingStructures,
       scopeRules,
@@ -3564,6 +3577,12 @@ function buildControlledOccurrenceWorksheet({
             supportingReferencedTermsIdentityEvidenceContracts:
               requirement.supportingReferencedTermsIdentityEvidenceContracts,
             supportingReferencedTermsIdentityProofs,
+          }
+        : {}),
+      ...(requirement.packageActivatedObjectMembershipAuditContract
+        ? {
+            packageActivatedObjectMembershipAuditContract:
+              requirement.packageActivatedObjectMembershipAuditContract,
           }
         : {}),
       componentCount: grouped.components.length,
