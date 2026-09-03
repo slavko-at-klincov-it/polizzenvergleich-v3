@@ -163,7 +163,7 @@ describe("auditTargetRequirementRecall", () => {
         target: {
           categoryView: "ST",
           requirementId: "ST-13",
-          currentCatalogId: "st-occurrence-full-draft-v0.5",
+          currentCatalogId: currentCatalog.catalogId,
         },
         counts: {
           documents: 2,
