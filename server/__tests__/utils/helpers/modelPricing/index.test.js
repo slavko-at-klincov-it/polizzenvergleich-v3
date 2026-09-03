@@ -51,6 +51,16 @@ describe("ModelPricing", () => {
   });
 
   describe("cache mechanics", () => {
+    it("does not start the module singleton refresh in the test runtime", async () => {
+      const fetchSpy = jest.fn();
+      global.fetch = fetchSpy;
+
+      require("../../../../utils/helpers/modelPricing");
+      await flushRefresh();
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
     it("fetches the remote pricing data and writes the disk cache", async () => {
       mockFetchWith(okResponse(FIXTURE, { etag: '"abc123"' }));
       const pricing = freshInstance();

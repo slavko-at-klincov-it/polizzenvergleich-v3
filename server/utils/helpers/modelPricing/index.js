@@ -128,6 +128,11 @@ function log(text, ...args) {
   console.log(`\x1b[36m[ModelPricing]\x1b[0m ${text}`, ...args);
 }
 
+function logPrecached() {
+  if (process.env.NODE_ENV === "test") return;
+  console.log(`⚡\x1b[32mPre-cached model pricing data\x1b[0m`);
+}
+
 class ModelPricing {
   static instance = null;
 
@@ -140,7 +145,7 @@ class ModelPricing {
   /** @type {Record<string, Record<string, string>>} - lazy bedrock normalization index per provider */
   #normalizedIndexes = {};
 
-  constructor() {
+  constructor({ backgroundRefresh = true } = {}) {
     if (ModelPricing.instance) return ModelPricing.instance;
     ModelPricing.instance = this;
 
@@ -148,18 +153,15 @@ class ModelPricing {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     this.#loadFromDisk();
-    if (this.#isCacheStale() || !this.#pricing) {
+    if ((this.#isCacheStale() || !this.#pricing) && backgroundRefresh) {
       this.#refresh()
         .then(() => {
-          if (this.#pricing)
-            console.log(`⚡\x1b[32mPre-cached model pricing data\x1b[0m`);
+          if (this.#pricing) logPrecached();
         })
         .catch((err) =>
           log("Background pricing refresh failed:", err?.message)
         );
-    } else {
-      console.log(`⚡\x1b[32mPre-cached model pricing data\x1b[0m`);
-    }
+    } else if (this.#pricing) logPrecached();
   }
 
   #isCacheStale() {
@@ -325,7 +327,9 @@ class ModelPricing {
   }
 }
 
-const MODEL_PRICING = new ModelPricing();
+const MODEL_PRICING = new ModelPricing({
+  backgroundRefresh: process.env.NODE_ENV !== "test",
+});
 
 /**
  * Enriches a metrics object with inputCost, outputCost, and totalCost (USD).
