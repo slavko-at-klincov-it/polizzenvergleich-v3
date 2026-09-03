@@ -2207,9 +2207,7 @@ function factOwnedByCurrentSelectedPeril({
   // own context. This ownership rule applies only when the selected source
   // candidate itself provides a valid containing peril context.
   if (
-    !owners.some(
-      ({ candidateId }) => candidateId === fact.source.candidateId
-    )
+    !owners.some(({ candidateId }) => candidateId === fact.source.candidateId)
   )
     return true;
 

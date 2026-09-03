@@ -39,11 +39,16 @@ function digest(value) {
 }
 
 function textDigest(value) {
-  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(String(value || ""))
+    .digest("hex");
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function exactKeys(value, expected) {
