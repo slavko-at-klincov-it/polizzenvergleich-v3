@@ -46,7 +46,7 @@ function validOccurrenceContext(occurrence) {
   const exactText = String(occurrence?.exactText || "");
   if (
     typeof contextText !== "string" ||
-    !["PARAGRAPH", "WORD_WINDOW_FALLBACK"].includes(
+    !["LIST_ITEM", "PARAGRAPH", "WORD_WINDOW_FALLBACK"].includes(
       occurrence?.context?.unitType
     ) ||
     !Number.isInteger(contextStart) ||
