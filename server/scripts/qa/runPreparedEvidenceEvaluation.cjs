@@ -6,6 +6,9 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
+const {
+  rebuildTargetedSelectedSources,
+} = require("../../utils/policyAnalysis/targetedSelectedSourcesContract");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 
@@ -31,6 +34,51 @@ function sha256(value) {
 
 function sha256File(file) {
   return sha256(fs.readFileSync(file));
+}
+
+function validDocumentArtifactBinding({ worksheet, documentArtifact }) {
+  const document = documentArtifact?.document;
+  const worksheetDocument = worksheet?.document;
+  if (
+    documentArtifact?.schemaVersion !== 1 ||
+    typeof documentArtifact.fingerprint !== "string" ||
+    !documentArtifact.fingerprint.trim() ||
+    documentArtifact.fingerprint !== document?.sourceDocumentId ||
+    document?.pdfExtraction?.schemaVersion !== 1 ||
+    document?.pdfExtraction?.complete !== true ||
+    typeof document?.pageContent !== "string" ||
+    !Array.isArray(document?.pageMap) ||
+    document.pageMap.length === 0 ||
+    document.pdfExtraction.totalPages !== document.pageMap.length ||
+    document.pdfExtraction.processedPages !==
+      document.pdfExtraction.totalPages ||
+    worksheet?.candidateOnly !== true ||
+    worksheetDocument?.fingerprint !== documentArtifact.fingerprint ||
+    worksheetDocument?.sourceDocumentId !== document.sourceDocumentId ||
+    worksheetDocument?.physicalPages !== document.pageMap.length ||
+    worksheetDocument?.pageContentLength !== document.pageContent.length ||
+    worksheetDocument?.pageContentSha256 !== sha256(document.pageContent) ||
+    !Array.isArray(worksheetDocument?.pageBoundaries) ||
+    worksheetDocument.pageBoundaries.length !== document.pageMap.length
+  )
+    return false;
+  let previousEnd = 0;
+  return document.pageMap.every((page, index) => {
+    const valid =
+      Number.isInteger(page?.pageNumber) &&
+      Number.isInteger(page?.start) &&
+      Number.isInteger(page?.end) &&
+      page.pageNumber === index + 1 &&
+      page.start >= previousEnd &&
+      page.end > page.start &&
+      page.end <= document.pageContent.length &&
+      worksheetDocument.pageBoundaries[index]?.physicalPageNumber ===
+        page.pageNumber &&
+      worksheetDocument.pageBoundaries[index]?.documentStart === page.start &&
+      worksheetDocument.pageBoundaries[index]?.documentEnd === page.end;
+    previousEnd = page.end;
+    return valid;
+  });
 }
 
 function writePrivateJson(outputDirectory, fileName, value) {
@@ -110,6 +158,7 @@ async function run() {
     "maxAttemptsPerTarget",
     "allowUniqueCandidateIdRepair",
     "expectedTargetSelectionDigestSha256",
+    "documentArtifact",
   ]);
   const unknownArguments = Object.keys(args).filter(
     (argument) => !allowedArguments.has(argument)
@@ -121,6 +170,9 @@ async function run() {
   const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
   const controlMode = args.controlMode || "file";
   const triageFile = args.triageFile ? path.resolve(args.triageFile) : null;
+  const documentArtifactFile = args.documentArtifact
+    ? path.resolve(args.documentArtifact)
+    : null;
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
@@ -138,6 +190,21 @@ async function run() {
     );
   if (triageFile && !fs.existsSync(triageFile))
     fail(`Triage fehlt: ${triageFile}`);
+  if (documentArtifactFile) {
+    let documentArtifactStat;
+    try {
+      documentArtifactStat = fs.lstatSync(documentArtifactFile);
+    } catch {
+      fail(`Dokumentartefakt fehlt: ${documentArtifactFile}`);
+    }
+    if (
+      documentArtifactStat.isSymbolicLink() ||
+      !documentArtifactStat.isFile()
+    )
+      fail(
+        `Dokumentartefakt muss eine reguläre Nicht-Symlink-Datei sein: ${documentArtifactFile}`
+      );
+  }
   if (!args.output) fail("--output ist erforderlich");
   fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
   fs.chmodSync(outputDirectory, 0o700);
@@ -164,6 +231,20 @@ async function run() {
   } = require("../../utils/policyAnalysis/preparedEvidenceControls");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const documentArtifactBytes = documentArtifactFile
+    ? fs.readFileSync(documentArtifactFile)
+    : null;
+  const documentArtifactSha256 = documentArtifactBytes
+    ? sha256(documentArtifactBytes)
+    : null;
+  const documentArtifact = documentArtifactBytes
+    ? JSON.parse(documentArtifactBytes.toString("utf8"))
+    : null;
+  if (
+    documentArtifact &&
+    !validDocumentArtifactBinding({ worksheet, documentArtifact })
+  )
+    fail("Dokumentartefakt ist nicht fail-closed an das Worksheet gebunden");
   const expectedTargetSelectionDigestSha256 =
     args.expectedTargetSelectionDigestSha256 || null;
   if (
@@ -314,7 +395,14 @@ async function run() {
         targets,
         judgements,
       });
-      sources = selectedSources({ targets, materialized });
+      sources = documentArtifact
+        ? rebuildTargetedSelectedSources({
+            targets,
+            materializedEvidence: materialized,
+            documentArtifact,
+            worksheet,
+          })
+        : selectedSources({ targets, materialized });
       controls = evaluatePreparedEvidenceControls({
         controlSet,
         materialized,
@@ -367,6 +455,9 @@ async function run() {
     contracts: {
       worksheetPath: worksheetFile,
       worksheetSha256: sha256File(worksheetFile),
+      documentArtifactPath: documentArtifactFile,
+      documentArtifactSha256,
+      documentFingerprint: documentArtifact?.fingerprint || null,
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
       controlPath: controlFile,
@@ -376,6 +467,9 @@ async function run() {
       controlMode,
       triagePath: triageFile,
       triageSha256: triageFile ? sha256File(triageFile) : null,
+      targetsSha256: sha256File(
+        path.join(outputDirectory, "targets.private.json")
+      ),
       documentStatus,
       materializedEvidenceSha256: materialized
         ? sha256File(path.join(outputDirectory, "materialized.private.json"))

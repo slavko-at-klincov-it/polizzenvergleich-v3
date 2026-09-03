@@ -141,6 +141,9 @@ describe("all-category shell runner", () => {
     expect(source).toContain(
       'CATEGORY_VIEWS <<< "$("$NODE_BIN" -e \'process.stdout.write(require(process.argv[1]).CATEGORY_ORDER.join(" "))\''
     );
+    expect(source).toMatch(
+      /runPreparedEvidenceEvaluation\.cjs" \\\n\s+--worksheet "\$WORKSHEET" \\\n\s+--documentArtifact "\$DOCUMENT_ARTIFACT"/u
+    );
   });
 
   test("extracts once and materializes the five customer categories", () => {

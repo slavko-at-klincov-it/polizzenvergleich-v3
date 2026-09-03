@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
@@ -14,6 +15,112 @@ function run(script, args) {
       encoding: "utf8",
     }
   );
+}
+
+function preparedEvidenceFixture({ objectScopeEvidence = false } = {}) {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "prepared-evidence-artifact-")
+  );
+  const worksheetFile = path.join(directory, "worksheet.private.json");
+  const documentArtifactFile = path.join(
+    directory,
+    "document.private.json"
+  );
+  const systemPromptFile = path.join(directory, "system.md");
+  const output = path.join(directory, "output");
+  const pageContent = "prefixx";
+  const pageStart = "prefix".length;
+  const fingerprint = "fixture-document-fingerprint";
+  const pageContentSha256 = crypto
+    .createHash("sha256")
+    .update(pageContent)
+    .digest("hex");
+  const worksheet = {
+    schemaVersion: 1,
+    candidateOnly: true,
+    catalog: { categoryView: "FE" },
+    document: {
+      fingerprint,
+      sourceDocumentId: fingerprint,
+      physicalPages: 1,
+      pageContentLength: pageContent.length,
+      pageContentSha256,
+      pageBoundaries: [
+        {
+          physicalPageNumber: 1,
+          documentStart: pageStart,
+          documentEnd: pageContent.length,
+        },
+      ],
+    },
+    requirements: [
+      {
+        id: "FE-TEST",
+        label: "Test",
+        components: [
+          {
+            id: "coverage",
+            label: "Deckung",
+            factRole: "COVERAGE",
+            occurrences: [],
+            ...(objectScopeEvidence
+              ? { objectScopeEvidenceContract: { contractId: "fixture" } }
+              : {}),
+          },
+        ],
+      },
+    ],
+  };
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint,
+    document: {
+      sourceDocumentId: fingerprint,
+      pageContent,
+      pageMap: [
+        { pageNumber: 1, start: pageStart, end: pageContent.length },
+      ],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        complete: true,
+      },
+    },
+  };
+  fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+  fs.writeFileSync(documentArtifactFile, JSON.stringify(documentArtifact));
+  fs.writeFileSync(systemPromptFile, "System prompt");
+  return {
+    directory,
+    worksheetFile,
+    documentArtifactFile,
+    systemPromptFile,
+    output,
+    documentArtifact,
+  };
+}
+
+function preparedEvidenceArguments(fixture, { documentArtifact = true } = {}) {
+  return [
+    "--worksheet",
+    fixture.worksheetFile,
+    ...(documentArtifact
+      ? ["--documentArtifact", fixture.documentArtifactFile]
+      : []),
+    "--systemPromptFile",
+    fixture.systemPromptFile,
+    "--controlMode",
+    "technical-review",
+    "--documentStatus",
+    "FRAMEWORK_TERMS",
+    "--output",
+    fixture.output,
+    "--model",
+    "qwen/qwen3.6-35b-a3b",
+    "--modelTokenLimit",
+    "42496",
+  ];
 }
 
 describe("VS full QA CLI contracts", () => {
@@ -102,5 +209,94 @@ describe("VS full QA CLI contracts", () => {
       validation: { formalPass: true, error: null },
       controls: { pass: true, results: [] },
     });
+  });
+
+  test("keeps the no-artifact caller compatible but rejects a foreign artifact", () => {
+    const compatible = preparedEvidenceFixture({ objectScopeEvidence: true });
+    const compatibleResult = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(compatible, { documentArtifact: false })
+    );
+    expect(compatibleResult.status).toBe(0);
+    expect(
+      JSON.parse(
+        fs.readFileSync(
+          path.join(compatible.output, "report.json"),
+          "utf8"
+        )
+      ).contracts
+    ).toMatchObject({
+      documentArtifactPath: null,
+      documentArtifactSha256: null,
+      documentFingerprint: null,
+    });
+
+    const foreign = preparedEvidenceFixture({ objectScopeEvidence: true });
+    foreign.documentArtifact.fingerprint = "foreign-fingerprint";
+    fs.writeFileSync(
+      foreign.documentArtifactFile,
+      JSON.stringify(foreign.documentArtifact)
+    );
+    const foreignResult = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(foreign)
+    );
+    expect(foreignResult.status).toBe(1);
+    expect(foreignResult.stderr).toContain(
+      "Dokumentartefakt ist nicht fail-closed an das Worksheet gebunden"
+    );
+
+    fs.rmSync(compatible.directory, { recursive: true, force: true });
+    fs.rmSync(foreign.directory, { recursive: true, force: true });
+  });
+
+  test("rejects a document artifact symlink before reading its bytes", () => {
+    const fixture = preparedEvidenceFixture();
+    const symlink = path.join(fixture.directory, "document-link.private.json");
+    fs.symlinkSync(fixture.documentArtifactFile, symlink);
+    fixture.documentArtifactFile = symlink;
+
+    const result = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(fixture)
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Dokumentartefakt muss eine reguläre Nicht-Symlink-Datei sein"
+    );
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+
+  test("binds the document artifact and prepared targets in the effects report", () => {
+    const fixture = preparedEvidenceFixture({ objectScopeEvidence: true });
+
+    const result = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(fixture)
+    );
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(
+      fs.readFileSync(path.join(fixture.output, "report.json"), "utf8")
+    );
+    expect(report.contracts).toMatchObject({
+      documentArtifactPath: fixture.documentArtifactFile,
+      documentFingerprint: fixture.documentArtifact.fingerprint,
+      documentArtifactSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      targetsSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+    expect(report.contracts.targetsSha256).toBe(
+      crypto
+        .createHash("sha256")
+        .update(
+          fs.readFileSync(
+            path.join(fixture.output, "targets.private.json")
+          )
+        )
+        .digest("hex")
+    );
+
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
 });

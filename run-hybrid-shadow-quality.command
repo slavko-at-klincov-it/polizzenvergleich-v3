@@ -129,6 +129,7 @@ for CATEGORY in "${CATEGORY_VIEWS[@]}"; do
   printf '%s\n' "[hybrid-shadow] $CATEGORY – normale Evidenz-/Wirkungsprüfung"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runPreparedEvidenceEvaluation.cjs" \
     --worksheet "$SHADOW_WORKSHEET" \
+    --documentArtifact "$DOCUMENT_ARTIFACT" \
     --triageFile "$TRIAGE_DIR/materialized-triage.private.json" \
     --systemPromptFile "$EFFECTS_PROMPT" \
     --controlMode technical-review \
