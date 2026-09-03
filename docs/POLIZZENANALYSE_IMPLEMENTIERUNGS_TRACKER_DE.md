@@ -5442,3 +5442,48 @@ Der echte Zehn-Dokument-Lauf beweist `B => A` und widerlegt `A => B`. Diese
 Stufe behauptet ausdrücklich nicht, dass B ausgeschlossen oder am konkreten
 Gebäude nicht erfüllt ist. Offen ist nur die getrennte, replay-validierte
 Entscheidungs- und Kundenmetrik-Integration. Kein Vollrun und kein Deployment.
+
+## 114. FE-C02 – Vorteil entschieden und gegen Auslassung abgesichert
+
+`6a64a5357` übersetzt den vollständigen side-neutralen Booleschen Audit in
+`VORTEIL_A` beziehungsweise beim Pakettausch `VORTEIL_B`. Der Schluss bewertet
+nur den breiteren vertraglichen Voraussetzungsscope; ein Ausschluss oder eine
+konkrete Nichterfüllung auf der engeren Seite wird nicht behauptet.
+
+Der Senior-Review fand anschließend eine P1-Lücke: Audit und Atomdigest wurden
+nur bei bereits gewählter Spezialentscheidung persistiert. `b7acb4f2f` bis
+`daac8477a` führen deshalb Comparison-Schema 13,
+`MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_V2` und Produktprofil
+V99/V60 ein. Jede FE-C02-Zeile muss nun unabhängig vom Ergebnis die privaten
+vollständigen A/B-Atomprojektionen tragen. Der Customer-Validator rekonstruiert
+daraus den erwarteten Audit und erzwingt die exakte Entscheidung. Andere
+Kategorien dürfen den Replay nicht tragen; Customer-Read-View, Markdown und
+XLSX entfernen ihn vollständig.
+
+Der erste reale Lauf legte eine Digest-Domänenabweichung offen: Der rohe
+FE-Katalog ergibt `4a4d…`, das produktiv validierte Worksheet-Requirement auf
+allen zehn Dokumenten dagegen `e81f…`. `b40405e63` bindet den Replay an den
+normalisierten Worksheet-Digest; `d69130b6e` setzt denselben Anchor bereits in
+der Auditbildung durch. Eine globale Digestmigration wurde bewusst vermieden.
+
+```text
+Finaler Commit: 6df8f3b069dfde9cf68d05c4238ebaa7046d551e
+Mac Studio: Format PASS; 2 Load-Order-Smokes PASS; 6 Suites / 185 Tests PASS
+Artefakt: QA/FE-C02-QUALIFICATION-REPLAY-6DF8F3B0-20260903
+Summary: 62a2fd833ae33bb786dc52d395840c9e0aa49d046914a1b649039bb2b0feabe4
+Customer Validation: d4093178ca685e499a292d96d8381af6b98ec578e269d474fe680685396ea047
+Omission Validation: 3adb2de22d8f5878997048092db4709cc5846161b1005b055b97360d67d7fa99
+Target Selection: cdf7f6e9946923eae3f1ce412290249faaafa9e98282afaa8627befa8f4084aa
+Qualification Replay: 841c122fe316d52af9c83ca0225eeafe266a58451c3c8b6088b65ce877dd0197
+Audit: 641f6fc1952fe999272e8779694fc0eb15c51347f8a91f9f356552965322d0fc
+A/B: BELEGT / TEILBELEGT
+Ergebnis: VORTEIL_A / Review nein
+Aufrufe: 2 Triage / 0 Effects
+```
+
+Der reale Omission-Loop weist den alten generischen Paket-Review mit
+`COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_OMISSION` und einen fehlenden
+Replay mit `COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED` zurück. Gegenüber
+dem guten Entscheidungsartefakt `35C29986` bleiben Entscheidung, Audit-Digest,
+Paketstatus und Modellaufrufe unverändert; neu ist ausschließlich die
+Auslassungssicherheit. Kein 224-Zeilen-Vollrun, kein Deployment.

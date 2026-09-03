@@ -2194,6 +2194,149 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.52 FE-C02 – Vorteilsentscheidung und Auslassungsschutz vollständig
+
+#### 10.52.1 Ergebnis und unveränderte fachliche Grenze
+
+Der side-neutrale Bedingungsumfang-Audit ist nun als Punktentscheidung
+freigegeben. Bei vollständig gebundener Direktformel auf einer Seite und
+vollständig gebundener Membership-Formel auf der Gegenseite gewinnt nur die
+Seite mit dem logisch strikt breiteren vertraglichen Voraussetzungsscope.
+Dokumentrolle und Dokumentstatus bleiben Provenienz; sie entscheiden den
+Gewinner nicht.
+
+Für die reale FE-C02-Zeile gilt:
+
+```text
+A: direkte allgemeine Photovoltaik-Formel, Paketstatus BELEGT
+B: Membership über EABS@2023, Paketstatus TEILBELEGT
+Formelrelation: B impliziert A; A impliziert B nicht
+Gültige Boolesche Belegungen: 48
+Ergebnis: VORTEIL_A
+Review erforderlich: nein
+```
+
+Der Kundentext bewertet ausschließlich die Breite der Vertragsbedingungen.
+Er behauptet weder einen ausdrücklichen Ausschluss in B noch eine konkrete
+Nichterfüllung der dort genannten Eigentums-, Wiederherstellungs- oder
+Neuwertbedingungen.
+
+#### 10.52.2 Geschlossene Replay- und Omission-Lücke
+
+Der erste Entscheidungsstand validierte eine vorhandene FE-C02-Entscheidung,
+konnte aber ihre vollständige Auslassung nicht erkennen: Der private
+Atomdigest wurde nur geschrieben, wenn `decidePoint()` die Spezialregel bereits
+gewählt hatte. Schema 13 beseitigt diese zirkuläre Kontrollannahme.
+
+`MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_V2` wird für jede FE-C02-Zeile
+unabhängig vom gewählten Ergebnis erzeugt. Er enthält privat die stabil
+sortierten vollständigen Atomprojektionen beider Seiten und bindet:
+
+- Kategorie `FE:FE-C02` und Komponente
+  `photovoltaic_as_damaged_object`;
+- den kanonischen Vergleichsvertrag;
+- den normalisierten Worksheet-Requirement-Digest `e81f4780…`;
+- Dokument-UUID, Seite, Rolle, Status und PDF-SHA je Paket;
+- beide Atomprojektionsdigests und den Gesamtreplay-Digest.
+
+Der Customer-Validator rekonstruiert den Audit ausschließlich aus Replay,
+Paketdaten, Dokumentmanifest und serverseitigem Katalogvertrag. Ist der Audit
+entscheidungsreif, muss die exakte Spezialentscheidung vorhanden sein. Ein
+alter generischer Paket-Review, ein fehlender Replay, ein Replay auf einer
+anderen Kategorie, Atom-Tamper oder ein selbst neu gehashter fremder Vertrag
+werden fail-closed abgewiesen. Kundenansicht, Markdown und XLSX enthalten den
+privaten Voll-Replay nicht.
+
+#### 10.52.3 Reale Digest-Abweichung und Forward-Fix
+
+Der erste reale Schema-13-Lauf schloss alle zehn LLM-/Evidenzphasen ab, stoppte
+aber korrekt vor dem Kundenergebnis mit `QUALIFICATION_REPLAY_MISSING`. Die
+Diagnose zeigte keine Inkonsistenz der Dokumente:
+
+```text
+Atome: 10/10 dokument- und fingerprintgebunden
+Vergleichsvertrag: 10/10 identisch
+Atom-Requirement-Digest: 10/10 e81f47807371f1d565d66c1943e040066d982a9c271e18426926766502e27b5c
+Irrtümlich erwarteter Rohkatalog-Digest: 4a4dd38996b2e926f5358e2916e753b221a00fd8e58a9de572483787c76cd446
+```
+
+Der Rohkatalog und das validierte Worksheet liegen absichtlich in
+unterschiedlichen Digest-Domänen: Die Worksheet-Validierung ergänzt Defaults
+und kanonisiert Alias-, Prädikat- und Formelarrays. Eine globale Digestmigration
+wäre riskant und fachlich unnötig gewesen. `b40405e63` bindet deshalb das
+Produktprofil an den tatsächlich produktiven normalisierten Digest `e81f…`.
+`d69130b6e` verlangt denselben Trust-Anchor bereits bei der Auditbildung, damit
+auch ein direkter `decidePoint()`-Aufruf keinen auf beiden Seiten identischen
+Fremd-Digest akzeptiert.
+
+#### 10.52.4 Commits und Mac-Studio-Validierung
+
+```text
+6a64a5357 feat(comparison): decide broader FE-C02 condition scope
+35c299862 style(comparison): format FE-C02 scope decision
+b7acb4f2f fix(comparison): require FE-C02 qualification replay
+ff597c227 style(comparison): format FE-C02 qualification replay
+46ddda645 test(comparison): harden FE-C02 qualification replay
+daac8477a style(test): format FE-C02 replay hardening
+b40405e63 fix(comparison): bind FE-C02 normalized requirement digest
+e13a81f16 style(comparison): format FE-C02 digest binding
+d69130b6e fix(comparison): enforce FE-C02 audit trust anchor
+6df8f3b06 style(comparison): format FE-C02 trust anchor
+```
+
+Finaler Gate:
+
+```text
+Commit: 6df8f3b069dfde9cf68d05c4238ebaa7046d551e
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Format: PASS
+CommonJS-Load-Reihenfolgen: 2/2 PASS
+Fokussierte Suites: 6/6 PASS
+Fokussierte Tests: 185/185 PASS
+```
+
+Finales revisionsgebundenes Artefakt:
+
+```text
+Pfad: QA/FE-C02-QUALIFICATION-REPLAY-6DF8F3B0-20260903
+Summary: 62a2fd833ae33bb786dc52d395840c9e0aa49d046914a1b649039bb2b0feabe4
+Customer Validation: d4093178ca685e499a292d96d8381af6b98ec578e269d474fe680685396ea047
+Omission Validation: 3adb2de22d8f5878997048092db4709cc5846161b1005b055b97360d67d7fa99
+Target Selection: cdf7f6e9946923eae3f1ce412290249faaafa9e98282afaa8627befa8f4084aa
+Qualification Replay: 841c122fe316d52af9c83ca0225eeafe266a58451c3c8b6088b65ce877dd0197
+Condition-Scope Audit: 641f6fc1952fe999272e8779694fc0eb15c51347f8a91f9f356552965322d0fc
+Aufrufe: 2 Triage / 0 Effects
+Server: 4 Triage-Rejects / 8 Evidence-Terminals
+Kundenmetrik: 1 VORTEIL_A / 0 UNKLAR / 0 Review
+```
+
+Der finale Replay verwendete die zehn unmittelbar zuvor unter `daac8477a`
+persistierten und vollständig gehashten Dokument-/Triage-/Evidence-Records
+erneut. Zwischen `daac8477a` und `6df8f3b06` änderten sich ausschließlich der
+Requirement-Trust-Anchor und dessen Auditprüfung; Suche, Modellprompts,
+Materialisierung und Evidenz blieben unverändert. Dadurch wurden keine teuren
+Modellaufrufe wiederholt, ohne die Bindung des finalen Ergebnisses an den
+finalen Commit zu verlieren.
+
+Delta zum bisherigen guten Entscheidungsartefakt
+`FE-C02-CONDITION-SCOPE-DECISION-35C29986-20260903`:
+
+```text
+Fachentscheidung: unverändert VORTEIL_A
+Review: unverändert nein
+Paketstatus: unverändert A BELEGT / B TEILBELEGT
+Audit-Digest: unverändert 641f6fc1…
+Triage-/Effects-Aufrufe: unverändert 2 / 0
+Neu: auslassungssicherer privater Qualification-Replay
+Neu: real belegte Ablehnung von generischem Review-Ersatz und fehlendem Replay
+```
+
+Die vollständige 224-Zeilen-Metrik wurde nicht neu berechnet. Es gab keinen
+Vollrun, kein Deployment und keine Änderung des installierten Kundenstandes.
+
 ### 10.50 FE-C02 – globale A-Voraussetzungsformel sourcegebunden
 
 #### 10.50.1 Ausgangslage und enger Fixumfang
