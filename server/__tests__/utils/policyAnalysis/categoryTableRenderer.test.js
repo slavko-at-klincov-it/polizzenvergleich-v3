@@ -854,6 +854,52 @@ describe("categoryTableRenderer", () => {
     expect(row.source).not.toContain("erfunden");
   });
 
+  test("renders a verified cross-page clause governor beside its body source", () => {
+    const fieldResult = completeLimit();
+    const input = fixture({ fieldResult });
+    const occurrence =
+      input.worksheet.requirements[0].components[0].occurrences[0];
+    const governorText =
+      "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00";
+    const governorStart = 5_000;
+    const amountStart = governorStart + governorText.indexOf("EUR6.121.600,00");
+    const fingerprint = "f".repeat(64);
+    occurrence.exactClauseCodeFieldGovernorHints = [
+      {
+        contractId: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1",
+        clauseCode: "12PA0130",
+        documentFingerprint: fingerprint,
+        scopeKey: "FEUER_INSURANCE",
+        physicalPageNumber: 1,
+        documentStart: governorStart,
+        documentEnd: governorStart + governorText.length,
+        text: governorText,
+      },
+    ];
+    fieldResult.fields[0].facts[0] = {
+      rawValue: "EUR6.121.600,00",
+      normalizedValue: "EUR 6.121.600,00",
+      exactClauseCodeFieldGovernor: {
+        contractId: "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1",
+        clauseCode: "12PA0130",
+        documentFingerprint: fingerprint,
+        scopeKey: "FEUER_INSURANCE",
+      },
+      source: {
+        candidateId: "candidate:0",
+        physicalPageNumber: 1,
+        documentStart: amountStart,
+        documentEnd: amountStart + "EUR6.121.600,00".length,
+        exactText: "EUR6.121.600,00",
+      },
+    };
+
+    const [row] = buildCategoryTableRows(input);
+    expect(row.source).toContain("PDF-Seite 3");
+    expect(row.source).toContain("PDF-Seite 1");
+    expect(row.source).toContain("EUR6.121.600,00");
+  });
+
   test("uses source-bound field excerpts without repeating the same candidate excerpt", () => {
     const input = fixture({
       id: "VS-11",

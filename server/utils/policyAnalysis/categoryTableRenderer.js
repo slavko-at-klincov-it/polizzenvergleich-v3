@@ -164,6 +164,26 @@ function sourceTextForFact(occurrence, fact) {
   return containing?.text || occurrence?.context?.text || occurrence?.exactText;
 }
 
+function verifiedFactPhysicalPageNumber(occurrence, fact) {
+  const occurrencePage = Number(
+    occurrence?.physicalPageNumber || occurrence?.pageNumber
+  );
+  const sourceStart = Number(fact?.source?.documentStart);
+  const sourceEnd = Number(fact?.source?.documentEnd);
+  const contract = fact?.exactClauseCodeFieldGovernor;
+  const governor = (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
+    (hint) =>
+      contract?.contractId === hint.contractId &&
+      contract?.clauseCode === hint.clauseCode &&
+      contract?.documentFingerprint === hint.documentFingerprint &&
+      contract?.scopeKey === hint.scopeKey &&
+      sourceStart >= hint.documentStart &&
+      sourceEnd <= hint.documentEnd &&
+      Number(fact?.source?.physicalPageNumber) === hint.physicalPageNumber
+  );
+  return governor ? governor.physicalPageNumber : occurrencePage;
+}
+
 function selectedSources({
   requirementId,
   judgements,
@@ -205,7 +225,7 @@ function selectedSources({
       continue;
     const hasCrossPageFieldFact = candidateFieldFacts.some(
       (fact) =>
-        Number(fact.source?.physicalPageNumber || physicalPageNumber) !==
+        verifiedFactPhysicalPageNumber(occurrence, fact) !==
         physicalPageNumber
     );
     if (candidateFieldFacts.length === 0 || hasCrossPageFieldFact)
@@ -217,8 +237,9 @@ function selectedSources({
         factSourceText,
         fact.rawValue || fact.source?.exactText
       );
-      const factPhysicalPageNumber = Number(
-        fact.source?.physicalPageNumber || physicalPageNumber
+      const factPhysicalPageNumber = verifiedFactPhysicalPageNumber(
+        occurrence,
+        fact
       );
       const factKey = `${factPhysicalPageNumber}:${factQuote}`;
       if (!factQuote || seen.has(factKey)) continue;
