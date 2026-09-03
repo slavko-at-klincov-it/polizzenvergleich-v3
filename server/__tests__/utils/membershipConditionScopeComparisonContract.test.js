@@ -12,6 +12,7 @@ const {
 } = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
 const {
   SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
+  validateCoverageConditionFormulaContract,
 } = require("../../utils/policyAnalysis/coverageConditionFormulaEvidenceContract");
 const {
   buildMembershipConditionEvidence,
@@ -102,7 +103,9 @@ function formulaProof() {
   const body = {
     schemaVersion: 1,
     contractId: SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
-    evidenceContractDigest: sha256(formulaEvidenceContract),
+    evidenceContractDigest: sha256(
+      validateCoverageConditionFormulaContract(formulaEvidenceContract)
+    ),
     documentFingerprint: "2".repeat(64),
     formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
     sourcePolicy: "GLOBAL_GOVERNOR_BEFORE_TARGETS_V1",
