@@ -1001,8 +1001,10 @@ describe("categoryTableRenderer", () => {
     expect(scopeTamperedRow.source).not.toContain("EUR6.121.600,00");
 
     occurrence.sectionScopeHint.scopeKeys = ["FEUER_INSURANCE"];
-    occurrence.exactClauseCodeFieldGovernorHints[0].text =
-      governorText.replace("Aufräumkosten", "Nicht gedeckt");
+    occurrence.exactClauseCodeFieldGovernorHints[0].text = governorText.replace(
+      "Aufräumkosten",
+      "Nicht gedeckt"
+    );
     const [negativeTamperedRow] = buildCategoryTableRows(input);
     expect(negativeTamperedRow.source).not.toContain("EUR6.121.600,00");
   });
