@@ -22,6 +22,8 @@ v3_safe_repo_path
 v3_require_clean_checkout
 v3_release_checkout_matches ||
   v3_die "Installation erfordert den veröffentlichten annotierten Release-Tag v$V3_RELEASE_VERSION auf origin/$V3_UPDATE_BRANCH."
+v3_remote_release_tag_matches ||
+  v3_die "Der lokale Release-Tag v$V3_RELEASE_VERSION stimmt nicht exakt mit origin überein."
 v3_require_macos_arm64
 v3_require_gui_session
 v3_require_command git

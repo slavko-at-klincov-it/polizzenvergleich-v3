@@ -88,11 +88,15 @@ done
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
 release_repo="$temp_dir/release-repo"
+release_remote="$temp_dir/release-origin.git"
 mkdir -p "$release_repo"
+git init --bare -q "$release_remote"
 git -C "$release_repo" init -q
 git -C "$release_repo" -c user.name='Release Contract' \
   -c user.email='release-contract@example.invalid' commit --allow-empty -qm initial
-git -C "$release_repo" update-ref refs/remotes/origin/main HEAD
+git -C "$release_repo" remote add origin "$release_remote"
+git -C "$release_repo" push -q origin HEAD:refs/heads/main
+git -C "$release_repo" fetch -q origin main
 if (
   export V3_REPO_DIR="$release_repo"
   # shellcheck disable=SC1091
@@ -105,12 +109,39 @@ fi
 git -C "$release_repo" -c user.name='Release Contract' \
   -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
   -m "Release v$V3_RELEASE_VERSION"
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_remote_release_tag_matches
+); then
+  printf '%s\n' "Nicht veröffentlichter Release-Tag wurde remote akzeptiert." >&2
+  exit 1
+fi
+git -C "$release_repo" push -q origin "refs/tags/v$V3_RELEASE_VERSION"
 (
   export V3_REPO_DIR="$release_repo"
   # shellcheck disable=SC1091
   source "$SCRIPT_DIR/lib/common.sh"
   v3_release_checkout_matches
+  v3_remote_release_tag_matches
 )
+git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
+  -m "Abweichender lokaler Release v$V3_RELEASE_VERSION"
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_remote_release_tag_matches
+); then
+  printf '%s\n' "Abweichendes lokales Tag-Objekt wurde remote akzeptiert." >&2
+  exit 1
+fi
+git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
+git -C "$release_repo" fetch -q origin \
+  "refs/tags/v$V3_RELEASE_VERSION:refs/tags/v$V3_RELEASE_VERSION"
 touch "$release_repo/untracked"
 if (
   export V3_REPO_DIR="$release_repo"

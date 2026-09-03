@@ -22,6 +22,8 @@ target_tag="${1:-$(git -C "$V3_REPO_DIR" tag --list 'v3.*' --sort=-v:refname | h
 [ -n "$target_tag" ] || v3_die "Kein veröffentlichter V3-Release-Tag gefunden."
 git -C "$V3_REPO_DIR" rev-parse -q --verify "$target_tag^{tag}" >/dev/null ||
   v3_die "$target_tag ist kein annotierter Release-Tag."
+v3_remote_release_tag_matches "$target_tag" ||
+  v3_die "$target_tag stimmt nicht exakt mit dem veröffentlichten origin-Tag überein."
 target_sha="$(git -C "$V3_REPO_DIR" rev-parse "$target_tag^{commit}")"
 git -C "$V3_REPO_DIR" merge-base --is-ancestor "$target_sha" "origin/$V3_UPDATE_BRANCH" ||
   v3_die "$target_tag gehört nicht zum veröffentlichten main-Stand."

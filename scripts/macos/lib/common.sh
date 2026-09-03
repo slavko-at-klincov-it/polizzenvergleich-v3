@@ -74,6 +74,23 @@ v3_release_checkout_matches() {
     "$tag_sha" "origin/$V3_UPDATE_BRANCH" >/dev/null 2>&1
 }
 
+v3_remote_release_tag_matches() {
+  local expected_tag="${1:-v$V3_RELEASE_VERSION}"
+  local tag_ref="refs/tags/$expected_tag" local_tag_sha local_commit_sha
+  local remote_refs remote_tag_sha remote_commit_sha
+  local_tag_sha="$(git -C "$V3_REPO_DIR" rev-parse "$tag_ref" 2>/dev/null)" ||
+    return 1
+  local_commit_sha="$(git -C "$V3_REPO_DIR" rev-parse "$tag_ref^{commit}" 2>/dev/null)" ||
+    return 1
+  remote_refs="$(git -C "$V3_REPO_DIR" ls-remote --exit-code origin \
+    "$tag_ref" "$tag_ref^{}" 2>/dev/null)" || return 1
+  remote_tag_sha="$(printf '%s\n' "$remote_refs" | /usr/bin/awk -v ref="$tag_ref" '$2 == ref { print $1 }')"
+  remote_commit_sha="$(printf '%s\n' "$remote_refs" | /usr/bin/awk -v ref="$tag_ref^{}" '$2 == ref { print $1 }')"
+  [ -n "$remote_tag_sha" ] && [ -n "$remote_commit_sha" ] &&
+    [ "$remote_tag_sha" = "$local_tag_sha" ] &&
+    [ "$remote_commit_sha" = "$local_commit_sha" ]
+}
+
 v3_require_port_available() {
   local port="$1" service="$2"
   command -v lsof >/dev/null 2>&1 || return 0
