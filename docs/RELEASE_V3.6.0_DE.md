@@ -65,9 +65,11 @@ Konfiguration, LaunchAgents und vorhandenen Vergleichsexporten erstellt. Bei
 einem roten Gate wird weder `main` veröffentlicht noch der Kundenstand
 verändert.
 
-## Noch einzutragende Abnahme
+## Abnahmeprotokoll
 
 Exakter Release-Commit, Testzahlen, Laufzeit, Ergebnisverteilung,
 Artefakthashes, Backup-Pfad, Doctor- und Deploymentbefund werden nach den
-tatsächlichen Prüfungen ergänzt. Bis dahin ist dieses Dokument ausdrücklich
-keine Deploymentfreigabe.
+tatsächlichen Prüfungen in einem getrennten, append-only
+Deployment-Dokumentationscommit festgehalten. Der zuvor vollständig geprüfte
+und veröffentlichte Release-Tag wird dafür niemals verschoben. Bis zu diesem
+Nachweis ist dieses Dokument ausdrücklich keine Deploymentfreigabe.

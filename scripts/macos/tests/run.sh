@@ -92,6 +92,16 @@ mkdir -p "$release_repo"
 git -C "$release_repo" init -q
 git -C "$release_repo" -c user.name='Release Contract' \
   -c user.email='release-contract@example.invalid' commit --allow-empty -qm initial
+git -C "$release_repo" update-ref refs/remotes/origin/main HEAD
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+); then
+  printf '%s\n' "Fehlender Release-Tag wurde fälschlich akzeptiert." >&2
+  exit 1
+fi
 git -C "$release_repo" -c user.name='Release Contract' \
   -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
   -m "Release v$V3_RELEASE_VERSION"
@@ -101,6 +111,17 @@ git -C "$release_repo" -c user.name='Release Contract' \
   source "$SCRIPT_DIR/lib/common.sh"
   v3_release_checkout_matches
 )
+touch "$release_repo/untracked"
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+); then
+  printf '%s\n' "Veränderter Checkout wurde fälschlich als Release akzeptiert." >&2
+  exit 1
+fi
+/bin/rm "$release_repo/untracked"
 git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
 git -C "$release_repo" tag "v$V3_RELEASE_VERSION"
 if (
@@ -125,6 +146,19 @@ if (
   v3_release_checkout_matches
 ); then
   printf '%s\n' "Fremder HEAD wurde fälschlich als Release akzeptiert." >&2
+  exit 1
+fi
+git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
+  -m "Release v$V3_RELEASE_VERSION"
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+); then
+  printf '%s\n' "Nicht auf origin/main veröffentlichter Tag wurde fälschlich akzeptiert." >&2
   exit 1
 fi
 

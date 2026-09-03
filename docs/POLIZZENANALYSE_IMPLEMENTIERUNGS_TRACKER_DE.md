@@ -5537,3 +5537,16 @@ Produktionsbuild, FE-C02-Replay, frischer Zehn-Dokument-/224-Zeilen-Vollrun,
 unabhängiger Metrik- und Favoritenvergleich sowie eine externe
 Kundendatensicherung. Jeder rote Befund stoppt die Release-Kette vor dem
 Deployment.
+
+Der nachgelagerte Release-Review erweitert das Gate um drei Invarianten:
+
+- der getaggte Checkout muss vollständig sauber sein;
+- der annotierte Tag muss exakt auf `HEAD` zeigen und auf dem lokal bekannten
+  `origin/main` veröffentlicht sein;
+- die Neuinstallation prüft diese Releaseidentität vor Abhängigkeitsaufbau,
+  Datenbank- oder Dienstmutation.
+
+Positive, fehlende, leichtgewichtige, fremde-HEAD-, Dirty-Checkout- und
+nicht-auf-main-veröffentlichte Tagvarianten werden im macOS-Vertragstest
+getrennt geprüft. Das spätere Deploymentprotokoll entsteht nach der Abnahme in
+einem eigenen Commit; der geprüfte Release-Tag bleibt unveränderlich.

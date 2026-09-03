@@ -60,12 +60,18 @@ v3_require_clean_checkout() {
 
 v3_release_checkout_matches() {
   local expected_tag="v$V3_RELEASE_VERSION" tag_sha current_sha
+  [ -z "$(git -C "$V3_REPO_DIR" status --porcelain --untracked-files=normal 2>/dev/null)" ] ||
+    return 1
   git -C "$V3_REPO_DIR" rev-parse -q --verify "$expected_tag^{tag}" >/dev/null 2>&1 ||
     return 1
   tag_sha="$(git -C "$V3_REPO_DIR" rev-parse "$expected_tag^{commit}" 2>/dev/null)" ||
     return 1
   current_sha="$(git -C "$V3_REPO_DIR" rev-parse HEAD 2>/dev/null)" || return 1
-  [ "$tag_sha" = "$current_sha" ]
+  [ "$tag_sha" = "$current_sha" ] || return 1
+  git -C "$V3_REPO_DIR" rev-parse -q --verify "origin/$V3_UPDATE_BRANCH^{commit}" >/dev/null 2>&1 ||
+    return 1
+  git -C "$V3_REPO_DIR" merge-base --is-ancestor \
+    "$tag_sha" "origin/$V3_UPDATE_BRANCH" >/dev/null 2>&1
 }
 
 v3_require_port_available() {
