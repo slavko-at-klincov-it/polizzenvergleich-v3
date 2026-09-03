@@ -311,6 +311,11 @@ describe("source-bound object-membership evidence contract", () => {
       "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden oder soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
       "AMBIGUOUS",
     ],
+    [
+      "duplicate complete predicate",
+      "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und sofern sie im Eigentum des Gebäudeeigentümers stehen und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+      "AMBIGUOUS",
+    ],
   ])("keeps %s fail closed", (_label, item, expectedStatus) => {
     const value = fixture({
       item,

@@ -373,6 +373,25 @@ function allAliasSpans(sourceText, aliases) {
   ].sort((left, right) => left.start - right.start || left.end - right.end);
 }
 
+function orderedAliasSequences(groups, limit = 2) {
+  let sequences = [[]];
+  for (const matches of groups) {
+    const next = [];
+    for (const sequence of sequences) {
+      const previous = sequence[sequence.length - 1];
+      for (const match of matches) {
+        if (previous && match.start < previous.end) continue;
+        next.push([...sequence, match]);
+        if (next.length >= limit) break;
+      }
+      if (next.length >= limit) break;
+    }
+    sequences = next;
+    if (sequences.length === 0) break;
+  }
+  return sequences;
+}
+
 function buildMembershipConditionEvidence({
   contract,
   memberContextSpan,
@@ -413,11 +432,12 @@ function buildMembershipConditionEvidence({
       missingPredicateKeys.push(predicate.predicateKey);
       continue;
     }
-    if (groups.some((matches) => matches.length !== 1)) {
+    const sequences = orderedAliasSequences(groups);
+    if (sequences.length !== 1) {
       ambiguousPredicateKeys.push(predicate.predicateKey);
       continue;
     }
-    const matches = groups.map(([match]) => match);
+    const [matches] = sequences;
     const start = Math.min(...matches.map((match) => match.start));
     const end = Math.max(...matches.map((match) => match.end));
     const exactText = sourceText.slice(start, end);
