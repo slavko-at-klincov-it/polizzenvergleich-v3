@@ -108,7 +108,6 @@ function exactAtomContract(atom, expectedDocument, componentId, factRole) {
       atom?.factRole === factRole &&
       atom?.componentSatisfactionPolicy === "ALL" &&
       atom?.scopePolicy === "GENERAL_REQUIRED" &&
-      atom?.selectedScopePicture === "GENERAL" &&
       atom?.requirementContractDigest ===
         VS25_REQUIREMENT_CONTRACT_DIGEST_SHA256 &&
       JSON.stringify(atom?.declaredComponents) ===
@@ -127,6 +126,7 @@ function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
     exactAtomContract(atom, expectedDocument, componentId, factRole) &&
       atom?.evidencePresence === "NOT_FOUND" &&
       atom?.coverageEffect === "UNKNOWN" &&
+      atom?.selectedScopePicture === "UNKNOWN" &&
       (atom?.selectedCandidateIds || []).length === 0 &&
       (atom?.sources || []).length === 0
   );
@@ -137,6 +137,7 @@ function exactFoundCostAtom(atom, expectedDocument) {
     exactAtomContract(atom, expectedDocument, VS25_COST_COMPONENT_ID, "COST") &&
       atom?.evidencePresence === "FOUND" &&
       atom?.coverageEffect === "INCLUDED" &&
+      atom?.selectedScopePicture === "GENERAL" &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       atom?.requestedFieldStatus === "NOT_FOUND" &&
       Array.isArray(atom?.fields) &&
@@ -159,6 +160,7 @@ function exactFoundLimitAtom(atom, expectedDocument) {
     ) &&
       atom?.evidencePresence === "FOUND" &&
       atom?.coverageEffect === "DEFINED" &&
+      atom?.selectedScopePicture === "GENERAL" &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       atom?.requestedFieldStatus === "COMPLETE" &&
       fields.length === 1 &&

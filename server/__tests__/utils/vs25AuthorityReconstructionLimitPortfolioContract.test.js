@@ -101,6 +101,20 @@ function limitAtom(sourceDocument, sourceText, fact) {
   };
 }
 
+function absentAtom(sourceDocument, componentId, factRole) {
+  return {
+    ...commonAtom(sourceDocument, componentId, factRole, ""),
+    documentApplicability: "UNKNOWN",
+    evidencePresence: "NOT_FOUND",
+    coverageEffect: "UNKNOWN",
+    selectedScopePicture: "UNKNOWN",
+    selectedCandidateIds: [],
+    requestedFieldStatus: "NOT_FOUND",
+    fields: [{ field: "limit", status: "NOT_FOUND", facts: [] }],
+    sources: [],
+  };
+}
+
 function newValueAtom(sourceDocument, amount = null) {
   const candidateId = `${sourceDocument.uuid}-vs01`;
   return {
@@ -162,6 +176,7 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
     "SUPPLEMENT",
     "FRAMEWORK_TERMS"
   );
+  const docBAbsent = document("b-absent", "B", "TERMS", "ACTIVE");
   const aText =
     "Mehrkosten durch behördliche Auflagen bis 10 % der Gebäudeversicherungssumme auf Erstes Risiko mitversichert.";
   const bMoneyText =
@@ -195,6 +210,16 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       unit: "%",
       limitKind: "CAPPED",
     }),
+    absentAtom(
+      docBAbsent,
+      "authority_reconstruction_extra_costs",
+      "COST"
+    ),
+    absentAtom(
+      docBAbsent,
+      "authority_reconstruction_extra_cost_limit",
+      "LIMIT"
+    ),
   ];
   const packageA = {
     evidenceFound: true,
@@ -240,7 +265,7 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
     referenceAtomsA: [newValueAtom(docA)],
     referenceAtomsB: [newValueAtom(docBMoney, "EUR 30.608.000,00")],
     expectedDocumentsA: [docA],
-    expectedDocumentsB: [docBMoney, docBPercent],
+    expectedDocumentsB: [docBMoney, docBPercent, docBAbsent],
   };
 }
 
