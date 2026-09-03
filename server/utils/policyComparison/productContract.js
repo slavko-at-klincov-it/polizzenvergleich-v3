@@ -27,8 +27,7 @@ const PRODUCT_PROFILE = Object.freeze({
     EL: "el-occurrence-full-draft-v0.8",
   }),
   trustAnchors: Object.freeze({
-    feC02ValidatedWorksheetRequirementV1:
-      FE_C02_REQUIREMENT_CONTRACT_DIGEST,
+    feC02ValidatedWorksheetRequirementV1: FE_C02_REQUIREMENT_CONTRACT_DIGEST,
   }),
   expectedRowCount: EXPECTED_ROW_COUNT,
 });
