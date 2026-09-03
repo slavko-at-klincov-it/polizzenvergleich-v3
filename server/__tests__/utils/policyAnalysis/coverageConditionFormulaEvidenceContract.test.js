@@ -60,7 +60,7 @@ function contract() {
       ["und"],
       predicate("SECTION_INSURED", null, [
         ["Sparten", "Versicherungssparten"],
-        ["versichert werden", "vereinbart sind"],
+        ["versichert werden", "vereinbart sind", "sind vereinbart"],
       ], null, ["nicht versichert", "nicht vereinbart"]),
       operator(
         "OR",
