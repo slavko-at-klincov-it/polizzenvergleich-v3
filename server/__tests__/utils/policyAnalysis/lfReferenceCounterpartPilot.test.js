@@ -55,7 +55,9 @@ function minimalCatalog() {
   });
 }
 
-function sourceArtifact(text = "Versichert ist der Rohrersatz bis zu 3m Länge.") {
+function sourceArtifact(
+  text = "Versichert ist der Rohrersatz bis zu 3m Länge."
+) {
   return {
     schemaVersion: 1,
     fingerprint: "a".repeat(64),
@@ -75,8 +77,12 @@ function sourceArtifact(text = "Versichert ist der Rohrersatz bis zu 3m Länge."
 
 describe("lfReferenceCounterpartPilot", () => {
   test("keeps the checked-in LF catalog QA-only and bound to the exact 31-page source", () => {
-    const catalog = validateCatalog(JSON.parse(fs.readFileSync(CATALOG_FILE, "utf8")));
-    const requirements = catalog.categories.flatMap(({ requirements }) => requirements);
+    const catalog = validateCatalog(
+      JSON.parse(fs.readFileSync(CATALOG_FILE, "utf8"))
+    );
+    const requirements = catalog.categories.flatMap(
+      ({ requirements }) => requirements
+    );
 
     expect(catalog).toMatchObject({
       contractId: "LF_IMMO_REFERENCE_COUNTERPART_PILOT_V1",
@@ -100,13 +106,15 @@ describe("lfReferenceCounterpartPilot", () => {
   test("binds every LF reference point to source-page text and fails on drift", () => {
     const catalog = minimalCatalog();
 
-    expect(bindReferenceEvidence(catalog, sourceArtifact()).get("LF-T-01")).toMatchObject({
+    expect(
+      bindReferenceEvidence(catalog, sourceArtifact()).get("LF-T-01")
+    ).toMatchObject({
       physicalPageNumber: 1,
       exactNeedle: "Rohrersatz bis zu 3m Länge",
     });
-    expect(() => bindReferenceEvidence(catalog, sourceArtifact("Anderer Inhalt"))).toThrow(
-      "LF_REFERENCE_NEEDLE_NOT_FOUND: LF-T-01"
-    );
+    expect(() =>
+      bindReferenceEvidence(catalog, sourceArtifact("Anderer Inhalt"))
+    ).toThrow("LF_REFERENCE_NEEDLE_NOT_FOUND: LF-T-01");
     const wrongSource = sourceArtifact();
     wrongSource.fingerprint = "b".repeat(64);
     expect(() => bindReferenceEvidence(catalog, wrongSource)).toThrow(
@@ -148,7 +156,9 @@ describe("lfReferenceCounterpartPilot", () => {
         expect.objectContaining({ documentName: "Bedingungen B.pdf" }),
       ])
     );
-    expect(selected.every(({ candidateId }) => candidateId.startsWith("B-"))).toBe(true);
+    expect(
+      selected.every(({ candidateId }) => candidateId.startsWith("B-"))
+    ).toBe(true);
   });
 
   test("accepts only mutually valid status/source combinations", () => {
@@ -172,7 +182,8 @@ describe("lfReferenceCounterpartPilot", () => {
             status: COUNTERPART_STATUS.NONE,
             candidateIds: [],
             matchSummary: "In den Kandidaten wurde kein Gegenstück gefunden.",
-            unresolved: "Das vollständige Paket ist damit nicht negativ bewiesen.",
+            unresolved:
+              "Das vollständige Paket ist damit nicht negativ bewiesen.",
           },
         ],
         [requirement],
@@ -219,7 +230,8 @@ describe("lfReferenceCounterpartPilot", () => {
   });
 
   test("extracts a JSON array from fenced model output", () => {
-    expect(jsonFromModelText("<think>intern</think>\n```json\n[{\"ok\":true}]\n```"))
-      .toEqual([{ ok: true }]);
+    expect(
+      jsonFromModelText('<think>intern</think>\n```json\n[{"ok":true}]\n```')
+    ).toEqual([{ ok: true }]);
   });
 });

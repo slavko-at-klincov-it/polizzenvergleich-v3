@@ -67,18 +67,23 @@ function walkRegularFiles(root, fileName) {
       continue;
     }
     if (!stat.isDirectory()) continue;
-    for (const entry of fs.readdirSync(current)) pending.push(path.join(current, entry));
+    for (const entry of fs.readdirSync(current))
+      pending.push(path.join(current, entry));
   }
   return files;
 }
 
 function artifactMap(runRoot) {
   const artifacts = new Map();
-  for (const file of walkRegularFiles(path.join(runRoot, "documents"), "document.private.json")) {
+  for (const file of walkRegularFiles(
+    path.join(runRoot, "documents"),
+    "document.private.json"
+  )) {
     const artifact = readJson(file, "Dokumentartefakt");
     const directory = path.basename(path.dirname(file));
     const uuid = directory.match(/^[AB]-\d+-(.+)$/u)?.[1];
-    if (!uuid || artifacts.has(uuid)) fail(`Dokumentartefakt-UUID ist nicht eindeutig: ${directory}`);
+    if (!uuid || artifacts.has(uuid))
+      fail(`Dokumentartefakt-UUID ist nicht eindeutig: ${directory}`);
     artifacts.set(uuid, artifact);
   }
   return artifacts;
@@ -90,10 +95,17 @@ function validateManifest(manifest, catalog) {
   const reference = manifest.documents.filter(({ side }) => side === "A");
   const counterparts = manifest.documents.filter(({ side }) => side === "B");
   if (reference.length !== 1 || counterparts.length < 1)
-    fail("Der Pilot erfordert genau ein Referenzdokument auf A und mindestens ein Dokument auf B");
+    fail(
+      "Der Pilot erfordert genau ein Referenzdokument auf A und mindestens ein Dokument auf B"
+    );
   if (reference[0].sha256 !== catalog.sourceProduct.documentSha256)
-    fail("Paket A stimmt nicht mit dem versionierten LF-Referenzdokument überein");
-  if (new Set(manifest.documents.map(({ uuid }) => uuid)).size !== manifest.documents.length)
+    fail(
+      "Paket A stimmt nicht mit dem versionierten LF-Referenzdokument überein"
+    );
+  if (
+    new Set(manifest.documents.map(({ uuid }) => uuid)).size !==
+    manifest.documents.length
+  )
     fail("Dokument-UUIDs im Manifest sind nicht eindeutig");
   return { reference: reference[0], counterparts };
 }
@@ -109,10 +121,14 @@ async function embed(client, model, inputs, label) {
       input: batch,
       encoding_format: "float",
     });
-    const rows = [...(response.data || [])].sort((left, right) => left.index - right.index);
+    const rows = [...(response.data || [])].sort(
+      (left, right) => left.index - right.index
+    );
     if (
       rows.length !== batch.length ||
-      rows.some((row, index) => row.index !== index || !Array.isArray(row.embedding))
+      rows.some(
+        (row, index) => row.index !== index || !Array.isArray(row.embedding)
+      )
     )
       throw new Error(`Embedding-Antwort ungültig: ${label}:${start}`);
     vectors.push(...rows.map(({ embedding }) => embedding));
@@ -128,24 +144,28 @@ async function embed(client, model, inputs, label) {
 }
 
 function promptForCategory(category, candidatesByRequirement) {
-  const payload = category.requirements.filter(({ pilot }) => pilot).map((requirement) => ({
-    requirementId: requirement.id,
-    referenceLabel: requirement.label,
-    factRole: requirement.factRole,
-    comparisonQuestion: requirement.query,
-    lfReference: {
-      physicalPageNumber: requirement.reference.page,
-      exactNeedle: requirement.reference.needle,
-    },
-    candidates: (candidatesByRequirement.get(requirement.id) || []).map((candidate) => ({
-      candidateId: candidate.candidateId,
-      documentName: candidate.documentName,
-      physicalPageNumber: candidate.physicalPageNumber,
-      lexicalScore: Number(candidate.lexicalScore.toFixed(4)),
-      semanticScore: Number(candidate.semanticScore.toFixed(6)),
-      exactText: candidate.exactText.slice(0, 1800),
-    })),
-  }));
+  const payload = category.requirements
+    .filter(({ pilot }) => pilot)
+    .map((requirement) => ({
+      requirementId: requirement.id,
+      referenceLabel: requirement.label,
+      factRole: requirement.factRole,
+      comparisonQuestion: requirement.query,
+      lfReference: {
+        physicalPageNumber: requirement.reference.page,
+        exactNeedle: requirement.reference.needle,
+      },
+      candidates: (candidatesByRequirement.get(requirement.id) || []).map(
+        (candidate) => ({
+          candidateId: candidate.candidateId,
+          documentName: candidate.documentName,
+          physicalPageNumber: candidate.physicalPageNumber,
+          lexicalScore: Number(candidate.lexicalScore.toFixed(4)),
+          semanticScore: Number(candidate.semanticScore.toFixed(6)),
+          exactText: candidate.exactText.slice(0, 1800),
+        })
+      ),
+    }));
 
   return [
     {
@@ -154,12 +174,21 @@ function promptForCategory(category, candidatesByRequirement) {
     },
     {
       role: "user",
-      content: JSON.stringify({ categoryId: category.id, categoryLabel: category.label, requirements: payload }),
+      content: JSON.stringify({
+        categoryId: category.id,
+        categoryLabel: category.label,
+        requirements: payload,
+      }),
     },
   ];
 }
 
-async function classifyCategory({ client, model, category, candidatesByRequirement }) {
+async function classifyCategory({
+  client,
+  model,
+  category,
+  candidatesByRequirement,
+}) {
   const requirements = category.requirements.filter(({ pilot }) => pilot);
   const messages = promptForCategory(category, candidatesByRequirement);
   let lastError;
@@ -201,7 +230,10 @@ async function classifyCategory({ client, model, category, candidatesByRequireme
 function markdownReport(report, catalog, candidatesByRequirement) {
   const labels = new Map(
     catalog.categories.flatMap((category) =>
-      category.requirements.map((requirement) => [requirement.id, { ...requirement, categoryLabel: category.label }])
+      category.requirements.map((requirement) => [
+        requirement.id,
+        { ...requirement, categoryLabel: category.label },
+      ])
     )
   );
   const lines = [
@@ -218,7 +250,9 @@ function markdownReport(report, catalog, candidatesByRequirement) {
     "",
     "## Ergebnisübersicht",
     "",
-    ...Object.values(COUNTERPART_STATUS).map((status) => `- ${status}: ${report.totals[status] || 0}`),
+    ...Object.values(COUNTERPART_STATUS).map(
+      (status) => `- ${status}: ${report.totals[status] || 0}`
+    ),
     "",
   ];
   let currentCategory = null;
@@ -229,14 +263,16 @@ function markdownReport(report, catalog, candidatesByRequirement) {
       lines.push(`## ${currentCategory}`, "");
     }
     lines.push(`### ${result.requirementId} · ${requirement.label}`, "");
-    lines.push(`- LF-Beleg: PDF-Seite ${requirement.reference.page} · „${requirement.reference.needle}“`);
+    lines.push(
+      `- LF-Beleg: PDF-Seite ${requirement.reference.page} · „${requirement.reference.needle}“`
+    );
     lines.push(`- Zuordnung: \`${result.status}\``);
     lines.push(`- Kurzbegründung: ${result.matchSummary}`);
     if (result.unresolved) lines.push(`- Offen: ${result.unresolved}`);
     for (const candidateId of result.candidateIds) {
-      const candidate = (candidatesByRequirement.get(result.requirementId) || []).find(
-        (entry) => entry.candidateId === candidateId
-      );
+      const candidate = (
+        candidatesByRequirement.get(result.requirementId) || []
+      ).find((entry) => entry.candidateId === candidateId);
       lines.push(
         `- Paket-B-Beleg: ${candidate.documentName}, PDF-Seite ${candidate.physicalPageNumber} · „${candidate.exactText.slice(0, 420).replace(/\s+/gu, " ").trim()}${candidate.exactText.length > 420 ? "…" : ""}“`
       );
@@ -253,7 +289,14 @@ function writePrivate(file, value) {
 
 async function run() {
   const args = parseArguments(process.argv.slice(2));
-  const allowed = new Set(["catalog", "manifest", "runRoot", "output", "model", "embeddingModel"]);
+  const allowed = new Set([
+    "catalog",
+    "manifest",
+    "runRoot",
+    "output",
+    "model",
+    "embeddingModel",
+  ]);
   const unknown = Object.keys(args).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(", ")}`);
   for (const required of ["catalog", "manifest", "runRoot", "output"])
@@ -265,7 +308,8 @@ async function run() {
   const output = path.resolve(args.output);
   regularFile(catalogFile, "Katalog");
   regularFile(manifestFile, "Manifest");
-  if (!fs.existsSync(runRoot) || !fs.lstatSync(runRoot).isDirectory()) fail(`Run-Verzeichnis fehlt: ${runRoot}`);
+  if (!fs.existsSync(runRoot) || !fs.lstatSync(runRoot).isDirectory())
+    fail(`Run-Verzeichnis fehlt: ${runRoot}`);
   if (fs.existsSync(output)) {
     const outputStat = fs.lstatSync(output);
     if (!outputStat.isDirectory() || outputStat.isSymbolicLink())
@@ -281,17 +325,32 @@ async function run() {
   const { reference, counterparts } = validateManifest(manifest, catalog);
   const artifactsByUuid = artifactMap(runRoot);
   if (artifactsByUuid.size !== manifest.documents.length)
-    fail(`Dokumentartefakte unvollständig: ${artifactsByUuid.size}/${manifest.documents.length}`);
-  const referenceEvidence = bindReferenceEvidence(catalog, artifactsByUuid.get(reference.uuid));
+    fail(
+      `Dokumentartefakte unvollständig: ${artifactsByUuid.size}/${manifest.documents.length}`
+    );
+  const referenceEvidence = bindReferenceEvidence(
+    catalog,
+    artifactsByUuid.get(reference.uuid)
+  );
   const chunks = chunksFromArtifacts(counterparts, artifactsByUuid);
-  const requirements = catalog.categories.flatMap(({ requirements }) => requirements).filter(({ pilot }) => pilot);
+  const requirements = catalog.categories
+    .flatMap(({ requirements }) => requirements)
+    .filter(({ pilot }) => pilot);
 
   const baseURL = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const chatModel = args.model || "qwen/qwen3.6-35b-a3b";
-  const embeddingModel = args.embeddingModel || "text-embedding-dinghy-law-4b-v1";
-  const client = new OpenAI({ baseURL, apiKey: process.env.LMSTUDIO_AUTH_TOKEN || "local-no-key", timeout: 600000, maxRetries: 0 });
+  const embeddingModel =
+    args.embeddingModel || "text-embedding-dinghy-law-4b-v1";
+  const client = new OpenAI({
+    baseURL,
+    apiKey: process.env.LMSTUDIO_AUTH_TOKEN || "local-no-key",
+    timeout: 600000,
+    maxRetries: 0,
+  });
 
-  console.log(`[lf-reference-pilot] ${requirements.length} Referenzpunkte, ${chunks.length} Paket-B-Kandidatenfenster`);
+  console.log(
+    `[lf-reference-pilot] ${requirements.length} Referenzpunkte, ${chunks.length} Paket-B-Kandidatenfenster`
+  );
   const chunkEmbeddingRun = await embed(
     client,
     embeddingModel,
@@ -323,14 +382,24 @@ async function run() {
   for (const category of catalog.categories) {
     if (!category.requirements.some(({ pilot }) => pilot)) continue;
     console.log(`[lf-reference-pilot] ${category.id} · ${category.label}`);
-    const classified = await classifyCategory({ client, model: chatModel, category, candidatesByRequirement });
+    const classified = await classifyCategory({
+      client,
+      model: chatModel,
+      category,
+      candidatesByRequirement,
+    });
     results.push(...classified.results);
     chatMetrics.push(classified.metrics);
   }
 
-  const totals = Object.fromEntries(Object.values(COUNTERPART_STATUS).map((status) => [status, 0]));
+  const totals = Object.fromEntries(
+    Object.values(COUNTERPART_STATUS).map((status) => [status, 0])
+  );
   for (const result of results) totals[result.status] += 1;
-  if (Object.values(totals).reduce((sum, count) => sum + count, 0) !== requirements.length)
+  if (
+    Object.values(totals).reduce((sum, count) => sum + count, 0) !==
+    requirements.length
+  )
     fail("Ergebnisgruppen decken nicht alle Referenzpunkte ab");
 
   const commitSha = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -369,7 +438,10 @@ async function run() {
       baseURL,
       chatModel,
       embeddingModel,
-      embeddingBatches: [...chunkEmbeddingRun.batches, ...queryEmbeddingRun.batches],
+      embeddingBatches: [
+        ...chunkEmbeddingRun.batches,
+        ...queryEmbeddingRun.batches,
+      ],
       chatMetrics,
     },
     referenceEvidence: Object.fromEntries(referenceEvidence),
@@ -377,17 +449,19 @@ async function run() {
     mutuallyExclusiveTotals: true,
     results: results.map((result) => ({
       ...result,
-      candidates: (candidatesByRequirement.get(result.requirementId) || []).map((candidate) => ({
-        candidateId: candidate.candidateId,
-        documentUuid: candidate.documentUuid,
-        documentName: candidate.documentName,
-        physicalPageNumber: candidate.physicalPageNumber,
-        pageStart: candidate.pageStart,
-        pageEnd: candidate.pageEnd,
-        lexicalScore: candidate.lexicalScore,
-        semanticScore: candidate.semanticScore,
-        exactTextSha256: sha256(candidate.exactText),
-      })),
+      candidates: (candidatesByRequirement.get(result.requirementId) || []).map(
+        (candidate) => ({
+          candidateId: candidate.candidateId,
+          documentUuid: candidate.documentUuid,
+          documentName: candidate.documentName,
+          physicalPageNumber: candidate.physicalPageNumber,
+          pageStart: candidate.pageStart,
+          pageEnd: candidate.pageEnd,
+          lexicalScore: candidate.lexicalScore,
+          semanticScore: candidate.semanticScore,
+          exactTextSha256: sha256(candidate.exactText),
+        })
+      ),
     })),
     proofLimits: [
       "QA-only pilot; no production rule was changed.",
@@ -396,8 +470,14 @@ async function run() {
       "The pilot does not discover provisions unique to package B.",
     ],
   };
-  writePrivate(path.join(output, "lf-reference-counterpart.private.json"), `${JSON.stringify(report, null, 2)}\n`);
-  writePrivate(path.join(output, "lf-reference-counterpart.md"), markdownReport(report, catalog, candidatesByRequirement));
+  writePrivate(
+    path.join(output, "lf-reference-counterpart.private.json"),
+    `${JSON.stringify(report, null, 2)}\n`
+  );
+  writePrivate(
+    path.join(output, "lf-reference-counterpart.md"),
+    markdownReport(report, catalog, candidatesByRequirement)
+  );
   console.log(`[lf-reference-pilot] FERTIG: ${output}`);
   console.log(`[lf-reference-pilot] Run-ID: ${runId}`);
 }
