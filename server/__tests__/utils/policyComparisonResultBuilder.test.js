@@ -23,11 +23,13 @@ const {
 const {
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
   LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+  VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   terminalOccurrenceDigest,
@@ -862,6 +864,186 @@ function writeFeC12AbsenceCategory(run, { postLossCost = false } = {}) {
         candidates: [],
         serverRejectedCandidates:
           postLossCost && componentId === "scaffolding" ? [rejection] : [],
+        unresolvedCandidateIds: [],
+      }))
+    )
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "requested-fields.private.json"),
+    JSON.stringify({
+      requirements: [
+        {
+          requirementId,
+          requestedFields: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          fields: [],
+        },
+      ],
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "rows.private.json"),
+    JSON.stringify([row(requirementId)])
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "result", "report.json"),
+    JSON.stringify({
+      status: "TECHNICAL_PASS_REVIEW_REQUIRED",
+      rowCount: 1,
+      expectedRowCount: 1,
+      gates: {
+        documentArtifact: true,
+        worksheetCatalog: true,
+        triage: true,
+        effects: true,
+        artifactIdentity: true,
+        tableContract: true,
+      },
+    })
+  );
+}
+
+function writeVs22AbsenceCategory(run, { nonTargetWaste = false } = {}) {
+  const categoryView = "VS";
+  const categoryDirectory = path.join(run.outputDirectory, categoryView);
+  const requirementId = "VS-22";
+  const components = [
+    { id: "disposal_costs", factRole: "COST" },
+    { id: "hazardous_waste", factRole: "INSURED_OBJECT" },
+    { id: "hazardous_waste_cost_limit", factRole: "LIMIT" },
+  ];
+  const contextText =
+    "Kein Versicherungsschutz besteht für die Endlagerung von Abfällen jeder Art. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfall- und Problemstoffen.";
+  const exactText = "gefährlichen Abfall";
+  const contextStart = 5_000;
+  const relativeStart = contextText.indexOf(exactText);
+  const occurrenceFor = (componentId) => ({
+    candidateId: `candidate:vs22:${componentId}:${run.document.uuid}`,
+    matchedAlias: exactText,
+    pageNumber: 5,
+    physicalPageNumber: 5,
+    documentStart: contextStart + relativeStart,
+    documentEnd: contextStart + relativeStart + exactText.length,
+    exactText,
+    context: {
+      unitType: "PARAGRAPH",
+      documentStart: contextStart,
+      documentEnd: contextStart + contextText.length,
+      text: contextText,
+    },
+    scopeLead: null,
+    pageScopeHints: [],
+    sectionScopeHint: null,
+  });
+  const targetComponentIds = new Set([
+    "hazardous_waste",
+    "hazardous_waste_cost_limit",
+  ]);
+  const occurrences = Object.fromEntries(
+    components.map(({ id }) => [id, occurrenceFor(id)])
+  );
+  const rejectionFor = (componentId) => {
+    const occurrence = occurrences[componentId];
+    return {
+      candidateId: occurrence.candidateId,
+      reason: "TRIAGE_MENTION_ONLY",
+      terminalRejectionContractId:
+        DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+      decisionOwner: "SERVER",
+      decisionBasis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+      physicalPageNumber: 5,
+      sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      observedScopeKeys: [],
+      scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+      occurrenceDigestSha256: terminalOccurrenceDigest({
+        ...occurrence,
+        scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+      }),
+    };
+  };
+
+  fs.writeFileSync(
+    path.join(run.outputDirectory, "document.private.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      fingerprint: run.document.sha256,
+      document: {
+        sourceDocumentId: run.document.sha256,
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 5,
+          processedPages: 5,
+          pagesWithText: 5,
+          complete: true,
+        },
+      },
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "worksheet.private.json"),
+    JSON.stringify({
+      catalog: { id: "vs-occurrence-full-draft-v0.15", categoryView },
+      document: { physicalPages: 5 },
+      summary: { componentCount: components.length },
+      requirements: [
+        {
+          id: requirementId,
+          label: "Entsorgungs- und Sondermüllkosten",
+          requestedFields: [],
+          componentSatisfactionPolicy: "ALL",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COVERAGE_MIXED",
+          components: components.map(({ id, factRole }) => {
+            const hasOccurrence = nonTargetWaste && targetComponentIds.has(id);
+            return {
+              id,
+              label: id,
+              factRole,
+              aliases: [id === "disposal_costs" ? "Entsorgungskosten" : exactText],
+              terminalState: hasOccurrence
+                ? "CONTROLLED_CANDIDATES_FOUND"
+                : "NO_CONTROLLED_CANDIDATE",
+              occurrenceCount: hasOccurrence ? 1 : 0,
+              occurrences: hasOccurrence ? [occurrences[id]] : [],
+            };
+          }),
+        },
+      ],
+    })
+  );
+  fs.mkdirSync(path.join(categoryDirectory, "effects"), { recursive: true });
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "materialized.private.json"),
+    JSON.stringify({
+      judgements: components.map(({ id }) => ({
+        targetId: `prepared-target:${requirementId}:${id}`,
+        requirementId,
+        componentId: id,
+        selectedCandidateIds: [],
+        unresolvedCandidateIds: [],
+        evidencePresence: "NOT_FOUND",
+        coverageEffect: "UNKNOWN",
+        conflictState: "NONE",
+        selectedScopePicture: "UNKNOWN",
+        documentApplicability: "UNKNOWN",
+        decisionOwner: "SERVER",
+      })),
+    })
+  );
+  fs.writeFileSync(
+    path.join(categoryDirectory, "effects", "targets.private.json"),
+    JSON.stringify(
+      components.map(({ id, factRole }) => ({
+        targetId: `prepared-target:${requirementId}:${id}`,
+        requirementId,
+        componentId: id,
+        factRole,
+        candidates: [],
+        serverRejectedCandidates:
+          nonTargetWaste && targetComponentIds.has(id)
+            ? [rejectionFor(id)]
+            : [],
         unresolvedCandidateIds: [],
       }))
     )
@@ -2710,6 +2892,148 @@ describe("policy comparison result builder", () => {
     expect(tamperedRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "MISSING_BOTH",
+    });
+  });
+
+  test("rebuilds VS-22 non-target terminals from files and rejects rehashed provenance tampering", () => {
+    const runA = writeRun(root, document("vs22-a", "A"));
+    const runB = writeRun(root, document("vs22-b", "B"));
+    writeVs22AbsenceCategory(runA);
+    writeVs22AbsenceCategory(runB, { nonTargetWaste: true });
+
+    const result = buildComparisonResult([runA, runB]);
+    const comparisonRow = result.categories
+      .find(({ categoryView }) => categoryView === "VS")
+      .rows.find(({ categoryId }) => categoryId === "VS-22");
+    const targetComponents = comparisonRow.packageB.searchAudit.components.filter(
+      ({ searchPlanId }) =>
+        /\/(?:hazardous_waste|hazardous_waste_cost_limit)$/u.test(searchPlanId)
+    );
+
+    expect(targetComponents).toHaveLength(2);
+    for (const componentAudit of targetComponents) {
+      expect(componentAudit).toMatchObject({
+        disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        gates: {
+          zeroOccurrenceTerminal: false,
+          zeroCandidateTerminal: false,
+          serverNegativeTerminal: true,
+          deterministicVs22NonTargetWasteOccurrenceTerminal: true,
+        },
+        terminalRejectionAudit: {
+          schemaVersion: 3,
+          contractId:
+            DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+          requirementId: "VS-22",
+          decisionOwner: "SERVER",
+          decisionBasis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+          proofMode:
+            "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
+          rejectedOccurrenceCount: 1,
+          rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+          rejections: [
+            expect.objectContaining({
+              candidateId: expect.stringContaining("candidate:vs22:"),
+              occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+              physicalPageNumber: 5,
+              sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+              observedScopeKeys: [],
+              scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+              occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+            }),
+          ],
+        },
+      });
+    }
+    expect(
+      comparisonRow.packageB.searchAudit.components.find(({ searchPlanId }) =>
+        searchPlanId.endsWith("/disposal_costs")
+      )
+    ).not.toHaveProperty("terminalRejectionAudit");
+    expect(comparisonRow.pointDecision).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const targetsFile = path.join(
+      runB.outputDirectory,
+      "VS",
+      "effects",
+      "targets.private.json"
+    );
+    const worksheetFile = path.join(
+      runB.outputDirectory,
+      "VS",
+      "worksheet.private.json"
+    );
+    const originalTargets = JSON.parse(fs.readFileSync(targetsFile, "utf8"));
+    const originalWorksheet = JSON.parse(
+      fs.readFileSync(worksheetFile, "utf8")
+    );
+    const expectTamperingToFailClosed = (mutate) => {
+      const targets = JSON.parse(JSON.stringify(originalTargets));
+      const worksheet = JSON.parse(JSON.stringify(originalWorksheet));
+      mutate({ targets, worksheet });
+      for (const target of targets.filter(({ componentId }) =>
+        ["hazardous_waste", "hazardous_waste_cost_limit"].includes(componentId)
+      )) {
+        const occurrence = worksheet.requirements[0].components.find(
+          ({ id }) => id === target.componentId
+        ).occurrences[0];
+        target.serverRejectedCandidates[0].occurrenceDigestSha256 =
+          terminalOccurrenceDigest({
+            ...occurrence,
+            scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+          });
+      }
+      fs.writeFileSync(targetsFile, JSON.stringify(targets));
+      fs.writeFileSync(worksheetFile, JSON.stringify(worksheet));
+
+      const tamperedResult = buildComparisonResult([runA, runB]);
+      const tamperedRow = tamperedResult.categories
+        .find(({ categoryView }) => categoryView === "VS")
+        .rows.find(({ categoryId }) => categoryId === "VS-22");
+      for (const componentAudit of tamperedRow.packageB.searchAudit.components.filter(
+        ({ searchPlanId }) =>
+          /\/(?:hazardous_waste|hazardous_waste_cost_limit)$/u.test(searchPlanId)
+      )) {
+        expect(componentAudit.disposition).toBe("SEARCH_INCOMPLETE");
+        expect(componentAudit.gates).not.toHaveProperty(
+          "deterministicVs22NonTargetWasteOccurrenceTerminal"
+        );
+        expect(componentAudit).not.toHaveProperty("terminalRejectionAudit");
+      }
+    };
+
+    expectTamperingToFailClosed(({ worksheet }) => {
+      for (const componentValue of worksheet.requirements[0].components.filter(
+        ({ id }) =>
+          ["hazardous_waste", "hazardous_waste_cost_limit"].includes(id)
+      )) {
+        componentValue.occurrences[0].documentStart += 1;
+        componentValue.occurrences[0].documentEnd += 1;
+      }
+    });
+    expectTamperingToFailClosed(({ worksheet }) => {
+      for (const componentValue of worksheet.requirements[0].components.filter(
+        ({ id }) =>
+          ["hazardous_waste", "hazardous_waste_cost_limit"].includes(id)
+      )) {
+        const occurrence = componentValue.occurrences[0];
+        occurrence.sectionScopeHint = {
+          scopeKey: "GENERAL_CONTRACT_TERMS",
+          source: "CURRENT_PAGE_HEADING",
+          text: "Allgemeine Vertragsbedingungen",
+          physicalPageNumber: 5,
+        };
+        occurrence.pageScopeHints = [
+          {
+            scopeKey: "GENERAL_CONTRACT_TERMS",
+            source: "CURRENT_PAGE_HEADING",
+          },
+        ];
+      }
     });
   });
 
