@@ -2625,6 +2625,175 @@ Klauselinhalt im selben Dokument halten, fremde Codes, mehrere widersprüchliche
 Werte, Nachbarpositionen, Selbstbehalte und dokumentübergreifende Joins
 ablehnen. Erst danach darf das typisierte VS-22-Portfolio bewertet werden.
 
+#### 10.29.3 Phase 2 – exakter Klauselcode bindet Aktivierungswert an allgemeinen Entsorgungsinhalt
+
+Die Quellenprüfung von DOC-02 bestätigte zwei dokumentinterne Beziehungen:
+
+- `12PA0130` steht auf physischer PDF-Seite 1 im Feuer-Abschnitt gemeinsam mit
+  `EUR 6.121.600,00` auf Erstes Risiko. Die eindeutige Klauselüberschrift auf
+  physischer Seite 8 definiert ausdrücklich allgemeine Entsorgungskosten.
+- `10PA0120` steht auf den physischen Seiten 2, 4 und 5 unter
+  Leitungswasser, Sturm und Glas jeweils gemeinsam mit demselben Betrag. Die
+  eindeutige Klauselüberschrift auf physischer Seite 13 enthält dieselbe
+  allgemeine Entsorgungsdefinition.
+
+Der Betrag gehört damit zum belegten Bestandteil `disposal_costs`. Er beweist
+weder allgemeinen Sondermüll noch ein eigenes Sondermülllimit. Insbesondere
+wird die enge Klausel für radioaktiv kontaminiertes Erdreich nicht zur
+allgemeinen Sondermülldeckung erweitert.
+
+Der neue Vertrag ist kein VS-22-ID-Sonderfall. Er ist ein wiederverwendbarer,
+komponentenbezogener Opt-in:
+
+```text
+fieldGovernorPolicy: SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1
+evidence contract: SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1
+```
+
+Er ist im aktuellen Katalog ausschließlich für
+`VS-22:disposal_costs` aktiviert. Ein Wert wird nur gebunden, wenn alle
+folgenden Bedingungen gleichzeitig gelten:
+
+1. Aktivierung und Klausel gehören zum selben Dokumentfingerprint.
+2. Die Schedule-Position enthält die ausdrückliche Form
+   `Besondere Bedingung <CODE>`; Fuzzy-, Präfix- und Nachbardokument-Joins sind
+   ausgeschlossen.
+3. Code und genau ein limitartiger Geldbetrag liegen im selben strukturellen
+   Listeneintrag.
+4. Der Listeneintrag besitzt einen positiven lokalen
+   `Mitversichert`-Governor und einen Limit-Hinweis wie `auf Erstes Risiko`.
+5. Selbstbehalt, Prämie, aufgehobene oder ersetzte Positionen werden
+   abgelehnt.
+6. Der Schedule-Scope muss exakt zum aktivierten Clause-Scope passen.
+7. Die Klauselüberschrift mit diesem Code muss dokumentweit eindeutig sein.
+8. Mehrere aktivierte Scopes sind nur zulässig, wenn alle normalisierten
+   Werte identisch sind; ein Wertkonflikt liefert keine Feldfakten.
+9. Die Feldextraktion verwendet für diese Opt-in-Komponente ausschließlich
+   den validierten Code-Governor. Lokale Zahlen im Klauseltext und der sonst
+   verwendete 360-Zeichen-Nahbereich werden nicht zusätzlich geöffnet.
+10. Die Ausgabe behält Body- und Wertquelle getrennt. Die Seite des
+    Cross-Page-Werts wird nur über einen im Worksheet vorhandenen, mit Code,
+    Fingerprint, Scope und Offset übereinstimmenden Governor akzeptiert.
+
+Betroffene produktive Abhängigkeiten:
+
+```text
+VS-Katalog und komponentenbezogener Opt-in
+  -> controlledOccurrenceWorksheet.js
+     - Aktivierungsindex, Scope, Code-, Wert- und Dokumentspans
+     - Eindeutigkeit der Klauselüberschrift
+  -> requestedFieldEvidenceContract.js
+     - erneute fail-closed Validierung
+     - ausschließliche Cross-Page-Limitextraktion
+     - komponenten- und gefahrgebundene Feldfakten
+  -> categoryTableRenderer.js
+     - getrennte Klausel- und Wertquelle
+     - keine Übernahme unvalidierter Seitennummern
+  -> coverageOnlyCertificationContract.js
+     - Policy ist Teil des versionierten Search-Contract-Digests
+  -> productContract.js sowie VS-08-/VS-15-Katalogverbraucher
+```
+
+Versionierung und Commits:
+
+```text
+Fachcommit: 326b73c0e04e4482056cc6a7c28bea4c23b30313
+Mac-Format-Forward-Fix: f27a31029c03e6568d2e1fe5f6b6ece299e36fb9
+Provenienz-Forward-Fix: a37748e112bb06a1f1efaeff1de30370490d3185
+Mac-Format-Forward-Fix: 2f6c96bb54560f4f3b974df6d6e4dc83a6104da4
+Mac-Format-Forward-Fix: 98d676cc7e56a91cdbcaaa058137ec1752465aee
+VS-Katalog: vs-occurrence-full-draft-v0.15
+Produktprofil: CUSTOMER_CORE_5_V57_EXACT_CLAUSE_CODE_FIELD_GOVERNOR
+Vergleichsvertrag: ...VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V18
+```
+
+Der erste fokussierte Mac-Lauf auf `f27a3102` fand 365/368 grüne Tests. Zwei
+Renderer-Tests bewiesen, dass die erste Fassung einer unvalidierten
+`fact.source.physicalPageNumber` vertraut hätte; der VS-15-Digest war durch
+die neue VS-Katalog-ID erwartungsgemäß veraltet. `a37748e1` bindet die
+Cross-Page-Seite deshalb nochmals an den Worksheet-Governor und aktualisiert
+den Digest. Die folgenden zwei Commits enthalten ausschließlich die auf dem
+Mac verbindliche Prettier-Formatierung.
+
+Finale Mac-Studio-Validierung:
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: 98d676cc7e56a91cdbcaaa058137ec1752465aee
+Runtime: Node v22.23.2
+Formatprüfung: PASS
+Fokussierte Suites: 9/9 PASS
+Fokussierte Tests: 369/369 PASS
+Breite Utils-Regression: 103/106 Suites PASS, 1501/1525 Tests PASS
+```
+
+Die drei roten breiten Suites und ihre 24 Tests besitzen dieselbe bekannte
+Fixture-Ursache: historische Target-QA-/Worksheet-Manifeste sind an eine alte
+Produktprofil- und Katalogkombination gebunden und brechen jetzt bereits am
+erwarteten `TARGETED_QA_PROFILE_CATALOG_MISMATCH: VS` ab. Alle fachlichen
+Worksheet-, Triage-, Evidence-, Requested-Field-, Renderer- und
+Vergleichssuites sind grün; es entstand keine neue fachliche Fehlersignatur.
+
+Realer Zehn-Dokument-Lauf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-CLAUSE-GOVERNOR-98D676CC-20260903
+Summary-Digest:
+bbbc309b2826999d36ba14d9881463eb19bdbf9ce57e8c50c5cbd3d6fe1a437f
+Input-Selection-Digest:
+a276982e4032b480359103bff926fd60f2fd1562b407edba4d873e5249277761
+Target-Selection-Digest:
+2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
+Producer: /tmp/vs22_targeted_producer-v02.cjs
+Producer-Digest:
+5dace643910fd40b0c5866bb5273f72923f28ad3d5bf23f459202b076a725e4d
+Dokumente: 10
+Qwen-Aufrufe: Triage 3 / Evidence 3
+Serverterminale Triage-Ziele: 38
+Serverterminale Evidence-Komponenten: 25
+```
+
+Der Producer summiert jetzt die gehashte Report-Kennzahl
+`input.serverTerminalTargetCount`; die in Phase 1 dokumentierte falsche Null
+aus einem nicht persistierten `decisionOwner`-Feld ist damit beseitigt.
+
+Revisionssicheres Ergebnisdelta für DOC-02:
+
+```text
+Vor Phase 2:
+  disposal_costs: INCLUDED, angefordertes Limit NOT_FOUND
+  Wertquellen über Klauselcode: 0
+
+Nach Phase 2:
+  disposal_costs: INCLUDED, angefordertes Limit COMPLETE
+  Feuer / 12PA0130: EUR 6.121.600,00 auf Erstes Risiko
+  Leitungswasser / 10PA0120: EUR 6.121.600,00 auf Erstes Risiko
+  Sturm / 10PA0120: EUR 6.121.600,00 auf Erstes Risiko
+  Glas / 10PA0120: EUR 6.121.600,00 auf Erstes Risiko
+  Body-Quellen: physische Seiten 8 und 13
+  Wertquellen: physische Seiten 1, 2, 4 und 5
+  hazardous_waste: unverändert NOT_FOUND
+  hazardous_waste_cost_limit: unverändert NOT_FOUND
+```
+
+Das Paket- und Vergleichsergebnis bleibt ehrlich unverändert:
+
+```text
+Paket A: BELEGT / Ja
+Paket B: TEILBELEGT / Nicht feststellbar
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+```
+
+Phase 2 ist als belegte Feld- und Provenienzverbesserung akzeptiert. VS-22 ist
+noch nicht abgeschlossen. Offen bleiben die tatsächlich fehlenden
+Komponenten `hazardous_waste` und `hazardous_waste_cost_limit` in Paket B
+sowie auf Paketebene mehrere Atome derselben `disposal_costs`-Komponente aus
+Vorschlag und Rahmenbedingung. Diese Punkte dürfen nicht durch eine
+Umbenennung allgemeiner Entsorgungskosten oder durch Auswahl eines beliebigen
+Dokuments entfernt werden; sie benötigen einen eigenen Rang-/Portfoliovertrag
+oder einen bestätigten kontrollierten Nichtfund.
+
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
