@@ -114,9 +114,7 @@ function projectedFieldFactAppliesToAtom({
     applicability?.schemaVersion !== 1 ||
     applicability?.contractId !==
       BINDING_GROUP_FIELD_APPLICABILITY_CONTRACT_ID ||
-    !String(applicability?.bindingGroupId || "").startsWith(
-      "binding-group:"
-    ) ||
+    !String(applicability?.bindingGroupId || "").startsWith("binding-group:") ||
     applicability?.requirementId !== requirementId ||
     !VALID_GROUP_TYPES.has(applicability?.type) ||
     applicability?.constraint !== SAME_CANDIDATE_BINDING ||

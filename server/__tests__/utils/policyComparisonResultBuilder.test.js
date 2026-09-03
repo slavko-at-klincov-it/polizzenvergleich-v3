@@ -1450,19 +1450,18 @@ describe("policy comparison result builder", () => {
         exactText: "10 %",
       },
     };
-    fact.bindingGroupFieldApplicability =
-      buildBindingGroupFieldApplicability({
-        group: {
-          id: bindingGroupId,
-          requirementId: "VS-21",
-          type: "SHARED_SPAN",
-          constraint: "SAME_CANDIDATE_BINDING",
-          candidateIds: ["candidate:cleanup", "candidate:demolition"],
-        },
-        candidateById,
-        sourceCandidateId: "candidate:cleanup",
-        fact,
-      });
+    fact.bindingGroupFieldApplicability = buildBindingGroupFieldApplicability({
+      group: {
+        id: bindingGroupId,
+        requirementId: "VS-21",
+        type: "SHARED_SPAN",
+        constraint: "SAME_CANDIDATE_BINDING",
+        candidateIds: ["candidate:cleanup", "candidate:demolition"],
+      },
+      candidateById,
+      sourceCandidateId: "candidate:cleanup",
+      fact,
+    });
     const selected = [
       ["cleanup_costs", "candidate:cleanup", "target:cleanup"],
       ["demolition_costs", "candidate:demolition", "target:demolition"],

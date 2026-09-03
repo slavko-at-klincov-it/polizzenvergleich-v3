@@ -52,13 +52,12 @@ function fixture() {
 describe("requested-field binding-group contract", () => {
   test("projects one exact field span to a selected sibling component", () => {
     const { candidateById, fact, group } = fixture();
-    fact.bindingGroupFieldApplicability =
-      buildBindingGroupFieldApplicability({
-        group,
-        candidateById,
-        sourceCandidateId: "candidate:cleanup",
-        fact,
-      });
+    fact.bindingGroupFieldApplicability = buildBindingGroupFieldApplicability({
+      group,
+      candidateById,
+      sourceCandidateId: "candidate:cleanup",
+      fact,
+    });
 
     expect(
       projectedFieldFactAppliesToAtom({
@@ -76,13 +75,12 @@ describe("requested-field binding-group contract", () => {
     ["unselected sibling", { selectedCandidateIds: ["candidate:other"] }],
   ])("fails closed for %s", (_label, overrides) => {
     const { candidateById, fact, group } = fixture();
-    fact.bindingGroupFieldApplicability =
-      buildBindingGroupFieldApplicability({
-        group,
-        candidateById,
-        sourceCandidateId: "candidate:cleanup",
-        fact,
-      });
+    fact.bindingGroupFieldApplicability = buildBindingGroupFieldApplicability({
+      group,
+      candidateById,
+      sourceCandidateId: "candidate:cleanup",
+      fact,
+    });
     expect(
       projectedFieldFactAppliesToAtom({
         fact,
@@ -96,9 +94,7 @@ describe("requested-field binding-group contract", () => {
 
   test("does not build a projection across pages or outside a shared context", () => {
     const { candidateById, fact, group } = fixture();
-    candidateById.get(
-      "candidate:demolition"
-    ).occurrence.physicalPageNumber = 4;
+    candidateById.get("candidate:demolition").occurrence.physicalPageNumber = 4;
     expect(
       buildBindingGroupFieldApplicability({
         group,
@@ -108,9 +104,7 @@ describe("requested-field binding-group contract", () => {
       })
     ).toBeNull();
 
-    candidateById.get(
-      "candidate:demolition"
-    ).occurrence.physicalPageNumber = 3;
+    candidateById.get("candidate:demolition").occurrence.physicalPageNumber = 3;
     fact.source.documentStart = 9_000;
     fact.source.documentEnd = 9_004;
     expect(
