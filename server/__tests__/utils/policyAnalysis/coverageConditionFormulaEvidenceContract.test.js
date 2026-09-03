@@ -77,7 +77,7 @@ function contract() {
           ],
           {
             operator: "OR",
-            operatorAliases: ["und / oder", "und/oder", "oder"],
+            operatorAliases: ["und / oder", "oder"],
             leftGroupIndex: 2,
             rightGroupIndex: 3,
           },
