@@ -946,7 +946,8 @@ function extractSectionGovernorLimitFacts({ occurrence, binding }) {
   const match = matches.at(-1);
   if (!match) return [];
   const percent = match[0].match(/(?:10|[lI]0)\s*%/iu);
-  if (!percent) return [];
+  const basis = match[0].match(/Gebäudeversicherungssumme/iu);
+  if (!percent || !basis) return [];
   percent.index = match.index + match[0].indexOf(percent[0]);
   return [
     sourceBoundFact({
@@ -960,6 +961,10 @@ function extractSectionGovernorLimitFacts({ occurrence, binding }) {
         limitKind: LIMIT_KIND.CAPPED,
         qualifier: "auf Erstes Risiko",
         comparisonBasis: "BUILDING_INSURANCE_SUM",
+        comparisonBasisEvidence: {
+          index: match.index + match[0].indexOf(basis[0]),
+          exactText: basis[0],
+        },
       },
     }),
   ];
