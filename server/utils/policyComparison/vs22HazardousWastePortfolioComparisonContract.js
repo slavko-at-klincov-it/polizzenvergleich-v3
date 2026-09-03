@@ -82,6 +82,8 @@ function canonicalDocumentManifest(expectedDocuments, side) {
       uuid: String(document?.uuid || "").trim(),
       sha256: String(document?.sha256 || "").trim(),
       side: String(document?.side || "").trim(),
+      role: String(document?.role || "").trim(),
+      documentStatus: String(document?.documentStatus || "").trim(),
     }))
     .sort((left, right) => left.uuid.localeCompare(right.uuid));
   if (
@@ -89,7 +91,9 @@ function canonicalDocumentManifest(expectedDocuments, side) {
       (document) =>
         !document.uuid ||
         !/^[a-f0-9]{64}$/u.test(document.sha256) ||
-        document.side !== side
+        document.side !== side ||
+        !document.role ||
+        !document.documentStatus
     ) ||
     new Set(manifest.map(({ uuid }) => uuid)).size !== manifest.length
   )
@@ -167,7 +171,13 @@ function searchMatrix(packageSummary, requirementContract, manifest) {
       audit.physicalPagesChecked
   )
     return null;
-  return { audit, catalogId, documentUuids, expectedSearchPlanIds };
+  return {
+    audit,
+    catalogId,
+    documentManifest: manifest,
+    documentUuids,
+    expectedSearchPlanIds,
+  };
 }
 
 function atomMatrix(categoryId, atoms, matrix, requirementContract) {
@@ -181,18 +191,25 @@ function atomMatrix(categoryId, atoms, matrix, requirementContract) {
       cell,
     ])
   );
+  const documents = new Map(
+    matrix.documentManifest.map((document) => [document.uuid, document])
+  );
   for (const atom of relevant) {
     const documentUuids = strings(atom?.documentUuids);
     const key = `${documentUuids?.[0] || ""}\u0000${atom?.componentId || ""}`;
     const cell = cells.get(key);
+    const document = documents.get(documentUuids?.[0]);
     const declared = VS22_COMPONENTS.find(({ id }) => id === atom.componentId);
     if (
       !cell ||
+      !document ||
       documentUuids?.length !== 1 ||
       !declared ||
       atom.factRole !== declared.factRole ||
       atom.requirementContractDigest !== requirementContract.digest ||
       atom.componentSatisfactionPolicy !== "ALL" ||
+      atom.documentRole !== document.role ||
+      atom.documentStatus !== document.documentStatus ||
       !sameJson(atom.declaredComponents, requirementContract.components) ||
       !sameJson(atom.searchAudit, cell)
     )

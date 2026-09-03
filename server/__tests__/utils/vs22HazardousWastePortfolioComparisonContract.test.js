@@ -48,8 +48,14 @@ function coherentlyRehash(audit) {
   audit.assessmentDigestSha256 = sha256(audit);
 }
 
-function document(uuid, side) {
-  return { uuid, side, sha256: uuid.repeat(64).slice(0, 64) };
+function document(uuid, side, index) {
+  return {
+    uuid,
+    side,
+    sha256: uuid.repeat(64).slice(0, 64),
+    role: index === 0 ? "MAIN_POLICY" : "SUPPLEMENT",
+    documentStatus: index === 0 ? "PROPOSAL" : "FRAMEWORK_TERMS",
+  };
 }
 
 function searchCell({ documentUuid, componentId, found }) {
@@ -162,7 +168,7 @@ function atomFor({ side, documentUuid, component, mode, index }) {
 
 function packageFixture(side, mode, documentCount) {
   const documents = Array.from({ length: documentCount }, (_, index) =>
-    document(`${side.toLowerCase()}${index + 1}`, side)
+    document(`${side.toLowerCase()}${index + 1}`, side, index)
   );
   const atoms = documents.flatMap(({ uuid }, index) =>
     components.map((component) =>
@@ -289,6 +295,12 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       "rehashes a document identity change",
       (audit) => {
         audit.sides.B.documentManifest[0].sha256 = "f".repeat(64);
+      },
+    ],
+    [
+      "rehashes an atom document status independently of the manifest",
+      (audit) => {
+        audit.sides.A.projectedAtoms[0].documentStatus = "ACTIVE";
       },
     ],
   ])("rejects an attacker that %s", (_label, mutate) => {
