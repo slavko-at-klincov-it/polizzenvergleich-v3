@@ -558,8 +558,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           UNILATERAL_COVERAGE_TREATMENT ||
         row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined;
       const vs22HazardousWastePortfolioDecisionDetected =
-        row.pointDecision?.ruleId ===
-          VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID ||
+        row.pointDecision?.ruleId === VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID ||
         row.pointDecision?.reasonCode ===
           VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE ||
         row.pointDecision?.comparisonTreatment ===

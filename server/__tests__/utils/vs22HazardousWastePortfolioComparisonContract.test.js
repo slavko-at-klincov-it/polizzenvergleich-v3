@@ -60,27 +60,28 @@ function atomFor({ side, documentUuid, component, mode, index }) {
     found,
   });
   const isLimit = component.id === "hazardous_waste_cost_limit";
-  const fields = isLimit && mode === "INCLUDED"
-    ? [
-        {
-          field: "limit",
-          status: "FOUND",
-          facts: [
-            {
-              normalizedValue: "EUR 7.300",
-              valueType: "MONEY",
-              unit: "EUR",
-              limitKind: "CAPPED",
-              source: {
-                candidateId,
-                physicalPageNumber: 5,
-                exactText: "EUR 7.300",
+  const fields =
+    isLimit && mode === "INCLUDED"
+      ? [
+          {
+            field: "limit",
+            status: "FOUND",
+            facts: [
+              {
+                normalizedValue: "EUR 7.300",
+                valueType: "MONEY",
+                unit: "EUR",
+                limitKind: "CAPPED",
+                source: {
+                  candidateId,
+                  physicalPageNumber: 5,
+                  exactText: "EUR 7.300",
+                },
               },
-            },
-          ],
-        },
-      ]
-    : [{ field: "limit", status: "NOT_FOUND", facts: [] }];
+            ],
+          },
+        ]
+      : [{ field: "limit", status: "NOT_FOUND", facts: [] }];
   return {
     requirementId: "VS-22",
     componentId: component.id,
@@ -90,11 +91,7 @@ function atomFor({ side, documentUuid, component, mode, index }) {
     documentRole: index === 0 ? "MAIN_POLICY" : "SUPPLEMENT",
     documentStatus: index === 0 ? "PROPOSAL" : "FRAMEWORK_TERMS",
     evidencePresence: found ? "FOUND" : "NOT_FOUND",
-    coverageEffect: found
-      ? isLimit
-        ? "DEFINED"
-        : "INCLUDED"
-      : "UNKNOWN",
+    coverageEffect: found ? (isLimit ? "DEFINED" : "INCLUDED") : "UNKNOWN",
     conflictState: "NONE",
     selectedScopePicture: found ? "GENERAL" : "UNKNOWN",
     scopePolicy: "GENERAL_REQUIRED",
@@ -161,9 +158,7 @@ function packageFixture(side, mode, documentCount) {
       documentUuids: documents.map(({ uuid }) => uuid).sort(),
       physicalPagesChecked: documents.length * 5,
       searchPlanIds: components
-        .map(
-          ({ id }) => `vs-occurrence-full-draft-v0.15/VS-22/${id}`
-        )
+        .map(({ id }) => `vs-occurrence-full-draft-v0.15/VS-22/${id}`)
         .sort(),
       requirementContract: contract,
       components: searchComponents,
@@ -192,38 +187,38 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
   test.each([
     [false, "A", "VORTEIL_A"],
     [true, "B", "VORTEIL_B"],
-  ])("certifies the complete direction (reverse=%s)", (reverse, winner, outcome) => {
-    const input = fixture(reverse);
-    const audit = buildVs22HazardousWastePortfolioAudit(input);
+  ])(
+    "certifies the complete direction (reverse=%s)",
+    (reverse, winner, outcome) => {
+      const input = fixture(reverse);
+      const audit = buildVs22HazardousWastePortfolioAudit(input);
 
-    expect(audit).toMatchObject({
-      schemaVersion: 1,
-      contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V1",
-      categoryId: "VS-22",
-      winner,
-      missingComponentIds: [
-        "hazardous_waste",
-        "hazardous_waste_cost_limit",
-      ],
-      assessmentDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
-    });
-    expect(vs22HazardousWastePortfolioDecision(audit)).toMatchObject({
-      outcome,
-      ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
-      reviewRequired: false,
-    });
-    expect(() =>
-      validateVs22HazardousWastePortfolioAudit(audit, {
-        categoryId: input.categoryId,
-        packageA: input.packageA,
-        packageB: input.packageB,
-        requirementContractA: contract,
-        requirementContractB: contract,
-        expectedDocumentsA: input.expectedDocumentsA,
-        expectedDocumentsB: input.expectedDocumentsB,
-      })
-    ).not.toThrow();
-  });
+      expect(audit).toMatchObject({
+        schemaVersion: 1,
+        contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V1",
+        categoryId: "VS-22",
+        winner,
+        missingComponentIds: ["hazardous_waste", "hazardous_waste_cost_limit"],
+        assessmentDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      });
+      expect(vs22HazardousWastePortfolioDecision(audit)).toMatchObject({
+        outcome,
+        ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+        reviewRequired: false,
+      });
+      expect(() =>
+        validateVs22HazardousWastePortfolioAudit(audit, {
+          categoryId: input.categoryId,
+          packageA: input.packageA,
+          packageB: input.packageB,
+          requirementContractA: contract,
+          requirementContractB: contract,
+          expectedDocumentsA: input.expectedDocumentsA,
+          expectedDocumentsB: input.expectedDocumentsB,
+        })
+      ).not.toThrow();
+    }
+  );
 
   test.each([
     ["missing search cell", (input) => input.atomsB.pop()],
@@ -249,15 +244,17 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     [
       "conflicting disposal contributor",
       (input) => {
-        input.atomsB.find(({ componentId }) => componentId === "disposal_costs").conflictState =
-          "CONFLICT";
+        input.atomsB.find(
+          ({ componentId }) => componentId === "disposal_costs"
+        ).conflictState = "CONFLICT";
       },
     ],
     [
       "unresolved disposal contributor",
       (input) => {
-        input.atomsB.find(({ componentId }) => componentId === "disposal_costs").unresolvedCandidateIds =
-          ["candidate:unresolved"];
+        input.atomsB.find(
+          ({ componentId }) => componentId === "disposal_costs"
+        ).unresolvedCandidateIds = ["candidate:unresolved"];
       },
     ],
     [

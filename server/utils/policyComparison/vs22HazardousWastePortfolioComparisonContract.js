@@ -46,7 +46,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function sha256(value) {
@@ -107,7 +109,9 @@ function searchMatrix(packageSummary, requirementContract, manifest) {
   ];
   const catalogId = catalogIds.length === 1 ? catalogIds[0] : null;
   const expectedSearchPlanIds = catalogId
-    ? VS22_COMPONENTS.map(({ id }) => `${catalogId}/${VS22_CATEGORY_ID}/${id}`).sort()
+    ? VS22_COMPONENTS.map(
+        ({ id }) => `${catalogId}/${VS22_CATEGORY_ID}/${id}`
+      ).sort()
     : null;
   const searchPlanIds = strings(audit?.searchPlanIds);
   if (
@@ -152,7 +156,9 @@ function searchMatrix(packageSummary, requirementContract, manifest) {
       return null;
     if (!pagesPerDocument.has(cell.documentUuid))
       pagesPerDocument.set(cell.documentUuid, cell.physicalPagesChecked);
-    else if (pagesPerDocument.get(cell.documentUuid) !== cell.physicalPagesChecked)
+    else if (
+      pagesPerDocument.get(cell.documentUuid) !== cell.physicalPagesChecked
+    )
       return null;
   }
   if (
@@ -211,7 +217,7 @@ function safeHazardousCoverageAtom(atom) {
   const fields = atom?.fields || [];
   return Boolean(
     atom?.componentId === "hazardous_waste" &&
-    atom?.evidencePresence === "FOUND" &&
+      atom?.evidencePresence === "FOUND" &&
       atom.coverageEffect === "INCLUDED" &&
       atom.conflictState === "NONE" &&
       atom.selectedScopePicture === "GENERAL" &&
@@ -358,11 +364,10 @@ function sideAssessment({
   );
   if (
     includedDisposal.length === 0 ||
-    byComponent.disposal_costs.some(
-      (atom) =>
-        atom.evidencePresence === "FOUND"
-          ? !safeDisposalContributor(atom)
-          : !cleanControlledAbsence(atom)
+    byComponent.disposal_costs.some((atom) =>
+      atom.evidencePresence === "FOUND"
+        ? !safeDisposalContributor(atom)
+        : !cleanControlledAbsence(atom)
     )
   )
     return null;
@@ -387,8 +392,12 @@ function sideAssessment({
         (atom) =>
           atom.evidencePresence === "FOUND" && !safeHazardousLimitAtom(atom)
       ) ||
-      [...byComponent.hazardous_waste, ...byComponent.hazardous_waste_cost_limit].some(
-        (atom) => atom.evidencePresence === "NOT_FOUND" && !cleanControlledAbsence(atom)
+      [
+        ...byComponent.hazardous_waste,
+        ...byComponent.hazardous_waste_cost_limit,
+      ].some(
+        (atom) =>
+          atom.evidencePresence === "NOT_FOUND" && !cleanControlledAbsence(atom)
       )
     )
       return null;
@@ -463,7 +472,10 @@ function packageReviewAllowsVs22Decision({
       continue;
     return false;
   }
-  return sameJson([...missing].sort(), [...VS22_HAZARDOUS_COMPONENT_IDS].sort());
+  return sameJson(
+    [...missing].sort(),
+    [...VS22_HAZARDOUS_COMPONENT_IDS].sort()
+  );
 }
 
 function buildVs22HazardousWastePortfolioAudit({
@@ -575,7 +587,8 @@ function validateVs22HazardousWastePortfolioAudit(audit, options) {
     atomsA: options?.atomsA || audit?.sides?.A?.projectedAtoms,
     atomsB: options?.atomsB || audit?.sides?.B?.projectedAtoms,
   });
-  if (!expected) throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_NOT_QUALIFIED");
+  if (!expected)
+    throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_NOT_QUALIFIED");
   if (!sameJson(audit, expected))
     throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_MISMATCH");
   return true;
