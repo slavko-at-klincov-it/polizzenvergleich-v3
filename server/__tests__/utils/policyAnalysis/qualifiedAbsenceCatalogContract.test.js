@@ -10,8 +10,8 @@ const {
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 
 const EXPECTED_MEANINGS = Object.freeze({
-  COVERAGE_ONLY: 91,
-  COVERAGE_MIXED: 25,
+  COVERAGE_ONLY: 92,
+  COVERAGE_MIXED: 24,
   COST_COVERAGE: 24,
   EXCLUSION: 13,
   VALUE_TERM: 16,
