@@ -316,7 +316,6 @@ function safeHazardousCoverageAtom(atom) {
       validSourceBinding(atom) &&
       validAtomSourcePages(atom) &&
       atom.sources.every(sourceHasHazardousWasteAnchor) &&
-      atom.sources.every(sourceHasDirectHazardousWasteBinding) &&
       !hasOptionalCoverageSource(atom) &&
       sameJson(atom.requestedFields, ["limit"]) &&
       sameJson(atom.optionalFields, []) &&
