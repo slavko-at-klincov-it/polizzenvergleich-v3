@@ -2434,6 +2434,43 @@ werden; danach muss die Rangfolge beziehungsweise gemeinsame Geltung von
 Polizze und referenzierten Bedingungen sourcegebunden geprüft werden. Bis dahin
 bleibt `readyForDecision=false`. Kein Vollrun und kein Deployment.
 
+## 10.47 FE-C02 – Supporting-Membership-Proofs autoritativ replayt
+
+Der Senior-Review des Paket-Audits fand, dass die unterstützende Elternkante
+im ResultBuilder noch aus dem Worksheet kopiert wurde. Die Forward-Fixes
+`1fc1cc71f` bis `a881858c4` ersetzen das durch einen vollständigen Neuaufbau aus
+dem servereigenen Dokumentartefakt. Vor dem Scan werden Artifact-Schema,
+64-stelliger Fingerprint und die Identität
+`fingerprint === document.sourceDocumentId` geprüft. Anschließend müssen
+erwartete und persistierte Proof-Menge sortiert exakt übereinstimmen; fehlende,
+doppelte oder manipulierte Proofs enden fail-closed. Ins Atomic Fact wird nur
+die serverseitig neu erzeugte Menge übernommen.
+
+```text
+Finaler Commit: a881858c43df290ad10ced051d30cf5f1abff179
+Mac Studio: Format PASS; 4 Suites / 171 Tests PASS
+Artefakt: QA/FE-C02-MEMBERSHIP-REPLAY-A881858C-20260903
+Summary: bb999dd458c3bf10375be44c9ee69abf57fe824af096940b21ce78930acf2cac
+Target Selection: 150778e3ad58d488ec08f884a8b0e63d85c6d3bd4cca5a5a02f7acf9998e4e12
+```
+
+Der reale Zehn-Dokument-Replay reproduziert denselben B-Elternproof
+`da49981d...`, dieselbe vollständige Paketkette und denselben Audit-Digest
+`98017351...`. Gegenüber dem favorisierten Paket-Audit auf `476d71401` bleiben
+Ergebnis, Paketstati und Laufkosten exakt stabil:
+
+```text
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+A: Ja / BELEGT
+B: Nicht feststellbar / TEILBELEGT
+2 Triage / 0 Effects / 4 Server-Rejects / 8 Evidence-Terminals
+```
+
+Damit ist die interne Membership-Provenienz gegen Worksheet-Manipulation
+geschlossen. Weiter offen ist die Validierung des daraus gebauten Audits an
+der finalen Kundenmetrik-Grenze; dieser Punkt wird als eigener Forward-Fix
+bearbeitet. Kein Vollrun und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne

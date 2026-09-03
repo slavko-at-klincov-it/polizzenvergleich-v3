@@ -5305,3 +5305,24 @@ erforderlich:
    unter welchen Bedingungen die Kette `INCLUDED` tragen darf.
 
 Keine Ergebnisfreigabe, kein 224-Zeilen-Vollrun und kein Deployment.
+
+## 109. FE-C02 – autoritativer Replay der Supporting-Membership-Kanten
+
+`1fc1cc71f` bis `a881858c4` schließen den im Senior-Review gefundenen
+Trust-Boundary-Fehler: Supporting-Membership-Proofs werden nicht mehr direkt
+aus dem Worksheet kopiert. Der ResultBuilder validiert das vollständige
+Dokumentartefakt, baut die erwartete Proof-Menge neu, vergleicht sie exakt und
+persistiert ausschließlich die serverseitige Rekonstruktion.
+
+```text
+Mac Studio: Format PASS; 4 Suites / 171 Tests PASS
+Commit: a881858c43df290ad10ced051d30cf5f1abff179
+Artefakt: QA/FE-C02-MEMBERSHIP-REPLAY-A881858C-20260903
+Summary: bb999dd458c3bf10375be44c9ee69abf57fe824af096940b21ce78930acf2cac
+Target Selection: 150778e3ad58d488ec08f884a8b0e63d85c6d3bd4cca5a5a02f7acf9998e4e12
+Ergebnis-/Proof-/Call-Delta: keines
+```
+
+Getestet sind positiver Replay, Proof-Tamper, fehlende und doppelte Proofs
+sowie ein fremder `sourceDocumentId`. Der Paket-Audit bleibt outcome-neutral.
+Als nächster Sicherheitsfix folgt dessen strikte Kundenmetrik-Validierung.
