@@ -8,6 +8,10 @@ const { DETERMINISTIC_BINDING } = require("./deterministicVsEvidenceRules");
 const {
   assertTargetRequirementSelection,
 } = require("./targetRequirementSelection");
+const {
+  VS22_OTHER_SCOPE_BASIS,
+  isVs22LiabilityOrStorageOccurrence,
+} = require("./vs22WasteScopeContract");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -309,16 +313,22 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       );
     const isVs22NonDisposalScope =
       candidate.requirement.id === "VS-22" &&
-      /(?:\bSchadenersatzverpflichtungen\b|\bUmweltstörung\b|Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung)/iu.test(
-        liabilityContext
-      );
+      isVs22LiabilityOrStorageOccurrence(source);
+    const localLiabilityContext = `${scopeLeadText}\n${
+      scopeSentence || source.exactText || ""
+    }`;
+    const isStructurallyLiabilityScoped = [
+      source.sectionScopeHint?.scopeKey,
+      ...(source.sectionScopeHint?.scopeKeys || []),
+    ].includes("HAFTPFLICHT_INSURANCE");
     const isExplicitLiabilityScope =
       !["HP", "VB"].includes(categoryView) &&
       (isVs22NonDisposalScope ||
         (allCostMembers &&
-          /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB|Bauherr)\b/iu.test(
-            liabilityContext
-          )));
+          (isStructurallyLiabilityScoped ||
+            /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB)\b/iu.test(
+              localLiabilityContext
+            ))));
     const isVs04LiabilitySum =
       candidate.requirement.id === "VS-04" &&
       (source.exactText?.trim().toLocaleLowerCase("de-AT") ===
@@ -347,7 +357,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         basis: isVs04LiabilitySum
           ? "VS04_LIABILITY_SUM_NOT_BUILDING_SUM_METHOD"
           : isVs22NonDisposalScope
-            ? "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST"
+            ? VS22_OTHER_SCOPE_BASIS
             : isExplicitLiabilityScope
               ? "LIABILITY_NOT_INSURED_COST"
               : "CLEANUP_WORK_START_NOT_COST",

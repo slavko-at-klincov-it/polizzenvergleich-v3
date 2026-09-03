@@ -1408,64 +1408,81 @@ describe("preparedEvidenceContract", () => {
     ]);
   });
 
-  test("rejects a VS-22 hazardous-waste occurrence from liability and temporary-storage scope", () => {
-    const text =
-      "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
-    const worksheet = {
-      candidateOnly: true,
-      catalog: { categoryView: "VS" },
-      requirements: [
-        {
-          id: "VS-22",
-          label: "Entsorgungskosten einschließlich Sondermüll",
-          requestedFields: ["limit"],
-          components: [
-            {
-              id: "hazardous_waste",
-              label: "Sondermüll",
-              factRole: "INSURED_OBJECT",
-              occurrences: [
-                {
-                  candidateId: "candidate:liability-storage",
-                  matchedAlias: "gefährlichen Abfällen",
-                  pageNumber: 5,
-                  exactText: "gefährlichen Abfällen",
-                  context: {
-                    unitType: "PARAGRAPH",
-                    text,
+  test.each([
+    ["disposal_costs", "COST"],
+    ["hazardous_waste", "INSURED_OBJECT"],
+    ["hazardous_waste_cost_limit", "LIMIT"],
+  ])(
+    "rejects a VS-22 liability storage occurrence for %s",
+    (componentId, factRole) => {
+      const text =
+        "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
+      const worksheet = {
+        candidateOnly: true,
+        catalog: { categoryView: "VS" },
+        requirements: [
+          {
+            id: "VS-22",
+            label: "Entsorgungskosten einschließlich Sondermüll",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: componentId,
+                label: componentId,
+                factRole,
+                occurrences: [
+                  {
+                    candidateId: "candidate:liability-storage",
+                    matchedAlias: "gefährlichen Abfällen",
+                    pageNumber: 5,
+                    exactText: "gefährlichen Abfällen",
+                    documentStart: text.indexOf("gefährlichen Abfällen"),
+                    documentEnd:
+                      text.indexOf("gefährlichen Abfällen") +
+                      "gefährlichen Abfällen".length,
+                    context: {
+                      unitType: "PARAGRAPH",
+                      text,
+                      documentStart: 0,
+                      documentEnd: text.length,
+                    },
+                    scopeLead: {
+                      text: "Haftpflichtversicherung für Umweltstörungen",
+                    },
+                    sectionScopeHint: {
+                      scopeKey: "HAFTPFLICHT_INSURANCE",
+                      text: "Haftpflichtversicherung für Umweltstörungen",
+                    },
                   },
-                  scopeLead: {
-                    text: "Haftpflichtversicherung für Umweltstörungen",
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
+                ],
+              },
+            ],
+          },
+        ],
+      };
 
-    const [target] = buildPreparedEvidenceTargets({
-      worksheet,
-      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
-      candidateTriage: [
+      const [target] = buildPreparedEvidenceTargets({
+        worksheet,
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId: "VS-22",
+            componentId,
+            candidateId: "candidate:liability-storage",
+            binding: "DIRECT",
+          },
+        ],
+      });
+
+      expect(target.candidates).toEqual([]);
+      expect(target.serverRejectedCandidates).toEqual([
         {
-          requirementId: "VS-22",
-          componentId: "hazardous_waste",
           candidateId: "candidate:liability-storage",
-          binding: "DIRECT",
+          reason: "VS_22_OTHER_SCOPE_LIABILITY_OR_STORAGE",
         },
-      ],
-    });
-
-    expect(target.candidates).toEqual([]);
-    expect(target.serverRejectedCandidates).toEqual([
-      {
-        candidateId: "candidate:liability-storage",
-        reason: "VS_22_OTHER_SCOPE_LIABILITY_OR_STORAGE",
-      },
-    ]);
-  });
+      ]);
+    }
+  );
 
   test("materializes explicit VS evidence without asking the model to select or classify it", () => {
     const worksheet = {

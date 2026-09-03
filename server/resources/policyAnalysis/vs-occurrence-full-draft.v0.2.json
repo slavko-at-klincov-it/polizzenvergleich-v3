@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.13",
+  "catalogId": "vs-occurrence-full-draft-v0.14",
   "categoryView": "VS",
   "requirements": [
     {
@@ -697,6 +697,7 @@
           "aliases": [
             "Sondermüll",
             "gefährlicher Abfall",
+            "gefährlichem Abfall",
             "gefährlichen Abfall",
             "gefährliche Abfälle",
             "gefährlichen Abfällen",
@@ -716,6 +717,7 @@
           "aliases": [
             "Sondermüll",
             "gefährlicher Abfall",
+            "gefährlichem Abfall",
             "gefährlichen Abfall",
             "gefährliche Abfälle",
             "gefährlichen Abfällen",

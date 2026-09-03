@@ -520,72 +520,139 @@ describe("candidateTriageContract", () => {
     ).toThrow("TRIAGE_SINGLE_TARGET_SERVER_TERMINAL");
   });
 
-  test("rejects a VS-22 hazardous-waste inflection from a liability storage carveback", () => {
-    const text =
-      "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
-    const worksheet = {
-      candidateOnly: true,
-      catalog: { categoryView: "VS" },
-      requirements: [
-        {
-          id: "VS-22",
-          label: "Entsorgungskosten einschließlich Sondermüll",
-          requestedFields: ["limit"],
-          components: [
-            {
-              id: "hazardous_waste",
-              label: "Sondermüll",
-              factRole: "INSURED_OBJECT",
-              occurrences: [
-                {
-                  candidateId: "candidate:liability-storage",
-                  matchedAlias: "gefährlichen Abfällen",
-                  pageNumber: 5,
-                  exactText: "gefährlichen Abfällen",
-                  documentStart: text.indexOf("gefährlichen Abfällen"),
-                  documentEnd:
-                    text.indexOf("gefährlichen Abfällen") +
-                    "gefährlichen Abfällen".length,
-                  context: {
-                    unitType: "PARAGRAPH",
-                    text,
-                    documentStart: 0,
-                    documentEnd: text.length,
+  test.each([
+    ["disposal_costs", "COST"],
+    ["hazardous_waste", "INSURED_OBJECT"],
+    ["hazardous_waste_cost_limit", "LIMIT"],
+  ])(
+    "rejects a VS-22 liability storage carveback for %s",
+    (componentId, factRole) => {
+      const text =
+        "Schadenersatzverpflichtungen aus einer Umweltstörung sind ausgeschlossen. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfällen.";
+      const worksheet = {
+        candidateOnly: true,
+        catalog: { categoryView: "VS" },
+        requirements: [
+          {
+            id: "VS-22",
+            label: "Entsorgungskosten einschließlich Sondermüll",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: componentId,
+                label: componentId,
+                factRole,
+                occurrences: [
+                  {
+                    candidateId: "candidate:liability-storage",
+                    matchedAlias: "gefährlichen Abfällen",
+                    pageNumber: 5,
+                    exactText: "gefährlichen Abfällen",
+                    documentStart: text.indexOf("gefährlichen Abfällen"),
+                    documentEnd:
+                      text.indexOf("gefährlichen Abfällen") +
+                      "gefährlichen Abfällen".length,
+                    context: {
+                      unitType: "PARAGRAPH",
+                      text,
+                      documentStart: 0,
+                      documentEnd: text.length,
+                    },
+                    scopeLead: {
+                      text: "Haftpflichtversicherung für Umweltstörungen",
+                    },
                   },
-                  scopeLead: {
-                    text: "Haftpflichtversicherung für Umweltstörungen",
-                  },
-                },
-              ],
-            },
-          ],
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+      expect(target).toMatchObject({
+        targetId: "candidate:liability-storage",
+        roleResolution: {
+          owner: "SERVER",
+          roleMatch: "MISMATCH",
+          basis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
         },
-      ],
-    };
+        scopeResolution: {
+          owner: "SERVER",
+          scopeMatch: "OTHER_SCOPE",
+          basis: "EXPLICIT_LIABILITY_SCOPE",
+        },
+        modelDecisionFields: [],
+      });
+      expect(
+        deriveCandidateBinding({
+          roleMatch: target.roleResolution.roleMatch,
+          scopeMatch: target.scopeResolution.scopeMatch,
+        })
+      ).toBe(CANDIDATE_BINDING.MENTION_ONLY);
+    }
+  );
 
-    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+  test.each([
+    ["disposal_costs", "COST"],
+    ["hazardous_waste", "INSURED_OBJECT"],
+    ["hazardous_waste_cost_limit", "LIMIT"],
+  ])(
+    "does not let an earlier liability sentence reject a later VS-22 property-cost sentence for %s",
+    (componentId, factRole) => {
+      const text =
+        "Schadenersatzverpflichtungen sind ausgeschlossen. Mitversichert sind jedoch Behandlungskosten für gefährliche Abfälle bis 10 %.";
+      const exactText = "gefährliche Abfälle";
+      const documentStart = text.indexOf(exactText);
+      const worksheet = {
+        candidateOnly: true,
+        catalog: { categoryView: "VS" },
+        requirements: [
+          {
+            id: "VS-22",
+            label: "Entsorgungskosten einschließlich Sondermüll",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: componentId,
+                label: componentId,
+                factRole,
+                occurrences: [
+                  {
+                    candidateId: "candidate:property-cost-after-reset",
+                    matchedAlias: exactText,
+                    pageNumber: 1,
+                    exactText,
+                    documentStart,
+                    documentEnd: documentStart + exactText.length,
+                    context: {
+                      unitType: "PARAGRAPH",
+                      text,
+                      documentStart: 0,
+                      documentEnd: text.length,
+                    },
+                    scopeLead: { text: "Versichert sind Sachschäden" },
+                    sectionScopeHint: {
+                      scopeKey: "GENERAL_CONTRACT_TERMS",
+                      text: "Versichert sind Sachschäden",
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
 
-    expect(target).toMatchObject({
-      targetId: "candidate:liability-storage",
-      roleResolution: {
-        owner: "SERVER",
-        roleMatch: "MISMATCH",
-        basis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
-      },
-      scopeResolution: {
-        owner: "SERVER",
-        scopeMatch: "OTHER_SCOPE",
-        basis: "EXPLICIT_LIABILITY_SCOPE",
-      },
-      modelDecisionFields: [],
-    });
-    expect(
-      deriveCandidateBinding({
-        roleMatch: target.roleResolution.roleMatch,
-        scopeMatch: target.scopeResolution.scopeMatch,
-      })
-    ).toBe(CANDIDATE_BINDING.MENTION_ONLY);
-  });
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+      expect(target.roleResolution.basis).not.toBe(
+        "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST"
+      );
+      expect(target.scopeResolution.scopeMatch).not.toBe("OTHER_SCOPE");
+    }
+  );
 
   test("attests a coordinated cost governor even when the exact alias is only Abbruch", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));

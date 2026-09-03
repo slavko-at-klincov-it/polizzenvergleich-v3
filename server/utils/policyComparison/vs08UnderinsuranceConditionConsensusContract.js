@@ -14,7 +14,7 @@ const VS08_CONDITION_CONSENSUS_REASON_CODE =
   "EQUAL_VS08_PACKAGE_CONDITION_CONSENSUS";
 
 const CATEGORY_ID = "VS-08";
-const CATALOG_ID = "vs-occurrence-full-draft-v0.13";
+const CATALOG_ID = "vs-occurrence-full-draft-v0.14";
 const COMPONENT_ID = "underinsurance_waiver_condition";
 const REQUIREMENT_CONTRACT_DIGEST =
   "06d56f1c92de98964da40daa375663e634213fa7ae2198d953bf0adc167b9024";

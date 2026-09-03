@@ -15,6 +15,10 @@ const {
 const {
   assertTargetRequirementSelection,
 } = require("./targetRequirementSelection");
+const {
+  VS22_OTHER_SCOPE_REJECTION,
+  isVs22LiabilityOrStorageOccurrence,
+} = require("./vs22WasteScopeContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -181,11 +185,9 @@ function serverScopeRejection({
   if (
     worksheet.catalog?.categoryView === "VS" &&
     requirement.id === "VS-22" &&
-    /(?:\bSchadenersatzverpflichtungen\b|\bUmweltstörung\b|Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung)/iu.test(
-      evidenceText
-    )
+    isVs22LiabilityOrStorageOccurrence(occurrence)
   )
-    return "VS_22_OTHER_SCOPE_LIABILITY_OR_STORAGE";
+    return VS22_OTHER_SCOPE_REJECTION;
   if (
     worksheet.catalog?.categoryView === "EL" &&
     /\bSchadenersatzverpflichtungen\b/iu.test(evidenceText)
