@@ -12,6 +12,9 @@ const {
   writeComparisonArtifacts,
 } = require("../../utils/policyComparison/resultBuilder");
 const {
+  FE_C02_REQUIREMENT_CONTRACT_DIGEST,
+} = require("../../utils/policyComparison/productContract");
+const {
   buildFeC07ConditionAbsenceAudit,
 } = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 const {
@@ -3932,7 +3935,9 @@ describe("policy comparison result builder", () => {
       contractId: "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1",
       componentId: "photovoltaic_as_damaged_object",
     });
-    expect(atom.requirementContractDigest).toMatch(/^[a-f0-9]{64}$/u);
+    expect(atom.requirementContractDigest).toBe(
+      FE_C02_REQUIREMENT_CONTRACT_DIGEST
+    );
     expect(atom.supportingCoverageConditionFormulaProofs).toHaveLength(1);
     expect(atom.supportingCoverageConditionFormulaProofs[0]).toMatchObject({
       formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",

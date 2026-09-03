@@ -10,10 +10,10 @@ const {
   SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
   validateCoverageConditionFormulaContract,
 } = require("../policyAnalysis/coverageConditionFormulaEvidenceContract");
-const {
-  requirementSearchContractDigest,
-} = require("../policyAnalysis/coverageOnlyCertificationContract");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  FE_C02_REQUIREMENT_CONTRACT_DIGEST,
+} = require("./productContract");
 const {
   COMPARISON_POLICY,
   DOCUMENT_RESOLUTION_POLICY,
@@ -75,13 +75,6 @@ function canonicalFeC02ComparisonContract() {
   return validateMembershipConditionScopeComparisonContract(
     canonicalFeC02Requirement().membershipConditionScopeComparisonContract
   );
-}
-
-function canonicalFeC02RequirementContractDigest() {
-  return requirementSearchContractDigest({
-    catalogId: feCatalog.catalogId,
-    requirement: canonicalFeC02Requirement(),
-  });
 }
 
 function exactKeys(value, keys, code) {
@@ -762,7 +755,7 @@ function buildMembershipConditionScopeQualificationReplay({
   )
     return null;
   const contract = canonicalFeC02ComparisonContract();
-  const requirementContractDigest = canonicalFeC02RequirementContractDigest();
+  const requirementContractDigest = FE_C02_REQUIREMENT_CONTRACT_DIGEST;
   const sides = {
     A: qualificationSideProjection({
       side: "A",

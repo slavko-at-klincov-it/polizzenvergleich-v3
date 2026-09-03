@@ -22,6 +22,7 @@ const {
   customerResultText,
 } = require("../../utils/policyComparison/customerResultPresenter");
 const {
+  FE_C02_REQUIREMENT_CONTRACT_DIGEST,
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
 const {
@@ -32,20 +33,9 @@ const {
   validateCoverageConditionFormulaContract,
 } = require("../../utils/policyAnalysis/coverageConditionFormulaEvidenceContract");
 const {
-  requirementSearchContractDigest,
-} = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
-const {
   buildMembershipConditionEvidence,
 } = require("../../utils/policyAnalysis/objectMembershipEvidenceContract");
 const feCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
-
-const feC02Requirement = feCatalog.requirements.find(
-  ({ id }) => id === "FE-C02"
-);
-const feC02RequirementContractDigest = requirementSearchContractDigest({
-  catalogId: feCatalog.catalogId,
-  requirement: feC02Requirement,
-});
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -277,7 +267,7 @@ function commonAtom(document, overrides = {}) {
       formulaEvidenceContract(),
     ],
     membershipConditionScopeComparisonContract: contract(),
-    requirementContractDigest: feC02RequirementContractDigest,
+    requirementContractDigest: FE_C02_REQUIREMENT_CONTRACT_DIGEST,
     ...overrides,
   };
 }
