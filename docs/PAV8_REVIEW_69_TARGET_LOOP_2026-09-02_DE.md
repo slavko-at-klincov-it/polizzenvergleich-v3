@@ -59,8 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `6/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `FE-A10`, `LW-07`,
-`LW-12` und `ST-27` sind abgeschlossen; 34 Fälle der ursprünglichen Familie
+Status: `7/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `FE-A10`,
+`LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 33 Fälle der ursprünglichen Familie
 bleiben offen.
 
 ```text
@@ -72,8 +72,8 @@ EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
 Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
-`VS-18` und `LW-12` gehören nach den in Abschnitt 10.19, 10.27
-beziehungsweise 10.21 dokumentierten Zielnachweisen nicht mehr zur
+`VS-18`, `VS-21` und `LW-12` gehören nach den in Abschnitt 10.19, 10.27,
+10.28 beziehungsweise 10.21 dokumentierten Zielnachweisen nicht mehr zur
 operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
@@ -2349,6 +2349,98 @@ Der verbleibende Kundenblocker ist weiterhin ausschließlich
 kein fremdes Limit zugeschrieben. Das sichtbare Ergebnis bleibt deshalb
 vorerst `UNKLAR / Review`; R69-A und die Gesamtprojektion ändern sich in
 diesem Zwischenschritt nicht.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+#### 10.28.4 Fix 3 – Summenausgleich als Modifier, Limitformen typisiert abgeschlossen
+
+Die letzte offene EABS-Fundstelle ist keine zusätzliche Limitposition. Ihr
+Wortlaut bestimmt ausschließlich, dass Aufräum-, Abbruch- und
+Feuerlöschkosten für Gebäude und Inhalt `gemeinsam summarisch versichert`
+sind. Sie verändert damit die Verteilung einer vorhandenen
+Versicherungssumme, enthält aber weder einen Eurobetrag noch einen Prozentsatz.
+
+Der neue Vertrag `VS21_COST_LIMIT_PORTFOLIO_AUDIT_V1` trennt deshalb zwei
+Ebenen, ohne Evidenz zu löschen:
+
+1. Ein Primärportfolio gilt nur, wenn `cleanup_costs` und
+   `demolition_costs` jeweils als eingeschlossen, quellengebunden,
+   konfliktfrei und mit vollständigem `limit`-Feld belegt sind.
+2. Eine feldlose Klausel darf nur als
+   `SHARED_SUM_INSURANCE_ALLOCATION_MODIFIER_V1` klassifiziert werden, wenn
+   beide Kostenkomponenten auf derselben Dokumentseite denselben lokalen
+   Klauseltext zu Aufräum-, Abbruch- und Feuerlöschkosten, Gebäude und Inhalt
+   sowie `gemeinsam summarisch versichert` tragen und der Text kein eigenes
+   Geld- oder Prozentlimit enthält.
+3. Bei `TEILBELEGT` wird der Abschluss nur zugelassen, wenn der bestehende
+   Paket-Audit ausschließlich `FIELD_INCOMPLETE` für genau die Dokumente
+   dieses zertifizierten Modifiers ausweist. Andere Feld-, Scope-, Konflikt-,
+   Quellen-, Kandidaten- oder Rangblocker lassen den Vertrag fehlschließen.
+4. Nur die inkompatible Typkombination `PERCENT` gegen `MONEY` wird durch
+   diese Regel entschieden. Gleiche oder unbekannte Typen fallen in den
+   normalen Vergleichsweg zurück.
+
+Der erste Implementierungsstand war absichtlich zu streng und blieb im
+frischen Ziellauf bei `UNKLAR`: Ein niedriger geranktes Bedingungsdokument
+enthielt zwei ungelöste, aber laut Paket-Rollup nicht beitragende Kandidaten.
+Der Forward-Fix entfernt diese Kandidaten nicht. Er bindet die Ausnahme
+stattdessen an den bereits vorhandenen Paket-Audit, der im realen Fall als
+einzigen Blocker die EABS-Summenausgleichsklausel bestätigt.
+
+```text
+Fachcommit: cc11ec4eaef02348c216e1815bf4c30e1c8b7b91
+Format-Forward-Fix: ebf286428bcb6f7977f9660794a3585297c83df9
+Fixture-Forward-Fix: e0dd36e86098f54d76b66e9b24d7abeeb2f3d135
+Review-Gate-Forward-Fix: 89bfa8821ed7a0cf57341f8e54cc852b6d763a21
+Produktprofil: CUSTOMER_CORE_5_V53_VS21_LIMIT_PORTFOLIO_REVIEW_GATE
+Vergleichsvertrag: ...VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_V14
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Mac-Studio-Commit: 89bfa8821ed7a0cf57341f8e54cc852b6d763a21
+Runtime: Node v22.23.2
+Modell: qwen/qwen3.6-35b-a3b
+Modell-Tokenlimit: 42496
+Mac-Studio-Formatprüfung: PASS
+Mac-Studio-Suites: 5/5 PASS
+Mac-Studio-Tests: 147/147 PASS
+```
+
+Der verbindliche frische Zehn-Dokumente-Lauf lautet:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-21-LIMIT-PORTFOLIO-89BFA882-20260903
+Summary-Digest:
+4bc6967d5d73147a16f598bee3d469811e438740e0a87787b1ac5217465c34b8
+Target-Selection-Digest:
+52367916ba9973a34f26d4e91098bada32b74aace24516347bad0188ec4f9a4b
+Producer-Digest:
+69c929d1dfadeddb1485b82b97687ac38b9bbceb892650a940250354b309e710
+Triage-Qwen-Aufrufe: 5
+Evidence-Qwen-Aufrufe: 5
+Triage-Serverablehnungen: 0
+```
+
+```text
+Paket A: BELEGT; Aufräum- und Abbruchkosten; 10 % / 15 %
+Paket B: TEILBELEGT; Aufräum- und Abbruchkosten; EUR 6.121.600,00
+EABS-Modifier: gemeinsam summarisch versichert; kein eigenes Limit
+
+Vorher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+Nachher: NICHT_VERGLEICHBAR / INCOMPATIBLE_LIMIT_VALUE_TYPES / kein Review
+Regel: VS21_INCOMPATIBLE_LIMIT_VALUE_TYPES_V1
+```
+
+Das Ergebnis ist bewusst kein Vorteil: Für Paket A ist im VS-21-Beleg keine
+absolute, deckungsgleiche Berechnungsbasis gebunden. Der Eurobetrag von Paket B
+darf weder als Bezugsbasis für Paket A verwendet noch gegen 10/15 Prozent
+gerechnet werden. Damit steigt R69-A auf `7/40`; `33` Fälle bleiben offen.
+Unter Einbeziehung aller akzeptierten gezielten Deltas verschiebt sich die
+noch nicht durch einen frischen 224-Zeilen-Vollrun bestätigte Projektion von
+`VORTEIL_A 2 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 11 / UNKLAR 54` auf
+`VORTEIL_A 2 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 12 / UNKLAR 53`.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
