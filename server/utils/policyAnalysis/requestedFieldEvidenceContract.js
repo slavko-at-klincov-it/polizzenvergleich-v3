@@ -447,8 +447,7 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
   const scopes = occurrence?.sectionScopeHint?.scopeKeys?.length
     ? occurrence.sectionScopeHint.scopeKeys
     : [occurrence?.sectionScopeHint?.scopeKey].filter(Boolean);
-  const codePattern =
-    /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const codePattern = /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
   const codes =
@@ -474,7 +473,8 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     codes[0][1].toLocaleUpperCase("de") !== clauseCode ||
     amounts.length !== 1 ||
     governor.amountText !== amounts[0][0] ||
-    governor.amountDocumentStart !== governor.documentStart + amounts[0].index ||
+    governor.amountDocumentStart !==
+      governor.documentStart + amounts[0].index ||
     governor.amountDocumentEnd !==
       governor.amountDocumentStart + governor.amountText.length ||
     !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
@@ -1750,8 +1750,7 @@ function extractorFor(requirement, field, component = null) {
     typeof component === "string" ? component : component?.id || null;
   if (
     field === "limit" &&
-    component?.fieldGovernorPolicy ===
-      EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY
+    component?.fieldGovernorPolicy === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY
   )
     return extractExactClauseCodeFieldGovernorLimitFacts;
   if (
@@ -2013,33 +2012,31 @@ function extractPreferredFacts({
       occurrence: indexed.occurrence,
       binding,
       worksheet,
-    }).map(
-      (fact) => {
-        const componentScopedFact =
-          (indexed.component.factRole === "INSURED_OBJECT" ||
-            indexed.component.fieldGovernorPolicy ===
-              EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY) &&
-          indexed.requirement.components.length > 1
-            ? {
-                ...fact,
-                componentScope: {
-                  id: indexed.component.id,
-                  label: indexed.component.label,
-                },
-              }
-            : fact;
-        const bindingGroupFieldApplicability =
-          buildBindingGroupFieldApplicability({
-            group: bindingGroupById.get(indexed.occurrence.bindingGroupId),
-            candidateById,
-            sourceCandidateId: candidateId,
-            fact: componentScopedFact,
-          });
-        return bindingGroupFieldApplicability
-          ? { ...componentScopedFact, bindingGroupFieldApplicability }
-          : componentScopedFact;
-      }
-    );
+    }).map((fact) => {
+      const componentScopedFact =
+        (indexed.component.factRole === "INSURED_OBJECT" ||
+          indexed.component.fieldGovernorPolicy ===
+            EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY) &&
+        indexed.requirement.components.length > 1
+          ? {
+              ...fact,
+              componentScope: {
+                id: indexed.component.id,
+                label: indexed.component.label,
+              },
+            }
+          : fact;
+      const bindingGroupFieldApplicability =
+        buildBindingGroupFieldApplicability({
+          group: bindingGroupById.get(indexed.occurrence.bindingGroupId),
+          candidateById,
+          sourceCandidateId: candidateId,
+          fact: componentScopedFact,
+        });
+      return bindingGroupFieldApplicability
+        ? { ...componentScopedFact, bindingGroupFieldApplicability }
+        : componentScopedFact;
+    });
     factsByBinding.get(binding).push(...facts);
   }
 

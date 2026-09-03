@@ -766,8 +766,7 @@ function exactClauseCodeFieldGovernors({
   activationScopes,
 }) {
   const governorsByClauseCode = new Map();
-  const codePattern =
-    /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const codePattern = /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
 
@@ -804,14 +803,15 @@ function exactClauseCodeFieldGovernors({
         currentSectionHeading?.scopeKey ||
         page.inheritedSectionHeading?.scopeKey;
       if (!scopeKey?.endsWith("_INSURANCE")) continue;
-      const currentCoverageGovernor = page.coverageGovernors
-        .filter(
-          ({ pageEnd, pageStart }) =>
-            pageEnd <= match.index &&
-            (!currentSectionHeading ||
-              pageStart >= currentSectionHeading.pageStart)
-        )
-        .at(-1) || page.inheritedCoverageGovernor;
+      const currentCoverageGovernor =
+        page.coverageGovernors
+          .filter(
+            ({ pageEnd, pageStart }) =>
+              pageEnd <= match.index &&
+              (!currentSectionHeading ||
+                pageStart >= currentSectionHeading.pageStart)
+          )
+          .at(-1) || page.inheritedCoverageGovernor;
       if (!positiveActivationGovernor(currentCoverageGovernor)) continue;
 
       const clauseCode = codes[0];
@@ -2705,9 +2705,11 @@ function buildControlledOccurrenceWorksheet({
               EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY &&
             sectionScopeHint?.clauseCode &&
             clauseSectionCounts.get(sectionScopeHint.clauseCode) === 1
-              ? (exactClauseCodeGovernors.get(
-                  sectionScopeHint.clauseCode.toLocaleUpperCase("de")
-                ) || []).filter(({ scopeKey }) =>
+              ? (
+                  exactClauseCodeGovernors.get(
+                    sectionScopeHint.clauseCode.toLocaleUpperCase("de")
+                  ) || []
+                ).filter(({ scopeKey }) =>
                   sectionScopeHint.scopeKeys?.length
                     ? sectionScopeHint.scopeKeys.includes(scopeKey)
                     : sectionScopeHint.scopeKey === scopeKey

@@ -676,12 +676,12 @@
       "label": "Entsorgungskosten einschließlich Sondermüll",
       "requestedFields": ["limit"],
       "components": [
-      {
-        "id": "disposal_costs",
-        "label": "Entsorgungskosten",
-        "factRole": "COST",
-        "fieldGovernorPolicy": "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
-        "aliases": [
+        {
+          "id": "disposal_costs",
+          "label": "Entsorgungskosten",
+          "factRole": "COST",
+          "fieldGovernorPolicy": "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
+          "aliases": [
             "Entsorgungskosten",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",

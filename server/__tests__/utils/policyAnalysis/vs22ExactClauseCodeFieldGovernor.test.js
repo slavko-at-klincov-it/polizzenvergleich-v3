@@ -40,9 +40,8 @@ function vs22Catalog({ optIn = true } = {}) {
     fullCatalog.requirements.find(({ id }) => id === "VS-22")
   );
   if (!optIn)
-    delete requirement.components.find(
-      ({ id }) => id === "disposal_costs"
-    ).fieldGovernorPolicy;
+    delete requirement.components.find(({ id }) => id === "disposal_costs")
+      .fieldGovernorPolicy;
   return { ...fullCatalog, requirements: [requirement] };
 }
 
@@ -169,9 +168,9 @@ describe("VS-22 exact clause-code field governor", () => {
       "LEITUNGSWASSER_INSURANCE",
       "STURM_INSURANCE",
     ]);
-    expect(new Set(field.facts.map(({ normalizedValue }) => normalizedValue))).toEqual(
-      new Set(["EUR 6.121.600,00"])
-    );
+    expect(
+      new Set(field.facts.map(({ normalizedValue }) => normalizedValue))
+    ).toEqual(new Set(["EUR 6.121.600,00"]));
   });
 
   test.each([
