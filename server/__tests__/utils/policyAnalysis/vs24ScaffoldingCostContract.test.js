@@ -175,7 +175,7 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     "preserves the exact declared comparison scope under %s",
     (heading, expectedScopeKey) => {
       const worksheet = worksheetFor(
-        `${heading}\nGerüstkosten sind nach einem ersatzpflichtigen Schaden mitversichert.`
+        `${heading}\nMitversichert sind Gerüstkosten.`
       );
       const {
         requirement: selectedRequirement,
@@ -217,7 +217,7 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
 
   test("does not expose an undeclared comparison scope key", () => {
     const worksheet = worksheetFor(
-      "Glasbruchversicherung\nGerüstkosten sind nach einem ersatzpflichtigen Glasschaden mitversichert."
+      "Glasbruchversicherung\nMitversichert sind Gerüstkosten."
     );
     worksheet.requirements[0].scopeRules.narrowScopeKeys = ["FEUER_INSURANCE"];
 
