@@ -1000,7 +1000,9 @@ function writeVs22AbsenceCategory(run, { nonTargetWaste = false } = {}) {
               id,
               label: id,
               factRole,
-              aliases: [id === "disposal_costs" ? "Entsorgungskosten" : exactText],
+              aliases: [
+                id === "disposal_costs" ? "Entsorgungskosten" : exactText,
+              ],
               terminalState: hasOccurrence
                 ? "CONTROLLED_CANDIDATES_FOUND"
                 : "NO_CONTROLLED_CANDIDATE",
@@ -2713,7 +2715,8 @@ describe("policy comparison result builder", () => {
         delete tampered.categories[0].rows[0].pointDecision
           .unilateralCoverageAbsenceAudit,
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible = false),
+        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible =
+          false),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
           "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2"),
@@ -2771,7 +2774,8 @@ describe("policy comparison result builder", () => {
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.bilateralAbsenceAudit.sides[0].physicalPagesChecked += 1),
       (tampered) =>
-        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction = false),
+        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction =
+          false),
       (tampered) => {
         const decision = tampered.categories[0].rows[0].pointDecision;
         decision.outcome = "KEIN_DOKUMENTIERTER_VORTEIL";
@@ -2905,10 +2909,10 @@ describe("policy comparison result builder", () => {
     const comparisonRow = result.categories
       .find(({ categoryView }) => categoryView === "VS")
       .rows.find(({ categoryId }) => categoryId === "VS-22");
-    const targetComponents = comparisonRow.packageB.searchAudit.components.filter(
-      ({ searchPlanId }) =>
+    const targetComponents =
+      comparisonRow.packageB.searchAudit.components.filter(({ searchPlanId }) =>
         /\/(?:hazardous_waste|hazardous_waste_cost_limit)$/u.test(searchPlanId)
-    );
+      );
 
     expect(targetComponents).toHaveLength(2);
     for (const componentAudit of targetComponents) {
@@ -2927,14 +2931,14 @@ describe("policy comparison result builder", () => {
           requirementId: "VS-22",
           decisionOwner: "SERVER",
           decisionBasis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
-          proofMode:
-            "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
+          proofMode: "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
           rejectedOccurrenceCount: 1,
           rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
           rejections: [
             expect.objectContaining({
               candidateId: expect.stringContaining("candidate:vs22:"),
-              occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+              occurrenceDigestContractId:
+                TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
               physicalPageNumber: 5,
               sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
               observedScopeKeys: [],
@@ -2996,7 +3000,9 @@ describe("policy comparison result builder", () => {
         .rows.find(({ categoryId }) => categoryId === "VS-22");
       for (const componentAudit of tamperedRow.packageB.searchAudit.components.filter(
         ({ searchPlanId }) =>
-          /\/(?:hazardous_waste|hazardous_waste_cost_limit)$/u.test(searchPlanId)
+          /\/(?:hazardous_waste|hazardous_waste_cost_limit)$/u.test(
+            searchPlanId
+          )
       )) {
         expect(componentAudit.disposition).toBe("SEARCH_INCOMPLETE");
         expect(componentAudit.gates).not.toHaveProperty(
