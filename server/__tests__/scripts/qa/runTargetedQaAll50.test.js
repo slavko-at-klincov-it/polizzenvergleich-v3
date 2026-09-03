@@ -436,10 +436,12 @@ describe("targeted QA all-50 runner", () => {
       const documentIndex = Math.floor(index / CATEGORY_ORDER.length);
       const document = value.documents[documentIndex];
       expect(call.parsed.documentArtifact).toBe(
-        path.join(
-          value.baselineRoot,
-          `DOC-${String(documentIndex + 1).padStart(2, "0")}-${document.uuid}`,
-          "document.private.json"
+        fs.realpathSync(
+          path.join(
+            value.baselineRoot,
+            `DOC-${String(documentIndex + 1).padStart(2, "0")}-${document.uuid}`,
+            "document.private.json"
+          )
         )
       );
     });
