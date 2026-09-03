@@ -471,8 +471,7 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     !Number.isInteger(governor?.physicalPageNumber) ||
     governor.physicalPageNumber < 1 ||
     governor.physicalPageNumber > worksheet?.document?.physicalPages ||
-    governor?.pageBoundaryPhysicalPageNumber !==
-      governor.physicalPageNumber ||
+    governor?.pageBoundaryPhysicalPageNumber !== governor.physicalPageNumber ||
     !Number.isInteger(governor?.pageDocumentStart) ||
     !Number.isInteger(governor?.pageDocumentEnd) ||
     governor.pageDocumentStart < 0 ||
