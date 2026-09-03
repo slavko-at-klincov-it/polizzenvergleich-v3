@@ -173,9 +173,24 @@ function sideProjection(atom, comparisonContract, evidenceContract) {
   const proofDigests = [];
   const keys = new Set();
   for (const part of atomParts(atom)) {
+    let normalizedComparisonContract;
+    let normalizedEvidenceContract;
+    try {
+      normalizedEvidenceContract = validateObjectScopeEvidenceContract(
+        part?.objectScopeEvidenceContract,
+        "objectScopeIdentityComparisonPart"
+      );
+      normalizedComparisonContract =
+        validateObjectScopeIdentityComparisonContract(
+          part?.objectScopeIdentityComparisonContract,
+          normalizedEvidenceContract
+        );
+    } catch {
+      return null;
+    }
     if (
-      !sameJson(part?.objectScopeIdentityComparisonContract, comparisonContract) ||
-      !sameJson(part?.objectScopeEvidenceContract, evidenceContract) ||
+      !sameJson(normalizedComparisonContract, comparisonContract) ||
+      !sameJson(normalizedEvidenceContract, evidenceContract) ||
       part?.conflictState !== "NONE" ||
       !Array.isArray(part?.selectedCandidateIds) ||
       part.selectedCandidateIds.length === 0

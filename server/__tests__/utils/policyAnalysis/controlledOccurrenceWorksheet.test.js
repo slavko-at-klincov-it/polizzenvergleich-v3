@@ -2902,16 +2902,16 @@ describe("controlledOccurrenceWorksheet", () => {
       components: [
         expect.objectContaining({
           id: "building_glazing_breakage",
-          objectScopeEvidenceContract: {
+          objectScopeEvidenceContract: expect.objectContaining({
             contractId: "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
-          },
-          objectScopeIdentityComparisonContract: {
+          }),
+          objectScopeIdentityComparisonContract: expect.objectContaining({
             contractId: "SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1",
             allowedObjectScopeKeys: [
               "ALL_INSURED_BUILDING_GLAZING",
               "COMMON_ACCESS_AREA_BUILDING_GLAZING",
             ],
-          },
+          }),
         }),
       ],
     });
