@@ -5193,3 +5193,27 @@ Objektklassifikations-Governor die vorherige Listeneinheit beendet. Erst ein
 erneuter Zehn-Dokument-Lauf darf diesen Punkt schließen.
 
 Kein Vollrun, keine Ergebnisfreigabe und kein Deployment.
+
+## 105. FE-C02 Membership V4 – nächste Klassifikationsgrenze respektiert
+
+`d5fa7a72e` ergänzt `objectClassificationGovernors` in der gemeinsamen
+Strukturgrenzenmenge. Der Regressionstest bildet eine positive
+Gebäude-Mitgliedschaft direkt vor einer negativen Folgeklassifikation ab und
+fordert, dass deren Überschrift nicht in den vorherigen Listenpunkt gelangt.
+Vertrag, Katalog und Produktprofil wurden auf V4/v0.14/V89 erhöht.
+
+```text
+Mac Studio: Format PASS; 8 Suites / 239 Tests PASS
+Artefakt: QA/FE-C02-BOUNDARY-D5FA7A72-20260903
+Summary: 2b1cce10adaa1635a6c937b6a0f464f6b3d0d44e5e3d237c51b392aa4ee4d3d4
+Target Selection: bfe8938b65efb1cdcef544b104c29e160c8e107acd798e88b0d1a31a9692a8ae
+Elternproof: da49981d791755ff6d48d9a73a5826caa34ed30e11844f2f714970a4428b0a8d
+Belegspan: 1893–2120; nächste Überschrift ausgeschlossen
+Ergebnis-/Call-/Terminal-Delta: keines
+```
+
+Damit sind beide gerichteten Objektkanten und die Bedingungen präzise
+persistiert. Offen sind weiterhin Feuer-/Gebäudeaktivierung, exakter
+EABS-Referenz-/Editionsmatch, Konfliktfreiheit und Rang. Diese werden im
+nächsten Schritt zunächst nur als Audit materialisiert; die Entscheidung
+bleibt unverändert. Kein Vollrun und kein Deployment.

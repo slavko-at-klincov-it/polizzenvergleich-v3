@@ -2246,6 +2246,45 @@ gesperrt, bis diese Grenze separat korrigiert und erneut real geprüft wurde.
 
 Kein Vollrun, keine Ergebnisänderung und kein Deployment.
 
+## 10.43 FE-C02 – Objektklassifikationsgrenze geschlossen
+
+Commit `d5fa7a72e` führt Objektklassifikations-Governors als echte
+Strukturgrenzen für Listenpunkte. Damit endet ein Mitgliedsnachweis vor einer
+nachfolgenden, anders gerichteten Klassenüberschrift. Weil sich der kanonische
+Belegspan und sein Digest ändern, wurde der Vertrag bewusst auf
+`SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4`, der FE-Katalog auf `v0.14` und
+das Produktprofil auf V89 versioniert.
+
+```text
+Commit: d5fa7a72ea84ff74c0009306824e9442a1f5f7dc
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Mac Studio: Format PASS; 8 Suites / 239 Tests PASS
+Artefakt: QA/FE-C02-BOUNDARY-D5FA7A72-20260903
+Summary-SHA: 2b1cce10adaa1635a6c937b6a0f464f6b3d0d44e5e3d237c51b392aa4ee4d3d4
+Target-Selection-SHA: bfe8938b65efb1cdcef544b104c29e160c8e107acd798e88b0d1a31a9692a8ae
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+```
+
+Der erneute Zehn-Dokument-Lauf liefert genau einen B-Elternnachweis. Sein
+`memberContextSpan` ist nun source-exakt auf Offset `1893–2120` begrenzt und
+endet mit `im Gebäudeneuwert enthalten sind.`. Die folgende Überschrift ist
+nicht mehr enthalten.
+
+```text
+Context-SHA: 02a0810aa4d20b9353ad0c9b3ee842abfcd0dfaae802b83d7db7e7f1666940a8
+Proof-Digest: da49981d791755ff6d48d9a73a5826caa34ed30e11844f2f714970a4428b0a8d
+A: BELEGT / INCLUDED
+B: TEILBELEGT / DEFINED
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+Calls: 2 Triage / 0 Effects / 4 Serverablehnungen / 8 Terminals
+```
+
+Gegenüber Baseline, V2 und dem noch zu weiten V3-Nachweis gibt es kein
+Ergebnis-, Call- oder Terminal-Delta. Der Boundary-Fix verändert ausschließlich
+die Belegpräzision. Nächster Schritt bleibt der outcome-neutrale
+Aktivierungs-/Referenz-Audit. Kein Vollrun und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne
