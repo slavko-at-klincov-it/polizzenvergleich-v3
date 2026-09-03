@@ -2931,7 +2931,7 @@ Ergänzte Gegenproben:
 - falscher Clause-Scope im Renderer;
 - negativer Governor-Text im Renderer;
 - echter Pfad `Worksheet -> Candidate Triage -> Prepared Evidence ->
-  Requested Fields -> Category Table Renderer` plus manipulierte Gegenprobe.
+Requested Fields -> Category Table Renderer` plus manipulierte Gegenprobe.
 
 Mac-Studio-Validierung des akzeptierten Quellstands:
 
