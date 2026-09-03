@@ -670,6 +670,90 @@ function nestedListContinuationProof({
   };
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalJson(value[key])])
+    );
+  return value;
+}
+
+/**
+ * Rebuilds an opted-in nested-list continuation proof from the authoritative
+ * PageMap bytes. Exact canonical equality validates every stored field,
+ * offset, segment, source hash, boundary and aggregate digest. Side effects:
+ * none. Role: validation.
+ */
+function validNestedListContinuationProof(occurrence, pageContent, pageMap) {
+  try {
+    if (
+      typeof pageContent !== "string" ||
+      !Array.isArray(pageMap) ||
+      occurrence?.nestedListContinuationProof?.contractId !==
+        NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
+    )
+      return false;
+    const physicalPageNumber = Number(occurrence?.physicalPageNumber);
+    const pageStart = Number(occurrence?.pageStart);
+    const pageEnd = Number(occurrence?.pageEnd);
+    const documentStart = Number(occurrence?.documentStart);
+    const documentEnd = Number(occurrence?.documentEnd);
+    if (
+      !Number.isInteger(physicalPageNumber) ||
+      !Number.isInteger(pageStart) ||
+      !Number.isInteger(pageEnd) ||
+      !Number.isInteger(documentStart) ||
+      !Number.isInteger(documentEnd) ||
+      pageStart < 0 ||
+      pageEnd <= pageStart ||
+      documentEnd <= documentStart
+    )
+      return false;
+
+    const { pages } = validateDocument({
+      pageContent,
+      pageMap,
+      pdfExtraction: {
+        schemaVersion: 1,
+        complete: true,
+        totalPages: pageMap.length,
+        processedPages: pageMap.length,
+      },
+    });
+    const page = pages.find(
+      ({ physicalPageNumber: number }) => number === physicalPageNumber
+    );
+    if (
+      !page ||
+      occurrence.pageNumber !== physicalPageNumber ||
+      documentStart !== page.start + pageStart ||
+      documentEnd !== page.start + pageEnd ||
+      pageEnd > page.text.length ||
+      String(occurrence.exactText || "") !==
+        pageContent.slice(documentStart, documentEnd)
+    )
+      return false;
+
+    const expected = nestedListContinuationProof({
+      pageContent,
+      page,
+      nextPage: pages[page.pageNumber] || null,
+      occurrenceStart: pageStart,
+      followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
+    });
+    return Boolean(
+      expected &&
+        JSON.stringify(canonicalJson(occurrence.nestedListContinuationProof)) ===
+          JSON.stringify(canonicalJson(expected))
+    );
+  } catch {
+    return false;
+  }
+}
+
 function centeredWordWindow(text, occurrenceStart, occurrenceEnd, wordRadius) {
   const words = [...text.matchAll(/\S+/gu)].map((match) => ({
     start: match.index,
@@ -3296,4 +3380,5 @@ module.exports = {
   normalizeWithOffsetMap,
   structuralContext,
   validFollowingStructuralBoundaryProof,
+  validNestedListContinuationProof,
 };

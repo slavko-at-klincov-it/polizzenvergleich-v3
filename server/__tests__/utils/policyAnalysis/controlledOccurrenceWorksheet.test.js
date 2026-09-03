@@ -13,6 +13,7 @@ const {
   findAliasRanges,
   normalizeWithOffsetMap,
   validFollowingStructuralBoundaryProof,
+  validNestedListContinuationProof,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 const {
   buildCandidateTriagePayload,
@@ -122,6 +123,44 @@ function structuralListContextCatalog(
         ],
       },
     ],
+  };
+}
+
+function nestedListContinuationFixture() {
+  const firstPage = [
+    "• Zielklausel gilt für die folgenden Sachen an",
+    "- erster untergeordneter Gegenstand;",
+    "- zweiter untergeordneter Gegenstand;",
+  ].join("\n");
+  const secondPage = [
+    "Seite 2",
+    "- dritter untergeordneter Gegenstand;",
+    "- vierter untergeordneter Gegenstand.",
+    "",
+    "• Gleichrangiger Folgepunkt bleibt getrennt.",
+  ].join("\n");
+  const separator = "\n\n[DOCUMENT_PAGE 2]\n";
+  const document = {
+    ...documentFromPages([firstPage, secondPage]),
+    pageContent: `${firstPage}${separator}${secondPage}`,
+    pageMap: [
+      { pageNumber: 1, start: 0, end: firstPage.length },
+      {
+        pageNumber: 2,
+        start: firstPage.length + separator.length,
+        end: firstPage.length + separator.length + secondPage.length,
+      },
+    ],
+  };
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document,
+    documentFingerprint: "continued-nested-list",
+    catalog: structuralListContextCatalog(),
+  });
+  return {
+    document,
+    firstPage,
+    target: component(worksheet, "QA-LIST", "target"),
   };
 }
 
@@ -887,38 +926,9 @@ describe("controlledOccurrenceWorksheet", () => {
   });
 
   test("proves a parent sublist continuation while keeping the occurrence context page-local", () => {
-    const firstPage = [
-      "• Zielklausel gilt für die folgenden Sachen an",
-      "- erster untergeordneter Gegenstand;",
-      "- zweiter untergeordneter Gegenstand;",
-    ].join("\n");
-    const secondPage = [
-      "Seite 2",
-      "- dritter untergeordneter Gegenstand;",
-      "- vierter untergeordneter Gegenstand.",
-      "",
-      "• Gleichrangiger Folgepunkt bleibt getrennt.",
-    ].join("\n");
-    const separator = "\n\n[DOCUMENT_PAGE 2]\n";
-    const document = {
-      ...documentFromPages([firstPage, secondPage]),
-      pageContent: `${firstPage}${separator}${secondPage}`,
-      pageMap: [
-        { pageNumber: 1, start: 0, end: firstPage.length },
-        {
-          pageNumber: 2,
-          start: firstPage.length + separator.length,
-          end: firstPage.length + separator.length + secondPage.length,
-        },
-      ],
-    };
-    const worksheet = buildControlledOccurrenceWorksheet({
-      document,
-      documentFingerprint: "continued-nested-list",
-      catalog: structuralListContextCatalog(),
-    });
-    const [occurrence] = component(worksheet, "QA-LIST", "target").occurrences;
-    expect(component(worksheet, "QA-LIST", "target")).toMatchObject({
+    const { document, firstPage, target } = nestedListContinuationFixture();
+    const [occurrence] = target.occurrences;
+    expect(target).toMatchObject({
       nestedListContinuationProofContractId:
         NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
     });
@@ -964,6 +974,13 @@ describe("controlledOccurrenceWorksheet", () => {
         document.pageContent.slice(segment.documentStart, segment.documentEnd)
       ).toBe(segment.text);
     expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
+    expect(
+      validNestedListContinuationProof(
+        occurrence,
+        document.pageContent,
+        document.pageMap
+      )
+    ).toBe(true);
   });
 
   test("keeps nested-list continuation provenance opt-in per component", () => {
@@ -981,6 +998,74 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(target.occurrences[0]).not.toHaveProperty(
       "nestedListContinuationProof"
     );
+  });
+
+  test.each([
+    ["top-level offsets", (proof) => (proof.documentEnd -= 1)],
+    ["segment offsets", (proof) => (proof.segments[0].pageEnd -= 1)],
+    ["segment text bytes", (proof) => (proof.segments[0].text += "x")],
+    ["segment SHA-256", (proof) => (proof.segments[1].sha256 = "0".repeat(64))],
+    [
+      "segment physical page",
+      (proof) => (proof.segments[1].physicalPageNumber = 1),
+    ],
+    ["page gap", (proof) => (proof.gap.text += "x")],
+    ["page-gap offsets", (proof) => (proof.gap.documentStart += 1)],
+    ["page-gap SHA-256", (proof) => (proof.gap.sha256 = "0".repeat(64))],
+    ["page prelude", (proof) => (proof.pagePrelude.pageStart = 1)],
+    [
+      "page-prelude SHA-256",
+      (proof) => (proof.pagePrelude.sha256 = "0".repeat(64)),
+    ],
+    ["stop boundary", (proof) => (proof.boundary.kind = "PAGE_END")],
+    [
+      "stop-boundary offsets",
+      (proof) => (proof.boundary.documentStart += 1),
+    ],
+    [
+      "stop-boundary SHA-256",
+      (proof) => (proof.boundary.sha256 = "0".repeat(64)),
+    ],
+    ["proof digest", (proof) => (proof.proofDigest = "f".repeat(64))],
+  ])("rejects tampered nested-list %s", (_label, mutate) => {
+    const { document, target } = nestedListContinuationFixture();
+    const candidate = JSON.parse(JSON.stringify(target.occurrences[0]));
+    mutate(candidate.nestedListContinuationProof);
+
+    expect(
+      validNestedListContinuationProof(
+        candidate,
+        document.pageContent,
+        document.pageMap
+      )
+    ).toBe(false);
+  });
+
+  test("rejects nested-list proofs against tampered source bytes or PageMap boundaries", () => {
+    const { document, target } = nestedListContinuationFixture();
+    const [candidate] = target.occurrences;
+    const tamperedContent = document.pageContent.replace(
+      "vierter untergeordneter",
+      "vierter untergeordneteX"
+    );
+    expect(tamperedContent).toHaveLength(document.pageContent.length);
+    expect(
+      validNestedListContinuationProof(
+        candidate,
+        tamperedContent,
+        document.pageMap
+      )
+    ).toBe(false);
+
+    const tamperedPageMap = JSON.parse(JSON.stringify(document.pageMap));
+    tamperedPageMap[1].start += 1;
+    expect(
+      validNestedListContinuationProof(
+        candidate,
+        document.pageContent,
+        tamperedPageMap
+      )
+    ).toBe(false);
   });
 
   test("opts only the declared FE-A05 component into nested-list continuation provenance", () => {
