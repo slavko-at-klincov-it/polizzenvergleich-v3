@@ -3906,8 +3906,8 @@ describe("policy comparison result builder", () => {
               conflictState: "NONE",
               selectedScopePicture: "GENERAL",
               documentApplicability: "CONDITIONAL",
-              selectedCandidateIds: candidates.map(({ candidateId }) =>
-                candidateId
+              selectedCandidateIds: candidates.map(
+                ({ candidateId }) => candidateId
               ),
               unresolvedCandidateIds: [],
             },

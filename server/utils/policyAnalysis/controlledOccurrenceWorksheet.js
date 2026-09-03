@@ -2361,10 +2361,7 @@ function validateCatalog(catalog) {
         undefined &&
       supportingCoverageConditionFormulaEvidenceContracts.length === 0
     )
-      throw worksheetError(
-        "COVERAGE_CONDITION_FORMULA_CONTRACTS_INVALID",
-        id
-      );
+      throw worksheetError("COVERAGE_CONDITION_FORMULA_CONTRACTS_INVALID", id);
     const supportingScopedPackageReferenceEvidenceContracts = Array.isArray(
       requirement.supportingScopedPackageReferenceEvidenceContracts
     )

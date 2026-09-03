@@ -1474,35 +1474,34 @@ function materializeAtomicFacts({
         throw new Error("REFERENCED_TERMS_IDENTITY_PROOF_REPLAY_INVALID");
       return JSON.parse(JSON.stringify(actual));
     })();
-    const sources = selectedTargetCandidates
-      .map((candidate) => {
-        const {
-          candidateId,
-          physicalPageNumber,
-          printedPageLabel,
-          exactText,
-          candidateBinding,
-          deterministicBindingBasis,
-          comparisonScopeKey,
-        } = candidate;
-        return {
-          candidateId,
-          physicalPageNumber,
-          printedPageLabel,
-          exactText,
-          conditionCheckText: conditionCheckText(candidate),
-          ...(candidateBinding ? { candidateBinding } : {}),
-          ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
-          ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
-          ...(candidate.objectMembershipProof
-            ? {
-                objectMembershipProof: JSON.parse(
-                  JSON.stringify(candidate.objectMembershipProof)
-                ),
-              }
-            : {}),
-        };
-      });
+    const sources = selectedTargetCandidates.map((candidate) => {
+      const {
+        candidateId,
+        physicalPageNumber,
+        printedPageLabel,
+        exactText,
+        candidateBinding,
+        deterministicBindingBasis,
+        comparisonScopeKey,
+      } = candidate;
+      return {
+        candidateId,
+        physicalPageNumber,
+        printedPageLabel,
+        exactText,
+        conditionCheckText: conditionCheckText(candidate),
+        ...(candidateBinding ? { candidateBinding } : {}),
+        ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
+        ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+        ...(candidate.objectMembershipProof
+          ? {
+              objectMembershipProof: JSON.parse(
+                JSON.stringify(candidate.objectMembershipProof)
+              ),
+            }
+          : {}),
+      };
+    });
     const comparisonScopeKeys = unique(
       sources.map(({ comparisonScopeKey }) => comparisonScopeKey)
     ).sort();

@@ -796,17 +796,10 @@
                 "predicateKey": "SECTION_INSURED",
                 "actorBinding": null,
                 "actorCombination": null,
-                "forbiddenAliases": [
-                  "nicht versichert",
-                  "nicht vereinbart"
-                ],
+                "forbiddenAliases": ["nicht versichert", "nicht vereinbart"],
                 "requiredGroups": [
                   ["Sparten", "Versicherungssparten"],
-                  [
-                    "versichert werden",
-                    "vereinbart sind",
-                    "sind vereinbart"
-                  ]
+                  ["versichert werden", "vereinbart sind", "sind vereinbart"]
                 ]
               },
               {
@@ -824,10 +817,7 @@
                       "leftGroupIndex": 2,
                       "rightGroupIndex": 3
                     },
-                    "forbiddenAliases": [
-                      "nicht im Eigentum",
-                      "kein Eigentum"
-                    ],
+                    "forbiddenAliases": ["nicht im Eigentum", "kein Eigentum"],
                     "requiredGroups": [
                       ["versicherten Sachen", "versicherte Sachen"],
                       ["Eigentum"],
