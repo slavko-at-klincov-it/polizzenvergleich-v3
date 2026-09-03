@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.17",
+  "catalogId": "fe-occurrence-full-draft-v0.18",
   "categoryView": "FE",
   "requirements": [
     {
@@ -769,7 +769,7 @@
       "requestedFields": [],
       "supportingObjectMembershipEvidenceContracts": [
         {
-          "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
+          "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5",
           "membership": "MEMBER_OF_CLASS",
           "memberObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
           "classObjectKey": "BUILDING",
@@ -781,7 +781,68 @@
           "allowedClassificationSources": [
             "CURRENT_PAGE_OBJECT_CLASSIFICATION",
             "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
-          ]
+          ],
+          "conditionEvidenceContract": {
+            "contractId": "SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_V1",
+            "conditionSetKey": "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
+            "sourcePolicy": "MEMBER_CONTEXT_AFTER_MEMBER_SPAN_V1",
+            "combinationPolicy": "ALL_CONJUNCTIVE_SAME_CONTEXT_V1",
+            "negationPolicy": "REJECT_LOCAL_NEGATION_V1",
+            "predicates": [
+              {
+                "predicateKey": "OBJECT_OWNED_BY_BUILDING_OWNER",
+                "requiredGroups": [
+                  ["sofern"],
+                  ["im Eigentum", "in dem Eigentum"],
+                  [
+                    "Gebäudeeigentümer",
+                    "Gebäudeeigentümers",
+                    "Eigentümer des Gebäudes"
+                  ],
+                  ["befinden", "stehen"]
+                ],
+                "forbiddenAliases": [
+                  "nicht im Eigentum",
+                  "kein Eigentum",
+                  "ohne Eigentum",
+                  "keinesfalls im Eigentum"
+                ]
+              },
+              {
+                "predicateKey": "BUILDING_OWNER_HAS_PROVABLE_REINSTATEMENT_OBLIGATION",
+                "requiredGroups": [
+                  ["soweit"],
+                  [
+                    "Gebäudeeigentümer",
+                    "Gebäudeeigentümers",
+                    "Eigentümer des Gebäudes"
+                  ],
+                  ["Wiederherstellung", "Wiederaufbau"],
+                  ["nachweislich", "nachgewiesen"],
+                  ["aufzukommen hat", "aufkommen muss", "verpflichtet ist"]
+                ],
+                "forbiddenAliases": [
+                  "nicht aufzukommen",
+                  "nicht verpflichtet",
+                  "keine Wiederherstellungspflicht",
+                  "ohne Wiederherstellungspflicht"
+                ]
+              },
+              {
+                "predicateKey": "OBJECT_INCLUDED_IN_BUILDING_REPLACEMENT_VALUE",
+                "requiredGroups": [
+                  ["Gebäudeneuwert", "Neuwert des Gebäudes"],
+                  ["enthalten", "eingerechnet", "berücksichtigt"]
+                ],
+                "forbiddenAliases": [
+                  "nicht im Gebäudeneuwert",
+                  "nicht im Neuwert des Gebäudes",
+                  "nur im Zeitwert",
+                  "nicht enthalten"
+                ]
+              }
+            ]
+          }
         }
       ],
       "supportingScopedPackageReferenceEvidenceContracts": [
@@ -812,7 +873,7 @@
         }
       ],
       "packageActivatedObjectMembershipAuditContract": {
-        "contractId": "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1",
+        "contractId": "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V2",
         "targetObjectKey": "PHOTOVOLTAIC_INSTALLATION",
         "coveredObjectKey": "BUILDING",
         "membershipPath": [
@@ -823,7 +884,10 @@
         "perilScopeKey": "FEUER_INSURANCE",
         "referenceFamilyKey": "EABS",
         "conditionPolicy": "PRESERVE_SOURCE_CONDITIONS_V1",
-        "conflictPolicy": "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1"
+        "conflictPolicy": "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1",
+        "requiredConditionSetKeys": [
+          "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1"
+        ]
       },
       "components": [
         {

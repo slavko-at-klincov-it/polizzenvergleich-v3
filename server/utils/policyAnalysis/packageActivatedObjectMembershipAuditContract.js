@@ -1,12 +1,17 @@
 const crypto = require("crypto");
+const {
+  validMembershipConditionEvidence,
+} = require("./objectMembershipEvidenceContract");
 
 const PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID =
-  "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1";
-const PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_SCHEMA_VERSION = 1;
+  "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V2";
+const PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_SCHEMA_VERSION = 2;
 const CONDITION_POLICY = "PRESERVE_SOURCE_CONDITIONS_V1";
 const CONFLICT_POLICY = "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1";
 const COMPLETE_SOURCE_CHAIN =
   "COMPLETE_SOURCE_CHAIN_REQUIRES_TYPED_CONDITION_AND_PRECEDENCE";
+const COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS =
+  "COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS_OUTCOME_LOCKED";
 const INCOMPLETE_SOURCE_CHAIN = "INCOMPLETE_SOURCE_CHAIN";
 const AMBIGUOUS_SOURCE_CHAIN = "AMBIGUOUS_SOURCE_CHAIN";
 const REFERENCE_KEY_MISMATCH = "REFERENCE_KEY_MISMATCH";
@@ -117,6 +122,7 @@ function validatePackageActivatedObjectMembershipAuditContract(
     "referenceFamilyKey",
     "conditionPolicy",
     "conflictPolicy",
+    "requiredConditionSetKeys",
   ];
   if (
     !contract ||
@@ -145,6 +151,22 @@ function validatePackageActivatedObjectMembershipAuditContract(
     contract.membershipPath.length < 2
   )
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_INVALID", detail);
+  if (
+    !Array.isArray(contract.requiredConditionSetKeys) ||
+    contract.requiredConditionSetKeys.length === 0
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONDITION_SETS_INVALID", detail);
+  const requiredConditionSetKeys = contract.requiredConditionSetKeys
+    .map((key, index) =>
+      requiredConceptKey(key, `${detail}:requiredConditionSetKeys[${index}]`)
+    )
+    .sort();
+  if (
+    new Set(requiredConditionSetKeys).size !== requiredConditionSetKeys.length ||
+    JSON.stringify(requiredConditionSetKeys) !==
+      JSON.stringify(contract.requiredConditionSetKeys)
+  )
+    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONDITION_SETS_INVALID", detail);
   const membershipPath = contract.membershipPath.map((key, index) =>
     requiredConceptKey(key, `${detail}:membershipPath[${index}]`)
   );
@@ -178,6 +200,7 @@ function validatePackageActivatedObjectMembershipAuditContract(
     ),
     conditionPolicy: CONDITION_POLICY,
     conflictPolicy: CONFLICT_POLICY,
+    requiredConditionSetKeys,
   };
 }
 
@@ -369,6 +392,31 @@ function buildPackageActivatedObjectMembershipAudit({ categoryId, atoms }) {
     status = REFERENCE_KEY_MISMATCH;
     reasonCode = "REFERENCE_AND_IDENTITY_KEY_DIFFER";
     remainingGates = ["REFERENCE_IDENTITY_MATCH"];
+  } else {
+    const conditionEvidence = pathEntries
+      .flat()
+      .map(({ proof }) => proof?.edge?.conditionEvidence)
+      .filter(Boolean);
+    const conditionSetKeys = [
+      ...new Set(conditionEvidence.map(({ conditionSetKey }) => conditionSetKey)),
+    ].sort();
+    if (
+      JSON.stringify(conditionSetKeys) ===
+        JSON.stringify(contract.requiredConditionSetKeys) &&
+      conditionEvidence.length === contract.requiredConditionSetKeys.length &&
+      conditionEvidence.every(
+        (value) =>
+          value.typingStatus === "COMPLETE" &&
+          validMembershipConditionEvidence(value)
+      )
+    ) {
+      status = COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS;
+      reasonCode = "SOURCE_CHAIN_AND_CONDITIONS_TYPED_OUTCOME_LOCKED";
+      remainingGates = [
+        "MEMBERSHIP_CONDITION_SCOPE_COMPARISON",
+        "DOCUMENT_PRECEDENCE",
+      ];
+    }
   }
   const evidence = {
     references: references.map(projectedEntry),
@@ -379,6 +427,7 @@ function buildPackageActivatedObjectMembershipAudit({ categoryId, atoms }) {
         documentUuids: entry.documentUuids,
         proofDigest: entry.proof.proofDigest,
         memberContextSpan: entry.proof.edge.memberContextSpan || null,
+        conditionEvidence: entry.proof.edge.conditionEvidence || null,
       })),
     })),
     conflicts: conflicts.map((entry) => ({
@@ -454,12 +503,38 @@ function validateMembershipPathEvidence(
     for (const entry of edge.entries) {
       exactObjectKeys(
         entry,
-        ["documentUuids", "proofDigest", "memberContextSpan"],
+        [
+          "documentUuids",
+          "proofDigest",
+          "memberContextSpan",
+          "conditionEvidence",
+        ],
         "PACKAGE_MEMBERSHIP_AUDIT_PATH_ENTRY_INVALID"
       );
       validateDocumentUuids(entry.documentUuids, allowedDocumentUuids);
       validateProofDigest(entry.proofDigest);
       validateMemberContextSpan(entry.memberContextSpan);
+      if (
+        entry.conditionEvidence !== null &&
+        !validMembershipConditionEvidence(entry.conditionEvidence)
+      )
+        throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONDITION_EVIDENCE_INVALID");
+      for (const predicate of entry.conditionEvidence?.predicates || []) {
+        const span = predicate.span;
+        const relativeStart =
+          span.documentStart - entry.memberContextSpan.documentStart;
+        const relativeEnd =
+          span.documentEnd - entry.memberContextSpan.documentStart;
+        if (
+          relativeStart < 0 ||
+          relativeEnd > entry.memberContextSpan.exactText.length ||
+          entry.memberContextSpan.exactText.slice(relativeStart, relativeEnd) !==
+            span.exactText
+        )
+          throw auditError(
+            "PACKAGE_MEMBERSHIP_AUDIT_CONDITION_SPAN_OUTSIDE_CONTEXT"
+          );
+      }
       digests.push(entry.proofDigest);
     }
     if (
@@ -598,6 +673,16 @@ function validatePackageActivatedObjectMembershipAudit(
     audit.evidence.references.length > 1 ||
     audit.evidence.identities.length > 1 ||
     audit.evidence.membershipPath.some(({ entries }) => entries.length > 1);
+  const conditionEvidence = audit.evidence.membershipPath
+    .flatMap(({ entries }) => entries)
+    .map(({ conditionEvidence: value }) => value)
+    .filter(Boolean);
+  const completeTypedConditions =
+    conditionEvidence.length === contract.requiredConditionSetKeys.length &&
+    conditionEvidence.every(({ typingStatus }) => typingStatus === "COMPLETE") &&
+    JSON.stringify(
+      [...new Set(conditionEvidence.map(({ conditionSetKey }) => conditionSetKey))].sort()
+    ) === JSON.stringify(contract.requiredConditionSetKeys);
   const expectedByStatus = {
     [COMPLETE_SOURCE_CHAIN]: {
       reasonCode: "SOURCE_CHAIN_COMPLETE_OUTCOME_LOCKED",
@@ -606,7 +691,21 @@ function validatePackageActivatedObjectMembershipAudit(
         missing.length === 0 &&
         !ambiguous &&
         audit.evidence.conflicts.length === 0 &&
-        typeof audit.referenceKey === "string",
+        typeof audit.referenceKey === "string" &&
+        !completeTypedConditions,
+    },
+    [COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS]: {
+      reasonCode: "SOURCE_CHAIN_AND_CONDITIONS_TYPED_OUTCOME_LOCKED",
+      gates: [
+        "MEMBERSHIP_CONDITION_SCOPE_COMPARISON",
+        "DOCUMENT_PRECEDENCE",
+      ],
+      valid:
+        missing.length === 0 &&
+        !ambiguous &&
+        audit.evidence.conflicts.length === 0 &&
+        typeof audit.referenceKey === "string" &&
+        completeTypedConditions,
     },
     [INCOMPLETE_SOURCE_CHAIN]: {
       reasonCode: "SOURCE_CHAIN_COMPONENT_MISSING",
@@ -651,6 +750,7 @@ function validatePackageActivatedObjectMembershipAudit(
 module.exports = {
   AMBIGUOUS_SOURCE_CHAIN,
   COMPLETE_SOURCE_CHAIN,
+  COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS,
   CONDITION_POLICY,
   CONFLICTING_MEMBERSHIP,
   CONFLICT_POLICY,

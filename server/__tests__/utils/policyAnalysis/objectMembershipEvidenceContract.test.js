@@ -3,10 +3,12 @@ const {
   OBJECT_MEMBERSHIP,
   OBJECT_MEMBERSHIP_CLASSIFICATION_SOURCE,
   SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+  SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID,
   buildSourceBoundObjectMembershipProof,
   validateObjectMembershipEvidenceContract,
   validSourceBoundObjectMembershipProof,
 } = require("../../../utils/policyAnalysis/objectMembershipEvidenceContract");
+const feCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -29,16 +31,20 @@ function contract(membership = OBJECT_MEMBERSHIP.MEMBER_OF_CLASS) {
 function fixture({
   membership = OBJECT_MEMBERSHIP.MEMBER_OF_CLASS,
   precedingPage = false,
+  item = "·Solar- und Photovoltaikanlagen;",
+  heading: headingOverride = null,
+  subject: subjectOverride = null,
 } = {}) {
   const heading =
-    membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
+    headingOverride ||
+    (membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
       ? "1.3Haustechnische Anlagen und Adaptierungen\ndas sind:"
-      : "Nicht als Haustechnische Anlagen und Adaptierungen gelten:";
+      : "Nicht als Haustechnische Anlagen und Adaptierungen gelten:");
   const subject =
-    membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
+    subjectOverride ||
+    (membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS
       ? "1.3Haustechnische Anlagen und Adaptierungen"
-      : "Haustechnische Anlagen und Adaptierungen";
-  const item = "·Solar- und Photovoltaikanlagen;";
+      : "Haustechnische Anlagen und Adaptierungen");
   const pages = precedingPage ? [heading, item] : [`${heading}\n${item}`];
   let pageContent = "";
   const pageMap = pages.map((text, index) => {
@@ -92,6 +98,15 @@ function fixture({
       },
     },
   };
+}
+
+function conditionAwareParentContract() {
+  const requirement = feCatalog.requirements.find(({ id }) => id === "FE-C02");
+  const value = requirement.supportingObjectMembershipEvidenceContracts[0];
+  expect(value.contractId).toBe(
+    SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID
+  );
+  return JSON.parse(JSON.stringify(value));
 }
 
 describe("source-bound object-membership evidence contract", () => {
@@ -237,6 +252,81 @@ describe("source-bound object-membership evidence contract", () => {
         ...sourceTamper,
       })
     ).toBeNull();
+  });
+
+  test("types three conjunctive membership prerequisites without claiming satisfaction", () => {
+    const item =
+      "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und\n" +
+      "soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im\n" +
+      "Gebäudeneuwert enthalten sind.";
+    const value = fixture({
+      item,
+      heading: "1.2 Gebäude\ndas sind:",
+      subject: "1.2 Gebäude",
+    });
+    const proof = buildSourceBoundObjectMembershipProof({
+      contract: conditionAwareParentContract(),
+      ...value,
+    });
+
+    expect(proof.edge.conditionEvidence).toMatchObject({
+      typingStatus: "COMPLETE",
+      conjunctionValid: true,
+      satisfaction: "NOT_EVALUATED",
+      readyForDecision: false,
+      predicates: [
+        {
+          predicateKey:
+            "BUILDING_OWNER_HAS_PROVABLE_REINSTATEMENT_OBLIGATION",
+          effect: "REQUIREMENT",
+        },
+        {
+          predicateKey: "OBJECT_INCLUDED_IN_BUILDING_REPLACEMENT_VALUE",
+          effect: "REQUIREMENT",
+        },
+        {
+          predicateKey: "OBJECT_OWNED_BY_BUILDING_OWNER",
+          effect: "REQUIREMENT",
+        },
+      ],
+    });
+    expect(proof.edge.conditionEvidence).not.toHaveProperty("coverageEffect");
+    expect(proof.edge.conditionEvidence.evidenceDigest).toMatch(
+      /^[a-f0-9]{64}$/u
+    );
+  });
+
+  test.each([
+    [
+      "missing predicate",
+      "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+      "INCOMPLETE",
+    ],
+    [
+      "local negation",
+      "·Haustechnische Anlagen und Adaptierungen sofern sie sich nicht im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+      "NEGATED",
+    ],
+    [
+      "disjunctive connector",
+      "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden oder soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+      "AMBIGUOUS",
+    ],
+  ])("keeps %s fail closed", (_label, item, expectedStatus) => {
+    const value = fixture({
+      item,
+      heading: "1.2 Gebäude\ndas sind:",
+      subject: "1.2 Gebäude",
+    });
+    const proof = buildSourceBoundObjectMembershipProof({
+      contract: conditionAwareParentContract(),
+      ...value,
+    });
+    expect(proof.edge.conditionEvidence).toMatchObject({
+      typingStatus: expectedStatus,
+      satisfaction: "NOT_EVALUATED",
+      readyForDecision: false,
+    });
   });
 
   test("rejects invalid catalog contracts before inspecting evidence", () => {

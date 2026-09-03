@@ -85,7 +85,7 @@ function schema7PackageResult() {
 
 function currentFeC02PackageResult() {
   const activatedContract = {
-    contractId: "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V1",
+    contractId: "PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_V2",
     targetObjectKey: "PHOTOVOLTAIC_INSTALLATION",
     coveredObjectKey: "BUILDING",
     membershipPath: [
@@ -97,6 +97,9 @@ function currentFeC02PackageResult() {
     referenceFamilyKey: "EABS",
     conditionPolicy: "PRESERVE_SOURCE_CONDITIONS_V1",
     conflictPolicy: "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1",
+    requiredConditionSetKeys: [
+      "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
+    ],
   };
   const atomA = {
     requirementId: "FE-C02",

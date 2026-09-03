@@ -2,6 +2,13 @@ const crypto = require("crypto");
 
 const SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID =
   "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4";
+const SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID =
+  "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5";
+const SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID =
+  "SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_V1";
+const CONDITION_SOURCE_POLICY = "MEMBER_CONTEXT_AFTER_MEMBER_SPAN_V1";
+const CONDITION_COMBINATION = "ALL_CONJUNCTIVE_SAME_CONTEXT_V1";
+const CONDITION_NEGATION_POLICY = "REJECT_LOCAL_NEGATION_V1";
 const OBJECT_MEMBERSHIP = Object.freeze({
   MEMBER_OF_CLASS: "MEMBER_OF_CLASS",
   EXCLUDED_FROM_CLASS: "EXCLUDED_FROM_CLASS",
@@ -110,6 +117,87 @@ function validateAliases(values, detail) {
   );
 }
 
+function validateMembershipConditionEvidenceContract(contract, detail) {
+  exactKeys(
+    contract,
+    [
+      "contractId",
+      "conditionSetKey",
+      "sourcePolicy",
+      "combinationPolicy",
+      "negationPolicy",
+      "predicates",
+    ],
+    "OBJECT_MEMBERSHIP_CONDITION_CONTRACT_INVALID",
+    detail
+  );
+  if (
+    contract.contractId !==
+      SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID ||
+    contract.sourcePolicy !== CONDITION_SOURCE_POLICY ||
+    contract.combinationPolicy !== CONDITION_COMBINATION ||
+    contract.negationPolicy !== CONDITION_NEGATION_POLICY ||
+    !Array.isArray(contract.predicates) ||
+    contract.predicates.length < 2
+  )
+    throw membershipError(
+      "OBJECT_MEMBERSHIP_CONDITION_CONTRACT_INVALID",
+      detail
+    );
+  const predicates = contract.predicates.map((predicate, index) => {
+    const predicateDetail = `${detail}:predicates[${index}]`;
+    exactKeys(
+      predicate,
+      ["predicateKey", "requiredGroups", "forbiddenAliases"],
+      "OBJECT_MEMBERSHIP_CONDITION_PREDICATE_INVALID",
+      predicateDetail
+    );
+    if (
+      !Array.isArray(predicate.requiredGroups) ||
+      predicate.requiredGroups.length < 2 ||
+      predicate.requiredGroups.length > 8
+    )
+      throw membershipError(
+        "OBJECT_MEMBERSHIP_CONDITION_GROUPS_INVALID",
+        predicateDetail
+      );
+    return {
+      predicateKey: validateConceptKey(
+        predicate.predicateKey,
+        `${predicateDetail}:predicateKey`
+      ),
+      requiredGroups: predicate.requiredGroups.map((aliases, groupIndex) =>
+        validateAliases(aliases, `${predicateDetail}:group[${groupIndex}]`)
+      ),
+      forbiddenAliases: validateAliases(
+        predicate.forbiddenAliases,
+        `${predicateDetail}:forbiddenAliases`
+      ),
+    };
+  });
+  if (
+    new Set(predicates.map(({ predicateKey }) => predicateKey)).size !==
+    predicates.length
+  )
+    throw membershipError(
+      "OBJECT_MEMBERSHIP_CONDITION_PREDICATE_DUPLICATE",
+      detail
+    );
+  return {
+    contractId: SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID,
+    conditionSetKey: validateConceptKey(
+      contract.conditionSetKey,
+      `${detail}:conditionSetKey`
+    ),
+    sourcePolicy: CONDITION_SOURCE_POLICY,
+    combinationPolicy: CONDITION_COMBINATION,
+    negationPolicy: CONDITION_NEGATION_POLICY,
+    predicates: predicates.sort((left, right) =>
+      left.predicateKey.localeCompare(right.predicateKey)
+    ),
+  };
+}
+
 /**
  * Validates the catalog-owned direction and vocabulary for one object edge.
  * This contract classifies membership only; it never asserts coverage.
@@ -118,22 +206,32 @@ function validateObjectMembershipEvidenceContract(
   contract,
   detail = "component"
 ) {
+  const conditionAware =
+    contract?.contractId ===
+    SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID;
+  const expectedKeys = [
+    "contractId",
+    "membership",
+    "memberObjectKey",
+    "classObjectKey",
+    "memberAliases",
+    "classAliases",
+    "allowedClassificationSources",
+    ...(conditionAware
+      ? ["conditionEvidenceContract"]
+      : []),
+  ];
   exactKeys(
     contract,
-    [
-      "contractId",
-      "membership",
-      "memberObjectKey",
-      "classObjectKey",
-      "memberAliases",
-      "classAliases",
-      "allowedClassificationSources",
-    ],
+    expectedKeys,
     "OBJECT_MEMBERSHIP_CONTRACT_INVALID",
     detail
   );
   if (
-    contract.contractId !== SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID
+    ![
+      SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+      SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID,
+    ].includes(contract.contractId)
   )
     throw membershipError("OBJECT_MEMBERSHIP_CONTRACT_ID_INVALID", detail);
   if (!Object.values(OBJECT_MEMBERSHIP).includes(contract.membership))
@@ -160,7 +258,7 @@ function validateObjectMembershipEvidenceContract(
   )
     throw membershipError("OBJECT_MEMBERSHIP_SOURCES_INVALID", detail);
   return {
-    contractId: SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+    contractId: contract.contractId,
     membership: contract.membership,
     memberObjectKey,
     classObjectKey,
@@ -173,6 +271,15 @@ function validateObjectMembershipEvidenceContract(
       `${detail}:classAliases`
     ),
     allowedClassificationSources: [...allowedClassificationSources].sort(),
+    ...(conditionAware
+      ? {
+          conditionEvidenceContract:
+            validateMembershipConditionEvidenceContract(
+              contract.conditionEvidenceContract,
+              `${detail}:conditionEvidenceContract`
+            ),
+        }
+      : {}),
   };
 }
 
@@ -240,6 +347,197 @@ function firstAliasSpan(sourceText, aliases) {
     start: source.offsets[selected.start],
     end: source.offsets[selected.end - 1] + 1,
   };
+}
+
+function allAliasSpans(sourceText, aliases) {
+  const source = normalizeWithOffsets(sourceText);
+  const matches = [];
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeWithOffsets(alias).text;
+    let start = source.text.indexOf(normalizedAlias);
+    while (start !== -1) {
+      const end = start + normalizedAlias.length;
+      const before = source.text[start - 1] || "";
+      const after = source.text[end] || "";
+      if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after))
+        matches.push({
+          matchedAlias: alias,
+          start: source.offsets[start],
+          end: source.offsets[end - 1] + 1,
+        });
+      start = source.text.indexOf(normalizedAlias, start + 1);
+    }
+  }
+  return [
+    ...new Map(
+      matches.map((match) => [`${match.start}:${match.end}`, match])
+    ).values(),
+  ].sort((left, right) => left.start - right.start || left.end - right.end);
+}
+
+function buildMembershipConditionEvidence({
+  contract,
+  memberContextSpan,
+  memberSpan,
+}) {
+  const validated = validateMembershipConditionEvidenceContract(
+    contract,
+    "conditionEvidence"
+  );
+  if (
+    !memberContextSpan ||
+    memberContextSpan.source !== "STRUCTURAL_LIST_ITEM" ||
+    !Number.isInteger(memberContextSpan.documentStart) ||
+    !Number.isInteger(memberContextSpan.documentEnd) ||
+    typeof memberContextSpan.exactText !== "string" ||
+    textDigest(memberContextSpan.exactText) !== memberContextSpan.sha256 ||
+    !memberSpan ||
+    !Number.isInteger(memberSpan.documentEnd) ||
+    memberSpan.documentEnd < memberContextSpan.documentStart ||
+    memberSpan.documentEnd > memberContextSpan.documentEnd
+  )
+    return null;
+  const sourceOffset = memberSpan.documentEnd - memberContextSpan.documentStart;
+  const sourceText = memberContextSpan.exactText.slice(sourceOffset);
+  const predicates = [];
+  const missingPredicateKeys = [];
+  const ambiguousPredicateKeys = [];
+  const negatedPredicateKeys = [];
+  for (const predicate of validated.predicates) {
+    const forbidden = predicate.forbiddenAliases.some(
+      (alias) => allAliasSpans(sourceText, [alias]).length > 0
+    );
+    const groups = predicate.requiredGroups.map((aliases) =>
+      allAliasSpans(sourceText, aliases)
+    );
+    if (forbidden) negatedPredicateKeys.push(predicate.predicateKey);
+    if (groups.some((matches) => matches.length === 0)) {
+      missingPredicateKeys.push(predicate.predicateKey);
+      continue;
+    }
+    if (groups.some((matches) => matches.length !== 1)) {
+      ambiguousPredicateKeys.push(predicate.predicateKey);
+      continue;
+    }
+    const matches = groups.map(([match]) => match);
+    const start = Math.min(...matches.map((match) => match.start));
+    const end = Math.max(...matches.map((match) => match.end));
+    const exactText = sourceText.slice(start, end);
+    predicates.push({
+      predicateKey: predicate.predicateKey,
+      effect: "REQUIREMENT",
+      span: {
+        source: CONDITION_SOURCE_POLICY,
+        physicalPageNumber: memberContextSpan.physicalPageNumber,
+        documentStart: memberSpan.documentEnd + start,
+        documentEnd: memberSpan.documentEnd + end,
+        exactText,
+        sha256: textDigest(exactText),
+      },
+    });
+  }
+  const sourceOrdered = [...predicates].sort(
+    (left, right) => left.span.documentStart - right.span.documentStart
+  );
+  const conjunctionValid = sourceOrdered.every((predicate, index) => {
+    if (index === 0) return true;
+    const previous = sourceOrdered[index - 1];
+    const betweenStart = previous.span.documentEnd - memberSpan.documentEnd;
+    const betweenEnd = predicate.span.documentStart - memberSpan.documentEnd;
+    const between = normalizedText(sourceText.slice(betweenStart, betweenEnd));
+    return /\bund\b/u.test(between) && !/\boder\b/u.test(between);
+  });
+  let typingStatus = "COMPLETE";
+  if (negatedPredicateKeys.length > 0) typingStatus = "NEGATED";
+  else if (ambiguousPredicateKeys.length > 0 || !conjunctionValid)
+    typingStatus = "AMBIGUOUS";
+  else if (missingPredicateKeys.length > 0) typingStatus = "INCOMPLETE";
+  const payload = {
+    schemaVersion: 1,
+    contractId: SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID,
+    evidenceContractDigest: digest(validated),
+    conditionSetKey: validated.conditionSetKey,
+    sourcePolicy: CONDITION_SOURCE_POLICY,
+    combinationPolicy: CONDITION_COMBINATION,
+    negationPolicy: CONDITION_NEGATION_POLICY,
+    typingStatus,
+    predicates: predicates.sort((left, right) =>
+      left.predicateKey.localeCompare(right.predicateKey)
+    ),
+    missingPredicateKeys: missingPredicateKeys.sort(),
+    ambiguousPredicateKeys: ambiguousPredicateKeys.sort(),
+    negatedPredicateKeys: negatedPredicateKeys.sort(),
+    conjunctionValid,
+    satisfaction: "NOT_EVALUATED",
+    readyForDecision: false,
+  };
+  return { ...payload, evidenceDigest: digest(payload) };
+}
+
+function validMembershipConditionEvidence(evidence) {
+  try {
+    exactKeys(
+      evidence,
+      [
+        "schemaVersion",
+        "contractId",
+        "evidenceContractDigest",
+        "conditionSetKey",
+        "sourcePolicy",
+        "combinationPolicy",
+        "negationPolicy",
+        "typingStatus",
+        "predicates",
+        "missingPredicateKeys",
+        "ambiguousPredicateKeys",
+        "negatedPredicateKeys",
+        "conjunctionValid",
+        "satisfaction",
+        "readyForDecision",
+        "evidenceDigest",
+      ],
+      "OBJECT_MEMBERSHIP_CONDITION_EVIDENCE_INVALID"
+    );
+    const { evidenceDigest, ...payload } = evidence;
+    if (
+      evidence.schemaVersion !== 1 ||
+      evidence.contractId !==
+        SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID ||
+      !/^[A-Z][A-Z0-9_]*$/u.test(evidence.conditionSetKey) ||
+      evidence.sourcePolicy !== CONDITION_SOURCE_POLICY ||
+      evidence.combinationPolicy !== CONDITION_COMBINATION ||
+      evidence.negationPolicy !== CONDITION_NEGATION_POLICY ||
+      !["COMPLETE", "INCOMPLETE", "AMBIGUOUS", "NEGATED"].includes(
+        evidence.typingStatus
+      ) ||
+      evidence.satisfaction !== "NOT_EVALUATED" ||
+      evidence.readyForDecision !== false ||
+      !/^[a-f0-9]{64}$/u.test(evidence.evidenceContractDigest) ||
+      digest(payload) !== evidenceDigest
+    )
+      return false;
+    for (const predicate of evidence.predicates) {
+      const span = predicate?.span;
+      if (
+        validateConceptKey(predicate?.predicateKey, "predicateKey") !==
+          predicate.predicateKey ||
+        predicate.effect !== "REQUIREMENT" ||
+        span?.source !== CONDITION_SOURCE_POLICY ||
+        !Number.isInteger(span.physicalPageNumber) ||
+        span.physicalPageNumber < 1 ||
+        !Number.isInteger(span.documentStart) ||
+        !Number.isInteger(span.documentEnd) ||
+        span.documentEnd <= span.documentStart ||
+        typeof span.exactText !== "string" ||
+        span.exactText.length !== span.documentEnd - span.documentStart ||
+        textDigest(span.exactText) !== span.sha256
+      )
+        return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function documentIdentity(documentArtifact) {
@@ -397,32 +695,42 @@ function buildSourceBoundObjectMembershipProof({
     memberMatch.end
   );
   const classExactText = hint.text.slice(classMatch.start, classMatch.end);
+  const memberSpan = {
+    candidateId: occurrence.candidateId,
+    matchedAlias: memberMatch.matchedAlias,
+    physicalPageNumber: occurrence.physicalPageNumber,
+    documentStart: occurrence.documentStart + memberMatch.start,
+    documentEnd: occurrence.documentStart + memberMatch.end,
+    exactText: memberExactText,
+    sha256: textDigest(memberExactText),
+  };
+  const memberContextSpan = {
+    source: "STRUCTURAL_LIST_ITEM",
+    physicalPageNumber: occurrence.physicalPageNumber,
+    documentStart: occurrence.context.documentStart,
+    documentEnd: occurrence.context.documentEnd,
+    exactText: occurrence.context.text,
+    sha256: textDigest(occurrence.context.text),
+  };
+  const conditionEvidence = validated.conditionEvidenceContract
+    ? buildMembershipConditionEvidence({
+        contract: validated.conditionEvidenceContract,
+        memberContextSpan,
+        memberSpan,
+      })
+    : null;
   const payload = {
     schemaVersion: 1,
-    contractId: SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+    contractId: validated.contractId,
     evidenceContractDigest: digest(validated),
     documentFingerprint: identity.fingerprint,
     edge: {
       relation: validated.membership,
       memberObjectKey: validated.memberObjectKey,
       classObjectKey: validated.classObjectKey,
-      memberSpan: {
-        candidateId: occurrence.candidateId,
-        matchedAlias: memberMatch.matchedAlias,
-        physicalPageNumber: occurrence.physicalPageNumber,
-        documentStart: occurrence.documentStart + memberMatch.start,
-        documentEnd: occurrence.documentStart + memberMatch.end,
-        exactText: memberExactText,
-        sha256: textDigest(memberExactText),
-      },
-      memberContextSpan: {
-        source: "STRUCTURAL_LIST_ITEM",
-        physicalPageNumber: occurrence.physicalPageNumber,
-        documentStart: occurrence.context.documentStart,
-        documentEnd: occurrence.context.documentEnd,
-        exactText: occurrence.context.text,
-        sha256: textDigest(occurrence.context.text),
-      },
+      memberSpan,
+      memberContextSpan,
+      ...(conditionEvidence ? { conditionEvidence } : {}),
       classSpan: {
         source: hint.source,
         matchedAlias: classAlias,
@@ -471,7 +779,12 @@ module.exports = {
   OBJECT_MEMBERSHIP,
   OBJECT_MEMBERSHIP_CLASSIFICATION_SOURCE,
   SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID,
+  SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V5_CONTRACT_ID,
+  SOURCE_BOUND_MEMBERSHIP_CONDITION_EVIDENCE_CONTRACT_ID,
   buildSourceBoundObjectMembershipProof,
+  buildMembershipConditionEvidence,
+  validateMembershipConditionEvidenceContract,
   validateObjectMembershipEvidenceContract,
+  validMembershipConditionEvidence,
   validSourceBoundObjectMembershipProof,
 };

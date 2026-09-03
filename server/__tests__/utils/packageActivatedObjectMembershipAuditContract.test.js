@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const {
-  COMPLETE_SOURCE_CHAIN,
+  COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS,
   CONFLICTING_MEMBERSHIP,
   INCOMPLETE_SOURCE_CHAIN,
   PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID,
@@ -9,6 +9,10 @@ const {
   validatePackageActivatedObjectMembershipAudit,
   validatePackageActivatedObjectMembershipAuditContract,
 } = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
+const {
+  buildMembershipConditionEvidence,
+} = require("../../utils/policyAnalysis/objectMembershipEvidenceContract");
+const feCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 
 function contract() {
   return {
@@ -24,6 +28,9 @@ function contract() {
     referenceFamilyKey: "EABS",
     conditionPolicy: "PRESERVE_SOURCE_CONDITIONS_V1",
     conflictPolicy: "FAIL_CLOSED_SAME_EDGE_EXCLUSION_V1",
+    requiredConditionSetKeys: [
+      "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
+    ],
   };
 }
 
@@ -33,21 +40,49 @@ function membershipProof(
   classObjectKey,
   relation = "MEMBER_OF_CLASS"
 ) {
-  const exactText = `${memberObjectKey} unter allen Quellbedingungen`;
+  const conditionedParent =
+    relation === "MEMBER_OF_CLASS" &&
+    memberObjectKey === "BUILDING_TECHNICAL_INSTALLATION" &&
+    classObjectKey === "BUILDING";
+  const exactText = conditionedParent
+    ? "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind."
+    : `${memberObjectKey} unter allen Quellbedingungen`;
+  const memberExactText = conditionedParent
+    ? "Haustechnische Anlagen und Adaptierungen"
+    : memberObjectKey;
+  const memberContextSpan = {
+    source: "STRUCTURAL_LIST_ITEM",
+    physicalPageNumber: 2,
+    documentStart: 100,
+    documentEnd: 100 + exactText.length,
+    exactText,
+    sha256: crypto.createHash("sha256").update(exactText).digest("hex"),
+  };
+  const memberSpan = {
+    documentStart: 100 + exactText.indexOf(memberExactText),
+    documentEnd:
+      100 + exactText.indexOf(memberExactText) + memberExactText.length,
+  };
+  const conditionContract =
+    feCatalog.requirements.find(({ id }) => id === "FE-C02")
+      .supportingObjectMembershipEvidenceContracts[0]
+      .conditionEvidenceContract;
   return {
     proofDigest: digestCharacter.repeat(64),
     edge: {
       relation,
       memberObjectKey,
       classObjectKey,
-      memberContextSpan: {
-        source: "STRUCTURAL_LIST_ITEM",
-        physicalPageNumber: 2,
-        documentStart: 100,
-        documentEnd: 100 + exactText.length,
-        exactText,
-        sha256: crypto.createHash("sha256").update(exactText).digest("hex"),
-      },
+      memberContextSpan,
+      ...(conditionedParent
+        ? {
+            conditionEvidence: buildMembershipConditionEvidence({
+              contract: conditionContract,
+              memberContextSpan,
+              memberSpan,
+            }),
+          }
+        : {}),
     },
   };
 }
@@ -111,11 +146,14 @@ describe("package-activated object-membership audit", () => {
     });
 
     expect(audit).toMatchObject({
-      status: COMPLETE_SOURCE_CHAIN,
-      reasonCode: "SOURCE_CHAIN_COMPLETE_OUTCOME_LOCKED",
+      status: COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS,
+      reasonCode: "SOURCE_CHAIN_AND_CONDITIONS_TYPED_OUTCOME_LOCKED",
       readyForDecision: false,
       referenceKey: "EABS@2023",
-      remainingGates: ["TYPED_CONDITIONS", "DOCUMENT_PRECEDENCE"],
+      remainingGates: [
+        "MEMBERSHIP_CONDITION_SCOPE_COMPARISON",
+        "DOCUMENT_PRECEDENCE",
+      ],
       evidence: {
         references: [{ documentUuids: ["proposal"] }],
         identities: [{ documentUuids: ["terms"] }],
@@ -194,7 +232,7 @@ describe("package-activated object-membership audit", () => {
         ],
       }),
     });
-    expect(unrelated.status).toBe(COMPLETE_SOURCE_CHAIN);
+    expect(unrelated.status).toBe(COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS);
 
     const sameEdge = buildPackageActivatedObjectMembershipAudit({
       categoryId: "FE-C02",
