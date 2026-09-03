@@ -380,7 +380,10 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
     atomsA,
     atomsB,
     referenceAtomsA: [newValueAtom(docA)],
-    referenceAtomsB: [newValueAtom(docBMoney, "EUR 30.608.000,00")],
+    referenceAtomsB: [
+      newValueAtom(docBMoney, "EUR 30.608.000,00"),
+      newValueAtom(docBPercent),
+    ],
     expectedDocumentsA: [docA],
     expectedDocumentsB: [docBMoney, docBPercent, docBAbsent],
   };
@@ -492,6 +495,14 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       "missing new-value reference",
       (input) => {
         input.referenceAtomsA = [];
+      },
+    ],
+    [
+      "new-value reference only in another package document",
+      (input) => {
+        input.referenceAtomsB = input.referenceAtomsB.filter(
+          (atom) => atom.documentUuids[0] !== "b-percent"
+        );
       },
     ],
     [

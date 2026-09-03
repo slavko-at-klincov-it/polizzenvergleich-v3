@@ -648,6 +648,12 @@ function sidePortfolio({
   const money = presentations.filter(({ valueType }) => valueType === "MONEY");
   if (percentages.length !== 1 || money.length > 1) return null;
   if (
+    !newValueReferences.some(
+      (atom) => atom.documentUuids[0] === percentages[0].documentUuid
+    )
+  )
+    return null;
+  if (
     money.length === 1 &&
     !reconciliationValid(
       packageSummary.vs25AmountReconciliation,
