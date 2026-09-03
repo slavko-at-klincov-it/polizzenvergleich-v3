@@ -19,6 +19,10 @@ const {
   VS22_OTHER_SCOPE_REJECTION,
   isVs22LiabilityOrStorageOccurrence,
 } = require("./vs22WasteScopeContract");
+const {
+  validNestedListContinuationEnvelope,
+  validSourceBoundObjectScopeProof,
+} = require("./objectScopeEvidenceContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -293,6 +297,27 @@ function buildPreparedEvidenceTargets({
           )
             ? deterministicBinding.comparisonScopeKey
             : null;
+        const nestedListContinuationRequired = Boolean(
+          occurrence.objectScopeProof?.assertions?.some(
+            ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"
+          )
+        );
+        const nestedListContinuationValidated =
+          nestedListContinuationRequired &&
+          validNestedListContinuationEnvelope(
+            occurrence.nestedListContinuationProof
+          );
+        const validObjectScopeProof = Boolean(
+          component.objectScopeEvidenceContract &&
+            occurrence.objectScopeProof &&
+            (!nestedListContinuationRequired ||
+              nestedListContinuationValidated) &&
+            validSourceBoundObjectScopeProof({
+              contract: component.objectScopeEvidenceContract,
+              occurrence,
+              nestedListContinuationValidated,
+            })
+        );
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
@@ -300,6 +325,20 @@ function buildPreparedEvidenceTargets({
             ? { deterministicBindingBasis: deterministicBinding.basis }
             : {}),
           ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+          ...(validObjectScopeProof
+            ? {
+                objectScopeProof: JSON.parse(
+                  JSON.stringify(occurrence.objectScopeProof)
+                ),
+                ...(nestedListContinuationRequired
+                  ? {
+                      nestedListContinuationProof: JSON.parse(
+                        JSON.stringify(occurrence.nestedListContinuationProof)
+                      ),
+                    }
+                  : {}),
+              }
+            : {}),
           physicalPageNumber:
             occurrence.physicalPageNumber || occurrence.pageNumber,
           printedPageLabel: occurrence.printedPageLabel || null,
@@ -351,10 +390,19 @@ function buildPreparedEvidenceTargets({
 }
 
 function buildSinglePreparedEvidencePayload({ target }) {
+  const modelTarget = {
+    ...target,
+    candidates: target.candidates.map((candidate) => {
+      const modelCandidate = { ...candidate };
+      delete modelCandidate.objectScopeProof;
+      delete modelCandidate.nestedListContinuationProof;
+      return modelCandidate;
+    }),
+  };
   return {
     schemaVersion: PREPARED_EVIDENCE_SCHEMA_VERSION,
     task: "CLASSIFY_ONE_ATOMIC_EVIDENCE_COMPONENT",
-    target,
+    target: modelTarget,
     allowedValues: {
       coverageEffect: Object.values(COVERAGE_EFFECT),
       conflictState: Object.values(CONFLICT_STATE),

@@ -520,5 +520,6 @@ module.exports = {
   SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_CONTRACT_ID,
   buildSourceBoundObjectScopeProof,
   validateObjectScopeEvidenceContract,
+  validNestedListContinuationEnvelope,
   validSourceBoundObjectScopeProof,
 };

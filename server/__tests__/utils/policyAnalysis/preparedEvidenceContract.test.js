@@ -9,9 +9,11 @@ const {
   REQUESTED_FIELD_STATUS,
   buildDeterministicPreparedEvidenceJudgement,
   buildPreparedEvidenceTargets,
+  buildSinglePreparedEvidencePayload,
   materializePreparedEvidence,
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const feFullCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const {
   COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS,
   COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
@@ -32,6 +34,7 @@ const {
 } = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 const {
   FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+  buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 
 const WORKSHEET = {
@@ -2706,5 +2709,154 @@ describe("preparedEvidenceContract", () => {
       evidencePresence: "FOUND",
       coverageEffect: COVERAGE_EFFECT.CONDITIONAL,
     });
+  });
+
+  test("keeps FE-A05 object-scope provenance internal and strips it from the Qwen payload", () => {
+    const firstPage = [
+      "• Überspannung infolge indirekter Blitzschlag innerhalb und außerhalb von versicherten Gebäuden am Versicherungsgrundstück, an",
+      "- Licht- und Kraftinstallationen sowie Zähler- und Sicherungskästen;",
+    ].join("\n");
+    const secondPage = [
+      "Seite 2",
+      "- Erd- und Telefonkabeln.",
+      "",
+      "Mitversichert ist der indirekter Blitzschlag an Erdkabel.",
+    ].join("\n");
+    const separator = "\n\n[DOCUMENT_PAGE 2]\n";
+    const pageContent = `${firstPage}${separator}${secondPage}`;
+    const document = {
+      id: "prepared-fe-a05-provenance",
+      sourceDocumentId: "prepared-fe-a05-provenance",
+      title: "prepared-fe-a05-provenance.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [
+        { pageNumber: 1, start: 0, end: firstPage.length },
+        {
+          pageNumber: 2,
+          start: firstPage.length + separator.length,
+          end: pageContent.length,
+        },
+      ],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 2,
+        processedPages: 2,
+        pagesWithText: 2,
+        complete: true,
+      },
+    };
+    const catalog = {
+      ...feFullCatalog,
+      requirements: [
+        feFullCatalog.requirements.find(({ id }) => id === "FE-A05"),
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "prepared-fe-a05-provenance",
+      catalog,
+    });
+    const occurrences = worksheet.requirements[0].components[0].occurrences;
+    const targets = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: occurrences.map(({ candidateId }) => ({
+        requirementId: "FE-A05",
+        componentId: "indirect_lightning_damage",
+        candidateId,
+        binding: "DIRECT",
+      })),
+    });
+    const target = targets[0];
+    const crossPageCandidate = target.candidates.find(
+      ({ nestedListContinuationProof }) => nestedListContinuationProof
+    );
+    const localCandidate = target.candidates.find(
+      (candidate) =>
+        candidate !== crossPageCandidate && candidate.objectScopeProof
+    );
+
+    expect(crossPageCandidate).toMatchObject({
+      objectScopeProof: {
+        objectScopeKeys: [
+          "BUILDING_ELECTRICAL_INSTALLATIONS",
+          "OBJECTS_OUTSIDE_BUILDINGS",
+          "UNDERGROUND_CABLES",
+        ],
+      },
+      nestedListContinuationProof: {
+        contractId: "NESTED_LIST_CONTINUATION_PROOF_V1",
+      },
+    });
+    expect(localCandidate.objectScopeProof.objectScopeKeys).toEqual([
+      "UNDERGROUND_CABLES",
+    ]);
+    expect(localCandidate).not.toHaveProperty("nestedListContinuationProof");
+
+    const payload = buildSinglePreparedEvidencePayload({ target });
+    expect(JSON.stringify(payload)).not.toMatch(
+      /objectScopeProof|nestedListContinuationProof|objectScopeEvidenceContract/u
+    );
+    const targetWithoutProvenance = JSON.parse(JSON.stringify(target));
+    for (const candidate of targetWithoutProvenance.candidates) {
+      delete candidate.objectScopeProof;
+      delete candidate.nestedListContinuationProof;
+    }
+    expect(JSON.stringify(payload)).toBe(
+      JSON.stringify(
+        buildSinglePreparedEvidencePayload({
+          target: targetWithoutProvenance,
+        })
+      )
+    );
+
+    const selectedCandidateId = crossPageCandidate.candidateId;
+    const judgement = parseAndValidatePreparedEvidenceResponse({
+      target,
+      responseText: response(
+        target.componentId,
+        [selectedCandidateId],
+        COVERAGE_EFFECT.INCLUDED
+      ),
+    });
+    const materialized = materializePreparedEvidence({
+      worksheet,
+      targets,
+      judgements: [judgement],
+    });
+    expect(materialized.judgements[0].selectedCandidateIds).toEqual([
+      selectedCandidateId,
+    ]);
+    expect(JSON.stringify(materialized)).not.toMatch(
+      /objectScopeProof|nestedListContinuationProof/u
+    );
+
+    const tamperedWorksheet = JSON.parse(JSON.stringify(worksheet));
+    const tamperedOccurrences =
+      tamperedWorksheet.requirements[0].components[0].occurrences;
+    const tamperedCrossPageOccurrence = tamperedOccurrences.find(
+      ({ nestedListContinuationProof }) => nestedListContinuationProof
+    );
+    tamperedCrossPageOccurrence.nestedListContinuationProof.segments[1].text =
+      "manipuliert";
+    const tamperedTarget = buildPreparedEvidenceTargets({
+      worksheet: tamperedWorksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: tamperedOccurrences.map(({ candidateId }) => ({
+        requirementId: "FE-A05",
+        componentId: "indirect_lightning_damage",
+        candidateId,
+        binding: "DIRECT",
+      })),
+    })[0];
+    const rejectedProvenanceCandidate = tamperedTarget.candidates.find(
+      ({ candidateId }) =>
+        candidateId === tamperedCrossPageOccurrence.candidateId
+    );
+    expect(rejectedProvenanceCandidate).not.toHaveProperty("objectScopeProof");
+    expect(rejectedProvenanceCandidate).not.toHaveProperty(
+      "nestedListContinuationProof"
+    );
   });
 });
