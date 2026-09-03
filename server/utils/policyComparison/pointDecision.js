@@ -1217,9 +1217,8 @@ function decidePoint({
       packageB,
       atomsA,
       atomsB,
-      contract: atomsA?.find(
-        (atom) => atom?.requirementId === categoryId
-      )?.membershipConditionScopeComparisonContract,
+      contract: atomsA?.find((atom) => atom?.requirementId === categoryId)
+        ?.membershipConditionScopeComparisonContract,
       expectedDocumentsA,
       expectedDocumentsB,
     });

@@ -741,7 +741,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID ||
         row.pointDecision?.reasonCode ===
           MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE ||
-        row.pointDecision?.membershipConditionScopeComparisonAudit !== undefined;
+        row.pointDecision?.membershipConditionScopeComparisonAudit !==
+          undefined;
       if (membershipConditionScopeDecisionDetected) {
         if (!validDocumentManifest)
           validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
@@ -778,7 +779,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
               : POINT_OUTCOME.ADVANTAGE_B) ||
           row.pointDecision?.reviewRequired !== false ||
           row.pointDecision?.packageReviewAudit !== undefined ||
-          row.pointDecision?.packageActivatedObjectMembershipAudit !== undefined ||
+          row.pointDecision?.packageActivatedObjectMembershipAudit !==
+            undefined ||
           !sameJson(row.pointDecision, reconstructed)
         )
           validationError(

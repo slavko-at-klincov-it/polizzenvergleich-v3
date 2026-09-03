@@ -10,9 +10,7 @@ const {
   validateMembershipConditionScopeComparisonAudit,
   validateMembershipConditionScopeComparisonContract,
 } = require("../../utils/policyComparison/membershipConditionScopeComparisonContract");
-const {
-  decidePoint,
-} = require("../../utils/policyComparison/pointDecision");
+const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 const {
   customerSafeComparisonReadView,
   deriveCustomerMetrics,
