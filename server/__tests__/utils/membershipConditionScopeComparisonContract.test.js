@@ -495,7 +495,20 @@ describe("membership condition-scope comparison contract", () => {
     const formulaTamper = fixture();
     formulaTamper.atomsA[0].supportingCoverageConditionFormulaProofs[0].formula.operands[1].operator =
       "AND";
+    const tamperedFormulaBody = {
+      ...formulaTamper.atomsA[0].supportingCoverageConditionFormulaProofs[0],
+    };
+    delete tamperedFormulaBody.proofDigest;
+    formulaTamper.atomsA[0].supportingCoverageConditionFormulaProofs[0].proofDigest =
+      sha256(tamperedFormulaBody);
     expect(buildMembershipConditionScopeComparisonAudit(formulaTamper)).toBeNull();
+
+    const formulaContractTamper = fixture();
+    formulaContractTamper.atomsA[0].supportingCoverageConditionFormulaEvidenceContracts[0].formula.operands[1].operator =
+      "AND";
+    expect(
+      buildMembershipConditionScopeComparisonAudit(formulaContractTamper)
+    ).toBeNull();
 
     const conditionTamper = fixture();
     conditionTamper.atomsB[1].supportingObjectMembershipProofs[0].edge.conditionEvidence.predicates.pop();

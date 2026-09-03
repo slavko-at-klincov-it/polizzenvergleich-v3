@@ -30,7 +30,7 @@ const {
 } = require("./coverageConditionFormulaEvidenceContract");
 const {
   validateMembershipConditionScopeComparisonContract,
-} = require("../policyComparison/membershipConditionScopeComparisonContract");
+} = require("./membershipConditionScopeComparisonDefinition");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2416,6 +2416,21 @@ function validateCatalog(catalog) {
           );
     if (membershipConditionScopeComparisonContract) {
       const comparison = membershipConditionScopeComparisonContract;
+      const matchingDirectFormulaContracts =
+        supportingCoverageConditionFormulaEvidenceContracts.filter(
+          ({ formulaKey }) => formulaKey === comparison.directFormulaKey
+        );
+      const directFormulaPredicateKeys = new Set();
+      const collectFormulaPredicateKeys = (formula) => {
+        if (formula?.kind === "PREDICATE") {
+          directFormulaPredicateKeys.add(formula.predicateKey);
+          return;
+        }
+        for (const operand of formula?.operands || [])
+          collectFormulaPredicateKeys(operand);
+      };
+      if (matchingDirectFormulaContracts.length === 1)
+        collectFormulaPredicateKeys(matchingDirectFormulaContracts[0].formula);
       const matchingMembershipConditionContracts =
         supportingObjectMembershipEvidenceContracts
           .map(({ conditionEvidenceContract }) => conditionEvidenceContract)
@@ -2429,8 +2444,15 @@ function validateCatalog(catalog) {
             componentId === comparison.componentId &&
             factRole === "INSURED_OBJECT"
         ) ||
-        !supportingCoverageConditionFormulaEvidenceContracts.some(
-          ({ formulaKey }) => formulaKey === comparison.directFormulaKey
+        matchingDirectFormulaContracts.length !== 1 ||
+        !directFormulaPredicateKeys.has(
+          comparison.membershipSectionPredicateKey
+        ) ||
+        comparison.predicateImplications.some(
+          ({ antecedentPredicateKey, consequentPredicateKey }) =>
+            !comparison.membershipRequiredPredicateKeys.includes(
+              antecedentPredicateKey
+            ) || !directFormulaPredicateKeys.has(consequentPredicateKey)
         ) ||
         !packageActivatedObjectMembershipAuditContract ||
         packageActivatedObjectMembershipAuditContract.targetObjectKey !==

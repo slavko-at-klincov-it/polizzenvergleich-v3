@@ -7,21 +7,22 @@ const {
 const {
   SATISFACTION,
   SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
+  validateCoverageConditionFormulaContract,
 } = require("../policyAnalysis/coverageConditionFormulaEvidenceContract");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  COMPARISON_POLICY,
+  DOCUMENT_RESOLUTION_POLICY,
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
+  SATISFACTION_POLICY,
+  WINNER_POLICY,
+  validateMembershipConditionScopeComparisonContract,
+} = require("../policyAnalysis/membershipConditionScopeComparisonDefinition");
 
-const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID =
-  "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1";
 const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_V1";
 const MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_V1";
-const COMPARISON_POLICY = "BOOLEAN_IMPLICATION_ALL_VALID_ASSIGNMENTS_V1";
-const SATISFACTION_POLICY =
-  "CONTRACT_SCOPE_ONLY_NOT_REAL_WORLD_SATISFACTION_V1";
-const DOCUMENT_RESOLUTION_POLICY =
-  "UNIQUE_COMPLEMENTARY_REFERENCE_IDENTITY_NO_CONTENT_CONFLICT_V1";
-const WINNER_POLICY = "LESS_RESTRICTIVE_PREREQUISITE_FORMULA_WINS_V1";
 const DIRECT_MODE = "DIRECT_INCLUDED_SOURCE_FORMULA";
 const MEMBERSHIP_MODE = "MEMBERSHIP_DEFINED_TYPED_CONDITIONS";
 const MAX_PREDICATES = 12;
@@ -63,141 +64,8 @@ function conceptKey(value, code) {
   return key;
 }
 
-function componentKey(value) {
-  const key = String(value || "").trim();
-  if (!/^[a-z][a-z0-9_]*$/u.test(key))
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_COMPONENT_INVALID");
-  return key;
-}
-
 function canonicalStrings(values) {
   return [...new Set((values || []).map(String).filter(Boolean))].sort();
-}
-
-function validateMembershipConditionScopeComparisonContract(contract) {
-  exactKeys(
-    contract,
-    [
-      "contractId",
-      "componentId",
-      "targetObjectKey",
-      "perilScopeKey",
-      "directFormulaKey",
-      "membershipConditionSetKey",
-      "membershipSectionPredicateKey",
-      "membershipRequiredPredicateKeys",
-      "predicateImplications",
-      "comparisonPolicy",
-      "satisfactionPolicy",
-      "documentResolutionPolicy",
-      "winnerPolicy",
-    ],
-    "MEMBERSHIP_CONDITION_SCOPE_CONTRACT_INVALID"
-  );
-  if (
-    contract.contractId !==
-      MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID ||
-    contract.comparisonPolicy !== COMPARISON_POLICY ||
-    contract.satisfactionPolicy !== SATISFACTION_POLICY ||
-    contract.documentResolutionPolicy !== DOCUMENT_RESOLUTION_POLICY ||
-    contract.winnerPolicy !== WINNER_POLICY
-  )
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_CONTRACT_POLICY_INVALID");
-
-  const membershipSectionPredicateKey = conceptKey(
-    contract.membershipSectionPredicateKey,
-    "MEMBERSHIP_CONDITION_SCOPE_SECTION_PREDICATE_INVALID"
-  );
-  if (
-    !Array.isArray(contract.membershipRequiredPredicateKeys) ||
-    contract.membershipRequiredPredicateKeys.length === 0 ||
-    contract.membershipRequiredPredicateKeys.length > MAX_PREDICATES
-  )
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_PREDICATES_INVALID");
-  const membershipRequiredPredicateKeys = contract.membershipRequiredPredicateKeys
-    .map((key) =>
-      conceptKey(key, "MEMBERSHIP_CONDITION_SCOPE_PREDICATE_INVALID")
-    )
-    .sort();
-  if (
-    new Set(membershipRequiredPredicateKeys).size !==
-      membershipRequiredPredicateKeys.length ||
-    membershipRequiredPredicateKeys.includes(membershipSectionPredicateKey) ||
-    !sameJson(
-      membershipRequiredPredicateKeys,
-      contract.membershipRequiredPredicateKeys
-    )
-  )
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_PREDICATES_INVALID");
-
-  if (
-    !Array.isArray(contract.predicateImplications) ||
-    contract.predicateImplications.length === 0 ||
-    contract.predicateImplications.length > MAX_PREDICATES
-  )
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_IMPLICATIONS_INVALID");
-  const predicateImplications = contract.predicateImplications
-    .map((implication) => {
-      exactKeys(
-        implication,
-        ["antecedentPredicateKey", "consequentPredicateKey"],
-        "MEMBERSHIP_CONDITION_SCOPE_IMPLICATION_INVALID"
-      );
-      const antecedentPredicateKey = conceptKey(
-        implication.antecedentPredicateKey,
-        "MEMBERSHIP_CONDITION_SCOPE_IMPLICATION_INVALID"
-      );
-      const consequentPredicateKey = conceptKey(
-        implication.consequentPredicateKey,
-        "MEMBERSHIP_CONDITION_SCOPE_IMPLICATION_INVALID"
-      );
-      if (antecedentPredicateKey === consequentPredicateKey)
-        throw new Error("MEMBERSHIP_CONDITION_SCOPE_IMPLICATION_INVALID");
-      return { antecedentPredicateKey, consequentPredicateKey };
-    })
-    .sort((left, right) =>
-      `${left.antecedentPredicateKey}->${left.consequentPredicateKey}`.localeCompare(
-        `${right.antecedentPredicateKey}->${right.consequentPredicateKey}`
-      )
-    );
-  if (
-    new Set(
-      predicateImplications.map(
-        ({ antecedentPredicateKey, consequentPredicateKey }) =>
-          `${antecedentPredicateKey}->${consequentPredicateKey}`
-      )
-    ).size !== predicateImplications.length ||
-    !sameJson(predicateImplications, contract.predicateImplications)
-  )
-    throw new Error("MEMBERSHIP_CONDITION_SCOPE_IMPLICATIONS_INVALID");
-
-  return {
-    contractId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
-    componentId: componentKey(contract.componentId),
-    targetObjectKey: conceptKey(
-      contract.targetObjectKey,
-      "MEMBERSHIP_CONDITION_SCOPE_TARGET_OBJECT_INVALID"
-    ),
-    perilScopeKey: conceptKey(
-      contract.perilScopeKey,
-      "MEMBERSHIP_CONDITION_SCOPE_PERIL_INVALID"
-    ),
-    directFormulaKey: conceptKey(
-      contract.directFormulaKey,
-      "MEMBERSHIP_CONDITION_SCOPE_DIRECT_FORMULA_INVALID"
-    ),
-    membershipConditionSetKey: conceptKey(
-      contract.membershipConditionSetKey,
-      "MEMBERSHIP_CONDITION_SCOPE_CONDITION_SET_INVALID"
-    ),
-    membershipSectionPredicateKey,
-    membershipRequiredPredicateKeys,
-    predicateImplications,
-    comparisonPolicy: COMPARISON_POLICY,
-    satisfactionPolicy: SATISFACTION_POLICY,
-    documentResolutionPolicy: DOCUMENT_RESOLUTION_POLICY,
-    winnerPolicy: WINNER_POLICY,
-  };
 }
 
 function normalizeBooleanFormula(node) {
@@ -448,6 +316,10 @@ function exactFormulaProof(proof, atom, contract) {
     const matchingEvidenceContracts = (
       atom.supportingCoverageConditionFormulaEvidenceContracts || []
     ).filter(({ formulaKey }) => formulaKey === contract.directFormulaKey);
+    const validatedEvidenceContract =
+      matchingEvidenceContracts.length === 1
+        ? validateCoverageConditionFormulaContract(matchingEvidenceContracts[0])
+        : null;
     if (
       proof.schemaVersion !== 1 ||
       proof.contractId !==
@@ -455,8 +327,14 @@ function exactFormulaProof(proof, atom, contract) {
       proof.formulaKey !== contract.directFormulaKey ||
       proof.satisfaction !== SATISFACTION ||
       proof.readyForDecision !== false ||
-      matchingEvidenceContracts.length !== 1 ||
-      proof.evidenceContractDigest !== sha256(matchingEvidenceContracts[0]) ||
+      !validatedEvidenceContract ||
+      proof.evidenceContractDigest !== sha256(validatedEvidenceContract) ||
+      proof.sourcePolicy !== validatedEvidenceContract.sourcePolicy ||
+      proof.targetScopePolicy !== validatedEvidenceContract.targetScopePolicy ||
+      !sameJson(
+        normalizeBooleanFormula(proof.formula),
+        normalizeBooleanFormula(validatedEvidenceContract.formula)
+      ) ||
       !/^[a-f0-9]{64}$/u.test(proof.evidenceContractDigest) ||
       !/^[a-f0-9]{64}$/u.test(proof.documentFingerprint) ||
       proofDigest !== sha256(body) ||
