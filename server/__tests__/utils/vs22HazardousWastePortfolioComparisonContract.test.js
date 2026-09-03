@@ -256,10 +256,10 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
           packageB: input.packageB,
           requirementContractA: contract,
           requirementContractB: contract,
-            expectedDocumentsA: input.expectedDocumentsA,
-            expectedDocumentsB: input.expectedDocumentsB,
-            atomsA: input.atomsA,
-            atomsB: input.atomsB,
+          expectedDocumentsA: input.expectedDocumentsA,
+          expectedDocumentsB: input.expectedDocumentsB,
+          atomsA: input.atomsA,
+          atomsB: input.atomsB,
         })
       ).not.toThrow();
     }
