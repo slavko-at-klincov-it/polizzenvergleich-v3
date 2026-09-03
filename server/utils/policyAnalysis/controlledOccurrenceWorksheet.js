@@ -653,8 +653,8 @@ function explicitPageScopeHints(pageText) {
 }
 
 function explicitSectionHeadings(pageText) {
-  const combinedScopeKeysForHeading = (value) =>
-    [
+  const combinedScopeKeysForHeading = (value) => {
+    const scopeKeys = [
       ["FEUER_INSURANCE", /\bFeuer/iu],
       ["STURM_INSURANCE", /\bSturm/iu],
       ["LEITUNGSWASSER_INSURANCE", /\bLeitungswasser/iu],
@@ -665,6 +665,15 @@ function explicitSectionHeadings(pageText) {
       .filter(([, pattern]) => pattern.test(value))
       .map(([scopeKey]) => scopeKey)
       .sort();
+    return JSON.stringify(scopeKeys) ===
+      JSON.stringify([
+        "FEUER_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ])
+      ? scopeKeys
+      : [];
+  };
   const canonicalScopeForHeading = (value) => {
     const normalized = normalizeWithOffsetMap(value).normalized.replace(
       /\s+/gu,
@@ -710,11 +719,14 @@ function explicitSectionHeadings(pageText) {
   )) {
     const text = match[1].trim();
     const scopeKeys = combinedScopeKeysForHeading(text);
-    if (scopeKeys.length < 2) continue;
     const leading = match[0].indexOf(text);
     headings.push({
       scopeKey: null,
       scopeKeys,
+      scopeResolution:
+        scopeKeys.length > 0
+          ? "VERIFIED_FEUER_STURM_LEITUNGSWASSER_COMBINATION"
+          : "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
       text,
       pageStart: match.index + leading,
       pageEnd: match.index + leading + text.length,
@@ -747,6 +759,16 @@ function clauseFamilyScopeKey(clauseCode) {
   return CLAUSE_FAMILY_SCOPE_KEYS[String(clauseCode || "").slice(0, 2)] || null;
 }
 
+function headingScopeKeys(heading) {
+  return [
+    ...new Set(
+      [heading?.scopeKey, ...(heading?.scopeKeys || [])].filter((scopeKey) =>
+        String(scopeKey || "").endsWith("_INSURANCE")
+      )
+    ),
+  ].sort();
+}
+
 // The proposal schedule activates special-condition codes inside explicit
 // coverage chapters. Preserve that link so an appendix clause cannot later be
 // treated as generally applicable merely because its text contains an alias.
@@ -760,18 +782,27 @@ function clauseActivationScopes(pages) {
       /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu
     )) {
       const currentSectionHeading = page.sectionHeadings
-        .filter(({ pageEnd, scopeKey }) => scopeKey && pageEnd <= match.index)
+        .filter(
+          (heading) =>
+            heading.pageEnd <= match.index &&
+            (headingScopeKeys(heading).length > 0 || heading.scopeResolution)
+        )
         .at(-1);
-      const scopeKey =
-        currentSectionHeading?.scopeKey || inheritedSectionHeading?.scopeKey;
-      if (!scopeKey || !scopeKey.endsWith("_INSURANCE")) continue;
+      const scopeKeys = headingScopeKeys(
+        currentSectionHeading || inheritedSectionHeading
+      );
+      if (scopeKeys.length === 0) continue;
       const clauseCode = match[1].toLocaleUpperCase("de");
       if (!scopesByClause.has(clauseCode))
         scopesByClause.set(clauseCode, new Set());
-      scopesByClause.get(clauseCode).add(scopeKey);
+      for (const scopeKey of scopeKeys)
+        scopesByClause.get(clauseCode).add(scopeKey);
     }
     const lastScopedHeading = page.sectionHeadings
-      .filter(({ scopeKey }) => scopeKey)
+      .filter(
+        (heading) =>
+          headingScopeKeys(heading).length > 0 || heading.scopeResolution
+      )
       .at(-1);
     if (lastScopedHeading) inheritedSectionHeading = lastScopedHeading;
   }
@@ -829,15 +860,20 @@ function exactClauseCodeFieldGovernors({
       }
 
       const currentSectionHeading = page.sectionHeadings
-        .filter(({ pageEnd, scopeKey }) => scopeKey && pageEnd <= match.index)
+        .filter(
+          (heading) =>
+            heading.pageEnd <= match.index &&
+            (headingScopeKeys(heading).length > 0 || heading.scopeResolution)
+        )
         .at(-1);
-      const scopeKey =
-        currentSectionHeading?.scopeKey ||
-        page.inheritedSectionHeading?.scopeKey;
-      if (!scopeKey?.endsWith("_INSURANCE")) {
+      const scopeKeys = headingScopeKeys(
+        currentSectionHeading || page.inheritedSectionHeading
+      );
+      if (scopeKeys.length !== 1) {
         invalidClauseCodes.add(matchedClauseCode);
         continue;
       }
+      const scopeKey = scopeKeys[0];
       const currentCoverageGovernor =
         page.coverageGovernors
           .filter(
@@ -1207,7 +1243,9 @@ function validateDocument(document) {
     if (page.sectionHeadings.length > 0) {
       const lastHeading = page.sectionHeadings.at(-1);
       inheritedSectionHeading =
-        lastHeading.scopeKey || lastHeading.scopeKeys?.length
+        lastHeading.scopeKey ||
+        lastHeading.scopeKeys?.length ||
+        lastHeading.scopeResolution
           ? lastHeading
           : null;
       inheritedVariantHeading = null;
@@ -2674,7 +2712,8 @@ function buildControlledOccurrenceWorksheet({
           };
           const sectionScopeHint = currentSectionBoundary
             ? currentSectionBoundary.scopeKey ||
-              currentSectionBoundary.scopeKeys?.length
+              currentSectionBoundary.scopeKeys?.length ||
+              currentSectionBoundary.scopeResolution
               ? {
                   ...currentSectionBoundary,
                   source: "CURRENT_PAGE_HEADING",

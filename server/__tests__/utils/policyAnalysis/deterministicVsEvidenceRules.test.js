@@ -838,6 +838,31 @@ describe("deterministicVsEvidenceRules", () => {
     });
   });
 
+  test("does not promote VS-25 under an unresolved combined insurance scope", () => {
+    const phrase = "Mehrkosten durch behördliche Auflagen";
+    const candidate = sourceOccurrence({
+      text: `${phrase} sind bis 5 % des NBW mitversichert.`,
+      exactText: phrase,
+    });
+    candidate.sectionScopeHint = {
+      scopeKey: null,
+      scopeKeys: [],
+      scopeResolution: "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+    };
+
+    expect(
+      deterministicVsCandidateBinding({
+        requirementId: "VS-25",
+        componentId: "authority_reconstruction_extra_costs",
+        occurrence: candidate,
+      })
+    ).toEqual({
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+      authoritative: true,
+    });
+  });
+
   test("does not authorize a VS-25 allocation rejection for invalid offsets", () => {
     const phrase = "Mehrkosten durch behördliche Auflagen";
     const text =

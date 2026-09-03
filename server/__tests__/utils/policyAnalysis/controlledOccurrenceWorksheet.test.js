@@ -1532,6 +1532,34 @@ describe("controlledOccurrenceWorksheet", () => {
         "LEITUNGSWASSER_INSURANCE",
         "STURM_INSURANCE",
       ],
+      scopeResolution: "VERIFIED_FEUER_STURM_LEITUNGSWASSER_COMBINATION",
+      source: "CURRENT_PAGE_HEADING",
+    });
+  });
+
+  test("resets inherited liability but does not certify an unknown combined scope", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Seite 5\n8. Grundstückshaftpflichtversicherung\nSchadenersatzverpflichtungen sind versichert.",
+        [
+          "Seite 6",
+          "3. Versicherungsumfang Feuer- und Sturmversicherung",
+          "Zusätzlich sind behördliche Mehrkosten mitversichert.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "unknown-combined-coverage-resets-liability",
+      catalog: fullCatalog,
+    });
+    const occurrence = component(
+      worksheet,
+      "VS-25",
+      "authority_reconstruction_extra_costs"
+    ).occurrences[0];
+
+    expect(occurrence.sectionScopeHint).toMatchObject({
+      scopeKey: null,
+      scopeKeys: [],
+      scopeResolution: "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
       source: "CURRENT_PAGE_HEADING",
     });
   });

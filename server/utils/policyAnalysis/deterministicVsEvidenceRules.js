@@ -468,6 +468,15 @@ function deterministicVsCandidateBinding({
       "VS-25:authority_reconstruction_extra_cost_limit",
     ].includes(key)
   ) {
+    if (
+      occurrence?.sectionScopeHint?.scopeResolution ===
+      "UNRESOLVED_COMBINED_INSURANCE_SCOPE"
+    )
+      return {
+        binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+        basis: "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+        authoritative: true,
+      };
     const allocation = explicitVs25PureSumEqualizationAllocation(occurrence);
     if (allocation) return allocation;
   }
