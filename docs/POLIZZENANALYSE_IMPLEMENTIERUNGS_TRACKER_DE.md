@@ -4884,3 +4884,52 @@ Fokussiert: 350/350 PASS
 Breit: 1610/1634 PASS; ausschließlich 24 bekannte VS-Katalog-Fixturefehler
 NO RESULT DELTA / NO DEPLOY
 ```
+
+## 94. VS-36-Feldvertrag gehärtet; Ergebnisrang bleibt offen
+
+VS-36 wurde auf dem gebundenen Zehn-Dokument-Paket isoliert geprüft. Der
+Ausgangsfehler war teilweise technisch: Vier belegte B-Klauseln beschrieben
+die Höchstentschädigung über Versicherungssumme, Positionssumme,
+Haftungshöchstsumme oder Versicherungswert, wurden aber nicht als
+source-gebundene symbolische Limits materialisiert. Paket B endete deshalb
+mit `FIELD_INCOMPLETE`.
+
+Die Commits `cee57f3b7`, `c5f2255d2`, `dbe871d8d`, `d99e60dca` und
+`90f40478a` führen einen engen VS-36-Vertrag ein, verhindern die Übernahme
+benachbarter fremder Prozentwerte und binden die A-Klausel exakt als
+`150 % / PER_LOSS_EVENT / BUILDING_INSURANCE_SUM`. Ein im ersten Vertrag
+fehlender `LIST_ITEM`-Scope wurde durch einen beobachtbaren Zwischenlauf
+entdeckt und vorwärts korrigiert.
+
+```text
+Commit: 90f40478ae9b250c4a4c4ec4b226079789322b38
+Profil: CUSTOMER_CORE_5_V81_VS36_LIST_EVENT_LIMITS
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Artefakt: QA/VS-36-LIST-EVENT-90F40478-20260903
+Summary: 187f91649dc341a5b29555e455a3e8ca18b74c7a073d7d8fc1b0021f4bc3e3f7
+Fokussiert: 225/225 PASS
+Breit: 1623/1647 PASS; nur 24 bekannte historische VS-Katalog-Fixturefehler
+Ergebnis: UNKLAR / Review
+Behoben: FIELD_INCOMPLETE
+Offen: MULTIPLE_ATOMS_SAME_COMPONENT, UNRESOLVED_DOCUMENT_PRECEDENCE
+```
+
+Der verbleibende Blocker ist fachlich real: DOC-10 enthält die einzige klare
+B-Ereignisklausel, aber keine dokumentgleiche VS-01-Basisbrücke; weitere
+B-Dokumente enthalten Positions- und Haftungshöchstgrenzen. Ohne belegte
+Dokumentrangfolge und identische Vergleichsbasis darf daraus weder `100 %`
+noch ein Vorteil abgeleitet werden.
+
+VS-25 blieb nach der Änderung im echten Nachbarlauf stabil:
+
+```text
+Artefakt: QA/VS-25-POST-VS36-90F40478-20260903
+Summary: 672ef9ef60f4791459e526333a175533b637f0061db886b0d44f1560dafdaa1d
+Ergebnis: VORTEIL_A / kein Review
+```
+
+R69-A bleibt `10/40`; die 224-Zeilen-Projektion ändert sich nicht. VS-36 ist
+technisch verbessert und als gegenwärtig nicht sicher entscheidbar
+dokumentiert. Kein Vollrun, kein Deployment. Nächster Schritt: nächsten
+offenen R69-Kandidaten einzeln reproduzieren und nur bei belegbarer
+semantischer Generalisierung ändern.

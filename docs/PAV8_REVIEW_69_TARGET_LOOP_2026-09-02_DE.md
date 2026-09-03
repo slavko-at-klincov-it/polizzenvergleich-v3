@@ -2194,6 +2194,128 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.32 VS-36 – Höchstentschädigung: Feldfehler geschlossen, Dokumentrang offen
+
+#### 10.32.1 Ausgangslage und reale Fundstellen
+
+VS-36 wurde auf dem unveränderten Zehn-Dokument-Paket zuerst am Commit
+`80955a41b` isoliert reproduziert. Der Ausgangslauf endete mit Paket A
+`BELEGT`, Paket B `TEILBELEGT` und
+`UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION`. Paket B trug dabei noch den
+technischen Blocker `FIELD_INCOMPLETE`.
+
+Die Fundstellen sind fachlich nicht austauschbar:
+
+- Paket A, DOC-01, PDF-Seite 25: Die Höchstentschädigung je Schadensfall ist
+  ausdrücklich auf maximal `150 %` der vereinbarten Versicherungssumme für
+  das Gebäude begrenzt.
+- Paket B, DOC-02: Die indexangepasste Versicherungssumme der betroffenen
+  Position wird als Ersatzgrenze beschrieben.
+- Paket B, DOC-03: In einem Unterversicherungsverzicht wird die Leistung durch
+  Versicherungssumme oder Haftungshöchstsumme begrenzt. Eine benachbarte
+  `25 %`-Angabe gehört nicht zu dieser Höchstentschädigung.
+- Paket B, DOC-05: Die Entschädigung je Position ist durch deren
+  Versicherungssumme begrenzt.
+- Paket B, DOC-10: Die Entschädigung je Ereignis ist durch die in der Polizze
+  angeführte Versicherungssumme begrenzt und mit dem Versicherungswert
+  maximiert.
+
+Damit lag kein reiner Retrievalfehler vor. Der spezialisierte Feldvertrag
+konnte die vier symbolischen B-Grenzen zuvor nicht typisieren und band die
+klare A-Klausel nicht vollständig an Ereignisscope und Vergleichsbasis.
+
+#### 10.32.2 Kleine Forward-Fixes
+
+```text
+cee57f3b7 fix(analysis): type VS-36 symbolic limits
+c5f2255d2 style(analysis): format VS-36 symbolic limits
+dbe871d8d fix(analysis): bind VS-36 event limit semantics
+d99e60dca style(analysis): format VS-36 event limits
+90f40478a fix(analysis): accept VS-36 list event clauses
+```
+
+Der neue Vertrag
+`server/utils/policyAnalysis/vs36MaximumIndemnityLimitContract.js` typisiert
+nur exakt belegte Klauselfamilien als `SYMBOLIC_LIMIT`; er erfindet
+insbesondere keine numerischen `100 %`. Die A-Klausel wird als `150 %`,
+`PER_LOSS_EVENT` und `BUILDING_INSURANCE_SUM` mit exakter Basisquelle
+materialisiert. Ein allgemeiner numerischer Fallback wurde für VS-36 bewusst
+entfernt, damit fremde Selbstbehalte oder benachbarte Prozentwerte nicht das
+Feld verdrängen.
+
+Der Zwischenlauf auf `d99e60dca` war kein akzeptierter Abschluss: Er zeigte,
+dass die richtige A-Klausel als `LIST_ITEM` strukturiert ist, während der
+erste enge Vertrag nur Absatz und Wortfenster erlaubte. `90f40478a` ergänzt
+genau diese Strukturart unter Beibehaltung des exakten Klauselmusters.
+
+#### 10.32.3 Mac-Studio-Prüfung und gebundene Läufe
+
+Alle Prüfungen liefen im isolierten Kunden-Mac-Studio-Worktree
+`/private/tmp/pv3-vs19-amount-LOqa66/repo` mit Commit
+`90f40478ae9b250c4a4c4ec4b226079789322b38`. Der installierte
+Kundencheckout blieb unverändert.
+
+```text
+Produktprofil: CUSTOMER_CORE_5_V81_VS36_LIST_EVENT_LIMITS
+Fokussiert/angrenzend: 6 Suites, 225 Tests PASS
+Breit: 108/111 Suites, 1623/1647 Tests PASS
+Bekannte Restfehler: ausschließlich 24 historische VS-Katalog-Fixturefehler
+```
+
+```text
+Baseline: QA/VS-36-BASELINE-80955A41-20260903
+Summary: 10365b9e9d54495e97c8bf20b7752d085925090560c9191e4f6fc2dcc48aa376
+A BELEGT / B TEILBELEGT / FIELD_INCOMPLETE / UNKLAR
+
+Symbolische Felder: QA/VS-36-SYMBOLIC-LIMIT-C5F2255D-20260903
+Summary: ba5d19fce42c7a23d22f09e24a502c48612824a79bab1e746f61029e4d7d1fab
+A BELEGT / B RANGFOLGE_PRÜFEN / UNKLAR
+
+Verworfener Struktur-Zwischenstand: QA/VS-36-EVENT-LIMIT-D99E60DC-20260903
+Summary: 0f6beccb70a259a758fa9c580b2cca8c4c1f328e849801d902614d83570a7eb7
+A TEILBELEGT / B RANGFOLGE_PRÜFEN / UNKLAR
+
+Finaler Zielstand: QA/VS-36-LIST-EVENT-90F40478-20260903
+Summary: 187f91649dc341a5b29555e455a3e8ca18b74c7a073d7d8fc1b0021f4bc3e3f7
+Selection: 7c92f519a569d53fd5222b3e397ccbecdc21a88a8df76888ffc5c8703e5d648a
+A BELEGT / B RANGFOLGE_PRÜFEN / UNKLAR
+Triage-/Evidence-Aufrufe: 3/2
+Server-Rejects/-Terminals: 3/5
+```
+
+Die angrenzende VS-25-Entscheidung wurde auf demselben Endcommit erneut über
+alle zehn Dokumente aufgebaut:
+
+```text
+Artefakt: QA/VS-25-POST-VS36-90F40478-20260903
+Summary: 672ef9ef60f4791459e526333a175533b637f0061db886b0d44f1560dafdaa1d
+Ergebnis: VORTEIL_A / kein Review
+Triage-/Evidence-Aufrufe: 0/0
+```
+
+#### 10.32.4 Ergebnis und sichere Grenze
+
+Der technische `FIELD_INCOMPLETE`-Fehler ist geschlossen. Die verbleibende
+Unklarheit ist jetzt präzise: Paket B enthält mehrere wirksame
+Höchstentschädigungsregeln auf unterschiedlichen Ebenen, aber der vorhandene
+Dokumentvertrag beweist weder deren Rangfolge noch eine identische
+Vergleichsbasis zur A-Klausel. Insbesondere liegt für die explizite
+Ereignisklausel in DOC-10 kein dokumentgleich gebundener VS-01-Neuwertbeleg
+vor.
+
+Deshalb ist ein automatisches `VORTEIL_A` derzeit **NO-GO**. Dafür wären ein
+versionierter, paketweiter Dokumentrangvertrag, eine belegte Basisbrücke und
+der Nachweis erforderlich, dass keine höherrangige konkurrierende
+Ereignisgrenze gilt. Das Ignorieren der Positionsklauseln oder ihre pauschale
+Umdeutung zu `100 %` könnte bei anderen Versicherern falsche Vorteile
+erzeugen.
+
+VS-36 gilt damit als vollständig analysierter, technisch verbesserter, aber
+fachlich noch nicht sicher entscheidbarer Kandidat. Er wird nicht als
+abgeschlossener Ergebnis-Delta gezählt: R69-A bleibt `10/40`, und die
+unbestätigte 224-Zeilen-Projektion bleibt unverändert. Ein Gesamtvollrun und
+ein Deployment wurden nicht durchgeführt.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache
