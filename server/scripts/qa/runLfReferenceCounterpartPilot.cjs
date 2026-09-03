@@ -170,7 +170,7 @@ function promptForCategory(category, candidatesByRequirement) {
   return [
     {
       role: "system",
-      content: `Du prüfst ausschließlich, ob vorgegebene Quellenkandidaten aus einem Gebäudeversicherungs-Dokumentpaket B ein semantisches Gegenstück zu einem LF-IMMO-Referenzpunkt bilden.\n\nZulässige Stati:\n- DIRECT_COUNTERPART: gleiche fachliche Funktion und derselbe wesentliche Objekt-/Gefahr-/Rollen-Scope; Werte oder Bedingungen dürfen abweichen.\n- PARTIAL_COUNTERPART: nur ein echter Teil des Referenzpunkts ist abgedeckt oder eine wesentliche Dimension fehlt.\n- RELATED_ONLY: gleiches Thema, aber andere Faktrolle, anderer Gegenstand oder anderer Geltungsbereich.\n- NO_COUNTERPART_IN_CANDIDATES: keiner der Kandidaten ist ein fachliches Gegenstück. Das bedeutet niemals automatisch Ausschluss oder fehlende Deckung im vollständigen Paket.\n- UNCLEAR: die Kandidaten reichen für eine sichere Zuordnung nicht aus.\n\nVerwende ausschließlich vorhandene candidateIds. Erfinde keine Quelle, Seite, Deckung, Wirkung oder Bewertung. Mehrere candidateIds sind erlaubt, wenn das Gegenstück über mehrere Paketdokumente verteilt ist. Gib für jeden requirementId genau ein Objekt aus. Ausgabe ausschließlich als JSON-Array ohne Markdown. Jedes Objekt hat exakt: requirementId, status, candidateIds, matchSummary, unresolved. Formuliere matchSummary und unresolved knapp auf Deutsch.`,
+      content: `Du prüfst ausschließlich, ob vorgegebene Quellenkandidaten aus einem Gebäudeversicherungs-Dokumentpaket B ein semantisches Gegenstück zu einem LF-IMMO-Referenzpunkt bilden.\n\nZulässige Stati:\n- DIRECT_COUNTERPART: gleiche fachliche Funktion und derselbe wesentliche Objekt-/Gefahr-/Rollen-Scope; Werte oder Bedingungen dürfen abweichen.\n- PARTIAL_COUNTERPART: nur ein echter Teil des Referenzpunkts ist abgedeckt oder eine wesentliche Dimension fehlt.\n- RELATED_ONLY: gleiches Thema, aber andere Faktrolle, anderer Gegenstand oder anderer Geltungsbereich.\n- NO_COUNTERPART_IN_CANDIDATES: keiner der Kandidaten ist ein fachliches Gegenstück. Das bedeutet niemals automatisch Ausschluss oder fehlende Deckung im vollständigen Paket.\n- UNCLEAR: die Kandidaten reichen für eine sichere Zuordnung nicht aus.\n\nVerwende ausschließlich vorhandene candidateIds. Erfinde keine Quelle, Seite, Deckung, Wirkung oder Bewertung. Für DIRECT_COUNTERPART, PARTIAL_COUNTERPART und RELATED_ONLY muss candidateIds mindestens eine vorhandene ID enthalten. Für NO_COUNTERPART_IN_CANDIDATES muss candidateIds exakt [] sein. Bei UNCLEAR sind [] oder vorhandene IDs zulässig. Mehrere candidateIds sind erlaubt, wenn das Gegenstück über mehrere Paketdokumente verteilt ist. Gib für jeden requirementId genau ein Objekt aus. Ausgabe ausschließlich als JSON-Array ohne Markdown. Jedes Objekt hat exakt: requirementId, status, candidateIds, matchSummary, unresolved. Formuliere matchSummary und unresolved knapp auf Deutsch.`,
     },
     {
       role: "user",
@@ -194,6 +194,7 @@ async function classifyCategory({
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const started = performance.now();
+    let modelText = "";
     try {
       const response = await client.chat.completions.create({
         model,
@@ -201,9 +202,9 @@ async function classifyCategory({
         temperature: 0,
         max_tokens: 5000,
       });
-      const text = response.choices?.[0]?.message?.content || "";
+      modelText = response.choices?.[0]?.message?.content || "";
       const results = validateModelResults(
-        jsonFromModelText(text),
+        jsonFromModelText(modelText),
         requirements,
         candidatesByRequirement
       );
@@ -222,6 +223,15 @@ async function classifyCategory({
       };
     } catch (error) {
       lastError = error;
+      if (attempt === 1 && modelText) {
+        messages.push(
+          { role: "assistant", content: modelText },
+          {
+            role: "user",
+            content: `Die Ausgabe verletzt den Vertrag (${error.code || error.message}). Korrigiere nur das JSON. Insbesondere gilt: Match-Status benötigen mindestens eine vorhandene candidateId; NO_COUNTERPART_IN_CANDIDATES benötigt candidateIds: []; unbekannte IDs sind verboten.`,
+          }
+        );
+      }
     }
   }
   throw lastError;
