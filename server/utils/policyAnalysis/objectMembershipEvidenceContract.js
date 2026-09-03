@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 const SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID =
-  "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2";
+  "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3";
 const OBJECT_MEMBERSHIP = Object.freeze({
   MEMBER_OF_CLASS: "MEMBER_OF_CLASS",
   EXCLUDED_FROM_CLASS: "EXCLUDED_FROM_CLASS",
@@ -292,15 +292,9 @@ function sourceBoundSpan({
   );
 }
 
-function withoutHeadingNumber(value) {
-  const text = String(value || "");
-  const prefix = text.match(/^\s*\d+(?:\.\d+)*\.?\s*/u)?.[0] || "";
-  return { text: text.slice(prefix.length), offset: prefix.length };
-}
-
-function relationTextMatches({ membership, classAlias, headingText }) {
-  const text = normalizedText(withoutHeadingNumber(headingText).text);
-  const subject = normalizedText(classAlias);
+function relationTextMatches({ membership, subjectText, headingText }) {
+  const text = normalizedText(headingText);
+  const subject = normalizedText(subjectText);
   if (membership === OBJECT_MEMBERSHIP.MEMBER_OF_CLASS)
     return text === `${subject} das sind`;
   return ["gelten", "gilt", "zaehlen", "zaehlt"].some(
@@ -337,20 +331,11 @@ function buildSourceBoundObjectMembershipProof({
     occurrence.exactText,
     validated.memberAliases
   );
-  const normalizedSubject = withoutHeadingNumber(hint.subject).text;
-  const classAlias = validated.classAliases.find(
-    (alias) => normalizedText(alias) === normalizedText(normalizedSubject)
+  const classAlias = validated.classAliases.find((alias) =>
+    firstAliasSpan(hint.subject, [alias])
   );
-  const headingWithoutNumber = withoutHeadingNumber(hint.text);
-  const localClassMatch = classAlias
-    ? firstAliasSpan(headingWithoutNumber.text, [classAlias])
-    : null;
-  const classMatch = localClassMatch
-    ? {
-        ...localClassMatch,
-        start: localClassMatch.start + headingWithoutNumber.offset,
-        end: localClassMatch.end + headingWithoutNumber.offset,
-      }
+  const classMatch = classAlias
+    ? firstAliasSpan(hint.text, [classAlias])
     : null;
   if (
     !memberMatch ||
@@ -358,7 +343,7 @@ function buildSourceBoundObjectMembershipProof({
     !classMatch ||
     !relationTextMatches({
       membership: validated.membership,
-      classAlias,
+      subjectText: hint.subject,
       headingText: hint.text,
     }) ||
     !sourceBoundSpan({

@@ -1083,6 +1083,11 @@ describe("controlledOccurrenceWorksheet", () => {
     const aWorksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
         [
+          "1.1Gebäude (Betriebs-, Büro-, Lager-, Wohn- und sonstige Gebäude)",
+          "das sind:",
+          "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+        ].join("\n"),
+        [
           "• Überspannung oder Induktion infolge indirekter Blitzschlag innerhalb und außerhalb von versicherten Gebäuden am Versicherungsgrundstück, an",
           "- Licht- und Kraftinstallationen sowie Zähler- und Sicherungskästen;",
         ].join("\n"),
@@ -1625,6 +1630,17 @@ describe("controlledOccurrenceWorksheet", () => {
       expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
       expect(proof).not.toHaveProperty("coverageEffect");
     }
+    const [parentProof] =
+      worksheet.requirements[0].supportingObjectMembershipProofs;
+    expect(parentProof.edge).toMatchObject({
+      relation: "MEMBER_OF_CLASS",
+      memberObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      classObjectKey: "BUILDING",
+      classSpan: { exactText: "Gebäude" },
+    });
+    expect(parentProof.edge.memberContextSpan.exactText).toContain(
+      "im Gebäudeneuwert enthalten sind"
+    );
   });
 
   test("does not neutralize a coverage-bearing exclusion disguised as classification", () => {

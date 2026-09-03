@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.12",
+  "catalogId": "fe-occurrence-full-draft-v0.13",
   "categoryView": "FE",
   "requirements": [
     {
@@ -767,6 +767,23 @@
       "id": "FE-C02",
       "label": "Photovoltaikanlage als vom Brand betroffene Sache mitversichert",
       "requestedFields": [],
+      "supportingObjectMembershipEvidenceContracts": [
+        {
+          "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+          "membership": "MEMBER_OF_CLASS",
+          "memberObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
+          "classObjectKey": "BUILDING",
+          "memberAliases": [
+            "Haustechnische Anlagen",
+            "Haustechnische Anlagen und Adaptierungen"
+          ],
+          "classAliases": ["Gebäude"],
+          "allowedClassificationSources": [
+            "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+            "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
+          ]
+        }
+      ],
       "components": [
         {
           "id": "photovoltaic_as_damaged_object",
@@ -791,7 +808,7 @@
           ],
           "objectMembershipEvidenceContracts": [
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
               "membership": "MEMBER_OF_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
@@ -806,7 +823,7 @@
               ]
             },
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
               "membership": "EXCLUDED_FROM_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUSINESS_CONTENT",

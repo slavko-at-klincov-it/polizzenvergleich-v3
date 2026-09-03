@@ -1415,6 +1415,17 @@ function materializeAtomicFacts({
       ...(requirement?.componentFamilyContract
         ? { componentFamilyContract: requirement.componentFamilyContract }
         : {}),
+      ...(requirement?.supportingObjectMembershipEvidenceContracts?.length > 0
+        ? {
+            supportingObjectMembershipEvidenceContracts:
+              requirement.supportingObjectMembershipEvidenceContracts,
+            supportingObjectMembershipProofs: JSON.parse(
+              JSON.stringify(
+                requirement.supportingObjectMembershipProofs || []
+              )
+            ),
+          }
+        : {}),
       scopePolicy: requirement?.scopePolicy || null,
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]

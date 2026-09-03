@@ -2442,9 +2442,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V87_FE_C02_MEMBERSHIP_QUALIFIER_PROOF",
+      id: "CUSTOMER_CORE_5_V88_FE_C02_MEMBERSHIP_PARENT_PROOF",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_OBJECT_MEMBERSHIP_QUALIFIER_PROOF_V48",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_OBJECT_MEMBERSHIP_PARENT_PROOF_V49",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -3654,12 +3654,21 @@ describe("policy comparison result builder", () => {
   test("retains source-bound object-membership proof on the selected atomic source", () => {
     const objectMembershipProof = {
       schemaVersion: 1,
-      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2",
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
       proofDigest: "a".repeat(64),
       edge: {
         relation: "MEMBER_OF_CLASS",
         memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
         classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      },
+    };
+    const supportingObjectMembershipProof = {
+      ...objectMembershipProof,
+      proofDigest: "b".repeat(64),
+      edge: {
+        relation: "MEMBER_OF_CLASS",
+        memberObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+        classObjectKey: "BUILDING",
       },
     };
     const targets = [
@@ -3687,6 +3696,12 @@ describe("policy comparison result builder", () => {
           {
             id: "FE-C02",
             requestedFields: [],
+            supportingObjectMembershipEvidenceContracts: [
+              { contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3" },
+            ],
+            supportingObjectMembershipProofs: [
+              supportingObjectMembershipProof,
+            ],
             components: [
               {
                 id: "photovoltaic_as_damaged_object",
@@ -3733,6 +3748,12 @@ describe("policy comparison result builder", () => {
     );
     expect(atom.sources[0].objectMembershipProof).not.toBe(
       objectMembershipProof
+    );
+    expect(atom.supportingObjectMembershipProofs).toEqual([
+      supportingObjectMembershipProof,
+    ]);
+    expect(atom.supportingObjectMembershipProofs[0]).not.toBe(
+      supportingObjectMembershipProof
     );
   });
 });

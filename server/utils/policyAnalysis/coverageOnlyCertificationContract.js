@@ -68,6 +68,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
       ...(requirement?.componentFamilyContract
         ? { componentFamilyContract: requirement.componentFamilyContract }
         : {}),
+      ...(requirement?.supportingObjectMembershipEvidenceContracts?.length > 0
+        ? {
+            supportingObjectMembershipEvidenceContracts:
+              requirement.supportingObjectMembershipEvidenceContracts,
+          }
+        : {}),
       bindingStructures: requirement?.bindingStructures || [],
       components: (requirement?.components || []).map((component) => ({
         id: component.id,

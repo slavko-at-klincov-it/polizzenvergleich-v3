@@ -2013,6 +2013,25 @@ function validFollowingStructuralBoundaryProof(occurrence) {
     : proof.documentEnd > proof.documentStart && proof.text.trim().length > 0;
 }
 
+function validateObjectMembershipContracts(value, detail) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length === 0 || value.length > 8)
+    throw worksheetError("OBJECT_MEMBERSHIP_CONTRACTS_INVALID", detail);
+  const validated = value.map((contract, contractIndex) =>
+    validateObjectMembershipEvidenceContract(
+      contract,
+      `${detail}[${contractIndex}]`
+    )
+  );
+  const keys = validated.map(
+    ({ membership, memberObjectKey, classObjectKey }) =>
+      `${membership}:${memberObjectKey}:${classObjectKey}`
+  );
+  if (new Set(keys).size !== keys.length)
+    throw worksheetError("OBJECT_MEMBERSHIP_CONTRACT_DUPLICATE", detail);
+  return validated;
+}
+
 function validateCatalog(catalog) {
   if (
     ![1, 2].includes(catalog?.schemaVersion) ||
@@ -2203,36 +2222,10 @@ function validateCatalog(catalog) {
               `${id}:${componentId}`
             );
       const objectMembershipEvidenceContracts =
-        component.objectMembershipEvidenceContracts === undefined
-          ? []
-          : (() => {
-              if (
-                !Array.isArray(component.objectMembershipEvidenceContracts) ||
-                component.objectMembershipEvidenceContracts.length === 0 ||
-                component.objectMembershipEvidenceContracts.length > 8
-              )
-                throw worksheetError(
-                  "OBJECT_MEMBERSHIP_CONTRACTS_INVALID",
-                  `${id}:${componentId}`
-                );
-              const validated = component.objectMembershipEvidenceContracts.map(
-                (contract, contractIndex) =>
-                  validateObjectMembershipEvidenceContract(
-                    contract,
-                    `${id}:${componentId}:objectMembershipEvidenceContracts[${contractIndex}]`
-                  )
-              );
-              const keys = validated.map(
-                ({ membership, memberObjectKey, classObjectKey }) =>
-                  `${membership}:${memberObjectKey}:${classObjectKey}`
-              );
-              if (new Set(keys).size !== keys.length)
-                throw worksheetError(
-                  "OBJECT_MEMBERSHIP_CONTRACT_DUPLICATE",
-                  `${id}:${componentId}`
-                );
-              return validated;
-            })();
+        validateObjectMembershipContracts(
+          component.objectMembershipEvidenceContracts,
+          `${id}:${componentId}:objectMembershipEvidenceContracts`
+        );
       const fieldGovernorPolicy =
         component.fieldGovernorPolicy === undefined
           ? null
@@ -2332,6 +2325,11 @@ function validateCatalog(catalog) {
         rowComparison: contract.rowComparison,
       };
     })();
+    const supportingObjectMembershipEvidenceContracts =
+      validateObjectMembershipContracts(
+        requirement.supportingObjectMembershipEvidenceContracts,
+        `${id}:supportingObjectMembershipEvidenceContracts`
+      );
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -2564,6 +2562,9 @@ function validateCatalog(catalog) {
         return policy;
       })(),
       ...(componentFamilyContract ? { componentFamilyContract } : {}),
+      ...(supportingObjectMembershipEvidenceContracts.length > 0
+        ? { supportingObjectMembershipEvidenceContracts }
+        : {}),
       bindingStructures,
       scopeRules,
       components,
@@ -2980,6 +2981,49 @@ function buildRequirementBindingGroups({
   };
 }
 
+function buildSupportingObjectMembershipProofs({
+  document,
+  documentFingerprint,
+  categoryView,
+  catalogId,
+  requirement,
+}) {
+  const contracts = requirement.supportingObjectMembershipEvidenceContracts || [];
+  if (contracts.length === 0) return [];
+  const supportCatalog = {
+    schemaVersion: 1,
+    catalogId: `${catalogId}/object-membership-support/${requirement.id}`,
+    categoryView,
+    requirements: [
+      {
+        id: `${requirement.id}-OBJECT-MEMBERSHIP-SUPPORT`,
+        label: `${requirement.label} – Objektmitgliedschaft`,
+        requestedFields: [],
+        components: contracts.map((contract, index) => ({
+          id: `object_membership_support_${index + 1}`,
+          label: `${contract.memberObjectKey} -> ${contract.classObjectKey}`,
+          factRole: "DEFINITION",
+          aliases: contract.memberAliases,
+          objectMembershipEvidenceContracts: [contract],
+        })),
+      },
+    ],
+  };
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document,
+    documentFingerprint,
+    catalog: supportCatalog,
+  });
+  const proofs = worksheet.requirements[0].components.flatMap((component) =>
+    component.occurrences
+      .map(({ objectMembershipProof }) => objectMembershipProof)
+      .filter(Boolean)
+  );
+  return [
+    ...new Map(proofs.map((proof) => [proof.proofDigest, proof])).values(),
+  ].sort((left, right) => left.proofDigest.localeCompare(right.proofDigest));
+}
+
 /**
  * Enumerates controlled aliases across every physical page and creates a
  * candidate-only worksheet for inspection before any LLM call.
@@ -3391,6 +3435,14 @@ function buildControlledOccurrenceWorksheet({
       documentFingerprint: fingerprint,
     });
     bindingGroups.push(...grouped.groups);
+    const supportingObjectMembershipProofs =
+      buildSupportingObjectMembershipProofs({
+        document,
+        documentFingerprint: fingerprint,
+        categoryView: catalog.categoryView,
+        catalogId: catalog.catalogId,
+        requirement,
+      });
     return {
       id: requirement.id,
       label: requirement.label,
@@ -3416,6 +3468,13 @@ function buildControlledOccurrenceWorksheet({
       coverageAggregationPolicy: requirement.coverageAggregationPolicy,
       ...(requirement.componentFamilyContract
         ? { componentFamilyContract: requirement.componentFamilyContract }
+        : {}),
+      ...(requirement.supportingObjectMembershipEvidenceContracts?.length > 0
+        ? {
+            supportingObjectMembershipEvidenceContracts:
+              requirement.supportingObjectMembershipEvidenceContracts,
+            supportingObjectMembershipProofs,
+          }
         : {}),
       componentCount: grouped.components.length,
       components: grouped.components,
