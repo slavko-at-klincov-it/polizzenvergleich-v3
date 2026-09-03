@@ -2128,6 +2128,103 @@ function valueCoversRequirement({
   );
 }
 
+const PERIL_SOURCE_OWNED_FIELDS = new Set([
+  "limit",
+  "limits",
+  "amount",
+  "deductible",
+  "waiting_period",
+]);
+
+function selectedPerilFieldOwner({ indexed, fact }) {
+  if (indexed?.component?.factRole !== "PERIL") return null;
+  const occurrence = indexed.occurrence;
+  const context = occurrence?.context;
+  const contextText = context?.text;
+  const contextStart = Number(context?.documentStart);
+  const contextEnd = Number(context?.documentEnd);
+  const occurrenceStart = Number(occurrence?.documentStart);
+  const occurrenceEnd = Number(occurrence?.documentEnd);
+  const exactText = occurrence?.exactText;
+  const sourceStart = Number(fact?.source?.documentStart);
+  const sourceEnd = Number(fact?.source?.documentEnd);
+  if (
+    typeof contextText !== "string" ||
+    typeof exactText !== "string" ||
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(contextEnd) ||
+    contextStart < 0 ||
+    contextEnd !== contextStart + contextText.length ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd) ||
+    occurrenceStart < contextStart ||
+    occurrenceEnd !== occurrenceStart + exactText.length ||
+    occurrenceEnd > contextEnd ||
+    contextText.slice(
+      occurrenceStart - contextStart,
+      occurrenceEnd - contextStart
+    ) !== exactText ||
+    !Number.isInteger(sourceStart) ||
+    !Number.isInteger(sourceEnd) ||
+    sourceStart < contextStart ||
+    sourceEnd <= sourceStart ||
+    sourceEnd > contextEnd
+  )
+    return null;
+  return {
+    candidateId: occurrence.candidateId,
+    requirementId: indexed.requirement.id,
+    componentId: indexed.component.id,
+    contextLength: contextEnd - contextStart,
+  };
+}
+
+function factOwnedByCurrentSelectedPeril({
+  fact,
+  field,
+  indexed,
+  candidateById,
+  bindingByCandidateId,
+}) {
+  if (
+    indexed.component.factRole !== "PERIL" ||
+    !PERIL_SOURCE_OWNED_FIELDS.has(field)
+  )
+    return true;
+
+  const owners = [];
+  for (const [candidateId, binding] of bindingByCandidateId) {
+    if (![VALUE_BINDING.DIRECT, VALUE_BINDING.NARROW_SCOPE].includes(binding))
+      continue;
+    const owner = selectedPerilFieldOwner({
+      indexed: candidateById.get(candidateId),
+      fact,
+    });
+    if (owner) owners.push(owner);
+  }
+
+  // Field governors may intentionally bind a value outside the candidate's
+  // own context. This ownership rule applies only when the selected source
+  // candidate itself provides a valid containing peril context.
+  if (
+    !owners.some(
+      ({ candidateId }) => candidateId === fact.source.candidateId
+    )
+  )
+    return true;
+
+  const shortestContext = Math.min(
+    ...owners.map(({ contextLength }) => contextLength)
+  );
+  return owners
+    .filter(({ contextLength }) => contextLength === shortestContext)
+    .every(
+      ({ requirementId, componentId }) =>
+        requirementId === indexed.requirement.id &&
+        componentId === indexed.component.id
+    );
+}
+
 function extractPreferredFacts({
   worksheet,
   requirement,
@@ -2159,31 +2256,41 @@ function extractPreferredFacts({
       occurrence: indexed.occurrence,
       binding,
       worksheet,
-    }).map((fact) => {
-      const componentScopedFact =
-        (indexed.component.factRole === "INSURED_OBJECT" ||
-          indexed.component.fieldGovernorPolicy ===
-            EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY) &&
-        indexed.requirement.components.length > 1
-          ? {
-              ...fact,
-              componentScope: {
-                id: indexed.component.id,
-                label: indexed.component.label,
-              },
-            }
-          : fact;
-      const bindingGroupFieldApplicability =
-        buildBindingGroupFieldApplicability({
-          group: bindingGroupById.get(indexed.occurrence.bindingGroupId),
+    })
+      .filter((fact) =>
+        factOwnedByCurrentSelectedPeril({
+          fact,
+          field,
+          indexed,
           candidateById,
-          sourceCandidateId: candidateId,
-          fact: componentScopedFact,
-        });
-      return bindingGroupFieldApplicability
-        ? { ...componentScopedFact, bindingGroupFieldApplicability }
-        : componentScopedFact;
-    });
+          bindingByCandidateId,
+        })
+      )
+      .map((fact) => {
+        const componentScopedFact =
+          (indexed.component.factRole === "INSURED_OBJECT" ||
+            indexed.component.fieldGovernorPolicy ===
+              EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY) &&
+          indexed.requirement.components.length > 1
+            ? {
+                ...fact,
+                componentScope: {
+                  id: indexed.component.id,
+                  label: indexed.component.label,
+                },
+              }
+            : fact;
+        const bindingGroupFieldApplicability =
+          buildBindingGroupFieldApplicability({
+            group: bindingGroupById.get(indexed.occurrence.bindingGroupId),
+            candidateById,
+            sourceCandidateId: candidateId,
+            fact: componentScopedFact,
+          });
+        return bindingGroupFieldApplicability
+          ? { ...componentScopedFact, bindingGroupFieldApplicability }
+          : componentScopedFact;
+      });
     factsByBinding.get(binding).push(...facts);
   }
 

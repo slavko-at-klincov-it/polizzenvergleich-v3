@@ -1739,6 +1739,257 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("keeps an HQ30 flood limit out of a broader earthquake clause context", () => {
+    const contextStart = 400;
+    const floodClause =
+      "Befindet sich das Gebäude innerhalb der HQ30-Zone, beträgt die Versicherungssumme bei Schäden durch Hochwasser maximal EUR 10.000.";
+    const text =
+      "Katastrophen sind versichert, insbesondere Hochwasser, Lawinen, Vermurungen und Erdbeben. Der Selbstbehalt bei Erdbeben beträgt EUR 350 je Schadenfall. " +
+      floodClause;
+    const earthquake = textualOccurrence({
+      candidateId: "candidate:el07-broad-earthquake",
+      text,
+      exactText: "Erdbeben",
+      contextStart,
+    });
+    const flood = textualOccurrence({
+      candidateId: "candidate:el04-local-hq30",
+      text: floodClause,
+      exactText: "Hochwasser",
+      contextStart: contextStart + text.indexOf(floodClause),
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: {
+        candidateOnly: true,
+        requirements: [
+          {
+            id: "EL-07",
+            label: "Erdbeben",
+            requestedFields: [],
+            optionalFields: ["limit", "deductible"],
+            components: [
+              {
+                id: "earthquake",
+                label: "Erdbeben",
+                factRole: "PERIL",
+                occurrences: [earthquake],
+              },
+            ],
+          },
+          {
+            id: "EL-04",
+            label: "Hochwasser",
+            requestedFields: [],
+            optionalFields: ["limit"],
+            components: [
+              {
+                id: "flood",
+                label: "Hochwasser",
+                factRole: "PERIL",
+                occurrences: [flood],
+              },
+            ],
+          },
+        ],
+      },
+      materializedCandidates: selections(
+        ["candidate:el07-broad-earthquake", "DIRECT"],
+        ["candidate:el04-local-hq30", "NARROW_SCOPE"]
+      ),
+    });
+
+    const earthquakeEvidence = result.requirements.find(
+      ({ requirementId }) => requirementId === "EL-07"
+    );
+    expect(earthquakeEvidence.fields).toEqual([
+      { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+      {
+        field: "deductible",
+        status: FIELD_EVIDENCE_STATUS.FOUND,
+        facts: [expect.objectContaining({ normalizedValue: "EUR 350" })],
+      },
+    ]);
+    expect(
+      result.requirements.find(
+        ({ requirementId }) => requirementId === "EL-04"
+      ).fields
+    ).toEqual([
+      {
+        field: "limit",
+        status: FIELD_EVIDENCE_STATUS.FOUND,
+        facts: [expect.objectContaining({ normalizedValue: "EUR 10.000" })],
+      },
+    ]);
+  });
+
+  test("uses source containment when a foreign peril follows its amount", () => {
+    const contextStart = 900;
+    const floodClause =
+      "EUR 10.000 gelten ausschließlich für Schäden durch Hochwasser.";
+    const text = `Erdbeben ist versichert. ${floodClause}`;
+    const earthquake = textualOccurrence({
+      candidateId: "candidate:el07-reverse-grammar",
+      text,
+      exactText: "Erdbeben",
+      contextStart,
+    });
+    const flood = textualOccurrence({
+      candidateId: "candidate:el04-reverse-grammar",
+      text: floodClause,
+      exactText: "Hochwasser",
+      contextStart: contextStart + text.indexOf(floodClause),
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: {
+        candidateOnly: true,
+        requirements: [
+          {
+            id: "EL-07",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "earthquake",
+                factRole: "PERIL",
+                occurrences: [earthquake],
+              },
+            ],
+          },
+          {
+            id: "EL-04",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "flood",
+                factRole: "PERIL",
+                occurrences: [flood],
+              },
+            ],
+          },
+        ],
+      },
+      materializedCandidates: selections(
+        ["candidate:el07-reverse-grammar", "DIRECT"],
+        ["candidate:el04-reverse-grammar", "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements[0].fields[0]).toEqual({
+      field: "limit",
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
+  test("fails closed when equally local selected perils compete for a value", () => {
+    const text = "Erdbeben und Hochwasser sind bis EUR 10.000 versichert.";
+    const earthquake = textualOccurrence({
+      candidateId: "candidate:el07-shared-context",
+      text,
+      exactText: "Erdbeben",
+    });
+    const flood = textualOccurrence({
+      candidateId: "candidate:el04-shared-context",
+      text,
+      exactText: "Hochwasser",
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: {
+        candidateOnly: true,
+        requirements: [
+          {
+            id: "EL-07",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "earthquake",
+                factRole: "PERIL",
+                occurrences: [earthquake],
+              },
+            ],
+          },
+          {
+            id: "EL-04",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "flood",
+                factRole: "PERIL",
+                occurrences: [flood],
+              },
+            ],
+          },
+        ],
+      },
+      materializedCandidates: selections(
+        ["candidate:el07-shared-context", "DIRECT"],
+        ["candidate:el04-shared-context", "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements.map(({ fields }) => fields[0])).toEqual([
+      { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+      { field: "limit", status: FIELD_EVIDENCE_STATUS.NOT_FOUND, facts: [] },
+    ]);
+  });
+
+  test("does not let a mention-only peril steal a selected peril value", () => {
+    const contextStart = 1200;
+    const floodClause =
+      "Für Schäden durch Hochwasser beträgt das Limit EUR 10.000.";
+    const text = `Erdbeben ist versichert. ${floodClause}`;
+    const earthquake = textualOccurrence({
+      candidateId: "candidate:el07-selected-owner",
+      text,
+      exactText: "Erdbeben",
+      contextStart,
+    });
+    const flood = textualOccurrence({
+      candidateId: "candidate:el04-mention-only",
+      text: floodClause,
+      exactText: "Hochwasser",
+      contextStart: contextStart + text.indexOf(floodClause),
+    });
+    const result = materializeRequestedFieldEvidence({
+      worksheet: {
+        candidateOnly: true,
+        requirements: [
+          {
+            id: "EL-07",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "earthquake",
+                factRole: "PERIL",
+                occurrences: [earthquake],
+              },
+            ],
+          },
+          {
+            id: "EL-04",
+            requestedFields: ["limit"],
+            components: [
+              {
+                id: "flood",
+                factRole: "PERIL",
+                occurrences: [flood],
+              },
+            ],
+          },
+        ],
+      },
+      materializedCandidates: selections(
+        ["candidate:el07-selected-owner", "DIRECT"],
+        ["candidate:el04-mention-only", "MENTION_ONLY"]
+      ),
+    });
+
+    expect(result.requirements[0].fields[0]).toMatchObject({
+      field: "limit",
+      status: FIELD_EVIDENCE_STATUS.FOUND,
+      facts: [expect.objectContaining({ normalizedValue: "EUR 10.000" })],
+    });
+  });
+
   test("materializes a VS-36 symbolic position limit without coercing it to 100 percent", () => {
     const text =
       "Die Versicherungssumme bildet die Grenze für die Entschädigung des Versicherers, wobei die Entschädigung für die unter jeder einzelnen Position der Polizze versicherten Sachen durch die für die betreffende Position angegebene Versicherungssumme begrenzt ist.";
