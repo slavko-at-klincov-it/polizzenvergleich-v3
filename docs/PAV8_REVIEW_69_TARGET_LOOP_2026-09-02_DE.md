@@ -2216,7 +2216,7 @@ Deckungsevidenz, wurden aber allein wegen ihres engeren Scopes als
 der zeilenspezifischen Vollständigkeitsregel.
 
 ```text
-Commit: ff0dea769b8c2ea9cf8ca6f4d15bf2df65f4f5f9
+Commit: ff0dea760dbc1aad5f7917aaac57eb037c668700
 QA-Artefakt:
 /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-A10-BASELINE-FF0DEA76-20260903
 Summary-Digest:
