@@ -2521,7 +2521,7 @@ Reportausschnitt zu erraten.
 Versionierte Bindungen:
 
 ```text
-Produktprofil: CUSTOMER_CORE_5_V77_VS25_BASIS_SOURCE_PROOF
+Produktprofil: CUSTOMER_CORE_5_V78_VS25_PERCENT_DOCUMENT_BASIS_PROOF
 Vergleichsregel: VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1
 Reason-Code: HIGHER_AUTHORITY_RECONSTRUCTION_RELATIVE_LIMIT
 ```
@@ -2610,6 +2610,48 @@ Gebäudeversicherungs-Aussage.
 
 Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
 durchgeführt. Die installierte Kundenanwendung blieb unverändert.
+
+#### 10.31.6 Nachaudit: Neubauwertbeleg im Prozentdokument
+
+Ein weiterer unabhängiger Mehrdokument-Audit fand nach `22dab16c7` eine
+generische Restlücke: Der Vertrag verlangte mindestens einen gültigen
+VS-01-Neuwertbeleg auf derselben Paketseite, aber noch nicht zwingend in genau
+dem Dokument, das die Prozentgrenze formuliert. Bei mehreren versicherten
+Gebäuden hätte dadurch theoretisch der Neuwertbeleg eines anderen Dokuments
+die Prozentbasis legitimieren können.
+
+Commit `95e4912ad30099d8dbeec15629e4ab59f0ea264d` verlangt deshalb zusätzlich
+einen vollständigen VS-01-Neuwertbeleg in der Dokument-UUID der
+Prozentpräsentation. Bei der Prozent-/Euro-Reconciliation bleibt der bereits
+streng gebundene Geldbasisbeleg im Dokument der Europräsentation zusätzlich
+erforderlich. Die neue adversariale Prüfung entfernt nur den Neuwertbeleg im
+Prozentdokument und bestätigt den fail-closed-Abbruch; der echte Kundenfall
+besitzt beide Bindungen.
+
+```text
+Produktprofil: CUSTOMER_CORE_5_V78_VS25_PERCENT_DOCUMENT_BASIS_PROOF
+Mac-Studio-Commit: 95e4912ad30099d8dbeec15629e4ab59f0ea264d
+Formatprüfung: PASS
+Fokussierte Regression: 8/8 Suites, 350/350 Tests PASS
+Breite Utility-Regression: 107/110 Suites, 1610/1634 Tests PASS
+Bekannte Fehler: 24 × TARGETED_QA_PROFILE_CATALOG_MISMATCH: VS
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-25-PERCENT-DOCUMENT-BASIS-95E4912A-20260903
+Summary-Digest:
+8e9998d6bf6de8ec66640c81d80d3a3e94ce959365fffb2349aea2d7a070ee6a
+Target-Selection-Digest:
+aed1c9e39129d53361eef4a4f3b4604398940bcbd4824f2eb93aa40e54fe4614
+Triage-/Evidence-Modellaufrufe: 0 / 0
+Triage-Serverrejects: 26
+Evidence-Serverterminals: 21
+Ergebnis: VORTEIL_A / kein Review
+```
+
+Die Ergebnisprojektion bleibt unverändert. Der Nachaudit erhöht die
+Generalisierungssicherheit, erzeugt aber bewusst kein zusätzliches
+Kundenergebnis. Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden
+nicht durchgeführt.
 
 ### 10.28 VS-21 – Aufräum-/Abbruchkosten und inkompatible Limitformen
 

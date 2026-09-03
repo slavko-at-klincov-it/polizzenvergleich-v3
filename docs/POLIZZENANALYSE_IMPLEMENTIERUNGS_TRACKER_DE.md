@@ -4847,7 +4847,7 @@ Ein zu enges 240-Zeichen-Basisfenster wurde nicht zurückgebaut, sondern durch
 die persistierte `comparisonBasisSource` auf `22dab16c7` vorwärts korrigiert.
 
 ```text
-Produktprofil: CUSTOMER_CORE_5_V77_VS25_BASIS_SOURCE_PROOF
+Produktprofil: CUSTOMER_CORE_5_V78_VS25_PERCENT_DOCUMENT_BASIS_PROOF
 Artefakt: QA/VS-25-BASIS-SOURCE-PROOF-22DAB16C-20260903
 Summary: 4b76d2f4843961ccd60e1779d7dc789fd030dece30399059a03c708e2552b8db
 Ergebnis: VORTEIL_A / kein Review
@@ -4868,4 +4868,19 @@ GLEICHWERTIG 122 / NICHT_VERGLEICHBAR 12 / UNKLAR 50
 LIMIT: kein neuer 224-Zeilen-Gesamtlauf und kein unbekannter Holdout
 NO DEPLOY
 NEXT: nächsten offenen R69-Kandidaten isoliert reproduzieren
+```
+
+Ein anschließender Mehrdokument-Audit fand noch eine fehlende Bindung zwischen
+dem VS-01-Neuwertbeleg und genau dem Dokument der VS-25-Prozentklausel.
+`95e4912ad` schließt diese Lücke mit einer zusätzlichen adversarialen
+Gegenprobe. Der echte Zehn-Dokument-Lauf bleibt unverändert
+`VORTEIL_A / kein Review`:
+
+```text
+Profil: CUSTOMER_CORE_5_V78_VS25_PERCENT_DOCUMENT_BASIS_PROOF
+Artefakt: QA/VS-25-PERCENT-DOCUMENT-BASIS-95E4912A-20260903
+Summary: 8e9998d6bf6de8ec66640c81d80d3a3e94ce959365fffb2349aea2d7a070ee6a
+Fokussiert: 350/350 PASS
+Breit: 1610/1634 PASS; ausschließlich 24 bekannte VS-Katalog-Fixturefehler
+NO RESULT DELTA / NO DEPLOY
 ```
