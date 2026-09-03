@@ -1517,7 +1517,7 @@ describe("controlledOccurrenceWorksheet", () => {
         ].join("\n"),
       ]),
       documentFingerprint: "combined-building-coverage-resets-liability",
-      catalog,
+      catalog: fullCatalog,
     });
     const occurrence = component(
       worksheet,
