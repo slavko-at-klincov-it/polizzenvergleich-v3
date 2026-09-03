@@ -2193,6 +2193,103 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.28 VS-21 – Aufräum-/Abbruchkosten und inkompatible Limitformen
+
+#### 10.28.1 Frischer gebundener Ausgangslauf
+
+VS-21 wurde auf dem nach VS-18 gesicherten Stand für alle zehn unveränderten
+Kundendokumente neu aufgebaut. Es handelt sich nicht um einen Recallfehler:
+beide Kostenkomponenten und die wesentlichen Limits sind vorhanden.
+
+```text
+Commit: 253dfbb23b9f12a73c149bc6cf0c6e811d1cd5e2
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-21-BASELINE-253DFBB2-20260903
+Summary-Digest:
+402ec9345cb383c710c5a2709ba0dfe3ee213e74ba6fa269d8a357469841d3df
+Target-Selection-Digest:
+52367916ba9973a34f26d4e91098bada32b74aace24516347bad0188ec4f9a4b
+Producer-Digest:
+69c929d1dfadeddb1485b82b97687ac38b9bbceb892650a940250354b309e710
+Paket A: BELEGT / 10 %; 15 %
+Paket B: TEILBELEGT / EUR 6.121.600,00 auf Erstes Risiko
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+```
+
+Der Paket-Audit enthielt genau zwei Blocker:
+
+1. `UNRESOLVED_CANDIDATE` für Paket B, EABS Seite 6, Komponente
+   `demolition_costs`: Die Wertzustandsklausel
+   `Gebäude ... zum Abbruch bestimmt` wurde über den nackten Alias `Abbruch`
+   als möglicher Kostenbeleg angeboten.
+2. `FIELD_INCOMPLETE` für Paket B, EABS Seite 8: Die Klausel
+   `gelten die Aufräum-, Abbruch- und Feuerlöschkosten für Gebäude und Inhalt
+   gemeinsam summarisch versichert` besitzt korrekt kein eigenes Limit.
+
+Die unabhängige Quellenprüfung bestätigt folgende fachliche Limitlage:
+
+- Paket A: Feuer `15 %`, Sturm und Leitungswasser `10 %` der
+  Gebäudeversicherungssumme auf Erstes Risiko;
+- Paket B: Feuer, Leitungswasser, Sturm und Glas jeweils
+  `EUR 6.121.600,00` auf Erstes Risiko;
+- Paket A enthält in der VS-21-Quelle keine absolute Gebäudeversicherungs-
+  summe. Prozent und Geldbetrag dürfen daher noch nicht gerichtet verglichen
+  werden.
+
+#### 10.28.2 Fix 1 – Abbruchreife ist keine Abbruchkostenposition
+
+Commit `b62d160a` ergänzt eine occurrence-lokale, serverautoritative
+Rollenregel nur für `VS-21 / demolition_costs`. Sie verwirft `Abbruch` genau
+dann, wenn der lokale Text eine Wert-/Nutzungszustandsklausel mit
+`zum/für den Abbruch bestimmt/vorgesehen` enthält und kein lokaler
+Kosten-Governor vorhanden ist. Der Alias wurde nicht gelöscht. Echte
+Abbruchkosten, koordinierte Aufräum-/Abbruchkosten und Kosten eines zum
+Abbruch bestimmten Gebäudes bleiben Modell- beziehungsweise Evidenzkandidaten.
+
+Versionierung:
+
+```text
+Produktprofil: CUSTOMER_CORE_5_V50_VS21_COST_ROLE
+Vergleichsvertrag: ...VS21_COST_ROLE_V11
+Commit: b62d160a92f5bcdc52bdc551e2c0b94c7e18baa6
+Mac-Studio-Formatprüfung: PASS
+Mac-Studio-Suites: 5/5 PASS
+Mac-Studio-Tests: 167/167 PASS
+```
+
+Der vollständige VS-21-Ziellauf auf denselben zehn Dokumenten belegt die
+isolierte Wirkung:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-21-DEMOLITION-ROLE-B62D160A-20260903
+Summary-Digest:
+10c664998845623d7f5d84b60c34dd7f5b19c18f4c07caddd5afae653ea00f26
+Target-Selection-Digest:
+52367916ba9973a34f26d4e91098bada32b74aace24516347bad0188ec4f9a4b
+Triage-Qwen-Aufrufe: 5
+Evidence-Qwen-Aufrufe: 5
+```
+
+```text
+Vorherige Blocker: FIELD_INCOMPLETE + UNRESOLVED_CANDIDATE
+Neue Blocker:      FIELD_INCOMPLETE
+Ergebnis vorher:   UNKLAR / Review
+Ergebnis nachher:  UNKLAR / Review
+```
+
+Damit ist ein realer Fehlkandidat entfernt, aber VS-21 noch nicht
+abgeschlossen. R69-A und die unbestätigte Gesamtprojektion bleiben
+unverändert. Der nächste getrennte Schritt prüft die bereits vorhandene
+Binding Group: Ein gemeinsamer Limitspan darf nur dann auf beide koordinierten
+Kostenkomponenten projiziert werden, wenn Gruppen-, Quellen-, Seiten- und
+Spanidentität vollständig validiert sind. Eine feldlose Summenausgleichs-
+klausel darf dadurch nicht still mit einem fremden Limit vervollständigt
+werden.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
 ### 10.27 VS-18 – Einfriedungsfamilie: gerichtete Oberklasse abgeschlossen
 
 #### 10.27.1 Aktueller gebundener Ausgangslauf
