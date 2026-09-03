@@ -14,7 +14,13 @@ const COMPONENTS = [
 ];
 
 function document(uuid, side, role, documentStatus) {
-  return { uuid, side, role, documentStatus };
+  return {
+    uuid,
+    side,
+    role,
+    documentStatus,
+    sha256: (side === "A" ? "a" : "b").repeat(64),
+  };
 }
 
 function source(candidateId, text) {
@@ -177,8 +183,10 @@ function newValueAtom(sourceDocument, amount = null) {
             status: "FOUND",
             facts: [
               {
-                normalizedValue: amount,
-                valueType: "MONEY",
+              normalizedValue: amount,
+              valueType: "MONEY",
+              unit: "EUR",
+              binding: "DIRECT",
                 source: {
                   candidateId,
                   physicalPageNumber: 1,
@@ -288,6 +296,7 @@ function fixture({ aPercent = "1000", bPercent = "500" } = {}) {
       percentage: {
         documentUuid: "b-percent",
         percentageHundredths: bPercent,
+        qualifier: "GENERAL",
       },
       currency: {
         documentUuid: "b-money",
@@ -387,6 +396,11 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
     expect(() =>
       validateVs25AuthorityLimitPortfolioAudit(tampered, options)
     ).toThrow("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
+    const tamperedManifest = JSON.parse(JSON.stringify(options));
+    tamperedManifest.expectedDocumentsB[0].sha256 = "f".repeat(64);
+    expect(() =>
+      validateVs25AuthorityLimitPortfolioAudit(audit, tamperedManifest)
+    ).toThrow("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
   });
 
   test.each([
@@ -437,6 +451,24 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       (input) => {
         input.packageB.vs25AmountReconciliation.base.atomProof.selectedCandidateIds =
           ["different-vs01"];
+      },
+    ],
+    [
+      "indirect limit field",
+      (input) => {
+        input.atomsA[1].fields[0].facts[0].binding = "INFERRED";
+      },
+    ],
+    [
+      "wrong limit unit",
+      (input) => {
+        input.atomsA[1].fields[0].facts[0].unit = "EUR";
+      },
+    ],
+    [
+      "conflicting percentage qualifier",
+      (input) => {
+        input.atomsB[3].fields[0].facts[0].qualifier = "pro Jahr";
       },
     ],
   ])("fails closed for %s", (_label, mutate) => {

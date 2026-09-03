@@ -1671,6 +1671,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
               atomsB,
               referenceAtomsA: packageAtomicFacts.A,
               referenceAtomsB: packageAtomicFacts.B,
+              expectedDocumentsA,
+              expectedDocumentsB,
             })
           : null;
       return {

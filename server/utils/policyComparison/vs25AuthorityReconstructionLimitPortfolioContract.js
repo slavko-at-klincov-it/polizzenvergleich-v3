@@ -77,23 +77,29 @@ function buildVs25SourceAtomDigestReplay({
   atomsB,
   referenceAtomsA,
   referenceAtomsB,
+  expectedDocumentsA,
+  expectedDocumentsB,
 }) {
   if (categoryId !== VS25_CATEGORY_ID) return null;
   const projections = {
     A: {
       targetAtoms: projectedAtoms(atomsA, VS25_CATEGORY_ID),
       referenceAtoms: projectedAtoms(referenceAtomsA, "VS-01"),
+      documents: expectedDocumentsForSide(expectedDocumentsA, "A"),
     },
     B: {
       targetAtoms: projectedAtoms(atomsB, VS25_CATEGORY_ID),
       referenceAtoms: projectedAtoms(referenceAtomsB, "VS-01"),
+      documents: expectedDocumentsForSide(expectedDocumentsB, "B"),
     },
   };
   if (
     projections.A.targetAtoms.length === 0 ||
     projections.B.targetAtoms.length === 0 ||
     projections.A.referenceAtoms.length === 0 ||
-    projections.B.referenceAtoms.length === 0
+    projections.B.referenceAtoms.length === 0 ||
+    !projections.A.documents ||
+    !projections.B.documents
   )
     return null;
   return {
@@ -104,10 +110,12 @@ function buildVs25SourceAtomDigestReplay({
       A: {
         targetAtoms: sha256(projections.A.targetAtoms),
         referenceAtoms: sha256(projections.A.referenceAtoms),
+        documents: sha256(projections.A.documents),
       },
       B: {
         targetAtoms: sha256(projections.B.targetAtoms),
         referenceAtoms: sha256(projections.B.referenceAtoms),
+        documents: sha256(projections.B.documents),
       },
     },
   };
@@ -126,11 +134,12 @@ function expectedDocumentsForSide(expectedDocuments, side) {
   if (!Array.isArray(expectedDocuments) || expectedDocuments.length === 0)
     return null;
   const documents = expectedDocuments.map(
-    ({ uuid, side: documentSide, role, documentStatus }) => ({
+    ({ uuid, side: documentSide, role, documentStatus, sha256: documentSha }) => ({
       uuid: String(uuid || ""),
       side: String(documentSide || ""),
       role: String(role || ""),
       documentStatus: String(documentStatus || ""),
+      sha256: String(documentSha || ""),
     })
   );
   if (
@@ -139,7 +148,8 @@ function expectedDocumentsForSide(expectedDocuments, side) {
         !document.uuid ||
         document.side !== side ||
         !document.role ||
-        !document.documentStatus
+        !document.documentStatus ||
+        !/^[a-f0-9]{64}$/u.test(document.sha256)
     ) ||
     strings(documents.map(({ uuid }) => uuid)).length !== documents.length
   )
@@ -284,6 +294,7 @@ function exactFoundLimitAtom(atom, expectedDocument) {
       fields[0]?.fieldStatus === "FOUND" &&
       ["MONEY", "PERCENT"].includes(fields[0]?.valueType) &&
       /^\d+$/u.test(fields[0]?.value || "") &&
+      directFieldFactsValid(atom, fields[0]) &&
       sourceSemanticsValid(atom)
   );
 }
@@ -314,13 +325,48 @@ function exactVs01ReferenceAtom(atom, expectedDocumentUuids) {
 function clauseCodes(atom) {
   return strings(
     (atom?.sources || [])
-      .flatMap((source) => [
-        ...String(source.conditionCheckText || "").matchAll(
-          /\b\d{2}[A-Z]{2}\d{4}\b/gu
-        ),
-      ])
+      .flatMap((source) => {
+        const local = localSourceWindow(source);
+        if (!local) return [];
+        return [
+          ...`${local.prefix}${local.fromAnchor.slice(0, 320)}`.matchAll(
+            /\b\d{2}[A-Z]{2}\d{4}\b/gu
+          ),
+        ];
+      })
       .map(([code]) => code)
   );
+}
+
+function directFieldFactsValid(atom, signature) {
+  const selectedCandidateIds = new Set(atom.selectedCandidateIds || []);
+  const facts = (atom.fields || []).flatMap(({ facts: fieldFacts }) =>
+    fieldFacts || []
+  );
+  if (facts.length === 0) return false;
+  return facts.every((fact) => {
+    const source = fact?.source;
+    const expectedUnit = fact.valueType === "MONEY" ? "EUR" : "%";
+    return Boolean(
+      fact?.binding === "DIRECT" &&
+        fact?.valueType === signature.valueType &&
+        fact?.unit === expectedUnit &&
+        fact?.limitKind === "CAPPED" &&
+        selectedCandidateIds.has(source?.candidateId) &&
+        Number.isInteger(source?.physicalPageNumber) &&
+        source.physicalPageNumber > 0 &&
+        Number.isInteger(source?.documentStart) &&
+        Number.isInteger(source?.documentEnd) &&
+        source.documentStart >= 0 &&
+        source.documentEnd > source.documentStart &&
+        String(source?.exactText || "").trim() &&
+        (fact.valueType !== "PERCENT" ||
+          [
+            "BUILDING_INSURANCE_SUM",
+            "BUILDING_NEW_VALUE_INSURANCE_SUM",
+          ].includes(fact.comparisonBasis))
+    );
+  });
 }
 
 function limitPresentation(atom) {
@@ -371,7 +417,24 @@ function vs01BaseAtomProof(atom, amountMinor) {
     .filter(({ field, status }) => field === "limit" && status === "FOUND")
     .flatMap(({ facts }) => facts || [])
     .filter(({ valueType }) => valueType === "MONEY");
-  if (moneyFacts.length === 0) return null;
+  const selectedCandidateIds = new Set(atom.selectedCandidateIds || []);
+  if (
+    moneyFacts.length === 0 ||
+    moneyFacts.some(
+      (fact) =>
+        fact?.binding !== "DIRECT" ||
+        fact?.unit !== "EUR" ||
+        !selectedCandidateIds.has(fact?.source?.candidateId) ||
+        !Number.isInteger(fact?.source?.physicalPageNumber) ||
+        fact.source.physicalPageNumber < 1 ||
+        !Number.isInteger(fact?.source?.documentStart) ||
+        !Number.isInteger(fact?.source?.documentEnd) ||
+        fact.source.documentStart < 0 ||
+        fact.source.documentEnd <= fact.source.documentStart ||
+        !String(fact?.source?.exactText || "").trim()
+    )
+  )
+    return null;
   return {
     requirementContractDigest: atom.requirementContractDigest,
     documentUuid: atom.documentUuids[0],
@@ -405,6 +468,7 @@ function reconciliationValid(
     reconciliation?.currency?.amountMinor !== money.value ||
     reconciliation?.percentage?.documentUuid !== percentage.documentUuid ||
     reconciliation?.percentage?.percentageHundredths !== percentage.value ||
+    reconciliation?.percentage?.qualifier !== "GENERAL" ||
     reconciliation?.calculation?.documentedAmountMinor !== money.value ||
     reconciliation?.calculation?.calculatedAmountMinor !== money.value ||
     reconciliation?.calculation?.remainder !== "0" ||
@@ -515,7 +579,10 @@ function sidePortfolio({
 
   const effectiveQualifier =
     money.length === 1
-      ? "FIRST_RISK"
+      ? percentages[0].qualifier === "" &&
+        money[0].qualifier === "auf erstes risiko"
+        ? "FIRST_RISK"
+        : null
       : percentages[0].qualifier === "auf erstes risiko"
         ? "FIRST_RISK"
         : null;
@@ -525,6 +592,7 @@ function sidePortfolio({
     side,
     status: "COMPLETE_INCLUDED_AUTHORITY_COST_RELATIVE_LIMIT_PORTFOLIO",
     expectedDocumentUuids: [...expectedDocumentUuids].sort(),
+    expectedDocumentManifest: documents,
     comparisonBasis: "BUILDING_NEW_VALUE_INSURANCE_SUM",
     canonicalRelativeLimitHundredths: percentages[0].value,
     displayRelativeLimit: percentages[0].displayValue,
@@ -635,13 +703,18 @@ function validateVs25AuthorityLimitPortfolioAudit(audit, options) {
     if (
       !/^[a-f0-9]{64}$/u.test(replayDigests?.targetAtoms || "") ||
       !/^[a-f0-9]{64}$/u.test(replayDigests?.referenceAtoms || "") ||
+      !/^[a-f0-9]{64}$/u.test(replayDigests?.documents || "") ||
       auditSide?.projectedAtomDigestsSha256?.targetAtoms !==
         replayDigests.targetAtoms ||
       auditSide?.projectedAtomDigestsSha256?.referenceAtoms !==
         replayDigests.referenceAtoms ||
       sha256(auditSide?.projectedAtoms) !== replayDigests.targetAtoms ||
       sha256(auditSide?.projectedReferenceAtoms) !==
-        replayDigests.referenceAtoms
+        replayDigests.referenceAtoms ||
+      sha256(auditSide?.expectedDocumentManifest) !== replayDigests.documents ||
+      sha256(
+        expectedDocumentsForSide(options?.[`expectedDocuments${side}`], side)
+      ) !== replayDigests.documents
     )
       throw new Error("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
   }
