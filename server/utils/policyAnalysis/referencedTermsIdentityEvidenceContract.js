@@ -30,7 +30,10 @@ function digest(value) {
 }
 
 function textDigest(value) {
-  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(String(value || ""))
+    .digest("hex");
 }
 
 function normalizedText(value) {
@@ -63,10 +66,18 @@ function conceptKey(value, detail) {
 }
 
 function aliases(values, detail) {
-  if (!Array.isArray(values) || values.length === 0 || values.length > MAX_ALIASES)
+  if (
+    !Array.isArray(values) ||
+    values.length === 0 ||
+    values.length > MAX_ALIASES
+  )
     throw identityError("TERMS_IDENTITY_ALIASES_INVALID", detail);
   const result = values.map((value, index) =>
-    requiredString(value, "TERMS_IDENTITY_ALIAS_REQUIRED", `${detail}[${index}]`)
+    requiredString(
+      value,
+      "TERMS_IDENTITY_ALIAS_REQUIRED",
+      `${detail}[${index}]`
+    )
   );
   const normalized = result.map(normalizedText);
   if (
@@ -240,7 +251,10 @@ function identityCandidates(identity, contract) {
   const titles = aliasSpans(pageText, contract.referenceTitleAliases);
   const candidates = [];
   for (const title of titles) {
-    const windowEnd = Math.min(pageText.length, title.end + MAX_HEADER_DISTANCE);
+    const windowEnd = Math.min(
+      pageText.length,
+      title.end + MAX_HEADER_DISTANCE
+    );
     const windowText = pageText.slice(title.end, windowEnd);
     const codes = aliasSpans(windowText, contract.referenceCodeAliases);
     if (codes.length !== 1) continue;

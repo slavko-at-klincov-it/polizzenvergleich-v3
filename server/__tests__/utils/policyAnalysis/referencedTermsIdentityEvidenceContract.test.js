@@ -170,7 +170,8 @@ describe("source-bound referenced-terms identity evidence", () => {
         ],
       },
     });
-    const [proof] = worksheet.requirements[0].supportingReferencedTermsIdentityProofs;
+    const [proof] =
+      worksheet.requirements[0].supportingReferencedTermsIdentityProofs;
     const input = {
       document: {
         uuid: "document-eabs",
@@ -214,9 +215,9 @@ describe("source-bound referenced-terms identity evidence", () => {
     const tampered = JSON.parse(JSON.stringify(worksheet));
     tampered.requirements[0].supportingReferencedTermsIdentityProofs[0].reference.edition =
       "2024";
-    expect(() => materializeAtomicFacts({ ...input, worksheet: tampered })).toThrow(
-      "REFERENCED_TERMS_IDENTITY_PROOF_REPLAY_INVALID"
-    );
+    expect(() =>
+      materializeAtomicFacts({ ...input, worksheet: tampered })
+    ).toThrow("REFERENCED_TERMS_IDENTITY_PROOF_REPLAY_INVALID");
   });
 
   test("rejects a fixed edition or duplicate aliases in the catalog", () => {
