@@ -335,6 +335,19 @@ function orderedAliasSequences(groups, limit = 2) {
   return sequences;
 }
 
+function nonContainedAliasSpans(text, aliases) {
+  return allAliasSpans(text, aliases).filter(
+    (match, _index, matches) =>
+      !matches.some(
+        (other) =>
+          other !== match &&
+          other.start <= match.start &&
+          other.end >= match.end &&
+          (other.start < match.start || other.end > match.end)
+      )
+  );
+}
+
 function completeDocumentIdentity(documentArtifact) {
   const document = documentArtifact?.document;
   const fingerprint = documentArtifact?.fingerprint;
@@ -467,7 +480,7 @@ function predicateEvidence(node, paragraph) {
     const left = matches[node.actorCombination.leftGroupIndex];
     const right = matches[node.actorCombination.rightGroupIndex];
     const between = paragraph.exactText.slice(left.end, right.start);
-    const operators = allAliasSpans(
+    const operators = nonContainedAliasSpans(
       between,
       node.actorCombination.operatorAliases
     );
@@ -512,15 +525,9 @@ function materializeFormulaNode(node, predicateByKey, paragraph) {
   const rightStart = operands[1].span.documentStart - paragraph.documentStart;
   if (rightStart < leftEnd) return null;
   const between = paragraph.exactText.slice(leftEnd, rightStart);
-  const operatorMatches = allAliasSpans(between, node.operatorAliases).filter(
-    (match, _index, matches) =>
-      !matches.some(
-        (other) =>
-          other !== match &&
-          other.start <= match.start &&
-          other.end >= match.end &&
-          (other.start < match.start || other.end > match.end)
-      )
+  const operatorMatches = nonContainedAliasSpans(
+    between,
+    node.operatorAliases
   );
   if (operatorMatches.length !== 1) return null;
   const operatorMatch = operatorMatches[0];
