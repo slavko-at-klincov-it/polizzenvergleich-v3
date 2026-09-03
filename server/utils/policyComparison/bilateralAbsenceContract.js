@@ -542,5 +542,7 @@ module.exports = {
   BILATERAL_ABSENCE_TREATMENT,
   buildBilateralAbsenceAudit,
   buildQualifiedAbsenceSideProjection: qualifiedSideProjection,
+  cleanNotFoundAtom,
+  validComponentTerminal,
   validateBilateralAbsenceAudit,
 };

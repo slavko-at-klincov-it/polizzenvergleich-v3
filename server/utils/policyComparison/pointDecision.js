@@ -59,6 +59,10 @@ const {
   buildVs21CostLimitPortfolioAudit,
   vs21CostLimitPortfolioDecision,
 } = require("./vs21CostLimitPortfolioComparisonContract");
+const {
+  buildVs22HazardousWastePortfolioAudit,
+  vs22HazardousWastePortfolioDecision,
+} = require("./vs22HazardousWastePortfolioComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1130,6 +1134,22 @@ function decidePoint({
   });
   if (vs21CostLimitPortfolioAudit)
     return vs21CostLimitPortfolioDecision(vs21CostLimitPortfolioAudit);
+  const vs22HazardousWastePortfolioAudit =
+    buildVs22HazardousWastePortfolioAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
+      expectedDocumentsA,
+      expectedDocumentsB,
+    });
+  if (vs22HazardousWastePortfolioAudit)
+    return vs22HazardousWastePortfolioDecision(
+      vs22HazardousWastePortfolioAudit
+    );
   if (
     packageA.reviewStatus !== "BELEGT" ||
     packageB.reviewStatus !== "BELEGT"

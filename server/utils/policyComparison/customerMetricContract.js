@@ -46,6 +46,13 @@ const {
   validateVs08ConditionConsensusAudit,
   vs08ConditionConsensusDecision,
 } = require("./vs08UnderinsuranceConditionConsensusContract");
+const {
+  VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE,
+  VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+  VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
+  validateVs22HazardousWastePortfolioAudit,
+  vs22HazardousWastePortfolioDecision,
+} = require("./vs22HazardousWastePortfolioComparisonContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -550,6 +557,62 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         row.pointDecision?.comparisonTreatment ===
           UNILATERAL_COVERAGE_TREATMENT ||
         row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined;
+      const vs22HazardousWastePortfolioDecisionDetected =
+        row.pointDecision?.ruleId ===
+          VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID ||
+        row.pointDecision?.reasonCode ===
+          VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE ||
+        row.pointDecision?.comparisonTreatment ===
+          VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT ||
+        row.pointDecision?.vs22HazardousWastePortfolioAudit !== undefined;
+      if (vs22HazardousWastePortfolioDecisionDetected) {
+        if (!validDocumentManifest)
+          validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
+        const audit = row.pointDecision.vs22HazardousWastePortfolioAudit;
+        try {
+          validateVs22HazardousWastePortfolioAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            requirementContractA:
+              row.packageA?.requirementContract ||
+              row.packageA?.searchAudit?.requirementContract,
+            requirementContractB:
+              row.packageB?.requirementContract ||
+              row.packageB?.searchAudit?.requirementContract,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+          });
+        } catch (error) {
+          validationError("COMPARISON_VS22_PORTFOLIO_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = vs22HazardousWastePortfolioDecision(audit);
+        if (
+          row.categoryView !== "VS" ||
+          row.categoryId !== "VS-22" ||
+          outcome !==
+            (audit?.winner === "A"
+              ? POINT_OUTCOME.ADVANTAGE_A
+              : POINT_OUTCOME.ADVANTAGE_B) ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.bilateralAbsenceAudit !== undefined ||
+          row.pointDecision?.unilateralCoverageAbsenceAudit !== undefined ||
+          row.pointDecision?.lw20AbsenceDefaultExclusionEqualityAudit !==
+            undefined ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_VS22_PORTFOLIO_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
           !unilateralDecision &&
@@ -563,7 +626,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       if (
         Boolean(oneSidedDirection) !== unilateralDecision &&
         !directionalAuditFailedClosed &&
-        !lw20EqualityDecision
+        !lw20EqualityDecision &&
+        !vs22HazardousWastePortfolioDecisionDetected
       )
         validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
       if (oneSidedDirection && unilateralDecision) {
