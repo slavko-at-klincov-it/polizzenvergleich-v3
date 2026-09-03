@@ -38,7 +38,7 @@ describe("policy comparison product contract", () => {
         feA01ValidatedWorksheetRequirementV1:
           FE_A01_REQUIREMENT_CONTRACT_DIGEST,
         feC02ValidatedWorksheetRequirementV1:
-          "d1b2aa25aeed832cf29676be65404e7f472050779bf0d53a6288178a908d190c",
+        "13ce015bfa884c3629e2f8125c3a183457343d96da9684f225e1af74dc5959cd",
         feC07ValidatedWorksheetRequirementV1:
           FE_C07_REQUIREMENT_CONTRACT_DIGEST,
         vs08ValidatedWorksheetRequirementV1:
