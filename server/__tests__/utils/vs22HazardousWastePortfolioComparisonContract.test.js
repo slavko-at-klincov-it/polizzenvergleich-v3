@@ -257,8 +257,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
 
     expect(decision).toMatchObject({
       outcome: "VORTEIL_A",
-      reasonCode:
-        "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE",
+      reasonCode: "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE",
       ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
       reviewRequired: false,
     });
