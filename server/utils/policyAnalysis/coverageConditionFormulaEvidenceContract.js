@@ -66,7 +66,11 @@ function normalizedText(value) {
 }
 
 function validateAliases(values, detail) {
-  if (!Array.isArray(values) || values.length === 0 || values.length > MAX_ALIASES)
+  if (
+    !Array.isArray(values) ||
+    values.length === 0 ||
+    values.length > MAX_ALIASES
+  )
     throw formulaError("COVERAGE_CONDITION_FORMULA_ALIASES_INVALID", detail);
   const aliases = values.map((value, index) => {
     if (typeof value !== "string" || normalizedText(value).length < 2)
@@ -195,12 +199,19 @@ function validateFormulaNode(node, detail, predicateKeys) {
       `${detail}:operatorAliases`
     ),
     operands: node.operands.map((operand, index) =>
-      validateFormulaNode(operand, `${detail}:operands[${index}]`, predicateKeys)
+      validateFormulaNode(
+        operand,
+        `${detail}:operands[${index}]`,
+        predicateKeys
+      )
     ),
   };
 }
 
-function validateCoverageConditionFormulaContract(contract, detail = "contract") {
+function validateCoverageConditionFormulaContract(
+  contract,
+  detail = "contract"
+) {
   exactKeys(
     contract,
     [
@@ -525,10 +536,7 @@ function materializeFormulaNode(node, predicateByKey, paragraph) {
   const rightStart = operands[1].span.documentStart - paragraph.documentStart;
   if (rightStart < leftEnd) return null;
   const between = paragraph.exactText.slice(leftEnd, rightStart);
-  const operatorMatches = nonContainedAliasSpans(
-    between,
-    node.operatorAliases
-  );
+  const operatorMatches = nonContainedAliasSpans(between, node.operatorAliases);
   if (operatorMatches.length !== 1) return null;
   const operatorMatch = operatorMatches[0];
   return {
@@ -551,13 +559,18 @@ function materializeFormulaNode(node, predicateByKey, paragraph) {
 }
 
 function completeFormulaEvidence(contract, paragraph) {
-  if (!uniqueOrderedMatches(paragraph.exactText, contract.governorRequiredGroups))
+  if (
+    !uniqueOrderedMatches(paragraph.exactText, contract.governorRequiredGroups)
+  )
     return null;
   const leaves = formulaLeaves(contract.formula);
   const predicates = leaves.map((node) => predicateEvidence(node, paragraph));
   if (predicates.some((predicate) => !predicate)) return null;
   for (let index = 1; index < predicates.length; index += 1)
-    if (predicates[index].span.documentStart < predicates[index - 1].span.documentEnd)
+    if (
+      predicates[index].span.documentStart <
+      predicates[index - 1].span.documentEnd
+    )
       return null;
   const predicateByKey = new Map(
     predicates.map((predicate) => [predicate.predicateKey, predicate])
@@ -567,8 +580,7 @@ function completeFormulaEvidence(contract, paragraph) {
 
 function validatedTargetGovernor(identity, candidate, target) {
   const hint = candidate?.coverageGovernorHint;
-  if (hint === null || hint === undefined)
-    return { valid: true, span: null };
+  if (hint === null || hint === undefined) return { valid: true, span: null };
   const governorPageNumber = Number.isInteger(hint.physicalPageNumber)
     ? hint.physicalPageNumber
     : target.physicalPageNumber;
@@ -591,8 +603,7 @@ function validatedTargetGovernor(identity, candidate, target) {
     page.start + hint.pageStart,
     page.start + hint.pageEnd
   );
-  if (exactText !== hint.text)
-    return { valid: false, span: null };
+  if (exactText !== hint.text) return { valid: false, span: null };
   return {
     valid: true,
     span: {
@@ -620,7 +631,11 @@ function validatedTargets(identity, targetCandidates, contract) {
       documentEnd: candidate?.documentEnd,
       exactText: candidate?.exactText,
     };
-    if (!candidateId || ids.has(candidateId) || !sourceBoundSpan(identity, span))
+    if (
+      !candidateId ||
+      ids.has(candidateId) ||
+      !sourceBoundSpan(identity, span)
+    )
       return null;
     ids.add(candidateId);
     const target = {

@@ -42,10 +42,7 @@ function contract() {
     formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
     sourcePolicy: "GLOBAL_GOVERNOR_BEFORE_TARGETS_V1",
     targetScopePolicy: "GENERAL_DIRECT_TARGET_V1",
-    targetCoverageGovernorAliases: [
-      "Versichert sind",
-      "Als versichert gelten",
-    ],
+    targetCoverageGovernorAliases: ["Versichert sind", "Als versichert gelten"],
     governorRequiredGroups: [
       ["Versicherungsschutz", "Deckungsschutz"],
       [
@@ -58,10 +55,16 @@ function contract() {
     formula: operator(
       "AND",
       ["und"],
-      predicate("SECTION_INSURED", null, [
-        ["Sparten", "Versicherungssparten"],
-        ["versichert werden", "vereinbart sind", "sind vereinbart"],
-      ], null, ["nicht versichert", "nicht vereinbart"]),
+      predicate(
+        "SECTION_INSURED",
+        null,
+        [
+          ["Sparten", "Versicherungssparten"],
+          ["versichert werden", "vereinbart sind", "sind vereinbart"],
+        ],
+        null,
+        ["nicht versichert", "nicht vereinbart"]
+      ),
       operator(
         "OR",
         ["und / oder", "oder"],
@@ -120,8 +123,9 @@ function fixture({
   ],
 } = {}) {
   const targetPage = targetBlocks
-    .map(({ governor: targetGovernor, exactText }) =>
-      `${targetGovernor}\n${exactText}`
+    .map(
+      ({ governor: targetGovernor, exactText }) =>
+        `${targetGovernor}\n${exactText}`
     )
     .join("\n\n");
   const pages = [`${prefix}${governor}`, targetPage];
@@ -135,10 +139,15 @@ function fixture({
   });
   const fingerprint = sha256(pageContent);
   const targetCandidates = targetBlocks.map((block, index) => {
-    const blockStart = pageContent.indexOf(`${block.governor}\n${block.exactText}`);
+    const blockStart = pageContent.indexOf(
+      `${block.governor}\n${block.exactText}`
+    );
     const governorDocumentStart = blockStart;
     const governorDocumentEnd = governorDocumentStart + block.governor.length;
-    const documentStart = pageContent.indexOf(block.exactText, governorDocumentEnd);
+    const documentStart = pageContent.indexOf(
+      block.exactText,
+      governorDocumentEnd
+    );
     const pageStart = pageMap[1].start;
     return {
       candidateId: `candidate:fe-c02:${index + 1}`,
@@ -205,8 +214,7 @@ describe("source-bound coverage-condition formula evidence", () => {
             operatorSpan: { exactText: "und / oder" },
             operands: [
               {
-                predicateKey:
-                  "OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER",
+                predicateKey: "OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER",
                 actorBinding: "POLICYHOLDER_OR_BUILDING_OWNER",
                 actorCombination: {
                   operator: "OR",
@@ -341,10 +349,7 @@ describe("source-bound coverage-condition formula evidence", () => {
             "Sachen sich im Eigentum des Versicherungsnehmers und / oder Gebäudeeigentümers befinden.",
         }),
     ],
-    [
-      "two complete governors",
-      () => fixture({ prefix: `${GOVERNOR}\n\n` }),
-    ],
+    ["two complete governors", () => fixture({ prefix: `${GOVERNOR}\n\n` })],
   ])("fails closed for %s", (_label, createValue) => {
     expect(
       buildSourceBoundCoverageConditionFormulaProof({
@@ -357,9 +362,8 @@ describe("source-bound coverage-condition formula evidence", () => {
   test("fails closed when any target precedes the governor", () => {
     const value = fixture();
     const target = value.targetCandidates[0];
-    const governorStart = value.documentArtifact.document.pageContent.indexOf(
-      GOVERNOR
-    );
+    const governorStart =
+      value.documentArtifact.document.pageContent.indexOf(GOVERNOR);
     const earlyText = "Deckungskonzept";
     value.targetCandidates = [
       {
@@ -441,9 +445,10 @@ describe("source-bound coverage-condition formula evidence", () => {
 
     const unsafe = contract();
     unsafe.formula.operands[1].operands[1].actorBinding = null;
-    expect(() => validateCoverageConditionFormulaContract(unsafe)).not.toThrow();
-    unsafe.formula.operands[1].operands[1].actorBinding =
-      "anaphoric free text";
+    expect(() =>
+      validateCoverageConditionFormulaContract(unsafe)
+    ).not.toThrow();
+    unsafe.formula.operands[1].operands[1].actorBinding = "anaphoric free text";
     expect(() => validateCoverageConditionFormulaContract(unsafe)).toThrow(
       "COVERAGE_CONDITION_FORMULA_ACTOR_BINDING_INVALID"
     );
