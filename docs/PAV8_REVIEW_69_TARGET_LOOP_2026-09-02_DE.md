@@ -2194,6 +2194,112 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.38 FE-A05 Schritt 2c2 – Effects-Runner an Originalartefakte gebunden
+
+Der Selected-Source-Replay ist jetzt in die tatsächliche Effects-Ausführung
+eingebunden. Für jede Komponente mit `objectScopeEvidenceContract` ist
+`--documentArtifact` zwingend. Ein `objectScopeProof` ohne Object-Scope-Vertrag
+oder ein `nestedListContinuationProof` ohne eigenen Listenproof-Vertrag wird
+vor jedem Modellaufruf abgelehnt. Dokumentartefakt, Worksheet und Targets
+werden über Originalbytes, Fingerprint, PageContent-SHA, PageMap,
+Seitenoffsets und SHA-256-Digests gebunden. Die Proof-Felder bleiben außerhalb
+des Qwen-Payloads.
+
+Alle inventarisierten aktiven Aufrufer wurden geschlossen:
+
+```text
+run-all-categories-quality.command
+run-hybrid-shadow-quality.command
+runTargetedQaAll50.cjs
+runHybridShadowPilotQwenPhase.cjs
+```
+
+Die historischen reinen VS-Runner bleiben kompatibel, solange ihr Worksheet
+weder Object-Scope-Vertrag noch verwaiste Proofs enthält. Pfade sind nur
+Auditmetadaten; die Vertrauensanker sind Artefakt-SHA, Dokumentfingerprint und
+der Replay gegen Originalbytes.
+
+Commits:
+
+```text
+6c116f959 fix(analysis): bind document artifacts in effects replay
+153bf990f test(qa): track current product profile
+c44f0eca9 style(analysis): format artifact replay wiring
+938c5e8fb fix(qa): bind targeted effects to source artifacts
+eaf9cc9d4 test(qa): canonicalize targeted artifact paths
+b7156cda7 fix(qa): bind hybrid qwen effects to source artifacts
+7fb93adce style(qa): format hybrid artifact binding
+592317199 fix(analysis): require artifacts for object scope evidence
+a2b2a662e style(analysis): format object scope gate
+3324aeb5d test(qa): track current ST recall catalog
+4655877c3 test(qa): declare legacy embedding fixture
+```
+
+Der Testversuch `13d1f0c17` wollte drei historische Manifest-Fixtures nur auf
+aktuelle Katalog-IDs umstellen. Das nächste Hash-Gate widerlegte diesen Ansatz:
+Der unveränderliche 69er-Baselinevertrag und die aktuellen Produktkataloge sind
+zwei verschiedene Wahrheitsschichten. `e63b855b5` stellte deshalb die
+historische Fixture-Semantik wieder her; kein Hash-Gate wurde abgeschwächt.
+
+Mac-Studio-Nachweis:
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit des echten Ziellaufs: a2b2a662e752e4c34a1f27c0c91be799815ce0d2
+Aktueller geprüfter HEAD: e63b855b514d2494c56166eca81d84b0803c2eea
+Node: v22.23.2
+Chatmodell: qwen/qwen3.6-35b-a3b, Kontext 42496
+Embeddingmodell: nicht geladen
+Fokussiertes Gate/Wiring: 72/72 PASS
+Breite Regression: 65/68 Suites und 1039/1063 Tests PASS
+Rest: exakt 24 bekannte historische TARGETED_QA_PROFILE_CATALOG_MISMATCH-Fixturetests
+```
+
+Echter Zehn-Dokument-Lauf:
+
+```text
+Artefakt: QA/FE-A05-A06-EFFECTS-ARTIFACT-GATE-A2B2A662-20260903
+Producer: /tmp/fe_a05_a06_targeted_producer-v05.cjs
+Producer-SHA: 9dc300b27122ed51522bc640aacb1016de3e258803ef9da0c84764ba1b8608fd
+Summary-SHA: dfcf80c7339b92e26bf2d288ed6c8ee20fad4c146f73c2549d77c0c17e0a1b71
+Selection: 387784fb7b4506bd9cad04dbeaf127280e03cf593cc7e98cd25f865c55be0120
+Effects-Reports mit vollständiger Dokument-/Targets-Bindung: 10/10
+Triage-Aufrufe: 3
+Effects-Aufrufe: 1
+Triage-Terminals: 11
+Evidence-Terminals: 15
+Ergebnis: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Gegenüber dem Favoritenlauf
+`FE-A05-A06-SELECTED-REPLAY-6D70AF9B-20260903` blieben Paketstatus,
+Entscheidung, Modellaufrufe und Terminalzahlen identisch. Der messbare Gewinn
+ist ausschließlich die geschlossene Ausführungs- und Persistenzkette für die
+vier ausgewählten Scope-Proofs. R69-A bleibt `10/40`; kein 224-Zeilen-Vollrun
+und kein Deployment.
+
+### 10.39 FE-C02 – aktuelle Ursache vor dem ersten Forward-Fix
+
+Die letzte gebundene Baseline zeigt A `BELEGT/INCLUDED`, B
+`TEILBELEGT/DEFINED` und deshalb `UNKLAR`. Recall, Pflichtfelder und
+Dokumentrang sind nicht die Ursache. B enthält eine vollständige, aber derzeit
+nicht zusammengesetzte Paketkette:
+
+```text
+Feuerversicherung deckt Wohngebäude
++ EABS 2023 ist im Angebot angeführt
++ Photovoltaik ist eine haustechnische Anlage
++ haustechnische Anlagen gehören unter Bedingungen zum Gebäude
+```
+
+Eine globale Umwandlung `DEFINED -> INCLUDED` bleibt verboten. Der kleinste
+generische nächste Vertrag ist `PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_V1`: Er
+muss aktive Oberobjektdeckung, anwendbare Bedingungen, gerichtete
+Objektmitgliedschaft, fortgetragene Bedingungen und widerspruchsfreie
+Paketdokumente sourcegebunden zusammensetzen. Erst danach ist zu prüfen, ob A
+wegen breiterer Eigentums-/Wiederherstellungsbedingungen tatsächlich einen
+beweisbaren Vorteil besitzt.
+
 ### 10.32 VS-36 – Höchstentschädigung: Feldfehler geschlossen, Dokumentrang offen
 
 #### 10.32.1 Ausgangslage und reale Fundstellen

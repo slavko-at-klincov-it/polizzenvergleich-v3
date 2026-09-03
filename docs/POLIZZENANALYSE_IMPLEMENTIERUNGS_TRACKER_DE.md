@@ -5066,3 +5066,53 @@ Nächster Schritt: Dokumentartefakt im Effects-CLI für Object-Scope-Opt-in
 zwingend machen und den Replay dort statt der lokalen ungeprüften
 Source-Projektion verwenden. R69-A bleibt `10/40`; kein Vollrun und kein
 Deployment.
+
+## 100. FE-A05 Effects-Artefakt-Gate – aktive Runner geschlossen
+
+Die Effects-CLI verwendet bei geliefertem Dokumentartefakt den gemeinsamen
+Selected-Source-Replay und bindet Artefakt-SHA, Dokumentfingerprint und
+Targets-SHA in den Report. Für Object-Scope-Komponenten ist das Artefakt jetzt
+Pflicht; verwaiste Object- oder Listenproofs werden vor Modellarbeit
+abgewiesen. All-Category, Hybrid-Shadow, Targeted-All-50 und der zweiphasige
+Hybrid-Qwen-Pilot reichen das eindeutig zugeordnete Originalartefakt durch und
+prüfen die Reportbindung fail-closed.
+
+```text
+Funktions-/Wiring-Commits:
+6c116f959, 938c5e8fb, b7156cda7, 592317199
+Format-/Testvertrags-Commits:
+153bf990f, c44f0eca9, eaf9cc9d4, 7fb93adce, a2b2a662e,
+3324aeb5d, 4655877c3
+Historische Fixture-Grenze wiederhergestellt:
+13d1f0c17 -> e63b855b5
+
+Mac Studio fokussiert: 72/72 PASS
+Mac Studio breit: 1039/1063 PASS; nur 24 bekannte historische
+TARGETED_QA_PROFILE_CATALOG_MISMATCH-Tests
+Artefakt: QA/FE-A05-A06-EFFECTS-ARTIFACT-GATE-A2B2A662-20260903
+Summary: dfcf80c7339b92e26bf2d288ed6c8ee20fad4c146f73c2549d77c0c17e0a1b71
+Dokument-/Targets-gebundene Effects-Reports: 10/10
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Damit ist die FE-A05-Provenienz vom Originaldokument bis zur persistierten
+Selected Source geschlossen. Eine Ergebnisänderung bleibt verboten, bis ein
+typisierter Set-/Bedingungsvertrag die echte Schnittmenge und den belegten
+A-exklusiven Bereich vergleicht. R69-A bleibt `10/40`; kein Vollrun und kein
+Deployment.
+
+## 101. FE-C02 Baseline-Audit – Paketkomposition fehlt
+
+FE-C02 ist kein Recall-, Feld- oder Rangproblem. B/DOC-10 definiert
+Photovoltaik korrekt als Mitglied der haustechnischen Anlagen und diese unter
+Bedingungen als Gebäudebestandteil; B/DOC-02 aktiviert Feuerversicherung,
+Wohngebäude und EABS 2023. Der aktuelle Code hält den isolierten Definitionsfund
+zu Recht wirkungsneutral, besitzt aber keinen Vertrag, der diese
+sourcegebundene Paketkette zusammensetzt.
+
+Nächster geplanter Schritt:
+`PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_V1` mit Gefahren-/Paketscope,
+Aktivierungsreferenz, gerichteter Objektmitgliedschaft, Bedingungsforttragung
+und Ausschluss-/Rangprüfung. Eine globale Promotion `DEFINED -> INCLUDED` ist
+ausgeschlossen. Vor jeder Vorteilsaussage ist danach ein eigener typisierter
+Bedingungs- und Teilmengenvergleich erforderlich.
