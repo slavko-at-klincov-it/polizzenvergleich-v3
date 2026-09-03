@@ -5,10 +5,12 @@ const {
 const {
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   FE_C12_POST_LOSS_SCAFFOLDING_COST_SCOPE_PROOF_MODE,
   LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
   LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+  VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
@@ -1668,6 +1670,166 @@ describe("policy comparison point decision", () => {
       Object.keys(audit).forEach((key) => delete audit[key]);
       Object.assign(audit, original);
     }
+  });
+
+  test("accepts VS-22 non-target absence only as schema v3 and rejects injected terminal gates", () => {
+    const categoryId = "VS-22";
+    const component = { id: "hazardous_waste", factRole: "INSURED_OBJECT" };
+    const requirementContract = {
+      digest: "7".repeat(64),
+      componentSatisfactionPolicy: "ALL",
+      components: [component],
+    };
+    const packageFor = (side, terminal = false) => {
+      const documentUuid = `vs22-${side}`;
+      const searchPlanId = `fixture/${categoryId}/${component.id}`;
+      const rejection = {
+        candidateId: `candidate:vs22:${side}`,
+        terminalRejectionContractId:
+          DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+        occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+        decisionBasis: "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+        occurrenceDigestSha256: "6".repeat(64),
+        physicalPageNumber: 5,
+        sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+        observedScopeKeys: [],
+        scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+      };
+      const searchCell = {
+        disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+        absenceMeaning: "COVERAGE_MIXED",
+        comparisonPolicy: null,
+        absenceCertification: null,
+        requirementContract,
+        searchPlanId,
+        documentUuid,
+        catalogId: "fixture",
+        physicalPagesChecked: 10,
+        totalPhysicalPages: 10,
+        aliases: ["gefährlicher Abfall"],
+        conceptSearchIds: [],
+        ...(terminal
+          ? {
+              terminalRejectionAudit: {
+                schemaVersion: 3,
+                contractId:
+                  DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+                requirementId: categoryId,
+                componentId: component.id,
+                decisionOwner: "SERVER",
+                decisionBasis:
+                  "VS22_LIABILITY_OR_STORAGE_NOT_DISPOSAL_COST",
+                proofMode:
+                  "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
+                rejectedOccurrenceCount: 1,
+                rejectedCandidateIds: [rejection.candidateId],
+                rejectionDigestContractId:
+                  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+                rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+                rejections: [rejection],
+              },
+            }
+          : {}),
+        gates: {
+          negativeSearchApproved: true,
+          certifiedNegativeSearch: false,
+          completeTextExtraction: true,
+          completeCategoryTechnicalContract: true,
+          zeroOccurrenceTerminal: !terminal,
+          zeroCandidateTerminal: !terminal,
+          serverNegativeTerminal: true,
+          ...(terminal
+            ? { deterministicVs22NonTargetWasteOccurrenceTerminal: true }
+            : {}),
+        },
+      };
+      const summary = packageSummary({
+        evidenceFound: false,
+        coverage: "Nicht feststellbar",
+        facts: [],
+        reviewStatus: "KEIN_TREFFER_NACH_VOLLSTÄNDIGER_KONTROLLIERTER_SUCHE",
+        searchDisposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+        comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+        requirementContract,
+        searchAudit: {
+          disposition: "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH",
+          comparisonTreatment: "DOCUMENTATION_ONLY_V1",
+          documentCount: 1,
+          documentUuids: [documentUuid],
+          physicalPagesChecked: 10,
+          searchPlanIds: [searchPlanId],
+          requirementContract,
+          components: [searchCell],
+        },
+      });
+      const atoms = [
+        atom(side, {
+          requirementId: categoryId,
+          componentId: component.id,
+          componentLabel: "Sondermüll",
+          factRole: component.factRole,
+          documentUuids: [documentUuid],
+          evidencePresence: "NOT_FOUND",
+          coverageEffect: "UNKNOWN",
+          conflictState: "NONE",
+          selectedScopePicture: "UNKNOWN",
+          documentApplicability: "UNKNOWN",
+          selectedCandidateIds: [],
+          unresolvedCandidateIds: [],
+          requestedFieldStatus: "NOT_REQUIRED",
+          requestedFields: [],
+          optionalFields: [],
+          componentSatisfactionPolicy: "ALL",
+          requirementContractDigest: requirementContract.digest,
+          declaredComponents: requirementContract.components,
+          fields: [],
+          sources: [],
+          searchAudit: searchCell,
+        }),
+      ];
+      return { summary, atoms, searchCell };
+    };
+
+    const zero = packageFor("A");
+    const terminal = packageFor("B", true);
+    const decideAbsence = () =>
+      decidePoint({
+        categoryId,
+        packageA: zero.summary,
+        packageB: terminal.summary,
+        atomsA: zero.atoms,
+        atomsB: terminal.atoms,
+      });
+
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.EQUIVALENT,
+      reasonCode: "EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH",
+      reviewRequired: false,
+    });
+
+    const audit = terminal.searchCell.terminalRejectionAudit;
+    const originalAudit = JSON.parse(JSON.stringify(audit));
+    audit.schemaVersion = 2;
+    delete audit.rejectionDigestContractId;
+    delete audit.rejections[0].occurrenceDigestContractId;
+    audit.rejectionDigestSha256 = legacyTerminalRejectionSetDigestV2(
+      audit.rejections
+    );
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
+    Object.keys(audit).forEach((key) => delete audit[key]);
+    Object.assign(audit, originalAudit);
+
+    zero.searchCell.gates.deterministicVs22NonTargetWasteOccurrenceTerminal =
+      true;
+    expect(decideAbsence()).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reasonCode: "MISSING_BOTH",
+    });
   });
 
   test("accepts LW-20 non-target absence only as schema v3 and keeps an explicit exclusion ineligible for advantage", () => {

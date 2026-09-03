@@ -15,6 +15,7 @@ const {
   DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+  vs22NonTargetWasteOccurrenceProof,
 } = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 function worksheetFor(text) {
@@ -206,6 +207,92 @@ describe("VS-22 hazardous-waste inflection recall", () => {
             DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
         }),
       ]);
+  });
+
+  test("binds the terminal proof to exact offsets and refuses mixed-scope local fallback", () => {
+    const worksheet = worksheetFor(
+      "Kein Versicherungsschutz besteht für die Endlagerung von Abfällen jeder Art. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfall- und Problemstoffen."
+    );
+    const occurrence = component(worksheet, "hazardous_waste").occurrences[0];
+
+    expect(vs22NonTargetWasteOccurrenceProof(occurrence)).toMatchObject({
+      sectionScopeSource: "OCCURRENCE_LOCAL_CLAUSE",
+      observedScopeKeys: [],
+    });
+
+    expect(
+      vs22NonTargetWasteOccurrenceProof({
+        ...occurrence,
+        documentStart: occurrence.documentStart + 1,
+        documentEnd: occurrence.documentEnd + 1,
+      })
+    ).toBeNull();
+
+    expect(
+      vs22NonTargetWasteOccurrenceProof({
+        ...occurrence,
+        sectionScopeHint: {
+          scopeKey: "GENERAL_CONTRACT_TERMS",
+          source: "CURRENT_PAGE_HEADING",
+          text: "Allgemeine Vertragsbedingungen",
+          physicalPageNumber: occurrence.physicalPageNumber,
+        },
+        pageScopeHints: [
+          {
+            scopeKey: "GENERAL_CONTRACT_TERMS",
+            source: "CURRENT_PAGE_HEADING",
+          },
+        ],
+      })
+    ).toBeNull();
+  });
+
+  test("requires exact current-page or bounded preceding liability headings", () => {
+    const worksheet = worksheetFor(
+      "Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfall- und Problemstoffen."
+    );
+    const occurrence = component(worksheet, "hazardous_waste").occurrences[0];
+    const liabilityOccurrence = {
+      ...occurrence,
+      sectionScopeHint: {
+        scopeKey: "HAFTPFLICHT_INSURANCE",
+        source: "CURRENT_PAGE_HEADING",
+        text: "Allgemeine Bedingungen für die Haftpflichtversicherung",
+        physicalPageNumber: 1,
+      },
+      pageScopeHints: [],
+    };
+
+    expect(vs22NonTargetWasteOccurrenceProof(liabilityOccurrence)).not.toBeNull();
+    expect(
+      vs22NonTargetWasteOccurrenceProof({
+        ...liabilityOccurrence,
+        physicalPageNumber: 2,
+        pageNumber: 2,
+      })
+    ).toBeNull();
+    expect(
+      vs22NonTargetWasteOccurrenceProof({
+        ...liabilityOccurrence,
+        physicalPageNumber: 4,
+        pageNumber: 4,
+        sectionScopeHint: {
+          ...liabilityOccurrence.sectionScopeHint,
+          source: "PRECEDING_PAGE_HEADING",
+        },
+      })
+    ).not.toBeNull();
+    expect(
+      vs22NonTargetWasteOccurrenceProof({
+        ...liabilityOccurrence,
+        physicalPageNumber: 5,
+        pageNumber: 5,
+        sectionScopeHint: {
+          ...liabilityOccurrence.sectionScopeHint,
+          source: "PRECEDING_PAGE_HEADING",
+        },
+      })
+    ).toBeNull();
   });
 
   test.each([

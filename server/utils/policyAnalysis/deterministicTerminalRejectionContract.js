@@ -665,12 +665,15 @@ function lw20NonTargetOccurrenceProof(occurrence) {
 function vs22NonTargetWasteOccurrenceProof(occurrence) {
   const exactText = String(occurrence?.exactText || "");
   const matchedAlias = String(occurrence?.matchedAlias || "");
+  const localClause = occurrenceLocalClauseText(occurrence);
   const localSentence = localOccurrenceSentence(occurrence);
   const occurrencePage =
     occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
   if (
     exactText !== matchedAlias ||
     !/gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll)\p{L}*/iu.test(exactText) ||
+    !localClause ||
+    !localClause.includes(exactText) ||
     !localSentence.includes(exactText) ||
     !isVs22LiabilityOrStorageOccurrence(occurrence) ||
     !Number.isInteger(occurrencePage) ||
@@ -684,22 +687,31 @@ function vs22NonTargetWasteOccurrenceProof(occurrence) {
 
   const section = occurrence?.sectionScopeHint || null;
   const scopes = observedScopeKeys(occurrence);
+  const sectionPageDistance = Number.isInteger(section?.physicalPageNumber)
+    ? occurrencePage - section.physicalPageNumber
+    : null;
   const structuralLiability = Boolean(
     section?.scopeKey === "HAFTPFLICHT_INSURANCE" &&
       ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
         section?.source
       ) &&
       /Haftpflichtversicherung/iu.test(String(section?.text || "")) &&
-      Number.isInteger(section?.physicalPageNumber) &&
-      occurrencePage >= section.physicalPageNumber &&
-      occurrencePage - section.physicalPageNumber <= 3 &&
+      ((section.source === "CURRENT_PAGE_HEADING" &&
+        sectionPageDistance === 0) ||
+        (section.source === "PRECEDING_PAGE_HEADING" &&
+          Number.isInteger(sectionPageDistance) &&
+          sectionPageDistance >= 1 &&
+          sectionPageDistance <= 3)) &&
       scopes.length === 1 &&
       scopes[0] === "HAFTPFLICHT_INSURANCE"
   );
-  const localStorageCarveback =
-    /Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung[\s\S]{0,180}?gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll)\p{L}*/iu.test(
-      localSentence
-    );
+  const localStorageCarveback = Boolean(
+    section === null &&
+      scopes.length === 0 &&
+      /Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung[\s\S]{0,180}?gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll)\p{L}*/iu.test(
+        localSentence
+      )
+  );
   if (!structuralLiability && !localStorageCarveback) return null;
   return {
     physicalPageNumber: occurrencePage,
