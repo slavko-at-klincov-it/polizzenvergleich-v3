@@ -4,6 +4,14 @@ const {
   customerResultText,
 } = require("../../utils/policyComparison/customerResultPresenter");
 const {
+  customerSafeComparisonReadView,
+  deriveCustomerMetrics,
+  validateCustomerComparison,
+} = require("../../utils/policyComparison/customerMetricContract");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
+const {
   VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
   VS22_REQUIREMENT_CONTRACT_DIGEST,
   buildVs22HazardousWastePortfolioAudit,
@@ -315,6 +323,54 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
         sourceAtomDigestReplay,
       })
     ).toThrow("VS22_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
+  });
+
+  test("replays the customer result against the private row digest and strips it from the read view", () => {
+    const input = fixture();
+    const audit = buildVs22HazardousWastePortfolioAudit(input);
+    const categories = [
+      {
+        categoryView: "VS",
+        rows: [
+          {
+            categoryId: "VS-22",
+            outcome: "A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision: vs22HazardousWastePortfolioDecision(audit),
+            vs22SourceAtomDigestReplay: buildVs22SourceAtomDigestReplay(input),
+          },
+        ],
+      },
+    ];
+    const result = {
+      schemaVersion: 11,
+      status: "COMPARISON_RESULT_MATERIALIZED",
+      productProfile: PRODUCT_PROFILE,
+      documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
+      categories,
+      totals: deriveCustomerMetrics(categories),
+    };
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      customerReviewRequired: 0,
+      pointDecisions: { VORTEIL_A: 1 },
+    });
+    expect(
+      customerSafeComparisonReadView(result).categories[0].rows[0]
+    ).not.toHaveProperty("vs22SourceAtomDigestReplay");
+
+    const tampered = JSON.parse(JSON.stringify(result));
+    const tamperedAudit =
+      tampered.categories[0].rows[0].pointDecision
+        .vs22HazardousWastePortfolioAudit;
+    tamperedAudit.sides.A.projectedAtoms.find(
+      ({ componentId }) => componentId === "hazardous_waste"
+    ).sources[0].exactText = "Allgemeine Entsorgungskosten";
+    coherentlyRehash(tamperedAudit);
+    expect(() => validateCustomerComparison(tampered)).toThrow(
+      "COMPARISON_VS22_PORTFOLIO_AUDIT_INVALID"
+    );
   });
 
   test.each([
