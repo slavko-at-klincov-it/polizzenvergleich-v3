@@ -746,8 +746,9 @@ function validNestedListContinuationProof(occurrence, pageContent, pageMap) {
     });
     return Boolean(
       expected &&
-        JSON.stringify(canonicalJson(occurrence.nestedListContinuationProof)) ===
-          JSON.stringify(canonicalJson(expected))
+        JSON.stringify(
+          canonicalJson(occurrence.nestedListContinuationProof)
+        ) === JSON.stringify(canonicalJson(expected))
     );
   } catch {
     return false;

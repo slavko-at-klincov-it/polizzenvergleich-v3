@@ -1018,10 +1018,7 @@ describe("controlledOccurrenceWorksheet", () => {
       (proof) => (proof.pagePrelude.sha256 = "0".repeat(64)),
     ],
     ["stop boundary", (proof) => (proof.boundary.kind = "PAGE_END")],
-    [
-      "stop-boundary offsets",
-      (proof) => (proof.boundary.documentStart += 1),
-    ],
+    ["stop-boundary offsets", (proof) => (proof.boundary.documentStart += 1)],
     [
       "stop-boundary SHA-256",
       (proof) => (proof.boundary.sha256 = "0".repeat(64)),
