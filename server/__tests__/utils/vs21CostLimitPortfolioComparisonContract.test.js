@@ -99,13 +99,9 @@ function sharedSumModifier(side, componentId, overrides = {}) {
 }
 
 function sideAtoms(side, valueType, { modifier = false } = {}) {
-  const atoms = components.map(({ id }) =>
-    primaryAtom(side, id, valueType)
-  );
+  const atoms = components.map(({ id }) => primaryAtom(side, id, valueType));
   if (modifier)
-    atoms.push(
-      ...components.map(({ id }) => sharedSumModifier(side, id))
-    );
+    atoms.push(...components.map(({ id }) => sharedSumModifier(side, id)));
   return atoms;
 }
 
@@ -192,10 +188,7 @@ describe("VS-21 cost limit portfolio comparison contract", () => {
           "Aufräum- und Abbruchkosten sind versichert.";
       },
     ],
-    [
-      "only one component of the modifier pair",
-      (atoms) => atoms.pop(),
-    ],
+    ["only one component of the modifier pair", (atoms) => atoms.pop()],
     [
       "another incomplete included cost clause",
       (atoms) => {

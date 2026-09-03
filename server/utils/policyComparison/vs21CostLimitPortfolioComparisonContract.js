@@ -6,10 +6,7 @@ const {
 } = require("./comparisonAtomCanonicalization");
 
 const VS21_CATEGORY_ID = "VS-21";
-const VS21_COMPONENT_IDS = Object.freeze([
-  "cleanup_costs",
-  "demolition_costs",
-]);
+const VS21_COMPONENT_IDS = Object.freeze(["cleanup_costs", "demolition_costs"]);
 const VS21_COST_LIMIT_PORTFOLIO_AUDIT_CONTRACT_ID =
   "VS21_COST_LIMIT_PORTFOLIO_AUDIT_V1";
 const VS21_INCOMPATIBLE_LIMIT_TYPES_RULE_ID =
@@ -81,36 +78,36 @@ function sharedSumModifierSource(source) {
   const text = normalized(source?.conditionCheckText);
   return Boolean(
     text.includes("aufräum") &&
-      text.includes("abbruch") &&
-      text.includes("feuerlösch") &&
-      text.includes("gebäude") &&
-      text.includes("inhalt") &&
-      text.includes("gemeinsam summarisch versichert") &&
-      !containsNumericLimit(text)
+    text.includes("abbruch") &&
+    text.includes("feuerlösch") &&
+    text.includes("gebäude") &&
+    text.includes("inhalt") &&
+    text.includes("gemeinsam summarisch versichert") &&
+    !containsNumericLimit(text)
   );
 }
 
 function potentialSharedSumModifier(atom) {
   return Boolean(
     atom?.requirementId === VS21_CATEGORY_ID &&
-      VS21_COMPONENT_IDS.includes(atom?.componentId) &&
-      atom?.factRole === "COST" &&
-      atom?.evidencePresence === "FOUND" &&
-      atom?.coverageEffect === "INCLUDED" &&
-      atom?.conflictState === "NONE" &&
-      (atom?.unresolvedCandidateIds || []).length === 0 &&
-      comparisonApplicability(atom) === PACKAGE_MEMBER &&
-      atom?.requestedFieldStatus === "NOT_FOUND" &&
-      JSON.stringify(atom?.requestedFields) === JSON.stringify(["limit"]) &&
-      JSON.stringify(atom?.optionalFields) === JSON.stringify([]) &&
-      Array.isArray(atom?.fields) &&
-      atom.fields.length === 1 &&
-      atom.fields[0]?.field === "limit" &&
-      atom.fields[0]?.status === "NOT_FOUND" &&
-      Array.isArray(atom.fields[0]?.facts) &&
-      atom.fields[0].facts.length === 0 &&
-      sourceBindingValid(atom) &&
-      atom.sources.every(sharedSumModifierSource)
+    VS21_COMPONENT_IDS.includes(atom?.componentId) &&
+    atom?.factRole === "COST" &&
+    atom?.evidencePresence === "FOUND" &&
+    atom?.coverageEffect === "INCLUDED" &&
+    atom?.conflictState === "NONE" &&
+    (atom?.unresolvedCandidateIds || []).length === 0 &&
+    comparisonApplicability(atom) === PACKAGE_MEMBER &&
+    atom?.requestedFieldStatus === "NOT_FOUND" &&
+    JSON.stringify(atom?.requestedFields) === JSON.stringify(["limit"]) &&
+    JSON.stringify(atom?.optionalFields) === JSON.stringify([]) &&
+    Array.isArray(atom?.fields) &&
+    atom.fields.length === 1 &&
+    atom.fields[0]?.field === "limit" &&
+    atom.fields[0]?.status === "NOT_FOUND" &&
+    Array.isArray(atom.fields[0]?.facts) &&
+    atom.fields[0].facts.length === 0 &&
+    sourceBindingValid(atom) &&
+    atom.sources.every(sharedSumModifierSource)
   );
 }
 
