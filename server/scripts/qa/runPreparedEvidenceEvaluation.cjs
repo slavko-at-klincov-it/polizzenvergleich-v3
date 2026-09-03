@@ -49,8 +49,10 @@ function inspectObjectScopeProvenance(worksheet) {
       objectScopeEvidenceRequired ||= componentHasContract;
       for (const occurrence of component.occurrences || []) {
         const objectScopeProofWithoutContract =
-          Object.prototype.hasOwnProperty.call(occurrence, "objectScopeProof") &&
-          !componentHasContract;
+          Object.prototype.hasOwnProperty.call(
+            occurrence,
+            "objectScopeProof"
+          ) && !componentHasContract;
         const nestedListProofWithoutContract =
           Object.prototype.hasOwnProperty.call(
             occurrence,
