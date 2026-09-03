@@ -1,3 +1,8 @@
+const crypto = require("crypto");
+const { decidePoint } = require("../../utils/policyComparison/pointDecision");
+const {
+  customerResultText,
+} = require("../../utils/policyComparison/customerResultPresenter");
 const {
   VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
   VS22_REQUIREMENT_CONTRACT_DIGEST,
@@ -16,6 +21,32 @@ const contract = {
   componentSatisfactionPolicy: "ALL",
   components,
 };
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])])
+  );
+}
+
+function sha256(value) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex");
+}
+
+function coherentlyRehash(audit) {
+  for (const side of ["A", "B"])
+    audit.sides[side].projectedAtomsDigestSha256 = sha256(
+      audit.sides[side].projectedAtoms
+    );
+  delete audit.assessmentDigestSha256;
+  audit.assessmentDigestSha256 = sha256(audit);
+}
 
 function document(uuid, side) {
   return { uuid, side, sha256: uuid.repeat(64).slice(0, 64) };
@@ -219,6 +250,66 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       ).not.toThrow();
     }
   );
+
+  test("runs before the package review gate and renders the customer advantage", () => {
+    const input = fixture();
+    const decision = decidePoint(input);
+
+    expect(decision).toMatchObject({
+      outcome: "VORTEIL_A",
+      reasonCode:
+        "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE",
+      ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+      reviewRequired: false,
+    });
+    expect(customerResultText({ pointDecision: decision })).toContain(
+      "Vorteil Polizze A:"
+    );
+  });
+
+  test.each([
+    [
+      "rehashes a missing terminal gate",
+      (audit) => {
+        const atom = audit.sides.B.projectedAtoms.find(
+          ({ componentId }) => componentId === "hazardous_waste"
+        );
+        atom.searchAudit.gates.zeroOccurrenceTerminal = false;
+      },
+    ],
+    [
+      "rehashes a general-disposal limit as hazardous limit",
+      (audit) => {
+        const atom = audit.sides.A.projectedAtoms.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        );
+        atom.componentId = "disposal_costs";
+      },
+    ],
+    [
+      "rehashes a document identity change",
+      (audit) => {
+        audit.sides.B.documentManifest[0].sha256 = "f".repeat(64);
+      },
+    ],
+  ])("rejects an attacker that %s", (_label, mutate) => {
+    const input = fixture();
+    const audit = buildVs22HazardousWastePortfolioAudit(input);
+    mutate(audit);
+    coherentlyRehash(audit);
+
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(audit, {
+        categoryId: input.categoryId,
+        packageA: input.packageA,
+        packageB: input.packageB,
+        requirementContractA: contract,
+        requirementContractB: contract,
+        expectedDocumentsA: input.expectedDocumentsA,
+        expectedDocumentsB: input.expectedDocumentsB,
+      })
+    ).toThrow(/^VS22_HAZARDOUS_WASTE_PORTFOLIO_/u);
+  });
 
   test.each([
     ["missing search cell", (input) => input.atomsB.pop()],
