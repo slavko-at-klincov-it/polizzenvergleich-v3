@@ -1,8 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const PAV8_BASELINE_COMMIT =
-  "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b";
+const PAV8_BASELINE_COMMIT = "2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b";
 const PAV8_BASELINE_PRODUCT_PROFILE = Object.freeze({
   id: "CUSTOMER_CORE_5_V11_VS_SPECIAL_EQUIPMENT_PRECISION",
   comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
