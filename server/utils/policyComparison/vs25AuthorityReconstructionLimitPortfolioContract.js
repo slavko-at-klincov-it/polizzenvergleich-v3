@@ -4,6 +4,12 @@ const {
   comparisonApplicability,
   comparisonFieldSignature,
 } = require("./comparisonAtomCanonicalization");
+const {
+  DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+  VS25_SUM_EQUALIZATION_DECISION_BASIS,
+  terminalRejectionSetDigest,
+} = require("../policyAnalysis/deterministicTerminalRejectionContract");
 
 const VS25_CATEGORY_ID = "VS-25";
 const VS25_COST_COMPONENT_ID = "authority_reconstruction_extra_costs";
@@ -241,6 +247,58 @@ function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
     searchAudit?.disposition === "VERIFIED_NOT_FOUND" &&
     searchAudit?.comparisonTreatment === "ASSUMED_NOT_INCLUDED_V1" &&
     searchAudit?.gates?.certifiedNegativeSearch === true;
+  const terminalAudit = searchAudit?.terminalRejectionAudit;
+  const deterministicSumEqualizationTerminal = Boolean(
+    searchAudit?.gates?.deterministicVs25SumEqualizationTerminal === true &&
+      terminalAudit?.schemaVersion === 3 &&
+      terminalAudit?.contractId ===
+        DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID &&
+      terminalAudit?.requirementId === VS25_CATEGORY_ID &&
+      terminalAudit?.componentId === componentId &&
+      terminalAudit?.decisionOwner === "SERVER" &&
+      terminalAudit?.decisionBasis === VS25_SUM_EQUALIZATION_DECISION_BASIS &&
+      terminalAudit?.proofMode ===
+        "ALL_OCCURRENCES_DETERMINISTICALLY_PURE_SUM_EQUALIZATION_ALLOCATIONS" &&
+      terminalAudit?.rejectionDigestContractId ===
+        TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID &&
+      Array.isArray(terminalAudit?.rejections) &&
+      terminalAudit.rejections.length > 0 &&
+      terminalAudit.rejectedOccurrenceCount === terminalAudit.rejections.length &&
+      sameJson(
+        terminalAudit.rejectedCandidateIds,
+        strings(terminalAudit.rejections.map(({ candidateId }) => candidateId))
+      ) &&
+      terminalAudit.rejections.every(
+        (rejection) =>
+          rejection?.terminalRejectionContractId ===
+            DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID &&
+          rejection?.occurrenceDigestContractId ===
+            "TERMINAL_OCCURRENCE_PROVENANCE_V3" &&
+          rejection?.decisionBasis === VS25_SUM_EQUALIZATION_DECISION_BASIS &&
+          rejection?.decisionOwner === undefined &&
+          /^[a-f0-9]{64}$/u.test(rejection?.occurrenceDigestSha256 || "") &&
+          Number.isInteger(rejection?.physicalPageNumber) &&
+          rejection.physicalPageNumber > 0 &&
+          rejection.physicalPageNumber <= searchAudit.totalPhysicalPages &&
+          rejection?.sectionScopeSource === "OCCURRENCE_LOCAL_CLAUSE" &&
+          sameJson(rejection?.observedScopeKeys, []) &&
+          rejection?.scopeProofMode ===
+            "VS25_LOCAL_SUM_EQUALIZATION_ALLOCATION_V1"
+      ) &&
+      terminalAudit.rejectionDigestSha256 ===
+        terminalRejectionSetDigest(terminalAudit.rejections)
+  );
+  const zeroTerminal = Boolean(
+    searchAudit?.gates?.zeroOccurrenceTerminal === true &&
+      searchAudit?.gates?.zeroCandidateTerminal === true &&
+      terminalAudit === undefined
+  );
+  if (
+    deterministicSumEqualizationTerminal &&
+    (searchAudit?.gates?.zeroOccurrenceTerminal !== false ||
+      searchAudit?.gates?.zeroCandidateTerminal !== false)
+  )
+    return false;
   return Boolean(
     exactAtomContract(atom, expectedDocument, componentId, factRole) &&
       atom?.evidencePresence === "NOT_FOUND" &&
@@ -258,8 +316,7 @@ function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
       searchAudit?.gates?.negativeSearchApproved === true &&
       searchAudit?.gates?.completeTextExtraction === true &&
       searchAudit?.gates?.completeCategoryTechnicalContract === true &&
-      searchAudit?.gates?.zeroOccurrenceTerminal === true &&
-      searchAudit?.gates?.zeroCandidateTerminal === true &&
+      (zeroTerminal || deterministicSumEqualizationTerminal) &&
       searchAudit?.gates?.serverNegativeTerminal === true
   );
 }

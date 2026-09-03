@@ -47,6 +47,7 @@ const {
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
@@ -1130,6 +1131,10 @@ function componentSearchAudit({
     terminalRejectionAudit?.contractId ===
       DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID
   );
+  const deterministicVs25SumEqualizationTerminal = Boolean(
+    terminalRejectionAudit?.contractId ===
+      DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID
+  );
   const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
   const lw20DefaultExclusionOverrideAudit =
     buildLw20DefaultExclusionOverrideAudit({
@@ -1252,6 +1257,9 @@ function componentSearchAudit({
         : {}),
       ...(deterministicVs22NonTargetWasteOccurrenceTerminal
         ? { deterministicVs22NonTargetWasteOccurrenceTerminal: true }
+        : {}),
+      ...(deterministicVs25SumEqualizationTerminal
+        ? { deterministicVs25SumEqualizationTerminal: true }
         : {}),
     },
   };

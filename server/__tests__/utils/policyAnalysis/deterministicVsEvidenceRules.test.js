@@ -3,6 +3,10 @@ const {
   deterministicVsCandidateBinding,
   deterministicVsPreparedDecision,
 } = require("../../../utils/policyAnalysis/deterministicVsEvidenceRules");
+const {
+  DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+  certifyDeterministicTerminalRejection,
+} = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 const vsCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
 function occurrence(text) {
@@ -501,6 +505,7 @@ describe("deterministicVsEvidenceRules", () => {
         basis,
         authoritative: true,
       });
+
     }
   );
 
@@ -817,6 +822,46 @@ describe("deterministicVsEvidenceRules", () => {
         basis: "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT",
         authoritative: true,
       });
+
+      const terminalOccurrence = {
+        ...sourceOccurrence({ text, exactText: phrase }),
+        matchedAlias: phrase,
+        candidateId: `candidate-${componentId}`,
+        physicalPageNumber: 8,
+        sectionScopeHint: null,
+        pageScopeHints: [],
+      };
+      const deterministicBinding = deterministicVsCandidateBinding({
+        requirementId: "VS-25",
+        componentId,
+        occurrence: terminalOccurrence,
+      });
+      expect(
+        certifyDeterministicTerminalRejection({
+          categoryView: "VS",
+          requirement: {
+            id: "VS-25",
+            negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+            absenceMeaning: "COST_COVERAGE",
+          },
+          component: {
+            id: componentId,
+            factRole:
+              componentId === "authority_reconstruction_extra_costs"
+                ? "COST"
+                : "LIMIT",
+          },
+          occurrence: terminalOccurrence,
+          deterministicBinding,
+        })
+      ).toMatchObject({
+        terminalRejectionContractId:
+          DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+        decisionBasis:
+          "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT",
+        sectionScopeSource: "OCCURRENCE_LOCAL_CLAUSE",
+        observedScopeKeys: [],
+      });
     }
   );
 
@@ -836,6 +881,34 @@ describe("deterministicVsEvidenceRules", () => {
       binding: DETERMINISTIC_BINDING.DIRECT,
       basis: "EXPLICIT_AUTHORITY_RECONSTRUCTION_COSTS",
     });
+    const terminalOccurrence = {
+      ...sourceOccurrence({ text, exactText: phrase }),
+      matchedAlias: phrase,
+      candidateId: "candidate-grant",
+      physicalPageNumber: 1,
+      sectionScopeHint: null,
+      pageScopeHints: [],
+    };
+    expect(
+      certifyDeterministicTerminalRejection({
+        categoryView: "VS",
+        requirement: {
+          id: "VS-25",
+          negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+          absenceMeaning: "COST_COVERAGE",
+        },
+        component: {
+          id: "authority_reconstruction_extra_costs",
+          factRole: "COST",
+        },
+        occurrence: terminalOccurrence,
+        deterministicBinding: deterministicVsCandidateBinding({
+          requirementId: "VS-25",
+          componentId: "authority_reconstruction_extra_costs",
+          occurrence: terminalOccurrence,
+        }),
+      })
+    ).toBeNull();
   });
 
   test("does not promote VS-25 under an unresolved combined insurance scope", () => {

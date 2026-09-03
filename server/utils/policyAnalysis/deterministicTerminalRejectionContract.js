@@ -22,6 +22,8 @@ const DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_V1";
 const DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_V1";
+const DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_V1";
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_V1";
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID =
@@ -43,6 +45,10 @@ const LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE =
   "LW20_LOCAL_ROLE_OR_STORM_SCOPE_V1";
 const VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE =
   "VS22_LOCAL_LIABILITY_OR_STORAGE_SCOPE_V1";
+const VS25_SUM_EQUALIZATION_DECISION_BASIS =
+  "PURE_SUM_EQUALIZATION_ALLOCATION_NOT_AUTHORITY_COST_GRANT";
+const VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE =
+  "VS25_LOCAL_SUM_EQUALIZATION_ALLOCATION_V1";
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS =
   "PURE_OBJECT_CLASSIFICATION_IS_NOT_OPERATIONAL_COVERAGE";
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE =
@@ -135,6 +141,17 @@ const VS22_NON_TARGET_WASTE_OCCURRENCE_TARGETS = Object.freeze({
     factRole: "LIMIT",
     absenceMeaning: "COVERAGE_MIXED",
     scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+  }),
+});
+
+const VS25_SUM_EQUALIZATION_TARGETS = Object.freeze({
+  "VS:VS-25:authority_reconstruction_extra_costs": Object.freeze({
+    factRole: "COST",
+    absenceMeaning: "COST_COVERAGE",
+  }),
+  "VS:VS-25:authority_reconstruction_extra_cost_limit": Object.freeze({
+    factRole: "LIMIT",
+    absenceMeaning: "COST_COVERAGE",
   }),
 });
 
@@ -300,6 +317,21 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
       scopeProofMode: postLossScaffoldingCostContract.scopeProofMode,
       occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     });
+  const vs25SumEqualizationContract = VS25_SUM_EQUALIZATION_TARGETS[key];
+  if (vs25SumEqualizationContract)
+    return Object.freeze({
+      contractId: DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+      decisionBasis: VS25_SUM_EQUALIZATION_DECISION_BASIS,
+      auditProofMode:
+        "ALL_OCCURRENCES_DETERMINISTICALLY_PURE_SUM_EQUALIZATION_ALLOCATIONS",
+      terminalGate: "deterministicVs25SumEqualizationTerminal",
+      factRole: vs25SumEqualizationContract.factRole,
+      absenceMeaning: vs25SumEqualizationContract.absenceMeaning,
+      allowedObservedScopeKeys: [],
+      sectionScopeSources: [OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE],
+      scopeProofMode: VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    });
   const otherCategoryContract = CERTIFIED_TARGETS[key];
   if (otherCategoryContract)
     return Object.freeze({
@@ -463,6 +495,15 @@ function terminalTargetAcceptsScopeProof(
       canonical.length === 0
     );
   }
+  if (
+    target?.contractId ===
+    DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID
+  )
+    return Boolean(
+      sectionScopeSource === OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE &&
+        Array.isArray(scopes) &&
+        scopes.length === 0
+    );
   return Boolean(
     target?.sectionScopeSources?.includes(sectionScopeSource) &&
       terminalTargetAcceptsObservedScopes(target, scopes)
@@ -724,6 +765,65 @@ function vs22NonTargetWasteOccurrenceProof(occurrence) {
   };
 }
 
+function vs25SumEqualizationOccurrenceProof(occurrence) {
+  const exactText = String(occurrence?.exactText || "").trim();
+  const matchedAlias = String(occurrence?.matchedAlias || "").trim();
+  const context = String(occurrence?.context?.text || "");
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart) - contextStart;
+  const occurrenceEnd = Number(occurrence?.documentEnd) - contextStart;
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  if (
+    !/^Mehrkosten\s+(?:durch|infolge)\s+behördliche(?:r)?\s+Auflagen$/iu.test(
+      exactText
+    ) ||
+    matchedAlias !== exactText ||
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd) ||
+    occurrenceStart < 0 ||
+    occurrenceEnd <= occurrenceStart ||
+    occurrenceEnd > context.length ||
+    context.slice(occurrenceStart, occurrenceEnd) !== exactText ||
+    !Number.isInteger(occurrencePage) ||
+    !String(occurrence?.candidateId || "") ||
+    occurrence?.sectionScopeHint !== null ||
+    !Array.isArray(occurrence?.pageScopeHints) ||
+    occurrence.pageScopeHints.length !== 0
+  )
+    return null;
+  const preceding = context.slice(0, occurrenceStart);
+  const following = context.slice(occurrenceEnd);
+  const priorBoundary = Math.max(
+    preceding.lastIndexOf("\n"),
+    preceding.lastIndexOf(";"),
+    preceding.lastIndexOf(".")
+  );
+  const nextBoundaryOffset = following.search(/[;\n.]/u);
+  const sentence = context.slice(
+    priorBoundary + 1,
+    nextBoundaryOffset === -1
+      ? context.length
+      : occurrenceEnd + nextBoundaryOffset + 1
+  );
+  if (
+    !/\bSummenausgleich\b/iu.test(preceding.slice(-900)) ||
+    !/gelten\s+die\s+Mehrkosten\s+(?:durch|infolge)\s+behördliche(?:r)?\s+Auflagen\s+f[üu]r\s+Gebäude\s+und\s+Inhalt\s+gemeinsam\s+summarisch\s+versichert/iu.test(
+      sentence
+    ) ||
+    /(?:\bmitversichert\b|\bersetzt\b|\bEntschädigung\b|\bauf\s+Erstes\s+Risiko\b|\b(?:EUR|Euro)\b|€|\d\s*%)/iu.test(
+      sentence
+    )
+  )
+    return null;
+  return {
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+    observedScopeKeys: [],
+  };
+}
+
 /**
  * Proves that a candidate is only an item in a locally declared object-class
  * list. The target controls whether that list defines membership or exclusion
@@ -871,6 +971,11 @@ function terminalOccurrenceProof(target, occurrence) {
     DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
   )
     return feC12PostLossScaffoldingCostProof(occurrence);
+  if (
+    target?.contractId ===
+    DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID
+  )
+    return vs25SumEqualizationOccurrenceProof(occurrence);
   const proof = {
     physicalPageNumber:
       occurrence?.physicalPageNumber || occurrence?.pageNumber || null,
@@ -1300,6 +1405,52 @@ function certifyVs22NonTargetWasteOccurrenceTerminalRejection({
   };
 }
 
+function certifyVs25SumEqualizationTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+  deterministicBinding,
+}) {
+  const contract =
+    VS25_SUM_EQUALIZATION_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning ||
+    deterministicBinding?.binding !== "MENTION_ONLY" ||
+    deterministicBinding?.basis !== VS25_SUM_EQUALIZATION_DECISION_BASIS ||
+    deterministicBinding?.authoritative !== true
+  )
+    return null;
+  const proof = vs25SumEqualizationOccurrenceProof(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!proof || !terminalTargetAcceptsScopeProof(target, proof)) return null;
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: VS25_SUM_EQUALIZATION_DECISION_BASIS,
+    physicalPageNumber: proof.physicalPageNumber,
+    sectionScopeSource: proof.sectionScopeSource,
+    observedScopeKeys: proof.observedScopeKeys,
+    scopeProofMode: VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
+    occurrenceDigestSha256: terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
+    }),
+  };
+}
+
 function certifyNonContractualRiskInformationTerminalRejection({
   categoryView,
   requirement,
@@ -1429,6 +1580,7 @@ function certifyCoverageOnlyObjectClassificationTerminalRejection({
 function certifyDeterministicTerminalRejection(input) {
   return (
     certifyCoverageOnlyObjectClassificationTerminalRejection(input) ||
+    certifyVs25SumEqualizationTerminalRejection(input) ||
     certifyVs22NonTargetWasteOccurrenceTerminalRejection(input) ||
     certifyLw20NonTargetOccurrenceTerminalRejection(input) ||
     certifyPostLossScaffoldingCostTerminalRejection(input) ||
@@ -1447,6 +1599,7 @@ module.exports = {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
@@ -1457,6 +1610,8 @@ module.exports = {
   LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
   LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
   VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+  VS25_SUM_EQUALIZATION_DECISION_BASIS,
+  VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
@@ -1464,6 +1619,7 @@ module.exports = {
   feC12PostLossScaffoldingCostProof,
   lw20NonTargetOccurrenceProof,
   vs22NonTargetWasteOccurrenceProof,
+  vs25SumEqualizationOccurrenceProof,
   legacyTerminalRejectionSetDigestV1,
   legacyTerminalRejectionSetDigestV2,
   terminalOccurrenceProof,

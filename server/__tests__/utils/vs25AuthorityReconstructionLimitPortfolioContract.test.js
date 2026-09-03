@@ -5,6 +5,14 @@ const {
   validateVs25AuthorityLimitPortfolioAudit,
 } = require("../../utils/policyComparison/vs25AuthorityReconstructionLimitPortfolioContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
+const {
+  DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+  VS25_SUM_EQUALIZATION_DECISION_BASIS,
+  VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
+  terminalRejectionSetDigest,
+} = require("../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 const DIGEST =
   "82d04fb0134a057ba083fef5d798340fb92106899a0b58cf022323b660208bb2";
@@ -146,6 +154,40 @@ function absentAtom(sourceDocument, componentId, factRole) {
     },
   };
   return atom;
+}
+
+function terminalSumEqualizationAbsence(atom) {
+  const candidateId = `${atom.documentUuids[0]}-${atom.componentId}-allocation`;
+  const rejection = {
+    candidateId,
+    terminalRejectionContractId:
+      DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionBasis: VS25_SUM_EQUALIZATION_DECISION_BASIS,
+    occurrenceDigestSha256: "c".repeat(64),
+    physicalPageNumber: 1,
+    sectionScopeSource: "OCCURRENCE_LOCAL_CLAUSE",
+    observedScopeKeys: [],
+    scopeProofMode: VS25_SUM_EQUALIZATION_SCOPE_PROOF_MODE,
+  };
+  atom.searchAudit.gates.zeroOccurrenceTerminal = false;
+  atom.searchAudit.gates.zeroCandidateTerminal = false;
+  atom.searchAudit.gates.deterministicVs25SumEqualizationTerminal = true;
+  atom.searchAudit.terminalRejectionAudit = {
+    schemaVersion: 3,
+    contractId: DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID,
+    requirementId: "VS-25",
+    componentId: atom.componentId,
+    decisionOwner: "SERVER",
+    decisionBasis: VS25_SUM_EQUALIZATION_DECISION_BASIS,
+    proofMode:
+      "ALL_OCCURRENCES_DETERMINISTICALLY_PURE_SUM_EQUALIZATION_ALLOCATIONS",
+    rejectedOccurrenceCount: 1,
+    rejectedCandidateIds: [candidateId],
+    rejectionDigestContractId: TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
+    rejectionDigestSha256: terminalRejectionSetDigest([rejection]),
+    rejections: [rejection],
+  };
 }
 
 function newValueAtom(sourceDocument, amount = null) {
@@ -356,6 +398,23 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
     expect(decidePoint(fixture({ aPercent: "400" }))).toMatchObject({
       outcome: "VORTEIL_B",
       reviewRequired: false,
+    });
+  });
+
+  test("accepts a fully audited sum-equalization-only occurrence as terminal", () => {
+    const input = fixture();
+    terminalSumEqualizationAbsence(input.atomsB[4]);
+    terminalSumEqualizationAbsence(input.atomsB[5]);
+
+    expect(decidePoint(input)).toMatchObject({
+      outcome: "VORTEIL_A",
+      ruleId: VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+      reviewRequired: false,
+    });
+    input.atomsB[4].searchAudit.terminalRejectionAudit.rejections[0].physicalPageNumber =
+      2;
+    expect(decidePoint(input)).not.toMatchObject({
+      ruleId: VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
     });
   });
 
