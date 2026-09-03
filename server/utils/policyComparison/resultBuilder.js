@@ -1137,14 +1137,22 @@ function materializeAtomicFacts({
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
       .map((candidate) => {
-        const { candidateId, physicalPageNumber, printedPageLabel, exactText } =
-          candidate;
+        const {
+          candidateId,
+          physicalPageNumber,
+          printedPageLabel,
+          exactText,
+          candidateBinding,
+          deterministicBindingBasis,
+        } = candidate;
         return {
           candidateId,
           physicalPageNumber,
           printedPageLabel,
           exactText,
           conditionCheckText: conditionCheckText(candidate),
+          ...(candidateBinding ? { candidateBinding } : {}),
+          ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
         };
       });
     return {

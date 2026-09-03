@@ -12,6 +12,9 @@ const {
 } = require("./bilateralAbsenceContract");
 const { hasOptionalCoverageSource } = require("./comparisonAtomSemantics");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
+const {
+  applicabilityFor,
+} = require("../policyAnalysis/preparedEvidenceContract");
 
 const VS22_CATEGORY_ID = "VS-22";
 const VS22_CATALOG_ID = "vs-occurrence-full-draft-v0.15";
@@ -27,8 +30,8 @@ const VS22_HAZARDOUS_COMPONENT_IDS = Object.freeze([
   "hazardous_waste_cost_limit",
 ]);
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID =
-  "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V1";
-const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION = 1;
+  "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2";
+const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION = 2;
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID =
   "VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1";
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE =
@@ -37,6 +40,14 @@ const VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
   "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1";
 const HAZARDOUS_WASTE_ANCHOR =
   /(?<!\p{L})(?:sondermüll|sonderabfall|problemstoff\p{L}*|gefährlich\p{L}*\s+abf(?:all|äll)\p{L}*)(?!\p{L})/iu;
+const DOCUMENT_ROLES = new Set([
+  "MAIN_POLICY",
+  "SUPPLEMENT",
+  "ENDORSEMENT",
+  "TERMS",
+  "OTHER",
+]);
+const DOCUMENT_STATUSES = new Set(["ACTIVE", "FRAMEWORK_TERMS", "PROPOSAL"]);
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -95,8 +106,8 @@ function canonicalDocumentManifest(expectedDocuments, side) {
         !document.uuid ||
         !/^[a-f0-9]{64}$/u.test(document.sha256) ||
         document.side !== side ||
-        !document.role ||
-        !document.documentStatus
+        !DOCUMENT_ROLES.has(document.role) ||
+        !DOCUMENT_STATUSES.has(document.documentStatus)
     ) ||
     new Set(manifest.map(({ uuid }) => uuid)).size !== manifest.length
   )
@@ -213,6 +224,8 @@ function atomMatrix(categoryId, atoms, matrix, requirementContract) {
       atom.componentSatisfactionPolicy !== "ALL" ||
       atom.documentRole !== document.role ||
       atom.documentStatus !== document.documentStatus ||
+      atom.documentApplicability !==
+        applicabilityFor(document.documentStatus, atom.evidencePresence) ||
       !sameJson(atom.declaredComponents, requirementContract.components) ||
       !sameJson(atom.searchAudit, cell)
     )
@@ -245,6 +258,13 @@ function validBoundPage(physicalPageNumber, totalPhysicalPages) {
 function sourceHasHazardousWasteAnchor(source) {
   return HAZARDOUS_WASTE_ANCHOR.test(
     `${source?.exactText || ""}\n${source?.conditionCheckText || ""}`
+  );
+}
+
+function sourceHasDirectHazardousWasteBinding(source) {
+  return Boolean(
+    source?.candidateBinding === "DIRECT" &&
+      source?.deterministicBindingBasis === "EXPLICIT_HAZARDOUS_WASTE_COSTS"
   );
 }
 
@@ -294,6 +314,7 @@ function safeHazardousCoverageAtom(atom) {
       validSourceBinding(atom) &&
       validAtomSourcePages(atom) &&
       atom.sources.every(sourceHasHazardousWasteAnchor) &&
+      atom.sources.every(sourceHasDirectHazardousWasteBinding) &&
       !hasOptionalCoverageSource(atom) &&
       sameJson(atom.requestedFields, ["limit"]) &&
       sameJson(atom.optionalFields, []) &&
@@ -319,12 +340,19 @@ function safeHazardousLimitAtom(atom) {
       completeRawComparisonAtom(atom) &&
       validAtomSourcePages(atom) &&
       atom.sources.every(sourceHasHazardousWasteAnchor) &&
+      atom.sources.every(sourceHasDirectHazardousWasteBinding) &&
       hazardousFieldSourcesMatchCandidates(atom) &&
       !hasOptionalCoverageSource(atom) &&
       fields.length > 0 &&
       fields.every(
-        ({ field, fieldStatus, value }) =>
-          field === "limit" && fieldStatus === "FOUND" && String(value || "")
+        ({ field, fieldStatus, value, valueType, unit, limitKind }) =>
+          field === "limit" &&
+          fieldStatus === "FOUND" &&
+          String(value || "") &&
+          ["MONEY", "PERCENT"].includes(valueType) &&
+          ((valueType === "MONEY" && unit === "EUR") ||
+            (valueType === "PERCENT" && unit === "%")) &&
+          limitKind === "CAPPED"
       )
   );
 }

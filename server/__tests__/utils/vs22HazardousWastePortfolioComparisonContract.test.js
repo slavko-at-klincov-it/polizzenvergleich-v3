@@ -149,6 +149,10 @@ function atomFor({ side, documentUuid, component, mode, index }) {
           {
             candidateId,
             physicalPageNumber: 5,
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis: isLimit || component.id === "hazardous_waste"
+              ? "EXPLICIT_HAZARDOUS_WASTE_COSTS"
+              : "EXPLICIT_DISPOSAL_COSTS",
             exactText:
               component.id === "disposal_costs"
                 ? "Entsorgungskosten sind mitversichert"
@@ -231,8 +235,8 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       const audit = buildVs22HazardousWastePortfolioAudit(input);
 
       expect(audit).toMatchObject({
-        schemaVersion: 1,
-        contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V1",
+        schemaVersion: 2,
+        contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2",
         categoryId: "VS-22",
         winner,
         missingComponentIds: ["hazardous_waste", "hazardous_waste_cost_limit"],
@@ -372,6 +376,35 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
         );
         atom.sources[0].physicalPageNumber = 6;
         atom.fields[0].facts[0].source.physicalPageNumber = 6;
+      },
+    ],
+    [
+      "non-limit value type relabeled as a limit",
+      (input) => {
+        const fact = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        ).fields[0].facts[0];
+        fact.valueType = "DURATION";
+        fact.unit = "DAYS";
+      },
+    ],
+    [
+      "deductible relabeled as a hazardous-waste limit",
+      (input) => {
+        const fact = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        ).fields[0].facts[0];
+        fact.limitKind = "DEDUCTIBLE";
+      },
+    ],
+    [
+      "non-deterministic hazardous-waste candidate",
+      (input) => {
+        const atom = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        );
+        atom.sources[0].deterministicBindingBasis =
+          "EXPLICIT_DISPOSAL_COSTS";
       },
     ],
     [
