@@ -789,6 +789,25 @@ describe("membership condition-scope comparison contract", () => {
       buildMembershipConditionScopeComparisonAudit(missingDigest)
     ).toBeNull();
 
+    const consistentlyForeignDigest = fixture();
+    for (const atom of [
+      ...consistentlyForeignDigest.atomsA,
+      ...consistentlyForeignDigest.atomsB,
+    ])
+      atom.requirementContractDigest = "e".repeat(64);
+    expect(
+      buildMembershipConditionScopeComparisonAudit(consistentlyForeignDigest)
+    ).toBeNull();
+    expect(decidePoint(consistentlyForeignDigest)).not.toMatchObject({
+      ruleId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+    });
+    expect(
+      buildMembershipConditionScopeQualificationReplay({
+        ...consistentlyForeignDigest,
+        categoryView: "FE",
+      })
+    ).toBeNull();
+
     const shapeTamper = fixture();
     shapeTamper.atomsA[0].declaredComponents[0].factRole = "COVERAGE";
     expect(

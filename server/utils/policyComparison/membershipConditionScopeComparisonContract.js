@@ -910,7 +910,10 @@ function buildMembershipConditionScopeComparisonAudit({
     membership = membershipAssessment;
   }
   if (!directSide) return null;
-  if (direct.requirementContractDigest !== membership.requirementContractDigest)
+  if (
+    direct.requirementContractDigest !== membership.requirementContractDigest ||
+    direct.requirementContractDigest !== FE_C02_REQUIREMENT_CONTRACT_DIGEST
+  )
     return null;
   let packageReviewAudit;
   try {
