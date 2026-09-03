@@ -59,8 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `4/40 TARGET-E2E ACCEPTED`. `VS-15`, `LW-07`, `LW-12` und `ST-27`
-sind abgeschlossen; 36 Fälle der ursprünglichen Familie bleiben offen.
+Status: `5/40 TARGET-E2E ACCEPTED`. `VS-15`, `FE-A10`, `LW-07`, `LW-12` und
+`ST-27` sind abgeschlossen; 35 Fälle der ursprünglichen Familie bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -2187,6 +2187,117 @@ eigener versionierter, zeilenspezifischer Vergleichsvertrag mit
 Override-/Konfliktprüfung nötig. Eine globale Gleichsetzung von `NOT_FOUND`
 und `EXCLUDED` ist verboten, weil sie bei unvollständiger Suche oder späterer
 positiver Ersatzregel falsche Gleichheit erzeugen würde.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
+
+### 10.25 FE-A10 – enger Einschlussscope wird vollständig, aber nicht gleichgesetzt
+
+#### 10.25.1 Ausgangsfehler
+
+FE-A10 vergleicht Schäden durch den Anprall von Fahrzeugen. Der frische
+Ausgangslauf am unveränderten Stand `ff0dea76` fand bereits belastbare
+Einschlüsse auf beiden Seiten:
+
+```text
+Paket A: BELEGT
+  Fahrzeuganprall INCLUDED / GENERAL
+Paket B: TEILBELEGT
+  Anprall unbekannter Fahrzeuge INCLUDED / NARROW_ONLY
+Entscheidung:
+  UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+```
+
+Paket B war nicht fundlos. Zwei Dokumente enthielten ausdrücklich den engeren
+Schutz für unbekannte Fahrzeuge: das Angebot auf physischer Seite 1 und der
+Zusatz auf physischer Seite 10. Beide Treffer waren direkte positive
+Deckungsevidenz, wurden aber allein wegen ihres engeren Scopes als
+`SCOPE_INCOMPLETE` markiert. Der Fehler lag daher nicht im Recall, sondern in
+der zeilenspezifischen Vollständigkeitsregel.
+
+```text
+Commit: ff0dea769b8c2ea9cf8ca6f4d15bf2df65f4f5f9
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-A10-BASELINE-FF0DEA76-20260903
+Summary-Digest:
+184aea6705e0ee6f97e870b9b7bb6014fdffbdd387e3d906f757b5141fe9efd8
+Target-Selection-Digest:
+6e6780db5c6d65a2b1125404ef8f1f04ab6b32b8b04bbe938822e8b663edc55e
+Producer-Digest:
+196dedc26e5d8c8008158cdf514180b02fcd00bc59ab38547725b47b80b9275b
+```
+
+#### 10.25.2 Kleiner, zeilenspezifischer Fix
+
+Der Fix aktiviert für FE-A10 den bereits vorhandenen, eng begrenzten Vertrag
+`MATCHING_SCOPE_INCLUDED_SUFFICIENT`. Ein positiver `NARROW_ONLY`-Treffer darf
+damit den Paket-Prüfstatus vervollständigen. Er wird ausdrücklich **nicht** zu
+`GENERAL` hochgestuft und nicht mit einem allgemeinen Einschluss
+gleichgesetzt. Der nachgelagerte atomare Vergleich sieht weiterhin den
+Scope-Unterschied.
+
+```text
+Commit: 293c8178ddfcee4ca3e40d76ed28551961c162d6
+FE-Katalog: fe-occurrence-full-draft-v0.8
+Produktprofil: CUSTOMER_CORE_5_V43_FEA10_MATCHING_INCLUDED_SCOPE
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Formatprüfung: PASS
+Fokussierte Suites: 6/6 PASS
+Fokussierte Tests: 162/162 PASS
+```
+
+Positive, negative und adversariale Kontrollen belegen dabei insbesondere:
+
+- ein direkter Einschluss unbekannter Fahrzeuge wird vollständig;
+- ein Ausschluss oder bloßer Kontexttreffer wird nicht positiv;
+- der enge Scope bleibt typisiert und sichtbar;
+- `GENERAL` gegen `NARROW_ONLY` wird nicht als Gleichwertigkeit oder Vorteil
+  ausgegeben.
+
+#### 10.25.3 Reales Zielergebnis und Risikogrenze
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/FE-A10-MATCHING-SCOPE-293C8178-20260903
+Summary-Digest:
+464518f719923a79ef7b16f112524acb7c828ebee0e1cd46f096dba434e6baaf
+Target-Selection-Digest:
+386dc246391709d0b8df4e330ff697ec7288470fbbff6f1ceb05c9fb518e57b5
+Producer-Digest:
+28704abf89aa7b3c92b2c2a4ca9d08eb80da0deb9e2c1cbfa9e68216f8ec79b7
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Qwen-Aufrufe: 3
+Evidence-Qwen-Aufrufe: 1
+Server-Terminalkomponenten: 7
+```
+
+Revisionssicheres Delta:
+
+```text
+Vorher:
+A BELEGT / B TEILBELEGT
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Nachher:
+A BELEGT / B BELEGT
+NICHT_VERGLEICHBAR / COMPARABILITY_GATE_FAILED / Review nein
+Regel: ATOMIC_COMPARABILITY_GATE_V1
+```
+
+Das Ergebnis ist absichtlich nicht `VORTEIL_A`: Allgemeiner Fahrzeuganprall
+und Anprall unbekannter Fahrzeuge beschreiben unterschiedliche Scopes. Die
+beiden B-Dokumente nennen zudem unterschiedliche Geldbeträge; FE-A10 fordert
+derzeit keine Wertfelder an. Der Fix behauptet deshalb weder gleiche Limits
+noch eine Rangfolge der Dokumente. Er entfernt ausschließlich den falschen
+Review-Blocker und bewahrt den echten Scope-Unterschied.
+
+R69-A steht damit bei `5/40` abgeschlossenen Kandidaten; `35` bleiben offen.
+Die noch nicht durch einen frischen 224-Zeilen-Vollrun bestätigte Projektion
+verschiebt sich von `Nicht vergleichbar 10 / Unklar 56` auf
+`Nicht vergleichbar 11 / Unklar 55`. Alle übrigen Ergebnisgruppen bleiben
+unverändert.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
