@@ -4,6 +4,7 @@ const {
   comparisonApplicability,
   completeRawComparisonAtom,
 } = require("./comparisonAtomCanonicalization");
+const { PRODUCT_PROFILE } = require("./productContract");
 
 const VS08_CONDITION_CONSENSUS_AUDIT_SCHEMA_VERSION = 1;
 const VS08_CONDITION_CONSENSUS_AUDIT_CONTRACT_ID =
@@ -14,10 +15,10 @@ const VS08_CONDITION_CONSENSUS_REASON_CODE =
   "EQUAL_VS08_PACKAGE_CONDITION_CONSENSUS";
 
 const CATEGORY_ID = "VS-08";
-const CATALOG_ID = "vs-occurrence-full-draft-v0.16";
+const CATALOG_ID = PRODUCT_PROFILE.categoryCatalogIds.VS;
 const COMPONENT_ID = "underinsurance_waiver_condition";
 const REQUIREMENT_CONTRACT_DIGEST =
-  "2a1c45db1fe2effc6c9a435fe4ef69d7658d92cc48ddf51e474477315c53a501";
+  PRODUCT_PROFILE.trustAnchors.vs08ValidatedWorksheetRequirementV1;
 const DECLARED_COMPONENTS = Object.freeze([
   Object.freeze({ id: COMPONENT_ID, factRole: "CONDITION" }),
 ]);
