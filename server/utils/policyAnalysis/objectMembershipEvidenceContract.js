@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 const SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_CONTRACT_ID =
-  "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1";
+  "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2";
 const OBJECT_MEMBERSHIP = Object.freeze({
   MEMBER_OF_CLASS: "MEMBER_OF_CLASS",
   EXCLUDED_FROM_CLASS: "EXCLUDED_FROM_CLASS",
@@ -414,6 +414,14 @@ function buildSourceBoundObjectMembershipProof({
         documentEnd: occurrence.documentStart + memberMatch.end,
         exactText: memberExactText,
         sha256: textDigest(memberExactText),
+      },
+      memberContextSpan: {
+        source: "STRUCTURAL_LIST_ITEM",
+        physicalPageNumber: occurrence.physicalPageNumber,
+        documentStart: occurrence.context.documentStart,
+        documentEnd: occurrence.context.documentEnd,
+        exactText: occurrence.context.text,
+        sha256: textDigest(occurrence.context.text),
       },
       classSpan: {
         source: hint.source,

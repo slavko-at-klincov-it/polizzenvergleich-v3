@@ -112,10 +112,14 @@ describe("source-bound object-membership evidence contract", () => {
           relation: membership,
           memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
           classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
-          memberSpan: {
-            candidateId: value.occurrence.candidateId,
-            exactText: "Photovoltaikanlagen",
-          },
+        memberSpan: {
+          candidateId: value.occurrence.candidateId,
+          exactText: "Photovoltaikanlagen",
+        },
+        memberContextSpan: {
+          source: "STRUCTURAL_LIST_ITEM",
+          exactText: "·Solar- und Photovoltaikanlagen;",
+        },
           classSpan: {
             source: value.occurrence.objectClassificationGovernorHint.source,
             exactText: "Haustechnische Anlagen und Adaptierungen",

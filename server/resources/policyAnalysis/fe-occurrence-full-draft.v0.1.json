@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.11",
+  "catalogId": "fe-occurrence-full-draft-v0.12",
   "categoryView": "FE",
   "requirements": [
     {
@@ -791,7 +791,7 @@
           ],
           "objectMembershipEvidenceContracts": [
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2",
               "membership": "MEMBER_OF_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
@@ -806,7 +806,7 @@
               ]
             },
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V2",
               "membership": "EXCLUDED_FROM_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUSINESS_CONTENT",
