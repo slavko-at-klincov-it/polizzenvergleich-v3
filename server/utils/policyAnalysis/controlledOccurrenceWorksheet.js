@@ -1110,13 +1110,14 @@ function explicitSectionHeadings(pageText) {
   for (const pattern of patterns) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0].trim();
-      if (headings.some(({ pageStart }) => pageStart === match.index)) continue;
       const leading = match[0].indexOf(text);
+      const pageStart = match.index + leading;
+      if (headings.some((heading) => heading.pageStart === pageStart)) continue;
       headings.push({
         scopeKey: canonicalScopeForHeading(match[1]),
         text,
-        pageStart: match.index + leading,
-        pageEnd: match.index + leading + text.length,
+        pageStart,
+        pageEnd: pageStart + text.length,
       });
     }
   }
