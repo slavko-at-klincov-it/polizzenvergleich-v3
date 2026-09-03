@@ -767,7 +767,8 @@ function exactClauseCodeFieldGovernors({
 }) {
   const governorsByClauseCode = new Map();
   const invalidClauseCodes = new Set();
-  const codePattern = /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const codePattern =
+    /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
 
@@ -792,7 +793,7 @@ function exactClauseCodeFieldGovernors({
         !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
           context.text
         ) ||
-        /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+        /\b(?:kein(?:e[rsnm]?)?\s+Versicherungsschutz|nicht\s+(?:(?:mit)?versichert|gedeckt|eingeschlossen)|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
           context.text
         )
       ) {
@@ -840,6 +841,9 @@ function exactClauseCodeFieldGovernors({
         scopeKey,
         physicalPageNumber: page.physicalPageNumber,
         printedPageLabel: page.printedPageLabel,
+        pageBoundaryPhysicalPageNumber: page.physicalPageNumber,
+        pageDocumentStart: page.start,
+        pageDocumentEnd: page.end,
         documentStart,
         documentEnd: page.start + context.pageEnd,
         text: context.text,

@@ -116,6 +116,9 @@ describe("VS-22 exact clause-code field governor", () => {
         clauseCode: "12PA0130",
         scopeKey: "FEUER_INSURANCE",
         physicalPageNumber: 1,
+        pageBoundaryPhysicalPageNumber: 1,
+        pageDocumentStart: 0,
+        pageDocumentEnd: expect.any(Number),
         amountText: "EUR6.121.600,00",
       }),
     ]);
@@ -257,6 +260,18 @@ describe("VS-22 exact clause-code field governor", () => {
         "- Nicht versichert sind Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
       ].join("\n"),
     ],
+    ...[
+      "kein Versicherungsschutz",
+      "nicht gedeckt",
+      "nicht eingeschlossen",
+    ].map((negativeWording) => [
+      `the local negative wording '${negativeWording}' below a positive governor`,
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        `- Für Aufräumkosten besteht ${negativeWording}; auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00`,
+      ].join("\n"),
+    ]),
     [
       "an optional activation below a positive governor",
       [
@@ -280,6 +295,24 @@ describe("VS-22 exact clause-code field governor", () => {
         "Mitversichert gelten",
         "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
         "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR7.300,00",
+      ].join("\n"),
+      BODY,
+    ]);
+    expect(materialize(worksheet)).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
+  test("fails closed when explicit and bare-code activation syntax disagree", () => {
+    const worksheet = build([
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
+        "LEITUNGSWASSERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten auf Erstes Risiko (12PA0130) EUR7.300,00",
       ].join("\n"),
       BODY,
     ]);
@@ -324,6 +357,11 @@ describe("VS-22 exact clause-code field governor", () => {
   test.each([
     ["fingerprint", (hint) => (hint.documentFingerprint = "x".repeat(64))],
     ["physical page", (hint) => (hint.physicalPageNumber = 999)],
+    ["valid but false physical page", (hint) => (hint.physicalPageNumber = 2)],
+    [
+      "page boundary physical page",
+      (hint) => (hint.pageBoundaryPhysicalPageNumber = 2),
+    ],
     ["governor offset", (hint) => (hint.documentStart = -1)],
     ["amount offset", (hint) => (hint.amountDocumentStart += 1)],
   ])("rejects a tampered %s", (_label, tamper) => {

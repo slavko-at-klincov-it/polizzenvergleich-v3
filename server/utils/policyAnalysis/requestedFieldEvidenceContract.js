@@ -447,7 +447,8 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
   const scopes = occurrence?.sectionScopeHint?.scopeKeys?.length
     ? occurrence.sectionScopeHint.scopeKeys
     : [occurrence?.sectionScopeHint?.scopeKey].filter(Boolean);
-  const codePattern = /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const codePattern =
+    /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
   const codes =
@@ -470,8 +471,17 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     !Number.isInteger(governor?.physicalPageNumber) ||
     governor.physicalPageNumber < 1 ||
     governor.physicalPageNumber > worksheet?.document?.physicalPages ||
+    governor?.pageBoundaryPhysicalPageNumber !==
+      governor.physicalPageNumber ||
+    !Number.isInteger(governor?.pageDocumentStart) ||
+    !Number.isInteger(governor?.pageDocumentEnd) ||
+    governor.pageDocumentStart < 0 ||
+    governor.pageDocumentEnd < governor.pageDocumentStart ||
+    governor.pageDocumentEnd > worksheet?.document?.pageContentLength ||
     governor.documentStart < 0 ||
     governor.documentEnd > worksheet?.document?.pageContentLength ||
+    governor.documentStart < governor.pageDocumentStart ||
+    governor.documentEnd > governor.pageDocumentEnd ||
     codes.length !== 1 ||
     codes[0][1].toLocaleUpperCase("de") !== clauseCode ||
     amounts.length !== 1 ||
@@ -483,7 +493,7 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
       governor.text
     ) ||
-    /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+    /\b(?:kein(?:e[rsnm]?)?\s+Versicherungsschutz|nicht\s+(?:(?:mit)?versichert|gedeckt|eingeschlossen)|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
       governor.text
     )
   )
