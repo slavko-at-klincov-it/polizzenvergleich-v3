@@ -11,6 +11,11 @@ const {
   DOCUMENT_STATUS,
   buildPreparedEvidenceTargets,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const {
+  DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+  TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+  VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+} = require("../../../utils/policyAnalysis/deterministicTerminalRejectionContract");
 
 function worksheetFor(text) {
   const fingerprint = crypto.createHash("sha256").update(text).digest("hex");
@@ -134,18 +139,73 @@ describe("VS-22 hazardous-waste inflection recall", () => {
         .filter(({ componentId }) => exposedComponents.includes(componentId))
         .map(({ candidates, serverRejectedCandidates }) => ({
           candidateCount: candidates.length,
-          reasons: serverRejectedCandidates.map(({ reason }) => reason),
+          rejections: serverRejectedCandidates,
         }))
     ).toEqual([
       {
         candidateCount: 0,
-        reasons: ["TRIAGE_MENTION_ONLY"],
+        rejections: [
+          expect.objectContaining({
+            reason: "TRIAGE_MENTION_ONLY",
+            terminalRejectionContractId:
+              DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+            occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          }),
+        ],
       },
       {
         candidateCount: 0,
-        reasons: ["TRIAGE_MENTION_ONLY"],
+        rejections: [
+          expect.objectContaining({
+            reason: "TRIAGE_MENTION_ONLY",
+            terminalRejectionContractId:
+              DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+            occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+            scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+            occurrenceDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          }),
+        ],
       },
     ]);
+  });
+
+  test("fails closed when a liability section locally refers back to property coverage", () => {
+    const worksheet = worksheetFor(
+      [
+        "Allgemeine Bedingungen für die Haftpflichtversicherung für Wohngebäude",
+        "Die Gebäudeversicherung deckt Behandlungskosten für gefährlichen Abfall.",
+      ].join("\n")
+    );
+    const triageTargets = buildCandidateTriagePayload(worksheet).bindingTargets;
+    const candidateTriage = triageTargets.flatMap((target) =>
+      target.members.map((member) => ({
+        requirementId: target.requirementId,
+        componentId: member.componentId,
+        candidateId: member.candidateId,
+        binding: deriveCandidateBinding({
+          roleMatch: target.roleResolution.roleMatch,
+          scopeMatch: target.scopeResolution.scopeMatch,
+        }),
+      }))
+    );
+    const preparedTargets = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage,
+    }).filter(({ componentId }) =>
+      ["hazardous_waste", "hazardous_waste_cost_limit"].includes(componentId)
+    );
+
+    expect(preparedTargets).toHaveLength(2);
+    for (const target of preparedTargets)
+      expect(target.serverRejectedCandidates).not.toEqual([
+        expect.objectContaining({
+          terminalRejectionContractId:
+            DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+        }),
+      ]);
   });
 
   test.each([

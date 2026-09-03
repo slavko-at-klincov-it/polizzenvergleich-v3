@@ -4,6 +4,11 @@ const {
   FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
   validFollowingStructuralBoundaryProof,
 } = require("./controlledOccurrenceWorksheet");
+const {
+  VS22_OTHER_SCOPE_BASIS,
+  isVs22LiabilityOrStorageOccurrence,
+  localOccurrenceSentence,
+} = require("./vs22WasteScopeContract");
 
 const DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_OTHER_CATEGORY_TERMINAL_V1";
@@ -15,6 +20,8 @@ const DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_V1";
 const DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_V1";
+const DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID =
+  "DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_V1";
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID =
   "DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_V1";
 const DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID =
@@ -34,6 +41,8 @@ const LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS =
   "LW20_NON_TARGET_GROUNDWATER_OCCURRENCE";
 const LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE =
   "LW20_LOCAL_ROLE_OR_STORM_SCOPE_V1";
+const VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE =
+  "VS22_LOCAL_LIABILITY_OR_STORAGE_SCOPE_V1";
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_DECISION_BASIS =
   "PURE_OBJECT_CLASSIFICATION_IS_NOT_OPERATIONAL_COVERAGE";
 const COVERAGE_ONLY_OBJECT_CLASSIFICATION_SCOPE_PROOF_MODE =
@@ -113,6 +122,19 @@ const LW20_NON_TARGET_OCCURRENCE_TARGETS = Object.freeze({
     factRole: "PERIL",
     absenceMeaning: "COVERAGE_ONLY",
     scopeProofMode: LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+  }),
+});
+
+const VS22_NON_TARGET_WASTE_OCCURRENCE_TARGETS = Object.freeze({
+  "VS:VS-22:hazardous_waste": Object.freeze({
+    factRole: "INSURED_OBJECT",
+    absenceMeaning: "COVERAGE_MIXED",
+    scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
+  }),
+  "VS:VS-22:hazardous_waste_cost_limit": Object.freeze({
+    factRole: "LIMIT",
+    absenceMeaning: "COVERAGE_MIXED",
+    scopeProofMode: VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
   }),
 });
 
@@ -237,6 +259,26 @@ function certifiedTerminalTarget({ categoryView, requirementId, componentId }) {
         OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
       ],
       scopeProofMode: lw20NonTargetContract.scopeProofMode,
+      occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    });
+  const vs22NonTargetContract = VS22_NON_TARGET_WASTE_OCCURRENCE_TARGETS[key];
+  if (vs22NonTargetContract)
+    return Object.freeze({
+      contractId:
+        DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+      decisionBasis: VS22_OTHER_SCOPE_BASIS,
+      auditProofMode:
+        "ALL_OCCURRENCES_DETERMINISTICALLY_NON_TARGET_WASTE_SCOPE",
+      terminalGate: "deterministicVs22NonTargetWasteOccurrenceTerminal",
+      factRole: vs22NonTargetContract.factRole,
+      absenceMeaning: vs22NonTargetContract.absenceMeaning,
+      allowedObservedScopeKeys: ["HAFTPFLICHT_INSURANCE"],
+      sectionScopeSources: [
+        "CURRENT_PAGE_HEADING",
+        "PRECEDING_PAGE_HEADING",
+        OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+      ],
+      scopeProofMode: vs22NonTargetContract.scopeProofMode,
       occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
     });
   const postLossScaffoldingCostContract =
@@ -380,6 +422,26 @@ function terminalTargetAcceptsScopeProof(
       ) &&
       canonical.length === 1 &&
       canonical[0] === "STURM_INSURANCE"
+    );
+  }
+  if (
+    target?.contractId ===
+    DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID
+  ) {
+    const canonical = canonicalStrings(scopes);
+    if (
+      !Array.isArray(scopes) ||
+      JSON.stringify(canonical) !== JSON.stringify(scopes)
+    )
+      return false;
+    if (sectionScopeSource === OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE)
+      return canonical.length === 0;
+    return (
+      ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
+        sectionScopeSource
+      ) &&
+      canonical.length === 1 &&
+      canonical[0] === "HAFTPFLICHT_INSURANCE"
     );
   }
   if (
@@ -600,6 +662,54 @@ function lw20NonTargetOccurrenceProof(occurrence) {
   };
 }
 
+function vs22NonTargetWasteOccurrenceProof(occurrence) {
+  const exactText = String(occurrence?.exactText || "");
+  const matchedAlias = String(occurrence?.matchedAlias || "");
+  const localSentence = localOccurrenceSentence(occurrence);
+  const occurrencePage =
+    occurrence?.physicalPageNumber || occurrence?.pageNumber || null;
+  if (
+    exactText !== matchedAlias ||
+    !/gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll)\p{L}*/iu.test(exactText) ||
+    !localSentence.includes(exactText) ||
+    !isVs22LiabilityOrStorageOccurrence(occurrence) ||
+    !Number.isInteger(occurrencePage) ||
+    String(occurrence?.candidateId || "").length === 0 ||
+    !Array.isArray(occurrence?.pageScopeHints) ||
+    /(?:Sach|Geb[aä]ude)versicherung[\s\S]{0,120}(?:Entsorgungskosten|gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll))/iu.test(
+      localSentence
+    )
+  )
+    return null;
+
+  const section = occurrence?.sectionScopeHint || null;
+  const scopes = observedScopeKeys(occurrence);
+  const structuralLiability = Boolean(
+    section?.scopeKey === "HAFTPFLICHT_INSURANCE" &&
+      ["CURRENT_PAGE_HEADING", "PRECEDING_PAGE_HEADING"].includes(
+        section?.source
+      ) &&
+      /Haftpflichtversicherung/iu.test(String(section?.text || "")) &&
+      Number.isInteger(section?.physicalPageNumber) &&
+      occurrencePage >= section.physicalPageNumber &&
+      occurrencePage - section.physicalPageNumber <= 3 &&
+      scopes.length === 1 &&
+      scopes[0] === "HAFTPFLICHT_INSURANCE"
+  );
+  const localStorageCarveback =
+    /Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung[\s\S]{0,180}?gef[aä]hrlich\p{L}*\s+Abf(?:all|[aä]ll)\p{L}*/iu.test(
+      localSentence
+    );
+  if (!structuralLiability && !localStorageCarveback) return null;
+  return {
+    physicalPageNumber: occurrencePage,
+    sectionScopeSource: structuralLiability
+      ? section.source
+      : OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
+    observedScopeKeys: structuralLiability ? scopes : [],
+  };
+}
+
 /**
  * Proves that a candidate is only an item in a locally declared object-class
  * list. The target controls whether that list defines membership or exclusion
@@ -737,6 +847,11 @@ function terminalOccurrenceProof(target, occurrence) {
     DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
   )
     return lw20NonTargetOccurrenceProof(occurrence);
+  if (
+    target?.contractId ===
+    DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID
+  )
+    return vs22NonTargetWasteOccurrenceProof(occurrence);
   if (
     target?.contractId ===
     DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
@@ -1128,6 +1243,51 @@ function certifyLw20NonTargetOccurrenceTerminalRejection({
   };
 }
 
+function certifyVs22NonTargetWasteOccurrenceTerminalRejection({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+  deterministicBinding,
+}) {
+  const contract =
+    VS22_NON_TARGET_WASTE_OCCURRENCE_TARGETS[
+      targetKey(categoryView, requirement?.id, component?.id)
+    ];
+  if (
+    !contract ||
+    component?.factRole !== contract.factRole ||
+    requirement?.negativeSearchPolicy !==
+      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" ||
+    requirement?.absenceMeaning !== contract.absenceMeaning ||
+    deterministicBinding?.binding !== "MENTION_ONLY" ||
+    deterministicBinding?.basis !== VS22_OTHER_SCOPE_BASIS
+  )
+    return null;
+  const proof = vs22NonTargetWasteOccurrenceProof(occurrence);
+  const target = certifiedTerminalTarget({
+    categoryView,
+    requirementId: requirement?.id,
+    componentId: component?.id,
+  });
+  if (!proof || !terminalTargetAcceptsScopeProof(target, proof)) return null;
+  return {
+    terminalRejectionContractId:
+      DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
+    occurrenceDigestContractId: TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
+    decisionOwner: "SERVER",
+    decisionBasis: VS22_OTHER_SCOPE_BASIS,
+    physicalPageNumber: proof.physicalPageNumber,
+    sectionScopeSource: proof.sectionScopeSource,
+    observedScopeKeys: proof.observedScopeKeys,
+    scopeProofMode: contract.scopeProofMode,
+    occurrenceDigestSha256: terminalOccurrenceDigest({
+      ...occurrence,
+      scopeProofMode: contract.scopeProofMode,
+    }),
+  };
+}
+
 function certifyNonContractualRiskInformationTerminalRejection({
   categoryView,
   requirement,
@@ -1257,6 +1417,7 @@ function certifyCoverageOnlyObjectClassificationTerminalRejection({
 function certifyDeterministicTerminalRejection(input) {
   return (
     certifyCoverageOnlyObjectClassificationTerminalRejection(input) ||
+    certifyVs22NonTargetWasteOccurrenceTerminalRejection(input) ||
     certifyLw20NonTargetOccurrenceTerminalRejection(input) ||
     certifyPostLossScaffoldingCostTerminalRejection(input) ||
     certifyOtherCategoryTerminalRejection(input) ||
@@ -1273,6 +1434,7 @@ module.exports = {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
+  DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
@@ -1282,12 +1444,14 @@ module.exports = {
   OCCURRENCE_LOCAL_CLAUSE_SCOPE_SOURCE,
   LW20_NON_TARGET_OCCURRENCE_DECISION_BASIS,
   LW20_NON_TARGET_OCCURRENCE_SCOPE_PROOF_MODE,
+  VS22_NON_TARGET_WASTE_SCOPE_PROOF_MODE,
   TERMINAL_OCCURRENCE_DIGEST_CONTRACT_ID,
   TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID,
   certifiedTerminalTarget,
   certifyDeterministicTerminalRejection,
   feC12PostLossScaffoldingCostProof,
   lw20NonTargetOccurrenceProof,
+  vs22NonTargetWasteOccurrenceProof,
   legacyTerminalRejectionSetDigestV1,
   legacyTerminalRejectionSetDigestV2,
   terminalOccurrenceProof,
