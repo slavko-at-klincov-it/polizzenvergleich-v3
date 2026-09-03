@@ -3674,7 +3674,13 @@ describe("policy comparison result builder", () => {
         title: "Source-bound FE-C02 fixture",
         pageContent,
         pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
-        pdfExtraction: { complete: true },
+        pdfExtraction: {
+          schemaVersion: 1,
+          totalPages: 1,
+          processedPages: 1,
+          pagesWithText: 1,
+          complete: true,
+        },
       },
     };
     const feC02Catalog = {
