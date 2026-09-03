@@ -217,10 +217,9 @@ function limitPresentation(atom) {
   if (field.valueType === "PERCENT") {
     if (
       typedBases.length !== 1 ||
-      ![
-        "BUILDING_INSURANCE_SUM",
-        "BUILDING_NEW_VALUE_INSURANCE_SUM",
-      ].includes(typedBases[0])
+      !["BUILDING_INSURANCE_SUM", "BUILDING_NEW_VALUE_INSURANCE_SUM"].includes(
+        typedBases[0]
+      )
     )
       return null;
   }
