@@ -2453,9 +2453,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V100_VS08_WORKSHEET_TRUST_ANCHOR",
+      id: "CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_V61",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_FE_A01_FE_C07_SOURCE_BOUND_QUALIFICATION_REPLAY_V62",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
@@ -2468,6 +2468,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.proofLimit).toContain(
       "fehlende lokale Limitangaben werden nicht als unbegrenzte Deckung bezeichnet"
+    );
+    expect(result.proofLimit).toContain(
+      "Für FE-C07 darf ausschließlich eine höhere"
     );
 
     const outputDirectory = path.join(root, "result");
@@ -2551,7 +2554,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(13);
+    expect(result.schemaVersion).toBe(14);
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -2604,7 +2607,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(13);
+    expect(result.schemaVersion).toBe(14);
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
@@ -2840,7 +2843,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(13);
+    expect(result.schemaVersion).toBe(14);
     expect(comparisonRow).toMatchObject({
       outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       pointDecision: {

@@ -549,7 +549,7 @@ describe("membership condition-scope comparison contract", () => {
       },
     ];
     const result = {
-      schemaVersion: 13,
+      schemaVersion: 14,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
@@ -684,7 +684,7 @@ describe("membership condition-scope comparison contract", () => {
       },
     ];
     const result = {
-      schemaVersion: 13,
+      schemaVersion: 14,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],

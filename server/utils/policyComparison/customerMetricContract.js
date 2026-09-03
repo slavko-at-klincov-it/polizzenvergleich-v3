@@ -76,6 +76,11 @@ const {
   membershipConditionScopeComparisonDecision,
   validateMembershipConditionScopeComparisonAudit,
 } = require("./membershipConditionScopeComparisonContract");
+const {
+  buildSpecializedPointDecisionFromQualificationReplay,
+  comparisonContract: specializedComparisonContract,
+  specializedComparisonDecisionDetected,
+} = require("./specializedComparisonQualificationReplayContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -104,6 +109,18 @@ const HISTORICAL_SCHEMA_10_PROFILE = Object.freeze({
   id: "CUSTOMER_CORE_5_V10_QUALIFIED_ONE_SIDED_INCLUSION",
   comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
 });
+const HISTORICAL_SCHEMA_13_PROFILES = Object.freeze([
+  Object.freeze({
+    id: "CUSTOMER_CORE_5_V99_FE_C02_QUALIFICATION_REPLAY",
+    comparisonContractId:
+      "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_V60",
+  }),
+  Object.freeze({
+    id: "CUSTOMER_CORE_5_V100_VS08_WORKSHEET_TRUST_ANCHOR",
+    comparisonContractId:
+      "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_V61",
+  }),
+]);
 const ONE_SIDED_TECHNICAL_OUTCOMES = new Map([
   ["A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["A", "B"]],
   ["B_BELEGT_A_VOLLSTÄNDIG_NICHT_GEFUNDEN", ["B", "A"]],
@@ -280,6 +297,18 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     if (
       productProfileId !== HISTORICAL_SCHEMA_10_PROFILE.id ||
       comparisonContractId !== HISTORICAL_SCHEMA_10_PROFILE.comparisonContractId
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) === 13) {
+    if (
+      !HISTORICAL_SCHEMA_13_PROFILES.some(
+        (profile) =>
+          productProfileId === profile.id &&
+          comparisonContractId === profile.comparisonContractId
+      )
     )
       validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
         productProfileId,
@@ -849,6 +878,61 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
             [rowKey]
           );
       }
+      const specializedContract = specializedComparisonContract(
+        row.categoryView,
+        row.categoryId
+      );
+      const specializedQualificationReplayPresent =
+        row.specializedComparisonQualificationReplay !== undefined;
+      if (Number(result.schemaVersion) >= 14) {
+        if (!specializedContract && specializedQualificationReplayPresent)
+          validationError(
+            "COMPARISON_SPECIALIZED_QUALIFICATION_REPLAY_ORPHANED",
+            [rowKey]
+          );
+        if (specializedContract) {
+          const errorPrefix = `COMPARISON_${row.categoryId.replace("-", "_")}`;
+          if (!specializedQualificationReplayPresent)
+            validationError(`${errorPrefix}_QUALIFICATION_REPLAY_REQUIRED`, [
+              rowKey,
+            ]);
+          let reconstructedDecision;
+          try {
+            reconstructedDecision =
+              buildSpecializedPointDecisionFromQualificationReplay({
+                replay: row.specializedComparisonQualificationReplay,
+                packageA: row.packageA,
+                packageB: row.packageB,
+                expectedDocumentsA: manifestDocuments.filter(
+                  ({ side }) => side === "A"
+                ),
+                expectedDocumentsB: manifestDocuments.filter(
+                  ({ side }) => side === "B"
+                ),
+              });
+          } catch (error) {
+            validationError(`${errorPrefix}_QUALIFICATION_REPLAY_INVALID`, [
+              rowKey,
+              error.message,
+            ]);
+          }
+          const storedSpecialized = specializedComparisonDecisionDetected(
+            row.pointDecision,
+            specializedContract
+          );
+          const reconstructedSpecialized =
+            specializedComparisonDecisionDetected(
+              reconstructedDecision,
+              specializedContract
+            );
+          if (reconstructedSpecialized) {
+            if (!sameJson(row.pointDecision, reconstructedDecision))
+              validationError(`${errorPrefix}_DECISION_OMISSION`, [rowKey]);
+          } else if (storedSpecialized) {
+            validationError(`${errorPrefix}_DECISION_NOT_QUALIFIED`, [rowKey]);
+          }
+        }
+      }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
           !unilateralDecision &&
@@ -1118,6 +1202,8 @@ function customerSafeComparisonReadView(result) {
               _privateMembershipConditionScopeReplay,
             membershipConditionScopeQualificationReplay:
               _privateMembershipConditionScopeQualificationReplay,
+            specializedComparisonQualificationReplay:
+              _privateSpecializedComparisonQualificationReplay,
             ...publicRow
           } = row;
           const explanation = packageReviewCustomerExplanation(

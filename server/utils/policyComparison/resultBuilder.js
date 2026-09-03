@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
@@ -44,6 +45,10 @@ const {
 const {
   buildMembershipConditionScopeQualificationReplay,
 } = require("./membershipConditionScopeComparisonContract");
+const {
+  buildSpecializedComparisonQualificationReplay,
+  comparisonContract: specializedComparisonContract,
+} = require("./specializedComparisonQualificationReplayContract");
 const {
   buildSourceBoundScopedPackageReferenceProofs,
 } = require("../policyAnalysis/scopedPackageReferenceEvidenceContract");
@@ -92,7 +97,11 @@ function worksheetRequirementContract(worksheet, requirement) {
   };
 }
 
-function conditionCheckText(candidate) {
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function conditionCheckSource(candidate) {
   const contextText = String(candidate?.contextText || "");
   const contextStart = Number(candidate?.contextDocumentStart);
   const documentStart = Number(candidate?.documentStart);
@@ -103,19 +112,37 @@ function conditionCheckText(candidate) {
     !Number.isFinite(documentStart) ||
     !Number.isFinite(documentEnd)
   )
-    return String(candidate?.exactText || "");
+    return {
+      text: String(candidate?.exactText || ""),
+      documentStart,
+      documentEnd,
+    };
   const relativeStart = documentStart - contextStart;
   const relativeEnd = documentEnd - contextStart;
   if (
     relativeStart < 0 ||
     relativeEnd < relativeStart ||
-    relativeStart > contextText.length
+    relativeStart > contextText.length ||
+    relativeEnd > contextText.length
   )
-    return String(candidate?.exactText || "");
-  return contextText.slice(
-    Math.max(0, relativeStart - CONDITION_CONTEXT_RADIUS),
-    Math.min(contextText.length, relativeEnd + CONDITION_CONTEXT_RADIUS)
+    return {
+      text: String(candidate?.exactText || ""),
+      documentStart,
+      documentEnd,
+    };
+  const contextSliceStart = Math.max(
+    0,
+    relativeStart - CONDITION_CONTEXT_RADIUS
   );
+  const contextSliceEnd = Math.min(
+    contextText.length,
+    relativeEnd + CONDITION_CONTEXT_RADIUS
+  );
+  return {
+    text: contextText.slice(contextSliceStart, contextSliceEnd),
+    documentStart: contextStart + contextSliceStart,
+    documentEnd: contextStart + contextSliceEnd,
+  };
 }
 
 function normalized(value) {
@@ -1318,15 +1345,36 @@ function materializeAtomicFacts({
     const selectedCandidateIds = judgement.selectedCandidateIds || [];
     const selectedSet = new Set(selectedCandidateIds);
     const fields = (fieldResult.fields || []).map((field) => {
-      const facts = (field.facts || []).filter((fact) =>
-        projectedFieldFactAppliesToAtom({
-          fact,
-          requirementId: judgement.requirementId,
-          componentId: judgement.componentId,
-          selectedCandidateIds,
-        })
-      );
-      const absenceAudit =
+      const facts = (field.facts || [])
+        .filter((fact) =>
+          projectedFieldFactAppliesToAtom({
+            fact,
+            requirementId: judgement.requirementId,
+            componentId: judgement.componentId,
+            selectedCandidateIds,
+          })
+        )
+        .map((fact) => {
+          const sourceBoundFeC07Field =
+            requirement?.id === "FE-C07" &&
+            component?.id === FE_C07_COMPONENT_ID &&
+            fact?.source;
+          return {
+            ...fact,
+            ...(sourceBoundFeC07Field
+              ? {
+                  source: {
+                    ...fact.source,
+                    exactTextSha256: sha256Text(fact.source.exactText),
+                    ...(document.sha256
+                      ? { documentFingerprint: document.sha256 }
+                      : {}),
+                  },
+                }
+              : {}),
+          };
+        });
+      const rawAbsenceAudit =
         requirement?.id === "FE-C07" &&
         component?.id === FE_C07_COMPONENT_ID &&
         field.field === "condition" &&
@@ -1336,6 +1384,17 @@ function materializeAtomicFacts({
         validFeC07ConditionAbsenceAudit(field.absenceAudit)
           ? field.absenceAudit
           : null;
+      const absenceAudit = rawAbsenceAudit
+        ? {
+            ...rawAbsenceAudit,
+            source: {
+              ...rawAbsenceAudit.source,
+              ...(document.sha256
+                ? { documentFingerprint: document.sha256 }
+                : {}),
+            },
+          }
+        : null;
       return {
         field: field.field,
         status: facts.length > 0 ? field.status : "NOT_FOUND",
@@ -1487,12 +1546,39 @@ function materializeAtomicFacts({
         deterministicBindingBasis,
         comparisonScopeKey,
       } = candidate;
+      const conditionSource = conditionCheckSource(candidate);
+      const sourceRangeAvailable =
+        Number.isInteger(candidate.documentStart) &&
+        Number.isInteger(candidate.documentEnd);
+      const conditionRangeAvailable =
+        Number.isInteger(conditionSource.documentStart) &&
+        Number.isInteger(conditionSource.documentEnd);
       return {
         candidateId,
         physicalPageNumber,
         printedPageLabel,
         exactText,
-        conditionCheckText: conditionCheckText(candidate),
+        conditionCheckText: conditionSource.text,
+        ...(document.sha256
+          ? { documentFingerprint: document.sha256 }
+          : {}),
+        ...(Number.isInteger(physicalPageNumber)
+          ? { candidateIdentityPageNumber: physicalPageNumber }
+          : {}),
+        ...(sourceRangeAvailable
+          ? {
+              documentStart: candidate.documentStart,
+              documentEnd: candidate.documentEnd,
+              exactTextSha256: sha256Text(exactText),
+            }
+          : {}),
+        ...(conditionRangeAvailable
+          ? {
+              conditionCheckDocumentStart: conditionSource.documentStart,
+              conditionCheckDocumentEnd: conditionSource.documentEnd,
+              conditionCheckTextSha256: sha256Text(conditionSource.text),
+            }
+          : {}),
         ...(candidateBinding ? { candidateBinding } : {}),
         ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
         ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
@@ -1870,6 +1956,24 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         throw new Error(
           "MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_UNAVAILABLE:FE-C02"
         );
+      const specializedComparisonQualificationReplay =
+        specializedComparisonContract(categoryView, categoryId)
+          ? buildSpecializedComparisonQualificationReplay({
+              categoryView,
+              categoryId,
+              atomsA,
+              atomsB,
+              expectedDocumentsA,
+              expectedDocumentsB,
+            })
+          : null;
+      if (
+        specializedComparisonContract(categoryView, categoryId) &&
+        !specializedComparisonQualificationReplay
+      )
+        throw new Error(
+          `SPECIALIZED_COMPARISON_QUALIFICATION_REPLAY_UNAVAILABLE:${categoryId}`
+        );
       return {
         categoryId,
         stage: first.stage,
@@ -1884,13 +1988,16 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         ...(membershipConditionScopeQualificationReplay
           ? { membershipConditionScopeQualificationReplay }
           : {}),
+        ...(specializedComparisonQualificationReplay
+          ? { specializedComparisonQualificationReplay }
+          : {}),
       };
     });
     return { categoryView, rows };
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 13,
+    schemaVersion: 14,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -1906,7 +2013,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     categories,
     totals,
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Ausschließlich für LW-20 darf ein vollständiger kontrollierter Nichtfund mit einem belegten, paketweit nicht aufgehobenen Standardausschluss als gleiche dokumentierte Nichtdeckung bewertet werden; der Negativbefund wird dabei niemals in einen ausdrücklichen Ausschluss umgeschrieben. Für FE-A01 darf die vollständig quellengebundene Branddefinition 'bestimmungswidriges Entstehen oder Ausbreiten' gegenüber einer Definition nur über die bestimmungswidrige Ausbreitung als breiterer Begriffsumfang bewertet werden. Für FE-C02 darf ausschließlich ein vollständiger sourcegebundener Boolescher Vergleich derselben Photovoltaik-Komponente im selben Feuerscope einen Vorteil für den breiteren vertraglichen Voraussetzungsscope ausweisen; dies behauptet weder einen ausdrücklichen Ausschluss noch die konkrete Nichterfüllung der engeren Bedingungen. Für VS-15 darf ausschließlich der beidseitig vollständig kontrollierte Nichtfund der namentlichen Nebengebäude-Anführung bei zugleich beidseitig belegtem allgemeinem Nebengebäudeschutz als gleiche dokumentierte Fundlage bewertet werden; unterschiedliche Limits werden dadurch nicht gleichgesetzt. Für VS-22 darf belegter Sondermüllschutz mit eigenem belegtem Limit gegenüber einem Paket mit belegten allgemeinen Entsorgungskosten, aber vollständig kontrolliertem Nichtfund beider Sondermüllkomponenten, als Vorteil bewertet werden. Dieser Vergleichsschluss behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit auf der fundlosen Seite. Für VS-24 darf Gleichwertigkeit nur bei beidseitig vollständig belegten Gerüstkosten nach einem Glasschaden im exakt gleichen Glasbruchscope und ohne dokumentiertes eigenes lokales Gerüstkostenlimit festgestellt werden; fehlende lokale Limitangaben werden nicht als unbegrenzte Deckung bezeichnet. Für VS-25 darf eine höhere relative Grenze für behördliche Wiederaufbau-Mehrkosten nur bei beidseitig belegter Neuwertdeckung, typisierter gemeinsamer Bezugsgröße, vollständig gebundenen Kosten- und Limitbelegen sowie – bei Prozent-/Euro-Doppeldarstellung – identischem Klauselcode und centgenauer VS-01-Rechnung als Vorteil ausgewiesen werden. Der Schluss bewertet ausschließlich die relative Prozentgrenze und behauptet ohne beidseitige Euro-Basis keinen höheren absoluten Eurobetrag. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Ausschließlich für LW-20 darf ein vollständiger kontrollierter Nichtfund mit einem belegten, paketweit nicht aufgehobenen Standardausschluss als gleiche dokumentierte Nichtdeckung bewertet werden; der Negativbefund wird dabei niemals in einen ausdrücklichen Ausschluss umgeschrieben. Für FE-A01 darf die vollständig quellengebundene Branddefinition 'bestimmungswidriges Entstehen oder Ausbreiten' gegenüber einer Definition nur über die bestimmungswidrige Ausbreitung als breiterer Begriffsumfang bewertet werden. Für FE-C02 darf ausschließlich ein vollständiger sourcegebundener Boolescher Vergleich derselben Photovoltaik-Komponente im selben Feuerscope einen Vorteil für den breiteren vertraglichen Voraussetzungsscope ausweisen; dies behauptet weder einen ausdrücklichen Ausschluss noch die konkrete Nichterfüllung der engeren Bedingungen. Für FE-C07 darf ausschließlich eine höhere, beidseitig auf dieselbe Gebäudeversicherungssumme und das erste Risiko bezogene Prozentgrenze gewinnen, wenn die höhere Seite sourcegebunden ohne zusätzliche lokale Sauna-Bedingung zertifiziert und die niedrigere Seite entweder ebenso unbeschränkt oder mit der bekannten Haftungs- und Gefahrversicherungsbedingung vollständig belegt ist. Für VS-15 darf ausschließlich der beidseitig vollständig kontrollierte Nichtfund der namentlichen Nebengebäude-Anführung bei zugleich beidseitig belegtem allgemeinem Nebengebäudeschutz als gleiche dokumentierte Fundlage bewertet werden; unterschiedliche Limits werden dadurch nicht gleichgesetzt. Für VS-22 darf belegter Sondermüllschutz mit eigenem belegtem Limit gegenüber einem Paket mit belegten allgemeinen Entsorgungskosten, aber vollständig kontrolliertem Nichtfund beider Sondermüllkomponenten, als Vorteil bewertet werden. Dieser Vergleichsschluss behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit auf der fundlosen Seite. Für VS-24 darf Gleichwertigkeit nur bei beidseitig vollständig belegten Gerüstkosten nach einem Glasschaden im exakt gleichen Glasbruchscope und ohne dokumentiertes eigenes lokales Gerüstkostenlimit festgestellt werden; fehlende lokale Limitangaben werden nicht als unbegrenzte Deckung bezeichnet. Für VS-25 darf eine höhere relative Grenze für behördliche Wiederaufbau-Mehrkosten nur bei beidseitig belegter Neuwertdeckung, typisierter gemeinsamer Bezugsgröße, vollständig gebundenen Kosten- und Limitbelegen sowie – bei Prozent-/Euro-Doppeldarstellung – identischem Klauselcode und centgenauer VS-01-Rechnung als Vorteil ausgewiesen werden. Der Schluss bewertet ausschließlich die relative Prozentgrenze und behauptet ohne beidseitige Euro-Basis keinen höheren absoluten Eurobetrag. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
   validateCustomerComparison(result);
   return result;
