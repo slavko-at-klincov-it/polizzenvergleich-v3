@@ -525,7 +525,7 @@ describe("membership condition-scope comparison contract", () => {
     });
   });
 
-  test("replays the customer decision and removes the private atom digest", () => {
+  test("replays the customer decision and removes the private qualification replay", () => {
     const input = fixture();
     const audit = buildMembershipConditionScopeComparisonAudit(input);
     const pointDecision = membershipConditionScopeComparisonDecision(audit);
@@ -614,6 +614,98 @@ describe("membership condition-scope comparison contract", () => {
       "EXCLUDED";
     expect(() => validateCustomerComparison(replayTamper)).toThrow(
       "COMPARISON_FE_C02_QUALIFICATION_REPLAY_INVALID"
+    );
+  });
+
+  test("persists qualification inputs even when FE-C02 is not decision-ready", () => {
+    const input = fixture();
+    input.atomsB[1].unresolvedCandidateIds = ["candidate-unresolved"];
+    const replay = buildMembershipConditionScopeQualificationReplay({
+      ...input,
+      categoryView: "FE",
+    });
+
+    expect(replay).toMatchObject({
+      schemaVersion: 2,
+      categoryView: "FE",
+      categoryId: "FE-C02",
+      projectedAtomsBySide: { A: expect.any(Array), B: expect.any(Array) },
+    });
+    expect(
+      buildMembershipConditionScopeAuditFromQualificationReplay({
+        replay,
+        packageA: input.packageA,
+        packageB: input.packageB,
+        expectedDocumentsA: input.expectedDocumentsA,
+        expectedDocumentsB: input.expectedDocumentsB,
+      })
+    ).toBeNull();
+  });
+
+  test("rejects a rehashed qualification replay with a non-canonical contract", () => {
+    const input = fixture();
+    const replay = buildMembershipConditionScopeQualificationReplay({
+      ...input,
+      categoryView: "FE",
+    });
+    replay.projectedAtomsBySide.A[0].membershipConditionScopeComparisonContract.winnerPolicy =
+      "TAMPERED_POLICY";
+    replay.comparisonContractDigestSha256 = sha256(
+      replay.projectedAtomsBySide.A[0]
+        .membershipConditionScopeComparisonContract
+    );
+    replay.projectedAtomDigestsSha256.A = sha256(
+      replay.projectedAtomsBySide.A
+    );
+    const { replayDigestSha256: _discarded, ...body } = replay;
+    replay.replayDigestSha256 = sha256(body);
+
+    expect(() =>
+      buildMembershipConditionScopeAuditFromQualificationReplay({
+        replay,
+        packageA: input.packageA,
+        packageB: input.packageB,
+        expectedDocumentsA: input.expectedDocumentsA,
+        expectedDocumentsB: input.expectedDocumentsB,
+      })
+    ).toThrow("MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_INVALID");
+  });
+
+  test("rejects the private FE-C02 replay on another category row", () => {
+    const input = fixture();
+    const qualificationReplay =
+      buildMembershipConditionScopeQualificationReplay({
+        ...input,
+        categoryView: "FE",
+      });
+    const categories = [
+      {
+        categoryView: "VS",
+        rows: [
+          {
+            categoryId: "VS-01",
+            outcome: "UNTERSCHIED_FACHLICH_PRÜFEN",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision: membershipConditionScopeComparisonDecision(
+              buildMembershipConditionScopeComparisonAudit(input)
+            ),
+            membershipConditionScopeQualificationReplay: qualificationReplay,
+          },
+        ],
+      },
+    ];
+    const result = {
+      schemaVersion: 13,
+      status: "COMPARISON_RESULT_MATERIALIZED",
+      productProfile: PRODUCT_PROFILE,
+      documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
+      categories,
+      totals: deriveCustomerMetrics(categories),
+    };
+
+    expect(() => validateCustomerComparison(result)).toThrow(
+      "COMPARISON_FE_C02_QUALIFICATION_REPLAY_ORPHANED"
     );
   });
 
