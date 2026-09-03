@@ -3936,7 +3936,7 @@ describe("policy comparison result builder", () => {
       targets: [
         {
           candidateId: generalCandidate.candidateId,
-          exactText: generalTarget,
+          exactText: generalOccurrence.exactText,
           physicalPageNumber: 2,
           coverageGovernorSpan: {
             exactText: generalGovernor,
