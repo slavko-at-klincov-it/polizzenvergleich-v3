@@ -159,18 +159,17 @@ function verifiedExactClauseCodeGovernor(occurrence, fact) {
     /(?:Besondere\s+Bedingung\s*\n?\s*|\()\s*(\d{2}\p{Lu}{2}\d{4})\s*\)?/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
-  return (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
-    (hint) => {
-      const codes =
-        typeof hint?.text === "string"
-          ? [...hint.text.matchAll(codePattern)]
-          : [];
-      const amounts =
-        typeof hint?.text === "string"
-          ? [...hint.text.matchAll(moneyPattern)]
-          : [];
-      return (
-        hint.contractId === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID &&
+  return (occurrence?.exactClauseCodeFieldGovernorHints || []).find((hint) => {
+    const codes =
+      typeof hint?.text === "string"
+        ? [...hint.text.matchAll(codePattern)]
+        : [];
+    const amounts =
+      typeof hint?.text === "string"
+        ? [...hint.text.matchAll(moneyPattern)]
+        : [];
+    return (
+      hint.contractId === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID &&
       hint.policy === EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY &&
       contract?.contractId === hint.contractId &&
       contract?.clauseCode === hint.clauseCode &&
@@ -203,9 +202,8 @@ function verifiedExactClauseCodeGovernor(occurrence, fact) {
       fact?.source?.exactText === hint.amountText &&
       fact?.rawValue === hint.amountText &&
       Number(fact?.source?.physicalPageNumber) === hint.physicalPageNumber
-      );
-    }
-  );
+    );
+  });
 }
 
 function sourceTextForFact(occurrence, fact) {

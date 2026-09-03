@@ -187,9 +187,9 @@ describe("VS-22 exact clause-code field governor", () => {
       }),
     ]);
 
-    const selectedCandidateIds = prepared.find(
-      ({ componentId }) => componentId === "disposal_costs"
-    ).candidates.map(({ candidateId }) => candidateId);
+    const selectedCandidateIds = prepared
+      .find(({ componentId }) => componentId === "disposal_costs")
+      .candidates.map(({ candidateId }) => candidateId);
     const judgements = [
       {
         requirementId: "VS-22",
@@ -250,8 +250,7 @@ describe("VS-22 exact clause-code field governor", () => {
     const tamperedFieldMaterialization = structuredClone(
       requestedFieldMaterialization
     );
-    tamperedFieldMaterialization.requirements[0].fields[0].facts[0].source.physicalPageNumber =
-      2;
+    tamperedFieldMaterialization.requirements[0].fields[0].facts[0].source.physicalPageNumber = 2;
     const tamperedRow = render(tamperedFieldMaterialization);
     expect(tamperedRow.documentedContent).not.toContain("EUR 6.121.600,00");
   });

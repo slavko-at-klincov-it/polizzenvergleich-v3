@@ -973,8 +973,7 @@ describe("categoryTableRenderer", () => {
     expect(row.source).not.toContain("EUR6.121.600,00");
 
     fieldResult.fields[0].facts[0].source.physicalPageNumber = 1;
-    occurrence.exactClauseCodeFieldGovernorHints[0].policy =
-      "UNTRUSTED_POLICY";
+    occurrence.exactClauseCodeFieldGovernorHints[0].policy = "UNTRUSTED_POLICY";
     const [policyTamperedRow] = buildCategoryTableRows(input);
     expect(policyTamperedRow.coverageAmount).toBe("Nicht feststellbar");
     expect(policyTamperedRow.source).not.toContain("EUR6.121.600,00");
