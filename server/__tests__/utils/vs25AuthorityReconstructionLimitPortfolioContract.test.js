@@ -381,9 +381,7 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       sourceAtomDigestReplay: replay,
     };
 
-    expect(validateVs25AuthorityLimitPortfolioAudit(audit, options)).toBe(
-      true
-    );
+    expect(validateVs25AuthorityLimitPortfolioAudit(audit, options)).toBe(true);
     const tampered = JSON.parse(JSON.stringify(audit));
     tampered.sides.B.projectedReferenceAtoms[0].coverageEffect = "EXCLUDED";
     expect(() =>
@@ -437,9 +435,8 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
     [
       "unbound reconstruction base",
       (input) => {
-        input.packageB.vs25AmountReconciliation.base.atomProof.selectedCandidateIds = [
-          "different-vs01",
-        ];
+        input.packageB.vs25AmountReconciliation.base.atomProof.selectedCandidateIds =
+          ["different-vs01"];
       },
     ],
   ])("fails closed for %s", (_label, mutate) => {

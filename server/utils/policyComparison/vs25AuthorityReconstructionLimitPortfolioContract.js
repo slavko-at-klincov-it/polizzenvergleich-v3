@@ -47,7 +47,9 @@ function stableValue(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+  return (
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
+  );
 }
 
 function sha256(value) {
@@ -169,7 +171,11 @@ function localSourceWindow(source) {
   if (index < 0) return null;
   const prefix = text.slice(Math.max(0, index - 180), index);
   const localPrefix = prefix.slice(
-    Math.max(prefix.lastIndexOf("."), prefix.lastIndexOf(";"), prefix.lastIndexOf("\n")) + 1
+    Math.max(
+      prefix.lastIndexOf("."),
+      prefix.lastIndexOf(";"),
+      prefix.lastIndexOf("\n")
+    ) + 1
   );
   return { fromAnchor: text.slice(index), prefix: localPrefix };
 }
@@ -634,7 +640,8 @@ function validateVs25AuthorityLimitPortfolioAudit(audit, options) {
       auditSide?.projectedAtomDigestsSha256?.referenceAtoms !==
         replayDigests.referenceAtoms ||
       sha256(auditSide?.projectedAtoms) !== replayDigests.targetAtoms ||
-      sha256(auditSide?.projectedReferenceAtoms) !== replayDigests.referenceAtoms
+      sha256(auditSide?.projectedReferenceAtoms) !==
+        replayDigests.referenceAtoms
     )
       throw new Error("VS25_SOURCE_REFERENCE_ATOM_DIGEST_REPLAY_MISMATCH");
   }
