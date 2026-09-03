@@ -5,7 +5,7 @@ const {
   PAV8_BASELINE_COMMIT,
   PAV8_BASELINE_PRODUCT_PROFILE,
   pav8BaselineCatalogBytes,
-} = require("../../fixtures/policyAnalysis/pav8BaselineFixture");
+} = require("../../../testFixtures/policyAnalysis/pav8BaselineFixture");
 const { sha256 } = require("../../../utils/policyAnalysis/runIdentity");
 const {
   EXPECTED_DOCUMENT_COUNT,

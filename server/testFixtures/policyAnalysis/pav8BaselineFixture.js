@@ -39,7 +39,10 @@ const PAV8_BASELINE_CATALOG_SHA256 = Object.freeze({
 });
 
 function pav8BaselineCatalogBytes() {
-  const fixtureDirectory = path.join(__dirname, "pav8-2d964b45");
+  const fixtureDirectory = path.resolve(
+    __dirname,
+    "../../__tests__/fixtures/policyAnalysis/pav8-2d964b45"
+  );
   return Object.fromEntries(
     Object.entries(PAV8_BASELINE_CATALOG_FILES).map(
       ([categoryView, filename]) => [

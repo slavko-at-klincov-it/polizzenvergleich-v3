@@ -4,7 +4,7 @@ const {
   PAV8_BASELINE_COMMIT,
   PAV8_BASELINE_PRODUCT_PROFILE,
   pav8BaselineCatalogBytes,
-} = require("../../fixtures/policyAnalysis/pav8BaselineFixture");
+} = require("../../../testFixtures/policyAnalysis/pav8BaselineFixture");
 const {
   BASELINE_WORKSHEET_REBUILD_CONTRACT_ID,
   assertBaselineWorksheetRebuild,
