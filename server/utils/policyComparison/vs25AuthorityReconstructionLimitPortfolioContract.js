@@ -393,7 +393,7 @@ function clauseCodes(atom) {
         const local = localSourceWindow(source);
         if (!local) return [];
         return [
-          ...`${local.prefix}${local.fromAnchor.slice(0, 320)}`.matchAll(
+          ...`${local.prefix.slice(-120)}${local.fromAnchor.slice(0, 180)}`.matchAll(
             /\b\d{2}[A-Z]{2}\d{4}\b/gu
           ),
         ];
@@ -411,6 +411,18 @@ function directFieldFactsValid(atom, signature) {
   return facts.every((fact) => {
     const source = fact?.source;
     const expectedUnit = fact.valueType === "MONEY" ? "EUR" : "%";
+    const percentageBasisLocallyBound =
+      fact.valueType !== "PERCENT" ||
+      (atom.sources || []).some((atomSource) => {
+        if (!selectedCandidateIds.has(atomSource?.candidateId)) return false;
+        const local = localSourceWindow(atomSource);
+        const targetClause = local?.fromAnchor.slice(0, 240) || "";
+        return fact.comparisonBasis === "BUILDING_NEW_VALUE_INSURANCE_SUM"
+          ? /\b(?:NBW|Neubauwert(?:es|s)?)\b/iu.test(targetClause)
+          : fact.comparisonBasis === "BUILDING_INSURANCE_SUM"
+            ? /\bGebäudeversicherungssumme\b/iu.test(targetClause)
+            : false;
+      });
     return Boolean(
       fact?.binding === "DIRECT" &&
         fact?.valueType === signature.valueType &&
@@ -424,6 +436,7 @@ function directFieldFactsValid(atom, signature) {
         source.documentStart >= 0 &&
         source.documentEnd > source.documentStart &&
         String(source?.exactText || "").trim() &&
+        percentageBasisLocallyBound &&
         (fact.valueType !== "PERCENT" ||
           [
             "BUILDING_INSURANCE_SUM",

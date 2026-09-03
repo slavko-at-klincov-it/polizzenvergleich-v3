@@ -529,6 +529,21 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
         input.atomsB[3].fields[0].facts[0].qualifier = "pro Jahr";
       },
     ],
+    [
+      "typed percentage basis without local wording",
+      (input) => {
+        input.atomsB[3].sources[0].conditionCheckText =
+          "Mehrkosten durch behördliche Auflagen bis 5 % gemäß 10PA0130";
+      },
+    ],
+    [
+      "distant neighbouring clause code",
+      (input) => {
+        for (const atom of [input.atomsB[1], input.atomsB[3]])
+          atom.sources[0].conditionCheckText =
+            `Mehrkosten durch behördliche Auflagen ${"ohne Klauselcode ".repeat(16)}10PA0130`;
+      },
+    ],
   ])("fails closed for %s", (_label, mutate) => {
     const input = fixture();
     mutate(input);
