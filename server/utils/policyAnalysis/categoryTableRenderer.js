@@ -185,9 +185,9 @@ function sourceTextForFact(occurrence, fact) {
     fact
   );
   const ranges = [
-    occurrence?.context,
-    occurrence?.fieldGovernorHint,
     verifiedExactGovernor,
+    occurrence?.fieldGovernorHint,
+    occurrence?.context,
     occurrence?.scopeLead,
   ];
   const containing = ranges.find(
@@ -255,7 +255,14 @@ function selectedSources({
       (fact) =>
         verifiedFactPhysicalPageNumber(occurrence, fact) !== physicalPageNumber
     );
-    if (candidateFieldFacts.length === 0 || hasCrossPageFieldFact)
+    const hasVerifiedExactClauseCodeFact = candidateFieldFacts.some((fact) =>
+      Boolean(verifiedExactClauseCodeGovernor(occurrence, fact))
+    );
+    if (
+      candidateFieldFacts.length === 0 ||
+      hasCrossPageFieldFact ||
+      hasVerifiedExactClauseCodeFact
+    )
       sources.push({ candidateId, physicalPageNumber, quote });
 
     for (const fact of candidateFieldFacts) {

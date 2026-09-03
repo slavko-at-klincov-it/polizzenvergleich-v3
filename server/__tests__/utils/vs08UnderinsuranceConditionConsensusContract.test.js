@@ -6,6 +6,10 @@ const {
   vs08ConditionConsensusDecision,
 } = require("../../utils/policyComparison/vs08UnderinsuranceConditionConsensusContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
+const {
+  requirementSearchContractDigest,
+} = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
+const fullVsCatalog = require("../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.15";
 const CATEGORY_ID = "VS-08";
@@ -194,6 +198,19 @@ function fixture() {
 }
 
 describe("VS-08 package condition consensus contract", () => {
+  test("binds the production contract to the current catalog requirement", () => {
+    const requirement = fullVsCatalog.requirements.find(
+      ({ id }) => id === CATEGORY_ID
+    );
+    expect(fullVsCatalog.catalogId).toBe(CATALOG_ID);
+    expect(
+      requirementSearchContractDigest({
+        catalogId: fullVsCatalog.catalogId,
+        requirement,
+      })
+    ).toBe(VS08_REQUIREMENT_CONTRACT_DIGEST);
+  });
+
   test("resolves multiple condition sources when every source says bedingt", () => {
     const input = fixture();
     const audit = buildVs08ConditionConsensusAudit(input);
