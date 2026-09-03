@@ -146,6 +146,7 @@ function fixture() {
     targets,
     materializedEvidence,
     documentArtifact,
+    worksheet,
   });
   const prompt = [
     "| Kategorie-ID | Stufe | Kategorie |",

@@ -294,6 +294,7 @@ function materializeTargetedCategoryResult(input) {
     targets,
     materializedEvidence: rebuiltEvidence,
     documentArtifact,
+    worksheet,
   });
   assertParity(
     persistedSources,

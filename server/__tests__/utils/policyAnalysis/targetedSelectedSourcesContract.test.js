@@ -1,6 +1,15 @@
+const crypto = require("crypto");
+const feFullCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const {
   rebuildTargetedSelectedSources,
 } = require("../../../utils/policyAnalysis/targetedSelectedSourcesContract");
+const {
+  buildControlledOccurrenceWorksheet,
+} = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  DOCUMENT_STATUS,
+  buildPreparedEvidenceTargets,
+} = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 
 function fixture() {
   const firstPage = "Sturm ist versichert. Kontext Sturmdeckung.";
@@ -86,6 +95,77 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function nestedProvenanceFixture() {
+  const firstPage = [
+    "• Überspannung infolge indirekter Blitzschlag innerhalb und außerhalb von versicherten Gebäuden am Versicherungsgrundstück, an",
+    "- Licht- und Kraftinstallationen sowie Zähler- und Sicherungskästen;",
+  ].join("\n");
+  const secondPage = ["Seite 2", "- Erd- und Telefonkabeln.", ""].join("\n");
+  const separator = "\n\n[DOCUMENT_PAGE 2]\n";
+  const pageContent = `${firstPage}${separator}${secondPage}`;
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint: "targeted-fe-a05-provenance",
+    document: {
+      id: "targeted-fe-a05-provenance",
+      sourceDocumentId: "targeted-fe-a05-provenance",
+      title: "targeted-fe-a05-provenance.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [
+        { pageNumber: 1, start: 0, end: firstPage.length },
+        {
+          pageNumber: 2,
+          start: firstPage.length + separator.length,
+          end: pageContent.length,
+        },
+      ],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 2,
+        processedPages: 2,
+        pagesWithText: 2,
+        complete: true,
+      },
+    },
+  };
+  const catalog = {
+    ...feFullCatalog,
+    requirements: [
+      feFullCatalog.requirements.find(({ id }) => id === "FE-A05"),
+    ],
+  };
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document: documentArtifact.document,
+    documentFingerprint: documentArtifact.fingerprint,
+    catalog,
+  });
+  const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+  const targets = buildPreparedEvidenceTargets({
+    worksheet,
+    documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    candidateTriage: [
+      {
+        requirementId: "FE-A05",
+        componentId: "indirect_lightning_damage",
+        candidateId: occurrence.candidateId,
+        binding: "DIRECT",
+      },
+    ],
+  });
+  const materializedEvidence = {
+    judgements: [
+      {
+        targetId: targets[0].targetId,
+        requirementId: "FE-A05",
+        componentId: "indirect_lightning_damage",
+        selectedCandidateIds: [occurrence.candidateId],
+      },
+    ],
+  };
+  return { targets, materializedEvidence, documentArtifact, worksheet };
+}
+
 describe("targeted selected sources contract", () => {
   test("reconstructs the current selected-sources artifact from server-owned targets", () => {
     const input = fixture();
@@ -117,6 +197,112 @@ describe("targeted selected sources contract", () => {
       },
     ]);
     expect(input).toEqual(before);
+  });
+
+  test("replays selected FE-A05 object and parent proofs against original document bytes", () => {
+    const input = nestedProvenanceFixture();
+    const [source] = rebuildTargetedSelectedSources(input);
+
+    expect(source).toMatchObject({
+      requirementId: "FE-A05",
+      componentId: "indirect_lightning_damage",
+      objectScopeProof: {
+        objectScopeKeys: [
+          "BUILDING_ELECTRICAL_INSTALLATIONS",
+          "OBJECTS_OUTSIDE_BUILDINGS",
+          "UNDERGROUND_CABLES",
+        ],
+      },
+      nestedListContinuationProof: {
+        contractId: "NESTED_LIST_CONTINUATION_PROOF_V1",
+      },
+    });
+  });
+
+  test("requires a matching worksheet whenever a target carries object-scope provenance", () => {
+    const input = nestedProvenanceFixture();
+    delete input.worksheet;
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_WORKSHEET_INVALID"
+    );
+
+    const foreignIdentity = nestedProvenanceFixture();
+    foreignIdentity.documentArtifact.fingerprint = "foreign-fingerprint";
+    expect(() => rebuildTargetedSelectedSources(foreignIdentity)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_WORKSHEET_INVALID"
+    );
+  });
+
+  test("rejects removed candidate provenance and never emits an unselected proof", () => {
+    const stripped = nestedProvenanceFixture();
+    delete stripped.targets[0].candidates[0].objectScopeProof;
+    delete stripped.targets[0].candidates[0].nestedListContinuationProof;
+    expect(() => rebuildTargetedSelectedSources(stripped)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_PRESENCE_MISMATCH"
+    );
+
+    const unselected = nestedProvenanceFixture();
+    const selectedCandidate = unselected.targets[0].candidates[0];
+    const unselectedCandidate = {
+      ...clone(selectedCandidate),
+      candidateId: "candidate:unselected-object-scope",
+    };
+    unselected.targets[0].candidates.push(unselectedCandidate);
+    const component = unselected.worksheet.requirements[0].components[0];
+    component.occurrences.push({
+      ...clone(component.occurrences[0]),
+      candidateId: unselectedCandidate.candidateId,
+    });
+    const sources = rebuildTargetedSelectedSources(unselected);
+    expect(sources).toHaveLength(1);
+    expect(sources[0].candidateId).toBe(selectedCandidate.candidateId);
+  });
+
+  test("rejects a candidate proof that differs from its worksheet occurrence", () => {
+    const input = nestedProvenanceFixture();
+    input.targets[0].candidates[0].objectScopeProof.proofDigest = "f".repeat(64);
+
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_OBJECT_PROOF_INVALID"
+    );
+  });
+
+  test("rejects an unselected object proof without its component contract", () => {
+    const input = nestedProvenanceFixture();
+    const target = input.targets[0];
+    const component = input.worksheet.requirements[0].components[0];
+    const proofFreeCandidate = clone(target.candidates[0]);
+    proofFreeCandidate.candidateId = "candidate:selected-proof-free";
+    delete proofFreeCandidate.objectScopeProof;
+    delete proofFreeCandidate.nestedListContinuationProof;
+    target.candidates.push(proofFreeCandidate);
+    const proofFreeOccurrence = clone(component.occurrences[0]);
+    proofFreeOccurrence.candidateId = proofFreeCandidate.candidateId;
+    delete proofFreeOccurrence.objectScopeProof;
+    delete proofFreeOccurrence.nestedListContinuationProof;
+    component.occurrences.push(proofFreeOccurrence);
+    input.materializedEvidence.judgements[0].selectedCandidateIds = [
+      proofFreeCandidate.candidateId,
+    ];
+    delete component.objectScopeEvidenceContract;
+
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_COMPONENT_CONTRACT_MISSING"
+    );
+  });
+
+  test("fails closed when the selected parent proof no longer matches document bytes", () => {
+    const input = nestedProvenanceFixture();
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace("Telefon", "Xelefon");
+    input.worksheet.document.pageContentSha256 = crypto
+      .createHash("sha256")
+      .update(input.documentArtifact.document.pageContent)
+      .digest("hex");
+
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_PARENT_PROOF_INVALID"
+    );
   });
 
   test.each([
