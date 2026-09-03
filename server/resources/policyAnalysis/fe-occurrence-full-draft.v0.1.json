@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.13",
+  "catalogId": "fe-occurrence-full-draft-v0.14",
   "categoryView": "FE",
   "requirements": [
     {
@@ -769,7 +769,7 @@
       "requestedFields": [],
       "supportingObjectMembershipEvidenceContracts": [
         {
-          "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+          "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
           "membership": "MEMBER_OF_CLASS",
           "memberObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
           "classObjectKey": "BUILDING",
@@ -808,7 +808,7 @@
           ],
           "objectMembershipEvidenceContracts": [
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
               "membership": "MEMBER_OF_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
@@ -823,7 +823,7 @@
               ]
             },
             {
-              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
               "membership": "EXCLUDED_FROM_CLASS",
               "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
               "classObjectKey": "BUSINESS_CONTENT",

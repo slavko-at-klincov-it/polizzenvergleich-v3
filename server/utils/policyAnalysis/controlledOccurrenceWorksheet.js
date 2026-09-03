@@ -1648,6 +1648,7 @@ function structuralBoundaryLineStarts(page) {
   const ranges = [
     ...page.sectionHeadings,
     ...page.coverageGovernors,
+    ...page.objectClassificationGovernors,
     ...page.clauseBoundaries,
   ];
   return new Set(

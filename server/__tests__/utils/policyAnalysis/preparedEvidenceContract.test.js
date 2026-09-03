@@ -2907,7 +2907,7 @@ describe("preparedEvidenceContract", () => {
     })[0];
 
     expect(target.candidates[0].objectMembershipProof).toMatchObject({
-      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
       edge: {
         relation: "MEMBER_OF_CLASS",
         memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",

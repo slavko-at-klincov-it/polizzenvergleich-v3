@@ -1585,6 +1585,8 @@ describe("controlledOccurrenceWorksheet", () => {
           "1.1Gebäude (Betriebs-, Büro-, Lager-, Wohn- und sonstige Gebäude)",
           "das sind:",
           "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+          "Nicht als Gebäude oder Gebäudebestandteile zählen:",
+          "·Fundamente von Maschinen;",
         ].join("\n"),
         [
           "Nicht als Betriebsinhalt gelten:",
@@ -1640,6 +1642,9 @@ describe("controlledOccurrenceWorksheet", () => {
     });
     expect(parentProof.edge.memberContextSpan.exactText).toContain(
       "im Gebäudeneuwert enthalten sind"
+    );
+    expect(parentProof.edge.memberContextSpan.exactText).not.toContain(
+      "Nicht als Gebäude"
     );
   });
 

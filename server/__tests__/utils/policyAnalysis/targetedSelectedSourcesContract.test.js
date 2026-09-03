@@ -289,7 +289,7 @@ describe("targeted selected sources contract", () => {
     const [source] = rebuildTargetedSelectedSources(input);
 
     expect(source.objectMembershipProof).toMatchObject({
-      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V3",
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
       edge: {
         relation: "MEMBER_OF_CLASS",
         memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
