@@ -17,7 +17,10 @@ function run(script, args) {
   );
 }
 
-function preparedEvidenceFixture({ objectScopeEvidence = false } = {}) {
+function preparedEvidenceFixture({
+  objectScopeEvidence = false,
+  orphanProofField = null,
+} = {}) {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), "prepared-evidence-artifact-")
   );
@@ -59,7 +62,14 @@ function preparedEvidenceFixture({ objectScopeEvidence = false } = {}) {
             id: "coverage",
             label: "Deckung",
             factRole: "COVERAGE",
-            occurrences: [],
+            occurrences: orphanProofField
+              ? [
+                  {
+                    candidateId: "candidate:orphan-proof",
+                    [orphanProofField]: {},
+                  },
+                ]
+              : [],
             ...(objectScopeEvidence
               ? { objectScopeEvidenceContract: { contractId: "fixture" } }
               : {}),
@@ -206,24 +216,59 @@ describe("VS full QA CLI contracts", () => {
     });
   });
 
-  test("keeps the no-artifact caller compatible but rejects a foreign artifact", () => {
-    const compatible = preparedEvidenceFixture({ objectScopeEvidence: true });
-    const compatibleResult = run(
+  test("keeps a proof-free worksheet without object-scope contract legacy-compatible", () => {
+    const fixture = preparedEvidenceFixture();
+    const result = run(
       "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
-      preparedEvidenceArguments(compatible, { documentArtifact: false })
+      preparedEvidenceArguments(fixture, { documentArtifact: false })
     );
-    expect(compatibleResult.status).toBe(0);
+    expect(result.status).toBe(0);
     expect(
       JSON.parse(
-        fs.readFileSync(path.join(compatible.output, "report.json"), "utf8")
+        fs.readFileSync(path.join(fixture.output, "report.json"), "utf8")
       ).contracts
     ).toMatchObject({
       documentArtifactPath: null,
       documentArtifactSha256: null,
       documentFingerprint: null,
     });
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
 
+  test("requires a document artifact for an object-scope contract", () => {
+    const fixture = preparedEvidenceFixture({ objectScopeEvidence: true });
+    const result = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(fixture, { documentArtifact: false })
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Worksheet mit objectScopeEvidenceContract erfordert --documentArtifact"
+    );
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+
+  test.each(["objectScopeProof", "nestedListContinuationProof"])(
+    "rejects orphaned %s even when a document artifact is present",
+    (orphanProofField) => {
+      const fixture = preparedEvidenceFixture({ orphanProofField });
+      const result = run(
+        "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+        preparedEvidenceArguments(fixture)
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Worksheet-Provenienz ohne passenden Komponentenvertrag ist unzulässig"
+      );
+      fs.rmSync(fixture.directory, { recursive: true, force: true });
+    }
+  );
+
+  test("rejects a foreign document artifact for an object-scope contract", () => {
     const foreign = preparedEvidenceFixture({ objectScopeEvidence: true });
+
     foreign.documentArtifact.fingerprint = "foreign-fingerprint";
     fs.writeFileSync(
       foreign.documentArtifactFile,
@@ -238,7 +283,6 @@ describe("VS full QA CLI contracts", () => {
       "Dokumentartefakt ist nicht fail-closed an das Worksheet gebunden"
     );
 
-    fs.rmSync(compatible.directory, { recursive: true, force: true });
     fs.rmSync(foreign.directory, { recursive: true, force: true });
   });
 

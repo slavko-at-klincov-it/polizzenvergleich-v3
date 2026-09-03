@@ -36,6 +36,38 @@ function sha256File(file) {
   return sha256(fs.readFileSync(file));
 }
 
+function inspectObjectScopeProvenance(worksheet) {
+  let objectScopeEvidenceRequired = false;
+  for (const requirement of worksheet?.requirements || [])
+    for (const component of requirement.components || []) {
+      const componentHasContract = Boolean(
+        component.objectScopeEvidenceContract
+      );
+      const componentHasNestedListContract = Boolean(
+        component.nestedListContinuationProofContractId
+      );
+      objectScopeEvidenceRequired ||= componentHasContract;
+      for (const occurrence of component.occurrences || []) {
+        const objectScopeProofWithoutContract =
+          Object.prototype.hasOwnProperty.call(occurrence, "objectScopeProof") &&
+          !componentHasContract;
+        const nestedListProofWithoutContract =
+          Object.prototype.hasOwnProperty.call(
+            occurrence,
+            "nestedListContinuationProof"
+          ) && !componentHasNestedListContract;
+        if (objectScopeProofWithoutContract || nestedListProofWithoutContract)
+          return {
+            objectScopeEvidenceRequired,
+            orphanProof: `${String(requirement.id || "requirement")}:${String(
+              component.id || "component"
+            )}:${String(occurrence.candidateId || "candidate")}`,
+          };
+      }
+    }
+  return { objectScopeEvidenceRequired, orphanProof: null };
+}
+
 function validDocumentArtifactBinding({ worksheet, documentArtifact }) {
   const document = documentArtifact?.document;
   const worksheetDocument = worksheet?.document;
@@ -228,6 +260,18 @@ async function run() {
   } = require("../../utils/policyAnalysis/preparedEvidenceControls");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const objectScopeProvenance = inspectObjectScopeProvenance(worksheet);
+  if (objectScopeProvenance.orphanProof)
+    fail(
+      `Worksheet-Provenienz ohne passenden Komponentenvertrag ist unzulässig: ${objectScopeProvenance.orphanProof}`
+    );
+  if (
+    objectScopeProvenance.objectScopeEvidenceRequired &&
+    !documentArtifactFile
+  )
+    fail(
+      "Worksheet mit objectScopeEvidenceContract erfordert --documentArtifact"
+    );
   const documentArtifactBytes = documentArtifactFile
     ? fs.readFileSync(documentArtifactFile)
     : null;
