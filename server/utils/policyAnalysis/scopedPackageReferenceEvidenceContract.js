@@ -33,7 +33,10 @@ function digest(value) {
 }
 
 function textDigest(value) {
-  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(String(value || ""))
+    .digest("hex");
 }
 
 function normalizedText(value) {
@@ -66,7 +69,11 @@ function conceptKey(value, detail) {
 }
 
 function aliases(values, detail) {
-  if (!Array.isArray(values) || values.length === 0 || values.length > MAX_ALIASES)
+  if (
+    !Array.isArray(values) ||
+    values.length === 0 ||
+    values.length > MAX_ALIASES
+  )
     throw contractError("SCOPED_PACKAGE_REFERENCE_ALIASES_INVALID", detail);
   const result = values.map((value, index) =>
     requiredString(
@@ -266,7 +273,8 @@ function pageForOffset(identity, offset) {
 
 function exactSpan(identity, documentStart, documentEnd, extra = {}) {
   const page = pageForOffset(identity, documentStart);
-  if (!page || documentEnd > page.end || documentEnd <= documentStart) return null;
+  if (!page || documentEnd > page.end || documentEnd <= documentStart)
+    return null;
   const exactText = identity.text.slice(documentStart, documentEnd);
   return {
     ...extra,
@@ -304,7 +312,8 @@ function scopeHeadings(lines, contract) {
       line,
       match: matchingLineSpans(line, contract.perilHeadingAliases).find(
         ({ start, end }) =>
-          normalizedText(line.text) === normalizedText(line.text.slice(start, end))
+          normalizedText(line.text) ===
+          normalizedText(line.text.slice(start, end))
       ),
     }));
 }
@@ -323,12 +332,19 @@ function referenceLineMatch(line, contract) {
     edition: {
       text: editionMatch[0],
       documentStart: line.documentStart + editionMatch.index,
-      documentEnd: line.documentStart + editionMatch.index + editionMatch[0].length,
+      documentEnd:
+        line.documentStart + editionMatch.index + editionMatch[0].length,
     },
   };
 }
 
-function proofForScope({ contract, identity, lines, headingIndex, nextHeadingIndex }) {
+function proofForScope({
+  contract,
+  identity,
+  lines,
+  headingIndex,
+  nextHeadingIndex,
+}) {
   const heading = lines[headingIndex];
   const endIndex = nextHeadingIndex === -1 ? lines.length : nextHeadingIndex;
   const scopedLines = lines.slice(headingIndex + 1, endIndex);

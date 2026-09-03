@@ -23,10 +23,7 @@ function contract() {
     perilScopeKey: "FEUER_INSURANCE",
     perilHeadingAliases: ["Feuerversicherung", "Feuer-Versicherung"],
     coveredObjectKey: "BUILDING",
-    coveredObjectAliases: [
-      "Wohngebäude zum Neuwert",
-      "Gebäude zum Neuwert",
-    ],
+    coveredObjectAliases: ["Wohngebäude zum Neuwert", "Gebäude zum Neuwert"],
     referenceFamilyKey: "EABS",
     referenceTitleAliases: [
       "Ergänzende allgemeine Bedingungen für die Sachversicherung",
@@ -102,7 +99,8 @@ describe("source-bound scoped package-reference evidence", () => {
         scopeHeadingSpan: { exactText: "FEUERVERSICHERUNG" },
         coveredObjectSpan: { exactText: "Wohngebäude zum Neuwert" },
         referenceTitleSpan: {
-          exactText: "Ergänzende allgemeine Bedingungen für die Sachversicherung",
+          exactText:
+            "Ergänzende allgemeine Bedingungen für die Sachversicherung",
         },
         referenceCodeSpan: { exactText: "EABS" },
         referenceEditionSpan: { exactText: "2023" },
@@ -237,7 +235,11 @@ describe("source-bound scoped package-reference evidence", () => {
       },
       requestedFields: {
         requirements: [
-          { requirementId: "FE-C02", requestedFieldStatus: "NOT_REQUIRED", fields: [] },
+          {
+            requirementId: "FE-C02",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
         ],
       },
       targets: [{ targetId: "target:fe-c02", candidates: [] }],
@@ -251,9 +253,9 @@ describe("source-bound scoped package-reference evidence", () => {
     const tampered = JSON.parse(JSON.stringify(worksheet));
     tampered.requirements[0].supportingScopedPackageReferenceProofs[0].reference.edition =
       "2024";
-    expect(() => materializeAtomicFacts({ ...input, worksheet: tampered })).toThrow(
-      "SCOPED_PACKAGE_REFERENCE_PROOF_REPLAY_INVALID"
-    );
+    expect(() =>
+      materializeAtomicFacts({ ...input, worksheet: tampered })
+    ).toThrow("SCOPED_PACKAGE_REFERENCE_PROOF_REPLAY_INVALID");
   });
 
   test("rejects unsafe or ambiguous catalog vocabulary", () => {

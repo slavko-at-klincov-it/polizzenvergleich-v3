@@ -788,10 +788,7 @@
         {
           "contractId": "SOURCE_BOUND_SCOPED_PACKAGE_REFERENCE_EVIDENCE_V1",
           "perilScopeKey": "FEUER_INSURANCE",
-          "perilHeadingAliases": [
-            "Feuerversicherung",
-            "Feuer-Versicherung"
-          ],
+          "perilHeadingAliases": ["Feuerversicherung", "Feuer-Versicherung"],
           "coveredObjectKey": "BUILDING",
           "coveredObjectAliases": [
             "Wohngebäude zum Neuwert",

@@ -1363,14 +1363,13 @@ function materializeAtomicFacts({
     const supportingScopedPackageReferenceProofs = (() => {
       const contracts =
         requirement?.supportingScopedPackageReferenceEvidenceContracts || [];
-      const proofs =
-        requirement?.supportingScopedPackageReferenceProofs || [];
+      const proofs = requirement?.supportingScopedPackageReferenceProofs || [];
       if (contracts.length === 0) return [];
       const expected = contracts
         .flatMap((contract) =>
           buildSourceBoundScopedPackageReferenceProofs({
-          contract,
-          documentArtifact,
+            contract,
+            documentArtifact,
           })
         )
         .sort((left, right) =>
