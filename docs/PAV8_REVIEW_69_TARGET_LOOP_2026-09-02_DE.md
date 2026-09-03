@@ -2191,6 +2191,209 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.26 VS-02 – variable Zeitwertschwellen gefunden, echter Vertragsrang bleibt offen
+
+#### 10.26.1 Ausgangsfehler
+
+Der gebundene Ausgangslauf auf Commit `19c12eef` erzeugte:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-02-BASELINE-19C12EEF-20260903
+
+summarySha256:
+b7e82e8f2d091eb6cb50381d834037193eff227fb580c303fe3fd1b4fcf40f7e
+
+selectionDigest:
+a9f70073b31e2b6769a26b5076e9de2a24f6ee215b6e032bea91d787befbf567
+
+Paket A: BELEGT
+Paket B: TEILBELEGT
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+```
+
+Die ursprüngliche Diagnose `B residual_value_threshold fehlt` war sachlich
+falsch. Die Dokumente enthalten drei unterschiedliche, relevante Schwellen:
+
+- Paket A, LF-Dokument, physische Seite 26: Zeitwert mindestens `30 %` des
+  Neuwerts; außerdem eine Drei-Jahres-Bedingung für die
+  Neuwertentschädigung;
+- Paket B, GenVerbund-Rahmenklausel, physische Seite 7: Zeitwert zumindest
+  `20 %` des Neuwerts;
+- Paket B, EABS, physische Seite 6: liegt der Zeitwert unter `40 %` der
+  Neuherstellungskosten, wird maximal der Zeitwert ersetzt.
+
+Die bisherige VS-02-Suche und deterministische Evidenzbindung erkannten nur
+nahezu wörtliche `30 %`-Formulierungen. Insbesondere eingeschobene
+Objektphrasen wie `Zeitwert der Sachen unter 40 %` und `Zeitwert der
+versicherten Gebäude und Sachen ... zumindest 20 %` fielen durch. Der
+historische Nulltreffer war deshalb ein Recallfehler und kein Nachweis
+fehlender Deckung.
+
+#### 10.26.2 Wiederverwendbarer Schwellenvertrag
+
+Commit `ea3f0d2c` führte den gemeinsamen, versionierten Vertrag
+`VS02_RESIDUAL_VALUE_THRESHOLD_CLAUSE_V1` ein. Derselbe Parser wird für
+Konzeptsuche, deterministische Evidenzbindung und Feldextraktion verwendet.
+Er akzeptiert lokal gebundene Mindestschwellen und Untergrenzenformen mit
+eindeutiger Zeitwert-Rechtsfolge, typisiert den Wert als `PERCENT` und bindet
+die Bezugsgröße im Qualifier. Fremde Prozente, bloße Restwertangaben und
+andere Gefahren bleiben ausgeschlossen.
+
+Der VS-Katalog wurde von `v0.10` auf `v0.11` und das Produktprofil auf V44
+angehoben. Commit `913e930a` enthält ausschließlich die vom Mac-Studio-
+Formatter erzeugte Darstellung. Commit `f74ea02a` aktualisierte die davon
+abhängigen Katalog-/Digest-Fixtures.
+
+Mac-Studio-Prüfung für diese Stufe:
+
+```text
+Commit: f74ea02a
+Format: bestanden
+Tests: 9 Suites / 239 Tests bestanden
+```
+
+Der erste echte Ziellauf fand danach die richtigen Kandidaten, konnte die
+Feldwerte aber noch nicht materialisieren:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-02-THRESHOLD-RECALL-F74EA02A-20260903
+
+summarySha256:
+a8d00eec6645c5634d94554dae15224b18585de5cc0defa7dfed968b354191b1
+```
+
+Ursache war eine zweite, unabhängige Grenze: Der Parser lieferte den
+Klauselspan, während die Feldbindung nur vollständig im ursprünglichen
+Trefferspan liegende Fakten akzeptierte. Commit `529ecfb9` ersetzte diese
+falsche Enthaltenheitsannahme durch eine kontrollierte Spanüberlappung.
+
+Mac-Studio-Prüfung und Ziellauf:
+
+```text
+Commit: 529ecfb9
+Format: bestanden
+Tests: 5 Suites / 200 Tests bestanden
+
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-02-THRESHOLD-SPAN-529ECFB9-20260903
+
+summarySha256:
+177ff95f7a664d9a0c45da77131036c9f449093cd748164de2b6ef4cc8353b00
+
+selectionDigest:
+04d681b111b42f97f78b41ff0da6f8c80366596c7f4bed93d1e4a5c42990a85e
+```
+
+Damit wurden `30 %`, `20 %` und `40 %` mit exakten Dokument-, Seiten- und
+Kandidatenquellen materialisiert.
+
+#### 10.26.3 Paketweite Pflichtkomponenten und atomlokale Feldstati
+
+Der nun sichtbare Paketinhalt deckte zwei Fehler in der nachgelagerten
+Prüfung auf:
+
+1. `packageReviewAudit` meldete eine Pflichtkomponente pro Dokument als
+   fehlend, obwohl sie in einem anderen Dokument derselben Seite vorhanden
+   war. Commit `2c7dc05d` prüft `ALL`-Komponenten nun paketweit. Er entfernt
+   ausschließlich den falschen `MISSING_REQUIRED_COMPONENT`-Blocker.
+2. `materializeAtomicFacts` übernahm den Feldstatus der gesamten Anforderung
+   auf jedes einzelne Atom. Dadurch konnte ein Feldfund aus einer Klausel ein
+   anderes Atom ohne lokal gebundenen Feldwert fälschlich als `COMPLETE`
+   markieren. Commit `3e7d08d6` leitet den Status nun aus den tatsächlich an
+   das jeweilige Atom gebundenen Fakten ab; Commit `3193f50c` ist nur dessen
+   Mac-Studio-Formatierung. Das Produktprofil ist deshalb V46.
+
+Mac-Studio-Prüfung der finalen Integritätsstufe:
+
+```text
+Commit: 3193f50c574f976431c22076726ce2deaf2a5972
+Pfad: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: gebundene Node-v22.23.2-Runtime des QWEN36-Auditlaufs
+Format: bestanden
+Tests: 5 Suites / 224 Tests bestanden
+```
+
+Finaler VS-02-Ziellauf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-02-ATOM-STATUS-3193F50C-20260903
+
+summarySha256:
+010b50b53abf318da0ae74cf3940172f42473a6ed0eefaef814e7d6c2b4056a6
+
+selectionDigest:
+04d681b111b42f97f78b41ff0da6f8c80366596c7f4bed93d1e4a5c42990a85e
+
+Aufrufe: Triage 4 / Effects 1
+Server-Terminals: 15
+Paket A: BELEGT
+Paket B: TEILBELEGT
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review ja
+
+Verbleibende Blocker:
+- FIELD_INCOMPLETE auf Paket B;
+- MULTIPLE_ATOMS_SAME_COMPONENT für residual_value_threshold auf Paket B.
+```
+
+Der wieder sichtbare `FIELD_INCOMPLETE`-Blocker ist kein Recallrückschritt.
+Er ist die beabsichtigte Korrektur einer falschen Vollständigkeitsanzeige:
+Die EABS-Zeitwertklausel besitzt einen lokalen Fund, aber der aktuell
+angeforderte Bedingungswert wird an diesem Atom noch nicht materialisiert.
+
+#### 10.26.4 Warum noch kein Vorteil freigegeben wird
+
+Die verbleibende Unsicherheit ist dokumentinhaltlich real:
+
+- Die EABS nennen `40 %` der Neuherstellungskosten.
+- Die GenVerbund-Rahmenklausel nennt `20 %` des Neuwerts.
+- Die Rahmenklausel enthält eine Günstigkeitsregel, nach der bei
+  widersprüchlichen Vertragsbestandteilen die günstigere Auslegung gilt.
+- Das Angebot belegt Premiumschutz und nennt eine Rahmenvereinbarung
+  WEVIG/Familienwohnbau. Das konkrete GenVerbund-Dokument identifiziert sich
+  jedoch anders; der eindeutige Identifier-Join zwischen Angebot und genau
+  dieser Rahmenklausel fehlt.
+
+Wären Anwendbarkeit und gemeinsamer Gebäudescope bewiesen, wäre `20 %`
+fachlich günstiger als `30 %` beziehungsweise `40 %`. Eine globale Regel
+`SUPPLEMENT schlägt TERMS` oder `kleinere Zahl gewinnt` wäre jedoch falsch:
+Sie könnte nicht aktivierte Zusatzbedingungen, abweichende Bezugsgrößen oder
+unterschiedliche Objektbereiche vermischen.
+
+Der sichere spätere Abschluss benötigt daher einen versionierten Vertrag für
+die konkrete Dokumentaktivierung, den gemeinsamen Objekt-/Wertscope und die
+dokumentgebundene Günstigkeitsregel. Bis dahin bleibt VS-02 bewusst offen.
+Die Zeile zählt nicht als abgeschlossener R69-A-Kandidat; der Stand bleibt
+`5/40`, also `35` offen. Ein Vollrun und ein Deployment wurden nicht
+durchgeführt.
+
+Betroffene produktive Grenzen für einen späteren VS-02-Schritt:
+
+```text
+Katalog/Konzeptfamilie:
+server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json
+
+Gemeinsamer Schwellenparser:
+server/utils/policyAnalysis/residualValueThresholdContract.js
+
+Deterministische Kandidatenbindung:
+server/utils/policyAnalysis/deterministicVsEvidenceRules.js:408-422
+
+Feldextraktion:
+server/utils/policyAnalysis/requestedFieldEvidenceContract.js:1337-1355
+
+Atommaterialisierung und lokale Feldstati:
+server/utils/policyComparison/resultBuilder.js:1031-1150
+
+Paketblocker und paketweite Pflichtkomponenten:
+server/utils/policyComparison/packageReviewAudit.js:155-300
+
+Produkt-/Katalogidentität:
+server/utils/policyComparison/productContract.js
+```
+
 ### 10.25 FE-A10 – enger Einschlussscope wird vollständig, aber nicht gleichgesetzt
 
 #### 10.25.1 Ausgangsfehler
