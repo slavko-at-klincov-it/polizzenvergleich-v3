@@ -625,9 +625,7 @@ function nestedListContinuationProof({
   ];
   const documentStart = segments[0].documentStart;
   const documentEnd = segments[1].documentEnd;
-  if (
-    documentEnd - documentStart > MAX_NESTED_LIST_CONTINUATION_PROOF_CHARS
-  )
+  if (documentEnd - documentStart > MAX_NESTED_LIST_CONTINUATION_PROOF_CHARS)
     return null;
   const gapText = pageContent.slice(page.end, nextPage.start);
   const gap = {

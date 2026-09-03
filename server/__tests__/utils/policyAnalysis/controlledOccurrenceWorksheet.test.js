@@ -917,11 +917,7 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "continued-nested-list",
       catalog: structuralListContextCatalog(),
     });
-    const [occurrence] = component(
-      worksheet,
-      "QA-LIST",
-      "target"
-    ).occurrences;
+    const [occurrence] = component(worksheet, "QA-LIST", "target").occurrences;
     expect(component(worksheet, "QA-LIST", "target")).toMatchObject({
       nestedListContinuationProofContractId:
         NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
@@ -957,9 +953,7 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(proof.segments[1].text).toContain(
       "- vierter untergeordneter Gegenstand."
     );
-    expect(proof.segments[1].text).not.toContain(
-      "Gleichrangiger Folgepunkt"
-    );
+    expect(proof.segments[1].text).not.toContain("Gleichrangiger Folgepunkt");
     expect(proof.pagePrelude).toMatchObject({
       kind: "PAGE_FURNITURE",
       physicalPageNumber: 2,
@@ -967,10 +961,7 @@ describe("controlledOccurrenceWorksheet", () => {
     });
     for (const segment of proof.segments)
       expect(
-        document.pageContent.slice(
-          segment.documentStart,
-          segment.documentEnd
-        )
+        document.pageContent.slice(segment.documentStart, segment.documentEnd)
       ).toBe(segment.text);
     expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
   });
@@ -986,9 +977,7 @@ describe("controlledOccurrenceWorksheet", () => {
     });
     const target = component(worksheet, "QA-LIST", "target");
 
-    expect(target).not.toHaveProperty(
-      "nestedListContinuationProofContractId"
-    );
+    expect(target).not.toHaveProperty("nestedListContinuationProofContractId");
     expect(target.occurrences[0]).not.toHaveProperty(
       "nestedListContinuationProof"
     );
@@ -1030,16 +1019,10 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "nested-list-sibling-boundary",
       catalog: structuralListContextCatalog(),
     });
-    const [occurrence] = component(
-      worksheet,
-      "QA-LIST",
-      "target"
-    ).occurrences;
+    const [occurrence] = component(worksheet, "QA-LIST", "target").occurrences;
 
     expect(occurrence.context.text).toBe("• Zielklausel gilt für:");
-    expect(occurrence.context.text).not.toContain(
-      "Gleichrangiger Folgepunkt"
-    );
+    expect(occurrence.context.text).not.toContain("Gleichrangiger Folgepunkt");
     expect(occurrence.nestedListContinuationProof).toBeUndefined();
   });
 
@@ -1054,11 +1037,7 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "mixed-marker-adversarial",
       catalog: structuralListContextCatalog(),
     });
-    const [occurrence] = component(
-      worksheet,
-      "QA-LIST",
-      "target"
-    ).occurrences;
+    const [occurrence] = component(worksheet, "QA-LIST", "target").occurrences;
 
     expect(occurrence.context.text).toBe(
       "• Die Zielklausel ist abschließend beschrieben."
@@ -1069,10 +1048,9 @@ describe("controlledOccurrenceWorksheet", () => {
   test("does not cross a page when a heading precedes a possible subordinate bullet", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
-        [
-          "• Zielklausel gilt für:",
-          "  - untergeordneter Gegenstand;",
-        ].join("\n"),
+        ["• Zielklausel gilt für:", "  - untergeordneter Gegenstand;"].join(
+          "\n"
+        ),
         [
           "Seite 2",
           "2. Neue Vertragssektion",
@@ -1082,11 +1060,7 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "nested-list-heading-boundary",
       catalog: structuralListContextCatalog(),
     });
-    const [occurrence] = component(
-      worksheet,
-      "QA-LIST",
-      "target"
-    ).occurrences;
+    const [occurrence] = component(worksheet, "QA-LIST", "target").occurrences;
 
     expect(occurrence.context.text).toBe("• Zielklausel gilt für:");
     expect(occurrence.nestedListContinuationProof).toBeUndefined();
