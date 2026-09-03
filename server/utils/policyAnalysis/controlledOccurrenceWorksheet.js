@@ -6,6 +6,10 @@ const {
   assertCoverageOnlyCertification,
 } = require("./coverageOnlyCertificationContract");
 const coverageOnlyCertificationRegistry = require("../../resources/policyAnalysis/coverage-only-certifications.v0.1.json");
+const {
+  buildSourceBoundObjectScopeProof,
+  validateObjectScopeEvidenceContract,
+} = require("./objectScopeEvidenceContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2187,6 +2191,13 @@ function validateCatalog(catalog) {
           "NESTED_LIST_CONTINUATION_PROOF_CONTRACT_INVALID",
           `${id}:${componentId}:${nestedListContinuationProofContractId}`
         );
+      const objectScopeEvidenceContract =
+        component.objectScopeEvidenceContract === undefined
+          ? null
+          : validateObjectScopeEvidenceContract(
+              component.objectScopeEvidenceContract,
+              `${id}:${componentId}`
+            );
       const fieldGovernorPolicy =
         component.fieldGovernorPolicy === undefined
           ? null
@@ -2240,6 +2251,7 @@ function validateCatalog(catalog) {
         ...(nestedListContinuationProofContractId
           ? { nestedListContinuationProofContractId }
           : {}),
+        ...(objectScopeEvidenceContract ? { objectScopeEvidenceContract } : {}),
         ...(fieldGovernorPolicy ? { fieldGovernorPolicy } : {}),
       };
     });
@@ -3182,7 +3194,7 @@ function buildControlledOccurrenceWorksheet({
                     page.structuralBoundaryLineStarts,
                 })
               : null;
-          occurrences.push({
+          const occurrence = {
             candidateId: candidateId({
               documentFingerprint: fingerprint,
               requirementId: requirement.id,
@@ -3244,6 +3256,23 @@ function buildControlledOccurrenceWorksheet({
               documentEnd: page.start + scopeLead.pageEnd,
               text: scopeLead.text,
             },
+          };
+          const objectScopeProof = component.objectScopeEvidenceContract
+            ? buildSourceBoundObjectScopeProof({
+                contract: component.objectScopeEvidenceContract,
+                occurrence,
+                nestedListContinuationValidated: listContinuationProof
+                  ? validNestedListContinuationProof(
+                      occurrence,
+                      pageContent,
+                      document.pageMap
+                    )
+                  : false,
+              })
+            : null;
+          occurrences.push({
+            ...occurrence,
+            ...(objectScopeProof ? { objectScopeProof } : {}),
           });
         }
       }
@@ -3266,6 +3295,12 @@ function buildControlledOccurrenceWorksheet({
           ? {
               nestedListContinuationProofContractId:
                 component.nestedListContinuationProofContractId,
+            }
+          : {}),
+        ...(component.objectScopeEvidenceContract
+          ? {
+              objectScopeEvidenceContract:
+                component.objectScopeEvidenceContract,
             }
           : {}),
         ...(component.fieldGovernorPolicy

@@ -78,6 +78,18 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
         conceptSearches: component.conceptSearches || [],
         followingStructuralBoundaryProofContractId:
           component.followingStructuralBoundaryProofContractId || null,
+        ...(component.nestedListContinuationProofContractId
+          ? {
+              nestedListContinuationProofContractId:
+                component.nestedListContinuationProofContractId,
+            }
+          : {}),
+        ...(component.objectScopeEvidenceContract
+          ? {
+              objectScopeEvidenceContract:
+                component.objectScopeEvidenceContract,
+            }
+          : {}),
         ...(component.fieldGovernorPolicy
           ? { fieldGovernorPolicy: component.fieldGovernorPolicy }
           : {}),

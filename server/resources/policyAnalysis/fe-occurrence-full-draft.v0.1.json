@@ -88,6 +88,69 @@
           "label": "Indirekter Blitzschlag",
           "factRole": "DAMAGE",
           "nestedListContinuationProofContractId": "NESTED_LIST_CONTINUATION_PROOF_V1",
+          "objectScopeEvidenceContract": {
+            "contractId": "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+            "allowedEvidenceSources": [
+              "STRUCTURAL_LOCAL_CONTEXT",
+              "NESTED_LIST_CONTINUATION"
+            ],
+            "families": [
+              {
+                "objectScopeKey": "BUILDING_ELECTRICAL_INSTALLATIONS",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      [
+                        "Gebäude-Elektroinstallationen",
+                        "Gebäudeelektroinstallationen"
+                      ]
+                    ]
+                  },
+                  {
+                    "sourceKinds": ["NESTED_LIST_CONTINUATION"],
+                    "allOf": [
+                      ["Licht- und Kraftinstallationen"],
+                      [
+                        "Zähler- und Sicherungskästen",
+                        "Schalt- und Verteileranlagen"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "objectScopeKey": "OBJECTS_OUTSIDE_BUILDINGS",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [["Sachen außerhalb von Gebäuden"]]
+                  },
+                  {
+                    "sourceKinds": ["NESTED_LIST_CONTINUATION"],
+                    "allOf": [
+                      [
+                        "außerhalb von versicherten Gebäuden am Versicherungsgrundstück"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "objectScopeKey": "UNDERGROUND_CABLES",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [["Erdkabel"]]
+                  },
+                  {
+                    "sourceKinds": ["NESTED_LIST_CONTINUATION"],
+                    "allOf": [["Erd- und Telefonkabeln"]]
+                  }
+                ]
+              }
+            ]
+          },
           "aliases": [
             "indirekter Blitzschlag",
             "indirekten Blitzschlag",

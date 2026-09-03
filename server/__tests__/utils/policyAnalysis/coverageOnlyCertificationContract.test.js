@@ -133,4 +133,84 @@ describe("coverage-only certification contract", () => {
       })
     ).toThrow("COVERAGE_CERTIFICATION_REFERENCE_INVALID");
   });
+
+  test("binds continuation and object-scope evidence contracts into the requirement digest", () => {
+    const requirement = coverageOnlyRequirement();
+    const baseDigest = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement,
+    });
+    const continuationDigest = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        components: [
+          {
+            ...requirement.components[0],
+            nestedListContinuationProofContractId:
+              "NESTED_LIST_CONTINUATION_PROOF_V1",
+          },
+        ],
+      },
+    });
+    const objectScopeEvidenceContract = {
+      contractId: "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+      allowedEvidenceSources: [
+        "STRUCTURAL_LOCAL_CONTEXT",
+        "NESTED_LIST_CONTINUATION",
+      ],
+      families: [
+        {
+          objectScopeKey: "UNDERGROUND_CABLES",
+          patterns: [
+            {
+              sourceKinds: ["STRUCTURAL_LOCAL_CONTEXT"],
+              allOf: [["Erdkabel"]],
+            },
+          ],
+        },
+      ],
+    };
+    const objectScopeDigest = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        components: [
+          {
+            ...requirement.components[0],
+            objectScopeEvidenceContract,
+          },
+        ],
+      },
+    });
+    const mutatedObjectScopeDigest = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        components: [
+          {
+            ...requirement.components[0],
+            objectScopeEvidenceContract: {
+              ...objectScopeEvidenceContract,
+              families: [
+                {
+                  ...objectScopeEvidenceContract.families[0],
+                  patterns: [
+                    {
+                      sourceKinds: ["STRUCTURAL_LOCAL_CONTEXT"],
+                      allOf: [["Erdkabel", "erdverlegte Versorgungskabel"]],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(continuationDigest).not.toBe(baseDigest);
+    expect(objectScopeDigest).not.toBe(baseDigest);
+    expect(mutatedObjectScopeDigest).not.toBe(objectScopeDigest);
+  });
 });

@@ -1079,6 +1079,83 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(optedIn).toEqual(["FE-A05:indirect_lightning_damage"]);
   });
 
+  test("materializes source-bound FE-A05 object scopes for the proven A and B clause forms", () => {
+    const aWorksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "• Überspannung oder Induktion infolge indirekter Blitzschlag innerhalb und außerhalb von versicherten Gebäuden am Versicherungsgrundstück, an",
+          "- Licht- und Kraftinstallationen sowie Zähler- und Sicherungskästen;",
+        ].join("\n"),
+        ["- Erd- und Telefonkabeln.", "", "• Nächste Klausel."].join("\n"),
+      ]),
+      documentFingerprint: "fe-a05-object-scopes-a",
+      catalog: feFullCatalog,
+    });
+    const aProofs = component(
+      aWorksheet,
+      "FE-A05",
+      "indirect_lightning_damage"
+    ).occurrences.map(({ objectScopeProof }) => objectScopeProof);
+    expect(aProofs).toHaveLength(1);
+    expect(aProofs[0].objectScopeKeys).toEqual([
+      "BUILDING_ELECTRICAL_INSTALLATIONS",
+      "OBJECTS_OUTSIDE_BUILDINGS",
+      "UNDERGROUND_CABLES",
+    ]);
+    expect(
+      aProofs[0].assertions.every(
+        ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"
+      )
+    ).toBe(true);
+
+    const bWorksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "- Indirekter Blitzschlag an Gebäude-Elektroinstallationen (12PG0340)",
+          "- Indirekter Blitzschlag an Sachen außerhalb von Gebäuden (12PA0160)",
+          "",
+          "FE04 Erdkabel",
+          "Mitversichert ist der indirekter Blitzschlag an Erdkabel.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "fe-a05-object-scopes-b",
+      catalog: feFullCatalog,
+    });
+    const bKeys = [
+      ...new Set(
+        component(bWorksheet, "FE-A05", "indirect_lightning_damage")
+          .occurrences.flatMap(
+            ({ objectScopeProof }) => objectScopeProof?.objectScopeKeys || []
+          )
+      ),
+    ].sort();
+    expect(bKeys).toEqual([
+      "BUILDING_ELECTRICAL_INSTALLATIONS",
+      "OBJECTS_OUTSIDE_BUILDINGS",
+      "UNDERGROUND_CABLES",
+    ]);
+  });
+
+  test("does not bind FE-A05 object scope from a word-window neighbouring clause", () => {
+    const longPrefix = "Fremdinhalt ".repeat(180);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        `${longPrefix}Gebäude-Elektroinstallationen. Indirekter Blitzschlag ist erwähnt.`,
+      ]),
+      documentFingerprint: "fe-a05-word-window-object-scope",
+      catalog: feFullCatalog,
+    });
+    const target = component(
+      worksheet,
+      "FE-A05",
+      "indirect_lightning_damage"
+    );
+    expect(target.occurrences[0].context.unitType).toBe(
+      "WORD_WINDOW_FALLBACK"
+    );
+    expect(target.occurrences[0]).not.toHaveProperty("objectScopeProof");
+  });
+
   test("rejects an unknown nested-list continuation proof contract", () => {
     expect(() =>
       buildControlledOccurrenceWorksheet({
