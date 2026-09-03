@@ -1083,11 +1083,6 @@ describe("controlledOccurrenceWorksheet", () => {
     const aWorksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
         [
-          "1.1Gebäude (Betriebs-, Büro-, Lager-, Wohn- und sonstige Gebäude)",
-          "das sind:",
-          "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
-        ].join("\n"),
-        [
           "• Überspannung oder Induktion infolge indirekter Blitzschlag innerhalb und außerhalb von versicherten Gebäuden am Versicherungsgrundstück, an",
           "- Licht- und Kraftinstallationen sowie Zähler- und Sicherungskästen;",
         ].join("\n"),
@@ -1586,6 +1581,11 @@ describe("controlledOccurrenceWorksheet", () => {
   test("materializes FE-C02 membership and non-membership as directed source-bound edges", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
+        [
+          "1.1Gebäude (Betriebs-, Büro-, Lager-, Wohn- und sonstige Gebäude)",
+          "das sind:",
+          "·Haustechnische Anlagen und Adaptierungen sofern sie sich im Eigentum des Gebäudeeigentümers befinden und soweit der Gebäudeeigentümer für die Wiederherstellung nachweislich aufzukommen hat und im Gebäudeneuwert enthalten sind.",
+        ].join("\n"),
         [
           "Nicht als Betriebsinhalt gelten:",
           "·Solar- und Photovoltaikanlagen;",
