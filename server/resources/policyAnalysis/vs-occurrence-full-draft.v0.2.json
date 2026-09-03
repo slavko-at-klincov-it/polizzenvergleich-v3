@@ -468,6 +468,13 @@
       "id": "VS-18",
       "label": "Einfriedungen, Zäune, Mauern, Tore mitversichert",
       "requestedFields": [],
+      "componentFamilyContract": {
+        "contractId": "DIRECTED_OBJECT_FAMILY_V1",
+        "rootComponentId": "enclosures",
+        "memberComponentIds": ["fences", "walls", "gates"],
+        "rootCoversMembers": true,
+        "rowComparison": "COVERAGE_PRESENCE_ONLY"
+      },
       "components": [
         {
           "id": "enclosures",

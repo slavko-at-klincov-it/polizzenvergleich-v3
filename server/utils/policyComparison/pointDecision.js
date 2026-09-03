@@ -51,6 +51,10 @@ const {
   buildVs08ConditionConsensusAudit,
   vs08ConditionConsensusDecision,
 } = require("./vs08UnderinsuranceConditionConsensusContract");
+const {
+  buildObjectFamilyCoverageAudit,
+  objectFamilyCoverageDecision,
+} = require("./objectFamilyComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -655,6 +659,9 @@ function requirementContract({ atoms, packageSummary, categoryId }) {
   const contracts = relevant.map((atom) => ({
     digest: atom.requirementContractDigest,
     componentSatisfactionPolicy: atom.componentSatisfactionPolicy,
+    ...(atom.componentFamilyContract
+      ? { componentFamilyContract: atom.componentFamilyContract }
+      : {}),
     components: atom.declaredComponents,
   }));
   if (contracts.length === 0) {
@@ -1099,6 +1106,15 @@ function decidePoint({
       "MISSING_ONE_SIDE",
       "Unklar: Nur ein Paket enthält belegten Inhalt. Fehlender Beleg bedeutet weder Ausschluss noch Nachteil."
     );
+  const objectFamilyCoverageAudit = buildObjectFamilyCoverageAudit({
+    categoryId,
+    atomsA,
+    atomsB,
+    requirementContractA: contractA,
+    requirementContractB: contractB,
+  });
+  if (objectFamilyCoverageAudit)
+    return objectFamilyCoverageDecision(objectFamilyCoverageAudit);
   if (
     packageA.reviewStatus !== "BELEGT" ||
     packageB.reviewStatus !== "BELEGT"

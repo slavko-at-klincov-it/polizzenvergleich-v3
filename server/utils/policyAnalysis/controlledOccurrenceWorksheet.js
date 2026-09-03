@@ -41,6 +41,8 @@ const ALLOWED_SCOPE_POLICIES = new Set([
   "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
 ]);
 const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
+const DIRECTED_OBJECT_FAMILY_CONTRACT_ID = "DIRECTED_OBJECT_FAMILY_V1";
+const COVERAGE_PRESENCE_ONLY = "COVERAGE_PRESENCE_ONLY";
 const ALLOWED_ABSENCE_COMPARISON_POLICIES = new Set([
   "ASSUME_NOT_INCLUDED_AFTER_COMPLETE_ZERO_OCCURRENCE_V1",
 ]);
@@ -1675,6 +1677,45 @@ function validateCatalog(catalog) {
           : {}),
       };
     });
+    const componentFamilyContract = (() => {
+      if (requirement.componentFamilyContract === undefined) return null;
+      const contract = requirement.componentFamilyContract;
+      if (
+        !contract ||
+        typeof contract !== "object" ||
+        Array.isArray(contract) ||
+        JSON.stringify(Object.keys(contract).sort()) !==
+          JSON.stringify(
+            [
+              "contractId",
+              "memberComponentIds",
+              "rootComponentId",
+              "rootCoversMembers",
+              "rowComparison",
+            ].sort()
+          ) ||
+        contract.contractId !== DIRECTED_OBJECT_FAMILY_CONTRACT_ID ||
+        contract.rootCoversMembers !== true ||
+        contract.rowComparison !== COVERAGE_PRESENCE_ONLY ||
+        !componentIds.has(contract.rootComponentId) ||
+        !Array.isArray(contract.memberComponentIds) ||
+        contract.memberComponentIds.length === 0 ||
+        new Set(contract.memberComponentIds).size !==
+          contract.memberComponentIds.length ||
+        contract.memberComponentIds.includes(contract.rootComponentId) ||
+        contract.memberComponentIds.some(
+          (componentId) => !componentIds.has(componentId)
+        )
+      )
+        throw worksheetError("COMPONENT_FAMILY_CONTRACT_INVALID", id);
+      return {
+        contractId: contract.contractId,
+        rootComponentId: contract.rootComponentId,
+        memberComponentIds: [...contract.memberComponentIds],
+        rootCoversMembers: true,
+        rowComparison: contract.rowComparison,
+      };
+    })();
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -1906,6 +1947,7 @@ function validateCatalog(catalog) {
           throw worksheetError("COVERAGE_ROLE_COMPONENT_REQUIRED", id);
         return policy;
       })(),
+      ...(componentFamilyContract ? { componentFamilyContract } : {}),
       bindingStructures,
       scopeRules,
       components,
@@ -2641,6 +2683,9 @@ function buildControlledOccurrenceWorksheet({
         ? { absenceCertification: requirement.absenceCertification }
         : {}),
       coverageAggregationPolicy: requirement.coverageAggregationPolicy,
+      ...(requirement.componentFamilyContract
+        ? { componentFamilyContract: requirement.componentFamilyContract }
+        : {}),
       componentCount: grouped.components.length,
       components: grouped.components,
     };

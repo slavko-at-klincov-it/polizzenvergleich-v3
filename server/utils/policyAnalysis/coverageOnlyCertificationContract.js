@@ -65,6 +65,9 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
       absenceComparisonPolicy: requirement?.absenceComparisonPolicy || null,
       coverageAggregationPolicy:
         requirement?.coverageAggregationPolicy || "ALL_COMPONENT_EFFECTS",
+      ...(requirement?.componentFamilyContract
+        ? { componentFamilyContract: requirement.componentFamilyContract }
+        : {}),
       bindingStructures: requirement?.bindingStructures || [],
       components: (requirement?.components || []).map((component) => ({
         id: component.id,

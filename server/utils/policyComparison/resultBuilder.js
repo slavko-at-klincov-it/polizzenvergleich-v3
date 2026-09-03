@@ -50,6 +50,9 @@ function worksheetRequirementContract(worksheet, requirement) {
     digest: requirementSearchContractDigest({ catalogId, requirement }),
     componentSatisfactionPolicy:
       requirement.componentSatisfactionPolicy || null,
+    ...(requirement.componentFamilyContract
+      ? { componentFamilyContract: requirement.componentFamilyContract }
+      : {}),
     components: (requirement.components || []).map(({ id, factRole }) => ({
       id,
       factRole,
@@ -1149,6 +1152,9 @@ function materializeAtomicFacts({
       componentSatisfactionPolicy:
         requirement?.componentSatisfactionPolicy || "ALL",
       coverageAggregationPolicy: requirement?.coverageAggregationPolicy || null,
+      ...(requirement?.componentFamilyContract
+        ? { componentFamilyContract: requirement.componentFamilyContract }
+        : {}),
       scopePolicy: requirement?.scopePolicy || null,
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]

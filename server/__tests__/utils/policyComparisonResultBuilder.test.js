@@ -2044,9 +2044,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V48_PACKAGE_MISSING_DIAGNOSTIC",
+      id: "CUSTOMER_CORE_5_V49_DIRECTED_OBJECT_FAMILY",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_V9",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_V10",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });
