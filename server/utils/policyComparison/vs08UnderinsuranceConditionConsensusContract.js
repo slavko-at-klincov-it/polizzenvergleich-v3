@@ -86,8 +86,8 @@ function normalized(value) {
 function validRequirementContract(contract) {
   return Boolean(
     contract?.digest === REQUIREMENT_CONTRACT_DIGEST &&
-    contract?.componentSatisfactionPolicy === "ALL" &&
-    sameJson(contract?.components, DECLARED_COMPONENTS)
+      contract?.componentSatisfactionPolicy === "ALL" &&
+      sameJson(contract?.components, DECLARED_COMPONENTS)
   );
 }
 
@@ -114,62 +114,62 @@ function expectedDocuments(side, documents) {
 function validCommonSearchCell(cell, requirementContract) {
   return Boolean(
     cell?.catalogId === CATALOG_ID &&
-    cell?.searchPlanId === SEARCH_PLAN_ID &&
-    String(cell?.documentUuid || "").trim() &&
-    cell?.negativeSearchPolicy ===
-      "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" &&
-    cell?.absenceMeaning === "CONDITION_ONLY" &&
-    cell?.comparisonPolicy == null &&
-    cell?.absenceCertification == null &&
-    sameJson(cell?.requirementContract, requirementContract) &&
-    Number.isInteger(cell?.physicalPagesChecked) &&
-    cell.physicalPagesChecked > 0 &&
-    cell.physicalPagesChecked === cell.totalPhysicalPages &&
-    sameJson(canonicalStrings(cell?.aliases), canonicalStrings(ALIASES)) &&
-    sameJson(cell?.conceptSearchIds, CONCEPT_SEARCH_IDS) &&
-    cell?.gates?.negativeSearchApproved === true &&
-    cell?.gates?.certifiedNegativeSearch === false &&
-    cell?.gates?.completeTextExtraction === true &&
-    cell?.gates?.completeCategoryTechnicalContract === true
+      cell?.searchPlanId === SEARCH_PLAN_ID &&
+      String(cell?.documentUuid || "").trim() &&
+      cell?.negativeSearchPolicy ===
+        "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" &&
+      cell?.absenceMeaning === "CONDITION_ONLY" &&
+      cell?.comparisonPolicy == null &&
+      cell?.absenceCertification == null &&
+      sameJson(cell?.requirementContract, requirementContract) &&
+      Number.isInteger(cell?.physicalPagesChecked) &&
+      cell.physicalPagesChecked > 0 &&
+      cell.physicalPagesChecked === cell.totalPhysicalPages &&
+      sameJson(canonicalStrings(cell?.aliases), canonicalStrings(ALIASES)) &&
+      sameJson(cell?.conceptSearchIds, CONCEPT_SEARCH_IDS) &&
+      cell?.gates?.negativeSearchApproved === true &&
+      cell?.gates?.certifiedNegativeSearch === false &&
+      cell?.gates?.completeTextExtraction === true &&
+      cell?.gates?.completeCategoryTechnicalContract === true
   );
 }
 
 function validFoundCell(cell, requirementContract) {
   return Boolean(
     validCommonSearchCell(cell, requirementContract) &&
-    cell.disposition === "RELEVANT_FOUND" &&
-    cell.comparisonTreatment == null &&
-    cell.gates.zeroOccurrenceTerminal === false &&
-    cell.gates.zeroCandidateTerminal === false &&
-    cell.gates.serverNegativeTerminal === false
+      cell.disposition === "RELEVANT_FOUND" &&
+      cell.comparisonTreatment == null &&
+      cell.gates.zeroOccurrenceTerminal === false &&
+      cell.gates.zeroCandidateTerminal === false &&
+      cell.gates.serverNegativeTerminal === false
   );
 }
 
 function validControlledZeroCell(cell, requirementContract) {
   return Boolean(
     validCommonSearchCell(cell, requirementContract) &&
-    cell.disposition === "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH" &&
-    cell.comparisonTreatment === "DOCUMENTATION_ONLY_V1" &&
-    cell.gates.zeroOccurrenceTerminal === true &&
-    cell.gates.zeroCandidateTerminal === true &&
-    cell.gates.serverNegativeTerminal === true
+      cell.disposition === "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH" &&
+      cell.comparisonTreatment === "DOCUMENTATION_ONLY_V1" &&
+      cell.gates.zeroOccurrenceTerminal === true &&
+      cell.gates.zeroCandidateTerminal === true &&
+      cell.gates.serverNegativeTerminal === true
   );
 }
 
 function commonAtom(atom, requirementContract, searchCell) {
   return Boolean(
     atom?.requirementId === CATEGORY_ID &&
-    atom?.componentId === COMPONENT_ID &&
-    atom?.factRole === "CONDITION" &&
-    atom?.requirementContractDigest === requirementContract.digest &&
-    atom?.componentSatisfactionPolicy === "ALL" &&
-    atom?.coverageAggregationPolicy === "ALL_COMPONENT_EFFECTS" &&
-    atom?.scopePolicy === "GENERAL_REQUIRED" &&
-    sameJson(atom?.declaredComponents, DECLARED_COMPONENTS) &&
-    Array.isArray(atom?.documentUuids) &&
-    atom.documentUuids.length === 1 &&
-    atom.documentUuids[0] === searchCell.documentUuid &&
-    sameJson(atom?.searchAudit, searchCell)
+      atom?.componentId === COMPONENT_ID &&
+      atom?.factRole === "CONDITION" &&
+      atom?.requirementContractDigest === requirementContract.digest &&
+      atom?.componentSatisfactionPolicy === "ALL" &&
+      atom?.coverageAggregationPolicy === "ALL_COMPONENT_EFFECTS" &&
+      atom?.scopePolicy === "GENERAL_REQUIRED" &&
+      sameJson(atom?.declaredComponents, DECLARED_COMPONENTS) &&
+      Array.isArray(atom?.documentUuids) &&
+      atom.documentUuids.length === 1 &&
+      atom.documentUuids[0] === searchCell.documentUuid &&
+      sameJson(atom?.searchAudit, searchCell)
   );
 }
 
@@ -235,37 +235,37 @@ function validConditionFacts(atom) {
 function completeConditionalAtom(atom, requirementContract, searchCell) {
   return Boolean(
     commonAtom(atom, requirementContract, searchCell) &&
-    validFoundCell(searchCell, requirementContract) &&
-    atom?.evidencePresence === "FOUND" &&
-    atom?.coverageEffect === "CONDITIONAL" &&
-    atom?.conflictState === "NONE" &&
-    atom?.selectedScopePicture === "GENERAL" &&
-    sameJson(atom?.unresolvedCandidateIds, []) &&
-    comparisonApplicability(atom) === PACKAGE_MEMBER &&
-    validSourceBindings(atom) &&
-    validConditionFacts(atom) &&
-    completeRawComparisonAtom(atom)
+      validFoundCell(searchCell, requirementContract) &&
+      atom?.evidencePresence === "FOUND" &&
+      atom?.coverageEffect === "CONDITIONAL" &&
+      atom?.conflictState === "NONE" &&
+      atom?.selectedScopePicture === "GENERAL" &&
+      sameJson(atom?.unresolvedCandidateIds, []) &&
+      comparisonApplicability(atom) === PACKAGE_MEMBER &&
+      validSourceBindings(atom) &&
+      validConditionFacts(atom) &&
+      completeRawComparisonAtom(atom)
   );
 }
 
 function cleanNotFoundAtom(atom, requirementContract, searchCell) {
   return Boolean(
     commonAtom(atom, requirementContract, searchCell) &&
-    validControlledZeroCell(searchCell, requirementContract) &&
-    atom?.evidencePresence === "NOT_FOUND" &&
-    atom?.coverageEffect === "UNKNOWN" &&
-    atom?.conflictState === "NONE" &&
-    atom?.selectedScopePicture === "UNKNOWN" &&
-    atom?.documentApplicability === "UNKNOWN" &&
-    sameJson(atom?.selectedCandidateIds, []) &&
-    sameJson(atom?.unresolvedCandidateIds, []) &&
-    sameJson(atom?.sources, []) &&
-    atom?.requestedFieldStatus === "NOT_FOUND" &&
-    sameJson(atom?.requestedFields, ["condition"]) &&
-    sameJson(atom?.optionalFields, []) &&
-    sameJson(atom?.fields, [
-      { field: "condition", status: "NOT_FOUND", facts: [] },
-    ])
+      validControlledZeroCell(searchCell, requirementContract) &&
+      atom?.evidencePresence === "NOT_FOUND" &&
+      atom?.coverageEffect === "UNKNOWN" &&
+      atom?.conflictState === "NONE" &&
+      atom?.selectedScopePicture === "UNKNOWN" &&
+      atom?.documentApplicability === "UNKNOWN" &&
+      sameJson(atom?.selectedCandidateIds, []) &&
+      sameJson(atom?.unresolvedCandidateIds, []) &&
+      sameJson(atom?.sources, []) &&
+      atom?.requestedFieldStatus === "NOT_FOUND" &&
+      sameJson(atom?.requestedFields, ["condition"]) &&
+      sameJson(atom?.optionalFields, []) &&
+      sameJson(atom?.fields, [
+        { field: "condition", status: "NOT_FOUND", facts: [] },
+      ])
   );
 }
 
