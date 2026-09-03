@@ -3792,14 +3792,14 @@ describe("policy comparison result builder", () => {
       "Versicherungsschutz gemäß der nachstehend angeführten Leistungsinformation besteht unter der Voraussetzung, dass diese Sparten versichert werden und die versicherten Sachen sich im Eigentum des Versicherungsnehmers und / oder Gebäudeeigentümers befinden und / oder dieser vertraglich für die Wiederbeschaffung / Wiederherstellung aufzukommen hat.";
     const generalGovernor = "Versichert sind";
     const generalTarget = "Solar- und Fotovoltaikanlagen";
-    const narrowGovernor =
-      "Zusätzlich versichert sind Schäden durch Überspannung oder Induktion infolge Blitzschlag";
+    const narrowGovernor = "Zusätzlich versichert sind Schäden durch";
     const narrowTarget = "Solar- und Fotovoltaikanlagen";
     const firstPage = [prerequisite, "", generalGovernor].join("\n");
     const secondPage = [
       `- ${generalTarget};`,
       "",
       narrowGovernor,
+      "Überspannung oder Induktion infolge Blitzschlag:",
       `- ${narrowTarget};`,
     ].join("\n");
     const pageContent = `${firstPage}\n${secondPage}`;
