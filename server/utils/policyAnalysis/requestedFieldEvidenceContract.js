@@ -586,6 +586,45 @@ function extractCoverageLimitFacts(options) {
   );
 }
 
+function extractScaffoldingCostLimitFacts(options) {
+  const context = validatedContext(options.occurrence);
+  const occurrenceStart = Number(options.occurrence?.documentStart);
+  const occurrenceEnd = Number(options.occurrence?.documentEnd);
+  if (
+    !["LIST_ITEM", "PARAGRAPH"].includes(options.occurrence?.context?.unitType) ||
+    !Number.isInteger(occurrenceStart) ||
+    !Number.isInteger(occurrenceEnd) ||
+    occurrenceStart < context.documentStart ||
+    occurrenceEnd <= occurrenceStart ||
+    occurrenceEnd > context.documentEnd ||
+    context.text.slice(
+      occurrenceStart - context.documentStart,
+      occurrenceEnd - context.documentStart
+    ) !== String(options.occurrence?.exactText || "")
+  )
+    return [];
+
+  return extractCoverageLimitFacts(options).filter((fact) => {
+    const sourceStart = Number(fact?.source?.documentStart);
+    if (
+      !Number.isInteger(sourceStart) ||
+      sourceStart < occurrenceEnd ||
+      sourceStart - occurrenceEnd > 160
+    )
+      return false;
+    const between = context.text.slice(
+      occurrenceEnd - context.documentStart,
+      sourceStart - context.documentStart
+    );
+    return (
+      !/[.!?;\n\r]/u.test(between) &&
+      !/\b(?:Kran\p{L}*|Notverglas\p{L}*|Folgesch\p{L}*|Selbstbehalt\p{L}*)\b/iu.test(
+        between
+      )
+    );
+  });
+}
+
 const FE_C07_LIMIT_QUALIFIER =
   "jeweils; auf Erstes Risiko; Bezugsgröße Gebäudeversicherungssumme";
 const FE_C07_SCOPED_OBJECT =
@@ -1823,6 +1862,8 @@ function extractorFor(requirement, field, component = null) {
   if (requirementId === "VS-16" && field === "limit")
     return extractLocalCoverageLimitFacts;
   if (requirementId === "VS-21" && field === "limit") return extractLimitFacts;
+  if (requirementId === "VS-24" && field === "limit")
+    return extractScaffoldingCostLimitFacts;
   if (requirementId === "VS-28" && field === "duration")
     return extractDurationFacts;
   if (requirementId === "VS-08" && field === "condition")
@@ -1839,7 +1880,6 @@ function extractorFor(requirement, field, component = null) {
       "VS-20",
       "VS-22",
       "VS-23",
-      "VS-24",
       "VS-29",
       "VS-31",
       "VS-34",

@@ -781,6 +781,14 @@
       "label": "Gerüstkosten im Schadenfall",
       "requestedFields": [],
       "optionalFields": ["limit"],
+      "scopeRules": {
+        "narrowScopeKeys": [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE"
+        ]
+      },
       "components": [
         {
           "id": "scaffolding_costs",

@@ -19,7 +19,7 @@ const {
 const VS22_CATEGORY_ID = "VS-22";
 const VS22_CATALOG_ID = "vs-occurrence-full-draft-v0.16";
 const VS22_REQUIREMENT_CONTRACT_DIGEST =
-  "7022516926810b8ca7f891566e03c72ebe274c4342541012ecf5480fe55ffadb";
+  "c19f2ed24d74a7349a8210035ba35e774f0e8043e34681b1693df83e6b601c44";
 const VS22_COMPONENTS = Object.freeze([
   Object.freeze({ id: "disposal_costs", factRole: "COST" }),
   Object.freeze({ id: "hazardous_waste", factRole: "INSURED_OBJECT" }),

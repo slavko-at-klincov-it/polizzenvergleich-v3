@@ -17,7 +17,7 @@ const CATEGORY_ID = "VS-08";
 const CATALOG_ID = "vs-occurrence-full-draft-v0.16";
 const COMPONENT_ID = "underinsurance_waiver_condition";
 const REQUIREMENT_CONTRACT_DIGEST =
-  "b7a27985064b74516ef6baf7feea47014a4e5b368bc01c27106c4aedec160778";
+  "2a1c45db1fe2effc6c9a435fe4ef69d7658d92cc48ddf51e474477315c53a501";
 const DECLARED_COMPONENTS = Object.freeze([
   Object.freeze({ id: COMPONENT_ID, factRole: "CONDITION" }),
 ]);

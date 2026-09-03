@@ -4,10 +4,6 @@ const {
   buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 const {
-  buildCandidateTriagePayload,
-  deriveCandidateBinding,
-} = require("../../../utils/policyAnalysis/candidateTriageContract");
-const {
   REQUESTED_FIELD_STATUS,
   materializeRequestedFieldEvidence,
 } = require("../../../utils/policyAnalysis/requestedFieldEvidenceContract");
@@ -45,17 +41,13 @@ function worksheetFor(text) {
 }
 
 function selectedCandidates(worksheet) {
-  return buildCandidateTriagePayload(worksheet).bindingTargets.flatMap(
-    (target) =>
-      target.members.map((member) => ({
-        requirementId: target.requirementId,
-        componentId: member.componentId,
-        candidateId: member.candidateId,
-        binding: deriveCandidateBinding({
-          roleMatch: target.roleResolution.roleMatch,
-          scopeMatch: target.scopeResolution.scopeMatch,
-        }),
-      }))
+  return worksheet.requirements[0].components.flatMap((component) =>
+    component.occurrences.map(({ candidateId }) => ({
+      requirementId: "VS-24",
+      componentId: component.id,
+      candidateId,
+      binding: "DIRECT",
+    }))
   );
 }
 
@@ -76,6 +68,14 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     expect(requirement).toMatchObject({
       requestedFields: [],
       optionalFields: ["limit"],
+      scopeRules: {
+        narrowScopeKeys: expect.arrayContaining([
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+          "GLASBRUCH_INSURANCE",
+        ]),
+      },
       components: [
         {
           id: "scaffolding_costs",
@@ -135,6 +135,15 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
 
     expect(occurrence.context.text).not.toContain("EUR 5.000");
     expect(occurrence.context.text).not.toContain("EUR 1.000");
+    expect(result.fields[0]).toMatchObject({ status: "NOT_FOUND", facts: [] });
+  });
+
+  test.each([
+    "Gerüstkosten sind mitversichert; Krankosten bis EUR 10.000.",
+    "Gerüstkosten sind mitversichert. Selbstbehalt EUR 500.",
+  ])("rejects a local value governed by another subject: %s", (text) => {
+    const { result } = requestedFieldsFor(text);
+
     expect(result.fields[0]).toMatchObject({ status: "NOT_FOUND", facts: [] });
   });
 });
