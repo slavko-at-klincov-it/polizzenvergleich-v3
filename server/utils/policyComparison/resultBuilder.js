@@ -42,6 +42,10 @@ const {
   buildVs25SourceAtomDigestReplay,
 } = require("./vs25AuthorityReconstructionLimitPortfolioContract");
 const {
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+  buildMembershipConditionScopeSourceAtomDigestReplay,
+} = require("./membershipConditionScopeComparisonContract");
+const {
   buildSourceBoundScopedPackageReferenceProofs,
 } = require("../policyAnalysis/scopedPackageReferenceEvidenceContract");
 const {
@@ -1848,6 +1852,14 @@ function buildComparisonResult(documentRuns, metadata = {}) {
               expectedDocumentsB,
             })
           : null;
+      const membershipConditionScopeSourceAtomDigestReplay =
+        pointDecision.ruleId === MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID
+          ? buildMembershipConditionScopeSourceAtomDigestReplay({
+              categoryId,
+              atomsA,
+              atomsB,
+            })
+          : null;
       return {
         categoryId,
         stage: first.stage,
@@ -1859,13 +1871,16 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         ...(vs22SourceAtomDigestReplay ? { vs22SourceAtomDigestReplay } : {}),
         ...(vs24SourceAtomDigestReplay ? { vs24SourceAtomDigestReplay } : {}),
         ...(vs25SourceAtomDigestReplay ? { vs25SourceAtomDigestReplay } : {}),
+        ...(membershipConditionScopeSourceAtomDigestReplay
+          ? { membershipConditionScopeSourceAtomDigestReplay }
+          : {}),
       };
     });
     return { categoryView, rows };
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 11,
+    schemaVersion: 12,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
@@ -1881,7 +1896,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
     categories,
     totals,
     proofLimit:
-      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Ausschließlich für LW-20 darf ein vollständiger kontrollierter Nichtfund mit einem belegten, paketweit nicht aufgehobenen Standardausschluss als gleiche dokumentierte Nichtdeckung bewertet werden; der Negativbefund wird dabei niemals in einen ausdrücklichen Ausschluss umgeschrieben. Für FE-A01 darf die vollständig quellengebundene Branddefinition 'bestimmungswidriges Entstehen oder Ausbreiten' gegenüber einer Definition nur über die bestimmungswidrige Ausbreitung als breiterer Begriffsumfang bewertet werden. Für VS-15 darf ausschließlich der beidseitig vollständig kontrollierte Nichtfund der namentlichen Nebengebäude-Anführung bei zugleich beidseitig belegtem allgemeinem Nebengebäudeschutz als gleiche dokumentierte Fundlage bewertet werden; unterschiedliche Limits werden dadurch nicht gleichgesetzt. Für VS-22 darf belegter Sondermüllschutz mit eigenem belegtem Limit gegenüber einem Paket mit belegten allgemeinen Entsorgungskosten, aber vollständig kontrolliertem Nichtfund beider Sondermüllkomponenten, als Vorteil bewertet werden. Dieser Vergleichsschluss behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit auf der fundlosen Seite. Für VS-24 darf Gleichwertigkeit nur bei beidseitig vollständig belegten Gerüstkosten nach einem Glasschaden im exakt gleichen Glasbruchscope und ohne dokumentiertes eigenes lokales Gerüstkostenlimit festgestellt werden; fehlende lokale Limitangaben werden nicht als unbegrenzte Deckung bezeichnet. Für VS-25 darf eine höhere relative Grenze für behördliche Wiederaufbau-Mehrkosten nur bei beidseitig belegter Neuwertdeckung, typisierter gemeinsamer Bezugsgröße, vollständig gebundenen Kosten- und Limitbelegen sowie – bei Prozent-/Euro-Doppeldarstellung – identischem Klauselcode und centgenauer VS-01-Rechnung als Vorteil ausgewiesen werden. Der Schluss bewertet ausschließlich die relative Prozentgrenze und behauptet ohne beidseitige Euro-Basis keinen höheren absoluten Eurobetrag. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
+      "Punktweise, regelgebundene Vergleichsentscheidung. Ein vollständig belegter reiner Einschluss darf gegenüber einer unter demselben versionierten Komponenten- und Suchvertrag vollständig kontrolliert fundlosen Gegenseite als dokumentierter Vorteil ausgewiesen werden. Ausschließlich für LW-20 darf ein vollständiger kontrollierter Nichtfund mit einem belegten, paketweit nicht aufgehobenen Standardausschluss als gleiche dokumentierte Nichtdeckung bewertet werden; der Negativbefund wird dabei niemals in einen ausdrücklichen Ausschluss umgeschrieben. Für FE-A01 darf die vollständig quellengebundene Branddefinition 'bestimmungswidriges Entstehen oder Ausbreiten' gegenüber einer Definition nur über die bestimmungswidrige Ausbreitung als breiterer Begriffsumfang bewertet werden. Für FE-C02 darf ausschließlich ein vollständiger sourcegebundener Boolescher Vergleich derselben Photovoltaik-Komponente im selben Feuerscope einen Vorteil für den breiteren vertraglichen Voraussetzungsscope ausweisen; dies behauptet weder einen ausdrücklichen Ausschluss noch die konkrete Nichterfüllung der engeren Bedingungen. Für VS-15 darf ausschließlich der beidseitig vollständig kontrollierte Nichtfund der namentlichen Nebengebäude-Anführung bei zugleich beidseitig belegtem allgemeinem Nebengebäudeschutz als gleiche dokumentierte Fundlage bewertet werden; unterschiedliche Limits werden dadurch nicht gleichgesetzt. Für VS-22 darf belegter Sondermüllschutz mit eigenem belegtem Limit gegenüber einem Paket mit belegten allgemeinen Entsorgungskosten, aber vollständig kontrolliertem Nichtfund beider Sondermüllkomponenten, als Vorteil bewertet werden. Dieser Vergleichsschluss behauptet weder einen ausdrücklichen Ausschluss noch ein Null-Euro-Limit auf der fundlosen Seite. Für VS-24 darf Gleichwertigkeit nur bei beidseitig vollständig belegten Gerüstkosten nach einem Glasschaden im exakt gleichen Glasbruchscope und ohne dokumentiertes eigenes lokales Gerüstkostenlimit festgestellt werden; fehlende lokale Limitangaben werden nicht als unbegrenzte Deckung bezeichnet. Für VS-25 darf eine höhere relative Grenze für behördliche Wiederaufbau-Mehrkosten nur bei beidseitig belegter Neuwertdeckung, typisierter gemeinsamer Bezugsgröße, vollständig gebundenen Kosten- und Limitbelegen sowie – bei Prozent-/Euro-Doppeldarstellung – identischem Klauselcode und centgenauer VS-01-Rechnung als Vorteil ausgewiesen werden. Der Schluss bewertet ausschließlich die relative Prozentgrenze und behauptet ohne beidseitige Euro-Basis keinen höheren absoluten Eurobetrag. Andere Suchbefunde bleiben von ihrer fachlichen Wirkung getrennt. Es gibt keinen Gesamtsieger; Dokumentrang, Ersatzwirkung und unvollständige Fakten bleiben sichtbar prüfpflichtig.",
   };
   validateCustomerComparison(result);
   return result;

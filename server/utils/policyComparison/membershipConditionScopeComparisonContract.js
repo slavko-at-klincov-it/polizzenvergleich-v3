@@ -23,6 +23,10 @@ const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_V1";
 const MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_V1";
+const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID =
+  "FE_C02_BROADER_MEMBERSHIP_CONDITION_SCOPE_V1";
+const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE =
+  "BROADER_MEMBERSHIP_CONDITION_SCOPE";
 const DIRECT_MODE = "DIRECT_INCLUDED_SOURCE_FORMULA";
 const MEMBERSHIP_MODE = "MEMBERSHIP_DEFINED_TYPED_CONDITIONS";
 const MAX_PREDICATES = 12;
@@ -818,6 +822,31 @@ function buildMembershipConditionScopeComparisonAudit({
   return { ...body, auditDigestSha256: sha256(body) };
 }
 
+function membershipConditionScopeComparisonDecision(audit) {
+  if (
+    audit?.contractId !==
+      MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_CONTRACT_ID ||
+    audit?.categoryId !== "FE-C02" ||
+    audit?.comparisonComplete !== true ||
+    audit?.readyForDecision !== true ||
+    !["A", "B"].includes(audit?.broaderConditionScopeSide) ||
+    audit?.broaderConditionScopeSide === audit?.narrowerConditionScopeSide
+  )
+    return null;
+  const winnerSide = audit.broaderConditionScopeSide;
+  const narrowerSide = audit.narrowerConditionScopeSide;
+  return {
+    schemaVersion: 8,
+    outcome: winnerSide === "A" ? "VORTEIL_A" : "VORTEIL_B",
+    reasonCode: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+    reason: `Vorteil Polizze ${winnerSide}: Für Photovoltaikanlagen gelten in Polizze ${winnerSide} die breiteren vertraglichen Voraussetzungen. Polizze ${narrowerSide} verlangt zusätzlich kumulativ Eigentum des Gebäudeeigentümers, eine nachweisliche Wiederherstellungspflicht und die Einbeziehung in den Gebäudeneuwert. Bewertet wird der Umfang der Vertragsvoraussetzungen; ein ausdrücklicher Ausschluss oder die konkrete Nichterfüllung in Polizze ${narrowerSide} wird damit nicht behauptet.`,
+    reviewRequired: false,
+    ruleId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+    dimensions: [],
+    membershipConditionScopeComparisonAudit: audit,
+  };
+}
+
 function validateMembershipConditionScopeComparisonAudit(audit, options) {
   const externalAtomsProvided = Boolean(
     Array.isArray(options?.atomsA) && Array.isArray(options?.atomsB)
@@ -861,12 +890,15 @@ module.exports = {
   DOCUMENT_RESOLUTION_POLICY,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_CONTRACT_ID,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
   MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_CONTRACT_ID,
   SATISFACTION_POLICY,
   WINNER_POLICY,
   buildMembershipConditionScopeComparisonAudit,
   buildMembershipConditionScopeSourceAtomDigestReplay,
   compareBooleanConditionFormulas,
+  membershipConditionScopeComparisonDecision,
   validMembershipConditionScopeSourceAtomDigestReplay,
   validateMembershipConditionScopeComparisonAudit,
   validateMembershipConditionScopeComparisonContract,

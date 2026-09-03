@@ -74,6 +74,10 @@ const {
   buildVs25AuthorityLimitPortfolioAudit,
   vs25AuthorityLimitPortfolioDecision,
 } = require("./vs25AuthorityReconstructionLimitPortfolioContract");
+const {
+  buildMembershipConditionScopeComparisonAudit,
+  membershipConditionScopeComparisonDecision,
+} = require("./membershipConditionScopeComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1205,6 +1209,23 @@ function decidePoint({
   if (vs25AuthorityLimitPortfolioAudit)
     return vs25AuthorityLimitPortfolioDecision(
       vs25AuthorityLimitPortfolioAudit
+    );
+  const membershipConditionScopeComparisonAudit =
+    buildMembershipConditionScopeComparisonAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      contract: atomsA?.find(
+        (atom) => atom?.requirementId === categoryId
+      )?.membershipConditionScopeComparisonContract,
+      expectedDocumentsA,
+      expectedDocumentsB,
+    });
+  if (membershipConditionScopeComparisonAudit)
+    return membershipConditionScopeComparisonDecision(
+      membershipConditionScopeComparisonAudit
     );
   if (
     packageA.reviewStatus !== "BELEGT" ||

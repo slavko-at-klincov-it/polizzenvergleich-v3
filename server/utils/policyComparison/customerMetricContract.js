@@ -69,6 +69,12 @@ const {
 const {
   validatePackageActivatedObjectMembershipAudit,
 } = require("../policyAnalysis/packageActivatedObjectMembershipAuditContract");
+const {
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+  membershipConditionScopeComparisonDecision,
+  validateMembershipConditionScopeComparisonAudit,
+} = require("./membershipConditionScopeComparisonContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -730,6 +736,56 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
             rowKey,
           ]);
       }
+      const membershipConditionScopeDecisionDetected =
+        row.pointDecision?.ruleId ===
+          MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID ||
+        row.pointDecision?.reasonCode ===
+          MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE ||
+        row.pointDecision?.membershipConditionScopeComparisonAudit !== undefined;
+      if (membershipConditionScopeDecisionDetected) {
+        if (!validDocumentManifest)
+          validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
+        const audit = row.pointDecision.membershipConditionScopeComparisonAudit;
+        try {
+          validateMembershipConditionScopeComparisonAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            contract: audit?.comparisonContract,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+            sourceAtomDigestReplay:
+              row.membershipConditionScopeSourceAtomDigestReplay,
+          });
+        } catch (error) {
+          validationError("COMPARISON_FE_C02_CONDITION_SCOPE_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = membershipConditionScopeComparisonDecision(audit);
+        if (
+          Number(result.schemaVersion) < 12 ||
+          row.categoryView !== "FE" ||
+          row.categoryId !== "FE-C02" ||
+          outcome !==
+            (audit?.broaderConditionScopeSide === "A"
+              ? POINT_OUTCOME.ADVANTAGE_A
+              : POINT_OUTCOME.ADVANTAGE_B) ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          row.pointDecision?.packageActivatedObjectMembershipAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError(
+            "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_INVALID",
+            [rowKey]
+          );
+      }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
           !unilateralDecision &&
@@ -995,6 +1051,8 @@ function customerSafeComparisonReadView(result) {
             vs22SourceAtomDigestReplay: _privateVs22Replay,
             vs24SourceAtomDigestReplay: _privateVs24Replay,
             vs25SourceAtomDigestReplay: _privateVs25Replay,
+            membershipConditionScopeSourceAtomDigestReplay:
+              _privateMembershipConditionScopeReplay,
             ...publicRow
           } = row;
           const explanation = packageReviewCustomerExplanation(

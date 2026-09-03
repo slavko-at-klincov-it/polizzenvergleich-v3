@@ -1,12 +1,29 @@
 const crypto = require("crypto");
 const {
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
   buildMembershipConditionScopeComparisonAudit,
   buildMembershipConditionScopeSourceAtomDigestReplay,
   compareBooleanConditionFormulas,
+  membershipConditionScopeComparisonDecision,
   validateMembershipConditionScopeComparisonAudit,
   validateMembershipConditionScopeComparisonContract,
 } = require("../../utils/policyComparison/membershipConditionScopeComparisonContract");
+const {
+  decidePoint,
+} = require("../../utils/policyComparison/pointDecision");
+const {
+  customerSafeComparisonReadView,
+  deriveCustomerMetrics,
+  validateCustomerComparison,
+} = require("../../utils/policyComparison/customerMetricContract");
+const {
+  customerResultText,
+} = require("../../utils/policyComparison/customerResultPresenter");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 const {
   PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID,
 } = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
@@ -466,6 +483,84 @@ describe("membership condition-scope comparison contract", () => {
         blockers: [{ code: "COVERAGE_EFFECT_NOT_DECISIVE", side: "A" }],
       },
     });
+  });
+
+  test("turns only the complete audit into a side-symmetric condition-scope advantage", () => {
+    const inputA = fixture();
+    const decisionA = decidePoint(inputA);
+    expect(decisionA).toMatchObject({
+      outcome: "VORTEIL_A",
+      reasonCode: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+      ruleId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+      reviewRequired: false,
+      membershipConditionScopeComparisonAudit: {
+        broaderConditionScopeSide: "A",
+      },
+    });
+    expect(decisionA.reason).not.toMatch(/nicht gedeckt/iu);
+    expect(decisionA.reason).toContain(
+      "ein ausdrücklicher Ausschluss oder die konkrete Nichterfüllung"
+    );
+
+    const inputB = fixture({ swap: true });
+    expect(decidePoint(inputB)).toMatchObject({
+      outcome: "VORTEIL_B",
+      reasonCode: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
+      ruleId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+      reviewRequired: false,
+      membershipConditionScopeComparisonAudit: {
+        broaderConditionScopeSide: "B",
+      },
+    });
+  });
+
+  test("replays the customer decision and removes the private atom digest", () => {
+    const input = fixture();
+    const audit = buildMembershipConditionScopeComparisonAudit(input);
+    const pointDecision = membershipConditionScopeComparisonDecision(audit);
+    const categories = [
+      {
+        categoryView: "FE",
+        rows: [
+          {
+            categoryId: "FE-C02",
+            outcome: "UNTERSCHIED_FACHLICH_PRÜFEN",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision,
+            membershipConditionScopeSourceAtomDigestReplay:
+              buildMembershipConditionScopeSourceAtomDigestReplay(input),
+          },
+        ],
+      },
+    ];
+    const result = {
+      schemaVersion: 12,
+      status: "COMPARISON_RESULT_MATERIALIZED",
+      productProfile: PRODUCT_PROFILE,
+      documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
+      categories,
+      totals: deriveCustomerMetrics(categories),
+    };
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      customerReviewRequired: 0,
+      pointDecisions: { VORTEIL_A: 1 },
+    });
+    const customerRow =
+      customerSafeComparisonReadView(result).categories[0].rows[0];
+    expect(customerRow).not.toHaveProperty(
+      "membershipConditionScopeSourceAtomDigestReplay"
+    );
+    expect(customerResultText(customerRow)).toContain("Vorteil Polizze A:");
+    expect(customerResultText(customerRow)).not.toMatch(/nicht gedeckt/iu);
+
+    const tampered = JSON.parse(JSON.stringify(result));
+    tampered.categories[0].rows[0].pointDecision.membershipConditionScopeComparisonAudit.formulaComparison.relationship =
+      "EQUIVALENT";
+    expect(() => validateCustomerComparison(tampered)).toThrow(
+      "COMPARISON_FE_C02_CONDITION_SCOPE_AUDIT_INVALID"
+    );
   });
 
   test("uses document role and status only as consistency metadata", () => {
