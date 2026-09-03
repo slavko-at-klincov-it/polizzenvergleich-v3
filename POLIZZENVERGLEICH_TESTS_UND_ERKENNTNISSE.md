@@ -3102,18 +3102,18 @@ physischen Seiten gebunden.
 
 Das LF-Schema v0.1 umfasst zehn Referenzansichten:
 
-| ID      | LF-orientierte Ansicht                                      | Punkte |
-| ------- | ------------------------------------------------------------ | -----: |
-| `LF-PR` | Produktgrundlage und Geltungsvoraussetzungen                  |      2 |
-| `LF-VS` | Versicherte Gebäude, Sachen und Grundstücksbestandteile      |      4 |
-| `LF-KO` | Spartenübergreifende Kosten und Ertragsausfälle              |      3 |
-| `LF-FE` | Feuerversicherung                                             |      4 |
-| `LF-ST` | Sturm und Elementargefahren                                   |      4 |
-| `LF-LW` | Leitungswasser und Deckungsvarianten                          |      5 |
-| `LF-GL` | Glasbruch                                                     |      3 |
-| `LF-HP` | Gebäude- und Grundstückshaftpflicht                           |      3 |
-| `LF-OK` | Ökoschutz, zeitliche und örtliche Geltung                     |      2 |
-| `LF-AV` | Allgemeine Entschädigungs- und Vertragsbestimmungen           |      5 |
+| ID      | LF-orientierte Ansicht                                  | Punkte |
+| ------- | ------------------------------------------------------- | -----: |
+| `LF-PR` | Produktgrundlage und Geltungsvoraussetzungen            |      2 |
+| `LF-VS` | Versicherte Gebäude, Sachen und Grundstücksbestandteile |      4 |
+| `LF-KO` | Spartenübergreifende Kosten und Ertragsausfälle         |      3 |
+| `LF-FE` | Feuerversicherung                                       |      4 |
+| `LF-ST` | Sturm und Elementargefahren                             |      4 |
+| `LF-LW` | Leitungswasser und Deckungsvarianten                    |      5 |
+| `LF-GL` | Glasbruch                                               |      3 |
+| `LF-HP` | Gebäude- und Grundstückshaftpflicht                     |      3 |
+| `LF-OK` | Ökoschutz, zeitliche und örtliche Geltung               |      2 |
+| `LF-AV` | Allgemeine Entschädigungs- und Vertragsbestimmungen     |      5 |
 
 Der Runner zerlegte die neun B-Dokumente in 228 seitengebundene Fenster,
 verwendete `text-embedding-dinghy-law-4b-v1` zur Kandidatensuche und
