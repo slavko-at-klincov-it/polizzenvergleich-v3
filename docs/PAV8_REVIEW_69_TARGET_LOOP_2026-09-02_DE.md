@@ -72,9 +72,10 @@ EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
 Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
-`VS-18`, `VS-21`, `VS-22` und `LW-12` gehören nach den in Abschnitt 10.19,
-10.27, 10.28, 10.29 beziehungsweise 10.21 dokumentierten Zielnachweisen nicht
-mehr zur operativen Restliste.
+`VS-18`, `VS-21`, `VS-22`, `FE-A10`, `LW-07`, `LW-12` und `ST-27` gehören
+nach den in Abschnitt 10.19, 10.27, 10.28, 10.29, 10.25, 10.24, 10.21
+beziehungsweise 10.23 dokumentierten Zielnachweisen nicht mehr zur
+operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
@@ -3104,8 +3105,9 @@ d366e54c2 test(comparison): replay VS-22 through customer validation
 
 Die endgültigen Gates binden:
 
-1. Dokument-UUID, PDF-SHA, Seite, Paketseite, Dokumentrolle und
-   Dokumentstatus an das unveränderte Eingabemanifest;
+1. Dokument-UUID, PDF-SHA, Paketseite A/B, Dokumentrolle und Dokumentstatus an
+   das unveränderte Eingabemanifest sowie Quellseiten an gültige
+   Dokumentgrenzen und die Kandidaten-/Feldquelle;
 2. `documentApplicability` deterministisch an Status und Evidenzfund, ohne
    Angebot, Rahmenbedingung oder Nachtrag als Paketmitglied auszuschließen;
 3. jeden Sondermüll-Limitwert an einen ausgewählten Kandidaten derselben
@@ -3150,8 +3152,13 @@ Der abschließende exakte Mac-Studio-Nachweis lautet:
 Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
 Commit: d366e54c2e304fc47d51c5eae55cd98b89f2085e
 Runtime: Node v22.23.2
+Runtime-Repo:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
 Modell: qwen/qwen3.6-35b-a3b
+Modell-Tokenlimit: 42496
 Produktprofil: CUSTOMER_CORE_5_V59_VS22_HAZARDOUS_WASTE_PORTFOLIO_HARDENED
+Vergleichsvertrag:
+PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_V20
 Auditvertrag: VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2
 Replayvertrag: VS22_SOURCE_ATOM_DIGEST_REPLAY_V1
 
@@ -3170,6 +3177,10 @@ QA-Artefakt:
 /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-22-CUSTOMER-REPLAY-D366E54C-20260903
 Summary-Digest:
 168614be7d8b410a7065cba29a000e0a4ef6278bd026dd1a4f114e344d328920
+Source-Input-Manifest-Digest:
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+Input-Selection-Dateidigest:
+6d65f9693ebeb31f79574f916c48f2a0c882a98fbe1ef8c741565fbadfcd7514
 Target-Selection-Digest:
 2150ea1e2f3f936eaa0b43ea372e120ef4d9cb7eff483c44091639c2a11fadb7
 Producer-Digest:
@@ -3187,12 +3198,25 @@ Grund: INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE
 Review erforderlich: nein
 ```
 
-Die mehrfach wiederholten Zwischenläufe `VS-22-PORTFOLIO-197A22D4`,
-`VS-22-STATUS-7DBE27A3`, `VS-22-SEMANTIC-F7B262BE`,
-`VS-22-REPLAY-BDF2C046` und `VS-22-FINAL-342AF830` bestätigten denselben
-gerichteten Endzustand, ausgenommen den oben erläuterten absichtlichen
-Fail-Closed-Zwischenstand. Der letzte Lauf prüft zusätzlich den privaten
-Replay durch den echten Customer-Metric-Pfad.
+Die mehrfach wiederholten Zehn-Dokumente-Läufe ergaben:
+
+```text
+PORTFOLIO-197A22D4  f9222fa75bb0b12b6bd930a84deb6ee6fd982f4ffe643a440dac19f6dc8e309f  VORTEIL_A / kein Review / Audit V1
+STATUS-7DBE27A3     0eb70e197ad3d8e8001c9035b2973a94fc4c3402888cfb6cd89288d75c17b018  VORTEIL_A / kein Review / Audit V1
+SEMANTIC-F7B262BE   d737e7605264cd5caa47d3180e42c117263fd9cee6befe6f8456c7901ce7f99b  VORTEIL_A / kein Review / Audit V1
+ATTEST-BCE5CFFB     c77147f70fc6b7413119130775a430396820c5e6db447b8d09e603534c3e727e  UNKLAR / Review / erwarteter Fail-Closed-Zwischenstand
+REPLAY-BDF2C046     7b26967e96e274fc2a14c16c289633968a3a0390ab3c07367b452a95ee0802aa  VORTEIL_A / kein Review / Audit V2
+FINAL-342AF830      8b8c1dd52cc3e425b044f561039d240b8ea8bba2d47614d69e31ee569dc89c13  VORTEIL_A / kein Review / Audit V2
+CUSTOMER-D366E54C   168614be7d8b410a7065cba29a000e0a4ef6278bd026dd1a4f114e344d328920  VORTEIL_A / kein Review / Audit V2
+```
+
+Der letzte Ziellauf bestätigt die VS-22-Entscheidung über
+`materializeAtomicFacts`, `summarizePackage` und `decidePoint`. Er ist kein
+vollständiger `resultBuilder`-zu-Customer-Validator-E2E-Lauf. Der fokussierte
+Mac-Test aus `d366e54c2` baut ein Customer-Result mit unabhängigem Replay auf,
+prüft `validateCustomerComparison`, erkennt kohärent neu gehashte Auditdrift
+und bestätigt, dass `customerSafeComparisonReadView` das private Replay-Feld
+entfernt. Diese beiden Nachweise bleiben getrennt dokumentiert.
 
 Die verbleibende Grenze ist ausdrücklich dokumentiert: Der getrennte
 SHA-256-Replay schützt die interne Revisionskonsistenz und erkennt Drift
