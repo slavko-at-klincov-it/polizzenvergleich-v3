@@ -36,6 +36,15 @@ function sha256(value) {
     .digest("hex");
 }
 
+function formulaEvidenceContract() {
+  return JSON.parse(
+    JSON.stringify(
+      feCatalog.requirements.find(({ id }) => id === "FE-C02")
+        .supportingCoverageConditionFormulaEvidenceContracts[0]
+    )
+  );
+}
+
 function contract() {
   return {
     contractId: MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
@@ -97,14 +106,12 @@ function membershipFormula() {
 }
 
 function formulaProof() {
-  const formulaEvidenceContract = feCatalog.requirements.find(
-    ({ id }) => id === "FE-C02"
-  ).supportingCoverageConditionFormulaEvidenceContracts[0];
+  const evidenceContract = formulaEvidenceContract();
   const body = {
     schemaVersion: 1,
     contractId: SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
     evidenceContractDigest: sha256(
-      validateCoverageConditionFormulaContract(formulaEvidenceContract)
+      validateCoverageConditionFormulaContract(evidenceContract)
     ),
     documentFingerprint: "2".repeat(64),
     formulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
@@ -212,9 +219,6 @@ function membershipProof(
 }
 
 function commonAtom(document, overrides = {}) {
-  const formulaEvidenceContract = feCatalog.requirements.find(
-    ({ id }) => id === "FE-C02"
-  ).supportingCoverageConditionFormulaEvidenceContracts[0];
   return {
     requirementId: "FE-C02",
     componentId: "photovoltaic_as_damaged_object",
@@ -241,7 +245,7 @@ function commonAtom(document, overrides = {}) {
     ],
     packageActivatedObjectMembershipAuditContract: packageMembershipContract(),
     supportingCoverageConditionFormulaEvidenceContracts: [
-      formulaEvidenceContract,
+      formulaEvidenceContract(),
     ],
     membershipConditionScopeComparisonContract: contract(),
     requirementContractDigest: "f".repeat(64),
