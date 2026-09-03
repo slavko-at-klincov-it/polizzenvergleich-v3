@@ -10,9 +10,7 @@ const {
   cleanNotFoundAtom,
   validComponentTerminal,
 } = require("./bilateralAbsenceContract");
-const {
-  hasOptionalCoverageSource,
-} = require("./comparisonAtomSemantics");
+const { hasOptionalCoverageSource } = require("./comparisonAtomSemantics");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
 
 const VS22_CATEGORY_ID = "VS-22";
