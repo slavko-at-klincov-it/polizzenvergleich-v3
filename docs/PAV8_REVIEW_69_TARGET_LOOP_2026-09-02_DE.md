@@ -59,8 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `8/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `VS-22`,
-`FE-A10`, `LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 32 Fälle der
+Status: `9/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `VS-22`,
+`VS-24`, `FE-A10`, `LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 31 Fälle der
 ursprünglichen Familie bleiben offen.
 
 ```text
@@ -72,10 +72,10 @@ EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
 Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
-`VS-18`, `VS-21`, `VS-22`, `FE-A10`, `LW-07`, `LW-12` und `ST-27` gehören
-nach den in Abschnitt 10.19, 10.27, 10.28, 10.29, 10.25, 10.24, 10.21
-beziehungsweise 10.23 dokumentierten Zielnachweisen nicht mehr zur
-operativen Restliste.
+`VS-18`, `VS-21`, `VS-22`, `VS-24`, `FE-A10`, `LW-07`, `LW-12` und `ST-27`
+gehören nach den in Abschnitt 10.19, 10.27, 10.28, 10.29, 10.30, 10.25,
+10.24, 10.21 beziehungsweise 10.23 dokumentierten Zielnachweisen nicht mehr
+zur operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
@@ -2193,6 +2193,230 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
+
+### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
+
+#### 10.30.1 Reproduzierter Fehler und fachliche Ursache
+
+Der gebundene Ausgangslauf behandelte bei VS-24 sowohl die Gerüstkosten als
+auch ein eigenes Gerüstkostenlimit als Pflichtkomponenten. In den zehn
+bereitgestellten Dokumenten existiert auf beiden Seiten ein positiver,
+inhaltlich passender Gerüstkostenbeleg im Glasbruchbereich. Ein eigenes lokal
+zu dieser Leistung gehörendes Limit ist dagegen auf keiner Seite dokumentiert.
+Dadurch wurden zwei tatsächlich vollständige Deckungsbelege künstlich zu
+Teilbelegen herabgestuft.
+
+Die in der Nähe vorkommenden Werte sind keine Gerüstkostenlimits:
+
+- die `50 %` auf Seite A gehören zu einer anderen Leistung;
+- `EUR 5.000` und `EUR 1.000` auf Seite B gehören ebenfalls zu anderen
+  Klauseln.
+
+Ein globales Übernehmen benachbarter Zahlen hätte deshalb falsche Limits
+erzeugt. Umgekehrt durfte das Weglassen des Limits nicht automatisch zu
+`unbegrenzt` umgedeutet werden. Die korrekte Aussage lautet ausschließlich:
+Auf beiden Seiten sind Gerüstkosten nach einem versicherten Glasschaden
+dokumentiert; für keine Seite ist ein eigenes lokales Gerüstkostenlimit
+dokumentiert.
+
+#### 10.30.2 Kleine Forward-Fixes und Abhängigkeiten
+
+Die Änderung wurde in getrennten, erhaltenen Schritten aufgebaut:
+
+```text
+ad6a1f252  fix(analysis): make VS-24 limit optional
+878879a86  fix(analysis): bind VS-24 optional limits locally
+c013bfbd2  style(analysis): format VS-24 local limit binding
+107ec1b7f  fix(analysis): preserve exact VS-24 comparison scope
+fbe80848e  style(test): format VS-24 scope cases
+23f298add  test(analysis): use explicit VS-24 cost governor
+e6fd49301  fix(comparison): gate VS-24 by exact scope identity
+bae7e898b  style(test): format VS-24 scope hardening
+aab4344bc  feat(comparison): certify VS-24 glass cost equality
+507b642ac  style(comparison): format VS-24 equality contract
+0c41acdee  test(comparison): replay VS-24 wording symmetrically
+71a010732  test(comparison): isolate VS-24 contract fixtures
+ccf4834ca  fix(comparison): replay VS-24 customer evidence
+6de49731c  style(comparison): format VS-24 customer replay
+```
+
+Der Katalog `vs-occurrence-full-draft-v0.16` deklariert nur noch
+`scaffolding_costs/COST` als Pflichtkomponente; `limit` bleibt ein optionales
+Feld derselben Komponente. Der lokale Feldbinder darf ein Limit nur aus der
+gebundenen Gerüstkostenklausel übernehmen. Die genaue enge Scope-Identität
+`GLASBRUCH_INSURANCE` wird von der deterministischen Auswahl über Prepared
+Evidence, Package Summary und kanonisches Atom bis in die Vergleichsprüfung
+erhalten. Mehrere oder widersprüchliche enge Scopes bleiben fail-closed und
+erzeugen keine Gleichheit.
+
+Der Vergleichsvertrag akzeptiert VS-24 nur unter allen folgenden Bedingungen:
+
+1. exakt VS-24 und `scaffolding_costs/COST`;
+2. auf beiden Seiten vollständige Paketmanifeste und `BELEGT`;
+3. je Seite exakt ein positives Atom mit `INCLUDED` und deterministischer
+   Direktbindung;
+4. auf beiden Seiten exakt `GLASBRUCH_INSURANCE`;
+5. keine offenen Kandidaten, Konflikte, bedingten oder optionalen
+   Deckungsformulierungen;
+6. kein lokales Gerüstkostenlimit auf einer Seite;
+7. keine Zahl, Prozentangabe, Kappung oder Unbegrenzt-Markierung im lokalen
+   Quelltext.
+
+Versionierte Bindungen:
+
+```text
+Produktprofil:
+CUSTOMER_CORE_5_V64_VS24_CUSTOMER_REPLAY_VALIDATION
+Kanonischer Atomvertrag:
+PACKAGE_MEMBER_CANONICAL_ATOM_V2
+Requirement-Digest:
+2ccf74464a4dbc28c3855e771ba3ae9918f73da28dd5181235941a5c2ee0495d
+Audit:
+VS24_GLASS_LOSS_SCAFFOLDING_COST_EQUALITY_AUDIT_V1
+Vergleichsregel:
+VS24_EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT_V1
+Replay:
+VS24_SOURCE_ATOM_DIGEST_REPLAY_V1
+Reason-Code:
+EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT
+```
+
+Die Customer-Validierung rekonstruiert die Entscheidung aus den projizierten
+Atomen und verwirft manipulierte private Replays. Der öffentliche Safe View
+entfernt den privaten Replay-Baustein.
+
+#### 10.30.3 Mac-Studio-Validierung
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: 6de49731c5f9448f52558c6e4916b649ccab72cb
+Runtime: AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
+Node: v22.23.2
+Modell im Zielweg: qwen/qwen3.6-35b-a3b
+Kontextfenster: 42496
+Formatprüfung: PASS
+Fokussierte Regression: 8/8 Suites, 219/219 Tests PASS
+Breite Utility-Regression: 106/109 Suites, 1581/1605 Tests PASS
+```
+
+Die 24 roten Tests gehören exakt zu den drei bereits bekannten historischen
+QA-Fixtures:
+
+```text
+targetedCategoryMaterializationContract.test.js
+targetedQaManifestContract.test.js
+baselineWorksheetRebuildContract.test.js
+TARGETED_QA_PROFILE_CATALOG_MISMATCH: VS
+```
+
+Es ist keine neue VS-24- oder Nachbarfehlersignatur entstanden. Zusätzlich
+wurde VS-22 auf demselben Commit erneut über alle zehn Dokumente ausgeführt:
+
+```text
+QA-Artefakt: VS-22-POST-VS24-6DE49731-20260903
+Summary-Digest:
+ba8a19f0410baf56c3dad8d4d3477ab74be13179fee433311999d2f65d155d36
+Target-Selection-Digest:
+4f10a4c48c2aa3ab0789529cf294f9ad83f7c98ff517e0606bddd09a040890df
+Producer-Digest:
+3a0e13e4f67abfd4d0ca08c6dc89a228f5da54e55619a6625f2984170a0eeb9a
+Triage-/Evidence-Aufrufe: 3 / 3
+Serverrejects/-terminals: 38 / 25
+Ergebnis: VORTEIL_A / kein Review
+```
+
+Damit ist nachgewiesen, dass die VS-24-Katalogänderung den bereits
+abgenommenen VS-22-Zielweg nicht zurückgesetzt hat.
+
+#### 10.30.4 Gebundene Zehn-Dokument-Läufe
+
+Alle Läufe verwenden dasselbe unveränderte Eingabemanifest:
+
+```text
+50dceb20550f6c4947bf7fe852cd483ec7f452009099c7ebf697cae37190f091
+```
+
+```text
+Lauf                          Summary-Digest                                                    Ergebnis
+BASELINE-F795FE7E             4201c001f86fc84f1fa33d1bb11c4bd0fc7ee0cf0868a432bc2aff4070be054a  UNKLAR / Paketstatus blockiert
+OPTIONAL-LIMIT-C013BFBD       09903156eef6d23d280390207cb210b5923238f54775d1541c8a015e463a1fd6  UNKLAR / nur Scopeblocker
+SCOPE-23F298AD                0d6f79b1ce69004404f7eaaedc093323b9372723c0a3dacbf55bff504fb064b2  A/B BELEGT, noch UNKLAR
+SCOPE-GATE-BAE7E898           f4c627f46f81cedd6e0681458194efb6f07baf915c9e28815a94a5ffa3298e3d  absichtlich UNKLAR
+EQUALITY-71A01073             30de7bf7b6aef89f6bb19b3b7a301eb38b1485716042cd073e0d8bfc3eb487fc  GLEICHWERTIG / kein Review
+CUSTOMER-REPLAY-6DE49731      d76d845bcd15c27dec393647d0159a1ff3c907a71d02f352992a02f5112deb10  GLEICHWERTIG / kein Review
+```
+
+Finale Artefaktbindungen:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-24-CUSTOMER-REPLAY-6DE49731-20260903
+Katalog-Digest:
+cc758d1774524484226af571ea51a7928017d805a3dcda5269f9495394c96144
+Target-Selection-Digest:
+8c373eee9b7d8f070666fc7a5988bbff83a97de98e1b476baecfd80572551a5b
+Producer-Digest:
+7b60ebcd1373059bb0eaa9cf77a6949d93e64299a56af7cbb24455d890e8a276
+Dokumente: 10, davon A: 1 und B: 9
+Triage-/Evidence-Modellaufrufe: 0 / 0
+Triage-Serverrejects: 2
+Evidence-Serverterminals: 8
+```
+
+Reale positive Quellen:
+
+```text
+A: 4417a01f-7f73-44de-979a-3dcf9e65ca63, MAIN_POLICY,
+   FRAMEWORK_TERMS, physische Seite 15, "Kosten für Gerüste"
+B: 6fc71468-…, SUPPLEMENT, FRAMEWORK_TERMS,
+   physische Seite 14, "Gerüstkosten"
+Scope beider Seiten: GLASBRUCH_INSURANCE
+A-Atomdigest: 2c1029148873d6b80ff11a31992fabf7874aac17889d08956a8c690b2e52caaa
+B-Atomdigest: cac24a765514f31d66771f8514b1f9584b877ecbfd4df15e71ef35a7fac495cd
+```
+
+Der gezielte Lauf bestätigt die Fachentscheidung aus den zehn Dokumenten. Er
+ruft `summarizePackage` und `decidePoint` direkt auf; der Name
+`CUSTOMER-REPLAY` darf deshalb nicht als echter Builder-zu-Customer-E2E-Lauf
+verstanden werden. Den Customer-Validator, den Tamper-Abbruch und das
+Entfernen des privaten Replays bestätigt die fokussierte Mac-Test-Suite mit
+manuell aufgebautem Customer Result.
+
+#### 10.30.5 Ergebnis, Projektion und Beweisgrenze
+
+VS-24 ist im gebundenen Zielpaket nun `GLEICHWERTIG` ohne Kundenreview. Die
+noch nicht durch einen neuen 224-Zeilen-Lauf bestätigte Projektion verschiebt
+sich damit von
+
+```text
+VORTEIL_A 3 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 12 / UNKLAR 52
+```
+
+auf
+
+```text
+VORTEIL_A 3 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 122 / NICHT_VERGLEICHBAR 12 / UNKLAR 51
+```
+
+R69-A steht damit bei `9/40`; `31` Fälle der Ausgangsfamilie bleiben offen.
+Das ursprüngliche 40er-Inventar und die historische Komponentenliste bleiben
+als Ausgangsbefund unverändert.
+
+Der Nachweis gilt für die bekannten zehn Dokumente und die synthetischen
+positiven, negativen, adversarialen und Scope-Varianten. Es wurde noch kein
+unbekannter Versicherer-/Dokument-Holdout bestanden; daraus folgt keine
+99-Prozent-Aussage. Der Vertrag ist bewusst auf VS-24, Glasbruchscope, exakt
+eine positive Gerüstkostenquelle je Seite und fehlende lokale Limitangabe
+begrenzt. Die privaten Hash-Replays belegen interne Revisionskonsistenz, sind
+aber keine externe Signatur gegen vollständiges Neuschreiben aller Artefakte.
+Der VS-24-Audit bezieht PDF-SHA und PageMap über das vorgelagerte
+Target-Pipeline-Gate; er validiert diese beiden Provenienzen nicht nochmals
+selbstständig.
+
+Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
+durchgeführt. Die installierte Kundenanwendung blieb unverändert.
 
 ### 10.28 VS-21 – Aufräum-/Abbruchkosten und inkompatible Limitformen
 
