@@ -42,6 +42,9 @@ const {
   buildVs25SourceAtomDigestReplay,
 } = require("./vs25AuthorityReconstructionLimitPortfolioContract");
 const {
+  buildSourceBoundScopedPackageReferenceProofs,
+} = require("../policyAnalysis/scopedPackageReferenceEvidenceContract");
+const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
@@ -1357,6 +1360,29 @@ function materializeAtomicFacts({
       }
     }
     const target = targetsById.get(judgement.targetId);
+    const supportingScopedPackageReferenceProofs = (() => {
+      const contracts =
+        requirement?.supportingScopedPackageReferenceEvidenceContracts || [];
+      const proofs =
+        requirement?.supportingScopedPackageReferenceProofs || [];
+      if (contracts.length === 0) return [];
+      const expected = contracts
+        .flatMap((contract) =>
+          buildSourceBoundScopedPackageReferenceProofs({
+          contract,
+          documentArtifact,
+          })
+        )
+        .sort((left, right) =>
+          left.proofDigest.localeCompare(right.proofDigest)
+        );
+      const actual = [...proofs].sort((left, right) =>
+        left.proofDigest.localeCompare(right.proofDigest)
+      );
+      if (JSON.stringify(actual) !== JSON.stringify(expected))
+        throw new Error("SCOPED_PACKAGE_REFERENCE_PROOF_REPLAY_INVALID");
+      return JSON.parse(JSON.stringify(actual));
+    })();
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
       .map((candidate) => {
@@ -1422,6 +1448,14 @@ function materializeAtomicFacts({
             supportingObjectMembershipProofs: JSON.parse(
               JSON.stringify(requirement.supportingObjectMembershipProofs || [])
             ),
+          }
+        : {}),
+      ...(requirement?.supportingScopedPackageReferenceEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingScopedPackageReferenceEvidenceContracts:
+              requirement.supportingScopedPackageReferenceEvidenceContracts,
+            supportingScopedPackageReferenceProofs,
           }
         : {}),
       scopePolicy: requirement?.scopePolicy || null,

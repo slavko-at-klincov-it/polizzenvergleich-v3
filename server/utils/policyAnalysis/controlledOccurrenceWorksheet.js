@@ -14,6 +14,10 @@ const {
   buildSourceBoundObjectMembershipProof,
   validateObjectMembershipEvidenceContract,
 } = require("./objectMembershipEvidenceContract");
+const {
+  buildSourceBoundScopedPackageReferenceProofs,
+  validateScopedPackageReferenceEvidenceContract,
+} = require("./scopedPackageReferenceEvidenceContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2331,6 +2335,23 @@ function validateCatalog(catalog) {
         requirement.supportingObjectMembershipEvidenceContracts,
         `${id}:supportingObjectMembershipEvidenceContracts`
       );
+    const supportingScopedPackageReferenceEvidenceContracts = Array.isArray(
+      requirement.supportingScopedPackageReferenceEvidenceContracts
+    )
+      ? requirement.supportingScopedPackageReferenceEvidenceContracts.map(
+          (contract, index) =>
+            validateScopedPackageReferenceEvidenceContract(
+              contract,
+              `${id}:supportingScopedPackageReferenceEvidenceContracts[${index}]`
+            )
+        )
+      : [];
+    if (
+      requirement.supportingScopedPackageReferenceEvidenceContracts !==
+        undefined &&
+      supportingScopedPackageReferenceEvidenceContracts.length === 0
+    )
+      throw worksheetError("SCOPED_PACKAGE_REFERENCE_CONTRACTS_INVALID", id);
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -2565,6 +2586,9 @@ function validateCatalog(catalog) {
       ...(componentFamilyContract ? { componentFamilyContract } : {}),
       ...(supportingObjectMembershipEvidenceContracts.length > 0
         ? { supportingObjectMembershipEvidenceContracts }
+        : {}),
+      ...(supportingScopedPackageReferenceEvidenceContracts.length > 0
+        ? { supportingScopedPackageReferenceEvidenceContracts }
         : {}),
       bindingStructures,
       scopeRules,
@@ -3445,6 +3469,18 @@ function buildControlledOccurrenceWorksheet({
         catalogId: catalog.catalogId,
         requirement,
       });
+    const supportingScopedPackageReferenceProofs = (
+      requirement.supportingScopedPackageReferenceEvidenceContracts || []
+    ).flatMap((contract) =>
+      buildSourceBoundScopedPackageReferenceProofs({
+        contract,
+        documentArtifact: {
+          schemaVersion: 1,
+          fingerprint,
+          document: { ...document, sourceDocumentId: fingerprint },
+        },
+      })
+    );
     return {
       id: requirement.id,
       label: requirement.label,
@@ -3476,6 +3512,14 @@ function buildControlledOccurrenceWorksheet({
             supportingObjectMembershipEvidenceContracts:
               requirement.supportingObjectMembershipEvidenceContracts,
             supportingObjectMembershipProofs,
+          }
+        : {}),
+      ...(requirement.supportingScopedPackageReferenceEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingScopedPackageReferenceEvidenceContracts:
+              requirement.supportingScopedPackageReferenceEvidenceContracts,
+            supportingScopedPackageReferenceProofs,
           }
         : {}),
       componentCount: grouped.components.length,

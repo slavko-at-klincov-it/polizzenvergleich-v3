@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.14",
+  "catalogId": "fe-occurrence-full-draft-v0.15",
   "categoryView": "FE",
   "requirements": [
     {
@@ -782,6 +782,26 @@
             "CURRENT_PAGE_OBJECT_CLASSIFICATION",
             "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
           ]
+        }
+      ],
+      "supportingScopedPackageReferenceEvidenceContracts": [
+        {
+          "contractId": "SOURCE_BOUND_SCOPED_PACKAGE_REFERENCE_EVIDENCE_V1",
+          "perilScopeKey": "FEUER_INSURANCE",
+          "perilHeadingAliases": [
+            "Feuerversicherung",
+            "Feuer-Versicherung"
+          ],
+          "coveredObjectKey": "BUILDING",
+          "coveredObjectAliases": [
+            "Wohngebäude zum Neuwert",
+            "Gebäude zum Neuwert"
+          ],
+          "referenceFamilyKey": "EABS",
+          "referenceTitleAliases": [
+            "Ergänzende allgemeine Bedingungen für die Sachversicherung"
+          ],
+          "referenceCodeAliases": ["EABS"]
         }
       ],
       "components": [

@@ -74,6 +74,13 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
               requirement.supportingObjectMembershipEvidenceContracts,
           }
         : {}),
+      ...(requirement?.supportingScopedPackageReferenceEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingScopedPackageReferenceEvidenceContracts:
+              requirement.supportingScopedPackageReferenceEvidenceContracts,
+          }
+        : {}),
       bindingStructures: requirement?.bindingStructures || [],
       components: (requirement?.components || []).map((component) => ({
         id: component.id,
