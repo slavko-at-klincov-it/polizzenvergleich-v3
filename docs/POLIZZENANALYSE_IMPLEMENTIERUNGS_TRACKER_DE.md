@@ -4968,3 +4968,26 @@ FE-A05 bleibt deshalb offen. Nächster Schritt: typisierte, sourcegebundene
 Objekt-Scope-IDs für A und B materialisieren; anschließend paketweiten
 Scope-Set-Vertrag entwickeln, ohne FE-A06-Limits einzumischen. R69-A bleibt
 `10/40`; kein Vollrun und kein Deployment.
+
+## 96. FE-A05 Listenproof-Validator – Replay vor fachlicher Nutzung
+
+`6a48d2dba` ergänzt für `NESTED_LIST_CONTINUATION_PROOF_V1` einen unabhängigen
+Replay-Validator; `618bcaeb2` formatiert den Schritt. Der Validator baut den
+Proof aus Originalbytes und PageMap neu auf und verlangt kanonische exakte
+Übereinstimmung aller Offsets, Seiten, Texte, Hashes, Seitenübergänge,
+Stop-Grenzen und des Gesamtdigests. Manipulierte Quelldaten oder PageMap-Grenzen
+schlagen fail-closed fehl. Es gibt weiterhin keinen Outcome-Consumer.
+
+```text
+Commit: 618bcaeb2da86b0706268039cb4d410b98ab1f6c
+Mac-Studio fokussiert/angrenzend: 198/198 PASS
+Artefakt: QA/FE-A05-A06-PROOF-VALIDATOR-618BCAEB-20260903
+Summary: 3d7b99c41cb844aa38565bdb301f2b5197d0bfed7e8290c5deeb1bda11be6991
+Ergebnis: A BELEGT / B TEILBELEGT / UNKLAR
+Delta zu 79f8eec38: keines bei Status, Ergebnis oder Aufrufzahlen
+```
+
+Nächster Schritt: `SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1` diagnostisch
+materialisieren. Erst nach quellgenauer Abbildung von Objekt, Ort, Nutzung,
+Installation und Bedingungen ist für FE-A05 eine Ergebnisänderung zulässig.
+R69-A bleibt `10/40`; kein Vollrun und kein Deployment.

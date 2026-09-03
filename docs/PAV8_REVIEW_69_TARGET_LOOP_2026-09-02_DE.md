@@ -2424,6 +2424,43 @@ Es gibt noch kein Ergebnisdelta: FE-A05 bleibt in R69-A offen, R69-A bleibt
 `10/40`, und die unbestätigte 224-Zeilen-Projektion ändert sich nicht. Kein
 Gesamtvollrun und kein Deployment.
 
+### 10.34 FE-A05 – Listenproof gegen gespeicherte und externe Manipulation abgesichert
+
+Der in 10.33 erzeugte Seitenfortsetzungsbeweis wurde zunächst nur bei seiner
+Erzeugung geprüft. Vor einer fachlichen Verwendung fehlte noch ein
+eigenständiger Replay-Validator. `6a48d2dba` ergänzt deshalb
+`validNestedListContinuationProof(...)`; `618bcaeb2` ist der ausschließlich
+mechanische Formatierungs-Forward-Fix.
+
+Der Validator rekonstruiert den erwarteten Proof aus den autoritativen
+Dokumentbytes und der validierten PageMap. Gespeicherte Occurrence- und
+Proof-Offsets, physische Seiten, Segmenttexte und -Hashes, Seitenseparator,
+Seitenvorspann, Stop-Grenze und Gesamtdigest müssen kanonisch exakt
+übereinstimmen. Geänderte Originalbytes oder PageMap-Grenzen werden ebenfalls
+abgelehnt. Der Schritt hat weiterhin keinen fachlichen Outcome-Consumer.
+
+Mac-Studio-Nachweis:
+
+```text
+Commit: 618bcaeb2da86b0706268039cb4d410b98ab1f6c
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Format: PASS
+Fokussiert/angrenzend: 198/198 PASS
+Artefakt: QA/FE-A05-A06-PROOF-VALIDATOR-618BCAEB-20260903
+Summary: 3d7b99c41cb844aa38565bdb301f2b5197d0bfed7e8290c5deeb1bda11be6991
+Producer: 60c2d68a3c84152cd8c0e5a34a23c2831fd5283588a115680ac2be17f92e02b0
+Dokumente: 10
+Triage-/Evidence-Aufrufe: 3/1
+Server-Rejects/-Terminals: 11/15
+FE-A05: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Gegenüber dem gebundenen Lauf aus 10.33 bleiben Paketstatus, Ergebnis,
+Aufrufzahlen und technische Kontrollzahlen unverändert. Das ist das erwartete
+Ergebnis eines rein beweissichernden Schritts. R69-A bleibt `10/40`; kein
+Gesamtvollrun und kein Deployment. Als nächster Schritt werden typisierte,
+quellgebundene Objekt-Scope-Fakten zunächst nur diagnostisch materialisiert.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache
