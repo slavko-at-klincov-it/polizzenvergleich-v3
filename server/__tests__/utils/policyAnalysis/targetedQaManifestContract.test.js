@@ -38,7 +38,11 @@ function jsonBytes(value) {
 }
 
 function sourceRegistry() {
-  return JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+  for (const target of registry.categoryTargets)
+    target.catalogId =
+      PRODUCT_PROFILE.categoryCatalogIds[target.categoryView];
+  return registry;
 }
 
 function catalogBytes() {

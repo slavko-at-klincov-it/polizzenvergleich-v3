@@ -55,6 +55,14 @@ function catalogBytesByCategory() {
   );
 }
 
+function currentProfileRegistry() {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+  for (const target of registry.categoryTargets)
+    target.catalogId =
+      PRODUCT_PROFILE.categoryCatalogIds[target.categoryView];
+  return registry;
+}
+
 function packageDocument(side, position, ordinal) {
   return {
     uuid: `${side.toLowerCase()}-document-${position}`,
@@ -174,7 +182,7 @@ function execution() {
 }
 
 function realManifest() {
-  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+  const registry = currentProfileRegistry();
   const packageContract = sourcePackage();
   const comparison = baselineComparison(packageContract, registry);
   const packageContractBytes = raw(packageContract);
