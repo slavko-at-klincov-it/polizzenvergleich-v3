@@ -34,6 +34,10 @@ const {
   buildVs22SourceAtomDigestReplay,
 } = require("./vs22HazardousWastePortfolioComparisonContract");
 const {
+  VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID,
+  buildVs24SourceAtomDigestReplay,
+} = require("./vs24ScaffoldingCostEqualityContract");
+const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
@@ -1432,6 +1436,10 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         pointDecision.ruleId === VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID
           ? buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB })
           : null;
+      const vs24SourceAtomDigestReplay =
+        pointDecision.ruleId === VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID
+          ? buildVs24SourceAtomDigestReplay({ categoryId, atomsA, atomsB })
+          : null;
       return {
         categoryId,
         stage: first.stage,
@@ -1441,6 +1449,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         ...comparison,
         pointDecision,
         ...(vs22SourceAtomDigestReplay ? { vs22SourceAtomDigestReplay } : {}),
+        ...(vs24SourceAtomDigestReplay ? { vs24SourceAtomDigestReplay } : {}),
       };
     });
     return { categoryView, rows };

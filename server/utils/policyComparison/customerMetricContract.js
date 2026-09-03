@@ -53,6 +53,12 @@ const {
   validateVs22HazardousWastePortfolioAudit,
   vs22HazardousWastePortfolioDecision,
 } = require("./vs22HazardousWastePortfolioComparisonContract");
+const {
+  VS24_SCAFFOLDING_COST_EQUALITY_REASON_CODE,
+  VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID,
+  validateVs24ScaffoldingCostEqualityAudit,
+  vs24ScaffoldingCostEqualityDecision,
+} = require("./vs24ScaffoldingCostEqualityContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -613,6 +619,53 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
             rowKey,
           ]);
       }
+      const vs24ScaffoldingCostEqualityDecisionDetected =
+        row.pointDecision?.ruleId === VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID ||
+        row.pointDecision?.reasonCode ===
+          VS24_SCAFFOLDING_COST_EQUALITY_REASON_CODE ||
+        row.pointDecision?.vs24ScaffoldingCostEqualityAudit !== undefined;
+      if (vs24ScaffoldingCostEqualityDecisionDetected) {
+        if (!validDocumentManifest)
+          validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
+        const audit = row.pointDecision.vs24ScaffoldingCostEqualityAudit;
+        try {
+          validateVs24ScaffoldingCostEqualityAudit(audit, {
+            categoryId: row.categoryId,
+            packageA: row.packageA,
+            packageB: row.packageB,
+            requirementContractA:
+              row.packageA?.requirementContract ||
+              row.packageA?.searchAudit?.requirementContract,
+            requirementContractB:
+              row.packageB?.requirementContract ||
+              row.packageB?.searchAudit?.requirementContract,
+            expectedDocumentsA: manifestDocuments.filter(
+              ({ side }) => side === "A"
+            ),
+            expectedDocumentsB: manifestDocuments.filter(
+              ({ side }) => side === "B"
+            ),
+            sourceAtomDigestReplay: row.vs24SourceAtomDigestReplay,
+          });
+        } catch (error) {
+          validationError("COMPARISON_VS24_EQUALITY_AUDIT_INVALID", [
+            rowKey,
+            error.message,
+          ]);
+        }
+        const reconstructed = vs24ScaffoldingCostEqualityDecision(audit);
+        if (
+          row.categoryView !== "VS" ||
+          row.categoryId !== "VS-24" ||
+          outcome !== POINT_OUTCOME.EQUIVALENT ||
+          row.pointDecision?.reviewRequired !== false ||
+          row.pointDecision?.packageReviewAudit !== undefined ||
+          !sameJson(row.pointDecision, reconstructed)
+        )
+          validationError("COMPARISON_VS24_EQUALITY_DECISION_INVALID", [
+            rowKey,
+          ]);
+      }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
           !unilateralDecision &&
@@ -627,7 +680,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         Boolean(oneSidedDirection) !== unilateralDecision &&
         !directionalAuditFailedClosed &&
         !lw20EqualityDecision &&
-        !vs22HazardousWastePortfolioDecisionDetected
+        !vs22HazardousWastePortfolioDecisionDetected &&
+        !vs24ScaffoldingCostEqualityDecisionDetected
       )
         validationError("COMPARISON_UNILATERAL_DECISION_OMISSION", [rowKey]);
       if (oneSidedDirection && unilateralDecision) {
@@ -829,8 +883,11 @@ function customerSafeComparisonReadView(result) {
     ? result.categories.map((category) => ({
         ...category,
         rows: (category.rows || []).map((row) => {
-          const { vs22SourceAtomDigestReplay: _privateReplay, ...publicRow } =
-            row;
+          const {
+            vs22SourceAtomDigestReplay: _privateVs22Replay,
+            vs24SourceAtomDigestReplay: _privateVs24Replay,
+            ...publicRow
+          } = row;
           const explanation = packageReviewCustomerExplanation(
             row.pointDecision
           );

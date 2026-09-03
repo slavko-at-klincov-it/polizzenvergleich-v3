@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   PACKAGE_MEMBER,
   atomHasConditionalOrOptionalSource,
@@ -19,6 +20,29 @@ const VS24_SCAFFOLDING_COST_EQUALITY_REASON_CODE =
 
 const LOCAL_LIMIT_MARKER =
   /(?:\b(?:eur|euro|sublimit|höchstentschädigung)\b|€|\d(?:[\d.,\s]*\d)?\s*%|\bbis\s+(?:zu\s+)?(?:\d|eur|euro|€)|\bhöchstens\b|\bmaximal\b|\bbetraglich(?:e|en|er|es)?\s+(?:beschränkt|unbeschränkt|begrenzung|beschränkung)\b)/iu;
+const VS24_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
+  "VS24_SOURCE_ATOM_DIGEST_REPLAY_V1";
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])])
+  );
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+}
+
+function sha256(value) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex");
+}
 
 function strings(values) {
   return [...new Set((values || []).map(String).filter(Boolean))].sort();
@@ -175,6 +199,37 @@ function sourceProof(atom) {
   };
 }
 
+function projectedAtoms(atoms) {
+  return stableValue(
+    (atoms || [])
+      .filter(({ requirementId }) => requirementId === VS24_CATEGORY_ID)
+      .sort((left, right) =>
+        JSON.stringify(stableValue(left)).localeCompare(
+          JSON.stringify(stableValue(right)),
+          "de-AT"
+        )
+      )
+  );
+}
+
+function buildVs24SourceAtomDigestReplay({ categoryId, atomsA, atomsB }) {
+  if (categoryId !== VS24_CATEGORY_ID) return null;
+  const projections = {
+    A: projectedAtoms(atomsA),
+    B: projectedAtoms(atomsB),
+  };
+  if (projections.A.length === 0 || projections.B.length === 0) return null;
+  return {
+    schemaVersion: 1,
+    contractId: VS24_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
+    categoryId: VS24_CATEGORY_ID,
+    sourceAtomDigestsSha256: {
+      A: sha256(projections.A),
+      B: sha256(projections.B),
+    },
+  };
+}
+
 function sideProof({ side, packageSummary, atoms, expectedDocuments }) {
   if (
     packageSummary?.reviewStatus !== "BELEGT" ||
@@ -205,6 +260,7 @@ function sideProof({ side, packageSummary, atoms, expectedDocuments }) {
     } else if (!exactAbsentAtom(atom, document)) return null;
   }
   if (found.length !== 1) return null;
+  const projection = projectedAtoms(relevant);
   return {
     side,
     expectedDocumentUuids: documents.map(({ uuid }) => uuid).sort(),
@@ -212,6 +268,8 @@ function sideProof({ side, packageSummary, atoms, expectedDocuments }) {
     coverageEffect: "INCLUDED",
     localLimitStatus: "NOT_FOUND",
     source: sourceProof(found[0]),
+    projectedAtoms: projection,
+    projectedAtomsDigestSha256: sha256(projection),
   };
 }
 
@@ -269,11 +327,43 @@ function vs24ScaffoldingCostEqualityDecision(audit) {
   };
 }
 
+function validateVs24ScaffoldingCostEqualityAudit(audit, options) {
+  const replay = options?.sourceAtomDigestReplay;
+  if (
+    replay?.schemaVersion !== 1 ||
+    replay?.contractId !== VS24_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID ||
+    replay?.categoryId !== VS24_CATEGORY_ID ||
+    !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.A || "") ||
+    !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.B || "")
+  )
+    throw new Error("VS24_SOURCE_ATOM_DIGEST_REPLAY_REQUIRED");
+  for (const side of ["A", "B"])
+    if (
+      audit?.sides?.[side]?.projectedAtomsDigestSha256 !==
+        replay.sourceAtomDigestsSha256[side] ||
+      sha256(audit?.sides?.[side]?.projectedAtoms) !==
+        replay.sourceAtomDigestsSha256[side]
+    )
+      throw new Error("VS24_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
+  const expected = buildVs24ScaffoldingCostEqualityAudit({
+    ...options,
+    atomsA: audit?.sides?.A?.projectedAtoms,
+    atomsB: audit?.sides?.B?.projectedAtoms,
+  });
+  if (!expected) throw new Error("VS24_SCAFFOLDING_COST_EQUALITY_NOT_QUALIFIED");
+  if (!sameJson(audit, expected))
+    throw new Error("VS24_SCAFFOLDING_COST_EQUALITY_AUDIT_MISMATCH");
+  return true;
+}
+
 module.exports = {
   VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256,
+  VS24_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
   VS24_SCAFFOLDING_COST_EQUALITY_AUDIT_CONTRACT_ID,
   VS24_SCAFFOLDING_COST_EQUALITY_REASON_CODE,
   VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID,
+  buildVs24SourceAtomDigestReplay,
   buildVs24ScaffoldingCostEqualityAudit,
+  validateVs24ScaffoldingCostEqualityAudit,
   vs24ScaffoldingCostEqualityDecision,
 };

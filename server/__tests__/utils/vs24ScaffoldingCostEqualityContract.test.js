@@ -1,8 +1,19 @@
 const {
   VS24_REQUIREMENT_CONTRACT_DIGEST_SHA256,
+  buildVs24SourceAtomDigestReplay,
   buildVs24ScaffoldingCostEqualityAudit,
+  validateVs24ScaffoldingCostEqualityAudit,
+  vs24ScaffoldingCostEqualityDecision,
 } = require("../../utils/policyComparison/vs24ScaffoldingCostEqualityContract");
 const { decidePoint } = require("../../utils/policyComparison/pointDecision");
+const {
+  customerSafeComparisonReadView,
+  deriveCustomerMetrics,
+  validateCustomerComparison,
+} = require("../../utils/policyComparison/customerMetricContract");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 
 const components = [{ id: "scaffolding_costs", factRole: "COST" }];
 const requirementContract = {
@@ -17,6 +28,7 @@ function document(side, suffix, overrides = {}) {
     side,
     role: suffix === "found" ? "SUPPLEMENT" : "MAIN_POLICY",
     documentStatus: suffix === "found" ? "FRAMEWORK_TERMS" : "ACTIVE",
+    sha256: (side === "A" ? "a" : "b").repeat(64),
     ...overrides,
   };
 }
@@ -269,5 +281,70 @@ describe("VS-24 scaffolding cost equality contract", () => {
       reasonCode: "ATOMIC_EVIDENCE_INCOMPLETE",
       reviewRequired: true,
     });
+  });
+
+  test("validates the persisted source replay and rejects coherent audit tampering", () => {
+    const input = fixture();
+    const audit = buildVs24ScaffoldingCostEqualityAudit(input);
+    const sourceAtomDigestReplay = buildVs24SourceAtomDigestReplay(input);
+    const options = { ...input, sourceAtomDigestReplay };
+
+    expect(() =>
+      validateVs24ScaffoldingCostEqualityAudit(audit, options)
+    ).not.toThrow();
+
+    const tampered = JSON.parse(JSON.stringify(audit));
+    tampered.sides.A.projectedAtoms.find(
+      ({ evidencePresence }) => evidencePresence === "FOUND"
+    ).sources[0].exactText = "Allgemeine Kosten";
+    expect(() =>
+      validateVs24ScaffoldingCostEqualityAudit(tampered, options)
+    ).toThrow("VS24_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
+  });
+
+  test("replays the customer result and removes the private digest from its read view", () => {
+    const input = fixture();
+    input.packageA.requirementContract = input.requirementContractA;
+    input.packageB.requirementContract = input.requirementContractB;
+    const audit = buildVs24ScaffoldingCostEqualityAudit(input);
+    const categories = [
+      {
+        categoryView: "VS",
+        rows: [
+          {
+            categoryId: "VS-24",
+            outcome: "INHALTLICH_GLEICH",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision: vs24ScaffoldingCostEqualityDecision(audit),
+            vs24SourceAtomDigestReplay: buildVs24SourceAtomDigestReplay(input),
+          },
+        ],
+      },
+    ];
+    const result = {
+      schemaVersion: 11,
+      status: "COMPARISON_RESULT_MATERIALIZED",
+      productProfile: PRODUCT_PROFILE,
+      documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
+      categories,
+      totals: deriveCustomerMetrics(categories),
+    };
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      customerReviewRequired: 0,
+      pointDecisions: { GLEICHWERTIG: 1 },
+    });
+    expect(
+      customerSafeComparisonReadView(result).categories[0].rows[0]
+    ).not.toHaveProperty("vs24SourceAtomDigestReplay");
+
+    const tampered = JSON.parse(JSON.stringify(result));
+    tampered.categories[0].rows[0].pointDecision.vs24ScaffoldingCostEqualityAudit.sides.A.projectedAtoms.find(
+      ({ evidencePresence }) => evidencePresence === "FOUND"
+    ).sources[0].exactText = "Allgemeine Kosten";
+    expect(() => validateCustomerComparison(tampered)).toThrow(
+      "COMPARISON_VS24_EQUALITY_AUDIT_INVALID"
+    );
   });
 });
