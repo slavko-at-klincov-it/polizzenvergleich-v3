@@ -9,6 +9,9 @@ const {
   RESIDUAL_VALUE_THRESHOLD_QUALIFIER,
   residualValueThresholdForOccurrence,
 } = require("./residualValueThresholdContract");
+const {
+  buildBindingGroupFieldApplicability,
+} = require("./requestedFieldBindingGroupContract");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
@@ -1863,6 +1866,7 @@ function extractPreferredFacts({
   field,
   candidateById,
   bindingByCandidateId,
+  bindingGroupById,
 }) {
   const factsByBinding = new Map(
     Object.values(VALUE_BINDING).map((binding) => [binding, []])
@@ -1884,17 +1888,29 @@ function extractPreferredFacts({
     )
       continue;
     const facts = extractor({ occurrence: indexed.occurrence, binding }).map(
-      (fact) =>
-        indexed.component.factRole === "INSURED_OBJECT" &&
-        indexed.requirement.components.length > 1
-          ? {
-              ...fact,
-              componentScope: {
-                id: indexed.component.id,
-                label: indexed.component.label,
-              },
-            }
-          : fact
+      (fact) => {
+        const componentScopedFact =
+          indexed.component.factRole === "INSURED_OBJECT" &&
+          indexed.requirement.components.length > 1
+            ? {
+                ...fact,
+                componentScope: {
+                  id: indexed.component.id,
+                  label: indexed.component.label,
+                },
+              }
+            : fact;
+        const bindingGroupFieldApplicability =
+          buildBindingGroupFieldApplicability({
+            group: bindingGroupById.get(indexed.occurrence.bindingGroupId),
+            candidateById,
+            sourceCandidateId: candidateId,
+            fact: componentScopedFact,
+          });
+        return bindingGroupFieldApplicability
+          ? { ...componentScopedFact, bindingGroupFieldApplicability }
+          : componentScopedFact;
+      }
     );
     factsByBinding.get(binding).push(...facts);
   }
@@ -2023,6 +2039,9 @@ function materializeRequestedFieldEvidence({
     materializedCandidates,
     candidateById,
   });
+  const bindingGroupById = new Map(
+    (worksheet.bindingGroups || []).map((group) => [group.id, group])
+  );
 
   const requirements = worksheet.requirements.map((requirement) => {
     const requestedFields = Array.isArray(requirement.requestedFields)
@@ -2048,6 +2067,7 @@ function materializeRequestedFieldEvidence({
         field,
         candidateById,
         bindingByCandidateId,
+        bindingGroupById,
       });
       const variantScopes = selectedVariantScopesForField({
         requirement,

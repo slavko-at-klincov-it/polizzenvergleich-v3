@@ -21,6 +21,9 @@ const {
   validFeC07ConditionAbsenceAudit,
 } = require("../policyAnalysis/feC07ConditionAbsenceAudit");
 const {
+  projectedFieldFactAppliesToAtom,
+} = require("../policyAnalysis/requestedFieldBindingGroupContract");
+const {
   buildLw20DefaultExclusionOverrideAudit,
 } = require("../policyAnalysis/lw20DefaultExclusionOverrideAudit");
 const {
@@ -1070,7 +1073,12 @@ function materializeAtomicFacts({
     const selectedSet = new Set(selectedCandidateIds);
     const fields = (fieldResult.fields || []).map((field) => {
       const facts = (field.facts || []).filter((fact) =>
-        selectedSet.has(fact.source?.candidateId)
+        projectedFieldFactAppliesToAtom({
+          fact,
+          requirementId: judgement.requirementId,
+          componentId: judgement.componentId,
+          selectedCandidateIds,
+        })
       );
       const absenceAudit =
         requirement?.id === "FE-C07" &&

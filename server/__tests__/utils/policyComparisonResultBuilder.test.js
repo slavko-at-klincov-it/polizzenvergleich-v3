@@ -15,6 +15,9 @@ const {
   buildFeC07ConditionAbsenceAudit,
 } = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 const {
+  buildBindingGroupFieldApplicability,
+} = require("../../utils/policyAnalysis/requestedFieldBindingGroupContract");
+const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
@@ -1400,6 +1403,139 @@ describe("policy comparison result builder", () => {
     ]);
   });
 
+  test("projects a field only across the validated members of one binding group", () => {
+    const context = "Aufräum- und Abbruchkosten sind bis 10 % versichert.";
+    const contextStart = 5_000;
+    const fieldStart = contextStart + context.indexOf("10 %");
+    const bindingGroupId = `binding-group:${"b".repeat(64)}`;
+    const occurrenceFor = (candidateId, componentId, exactText) => ({
+      requirement: { id: "VS-21" },
+      component: { id: componentId },
+      occurrence: {
+        candidateId,
+        bindingGroupId,
+        physicalPageNumber: 4,
+        exactText,
+        context: {
+          text: context,
+          documentStart: contextStart,
+          documentEnd: contextStart + context.length,
+        },
+      },
+    });
+    const candidateById = new Map([
+      [
+        "candidate:cleanup",
+        occurrenceFor("candidate:cleanup", "cleanup_costs", "Aufräum-"),
+      ],
+      [
+        "candidate:demolition",
+        occurrenceFor(
+          "candidate:demolition",
+          "demolition_costs",
+          "Abbruchkosten"
+        ),
+      ],
+    ]);
+    const fact = {
+      normalizedValue: "10 %",
+      valueType: "PERCENT",
+      unit: "%",
+      limitKind: "CAPPED",
+      source: {
+        candidateId: "candidate:cleanup",
+        physicalPageNumber: 4,
+        documentStart: fieldStart,
+        documentEnd: fieldStart + "10 %".length,
+        exactText: "10 %",
+      },
+    };
+    fact.bindingGroupFieldApplicability =
+      buildBindingGroupFieldApplicability({
+        group: {
+          id: bindingGroupId,
+          requirementId: "VS-21",
+          type: "SHARED_SPAN",
+          constraint: "SAME_CANDIDATE_BINDING",
+          candidateIds: ["candidate:cleanup", "candidate:demolition"],
+        },
+        candidateById,
+        sourceCandidateId: "candidate:cleanup",
+        fact,
+      });
+    const selected = [
+      ["cleanup_costs", "candidate:cleanup", "target:cleanup"],
+      ["demolition_costs", "candidate:demolition", "target:demolition"],
+    ];
+    const atoms = materializeAtomicFacts({
+      document: {
+        uuid: "document-vs-21",
+        role: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+      },
+      worksheet: {
+        catalog: { id: "synthetic-vs" },
+        requirements: [
+          {
+            id: "VS-21",
+            requestedFields: ["limit"],
+            components: selected.map(([id]) => ({ id, factRole: "COST" })),
+          },
+        ],
+      },
+      materializedEvidence: {
+        judgements: selected.map(([componentId, candidateId, targetId]) => ({
+          targetId,
+          requirementId: "VS-21",
+          componentId,
+          evidencePresence: "FOUND",
+          coverageEffect: "INCLUDED",
+          conflictState: "NONE",
+          selectedScopePicture: "GENERAL",
+          documentApplicability: "ACTIVE",
+          selectedCandidateIds: [candidateId],
+          unresolvedCandidateIds: [],
+        })),
+      },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "VS-21",
+            requestedFieldStatus: "COMPLETE",
+            fields: [{ field: "limit", status: "FOUND", facts: [fact] }],
+          },
+        ],
+      },
+      targets: selected.map(([componentId, candidateId, targetId]) => ({
+        targetId,
+        factRole: "COST",
+        candidates: [
+          {
+            candidateId,
+            componentId,
+            physicalPageNumber: 4,
+            exactText: candidateById.get(candidateId).occurrence.exactText,
+          },
+        ],
+      })),
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(
+      atoms.map(({ componentId, requestedFieldStatus }) => ({
+        componentId,
+        requestedFieldStatus,
+      }))
+    ).toEqual([
+      { componentId: "cleanup_costs", requestedFieldStatus: "COMPLETE" },
+      { componentId: "demolition_costs", requestedFieldStatus: "COMPLETE" },
+    ]);
+    expect(atoms[1].fields[0].facts[0].source.candidateId).toBe(
+      "candidate:cleanup"
+    );
+  });
+
   let root;
 
   beforeEach(() => {
@@ -2044,9 +2180,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V50_VS21_COST_ROLE",
+      id: "CUSTOMER_CORE_5_V51_BINDING_GROUP_FIELDS",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_V11",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_V12",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });

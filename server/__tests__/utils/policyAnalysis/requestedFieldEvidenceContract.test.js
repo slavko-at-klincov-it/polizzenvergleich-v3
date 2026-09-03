@@ -228,6 +228,90 @@ describe("requestedFieldEvidenceContract", () => {
     ]);
   });
 
+  test("records shared field applicability for a declared multi-component binding group", () => {
+    const text = "Aufräum- und Abbruchkosten sind bis 10 % versichert.";
+    const contextStart = 4_000;
+    const bindingGroupId = `binding-group:${"a".repeat(64)}`;
+    const cleanup = {
+      ...textualOccurrence({
+        candidateId: "candidate:cleanup",
+        text,
+        exactText: "Aufräum-",
+        contextStart,
+      }),
+      bindingGroupId,
+    };
+    const demolition = {
+      ...textualOccurrence({
+        candidateId: "candidate:demolition",
+        text,
+        exactText: "Abbruchkosten",
+        contextStart,
+      }),
+      bindingGroupId,
+    };
+    const input = {
+      candidateOnly: true,
+      bindingGroups: [
+        {
+          id: bindingGroupId,
+          requirementId: "VS-21",
+          type: "SHARED_SPAN",
+          constraint: "SAME_CANDIDATE_BINDING",
+          governorText: "Aufräum- und Abbruchkosten",
+          candidateIds: [cleanup.candidateId, demolition.candidateId],
+        },
+      ],
+      requirements: [
+        {
+          id: "VS-21",
+          label: "Aufräum- und Abbruchkosten, Höhe des Limits",
+          requestedFields: ["limit"],
+          components: [
+            {
+              id: "cleanup_costs",
+              label: "Aufräumkosten",
+              factRole: "COST",
+              occurrences: [cleanup],
+            },
+            {
+              id: "demolition_costs",
+              label: "Abbruchkosten",
+              factRole: "COST",
+              occurrences: [demolition],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = materializeRequestedFieldEvidence({
+      worksheet: input,
+      materializedCandidates: selections(
+        [cleanup.candidateId, "DIRECT"],
+        [demolition.candidateId, "DIRECT"]
+      ),
+    });
+
+    expect(result.requirements[0].fields[0].facts[0]).toMatchObject({
+      normalizedValue: "10 %",
+      bindingGroupFieldApplicability: {
+        schemaVersion: 1,
+        contractId: "DECLARED_BINDING_GROUP_FIELD_APPLICABILITY_V1",
+        bindingGroupId,
+        requirementId: "VS-21",
+        sourceCandidateId: cleanup.candidateId,
+        members: [
+          { candidateId: cleanup.candidateId, componentId: "cleanup_costs" },
+          {
+            candidateId: demolition.candidateId,
+            componentId: "demolition_costs",
+          },
+        ],
+      },
+    });
+  });
+
   test("binds a trailing first-risk qualifier to every limit in one paragraph", () => {
     const candidateId = "candidate:VS-21:compound-first-risk";
     const text =

@@ -5,6 +5,9 @@ const {
 const {
   applicabilityFor,
 } = require("../policyAnalysis/preparedEvidenceContract");
+const {
+  projectedFieldFactAppliesToAtom,
+} = require("../policyAnalysis/requestedFieldBindingGroupContract");
 
 const PACKAGE_MEMBER = "PACKAGE_MEMBER";
 const CANONICAL_COMPARISON_ATOM_CONTRACT_ID =
@@ -223,13 +226,20 @@ function validRequestedFields(atom) {
     return (
       status === "FOUND" &&
       facts.length > 0 &&
-      facts.every(
-        ({ source }) =>
-          atom.selectedCandidateIds.includes(source?.candidateId) &&
+      facts.every((fact) => {
+        const { source } = fact;
+        return (
+          projectedFieldFactAppliesToAtom({
+            fact,
+            requirementId: atom.requirementId,
+            componentId: atom.componentId,
+            selectedCandidateIds: atom.selectedCandidateIds,
+          }) &&
           Number.isInteger(source?.physicalPageNumber) &&
           source.physicalPageNumber > 0 &&
           String(source?.exactText || "").trim().length > 0
-      )
+        );
+      })
     );
   });
 }
