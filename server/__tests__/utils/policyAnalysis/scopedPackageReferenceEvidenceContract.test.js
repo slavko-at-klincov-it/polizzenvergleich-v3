@@ -50,6 +50,7 @@ function artifact(pages) {
       pageContent,
       pageMap,
       pdfExtraction: {
+        schemaVersion: 1,
         complete: true,
         totalPages: pages.length,
         processedPages: pages.length,
