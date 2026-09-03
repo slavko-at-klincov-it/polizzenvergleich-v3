@@ -4,6 +4,7 @@ const {
   comparisonFieldSignature,
   completeRawComparisonAtom,
 } = require("./comparisonAtomCanonicalization");
+const { derivePackageReviewAudit } = require("./packageReviewAudit");
 
 const VS21_CATEGORY_ID = "VS-21";
 const VS21_COMPONENT_IDS = Object.freeze(["cleanup_costs", "demolition_costs"]);
@@ -68,7 +69,7 @@ function sourceBindingValid(atom) {
 
 function containsNumericLimit(text) {
   return (
-    /(?:\beur\b|\beuro\b|€)\s*\d/iu.test(text) ||
+    /(?:\beur|\beuro|€)\s*\d/iu.test(text) ||
     /\d(?:[\d.,\s]*\d)?\s*%/u.test(text) ||
     /versicherungssumme\s+(?:von|bis(?:\s+zu)?)\s+\d/iu.test(text)
   );
@@ -186,7 +187,6 @@ function sidePortfolio(categoryId, atoms) {
       (atom) =>
         !VS21_COMPONENT_IDS.includes(atom.componentId) ||
         atom.conflictState !== "NONE" ||
-        (atom.unresolvedCandidateIds || []).length > 0 ||
         (atom.evidencePresence === "FOUND" &&
           comparisonApplicability(atom) !== PACKAGE_MEMBER) ||
         atom.coverageEffect === "EXCLUDED"
@@ -243,10 +243,61 @@ function sidePortfolio(categoryId, atoms) {
   };
 }
 
+function modifierDocumentUuids(portfolio) {
+  return new Set(
+    portfolio.allocationModifiers.flatMap(({ documentUuids }) => documentUuids)
+  );
+}
+
+function packageReviewAllowsOnlyCertifiedModifiers({
+  categoryId,
+  packageA,
+  packageB,
+  atomsA,
+  atomsB,
+  sideA,
+  sideB,
+}) {
+  if (
+    !["BELEGT", "TEILBELEGT"].includes(packageA?.reviewStatus) ||
+    !["BELEGT", "TEILBELEGT"].includes(packageB?.reviewStatus)
+  )
+    return false;
+  if (packageA.reviewStatus === "BELEGT" && packageB.reviewStatus === "BELEGT")
+    return true;
+  const audit = derivePackageReviewAudit({
+    categoryId,
+    packageA,
+    packageB,
+    atomsA,
+    atomsB,
+  });
+  if (!audit || !Array.isArray(audit.blockers) || audit.blockers.length === 0)
+    return false;
+  const modifierDocuments = {
+    A: modifierDocumentUuids(sideA),
+    B: modifierDocumentUuids(sideB),
+  };
+  return audit.blockers.every(
+    (blocker) =>
+      blocker.code === "FIELD_INCOMPLETE" &&
+      blocker.level === "REQUIREMENT" &&
+      blocker.requirementId === categoryId &&
+      blocker.componentId === null &&
+      ["A", "B"].includes(blocker.side) &&
+      (blocker.documentUuids || []).length > 0 &&
+      blocker.documentUuids.every((documentUuid) =>
+        modifierDocuments[blocker.side].has(documentUuid)
+      )
+  );
+}
+
 function buildVs21CostLimitPortfolioAudit({
   categoryId,
   atomsA,
   atomsB,
+  packageA,
+  packageB,
   requirementContractA,
   requirementContractB,
 }) {
@@ -260,6 +311,18 @@ function buildVs21CostLimitPortfolioAudit({
   const sideA = sidePortfolio(categoryId, atomsA);
   const sideB = sidePortfolio(categoryId, atomsB);
   if (!sideA || !sideB) return null;
+  if (
+    !packageReviewAllowsOnlyCertifiedModifiers({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      sideA,
+      sideB,
+    })
+  )
+    return null;
   if (
     JSON.stringify(strings([sideA.valueType, sideB.valueType])) !==
     JSON.stringify(["MONEY", "PERCENT"])

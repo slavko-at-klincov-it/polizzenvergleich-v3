@@ -105,11 +105,21 @@ function sideAtoms(side, valueType, { modifier = false } = {}) {
   return atoms;
 }
 
-function packageSummary(reviewStatus) {
+function packageSummary(reviewStatus, side = "a") {
   return {
     evidenceFound: true,
     reviewStatus,
     requirementContract,
+    facts:
+      reviewStatus === "BELEGT"
+        ? []
+        : [
+            { documentUuid: `document-${side}`, reviewStatus: "BELEGT" },
+            {
+              documentUuid: `document-${side}-terms`,
+              reviewStatus: "TEILBELEGT",
+            },
+          ],
   };
 }
 
@@ -118,7 +128,7 @@ describe("VS-21 cost limit portfolio comparison contract", () => {
     const result = decidePoint({
       categoryId: "VS-21",
       packageA: packageSummary("BELEGT"),
-      packageB: packageSummary("TEILBELEGT"),
+      packageB: packageSummary("TEILBELEGT", "b"),
       atomsA: sideAtoms("a", "PERCENT"),
       atomsB: sideAtoms("b", "MONEY", { modifier: true }),
     });
@@ -214,6 +224,8 @@ describe("VS-21 cost limit portfolio comparison contract", () => {
     expect(
       buildVs21CostLimitPortfolioAudit({
         categoryId: "VS-21",
+        packageA: packageSummary("BELEGT"),
+        packageB: packageSummary("TEILBELEGT", "b"),
         atomsA: sideAtoms("a", "PERCENT"),
         atomsB,
         requirementContractA: requirementContract,
@@ -229,6 +241,8 @@ describe("VS-21 cost limit portfolio comparison contract", () => {
     expect(
       buildVs21CostLimitPortfolioAudit({
         categoryId: "VS-21",
+        packageA: packageSummary("BELEGT"),
+        packageB: packageSummary("BELEGT"),
         atomsA: sideAtoms("a", "MONEY"),
         atomsB: sideAtoms("b", rightValueType),
         requirementContractA: requirementContract,
@@ -241,6 +255,8 @@ describe("VS-21 cost limit portfolio comparison contract", () => {
     expect(
       buildVs21CostLimitPortfolioAudit({
         categoryId: "VS-21",
+        packageA: packageSummary("BELEGT"),
+        packageB: packageSummary("BELEGT"),
         atomsA: sideAtoms("a", "PERCENT").slice(0, 1),
         atomsB: sideAtoms("b", "MONEY"),
         requirementContractA: requirementContract,

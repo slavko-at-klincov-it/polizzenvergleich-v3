@@ -1121,6 +1121,8 @@ function decidePoint({
     return objectFamilyCoverageDecision(objectFamilyCoverageAudit);
   const vs21CostLimitPortfolioAudit = buildVs21CostLimitPortfolioAudit({
     categoryId,
+    packageA,
+    packageB,
     atomsA,
     atomsB,
     requirementContractA: contractA,
