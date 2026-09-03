@@ -18,6 +18,10 @@ const {
   buildSourceBoundScopedPackageReferenceProofs,
   validateScopedPackageReferenceEvidenceContract,
 } = require("./scopedPackageReferenceEvidenceContract");
+const {
+  buildSourceBoundReferencedTermsIdentityProofs,
+  validateReferencedTermsIdentityEvidenceContract,
+} = require("./referencedTermsIdentityEvidenceContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2352,6 +2356,23 @@ function validateCatalog(catalog) {
       supportingScopedPackageReferenceEvidenceContracts.length === 0
     )
       throw worksheetError("SCOPED_PACKAGE_REFERENCE_CONTRACTS_INVALID", id);
+    const supportingReferencedTermsIdentityEvidenceContracts = Array.isArray(
+      requirement.supportingReferencedTermsIdentityEvidenceContracts
+    )
+      ? requirement.supportingReferencedTermsIdentityEvidenceContracts.map(
+          (contract, index) =>
+            validateReferencedTermsIdentityEvidenceContract(
+              contract,
+              `${id}:supportingReferencedTermsIdentityEvidenceContracts[${index}]`
+            )
+        )
+      : [];
+    if (
+      requirement.supportingReferencedTermsIdentityEvidenceContracts !==
+        undefined &&
+      supportingReferencedTermsIdentityEvidenceContracts.length === 0
+    )
+      throw worksheetError("REFERENCED_TERMS_IDENTITY_CONTRACTS_INVALID", id);
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -2589,6 +2610,9 @@ function validateCatalog(catalog) {
         : {}),
       ...(supportingScopedPackageReferenceEvidenceContracts.length > 0
         ? { supportingScopedPackageReferenceEvidenceContracts }
+        : {}),
+      ...(supportingReferencedTermsIdentityEvidenceContracts.length > 0
+        ? { supportingReferencedTermsIdentityEvidenceContracts }
         : {}),
       bindingStructures,
       scopeRules,
@@ -3481,6 +3505,18 @@ function buildControlledOccurrenceWorksheet({
         },
       })
     );
+    const supportingReferencedTermsIdentityProofs = (
+      requirement.supportingReferencedTermsIdentityEvidenceContracts || []
+    ).flatMap((contract) =>
+      buildSourceBoundReferencedTermsIdentityProofs({
+        contract,
+        documentArtifact: {
+          schemaVersion: 1,
+          fingerprint,
+          document: { ...document, sourceDocumentId: fingerprint },
+        },
+      })
+    );
     return {
       id: requirement.id,
       label: requirement.label,
@@ -3520,6 +3556,14 @@ function buildControlledOccurrenceWorksheet({
             supportingScopedPackageReferenceEvidenceContracts:
               requirement.supportingScopedPackageReferenceEvidenceContracts,
             supportingScopedPackageReferenceProofs,
+          }
+        : {}),
+      ...(requirement.supportingReferencedTermsIdentityEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingReferencedTermsIdentityEvidenceContracts:
+              requirement.supportingReferencedTermsIdentityEvidenceContracts,
+            supportingReferencedTermsIdentityProofs,
           }
         : {}),
       componentCount: grouped.components.length,

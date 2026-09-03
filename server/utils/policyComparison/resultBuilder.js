@@ -45,6 +45,9 @@ const {
   buildSourceBoundScopedPackageReferenceProofs,
 } = require("../policyAnalysis/scopedPackageReferenceEvidenceContract");
 const {
+  buildSourceBoundReferencedTermsIdentityProofs,
+} = require("../policyAnalysis/referencedTermsIdentityEvidenceContract");
+const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
@@ -1382,6 +1385,28 @@ function materializeAtomicFacts({
         throw new Error("SCOPED_PACKAGE_REFERENCE_PROOF_REPLAY_INVALID");
       return JSON.parse(JSON.stringify(actual));
     })();
+    const supportingReferencedTermsIdentityProofs = (() => {
+      const contracts =
+        requirement?.supportingReferencedTermsIdentityEvidenceContracts || [];
+      const proofs = requirement?.supportingReferencedTermsIdentityProofs || [];
+      if (contracts.length === 0) return [];
+      const expected = contracts
+        .flatMap((contract) =>
+          buildSourceBoundReferencedTermsIdentityProofs({
+            contract,
+            documentArtifact,
+          })
+        )
+        .sort((left, right) =>
+          left.proofDigest.localeCompare(right.proofDigest)
+        );
+      const actual = [...proofs].sort((left, right) =>
+        left.proofDigest.localeCompare(right.proofDigest)
+      );
+      if (JSON.stringify(actual) !== JSON.stringify(expected))
+        throw new Error("REFERENCED_TERMS_IDENTITY_PROOF_REPLAY_INVALID");
+      return JSON.parse(JSON.stringify(actual));
+    })();
     const sources = (target?.candidates || [])
       .filter(({ candidateId }) => selectedSet.has(candidateId))
       .map((candidate) => {
@@ -1455,6 +1480,14 @@ function materializeAtomicFacts({
             supportingScopedPackageReferenceEvidenceContracts:
               requirement.supportingScopedPackageReferenceEvidenceContracts,
             supportingScopedPackageReferenceProofs,
+          }
+        : {}),
+      ...(requirement?.supportingReferencedTermsIdentityEvidenceContracts
+        ?.length > 0
+        ? {
+            supportingReferencedTermsIdentityEvidenceContracts:
+              requirement.supportingReferencedTermsIdentityEvidenceContracts,
+            supportingReferencedTermsIdentityProofs,
           }
         : {}),
       scopePolicy: requirement?.scopePolicy || null,

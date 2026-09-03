@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.15",
+  "catalogId": "fe-occurrence-full-draft-v0.16",
   "categoryView": "FE",
   "requirements": [
     {
@@ -794,6 +794,16 @@
             "Wohngebäude zum Neuwert",
             "Gebäude zum Neuwert"
           ],
+          "referenceFamilyKey": "EABS",
+          "referenceTitleAliases": [
+            "Ergänzende allgemeine Bedingungen für die Sachversicherung"
+          ],
+          "referenceCodeAliases": ["EABS"]
+        }
+      ],
+      "supportingReferencedTermsIdentityEvidenceContracts": [
+        {
+          "contractId": "SOURCE_BOUND_REFERENCED_TERMS_IDENTITY_EVIDENCE_V1",
           "referenceFamilyKey": "EABS",
           "referenceTitleAliases": [
             "Ergänzende allgemeine Bedingungen für die Sachversicherung"
