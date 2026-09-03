@@ -59,8 +59,9 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `5/40 TARGET-E2E ACCEPTED`. `VS-15`, `FE-A10`, `LW-07`, `LW-12` und
-`ST-27` sind abgeschlossen; 35 Fälle der ursprünglichen Familie bleiben offen.
+Status: `6/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `FE-A10`, `LW-07`,
+`LW-12` und `ST-27` sind abgeschlossen; 34 Fälle der ursprünglichen Familie
+bleiben offen.
 
 ```text
 VS-02, VS-15, VS-18, VS-19, VS-21, VS-22, VS-24, VS-25, VS-36
@@ -70,9 +71,10 @@ ST-15, ST-16, ST-17, ST-18, ST-19, ST-21, ST-25, ST-27
 EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
-Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15` und
-`LW-12` gehören nach den in Abschnitt 10.19 beziehungsweise 10.21
-dokumentierten Zielnachweisen nicht mehr zur operativen Restliste.
+Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
+`VS-18` und `LW-12` gehören nach den in Abschnitt 10.19, 10.27
+beziehungsweise 10.21 dokumentierten Zielnachweisen nicht mehr zur
+operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
 
@@ -2191,7 +2193,7 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
-### 10.27 VS-18 – Einfriedungsfamilie: Recall verbessert, Hierarchie noch offen
+### 10.27 VS-18 – Einfriedungsfamilie: gerichtete Oberklasse abgeschlossen
 
 #### 10.27.1 Aktueller gebundener Ausgangslauf
 
@@ -2390,6 +2392,102 @@ server/utils/policyComparison/packageReviewAudit.js:155-370
 Entscheidungsregeln:
 server/utils/policyComparison/pointDecision.js
 ```
+
+#### 10.27.5 Gerichteter Objektfamilienvertrag und realer Abschluss
+
+Die offene Hierarchie wurde nicht mit `ANY`, Dokumenttyp-Heuristiken oder
+einer Definition-gleich-Deckung-Abkürzung geschlossen. Stattdessen besitzt
+VS-18 jetzt den kataloggebundenen Vertrag
+`DIRECTED_OBJECT_FAMILY_V1`:
+
+```text
+Wurzel: enclosures
+Mitglieder: fences, walls, gates
+Richtung: allgemeiner Wurzeleinschluss -> Mitglieder
+Verbotene Rückrichtung: einzelnes Mitglied -/-> Wurzel
+Vergleichsdimension: ausschließlich COVERAGE_PRESENCE_ONLY
+```
+
+Eine Seite erfüllt diesen Vertrag nur, wenn ihr rohes Wurzelatom vollständig,
+allgemein, paketzugehörig und positiv `INCLUDED` ist. Konflikte, ungelöste
+Kandidaten, enger Scope, ein bloßes `DEFINED`, Ausschlüsse oder bedingte
+Wirkungen lassen die Regel fail-closed. Limits, Selbstbehalte und Bedingungen
+werden weder übernommen noch gleichgesetzt.
+
+Produktive Commits und getrennte Forward-Fixes:
+
+```text
+0fc34e8a feat(comparison): compare directed object families
+78eee3c9 style(comparison): format object family contract
+0f2fc438 test(comparison): complete object family scope fixture
+8b9f2c8b test(policy): align FE-C07 absence inventory
+```
+
+Der letzte Testcommit verändert keine Produktionssemantik. Er korrigiert den
+seit `FE-C07` veralteten statischen Katalogzähler von
+`91 COVERAGE_ONLY / 25 COVERAGE_MIXED` auf die bereits produktiv vorhandenen
+`92 / 24`.
+
+Mac-Studio-Validierung des exakten Commits
+`8b9f2c8b853623ec139f6daed077bcf5bb02485c` im isolierten Worktree
+`/private/tmp/pv3-vs19-amount-LOqa66/repo`:
+
+```text
+Node: v22.23.2 aus dem installierten Audit-Runtime
+Formatprüfung: PASS
+Fokussierte Suites: 10/10 PASS
+Fokussierte Tests: 286/286 PASS
+```
+
+Der anschließende Ziellauf baute VS-18 auf allen zehn unveränderten
+Kundendokumenten neu auf:
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-18-FAMILY-8B9F2C8B-20260903
+Summary-Digest:
+1dd461ba8809fe9063c3715cb10cc4c6cb2ea89483387b8bf8eb1878306130c0
+Target-Selection-Digest:
+ec490a5e216edb121261b326ec3e70ae12aa6ddc1b58b6d15d84e21b10756b91
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Dokumente: 10
+Triage-Qwen-Aufrufe: 15
+Evidence-Qwen-Aufrufe: 4
+Triage-Server-Rejects: 0
+Evidence-Terminals: 32
+```
+
+Beide Pakete besitzen darin je einen vollständigen allgemeinen
+`enclosures / INCLUDED`-Wurzelbeleg. Paket A bindet die Belegstellen auf
+physischer Seite 4 unter anderem an `Grundstücksbegrenzungen` sowie
+`Begrenzungen und Umzäunungen`. Paket B bindet die Belegstellen auf den
+physischen Seiten 9 bis 10 an `Einfriedungen`. Die unterschiedlichen zusätzlich
+beobachteten Unterbegriffe bleiben im Audit sichtbar, entscheiden die
+deckungsgleiche Oberklasse aber nicht rückwärts.
+
+Revisionssicheres Delta:
+
+```text
+VS-18 vorher:
+UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+
+VS-18 nachher:
+GLEICHWERTIG / EQUAL_DIRECTED_OBJECT_FAMILY_COVERAGE / kein Review
+Regel: EQUAL_DIRECTED_OBJECT_FAMILY_COVERAGE_V1
+```
+
+Damit steigt R69-A auf `6/40`; `34` Fälle dieser Ausgangsfamilie bleiben
+offen. Unter Einbeziehung aller zuvor akzeptierten gezielten Deltas ändert
+sich die weiterhin nicht durch einen frischen 224-Zeilen-Lauf bestätigte
+Projektion von
+`VORTEIL_A 2 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 120 / NICHT_VERGLEICHBAR 11 / UNKLAR 55` auf
+`VORTEIL_A 2 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 121 / NICHT_VERGLEICHBAR 11 / UNKLAR 54`.
+
+Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
+installierte Kundenstand blieb unverändert.
 
 ### 10.26 VS-02 – variable Zeitwertschwellen gefunden, echter Vertragsrang bleibt offen
 
