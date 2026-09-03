@@ -5526,8 +5526,8 @@ Release-Vorbereitungs-Ausgangs-HEAD: dc1fa925ccf8c5678e285b13996f2c11c8faa411
 Aktuelle Release-Codebasis: 97e3140b4dee734feb611861e9205408759c089e
 Installierter Kundenstand: c7d3b16d400ea4d65b558ef091781da5df82d610
 Geplanter Release: v3.6.0
-Produktprofil: CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY
-Vergleichsvertrag: V62
+Produktprofil: CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY
+Vergleichsvertrag: V64
 Ergebnisschema: 14
 Main: noch nicht aktualisiert
 Tag: noch nicht erstellt
@@ -5594,3 +5594,90 @@ Fehler; der gezielte Mac-Studio-Rerun bestand mit 4 Suites und 94 Tests. Der
 abschließende vollständige Test-, Lint-, Installer- und Buildlauf sowie der
 frische Zehn-Dokument-/224-Zeilen-Lauf bleiben harte Gates vor `main`, Tag und
 Deployment.
+
+## 117. V3.6.0 – erster frischer Vollrun gestoppt und fachlich gehärtet
+
+Der frische, isolierte Mac-Studio-Lauf auf `35308a11a` verarbeitete alle zehn
+gebundenen PDFs und alle 50 Kategorien ohne Workerfehler. Die Kundeninstallation
+und ihre SQLite-Datenbank blieben unverändert. Der Lauf war technisch gültig,
+aber fachlich kein Deployment-GO.
+
+```text
+QA-Root: QA/RELEASE-V3.6.0-FULL-35308A11-20260903-163505
+Session: 12e1857c-5e39-44f9-96d2-d6bf46ed78f8
+Commit: 35308a11a2f7e3f27aacdda304839d2740fcf8ae
+Modell: qwen/qwen3.6-35b-a3b
+Kontext / Parallelität: 42496 / 1
+Workerzeit: 29:35,190
+Dokumente / Kategorien / Zeilen: 10 / 50 / 224
+Vorteil A / Vorteil B: 5 / 5
+Dokumentationsunterschied / Gleichwertig: 34 / 120
+Nicht vergleichbar / Unklar / Kundenreview: 10 / 50 / 50
+comparison.private.json: e20344910f1ef02fd9fd563127f5cce703a07a0510650422e06aa3bfaede3732
+comparison.md: 57f5847c81b0bc0f37a96c6ae53073b819bb29e05f63b5b361ee6be72e3b8daf
+XLSX: a763c5a5c8c58e71fe13e17130caea5903c16bf7f3e292165b3b082f52130393
+```
+
+Der vollständige 224-Key-Diff gegen gespeicherten Replay und Favoritenlauf
+ergab vier Replay-Regressionen: `EL-07` und `EL-11` wechselten von
+`NICHT_VERGLEICHBAR` zu `UNKLAR`, `EL-13` und `VS-24` von `GLEICHWERTIG` zu
+`UNKLAR`. Gemeinsame Ursache war ein Producer-/Validator-Widerspruch:
+`explicitSectionHeadings()` trimmte den Überschriftentext, speicherte aber die
+Offsets einschließlich Leerraum. Der strenge source-bound Validator verwarf
+die dadurch nicht mehr identischen Spans zu Recht. `7a45a4c09` richtet Text und
+Offsets aus; `df0ad7fac` verwendet den korrigierten Start auch zur
+Deduplizierung. Der Validator wurde nicht gelockert, und mehrdeutige
+Multi-Scope-Überschriften bleiben fail-closed. 174/174 fokussierte Tests waren
+auf dem Mac Studio grün.
+
+Der Scope-Fix hätte zwei bereits vorhandene semantische Fehler sichtbar
+gemacht. Erstens lag das A-seitige HQ30-Hochwasserlimit im breiten
+`CLAUSE_SECTION`-Fenster von `EL-07` und wurde dadurch fälschlich als
+Erdbebenlimit extrahiert. `78bce51c3` führt einen allgemeinen, sourcegebundenen
+Feldeigentümervertrag ein: Für numerische oder zeitliche Felder von
+Gefahrenkomponenten besitzt der kleinste gültige ausgewählte Gefahrenkontext
+den Wert; gleich lokale konkurrierende Gefahren werden verworfen. A behält den
+Erdbeben-Selbstbehalt von 350 Euro, nicht aber das fremde HQ30-Limit. 130/130
+relevante Tests bestanden.
+
+Zweitens war der Vorteil `FE-A09` falsch: Der Beleg nannte nur allgemeine
+Explosion beziehungsweise Verpuffung von Gasen und Dämpfen, aber keine Heiz-,
+Gas- oder Feuerungsanlage. `a075bc564` macht dafür den bestehenden
+`SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1` komponentenlokal verpflichtend. Nur
+enge Anlagenbegriffe können die Komponente erzeugen; allgemeine Gase, Kessel
+oder Rohrleitungen reichen nicht. FE-Katalog v0.22, Produktprofil V102 und
+Vergleichsvertrag V63 verhindern die stille Wiederverwendung alter Artefakte.
+Die beiden Test-Follow-ups `76f3ae017` und `53dd4c2bc` binden die Trust-Digests
+an die normalisierten Worksheet-Verträge. Das abschließende fokussierte Gate
+bestand mit 243/243 Tests.
+
+Für `EL-13` reicht derselbe Glasbruch-Hostscope nicht zur Gleichwertigkeit:
+Eine Seite belegt die Verglasung der versicherten Gebäude, die andere nur die
+Gebäudeverglasung allgemein zugänglicher Bereiche. `a7510e2db` führt deshalb
+den opt-in `SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1` ein. Gleiche, exakt
+belegte Objektkeys dürfen den regulären Vergleich fortsetzen; unterschiedliche
+Keys ergeben side-neutral `NICHT_VERGLEICHBAR`; fehlende, mehrdeutige oder
+manipulierte Proofs bleiben `UNKLAR`. Der Vertrag behauptet noch keinen Vorteil
+für den breiteren Scope, weil die ebenfalls genannten 10-m²-Grenzen noch nicht
+als typisierte Vergleichsfakten modelliert sind. `c1dc185cd` kanonisiert gültige
+Verträge unabhängig von ihrer Array-Reihenfolge. 315/315 fokussierte Tests
+bestanden.
+
+Aktueller Vorbereitungsstand vor dem neuen Vollgate:
+
+```text
+Code-HEAD vor Dokumentationscommit: c1dc185cd4fd18f317c5213d413e3339cd79319e
+Produktprofil: CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY
+Vergleichsvertrag: V64
+FE-Katalog: fe-occurrence-full-draft-v0.22
+EL-Katalog: el-occurrence-full-draft-v0.9
+origin/main: unverändert c7d3b16d400ea4d65b558ef091781da5df82d610
+Kundeninstallation: unverändert c7d3b16d400ea4d65b558ef091781da5df82d610
+Release/Tag/Deployment: nicht freigegeben und nicht begonnen
+```
+
+Nächste harte Gates sind der vollständige Mac-Studio-Test-, Lint-, Installer-
+und Buildlauf auf exakt dem Dokumentationscommit sowie ein neuer frischer
+Zehn-Dokument-/224-Zeilen-Lauf. Erst ein vollständig geprüfter Outcome-Diff
+ohne neue falsche Vorteile oder gute Non-Review-zu-Review-Regression erlaubt
+`main`, annotierten Tag und Kundenupdate.

@@ -23,7 +23,7 @@ Enthalten sind insbesondere:
 - sourcegebundene private Audits und Replays gegen Auslassung oder
   Manipulation;
 - der aktuelle Produktvertrag
-  `CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY` mit Ergebnisschema
+  `CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY` mit Ergebnisschema
   14;
 - die quellgebundene Qualifikationswiedergabe für FE-A01 und FE-C07 sowie der
   normalisierte Worksheet-Trust-Anchor für VS-08;
@@ -73,13 +73,39 @@ verändert.
 
 ## Aktueller Kandidatenstand
 
-Die Release-Codebasis reicht bis zum Formatabschluss `97e3140b4`; die
-Release-Dokumentation baut danach ausschließlich additiv darauf auf. Aktiv
-sind Produktprofil `CUSTOMER_CORE_5_V101_SPECIALIZED_QUALIFICATION_REPLAY`,
-Vergleichsvertrag V62 und Ergebnisschema 14. Ein frischer vollständiger
-224-Zeilen-Lauf auf dem abschließenden Dokumentationscommit steht noch aus.
-Bis zu dessen erfolgreicher Abnahme bleibt der Status
-`RELEASE_CANDIDATE_IN_VALIDATION`; es gibt noch keine Deploymentfreigabe.
+Die Release-Codebasis reicht bis `c1dc185cd`. Aktiv sind Produktprofil
+`CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY`, Vergleichsvertrag
+V64 und Ergebnisschema 14. Der erste frische vollständige 224-Zeilen-Lauf auf
+`35308a11a` war technisch vollständig, aber fachlich kein Release-GO. Seine
+Ergebnisverteilung war 5 Vorteile A, 5 Vorteile B, 34
+Dokumentationsunterschiede, 120 Gleichwertigkeiten, 10 nicht vergleichbare und
+50 unklare Zeilen bei 50 Kundenreviews. Der Lauf dauerte 29 Minuten und 35
+Sekunden reine Workerzeit.
+
+Der unabhängige Diff fand vier Replay-Regressionen durch widersprüchliche
+Heading-Offets (`EL-07`, `EL-11`, `EL-13`, `VS-24`) und einen bereits zuvor
+vorhandenen falschen Vorteil bei `FE-A09`. Die folgenden Forward-Fixes wurden
+deshalb vor jeder Veröffentlichung ergänzt:
+
+- `7a45a4c09` richtet getrimmte Headingtexte und sourcegebundene Offsets aus;
+- `df0ad7fac` dedupliziert Überschriften anhand desselben normalisierten
+  Startoffsets;
+- `78bce51c3` bindet numerische Gefahrenfelder an den kleinsten gültigen
+  lokalen Gefahrenkontext und verhindert die Zuordnung eines HQ30-Limits zu
+  Erdbeben;
+- `a075bc564` bis `53dd4c2bc` verlangen für `FE-A09` einen echten
+  Heizungs-, Gas- oder Feuerungsanlagen-Scope und versionieren FE-Katalog,
+  Trust-Anker und Produktvertrag;
+- `a7510e2db` und `c1dc185cd` führen für `EL-13` ein side-neutrales,
+  sourcegebundenes Objekt-Scope-Identity-Gate ein. Unterschiedliche
+  Objektumfänge werden nicht mehr als gleichwertig dargestellt; ohne
+  vollständige Provenienz bleibt der Vergleich fail-closed.
+
+Die fokussierten Mac-Studio-Gates bestanden zuletzt mit 130/130, 243/243 und
+315/315 Tests. Ein frischer vollständiger 224-Zeilen-Lauf auf dem
+abschließenden Dokumentationscommit steht noch aus. Bis zu dessen erfolgreicher
+Abnahme bleibt der Status `RELEASE_CANDIDATE_IN_VALIDATION`; es gibt noch keine
+Deploymentfreigabe.
 
 ## Abnahmeprotokoll
 
