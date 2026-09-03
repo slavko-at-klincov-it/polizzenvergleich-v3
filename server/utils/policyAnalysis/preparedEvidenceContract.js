@@ -339,6 +339,14 @@ function buildPreparedEvidenceTargets({
                   : {}),
               }
             : {}),
+          ...(component.objectMembershipEvidenceContracts?.length > 0 &&
+          occurrence.objectMembershipProof
+            ? {
+                objectMembershipProof: JSON.parse(
+                  JSON.stringify(occurrence.objectMembershipProof)
+                ),
+              }
+            : {}),
           physicalPageNumber:
             occurrence.physicalPageNumber || occurrence.pageNumber,
           printedPageLabel: occurrence.printedPageLabel || null,
@@ -396,6 +404,7 @@ function buildSinglePreparedEvidencePayload({ target }) {
       const modelCandidate = { ...candidate };
       delete modelCandidate.objectScopeProof;
       delete modelCandidate.nestedListContinuationProof;
+      delete modelCandidate.objectMembershipProof;
       return modelCandidate;
     }),
   };

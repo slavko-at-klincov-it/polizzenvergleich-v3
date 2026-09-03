@@ -2859,4 +2859,63 @@ describe("preparedEvidenceContract", () => {
       "nestedListContinuationProof"
     );
   });
+
+  test("keeps FE-C02 object-membership provenance internal and strips it from the Qwen payload", () => {
+    const pageContent = [
+      "1.3Haustechnische Anlagen und Adaptierungen",
+      "das sind:",
+      "·Solar- und Photovoltaikanlagen;",
+    ].join("\n");
+    const document = {
+      id: "prepared-fe-c02-membership",
+      sourceDocumentId: "prepared-fe-c02-membership",
+      title: "prepared-fe-c02-membership.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    };
+    const catalog = {
+      ...feFullCatalog,
+      requirements: [
+        feFullCatalog.requirements.find(({ id }) => id === "FE-C02"),
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: document.sourceDocumentId,
+      catalog,
+    });
+    const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+    const target = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "FE-C02",
+          componentId: "photovoltaic_as_damaged_object",
+          candidateId: occurrence.candidateId,
+          binding: "DIRECT",
+        },
+      ],
+    })[0];
+
+    expect(target.candidates[0].objectMembershipProof).toMatchObject({
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+      edge: {
+        relation: "MEMBER_OF_CLASS",
+        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      },
+    });
+    expect(
+      JSON.stringify(buildSinglePreparedEvidencePayload({ target }))
+    ).not.toContain("objectMembershipProof");
+  });
 });

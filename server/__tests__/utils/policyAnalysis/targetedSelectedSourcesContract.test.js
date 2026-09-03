@@ -166,6 +166,71 @@ function nestedProvenanceFixture() {
   return { targets, materializedEvidence, documentArtifact, worksheet };
 }
 
+function objectMembershipFixture() {
+  const pageContent = [
+    "1.3Haustechnische Anlagen und Adaptierungen",
+    "das sind:",
+    "·Solar- und Photovoltaikanlagen;",
+  ].join("\n");
+  const fingerprint = crypto
+    .createHash("sha256")
+    .update(pageContent)
+    .digest("hex");
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint,
+    document: {
+      sourceDocumentId: fingerprint,
+      title: "fe-c02-membership.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    },
+  };
+  const catalog = {
+    ...feFullCatalog,
+    requirements: [
+      feFullCatalog.requirements.find(({ id }) => id === "FE-C02"),
+    ],
+  };
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document: documentArtifact.document,
+    documentFingerprint: fingerprint,
+    catalog,
+  });
+  const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+  const targets = buildPreparedEvidenceTargets({
+    worksheet,
+    documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    candidateTriage: [
+      {
+        requirementId: "FE-C02",
+        componentId: "photovoltaic_as_damaged_object",
+        candidateId: occurrence.candidateId,
+        binding: "DIRECT",
+      },
+    ],
+  });
+  const materializedEvidence = {
+    judgements: [
+      {
+        targetId: targets[0].targetId,
+        requirementId: "FE-C02",
+        componentId: "photovoltaic_as_damaged_object",
+        selectedCandidateIds: [occurrence.candidateId],
+      },
+    ],
+  };
+  return { targets, materializedEvidence, documentArtifact, worksheet };
+}
+
 describe("targeted selected sources contract", () => {
   test("reconstructs the current selected-sources artifact from server-owned targets", () => {
     const input = fixture();
@@ -217,6 +282,30 @@ describe("targeted selected sources contract", () => {
         contractId: "NESTED_LIST_CONTINUATION_PROOF_V1",
       },
     });
+  });
+
+  test("replays selected FE-C02 membership proof against original document bytes", () => {
+    const input = objectMembershipFixture();
+    const [source] = rebuildTargetedSelectedSources(input);
+
+    expect(source.objectMembershipProof).toMatchObject({
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+      edge: {
+        relation: "MEMBER_OF_CLASS",
+        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      },
+    });
+  });
+
+  test("rejects manipulated FE-C02 membership provenance", () => {
+    const input = objectMembershipFixture();
+    input.targets[0].candidates[0].objectMembershipProof.edge.classObjectKey =
+      "BUILDING";
+
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_MEMBERSHIP_PROOF_INVALID"
+    );
   });
 
   test("requires a matching worksheet whenever a target carries object-scope provenance", () => {

@@ -5,6 +5,9 @@ const {
 const {
   validSourceBoundObjectScopeProof,
 } = require("./objectScopeEvidenceContract");
+const {
+  validSourceBoundObjectMembershipProof,
+} = require("./objectMembershipEvidenceContract");
 
 const ALLOWED_CANDIDATE_BINDINGS = new Set(["DIRECT", "NARROW_SCOPE"]);
 
@@ -139,6 +142,13 @@ function candidateCarriesObjectScopeProvenance(candidate) {
   );
 }
 
+function candidateCarriesObjectMembershipProvenance(candidate) {
+  return Boolean(
+    candidate &&
+      Object.prototype.hasOwnProperty.call(candidate, "objectMembershipProof")
+  );
+}
+
 function worksheetDocumentMatchesArtifact(worksheet, documentArtifact) {
   const worksheetDocument = worksheet?.document;
   const document = documentArtifact.document;
@@ -167,7 +177,11 @@ function worksheetDocumentMatchesArtifact(worksheet, documentArtifact) {
 
 function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
   const targetHasProvenance = targets.some((target) =>
-    (target.candidates || []).some(candidateCarriesObjectScopeProvenance)
+    (target.candidates || []).some(
+      (candidate) =>
+        candidateCarriesObjectScopeProvenance(candidate) ||
+        candidateCarriesObjectMembershipProvenance(candidate)
+    )
   );
   if (!worksheet && !targetHasProvenance) return null;
   if (
@@ -248,8 +262,66 @@ function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
           "TARGETED_SOURCES_PROVENANCE_PRESENCE_MISMATCH",
           candidate.candidateId
         );
+      const candidateHasMembershipProof =
+        candidateCarriesObjectMembershipProvenance(candidate);
+      const occurrenceHasMembershipProof =
+        candidateCarriesObjectMembershipProvenance(occurrence);
+      if (
+        candidateHasMembershipProof !== occurrenceHasMembershipProof ||
+        (candidateHasMembershipProof &&
+          !Array.isArray(
+            indexedComponent.component.objectMembershipEvidenceContracts
+          ))
+      )
+        throw sourceError(
+          "TARGETED_SOURCES_PROVENANCE_MEMBERSHIP_PRESENCE_MISMATCH",
+          candidate.candidateId
+        );
     }
   return componentByKey;
+}
+
+function selectedObjectMembershipProvenance({
+  indexed,
+  worksheetComponents,
+  documentArtifact,
+}) {
+  const { candidate, requirementId, componentId } = indexed;
+  if (!candidateCarriesObjectMembershipProvenance(candidate)) return {};
+  const candidateId = candidate.candidateId;
+  const indexedComponent = worksheetComponents?.get(
+    `${requirementId}:${componentId}`
+  );
+  const component = indexedComponent?.component;
+  const occurrence = indexedComponent?.occurrenceById.get(candidateId);
+  if (
+    !occurrence?.objectMembershipProof ||
+    !canonicalEqual(
+      candidate.objectMembershipProof,
+      occurrence.objectMembershipProof
+    )
+  )
+    throw sourceError(
+      "TARGETED_SOURCES_PROVENANCE_MEMBERSHIP_PROOF_INVALID",
+      candidateId
+    );
+  const matchingContracts = (
+    component?.objectMembershipEvidenceContracts || []
+  ).filter((contract) =>
+    validSourceBoundObjectMembershipProof({
+      contract,
+      occurrence,
+      documentArtifact,
+    })
+  );
+  if (matchingContracts.length !== 1)
+    throw sourceError(
+      "TARGETED_SOURCES_PROVENANCE_MEMBERSHIP_PROOF_INVALID",
+      candidateId
+    );
+  return {
+    objectMembershipProof: privateCopy(occurrence.objectMembershipProof),
+  };
 }
 
 function validateProofMatchesDocument({ proof, document, pages, candidateId }) {
@@ -426,6 +498,15 @@ function validateSelectedCandidate({
       worksheetComponents,
       document,
       pages,
+    }),
+    ...selectedObjectMembershipProvenance({
+      indexed,
+      worksheetComponents,
+      documentArtifact: {
+        schemaVersion: 1,
+        fingerprint: document.sourceDocumentId,
+        document,
+      },
     }),
   });
 }

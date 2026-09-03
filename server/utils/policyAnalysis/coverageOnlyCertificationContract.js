@@ -90,6 +90,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
                 component.objectScopeEvidenceContract,
             }
           : {}),
+        ...(component.objectMembershipEvidenceContracts?.length > 0
+          ? {
+              objectMembershipEvidenceContracts:
+                component.objectMembershipEvidenceContracts,
+            }
+          : {}),
         ...(component.fieldGovernorPolicy
           ? { fieldGovernorPolicy: component.fieldGovernorPolicy }
           : {}),

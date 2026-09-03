@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.10",
+  "catalogId": "fe-occurrence-full-draft-v0.11",
   "categoryView": "FE",
   "requirements": [
     {
@@ -786,6 +786,41 @@
               "requiredGroups": [
                 { "prefixes": ["solar"] },
                 { "prefixes": ["fotovoltaikanlage", "photovoltaikanlage"] }
+              ]
+            }
+          ],
+          "objectMembershipEvidenceContracts": [
+            {
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+              "membership": "MEMBER_OF_CLASS",
+              "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
+              "classObjectKey": "BUILDING_TECHNICAL_INSTALLATION",
+              "memberAliases": [
+                "Photovoltaikanlagen",
+                "Fotovoltaikanlagen"
+              ],
+              "classAliases": [
+                "Haustechnische Anlagen",
+                "Haustechnische Anlagen und Adaptierungen"
+              ],
+              "allowedClassificationSources": [
+                "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+                "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
+              ]
+            },
+            {
+              "contractId": "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+              "membership": "EXCLUDED_FROM_CLASS",
+              "memberObjectKey": "PHOTOVOLTAIC_INSTALLATION",
+              "classObjectKey": "BUSINESS_CONTENT",
+              "memberAliases": [
+                "Photovoltaikanlagen",
+                "Fotovoltaikanlagen"
+              ],
+              "classAliases": ["Betriebsinhalt"],
+              "allowedClassificationSources": [
+                "CURRENT_PAGE_OBJECT_CLASSIFICATION",
+                "PRECEDING_PAGE_OBJECT_CLASSIFICATION"
               ]
             }
           ]

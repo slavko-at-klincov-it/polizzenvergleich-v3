@@ -1578,6 +1578,55 @@ describe("controlledOccurrenceWorksheet", () => {
     }
   );
 
+  test("materializes FE-C02 membership and non-membership as directed source-bound edges", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Nicht als Betriebsinhalt gelten:",
+          "·Solar- und Photovoltaikanlagen;",
+        ].join("\n"),
+        "1.3Haustechnische Anlagen und Adaptierungen\ndas sind:",
+        "·Solar- und Photovoltaikanlagen;",
+      ]),
+      documentFingerprint: "fe-c02-membership-edges",
+      catalog: {
+        ...feFullCatalog,
+        requirements: [
+          feFullCatalog.requirements.find(({ id }) => id === "FE-C02"),
+        ],
+      },
+    });
+    const occurrences = component(
+      worksheet,
+      "FE-C02",
+      "photovoltaic_as_damaged_object"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(2);
+    expect(
+      occurrences.map(({ objectMembershipProof }) =>
+        objectMembershipProof?.edge
+      )
+    ).toEqual([
+      expect.objectContaining({
+        relation: "EXCLUDED_FROM_CLASS",
+        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+        classObjectKey: "BUSINESS_CONTENT",
+      }),
+      expect.objectContaining({
+        relation: "MEMBER_OF_CLASS",
+        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      }),
+    ]);
+    for (const occurrence of occurrences) {
+      const proof = occurrence.objectMembershipProof;
+      expect(proof.documentFingerprint).toBe("fe-c02-membership-edges");
+      expect(proof.proofDigest).toMatch(/^[a-f0-9]{64}$/u);
+      expect(proof).not.toHaveProperty("coverageEffect");
+    }
+  });
+
   test("does not neutralize a coverage-bearing exclusion disguised as classification", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([

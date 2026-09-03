@@ -1378,6 +1378,13 @@ function materializeAtomicFacts({
           ...(candidateBinding ? { candidateBinding } : {}),
           ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
           ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+          ...(candidate.objectMembershipProof
+            ? {
+                objectMembershipProof: JSON.parse(
+                  JSON.stringify(candidate.objectMembershipProof)
+                ),
+              }
+            : {}),
         };
       });
     const comparisonScopeKeys = unique(

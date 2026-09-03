@@ -77,7 +77,7 @@ describe("PAV8 69-row targeted QA registry", () => {
         VS: ["vs-occurrence-full-draft-v0.7", "vs-occurrence-full-draft-v0.16"],
         FE: [
           "fe-occurrence-full-draft-v0.5",
-          "fe-occurrence-full-draft-v0.10",
+          "fe-occurrence-full-draft-v0.11",
         ],
         LW: ["lw-occurrence-full-draft-v0.5", "lw-occurrence-full-draft-v0.10"],
         ST: ["st-occurrence-full-draft-v0.4", "st-occurrence-full-draft-v0.6"],

@@ -3650,4 +3650,89 @@ describe("policy comparison result builder", () => {
       ],
     });
   });
+
+  test("retains source-bound object-membership proof on the selected atomic source", () => {
+    const objectMembershipProof = {
+      schemaVersion: 1,
+      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1",
+      proofDigest: "a".repeat(64),
+      edge: {
+        relation: "MEMBER_OF_CLASS",
+        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      },
+    };
+    const targets = [
+      {
+        targetId: "target:fe-c02",
+        candidates: [
+          {
+            candidateId: "candidate:pv",
+            physicalPageNumber: 4,
+            exactText: "Photovoltaikanlagen",
+            objectMembershipProof,
+          },
+        ],
+      },
+    ];
+    const [atom] = materializeAtomicFacts({
+      document: {
+        uuid: "document-fe-c02",
+        role: "TERMS",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+      worksheet: {
+        catalog: { id: "fe-test-v1" },
+        requirements: [
+          {
+            id: "FE-C02",
+            requestedFields: [],
+            components: [
+              {
+                id: "photovoltaic_as_damaged_object",
+                label: "Photovoltaikanlage als betroffene Sache",
+                factRole: "INSURED_OBJECT",
+                aliases: ["Photovoltaikanlagen"],
+              },
+            ],
+          },
+        ],
+      },
+      materializedEvidence: {
+        judgements: [
+          {
+            targetId: "target:fe-c02",
+            requirementId: "FE-C02",
+            componentId: "photovoltaic_as_damaged_object",
+            evidencePresence: "FOUND",
+            coverageEffect: "DEFINED",
+            conflictState: "NONE",
+            selectedScopePicture: "GENERAL",
+            documentApplicability: "CONDITIONAL",
+            selectedCandidateIds: ["candidate:pv"],
+            unresolvedCandidateIds: [],
+          },
+        ],
+      },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "FE-C02",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
+        ],
+      },
+      targets,
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(atom.sources[0].objectMembershipProof).toEqual(
+      objectMembershipProof
+    );
+    expect(atom.sources[0].objectMembershipProof).not.toBe(
+      objectMembershipProof
+    );
+  });
 });

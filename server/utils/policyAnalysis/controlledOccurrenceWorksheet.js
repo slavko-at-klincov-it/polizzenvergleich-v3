@@ -10,6 +10,10 @@ const {
   buildSourceBoundObjectScopeProof,
   validateObjectScopeEvidenceContract,
 } = require("./objectScopeEvidenceContract");
+const {
+  buildSourceBoundObjectMembershipProof,
+  validateObjectMembershipEvidenceContract,
+} = require("./objectMembershipEvidenceContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2198,6 +2202,37 @@ function validateCatalog(catalog) {
               component.objectScopeEvidenceContract,
               `${id}:${componentId}`
             );
+      const objectMembershipEvidenceContracts =
+        component.objectMembershipEvidenceContracts === undefined
+          ? []
+          : (() => {
+              if (
+                !Array.isArray(component.objectMembershipEvidenceContracts) ||
+                component.objectMembershipEvidenceContracts.length === 0 ||
+                component.objectMembershipEvidenceContracts.length > 8
+              )
+                throw worksheetError(
+                  "OBJECT_MEMBERSHIP_CONTRACTS_INVALID",
+                  `${id}:${componentId}`
+                );
+              const validated = component.objectMembershipEvidenceContracts.map(
+                (contract, contractIndex) =>
+                  validateObjectMembershipEvidenceContract(
+                    contract,
+                    `${id}:${componentId}:objectMembershipEvidenceContracts[${contractIndex}]`
+                  )
+              );
+              const keys = validated.map(
+                ({ membership, memberObjectKey, classObjectKey }) =>
+                  `${membership}:${memberObjectKey}:${classObjectKey}`
+              );
+              if (new Set(keys).size !== keys.length)
+                throw worksheetError(
+                  "OBJECT_MEMBERSHIP_CONTRACT_DUPLICATE",
+                  `${id}:${componentId}`
+                );
+              return validated;
+            })();
       const fieldGovernorPolicy =
         component.fieldGovernorPolicy === undefined
           ? null
@@ -2252,6 +2287,9 @@ function validateCatalog(catalog) {
           ? { nestedListContinuationProofContractId }
           : {}),
         ...(objectScopeEvidenceContract ? { objectScopeEvidenceContract } : {}),
+        ...(objectMembershipEvidenceContracts.length > 0
+          ? { objectMembershipEvidenceContracts }
+          : {}),
         ...(fieldGovernorPolicy ? { fieldGovernorPolicy } : {}),
       };
     });
@@ -3270,9 +3308,35 @@ function buildControlledOccurrenceWorksheet({
                   : false,
               })
             : null;
+          const objectMembershipProofs = (
+            component.objectMembershipEvidenceContracts || []
+          )
+            .map((contract) =>
+              buildSourceBoundObjectMembershipProof({
+                contract,
+                occurrence,
+                documentArtifact: {
+                  schemaVersion: 1,
+                  fingerprint,
+                  document: {
+                    ...document,
+                    sourceDocumentId: fingerprint,
+                  },
+                },
+              })
+            )
+            .filter(Boolean);
+          if (objectMembershipProofs.length > 1)
+            throw worksheetError(
+              "OBJECT_MEMBERSHIP_PROOF_AMBIGUOUS",
+              occurrence.candidateId
+            );
           occurrences.push({
             ...occurrence,
             ...(objectScopeProof ? { objectScopeProof } : {}),
+            ...(objectMembershipProofs.length === 1
+              ? { objectMembershipProof: objectMembershipProofs[0] }
+              : {}),
           });
         }
       }
@@ -3301,6 +3365,12 @@ function buildControlledOccurrenceWorksheet({
           ? {
               objectScopeEvidenceContract:
                 component.objectScopeEvidenceContract,
+            }
+          : {}),
+        ...(component.objectMembershipEvidenceContracts?.length > 0
+          ? {
+              objectMembershipEvidenceContracts:
+                component.objectMembershipEvidenceContracts,
             }
           : {}),
         ...(component.fieldGovernorPolicy
