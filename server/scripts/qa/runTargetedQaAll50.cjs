@@ -128,6 +128,67 @@ function pairRelative(documentIndex, documentUuid, categoryView) {
   );
 }
 
+function resolveDocumentArtifact({
+  baseline,
+  documentIndex,
+  document,
+  fsImpl,
+}) {
+  const documentDirectory = realDirectory(
+    path.join(
+      baseline,
+      `DOC-${String(documentIndex + 1).padStart(2, "0")}-${document.uuid}`
+    ),
+    "TARGETED_RUN_BASELINE_DOCUMENT_INVALID",
+    fsImpl
+  );
+  if (!isWithin(baseline, documentDirectory))
+    throw runnerError(
+      "TARGETED_RUN_BASELINE_DOCUMENT_SCOPE_INVALID",
+      document.uuid
+    );
+  const requestedArtifact = path.join(
+    documentDirectory,
+    "document.private.json"
+  );
+  const bytes = fileBytes(
+    requestedArtifact,
+    "TARGETED_RUN_DOCUMENT_ARTIFACT_INVALID",
+    fsImpl,
+    documentDirectory
+  );
+  if (
+    !/^[a-f0-9]{64}$/u.test(document.documentArtifactSha256 || "") ||
+    sha256(bytes) !== document.documentArtifactSha256
+  )
+    throw runnerError(
+      "TARGETED_RUN_DOCUMENT_ARTIFACT_SHA_MISMATCH",
+      document.uuid
+    );
+  let artifact;
+  try {
+    artifact = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw runnerError("TARGETED_RUN_DOCUMENT_ARTIFACT_INVALID", document.uuid);
+  }
+  if (
+    artifact?.schemaVersion !== 1 ||
+    typeof artifact?.fingerprint !== "string" ||
+    !artifact.fingerprint ||
+    artifact.fingerprint !== document.sha256 ||
+    artifact.document?.sourceDocumentId !== artifact.fingerprint
+  )
+    throw runnerError(
+      "TARGETED_RUN_DOCUMENT_ARTIFACT_FINGERPRINT_MISMATCH",
+      document.uuid
+    );
+  return {
+    file: fsImpl.realpathSync(requestedArtifact),
+    fingerprint: artifact.fingerprint,
+    sha256: document.documentArtifactSha256,
+  };
+}
+
 async function verifyRuntime({ baseUrl, model, modelTokenLimit, fetchFn }) {
   if (!/qwen/iu.test(model))
     throw runnerError("TARGETED_RUN_QWEN_MODEL_REQUIRED", model);
@@ -217,6 +278,9 @@ function assertEffects({
   prompt,
   digest,
   documentStatus,
+  documentArtifact,
+  expectedDocumentArtifactSha256,
+  documentFingerprint,
   execution,
   fsImpl,
 }) {
@@ -229,6 +293,22 @@ function assertEffects({
   );
   const evidence = path.join(directory, "materialized.private.json");
   const sources = path.join(directory, "selected-sources.private.json");
+  const targets = path.join(directory, "targets.private.json");
+  const documentArtifactSha256 = sha256(
+    fileBytes(
+      documentArtifact,
+      "TARGETED_RUN_DOCUMENT_ARTIFACT_INVALID",
+      fsImpl
+    )
+  );
+  const targetsSha256 = sha256(
+    fileBytes(
+      targets,
+      "TARGETED_RUN_EFFECTS_TARGETS_INVALID",
+      fsImpl,
+      directory
+    )
+  );
   if (
     !ACCEPTED_STATUS.has(report.status) ||
     report.validation?.pass !== true ||
@@ -242,6 +322,10 @@ function assertEffects({
     report.contracts?.systemPromptSha256 !== sha256File(prompt, fsImpl) ||
     report.contracts?.triageSha256 !== sha256File(triage, fsImpl) ||
     report.contracts?.documentStatus !== documentStatus ||
+    documentArtifactSha256 !== expectedDocumentArtifactSha256 ||
+    report.contracts?.documentArtifactSha256 !== documentArtifactSha256 ||
+    report.contracts?.documentFingerprint !== documentFingerprint ||
+    report.contracts?.targetsSha256 !== targetsSha256 ||
     report.contracts?.expectedTargetSelectionDigestSha256 !== digest ||
     report.contracts?.targetSelectionDigestSha256 !== digest ||
     report.contracts?.materializedEvidenceSha256 !==
@@ -513,6 +597,12 @@ async function run(
       documentIndex,
       document,
     ] of manifest.documentMatrix.documents.entries()) {
+      const documentArtifact = resolveDocumentArtifact({
+        baseline,
+        documentIndex,
+        document,
+        fsImpl,
+      });
       for (const categoryView of CATEGORY_ORDER) {
         const categoryTarget = manifest.categoryTargets.find(
           (target) => target.categoryView === categoryView
@@ -667,6 +757,8 @@ async function run(
               args: [
                 "--worksheet",
                 worksheet,
+                "--documentArtifact",
+                documentArtifact.file,
                 "--systemPromptFile",
                 effectsPrompt,
                 "--controlMode",
@@ -697,6 +789,9 @@ async function run(
               prompt: effectsPrompt,
               digest,
               documentStatus: document.documentStatus,
+              documentArtifact: documentArtifact.file,
+              expectedDocumentArtifactSha256: documentArtifact.sha256,
+              documentFingerprint: documentArtifact.fingerprint,
               execution,
               fsImpl,
             }),

@@ -67,13 +67,31 @@ function fixture() {
   const preparedRoot = path.join(root, "prepared");
   fs.mkdirSync(baselineRoot, { recursive: true });
   fs.mkdirSync(preparedRoot);
-  const documents = Array.from({ length: 10 }, (_, index) => ({
-    uuid: `document-${String(index + 1).padStart(2, "0")}`,
-    sha256: String(index).padStart(64, "0"),
-    side: index === 0 ? "A" : "B",
-    position: index === 0 ? 0 : index - 1,
-    documentStatus: index === 0 ? "FRAMEWORK_TERMS" : "PROPOSAL",
-  }));
+  const documents = Array.from({ length: 10 }, (_, index) => {
+    const document = {
+      uuid: `document-${String(index + 1).padStart(2, "0")}`,
+      sha256: String(index).padStart(64, "0"),
+      side: index === 0 ? "A" : "B",
+      position: index === 0 ? 0 : index - 1,
+      documentStatus: index === 0 ? "FRAMEWORK_TERMS" : "PROPOSAL",
+    };
+    const directory = path.join(
+      baselineRoot,
+      `DOC-${String(index + 1).padStart(2, "0")}-${document.uuid}`
+    );
+    const artifact = Buffer.from(
+      JSON.stringify({
+        schemaVersion: 1,
+        fingerprint: document.sha256,
+        document: { sourceDocumentId: document.sha256 },
+      })
+    );
+    fs.mkdirSync(directory);
+    fs.writeFileSync(path.join(directory, "document.private.json"), artifact, {
+      mode: 0o600,
+    });
+    return { ...document, documentArtifactSha256: sha256(artifact) };
+  });
   const categoryTargets = CATEGORY_ORDER.map((categoryView, index) => ({
     categoryView,
     requirementIds: [`${categoryView}-01`],
@@ -225,8 +243,13 @@ function createChildRunner(value, calls) {
         rollups: [],
       });
       writeJson(path.join(output, "selected-sources.private.json"), []);
+      writeJson(path.join(output, "targets.private.json"), []);
       const evidence = path.join(output, "materialized.private.json");
       const sources = path.join(output, "selected-sources.private.json");
+      const targets = path.join(output, "targets.private.json");
+      const documentArtifact = JSON.parse(
+        fs.readFileSync(parsed.documentArtifact, "utf8")
+      );
       writeJson(path.join(output, "report.json"), {
         status: "TECHNICAL_PASS_REVIEW_REQUIRED",
         implementation: {
@@ -239,6 +262,11 @@ function createChildRunner(value, calls) {
           systemPromptSha256: sha256(fs.readFileSync(parsed.systemPromptFile)),
           triageSha256: sha256(fs.readFileSync(parsed.triageFile)),
           documentStatus: parsed.documentStatus,
+          documentArtifactSha256: sha256(
+            fs.readFileSync(parsed.documentArtifact)
+          ),
+          documentFingerprint: documentArtifact.fingerprint,
+          targetsSha256: sha256(fs.readFileSync(targets)),
           expectedTargetSelectionDigestSha256:
             parsed.expectedTargetSelectionDigestSha256,
           targetSelectionDigestSha256:
@@ -400,10 +428,21 @@ describe("targeted QA all-50 runner", () => {
       ({ name }) => name === "runVsCandidateTriage.cjs"
     ))
       expect(call.args).not.toContain("--hybridSystemPromptFile");
-    for (const call of calls.filter(
+    const effectsCalls = calls.filter(
       ({ name }) => name === "runPreparedEvidenceEvaluation.cjs"
-    ))
+    );
+    effectsCalls.forEach((call, index) => {
       expect(call.parsed.allowUniqueCandidateIdRepair).toBe("false");
+      const documentIndex = Math.floor(index / CATEGORY_ORDER.length);
+      const document = value.documents[documentIndex];
+      expect(call.parsed.documentArtifact).toBe(
+        path.join(
+          value.baselineRoot,
+          `DOC-${String(documentIndex + 1).padStart(2, "0")}-${document.uuid}`,
+          "document.private.json"
+        )
+      );
+    });
     expect(result.summary.totals).toMatchObject({
       callCount: 100,
       promptTokens: 1500,
@@ -432,6 +471,46 @@ describe("targeted QA all-50 runner", () => {
       calls.every(({ name }) => name === "materializeTargetedQaCategory.cjs")
     ).toBe(true);
   });
+
+  test("rejects a baseline document artifact that no longer matches the manifest", async () => {
+    fs.appendFileSync(
+      path.join(
+        value.baselineRoot,
+        `DOC-01-${value.documents[0].uuid}`,
+        "document.private.json"
+      ),
+      "\n"
+    );
+
+    await expect(run(args(value), dependencies(value, []))).rejects.toThrow(
+      "TARGETED_RUN_DOCUMENT_ARTIFACT_SHA_MISMATCH"
+    );
+  });
+
+  test.each([
+    ["documentArtifactSha256", "0".repeat(64)],
+    ["documentFingerprint", "foreign-document"],
+    ["targetsSha256", "0".repeat(64)],
+  ])(
+    "rejects a resumed effects report with a false %s",
+    async (field, falseValue) => {
+      await run(args(value), dependencies(value, []));
+      const reportFile = path.join(
+        value.output,
+        `DOC-01-${value.documents[0].uuid}`,
+        CATEGORY_ORDER[0],
+        "effects",
+        "report.json"
+      );
+      const report = JSON.parse(fs.readFileSync(reportFile, "utf8"));
+      report.contracts[field] = falseValue;
+      writeJson(reportFile, report);
+
+      await expect(run(args(value), dependencies(value, []))).rejects.toThrow(
+        "TARGETED_RUN_EFFECTS_RESUME_INVALID"
+      );
+    }
+  );
 
   test("rejects embeddings and wrong loaded-model multiplicity", async () => {
     await expect(
