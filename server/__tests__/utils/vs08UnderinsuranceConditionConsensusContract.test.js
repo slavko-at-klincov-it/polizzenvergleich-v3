@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   VS08_CONDITION_CONSENSUS_RULE_ID,
   VS08_REQUIREMENT_CONTRACT_DIGEST,
@@ -9,6 +10,12 @@ const { decidePoint } = require("../../utils/policyComparison/pointDecision");
 const {
   requirementSearchContractDigest,
 } = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
+const {
+  buildControlledOccurrenceWorksheet,
+} = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  PRODUCT_PROFILE,
+} = require("../../utils/policyComparison/productContract");
 const fullVsCatalog = require("../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
 const CATALOG_ID = "vs-occurrence-full-draft-v0.16";
@@ -26,6 +33,65 @@ const ALIASES = [
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function currentWorksheetRequirement() {
+  const text =
+    "Der Unterversicherungsverzicht gilt unter den vereinbarten Bedingungen.";
+  const fingerprint = crypto.createHash("sha256").update(text).digest("hex");
+  const worksheet = buildControlledOccurrenceWorksheet({
+    documentFingerprint: fingerprint,
+    catalog: {
+      ...fullVsCatalog,
+      requirements: fullVsCatalog.requirements.filter(
+        ({ id }) => id === CATEGORY_ID
+      ),
+    },
+    document: {
+      sourceDocumentId: fingerprint,
+      title: "vs08-workbook-contract.pdf",
+      pageContent: text,
+      pageMap: [{ pageNumber: 1, start: 0, end: text.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    },
+  });
+  return {
+    catalogId: worksheet.catalog.id,
+    requirement: worksheet.requirements[0],
+  };
+}
+
+function replaceRequirementDigest(input, digest) {
+  for (const side of ["A", "B"]) {
+    const packageSummary = input[`package${side}`];
+    packageSummary.searchAudit.requirementContract.digest = digest;
+    for (const cell of packageSummary.searchAudit.components)
+      cell.requirementContract.digest = digest;
+    for (const atom of input[`atoms${side}`]) {
+      atom.requirementContractDigest = digest;
+      atom.searchAudit.requirementContract.digest = digest;
+    }
+  }
+}
+
+function replaceDeclaredComponents(input, components) {
+  for (const side of ["A", "B"]) {
+    const packageSummary = input[`package${side}`];
+    packageSummary.searchAudit.requirementContract.components =
+      clone(components);
+    for (const cell of packageSummary.searchAudit.components)
+      cell.requirementContract.components = clone(components);
+    for (const atom of input[`atoms${side}`]) {
+      atom.declaredComponents = clone(components);
+      atom.searchAudit.requirementContract.components = clone(components);
+    }
+  }
 }
 
 function requirementContract() {
@@ -198,17 +264,52 @@ function fixture() {
 }
 
 describe("VS-08 package condition consensus contract", () => {
-  test("binds the production contract to the current catalog requirement", () => {
-    const requirement = fullVsCatalog.requirements.find(
-      ({ id }) => id === CATEGORY_ID
-    );
-    expect(fullVsCatalog.catalogId).toBe(CATALOG_ID);
+  test("binds the production trust anchor to the current validated worksheet requirement", () => {
+    const { catalogId, requirement } = currentWorksheetRequirement();
+    expect(catalogId).toBe(CATALOG_ID);
     expect(
       requirementSearchContractDigest({
-        catalogId: fullVsCatalog.catalogId,
+        catalogId,
         requirement,
       })
     ).toBe(VS08_REQUIREMENT_CONTRACT_DIGEST);
+    expect(PRODUCT_PROFILE.trustAnchors).toMatchObject({
+      vs08ValidatedWorksheetRequirementV1:
+        VS08_REQUIREMENT_CONTRACT_DIGEST,
+    });
+  });
+
+  test("rejects the stale raw-catalog digest even when every persisted copy agrees", () => {
+    const rawRequirement = fullVsCatalog.requirements.find(
+      ({ id }) => id === CATEGORY_ID
+    );
+    const staleDigest = requirementSearchContractDigest({
+      catalogId: fullVsCatalog.catalogId,
+      requirement: rawRequirement,
+    });
+    const input = fixture();
+    expect(staleDigest).not.toBe(VS08_REQUIREMENT_CONTRACT_DIGEST);
+
+    replaceRequirementDigest(input, staleDigest);
+
+    expect(buildVs08ConditionConsensusAudit(input)).toBeNull();
+    expect(decidePoint(input)).toMatchObject({
+      outcome: "UNKLAR",
+      reviewRequired: true,
+    });
+  });
+
+  test("rejects an adversarial contract shape despite a copied trusted digest", () => {
+    const input = fixture();
+    replaceDeclaredComponents(input, [
+      { id: COMPONENT_ID, factRole: "BENEFIT" },
+    ]);
+
+    expect(buildVs08ConditionConsensusAudit(input)).toBeNull();
+    expect(decidePoint(input)).toMatchObject({
+      outcome: "UNKLAR",
+      reviewRequired: true,
+    });
   });
 
   test("resolves multiple condition sources when every source says bedingt", () => {
@@ -239,6 +340,30 @@ describe("VS-08 package condition consensus contract", () => {
       vs08ConditionConsensusAudit: expect.objectContaining({
         conditionValues: ["bedingt"],
       }),
+    });
+  });
+
+  test("keeps the accepted VS-08 target outcome equivalent after an A/B swap", () => {
+    const input = fixture();
+    const swapped = {
+      ...input,
+      packageA: input.packageB,
+      packageB: input.packageA,
+      atomsA: input.atomsB,
+      atomsB: input.atomsA,
+      expectedDocumentsA: input.expectedDocumentsB.map((item) => ({
+        ...item,
+        side: "A",
+      })),
+      expectedDocumentsB: input.expectedDocumentsA.map((item) => ({
+        ...item,
+        side: "B",
+      })),
+    };
+    expect(decidePoint(swapped)).toMatchObject({
+      outcome: "GLEICHWERTIG",
+      reviewRequired: false,
+      ruleId: VS08_CONDITION_CONSENSUS_RULE_ID,
     });
   });
 
