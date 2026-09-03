@@ -101,6 +101,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
               requirement.packageActivatedObjectMembershipAuditContract,
           }
         : {}),
+      ...(requirement?.membershipConditionScopeComparisonContract
+        ? {
+            membershipConditionScopeComparisonContract:
+              requirement.membershipConditionScopeComparisonContract,
+          }
+        : {}),
       bindingStructures: requirement?.bindingStructures || [],
       components: (requirement?.components || []).map((component) => ({
         id: component.id,

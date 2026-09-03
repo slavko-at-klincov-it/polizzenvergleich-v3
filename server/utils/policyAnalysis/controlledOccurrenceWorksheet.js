@@ -28,6 +28,9 @@ const {
 const {
   validateCoverageConditionFormulaContract,
 } = require("./coverageConditionFormulaEvidenceContract");
+const {
+  validateMembershipConditionScopeComparisonContract,
+} = require("../policyComparison/membershipConditionScopeComparisonContract");
 
 const WORKSHEET_SCHEMA_VERSION = 2;
 const DEFAULT_CONTEXT_MAX_CHARS = 1_600;
@@ -2405,6 +2408,50 @@ function validateCatalog(catalog) {
             requirement.packageActivatedObjectMembershipAuditContract,
             `${id}:packageActivatedObjectMembershipAuditContract`
           );
+    const membershipConditionScopeComparisonContract =
+      requirement.membershipConditionScopeComparisonContract === undefined
+        ? null
+        : validateMembershipConditionScopeComparisonContract(
+            requirement.membershipConditionScopeComparisonContract
+          );
+    if (membershipConditionScopeComparisonContract) {
+      const comparison = membershipConditionScopeComparisonContract;
+      const matchingMembershipConditionContracts =
+        supportingObjectMembershipEvidenceContracts
+          .map(({ conditionEvidenceContract }) => conditionEvidenceContract)
+          .filter(
+            (contract) =>
+              contract?.conditionSetKey === comparison.membershipConditionSetKey
+          );
+      if (
+        !components.some(
+          ({ id: componentId, factRole }) =>
+            componentId === comparison.componentId &&
+            factRole === "INSURED_OBJECT"
+        ) ||
+        !supportingCoverageConditionFormulaEvidenceContracts.some(
+          ({ formulaKey }) => formulaKey === comparison.directFormulaKey
+        ) ||
+        !packageActivatedObjectMembershipAuditContract ||
+        packageActivatedObjectMembershipAuditContract.targetObjectKey !==
+          comparison.targetObjectKey ||
+        packageActivatedObjectMembershipAuditContract.perilScopeKey !==
+          comparison.perilScopeKey ||
+        !packageActivatedObjectMembershipAuditContract.requiredConditionSetKeys.includes(
+          comparison.membershipConditionSetKey
+        ) ||
+        matchingMembershipConditionContracts.length !== 1 ||
+        JSON.stringify(
+          matchingMembershipConditionContracts[0].predicates
+            .map(({ predicateKey }) => predicateKey)
+            .sort()
+        ) !== JSON.stringify(comparison.membershipRequiredPredicateKeys)
+      )
+        throw worksheetError(
+          "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_BINDING_INVALID",
+          id
+        );
+    }
     const bindingStructures = Array.isArray(requirement.bindingStructures)
       ? requirement.bindingStructures.map((structure, index) => {
           const detail = `${id}:bindingStructures[${index}]`;
@@ -2651,6 +2698,9 @@ function validateCatalog(catalog) {
         : {}),
       ...(packageActivatedObjectMembershipAuditContract
         ? { packageActivatedObjectMembershipAuditContract }
+        : {}),
+      ...(membershipConditionScopeComparisonContract
+        ? { membershipConditionScopeComparisonContract }
         : {}),
       bindingStructures,
       scopeRules,
@@ -3638,6 +3688,12 @@ function buildControlledOccurrenceWorksheet({
         ? {
             packageActivatedObjectMembershipAuditContract:
               requirement.packageActivatedObjectMembershipAuditContract,
+          }
+        : {}),
+      ...(requirement.membershipConditionScopeComparisonContract
+        ? {
+            membershipConditionScopeComparisonContract:
+              requirement.membershipConditionScopeComparisonContract,
           }
         : {}),
       componentCount: grouped.components.length,

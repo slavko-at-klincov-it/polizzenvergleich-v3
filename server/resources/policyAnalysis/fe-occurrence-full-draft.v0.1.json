@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.20",
+  "catalogId": "fe-occurrence-full-draft-v0.21",
   "categoryView": "FE",
   "requirements": [
     {
@@ -972,6 +972,30 @@
         "requiredConditionSetKeys": [
           "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1"
         ]
+      },
+      "membershipConditionScopeComparisonContract": {
+        "contractId": "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1",
+        "componentId": "photovoltaic_as_damaged_object",
+        "targetObjectKey": "PHOTOVOLTAIC_INSTALLATION",
+        "perilScopeKey": "FEUER_INSURANCE",
+        "directFormulaKey": "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
+        "membershipConditionSetKey": "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
+        "membershipSectionPredicateKey": "SECTION_INSURED",
+        "membershipRequiredPredicateKeys": [
+          "BUILDING_OWNER_HAS_PROVABLE_REINSTATEMENT_OBLIGATION",
+          "OBJECT_INCLUDED_IN_BUILDING_REPLACEMENT_VALUE",
+          "OBJECT_OWNED_BY_BUILDING_OWNER"
+        ],
+        "predicateImplications": [
+          {
+            "antecedentPredicateKey": "OBJECT_OWNED_BY_BUILDING_OWNER",
+            "consequentPredicateKey": "OBJECT_OWNED_BY_POLICYHOLDER_OR_BUILDING_OWNER"
+          }
+        ],
+        "comparisonPolicy": "BOOLEAN_IMPLICATION_ALL_VALID_ASSIGNMENTS_V1",
+        "satisfactionPolicy": "CONTRACT_SCOPE_ONLY_NOT_REAL_WORLD_SATISFACTION_V1",
+        "documentResolutionPolicy": "UNIQUE_COMPLEMENTARY_REFERENCE_IDENTITY_NO_CONTENT_CONFLICT_V1",
+        "winnerPolicy": "LESS_RESTRICTIVE_PREREQUISITE_FORMULA_WINS_V1"
       },
       "components": [
         {

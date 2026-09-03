@@ -239,4 +239,31 @@ describe("coverage-only certification contract", () => {
 
     expect(first).not.toBe(second);
   });
+
+  test("binds membership condition-scope comparison contracts into the requirement digest", () => {
+    const requirement = coverageOnlyRequirement();
+    const comparisonContract = {
+      contractId: "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1",
+      winnerPolicy: "LESS_RESTRICTIVE_PREREQUISITE_FORMULA_WINS_V1",
+    };
+    const first = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        membershipConditionScopeComparisonContract: comparisonContract,
+      },
+    });
+    const second = requirementSearchContractDigest({
+      catalogId: CATALOG_ID,
+      requirement: {
+        ...requirement,
+        membershipConditionScopeComparisonContract: {
+          ...comparisonContract,
+          winnerPolicy: "MUTATED_POLICY",
+        },
+      },
+    });
+
+    expect(first).not.toBe(second);
+  });
 });

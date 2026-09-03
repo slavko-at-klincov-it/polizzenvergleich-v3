@@ -1567,6 +1567,12 @@ function materializeAtomicFacts({
               requirement.packageActivatedObjectMembershipAuditContract,
           }
         : {}),
+      ...(requirement?.membershipConditionScopeComparisonContract
+        ? {
+            membershipConditionScopeComparisonContract:
+              requirement.membershipConditionScopeComparisonContract,
+          }
+        : {}),
       scopePolicy: requirement?.scopePolicy || null,
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]

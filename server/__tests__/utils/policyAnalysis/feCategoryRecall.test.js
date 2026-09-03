@@ -189,7 +189,7 @@ describe("FE category recall", () => {
   test("models FE-C07 as one pure scoped insured object", () => {
     const requirement = catalog.requirements.find(({ id }) => id === "FE-C07");
 
-    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.20");
+    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.21");
     expect(requirement).toMatchObject({
       absenceMeaning: "COVERAGE_ONLY",
       requestedFields: ["limit"],
@@ -389,6 +389,21 @@ describe("FE category recall", () => {
     ).toMatchObject({
       terminalState: "NO_CONTROLLED_CANDIDATE",
       occurrenceCount: 0,
+    });
+  });
+
+  test("binds FE-C02 to its versioned membership condition-scope comparison", () => {
+    const requirement = catalog.requirements.find(({ id }) => id === "FE-C02");
+
+    expect(requirement.membershipConditionScopeComparisonContract).toMatchObject({
+      contractId: "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1",
+      componentId: "photovoltaic_as_damaged_object",
+      targetObjectKey: "PHOTOVOLTAIC_INSTALLATION",
+      perilScopeKey: "FEUER_INSURANCE",
+      directFormulaKey: "GLOBAL_OBJECT_ELIGIBILITY_FOR_SELECTED_SECTION_V1",
+      membershipConditionSetKey:
+        "BUILDING_MEMBERSHIP_OWNERSHIP_REINSTATEMENT_VALUE_V1",
+      winnerPolicy: "LESS_RESTRICTIVE_PREREQUISITE_FORMULA_WINS_V1",
     });
   });
 });
