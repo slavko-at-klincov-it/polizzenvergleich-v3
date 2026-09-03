@@ -752,7 +752,6 @@ function buildVs25AuthorityLimitPortfolioAudit({
 
 function vs25AuthorityLimitPortfolioDecision(audit) {
   const valueA = audit.sides.A.displayRelativeLimit;
-  const valueB = audit.sides.B.displayRelativeLimit;
   if (!audit.winnerSide)
     return {
       schemaVersion: 4,

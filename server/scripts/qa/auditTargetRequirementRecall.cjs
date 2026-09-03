@@ -4,7 +4,6 @@ process.umask(0o077);
 
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 const {
   buildControlledOccurrenceWorksheet,
 } = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");

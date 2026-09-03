@@ -155,7 +155,7 @@ function comparisonApplicability(atom) {
       applicabilityFor(atom?.documentStatus, atom.evidencePresence)
       ? PACKAGE_MEMBER
       : null;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
