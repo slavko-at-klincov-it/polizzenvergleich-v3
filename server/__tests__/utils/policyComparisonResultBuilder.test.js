@@ -3702,41 +3702,41 @@ describe("policy comparison result builder", () => {
     ];
     const materialize = (worksheetValue) =>
       materializeAtomicFacts({
-      document: {
-        uuid: "document-fe-c02",
-        role: "TERMS",
-        documentStatus: "FRAMEWORK_TERMS",
-      },
-      worksheet: worksheetValue,
-      materializedEvidence: {
-        judgements: [
-          {
-            targetId: "target:fe-c02",
-            requirementId: "FE-C02",
-            componentId: "photovoltaic_as_damaged_object",
-            evidencePresence: "FOUND",
-            coverageEffect: "DEFINED",
-            conflictState: "NONE",
-            selectedScopePicture: "GENERAL",
-            documentApplicability: "CONDITIONAL",
-            selectedCandidateIds: [occurrence.candidateId],
-            unresolvedCandidateIds: [],
-          },
-        ],
-      },
-      requestedFields: {
-        requirements: [
-          {
-            requirementId: "FE-C02",
-            requestedFieldStatus: "NOT_REQUIRED",
-            fields: [],
-          },
-        ],
-      },
-      targets,
-      documentArtifact,
-      report: null,
-    });
+        document: {
+          uuid: "document-fe-c02",
+          role: "TERMS",
+          documentStatus: "FRAMEWORK_TERMS",
+        },
+        worksheet: worksheetValue,
+        materializedEvidence: {
+          judgements: [
+            {
+              targetId: "target:fe-c02",
+              requirementId: "FE-C02",
+              componentId: "photovoltaic_as_damaged_object",
+              evidencePresence: "FOUND",
+              coverageEffect: "DEFINED",
+              conflictState: "NONE",
+              selectedScopePicture: "GENERAL",
+              documentApplicability: "CONDITIONAL",
+              selectedCandidateIds: [occurrence.candidateId],
+              unresolvedCandidateIds: [],
+            },
+          ],
+        },
+        requestedFields: {
+          requirements: [
+            {
+              requirementId: "FE-C02",
+              requestedFieldStatus: "NOT_REQUIRED",
+              fields: [],
+            },
+          ],
+        },
+        targets,
+        documentArtifact,
+        report: null,
+      });
     const [atom] = materialize(worksheet);
 
     expect(atom.sources[0].objectMembershipProof).toEqual(
