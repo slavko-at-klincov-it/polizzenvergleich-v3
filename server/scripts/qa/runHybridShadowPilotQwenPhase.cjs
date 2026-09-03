@@ -39,6 +39,166 @@ function sha256File(file) {
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function readRegularFile(file, code) {
+  let metadata;
+  try {
+    metadata = fs.lstatSync(file);
+  } catch {
+    throw new Error(`${code}_MISSING: ${file}`);
+  }
+  if (!metadata.isFile()) throw new Error(`${code}_NOT_REGULAR_FILE: ${file}`);
+  return fs.readFileSync(file);
+}
+
+function parseBoundJson(bytes, code) {
+  try {
+    const value = JSON.parse(bytes.toString("utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new Error("JSON root is not an object");
+    return value;
+  } catch (error) {
+    throw new Error(`${code}_JSON_INVALID: ${error.message}`);
+  }
+}
+
+function resolveDocumentArtifactBinding({ manifest, category }) {
+  const documentIndex = category?.documentIndex;
+  const documentFingerprint = String(category?.documentFingerprint || "");
+  if (
+    !Number.isInteger(documentIndex) ||
+    documentIndex < 0 ||
+    !documentFingerprint ||
+    !Array.isArray(manifest?.documents)
+  )
+    throw new Error("HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_CONTRACT_INVALID");
+  const matches = manifest.documents.filter(
+    (document) =>
+      document?.documentIndex === documentIndex &&
+      document?.documentFingerprint === documentFingerprint
+  );
+  if (matches.length !== 1)
+    throw new Error(
+      `HYBRID_SHADOW_PILOT_MANIFEST_DOCUMENT_BINDING_NOT_UNIQUE: ${String(
+        documentIndex
+      )}:${documentFingerprint}`
+    );
+
+  const manifestDocument = matches[0];
+  if (
+    typeof manifestDocument.documentArtifactPath !== "string" ||
+    !manifestDocument.documentArtifactPath.trim() ||
+    !/^[a-f0-9]{64}$/u.test(
+      String(manifestDocument.documentArtifactSha256 || "")
+    )
+  )
+    throw new Error("HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_CONTRACT_INVALID");
+
+  const documentArtifactPath = path.resolve(
+    manifestDocument.documentArtifactPath
+  );
+  const documentArtifactBytes = readRegularFile(
+    documentArtifactPath,
+    "HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT"
+  );
+  const documentArtifactSha256 = sha256(documentArtifactBytes);
+  if (documentArtifactSha256 !== manifestDocument.documentArtifactSha256)
+    throw new Error("HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_CHANGED");
+  const documentArtifact = parseBoundJson(
+    documentArtifactBytes,
+    "HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT"
+  );
+  if (
+    documentArtifact.schemaVersion !== 1 ||
+    documentArtifact.fingerprint !== documentFingerprint ||
+    documentArtifact.document?.sourceDocumentId !== documentFingerprint
+  )
+    throw new Error("HYBRID_SHADOW_PILOT_DOCUMENT_ARTIFACT_IDENTITY_MISMATCH");
+
+  return {
+    documentArtifactPath,
+    documentArtifactSha256,
+    documentFingerprint,
+  };
+}
+
+function buildPreparedEvidenceArguments({
+  category,
+  documentArtifactPath,
+  effectsPrompt,
+  effectsOutput,
+  triageOutput,
+  manifest,
+}) {
+  return [
+    "--worksheet",
+    category.shadowWorksheetPath,
+    "--documentArtifact",
+    documentArtifactPath,
+    "--triageFile",
+    path.join(triageOutput, "materialized-triage.private.json"),
+    "--systemPromptFile",
+    effectsPrompt,
+    "--controlMode",
+    "technical-review",
+    "--documentStatus",
+    category.documentStatus,
+    "--output",
+    effectsOutput,
+    "--model",
+    manifest.qwen.model,
+    "--modelTokenLimit",
+    String(manifest.qwen.modelTokenLimit),
+    "--maxAttemptsPerTarget",
+    "2",
+    "--allowUniqueCandidateIdRepair",
+    "true",
+  ];
+}
+
+function verifyEffectsReportBindings({
+  category,
+  effectsOutput,
+  documentArtifactBinding,
+}) {
+  const reportPath = path.join(effectsOutput, "report.json");
+  const targetsPath = path.join(effectsOutput, "targets.private.json");
+  const reportBytes = readRegularFile(
+    reportPath,
+    "HYBRID_SHADOW_PILOT_EFFECTS_REPORT"
+  );
+  const targetsBytes = readRegularFile(
+    targetsPath,
+    "HYBRID_SHADOW_PILOT_EFFECTS_TARGETS"
+  );
+  const report = parseBoundJson(
+    reportBytes,
+    "HYBRID_SHADOW_PILOT_EFFECTS_REPORT"
+  );
+  const contracts = report.contracts;
+  if (
+    !contracts ||
+    contracts.worksheetSha256 !== category.shadowWorksheetSha256 ||
+    contracts.documentArtifactPath !==
+      documentArtifactBinding.documentArtifactPath ||
+    contracts.documentArtifactSha256 !==
+      documentArtifactBinding.documentArtifactSha256 ||
+    contracts.documentFingerprint !==
+      documentArtifactBinding.documentFingerprint ||
+    contracts.targetsSha256 !== sha256(targetsBytes)
+  )
+    throw new Error("HYBRID_SHADOW_PILOT_EFFECTS_REPORT_BINDING_INVALID");
+  return {
+    reportPath,
+    reportSha256: sha256(reportBytes),
+    targetsPath,
+    targetsSha256: sha256(targetsBytes),
+  };
+}
+
 function writePrivateJson(file, value) {
   const temporary = `${file}.tmp-${process.pid}`;
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
@@ -135,6 +295,10 @@ async function run() {
   };
 
   for (const category of gate.categories) {
+    const documentArtifactBinding = resolveDocumentArtifactBinding({
+      manifest,
+      category,
+    });
     const categoryOutput = path.join(
       output,
       `document-${category.documentIndex + 1}`,
@@ -195,30 +359,22 @@ async function run() {
         REPOSITORY_ROOT,
         "server/scripts/qa/runPreparedEvidenceEvaluation.cjs"
       ),
-      [
-        "--worksheet",
-        category.shadowWorksheetPath,
-        "--triageFile",
-        path.join(triageOutput, "materialized-triage.private.json"),
-        "--systemPromptFile",
+      buildPreparedEvidenceArguments({
+        category,
+        documentArtifactPath:
+          documentArtifactBinding.documentArtifactPath,
         effectsPrompt,
-        "--controlMode",
-        "technical-review",
-        "--documentStatus",
-        category.documentStatus,
-        "--output",
         effectsOutput,
-        "--model",
-        manifest.qwen.model,
-        "--modelTokenLimit",
-        String(manifest.qwen.modelTokenLimit),
-        "--maxAttemptsPerTarget",
-        "2",
-        "--allowUniqueCandidateIdRepair",
-        "true",
-      ],
+        triageOutput,
+        manifest,
+      }),
       environment
     );
+    verifyEffectsReportBindings({
+      category,
+      effectsOutput,
+      documentArtifactBinding,
+    });
   }
 
   const evaluationFile = path.join(output, "evaluation.private.json");
@@ -264,4 +420,11 @@ async function run() {
   console.log("[hybrid-shadow-pilot-qwen] QWEN_COMPLETE");
 }
 
-run().catch((error) => fail(error.stack || error.message));
+if (require.main === module)
+  run().catch((error) => fail(error.stack || error.message));
+
+module.exports = {
+  buildPreparedEvidenceArguments,
+  resolveDocumentArtifactBinding,
+  verifyEffectsReportBindings,
+};
