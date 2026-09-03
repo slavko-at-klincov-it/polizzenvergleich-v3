@@ -78,6 +78,9 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
         conceptSearches: component.conceptSearches || [],
         followingStructuralBoundaryProofContractId:
           component.followingStructuralBoundaryProofContractId || null,
+        ...(component.fieldGovernorPolicy
+          ? { fieldGovernorPolicy: component.fieldGovernorPolicy }
+          : {}),
       })),
     },
   };

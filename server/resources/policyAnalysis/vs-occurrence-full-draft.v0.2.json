@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "vs-occurrence-full-draft-v0.14",
+  "catalogId": "vs-occurrence-full-draft-v0.15",
   "categoryView": "VS",
   "requirements": [
     {
@@ -676,11 +676,12 @@
       "label": "Entsorgungskosten einschließlich Sondermüll",
       "requestedFields": ["limit"],
       "components": [
-        {
-          "id": "disposal_costs",
-          "label": "Entsorgungskosten",
-          "factRole": "COST",
-          "aliases": [
+      {
+        "id": "disposal_costs",
+        "label": "Entsorgungskosten",
+        "factRole": "COST",
+        "fieldGovernorPolicy": "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1",
+        "aliases": [
             "Entsorgungskosten",
             "Entsorgungskosten von Sondermüll",
             "Entsorgungskosten für Sondermüll",

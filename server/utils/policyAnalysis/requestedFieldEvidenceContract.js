@@ -12,6 +12,10 @@ const {
 const {
   buildBindingGroupFieldApplicability,
 } = require("./requestedFieldBindingGroupContract");
+const {
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
+} = require("./controlledOccurrenceWorksheet");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
@@ -434,6 +438,109 @@ function extractFieldGovernorLimitFacts({ occurrence, binding }) {
     },
     binding,
   });
+}
+
+function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
+  const clauseCode = String(occurrence?.sectionScopeHint?.clauseCode || "")
+    .trim()
+    .toLocaleUpperCase("de");
+  const scopes = occurrence?.sectionScopeHint?.scopeKeys?.length
+    ? occurrence.sectionScopeHint.scopeKeys
+    : [occurrence?.sectionScopeHint?.scopeKey].filter(Boolean);
+  const codePattern =
+    /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const moneyPattern =
+    /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
+  const codes =
+    typeof governor?.text === "string"
+      ? [...governor.text.matchAll(codePattern)]
+      : [];
+  const amounts =
+    typeof governor?.text === "string"
+      ? [...governor.text.matchAll(moneyPattern)]
+      : [];
+  if (
+    governor?.contractId !== EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID ||
+    governor?.policy !== EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY ||
+    governor?.documentFingerprint !== worksheet?.document?.fingerprint ||
+    String(governor?.clauseCode || "").toLocaleUpperCase("de") !== clauseCode ||
+    !scopes.includes(governor?.scopeKey) ||
+    typeof governor?.text !== "string" ||
+    !Number.isInteger(governor?.documentStart) ||
+    governor.documentEnd !== governor.documentStart + governor.text.length ||
+    !Number.isInteger(governor?.physicalPageNumber) ||
+    governor.physicalPageNumber < 1 ||
+    codes.length !== 1 ||
+    codes[0][1].toLocaleUpperCase("de") !== clauseCode ||
+    amounts.length !== 1 ||
+    governor.amountText !== amounts[0][0] ||
+    governor.amountDocumentStart !== governor.documentStart + amounts[0].index ||
+    governor.amountDocumentEnd !==
+      governor.amountDocumentStart + governor.amountText.length ||
+    !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
+      governor.text
+    ) ||
+    /\b(?:Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+      governor.text
+    )
+  )
+    return null;
+  return governor;
+}
+
+function extractExactClauseCodeFieldGovernorLimitFacts({
+  occurrence,
+  binding,
+  worksheet,
+}) {
+  const governors = (occurrence?.exactClauseCodeFieldGovernorHints || [])
+    .map((governor) =>
+      validatedExactClauseCodeGovernor({ occurrence, governor, worksheet })
+    )
+    .filter(Boolean);
+  if (governors.length === 0) return [];
+
+  const facts = governors.flatMap((governor) =>
+    extractLimitFacts({
+      occurrence: {
+        ...occurrence,
+        pageNumber: governor.physicalPageNumber,
+        physicalPageNumber: governor.physicalPageNumber,
+        printedPageLabel: governor.printedPageLabel,
+        documentStart: governor.documentStart,
+        documentEnd: governor.documentEnd,
+        context: {
+          unitType: "LIST_ITEM",
+          text: governor.text,
+          documentStart: governor.documentStart,
+          documentEnd: governor.documentEnd,
+        },
+      },
+      binding,
+    }).map((fact) => ({
+      ...fact,
+      clauseActivationScope: {
+        key: governor.scopeKey,
+        label:
+          {
+            FEUER_INSURANCE: "Feuer",
+            LEITUNGSWASSER_INSURANCE: "Leitungswasser",
+            STURM_INSURANCE: "Sturm",
+            GLASBRUCH_INSURANCE: "Glas",
+          }[governor.scopeKey] || governor.scopeKey,
+      },
+      exactClauseCodeFieldGovernor: {
+        contractId: governor.contractId,
+        clauseCode: governor.clauseCode,
+        documentFingerprint: governor.documentFingerprint,
+        scopeKey: governor.scopeKey,
+      },
+    }))
+  );
+  const normalizedValues = new Set(
+    facts.map(({ normalizedValue }) => normalizedValue)
+  );
+  return normalizedValues.size === 1 ? facts : [];
 }
 
 function extractBoundLimitFacts(options) {
@@ -1637,8 +1744,16 @@ function extractRentLossCalculationBasisFacts({ occurrence, binding }) {
   });
 }
 
-function extractorFor(requirement, field, componentId = null) {
+function extractorFor(requirement, field, component = null) {
   const requirementId = requirement.id;
+  const componentId =
+    typeof component === "string" ? component : component?.id || null;
+  if (
+    field === "limit" &&
+    component?.fieldGovernorPolicy ===
+      EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY
+  )
+    return extractExactClauseCodeFieldGovernorLimitFacts;
   if (
     requirementId === "FE-C07" &&
     componentId === FE_C07_COMPONENT_ID &&
@@ -1783,6 +1898,12 @@ function valueCoversRequirement({
     return true;
   if (
     field === "limit" &&
+    indexed.component.fieldGovernorPolicy ===
+      EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY
+  )
+    return true;
+  if (
+    field === "limit" &&
     indexed.component.factRole === "LIMIT" &&
     ["VS-22", "VS-23", "VS-25", "VS-31", "VS-33"].includes(
       indexed.requirement.id
@@ -1862,6 +1983,7 @@ function valueCoversRequirement({
 }
 
 function extractPreferredFacts({
+  worksheet,
   requirement,
   field,
   candidateById,
@@ -1875,7 +1997,7 @@ function extractPreferredFacts({
     if (!factsByBinding.has(binding)) continue;
     const indexed = candidateById.get(candidateId);
     if (indexed.requirement.id !== requirement.id) continue;
-    const extractor = extractorFor(requirement, field, indexed.component.id);
+    const extractor = extractorFor(requirement, field, indexed.component);
     if (!extractor) continue;
     if (
       !valueCoversRequirement({
@@ -1887,10 +2009,16 @@ function extractPreferredFacts({
       })
     )
       continue;
-    const facts = extractor({ occurrence: indexed.occurrence, binding }).map(
+    const facts = extractor({
+      occurrence: indexed.occurrence,
+      binding,
+      worksheet,
+    }).map(
       (fact) => {
         const componentScopedFact =
-          indexed.component.factRole === "INSURED_OBJECT" &&
+          (indexed.component.factRole === "INSURED_OBJECT" ||
+            indexed.component.fieldGovernorPolicy ===
+              EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY) &&
           indexed.requirement.components.length > 1
             ? {
                 ...fact,
@@ -2054,7 +2182,7 @@ function materializeRequestedFieldEvidence({
       : [];
     const fields = [...requestedFields, ...optionalFields].map((field) => {
       const extractors = requirement.components
-        .map(({ id }) => extractorFor(requirement, field, id))
+        .map((component) => extractorFor(requirement, field, component))
         .filter(Boolean);
       if (extractors.length === 0)
         return {
@@ -2063,6 +2191,7 @@ function materializeRequestedFieldEvidence({
           facts: [],
         };
       const facts = extractPreferredFacts({
+        worksheet,
         requirement,
         field,
         candidateById,

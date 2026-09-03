@@ -150,6 +150,7 @@ function sourceTextForFact(occurrence, fact) {
   const ranges = [
     occurrence?.context,
     occurrence?.fieldGovernorHint,
+    ...(occurrence?.exactClauseCodeFieldGovernorHints || []),
     occurrence?.scopeLead,
   ];
   const containing = ranges.find(
@@ -202,7 +203,12 @@ function selectedSources({
       !quote
     )
       continue;
-    if (candidateFieldFacts.length === 0)
+    const hasCrossPageFieldFact = candidateFieldFacts.some(
+      (fact) =>
+        Number(fact.source?.physicalPageNumber || physicalPageNumber) !==
+        physicalPageNumber
+    );
+    if (candidateFieldFacts.length === 0 || hasCrossPageFieldFact)
       sources.push({ candidateId, physicalPageNumber, quote });
 
     for (const fact of candidateFieldFacts) {
@@ -211,10 +217,17 @@ function selectedSources({
         factSourceText,
         fact.rawValue || fact.source?.exactText
       );
-      const factKey = `${physicalPageNumber}:${factQuote}`;
+      const factPhysicalPageNumber = Number(
+        fact.source?.physicalPageNumber || physicalPageNumber
+      );
+      const factKey = `${factPhysicalPageNumber}:${factQuote}`;
       if (!factQuote || seen.has(factKey)) continue;
       seen.add(factKey);
-      sources.push({ candidateId, physicalPageNumber, quote: factQuote });
+      sources.push({
+        candidateId,
+        physicalPageNumber: factPhysicalPageNumber,
+        quote: factQuote,
+      });
     }
   }
   const unique = [];
@@ -291,7 +304,10 @@ function factDisplayValue(fact) {
   const value = [fact.normalizedValue, fact.qualifier]
     .filter(Boolean)
     .join(" ");
-  const scopeLabel = fact.variantScope?.label || fact.componentScope?.label;
+  const scopeLabel =
+    fact.variantScope?.label ||
+    fact.clauseActivationScope?.label ||
+    fact.componentScope?.label;
   return scopeLabel ? `${scopeLabel}: ${value}` : value;
 }
 

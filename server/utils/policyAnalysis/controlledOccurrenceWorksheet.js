@@ -22,6 +22,10 @@ const OBJECT_CLASSIFICATION_CONTEXT_CONTRACT =
   "CROSS_PAGE_OBJECT_CLASSIFICATION_CONTEXT_V1";
 const FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID =
   "FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_V1";
+const EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY =
+  "SAME_DOCUMENT_EXACT_CLAUSE_CODE_V1";
+const EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID =
+  "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1";
 const MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE = 4_096;
 const FOLLOWING_STRUCTURAL_BOUNDARY_KIND = Object.freeze({
   LIST_ITEM: "LIST_ITEM",
@@ -745,6 +749,97 @@ function clauseActivationScopes(pages) {
     if (lastScopedHeading) inheritedSectionHeading = lastScopedHeading;
   }
   return scopesByClause;
+}
+
+function positiveActivationGovernor(governor) {
+  return (
+    governor?.polarity === "POSITIVE" ||
+    /^(?:Zus[aä]tzlich\s+)?(?:mit)?versichert\s+(?:sind|gelten)\b/iu.test(
+      String(governor?.text || "").trim()
+    )
+  );
+}
+
+function exactClauseCodeFieldGovernors({
+  pages,
+  documentFingerprint,
+  activationScopes,
+}) {
+  const governorsByClauseCode = new Map();
+  const codePattern =
+    /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
+  const moneyPattern =
+    /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
+
+  for (const page of pages) {
+    for (const match of page.text.matchAll(codePattern)) {
+      const context = structuralContext({
+        pageText: page.text,
+        occurrenceStart: match.index,
+        occurrenceEnd: match.index + match[0].length,
+        maxChars: 2_000,
+        fallbackWordsEachSide: DEFAULT_FALLBACK_WORDS_EACH_SIDE,
+      });
+      if (context.unitType !== "LIST_ITEM") continue;
+      const codes = [...context.text.matchAll(codePattern)].map((candidate) =>
+        candidate[1].toLocaleUpperCase("de")
+      );
+      const amounts = [...context.text.matchAll(moneyPattern)];
+      if (
+        codes.length !== 1 ||
+        amounts.length !== 1 ||
+        !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
+          context.text
+        ) ||
+        /\b(?:Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+          context.text
+        )
+      )
+        continue;
+
+      const currentSectionHeading = page.sectionHeadings
+        .filter(({ pageEnd, scopeKey }) => scopeKey && pageEnd <= match.index)
+        .at(-1);
+      const scopeKey =
+        currentSectionHeading?.scopeKey ||
+        page.inheritedSectionHeading?.scopeKey;
+      if (!scopeKey?.endsWith("_INSURANCE")) continue;
+      const currentCoverageGovernor = page.coverageGovernors
+        .filter(
+          ({ pageEnd, pageStart }) =>
+            pageEnd <= match.index &&
+            (!currentSectionHeading ||
+              pageStart >= currentSectionHeading.pageStart)
+        )
+        .at(-1) || page.inheritedCoverageGovernor;
+      if (!positiveActivationGovernor(currentCoverageGovernor)) continue;
+
+      const clauseCode = codes[0];
+      if (!activationScopes.get(clauseCode)?.has(scopeKey)) continue;
+      const amount = amounts[0];
+      const documentStart = page.start + context.pageStart;
+      const amountDocumentStart = documentStart + amount.index;
+      const governor = {
+        contractId: EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
+        policy: EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
+        clauseCode,
+        documentFingerprint,
+        scopeKey,
+        physicalPageNumber: page.physicalPageNumber,
+        printedPageLabel: page.printedPageLabel,
+        documentStart,
+        documentEnd: page.start + context.pageEnd,
+        text: context.text,
+        amountDocumentStart,
+        amountDocumentEnd: amountDocumentStart + amount[0].length,
+        amountText: amount[0],
+      };
+      if (!governorsByClauseCode.has(clauseCode))
+        governorsByClauseCode.set(clauseCode, []);
+      governorsByClauseCode.get(clauseCode).push(governor);
+    }
+  }
+  return governorsByClauseCode;
 }
 
 function explicitClauseSectionHeadings(pageText, activationScopes) {
@@ -1641,6 +1736,22 @@ function validateCatalog(catalog) {
           "FOLLOWING_BOUNDARY_PROOF_CONTRACT_INVALID",
           `${id}:${componentId}:${followingStructuralBoundaryProofContractId}`
         );
+      const fieldGovernorPolicy =
+        component.fieldGovernorPolicy === undefined
+          ? null
+          : requireNonEmptyString(
+              component.fieldGovernorPolicy,
+              "FIELD_GOVERNOR_POLICY_REQUIRED",
+              `${id}:${componentId}`
+            );
+      if (
+        fieldGovernorPolicy !== null &&
+        fieldGovernorPolicy !== EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY
+      )
+        throw worksheetError(
+          "FIELD_GOVERNOR_POLICY_INVALID",
+          `${id}:${componentId}:${fieldGovernorPolicy}`
+        );
       return {
         id: componentId,
         label: requireNonEmptyString(
@@ -1675,6 +1786,7 @@ function validateCatalog(catalog) {
         ...(followingStructuralBoundaryProofContractId
           ? { followingStructuralBoundaryProofContractId }
           : {}),
+        ...(fieldGovernorPolicy ? { fieldGovernorPolicy } : {}),
       };
     });
     const componentFamilyContract = (() => {
@@ -2386,6 +2498,21 @@ function buildControlledOccurrenceWorksheet({
   );
   const { pageContent, pages } = validateDocument(document);
   const requirements = validateCatalog(catalog);
+  const activationScopes = clauseActivationScopes(pages);
+  const exactClauseCodeGovernors = exactClauseCodeFieldGovernors({
+    pages,
+    documentFingerprint: fingerprint,
+    activationScopes,
+  });
+  const clauseSectionCounts = new Map();
+  for (const page of pages)
+    for (const heading of page.sectionHeadings) {
+      if (!heading.clauseCode) continue;
+      clauseSectionCounts.set(
+        heading.clauseCode,
+        (clauseSectionCounts.get(heading.clauseCode) || 0) + 1
+      );
+    }
   const structuralUnits = requirements.some((requirement) =>
     requirement.components.some(
       (component) => component.followingStructuralBoundaryProofContractId
@@ -2573,6 +2700,19 @@ function buildControlledOccurrenceWorksheet({
                   source: "CURRENT_PAGE_FIELD_GOVERNOR",
                 }
               : null;
+          const exactClauseCodeFieldGovernorHints =
+            component.fieldGovernorPolicy ===
+              EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY &&
+            sectionScopeHint?.clauseCode &&
+            clauseSectionCounts.get(sectionScopeHint.clauseCode) === 1
+              ? (exactClauseCodeGovernors.get(
+                  sectionScopeHint.clauseCode.toLocaleUpperCase("de")
+                ) || []).filter(({ scopeKey }) =>
+                  sectionScopeHint.scopeKeys?.length
+                    ? sectionScopeHint.scopeKeys.includes(scopeKey)
+                    : sectionScopeHint.scopeKey === scopeKey
+                )
+              : [];
           occurrences.push({
             candidateId: candidateId({
               documentFingerprint: fingerprint,
@@ -2592,6 +2732,9 @@ function buildControlledOccurrenceWorksheet({
             objectClassificationGovernorHint,
             variantScopeHint,
             fieldGovernorHint,
+            ...(exactClauseCodeFieldGovernorHints.length > 0
+              ? { exactClauseCodeFieldGovernorHints }
+              : {}),
             pageStart: range.originalStart,
             pageEnd: range.originalEnd,
             documentStart,
@@ -2644,6 +2787,9 @@ function buildControlledOccurrenceWorksheet({
               followingStructuralBoundaryProofContractId:
                 component.followingStructuralBoundaryProofContractId,
             }
+          : {}),
+        ...(component.fieldGovernorPolicy
+          ? { fieldGovernorPolicy: component.fieldGovernorPolicy }
           : {}),
         terminalState:
           occurrences.length > 0
@@ -2739,6 +2885,8 @@ module.exports = {
   DEFAULT_SCOPE_WORDS_BEFORE,
   FOLLOWING_STRUCTURAL_BOUNDARY_KIND,
   FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
+  EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
   MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE,
   WORKSHEET_SCHEMA_VERSION,
   buildControlledOccurrenceWorksheet,

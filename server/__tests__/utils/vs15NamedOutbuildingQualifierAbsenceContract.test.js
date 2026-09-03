@@ -23,7 +23,7 @@ const {
 } = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 const fullVsCatalog = require("../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 
-const CATALOG_ID = "vs-occurrence-full-draft-v0.14";
+const CATALOG_ID = "vs-occurrence-full-draft-v0.15";
 const CATEGORY_ID = "VS-15";
 const COVER_COMPONENT_ID = "outbuilding_cover";
 const QUALIFIER_COMPONENT_ID = "named_outbuilding_designation";

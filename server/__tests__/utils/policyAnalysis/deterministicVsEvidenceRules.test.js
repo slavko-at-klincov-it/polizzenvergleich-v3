@@ -30,7 +30,7 @@ describe("deterministicVsEvidenceRules", () => {
       vsCatalog.requirements.find((candidate) => candidate.id === id);
     const aliases = (id) => requirement(id).components[0].aliases;
 
-    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.14");
+    expect(vsCatalog.catalogId).toBe("vs-occurrence-full-draft-v0.15");
     expect(aliases("VS-13")).toContain(
       "Adaptierungen und Investitionen der Bewohner"
     );
