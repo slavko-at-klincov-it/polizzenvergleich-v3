@@ -134,7 +134,13 @@ function expectedDocumentsForSide(expectedDocuments, side) {
   if (!Array.isArray(expectedDocuments) || expectedDocuments.length === 0)
     return null;
   const documents = expectedDocuments.map(
-    ({ uuid, side: documentSide, role, documentStatus, sha256: documentSha }) => ({
+    ({
+      uuid,
+      side: documentSide,
+      role,
+      documentStatus,
+      sha256: documentSha,
+    }) => ({
       uuid: String(uuid || ""),
       side: String(documentSide || ""),
       role: String(role || ""),
@@ -340,8 +346,8 @@ function clauseCodes(atom) {
 
 function directFieldFactsValid(atom, signature) {
   const selectedCandidateIds = new Set(atom.selectedCandidateIds || []);
-  const facts = (atom.fields || []).flatMap(({ facts: fieldFacts }) =>
-    fieldFacts || []
+  const facts = (atom.fields || []).flatMap(
+    ({ facts: fieldFacts }) => fieldFacts || []
   );
   if (facts.length === 0) return false;
   return facts.every((fact) => {

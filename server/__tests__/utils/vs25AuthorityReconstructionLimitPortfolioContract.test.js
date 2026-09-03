@@ -183,10 +183,10 @@ function newValueAtom(sourceDocument, amount = null) {
             status: "FOUND",
             facts: [
               {
-              normalizedValue: amount,
-              valueType: "MONEY",
-              unit: "EUR",
-              binding: "DIRECT",
+                normalizedValue: amount,
+                valueType: "MONEY",
+                unit: "EUR",
+                binding: "DIRECT",
                 source: {
                   candidateId,
                   physicalPageNumber: 1,
