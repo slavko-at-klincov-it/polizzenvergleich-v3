@@ -5116,3 +5116,31 @@ Aktivierungsreferenz, gerichteter Objektmitgliedschaft, Bedingungsforttragung
 und Ausschluss-/Rangprüfung. Eine globale Promotion `DEFINED -> INCLUDED` ist
 ausgeschlossen. Vor jeder Vorteilsaussage ist danach ein eigener typisierter
 Bedingungs- und Teilmengenvergleich erforderlich.
+
+## 102. FE-C02 Objektmitgliedschaft – Proof-Persistenz abgeschlossen
+
+`5e5a5cf51` führt `SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1` und den
+FE-Katalog `v0.11` ein. Die Verträge unterscheiden gerichtete Zugehörigkeit
+von gerichteter Nichtzugehörigkeit und transportieren keine Deckungswirkung.
+Prepared Evidence hält den Proof nur serverintern; der Selected-Source-Replay
+validiert ihn gegen Worksheet, Katalogvertrag, Originalbytes, PageMap und
+Dokumentfingerprint. Atomic Sources erhalten anschließend eine private Kopie.
+`6ee2f959f` formatiert die betroffenen Dateien; `ee9d0493a` korrigiert die
+zweite, beim ersten Mac-Lauf sichtbar gewordene Produktprofil-Erwartung.
+
+```text
+Mac Studio: 8 Suites / 239 Tests PASS
+Baseline: QA/FE-C02-BASELINE-6D3A455A-20260903
+Baseline-SHA: 95e9dee7d9a21c98df954bb84e8df17aa1e5f5f9b30b7fced95140948742755f
+Nachlauf: QA/FE-C02-MEMBERSHIP-EE9D0493-20260903
+Nachlauf-SHA: 0c61bb884735248216ec71db140d38419ee3be216ab3a0970be4ee0a64227b74
+Ergebnisdelta: keines
+Call-Delta: keines
+Persistierte B-Kanten: 2
+```
+
+Offen bleibt der outcome-neutrale Paket-Audit für die vollständige Kette
+`Feuer/Wohngebäude -> EABS 2023 -> Gebäude -> Haustechnik -> Photovoltaik`
+einschließlich Editionsmatch, Bedingungen, Konflikt und Rang. Erst danach darf
+ein eigener Entscheidungsvertrag vor dem allgemeinen Paketstatus-Gate geprüft
+werden. R69-A bleibt `10/40`; kein Vollrun und kein Deployment.

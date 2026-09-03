@@ -2194,6 +2194,65 @@ positiver Ersatzregel falsche Gleichheit erzeugen würde.
 Ein voller 224-Zeilen-Lauf und ein Deployment wurden nicht durchgeführt; der
 installierte Kundenstand blieb unverändert.
 
+### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
+
+Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne
+Rückgriff auf den alten Vergleichs-Report:
+
+```text
+Artefakt: QA/FE-C02-BASELINE-6D3A455A-20260903
+Summary-SHA: 95e9dee7d9a21c98df954bb84e8df17aa1e5f5f9b30b7fced95140948742755f
+Selection-SHA: 81c5c02c61ac2a5038fe232b521f9dfebe2796c76cb0e539dd38c2111c5fba7d
+A: BELEGT / INCLUDED
+B: TEILBELEGT / DEFINED
+Entscheidung: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+Calls: 2 Triage, 0 Effects
+```
+
+Die zwei ausgewählten B-Fundstellen haben unterschiedliche gerichtete
+Bedeutung. S. 2 beweist `PHOTOVOLTAIC_INSTALLATION EXCLUDED_FROM_CLASS
+BUSINESS_CONTENT`; S. 4 beweist `PHOTOVOLTAIC_INSTALLATION MEMBER_OF_CLASS
+BUILDING_TECHNICAL_INSTALLATION`. Keine dieser Kanten allein ist eine
+Deckungsaussage.
+
+Die Commits `5e5a5cf51`, `6ee2f959f` und `ee9d0493a` führen deshalb den
+kataloggesteuerten Vertrag
+`SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V1` ein. Der Beweis bindet
+Mitglieds- und Klassen-Span, Richtung, Originaltext, physische Seite, Offsets,
+Dokumentfingerprint sowie Vertrags- und Proof-Digest. Er wird intern über
+Prepared Target, originalbyte-validierte Selected Source und Atomic Source
+erhalten, aber vor dem Qwen-Payload entfernt. Manipulierte Proofs oder
+Dokumentbytes werden fail-closed verworfen.
+
+Mac-Studio-Regression auf `ee9d0493a617b466388df675901c17d6b08f0588`:
+
+```text
+8/8 fokussierte Suites PASS
+239/239 fokussierte Tests PASS
+Arbeitsbaum: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b; Kontext 42496
+```
+
+Der reale Zehn-Dokument-Lauf blieb absichtlich outcome-neutral:
+
+```text
+Artefakt: QA/FE-C02-MEMBERSHIP-EE9D0493-20260903
+Summary-SHA: 0c61bb884735248216ec71db140d38419ee3be216ab3a0970be4ee0a64227b74
+Selection-SHA: 4df5fbe574bfd26a2258f9946cc8ee4426fcc95e2b9a98e4968f25dc713b450c
+A/B/Entscheidung: unverändert BELEGT / TEILBELEGT / UNKLAR
+Calls und Server-Terminals: unverändert 2 / 0 / 4 / 8
+Neue Membership-Proofs: 2 in Selected Sources und Atomic Sources
+```
+
+Damit ist nur die erste von vier Freigabestufen abgeschlossen. Noch fehlen
+die sourcegebundene Kante `BUILDING_TECHNICAL_INSTALLATION -> BUILDING`, die
+Paketaktivierung `FEUER + WOHNGEBAEUDE + EABS 2023` und die unveränderte
+Forttragung der drei kumulativen Bedingungen Eigentum,
+Wiederherstellungspflicht und Aufnahme im Gebäudeneuwert. Eine globale oder
+FE-C02-lokale Umdeutung `DEFINED -> INCLUDED` bleibt verboten. Kein voller
+224-Zeilen-Lauf und kein Deployment.
+
 ### 10.38 FE-A05 Schritt 2c2 – Effects-Runner an Originalartefakte gebunden
 
 Der Selected-Source-Replay ist jetzt in die tatsächliche Effects-Ausführung
