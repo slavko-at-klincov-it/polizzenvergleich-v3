@@ -4820,3 +4820,52 @@ NO PRODUCT SEMANTIC CHANGE
 NO DEPLOY
 NEXT: neues commitgebundenes Manifest/Prepared-Paket und kompletter Target-Lauf
 ```
+
+## 93. VS-24-Nachaudit und VS-25 relative behördliche Mehrkosten
+
+Der R69-Ziellauf wurde nach VS-24 mit VS-25 fortgesetzt. Alle Ausführungen
+liefen im isolierten Mac-Studio-Worktree
+`/private/tmp/pv3-vs19-amount-LOqa66/repo`; der installierte Kundencheckout
+wurde nicht verändert.
+
+VS-24 blieb nach zwei Audit-Härtungen (`8d6d563ad`, `b890d0d7a`) und nach allen
+VS-25-Änderungen stabil:
+
+```text
+Commit: 22dab16c74ac789e2cf310a09b520593985f4290
+Artefakt: QA/VS-24-POST-VS25-22DAB16C-20260903
+Summary: 8dd5afa277a53987ef8ce4daf0785fa2d6e03dc093b64e18b38db53577f20f73
+Ergebnis: GLEICHWERTIG / kein Review
+```
+
+Der erste VS-25-Vorteilsstand auf `2165289ad` wurde verworfen, weil ein
+`SEARCH_INCOMPLETE`-Dokument fälschlich als belastbare Abwesenheit akzeptiert
+worden wäre. Die Folgecommits binden vollständige Negativsuche, ein enges
+Summenausgleich-Terminal, lokale Limitbasis, exakte VS-01-Basisquelle,
+centgenaue Prozent-/Euro-Reconciliation, Dokumentmanifest und Customer-Replay.
+Ein zu enges 240-Zeichen-Basisfenster wurde nicht zurückgebaut, sondern durch
+die persistierte `comparisonBasisSource` auf `22dab16c7` vorwärts korrigiert.
+
+```text
+Produktprofil: CUSTOMER_CORE_5_V77_VS25_BASIS_SOURCE_PROOF
+Artefakt: QA/VS-25-BASIS-SOURCE-PROOF-22DAB16C-20260903
+Summary: 4b76d2f4843961ccd60e1779d7dc789fd030dece30399059a03c708e2552b8db
+Ergebnis: VORTEIL_A / kein Review
+Fachliche Aussage: 10 % > 5 %; kein absoluter Eurovorteil behauptet
+Standalone-Replay: PASS
+Fokussiert: 349/349 PASS
+Breit: 1609/1633 PASS; 24 bekannte historische VS-Katalog-Fixturefehler
+```
+
+VS-22 blieb im Nachbarlauf `VORTEIL_A / kein Review` mit Summary
+`83b90509ab02daa415b3704f020d3fa923763ea3576ef6e1c22b5cac3cddbf5c`.
+
+```text
+R69-A: 10/40 abgeschlossen, 30 offen
+Unbestätigte 224-Zeilen-Projektion:
+VORTEIL_A 4 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 122 / NICHT_VERGLEICHBAR 12 / UNKLAR 50
+LIMIT: kein neuer 224-Zeilen-Gesamtlauf und kein unbekannter Holdout
+NO DEPLOY
+NEXT: nächsten offenen R69-Kandidaten isoliert reproduzieren
+```

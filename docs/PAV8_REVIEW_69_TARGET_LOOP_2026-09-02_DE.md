@@ -59,8 +59,8 @@ EL: 13
 
 ### R69-A – Paket-Prüfstatus blockiert: 40
 
-Status: `9/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `VS-22`,
-`VS-24`, `FE-A10`, `LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 31 Fälle der
+Status: `10/40 TARGET-E2E ACCEPTED`. `VS-15`, `VS-18`, `VS-21`, `VS-22`,
+`VS-24`, `VS-25`, `FE-A10`, `LW-07`, `LW-12` und `ST-27` sind abgeschlossen; 30 Fälle der
 ursprünglichen Familie bleiben offen.
 
 ```text
@@ -72,9 +72,9 @@ EL-04, EL-05, EL-08, EL-16, EL-17, EL-19, EL-21, EL-27, EL-35
 ```
 
 Die Liste bleibt als unverändertes Ausgangsinventar erhalten. `VS-15`,
-`VS-18`, `VS-21`, `VS-22`, `VS-24`, `FE-A10`, `LW-07`, `LW-12` und `ST-27`
+`VS-18`, `VS-21`, `VS-22`, `VS-24`, `VS-25`, `FE-A10`, `LW-07`, `LW-12` und `ST-27`
 gehören nach den in Abschnitt 10.19, 10.27, 10.28, 10.29, 10.30, 10.25,
-10.24, 10.21 beziehungsweise 10.23 dokumentierten Zielnachweisen nicht mehr
+10.31, 10.24, 10.21 beziehungsweise 10.23 dokumentierten Zielnachweisen nicht mehr
 zur operativen Restliste.
 
 Diese 40 sind keine einheitliche Ursache. Die internen Blocker überlappen:
@@ -2414,6 +2414,199 @@ aber keine externe Signatur gegen vollständiges Neuschreiben aller Artefakte.
 Der VS-24-Audit bezieht PDF-SHA und PageMap über das vorgelagerte
 Target-Pipeline-Gate; er validiert diese beiden Provenienzen nicht nochmals
 selbstständig.
+
+Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
+durchgeführt. Die installierte Kundenanwendung blieb unverändert.
+
+#### 10.30.6 Nachaudit nach der VS-25-Härtung
+
+Die spätere VS-25-Arbeit berührte gemeinsame Atom-, Result- und
+Customer-Validierungsgrenzen. Deshalb wurde VS-24 auf dem finalen VS-25-Commit
+erneut über dieselben zehn Dokumente ausgeführt:
+
+```text
+Commit: 22dab16c74ac789e2cf310a09b520593985f4290
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-24-POST-VS25-22DAB16C-20260903
+Summary-Digest:
+8dd5afa277a53987ef8ce4daf0785fa2d6e03dc093b64e18b38db53577f20f73
+Ergebnis: GLEICHWERTIG / kein Review
+Reason-Code: EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT
+Regel: VS24_EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT_V1
+Triage-/Evidence-Modellaufrufe: 0 / 0
+Triage-Serverrejects: 2
+Evidence-Serverterminals: 8
+```
+
+Zwei zusätzliche Forward-Fixes aus dem unabhängigen VS-24-Nachaudit bleiben
+Teil der Historie:
+
+```text
+8d6d563ad  fix(comparison): disclose VS-24 proof boundary
+b890d0d7a  fix(comparison): reject implicit VS-24 limit language
+```
+
+Der Nachaudit bestätigt, dass VS-25 die enge VS-24-Entscheidung nicht
+verändert hat. Er ist kein neuer 224-Zeilen-Gesamtlauf.
+
+### 10.31 VS-25 – behördliche Mehrkosten mit relativer Prozentgrenze
+
+#### 10.31.1 Ausgangsfehler und verworfener Fehlabschluss
+
+Im Ausgangszustand blieb VS-25 `UNKLAR`, obwohl Paket A ein direktes Limit von
+`10 % auf Erstes Risiko` und Paket B ein direktes Limit von `5 % des
+Neubauwerts` dokumentiert. Paket B enthält zusätzlich den errechneten
+Eurobetrag `EUR 1.530.400`; der gebundene VS-01-Neubauwert beträgt
+`EUR 30.608.000`. Die Rechnung `30.608.000 × 5 % = 1.530.400` geht centgenau
+auf. Damit darf die Prozent- und Eurodarstellung innerhalb von Paket B als
+dieselbe Grenze versöhnt werden. Der fachlich belegte Vergleich ist jedoch
+nur `10 % > 5 %`; ohne einen beidseitigen Euro-Neubauwert ist kein absoluter
+Eurovorteil für A bewiesen.
+
+Ein früher Zwischenstand auf Commit `2165289ad` meldete bereits
+`VORTEIL_A`. Der unabhängige Audit verwarf ihn: Ein B-Dokument hatte für beide
+VS-25-Atome `NOT_FOUND`, aber zugleich `SEARCH_INCOMPLETE`, kein
+Zero-Occurrence- und kein Zero-Candidate-Terminal. Die damalige Abwesenheits-
+Prüfung hätte dieses Dokument trotzdem als vollständig negativ behandelt.
+Dieser Lauf ist ausdrücklich **kein akzeptierter Nachweis**.
+
+#### 10.31.2 Kleine Forward-Fixes und Sicherheitsgrenzen
+
+Die Korrektur wurde ohne Rückbau in getrennten Commits aufgebaut:
+
+```text
+9b8939c5c  fix(comparison): validate VS-25 customer replay
+52f0461e8  style(comparison): format VS-25 replay validation
+ee080e52e  fix(comparison): bind VS-25 source semantics
+0d0531792  style(comparison): format VS-25 source binding
+cfa94300c  fix(analysis): certify VS-25 allocation-only terminals
+2bf1ae8fb  style(analysis): format VS-25 terminal contract
+9d29e576d  fix(comparison): bind VS-25 local limit basis
+1d4060c0a  style(test): format VS-25 local basis cases
+6102f192a  fix(analysis): persist VS-25 limit basis proof
+22dab16c7  fix(analysis): bind section-governor basis source
+```
+
+Der finale Vertrag verlangt unter anderem:
+
+1. für jedes erwartete Dokument exakt die gebundenen VS-25-Komponenten;
+2. bei `NOT_FOUND` einen vollständig kontrollierten oder zertifizierten
+   Suchabschluss beziehungsweise ein enges deterministisches Terminal;
+3. direkte, ausgewählte und quellgebundene Limitfelder mit gültiger Einheit,
+   `CAPPED`-Limitart, Seite und Offsets;
+4. eine lokal gebundene Prozentbasis und kompatible Qualifier;
+5. die Rekonstruktion des verwendeten VS-01-Basisbetrags aus dem exakten Atom,
+   nicht aus einem frei übergebenen Auditwert;
+6. eine centgenaue Reconciliation zwischen Prozentwert, Basis und Eurobetrag;
+7. lokale Klauselcode-, Präfixbedingungs- und Scope-Prüfung;
+8. Source-/Reference-Atom-Digest-Replay, Dokumentmanifest-SHA und erneute
+   Customer-Validierung der Entscheidung.
+
+Das B-Dokument `759b582e-…` enthält nur eine
+`Summenausgleich`-Formulierung: behördliche Mehrkosten für Gebäude und Inhalt
+gelten gemeinsam summarisch versichert. Das ist weder ein neuer Einschluss
+noch ein eigenes Limit. Der versionierte Terminalvertrag
+`DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_V1` akzeptiert diesen Befund nur
+mit exaktem lokalem Wortlaut, ohne eigene EUR-/Prozent-/Erstrisiko- oder
+Leistungszusage, mit gebundenen Occurrence-Offsets, vollständiger Suche und
+exaktem Rejection-Digest. Andere Formulierungen bleiben fail-closed.
+
+Der Zwischencommit `1d4060c0a` war ebenfalls noch nicht akzeptabel: Ein
+pauschales 240-Zeichen-Fenster trennte im echten A-Dokument den gültigen
+Abschnitts-Governor vom Limit und führte wieder zu `UNKLAR`. Der Forward-Fix
+`22dab16c7` persistiert deshalb die tatsächlich verwendete
+`comparisonBasisSource`, statt die Basis später aus einem gekürzten
+Reportausschnitt zu erraten.
+
+Versionierte Bindungen:
+
+```text
+Produktprofil: CUSTOMER_CORE_5_V77_VS25_BASIS_SOURCE_PROOF
+Vergleichsregel: VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1
+Reason-Code: HIGHER_AUTHORITY_RECONSTRUCTION_RELATIVE_LIMIT
+```
+
+#### 10.31.3 Mac-Studio-Validierung und Nachbarprüfungen
+
+```text
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Commit: 22dab16c74ac789e2cf310a09b520593985f4290
+Runtime: AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
+Node: v22.23.2
+Formatprüfung: PASS
+Fokussierte Regression: 8/8 Suites, 349/349 Tests PASS
+Breite Utility-Regression: 107/110 Suites, 1609/1633 Tests PASS
+```
+
+Die 24 roten Tests sind ausschließlich die bereits bekannte historische
+Katalog-Fixture-Abweichung `TARGETED_QA_PROFILE_CATALOG_MISMATCH: VS` in drei
+Suites. Es entstand keine neue Fehlersignatur.
+
+Nachbarläufe auf exakt demselben Commit:
+
+```text
+VS-24:
+QA/VS-24-POST-VS25-22DAB16C-20260903
+Summary-Digest: 8dd5afa277a53987ef8ce4daf0785fa2d6e03dc093b64e18b38db53577f20f73
+Ergebnis: GLEICHWERTIG / kein Review
+
+VS-22:
+QA/VS-22-POST-VS25-22DAB16C-20260903
+Summary-Digest: 83b90509ab02daa415b3704f020d3fa923763ea3576ef6e1c22b5cac3cddbf5c
+Ergebnis: VORTEIL_A / kein Review
+Triage-/Evidence-Aufrufe: 3 / 3
+Serverrejects/-terminals: 38 / 25
+```
+
+#### 10.31.4 Finaler gebundener Zehn-Dokument-Lauf
+
+```text
+QA-Artefakt:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/VS-25-BASIS-SOURCE-PROOF-22DAB16C-20260903
+Summary-Digest:
+4b76d2f4843961ccd60e1779d7dc789fd030dece30399059a03c708e2552b8db
+Producer-Digest:
+56c7f4656ccbed11b7167476973f151e4675369c500fecc36ec019d7b344d4ec
+Target-Selection-Digest:
+aed1c9e39129d53361eef4a4f3b4604398940bcbd4824f2eb93aa40e54fe4614
+Dokumente: 10, davon A: 1 und B: 9
+Triage-/Evidence-Modellaufrufe: 0 / 0
+Triage-Serverrejects: 26
+Evidence-Serverterminals: 21
+Ergebnis: VORTEIL_A / kein Review
+Reason-Code: HIGHER_AUTHORITY_RECONSTRUCTION_RELATIVE_LIMIT
+Standalone-Replayvalidierung: PASS
+```
+
+Das Ergebnis bedeutet ausschließlich: Paket A dokumentiert mit `10 %` die
+höhere relative Grenze gegenüber `5 %` in Paket B. Die zusätzliche
+Eurodarstellung in B wurde auf denselben 5-Prozent-Wert zurückgeführt. Das
+Ergebnis behauptet nicht, dass A in Euro höher liegt.
+
+#### 10.31.5 Delta, Status und Beweisgrenze
+
+Die noch nicht durch einen neuen 224-Zeilen-Lauf bestätigte Projektion
+verschiebt sich gegenüber dem akzeptierten VS-24-Stand von
+
+```text
+VORTEIL_A 3 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 122 / NICHT_VERGLEICHBAR 12 / UNKLAR 51
+```
+
+auf
+
+```text
+VORTEIL_A 4 / VORTEIL_B 3 / DOKUMENTATIONSUNTERSCHIED 33 /
+GLEICHWERTIG 122 / NICHT_VERGLEICHBAR 12 / UNKLAR 50
+```
+
+R69-A steht damit bei `10/40`; `30` Fälle der Ausgangsfamilie bleiben offen.
+Das ist eine aus einzeln bestätigten Deltas berechnete Projektion und keine
+neue Gesamtmessung. Der Nachweis gilt für die bekannten zehn Dokumente und
+die implementierten positiven, negativen, adversarialen, Scope-, Replay- und
+Manipulationsprüfungen. Ein unbekannter Versicherer-/Dokument-Holdout wurde
+noch nicht bestanden; daraus folgt keine 99-Prozent- oder allgemeine
+Gebäudeversicherungs-Aussage.
 
 Ein vollständiger 224-Zeilen-Lauf und ein Deployment wurden nicht
 durchgeführt. Die installierte Kundenanwendung blieb unverändert.
