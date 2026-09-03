@@ -344,6 +344,37 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       },
     ],
     [
+      "general disposal wording relabeled as special limit",
+      (input) => {
+        const atom = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        );
+        atom.sources[0].exactText =
+          "Allgemeine Entsorgungskosten bis EUR 6.121.600";
+        atom.fields[0].facts[0].source.exactText = "EUR 6.121.600";
+      },
+    ],
+    [
+      "optional hazardous-waste limit",
+      (input) => {
+        const atom = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        );
+        atom.sources[0].conditionCheckText =
+          "Sondermüll kann gegen Mehrprämie eingeschlossen werden";
+      },
+    ],
+    [
+      "source page beyond the document",
+      (input) => {
+        const atom = input.atomsA.find(
+          ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+        );
+        atom.sources[0].physicalPageNumber = 6;
+        atom.fields[0].facts[0].source.physicalPageNumber = 6;
+      },
+    ],
+    [
       "conflicting disposal contributor",
       (input) => {
         input.atomsB.find(

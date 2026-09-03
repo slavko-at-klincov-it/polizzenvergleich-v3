@@ -10,6 +10,9 @@ const {
   cleanNotFoundAtom,
   validComponentTerminal,
 } = require("./bilateralAbsenceContract");
+const {
+  hasOptionalCoverageSource,
+} = require("./comparisonAtomSemantics");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
 
 const VS22_CATEGORY_ID = "VS-22";
@@ -34,6 +37,8 @@ const VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE =
   "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE";
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
   "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1";
+const HAZARDOUS_WASTE_ANCHOR =
+  /(?<!\p{L})(?:sondermüll|sonderabfall|problemstoff\p{L}*|gefährlich\p{L}*\s+abf(?:all|äll)\p{L}*)(?!\p{L})/iu;
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -230,6 +235,54 @@ function cleanControlledAbsence(atom) {
   );
 }
 
+function validBoundPage(physicalPageNumber, totalPhysicalPages) {
+  return Boolean(
+    Number.isInteger(physicalPageNumber) &&
+      physicalPageNumber > 0 &&
+      Number.isInteger(totalPhysicalPages) &&
+      physicalPageNumber <= totalPhysicalPages
+  );
+}
+
+function sourceHasHazardousWasteAnchor(source) {
+  return HAZARDOUS_WASTE_ANCHOR.test(
+    `${source?.exactText || ""}\n${source?.conditionCheckText || ""}`
+  );
+}
+
+function validAtomSourcePages(atom) {
+  const totalPhysicalPages = atom?.searchAudit?.totalPhysicalPages;
+  return Boolean(
+    Array.isArray(atom?.sources) &&
+      atom.sources.length > 0 &&
+      atom.sources.every(({ physicalPageNumber }) =>
+        validBoundPage(physicalPageNumber, totalPhysicalPages)
+      ) &&
+      (atom.fields || []).every(({ facts }) =>
+        (facts || []).every(({ source }) =>
+          validBoundPage(source?.physicalPageNumber, totalPhysicalPages)
+        )
+      )
+  );
+}
+
+function hazardousFieldSourcesMatchCandidates(atom) {
+  const sources = new Map(
+    (atom?.sources || []).map((source) => [source.candidateId, source])
+  );
+  return (atom?.fields || []).every(({ facts }) =>
+    (facts || []).every(({ source: fieldSource }) => {
+      const candidateSource = sources.get(fieldSource?.candidateId);
+      return Boolean(
+        candidateSource &&
+          candidateSource.physicalPageNumber ===
+            fieldSource.physicalPageNumber &&
+          sourceHasHazardousWasteAnchor(candidateSource)
+      );
+    })
+  );
+}
+
 function safeHazardousCoverageAtom(atom) {
   const fields = atom?.fields || [];
   return Boolean(
@@ -241,6 +294,9 @@ function safeHazardousCoverageAtom(atom) {
       (atom.unresolvedCandidateIds || []).length === 0 &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       validSourceBinding(atom) &&
+      validAtomSourcePages(atom) &&
+      atom.sources.every(sourceHasHazardousWasteAnchor) &&
+      !hasOptionalCoverageSource(atom) &&
       sameJson(atom.requestedFields, ["limit"]) &&
       sameJson(atom.optionalFields, []) &&
       ["NOT_FOUND", "NOT_EVALUATED"].includes(atom.requestedFieldStatus) &&
@@ -263,6 +319,10 @@ function safeHazardousLimitAtom(atom) {
       (atom.unresolvedCandidateIds || []).length === 0 &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       completeRawComparisonAtom(atom) &&
+      validAtomSourcePages(atom) &&
+      atom.sources.every(sourceHasHazardousWasteAnchor) &&
+      hazardousFieldSourcesMatchCandidates(atom) &&
+      !hasOptionalCoverageSource(atom) &&
       fields.length > 0 &&
       fields.every(
         ({ field, fieldStatus, value }) =>
@@ -291,6 +351,8 @@ function safeDisposalContributor(atom) {
       (atom.unresolvedCandidateIds || []).length === 0 &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       validSourceBinding(atom) &&
+      validAtomSourcePages(atom) &&
+      !hasOptionalCoverageSource(atom) &&
       sameJson(atom.requestedFields, ["limit"]) &&
       sameJson(atom.optionalFields, []) &&
       fieldStateValid
