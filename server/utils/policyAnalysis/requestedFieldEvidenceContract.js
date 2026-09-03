@@ -17,7 +17,7 @@ const {
   EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
 } = require("./controlledOccurrenceWorksheet");
 const {
-  vs36SymbolicLimitForOccurrence,
+  vs36MaximumIndemnityLimitForOccurrence,
 } = require("./vs36MaximumIndemnityLimitContract");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
@@ -207,6 +207,10 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
     ...(value.symbolicLimitType
       ? { symbolicLimitType: value.symbolicLimitType }
       : {}),
+    ...(value.limitSemanticType
+      ? { limitSemanticType: value.limitSemanticType }
+      : {}),
+    ...(value.eventScope ? { eventScope: value.eventScope } : {}),
     ...(value.semanticContractId
       ? { semanticContractId: value.semanticContractId }
       : {}),
@@ -639,16 +643,14 @@ function extractBoundLimitFacts(options) {
 }
 
 function extractVs36MaximumIndemnityLimitFacts(options) {
-  const numeric = extractBoundLimitFacts(options);
-  if (numeric.length > 0) return numeric;
-  const symbolic = vs36SymbolicLimitForOccurrence(options.occurrence);
-  return symbolic
+  const limit = vs36MaximumIndemnityLimitForOccurrence(options.occurrence);
+  return limit
     ? [
         sourceBoundFact({
           occurrence: options.occurrence,
           binding: options.binding,
-          match: symbolic.match,
-          value: symbolic.value,
+          match: limit.match,
+          value: limit.value,
         }),
       ]
     : [];

@@ -1788,6 +1788,49 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("binds a VS-36 numeric event limit to its local building-sum basis", () => {
+    const text =
+      "Die Höchstentschädigung im Schadensfall beträgt inklusive aller Positionen maximal 150 % der vereinbarten Versicherungssumme für das Gebäude.";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs36-event-limit",
+      text,
+      exactText: "Höchstentschädigung im Schadensfall",
+    });
+    source.context.unitType = "PARAGRAPH";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-36",
+        label: "Höchstentschädigung pro Ereignis",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "maximum_indemnity_per_event",
+            label: "Höchstentschädigung pro Ereignis",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs36-event-limit",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0].fields[0].facts).toEqual([
+      expect.objectContaining({
+        normalizedValue: "150 %",
+        qualifier: "pro Schadenereignis",
+        eventScope: "PER_LOSS_EVENT",
+        comparisonBasis: "BUILDING_INSURANCE_SUM",
+        comparisonBasisSource: expect.objectContaining({
+          exactText: "Versicherungssumme für das Gebäude",
+        }),
+        limitSemanticType: "PERCENT_OF_BUILDING_INSURANCE_SUM",
+      }),
+    ]);
+  });
+
   test("keeps an EL-11 annual maximum out of the local deductible field", () => {
     const text =
       "Erdbeben Jahreshöchstentschädigung; Selbstbehalt EUR 350,00 (Besondere Bedingung 64PA0021) (EUR 20.000,00)";

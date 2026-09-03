@@ -34,6 +34,9 @@ const SYMBOLIC_LIMIT_PATTERNS = Object.freeze([
   }),
 ]);
 
+const NUMERIC_EVENT_LIMIT_PATTERN =
+  /Höchstentschädigung\s+im\s+Schadensfall[\s\S]{0,180}?maximal\s+(?<percentage>\d{1,3}(?:[.,]\d{1,2})?\s*%)\s+der\s+vereinbarten\s+(?<basis>Versicherungssumme\s+für\s+das\s+Gebäude)/giu;
+
 function validOccurrenceContext(occurrence) {
   const contextText = occurrence?.context?.text;
   const contextStart = Number(occurrence?.context?.documentStart);
@@ -73,6 +76,45 @@ function overlapsOccurrence(match, context) {
   return start < context.occurrenceEnd && end > context.occurrenceStart;
 }
 
+function numericEventLimit(context) {
+  const matches = [...context.text.matchAll(NUMERIC_EVENT_LIMIT_PATTERN)].filter(
+    (match) => overlapsOccurrence(match, context)
+  );
+  if (matches.length !== 1) return null;
+  const clauseMatch = matches[0];
+  const rawPercentage = String(clauseMatch.groups?.percentage || "");
+  const rawBasis = String(clauseMatch.groups?.basis || "");
+  const percentageOffset = clauseMatch[0].indexOf(rawPercentage);
+  const basisOffset = clauseMatch[0].indexOf(rawBasis);
+  if (
+    !rawPercentage ||
+    !rawBasis ||
+    percentageOffset < 0 ||
+    basisOffset < 0
+  )
+    return null;
+  const match = [rawPercentage];
+  match.index = clauseMatch.index + percentageOffset;
+  return {
+    match,
+    value: {
+      normalizedValue: rawPercentage.replace(/\s*%\s*$/u, " %"),
+      valueType: "PERCENT",
+      unit: "%",
+      limitKind: "CAPPED",
+      qualifier: "pro Schadenereignis",
+      eventScope: "PER_LOSS_EVENT",
+      comparisonBasis: "BUILDING_INSURANCE_SUM",
+      comparisonBasisEvidence: {
+        index: clauseMatch.index + basisOffset,
+        exactText: rawBasis,
+      },
+      limitSemanticType: "PERCENT_OF_BUILDING_INSURANCE_SUM",
+      semanticContractId: VS36_SYMBOLIC_LIMIT_CONTRACT_ID,
+    },
+  };
+}
+
 function vs36SymbolicLimitForOccurrence(occurrence) {
   const context = validOccurrenceContext(occurrence);
   if (!context) return null;
@@ -97,8 +139,15 @@ function vs36SymbolicLimitForOccurrence(occurrence) {
   };
 }
 
+function vs36MaximumIndemnityLimitForOccurrence(occurrence) {
+  const context = validOccurrenceContext(occurrence);
+  if (!context) return null;
+  return numericEventLimit(context) || vs36SymbolicLimitForOccurrence(occurrence);
+}
+
 module.exports = {
   SYMBOLIC_LIMIT_PATTERNS,
   VS36_SYMBOLIC_LIMIT_CONTRACT_ID,
+  vs36MaximumIndemnityLimitForOccurrence,
   vs36SymbolicLimitForOccurrence,
 };

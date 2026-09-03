@@ -1,5 +1,6 @@
 const {
   VS36_SYMBOLIC_LIMIT_CONTRACT_ID,
+  vs36MaximumIndemnityLimitForOccurrence,
   vs36SymbolicLimitForOccurrence,
 } = require("../../../utils/policyAnalysis/vs36MaximumIndemnityLimitContract");
 
@@ -51,6 +52,42 @@ describe("VS-36 symbolic maximum-indemnity limit contract", () => {
         unit: "CONTRACTUAL_SUM",
         qualifier,
         semanticContractId: VS36_SYMBOLIC_LIMIT_CONTRACT_ID,
+      },
+    });
+  });
+
+  test("binds the numeric event limit to the building insurance sum", () => {
+    const text =
+      "Die Höchstentschädigung im Schadensfall beträgt inklusive aller Positionen maximal 150 % der vereinbarten Versicherungssumme für das Gebäude.";
+    expect(vs36MaximumIndemnityLimitForOccurrence(occurrence(text))).toMatchObject({
+      match: expect.objectContaining({ 0: "150 %" }),
+      value: {
+        normalizedValue: "150 %",
+        valueType: "PERCENT",
+        unit: "%",
+        limitKind: "CAPPED",
+        qualifier: "pro Schadenereignis",
+        eventScope: "PER_LOSS_EVENT",
+        comparisonBasis: "BUILDING_INSURANCE_SUM",
+        comparisonBasisEvidence: {
+          exactText: "Versicherungssumme für das Gebäude",
+        },
+        limitSemanticType: "PERCENT_OF_BUILDING_INSURANCE_SUM",
+        semanticContractId: VS36_SYMBOLIC_LIMIT_CONTRACT_ID,
+      },
+    });
+  });
+
+  test("prefers the exact symbolic clause over a nearby unrelated percentage", () => {
+    const exactText =
+      "Die Ersatzleistung ist jedenfalls mit der Versicherungssumme bzw. mit der Höchsthaftungssumme oder dergleichen begrenzt.";
+    const text = `Der Unterversicherungsverzicht gilt bei 25 % Abweichung. ${exactText} Selbstbehalt 10 %.`;
+    expect(
+      vs36MaximumIndemnityLimitForOccurrence(occurrence(text, exactText))
+    ).toMatchObject({
+      value: {
+        valueType: "SYMBOLIC_LIMIT",
+        symbolicLimitType: "POLICY_OR_MAXIMUM_LIABILITY_SUM",
       },
     });
   });
