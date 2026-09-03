@@ -201,10 +201,6 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
       .filter(({ evidencePresence }) => evidencePresence === "FOUND")
       .map(({ componentId }) => componentId)
   );
-  const anyAlternativeFound =
-    satisfactionPolicy === "ANY" &&
-    relevant.some(({ evidencePresence }) => evidencePresence === "FOUND");
-
   const fieldStatuses = new Set(
     relevant.map(({ requestedFieldStatus }) => requestedFieldStatus)
   );
@@ -224,6 +220,8 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
     );
 
   const foundByComponent = new Map();
+  const absentByComponent = new Map();
+  const unresolvedComponentIds = new Set();
   for (const atom of relevant) {
     if (atom.documentApplicability === "PROPOSED_ONLY")
       signals.push(
@@ -260,6 +258,7 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
       );
 
     if ((atom.unresolvedCandidateIds || []).length > 0) {
+      unresolvedComponentIds.add(atom.componentId);
       blockers.push(
         auditEntry({
           code: BLOCKER_CODE.UNRESOLVED_CANDIDATE,
@@ -272,20 +271,9 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
       continue;
     }
     if (atom.evidencePresence !== "FOUND") {
-      if (
-        satisfactionPolicy === "ALL" &&
-        !anyAlternativeFound &&
-        !packageFoundComponentIds.has(atom.componentId)
-      )
-        blockers.push(
-          auditEntry({
-            code: BLOCKER_CODE.MISSING_REQUIRED_COMPONENT,
-            side,
-            level: LEVEL.COMPONENT,
-            categoryId,
-            atom,
-          })
-        );
+      if (!absentByComponent.has(atom.componentId))
+        absentByComponent.set(atom.componentId, []);
+      absentByComponent.get(atom.componentId).push(atom);
       continue;
     }
 
@@ -357,6 +345,27 @@ function deriveSideAudit({ categoryId, side, packageSummary, atoms }) {
         })
       );
   }
+
+  if (satisfactionPolicy === "ALL")
+    for (const [componentId, absentAtoms] of absentByComponent) {
+      if (
+        packageFoundComponentIds.has(componentId) ||
+        unresolvedComponentIds.has(componentId)
+      )
+        continue;
+      blockers.push(
+        auditEntry({
+          code: BLOCKER_CODE.MISSING_REQUIRED_COMPONENT,
+          side,
+          level: LEVEL.COMPONENT,
+          categoryId,
+          atom: absentAtoms[0],
+          documentUuids: absentAtoms.flatMap(
+            ({ documentUuids: uuids }) => uuids || []
+          ),
+        })
+      );
+    }
 
   for (const componentAtoms of foundByComponent.values()) {
     if (new Set(componentAtoms.map(comparisonAtomKey)).size < 2) continue;

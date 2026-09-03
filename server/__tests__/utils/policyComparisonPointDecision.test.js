@@ -2489,6 +2489,40 @@ describe("policy comparison point decision", () => {
     ).not.toContain("UNKNOWN_COVERAGE_EFFECT");
   });
 
+  test("reports one package-level missing blocker per component", () => {
+    const missingAtom = (side) =>
+      atom(side, {
+        evidencePresence: "NOT_FOUND",
+        coverageEffect: "UNKNOWN",
+        selectedScopePicture: "UNKNOWN",
+        documentApplicability: "UNKNOWN",
+        selectedCandidateIds: [],
+        sources: [],
+      });
+    const result = decide(
+      [missingAtom("a1"), missingAtom("a2")],
+      [atom("b")],
+      {
+        packageA: {
+          reviewStatus: "TEILBELEGT",
+          facts: [
+            { documentUuid: "document-a1", reviewStatus: "TEILBELEGT" },
+            { documentUuid: "document-a2", reviewStatus: "TEILBELEGT" },
+          ],
+        },
+      }
+    );
+
+    expect(result.packageReviewAudit.blockers).toEqual([
+      expect.objectContaining({
+        code: "MISSING_REQUIRED_COMPONENT",
+        side: "A",
+        componentId: "fungus_damage",
+        documentUuids: ["document-a1", "document-a2"],
+      }),
+    ]);
+  });
+
   test("does not report a component missing when another package document proves it", () => {
     const found = atom("found", {
       documentUuids: ["document-found"],
