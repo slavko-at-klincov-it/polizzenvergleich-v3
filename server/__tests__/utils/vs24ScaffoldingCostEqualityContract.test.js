@@ -194,23 +194,26 @@ describe("VS-24 scaffolding cost equality contract", () => {
 
   test("is symmetric across package A and B", () => {
     const input = fixture();
-    const swapped = {
-      ...input,
-      packageA: input.packageB,
-      packageB: input.packageA,
-      atomsA: input.atomsB,
-      atomsB: input.atomsA,
-      expectedDocumentsA: input.expectedDocumentsB.map((entry) => ({
-        ...entry,
-        side: "A",
-      })),
-      expectedDocumentsB: input.expectedDocumentsA.map((entry) => ({
-        ...entry,
-        side: "B",
-      })),
-    };
+    input.atomsA[0].sources[0].exactText = "Kosten für Gerüste";
+    input.atomsA[0].sources[0].conditionCheckText =
+      "Kosten für Gerüste, die zur Ersatzausführung erforderlich sind.";
+    input.atomsB[0].sources[0].exactText = "Gerüstkosten";
 
-    expect(buildVs24ScaffoldingCostEqualityAudit(swapped)).not.toBeNull();
+    const first = buildVs24ScaffoldingCostEqualityAudit(input);
+    const sourceA = input.atomsA[0].sources[0];
+    const sourceB = input.atomsB[0].sources[0];
+    [sourceA.exactText, sourceB.exactText] = [
+      sourceB.exactText,
+      sourceA.exactText,
+    ];
+    [sourceA.conditionCheckText, sourceB.conditionCheckText] = [
+      sourceB.conditionCheckText,
+      sourceA.conditionCheckText,
+    ];
+    const second = buildVs24ScaffoldingCostEqualityAudit(input);
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
   });
 
   test.each(["FRAMEWORK_TERMS", "ACTIVE"])(
