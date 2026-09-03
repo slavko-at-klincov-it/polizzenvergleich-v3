@@ -95,6 +95,7 @@ function projectAtom(atom) {
     coverageEffect: atom.coverageEffect,
     conflictState: atom.conflictState,
     selectedScopePicture: atom.selectedScopePicture,
+    comparisonScopeKeys: atom.comparisonScopeKeys,
     scopePolicy: atom.scopePolicy,
     documentApplicability: atom.documentApplicability,
     selectedCandidateIds: atom.selectedCandidateIds,

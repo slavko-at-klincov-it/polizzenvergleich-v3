@@ -28,6 +28,9 @@ const {
 const {
   buildFeC07ConditionAbsenceAudit,
 } = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
+const {
+  validateUnilateralCoverageAbsenceAudit,
+} = require("../../utils/policyComparison/unilateralCoverageAbsenceContract");
 
 const FIXTURE_REQUIREMENT_DIGEST = "a".repeat(64);
 const SOLE_SCOPE_REQUIREMENT_DIGEST = "f".repeat(64);
@@ -758,6 +761,49 @@ describe("policy comparison point decision", () => {
       "für den im Beleg ausgewiesenen engeren Deckungsumfang"
     );
     expect(result.reason).toContain("Für genau diesen engeren Deckungsumfang");
+  });
+
+  test("preserves narrow comparison scope keys for unilateral audit replay", () => {
+    const fixture = qualifiedOneSidedFixture();
+    fixture.atomsA[0].selectedScopePicture = "NARROW_ONLY";
+    fixture.atomsA[0].scopePolicy = "MATCHING_SCOPE_INCLUDED_SUFFICIENT";
+    fixture.atomsA[0].comparisonScopeKeys = ["STURM_INSURANCE"];
+    fixture.atomsA[0].sources[0].comparisonScopeKey = "STURM_INSURANCE";
+    fixture.atomsA[0].sources[0].candidateBinding = "NARROW_SCOPE";
+    fixture.atomsA[0].sources[0].deterministicBindingBasis =
+      "EXPLICIT_NARROW_SECTION_SCOPE";
+
+    const result = decidePoint(fixture);
+    const audit = result.unilateralCoverageAbsenceAudit;
+
+    expect(audit.evidenced.evidencedAtoms[0].comparisonScopeKeys).toEqual([
+      "STURM_INSURANCE",
+    ]);
+    expect(() =>
+      validateUnilateralCoverageAbsenceAudit(audit, {
+        categoryId: fixture.categoryId,
+        packageA: fixture.packageA,
+        packageB: fixture.packageB,
+        expectedDocumentUuidsA:
+          fixture.packageA.searchAudit.documentUuids,
+        expectedDocumentUuidsB:
+          fixture.packageB.searchAudit.documentUuids,
+      })
+    ).not.toThrow();
+
+    const tampered = JSON.parse(JSON.stringify(audit));
+    delete tampered.evidenced.evidencedAtoms[0].comparisonScopeKeys;
+    expect(() =>
+      validateUnilateralCoverageAbsenceAudit(tampered, {
+        categoryId: fixture.categoryId,
+        packageA: fixture.packageA,
+        packageB: fixture.packageB,
+        expectedDocumentUuidsA:
+          fixture.packageA.searchAudit.documentUuids,
+        expectedDocumentUuidsB:
+          fixture.packageB.searchAudit.documentUuids,
+      })
+    ).toThrow("UNILATERAL_COVERAGE_ABSENCE_AUDIT_MISMATCH");
   });
 
   test("renders multiple required winner components as grammatical Teilpunkte", () => {
