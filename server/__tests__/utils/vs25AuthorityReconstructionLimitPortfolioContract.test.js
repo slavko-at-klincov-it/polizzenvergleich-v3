@@ -540,8 +540,7 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       "distant neighbouring clause code",
       (input) => {
         for (const atom of [input.atomsB[1], input.atomsB[3]])
-          atom.sources[0].conditionCheckText =
-            `Mehrkosten durch behördliche Auflagen ${"ohne Klauselcode ".repeat(16)}10PA0130`;
+          atom.sources[0].conditionCheckText = `Mehrkosten durch behördliche Auflagen ${"ohne Klauselcode ".repeat(16)}10PA0130`;
       },
     ],
   ])("fails closed for %s", (_label, mutate) => {
