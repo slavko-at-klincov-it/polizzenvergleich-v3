@@ -347,7 +347,9 @@ describe("categoryTableRenderer", () => {
     const [row] = buildCategoryTableRows(input);
 
     expect(row).toMatchObject({
-      documentedContent: expect.stringContaining("Bestandteil 2: eingeschlossen"),
+      documentedContent: expect.stringContaining(
+        "Bestandteil 2: eingeschlossen"
+      ),
       coverage: "Ja",
       coverageAmount: "EUR 2.500",
       reviewStatus: "BELEGT",

@@ -225,8 +225,7 @@ function selectedSources({
       continue;
     const hasCrossPageFieldFact = candidateFieldFacts.some(
       (fact) =>
-        verifiedFactPhysicalPageNumber(occurrence, fact) !==
-        physicalPageNumber
+        verifiedFactPhysicalPageNumber(occurrence, fact) !== physicalPageNumber
     );
     if (candidateFieldFacts.length === 0 || hasCrossPageFieldFact)
       sources.push({ candidateId, physicalPageNumber, quote });

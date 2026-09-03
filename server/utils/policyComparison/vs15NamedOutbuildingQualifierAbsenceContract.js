@@ -115,17 +115,17 @@ function canonicalStrings(values) {
 function hasExactKeys(value, keys) {
   return Boolean(
     value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    sameJson(Object.keys(value).sort(), [...keys].sort())
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      sameJson(Object.keys(value).sort(), [...keys].sort())
   );
 }
 
 function validRequirementContract(contract) {
   return Boolean(
     contract?.digest === REQUIREMENT_CONTRACT_DIGEST &&
-    contract?.componentSatisfactionPolicy === "ALL" &&
-    sameJson(contract?.components, DECLARED_COMPONENTS)
+      contract?.componentSatisfactionPolicy === "ALL" &&
+      sameJson(contract?.components, DECLARED_COMPONENTS)
   );
 }
 
@@ -161,94 +161,97 @@ function validCommonSearchCell(cell, requirementContract) {
   const component = COMPONENTS[componentId];
   return Boolean(
     component &&
-    hasExactKeys(cell, SEARCH_CELL_KEYS) &&
-    hasExactKeys(cell.gates, SEARCH_GATE_KEYS) &&
-    cell.catalogId === CATALOG_ID &&
-    cell.documentUuid &&
-    cell.negativeSearchPolicy === "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" &&
-    cell.absenceMeaning === "COVERAGE_MIXED" &&
-    cell.comparisonPolicy == null &&
-    cell.absenceCertification == null &&
-    sameJson(cell.requirementContract, requirementContract) &&
-    Number.isInteger(cell.physicalPagesChecked) &&
-    cell.physicalPagesChecked > 0 &&
-    cell.physicalPagesChecked === cell.totalPhysicalPages &&
-    sameJson(
-      canonicalStrings(cell.aliases),
-      canonicalStrings(component.aliases)
-    ) &&
-    sameJson(cell.conceptSearchIds, []) &&
-    cell.gates.negativeSearchApproved === true &&
-    cell.gates.certifiedNegativeSearch === false &&
-    cell.gates.completeTextExtraction === true &&
-    cell.gates.completeCategoryTechnicalContract === true
+      hasExactKeys(cell, SEARCH_CELL_KEYS) &&
+      hasExactKeys(cell.gates, SEARCH_GATE_KEYS) &&
+      cell.catalogId === CATALOG_ID &&
+      cell.documentUuid &&
+      cell.negativeSearchPolicy ===
+        "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1" &&
+      cell.absenceMeaning === "COVERAGE_MIXED" &&
+      cell.comparisonPolicy == null &&
+      cell.absenceCertification == null &&
+      sameJson(cell.requirementContract, requirementContract) &&
+      Number.isInteger(cell.physicalPagesChecked) &&
+      cell.physicalPagesChecked > 0 &&
+      cell.physicalPagesChecked === cell.totalPhysicalPages &&
+      sameJson(
+        canonicalStrings(cell.aliases),
+        canonicalStrings(component.aliases)
+      ) &&
+      sameJson(cell.conceptSearchIds, []) &&
+      cell.gates.negativeSearchApproved === true &&
+      cell.gates.certifiedNegativeSearch === false &&
+      cell.gates.completeTextExtraction === true &&
+      cell.gates.completeCategoryTechnicalContract === true
   );
 }
 
 function validControlledZeroCell(cell, requirementContract) {
   return Boolean(
     validCommonSearchCell(cell, requirementContract) &&
-    cell.disposition === "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH" &&
-    cell.comparisonTreatment === "DOCUMENTATION_ONLY_V1" &&
-    cell.gates.zeroOccurrenceTerminal === true &&
-    cell.gates.zeroCandidateTerminal === true &&
-    cell.gates.serverNegativeTerminal === true
+      cell.disposition === "NO_MATCH_AFTER_COMPLETE_CONTROLLED_SEARCH" &&
+      cell.comparisonTreatment === "DOCUMENTATION_ONLY_V1" &&
+      cell.gates.zeroOccurrenceTerminal === true &&
+      cell.gates.zeroCandidateTerminal === true &&
+      cell.gates.serverNegativeTerminal === true
   );
 }
 
 function validFoundCell(cell, requirementContract) {
   return Boolean(
     validCommonSearchCell(cell, requirementContract) &&
-    componentIdForSearchPlan(cell.searchPlanId) === COVER_COMPONENT_ID &&
-    cell.disposition === "RELEVANT_FOUND" &&
-    cell.comparisonTreatment == null &&
-    cell.gates.zeroOccurrenceTerminal === false &&
-    cell.gates.zeroCandidateTerminal === false &&
-    cell.gates.serverNegativeTerminal === false
+      componentIdForSearchPlan(cell.searchPlanId) === COVER_COMPONENT_ID &&
+      cell.disposition === "RELEVANT_FOUND" &&
+      cell.comparisonTreatment == null &&
+      cell.gates.zeroOccurrenceTerminal === false &&
+      cell.gates.zeroCandidateTerminal === false &&
+      cell.gates.serverNegativeTerminal === false
   );
 }
 
 function exactEmptyFields(atom) {
   return Boolean(
     atom?.requestedFieldStatus === "NOT_REQUIRED" &&
-    sameJson(atom?.requestedFields, []) &&
-    sameJson(atom?.optionalFields, ["limit"]) &&
-    sameJson(atom?.fields, [{ field: "limit", status: "NOT_FOUND", facts: [] }])
+      sameJson(atom?.requestedFields, []) &&
+      sameJson(atom?.optionalFields, ["limit"]) &&
+      sameJson(atom?.fields, [
+        { field: "limit", status: "NOT_FOUND", facts: [] },
+      ])
   );
 }
 
 function commonAtom(atom, componentId, requirementContract, searchCell) {
   return Boolean(
     atom?.requirementId === CATEGORY_ID &&
-    atom?.componentId === componentId &&
-    atom?.factRole === COMPONENTS[componentId].factRole &&
-    atom?.requirementContractDigest === requirementContract.digest &&
-    atom?.componentSatisfactionPolicy === "ALL" &&
-    atom?.coverageAggregationPolicy === "ALL_COMPONENT_EFFECTS" &&
-    atom?.scopePolicy === "GENERAL_REQUIRED" &&
-    sameJson(atom?.declaredComponents, DECLARED_COMPONENTS) &&
-    Array.isArray(atom?.documentUuids) &&
-    atom.documentUuids.length === 1 &&
-    atom.documentUuids[0] === searchCell.documentUuid &&
-    String(atom?.documentRole || "").trim() &&
-    String(atom?.documentStatus || "").trim() &&
-    sameJson(atom?.searchAudit, searchCell)
+      atom?.componentId === componentId &&
+      atom?.factRole === COMPONENTS[componentId].factRole &&
+      atom?.requirementContractDigest === requirementContract.digest &&
+      atom?.componentSatisfactionPolicy === "ALL" &&
+      atom?.coverageAggregationPolicy === "ALL_COMPONENT_EFFECTS" &&
+      atom?.scopePolicy === "GENERAL_REQUIRED" &&
+      sameJson(atom?.declaredComponents, DECLARED_COMPONENTS) &&
+      Array.isArray(atom?.documentUuids) &&
+      atom.documentUuids.length === 1 &&
+      atom.documentUuids[0] === searchCell.documentUuid &&
+      String(atom?.documentRole || "").trim() &&
+      String(atom?.documentStatus || "").trim() &&
+      sameJson(atom?.searchAudit, searchCell)
   );
 }
 
 function cleanNotFoundAtom(atom, componentId, requirementContract, searchCell) {
   return Boolean(
     commonAtom(atom, componentId, requirementContract, searchCell) &&
-    validControlledZeroCell(searchCell, requirementContract) &&
-    atom?.evidencePresence === "NOT_FOUND" &&
-    atom?.coverageEffect === "UNKNOWN" &&
-    atom?.conflictState === "NONE" &&
-    atom?.selectedScopePicture === "UNKNOWN" &&
-    atom?.documentApplicability === "UNKNOWN" &&
-    sameJson(atom?.selectedCandidateIds, []) &&
-    sameJson(atom?.unresolvedCandidateIds, []) &&
-    sameJson(atom?.sources, []) &&
-    exactEmptyFields(atom)
+      validControlledZeroCell(searchCell, requirementContract) &&
+      atom?.evidencePresence === "NOT_FOUND" &&
+      atom?.coverageEffect === "UNKNOWN" &&
+      atom?.conflictState === "NONE" &&
+      atom?.selectedScopePicture === "UNKNOWN" &&
+      atom?.documentApplicability === "UNKNOWN" &&
+      sameJson(atom?.selectedCandidateIds, []) &&
+      sameJson(atom?.unresolvedCandidateIds, []) &&
+      sameJson(atom?.sources, []) &&
+      exactEmptyFields(atom)
   );
 }
 
@@ -259,38 +262,38 @@ function exactSourceBinding(atom) {
   );
   return Boolean(
     selectedIds &&
-    selectedIds.length > 0 &&
-    sourceIds &&
-    sameJson(selectedIds, sourceIds) &&
-    atom.sources.length === selectedIds.length &&
-    atom.sources.every(
-      (source) =>
-        Number.isInteger(source?.physicalPageNumber) &&
-        source.physicalPageNumber > 0 &&
-        String(source?.exactText || "").trim()
-    )
+      selectedIds.length > 0 &&
+      sourceIds &&
+      sameJson(selectedIds, sourceIds) &&
+      atom.sources.length === selectedIds.length &&
+      atom.sources.every(
+        (source) =>
+          Number.isInteger(source?.physicalPageNumber) &&
+          source.physicalPageNumber > 0 &&
+          String(source?.exactText || "").trim()
+      )
   );
 }
 
 function completeCoverAtom(atom, requirementContract, searchCell) {
   return Boolean(
     commonAtom(atom, COVER_COMPONENT_ID, requirementContract, searchCell) &&
-    validFoundCell(searchCell, requirementContract) &&
-    atom?.evidencePresence === "FOUND" &&
-    atom?.coverageEffect === "INCLUDED" &&
-    atom?.conflictState === "NONE" &&
-    atom?.selectedScopePicture === "GENERAL" &&
-    atom?.requestedFieldStatus === "NOT_REQUIRED" &&
-    sameJson(atom?.requestedFields, []) &&
-    sameJson(atom?.optionalFields, ["limit"]) &&
-    Array.isArray(atom?.fields) &&
-    atom.fields.length === 1 &&
-    atom.fields[0]?.field === "limit" &&
-    sameJson(atom?.unresolvedCandidateIds, []) &&
-    exactSourceBinding(atom) &&
-    comparisonApplicability(atom) === PACKAGE_MEMBER &&
-    atomEventMode(atom) === "UNSPECIFIED" &&
-    completeRawComparisonAtom(atom)
+      validFoundCell(searchCell, requirementContract) &&
+      atom?.evidencePresence === "FOUND" &&
+      atom?.coverageEffect === "INCLUDED" &&
+      atom?.conflictState === "NONE" &&
+      atom?.selectedScopePicture === "GENERAL" &&
+      atom?.requestedFieldStatus === "NOT_REQUIRED" &&
+      sameJson(atom?.requestedFields, []) &&
+      sameJson(atom?.optionalFields, ["limit"]) &&
+      Array.isArray(atom?.fields) &&
+      atom.fields.length === 1 &&
+      atom.fields[0]?.field === "limit" &&
+      sameJson(atom?.unresolvedCandidateIds, []) &&
+      exactSourceBinding(atom) &&
+      comparisonApplicability(atom) === PACKAGE_MEMBER &&
+      atomEventMode(atom) === "UNSPECIFIED" &&
+      completeRawComparisonAtom(atom)
   );
 }
 
