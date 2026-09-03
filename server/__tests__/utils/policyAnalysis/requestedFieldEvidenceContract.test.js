@@ -1739,6 +1739,55 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("materializes a VS-36 symbolic position limit without coercing it to 100 percent", () => {
+    const text =
+      "Die Versicherungssumme bildet die Grenze für die Entschädigung des Versicherers, wobei die Entschädigung für die unter jeder einzelnen Position der Polizze versicherten Sachen durch die für die betreffende Position angegebene Versicherungssumme begrenzt ist.";
+    const source = textualOccurrence({
+      candidateId: "candidate:vs36-position-limit",
+      text,
+      exactText:
+        "Die Versicherungssumme bildet die Grenze für die Entschädigung des Versicherers, wobei die Entschädigung für die",
+    });
+    source.context.unitType = "PARAGRAPH";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "VS-36",
+        label: "Höchstentschädigung pro Ereignis",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "maximum_indemnity_per_event",
+            label: "Höchstentschädigung pro Ereignis",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:vs36-position-limit",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              valueType: "SYMBOLIC_LIMIT",
+              symbolicLimitType: "POSITION_INSURANCE_SUM",
+              normalizedValue: "Versicherungssumme der betreffenden Position",
+              binding: "DIRECT",
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
   test("keeps an EL-11 annual maximum out of the local deductible field", () => {
     const text =
       "Erdbeben Jahreshöchstentschädigung; Selbstbehalt EUR 350,00 (Besondere Bedingung 64PA0021) (EUR 20.000,00)";

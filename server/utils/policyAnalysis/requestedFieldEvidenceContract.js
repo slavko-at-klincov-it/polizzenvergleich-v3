@@ -16,6 +16,9 @@ const {
   EXACT_CLAUSE_CODE_FIELD_GOVERNOR_CONTRACT_ID,
   EXACT_CLAUSE_CODE_FIELD_GOVERNOR_POLICY,
 } = require("./controlledOccurrenceWorksheet");
+const {
+  vs36SymbolicLimitForOccurrence,
+} = require("./vs36MaximumIndemnityLimitContract");
 
 const REQUESTED_FIELD_STATUS = Object.freeze({
   NOT_REQUIRED: "NOT_REQUIRED",
@@ -200,6 +203,12 @@ function sourceBoundFact({ occurrence, binding, match, value }) {
             exactText: value.comparisonBasisEvidence.exactText,
           },
         }
+      : {}),
+    ...(value.symbolicLimitType
+      ? { symbolicLimitType: value.symbolicLimitType }
+      : {}),
+    ...(value.semanticContractId
+      ? { semanticContractId: value.semanticContractId }
       : {}),
     ...(variantScope?.key && variantScope?.label
       ? {
@@ -627,6 +636,22 @@ function extractBoundLimitFacts(options) {
     ...extractUnboundedLimitFacts(options),
     ...extractFieldGovernorLimitFacts(options),
   ];
+}
+
+function extractVs36MaximumIndemnityLimitFacts(options) {
+  const numeric = extractBoundLimitFacts(options);
+  if (numeric.length > 0) return numeric;
+  const symbolic = vs36SymbolicLimitForOccurrence(options.occurrence);
+  return symbolic
+    ? [
+        sourceBoundFact({
+          occurrence: options.occurrence,
+          binding: options.binding,
+          match: symbolic.match,
+          value: symbolic.value,
+        }),
+      ]
+    : [];
 }
 
 function extractCoverageLimitFacts(options) {
@@ -1933,17 +1958,12 @@ function extractorFor(requirement, field, component = null) {
     return extractIndexTypeFacts;
   if (requirementId === "VS-15" && field === "limit")
     return extractOutbuildingLimitFacts;
+  if (requirementId === "VS-36" && field === "limit")
+    return extractVs36MaximumIndemnityLimitFacts;
   if (
-    [
-      "VS-19",
-      "VS-20",
-      "VS-22",
-      "VS-23",
-      "VS-29",
-      "VS-31",
-      "VS-34",
-      "VS-36",
-    ].includes(requirementId) &&
+    ["VS-19", "VS-20", "VS-22", "VS-23", "VS-29", "VS-31", "VS-34"].includes(
+      requirementId
+    ) &&
     field === "limit"
   )
     return extractBoundLimitFacts;
