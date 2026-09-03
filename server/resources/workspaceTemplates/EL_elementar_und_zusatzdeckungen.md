@@ -19,44 +19,44 @@ Antworte ausschließlich auf Deutsch, sachlich, kompakt und quellengebunden.
 Analysiere genau diese 36 Kategorien und gib sie vollständig in genau dieser
 Reihenfolge aus:
 
-| ID | Stufe | Kategorie-Name |
-|---|---|---|
-| `EL-01` | K | Elementar-Sublimit pro Schadenereignis |
-| `EL-02` | K | Elementar-Sublimit pro Versicherungsjahr |
-| `EL-03` | K | Gilt das Limit gemeinsam für alle Elementargefahren |
-| `EL-04` | K | Hochwasser und Überschwemmung |
-| `EL-05` | K | Starkregen und Oberflächenwasser ohne Gewässerausuferung |
-| `EL-06` | K | Rückstau aus der Kanalisation |
-| `EL-07` | S | Erdbeben |
-| `EL-08` | S | Erdrutsch, Erdfall und Erdsenkung |
-| `EL-09` | V | Lawine |
-| `EL-10` | V | Vermurung |
-| `EL-11` | K | Selbstbehalt in der Sparte Elementar |
-| `EL-12` | K | Zonenbedingte Einschränkung bei Hochwasser |
-| `EL-13` | S | Glasbruch an der Gebäudeverglasung |
-| `EL-14` | S | Glasbruch in Stiegenhaus und Gemeinschaftsräumen |
-| `EL-15` | S | Sonderverglasung wie Isolier- oder Sicherheitsglas |
-| `EL-16` | V | Wintergarten und Vitrinen |
-| `EL-17` | S | Kosten einer Notverglasung |
-| `EL-18` | S | Selbstbehalt oder Limit in der Glasversicherung |
-| `EL-19` | K | Maschinenbruch der Aufzugsanlage |
-| `EL-20` | S | Maschinenbruch der übrigen Haustechnik |
-| `EL-21` | S | Elektronikversicherung für Gegensprech- und Zutrittsanlagen |
-| `EL-22` | S | Sachschäden an der E-Ladeinfrastruktur |
-| `EL-23` | S | Allgefahrendeckung für die Photovoltaikanlage |
-| `EL-24` | V | Diebstahl von Photovoltaikmodulen |
-| `EL-25` | S | Vandalismus ohne vorangegangenen Einbruch |
-| `EL-26` | S | Graffitientfernung, Limit und Anzahl pro Jahr |
-| `EL-27` | K | Einbruchdiebstahl in allgemeine Teile und Kellerabteile |
-| `EL-28` | S | Gebäudeschäden durch den Einbruch selbst |
-| `EL-29` | S | Diebstahl fest mit dem Gebäude verbundener Teile |
-| `EL-30` | S | Diebstahl von Wärmepumpe oder Außengeräten |
-| `EL-31` | K | Kosten der Schlossänderung nach Schlüsselverlust |
-| `EL-32` | S | Regelung für Generalschlüssel und Schließanlage |
-| `EL-33` | S | Tierschäden durch Marder, Nagetiere oder Tauben |
-| `EL-34` | V | Terror und Sabotage |
-| `EL-35` | V | Innere Unruhen, Streik und Aussperrung |
-| `EL-36` | V | Cyberrisiken und Manipulation der Gebäudeautomation |
+| ID      | Stufe | Kategorie-Name                                              |
+| ------- | ----- | ----------------------------------------------------------- |
+| `EL-01` | K     | Elementar-Sublimit pro Schadenereignis                      |
+| `EL-02` | K     | Elementar-Sublimit pro Versicherungsjahr                    |
+| `EL-03` | K     | Gilt das Limit gemeinsam für alle Elementargefahren         |
+| `EL-04` | K     | Hochwasser und Überschwemmung                               |
+| `EL-05` | K     | Starkregen und Oberflächenwasser ohne Gewässerausuferung    |
+| `EL-06` | K     | Rückstau aus der Kanalisation                               |
+| `EL-07` | S     | Erdbeben                                                    |
+| `EL-08` | S     | Erdrutsch, Erdfall und Erdsenkung                           |
+| `EL-09` | V     | Lawine                                                      |
+| `EL-10` | V     | Vermurung                                                   |
+| `EL-11` | K     | Selbstbehalt in der Sparte Elementar                        |
+| `EL-12` | K     | Zonenbedingte Einschränkung bei Hochwasser                  |
+| `EL-13` | S     | Glasbruch an der Gebäudeverglasung                          |
+| `EL-14` | S     | Glasbruch in Stiegenhaus und Gemeinschaftsräumen            |
+| `EL-15` | S     | Sonderverglasung wie Isolier- oder Sicherheitsglas          |
+| `EL-16` | V     | Wintergarten und Vitrinen                                   |
+| `EL-17` | S     | Kosten einer Notverglasung                                  |
+| `EL-18` | S     | Selbstbehalt oder Limit in der Glasversicherung             |
+| `EL-19` | K     | Maschinenbruch der Aufzugsanlage                            |
+| `EL-20` | S     | Maschinenbruch der übrigen Haustechnik                      |
+| `EL-21` | S     | Elektronikversicherung für Gegensprech- und Zutrittsanlagen |
+| `EL-22` | S     | Sachschäden an der E-Ladeinfrastruktur                      |
+| `EL-23` | S     | Allgefahrendeckung für die Photovoltaikanlage               |
+| `EL-24` | V     | Diebstahl von Photovoltaikmodulen                           |
+| `EL-25` | S     | Vandalismus ohne vorangegangenen Einbruch                   |
+| `EL-26` | S     | Graffitientfernung, Limit und Anzahl pro Jahr               |
+| `EL-27` | K     | Einbruchdiebstahl in allgemeine Teile und Kellerabteile     |
+| `EL-28` | S     | Gebäudeschäden durch den Einbruch selbst                    |
+| `EL-29` | S     | Diebstahl fest mit dem Gebäude verbundener Teile            |
+| `EL-30` | S     | Diebstahl von Wärmepumpe oder Außengeräten                  |
+| `EL-31` | K     | Kosten der Schlossänderung nach Schlüsselverlust            |
+| `EL-32` | S     | Regelung für Generalschlüssel und Schließanlage             |
+| `EL-33` | S     | Tierschäden durch Marder, Nagetiere oder Tauben             |
+| `EL-34` | V     | Terror und Sabotage                                         |
+| `EL-35` | V     | Innere Unruhen, Streik und Aussperrung                      |
+| `EL-36` | V     | Cyberrisiken und Manipulation der Gebäudeautomation         |
 
 ## Beleg- und Abgrenzungsregeln
 
@@ -150,7 +150,7 @@ Es sind ausschließlich diese Kombinationen zulässig:
 Gib genau diese acht Spalten aus:
 
 | Kategorie-ID | Stufe | Kategorie-Name | Belegter Vertragsinhalt | Deckung | Deckungssumme | Quelle | Prüfstatus |
-|---|---|---|---|---|---|---|---|
+| ------------ | ----- | -------------- | ----------------------- | ------- | ------------- | ------ | ---------- |
 
 - `Kategorie-ID`, `Stufe` und `Kategorie-Name`: unverändert aus dem Katalog
   übernehmen.

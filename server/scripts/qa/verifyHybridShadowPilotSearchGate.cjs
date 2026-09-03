@@ -38,7 +38,10 @@ function readJson(file, label) {
 }
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(file))
+    .digest("hex");
 }
 
 function writePrivateJson(file, value) {
@@ -112,8 +115,7 @@ function run() {
       fail(`Dokument ${manifestDocument.documentIndex + 1} ist unvollständig`);
     for (const manifestCategory of manifestDocument.categories) {
       const completedCategory = completedDocument.categories.find(
-        ({ categoryView }) =>
-          categoryView === manifestCategory.categoryView
+        ({ categoryView }) => categoryView === manifestCategory.categoryView
       );
       if (!completedCategory)
         fail(`${manifestCategory.categoryView} fehlt in Search-Completion`);
@@ -149,7 +151,9 @@ function run() {
         worksheet.shadowSearch?.pilot?.pilotSha256 !==
           pilotIdentity.pilotSha256 ||
         expectedCaseIds.length !== reportedCaseIds.length ||
-        expectedCaseIds.some((caseId, index) => caseId !== reportedCaseIds[index])
+        expectedCaseIds.some(
+          (caseId, index) => caseId !== reportedCaseIds[index]
+        )
       )
         fail(`${manifestCategory.categoryView} verletzt den Search-Vertrag`);
       for (const caseId of expectedCaseIds) {

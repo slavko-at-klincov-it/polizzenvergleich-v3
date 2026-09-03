@@ -63,7 +63,9 @@ function pilotFixture() {
               : adversarial
                 ? "MUST_REJECT"
                 : "MUST_RETURN_NO_SELECTED_CANDIDATE",
-            note: positive ? "bestätigter Primär-Miss" : "harte Negativkontrolle",
+            note: positive
+              ? "bestätigter Primär-Miss"
+              : "harte Negativkontrolle",
           };
         }),
       },
@@ -104,30 +106,33 @@ describe("hybridShadowPilot", () => {
       const oracleRange = pilotCase.acceptedSourceRanges[0];
       let spans = [];
       if (pilotCase.controlClass === "POSITIVE") {
-        spans = index === 0
-          ? [{
-              accepted: true,
-              physicalPageNumber: 1,
-              documentStart: oracleRange.documentStart,
-              documentEnd: oracleRange.documentEnd,
-              exactQuoteSha256: oracleRange.exactQuoteSha256,
-            }]
-          : [
-              {
-                accepted: true,
-                physicalPageNumber: 2,
-                documentStart: 1,
-                documentEnd: 2,
-                exactQuoteSha256: "e".repeat(64),
-              },
-              {
-                accepted: true,
-                physicalPageNumber: 1,
-                documentStart: oracleRange.documentStart + 1,
-                documentEnd: oracleRange.documentEnd - 1,
-                exactQuoteSha256: oracleRange.exactQuoteSha256,
-              },
-            ];
+        spans =
+          index === 0
+            ? [
+                {
+                  accepted: true,
+                  physicalPageNumber: 1,
+                  documentStart: oracleRange.documentStart,
+                  documentEnd: oracleRange.documentEnd,
+                  exactQuoteSha256: oracleRange.exactQuoteSha256,
+                },
+              ]
+            : [
+                {
+                  accepted: true,
+                  physicalPageNumber: 2,
+                  documentStart: 1,
+                  documentEnd: 2,
+                  exactQuoteSha256: "e".repeat(64),
+                },
+                {
+                  accepted: true,
+                  physicalPageNumber: 1,
+                  documentStart: oracleRange.documentStart + 1,
+                  documentEnd: oracleRange.documentEnd - 1,
+                  exactQuoteSha256: oracleRange.exactQuoteSha256,
+                },
+              ];
       } else if (pilotCase.controlClass === "ADVERSARIAL") {
         const range = pilotCase.knownAdversarialSourceRanges[0];
         spans = [
@@ -140,13 +145,15 @@ describe("hybridShadowPilot", () => {
           },
         ];
       } else if (index === 7) {
-        spans = [{
-          accepted: true,
-          physicalPageNumber: 1,
-          documentStart: 1,
-          documentEnd: 2,
-          exactQuoteSha256: "f".repeat(64),
-        }];
+        spans = [
+          {
+            accepted: true,
+            physicalPageNumber: 1,
+            documentStart: 1,
+            documentEnd: 2,
+            exactQuoteSha256: "f".repeat(64),
+          },
+        ];
       }
       return { caseId: pilotCase.caseId, spans };
     });

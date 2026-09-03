@@ -1,9 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const {
-  CATEGORY_ORDER,
-} = require("../policyComparison/productContract");
+const { CATEGORY_ORDER } = require("../policyComparison/productContract");
 
 const HYBRID_SHADOW_PILOT_SCHEMA_VERSION = 1;
 const MINIMUM_PILOT_CASES = 10;
@@ -210,10 +208,7 @@ function validateHybridShadowPilot(rawPilot) {
         "HYBRID_SHADOW_PILOT_CATEGORY_REQUIRED"
       );
       if (!CATEGORY_ORDER.includes(categoryView))
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_CATEGORY_INVALID",
-          categoryView
-        );
+        throw pilotError("HYBRID_SHADOW_PILOT_CATEGORY_INVALID", categoryView);
       const requirementId = requiredString(
         pilotCase.requirementId,
         "HYBRID_SHADOW_PILOT_REQUIREMENT_REQUIRED"
@@ -231,24 +226,11 @@ function validateHybridShadowPilot(rawPilot) {
         throw pilotError("HYBRID_SHADOW_PILOT_TARGET_DUPLICATE", targetKey);
       targetKeys.add(targetKey);
       if (!CONTROL_CLASSES.has(pilotCase.controlClass))
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_CONTROL_CLASS_INVALID",
-          caseId
-        );
+        throw pilotError("HYBRID_SHADOW_PILOT_CONTROL_CLASS_INVALID", caseId);
       if (!GROUND_TRUTH_VALUES.has(pilotCase.groundTruth))
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_GROUND_TRUTH_INVALID",
-          caseId
-        );
-      if (
-        !CANDIDATE_DISPOSITIONS.has(
-          pilotCase.expectedCandidateDisposition
-        )
-      )
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_DISPOSITION_INVALID",
-          caseId
-        );
+        throw pilotError("HYBRID_SHADOW_PILOT_GROUND_TRUTH_INVALID", caseId);
+      if (!CANDIDATE_DISPOSITIONS.has(pilotCase.expectedCandidateDisposition))
+        throw pilotError("HYBRID_SHADOW_PILOT_DISPOSITION_INVALID", caseId);
       if (!DOWNSTREAM_EXPECTATIONS.has(pilotCase.downstreamExpectation))
         throw pilotError(
           "HYBRID_SHADOW_PILOT_DOWNSTREAM_EXPECTATION_INVALID",
@@ -268,8 +250,7 @@ function validateHybridShadowPilot(rawPilot) {
       const adversarial = pilotCase.controlClass === "ADVERSARIAL";
       const trueNull = pilotCase.controlClass === "TRUE_NULL";
       if (
-        positive !==
-          (pilotCase.groundTruth === "RELEVANT_EVIDENCE_EXISTS") ||
+        positive !== (pilotCase.groundTruth === "RELEVANT_EVIDENCE_EXISTS") ||
         (positive && acceptedSourceRanges.length === 0) ||
         (!positive && acceptedSourceRanges.length !== 0) ||
         (positive && knownAdversarialSourceRanges.length !== 0) ||
@@ -280,10 +261,9 @@ function validateHybridShadowPilot(rawPilot) {
             pilotCase.expectedCandidateDisposition
           )) ||
         (adversarial &&
-          !new Set([
-            "RELATED_NOT_SUFFICIENT",
-            "WRONG_ROLE_OR_SCOPE",
-          ]).has(pilotCase.expectedCandidateDisposition)) ||
+          !new Set(["RELATED_NOT_SUFFICIENT", "WRONG_ROLE_OR_SCOPE"]).has(
+            pilotCase.expectedCandidateDisposition
+          )) ||
         (trueNull && pilotCase.expectedCandidateDisposition !== "IRRELEVANT") ||
         (positive && pilotCase.downstreamExpectation !== "MUST_SELECT") ||
         (adversarial && pilotCase.downstreamExpectation !== "MUST_REJECT") ||
@@ -291,10 +271,7 @@ function validateHybridShadowPilot(rawPilot) {
           pilotCase.downstreamExpectation !==
             "MUST_RETURN_NO_SELECTED_CANDIDATE")
       )
-        throw pilotError(
-          "HYBRID_SHADOW_PILOT_ORACLE_CONTRACT_INVALID",
-          caseId
-        );
+        throw pilotError("HYBRID_SHADOW_PILOT_ORACLE_CONTRACT_INVALID", caseId);
       return {
         caseId,
         categoryView,
@@ -341,9 +318,7 @@ function validateHybridShadowPilot(rawPilot) {
       document.cases.some(({ controlClass }) => controlClass === "POSITIVE")
     ) ||
     !documents.some((document) =>
-      document.cases.some(
-        ({ controlClass }) => controlClass === "ADVERSARIAL"
-      )
+      document.cases.some(({ controlClass }) => controlClass === "ADVERSARIAL")
     ) ||
     !documents.some((document) =>
       document.cases.some(({ controlClass }) => controlClass === "TRUE_NULL")
@@ -399,9 +374,7 @@ function loadHybridShadowPilot(pilotFile) {
 }
 
 function pilotCasesForWorksheet({ pilotDocument, worksheet }) {
-  if (
-    worksheet?.document?.fingerprint !== pilotDocument.documentFingerprint
-  )
+  if (worksheet?.document?.fingerprint !== pilotDocument.documentFingerprint)
     throw pilotError("HYBRID_SHADOW_PILOT_WORKSHEET_DOCUMENT_MISMATCH");
   const categoryView = worksheet?.catalog?.categoryView;
   if (!CATEGORY_ORDER.includes(categoryView))
@@ -455,33 +428,25 @@ function calculateHybridShadowPilotRetrievalMetrics({ pilot, searchReports }) {
         pilotCase.controlClass === "POSITIVE"
           ? rankedSpans
               .slice(0, 1)
-              .some((span) =>
-                matchesAny(span, pilotCase.acceptedSourceRanges)
-              )
+              .some((span) => matchesAny(span, pilotCase.acceptedSourceRanges))
           : null,
       rawRecallAt3:
         pilotCase.controlClass === "POSITIVE"
           ? rankedSpans
               .slice(0, 3)
-              .some((span) =>
-                matchesAny(span, pilotCase.acceptedSourceRanges)
-              )
+              .some((span) => matchesAny(span, pilotCase.acceptedSourceRanges))
           : null,
       recallAt1:
         pilotCase.controlClass === "POSITIVE"
           ? rankedAcceptedSpans
               .slice(0, 1)
-              .some((span) =>
-                matchesAny(span, pilotCase.acceptedSourceRanges)
-              )
+              .some((span) => matchesAny(span, pilotCase.acceptedSourceRanges))
           : null,
       recallAt3:
         pilotCase.controlClass === "POSITIVE"
           ? rankedAcceptedSpans
               .slice(0, 3)
-              .some((span) =>
-                matchesAny(span, pilotCase.acceptedSourceRanges)
-              )
+              .some((span) => matchesAny(span, pilotCase.acceptedSourceRanges))
           : null,
       adversarialFalsePositive:
         pilotCase.controlClass === "TRUE_NULL"

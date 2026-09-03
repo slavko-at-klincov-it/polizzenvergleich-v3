@@ -51,7 +51,11 @@ describe("general branch maximum recall", () => {
   ])(
     "%s recalls the complete general branch maximum clause",
     (catalog, requirementId, componentId) => {
-      const recalled = component(worksheet(catalog), requirementId, componentId);
+      const recalled = component(
+        worksheet(catalog),
+        requirementId,
+        componentId
+      );
       expect(recalled.occurrenceCount).toBeGreaterThan(0);
       expect(recalled.occurrences).toEqual(
         expect.arrayContaining([
@@ -86,17 +90,12 @@ describe("general branch maximum recall", () => {
         "Die Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme, maximiert mit dem Versicherungswert, begrenzt.",
       ].join("\n")
     );
-    const maximum = component(
-      result,
-      "VS-36",
-      "maximum_indemnity_per_event"
-    );
+    const maximum = component(result, "VS-36", "maximum_indemnity_per_event");
 
     expect(maximum.occurrences).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          matchedAlias:
-            "CONCEPT_SEARCH:sum-insured-as-indemnity-boundary",
+          matchedAlias: "CONCEPT_SEARCH:sum-insured-as-indemnity-boundary",
           sectionScopeHint: expect.objectContaining({
             scopeKey: "GENERAL_CONTRACT_TERMS",
           }),
@@ -158,11 +157,11 @@ describe("general branch maximum recall", () => {
       terminalState: "NO_CONTROLLED_CANDIDATE",
       occurrenceCount: 0,
     });
-    expect(
-      component(result, "VS-32", "temporary_storage_costs")
-    ).toMatchObject({
-      terminalState: "NO_CONTROLLED_CANDIDATE",
-      occurrenceCount: 0,
-    });
+    expect(component(result, "VS-32", "temporary_storage_costs")).toMatchObject(
+      {
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+      }
+    );
   });
 });

@@ -75,7 +75,12 @@ function writePrivateJson(file, value) {
   fs.chmodSync(file, 0o600);
 }
 
-function verifyManifest({ manifest, manifestFile, pilotIdentity, contractIdentity }) {
+function verifyManifest({
+  manifest,
+  manifestFile,
+  pilotIdentity,
+  contractIdentity,
+}) {
   if (
     manifest?.schemaVersion !== 1 ||
     manifest.runKind !== "HYBRID_SHADOW_TWO_PHASE_PILOT_QA" ||
@@ -275,8 +280,7 @@ async function run() {
         document,
         rankedTargets: categoryRankings,
         contractIdentity,
-        primaryWorksheetSha256:
-          categoryInput.manifestCategory.worksheetSha256,
+        primaryWorksheetSha256: categoryInput.manifestCategory.worksheetSha256,
         documentArtifactSha256: manifestDocument.documentArtifactSha256,
         allowedTargets: categoryInput.selectedCases,
         pilotIdentity: {

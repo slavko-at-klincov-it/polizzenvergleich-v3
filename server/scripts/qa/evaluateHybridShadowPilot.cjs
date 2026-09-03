@@ -122,7 +122,11 @@ function run() {
       "effects",
       "materialized.private.json"
     );
-    const effectsReportFile = path.join(categoryOutput, "effects", "report.json");
+    const effectsReportFile = path.join(
+      categoryOutput,
+      "effects",
+      "report.json"
+    );
     const triage = readJson(triageFile, "Pilot-Triage");
     const triageReport = readJson(triageReportFile, "Pilot-Triage-Report");
     const effects = readJson(effectsFile, "Pilot-Wirkungsprüfung");
@@ -162,19 +166,16 @@ function run() {
         `${ranking.requirementId}:${ranking.componentId}`
       );
       if (!effect) fail(`Wirkung fehlt für Pilotfall ${ranking.caseId}`);
-      const selectedSources = effect.selectedCandidateIds.map(
-        (candidateId) => {
-          const occurrence = occurrenceById.get(candidateId);
-          if (!occurrence)
-            fail(`Ausgewählter Kandidat fehlt: ${candidateId}`);
-          return {
-            physicalPageNumber: occurrence.physicalPageNumber,
-            documentStart: occurrence.documentStart,
-            documentEnd: occurrence.documentEnd,
-            exactQuoteSha256: sha256(occurrence.exactText),
-          };
-        }
-      );
+      const selectedSources = effect.selectedCandidateIds.map((candidateId) => {
+        const occurrence = occurrenceById.get(candidateId);
+        if (!occurrence) fail(`Ausgewählter Kandidat fehlt: ${candidateId}`);
+        return {
+          physicalPageNumber: occurrence.physicalPageNumber,
+          documentStart: occurrence.documentStart,
+          documentEnd: occurrence.documentEnd,
+          exactQuoteSha256: sha256(occurrence.exactText),
+        };
+      });
       casePipelineById.set(ranking.caseId, {
         selectedCandidateCount: effect.selectedCandidateIds.length,
         selectedSources,
@@ -263,8 +264,7 @@ function run() {
       trueNull.filter(({ trueNullFalsePositive }) => trueNullFalsePositive)
         .length / trueNull.length,
     additionalQwenCalls: qwenReports.reduce(
-      (sum, report) =>
-        sum + report.triageModelCalls + report.effectsModelCalls,
+      (sum, report) => sum + report.triageModelCalls + report.effectsModelCalls,
       0
     ),
     providerDurationSeconds: qwenReports.reduce(
@@ -309,8 +309,7 @@ function run() {
       rawRecallAt3: retrieval.rawRecallAt3,
       thresholdRecallAt1: retrieval.recallAt1,
       thresholdRecallAt3: retrieval.recallAt3,
-      knownAdversarialRetrievalAt3:
-        retrieval.knownAdversarialRetrievalAt3,
+      knownAdversarialRetrievalAt3: retrieval.knownAdversarialRetrievalAt3,
       retrievalFalsePositiveRate: retrieval.retrievalFalsePositiveRate,
       pipelineRecall: qwen.pipelineRecall,
       adversarialRejectionRate: qwen.adversarialRejectionRate,

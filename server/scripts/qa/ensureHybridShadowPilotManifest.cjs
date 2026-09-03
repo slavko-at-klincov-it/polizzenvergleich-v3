@@ -43,7 +43,10 @@ function readJson(file, label) {
 }
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(file))
+    .digest("hex");
 }
 
 function sha256(value) {
@@ -120,8 +123,7 @@ function run() {
       documentArtifact?.schemaVersion !== 1 ||
       documentArtifact.fingerprint !== pilotDocument.documentFingerprint ||
       primaryManifest.releaseId !== pilotDocument.primaryReleaseId ||
-      sha256File(documentArtifactFile) !==
-        pilotDocument.documentArtifactSha256
+      sha256File(documentArtifactFile) !== pilotDocument.documentArtifactSha256
     )
       fail(`Primärlauf ${documentIndex + 1} ist nicht pilotfähig`);
 
@@ -189,13 +191,11 @@ function run() {
         worksheetSha256: sha256File(worksheetFile),
         resultReportPath: resultReportFile,
         resultReportSha256: sha256File(resultReportFile),
-        cases: selectedCases.map(
-          ({ caseId, requirementId, componentId }) => ({
-            caseId,
-            requirementId,
-            componentId,
-          })
-        ),
+        cases: selectedCases.map(({ caseId, requirementId, componentId }) => ({
+          caseId,
+          requirementId,
+          componentId,
+        })),
       };
     });
     return {

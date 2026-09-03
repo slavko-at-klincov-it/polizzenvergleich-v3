@@ -151,16 +151,12 @@ describe("P0 category catalog candidate recall", () => {
     );
 
     expect(
-      component(
-        result,
-        "LW-13",
-        "sprinkler_or_extinguishing_discharge"
-      ).occurrences
+      component(result, "LW-13", "sprinkler_or_extinguishing_discharge")
+        .occurrences
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          matchedAlias:
-            "CONCEPT_SEARCH:sprinkler-or-extinguishing-activation",
+          matchedAlias: "CONCEPT_SEARCH:sprinkler-or-extinguishing-activation",
           sectionScopeHint: expect.objectContaining({
             scopeKey: "LEITUNGSWASSER_INSURANCE",
           }),

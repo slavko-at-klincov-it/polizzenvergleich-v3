@@ -31,7 +31,8 @@ async function run() {
   const response = await fetch(`${apiRoot}/api/v0/models`, {
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) fail(`LM-Studio-Modellliste fehlgeschlagen: ${response.status}`);
+  if (!response.ok)
+    fail(`LM-Studio-Modellliste fehlgeschlagen: ${response.status}`);
   const body = await response.json();
   const entry = body?.data?.find(
     ({ id, type }) => id === args.model && type === args.type

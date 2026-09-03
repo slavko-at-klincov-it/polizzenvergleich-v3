@@ -513,12 +513,10 @@ function buildHybridShadowWorksheet({
     allowedZeroPrimaryComponents({
       worksheet: primaryWorksheet,
       allowedTargets,
-    }).map(
-      ({ requirement, component }) => [
-        `${requirement.id}:${component.id}`,
-        { requirement, component },
-      ]
-    )
+    }).map(({ requirement, component }) => [
+      `${requirement.id}:${component.id}`,
+      { requirement, component },
+    ])
   );
   const rankingByKey = new Map();
   for (const ranking of rankedTargets) {
