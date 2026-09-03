@@ -2,6 +2,9 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const {
+  PRODUCT_PROFILE,
+} = require("../../../utils/policyComparison/productContract");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
@@ -173,12 +176,7 @@ describe("all-category shell runner", () => {
     expect(manifest).toMatchObject({
       runKind: "ALL_CATEGORIES_QUALITY",
       releaseId: "fixture-release",
-      productProfile: {
-        id: "CUSTOMER_CORE_5_V17_FE_C07_SCOPED_INSURED_OBJECT",
-        comparisonContractId: "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_V1",
-        categoryViews: ["VS", "FE", "LW", "ST", "EL"],
-        expectedRowCount: 224,
-      },
+      productProfile: PRODUCT_PROFILE,
       configuration: {
         model: "qwen/qwen3.6-35b-a3b",
         documentStatus: "FRAMEWORK_TERMS",
