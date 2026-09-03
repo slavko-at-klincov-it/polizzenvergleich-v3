@@ -5511,3 +5511,29 @@ Der vollständige Wiederanlaufpunkt, die FE-C02-Artefakthashes und die genaue
 FE-A05-Fortsetzungsreihenfolge stehen in Abschnitt 10.53 des Target-Loop-
 Dokuments. Kein Fortschritt hängt ausschließlich an einem temporären Skript
 oder nicht versionierten Chatkontext.
+
+## 116. V3.6.0 – kontrollierte Release-Vorbereitung
+
+Nach ausdrücklicher Nutzerfreigabe wird der gesamte gesicherte
+Entwicklungsstand als V3.6.0-Kandidat geprüft. Die Veröffentlichung bleibt bis
+zum vollständigen Mac-Studio-Gate gesperrt. Der Releasevertrag verlangt einen
+annotierten Tag `v3.6.0`, der exakt auf dem installierten Commit liegt; damit
+kann der Doctor keinen ungetaggten oder nur namensgleichen Checkout mehr als
+gültigen Release melden.
+
+```text
+Ausgangs-HEAD: dc1fa925ccf8c5678e285b13996f2c11c8faa411
+Installierter Kundenstand: c7d3b16d400ea4d65b558ef091781da5df82d610
+Geplanter Release: v3.6.0
+Produktprofil: CUSTOMER_CORE_5_V99_FE_C02_QUALIFICATION_REPLAY
+Ergebnisschema: 13
+Main: noch nicht aktualisiert
+Tag: noch nicht erstellt
+Deployment: noch nicht begonnen
+```
+
+Vor `main`, Tag und Deployment folgen vollständige Regression,
+Produktionsbuild, FE-C02-Replay, frischer Zehn-Dokument-/224-Zeilen-Vollrun,
+unabhängiger Metrik- und Favoritenvergleich sowie eine externe
+Kundendatensicherung. Jeder rote Befund stoppt die Release-Kette vor dem
+Deployment.

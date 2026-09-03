@@ -83,12 +83,56 @@ for plist in "$V3_LAUNCH_AGENTS_DIR"/*.plist; do
 done
 [ "$(find "$V3_LAUNCH_AGENTS_DIR" -name '*.plist' | wc -l | tr -d ' ')" = "2" ]
 [ "$V3_NODE_VERSION" = "22.23.2" ]
+[ "$V3_RELEASE_VERSION" = "3.6.0" ]
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
+
+release_repo="$temp_dir/release-repo"
+mkdir -p "$release_repo"
+git -C "$release_repo" init -q
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' commit --allow-empty -qm initial
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
+  -m "Release v$V3_RELEASE_VERSION"
+(
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+)
+git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
+git -C "$release_repo" tag "v$V3_RELEASE_VERSION"
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+); then
+  printf '%s\n' "Lightweight-Tag wurde fälschlich als Release akzeptiert." >&2
+  exit 1
+fi
+git -C "$release_repo" tag -d "v$V3_RELEASE_VERSION" >/dev/null
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' tag -a "v$V3_RELEASE_VERSION" \
+  -m "Release v$V3_RELEASE_VERSION"
+git -C "$release_repo" -c user.name='Release Contract' \
+  -c user.email='release-contract@example.invalid' commit --allow-empty -qm next
+if (
+  export V3_REPO_DIR="$release_repo"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/common.sh"
+  v3_release_checkout_matches
+); then
+  printf '%s\n' "Fremder HEAD wurde fälschlich als Release akzeptiert." >&2
+  exit 1
+fi
 
 if /usr/bin/grep -RniE --exclude='run.sh' --exclude='start-server.sh' \
   --exclude='lmstudio.sh' --exclude='prepare-qwen36-model.cjs' \
   --exclude='load-qwen36.cjs' --exclude='run-all-categories-quality.command' \
+  --exclude='run-hybrid-shadow-pilot.command' \
+  --exclude='run-hybrid-shadow-quality.command' \
   'feuer|policyComparison|dinghy|qwen3\.8|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
@@ -115,5 +159,13 @@ fi
   "$REPO_DIR/run-all-categories-quality.command"
 /usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' \
   "$REPO_DIR/run-all-categories-quality.command"
+
+# Die Hybrid-Shadow-Runner bleiben explizite QA-Werkzeuge. Sie dürfen Modelle
+# kontrolliert wechseln, sind aber kein Bestandteil von Installation, Start,
+# Doctor oder Update.
+/usr/bin/grep -Fq 'server/scripts/qa/runHybridShadowPilotSearch.cjs' \
+  "$REPO_DIR/run-hybrid-shadow-pilot.command"
+/usr/bin/grep -Fq 'server/utils/policyComparison/productContract.js' \
+  "$REPO_DIR/run-hybrid-shadow-quality.command"
 
 printf '%s\n' "V3 macOS installer tests: PASS"

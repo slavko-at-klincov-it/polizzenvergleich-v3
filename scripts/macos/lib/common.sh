@@ -5,7 +5,7 @@ V3_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 V3_REPO_DIR="${V3_REPO_DIR:-$(cd "$V3_SCRIPT_DIR/../.." && pwd)}"
 V3_RUNTIME_DIR="${V3_RUNTIME_DIR:-$V3_REPO_DIR/.runtime}"
 V3_NODE_VERSION="22.23.2"
-V3_RELEASE_VERSION="3.5.1"
+V3_RELEASE_VERSION="3.6.0"
 V3_NODE_SHA256="61130f394c1630d211dd50aecc4353d379480f36d3ac913cd85dbba1aed585c6"
 V3_NODE_DIR="$V3_RUNTIME_DIR/node-v$V3_NODE_VERSION"
 V3_NODE_BIN="$V3_NODE_DIR/bin/node"
@@ -56,6 +56,16 @@ v3_safe_repo_path() {
 v3_require_clean_checkout() {
   [ -z "$(git -C "$V3_REPO_DIR" status --porcelain --untracked-files=normal)" ] ||
     v3_die "Lokale Codeänderungen erkannt. Bitte zuerst sichern oder entfernen."
+}
+
+v3_release_checkout_matches() {
+  local expected_tag="v$V3_RELEASE_VERSION" tag_sha current_sha
+  git -C "$V3_REPO_DIR" rev-parse -q --verify "$expected_tag^{tag}" >/dev/null 2>&1 ||
+    return 1
+  tag_sha="$(git -C "$V3_REPO_DIR" rev-parse "$expected_tag^{commit}" 2>/dev/null)" ||
+    return 1
+  current_sha="$(git -C "$V3_REPO_DIR" rev-parse HEAD 2>/dev/null)" || return 1
+  [ "$tag_sha" = "$current_sha" ]
 }
 
 v3_require_port_available() {
