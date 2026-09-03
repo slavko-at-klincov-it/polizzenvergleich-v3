@@ -5410,3 +5410,35 @@ Offen ist nur noch ein eigener, side-neutraler Vergleichsvertrag. Er darf
 konkrete Gebäude umdeuten. Zulässig ist ausschließlich der Schluss, dass A
 einen breiteren vertraglichen Voraussetzungsscope besitzt, wenn `B => A`, aber
 nicht `A => B` beweisbar ist. Kein Vollrun und kein Deployment.
+
+## 113. FE-C02 – Bedingungsumfang vollständig verglichen
+
+`65c6b8c0e` bis `5ddf2e9f3` führen den outcome-neutralen
+`MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1` ein und härten seine
+Trust-Boundaries. Alle beteiligten Atome müssen `INSURED_OBJECT`, denselben
+kanonischen Vergleichsvertrag, denselben Requirement-Digest und dieselbe
+deklarierte Komponente tragen. Formula-Proof, Katalogformel,
+Membership-Prädikate, Implikationen, Paket-Audit und Source-Atom-Replay werden
+fail-closed gegeneinander gebunden.
+
+Eine Architekturprüfung fand rechtzeitig einen CommonJS-Zirkel vom Worksheet
+über den Comparison-Layer zurück in den Worksheet-Unterbau. `92d0ccbe8`
+entfernte ihn durch ein reines dependency-leaf. Zwei nachfolgende kleine
+Commits reparierten ausschließlich kanonische Digestbildung und
+Objektisolation in der neuen Testfixture.
+
+```text
+Commit: 5ddf2e9f3c0b7ca07d7dd7b847d736455f3a90c9
+Mac Studio: Format PASS; 8 Suites / 209 Tests PASS
+Artefakt: QA/FE-C02-CONDITION-SCOPE-AUDIT-5DDF2E9F-20260903
+Summary: 0afaacb6f62bdcf9989ba8e2d73b5dd2ce14f3cd2ccae2a50548b630c17084aa
+Target Selection: cdf7f6e9946923eae3f1ce412290249faaafa9e98282afaa8627befa8f4084aa
+Audit: A direkt / B Membership / A strikt breiter / 48 gültige Belegungen
+Aufrufe: 2 Triage / 0 Effects
+Kundenergebnis: unverändert UNKLAR / Review
+```
+
+Der echte Zehn-Dokument-Lauf beweist `B => A` und widerlegt `A => B`. Diese
+Stufe behauptet ausdrücklich nicht, dass B ausgeschlossen oder am konkreten
+Gebäude nicht erfüllt ist. Offen ist nur die getrennte, replay-validierte
+Entscheidungs- und Kundenmetrik-Integration. Kein Vollrun und kein Deployment.

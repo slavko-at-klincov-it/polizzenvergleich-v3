@@ -2311,6 +2311,81 @@ vertragliche Voraussetzungsscopes. Dokumentrolle oder `PROPOSAL` dürfen dabei
 nicht blockieren; nur ein echter Quellen-, Editions-, Ersatz-, Scope- oder
 Inhaltskonflikt darf fail-closed bleiben. Kein Vollrun und kein Deployment.
 
+### 10.51 FE-C02 – Bedingungsumfang side-neutral beweisbar
+
+Der neue Vertrag `MEMBERSHIP_CONDITION_SCOPE_COMPARISON_V1` vergleicht keine
+Dokumenttypen und bewertet nicht, ob das konkrete Gebäude die Bedingungen
+erfüllt. Er vergleicht ausschließlich zwei vollständig sourcegebundene
+Boolesche Vertragsformeln für dasselbe Zielobjekt, denselben Gefahrenscope und
+dieselbe Komponente. Requirement-Digest und Vergleichsvertrag müssen auf allen
+Atomen beider Seiten identisch sein.
+
+```text
+65c6b8c0e feat(analysis): bind membership condition scope comparison
+92d0ccbe8 fix(analysis): harden condition scope contract boundary
+ea8706b08 style(analysis): format condition scope comparison
+f480d9e7e test(analysis): canonicalize condition formula fixture
+5ddf2e9f3 test(analysis): isolate condition scope fixtures
+```
+
+Die unabhängige Architekturprüfung fand vor der Freischaltung einen
+CommonJS-Importzirkel. `92d0ccbe8` verschob deshalb die reine
+Katalogdefinition in ein abhängigkeitloses Policy-Analysis-Leaf. Derselbe
+Forward-Fix bindet den Formula-Proof semantisch an den validierten
+Katalogvertrag und prüft Section- sowie Implikationsprädikate gegen die
+tatsächlichen Direkt- und Membership-Formeln.
+
+Der erste Mac-Testlauf lieferte 7/8 grüne Suites und 205/209 grüne Tests. Die
+vier Fehler lagen vollständig in der neuen Testfixture: zuerst wurde der
+Digest aus dem rohen statt dem kanonisch validierten Formula-Vertrag gebildet,
+danach veränderte ein adversarialer Test über eine geteilte Referenz den
+importierten Katalog. `f480d9e7e` und `5ddf2e9f3` schließen beide Testfehler.
+
+```text
+Validierungscommit: 5ddf2e9f3c0b7ca07d7dd7b847d736455f3a90c9
+Mac-Studio-Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Runtime: /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/AuditRuns/QWEN36-FULL-20260831-7ab999c6/repo
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Format: PASS
+Suites: 8/8 PASS
+Tests: 209/209 PASS
+```
+
+Realer Zehn-Dokument-Ziellauf:
+
+```text
+Artefakt: QA/FE-C02-CONDITION-SCOPE-AUDIT-5DDF2E9F-20260903
+Summary: 0afaacb6f62bdcf9989ba8e2d73b5dd2ce14f3cd2ccae2a50548b630c17084aa
+Target Selection: cdf7f6e9946923eae3f1ce412290249faaafa9e98282afaa8627befa8f4084aa
+Triage: 2 Aufrufe; 4 serverseitige Ablehnungen
+Effects: 0 Aufrufe; 8 serverseitige Terminals
+A: BELEGT
+B: TEILBELEGT
+Formelrelation: LEFT_STRICTLY_BROADER
+Gültige Belegungen: 48
+Breiterer Bedingungsumfang: A
+Audit: comparisonComplete=true / readyForDecision=true
+Audit-Digest: bcc272eb7f58cf89c61e0935d750b207f6cb7b3a393f24f673326a8ca8990eb3
+```
+
+Damit ist aus den echten Dokumenten belegt: Die B-Formel impliziert die
+A-Formel, die A-Formel impliziert die B-Formel nicht. A hat für FE-C02 den
+breiteren vertraglichen Voraussetzungsscope. Es wird weder ein ausdrücklicher
+Ausschluss in B noch die konkrete Nichterfüllung der B-Bedingungen behauptet.
+
+Der Stand bleibt absichtlich outcome-neutral:
+
+```text
+Vorher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+Nachher: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION / Review
+```
+
+Erst der nächste getrennte Commit darf diesen vollständig replaybaren Audit
+in `VORTEIL_A` beziehungsweise beim Seitentausch `VORTEIL_B` übersetzen. Vor
+dieser Freischaltung werden noch die vollständigen Atom- und
+Dokumentfingerprint-Invarianten geschlossen. Kein Vollrun, kein Deployment.
+
 ## 10.49 FE-C02 – Membership-Voraussetzungen sourcegebunden typisiert
 
 `809ac148c`/`d853a8cc8` ergänzen für die Elternkante
