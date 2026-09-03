@@ -72,6 +72,7 @@ const {
 const {
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+  buildMembershipConditionScopeAuditFromQualificationReplay,
   membershipConditionScopeComparisonDecision,
   validateMembershipConditionScopeComparisonAudit,
 } = require("./membershipConditionScopeComparisonContract");
@@ -743,7 +744,72 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
           MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE ||
         row.pointDecision?.membershipConditionScopeComparisonAudit !==
           undefined;
-      if (membershipConditionScopeDecisionDetected) {
+      const membershipConditionScopeQualificationReplayPresent =
+        row.membershipConditionScopeQualificationReplay !== undefined;
+      if (Number(result.schemaVersion) >= 13) {
+        const isFeC02Row =
+          row.categoryView === "FE" && row.categoryId === "FE-C02";
+        if (
+          row.membershipConditionScopeSourceAtomDigestReplay !== undefined
+        )
+          validationError(
+            "COMPARISON_FE_C02_LEGACY_SOURCE_REPLAY_UNEXPECTED",
+            [rowKey]
+          );
+        if (!isFeC02Row && membershipConditionScopeQualificationReplayPresent)
+          validationError(
+            "COMPARISON_FE_C02_QUALIFICATION_REPLAY_ORPHANED",
+            [rowKey]
+          );
+        if (isFeC02Row) {
+          if (!validDocumentManifest)
+            validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
+          if (!membershipConditionScopeQualificationReplayPresent)
+            validationError(
+              "COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED",
+              [rowKey]
+            );
+          let reconstructedAudit;
+          try {
+            reconstructedAudit =
+              buildMembershipConditionScopeAuditFromQualificationReplay({
+                replay: row.membershipConditionScopeQualificationReplay,
+                packageA: row.packageA,
+                packageB: row.packageB,
+                expectedDocumentsA: manifestDocuments.filter(
+                  ({ side }) => side === "A"
+                ),
+                expectedDocumentsB: manifestDocuments.filter(
+                  ({ side }) => side === "B"
+                ),
+              });
+          } catch (error) {
+            validationError(
+              "COMPARISON_FE_C02_QUALIFICATION_REPLAY_INVALID",
+              [rowKey, error.message]
+            );
+          }
+          if (reconstructedAudit) {
+            const reconstructedDecision =
+              membershipConditionScopeComparisonDecision(reconstructedAudit);
+            if (!sameJson(row.pointDecision, reconstructedDecision))
+              validationError(
+                "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_OMISSION",
+                [rowKey]
+              );
+          } else if (membershipConditionScopeDecisionDetected) {
+            validationError(
+              "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_NOT_QUALIFIED",
+              [rowKey]
+            );
+          }
+        } else if (membershipConditionScopeDecisionDetected) {
+          validationError(
+            "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_ORPHANED",
+            [rowKey]
+          );
+        }
+      } else if (membershipConditionScopeDecisionDetected) {
         if (!validDocumentManifest)
           validationError("COMPARISON_DOCUMENT_MANIFEST_INVALID", [rowKey]);
         const audit = row.pointDecision.membershipConditionScopeComparisonAudit;
@@ -1055,6 +1121,8 @@ function customerSafeComparisonReadView(result) {
             vs25SourceAtomDigestReplay: _privateVs25Replay,
             membershipConditionScopeSourceAtomDigestReplay:
               _privateMembershipConditionScopeReplay,
+            membershipConditionScopeQualificationReplay:
+              _privateMembershipConditionScopeQualificationReplay,
             ...publicRow
           } = row;
           const explanation = packageReviewCustomerExplanation(

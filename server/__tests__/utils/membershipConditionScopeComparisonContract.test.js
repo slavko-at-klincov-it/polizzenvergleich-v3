@@ -3,7 +3,9 @@ const {
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
+  buildMembershipConditionScopeAuditFromQualificationReplay,
   buildMembershipConditionScopeComparisonAudit,
+  buildMembershipConditionScopeQualificationReplay,
   buildMembershipConditionScopeSourceAtomDigestReplay,
   compareBooleanConditionFormulas,
   membershipConditionScopeComparisonDecision,
@@ -30,9 +32,20 @@ const {
   validateCoverageConditionFormulaContract,
 } = require("../../utils/policyAnalysis/coverageConditionFormulaEvidenceContract");
 const {
+  requirementSearchContractDigest,
+} = require("../../utils/policyAnalysis/coverageOnlyCertificationContract");
+const {
   buildMembershipConditionEvidence,
 } = require("../../utils/policyAnalysis/objectMembershipEvidenceContract");
 const feCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
+
+const feC02Requirement = feCatalog.requirements.find(
+  ({ id }) => id === "FE-C02"
+);
+const feC02RequirementContractDigest = requirementSearchContractDigest({
+  catalogId: feCatalog.catalogId,
+  requirement: feC02Requirement,
+});
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -264,7 +277,7 @@ function commonAtom(document, overrides = {}) {
       formulaEvidenceContract(),
     ],
     membershipConditionScopeComparisonContract: contract(),
-    requirementContractDigest: "f".repeat(64),
+    requirementContractDigest: feC02RequirementContractDigest,
     ...overrides,
   };
 }
@@ -516,6 +529,20 @@ describe("membership condition-scope comparison contract", () => {
     const input = fixture();
     const audit = buildMembershipConditionScopeComparisonAudit(input);
     const pointDecision = membershipConditionScopeComparisonDecision(audit);
+    const qualificationReplay =
+      buildMembershipConditionScopeQualificationReplay({
+        ...input,
+        categoryView: "FE",
+      });
+    expect(
+      buildMembershipConditionScopeAuditFromQualificationReplay({
+        replay: qualificationReplay,
+        packageA: input.packageA,
+        packageB: input.packageB,
+        expectedDocumentsA: input.expectedDocumentsA,
+        expectedDocumentsB: input.expectedDocumentsB,
+      })
+    ).toEqual(audit);
     const categories = [
       {
         categoryView: "FE",
@@ -526,14 +553,13 @@ describe("membership condition-scope comparison contract", () => {
             packageA: input.packageA,
             packageB: input.packageB,
             pointDecision,
-            membershipConditionScopeSourceAtomDigestReplay:
-              buildMembershipConditionScopeSourceAtomDigestReplay(input),
+            membershipConditionScopeQualificationReplay: qualificationReplay,
           },
         ],
       },
     ];
     const result = {
-      schemaVersion: 12,
+      schemaVersion: 13,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
@@ -548,7 +574,7 @@ describe("membership condition-scope comparison contract", () => {
     const customerRow =
       customerSafeComparisonReadView(result).categories[0].rows[0];
     expect(customerRow).not.toHaveProperty(
-      "membershipConditionScopeSourceAtomDigestReplay"
+      "membershipConditionScopeQualificationReplay"
     );
     expect(customerResultText(customerRow)).toContain("Vorteil Polizze A:");
     expect(customerResultText(customerRow)).not.toMatch(/nicht gedeckt/iu);
@@ -557,7 +583,37 @@ describe("membership condition-scope comparison contract", () => {
     tampered.categories[0].rows[0].pointDecision.membershipConditionScopeComparisonAudit.formulaComparison.relationship =
       "EQUIVALENT";
     expect(() => validateCustomerComparison(tampered)).toThrow(
-      "COMPARISON_FE_C02_CONDITION_SCOPE_AUDIT_INVALID"
+      "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_OMISSION"
+    );
+
+    const omitted = JSON.parse(JSON.stringify(result));
+    omitted.categories[0].rows[0].pointDecision = {
+      schemaVersion: 3,
+      outcome: "UNKLAR",
+      reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
+      reason: "Unklar: alter generischer Paket-Prüfstatus.",
+      reviewRequired: true,
+      ruleId: "FAIL_CLOSED_V1",
+      dimensions: [],
+      packageReviewAudit: audit.packageReviewAudit,
+    };
+    omitted.totals = deriveCustomerMetrics(omitted.categories);
+    expect(() => validateCustomerComparison(omitted)).toThrow(
+      "COMPARISON_FE_C02_CONDITION_SCOPE_DECISION_OMISSION"
+    );
+
+    const missingReplay = JSON.parse(JSON.stringify(result));
+    delete missingReplay.categories[0].rows[0]
+      .membershipConditionScopeQualificationReplay;
+    expect(() => validateCustomerComparison(missingReplay)).toThrow(
+      "COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED"
+    );
+
+    const replayTamper = JSON.parse(JSON.stringify(result));
+    replayTamper.categories[0].rows[0].membershipConditionScopeQualificationReplay.projectedAtomsBySide.A[0].coverageEffect =
+      "EXCLUDED";
+    expect(() => validateCustomerComparison(replayTamper)).toThrow(
+      "COMPARISON_FE_C02_QUALIFICATION_REPLAY_INVALID"
     );
   });
 

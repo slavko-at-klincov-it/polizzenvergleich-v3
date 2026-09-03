@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const feCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
 const {
   COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS,
   buildPackageActivatedObjectMembershipAudit,
@@ -9,6 +10,9 @@ const {
   SOURCE_BOUND_COVERAGE_CONDITION_FORMULA_CONTRACT_ID,
   validateCoverageConditionFormulaContract,
 } = require("../policyAnalysis/coverageConditionFormulaEvidenceContract");
+const {
+  requirementSearchContractDigest,
+} = require("../policyAnalysis/coverageOnlyCertificationContract");
 const { derivePackageReviewAudit } = require("./packageReviewAudit");
 const {
   COMPARISON_POLICY,
@@ -23,6 +27,8 @@ const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_COMPARISON_AUDIT_V1";
 const MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_CONTRACT_ID =
   "MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_V1";
+const MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_CONTRACT_ID =
+  "MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_V2";
 const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID =
   "FE_C02_BROADER_MEMBERSHIP_CONDITION_SCOPE_V1";
 const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE =
@@ -30,6 +36,8 @@ const MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE =
 const DIRECT_MODE = "DIRECT_INCLUDED_SOURCE_FORMULA";
 const MEMBERSHIP_MODE = "MEMBERSHIP_DEFINED_TYPED_CONDITIONS";
 const MAX_PREDICATES = 12;
+const FE_C02_CATEGORY_VIEW = "FE";
+const FE_C02_CATEGORY_ID = "FE-C02";
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -52,6 +60,28 @@ function sha256(value) {
     .createHash("sha256")
     .update(JSON.stringify(stableValue(value)))
     .digest("hex");
+}
+
+function canonicalFeC02Requirement() {
+  const requirement = feCatalog.requirements.find(
+    ({ id }) => id === FE_C02_CATEGORY_ID
+  );
+  if (!requirement)
+    throw new Error("MEMBERSHIP_CONDITION_SCOPE_CANONICAL_REQUIREMENT_MISSING");
+  return stableValue(requirement);
+}
+
+function canonicalFeC02ComparisonContract() {
+  return validateMembershipConditionScopeComparisonContract(
+    canonicalFeC02Requirement().membershipConditionScopeComparisonContract
+  );
+}
+
+function canonicalFeC02RequirementContractDigest() {
+  return requirementSearchContractDigest({
+    catalogId: feCatalog.catalogId,
+    requirement: canonicalFeC02Requirement(),
+  });
 }
 
 function exactKeys(value, keys, code) {
@@ -690,6 +720,134 @@ function validMembershipConditionScopeSourceAtomDigestReplay(replay) {
   return replayDigestSha256 === sha256(body);
 }
 
+function qualificationSideProjection({
+  side,
+  categoryId,
+  atoms,
+  expectedDocumentValues,
+  contract,
+  requirementContractDigest,
+}) {
+  const documents = expectedDocuments(expectedDocumentValues, side);
+  if (!documents) return null;
+  const relevant = relevantAtoms({
+    categoryId,
+    componentId: contract.componentId,
+    atoms,
+    documents,
+  });
+  if (!relevant || !sourceProofFingerprintsMatch(relevant, documents))
+    return null;
+  const projection = projectedAtoms(categoryId, atoms);
+  if (
+    !sameJson(projection, projectedAtoms(categoryId, relevant)) ||
+    exactRequirementContractBinding(relevant, contract) !==
+      requirementContractDigest
+  )
+    return null;
+  return { documents, projection };
+}
+
+function buildMembershipConditionScopeQualificationReplay({
+  categoryView,
+  categoryId,
+  atomsA,
+  atomsB,
+  expectedDocumentsA,
+  expectedDocumentsB,
+}) {
+  if (
+    categoryView !== FE_C02_CATEGORY_VIEW ||
+    categoryId !== FE_C02_CATEGORY_ID
+  )
+    return null;
+  const contract = canonicalFeC02ComparisonContract();
+  const requirementContractDigest =
+    canonicalFeC02RequirementContractDigest();
+  const sides = {
+    A: qualificationSideProjection({
+      side: "A",
+      categoryId,
+      atoms: atomsA,
+      expectedDocumentValues: expectedDocumentsA,
+      contract,
+      requirementContractDigest,
+    }),
+    B: qualificationSideProjection({
+      side: "B",
+      categoryId,
+      atoms: atomsB,
+      expectedDocumentValues: expectedDocumentsB,
+      contract,
+      requirementContractDigest,
+    }),
+  };
+  if (!sides.A || !sides.B) return null;
+  const body = {
+    schemaVersion: 2,
+    contractId: MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_CONTRACT_ID,
+    categoryView,
+    categoryId,
+    componentId: contract.componentId,
+    comparisonContractDigestSha256: sha256(contract),
+    requirementContractDigest,
+    projectedAtomsBySide: {
+      A: sides.A.projection,
+      B: sides.B.projection,
+    },
+    projectedAtomDigestsSha256: {
+      A: sha256(sides.A.projection),
+      B: sha256(sides.B.projection),
+    },
+    documentManifestDigestsSha256: {
+      A: sha256(sides.A.documents),
+      B: sha256(sides.B.documents),
+    },
+  };
+  return { ...body, replayDigestSha256: sha256(body) };
+}
+
+function validateMembershipConditionScopeQualificationReplay(replay, options) {
+  const expected = buildMembershipConditionScopeQualificationReplay({
+    categoryView: options?.categoryView,
+    categoryId: options?.categoryId,
+    atomsA: replay?.projectedAtomsBySide?.A,
+    atomsB: replay?.projectedAtomsBySide?.B,
+    expectedDocumentsA: options?.expectedDocumentsA,
+    expectedDocumentsB: options?.expectedDocumentsB,
+  });
+  if (!expected)
+    throw new Error("MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_INVALID");
+  if (!sameJson(replay, expected))
+    throw new Error("MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_MISMATCH");
+  return true;
+}
+
+function buildMembershipConditionScopeAuditFromQualificationReplay({
+  replay,
+  packageA,
+  packageB,
+  expectedDocumentsA,
+  expectedDocumentsB,
+}) {
+  validateMembershipConditionScopeQualificationReplay(replay, {
+    categoryView: FE_C02_CATEGORY_VIEW,
+    categoryId: FE_C02_CATEGORY_ID,
+    expectedDocumentsA,
+    expectedDocumentsB,
+  });
+  return buildMembershipConditionScopeComparisonAudit({
+    categoryId: FE_C02_CATEGORY_ID,
+    packageA,
+    packageB,
+    atomsA: replay.projectedAtomsBySide.A,
+    atomsB: replay.projectedAtomsBySide.B,
+    contract: canonicalFeC02ComparisonContract(),
+    expectedDocumentsA,
+    expectedDocumentsB,
+  });
+}
+
 function soleMembershipCoverageBlocker(
   packageReviewAudit,
   membershipSide,
@@ -892,14 +1050,18 @@ module.exports = {
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_CONTRACT_ID,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_REASON_CODE,
   MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
+  MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_CONTRACT_ID,
   MEMBERSHIP_CONDITION_SCOPE_SOURCE_ATOM_REPLAY_CONTRACT_ID,
   SATISFACTION_POLICY,
   WINNER_POLICY,
   buildMembershipConditionScopeComparisonAudit,
+  buildMembershipConditionScopeAuditFromQualificationReplay,
+  buildMembershipConditionScopeQualificationReplay,
   buildMembershipConditionScopeSourceAtomDigestReplay,
   compareBooleanConditionFormulas,
   membershipConditionScopeComparisonDecision,
   validMembershipConditionScopeSourceAtomDigestReplay,
   validateMembershipConditionScopeComparisonAudit,
   validateMembershipConditionScopeComparisonContract,
+  validateMembershipConditionScopeQualificationReplay,
 };

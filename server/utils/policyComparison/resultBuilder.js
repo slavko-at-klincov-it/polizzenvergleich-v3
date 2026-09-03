@@ -42,8 +42,7 @@ const {
   buildVs25SourceAtomDigestReplay,
 } = require("./vs25AuthorityReconstructionLimitPortfolioContract");
 const {
-  MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID,
-  buildMembershipConditionScopeSourceAtomDigestReplay,
+  buildMembershipConditionScopeQualificationReplay,
 } = require("./membershipConditionScopeComparisonContract");
 const {
   buildSourceBoundScopedPackageReferenceProofs,
@@ -1852,14 +1851,25 @@ function buildComparisonResult(documentRuns, metadata = {}) {
               expectedDocumentsB,
             })
           : null;
-      const membershipConditionScopeSourceAtomDigestReplay =
-        pointDecision.ruleId === MEMBERSHIP_CONDITION_SCOPE_COMPARISON_RULE_ID
-          ? buildMembershipConditionScopeSourceAtomDigestReplay({
+      const membershipConditionScopeQualificationReplay =
+        categoryView === "FE" && categoryId === "FE-C02"
+          ? buildMembershipConditionScopeQualificationReplay({
+              categoryView,
               categoryId,
               atomsA,
               atomsB,
+              expectedDocumentsA,
+              expectedDocumentsB,
             })
           : null;
+      if (
+        categoryView === "FE" &&
+        categoryId === "FE-C02" &&
+        !membershipConditionScopeQualificationReplay
+      )
+        throw new Error(
+          "MEMBERSHIP_CONDITION_SCOPE_QUALIFICATION_REPLAY_UNAVAILABLE:FE-C02"
+        );
       return {
         categoryId,
         stage: first.stage,
@@ -1871,8 +1881,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         ...(vs22SourceAtomDigestReplay ? { vs22SourceAtomDigestReplay } : {}),
         ...(vs24SourceAtomDigestReplay ? { vs24SourceAtomDigestReplay } : {}),
         ...(vs25SourceAtomDigestReplay ? { vs25SourceAtomDigestReplay } : {}),
-        ...(membershipConditionScopeSourceAtomDigestReplay
-          ? { membershipConditionScopeSourceAtomDigestReplay }
+        ...(membershipConditionScopeQualificationReplay
+          ? { membershipConditionScopeQualificationReplay }
           : {}),
       };
     });
@@ -1880,7 +1890,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 12,
+    schemaVersion: 13,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
