@@ -224,7 +224,10 @@ function newBuildingValueBases(referenceEntries) {
   ).map(BigInt);
 }
 
-function vs01BaseAtomProof(referenceAtomicFacts, { documentUuid, amountMinor }) {
+function vs01BaseAtomProof(
+  referenceAtomicFacts,
+  { documentUuid, amountMinor }
+) {
   const atoms = (referenceAtomicFacts || []).filter(
     (atom) =>
       atom?.requirementId === "VS-01" &&
@@ -243,15 +246,17 @@ function vs01BaseAtomProof(referenceAtomicFacts, { documentUuid, amountMinor }) 
   const moneyFacts = (atom.fields || [])
     .filter(({ field, status }) => field === "limit" && status === "FOUND")
     .flatMap(({ facts }) => facts || [])
-    .filter(({ valueType, normalizedValue }) =>
-      valueType === "MONEY" && singleCurrencyAmount(normalizedValue) !== null
+    .filter(
+      ({ valueType, normalizedValue }) =>
+        valueType === "MONEY" && singleCurrencyAmount(normalizedValue) !== null
     );
   const amounts = unique(
     moneyFacts.map(({ normalizedValue }) =>
       singleCurrencyAmount(normalizedValue).toString()
     )
   );
-  if (amounts.length !== 1 || amounts[0] !== amountMinor.toString()) return null;
+  if (amounts.length !== 1 || amounts[0] !== amountMinor.toString())
+    return null;
   if (
     !Array.isArray(atom.selectedCandidateIds) ||
     atom.selectedCandidateIds.length === 0 ||
@@ -786,9 +791,7 @@ function summarizePackage(
     ...(componentAmountComparison
       ? { amountComparison: componentAmountComparison }
       : {}),
-    ...(vs25AmountReconciliation
-      ? { vs25AmountReconciliation }
-      : {}),
+    ...(vs25AmountReconciliation ? { vs25AmountReconciliation } : {}),
     searchAudit,
     facts,
   };
@@ -1567,8 +1570,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
       loadedRuns
         .filter(({ document }) => document.side === side)
         .flatMap(({ atomicFacts }) =>
-          CATEGORY_ORDER.flatMap((categoryView) =>
-            atomicFacts[categoryView] || []
+          CATEGORY_ORDER.flatMap(
+            (categoryView) => atomicFacts[categoryView] || []
           )
         ),
     ])
