@@ -89,8 +89,8 @@ describe("VS-22 hazardous-waste inflection recall", () => {
       "Kein Versicherungsschutz besteht für die Endlagerung von Abfällen jeder Art. Nicht unter diesem Ausschluss fallen die kurzfristige Zwischenlagerung von gefährlichen Abfall- und Problemstoffen."
     );
     const triageTargets = buildCandidateTriagePayload(worksheet).bindingTargets;
-    const exposedComponents = triageTargets.map(
-      ({ componentId }) => componentId
+    const exposedComponents = triageTargets.flatMap(({ members }) =>
+      members.map(({ componentId }) => componentId)
     );
 
     expect(exposedComponents).toEqual([
@@ -113,10 +113,10 @@ describe("VS-22 hazardous-waste inflection recall", () => {
     );
 
     const candidateTriage = triageTargets.flatMap((target) =>
-      target.candidateIds.map((candidateId) => ({
+      target.members.map((member) => ({
         requirementId: target.requirementId,
-        componentId: target.componentId,
-        candidateId,
+        componentId: member.componentId,
+        candidateId: member.candidateId,
         binding: deriveCandidateBinding({
           roleMatch: target.roleResolution.roleMatch,
           scopeMatch: target.scopeResolution.scopeMatch,

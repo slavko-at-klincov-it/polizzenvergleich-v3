@@ -55,11 +55,11 @@ function isVs22LiabilityOrStorageOccurrence(occurrence) {
     "HAFTPFLICHT_INSURANCE"
   );
   const explicitLocalLiability =
-    /\b(?:Haftpflicht|Umwelthaftpflicht|Schadenersatzverpflichtungen|AHVB)\b/iu.test(
+    /(?:\b(?:Umwelt)?Haftpflicht\p{L}*|\bSchadenersatzverpflichtungen\b|\bAHVB\b)/iu.test(
       localSentence
     );
   const localStorageCarveback =
-    /Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung[\s\S]{0,180}?gefährlich\p{L}*\s+Abfall/iu.test(
+    /Nicht\s+unter\s+diesem\s+Ausschluss\s+fallen[\s\S]{0,260}?kurzfristige\s+Zwischenlagerung[\s\S]{0,180}?gefährlich\p{L}*\s+Abf(?:all|äll)\p{L}*/iu.test(
       localSentence
     );
   return (

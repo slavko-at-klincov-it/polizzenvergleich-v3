@@ -326,7 +326,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       (isVs22NonDisposalScope ||
         (allCostMembers &&
           (isStructurallyLiabilityScoped ||
-            /\b(?:Haftpflicht|Schadenersatzverpflichtungen|AHVB)\b/iu.test(
+            /(?:\b(?:Umwelt)?Haftpflicht\p{L}*|\bSchadenersatzverpflichtungen\b|\bAHVB\b)/iu.test(
               localLiabilityContext
             ))));
     const isVs04LiabilitySum =
