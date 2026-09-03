@@ -63,6 +63,10 @@ const {
   buildVs22HazardousWastePortfolioAudit,
   vs22HazardousWastePortfolioDecision,
 } = require("./vs22HazardousWastePortfolioComparisonContract");
+const {
+  buildVs24ScaffoldingCostEqualityAudit,
+  vs24ScaffoldingCostEqualityDecision,
+} = require("./vs24ScaffoldingCostEqualityContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1158,6 +1162,22 @@ function decidePoint({
   if (vs22HazardousWastePortfolioAudit)
     return vs22HazardousWastePortfolioDecision(
       vs22HazardousWastePortfolioAudit
+    );
+  const vs24ScaffoldingCostEqualityAudit =
+    buildVs24ScaffoldingCostEqualityAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
+      expectedDocumentsA,
+      expectedDocumentsB,
+    });
+  if (vs24ScaffoldingCostEqualityAudit)
+    return vs24ScaffoldingCostEqualityDecision(
+      vs24ScaffoldingCostEqualityAudit
     );
   if (
     packageA.reviewStatus !== "BELEGT" ||
