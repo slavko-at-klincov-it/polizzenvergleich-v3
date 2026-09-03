@@ -4991,3 +4991,32 @@ Nächster Schritt: `SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1` diagnostisch
 materialisieren. Erst nach quellgenauer Abbildung von Objekt, Ort, Nutzung,
 Installation und Bedingungen ist für FE-A05 eine Ergebnisänderung zulässig.
 R69-A bleibt `10/40`; kein Vollrun und kein Deployment.
+
+## 97. FE-A05 Objekt-Scope-Provenienz – diagnostisch und outcome-neutral
+
+`aa417dec5`/`b74d5c265` implementieren
+`SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1`; `622ee50ae` hebt den FE-Katalog auf
+v0.10 und das Produktprofil auf V83. `bf6e87c86` ist der isolierte
+QA-Erwartungsfix.
+
+Der Vertrag akzeptiert ausschließlich lokale Listen-/Absatzkontexte oder zuvor
+vollständig replay-validierte Seitenfortsetzungen. Er speichert exakte
+Quelloffsets, Texte, Hashes, Scope-Keys, Matcher- und Parent-Proof-Digests. Im
+echten Lauf erhält A/DOC-01 drei Keys; B/DOC-02 erhält zwei Keys aus getrennten
+Seite-1-Listenpunkten und B/DOC-03 den Erdkabel-Key aus seinem eigenen Absatz.
+Die breiten Seite-11-Fenster in DOC-02 erzeugen absichtlich keinen Scope-Fakt.
+
+```text
+Commit: bf6e87c860a4037173418cb1910315691ea5daed
+Mac-Studio fokussiert: 212/212 PASS
+Mac-Studio breit: 1125/1149 PASS; 24 bekannte historische VS-Fixturefehler
+Artefakt: QA/FE-A05-A06-OBJECT-SCOPE-BF6E87C8-20260903
+Summary: f78f3ac1aa0a31195359555c019c873aa5d74820cd82fe445b4ae57825c29994
+Selection: 387784fb7b4506bd9cad04dbeaf127280e03cf593cc7e98cd25f865c55be0120
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Nächster Schritt: den Proof serverseitig nur über ausgewählte Candidate-IDs
+in die atomare Source-Provenienz weiterreichen, ohne Prompt, Atomidentität,
+Paketstatus oder Ergebnis zu ändern. R69-A bleibt `10/40`; kein Vollrun und
+kein Deployment.

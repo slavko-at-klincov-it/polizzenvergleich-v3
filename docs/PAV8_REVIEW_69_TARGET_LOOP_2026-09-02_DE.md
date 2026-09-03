@@ -2461,6 +2461,72 @@ Ergebnis eines rein beweissichernden Schritts. R69-A bleibt `10/40`; kein
 Gesamtvollrun und kein Deployment. Als nächster Schritt werden typisierte,
 quellgebundene Objekt-Scope-Fakten zunächst nur diagnostisch materialisiert.
 
+### 10.35 FE-A05 Schritt 2 – quellgebundene Objekt-Scope-Fakten materialisiert
+
+Die bisherige Einteilung `GENERAL/NARROW` reicht für FE-A05 nicht aus: Beide
+Pakete nennen konkrete, teilweise überlappende Objektgruppen. Die Commits
+`aa417dec5` und `b74d5c265` ergänzen deshalb den generischen, komponentenweise
+opt-in-fähigen Vertrag `SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1`.
+`622ee50ae` versioniert FE-Katalog und Produktprofil; `bf6e87c86` korrigiert
+ausschließlich die historische QA-Versionserwartung.
+
+Der Vertrag materialisiert noch keine Deckungs- oder Vergleichsaussage. Er
+erzeugt nur dann eine Scope-Assertion, wenn ein Katalogmuster vollständig in
+einem lokalen `LIST_ITEM`/`PARAGRAPH` oder in einem zuvor gegen Originalbytes
+und PageMap validierten Fortsetzungssegment liegt. `WORD_WINDOW_FALLBACK`,
+seitenweite Texte und Nachbarklauseln sind ausgeschlossen. Jede Assertion
+bindet Objekt-Key, Quellart, Seite, Offsets, exakten Text, Text-Hash,
+Matcher-Contract-Digest und gegebenenfalls den Parent-Proof-Digest.
+
+Im echten Zehn-Dokument-Lauf wurden exakt folgende Fakten erzeugt:
+
+```text
+A / DOC-01:
+  BUILDING_ELECTRICAL_INSTALLATIONS
+  OBJECTS_OUTSIDE_BUILDINGS
+  UNDERGROUND_CABLES
+  Quelle: nur validierte NESTED_LIST_CONTINUATION-Segmente
+
+B / DOC-02:
+  BUILDING_ELECTRICAL_INSTALLATIONS
+  OBJECTS_OUTSIDE_BUILDINGS
+  Quelle: je eigener lokaler LIST_ITEM auf Seite 1
+
+B / DOC-03:
+  UNDERGROUND_CABLES
+  Quelle: eigener lokaler PARAGRAPH auf Seite 11
+
+B / DOC-02 Seite 11:
+  kein Scope-Fakt aus WORD_WINDOW_FALLBACK
+```
+
+Mac-Studio-Nachweis:
+
+```text
+Commit: bf6e87c860a4037173418cb1910315691ea5daed
+Profil: CUSTOMER_CORE_5_V83_FE_A05_OBJECT_SCOPE_EVIDENCE
+FE-Katalog: fe-occurrence-full-draft-v0.10
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Fokussiert/angrenzend: 212/212 PASS
+Breit: 57/60 Suites, 1125/1149 Tests PASS
+Restfehler: ausschließlich 24 bekannte historische VS-Profil-Fixtures
+Artefakt: QA/FE-A05-A06-OBJECT-SCOPE-BF6E87C8-20260903
+Summary: f78f3ac1aa0a31195359555c019c873aa5d74820cd82fe445b4ae57825c29994
+Selection: 387784fb7b4506bd9cad04dbeaf127280e03cf593cc7e98cd25f865c55be0120
+Producer: e570458308a3bc4707015ccba18746ea3706aaf89d40a31d8c4465205e6f7e63
+Dokumente: 10
+Triage-/Evidence-Aufrufe: 3/1
+Server-Rejects/-Terminals: 11/15
+FE-A05: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Das unveränderte Ergebnis ist beabsichtigt: Der Proof befindet sich bisher nur
+im Worksheet und darf vor ausgewählter Candidate-/Atom-Provenienz noch nicht
+entscheiden. Der nächste Schritt ist die outcome-neutrale Weitergabe ausschließlich
+der von der Evidenzauswahl gewählten Proofs. Erst danach werden Objekt, Ort,
+Nutzung, Installation und Bedingungen zu einer Vergleichsrelation verbunden.
+R69-A bleibt `10/40`; kein Gesamtvollrun und kein Deployment.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache
