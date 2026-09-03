@@ -505,7 +505,6 @@ describe("deterministicVsEvidenceRules", () => {
         basis,
         authoritative: true,
       });
-
     }
   );
 

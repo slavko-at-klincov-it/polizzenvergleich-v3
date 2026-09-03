@@ -411,8 +411,7 @@ describe("VS-25 authority reconstruction limit portfolio contract", () => {
       ruleId: VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
       reviewRequired: false,
     });
-    input.atomsB[4].searchAudit.terminalRejectionAudit.rejections[0].physicalPageNumber =
-      2;
+    input.atomsB[4].searchAudit.terminalRejectionAudit.rejections[0].physicalPageNumber = 2;
     expect(decidePoint(input)).not.toMatchObject({
       ruleId: VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
     });

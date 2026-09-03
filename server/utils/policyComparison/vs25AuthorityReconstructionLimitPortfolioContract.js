@@ -263,7 +263,8 @@ function exactAbsentAtom(atom, expectedDocument, componentId, factRole) {
         TERMINAL_REJECTION_SET_DIGEST_CONTRACT_ID &&
       Array.isArray(terminalAudit?.rejections) &&
       terminalAudit.rejections.length > 0 &&
-      terminalAudit.rejectedOccurrenceCount === terminalAudit.rejections.length &&
+      terminalAudit.rejectedOccurrenceCount ===
+        terminalAudit.rejections.length &&
       sameJson(
         terminalAudit.rejectedCandidateIds,
         strings(terminalAudit.rejections.map(({ candidateId }) => candidateId))
