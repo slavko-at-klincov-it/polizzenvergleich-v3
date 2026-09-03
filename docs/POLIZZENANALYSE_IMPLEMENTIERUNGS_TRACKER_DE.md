@@ -5043,3 +5043,26 @@ Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
 Nächster Schritt: Object-Scope-konditionalen `--documentArtifact`-Input im
 Effects-CLI und ausgewählten Source-Replay gegen Originalbytes/PageMap
 ergänzen. R69-A bleibt `10/40`; kein Vollrun und kein Deployment.
+
+## 99. FE-A05 Selected-Source-Replay – Originalbyte-Trust-Boundary geschlossen
+
+`ad3448dfc`/`69bbc48c2` replayen ausgewählte Object-Scope-Proofs gegen
+Worksheet, Komponentenvertrag, Occurrence, Dokumentfingerprint, Originalbytes
+und PageMap. Presence-Parität und Komponenten-Opt-in werden für alle Candidates
+geprüft; nur ausgewählte Proofs werden ausgegeben. `6d70af9b4` versioniert den
+Schritt als Profil V85.
+
+```text
+Commit: 6d70af9b479dda1f67367e1e6e33a4a65b54ef96
+Mac-Studio fokussiert: 224/224 PASS
+Artefakt: QA/FE-A05-A06-SELECTED-REPLAY-6D70AF9B-20260903
+Summary: 0e4fff646b1417fc480935eb77f1033a05de605929ad9b690caf16fdb84a68d5
+Replay-SHA: ec8b9d984ba7ec1461a08dbe45d54105af7eebeab2424f28398f6acde21c9208
+Ausgewählte Sources: 8; davon 4 mit replay-validiertem Scope-Proof
+Ergebnis: unverändert A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Nächster Schritt: Dokumentartefakt im Effects-CLI für Object-Scope-Opt-in
+zwingend machen und den Replay dort statt der lokalen ungeprüften
+Source-Projektion verwenden. R69-A bleibt `10/40`; kein Vollrun und kein
+Deployment.

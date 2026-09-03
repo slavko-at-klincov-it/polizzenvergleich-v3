@@ -2566,6 +2566,48 @@ Dokumentbytes. Der nächste Schritt macht das Dokumentartefakt bei
 Object-Scope-Opt-in verpflichtend und replayt nur ausgewählte Proofs gegen die
 Originalbytes. R69-A bleibt `10/40`; kein Gesamtvollrun und kein Deployment.
 
+### 10.37 FE-A05 Schritt 2c1 – ausgewählte Scope-Proofs gegen Originalbytes replayt
+
+`ad3448dfc` ergänzt den gemeinsamen Selected-Source-Replay;
+`69bbc48c2` ist sein Formatierungs-Forward-Fix. `6d70af9b4` versioniert den
+Schritt als Produktprofil V85.
+
+Sobald Prepared Targets Objekt-Scope-Provenienz enthalten, bindet der Replay
+Worksheet, Dokumentartefakt, Target, Komponente und Occurrence gemeinsam.
+Candidate- und Occurrence-Proof müssen kanonisch gleich sein. Der
+Parent-Listenproof wird erneut gegen Originalbytes und PageMap validiert;
+danach werden Matcher-Contract, Object-Proof und alle Match-Spans samt Seite,
+Offsets, Text und SHA-256 geprüft. Fehlende, zusätzliche oder entfernte
+Provenienz sowie ein Proof ohne Komponenten-Opt-in brechen fail-closed ab.
+Unselektierte Proofs werden geprüft, aber nie ausgegeben.
+
+Mac-Studio-Nachweis:
+
+```text
+Commit: 6d70af9b479dda1f67367e1e6e33a4a65b54ef96
+Profil: CUSTOMER_CORE_5_V85_FE_A05_SELECTED_SCOPE_REPLAY
+Fokussiert/angrenzend: 224/224 PASS
+Artefakt: QA/FE-A05-A06-SELECTED-REPLAY-6D70AF9B-20260903
+Summary: 0e4fff646b1417fc480935eb77f1033a05de605929ad9b690caf16fdb84a68d5
+Replay: selected-scope-replay.private.json
+Replay-SHA: ec8b9d984ba7ec1461a08dbe45d54105af7eebeab2424f28398f6acde21c9208
+Selection: 387784fb7b4506bd9cad04dbeaf127280e03cf593cc7e98cd25f865c55be0120
+Dokumente im Replay: 10
+Ausgewählte Sources: 8
+Davon mit validiertem Object-Scope-Proof: 4
+FE-A05: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Die vier Proof-Sources sind exakt A/DOC-01 (drei Keys), B/DOC-02 (zwei
+getrennte Seite-1-Sources mit je einem Key) und B/DOC-03 (Erdkabel-Key). Nur
+A/DOC-01 benötigt den Parent-Listenproof. Das Ergebnis bleibt unverändert, da
+der Replay noch keine Vergleichsrelation erzeugt.
+
+Nächster Schritt: den bereits vorhandenen Dokumentartefaktpfad im
+Prepared-Evidence-CLI bei Object-Scope-Opt-in verpflichtend machen und diesen
+gemeinsamen Replay für `selected-sources.private.json` verwenden. R69-A bleibt
+`10/40`; kein Gesamtvollrun und kein Deployment.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache
