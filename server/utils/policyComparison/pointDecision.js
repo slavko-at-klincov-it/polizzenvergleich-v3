@@ -55,6 +55,10 @@ const {
   buildObjectFamilyCoverageAudit,
   objectFamilyCoverageDecision,
 } = require("./objectFamilyComparisonContract");
+const {
+  buildVs21CostLimitPortfolioAudit,
+  vs21CostLimitPortfolioDecision,
+} = require("./vs21CostLimitPortfolioComparisonContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1115,6 +1119,15 @@ function decidePoint({
   });
   if (objectFamilyCoverageAudit)
     return objectFamilyCoverageDecision(objectFamilyCoverageAudit);
+  const vs21CostLimitPortfolioAudit = buildVs21CostLimitPortfolioAudit({
+    categoryId,
+    atomsA,
+    atomsB,
+    requirementContractA: contractA,
+    requirementContractB: contractB,
+  });
+  if (vs21CostLimitPortfolioAudit)
+    return vs21CostLimitPortfolioDecision(vs21CostLimitPortfolioAudit);
   if (
     packageA.reviewStatus !== "BELEGT" ||
     packageB.reviewStatus !== "BELEGT"
