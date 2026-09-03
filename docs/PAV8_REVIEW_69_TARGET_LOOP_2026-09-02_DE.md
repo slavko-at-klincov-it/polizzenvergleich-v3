@@ -2471,6 +2471,42 @@ geschlossen. Weiter offen ist die Validierung des daraus gebauten Audits an
 der finalen Kundenmetrik-Grenze; dieser Punkt wird als eigener Forward-Fix
 bearbeitet. Kein Vollrun und kein Deployment.
 
+## 10.48 FE-C02 – Paket-Audit an der Kundenmetrik-Grenze validiert
+
+`4dc017345`/`d60c74c31` ergänzen einen strikten Validator für den
+persistierten Paket-Audit und machen ihn für eine aktuelle, wegen
+`PACKAGE_REVIEW_STATUS_BLOCKS_DECISION` unklare FE-C02-Zeile verpflichtend.
+Geprüft werden exakte Schemaform, Vertragsidentität, Kategorie, Digest,
+Status-/Reason-/Rest-Gate-Kombination, kanonische Proof-Mengen,
+Kontextspan-Digest sowie die Zugehörigkeit jeder Dokument-UUID zur richtigen
+Paketseite. Ein Audit außerhalb dieses Entscheidungszweigs wird abgewiesen.
+
+```text
+Finaler Commit: d60c74c3174b8fed94617568d4b770956d9cf54d
+Produktprofil: CUSTOMER_CORE_5_V93_FE_C02_PACKAGE_MEMBERSHIP_AUDIT_VALIDATED
+Mac Studio: Format PASS; 5 Suites / 148 Tests PASS
+Artefakt: QA/FE-C02-CUSTOMER-AUDIT-D60C74C3-20260903
+Summary: d75124e5caa0ff5ab20cecf78b285bc1edc28c386023b201455b9802e2d9e3ba
+Target Selection: 150778e3ad58d488ec08f884a8b0e63d85c6d3bd4cca5a5a02f7acf9998e4e12
+```
+
+Der echte Lauf reproduziert die identische vollständige B-Kette, den
+Audit-Digest `98017351...` und den B-Elternproof `da49981d...`. Das Delta zum
+favorisierten Paket-Audit und zum autoritativen Membership-Replay ist null:
+
+```text
+Ergebnis: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+A: Ja / BELEGT
+B: Nicht feststellbar / TEILBELEGT
+Calls: 2 Triage / 0 Effects
+Terminals: 4 Server-Rejects / 8 Evidence-Terminals
+```
+
+Damit sind die beiden im Senior-Review identifizierten Trust-Boundary-Lücken
+geschlossen. Der Audit selbst bleibt `readyForDecision=false`; fachlich offen
+sind weiterhin die typisierte Auswertung der drei Bedingungen und danach die
+Dokumentpräzedenz. Kein Vollrun und kein Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne
