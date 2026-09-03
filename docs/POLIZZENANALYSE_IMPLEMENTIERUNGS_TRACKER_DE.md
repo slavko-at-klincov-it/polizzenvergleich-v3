@@ -5487,3 +5487,27 @@ Replay mit `COMPARISON_FE_C02_QUALIFICATION_REPLAY_REQUIRED` zurück. Gegenüber
 dem guten Entscheidungsartefakt `35C29986` bleiben Entscheidung, Audit-Digest,
 Paketstatus und Modellaufrufe unverändert; neu ist ausschließlich die
 Auslassungssicherheit. Kein 224-Zeilen-Vollrun, kein Deployment.
+
+## 115. Kontrollierter Stop-Checkpoint
+
+Nach Abschluss von FE-C02 wurde die Arbeit auf Nutzerwunsch sicher beendet.
+Der fachliche Code endet bei `6df8f3b06`, die vollständige FE-C02-Dokumentation
+bei `0afe62062`. Beide Stände sind auf
+`origin/codex/polizzenvergleich-v3` gesichert. Der isolierte Mac-Studio-Worktree
+stand beim Stop ebenfalls auf `0afe62062`; der installierte Kundencheckout
+blieb unverändert.
+
+Es wurde danach kein weiterer Fix, Testlauf, Vollrun oder Deploy begonnen.
+Die nur read-only begonnene FE-A05-Analyse hat keine Produktdatei verändert;
+die drei Analyseagenten wurden kontrolliert unterbrochen. Wiederaufnahmeziel
+ist das vorhandene Artefakt
+`QA/FE-A05-A06-EFFECTS-ARTIFACT-GATE-A2B2A662-20260903` mit dem bekannten
+Stand `A BELEGT / B TEILBELEGT / UNKLAR` und vier ausgewählten
+Object-Scope-Proofs. Vor einer FE-A05-Entscheidung müssen die A/B-Objektmengen
+und Bedingungen vollständig aus den persistierten Atomen inventarisiert und
+in einem side-neutralen, replaybaren Set-/Bedingungsvertrag modelliert werden.
+
+Der vollständige Wiederanlaufpunkt, die FE-C02-Artefakthashes und die genaue
+FE-A05-Fortsetzungsreihenfolge stehen in Abschnitt 10.53 des Target-Loop-
+Dokuments. Kein Fortschritt hängt ausschließlich an einem temporären Skript
+oder nicht versionierten Chatkontext.
