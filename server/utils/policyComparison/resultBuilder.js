@@ -1102,9 +1102,7 @@ function materializeAtomicFacts({
     if (requestedAtomFields.length > 0) {
       if (evaluatedRequestedAtomFields.length === 0) {
         requestedFieldStatus = "NOT_EVALUATED";
-      } else if (
-        foundRequestedAtomFieldCount === requestedAtomFields.length
-      ) {
+      } else if (foundRequestedAtomFieldCount === requestedAtomFields.length) {
         requestedFieldStatus = "COMPLETE";
       } else if (
         requestedAtomFields.some(({ status }) => status === "PARTIAL") ||
