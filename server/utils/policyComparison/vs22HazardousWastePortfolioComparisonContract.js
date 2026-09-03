@@ -38,6 +38,8 @@ const VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE =
   "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE";
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
   "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1";
+const VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
+  "VS22_SOURCE_ATOM_DIGEST_REPLAY_V1";
 const HAZARDOUS_WASTE_ANCHOR =
   /(?<!\p{L})(?:sondermüll|sonderabfall|problemstoff\p{L}*|gefährlich\p{L}*\s+abf(?:all|äll)\p{L}*)(?!\p{L})/iu;
 const DOCUMENT_ROLES = new Set([
@@ -395,6 +397,38 @@ function projectedAtoms(atoms) {
     );
 }
 
+function buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB }) {
+  if (
+    categoryId !== VS22_CATEGORY_ID ||
+    !Array.isArray(atomsA) ||
+    !Array.isArray(atomsB)
+  )
+    return null;
+  const body = {
+    schemaVersion: 1,
+    contractId: VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
+    categoryId,
+    sourceAtomDigestsSha256: {
+      A: sha256(projectedAtoms(atomsA)),
+      B: sha256(projectedAtoms(atomsB)),
+    },
+  };
+  return { ...body, replayDigestSha256: sha256(body) };
+}
+
+function validVs22SourceAtomDigestReplay(replay) {
+  if (
+    replay?.schemaVersion !== 1 ||
+    replay?.contractId !== VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID ||
+    replay?.categoryId !== VS22_CATEGORY_ID ||
+    !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.A || "") ||
+    !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.B || "")
+  )
+    return false;
+  const { replayDigestSha256, ...body } = replay;
+  return replayDigestSha256 === sha256(body);
+}
+
 function atomProof(atom) {
   return stableValue({
     componentId: atom.componentId,
@@ -687,10 +721,33 @@ function vs22HazardousWastePortfolioDecision(audit) {
 }
 
 function validateVs22HazardousWastePortfolioAudit(audit, options) {
+  const externalAtomsProvided = Boolean(
+    Array.isArray(options?.atomsA) && Array.isArray(options?.atomsB)
+  );
+  const externalReplay = externalAtomsProvided
+    ? buildVs22SourceAtomDigestReplay({
+        categoryId: options.categoryId,
+        atomsA: options.atomsA,
+        atomsB: options.atomsB,
+      })
+    : options?.sourceAtomDigestReplay;
+  if (!validVs22SourceAtomDigestReplay(externalReplay))
+    throw new Error("VS22_SOURCE_ATOM_DIGEST_REPLAY_REQUIRED");
+  if (
+    audit?.sides?.A?.projectedAtomsDigestSha256 !==
+      externalReplay.sourceAtomDigestsSha256.A ||
+    audit?.sides?.B?.projectedAtomsDigestSha256 !==
+      externalReplay.sourceAtomDigestsSha256.B
+  )
+    throw new Error("VS22_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
   const expected = buildVs22HazardousWastePortfolioAudit({
     ...options,
-    atomsA: options?.atomsA || audit?.sides?.A?.projectedAtoms,
-    atomsB: options?.atomsB || audit?.sides?.B?.projectedAtoms,
+    atomsA: externalAtomsProvided
+      ? options.atomsA
+      : audit?.sides?.A?.projectedAtoms,
+    atomsB: externalAtomsProvided
+      ? options.atomsB
+      : audit?.sides?.B?.projectedAtoms,
   });
   if (!expected)
     throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_NOT_QUALIFIED");
@@ -706,7 +763,9 @@ module.exports = {
   VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
   VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
   VS22_REQUIREMENT_CONTRACT_DIGEST,
+  VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
   buildVs22HazardousWastePortfolioAudit,
+  buildVs22SourceAtomDigestReplay,
   validateVs22HazardousWastePortfolioAudit,
   vs22HazardousWastePortfolioDecision,
 };

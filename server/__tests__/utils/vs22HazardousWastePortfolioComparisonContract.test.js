@@ -7,6 +7,7 @@ const {
   VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
   VS22_REQUIREMENT_CONTRACT_DIGEST,
   buildVs22HazardousWastePortfolioAudit,
+  buildVs22SourceAtomDigestReplay,
   validateVs22HazardousWastePortfolioAudit,
   vs22HazardousWastePortfolioDecision,
 } = require("../../utils/policyComparison/vs22HazardousWastePortfolioComparisonContract");
@@ -255,8 +256,10 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
           packageB: input.packageB,
           requirementContractA: contract,
           requirementContractB: contract,
-          expectedDocumentsA: input.expectedDocumentsA,
-          expectedDocumentsB: input.expectedDocumentsB,
+            expectedDocumentsA: input.expectedDocumentsA,
+            expectedDocumentsB: input.expectedDocumentsB,
+            atomsA: input.atomsA,
+            atomsB: input.atomsB,
         })
       ).not.toThrow();
     }
@@ -275,6 +278,30 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     expect(customerResultText({ pointDecision: decision })).toContain(
       "Vorteil Polizze A:"
     );
+  });
+
+  test("requires source atoms or an independently stored source digest", () => {
+    const input = fixture();
+    const audit = buildVs22HazardousWastePortfolioAudit(input);
+    const validationOptions = {
+      categoryId: input.categoryId,
+      packageA: input.packageA,
+      packageB: input.packageB,
+      requirementContractA: contract,
+      requirementContractB: contract,
+      expectedDocumentsA: input.expectedDocumentsA,
+      expectedDocumentsB: input.expectedDocumentsB,
+    };
+
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(audit, validationOptions)
+    ).toThrow("VS22_SOURCE_ATOM_DIGEST_REPLAY_REQUIRED");
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(audit, {
+        ...validationOptions,
+        sourceAtomDigestReplay: buildVs22SourceAtomDigestReplay(input),
+      })
+    ).not.toThrow();
   });
 
   test.each([
@@ -323,6 +350,8 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
         requirementContractB: contract,
         expectedDocumentsA: input.expectedDocumentsA,
         expectedDocumentsB: input.expectedDocumentsB,
+        atomsA: input.atomsA,
+        atomsB: input.atomsB,
       })
     ).toThrow(/^VS22_HAZARDOUS_WASTE_PORTFOLIO_/u);
   });

@@ -585,6 +585,7 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
             expectedDocumentsB: manifestDocuments.filter(
               ({ side }) => side === "B"
             ),
+            sourceAtomDigestReplay: row.vs22SourceAtomDigestReplay,
           });
         } catch (error) {
           validationError("COMPARISON_VS22_PORTFOLIO_AUDIT_INVALID", [
@@ -828,12 +829,14 @@ function customerSafeComparisonReadView(result) {
     ? result.categories.map((category) => ({
         ...category,
         rows: (category.rows || []).map((row) => {
+          const { vs22SourceAtomDigestReplay: _privateReplay, ...publicRow } =
+            row;
           const explanation = packageReviewCustomerExplanation(
             row.pointDecision
           );
-          if (!explanation) return row;
+          if (!explanation) return publicRow;
           return {
-            ...row,
+            ...publicRow,
             pointDecision: {
               ...row.pointDecision,
               reason: explanation,

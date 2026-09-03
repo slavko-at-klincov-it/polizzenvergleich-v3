@@ -30,6 +30,10 @@ const {
   buildLw20DefaultExclusionSourceAudit,
 } = require("../policyAnalysis/lw20DefaultExclusionSourceAudit");
 const {
+  VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+  buildVs22SourceAtomDigestReplay,
+} = require("./vs22HazardousWastePortfolioComparisonContract");
+const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
@@ -1418,6 +1422,10 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         expectedDocumentsA,
         expectedDocumentsB,
       });
+      const vs22SourceAtomDigestReplay =
+        pointDecision.ruleId === VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID
+          ? buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB })
+          : null;
       return {
         categoryId,
         stage: first.stage,
@@ -1426,6 +1434,7 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         packageB,
         ...comparison,
         pointDecision,
+        ...(vs22SourceAtomDigestReplay ? { vs22SourceAtomDigestReplay } : {}),
       };
     });
     return { categoryView, rows };
