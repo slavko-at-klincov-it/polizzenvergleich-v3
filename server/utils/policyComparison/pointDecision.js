@@ -67,6 +67,10 @@ const {
   buildVs24ScaffoldingCostEqualityAudit,
   vs24ScaffoldingCostEqualityDecision,
 } = require("./vs24ScaffoldingCostEqualityContract");
+const {
+  buildVs25AuthorityLimitPortfolioAudit,
+  vs25AuthorityLimitPortfolioDecision,
+} = require("./vs25AuthorityReconstructionLimitPortfolioContract");
 
 const POINT_OUTCOME = Object.freeze({
   ADVANTAGE_A: "VORTEIL_A",
@@ -1031,6 +1035,8 @@ function decidePoint({
   packageB,
   atomsA,
   atomsB,
+  referenceAtomsA = atomsA,
+  referenceAtomsB = atomsB,
   expectedDocumentsA,
   expectedDocumentsB,
 }) {
@@ -1178,6 +1184,24 @@ function decidePoint({
   if (vs24ScaffoldingCostEqualityAudit)
     return vs24ScaffoldingCostEqualityDecision(
       vs24ScaffoldingCostEqualityAudit
+    );
+  const vs25AuthorityLimitPortfolioAudit =
+    buildVs25AuthorityLimitPortfolioAudit({
+      categoryId,
+      packageA,
+      packageB,
+      atomsA,
+      atomsB,
+      referenceAtomsA,
+      referenceAtomsB,
+      requirementContractA: contractA,
+      requirementContractB: contractB,
+      expectedDocumentsA,
+      expectedDocumentsB,
+    });
+  if (vs25AuthorityLimitPortfolioAudit)
+    return vs25AuthorityLimitPortfolioDecision(
+      vs25AuthorityLimitPortfolioAudit
     );
   if (
     packageA.reviewStatus !== "BELEGT" ||

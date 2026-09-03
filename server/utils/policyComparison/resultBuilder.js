@@ -1646,6 +1646,8 @@ function buildComparisonResult(documentRuns, metadata = {}) {
         packageB,
         atomsA,
         atomsB,
+        referenceAtomsA: packageAtomicFacts.A,
+        referenceAtomsB: packageAtomicFacts.B,
         expectedDocumentsA,
         expectedDocumentsB,
       });
