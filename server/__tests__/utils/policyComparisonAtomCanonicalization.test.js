@@ -396,10 +396,7 @@ describe("comparison atom canonicalization", () => {
     expect(
       completeRawComparisonAtom({
         ...valid,
-        comparisonScopeKeys: [
-          "FEUER_INSURANCE",
-          "GLASBRUCH_INSURANCE",
-        ],
+        comparisonScopeKeys: ["FEUER_INSURANCE", "GLASBRUCH_INSURANCE"],
       })
     ).toBe(false);
   });

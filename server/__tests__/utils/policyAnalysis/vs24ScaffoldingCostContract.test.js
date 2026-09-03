@@ -242,8 +242,11 @@ describe("VS-24 scaffolding-cost semantic contract", () => {
     const worksheet = worksheetFor(
       "Glasbruchversicherung\nMitversichert sind Gerüstkosten."
     );
-    const { requirement: selectedRequirement, component, occurrence } =
-      occurrenceFor(worksheet);
+    const {
+      requirement: selectedRequirement,
+      component,
+      occurrence,
+    } = occurrenceFor(worksheet);
     occurrence.sectionScopeHint.scopeKeys = [
       "GLASBRUCH_INSURANCE",
       "FEUER_INSURANCE",
