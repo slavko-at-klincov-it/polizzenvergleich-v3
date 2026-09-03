@@ -260,7 +260,9 @@ describe("targeted selected sources contract", () => {
 
   test("rejects a candidate proof that differs from its worksheet occurrence", () => {
     const input = nestedProvenanceFixture();
-    input.targets[0].candidates[0].objectScopeProof.proofDigest = "f".repeat(64);
+    input.targets[0].candidates[0].objectScopeProof.proofDigest = "f".repeat(
+      64
+    );
 
     expect(() => rebuildTargetedSelectedSources(input)).toThrow(
       "TARGETED_SOURCES_PROVENANCE_OBJECT_PROOF_INVALID"

@@ -39,8 +39,7 @@ function stableValue(value) {
 
 function canonicalEqual(left, right) {
   return (
-    JSON.stringify(stableValue(left)) ===
-    JSON.stringify(stableValue(right))
+    JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right))
   );
 }
 
@@ -304,7 +303,8 @@ function selectedObjectScopeProvenance({
     ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"
   );
   if (
-    Boolean(candidate.nestedListContinuationProof) !== Boolean(nestedRequired) ||
+    Boolean(candidate.nestedListContinuationProof) !==
+      Boolean(nestedRequired) ||
     (nestedRequired &&
       (!canonicalEqual(
         candidate.nestedListContinuationProof,
