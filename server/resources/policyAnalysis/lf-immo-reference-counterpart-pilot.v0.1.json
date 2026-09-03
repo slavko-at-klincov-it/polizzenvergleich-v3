@@ -1,0 +1,397 @@
+{
+  "schemaVersion": 1,
+  "contractId": "LF_IMMO_REFERENCE_COUNTERPART_PILOT_V1",
+  "qaOnly": true,
+  "sourceProduct": {
+    "productId": "LF_IMMO_EXKLUSIVSCHUTZ",
+    "version": "2023",
+    "documentSha256": "2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62",
+    "physicalPages": 31,
+    "role": "REFERENCE_PRODUCT"
+  },
+  "comparisonPolicy": {
+    "direction": "REFERENCE_TO_COUNTERPART",
+    "noMatchMeaning": "NO_COUNTERPART_IN_RETRIEVED_CANDIDATES",
+    "missingIsExclusion": false,
+    "allowMultipleDocuments": true,
+    "requireSourceCandidateIds": true,
+    "productionRule": false
+  },
+  "categories": [
+    {
+      "id": "LF-PR",
+      "label": "Produktgrundlage und Geltungsvoraussetzungen",
+      "requirements": [
+        {
+          "id": "LF-PR-01",
+          "label": "Grunddeckung PREMIUM in den beantragten Sparten",
+          "factRole": "CONDITION",
+          "reference": { "page": 2, "needle": "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM" },
+          "query": "Welche Produktvariante und welche beantragten Sparten bilden die Grunddeckung?",
+          "aliases": ["Variante PREMIUM", "Grunddeckung", "beantragten Sparten"],
+          "pilot": true
+        },
+        {
+          "id": "LF-PR-02",
+          "label": "Bessere Deckung je Schadenfall ohne Summenaddition",
+          "factRole": "CONDITION",
+          "reference": { "page": 2, "needle": "Es gilt die für den Versicherungsnehmer im jeweiligen Schadensfall bessere Deckung" },
+          "query": "Gibt es eine Best-of-Deckung oder Vorrangregel, ohne Versicherungssummen zu addieren?",
+          "aliases": ["bessere Deckung", "Versicherungssummen nicht addiert", "einmal pro Schadenfall"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-VS",
+      "label": "Versicherte Gebäude, Sachen und Grundstücksbestandteile",
+      "requirements": [
+        {
+          "id": "LF-VS-01",
+          "label": "Gebäude einschließlich Fundamente, Anbauten und Installationen",
+          "factRole": "COVERAGE",
+          "reference": { "page": 3, "needle": "Gebäude einschließlich der unter Erdniveau befindlichen Fundamente" },
+          "query": "Sind Gebäude, Fundamente, Grund- und Kellermauern, An- und Zubauten sowie Installationen versichert?",
+          "aliases": ["Fundamente", "Grund- und Kellermauern", "An- und Zubauten", "Installationen aller Art"],
+          "pilot": true
+        },
+        {
+          "id": "LF-VS-02",
+          "label": "Nebengebäude mit 5-Prozent-Limit und Gewächshaus-Ausschluss",
+          "factRole": "COVERAGE_LIMIT_EXCLUSION",
+          "reference": { "page": 3, "needle": "Nebengebäude, sofern sie nicht in der Versicherungssumme berücksichtigt wurden" },
+          "query": "Wie sind Nebengebäude, Garagen, Gartenhäuser sowie Treib- und Gewächshäuser geregelt und limitiert?",
+          "aliases": ["Nebengebäude", "Garagen", "Gartenhäuser", "Treib- und Gewächshäuser", "5 %"],
+          "pilot": true
+        },
+        {
+          "id": "LF-VS-03",
+          "label": "Gemeinschaftseinrichtungen und Bewohnerinvestitionen",
+          "factRole": "COVERAGE",
+          "reference": { "page": 4, "needle": "Gemeinschaftseinrichtungen von Wasch- und Trockenräumen" },
+          "query": "Sind Gemeinschaftseinrichtungen, Werkzeuge zur Gebäudepflege sowie Adaptierungen und Investitionen der Bewohner versichert?",
+          "aliases": ["Gemeinschaftseinrichtungen", "Wasch- und Trockenräumen", "Adaptierungen und Investitionen", "Bewohner"],
+          "pilot": true
+        },
+        {
+          "id": "LF-VS-04",
+          "label": "Außenanlagen und Grundstückseinrichtungen auf Erstes Risiko",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 4, "needle": "Außenanlagen wie z.B. Einrichtungen von Kinderspiel- und Wäscheplätzen" },
+          "query": "Welche Außenanlagen, Einfriedungen, Müllplätze, Wege und beweglichen oder unbeweglichen Grundstücksgegenstände sind versichert und mit welchem Limit?",
+          "aliases": ["Außenanlagen", "Kinderspiel", "Müllsammelplätze", "Grundstücksbegrenzungen", "Asphaltierungen", "Gehwege"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-KO",
+      "label": "Spartenübergreifende Kosten und Ertragsausfälle",
+      "requirements": [
+        {
+          "id": "LF-KO-01",
+          "label": "Mietverlust bis sechs Monate",
+          "factRole": "DURATION_LIMIT",
+          "reference": { "page": 5, "needle": "der Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten" },
+          "query": "Ist Mietverlust für private und gewerbliche Einheiten gedeckt, unter welchen Voraussetzungen und wie lange?",
+          "aliases": ["Mietverlust", "Bestandzins", "sechs Monaten", "Mieter", "Pächter"],
+          "pilot": true
+        },
+        {
+          "id": "LF-KO-02",
+          "label": "Ersatzräumlichkeiten und Hotelkosten",
+          "factRole": "COST_LIMIT_DURATION",
+          "reference": { "page": 5, "needle": "die tatsächlichen Kosten für Ersatzräumlichkeiten" },
+          "query": "Sind Ersatzräumlichkeiten oder Hotel beziehungsweise Pension gedeckt, mit welchen Tages- und Zeitlimits?",
+          "aliases": ["Ersatzräumlichkeiten", "Hotelzimmer", "Pension", "EUR 50", "EUR 120"],
+          "pilot": true
+        },
+        {
+          "id": "LF-KO-03",
+          "label": "Aufräumungs-, Abbruch-, Lösch-, Bewegungs- und Lagerkosten",
+          "factRole": "COST_LIMIT",
+          "reference": { "page": 5, "needle": "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-" },
+          "query": "Welche Schadennebenkosten sind versichert und gelten 10 oder 15 Prozent der Gebäudeversicherungssumme?",
+          "aliases": ["Aufräumungskosten", "Abbruchkosten", "Feuerlöschkosten", "Demontage", "Remontage", "Lagerkosten"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-FE",
+      "label": "Feuerversicherung",
+      "requirements": [
+        {
+          "id": "LF-FE-01",
+          "label": "Brand, Explosion, Sprengstoffexplosion und direkter Blitzschlag",
+          "factRole": "COVERAGE_DEFINITION",
+          "reference": { "page": 7, "needle": "Brand das ist ein Feuer, das sich bestimmungswidrig ausbreitet" },
+          "query": "Wie sind Brand, Explosion, Sprengstoffexplosion und direkter Blitzschlag definiert und gedeckt?",
+          "aliases": ["Brand", "bestimmungswidrig ausbreitet", "Explosion", "Sprengstoffexplosion", "direkter Blitzschlag"],
+          "pilot": true
+        },
+        {
+          "id": "LF-FE-02",
+          "label": "Verrußung und Schäden durch elektrische Energie",
+          "factRole": "COVERAGE",
+          "reference": { "page": 7, "needle": "Verrußung, auch wenn sie auf Grund von Glimm- oder Schmorbrand entstehen" },
+          "query": "Sind Verrußung, Glimm- oder Schmorbrand sowie Strom-, Kurzschluss- und Kabelschmorschäden ohne Brand gedeckt?",
+          "aliases": ["Verrußung", "Glimmbrand", "Schmorbrand", "Energie des elektrischen Stromes", "Kabelschmorschäden", "Kurzschluss"],
+          "pilot": true
+        },
+        {
+          "id": "LF-FE-03",
+          "label": "Indirekter Blitz und Überspannung mit Mindest- und Prozentlimit",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 7, "needle": "Überspannung oder Induktion infolge Blitzschlag oder atmosphärische Entladungen" },
+          "query": "Sind indirekter Blitz, Induktion und Überspannung gedeckt, für welche Anlagen und mit welchem Limit?",
+          "aliases": ["Überspannung", "Induktion", "indirekter Blitzschlag", "atmosphärische Entladungen", "mindestens EUR 10.000"],
+          "pilot": true
+        },
+        {
+          "id": "LF-FE-04",
+          "label": "Erweiterter Vandalismus mit Limit, Selbstbehalt und Graffiti-Ausschluss",
+          "factRole": "COVERAGE_LIMIT_DEDUCTIBLE_EXCLUSION",
+          "reference": { "page": 9, "needle": "Böswillige Beschädigung und Unbrauchbarmachen (erweiterter Vandalismus)" },
+          "query": "Wie sind böswillige Beschädigung und Vandalismus geregelt, einschließlich Eingangstüren, Limit, Selbstbehalt und Graffiti?",
+          "aliases": ["Böswillige Beschädigung", "erweiterter Vandalismus", "EUR 500", "Graffiti", "Wohnungseingangstüren"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-ST",
+      "label": "Sturm und Elementargefahren",
+      "requirements": [
+        {
+          "id": "LF-ST-01",
+          "label": "Sturmdefinition über 60 km/h sowie Hagel und Schneedruck",
+          "factRole": "COVERAGE_DEFINITION",
+          "reference": { "page": 10, "needle": "Sturm (Wind mit Spitzengeschwindigkeiten von mehr als 60 km/h)" },
+          "query": "Ab welcher Windgeschwindigkeit gilt Sturm und sind Hagel sowie Schneedruck eingeschlossen?",
+          "aliases": ["Spitzengeschwindigkeiten", "60 km/h", "Hagel", "Schneedruck"],
+          "pilot": true
+        },
+        {
+          "id": "LF-ST-02",
+          "label": "Schnee- und Eisrutsch mit Gebäudeteil-Ausschlüssen",
+          "factRole": "COVERAGE_EXCLUSION",
+          "reference": { "page": 10, "needle": "Schnee- und Eisrutsch an den versicherten Gebäuden" },
+          "query": "Ist Schnee- und Eisrutsch gedeckt und welche Schäden an Fassade, Dach, Rinnen oder offenen Dachstellen sind ausgeschlossen?",
+          "aliases": ["Schnee- und Eisrutsch", "Hausfassade", "tragenden Dachkonstruktion", "Dachrinnen", "Außenablaufrohren"],
+          "pilot": true
+        },
+        {
+          "id": "LF-ST-03",
+          "label": "Katastrophendeckung und gemeinsames Objektlimit",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 10, "needle": "Katastrophen bis 1% der Gebäudeversicherungssumme" },
+          "query": "Sind Hochwasser, Überschwemmung, Rückstau, Lawine, Vermurung und Erdbeben über ein gemeinsames Katastrophenlimit versichert?",
+          "aliases": ["Katastrophen", "Hochwasser", "Überschwemmungen", "Rückstau", "Lawinen", "Vermurungen", "Erdbeben"],
+          "pilot": true
+        },
+        {
+          "id": "LF-ST-04",
+          "label": "HQ30-Zonenlimit für Hochwasser",
+          "factRole": "ZONE_LIMIT",
+          "reference": { "page": 10, "needle": "innerhalb der HQ30-Zone" },
+          "query": "Gibt es für Objekte in einer Hochwasserzone wie HQ30 ein besonderes Hochwasserlimit?",
+          "aliases": ["HQ30", "Hochwasserzone", "maximal € 10.000", "maximal EUR 10.000"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-LW",
+      "label": "Leitungswasser und Deckungsvarianten",
+      "requirements": [
+        {
+          "id": "LF-LW-01",
+          "label": "Wasseraustritt, Rohrbruch und Frost in der Grunddeckung",
+          "factRole": "COVERAGE",
+          "reference": { "page": 12, "needle": "Austritt von Wasser aus Zu- und Ableitungsrohren" },
+          "query": "Sind Wasseraustritt, Rohrbruch und Frost an Rohren, Armaturen und angeschlossenen Einrichtungen gedeckt?",
+          "aliases": ["Austritt von Wasser", "Zu- und Ableitungsrohren", "Rohrbruch", "Frost", "Armaturen", "Sanitäranlagen"],
+          "pilot": true
+        },
+        {
+          "id": "LF-LW-02",
+          "label": "Rohrersatzlänge und Inliner-Verdopplung in der Grunddeckung",
+          "factRole": "LENGTH_LIMIT",
+          "reference": { "page": 12, "needle": "Der Rohrersatz beträgt in der Grunddeckung bis zu 3m Länge" },
+          "query": "Welche Rohrersatzlänge gilt in der Grunddeckung und wie wird ein Inliner-Verfahren behandelt?",
+          "aliases": ["Rohrersatz", "3m", "Inliner", "doppelten Laufmeter"],
+          "pilot": true
+        },
+        {
+          "id": "LF-LW-03",
+          "label": "Suchkosten auch ohne festgestelltes Gebrechen",
+          "factRole": "COST_LIMIT_CONDITION",
+          "reference": { "page": 12, "needle": "Suchkosten zur Auffindung der Schadensstelle bei gerechtfertigter Schadenvermutung" },
+          "query": "Sind Such- oder Leckortungskosten auch ohne festgestelltes Gebrechen versichert und mit welchem Limit?",
+          "aliases": ["Suchkosten", "Auffindung der Schadensstelle", "Schadenvermutung", "ohne Vorliegen eines Gebrechens", "2.500"],
+          "pilot": true
+        },
+        {
+          "id": "LF-LW-04",
+          "label": "C-Deckung für Außenrohre, Verstopfung und optische Wiederherstellung",
+          "factRole": "VARIANT_COVERAGE_LIMIT",
+          "reference": { "page": 13, "needle": "Zusätzlich zur Grunddeckung sind in der C-Deckungsvariante versichert" },
+          "query": "Welche Erweiterungen gelten in der C-Deckung für Außenrohre, Dichtungen, Verstopfung, Rohrreinigung und optische Wiederherstellung?",
+          "aliases": ["C-Deckung", "außerhalb von versicherten Gebäuden", "Verstopfungen", "Rohrreinigung", "Verfliesungen", "10m"],
+          "pilot": true
+        },
+        {
+          "id": "LF-LW-05",
+          "label": "D-Deckung mit 15 Metern, Wasserverlust und unlimitierter Rohrreinigung",
+          "factRole": "VARIANT_COVERAGE_LIMIT",
+          "reference": { "page": 14, "needle": "Zusätzlich zur Grund- und C-Deckung sind in der D-Deckungsvariante versichert" },
+          "query": "Welche D-Deckungs-Erweiterungen gelten für Außenrohre, Wasserverlust, Rohrreinigung, Regenabläufe und Rohrersatzlänge?",
+          "aliases": ["D-Deckung", "15m", "Wasserverlust", "ohne betragliche Beschränkung", "Regenablaufrohren", "Rinnenkessel"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-GL",
+      "label": "Glasbruch",
+      "requirements": [
+        {
+          "id": "LF-GL-01",
+          "label": "Gebäudeverglasung, Fassaden, Loggien und Wintergärten bis 10 m²",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 15, "needle": "die Verglasung der versicherten Gebäude, insbesondere die Fassadenverglasung" },
+          "query": "Welche Gebäudeverglasungen einschließlich Fassade, Loggia, Wintergarten und Wohnungsfenster sind bis zu welcher Scheibengröße versichert?",
+          "aliases": ["Fassadenverglasung", "verglaste Loggien", "Wintergärten", "Einzelscheibengröße", "10m²", "Mehrscheibenisolierungen"],
+          "pilot": true
+        },
+        {
+          "id": "LF-GL-02",
+          "label": "Sonderverglasungen und Verglasung von Solar- und PV-Anlagen",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 15, "needle": "die Verglasung von Sonnenkollektoren für Brauchwassererzeugung" },
+          "query": "Sind Kunststoffscheiben, Sicherheitsglas, Kunstverglasungen, Lichtkuppeln sowie Verglasungen von Solar- und Photovoltaikanlagen versichert?",
+          "aliases": ["Kunststoff", "Sicherheitsgläser", "Sonnenkollektoren", "Fotovoltaikanlagen", "Lichtkuppeln", "Kunstverglasungen"],
+          "pilot": true
+        },
+        {
+          "id": "LF-GL-03",
+          "label": "Notverglasung, Gerüst, Bewachung und Entsorgungskosten",
+          "factRole": "COST_COVERAGE_LIMIT",
+          "reference": { "page": 15, "needle": "Kosten für eine erforderliche Notverglasung oder Notverschalung" },
+          "query": "Sind Hindernisbeseitigung, Notverglasung, Gerüst, Bewachung und Entsorgungskosten nach Glasbruch gedeckt?",
+          "aliases": ["Notverglasung", "Notverschalung", "Gerüste", "Bewachung", "Entsorgungskosten", "50%"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-HP",
+      "label": "Gebäude- und Grundstückshaftpflicht",
+      "requirements": [
+        {
+          "id": "LF-HP-01",
+          "label": "Pauschaldeckungssumme und Jahreshöchstleistung",
+          "factRole": "COVERAGE_LIMIT",
+          "reference": { "page": 17, "needle": "Die Pauschaldeckungssumme beträgt € 2.000.000" },
+          "query": "Wie hoch ist die Haftpflicht-Pauschaldeckungssumme und wie oft steht sie pro Versicherungsjahr zur Verfügung?",
+          "aliases": ["Pauschaldeckungssumme", "Pauschalversicherungssumme", "2.000.000", "dreimal zur Verfügung"],
+          "pilot": true
+        },
+        {
+          "id": "LF-HP-02",
+          "label": "Bauherrenhaftpflicht mit höherem Wert aus Betrag und Prozentsatz",
+          "factRole": "COVERAGE_LIMIT_FORMULA",
+          "reference": { "page": 18, "needle": "Gesamtbaukosten des Bauvorhabens bis EUR 440.000,- oder 20% des Gebäudeneuwerts" },
+          "query": "Ist Bauherrenhaftpflicht versichert und gilt der höhere Wert aus fixem Betrag und Prozentsatz des Gebäudeneuwerts?",
+          "aliases": ["Bauherrenhaftpflicht", "Gesamtbaukosten", "440.000", "20% des Gebäudeneuwerts", "höhere Wert"],
+          "pilot": true
+        },
+        {
+          "id": "LF-HP-03",
+          "label": "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
+          "factRole": "COVERAGE_LIMIT_DEDUCTIBLE_CONDITION",
+          "reference": { "page": 19, "needle": "Sachschäden durch Umweltstörung und Umweltsanierungskosten" },
+          "query": "Sind Umweltstörung und Umweltsanierung gedeckt, unter welcher Störfallvoraussetzung und mit welchem Limit und Selbstbehalt?",
+          "aliases": ["Umweltstörung", "Umweltsanierungskosten", "Störfall", "50% der Pauschalversicherungssumme", "10% des Schadenbetrages"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-OK",
+      "label": "Ökoschutz, zeitliche und örtliche Geltung",
+      "requirements": [
+        {
+          "id": "LF-OK-01",
+          "label": "Ökoschutz für gefährlichen Abfall und Problemstoffe",
+          "factRole": "COST_COVERAGE_LIMIT",
+          "reference": { "page": 22, "needle": "Mehrkosten für die Behandlung von gefährlichem Abfall und/oder Problemstoffen" },
+          "query": "Gibt es eine eigene Ökoschutzdeckung für gefährlichen Abfall oder Problemstoffe, mit welchem Limit und welchen Ausschlüssen?",
+          "aliases": ["Ökoschutz", "gefährlichem Abfall", "Problemstoffen", "7.300", "Altlasten", "Grundwasser"],
+          "pilot": true
+        },
+        {
+          "id": "LF-OK-02",
+          "label": "Nachmelde- und Rückwärtsdeckung für Umweltstörungen",
+          "factRole": "TEMPORAL_SCOPE",
+          "reference": { "page": 23, "needle": "Für Umweltsachschäden erstreckt sich der Versicherungsschutz auf eine Umweltstörung" },
+          "query": "Welche zeitliche Geltung, Nachmeldefrist und Rückwärtsdeckung gilt für Umweltstörungen oder vorvertragliche Ursachen?",
+          "aliases": ["spätestens zwei Jahre danach", "vor Abschluss des Versicherungsvertrages", "nicht bekannt", "Wirksamkeit des Versicherungsschutzes"],
+          "pilot": true
+        }
+      ]
+    },
+    {
+      "id": "LF-AV",
+      "label": "Allgemeine Entschädigungs- und Vertragsbestimmungen",
+      "requirements": [
+        {
+          "id": "LF-AV-01",
+          "label": "Höchstentschädigung inklusive Erstrisikosummen bis 150 Prozent",
+          "factRole": "MAXIMUM_INDEMNITY",
+          "reference": { "page": 25, "needle": "Die Höchstentschädigung im Schadensfall beträgt inklusive aller" },
+          "query": "Gibt es eine spartenübergreifende Höchstentschädigung einschließlich Erstrisikosummen als Prozentsatz der Gebäudeversicherungssumme?",
+          "aliases": ["Höchstentschädigung", "Erstrisikosummen", "150 %", "Versicherungssumme für das Gebäude"],
+          "pilot": true
+        },
+        {
+          "id": "LF-AV-02",
+          "label": "Neuwertentschädigung und Wiederherstellungsfrist von drei Jahren",
+          "factRole": "VALUATION_CONDITION_DURATION",
+          "reference": { "page": 26, "needle": "Sämtliche zum Neuwert versicherten Gebäude und Sachen" },
+          "query": "Wann wird zum Neuwert entschädigt und welche Wiederherstellungs- oder Wiederbeschaffungsfrist gilt?",
+          "aliases": ["Neuwertentschädigung", "zum Neuwert", "innerhalb dreier Jahre", "Zeitwert"],
+          "pilot": true
+        },
+        {
+          "id": "LF-AV-03",
+          "label": "Untergrenze der Neuwertentschädigung bei 30 Prozent Zeitwert",
+          "factRole": "VALUATION_THRESHOLD",
+          "reference": { "page": 26, "needle": "einen Zeitwert von mindestens 30 % haben" },
+          "query": "Gibt es eine Zeitwert-Untergrenze von 30 Prozent für die volle Neuwertentschädigung?",
+          "aliases": ["Untergrenze Neuwertentschädigung", "Zeitwert von mindestens 30 %", "volle Neuwertentschädigung"],
+          "pilot": true
+        },
+        {
+          "id": "LF-AV-04",
+          "label": "Sachverständigenkosten mit 80 Prozent, Höchstbetrag und Schadenschwelle",
+          "factRole": "COST_LIMIT_CONDITION",
+          "reference": { "page": 30, "needle": "Der Versicherer ersetzt 80% der vom Versicherungsnehmer" },
+          "query": "Werden Sachverständigenkosten ersetzt, zu welchem Prozentsatz, bis zu welchem Höchstbetrag und ab welcher Schadenschwelle?",
+          "aliases": ["Sachverständigenkosten", "80%", "36.337", "72.673", "Sachverständigenverfahren"],
+          "pilot": true
+        },
+        {
+          "id": "LF-AV-05",
+          "label": "Unterversicherungsverzicht nach Neuwertgutachten und Indexanpassung",
+          "factRole": "UNDERINSURANCE_WAIVER_CONDITION_DURATION",
+          "reference": { "page": 31, "needle": "verzichtet der Versicherer für die Dauer von ca. 3 Jahren" },
+          "query": "Unter welchen Voraussetzungen und für welche Dauer wird auf den Einwand der Unterversicherung verzichtet?",
+          "aliases": ["Unterversicherungsverzicht", "Neuwertschätzgutachten", "Baukostenindex", "Dauer von ca. 3 Jahren"],
+          "pilot": true
+        }
+      ]
+    }
+  ]
+}
