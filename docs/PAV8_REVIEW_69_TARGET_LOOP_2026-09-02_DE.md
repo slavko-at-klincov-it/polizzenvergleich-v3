@@ -2327,6 +2327,44 @@ Haftpflicht wurde dem Feuerproof zugeschlagen. Das Ergebnis bleibt
 8`. Offen ist die getrennte Identitätsprüfung des tatsächlich hochgeladenen
 Bedingungsdokuments. Kein Vollrun und kein Deployment.
 
+## 10.45 FE-C02 – EABS-Dokumentidentität sourcegebunden
+
+`ff11bf446` führt
+`SOURCE_BOUND_REFERENCED_TERMS_IDENTITY_EVIDENCE_V1` ein. Der Vertrag liest
+Familie und Edition ausschließlich aus genau einem kanonischen Titelblock auf
+physischer Seite 1. Dateiname, Dokumentrolle und im Katalog fest codierte
+Edition sind verboten. `73f09df57` schließt einen im adversarialen Mac-Test
+entdeckten Mehrdeutigkeitsfall: Mehrere passende Titelblöcke führen immer zu
+null Proofs, statt still einen späteren Treffer auszuwählen.
+
+```text
+Finaler Commit: 73f09df577c872e07105f5a94fb788087d23f8ae
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Mac Studio: Format PASS; 10 Suites / 254 Tests PASS
+Artefakt: QA/FE-C02-TERMS-IDENTITY-73F09DF5-20260903
+Summary-SHA: 744e43ae05536a9328e6607cd1e19c089eb6bce0fc55a64587238ec24c1f87a9
+Target-Selection-SHA: cf561e85872ce6e1e36bee2e2a229be443679b67ef906d97242cb4c6dc1f570e
+```
+
+Der reale Zehn-Dokument-Lauf liefert genau einen Identitätsproof in B/DOC-10:
+
+```text
+Titel: Seite 1, Offset 41–99
+       „Ergänzende allgemeine Bedingungen für die\nSachversicherung“
+Code: Seite 1, Offset 101–105, „EABS“
+Edition: Seite 1, Offset 106–110, „2023“
+Identity Context: Offset 41–111
+Reference Key: EABS@2023
+Proof-Digest: 042612468b3a47f75cc608906d800a02164bce6f13687d7392490d8a02c15148
+```
+
+Der bereits belegte Feuerabschnitt in B/DOC-02 referenziert denselben,
+unabhängig aus der Quelle gewonnenen Schlüssel `EABS@2023`. Noch wurde kein
+Paket-Join und keine Wirkung daraus abgeleitet. Ergebnis und Calls bleiben
+unverändert. Nächster Schritt ist ein outcome-neutraler Kettenaudit mit
+explizitem Rest-Gate für Bedingungen, Konflikt und Rang. Kein Vollrun und kein
+Deployment.
+
 ### 10.40 FE-C02 – gerichtete Objektmitgliedschaft sourcegebunden erhalten
 
 Der frische Ist-Lauf auf `6d3a455a5` bestätigte die bisherige Diagnose ohne

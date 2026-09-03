@@ -5245,3 +5245,28 @@ ist. Nächster getrennter Schritt ist deshalb
 `SOURCE_BOUND_REFERENCED_TERMS_IDENTITY_EVIDENCE_V1`. Dateiname,
 Dokumentrolle und feste Edition bleiben als Join-Kriterien verboten. Kein
 Vollrun und kein Deployment.
+
+## 107. FE-C02 – referenzierte Bedingungsidentität belegt
+
+`ff11bf446`/`bc596a5c3` implementieren den sourcegebundenen
+Erstseiten-Titelblock-Proof; `73f09df57` lässt mehrere passende Titelblöcke
+fail-closed enden. Worksheet und Atomic Fact tragen nur gegen das
+Dokumentartefakt replayte Proofs. Der Vertrag enthält keine Wirkung,
+Applicability oder Entscheidung.
+
+```text
+Mac Studio: Format PASS; 10 Suites / 254 Tests PASS
+Artefakt: QA/FE-C02-TERMS-IDENTITY-73F09DF5-20260903
+Summary: 744e43ae05536a9328e6607cd1e19c089eb6bce0fc55a64587238ec24c1f87a9
+Target Selection: cf561e85872ce6e1e36bee2e2a229be443679b67ef906d97242cb4c6dc1f570e
+Identitätsproofs: genau 1, nur B/DOC-10, EABS@2023
+Proof: 042612468b3a47f75cc608906d800a02164bce6f13687d7392490d8a02c15148
+Scopespezifische Referenz: genau 1, nur B/DOC-02, EABS@2023
+Ergebnis-/Call-/Terminal-Delta: keines
+```
+
+Damit stimmen Referenz- und Identitätsschlüssel erstmals unabhängig und
+sourcegebunden überein. Offen bleiben deren paketweiter Join, typisierte
+Forttragung der drei Membership-Bedingungen, Gegenbeweis-/Konfliktprüfung und
+Dokumentpräzedenz. Der nächste Commit materialisiert diese Lage nur als Audit;
+er ändert kein Kundenergebnis. Kein Vollrun und kein Deployment.
