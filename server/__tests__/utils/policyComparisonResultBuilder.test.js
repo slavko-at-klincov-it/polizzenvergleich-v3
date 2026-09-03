@@ -3706,7 +3706,10 @@ describe("policy comparison result builder", () => {
         candidates: [occurrence],
       },
     ];
-    const materialize = (worksheetValue, documentArtifactValue = documentArtifact) =>
+    const materialize = (
+      worksheetValue,
+      documentArtifactValue = documentArtifact
+    ) =>
       materializeAtomicFacts({
         document: {
           uuid: "document-fe-c02",
