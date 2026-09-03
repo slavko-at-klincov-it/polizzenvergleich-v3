@@ -93,11 +93,7 @@ function atoms({ identityKey = "EABS@2023", conflicts = [] } = {}) {
         ...conflicts.map((proof) => ({ objectMembershipProof: proof })),
       ],
       supportingObjectMembershipProofs: [
-        membershipProof(
-          "d",
-          "BUILDING_TECHNICAL_INSTALLATION",
-          "BUILDING"
-        ),
+        membershipProof("d", "BUILDING_TECHNICAL_INSTALLATION", "BUILDING"),
       ],
     },
   ];
@@ -199,9 +195,7 @@ describe("package-activated object-membership audit", () => {
     ).toMatchObject({
       status: INCOMPLETE_SOURCE_CHAIN,
       readyForDecision: false,
-      remainingGates: [
-        "MEMBERSHIP:BUILDING_TECHNICAL_INSTALLATION->BUILDING",
-      ],
+      remainingGates: ["MEMBERSHIP:BUILDING_TECHNICAL_INSTALLATION->BUILDING"],
     });
   });
 

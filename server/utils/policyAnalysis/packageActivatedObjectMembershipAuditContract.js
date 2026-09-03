@@ -63,13 +63,25 @@ function validatePackageActivatedObjectMembershipAuditContract(
     JSON.stringify(Object.keys(contract).sort()) !== JSON.stringify(keys.sort())
   )
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONTRACT_INVALID", detail);
-  if (contract.contractId !== PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID)
+  if (
+    contract.contractId !==
+    PACKAGE_ACTIVATED_OBJECT_MEMBERSHIP_AUDIT_CONTRACT_ID
+  )
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONTRACT_ID_INVALID", detail);
   if (contract.conditionPolicy !== CONDITION_POLICY)
-    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONDITION_POLICY_INVALID", detail);
+    throw auditError(
+      "PACKAGE_MEMBERSHIP_AUDIT_CONDITION_POLICY_INVALID",
+      detail
+    );
   if (contract.conflictPolicy !== CONFLICT_POLICY)
-    throw auditError("PACKAGE_MEMBERSHIP_AUDIT_CONFLICT_POLICY_INVALID", detail);
-  if (!Array.isArray(contract.membershipPath) || contract.membershipPath.length < 2)
+    throw auditError(
+      "PACKAGE_MEMBERSHIP_AUDIT_CONFLICT_POLICY_INVALID",
+      detail
+    );
+  if (
+    !Array.isArray(contract.membershipPath) ||
+    contract.membershipPath.length < 2
+  )
     throw auditError("PACKAGE_MEMBERSHIP_AUDIT_PATH_INVALID", detail);
   const membershipPath = contract.membershipPath.map((key, index) =>
     requiredConceptKey(key, `${detail}:membershipPath[${index}]`)
@@ -182,10 +194,7 @@ function projectedEntry(entry) {
   };
 }
 
-function buildPackageActivatedObjectMembershipAudit({
-  categoryId,
-  atoms,
-}) {
+function buildPackageActivatedObjectMembershipAudit({ categoryId, atoms }) {
   const scopedAtoms = (atoms || []).filter(
     ({ requirementId }) => requirementId === categoryId
   );
@@ -233,46 +242,48 @@ function buildPackageActivatedObjectMembershipAudit({
     ({ proof }) => proof.reference?.familyKey === contract.referenceFamilyKey
   );
   const memberships = membershipEntries(scopedAtoms);
-  const requiredEdges = contract.membershipPath.slice(0, -1).map(
-    (memberObjectKey, index) => ({
+  const requiredEdges = contract.membershipPath
+    .slice(0, -1)
+    .map((memberObjectKey, index) => ({
       memberObjectKey,
       classObjectKey: contract.membershipPath[index + 1],
-    })
-  );
+    }));
   const pathEntries = requiredEdges.map(({ memberObjectKey, classObjectKey }) =>
     memberships.filter(({ proof }) =>
-      edgeMatches(
-        proof,
-        "MEMBER_OF_CLASS",
-        memberObjectKey,
-        classObjectKey
-      )
+      edgeMatches(proof, "MEMBER_OF_CLASS", memberObjectKey, classObjectKey)
     )
   );
-  const conflicts = requiredEdges.flatMap(({ memberObjectKey, classObjectKey }) =>
-    memberships.filter(({ proof }) =>
-      edgeMatches(
-        proof,
-        "EXCLUDED_FROM_CLASS",
-        memberObjectKey,
-        classObjectKey
+  const conflicts = requiredEdges.flatMap(
+    ({ memberObjectKey, classObjectKey }) =>
+      memberships.filter(({ proof }) =>
+        edgeMatches(
+          proof,
+          "EXCLUDED_FROM_CLASS",
+          memberObjectKey,
+          classObjectKey
+        )
       )
-    )
   );
   const missing = [];
   if (references.length === 0) missing.push("SCOPED_PACKAGE_REFERENCE");
   if (identities.length === 0) missing.push("REFERENCED_TERMS_IDENTITY");
   requiredEdges.forEach((edge, index) => {
     if (pathEntries[index].length === 0)
-      missing.push(`MEMBERSHIP:${edge.memberObjectKey}->${edge.classObjectKey}`);
+      missing.push(
+        `MEMBERSHIP:${edge.memberObjectKey}->${edge.classObjectKey}`
+      );
   });
   const ambiguous =
     references.length > 1 ||
     identities.length > 1 ||
     pathEntries.some((entries) => entries.length > 1);
   const unsafeMembership = pathEntries.flat().some(({ atomSafe }) => !atomSafe);
-  const referenceKeys = [...new Set(references.map(({ proof }) => proof.reference.referenceKey))];
-  const identityKeys = [...new Set(identities.map(({ proof }) => proof.reference.referenceKey))];
+  const referenceKeys = [
+    ...new Set(references.map(({ proof }) => proof.reference.referenceKey)),
+  ];
+  const identityKeys = [
+    ...new Set(identities.map(({ proof }) => proof.reference.referenceKey)),
+  ];
   let status = COMPLETE_SOURCE_CHAIN;
   let reasonCode = "SOURCE_CHAIN_COMPLETE_OUTCOME_LOCKED";
   let remainingGates = ["TYPED_CONDITIONS", "DOCUMENT_PRECEDENCE"];
