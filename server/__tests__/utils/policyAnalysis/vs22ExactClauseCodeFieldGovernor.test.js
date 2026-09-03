@@ -343,10 +343,8 @@ describe("VS-22 exact clause-code field governor", () => {
       ].join("\n"),
       BODY,
     ]);
-    const hint = component(
-      worksheet,
-      "disposal_costs"
-    ).occurrences.at(-1).exactClauseCodeFieldGovernorHints[0];
+    const hint = component(worksheet, "disposal_costs").occurrences.at(-1)
+      .exactClauseCodeFieldGovernorHints[0];
     tamper(hint);
     expect(materialize(worksheet)).toMatchObject({
       status: FIELD_EVIDENCE_STATUS.NOT_FOUND,

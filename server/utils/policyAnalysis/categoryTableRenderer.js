@@ -153,8 +153,7 @@ function verifiedExactClauseCodeGovernor(occurrence, fact) {
   const contract = fact?.exactClauseCodeFieldGovernor;
   return (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
     (hint) =>
-      hint.contractId ===
-        "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1" &&
+      hint.contractId === "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1" &&
       contract?.contractId === hint.contractId &&
       contract?.clauseCode === hint.clauseCode &&
       contract?.documentFingerprint === hint.documentFingerprint &&
