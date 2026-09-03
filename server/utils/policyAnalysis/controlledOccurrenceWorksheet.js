@@ -766,12 +766,14 @@ function exactClauseCodeFieldGovernors({
   activationScopes,
 }) {
   const governorsByClauseCode = new Map();
+  const invalidClauseCodes = new Set();
   const codePattern = /Besondere\s+Bedingung\s*\n?\s*(\d{2}\p{Lu}{2}\d{4})/giu;
   const moneyPattern =
     /(?<![\p{L}\p{N}])(?:EUR|€)\s*\d+(?:\.\d{3})*(?:,\d{2})?(?![\p{L}\p{N}])/giu;
 
   for (const page of pages) {
     for (const match of page.text.matchAll(codePattern)) {
+      const matchedClauseCode = match[1].toLocaleUpperCase("de");
       const context = structuralContext({
         pageText: page.text,
         occurrenceStart: match.index,
@@ -790,11 +792,13 @@ function exactClauseCodeFieldGovernors({
         !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
           context.text
         ) ||
-        /\b(?:Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+        /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
           context.text
         )
-      )
+      ) {
+        invalidClauseCodes.add(matchedClauseCode);
         continue;
+      }
 
       const currentSectionHeading = page.sectionHeadings
         .filter(({ pageEnd, scopeKey }) => scopeKey && pageEnd <= match.index)
@@ -802,7 +806,10 @@ function exactClauseCodeFieldGovernors({
       const scopeKey =
         currentSectionHeading?.scopeKey ||
         page.inheritedSectionHeading?.scopeKey;
-      if (!scopeKey?.endsWith("_INSURANCE")) continue;
+      if (!scopeKey?.endsWith("_INSURANCE")) {
+        invalidClauseCodes.add(matchedClauseCode);
+        continue;
+      }
       const currentCoverageGovernor =
         page.coverageGovernors
           .filter(
@@ -812,10 +819,16 @@ function exactClauseCodeFieldGovernors({
                 pageStart >= currentSectionHeading.pageStart)
           )
           .at(-1) || page.inheritedCoverageGovernor;
-      if (!positiveActivationGovernor(currentCoverageGovernor)) continue;
+      if (!positiveActivationGovernor(currentCoverageGovernor)) {
+        invalidClauseCodes.add(matchedClauseCode);
+        continue;
+      }
 
       const clauseCode = codes[0];
-      if (!activationScopes.get(clauseCode)?.has(scopeKey)) continue;
+      if (!activationScopes.get(clauseCode)?.has(scopeKey)) {
+        invalidClauseCodes.add(matchedClauseCode);
+        continue;
+      }
       const amount = amounts[0];
       const documentStart = page.start + context.pageStart;
       const amountDocumentStart = documentStart + amount.index;
@@ -839,6 +852,8 @@ function exactClauseCodeFieldGovernors({
       governorsByClauseCode.get(clauseCode).push(governor);
     }
   }
+  for (const clauseCode of invalidClauseCodes)
+    governorsByClauseCode.delete(clauseCode);
   return governorsByClauseCode;
 }
 
@@ -2859,6 +2874,7 @@ function buildControlledOccurrenceWorksheet({
         .createHash("sha256")
         .update(pageContent)
         .digest("hex"),
+      pageContentLength: pageContent.length,
     },
     summary: {
       requirementCount: worksheetRequirements.length,

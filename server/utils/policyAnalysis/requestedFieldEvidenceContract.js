@@ -469,6 +469,9 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     governor.documentEnd !== governor.documentStart + governor.text.length ||
     !Number.isInteger(governor?.physicalPageNumber) ||
     governor.physicalPageNumber < 1 ||
+    governor.physicalPageNumber > worksheet?.document?.physicalPages ||
+    governor.documentStart < 0 ||
+    governor.documentEnd > worksheet?.document?.pageContentLength ||
     codes.length !== 1 ||
     codes[0][1].toLocaleUpperCase("de") !== clauseCode ||
     amounts.length !== 1 ||
@@ -480,7 +483,7 @@ function validatedExactClauseCodeGovernor({ occurrence, governor, worksheet }) {
     !/\b(?:auf\s+Erstes\s+Risiko|Versicherungssumme|H[oö]chstentsch[aä]digung|Limit|Sublimit)\b/iu.test(
       governor.text
     ) ||
-    /\b(?:Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
+    /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|ausgenommen|optional|wahlweise|gegen\s+(?:eine[nr]?\s+)?(?:Mehrpr[aä]mie|Mehrbeitrag|Pr[aä]mienzuschlag)|Selbstbehalt|Selbstbeteiligung|Eigenbehalt|Pr[aä]mie|entf[aä]llt|aufgehoben|ersetzt)\b/iu.test(
       governor.text
     )
   )
@@ -537,10 +540,17 @@ function extractExactClauseCodeFieldGovernorLimitFacts({
       },
     }))
   );
-  const normalizedValues = new Set(
-    facts.map(({ normalizedValue }) => normalizedValue)
+  const normalizedContracts = new Set(
+    facts.map((fact) =>
+      JSON.stringify([
+        fact.normalizedValue,
+        fact.qualifier || null,
+        fact.limitKind || null,
+        fact.unit || null,
+      ])
+    )
   );
-  return normalizedValues.size === 1 ? facts : [];
+  return normalizedContracts.size === 1 ? facts : [];
 }
 
 function extractBoundLimitFacts(options) {

@@ -9,6 +9,14 @@ const {
   FIELD_EVIDENCE_STATUS,
   materializeRequestedFieldEvidence,
 } = require("../../../utils/policyAnalysis/requestedFieldEvidenceContract");
+const {
+  buildCandidateTriagePayload,
+  deriveCandidateBinding,
+} = require("../../../utils/policyAnalysis/candidateTriageContract");
+const {
+  DOCUMENT_STATUS,
+  buildPreparedEvidenceTargets,
+} = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 
 function documentFromPages(pages) {
   let pageContent = "";
@@ -65,13 +73,22 @@ function component(worksheet, id) {
 }
 
 function materialize(worksheet) {
-  const disposal = component(worksheet, "disposal_costs");
+  const materializedCandidates = buildCandidateTriagePayload(
+    worksheet
+  ).bindingTargets.flatMap((target) =>
+    target.members.map((member) => ({
+      requirementId: target.requirementId,
+      componentId: member.componentId,
+      candidateId: member.candidateId,
+      binding: deriveCandidateBinding({
+        roleMatch: target.roleResolution.roleMatch,
+        scopeMatch: target.scopeResolution.scopeMatch,
+      }),
+    }))
+  );
   return materializeRequestedFieldEvidence({
     worksheet,
-    materializedCandidates: disposal.occurrences.map(({ candidateId }) => ({
-      candidateId,
-      binding: "DIRECT",
-    })),
+    materializedCandidates,
   }).requirements[0].fields[0];
 }
 
@@ -114,6 +131,32 @@ describe("VS-22 exact clause-code field governor", () => {
     expect(
       component(worksheet, "hazardous_waste_cost_limit").occurrences
     ).toHaveLength(0);
+
+    const triage = buildCandidateTriagePayload(worksheet).bindingTargets;
+    const materializedTriage = triage.flatMap((target) =>
+      target.members.map((member) => ({
+        requirementId: target.requirementId,
+        componentId: member.componentId,
+        candidateId: member.candidateId,
+        binding: deriveCandidateBinding({
+          roleMatch: target.roleResolution.roleMatch,
+          scopeMatch: target.scopeResolution.scopeMatch,
+        }),
+      }))
+    );
+    const prepared = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: materializedTriage,
+    });
+    expect(
+      prepared.find(({ componentId }) => componentId === "disposal_costs")
+        .candidates
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ candidateId: bodyOccurrence.candidateId }),
+      ])
+    );
 
     const field = materialize(worksheet);
     expect(field.status).toBe(FIELD_EVIDENCE_STATUS.FOUND);
@@ -214,6 +257,22 @@ describe("VS-22 exact clause-code field governor", () => {
         "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
       ].join("\n"),
     ],
+    [
+      "a local exclusion below a positive governor",
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Nicht versichert sind Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
+      ].join("\n"),
+    ],
+    [
+      "an optional activation below a positive governor",
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten optional auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
+      ].join("\n"),
+    ],
   ])("does not bind %s", (_label, schedule) => {
     const worksheet = build([schedule, BODY]);
     expect(materialize(worksheet)).toMatchObject({
@@ -232,6 +291,63 @@ describe("VS-22 exact clause-code field governor", () => {
       ].join("\n"),
       BODY,
     ]);
+    expect(materialize(worksheet)).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
+  test("fails closed when one repeated activation is ambiguous", () => {
+    const worksheet = build([
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00 EUR7.300,00",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
+      ].join("\n"),
+      BODY,
+    ]);
+    expect(materialize(worksheet)).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
+  test("fails closed when equal amounts have conflicting qualifiers", () => {
+    const worksheet = build([
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00 je Schadenfall",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00 pro Jahr",
+      ].join("\n"),
+      BODY,
+    ]);
+    expect(materialize(worksheet)).toMatchObject({
+      status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
+      facts: [],
+    });
+  });
+
+  test.each([
+    ["fingerprint", (hint) => (hint.documentFingerprint = "x".repeat(64))],
+    ["physical page", (hint) => (hint.physicalPageNumber = 999)],
+    ["governor offset", (hint) => (hint.documentStart = -1)],
+    ["amount offset", (hint) => (hint.amountDocumentStart += 1)],
+  ])("rejects a tampered %s", (_label, tamper) => {
+    const worksheet = build([
+      [
+        "FEUERVERSICHERUNG",
+        "Mitversichert gelten",
+        "- Aufräumkosten auf Erstes Risiko (Besondere Bedingung 12PA0130) EUR6.121.600,00",
+      ].join("\n"),
+      BODY,
+    ]);
+    const hint = component(
+      worksheet,
+      "disposal_costs"
+    ).occurrences.at(-1).exactClauseCodeFieldGovernorHints[0];
+    tamper(hint);
     expect(materialize(worksheet)).toMatchObject({
       status: FIELD_EVIDENCE_STATUS.NOT_FOUND,
       facts: [],

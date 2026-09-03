@@ -88,6 +88,9 @@ function candidateIndex(worksheet) {
           ...occurrence,
           requirementId: requirement.id,
           componentId: component.id,
+          worksheetDocumentFingerprint: worksheet?.document?.fingerprint,
+          worksheetPhysicalPages: worksheet?.document?.physicalPages,
+          worksheetPageContentLength: worksheet?.document?.pageContentLength,
         });
       }
     }
@@ -144,13 +147,47 @@ function selectedCandidateSourceText(occurrence) {
   return contextText || exactText;
 }
 
+function verifiedExactClauseCodeGovernor(occurrence, fact) {
+  const sourceStart = Number(fact?.source?.documentStart);
+  const sourceEnd = Number(fact?.source?.documentEnd);
+  const contract = fact?.exactClauseCodeFieldGovernor;
+  return (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
+    (hint) =>
+      hint.contractId ===
+        "SAME_DOCUMENT_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_V1" &&
+      contract?.contractId === hint.contractId &&
+      contract?.clauseCode === hint.clauseCode &&
+      contract?.documentFingerprint === hint.documentFingerprint &&
+      contract?.scopeKey === hint.scopeKey &&
+      hint.documentFingerprint === occurrence?.worksheetDocumentFingerprint &&
+      Number.isInteger(hint.physicalPageNumber) &&
+      hint.physicalPageNumber >= 1 &&
+      hint.physicalPageNumber <= occurrence?.worksheetPhysicalPages &&
+      Number.isInteger(hint.documentStart) &&
+      hint.documentStart >= 0 &&
+      Number.isInteger(hint.documentEnd) &&
+      hint.documentEnd <= occurrence?.worksheetPageContentLength &&
+      hint.documentEnd === hint.documentStart + hint.text?.length &&
+      sourceStart === hint.amountDocumentStart &&
+      sourceEnd === hint.amountDocumentEnd &&
+      sourceEnd === sourceStart + hint.amountText?.length &&
+      fact?.source?.exactText === hint.amountText &&
+      fact?.rawValue === hint.amountText &&
+      Number(fact?.source?.physicalPageNumber) === hint.physicalPageNumber
+  );
+}
+
 function sourceTextForFact(occurrence, fact) {
   const start = Number(fact?.source?.documentStart);
   const end = Number(fact?.source?.documentEnd);
+  const verifiedExactGovernor = verifiedExactClauseCodeGovernor(
+    occurrence,
+    fact
+  );
   const ranges = [
     occurrence?.context,
     occurrence?.fieldGovernorHint,
-    ...(occurrence?.exactClauseCodeFieldGovernorHints || []),
+    verifiedExactGovernor,
     occurrence?.scopeLead,
   ];
   const containing = ranges.find(
@@ -168,19 +205,7 @@ function verifiedFactPhysicalPageNumber(occurrence, fact) {
   const occurrencePage = Number(
     occurrence?.physicalPageNumber || occurrence?.pageNumber
   );
-  const sourceStart = Number(fact?.source?.documentStart);
-  const sourceEnd = Number(fact?.source?.documentEnd);
-  const contract = fact?.exactClauseCodeFieldGovernor;
-  const governor = (occurrence?.exactClauseCodeFieldGovernorHints || []).find(
-    (hint) =>
-      contract?.contractId === hint.contractId &&
-      contract?.clauseCode === hint.clauseCode &&
-      contract?.documentFingerprint === hint.documentFingerprint &&
-      contract?.scopeKey === hint.scopeKey &&
-      sourceStart >= hint.documentStart &&
-      sourceEnd <= hint.documentEnd &&
-      Number(fact?.source?.physicalPageNumber) === hint.physicalPageNumber
-  );
+  const governor = verifiedExactClauseCodeGovernor(occurrence, fact);
   return governor ? governor.physicalPageNumber : occurrencePage;
 }
 
@@ -213,7 +238,10 @@ function selectedSources({
     const candidateFieldFacts = (fieldResult?.fields || []).flatMap(
       ({ facts }) =>
         (facts || []).filter(
-          ({ source }) => source?.candidateId === candidateId
+          (fact) =>
+            fact.source?.candidateId === candidateId &&
+            (!fact.exactClauseCodeFieldGovernor ||
+              Boolean(verifiedExactClauseCodeGovernor(occurrence, fact)))
         )
     );
     const quote = compactQuote(contextText, occurrence.exactText);
@@ -311,7 +339,9 @@ function fieldFacts(fieldResult, fieldName, candidates, requirementId) {
       fact.normalizedValue.trim().length > 0 &&
       typeof candidateId === "string" &&
       candidateId.trim().length > 0 &&
-      source?.requirementId === requirementId
+      source?.requirementId === requirementId &&
+      (!fact.exactClauseCodeFieldGovernor ||
+        Boolean(verifiedExactClauseCodeGovernor(source, fact)))
     );
   });
 }
