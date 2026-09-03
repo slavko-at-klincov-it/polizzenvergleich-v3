@@ -63,10 +63,9 @@ function membershipProof(
     documentEnd:
       100 + exactText.indexOf(memberExactText) + memberExactText.length,
   };
-  const conditionContract =
-    feCatalog.requirements.find(({ id }) => id === "FE-C02")
-      .supportingObjectMembershipEvidenceContracts[0]
-      .conditionEvidenceContract;
+  const conditionContract = feCatalog.requirements.find(
+    ({ id }) => id === "FE-C02"
+  ).supportingObjectMembershipEvidenceContracts[0].conditionEvidenceContract;
   return {
     proofDigest: digestCharacter.repeat(64),
     edge: {

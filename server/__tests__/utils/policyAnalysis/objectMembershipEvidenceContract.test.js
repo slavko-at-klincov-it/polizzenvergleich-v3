@@ -276,8 +276,7 @@ describe("source-bound object-membership evidence contract", () => {
       readyForDecision: false,
       predicates: [
         {
-          predicateKey:
-            "BUILDING_OWNER_HAS_PROVABLE_REINSTATEMENT_OBLIGATION",
+          predicateKey: "BUILDING_OWNER_HAS_PROVABLE_REINSTATEMENT_OBLIGATION",
           effect: "REQUIREMENT",
         },
         {

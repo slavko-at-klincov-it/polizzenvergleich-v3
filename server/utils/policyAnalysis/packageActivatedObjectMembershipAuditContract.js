@@ -162,7 +162,8 @@ function validatePackageActivatedObjectMembershipAuditContract(
     )
     .sort();
   if (
-    new Set(requiredConditionSetKeys).size !== requiredConditionSetKeys.length ||
+    new Set(requiredConditionSetKeys).size !==
+      requiredConditionSetKeys.length ||
     JSON.stringify(requiredConditionSetKeys) !==
       JSON.stringify(contract.requiredConditionSetKeys)
   )
@@ -398,7 +399,9 @@ function buildPackageActivatedObjectMembershipAudit({ categoryId, atoms }) {
       .map(({ proof }) => proof?.edge?.conditionEvidence)
       .filter(Boolean);
     const conditionSetKeys = [
-      ...new Set(conditionEvidence.map(({ conditionSetKey }) => conditionSetKey)),
+      ...new Set(
+        conditionEvidence.map(({ conditionSetKey }) => conditionSetKey)
+      ),
     ].sort();
     if (
       JSON.stringify(conditionSetKeys) ===
@@ -528,8 +531,10 @@ function validateMembershipPathEvidence(
         if (
           relativeStart < 0 ||
           relativeEnd > entry.memberContextSpan.exactText.length ||
-          entry.memberContextSpan.exactText.slice(relativeStart, relativeEnd) !==
-            span.exactText
+          entry.memberContextSpan.exactText.slice(
+            relativeStart,
+            relativeEnd
+          ) !== span.exactText
         )
           throw auditError(
             "PACKAGE_MEMBERSHIP_AUDIT_CONDITION_SPAN_OUTSIDE_CONTEXT"
@@ -679,9 +684,15 @@ function validatePackageActivatedObjectMembershipAudit(
     .filter(Boolean);
   const completeTypedConditions =
     conditionEvidence.length === contract.requiredConditionSetKeys.length &&
-    conditionEvidence.every(({ typingStatus }) => typingStatus === "COMPLETE") &&
+    conditionEvidence.every(
+      ({ typingStatus }) => typingStatus === "COMPLETE"
+    ) &&
     JSON.stringify(
-      [...new Set(conditionEvidence.map(({ conditionSetKey }) => conditionSetKey))].sort()
+      [
+        ...new Set(
+          conditionEvidence.map(({ conditionSetKey }) => conditionSetKey)
+        ),
+      ].sort()
     ) === JSON.stringify(contract.requiredConditionSetKeys);
   const expectedByStatus = {
     [COMPLETE_SOURCE_CHAIN]: {
@@ -696,10 +707,7 @@ function validatePackageActivatedObjectMembershipAudit(
     },
     [COMPLETE_SOURCE_CHAIN_TYPED_CONDITIONS]: {
       reasonCode: "SOURCE_CHAIN_AND_CONDITIONS_TYPED_OUTCOME_LOCKED",
-      gates: [
-        "MEMBERSHIP_CONDITION_SCOPE_COMPARISON",
-        "DOCUMENT_PRECEDENCE",
-      ],
+      gates: ["MEMBERSHIP_CONDITION_SCOPE_COMPARISON", "DOCUMENT_PRECEDENCE"],
       valid:
         missing.length === 0 &&
         !ambiguous &&

@@ -217,9 +217,7 @@ function validateObjectMembershipEvidenceContract(
     "memberAliases",
     "classAliases",
     "allowedClassificationSources",
-    ...(conditionAware
-      ? ["conditionEvidenceContract"]
-      : []),
+    ...(conditionAware ? ["conditionEvidenceContract"] : []),
   ];
   exactKeys(
     contract,
