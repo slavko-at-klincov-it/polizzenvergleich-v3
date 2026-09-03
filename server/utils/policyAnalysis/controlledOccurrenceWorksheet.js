@@ -1357,12 +1357,14 @@ function explicitCoverageGovernors(pageText) {
   for (const pattern of patterns) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0].trim();
-      if (governors.some(({ pageStart }) => pageStart === match.index))
+      const leading = match[0].indexOf(text);
+      const pageStart = match.index + leading;
+      if (governors.some((governor) => governor.pageStart === pageStart))
         continue;
       governors.push({
         text,
-        pageStart: match.index,
-        pageEnd: match.index + match[0].length,
+        pageStart,
+        pageEnd: pageStart + text.length,
       });
     }
   }
