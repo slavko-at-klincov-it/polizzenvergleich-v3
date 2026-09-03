@@ -796,7 +796,7 @@ function writeFeC12AbsenceCategory(run, { postLossCost = false } = {}) {
   fs.writeFileSync(
     path.join(categoryDirectory, "worksheet.private.json"),
     JSON.stringify({
-      catalog: { id: "fe-occurrence-full-draft-v0.7", categoryView },
+      catalog: { id: "fe-occurrence-full-draft-v0.8", categoryView },
       document: { physicalPages: 7 },
       summary: { componentCount: componentIds.length },
       requirements: [
@@ -1169,7 +1169,7 @@ describe("policy comparison result builder", () => {
       },
     });
     const worksheet = {
-      catalog: { id: "fe-occurrence-full-draft-v0.7" },
+      catalog: { id: "fe-occurrence-full-draft-v0.8" },
       requirements: [
         {
           id: "FE-C07",
@@ -1925,7 +1925,7 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V42_LW07_CONNECTED_FIXTURE_RECALL",
+      id: "CUSTOMER_CORE_5_V43_FEA10_MATCHING_INCLUDED_SCOPE",
       comparisonContractId:
         "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_V9",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],

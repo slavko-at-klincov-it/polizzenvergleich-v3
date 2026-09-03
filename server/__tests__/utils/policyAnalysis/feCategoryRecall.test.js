@@ -172,10 +172,24 @@ describe("FE category recall", () => {
     );
   });
 
+  test("keeps an explicitly included matching FE-A10 scope decision-ready", () => {
+    expect(
+      catalog.requirements.find(({ id }) => id === "FE-A10")
+    ).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      scopeRules: {
+        narrowAliases: expect.arrayContaining([
+          "Anprall unbekannter Fahrzeuge",
+          "Anprall unbekannter Landfahrzeuge",
+        ]),
+      },
+    });
+  });
+
   test("models FE-C07 as one pure scoped insured object", () => {
     const requirement = catalog.requirements.find(({ id }) => id === "FE-C07");
 
-    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.7");
+    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.8");
     expect(requirement).toMatchObject({
       absenceMeaning: "COVERAGE_ONLY",
       requestedFields: ["limit"],
