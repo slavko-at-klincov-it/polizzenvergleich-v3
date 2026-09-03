@@ -1,8 +1,8 @@
 # PAV8 – Target-Loop für die 69 Reviewzeilen
 
 Stand: 3. September 2026
-Baseline: `PAV8-03D-VS14-2D964B45-20260902-073000`  
-Fachlicher Code: `2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b`  
+Baseline: `PAV8-03D-VS14-2D964B45-20260902-073000`
+Fachlicher Code: `2d964b45d6bbf8a1ca0769ad25bc3b59d3a7c42b`
 Dokumentierter Arbeitsstand bei Beginn: `c6462b481cb666ee3701a236cbf5fb63e1da5743`
 
 ## 1. Ziel und unveränderliche Grenze

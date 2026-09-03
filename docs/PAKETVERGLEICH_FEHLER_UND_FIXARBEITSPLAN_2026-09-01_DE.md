@@ -1,8 +1,8 @@
 # Paketvergleich: Fehler-, Abhängigkeits- und Fixarbeitsplan
 
-Stand: 1. September 2026  
-Status: lebendes, commit- und rungebundenes Arbeitsdokument  
-Aktives Repository: `polizzenvergleich-v3`  
+Stand: 1. September 2026
+Status: lebendes, commit- und rungebundenes Arbeitsdokument
+Aktives Repository: `polizzenvergleich-v3`
 Aktueller Entwicklungsstand bei Anlage: `df3348c04ce57d78c2f9dd933d580cc5139cd3d7`
 
 ## 1. Zweck und Arbeitsvertrag

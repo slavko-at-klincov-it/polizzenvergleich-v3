@@ -1,6 +1,6 @@
 # Dreiphasen-Umsetzung: Recall, Shadow-Suche und Einzelzertifizierung
 
-Stand: 31. August 2026  
+Stand: 31. August 2026
 Implementierungsbranch: `codex/polizzenvergleich-v3`
 
 ## Kurzurteil
