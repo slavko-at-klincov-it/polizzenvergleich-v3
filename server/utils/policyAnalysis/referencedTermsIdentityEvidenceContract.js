@@ -249,6 +249,7 @@ function identityCandidates(identity, contract) {
   const page = identity.firstPage;
   const pageText = identity.text.slice(page.start, page.end);
   const titles = aliasSpans(pageText, contract.referenceTitleAliases);
+  if (titles.length !== 1) return [];
   const candidates = [];
   for (const title of titles) {
     const windowEnd = Math.min(
