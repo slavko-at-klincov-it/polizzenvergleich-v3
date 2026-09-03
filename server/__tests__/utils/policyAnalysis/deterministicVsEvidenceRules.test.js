@@ -113,7 +113,7 @@ describe("deterministicVsEvidenceRules", () => {
     [
       "VS-02",
       "residual_value_threshold",
-      "Für instandgehaltene Gebäude gilt ein Zeitwert von mindestens 30 %.",
+      "Für instandgehaltene Gebäude gilt ein Zeitwert von mindestens 30 % und damit die volle Neuwertentschädigung.",
       "EXPLICIT_RESIDUAL_VALUE_THRESHOLD",
     ],
     [
