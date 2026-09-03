@@ -5681,3 +5681,41 @@ und Buildlauf auf exakt dem Dokumentationscommit sowie ein neuer frischer
 Zehn-Dokument-/224-Zeilen-Lauf. Erst ein vollständig geprüfter Outcome-Diff
 ohne neue falsche Vorteile oder gute Non-Review-zu-Review-Regression erlaubt
 `main`, annotierten Tag und Kundenupdate.
+
+## 118. V3.6.0 – finales Vollgate und technisches Kundendeployment
+
+Der abschließende Commit `2804fa56361084c0ee74fca6f54ef6365d65aeeb`
+bestand auf dem Mac Studio die vollständige statische Freigabe mit 162/162
+Testsuites, 2162/2162 Tests, Lint, macOS-Installerverträgen und
+Frontend-Produktionsbuild. Der frische isolierte Lauf verwendete zehn
+Dokumente, das Produktprofil
+`CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY`, Vergleichsvertrag V64,
+Qwen 3.6 mit 42.496 Token Kontext und Parallelität 1.
+
+```text
+QA-Root: QA/RELEASE-V3.6.0-FULL-2804FA56-20260903-182148
+Session: 27918d93-4f0d-47a5-88a7-c13e418b05e5
+Workerzeit: 29:06,430
+Dokumente / Kategorien / Zeilen: 10 / 50 / 224
+Vorteil A / Vorteil B: 5 / 4
+Dokumentationsunterschied / Gleichwertig: 34 / 125
+Nicht vergleichbar / Unklar / Kundenreview: 13 / 43 / 43
+```
+
+Der unabhängige 224-Key-Diff bestand. Gegen den vorigen frischen Lauf sank
+Review von 50 auf 43; gegen den früheren Favoriten von 69 auf 43. Alle neun
+bestätigten Vorteile blieben erhalten, der falsche zehnte Vorteil `FE-A09`
+wurde entfernt, und keine abgeschlossene Favoriten- oder Replay-Zeile wurde zu
+Review. Die erwarteten Korrekturen für `VS-24`, `EL-06`, `EL-07`, `EL-09`,
+`EL-10`, `EL-11` und `EL-13` traten exakt ein. Der separate XLSX-Audit fand
+keine Abweichung in 224 mal 17 Kundenzellen.
+
+Der getestete Commit wurde per Fast-Forward nach `origin/main` veröffentlicht
+und mit dem annotierten Tag `v3.6.0` unveränderlich markiert. Nach externer
+Sicherung unter
+`/Users/michaelmischkot/Polizzenvergleich-Backups/pre-v3.6.0-20260903-185658`
+installierte der offizielle Updater denselben Commit. Integrierter und
+separater Doctor bestanden. Datenbankintegrität, Bestandszahlen, 23 Exporte,
+Loopback-Dienste und der ausschließliche Qwen-Laufzeitvertrag blieben erhalten.
+Die vollständigen Hashes und die weiterhin geltende Beweisgrenze stehen im
+Releaseprotokoll `docs/RELEASE_V3.6.0_DE.md`.

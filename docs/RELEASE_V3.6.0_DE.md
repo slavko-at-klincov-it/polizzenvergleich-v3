@@ -4,7 +4,7 @@ Stand: 3. September 2026
 
 Geplanter Release-Tag: `v3.6.0`
 
-Status: `RELEASE_CANDIDATE_IN_VALIDATION`
+Status: `DEPLOYED_TECHNICAL_CUSTOMER_BUILD`
 
 ## Zweck
 
@@ -71,7 +71,7 @@ Konfiguration, LaunchAgents und vorhandenen Vergleichsexporten erstellt. Bei
 einem roten Gate wird weder `main` veröffentlicht noch der Kundenstand
 verändert.
 
-## Aktueller Kandidatenstand
+## Kandidatenstand vor der finalen Abnahme
 
 Die Release-Codebasis reicht bis `c1dc185cd`. Aktiv sind Produktprofil
 `CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY`, Vergleichsvertrag
@@ -115,3 +115,96 @@ tatsächlichen Prüfungen in einem getrennten, append-only
 Deployment-Dokumentationscommit festgehalten. Der zuvor vollständig geprüfte
 und veröffentlichte Release-Tag wird dafür niemals verschoben. Bis zu diesem
 Nachweis ist dieses Dokument ausdrücklich keine Deploymentfreigabe.
+
+## Finales Abnahme- und Deploymentprotokoll
+
+V3.6.0 wurde am 3. September 2026 nach einem frischen vollständigen Lauf auf
+dem Mac Studio technisch freigegeben und über den offiziellen Updater auf dem
+Kundenstand installiert. Der unveränderliche annotierte Tag zeigt auf exakt
+denselben Commit, der alle statischen und dynamischen Gates bestanden hat.
+
+```text
+Release-Commit: 2804fa56361084c0ee74fca6f54ef6365d65aeeb
+Tag: v3.6.0
+Tagobjekt: 5f0bab6757fd8c383db1f7a1c71ca69de38364d9
+Installation: /Users/michaelmischkot/Code/polizzenvergleich-v3
+Vorheriger Stand: c7d3b16d400ea4d65b558ef091781da5df82d610
+Mac-Studio-QA-Checkout: /private/tmp/pv3-v360-8546057c.J8oNuw/repo
+QA-Root: QA/RELEASE-V3.6.0-FULL-2804FA56-20260903-182148
+Session: 27918d93-4f0d-47a5-88a7-c13e418b05e5
+Modell: qwen/qwen3.6-35b-a3b
+Kontext / Parallelitaet: 42496 / 1
+Workerzeit: 29:06,430
+Dokumente / Kategorien / Zeilen: 10 / 50 / 224
+```
+
+Die vollständige Mac-Studio-Regressionsprüfung auf demselben Commit bestand
+mit 162 von 162 Testsuites und 2162 von 2162 Tests. Zusätzlich bestanden
+Lint, macOS-Installerverträge und der Frontend-Produktionsbuild. Der frische
+Vollrun ergab:
+
+| Kundenergebnis              | Zeilen |
+| --------------------------- | -----: |
+| Vorteil A                   |      5 |
+| Vorteil B                   |      4 |
+| Dokumentationsunterschied   |     34 |
+| Gleichwertig                |    125 |
+| Kein dokumentierter Vorteil |      0 |
+| Nicht vergleichbar          |     13 |
+| Unklar / Kundenreview       |     43 |
+
+Gegen den unmittelbar vorherigen frischen Lauf auf `35308a11a` sank der
+Kundenreview von 50 auf 43. Die neun bestätigten Vorteile blieben exakt
+erhalten. Der falsche Vorteil `FE-A09` wurde zu `GLEICHWERTIG` korrigiert;
+`VS-24` wurde wieder korrekt gleichwertig; `EL-07` und `EL-11` wurden korrekt
+nicht vergleichbar; `EL-13` wurde wegen unterschiedlicher sourcegebundener
+Objektumfänge nicht vergleichbar. `EL-06`, `EL-09` und `EL-10` wurden ohne
+Reviewregression korrekt gleichwertig. Gegen den früheren Favoriten sank der
+Kundenreview von 69 auf 43. Es gab weder eine Favoriten- noch eine
+Replay-Regression von einer abgeschlossenen Zeile zu Kundenreview und keinen
+neuen Vorteil, der einen zusätzlichen Quellenaudit erfordert hätte.
+
+Der unabhängige Ergebnisvalidator bestätigte exakt 224 eindeutige Schlüssel,
+die Kategorieverteilung 36/80/36/36/36, dieselben zehn Eingabedokumente und
+den Kundenmetrikvertrag V2. Der separate XLSX-Audit bestätigte ein Blatt,
+225 Zeilen einschließlich Header, 17 Spalten und keine Abweichung in den
+224 mal 17 exportierten Datenzellen.
+
+```text
+comparison.private.json:
+  82c9d7ee46046eabd2bfba1c483ebee5f8317867d6c07776be1cf5388e106c60
+comparison.md:
+  8b77d105242a1b0a6f0d5193ab30f0718d4a7b1430d4ef3ef4c8e255524789ed
+polizzenvergleich.xlsx:
+  9088f78768e2c64d7dad075fa6f1802078639cd1f534065105249f46a81373d3
+export.private.json:
+  028620d191353c0a746923118f4a6bbf4455943a64fdb4ab6f4aa56700f56fae
+Favoriten-/Replay-Audit:
+  6f88e0e6ad0f9b1a0fb89235b29e7171579f064e1a5bdf96b61cd6647848882e
+XLSX-Audit:
+  c1e710ddae5e3dc71cbe0aecb431dee0fd8a7fbecd15b8420302cbf4a62e5fb1
+Archivierter Kundenexport:
+  /Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+  Gesamtvergleich-27918d93-4f0d-47a5-88a7-c13e418b05e5-59d2b5f41787.xlsx
+```
+
+Vor dem Update wurde eine externe Sicherung angelegt:
+
+```text
+/Users/michaelmischkot/Polizzenvergleich-Backups/
+pre-v3.6.0-20260903-185658
+```
+
+Die konsistente Sicherungsdatenbank und die installierte Produktionsdatenbank
+bestanden `PRAGMA quick_check`. Die Bestandszahlen blieben vor und nach dem
+Update identisch: 10 Workspaces, 3 Workspace-Dokumente, 5
+Vergleichssessions und 22 Vergleichsdokumente. Alle 23 vorhandenen
+Vergleichsexporte blieben erhalten. Der integrierte sowie ein separater Doctor
+bestanden. Der installierte Checkout ist sauber und exakt auf `v3.6.0` und
+`2804fa563`; Server und Collector laufen ausschließlich auf
+`127.0.0.1:3004` beziehungsweise `127.0.0.1:8890`. Ausschließlich
+`qwen/qwen3.6-35b-a3b` ist mit 42.496 Token Kontext geladen.
+
+Diese Freigabe belegt die technische Installation und die beschriebenen zehn
+Dokumente. Sie ist weiterhin kein Beweis für beliebige Gebäudeversicherer,
+unbekannte Holdouts oder das 99-Prozent-Ziel des Produktvertrags.
