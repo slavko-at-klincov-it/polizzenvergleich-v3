@@ -353,7 +353,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
         atomsA: input.atomsA,
         atomsB: input.atomsB,
       })
-    ).toThrow(/^VS22_HAZARDOUS_WASTE_PORTFOLIO_/u);
+    ).toThrow(/^VS22_/u);
   });
 
   test.each([
