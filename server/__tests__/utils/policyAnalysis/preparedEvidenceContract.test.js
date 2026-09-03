@@ -99,6 +99,57 @@ function response(componentId, selectedCandidateIds, coverageEffect) {
 }
 
 describe("preparedEvidenceContract", () => {
+  test("requires the source-bound FE-A09 installation proof during preparation", () => {
+    const pageContent =
+      "Verpuffungsschäden an Heizungsanlagen sind mitversichert.";
+    const document = {
+      id: "fe-a09-required-object-scope",
+      sourceDocumentId: "fe-a09-required-object-scope",
+      title: "fe-a09-required-object-scope.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: document.sourceDocumentId,
+      catalog: feFullCatalog,
+    });
+    const target = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    }).find(({ requirementId }) => requirementId === "FE-A09");
+
+    expect(target).toMatchObject({
+      objectScopeEvidenceRequired: true,
+      candidates: [
+        expect.objectContaining({
+          objectScopeProof: expect.objectContaining({
+            objectScopeKeys: ["HEATING_GAS_OR_FIRING_SYSTEM"],
+          }),
+        }),
+      ],
+    });
+
+    const missingProof = JSON.parse(JSON.stringify(worksheet));
+    delete missingProof.requirements
+      .find(({ id }) => id === "FE-A09")
+      .components[0].occurrences[0].objectScopeProof;
+    expect(() =>
+      buildPreparedEvidenceTargets({
+        worksheet: missingProof,
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      })
+    ).toThrow("PREPARED_REQUIRED_OBJECT_SCOPE_PROOF_INVALID");
+  });
+
   test.each([
     ["EL-09", "avalanche", "Lawinen"],
     ["EL-10", "mudslide", "Muren"],

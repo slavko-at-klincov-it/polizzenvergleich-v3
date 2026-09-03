@@ -274,6 +274,32 @@ function buildPreparedEvidenceTargets({
       const serverRejectedCandidates = [];
       const unresolvedCandidateIds = [];
       for (const occurrence of component.occurrences) {
+        const nestedListContinuationRequired = Boolean(
+          occurrence.objectScopeProof?.assertions?.some(
+            ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"
+          )
+        );
+        const nestedListContinuationValidated =
+          nestedListContinuationRequired &&
+          validNestedListContinuationEnvelope(
+            occurrence.nestedListContinuationProof
+          );
+        const validObjectScopeProof = Boolean(
+          component.objectScopeEvidenceContract &&
+            occurrence.objectScopeProof &&
+            (!nestedListContinuationRequired ||
+              nestedListContinuationValidated) &&
+            validSourceBoundObjectScopeProof({
+              contract: component.objectScopeEvidenceContract,
+              occurrence,
+              nestedListContinuationValidated,
+            })
+        );
+        if (component.objectScopeEvidenceRequired && !validObjectScopeProof)
+          throw preparedError(
+            "PREPARED_REQUIRED_OBJECT_SCOPE_PROOF_INVALID",
+            occurrence.candidateId
+          );
         const triagedCandidateBinding =
           triageById?.get(occurrence.candidateId) || null;
         const deterministicBinding = deterministicCategoryCandidateBinding({
@@ -352,27 +378,6 @@ function buildPreparedEvidenceTargets({
             : null;
         const comparisonScopeKey =
           deterministicComparisonScopeKey || sectionComparisonScopeKey;
-        const nestedListContinuationRequired = Boolean(
-          occurrence.objectScopeProof?.assertions?.some(
-            ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"
-          )
-        );
-        const nestedListContinuationValidated =
-          nestedListContinuationRequired &&
-          validNestedListContinuationEnvelope(
-            occurrence.nestedListContinuationProof
-          );
-        const validObjectScopeProof = Boolean(
-          component.objectScopeEvidenceContract &&
-            occurrence.objectScopeProof &&
-            (!nestedListContinuationRequired ||
-              nestedListContinuationValidated) &&
-            validSourceBoundObjectScopeProof({
-              contract: component.objectScopeEvidenceContract,
-              occurrence,
-              nestedListContinuationValidated,
-            })
-        );
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
@@ -443,6 +448,9 @@ function buildPreparedEvidenceTargets({
         componentId: component.id,
         componentLabel: component.label,
         factRole: component.factRole,
+        ...(component.objectScopeEvidenceRequired
+          ? { objectScopeEvidenceRequired: true }
+          : {}),
         documentStatus,
         candidates,
         serverRejectedCandidates,

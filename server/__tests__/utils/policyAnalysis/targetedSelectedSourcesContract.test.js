@@ -231,6 +231,68 @@ function objectMembershipFixture() {
   return { targets, materializedEvidence, documentArtifact, worksheet };
 }
 
+function requiredObjectScopeFixture() {
+  const pageContent =
+    "Verpuffungsschäden an Heizungsanlagen sind mitversichert.";
+  const fingerprint = crypto
+    .createHash("sha256")
+    .update(pageContent)
+    .digest("hex");
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint,
+    document: {
+      sourceDocumentId: fingerprint,
+      title: "fe-a09-required-object-scope.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    },
+  };
+  const catalog = {
+    ...feFullCatalog,
+    requirements: [
+      feFullCatalog.requirements.find(({ id }) => id === "FE-A09"),
+    ],
+  };
+  const worksheet = buildControlledOccurrenceWorksheet({
+    document: documentArtifact.document,
+    documentFingerprint: fingerprint,
+    catalog,
+  });
+  const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+  const targets = buildPreparedEvidenceTargets({
+    worksheet,
+    documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    candidateTriage: [
+      {
+        requirementId: "FE-A09",
+        componentId: "deflagration_at_heating_gas_or_firing_system",
+        candidateId: occurrence.candidateId,
+        binding: "DIRECT",
+      },
+    ],
+  });
+  const materializedEvidence = {
+    judgements: [
+      {
+        targetId: targets[0].targetId,
+        requirementId: "FE-A09",
+        componentId: "deflagration_at_heating_gas_or_firing_system",
+        selectedCandidateIds: [occurrence.candidateId],
+      },
+    ],
+  };
+  return { targets, materializedEvidence, documentArtifact, worksheet };
+}
+
 describe("targeted selected sources contract", () => {
   test("reconstructs the current selected-sources artifact from server-owned targets", () => {
     const input = fixture();
@@ -282,6 +344,28 @@ describe("targeted selected sources contract", () => {
         contractId: "NESTED_LIST_CONTINUATION_PROOF_V1",
       },
     });
+  });
+
+  test("replays required FE-A09 object scope and rejects its omission", () => {
+    const input = requiredObjectScopeFixture();
+    expect(rebuildTargetedSelectedSources(input)[0]).toMatchObject({
+      requirementId: "FE-A09",
+      objectScopeProof: {
+        objectScopeKeys: ["HEATING_GAS_OR_FIRING_SYSTEM"],
+      },
+    });
+
+    const missingCandidateProof = requiredObjectScopeFixture();
+    delete missingCandidateProof.targets[0].candidates[0].objectScopeProof;
+    expect(() => rebuildTargetedSelectedSources(missingCandidateProof)).toThrow(
+      "TARGETED_SOURCES_PROVENANCE_PRESENCE_MISMATCH"
+    );
+
+    const missingRequiredMarker = requiredObjectScopeFixture();
+    delete missingRequiredMarker.targets[0].objectScopeEvidenceRequired;
+    expect(() => rebuildTargetedSelectedSources(missingRequiredMarker)).toThrow(
+      "TARGETED_SOURCES_REQUIRED_OBJECT_SCOPE_CONTRACT_INVALID"
+    );
   });
 
   test("replays selected FE-C02 membership proof against original document bytes", () => {

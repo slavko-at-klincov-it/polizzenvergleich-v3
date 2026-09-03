@@ -2243,6 +2243,19 @@ function validateCatalog(catalog) {
               component.objectScopeEvidenceContract,
               `${id}:${componentId}`
             );
+      const objectScopeEvidenceRequired =
+        component.objectScopeEvidenceRequired === undefined
+          ? false
+          : component.objectScopeEvidenceRequired;
+      if (
+        (component.objectScopeEvidenceRequired !== undefined &&
+          objectScopeEvidenceRequired !== true) ||
+        (objectScopeEvidenceRequired && !objectScopeEvidenceContract)
+      )
+        throw worksheetError(
+          "OBJECT_SCOPE_EVIDENCE_REQUIREMENT_INVALID",
+          `${id}:${componentId}`
+        );
       const objectMembershipEvidenceContracts =
         validateObjectMembershipContracts(
           component.objectMembershipEvidenceContracts,
@@ -2302,6 +2315,7 @@ function validateCatalog(catalog) {
           ? { nestedListContinuationProofContractId }
           : {}),
         ...(objectScopeEvidenceContract ? { objectScopeEvidenceContract } : {}),
+        ...(objectScopeEvidenceRequired ? { objectScopeEvidenceRequired } : {}),
         ...(objectMembershipEvidenceContracts.length > 0
           ? { objectMembershipEvidenceContracts }
           : {}),
@@ -3555,6 +3569,8 @@ function buildControlledOccurrenceWorksheet({
               })
             )
             .filter(Boolean);
+          if (component.objectScopeEvidenceRequired && !objectScopeProof)
+            continue;
           if (objectMembershipProofs.length > 1)
             throw worksheetError(
               "OBJECT_MEMBERSHIP_PROOF_AMBIGUOUS",
@@ -3595,6 +3611,9 @@ function buildControlledOccurrenceWorksheet({
               objectScopeEvidenceContract:
                 component.objectScopeEvidenceContract,
             }
+          : {}),
+        ...(component.objectScopeEvidenceRequired
+          ? { objectScopeEvidenceRequired: true }
           : {}),
         ...(component.objectMembershipEvidenceContracts?.length > 0
           ? {

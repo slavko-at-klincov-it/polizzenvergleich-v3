@@ -129,6 +129,9 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
                 component.objectScopeEvidenceContract,
             }
           : {}),
+        ...(component.objectScopeEvidenceRequired
+          ? { objectScopeEvidenceRequired: true }
+          : {}),
         ...(component.objectMembershipEvidenceContracts?.length > 0
           ? {
               objectMembershipEvidenceContracts:

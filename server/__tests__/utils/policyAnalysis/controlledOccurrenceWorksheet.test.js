@@ -1200,6 +1200,97 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(target.occurrences[0]).not.toHaveProperty("objectScopeProof");
   });
 
+  test("keeps FE-A09 only when Verpuffung is source-bound to a declared installation", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Verpuffungsschäden an Heizungsanlagen sind mitversichert.",
+          "",
+          "Eine Verpuffung an Gasanlagen ist versichert.",
+          "",
+          "Verpuffung an Feuerungsanlagen ist eingeschlossen.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "fe-a09-required-object-scope",
+      catalog: feFullCatalog,
+    });
+    const target = component(
+      worksheet,
+      "FE-A09",
+      "deflagration_at_heating_gas_or_firing_system"
+    );
+
+    expect(target.objectScopeEvidenceRequired).toBe(true);
+    expect(target.occurrences).toHaveLength(3);
+    expect(
+      target.occurrences.every(
+        ({ objectScopeProof }) =>
+          JSON.stringify(objectScopeProof?.objectScopeKeys) ===
+          JSON.stringify(["HEATING_GAS_OR_FIRING_SYSTEM"])
+      )
+    ).toBe(true);
+  });
+
+  test("does not turn the general Verpuffung definition into FE-A09 installation coverage", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        "Explosion (auch Verpuffung) ist eine plötzlich verlaufende Kraftäußerung, die auf dem Ausdehnungsbestreben von Gasen oder Dämpfen beruht. Eine Explosion eines Behälters (Kessel, Rohrleitung u.a.) ist die plötzliche Zerstörung der Wand dieses Behälters.",
+      ]),
+      documentFingerprint: "fe-a09-general-definition",
+      catalog: feFullCatalog,
+    });
+    const target = component(
+      worksheet,
+      "FE-A09",
+      "deflagration_at_heating_gas_or_firing_system"
+    );
+
+    expect(target.occurrences).toEqual([]);
+    expect(target.terminalState).toBe("NO_CONTROLLED_CANDIDATE");
+  });
+
+  test("does not borrow the required FE-A09 installation from another structural unit", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "Explosion (auch Verpuffung) ist eine Kraftäußerung von Gasen oder Dämpfen.",
+          "",
+          "Wartung der Heizungsanlagen ist Sache des Versicherungsnehmers.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "fe-a09-foreign-installation",
+      catalog: feFullCatalog,
+    });
+
+    expect(
+      component(
+        worksheet,
+        "FE-A09",
+        "deflagration_at_heating_gas_or_firing_system"
+      ).occurrences
+    ).toEqual([]);
+  });
+
+  test("rejects required object-scope evidence without its source-bound contract", () => {
+    const invalidCatalog = JSON.parse(JSON.stringify(feFullCatalog));
+    const target = invalidCatalog.requirements
+      .find(({ id }) => id === "FE-A09")
+      .components.find(
+        ({ id }) => id === "deflagration_at_heating_gas_or_firing_system"
+      );
+    delete target.objectScopeEvidenceContract;
+
+    expect(() =>
+      buildControlledOccurrenceWorksheet({
+        document: documentFromPages([
+          "Verpuffungsschäden an Heizungsanlagen sind mitversichert.",
+        ]),
+        documentFingerprint: "fe-a09-required-contract-missing",
+        catalog: invalidCatalog,
+      })
+    ).toThrow("OBJECT_SCOPE_EVIDENCE_REQUIREMENT_INVALID");
+  });
+
   test("rejects an unknown nested-list continuation proof contract", () => {
     expect(() =>
       buildControlledOccurrenceWorksheet({

@@ -176,6 +176,9 @@ function worksheetDocumentMatchesArtifact(worksheet, documentArtifact) {
 }
 
 function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
+  const targetRequiresObjectScopeEvidence = targets.some(
+    (target) => target?.objectScopeEvidenceRequired === true
+  );
   const targetHasProvenance = targets.some((target) =>
     (target.candidates || []).some(
       (candidate) =>
@@ -183,7 +186,8 @@ function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
         candidateCarriesObjectMembershipProvenance(candidate)
     )
   );
-  if (!worksheet && !targetHasProvenance) return null;
+  if (!worksheet && !targetHasProvenance && !targetRequiresObjectScopeEvidence)
+    return null;
   if (
     !worksheet ||
     !Array.isArray(worksheet.requirements) ||
@@ -217,10 +221,20 @@ function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
       componentByKey.set(key, { component, occurrenceById });
     }
 
-  for (const target of targets)
+  for (const target of targets) {
+    const key = `${target.requirementId}:${target.componentId}`;
+    const indexedComponent = componentByKey.get(key);
+    if (
+      Boolean(target.objectScopeEvidenceRequired) !==
+        Boolean(indexedComponent?.component?.objectScopeEvidenceRequired) ||
+      (target.objectScopeEvidenceRequired === true &&
+        !indexedComponent?.component?.objectScopeEvidenceContract)
+    )
+      throw sourceError(
+        "TARGETED_SOURCES_REQUIRED_OBJECT_SCOPE_CONTRACT_INVALID",
+        key
+      );
     for (const candidate of target.candidates || []) {
-      const key = `${target.requirementId}:${target.componentId}`;
-      const indexedComponent = componentByKey.get(key);
       const occurrence = indexedComponent?.occurrenceById.get(
         candidate.candidateId
       );
@@ -256,6 +270,8 @@ function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
       );
       if (
         candidateHasObjectProof !== occurrenceHasObjectProof ||
+        (target.objectScopeEvidenceRequired === true &&
+          !candidateHasObjectProof) ||
         candidateHasParentProof !== occurrenceObjectProofNeedsParent
       )
         throw sourceError(
@@ -278,6 +294,7 @@ function indexWorksheetProvenance({ worksheet, documentArtifact, targets }) {
           candidate.candidateId
         );
     }
+  }
   return componentByKey;
 }
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "catalogId": "fe-occurrence-full-draft-v0.21",
+  "catalogId": "fe-occurrence-full-draft-v0.22",
   "categoryView": "FE",
   "requirements": [
     {
@@ -230,6 +230,51 @@
           "id": "deflagration_at_heating_gas_or_firing_system",
           "label": "Verpuffung an Heiz-, Gas- oder Feuerungsanlagen",
           "factRole": "PERIL",
+          "objectScopeEvidenceRequired": true,
+          "objectScopeEvidenceContract": {
+            "contractId": "SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_V1",
+            "allowedEvidenceSources": [
+              "STRUCTURAL_LOCAL_CONTEXT",
+              "NESTED_LIST_CONTINUATION"
+            ],
+            "families": [
+              {
+                "objectScopeKey": "HEATING_GAS_OR_FIRING_SYSTEM",
+                "patterns": [
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      [
+                        "Heizungsanlage",
+                        "Heizungsanlagen",
+                        "Heizanlage",
+                        "Heizanlagen",
+                        "Heizkesselanlage",
+                        "Heizkesselanlagen"
+                      ]
+                    ]
+                  },
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      ["Gasanlage", "Gasanlagen", "Gastherme", "Gasthermen"]
+                    ]
+                  },
+                  {
+                    "sourceKinds": ["STRUCTURAL_LOCAL_CONTEXT"],
+                    "allOf": [
+                      [
+                        "Feuerungsanlage",
+                        "Feuerungsanlagen",
+                        "Feuerstätte",
+                        "Feuerstätten"
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
           "aliases": ["Verpuffung", "Verpuffungsschäden"]
         }
       ],
