@@ -46,7 +46,10 @@ function digest(value) {
 }
 
 function textDigest(value) {
-  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(String(value || ""))
+    .digest("hex");
 }
 
 function exactKeys(value, expected, code, detail) {
@@ -95,9 +98,7 @@ function validateObjectScopeEvidenceContract(contract, detail = "component") {
     "OBJECT_SCOPE_CONTRACT_INVALID",
     detail
   );
-  if (
-    contract.contractId !== SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_CONTRACT_ID
-  )
+  if (contract.contractId !== SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_CONTRACT_ID)
     throw objectScopeError(
       "OBJECT_SCOPE_CONTRACT_ID_INVALID",
       `${detail}:${String(contract.contractId || "")}`
@@ -160,9 +161,7 @@ function validateObjectScopeEvidenceContract(contract, detail = "component") {
         pattern.sourceKinds,
         patternDetail
       );
-      if (
-        sourceKinds.some((kind) => !allowedEvidenceSources.includes(kind))
-      )
+      if (sourceKinds.some((kind) => !allowedEvidenceSources.includes(kind)))
         throw objectScopeError(
           "OBJECT_SCOPE_PATTERN_SOURCE_NOT_DECLARED",
           patternDetail
@@ -201,10 +200,7 @@ function validateObjectScopeEvidenceContract(contract, detail = "component") {
       const validatedPattern = { sourceKinds, allOf };
       const patternDigest = digest(validatedPattern);
       if (patternDigests.has(patternDigest))
-        throw objectScopeError(
-          "OBJECT_SCOPE_PATTERN_DUPLICATE",
-          patternDetail
-        );
+        throw objectScopeError("OBJECT_SCOPE_PATTERN_DUPLICATE", patternDetail);
       patternDigests.add(patternDigest);
       return validatedPattern;
     });
@@ -227,10 +223,7 @@ function transliterateCharacter(character) {
 }
 
 function hyphenatedLineBreakTarget(text, hyphenIndex) {
-  if (
-    text[hyphenIndex] !== "-" ||
-    !/\p{L}/u.test(text[hyphenIndex - 1] || "")
-  )
+  if (text[hyphenIndex] !== "-" || !/\p{L}/u.test(text[hyphenIndex - 1] || ""))
     return null;
   let cursor = hyphenIndex + 1;
   let includesLineBreak = false;
@@ -239,9 +232,7 @@ function hyphenatedLineBreakTarget(text, hyphenIndex) {
     cursor += 1;
   }
   if (!includesLineBreak || !/\p{L}/u.test(text[cursor] || "")) return null;
-  const followingWord = String(
-    text.slice(cursor).match(/^\p{L}+/u)?.[0] || ""
-  )
+  const followingWord = String(text.slice(cursor).match(/^\p{L}+/u)?.[0] || "")
     .toLocaleLowerCase("de")
     .trim();
   return ["und", "oder"].includes(followingWord) ? null : cursor;

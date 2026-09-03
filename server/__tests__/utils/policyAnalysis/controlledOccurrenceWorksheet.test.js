@@ -1123,10 +1123,13 @@ describe("controlledOccurrenceWorksheet", () => {
     });
     const bKeys = [
       ...new Set(
-        component(bWorksheet, "FE-A05", "indirect_lightning_damage")
-          .occurrences.flatMap(
-            ({ objectScopeProof }) => objectScopeProof?.objectScopeKeys || []
-          )
+        component(
+          bWorksheet,
+          "FE-A05",
+          "indirect_lightning_damage"
+        ).occurrences.flatMap(
+          ({ objectScopeProof }) => objectScopeProof?.objectScopeKeys || []
+        )
       ),
     ].sort();
     expect(bKeys).toEqual([
@@ -1145,14 +1148,8 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "fe-a05-word-window-object-scope",
       catalog: feFullCatalog,
     });
-    const target = component(
-      worksheet,
-      "FE-A05",
-      "indirect_lightning_damage"
-    );
-    expect(target.occurrences[0].context.unitType).toBe(
-      "WORD_WINDOW_FALLBACK"
-    );
+    const target = component(worksheet, "FE-A05", "indirect_lightning_damage");
+    expect(target.occurrences[0].context.unitType).toBe("WORD_WINDOW_FALLBACK");
     expect(target.occurrences[0]).not.toHaveProperty("objectScopeProof");
   });
 

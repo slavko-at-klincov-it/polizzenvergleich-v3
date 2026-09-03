@@ -161,9 +161,9 @@ describe("source-bound object-scope evidence contract", () => {
     expect(proof.assertions[0].matches[0].documentStart).toBeGreaterThanOrEqual(
       occurrence.context.documentStart
     );
-    expect(
-      proof.assertions[0].matches[0].documentEnd
-    ).toBeLessThanOrEqual(occurrence.context.documentEnd);
+    expect(proof.assertions[0].matches[0].documentEnd).toBeLessThanOrEqual(
+      occurrence.context.documentEnd
+    );
   });
 
   test("does not classify word-window neighbours or alias substrings", () => {
@@ -253,7 +253,8 @@ describe("source-bound object-scope evidence contract", () => {
         nestedListContinuationValidated: true,
       })
     ).toBe(true);
-    occurrence.objectScopeProof.assertions[0].matches[0].exactText = "manipuliert";
+    occurrence.objectScopeProof.assertions[0].matches[0].exactText =
+      "manipuliert";
     expect(
       validSourceBoundObjectScopeProof({
         contract: contract(),
