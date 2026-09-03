@@ -22,10 +22,7 @@ function preparedEvidenceFixture({ objectScopeEvidence = false } = {}) {
     path.join(os.tmpdir(), "prepared-evidence-artifact-")
   );
   const worksheetFile = path.join(directory, "worksheet.private.json");
-  const documentArtifactFile = path.join(
-    directory,
-    "document.private.json"
-  );
+  const documentArtifactFile = path.join(directory, "document.private.json");
   const systemPromptFile = path.join(directory, "system.md");
   const output = path.join(directory, "output");
   const pageContent = "prefixx";
@@ -77,9 +74,7 @@ function preparedEvidenceFixture({ objectScopeEvidence = false } = {}) {
     document: {
       sourceDocumentId: fingerprint,
       pageContent,
-      pageMap: [
-        { pageNumber: 1, start: pageStart, end: pageContent.length },
-      ],
+      pageMap: [{ pageNumber: 1, start: pageStart, end: pageContent.length }],
       pdfExtraction: {
         schemaVersion: 1,
         totalPages: 1,
@@ -220,10 +215,7 @@ describe("VS full QA CLI contracts", () => {
     expect(compatibleResult.status).toBe(0);
     expect(
       JSON.parse(
-        fs.readFileSync(
-          path.join(compatible.output, "report.json"),
-          "utf8"
-        )
+        fs.readFileSync(path.join(compatible.output, "report.json"), "utf8")
       ).contracts
     ).toMatchObject({
       documentArtifactPath: null,
@@ -290,9 +282,7 @@ describe("VS full QA CLI contracts", () => {
       crypto
         .createHash("sha256")
         .update(
-          fs.readFileSync(
-            path.join(fixture.output, "targets.private.json")
-          )
+          fs.readFileSync(path.join(fixture.output, "targets.private.json"))
         )
         .digest("hex")
     );

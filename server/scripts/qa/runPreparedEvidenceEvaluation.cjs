@@ -197,10 +197,7 @@ async function run() {
     } catch {
       fail(`Dokumentartefakt fehlt: ${documentArtifactFile}`);
     }
-    if (
-      documentArtifactStat.isSymbolicLink() ||
-      !documentArtifactStat.isFile()
-    )
+    if (documentArtifactStat.isSymbolicLink() || !documentArtifactStat.isFile())
       fail(
         `Dokumentartefakt muss eine reguläre Nicht-Symlink-Datei sein: ${documentArtifactFile}`
       );
