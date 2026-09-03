@@ -2316,6 +2316,114 @@ abgeschlossener Ergebnis-Delta gezählt: R69-A bleibt `10/40`, und die
 unbestätigte 224-Zeilen-Projektion bleibt unverändert. Ein Gesamtvollrun und
 ein Deployment wurden nicht durchgeführt.
 
+### 10.33 FE-A05 Schritt 1 – seitenübergreifende Listenprovenienz
+
+#### 10.33.1 Reproduzierter Ausgang und Fehlerkette
+
+Der frische FE-A05-Ziellauf auf `bf152f4b` bestätigt den historischen
+Paketbefund am aktuellen Code:
+
+```text
+Artefakt: QA/FE-A05-BASELINE-BF152F4B-20260903
+Summary: 0c9ec38b0d5f68e1f14c55489e862d098224e6503a922e70d98e3f1001688e45
+Selection: b5623f18a1513a55ecc3c8cf5f35a12bd499d047a46a2ec02ec21dc140527303
+A: BELEGT
+B: TEILBELEGT
+Ergebnis: UNKLAR / PACKAGE_REVIEW_STATUS_BLOCKS_DECISION
+Blocker: MULTIPLE_ATOMS_SAME_COMPONENT plus zweimal SCOPE_INCOMPLETE auf B
+Triage-/Evidence-Aufrufe: 3/1
+```
+
+Das ist kein Alias- oder Nullfundfehler. A/DOC-01 und B/DOC-02/DOC-03
+enthalten direkte Treffer; die weiteren sieben B-Dokumente enden nach
+vollständiger kontrollierter Suche lokal ohne Kandidat.
+
+Die neue Ursachenprüfung zeigte stattdessen einen vorgelagerten
+Strukturfehler: Der A-Fund auf PDF-Seite 7 endet im normalen seitenlokalen
+`LIST_ITEM`-Kontext bei `Gebäuden am Versicherungsgrundstück, an`. Die daran
+hängende konkrete Objektliste beginnt auf Seite 7 und läuft auf Seite 8
+weiter. Ohne einen eigenen Fortsetzungsnachweis darf A deshalb nicht als
+unbegrenzter allgemeiner Scope gegen die engeren B-Klauseln gereiht werden.
+
+#### 10.33.2 Outcome-neutraler Provenienzvertrag
+
+```text
+bc309cfb9 fix(analysis): prove nested list continuations
+f59ba5f64 style(analysis): format nested list proof
+79f8eec38 fix(contract): version FE-A05 continuation proof
+```
+
+`NESTED_LIST_CONTINUATION_PROOF_V1` wird nur nach explizitem Komponenten-Opt-in
+erzeugt; aktuell besitzt ausschließlich
+`FE-A05:indirect_lightning_damage` dieses Opt-in. Der bestehende
+Occurrence-Kontext bleibt byteinhaltlich und seitenlokal unverändert.
+
+Ein Proof wird nur erzeugt, wenn Parent-Listitem, Unterlistenstil, direkte
+Folgeseite, kanonischer Seitenseparator und Seitenfortsetzung zusammenpassen.
+Er enthält für jede physische Seite eigene Dokument-/Seitenoffsets, exakten
+Text und SHA-256, außerdem Seitengap, Seitenkopf, Stop-Grenze und Gesamtdigest.
+Leerzeile, Strukturüberschrift, gleichrangiger Listeneintrag, geschlossener
+Parent-Satz oder mehr als 3.200 Zeichen führen fail-closed zu keinem Proof.
+
+Der FE-Katalog wurde dafür auf `fe-occurrence-full-draft-v0.9` und das
+Produktprofil auf
+`CUSTOMER_CORE_5_V82_FE_A05_LIST_CONTINUATION_PROOF` versioniert. Der Proof
+hat noch keinen fachlichen Consumer und ändert absichtlich weder
+Deckungswirkung noch Ergebnis.
+
+#### 10.33.3 Mac-Studio-Nachweis und reales Dokumentdelta
+
+```text
+Commit: 79f8eec38f17cadfbc1892de9762360d343be460
+Worktree: /private/tmp/pv3-vs19-amount-LOqa66/repo
+Format: PASS
+Fokussiert/angrenzend Schritt 1: 206/206 PASS
+Profil-/Katalog-/Result-Nachprüfung: 159/159 PASS
+Breit: 108/111 Suites, 1630/1654 Tests PASS
+Restfehler: ausschließlich 24 bekannte historische VS-Katalog-Fixturefehler
+```
+
+Der akzeptierte reale Lauf nimmt FE-A05 und FE-A06 gemeinsam auf, damit Limits
+aus FE-A06 nicht versehentlich nach FE-A05 verschoben werden:
+
+```text
+Artefakt: QA/FE-A05-A06-VERSIONED-PROOF-79F8EEC3-20260903
+Summary: 7a5fae57bade9489ffcd4ceb4f614df25f6029fc6fb549fc100915d7ed7b96fc
+Selection: d3a10795341c8e8b572957f868615c9b347377e45033b99c13060d4fc61c613b
+Producer: 60c2d68a3c84152cd8c0e5a34a23c2831fd5283588a115680ac2be17f92e02b0
+Dokumente: 10
+Triage-/Evidence-Aufrufe: 3/1
+Server-Rejects/-Terminals: 11/15
+FE-A05: A BELEGT / B TEILBELEGT / UNKLAR
+```
+
+Der neue A-Proof verbindet exakt:
+
+```text
+Seite 7: Parent plus erste Objekt-Unterliste
+Seite 8: fortgesetzte Objekt-Unterliste bis zur ersten Leerzeile
+Proof-Digest: a0b21d86e558d1df1d79d344a853fc7d467d0065f39fcd82b92fbb958cec984c
+```
+
+#### 10.33.4 Status, Risiko und nächster Schritt
+
+Schritt 1 behebt die fehlende Provenienz, aber noch nicht die fachliche
+Scope-Modellierung. Ein sofortiges `GENERAL > NARROW` wäre weiterhin falsch:
+A besitzt nun nachweislich selbst eine konkrete Objektliste, während B zwei
+Klauseln mit verschiedenen Objektmengen und Geltungen enthält. Auch ein
+pauschales Zusammenlegen der B-Atome würde Bedingung und Dokumentwirkung
+verlieren.
+
+Nächster zulässiger Schritt ist ein eigener typisierter Objekt-Scope-Vertrag:
+sourcegebundene Scope-IDs pro Klausel, paketweite Union nur kompatibler
+Einschlüsse und Erhalt von Bedingungen. Erst danach darf ein Setvergleich
+identische Menge, echte Obermenge, Überlappung oder offene Dokumentbeziehung
+unterscheiden. FE-A06-Werte bleiben außerhalb dieses Vertrags.
+
+Es gibt noch kein Ergebnisdelta: FE-A05 bleibt in R69-A offen, R69-A bleibt
+`10/40`, und die unbestätigte 224-Zeilen-Projektion ändert sich nicht. Kein
+Gesamtvollrun und kein Deployment.
+
 ### 10.30 VS-24 – Gerüstkosten nach Glasschaden ohne erfundenes Limit
 
 #### 10.30.1 Reproduzierter Fehler und fachliche Ursache

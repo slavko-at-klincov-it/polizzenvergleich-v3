@@ -4933,3 +4933,38 @@ technisch verbessert und als gegenwärtig nicht sicher entscheidbar
 dokumentiert. Kein Vollrun, kein Deployment. Nächster Schritt: nächsten
 offenen R69-Kandidaten einzeln reproduzieren und nur bei belegbarer
 semantischer Generalisierung ändern.
+
+## 95. FE-A05 Cross-Page-Listenproof – Provenienz geschlossen, Outcome offen
+
+Der frische Ausgangslauf `QA/FE-A05-BASELINE-BF152F4B-20260903` bestätigt
+FE-A05 als `A BELEGT / B TEILBELEGT / UNKLAR`. Die Ursache ist kein Recall:
+Die positiven Klauseln in A/DOC-01 und B/DOC-02/DOC-03 wurden gefunden; sieben
+weitere B-Dokumente besitzen kontrollierte lokale Nichtfunde.
+
+Die A-Klausel läuft jedoch von einem Parent-Listitem auf PDF-Seite 7 über eine
+Objekt-Unterliste bis Seite 8. Der normale seitenlokale Kontext endete vor
+dieser Liste. `bc309cfb9` ergänzt daher outcome-neutral den opt-in Vertrag
+`NESTED_LIST_CONTINUATION_PROOF_V1`; `f59ba5f64` formatiert ihn. `79f8eec38`
+versioniert den FE-Katalog auf v0.9 und das Produktprofil auf V82.
+
+```text
+Commit: 79f8eec38f17cadfbc1892de9762360d343be460
+Profil: CUSTOMER_CORE_5_V82_FE_A05_LIST_CONTINUATION_PROOF
+Artefakt: QA/FE-A05-A06-VERSIONED-PROOF-79F8EEC3-20260903
+Summary: 7a5fae57bade9489ffcd4ceb4f614df25f6029fc6fb549fc100915d7ed7b96fc
+Selection: d3a10795341c8e8b572957f868615c9b347377e45033b99c13060d4fc61c613b
+Proof: a0b21d86e558d1df1d79d344a853fc7d467d0065f39fcd82b92fbb958cec984c
+Fokussierte Prüfungen: 206/206 und 159/159 PASS
+Breit: 1630/1654 PASS; nur 24 bekannte historische VS-Katalog-Fixturefehler
+Ergebnis: unverändert UNKLAR / Review
+```
+
+Der neue Proof hält `context` seitenlokal, speichert beide physischen
+Quellsegmente samt Offsets/Text/Hashes und stoppt fail-closed an Struktur- und
+Sibling-Grenzen. Er ist derzeit nur für FE-A05 aktiv und besitzt noch keinen
+Outcome-Consumer.
+
+FE-A05 bleibt deshalb offen. Nächster Schritt: typisierte, sourcegebundene
+Objekt-Scope-IDs für A und B materialisieren; anschließend paketweiten
+Scope-Set-Vertrag entwickeln, ohne FE-A06-Limits einzumischen. R69-A bleibt
+`10/40`; kein Vollrun und kein Deployment.
