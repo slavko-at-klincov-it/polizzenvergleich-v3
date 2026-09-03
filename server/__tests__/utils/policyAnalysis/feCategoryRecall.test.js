@@ -189,7 +189,7 @@ describe("FE category recall", () => {
   test("models FE-C07 as one pure scoped insured object", () => {
     const requirement = catalog.requirements.find(({ id }) => id === "FE-C07");
 
-    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.8");
+    expect(catalog.catalogId).toBe("fe-occurrence-full-draft-v0.9");
     expect(requirement).toMatchObject({
       absenceMeaning: "COVERAGE_ONLY",
       requestedFields: ["limit"],
