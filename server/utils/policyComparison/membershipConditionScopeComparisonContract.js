@@ -210,6 +210,7 @@ function expectedDocuments(expectedDocuments, side) {
       side: String(document?.side || ""),
       role: String(document?.role || ""),
       documentStatus: String(document?.documentStatus || ""),
+      sha256: String(document?.sha256 || ""),
     }))
     .sort((left, right) => left.uuid.localeCompare(right.uuid));
   if (
@@ -218,7 +219,8 @@ function expectedDocuments(expectedDocuments, side) {
         !document.uuid ||
         document.side !== side ||
         !document.role ||
-        !document.documentStatus
+        !document.documentStatus ||
+        !/^[a-f0-9]{64}$/u.test(document.sha256)
     ) ||
     new Set(documents.map(({ uuid }) => uuid)).size !== documents.length
   )
@@ -239,10 +241,37 @@ function cleanNonFinding(atom) {
     atom?.evidencePresence === "NOT_FOUND" &&
     atom?.coverageEffect === "UNKNOWN" &&
     atom?.conflictState === "NONE" &&
+    atom?.requestedFieldStatus === "NOT_REQUIRED" &&
+    atom?.selectedScopePicture === "UNKNOWN" &&
+    atom?.scopePolicy === "GENERAL_REQUIRED" &&
+    atom?.documentApplicability === "UNKNOWN" &&
     (atom?.selectedCandidateIds || []).length === 0 &&
     (atom?.unresolvedCandidateIds || []).length === 0 &&
     (atom?.sources || []).length === 0
   );
+}
+
+function sourceProofFingerprintsMatch(atoms, documents) {
+  const documentByUuid = new Map(
+    documents.map((document) => [document.uuid, document])
+  );
+  return (atoms || []).every((atom) => {
+    const [documentUuid] = canonicalStrings(atom?.documentUuids);
+    const document = documentByUuid.get(documentUuid);
+    if (!document) return false;
+    const proofs = [
+      ...(atom.supportingCoverageConditionFormulaProofs || []),
+      ...(atom.supportingScopedPackageReferenceProofs || []),
+      ...(atom.supportingReferencedTermsIdentityProofs || []),
+      ...(atom.supportingObjectMembershipProofs || []),
+      ...(atom.sources || [])
+        .map(({ objectMembershipProof }) => objectMembershipProof)
+        .filter(Boolean),
+    ];
+    return proofs.every(
+      ({ documentFingerprint }) => documentFingerprint === document.sha256
+    );
+  });
 }
 
 function relevantAtoms({ categoryId, componentId, atoms, documents }) {
@@ -381,6 +410,7 @@ function directSideAssessment({
     documents,
   });
   if (!relevant) return null;
+  if (!sourceProofFingerprintsMatch(relevant, documents)) return null;
   const requirementContractDigest = exactRequirementContractBinding(
     relevant,
     contract
@@ -400,6 +430,8 @@ function directSideAssessment({
     atom.factRole !== "INSURED_OBJECT" ||
     atom.conflictState !== "NONE" ||
     atom.selectedScopePicture !== "GENERAL" ||
+    atom.requestedFieldStatus !== "NOT_REQUIRED" ||
+    atom.scopePolicy !== "GENERAL_REQUIRED" ||
     (atom.unresolvedCandidateIds || []).length !== 0 ||
     !Array.isArray(atom.supportingCoverageConditionFormulaProofs) ||
     atom.supportingCoverageConditionFormulaProofs.length !== 1
@@ -517,6 +549,7 @@ function membershipSideAssessment({
     documents,
   });
   if (!relevant) return null;
+  if (!sourceProofFingerprintsMatch(relevant, documents)) return null;
   const requirementContractDigest = exactRequirementContractBinding(
     relevant,
     contract
@@ -535,6 +568,10 @@ function membershipSideAssessment({
     atom.coverageEffect !== "DEFINED" ||
     atom.factRole !== "INSURED_OBJECT" ||
     atom.conflictState !== "NONE" ||
+    atom.requestedFieldStatus !== "NOT_REQUIRED" ||
+    atom.selectedScopePicture !== "GENERAL" ||
+    atom.scopePolicy !== "GENERAL_REQUIRED" ||
+    atom.documentApplicability !== "CONDITIONAL" ||
     (atom.unresolvedCandidateIds || []).length !== 0 ||
     !Array.isArray(atom.sources) ||
     atom.sources.length === 0 ||

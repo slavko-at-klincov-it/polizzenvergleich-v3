@@ -197,6 +197,7 @@ function membershipProof(
   ).supportingObjectMembershipEvidenceContracts[0].conditionEvidenceContract;
   return {
     proofDigest: digestCharacter.repeat(64),
+    documentFingerprint: "7".repeat(64),
     edge: {
       relation,
       memberObjectKey,
@@ -278,6 +279,7 @@ function membershipAtoms(referenceDocument, termsDocument) {
       supportingScopedPackageReferenceProofs: [
         {
           proofDigest: "a".repeat(64),
+          documentFingerprint: "6".repeat(64),
           perilScopeKey: "FEUER_INSURANCE",
           coveredObjectKey: "BUILDING",
           reference: { familyKey: "EABS", referenceKey: "EABS@2023" },
@@ -309,6 +311,7 @@ function membershipAtoms(referenceDocument, termsDocument) {
       supportingReferencedTermsIdentityProofs: [
         {
           proofDigest: "b".repeat(64),
+          documentFingerprint: "7".repeat(64),
           reference: { familyKey: "EABS", referenceKey: "EABS@2023" },
         },
       ],
@@ -322,18 +325,21 @@ function fixture({ swap = false } = {}) {
     side: swap ? "B" : "A",
     role: "POLICY",
     documentStatus: "ACTIVE",
+    sha256: "2".repeat(64),
   };
   const referenceDocument = {
     uuid: "reference-document",
     side: swap ? "A" : "B",
     role: "PROPOSAL",
     documentStatus: "PROPOSAL",
+    sha256: "6".repeat(64),
   };
   const termsDocument = {
     uuid: "terms-document",
     side: swap ? "A" : "B",
     role: "TERMS",
     documentStatus: "FRAMEWORK_TERMS",
+    sha256: "7".repeat(64),
   };
   const directAtoms = [directAtom(directDocument)];
   const definedAtoms = membershipAtoms(referenceDocument, termsDocument);
@@ -525,6 +531,12 @@ describe("membership condition-scope comparison contract", () => {
   test("rejects document metadata tamper without using role or status as winner policy", () => {
     const value = fixture();
     value.expectedDocumentsB[1].role = "ENDORSEMENT";
+    expect(buildMembershipConditionScopeComparisonAudit(value)).toBeNull();
+  });
+
+  test("rejects a proof that is not bound to the expected document fingerprint", () => {
+    const value = fixture();
+    value.expectedDocumentsA[0].sha256 = "9".repeat(64);
     expect(buildMembershipConditionScopeComparisonAudit(value)).toBeNull();
   });
 
