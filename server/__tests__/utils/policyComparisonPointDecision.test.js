@@ -2499,19 +2499,15 @@ describe("policy comparison point decision", () => {
         selectedCandidateIds: [],
         sources: [],
       });
-    const result = decide(
-      [missingAtom("a1"), missingAtom("a2")],
-      [atom("b")],
-      {
-        packageA: {
-          reviewStatus: "TEILBELEGT",
-          facts: [
-            { documentUuid: "document-a1", reviewStatus: "TEILBELEGT" },
-            { documentUuid: "document-a2", reviewStatus: "TEILBELEGT" },
-          ],
-        },
-      }
-    );
+    const result = decide([missingAtom("a1"), missingAtom("a2")], [atom("b")], {
+      packageA: {
+        reviewStatus: "TEILBELEGT",
+        facts: [
+          { documentUuid: "document-a1", reviewStatus: "TEILBELEGT" },
+          { documentUuid: "document-a2", reviewStatus: "TEILBELEGT" },
+        ],
+      },
+    });
 
     expect(result.packageReviewAudit.blockers).toEqual([
       expect.objectContaining({
