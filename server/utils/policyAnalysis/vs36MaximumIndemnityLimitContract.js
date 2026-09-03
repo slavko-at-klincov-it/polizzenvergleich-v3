@@ -27,8 +27,7 @@ const SYMBOLIC_LIMIT_PATTERNS = Object.freeze([
   }),
   Object.freeze({
     type: "EVENT_POLICY_SUM_MAXIMIZED_WITH_INSURED_VALUE",
-    normalizedValue:
-      "Versicherungssumme, maximiert mit dem Versicherungswert",
+    normalizedValue: "Versicherungssumme, maximiert mit dem Versicherungswert",
     qualifier: "pro Schadenereignis",
     pattern:
       /Die\s+Entschädigungsleistung\s+ist\s+pro\s+Schadenereignis\s+mit\s+der\s+in\s+der\s+Polizze\s+vereinbarten\s+Versicherungssumme,\s*maximiert\s+mit\s+dem\s+Versicherungswert,\s*begrenzt/giu,
