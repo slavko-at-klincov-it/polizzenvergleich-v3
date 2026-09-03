@@ -2224,7 +2224,7 @@ Der Paket-Audit enthielt genau zwei Blocker:
    als möglicher Kostenbeleg angeboten.
 2. `FIELD_INCOMPLETE` für Paket B, EABS Seite 8: Die Klausel
    `gelten die Aufräum-, Abbruch- und Feuerlöschkosten für Gebäude und Inhalt
-   gemeinsam summarisch versichert` besitzt korrekt kein eigenes Limit.
+gemeinsam summarisch versichert` besitzt korrekt kein eigenes Limit.
 
 Die unabhängige Quellenprüfung bestätigt folgende fachliche Limitlage:
 
