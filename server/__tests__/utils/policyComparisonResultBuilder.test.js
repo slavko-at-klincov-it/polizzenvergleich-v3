@@ -18,6 +18,10 @@ const {
   buildBindingGroupFieldApplicability,
 } = require("../../utils/policyAnalysis/requestedFieldBindingGroupContract");
 const {
+  buildControlledOccurrenceWorksheet,
+} = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const feFullCatalog = require("../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
+const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
@@ -3651,66 +3655,59 @@ describe("policy comparison result builder", () => {
     });
   });
 
-  test("retains source-bound object-membership proof on the selected atomic source", () => {
-    const objectMembershipProof = {
+  test("replays source-bound object-membership proofs from the document artifact", () => {
+    const pageContent = [
+      "1.2 Gebäude das sind:",
+      "·Haustechnische Anlagen und Adaptierungen;",
+      "1.3 Haustechnische Anlagen und Adaptierungen das sind:",
+      "·Solar- und Photovoltaikanlagen;",
+    ].join("\n");
+    const fingerprint = crypto
+      .createHash("sha256")
+      .update(pageContent)
+      .digest("hex");
+    const documentArtifact = {
       schemaVersion: 1,
-      contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4",
-      proofDigest: "a".repeat(64),
-      edge: {
-        relation: "MEMBER_OF_CLASS",
-        memberObjectKey: "PHOTOVOLTAIC_INSTALLATION",
-        classObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
+      fingerprint,
+      document: {
+        sourceDocumentId: fingerprint,
+        title: "Source-bound FE-C02 fixture",
+        pageContent,
+        pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+        pdfExtraction: { complete: true },
       },
     };
-    const supportingObjectMembershipProof = {
-      ...objectMembershipProof,
-      proofDigest: "b".repeat(64),
-      edge: {
-        relation: "MEMBER_OF_CLASS",
-        memberObjectKey: "BUILDING_TECHNICAL_INSTALLATION",
-        classObjectKey: "BUILDING",
-      },
+    const feC02Catalog = {
+      ...feFullCatalog,
+      requirements: [
+        feFullCatalog.requirements.find(({ id }) => id === "FE-C02"),
+      ],
     };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentArtifact.document,
+      documentFingerprint: fingerprint,
+      catalog: feC02Catalog,
+    });
+    const requirement = worksheet.requirements[0];
+    const occurrence = requirement.components[0].occurrences.find(
+      ({ objectMembershipProof }) => objectMembershipProof
+    );
+    expect(occurrence).toBeDefined();
+    expect(requirement.supportingObjectMembershipProofs).toHaveLength(1);
     const targets = [
       {
         targetId: "target:fe-c02",
-        candidates: [
-          {
-            candidateId: "candidate:pv",
-            physicalPageNumber: 4,
-            exactText: "Photovoltaikanlagen",
-            objectMembershipProof,
-          },
-        ],
+        candidates: [occurrence],
       },
     ];
-    const [atom] = materializeAtomicFacts({
+    const materialize = (worksheetValue) =>
+      materializeAtomicFacts({
       document: {
         uuid: "document-fe-c02",
         role: "TERMS",
         documentStatus: "FRAMEWORK_TERMS",
       },
-      worksheet: {
-        catalog: { id: "fe-test-v1" },
-        requirements: [
-          {
-            id: "FE-C02",
-            requestedFields: [],
-            supportingObjectMembershipEvidenceContracts: [
-              { contractId: "SOURCE_BOUND_OBJECT_MEMBERSHIP_EVIDENCE_V4" },
-            ],
-            supportingObjectMembershipProofs: [supportingObjectMembershipProof],
-            components: [
-              {
-                id: "photovoltaic_as_damaged_object",
-                label: "Photovoltaikanlage als betroffene Sache",
-                factRole: "INSURED_OBJECT",
-                aliases: ["Photovoltaikanlagen"],
-              },
-            ],
-          },
-        ],
-      },
+      worksheet: worksheetValue,
       materializedEvidence: {
         judgements: [
           {
@@ -3722,7 +3719,7 @@ describe("policy comparison result builder", () => {
             conflictState: "NONE",
             selectedScopePicture: "GENERAL",
             documentApplicability: "CONDITIONAL",
-            selectedCandidateIds: ["candidate:pv"],
+            selectedCandidateIds: [occurrence.candidateId],
             unresolvedCandidateIds: [],
           },
         ],
@@ -3737,21 +3734,29 @@ describe("policy comparison result builder", () => {
         ],
       },
       targets,
-      documentArtifact: null,
+      documentArtifact,
       report: null,
     });
+    const [atom] = materialize(worksheet);
 
     expect(atom.sources[0].objectMembershipProof).toEqual(
-      objectMembershipProof
+      occurrence.objectMembershipProof
     );
     expect(atom.sources[0].objectMembershipProof).not.toBe(
-      objectMembershipProof
+      occurrence.objectMembershipProof
     );
-    expect(atom.supportingObjectMembershipProofs).toEqual([
-      supportingObjectMembershipProof,
-    ]);
+    expect(atom.supportingObjectMembershipProofs).toEqual(
+      requirement.supportingObjectMembershipProofs
+    );
     expect(atom.supportingObjectMembershipProofs[0]).not.toBe(
-      supportingObjectMembershipProof
+      requirement.supportingObjectMembershipProofs[0]
+    );
+
+    const tampered = JSON.parse(JSON.stringify(worksheet));
+    tampered.requirements[0].supportingObjectMembershipProofs[0].edge.memberContextSpan.exactText =
+      "manipuliert";
+    expect(() => materialize(tampered)).toThrow(
+      "OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID"
     );
   });
 });

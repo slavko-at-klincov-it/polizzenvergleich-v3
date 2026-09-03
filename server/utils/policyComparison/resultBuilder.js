@@ -48,6 +48,9 @@ const {
   buildSourceBoundReferencedTermsIdentityProofs,
 } = require("../policyAnalysis/referencedTermsIdentityEvidenceContract");
 const {
+  buildSupportingObjectMembershipProofs,
+} = require("../policyAnalysis/controlledOccurrenceWorksheet");
+const {
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID,
@@ -1363,6 +1366,25 @@ function materializeAtomicFacts({
       }
     }
     const target = targetsById.get(judgement.targetId);
+    const supportingObjectMembershipProofs = (() => {
+      const contracts =
+        requirement?.supportingObjectMembershipEvidenceContracts || [];
+      const proofs = requirement?.supportingObjectMembershipProofs || [];
+      if (contracts.length === 0) return [];
+      const expected = buildSupportingObjectMembershipProofs({
+        document: documentArtifact?.document,
+        documentFingerprint: documentArtifact?.fingerprint,
+        categoryView: worksheet?.catalog?.categoryView,
+        catalogId: worksheet?.catalog?.id,
+        requirement,
+      });
+      const actual = [...proofs].sort((left, right) =>
+        left.proofDigest.localeCompare(right.proofDigest)
+      );
+      if (JSON.stringify(actual) !== JSON.stringify(expected))
+        throw new Error("OBJECT_MEMBERSHIP_SUPPORT_PROOF_REPLAY_INVALID");
+      return JSON.parse(JSON.stringify(actual));
+    })();
     const supportingScopedPackageReferenceProofs = (() => {
       const contracts =
         requirement?.supportingScopedPackageReferenceEvidenceContracts || [];
@@ -1469,9 +1491,7 @@ function materializeAtomicFacts({
         ? {
             supportingObjectMembershipEvidenceContracts:
               requirement.supportingObjectMembershipEvidenceContracts,
-            supportingObjectMembershipProofs: JSON.parse(
-              JSON.stringify(requirement.supportingObjectMembershipProofs || [])
-            ),
+            supportingObjectMembershipProofs,
           }
         : {}),
       ...(requirement?.supportingScopedPackageReferenceEvidenceContracts

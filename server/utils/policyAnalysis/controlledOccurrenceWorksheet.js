@@ -3650,6 +3650,7 @@ module.exports = {
   NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID,
   WORKSHEET_SCHEMA_VERSION,
   buildControlledOccurrenceWorksheet,
+  buildSupportingObjectMembershipProofs,
   findAliasRanges,
   normalizeWithOffsetMap,
   structuralContext,
