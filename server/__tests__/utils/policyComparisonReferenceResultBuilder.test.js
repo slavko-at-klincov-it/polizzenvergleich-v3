@@ -328,6 +328,105 @@ describe("directed LF reference result builder", () => {
     });
   });
 
+  test("preserves an internal conflict beside positive package evidence", () => {
+    const firstCategory = categoryCatalogs()[0];
+    const firstRequirement = firstCategory.catalog.requirements[0];
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const positive = writeRun(
+      root,
+      document("counterpart-positive", "B", 0),
+      new Set([firstRequirement.id])
+    );
+    const conflicting = writeRun(
+      root,
+      document("counterpart-conflicting", "B", 1),
+      new Set([firstRequirement.id])
+    );
+    const effectsFile = path.join(
+      conflicting.outputDirectory,
+      firstCategory.categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const effects = JSON.parse(fs.readFileSync(effectsFile, "utf8"));
+    const judgement = effects.judgements.find(
+      ({ requirementId }) => requirementId === firstRequirement.id
+    );
+    judgement.coverageEffect = "UNKNOWN";
+    judgement.conflictState = "ACTIVE_SAME_SCOPE";
+    fs.writeFileSync(effectsFile, JSON.stringify(effects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        positive,
+        conflicting,
+      ],
+      {}
+    );
+
+    expect(result.categories[0].rows[0]).toMatchObject({
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.UNCLEAR,
+        reviewRequired: true,
+      },
+      packageB: { reviewStatus: "WIDERSPRÜCHLICH" },
+    });
+  });
+
+  test("preserves unresolved candidates beside positive package evidence", () => {
+    const firstCategory = categoryCatalogs()[0];
+    const firstRequirement = firstCategory.catalog.requirements[0];
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const positive = writeRun(
+      root,
+      document("counterpart-positive", "B", 0),
+      new Set([firstRequirement.id])
+    );
+    const unresolved = writeRun(
+      root,
+      document("counterpart-unresolved", "B", 1)
+    );
+    const effectsFile = path.join(
+      unresolved.outputDirectory,
+      firstCategory.categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const effects = JSON.parse(fs.readFileSync(effectsFile, "utf8"));
+    const judgement = effects.judgements.find(
+      ({ requirementId }) => requirementId === firstRequirement.id
+    );
+    judgement.evidencePresence = "FOUND";
+    judgement.unresolvedCandidateIds = ["candidate:unresolved"];
+    fs.writeFileSync(effectsFile, JSON.stringify(effects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        positive,
+        unresolved,
+      ],
+      {}
+    );
+
+    expect(result.categories[0].rows[0]).toMatchObject({
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.UNCLEAR,
+        reviewRequired: true,
+      },
+      packageB: { reviewStatus: "UNGEKLÄRT" },
+    });
+  });
+
   test("does not complete a package from evidence hidden behind an unclear row", () => {
     const requirement = categoryCatalogs()
       .flatMap(({ catalog }) => catalog.requirements)
@@ -517,6 +616,59 @@ describe("directed LF reference result builder", () => {
     expect(rowResult).toMatchObject({
       pointDecision: { outcome: REFERENCE_OUTCOME.FOUND },
       packageB: { reviewStatus: "BELEGT" },
+    });
+  });
+
+  test("does not hide a terms exclusion behind supplement inclusion", () => {
+    const objectRequirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(({ sourceReferenceId }) => sourceReferenceId === "LF-VS-01");
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const supplement = document("counterpart-supplement", "B", 1);
+    supplement.role = "SUPPLEMENT";
+    const terms = document("counterpart-terms", "B", 2);
+    terms.role = "TERMS";
+    const supplementRun = writeRun(
+      root,
+      supplement,
+      new Set([objectRequirement.id])
+    );
+    const termsRun = writeRun(root, terms, new Set([objectRequirement.id]));
+    const termsEffectsFile = path.join(
+      termsRun.outputDirectory,
+      "RV",
+      "effects",
+      "materialized.private.json"
+    );
+    const termsEffects = JSON.parse(
+      fs.readFileSync(termsEffectsFile, "utf8")
+    );
+    termsEffects.judgements
+      .filter(({ requirementId }) => requirementId === objectRequirement.id)
+      .forEach((judgement) => {
+        judgement.coverageEffect = "EXCLUDED";
+      });
+    fs.writeFileSync(termsEffectsFile, JSON.stringify(termsEffects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        supplementRun,
+        termsRun,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ categoryId }) => categoryId === "LF-VS-01");
+
+    expect(rowResult).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.UNCLEAR },
+      packageB: { reviewStatus: "WIDERSPRÜCHLICH" },
     });
   });
 

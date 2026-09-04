@@ -232,6 +232,29 @@ function componentEvidenceConflicts(component, selectedEvidence) {
   return [...effects].some((effect) => componentAcceptsEffect(component, effect));
 }
 
+function packageEvidenceState(entries) {
+  const judgements = entries.flatMap(({ judgements }) => judgements);
+  if (
+    judgements.some(
+      ({ conflictState }) => conflictState && conflictState !== "NONE"
+    )
+  )
+    return "CONFLICTING";
+  if (
+    judgements.some(
+      ({
+        coverageEffect,
+        evidencePresence,
+        unresolvedCandidateIds = [],
+      }) =>
+        unresolvedCandidateIds.length > 0 ||
+        (evidencePresence === "FOUND" && coverageEffect === "UNKNOWN")
+    )
+  )
+    return "UNRESOLVED";
+  return "CLEAR";
+}
+
 function controlledNotFound(entries, requirement) {
   return entries.every(({ judgements }) =>
     requirement.components.every((component) => {
@@ -310,6 +333,7 @@ function aggregateCounterpart(entries, requirement) {
         ) || componentEvidenceConflicts(component, componentEvidence)
       );
     });
+  const evidenceState = packageEvidenceState(entries);
   return {
     documentedContent: matched
       .map(
@@ -328,8 +352,11 @@ function aggregateCounterpart(entries, requirement) {
     source: matched
       .map(({ document, row }) => sourceWithDocument(document, row.source))
       .join("\n"),
-    reviewStatus: packageEvidenceConflicting
+    reviewStatus:
+      packageEvidenceConflicting || evidenceState === "CONFLICTING"
       ? "WIDERSPRÜCHLICH"
+      : evidenceState === "UNRESOLVED"
+        ? COUNTERPART_REVIEW_STATUS.UNCLEAR
       : packageComponentComplete
         ? "BELEGT"
         : "TEILBELEGT",
