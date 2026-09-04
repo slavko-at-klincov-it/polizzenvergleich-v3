@@ -12,6 +12,11 @@ const {
   VS22_OTHER_SCOPE_BASIS,
   isVs22LiabilityOrStorageOccurrence,
 } = require("./vs22WasteScopeContract");
+const {
+  RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
+  isRgCostWithoutExplicitGlassLossScope,
+  occurrenceLocalSentence,
+} = require("./glassLossScopeContract");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -95,47 +100,6 @@ function hasExplicitLocalCostRole(members, contextText) {
       );
     });
   });
-}
-
-function isScopeSentenceBoundary(text, index) {
-  const character = text[index];
-  if (character === ";" || character === "!" || character === "?") return true;
-  if (character !== ".") return false;
-  let cursor = index + 1;
-  while (cursor < text.length && /\s/u.test(text[cursor])) cursor += 1;
-  if (cursor >= text.length) return true;
-  return /\p{Lu}/u.test(text[cursor]);
-}
-
-function occurrenceScopeSentence(occurrence) {
-  const text = String(occurrence.context?.text || "");
-  const contextStart = Number(occurrence.context?.documentStart);
-  const occurrenceStart = Number(occurrence.documentStart) - contextStart;
-  const occurrenceEnd = Number(occurrence.documentEnd) - contextStart;
-  if (
-    !Number.isInteger(contextStart) ||
-    !Number.isInteger(occurrenceStart) ||
-    !Number.isInteger(occurrenceEnd) ||
-    occurrenceStart < 0 ||
-    occurrenceEnd <= occurrenceStart ||
-    occurrenceEnd > text.length ||
-    text.slice(occurrenceStart, occurrenceEnd) !== occurrence.exactText
-  )
-    return null;
-
-  let sentenceStart = 0;
-  for (let index = occurrenceStart - 1; index >= 0; index -= 1) {
-    if (!isScopeSentenceBoundary(text, index)) continue;
-    sentenceStart = index + 1;
-    break;
-  }
-  let sentenceEnd = text.length;
-  for (let index = occurrenceEnd; index < text.length; index += 1) {
-    if (!isScopeSentenceBoundary(text, index)) continue;
-    sentenceEnd = index + 1;
-    break;
-  }
-  return text.slice(sentenceStart, sentenceEnd);
 }
 
 function triageError(code, detail = "") {
@@ -332,7 +296,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           .replace(/[^\p{L}\p{N}]+/gu, "")
       )
     );
-    const scopeSentence = occurrenceScopeSentence(source);
+    const scopeSentence = occurrenceLocalSentence(source);
     const scopeLeadText = `${source.coverageGovernorHint?.text || ""}\n${
       source.scopeLead?.text || ""
     }`.trim();
@@ -384,13 +348,11 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         /(?:Haftpflicht|AHVB|Schadenersatzverpflichtungen|Pauschaldeckungssumme|Versicherungsfälle\s+eines\s+Jahres)/iu.test(
           liabilityContext
         ));
-    const isRgCostWithoutExplicitGlassLossScope =
-      categoryView === "RG" &&
-      allCostMembers &&
-      !observedSectionScopeKeys.includes("GLASBRUCH_INSURANCE") &&
-      !/\b(?:Glasbruch(?:schaden\p{L}*)?|Glasschaden\p{L}*|Glasscheiben\p{L}*|versicherte\p{L}*\s+Gl[aä]ser\p{L}*|Glasversicherung\p{L}*|Glaspauschal\p{L}*)\b/iu.test(
-        scopeSentence || source.exactText || ""
-      );
+    const rejectsUnscopedRgCost = isRgCostWithoutExplicitGlassLossScope({
+      categoryView,
+      allCostMembers,
+      occurrence: source,
+    });
     let roleResolution = {
       owner: "MODEL",
       roleMatch: null,
@@ -476,11 +438,11 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         basis: "ROLE_UNRESOLVED",
         matchedAlias: null,
       };
-    } else if (isRgCostWithoutExplicitGlassLossScope) {
+    } else if (rejectsUnscopedRgCost) {
       scopeResolution = {
         owner: "SERVER",
         scopeMatch: SCOPE_MATCH.OTHER_SCOPE,
-        basis: "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
+        basis: RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
         matchedAlias: null,
       };
     } else if (matchedNarrowAlias || matchedNarrowScopeKey) {

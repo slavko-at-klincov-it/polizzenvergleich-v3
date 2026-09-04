@@ -36,6 +36,9 @@ const {
   FOLLOWING_STRUCTURAL_BOUNDARY_PROOF_CONTRACT_ID,
   buildControlledOccurrenceWorksheet,
 } = require("../../../utils/policyAnalysis/controlledOccurrenceWorksheet");
+const {
+  buildCandidateTriagePayload,
+} = require("../../../utils/policyAnalysis/candidateTriageContract");
 
 const WORKSHEET = {
   candidateOnly: true,
@@ -99,6 +102,126 @@ function response(componentId, selectedCandidateIds, coverageEffect) {
 }
 
 describe("preparedEvidenceContract", () => {
+  function rgCostWorksheet({ text, exactText, sectionScopeHint = null }) {
+    const documentStart = text.indexOf(exactText);
+    return {
+      candidateOnly: true,
+      catalog: { categoryView: "RG" },
+      requirements: [
+        {
+          id: "RG-03",
+          label: "Kosten nach Glasschäden",
+          sourceReferenceId: "LF-GL-03",
+          requestedFields: [],
+          components: [
+            {
+              id: "emergency_boarding",
+              label: "Notverschalung",
+              factRole: "COST",
+              occurrences: [
+                {
+                  candidateId: "candidate:rg-03:emergency-boarding",
+                  matchedAlias: exactText,
+                  pageNumber: 4,
+                  physicalPageNumber: 4,
+                  exactText,
+                  documentStart,
+                  documentEnd: documentStart + exactText.length,
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text,
+                    documentStart: 0,
+                    documentEnd: text.length,
+                  },
+                  scopeLead: { text: "" },
+                  sectionScopeHint,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  test("keeps the unscoped RG-cost rejection authoritative from triage through preparation", () => {
+    const worksheet = rgCostWorksheet({
+      text: "Notverschalungskosten sind mitversichert.",
+      exactText: "Notverschalungskosten",
+    });
+    const [triageTarget] =
+      buildCandidateTriagePayload(worksheet).bindingTargets;
+
+    expect(triageTarget.scopeResolution).toEqual({
+      owner: "SERVER",
+      scopeMatch: "OTHER_SCOPE",
+      basis: "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
+      matchedAlias: null,
+    });
+
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "RG-03",
+          componentId: "emergency_boarding",
+          candidateId: "candidate:rg-03:emergency-boarding",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(preparedTarget.candidates).toEqual([]);
+    expect(preparedTarget.serverRejectedCandidates).toEqual([
+      {
+        candidateId: "candidate:rg-03:emergency-boarding",
+        reason: "TRIAGE_MENTION_ONLY",
+      },
+    ]);
+  });
+
+  test.each([
+    {
+      name: "local Glasschaden clause",
+      text: "Notverschalungskosten nach einem ersatzpflichtigen Glasschaden sind mitversichert.",
+      sectionScopeHint: null,
+    },
+    {
+      name: "structured glass-insurance section",
+      text: "Notverschalungskosten sind mitversichert.",
+      sectionScopeHint: {
+        scopeKey: "GLASBRUCH_INSURANCE",
+        text: "Glasversicherung",
+      },
+    },
+  ])("keeps a genuinely glass-scoped RG cost eligible: $name", (variant) => {
+    const worksheet = rgCostWorksheet({
+      ...variant,
+      exactText: "Notverschalungskosten",
+    });
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "RG-03",
+          componentId: "emergency_boarding",
+          candidateId: "candidate:rg-03:emergency-boarding",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(preparedTarget.candidates).toEqual([
+      expect.objectContaining({
+        candidateId: "candidate:rg-03:emergency-boarding",
+        candidateBinding: "DIRECT",
+      }),
+    ]);
+    expect(preparedTarget.serverRejectedCandidates).toEqual([]);
+  });
+
   test("requires the source-bound FE-A09 installation proof during preparation", () => {
     const pageContent =
       "Verpuffungsschäden an Heizungsanlagen sind mitversichert.";

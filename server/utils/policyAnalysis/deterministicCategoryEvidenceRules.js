@@ -12,6 +12,10 @@ const {
   FE_C12_POST_LOSS_SCAFFOLDING_COST_DECISION_BASIS,
   feC12PostLossScaffoldingCostProof,
 } = require("./deterministicTerminalRejectionContract");
+const {
+  RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
+  isRgCostWithoutExplicitGlassLossScope,
+} = require("./glassLossScopeContract");
 
 const CATEGORY_SCOPE_KEYS = Object.freeze({
   FE: ["FEUER_INSURANCE"],
@@ -1349,6 +1353,18 @@ function deterministicCategoryCandidateBinding({
   occurrence,
 }) {
   const categoryView = resolvedCategoryView(worksheet, requirement);
+  if (
+    isRgCostWithoutExplicitGlassLossScope({
+      categoryView,
+      allCostMembers: component?.factRole === "COST",
+      occurrence,
+    })
+  )
+    return {
+      binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+      basis: RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
+      authoritative: true,
+    };
   const technicalSubcomponentBinding = technicalSubcomponentObjectBinding(
     component,
     occurrence
