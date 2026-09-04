@@ -99,6 +99,17 @@ strict fail-closed ab. Dieser neue Commit ersetzt den vorherigen Freeze; alle
 noch ausstehenden Finalgates beziehen sich ausschließlich auf seinen exakten
 SHA oder einen späteren, ausdrücklich dokumentierten Nachfolger.
 
+Der frische LF-Nachlauf auf `2ec71e4e6` bestätigte den RH-Scope-Fix für
+`RH-03`, deckte aber eine zweite Modellvarianz bei `RH-01` auf: Der
+source-verifizierte Satz zur dreifachen Jahreshöchstleistung wurde bei
+identischem Kandidaten einmal als passende und einmal als unpassende Rolle
+bewertet. Der nächste isolierte Forward-Fix bindet ausschließlich die
+vollständige Haftpflicht-Jahresaggregat-Klausel deterministisch und terminiert
+ihren Effekt nur bei ausschließlich direkten, vollständig aufgelösten
+Kandidaten. Negation, Optionalität, fehlender Summen- oder Jahresbezug und
+Fremdsparten bleiben fail-closed. Auch dieser Nachfolger muss sämtliche Gates
+erneut auf seinem exakten SHA bestehen.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen

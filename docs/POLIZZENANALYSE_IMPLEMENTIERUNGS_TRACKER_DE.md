@@ -6158,3 +6158,44 @@ Umweltklauseln oder eine Aufweichung des Source-/Offsetvertrags. Der Fix
 beweist nur die deterministische Scopeparität von `HP` und `RH`; der frische
 35-Zeilen-Lauf und der symmetrische Nichtregressionslauf bleiben auf dem neuen
 SHA erforderlich.
+
+## 130. LF-Nachlauf: RH-03 repariert, RH-01-Modellrolle driftet
+
+Der frische LF-Vollauf auf `2ec71e4e6` lief auf dem Mac Studio ohne Resume in
+1.213.448 ms durch. Die technische Artefaktprüfung bestand: 10 eindeutige
+Dokumente, 100 Result-, 100 Triage- und 100 Effects-Reports, null Hybrid- oder
+Embeddingziele, vollständige Manifest-Hashkette und null Abweichungen in den
+35 mal 11 aus dem geschriebenen XLSX zurückgelesenen Datenzellen.
+
+Der beabsichtigte Fix ist fachlich wirksam: `RH-03` wechselte bei identischem
+Quellkandidaten von `REFERENZZEILE_UNKLAR` zu
+`TEILWEISES_GEGENSTUECK`; A ist wieder `BELEGT`, B bleibt `TEILBELEGT`.
+Der Lauf ist dennoch kein fachlicher Gesamtpass. `RH-01` wechselte im selben
+Lauf von `GEGENSTUECK_GEFUNDEN` zu `REFERENZZEILE_UNKLAR`. Suche, Seite,
+Offsets und der source-verifizierte Scope sind korrekt und unverändert. Qwen
+änderte allein die Rollenbewertung desselben Kandidaten
+`candidate:c48a3495b0b68bb1a14737b610a36acaf289f8e75fb9a331f9e262e57b241e88`
+von `MATCH` zu `MISMATCH`:
+
+```text
+Bei der Gebäudehaftpflichtversicherung steht die jeweils maßgebende
+Pauschalversicherungssumme für alle Versicherungsfälle eines Jahres zusammen
+maximal dreimal zur Verfügung.
+```
+
+Die gerichtete Komponente `RH-01/annual_aggregate` ist korrekt als Bedingung
+modelliert; eine Profil- oder Rollenänderung wäre ein größerer Wertvertrag und
+ist nicht Teil dieses Fixes. Stattdessen bindet ein enger semantischer Vertrag
+eine Haftpflicht-Jahreshöchstleistung nur dann direkt, wenn dieselbe lokale
+Klausel die Versicherungssumme, den Jahresbezug und ein ausdrückliches
+maximales Vielfaches enthält und der source-verifizierte Abschnitt zur
+Haftpflicht gehört. Negierte, optionale, unvollständige und fremdspartige
+Formulierungen bleiben ausgeschlossen. Die nachgelagerte Effektentscheidung
+ist nur bei ausschließlich direkt gebundenen Kandidaten ohne ungelöste IDs
+serverseitig `DEFINED`; andernfalls bleibt der normale fail-closed Pfad aktiv.
+
+Der vollständige Laufbeweis einschließlich Zeilenpartition, Hashes und
+Gate-Urteil liegt außerhalb des Repositorys im privaten QA-Root als
+`FACHLICHER_LF_LAUFBERICHT_DE.md`. Nach diesem separaten Forward-Fix sind ein
+fokussierter Mac-Test und erneut ein frischer LF-Vollauf auf dem neuen SHA
+verpflichtend. Der symmetrische Lauf, Merge, Tag und Deployment bleiben offen.

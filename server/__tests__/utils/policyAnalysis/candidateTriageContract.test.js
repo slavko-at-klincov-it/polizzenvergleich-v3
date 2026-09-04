@@ -120,11 +120,20 @@ function directedLiabilityFixture({
   scopeKey = "HAFTPFLICHT_INSURANCE",
   heading = "8. Gebäude- und Grundstückshaftpflichtversicherung",
   narrowScopeKeys = [],
+  requirementId = "RH-03",
+  sourceReferenceId = "LF-HP-03",
+  requirementLabel =
+    "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
+  requestedFields = ["limit", "deductible"],
+  componentId = "environmental_limit",
+  componentLabel = "Umwelthaftpflichtlimit",
+  factRole = "LIMIT",
+  exactText =
+    "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme",
+  contextText: suppliedContextText = null,
 } = {}) {
   const fingerprint = "b".repeat(64);
-  const exactText =
-    "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme";
-  const contextText = `- Die ${exactText}.`;
+  const contextText = suppliedContextText || `- Die ${exactText}.`;
   const pageContent = `${heading}\n${contextText}`;
   const contextStart = heading.length + 1;
   const occurrenceStart = pageContent.indexOf(exactText);
@@ -194,17 +203,16 @@ function directedLiabilityFixture({
       },
       requirements: [
         {
-          id: "RH-03",
-          sourceReferenceId: "LF-HP-03",
-          label:
-            "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
-          requestedFields: ["limit", "deductible"],
+          id: requirementId,
+          sourceReferenceId,
+          label: requirementLabel,
+          requestedFields,
           scopeRules: { narrowAliases: [], narrowScopeKeys },
           components: [
             {
-              id: "environmental_limit",
-              label: "Umwelthaftpflichtlimit",
-              factRole: "LIMIT",
+              id: componentId,
+              label: componentLabel,
+              factRole,
               occurrences: [occurrence],
             },
           ],
@@ -295,6 +303,37 @@ describe("candidateTriageContract", () => {
       matchedAlias: "HAFTPFLICHT_INSURANCE",
     });
     expect(target.modelDecisionFields).toEqual(["roleMatch"]);
+  });
+
+  test("binds a source-proven RH annual aggregate without model variance", () => {
+    const exactText =
+      "für alle Versicherungsfälle eines Jahres zusammen maximal dreimal";
+    const fixture = directedLiabilityFixture({
+      requirementId: "RH-01",
+      sourceReferenceId: "LF-HP-01",
+      requirementLabel: "Pauschaldeckungssumme und Jahreshöchstleistung",
+      requestedFields: ["limit"],
+      componentId: "annual_aggregate",
+      componentLabel: "Jahreshöchstleistung",
+      factRole: "CONDITION",
+      exactText,
+      contextText: `Die maßgebende Pauschalversicherungssumme steht ${exactText} zur Verfügung.`,
+    });
+    const [target] = buildCandidateTriagePayload(fixture.worksheet, {
+      documentArtifact: fixture.documentArtifact,
+    }).bindingTargets;
+
+    expect(target.roleResolution).toMatchObject({
+      owner: "SERVER",
+      roleMatch: "MATCH",
+      basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+    });
+    expect(target.scopeResolution).toMatchObject({
+      owner: "SERVER",
+      scopeMatch: "GENERAL",
+      basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+    });
+    expect(target.modelDecisionFields).toEqual([]);
   });
 
   test("rejects the same RH wording in a source-proven foreign insurance section", () => {

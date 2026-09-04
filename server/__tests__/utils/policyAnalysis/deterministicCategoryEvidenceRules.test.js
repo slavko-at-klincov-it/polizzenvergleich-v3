@@ -1116,6 +1116,161 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("binds an explicit directed liability annual aggregate authoritatively", () => {
+    const input = bindingInput({
+      text: "Bei der Gebäudehaftpflichtversicherung steht die jeweils maßgebende Pauschalversicherungssumme für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung.",
+      exactText:
+        "für alle Versicherungsfälle eines Jahres zusammen maximal dreimal",
+    });
+    input.worksheet.catalog.categoryView = "RH";
+    input.requirement.id = "RH-01";
+    input.component = {
+      id: "annual_aggregate",
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "RH",
+        requirementId: "RH-01",
+        componentId: "annual_aggregate",
+        candidates: [
+          {
+            candidateId: "candidate:annual-aggregate",
+            candidateBinding: "DIRECT",
+            deterministicBindingBasis:
+              "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: ["candidate:annual-aggregate"],
+      coverageEffect: "DEFINED",
+      basis: "EXPLICIT_RH01_ANNUAL_AGGREGATE_MULTIPLE:RH:RH-01",
+    });
+  });
+
+  test("binds an equivalent directed liability aggregate wording", () => {
+    const input = bindingInput({
+      text: "Der Versicherer leistet für die innerhalb eines Versicherungsjahres eingetretenen Versicherungsfälle höchstens das Dreifache der jeweils maßgebenden Versicherungssumme.",
+      exactText:
+        "innerhalb eines Versicherungsjahres eingetretenen Versicherungsfälle höchstens das Dreifache",
+    });
+    input.worksheet.catalog.categoryView = "RH";
+    input.requirement.id = "RH-01";
+    input.component = {
+      id: "annual_aggregate",
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+
+    expect(deterministicCategoryCandidateBinding(input)).toMatchObject({
+      binding: "DIRECT",
+      basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+      authoritative: true,
+    });
+  });
+
+  test.each([
+    "Die Pauschalversicherungssumme steht maximal dreimal zur Verfügung.",
+    "Für alle Versicherungsfälle eines Jahres sind maximal drei Meldungen möglich.",
+    "Die Pauschalversicherungssumme steht nicht für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung.",
+    "Die Pauschalversicherungssumme kann optional für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung stehen.",
+  ])(
+    "does not authoritatively bind an incomplete or negative directed liability aggregate: %s",
+    (text) => {
+      const input = bindingInput({
+        text,
+        exactText: text.includes("Versicherungsfälle eines Jahres")
+          ? "Versicherungsfälle eines Jahres"
+          : "Pauschalversicherungssumme",
+      });
+      input.worksheet.catalog.categoryView = "RH";
+      input.requirement.id = "RH-01";
+      input.component = {
+        id: "annual_aggregate",
+        factRole: "CONDITION",
+      };
+      input.occurrence.sectionScopeHint.scopeKey = "HAFTPFLICHT_INSURANCE";
+
+      expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+    }
+  );
+
+  test("does not bind a directed liability aggregate in a foreign insurance section", () => {
+    const input = bindingInput({
+      text: "Die Pauschalversicherungssumme steht für alle Versicherungsfälle eines Jahres zusammen maximal dreimal zur Verfügung.",
+      exactText:
+        "für alle Versicherungsfälle eines Jahres zusammen maximal dreimal",
+    });
+    input.worksheet.catalog.categoryView = "RH";
+    input.requirement.id = "RH-01";
+    input.component = {
+      id: "annual_aggregate",
+      factRole: "CONDITION",
+    };
+    input.occurrence.sectionScopeHint.scopeKey = "FEUER_INSURANCE";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+  });
+
+  test.each([
+    {
+      unresolvedCandidateIds: ["candidate:unresolved"],
+      candidates: [
+        {
+          candidateId: "candidate:annual-aggregate",
+          candidateBinding: "DIRECT",
+          deterministicBindingBasis:
+            "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+        },
+      ],
+    },
+    {
+      unresolvedCandidateIds: [],
+      candidates: [
+        {
+          candidateId: "candidate:annual-aggregate",
+          candidateBinding: "MENTION_ONLY",
+          deterministicBindingBasis:
+            "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+        },
+      ],
+    },
+    {
+      unresolvedCandidateIds: [],
+      candidates: [
+        {
+          candidateId: "candidate:annual-aggregate",
+          candidateBinding: "DIRECT",
+          deterministicBindingBasis: "SOME_OTHER_BASIS",
+        },
+      ],
+    },
+  ])(
+    "does not force an RH annual aggregate effect for unresolved or mixed evidence",
+    ({ unresolvedCandidateIds, candidates }) => {
+      expect(
+        deterministicCategoryPreparedDecision({
+          categoryView: "RH",
+          requirementId: "RH-01",
+          componentId: "annual_aggregate",
+          unresolvedCandidateIds,
+          candidates,
+        })
+      ).toBeNull();
+    }
+  );
+
   test.each(["claims_handling", "claims_contact"])(
     "binds a complete VB-36 claims-service contact block for %s",
     (componentId) => {

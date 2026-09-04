@@ -654,6 +654,50 @@ function explicitHp02AnnualAggregateBinding({
 }
 
 /**
+ * Binds the directed liability-row form of an annual aggregate only when the
+ * same operative sentence names the liability sum, the annual claim set and
+ * an explicit maximum multiple. A bare annual reference or a foreign
+ * insurance section remains model-/contract-owned. Side effects: none.
+ */
+function explicitRh01AnnualAggregateBinding({
+  categoryView,
+  requirement,
+  component,
+  occurrence,
+}) {
+  if (
+    categoryView !== "RH" ||
+    requirement?.id !== "RH-01" ||
+    component?.id !== "annual_aggregate" ||
+    component?.factRole !== "CONDITION" ||
+    occurrence?.sectionScopeHint?.scopeKey !== "HAFTPFLICHT_INSURANCE"
+  )
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  if (
+    !/(?:Deckungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
+      clause
+    ) ||
+    !/(?:Versicherungsf[aä]lle\s+eines\s+Jahres|Versicherungsf[aä]lle\s+eines\s+Versicherungsjahres|innerhalb\s+eines\s+Versicherungsjahres\s+eingetretenen\s+Versicherungsf[aä]lle|Jahresh[oö]chstleistung|Jahres(?:gesamt|aggregate))/iu.test(
+      clause
+    ) ||
+    !/(?:maximal|höchstens|bis\s+zu)\s+(?:das\s+)?(?:\d{1,2}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\s*(?:-?\s*mal|-?\s*fach(?:e[snrm]?)?)/iu.test(
+      clause
+    ) ||
+    /\b(?:kein(?:e|en|er|es)?|ausgeschlossen)\b/iu.test(clause) ||
+    /\bnicht\b(?!\s+mehr\s+als)/iu.test(clause) ||
+    /\b(?:kann|könnte|optional|wahlweise|wenn|sofern)\b/iu.test(clause) ||
+    /\bgegen\s+(?:Mehrprämie|Mehrbeitrag|Zuschlag)\b/iu.test(clause)
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.DIRECT,
+    basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+    authoritative: true,
+  };
+}
+
+/**
  * A labelled liability summary can state the combined sum without repeating
  * "Personen- und Sachschäden". In that established policy notation the one
  * Pauschalversicherungssumme is the common limit for both damage classes.
@@ -1429,6 +1473,14 @@ function deterministicCategoryCandidateBinding({
   });
   if (hp02Binding) return hp02Binding;
 
+  const rh01AnnualAggregateBinding = explicitRh01AnnualAggregateBinding({
+    categoryView,
+    requirement,
+    component,
+    occurrence,
+  });
+  if (rh01AnnualAggregateBinding) return rh01AnnualAggregateBinding;
+
   const hp01Binding = explicitHp01CombinedLiabilitySumBinding({
     categoryView,
     requirement,
@@ -1959,6 +2011,25 @@ function deterministicCategoryPreparedDecision(target) {
       ),
       coverageEffect: COVERAGE_EFFECT.DEFINED,
       basis: "EXPLICIT_HP02_ANNUAL_AGGREGATE_MULTIPLE:HP:HP-02",
+    };
+  if (
+    target.categoryView === "RH" &&
+    target.requirementId === "RH-01" &&
+    target.componentId === "annual_aggregate" &&
+    !target.unresolvedCandidateIds?.length &&
+    target.candidates.every(
+      ({ candidateBinding, deterministicBindingBasis }) =>
+        candidateBinding === DETERMINISTIC_BINDING.DIRECT &&
+        deterministicBindingBasis ===
+          "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE"
+    )
+  )
+    return {
+      selectedCandidateIds: target.candidates.map(
+        ({ candidateId }) => candidateId
+      ),
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+      basis: "EXPLICIT_RH01_ANNUAL_AGGREGATE_MULTIPLE:RH:RH-01",
     };
   if (
     target.categoryView === "ST" &&
