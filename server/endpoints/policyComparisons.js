@@ -19,16 +19,8 @@ const {
   POLICY_COMPARISON_MODE,
 } = require("../utils/policyComparison/modes");
 const {
-  readValidatedComparisonResult,
-} = require("../utils/policyComparison/comparisonResultReader");
-const {
-  POLICY_COMPARISON_EXPORT_POLICY,
-  comparisonExportContractPolicy,
-  validateComparisonExportContract,
-} = require("../utils/policyComparison/comparisonExportContract");
-const {
-  POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
-} = require("../utils/policyComparison/artifactSetPublisher");
+  readValidatedStoredComparisonArtifacts,
+} = require("../utils/policyComparison/storedArtifactAccess");
 
 function comparisonOptions(workspace) {
   const mode = policyComparisonMode(workspace.policyComparisonMode);
@@ -445,22 +437,15 @@ function policyComparisonEndpoints(app) {
             success: false,
             error: "Comparison result is not available yet.",
           });
-        const resultFile = path.resolve(
-          policyComparisonsPath,
-          session.resultPath,
-          "comparison.private.json"
-        );
-        if (
-          !isWithin(policyComparisonsPath, resultFile) ||
-          !fs.existsSync(resultFile)
-        )
-          throw new Error("COMPARISON_RESULT_MISSING");
+        const artifacts = readValidatedStoredComparisonArtifacts({
+          policyComparisonsRoot: policyComparisonsPath,
+          resultPath: session.resultPath,
+          expectedComparisonMode: session.comparisonMode,
+          expectedSessionUuid: session.uuid,
+        });
         return response.status(200).json({
           success: true,
-          result: readValidatedComparisonResult(
-            resultFile,
-            session.comparisonMode
-          ),
+          result: artifacts.result,
         });
       } catch (error) {
         console.error(error.message, error);
@@ -515,78 +500,21 @@ function policyComparisonEndpoints(app) {
             success: false,
             error: "Comparison result is not available yet.",
           });
-        const workbook = path.resolve(
-          policyComparisonsPath,
-          session.resultPath,
-          "polizzenvergleich.xlsx"
-        );
-        if (
-          !isWithin(policyComparisonsPath, workbook) ||
-          !fs.existsSync(workbook)
-        )
-          throw new Error("COMPARISON_WORKBOOK_MISSING");
-        const resultFile = path.resolve(
-          policyComparisonsPath,
-          session.resultPath,
-          "comparison.private.json"
-        );
-        if (
-          !isWithin(policyComparisonsPath, resultFile) ||
-          !fs.existsSync(resultFile)
-        )
-          throw new Error("COMPARISON_RESULT_MISSING");
-        const result = readValidatedComparisonResult(
-          resultFile,
-          session.comparisonMode
-        );
-        const artifactSetManifestFile = path.resolve(
-          policyComparisonsPath,
-          session.resultPath,
-          POLICY_COMPARISON_ARTIFACT_SET_MANIFEST
-        );
-        const exportFile = path.resolve(
-          policyComparisonsPath,
-          session.resultPath,
-          "export.private.json"
-        );
-        if (
-          !isWithin(policyComparisonsPath, artifactSetManifestFile) ||
-          !isWithin(policyComparisonsPath, exportFile)
-        )
-          throw new Error("COMPARISON_EXPORT_PATH_INVALID");
-        const strictExportRequired =
-          Number(result.schemaVersion) >= 15 ||
-          fs.existsSync(artifactSetManifestFile);
-        if (strictExportRequired) {
-          if (
-            !fs.existsSync(artifactSetManifestFile) ||
-            !fs.existsSync(exportFile)
-          )
-            throw new Error("COMPARISON_EXPORT_CONTRACT_MISSING");
-          const exportContract = JSON.parse(
-            fs.readFileSync(exportFile, "utf8")
-          );
-          validateComparisonExportContract(exportContract, {
-            expectedComparisonMode: session.comparisonMode,
-            expectedSessionUuid: session.uuid,
-            expectedRunSignature: result.runSignature,
-            artifactSetManifestFile,
-          });
-        } else if (fs.existsSync(exportFile)) {
-          const historicalExport = JSON.parse(
-            fs.readFileSync(exportFile, "utf8")
-          );
-          if (
-            comparisonExportContractPolicy(historicalExport) !==
-            POLICY_COMPARISON_EXPORT_POLICY.HISTORICAL_SCHEMA_1_READ_ONLY
-          )
-            throw new Error("COMPARISON_EXPORT_CONTRACT_UNSUPPORTED");
-        }
+        const artifacts = readValidatedStoredComparisonArtifacts({
+          policyComparisonsRoot: policyComparisonsPath,
+          resultPath: session.resultPath,
+          expectedComparisonMode: session.comparisonMode,
+          expectedSessionUuid: session.uuid,
+        });
         const filename =
           session.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
             ? "LF-IMMO-Referenzvergleich.xlsx"
             : "Gesamtvergleich.xlsx";
-        return response.download(workbook, filename);
+        response.attachment(filename);
+        response.type(
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        return response.send(artifacts.workbookBytes);
       } catch (error) {
         console.error(error.message, error);
         return response

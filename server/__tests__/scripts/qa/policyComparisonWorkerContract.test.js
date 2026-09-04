@@ -150,13 +150,9 @@ describe("policy comparison worker contract", () => {
       path.join(REPOSITORY_ROOT, "server/endpoints/policyComparisons.js"),
       "utf8"
     );
-    expect(endpoint).toContain("validateComparisonExportContract(");
-    expect(endpoint).toContain("POLICY_COMPARISON_ARTIFACT_SET_MANIFEST");
+    expect(endpoint).toContain("readValidatedStoredComparisonArtifacts({");
     expect(endpoint).toContain("expectedSessionUuid: session.uuid");
-    expect(endpoint).toContain("expectedRunSignature: result.runSignature");
-    expect(endpoint.indexOf("validateComparisonExportContract(")).toBeLessThan(
-      endpoint.indexOf("response.download(workbook, filename)")
-    );
-    expect(endpoint).toContain("HISTORICAL_SCHEMA_1_READ_ONLY");
+    expect(endpoint).toContain("response.send(artifacts.workbookBytes)");
+    expect(endpoint).not.toContain("response.download(workbook, filename)");
   });
 });
