@@ -6256,3 +6256,8 @@ Es entstehen dadurch keine zusätzlichen Modellaufrufe und kein zweites
 PDF-Parsing. Vergleichs-, Evidenz- und Produktsemantik bleiben unverändert.
 Da dieser Fix einen neuen SHA erzeugt, müssen LF- und symmetrischer Finalgate
 auf dem resultierenden gemeinsamen Release-SHA wiederholt werden.
+
+Die erste Runner-Prüfung bestand alle 18 fokussierten Vertragstests. Der
+Server-Lint beanstandete ausschließlich den Prettier-Zeilenumbruch des zuvor
+ergänzten RH-Basisvergleichs; ein eigener semantikneutraler Format-Forward-Fix
+stellt den vollständigen Lint-Gate wieder her.

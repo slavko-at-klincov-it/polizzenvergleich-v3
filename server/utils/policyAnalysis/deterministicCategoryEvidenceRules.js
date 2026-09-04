@@ -2020,8 +2020,7 @@ function deterministicCategoryPreparedDecision(target) {
     target.candidates.every(
       ({ candidateBinding, deterministicBindingBasis }) =>
         candidateBinding === DETERMINISTIC_BINDING.DIRECT &&
-        deterministicBindingBasis ===
-          "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE"
+        deterministicBindingBasis === "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE"
     )
   )
     return {
