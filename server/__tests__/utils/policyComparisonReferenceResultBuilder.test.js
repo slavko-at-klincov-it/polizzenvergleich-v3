@@ -50,7 +50,8 @@ function effectFor(component) {
 }
 
 function requestedFieldsFor(component) {
-  if (Array.isArray(component.requestedFields)) return component.requestedFields;
+  if (Array.isArray(component.requestedFields))
+    return component.requestedFields;
   if (component.factRole === "LIMIT") return ["limit"];
   if (component.factRole === "DEDUCTIBLE") return ["deductible"];
   return [];
@@ -115,26 +116,28 @@ function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
       JSON.stringify({
         requirements: catalog.requirements.map((requirement) => {
           const factsByField = new Map();
-          requirement.components.flatMap((component) =>
-            requestedFieldsFor(component).map((field) => ({
-              field,
-              component,
-            }))
-          ).forEach(({ field, component }) => {
-            if (!factsByField.has(field)) factsByField.set(field, []);
-            if (found(requirement))
-              factsByField.get(field).push({
-                rawValue: "10",
-                normalizedValue: "10",
-                valueType: "MONEY",
-                source: {
-                  candidateId: `candidate:${requirement.id}:${component.id}`,
-                  physicalPageNumber: 1,
-                  exactText: "10",
-                },
-                componentScope: { id: component.id },
-              });
-          });
+          requirement.components
+            .flatMap((component) =>
+              requestedFieldsFor(component).map((field) => ({
+                field,
+                component,
+              }))
+            )
+            .forEach(({ field, component }) => {
+              if (!factsByField.has(field)) factsByField.set(field, []);
+              if (found(requirement))
+                factsByField.get(field).push({
+                  rawValue: "10",
+                  normalizedValue: "10",
+                  valueType: "MONEY",
+                  source: {
+                    candidateId: `candidate:${requirement.id}:${component.id}`,
+                    physicalPageNumber: 1,
+                    exactText: "10",
+                  },
+                  componentScope: { id: component.id },
+                });
+            });
           const fields = [...factsByField].map(([field, facts]) => ({
             field,
             status: found(requirement) ? "FOUND" : "NOT_FOUND",
@@ -585,8 +588,9 @@ describe("directed LF reference result builder", () => {
       "rows.private.json"
     );
     const firstRows = JSON.parse(fs.readFileSync(firstRowsFile, "utf8"));
-    firstRows.find(({ categoryId }) => categoryId === requirement.id).reviewStatus =
-      "TEILBELEGT";
+    firstRows.find(
+      ({ categoryId }) => categoryId === requirement.id
+    ).reviewStatus = "TEILBELEGT";
     fs.writeFileSync(firstRowsFile, JSON.stringify(firstRows));
     const secondRowsFile = path.join(
       second.outputDirectory,
@@ -595,8 +599,9 @@ describe("directed LF reference result builder", () => {
       "rows.private.json"
     );
     const secondRows = JSON.parse(fs.readFileSync(secondRowsFile, "utf8"));
-    secondRows.find(({ categoryId }) => categoryId === requirement.id).reviewStatus =
-      "UNGEKLÄRT";
+    secondRows.find(
+      ({ categoryId }) => categoryId === requirement.id
+    ).reviewStatus = "UNGEKLÄRT";
     fs.writeFileSync(secondRowsFile, JSON.stringify(secondRows));
 
     const result = buildReferenceComparisonResult(
@@ -684,7 +689,11 @@ describe("directed LF reference result builder", () => {
     fs.writeFileSync(effectsFile, JSON.stringify(effects));
     const wrongScopeResult = buildReferenceComparisonResult(
       [
-        writeRun(root, document("reference-a-wrong-scope", "A", 0), allReferenceIds),
+        writeRun(
+          root,
+          document("reference-a-wrong-scope", "A", 0),
+          allReferenceIds
+        ),
         counterpart,
       ],
       {}
@@ -832,9 +841,7 @@ describe("directed LF reference result builder", () => {
     );
     const termsEffects = JSON.parse(fs.readFileSync(termsEffectsFile, "utf8"));
     termsEffects.judgements
-      .filter(
-        ({ requirementId }) => requirementId === objectRequirement.id
-      )
+      .filter(({ requirementId }) => requirementId === objectRequirement.id)
       .forEach((judgement) => {
         judgement.coverageEffect = "DEFINED";
       });
@@ -883,9 +890,7 @@ describe("directed LF reference result builder", () => {
       "effects",
       "materialized.private.json"
     );
-    const termsEffects = JSON.parse(
-      fs.readFileSync(termsEffectsFile, "utf8")
-    );
+    const termsEffects = JSON.parse(fs.readFileSync(termsEffectsFile, "utf8"));
     termsEffects.judgements
       .filter(({ requirementId }) => requirementId === objectRequirement.id)
       .forEach((judgement) => {
@@ -931,9 +936,7 @@ describe("directed LF reference result builder", () => {
     );
     const termsEffects = JSON.parse(fs.readFileSync(termsEffectsFile, "utf8"));
     termsEffects.judgements
-      .filter(
-        ({ requirementId }) => requirementId === objectRequirement.id
-      )
+      .filter(({ requirementId }) => requirementId === objectRequirement.id)
       .forEach((judgement) => {
         judgement.coverageEffect = "DEFINED";
       });

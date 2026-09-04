@@ -17,9 +17,7 @@ const {
   assertCustomerResultSemanticParity,
   customerOutcomeFromText,
 } = require("./customerResultSemanticContract");
-const {
-  publishComparisonArtifactSet,
-} = require("./artifactSetPublisher");
+const { publishComparisonArtifactSet } = require("./artifactSetPublisher");
 const {
   deriveCustomerMetrics,
   validateCustomerComparison,
@@ -993,11 +991,11 @@ function completeTextExtraction(documentArtifact) {
   const extraction = documentArtifact?.document?.pdfExtraction;
   return Boolean(
     documentArtifact?.schemaVersion === 1 &&
-      extraction?.complete === true &&
-      Number.isInteger(extraction.totalPages) &&
-      extraction.totalPages > 0 &&
-      extraction.processedPages === extraction.totalPages &&
-      extraction.pagesWithText === extraction.totalPages
+    extraction?.complete === true &&
+    Number.isInteger(extraction.totalPages) &&
+    extraction.totalPages > 0 &&
+    extraction.processedPages === extraction.totalPages &&
+    extraction.pagesWithText === extraction.totalPages
   );
 }
 
@@ -1011,18 +1009,18 @@ function completeCategoryTechnicalContract({
   const componentCount = Number(worksheet?.summary?.componentCount || 0);
   return Boolean(
     completeTextExtraction(documentArtifact) &&
-      worksheet?.document?.physicalPages ===
-        documentArtifact.document.pdfExtraction.totalPages &&
-      ["PASS", "TECHNICAL_PASS_REVIEW_REQUIRED"].includes(report?.status) &&
-      Number.isInteger(report?.rowCount) &&
-      report.rowCount > 0 &&
-      report.rowCount === report.expectedRowCount &&
-      report?.gates &&
-      Object.values(report.gates).length > 0 &&
-      Object.values(report.gates).every(Boolean) &&
-      componentCount > 0 &&
-      materializedEvidence?.judgements?.length === componentCount &&
-      targets?.length === componentCount
+    worksheet?.document?.physicalPages ===
+      documentArtifact.document.pdfExtraction.totalPages &&
+    ["PASS", "TECHNICAL_PASS_REVIEW_REQUIRED"].includes(report?.status) &&
+    Number.isInteger(report?.rowCount) &&
+    report.rowCount > 0 &&
+    report.rowCount === report.expectedRowCount &&
+    report?.gates &&
+    Object.values(report.gates).length > 0 &&
+    Object.values(report.gates).every(Boolean) &&
+    componentCount > 0 &&
+    materializedEvidence?.judgements?.length === componentCount &&
+    targets?.length === componentCount
   );
 }
 
@@ -1180,35 +1178,35 @@ function componentSearchAudit({
   });
   const deterministicOutOfCategoryTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_OTHER_CATEGORY_TERMINAL_CONTRACT_ID
   );
   const deterministicCoverageOnlyObjectClassificationTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASSIFICATION_TERMINAL_CONTRACT_ID
   );
   const deterministicCoverageOnlyObjectClassExclusionTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_TERMINAL_CONTRACT_ID
   );
   const deterministicNonContractualRiskInformationTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_NON_CONTRACTUAL_RISK_INFORMATION_TERMINAL_CONTRACT_ID
   );
   const deterministicPostLossScaffoldingCostTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID
   );
   const deterministicLw20NonTargetOccurrenceTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID
   );
   const deterministicVs22NonTargetWasteOccurrenceTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID
   );
   const deterministicVs25SumEqualizationTerminal = Boolean(
     terminalRejectionAudit?.contractId ===
-      DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID
+    DETERMINISTIC_VS25_SUM_EQUALIZATION_TERMINAL_CONTRACT_ID
   );
   const deterministicRejectionTerminal = Boolean(terminalRejectionAudit);
   const lw20DefaultExclusionOverrideAudit =
@@ -1228,13 +1226,13 @@ function componentSearchAudit({
   });
   const serverNegativeTerminal = Boolean(
     judgement?.evidencePresence === "NOT_FOUND" &&
-      judgement?.coverageEffect === "UNKNOWN" &&
-      judgement?.conflictState === "NONE" &&
-      judgement?.decisionOwner === "SERVER" &&
-      Array.isArray(judgement?.selectedCandidateIds) &&
-      judgement.selectedCandidateIds.length === 0 &&
-      Array.isArray(judgement?.unresolvedCandidateIds) &&
-      judgement.unresolvedCandidateIds.length === 0
+    judgement?.coverageEffect === "UNKNOWN" &&
+    judgement?.conflictState === "NONE" &&
+    judgement?.decisionOwner === "SERVER" &&
+    Array.isArray(judgement?.selectedCandidateIds) &&
+    judgement.selectedCandidateIds.length === 0 &&
+    Array.isArray(judgement?.unresolvedCandidateIds) &&
+    judgement.unresolvedCandidateIds.length === 0
   );
   const negativeSearchApproved = [
     "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
@@ -1242,22 +1240,22 @@ function componentSearchAudit({
   ].includes(requirement?.negativeSearchPolicy);
   const completeControlledSearch = Boolean(
     negativeSearchApproved &&
-      completeCategoryTechnicalContract({
-        documentArtifact,
-        worksheet,
-        materializedEvidence,
-        targets,
-        report,
-      }) &&
-      ((zeroOccurrenceTerminal && zeroCandidateTerminal) ||
-        deterministicRejectionTerminal) &&
-      serverNegativeTerminal
+    completeCategoryTechnicalContract({
+      documentArtifact,
+      worksheet,
+      materializedEvidence,
+      targets,
+      report,
+    }) &&
+    ((zeroOccurrenceTerminal && zeroCandidateTerminal) ||
+      deterministicRejectionTerminal) &&
+    serverNegativeTerminal
   );
   const verified = Boolean(
     completeControlledSearch &&
-      requirement?.negativeSearchPolicy ===
-        "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1" &&
-      requirement?.absenceCertification?.requirementDigest
+    requirement?.negativeSearchPolicy ===
+      "CERTIFY_COMPLETE_ZERO_OCCURRENCE_V1" &&
+    requirement?.absenceCertification?.requirementDigest
   );
   const comparisonTreatment =
     verified &&
@@ -2274,8 +2272,7 @@ async function validateComparisonArtifactRoundTrip({ result, files }) {
   if (workbook.worksheets.length !== 1)
     throw new Error("COMPARISON_ARTIFACT_WORKBOOK_SHEET_COUNT_INVALID");
   const sheet = workbook.getWorksheet(CUSTOMER_WORKBOOK_SHEET);
-  if (!sheet)
-    throw new Error("COMPARISON_ARTIFACT_WORKBOOK_SHEET_MISSING");
+  if (!sheet) throw new Error("COMPARISON_ARTIFACT_WORKBOOK_SHEET_MISSING");
   if (
     JSON.stringify(sheet.getRow(1).values.slice(1)) !==
     JSON.stringify(CUSTOMER_WORKBOOK_HEADERS)
@@ -2336,10 +2333,7 @@ async function writeComparisonArtifacts({
   const published = await publishComparisonArtifactSet({
     outputDirectory,
     writeArtifacts: async (stagingDirectory) => {
-      const jsonFile = path.join(
-        stagingDirectory,
-        "comparison.private.json"
-      );
+      const jsonFile = path.join(stagingDirectory, "comparison.private.json");
       const markdownFile = path.join(stagingDirectory, "comparison.md");
       const workbookFile = path.join(
         stagingDirectory,

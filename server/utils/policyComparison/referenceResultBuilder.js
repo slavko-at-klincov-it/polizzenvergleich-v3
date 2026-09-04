@@ -10,9 +10,7 @@ const {
 const {
   componentScopeContract,
 } = require("../policyAnalysis/componentScopePolicyContract");
-const {
-  publishComparisonArtifactSet,
-} = require("./artifactSetPublisher");
+const { publishComparisonArtifactSet } = require("./artifactSetPublisher");
 
 const REFERENCE_RESULT_SCHEMA_VERSION = 2;
 const REFERENCE_RESULT_CONTRACT_ID = "LF_REFERENCE_A_TO_B_RESULT_V2";
@@ -698,8 +696,7 @@ async function validateReferenceArtifactRoundTrip({ result, files }) {
   if (workbook.worksheets.length !== 1)
     throw new Error("REFERENCE_ARTIFACT_WORKBOOK_SHEET_COUNT_INVALID");
   const sheet = workbook.getWorksheet(REFERENCE_WORKBOOK_SHEET);
-  if (!sheet)
-    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_SHEET_MISSING");
+  if (!sheet) throw new Error("REFERENCE_ARTIFACT_WORKBOOK_SHEET_MISSING");
   if (
     JSON.stringify(sheet.getRow(1).values.slice(1)) !==
     JSON.stringify(REFERENCE_WORKBOOK_HEADERS)
@@ -720,7 +717,9 @@ async function validateReferenceArtifactRoundTrip({ result, files }) {
       throw new Error(
         `REFERENCE_ARTIFACT_WORKBOOK_ROW_IDENTITY_INVALID:${expected.categoryId}`
       );
-    if (sheet.getCell(`J${rowNumber}`).value !== expected.pointDecision?.outcome)
+    if (
+      sheet.getCell(`J${rowNumber}`).value !== expected.pointDecision?.outcome
+    )
       throw new Error(
         `REFERENCE_ARTIFACT_WORKBOOK_OUTCOME_INVALID:${expected.categoryId}`
       );
@@ -739,10 +738,7 @@ async function writeReferenceComparisonArtifacts({
   const published = await publishComparisonArtifactSet({
     outputDirectory,
     writeArtifacts: async (stagingDirectory) => {
-      const jsonFile = path.join(
-        stagingDirectory,
-        "comparison.private.json"
-      );
+      const jsonFile = path.join(stagingDirectory, "comparison.private.json");
       const markdownFile = path.join(stagingDirectory, "comparison.md");
       const workbookFile = path.join(
         stagingDirectory,

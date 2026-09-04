@@ -1389,8 +1389,7 @@ describe("policy comparison result builder", () => {
         "COMMON_ACCESS_AREA_BUILDING_GLAZING",
       ],
       comparisonPolicy: "EXACT_SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_V1",
-      satisfactionPolicy:
-        "EXACTLY_ONE_CONFLICT_FREE_SCOPE_KEY_PER_SIDE",
+      satisfactionPolicy: "EXACTLY_ONE_CONFLICT_FREE_SCOPE_KEY_PER_SIDE",
     };
     const occurrence = {
       candidateId: "candidate:el-13",
@@ -1571,7 +1570,9 @@ describe("policy comparison result builder", () => {
     });
 
     expect(
-      Object.fromEntries(atoms.map((atom) => [atom.componentId, atom.scopePolicy]))
+      Object.fromEntries(
+        atoms.map((atom) => [atom.componentId, atom.scopePolicy])
+      )
     ).toEqual({
       solar_glass: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       special_glass: "GENERAL_REQUIRED",
@@ -3074,8 +3075,7 @@ describe("policy comparison result builder", () => {
         delete tampered.categories[0].rows[0].pointDecision
           .unilateralCoverageAbsenceAudit,
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible =
-          false),
+        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible = false),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
           "INCLUDED_OVER_EXCLUDED_V1"),
@@ -3133,8 +3133,7 @@ describe("policy comparison result builder", () => {
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.bilateralAbsenceAudit.sides[0].physicalPagesChecked += 1),
       (tampered) =>
-        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction =
-          false),
+        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction = false),
       (tampered) => {
         const decision = tampered.categories[0].rows[0].pointDecision;
         decision.outcome = "KEIN_DOKUMENTIERTER_VORTEIL";
