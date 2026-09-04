@@ -258,6 +258,7 @@ describe("comparison atom canonicalization", () => {
         rawAtom("narrow-valid", {
           selectedScopePicture: "NARROW_ONLY",
           scopePolicy: "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+          comparisonScopeKeys: ["STURM_INSURANCE"],
         })
       )
     ).toBe(true);

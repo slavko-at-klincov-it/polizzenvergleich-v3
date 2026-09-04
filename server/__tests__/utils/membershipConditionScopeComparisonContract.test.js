@@ -22,6 +22,9 @@ const {
   customerResultText,
 } = require("../../utils/policyComparison/customerResultPresenter");
 const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+} = require("../../utils/policyComparison/customerResultRuleOutcomeContract");
+const {
   FE_C02_REQUIREMENT_CONTRACT_DIGEST,
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
@@ -549,9 +552,13 @@ describe("membership condition-scope comparison contract", () => {
       },
     ];
     const result = {
-      schemaVersion: 14,
+      schemaVersion: 15,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
+      customerResultRuleOutcomeContract: {
+        schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+        contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+      },
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
       categories,
       totals: deriveCustomerMetrics(categories),
@@ -684,9 +691,13 @@ describe("membership condition-scope comparison contract", () => {
       },
     ];
     const result = {
-      schemaVersion: 14,
+      schemaVersion: 15,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
+      customerResultRuleOutcomeContract: {
+        schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+        contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+      },
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
       categories,
       totals: deriveCustomerMetrics(categories),

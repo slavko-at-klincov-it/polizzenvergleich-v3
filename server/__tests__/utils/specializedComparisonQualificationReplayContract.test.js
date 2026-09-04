@@ -16,6 +16,9 @@ const {
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
 const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+} = require("../../utils/policyComparison/customerResultRuleOutcomeContract");
+const {
   buildFeC07ConditionAbsenceAudit,
 } = require("../../utils/policyAnalysis/feC07ConditionAbsenceAudit");
 
@@ -373,9 +376,13 @@ function resultFor(input) {
     },
   ];
   return {
-    schemaVersion: 14,
+    schemaVersion: 15,
     status: "COMPARISON_RESULT_MATERIALIZED",
     productProfile: PRODUCT_PROFILE,
+    customerResultRuleOutcomeContract: {
+      schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+      contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+    },
     documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
     categories,
     totals: deriveCustomerMetrics(categories),

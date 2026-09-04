@@ -980,9 +980,8 @@ describe("category semantic exceptions", () => {
         occurrence: stormOccurrence,
       })
     ).toEqual({
-      binding: "MENTION_ONLY",
-      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
-      authoritative: true,
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
     });
 
     const lateCrossReference = {
