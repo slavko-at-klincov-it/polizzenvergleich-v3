@@ -486,11 +486,15 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       const mentionOnly =
         deterministicCategoryBinding.binding ===
         DETERMINISTIC_BINDING.MENTION_ONLY;
+      const scopeOnlyMention =
+        mentionOnly &&
+        deterministicCategoryBinding.basis ===
+          RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE;
       const narrowScope =
         deterministicCategoryBinding.binding ===
         DETERMINISTIC_BINDING.NARROW_SCOPE;
       if (
-        mentionOnly ||
+        (mentionOnly && !scopeOnlyMention) ||
         roleResolution.owner === "MODEL" ||
         roleResolution.roleMatch === ROLE_MATCH.UNRESOLVED
       )
