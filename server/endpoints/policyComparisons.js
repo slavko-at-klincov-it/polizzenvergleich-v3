@@ -21,6 +21,14 @@ const {
 const {
   readValidatedComparisonResult,
 } = require("../utils/policyComparison/comparisonResultReader");
+const {
+  POLICY_COMPARISON_EXPORT_POLICY,
+  comparisonExportContractPolicy,
+  validateComparisonExportContract,
+} = require("../utils/policyComparison/comparisonExportContract");
+const {
+  POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
+} = require("../utils/policyComparison/artifactSetPublisher");
 
 function comparisonOptions(workspace) {
   const mode = policyComparisonMode(workspace.policyComparisonMode);
@@ -527,7 +535,53 @@ function policyComparisonEndpoints(app) {
           !fs.existsSync(resultFile)
         )
           throw new Error("COMPARISON_RESULT_MISSING");
-        readValidatedComparisonResult(resultFile, session.comparisonMode);
+        const result = readValidatedComparisonResult(
+          resultFile,
+          session.comparisonMode
+        );
+        const artifactSetManifestFile = path.resolve(
+          policyComparisonsPath,
+          session.resultPath,
+          POLICY_COMPARISON_ARTIFACT_SET_MANIFEST
+        );
+        const exportFile = path.resolve(
+          policyComparisonsPath,
+          session.resultPath,
+          "export.private.json"
+        );
+        if (
+          !isWithin(policyComparisonsPath, artifactSetManifestFile) ||
+          !isWithin(policyComparisonsPath, exportFile)
+        )
+          throw new Error("COMPARISON_EXPORT_PATH_INVALID");
+        const strictExportRequired =
+          Number(result.schemaVersion) >= 15 ||
+          fs.existsSync(artifactSetManifestFile);
+        if (strictExportRequired) {
+          if (
+            !fs.existsSync(artifactSetManifestFile) ||
+            !fs.existsSync(exportFile)
+          )
+            throw new Error("COMPARISON_EXPORT_CONTRACT_MISSING");
+          const exportContract = JSON.parse(
+            fs.readFileSync(exportFile, "utf8")
+          );
+          validateComparisonExportContract(exportContract, {
+            expectedComparisonMode: session.comparisonMode,
+            expectedSessionUuid: session.uuid,
+            expectedRunSignature: result.runSignature,
+            artifactSetManifestFile,
+          });
+        } else if (fs.existsSync(exportFile)) {
+          const historicalExport = JSON.parse(
+            fs.readFileSync(exportFile, "utf8")
+          );
+          if (
+            comparisonExportContractPolicy(historicalExport) !==
+            POLICY_COMPARISON_EXPORT_POLICY.HISTORICAL_SCHEMA_1_READ_ONLY
+          )
+            throw new Error("COMPARISON_EXPORT_CONTRACT_UNSUPPORTED");
+        }
         const filename =
           session.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
             ? "LF-IMMO-Referenzvergleich.xlsx"

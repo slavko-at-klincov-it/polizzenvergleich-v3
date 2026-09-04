@@ -36,6 +36,9 @@ const {
   archiveComparisonWorkbook,
 } = require("../utils/policyComparison/workbookArchive");
 const {
+  buildComparisonExportContract,
+} = require("../utils/policyComparison/comparisonExportContract");
+const {
   validateCustomerComparisonFile,
 } = require("../utils/policyComparison/customerMetricContract");
 const {
@@ -397,10 +400,17 @@ async function main() {
     runSignature: signature,
     comparisonMode,
   });
-  writePrivateJson(path.join(resultDirectory, "export.private.json"), {
-    schemaVersion: 1,
+  const exportContract = buildComparisonExportContract({
+    comparisonMode,
+    sessionUuid,
+    runSignature: signature,
+    artifactSetManifestFile: artifacts.artifactSetManifestFile,
     archivedWorkbook,
   });
+  writePrivateJson(
+    path.join(resultDirectory, "export.private.json"),
+    exportContract
+  );
   const resultPath = path.relative(policyComparisonsPath, resultDirectory);
   await updateSession(session.id, {
     status: "COMPLETED",

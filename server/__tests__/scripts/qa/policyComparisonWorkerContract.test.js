@@ -129,9 +129,31 @@ describe("policy comparison worker contract", () => {
 
   test("archives the completed workbook before marking the session complete", () => {
     expect(source).toContain("archiveComparisonWorkbook({");
+    expect(source).toContain("buildComparisonExportContract({");
+    expect(source).toContain(
+      "artifactSetManifestFile: artifacts.artifactSetManifestFile"
+    );
     expect(source).toContain('"export.private.json"');
     expect(source.indexOf("archiveComparisonWorkbook({")).toBeLessThan(
       source.indexOf('status: "COMPLETED"')
     );
+    expect(source.indexOf("buildComparisonExportContract({")).toBeLessThan(
+      source.indexOf('status: "COMPLETED"')
+    );
+  });
+
+  test("verifies current workbook downloads against the persisted export hash chain", () => {
+    const endpoint = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "server/endpoints/policyComparisons.js"),
+      "utf8"
+    );
+    expect(endpoint).toContain("validateComparisonExportContract(");
+    expect(endpoint).toContain("POLICY_COMPARISON_ARTIFACT_SET_MANIFEST");
+    expect(endpoint).toContain("expectedSessionUuid: session.uuid");
+    expect(endpoint).toContain("expectedRunSignature: result.runSignature");
+    expect(endpoint.indexOf("validateComparisonExportContract(")).toBeLessThan(
+      endpoint.indexOf("response.download(workbook, filename)")
+    );
+    expect(endpoint).toContain("HISTORICAL_SCHEMA_1_READ_ONLY");
   });
 });
