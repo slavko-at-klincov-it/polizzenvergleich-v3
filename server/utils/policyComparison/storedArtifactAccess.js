@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const { isWithin } = require("../files");
 const {
   LF_REFERENCE_PROFILE,
 } = require("./lfReferenceProfile");
@@ -26,8 +25,18 @@ function accessError(code) {
   return error;
 }
 
+function isPathWithin(root, target) {
+  const relative = path.relative(root, target);
+  return (
+    relative.length > 0 &&
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
 function regularFile(file, root, fsImpl, missingCode) {
-  if (!isWithin(root, file) || !fsImpl.existsSync(file))
+  if (!isPathWithin(root, file) || !fsImpl.existsSync(file))
     throw accessError(missingCode);
   const stat = fsImpl.lstatSync(file);
   if (stat.isSymbolicLink() || !stat.isFile())
@@ -61,7 +70,7 @@ function readValidatedStoredComparisonArtifacts(
 ) {
   const root = path.resolve(String(policyComparisonsRoot || ""));
   const resultDirectory = path.resolve(root, String(resultPath || ""));
-  if (!isWithin(root, resultDirectory))
+  if (!isPathWithin(root, resultDirectory))
     throw accessError("COMPARISON_STORED_ARTIFACT_PATH_INVALID");
   const mode = normalizePolicyComparisonMode(expectedComparisonMode, {
     allowDefault: false,
