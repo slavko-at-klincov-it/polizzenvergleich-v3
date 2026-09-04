@@ -21,6 +21,10 @@ const { getModelTag } = require("../../utils");
 const {
   workspaceDeletionProtection,
 } = require("../../../utils/middleware/workspaceDeletionProtection");
+const {
+  resolveWorkspaceCreationMode,
+  WorkspaceTemplateError,
+} = require("../../../utils/workspaceTemplates");
 
 function apiWorkspaceEndpoints(app) {
   if (!app) return;
@@ -36,6 +40,7 @@ function apiWorkspaceEndpoints(app) {
         "application/json": {
           example: {
             name: "My New Workspace",
+            analysisMode: "SYMMETRIC_A_B_CORE5_V1",
             similarityThreshold: 0.7,
             openAiTemp: 0.7,
             openAiHistory: 20,
@@ -76,11 +81,20 @@ function apiWorkspaceEndpoints(app) {
     }
     */
     try {
-      const { name = null, ...additionalFields } = reqBody(request);
+      const {
+        name = null,
+        analysisMode = null,
+        policyComparisonMode = null,
+        ...additionalFields
+      } = reqBody(request);
+      const resolvedMode = resolveWorkspaceCreationMode({
+        analysisMode,
+        policyComparisonMode,
+      });
       const { workspace, message } = await Workspace.new(
         name,
         null,
-        additionalFields
+        { ...additionalFields, policyComparisonMode: resolvedMode }
       );
 
       if (!workspace) {
@@ -98,9 +112,14 @@ function apiWorkspaceEndpoints(app) {
       });
       await EventLogs.logEvent("api_workspace_created", {
         workspaceName: workspace?.name || "Unknown Workspace",
+        policyComparisonMode: resolvedMode,
       });
       response.status(200).json({ workspace, message });
     } catch (e) {
+      if (e instanceof WorkspaceTemplateError) {
+        response.status(400).json({ workspace: null, message: e.message });
+        return;
+      }
       console.error(e.message, e);
       response.sendStatus(500).end();
     }

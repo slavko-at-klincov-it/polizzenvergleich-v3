@@ -4,6 +4,7 @@ const {
   WorkspaceTemplateError,
   buildWorkspaceCreationFields,
   listWorkspaceTemplates,
+  resolveWorkspaceCreationMode,
 } = require("../../../utils/workspaceTemplates");
 const {
   POLICY_COMPARISON_MODE,
@@ -54,5 +55,33 @@ describe("workspaceTemplates", () => {
     expect(() => buildWorkspaceCreationFields({ id: "VS" })).toThrow(
       WorkspaceTemplateError
     );
+  });
+
+  test("accepts the public API mode name and its legacy alias consistently", () => {
+    expect(
+      resolveWorkspaceCreationMode({
+        analysisMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      })
+    ).toBe(POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B);
+    expect(
+      resolveWorkspaceCreationMode({
+        policyComparisonMode: POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
+      })
+    ).toBe(POLICY_COMPARISON_MODE.SYMMETRIC_A_B);
+    expect(
+      resolveWorkspaceCreationMode({
+        analysisMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+        policyComparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      })
+    ).toBe(POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B);
+  });
+
+  test("rejects contradictory public and legacy API mode fields", () => {
+    expect(() =>
+      resolveWorkspaceCreationMode({
+        analysisMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+        policyComparisonMode: POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
+      })
+    ).toThrow(WorkspaceTemplateError);
   });
 });

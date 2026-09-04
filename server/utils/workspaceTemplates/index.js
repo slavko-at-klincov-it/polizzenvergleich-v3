@@ -30,6 +30,29 @@ function listWorkspaceTemplates() {
   return WORKSPACE_TEMPLATES.map((template) => ({ ...template }));
 }
 
+function resolveWorkspaceCreationMode({
+  analysisMode = null,
+  policyComparisonMode = null,
+} = {}) {
+  if (analysisMode !== null && policyComparisonMode !== null) {
+    const publicMode = normalizePolicyComparisonMode(analysisMode, {
+      allowDefault: false,
+    });
+    const legacyMode = normalizePolicyComparisonMode(policyComparisonMode, {
+      allowDefault: false,
+    });
+    if (publicMode !== legacyMode)
+      throw new WorkspaceTemplateError(
+        "analysisMode und policyComparisonMode widersprechen einander."
+      );
+    return publicMode;
+  }
+  return normalizePolicyComparisonMode(
+    analysisMode ?? policyComparisonMode,
+    { allowDefault: true }
+  );
+}
+
 function buildWorkspaceCreationFields(templateId = null) {
   const template = workspaceTemplate(templateId);
   const fields = {
@@ -48,5 +71,6 @@ module.exports = {
   WorkspaceTemplateError,
   buildWorkspaceCreationFields,
   listWorkspaceTemplates,
+  resolveWorkspaceCreationMode,
   workspaceTemplate,
 };
