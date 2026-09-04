@@ -170,6 +170,8 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("rent_loss", "Mietverlust", "BENEFIT", [
       "Mietverlust",
       "Bestandzins",
+      "Entgang von Mietzinseinnahmen",
+      "Entgang an Erträgen aus Miet-, Pacht-, Leasingverträgen",
     ]),
     component(
       "rent_loss_scope",
@@ -516,6 +518,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "INSURED_OBJECT",
       [
         "Verglasung der versicherten Gebäude",
+        "Gebäudeverglasung von allgemein zugänglichen Bereichen",
         "Fassadenverglasung",
         "Loggien",
         "Wintergärten",

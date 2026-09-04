@@ -653,6 +653,14 @@ describe("requestedFieldEvidenceContract", () => {
       expected: "Einzelscheibengröße bis 10 m²",
     },
     {
+      id: "RG-01",
+      field: "limit",
+      factRole: "LIMIT",
+      text: "Mitversichert gelten: Gebäudeverglasung von allgemein zugänglichen Bereichen. Einzelscheiben bis m²: 10",
+      exactText: "Einzelscheiben bis m²: 10",
+      expected: "Einzelscheibengröße bis 10 m²",
+    },
+    {
       id: "ST-02",
       field: "condition",
       factRole: "CONDITION",

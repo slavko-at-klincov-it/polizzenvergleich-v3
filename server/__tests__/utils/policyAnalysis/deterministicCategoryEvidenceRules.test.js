@@ -249,6 +249,35 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("binds a square-metre table limit under a positive list governor", () => {
+    const text =
+      "Gebäudeverglasung von allgemein zugänglichen Bereichen. Einzelscheiben bis m²: 10";
+    const input = bindingInput({
+      text,
+      exactText: "Einzelscheiben bis m²: 10",
+    });
+    input.worksheet.catalog.categoryView = "RG";
+    input.requirement = {
+      id: "RG-01",
+      sourceReferenceId: "LF-GL-01",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "pane_limit", factRole: "LIMIT" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "GLASBRUCH_INSURANCE",
+      text: "GLASPAUSCHALVERSICHERUNG",
+    };
+    input.occurrence.scopeLead = { text: "Mitversichert gelten" };
+    input.occurrence.coverageGovernorHint = { text: "Mitversichert gelten" };
+    input.occurrence.context.unitType = "LIST_ITEM";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+      authoritative: true,
+    });
+  });
+
   test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
     ["Versicherte Kosten im Rahmen der Versicherungssumme", "POSITIVE"],

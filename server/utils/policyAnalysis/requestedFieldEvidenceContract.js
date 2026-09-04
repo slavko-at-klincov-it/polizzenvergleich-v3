@@ -425,10 +425,11 @@ function extractLimitFacts({ occurrence, binding }) {
     );
   }
   const dimensionalPattern =
-    /Einzelscheibengr[öo]ße\s+von\s+\d{1,4}(?:[.,]\d+)?\s*m(?:²|2)(?![\p{L}\p{N}])/giu;
+    /(?:Einzelscheibengr[öo]ße\s+von\s+(?<dimensionAfterSize>\d{1,4}(?:[.,]\d+)?)\s*m(?:²|2)|Einzelscheiben?\s+bis\s+m(?:²|2)\s*:\s*(?<dimensionAfterColon>\d{1,4}(?:[.,]\d+)?))(?![\p{L}\p{N}])/giu;
   for (const match of text.matchAll(dimensionalPattern)) {
     if (!valueFollowsCandidate(occurrence, match)) continue;
-    const dimension = match[0].match(/(\d{1,4}(?:[.,]\d+)?)\s*m(?:²|2)/iu);
+    const dimension =
+      match.groups?.dimensionAfterSize || match.groups?.dimensionAfterColon;
     if (!dimension) continue;
     matches.push(
       sourceBoundFact({
@@ -436,7 +437,7 @@ function extractLimitFacts({ occurrence, binding }) {
         binding,
         match,
         value: {
-          normalizedValue: `Einzelscheibengröße bis ${dimension[1].replace(
+          normalizedValue: `Einzelscheibengröße bis ${dimension.replace(
             ".",
             ","
           )} m²`,

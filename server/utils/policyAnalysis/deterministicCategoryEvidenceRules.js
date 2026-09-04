@@ -220,7 +220,7 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
       text
     );
   if (factRole === "LIMIT")
-    return /(?:EUR|€|%|Höchstentschädigung|Sublimit|bis\s+zu|maximal)/iu.test(
+    return /(?:EUR|€|%|Höchstentschädigung|Sublimit|bis\s+zu|maximal|\bm\s*(?:²|2)\s*:\s*\d)/iu.test(
       text
     );
   if (factRole === "DEDUCTIBLE") return /Selbstbehalt/iu.test(text);
@@ -374,7 +374,7 @@ function explicitRoleMismatch(component, occurrence) {
   if (
     component?.factRole === "LIMIT" &&
     !subjectBoundIndirectLightningLimit &&
-    !/(?:EUR|€|%|Höchstentschädigung|Sublimit|Versicherungssumme|auf\s+[,„“"']*Erstes\s+Risiko|bis\s+zu|maximal)/iu.test(
+    !/(?:EUR|€|%|Höchstentschädigung|Sublimit|Versicherungssumme|auf\s+[,„“"']*Erstes\s+Risiko|bis\s+zu|maximal|m\s*(?:²|2)\s*:\s*\d)/iu.test(
       clause
     )
   )
