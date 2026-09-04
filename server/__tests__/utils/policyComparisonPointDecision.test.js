@@ -758,6 +758,7 @@ describe("policy comparison point decision", () => {
     const fixture = qualifiedOneSidedFixture();
     fixture.atomsA[0].selectedScopePicture = "NARROW_ONLY";
     fixture.atomsA[0].scopePolicy = "MATCHING_SCOPE_INCLUDED_SUFFICIENT";
+    fixture.atomsA[0].comparisonScopeKeys = ["FIXTURE_NARROW_SCOPE"];
     const result = decidePoint(fixture);
     expect(result.outcome).toBe(POINT_OUTCOME.ADVANTAGE_A);
     expect(result.reason).toContain(

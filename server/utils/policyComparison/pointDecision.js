@@ -187,10 +187,9 @@ function missingNarrowScopeProof(left, right) {
   const leftKeys = comparisonScopeKeys(left);
   const rightKeys = comparisonScopeKeys(right);
   return (
-    (left?.selectedScopePicture === "NARROW_ONLY" &&
-      leftKeys.length === 0) ||
-    (right?.selectedScopePicture === "NARROW_ONLY" &&
-      rightKeys.length === 0)
+    left?.selectedScopePicture === "NARROW_ONLY" &&
+    right?.selectedScopePicture === "NARROW_ONLY" &&
+    (leftKeys.length === 0 || rightKeys.length === 0)
   );
 }
 
