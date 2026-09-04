@@ -1,4 +1,4 @@
-const TRIAGE_SCHEMA_VERSION = 6;
+const TRIAGE_SCHEMA_VERSION = 7;
 const {
   deterministicCategoryCandidateBinding,
   expectedCategoryScopeKeys,

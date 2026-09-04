@@ -109,7 +109,7 @@ GROUPED_WORKSHEET.bindingGroups = [
 ];
 
 function response(judgements) {
-  return JSON.stringify({ schemaVersion: 6, judgements });
+  return JSON.stringify({ schemaVersion: 7, judgements });
 }
 
 describe("candidateTriageContract", () => {
@@ -305,7 +305,7 @@ describe("candidateTriageContract", () => {
     const payload = buildCandidateTriagePayload(WORKSHEET);
 
     expect(payload).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       task: "CLASSIFY_BINDING_TARGETS",
       bindingTargets: [
         {
@@ -421,7 +421,7 @@ describe("candidateTriageContract", () => {
     });
 
     expect(single).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       task: "CLASSIFY_ONE_BINDING_TARGET",
       bindingTarget: {
         targetId: "binding-group:shared-costs",
@@ -432,7 +432,7 @@ describe("candidateTriageContract", () => {
     expect(
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MATCH",
           scopeMatch: "NARROW",
         }),
@@ -453,7 +453,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MATCH",
           scopeMatch: "GENERAL",
           targetId: "candidate:other",
@@ -464,7 +464,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MATCH",
           scopeMatch: "GENERAL",
           explanation: "not allowed",
@@ -481,7 +481,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MISMATCH",
           scopeMatch: "GENERAL",
         }),
@@ -511,7 +511,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MISMATCH",
           scopeMatch: "OTHER_SCOPE",
         }),
@@ -949,7 +949,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           roleMatch: "MATCH",
           scopeMatch: "NARROW",
         }),
@@ -1185,7 +1185,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateCandidateTriage({
         responseText: JSON.stringify({
-          schemaVersion: 6,
+          schemaVersion: 7,
           judgements: JSON.parse(valid).judgements,
           explanation: "not allowed",
         }),
