@@ -364,12 +364,12 @@ function explicitRoleMismatch(component, occurrence) {
   const context = String(occurrence?.context?.text || "");
   const subjectBoundIndirectLightningLimit = Boolean(
     component?.id === "indirect_lightning_limit" &&
-    /(?:indirekter?\s+Blitzschlag|Überspannung[\s\S]{0,80}Blitzschlag)/iu.test(
-      context
-    ) &&
-    /(?:bis\s+(?:insgesamt\s+)?|mindestens\s+|maximal\s+)[\s\S]{0,100}(?:EUR|€|%|Versicherungssumme)/iu.test(
-      context
-    )
+      /(?:indirekter?\s+Blitzschlag|Überspannung[\s\S]{0,80}Blitzschlag)/iu.test(
+        context
+      ) &&
+      /(?:bis\s+(?:insgesamt\s+)?|mindestens\s+|maximal\s+)[\s\S]{0,100}(?:EUR|€|%|Versicherungssumme)/iu.test(
+        context
+      )
   );
   if (
     component?.factRole === "LIMIT" &&
@@ -1248,8 +1248,8 @@ function isGeneralBranchMaximumTarget({
   const target = GENERAL_BRANCH_MAXIMUM_TARGETS[categoryView];
   return Boolean(
     target &&
-    target.requirementId === requirementId &&
-    target.componentId === componentId
+      target.requirementId === requirementId &&
+      target.componentId === componentId
   );
 }
 
@@ -1595,24 +1595,24 @@ function deterministicCategoryCandidateBinding({
     return null;
   const explicitVariantListClause = Boolean(
     occurrence?.variantScopeHint?.key &&
-    occurrence?.variantScopeHint?.label &&
-    occurrence?.coverageGovernorHint?.text &&
-    occurrence?.context?.unitType === "LIST_ITEM" &&
-    containsPhrase(occurrence?.context?.text, occurrence?.exactText)
+      occurrence?.variantScopeHint?.label &&
+      occurrence?.coverageGovernorHint?.text &&
+      occurrence?.context?.unitType === "LIST_ITEM" &&
+      containsPhrase(occurrence?.context?.text, occurrence?.exactText)
   );
   const explicitCategoryListClause = Boolean(
     matchingScopeKey &&
-    occurrence?.coverageGovernorHint?.text &&
-    occurrence?.context?.unitType === "LIST_ITEM" &&
-    containsPhrase(occurrence?.context?.text, occurrence?.exactText) &&
-    (lastPatternMatch(
-      occurrence.coverageGovernorHint.text,
-      POSITIVE_GOVERNORS
-    ) ||
-      lastPatternMatch(
+      occurrence?.coverageGovernorHint?.text &&
+      occurrence?.context?.unitType === "LIST_ITEM" &&
+      containsPhrase(occurrence?.context?.text, occurrence?.exactText) &&
+      (lastPatternMatch(
         occurrence.coverageGovernorHint.text,
-        NEGATIVE_GOVERNORS
-      ))
+        POSITIVE_GOVERNORS
+      ) ||
+        lastPatternMatch(
+          occurrence.coverageGovernorHint.text,
+          NEGATIVE_GOVERNORS
+        ))
   );
   return {
     binding:
