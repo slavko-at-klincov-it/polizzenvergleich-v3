@@ -742,6 +742,7 @@ describe("candidateTriageContract", () => {
     "Die Kostenfrage zur Bewachung wird im nächsten Kapitel beantwortet.",
     "Kosten für eine Prüfung, ob Bewachung erforderlich sein könnte.",
     "Aufwendungen für Werbung erwähnen auch die Bewachung.",
+    "Bewachung ist eine Obliegenheit, während Sicherungskosten Kosten für Notverschalung sind.",
   ])("keeps a non-local cost mention unresolved (%s)", (text) => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     const occurrence = worksheet.requirements[0].components[0].occurrences[0];

@@ -62,8 +62,11 @@ function containsNormalizedPhrase(text, phrase) {
 
 function hasExplicitLocalCostRole(members, contextText) {
   const normalizedContext = normalizeRuleText(contextText);
-  const hasCostDefinitionGovernor =
-    /\b\p{L}*kosten\s+sind\s+kosten\s+fuer\b/iu.test(normalizedContext);
+  const costDefinitionGovernors = [
+    ...normalizedContext.matchAll(
+      /\b\p{L}*kosten\s+sind\s+kosten\s+fuer\b/giu
+    ),
+  ];
   return members.every((member) => {
     const normalizedExactText = normalizeRuleText(member.exactText);
     const firstWord = normalizedExactText.split(" ")[0] || "";
@@ -77,10 +80,21 @@ function hasExplicitLocalCostRole(members, contextText) {
       ].some((phrase) => containsNormalizedPhrase(contextText, phrase))
     )
       return true;
-    return (
-      hasCostDefinitionGovernor &&
-      containsNormalizedPhrase(contextText, member.exactText)
-    );
+    const occurrenceIndex = normalizedContext.indexOf(normalizedExactText);
+    if (
+      occurrenceIndex < 0 ||
+      normalizedContext.indexOf(
+        normalizedExactText,
+        occurrenceIndex + normalizedExactText.length
+      ) >= 0
+    )
+      return false;
+    return costDefinitionGovernors.some(({ index, 0: governorText }) => {
+      const governedStart = index + governorText.length;
+      return (
+        occurrenceIndex >= governedStart && occurrenceIndex - governedStart <= 280
+      );
+    });
   });
 }
 
