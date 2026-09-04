@@ -5,6 +5,8 @@ const path = require("path");
 const POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID =
   "POLICY_COMPARISON_ARTIFACT_SET_V1";
 const POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION = 1;
+const POLICY_COMPARISON_PUBLISH_CLAIM_CONTRACT_ID =
+  "POLICY_COMPARISON_PUBLISH_CLAIM_V1";
 const POLICY_COMPARISON_ARTIFACT_SET_MANIFEST =
   "artifact-set-manifest.private.json";
 const POLICY_COMPARISON_ARTIFACT_FILES = Object.freeze([
@@ -116,6 +118,92 @@ function fsyncArtifactSet(directory, files, fsImpl) {
   }
 }
 
+function fsyncDirectory(directory, fsImpl) {
+  const descriptor = fsImpl.openSync(directory, "r");
+  try {
+    fsImpl.fsyncSync(descriptor);
+  } finally {
+    fsImpl.closeSync(descriptor);
+  }
+}
+
+function processIsAlive(pid, processImpl) {
+  try {
+    processImpl.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === "ESRCH") return false;
+    return true;
+  }
+}
+
+function acquirePublishClaim({
+  claimFile,
+  parent,
+  nonce,
+  resolvedOutput,
+  fsImpl,
+  processImpl,
+}) {
+  const owner = JSON.stringify({
+    schemaVersion: 1,
+    contractId: POLICY_COMPARISON_PUBLISH_CLAIM_CONTRACT_ID,
+    pid: processImpl.pid,
+    nonce,
+  });
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const candidate = `${claimFile}.candidate-${processImpl.pid}-${nonce}`;
+    let candidateCreated = false;
+    try {
+      const descriptor = fsImpl.openSync(candidate, "wx", 0o600);
+      candidateCreated = true;
+      try {
+        fsImpl.writeFileSync(descriptor, owner, "utf8");
+        fsImpl.fsyncSync(descriptor);
+      } finally {
+        fsImpl.closeSync(descriptor);
+      }
+      fsImpl.linkSync(candidate, claimFile);
+      fsyncDirectory(parent, fsImpl);
+      return owner;
+    } catch (error) {
+      if (error?.code !== "EEXIST" || attempt > 0) throw error;
+      const claimStat = fsImpl.lstatSync(claimFile);
+      if (claimStat.isSymbolicLink() || !claimStat.isFile())
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_INVALID");
+      const observed = fsImpl.readFileSync(claimFile, "utf8");
+      let claim;
+      try {
+        claim = JSON.parse(observed);
+      } catch {
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_INVALID");
+      }
+      if (
+        claim?.schemaVersion !== 1 ||
+        claim?.contractId !== POLICY_COMPARISON_PUBLISH_CLAIM_CONTRACT_ID ||
+        !Number.isInteger(claim?.pid) ||
+        claim.pid < 1 ||
+        typeof claim?.nonce !== "string" ||
+        claim.nonce.length < 12
+      )
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_INVALID");
+      if (processIsAlive(claim.pid, processImpl))
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_ACTIVE");
+      if (fsImpl.existsSync(resolvedOutput))
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_OUTPUT_ALREADY_EXISTS");
+      if (fsImpl.readFileSync(claimFile, "utf8") !== observed)
+        throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_CHANGED");
+      fsImpl.unlinkSync(claimFile);
+      fsyncDirectory(parent, fsImpl);
+    } finally {
+      if (candidateCreated && fsImpl.existsSync(candidate))
+        fsImpl.unlinkSync(candidate);
+    }
+  }
+  throw artifactSetError("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_UNAVAILABLE");
+}
+
 function finalArtifactFiles(outputDirectory) {
   return Object.fromEntries(
     POLICY_COMPARISON_ARTIFACT_FILES.map((filename) => [
@@ -186,7 +274,11 @@ function validatePublishedComparisonArtifactSet(
 
 async function publishComparisonArtifactSet(
   { outputDirectory, writeArtifacts, validateArtifacts = null },
-  { fsImpl = fs, randomBytes = crypto.randomBytes } = {}
+  {
+    fsImpl = fs,
+    processImpl = process,
+    randomBytes = crypto.randomBytes,
+  } = {}
 ) {
   if (typeof writeArtifacts !== "function")
     throw artifactSetError("COMPARISON_ARTIFACT_SET_WRITER_REQUIRED");
@@ -199,11 +291,10 @@ async function publishComparisonArtifactSet(
   );
   const staging = path.join(
     parent,
-    `.${path.basename(resolvedOutput)}.staging-${process.pid}-${randomBytes(12).toString("hex")}`
+    `.${path.basename(resolvedOutput)}.staging-${processImpl.pid}-${randomBytes(12).toString("hex")}`
   );
   const publishClaim = `${resolvedOutput}.publish-claim`;
-  let claimDescriptor = null;
-  let claimCreated = false;
+  let claimOwner = null;
   let published = false;
   let stagingCreated = false;
 
@@ -231,12 +322,18 @@ async function publishComparisonArtifactSet(
     writeManifest(manifestFile, manifest, fsImpl);
     fsyncArtifactSet(staging, { ...files, manifest: manifestFile }, fsImpl);
 
-    claimDescriptor = fsImpl.openSync(publishClaim, "wx", 0o600);
-    claimCreated = true;
-    fsImpl.fsyncSync(claimDescriptor);
+    claimOwner = acquirePublishClaim({
+      claimFile: publishClaim,
+      parent,
+      nonce: randomBytes(12).toString("hex"),
+      resolvedOutput,
+      fsImpl,
+      processImpl,
+    });
     if (fsImpl.existsSync(resolvedOutput))
       throw artifactSetError("COMPARISON_ARTIFACT_SET_OUTPUT_ALREADY_EXISTS");
     fsImpl.renameSync(staging, resolvedOutput);
+    fsyncDirectory(parent, fsImpl);
     published = true;
     stagingCreated = false;
 
@@ -256,14 +353,15 @@ async function publishComparisonArtifactSet(
       fsImpl.rmSync(staging, { recursive: true, force: true });
     throw error;
   } finally {
-    if (claimDescriptor !== null) {
+    if (claimOwner)
       try {
-        fsImpl.closeSync(claimDescriptor);
-      } catch {}
-    }
-    if (claimCreated)
-      try {
-        if (fsImpl.existsSync(publishClaim)) fsImpl.unlinkSync(publishClaim);
+        if (
+          fsImpl.existsSync(publishClaim) &&
+          fsImpl.readFileSync(publishClaim, "utf8") === claimOwner
+        ) {
+          fsImpl.unlinkSync(publishClaim);
+          fsyncDirectory(parent, fsImpl);
+        }
       } catch {}
   }
 }

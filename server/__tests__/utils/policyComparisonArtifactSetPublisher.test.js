@@ -160,7 +160,9 @@ describe("policy comparison artifact set publisher", () => {
         outputDirectory,
         writeArtifacts: async (staging) => writeFixtureArtifacts(staging),
       })
-    ).rejects.toMatchObject({ code: "EEXIST" });
+    ).rejects.toMatchObject({
+      code: "COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_INVALID",
+    });
 
     expect(fs.existsSync(outputDirectory)).toBe(false);
     expect(fs.readFileSync(claim, "utf8")).toBe("other-publisher");
@@ -220,5 +222,59 @@ describe("policy comparison artifact set publisher", () => {
     expect(() =>
       validatePublishedComparisonArtifactSet(outputDirectory)
     ).toThrow("COMPARISON_ARTIFACT_SET_FILE_MISSING");
+  });
+
+  test("recovers a valid claim only when its owning process no longer exists", async () => {
+    const claim = `${outputDirectory}.publish-claim`;
+    fs.writeFileSync(
+      claim,
+      JSON.stringify({
+        schemaVersion: 1,
+        contractId: "POLICY_COMPARISON_PUBLISH_CLAIM_V1",
+        pid: 777,
+        nonce: "stale-publisher-nonce",
+      })
+    );
+    const processImpl = {
+      pid: 888,
+      kill: () => {
+        const error = new Error("missing");
+        error.code = "ESRCH";
+        throw error;
+      },
+    };
+
+    await expect(
+      publishComparisonArtifactSet(
+        {
+          outputDirectory,
+          writeArtifacts: async (staging) => writeFixtureArtifacts(staging),
+        },
+        { processImpl }
+      )
+    ).resolves.toMatchObject({ outputDirectory });
+    expect(fs.existsSync(claim)).toBe(false);
+  });
+
+  test("preserves and rejects a valid claim whose owner is still alive", async () => {
+    const claim = `${outputDirectory}.publish-claim`;
+    const contents = JSON.stringify({
+      schemaVersion: 1,
+      contractId: "POLICY_COMPARISON_PUBLISH_CLAIM_V1",
+      pid: 777,
+      nonce: "active-publisher-nonce",
+    });
+    fs.writeFileSync(claim, contents);
+
+    await expect(
+      publishComparisonArtifactSet(
+        {
+          outputDirectory,
+          writeArtifacts: async (staging) => writeFixtureArtifacts(staging),
+        },
+        { processImpl: { pid: 888, kill: () => {} } }
+      )
+    ).rejects.toThrow("COMPARISON_ARTIFACT_SET_PUBLISH_CLAIM_ACTIVE");
+    expect(fs.readFileSync(claim, "utf8")).toBe(contents);
   });
 });
