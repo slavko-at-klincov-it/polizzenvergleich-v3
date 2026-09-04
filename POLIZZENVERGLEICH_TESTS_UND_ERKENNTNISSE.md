@@ -3342,3 +3342,148 @@ B-only-Zeilen.
 Generalisierung auf unbekannte Versicherer oder Dokumentvarianten, fachliche
 Freigabe ohne Kunden-/Expertenabnahme oder das 99-Prozent-Ziel. Ein
 kontrollierter Nullfund ist weiterhin kein ausdrücklicher Ausschluss.
+
+## 56. LF-V2-Forward-Fixes und finale V3.7.0-Nichtregressionsläufe
+
+**Prüfung:** 4. September 2026
+
+**Exakter Implementierungs- und Laufcommit:**
+`14c2bb1b015dbdbd53c4919967f2c9abc281ca37`
+
+Die sieben durch die V2-Härtung sichtbar gewordenen LF-Zeilen wurden einzeln
+gegen ihre Quellen und den vollständigen Callgraph geprüft. Sechs Zeilen
+hatten allgemein formulierbare Semantiklücken: eine zu breit angewandte
+Bedingungsklausel, einen fehlenden Elementar-Scope der gerichteten
+Sturmreferenz, gerichtete lokale Kostendefinitionen sowie Glasüberschrift,
+Glas-Scope und unlokalisierte Glaskosten. `LF-FE-02` blieb bewusst offen:
+B02 schließt elektrische Energie ein, B05 schließt sie aus, sofern nichts
+anderes vereinbart ist; der aktuelle Paketvertrag beweist die konkrete
+B01/B02-Aktivierung beziehungsweise Variantenidentität nicht.
+
+Eine bei der Glasreparatur sichtbar gewordene Nachbarregression von
+`LF-GL-02` wurde nicht durch globale Scope-Aufweichung behoben. Der
+Referenzvertrag erlaubt ausschließlich den deklarierten engeren
+`STURM_INSURANCE`-Scope, und Ergebnisbuilder sowie Renderer verlangen einen
+nicht leeren, vollständig erlaubten Scope. Alle kleinen Fixes besitzen
+positive und adversariale Regressionen.
+
+Auf dem finalen Commit bestand im isolierten Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/v370-final-ace2b626` der
+vollständige technische Gate-Satz:
+
+```text
+Jest:                       167/167 Suites, 2239/2239 Tests
+Lint:                       Server, Frontend, Collector PASS
+Frontend-Build:             PASS, 6170 Module
+Installer/Updater:          PASS
+Prisma validate/generate:   PASS
+frische Datenbank:          42/42 Migrationen, quick_check PASS, FK 0
+befüllte V3.6-Kopie:        41 -> 42 Migrationen, quick_check PASS, FK 0
+Geschäftstabellen:          35/35 Zeilenzahlen unverändert
+```
+
+Ein erster Jest-Aufruf ohne Homebrew im isolierten `PATH` fand das vorhandene
+FFmpeg-Binary nicht. Mit dem dokumentierten Mac-Studio-Pfad bestand zunächst
+die einzelne FFmpeg-Suite mit 5/5 Tests und danach die vollständige Suite. Das
+war eine Gate-Umgebungsabweichung, keine Produktcodekorrektur.
+
+### Frischer LF-V2-Lauf
+
+Die zehn PDFs wurden in eine neue private QA-Root kopiert und vor dem Queueing
+einzeln per SHA-256 geprüft. Die Session lief über den produktiven
+`PolicyComparison`-Queuevertrag vollständig neu; null Kategorien wurden
+wiederaufgenommen.
+
+```text
+QA-Root:                    /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/RELEASE-V3.7.0-LF-14C2BB1B-20260904-152125
+Session:                    1e22b14c-4108-4510-93a5-38a5608a72e6
+Dokumente / Kategorien:     10 / 100, 0 wiederaufgenommen
+LF-Zeilen:                  35
+voll / teilweise / Null:    15 / 15 / 4
+unklar:                     1 (`LF-FE-02`)
+Kundenreview:               16
+Workerzeit:                 20:09,645
+Qwen-Aufrufe:               239
+Prompt-/Completiontoken:    523.037 / 16.050
+Embeddings / Hybridziele:   0 / 0
+XLSX-Paritätsabweichungen:  0 von 35 × 11 Datenzellen
+```
+
+Ergebnishashes:
+
+```text
+comparison.private.json  5e349e9d609b82f0f763d8393421f4d93ffc1e0a8bf02cd7e0e78da15cefb183
+comparison.md            af2ec6a2372871d3a5fe2b33284675f4866ba72060e8ad2e70f1de85ebbe0583
+polizzenvergleich.xlsx   62f047acbcad578cf76ce7ce12791156c820b2e3db08c10050112072d3ba02f4
+```
+
+### Frischer symmetrischer 224-Zeilen-Lauf
+
+Auch der symmetrische Lauf erhielt eine neue Session, neue hashgeprüfte
+Uploads und null wiederaufgenommene Kategorien. Ein zusätzlicher
+Setup-Preflight fragte irrtümlich `productProfile.totalRows` statt des
+tatsächlichen Felds `expectedRowCount` ab. Der produktive Queuevertrag hatte
+die Session zu diesem Zeitpunkt bereits korrekt angelegt. Die identifizierte
+Session wurde gegen `expectedRowCount = 224` geprüft und ohne Duplikat
+ausgeführt.
+
+```text
+QA-Root:                    /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/RELEASE-V3.7.0-SYMMETRIC-14C2BB1B-20260904-154403
+Session:                    a50fcba7-ee01-4930-9ce4-d487238457d6
+Dokumente / Kategorien:     10 / 50, 0 wiederaufgenommen
+Zeilen:                     224
+Vorteil A / Vorteil B:      5 / 4
+Dokumentationsunterschied:  34
+Gleichwertig:               125
+Nicht vergleichbar:         13
+Unklar / Kundenreview:      43 / 43
+Workerzeit:                 28:04,592
+Qwen-Aufrufe:               325
+Prompt-/Completiontoken:    734.095 / 22.344
+Embeddings / Hybridziele:   0 / 0
+XLSX-Paritätsabweichungen:  0 von 224 × 17 Datenzellen
+```
+
+Die neun bestätigten Vorteils-IDs blieben exakt erhalten:
+
+```text
+Vorteil A: VS-13, VS-22, VS-25, FE-C02, EL-25
+Vorteil B: FE-A01, FE-C07, LW-25, ST-05
+```
+
+Ergebnishashes:
+
+```text
+comparison.private.json  c857ce0ee05523ac9aee367154ed2e2c4622db112372f28e7c3172847e96df10
+comparison.md            fee425d3e0367745165064a720e56961bd02af80c0053f27aeb5095970c54573
+polizzenvergleich.xlsx   aea5e83e7ad553c44e5a8f76ad1777acf43c88d0c5b2f452a699f4d2c60836ac
+```
+
+Der symmetrische Lauf trifft die gesamte V3.6-Favoritenpartition und alle
+Vorteils-IDs exakt. Die Kundenreviewgrenze von höchstens 43 wurde mit 43
+eingehalten; keine zuvor abgeschlossene Zeile wurde neu reviewpflichtig. Die
+beiden `artifact-verification.private.json` prüfen zusätzlich Release-SHA,
+Node 22.23.2, Qwen-Kontext 42.496, 100 beziehungsweise 50 Kategorie-, Triage-
+und Wirkungsreports, Ergebnisvertrag, Archivhash und XLSX-Zellparität.
+
+**Beweist:** Die sechs LF-Forward-Fixes verbessern auf dem bekannten
+LF-/WEVIG-Set die V2-Partition von 12/13/4/6 auf 15/15/4/1, ohne die
+symmetrische 224-Zeilen-Favoritenpartition oder ihre neun Vorteile zu ändern.
+
+**Beweist nicht:** Die verbleibenden 16 LF-Reviews sind Fehler; 15 davon sind
+sichtbare Teilgegenstücke. Ebenso beweisen die Läufe keine unbekannten
+Versicherer, kein vollständiges LF-Inventar und nicht das 99-Prozent-Ziel.
+`LF-FE-02` benötigt vor einer Umklassifizierung einen versionierten,
+quellengebundenen Aktivierungs-/Overridevertrag.
+
+**Nachgelagerter Senior-Review:** Trotz grüner Läufe bleibt dieser Stand
+zunächst `NO-GO`. Zwei adversariale Pfade sind in den bekannten PDFs nicht
+ausgelöst worden: Die Prepared-Evidence-Stufe kann eine in der Triage korrekt
+als unscopiert abgewiesene `RG`-Kostenquelle über eine autoritative
+deterministische Direktbindung wieder aufwerten. Außerdem ist der erlaubte
+enge Sturm-Scope für `LF-GL-02` derzeit am Requirement statt ausschließlich
+an der Solar-Glas-Komponente gebunden; dadurch könnten andere Komponenten der
+Zeile zu breit erfüllt werden. Beide Grenzen benötigen einen eigenen kleinen
+Fix, einen Triage-zu-Prepared-Integrationstest beziehungsweise negative
+Komponententests und danach erneute Gates. Die gemessenen Läufe bleiben
+gültige Bestands- und Fixture-Evidenz, sind aber noch keine Releasefreigabe.

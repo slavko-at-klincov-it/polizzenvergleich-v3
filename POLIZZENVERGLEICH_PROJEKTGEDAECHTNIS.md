@@ -990,3 +990,39 @@ Status: Produktregel bestätigt, Code noch nicht umgestellt. Nächster Schritt
 ist die getrennte Implementierung von Dokumenttypneutralität und
 Nullfundwirkung mit jeweils eigenem Commit, Mac-Studio-Test und gebundenem
 Fünfkategorienlauf. Historische Runs bleiben unverändert.
+
+## 18. Aktueller Kandidatenstand V3.7.0 am 4. September 2026
+
+Die in Abschnitt 17 noch als offen bezeichnete Paket- und
+Dokumenttypneutralität ist inzwischen im V3-Unterbau umgesetzt. Der aktuelle
+ungefreigegebene Kandidat liegt auf
+`14c2bb1b015dbdbd53c4919967f2c9abc281ca37`; der installierte Kundenstand
+bleibt bis zur Releaseentscheidung unverändert V3.6.0 auf `2804fa563`.
+
+Der gerichtete LF-V2-Modus wurde nach sieben Einzelquellenaudits gehärtet.
+Sechs wiederverwendbare Forward-Fixes reduzieren im frischen bekannten
+1+9-Lauf unklare Zeilen von sechs auf eine. Die neue Partition lautet 15
+vollständige, 15 teilweise, vier kontrollierte Nullfunde und eine unklare
+Zeile bei 16 Kundenreviews. Nur `LF-FE-02` bleibt wegen nicht bewiesener
+Aktivierung/Variantenidentität zwischen einschließender Sonderbedingung und
+bedingtem Ausschluss unklar.
+
+Der frische symmetrische Nichtregressionslauf auf demselben Commit bestätigt
+die V3.6-Favoritenpartition exakt: 5 Vorteil A, 4 Vorteil B, 34
+Dokumentationsunterschiede, 125 gleichwertig, 13 nicht vergleichbar und 43
+unklar/reviewpflichtig. Alle neun Vorteils-IDs blieben gleich. Beide Läufe
+verwendeten Qwen 3.6 mit 42.496 Kontext und weder Embeddings noch Hybridziele.
+
+Der vollständige technische Mac-Studio-Gate-Satz ist grün: 167 Suites mit
+2.239 Tests, drei Lints, Frontend-Build, Installer/Updater, Prisma sowie
+frische und befüllte V3.6-Migrationskopie. Die detaillierte Evidenz steht in
+`POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`, Abschnitt 56.
+
+Diese Evidenz bestätigt den bekannten Fixture- und Nichtregressionsstand,
+trägt nach dem nachgelagerten Senior-Review aber noch keine technische
+Releaseentscheidung. Zwei adversariale Glasgrenzen bleiben offen: ein
+möglicher Triage-zu-Prepared-Bypass für unscopierte `RG`-Kosten und die noch
+requirementweite statt komponentengenaue enge Sturmfreigabe in `LF-GL-02`.
+Der Kundencheckout darf erst nach getrennten Forward-Fixes, adversarialen
+Tests, erneuten Gates, Merge/Tag und dem manuellen First-Hop-Quieszenzcheck
+von V3.6.0 aktualisiert werden.
