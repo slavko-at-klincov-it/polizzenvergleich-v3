@@ -10,9 +10,9 @@ freigegebenen V3.6.0.
 
 ```text
 Lokaler Arbeitsbranch:       codex/polizzenvergleich-v3
-Lokaler HEAD:                03c5841558ff3463eabff6ec4db8a9c904bb091a
+Geprüfter Logik-HEAD:        03c5841558ff3463eabff6ec4db8a9c904bb091a
 Remote-Arbeitsbranch:        origin/codex/polizzenvergleich-v3
-Remote-Arbeitsbranch HEAD:   03c5841558ff3463eabff6ec4db8a9c904bb091a
+Checkpoint-Commit:           im Git-Verlauf direkt nach diesem Logik-HEAD
 origin/main:                 f31ddcd7bde8f8cd2f7a2bb9dbb0d742a59d8747
 Kundeninstallation:         2804fa56361084c0ee74fca6f54ef6365d65aeeb
 Kundenversion:               V3.6.0
