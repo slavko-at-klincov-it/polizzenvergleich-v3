@@ -128,6 +128,9 @@ describe("policy comparison worker contract", () => {
   });
 
   test("archives the completed workbook before marking the session complete", () => {
+    expect(source).toContain("validatePublishedComparisonArtifactSet(");
+    expect(source).toContain("COMPARISON_RESULT_SESSION_MISMATCH");
+    expect(source).toContain("COMPARISON_RESULT_RUN_SIGNATURE_MISMATCH");
     expect(source).toContain("archiveComparisonWorkbook({");
     expect(source).toContain("buildComparisonExportContract({");
     expect(source).toContain(

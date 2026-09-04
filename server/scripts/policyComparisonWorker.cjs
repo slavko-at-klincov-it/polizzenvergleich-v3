@@ -39,6 +39,12 @@ const {
   buildComparisonExportContract,
 } = require("../utils/policyComparison/comparisonExportContract");
 const {
+  validatePublishedComparisonArtifactSet,
+} = require("../utils/policyComparison/artifactSetPublisher");
+const {
+  readValidatedComparisonResult,
+} = require("../utils/policyComparison/comparisonResultReader");
+const {
   validateCustomerComparisonFile,
 } = require("../utils/policyComparison/customerMetricContract");
 const {
@@ -380,18 +386,40 @@ async function main() {
     }),
   });
   const resultDirectory = path.join(runRoot, "result");
-  const artifacts = referenceMode
-    ? await writeReferenceComparisonArtifacts({
-        documentRuns,
-        outputDirectory: resultDirectory,
-        metadata: { sessionUuid, runSignature: signature },
-      })
-    : await writeComparisonArtifacts({
-        documentRuns,
-        outputDirectory: resultDirectory,
-        metadata: { sessionUuid, runSignature: signature },
-        enforceProductProfile: true,
-      });
+  let artifacts;
+  if (fs.existsSync(resultDirectory)) {
+    const published = validatePublishedComparisonArtifactSet(resultDirectory);
+    const result = readValidatedComparisonResult(
+      published.files["comparison.private.json"],
+      comparisonMode
+    );
+    if (result.sessionUuid !== sessionUuid)
+      throw new Error("COMPARISON_RESULT_SESSION_MISMATCH");
+    if (result.runSignature !== signature)
+      throw new Error("COMPARISON_RESULT_RUN_SIGNATURE_MISMATCH");
+    artifacts = {
+      result,
+      jsonFile: published.files["comparison.private.json"],
+      markdownFile: published.files["comparison.md"],
+      workbookFile: published.files["polizzenvergleich.xlsx"],
+      artifactSetManifest: published.manifest,
+      artifactSetManifestFile: published.manifestFile,
+      reused: true,
+    };
+  } else {
+    artifacts = referenceMode
+      ? await writeReferenceComparisonArtifacts({
+          documentRuns,
+          outputDirectory: resultDirectory,
+          metadata: { sessionUuid, runSignature: signature },
+        })
+      : await writeComparisonArtifacts({
+          documentRuns,
+          outputDirectory: resultDirectory,
+          metadata: { sessionUuid, runSignature: signature },
+          enforceProductProfile: true,
+        });
+  }
   if (referenceMode) validateReferenceComparison(artifacts.result);
   else validateCustomerComparisonFile(artifacts.jsonFile);
   const archivedWorkbook = archiveComparisonWorkbook({
