@@ -39,21 +39,46 @@ function readRows(documentRun, categoryView) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
-function readEvidence(documentRun, categoryView, requirementId) {
-  const file = path.join(
+function readJson(file, errorCode) {
+  if (!fs.existsSync(file)) throw new Error(errorCode);
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
+function readEvidenceBundle(documentRun, categoryView, requirementId) {
+  const effectsRoot = path.join(
     documentRun.outputDirectory,
     categoryView,
-    "effects",
-    "materialized.private.json"
+    "effects"
   );
-  if (!fs.existsSync(file))
-    throw new Error(
-      `REFERENCE_EVIDENCE_RESULT_MISSING:${documentRun.document.uuid}:${categoryView}`
-    );
-  const materialized = JSON.parse(fs.readFileSync(file, "utf8"));
-  return (materialized.judgements || []).filter(
-    (judgement) => judgement.requirementId === requirementId
+  const resultRoot = path.join(
+    documentRun.outputDirectory,
+    categoryView,
+    "result"
   );
+  const errorContext = `${documentRun.document.uuid}:${categoryView}`;
+  const materialized = readJson(
+    path.join(effectsRoot, "materialized.private.json"),
+    `REFERENCE_EVIDENCE_RESULT_MISSING:${errorContext}`
+  );
+  const selectedSources = readJson(
+    path.join(effectsRoot, "selected-sources.private.json"),
+    `REFERENCE_SELECTED_SOURCES_MISSING:${errorContext}`
+  );
+  const requestedFields = readJson(
+    path.join(resultRoot, "requested-fields.private.json"),
+    `REFERENCE_REQUESTED_FIELDS_MISSING:${errorContext}`
+  );
+  return {
+    judgements: (materialized.judgements || []).filter(
+      (judgement) => judgement.requirementId === requirementId
+    ),
+    selectedSources: (selectedSources || []).filter(
+      (source) => source.requirementId === requirementId
+    ),
+    requestedFields: (requestedFields.requirements || []).find(
+      (result) => result.requirementId === requirementId
+    ),
+  };
 }
 
 function sourceWithDocument(document, source) {
@@ -67,21 +92,102 @@ function componentAcceptsEffect(component, coverageEffect) {
   return coverageEffect === "INCLUDED";
 }
 
-function selectedComponentEvidence(entries, componentId) {
-  const found = entries.flatMap(({ document, evidence }) =>
-    evidence
+function componentRequestedFields(component) {
+  if (Array.isArray(component.requestedFields))
+    return component.requestedFields;
+  if (component.factRole === "LIMIT") return ["limit"];
+  if (component.factRole === "DEDUCTIBLE") return ["deductible"];
+  return [];
+}
+
+function selectedSourcesValid(entry, judgement) {
+  const candidateIds = judgement.selectedCandidateIds || [];
+  return (
+    candidateIds.length > 0 &&
+    candidateIds.every((candidateId) =>
+      entry.selectedSources.some(
+        (source) =>
+          source.candidateId === candidateId &&
+          source.requirementId === judgement.requirementId &&
+          source.componentId === judgement.componentId &&
+          Number.isInteger(source.physicalPageNumber) &&
+          source.physicalPageNumber > 0 &&
+          String(source.exactText || "").trim().length > 0
+      )
+    )
+  );
+}
+
+function requestedFieldsValid(entry, component, judgement) {
+  const requestedFields = componentRequestedFields(component);
+  if (requestedFields.length === 0) return true;
+  const result = entry.requestedFields;
+  if (result?.requestedFieldStatus !== "COMPLETE") return false;
+  return requestedFields.every((fieldName) => {
+    const field = (result.fields || []).find(
+      (candidate) => candidate.field === fieldName
+    );
+    const componentFacts = (field?.facts || []).filter(
+      (fact) => fact.componentScope?.id === component.id
+    );
+    return (
+      field?.status === "FOUND" &&
+      componentFacts.length > 0 &&
+      componentFacts.every(
+        (fact) =>
+          judgement.selectedCandidateIds.includes(fact.source?.candidateId) &&
+          Number.isInteger(fact.source?.physicalPageNumber) &&
+          fact.source.physicalPageNumber > 0 &&
+          String(fact.source?.exactText || "").trim().length > 0
+      )
+    );
+  });
+}
+
+function scopeValid(requirement, component, judgement) {
+  if (judgement.selectedScopePicture !== "NARROW_ONLY")
+    return judgement.selectedScopePicture !== "UNKNOWN";
+  if (
+    ![
+      "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
+      "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    ].includes(requirement.scopePolicy)
+  )
+    return false;
+  const scopeKeys = judgement.comparisonScopeKeys || [];
+  if (scopeKeys.length === 0) return false;
+  if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
+    return ["INCLUDED", "EXCLUDED", "DEFINED", "CONDITIONAL"].includes(
+      judgement.coverageEffect
+    );
+  return ["LIMIT", "DEDUCTIBLE", "CONDITION"].includes(component.factRole)
+    ? ["DEFINED", "CONDITIONAL"].includes(judgement.coverageEffect)
+    : judgement.coverageEffect === "INCLUDED";
+}
+
+function decisionReadyEvidence(entry, requirement, component, judgement) {
+  return (
+    entry.row.reviewStatus !== "UNGEKLÄRT" &&
+    judgement.evidencePresence === "FOUND" &&
+    judgement.conflictState === "NONE" &&
+    (judgement.unresolvedCandidateIds || []).length === 0 &&
+    selectedSourcesValid(entry, judgement) &&
+    requestedFieldsValid(entry, component, judgement) &&
+    scopeValid(requirement, component, judgement)
+  );
+}
+
+function selectedComponentEvidence(entries, requirement, component) {
+  return entries.flatMap((entry) =>
+    entry.judgements
       .filter(
         (judgement) =>
-          judgement.componentId === componentId &&
-          judgement.evidencePresence === "FOUND" &&
-          judgement.coverageEffect !== "UNKNOWN"
+          judgement.componentId === component.id &&
+          judgement.coverageEffect !== "UNKNOWN" &&
+          decisionReadyEvidence(entry, requirement, component, judgement)
       )
-      .map((judgement) => ({ document, judgement }))
+      .map((judgement) => ({ document: entry.document, judgement }))
   );
-  const packageSpecific = found.filter(
-    ({ document }) => document.role !== "TERMS"
-  );
-  return packageSpecific.length > 0 ? packageSpecific : found;
 }
 
 function componentEvidenceConflicts(component, selectedEvidence) {
@@ -96,13 +202,13 @@ function componentEvidenceConflicts(component, selectedEvidence) {
 }
 
 function controlledNotFound(entries, requirement) {
-  return entries.every(({ evidence }) =>
+  return entries.every(({ judgements }) =>
     requirement.components.every((component) => {
-      const judgements = evidence.filter(
+      const componentJudgements = judgements.filter(
         (judgement) => judgement.componentId === component.id
       );
-      if (judgements.length !== 1) return false;
-      const [judgement] = judgements;
+      if (componentJudgements.length !== 1) return false;
+      const [judgement] = componentJudgements;
       return (
         judgement.evidencePresence === "NOT_FOUND" &&
         judgement.coverageEffect === "UNKNOWN" &&
@@ -145,7 +251,7 @@ function aggregateCounterpart(entries, requirement) {
   const selectedEvidence = new Map(
     requirement.components.map((component) => [
       component.id,
-      selectedComponentEvidence(entries, component.id),
+      selectedComponentEvidence(entries, requirement, component),
     ])
   );
   const foundComponents = new Set(
@@ -304,7 +410,11 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
         return {
           document: run.document,
           row,
-          evidence: readEvidence(run, definition.categoryView, requirement.id),
+          ...readEvidenceBundle(
+            run,
+            definition.categoryView,
+            requirement.id
+          ),
         };
       });
       const counterpart = aggregateCounterpart(counterpartEntries, requirement);

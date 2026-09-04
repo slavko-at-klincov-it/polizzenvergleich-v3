@@ -47,6 +47,13 @@ function effectFor(component) {
   return "INCLUDED";
 }
 
+function requestedFieldsFor(component) {
+  if (Array.isArray(component.requestedFields)) return component.requestedFields;
+  if (component.factRole === "LIMIT") return ["limit"];
+  if (component.factRole === "DEDUCTIBLE") return ["deductible"];
+  return [];
+}
+
 function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
   const outputDirectory = path.join(root, sourceDocument.uuid);
   for (const { categoryView, catalog } of categoryCatalogs()) {
@@ -55,13 +62,26 @@ function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
     const effectsRoot = path.join(categoryRoot, "effects");
     fs.mkdirSync(resultRoot, { recursive: true });
     fs.mkdirSync(effectsRoot, { recursive: true });
+    const found = (requirement) => foundRequirementIds.has(requirement.id);
     fs.writeFileSync(
       path.join(resultRoot, "rows.private.json"),
       JSON.stringify(
         catalog.requirements.map((requirement) =>
-          row(requirement, foundRequirementIds.has(requirement.id))
+          row(requirement, found(requirement))
         )
       )
+    );
+    const selectedSources = catalog.requirements.flatMap((requirement) =>
+      found(requirement)
+        ? requirement.components.map((component) => ({
+            requirementId: requirement.id,
+            componentId: component.id,
+            candidateId: `candidate:${requirement.id}:${component.id}`,
+            candidateBinding: "DIRECT",
+            physicalPageNumber: 1,
+            exactText: `Belegter Inhalt ${component.id}`,
+          }))
+        : []
     );
     fs.writeFileSync(
       path.join(effectsRoot, "materialized.private.json"),
@@ -70,15 +90,66 @@ function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
           requirement.components.map((component) => ({
             requirementId: requirement.id,
             componentId: component.id,
-            evidencePresence: foundRequirementIds.has(requirement.id)
-              ? "FOUND"
-              : "NOT_FOUND",
-            coverageEffect: foundRequirementIds.has(requirement.id)
+            selectedCandidateIds: found(requirement)
+              ? [`candidate:${requirement.id}:${component.id}`]
+              : [],
+            unresolvedCandidateIds: [],
+            evidencePresence: found(requirement) ? "FOUND" : "NOT_FOUND",
+            coverageEffect: found(requirement)
               ? effectFor(component)
               : "UNKNOWN",
             conflictState: "NONE",
+            selectedScopePicture: found(requirement) ? "GENERAL" : "UNKNOWN",
           }))
         ),
+      })
+    );
+    fs.writeFileSync(
+      path.join(effectsRoot, "selected-sources.private.json"),
+      JSON.stringify(selectedSources)
+    );
+    fs.writeFileSync(
+      path.join(resultRoot, "requested-fields.private.json"),
+      JSON.stringify({
+        requirements: catalog.requirements.map((requirement) => {
+          const factsByField = new Map();
+          requirement.components.flatMap((component) =>
+            requestedFieldsFor(component).map((field) => ({
+              field,
+              component,
+            }))
+          ).forEach(({ field, component }) => {
+            if (!factsByField.has(field)) factsByField.set(field, []);
+            if (found(requirement))
+              factsByField.get(field).push({
+                rawValue: "10",
+                normalizedValue: "10",
+                valueType: "MONEY",
+                source: {
+                  candidateId: `candidate:${requirement.id}:${component.id}`,
+                  physicalPageNumber: 1,
+                  exactText: "10",
+                },
+                componentScope: { id: component.id },
+              });
+          });
+          const fields = [...factsByField].map(([field, facts]) => ({
+            field,
+            status: found(requirement) ? "FOUND" : "NOT_FOUND",
+            facts,
+          }));
+          return {
+            requirementId: requirement.id,
+            requestedFields: [...new Set(fields.map(({ field }) => field))],
+            requestedFieldStatus:
+              fields.length === 0
+                ? "NOT_REQUIRED"
+                : found(requirement)
+                  ? "COMPLETE"
+                  : "NOT_FOUND",
+            fields,
+          };
+        }),
       })
     );
   }
@@ -254,6 +325,145 @@ describe("directed LF reference result builder", () => {
     expect(result.categories[0].rows[0]).toMatchObject({
       pointDecision: { outcome: REFERENCE_OUTCOME.UNCLEAR },
       packageB: { reviewStatus: "WIDERSPRÜCHLICH" },
+    });
+  });
+
+  test("does not complete a package from evidence hidden behind an unclear row", () => {
+    const requirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(({ components }) => components.length > 1);
+    const definition = categoryCatalogs().find(({ catalog }) =>
+      catalog.requirements.some(({ id }) => id === requirement.id)
+    );
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const first = writeRun(
+      root,
+      document("counterpart-partial", "B", 0),
+      new Set([requirement.id])
+    );
+    const second = writeRun(
+      root,
+      document("counterpart-unclear", "B", 1),
+      new Set([requirement.id])
+    );
+    const firstEffectsFile = path.join(
+      first.outputDirectory,
+      definition.categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const firstEffects = JSON.parse(fs.readFileSync(firstEffectsFile, "utf8"));
+    firstEffects.judgements.find(
+      ({ requirementId, componentId }) =>
+        requirementId === requirement.id &&
+        componentId === requirement.components[1].id
+    ).evidencePresence = "NOT_FOUND";
+    const firstMissing = firstEffects.judgements.find(
+      ({ requirementId, componentId }) =>
+        requirementId === requirement.id &&
+        componentId === requirement.components[1].id
+    );
+    firstMissing.coverageEffect = "UNKNOWN";
+    firstMissing.selectedCandidateIds = [];
+    firstMissing.selectedScopePicture = "UNKNOWN";
+    fs.writeFileSync(firstEffectsFile, JSON.stringify(firstEffects));
+    const firstRowsFile = path.join(
+      first.outputDirectory,
+      definition.categoryView,
+      "result",
+      "rows.private.json"
+    );
+    const firstRows = JSON.parse(fs.readFileSync(firstRowsFile, "utf8"));
+    firstRows.find(({ categoryId }) => categoryId === requirement.id).reviewStatus =
+      "TEILBELEGT";
+    fs.writeFileSync(firstRowsFile, JSON.stringify(firstRows));
+    const secondRowsFile = path.join(
+      second.outputDirectory,
+      definition.categoryView,
+      "result",
+      "rows.private.json"
+    );
+    const secondRows = JSON.parse(fs.readFileSync(secondRowsFile, "utf8"));
+    secondRows.find(({ categoryId }) => categoryId === requirement.id).reviewStatus =
+      "UNGEKLÄRT";
+    fs.writeFileSync(secondRowsFile, JSON.stringify(secondRows));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        first,
+        second,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ analysisRowId }) => analysisRowId === requirement.id);
+
+    expect(rowResult).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.PARTIAL },
+      packageB: { reviewStatus: "TEILBELEGT" },
+    });
+  });
+
+  test("does not complete a limit component without its bound requested field", () => {
+    const requirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(
+        ({ components }) =>
+          components.length > 1 &&
+          components.some(({ factRole }) => factRole === "LIMIT")
+      );
+    const definition = categoryCatalogs().find(({ catalog }) =>
+      catalog.requirements.some(({ id }) => id === requirement.id)
+    );
+    const limitComponent = requirement.components.find(
+      ({ factRole }) => factRole === "LIMIT"
+    );
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const counterpart = writeRun(
+      root,
+      document("counterpart-missing-limit", "B", 0),
+      new Set([requirement.id])
+    );
+    const fieldsFile = path.join(
+      counterpart.outputDirectory,
+      definition.categoryView,
+      "result",
+      "requested-fields.private.json"
+    );
+    const fields = JSON.parse(fs.readFileSync(fieldsFile, "utf8"));
+    const fieldResult = fields.requirements.find(
+      ({ requirementId }) => requirementId === requirement.id
+    );
+    for (const field of fieldResult.fields)
+      field.facts = field.facts.filter(
+        (fact) => fact.componentScope?.id !== limitComponent.id
+      );
+    fs.writeFileSync(fieldsFile, JSON.stringify(fields));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        counterpart,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ analysisRowId }) => analysisRowId === requirement.id);
+
+    expect(rowResult).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.PARTIAL },
+      packageB: { reviewStatus: "TEILBELEGT" },
     });
   });
 
