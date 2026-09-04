@@ -22,7 +22,7 @@ const POLICY_COMPARISON_MODES = Object.freeze([
     id: POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
     name: "Vollständiger A/B-Vergleich",
     description:
-      "Beide Dokumentpakete vollständig und gleichberechtigt nach dem bestehenden V3.6.0-Verfahren vergleichen.",
+      "Beide Dokumentpakete vollständig und gleichberechtigt mit dem produktiven Kernverfahren vergleichen.",
     direction: "SYMMETRIC",
     sideALabel: "Dokumentpaket A",
     sideBLabel: "Dokumentpaket B",

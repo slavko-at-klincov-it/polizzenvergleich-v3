@@ -83,7 +83,7 @@ for plist in "$V3_LAUNCH_AGENTS_DIR"/*.plist; do
 done
 [ "$(find "$V3_LAUNCH_AGENTS_DIR" -name '*.plist' | wc -l | tr -d ' ')" = "2" ]
 [ "$V3_NODE_VERSION" = "22.23.2" ]
-[ "$V3_RELEASE_VERSION" = "3.6.0" ]
+[ "$V3_RELEASE_VERSION" = "3.7.0" ]
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
