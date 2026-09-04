@@ -7,6 +7,7 @@ const {
   POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID,
   POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
   publishComparisonArtifactSet,
+  validatePublishedComparisonArtifactSet,
 } = require("../../utils/policyComparison/artifactSetPublisher");
 
 function sha256(bytes) {
@@ -181,5 +182,43 @@ describe("policy comparison artifact set publisher", () => {
 
     expect(fs.existsSync(outputDirectory)).toBe(false);
     expect(fs.readdirSync(root)).toEqual([]);
+  });
+
+  test("revalidates a published set before an interrupted finalization resumes", async () => {
+    const published = await publishComparisonArtifactSet({
+      outputDirectory,
+      writeArtifacts: async (staging) => writeFixtureArtifacts(staging),
+    });
+    fs.writeFileSync(
+      path.join(outputDirectory, "export.private.json"),
+      JSON.stringify({ schemaVersion: 2 })
+    );
+
+    expect(validatePublishedComparisonArtifactSet(outputDirectory)).toMatchObject({
+      outputDirectory,
+      files: published.files,
+      manifest: published.manifest,
+      reused: true,
+    });
+  });
+
+  test("fails closed instead of reusing a modified or incomplete published set", async () => {
+    await publishComparisonArtifactSet({
+      outputDirectory,
+      writeArtifacts: async (staging) => writeFixtureArtifacts(staging),
+    });
+    fs.appendFileSync(
+      path.join(outputDirectory, "comparison.private.json"),
+      "tampered"
+    );
+    expect(() =>
+      validatePublishedComparisonArtifactSet(outputDirectory)
+    ).toThrow("COMPARISON_ARTIFACT_SET_MANIFEST_MISMATCH");
+
+    fs.rmSync(outputDirectory, { recursive: true, force: true });
+    fs.mkdirSync(outputDirectory);
+    expect(() =>
+      validatePublishedComparisonArtifactSet(outputDirectory)
+    ).toThrow("COMPARISON_ARTIFACT_SET_FILE_MISSING");
   });
 });

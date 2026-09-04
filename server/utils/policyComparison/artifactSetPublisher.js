@@ -125,6 +125,65 @@ function finalArtifactFiles(outputDirectory) {
   );
 }
 
+function validatePublishedComparisonArtifactSet(
+  outputDirectory,
+  { fsImpl = fs } = {}
+) {
+  const resolvedOutput = path.resolve(String(outputDirectory || ""));
+  if (!path.isAbsolute(String(outputDirectory || "")))
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_OUTPUT_MUST_BE_ABSOLUTE");
+  if (!fsImpl.existsSync(resolvedOutput))
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_OUTPUT_MISSING");
+  const outputStat = fsImpl.lstatSync(resolvedOutput);
+  if (outputStat.isSymbolicLink() || !outputStat.isDirectory())
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_OUTPUT_INVALID");
+
+  const allowedEntries = new Set([
+    ...POLICY_COMPARISON_ARTIFACT_FILES,
+    POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
+    "export.private.json",
+  ]);
+  if (fsImpl.readdirSync(resolvedOutput).some((entry) => !allowedEntries.has(entry)))
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_FILES_INVALID");
+
+  const files = finalArtifactFiles(resolvedOutput);
+  for (const [filename, file] of Object.entries(files)) {
+    if (!fsImpl.existsSync(file))
+      throw artifactSetError("COMPARISON_ARTIFACT_SET_FILE_MISSING", filename);
+    const stat = fsImpl.lstatSync(file);
+    if (stat.isSymbolicLink() || !stat.isFile())
+      throw artifactSetError("COMPARISON_ARTIFACT_SET_FILE_INVALID", filename);
+  }
+  const manifestFile = path.join(
+    resolvedOutput,
+    POLICY_COMPARISON_ARTIFACT_SET_MANIFEST
+  );
+  if (!fsImpl.existsSync(manifestFile))
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_MANIFEST_MISSING");
+  const manifestStat = fsImpl.lstatSync(manifestFile);
+  if (manifestStat.isSymbolicLink() || !manifestStat.isFile())
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_MANIFEST_INVALID");
+  let manifest;
+  try {
+    manifest = JSON.parse(fsImpl.readFileSync(manifestFile, "utf8"));
+  } catch (error) {
+    throw artifactSetError(
+      "COMPARISON_ARTIFACT_SET_MANIFEST_INVALID",
+      error.message
+    );
+  }
+  const expectedManifest = buildArtifactSetManifest(files, fsImpl);
+  if (JSON.stringify(manifest) !== JSON.stringify(expectedManifest))
+    throw artifactSetError("COMPARISON_ARTIFACT_SET_MANIFEST_MISMATCH");
+  return {
+    outputDirectory: resolvedOutput,
+    files,
+    manifest,
+    manifestFile,
+    reused: true,
+  };
+}
+
 async function publishComparisonArtifactSet(
   { outputDirectory, writeArtifacts, validateArtifacts = null },
   { fsImpl = fs, randomBytes = crypto.randomBytes } = {}
@@ -216,4 +275,5 @@ module.exports = {
   POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
   buildArtifactSetManifest,
   publishComparisonArtifactSet,
+  validatePublishedComparisonArtifactSet,
 };
