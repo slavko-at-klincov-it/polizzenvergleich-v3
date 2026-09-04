@@ -20,11 +20,16 @@ const {
   POLICY_COMPARISON_MODE,
 } = require("../../utils/policyComparison/modes");
 
-function writeArtifactSet({ root, name, comparisonMode, sessionUuid, runSignature }) {
+function writeArtifactSet({
+  root,
+  name,
+  comparisonMode,
+  sessionUuid,
+  runSignature,
+}) {
   const directory = path.join(root, name);
   fs.mkdirSync(directory, { mode: 0o700 });
-  const customerMode =
-    comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B;
+  const customerMode = comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B;
   const result = {
     schemaVersion: customerMode ? 15 : 2,
     ...(customerMode ? {} : { comparisonMode }),
@@ -33,8 +38,7 @@ function writeArtifactSet({ root, name, comparisonMode, sessionUuid, runSignatur
     ...(customerMode
       ? {
           customerResultRuleOutcomeContract: {
-            schemaVersion:
-              CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+            schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
             contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
           },
         }
@@ -89,7 +93,9 @@ describe("policy comparison export contract", () => {
   const runSignature = "a".repeat(64);
 
   beforeEach(() => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), "comparison-export-contract-"));
+    root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "comparison-export-contract-")
+    );
   });
 
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -107,21 +113,18 @@ describe("policy comparison export contract", () => {
   function build(fixture, overrides = {}) {
     return buildComparisonExportContract({
       comparisonMode:
-        overrides.comparisonMode ||
-        fixture.archivedWorkbook.comparisonMode,
+        overrides.comparisonMode || fixture.archivedWorkbook.comparisonMode,
       sessionUuid: overrides.sessionUuid || sessionUuid,
       runSignature: overrides.runSignature || runSignature,
       artifactSetManifestFile: fixture.manifestFile,
-      archivedWorkbook:
-        overrides.archivedWorkbook || fixture.archivedWorkbook,
+      archivedWorkbook: overrides.archivedWorkbook || fixture.archivedWorkbook,
     });
   }
 
   function validate(value, fixture, overrides = {}) {
     return validateComparisonExportContract(value, {
       expectedComparisonMode:
-        overrides.comparisonMode ||
-        fixture.archivedWorkbook.comparisonMode,
+        overrides.comparisonMode || fixture.archivedWorkbook.comparisonMode,
       expectedSessionUuid: overrides.sessionUuid || sessionUuid,
       expectedRunSignature: overrides.runSignature || runSignature,
       artifactSetManifestFile: fixture.manifestFile,
@@ -191,15 +194,18 @@ describe("policy comparison export contract", () => {
   test.each([
     ["comparison JSON", "comparison.private.json"],
     ["workbook", "polizzenvergleich.xlsx"],
-  ])("rejects a current artifact set after %s manipulation", (_label, filename) => {
-    const fixture = customerFixture();
-    const value = build(fixture);
-    fs.appendFileSync(fixture.files[filename], "tampered");
+  ])(
+    "rejects a current artifact set after %s manipulation",
+    (_label, filename) => {
+      const fixture = customerFixture();
+      const value = build(fixture);
+      fs.appendFileSync(fixture.files[filename], "tampered");
 
-    expect(() => validate(value, fixture)).toThrow(
-      "COMPARISON_EXPORT_ARTIFACT_SET_INVALID"
-    );
-  });
+      expect(() => validate(value, fixture)).toThrow(
+        "COMPARISON_EXPORT_ARTIFACT_SET_INVALID"
+      );
+    }
+  );
 
   test("rejects a manifest digest or bound file hash changed after publication", () => {
     const fixture = customerFixture();

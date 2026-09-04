@@ -17,8 +17,7 @@ const {
 } = require("./modes");
 
 const POLICY_COMPARISON_EXPORT_SCHEMA_VERSION = 2;
-const POLICY_COMPARISON_EXPORT_CONTRACT_ID =
-  "POLICY_COMPARISON_EXPORT_V2";
+const POLICY_COMPARISON_EXPORT_CONTRACT_ID = "POLICY_COMPARISON_EXPORT_V2";
 const POLICY_COMPARISON_EXPORT_POLICY = Object.freeze({
   CURRENT_SCHEMA_2: "CURRENT_SCHEMA_2",
   HISTORICAL_SCHEMA_1_READ_ONLY: "HISTORICAL_SCHEMA_1_READ_ONLY",
@@ -89,7 +88,9 @@ function readValidatedArtifactSet(artifactSetManifestFile, fsImpl) {
     fsImpl
   );
   if (path.basename(manifestFile) !== POLICY_COMPARISON_ARTIFACT_SET_MANIFEST)
-    throw exportContractError("COMPARISON_EXPORT_ARTIFACT_MANIFEST_NAME_INVALID");
+    throw exportContractError(
+      "COMPARISON_EXPORT_ARTIFACT_MANIFEST_NAME_INVALID"
+    );
 
   const directory = path.dirname(manifestFile);
   const files = Object.fromEntries(
@@ -175,7 +176,9 @@ function validateResultIdentity({
   }
 
   if (result?.schemaVersion !== LF_REFERENCE_RESULT_SCHEMA_VERSION)
-    throw exportContractError("COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID");
+    throw exportContractError(
+      "COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID"
+    );
   if (
     Object.prototype.hasOwnProperty.call(
       result,
@@ -213,10 +216,7 @@ function validateInputs({
   if (!SHA256_PATTERN.test(normalizedRunSignature))
     throw exportContractError("COMPARISON_EXPORT_RUN_SIGNATURE_INVALID");
 
-  const artifactSet = readValidatedArtifactSet(
-    artifactSetManifestFile,
-    fsImpl
-  );
+  const artifactSet = readValidatedArtifactSet(artifactSetManifestFile, fsImpl);
   const result = readJson(
     artifactSet.files["comparison.private.json"],
     "COMPARISON_EXPORT_RESULT_JSON_INVALID",
@@ -312,8 +312,7 @@ function buildComparisonExportContract(
     artifactSet: {
       schemaVersion: POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION,
       contractId: POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID,
-      manifestDigestSha256:
-        validated.artifactSet.manifest.manifestDigestSha256,
+      manifestDigestSha256: validated.artifactSet.manifest.manifestDigestSha256,
       comparisonSha256: validated.artifactSet.comparisonSha256,
       workbookSha256: validated.artifactSet.workbookSha256,
     },
@@ -360,8 +359,7 @@ function validateComparisonExportContract(
   const expectedArtifactSet = {
     schemaVersion: POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION,
     contractId: POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID,
-    manifestDigestSha256:
-      validated.artifactSet.manifest.manifestDigestSha256,
+    manifestDigestSha256: validated.artifactSet.manifest.manifestDigestSha256,
     comparisonSha256: validated.artifactSet.comparisonSha256,
     workbookSha256: validated.artifactSet.workbookSha256,
   };
