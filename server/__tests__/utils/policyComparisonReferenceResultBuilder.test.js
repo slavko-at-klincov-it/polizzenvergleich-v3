@@ -536,6 +536,91 @@ describe("directed LF reference result builder", () => {
     });
   });
 
+  test("completes LF-GL-02 from its declared narrower storm inclusion", () => {
+    const requirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(({ sourceReferenceId }) => sourceReferenceId === "LF-GL-02");
+    const definition = categoryCatalogs().find(({ catalog }) =>
+      catalog.requirements.some(({ id }) => id === requirement.id)
+    );
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const counterpart = writeRun(
+      root,
+      document("counterpart-narrow-storm-glass", "B", 0),
+      new Set([requirement.id])
+    );
+    const effectsFile = path.join(
+      counterpart.outputDirectory,
+      definition.categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const effects = JSON.parse(fs.readFileSync(effectsFile, "utf8"));
+    const judgement = effects.judgements.find(
+      ({ requirementId, componentId }) =>
+        requirementId === requirement.id && componentId === "solar_glass"
+    );
+    judgement.selectedScopePicture = "NARROW_ONLY";
+    judgement.comparisonScopeKeys = ["STURM_INSURANCE"];
+    fs.writeFileSync(effectsFile, JSON.stringify(effects));
+    const sourcesFile = path.join(
+      counterpart.outputDirectory,
+      definition.categoryView,
+      "effects",
+      "selected-sources.private.json"
+    );
+    const sources = JSON.parse(fs.readFileSync(sourcesFile, "utf8"));
+    sources.find(
+      ({ requirementId, componentId }) =>
+        requirementId === requirement.id && componentId === "solar_glass"
+    ).candidateBinding = "NARROW_SCOPE";
+    fs.writeFileSync(sourcesFile, JSON.stringify(sources));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        counterpart,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ analysisRowId }) => analysisRowId === requirement.id);
+
+    expect(rowResult).toMatchObject({
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.FULL,
+        reviewRequired: false,
+      },
+      packageB: { reviewStatus: "BELEGT" },
+    });
+
+    judgement.comparisonScopeKeys = ["FEUER_INSURANCE"];
+    fs.writeFileSync(effectsFile, JSON.stringify(effects));
+    const wrongScopeResult = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a-wrong-scope", "A", 0), allReferenceIds),
+        counterpart,
+      ],
+      {}
+    );
+    expect(
+      wrongScopeResult.categories
+        .flatMap(({ rows }) => rows)
+        .find(({ analysisRowId }) => analysisRowId === requirement.id)
+    ).toMatchObject({
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.PARTIAL,
+        reviewRequired: true,
+      },
+      packageB: { reviewStatus: "TEILBELEGT" },
+    });
+  });
+
   test("does not complete a limit component without its bound requested field", () => {
     const requirement = categoryCatalogs()
       .flatMap(({ catalog }) => catalog.requirements)

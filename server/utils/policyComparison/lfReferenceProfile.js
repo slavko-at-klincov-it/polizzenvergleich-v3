@@ -28,6 +28,16 @@ const CATEGORY_VIEWS = Object.freeze({
   "LF-AV": "RA",
 });
 
+const REQUIREMENT_SCOPE_OVERRIDES = Object.freeze({
+  "LF-GL-02": Object.freeze({
+    scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    scopeRules: Object.freeze({
+      narrowAliases: Object.freeze([]),
+      narrowScopeKeys: Object.freeze(["STURM_INSURANCE"]),
+    }),
+  }),
+});
+
 function component(id, label, factRole, aliases, options = {}) {
   return Object.freeze({
     id,
@@ -826,6 +836,7 @@ function categoryCatalogs() {
             label: requirement.label,
             requestedFields: requestedFields(components),
             components,
+            ...(REQUIREMENT_SCOPE_OVERRIDES[requirement.id] || {}),
             coverageAggregationPolicy: components.some(({ factRole }) =>
               [
                 "PERIL",

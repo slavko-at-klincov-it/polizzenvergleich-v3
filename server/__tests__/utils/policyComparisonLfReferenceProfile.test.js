@@ -89,6 +89,13 @@ describe("LF reference comparison profile", () => {
       bySourceId.get("LF-HP-03").components.map(({ factRole }) => factRole)
     ).toContain("DEDUCTIBLE");
     expect(bySourceId.get("LF-GL-03").components).toHaveLength(4);
+    expect(bySourceId.get("LF-GL-02")).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      scopeRules: {
+        narrowAliases: [],
+        narrowScopeKeys: ["STURM_INSURANCE"],
+      },
+    });
     expect(bySourceId.get("LF-KO-02").components).toHaveLength(6);
     expect(bySourceId.get("LF-KO-03").components).toHaveLength(10);
     expect(bySourceId.get("LF-ST-02").components).toHaveLength(5);
