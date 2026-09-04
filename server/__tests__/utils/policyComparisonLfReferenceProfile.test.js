@@ -32,8 +32,7 @@ describe("LF reference comparison profile", () => {
     expect(
       requirements.every(
         ({ negativeSearchPolicy }) =>
-          negativeSearchPolicy ===
-          "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V2"
+          negativeSearchPolicy === "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V2"
       )
     ).toBe(true);
   });

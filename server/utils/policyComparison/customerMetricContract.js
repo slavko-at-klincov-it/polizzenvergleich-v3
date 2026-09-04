@@ -377,10 +377,10 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     : [];
   const validDocumentManifest = Boolean(
     Array.isArray(result?.documents) &&
-      validManifestDocuments &&
-      new Set(manifestDocumentUuids).size === manifestDocumentUuids.length &&
-      manifestDocuments.some(({ side }) => side === "A") &&
-      manifestDocuments.some(({ side }) => side === "B")
+    validManifestDocuments &&
+    new Set(manifestDocumentUuids).size === manifestDocumentUuids.length &&
+    manifestDocuments.some(({ side }) => side === "A") &&
+    manifestDocuments.some(({ side }) => side === "B")
   );
   const allowedDocumentUuidsBySide = Object.fromEntries(
     ["A", "B"].map((side) => [
@@ -397,13 +397,10 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
 
   if (Number(result.schemaVersion) >= 15) {
     if (
-      !sameJson(
-        result.customerResultRuleOutcomeContract,
-        {
-          schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
-          contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
-        }
-      )
+      !sameJson(result.customerResultRuleOutcomeContract, {
+        schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+        contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+      })
     )
       validationError("COMPARISON_CUSTOMER_RULE_OUTCOME_CONTRACT_MISMATCH");
   }
@@ -976,13 +973,13 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
       }
       const directionalAuditFailedClosed = Boolean(
         oneSidedDirection &&
-          !unilateralDecision &&
-          outcome === POINT_OUTCOME.UNCLEAR &&
-          row.pointDecision?.schemaVersion === 3 &&
-          row.pointDecision?.reasonCode ===
-            "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE" &&
-          row.pointDecision?.ruleId === "FAIL_CLOSED_V1" &&
-          row.pointDecision?.reviewRequired === true
+        !unilateralDecision &&
+        outcome === POINT_OUTCOME.UNCLEAR &&
+        row.pointDecision?.schemaVersion === 3 &&
+        row.pointDecision?.reasonCode ===
+          "QUALIFIED_DIRECTIONAL_AUDIT_INCOMPLETE" &&
+        row.pointDecision?.ruleId === "FAIL_CLOSED_V1" &&
+        row.pointDecision?.reviewRequired === true
       );
       if (
         Boolean(oneSidedDirection) !== unilateralDecision &&
