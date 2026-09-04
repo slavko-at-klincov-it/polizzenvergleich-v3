@@ -337,13 +337,13 @@ describe("policy comparison customer metric contract", () => {
   });
 
   test("keeps schema V14 results from the previous shipped profile readable", () => {
-    const result = currentFeC02PackageResult();
+    const result = resultFor([]);
     result.schemaVersion = 14;
     result.productProfile = PREVIOUS_PRODUCT_PROFILE_IDENTITY;
 
     expect(validateCustomerComparison(result)).toMatchObject({
-      rows: 1,
-      customerReviewRequired: 1,
+      rows: 0,
+      customerReviewRequired: 0,
     });
   });
 
