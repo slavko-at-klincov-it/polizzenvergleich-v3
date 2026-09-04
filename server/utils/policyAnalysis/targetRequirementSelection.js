@@ -230,7 +230,9 @@ function selectTargetRequirements({ catalog, requirementIds }) {
 
   const requested = new Set(requestedIds);
   const normalizedRequirementById = new Map(
-    validateCatalog(catalog).map((requirement) => [requirement.id, requirement])
+    validateCatalog(catalog, { assertCoverageCertifications: false }).map(
+      (requirement) => [requirement.id, requirement]
+    )
   );
   const canonicalRequirementIds = catalog.requirements
     .map(({ id }) => id)

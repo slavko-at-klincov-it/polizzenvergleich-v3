@@ -2113,7 +2113,10 @@ function validateObjectMembershipContracts(value, detail) {
   return validated;
 }
 
-function validateCatalog(catalog) {
+function validateCatalog(
+  catalog,
+  { assertCoverageCertifications = true } = {}
+) {
   if (
     ![1, 2].includes(catalog?.schemaVersion) ||
     !Array.isArray(catalog.requirements)
@@ -2806,7 +2809,10 @@ function validateCatalog(catalog) {
       scopeRules,
       components,
     };
-    if (validatedRequirement.absenceComparisonPolicy) {
+    if (
+      validatedRequirement.absenceComparisonPolicy &&
+      assertCoverageCertifications
+    ) {
       const certification = assertCoverageOnlyCertification({
         categoryView: catalog.categoryView,
         catalogId: catalog.catalogId,
