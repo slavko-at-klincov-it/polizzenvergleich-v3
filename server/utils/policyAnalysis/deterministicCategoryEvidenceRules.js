@@ -36,6 +36,7 @@ const STRICT_COVERAGE_CATEGORY_VIEWS = new Set([
   "LW",
   "ST",
   "RS",
+  "RG",
   "EL",
   "HP",
   "WE",

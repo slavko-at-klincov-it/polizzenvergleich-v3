@@ -428,27 +428,65 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
-  test("maps the glass reference view without making foreign host scopes terminal", () => {
+  test("rejects a foreign storm scope for a general-only glass component", () => {
     expect(expectedCategoryScopeKeys("RG")).toEqual([
       "GLASBRUCH_INSURANCE",
     ]);
     const input = bindingInput({
-      text: "Die Glasbruchdeckung für Solaranlagen wird gesondert beschrieben.",
-      exactText: "Glasbruchdeckung für Solaranlagen",
+      text: "Blei-, Messing- und Kunstverglasungen sind mitversichert.",
+      exactText: "Blei-, Messing- und Kunstverglasungen",
     });
     input.worksheet.catalog.categoryView = "RG";
     input.requirement = {
       id: "RG-02",
       sourceReferenceId: "LF-GL-02",
-      scopeRules: { narrowAliases: [] },
+      scopePolicy: "GENERAL_REQUIRED",
+      scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
     };
-    input.component = { id: "solar_glass", factRole: "INSURED_OBJECT" };
+    input.component = { id: "special_glass", factRole: "INSURED_OBJECT" };
     input.occurrence.sectionScopeHint = {
       scopeKey: "STURM_INSURANCE",
       text: "STURMVERSICHERUNG",
     };
 
-    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+  });
+
+  test("keeps the declared storm scope eligible only for the solar-glass component", () => {
+    const input = bindingInput({
+      text: "Solar- und Fotovoltaikanlagen sind mitversichert.",
+      exactText: "Solar- und Fotovoltaikanlagen",
+    });
+    input.worksheet.catalog.categoryView = "RG";
+    input.requirement = {
+      id: "RG-02",
+      sourceReferenceId: "LF-GL-02",
+      scopePolicy: "GENERAL_REQUIRED",
+      scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+    };
+    input.component = {
+      id: "solar_glass",
+      factRole: "INSURED_OBJECT",
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      scopeRules: {
+        narrowAliases: [],
+        narrowScopeKeys: ["STURM_INSURANCE"],
+      },
+    };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "STURM_INSURANCE",
+      text: "STURMVERSICHERUNG",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "EXPLICIT_INCLUDED_OPERATIVE_COVERAGE_CLAUSE",
+      comparisonScopeKey: "STURM_INSURANCE",
+      authoritative: true,
+    });
   });
 
   test.each([
