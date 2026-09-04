@@ -177,6 +177,8 @@ describe("preparedEvidenceContract", () => {
       {
         candidateId: "candidate:rg-03:emergency-boarding",
         reason: "TRIAGE_MENTION_ONLY",
+        deterministicBindingBasis:
+          "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
       },
     ]);
   });

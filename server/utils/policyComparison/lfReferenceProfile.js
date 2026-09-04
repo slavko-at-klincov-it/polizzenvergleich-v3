@@ -1,9 +1,9 @@
 const seedCatalog = require("../../resources/policyAnalysis/lf-immo-reference-counterpart-pilot.v0.1.json");
 
 const LF_REFERENCE_PROFILE = Object.freeze({
-  id: "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
-  catalogId: "lf-immo-reference-35-controlled-v2",
-  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
+  id: "LF_IMMO_REFERENCE_35_V3_COMPONENT_SCOPED",
+  catalogId: "lf-immo-reference-35-component-scoped-v3",
+  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
   sourceSeedCatalogId: seedCatalog.contractId,
   sourceProduct: Object.freeze({ ...seedCatalog.sourceProduct }),
   categoryCount: seedCatalog.categories.length,

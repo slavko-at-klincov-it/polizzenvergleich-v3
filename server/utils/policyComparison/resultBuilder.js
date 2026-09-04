@@ -21,6 +21,9 @@ const {
   requirementSearchContractDigest,
 } = require("../policyAnalysis/coverageOnlyCertificationContract");
 const {
+  componentScopeContract,
+} = require("../policyAnalysis/componentScopePolicyContract");
+const {
   FE_C07_COMPONENT_ID,
   validFeC07ConditionAbsenceAudit,
 } = require("../policyAnalysis/feC07ConditionAbsenceAudit");
@@ -1341,6 +1344,7 @@ function materializeAtomicFacts({
     const component = requirement?.components?.find(
       ({ id }) => id === judgement.componentId
     );
+    const scopeContract = componentScopeContract(requirement, component);
     const fieldResult = fieldResults.get(judgement.requirementId) || {
       requestedFieldStatus: "NOT_EVALUATED",
       fields: [],
@@ -1679,7 +1683,7 @@ function materializeAtomicFacts({
               component.objectScopeIdentityComparisonContract,
           }
         : {}),
-      scopePolicy: requirement?.scopePolicy || null,
+      scopePolicy: scopeContract.scopePolicy,
       requestedFields: Array.isArray(requirement?.requestedFields)
         ? [...requirement.requestedFields]
         : [],

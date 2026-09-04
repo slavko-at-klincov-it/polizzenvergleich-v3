@@ -17,9 +17,9 @@ describe("LF reference comparison profile", () => {
     expect(categories).toHaveLength(10);
     expect(requirements).toHaveLength(35);
     expect(LF_REFERENCE_PROFILE).toMatchObject({
-      id: "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
-      catalogId: "lf-immo-reference-35-controlled-v2",
-      componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
+      id: "LF_IMMO_REFERENCE_35_V3_COMPONENT_SCOPED",
+      catalogId: "lf-immo-reference-35-component-scoped-v3",
+      componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
       categoryCount: 10,
       rowCount: 35,
       noEmbeddings: true,

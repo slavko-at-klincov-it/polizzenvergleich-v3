@@ -428,32 +428,45 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
-  test("rejects a foreign storm scope for a general-only glass component", () => {
-    expect(expectedCategoryScopeKeys("RG")).toEqual([
-      "GLASBRUCH_INSURANCE",
-    ]);
-    const input = bindingInput({
-      text: "Blei-, Messing- und Kunstverglasungen sind mitversichert.",
-      exactText: "Blei-, Messing- und Kunstverglasungen",
-    });
-    input.worksheet.catalog.categoryView = "RG";
-    input.requirement = {
-      id: "RG-02",
-      sourceReferenceId: "LF-GL-02",
-      scopePolicy: "GENERAL_REQUIRED",
-      scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
-    };
-    input.component = { id: "special_glass", factRole: "INSURED_OBJECT" };
-    input.occurrence.sectionScopeHint = {
-      scopeKey: "STURM_INSURANCE",
-      text: "STURMVERSICHERUNG",
-    };
+  test.each([
+    [
+      "special_glass",
+      "INSURED_OBJECT",
+      "Blei-, Messing- und Kunstverglasungen",
+      "Blei-, Messing- und Kunstverglasungen sind mitversichert.",
+    ],
+    [
+      "special_glass_limit",
+      "LIMIT",
+      "1.500 Euro",
+      "Blei-, Messing- und Kunstverglasungen sind bis 1.500 Euro mitversichert.",
+    ],
+  ])(
+    "rejects a foreign storm scope for general-only glass component %s",
+    (componentId, factRole, exactText, text) => {
+      expect(expectedCategoryScopeKeys("RG")).toEqual([
+        "GLASBRUCH_INSURANCE",
+      ]);
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RG";
+      input.requirement = {
+        id: "RG-02",
+        sourceReferenceId: "LF-GL-02",
+        scopePolicy: "GENERAL_REQUIRED",
+        scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+      };
+      input.component = { id: componentId, factRole };
+      input.occurrence.sectionScopeHint = {
+        scopeKey: "STURM_INSURANCE",
+        text: "STURMVERSICHERUNG",
+      };
 
-    expect(deterministicCategoryCandidateBinding(input)).toEqual({
-      binding: "MENTION_ONLY",
-      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
-    });
-  });
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "MENTION_ONLY",
+        basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+      });
+    }
+  );
 
   test("keeps the declared storm scope eligible only for the solar-glass component", () => {
     const input = bindingInput({

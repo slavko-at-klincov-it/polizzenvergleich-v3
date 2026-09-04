@@ -26,6 +26,9 @@ const {
 const {
   componentScopeContract,
 } = require("./componentScopePolicyContract");
+const {
+  RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
+} = require("./glassLossScopeContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -337,6 +340,11 @@ function buildPreparedEvidenceTargets({
           serverRejectedCandidates.push({
             candidateId: occurrence.candidateId,
             reason: "TRIAGE_MENTION_ONLY",
+            ...(deterministicBinding?.authoritative &&
+            deterministicBinding.basis ===
+              RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE
+              ? { deterministicBindingBasis: deterministicBinding.basis }
+              : {}),
             ...(terminalRejection || {}),
           });
           continue;

@@ -1492,6 +1492,92 @@ describe("policy comparison result builder", () => {
     });
   });
 
+  test("persists the effective scope policy of each component in comparison atoms", () => {
+    const components = [
+      {
+        id: "solar_glass",
+        label: "Solarverglasung",
+        factRole: "INSURED_OBJECT",
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+        scopeRules: {
+          narrowAliases: [],
+          narrowScopeKeys: ["STURM_INSURANCE"],
+        },
+      },
+      {
+        id: "special_glass",
+        label: "Sonderverglasung",
+        factRole: "INSURED_OBJECT",
+      },
+    ];
+    const worksheet = {
+      catalog: { id: "lf-gl-component-scope-v3", categoryView: "RG" },
+      requirements: [
+        {
+          id: "RG-02",
+          requestedFields: [],
+          scopePolicy: "GENERAL_REQUIRED",
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          componentSatisfactionPolicy: "ALL",
+          components,
+        },
+      ],
+    };
+    const judgements = components.map((component, index) => ({
+      targetId: `target:${component.id}`,
+      requirementId: "RG-02",
+      componentId: component.id,
+      evidencePresence: "FOUND",
+      coverageEffect: "INCLUDED",
+      conflictState: "NONE",
+      selectedScopePicture: index === 0 ? "NARROW_ONLY" : "GENERAL",
+      documentApplicability: "ACTIVE",
+      selectedCandidateIds: [`candidate:${component.id}`],
+      unresolvedCandidateIds: [],
+    }));
+    const targets = components.map((component, index) => ({
+      targetId: `target:${component.id}`,
+      candidates: [
+        {
+          candidateId: `candidate:${component.id}`,
+          physicalPageNumber: 2,
+          exactText: component.label,
+          candidateBinding: index === 0 ? "NARROW_SCOPE" : "DIRECT",
+          ...(index === 0 ? { comparisonScopeKey: "STURM_INSURANCE" } : {}),
+        },
+      ],
+    }));
+
+    const atoms = materializeAtomicFacts({
+      document: {
+        uuid: "document-component-scope",
+        role: "SUPPLEMENTAL_CONTRACT",
+        documentStatus: "ACTIVE",
+      },
+      worksheet,
+      materializedEvidence: { judgements },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "RG-02",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
+        ],
+      },
+      targets,
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(
+      Object.fromEntries(atoms.map((atom) => [atom.componentId, atom.scopePolicy]))
+    ).toEqual({
+      solar_glass: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      special_glass: "GENERAL_REQUIRED",
+    });
+  });
+
   test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
     const candidateId = "candidate:fe-c07-result-builder";
     const clause =
