@@ -30,7 +30,7 @@ function preparedEvidenceFixture({
   const output = path.join(directory, "output");
   const pageContent = "prefixx";
   const pageStart = "prefix".length;
-  const fingerprint = "fixture-document-fingerprint";
+  const fingerprint = "c".repeat(64);
   const pageContentSha256 = crypto
     .createHash("sha256")
     .update(pageContent)
