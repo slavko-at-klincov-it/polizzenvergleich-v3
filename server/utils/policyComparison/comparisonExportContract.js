@@ -238,7 +238,12 @@ function validateInputs({
   };
 }
 
-function validateArchivedWorkbook(archivedWorkbook, expected, fsImpl) {
+function validateArchivedWorkbook(
+  archivedWorkbook,
+  expected,
+  fsImpl,
+  { verifyFile = true } = {}
+) {
   if (
     !archivedWorkbook ||
     typeof archivedWorkbook !== "object" ||
@@ -265,6 +270,8 @@ function validateArchivedWorkbook(archivedWorkbook, expected, fsImpl) {
     throw exportContractError(
       "COMPARISON_EXPORT_ARCHIVED_WORKBOOK_MODE_MISMATCH"
     );
+
+  if (!verifyFile) return;
 
   const archivedFile = assertRegularFile(
     archivedWorkbook.file,
@@ -334,7 +341,7 @@ function validateComparisonExportContract(
     expectedRunSignature,
     artifactSetManifestFile,
   },
-  { fsImpl = fs } = {}
+  { fsImpl = fs, verifyArchivedWorkbookFile = true } = {}
 ) {
   if (
     comparisonExportContractPolicy(value) !==
@@ -392,8 +399,14 @@ function validateComparisonExportContract(
       comparisonMode: validated.comparisonMode,
       workbookSha256: validated.artifactSet.workbookSha256,
     },
-    fsImpl
+    fsImpl,
+    { verifyFile: verifyArchivedWorkbookFile }
   );
+  const workbookBytes = fsImpl.readFileSync(
+    validated.artifactSet.files["polizzenvergleich.xlsx"]
+  );
+  if (sha256(workbookBytes) !== validated.artifactSet.workbookSha256)
+    throw exportContractError("COMPARISON_EXPORT_WORKBOOK_HASH_MISMATCH");
   return {
     schemaVersion: POLICY_COMPARISON_EXPORT_SCHEMA_VERSION,
     contractId: POLICY_COMPARISON_EXPORT_CONTRACT_ID,
@@ -403,6 +416,7 @@ function validateComparisonExportContract(
     artifactSet: expectedArtifactSet,
     customerResultRuleOutcomeContract:
       validated.customerResultRuleOutcomeContract,
+    workbookBytes,
   };
 }
 

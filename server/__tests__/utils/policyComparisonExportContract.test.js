@@ -238,6 +238,20 @@ describe("policy comparison export contract", () => {
     expect(() => validate(value, fixture)).toThrow(
       "COMPARISON_EXPORT_ARCHIVED_WORKBOOK_HASH_MISMATCH"
     );
+
+    expect(
+      validateComparisonExportContract(
+        value,
+        {
+          expectedComparisonMode:
+            fixture.archivedWorkbook.comparisonMode,
+          expectedSessionUuid: sessionUuid,
+          expectedRunSignature: runSignature,
+          artifactSetManifestFile: fixture.manifestFile,
+        },
+        { verifyArchivedWorkbookFile: false }
+      ).workbookBytes
+    ).toEqual(fs.readFileSync(fixture.files["polizzenvergleich.xlsx"]));
   });
 
   test("rejects a customer result or export carrying another rule contract", () => {
