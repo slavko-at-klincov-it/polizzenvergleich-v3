@@ -330,6 +330,13 @@ function carriedReferenceListPolarity(occurrence) {
   const positive = lastPatternMatch(prefix, POSITIVE_GOVERNORS);
   const negative = lastPatternMatch(prefix, NEGATIVE_GOVERNORS);
   if (!positive && !negative) return "UNKNOWN";
+  if (
+    positive &&
+    negative &&
+    positive.index >= negative.index &&
+    positive.index < negative.index + negative.text.length
+  )
+    return "NEGATIVE";
   return negative && (!positive || negative.index > positive.index)
     ? "NEGATIVE"
     : "POSITIVE";
