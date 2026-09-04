@@ -1,4 +1,16 @@
-const { POINT_OUTCOME } = require("./pointDecision");
+const {
+  ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
+  POINT_OUTCOME,
+} = require("./pointDecision");
+const {
+  AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_RULE_ID,
+} = require("./automaticIndexAdjustmentComparisonContract");
+const {
+  VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+} = require("./vs25AuthorityReconstructionLimitPortfolioContract");
+const {
+  STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID,
+} = require("./stormDefinitionThresholdContract");
 
 const UNCLEAR_REASON_TEXT = Object.freeze({
   MISSING_BOTH:
@@ -57,6 +69,8 @@ const PACKAGE_REVIEW_HINTS = Object.freeze({
     "Der offene Prüfgrund konnte technisch noch nicht genauer eingeordnet werden.",
 });
 const APPROVED_RULE_IDS = new Set([
+  ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
+  AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_RULE_ID,
   "ATOMIC_COMPARABILITY_GATE_V1",
   "ATOMIC_COVERAGE_EQUALITY_V1",
   "ANY_COMPONENT_IDENTITY_GATE_V1",
@@ -86,6 +100,8 @@ const APPROVED_RULE_IDS = new Set([
   "VS21_INCOMPATIBLE_LIMIT_VALUE_TYPES_V1",
   "VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1",
   "VS24_EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT_V1",
+  VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+  STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID,
 ]);
 
 function approvedRule(value) {

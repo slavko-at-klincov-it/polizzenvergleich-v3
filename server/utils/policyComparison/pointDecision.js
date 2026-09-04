@@ -93,6 +93,8 @@ const POINT_OUTCOME = Object.freeze({
   NOT_COMPARABLE: "NICHT_VERGLEICHBAR",
   UNCLEAR: "UNKLAR",
 });
+const ANY_COMPONENT_IDENTITY_GATE_RULE_ID =
+  "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE";
 
 const SEARCH_DISPOSITION = Object.freeze({
   RELEVANT_FOUND: "RELEVANT_FOUND",
@@ -1399,7 +1401,7 @@ function decidePoint({
         reason:
           "Nicht direkt vergleichbar: Die alternativ erfüllbare Zeile ist in den beiden Paketen durch unterschiedliche Komponenten belegt. Diese Alternativen dürfen nicht stillschweigend gleichgesetzt werden.",
         reviewRequired: false,
-        ruleId: "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
+        ruleId: ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
         dimensions: [],
       };
     componentIds = foundIdsA;
@@ -1586,6 +1588,7 @@ function decidePoint({
 }
 
 module.exports = {
+  ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
   POINT_OUTCOME,
   SEARCH_DISPOSITION,
   decideQualifiedCoverageOverAbsence,

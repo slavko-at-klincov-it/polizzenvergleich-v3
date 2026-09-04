@@ -11,6 +11,9 @@ const {
 } = require("./productContract");
 const { customerResultText } = require("./customerResultPresenter");
 const {
+  assertCustomerResultSemanticParity,
+} = require("./customerResultSemanticContract");
+const {
   deriveCustomerMetrics,
   validateCustomerComparison,
 } = require("./customerMetricContract");
@@ -2145,8 +2148,14 @@ async function writeWorkbook(result, outputFile) {
           (stageOrder.get(right.row.stage) ?? Number.MAX_SAFE_INTEGER) ||
         left.categoryIndex - right.categoryIndex ||
         left.rowIndex - right.rowIndex
-    );
+  );
   for (const { row } of workbookRows) {
+    const customerResult = customerResultText(row);
+    assertCustomerResultSemanticParity({
+      categoryId: row.categoryId,
+      outcome: row.pointDecision?.outcome,
+      text: customerResult,
+    });
     sheet.addRow({
       aCategoryId: row.categoryId,
       aStage: row.stage,
@@ -2164,7 +2173,7 @@ async function writeWorkbook(result, outputFile) {
       bAmount: row.packageB.coverageAmount,
       bSource: row.packageB.source,
       bReview: row.packageB.reviewStatus,
-      customerResult: customerResultText(row),
+      customerResult,
     });
   }
   const wrappedColumns = new Set([4, 7, 11, 12, 14, 15, 17]);

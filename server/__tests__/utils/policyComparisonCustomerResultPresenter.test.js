@@ -2,6 +2,10 @@ const {
   customerResultText,
   packageReviewCustomerExplanation,
 } = require("../../utils/policyComparison/customerResultPresenter");
+const {
+  assertCustomerResultSemanticParity,
+  customerOutcomeFromText,
+} = require("../../utils/policyComparison/customerResultSemanticContract");
 
 function presented(outcome, overrides = {}) {
   return customerResultText({
@@ -63,7 +67,9 @@ describe("policy comparison customer result presenter", () => {
       "Kein klarer Vorteil: In beiden Polizzen wurde nach vollständiger kontrollierter Suche keine passende Vertragsregelung gefunden.",
     ],
   ])("maps %s to the customer signal %s", (outcome, prefix) => {
-    expect(presented(outcome).startsWith(prefix)).toBe(true);
+    const text = presented(outcome);
+    expect(text.startsWith(prefix)).toBe(true);
+    expect(customerOutcomeFromText(text)).toBe(outcome);
   });
 
   test("degrades an unsafe advantage decision to unclear", () => {
@@ -118,6 +124,57 @@ describe("policy comparison customer result presenter", () => {
         "Kein klarer Vorteil: ungeklärt –"
       )
     ).toBe(true);
+  });
+
+  test.each([
+    [
+      "AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_V1",
+      "GLEICHWERTIG",
+      "Kein klarer Vorteil: gleichwertig –",
+    ],
+    [
+      "VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1",
+      "VORTEIL_A",
+      "Vorteil Polizze A:",
+    ],
+    [
+      "STORM_DEFINITION_THRESHOLD_EQUALITY_V1",
+      "GLEICHWERTIG",
+      "Kein klarer Vorteil: gleichwertig –",
+    ],
+    [
+      "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
+      "NICHT_VERGLEICHBAR",
+      "Kein klarer Vorteil: nicht vergleichbar –",
+    ],
+  ])(
+    "preserves the server-owned outcome for approved rule %s",
+    (ruleId, outcome, prefix) => {
+      const text = presented(outcome, { ruleId, reviewRequired: false });
+      expect(text.startsWith(prefix)).toBe(true);
+      expect(customerOutcomeFromText(text)).toBe(outcome);
+      expect(
+        assertCustomerResultSemanticParity({
+          categoryId: "fixture",
+          outcome,
+          text,
+        })
+      ).toBe(true);
+    }
+  );
+
+  test("detects a customer-export outcome that diverges from the private decision", () => {
+    const degraded = presented("VORTEIL_A", { ruleId: "UNREVIEWED_RULE" });
+    expect(customerOutcomeFromText(degraded)).toBe("UNKLAR");
+    expect(() =>
+      assertCustomerResultSemanticParity({
+        categoryId: "VS-99",
+        outcome: "VORTEIL_A",
+        text: degraded,
+      })
+    ).toThrow(
+      "CUSTOMER_RESULT_SEMANTIC_MISMATCH:VS-99:VORTEIL_A:UNKLAR"
+    );
   });
 
   test("keeps the approved VS-08 condition consensus customer-visible", () => {
