@@ -6202,6 +6202,12 @@ Rollenauflösung trägt. Außerdem muss die semantisch gleichwertige Form
 Pauschalsummenformen ausdrücklich akzeptiert werden. Der zugehörige
 Forward-Fix ändert weder Scope noch Ergebnisaggregation.
 
+Die zweite fokussierte Prüfung zeigte, dass die erste Regex-Erweiterung wegen
+zweier benachbarter, ähnlich aufgebauter Verträge irrtümlich den bestehenden
+`HP-02`-Anker statt des neuen `RH-01`-Ankers erweitert hatte. Der nächste
+Forward-Fix setzt `HP-02` bytegenau auf seinen bisherigen Summenanker zurück
+und ergänzt `Versicherungssumme` ausschließlich im gerichteten RH-Vertrag.
+
 Der vollständige Laufbeweis einschließlich Zeilenpartition, Hashes und
 Gate-Urteil liegt außerhalb des Repositorys im privaten QA-Root als
 `FACHLICHER_LF_LAUFBERICHT_DE.md`. Nach diesem separaten Forward-Fix sind ein

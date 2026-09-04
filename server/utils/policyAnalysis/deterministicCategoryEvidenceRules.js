@@ -635,7 +635,7 @@ function explicitHp02AnnualAggregateBinding({
     return null;
   const clause = occurrenceClauseText(occurrence);
   if (
-    !/(?:Deckungssumme|Versicherungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
+    !/(?:Deckungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
       clause
     ) ||
     !/(?:Versicherungsf[aä]lle\s+eines\s+Jahres|Jahresh[oö]chstleistung|Jahres(?:gesamt|aggregate))/iu.test(
@@ -675,7 +675,7 @@ function explicitRh01AnnualAggregateBinding({
     return null;
   const clause = occurrenceClauseText(occurrence);
   if (
-    !/(?:Deckungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
+    !/(?:Deckungssumme|Versicherungssumme|Pauschal(?:deckungs|versicherungs)summe)/iu.test(
       clause
     ) ||
     !/(?:Versicherungsf[aä]lle\s+eines\s+Jahres|Versicherungsf[aä]lle\s+eines\s+Versicherungsjahres|innerhalb\s+eines\s+Versicherungsjahres\s+eingetretenen\s+Versicherungsf[aä]lle|Jahresh[oö]chstleistung|Jahres(?:gesamt|aggregate))/iu.test(
