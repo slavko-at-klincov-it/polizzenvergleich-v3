@@ -1,4 +1,5 @@
 const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
   customerResultText,
   packageReviewCustomerExplanation,
 } = require("../../utils/policyComparison/customerResultPresenter");
@@ -7,6 +8,17 @@ const {
   customerOutcomeFromText,
 } = require("../../utils/policyComparison/customerResultSemanticContract");
 
+const DEFAULT_RULE_BY_OUTCOME = Object.freeze({
+  VORTEIL_A: "INCLUDED_OVER_EXCLUDED_V1",
+  VORTEIL_B: "INCLUDED_OVER_EXCLUDED_V1",
+  DOKUMENTATIONSUNTERSCHIED:
+    "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2",
+  GLEICHWERTIG: "ATOMIC_COVERAGE_EQUALITY_V1",
+  KEIN_DOKUMENTIERTER_VORTEIL: "COMPLETE_SEARCH_ABSENCE_BOTH_V1",
+  NICHT_VERGLEICHBAR: "ATOMIC_COMPARABILITY_GATE_V1",
+  UNKLAR: "FAIL_CLOSED_V1",
+});
+
 function presented(outcome, overrides = {}) {
   return customerResultText({
     pointDecision: {
@@ -14,7 +26,7 @@ function presented(outcome, overrides = {}) {
       reasonCode: "FIXTURE",
       reason: "Begründung für Paket A und Paket B.",
       reviewRequired: outcome === "UNKLAR",
-      ruleId: "ATOMIC_COVERAGE_EQUALITY_V1",
+      ruleId: DEFAULT_RULE_BY_OUTCOME[outcome],
       ...overrides,
     },
   });
@@ -190,6 +202,28 @@ describe("policy comparison customer result presenter", () => {
         "Kein klarer Vorteil: ungeklärt –"
       )
     ).toBe(true);
+  });
+
+  test("binds every approved rule to an explicit outcome allowlist", () => {
+    const allOutcomes = Object.keys(DEFAULT_RULE_BY_OUTCOME);
+    expect(CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT).toMatchObject({
+      schemaVersion: 1,
+      contractId: "CUSTOMER_RESULT_RULE_OUTCOME_V1",
+    });
+    for (const [ruleId, allowedOutcomes] of Object.entries(
+      CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.rules
+    )) {
+      expect(allowedOutcomes.length).toBeGreaterThan(0);
+      for (const outcome of allOutcomes) {
+        const text = presented(outcome, {
+          ruleId,
+          reviewRequired: outcome === "UNKLAR",
+        });
+        expect(customerOutcomeFromText(text)).toBe(
+          allowedOutcomes.includes(outcome) ? outcome : "UNKLAR"
+        );
+      }
+    }
   });
 
   test("detects a customer-export outcome that diverges from the private decision", () => {
