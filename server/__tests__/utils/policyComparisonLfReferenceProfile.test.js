@@ -63,7 +63,11 @@ describe("LF reference comparison profile", () => {
 
     for (const { catalog } of categoryCatalogs()) {
       expect(() =>
-        buildControlledOccurrenceWorksheet({ catalog, document })
+        buildControlledOccurrenceWorksheet({
+          catalog,
+          document,
+          documentFingerprint: "1".repeat(64),
+        })
       ).not.toThrow();
     }
   });
