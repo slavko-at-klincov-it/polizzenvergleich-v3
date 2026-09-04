@@ -45,12 +45,13 @@ function rewrite(bytes, mutate) {
 
 function fixture() {
   const pageContent = "Sturm ist versichert.";
+  const fingerprint = "b".repeat(64);
   const documentArtifact = {
     schemaVersion: 1,
-    fingerprint: "targeted-result-document",
+    fingerprint,
     document: {
       id: "targeted-result-document",
-      sourceDocumentId: "targeted-result-document",
+      sourceDocumentId: fingerprint,
       title: "targeted-result.pdf",
       documentType: "pdf",
       pageContent,
