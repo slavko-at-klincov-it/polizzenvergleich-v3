@@ -2716,6 +2716,15 @@ describe("policy comparison result builder", () => {
     expect(fs.existsSync(artifacts.jsonFile)).toBe(true);
     expect(fs.existsSync(artifacts.markdownFile)).toBe(true);
     expect(fs.existsSync(artifacts.workbookFile)).toBe(true);
+    expect(fs.existsSync(artifacts.artifactSetManifestFile)).toBe(true);
+    expect(artifacts.artifactSetManifest).toMatchObject({
+      contractId: "POLICY_COMPARISON_ARTIFACT_SET_V1",
+      artifacts: expect.arrayContaining([
+        expect.objectContaining({ filename: "comparison.private.json" }),
+        expect.objectContaining({ filename: "comparison.md" }),
+        expect.objectContaining({ filename: "polizzenvergleich.xlsx" }),
+      ]),
+    });
     expect(fs.statSync(artifacts.workbookFile).mode & 0o077).toBe(0);
     const markdown = fs.readFileSync(artifacts.markdownFile, "utf8");
     expect(markdown).toContain("A-Prüfstatus");
@@ -2935,14 +2944,16 @@ describe("policy comparison result builder", () => {
   test("rejects a productive export when the profile row count is incomplete", async () => {
     const runA = writeRun(root, document("a", "A"));
     const runB = writeRun(root, document("b", "B"));
+    const outputDirectory = path.join(root, "incomplete-result");
 
     await expect(
       writeComparisonArtifacts({
         documentRuns: [runA, runB],
-        outputDirectory: path.join(root, "incomplete-result"),
+        outputDirectory,
         enforceProductProfile: true,
       })
     ).rejects.toThrow("COMPARISON_CATEGORY_ROW_COUNT_MISMATCH:VS:1:36");
+    expect(fs.existsSync(outputDirectory)).toBe(false);
   });
 
   test("turns an approved complete zero-occurrence search into an explicit comparison assumption", () => {

@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const ExcelJS = require("exceljs");
 const {
   categoryCatalogs,
 } = require("../../utils/policyComparison/lfReferenceProfile");
@@ -9,6 +10,7 @@ const {
   REFERENCE_OUTCOME,
   buildReferenceComparisonResult,
   validateReferenceComparison,
+  writeReferenceComparisonArtifacts,
 } = require("../../utils/policyComparison/referenceResultBuilder");
 
 function document(uuid, side, position) {
@@ -209,6 +211,48 @@ describe("directed LF reference result builder", () => {
         ],
       },
     });
+  });
+
+  test("publishes a validated reference JSON, Markdown, and workbook set", async () => {
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const outputDirectory = path.join(root, "reference-result");
+    const artifacts = await writeReferenceComparisonArtifacts({
+      documentRuns: [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        writeRun(root, document("counterpart-b", "B", 0)),
+      ],
+      outputDirectory,
+      metadata: { sessionUuid: "reference-artifact-test" },
+    });
+
+    expect(fs.readdirSync(outputDirectory).sort()).toEqual(
+      [
+        "artifact-set-manifest.private.json",
+        "comparison.md",
+        "comparison.private.json",
+        "polizzenvergleich.xlsx",
+      ].sort()
+    );
+    expect(artifacts.artifactSetManifest).toMatchObject({
+      contractId: "POLICY_COMPARISON_ARTIFACT_SET_V1",
+      artifacts: expect.arrayContaining([
+        expect.objectContaining({ filename: "comparison.private.json" }),
+        expect.objectContaining({ filename: "comparison.md" }),
+        expect.objectContaining({ filename: "polizzenvergleich.xlsx" }),
+      ]),
+    });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(artifacts.workbookFile);
+    const sheet = workbook.getWorksheet("LF Referenz A nach B");
+    expect(sheet.rowCount).toBe(36);
+    expect(sheet.getCell("B2").value).toBe("LF-PR-01");
+    expect(sheet.getCell("J2").value).toBe(
+      artifacts.result.categories[0].rows[0].pointDecision.outcome
+    );
   });
 
   test("fails closed when an additional result row is injected", () => {

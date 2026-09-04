@@ -10,6 +10,9 @@ const {
 const {
   componentScopeContract,
 } = require("../policyAnalysis/componentScopePolicyContract");
+const {
+  publishComparisonArtifactSet,
+} = require("./artifactSetPublisher");
 
 const REFERENCE_RESULT_SCHEMA_VERSION = 2;
 const REFERENCE_RESULT_CONTRACT_ID = "LF_REFERENCE_A_TO_B_RESULT_V2";
@@ -24,6 +27,20 @@ const COUNTERPART_REVIEW_STATUS = Object.freeze({
   CONTROLLED_NOT_FOUND: "KEIN_BELEG_NACH_KONTROLLIERTER_SUCHE",
   UNCLEAR: "UNGEKLÄRT",
 });
+const REFERENCE_WORKBOOK_SHEET = "LF Referenz A nach B";
+const REFERENCE_WORKBOOK_HEADERS = Object.freeze([
+  "LF_Kategorie",
+  "LF_Zeilen-ID",
+  "LF_Prüfpunkt",
+  "A_Vertragsinhalt",
+  "A_Deckung",
+  "A_Quelle",
+  "B_Gegenstück",
+  "B_Deckung",
+  "B_Quelle",
+  "Gegenstückstatus",
+  "Begründung",
+]);
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -622,7 +639,7 @@ async function writeWorkbook(result, outputFile) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Polizzenvergleich V3";
   workbook.created = new Date();
-  const sheet = workbook.addWorksheet("LF Referenz A nach B");
+  const sheet = workbook.addWorksheet(REFERENCE_WORKBOOK_SHEET);
   sheet.views = [{ state: "frozen", ySplit: 1, zoomScale: 80 }];
   sheet.columns = [
     { header: "LF_Kategorie", key: "category", width: 14 },
@@ -664,26 +681,94 @@ async function writeWorkbook(result, outputFile) {
   fs.chmodSync(outputFile, 0o600);
 }
 
+async function validateReferenceArtifactRoundTrip({ result, files }) {
+  const persistedResult = JSON.parse(
+    fs.readFileSync(files["comparison.private.json"], "utf8")
+  );
+  validateReferenceComparison(persistedResult);
+  if (JSON.stringify(persistedResult) !== JSON.stringify(result))
+    throw new Error("REFERENCE_ARTIFACT_JSON_ROUNDTRIP_MISMATCH");
+  if (
+    fs.readFileSync(files["comparison.md"], "utf8") !== markdownResult(result)
+  )
+    throw new Error("REFERENCE_ARTIFACT_MARKDOWN_ROUNDTRIP_MISMATCH");
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(files["polizzenvergleich.xlsx"]);
+  if (workbook.worksheets.length !== 1)
+    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_SHEET_COUNT_INVALID");
+  const sheet = workbook.getWorksheet(REFERENCE_WORKBOOK_SHEET);
+  if (!sheet)
+    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_SHEET_MISSING");
+  if (
+    JSON.stringify(sheet.getRow(1).values.slice(1)) !==
+    JSON.stringify(REFERENCE_WORKBOOK_HEADERS)
+  )
+    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_HEADERS_INVALID");
+
+  const expectedRows = result.categories.flatMap(({ rows }) => rows);
+  if (sheet.rowCount !== expectedRows.length + 1)
+    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_ROW_COUNT_INVALID");
+  const observedIds = [];
+  for (const [index, expected] of expectedRows.entries()) {
+    const rowNumber = index + 2;
+    const categoryId = sheet.getCell(`B${rowNumber}`).value;
+    if (
+      categoryId !== expected.categoryId ||
+      sheet.getCell(`C${rowNumber}`).value !== expected.categoryName
+    )
+      throw new Error(
+        `REFERENCE_ARTIFACT_WORKBOOK_ROW_IDENTITY_INVALID:${expected.categoryId}`
+      );
+    if (sheet.getCell(`J${rowNumber}`).value !== expected.pointDecision?.outcome)
+      throw new Error(
+        `REFERENCE_ARTIFACT_WORKBOOK_OUTCOME_INVALID:${expected.categoryId}`
+      );
+    observedIds.push(categoryId);
+  }
+  if (new Set(observedIds).size !== observedIds.length)
+    throw new Error("REFERENCE_ARTIFACT_WORKBOOK_DUPLICATE_CATEGORY_ID");
+}
+
 async function writeReferenceComparisonArtifacts({
   documentRuns,
   outputDirectory,
   metadata,
 }) {
-  fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
   const result = buildReferenceComparisonResult(documentRuns, metadata);
-  const jsonFile = path.join(outputDirectory, "comparison.private.json");
-  const markdownFile = path.join(outputDirectory, "comparison.md");
-  const workbookFile = path.join(outputDirectory, "polizzenvergleich.xlsx");
-  fs.writeFileSync(jsonFile, JSON.stringify(result, null, 2), {
-    encoding: "utf8",
-    mode: 0o600,
+  const published = await publishComparisonArtifactSet({
+    outputDirectory,
+    writeArtifacts: async (stagingDirectory) => {
+      const jsonFile = path.join(
+        stagingDirectory,
+        "comparison.private.json"
+      );
+      const markdownFile = path.join(stagingDirectory, "comparison.md");
+      const workbookFile = path.join(
+        stagingDirectory,
+        "polizzenvergleich.xlsx"
+      );
+      fs.writeFileSync(jsonFile, JSON.stringify(result, null, 2), {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      fs.writeFileSync(markdownFile, markdownResult(result), {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      await writeWorkbook(result, workbookFile);
+    },
+    validateArtifacts: ({ files }) =>
+      validateReferenceArtifactRoundTrip({ result, files }),
   });
-  fs.writeFileSync(markdownFile, markdownResult(result), {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  await writeWorkbook(result, workbookFile);
-  return { result, jsonFile, markdownFile, workbookFile };
+  return {
+    result,
+    jsonFile: published.files["comparison.private.json"],
+    markdownFile: published.files["comparison.md"],
+    workbookFile: published.files["polizzenvergleich.xlsx"],
+    artifactSetManifest: published.manifest,
+    artifactSetManifestFile: published.manifestFile,
+  };
 }
 
 module.exports = {
