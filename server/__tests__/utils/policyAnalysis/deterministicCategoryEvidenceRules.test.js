@@ -483,7 +483,7 @@ describe("deterministicCategoryEvidenceRules", () => {
 
     expect(deterministicCategoryCandidateBinding(input)).toEqual({
       binding: "NARROW_SCOPE",
-      basis: "EXPLICIT_INCLUDED_OPERATIVE_COVERAGE_CLAUSE",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
       comparisonScopeKey: "STURM_INSURANCE",
       authoritative: true,
     });
