@@ -5944,3 +5944,23 @@ offene Release-Gates stehen in
 V3.6.0-Upgrade-Test, frischen LF-V2-Lauf und frischen symmetrischen
 224-Zeilen-Nichtregressionslauf bleibt der Kandidat NO-GO und die
 Kundeninstallation unverändert auf V3.6.0.
+
+## 124. Kontrollierte Arbeitsunterbrechung nach frischem LF-V2-Lauf
+
+Die Arbeit wurde am 4. September 2026 auf Wunsch des Auftraggebers sicher
+beendet. Der frische LF-V2-Lauf auf `03c584155` ist mit 100/100 Schritten in
+20:08,371 abgeschlossen und stimmt ohne Partitionsabweichung mit der zuvor
+gespeicherten gehärteten Neuauswertung überein: 12 vollständige, 13 partielle,
+vier kontrollierte Nullfunde, sechs unklare B-Gegenstücke und 19
+Kundenreviews. JSON und XLSX stimmen in allen 35 mal elf Datenzellen überein.
+
+Der vollständige symmetrische 224-Zeilen-Nichtregressionslauf wurde noch nicht
+gestartet. Drei offene Read-only-Einzelquellenaudits wurden kontrolliert
+unterbrochen; aus ihnen wurde kein unvollständiger Befund und keine
+Codeänderung übernommen. Auf dem Mac Studio läuft kein Vergleichs- oder
+Testprozess. V3.7.0 ist weder gemergt noch getaggt noch deployed; der
+Kundencheckout bleibt sauber auf V3.6.0 (`2804fa563`).
+
+Der vollständige Wiederaufnahmezustand mit Branch-SHAs, Artefaktpfaden,
+Hashes, offenen Gates, First-Hop-Deploymentgrenze und Fortsetzungsreihenfolge
+steht in `docs/ARBEITSUNTERBRECHUNG_V3.7.0_2026-09-04_DE.md`.
