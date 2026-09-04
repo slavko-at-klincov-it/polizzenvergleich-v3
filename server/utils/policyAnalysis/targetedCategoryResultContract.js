@@ -280,6 +280,7 @@ function materializeTargetedCategoryResult(input) {
   });
   const targets = buildPreparedEvidenceTargets({
     worksheet,
+    documentArtifact,
     documentStatus: inputContract.document.documentStatus,
     candidateTriage: rebuiltTriage,
     expectedTargetSelectionDigestSha256:

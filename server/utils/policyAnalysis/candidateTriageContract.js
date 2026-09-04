@@ -20,6 +20,9 @@ const {
 const {
   componentScopeContract,
 } = require("./componentScopePolicyContract");
+const {
+  createArtifactBackedSourceScopeResolver,
+} = require("./sourceBoundSectionScopeContract");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -608,12 +611,27 @@ function normalizeCandidateTriageResponse(responseText) {
  */
 function buildCandidateTriagePayload(
   worksheet,
-  { expectedTargetSelectionDigestSha256 = null } = {}
+  {
+    documentArtifact = null,
+    expectedTargetSelectionDigestSha256 = null,
+  } = {}
 ) {
   assertTargetRequirementSelection(worksheet, {
     expectedSelectionDigestSha256: expectedTargetSelectionDigestSha256,
   });
-  const candidates = worksheetCandidates(worksheet);
+  const sourceScopeResolver = documentArtifact
+    ? createArtifactBackedSourceScopeResolver({ worksheet, documentArtifact })
+    : null;
+  const candidates = worksheetCandidates(worksheet).map((candidate) =>
+    sourceScopeResolver
+      ? {
+          ...candidate,
+          occurrence: sourceScopeResolver.resolveOccurrence(
+            candidate.occurrence
+          ),
+        }
+      : candidate
+  );
   const bindingGroups = worksheetBindingGroups(worksheet, candidates);
   return {
     schemaVersion: TRIAGE_SCHEMA_VERSION,

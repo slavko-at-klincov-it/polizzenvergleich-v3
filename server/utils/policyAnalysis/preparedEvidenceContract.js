@@ -30,6 +30,9 @@ const {
 const {
   RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
 } = require("./glassLossScopeContract");
+const {
+  createArtifactBackedSourceScopeResolver,
+} = require("./sourceBoundSectionScopeContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -276,17 +279,24 @@ function buildPreparedEvidenceTargets({
   worksheet,
   documentStatus,
   candidateTriage = null,
+  documentArtifact = null,
   expectedTargetSelectionDigestSha256 = null,
 }) {
   validateWorksheet(worksheet, expectedTargetSelectionDigestSha256);
   applicabilityFor(documentStatus, EVIDENCE_PRESENCE.FOUND);
+  const sourceScopeResolver = documentArtifact
+    ? createArtifactBackedSourceScopeResolver({ worksheet, documentArtifact })
+    : null;
   const triageById = validateCandidateTriage({ worksheet, candidateTriage });
   return worksheet.requirements.flatMap((requirement) =>
     requirement.components.map((component) => {
       const candidates = [];
       const serverRejectedCandidates = [];
       const unresolvedCandidateIds = [];
-      for (const occurrence of component.occurrences) {
+      for (const rawOccurrence of component.occurrences) {
+        const occurrence = sourceScopeResolver
+          ? sourceScopeResolver.resolveOccurrence(rawOccurrence)
+          : rawOccurrence;
         const nestedListContinuationRequired = Boolean(
           occurrence.objectScopeProof?.assertions?.some(
             ({ sourceKind }) => sourceKind === "NESTED_LIST_CONTINUATION"

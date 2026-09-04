@@ -328,6 +328,7 @@ async function run() {
     fail(`Ungültiger --documentStatus: ${documentStatus}`);
   const targets = buildPreparedEvidenceTargets({
     worksheet,
+    documentArtifact,
     documentStatus,
     candidateTriage,
     expectedTargetSelectionDigestSha256,
