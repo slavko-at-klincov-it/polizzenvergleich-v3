@@ -75,6 +75,67 @@ describe("deterministicCategoryEvidenceRules", () => {
   });
 
   test.each([
+    [
+      "Zusätzlich sind im Rahmen des Vertrages mitversichert:\n- Mietverlust;\n- tatsächliche Kosten für Ersatzräumlichkeiten",
+      "POSITIVE",
+    ],
+    [
+      "Nicht versichert sind:\n- Mietverlust;\n- Kosten für Ersatzräumlichkeiten",
+      "NEGATIVE",
+    ],
+  ])(
+    "makes an explicit carried list governor authoritative for a curated reference requirement (%s)",
+    (text, polarity) => {
+      const exactText = text.includes("tatsächliche")
+        ? "tatsächliche Kosten für Ersatzräumlichkeiten"
+        : "Kosten für Ersatzräumlichkeiten";
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RK";
+      input.requirement = {
+        id: "RK-02",
+        sourceReferenceId: "LF-KO-02",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "replacement_rooms", factRole: "COST" };
+      input.occurrence.sectionScopeHint = null;
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each([
+    ["Sämtliche versicherten Gebäude sind zum Neuwert zu ersetzen.", "POSITIVE"],
+    [
+      "Nicht ständig verwendete Gebäude sind nicht zum Neuwert zu ersetzen.",
+      "NEGATIVE",
+    ],
+  ])(
+    "makes an explicit operative replacement clause authoritative for a curated reference requirement (%s)",
+    (text, polarity) => {
+      const exactText = "zum Neuwert zu ersetzen";
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RA";
+      input.requirement = {
+        id: "RA-02",
+        sourceReferenceId: "LF-AV-02",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "new_value", factRole: "BENEFIT" };
+      input.occurrence.sectionScopeHint = null;
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: `EXPLICIT_${polarity}_OPERATIVE_COVERAGE_CLAUSE`,
+        authoritative: true,
+      });
+    }
+  );
+
+  test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
     ["Versicherte Kosten im Rahmen der Versicherungssumme", "POSITIVE"],
     ["7.2 Versicherte Gefahren", "POSITIVE"],

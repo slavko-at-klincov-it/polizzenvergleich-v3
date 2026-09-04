@@ -2638,6 +2638,15 @@ function validateCatalog(catalog) {
     }
     const validatedRequirement = {
       id,
+      ...(requirement.sourceReferenceId
+        ? {
+            sourceReferenceId: requireNonEmptyString(
+              requirement.sourceReferenceId,
+              "SOURCE_REFERENCE_ID_INVALID",
+              id
+            ),
+          }
+        : {}),
       label: requireNonEmptyString(
         requirement.label,
         "REQUIREMENT_LABEL_REQUIRED",
@@ -3692,6 +3701,9 @@ function buildControlledOccurrenceWorksheet({
     );
     return {
       id: requirement.id,
+      ...(requirement.sourceReferenceId
+        ? { sourceReferenceId: requirement.sourceReferenceId }
+        : {}),
       label: requirement.label,
       requestedFields: requirement.requestedFields,
       ...(requirement.optionalFields.length > 0

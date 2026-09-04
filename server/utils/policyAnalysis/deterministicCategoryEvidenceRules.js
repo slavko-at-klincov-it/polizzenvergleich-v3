@@ -216,7 +216,7 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
     );
   if (factRole === "COST") return /Kosten/iu.test(text);
   if (factRole === "BENEFIT")
-    return /(?:Entschädigung|Leistung|Ersatz|Ertragsausfall|Mietverlust)/iu.test(
+    return /(?:Entschädigung|Leistung|Ersatz|ersetz|Ertragsausfall|Mietverlust)/iu.test(
       text
     );
   if (factRole === "LIMIT")
@@ -225,7 +225,7 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
     );
   if (factRole === "DEDUCTIBLE") return /Selbstbehalt/iu.test(text);
   if (factRole === "CONDITION")
-    return /(?:wenn|sofern|vorausgesetzt|Obliegenheit|Nachweis|Frist|Karenz)/iu.test(
+    return /(?:wenn|sofern|vorausgesetzt|Voraussetzung|Obliegenheit|Nachweis|Frist|Karenz|innerhalb|binnen|Dauer|gilt|verzichtet|subsidiär|ohne\s+betragliche\s+Beschränkung)/iu.test(
       text
     );
   if (factRole === "DEFINITION")
@@ -281,6 +281,10 @@ function operativeCoveragePolarity(occurrence) {
     /\b(?:sind|gelten)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\bmitversichert\b/iu.test(
       clause
     ) ||
+    /\b(?:Deckung|Versicherungsschutz)\s+gilt\s+nicht\b/iu.test(clause) ||
+    /\b(?:ist|sind)\b[\s\S]{0,220}?\bnicht\b[\s\S]{0,120}?\bzu\s+(?:ersetzen|entschädigen|vergüten)\b/iu.test(
+      clause
+    ) ||
     /\b(?:kein\w*\s+Ersatz|nicht\s+(?:ersetzt|entschädigt|vergütet))\b/iu.test(
       clause
     ) ||
@@ -292,10 +296,43 @@ function operativeCoveragePolarity(occurrence) {
       clause
     ) ||
     /\b(?:sind|gelten)\b[\s\S]{0,320}?\bmitversichert\b/iu.test(clause) ||
-    /\b(?:der\s+)?Versicherer\s+leistet\s+Entschädigung\b/iu.test(clause)
+    /\b(?:der\s+)?Versicherer\s+leistet\s+Entschädigung\b/iu.test(clause) ||
+    /\b(?:ist|sind)\b[\s\S]{0,320}?\bzu\s+(?:ersetzen|entschädigen|vergüten)\b/iu.test(
+      clause
+    ) ||
+    /\b(?:Deckung|Versicherungsschutz)\s+gilt\b/iu.test(clause) ||
+    /\bVoraussetzung\b[\s\S]{0,240}?\bist\s*,?\s*dass\b/iu.test(clause) ||
+    /\berwirbt\b[\s\S]{0,180}?\bAnspruch\b[\s\S]{0,180}?\bnur\s+insoweit\b/iu.test(
+      clause
+    ) ||
+    /\bverzichtet\s+(?:der\s+)?Versicherer\b[\s\S]{0,220}?\bauf\b/iu.test(
+      clause
+    )
   )
     return "POSITIVE";
   return "UNKNOWN";
+}
+
+function carriedReferenceListPolarity(occurrence) {
+  const context = String(occurrence?.context?.text || "");
+  const contextStart = Number(occurrence?.context?.documentStart);
+  const occurrenceStart = Number(occurrence?.documentStart) - contextStart;
+  if (
+    occurrence?.context?.unitType !== "CLAUSE_SECTION" ||
+    !Number.isInteger(contextStart) ||
+    !Number.isInteger(occurrenceStart) ||
+    occurrenceStart <= 0 ||
+    occurrenceStart > context.length
+  )
+    return "UNKNOWN";
+  const prefix = context.slice(0, occurrenceStart);
+  if (!/(?:^|\n)\s*[-•·]\s*/u.test(prefix)) return "UNKNOWN";
+  const positive = lastPatternMatch(prefix, POSITIVE_GOVERNORS);
+  const negative = lastPatternMatch(prefix, NEGATIVE_GOVERNORS);
+  if (!positive && !negative) return "UNKNOWN";
+  return negative && (!positive || negative.index > positive.index)
+    ? "NEGATIVE"
+    : "POSITIVE";
 }
 
 function explicitRoleMismatch(component, occurrence) {
@@ -1476,7 +1513,7 @@ function deterministicCategoryCandidateBinding({
   const operativePolarity = operativeCoveragePolarity(occurrence);
   const operativeClause = occurrenceClauseText(occurrence);
   if (
-    matchingScopeKey &&
+    (matchingScopeKey || requirement?.sourceReferenceId) &&
     operativePolarity !== "UNKNOWN" &&
     factRoleMatchesGovernor(
       component?.factRole,
@@ -1508,7 +1545,17 @@ function deterministicCategoryCandidateBinding({
   const evidenceText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
     occurrence?.scopeLead?.text || ""
   }\n${occurrence?.context?.text || ""}`;
-  if (!factRoleMatchesGovernor(component?.factRole, polarity, evidenceText))
+  const effectivePolarity =
+    polarity === "UNKNOWN" && requirement?.sourceReferenceId
+      ? carriedReferenceListPolarity(occurrence)
+      : polarity;
+  if (
+    !factRoleMatchesGovernor(
+      component?.factRole,
+      effectivePolarity,
+      evidenceText
+    )
+  )
     return null;
   const explicitVariantListClause = Boolean(
     occurrence?.variantScopeHint?.key &&
@@ -1542,9 +1589,10 @@ function deterministicCategoryCandidateBinding({
         ? "EXPLICIT_NARROW_CLAUSE_SCOPE"
         : narrowScopeKey
           ? "EXPLICIT_NARROW_SECTION_SCOPE"
-          : `EXPLICIT_${polarity}_CLAUSE_GOVERNOR`,
+          : `EXPLICIT_${effectivePolarity}_CLAUSE_GOVERNOR`,
     ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
-    ...(ambiguousNarrowScope ||
+    ...(requirement?.sourceReferenceId ||
+    ambiguousNarrowScope ||
     explicitVariantListClause ||
     explicitCategoryListClause
       ? { authoritative: true }

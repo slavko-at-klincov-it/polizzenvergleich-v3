@@ -199,6 +199,18 @@ function followingBoundaryOccurrence(pages, fingerprint = "boundary-proof") {
 }
 
 describe("controlledOccurrenceWorksheet", () => {
+  test("preserves a curated source reference id for downstream evidence policy", () => {
+    const referenceCatalog = singleSolarComponentCatalog();
+    referenceCatalog.requirements[0].sourceReferenceId = "LF-GL-02";
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages(["Solar- und Photovoltaikanlagen"]),
+      documentFingerprint: "curated-reference-id",
+      catalog: referenceCatalog,
+    });
+
+    expect(worksheet.requirements[0].sourceReferenceId).toBe("LF-GL-02");
+  });
+
   test("keeps following-boundary provenance opt-in per component", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages(["Solar- und Photovoltaikanlagen"]),
