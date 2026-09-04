@@ -1,9 +1,9 @@
 const seedCatalog = require("../../resources/policyAnalysis/lf-immo-reference-counterpart-pilot.v0.1.json");
 
 const LF_REFERENCE_PROFILE = Object.freeze({
-  id: "LF_IMMO_REFERENCE_35_V1_CONTROLLED",
-  catalogId: "lf-immo-reference-35-controlled-v1",
-  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V1",
+  id: "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
+  catalogId: "lf-immo-reference-35-controlled-v2",
+  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
   sourceSeedCatalogId: seedCatalog.contractId,
   sourceProduct: Object.freeze({ ...seedCatalog.sourceProduct }),
   categoryCount: seedCatalog.categories.length,
@@ -839,7 +839,7 @@ function categoryCatalogs() {
               ? "COVERAGE_ROLES_ONLY"
               : "ALL_COMPONENT_EFFECTS",
             componentSatisfactionPolicy: "ALL",
-            negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
+            negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V2",
             absenceMeaning: "COVERAGE_MIXED",
             reference: { ...requirement.reference },
           };

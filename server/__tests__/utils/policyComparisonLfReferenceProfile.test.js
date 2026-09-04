@@ -14,6 +14,9 @@ describe("LF reference comparison profile", () => {
     expect(categories).toHaveLength(10);
     expect(requirements).toHaveLength(35);
     expect(LF_REFERENCE_PROFILE).toMatchObject({
+      id: "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
+      catalogId: "lf-immo-reference-35-controlled-v2",
+      componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
       categoryCount: 10,
       rowCount: 35,
       noEmbeddings: true,
@@ -23,6 +26,13 @@ describe("LF reference comparison profile", () => {
       new Set(requirements.map(({ sourceReferenceId }) => sourceReferenceId))
         .size
     ).toBe(35);
+    expect(
+      requirements.every(
+        ({ negativeSearchPolicy }) =>
+          negativeSearchPolicy ===
+          "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V2"
+      )
+    ).toBe(true);
   });
 
   test("splits compound LF points into mandatory typed components", () => {

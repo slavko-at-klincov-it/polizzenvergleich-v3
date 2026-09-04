@@ -233,6 +233,33 @@ describe("directed LF reference result builder", () => {
     );
   });
 
+  test("rejects a result carrying the superseded V1 contract identity", () => {
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        writeRun(root, document("counterpart-b", "B", 0)),
+      ],
+      {}
+    );
+    result.schemaVersion = 1;
+    result.contractId = "LF_REFERENCE_A_TO_B_RESULT_V1";
+    result.productProfile = {
+      ...result.productProfile,
+      id: "LF_IMMO_REFERENCE_35_V1_CONTROLLED",
+      catalogId: "lf-immo-reference-35-controlled-v1",
+      componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V1",
+    };
+
+    expect(() => validateReferenceComparison(result)).toThrow(
+      "REFERENCE_RESULT_CONTRACT_INVALID"
+    );
+  });
+
   test("does not convert unresolved B candidates into a controlled zero result", () => {
     const firstCategory = categoryCatalogs()[0];
     const firstRequirement = firstCategory.catalog.requirements[0];

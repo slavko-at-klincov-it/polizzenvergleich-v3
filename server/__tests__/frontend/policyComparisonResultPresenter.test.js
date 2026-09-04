@@ -88,7 +88,7 @@ describe("policy comparison result presenter", () => {
         reasonCode: "ONLY_PART_OF_REFERENCE_COMPONENTS_EVIDENCED_IN_B",
         reason: "Nur ein Teil ist belegt.",
         reviewRequired: true,
-        ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V1",
+        ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V2",
       },
     };
     expect(presentPointDecision(row)).toMatchObject({

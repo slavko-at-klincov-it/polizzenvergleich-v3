@@ -7,8 +7,8 @@ const {
   categoryCatalogs,
 } = require("./lfReferenceProfile");
 
-const REFERENCE_RESULT_SCHEMA_VERSION = 1;
-const REFERENCE_RESULT_CONTRACT_ID = "LF_REFERENCE_A_TO_B_RESULT_V1";
+const REFERENCE_RESULT_SCHEMA_VERSION = 2;
+const REFERENCE_RESULT_CONTRACT_ID = "LF_REFERENCE_A_TO_B_RESULT_V2";
 const REFERENCE_OUTCOME = Object.freeze({
   FOUND: "GEGENSTUECK_GEFUNDEN",
   PARTIAL: "TEILWEISES_GEGENSTUECK",
@@ -378,7 +378,7 @@ function referenceDecision(reference, counterpart) {
       reason:
         "Die LF-IMMO-Referenzzeile ist nicht vollständig belegt; daraus wird kein belastbares Gegenstück abgeleitet.",
       reviewRequired: true,
-      ruleId: "REFERENCE_A_ELIGIBILITY_V1",
+      ruleId: "REFERENCE_A_ELIGIBILITY_V2",
     };
   if (counterpart.reviewStatus === "BELEGT")
     return {
@@ -387,7 +387,7 @@ function referenceDecision(reference, counterpart) {
       reason:
         "Für alle verpflichtenden Komponenten der LF-IMMO-Zeile liegt im Paket B ein belegtes Gegenstück vor.",
       reviewRequired: false,
-      ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V1",
+      ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V2",
     };
   if (counterpart.reviewStatus === "TEILBELEGT")
     return {
@@ -396,7 +396,7 @@ function referenceDecision(reference, counterpart) {
       reason:
         "Im Paket B ist nur ein Teil der verpflichtenden LF-IMMO-Komponenten belegt.",
       reviewRequired: true,
-      ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V1",
+      ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V2",
     };
   if (
     counterpart.reviewStatus ===
@@ -408,7 +408,7 @@ function referenceDecision(reference, counterpart) {
       reason:
         "Die kontrollierte Suche über alle zugeordneten B-Dokumente fand für diese LF-IMMO-Zeile keinen belastbaren Beleg. Das ist kein ausdrücklicher Ausschluss.",
       reviewRequired: false,
-      ruleId: "REFERENCE_CONTROLLED_ZERO_RESULT_V1",
+      ruleId: "REFERENCE_CONTROLLED_ZERO_RESULT_V2",
     };
   return {
     outcome: REFERENCE_OUTCOME.UNCLEAR,
@@ -416,7 +416,7 @@ function referenceDecision(reference, counterpart) {
     reason:
       "Die Fundlage im Paket B ist widersprüchlich oder nicht eindeutig auflösbar.",
     reviewRequired: true,
-    ruleId: "REFERENCE_FAIL_CLOSED_V1",
+    ruleId: "REFERENCE_FAIL_CLOSED_V2",
   };
 }
 
