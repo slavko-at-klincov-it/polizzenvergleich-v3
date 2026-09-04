@@ -545,7 +545,7 @@ describe("deterministicCategoryEvidenceRules", () => {
       "Versichert sind Hochwasser und Erdbeben.",
       "Hochwasser",
       "DIRECT",
-      "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
     ],
     [
       "LEITUNGSWASSER_INSURANCE",
@@ -566,7 +566,7 @@ describe("deterministicCategoryEvidenceRules", () => {
       "Nicht versichert sind Schäden durch Hochwasser und Erdbeben.",
       "Hochwasser",
       "DIRECT",
-      "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
+      "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
     ],
   ])(
     "maps the directed storm view to its source-bound insurance scope (%s, %s)",
