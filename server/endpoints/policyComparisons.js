@@ -15,22 +15,12 @@ const { handlePolicyComparisonUpload } = require("../utils/files/multer");
 const { isWithin, policyComparisonsPath } = require("../utils/files");
 const { EventLogs } = require("../models/eventLogs");
 const {
-  customerSafeComparisonReadView,
-} = require("../utils/policyComparison/customerMetricContract");
-const {
   policyComparisonMode,
   POLICY_COMPARISON_MODE,
 } = require("../utils/policyComparison/modes");
 const {
-  customerSafeReferenceReadView,
-} = require("../utils/policyComparison/referenceResultBuilder");
-
-function readValidatedComparisonResult(resultFile) {
-  const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
-  if (result?.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B)
-    return customerSafeReferenceReadView(result);
-  return customerSafeComparisonReadView(result);
-}
+  readValidatedComparisonResult,
+} = require("../utils/policyComparison/comparisonResultReader");
 
 function comparisonOptions(workspace) {
   const mode = policyComparisonMode(workspace.policyComparisonMode);
@@ -459,7 +449,10 @@ function policyComparisonEndpoints(app) {
           throw new Error("COMPARISON_RESULT_MISSING");
         return response.status(200).json({
           success: true,
-          result: readValidatedComparisonResult(resultFile),
+          result: readValidatedComparisonResult(
+            resultFile,
+            session.comparisonMode
+          ),
         });
       } catch (error) {
         console.error(error.message, error);
@@ -534,7 +527,7 @@ function policyComparisonEndpoints(app) {
           !fs.existsSync(resultFile)
         )
           throw new Error("COMPARISON_RESULT_MISSING");
-        readValidatedComparisonResult(resultFile);
+        readValidatedComparisonResult(resultFile, session.comparisonMode);
         const filename =
           session.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
             ? "LF-IMMO-Referenzvergleich.xlsx"
