@@ -37,6 +37,7 @@ if [ "$old_sha" = "$target_sha" ]; then
 fi
 
 v3_stop_services
+v3_require_comparison_quiescent
 git -C "$V3_REPO_DIR" checkout --detach "$target_tag"
 
 # Das Update kann auch diese Installerfunktionen geändert haben.

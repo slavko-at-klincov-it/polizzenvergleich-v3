@@ -87,6 +87,37 @@ done
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 
+# Installation und Update dürfen nie Code oder Datenbank wechseln, solange ein
+# Vergleich in der Datenbank oder als abgekoppelter Worker aktiv ist.
+comparison_db="$V3_REPO_DIR/server/storage/anythingllm.db"
+mkdir -p "$(dirname "$comparison_db")" "$V3_REPO_DIR/server/scripts"
+/usr/bin/sqlite3 "$comparison_db" \
+  "CREATE TABLE policy_comparison_sessions (status TEXT NOT NULL); INSERT INTO policy_comparison_sessions VALUES ('COMPLETED');"
+v3_require_comparison_quiescent
+/usr/bin/sqlite3 "$comparison_db" \
+  "INSERT INTO policy_comparison_sessions VALUES ('RUNNING');"
+if (v3_require_comparison_quiescent); then
+  printf '%s\n' "Aktive Vergleichssitzung wurde fälschlich freigegeben." >&2
+  exit 1
+fi
+/usr/bin/sqlite3 "$comparison_db" \
+  "DELETE FROM policy_comparison_sessions WHERE status = 'RUNNING';"
+worker_fixture="$V3_REPO_DIR/server/scripts/policyComparisonWorker.cjs"
+{
+  printf '%s\n' '#!/bin/bash' '/bin/sleep 30'
+} >"$worker_fixture"
+chmod 700 "$worker_fixture"
+/bin/bash "$worker_fixture" &
+worker_fixture_pid=$!
+if (v3_require_comparison_quiescent); then
+  kill "$worker_fixture_pid" >/dev/null 2>&1 || true
+  wait "$worker_fixture_pid" >/dev/null 2>&1 || true
+  printf '%s\n' "Aktiver Vergleichs-Worker wurde fälschlich freigegeben." >&2
+  exit 1
+fi
+kill "$worker_fixture_pid" >/dev/null 2>&1 || true
+wait "$worker_fixture_pid" >/dev/null 2>&1 || true
+
 release_repo="$temp_dir/release-repo"
 release_remote="$temp_dir/release-origin.git"
 mkdir -p "$release_repo"

@@ -48,6 +48,7 @@ V3_REPO_DIR="$V3_REPO_DIR" \
 chmod 600 "$V3_REPO_DIR/server/.env" "$V3_REPO_DIR/collector/.env" "$V3_REPO_DIR/frontend/.env"
 v3_prepare_application
 v3_stop_services
+v3_require_comparison_quiescent
 v3_require_port_available "$V3_SERVER_PORT" server
 v3_require_port_available "$V3_COLLECTOR_PORT" collector
 activation_attempted=true

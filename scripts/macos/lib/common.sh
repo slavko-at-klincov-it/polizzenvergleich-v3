@@ -139,6 +139,30 @@ v3_release_install_lock() {
   [ "$V3_INSTALL_LOCK" = "$V3_RUNTIME_DIR/install.lock" ] && /bin/rm -rf "$V3_INSTALL_LOCK"
 }
 
+v3_require_comparison_quiescent() {
+  local database="$V3_REPO_DIR/server/storage/anythingllm.db"
+  local table_exists="0" active_count="0"
+  if [ -s "$database" ]; then
+    [ -x /usr/bin/sqlite3 ] ||
+      v3_die "SQLite-Prüfung fehlt; laufende Vergleiche können nicht sicher ausgeschlossen werden."
+    table_exists="$(/usr/bin/sqlite3 "$database" \
+      "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='policy_comparison_sessions';")" ||
+      v3_die "Vergleichsstatus konnte vor der Aktualisierung nicht gelesen werden."
+    if [ "$table_exists" = "1" ]; then
+      active_count="$(/usr/bin/sqlite3 "$database" \
+        "SELECT COUNT(*) FROM policy_comparison_sessions WHERE status IN ('QUEUED','RUNNING');")" ||
+        v3_die "Aktive Vergleichssitzungen konnten nicht sicher geprüft werden."
+      [ "$active_count" = "0" ] ||
+        v3_die "$active_count Vergleichslauf/-läufe sind noch QUEUED oder RUNNING. Bitte zuerst abschließen oder abbrechen."
+    fi
+  fi
+
+  local worker_script="$V3_REPO_DIR/server/scripts/policy""ComparisonWorker.cjs"
+  if /usr/bin/pgrep -f "$worker_script" >/dev/null 2>&1; then
+    v3_die "Ein Vergleichs-Worker läuft noch. Bitte den Vergleich zuerst abschließen oder abbrechen."
+  fi
+}
+
 v3_listener_is_loopback_only() {
   local names
   names="$(/usr/sbin/lsof -nP -a -iTCP:"$1" -sTCP:LISTEN -F n 2>/dev/null | /usr/bin/grep '^n' || true)"
