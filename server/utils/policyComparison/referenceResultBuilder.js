@@ -229,7 +229,9 @@ function componentEvidenceConflicts(component, selectedEvidence) {
   );
   if (!effects.has("EXCLUDED")) return false;
   if (component.factRole === "EXCLUSION") return effects.has("INCLUDED");
-  return [...effects].some((effect) => componentAcceptsEffect(component, effect));
+  return [...effects].some((effect) =>
+    componentAcceptsEffect(component, effect)
+  );
 }
 
 function packageEvidenceState(entries) {
@@ -242,11 +244,7 @@ function packageEvidenceState(entries) {
     return "CONFLICTING";
   if (
     judgements.some(
-      ({
-        coverageEffect,
-        evidencePresence,
-        unresolvedCandidateIds = [],
-      }) =>
+      ({ coverageEffect, evidencePresence, unresolvedCandidateIds = [] }) =>
         unresolvedCandidateIds.length > 0 ||
         (evidencePresence === "FOUND" && coverageEffect === "UNKNOWN")
     )
@@ -324,15 +322,16 @@ function aggregateCounterpart(entries, requirement) {
   const packageComponentComplete = requirement.components.every(({ id }) =>
     foundComponents.has(id)
   );
-  const packageEvidenceConflicting =
-    requirement.components.some((component) => {
+  const packageEvidenceConflicting = requirement.components.some(
+    (component) => {
       const componentEvidence = selectedEvidence.get(component.id);
       return (
         componentEvidence.some(
           ({ judgement }) => judgement.conflictState !== "NONE"
         ) || componentEvidenceConflicts(component, componentEvidence)
       );
-    });
+    }
+  );
   const evidenceState = packageEvidenceState(entries);
   return {
     documentedContent: matched
@@ -354,12 +353,12 @@ function aggregateCounterpart(entries, requirement) {
       .join("\n"),
     reviewStatus:
       packageEvidenceConflicting || evidenceState === "CONFLICTING"
-      ? "WIDERSPRÜCHLICH"
-      : evidenceState === "UNRESOLVED"
-        ? COUNTERPART_REVIEW_STATUS.UNCLEAR
-      : packageComponentComplete
-        ? "BELEGT"
-        : "TEILBELEGT",
+        ? "WIDERSPRÜCHLICH"
+        : evidenceState === "UNRESOLVED"
+          ? COUNTERPART_REVIEW_STATUS.UNCLEAR
+          : packageComponentComplete
+            ? "BELEGT"
+            : "TEILBELEGT",
     contributors: matched.map(({ document, row }) => ({
       documentUuid: document.uuid,
       documentName: document.originalName,
@@ -399,8 +398,7 @@ function referenceDecision(reference, counterpart) {
       ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V2",
     };
   if (
-    counterpart.reviewStatus ===
-    COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
+    counterpart.reviewStatus === COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
   )
     return {
       outcome: REFERENCE_OUTCOME.NOT_FOUND,
@@ -468,11 +466,7 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
         return {
           document: run.document,
           row,
-          ...readEvidenceBundle(
-            run,
-            definition.categoryView,
-            requirement.id
-          ),
+          ...readEvidenceBundle(run, definition.categoryView, requirement.id),
         };
       });
       const counterpart = aggregateCounterpart(counterpartEntries, requirement);

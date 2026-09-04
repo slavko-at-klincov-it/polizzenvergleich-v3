@@ -47,10 +47,9 @@ function resolveWorkspaceCreationMode({
       );
     return publicMode;
   }
-  return normalizePolicyComparisonMode(
-    analysisMode ?? policyComparisonMode,
-    { allowDefault: true }
-  );
+  return normalizePolicyComparisonMode(analysisMode ?? policyComparisonMode, {
+    allowDefault: true,
+  });
 }
 
 function buildWorkspaceCreationFields(templateId = null) {

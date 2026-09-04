@@ -91,11 +91,10 @@ function apiWorkspaceEndpoints(app) {
         analysisMode,
         policyComparisonMode,
       });
-      const { workspace, message } = await Workspace.new(
-        name,
-        null,
-        { ...additionalFields, policyComparisonMode: resolvedMode }
-      );
+      const { workspace, message } = await Workspace.new(name, null, {
+        ...additionalFields,
+        policyComparisonMode: resolvedMode,
+      });
 
       if (!workspace) {
         response.status(400).json({ workspace: null, message });

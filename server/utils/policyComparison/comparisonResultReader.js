@@ -1,14 +1,10 @@
 const fs = require("fs");
-const {
-  customerSafeComparisonReadView,
-} = require("./customerMetricContract");
+const { customerSafeComparisonReadView } = require("./customerMetricContract");
 const {
   normalizePolicyComparisonMode,
   POLICY_COMPARISON_MODE,
 } = require("./modes");
-const {
-  customerSafeReferenceReadView,
-} = require("./referenceResultBuilder");
+const { customerSafeReferenceReadView } = require("./referenceResultBuilder");
 
 function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
   const expectedMode = normalizePolicyComparisonMode(expectedComparisonMode, {
