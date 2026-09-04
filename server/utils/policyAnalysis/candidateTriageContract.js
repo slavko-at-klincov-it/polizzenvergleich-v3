@@ -358,9 +358,12 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
     const localLiabilityContext = `${scopeLeadText}\n${
       scopeSentence || source.exactText || ""
     }`;
-    const isStructurallyLiabilityScoped = [
+    const observedSectionScopeKeys = [
       source.sectionScopeHint?.scopeKey,
       ...(source.sectionScopeHint?.scopeKeys || []),
+    ].filter(Boolean);
+    const isStructurallyLiabilityScoped = [
+      ...observedSectionScopeKeys,
     ].includes("HAFTPFLICHT_INSURANCE");
     const isExplicitLiabilityScope =
       !["HP", "VB"].includes(categoryView) &&
@@ -382,6 +385,13 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         /(?:Haftpflicht|AHVB|Schadenersatzverpflichtungen|Pauschaldeckungssumme|Versicherungsfälle\s+eines\s+Jahres)/iu.test(
           liabilityContext
         ));
+    const isRgCostWithoutExplicitGlassLossScope =
+      categoryView === "RG" &&
+      allCostMembers &&
+      !observedSectionScopeKeys.includes("GLASBRUCH_INSURANCE") &&
+      !/\b(?:Glasbruch(?:schaden\p{L}*)?|Glasschaden\p{L}*|Glasscheiben\p{L}*|versicherte\p{L}*\s+Gl[aä]ser\p{L}*|Glasversicherung\p{L}*|Glaspauschal\p{L}*)\b/iu.test(
+        scopeSentence || source.exactText || ""
+      );
     let roleResolution = {
       owner: "MODEL",
       roleMatch: null,
@@ -439,10 +449,6 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         alias
       )
     );
-    const observedSectionScopeKeys = [
-      source.sectionScopeHint?.scopeKey,
-      ...(source.sectionScopeHint?.scopeKeys || []),
-    ].filter(Boolean);
     const matchedNarrowScopeKey = observedSectionScopeKeys.find((scopeKey) =>
       (candidate.requirement.scopeRules?.narrowScopeKeys || []).includes(
         scopeKey
@@ -469,6 +475,13 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
         owner: "SERVER",
         scopeMatch: SCOPE_MATCH.UNRESOLVED,
         basis: "ROLE_UNRESOLVED",
+        matchedAlias: null,
+      };
+    } else if (isRgCostWithoutExplicitGlassLossScope) {
+      scopeResolution = {
+        owner: "SERVER",
+        scopeMatch: SCOPE_MATCH.OTHER_SCOPE,
+        basis: "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
         matchedAlias: null,
       };
     } else if (matchedNarrowAlias || matchedNarrowScopeKey) {

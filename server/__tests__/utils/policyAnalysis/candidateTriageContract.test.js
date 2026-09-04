@@ -775,6 +775,104 @@ describe("candidateTriageContract", () => {
     expect(target.modelDecisionFields).toEqual([]);
   });
 
+  test.each([
+    [
+      "Notverschalung",
+      "Sicherungskosten sind Kosten für kurzfristig notwendige Notverschalung und Bewachung nach einem versicherten Schadenereignis.",
+    ],
+    [
+      "Entsorgungskosten",
+      "Entsorgungskosten sind Kosten für Untersuchung, Abfuhr und Deponie versicherter Sachen.",
+    ],
+  ])(
+    "rejects an RG cost without local glass-loss scope (%s)",
+    (exactText, text) => {
+      const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+      worksheet.catalog = { categoryView: "RG" };
+      worksheet.requirements[0].id = "RG-03";
+      worksheet.requirements[0].sourceReferenceId = "LF-GL-03";
+      const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+      worksheet.requirements[0].components[0].id = "glass_cost";
+      const start = text.indexOf(exactText);
+      occurrence.exactText = exactText;
+      occurrence.matchedAlias = exactText;
+      occurrence.context = {
+        unitType: "PARAGRAPH",
+        text,
+        documentStart: 0,
+        documentEnd: text.length,
+      };
+      occurrence.documentStart = start;
+      occurrence.documentEnd = start + exactText.length;
+      occurrence.scopeLead = { text: "" };
+      occurrence.sectionScopeHint = null;
+      worksheet.requirements[0].components[0].occurrences = [occurrence];
+
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+      expect(target.roleResolution).toMatchObject({
+        owner: "SERVER",
+        roleMatch: "MATCH",
+      });
+      expect(target.scopeResolution).toEqual({
+        owner: "SERVER",
+        scopeMatch: "OTHER_SCOPE",
+        basis: "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
+        matchedAlias: null,
+      });
+      expect(target.modelDecisionFields).toEqual([]);
+    }
+  );
+
+  test.each([
+    {
+      text: "Kosten für eine Notverschalung nach einem ersatzpflichtigen Glasschaden sind mitversichert.",
+      exactText: "Notverschalung",
+      sectionScopeHint: null,
+      expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
+    },
+    {
+      text: "Bewachungskosten sind mitversichert.",
+      exactText: "Bewachungskosten",
+      sectionScopeHint: {
+        scopeKey: "GLASBRUCH_INSURANCE",
+        text: "B5 Glasversicherung (GL)",
+      },
+      expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
+    },
+  ])(
+    "keeps a source-bound RG glass cost eligible ($exactText)",
+    ({ text, exactText, sectionScopeHint, expectedScope }) => {
+      const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+      worksheet.catalog = { categoryView: "RG" };
+      worksheet.requirements[0].id = "RG-03";
+      worksheet.requirements[0].sourceReferenceId = "LF-GL-03";
+      const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+      worksheet.requirements[0].components[0].id = "glass_cost";
+      const start = text.indexOf(exactText);
+      occurrence.exactText = exactText;
+      occurrence.matchedAlias = exactText;
+      occurrence.context = {
+        unitType: "PARAGRAPH",
+        text,
+        documentStart: 0,
+        documentEnd: text.length,
+      };
+      occurrence.documentStart = start;
+      occurrence.documentEnd = start + exactText.length;
+      occurrence.scopeLead = { text: "" };
+      occurrence.sectionScopeHint = sectionScopeHint;
+      worksheet.requirements[0].components[0].occurrences = [occurrence];
+
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+      expect(target.scopeResolution).toMatchObject(expectedScope);
+      expect(target.scopeResolution.basis).not.toBe(
+        "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE"
+      );
+    }
+  );
+
   test("rejects a cleanup work-start threshold as cost evidence", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     const occurrence = worksheet.requirements[0].components[0].occurrences[0];
