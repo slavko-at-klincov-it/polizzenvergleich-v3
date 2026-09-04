@@ -855,6 +855,10 @@ describe("candidateTriageContract", () => {
       sectionScopeHint: {
         scopeKey: "GLASBRUCH_INSURANCE",
         text: "B5 Glasversicherung (GL)",
+        source: "CURRENT_PAGE_HEADING",
+        physicalPageNumber: 1,
+        pageStart: 0,
+        pageEnd: "B5 Glasversicherung (GL)".length,
       },
       expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
     },
@@ -880,6 +884,7 @@ describe("candidateTriageContract", () => {
       occurrence.documentEnd = start + exactText.length;
       occurrence.scopeLead = { text: "" };
       occurrence.sectionScopeHint = sectionScopeHint;
+      occurrence.physicalPageNumber = 1;
       worksheet.requirements[0].components[0].occurrences = [occurrence];
 
       const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;

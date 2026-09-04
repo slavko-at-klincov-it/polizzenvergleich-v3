@@ -1,5 +1,8 @@
 const RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE =
   "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE";
+const {
+  sourceBoundSectionScopeKeys,
+} = require("./sourceBoundSectionScopeContract");
 
 const EXPLICIT_GLASS_LOSS_SCOPE =
   /\b(?:Glasbruch(?:[\s-]*sch[aä]d\p{L}*)?|Glas[\s-]*sch[aä]d\p{L}*|Glasscheiben\p{L}*|versicherte\p{L}*\s+Gl[aä]ser\p{L}*|Glasversicherung\p{L}*|Glaspauschal\p{L}*)\b/iu;
@@ -64,10 +67,7 @@ function isRgCostWithoutExplicitGlassLossScope({
 }) {
   if (String(categoryView || "").toUpperCase() !== "RG" || !allCostMembers)
     return false;
-  const observedSectionScopeKeys = [
-    occurrence?.sectionScopeHint?.scopeKey,
-    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
-  ].filter(Boolean);
+  const observedSectionScopeKeys = sourceBoundSectionScopeKeys(occurrence);
   if (observedSectionScopeKeys.includes("GLASBRUCH_INSURANCE")) return false;
   return !EXPLICIT_GLASS_LOSS_SCOPE.test(
     occurrenceLocalSentence(occurrence) || occurrence?.exactText || ""

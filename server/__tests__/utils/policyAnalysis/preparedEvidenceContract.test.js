@@ -205,6 +205,10 @@ describe("preparedEvidenceContract", () => {
       sectionScopeHint: {
         scopeKey: "GLASBRUCH_INSURANCE",
         text: "Glasversicherung",
+        source: "CURRENT_PAGE_HEADING",
+        physicalPageNumber: 4,
+        pageStart: 0,
+        pageEnd: "Glasversicherung".length,
       },
     },
   ])("keeps a genuinely glass-scoped RG cost eligible: $name", (variant) => {
@@ -233,6 +237,90 @@ describe("preparedEvidenceContract", () => {
     ]);
     expect(preparedTarget.serverRejectedCandidates).toEqual([]);
   });
+
+  test("does not trust an unbound glass section hint", () => {
+    const worksheet = rgCostWorksheet({
+      text: "Notverschalungskosten sind mitversichert.",
+      exactText: "Notverschalungskosten",
+      sectionScopeHint: {
+        scopeKey: "GLASBRUCH_INSURANCE",
+        text: "Glasversicherung",
+      },
+    });
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "RG-03",
+          componentId: "emergency_boarding",
+          candidateId: "candidate:rg-03:emergency-boarding",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(preparedTarget.candidates).toEqual([]);
+    expect(preparedTarget.serverRejectedCandidates).toEqual([
+      expect.objectContaining({
+        candidateId: "candidate:rg-03:emergency-boarding",
+        deterministicBindingBasis:
+          "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
+      }),
+    ]);
+  });
+
+  test.each([
+    ["special_glass", "INSURED_OBJECT", "DIRECT"],
+    ["special_glass", "INSURED_OBJECT", null],
+    ["special_glass_limit", "LIMIT", "DIRECT"],
+    ["special_glass_limit", "LIMIT", null],
+  ])(
+    "rejects RG %s from a source-bound storm section with triage %s",
+    (componentId, factRole, triageBinding) => {
+      const heading = "Allgemeine Bedingungen für die Sturmversicherung";
+      const worksheet = rgCostWorksheet({
+        text: "Sonderverglasungen sind bis EUR 10.000 mitversichert.",
+        exactText: "Sonderverglasungen",
+        sectionScopeHint: {
+          scopeKey: "STURM_INSURANCE",
+          text: heading,
+          source: "CURRENT_PAGE_HEADING",
+          physicalPageNumber: 4,
+          pageStart: 0,
+          pageEnd: heading.length,
+        },
+      });
+      const component = worksheet.requirements[0].components[0];
+      component.id = componentId;
+      component.factRole = factRole;
+      const candidateId = component.occurrences[0].candidateId;
+      const [preparedTarget] = buildPreparedEvidenceTargets({
+        worksheet,
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage:
+          triageBinding === null
+            ? null
+            : [
+                {
+                  requirementId: "RG-03",
+                  componentId,
+                  candidateId,
+                  binding: triageBinding,
+                },
+              ],
+      });
+
+      expect(preparedTarget.candidates).toEqual([]);
+      expect(preparedTarget.unresolvedCandidateIds).toEqual([]);
+      expect(preparedTarget.serverRejectedCandidates).toEqual([
+        expect.objectContaining({
+          candidateId,
+          reason: "TRIAGE_MENTION_ONLY",
+        }),
+      ]);
+    }
+  );
 
   test("requires the source-bound FE-A09 installation proof during preparation", () => {
     const pageContent =

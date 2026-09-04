@@ -17,6 +17,9 @@ const {
   isRgCostWithoutExplicitGlassLossScope,
 } = require("./glassLossScopeContract");
 const {
+  sourceBoundSectionScopeKeys,
+} = require("./sourceBoundSectionScopeContract");
+const {
   componentScopeContract,
 } = require("./componentScopePolicyContract");
 
@@ -1606,6 +1609,10 @@ function deterministicCategoryCandidateBinding({
       ? {
           binding: DETERMINISTIC_BINDING.MENTION_ONLY,
           basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+          ...(sourceBoundSectionScopeKeys(occurrence).length > 0 ||
+          explicitPageTitleScopeKeys(occurrence).length > 0
+            ? { authoritative: true }
+            : {}),
         }
       : null;
 
