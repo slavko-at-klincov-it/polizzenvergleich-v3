@@ -260,6 +260,43 @@ describe("directed LF reference result builder", () => {
     );
   });
 
+  test.each([
+    [
+      "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
+      "lf-immo-reference-35-controlled-v2",
+      "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
+    ],
+    [
+      "LF_IMMO_REFERENCE_35_V3_COMPONENT_SCOPED",
+      "lf-immo-reference-35-component-scoped-v3",
+      "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
+    ],
+  ])(
+    "keeps a stored historical reference profile readable: %s",
+    (id, catalogId, componentContractId) => {
+      const allReferenceIds = new Set(
+        categoryCatalogs().flatMap(({ catalog }) =>
+          catalog.requirements.map(({ id: requirementId }) => requirementId)
+        )
+      );
+      const result = buildReferenceComparisonResult(
+        [
+          writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+          writeRun(root, document("counterpart-b", "B", 0)),
+        ],
+        {}
+      );
+      result.productProfile = {
+        ...result.productProfile,
+        id,
+        catalogId,
+        componentContractId,
+      };
+
+      expect(() => validateReferenceComparison(result)).not.toThrow();
+    }
+  );
+
   test("does not convert unresolved B candidates into a controlled zero result", () => {
     const firstCategory = categoryCatalogs()[0];
     const firstRequirement = firstCategory.catalog.requirements[0];

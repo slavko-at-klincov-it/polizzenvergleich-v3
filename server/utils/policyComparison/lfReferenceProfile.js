@@ -14,6 +14,20 @@ const LF_REFERENCE_PROFILE = Object.freeze({
   noEmbeddings: true,
   discoversSideBOnly: false,
 });
+const HISTORICAL_LF_REFERENCE_PROFILES = Object.freeze([
+  Object.freeze({
+    ...LF_REFERENCE_PROFILE,
+    id: "LF_IMMO_REFERENCE_35_V2_CONTROLLED",
+    catalogId: "lf-immo-reference-35-controlled-v2",
+    componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V2",
+  }),
+  Object.freeze({
+    ...LF_REFERENCE_PROFILE,
+    id: "LF_IMMO_REFERENCE_35_V3_COMPONENT_SCOPED",
+    catalogId: "lf-immo-reference-35-component-scoped-v3",
+    componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
+  }),
+]);
 
 const CATEGORY_VIEWS = Object.freeze({
   "LF-PR": "RP",
@@ -891,6 +905,7 @@ function analysisPrompt({ categoryView, label, catalog }) {
 }
 
 module.exports = {
+  HISTORICAL_LF_REFERENCE_PROFILES,
   LF_REFERENCE_PROFILE,
   analysisPrompt,
   categoryCatalogs,

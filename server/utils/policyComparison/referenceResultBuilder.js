@@ -3,6 +3,7 @@ const path = require("path");
 const ExcelJS = require("exceljs");
 const { POLICY_COMPARISON_MODE } = require("./modes");
 const {
+  HISTORICAL_LF_REFERENCE_PROFILES,
   LF_REFERENCE_PROFILE,
   categoryCatalogs,
 } = require("./lfReferenceProfile");
@@ -528,12 +529,18 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
 }
 
 function validateReferenceComparison(result) {
+  const acceptedProfiles = [
+    ...HISTORICAL_LF_REFERENCE_PROFILES,
+    LF_REFERENCE_PROFILE,
+  ];
   if (
     result?.schemaVersion !== REFERENCE_RESULT_SCHEMA_VERSION ||
     result?.contractId !== REFERENCE_RESULT_CONTRACT_ID ||
     result?.comparisonMode !== POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B ||
-    JSON.stringify(result?.productProfile) !==
-      JSON.stringify(LF_REFERENCE_PROFILE)
+    !acceptedProfiles.some(
+      (profile) =>
+        JSON.stringify(result?.productProfile) === JSON.stringify(profile)
+    )
   )
     throw new Error("REFERENCE_RESULT_CONTRACT_INVALID");
   const sideA = (result.documents || []).filter(({ side }) => side === "A");
