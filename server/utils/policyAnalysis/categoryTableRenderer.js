@@ -534,11 +534,21 @@ function buildCategoryTableRows({
       const scopeComplete = rowJudgements.every((judgement) => {
         if ((judgement.unresolvedCandidateIds || []).length > 0) return false;
         if (judgement.selectedScopePicture !== "NARROW_ONLY") return true;
+        const allowedScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+        const comparisonScopeKeys = judgement.comparisonScopeKeys || [];
+        if (
+          allowedScopeKeys.length > 0 &&
+          (comparisonScopeKeys.length === 0 ||
+            comparisonScopeKeys.some(
+              (scopeKey) => !allowedScopeKeys.includes(scopeKey)
+            ))
+        )
+          return false;
         if (
           normalized.id === "VS-24" &&
-          (judgement.comparisonScopeKeys?.length !== 1 ||
+          (comparisonScopeKeys.length !== 1 ||
             !requirement.scopeRules?.narrowScopeKeys?.includes(
-              judgement.comparisonScopeKeys[0]
+              comparisonScopeKeys[0]
             ))
         )
           return false;

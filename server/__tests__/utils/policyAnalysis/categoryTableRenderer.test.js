@@ -703,6 +703,34 @@ describe("categoryTableRenderer", () => {
     });
   });
 
+  test("accepts only a catalog-declared narrow comparison scope", () => {
+    const input = fixture({
+      id: "RG-02",
+      requestedFields: [],
+      componentEffects: [COVERAGE_EFFECT.INCLUDED],
+      selected: [true],
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    });
+    input.worksheet.requirements[0].scopeRules = {
+      narrowAliases: [],
+      narrowScopeKeys: ["STURM_INSURANCE"],
+    };
+    const [judgement] = input.materializedEvidence.judgements;
+    judgement.selectedScopePicture = "NARROW_ONLY";
+    judgement.comparisonScopeKeys = ["FEUER_INSURANCE"];
+
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Nicht feststellbar",
+      reviewStatus: "TEILBELEGT",
+    });
+
+    judgement.comparisonScopeKeys = ["STURM_INSURANCE"];
+    expect(buildCategoryTableRows(input)[0]).toMatchObject({
+      coverage: "Ja",
+      reviewStatus: "BELEGT",
+    });
+  });
+
   test("keeps VS-24 partial until one declared comparison scope is proven", () => {
     const input = fixture({
       id: "VS-24",
