@@ -20,7 +20,8 @@ function isSentenceBoundary(text, index) {
       after === "\r"
     )
       return true;
-    const followingLine = text.slice(index + 1).match(/^[ \t]*(.*)$/u)?.[1] || "";
+    const followingLine =
+      text.slice(index + 1).match(/^[ \t]*([^\r\n]*)/u)?.[1] || "";
     return /^(?:[-–—*•◦▪‣·]|\(?\d{1,3}[.)]|[a-zA-Z][.)])\s+/u.test(
       followingLine
     );

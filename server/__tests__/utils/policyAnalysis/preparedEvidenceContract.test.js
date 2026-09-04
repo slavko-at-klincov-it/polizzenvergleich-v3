@@ -273,6 +273,7 @@ describe("preparedEvidenceContract", () => {
   test.each([
     "• Glasschäden an Scheiben sind versichert.\n• Notverschalungskosten sind mitversichert.",
     "1. Glasbruchschäden sind versichert.\n2. Notverschalungskosten sind mitversichert.",
+    "• Glasschäden an Scheiben sind versichert.\n• Notverschalungskosten sind mitversichert.\n• Bewachungskosten sind mitversichert.",
   ])(
     "does not borrow glass-loss scope from a preceding list item",
     (text) => {
@@ -303,6 +304,33 @@ describe("preparedEvidenceContract", () => {
       ]);
     }
   );
+
+  test("keeps glass-loss scope across a plain OCR line wrap", () => {
+    const worksheet = rgCostWorksheet({
+      text: "• Notverschalungskosten nach einem versicherten\nGlasschaden sind mitversichert.",
+      exactText: "Notverschalungskosten",
+    });
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "RG-03",
+          componentId: "emergency_boarding",
+          candidateId: "candidate:rg-03:emergency-boarding",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(preparedTarget.candidates).toEqual([
+      expect.objectContaining({
+        candidateId: "candidate:rg-03:emergency-boarding",
+        candidateBinding: "DIRECT",
+      }),
+    ]);
+    expect(preparedTarget.serverRejectedCandidates).toEqual([]);
+  });
 
   test.each([
     ["special_glass", "INSURED_OBJECT", "DIRECT"],
