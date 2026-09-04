@@ -395,6 +395,7 @@ async function main() {
     workbookFile: artifacts.workbookFile,
     sessionUuid,
     runSignature: signature,
+    comparisonMode,
   });
   writePrivateJson(path.join(resultDirectory, "export.private.json"), {
     schemaVersion: 1,

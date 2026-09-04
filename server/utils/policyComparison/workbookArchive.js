@@ -2,6 +2,10 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const {
+  normalizePolicyComparisonMode,
+  POLICY_COMPARISON_MODE,
+} = require("./modes");
 
 const DEFAULT_COMPARISON_EXPORT_DIRECTORY = path.join(
   os.homedir(),
@@ -32,6 +36,7 @@ function archiveComparisonWorkbook({
   exportDirectory = configuredExportDirectory(),
   sessionUuid,
   runSignature,
+  comparisonMode,
 }) {
   if (!exportDirectory) throw new Error("COMPARISON_EXPORT_DIRECTORY_REQUIRED");
   if (!path.isAbsolute(exportDirectory))
@@ -40,6 +45,9 @@ function archiveComparisonWorkbook({
     throw new Error("COMPARISON_EXPORT_SESSION_UUID_INVALID");
   if (!/^[0-9a-f]{64}$/u.test(String(runSignature || "")))
     throw new Error("COMPARISON_EXPORT_RUN_SIGNATURE_INVALID");
+  const normalizedMode = normalizePolicyComparisonMode(comparisonMode, {
+    allowDefault: false,
+  });
 
   const source = path.resolve(workbookFile);
   if (!fs.existsSync(source) || !fs.statSync(source).isFile())
@@ -51,13 +59,22 @@ function archiveComparisonWorkbook({
   if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink())
     throw new Error("COMPARISON_EXPORT_DIRECTORY_INVALID");
 
-  const filename = `Gesamtvergleich-${sessionUuid}-${runSignature.slice(0, 12)}.xlsx`;
+  const prefix =
+    normalizedMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+      ? "LF-IMMO-Referenzvergleich"
+      : "Gesamtvergleich";
+  const filename = `${prefix}-${sessionUuid}-${runSignature.slice(0, 12)}.xlsx`;
   const target = path.join(targetDirectory, filename);
   const sourceSha256 = sha256File(source);
   if (fs.existsSync(target)) {
     if (!fs.statSync(target).isFile() || sha256File(target) !== sourceSha256)
       throw new Error("COMPARISON_EXPORT_CONFLICT");
-    return { file: target, sha256: sourceSha256, reused: true };
+    return {
+      file: target,
+      sha256: sourceSha256,
+      reused: true,
+      comparisonMode: normalizedMode,
+    };
   }
 
   const temporary = path.join(
@@ -73,10 +90,20 @@ function archiveComparisonWorkbook({
       if (error.code !== "EEXIST") throw error;
       if (!fs.statSync(target).isFile() || sha256File(target) !== sourceSha256)
         throw new Error("COMPARISON_EXPORT_CONFLICT");
-      return { file: target, sha256: sourceSha256, reused: true };
+      return {
+        file: target,
+        sha256: sourceSha256,
+        reused: true,
+        comparisonMode: normalizedMode,
+      };
     }
     fs.chmodSync(target, 0o600);
-    return { file: target, sha256: sourceSha256, reused: false };
+    return {
+      file: target,
+      sha256: sourceSha256,
+      reused: false,
+      comparisonMode: normalizedMode,
+    };
   } finally {
     if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
   }
