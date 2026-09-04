@@ -2508,6 +2508,24 @@ describe("policy comparison point decision", () => {
     expect(result.outcome).not.toBe(POINT_OUTCOME.EQUIVALENT);
   });
 
+  test("fails closed when both narrow atoms lack canonical scope identity", () => {
+    const narrow = (side) =>
+      atom(side, {
+        selectedScopePicture: "NARROW_ONLY",
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+        comparisonScopeKeys: [],
+      });
+    const result = decide([narrow("a")], [narrow("b")]);
+
+    expect(result).toMatchObject({
+      outcome: POINT_OUTCOME.UNCLEAR,
+      reviewRequired: true,
+    });
+    expect(result.outcome).not.toBe(POINT_OUTCOME.EQUIVALENT);
+    expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_A);
+    expect(result.outcome).not.toBe(POINT_OUTCOME.ADVANTAGE_B);
+  });
+
   test("applies the sole scope contract symmetrically and to active facts", () => {
     const narrowA = scopeLimitAtom("a", "NARROW_ONLY");
     const generalB = scopeLimitAtom("b", "GENERAL");

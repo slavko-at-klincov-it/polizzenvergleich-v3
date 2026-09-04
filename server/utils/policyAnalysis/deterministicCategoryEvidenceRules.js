@@ -20,6 +20,7 @@ const {
   sourceBoundSectionScopeKeys,
 } = require("./sourceBoundSectionScopeContract");
 const {
+  catalogNarrowAliasComparisonScopeKey,
   componentScopeContract,
 } = require("./componentScopePolicyContract");
 
@@ -1593,6 +1594,9 @@ function deterministicCategoryCandidateBinding({
   ];
   const narrowScopeKey =
     observedNarrowScopeKeys.length === 1 ? observedNarrowScopeKeys[0] : null;
+  const narrowAliasScopeKey = narrowAlias
+    ? catalogNarrowAliasComparisonScopeKey(requirement, component)
+    : null;
   const ambiguousNarrowScope = observedNarrowScopeKeys.length > 1;
   const matchingScopeKey = observedScopeKeys.find((scopeKey) =>
     expectedScopeKeys.includes(scopeKey)
@@ -1638,7 +1642,9 @@ function deterministicCategoryCandidateBinding({
       basis: ambiguousNarrowScope
         ? "AMBIGUOUS_NARROW_SECTION_SCOPE"
         : `EXPLICIT_${operativePolarity}_OPERATIVE_COVERAGE_CLAUSE`,
-      ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
+      ...(narrowScopeKey || narrowAliasScopeKey
+        ? { comparisonScopeKey: narrowScopeKey || narrowAliasScopeKey }
+        : {}),
       authoritative: true,
     };
 
@@ -1699,7 +1705,9 @@ function deterministicCategoryCandidateBinding({
         : narrowScopeKey
           ? "EXPLICIT_NARROW_SECTION_SCOPE"
           : `EXPLICIT_${effectivePolarity}_CLAUSE_GOVERNOR`,
-    ...(narrowScopeKey ? { comparisonScopeKey: narrowScopeKey } : {}),
+    ...(narrowScopeKey || narrowAliasScopeKey
+      ? { comparisonScopeKey: narrowScopeKey || narrowAliasScopeKey }
+      : {}),
     ...(requirement?.sourceReferenceId ||
     ambiguousNarrowScope ||
     explicitVariantListClause ||

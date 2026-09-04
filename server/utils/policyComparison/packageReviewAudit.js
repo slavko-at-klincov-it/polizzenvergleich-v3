@@ -123,6 +123,7 @@ function validSource(atom) {
 
 function scopeComplete(atom) {
   if (atom?.selectedScopePicture !== "NARROW_ONLY") return true;
+  if (strings(atom?.comparisonScopeKeys).length === 0) return false;
   if (atom?.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
     return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(atom.coverageEffect);
   if (atom?.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT") return false;

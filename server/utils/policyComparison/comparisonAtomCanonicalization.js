@@ -183,6 +183,7 @@ function validComparisonScope(atom) {
   )
     return false;
   if (atom.selectedScopePicture !== "NARROW_ONLY") return true;
+  if (strings(atom.comparisonScopeKeys).length === 0) return false;
   if (atom.requirementId === "VS-24") {
     const scopeKeys = strings(atom.comparisonScopeKeys);
     const selectedIds = new Set(atom.selectedCandidateIds || []);

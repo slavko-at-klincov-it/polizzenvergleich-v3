@@ -17,6 +17,9 @@ const {
   buildPreparedEvidenceTargets,
   materializePreparedEvidence,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
+const {
+  catalogNarrowAliasComparisonScopeKey,
+} = require("../../../utils/policyAnalysis/componentScopePolicyContract");
 
 function occurrence({
   candidateId,
@@ -1379,6 +1382,10 @@ describe("category semantic exceptions", () => {
       ).toEqual({
         binding: "NARROW_SCOPE",
         basis: "EXPLICIT_NARROW_CLAUSE_SCOPE",
+        comparisonScopeKey: catalogNarrowAliasComparisonScopeKey(
+          requirement,
+          component
+        ),
       });
 
       expect(

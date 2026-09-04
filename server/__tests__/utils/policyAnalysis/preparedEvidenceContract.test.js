@@ -322,6 +322,77 @@ describe("preparedEvidenceContract", () => {
     }
   );
 
+  test("persists a canonical scope key for catalog narrow-alias evidence", () => {
+    const text =
+      "Mitversichert ist der Anprall unbekannter Landfahrzeuge an versicherten Gebäuden.";
+    const exactText = "Anprall unbekannter Landfahrzeuge";
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "FE" },
+      requirements: [
+        {
+          id: "FE-A10",
+          label: "Anprall fremder Fahrzeuge",
+          requestedFields: [],
+          scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+          scopeRules: {
+            narrowAliases: [
+              "Anprall unbekannter Fahrzeuge",
+              "Anprall unbekannter Landfahrzeuge",
+            ],
+          },
+          components: [
+            {
+              id: "foreign_vehicle_impact",
+              label: "Anprall fremder Fahrzeuge",
+              factRole: "PERIL",
+              occurrences: [
+                {
+                  candidateId: "candidate:fe-a10:unknown-vehicle",
+                  matchedAlias: exactText,
+                  pageNumber: 3,
+                  physicalPageNumber: 3,
+                  exactText,
+                  documentStart: text.indexOf(exactText),
+                  documentEnd: text.indexOf(exactText) + exactText.length,
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text,
+                    documentStart: 0,
+                    documentEnd: text.length,
+                  },
+                  scopeLead: { text },
+                  sectionScopeHint: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "FE-A10",
+          componentId: "foreign_vehicle_impact",
+          candidateId: "candidate:fe-a10:unknown-vehicle",
+          binding: "NARROW_SCOPE",
+        },
+      ],
+    });
+
+    expect(target.candidates).toEqual([
+      expect.objectContaining({
+        candidateBinding: "NARROW_SCOPE",
+        comparisonScopeKey: expect.stringMatching(
+          /^CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1:[a-f0-9]{64}$/u
+        ),
+      }),
+    ]);
+  });
+
   test("requires the source-bound FE-A09 installation proof during preparation", () => {
     const pageContent =
       "Verpuffungsschäden an Heizungsanlagen sind mitversichert.";

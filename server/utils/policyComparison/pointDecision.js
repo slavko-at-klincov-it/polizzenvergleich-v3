@@ -183,16 +183,14 @@ function comparisonScopeKeys(atom) {
   return [...new Set((atom?.comparisonScopeKeys || []).filter(Boolean))].sort();
 }
 
-function asymmetricMissingNarrowScopeProof(left, right) {
+function missingNarrowScopeProof(left, right) {
   const leftKeys = comparisonScopeKeys(left);
   const rightKeys = comparisonScopeKeys(right);
   return (
     (left?.selectedScopePicture === "NARROW_ONLY" &&
-      leftKeys.length === 0 &&
-      rightKeys.length > 0) ||
+      leftKeys.length === 0) ||
     (right?.selectedScopePicture === "NARROW_ONLY" &&
-      rightKeys.length === 0 &&
-      leftKeys.length > 0)
+      rightKeys.length === 0)
   );
 }
 
@@ -555,7 +553,7 @@ function comparisonDimension(left, right, { canonical = false } = {}) {
 function compareDimension(left, right, { canonical = false } = {}) {
   const dimension = comparisonDimension(left, right, { canonical });
   const keyFor = canonical ? canonicalComparisonKey : comparisonKey;
-  if (asymmetricMissingNarrowScopeProof(left, right))
+  if (missingNarrowScopeProof(left, right))
     return {
       outcome: POINT_OUTCOME.UNCLEAR,
       reasonCode: "COMPARISON_SCOPE_PROVENANCE_INCOMPLETE",

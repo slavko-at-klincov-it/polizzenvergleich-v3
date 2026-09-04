@@ -19,4 +19,49 @@ function componentScopeContract(requirement, component) {
   };
 }
 
-module.exports = { componentScopeContract };
+function catalogNarrowAliasComparisonScopeKey(requirement, component) {
+  const narrowAliases = [
+    ...new Set(
+      (
+        componentScopeContract(requirement, component).scopeRules
+          ?.narrowAliases || []
+      )
+        .map((alias) =>
+          String(alias || "")
+            .normalize("NFKC")
+            .replace(/\s+/gu, " ")
+            .trim()
+            .toLocaleLowerCase("de-AT")
+        )
+        .filter(Boolean)
+    ),
+  ].sort();
+  if (
+    !String(requirement?.id || "").trim() ||
+    !String(component?.id || "").trim() ||
+    narrowAliases.length === 0
+  )
+    return null;
+  const digest = crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        contractId: CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID,
+        requirementId: requirement.id,
+        componentId: component.id,
+        narrowAliases,
+      })
+    )
+    .digest("hex");
+  return `${CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID}:${digest}`;
+}
+
+module.exports = {
+  CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID,
+  catalogNarrowAliasComparisonScopeKey,
+  componentScopeContract,
+};
+const crypto = require("crypto");
+
+const CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID =
+  "CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1";

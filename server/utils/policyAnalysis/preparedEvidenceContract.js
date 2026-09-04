@@ -24,6 +24,7 @@ const {
   validSourceBoundObjectScopeProof,
 } = require("./objectScopeEvidenceContract");
 const {
+  catalogNarrowAliasComparisonScopeKey,
   componentScopeContract,
 } = require("./componentScopePolicyContract");
 const {
@@ -379,16 +380,22 @@ function buildPreparedEvidenceTargets({
         const localTargetScopeRebinding =
           deterministicBinding?.basis ===
           "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2";
-        const deterministicComparisonScopeKey =
-          deterministicBinding?.binding === candidateBinding &&
-          candidateBinding === "NARROW_SCOPE" &&
+        const catalogNarrowAliasScopeKey =
+          catalogNarrowAliasComparisonScopeKey(requirement, component);
+        const deterministicScopeKeyAllowed =
           (
             componentScopeContract(requirement, component).scopeRules
               ?.narrowScopeKeys || []
-          ).includes(
-            deterministicBinding?.comparisonScopeKey
-          ) &&
+          ).includes(deterministicBinding?.comparisonScopeKey) ||
+          deterministicBinding?.comparisonScopeKey ===
+            catalogNarrowAliasScopeKey;
+        const deterministicComparisonScopeKey =
+          deterministicBinding?.binding === candidateBinding &&
+          candidateBinding === "NARROW_SCOPE" &&
+          deterministicScopeKeyAllowed &&
           (localTargetScopeRebinding ||
+            deterministicBinding.comparisonScopeKey ===
+              catalogNarrowAliasScopeKey ||
             deterministicBinding.comparisonScopeKey ===
               sourceBoundComparisonScopeKey)
             ? deterministicBinding.comparisonScopeKey
