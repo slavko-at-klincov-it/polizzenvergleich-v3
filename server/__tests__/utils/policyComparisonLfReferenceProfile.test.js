@@ -42,12 +42,29 @@ describe("LF reference comparison profile", () => {
       bySourceId.get("LF-HP-03").components.map(({ factRole }) => factRole)
     ).toContain("DEDUCTIBLE");
     expect(bySourceId.get("LF-GL-03").components).toHaveLength(4);
+    expect(bySourceId.get("LF-KO-02").components).toHaveLength(6);
+    expect(bySourceId.get("LF-KO-03").components).toHaveLength(10);
     expect(
       requirements.every(
         ({ componentSatisfactionPolicy }) =>
           componentSatisfactionPolicy === "ALL"
       )
     ).toBe(true);
+  });
+
+  test("requests structured values only for fields present in the LF clause", () => {
+    const bySourceId = new Map(
+      categoryCatalogs()
+        .flatMap(({ catalog }) => catalog.requirements)
+        .map((requirement) => [requirement.sourceReferenceId, requirement])
+    );
+
+    expect(bySourceId.get("LF-PR-02").requestedFields).toEqual([]);
+    expect(bySourceId.get("LF-KO-01").requestedFields).toEqual(["duration"]);
+    expect(bySourceId.get("LF-KO-02").requestedFields).toEqual([
+      "limit",
+      "duration",
+    ]);
   });
 
   test("models product basis and favorability as contract conditions", () => {

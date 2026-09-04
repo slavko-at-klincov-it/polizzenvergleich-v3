@@ -28,13 +28,16 @@ const CATEGORY_VIEWS = Object.freeze({
   "LF-AV": "RA",
 });
 
-function component(id, label, factRole, aliases) {
+function component(id, label, factRole, aliases, options = {}) {
   return Object.freeze({
     id,
     label,
     factRole,
     contextMode: "CLAUSE_SECTION",
     aliases: Object.freeze(aliases),
+    ...(Array.isArray(options.requestedFields)
+      ? { requestedFields: Object.freeze(options.requestedFields) }
+      : {}),
   });
 }
 
@@ -81,7 +84,11 @@ const COMPONENT_OVERRIDES = Object.freeze({
     ),
   ],
   "LF-VS-01": [
-    component("building", "Gebäude", "INSURED_OBJECT", ["Gebäude"]),
+    component("building", "Gebäude", "INSURED_OBJECT", [
+      "die am Versicherungsort befindlichen Gebäude",
+      "in der Polizze bezeichnete Gebäude",
+      "versicherte Gebäude",
+    ]),
     component("foundations", "Fundamente und Kellermauern", "INSURED_OBJECT", [
       "Fundamente",
       "Grund- und Kellermauern",
@@ -93,6 +100,8 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("installations", "Gebäudeinstallationen", "INSURED_OBJECT", [
       "Installationen aller Art",
       "Elektro-, Gas- und Wasserinstallationen",
+      "Haustechnische Anlagen und Adaptierungen",
+      "Gebäudeelektroinstallationen",
     ]),
   ],
   "LF-VS-02": [
@@ -127,7 +136,9 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "INSURED_OBJECT",
       [
         "Werkzeuge, Geräte und Maschinen",
+        "Werkzeuge und Geräte",
         "Pflege und Wartung der versicherten Gebäude",
+        "Pflege und Wartung des Gebäudes",
       ]
     ),
     component(
@@ -148,8 +159,9 @@ const COMPONENT_OVERRIDES = Object.freeze({
       ["Außenanlagen", "Müllsammelplätze", "Grundstücksbegrenzungen", "Gehwege"]
     ),
     component("first_risk_limit", "Limit auf Erstes Risiko", "LIMIT", [
-      "auf Erstes Risiko",
-      "bis zu jeweils 5% der Gebäudeversicherungssumme",
+      "bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko",
+      "Außenanlagen, gemeinschaftliche Einrichtungen, Spielplatzeinrichtungen auf Erstes Risiko",
+      "Versicherungssumme auf Erstes Risiko in Höhe von EUR 7.500",
     ]),
   ],
   "LF-KO-01": [
@@ -161,41 +173,80 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "rent_loss_scope",
       "Private und gewerbliche Einheiten",
       "CONDITION",
-      ["privat und gewerblich genutzte Gebäudeeinheiten", "Mieter oder Pächter"]
+      [
+        "privat und gewerblich genutzte Gebäudeeinheiten",
+        "Bestandsobjekt mit Miet-, Pacht-, Leasingverträgen",
+        "Mieter oder Pächter",
+      ]
     ),
-    component("rent_loss_duration", "Leistungsdauer", "LIMIT", [
-      "sechs Monaten",
-      "6 Monate",
-    ]),
+    component(
+      "rent_loss_duration",
+      "Leistungsdauer",
+      "LIMIT",
+      [
+        "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und -räume bis zu sechs Monaten",
+        "Entgang von Mietzinseinnahmen auf Erstes Risiko mit einer Haftungszeit von 6 Monaten",
+        "Haftungszeit von 6 Monaten",
+      ],
+      { requestedFields: ["duration"] }
+    ),
   ],
   "LF-KO-02": [
     component("replacement_rooms", "Ersatzräumlichkeiten", "COST", [
-      "Ersatzräumlichkeiten",
+      "tatsächlichen Kosten für Ersatzräumlichkeiten",
+      "Mehrkosten für eine Ersatzunterkunft",
     ]),
     component("hotel", "Hotel oder Pension", "COST", [
-      "Hotelzimmer",
-      "Pension",
+      "Kosten für ein Hotelzimmer / Pension",
+      "Kosten für ein Hotelzimmer oder eine Pension",
     ]),
-    component("accommodation_limits", "Tages- und Zeitlimits", "LIMIT", [
-      "EUR 50",
-      "EUR 120",
-      "pro Tag",
+    component("without_proof_limit", "EUR 50 pro Tag ohne Nachweis", "LIMIT", [
+      "bis zu EUR 50 pro Tag ohne Nachweis",
     ]),
+    component("with_proof_limit", "EUR 120 pro Tag mit Nachweis", "LIMIT", [
+      "bis zu EUR 120 pro Tag mit Nachweis",
+    ]),
+    component(
+      "accommodation_duration",
+      "Leistungsdauer sechs Monate",
+      "LIMIT",
+      [
+        "längstens bis zum Ablauf von sechs Monaten",
+        "maximale Dauer von 6 Monaten",
+        "Zeitraum von 6 Monaten nach dem Schadenzeitpunkt",
+      ],
+      { requestedFields: ["duration"] }
+    ),
+    component(
+      "subsidiary_cover",
+      "Subsidiär zur Haushaltsversicherung",
+      "CONDITION",
+      [
+        "subsidiär zu einer bestehenden Haushaltsversicherung",
+        "subsidiär zu einer allfälligen Mehrkostenversicherung für Ersatzunterkunft",
+      ]
+    ),
   ],
   "LF-KO-03": [
-    component("cleanup_demolition", "Aufräumungs- und Abbruchkosten", "COST", [
+    component("securing", "Sicherungskosten", "COST", ["Sicherungskosten"]),
+    component("cleanup", "Aufräumungskosten", "COST", [
       "Aufräumungskosten",
-      "Abbruchkosten",
+      "Aufräumkosten",
     ]),
+    component("demolition", "Abbruchkosten", "COST", ["Abbruchkosten"]),
     component("firefighting", "Feuerlöschkosten", "COST", ["Feuerlöschkosten"]),
-    component("movement_storage", "Bewegungs- und Lagerkosten", "COST", [
-      "Bewegungskosten",
-      "Lagerkosten",
+    component("de_remounting", "De- und Remontagekosten", "COST", [
+      "De- und Remontagekosten",
       "De- und Remontage",
     ]),
+    component("movement", "Bewegungskosten", "COST", ["Bewegungskosten"]),
+    component("protection", "Schutzkosten", "COST", ["Schutzkosten"]),
+    component("cleaning", "Reinigungskosten", "COST", ["Reinigungskosten"]),
+    component("storage", "Lagerkosten", "COST", ["Lagerkosten"]),
     component("cost_limit", "Kostenlimit", "LIMIT", [
-      "10 % der Gebäudeversicherungssumme",
-      "15 % der Gebäudeversicherungssumme",
+      "bis zu maximal 10%, in der Feuerversicherung maximal 15%, der Gebäudeversicherungssumme",
+      "Aufräum-, Abbruch- und Feuerlöschkosten auf Erstes Risiko",
+      "Aufräum- und Abbruchkosten auf Erstes Risiko",
     ]),
   ],
   "LF-FE-01": [
@@ -620,11 +671,15 @@ function defaultComponents(requirement) {
 }
 
 function requestedFields(components) {
-  const roles = new Set(components.map(({ factRole }) => factRole));
   return [
-    ...(roles.has("LIMIT") ? ["limit"] : []),
-    ...(roles.has("DEDUCTIBLE") ? ["deductible"] : []),
-    ...(roles.has("CONDITION") ? ["condition"] : []),
+    ...new Set(
+      components.flatMap((item) => {
+        if (Array.isArray(item.requestedFields)) return item.requestedFields;
+        if (item.factRole === "LIMIT") return ["limit"];
+        if (item.factRole === "DEDUCTIBLE") return ["deductible"];
+        return [];
+      })
+    ),
   ];
 }
 
