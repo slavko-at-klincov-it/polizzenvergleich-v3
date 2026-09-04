@@ -5779,3 +5779,72 @@ noch kein vollständiges LF-Inventar. Die Implementierung beweist vor dem
 Mac-Studio-Gate weder fachliche Trefferqualität noch Laufzeit oder
 Generalisierung. Der frühere Dinghy-/Top-5-Pilot bleibt historische
 QA-Evidenz und wird vom produktiven Referenzpfad nicht aufgerufen.
+
+## 121. Mac-Studio-Gate und frischer LF-1-gegen-9-Lauf
+
+Der Implementierungscommit
+`18d87b7dd4f916139b53946c3f78240aa7703d9b` wurde am 4. September 2026 im
+isolierten Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/workspace-modes-18d87b7dd`
+geprüft. Der installierte Kundencheckout blieb unverändert auf
+`2804fa56361084c0ee74fca6f54ef6365d65aeeb`. Verwendet wurden Node 22.23.2,
+Qwen `qwen/qwen3.6-35b-a3b`, 42.496 Token Kontext und eine aus allen 42
+Migrationen frisch erzeugte isolierte SQLite-Datenbank.
+
+Die statischen Gates bestanden vollständig:
+
+```text
+Fokussierte Tests: 6/6 Suites, 30/30 Tests
+Gesamttests:       166/166 Suites, 2172/2172 Tests
+Lint:              Server, Frontend und Collector bestanden
+Frontend-Build:    bestanden, 6170 Module
+Prisma:            Schema validiert, 42/42 Migrationen auf frischer DB
+```
+
+Der anschließende echte Lauf verwendete genau ein LF-Dokument auf A und neun
+WEVIG-/Bedingungsdokumente auf B. Er wurde über die produktiven
+`PolicyComparison`-Erstellungs-, Upload- und Queue-Verträge gestartet.
+
+```text
+Session:                    8969a32b-7cd7-4177-be5c-c060ea7a8a5c
+Modus:                      LF_IMMO_REFERENCE_A_TO_B_V1
+Profil:                     LF_IMMO_REFERENCE_35_V1_CONTROLLED
+Dokumente:                  1 A / 9 B
+Dokument-/Kategorieschritte: 100/100
+LF-Kategorien / LF-Zeilen:  10 / 35
+analysierte A-Zeilen:       35/35
+voll belegt / teilbelegt A: 17 / 18
+B-only-Zeilen:              0
+Gegenstück / teilweise:     2 / 9
+Gegenstück unklar:          3
+kontrollierter Nullfund:    3
+Referenzzeile unklar:       18
+Kundenreview:               30
+Workerzeit:                 2869 s (47:49)
+Modellaufrufe:              526
+Prompt-/Completiontoken:    1.351.569 / 28.197
+```
+
+Alle 100 Dokument-/Kategorieartefakte wurden materialisiert. Der XLSX-Export
+enthält ein Blatt, 35 Datenzeilen plus Kopfzeile und elf Spalten. Die
+Ergebnishashes lauten:
+
+```text
+comparison.private.json  f7a10799373cf5a479d815b069fc702dfd80ac465000e7cd29060bfe8d9384ad
+comparison.md            9eadb50c321faa1f3d4bf20d3691a8651fab5592849f490ab6659f0e34e993e1
+polizzenvergleich.xlsx   f78b6b0ab1c366992dbf29f9e8b0390b2137024ff7775ea36bd1973862078990
+```
+
+Die Fehlerstichprobe des früheren Piloten verbesserte sich fail-closed:
+`LF-VS-02` findet nun ein partielles Nebengebäude-Gegenstück statt eines
+Retrieval-Misses; `LF-GL-03` bleibt wegen fehlender Bewachung korrekt
+partiell; `LF-HP-03` wird nicht mehr unzulässig als direktes Gegenstück
+ausgegeben. `LF-GL-01` bleibt trotz sichtbarem 10-m²-Beleg bereits auf A
+teilbelegt und zeigt eine offene Kalibrierungslücke der komponentenweisen
+Wirkungsbewertung. Der Lauf ist daher ein technischer Funktionsnachweis, keine
+fachliche Freigabe der 35 Status.
+
+Der Referenzrunner ruft weder einen Embedder noch einen Embedding-Endpunkt auf.
+Der allgemeine `LMStudioLLM`-Konstruktor protokolliert beim Erzeugen einer
+Modellinstanz dennoch ein `NativeEmbedder Initialized`; ohne Aufruf einer
+Embed-Funktion wird dabei keine Embedding-Suche oder -Berechnung ausgeführt.
