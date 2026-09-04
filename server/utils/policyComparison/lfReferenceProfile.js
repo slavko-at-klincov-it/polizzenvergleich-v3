@@ -504,12 +504,15 @@ const COMPONENT_OVERRIDES = Object.freeze({
     ),
     component("pane_limit", "Einzelscheiben bis 10 m²", "LIMIT", [
       "10 m²",
+      "10m²",
       "Einzelscheiben",
+      "Einzelscheiben bis m²: 10",
     ]),
   ],
   "LF-GL-02": [
     component("special_glass", "Sonderverglasungen", "INSURED_OBJECT", [
       "Blei-, Messing- und Kunstverglasungen",
+      "Bruch von Blei-, Messing- und Kunstverglasung",
       "Sicherheitsgläser",
       "Acryl- und Plexiglas",
     ]),
@@ -517,11 +520,15 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "solar_glass",
       "Solar- und Photovoltaikverglasung",
       "INSURED_OBJECT",
-      ["Verglasung von Sonnenkollektoren", "Solar- und Fotovoltaikanlagen"]
+      [
+        "Verglasung von Sonnenkollektoren",
+        "Solar- und Fotovoltaikanlagen",
+        "Glasbruch der Solar- und Photovoltaikanlagen",
+      ]
     ),
     component("special_glass_limit", "Sonderverglasungslimit", "LIMIT", [
-      "bis € 1.500",
-      "bis EUR 1.500",
+      "Blei-, Messing- und Kunstverglasungen bis € 1.500",
+      "Bruch von Blei-, Messing- und Kunstverglasung auf Erstes Risiko",
     ]),
   ],
   "LF-GL-03": [
@@ -548,6 +555,8 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("annual_aggregate", "Jahreshöchstleistung", "LIMIT", [
       "Jahreshöchstleistung",
       "Versicherungsfälle eines Versicherungsjahres",
+      "für alle Versicherungsfälle eines Jahres zusammen maximal dreimal",
+      "innerhalb eines Versicherungsjahres eingetretenen Versicherungsfälle höchstens das Dreifache",
     ]),
   ],
   "LF-HP-02": [
@@ -567,23 +576,32 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "environmental_liability",
       "Umweltstörung und Umweltsanierung",
       "BENEFIT",
-      ["Umweltstörung", "Umweltsanierung"]
+      [
+        "Sachschäden durch Umweltstörung und Umweltsanierungskosten",
+        "Umwelthaftpflicht inklusive Umweltsanierungskostenversicherung",
+      ]
     ),
     component("environmental_limit", "Umwelthaftpflichtlimit", "LIMIT", [
-      "Umwelt",
-      "Versicherungssumme",
+      "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme",
+      "Umwelthaftpflicht inklusive Umweltsanierungskostenversicherung (USKV) Sublimit",
+      "in der Polizze vereinbarte Sublimit im Rahmen der Pauschalversicherungssumme",
     ]),
     component(
       "environmental_deductible",
       "Umwelthaftpflicht-Selbstbehalt",
       "DEDUCTIBLE",
-      ["Selbstbehalt", "Schadenbeteiligung"]
+      [
+        "Selbstbehalt des Versicherungsnehmers ist in jedem Versicherungsfall 10 % des Schadenbetrages",
+      ]
     ),
     component(
       "environmental_condition",
       "Voraussetzungen der Umweltdeckung",
       "CONDITION",
-      ["plötzlich", "bestimmungswidrig", "Umweltstörung"]
+      [
+        "Umweltschaden auf einen Störfall zurückzuführen",
+        "Umweltstörung durch einen einzelnen, plötzlich eingetretenen, unvorhergesehenen Vorfall",
+      ]
     ),
   ],
   "LF-OK-01": [
@@ -591,54 +609,67 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "hazardous_waste",
       "Gefährlicher Abfall und Problemstoffe",
       "COST",
-      ["gefährlichem Abfall", "Problemstoffen", "Sonderabfall"]
+      [
+        "Mehrkosten für die Behandlung von gefährlichem Abfall und/oder Problemstoffen",
+      ]
     ),
     component("eco_limit", "Ökoschutzlimit", "LIMIT", [
-      "Ökoschutz",
-      "auf Erstes Risiko",
+      "Versicherungssumme von EUR 7.300,00 auf Erstes Risiko",
     ]),
   ],
   "LF-OK-02": [
     component("extended_reporting", "Nachmeldeckung", "CONDITION", [
       "Nachmeldefrist",
-      "nach Beendigung",
+      "spätestens zwei Jahre danach festgestellt",
     ]),
     component("retroactive_cover", "Rückwärtsdeckung", "CONDITION", [
       "Rückwärtsdeckung",
-      "vor Abschluss",
+      "Vorfall vor Abschluss des Versicherungsvertrages zurückzuführen",
     ]),
   ],
   "LF-AV-01": [
     component("maximum_indemnity", "Höchstentschädigung", "LIMIT", [
       "Höchstentschädigung im Schadensfall",
+      "Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme begrenzt",
     ]),
     component(
       "first_risk_included",
       "Erstrisikosummen einbezogen",
       "CONDITION",
-      ["inklusive aller", "Erstes Risiko"]
+      [
+        "inklusive aller für die jeweilige Sparte vereinbarten Positionen inklusive der Erstrisikosummen",
+        "Bei Vereinbarung von Versicherungssummen auf Erstes Risiko erfolgt die Entschädigung",
+      ]
     ),
     component("one_hundred_fifty_percent", "Grenze von 150 Prozent", "LIMIT", [
-      "150 %",
-      "150 Prozent",
+      "maximal 150 % der vereinbarten Versicherungssumme",
+      "höchstens jedoch der Versicherungssumme",
     ]),
   ],
   "LF-AV-02": [
     component("new_value", "Neuwertentschädigung", "BENEFIT", [
       "Neuwertentschädigung",
-      "Neuwert",
+      "zum Neuwert zu ersetzen",
     ]),
     component(
       "restoration_condition",
       "Wiederherstellung als Voraussetzung",
       "CONDITION",
-      ["Wiederherstellung", "wiederhergestellt"]
+      [
+        "Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung",
+        "Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet",
+      ]
     ),
     component(
       "restoration_period",
       "Wiederherstellungsfrist von drei Jahren",
       "LIMIT",
-      ["drei Jahren", "3 Jahren"]
+      [
+        "innerhalb dreier Jahre nach dem Schadenfall sichergestellt",
+        "binnen drei Jahren ab dem Eintritt des Schadenereignisses",
+        "binnen drei Jahren ab dem Schadendatum",
+      ],
+      { requestedFields: ["duration"] }
     ),
   ],
   "LF-AV-03": [
@@ -646,40 +677,47 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "new_value_floor",
       "Untergrenze der Neuwertentschädigung",
       "CONDITION",
-      ["Untergrenze Neuwertentschädigung"]
+      [
+        "Untergrenze Neuwertentschädigung",
+        "zumindest 20% des Neuwertes betragen hat",
+        "Ständig genutzte und instand gehaltene Sachen haben einen Zeitwert von mindestens 40 %",
+      ]
     ),
     component(
       "current_value_threshold",
       "Zeitwertschwelle von 30 Prozent",
       "LIMIT",
-      ["30 %", "30 Prozent", "Zeitwert"]
+      [
+        "Zeitwert von mindestens 30 %",
+        "Zeitwert zumindest 20% des Neuwertes",
+        "Zeitwert der Sachen unter 40 % der Neuherstellungskosten",
+      ]
     ),
   ],
   "LF-AV-04": [
     component("expert_costs", "Sachverständigenkosten", "COST", [
-      "Sachverständigenkosten",
+      "Versicherer ersetzt 80% der vom Versicherungsnehmer zu tragenden Kosten des Sachverständigen",
     ]),
     component("expert_cost_share", "Kostenanteil von 80 Prozent", "LIMIT", [
       "80 %",
       "80 Prozent",
     ]),
     component("expert_cost_cap", "Höchstbetrag", "LIMIT", [
-      "Höchstbetrag",
-      "maximal",
+      "höchstens jedoch EUR 36.337",
     ]),
     component("damage_threshold", "Schadenschwelle", "CONDITION", [
-      "Schadenhöhe",
-      "Schadensumme",
+      "jeweils festgestellte Schaden EUR 72.673 übersteigt",
     ]),
   ],
   "LF-AV-05": [
     component(
       "underinsurance_waiver",
       "Unterversicherungsverzicht",
-      "BENEFIT",
+      "CONDITION",
       [
         "Unterversicherungsverzicht",
         "Verzicht auf den Einwand der Unterversicherung",
+        "verzichtet der Versicherer auf den Einwand einer Unterversicherung",
       ]
     ),
     component("valuation_report", "Neuwertgutachten", "CONDITION", [
@@ -690,10 +728,13 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Indexanpassung",
       "Baukostenindex",
     ]),
-    component("waiver_duration", "Geltungsdauer", "LIMIT", [
-      "für die Dauer",
-      "Jahre",
-    ]),
+    component(
+      "waiver_duration",
+      "Geltungsdauer",
+      "LIMIT",
+      ["für die Dauer von ca. 3 Jahren"],
+      { requestedFields: ["duration"] }
+    ),
   ],
 });
 

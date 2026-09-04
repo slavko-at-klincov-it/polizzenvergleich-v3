@@ -67,6 +67,8 @@ describe("LF reference comparison profile", () => {
       "limit",
       "duration",
     ]);
+    expect(bySourceId.get("LF-AV-02").requestedFields).toEqual(["duration"]);
+    expect(bySourceId.get("LF-AV-05").requestedFields).toEqual(["duration"]);
   });
 
   test("models product basis and favorability as contract conditions", () => {
