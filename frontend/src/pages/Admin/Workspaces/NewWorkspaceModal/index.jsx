@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Admin from "@/models/admin";
 import Workspace from "@/models/workspace";
 import { useTranslation } from "react-i18next";
@@ -15,17 +15,33 @@ import {
 export default function NewWorkspaceModal({ closeModal }) {
   const [error, setError] = useState(null);
   const [templates, setTemplates] = useState([]);
+  const [templateError, setTemplateError] = useState(null);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const mountedRef = useRef(true);
   const [analysisMode, setAnalysisMode] = useState("");
   const { t } = useTranslation();
-  useEffect(() => {
-    let mounted = true;
-    Workspace.templates().then((availableTemplates) => {
-      if (mounted) setTemplates(availableTemplates);
-    });
-    return () => {
-      mounted = false;
-    };
+  const loadTemplates = useCallback(async () => {
+    setTemplateError(null);
+    setTemplatesLoading(true);
+    try {
+      const availableTemplates = await Workspace.templates();
+      if (mountedRef.current) setTemplates(availableTemplates);
+    } catch (loadError) {
+      if (!mountedRef.current) return;
+      setTemplates([]);
+      setAnalysisMode("");
+      setTemplateError(loadError.message);
+    } finally {
+      if (mountedRef.current) setTemplatesLoading(false);
+    }
   }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    loadTemplates();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadTemplates]);
   const handleCreate = async (e) => {
     setError(null);
     e.preventDefault();
@@ -85,6 +101,18 @@ export default function NewWorkspaceModal({ closeModal }) {
               </span>
             </label>
           ))}
+          {templateError && (
+            <div className="text-sm text-red-400">
+              <p>{templateError}</p>
+              <button
+                type="button"
+                className="mt-2 underline"
+                onClick={loadTemplates}
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </fieldset>
         {error && <p className="text-red-400 text-sm">Error: {error}</p>}
         <p className="text-zinc-400 light:text-slate-600 text-xs md:text-sm">
@@ -96,7 +124,10 @@ export default function NewWorkspaceModal({ closeModal }) {
         <ModalSecondaryButton onClick={closeModal} type="button">
           Cancel
         </ModalSecondaryButton>
-        <ModalPrimaryButton type="submit" disabled={!analysisMode}>
+        <ModalPrimaryButton
+          type="submit"
+          disabled={templatesLoading || !analysisMode}
+        >
           Create workspace
         </ModalPrimaryButton>
       </ModalFooter>

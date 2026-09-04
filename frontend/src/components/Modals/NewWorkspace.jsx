@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Workspace from "@/models/workspace";
 import paths from "@/utils/paths";
 import { useTranslation } from "react-i18next";
@@ -16,22 +16,39 @@ import Modal, {
 const noop = () => false;
 export default function NewWorkspaceModal({ hideModal = noop }) {
   const formEl = useRef(null);
+  const mountedRef = useRef(true);
   const [error, setError] = useState(null);
   const [templates, setTemplates] = useState([]);
+  const [templateError, setTemplateError] = useState(null);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [saving, setSaving] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let mounted = true;
-    Workspace.templates().then((availableTemplates) => {
-      if (mounted) setTemplates(availableTemplates);
-    });
-    return () => {
-      mounted = false;
-    };
+  const loadTemplates = useCallback(async () => {
+    setTemplateError(null);
+    setTemplatesLoading(true);
+    try {
+      const availableTemplates = await Workspace.templates();
+      if (mountedRef.current) setTemplates(availableTemplates);
+    } catch (loadError) {
+      if (!mountedRef.current) return;
+      setTemplates([]);
+      setSelectedTemplate("");
+      setTemplateError(loadError.message);
+    } finally {
+      if (mountedRef.current) setTemplatesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    loadTemplates();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadTemplates]);
 
   const handleCreate = async (e) => {
     setError(null);
@@ -97,6 +114,18 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
                 />
               ))}
             </div>
+            {templateError && (
+              <div className="text-sm text-red-400">
+                <p>{templateError}</p>
+                <button
+                  type="button"
+                  className="mt-2 underline"
+                  onClick={loadTemplates}
+                >
+                  Erneut versuchen
+                </button>
+              </div>
+            )}
           </fieldset>
 
           <div className="rounded-lg border border-zinc-700 light:border-slate-300 bg-zinc-800/60 light:bg-slate-50 p-4">
@@ -113,7 +142,7 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
         <ModalFooter className="justify-end">
           <ModalPrimaryButton
             type="submit"
-            disabled={saving || !selectedTemplate}
+            disabled={saving || templatesLoading || !selectedTemplate}
           >
             {saving ? t("common.saving") : t("new-workspace.create")}
           </ModalPrimaryButton>

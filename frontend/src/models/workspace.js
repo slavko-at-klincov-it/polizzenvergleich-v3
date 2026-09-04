@@ -44,17 +44,16 @@ const Workspace = {
     return { workspace, message };
   },
   templates: async function () {
-    return fetch(`${API_BASE}/workspace/templates`, {
+    const response = await fetch(`${API_BASE}/workspace/templates`, {
       method: "GET",
       headers: baseHeaders(),
-    })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new Error(`Template request failed: ${response.status}`);
-        const data = await response.json();
-        return Array.isArray(data.templates) ? data.templates : [];
-      })
-      .catch(() => []);
+    });
+    if (!response.ok)
+      throw new Error(`Template request failed: ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.templates))
+      throw new Error("Template response is invalid.");
+    return data.templates;
   },
   update: async function (slug, data = {}) {
     const { workspace, message } = await fetch(
