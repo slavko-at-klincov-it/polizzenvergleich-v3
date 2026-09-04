@@ -588,6 +588,13 @@ describe("deterministicCategoryEvidenceRules", () => {
       "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
     ],
     [
+      "ELEMENTAR_INSURANCE",
+      "Versichert sind Hochwasser und Erdbeben.",
+      "Hochwasser",
+      "DIRECT",
+      "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
+    ],
+    [
       "LEITUNGSWASSER_INSURANCE",
       "Nicht versichert sind Schäden durch Hochwasser und Erdbeben.",
       "Hochwasser",
@@ -631,6 +638,30 @@ describe("deterministicCategoryEvidenceRules", () => {
       });
     }
   );
+
+  test("accepts an HQ30 limit from the elementar section in the directed storm view", () => {
+    const text =
+      "Schäden durch Hochwasser in der HQ30-Zone sind bis maximal EUR 10.000 mitversichert.";
+    const exactText = "maximal EUR 10.000";
+    const input = bindingInput({ text, exactText });
+    input.worksheet.catalog.categoryView = "RS";
+    input.requirement = {
+      id: "RS-04",
+      sourceReferenceId: "LF-ST-04",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "hq30_limit", factRole: "LIMIT" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "ELEMENTAR_INSURANCE",
+      text: "ELEMENTARVERSICHERUNG",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
 
   test("keeps a cross-cutting general clause in the directed storm view model-owned", () => {
     const text = "Der Vertrag beschreibt Hochwasser im nachfolgenden Abschnitt.";
