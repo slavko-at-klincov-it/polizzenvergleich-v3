@@ -4,6 +4,9 @@ const {
   LF_REFERENCE_PROFILE,
   categoryCatalogs,
 } = require("../../utils/policyComparison/lfReferenceProfile");
+const {
+  buildControlledOccurrenceWorksheet,
+} = require("../../utils/policyAnalysis/controlledOccurrenceWorksheet");
 
 describe("LF reference comparison profile", () => {
   test("provides exactly 10 categories and 35 A-owned result rows", () => {
@@ -33,6 +36,36 @@ describe("LF reference comparison profile", () => {
           "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V2"
       )
     ).toBe(true);
+  });
+
+  test("materializes every V2 catalog through the production worksheet contract", () => {
+    const document = {
+      id: "lf-v2-contract-probe",
+      sourceDocumentId: "lf-v2-contract-probe",
+      title: "lf-v2-contract-probe.pdf",
+      documentType: "pdf",
+      pageContent: "Kein Treffer in diesem synthetischen Vertragsdokument.",
+      pageMap: [
+        {
+          pageNumber: 1,
+          start: 0,
+          end: 54,
+        },
+      ],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    };
+
+    for (const { catalog } of categoryCatalogs()) {
+      expect(() =>
+        buildControlledOccurrenceWorksheet({ catalog, document })
+      ).not.toThrow();
+    }
   });
 
   test("splits compound LF points into mandatory typed components", () => {
