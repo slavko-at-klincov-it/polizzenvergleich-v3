@@ -236,10 +236,11 @@ function factRoleMatchesGovernor(factRole, polarity, text) {
 
 function occurrenceClauseText(occurrence) {
   const text = String(occurrence?.context?.text || "");
-  const softLineBreaks = occurrence?.context?.unitType === "PARAGRAPH";
   const isBoundary = (index) => {
     const character = text[index];
-    if (/[\n\r]/u.test(character)) return !softLineBreaks;
+    // Extraction preserves visual PDF line wraps. They are not semantic
+    // sentence boundaries; punctuation remains authoritative here.
+    if (/[\n\r]/u.test(character)) return false;
     if (/[!?;]/u.test(character)) return true;
     if (character !== ".") return false;
     const nextNonWhitespace = text.slice(index + 1).match(/\S/u)?.[0] || "";
@@ -273,6 +274,7 @@ function occurrenceClauseText(occurrence) {
  */
 function operativeCoveragePolarity(occurrence) {
   const clause = occurrenceClauseText(occurrence);
+  const exactText = String(occurrence?.exactText || "");
   if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
   if (
     /\b(?:werden|wird)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
@@ -295,6 +297,12 @@ function operativeCoveragePolarity(occurrence) {
     /\b(?:es\s+)?(?:werden|wird)\b[\s\S]{0,320}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
       clause
     ) ||
+    (/\b(?:der\s+)?Versicherer\s+(?:ersetzt|entschädigt|vergütet|übernimmt)\b/iu.test(
+      clause
+    ) &&
+      /\b(?:der\s+)?Versicherer\s+(?:ersetzt|entschädigt|vergütet|übernimmt)\b/iu.test(
+        exactText
+      )) ||
     /\b(?:sind|gelten)\b[\s\S]{0,320}?\bmitversichert\b/iu.test(clause) ||
     /\b(?:der\s+)?Versicherer\s+leistet\s+Entschädigung\b/iu.test(clause) ||
     /\b(?:ist|sind)\b[\s\S]{0,320}?\bzu\s+(?:ersetzen|entschädigen|vergüten)\b/iu.test(
@@ -347,12 +355,12 @@ function explicitRoleMismatch(component, occurrence) {
   const context = String(occurrence?.context?.text || "");
   const subjectBoundIndirectLightningLimit = Boolean(
     component?.id === "indirect_lightning_limit" &&
-      /(?:indirekter?\s+Blitzschlag|Überspannung[\s\S]{0,80}Blitzschlag)/iu.test(
-        context
-      ) &&
-      /(?:bis\s+(?:insgesamt\s+)?|mindestens\s+|maximal\s+)[\s\S]{0,100}(?:EUR|€|%|Versicherungssumme)/iu.test(
-        context
-      )
+    /(?:indirekter?\s+Blitzschlag|Überspannung[\s\S]{0,80}Blitzschlag)/iu.test(
+      context
+    ) &&
+    /(?:bis\s+(?:insgesamt\s+)?|mindestens\s+|maximal\s+)[\s\S]{0,100}(?:EUR|€|%|Versicherungssumme)/iu.test(
+      context
+    )
   );
   if (
     component?.factRole === "LIMIT" &&
@@ -1231,8 +1239,8 @@ function isGeneralBranchMaximumTarget({
   const target = GENERAL_BRANCH_MAXIMUM_TARGETS[categoryView];
   return Boolean(
     target &&
-      target.requirementId === requirementId &&
-      target.componentId === componentId
+    target.requirementId === requirementId &&
+    target.componentId === componentId
   );
 }
 
@@ -1345,6 +1353,18 @@ function deterministicCategoryCandidateBinding({
     occurrence,
   });
   if (tenantRecourseBinding) return tenantRecourseBinding;
+  if (
+    categoryView === "VB" &&
+    requirement?.id === "VB-16" &&
+    component?.id === "residents" &&
+    /gegen\s+einen\s+Mieter[\s\S]{0,320}?verzichtet\s+der\s+Versicherer\s+auf\s+seinen\s+Regressanspruch/iu.test(
+      occurrence?.context?.text || ""
+    ) &&
+    !/mit\s+ihm\s+in\s+häuslicher\s+Gemeinschaft\s+lebenden\s+Familienangehörigen/iu.test(
+      occurrence?.context?.text || ""
+    )
+  )
+    return null;
 
   const hp02Binding = explicitHp02AnnualAggregateBinding({
     categoryView,
@@ -1566,24 +1586,24 @@ function deterministicCategoryCandidateBinding({
     return null;
   const explicitVariantListClause = Boolean(
     occurrence?.variantScopeHint?.key &&
-      occurrence?.variantScopeHint?.label &&
-      occurrence?.coverageGovernorHint?.text &&
-      occurrence?.context?.unitType === "LIST_ITEM" &&
-      containsPhrase(occurrence?.context?.text, occurrence?.exactText)
+    occurrence?.variantScopeHint?.label &&
+    occurrence?.coverageGovernorHint?.text &&
+    occurrence?.context?.unitType === "LIST_ITEM" &&
+    containsPhrase(occurrence?.context?.text, occurrence?.exactText)
   );
   const explicitCategoryListClause = Boolean(
     matchingScopeKey &&
-      occurrence?.coverageGovernorHint?.text &&
-      occurrence?.context?.unitType === "LIST_ITEM" &&
-      containsPhrase(occurrence?.context?.text, occurrence?.exactText) &&
-      (lastPatternMatch(
+    occurrence?.coverageGovernorHint?.text &&
+    occurrence?.context?.unitType === "LIST_ITEM" &&
+    containsPhrase(occurrence?.context?.text, occurrence?.exactText) &&
+    (lastPatternMatch(
+      occurrence.coverageGovernorHint.text,
+      POSITIVE_GOVERNORS
+    ) ||
+      lastPatternMatch(
         occurrence.coverageGovernorHint.text,
-        POSITIVE_GOVERNORS
-      ) ||
-        lastPatternMatch(
-          occurrence.coverageGovernorHint.text,
-          NEGATIVE_GOVERNORS
-        ))
+        NEGATIVE_GOVERNORS
+      ))
   );
   return {
     binding:

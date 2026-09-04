@@ -109,7 +109,10 @@ describe("deterministicCategoryEvidenceRules", () => {
   );
 
   test.each([
-    ["Sämtliche versicherten Gebäude sind zum Neuwert zu ersetzen.", "POSITIVE"],
+    [
+      "Sämtliche versicherten Gebäude sind zum Neuwert zu ersetzen.",
+      "POSITIVE",
+    ],
     [
       "Nicht ständig verwendete Gebäude sind nicht zum Neuwert zu ersetzen.",
       "NEGATIVE",
@@ -135,6 +138,66 @@ describe("deterministicCategoryEvidenceRules", () => {
       });
     }
   );
+
+  test.each([
+    [
+      [
+        "Mehrkosten für die Behandlung von gefährlichem Abfall und Problemstoffen",
+        "sind bis EUR 7.300 auf Erstes Risiko mitversichert.",
+      ].join("\n"),
+      "Mehrkosten für die Behandlung von gefährlichem Abfall und Problemstoffen",
+      "COST",
+    ],
+    [
+      [
+        "Eine wesentliche Voraussetzung für den Versicherungsschutz ist, dass der",
+        "Umweltsachschaden auf einen Störfall zurückzuführen ist.",
+      ].join("\n"),
+      "Umweltsachschaden auf einen Störfall zurückzuführen",
+      "CONDITION",
+    ],
+  ])(
+    "treats visual PDF line wraps as soft boundaries in a curated clause",
+    (text, exactText, factRole) => {
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RO";
+      input.requirement = {
+        id: "RO-01",
+        sourceReferenceId: "LF-OK-01",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "reference_component", factRole };
+      input.occurrence.sectionScopeHint = null;
+      input.occurrence.context.unitType = "CLAUSE_SECTION";
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: "DIRECT",
+        basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+        authoritative: true,
+      });
+    }
+  );
+
+  test("binds a direct insurer reimbursement promise", () => {
+    const text =
+      "Der Versicherer ersetzt 80% der vom Versicherungsnehmer zu tragenden Sachverständigenkosten.";
+    const input = bindingInput({ text, exactText: "Versicherer ersetzt 80%" });
+    input.worksheet.catalog.categoryView = "RA";
+    input.requirement = {
+      id: "RA-04",
+      sourceReferenceId: "LF-AV-04",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "expert_costs", factRole: "COST" };
+    input.occurrence.sectionScopeHint = null;
+    input.occurrence.context.unitType = "CLAUSE_SECTION";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
 
   test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],

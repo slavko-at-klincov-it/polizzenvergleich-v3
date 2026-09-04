@@ -494,14 +494,9 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("water_loss", "Wasserverlustkosten", "COST", [
       "Kosten für den Wasserverlust",
     ]),
-    component(
-      "unlimited_cleaning",
-      "Rohrreinigung ohne Limit",
-      "CONDITION",
-      [
-        "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen ohne betragliche Beschränkung",
-      ]
-    ),
+    component("unlimited_cleaning", "Rohrreinigung ohne Limit", "CONDITION", [
+      "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen ohne betragliche Beschränkung",
+    ]),
     component(
       "rainwater_pipes",
       "Regenablaufrohre und Dachrinnen",

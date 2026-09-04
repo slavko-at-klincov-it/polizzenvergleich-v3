@@ -1175,17 +1175,12 @@ function extractBuildersLiabilityConstructionSumFacts({ occurrence, binding }) {
 function extractDurationFacts({ occurrence, binding }) {
   const { text } = validatedContext(occurrence);
   const durationPattern =
-    /(?<![\p{L}\p{N}])(?:\d{1,3}|ein(?:e[rmn]?)?|eins|zwei|drei|vier|f(?:ue|ü)nf|sechs|sieben|acht|neun|zehn|elf|zw(?:oe|ö)lf)\s+(Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?)(?![\p{L}\p{N}])/giu;
+    /(?<![\p{L}\p{N}])(?:\d{1,3}|ein(?:e[rmn]?)?|eins|zwei(?:e[rmn])?|drei(?:e[rmn])?|vier(?:e[rmn])?|f(?:ue|ü)nf(?:e[rmn])?|sechs(?:e[rmn])?|sieben(?:e[rmn])?|acht(?:e[rmn])?|neun(?:e[rmn])?|zehn(?:e[rmn])?|elf(?:e[rmn])?|zw(?:oe|ö)lf(?:e[rmn])?)\s+(Stunde(?:n)?|Tag(?:e|en)?|Woche(?:n)?|Monat(?:e|en)?|Jahr(?:e|en)?)(?![\p{L}\p{N}])/giu;
   return [...text.matchAll(durationPattern)]
     .filter((match) => valueFollowsCandidate(occurrence, match))
     .map((match) => {
       const rawNumber = match[0].trim().split(/\s+/u)[0];
-      const normalizedWord = rawNumber
-        .normalize("NFKC")
-        .toLocaleLowerCase("de");
-      const count = /^\d+$/u.test(normalizedWord)
-        ? Number(normalizedWord)
-        : GERMAN_MONTH_NUMBERS[normalizedWord];
+      const count = normalizedGermanCardinal(rawNumber);
       if (!Number.isInteger(count))
         throw requestedFieldError("REQUESTED_FIELD_DURATION_INVALID", match[0]);
       const unitText = match[1].toLocaleLowerCase("de");

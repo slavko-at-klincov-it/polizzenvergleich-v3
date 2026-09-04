@@ -1001,38 +1001,42 @@ describe("requestedFieldEvidenceContract", () => {
   });
 
   test.each([
-    ["sechs Monaten", "6 Monate"],
-    ["6 Monaten", "6 Monate"],
-  ])("normalizes duration %s with exact offsets", (rawDuration, normalized) => {
-    const text = `Mietzinsentgang wird während ${rawDuration} ersetzt.`;
-    const source = occurrence({
-      candidateId: `candidate:duration:${rawDuration}`,
-      requirementId: "VS-28",
-      text,
-      contextStart: 2_000,
-      pageNumber: 14,
-    });
-    const result = materializeRequestedFieldEvidence({
-      worksheet: worksheet({ durationOccurrences: [source] }),
-      materializedCandidates: selections([
-        `candidate:duration:${rawDuration}`,
-        "DIRECT",
-      ]),
-    });
-    const fact = result.requirements[2].fields[0].facts[0];
+    ["sechs Monaten", "6 Monate", "MONTH"],
+    ["6 Monaten", "6 Monate", "MONTH"],
+    ["dreier Jahre", "3 Jahre", "YEAR"],
+  ])(
+    "normalizes duration %s with exact offsets",
+    (rawDuration, normalized, unit) => {
+      const text = `Mietzinsentgang wird während ${rawDuration} ersetzt.`;
+      const source = occurrence({
+        candidateId: `candidate:duration:${rawDuration}`,
+        requirementId: "VS-28",
+        text,
+        contextStart: 2_000,
+        pageNumber: 14,
+      });
+      const result = materializeRequestedFieldEvidence({
+        worksheet: worksheet({ durationOccurrences: [source] }),
+        materializedCandidates: selections([
+          `candidate:duration:${rawDuration}`,
+          "DIRECT",
+        ]),
+      });
+      const fact = result.requirements[2].fields[0].facts[0];
 
-    expect(fact).toMatchObject({
-      rawValue: rawDuration,
-      normalizedValue: normalized,
-      valueType: "DURATION",
-      unit: "MONTH",
-      source: {
-        documentStart: 2_000 + text.indexOf(rawDuration),
-        documentEnd: 2_000 + text.indexOf(rawDuration) + rawDuration.length,
-        exactText: rawDuration,
-      },
-    });
-  });
+      expect(fact).toMatchObject({
+        rawValue: rawDuration,
+        normalizedValue: normalized,
+        valueType: "DURATION",
+        unit,
+        source: {
+          documentStart: 2_000 + text.indexOf(rawDuration),
+          documentEnd: 2_000 + text.indexOf(rawDuration) + rawDuration.length,
+          exactText: rawDuration,
+        },
+      });
+    }
+  );
 
   test.each([
     ["maximal dreimal", "dreimal", "3-fach"],
@@ -1810,9 +1814,8 @@ describe("requestedFieldEvidenceContract", () => {
       },
     ]);
     expect(
-      result.requirements.find(
-        ({ requirementId }) => requirementId === "EL-04"
-      ).fields
+      result.requirements.find(({ requirementId }) => requirementId === "EL-04")
+        .fields
     ).toEqual([
       {
         field: "limit",
