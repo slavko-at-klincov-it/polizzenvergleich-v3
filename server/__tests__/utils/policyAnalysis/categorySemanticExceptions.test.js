@@ -145,7 +145,6 @@ describe("category semantic exceptions", () => {
     ).toEqual({
       binding: "MENTION_ONLY",
       basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
-      authoritative: true,
     });
 
     const staleHeading = occurrence({
@@ -980,6 +979,7 @@ describe("category semantic exceptions", () => {
     ).toEqual({
       binding: "MENTION_ONLY",
       basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+      authoritative: true,
     });
 
     const lateCrossReference = {
