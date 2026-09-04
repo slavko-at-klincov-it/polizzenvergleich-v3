@@ -3078,7 +3078,7 @@ describe("controlledOccurrenceWorksheet", () => {
   });
 
   test("keeps a wrapped concept inside one list item", () => {
-    const fingerprint = "wrapped-list-concept-fixture";
+    const fingerprint = "a".repeat(64);
     const firstItem = [
       "- Die Kosten einer höchstens sechsmonatigen Zwischenlagerung sind unter der Voraussetzung",
       "versichert, dass die Zwischenlagerung unverzüglich angezeigt wird;",
@@ -3176,7 +3176,7 @@ describe("controlledOccurrenceWorksheet", () => {
   });
 
   test("keeps a concept shared by a governor and its first list item", () => {
-    const fingerprint = "governed-list-concept-fixture";
+    const fingerprint = "b".repeat(64);
     const governedText = [
       "Zusätzlich versichert sind Schäden durch",
       "• Schnee- und Eisrutsch an den versicherten Gebäuden, die durch Herabrutschen von am Dach",
@@ -3194,14 +3194,14 @@ describe("controlledOccurrenceWorksheet", () => {
         categoryView: "ST",
         requirementId: "ST-08",
         componentId: "roof_avalanche_on_own_installations",
-        factRole: "COVERAGE",
+        factRole: "PERIL",
         conceptId: "snow-or-ice-slide-on-insured-property",
         requiredGroups: [
           { prefixes: ["versichert"] },
           { prefixes: ["schnee", "eisrutsch"] },
           { prefixes: ["gebäude"] },
         ],
-        maxLines: 3,
+        maxLines: 2,
       }),
     });
     const occurrences = component(
