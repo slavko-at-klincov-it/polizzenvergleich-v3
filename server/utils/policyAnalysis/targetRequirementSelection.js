@@ -296,6 +296,19 @@ function assertTargetRequirementSelection(
     )
   )
     throw selectionError("TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH");
+  for (const [index, requirement] of worksheet.requirements.entries()) {
+    const persistedDigest =
+      selection.requirementContracts[index]?.searchContractDigestSha256;
+    const currentDigest = requirementSearchContractDigest({
+      catalogId: selection.catalogId,
+      requirement,
+    });
+    if (persistedDigest !== currentDigest)
+      throw selectionError(
+        "TARGET_REQUIREMENT_SELECTION_REQUIREMENT_DIGEST_MISMATCH",
+        requirement.id
+      );
+  }
   return selection;
 }
 

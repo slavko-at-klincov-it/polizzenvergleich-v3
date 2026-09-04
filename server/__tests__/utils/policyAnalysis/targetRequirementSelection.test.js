@@ -480,6 +480,17 @@ describe("target requirement selection", () => {
       ).toThrow(/^TARGET_REQUIREMENT_SELECTION_/u);
     }
 
+    const scopeMutation = JSON.parse(JSON.stringify(worksheet));
+    scopeMutation.requirements[0].components[0].scopePolicy =
+      "MATCHING_SCOPE_INCLUDED_SUFFICIENT";
+    scopeMutation.requirements[0].components[0].scopeRules = {
+      narrowAliases: ["Sturmdeckung für Nebengebäude"],
+      narrowScopeKeys: ["STURM_NEBENGEBÄUDE"],
+    };
+    expect(() => assertTargetRequirementSelection(scopeMutation)).toThrow(
+      "TARGET_REQUIREMENT_SELECTION_REQUIREMENT_DIGEST_MISMATCH: ST-01"
+    );
+
     const missingProvenance = JSON.parse(JSON.stringify(worksheet));
     delete missingProvenance.targetRequirementSelection;
     expect(() =>

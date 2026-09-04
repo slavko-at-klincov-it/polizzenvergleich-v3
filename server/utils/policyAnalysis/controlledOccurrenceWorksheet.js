@@ -3771,6 +3771,9 @@ function buildControlledOccurrenceWorksheet({
         ? { absenceCertification: requirement.absenceCertification }
         : {}),
       coverageAggregationPolicy: requirement.coverageAggregationPolicy,
+      ...(requirement.bindingStructures.length > 0
+        ? { bindingStructures: requirement.bindingStructures }
+        : {}),
       ...(requirement.componentFamilyContract
         ? { componentFamilyContract: requirement.componentFamilyContract }
         : {}),
