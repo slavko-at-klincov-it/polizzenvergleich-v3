@@ -131,6 +131,56 @@ function requireNonEmptyString(value, code, detail) {
   return value.trim();
 }
 
+function validatedScopeRules(value, detail) {
+  if (value === undefined)
+    return { narrowAliases: [], narrowScopeKeys: [] };
+  const keys = Object.keys(value || {});
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    keys.length === 0 ||
+    keys.some((key) => !["narrowAliases", "narrowScopeKeys"].includes(key)) ||
+    (value.narrowAliases !== undefined &&
+      !Array.isArray(value.narrowAliases)) ||
+    (value.narrowScopeKeys !== undefined &&
+      !Array.isArray(value.narrowScopeKeys))
+  )
+    throw worksheetError("SCOPE_RULES_INVALID", detail);
+  return {
+    narrowAliases: [
+      ...new Set(
+        (value.narrowAliases || []).map((alias) =>
+          requireNonEmptyString(alias, "SCOPE_ALIAS_REQUIRED", detail)
+        )
+      ),
+    ],
+    narrowScopeKeys: [
+      ...new Set(
+        (value.narrowScopeKeys || []).map((scopeKey) =>
+          requireNonEmptyString(
+            scopeKey,
+            "SCOPE_SECTION_KEY_REQUIRED",
+            detail
+          )
+        )
+      ),
+    ],
+  };
+}
+
+function validatedScopePolicy(value, scopeRules, detail) {
+  const scopePolicy = value || "GENERAL_REQUIRED";
+  if (!ALLOWED_SCOPE_POLICIES.has(scopePolicy))
+    throw worksheetError("SCOPE_POLICY_INVALID", detail);
+  if (
+    scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT" &&
+    scopeRules.narrowScopeKeys.length === 0
+  )
+    throw worksheetError("DEFINITIVE_SCOPE_KEYS_REQUIRED", detail);
+  return scopePolicy;
+}
+
 function transliterateCharacter(character) {
   const lower = character.normalize("NFKC").toLocaleLowerCase("de");
   if (lower === "ä") return "ae";
@@ -2106,6 +2156,23 @@ function validateCatalog(catalog) {
       if (componentIds.has(componentId))
         throw worksheetError("DUPLICATE_COMPONENT_ID", `${id}:${componentId}`);
       componentIds.add(componentId);
+      const hasComponentScopePolicy = component.scopePolicy !== undefined;
+      const hasComponentScopeRules = component.scopeRules !== undefined;
+      if (hasComponentScopePolicy !== hasComponentScopeRules)
+        throw worksheetError(
+          "COMPONENT_SCOPE_CONTRACT_INCOMPLETE",
+          `${id}:${componentId}`
+        );
+      const componentScopeRules = hasComponentScopeRules
+        ? validatedScopeRules(component.scopeRules, `${id}:${componentId}`)
+        : null;
+      const componentScopePolicy = hasComponentScopePolicy
+        ? validatedScopePolicy(
+            component.scopePolicy,
+            componentScopeRules,
+            `${id}:${componentId}`
+          )
+        : null;
       if (!Array.isArray(component.aliases) || component.aliases.length === 0)
         throw worksheetError(
           "COMPONENT_ALIASES_REQUIRED",
@@ -2324,6 +2391,12 @@ function validateCatalog(catalog) {
         })(),
         aliases,
         conceptSearches,
+        ...(componentScopePolicy
+          ? {
+              scopePolicy: componentScopePolicy,
+              scopeRules: componentScopeRules,
+            }
+          : {}),
         ...(followingStructuralBoundaryProofContractId
           ? { followingStructuralBoundaryProofContractId }
           : {}),
@@ -2608,40 +2681,7 @@ function validateCatalog(catalog) {
           };
         })
       : [];
-    let scopeRules = { narrowAliases: [], narrowScopeKeys: [] };
-    if (requirement.scopeRules !== undefined) {
-      const scopeRuleKeys = Object.keys(requirement.scopeRules || {});
-      if (
-        !requirement.scopeRules ||
-        typeof requirement.scopeRules !== "object" ||
-        Array.isArray(requirement.scopeRules) ||
-        scopeRuleKeys.length === 0 ||
-        scopeRuleKeys.some(
-          (key) => !["narrowAliases", "narrowScopeKeys"].includes(key)
-        ) ||
-        (requirement.scopeRules.narrowAliases !== undefined &&
-          !Array.isArray(requirement.scopeRules.narrowAliases)) ||
-        (requirement.scopeRules.narrowScopeKeys !== undefined &&
-          !Array.isArray(requirement.scopeRules.narrowScopeKeys))
-      )
-        throw worksheetError("SCOPE_RULES_INVALID", id);
-      scopeRules = {
-        narrowAliases: [
-          ...new Set(
-            (requirement.scopeRules.narrowAliases || []).map((alias) =>
-              requireNonEmptyString(alias, "SCOPE_ALIAS_REQUIRED", id)
-            )
-          ),
-        ],
-        narrowScopeKeys: [
-          ...new Set(
-            (requirement.scopeRules.narrowScopeKeys || []).map((scopeKey) =>
-              requireNonEmptyString(scopeKey, "SCOPE_SECTION_KEY_REQUIRED", id)
-            )
-          ),
-        ],
-      };
-    }
+    const scopeRules = validatedScopeRules(requirement.scopeRules, id);
     const validatedRequirement = {
       id,
       ...(requirement.sourceReferenceId
@@ -2670,17 +2710,11 @@ function validateCatalog(catalog) {
             ),
           ]
         : [],
-      scopePolicy: (() => {
-        const scopePolicy = requirement.scopePolicy || "GENERAL_REQUIRED";
-        if (!ALLOWED_SCOPE_POLICIES.has(scopePolicy))
-          throw worksheetError("SCOPE_POLICY_INVALID", id);
-        if (
-          scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT" &&
-          scopeRules.narrowScopeKeys.length === 0
-        )
-          throw worksheetError("DEFINITIVE_SCOPE_KEYS_REQUIRED", id);
-        return scopePolicy;
-      })(),
+      scopePolicy: validatedScopePolicy(
+        requirement.scopePolicy,
+        scopeRules,
+        id
+      ),
       componentSatisfactionPolicy: (() => {
         const policy = requirement.componentSatisfactionPolicy || "ALL";
         if (!ALLOWED_COMPONENT_SATISFACTION_POLICIES.has(policy))

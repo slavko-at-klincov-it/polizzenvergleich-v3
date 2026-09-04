@@ -10,6 +10,9 @@ const { DOCUMENT_STATUS } = require("./preparedEvidenceContract");
 const {
   validatedExactClauseCodeGovernor,
 } = require("./requestedFieldEvidenceContract");
+const {
+  componentScopeContract,
+} = require("./componentScopePolicyContract");
 
 const CATEGORY_TABLE_HEADERS = Object.freeze([
   "Kategorie-ID",
@@ -534,7 +537,10 @@ function buildCategoryTableRows({
       const scopeComplete = rowJudgements.every((judgement) => {
         if ((judgement.unresolvedCandidateIds || []).length > 0) return false;
         if (judgement.selectedScopePicture !== "NARROW_ONLY") return true;
-        const allowedScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+        const component = componentById.get(judgement.componentId);
+        const scopeContract = componentScopeContract(requirement, component);
+        const allowedScopeKeys =
+          scopeContract.scopeRules?.narrowScopeKeys || [];
         const comparisonScopeKeys = judgement.comparisonScopeKeys || [];
         if (
           allowedScopeKeys.length > 0 &&
@@ -547,16 +553,21 @@ function buildCategoryTableRows({
         if (
           normalized.id === "VS-24" &&
           (comparisonScopeKeys.length !== 1 ||
-            !requirement.scopeRules?.narrowScopeKeys?.includes(
+            !scopeContract.scopeRules?.narrowScopeKeys?.includes(
               comparisonScopeKeys[0]
             ))
         )
           return false;
-        if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
+        if (
+          scopeContract.scopePolicy ===
+          "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT"
+        )
           return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(judgement.coverageEffect);
-        if (requirement.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT")
+        if (
+          scopeContract.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT"
+        )
           return false;
-        const factRole = componentById.get(judgement.componentId)?.factRole;
+        const factRole = component?.factRole;
         return NON_COVERAGE_FACT_ROLES.has(factRole)
           ? [COVERAGE_EFFECT.DEFINED, COVERAGE_EFFECT.CONDITIONAL].includes(
               judgement.coverageEffect

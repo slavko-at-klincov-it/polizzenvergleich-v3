@@ -16,6 +16,9 @@ const {
   RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
   isRgCostWithoutExplicitGlassLossScope,
 } = require("./glassLossScopeContract");
+const {
+  componentScopeContract,
+} = require("./componentScopePolicyContract");
 
 const CATEGORY_SCOPE_KEYS = Object.freeze({
   FE: ["FEUER_INSURANCE"],
@@ -202,8 +205,10 @@ function occurrencePrecedingClauseText(occurrence) {
   return text.slice(start, end);
 }
 
-function matchedNarrowAlias(requirement, occurrence) {
-  const narrowAliases = requirement?.scopeRules?.narrowAliases || [];
+function matchedNarrowAlias(requirement, component, occurrence) {
+  const narrowAliases =
+    componentScopeContract(requirement, component).scopeRules?.narrowAliases ||
+    [];
   const scopeText = `${occurrence?.coverageGovernorHint?.text || ""}\n${
     occurrence?.scopeLead?.text || ""
   }\n${occurrencePrecedingClauseText(occurrence)}\n${occurrenceClauseText(
@@ -1004,7 +1009,9 @@ function explicitEl06LocalTargetScopeRebinding({
     );
   if (!hasSubjectBoundPositiveRule || hasFailClosedQualifier) return null;
 
-  const narrowScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+  const narrowScopeKeys =
+    componentScopeContract(requirement, component).scopeRules
+      ?.narrowScopeKeys || [];
   const [comparisonScopeKey] = narrowScopeKeys;
   if (!comparisonScopeKey || narrowScopeKeys.length !== 1) return null;
 
@@ -1571,11 +1578,12 @@ function deterministicCategoryCandidateBinding({
     ...(occurrence?.sectionScopeHint?.scopeKeys || []),
     ...explicitPageTitleScopeKeys(occurrence),
   ].filter(Boolean);
-  const narrowAlias = matchedNarrowAlias(requirement, occurrence);
+  const scopeContract = componentScopeContract(requirement, component);
+  const narrowAlias = matchedNarrowAlias(requirement, component, occurrence);
   const observedNarrowScopeKeys = [
     ...new Set(
       observedScopeKeys.filter((scopeKey) =>
-        (requirement?.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
+        (scopeContract.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
       )
     ),
   ];

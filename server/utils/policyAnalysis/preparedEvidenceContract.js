@@ -23,6 +23,9 @@ const {
   validNestedListContinuationEnvelope,
   validSourceBoundObjectScopeProof,
 } = require("./objectScopeEvidenceContract");
+const {
+  componentScopeContract,
+} = require("./componentScopePolicyContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
 const DOCUMENT_STATUS = Object.freeze({
@@ -84,8 +87,14 @@ function applicabilityFor(documentStatus, evidencePresence) {
   throw preparedError("PREPARED_DOCUMENT_STATUS_INVALID", documentStatus);
 }
 
-function sourceBoundOccurrenceComparisonScopeKey({ occurrence, requirement }) {
-  const allowedKeys = requirement?.scopeRules?.narrowScopeKeys || [];
+function sourceBoundOccurrenceComparisonScopeKey({
+  occurrence,
+  requirement,
+  component,
+}) {
+  const allowedKeys =
+    componentScopeContract(requirement, component).scopeRules?.narrowScopeKeys ||
+    [];
   const occurrencePage = Number(occurrence?.physicalPageNumber);
   const section = occurrence?.sectionScopeHint;
   const declaredSectionKeys = [
@@ -357,6 +366,7 @@ function buildPreparedEvidenceTargets({
           sourceBoundOccurrenceComparisonScopeKey({
             occurrence,
             requirement,
+            component,
           });
         const localTargetScopeRebinding =
           deterministicBinding?.basis ===
@@ -364,7 +374,10 @@ function buildPreparedEvidenceTargets({
         const deterministicComparisonScopeKey =
           deterministicBinding?.binding === candidateBinding &&
           candidateBinding === "NARROW_SCOPE" &&
-          (requirement?.scopeRules?.narrowScopeKeys || []).includes(
+          (
+            componentScopeContract(requirement, component).scopeRules
+              ?.narrowScopeKeys || []
+          ).includes(
             deterministicBinding?.comparisonScopeKey
           ) &&
           (localTargetScopeRebinding ||

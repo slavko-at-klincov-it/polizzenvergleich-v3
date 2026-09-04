@@ -72,6 +72,53 @@ describe("LF reference comparison profile", () => {
     }
   });
 
+  test("preserves the LF-GL-02 narrow storm contract only on solar glass", () => {
+    const definition = categoryCatalogs().find(
+      ({ sourceCategoryId }) => sourceCategoryId === "LF-GL"
+    );
+    const document = {
+      id: "lf-gl-component-scope-probe",
+      sourceDocumentId: "lf-gl-component-scope-probe",
+      title: "lf-gl-component-scope-probe.pdf",
+      documentType: "pdf",
+      pageContent: "Kein Treffer in diesem synthetischen Vertragsdokument.",
+      pageMap: [{ pageNumber: 1, start: 0, end: 54 }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      catalog: definition.catalog,
+      document,
+      documentFingerprint: "2".repeat(64),
+    });
+    const gl02 = worksheet.requirements.find(
+      ({ sourceReferenceId }) => sourceReferenceId === "LF-GL-02"
+    );
+
+    expect(gl02).toMatchObject({
+      scopePolicy: "GENERAL_REQUIRED",
+      scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+    });
+    expect(
+      gl02.components.find(({ id }) => id === "solar_glass")
+    ).toMatchObject({
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      scopeRules: {
+        narrowAliases: [],
+        narrowScopeKeys: ["STURM_INSURANCE"],
+      },
+    });
+    for (const componentId of ["special_glass", "special_glass_limit"])
+      expect(
+        gl02.components.find(({ id }) => id === componentId)
+      ).not.toHaveProperty("scopePolicy");
+  });
+
   test("splits compound LF points into mandatory typed components", () => {
     const requirements = categoryCatalogs().flatMap(
       ({ catalog }) => catalog.requirements
@@ -89,13 +136,24 @@ describe("LF reference comparison profile", () => {
       bySourceId.get("LF-HP-03").components.map(({ factRole }) => factRole)
     ).toContain("DEDUCTIBLE");
     expect(bySourceId.get("LF-GL-03").components).toHaveLength(4);
-    expect(bySourceId.get("LF-GL-02")).toMatchObject({
+    const gl02 = bySourceId.get("LF-GL-02");
+    expect(gl02).toMatchObject({
+      scopePolicy: "GENERAL_REQUIRED",
+      scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+    });
+    expect(
+      gl02.components.find(({ id }) => id === "solar_glass")
+    ).toMatchObject({
       scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
       scopeRules: {
         narrowAliases: [],
         narrowScopeKeys: ["STURM_INSURANCE"],
       },
     });
+    for (const componentId of ["special_glass", "special_glass_limit"])
+      expect(
+        gl02.components.find(({ id }) => id === componentId)
+      ).not.toHaveProperty("scopePolicy");
     expect(bySourceId.get("LF-KO-02").components).toHaveLength(6);
     expect(bySourceId.get("LF-KO-03").components).toHaveLength(10);
     expect(bySourceId.get("LF-ST-02").components).toHaveLength(5);

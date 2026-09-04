@@ -619,6 +619,52 @@ describe("directed LF reference result builder", () => {
       },
       packageB: { reviewStatus: "TEILBELEGT" },
     });
+
+    judgement.comparisonScopeKeys = ["STURM_INSURANCE"];
+    for (const componentId of ["special_glass", "special_glass_limit"]) {
+      const componentJudgement = effects.judgements.find(
+        ({ requirementId, componentId: observedComponentId }) =>
+          requirementId === requirement.id &&
+          observedComponentId === componentId
+      );
+      componentJudgement.selectedScopePicture = "NARROW_ONLY";
+      componentJudgement.comparisonScopeKeys = ["STURM_INSURANCE"];
+      const componentSource = sources.find(
+        ({ requirementId, componentId: observedComponentId }) =>
+          requirementId === requirement.id &&
+          observedComponentId === componentId
+      );
+      componentSource.candidateBinding = "NARROW_SCOPE";
+      fs.writeFileSync(effectsFile, JSON.stringify(effects));
+      fs.writeFileSync(sourcesFile, JSON.stringify(sources));
+
+      const componentScopedResult = buildReferenceComparisonResult(
+        [
+          writeRun(
+            root,
+            document(`reference-a-${componentId}`, "A", 0),
+            allReferenceIds
+          ),
+          counterpart,
+        ],
+        {}
+      );
+      expect(
+        componentScopedResult.categories
+          .flatMap(({ rows }) => rows)
+          .find(({ analysisRowId }) => analysisRowId === requirement.id)
+      ).toMatchObject({
+        pointDecision: {
+          outcome: REFERENCE_OUTCOME.PARTIAL,
+          reviewRequired: true,
+        },
+        packageB: { reviewStatus: "TEILBELEGT" },
+      });
+
+      componentJudgement.selectedScopePicture = "GENERAL";
+      componentJudgement.comparisonScopeKeys = [];
+      componentSource.candidateBinding = "DIRECT";
+    }
   });
 
   test("does not complete a limit component without its bound requested field", () => {

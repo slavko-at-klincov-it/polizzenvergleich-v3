@@ -6,6 +6,9 @@ const {
   LF_REFERENCE_PROFILE,
   categoryCatalogs,
 } = require("./lfReferenceProfile");
+const {
+  componentScopeContract,
+} = require("../policyAnalysis/componentScopePolicyContract");
 
 const REFERENCE_RESULT_SCHEMA_VERSION = 2;
 const REFERENCE_RESULT_CONTRACT_ID = "LF_REFERENCE_A_TO_B_RESULT_V2";
@@ -178,22 +181,23 @@ function requestedFieldsValid(entry, component, judgement) {
 function scopeValid(requirement, component, judgement) {
   if (judgement.selectedScopePicture !== "NARROW_ONLY")
     return judgement.selectedScopePicture !== "UNKNOWN";
+  const scopeContract = componentScopeContract(requirement, component);
   if (
     ![
       "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
       "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
-    ].includes(requirement.scopePolicy)
+    ].includes(scopeContract.scopePolicy)
   )
     return false;
   const scopeKeys = judgement.comparisonScopeKeys || [];
-  const allowedScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+  const allowedScopeKeys = scopeContract.scopeRules?.narrowScopeKeys || [];
   if (
     scopeKeys.length === 0 ||
     allowedScopeKeys.length === 0 ||
     scopeKeys.some((scopeKey) => !allowedScopeKeys.includes(scopeKey))
   )
     return false;
-  if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
+  if (scopeContract.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
     return ["INCLUDED", "EXCLUDED", "DEFINED", "CONDITIONAL"].includes(
       judgement.coverageEffect
     );

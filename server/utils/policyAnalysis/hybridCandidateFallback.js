@@ -563,6 +563,12 @@ function mergeHybridSelections({ worksheet, document, selections }) {
                 factRole: sourceComponent.factRole,
                 contextMode: sourceComponent.contextMode,
                 aliases: [selection.quote],
+                ...(sourceComponent.scopePolicy
+                  ? { scopePolicy: sourceComponent.scopePolicy }
+                  : {}),
+                ...(sourceComponent.scopeRules
+                  ? { scopeRules: sourceComponent.scopeRules }
+                  : {}),
               },
             ],
           },

@@ -30,10 +30,10 @@ const CATEGORY_VIEWS = Object.freeze({
 
 const REQUIREMENT_SCOPE_OVERRIDES = Object.freeze({
   "LF-GL-02": Object.freeze({
-    scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+    scopePolicy: "GENERAL_REQUIRED",
     scopeRules: Object.freeze({
       narrowAliases: Object.freeze([]),
-      narrowScopeKeys: Object.freeze(["STURM_INSURANCE"]),
+      narrowScopeKeys: Object.freeze([]),
     }),
   }),
 });
@@ -47,6 +47,19 @@ function component(id, label, factRole, aliases, options = {}) {
     aliases: Object.freeze(aliases),
     ...(Array.isArray(options.requestedFields)
       ? { requestedFields: Object.freeze(options.requestedFields) }
+      : {}),
+    ...(options.scopePolicy ? { scopePolicy: options.scopePolicy } : {}),
+    ...(options.scopeRules
+      ? {
+          scopeRules: Object.freeze({
+            narrowAliases: Object.freeze(
+              options.scopeRules.narrowAliases || []
+            ),
+            narrowScopeKeys: Object.freeze(
+              options.scopeRules.narrowScopeKeys || []
+            ),
+          }),
+        }
       : {}),
   });
 }
@@ -556,7 +569,14 @@ const COMPONENT_OVERRIDES = Object.freeze({
         "Verglasung von Sonnenkollektoren",
         "Solar- und Fotovoltaikanlagen",
         "Glasbruch der Solar- und Photovoltaikanlagen",
-      ]
+      ],
+      {
+        scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+        scopeRules: {
+          narrowAliases: [],
+          narrowScopeKeys: ["STURM_INSURANCE"],
+        },
+      }
     ),
     component("special_glass_limit", "Sonderverglasungslimit", "LIMIT", [
       "Blei-, Messing- und Kunstverglasungen bis € 1.500",

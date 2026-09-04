@@ -17,6 +17,9 @@ const {
   isRgCostWithoutExplicitGlassLossScope,
   occurrenceLocalSentence,
 } = require("./glassLossScopeContract");
+const {
+  componentScopeContract,
+} = require("./componentScopePolicyContract");
 
 const CANDIDATE_BINDING = Object.freeze({
   DIRECT: "DIRECT",
@@ -285,6 +288,10 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       "HYBRID_EXACT_SPAN_SEMANTIC",
     ]).has(source.discoveryMethod);
     const categoryView = resolvedCategoryView(worksheet, candidate.requirement);
+    const scopeContract = componentScopeContract(
+      candidate.requirement,
+      candidate.component
+    );
     const allCostMembers = members.every(
       (member) => member.factRole === "COST"
     );
@@ -403,7 +410,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       };
     }
     const matchedNarrowAlias = (
-      candidate.requirement.scopeRules?.narrowAliases || []
+      scopeContract.scopeRules?.narrowAliases || []
     ).find((alias) =>
       containsNormalizedPhrase(
         `${scopeLeadText}\n${scopeSentence || ""}`,
@@ -411,7 +418,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       )
     );
     const matchedNarrowScopeKey = observedSectionScopeKeys.find((scopeKey) =>
-      (candidate.requirement.scopeRules?.narrowScopeKeys || []).includes(
+      (scopeContract.scopeRules?.narrowScopeKeys || []).includes(
         scopeKey
       )
     );
