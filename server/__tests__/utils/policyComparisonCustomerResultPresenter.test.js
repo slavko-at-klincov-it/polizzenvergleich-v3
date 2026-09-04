@@ -138,6 +138,16 @@ describe("policy comparison customer result presenter", () => {
       "Vorteil Polizze A:",
     ],
     [
+      "VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1",
+      "VORTEIL_B",
+      "Vorteil Polizze B:",
+    ],
+    [
+      "VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1",
+      "GLEICHWERTIG",
+      "Kein klarer Vorteil: gleichwertig –",
+    ],
+    [
       "STORM_DEFINITION_THRESHOLD_EQUALITY_V1",
       "GLEICHWERTIG",
       "Kein klarer Vorteil: gleichwertig –",
@@ -162,6 +172,25 @@ describe("policy comparison customer result presenter", () => {
       ).toBe(true);
     }
   );
+
+  test.each([
+    ["AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_V1", "VORTEIL_A"],
+    ["STORM_DEFINITION_THRESHOLD_EQUALITY_V1", "NICHT_VERGLEICHBAR"],
+    [
+      "ANY_COMPONENT_IDENTITY_GATE_V2_COMPLETE_FOUND_PRECEDENCE",
+      "GLEICHWERTIG",
+    ],
+    [
+      "VS25_HIGHER_BUILDING_VALUE_PERCENT_LIMIT_V1",
+      "NICHT_VERGLEICHBAR",
+    ],
+  ])("rejects invalid rule/outcome pair %s + %s", (ruleId, outcome) => {
+    expect(
+      presented(outcome, { ruleId, reviewRequired: false }).startsWith(
+        "Kein klarer Vorteil: ungeklärt –"
+      )
+    ).toBe(true);
+  });
 
   test("detects a customer-export outcome that diverges from the private decision", () => {
     const degraded = presented("VORTEIL_A", { ruleId: "UNREVIEWED_RULE" });

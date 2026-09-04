@@ -35,6 +35,9 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  customerOutcomeFromText,
+} = require("../../utils/policyComparison/customerResultSemanticContract");
+const {
   DETERMINISTIC_LW20_NON_TARGET_OCCURRENCE_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_POST_LOSS_SCAFFOLDING_COST_TERMINAL_CONTRACT_ID,
   DETERMINISTIC_VS22_NON_TARGET_WASTE_OCCURRENCE_TERMINAL_CONTRACT_ID,
@@ -2669,6 +2672,17 @@ describe("policy comparison result builder", () => {
     expect(sheet.getCell("B2").value).toBe(sheet.getCell("J2").value);
     expect(sheet.getCell("C2").value).toBe(sheet.getCell("K2").value);
     expect(sheet.getCell("Q2").value).toContain("Kein klarer Vorteil:");
+    const pointDecisionByCategoryId = new Map(
+      artifacts.result.categories.flatMap(({ rows }) =>
+        rows.map(({ categoryId, pointDecision }) => [categoryId, pointDecision])
+      )
+    );
+    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+      const categoryId = sheet.getCell(`A${rowNumber}`).value;
+      expect(
+        customerOutcomeFromText(sheet.getCell(`Q${rowNumber}`).value)
+      ).toBe(pointDecisionByCategoryId.get(categoryId).outcome);
+    }
     expect(sheet.getRow(1).height).toBe(17);
     expect(sheet.getRow(2).height).toBeGreaterThanOrEqual(34);
     expect(sheet.getRow(2).height % 17).toBe(0);

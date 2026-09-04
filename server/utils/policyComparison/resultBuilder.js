@@ -2145,10 +2145,10 @@ async function writeWorkbook(result, outputFile) {
     .sort(
       (left, right) =>
         (stageOrder.get(left.row.stage) ?? Number.MAX_SAFE_INTEGER) -
-          (stageOrder.get(right.row.stage) ?? Number.MAX_SAFE_INTEGER) ||
+        (stageOrder.get(right.row.stage) ?? Number.MAX_SAFE_INTEGER) ||
         left.categoryIndex - right.categoryIndex ||
         left.rowIndex - right.rowIndex
-  );
+    );
   for (const { row } of workbookRows) {
     const customerResult = customerResultText(row);
     assertCustomerResultSemanticParity({

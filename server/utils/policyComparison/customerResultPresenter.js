@@ -103,10 +103,40 @@ const APPROVED_RULE_IDS = new Set([
   VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
   STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID,
 ]);
+const RESTRICTED_RULE_OUTCOMES = new Map([
+  [
+    AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_RULE_ID,
+    new Set([POINT_OUTCOME.EQUIVALENT]),
+  ],
+  [
+    STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID,
+    new Set([POINT_OUTCOME.EQUIVALENT]),
+  ],
+  [
+    ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
+    new Set([POINT_OUTCOME.NOT_COMPARABLE]),
+  ],
+  [
+    VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
+    new Set([
+      POINT_OUTCOME.ADVANTAGE_A,
+      POINT_OUTCOME.ADVANTAGE_B,
+      POINT_OUTCOME.EQUIVALENT,
+    ]),
+  ],
+]);
 
-function approvedRule(value) {
+function approvedRule(value, outcome) {
   const rules = String(value || "").split("+");
-  return rules.length > 0 && rules.every((rule) => APPROVED_RULE_IDS.has(rule));
+  return (
+    rules.length > 0 &&
+    rules.every(
+      (rule) =>
+        APPROVED_RULE_IDS.has(rule) &&
+        (!RESTRICTED_RULE_OUTCOMES.has(rule) ||
+          RESTRICTED_RULE_OUTCOMES.get(rule).has(outcome))
+    )
+  );
 }
 
 function customerLanguage(value) {
@@ -168,7 +198,7 @@ function customerResultText(row) {
   const invalidDecision =
     !validOutcome ||
     decision?.reviewRequired !== expectedReviewRequired ||
-    !approvedRule(decision?.ruleId) ||
+    !approvedRule(decision?.ruleId, decision?.outcome) ||
     (decision?.outcome !== POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE &&
       !String(decision?.reason || "").trim());
   if (invalidDecision)
