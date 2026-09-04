@@ -3273,3 +3273,72 @@ LF-Inventar, beliebige LF-Versionen, unbekannte Versicherer oder das
 99-Prozent-Ziel. Die 18 unklaren Referenzzeilen und insbesondere `LF-GL-01`
 benötigen weitere Profil- und Wirkungsbewertungskalibrierung gegen ein
 Expertenoracle.
+
+## 55. Manueller 35-Zeilen-PDF-Audit und kalibrierter LF-A→B-Endlauf
+
+**Prüfung:** 4. September 2026
+
+**Logikcommit des Endlaufs:**
+`16a502186b4eda0bda6b062b39af948205457270`
+
+**Finaler Formatierungscommit:**
+`34217eb8163b8bd6362e59d7121b23f58bbef425`
+
+Alle 35 LF-Referenzzeilen wurden gegen die sichtbaren Original-PDF-Seiten des
+31-seitigen LF-Dokuments geprüft. Danach wurden für jede Zeile die fachlich
+maßgeblichen Stellen in allen neun B-Dokumenten kontrolliert. Vor dem Endlauf
+wurde eine feste Entwickler-Sollmatrix erstellt: 16 vollständige
+Gegenstücke, 15 teilweise Gegenstücke und vier kontrollierte Nullfunde. Der
+Zwischenstand `c0b0de626` stimmte in 31/35 Fällen überein.
+
+Die vier verbliebenen Abweichungen waren keine Modellzufälligkeit, sondern
+reproduzierbare Vertragslücken:
+
+1. `LF-KO-01`: Synonyme für Mietzinsentgang fehlten.
+2. `LF-LW-04`: Eine bepreiste Erstrisikoleistung und die operative
+   Ersatzleistungszusage wurden als bloße Definition bewertet.
+3. `LF-GL-01`: Das Tabellenformat „Einzelscheiben bis m²: 10“ wurde nicht als
+   lokales Dimensionslimit verstanden.
+4. `LF-AV-01`: Die Versicherungssumme als vertragliche
+   Höchstentschädigungsgrenze wurde nicht als symbolisches Limit
+   materialisiert.
+
+Die Korrekturen wurden als wiederverwendbare Rollen-, Polaritäts-,
+Dimensions- und Symbolic-Limit-Verträge umgesetzt und mit positiven sowie
+negativen Varianten getestet. Der frische Lauf nutzte exakt ein LF-Dokument
+auf A und neun B-Dokumente, Qwen `qwen/qwen3.6-35b-a3b`, 42.496 Token Kontext
+und keine Embeddings.
+
+```text
+Session:                     c10d4c3a-4a0b-404c-b8bf-027b41879979
+Run-Signatur:                fdd84a933c8df4aa58090ee8e7dc955d3bfd4d68e3cff7fd8faa01bc1c706b17
+Dokument-/Kategorieschritte: 100 / 100, 0 wiederaufgenommen
+LF-Kategorien / LF-Zeilen:   10 / 35
+Pflichtkomponenten:          113
+A vollständig belegt:        35 / 35
+B-only-Zeilen:               0
+voll / teilweise / Nullfund: 16 / 15 / 4
+A unklar / B unklar:         0 / 0
+Kundenreview:                15
+Workerzeit:                  20:05,275
+Qwen-Aufrufe:                237
+Prompt-/Completiontoken:     519.517 / 15.995
+Sollübereinstimmung:         35 / 35
+```
+
+Der Lauf wurde auf dem exakten Logikcommit ausgeführt. Der nachfolgende
+Commit `34217eb816` enthält nur Prettier-Formatierung. Auf diesem finalen
+Quellstand bestanden im isolierten Mac-Studio-Worktree ESLint für die
+geänderten Produktionsdateien, 6/6 fokussierte Suites mit 284/284 Tests und
+die vollständige Serversuite mit 156/156 Suites sowie 2.089/2.089 Tests. Der
+installierte Kundencheckout blieb auf V3.6.0 (`2804fa563`).
+
+**Beweist:** Für genau das versionierte 1+9-Entwicklungsset stimmen alle 35
+gerichteten Entscheidungen mit der vorab festgelegten manuellen
+PDF-Annotation überein; A ist vollständig analysiert und es entstehen keine
+B-only-Zeilen.
+
+**Beweist nicht:** Vollständigkeit des gesamten LF-Produkts,
+Generalisierung auf unbekannte Versicherer oder Dokumentvarianten, fachliche
+Freigabe ohne Kunden-/Expertenabnahme oder das 99-Prozent-Ziel. Ein
+kontrollierter Nullfund ist weiterhin kein ausdrücklicher Ausschluss.

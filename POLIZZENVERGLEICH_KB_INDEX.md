@@ -60,6 +60,16 @@ Jüngster QA-Nachtrag: Das LF-IMMO-Referenzschema und der gerichtete
 dokumentiert. Die Referenzsicht ist nicht produktiv und ersetzt weder die
 allgemeinen atomaren Faktenverträge noch paketweite kontrollierte Suche.
 
+Der nachfolgende produktive Referenzvertrag und der vollständige manuelle
+35-Zeilen-PDF-Audit sind in
+[Abschnitt 54](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#54-produktiver-lfab-vertrag-mac-studio-gate-und-1-gegen-9-lauf)
+und
+[Abschnitt 55](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#55-manueller-35-zeilen-pdf-audit-und-kalibrierter-lfab-endlauf)
+dokumentiert. Der Endlauf trifft die vorab festgelegte Annotation für das
+bekannte 1+9-Set mit 35/35 Zeilen, ohne Embeddings und ohne B-only-Zeilen.
+Das ist Fixture-Evidenz und weder ein vollständiges LF-Inventar noch ein
+Generalisierungs- oder 99-Prozent-Nachweis.
+
 ## 2. Schnelllage
 
 | Statusachse                           | Aktueller Stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Kanonischer Beleg                                                                                                                                                                                                                                                                                      |
