@@ -281,11 +281,16 @@ describe("deterministicCategoryEvidenceRules", () => {
     input.component = { id: "retroactive_cover", factRole: "CONDITION" };
     input.occurrence.sectionScopeHint = null;
 
-    expect(deterministicCategoryCandidateBinding(input)).toEqual({
-      binding: "NARROW_SCOPE",
-      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
-      authoritative: true,
-    });
+    expect(deterministicCategoryCandidateBinding(input)).toEqual(
+      expect.objectContaining({
+        binding: "NARROW_SCOPE",
+        basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+        authoritative: true,
+        comparisonScopeKey: expect.stringMatching(
+          /^CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1:[a-f0-9]{64}$/u
+        ),
+      })
+    );
   });
 
   test.each(["COST", "PERIL"])(
@@ -1350,10 +1355,15 @@ describe("deterministicCategoryEvidenceRules", () => {
           narrowAliases: ["Schnee- und Eisrutsch"],
         })
       )
-    ).toEqual({
-      binding: "NARROW_SCOPE",
-      basis: "EXPLICIT_NARROW_CLAUSE_SCOPE",
-    });
+    ).toEqual(
+      expect.objectContaining({
+        binding: "NARROW_SCOPE",
+        basis: "EXPLICIT_NARROW_CLAUSE_SCOPE",
+        comparisonScopeKey: expect.stringMatching(
+          /^CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1:[a-f0-9]{64}$/u
+        ),
+      })
+    );
   });
 
   test("keeps the broad positive rule decisive while preserving a narrow exception separately", () => {
