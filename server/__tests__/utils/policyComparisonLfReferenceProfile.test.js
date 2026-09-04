@@ -44,6 +44,8 @@ describe("LF reference comparison profile", () => {
     expect(bySourceId.get("LF-GL-03").components).toHaveLength(4);
     expect(bySourceId.get("LF-KO-02").components).toHaveLength(6);
     expect(bySourceId.get("LF-KO-03").components).toHaveLength(10);
+    expect(bySourceId.get("LF-ST-02").components).toHaveLength(5);
+    expect(bySourceId.get("LF-ST-04").components).toHaveLength(1);
     expect(
       requirements.every(
         ({ componentSatisfactionPolicy }) =>

@@ -298,7 +298,10 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "indirect_lightning_limit",
       "Mindest- und Prozentlimit",
       "LIMIT",
-      ["mindestens EUR 10.000", "10 % der Gebäudeversicherungssumme"]
+      [
+        "bis 1% der Gebäudeversicherungssumme mindestens EUR 10.000",
+        "bis 1 % der Gebäudeversicherungssumme mindestens EUR 10.000",
+      ]
     ),
   ],
   "LF-FE-04": [
@@ -308,14 +311,15 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Unbrauchbarmachen",
     ]),
     component("vandalism_limit", "Vandalismuslimit", "LIMIT", [
-      "Vandalismus",
-      "auf Erstes Risiko",
+      "bis zu 1% der Gebäudeversicherungssumme maximal EUR 10.000 auf Erstes Risiko",
     ]),
     component(
       "vandalism_deductible",
       "Vandalismus-Selbstbehalt",
       "DEDUCTIBLE",
-      ["Selbstbehalt", "Schadenbeteiligung"]
+      [
+        "Selbstbehalt für diese Deckungserweiterung beträgt in jedem Schadenfall EUR 500",
+      ]
     ),
     component("graffiti_exclusion", "Graffiti ausgeschlossen", "EXCLUSION", [
       "Graffiti",
@@ -333,12 +337,35 @@ const COMPONENT_OVERRIDES = Object.freeze({
   "LF-ST-02": [
     component("snow_ice_slide", "Schnee- und Eisrutsch", "PERIL", [
       "Schnee- und Eisrutsch",
+      "Dachlawinen (Schnee und Eis)",
+      "Schneerutschschäden",
     ]),
-    component("excluded_parts", "Ausgeschlossene Gebäudeteile", "EXCLUSION", [
-      "Dachrinnen",
-      "Schneefanggitter",
-      "Vordächer",
-    ]),
+    component(
+      "facade_exclusion",
+      "Hausfassade, Außenmauern und Außenverputz ausgeschlossen",
+      "EXCLUSION",
+      ["Schäden an der Hausfassade, an Außenmauern und dem Außenverputz"]
+    ),
+    component(
+      "roof_exclusion",
+      "Tragende Dachkonstruktion und Dachbelag ausgeschlossen",
+      "EXCLUSION",
+      ["Schäden an der tragenden Dachkonstruktion und dem Dachbelag"]
+    ),
+    component(
+      "gutter_exclusion",
+      "Auftauen und Reparatur von Dachrinnen ausgeschlossen",
+      "EXCLUSION",
+      ["Auftauen und Reparaturen von Dachrinnen und Außenablaufrohren"]
+    ),
+    component(
+      "clearance_water_exclusion",
+      "Schneeräumung und Wassereintritt ausgeschlossen",
+      "EXCLUSION",
+      [
+        "Kosten für Wegräumen von Schnee und Eis sowie Schäden infolge Eindringens von Wasser",
+      ]
+    ),
   ],
   "LF-ST-03": [
     component("catastrophes", "Katastrophengefahren", "PERIL", [
@@ -347,19 +374,14 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Erdbeben",
     ]),
     component("catastrophe_limit", "Gemeinsames Katastrophenlimit", "LIMIT", [
-      "1% der Gebäudeversicherungssumme",
-      "mindestens € 20.000",
-      "maximal",
+      "Katastrophen bis 1% der Gebäudeversicherungssumme mindestens € 20.000 maximal € 100.000",
+      "Hochwasser, Überschwemmung, Lawinen und Muren Jahreshöchstentschädigung",
+      "Erdbeben Jahreshöchstentschädigung",
     ]),
   ],
   "LF-ST-04": [
-    component("hq30_zone", "HQ30-Hochwasserzone", "CONDITION", [
-      "HQ30",
-      "Hochwasser",
-    ]),
     component("hq30_limit", "HQ30-Zonenlimit", "LIMIT", [
-      "HQ30",
-      "auf Erstes Risiko",
+      "innerhalb der HQ30-Zone beträgt die Versicherungssumme bei Schäden durch Hochwasser maximal € 10.000",
     ]),
   ],
   "LF-LW-01": [
@@ -368,37 +390,48 @@ const COMPONENT_OVERRIDES = Object.freeze({
     ]),
     component("pipe_break", "Rohrbruch", "DAMAGE", [
       "Bruch von wasserführenden Rohren",
+      "Rohrbruch ist die Beschädigung an den wasserführenden Zu- und Ableitungsrohren",
+      "Schäden an Zu- und Ableitungsrohren innerhalb des Versicherungsgrundstücks",
     ]),
     component("frost", "Frostschäden", "PERIL", [
       "Frost an den leitungswasserführenden Rohren",
+      "Rohrbruch durch Frostschaden",
+      "Frostschäden",
     ]),
   ],
   "LF-LW-02": [
     component("pipe_replacement_length", "Rohrersatzlänge", "LIMIT", [
-      "Rohrersatz",
-      "Meter Rohr",
+      "Rohrersatz beträgt in der Grunddeckung bis zu 3m Länge",
+      "Rohrersatz bei Rohrbruch bei allen versicherten Rohren bis zu 15 lfm",
+      "bis zur maximal in der Polizze angeführten Länge ersetzt",
     ]),
     component(
       "inliner_double",
       "Verdopplung bei Inliner-Sanierung",
       "CONDITION",
-      ["Inliner", "verdoppelt"]
+      [
+        "Bei Anwendung eines Inliner-Reparaturverfahren werden die doppelten Laufmeter ersetzt",
+        "Inliner-Reparaturverfahren werden die doppelten Laufmeter ersetzt",
+      ]
     ),
   ],
   "LF-LW-03": [
     component("search_cost", "Suchkosten", "COST", [
-      "Suchkosten",
-      "Auffindung der Schadenstelle",
+      "Suchkosten zur Auffindung der Schadenstelle",
+      "Suchkosten ohne ersatzpflichtigen Schaden",
     ]),
     component(
       "suspected_damage",
       "Gerechtfertigte Schadenvermutung ohne festgestelltes Gebrechen",
       "CONDITION",
-      ["gerechtfertigter Schadenvermutung", "auch ohne"]
+      [
+        "bei gerechtfertigter Schadenvermutung auch ohne Vorliegen eines Gebrechens",
+        "auch ohne Vorliegen eines ersatzpflichtigen Schadens, sofern augenscheinlich der Verdacht",
+      ]
     ),
     component("search_cost_limit", "Suchkostenlimit", "LIMIT", [
-      "Suchkosten",
-      "auf Erstes Risiko",
+      "Suchkosten zur Auffindung der Schadensstelle bei gerechtfertigter Schadenvermutung auch ohne Vorliegen eines Gebrechens auf Erstes Risiko bis € 2.500",
+      "Suchkosten ohne ersatzpflichtigen Schaden auf Erstes Risiko",
     ]),
   ],
   "LF-LW-04": [
@@ -415,34 +448,46 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "fixtures",
       "Sanitäreinrichtungen und Armaturen",
       "INSURED_OBJECT",
-      ["Sanitäreinrichtungen und Armaturen", "Wasserhähne"]
+      [
+        "Sanitäreinrichtungen und Armaturen",
+        "angeschlossenen Einrichtungen und Armaturen anlässlich Rohrbruch",
+        "WC-Schalen, Ventilen und Siphonen",
+        "Wasserhähne",
+      ]
     ),
     component("blockage", "Verstopfung und Rohrreinigung", "DAMAGE", [
       "Verstopfungen",
       "Rohrreinigung",
+      "Verstopfungsbehebung",
     ]),
     component("optical_restoration", "Optische Wiederherstellung", "BENEFIT", [
       "Verfliesungen, Malereien oder Tapeten innerhalb eines Raumes",
       "zur Gänze ersetzt",
+      "Erweiterte Ersatzleistung für Fliesen, Böden, Malereien und Tapeten",
     ]),
   ],
   "LF-LW-05": [
     component("external_pipe_length", "Außenrohre bis 15 Meter", "LIMIT", [
       "15 Meter",
+      "max. 15m",
+      "bis zu 15 lfm",
       "außerhalb des Versicherungsgrundstückes",
     ]),
     component("water_loss", "Wasserverlustkosten", "COST", [
       "Kosten für den Wasserverlust",
     ]),
     component("unlimited_cleaning", "Rohrreinigung ohne Limit", "LIMIT", [
-      "Rohrreinigung",
-      "ohne Begrenzung",
+      "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen ohne betragliche Beschränkung",
     ]),
     component(
       "rainwater_pipes",
       "Regenablaufrohre und Dachrinnen",
       "INSURED_OBJECT",
-      ["Regenablaufrohren", "Dachrinnen"]
+      [
+        "Regenablaufrohren",
+        "Dachrinnen und waagrechte Regenabläufe",
+        "Regenablaufrohre außerhalb des Gebäudes",
+      ]
     ),
   ],
   "LF-GL-01": [
