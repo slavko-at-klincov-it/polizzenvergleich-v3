@@ -713,7 +713,10 @@ async function validateReferenceArtifactRoundTrip({ result, files }) {
   if (sheet.rowCount !== expectedRows.length + 1)
     throw new Error("REFERENCE_ARTIFACT_WORKBOOK_ROW_COUNT_INVALID");
   const observedIds = [];
-  for (const [index, { categoryView, row: expected }] of expectedRows.entries()) {
+  for (const [
+    index,
+    { categoryView, row: expected },
+  ] of expectedRows.entries()) {
     const rowNumber = index + 2;
     const expectedValues = referenceWorkbookRowValues(categoryView, expected);
     const observedValues = sheet.getRow(rowNumber).values.slice(1);

@@ -231,7 +231,11 @@ function validatePublishedComparisonArtifactSet(
     POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
     "export.private.json",
   ]);
-  if (fsImpl.readdirSync(resolvedOutput).some((entry) => !allowedEntries.has(entry)))
+  if (
+    fsImpl
+      .readdirSync(resolvedOutput)
+      .some((entry) => !allowedEntries.has(entry))
+  )
     throw artifactSetError("COMPARISON_ARTIFACT_SET_FILES_INVALID");
 
   const files = finalArtifactFiles(resolvedOutput);
@@ -274,11 +278,7 @@ function validatePublishedComparisonArtifactSet(
 
 async function publishComparisonArtifactSet(
   { outputDirectory, writeArtifacts, validateArtifacts = null },
-  {
-    fsImpl = fs,
-    processImpl = process,
-    randomBytes = crypto.randomBytes,
-  } = {}
+  { fsImpl = fs, processImpl = process, randomBytes = crypto.randomBytes } = {}
 ) {
   if (typeof writeArtifacts !== "function")
     throw artifactSetError("COMPARISON_ARTIFACT_SET_WRITER_REQUIRED");

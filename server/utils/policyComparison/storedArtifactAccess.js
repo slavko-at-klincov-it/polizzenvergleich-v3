@@ -1,8 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const {
-  LF_REFERENCE_PROFILE,
-} = require("./lfReferenceProfile");
+const { LF_REFERENCE_PROFILE } = require("./lfReferenceProfile");
 const {
   POLICY_COMPARISON_MODE,
   normalizePolicyComparisonMode,
@@ -15,9 +13,7 @@ const {
 const {
   POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
 } = require("./artifactSetPublisher");
-const {
-  readValidatedComparisonResult,
-} = require("./comparisonResultReader");
+const { readValidatedComparisonResult } = require("./comparisonResultReader");
 
 function accessError(code) {
   const error = new Error(code);
@@ -103,12 +99,7 @@ function readValidatedStoredComparisonArtifacts(
       fsImpl,
       "COMPARISON_EXPORT_CONTRACT_MISSING"
     );
-    regularFile(
-      exportFile,
-      root,
-      fsImpl,
-      "COMPARISON_EXPORT_CONTRACT_MISSING"
-    );
+    regularFile(exportFile, root, fsImpl, "COMPARISON_EXPORT_CONTRACT_MISSING");
     let exportContract;
     try {
       exportContract = JSON.parse(fsImpl.readFileSync(exportFile, "utf8"));
@@ -137,12 +128,7 @@ function readValidatedStoredComparisonArtifacts(
   if (result?.sessionUuid && result.sessionUuid !== expectedSessionUuid)
     throw accessError("COMPARISON_RESULT_SESSION_MISMATCH");
   if (fsImpl.existsSync(exportFile)) {
-    regularFile(
-      exportFile,
-      root,
-      fsImpl,
-      "COMPARISON_EXPORT_CONTRACT_INVALID"
-    );
+    regularFile(exportFile, root, fsImpl, "COMPARISON_EXPORT_CONTRACT_INVALID");
     let historicalExport;
     try {
       historicalExport = JSON.parse(fsImpl.readFileSync(exportFile, "utf8"));

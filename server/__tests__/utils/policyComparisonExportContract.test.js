@@ -243,8 +243,7 @@ describe("policy comparison export contract", () => {
       validateComparisonExportContract(
         value,
         {
-          expectedComparisonMode:
-            fixture.archivedWorkbook.comparisonMode,
+          expectedComparisonMode: fixture.archivedWorkbook.comparisonMode,
           expectedSessionUuid: sessionUuid,
           expectedRunSignature: runSignature,
           artifactSetManifestFile: fixture.manifestFile,

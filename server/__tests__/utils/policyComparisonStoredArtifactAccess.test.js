@@ -144,7 +144,10 @@ describe("stored policy comparison artifact access", () => {
       path.join(resultDirectory, "comparison.private.json"),
       JSON.stringify({ schemaVersion: 14, sessionUuid })
     );
-    fs.writeFileSync(path.join(resultDirectory, "polizzenvergleich.xlsx"), "old");
+    fs.writeFileSync(
+      path.join(resultDirectory, "polizzenvergleich.xlsx"),
+      "old"
+    );
     fs.writeFileSync(
       path.join(resultDirectory, "export.private.json"),
       JSON.stringify({ schemaVersion: 1, archivedWorkbook: {} })
@@ -170,7 +173,10 @@ describe("stored policy comparison artifact access", () => {
       path.join(resultDirectory, "comparison.private.json"),
       JSON.stringify({ schemaVersion: 2, productProfile: LF_REFERENCE_PROFILE })
     );
-    fs.writeFileSync(path.join(resultDirectory, "polizzenvergleich.xlsx"), "lf");
+    fs.writeFileSync(
+      path.join(resultDirectory, "polizzenvergleich.xlsx"),
+      "lf"
+    );
 
     expect(() =>
       readValidatedStoredComparisonArtifacts(

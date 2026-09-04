@@ -2294,9 +2294,7 @@ async function validateComparisonArtifactRoundTrip({ result, files }) {
       throw new Error(
         `COMPARISON_ARTIFACT_WORKBOOK_ROW_CONTENT_INVALID:${expected.categoryId}`
       );
-    const customerOutcome = customerOutcomeFromText(
-      observedValues[16]
-    );
+    const customerOutcome = customerOutcomeFromText(observedValues[16]);
     if (customerOutcome !== expected.pointDecision?.outcome)
       throw new Error(
         `COMPARISON_ARTIFACT_WORKBOOK_OUTCOME_INVALID:${expected.categoryId}`

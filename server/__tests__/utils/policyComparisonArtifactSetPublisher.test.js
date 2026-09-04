@@ -196,7 +196,9 @@ describe("policy comparison artifact set publisher", () => {
       JSON.stringify({ schemaVersion: 2 })
     );
 
-    expect(validatePublishedComparisonArtifactSet(outputDirectory)).toMatchObject({
+    expect(
+      validatePublishedComparisonArtifactSet(outputDirectory)
+    ).toMatchObject({
       outputDirectory,
       files: published.files,
       manifest: published.manifest,
