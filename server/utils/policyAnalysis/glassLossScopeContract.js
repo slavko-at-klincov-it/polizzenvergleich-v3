@@ -2,7 +2,7 @@ const RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE =
   "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE";
 
 const EXPLICIT_GLASS_LOSS_SCOPE =
-  /\b(?:Glasbruch(?:schaden\p{L}*)?|Glasschaden\p{L}*|Glasscheiben\p{L}*|versicherte\p{L}*\s+Gl[aä]ser\p{L}*|Glasversicherung\p{L}*|Glaspauschal\p{L}*)\b/iu;
+  /\b(?:Glasbruch(?:[\s-]*sch[aä]d\p{L}*)?|Glas[\s-]*sch[aä]d\p{L}*|Glasscheiben\p{L}*|versicherte\p{L}*\s+Gl[aä]ser\p{L}*|Glasversicherung\p{L}*|Glaspauschal\p{L}*)\b/iu;
 
 function isSentenceBoundary(text, index) {
   const character = text[index];

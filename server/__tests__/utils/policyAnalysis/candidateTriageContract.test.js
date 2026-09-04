@@ -832,6 +832,24 @@ describe("candidateTriageContract", () => {
       expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
     },
     {
+      text: "Notverschalungskosten nach Glasschäden sind mitversichert.",
+      exactText: "Notverschalungskosten",
+      sectionScopeHint: null,
+      expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
+    },
+    {
+      text: "NOTVERSCHALUNGSKOSTEN nach Glasbruchschäden sind mitversichert.",
+      exactText: "NOTVERSCHALUNGSKOSTEN",
+      sectionScopeHint: null,
+      expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
+    },
+    {
+      text: "Notverschalungskosten nach Glasbruch-Schäden sind mitversichert.",
+      exactText: "Notverschalungskosten",
+      sectionScopeHint: null,
+      expectedScope: { owner: "SERVER", scopeMatch: "GENERAL" },
+    },
+    {
       text: "Bewachungskosten sind mitversichert.",
       exactText: "Bewachungskosten",
       sectionScopeHint: {

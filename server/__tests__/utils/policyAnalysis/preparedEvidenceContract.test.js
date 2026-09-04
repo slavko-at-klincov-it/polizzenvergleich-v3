@@ -190,6 +190,16 @@ describe("preparedEvidenceContract", () => {
       sectionScopeHint: null,
     },
     {
+      name: "local Glasschäden clause",
+      text: "Notverschalungskosten nach Glasschäden sind mitversichert.",
+      sectionScopeHint: null,
+    },
+    {
+      name: "local Glasbruchschäden clause",
+      text: "Notverschalungskosten nach Glasbruchschäden sind mitversichert.",
+      sectionScopeHint: null,
+    },
+    {
       name: "structured glass-insurance section",
       text: "Notverschalungskosten sind mitversichert.",
       sectionScopeHint: {
