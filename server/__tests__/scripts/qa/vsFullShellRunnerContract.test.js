@@ -24,6 +24,10 @@ function write(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
 }
+function requireDocumentArtifact() {
+  const file = argument("--documentArtifact");
+  if (!file || !fs.existsSync(file)) throw new Error("DOCUMENT_ARTIFACT_REQUIRED");
+}
 const script = path.basename(__filename);
 const output = argument("--output");
 if (script === "pdfProvenanceLiveRun.cjs") {
@@ -31,10 +35,13 @@ if (script === "pdfProvenanceLiveRun.cjs") {
   write(path.join(output, "report.json"), JSON.stringify({ status: "REVISE" }));
 } else if (script === "buildVsOccurrenceWorksheet.cjs") {
   write(output, "{}");
+  write(argument("--documentArtifactOutput"), "{}");
 } else if (script === "runVsCandidateTriage.cjs") {
+  requireDocumentArtifact();
   write(path.join(output, "materialized-triage.private.json"), "{}");
   write(path.join(output, "report.json"), "{}");
 } else if (script === "runPreparedEvidenceEvaluation.cjs") {
+  requireDocumentArtifact();
   write(path.join(output, "materialized.private.json"), "{}");
   write(path.join(output, "selected-sources.private.json"), "[]");
   write(path.join(output, "report.json"), "{}");
@@ -103,6 +110,20 @@ describe("VS full shell runner", () => {
 
   afterEach(() => {
     if (harness) fs.rmSync(harness.root, { recursive: true, force: true });
+  });
+
+  test("threads one generated document artifact through triage and effects", () => {
+    const source = fs.readFileSync(RUNNER, "utf8");
+
+    expect(source).toMatch(
+      /buildVsOccurrenceWorksheet\.cjs" \\\n\s+--pdfFile "\$pdf_file" \\\n\s+--documentArtifactOutput "\$document_artifact"/u
+    );
+    expect(source).toMatch(
+      /runVsCandidateTriage\.cjs" \\\n\s+--worksheet "\$worksheet" \\\n\s+--documentArtifact "\$document_artifact"/u
+    );
+    expect(source).toMatch(
+      /runPreparedEvidenceEvaluation\.cjs" \\\n\s+--worksheet "\$worksheet" \\\n\s+--documentArtifact "\$document_artifact"/u
+    );
   });
 
   test("finishes WEVIG after an LF materialization review exit", () => {

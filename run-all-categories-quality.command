@@ -215,6 +215,7 @@ for CATEGORY in "${CATEGORY_VIEWS[@]}"; do
   printf '%s\n' "[all-categories] $CATEGORY – Candidate-Triage"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runVsCandidateTriage.cjs" \
     --worksheet "$WORKSHEET" \
+    --documentArtifact "$DOCUMENT_ARTIFACT" \
     --systemPromptFile "$TRIAGE_PROMPT" \
     --hybridSystemPromptFile "$SCRIPT_DIR/server/resources/policyAnalysis/hybrid-candidate-triage-addon.v0.1.md" \
     --controlMode technical-review \

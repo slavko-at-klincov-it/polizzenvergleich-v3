@@ -33,6 +33,10 @@ function write(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
 }
+function requireDocumentArtifact() {
+  const file = argument("--documentArtifact");
+  if (!file || !fs.existsSync(file)) throw new Error("DOCUMENT_ARTIFACT_REQUIRED");
+}
 const script = path.basename(__filename);
 const output = argument("--output");
 if (script === "extractPolicyDocument.cjs") {
@@ -40,9 +44,11 @@ if (script === "extractPolicyDocument.cjs") {
 } else if (script === "buildCategoryOccurrenceWorksheet.cjs") {
   write(output, "{}");
 } else if (script === "runVsCandidateTriage.cjs") {
+  requireDocumentArtifact();
   write(path.join(output, "materialized-triage.private.json"), "[]");
   write(path.join(output, "report.json"), "{}");
 } else if (script === "runPreparedEvidenceEvaluation.cjs") {
+  requireDocumentArtifact();
   write(path.join(output, "materialized.private.json"), "{}");
   write(path.join(output, "selected-sources.private.json"), "[]");
   write(path.join(output, "report.json"), "{}");
@@ -143,6 +149,9 @@ describe("all-category shell runner", () => {
     );
     expect(source).toContain(
       'CATEGORY_VIEWS <<< "$("$NODE_BIN" -e \'process.stdout.write(require(process.argv[1]).CATEGORY_ORDER.join(" "))\''
+    );
+    expect(source).toMatch(
+      /runVsCandidateTriage\.cjs" \\\n\s+--worksheet "\$WORKSHEET" \\\n\s+--documentArtifact "\$DOCUMENT_ARTIFACT"/u
     );
     expect(source).toMatch(
       /runPreparedEvidenceEvaluation\.cjs" \\\n\s+--worksheet "\$WORKSHEET" \\\n\s+--documentArtifact "\$DOCUMENT_ARTIFACT"/u

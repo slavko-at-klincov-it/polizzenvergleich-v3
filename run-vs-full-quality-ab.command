@@ -72,6 +72,7 @@ run_document() {
   local document_dir="$OUTPUT_DIR/$document_key"
   local baseline_dir="$document_dir/A-v3.2.1-compatible-replay"
   local adapted_dir="$document_dir/B-v3.3.0-full"
+  local document_artifact="$adapted_dir/document.private.json"
   local worksheet="$adapted_dir/worksheet.private.json"
   local triage_dir="$adapted_dir/triage"
   local effects_dir="$adapted_dir/effects"
@@ -109,12 +110,14 @@ run_document() {
   printf '%s\n' "[vs-full-quality-ab] $document_key: B – 36er-Worksheet"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildVsOccurrenceWorksheet.cjs" \
     --pdfFile "$pdf_file" \
+    --documentArtifactOutput "$document_artifact" \
     --catalogFile "$SCRIPT_DIR/server/resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json" \
     --output "$worksheet"
 
   printf '%s\n' "[vs-full-quality-ab] $document_key: B – Candidate-Triage"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runVsCandidateTriage.cjs" \
     --worksheet "$worksheet" \
+    --documentArtifact "$document_artifact" \
     --systemPromptFile "$SCRIPT_DIR/server/resources/policyAnalysis/vs-candidate-triage-system.v0.1.md" \
     --controlMode technical-review \
     --output "$triage_dir" \
@@ -125,6 +128,7 @@ run_document() {
   printf '%s\n' "[vs-full-quality-ab] $document_key: B – atomare Wirkungsprüfung"
   "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runPreparedEvidenceEvaluation.cjs" \
     --worksheet "$worksheet" \
+    --documentArtifact "$document_artifact" \
     --triageFile "$triage_dir/materialized-triage.private.json" \
     --systemPromptFile "$SCRIPT_DIR/server/resources/policyAnalysis/vs-prepared-evidence-system.v0.1.md" \
     --controlMode technical-review \

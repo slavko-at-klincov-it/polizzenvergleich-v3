@@ -110,6 +110,15 @@ Kandidaten. Negation, Optionalität, fehlender Summen- oder Jahresbezug und
 Fremdsparten bleiben fail-closed. Auch dieser Nachfolger muss sämtliche Gates
 erneut auf seinem exakten SHA bestehen.
 
+Der LF-Nachlauf auf `67dcb847a` bestand anschließend mit der erwarteten
+Partition 15 vollständig / 15 teilweise / 4 kontrolliert ohne Gegenstück /
+0 Referenz unklar / 1 Gegenstück unklar und null XLSX-Zellabweichungen. Der
+darauf folgende, semantikneutrale Runner-Fix vervollständigt den seit der
+Source-Bindung verpflichtenden `documentArtifact`-Parameter in den manuellen
+All-Category-, Hybrid-Shadow- und historischen VS-A/B-Pfaden. Weil auch dieser
+Fix den Release-SHA ändert, sind beide Modell-Finalgates auf seinem Nachfolger
+erneut erforderlich.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen

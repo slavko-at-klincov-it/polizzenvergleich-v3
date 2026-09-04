@@ -6213,3 +6213,46 @@ Gate-Urteil liegt außerhalb des Repositorys im privaten QA-Root als
 `FACHLICHER_LF_LAUFBERICHT_DE.md`. Nach diesem separaten Forward-Fix sind ein
 fokussierter Mac-Test und erneut ein frischer LF-Vollauf auf dem neuen SHA
 verpflichtend. Der symmetrische Lauf, Merge, Tag und Deployment bleiben offen.
+
+## 131. LF-Gate bestanden und Source-Artefaktvertrag der Shell-Runner
+
+Der frische LF-Vollauf auf `67dcb847a` bestand in 1.205.808 ms sowohl den
+technischen als auch den fachlichen Gate. Die unabhängig nachgerechnete
+Partition lautet:
+
+```text
+GEGENSTUECK_GEFUNDEN                         15
+TEILWEISES_GEGENSTUECK                      15
+KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE   4
+REFERENZZEILE_UNKLAR                          0
+GEGENSTUECK_UNKLAR                            1
+```
+
+`RH-01` ist wieder beidseitig `BELEGT`; `RH-03` bleibt A `BELEGT` und B
+`TEILBELEGT`. Gegen `2ec71e4e6` änderte sich ausschließlich `RH-01`. Alle 35
+mal 11 XLSX-Datenzellen stimmen mit dem kanonischen JSON überein. Nach der
+verbindlichen Kundenmetrik existiert genau eine echte unklare Zeile:
+`LF-FE-02 (RF-02)`. Das gespeicherte Feld `customerReviewRequired=16` ist die
+breitere interne Altzählung einschließlich Teilbelegen und darf nicht als
+Kundenreviewzahl berichtet werden.
+
+Der anschließende Runner-Audit bestätigte eine davon unabhängige technische
+Lücke seit dem source-gebundenen Triage-Vertrag: Drei manuelle QA-Shellpfade
+reichten das bereits vorhandene Dokumentartefakt nicht vollständig an Triage
+und Effects weiter. Nichtleere Worksheets würden deshalb vor der fachlichen
+Prüfung fail-closed abbrechen.
+
+Der kleine Runner-Fix:
+
+- übergibt im All-Category- und Hybrid-Shadow-Runner das bereits einmal
+  erzeugte `document.private.json` zusätzlich an die Triage;
+- lässt den historischen VS-A/B-Runner beim bestehenden Worksheet-Parsing
+  genau ein Dokumentartefakt erzeugen und reicht dasselbe Artefakt an Triage
+  und Effects weiter;
+- ergänzt statische und dynamische Shell-Harness-Verträge, die fehlende oder
+  nicht existente Artefakte ablehnen.
+
+Es entstehen dadurch keine zusätzlichen Modellaufrufe und kein zweites
+PDF-Parsing. Vergleichs-, Evidenz- und Produktsemantik bleiben unverändert.
+Da dieser Fix einen neuen SHA erzeugt, müssen LF- und symmetrischer Finalgate
+auf dem resultierenden gemeinsamen Release-SHA wiederholt werden.
