@@ -86,6 +86,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
   "LF-VS-01": [
     component("building", "Gebäude", "INSURED_OBJECT", [
       "die am in der Polizze bezeichneten Versicherungs- oder Risikoort befindlichen Gebäude",
+      "Gebäude einschließlich der unter Erdniveau befindlichen Fundamente",
       "die am Versicherungsort befindlichen Gebäude",
       "in der Polizze bezeichnete Gebäude",
       "versicherte Gebäude",

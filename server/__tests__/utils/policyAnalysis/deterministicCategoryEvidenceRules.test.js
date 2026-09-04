@@ -199,6 +199,56 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("keeps a subsidiary cost promise positive when other cover is absent", () => {
+    const text = [
+      "Mehrkosten für die Behandlung gefährlichen Abfalls sind, soweit sie im Rahmen",
+      "versicherter Aufräumungskosten keine Deckung finden, bis EUR 7.300 mitversichert.",
+    ].join("\n");
+    const input = bindingInput({
+      text,
+      exactText: "Mehrkosten für die Behandlung gefährlichen Abfalls",
+    });
+    input.worksheet.catalog.categoryView = "RO";
+    input.requirement = {
+      id: "RO-01",
+      sourceReferenceId: "LF-OK-01",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "hazardous_waste", factRole: "COST" };
+    input.occurrence.sectionScopeHint = null;
+    input.occurrence.context.unitType = "CLAUSE_SECTION";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
+  test("binds a threshold from its explicit conditional agreement clause", () => {
+    const text =
+      "Diese Vereinbarung gilt nur für den Fall, wenn der Schaden EUR 72.673 übersteigt.";
+    const input = bindingInput({
+      text,
+      exactText: "Schaden EUR 72.673 übersteigt",
+    });
+    input.worksheet.catalog.categoryView = "RA";
+    input.requirement = {
+      id: "RA-04",
+      sourceReferenceId: "LF-AV-04",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "damage_threshold", factRole: "CONDITION" };
+    input.occurrence.sectionScopeHint = null;
+    input.occurrence.context.unitType = "CLAUSE_SECTION";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
   test.each([
     ["Versicherte Kosten gemäß Art. 3:", "POSITIVE"],
     ["Versicherte Kosten im Rahmen der Versicherungssumme", "POSITIVE"],

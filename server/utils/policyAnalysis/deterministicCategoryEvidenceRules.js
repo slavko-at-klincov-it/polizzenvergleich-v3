@@ -277,6 +277,12 @@ function operativeCoveragePolarity(occurrence) {
   const exactText = String(occurrence?.exactText || "");
   if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
   if (
+    /\bsind\s*,?\s*soweit\b[\s\S]{0,260}?\bkeine\s+Deckung\s+finden\b[\s\S]{0,220}?\bmitversichert\b/iu.test(
+      clause
+    )
+  )
+    return "POSITIVE";
+  if (
     /\b(?:werden|wird)\b[\s\S]{0,220}?\b(?:nicht|keine?[nmr]?|keinerlei)\b[\s\S]{0,120}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
       clause
     ) ||
@@ -309,6 +315,9 @@ function operativeCoveragePolarity(occurrence) {
       clause
     ) ||
     /\b(?:Deckung|Versicherungsschutz)\s+gilt\b/iu.test(clause) ||
+    /\bVereinbarung\s+gilt\s+nur\s+f[üu]r\s+den\s+Fall\s*,?\s*(?:wenn|dass)\b/iu.test(
+      clause
+    ) ||
     /\bVoraussetzung\b[\s\S]{0,240}?\bist\s*,?\s*dass\b/iu.test(clause) ||
     /\berwirbt\b[\s\S]{0,180}?\bAnspruch\b[\s\S]{0,180}?\bnur\s+insoweit\b/iu.test(
       clause
