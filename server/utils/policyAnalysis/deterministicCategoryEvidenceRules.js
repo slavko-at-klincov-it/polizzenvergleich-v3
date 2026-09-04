@@ -161,28 +161,6 @@ function expectedCategoryScopeKeys(categoryView) {
   return CATEGORY_SCOPE_KEYS[String(categoryView || "").toUpperCase()] || [];
 }
 
-function explicitPageTitleScopeKeys(occurrence) {
-  const sectionScopeKeys = [
-    occurrence?.sectionScopeHint?.scopeKey,
-    ...(occurrence?.sectionScopeHint?.scopeKeys || []),
-  ].filter(Boolean);
-  if (sectionScopeKeys.length > 0) return [];
-  const pageScopeKeys = [
-    ...new Set(
-      (occurrence?.pageScopeHints || [])
-        .filter(
-          ({ scopeKey, pageStart, text }) =>
-            scopeKey?.endsWith("_INSURANCE") &&
-            Number.isInteger(pageStart) &&
-            pageStart <= 240 &&
-            /versicherung\b/iu.test(text || "")
-        )
-        .map(({ scopeKey }) => scopeKey)
-    ),
-  ];
-  return pageScopeKeys.length === 1 ? pageScopeKeys : [];
-}
-
 function resolvedCategoryView(worksheet, requirement) {
   return String(
     worksheet?.catalog?.categoryView ||
@@ -1581,7 +1559,6 @@ function deterministicCategoryCandidateBinding({
   const observedScopeKeys = [
     occurrence?.sectionScopeHint?.scopeKey,
     ...(occurrence?.sectionScopeHint?.scopeKeys || []),
-    ...explicitPageTitleScopeKeys(occurrence),
   ].filter(Boolean);
   const scopeContract = componentScopeContract(requirement, component);
   const narrowAlias = matchedNarrowAlias(requirement, component, occurrence);

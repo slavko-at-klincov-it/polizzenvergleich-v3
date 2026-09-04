@@ -323,6 +323,11 @@ describe("preparedEvidenceContract", () => {
       ],
     });
 
+    const [triageTarget] =
+      buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(triageTarget.roleResolution.roleMatch).not.toBe("MISMATCH");
+    expect(triageTarget.scopeResolution.scopeMatch).not.toBe("OTHER_SCOPE");
+
     expect(preparedTarget.candidates).toEqual([
       expect.objectContaining({
         candidateId: "candidate:rg-03:emergency-boarding",
@@ -885,6 +890,11 @@ describe("preparedEvidenceContract", () => {
         },
       ],
     });
+
+    const [triageTarget] =
+      buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(triageTarget.roleResolution.roleMatch).not.toBe("MISMATCH");
+    expect(triageTarget.scopeResolution.scopeMatch).not.toBe("OTHER_SCOPE");
 
     expect(preparedTarget.candidates).toEqual([
       expect.objectContaining({
