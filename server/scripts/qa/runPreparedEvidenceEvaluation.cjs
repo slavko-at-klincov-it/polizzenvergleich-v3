@@ -262,6 +262,16 @@ async function run() {
   } = require("../../utils/policyAnalysis/preparedEvidenceControls");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const worksheetCandidateCount = (worksheet.requirements || []).reduce(
+    (total, requirement) =>
+      total +
+      (requirement.components || []).reduce(
+        (componentTotal, component) =>
+          componentTotal + (component.occurrences || []).length,
+        0
+      ),
+    0
+  );
   const objectScopeProvenance = inspectObjectScopeProvenance(worksheet);
   if (objectScopeProvenance.orphanProof)
     fail(
@@ -274,6 +284,8 @@ async function run() {
     fail(
       "Worksheet mit objectScopeEvidenceContract erfordert --documentArtifact"
     );
+  if (worksheetCandidateCount > 0 && !documentArtifactFile)
+    fail("Worksheet mit Kandidaten erfordert --documentArtifact");
   const documentArtifactBytes = documentArtifactFile
     ? fs.readFileSync(documentArtifactFile)
     : null;

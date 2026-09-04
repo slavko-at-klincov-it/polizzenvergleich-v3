@@ -235,6 +235,41 @@ describe("VS full QA CLI contracts", () => {
     fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
 
+  test("requires a document artifact whenever an effects worksheet has candidates", () => {
+    const fixture = preparedEvidenceFixture();
+    const worksheet = JSON.parse(
+      fs.readFileSync(fixture.worksheetFile, "utf8")
+    );
+    worksheet.requirements[0].components[0].occurrences = [
+      {
+        candidateId: "candidate:source-bound",
+        pageNumber: 1,
+        physicalPageNumber: 1,
+        documentStart: 6,
+        documentEnd: 7,
+        exactText: "x",
+        context: {
+          unitType: "PARAGRAPH",
+          documentStart: 6,
+          documentEnd: 7,
+          text: "x",
+        },
+      },
+    ];
+    fs.writeFileSync(fixture.worksheetFile, JSON.stringify(worksheet));
+
+    const result = run(
+      "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+      preparedEvidenceArguments(fixture, { documentArtifact: false })
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Worksheet mit Kandidaten erfordert --documentArtifact"
+    );
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+
   test("requires a document artifact for an object-scope contract", () => {
     const fixture = preparedEvidenceFixture({ objectScopeEvidence: true });
     const result = run(
