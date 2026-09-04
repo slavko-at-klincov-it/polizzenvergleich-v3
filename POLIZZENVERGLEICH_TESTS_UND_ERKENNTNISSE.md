@@ -3191,3 +3191,85 @@ Fail-Closed-Ausgabeverträge funktionieren für diesen bekannten Lauf.
 **Beweist nicht:** fachliche Richtigkeit der 35 Rohstatus, vollständigen
 Paket-Recall, korrekte Werte- und Rollenbindung, LF-Vollständigkeit,
 Besonderheiten nur auf B, unbekannte Versicherer oder das 99-Prozent-Ziel.
+
+## 54. Produktiver LF-A→B-Vertrag: Mac-Studio-Gate und 1-gegen-9-Lauf
+
+**Versuch:** 4. September 2026
+
+**Codecommit:** `18d87b7dd4f916139b53946c3f78240aa7703d9b`
+
+**Abnahmeort:** isolierter Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/workspace-modes-18d87b7dd`
+
+Der QA-only-Dinghy-/Top-5-Pilot aus Abschnitt 53 wurde nicht produktiv
+übernommen. Der neue Modus `LF_IMMO_REFERENCE_A_TO_B_V1` verwendet ein
+versioniertes 35-Zeilen-Komponentenprofil und den kontrollierten
+Occurrence-/Qwen-/Prepared-Evidence-Pfad aus V3.6.0. A wird zuerst analysiert;
+der Ergebnis-Builder iteriert danach ausschließlich über diese A-Zeilen und
+aggregiert passende Belege aus einem oder mehreren B-Dokumenten. Inhalte nur
+in B erzeugen keine Zeile.
+
+Auf dem exakten Commit bestanden 6/6 fokussierte Suites mit 30/30 Tests,
+166/166 Gesamtsuites mit 2172/2172 Tests, Server-/Frontend-/Collector-Lint,
+Frontend-Produktionsbuild, Prisma-Schemavalidierung und alle 42 Migrationen
+auf einer frischen isolierten SQLite-Datenbank. Der installierte
+Kundencheckout und seine Datenbank blieben unverändert.
+
+```text
+Session:                    8969a32b-7cd7-4177-be5c-c060ea7a8a5c
+LF-Dokument A:              1, 31 Seiten, SHA-256 2f1be7924...e9d62
+Vergleichsdokumente B:      9
+Dokument-/Kategorieschritte: 100/100
+LF-Kategorien / LF-Zeilen:  10 / 35
+A vollständig analysiert:  35/35
+A voll belegt / teilbelegt: 17 / 18
+B-only-Zeilen:              0
+vollständiges Gegenstück:   2
+teilweises Gegenstück:      9
+Gegenstück unklar:          3
+kontrollierter Nullfund:    3
+Referenzzeile unklar:       18
+Kundenreview erforderlich: 30
+Workerzeit:                 2869 s
+Qwen-Aufrufe:               526
+Prompt-/Completiontoken:    1.351.569 / 28.197
+```
+
+Der private JSON- und Markdown-Export sowie das XLSX wurden erzeugt. Das XLSX
+besitzt genau ein Blatt mit 36 tatsächlichen Zeilen einschließlich Kopfzeile
+und elf Spalten. Sämtliche 100 Dokument-/Kategorieergebnisse liegen vor;
+`sideBOnlyRows` ist null.
+
+Unabhängige Rückprüfung der vier bekannten Pilotfehler:
+
+1. `LF-VS-02`: Der frühere Retrieval-Miss ist behoben. Die
+   WEVIG-Musterberechnung liefert den Nebengebäude-Beleg; weil 5-Prozent-Limit
+   und Gewächshaus-Ausschluss fehlen, ist das Ergebnis korrekt nur partiell.
+2. `LF-GL-03`: Notverglasung, Gerüst und Entsorgung werden auf B belegt;
+   Bewachung fehlt. Der neue Komponentenvertrag verhindert den früheren
+   falschen Direktstatus und gibt partiell aus.
+3. `LF-HP-03`: Das frühere unzulässige Ableiten eines Selbstbehalts aus einem
+   Limit führt nicht mehr zu einem Direktstatus. Der neue Lauf bleibt wegen
+   unvollständiger A-Komponenten konservativ `REFERENZZEILE_UNKLAR`.
+4. `LF-GL-01`: Die LF-Quelle auf Seite 15 nennt Gebäudeverglasung und
+   Einzelscheibengröße 10 m² gemeinsam, die Wirkungsbewertung stuft die
+   Limitkomponente dennoch als nicht feststellbar ein. Das ist eine bestätigte
+   offene Kalibrierungslücke bereits auf A und erklärt, warum dieser Punkt
+   noch keine B-Gegenstückaussage erzeugt.
+
+Der Runner führt keine Embedding-Suche und keine Embedding-Berechnung aus.
+Die im Workerlog sichtbare Meldung `NativeEmbedder Initialized` stammt aus
+dem generischen `LMStudioLLM`-Konstruktor; der Referenzpfad ruft keine
+Embed-Funktion und keinen Embedding-Endpunkt auf. Der im vorherigen QA-Piloten
+verwendete Dinghy-Embedder wird nicht geroutet.
+
+**Beweist:** Die zwei persistenten Workspace-Modi, der gerichtete
+1-gegen-9-Datenfluss, 35/35 A-Zeilen, paketweite B-Gegenstücksuche,
+Komponenten-Fail-Closed-Verhalten, null B-only-Zeilen, Export und Betrieb mit
+Qwen auf dem Mac Studio funktionieren auf dem bekannten Paket.
+
+**Beweist nicht:** fachliche Freigabe der 35 Entscheidungen, vollständiges
+LF-Inventar, beliebige LF-Versionen, unbekannte Versicherer oder das
+99-Prozent-Ziel. Die 18 unklaren Referenzzeilen und insbesondere `LF-GL-01`
+benötigen weitere Profil- und Wirkungsbewertungskalibrierung gegen ein
+Expertenoracle.

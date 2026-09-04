@@ -908,3 +908,59 @@ unvollständiger Nullfund, A/B-Swap-Symmetrie, positive, negative,
 adversariale, Ausschluss-, Scope-, Wert-, Konflikt- und Ersetzungsvarianten
 sowie ein gebundener Mac-Studio-Fünfkategorienlauf mit unabhängiger Prüfung
 aller neu entstandenen Vorteile.
+
+## ADR-027: Zwei getrennte Workspace-Laufverträge für LF-Referenz A→B und vollständiges A/B
+
+**Status:** AKZEPTIERT UND TECHNISCH ABGENOMMEN; FACHLICHE
+35-ZEILEN-KALIBRIERUNG OFFEN
+
+Diese Entscheidung ergänzt ADR-023 und ADR-026. Sie ersetzt deren symmetrische
+Annahmen nicht, sondern begrenzt sie auf den vollständigen A/B-Modus.
+
+Verbindliche Entscheidung:
+
+1. Der Dialog „Neues Workspace“ zeigt genau zwei Analyseverfahren:
+   `LF_IMMO_REFERENCE_A_TO_B_V1` und `SYMMETRIC_A_B_CORE5_V1`.
+2. Die Auswahl ist kein Systemprompt, sondern ein persistenter Laufvertrag am
+   Workspace und an der Vergleichssitzung. Manifest, Resume und Ergebnis
+   tragen dieselbe Modus- und Profilidentität. Bestehende Workspaces erhalten
+   kompatibel den symmetrischen Modus.
+3. Im LF-Modus ist genau ein versioniertes LF-Referenzdokument auf A und ein
+   bis neun Vergleichsdokumente auf B zulässig. A definiert Kategorien,
+   Zeilen, Komponenten und Reihenfolge.
+4. Der LF-Modus analysiert zuerst die A-Zeilen und sucht danach ausschließlich
+   deren fachliche Gegenstücke im gesamten Paket B. Inhalte, die nur in B
+   vorkommen, erzeugen keine Zeile und keine Nebeninventarliste.
+5. Ein Gegenstück kann aus einem oder mehreren B-Dokumenten stammen. Objekt,
+   Gefahr, Faktrolle, Bedingung, Limit, Selbstbehalt und Ausschluss bleiben
+   getrennte verpflichtende Komponenten. Ein Teilbeleg darf kein direktes
+   Gegenstück werden.
+6. Der LF-Produktpfad verwendet keine Embeddings und keinen globalen Top-N.
+   Er übernimmt PageMap, kontrollierte Occurrence-Suche, begrenzte
+   Qwen-Triage, Prepared Evidence und servereigene Quellen aus V3.6.0.
+7. Ein vollständiger kontrollierter Nullfund bedeutet nur „kein Gegenstück
+   nach kontrollierter Suche“. Er beweist keinen ausdrücklichen Ausschluss.
+8. Der symmetrische Modus behält das V3.6.0-Fünfkategorienprofil mit 224
+   Zeilen und seine beidseitige Vergleichslogik unverändert.
+9. Das erste LF-Profil besitzt zehn Ansichten und 35 Referenzzeilen. Diese
+   Zahl ist sichtbar zu berichten und ausdrücklich keine vollständige
+   Inventarisierung des LF-IMMO-Vertrags. Eine Erweiterung benötigt neue
+   Profil-, Katalog- und Abnahmeversionen.
+10. Die acht bisherigen Kategorie-Systemprompts bleiben interne
+    Analyseartefakte, erscheinen aber nicht mehr als auswählbare
+    Workspace-Vorlagen.
+
+Abnahmegates sind Moduspersistenz und Migrationskompatibilität, genau zwei
+UI-Auswahlen, Dokumentlimits 1→1..9, Manifest-/Resume-Bindung, 35/35
+A-Zeilen, null B-only-Zeilen, Quellenprovenienz, kein Embeddingaufruf,
+Frontend-Build sowie ein frischer isolierter Mac-Studio-1-gegen-9-Lauf. Der
+letzte Lauf ist für die technische Bereitstellung nötig; fachliche
+Vollständigkeit bleibt bis zum erweiterten LF-Katalog und Expertenoracle
+offen.
+
+Der technische Nachweis auf Commit `18d87b7dd4f916139b53946c3f78240aa7703d9b`
+bestand alle statischen Gates und einen frischen 1-gegen-9-Lauf mit 35/35
+A-Zeilen und null B-only-Zeilen. Die Ergebnisqualität bleibt getrennt: 18
+Referenzzeilen waren nur teilbelegt; `LF-GL-01` ist eine bestätigte offene
+Kalibrierungslücke. Messwerte und Beweisgrenze stehen in Tests und
+Erkenntnisse, Abschnitt 54.

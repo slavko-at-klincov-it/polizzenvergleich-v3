@@ -142,8 +142,9 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260825-029` | Zwei-Polizzen-Vergleich hat aktuelle Produktpriorität                    | `ZIEL`                  | `PROMOTED`    | Strategie und Abnahme primär an dokumentisoliertem A/B-Vergleich ausrichten                                             |
 | `INT-20260825-030` | Bidirektionaler Klauselabgleich als katalogunabhängiger Vergleichspfad   | `IDEE`                  | `IN_PRÜFUNG`  | an einem anonymisierten A/B-Paar gegen manuell markierte Klauselunterschiede falsifizieren                              |
 | `INT-20260831-031` | Fünf Kategorien und ein Einblatt-Kundenexport                            | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | fachliche 224-Zeilen-Abnahme auf unbekannten Paketen getrennt vom Layoutvertrag durchführen                             |
-| `INT-20260901-032` | Jede Zeile entscheidet und einseitig belegter Schutz kann gewinnen       | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | durch den bestätigten Paketvergleichsvertrag `INT-20260902-033` konkretisieren                                           |
+| `INT-20260901-032` | Jede Zeile entscheidet und einseitig belegter Schutz kann gewinnen       | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | durch den bestätigten Paketvergleichsvertrag `INT-20260902-033` konkretisieren                                          |
 | `INT-20260902-033` | Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich   | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Vergleichsvertrag V8 schrittweise implementieren und auf dem Mac Studio abnehmen                                        |
+| `INT-20260904-034` | Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B       | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | beide Laufverträge getrennt versionieren; LF-Katalog nach dem 35-Zeilen-Startprofil vollständig erweitern               |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -2431,6 +2432,63 @@ pauschalen Gesamtsieger.
 - Entscheidung: akzeptieren und schrittweise implementieren.
 - Kanonischer Ausgang: `ADR-026`, Architektur Abschnitt 20,
   Projektgedächtnis Abschnitt 17 und aktualisierter Produktcharter.
+
+## INT-20260904-034 — Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B
+
+- Erfasst: 2026-09-04
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `PROMOTED`
+- Aussage: Neue Workspaces müssen genau zwischen einem gerichteten
+  LF-IMMO-Referenzvergleich A→B und dem bisherigen vollständigen
+  symmetrischen A/B-Vergleich wählen können.
+- Ist-Wahrheit: JA – als Produktentscheidung bestätigt; Implementierungs- und
+  Abnahmestand bleibt an Codecommit und Mac-Studio-Gates gebunden.
+- Quelle: Nutzerkorrektur im Produktgespräch. Variante 1 darf keine nur in B
+  vorhandenen Inhalte inventarisieren; Variante 2 behält genau diese
+  vollständige beidseitige Sicht.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Im LF-Modus beantwortet
+  jede Zeile „Was leistet mein LF-Dokument A, und wo befindet sich das
+  Gegenstück im gesamten Paket B?“. Im vollständigen Modus bleibt die
+  heutige A/B-Gegenüberstellung erhalten.
+- Scope und ausdrückliche Nicht-Ziele: A besitzt im LF-Modus das vollständige
+  Zeilenuniversum. B darf ein oder mehrere Dokumente beitragen, erzeugt aber
+  keine eigene Zeile. Ein Nullfund ist kein ausdrücklicher Ausschluss. Der
+  symmetrische Modus wird nicht semantisch verändert.
+- Evidenz und Beweisgrenze: Der frühere 35-Punkte-/Dinghy-Pilot belegt nur die
+  grundsätzliche Navigation und bleibt wegen Retrieval-Misses und
+  Überzuordnung historische QA-Evidenz. Das erste kontrollierte Profil darf
+  seine 35-Zeilen-Grenze nicht als vollständiges LF-Inventar ausgeben.
+- Systembezug: Workspace-Erstellung und Persistenz, Vergleichssitzung,
+  Laufmanifest, Resume, Dokumentlimits, V3.6-Evidenzpfad, gerichteter
+  Ergebnisvertrag, UI und XLSX.
+- Beziehungen:
+  - präzisiert -> `INT-20260825-031`
+  - begrenzt -> `INT-20260825-030`
+  - ergänzt -> `ADR-026`
+  - kanonischer Ausgang -> `ADR-027`
+- Spezialistenurteil:
+  - Local-AI/RAG: Der gerichtete Produktpfad verwendet den kontrollierten
+    V3.6-Occurrence-/Qwen-Pfad ohne Embeddings; der historische Top-5-Pilot
+    wird nicht produktiv geroutet.
+  - Kunde/Versicherung: Gegenstück bedeutet gleiche fachliche Zeilenfunktion,
+    nicht automatisch gleiche Deckungswirkung oder Vorteil.
+  - Datenschutz/Betrieb: Alle PDFs und Ergebnisartefakte bleiben im privaten
+    lokalen Vergleichsspeicher.
+  - Kritik/Test: Modus muss unveränderlich gespeichert und in Manifest/Resume
+    gebunden werden; A exakt eins, B eins bis neun, B-only stets null.
+- Hard-Gates: `TECHNISCH BESTANDEN` auf Commit
+  `18d87b7dd4f916139b53946c3f78240aa7703d9b`; fachliche Kalibrierung und
+  vollständiges LF-Inventar bleiben offen.
+- Bewertung: technisch akzeptiert; fachlich begrenzt.
+- Evidenzqualität: `NUTZERANGABE` plus `BEOBACHTET_CODE` plus
+  `GEMESSEN_KUNDENHARDWARE`
+- Riskanteste Annahme: Das 35-Zeilen-Startprofil wird ohne vollständige
+  LF-Zerlegung als fachlich vollständig missverstanden.
+- Nächster Prüfschritt: die 18 teilbelegten LF-Referenzzeilen, beginnend mit
+  der bestätigten `LF-GL-01`-Wirkungslücke, gegen ein Expertenoracle
+  kalibrieren und danach den LF-Katalog atomar erweitern.
+- Entscheidung: akzeptieren.
+- Kanonischer Ausgang: `ADR-027`.
 
 ## 8. Vorläufige Strategiekarte aus `INT-20260824-002` bis `INT-20260824-006`
 

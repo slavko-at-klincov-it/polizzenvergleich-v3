@@ -738,3 +738,38 @@ versionierte Bewertungsrichtung.
 Dieser Abschnitt beschreibt das beschlossene Ziel. Der aktuelle V7-Code und
 der letzte FE-A06-Lauf verwenden noch den früheren Vertrag. Implementierung,
 Tests, Ergebnis-ID und Mac-Studio-Nachweis stehen aus.
+
+## 21. Workspace-Routing für gerichteten LF-Referenzvergleich und vollständiges A/B
+
+Die Workspace-Erstellung besitzt einen unveränderlichen
+`policyComparisonMode`. Eine Vergleichssitzung kopiert den Wert bei ihrer
+Erstellung nach `comparisonMode`; das Queue-Manifest bindet zusätzlich das
+zugehörige Produktprofil. Dadurch kann ein laufender oder fortgesetzter Job
+nicht durch eine spätere UI- oder Promptänderung den Verfahrenstyp wechseln.
+Bestandsworkspaces und Bestandssitzungen migrieren auf den symmetrischen
+V3.6.0-Vertrag.
+
+```text
+Workspace-Modus
+  ├─ SYMMETRIC_A_B_CORE5_V1
+  │    -> A 1..9 / B 1..9
+  │    -> V3.6.0 CUSTOMER_CORE_5 / 224 Zeilen
+  │    -> vollständige beidseitige Punktentscheidung
+  └─ LF_IMMO_REFERENCE_A_TO_B_V1
+       -> exakt ein versioniertes LF-Dokument A / B 1..9
+       -> LF_IMMO_REFERENCE_35_V1_CONTROLLED
+       -> 10 Ansichten / 35 A-eigene Zeilen
+       -> B liefert nur Gegenstückbelege zu diesen IDs
+       -> sideBOnlyRows = 0
+```
+
+Der LF-Zweig verwendet denselben privaten Dokumentartefakt-,
+Occurrence-Worksheet-, Qwen-Triage-, Prepared-Evidence- und
+Quellenmaterialisierungspfad wie der V3.6.0-Lauf, aber einen eigenen
+gerichteten Result- und XLSX-Builder. Er ruft weder Dinghy noch einen anderen
+Embeddingpfad auf. Mehrere B-Dokumente dürfen gemeinsam die verpflichtenden
+Komponenten einer A-Zeile belegen; Rohbelege bleiben je Dokument getrennt.
+
+Die früheren acht Fachprompts bleiben interne Analyseverträge und sind keine
+Workspace-Auswahl mehr. Die zwei sichtbaren Verfahren ändern den
+Vergleichsdatenfluss, nicht den Chat-Systemprompt.
