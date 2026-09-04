@@ -44,4 +44,21 @@ describe("policy comparison result reader", () => {
       "COMPARISON_RESULT_MODE_MISMATCH:LF_IMMO_REFERENCE_A_TO_B_V1:SYMMETRIC_A_B_CORE5_V1"
     );
   });
+
+  test("treats a pre-mode result as symmetric and never as LF", () => {
+    expect(() =>
+      readValidatedComparisonResult(
+        resultFile(undefined),
+        POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+      )
+    ).toThrow(
+      "COMPARISON_RESULT_MODE_MISMATCH:LF_IMMO_REFERENCE_A_TO_B_V1:SYMMETRIC_A_B_CORE5_V1"
+    );
+    expect(() =>
+      readValidatedComparisonResult(
+        resultFile(undefined),
+        POLICY_COMPARISON_MODE.SYMMETRIC_A_B
+      )
+    ).not.toThrow("COMPARISON_RESULT_MODE_MISMATCH");
+  });
 });

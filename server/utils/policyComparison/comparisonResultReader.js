@@ -11,9 +11,11 @@ function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
     allowDefault: false,
   });
   const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
-  const resultMode = normalizePolicyComparisonMode(result?.comparisonMode, {
-    allowDefault: false,
-  });
+  const resultMode = result?.comparisonMode
+    ? normalizePolicyComparisonMode(result.comparisonMode, {
+        allowDefault: false,
+      })
+    : POLICY_COMPARISON_MODE.SYMMETRIC_A_B;
   if (resultMode !== expectedMode)
     throw new Error(
       `COMPARISON_RESULT_MODE_MISMATCH:${expectedMode}:${resultMode}`
