@@ -3653,6 +3653,12 @@ function buildControlledOccurrenceWorksheet({
         factRole: component.factRole,
         contextMode: component.contextMode,
         aliases: component.aliases,
+        ...(component.scopePolicy
+          ? {
+              scopePolicy: component.scopePolicy,
+              scopeRules: component.scopeRules,
+            }
+          : {}),
         ...(component.conceptSearches.length > 0
           ? { conceptSearches: component.conceptSearches }
           : {}),
