@@ -5,6 +5,7 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  NARROW_ALIAS_PRODUCT_PROFILE_IDENTITY,
   PREVIOUS_PRODUCT_PROFILE_IDENTITY,
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
@@ -363,6 +364,18 @@ describe("policy comparison customer metric contract", () => {
       rows: 0,
       customerReviewRequired: 0,
     });
+  });
+
+  test("keeps the superseded V104 schema V14 profile readable without treating it as current", () => {
+    const result = resultFor([]);
+    result.schemaVersion = 14;
+    result.productProfile = NARROW_ALIAS_PRODUCT_PROFILE_IDENTITY;
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 0,
+      customerReviewRequired: 0,
+    });
+    expect(result.productProfile).not.toEqual(PRODUCT_PROFILE);
   });
 
   test("binds every schema V15 decision to the persisted rule/outcome contract", () => {

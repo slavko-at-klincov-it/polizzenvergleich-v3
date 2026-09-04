@@ -318,6 +318,11 @@ describe("directed LF reference result builder", () => {
       "lf-immo-reference-35-component-scoped-v3",
       "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
     ],
+    [
+      "LF_IMMO_REFERENCE_35_V4_NARROW_SCOPE_IDENTITY",
+      "lf-immo-reference-35-narrow-scope-identity-v4",
+      "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V4",
+    ],
   ])(
     "keeps a stored historical reference profile readable: %s",
     (id, catalogId, componentContractId) => {

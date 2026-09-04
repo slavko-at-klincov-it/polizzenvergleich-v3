@@ -1,9 +1,9 @@
 const seedCatalog = require("../../resources/policyAnalysis/lf-immo-reference-counterpart-pilot.v0.1.json");
 
 const LF_REFERENCE_PROFILE = Object.freeze({
-  id: "LF_IMMO_REFERENCE_35_V4_NARROW_SCOPE_IDENTITY",
-  catalogId: "lf-immo-reference-35-narrow-scope-identity-v4",
-  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V4",
+  id: "LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE",
+  catalogId: "lf-immo-reference-35-source-bound-triage-v5",
+  componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V5",
   sourceSeedCatalogId: seedCatalog.contractId,
   sourceProduct: Object.freeze({ ...seedCatalog.sourceProduct }),
   categoryCount: seedCatalog.categories.length,
@@ -26,6 +26,12 @@ const HISTORICAL_LF_REFERENCE_PROFILES = Object.freeze([
     id: "LF_IMMO_REFERENCE_35_V3_COMPONENT_SCOPED",
     catalogId: "lf-immo-reference-35-component-scoped-v3",
     componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V3",
+  }),
+  Object.freeze({
+    ...LF_REFERENCE_PROFILE,
+    id: "LF_IMMO_REFERENCE_35_V4_NARROW_SCOPE_IDENTITY",
+    catalogId: "lf-immo-reference-35-narrow-scope-identity-v4",
+    componentContractId: "LF_REFERENCE_COMPONENTS_ALL_REQUIRED_V4",
   }),
 ]);
 

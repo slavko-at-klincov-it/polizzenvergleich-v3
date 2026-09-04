@@ -11,7 +11,7 @@ const {
   packageReviewCustomerExplanation,
 } = require("./customerResultPresenter");
 const {
-  PREVIOUS_PRODUCT_PROFILE_IDENTITY,
+  HISTORICAL_SCHEMA_14_PRODUCT_PROFILES,
   PRODUCT_PROFILE,
 } = require("./productContract");
 const {
@@ -322,12 +322,8 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
         comparisonContractId,
       ]);
   } else if (Number(result.schemaVersion) === 14) {
-    const acceptedProfiles = [
-      PREVIOUS_PRODUCT_PROFILE_IDENTITY,
-      PRODUCT_PROFILE,
-    ];
     if (
-      !acceptedProfiles.some(
+      !HISTORICAL_SCHEMA_14_PRODUCT_PROFILES.some(
         (profile) =>
           productProfileId === profile.id &&
           comparisonContractId === profile.comparisonContractId
