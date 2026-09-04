@@ -3067,7 +3067,7 @@ describe("policy comparison result builder", () => {
           false),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
-          "QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2"),
+          "INCLUDED_OVER_EXCLUDED_V1"),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.absence.physicalPagesChecked += 1),
     ]) {
