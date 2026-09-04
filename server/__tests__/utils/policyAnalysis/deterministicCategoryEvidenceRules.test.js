@@ -98,6 +98,7 @@ describe("deterministicCategoryEvidenceRules", () => {
       };
       input.component = { id: "replacement_rooms", factRole: "COST" };
       input.occurrence.sectionScopeHint = null;
+      input.occurrence.context.unitType = "CLAUSE_SECTION";
 
       expect(deterministicCategoryCandidateBinding(input)).toEqual({
         binding: "DIRECT",
