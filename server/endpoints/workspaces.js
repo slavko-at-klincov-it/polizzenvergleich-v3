@@ -61,8 +61,14 @@ function workspaceEndpoints(app) {
     async (request, response) => {
       try {
         const user = await userFromSession(request, response);
-        const { name = null, templateId = null } = reqBody(request);
-        const { fields, template } = buildWorkspaceCreationFields(templateId);
+        const {
+          name = null,
+          analysisMode = null,
+          templateId = null,
+        } = reqBody(request);
+        const { fields, template } = buildWorkspaceCreationFields(
+          analysisMode ?? templateId
+        );
         const { workspace, message } = await Workspace.new(
           name,
           user?.id,
@@ -85,7 +91,8 @@ function workspaceEndpoints(app) {
           "workspace_created",
           {
             workspaceName: workspace?.name || "Unknown Workspace",
-            workspaceTemplate: template?.id || "default",
+            workspaceTemplate: template.id,
+            policyComparisonMode: template.id,
           },
           user?.id
         );

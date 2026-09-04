@@ -41,7 +41,7 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
     const form = new FormData(formEl.current);
     const data = {
       name: form.get("name"),
-      templateId: selectedTemplate || null,
+      analysisMode: selectedTemplate || null,
     };
     const { workspace, message } = await Workspace.new(data);
     if (!!workspace) {
@@ -86,17 +86,12 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
             </legend>
             <ModalHint>{t("new-workspace.template-hint")}</ModalHint>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              <TemplateChoice
-                id=""
-                name={t("new-workspace.template-default")}
-                selected={selectedTemplate === ""}
-                onSelect={setSelectedTemplate}
-              />
               {templates.map((template) => (
                 <TemplateChoice
                   key={template.id}
                   id={template.id}
                   name={template.name}
+                  description={template.description}
                   selected={selectedTemplate === template.id}
                   onSelect={setSelectedTemplate}
                 />
@@ -116,7 +111,10 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
           {error && <p className="text-red-400 text-sm">Error: {error}</p>}
         </ModalBody>
         <ModalFooter className="justify-end">
-          <ModalPrimaryButton type="submit" disabled={saving}>
+          <ModalPrimaryButton
+            type="submit"
+            disabled={saving || !selectedTemplate}
+          >
             {saving ? t("common.saving") : t("new-workspace.create")}
           </ModalPrimaryButton>
         </ModalFooter>
@@ -125,8 +123,8 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
   );
 }
 
-function TemplateChoice({ id, name, selected, onSelect }) {
-  const inputId = `workspace-template-${id || "default"}`;
+function TemplateChoice({ id, name, description, selected, onSelect }) {
+  const inputId = `workspace-template-${id}`;
   return (
     <label
       htmlFor={inputId}
@@ -146,13 +144,11 @@ function TemplateChoice({ id, name, selected, onSelect }) {
         className="accent-sky-500"
       />
       <span className="min-w-0">
-        {id && (
-          <span className="inline-flex mr-2 px-1.5 py-0.5 rounded bg-zinc-700 light:bg-slate-200 text-xs font-semibold text-zinc-100 light:text-slate-800">
-            {id}
-          </span>
-        )}
-        <span className="text-sm text-zinc-100 light:text-slate-800">
+        <span className="block text-sm font-medium text-zinc-100 light:text-slate-800">
           {name}
+        </span>
+        <span className="mt-1 block text-xs leading-4 text-zinc-400 light:text-slate-500">
+          {description}
         </span>
       </span>
     </label>

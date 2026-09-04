@@ -144,11 +144,11 @@ const TRANSLATIONS = {
     title: "Neuer Workspace",
     placeholder: "Mein Workspace",
     subtitle:
-      "Erstelle einen normalen Workspace und wähle optional eine Fachvorlage.",
-    "template-title": "Fachvorlage",
+      "Erstelle einen Workspace und wähle das gewünschte Analyseverfahren.",
+    "template-title": "Analyseverfahren",
     "template-hint":
-      "Die Auswahl setzt den zugehörigen Systemprompt. Ohne Vorlage bleibt der AnythingLLM-Standardprompt aktiv.",
-    "template-default": "Keine Fachvorlage (Standardprompt)",
+      "Diese Auswahl bestimmt dauerhaft, wie Dokument A und die Vergleichsdokumente B ausgewertet werden.",
+    "template-default": "Analyseverfahren auswählen",
     "settings-title": "Automatische Workspace-Einstellungen",
     "settings-chat":
       "Chat: System default · Modus Chat · Verlauf 1 · Temperatur 0",

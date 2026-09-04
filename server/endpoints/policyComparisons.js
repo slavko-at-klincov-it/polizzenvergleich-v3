@@ -17,10 +17,29 @@ const { EventLogs } = require("../models/eventLogs");
 const {
   customerSafeComparisonReadView,
 } = require("../utils/policyComparison/customerMetricContract");
+const {
+  policyComparisonMode,
+  POLICY_COMPARISON_MODE,
+} = require("../utils/policyComparison/modes");
+const {
+  customerSafeReferenceReadView,
+} = require("../utils/policyComparison/referenceResultBuilder");
 
 function readValidatedComparisonResult(resultFile) {
   const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
+  if (result?.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B)
+    return customerSafeReferenceReadView(result);
   return customerSafeComparisonReadView(result);
+}
+
+function comparisonOptions(workspace) {
+  const mode = policyComparisonMode(workspace.policyComparisonMode);
+  return {
+    sides: PolicyComparison.SIDES,
+    documentRoles: PolicyComparison.DOCUMENT_ROLES,
+    documentStatuses: PolicyComparison.DOCUMENT_STATUSES,
+    mode,
+  };
 }
 
 function safeUnlink(file) {
@@ -87,6 +106,18 @@ function errorStatus(error) {
   if (error?.message === "COMPARISON_SESSION_LOCKED") return 423;
   if (error?.code === "P2002") return 409;
   return 500;
+}
+
+function comparisonStartErrorMessage(error) {
+  const messages = {
+    COMPARISON_BOTH_SIDES_REQUIRED:
+      "Bitte mindestens ein Dokument auf Seite A und Seite B hinzufügen.",
+    COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED:
+      "Für den LF-IMMO-Referenzvergleich ist genau ein Referenzdokument auf Seite A erforderlich.",
+    COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED:
+      "Das Dokument auf Seite A entspricht nicht der versionierten LF-IMMO-Referenzfassung dieses Analyseverfahrens.",
+  };
+  return messages[error?.message] || error?.message;
 }
 
 async function resolveScope(request, response) {
@@ -168,9 +199,7 @@ function policyComparisonEndpoints(app) {
           success: true,
           session: session ? PolicyComparison.publicSession(session) : null,
           options: {
-            sides: PolicyComparison.SIDES,
-            documentRoles: PolicyComparison.DOCUMENT_ROLES,
-            documentStatuses: PolicyComparison.DOCUMENT_STATUSES,
+            ...comparisonOptions(scope.workspace),
           },
         });
       } catch (error) {
@@ -199,15 +228,12 @@ function policyComparisonEndpoints(app) {
           threadId: scope.thread?.id || null,
           ownerKey: scope.ownerKey,
           conversationKey: scope.conversationKey,
+          comparisonMode: scope.workspace.policyComparisonMode,
         });
         return response.status(201).json({
           success: true,
           session: PolicyComparison.publicSession(session),
-          options: {
-            sides: PolicyComparison.SIDES,
-            documentRoles: PolicyComparison.DOCUMENT_ROLES,
-            documentStatuses: PolicyComparison.DOCUMENT_STATUSES,
-          },
+          options: comparisonOptions(scope.workspace),
         });
       } catch (error) {
         console.error(error.message, error);
@@ -370,6 +396,7 @@ function policyComparisonEndpoints(app) {
             workspaceId: request.policyComparisonScope.workspace.id,
             sessionUuid: session.uuid,
             documents: current.documents.length,
+            comparisonMode: current.comparisonMode,
           },
           request.policyComparisonScope.user?.id
         );
@@ -397,10 +424,14 @@ function policyComparisonEndpoints(app) {
         const status =
           error.message === "COMPARISON_BOTH_SIDES_REQUIRED"
             ? 400
-            : errorStatus(error);
+            : error.message === "COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED"
+              ? 400
+              : error.message === "COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED"
+                ? 400
+                : errorStatus(error);
         return response
           .status(status)
-          .json({ success: false, error: error.message });
+          .json({ success: false, error: comparisonStartErrorMessage(error) });
       }
     }
   );
@@ -504,7 +535,11 @@ function policyComparisonEndpoints(app) {
         )
           throw new Error("COMPARISON_RESULT_MISSING");
         readValidatedComparisonResult(resultFile);
-        return response.download(workbook, "Gesamtvergleich.xlsx");
+        const filename =
+          session.comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+            ? "LF-IMMO-Referenzvergleich.xlsx"
+            : "Gesamtvergleich.xlsx";
+        return response.download(workbook, filename);
       } catch (error) {
         console.error(error.message, error);
         return response

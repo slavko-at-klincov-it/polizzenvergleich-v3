@@ -140,6 +140,7 @@ model workspaces {
   agentModel                   String?
   queryRefusalResponse         String?
   vectorSearchMode             String?                        @default("default")
+  policyComparisonMode         String                         @default("SYMMETRIC_A_B_CORE5_V1")
   router_id                    Int? // No relation to prevent whole table migration (SQLite limitation)
   workspace_users              workspace_users[]
   documents                    workspace_documents[]
@@ -402,6 +403,7 @@ model policy_comparison_sessions {
   threadId         Int?
   ownerKey         String
   conversationKey  String
+  comparisonMode   String                        @default("SYMMETRIC_A_B_CORE5_V1")
   status           String                        @default("DRAFT")
   progress         String?
   inputManifest    String?

@@ -31,6 +31,10 @@ const {
 const {
   workspaceDeletionProtection,
 } = require("../utils/middleware/workspaceDeletionProtection");
+const {
+  WorkspaceTemplateError,
+  buildWorkspaceCreationFields,
+} = require("../utils/workspaceTemplates");
 
 function adminEndpoints(app) {
   if (!app) return;
@@ -260,13 +264,19 @@ function adminEndpoints(app) {
     async (request, response) => {
       try {
         const user = await userFromSession(request, response);
-        const { name } = reqBody(request);
+        const { name, analysisMode = null } = reqBody(request);
+        const { fields } = buildWorkspaceCreationFields(analysisMode);
         const { workspace, message: error } = await Workspace.new(
           name,
-          user.id
+          user.id,
+          fields
         );
         response.status(200).json({ workspace, error });
       } catch (e) {
+        if (e instanceof WorkspaceTemplateError)
+          return response
+            .status(400)
+            .json({ workspace: null, error: e.message });
         console.error(e);
         response.sendStatus(500).end();
       }

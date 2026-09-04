@@ -100,15 +100,31 @@ describe("policy comparison worker contract", () => {
   });
 
   test("uses a release-bound resumable run and counts completed categories", () => {
-    expect(source).toContain("resumableRun({ sessionUuid, manifest })");
+    expect(source).toContain("resumableRun({");
+    expect(source).toContain("comparisonMode,");
     expect(source).toContain("run-contract.private.json");
     expect(source).toContain("completedCategoryViews(documentOutput)");
     expect(source).toContain("initialCompletedCategories");
     expect(source).toContain("resumedCategories");
-    expect(source).toContain("productProfile: PRODUCT_PROFILE");
-    expect(source).toContain("manifest?.schemaVersion !== 2");
+    expect(source).toContain("productProfile: manifest.productProfile");
+    expect(source).toContain("manifest?.schemaVersion !== 3");
     expect(source).toContain("enforceProductProfile: true");
     expect(source).not.toContain("const timestamp = new Date()");
+  });
+
+  test("routes the directed LF workflow through the controlled no-embedding path", () => {
+    expect(source).toContain("analyzeReferenceDocument");
+    expect(source).toContain("writeReferenceComparisonArtifacts");
+    const referenceRunner = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/utils/policyComparison/referenceRunner.js"
+      ),
+      "utf8"
+    );
+    expect(referenceRunner).toContain("buildCategoryOccurrenceWorksheet.cjs");
+    expect(referenceRunner).toContain("runPreparedEvidenceEvaluation.cjs");
+    expect(referenceRunner).not.toContain(".embeddings.");
   });
 
   test("archives the completed workbook before marking the session complete", () => {

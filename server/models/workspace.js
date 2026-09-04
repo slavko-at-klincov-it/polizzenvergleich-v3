@@ -7,6 +7,9 @@ const { v4: uuidv4 } = require("uuid");
 const { User } = require("./user");
 const { PromptHistory } = require("./promptHistory");
 const { SystemSettings } = require("./systemSettings");
+const {
+  normalizePolicyComparisonMode,
+} = require("../utils/policyComparison/modes");
 
 function isNullOrNaN(value) {
   if (value === null) return true;
@@ -30,6 +33,7 @@ function isNullOrNaN(value) {
  * @property {string} agentModel - The agent model of the workspace
  * @property {string} queryRefusalResponse - The query refusal response of the workspace
  * @property {string} vectorSearchMode - The vector search mode of the workspace
+ * @property {string} policyComparisonMode - The immutable policy comparison workflow selected at creation
  */
 
 const Workspace = {
@@ -218,11 +222,15 @@ const Workspace = {
     }
 
     try {
+      const policyComparisonMode = normalizePolicyComparisonMode(
+        additionalFields.policyComparisonMode
+      );
       const workspace = await prisma.workspaces.create({
         data: {
           name: this.validations.name(name),
           chatMode: "automatic",
           ...this.validateFields(additionalFields),
+          policyComparisonMode,
           slug,
         },
       });

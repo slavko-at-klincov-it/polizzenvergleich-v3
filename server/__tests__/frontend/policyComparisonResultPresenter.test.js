@@ -80,6 +80,41 @@ describe("policy comparison result presenter", () => {
     });
   });
 
+  test("presents directed LF counterpart outcomes without symmetric wording", () => {
+    const row = {
+      categoryId: "LF-VS-02",
+      pointDecision: {
+        outcome: "TEILWEISES_GEGENSTUECK",
+        reasonCode: "ONLY_PART_OF_REFERENCE_COMPONENTS_EVIDENCED_IN_B",
+        reason: "Nur ein Teil ist belegt.",
+        reviewRequired: true,
+        ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V1",
+      },
+    };
+    expect(presentPointDecision(row)).toMatchObject({
+      outcome: "TEILWEISES_GEGENSTUECK",
+      label: "Teilweises Gegenstück",
+      legacyFallback: false,
+    });
+    expect(
+      presentComparisonMetrics({
+        comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+        categories: [{ categoryView: "LF-VS", rows: [row] }],
+        totals: {
+          rows: 1,
+          sideBOnlyRows: 0,
+          customerReviewRequired: 1,
+          outcomes: { TEILWEISES_GEGENSTUECK: 1 },
+        },
+      })
+    ).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+      pointDecisions: { TEILWEISES_GEGENSTUECK: 1 },
+      storedMetricDiscrepancy: false,
+    });
+  });
+
   test("uses only the customer-review metric and never the legacy difference total", () => {
     expect(
       presentComparisonMetrics({

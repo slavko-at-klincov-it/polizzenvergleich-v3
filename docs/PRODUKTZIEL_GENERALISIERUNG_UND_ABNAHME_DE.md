@@ -1,13 +1,16 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 2. September 2026
+Stand: 4. September 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
 
 Das Produktziel ist **keine perfekte Sonderlösung für LF IMMO**. Ziel ist eine
 allgemeine, beleggebundene Analyse-Engine für zukünftige
-Gebäudeversicherungs-Vertragspakete unterschiedlicher Versicherer.
+Gebäudeversicherungs-Vertragspakete unterschiedlicher Versicherer. Die
+Bedienoberfläche bietet dafür zwei ausdrücklich getrennte Laufverträge: einen
+gerichteten LF-IMMO-Referenzvergleich und den vollständigen symmetrischen
+A/B-Vergleich.
 
 LF IMMO und WEVIG sind bekannte Entwicklungs- und Regressionsexemplare. Sie
 zeigen konkrete Fehler und erlauben reproduzierbare Vorher-/Nachher-Vergleiche.
@@ -30,14 +33,25 @@ allgemeinen und besonderen Bedingungen, Klauselverzeichnis sowie Feuer-,
 Sturm- oder anderen Nachträgen.
 
 Paket A und Paket B werden ausschließlich durch die Upload-Zuordnung des
-Benutzers gebildet. Beide Seiten sind gleichberechtigte
-Gebäudeversicherungs-Pakete. Ein Paket darf jede unterstützte Mischung aus
+Benutzers gebildet. Im vollständigen A/B-Modus sind beide Seiten
+gleichberechtigte Gebäudeversicherungs-Pakete. Ein Paket darf jede
+unterstützte Mischung aus
 Angeboten, Polizzen, Verträgen, Zusatzpolizzen, Zusatzverträgen, Nachträgen,
 Rahmenvereinbarungen und Bedingungen enthalten. Die Dokumentart darf einen
 gefundenen Inhalt weder allein abwerten noch einen Vergleich allein sperren.
 Sie bleibt als Herkunftsmetadatum sichtbar. Echte Unterschiede bei Inhalt,
 Wert, Scope, Bedingung, Variante, Version, Widerspruch oder Ersetzung bleiben
 entscheidungsrelevant.
+
+Im gerichteten LF-IMMO-Modus ist dagegen genau ein versioniertes
+LF-IMMO-Referenzdokument auf A zulässig. Zuerst entstehen ausschließlich die
+beleggebundenen A-Zeilen. Danach wird zu jeder A-Zeile im gesamten B-Paket
+nach dem Gegenstück gesucht. B darf ein bis neun Dokumente enthalten. Inhalte,
+die nur in B vorkommen, erzeugen in diesem Modus bewusst keine Ergebniszeile.
+Ein Nullfund bleibt vom ausdrücklichen Ausschluss getrennt. Das erste
+kontrollierte Profil umfasst zehn LF-orientierte Ansichten mit 35
+Referenzzeilen und behauptet noch keine vollständige Inventarisierung des
+gesamten LF-IMMO-Produkts.
 
 Die aktuelle Kundenansicht besitzt fünf fachliche Kategorien:
 

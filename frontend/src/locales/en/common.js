@@ -149,12 +149,11 @@ const TRANSLATIONS = {
   "new-workspace": {
     title: "New Workspace",
     placeholder: "My Workspace",
-    subtitle:
-      "Create a regular workspace and optionally select an analysis template.",
-    "template-title": "Analysis template",
+    subtitle: "Create a workspace and select the required analysis workflow.",
+    "template-title": "Analysis workflow",
     "template-hint":
-      "The selection sets the matching system prompt. Without a template, the AnythingLLM default prompt remains active.",
-    "template-default": "No analysis template (default prompt)",
+      "This selection permanently determines how document A and comparison documents B are evaluated.",
+    "template-default": "Select an analysis workflow",
     "settings-title": "Automatic workspace settings",
     "settings-chat":
       "Chat: System default · Chat mode · History 1 · Temperature 0",

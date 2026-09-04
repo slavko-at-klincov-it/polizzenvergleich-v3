@@ -16,6 +16,23 @@ const {
   PRODUCT_PROFILE,
 } = require("../utils/policyComparison/productContract");
 const {
+  POLICY_COMPARISON_MODE,
+  normalizePolicyComparisonMode,
+} = require("../utils/policyComparison/modes");
+const {
+  LF_REFERENCE_PROFILE,
+  categoryCatalogs,
+} = require("../utils/policyComparison/lfReferenceProfile");
+const {
+  analyzeReferenceDocument,
+  completedReferenceCategoryViews,
+  prepareReferenceContracts,
+} = require("../utils/policyComparison/referenceRunner");
+const {
+  validateReferenceComparison,
+  writeReferenceComparisonArtifacts,
+} = require("../utils/policyComparison/referenceResultBuilder");
+const {
   archiveComparisonWorkbook,
 } = require("../utils/policyComparison/workbookArchive");
 const {
@@ -28,7 +45,6 @@ const {
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
-const CATEGORY_COUNT = CATEGORY_ORDER.length;
 const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.6-35b-a3b";
 const MODEL_TOKEN_LIMIT = Number(
   process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
@@ -69,11 +85,12 @@ function completedCategoryViews(outputDirectory) {
   });
 }
 
-function resumableRun({ sessionUuid, manifest }) {
+function resumableRun({ sessionUuid, manifest, comparisonMode }) {
   const contract = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
-    productProfile: PRODUCT_PROFILE,
+    comparisonMode,
+    productProfile: manifest.productProfile,
     configuration: {
       model: MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
@@ -205,16 +222,35 @@ async function main() {
   if (session.status !== "QUEUED")
     throw new Error(`COMPARISON_SESSION_NOT_QUEUED:${session.status}`);
   const manifest = JSON.parse(session.inputManifest || "null");
+  const comparisonMode = normalizePolicyComparisonMode(
+    manifest?.comparisonMode || session.comparisonMode
+  );
+  const expectedProfile =
+    comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+      ? LF_REFERENCE_PROFILE
+      : PRODUCT_PROFILE;
   if (
-    manifest?.schemaVersion !== 2 ||
+    manifest?.schemaVersion !== 3 ||
     manifest?.sessionUuid !== sessionUuid ||
     JSON.stringify(manifest?.productProfile) !==
-      JSON.stringify(PRODUCT_PROFILE) ||
+      JSON.stringify(expectedProfile) ||
+    manifest?.comparisonMode !== comparisonMode ||
     !Array.isArray(manifest.documents)
   )
     throw new Error("COMPARISON_INPUT_MANIFEST_INVALID");
 
-  const { runRoot, signature } = resumableRun({ sessionUuid, manifest });
+  const referenceMode =
+    comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
+  const categoryOrder = referenceMode
+    ? categoryCatalogs().map(({ categoryView }) => categoryView)
+    : CATEGORY_ORDER;
+  const categoryCount = categoryOrder.length;
+  const { runRoot, signature } = resumableRun({
+    sessionUuid,
+    manifest,
+    comparisonMode,
+  });
+  const contracts = referenceMode ? prepareReferenceContracts(runRoot) : null;
   writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
   const plannedRuns = manifest.documents.map((document) => ({
     document,
@@ -226,7 +262,10 @@ async function main() {
   }));
   const resumedCategories = plannedRuns.reduce(
     (sum, { outputDirectory }) =>
-      sum + completedCategoryViews(outputDirectory).length,
+      sum +
+      (referenceMode
+        ? completedReferenceCategoryViews(outputDirectory, contracts).length
+        : completedCategoryViews(outputDirectory).length),
     0
   );
 
@@ -238,7 +277,7 @@ async function main() {
       completedDocuments: 0,
       totalDocuments: manifest.documents.length,
       completedCategories: resumedCategories,
-      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      totalCategories: manifest.documents.length * categoryCount,
       resumedCategories,
       currentDocument: null,
     }),
@@ -258,14 +297,16 @@ async function main() {
       throw new Error(`COMPARISON_SOURCE_MISSING:${document.uuid}`);
     if ((await sha256File(sourceFile)) !== document.sha256)
       throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
-    const completedBeforeRun = completedCategoryViews(documentOutput).length;
+    const completedBeforeRun = referenceMode
+      ? completedReferenceCategoryViews(documentOutput, contracts).length
+      : completedCategoryViews(documentOutput).length;
     await updateSession(session.id, {
       progress: JSON.stringify({
         phase: "ANALYZING_DOCUMENTS",
         completedDocuments: index,
         totalDocuments: manifest.documents.length,
-        completedCategories: index * CATEGORY_COUNT + completedBeforeRun,
-        totalCategories: manifest.documents.length * CATEGORY_COUNT,
+        completedCategories: index * categoryCount + completedBeforeRun,
+        totalCategories: manifest.documents.length * categoryCount,
         resumedCategories,
         currentCategory: null,
         currentDocument: {
@@ -276,33 +317,49 @@ async function main() {
       }),
     });
     let progressUpdates = Promise.resolve();
-    await runDocument({
-      file: sourceFile,
-      documentStatus: document.documentStatus,
-      outputDirectory: documentOutput,
-      logFile: path.join(runRoot, "worker.log"),
-      initialCompletedCategories: completedCategoryViews(documentOutput),
-      onCategoryComplete: (categoryView, completedInDocument) => {
-        progressUpdates = progressUpdates.then(() =>
-          updateSession(session.id, {
-            progress: JSON.stringify({
-              phase: "ANALYZING_DOCUMENTS",
-              completedDocuments: index,
-              totalDocuments: manifest.documents.length,
-              completedCategories: index * CATEGORY_COUNT + completedInDocument,
-              totalCategories: manifest.documents.length * CATEGORY_COUNT,
-              resumedCategories,
-              currentCategory: categoryView,
-              currentDocument: {
-                uuid: document.uuid,
-                side: document.side,
-                originalName: document.originalName,
-              },
-            }),
-          })
-        );
-      },
-    });
+    const onCategoryComplete = (categoryView, completedInDocument) => {
+      const completedCount = Number.isInteger(completedInDocument)
+        ? completedInDocument
+        : categoryOrder.indexOf(categoryView) + 1;
+      progressUpdates = progressUpdates.then(() =>
+        updateSession(session.id, {
+          progress: JSON.stringify({
+            phase: "ANALYZING_DOCUMENTS",
+            completedDocuments: index,
+            totalDocuments: manifest.documents.length,
+            completedCategories: index * categoryCount + completedCount,
+            totalCategories: manifest.documents.length * categoryCount,
+            resumedCategories,
+            currentCategory: categoryView,
+            currentDocument: {
+              uuid: document.uuid,
+              side: document.side,
+              originalName: document.originalName,
+            },
+          }),
+        })
+      );
+    };
+    if (referenceMode)
+      await analyzeReferenceDocument({
+        file: sourceFile,
+        documentStatus: document.documentStatus,
+        outputDirectory: documentOutput,
+        logFile: path.join(runRoot, "worker.log"),
+        contracts,
+        model: MODEL,
+        modelTokenLimit: MODEL_TOKEN_LIMIT,
+        onCategoryComplete,
+      });
+    else
+      await runDocument({
+        file: sourceFile,
+        documentStatus: document.documentStatus,
+        outputDirectory: documentOutput,
+        logFile: path.join(runRoot, "worker.log"),
+        initialCompletedCategories: completedCategoryViews(documentOutput),
+        onCategoryComplete,
+      });
     await progressUpdates;
     documentRuns.push({ document, outputDirectory: documentOutput });
   }
@@ -312,21 +369,28 @@ async function main() {
       phase: "BUILDING_COMPARISON",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
-      completedCategories: manifest.documents.length * CATEGORY_COUNT,
-      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      completedCategories: manifest.documents.length * categoryCount,
+      totalCategories: manifest.documents.length * categoryCount,
       resumedCategories,
       currentCategory: null,
       currentDocument: null,
     }),
   });
   const resultDirectory = path.join(runRoot, "result");
-  const artifacts = await writeComparisonArtifacts({
-    documentRuns,
-    outputDirectory: resultDirectory,
-    metadata: { sessionUuid, runSignature: signature },
-    enforceProductProfile: true,
-  });
-  validateCustomerComparisonFile(artifacts.jsonFile);
+  const artifacts = referenceMode
+    ? await writeReferenceComparisonArtifacts({
+        documentRuns,
+        outputDirectory: resultDirectory,
+        metadata: { sessionUuid, runSignature: signature },
+      })
+    : await writeComparisonArtifacts({
+        documentRuns,
+        outputDirectory: resultDirectory,
+        metadata: { sessionUuid, runSignature: signature },
+        enforceProductProfile: true,
+      });
+  if (referenceMode) validateReferenceComparison(artifacts.result);
+  else validateCustomerComparisonFile(artifacts.jsonFile);
   const archivedWorkbook = archiveComparisonWorkbook({
     workbookFile: artifacts.workbookFile,
     sessionUuid,
@@ -343,8 +407,8 @@ async function main() {
       phase: "COMPLETED",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
-      completedCategories: manifest.documents.length * CATEGORY_COUNT,
-      totalCategories: manifest.documents.length * CATEGORY_COUNT,
+      completedCategories: manifest.documents.length * categoryCount,
+      totalCategories: manifest.documents.length * categoryCount,
       resumedCategories,
       currentCategory: null,
       currentDocument: null,

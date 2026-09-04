@@ -9,7 +9,23 @@ const OUTCOME_LABELS = Object.freeze({
     "In beiden Polizzen keine passende Vertragsregelung gefunden",
   NICHT_VERGLEICHBAR: "Nicht vergleichbar",
   UNKLAR: "Unklar",
+  GEGENSTUECK_GEFUNDEN: "Gegenstück gefunden",
+  TEILWEISES_GEGENSTUECK: "Teilweises Gegenstück",
+  KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE:
+    "Kein Gegenstück nach kontrollierter Suche",
+  REFERENZZEILE_UNKLAR: "LF-Referenzzeile unklar",
+  GEGENSTUECK_UNKLAR: "Gegenstück unklar",
 });
+
+const SYMMETRIC_OUTCOMES = Object.freeze([
+  "VORTEIL_A",
+  "VORTEIL_B",
+  "DOKUMENTATIONSUNTERSCHIED",
+  "GLEICHWERTIG",
+  "KEIN_DOKUMENTIERTER_VORTEIL",
+  "NICHT_VERGLEICHBAR",
+  "UNKLAR",
+]);
 
 const REVIEW_REASON_LABELS = Object.freeze({
   PACKAGE_REVIEW_STATUS_BLOCKS_DECISION:
@@ -22,6 +38,12 @@ const REVIEW_REASON_LABELS = Object.freeze({
   ANY_COMPONENT_EVIDENCE_INCOMPLETE:
     "Erforderliche alternative Teilpunkte unvollständig",
   CONDITIONAL_OR_EXCEPTION_SCOPE: "Bedingung oder Ausnahmebereich ungeklärt",
+  REFERENCE_ROW_NOT_FULLY_EVIDENCED:
+    "LF-Referenzzeile nicht vollständig belegt",
+  ONLY_PART_OF_REFERENCE_COMPONENTS_EVIDENCED_IN_B:
+    "Gegenstück in B nur teilweise belegt",
+  COUNTERPART_EVIDENCE_CONFLICTING_OR_UNRESOLVED:
+    "Gegenstück in B widersprüchlich oder ungeklärt",
 });
 
 function presentPointDecision(row) {
@@ -59,8 +81,38 @@ function presentComparisonMetrics(result) {
     ...presentPointDecision(row),
     rowKey: `${row.categoryView}:${row.categoryId}`,
   }));
+  if (result?.comparisonMode === "LF_IMMO_REFERENCE_A_TO_B_V1") {
+    const customerReviewRequired = presentedRows.filter(
+      ({ reviewRequired }) => reviewRequired === true
+    ).length;
+    const reviewCounts = presentedRows
+      .filter(({ reviewRequired }) => reviewRequired === true)
+      .reduce((counts, { reasonCode }) => {
+        const key = String(reasonCode || "REASON_NOT_AVAILABLE");
+        counts[key] = (counts[key] || 0) + 1;
+        return counts;
+      }, {});
+    return {
+      rows: rows.length,
+      customerReviewRequired,
+      pointDecisions: { ...(totals.outcomes || {}) },
+      pointDecisionRowKeysByOutcome: {},
+      customerReviewBreakdown: Object.entries(reviewCounts).map(
+        ([reasonCode, count]) => ({
+          reasonCode,
+          label: REVIEW_REASON_LABELS[reasonCode] || reasonCode,
+          count,
+        })
+      ),
+      legacyFallback: false,
+      storedMetricDiscrepancy:
+        Number(totals.rows) !== rows.length ||
+        Number(totals.customerReviewRequired) !== customerReviewRequired ||
+        Number(totals.sideBOnlyRows) !== 0,
+    };
+  }
   const pointDecisionRowKeysByOutcome = Object.fromEntries(
-    Object.keys(OUTCOME_LABELS).map((outcome) => [
+    SYMMETRIC_OUTCOMES.map((outcome) => [
       outcome,
       presentedRows
         .filter((row) => row.outcome === outcome)
@@ -98,7 +150,7 @@ function presentComparisonMetrics(result) {
     rows.length > 0 &&
     (Number(totals.rows) !== rows.length ||
       storedCustomerReview !== customerReviewRequired ||
-      Object.keys(OUTCOME_LABELS).some(
+      SYMMETRIC_OUTCOMES.some(
         (outcome) =>
           Number(storedPointDecisions[outcome]) !== pointDecisions[outcome]
       ));

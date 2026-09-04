@@ -5739,3 +5739,43 @@ Komponentenverträge freigegeben.
 Kanonische Messung, Fehleranalyse und Beweisgrenze:
 `../policy-project-documentation/POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`,
 Abschnitt 53.
+
+## 120. Zwei persistente Workspace-Analyseverfahren und kontrollierter LF-A→B-Pfad
+
+Am 4. September 2026 wurde die Nutzerkorrektur als neuer Produkt- und
+Routingvertrag umgesetzt: Der Dialog „Neues Workspace“ zeigt keine einzelnen
+Fachvorlagen mehr, sondern ausschließlich den gerichteten
+`LF_IMMO_REFERENCE_A_TO_B_V1` und den bestehenden vollständigen
+`SYMMETRIC_A_B_CORE5_V1`. Die Auswahl wird am Workspace und an jeder
+Vergleichssitzung gespeichert; bestehende Workspaces migrieren kompatibel auf
+den symmetrischen V3.6.0-Modus.
+
+Der gerichtete Modus erzwingt genau ein LF-Referenzdokument auf A und erlaubt
+bis zu neun B-Dokumente. Sein Laufvertrag verwendet keine Embeddings. Er nutzt
+PageMap, kontrollierte Occurrence-Worksheets, Qwen-Kandidatentriage,
+Prepared-Evidence-Wirkungsprüfung und servereigene Quellen aus dem
+V3.6.0-Pfad. Der eigene Ergebnis-Builder iteriert ausschließlich über die 35
+versionierten A-Referenzzeilen in zehn LF-Ansichten; `sideBOnlyRows` muss null
+bleiben. Mehrteilige Punkte wie Nebengebäude/Limit/Ausschluss,
+Glasbruchkosten und Umweltdeckung/Limit/Selbstbehalt wurden in verpflichtende
+typisierte Komponenten getrennt.
+
+```text
+LF-PR   Produktgrundlage und Geltungsvoraussetzungen                 2 Zeilen
+LF-VS   Versicherte Gebäude, Sachen und Grundstücksbestandteile      4 Zeilen
+LF-KO   Spartenübergreifende Kosten und Ertragsausfälle              3 Zeilen
+LF-FE   Feuerversicherung                                             4 Zeilen
+LF-ST   Sturm und Elementargefahren                                   4 Zeilen
+LF-LW   Leitungswasser und Deckungsvarianten                          5 Zeilen
+LF-GL   Glasbruch                                                     3 Zeilen
+LF-HP   Gebäude- und Grundstückshaftpflicht                           3 Zeilen
+LF-OK   Ökoschutz, zeitliche und örtliche Geltung                     2 Zeilen
+LF-AV   Allgemeine Entschädigungs- und Vertragsbestimmungen           5 Zeilen
+SUMME                                                               35 Zeilen
+```
+
+Beweisgrenze: Die 35 Zeilen sind ein erster kontrollierter Produktvertrag und
+noch kein vollständiges LF-Inventar. Die Implementierung beweist vor dem
+Mac-Studio-Gate weder fachliche Trefferqualität noch Laufzeit oder
+Generalisierung. Der frühere Dinghy-/Top-5-Pilot bleibt historische
+QA-Evidenz und wird vom produktiven Referenzpfad nicht aufgerufen.

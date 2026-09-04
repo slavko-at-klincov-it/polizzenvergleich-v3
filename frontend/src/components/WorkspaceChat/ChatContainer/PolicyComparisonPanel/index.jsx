@@ -20,6 +20,8 @@ const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
 const { presentComparisonMetrics, presentPointDecision } =
   policyComparisonResultPresenter;
 
+const LF_REFERENCE_MODE = "LF_IMMO_REFERENCE_A_TO_B_V1";
+
 const ROLE_LABELS = {
   MAIN_POLICY: "Hauptpolizze",
   SUPPLEMENT: "Zusatzvertrag",
@@ -115,6 +117,10 @@ export default function PolicyComparisonPanel({
   const chatUploadActive = chatFiles.length > 0;
   const documents = session?.documents || [];
   const totalCount = documents.length;
+  const referenceMode =
+    (session?.comparisonMode || options.mode?.id) === LF_REFERENCE_MODE;
+  const sideLimit = (side) =>
+    session?.limits?.[side] || options.mode?.[`maxDocuments${side}`] || 9;
 
   async function toggleExpanded() {
     if (expanded) {
@@ -143,8 +149,13 @@ export default function PolicyComparisonPanel({
     const pdfs = Array.from(selectedFiles || []);
     if (!pdfs.length) return;
     const existing = documents.filter((document) => document.side === side);
-    if (existing.length + pdfs.length > (session.limits?.perSide || 9)) {
-      showToast("Pro Paket sind höchstens neun Dokumente zulässig.", "error");
+    if (existing.length + pdfs.length > sideLimit(side)) {
+      showToast(
+        side === "A" && referenceMode
+          ? "Im LF-IMMO-Referenzvergleich ist genau ein Referenzdokument A zulässig."
+          : "Pro Paket sind höchstens neun Dokumente zulässig.",
+        "error"
+      );
       return;
     }
     setBusy(true);
@@ -246,7 +257,9 @@ export default function PolicyComparisonPanel({
       });
       setSession(data.session);
       showToast(
-        "Der Vergleich der fünf Kernkategorien wurde gestartet.",
+        referenceMode
+          ? "Der gerichtete LF-IMMO-Referenzvergleich wurde gestartet."
+          : "Der vollständige Vergleich der fünf Kernkategorien wurde gestartet.",
         "success"
       );
     } catch (error) {
@@ -266,7 +279,12 @@ export default function PolicyComparisonPanel({
         threadSlug,
         sessionUuid: session.uuid,
       });
-      saveAs(blob, "Gesamtvergleich.xlsx");
+      saveAs(
+        blob,
+        referenceMode
+          ? "LF-IMMO-Referenzvergleich.xlsx"
+          : "Gesamtvergleich.xlsx"
+      );
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -305,7 +323,9 @@ export default function PolicyComparisonPanel({
           <Scales size={20} className="shrink-0 text-sky-400" weight="bold" />
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-white light:text-slate-900">
-              Polizzenvergleich A/B
+              {referenceMode
+                ? "LF-IMMO-Referenzvergleich A → B"
+                : "Vollständiger Polizzenvergleich A/B"}
             </span>
             <span className="block truncate text-xs text-zinc-400 light:text-slate-500">
               {loading
@@ -335,7 +355,12 @@ export default function PolicyComparisonPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <PackageColumn
               side="A"
-              title="Dokumentpaket A"
+              title={
+                options.mode?.sideALabel ||
+                (referenceMode
+                  ? "LF-IMMO-Referenzdokument A"
+                  : "Dokumentpaket A")
+              }
               documents={documents.filter(({ side }) => side === "A")}
               roleOptions={options.documentRoles}
               statusOptions={options.documentStatuses}
@@ -343,10 +368,11 @@ export default function PolicyComparisonPanel({
               onFiles={(files) => uploadFiles("A", files)}
               onUpdate={updateDocument}
               onRemove={removeDocument}
+              maxDocuments={sideLimit("A")}
             />
             <PackageColumn
               side="B"
-              title="Dokumentpaket B"
+              title={options.mode?.sideBLabel || "Dokumentpaket B"}
               documents={documents.filter(({ side }) => side === "B")}
               roleOptions={options.documentRoles}
               statusOptions={options.documentStatuses}
@@ -354,12 +380,14 @@ export default function PolicyComparisonPanel({
               onFiles={(files) => uploadFiles("B", files)}
               onUpdate={updateDocument}
               onRemove={removeDocument}
+              maxDocuments={sideLimit("B")}
             />
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] leading-4 text-zinc-400 light:text-slate-500 max-w-[490px]">
-              Die PDFs bleiben außerhalb des Workspace-Index. Rolle und
-              Geltungsstatus werden pro Quelldokument gespeichert.
+              {referenceMode
+                ? "Die 35 LF-IMMO-Referenzzeilen aus A steuern die Suche in B. Inhalte ausschließlich in B erzeugen keine Ergebniszeile."
+                : "Die PDFs bleiben außerhalb des Workspace-Index. Rolle und Geltungsstatus werden pro Quelldokument gespeichert."}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -400,7 +428,9 @@ export default function PolicyComparisonPanel({
                   }
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  5 Kernkategorien vergleichen
+                  {referenceMode
+                    ? "35 LF-Referenzzeilen A → B prüfen"
+                    : "5 Kernkategorien vollständig vergleichen"}
                 </button>
               )}
             </div>
@@ -466,6 +496,7 @@ function ComparisonProgress({ progress }) {
 
 function ComparisonResult({ result }) {
   const customerMetrics = presentComparisonMetrics(result);
+  const referenceMode = result.comparisonMode === LF_REFERENCE_MODE;
   const [activeCategory, setActiveCategory] = useState(
     result.categories?.[0]?.categoryView || "VS"
   );
@@ -476,7 +507,8 @@ function ComparisonResult({ result }) {
     <div className="mt-3 rounded-xl border border-emerald-500/30 overflow-hidden">
       <div className="px-3 py-2 bg-emerald-500/10">
         <p className="text-xs font-semibold text-emerald-200 light:text-emerald-800">
-          Technisches Ergebnis · {customerMetrics.rows} Kategorienzeilen
+          Technisches Ergebnis · {result.categories?.length || 0} Kategorien ·{" "}
+          {customerMetrics.rows} analysierte Zeilen
         </p>
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
           {result.proofLimit}
@@ -512,7 +544,21 @@ function ComparisonResult({ result }) {
             )}
           </>
         )}
-        {customerMetrics.pointDecisions && (
+        {referenceMode ? (
+          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+            Gegenstücke: gefunden{" "}
+            {result.totals?.outcomes?.GEGENSTUECK_GEFUNDEN || 0}
+            {" · "}teilweise{" "}
+            {result.totals?.outcomes?.TEILWEISES_GEGENSTUECK || 0}
+            {" · "}nicht gefunden{" "}
+            {result.totals?.outcomes
+              ?.KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE || 0}
+            {" · "}unklar{" "}
+            {(result.totals?.outcomes?.GEGENSTUECK_UNKLAR || 0) +
+              (result.totals?.outcomes?.REFERENZZEILE_UNKLAR || 0)}
+            {" · "}B-only-Zeilen 0
+          </p>
+        ) : customerMetrics.pointDecisions ? (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             Punktentscheidungen: A{" "}
             {customerMetrics.pointDecisions.VORTEIL_A || 0} · B{" "}
@@ -526,13 +572,14 @@ function ComparisonResult({ result }) {
             {customerMetrics.pointDecisions.NICHT_VERGLEICHBAR || 0} · unklar{" "}
             {customerMetrics.pointDecisions.UNKLAR || 0}
           </p>
-        )}
+        ) : null}
       </div>
       <div className="flex gap-1 overflow-x-auto p-2 border-t border-zinc-700 light:border-slate-200">
-        {result.categories?.map(({ categoryView }) => (
+        {result.categories?.map(({ categoryView, categoryName, rows }) => (
           <button
             type="button"
             key={categoryView}
+            title={categoryName}
             onClick={() => setActiveCategory(categoryView)}
             className={`shrink-0 rounded-md px-2.5 py-1 text-[11px] font-medium ${
               categoryView === activeCategory
@@ -540,7 +587,7 @@ function ComparisonResult({ result }) {
                 : "bg-zinc-800 light:bg-slate-100 text-zinc-300 light:text-slate-600"
             }`}
           >
-            {categoryView}
+            {categoryView} ({rows?.length || 0})
           </button>
         ))}
       </div>
@@ -550,9 +597,15 @@ function ComparisonResult({ result }) {
             <tr>
               <th className="p-2 text-left">ID</th>
               <th className="p-2 text-left">Kategorie</th>
-              <th className="p-2 text-left">Paket A</th>
-              <th className="p-2 text-left">Paket B</th>
-              <th className="p-2 text-left">Punktentscheidung</th>
+              <th className="p-2 text-left">
+                {referenceMode ? "LF-Referenz A" : "Paket A"}
+              </th>
+              <th className="p-2 text-left">
+                {referenceMode ? "Gegenstück(e) B" : "Paket B"}
+              </th>
+              <th className="p-2 text-left">
+                {referenceMode ? "Gegenstückstatus" : "Punktentscheidung"}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -621,6 +674,7 @@ function PackageColumn({
   onFiles,
   onUpdate,
   onRemove,
+  maxDocuments = 9,
 }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -639,7 +693,7 @@ function PackageColumn({
           {title}
         </h3>
         <span className="text-[11px] text-zinc-400 light:text-slate-500">
-          {documents.length}/9
+          {documents.length}/{maxDocuments}
         </span>
       </div>
       <div className="space-y-2">
@@ -673,7 +727,7 @@ function PackageColumn({
           setDragging(false);
         }}
         onDrop={handleDrop}
-        disabled={disabled || documents.length >= 9}
+        disabled={disabled || documents.length >= maxDocuments}
         className={`mt-2 w-full min-h-[64px] flex items-center justify-center gap-2 rounded-lg border border-dashed text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
           dragging
             ? "border-sky-400 bg-sky-500/10 text-sky-300"
@@ -687,9 +741,9 @@ function PackageColumn({
         ref={inputRef}
         type="file"
         accept="application/pdf,.pdf"
-        multiple
+        multiple={maxDocuments > 1}
         hidden
-        disabled={disabled || documents.length >= 9}
+        disabled={disabled || documents.length >= maxDocuments}
         onChange={(event) => {
           onFiles(event.target.files);
           event.target.value = "";

@@ -4,6 +4,15 @@ const { safeJsonParse } = require("../utils/http");
 const {
   PRODUCT_PROFILE,
 } = require("../utils/policyComparison/productContract");
+const {
+  DEFAULT_POLICY_COMPARISON_MODE,
+  POLICY_COMPARISON_MODE,
+  normalizePolicyComparisonMode,
+  policyComparisonMode,
+} = require("../utils/policyComparison/modes");
+const {
+  LF_REFERENCE_PROFILE,
+} = require("../utils/policyComparison/lfReferenceProfile");
 
 const SIDES = Object.freeze(["A", "B"]);
 const DOCUMENT_ROLES = Object.freeze([
@@ -51,12 +60,20 @@ function publicSession(session) {
     createdAt: session.createdAt,
     lastUpdatedAt: session.lastUpdatedAt,
     resultAvailable: Boolean(session.resultPath),
+    comparisonMode: normalizePolicyComparisonMode(session.comparisonMode),
     documents,
     counts: {
       A: documents.filter(({ side }) => side === "A").length,
       B: documents.filter(({ side }) => side === "B").length,
     },
-    limits: { perSide: MAX_DOCUMENTS_PER_SIDE },
+    limits: (() => {
+      const mode = policyComparisonMode(session.comparisonMode);
+      return {
+        perSide: MAX_DOCUMENTS_PER_SIDE,
+        A: mode.maxDocumentsA,
+        B: mode.maxDocumentsB,
+      };
+    })(),
   };
 }
 
@@ -86,6 +103,7 @@ const PolicyComparison = {
     threadId = null,
     ownerKey,
     conversationKey,
+    comparisonMode = DEFAULT_POLICY_COMPARISON_MODE,
   }) {
     const where = { workspaceId, ownerKey, conversationKey };
     const existing = await prisma.policy_comparison_sessions.findFirst({
@@ -103,6 +121,7 @@ const PolicyComparison = {
           threadId,
           ownerKey,
           conversationKey,
+          comparisonMode: normalizePolicyComparisonMode(comparisonMode),
         },
         include: includeDocuments,
       });
@@ -153,7 +172,9 @@ const PolicyComparison = {
       const existingCount = await tx.policy_comparison_documents.count({
         where: { sessionId: session.id, side },
       });
-      if (existingCount >= MAX_DOCUMENTS_PER_SIDE)
+      const mode = policyComparisonMode(currentSession.comparisonMode);
+      const sideLimit = side === "A" ? mode.maxDocumentsA : mode.maxDocumentsB;
+      if (existingCount >= sideLimit)
         throw new Error("COMPARISON_SIDE_LIMIT_REACHED");
 
       const document = await tx.policy_comparison_documents.create({
@@ -323,11 +344,29 @@ const PolicyComparison = {
       ).length;
       if (countA === 0 || countB === 0)
         throw new Error("COMPARISON_BOTH_SIDES_REQUIRED");
+      const comparisonMode = normalizePolicyComparisonMode(
+        current.comparisonMode
+      );
+      if (
+        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
+        countA !== 1
+      )
+        throw new Error("COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED");
+      if (
+        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
+        current.documents.find(({ side }) => side === "A")?.sha256 !==
+          LF_REFERENCE_PROFILE.sourceProduct.documentSha256
+      )
+        throw new Error("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
       const inputManifest = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         sessionUuid: current.uuid,
         queuedAt: new Date().toISOString(),
-        productProfile: PRODUCT_PROFILE,
+        comparisonMode,
+        productProfile:
+          comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B
+            ? PRODUCT_PROFILE
+            : LF_REFERENCE_PROFILE,
         documents: current.documents.map((document) => ({
           uuid: document.uuid,
           side: document.side,

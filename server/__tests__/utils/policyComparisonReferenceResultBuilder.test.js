@@ -1,0 +1,212 @@
+const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const {
+  categoryCatalogs,
+} = require("../../utils/policyComparison/lfReferenceProfile");
+const {
+  REFERENCE_OUTCOME,
+  buildReferenceComparisonResult,
+  validateReferenceComparison,
+} = require("../../utils/policyComparison/referenceResultBuilder");
+
+function document(uuid, side, position) {
+  return {
+    uuid,
+    side,
+    position,
+    role: position === 0 ? "MAIN_POLICY" : "SUPPLEMENT",
+    documentStatus: "ACTIVE",
+    originalName: `${uuid}.pdf`,
+    sha256: crypto.createHash("sha256").update(uuid).digest("hex"),
+  };
+}
+
+function row(requirement, found) {
+  return {
+    categoryId: requirement.id,
+    stage: "K",
+    categoryName: requirement.label,
+    documentedContent: found
+      ? `Belegter Inhalt ${requirement.id}`
+      : "keine belegte Fundstelle gefunden",
+    coverage: found ? "Ja" : "Nicht feststellbar",
+    coverageAmount: "Nicht feststellbar",
+    source: found
+      ? "PDF-Seite 1: „belegter Inhalt“"
+      : "keine belegte Fundstelle gefunden",
+    reviewStatus: found ? "BELEGT" : "UNGEKLÄRT",
+  };
+}
+
+function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
+  const outputDirectory = path.join(root, sourceDocument.uuid);
+  for (const { categoryView, catalog } of categoryCatalogs()) {
+    const categoryRoot = path.join(outputDirectory, categoryView);
+    const resultRoot = path.join(categoryRoot, "result");
+    const effectsRoot = path.join(categoryRoot, "effects");
+    fs.mkdirSync(resultRoot, { recursive: true });
+    fs.mkdirSync(effectsRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(resultRoot, "rows.private.json"),
+      JSON.stringify(
+        catalog.requirements.map((requirement) =>
+          row(requirement, foundRequirementIds.has(requirement.id))
+        )
+      )
+    );
+    fs.writeFileSync(
+      path.join(effectsRoot, "materialized.private.json"),
+      JSON.stringify({
+        judgements: catalog.requirements.flatMap((requirement) =>
+          requirement.components.map((component) => ({
+            requirementId: requirement.id,
+            componentId: component.id,
+            evidencePresence: foundRequirementIds.has(requirement.id)
+              ? "FOUND"
+              : "NOT_FOUND",
+            coverageEffect: foundRequirementIds.has(requirement.id)
+              ? "INCLUDED"
+              : "UNKNOWN",
+            conflictState: "NONE",
+          }))
+        ),
+      })
+    );
+  }
+  return { document: sourceDocument, outputDirectory };
+}
+
+describe("directed LF reference result builder", () => {
+  let root;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "lf-reference-result-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test("creates only A-owned rows and never discovers B-only rows", () => {
+    const firstRequirement = categoryCatalogs()[0].catalog.requirements[0];
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const runs = [
+      writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+      writeRun(
+        root,
+        document("counterpart-b1", "B", 0),
+        new Set([firstRequirement.id])
+      ),
+      writeRun(root, document("counterpart-b2", "B", 1)),
+    ];
+
+    const result = buildReferenceComparisonResult(runs, {
+      sessionUuid: "synthetic-session",
+      runSignature: "a".repeat(64),
+    });
+
+    expect(() => validateReferenceComparison(result)).not.toThrow();
+    expect(result.totals).toMatchObject({
+      categories: 10,
+      rows: 35,
+      referenceRowsAnalyzed: 35,
+      sideBOnlyRows: 0,
+      outcomes: {
+        [REFERENCE_OUTCOME.FOUND]: 1,
+        [REFERENCE_OUTCOME.NOT_FOUND]: 34,
+      },
+    });
+    expect(result.categories[0].rows[0]).toMatchObject({
+      categoryId: "LF-PR-01",
+      pointDecision: { outcome: REFERENCE_OUTCOME.FOUND },
+      packageB: {
+        contributors: [
+          expect.objectContaining({ documentUuid: "counterpart-b1" }),
+        ],
+      },
+    });
+  });
+
+  test("fails closed when an additional result row is injected", () => {
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        writeRun(root, document("counterpart-b", "B", 0)),
+      ],
+      {}
+    );
+    result.categories[0].rows.push({
+      ...result.categories[0].rows[0],
+      categoryId: "B-ONLY-01",
+    });
+    expect(() => validateReferenceComparison(result)).toThrow(
+      "REFERENCE_RESULT_ROW_SET_INVALID"
+    );
+  });
+
+  test("does not report a found counterpart when B documents conflict", () => {
+    const firstRequirement = categoryCatalogs()[0].catalog.requirements[0];
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const left = writeRun(
+      root,
+      document("counterpart-left", "B", 0),
+      new Set([firstRequirement.id])
+    );
+    const right = writeRun(
+      root,
+      document("counterpart-right", "B", 1),
+      new Set([firstRequirement.id])
+    );
+    const rightRowsFile = path.join(
+      right.outputDirectory,
+      categoryCatalogs()[0].categoryView,
+      "result",
+      "rows.private.json"
+    );
+    const rightRows = JSON.parse(fs.readFileSync(rightRowsFile, "utf8"));
+    rightRows[0].coverage = "Nein";
+    fs.writeFileSync(rightRowsFile, JSON.stringify(rightRows));
+    const rightEffectsFile = path.join(
+      right.outputDirectory,
+      categoryCatalogs()[0].categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const rightEffects = JSON.parse(fs.readFileSync(rightEffectsFile, "utf8"));
+    rightEffects.judgements
+      .filter(({ requirementId }) => requirementId === firstRequirement.id)
+      .forEach((judgement) => {
+        judgement.coverageEffect = "EXCLUDED";
+      });
+    fs.writeFileSync(rightEffectsFile, JSON.stringify(rightEffects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        left,
+        right,
+      ],
+      {}
+    );
+
+    expect(result.categories[0].rows[0]).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.UNCLEAR },
+      packageB: { reviewStatus: "WIDERSPRÜCHLICH" },
+    });
+  });
+});
