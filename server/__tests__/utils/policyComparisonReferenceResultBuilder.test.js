@@ -593,7 +593,7 @@ describe("directed LF reference result builder", () => {
 
     expect(rowResult).toMatchObject({
       pointDecision: {
-        outcome: REFERENCE_OUTCOME.FULL,
+        outcome: REFERENCE_OUTCOME.FOUND,
         reviewRequired: false,
       },
       packageB: { reviewStatus: "BELEGT" },
