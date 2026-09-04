@@ -4,6 +4,9 @@ const {
 const {
   selectionDigest,
 } = require("../../../utils/policyAnalysis/targetRequirementSelection");
+const {
+  requirementSearchContractDigest,
+} = require("../../../utils/policyAnalysis/coverageOnlyCertificationContract");
 
 const DOCUMENT = Object.freeze({
   uuid: "document-01",
@@ -48,19 +51,25 @@ function requirement(id, occurrences = []) {
   };
 }
 
-function selection(requirementIds) {
+function selection(requirements) {
+  const requirementIds = requirements.map(({ id }) => id);
   const digestContract = {
-    schemaVersion: 1,
-    contractId: "QA_TARGET_REQUIREMENT_SELECTION_V1",
+    schemaVersion: 2,
+    contractId: "QA_TARGET_REQUIREMENT_SELECTION_V2_WORKSHEET_REPLAY",
     catalogId: "st",
     categoryView: "ST",
     requirementIds,
-    requirementContracts: requirementIds.map((requirementId) => ({
-      requirementId,
-      searchContractDigestSha256: requirementId
-        .replace(/[^0-9]/gu, "")
-        .padStart(64, "0"),
-    })),
+    requirementContracts: requirements.map((requirement) => {
+      const digest = requirementSearchContractDigest({
+        catalogId: "st",
+        requirement,
+      });
+      return {
+        requirementId: requirement.id,
+        searchContractDigestSha256: digest,
+        worksheetSearchContractDigestSha256: digest,
+      };
+    }),
   };
   return {
     ...digestContract,
@@ -85,9 +94,7 @@ function worksheet(requirements, targeted = false) {
     requirements,
     ...(targeted
       ? {
-          targetRequirementSelection: selection(
-            requirements.map(({ id }) => id)
-          ),
+          targetRequirementSelection: selection(requirements),
         }
       : {}),
   };

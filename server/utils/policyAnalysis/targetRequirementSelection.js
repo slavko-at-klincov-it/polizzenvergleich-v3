@@ -2,10 +2,13 @@ const crypto = require("crypto");
 const {
   requirementSearchContractDigest,
 } = require("./coverageOnlyCertificationContract");
+const {
+  validateCatalog,
+} = require("./controlledOccurrenceWorksheet");
 
-const TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION = 1;
+const TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION = 2;
 const TARGET_REQUIREMENT_SELECTION_CONTRACT_ID =
-  "QA_TARGET_REQUIREMENT_SELECTION_V1";
+  "QA_TARGET_REQUIREMENT_SELECTION_V2_WORKSHEET_REPLAY";
 
 function selectionError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -142,12 +145,19 @@ function assertTargetRequirementSelectionContract(
   for (const [index, contract] of selection.requirementContracts.entries()) {
     exactKeys(
       contract,
-      ["requirementId", "searchContractDigestSha256"],
+      [
+        "requirementId",
+        "searchContractDigestSha256",
+        "worksheetSearchContractDigestSha256",
+      ],
       "TARGET_REQUIREMENT_SELECTION_REQUIREMENT_CONTRACT_KEYS_INVALID"
     );
     if (
       contract.requirementId !== requirementIds[index] ||
-      !/^[a-f0-9]{64}$/u.test(contract.searchContractDigestSha256 || "")
+      !/^[a-f0-9]{64}$/u.test(contract.searchContractDigestSha256 || "") ||
+      !/^[a-f0-9]{64}$/u.test(
+        contract.worksheetSearchContractDigestSha256 || ""
+      )
     )
       throw selectionError(
         "TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH"
@@ -219,6 +229,9 @@ function selectTargetRequirements({ catalog, requirementIds }) {
     );
 
   const requested = new Set(requestedIds);
+  const normalizedRequirementById = new Map(
+    validateCatalog(catalog).map((requirement) => [requirement.id, requirement])
+  );
   const canonicalRequirementIds = catalog.requirements
     .map(({ id }) => id)
     .filter((id) => requested.has(id));
@@ -236,6 +249,10 @@ function selectTargetRequirements({ catalog, requirementIds }) {
       searchContractDigestSha256: requirementSearchContractDigest({
         catalogId,
         requirement,
+      }),
+      worksheetSearchContractDigestSha256: requirementSearchContractDigest({
+        catalogId,
+        requirement: normalizedRequirementById.get(requirement.id),
       }),
     })),
   };
@@ -298,7 +315,8 @@ function assertTargetRequirementSelection(
     throw selectionError("TARGET_REQUIREMENT_SELECTION_REQUIREMENTS_MISMATCH");
   for (const [index, requirement] of worksheet.requirements.entries()) {
     const persistedDigest =
-      selection.requirementContracts[index]?.searchContractDigestSha256;
+      selection.requirementContracts[index]
+        ?.worksheetSearchContractDigestSha256;
     const currentDigest = requirementSearchContractDigest({
       catalogId: selection.catalogId,
       requirement,

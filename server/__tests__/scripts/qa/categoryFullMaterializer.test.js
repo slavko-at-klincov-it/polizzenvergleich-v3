@@ -180,7 +180,7 @@ describe("generic category full materializer", () => {
     });
 
     worksheet.targetRequirementSelection = {
-      contractId: "QA_TARGET_REQUIREMENT_SELECTION_V1",
+      contractId: "QA_TARGET_REQUIREMENT_SELECTION_V2_WORKSHEET_REPLAY",
     };
     writeJson(worksheetFile, worksheet);
     const targetOutput = path.join(root, "target-result");

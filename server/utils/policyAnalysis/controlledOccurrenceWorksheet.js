@@ -3889,6 +3889,7 @@ module.exports = {
   findAliasRanges,
   normalizeWithOffsetMap,
   structuralContext,
+  validateCatalog,
   validFollowingStructuralBoundaryProof,
   validNestedListContinuationProof,
 };

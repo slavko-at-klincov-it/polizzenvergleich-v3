@@ -135,7 +135,7 @@ describe("target requirement selection", () => {
     );
     expect(sourceCatalog).toEqual(original);
     expect(selected.selection).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       contractId: TARGET_REQUIREMENT_SELECTION_CONTRACT_ID,
       catalogId: sourceCatalog.catalogId,
       categoryView: sourceCatalog.categoryView,
@@ -144,10 +144,16 @@ describe("target requirement selection", () => {
         {
           requirementId: "ST-01",
           searchContractDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          worksheetSearchContractDigestSha256: expect.stringMatching(
+            /^[a-f0-9]{64}$/u
+          ),
         },
         {
           requirementId: "ST-03",
           searchContractDigestSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          worksheetSearchContractDigestSha256: expect.stringMatching(
+            /^[a-f0-9]{64}$/u
+          ),
         },
       ],
       requirementCount: 2,
