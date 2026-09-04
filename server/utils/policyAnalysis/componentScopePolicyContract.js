@@ -1,3 +1,8 @@
+const crypto = require("crypto");
+
+const CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID =
+  "CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1";
+
 /**
  * Resolves the narrow-scope contract for one atomic component. A component
  * contract intentionally overrides the requirement default; otherwise all
@@ -61,7 +66,3 @@ module.exports = {
   catalogNarrowAliasComparisonScopeKey,
   componentScopeContract,
 };
-const crypto = require("crypto");
-
-const CATALOG_NARROW_ALIAS_SCOPE_CONTRACT_ID =
-  "CATALOG_NARROW_ALIAS_SCOPE_FAMILY_V1";
