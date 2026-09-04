@@ -539,6 +539,77 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test.each([
+    [
+      "STURM_INSURANCE",
+      "Versichert sind Hochwasser und Erdbeben.",
+      "Hochwasser",
+      "DIRECT",
+      "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+    ],
+    [
+      "LEITUNGSWASSER_INSURANCE",
+      "Nicht versichert sind Schäden durch Hochwasser und Erdbeben.",
+      "Hochwasser",
+      "MENTION_ONLY",
+      "EXPLICIT_OTHER_CATEGORY_SECTION",
+    ],
+    [
+      "LEITUNGSWASSER_INSURANCE",
+      "Schäden nach Kanalrückstau sind im Rahmen der Versicherungssumme für Hochwasser mitversichert.",
+      "Hochwasser",
+      "MENTION_ONLY",
+      "EXPLICIT_OTHER_CATEGORY_SECTION",
+    ],
+    [
+      "STURM_INSURANCE",
+      "Nicht versichert sind Schäden durch Hochwasser und Erdbeben.",
+      "Hochwasser",
+      "DIRECT",
+      "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
+    ],
+  ])(
+    "maps the directed storm view to its source-bound insurance scope (%s, %s)",
+    (scopeKey, text, exactText, expectedBinding, expectedBasis) => {
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RS";
+      input.requirement = {
+        id: "RS-03",
+        sourceReferenceId: "LF-ST-03",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "catastrophes", factRole: "PERIL" };
+      input.occurrence.sectionScopeHint = {
+        scopeKey,
+        text: `${scopeKey} section`,
+      };
+
+      expect(deterministicCategoryCandidateBinding(input)).toEqual({
+        binding: expectedBinding,
+        basis: expectedBasis,
+        ...(expectedBinding === "DIRECT" ? { authoritative: true } : {}),
+      });
+    }
+  );
+
+  test("keeps a cross-cutting general clause in the directed storm view model-owned", () => {
+    const text = "Der Vertrag beschreibt Hochwasser im nachfolgenden Abschnitt.";
+    const input = bindingInput({ text, exactText: "Hochwasser" });
+    input.worksheet.catalog.categoryView = "RS";
+    input.requirement = {
+      id: "RS-03",
+      sourceReferenceId: "LF-ST-03",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "catastrophes", factRole: "PERIL" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "GENERAL_CONTRACT_TERMS",
+      text: "Allgemeine Vertragsbedingungen",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+  });
+
   test("leaves a cross-cutting general contract section model-owned", () => {
     const input = bindingInput({
       text: "Versichert sind Schäden durch Hagel.",
