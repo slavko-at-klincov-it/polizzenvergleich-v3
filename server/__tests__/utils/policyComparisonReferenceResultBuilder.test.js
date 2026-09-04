@@ -162,6 +162,46 @@ describe("directed LF reference result builder", () => {
     );
   });
 
+  test("does not convert unresolved B candidates into a controlled zero result", () => {
+    const firstCategory = categoryCatalogs()[0];
+    const firstRequirement = firstCategory.catalog.requirements[0];
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const counterpart = writeRun(root, document("counterpart-b", "B", 0));
+    const effectsFile = path.join(
+      counterpart.outputDirectory,
+      firstCategory.categoryView,
+      "effects",
+      "materialized.private.json"
+    );
+    const effects = JSON.parse(fs.readFileSync(effectsFile, "utf8"));
+    const unresolved = effects.judgements.find(
+      ({ requirementId }) => requirementId === firstRequirement.id
+    );
+    unresolved.evidencePresence = "FOUND";
+    unresolved.unresolvedCandidateIds = ["candidate:unresolved"];
+    fs.writeFileSync(effectsFile, JSON.stringify(effects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        counterpart,
+      ],
+      {}
+    );
+
+    expect(result.categories[0].rows[0]).toMatchObject({
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.UNCLEAR,
+        reviewRequired: true,
+      },
+      packageB: { reviewStatus: "UNGEKLÄRT" },
+    });
+  });
+
   test("does not report a found counterpart when B documents conflict", () => {
     const firstRequirement = categoryCatalogs()[0].catalog.requirements[0];
     const allReferenceIds = new Set(

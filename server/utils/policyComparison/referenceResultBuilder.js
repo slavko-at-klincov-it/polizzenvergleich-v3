@@ -16,6 +16,10 @@ const REFERENCE_OUTCOME = Object.freeze({
   REFERENCE_UNCLEAR: "REFERENZZEILE_UNKLAR",
   UNCLEAR: "GEGENSTUECK_UNKLAR",
 });
+const COUNTERPART_REVIEW_STATUS = Object.freeze({
+  CONTROLLED_NOT_FOUND: "KEIN_BELEG_NACH_KONTROLLIERTER_SUCHE",
+  UNCLEAR: "UNGEKLÄRT",
+});
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -91,17 +95,47 @@ function componentEvidenceConflicts(component, selectedEvidence) {
   return [...effects].some((effect) => componentAcceptsEffect(component, effect));
 }
 
+function controlledNotFound(entries, requirement) {
+  return entries.every(({ evidence }) =>
+    requirement.components.every((component) => {
+      const judgements = evidence.filter(
+        (judgement) => judgement.componentId === component.id
+      );
+      if (judgements.length !== 1) return false;
+      const [judgement] = judgements;
+      return (
+        judgement.evidencePresence === "NOT_FOUND" &&
+        judgement.coverageEffect === "UNKNOWN" &&
+        judgement.conflictState === "NONE" &&
+        (judgement.selectedCandidateIds || []).length === 0 &&
+        (judgement.unresolvedCandidateIds || []).length === 0
+      );
+    })
+  );
+}
+
 function aggregateCounterpart(entries, requirement) {
   const matched = entries.filter(({ row }) => row.reviewStatus !== "UNGEKLÄRT");
-  if (matched.length === 0)
+  if (matched.length === 0) {
+    const searchCompleteWithoutEvidence = controlledNotFound(
+      entries,
+      requirement
+    );
     return {
-      documentedContent: "kein Gegenstück nach kontrollierter Suche gefunden",
+      documentedContent: searchCompleteWithoutEvidence
+        ? "kein Gegenstück nach kontrollierter Suche gefunden"
+        : "Fundlage nicht eindeutig auflösbar",
       coverage: "Nicht feststellbar",
       coverageAmount: "Nicht feststellbar",
-      source: "keine belegte Fundstelle gefunden",
-      reviewStatus: "UNGEKLÄRT",
+      source: searchCompleteWithoutEvidence
+        ? "keine belegte Fundstelle gefunden"
+        : "keine entscheidungsreife Fundstelle",
+      reviewStatus: searchCompleteWithoutEvidence
+        ? COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
+        : COUNTERPART_REVIEW_STATUS.UNCLEAR,
       contributors: [],
     };
+  }
   const coverage = unique(matched.map(({ row }) => row.coverage));
   const amounts = unique(
     matched
@@ -200,7 +234,10 @@ function referenceDecision(reference, counterpart) {
       reviewRequired: true,
       ruleId: "REFERENCE_COMPONENT_COMPLETENESS_V1",
     };
-  if (counterpart.reviewStatus === "UNGEKLÄRT")
+  if (
+    counterpart.reviewStatus ===
+    COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
+  )
     return {
       outcome: REFERENCE_OUTCOME.NOT_FOUND,
       reasonCode: "CONTROLLED_SEARCH_COMPLETE_WITHOUT_B_EVIDENCE",
