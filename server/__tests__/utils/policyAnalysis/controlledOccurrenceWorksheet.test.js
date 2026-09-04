@@ -3197,9 +3197,10 @@ describe("controlledOccurrenceWorksheet", () => {
         factRole: "PERIL",
         conceptId: "snow-or-ice-slide-on-insured-property",
         requiredGroups: [
-          { prefixes: ["versichert"] },
-          { prefixes: ["schnee", "eisrutsch"] },
-          { prefixes: ["gebäude"] },
+          { prefixes: ["schnee", "dachlawine", "eiszapfen"] },
+          { prefixes: ["herabrutsch", "herabfall", "dachlawine"] },
+          { prefixes: ["versichert", "eigen"] },
+          { prefixes: ["schaden", "schaed", "beschaedig"] },
         ],
         maxLines: 2,
       }),
