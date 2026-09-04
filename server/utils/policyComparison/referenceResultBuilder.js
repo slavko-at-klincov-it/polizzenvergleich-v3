@@ -127,15 +127,14 @@ function requestedFieldsValid(entry, component, judgement) {
     const field = (result.fields || []).find(
       (candidate) => candidate.field === fieldName
     );
-    const componentFacts = (field?.facts || []).filter(
-      (fact) => fact.componentScope?.id === component.id
+    const componentFacts = (field?.facts || []).filter((fact) =>
+      judgement.selectedCandidateIds.includes(fact.source?.candidateId)
     );
     return (
       field?.status === "FOUND" &&
       componentFacts.length > 0 &&
       componentFacts.every(
         (fact) =>
-          judgement.selectedCandidateIds.includes(fact.source?.candidateId) &&
           Number.isInteger(fact.source?.physicalPageNumber) &&
           fact.source.physicalPageNumber > 0 &&
           String(fact.source?.exactText || "").trim().length > 0
