@@ -267,6 +267,24 @@ function occurrenceClauseText(occurrence) {
   return text.slice(start, end);
 }
 
+function explicitConditionalInsurancePolarity(occurrence) {
+  const clause = occurrenceClauseText(occurrence);
+  if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
+  if (
+    /\b(?:ist|sind)\s+(?:nur\s+)?(?:dann\s+)?nicht\s+versichert\b/iu.test(
+      clause
+    )
+  )
+    return "NEGATIVE";
+  if (
+    /\b(?:ist|sind)\s+(?:nur\s+)?dann\s+versichert\s*,?\s*(?:wenn|sofern)\b/iu.test(
+      clause
+    )
+  )
+    return "POSITIVE";
+  return "UNKNOWN";
+}
+
 /**
  * Recognises an operative promise or denial in the sentence that contains the
  * exact occurrence. Unlike a carried list governor, German operative clauses
@@ -276,6 +294,10 @@ function operativeCoveragePolarity(occurrence) {
   const clause = occurrenceClauseText(occurrence);
   const exactText = String(occurrence?.exactText || "");
   if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
+  const conditionalInsurancePolarity =
+    explicitConditionalInsurancePolarity(occurrence);
+  if (conditionalInsurancePolarity !== "UNKNOWN")
+    return conditionalInsurancePolarity;
   if (
     /\bsind\s*,?\s*soweit\b[\s\S]{0,260}?\bkeine\s+Deckung\s+finden\b[\s\S]{0,220}?\bmitversichert\b/iu.test(
       clause
@@ -1674,6 +1696,19 @@ function effectForCandidate(target, candidate) {
   if (operativePolarity === "NEGATIVE") return COVERAGE_EFFECT.EXCLUDED;
   if (operativePolarity === "POSITIVE") {
     if (target.factRole === "DEFINITION") return COVERAGE_EFFECT.DEFINED;
+    if (
+      target.factRole === "CONDITION" &&
+      explicitConditionalInsurancePolarity({
+        exactText: candidate.exactText,
+        documentStart: candidate.documentStart,
+        documentEnd: candidate.documentEnd,
+        context: {
+          text: candidate.contextText,
+          documentStart: candidate.contextDocumentStart,
+        },
+      }) === "POSITIVE"
+    )
+      return COVERAGE_EFFECT.CONDITIONAL;
     if (["LIMIT", "DEDUCTIBLE", "CONDITION"].includes(target.factRole))
       return COVERAGE_EFFECT.DEFINED;
     return COVERAGE_EFFECT.INCLUDED;

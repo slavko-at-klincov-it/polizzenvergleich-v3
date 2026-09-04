@@ -178,6 +178,115 @@ describe("deterministicCategoryEvidenceRules", () => {
     }
   );
 
+  test("binds a source-local conditional insurance clause without model scope inference", () => {
+    const text = [
+      "Eine Umweltstörung, die auf einen Vorfall vor Vertragsabschluss zurückzuführen",
+      "ist, ist nur dann versichert, wenn sich dieser Vorfall frühestens drei Jahre",
+      "vor Abschluss ereignet hat und dem Versicherungsnehmer nicht bekannt war.",
+    ].join("\n");
+    const exactText = "Vorfall vor Vertragsabschluss";
+    const input = bindingInput({ text, exactText });
+    input.worksheet.catalog.categoryView = "RO";
+    input.requirement = {
+      id: "RO-02",
+      sourceReferenceId: "LF-OK-02",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "retroactive_cover", factRole: "CONDITION" };
+    input.occurrence.sectionScopeHint = null;
+    input.occurrence.context.unitType = "CLAUSE_SECTION";
+
+    const binding = deterministicCategoryCandidateBinding(input);
+    expect(binding).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "RO",
+        requirementId: "RO-02",
+        componentId: "retroactive_cover",
+        factRole: "CONDITION",
+        unresolvedCandidateIds: [],
+        candidates: [
+          {
+            candidateId: input.occurrence.candidateId,
+            candidateBinding: binding.binding,
+            exactText,
+            contextUnitType: input.occurrence.context.unitType,
+            contextText: text,
+            contextDocumentStart: input.occurrence.context.documentStart,
+            documentStart: input.occurrence.documentStart,
+            documentEnd: input.occurrence.documentEnd,
+            scopeLeadText: "",
+          },
+        ],
+      })
+    ).toEqual({
+      selectedCandidateIds: [input.occurrence.candidateId],
+      coverageEffect: "CONDITIONAL",
+      basis: "EXPLICIT_CATEGORY_CLAUSE:RO:RO-02",
+    });
+  });
+
+  test.each([
+    [
+      "Die Rückwärtsdeckung ist nur dann nicht versichert, wenn der Vorfall bekannt war.",
+      "EXPLICIT_NEGATIVE_OPERATIVE_COVERAGE_CLAUSE",
+    ],
+    [
+      "Die Rückwärtsdeckung kann optional versichert werden, wenn dies beantragt wird.",
+      null,
+    ],
+  ])(
+    "keeps negative and optional conditional wording fail-closed (%s)",
+    (text, expectedBasis) => {
+      const input = bindingInput({ text, exactText: "Rückwärtsdeckung" });
+      input.worksheet.catalog.categoryView = "RO";
+      input.requirement = {
+        id: "RO-02",
+        sourceReferenceId: "LF-OK-02",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "retroactive_cover", factRole: "CONDITION" };
+      input.occurrence.sectionScopeHint = null;
+
+      const result = deterministicCategoryCandidateBinding(input);
+      if (expectedBasis === null) expect(result).toBeNull();
+      else
+        expect(result).toEqual({
+          binding: "DIRECT",
+          basis: expectedBasis,
+          authoritative: true,
+        });
+    }
+  );
+
+  test("preserves a catalogued narrow scope for a conditional insurance clause", () => {
+    const text =
+      "Die Rückwärtsdeckung ist nur für Altverträge nur dann versichert, wenn der Vorfall unbekannt war.";
+    const input = bindingInput({
+      text,
+      exactText: "Rückwärtsdeckung",
+      narrowAliases: ["nur für Altverträge"],
+    });
+    input.worksheet.catalog.categoryView = "RO";
+    input.requirement = {
+      id: "RO-02",
+      sourceReferenceId: "LF-OK-02",
+      scopeRules: { narrowAliases: ["nur für Altverträge"] },
+    };
+    input.component = { id: "retroactive_cover", factRole: "CONDITION" };
+    input.occurrence.sectionScopeHint = null;
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "NARROW_SCOPE",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
   test("binds a direct insurer reimbursement promise", () => {
     const text =
       "Der Versicherer ersetzt 80% der vom Versicherungsnehmer zu tragenden Sachverständigenkosten.";
