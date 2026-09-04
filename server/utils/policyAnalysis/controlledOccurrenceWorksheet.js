@@ -996,10 +996,7 @@ function conceptRangeContext({
     fallbackWordsEachSide,
     followingBoundaryLineStarts,
   });
-  if (
-    occurrenceStart >= context.pageStart &&
-    occurrenceEnd <= context.pageEnd
-  )
+  if (occurrenceStart >= context.pageStart && occurrenceEnd <= context.pageEnd)
     return context;
 
   const lines = buildLineRecords(pageText);
