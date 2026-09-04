@@ -20,7 +20,8 @@ noch 99 Prozent fachliche Richtigkeit.
 Der derzeitige Stand erreicht dieses Gesamtziel noch nicht. Der gemeinsame
 evidenzgebundene Verarbeitungspfad besitzt weiterhin Kataloge und historische
 Regressionsevidenz für acht Ansichten. Das produktive, versionierte
-Kundenprofil `CUSTOMER_CORE_5_V7` umfasst jedoch bewusst nur VS, FE, LW, ST
+Kundenprofil `CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY` umfasst
+jedoch bewusst nur VS, FE, LW, ST
 und EL mit 224 sichtbaren Zeilen. Die offene Grenze liegt bei fachlicher
 Expertenabnahme, Dokumentrang/Ersetzung, unbekannten Holdouts und dem
 Laufzeitbudget.
@@ -252,7 +253,7 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
 
 - kanonische physische PDF-PageMap und seitengebundene Dokumentartefakte;
 - fünf produktive Kundenansichten mit 224 IDs im Profil
-  `CUSTOMER_CORE_5_V7` und Vergleichsvertrag
+  `CUSTOMER_CORE_5_V103_SPECIALIZED_QUALIFICATION_REPLAY` und Vergleichsvertrag
   `CERTIFIED_COVERAGE_ONLY_TYPED_V2`;
 - acht erhaltene Full-Draft-Kataloge mit 533 atomaren Komponenten und
   Promptparität; HP, VB und WE sind keine produktiven Kundenansichten;

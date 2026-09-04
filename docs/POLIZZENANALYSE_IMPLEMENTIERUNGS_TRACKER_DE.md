@@ -5909,3 +5909,38 @@ Beweisgrenze: Die 35/35-Übereinstimmung gilt ausschließlich für das bekannte,
 versionierte 1+9-Entwicklungsset. Sie ist kein Nachweis eines vollständigen
 LF-Inventars, unbekannter Versicherer, beliebiger Vertragsvarianten oder des
 99-Prozent-Ziels.
+
+## 123. LF-Referenzvertrag V2 und Release-Härtung
+
+Der anschließende System- und Releaseaudit zeigte fünf zu optimistische
+Entscheidungswege im V1-Ergebnisbuilder: unaufgelöste Kandidaten konnten als
+kontrollierter Nullfund enden, nicht entscheidungsreife Komponenten konnten
+ein Paket vervollständigen, interne Konflikte konnten herausgefiltert werden,
+`TERMS`-Evidenz wurde allein aufgrund der Dokumentrolle verdrängt und die
+Vertragsidentität blieb trotz geänderter Semantik auf V1.
+
+Die Commits `57eb33903`, `50ee41568`, `b12d34d99`, `4c5992ad0`,
+`aa50f38b3` und `273c6ce60` schließen diese Wege und versionieren Profil,
+Katalog, Komponenten-, Negativsuch- und Ergebnisvertrag auf V2. Jeder kleine
+Fix erhielt einen eigenen Commit und eine fokussierte Mac-Studio-Prüfung.
+
+Die reine Neuauswertung des gespeicherten Endlaufs ergibt unter dem
+gehärteten Vertrag 12 vollständige, 13 partielle, vier kontrollierte
+Nullfunde, sechs unklare B-Gegenstücke und 19 Kundenreviews. Das ist noch kein
+frischer Modelllauf. Die sieben strengeren Einstufungen betreffen
+`LF-FE-02`, `LF-ST-03`, `LF-LW-03`, `LF-KO-02`, `LF-KO-03`, `LF-GL-03` und
+`LF-OK-02`; Gründe sind Paketkonflikte, unaufgelöste Kandidaten oder fehlende
+typisierte Scope-Freigabe.
+
+Zusätzlich sichern `dd3854b31`, `6a752c211`, `bff715d16`, `02d33c475`,
+`52db4ca8a` und `62e4fdef6` Update-Quieszenz, Session-/Resultatmodus,
+modusabhängige Archive, API-Modusvertrag, sichtbare Template-Ladefehler und
+die V3.7.0-Kandidatenidentität. Die jeweiligen fokussierten Mac-Studio-Gates,
+der Installertest sowie Frontend-Lint und -Build bestanden.
+
+Vollständige Ursachen, Callgraph-Abhängigkeiten, Vorher-/Nachher-Zahlen und
+offene Release-Gates stehen in
+`docs/LF_REFERENCE_V2_HARDENING_AUDIT_DE.md`. Bis zum befüllten
+V3.6.0-Upgrade-Test, frischen LF-V2-Lauf und frischen symmetrischen
+224-Zeilen-Nichtregressionslauf bleibt der Kandidat NO-GO und die
+Kundeninstallation unverändert auf V3.6.0.
