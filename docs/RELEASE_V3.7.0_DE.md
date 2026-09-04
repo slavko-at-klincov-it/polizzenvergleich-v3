@@ -88,6 +88,17 @@ endete nach zwei Antworten fail-closed und wird nicht gewertet. Der
 Forward-Fix aktualisiert beide Promptbeispiele und schützt sie durch einen
 gemeinsamen Versionstest; damit ist dieser Commit der neue Finalgate-Freeze.
 
+Der daraufhin vollständige LF-Lauf bestand die unabhängige Artefaktprüfung,
+zeigte jedoch bei genau einem unveränderten Kandidaten eine Modellvarianz:
+`RH-03` wertete einen LIMIT-Span unter der source-verifizierten
+Haftpflichtüberschrift anders als der Vorlauf. Der gerichteten Ansicht `RH`
+fehlte – anders als `HP`, `RS` und `RG` – die entsprechende allgemeine
+Spartenzuordnung. Der nächste kleine Forward-Fix bindet `RH` deshalb an
+`HAFTPFLICHT_INSURANCE` und lehnt fremde Versicherungssparten weiterhin
+strict fail-closed ab. Dieser neue Commit ersetzt den vorherigen Freeze; alle
+noch ausstehenden Finalgates beziehen sich ausschließlich auf seinen exakten
+SHA oder einen späteren, ausdrücklich dokumentierten Nachfolger.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen

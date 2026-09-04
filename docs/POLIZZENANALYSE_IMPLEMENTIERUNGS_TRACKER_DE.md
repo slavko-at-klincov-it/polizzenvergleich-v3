@@ -6122,3 +6122,39 @@ Promptbeispiele auf V7. Ein Vertragstest bindet künftig beide Promptdateien an
 auseinanderlaufen. Rollen-, Scope-, Kandidaten-, Evidenz- und
 Vergleichssemantik werden nicht verändert. Die abgebrochene Session bleibt als
 Fehlernachweis erhalten; der Finalgate-Lauf beginnt mit einer neuen Session.
+
+## 129. LF-Finalgate-Differentialaudit: gerichteter Haftpflicht-Scope
+
+Der vollständige LF-Lauf auf `4ce19f37f` terminierte in 1.201.411 ms und sein
+Artefaktsatz bestand die unabhängige Hash-, Struktur- und XLSX-Zellprüfung.
+Gegen den vollständigen Vorlauf auf `14c2bb1b0` änderte sich genau eine der 35
+Zeilen: `RH-03` wechselte von `TEILWEISES_GEGENSTUECK` zu
+`REFERENZZEILE_UNKLAR`. Alle anderen Punktentscheidungen blieben gleich.
+
+Der zeilen- und kandidatengenaue Vergleich lokalisiert die Abweichung auf den
+unveränderten A-Kandidaten
+`candidate:8c11cacc51a87a4c1d91587d11658fdafc9d45467184202499f5e32543ea26ff`:
+Die Versicherungssumme für Umweltstörungen von 50 Prozent liegt physisch auf
+Seite 19 unter der source-verifizierten Überschrift „Gebäude- und
+Grundstückshaftpflichtversicherung“. V6 klassifizierte denselben LIMIT-Span als
+`GENERAL`, V7 in diesem Lauf als `NARROW`; die normalisierten Modellnachrichten
+sind abgesehen von der erforderlichen Schemaangabe identisch.
+
+Root Cause ist eine Scopevertragslücke, nicht ein geänderter Quelltext: Die
+symmetrische Haftpflichtansicht `HP` war bereits mit
+`HAFTPFLICHT_INSURANCE` verbunden, ihre gerichtete Entsprechung `RH` jedoch
+nicht. `RS` und `RG` besitzen die entsprechende Referenzabbildung schon. Der
+kleine allgemeine Forward-Fix ordnet daher `RH` derselben Haftpflichtsparte zu
+und nimmt die Ansicht in die strikte Fremdspartenprüfung auf. Ein LIMIT im
+echten Haftpflichtabschnitt erhält damit serverseitig `GENERAL`; derselbe Text
+in einem Feuerabschnitt wird durch die strikte Fremdspartenbindung als
+`MENTION_ONLY` terminiert. Ein katalogseitig ausdrücklich als enger
+deklarierter Haftpflichtscope bleibt `NARROW`. Qwen entscheidet weiterhin die
+fachliche Rollenpassung und sämtliche Fälle ohne beweiskräftigen
+Section-Scope.
+
+Nicht-Ziele sind eine LF-Wortlautregel, eine pauschale Direktbindung von
+Umweltklauseln oder eine Aufweichung des Source-/Offsetvertrags. Der Fix
+beweist nur die deterministische Scopeparität von `HP` und `RH`; der frische
+35-Zeilen-Lauf und der symmetrische Nichtregressionslauf bleiben auf dem neuen
+SHA erforderlich.

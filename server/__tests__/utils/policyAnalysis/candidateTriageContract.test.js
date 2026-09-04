@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -115,6 +116,104 @@ function response(judgements) {
   return JSON.stringify({ schemaVersion: 7, judgements });
 }
 
+function directedLiabilityFixture({
+  scopeKey = "HAFTPFLICHT_INSURANCE",
+  heading = "8. Gebäude- und Grundstückshaftpflichtversicherung",
+  narrowScopeKeys = [],
+} = {}) {
+  const fingerprint = "b".repeat(64);
+  const exactText =
+    "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme";
+  const contextText = `- Die ${exactText}.`;
+  const pageContent = `${heading}\n${contextText}`;
+  const contextStart = heading.length + 1;
+  const occurrenceStart = pageContent.indexOf(exactText);
+  const occurrence = {
+    candidateId: `candidate:rh-limit-${scopeKey}`,
+    matchedAlias: exactText,
+    pageNumber: 1,
+    physicalPageNumber: 1,
+    pageStart: occurrenceStart,
+    pageEnd: occurrenceStart + exactText.length,
+    exactText,
+    documentStart: occurrenceStart,
+    documentEnd: occurrenceStart + exactText.length,
+    context: {
+      unitType: "LIST_ITEM",
+      text: contextText,
+      pageStart: contextStart,
+      pageEnd: pageContent.length,
+      documentStart: contextStart,
+      documentEnd: pageContent.length,
+    },
+    scopeLead: { text: "" },
+    pageScopeHints: [],
+    sectionScopeHint: {
+      scopeKey,
+      text: heading,
+      pageStart: 0,
+      pageEnd: heading.length,
+      physicalPageNumber: 1,
+      source: "CURRENT_PAGE_HEADING",
+    },
+  };
+  const document = {
+    sourceDocumentId: fingerprint,
+    pageContent,
+    pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+    pdfExtraction: {
+      schemaVersion: 1,
+      complete: true,
+      totalPages: 1,
+      processedPages: 1,
+    },
+  };
+  return {
+    occurrence,
+    documentArtifact: { schemaVersion: 1, fingerprint, document },
+    worksheet: {
+      schemaVersion: 2,
+      candidateOnly: true,
+      catalog: { categoryView: "RH" },
+      document: {
+        sourceDocumentId: fingerprint,
+        fingerprint,
+        physicalPages: 1,
+        pageContentLength: pageContent.length,
+        pageContentSha256: crypto
+          .createHash("sha256")
+          .update(pageContent)
+          .digest("hex"),
+        pageBoundaries: [
+          {
+            physicalPageNumber: 1,
+            documentStart: 0,
+            documentEnd: pageContent.length,
+          },
+        ],
+      },
+      requirements: [
+        {
+          id: "RH-03",
+          sourceReferenceId: "LF-HP-03",
+          label:
+            "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
+          requestedFields: ["limit", "deductible"],
+          scopeRules: { narrowAliases: [], narrowScopeKeys },
+          components: [
+            {
+              id: "environmental_limit",
+              label: "Umwelthaftpflichtlimit",
+              factRole: "LIMIT",
+              occurrences: [occurrence],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 describe("candidateTriageContract", () => {
   test.each([
     "candidate-triage-system.v0.1.md",
@@ -181,6 +280,71 @@ describe("candidateTriageContract", () => {
       roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
       scopeResolution: { owner: "SERVER", scopeMatch: "GENERAL" },
     });
+  });
+
+  test("binds source-proven RH liability sections without model scope variance", () => {
+    const fixture = directedLiabilityFixture();
+    const [target] = buildCandidateTriagePayload(fixture.worksheet, {
+      documentArtifact: fixture.documentArtifact,
+    }).bindingTargets;
+
+    expect(target.scopeResolution).toMatchObject({
+      owner: "SERVER",
+      scopeMatch: "GENERAL",
+      basis: "MATCHING_CATEGORY_SECTION",
+      matchedAlias: "HAFTPFLICHT_INSURANCE",
+    });
+    expect(target.modelDecisionFields).toEqual(["roleMatch"]);
+  });
+
+  test("rejects the same RH wording in a source-proven foreign insurance section", () => {
+    const fixture = directedLiabilityFixture({
+      scopeKey: "FEUER_INSURANCE",
+      heading: "Feuerversicherung",
+    });
+    const [target] = buildCandidateTriagePayload(fixture.worksheet, {
+      documentArtifact: fixture.documentArtifact,
+    }).bindingTargets;
+
+    expect(target.roleResolution).toMatchObject({
+      owner: "SERVER",
+      roleMatch: "MISMATCH",
+      basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
+    });
+    expect(target.modelDecisionFields).toEqual([]);
+    expect(
+      deriveCandidateBinding({
+        roleMatch: target.roleResolution.roleMatch,
+        scopeMatch: target.scopeResolution.scopeMatch,
+      })
+    ).toBe("MENTION_ONLY");
+  });
+
+  test("preserves a catalog-declared narrow RH liability section", () => {
+    const fixture = directedLiabilityFixture({
+      narrowScopeKeys: ["HAFTPFLICHT_INSURANCE"],
+    });
+    const [target] = buildCandidateTriagePayload(fixture.worksheet, {
+      documentArtifact: fixture.documentArtifact,
+    }).bindingTargets;
+
+    expect(target.scopeResolution).toMatchObject({
+      owner: "SERVER",
+      scopeMatch: "NARROW",
+      basis: "CATALOG_NARROW_SECTION",
+      matchedAlias: "HAFTPFLICHT_INSURANCE",
+    });
+  });
+
+  test("does not trust a manipulated RH section hint", () => {
+    const fixture = directedLiabilityFixture();
+    fixture.occurrence.sectionScopeHint.text = "Feuerversicherung";
+
+    expect(() =>
+      buildCandidateTriagePayload(fixture.worksheet, {
+        documentArtifact: fixture.documentArtifact,
+      })
+    ).toThrow("SOURCE_SCOPE_SECTION_HINT_INVALID");
   });
 
   test("keeps explicit VS07-11 roles server-terminal and rejects a generic index mention", () => {
