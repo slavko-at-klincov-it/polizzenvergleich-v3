@@ -1018,7 +1018,10 @@ function explicitPageScopeHints(pageText) {
   for (const pattern of patterns) {
     for (const match of String(pageText || "").matchAll(pattern)) {
       const text = match[0];
-      const scopeKey = `${match[1].toLocaleUpperCase("de")}_INSURANCE`;
+      const scopeKey =
+        match[1].toLocaleLowerCase("de") === "glas"
+          ? "GLASBRUCH_INSURANCE"
+          : `${match[1].toLocaleUpperCase("de")}_INSURANCE`;
       if (!hints.some((hint) => hint.scopeKey === scopeKey))
         hints.push({
           scopeKey,
@@ -1077,7 +1080,8 @@ function explicitSectionHeadings(pageText) {
     if (
       normalized.includes("glaspauschal") ||
       normalized.includes("glasbruch") ||
-      normalized === "glasversicherung"
+      /^(?:b\d{1,2})?(?:die)?glasversicherung(?:gl)?$/u.test(normalized) ||
+      normalized === "allgemeinebedingungenfuerdieglasversicherung"
     )
       return "GLASBRUCH_INSURANCE";
     return null;

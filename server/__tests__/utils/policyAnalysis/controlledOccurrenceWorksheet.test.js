@@ -777,6 +777,8 @@ describe("controlledOccurrenceWorksheet", () => {
     ["B2 Feuerversicherung (FE)", "FEUER_INSURANCE"],
     ["B3 Sturmversicherung (ST)", "STURM_INSURANCE"],
     ["B4 Leitungswasserversicherung (LW)", "LEITUNGSWASSER_INSURANCE"],
+    ["B5 Glasversicherung (GL)", "GLASBRUCH_INSURANCE"],
+    ["Die Glasversicherung", "GLASBRUCH_INSURANCE"],
   ])("recognizes the cross-cutting section %s", (heading, scopeKey) => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([
