@@ -115,6 +115,12 @@ function requirementSearchContractDigest({ catalogId, requirement }) {
         contextMode: component.contextMode || "STRUCTURAL",
         aliases: component.aliases || [],
         conceptSearches: component.conceptSearches || [],
+        ...(component.scopePolicy
+          ? {
+              scopePolicy: component.scopePolicy,
+              scopeRules: component.scopeRules || {},
+            }
+          : {}),
         followingStructuralBoundaryProofContractId:
           component.followingStructuralBoundaryProofContractId || null,
         ...(component.nestedListContinuationProofContractId

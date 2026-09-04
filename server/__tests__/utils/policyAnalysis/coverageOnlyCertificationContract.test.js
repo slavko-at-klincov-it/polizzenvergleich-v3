@@ -132,6 +132,39 @@ describe("coverage-only certification contract", () => {
         registry: approved,
       })
     ).toThrow("COVERAGE_CERTIFICATION_REFERENCE_INVALID");
+
+    const mutatedComponentScope = {
+      ...requirement,
+      components: [
+        {
+          ...requirement.components[0],
+          scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+          scopeRules: {
+            narrowAliases: [],
+            narrowScopeKeys: ["STURM_INSURANCE"],
+          },
+        },
+      ],
+    };
+    expect(
+      requirementSearchContractDigest({
+        catalogId: CATALOG_ID,
+        requirement: mutatedComponentScope,
+      })
+    ).not.toBe(
+      requirementSearchContractDigest({
+        catalogId: CATALOG_ID,
+        requirement,
+      })
+    );
+    expect(() =>
+      assertCoverageOnlyCertification({
+        categoryView: "VS",
+        catalogId: CATALOG_ID,
+        requirement: mutatedComponentScope,
+        registry: approved,
+      })
+    ).toThrow("COVERAGE_CERTIFICATION_REFERENCE_INVALID");
   });
 
   test("binds continuation and object-scope evidence contracts into the requirement digest", () => {
