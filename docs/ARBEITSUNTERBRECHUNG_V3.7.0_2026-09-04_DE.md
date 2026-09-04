@@ -273,3 +273,50 @@ Vollständige statische Gates, ein frischer LF-Gesamtlauf und der frische
 symmetrische 224-Zeilen-Nichtregressionslauf bleiben offen. Alle Details und
 Hashes stehen in
 `docs/LF_REFERENCE_V2_SEVEN_FIX_AUDIT_2026-09-04_DE.md`.
+
+## Zweiter Fortsetzungs-Checkpoint am 4. September 2026
+
+Der frühere vollständige Laufstand `14c2bb1b0` bleibt unveränderte
+Fixture-Evidenz, aber keine Releasefreigabe. Ein Senior- und Artefaktaudit fand
+danach drei Grenzen: den Triage→Prepared-Bypass bei unscopierten RG-Kosten, den
+requirementweiten Sturm-Scope von `LF-GL-02` und vier private Entscheidungen,
+die im Kunden-XLSX fälschlich als `UNKLAR` präsentiert wurden.
+
+Diese Grenzen und die zusätzlichen Senior-Funde sind auf der
+Implementierungsbasis vor dem Dokumentations-Freeze geschlossen. Hinzu kamen
+die versionierte Komponenten-Scopeidentität, Digestbindung, Atom-Persistenz,
+die harte JSON→Kunden-XLSX-Semantikprüfung, ein vollständiger
+Regel→Outcome-Vertrag, source-gebundene Fremd-Scope-Grenzen, der
+V2-Worksheet-Replayvertrag und eine kanonische Narrow-Alias-Scopeidentität.
+Ein weiterer Artefaktreview schloss die atomare Veröffentlichung des gesamten
+Ergebnissatzes, vollständige 17-/11-Zellen-XLSX-Prüfung, Export-Hashkette,
+Crash-Resume, verwaiste Publish-Claims und die quellenverifizierte
+Ergebnis-/Downloadauslieferung. Der Commit, der diesen Checkpoint enthält, ist
+der einzige zulässige Finalgate-SHA und wird nach dem Lauf extern im
+QA-Manifest festgehalten; sein eigener SHA wird nicht in diesem Commit
+vorweggenommen.
+
+```text
+Vorfix-Laufstand:          14c2bb1b015dbdbd53c4919967f2c9abc281ca37
+Implementierungsbasis:    c839a2834 (vor Dokumentations-Freeze)
+Kundeninstallation:       2804fa56361084c0ee74fca6f54ef6365d65aeeb / V3.6.0
+Merge / Tag / Deployment: nein / nein / nein
+Releaseentscheidung:      NO-GO bis Finalgates bestanden
+```
+
+Die Kundeninstallation und ihre Daten wurden nicht verändert. Jeder weitere
+Code-Repo-Commit nach dem Freeze öffnet alle Finalgates erneut.
+
+Statische Mac-Studio-Vorprüfung der Implementierungsbasis:
+
+```text
+Jest:                       171/171 Suites, 2317/2317 Tests PASS
+Lint:                       Server, Frontend, Collector PASS
+Frontend-Produktionsbuild:  PASS
+Prisma validate/generate:   PASS
+Migration leer/befüllt:     42/42, quick_check=ok, 0 FK-Fehler
+macOS-Installerverträge:    PASS
+```
+
+Diese Vorprüfung ersetzt nicht die Wiederholung auf dem nachfolgenden
+Dokumentations-Freeze-SHA.

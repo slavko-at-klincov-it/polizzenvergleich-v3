@@ -5993,3 +5993,116 @@ Partition ist noch kein End-to-End-Releasebeleg, da unveränderte Kategorien
 aus verifizierten Vorläufen wiederverwendet wurden. Vollständige statische
 Gates sowie frische LF- und symmetrische Gesamtläufe auf einem identischen
 finalen SHA bleiben vor Merge, Tag und Deployment verpflichtend.
+
+## 126. Nachgelagerte V3.7-Sicherheitsgrenzen und Finalgate-Freeze
+
+Der unabhängige Review des vollständigen Vorfix-Stands `14c2bb1b0` fand drei
+Releaseblocker, die von den bekannten PDFs allein nicht ausgelöst worden waren:
+
+1. Die Triage wies unscopierte Kosten im gerichteten Glasvergleich korrekt als
+   `RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE` ab; eine autoritative
+   deterministische Bindung konnte diese Ablehnung in der Preparation jedoch
+   überstimmen. `2405de721` macht den gemeinsamen Scopevertrag in beiden
+   Stufen autoritativ, `82ccabf3a` hält Rollen- und Scopediagnose getrennt.
+2. Der erlaubte Sturm-Scope von `LF-GL-02` galt zunächst für alle drei
+   Komponenten. `faad2e2ba` macht ihn ausschließlich für `solar_glass`
+   wirksam, `a66f91071` persistiert den Komponentenvertrag. Die nachgelagerten
+   Commits `f385a75e0`, `9f2b75a0d` und `7de9306b8` schließen Fremdscope-,
+   Digest-, Atom- und Profilversionsgrenzen.
+3. Im privaten JSON waren `VS-10`, `VS-25`, `ST-01` und `VS-34` gültig
+   entschieden, im Kunden-XLSX aber wegen fehlender Rule-ID-Freigaben als
+   `UNKLAR` dargestellt. `9065aac91` ergänzt die vier erzeugenden Regeln und
+   eine semantische Outcomeprüfung; `6c9cc7ae4` bindet jede neue Freigabe an
+   ihre zulässigen Outcomes.
+4. `4d27cf5bf` ersetzt die nur für vier Regeln geschlossene Prüfung durch den
+   vollständigen versionierten `CUSTOMER_RESULT_RULE_OUTCOME_V1`-Vertrag für
+   alle 33 freigegebenen aktuellen und historischen Presenter-Regeln.
+5. `e29cbe897` ergänzt die häufigen Formen `Glasschäden`,
+   `Glasbruchschäden` und die Bindestrichvariante. `8658d82be` verlangt für
+   strukturelle Scope-Hinweise eine source-gebundene Seiten-/Offsetbeziehung
+   und macht einen so belegten Fremd-Scope auch gegen angeliefertes `DIRECT`
+   oder fehlende Triage autoritativ. `e3a8555b6` und `86a2c7b22` sind reine
+   Forward-Korrekturen der zugehörigen Testassertion.
+6. `c8b821440` führte den Worksheet-Replay des Requirement-Digests ein. Der
+   Mac-Test deckte dabei die unterschiedliche Roh-/Worksheet-Normalisierung
+   auf. `95727b701` versioniert den Vertrag deshalb als
+   `QA_TARGET_REQUIREMENT_SELECTION_V2_WORKSHEET_REPLAY`; `525e2601e` trennt
+   dessen Normalisierung von der unverändert strengen späteren
+   Zertifizierungsprüfung.
+7. `1be7264e3` bindet Narrow-Aliasfamilien an eine kanonische Scope-Identität
+   und lässt beidseitig enge Atome ohne Identität fail-closed. `0d82cc3ea`
+   korrigiert ausschließlich die Initialisierungsreihenfolge; `528083b1d`
+   begrenzt den Identitätsgate korrekt auf fachlich vergleichbare
+   Eng-gegen-Eng-Fälle, ohne den freigegebenen Allgemein-gegen-Eng-Ausgang
+   `NICHT_VERGLEICHBAR` zu blockieren.
+
+Die frühere QA-Prüfung verglich das XLSX mit einer durch denselben Presenter
+erzeugten Sollprojektion. Sie belegte Serialisierungs-, aber keine unabhängige
+Semantikparität. Tatsächlich galt auf `14c2bb1b0`:
+
+```text
+JSON: A 5 / B 4 / Doku 34 / Gleich 125 / NC 13 / Unklar 43
+XLSX: A 4 / B 4 / Doku 34 / Gleich 123 / NC 12 / Unklar 47
+```
+
+Status vor dem finalen Lauf auf Implementierungsbasis `528083b1d`:
+`IMPLEMENTIERT, FINALGATES OFFEN`. Erforderlich
+sind vollständige statische Gates, ein frischer LF-Lauf, ein frischer
+symmetrischer 224-Zeilen-Lauf und ein aus dem geschriebenen XLSX unabhängig
+zurückgelesener Outcomevergleich gegen `pointDecision.outcome`. Merge, Tag und
+Deployment bleiben bis dahin gesperrt.
+
+## 127. Source-Bindung und atomare Ergebnisveröffentlichung
+
+Der nachfolgende Systemreview erweiterte die Implementierungsbasis bis
+`c839a2834`, ohne die fachlich erwartete 35-/224-Zeilen-Partition als bereits
+bewiesen auszugeben.
+
+### 127.1 Eingangs- und Profilbindung
+
+- `820a35e46`, `3384e59c8`, `75fd6d183`, `679b6f258` und `49a66cb2b`
+  binden Scope-Hinweise, Triage und jeden Evidenzkandidaten an verifizierte
+  Dokumentartefakte, physische Seiten und Offsets;
+- `cf264f63c` sowie `cfe7d4649` versionieren die dadurch veränderte Semantik
+  als Ergebnisschema 15, Produktprofil
+  `CUSTOMER_CORE_5_V105_SOURCE_BOUND_TRIAGE` / Vergleichsvertrag V66 und
+  LF-Profil `LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE`;
+- V104/V65 und LF-V4 bleiben als explizite historische Identitäten lesbar,
+  werden aber nicht als aktueller Produktionsvertrag ausgegeben.
+
+### 127.2 Ergebnis- und Downloadvertrag
+
+- `73db76ec9`, `40aa06d89` und `b656bab16` veröffentlichen JSON, Markdown und
+  XLSX erst nach vollständiger Validierung atomar und gemeinsam mit einem
+  versionierten SHA-256-Manifest;
+- `d270b1272`, `10e6df830` und `1904d8c6f` binden Export und Archivkopie an
+  diese Hashkette und prüfen alle 17 symmetrischen beziehungsweise 11
+  gerichteten Zellen je Zeile gegen die kanonische Projektion;
+- `69f769217` und `123f22538` erlauben nach einem Crash ausschließlich die
+  Wiederverwendung eines vollständig validierten, session- und
+  signaturgleichen Ergebnissatzes;
+- `9448df0fe`, `aaa222924`, `f3ce91589` und `a4b1b6ac6` prüfen gespeicherte
+  Resultate vor JSON- und XLSX-Zugriff und senden exakt die verifizierten
+  Workbook-Bytes; eine später fehlende Archivkopie macht den internen
+  Originalexport nicht unzugänglich;
+- `6c55cb27d` schützt die Veröffentlichung durch PID-/Nonce-Claims, verwirft
+  nur nachweislich verwaiste Claims und synchronisiert das Elternverzeichnis.
+
+### 127.3 Mac-Studio-Vorprüfung
+
+```text
+Implementierungsbasis:       c839a28342b619aa3dcc166d32cf9a7e725ea036
+Checkout:                    /Users/michaelmischkot/Code/validation-worktrees/v370-final-ace2b626
+Node:                        22.23.2
+Jest:                        171/171 Suites, 2317/2317 Tests PASS
+Lint:                        PASS
+Frontend-Produktionsbuild:   PASS
+Prisma validate/generate:    PASS
+Migration leer/befüllt:      42/42, quick_check=ok, 0 FK-Fehler
+macOS-Installerverträge:     PASS
+```
+
+Die installierte V3.6.0-Kundeninstanz blieb dabei unverändert. Diese
+Vorprüfung ist noch keine V3.7-Freigabe: Die vollständigen Gates sowie die
+frischen LF- und symmetrischen Modellläufe müssen auf dem unveränderten
+Dokumentations-Freeze-SHA wiederholt werden.

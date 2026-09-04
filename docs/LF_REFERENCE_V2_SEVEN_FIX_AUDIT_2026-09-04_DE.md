@@ -54,14 +54,81 @@ der Quelle: Das B-Dokument deckt den Glasbruch an Solar- und
 Photovoltaikanlagen ausdrücklich aufgrund eines Sturmschadens, also gültig in
 einem engeren Sturm-Scope.
 
-`05b222937` erlaubt deshalb für genau diese versionierte Referenzkomponente
-einen eingeschlossenen `STURM_INSURANCE`-Gegenpart. `b63d71828` und
+`05b222937` sollte deshalb für genau diese versionierte Referenzkomponente
+einen eingeschlossenen `STURM_INSURANCE`-Gegenpart erlauben. Der nachgelagerte
+Review zeigte jedoch, dass die erste Umsetzung den Scope requirementweit
+speicherte. `b63d71828` und
 `60d87bff6` schließen gleichzeitig die bisherige Validierungslücke: Eine
 `NARROW_ONLY`-Entscheidung ist nur gültig, wenn der beobachtete Scope nicht leer
 ist, im Vertrag deklariert wurde und vollständig innerhalb der erlaubten
 Scope-Schlüssel liegt. Dadurch wurde `LF-GL-02` wieder vollständig, ohne
 beliebige enge Quellen zuzulassen. `0c2fd07c6` korrigiert ausschließlich die
 zugehörige Testfixture.
+
+## Nachtrag: nachgelagerte Releaseblocker
+
+Der vollständige Vorfix-Lauf auf `14c2bb1b0` bestätigte die erwartete
+LF-Partition, war aber noch kein Releasebeleg. Der anschließende Code- und
+Artefaktaudit fand:
+
+- einen Triage→Prepared-Bypass für unscopierte RG-Kosten, geschlossen durch
+  `2405de721` und `82ccabf3a`;
+- den requirementweiten `LF-GL-02`-Sturm-Scope, komponentengenau und
+  versioniert geschlossen durch `faad2e2ba`, `a66f91071`, `f385a75e0`,
+  `9f2b75a0d` und `7de9306b8`;
+- vier gültige JSON-Entscheidungen, die im Kunden-XLSX fälschlich `UNKLAR`
+  wurden, geschlossen durch `9065aac91` und `6c9cc7ae4`.
+
+Ein zweiter Senior-Review fand weitere Eingangs- und Replaygrenzen. Sie sind
+auf Implementierungsbasis `528083b1d` geschlossen:
+
+- `4d27cf5bf`: vollständiger versionierter Regel→Outcome-Vertrag für alle 33
+  freigegebenen Kundenpresenter-Regeln;
+- `e29cbe897`: Plural- und Bindestrichformen für
+  `Glasschäden`/`Glasbruchschäden`;
+- `8658d82be`: source-gebundene Section-Scope-Validierung und autoritative
+  Fremd-Scope-Ablehnung in Preparation auch bei `DIRECT` oder ohne Triage;
+- `95727b701` und `525e2601e`: V2-Target-Selection mit Replay des normalisierten
+  Worksheet-Suchvertrags;
+- `1be7264e3` und `528083b1d`: kanonische Narrow-Alias-Scopeidentität sowie
+  Fail-Closed für vergleichbare beidseitig enge Atome ohne Identität.
+
+Die alte XLSX-Prüfung verwendete denselben Presenter als Soll-Oracle und
+belegte daher nur Serialisierungsparität. Der tatsächliche Vorfix-Befund war:
+
+```text
+JSON: A 5 / B 4 / Doku 34 / Gleich 125 / NC 13 / Unklar 43
+XLSX: A 4 / B 4 / Doku 34 / Gleich 123 / NC 12 / Unklar 47
+Abweichende IDs: VS-10, VS-25, ST-01, VS-34
+```
+
+Die erneuten vollständigen statischen Gates sowie frischen LF- und
+symmetrischen Läufe auf dem Dokumentations-Freeze-SHA bleiben offen.
+
+Ein dritter, unabhängiger Artefaktreview fand danach sechs Grenzen außerhalb
+der fachlichen Entscheidung: unvollständige XLSX-Rückprüfung, fehlende
+Finalisierungswiederaufnahme nach einem Crash, einen vom Exportvertrag
+umgangenen JSON-Endpunkt, verwaiste Publish-Claims, eine unnötige
+Downloadabhängigkeit von der Archivkopie und ein Read/Send-Zeitfenster. Die
+Commits `73db76ec9` bis `c839a2834` schließen diese Grenzen durch:
+
+- atomare Veröffentlichung von JSON, Markdown und XLSX als ein manifest- und
+  hashgebundener Satz;
+- vollständige Prüfung jeder exportierten Datenzelle gegen die kanonische
+  Projektion;
+- versionierte Export-Hashkette und gespeicherten Zugriffvertrag für JSON und
+  XLSX;
+- Wiederaufnahme einer bereits vollständig publizierten Finalisierung;
+- PID-/Nonce-gebundene Publish-Claims mit sicherer Stale-Recovery und
+  Verzeichnis-Fsync;
+- Auslieferung exakt der zuvor verifizierten Workbook-Bytes ohne erneutes
+  ungeschütztes Einlesen.
+
+Der source-gebundene Such-/Triagevertrag ist gleichzeitig als Produktprofil
+`CUSTOMER_CORE_5_V105_SOURCE_BOUND_TRIAGE` mit Vergleichsvertrag V66 und als
+LF-Profil `LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE` versioniert. Der
+vorherige V104-/LF-V4-Stand bleibt ausschließlich als historische
+Validierungsidentität erhalten.
 
 ## Mac-Studio-Prüfungen pro kleinem Fix
 
@@ -78,6 +145,16 @@ c9989ead4  deterministische Kategorieregeln            100/100 PASS
 fdc43c3e2  Kandidatentriage                              57/57 PASS
 b63d71828  LF-Profil + Referenzergebnis                  19/19 PASS
 60d87bff6  Renderer + Profil + Referenzergebnis          58/58 PASS
+4d27cf5bf  Kunden-Regel→Outcome-Vertrag                  38/38 PASS
+e29cbe897  RG-Pluralformen                              103/103 PASS
+8658d82be  Source-bound Fremd-Scope                     134/135; 1 alte Assertion
+86a2c7b22  Fremd-Scope-Test-Forward-Fix                 135/135 PASS
+c8b821440  Target-Selection-Replay                      153/158; Normalisierung offen
+95727b701  V2-Worksheet-Replay                          175/176; Registry-Dopplung offen
+525e2601e  Auswahl-Normalisierung getrennt              176/176 PASS
+1be7264e3  Narrow-Alias-Identität                         0/0; Initialisierung blockiert
+0d82cc3ea  Initialisierungs-Forward-Fix                 196/200; Gate zu breit
+528083b1d  Eng-gegen-Eng-Gate begrenzt                  200/200 PASS
 ```
 
 Die erste natürliche Glasüberschrift auf `3a2602d68` deckte nur die

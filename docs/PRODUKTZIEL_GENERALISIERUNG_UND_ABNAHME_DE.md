@@ -175,10 +175,11 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
     Dokumentpaket.
 
 Die Regeln 8 und 9 beschreiben den am 2. September beschlossenen
-Nachfolgevertrag. Der aktuelle V7-Code setzt ihn noch nicht vollständig um.
-Bis ein entsprechender Commit im isolierten Mac-Studio-Checkout und in einem
-frischen vollständigen Lauf bestanden hat, bleibt die gespeicherte
-V7-Entscheidungsschicht die Implementierungswahrheit.
+Nachfolgevertrag. Paket-/Dokumenttypneutralität und die getrennte
+Vergleichswirkung eines qualifizierten Nullfunds sind im V3.7-Kandidaten
+implementiert. Die Releasefreigabe bleibt bis zu vollständigen statischen
+Gates sowie frischen LF- und symmetrischen Läufen auf demselben finalen SHA
+offen.
 
 ## 5. Generalisierungsvertrag gegen Überanpassung
 
@@ -278,13 +279,12 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   nicht indexierte PDFs auf, erhält Rolle und Geltungsstatus pro Dokument und
   erzeugt aus dem produktiven Fünf-Kategorien-Profil eine UI- sowie
   Einblatt-XLSX-Gegenüberstellung;
-- das aktuelle Ergebnisschema V7 enthält die seit V2 servereigene, punktweise
-  und fail-closed Entscheidungsschicht sowie sieben fachliche Outcomes. Sie
-  darf im implementierten V7-Stand Vorteile nur aus vollständigen atomaren
-  Fakten mit übereinstimmendem Vergleichsscope und versionierter Regel
-  ableiten; der allgemeine Einseitenfund bleibt bis zum bestandenen
-  Nachfolgevertrag ein Dokumentationsunterschied, und es gibt keinen
-  Gesamtsieger;
+- das aktuelle Ergebnisschema 15 enthält eine servereigene, punktweise und
+  fail-closed Entscheidungsschicht mit sieben fachlichen Outcomes. Das Profil
+  `CUSTOMER_CORE_5_V105_SOURCE_BOUND_TRIAGE` erlaubt einen
+  regelgebundenen Vorteil aus vollständigem Einschluss gegen qualifizierte,
+  paketweit kontrollierte Abwesenheit. Ein unqualifizierter Einseitenfund
+  bleibt davon getrennt; einen Gesamtsieger gibt es nicht;
 - der frische LF-gegen-neun-WEVIG-Lauf auf dem Mac Studio verarbeitet 10/10
   Dokumente und 80/80 Dokument-Kategorie-Schritte zu 320/320 Zeilen; der
   bedingungssichere RC2-Replay liefert 0 `VORTEIL_A`, 0 `VORTEIL_B`, 4
@@ -307,8 +307,8 @@ daraus nicht.
 - die Full-Draft-Kataloge und vollständigen Läufe beweisen ID-, Reihenfolge-
   und technische Pfadabdeckung, aber noch keine vollständige Semantik,
   Wertbindung oder Fachrichtigkeit;
-- der semantische Hybridfallback ist technisch allgemein, fachlich produktiv
-  aber zunächst nur für die zwei Komponenten von `HP-12` aktiviert;
+- der frühere produktive HP-12-/Dinghy-Hybridfallback ist historische
+  V3.3.1-Evidenz. Der produktive V3.7-Kandidat läuft Qwen-only ohne Embeddings;
 - LF und WEVIG decken zwei wichtige Dokumentformen ab, sind aber kein
   unabhängiges Mehrversicherer-Holdout.
 
@@ -325,11 +325,33 @@ daraus nicht.
   Versicherer;
 - ein einmaliger paketweiter Vorbereitungslauf mit Wiederverwendung der Fakten
   für alle Kategorien;
-- ein kompletter Lauf auf Zielhardware innerhalb des Laufzeitbudgets;
+- Wiederholung der bereits auf `14c2bb1b0` innerhalb des Laufzeitbudgets
+  gemessenen vollständigen Läufe (LF 20:09, symmetrisch 28:05) auf dem finalen
+  Release-SHA;
 - ein fachlich freigegebener Veröffentlichungsweg; persistenter Ein-Klick-Job,
   content-addressed Resume, Progress, Cancel und privater Ergebnisdownload
   sind im A/B-MVP technisch umgesetzt, benötigen aber noch die frische
   Release-Candidate-End-to-End-Abnahme.
+
+### V3.7-Kandidatenhärtung am 4. September 2026
+
+Ein nachgelagerter Review des Vorfix-Stands `14c2bb1b0` fand zunächst drei
+Grenzen, die vor einer Veröffentlichung geschlossen werden mussten: eine zwischen Triage
+und Preparation umgehbare Ablehnung unscopierter RG-Kosten, einen
+requirementweiten statt komponentengenauen Sturm-Scope für `LF-GL-02` und vier
+gültige private Entscheidungen, die im Kunden-XLSX mangels Presenterfreigabe
+als `UNKLAR` erschienen. Der Kandidat verwendet nun einen gemeinsamen
+RG-Glaskosten-Scopevertrag, komponentengenauen Scope mit versionierter
+Suchvertragsidentität sowie eine serverseitige JSON→Kunden-XLSX-Semantikprüfung.
+Der zweite Review schloss zusätzlich häufige Pluralformen für Glasschäden,
+quellengebundene Fremd-Scope-Grenzen auch ohne Triage, einen V2-Replayvertrag
+für gezielte Worksheet-Selektionen, eine kanonische Identität für
+Katalog-Narrow-Aliasfamilien und einen vollständigen Regel→Outcome-Vertrag des
+Kundenpresenters. Der abschließende Artefaktreview ergänzte atomare
+Satzveröffentlichung, vollständige Zellenparität, Export-Hashkette,
+Crash-Resume, Stale-Claim-Recovery und verifizierte JSON-/XLSX-Auslieferung.
+Diese Implementierung ist noch kein bestandener Releasebeleg; maßgeblich sind
+die ausstehenden Finalgates auf dem Dokumentations-Freeze-SHA.
 
 ## 8. Was der LF-Gesamtlauf bewiesen hat
 
