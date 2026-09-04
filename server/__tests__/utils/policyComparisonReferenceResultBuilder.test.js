@@ -40,6 +40,13 @@ function row(requirement, found) {
   };
 }
 
+function effectFor(component) {
+  if (component.factRole === "EXCLUSION") return "EXCLUDED";
+  if (["LIMIT", "DEDUCTIBLE", "CONDITION"].includes(component.factRole))
+    return "DEFINED";
+  return "INCLUDED";
+}
+
 function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
   const outputDirectory = path.join(root, sourceDocument.uuid);
   for (const { categoryView, catalog } of categoryCatalogs()) {
@@ -67,7 +74,7 @@ function writeRun(root, sourceDocument, foundRequirementIds = new Set()) {
               ? "FOUND"
               : "NOT_FOUND",
             coverageEffect: foundRequirementIds.has(requirement.id)
-              ? "INCLUDED"
+              ? effectFor(component)
               : "UNKNOWN",
             conflictState: "NONE",
           }))
@@ -207,6 +214,104 @@ describe("directed LF reference result builder", () => {
     expect(result.categories[0].rows[0]).toMatchObject({
       pointDecision: { outcome: REFERENCE_OUTCOME.UNCLEAR },
       packageB: { reviewStatus: "WIDERSPRÜCHLICH" },
+    });
+  });
+
+  test("uses package-specific evidence before generic terms and does not treat definitions as insured objects", () => {
+    const objectRequirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(({ sourceReferenceId }) => sourceReferenceId === "LF-VS-01");
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const supplement = document("counterpart-supplement", "B", 1);
+    supplement.role = "SUPPLEMENT";
+    const terms = document("counterpart-terms", "B", 2);
+    terms.role = "TERMS";
+    const supplementRun = writeRun(
+      root,
+      supplement,
+      new Set([objectRequirement.id])
+    );
+    const termsRun = writeRun(root, terms, new Set([objectRequirement.id]));
+    const termsEffectsFile = path.join(
+      termsRun.outputDirectory,
+      "RV",
+      "effects",
+      "materialized.private.json"
+    );
+    const termsEffects = JSON.parse(fs.readFileSync(termsEffectsFile, "utf8"));
+    termsEffects.judgements
+      .filter(
+        ({ requirementId }) => requirementId === objectRequirement.id
+      )
+      .forEach((judgement) => {
+        judgement.coverageEffect = "DEFINED";
+      });
+    fs.writeFileSync(termsEffectsFile, JSON.stringify(termsEffects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        supplementRun,
+        termsRun,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ categoryId }) => categoryId === "LF-VS-01");
+
+    expect(rowResult).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.FOUND },
+      packageB: { reviewStatus: "BELEGT" },
+    });
+  });
+
+  test("does not satisfy an insured-object component from a definition alone", () => {
+    const objectRequirement = categoryCatalogs()
+      .flatMap(({ catalog }) => catalog.requirements)
+      .find(({ sourceReferenceId }) => sourceReferenceId === "LF-VS-01");
+    const allReferenceIds = new Set(
+      categoryCatalogs().flatMap(({ catalog }) =>
+        catalog.requirements.map(({ id }) => id)
+      )
+    );
+    const terms = document("counterpart-terms", "B", 1);
+    terms.role = "TERMS";
+    const termsRun = writeRun(root, terms, new Set([objectRequirement.id]));
+    const termsEffectsFile = path.join(
+      termsRun.outputDirectory,
+      "RV",
+      "effects",
+      "materialized.private.json"
+    );
+    const termsEffects = JSON.parse(fs.readFileSync(termsEffectsFile, "utf8"));
+    termsEffects.judgements
+      .filter(
+        ({ requirementId }) => requirementId === objectRequirement.id
+      )
+      .forEach((judgement) => {
+        judgement.coverageEffect = "DEFINED";
+      });
+    fs.writeFileSync(termsEffectsFile, JSON.stringify(termsEffects));
+
+    const result = buildReferenceComparisonResult(
+      [
+        writeRun(root, document("reference-a", "A", 0), allReferenceIds),
+        termsRun,
+      ],
+      {}
+    );
+    const rowResult = result.categories
+      .flatMap(({ rows }) => rows)
+      .find(({ categoryId }) => categoryId === "LF-VS-01");
+
+    expect(rowResult).toMatchObject({
+      pointDecision: { outcome: REFERENCE_OUTCOME.PARTIAL },
+      packageB: { reviewStatus: "TEILBELEGT" },
     });
   });
 });

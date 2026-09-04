@@ -56,6 +56,41 @@ function sourceWithDocument(document, source) {
   return `${document.originalName}: ${source}`;
 }
 
+function componentAcceptsEffect(component, coverageEffect) {
+  if (component.factRole === "EXCLUSION") return coverageEffect === "EXCLUDED";
+  if (["LIMIT", "DEDUCTIBLE", "CONDITION"].includes(component.factRole))
+    return ["DEFINED", "CONDITIONAL"].includes(coverageEffect);
+  return coverageEffect === "INCLUDED";
+}
+
+function selectedComponentEvidence(entries, componentId) {
+  const found = entries.flatMap(({ document, evidence }) =>
+    evidence
+      .filter(
+        (judgement) =>
+          judgement.componentId === componentId &&
+          judgement.evidencePresence === "FOUND" &&
+          judgement.coverageEffect !== "UNKNOWN"
+      )
+      .map((judgement) => ({ document, judgement }))
+  );
+  const packageSpecific = found.filter(
+    ({ document }) => document.role !== "TERMS"
+  );
+  return packageSpecific.length > 0 ? packageSpecific : found;
+}
+
+function componentEvidenceConflicts(component, selectedEvidence) {
+  const effects = new Set(
+    selectedEvidence
+      .filter(({ judgement }) => judgement.conflictState === "NONE")
+      .map(({ judgement }) => judgement.coverageEffect)
+  );
+  if (!effects.has("EXCLUDED")) return false;
+  if (component.factRole === "EXCLUSION") return effects.has("INCLUDED");
+  return [...effects].some((effect) => componentAcceptsEffect(component, effect));
+}
+
 function aggregateCounterpart(entries, requirement) {
   const matched = entries.filter(({ row }) => row.reviewStatus !== "UNGEKLÄRT");
   if (matched.length === 0)
@@ -73,45 +108,37 @@ function aggregateCounterpart(entries, requirement) {
       .map(({ row }) => row.coverageAmount)
       .filter((value) => value !== "Nicht feststellbar")
   );
+  const selectedEvidence = new Map(
+    requirement.components.map((component) => [
+      component.id,
+      selectedComponentEvidence(entries, component.id),
+    ])
+  );
   const foundComponents = new Set(
-    entries.flatMap(({ evidence }) =>
-      evidence
-        .filter(
-          (judgement) =>
-            judgement.evidencePresence === "FOUND" &&
-            judgement.coverageEffect !== "UNKNOWN" &&
-            judgement.conflictState === "NONE"
-        )
-        .map(({ componentId }) => componentId)
-    )
+    requirement.components
+      .filter((component) =>
+        selectedEvidence
+          .get(component.id)
+          .some(
+            ({ judgement }) =>
+              judgement.conflictState === "NONE" &&
+              componentAcceptsEffect(component, judgement.coverageEffect)
+          )
+      )
+      .map(({ id }) => id)
   );
   const packageComponentComplete = requirement.components.every(({ id }) =>
     foundComponents.has(id)
   );
-  const effectsByComponent = new Map();
-  for (const { evidence } of entries) {
-    for (const judgement of evidence) {
-      if (
-        judgement.evidencePresence !== "FOUND" ||
-        judgement.coverageEffect === "UNKNOWN" ||
-        judgement.conflictState !== "NONE"
-      )
-        continue;
-      const effects =
-        effectsByComponent.get(judgement.componentId) || new Set();
-      effects.add(judgement.coverageEffect);
-      effectsByComponent.set(judgement.componentId, effects);
-    }
-  }
   const packageEvidenceConflicting =
-    [...effectsByComponent.values()].some((effects) => effects.size > 1) ||
-    entries.some(({ evidence }) =>
-      evidence.some(
-        ({ evidencePresence, conflictState }) =>
-          evidencePresence === "FOUND" && conflictState !== "NONE"
-      )
-    ) ||
-    matched.some(({ row }) => row.reviewStatus === "WIDERSPRÜCHLICH");
+    requirement.components.some((component) => {
+      const componentEvidence = selectedEvidence.get(component.id);
+      return (
+        componentEvidence.some(
+          ({ judgement }) => judgement.conflictState !== "NONE"
+        ) || componentEvidenceConflicts(component, componentEvidence)
+      );
+    });
   return {
     documentedContent: matched
       .map(
