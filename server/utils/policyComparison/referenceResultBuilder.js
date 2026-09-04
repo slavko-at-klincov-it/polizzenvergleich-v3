@@ -118,6 +118,33 @@ function selectedSourcesValid(entry, judgement) {
   );
 }
 
+function normalizedText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function sourceBindsFact(source, fact) {
+  if (source.candidateId === fact.source?.candidateId) return true;
+  if (
+    source.physicalPageNumber !== fact.source?.physicalPageNumber ||
+    !Number.isInteger(source.contextDocumentStart) ||
+    !Number.isInteger(fact.source?.documentStart) ||
+    !Number.isInteger(fact.source?.documentEnd)
+  )
+    return false;
+  const context = normalizedText(source.contextText);
+  const exactText = normalizedText(fact.source?.exactText);
+  return (
+    exactText.length > 0 &&
+    context.includes(exactText) &&
+    fact.source.documentStart >= source.contextDocumentStart &&
+    fact.source.documentEnd <=
+      source.contextDocumentStart + String(source.contextText || "").length
+  );
+}
+
 function requestedFieldsValid(entry, component, judgement) {
   const requestedFields = componentRequestedFields(component);
   if (requestedFields.length === 0) return true;
@@ -127,8 +154,13 @@ function requestedFieldsValid(entry, component, judgement) {
     const field = (result.fields || []).find(
       (candidate) => candidate.field === fieldName
     );
+    const componentSources = entry.selectedSources.filter(
+      (source) =>
+        source.componentId === component.id &&
+        judgement.selectedCandidateIds.includes(source.candidateId)
+    );
     const componentFacts = (field?.facts || []).filter((fact) =>
-      judgement.selectedCandidateIds.includes(fact.source?.candidateId)
+      componentSources.some((source) => sourceBindsFact(source, fact))
     );
     return (
       field?.status === "FOUND" &&
