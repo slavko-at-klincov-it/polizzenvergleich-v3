@@ -10,6 +10,21 @@ const EXPLICIT_GLASS_LOSS_SCOPE =
 function isSentenceBoundary(text, index) {
   const character = text[index];
   if (character === ";" || character === "!" || character === "?") return true;
+  if (character === "\n" || character === "\r") {
+    const before = text[index - 1];
+    const after = text[index + 1];
+    if (
+      before === "\n" ||
+      before === "\r" ||
+      after === "\n" ||
+      after === "\r"
+    )
+      return true;
+    const followingLine = text.slice(index + 1).match(/^[ \t]*(.*)$/u)?.[1] || "";
+    return /^(?:[-–—*•◦▪‣·]|\(?\d{1,3}[.)]|[a-zA-Z][.)])\s+/u.test(
+      followingLine
+    );
+  }
   if (character !== ".") return false;
   let cursor = index + 1;
   while (cursor < text.length && /\s/u.test(text[cursor])) cursor += 1;

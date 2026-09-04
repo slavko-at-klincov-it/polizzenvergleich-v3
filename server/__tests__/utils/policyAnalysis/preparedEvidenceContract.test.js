@@ -271,6 +271,40 @@ describe("preparedEvidenceContract", () => {
   });
 
   test.each([
+    "• Glasschäden an Scheiben sind versichert.\n• Notverschalungskosten sind mitversichert.",
+    "1. Glasbruchschäden sind versichert.\n2. Notverschalungskosten sind mitversichert.",
+  ])(
+    "does not borrow glass-loss scope from a preceding list item",
+    (text) => {
+      const worksheet = rgCostWorksheet({
+        text,
+        exactText: "Notverschalungskosten",
+      });
+      const [preparedTarget] = buildPreparedEvidenceTargets({
+        worksheet,
+        documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+        candidateTriage: [
+          {
+            requirementId: "RG-03",
+            componentId: "emergency_boarding",
+            candidateId: "candidate:rg-03:emergency-boarding",
+            binding: "DIRECT",
+          },
+        ],
+      });
+
+      expect(preparedTarget.candidates).toEqual([]);
+      expect(preparedTarget.serverRejectedCandidates).toEqual([
+        expect.objectContaining({
+          candidateId: "candidate:rg-03:emergency-boarding",
+          deterministicBindingBasis:
+            "RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE",
+        }),
+      ]);
+    }
+  );
+
+  test.each([
     ["special_glass", "INSURED_OBJECT", "DIRECT"],
     ["special_glass", "INSURED_OBJECT", null],
     ["special_glass_limit", "LIMIT", "DIRECT"],
