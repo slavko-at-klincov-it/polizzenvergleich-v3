@@ -2,6 +2,7 @@ const {
   clausePolarity,
   deterministicCategoryCandidateBinding,
   deterministicCategoryPreparedDecision,
+  expectedCategoryScopeKeys,
 } = require("../../../utils/policyAnalysis/deterministicCategoryEvidenceRules");
 
 function occurrence({ text, exactText, scopeLeadText = "" }) {
@@ -425,6 +426,29 @@ describe("deterministicCategoryEvidenceRules", () => {
       basis: "EXPLICIT_POSITIVE_CLAUSE_GOVERNOR",
       authoritative: true,
     });
+  });
+
+  test("maps the glass reference view without making foreign host scopes terminal", () => {
+    expect(expectedCategoryScopeKeys("RG")).toEqual([
+      "GLASBRUCH_INSURANCE",
+    ]);
+    const input = bindingInput({
+      text: "Die Glasbruchdeckung für Solaranlagen wird gesondert beschrieben.",
+      exactText: "Glasbruchdeckung für Solaranlagen",
+    });
+    input.worksheet.catalog.categoryView = "RG";
+    input.requirement = {
+      id: "RG-02",
+      sourceReferenceId: "LF-GL-02",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "solar_glass", factRole: "INSURED_OBJECT" };
+    input.occurrence.sectionScopeHint = {
+      scopeKey: "STURM_INSURANCE",
+      text: "STURMVERSICHERUNG",
+    };
+
+    expect(deterministicCategoryCandidateBinding(input)).toBeNull();
   });
 
   test.each([
