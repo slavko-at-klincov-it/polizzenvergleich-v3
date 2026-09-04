@@ -4,6 +4,7 @@ const path = require("path");
 
 const POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID =
   "POLICY_COMPARISON_ARTIFACT_SET_V1";
+const POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION = 1;
 const POLICY_COMPARISON_ARTIFACT_SET_MANIFEST =
   "artifact-set-manifest.private.json";
 const POLICY_COMPARISON_ARTIFACT_FILES = Object.freeze([
@@ -74,6 +75,7 @@ function buildArtifactSetManifest(files, fsImpl) {
     };
   });
   const digestBasis = {
+    schemaVersion: POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION,
     contractId: POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID,
     artifacts,
   };
@@ -210,6 +212,7 @@ async function publishComparisonArtifactSet(
 module.exports = {
   POLICY_COMPARISON_ARTIFACT_FILES,
   POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID,
+  POLICY_COMPARISON_ARTIFACT_SET_SCHEMA_VERSION,
   POLICY_COMPARISON_ARTIFACT_SET_MANIFEST,
   buildArtifactSetManifest,
   publishComparisonArtifactSet,

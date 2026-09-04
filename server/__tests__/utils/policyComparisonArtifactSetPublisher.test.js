@@ -77,6 +77,7 @@ describe("policy comparison artifact set publisher", () => {
     expect(manifest.contractId).toBe(
       POLICY_COMPARISON_ARTIFACT_SET_CONTRACT_ID
     );
+    expect(manifest.schemaVersion).toBe(1);
     expect(manifest.artifacts).toEqual(
       POLICY_COMPARISON_ARTIFACT_FILES.map((filename) => ({
         filename,
