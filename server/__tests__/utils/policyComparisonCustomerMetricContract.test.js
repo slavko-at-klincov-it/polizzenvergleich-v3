@@ -5,6 +5,7 @@ const {
   validateCustomerComparison,
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
+  PREVIOUS_PRODUCT_PROFILE_IDENTITY,
   PRODUCT_PROFILE,
 } = require("../../utils/policyComparison/productContract");
 const {
@@ -333,6 +334,17 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(tampered)).toThrow(
       "COMPARISON_PACKAGE_MEMBERSHIP_AUDIT_INVALID"
     );
+  });
+
+  test("keeps schema V14 results from the previous shipped profile readable", () => {
+    const result = currentFeC02PackageResult();
+    result.schemaVersion = 14;
+    result.productProfile = PREVIOUS_PRODUCT_PROFILE_IDENTITY;
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 1,
+    });
   });
 
   test("counts multiple private blockers as one customer review row", () => {

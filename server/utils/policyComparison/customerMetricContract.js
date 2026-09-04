@@ -10,7 +10,10 @@ const {
 const {
   packageReviewCustomerExplanation,
 } = require("./customerResultPresenter");
-const { PRODUCT_PROFILE } = require("./productContract");
+const {
+  PREVIOUS_PRODUCT_PROFILE_IDENTITY,
+  PRODUCT_PROFILE,
+} = require("./productContract");
 const {
   BILATERAL_ABSENCE_REASON_CODE,
   BILATERAL_ABSENCE_RULE_ID,
@@ -305,6 +308,22 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   } else if (Number(result.schemaVersion) === 13) {
     if (
       !HISTORICAL_SCHEMA_13_PROFILES.some(
+        (profile) =>
+          productProfileId === profile.id &&
+          comparisonContractId === profile.comparisonContractId
+      )
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) === 14) {
+    const acceptedProfiles = [
+      PREVIOUS_PRODUCT_PROFILE_IDENTITY,
+      PRODUCT_PROFILE,
+    ];
+    if (
+      !acceptedProfiles.some(
         (profile) =>
           productProfileId === profile.id &&
           comparisonContractId === profile.comparisonContractId
