@@ -331,7 +331,7 @@ describe("candidateTriageContract", () => {
     expect(target.scopeResolution).toMatchObject({
       owner: "SERVER",
       scopeMatch: "GENERAL",
-      basis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+      basis: "MATCHING_CATEGORY_SECTION",
     });
     expect(target.modelDecisionFields).toEqual([]);
   });

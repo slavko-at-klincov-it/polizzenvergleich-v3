@@ -6194,6 +6194,14 @@ Formulierungen bleiben ausgeschlossen. Die nachgelagerte Effektentscheidung
 ist nur bei ausschließlich direkt gebundenen Kandidaten ohne ungelöste IDs
 serverseitig `DEFINED`; andernfalls bleibt der normale fail-closed Pfad aktiv.
 
+Die erste fokussierte Mac-Prüfung des neuen Vertrags wies zwei präzise
+Testvertragskorrekturen nach: Die servereigene Scope-Auflösung behält als
+Provenienzgrund `MATCHING_CATEGORY_SECTION`, während die neue RH-Basis nur die
+Rollenauflösung trägt. Außerdem muss die semantisch gleichwertige Form
+„höchstens das Dreifache der Versicherungssumme“ neben den
+Pauschalsummenformen ausdrücklich akzeptiert werden. Der zugehörige
+Forward-Fix ändert weder Scope noch Ergebnisaggregation.
+
 Der vollständige Laufbeweis einschließlich Zeilenpartition, Hashes und
 Gate-Urteil liegt außerhalb des Repositorys im privaten QA-Root als
 `FACHLICHER_LF_LAUFBERICHT_DE.md`. Nach diesem separaten Forward-Fix sind ein
