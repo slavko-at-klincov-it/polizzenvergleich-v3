@@ -12,6 +12,9 @@ const {
   derivePackageReviewAudit,
 } = require("../../utils/policyComparison/packageReviewAudit");
 const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+} = require("../../utils/policyComparison/customerResultRuleOutcomeContract");
+const {
   buildPackageActivatedObjectMembershipAudit,
 } = require("../../utils/policyAnalysis/packageActivatedObjectMembershipAuditContract");
 
@@ -40,6 +43,21 @@ function resultFor(rows) {
     categories,
     totals: deriveCustomerMetrics(categories),
   };
+}
+
+function schema15SimpleResult() {
+  const result = resultFor([
+    row("VS-03", "GLEICHWERTIG", "INHALTLICH_GLEICH", "EQUAL_COVERAGE"),
+  ]);
+  result.schemaVersion = 15;
+  result.productProfile = PRODUCT_PROFILE;
+  result.customerResultRuleOutcomeContract = {
+    schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+    contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+  };
+  result.categories[0].rows[0].pointDecision.ruleId =
+    "ATOMIC_COVERAGE_EQUALITY_V1";
+  return result;
 }
 
 function packageAuditBlocker(code, documentUuid = "document-a") {
@@ -345,6 +363,32 @@ describe("policy comparison customer metric contract", () => {
       rows: 0,
       customerReviewRequired: 0,
     });
+  });
+
+  test("binds every schema V15 decision to the persisted rule/outcome contract", () => {
+    expect(validateCustomerComparison(schema15SimpleResult())).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 0,
+    });
+
+    const missingContract = schema15SimpleResult();
+    delete missingContract.customerResultRuleOutcomeContract;
+    expect(() => validateCustomerComparison(missingContract)).toThrow(
+      "COMPARISON_CUSTOMER_RULE_OUTCOME_CONTRACT_MISMATCH"
+    );
+
+    const unknownRule = schema15SimpleResult();
+    unknownRule.categories[0].rows[0].pointDecision.ruleId = "UNKNOWN_RULE";
+    expect(() => validateCustomerComparison(unknownRule)).toThrow(
+      "COMPARISON_CUSTOMER_RULE_OUTCOME_NOT_APPROVED"
+    );
+
+    const forbiddenOutcome = schema15SimpleResult();
+    forbiddenOutcome.categories[0].rows[0].pointDecision.ruleId =
+      "INCLUDED_OVER_EXCLUDED_V1";
+    expect(() => validateCustomerComparison(forbiddenOutcome)).toThrow(
+      "COMPARISON_CUSTOMER_RULE_OUTCOME_NOT_APPROVED"
+    );
   });
 
   test("counts multiple private blockers as one customer review row", () => {

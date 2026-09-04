@@ -1,16 +1,11 @@
 const {
-  ANY_COMPONENT_IDENTITY_GATE_RULE_ID,
   POINT_OUTCOME,
 } = require("./pointDecision");
 const {
-  AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_RULE_ID,
-} = require("./automaticIndexAdjustmentComparisonContract");
-const {
-  VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID,
-} = require("./vs25AuthorityReconstructionLimitPortfolioContract");
-const {
-  STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID,
-} = require("./stormDefinitionThresholdContract");
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT_ID,
+  customerRuleOutcomeApproved,
+} = require("./customerResultRuleOutcomeContract");
 
 const UNCLEAR_REASON_TEXT = Object.freeze({
   MISSING_BOTH:
@@ -68,110 +63,8 @@ const PACKAGE_REVIEW_HINTS = Object.freeze({
   UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER:
     "Der offene Prüfgrund konnte technisch noch nicht genauer eingeordnet werden.",
 });
-const CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT_ID =
-  "CUSTOMER_RESULT_RULE_OUTCOME_V1";
-const A_OR_B = Object.freeze([
-  POINT_OUTCOME.ADVANTAGE_A,
-  POINT_OUTCOME.ADVANTAGE_B,
-]);
-const A_OR_B_OR_EQUAL = Object.freeze([
-  ...A_OR_B,
-  POINT_OUTCOME.EQUIVALENT,
-]);
-const CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT = Object.freeze({
-  schemaVersion: 1,
-  contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT_ID,
-  rules: Object.freeze({
-    [ANY_COMPONENT_IDENTITY_GATE_RULE_ID]: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    [AUTOMATIC_INDEX_ADJUSTMENT_PRESENCE_EQUALITY_RULE_ID]: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-    ATOMIC_COMPARABILITY_GATE_V1: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    ATOMIC_COVERAGE_EQUALITY_V1: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-    ANY_COMPONENT_IDENTITY_GATE_V1: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    COMPLETE_SEARCH_ABSENCE_BOTH_V1: Object.freeze([
-      POINT_OUTCOME.NO_DOCUMENTED_ADVANTAGE,
-    ]),
-    EQUAL_COMPLETE_CONTROLLED_ABSENCE_BOTH_V1: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-    FAIL_CLOSED_COMPARISON_SCOPE_PROVENANCE_V1: Object.freeze([
-      POINT_OUTCOME.UNCLEAR,
-    ]),
-    FAIL_CLOSED_CONDITIONAL_SOURCE_V1: Object.freeze([
-      POINT_OUTCOME.UNCLEAR,
-    ]),
-    FAIL_CLOSED_OBJECT_SCOPE_IDENTITY_V1: Object.freeze([
-      POINT_OUTCOME.UNCLEAR,
-    ]),
-    FAIL_CLOSED_V1: Object.freeze([POINT_OUTCOME.UNCLEAR]),
-    FE_A01_FIRE_DEFINITION_SCOPE_COMPARISON_V1: A_OR_B_OR_EQUAL,
-    FE_C07_HIGHER_UNCONDITIONED_PERCENT_LIMIT_V1: A_OR_B,
-    FE_C02_BROADER_MEMBERSHIP_CONDITION_SCOPE_V1: A_OR_B,
-    HIGHER_COVERAGE_LIMIT_V1: A_OR_B,
-    INCLUDED_OVER_ASSUMED_NOT_INCLUDED_V1: A_OR_B,
-    INCLUDED_OVER_QUALIFIED_ABSENCE_V1: A_OR_B,
-    INCLUDED_OVER_EXCLUDED_V1: A_OR_B,
-    LOWER_DEDUCTIBLE_V1: A_OR_B,
-    LW20_QUALIFIED_ABSENCE_UNOVERRIDDEN_DEFAULT_EXCLUSION_EQUALITY_V1:
-      Object.freeze([POINT_OUTCOME.EQUIVALENT]),
-    EQUAL_DIRECTED_OBJECT_FAMILY_COVERAGE_V1: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-    QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V1: Object.freeze([
-      POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-    ]),
-    QUALIFIED_ABSENCE_DOCUMENTATION_DIFFERENCE_V2: Object.freeze([
-      POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,
-    ]),
-    SOLE_SCOPE_REVIEW_BLOCKER_TO_ATOMIC_NONCOMPARABLE_V1: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    SOURCE_BOUND_OBJECT_SCOPE_IDENTITY_GATE_V1: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    TYPED_VALUE_EQUALITY_V1: Object.freeze([POINT_OUTCOME.EQUIVALENT]),
-    VS08_EQUAL_PACKAGE_CONDITION_CONSENSUS_V1: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-    VS15_EQUAL_CONTROLLED_NAMED_OUTBUILDING_QUALIFIER_ABSENCE_BOTH_V1:
-      Object.freeze([POINT_OUTCOME.EQUIVALENT]),
-    VS21_INCOMPATIBLE_LIMIT_VALUE_TYPES_V1: Object.freeze([
-      POINT_OUTCOME.NOT_COMPARABLE,
-    ]),
-    VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1: A_OR_B,
-    VS24_EQUIVALENT_GLASS_LOSS_SCAFFOLDING_COST_WITHOUT_LOCAL_LIMIT_V1:
-      Object.freeze([POINT_OUTCOME.EQUIVALENT]),
-    [VS25_AUTHORITY_LIMIT_PORTFOLIO_RULE_ID]: A_OR_B_OR_EQUAL,
-    [STORM_DEFINITION_THRESHOLD_EQUALITY_RULE_ID]: Object.freeze([
-      POINT_OUTCOME.EQUIVALENT,
-    ]),
-  }),
-});
-const APPROVED_RULE_OUTCOMES = new Map(
-  Object.entries(CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.rules).map(
-    ([ruleId, outcomes]) => [ruleId, new Set(outcomes)]
-  )
-);
-
 function approvedRule(value, outcome) {
-  const rules = String(value || "").split("+");
-  return (
-    rules.length > 0 &&
-    rules.every(
-      (rule) =>
-        APPROVED_RULE_OUTCOMES.has(rule) &&
-        APPROVED_RULE_OUTCOMES.get(rule).has(outcome)
-    )
-  );
+  return customerRuleOutcomeApproved(value, outcome);
 }
 
 function customerLanguage(value) {

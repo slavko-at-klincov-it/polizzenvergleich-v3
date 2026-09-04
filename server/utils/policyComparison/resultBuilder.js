@@ -11,6 +11,9 @@ const {
 } = require("./productContract");
 const { customerResultText } = require("./customerResultPresenter");
 const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+} = require("./customerResultRuleOutcomeContract");
+const {
   assertCustomerResultSemanticParity,
 } = require("./customerResultSemanticContract");
 const {
@@ -2018,11 +2021,15 @@ function buildComparisonResult(documentRuns, metadata = {}) {
   });
   const totals = deriveCustomerMetrics(categories);
   const result = {
-    schemaVersion: 14,
+    schemaVersion: 15,
     status: "COMPARISON_RESULT_MATERIALIZED",
     generatedAt: new Date().toISOString(),
     ...metadata,
     productProfile: PRODUCT_PROFILE,
+    customerResultRuleOutcomeContract: {
+      schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+      contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+    },
     documents: loadedRuns.map(({ document }) => ({
       uuid: document.uuid,
       side: document.side,

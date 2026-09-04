@@ -84,6 +84,10 @@ const {
   comparisonContract: specializedComparisonContract,
   specializedComparisonDecisionDetected,
 } = require("./specializedComparisonQualificationReplayContract");
+const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+  customerRuleOutcomeApproved,
+} = require("./customerResultRuleOutcomeContract");
 
 const METRIC_CONTRACT_ID = "CUSTOMER_COMPARISON_METRICS_V2";
 const POINT_OUTCOMES = Object.freeze(Object.values(POINT_OUTCOME));
@@ -395,6 +399,19 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   let recomputedReview = 0;
   let recomputedLegacyDifferences = 0;
 
+  if (Number(result.schemaVersion) >= 15) {
+    if (
+      !sameJson(
+        result.customerResultRuleOutcomeContract,
+        {
+          schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+          contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+        }
+      )
+    )
+      validationError("COMPARISON_CUSTOMER_RULE_OUTCOME_CONTRACT_MISMATCH");
+  }
+
   for (const row of rows) {
     const rowKey = `${row.categoryView}:${row.categoryId}`;
     if (seenRows.has(rowKey))
@@ -403,6 +420,15 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
     const outcome = row.pointDecision?.outcome;
     if (!POINT_OUTCOMES.includes(outcome))
       validationError("COMPARISON_POINT_OUTCOME_INVALID", [rowKey, outcome]);
+    if (
+      Number(result.schemaVersion) >= 15 &&
+      !customerRuleOutcomeApproved(row.pointDecision?.ruleId, outcome)
+    )
+      validationError("COMPARISON_CUSTOMER_RULE_OUTCOME_NOT_APPROVED", [
+        rowKey,
+        row.pointDecision?.ruleId,
+        outcome,
+      ]);
     recomputedOutcomes[outcome] += 1;
     recomputedOutcomeRowKeys[outcome].push(rowKey);
     const reviewRequired = row.pointDecision?.reviewRequired;

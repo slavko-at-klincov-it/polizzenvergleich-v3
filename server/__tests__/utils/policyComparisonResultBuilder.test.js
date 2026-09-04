@@ -2799,7 +2799,11 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(14);
+    expect(result.schemaVersion).toBe(15);
+    expect(result.customerResultRuleOutcomeContract).toEqual({
+      schemaVersion: 1,
+      contractId: "CUSTOMER_RESULT_RULE_OUTCOME_V1",
+    });
     expect(comparisonRow.outcome).toBe("UNTERSCHIED_FACHLICH_PRÜFEN");
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "VORTEIL_B",
@@ -2852,7 +2856,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(14);
+    expect(result.schemaVersion).toBe(15);
     expect(comparisonRow.pointDecision).toMatchObject({
       outcome: "UNKLAR",
       reasonCode: "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION",
@@ -3088,7 +3092,7 @@ describe("policy comparison result builder", () => {
     const result = buildComparisonResult([runA, runB]);
     const comparisonRow = result.categories[0].rows[0];
 
-    expect(result.schemaVersion).toBe(14);
+    expect(result.schemaVersion).toBe(15);
     expect(comparisonRow).toMatchObject({
       outcome: "BEIDSEITIG_VOLLSTÄNDIG_NICHT_GEFUNDEN",
       pointDecision: {
