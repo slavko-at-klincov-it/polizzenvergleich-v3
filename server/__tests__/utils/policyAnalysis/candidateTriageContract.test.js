@@ -683,6 +683,97 @@ describe("candidateTriageContract", () => {
     });
   });
 
+  test.each([
+    [
+      "Mehrkosten für eine Ersatzunterkunft",
+      "Mehrkosten für eine Ersatzunterkunft gemäß den nachfolgenden Bestimmungen.",
+    ],
+    [
+      "Suchkosten ohne ersatzpflichtigen Schaden",
+      "Suchkosten ohne ersatzpflichtigen Schaden sind auf Erstes Risiko vorgesehen.",
+    ],
+    [
+      "De- und Remontage",
+      "Kosten für De- und Remontage von Maschinen und Einrichtungen.",
+    ],
+    [
+      "De- und Remontage",
+      "Aufwendungen für die De- und Remontage von Maschinen.",
+    ],
+    [
+      "Bewachung",
+      "Sicherungskosten sind Kosten für kurzfristig notwendige Notverschalung, Bewachung und weitere Maßnahmen.",
+    ],
+  ])(
+    "attests only the local cost role and leaves scope open (%s)",
+    (exactText, text) => {
+      const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+      const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+      const start = text.indexOf(exactText);
+      occurrence.exactText = exactText;
+      occurrence.context = {
+        unitType: "PARAGRAPH",
+        text,
+        documentStart: 0,
+        documentEnd: text.length,
+      };
+      occurrence.documentStart = start;
+      occurrence.documentEnd = start + exactText.length;
+      occurrence.scopeLead = { text: "" };
+
+      const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+      expect(target.roleResolution).toEqual({
+        owner: "SERVER",
+        roleMatch: "MATCH",
+        basis: "EXPLICIT_LOCAL_COST_ROLE",
+      });
+      expect(target.scopeResolution).toEqual({
+        owner: "MODEL",
+        scopeMatch: null,
+        basis: "MODEL_REQUIRED",
+        matchedAlias: null,
+      });
+      expect(target.modelDecisionFields).toEqual(["scopeMatch"]);
+    }
+  );
+
+  test.each([
+    "Die Kostenfrage zur Bewachung wird im nächsten Kapitel beantwortet.",
+    "Kosten für eine Prüfung, ob Bewachung erforderlich sein könnte.",
+    "Aufwendungen für Werbung erwähnen auch die Bewachung.",
+  ])("keeps a non-local cost mention unresolved (%s)", (text) => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+    const exactText = "Bewachung";
+    const start = text.indexOf(exactText);
+    occurrence.exactText = exactText;
+    occurrence.context = {
+      unitType: "PARAGRAPH",
+      text,
+      documentStart: 0,
+      documentEnd: text.length,
+    };
+    occurrence.documentStart = start;
+    occurrence.documentEnd = start + exactText.length;
+    occurrence.scopeLead = { text: "" };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+    expect(target.roleResolution).toEqual({
+      owner: "SERVER",
+      roleMatch: "UNRESOLVED",
+      basis: "NO_EXPLICIT_COST_ROLE",
+    });
+    expect(target.scopeResolution).toEqual({
+      owner: "SERVER",
+      scopeMatch: "UNRESOLVED",
+      basis: "ROLE_UNRESOLVED",
+      matchedAlias: null,
+    });
+    expect(target.modelDecisionFields).toEqual([]);
+  });
+
   test("rejects a cleanup work-start threshold as cost evidence", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     const occurrence = worksheet.requirements[0].components[0].occurrences[0];

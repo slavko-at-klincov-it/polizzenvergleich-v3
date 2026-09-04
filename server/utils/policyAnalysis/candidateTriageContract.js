@@ -60,6 +60,30 @@ function containsNormalizedPhrase(text, phrase) {
   );
 }
 
+function hasExplicitLocalCostRole(members, contextText) {
+  const normalizedContext = normalizeRuleText(contextText);
+  const hasCostDefinitionGovernor =
+    /\b\p{L}*kosten\s+sind\s+kosten\s+fuer\b/iu.test(normalizedContext);
+  return members.every((member) => {
+    const normalizedExactText = normalizeRuleText(member.exactText);
+    const firstWord = normalizedExactText.split(" ")[0] || "";
+    if (firstWord.endsWith("kosten")) return true;
+    if (
+      [
+        `Kosten für ${member.exactText}`,
+        `Kosten für die ${member.exactText}`,
+        `Aufwendungen für ${member.exactText}`,
+        `Aufwendungen für die ${member.exactText}`,
+      ].some((phrase) => containsNormalizedPhrase(contextText, phrase))
+    )
+      return true;
+    return (
+      hasCostDefinitionGovernor &&
+      containsNormalizedPhrase(contextText, member.exactText)
+    );
+  });
+}
+
 function isScopeSentenceBoundary(text, index) {
   const character = text[index];
   if (character === ";" || character === "!" || character === "?") return true;
@@ -301,6 +325,9 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
     }`.trim();
     const liabilityContext = `${scopeLeadText}\n${source.context?.text || ""}`;
     const explicitCostGovernorContext = scopeSentence || source.context?.text;
+    const hasExplicitLocalCostRoleEvidence =
+      allCostMembers &&
+      hasExplicitLocalCostRole(members, explicitCostGovernorContext);
     const hasExplicitCostGovernor =
       allCostMembers &&
       /(?:Kosten\s+für\s+(?:die\s+)?(?:nötige[nr]?\s+)?(?:Aufräumung|Abbruch)|Aufräum(?:ungs)?-?\s*(?:und|,)?\s*Abbruchkosten|Aufräum-\s*,?\s*Abbruch-\s*und\s*Feuerlöschkosten)/iu.test(
@@ -370,14 +397,18 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       };
     } else if (
       allCostMembers &&
-      (allExplicitCostTerms || hasExplicitCostGovernor)
+      (allExplicitCostTerms ||
+        hasExplicitCostGovernor ||
+        hasExplicitLocalCostRoleEvidence)
     ) {
       roleResolution = {
         owner: "SERVER",
         roleMatch: ROLE_MATCH.MATCH,
         basis: allExplicitCostTerms
           ? "EXPLICIT_COST_TERM"
-          : "EXPLICIT_COST_GOVERNOR",
+          : hasExplicitCostGovernor
+            ? "EXPLICIT_COST_GOVERNOR"
+            : "EXPLICIT_LOCAL_COST_ROLE",
       };
     } else if (allCostMembers) {
       roleResolution = {
