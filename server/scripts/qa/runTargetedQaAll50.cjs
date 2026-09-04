@@ -715,6 +715,8 @@ async function run(
               args: [
                 "--worksheet",
                 worksheet,
+                "--documentArtifact",
+                documentArtifact.file,
                 "--systemPromptFile",
                 triagePrompt,
                 "--controlMode",

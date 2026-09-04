@@ -371,6 +371,10 @@ async function runDocument({
   const effectDirectory = path.join(documentDirectory, "effects");
   const adaptedDirectory = path.join(documentDirectory, "adapted");
   const worksheetFile = path.join(documentDirectory, "worksheet.private.json");
+  const documentArtifactFile = path.join(
+    documentDirectory,
+    "document.private.json"
+  );
   for (const directory of [
     documentDirectory,
     legacyDirectory,
@@ -422,6 +426,8 @@ async function runDocument({
       PATHS.catalog,
       "--output",
       worksheetFile,
+      "--documentArtifactOutput",
+      documentArtifactFile,
     ],
     environment
   );
@@ -436,6 +442,8 @@ async function runDocument({
     [
       "--worksheet",
       worksheetFile,
+      "--documentArtifact",
+      documentArtifactFile,
       "--systemPromptFile",
       PATHS.triagePrompt,
       "--controlFile",
@@ -465,6 +473,8 @@ async function runDocument({
     [
       "--worksheet",
       worksheetFile,
+      "--documentArtifact",
+      documentArtifactFile,
       "--triageFile",
       triageMaterializedFile,
       "--systemPromptFile",

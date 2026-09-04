@@ -158,6 +158,8 @@ async function analyzeReferenceDocument({
           path.join(SCRIPT_ROOT, "runVsCandidateTriage.cjs"),
           "--worksheet",
           worksheet,
+          "--documentArtifact",
+          documentArtifact,
           "--systemPromptFile",
           path.join(RESOURCE_ROOT, "candidate-triage-system.v0.1.md"),
           "--hybridSystemPromptFile",

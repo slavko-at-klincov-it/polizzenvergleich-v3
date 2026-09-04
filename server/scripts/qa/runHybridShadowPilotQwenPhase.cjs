@@ -329,6 +329,8 @@ async function run() {
       [
         "--worksheet",
         category.shadowWorksheetPath,
+        "--documentArtifact",
+        documentArtifactBinding.documentArtifactPath,
         "--systemPromptFile",
         triagePrompt,
         "--hybridSystemPromptFile",

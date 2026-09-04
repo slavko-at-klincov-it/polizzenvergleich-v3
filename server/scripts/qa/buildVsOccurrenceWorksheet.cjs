@@ -39,6 +39,7 @@ async function run() {
     "pdfFile",
     "catalogFile",
     "output",
+    "documentArtifactOutput",
     "requirementIds",
   ]);
   const unknownArguments = Object.keys(args).filter(
@@ -49,6 +50,9 @@ async function run() {
   const pdfFile = path.resolve(args.pdfFile || "");
   const catalogFile = path.resolve(args.catalogFile || "");
   const outputFile = path.resolve(args.output || "");
+  const documentArtifactOutputFile = args.documentArtifactOutput
+    ? path.resolve(args.documentArtifactOutput)
+    : null;
   for (const [label, file] of [
     ["PDF", pdfFile],
     ["Katalog", catalogFile],
@@ -97,6 +101,18 @@ async function run() {
     mode: 0o600,
   });
   fs.chmodSync(outputFile, 0o600);
+  if (documentArtifactOutputFile) {
+    fs.mkdirSync(path.dirname(documentArtifactOutputFile), {
+      recursive: true,
+      mode: 0o700,
+    });
+    fs.writeFileSync(
+      documentArtifactOutputFile,
+      JSON.stringify({ schemaVersion: 1, fingerprint, document }, null, 2),
+      { encoding: "utf8", mode: 0o600 }
+    );
+    fs.chmodSync(documentArtifactOutputFile, 0o600);
+  }
   console.log(
     `[vs-occurrence-worksheet] ${worksheet.summary.occurrenceCount} Kandidaten, ` +
       `${worksheet.summary.componentsWithCandidates}/${worksheet.summary.componentCount} Komponenten: ${outputFile}`

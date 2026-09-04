@@ -81,6 +81,7 @@ async function run() {
   const args = parseArguments(process.argv.slice(2));
   const allowedArguments = new Set([
     "worksheet",
+    "documentArtifact",
     "systemPromptFile",
     "hybridSystemPromptFile",
     "controlFile",
@@ -97,6 +98,9 @@ async function run() {
   if (unknownArguments.length)
     fail(`Unbekannte Argumente: ${unknownArguments.join(",")}`);
   const worksheetFile = path.resolve(args.worksheet || "");
+  const documentArtifactFile = args.documentArtifact
+    ? path.resolve(args.documentArtifact)
+    : null;
   const systemPromptFile = path.resolve(args.systemPromptFile || "");
   const hybridSystemPromptFile = args.hybridSystemPromptFile
     ? path.resolve(args.hybridSystemPromptFile)
@@ -106,6 +110,9 @@ async function run() {
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
+    ...(documentArtifactFile
+      ? [["Dokumentartefakt", documentArtifactFile]]
+      : []),
     ["Systemprompt", systemPromptFile],
     ...(hybridSystemPromptFile
       ? [["Hybrid-Systemprompt", hybridSystemPromptFile]]
@@ -144,6 +151,24 @@ async function run() {
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
+  const worksheetCandidateCount = (worksheet.requirements || []).reduce(
+    (total, requirement) =>
+      total +
+      (requirement.components || []).reduce(
+        (componentTotal, component) =>
+          componentTotal + (component.occurrences || []).length,
+        0
+      ),
+    0
+  );
+  if (worksheetCandidateCount > 0 && !documentArtifactFile)
+    fail("Worksheet mit Kandidaten erfordert --documentArtifact");
+  const documentArtifactBytes = documentArtifactFile
+    ? fs.readFileSync(documentArtifactFile)
+    : null;
+  const documentArtifact = documentArtifactBytes
+    ? JSON.parse(documentArtifactBytes.toString("utf8"))
+    : null;
   const expectedTargetSelectionDigestSha256 =
     args.expectedTargetSelectionDigestSha256 || null;
   if (
@@ -190,6 +215,7 @@ async function run() {
   )
     fail(`Ungültiger Control-Reviewstatus: ${controlReviewStatus}`);
   const payload = buildCandidateTriagePayload(worksheet, {
+    documentArtifact,
     expectedTargetSelectionDigestSha256,
   });
   const hybridTargetCount = payload.bindingTargets.filter(
@@ -386,6 +412,11 @@ async function run() {
     contracts: {
       worksheetPath: worksheetFile,
       worksheetSha256: sha256File(worksheetFile),
+      documentArtifactPath: documentArtifactFile,
+      documentArtifactSha256: documentArtifactBytes
+        ? sha256(documentArtifactBytes)
+        : null,
+      documentFingerprint: documentArtifact?.fingerprint || null,
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
       hybridSystemPromptPath: hybridSystemPromptFile,
