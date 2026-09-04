@@ -140,6 +140,15 @@ Die veränderte symmetrische Suchsemantik ist als V106/V67 versioniert; V105/V66
 bleibt als historische Schema-15-Identität lesbar. Der Fix benötigt erneut
 fokussierte Mac-Studio-Tests sowie frische LF- und symmetrische Finalgates.
 
+Der modellfreie Neuaufbau des zuerst gescheiterten realen A-Dokuments bestand
+danach für alle 224 Anforderungen und 326 erzeugten Fundstellen ohne einen
+Source-Range-Fehler. Vor dem Modellgate wurde die einzige Sonderfreigabe weiter
+gehärtet: Governor und erster Listeneintrag dürfen nur dann einen gemeinsamen
+Concept-Search-Span bilden, wenn die Governor-Zeile bereits durch den
+bestehenden semantischen Coverage-Parser exakt registriert ist. Überschriften
+und beliebige offene Fließtextsätze können diese Ausnahme nicht mehr auslösen;
+der gültige `ST-08`-Fall und die Geschwistergrenze bleiben regressionsgeschützt.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen

@@ -3182,8 +3182,9 @@ describe("controlledOccurrenceWorksheet", () => {
       "• Schnee- und Eisrutsch an den versicherten Gebäuden, die durch Herabrutschen von am Dach",
       "angesammelten Schnee- und Eismassen entstehen;",
     ].join("\n");
+    const sibling = "• Schneedruck auf nicht versicherten Sachen.";
     const document = {
-      ...documentFromPages([governedText]),
+      ...documentFromPages([[governedText, sibling].join("\n")]),
       sourceDocumentId: fingerprint,
     };
     const worksheet = buildControlledOccurrenceWorksheet({
@@ -3229,6 +3230,52 @@ describe("controlledOccurrenceWorksheet", () => {
       })
     ).not.toThrow();
   });
+
+  test.each([
+    "3. Zusätzlich versicherte Schäden durch:",
+    "Diese Übersicht betrifft Schäden durch",
+  ])(
+    "does not treat an unregistered concept lead as a coverage governor: %s",
+    (lead) => {
+      const document = documentFromPages([
+        [
+          lead,
+          "• Schnee- und Eisrutsch an den versicherten Gebäuden durch Herabrutschen vom Dach.",
+        ].join("\n"),
+      ]);
+      const worksheet = buildControlledOccurrenceWorksheet({
+        document,
+        documentFingerprint: `unregistered-concept-governor-${lead.length}`,
+        catalog: singleConceptComponentCatalog({
+          catalogId: "unregistered-concept-governor-test",
+          categoryView: "ST",
+          requirementId: "ST-08",
+          componentId: "roof_avalanche_on_own_installations",
+          factRole: "PERIL",
+          conceptId: "snow-or-ice-slide-on-insured-property",
+          requiredGroups: [
+            { prefixes: ["schnee", "dachlawine", "eiszapfen"] },
+            { prefixes: ["herabrutsch", "herabfall", "dachlawine"] },
+            { prefixes: ["versichert", "eigen"] },
+            { prefixes: ["schaden", "schaed", "beschaedig"] },
+          ],
+          maxLines: 2,
+        }),
+      });
+
+      expect(
+        component(
+          worksheet,
+          "ST-08",
+          "roof_avalanche_on_own_installations"
+        )
+      ).toMatchObject({
+        terminalState: "NO_CONTROLLED_CANDIDATE",
+        occurrenceCount: 0,
+        occurrences: [],
+      });
+    }
+  );
 
   test("keeps a component unresolved when one required concept group is absent", () => {
     const document = documentFromPages([

@@ -6310,3 +6310,18 @@ zweier Geschwisterpunkte und führen das erzeugte Worksheet anschließend durch
 den source-gebundenen Triagevertrag. Vor Merge, Tag oder Deployment sind nach
 dem Commit erneut fokussierte Mac-Studio-Prüfungen sowie vollständige LF- und
 symmetrische Läufe erforderlich.
+
+Der erste Real-Artefakt-Neuaufbau auf dem Fix-SHA bestätigte modellfrei alle
+fünf Kataloge: 224 Anforderungen, 326 Fundstellen, 311 Triage-Ziele und null
+Source-Range-Fehler. Der falsche `VS-32`-Kandidat ist entfallen; der vollständige
+Zwischenlagerungs-Listenpunkt und die echte `ST-08`-Governor→Erstpunkt-Bindung
+bleiben erhalten. Ein unabhängiger Review fand vor dem Modelllauf noch eine
+zu breite Ausnahme: Ein syntaktisch offener Nicht-Bullet-Satz konnte allein
+wegen seiner Form als Governor gelten. Der abschließende Präzisions-Fix lässt
+die Ausnahme deshalb nur zu, wenn die Startzeile bereits vom bestehenden
+semantischen Parser als expliziter Coverage-Governor mit exakt demselben
+Quellbereich registriert wurde. Nummerierte Überschriften und beliebige offene
+Fließtextsätze werden adversarial abgewiesen; die nächste Geschwister-Bullet
+bleibt auch beim echten Governor ausgeschlossen. Das ist eine Härtung der noch
+nicht freigegebenen V106/V67-Semantik und benötigt denselben vollständigen
+Finalgate.

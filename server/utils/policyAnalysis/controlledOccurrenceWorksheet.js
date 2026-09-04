@@ -987,6 +987,7 @@ function conceptRangeContext({
   maxChars,
   fallbackWordsEachSide,
   followingBoundaryLineStarts = new Set(),
+  coverageGovernors = [],
 }) {
   const context = structuralContext({
     pageText,
@@ -1005,9 +1006,21 @@ function conceptRangeContext({
   );
   const governor = lines[governorIndex];
   const firstItem = lines[governorIndex + 1];
+  const governorTrimmedStart = governor
+    ? governor.start + Math.max(0, governor.text.search(/\S/u))
+    : -1;
+  const governorTrimmedEnd = governor
+    ? governor.start + governor.text.trimEnd().length
+    : -1;
+  const isRegisteredCoverageGovernor = coverageGovernors.some(
+    ({ pageStart, pageEnd }) =>
+      pageStart === governorTrimmedStart && pageEnd === governorTrimmedEnd
+  );
   if (
     governorIndex === -1 ||
     isBulletLine(governor) ||
+    isClauseSectionHeading(governor) ||
+    !isRegisteredCoverageGovernor ||
     !opensSubordinateList(governor?.text) ||
     !firstItem ||
     isBlankLine(firstItem) ||
@@ -3422,6 +3435,7 @@ function buildControlledOccurrenceWorksheet({
               maxChars: contextMaxChars,
               fallbackWordsEachSide,
               followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
+              coverageGovernors: page.coverageGovernors,
             });
             if (
               !conceptContext ||
