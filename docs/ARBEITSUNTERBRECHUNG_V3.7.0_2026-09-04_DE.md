@@ -162,9 +162,10 @@ Archivexport (hashgleich mit polizzenvergleich.xlsx):
 ```
 
 Die exakte Zahl der Qwen-Aufrufe und Token dieses frischen V2-Laufs wurde vor
-der Arbeitsunterbrechung noch nicht belastbar aus den privaten Antwortdateien
-aggregiert. Hier darf bei der Wiederaufnahme keine Schätzung eingetragen
-werden.
+der Arbeitsunterbrechung zunächst nicht aggregiert. Die spätere vollständige
+Auswertung der privaten Antwortdateien ergab 237 Qwen-Aufrufe, 519.517
+Prompt- und 15.995 Completion-Token. Diese Zahlen sind gemessen, nicht
+geschätzt.
 
 ## Offene fachliche Einzelquellenaudits
 
@@ -246,3 +247,29 @@ LF-/WEVIG-Entwicklungsset. Er beweist weder Nichtregression der symmetrischen
 224 Zeilen noch Generalisierung auf unbekannte Versicherer, beliebige
 Gebäudeversicherungspakete oder das 99-Prozent-Produktziel. Deshalb bleibt
 V3.7.0 bis zu den offenen Gates ein Kandidat mit Releaseentscheidung `NO-GO`.
+
+## Wiederaufnahme am 4. September 2026
+
+Dieser Abschnitt ersetzt nicht den historischen Unterbrechungszustand oben,
+sondern dokumentiert dessen kontrollierte Fortsetzung. Die sieben
+Einzelquellenaudits wurden abgeschlossen. Sechs Zeilen erhielten kleine,
+wiederverwendbare Forward-Fixes; `LF-FE-02` bleibt wegen einer nicht
+beweisbaren B01/B02-Aktivierungs- beziehungsweise Variantenbeziehung unklar.
+
+```text
+Fortgesetzter Logik-HEAD:   60d87bff6162371b454ecd6e2876a9aa46d97a32
+Remote-Arbeitsbranch:      origin/codex/polizzenvergleich-v3
+origin/main:               f31ddcd7bde8f8cd2f7a2bb9dbb0d742a59d8747
+Kundeninstallation:       2804fa56361084c0ee74fca6f54ef6365d65aeeb
+V3.7.0 gemergt/getaggt:    nein
+V3.7.0 deployed:           nein
+```
+
+Der letzte gemischte 35-Zeilen-Diagnoselauf ergibt 15 vollständige, 15
+teilweise, vier kontrollierte Nullfunde, eine unklare Zeile und 16
+Kundenreviews. Er bestätigt die erwartete lokale Wirkung einschließlich der
+behobenen `LF-GL-02`-Nachbarregression, ist aber kein frischer End-to-End-Lauf.
+Vollständige statische Gates, ein frischer LF-Gesamtlauf und der frische
+symmetrische 224-Zeilen-Nichtregressionslauf bleiben offen. Alle Details und
+Hashes stehen in
+`docs/LF_REFERENCE_V2_SEVEN_FIX_AUDIT_2026-09-04_DE.md`.

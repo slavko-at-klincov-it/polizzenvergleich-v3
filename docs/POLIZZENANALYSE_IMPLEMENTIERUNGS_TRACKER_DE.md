@@ -5964,3 +5964,32 @@ Kundencheckout bleibt sauber auf V3.6.0 (`2804fa563`).
 Der vollständige Wiederaufnahmezustand mit Branch-SHAs, Artefaktpfaden,
 Hashes, offenen Gates, First-Hop-Deploymentgrenze und Fortsetzungsreihenfolge
 steht in `docs/ARBEITSUNTERBRECHUNG_V3.7.0_2026-09-04_DE.md`.
+
+## 125. Sieben LF-V2-Einzelquellenaudits und kontrollierte Forward-Fixes
+
+Die nach der Unterbrechung fortgesetzten Audits trennten sechs allgemein
+behebbare Semantiklücken von einem weiterhin nicht beweisbaren Paketkonflikt.
+Kleine Commits korrigieren eine zu breite Bedingungsklausel, den fehlenden
+Elementar-Scope der gerichteten Sturmreferenz, gerichtete lokale
+Kostendefinitionen sowie Glasüberschrift, Glas-Scope und unlokalisierte
+Glaskosten. Eine zunächst sichtbare Nachbarregression von `LF-GL-02` wurde mit
+einem deklarationspflichtigen, vollständig validierten engen Sturm-Scope
+geschlossen.
+
+Der abschließende gemischte Diagnoselauf auf `60d87bff6` ergibt gegenüber dem
+frischen LF-V2-Ausgangslauf 15 statt 12 vollständige, 15 statt 13 teilweise,
+weiterhin vier kontrollierte Nullfunde, nur noch eine statt sechs unklare Zeile
+und 16 statt 19 Kundenreviews. `LF-FE-02` bleibt als einzige unklare Zeile
+offen, weil B02 einen Einschluss elektrischer Energie und B05 einen Ausschluss
+„so ferne nicht anders vereinbart“ enthält, ohne dass der derzeitige
+Paketvertrag die konkrete Aktivierung beziehungsweise Variantenidentität
+beweist. Eine pauschale Rangregel wäre fachlich unsicher und wurde nicht
+implementiert.
+
+Der genaue Quellenbefund, alle kleinen Commits, fokussierten Mac-Studio-Tests,
+Diagnosepfade, Laufzeiten, Tokenzahlen, Hashes und Beweisgrenzen stehen in
+`docs/LF_REFERENCE_V2_SEVEN_FIX_AUDIT_2026-09-04_DE.md`. Die 15/15/4/1-
+Partition ist noch kein End-to-End-Releasebeleg, da unveränderte Kategorien
+aus verifizierten Vorläufen wiederverwendet wurden. Vollständige statische
+Gates sowie frische LF- und symmetrische Gesamtläufe auf einem identischen
+finalen SHA bleiben vor Merge, Tag und Deployment verpflichtend.
