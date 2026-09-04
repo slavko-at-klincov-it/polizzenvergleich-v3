@@ -85,6 +85,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
   ],
   "LF-VS-01": [
     component("building", "Gebäude", "INSURED_OBJECT", [
+      "die am in der Polizze bezeichneten Versicherungs- oder Risikoort befindlichen Gebäude",
       "die am Versicherungsort befindlichen Gebäude",
       "in der Polizze bezeichnete Gebäude",
       "versicherte Gebäude",
@@ -228,7 +229,10 @@ const COMPONENT_OVERRIDES = Object.freeze({
     ),
   ],
   "LF-KO-03": [
-    component("securing", "Sicherungskosten", "COST", ["Sicherungskosten"]),
+    component("securing", "Sicherungskosten", "COST", [
+      "Sicherungskosten",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
+    ]),
     component("cleanup", "Aufräumungskosten", "COST", [
       "Aufräumungskosten",
       "Aufräumkosten",
@@ -238,13 +242,27 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("de_remounting", "De- und Remontagekosten", "COST", [
       "De- und Remontagekosten",
       "De- und Remontage",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
     ]),
-    component("movement", "Bewegungskosten", "COST", ["Bewegungskosten"]),
-    component("protection", "Schutzkosten", "COST", ["Schutzkosten"]),
-    component("cleaning", "Reinigungskosten", "COST", ["Reinigungskosten"]),
-    component("storage", "Lagerkosten", "COST", ["Lagerkosten"]),
+    component("movement", "Bewegungskosten", "COST", [
+      "Bewegungskosten",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
+    ]),
+    component("protection", "Schutzkosten", "COST", [
+      "Schutzkosten",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
+    ]),
+    component("cleaning", "Reinigungskosten", "COST", [
+      "Reinigungskosten",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
+    ]),
+    component("storage", "Lagerkosten", "COST", [
+      "Lagerkosten",
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten",
+    ]),
     component("cost_limit", "Kostenlimit", "LIMIT", [
       "bis zu maximal 10%, in der Feuerversicherung maximal 15%, der Gebäudeversicherungssumme",
+      "maximal 15%, der Gebäudeversicherungssumme auf Erstes Risiko",
       "Aufräum-, Abbruch- und Feuerlöschkosten auf Erstes Risiko",
       "Aufräum- und Abbruchkosten auf Erstes Risiko",
     ]),
@@ -476,9 +494,14 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("water_loss", "Wasserverlustkosten", "COST", [
       "Kosten für den Wasserverlust",
     ]),
-    component("unlimited_cleaning", "Rohrreinigung ohne Limit", "LIMIT", [
-      "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen ohne betragliche Beschränkung",
-    ]),
+    component(
+      "unlimited_cleaning",
+      "Rohrreinigung ohne Limit",
+      "CONDITION",
+      [
+        "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen ohne betragliche Beschränkung",
+      ]
+    ),
     component(
       "rainwater_pipes",
       "Regenablaufrohre und Dachrinnen",
@@ -550,9 +573,12 @@ const COMPONENT_OVERRIDES = Object.freeze({
   ],
   "LF-HP-01": [
     component("liability_sum", "Pauschalversicherungssumme", "LIMIT", [
+      "Pauschaldeckungssumme beträgt",
+      "Pauschalversicherungssumme beträgt",
       "Pauschalversicherungssumme",
+      "Pauschaldeckungssumme",
     ]),
-    component("annual_aggregate", "Jahreshöchstleistung", "LIMIT", [
+    component("annual_aggregate", "Jahreshöchstleistung", "CONDITION", [
       "Jahreshöchstleistung",
       "Versicherungsfälle eines Versicherungsjahres",
       "für alle Versicherungsfälle eines Jahres zusammen maximal dreimal",
@@ -575,7 +601,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component(
       "environmental_liability",
       "Umweltstörung und Umweltsanierung",
-      "BENEFIT",
+      "CONDITION",
       [
         "Sachschäden durch Umweltstörung und Umweltsanierungskosten",
         "Umwelthaftpflicht inklusive Umweltsanierungskostenversicherung",
@@ -600,6 +626,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "CONDITION",
       [
         "Umweltschaden auf einen Störfall zurückzuführen",
+        "Umweltsachschaden auf einen Störfall zurückzuführen",
         "Umweltstörung durch einen einzelnen, plötzlich eingetretenen, unvorhergesehenen Vorfall",
       ]
     ),
@@ -610,7 +637,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Gefährlicher Abfall und Problemstoffe",
       "COST",
       [
-        "Mehrkosten für die Behandlung von gefährlichem Abfall und/oder Problemstoffen",
+        "Mehrkosten für die Behandlung von gefährlichem Abfall und/oder Problemstoffen im Sinne des Abfallwirtschaftsgesetzes BGBl. 325/90",
       ]
     ),
     component("eco_limit", "Ökoschutzlimit", "LIMIT", [
@@ -648,8 +675,8 @@ const COMPONENT_OVERRIDES = Object.freeze({
   ],
   "LF-AV-02": [
     component("new_value", "Neuwertentschädigung", "BENEFIT", [
-      "Neuwertentschädigung",
       "zum Neuwert zu ersetzen",
+      "Ersatzwert gilt der Neuwert",
     ]),
     component(
       "restoration_condition",
@@ -663,7 +690,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component(
       "restoration_period",
       "Wiederherstellungsfrist von drei Jahren",
-      "LIMIT",
+      "CONDITION",
       [
         "innerhalb dreier Jahre nach dem Schadenfall sichergestellt",
         "binnen drei Jahren ab dem Eintritt des Schadenereignisses",
@@ -696,6 +723,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
   ],
   "LF-AV-04": [
     component("expert_costs", "Sachverständigenkosten", "COST", [
+      "Versicherer ersetzt 80%",
       "Versicherer ersetzt 80% der vom Versicherungsnehmer zu tragenden Kosten des Sachverständigen",
     ]),
     component("expert_cost_share", "Kostenanteil von 80 Prozent", "LIMIT", [
@@ -731,7 +759,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component(
       "waiver_duration",
       "Geltungsdauer",
-      "LIMIT",
+      "CONDITION",
       ["für die Dauer von ca. 3 Jahren"],
       { requestedFields: ["duration"] }
     ),
@@ -792,6 +820,18 @@ function categoryCatalogs() {
             label: requirement.label,
             requestedFields: requestedFields(components),
             components,
+            coverageAggregationPolicy: components.some(({ factRole }) =>
+              [
+                "PERIL",
+                "DAMAGE",
+                "EXCLUSION",
+                "INSURED_OBJECT",
+                "COST",
+                "BENEFIT",
+              ].includes(factRole)
+            )
+              ? "COVERAGE_ROLES_ONLY"
+              : "ALL_COMPONENT_EFFECTS",
             componentSatisfactionPolicy: "ALL",
             negativeSearchPolicy: "REPORT_COMPLETE_ZERO_CONTROLLED_SEARCH_V1",
             absenceMeaning: "COVERAGE_MIXED",

@@ -69,6 +69,17 @@ describe("LF reference comparison profile", () => {
     ]);
     expect(bySourceId.get("LF-AV-02").requestedFields).toEqual(["duration"]);
     expect(bySourceId.get("LF-AV-05").requestedFields).toEqual(["duration"]);
+    expect(bySourceId.get("LF-KO-01").coverageAggregationPolicy).toBe(
+      "COVERAGE_ROLES_ONLY"
+    );
+    expect(bySourceId.get("LF-HP-01").coverageAggregationPolicy).toBe(
+      "ALL_COMPONENT_EFFECTS"
+    );
+    expect(
+      bySourceId
+        .get("LF-AV-02")
+        .components.find(({ id }) => id === "restoration_period")
+    ).toMatchObject({ factRole: "CONDITION", requestedFields: ["duration"] });
   });
 
   test("models product basis and favorability as contract conditions", () => {
