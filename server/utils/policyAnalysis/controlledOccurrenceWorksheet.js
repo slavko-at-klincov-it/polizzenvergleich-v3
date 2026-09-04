@@ -1087,6 +1087,7 @@ function explicitSectionHeadings(pageText) {
     return null;
   };
   const patterns = [
+    /^\s*(Die\s+Glasversicherung)\s*$/gimu,
     /^\s*((?:Allgemeine\s+Bedingungen\s+für\s+die\s+)?Haftpflichtversicherung(?:\s+für\s+Wohngebäude)?)\s*$/gimu,
     /^\s*(B\d{1,2}\s+(?:Feuer|Sturm|Leitungswasser|Elementar|Haftpflicht|Glas)versicherung\s*\((?:FE|ST|LW|EL|HP|GL)\))\s*$/gimu,
     /^[\t ]*([\p{L}-]+(?:[\t ]+[\p{L}-]+)*)VERSICHERUNG[\t ]*$/gimu,
