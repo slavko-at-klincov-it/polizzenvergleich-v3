@@ -3264,11 +3264,7 @@ describe("controlledOccurrenceWorksheet", () => {
       });
 
       expect(
-        component(
-          worksheet,
-          "ST-08",
-          "roof_avalanche_on_own_installations"
-        )
+        component(worksheet, "ST-08", "roof_avalanche_on_own_installations")
       ).toMatchObject({
         terminalState: "NO_CONTROLLED_CANDIDATE",
         occurrenceCount: 0,
