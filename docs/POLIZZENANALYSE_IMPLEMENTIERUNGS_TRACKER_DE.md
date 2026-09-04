@@ -5848,3 +5848,64 @@ Der Referenzrunner ruft weder einen Embedder noch einen Embedding-Endpunkt auf.
 Der allgemeine `LMStudioLLM`-Konstruktor protokolliert beim Erzeugen einer
 Modellinstanz dennoch ein `NativeEmbedder Initialized`; ohne Aufruf einer
 Embed-Funktion wird dabei keine Embedding-Suche oder -Berechnung ausgeführt.
+
+## 122. Vollständiger manueller PDF-Audit der 35 LF-Referenzzeilen
+
+Am 4. September 2026 wurden alle 35 LF-Referenzzeilen und die zugehörigen
+Gegenstückstellen in den neun B-PDFs manuell gegen die sichtbaren
+Originalseiten geprüft. Daraus entstand vor dem Endlauf eine versionierte
+Entwickler-Sollmatrix mit 16 vollständigen, 15 teilweisen und vier
+kontrollierten Nullfunden. Der Ausgangsstand `c0b0de626` traf davon 31/35.
+
+Vier wiederverwendbare semantische Lücken wurden anschließend geschlossen:
+
+1. Mietzinsentgang wird auch in den Varianten „Entgang von
+   Mietzinseinnahmen“ und „Entgang an Erträgen aus Miet-, Pacht-,
+   Leasingverträgen“ erkannt.
+2. Das Tabellenformat „Einzelscheiben bis m²: 10“ wird als lokales
+   Dimensionslimit gebunden.
+3. Bepreiste Erstrisikoleistungen und operative Zusagen mit „ersetzt der
+   Versicherer“ werden als eingeschlossene Leistung bewertet; negative
+   Varianten bleiben fail-closed.
+4. Vertragsgebundene Versicherungssummengrenzen werden als symbolische Limits
+   materialisiert, ohne eine Prozentzahl zu erfinden.
+
+Kleine Abschlusscommits: `1ce62e00a`, `16a502186`; reine Formatierung:
+`34217eb81`. Der frische 1+9-Lauf wurde auf dem exakten Logikcommit
+`16a502186b4eda0bda6b062b39af948205457270` im isolierten Mac-Studio-Worktree
+ausgeführt. Er verwendete Qwen `qwen/qwen3.6-35b-a3b`, 42.496 Token Kontext
+und keine Embeddings.
+
+```text
+Session:                     c10d4c3a-4a0b-404c-b8bf-027b41879979
+Run-Signatur:                fdd84a933c8df4aa58090ee8e7dc955d3bfd4d68e3cff7fd8faa01bc1c706b17
+Dokumente / Schritte:        10 / 100
+Kategorien / Zeilen:         10 / 35
+Pflichtkomponenten:          113
+A vollständig belegt:        35 / 35
+B-only-Zeilen:               0
+Gegenstück / teilweise:      16 / 15
+kontrollierter Nullfund:     4
+A unklar / B unklar:         0 / 0
+Kundenreview:                15
+Workerzeit:                  20:05,275
+Qwen-Aufrufe:                237
+Prompt-/Completiontoken:     519.517 / 15.995
+manuelle Sollübereinstimmung: 35 / 35
+```
+
+Auf dem danach ausschließlich formatierten Commit `34217eb816` bestanden
+ESLint für die geänderten Produktionsdateien, 6/6 fokussierte Suites mit
+284/284 Tests und die vollständige Serversuite mit 156/156 Suites sowie
+2.089/2.089 Tests. Die 35-Zeilen-Matrix wurde auf dem Mac Studio maschinell
+gegen die manuelle Annotation geprüft: null Abweichungen. Der installierte
+Kundencheckout blieb unverändert auf V3.6.0 (`2804fa563`).
+
+Der vollständige zeilenweise Quellenbefund, Seitenangaben, Korrekturhistorie
+und Ergebnishashes stehen in
+`docs/LF_REFERENCE_35_MANUAL_AUDIT_DE.md`.
+
+Beweisgrenze: Die 35/35-Übereinstimmung gilt ausschließlich für das bekannte,
+versionierte 1+9-Entwicklungsset. Sie ist kein Nachweis eines vollständigen
+LF-Inventars, unbekannter Versicherer, beliebiger Vertragsvarianten oder des
+99-Prozent-Ziels.
