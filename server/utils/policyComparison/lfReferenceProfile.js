@@ -43,19 +43,32 @@ const COMPONENT_OVERRIDES = Object.freeze({
     component("premium_variant", "Variante PREMIUM", "CONDITION", [
       "Variante PREMIUM",
       "Wohnhausversicherung mit der Variante PREMIUM",
+      "Produktvariante Premiumschutz",
+      "Versicherte Variante Premiumschutz",
     ]),
     component(
       "requested_lines",
       "Beantragte Versicherungssparten",
       "CONDITION",
-      ["jeweils beantragten Sparten", "Feuer, Sturm, Leitungswasser, Glasbruch"]
+      [
+        "jeweils beantragten Sparten",
+        "für alle beantragten Sparten",
+        "Feuer, Sturm, Leitungswasser, Glasbruch",
+      ]
     ),
   ],
   "LF-PR-02": [
-    component("better_coverage", "Bessere Deckung je Schadenfall", "BENEFIT", [
-      "bessere Deckung",
-      "für den Versicherungsnehmer im jeweiligen Schadensfall bessere Deckung",
-    ]),
+    component(
+      "better_coverage",
+      "Bessere Deckung beziehungsweise günstigere Auslegung",
+      "CONDITION",
+      [
+        "bessere Deckung",
+        "für den Versicherungsnehmer im jeweiligen Schadensfall bessere Deckung",
+        "günstigere Auslegung",
+        "für den Versicherungsnehmer günstigere Auslegung",
+      ]
+    ),
     component("no_sum_addition", "Keine Summenaddition", "CONDITION", [
       "Versicherungssummen nicht addiert",
       "nicht addiert",

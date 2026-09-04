@@ -50,6 +50,34 @@ describe("LF reference comparison profile", () => {
     ).toBe(true);
   });
 
+  test("models product basis and favorability as contract conditions", () => {
+    const requirements = categoryCatalogs().flatMap(
+      ({ catalog }) => catalog.requirements
+    );
+    const bySourceId = new Map(
+      requirements.map((requirement) => [
+        requirement.sourceReferenceId,
+        requirement,
+      ])
+    );
+    const productBasis = bySourceId.get("LF-PR-01");
+    const favorability = bySourceId.get("LF-PR-02");
+
+    expect(productBasis.components[0].aliases).toContain(
+      "Produktvariante Premiumschutz"
+    );
+    expect(productBasis.components[1].aliases).toContain(
+      "für alle beantragten Sparten"
+    );
+    expect(favorability.components[0]).toMatchObject({
+      id: "better_coverage",
+      factRole: "CONDITION",
+    });
+    expect(favorability.components[0].aliases).toContain(
+      "günstigere Auslegung"
+    );
+  });
+
   test("keeps embedding calls out of the directed production runner", () => {
     const runner = fs.readFileSync(
       path.resolve(
