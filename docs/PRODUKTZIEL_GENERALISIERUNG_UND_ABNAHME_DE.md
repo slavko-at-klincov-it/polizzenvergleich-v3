@@ -281,10 +281,13 @@ Stand: noch nicht bewiesen; menschlicher Review für offene/ambige Fälle
   Einblatt-XLSX-Gegenüberstellung;
 - das aktuelle Ergebnisschema 15 enthält eine servereigene, punktweise und
   fail-closed Entscheidungsschicht mit sieben fachlichen Outcomes. Das Profil
-  `CUSTOMER_CORE_5_V105_SOURCE_BOUND_TRIAGE` erlaubt einen
+  `CUSTOMER_CORE_5_V106_STRUCTURAL_CONCEPT_CONTEXT` erlaubt einen
   regelgebundenen Vorteil aus vollständigem Einschluss gegen qualifizierte,
   paketweit kontrollierte Abwesenheit. Ein unqualifizierter Einseitenfund
-  bleibt davon getrennt; einen Gesamtsieger gibt es nicht;
+  bleibt davon getrennt; strukturübergreifende Konzeptfenster sind nur für
+  einen nachweislichen Einleitungs-Governor mit seinem ersten Listeneintrag
+  zulässig, nicht zwischen Geschwisterpunkten; einen Gesamtsieger gibt es
+  nicht;
 - der frische LF-gegen-neun-WEVIG-Lauf auf dem Mac Studio verarbeitet 10/10
   Dokumente und 80/80 Dokument-Kategorie-Schritte zu 320/320 Zeilen; der
   bedingungssichere RC2-Replay liefert 0 `VORTEIL_A`, 0 `VORTEIL_B`, 4

@@ -13,6 +13,7 @@ const {
 const {
   HISTORICAL_SCHEMA_14_PRODUCT_PROFILES,
   PRODUCT_PROFILE,
+  SCHEMA_15_PRODUCT_PROFILES,
 } = require("./productContract");
 const {
   BILATERAL_ABSENCE_REASON_CODE,
@@ -324,6 +325,18 @@ function validateCustomerComparison(result, { allowLegacy = false } = {}) {
   } else if (Number(result.schemaVersion) === 14) {
     if (
       !HISTORICAL_SCHEMA_14_PRODUCT_PROFILES.some(
+        (profile) =>
+          productProfileId === profile.id &&
+          comparisonContractId === profile.comparisonContractId
+      )
+    )
+      validationError("COMPARISON_PRODUCT_PROFILE_CONTRACT_MISMATCH", [
+        productProfileId,
+        comparisonContractId,
+      ]);
+  } else if (Number(result.schemaVersion) === 15) {
+    if (
+      !SCHEMA_15_PRODUCT_PROFILES.some(
         (profile) =>
           productProfileId === profile.id &&
           comparisonContractId === profile.comparisonContractId

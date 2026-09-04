@@ -8,6 +8,7 @@ const {
   NARROW_ALIAS_PRODUCT_PROFILE_IDENTITY,
   PREVIOUS_PRODUCT_PROFILE_IDENTITY,
   PRODUCT_PROFILE,
+  SOURCE_BOUND_TRIAGE_PRODUCT_PROFILE_IDENTITY,
 } = require("../../utils/policyComparison/productContract");
 const {
   derivePackageReviewAudit,
@@ -402,6 +403,17 @@ describe("policy comparison customer metric contract", () => {
     expect(() => validateCustomerComparison(forbiddenOutcome)).toThrow(
       "COMPARISON_CUSTOMER_RULE_OUTCOME_NOT_APPROVED"
     );
+  });
+
+  test("keeps the superseded V105 schema V15 profile readable", () => {
+    const result = schema15SimpleResult();
+    result.productProfile = SOURCE_BOUND_TRIAGE_PRODUCT_PROFILE_IDENTITY;
+
+    expect(validateCustomerComparison(result)).toMatchObject({
+      rows: 1,
+      customerReviewRequired: 0,
+    });
+    expect(result.productProfile).not.toEqual(PRODUCT_PROFILE);
   });
 
   test("counts multiple private blockers as one customer review row", () => {

@@ -980,6 +980,74 @@ function structuralContext({
   };
 }
 
+function conceptRangeContext({
+  pageText,
+  occurrenceStart,
+  occurrenceEnd,
+  maxChars,
+  fallbackWordsEachSide,
+  followingBoundaryLineStarts = new Set(),
+}) {
+  const context = structuralContext({
+    pageText,
+    occurrenceStart,
+    occurrenceEnd,
+    maxChars,
+    fallbackWordsEachSide,
+    followingBoundaryLineStarts,
+  });
+  if (
+    occurrenceStart >= context.pageStart &&
+    occurrenceEnd <= context.pageEnd
+  )
+    return context;
+
+  const lines = buildLineRecords(pageText);
+  const governorIndex = lines.findIndex(
+    ({ start, end }) => occurrenceStart >= start && occurrenceStart <= end
+  );
+  const governor = lines[governorIndex];
+  const firstItem = lines[governorIndex + 1];
+  if (
+    governorIndex === -1 ||
+    isBulletLine(governor) ||
+    !opensSubordinateList(governor?.text) ||
+    !firstItem ||
+    isBlankLine(firstItem) ||
+    isClauseSectionHeading(firstItem) ||
+    followingBoundaryLineStarts.has(firstItem.start) ||
+    !isBulletLine(firstItem)
+  )
+    return null;
+
+  let endIndex = governorIndex + 1;
+  for (let index = governorIndex + 2; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (
+      isBlankLine(line) ||
+      isBulletLine(line) ||
+      isClauseSectionHeading(line) ||
+      followingBoundaryLineStarts.has(line.start)
+    )
+      break;
+    endIndex = index;
+  }
+  const pageStart = governor.start;
+  const pageEnd = lines[endIndex].end;
+  if (
+    occurrenceStart < pageStart ||
+    occurrenceEnd > pageEnd ||
+    pageEnd - pageStart > maxChars
+  )
+    return null;
+  return {
+    unitType: "LIST_ITEM",
+    pageStart,
+    pageEnd,
+    text: pageText.slice(pageStart, pageEnd),
+  };
+}
+
 function isClauseSectionHeading(line) {
   if (isBulletLine(line)) return false;
   const text = String(line?.text || "");
@@ -3349,25 +3417,43 @@ function buildControlledOccurrenceWorksheet({
             });
         }
         for (const search of component.conceptSearches) {
-          for (const range of findConceptSearchRanges(page.text, search))
+          for (const range of findConceptSearchRanges(page.text, search)) {
+            const conceptContext = conceptRangeContext({
+              pageText: page.text,
+              occurrenceStart: range.originalStart,
+              occurrenceEnd: range.originalEnd,
+              maxChars: contextMaxChars,
+              fallbackWordsEachSide,
+              followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
+            });
+            if (
+              !conceptContext ||
+              range.originalStart < conceptContext.pageStart ||
+              range.originalEnd > conceptContext.pageEnd
+            )
+              continue;
             pageRanges.push({
               ...range,
+              conceptContext,
               matchedAlias: `CONCEPT_SEARCH:${search.id}`,
               discoveryPriority: 1,
             });
+          }
         }
 
         for (const range of removeOverlappingRanges(pageRanges)) {
           const documentStart = page.start + range.originalStart;
           const documentEnd = page.start + range.originalEnd;
-          const context = structuralContext({
-            pageText: page.text,
-            occurrenceStart: range.originalStart,
-            occurrenceEnd: range.originalEnd,
-            maxChars: contextMaxChars,
-            fallbackWordsEachSide,
-            followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
-          });
+          const context =
+            range.conceptContext ||
+            structuralContext({
+              pageText: page.text,
+              occurrenceStart: range.originalStart,
+              occurrenceEnd: range.originalEnd,
+              maxChars: contextMaxChars,
+              fallbackWordsEachSide,
+              followingBoundaryLineStarts: page.structuralBoundaryLineStarts,
+            });
           const evidenceContext =
             component.contextMode === CONTEXT_MODE.CLAUSE_SECTION
               ? clauseSectionContext({

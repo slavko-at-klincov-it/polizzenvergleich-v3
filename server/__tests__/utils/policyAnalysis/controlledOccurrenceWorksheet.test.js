@@ -98,6 +98,46 @@ function singleSolarComponentCatalog(overrides = {}) {
   };
 }
 
+function singleConceptComponentCatalog({
+  catalogId,
+  categoryView,
+  requirementId,
+  componentId,
+  factRole,
+  conceptId,
+  requiredGroups,
+  maxLines,
+}) {
+  return {
+    schemaVersion: 1,
+    catalogId,
+    categoryView,
+    requirements: [
+      {
+        id: requirementId,
+        label: requirementId,
+        requestedFields: [],
+        components: [
+          {
+            id: componentId,
+            label: componentId,
+            factRole,
+            aliases: [`${componentId}-exact-alias`],
+            conceptSearches: [
+              {
+                id: conceptId,
+                requiredGroups,
+                maxLines,
+                maxChars: 320,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function structuralListContextCatalog(
   proofContractId = NESTED_LIST_CONTINUATION_PROOF_CONTRACT_ID
 ) {
@@ -3035,6 +3075,158 @@ describe("controlledOccurrenceWorksheet", () => {
     expect(
       document.pageContent.slice(candidate.documentStart, candidate.documentEnd)
     ).toBe(candidate.exactText);
+  });
+
+  test("keeps a wrapped concept inside one list item", () => {
+    const fingerprint = "wrapped-list-concept-fixture";
+    const firstItem = [
+      "- Die Kosten einer höchstens sechsmonatigen Zwischenlagerung sind unter der Voraussetzung",
+      "versichert, dass die Zwischenlagerung unverzüglich angezeigt wird;",
+    ].join("\n");
+    const document = {
+      ...documentFromPages([
+        [
+          "3. Versicherungsumfang",
+          firstItem,
+          "- Versichert sind auch Kosten der notwendigen Wiederauffüllung.",
+        ].join("\n"),
+      ]),
+      sourceDocumentId: fingerprint,
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: fingerprint,
+      catalog: singleConceptComponentCatalog({
+        catalogId: "wrapped-list-concept-test",
+        categoryView: "VS",
+        requirementId: "VS-32",
+        componentId: "temporary_storage_costs",
+        factRole: "COST",
+        conceptId: "insured-temporary-storage-costs",
+        requiredGroups: [
+          { prefixes: ["zwischenlager"] },
+          { prefixes: ["kosten"] },
+          { prefixes: ["versichert"] },
+        ],
+        maxLines: 2,
+      }),
+    });
+    const occurrences = component(
+      worksheet,
+      "VS-32",
+      "temporary_storage_costs"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(1);
+    expect(occurrences[0]).toMatchObject({
+      matchedAlias: "CONCEPT_SEARCH:insured-temporary-storage-costs",
+      exactText: firstItem,
+      context: expect.objectContaining({
+        unitType: "LIST_ITEM",
+        text: firstItem,
+      }),
+    });
+    expect(occurrences[0].context.documentStart).toBeLessThanOrEqual(
+      occurrences[0].documentStart
+    );
+    expect(occurrences[0].context.documentEnd).toBeGreaterThanOrEqual(
+      occurrences[0].documentEnd
+    );
+    expect(() =>
+      buildCandidateTriagePayload(worksheet, {
+        documentArtifact: { schemaVersion: 1, fingerprint, document },
+      })
+    ).not.toThrow();
+  });
+
+  test("does not combine concept groups across sibling list items", () => {
+    const document = documentFromPages([
+      [
+        "3. Versicherungsumfang",
+        "- Die Zwischenlagerung muss unverzüglich angezeigt werden.",
+        "- Die notwendigen Kosten sind versichert.",
+      ].join("\n"),
+    ]);
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: "sibling-list-concept-fixture",
+      catalog: singleConceptComponentCatalog({
+        catalogId: "sibling-list-concept-test",
+        categoryView: "VS",
+        requirementId: "VS-32",
+        componentId: "temporary_storage_costs",
+        factRole: "COST",
+        conceptId: "insured-temporary-storage-costs",
+        requiredGroups: [
+          { prefixes: ["zwischenlager"] },
+          { prefixes: ["kosten"] },
+          { prefixes: ["versichert"] },
+        ],
+        maxLines: 2,
+      }),
+    });
+
+    expect(
+      component(worksheet, "VS-32", "temporary_storage_costs")
+    ).toMatchObject({
+      terminalState: "NO_CONTROLLED_CANDIDATE",
+      occurrenceCount: 0,
+      occurrences: [],
+    });
+  });
+
+  test("keeps a concept shared by a governor and its first list item", () => {
+    const fingerprint = "governed-list-concept-fixture";
+    const governedText = [
+      "Zusätzlich versichert sind Schäden durch",
+      "• Schnee- und Eisrutsch an den versicherten Gebäuden, die durch Herabrutschen von am Dach",
+      "angesammelten Schnee- und Eismassen entstehen;",
+    ].join("\n");
+    const document = {
+      ...documentFromPages([governedText]),
+      sourceDocumentId: fingerprint,
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: fingerprint,
+      catalog: singleConceptComponentCatalog({
+        catalogId: "governed-list-concept-test",
+        categoryView: "ST",
+        requirementId: "ST-08",
+        componentId: "roof_avalanche_on_own_installations",
+        factRole: "COVERAGE",
+        conceptId: "snow-or-ice-slide-on-insured-property",
+        requiredGroups: [
+          { prefixes: ["versichert"] },
+          { prefixes: ["schnee", "eisrutsch"] },
+          { prefixes: ["gebäude"] },
+        ],
+        maxLines: 3,
+      }),
+    });
+    const occurrences = component(
+      worksheet,
+      "ST-08",
+      "roof_avalanche_on_own_installations"
+    ).occurrences;
+
+    expect(occurrences).toHaveLength(1);
+    expect(occurrences[0]).toMatchObject({
+      matchedAlias: "CONCEPT_SEARCH:snow-or-ice-slide-on-insured-property",
+      context: {
+        unitType: "LIST_ITEM",
+        pageStart: 0,
+        pageEnd: governedText.length,
+        documentStart: 0,
+        documentEnd: governedText.length,
+        text: governedText,
+      },
+    });
+    expect(() =>
+      buildCandidateTriagePayload(worksheet, {
+        documentArtifact: { schemaVersion: 1, fingerprint, document },
+      })
+    ).not.toThrow();
   });
 
   test("keeps a component unresolved when one required concept group is absent", () => {

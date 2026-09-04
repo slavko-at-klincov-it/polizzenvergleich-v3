@@ -6261,3 +6261,52 @@ Die erste Runner-Prüfung bestand alle 18 fokussierten Vertragstests. Der
 Server-Lint beanstandete ausschließlich den Prettier-Zeilenumbruch des zuvor
 ergänzten RH-Basisvergleichs; ein eigener semantikneutraler Format-Forward-Fix
 stellt den vollständigen Lint-Gate wieder her.
+
+## 132. Symmetrischer Finalgate: strukturgebundene Konzeptfenster
+
+Die vollständigen statischen Gates auf `eb7004273` bestanden auf dem Mac
+Studio: 171/171 Jest-Suites, 2.335/2.335 Tests, Repository- und Server-Lint,
+Frontend-Produktionsbuild, macOS-Installerverträge sowie Prisma validate und
+generate. Alle 42 Migrationen liefen auf einer leeren Datenbank und auf einer
+Kopie der Kunden-SQLite-Datenbank; `quick_check=ok`, null
+Fremdschlüsselfehler und unveränderte Zeilenzahlen in 35 Fachtabellen.
+
+Der frische LF-Fünferlauf auf demselben Commit terminierte ohne Resume in
+1.198.772 ms. Seine unabhängige Prüfung bestätigte 10 Dokumentartefakte, je
+100 Result-/Triage-/Effects-Reports, 237 Qwen-Aufrufe, null Hybrid- oder
+Embeddingziele, null XLSX-Zellabweichungen und die unveränderte Partition
+15 vollständig / 15 teilweise / 4 kontrolliert ohne Gegenstück / 0 Referenz
+unklar / 1 Gegenstück unklar. Tatsächliche Kundenreviewzahl bleibt genau 1;
+die breitere gespeicherte Altzählung 16 enthält zusätzlich Teilbelege.
+
+Der folgende symmetrische Lauf stoppte nach drei Sekunden vor dem ersten
+Modellaufruf mit `SOURCE_SCOPE_OCCURRENCE_RANGE_INVALID`. Die neue
+Runner-Weitergabe des Dokumentartefakts arbeitete korrekt und machte einen
+älteren Producerfehler sichtbar. Der erste falsche Span
+(`VS-32/temporary_storage_costs`) verband die Fortsetzungszeile eines
+Zwischenlagerungs-Listeneintrags mit dem folgenden Geschwisterpunkt. Sein
+Quellspan `[10059,10238)` war source-exakt, lag aber 95 Zeichen außerhalb des
+korrekt bei `[9961,10143)` endenden `LIST_ITEM`-Kontexts. Ein Audit der 948
+historischen Kandidaten fand genau einen weiteren solchen Widerspruch:
+`ST-08` verband dagegen den echten Deckungs-Governor „Zusätzlich versichert
+sind Schäden durch“ mit seinem ersten Schnee-/Eisrutsch-Listeneintrag.
+
+Der Source-Validator bleibt unverändert fail-closed. Der generische
+Producer-Fix prüft jeden Concept-Search-Span vor der Überlappungsauswahl gegen
+denselben Strukturkontext, der später persistiert wird. Spans über
+Geschwisterpunkte werden verworfen, bevor ein kürzerer falscher Span den
+gültigen Treffer verdrängen kann. Ein nicht als Bullet formulierter,
+syntaktisch offener Governor darf mit genau seinem ersten Listeneintrag und
+dessen Fortsetzungszeilen verbunden werden; die nächste Bullet-, Leer-,
+Heading- oder registrierte Strukturgrenze beendet den Kontext. Direkte
+Alias-Treffer bleiben unverändert.
+
+Die symmetrische Produktidentität wird wegen der geänderten Suchsemantik auf
+`CUSTOMER_CORE_5_V106_STRUCTURAL_CONCEPT_CONTEXT` / Vergleichsvertrag V67
+gehoben. V105/V66 bleibt für gespeicherte Schema-15-Ergebnisse explizit
+lesbar. Positive Tests schützen umgebrochene Einzelpunkte und echte
+Governor→Erstpunkt-Beziehungen; adversariale Tests verhindern die Vermischung
+zweier Geschwisterpunkte und führen das erzeugte Worksheet anschließend durch
+den source-gebundenen Triagevertrag. Vor Merge, Tag oder Deployment sind nach
+dem Commit erneut fokussierte Mac-Studio-Prüfungen sowie vollständige LF- und
+symmetrische Läufe erforderlich.

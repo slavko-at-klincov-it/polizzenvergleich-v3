@@ -34,8 +34,10 @@ Versichererabdeckung noch 99 Prozent Fachrichtigkeit.
 - Der produktive Vergleich verwendet Qwen 3.6 ohne Embeddings oder Hybrid.
 - Das aktuelle symmetrische Ergebnisschema ist V15. Es bindet das
   source-verifizierte Produktprofil
-  `CUSTOMER_CORE_5_V105_SOURCE_BOUND_TRIAGE` mit Vergleichsvertrag V66; der
-  gerichtete Weg bindet `LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE`.
+  `CUSTOMER_CORE_5_V106_STRUCTURAL_CONCEPT_CONTEXT` mit Vergleichsvertrag V67;
+  der vorherige V105-/V66-Vertrag bleibt für gespeicherte Schema-15-Ergebnisse
+  lesbar. Der gerichtete Weg bindet
+  `LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE`.
 - JSON, Markdown und XLSX werden als ein atomarer, hashgebundener Artefaktsatz
   veröffentlicht. Ergebnis- und Downloadendpunkte akzeptieren den Satz nur
   über die versionierte Export-Hashkette und liefern exakt die geprüften
@@ -118,6 +120,25 @@ Source-Bindung verpflichtenden `documentArtifact`-Parameter in den manuellen
 All-Category-, Hybrid-Shadow- und historischen VS-A/B-Pfaden. Weil auch dieser
 Fix den Release-SHA ändert, sind beide Modell-Finalgates auf seinem Nachfolger
 erneut erforderlich.
+
+Der LF-Finalgate auf `eb7004273` bestand anschließend in 1.198.772 ms mit
+unveränderter 15/15/4/0/1-Partition, genau einer tatsächlich unklaren Zeile,
+null XLSX-Zellabweichungen und gültiger Artefakt-Hashkette. Der unmittelbar
+darauf gestartete symmetrische Gate brach vor dem ersten Modellaufruf
+fail-closed ab: Der nun korrekt weitergereichte Dokumentartefaktvertrag deckte
+zwei ältere, intern widersprüchliche Concept-Search-Spans unter 948
+historischen Kandidaten auf. Einer verband zwei Geschwister-Listeneinträge;
+der andere verband einen echten Deckungs-Governor mit seinem ersten
+Listeneintrag.
+
+Der isolierte Forward-Fix filtert Concept-Search-Spans vor der
+Überlappungsauswahl gegen ihren source-genauen Strukturkontext. Ein
+Einleitungs-Governor darf kontrolliert mit ausschließlich seinem ersten
+Listeneintrag verbunden werden; Geschwisterpunkte bleiben getrennte Fakten.
+Direkte Aliase und der fail-closed Source-Validator werden nicht gelockert.
+Die veränderte symmetrische Suchsemantik ist als V106/V67 versioniert; V105/V66
+bleibt als historische Schema-15-Identität lesbar. Der Fix benötigt erneut
+fokussierte Mac-Studio-Tests sowie frische LF- und symmetrische Finalgates.
 
 ## First-Hop V3.6.0 → V3.7.0
 
