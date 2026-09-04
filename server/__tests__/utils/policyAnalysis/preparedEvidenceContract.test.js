@@ -792,6 +792,81 @@ describe("preparedEvidenceContract", () => {
     });
   });
 
+  test("does not let an unbound page-title hint override direct triage", () => {
+    const text = "Blei-, Messing- und Kunstverglasungen sind mitversichert.";
+    const exactText = "Blei-, Messing- und Kunstverglasungen";
+    const documentStart = text.indexOf(exactText);
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "RG" },
+      requirements: [
+        {
+          id: "RG-02",
+          label: "Sonderverglasungen",
+          sourceReferenceId: "LF-GL-02",
+          requestedFields: [],
+          scopePolicy: "GENERAL_REQUIRED",
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "special_glass",
+              label: "Sonderverglasungen",
+              factRole: "INSURED_OBJECT",
+              scopePolicy: "GENERAL_REQUIRED",
+              scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+              occurrences: [
+                {
+                  candidateId: "candidate:rg-02:fake-page-title",
+                  pageNumber: 4,
+                  physicalPageNumber: 4,
+                  exactText,
+                  documentStart,
+                  documentEnd: documentStart + exactText.length,
+                  context: {
+                    unitType: "PARAGRAPH",
+                    text,
+                    documentStart: 0,
+                    documentEnd: text.length,
+                  },
+                  scopeLead: { text: "" },
+                  sectionScopeHint: null,
+                  pageScopeHints: [
+                    {
+                      scopeKey: "STURM_INSURANCE",
+                      pageStart: 0,
+                      text: "Sturmversicherung",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [preparedTarget] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      candidateTriage: [
+        {
+          requirementId: "RG-02",
+          componentId: "special_glass",
+          candidateId: "candidate:rg-02:fake-page-title",
+          binding: "DIRECT",
+        },
+      ],
+    });
+
+    expect(preparedTarget.candidates).toEqual([
+      expect.objectContaining({
+        candidateId: "candidate:rg-02:fake-page-title",
+        candidateBinding: "DIRECT",
+      }),
+    ]);
+    expect(preparedTarget.serverRejectedCandidates).toEqual([]);
+  });
+
   test("server-certifies ST-14 light domes only inside a locally governed current glass section", () => {
     const occurrence = {
       candidateId: "candidate:glass-light-dome",

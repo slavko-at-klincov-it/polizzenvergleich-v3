@@ -1613,8 +1613,7 @@ function deterministicCategoryCandidateBinding({
       ? {
           binding: DETERMINISTIC_BINDING.MENTION_ONLY,
           basis: "EXPLICIT_OTHER_CATEGORY_SECTION",
-          ...(sourceBoundSectionScopeKeys(occurrence).length > 0 ||
-          explicitPageTitleScopeKeys(occurrence).length > 0
+          ...(sourceBoundSectionScopeKeys(occurrence).length > 0
             ? { authoritative: true }
             : {}),
         }
