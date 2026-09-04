@@ -1,5 +1,8 @@
+const fs = require("fs");
+const path = require("path");
 const {
   CANDIDATE_BINDING,
+  TRIAGE_SCHEMA_VERSION,
   buildCandidateTriagePayload,
   buildSingleBindingTargetPayload,
   deriveCandidateBinding,
@@ -113,6 +116,24 @@ function response(judgements) {
 }
 
 describe("candidateTriageContract", () => {
+  test.each([
+    "candidate-triage-system.v0.1.md",
+    "vs-candidate-triage-system.v0.1.md",
+  ])("keeps the %s response schema aligned with the parser", (filename) => {
+    const prompt = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../resources/policyAnalysis",
+        filename
+      ),
+      "utf8"
+    );
+
+    expect(prompt).toContain(
+      `{"schemaVersion":${TRIAGE_SCHEMA_VERSION},"roleMatch":"MATCH","scopeMatch":"GENERAL"}`
+    );
+  });
+
   test("does not misclassify an HP cost inside the liability chapter as another scope", () => {
     const worksheet = {
       candidateOnly: true,

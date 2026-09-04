@@ -81,6 +81,13 @@ Die signierten QA-Manifeste sind die unveränderliche Laufdokumentation, damit
 der geprüfte Git-SHA nicht nachträglich durch das Eintragen seines eigenen
 Hashes verändert werden muss.
 
+Der erste LF-Versuch auf dem Freeze `2309a52f4` deckte vor dem eigentlichen
+Gesamtlauf eine Prompt-/Parser-Drift auf: Beide Triage-Prompts verlangten noch
+Schema V6, während der source-gebundene Parser V7 voraussetzt. Der Versuch
+endete nach zwei Antworten fail-closed und wird nicht gewertet. Der
+Forward-Fix aktualisiert beide Promptbeispiele und schützt sie durch einen
+gemeinsamen Versionstest; damit ist dieser Commit der neue Finalgate-Freeze.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen

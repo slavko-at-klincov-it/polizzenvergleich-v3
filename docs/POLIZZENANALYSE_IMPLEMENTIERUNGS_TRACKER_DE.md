@@ -6106,3 +6106,19 @@ Die installierte V3.6.0-Kundeninstanz blieb dabei unverändert. Diese
 Vorprüfung ist noch keine V3.7-Freigabe: Die vollständigen Gates sowie die
 frischen LF- und symmetrischen Modellläufe müssen auf dem unveränderten
 Dokumentations-Freeze-SHA wiederholt werden.
+
+## 128. Finalgate-Fund: Triage-Promptversion
+
+Der erste LF-Finalgate-Versuch auf `2309a52f4` stoppte nach der vorbereiteten
+ersten A-Dokumentkategorie und zwei Modellantworten. Qwen lieferte exakt das in
+beiden Triage-Systemprompts verlangte Root-Schema V6; der bereits
+source-gebundene Parser verlangt korrekt V7. Der Lauf wurde deshalb mit
+`TRIAGE_SCHEMA_VERSION_INVALID: 6` fail-closed beendet und ist kein
+Qualitäts- oder Laufzeitnachweis.
+
+Der kleinste allgemeine Forward-Fix hebt die beiden produktiv verwendeten
+Promptbeispiele auf V7. Ein Vertragstest bindet künftig beide Promptdateien an
+`TRIAGE_SCHEMA_VERSION`, damit Parser- und Promptversion nicht erneut
+auseinanderlaufen. Rollen-, Scope-, Kandidaten-, Evidenz- und
+Vergleichssemantik werden nicht verändert. Die abgebrochene Session bleibt als
+Fehlernachweis erhalten; der Finalgate-Lauf beginnt mit einer neuen Session.
