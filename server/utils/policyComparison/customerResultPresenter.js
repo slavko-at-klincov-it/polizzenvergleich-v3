@@ -1,6 +1,4 @@
-const {
-  POINT_OUTCOME,
-} = require("./pointDecision");
+const { POINT_OUTCOME } = require("./pointDecision");
 const {
   CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
   CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT_ID,

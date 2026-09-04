@@ -13,12 +13,7 @@ function isSentenceBoundary(text, index) {
   if (character === "\n" || character === "\r") {
     const before = text[index - 1];
     const after = text[index + 1];
-    if (
-      before === "\n" ||
-      before === "\r" ||
-      after === "\n" ||
-      after === "\r"
-    )
+    if (before === "\n" || before === "\r" || after === "\n" || after === "\r")
       return true;
     const followingLine =
       text.slice(index + 1).match(/^[ \t]*([^\r\n]*)/u)?.[1] || "";

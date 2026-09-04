@@ -17,9 +17,7 @@ const {
   isRgCostWithoutExplicitGlassLossScope,
   occurrenceLocalSentence,
 } = require("./glassLossScopeContract");
-const {
-  componentScopeContract,
-} = require("./componentScopePolicyContract");
+const { componentScopeContract } = require("./componentScopePolicyContract");
 const {
   createArtifactBackedSourceScopeResolver,
 } = require("./sourceBoundSectionScopeContract");
@@ -421,9 +419,7 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       )
     );
     const matchedNarrowScopeKey = observedSectionScopeKeys.find((scopeKey) =>
-      (scopeContract.scopeRules?.narrowScopeKeys || []).includes(
-        scopeKey
-      )
+      (scopeContract.scopeRules?.narrowScopeKeys || []).includes(scopeKey)
     );
     let scopeResolution = {
       owner: "MODEL",
@@ -611,10 +607,7 @@ function normalizeCandidateTriageResponse(responseText) {
  */
 function buildCandidateTriagePayload(
   worksheet,
-  {
-    documentArtifact = null,
-    expectedTargetSelectionDigestSha256 = null,
-  } = {}
+  { documentArtifact = null, expectedTargetSelectionDigestSha256 = null } = {}
 ) {
   assertTargetRequirementSelection(worksheet, {
     expectedSelectionDigestSha256: expectedTargetSelectionDigestSha256,

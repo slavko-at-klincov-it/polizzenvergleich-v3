@@ -4,10 +4,7 @@ const CUSTOMER_PREFIX_OUTCOMES = Object.freeze([
   ["Vorteil Polizze A:", POINT_OUTCOME.ADVANTAGE_A],
   ["Vorteil Polizze B:", POINT_OUTCOME.ADVANTAGE_B],
   ["Kein klarer Vorteil: gleichwertig –", POINT_OUTCOME.EQUIVALENT],
-  [
-    "Kein klarer Vorteil: nicht vergleichbar –",
-    POINT_OUTCOME.NOT_COMPARABLE,
-  ],
+  ["Kein klarer Vorteil: nicht vergleichbar –", POINT_OUTCOME.NOT_COMPARABLE],
   [
     "Kein klarer Vorteil: Dokumentationsunterschied –",
     POINT_OUTCOME.DOCUMENTATION_DIFFERENCE,

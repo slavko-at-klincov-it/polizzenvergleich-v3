@@ -138,7 +138,10 @@ function assertOccurrenceSource({ occurrence, expected, document, pages }) {
     contextText.length !== contextEnd - contextStart ||
     document.pageContent.slice(contextStart, contextEnd) !== contextText
   )
-    throw sourceScopeError("SOURCE_SCOPE_OCCURRENCE_RANGE_INVALID", candidateId);
+    throw sourceScopeError(
+      "SOURCE_SCOPE_OCCURRENCE_RANGE_INVALID",
+      candidateId
+    );
   return page;
 }
 

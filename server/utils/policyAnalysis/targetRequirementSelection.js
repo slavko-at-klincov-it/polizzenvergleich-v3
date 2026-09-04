@@ -2,9 +2,7 @@ const crypto = require("crypto");
 const {
   requirementSearchContractDigest,
 } = require("./coverageOnlyCertificationContract");
-const {
-  validateCatalog,
-} = require("./controlledOccurrenceWorksheet");
+const { validateCatalog } = require("./controlledOccurrenceWorksheet");
 
 const TARGET_REQUIREMENT_SELECTION_SCHEMA_VERSION = 2;
 const TARGET_REQUIREMENT_SELECTION_CONTRACT_ID =

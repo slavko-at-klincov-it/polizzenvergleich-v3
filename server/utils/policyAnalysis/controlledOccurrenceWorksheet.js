@@ -132,8 +132,7 @@ function requireNonEmptyString(value, code, detail) {
 }
 
 function validatedScopeRules(value, detail) {
-  if (value === undefined)
-    return { narrowAliases: [], narrowScopeKeys: [] };
+  if (value === undefined) return { narrowAliases: [], narrowScopeKeys: [] };
   const keys = Object.keys(value || {});
   if (
     !value ||
@@ -158,11 +157,7 @@ function validatedScopeRules(value, detail) {
     narrowScopeKeys: [
       ...new Set(
         (value.narrowScopeKeys || []).map((scopeKey) =>
-          requireNonEmptyString(
-            scopeKey,
-            "SCOPE_SECTION_KEY_REQUIRED",
-            detail
-          )
+          requireNonEmptyString(scopeKey, "SCOPE_SECTION_KEY_REQUIRED", detail)
         )
       ),
     ],

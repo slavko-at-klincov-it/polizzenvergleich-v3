@@ -10,9 +10,7 @@ const { DOCUMENT_STATUS } = require("./preparedEvidenceContract");
 const {
   validatedExactClauseCodeGovernor,
 } = require("./requestedFieldEvidenceContract");
-const {
-  componentScopeContract,
-} = require("./componentScopePolicyContract");
+const { componentScopeContract } = require("./componentScopePolicyContract");
 
 const CATEGORY_TABLE_HEADERS = Object.freeze([
   "Kategorie-ID",
@@ -559,13 +557,10 @@ function buildCategoryTableRows({
         )
           return false;
         if (
-          scopeContract.scopePolicy ===
-          "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT"
+          scopeContract.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT"
         )
           return DEFINITIVE_NARROW_SCOPE_EFFECTS.has(judgement.coverageEffect);
-        if (
-          scopeContract.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT"
-        )
+        if (scopeContract.scopePolicy !== "MATCHING_SCOPE_INCLUDED_SUFFICIENT")
           return false;
         const factRole = component?.factRole;
         return NON_COVERAGE_FACT_ROLES.has(factRole)

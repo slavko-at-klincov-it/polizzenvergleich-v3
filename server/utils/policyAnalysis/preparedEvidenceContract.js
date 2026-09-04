@@ -100,8 +100,8 @@ function sourceBoundOccurrenceComparisonScopeKey({
   component,
 }) {
   const allowedKeys =
-    componentScopeContract(requirement, component).scopeRules?.narrowScopeKeys ||
-    [];
+    componentScopeContract(requirement, component).scopeRules
+      ?.narrowScopeKeys || [];
   const occurrencePage = Number(occurrence?.physicalPageNumber);
   const section = occurrence?.sectionScopeHint;
   const declaredSectionKeys = [
@@ -390,8 +390,10 @@ function buildPreparedEvidenceTargets({
         const localTargetScopeRebinding =
           deterministicBinding?.basis ===
           "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2";
-        const catalogNarrowAliasScopeKey =
-          catalogNarrowAliasComparisonScopeKey(requirement, component);
+        const catalogNarrowAliasScopeKey = catalogNarrowAliasComparisonScopeKey(
+          requirement,
+          component
+        );
         const deterministicScopeKeyAllowed =
           (
             componentScopeContract(requirement, component).scopeRules
