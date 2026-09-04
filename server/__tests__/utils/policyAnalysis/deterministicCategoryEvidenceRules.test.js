@@ -287,6 +287,46 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test.each(["COST", "PERIL"])(
+    "does not turn a conditional agreement into server-owned %s coverage",
+    (factRole) => {
+      const exactText =
+        factRole === "COST" ? "Feuerlöschkosten" : "Überschwemmung";
+      const text = `${exactText} sind nur dann versichert, wenn sie ausdrücklich vereinbart wurden.`;
+      const input = bindingInput({ text, exactText });
+      input.worksheet.catalog.categoryView = "RS";
+      input.requirement = {
+        id: "RS-03",
+        sourceReferenceId: "LF-ST-03",
+        scopeRules: { narrowAliases: [] },
+      };
+      input.component = { id: "conditional_coverage", factRole };
+      input.occurrence.sectionScopeHint = null;
+
+      expect(deterministicCategoryCandidateBinding(input)).toBeNull();
+    }
+  );
+
+  test("binds the conditional predicate nearest to the exact component", () => {
+    const text =
+      "Vorleistung ist nicht versichert und Rückwärtsdeckung ist nur dann versichert, wenn der Vorfall unbekannt war.";
+    const input = bindingInput({ text, exactText: "Rückwärtsdeckung" });
+    input.worksheet.catalog.categoryView = "RO";
+    input.requirement = {
+      id: "RO-02",
+      sourceReferenceId: "LF-OK-02",
+      scopeRules: { narrowAliases: [] },
+    };
+    input.component = { id: "retroactive_cover", factRole: "CONDITION" };
+    input.occurrence.sectionScopeHint = null;
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+  });
+
   test("binds a direct insurer reimbursement promise", () => {
     const text =
       "Der Versicherer ersetzt 80% der vom Versicherungsnehmer zu tragenden Sachverständigenkosten.";

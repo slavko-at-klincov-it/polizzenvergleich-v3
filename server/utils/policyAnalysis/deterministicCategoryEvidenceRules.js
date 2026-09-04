@@ -271,20 +271,31 @@ function occurrenceClauseText(occurrence) {
 
 function explicitConditionalInsurancePolarity(occurrence) {
   const clause = occurrenceClauseText(occurrence);
-  if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
+  const exactText = String(occurrence?.exactText || "");
+  const occurrenceIndex = clause.indexOf(exactText);
   if (
-    /\b(?:ist|sind)\s+(?:nur\s+)?(?:dann\s+)?nicht\s+versichert\b/iu.test(
-      clause
-    )
+    occurrenceIndex < 0 ||
+    clause.indexOf(exactText, occurrenceIndex + exactText.length) >= 0
   )
-    return "NEGATIVE";
-  if (
-    /\b(?:ist|sind)\s+(?:nur\s+)?dann\s+versichert\s*,?\s*(?:wenn|sofern)\b/iu.test(
-      clause
-    )
-  )
-    return "POSITIVE";
-  return "UNKNOWN";
+    return "UNKNOWN";
+  const governedTail = clause.slice(occurrenceIndex + exactText.length);
+  const candidates = [
+    {
+      polarity: "NEGATIVE",
+      match: governedTail.match(
+        /\b(?:ist|sind)\s+(?:nur\s+)?(?:dann\s+)?nicht\s+versichert\b/iu
+      ),
+    },
+    {
+      polarity: "POSITIVE",
+      match: governedTail.match(
+        /\b(?:ist|sind)\s+(?:nur\s+)?dann\s+versichert\s*,?\s*(?:wenn|sofern)\b/iu
+      ),
+    },
+  ]
+    .filter(({ match }) => Number.isInteger(match?.index))
+    .sort((left, right) => left.match.index - right.match.index);
+  return candidates[0]?.polarity || "UNKNOWN";
 }
 
 /**
@@ -292,12 +303,14 @@ function explicitConditionalInsurancePolarity(occurrence) {
  * exact occurrence. Unlike a carried list governor, German operative clauses
  * often place "ersetzt" after the matched noun phrase. Side effects: none.
  */
-function operativeCoveragePolarity(occurrence) {
+function operativeCoveragePolarity(occurrence, factRole = null) {
   const clause = occurrenceClauseText(occurrence);
   const exactText = String(occurrence?.exactText || "");
   if (!containsPhrase(clause, occurrence?.exactText)) return "UNKNOWN";
   const conditionalInsurancePolarity =
-    explicitConditionalInsurancePolarity(occurrence);
+    factRole === "CONDITION"
+      ? explicitConditionalInsurancePolarity(occurrence)
+      : "UNKNOWN";
   if (conditionalInsurancePolarity !== "UNKNOWN")
     return conditionalInsurancePolarity;
   if (
@@ -1570,7 +1583,10 @@ function deterministicCategoryCandidateBinding({
         }
       : null;
 
-  const operativePolarity = operativeCoveragePolarity(occurrence);
+  const operativePolarity = operativeCoveragePolarity(
+    occurrence,
+    component?.factRole
+  );
   const operativeClause = occurrenceClauseText(occurrence);
   if (
     (matchingScopeKey || requirement?.sourceReferenceId) &&
@@ -1686,15 +1702,18 @@ function effectForCandidate(target, candidate) {
       ));
   if (explicitBenefitPerformance) return COVERAGE_EFFECT.INCLUDED;
 
-  const operativePolarity = operativeCoveragePolarity({
-    exactText: candidate.exactText,
-    documentStart: candidate.documentStart,
-    documentEnd: candidate.documentEnd,
-    context: {
-      text: candidate.contextText,
-      documentStart: candidate.contextDocumentStart,
+  const operativePolarity = operativeCoveragePolarity(
+    {
+      exactText: candidate.exactText,
+      documentStart: candidate.documentStart,
+      documentEnd: candidate.documentEnd,
+      context: {
+        text: candidate.contextText,
+        documentStart: candidate.contextDocumentStart,
+      },
     },
-  });
+    target.factRole
+  );
   if (operativePolarity === "NEGATIVE") return COVERAGE_EFFECT.EXCLUDED;
   if (operativePolarity === "POSITIVE") {
     if (target.factRole === "DEFINITION") return COVERAGE_EFFECT.DEFINED;
