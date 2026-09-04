@@ -656,6 +656,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
   "LF-AV-01": [
     component("maximum_indemnity", "Höchstentschädigung", "LIMIT", [
       "Höchstentschädigung im Schadensfall",
+      "Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme",
       "Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme begrenzt",
     ]),
     component(

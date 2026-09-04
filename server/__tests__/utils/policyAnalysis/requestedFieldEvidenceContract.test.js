@@ -2050,6 +2050,59 @@ describe("requestedFieldEvidenceContract", () => {
     });
   });
 
+  test("materializes a symbolic policy-sum cap for a non-VS reference row", () => {
+    const text =
+      "Die Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme, maximiert mit dem Versicherungswert, begrenzt.";
+    const source = textualOccurrence({
+      candidateId: "candidate:ra01-event-policy-sum",
+      text,
+      exactText:
+        "Entschädigungsleistung ist pro Schadenereignis mit der in der Polizze vereinbarten Versicherungssumme",
+    });
+    source.context.unitType = "PARAGRAPH";
+    const result = materializeRequestedFieldEvidence({
+      worksheet: textualWorksheet({
+        id: "RA-01",
+        label: "Höchstentschädigung pro Ereignis",
+        requestedFields: ["limit"],
+        components: [
+          {
+            id: "maximum_indemnity",
+            label: "Höchstentschädigung",
+            factRole: "LIMIT",
+            occurrences: [source],
+          },
+        ],
+      }),
+      materializedCandidates: selections([
+        "candidate:ra01-event-policy-sum",
+        "DIRECT",
+      ]),
+    });
+
+    expect(result.requirements[0]).toMatchObject({
+      requestedFieldStatus: REQUESTED_FIELD_STATUS.COMPLETE,
+      fields: [
+        {
+          field: "limit",
+          status: FIELD_EVIDENCE_STATUS.FOUND,
+          facts: [
+            expect.objectContaining({
+              valueType: "SYMBOLIC_LIMIT",
+              symbolicLimitType:
+                "EVENT_POLICY_SUM_MAXIMIZED_WITH_INSURED_VALUE",
+              normalizedValue:
+                "Versicherungssumme, maximiert mit dem Versicherungswert",
+              unit: "CONTRACTUAL_SUM",
+              binding: "DIRECT",
+            }),
+          ],
+        },
+      ],
+    });
+    expect(JSON.stringify(result)).not.toContain("100 %");
+  });
+
   test("binds a VS-36 numeric event limit to its local building-sum basis", () => {
     const text =
       "Die Höchstentschädigung im Schadensfall beträgt inklusive aller Positionen maximal 150 % der vereinbarten Versicherungssumme für das Gebäude.";

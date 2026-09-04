@@ -1647,6 +1647,21 @@ function effectForCandidate(target, candidate) {
     !lastPatternMatch(localClause, NEGATIVE_GOVERNORS);
   if (localLimitedCoverage) return COVERAGE_EFFECT.INCLUDED;
 
+  const explicitBenefitPerformance =
+    target.factRole === "BENEFIT" &&
+    containsPhrase(localClause, candidate.exactText) &&
+    !lastPatternMatch(localClause, NEGATIVE_GOVERNORS) &&
+    !/\bnicht\s+(?:vom\s+Versicherer\s+)?(?:ersetzt|übernommen|geleistet)\b/iu.test(
+      localClause
+    ) &&
+    ((candidate.contextUnitType === "LIST_ITEM" &&
+      /auf\s+[,„“"']*Erstes\s+Risiko/iu.test(localClause) &&
+      /(?:EUR|€)\s*\d/iu.test(localClause)) ||
+      /(?:ersetzt|übernimmt|leistet)\s+der\s+Versicherer|der\s+Versicherer\s+(?:ersetzt|übernimmt|leistet)/iu.test(
+        localClause
+      ));
+  if (explicitBenefitPerformance) return COVERAGE_EFFECT.INCLUDED;
+
   const operativePolarity = operativeCoveragePolarity({
     exactText: candidate.exactText,
     documentStart: candidate.documentStart,

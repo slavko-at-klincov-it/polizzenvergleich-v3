@@ -658,9 +658,10 @@ function extractVs36MaximumIndemnityLimitFacts(options) {
 }
 
 function extractCoverageLimitFacts(options) {
-  return extractBoundLimitFacts(options).filter(
-    (fact) => !deductibleFact(options.occurrence, fact)
-  );
+  return [
+    ...extractBoundLimitFacts(options),
+    ...extractVs36MaximumIndemnityLimitFacts(options),
+  ].filter((fact) => !deductibleFact(options.occurrence, fact));
 }
 
 function extractScaffoldingCostLimitFacts(options) {

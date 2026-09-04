@@ -1108,6 +1108,73 @@ describe("deterministicCategoryEvidenceRules", () => {
     });
   });
 
+  test("treats an explicit first-risk benefit schedule and operative payment clause as included", () => {
+    const scheduleText =
+      "Erweiterte Ersatzleistung für Fliesen, Böden, Malereien und Tapeten auf Erstes Risiko (EUR 10.000,00)";
+    const operativeText =
+      "Erweiterte Ersatzleistung für Fliesen, Böden, Malereien und Tapeten. Sind gleiche Fliesen nicht mehr erhältlich, ersetzt der Versicherer die Kosten für eine Neuverfliesung.";
+    const candidates = [
+      {
+        candidateId: "candidate:benefit-schedule",
+        candidateBinding: "DIRECT",
+        exactText:
+          "Erweiterte Ersatzleistung für Fliesen, Böden, Malereien und Tapeten",
+        contextUnitType: "LIST_ITEM",
+        contextText: scheduleText,
+        contextDocumentStart: 7_000,
+        documentStart: 7_000,
+      },
+      {
+        candidateId: "candidate:benefit-clause",
+        candidateBinding: "DIRECT",
+        exactText:
+          "Erweiterte Ersatzleistung für Fliesen, Böden, Malereien und Tapeten",
+        contextUnitType: "CLAUSE_SECTION",
+        contextText: operativeText,
+        contextDocumentStart: 8_000,
+        documentStart: 8_000,
+      },
+    ];
+
+    expect(
+      deterministicCategoryPreparedDecision({
+        categoryView: "LW",
+        requirementId: "LW-04",
+        componentId: "optical_restoration",
+        factRole: "BENEFIT",
+        candidates,
+      })
+    ).toEqual({
+      selectedCandidateIds: candidates.map(({ candidateId }) => candidateId),
+      coverageEffect: "INCLUDED",
+      basis: "EXPLICIT_CATEGORY_CLAUSE:LW:LW-04",
+    });
+  });
+
+  test.each([
+    "Nicht versichert sind erweiterte Ersatzleistungen für Fliesen auf Erstes Risiko (EUR 10.000,00).",
+    "Erweiterte Ersatzleistung für Fliesen wird nicht vom Versicherer ersetzt.",
+  ])("does not certify a negated benefit clause: %s", (contextText) => {
+    const decision = deterministicCategoryPreparedDecision({
+      categoryView: "LW",
+      requirementId: "LW-04",
+      componentId: "optical_restoration",
+      factRole: "BENEFIT",
+      candidates: [
+        {
+          candidateId: "candidate:negated-benefit",
+          candidateBinding: "DIRECT",
+          exactText: "Erweiterte Ersatzleistung für Fliesen",
+          contextUnitType: "LIST_ITEM",
+          contextText,
+          contextDocumentStart: 9_000,
+          documentStart: 9_000 + contextText.indexOf("Erweiterte"),
+        },
+      ],
+    });
+    expect(decision?.coverageEffect).not.toBe("INCLUDED");
+  });
+
   test("certifies the complete unconditional LW-25 inclusion clause", () => {
     const contextText = [
       "LW01 Allmählichkeitsschäden",
