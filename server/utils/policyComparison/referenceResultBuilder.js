@@ -186,7 +186,13 @@ function scopeValid(requirement, component, judgement) {
   )
     return false;
   const scopeKeys = judgement.comparisonScopeKeys || [];
-  if (scopeKeys.length === 0) return false;
+  const allowedScopeKeys = requirement.scopeRules?.narrowScopeKeys || [];
+  if (
+    scopeKeys.length === 0 ||
+    allowedScopeKeys.length === 0 ||
+    scopeKeys.some((scopeKey) => !allowedScopeKeys.includes(scopeKey))
+  )
+    return false;
   if (requirement.scopePolicy === "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT")
     return ["INCLUDED", "EXCLUDED", "DEFINED", "CONDITIONAL"].includes(
       judgement.coverageEffect
