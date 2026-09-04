@@ -675,6 +675,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
   ],
   "LF-AV-02": [
     component("new_value", "Neuwertentschädigung", "BENEFIT", [
+      "Sämtliche zum Neuwert versicherten Gebäude und Sachen sind, soweit ständig gewartet und in Verwendung stehend, unabhängig von der Höhe ihres Zeitwertes, zum Neuwert zu ersetzen",
       "zum Neuwert zu ersetzen",
       "Ersatzwert gilt der Neuwert",
     ]),
@@ -683,6 +684,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Wiederherstellung als Voraussetzung",
       "CONDITION",
       [
+        "Versicherungsnehmer erwirbt den Anspruch auf Zahlung des die Zeitwertentschädigung übersteigenden Teiles der Entschädigung nur insoweit, als die Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung versicherter Sachen innerhalb dreier Jahre nach dem Schadenfall sichergestellt ist",
         "Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung",
         "Entschädigung zur Gänze für die Wiederherstellung bzw. Wiederbeschaffung verwendet",
       ]
@@ -692,6 +694,7 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "Wiederherstellungsfrist von drei Jahren",
       "CONDITION",
       [
+        "Versicherungsnehmer erwirbt den Anspruch auf Zahlung des die Zeitwertentschädigung übersteigenden Teiles der Entschädigung nur insoweit, als die Verwendung der Entschädigung zur Wiederbeschaffung oder Wiederherstellung versicherter Sachen innerhalb dreier Jahre nach dem Schadenfall sichergestellt ist",
         "innerhalb dreier Jahre nach dem Schadenfall sichergestellt",
         "binnen drei Jahren ab dem Eintritt des Schadenereignisses",
         "binnen drei Jahren ab dem Schadendatum",
@@ -760,7 +763,10 @@ const COMPONENT_OVERRIDES = Object.freeze({
       "waiver_duration",
       "Geltungsdauer",
       "CONDITION",
-      ["für die Dauer von ca. 3 Jahren"],
+      [
+        "Für alle jene Objekte, für die ein Neuwertschätzgutachten besteht und die Versicherungssumme dem Neuwert des Gutachtens entspricht, verzichtet der Versicherer für die Dauer von ca. 3 Jahren, ab der letzten Anpassung an den Baukostenindex, auf den Einwand einer eventuell bestehenden Unterversicherung",
+        "für die Dauer von ca. 3 Jahren",
+      ],
       { requestedFields: ["duration"] }
     ),
   ],
