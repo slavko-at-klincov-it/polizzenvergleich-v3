@@ -265,7 +265,7 @@ describe("deterministicCategoryEvidenceRules", () => {
 
   test("preserves a catalogued narrow scope for a conditional insurance clause", () => {
     const text =
-      "Die Rückwärtsdeckung ist nur für Altverträge nur dann versichert, wenn der Vorfall unbekannt war.";
+      "Diese Regel gilt nur für Altverträge. Die Rückwärtsdeckung ist nur dann versichert, wenn der Vorfall unbekannt war.";
     const input = bindingInput({
       text,
       exactText: "Rückwärtsdeckung",
