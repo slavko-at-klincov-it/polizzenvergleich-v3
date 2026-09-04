@@ -654,19 +654,7 @@ async function writeWorkbook(result, outputFile) {
   ];
   for (const category of result.categories)
     for (const row of category.rows)
-      sheet.addRow({
-        category: category.categoryView,
-        id: row.categoryId,
-        name: row.categoryName,
-        aContent: row.packageA.documentedContent,
-        aCoverage: row.packageA.coverage,
-        aSource: row.packageA.source,
-        bContent: row.packageB.documentedContent,
-        bCoverage: row.packageB.coverage,
-        bSource: row.packageB.source,
-        outcome: row.pointDecision.outcome,
-        reason: row.pointDecision.reason,
-      });
+      sheet.addRow(referenceWorkbookRowValues(category.categoryView, row));
   sheet.autoFilter = `A1:K${sheet.rowCount}`;
   sheet.eachRow((row, rowNumber) => {
     row.eachCell((cell) => {
@@ -677,6 +665,22 @@ async function writeWorkbook(result, outputFile) {
   });
   await workbook.xlsx.writeFile(outputFile);
   fs.chmodSync(outputFile, 0o600);
+}
+
+function referenceWorkbookRowValues(categoryView, row) {
+  return [
+    categoryView,
+    row.categoryId,
+    row.categoryName,
+    row.packageA.documentedContent,
+    row.packageA.coverage,
+    row.packageA.source,
+    row.packageB.documentedContent,
+    row.packageB.coverage,
+    row.packageB.source,
+    row.pointDecision.outcome,
+    row.pointDecision.reason,
+  ];
 }
 
 async function validateReferenceArtifactRoundTrip({ result, files }) {
@@ -703,27 +707,25 @@ async function validateReferenceArtifactRoundTrip({ result, files }) {
   )
     throw new Error("REFERENCE_ARTIFACT_WORKBOOK_HEADERS_INVALID");
 
-  const expectedRows = result.categories.flatMap(({ rows }) => rows);
+  const expectedRows = result.categories.flatMap(({ categoryView, rows }) =>
+    rows.map((row) => ({ categoryView, row }))
+  );
   if (sheet.rowCount !== expectedRows.length + 1)
     throw new Error("REFERENCE_ARTIFACT_WORKBOOK_ROW_COUNT_INVALID");
   const observedIds = [];
-  for (const [index, expected] of expectedRows.entries()) {
+  for (const [index, { categoryView, row: expected }] of expectedRows.entries()) {
     const rowNumber = index + 2;
-    const categoryId = sheet.getCell(`B${rowNumber}`).value;
-    if (
-      categoryId !== expected.categoryId ||
-      sheet.getCell(`C${rowNumber}`).value !== expected.categoryName
-    )
+    const expectedValues = referenceWorkbookRowValues(categoryView, expected);
+    const observedValues = sheet.getRow(rowNumber).values.slice(1);
+    if (JSON.stringify(observedValues) !== JSON.stringify(expectedValues))
       throw new Error(
-        `REFERENCE_ARTIFACT_WORKBOOK_ROW_IDENTITY_INVALID:${expected.categoryId}`
+        `REFERENCE_ARTIFACT_WORKBOOK_ROW_CONTENT_INVALID:${expected.categoryId}`
       );
-    if (
-      sheet.getCell(`J${rowNumber}`).value !== expected.pointDecision?.outcome
-    )
+    if (observedValues[9] !== expected.pointDecision?.outcome)
       throw new Error(
         `REFERENCE_ARTIFACT_WORKBOOK_OUTCOME_INVALID:${expected.categoryId}`
       );
-    observedIds.push(categoryId);
+    observedIds.push(observedValues[1]);
   }
   if (new Set(observedIds).size !== observedIds.length)
     throw new Error("REFERENCE_ARTIFACT_WORKBOOK_DUPLICATE_CATEGORY_ID");

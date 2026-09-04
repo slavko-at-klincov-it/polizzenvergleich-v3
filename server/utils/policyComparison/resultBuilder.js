@@ -2159,6 +2159,34 @@ function orderedWorkbookRows(result) {
     );
 }
 
+function customerWorkbookRowValues(row) {
+  const customerResult = customerResultText(row);
+  assertCustomerResultSemanticParity({
+    categoryId: row.categoryId,
+    outcome: row.pointDecision?.outcome,
+    text: customerResult,
+  });
+  return [
+    row.categoryId,
+    row.stage,
+    row.categoryName,
+    row.packageA.documentedContent,
+    row.packageA.coverage,
+    row.packageA.coverageAmount,
+    row.packageA.source,
+    row.packageA.reviewStatus,
+    row.categoryId,
+    row.stage,
+    row.categoryName,
+    row.packageB.documentedContent,
+    row.packageB.coverage,
+    row.packageB.coverageAmount,
+    row.packageB.source,
+    row.packageB.reviewStatus,
+    customerResult,
+  ];
+}
+
 async function writeWorkbook(result, outputFile) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Polizzenvergleich V3";
@@ -2186,33 +2214,8 @@ async function writeWorkbook(result, outputFile) {
     { header: "KI-Ergebnis", key: "customerResult", width: 54.33203125 },
   ];
   const workbookRows = orderedWorkbookRows(result);
-  for (const { row } of workbookRows) {
-    const customerResult = customerResultText(row);
-    assertCustomerResultSemanticParity({
-      categoryId: row.categoryId,
-      outcome: row.pointDecision?.outcome,
-      text: customerResult,
-    });
-    sheet.addRow({
-      aCategoryId: row.categoryId,
-      aStage: row.stage,
-      aCategoryName: row.categoryName,
-      aContent: row.packageA.documentedContent,
-      aCoverage: row.packageA.coverage,
-      aAmount: row.packageA.coverageAmount,
-      aSource: row.packageA.source,
-      aReview: row.packageA.reviewStatus,
-      bCategoryId: row.categoryId,
-      bStage: row.stage,
-      bCategoryName: row.categoryName,
-      bContent: row.packageB.documentedContent,
-      bCoverage: row.packageB.coverage,
-      bAmount: row.packageB.coverageAmount,
-      bSource: row.packageB.source,
-      bReview: row.packageB.reviewStatus,
-      customerResult,
-    });
-  }
+  for (const { row } of workbookRows)
+    sheet.addRow(customerWorkbookRowValues(row));
   const wrappedColumns = new Set([4, 7, 11, 12, 14, 15, 17]);
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     row.height =
@@ -2285,27 +2288,20 @@ async function validateComparisonArtifactRoundTrip({ result, files }) {
   const observedIds = [];
   for (const [index, expected] of expectedRows.entries()) {
     const rowNumber = index + 2;
-    const categoryIdA = sheet.getCell(`A${rowNumber}`).value;
-    const categoryIdB = sheet.getCell(`I${rowNumber}`).value;
-    if (
-      categoryIdA !== expected.categoryId ||
-      categoryIdB !== expected.categoryId ||
-      sheet.getCell(`B${rowNumber}`).value !== expected.stage ||
-      sheet.getCell(`J${rowNumber}`).value !== expected.stage ||
-      sheet.getCell(`C${rowNumber}`).value !== expected.categoryName ||
-      sheet.getCell(`K${rowNumber}`).value !== expected.categoryName
-    )
+    const expectedValues = customerWorkbookRowValues(expected);
+    const observedValues = sheet.getRow(rowNumber).values.slice(1);
+    if (JSON.stringify(observedValues) !== JSON.stringify(expectedValues))
       throw new Error(
-        `COMPARISON_ARTIFACT_WORKBOOK_ROW_IDENTITY_INVALID:${expected.categoryId}`
+        `COMPARISON_ARTIFACT_WORKBOOK_ROW_CONTENT_INVALID:${expected.categoryId}`
       );
     const customerOutcome = customerOutcomeFromText(
-      sheet.getCell(`Q${rowNumber}`).value
+      observedValues[16]
     );
     if (customerOutcome !== expected.pointDecision?.outcome)
       throw new Error(
         `COMPARISON_ARTIFACT_WORKBOOK_OUTCOME_INVALID:${expected.categoryId}`
       );
-    observedIds.push(categoryIdA);
+    observedIds.push(observedValues[0]);
   }
   if (new Set(observedIds).size !== observedIds.length)
     throw new Error("COMPARISON_ARTIFACT_WORKBOOK_DUPLICATE_CATEGORY_ID");
