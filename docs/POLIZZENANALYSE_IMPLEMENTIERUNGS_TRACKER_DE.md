@@ -6578,3 +6578,172 @@ Die installierte Kundenfassung blieb sauber auf
 sauber auf `0090b3cccfeb03f3f71a6fefb4e999e055ff4eca`. VS-22 ist damit für
 diese bekannten zehn Dokumente technisch und im frischen Modelllauf belegt.
 Dies ist kein unbekannter Versicherer-Holdout und kein 99-Prozent-Nachweis.
+
+## 134. Source-bound Mehrfachsparten-Heading und FE-D01-Finalgate
+
+### 134.1 Fehlerursache und enger Forward-Fix
+
+Der bekannte FE-D01-Recallfehler war kein fehlender Alias und kein
+Modellfehler. Die physische PDF-Seite 5 des LF-Dokuments enthält eine über zwei
+Zeilen umbrochene kombinierte Überschrift:
+
+```text
+2. Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und
+Grundstückshaftpflichtversicherung
+```
+
+Der alte Abschnittsparser erfasste nur den Suffix der zweiten Zeile als
+alleinigen Haftpflicht-Scope. Dadurch wurden gültige Feuerlöschkosten auf
+derselben Seite im neuen source-bound Evidenzpfad autoritativ als
+`TRIAGE_MENTION_ONLY` verworfen. Die Suche selbst hatte den Text gefunden.
+
+Der Fix wurde bewusst als wiederverwendbarer Überschriftenvertrag umgesetzt:
+
+- `71b873450a7d1e5c9e21e034804e740de7ad0423` erkennt exakt gebundene ein- und
+  zweizeilige kombinierte Versicherungsumfang-Headings, gibt die vier
+  Sparten-Scopes Feuer, Sturm, Leitungswasser und Gebäude-/
+  Grundstückshaftpflicht unverfälscht weiter und unterdrückt vollständig im
+  kombinierten Bereich enthaltene Haftpflicht-Suffix-Headings;
+- strukturelle Haftpflichtablehnung greift nur noch bei einem alleinigen
+  Haftpflicht-Scope; lokale AHVB-/Schadenersatzsprache bleibt unverändert
+  terminal;
+- unvollständige, doppelte oder unbekannte Spartenmengen werden fail-closed
+  abgewiesen;
+- Profil und Triage wurden als V108/V69 beziehungsweise Triage-Schema 8
+  versioniert;
+- `96d375fb33f8a8da7c39df097ddbf600fde9d93c` ergänzt die positiven,
+  adversarialen und source-bound Kontrollen; `1fe9473b481fb0ef52745110a4dc8b0ff4b38161`
+  und `d266b48ae943214b4ee29e756b8ae0d49fc5f7ad` sind ausschließlich
+  Formatierungsnacharbeiten.
+
+Der Real-Artefakt-Neuaufbau änderte keine Candidate-ID und keine
+Candidate-Anzahl. Exakt 16 Fundstellen in sieben Zeilen erhielten einen neuen
+source-bound Abschnittsscope: 13 in VS, zwei in FE und eine in ST. Betroffen
+waren `VS-21`, `VS-23`, `VS-28`, `VS-29`, `VS-31`, `FE-D01` und `ST-10`.
+LW und EL blieben unverändert. Damit ist der Eingriff auf die nachweislich
+falsch gebundene Überschrift begrenzt; es wurde keine allgemeine Alias- oder
+Recall-Lockerung eingeführt.
+
+### 134.2 Technische Mac-Studio-Gates auf dem exakten Commit
+
+Der isolierte Validierungsworktree lag unter
+`/Users/michaelmischkot/Code/validation-worktrees/v370-final-ace2b626` und war
+sauber auf `d266b48ae943214b4ee29e756b8ae0d49fc5f7ad`. Verbindliche Runtime war
+Node `v22.23.2` über `fnm exec --using=22.23.2`.
+
+- neun fokussierte Suites: 595/595 Tests bestanden;
+- vollständige Serversuite: 162/162 Suites und 2.300/2.300 Tests bestanden;
+- Server-, Frontend- und Collector-Lint bestanden;
+- Prisma-Schemavalidierung und Clientgenerierung bestanden;
+- Frontend-Produktionsbuild und macOS-Installer-Suite bestanden;
+- Prettier bestand nach der getrennten, rein formatierenden Nacharbeit.
+
+Es wurde keine Migration geändert. Deshalb wurde für diesen Heading-Fix kein
+weiterer Datenbank-Migrationslauf ausgeführt; die unmittelbar vorangegangenen
+Neu- und Kundenkopie-Gates mit 42/42 Migrationen bleiben die letzte
+Migrationsprüfung. Der installierte Kundencheckout wurde nicht verändert und
+blieb sauber auf `2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
+
+### 134.3 Frischer symmetrischer 224-Zeilen-Vollvergleich
+
+Der neue Vollvergleich lief ohne Resume und ohne Embedding-/Hybridpfad. Vor,
+während und nach dem Lauf war ausschließlich Qwen geladen; der LM-Studio-Log
+enthält null `/v1/embeddings`-Aufrufe.
+
+```text
+Commit: d266b48ae943214b4ee29e756b8ae0d49fc5f7ad
+QA-Root: QA/RELEASE-V3.7.0-FED01-D266B48A-20260905-043027
+Session: 3af8a217-01ee-4296-9b71-538b1a5d2894
+Run: resume-966476e2d9741c3d749d0dc8
+Modell / Kontext: qwen/qwen3.6-35b-a3b / 42496
+Workerzeit: 1.697,346 Sekunden (28:17)
+Dokumente / Kategorien / Resume: 10/10 / 50/50 / 0
+Qwen-Aufrufe: 335 (246 Triage, 89 Wirkungsprüfung)
+Validierungs-Retries: 11 x TRIAGE_ROOT_KEYS_INVALID
+Prompt- / Completion-Token: 747.147 / 21.761
+Embedding-Aufrufe / Hybridartefakte: 0 / 0
+Vorteil A / Vorteil B: 5 / 4
+Dokumentationsunterschied / Gleichwertig: 34 / 125
+Kein dokumentierter Vorteil / Nicht vergleichbar: 0 / 12
+Unklar / tatsächliche Kundenreviewzahl: 44 / 44
+comparison.private.json: 377acc4f77e7df8328de5759dea3729e683975e5f6afc2d4c3238d27933ca8a7
+comparison.md: bf2068b31a22b6402813058fef702af1534a4d85ec2d57ccce65033b713f5150
+polizzenvergleich.xlsx: dd58079bc7a648b63877b4243b6b064a001fddd9eba93150fc31ab127ffc86fa
+artifact-set-manifest.private.json: 9c41950866c2ace0ff4cf861d555d1cab17681ba7003e2214085727572a6fd7b
+export.private.json: c774c4e8399a81e325778eef4ffa74e5c16656178ac3aedaf2699b2b8e350b30
+```
+
+Die 335 Requests und Tokenzahlen wurden für das exakte Laufzeitfenster aus
+dem LM-Studio-Serverlog rekonstruiert; zu jedem Request lag eine Prediction
+mit Usage vor. Elf Triage-Antworten verletzten zunächst den strikten
+Root-Key-Vertrag und wurden mit `TRIAGE_ROOT_KEYS_INVALID` kontrolliert neu
+angefordert. Der Lauf endete trotzdem vollständig und ohne offenen Fehler.
+
+Ein erster reiner Harness-Setupversuch kollidierte vor Sessionstart mit dem
+global eindeutigen `storedName` einer kopierten QA-Datei. Er erreichte weder
+Worker noch Modell. Die leere Draft-Session wurde anschließend mit
+sessiongebundenen Dateinamen korrekt gestartet. Im isolierten Uploadordner
+liegt deshalb zusätzlich eine unbenutzte QA-Kopie; sie gehört nicht zum
+Inputmanifest und nicht zur Artefakt-Hashkette. Sie wurde nicht destruktiv
+entfernt.
+
+Der unabhängige Nachlauf bestand den veröffentlichten Artefaktsatz, die
+verbindliche Kundenmetrik mit exakt 44 Reviews, den Exportvertrag samt
+Archivdateiprüfung und die Workbook-Hashgleichheit. Die archivierte Datei ist:
+
+```text
+/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+Gesamtvergleich-3af8a217-01ee-4296-9b71-538b1a5d2894-966476e2d974.xlsx
+SHA-256: dd58079bc7a648b63877b4243b6b064a001fddd9eba93150fc31ab127ffc86fa
+```
+
+### 134.4 Fachliches Differential und offene Folgegrenzen
+
+Alle neun bestätigten Vorteilsschlüssel blieben erhalten: `VS-13`, `VS-22`,
+`VS-25`, `FE-A01`, `FE-C02`, `FE-C07`, `LW-25`, `ST-05` und `EL-25`.
+Gegen den frischen V107/V68-Lauf blieben 222/224 Punkt-Outcomes gleich; die
+beiden Änderungen heben sich nur in der Gesamtsumme auf und wurden deshalb
+einzeln geprüft:
+
+- `VS-23` wechselte von `UNKLAR` zu `NICHT_VERGLEICHBAR`. Der LF-Beleg auf
+  Seite 5 wird nun vollständig als Bewegungs-, Schutzkosten- und Limitbeleg
+  erkannt (`BELEGT`, 10 % / 15 %), statt nur das Limit als Teilbeleg zu
+  behalten. Der verbleibende Ausgang
+  `ANY_ALTERNATIVE_SCOPE_DIFFERS` stammt aus der Katalogmodellierung, die
+  COST- und LIMIT-Komponenten als alternativ erfüllbare IDs behandelt. Ob
+  diese Modellierung korrigiert werden muss, ist ein eigener Vertrag und darf
+  nicht durch den Heading-Fix stillschweigend umgangen werden.
+- `VS-28` wechselte von `NICHT_VERGLEICHBAR` zu `UNKLAR`. Der Beleg und die
+  Dauer sechs Monate bleiben vollständig gefunden. Der frühere Lauf behandelte
+  die LF-Klausel jedoch fälschlich als allgemeinen Scope. V108 erkennt korrekt
+  die kombinierte Mehrfachspartenüberschrift. Der derzeitige Prepared-
+  Evidence-Vertrag kann an einer Fundstelle nur einen singularen
+  `comparisonScopeKey` materialisieren; drei für VS-28 zulässige source-bound
+  Sparten sind daher `AMBIGUOUS_NARROW_SECTION_SCOPE`. Das Ergebnis ist
+  `NARROW_ONLY` ohne vollständigen Scope-Vektor, im Kundenrendering
+  `TEILBELEGT`, und der Paketaudit fällt auf
+  `UNCLASSIFIED_DOCUMENT_REVIEW_BLOCKER`. Das ist eine präzisere, aber noch
+  nicht fertig entscheidbare Darstellung und der nächste direkte
+  Architekturkandidat.
+
+`FE-D01` ist der klare positive Zielbeweis des Fixes. Paket A wechselte von
+`UNGEKLÄRT`/kein Beleg zu `BELEGT`, Deckung `Ja`, Limit `10 %; 15 %`, mit der
+exakten Feuerlöschkostenliste auf PDF-Seite 5. Der enge Sondermüllbeleg auf
+Seite 27 bleibt weiterhin serverseitig abgewiesen. Die Gesamtzeile bleibt
+noch `UNKLAR`, jetzt aber aus einem getrennten echten B-seitigen Grund:
+EABS-Terms belegen Feuerlöschkosten und ein Limit, liefern für das angeforderte
+Limitfeld jedoch `NOT_FOUND`; der Audit weist exakt `FIELD_INCOMPLETE` für B
+aus. Der A-seitige Recallfehler ist damit behoben, die B-seitige Feldbindung
+nicht.
+
+Bei `VS-21`, `VS-29` und `ST-10` blieb das Outcome unverändert. `VS-31`
+gewann auf A belastbare Deckungs- und Betragsdarstellung (`Ja`, EUR 50 /
+EUR 120), bleibt aber wegen einer anderen unvollständigen Atomkonstellation
+`UNKLAR`. Gegen den bevorzugten Lauf `14c2bb1b` bestehen genau drei
+Outcomeunterschiede: der bereits bekannte sichere `FE-A10`-Wechsel zu
+`UNKLAR` sowie `VS-23` und `VS-28` wie oben beschrieben.
+
+Der Lauf belegt die Korrektur der mehrzeiligen kombinierten Überschrift auf
+dem bekannten 1+9-Dokumentpaket. Er ist weder ein unbekannter
+Versicherer-/Dokument-Holdout noch ein 99-Prozent-Nachweis und noch keine
+Deploymentfreigabe.

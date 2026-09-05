@@ -211,6 +211,56 @@ zu behandeln und der danach entstehende neue Code-SHA erneut zu prüfen. Die
 installierte Kundenfassung blieb dabei unverändert auf
 `2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
 
+## Source-bound Mehrfachsparten-Heading: Finalgate
+
+Die Commitfolge `71b873450`, `96d375fb3`, `1fe9473b4` und `d266b48ae`
+korrigiert die über zwei Zeilen umbrochene kombinierte Überschrift für Feuer,
+Sturm, Leitungswasser und Gebäude-/Grundstückshaftpflicht. Sie erweitert keine
+allgemeinen Aliasfamilien, sondern bindet ausschließlich eine vollständig
+zertifizierte Heading-Struktur an ihre Quelloffsets. Unbekannte, unvollständige
+oder doppelte Spartenmengen bleiben fail-closed.
+
+Auf dem exakten Commit `d266b48ae943214b4ee29e756b8ae0d49fc5f7ad`
+bestanden im isolierten Mac-Studio-Worktree unter Node `v22.23.2` neun
+fokussierte Suites mit 595/595 Tests, die vollständige Serversuite mit
+162/162 Suites und 2.300/2.300 Tests, Prettier, alle drei Lints, Prisma-
+Validierung/-Generierung, Frontend-Build und macOS-Installer-Suite. Es wurden
+keine Migrationen geändert. Die Kundeninstallation blieb unverändert auf
+`2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
+
+Der frische symmetrische Vollvergleich
+`3af8a217-01ee-4296-9b71-538b1a5d2894` lief ohne Resume in 1.697,346
+Sekunden (28:17), mit 10/10 Dokumenten, 50/50 Kategorien, Qwen 3.6 bei 42.496
+Kontexttokens sowie null Embedding-/Hybridaufrufen. Die Ergebnispartition ist
+5 Vorteil A, 4 Vorteil B, 34 Dokumentationsunterschiede, 125 gleichwertig,
+0 kein dokumentierter Vorteil, 12 nicht vergleichbar und exakt 44 unklar.
+Die tatsächliche Kundenreviewzahl ist ebenfalls exakt 44. Alle neun
+bestätigten Vorteilsschlüssel blieben erhalten.
+
+Der Zieldefekt `FE-D01` ist auf A behoben: Die Feuerlöschkostenliste auf
+PDF-Seite 5 wird als `BELEGT`, Deckung `Ja`, 10 % / 15 % materialisiert. Die
+Zeile bleibt nur wegen des getrennten B-seitigen
+`FIELD_INCOMPLETE`-Limitfelds unklar. `VS-23` erhält ebenfalls den zuvor
+fehlenden vollständigen Bewegungs-/Schutzkostenbeleg. `VS-28` zeigt die noch
+offene Folgegrenze: mehrere source-bound Sparten können im aktuellen
+Prepared-Evidence-Pfad noch nicht als vollständiger pluraler
+Vergleichsscope-Vektor weitergegeben werden. Dieser Vertrag wird getrennt
+bearbeitet; die alte falsche General-Scope-Annahme wird nicht wieder
+eingeführt.
+
+Artefaktsatz, Kundenmetrik, Exportvertrag und Archivhash wurden unabhängig
+validiert. Die archivierte Kundenarbeitsmappe liegt unter:
+
+```text
+/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+Gesamtvergleich-3af8a217-01ee-4296-9b71-538b1a5d2894-966476e2d974.xlsx
+SHA-256: dd58079bc7a648b63877b4243b6b064a001fddd9eba93150fc31ab127ffc86fa
+```
+
+Das Finalgate gilt für das bekannte 1+9-Dokumentpaket. Es ist kein
+unbekannter Holdout, kein 99-Prozent-Nachweis und noch keine
+Deploymentfreigabe.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen
