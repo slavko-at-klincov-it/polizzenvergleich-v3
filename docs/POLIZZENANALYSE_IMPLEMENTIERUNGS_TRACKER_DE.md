@@ -6355,8 +6355,7 @@ UNKLAR                    45
 ```
 
 Diese korrigierte Partition ist direkt aus
-`comparison.private.json` des Laufs aggregiert und summiert sich exakt auf
-224. Die zuvor an dieser Stelle notierte Zahl 12 für
+`comparison.private.json` des Laufs aggregiert und summiert sich exakt auf 224. Die zuvor an dieser Stelle notierte Zahl 12 für
 `KEIN_DOKUMENTIERTER_VORTEIL` war ein Dokumentationsfehler: 12 gehört
 ausschließlich zu `NICHT_VERGLEICHBAR`; mit beiden 12er-Werten hätte die
 Tabelle unmögliche 236 Zeilen ergeben. Für Laufmetriken gelten fortan nur die
