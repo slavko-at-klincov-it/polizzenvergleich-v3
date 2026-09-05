@@ -167,8 +167,7 @@ function sourceProjection(source) {
     documentStart: source?.documentStart ?? null,
     documentEnd: source?.documentEnd ?? null,
     exactTextSha256: source?.exactTextSha256 || null,
-    conditionCheckDocumentStart:
-      source?.conditionCheckDocumentStart ?? null,
+    conditionCheckDocumentStart: source?.conditionCheckDocumentStart ?? null,
     conditionCheckDocumentEnd: source?.conditionCheckDocumentEnd ?? null,
     conditionCheckTextSha256: source?.conditionCheckTextSha256 || null,
     candidateBinding: source?.candidateBinding || null,
@@ -333,8 +332,7 @@ function buildProofInternal({
     narrows.length !== 1 ||
     directs.length + narrows.length !== bound.length ||
     directs.some(
-      ({ candidate }) =>
-        candidate.deterministicBindingBasis !== DIRECT_BASIS
+      ({ candidate }) => candidate.deterministicBindingBasis !== DIRECT_BASIS
     )
   )
     return null;
@@ -347,10 +345,7 @@ function buildProofInternal({
   )
     return null;
   const previousPage = complete.pages.get(continuation.page.pageNumber - 1);
-  if (
-    !previousPage ||
-    continuation.context.start !== continuation.page.start
-  )
+  if (!previousPage || continuation.context.start !== continuation.page.start)
     return null;
   const eligiblePredecessors = directs.filter(
     ({ page, context }) =>
@@ -389,8 +384,7 @@ function buildProofInternal({
     return null;
 
   const proofWithoutDigest = {
-    schemaVersion:
-      VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_SCHEMA_VERSION,
+    schemaVersion: VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_SCHEMA_VERSION,
     contractId: VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_CONTRACT_ID,
     requirementId: VS22_REQUIREMENT_ID,
     componentId: VS22_COMPONENT_ID,
@@ -435,7 +429,7 @@ function buildProofInternal({
 function buildVs22LocalNarrowContinuationProof(context) {
   try {
     return buildProofInternal(context || {});
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -494,8 +488,7 @@ function validProofShape(proof) {
           ref?.documentStart,
           ref?.documentEnd,
           Number.MAX_SAFE_INTEGER
-        ) ||
-        !SHA256.test(String(ref?.sha256 || ""))
+        ) || !SHA256.test(String(ref?.sha256 || ""))
     ) ||
     continuation?.previousPage?.pageNumber !==
       continuation.fromPhysicalPageNumber ||
@@ -553,7 +546,8 @@ function atomMatchesProof(atom, proof) {
       ) &&
       source.conditionCheckDocumentStart <= source.documentStart &&
       source.conditionCheckDocumentEnd >= source.documentEnd &&
-      source?.conditionCheckTextSha256 === sha256Text(source?.conditionCheckText)
+      source?.conditionCheckTextSha256 ===
+        sha256Text(source?.conditionCheckText)
   );
 }
 
@@ -576,7 +570,7 @@ function validateVs22LocalNarrowContinuationProof(proof, context = {}) {
       if (!rebuilt || !sameJson(rebuilt, proof)) return false;
     }
     return true;
-  } catch (_error) {
+  } catch {
     return false;
   }
 }

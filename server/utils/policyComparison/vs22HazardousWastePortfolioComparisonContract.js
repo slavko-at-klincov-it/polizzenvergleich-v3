@@ -321,8 +321,10 @@ function validMixedScopeSourceEnvelope(source) {
       conditionEnd > conditionStart &&
       exactText.length === documentEnd - documentStart &&
       conditionCheckText.length === conditionEnd - conditionStart &&
-      conditionCheckText.slice(relativeStart, relativeStart + exactText.length) ===
-        exactText &&
+      conditionCheckText.slice(
+        relativeStart,
+        relativeStart + exactText.length
+      ) === exactText &&
       source.exactTextSha256 === sha256Text(exactText) &&
       source.conditionCheckTextSha256 === sha256Text(conditionCheckText)
   );
@@ -355,9 +357,7 @@ function safeMixedScopeHazardousCoverage(
         validMixedScopeSourceEnvelope(source) &&
         source.documentFingerprint === expectedDocumentSha256 &&
         !source.comparisonScopeKey &&
-        !VS22_HAZARDOUS_WASTE_ADVERSE_LOCAL_TEXT.test(
-          source.conditionCheckText
-        )
+        !VS22_HAZARDOUS_WASTE_ADVERSE_LOCAL_TEXT.test(source.conditionCheckText)
     )
   )
     return false;
@@ -778,15 +778,15 @@ function packageReviewAllowsVs22Decision({
 
 function buildVs22HazardousWastePortfolioAuditForVersion(
   {
-  categoryId,
-  packageA,
-  packageB,
-  atomsA,
-  atomsB,
-  requirementContractA,
-  requirementContractB,
-  expectedDocumentsA,
-  expectedDocumentsB,
+    categoryId,
+    packageA,
+    packageB,
+    atomsA,
+    atomsB,
+    requirementContractA,
+    requirementContractB,
+    expectedDocumentsA,
+    expectedDocumentsB,
   },
   { legacy }
 ) {

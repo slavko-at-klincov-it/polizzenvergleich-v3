@@ -419,8 +419,7 @@ describe("policy comparison customer metric contract", () => {
 
   test("keeps the superseded V106 schema V15 profile readable", () => {
     const result = schema15SimpleResult();
-    result.productProfile =
-      STRUCTURAL_CONCEPT_CONTEXT_PRODUCT_PROFILE_IDENTITY;
+    result.productProfile = STRUCTURAL_CONCEPT_CONTEXT_PRODUCT_PROFILE_IDENTITY;
 
     expect(validateCustomerComparison(result)).toMatchObject({
       rows: 1,

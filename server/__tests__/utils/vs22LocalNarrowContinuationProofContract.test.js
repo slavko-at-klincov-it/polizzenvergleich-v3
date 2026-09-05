@@ -59,8 +59,7 @@ function sourceFor(candidate) {
 
 function fixture({
   narrowText = DEFAULT_NARROW,
-  positiveGeneralText =
-    "Kosten für Sondermüll und gefährlichen Abfall gelten als mitversichert: Der Sondermüll entsteht aus einem versicherten Ereignis.",
+  positiveGeneralText = "Kosten für Sondermüll und gefährlichen Abfall gelten als mitversichert: Der Sondermüll entsteht aus einem versicherten Ereignis.",
   bridge = "\n\n[DOCUMENT_PAGE 28]\n",
   toPage = 28,
   extraNarrow = false,
@@ -135,9 +134,7 @@ function fixture({
     });
   }
   const sources = candidates.map(sourceFor);
-  const selectedCandidateIds = candidates.map(
-    ({ candidateId }) => candidateId
-  );
+  const selectedCandidateIds = candidates.map(({ candidateId }) => candidateId);
   const documentArtifact = {
     schemaVersion: 1,
     fingerprint: FINGERPRINT,
@@ -183,8 +180,7 @@ describe("VS22 source-bound local narrow continuation proof", () => {
     const proof = buildVs22LocalNarrowContinuationProof(context);
 
     expect(proof).toMatchObject({
-      schemaVersion:
-        VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_SCHEMA_VERSION,
+      schemaVersion: VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_SCHEMA_VERSION,
       contractId: VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_CONTRACT_ID,
       requirementId: "VS-22",
       componentId: "hazardous_waste",
@@ -207,9 +203,7 @@ describe("VS22 source-bound local narrow continuation proof", () => {
       },
     });
     expect(validateVs22LocalNarrowContinuationProof(proof)).toBe(true);
-    expect(validateVs22LocalNarrowContinuationProof(proof, context)).toBe(
-      true
-    );
+    expect(validateVs22LocalNarrowContinuationProof(proof, context)).toBe(true);
     expect(
       validateVs22LocalNarrowContinuationProof(proof, {
         atom: atomFrom(context, proof),
@@ -329,29 +323,29 @@ describe("VS22 source-bound local narrow continuation proof", () => {
     expect(buildVs22LocalNarrowContinuationProof(context)).not.toBeNull();
   });
 
-  test.each([
-    "candidate:vs22:general:positive",
-    "candidate:vs22:general",
-  ])("rejects a %s context crossing its physical page", (candidateId) => {
-    const context = fixture();
-    const candidate = context.selectedCandidates.find(
-      (item) => item.candidateId === candidateId
-    );
-    const page26 = context.documentArtifact.document.pageMap[25];
-    const page27 = context.documentArtifact.document.pageMap[26];
-    candidate.contextDocumentStart = page26.start;
-    candidate.contextText =
-      context.documentArtifact.document.pageContent.slice(
-        page26.start,
-        page27.end
+  test.each(["candidate:vs22:general:positive", "candidate:vs22:general"])(
+    "rejects a %s context crossing its physical page",
+    (candidateId) => {
+      const context = fixture();
+      const candidate = context.selectedCandidates.find(
+        (item) => item.candidateId === candidateId
       );
-    const sourceIndex = context.sources.findIndex(
-      (source) => source.candidateId === candidateId
-    );
-    context.sources[sourceIndex] = sourceFor(candidate);
+      const page26 = context.documentArtifact.document.pageMap[25];
+      const page27 = context.documentArtifact.document.pageMap[26];
+      candidate.contextDocumentStart = page26.start;
+      candidate.contextText =
+        context.documentArtifact.document.pageContent.slice(
+          page26.start,
+          page27.end
+        );
+      const sourceIndex = context.sources.findIndex(
+        (source) => source.candidateId === candidateId
+      );
+      context.sources[sourceIndex] = sourceFor(candidate);
 
-    expect(buildVs22LocalNarrowContinuationProof(context)).toBeNull();
-  });
+      expect(buildVs22LocalNarrowContinuationProof(context)).toBeNull();
+    }
+  );
 
   test("rejects a narrow context extending from physical page 28 into page 29", () => {
     const context = fixture();
@@ -390,15 +384,13 @@ describe("VS22 source-bound local narrow continuation proof", () => {
     const proof = buildVs22LocalNarrowContinuationProof(context);
     const tamperedProof = JSON.parse(JSON.stringify(proof));
     tamperedProof.continuation.toPhysicalPageNumber = 29;
-    expect(validateVs22LocalNarrowContinuationProof(tamperedProof)).toBe(
-      false
-    );
+    expect(validateVs22LocalNarrowContinuationProof(tamperedProof)).toBe(false);
 
     const atom = atomFrom(context, proof);
     atom.sources[1].exactText = `${atom.sources[1].exactText} manipuliert`;
-    expect(
-      validateVs22LocalNarrowContinuationProof(proof, { atom })
-    ).toBe(false);
+    expect(validateVs22LocalNarrowContinuationProof(proof, { atom })).toBe(
+      false
+    );
   });
 
   test("does not produce a proof outside exact VS-22 hazardous_waste scope", () => {

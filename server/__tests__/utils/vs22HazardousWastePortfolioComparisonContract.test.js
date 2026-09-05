@@ -283,10 +283,8 @@ function fixture(reverse = false) {
 function mixedScopeFixture(
   reverse = false,
   {
-    positiveDirectLine =
-      "Kosten für Sondermüll sind auf erstes Risiko zusätzlich mitversichert.",
-    narrowText =
-      "gefährlichem Abfall und Sonderabfall, der durch Eindringen oder Vermischen versicherter Sachen in bzw. mit Erdreich, Wasser und/oder Luft entsteht, gilt als mitversichert.",
+    positiveDirectLine = "Kosten für Sondermüll sind auf erstes Risiko zusätzlich mitversichert.",
+    narrowText = "gefährlichem Abfall und Sonderabfall, der durch Eindringen oder Vermischen versicherter Sachen in bzw. mit Erdreich, Wasser und/oder Luft entsteht, gilt als mitversichert.",
     proofFingerprint = null,
     additionalDirectLine = null,
   } = {}
@@ -323,7 +321,8 @@ function mixedScopeFixture(
   const page28Start = pageMap[27].start;
   const directCandidates = directLines.map((line, index) => {
     const exactText = "Sondermüll";
-    const documentStart = page27Start + page27.indexOf(line) + line.indexOf(exactText);
+    const documentStart =
+      page27Start + page27.indexOf(line) + line.indexOf(exactText);
     return {
       candidateId: `candidate:${winner}:hazardous-waste:direct:${index}`,
       physicalPageNumber: 27,
@@ -363,10 +362,14 @@ function mixedScopeFixture(
   };
   const selectedCandidates = [...directCandidates, narrowCandidate];
   const sources = selectedCandidates.map((candidate) => {
-    const relativeStart = candidate.documentStart - candidate.contextDocumentStart;
+    const relativeStart =
+      candidate.documentStart - candidate.contextDocumentStart;
     const relativeEnd = candidate.documentEnd - candidate.contextDocumentStart;
     const conditionStart = Math.max(0, relativeStart - 240);
-    const conditionEnd = Math.min(candidate.contextText.length, relativeEnd + 240);
+    const conditionEnd = Math.min(
+      candidate.contextText.length,
+      relativeEnd + 240
+    );
     const conditionCheckText = candidate.contextText.slice(
       conditionStart,
       conditionEnd
@@ -412,8 +415,8 @@ function mixedScopeFixture(
   atom.sources = sources;
   atom.selectedCandidateIds = sources.map(({ candidateId }) => candidateId);
   atom.selectedScopePicture = "GENERAL_AND_NARROW";
-  atom.vs22LocalNarrowContinuationProof =
-    buildVs22LocalNarrowContinuationProof({
+  atom.vs22LocalNarrowContinuationProof = buildVs22LocalNarrowContinuationProof(
+    {
       documentArtifact,
       documentFingerprint: proofFingerprint || fingerprint,
       requirementId: "VS-22",
@@ -422,7 +425,8 @@ function mixedScopeFixture(
       selectedCandidateIds: atom.selectedCandidateIds,
       selectedCandidates,
       sources,
-    });
+    }
+  );
   for (const candidateAtom of input[`atoms${winner}`]) {
     candidateAtom.searchAudit.physicalPagesChecked = 28;
     candidateAtom.searchAudit.totalPhysicalPages = 28;
@@ -526,10 +530,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
           schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
           contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
         },
-        documents: [
-          ...input.expectedDocumentsA,
-          ...input.expectedDocumentsB,
-        ],
+        documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
         categories,
         totals: deriveCustomerMetrics(categories),
       })
@@ -550,9 +551,9 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       const sourceAtomDigestReplay = buildVs22SourceAtomDigestReplay(input);
 
       expect(audit).toMatchObject({ winner });
-      expect(
-        audit.sides[winner].hazardousWasteProofs[0]
-      ).toMatchObject({ selectedScopePicture: "GENERAL_AND_NARROW" });
+      expect(audit.sides[winner].hazardousWasteProofs[0]).toMatchObject({
+        selectedScopePicture: "GENERAL_AND_NARROW",
+      });
       expect(decidePoint(input)).toMatchObject({
         outcome,
         ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
@@ -588,8 +589,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     [
       "a negated direct inclusion",
       {
-        positiveDirectLine:
-          "Kosten für Sondermüll sind nicht mitversichert.",
+        positiveDirectLine: "Kosten für Sondermüll sind nicht mitversichert.",
       },
     ],
     [
@@ -627,7 +627,10 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
           "gefährlichem Abfall und Sonderabfall, der durch Zwischenlagerung versicherter Sachen in Erdreich entsteht, gilt als mitversichert.",
       },
     ],
-    ["a proof fingerprint outside the package manifest", { proofFingerprint: "f".repeat(64) }],
+    [
+      "a proof fingerprint outside the package manifest",
+      { proofFingerprint: "f".repeat(64) },
+    ],
   ])("rejects coherently built mixed scope with %s", (_label, options) => {
     const input = mixedScopeFixture(false, options);
     expect(buildVs22HazardousWastePortfolioAudit(input)).toBeNull();
@@ -684,8 +687,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     [
       "a wrong direct binding basis",
       (atom) => {
-        atom.sources[0].deterministicBindingBasis =
-          "EXPLICIT_DISPOSAL_COSTS";
+        atom.sources[0].deterministicBindingBasis = "EXPLICIT_DISPOSAL_COSTS";
       },
     ],
     [
@@ -911,8 +913,7 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     };
     const canonicalAudit =
       buildVs22HazardousWastePortfolioAudit(canonicalInput);
-    const permutedAudit =
-      buildVs22HazardousWastePortfolioAudit(permutedInput);
+    const permutedAudit = buildVs22HazardousWastePortfolioAudit(permutedInput);
     const sourceAtomDigestReplay =
       buildVs22SourceAtomDigestReplay(permutedInput);
 
@@ -983,8 +984,8 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     );
 
     const replayTampered = JSON.parse(JSON.stringify(result));
-    const replay = replayTampered.categories[0].rows[0]
-      .vs22SourceAtomDigestReplay;
+    const replay =
+      replayTampered.categories[0].rows[0].vs22SourceAtomDigestReplay;
     replay.sourceAtomDigestsSha256.A = "f".repeat(64);
     delete replay.replayDigestSha256;
     replay.replayDigestSha256 = sha256(replay);
