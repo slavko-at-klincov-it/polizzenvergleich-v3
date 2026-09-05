@@ -6437,9 +6437,47 @@ Portfolioaudit V3 und Source-Atom-Replay V2 versioniert. V106/V67,
 Portfolioaudit V2 und Replay V1 bleiben über den historischen ausschließlich
 `GENERAL` akzeptierenden Pfad lesbar. Das Top-Level-Ergebnisschema bleibt 15.
 
-Status: `IMPLEMENTIERT, NOCH NICHT GETESTET ODER FREIGEGEBEN`. Verbindliche
-nächste Schritte sind fokussierte Mac-Studio-Tests, vollständige statische
-Gates, ein privater Real-Artefakt-Replay und anschließend ein frischer
-symmetrischer 224-Zeilen-Lauf auf demselben exakten Commit. Erwartet, aber vor
-diesem Nachweis nicht behauptet, ist ausschließlich `VS-22: UNKLAR ->
-VORTEIL_A`; alle übrigen 223 Outcomes müssen unverändert bleiben.
+Status: `IMPLEMENTIERT, TECHNISCHE MAC-STUDIO-GATES BESTANDEN, FACHLICHER
+REAL-ARTEFAKT- UND VOLLLAUFNACHWEIS NOCH OFFEN`. Verbindliche nächste Schritte
+sind ein privater Real-Artefakt-Replay und anschließend ein frischer
+symmetrischer 224-Zeilen-Lauf auf demselben exakten Implementierungsstand.
+Erwartet, aber vor diesem Nachweis nicht behauptet, ist ausschließlich
+`VS-22: UNKLAR -> VORTEIL_A`; alle übrigen 223 Outcomes müssen unverändert
+bleiben.
+
+### 133.4 Technischer Mac-Studio-Nachweis für `494f0cb74`
+
+Der source-bound VS-22-Fix wurde in den getrennten Commits
+`0896e3aaa626bbde8b6ee161f28a176b426cb00b` (Semantik) und
+`494f0cb74eed2f2cdfb547b5bab7ccad78e7d061` (ausschließlich Formatierung)
+gesichert und auf `origin/codex/polizzenvergleich-v3` veröffentlicht. Alle
+Validierungen liefen im isolierten Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/v370-final-ace2b626` auf
+exakt `494f0cb74eed2f2cdfb547b5bab7ccad78e7d061`. Die installierte
+Kundenfassung blieb sauber und unverändert auf
+`2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
+
+Verbindliche Runtime war Node `v22.23.2` über `fnm exec --using=22.23.2`.
+Damit bestanden:
+
+- Prettier auf allen geänderten JavaScript- und Dokumentationsdateien;
+- fünf fokussierte Suites mit 145/145 Tests;
+- die vollständige Serverregression mit 172/172 Suites und 2.396/2.396 Tests
+  in 31,683 Sekunden;
+- Server-, Frontend- und Collector-Lint;
+- der Frontend-Produktionsbuild;
+- Prisma-Schemavalidierung und Clientgenerierung;
+- die macOS-Installer-Suite;
+- 42/42 Migrationen auf einer neuen temporären Datenbank;
+- 42/42 Migrationen auf einer Kopie der Kundendatenbank, mit 35/35 stabilen
+  Domänentabellen, unveränderten Zeilenzahlen, `quick_check=ok` und null
+  Foreign-Key-Verstößen.
+
+Ein erster Gesamt-Testversuch über den ungepinnten Homebrew-Pfad benutzte
+Node `v26.7.0` und scheiterte in der unveränderten Alt-Abhängigkeit
+`buffer-equal-constant-time`, weil Node 26 `SlowBuffer` nicht mehr anbietet.
+Das ist kein Produktfehler und kein gültiger Release-Gate-Lauf. Derselbe
+Commit bestand danach vollständig unter der projektverbindlichen Node-22-
+Runtime. Der Worktree war nach den Gates sauber. Noch nicht erbracht sind der
+Real-Artefakt-Replay und der frische modellgestützte 224-Zeilen-Vollvergleich;
+deshalb ist dies noch keine Merge-, Tag- oder Deploymentfreigabe.

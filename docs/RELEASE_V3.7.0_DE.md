@@ -183,6 +183,20 @@ strikten `GENERAL`-Pfad lesbar. Vor Freigabe sind fokussierte und vollständige
 Mac-Studio-Gates sowie ein neuer symmetrischer Lauf auf dem exakten
 V107-Commit erforderlich.
 
+Die technischen Mac-Studio-Gates wurden im isolierten Worktree auf
+`494f0cb74eed2f2cdfb547b5bab7ccad78e7d061` unter Node `v22.23.2`
+bestanden: 5 fokussierte Suites mit 145 Tests, 172 vollständige Suites mit
+2.396 Tests, Prettier, Server-/Frontend-/Collector-Lint,
+Frontend-Produktionsbuild, Prisma-Validierung/-Generierung,
+macOS-Installer-Suite sowie Neu- und Bestandskopie-Migration mit 42/42
+Migrationen und stabilen Datenzeilen. Ein vorangegangener ungültiger Versuch
+unter ungepinnter Homebrew-Node `v26.7.0` traf ausschließlich die bekannte
+`SlowBuffer`-Inkompatibilität einer Alt-Abhängigkeit; der verbindliche
+Node-22-Lauf war vollständig grün. Der Real-Artefakt-Replay und der frische
+symmetrische 224-Zeilen-Vollvergleich bleiben vor Merge, Tag und Deployment
+offen. Die installierte Kundenfassung blieb dabei unverändert auf
+`2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
+
 ## First-Hop V3.6.0 → V3.7.0
 
 Der installierte V3.6-Updater besitzt noch nicht alle neuen
