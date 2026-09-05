@@ -6578,3 +6578,32 @@ Die installierte Kundenfassung blieb sauber auf
 sauber auf `0090b3cccfeb03f3f71a6fefb4e999e055ff4eca`. VS-22 ist damit für
 diese bekannten zehn Dokumente technisch und im frischen Modelllauf belegt.
 Dies ist kein unbekannter Versicherer-Holdout und kein 99-Prozent-Nachweis.
+
+### 133.7 LF-Referenzprofil: source-bound A-Zeilenmanifest
+
+Die LF-Referenzstrecke verwendet ab dem Branch
+`codex/lf-reference-complete-template` keinen festen Dokument-SHA mehr als
+Zulassungskriterium. Der Worker extrahiert Paket A zuerst in das kanonische
+Dokumentartefakt, prüft die versionierte LF-Familienstruktur und erzeugt pro
+Session ein unveränderliches, gehashtes A-Zeilenmanifest. Jede Manifestzeile
+bindet physische Seite, Dokument-Offsets, exakten Quelltext, Text-Hash,
+Kategorie, Unterkategorie, Faktenrolle, Scope sowie gefundene Prozent- und
+Betragswerte. Bei fehlender Berechnungsbasis bleiben Prozentwert, Basis,
+Formel und berechneter Betrag ausdrücklich getrennt; es wird kein Betrag
+erfunden.
+
+Die dynamischen LF-Verträge werden ausschließlich aus diesem Manifest gebaut.
+Paket B liefert nur kontrollierte Gegenstücke zu diesen A-Zeilen; B-only-Inhalt
+erzeugt keine Ergebniszeile. Das bestehende symmetrische Core-5-Verfahren mit
+224 Vergleichspunkten und die zwei Workspace-Templates bleiben außerhalb
+dieses gerichteten Pfads unverändert. Eine strukturell nicht kompatible
+Dokumentvariante bricht fail-closed mit `neues LF-Profil erforderlich` ab.
+
+Der Vertrag verbessert damit Inventarisierung, Persistenz und sichtbare
+Abdeckungsdarstellung. Er ist noch kein fachlicher Semantikbeweis für alle
+österreichischen Versicherer: Die aktuelle dynamische Gegenstücksuche ist
+source-bound und kontrolliert, ein unbekannter Wortlaut kann daher weiterhin
+als Review-/Nullfund enden. Vollständigkeit und semantische Korrektheit sind
+erst nach versioniertem Experten-Holdout gemäß Produktcharter belegbar.
+
+Bezug: INV-003, INV-004, INV-008, INV-011, FAIL-001, FAIL-005 und ADR-027.

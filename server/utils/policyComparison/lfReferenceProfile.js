@@ -1,4 +1,8 @@
 const seedCatalog = require("../../resources/policyAnalysis/lf-immo-reference-counterpart-pilot.v0.1.json");
+const {
+  buildCatalogFromLineManifest,
+  validateLfReferenceLineManifest,
+} = require("./lfReferenceManifest");
 
 const LF_REFERENCE_PROFILE = Object.freeze({
   id: "LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE",
@@ -853,7 +857,11 @@ function requestedFields(components) {
   ];
 }
 
-function categoryCatalogs() {
+function categoryCatalogs({ lineManifest = null } = {}) {
+  if (lineManifest)
+    return buildCatalogFromLineManifest(
+      validateLfReferenceLineManifest(lineManifest)
+    );
   return seedCatalog.categories.map((category) => {
     const categoryView = CATEGORY_VIEWS[category.id];
     if (!categoryView)
@@ -900,6 +908,29 @@ function categoryCatalogs() {
   });
 }
 
+function lfReferenceProfileForManifest(lineManifest) {
+  const manifest = validateLfReferenceLineManifest(lineManifest);
+  const categories = categoryCatalogs({ lineManifest: manifest });
+  return Object.freeze({
+    id: "LF_IMMO_REFERENCE_SOURCE_MANIFEST_V1",
+    catalogId: `lf-immo-reference-source-manifest-v1:${manifest.manifestSha256}`,
+    componentContractId: "LF_REFERENCE_SOURCE_LINE_COMPONENTS_V1",
+    manifestContractId: manifest.contractId,
+    manifestSha256: manifest.manifestSha256,
+    sourceProduct: Object.freeze({
+      productId: manifest.sourceProduct.productId,
+      version: manifest.sourceProduct.version,
+      documentSha256: manifest.sourceDocument.fingerprint,
+      physicalPages: manifest.sourceDocument.physicalPages,
+      role: "REFERENCE_PRODUCT",
+    }),
+    categoryCount: categories.length,
+    rowCount: manifest.lines.length,
+    noEmbeddings: true,
+    discoversSideBOnly: false,
+  });
+}
+
 function analysisPrompt({ categoryView, label, catalog }) {
   const definitions = catalog.requirements
     .map(
@@ -915,4 +946,5 @@ module.exports = {
   LF_REFERENCE_PROFILE,
   analysisPrompt,
   categoryCatalogs,
+  lfReferenceProfileForManifest,
 };

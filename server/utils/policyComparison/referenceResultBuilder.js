@@ -10,6 +10,11 @@ const {
 const {
   componentScopeContract,
 } = require("../policyAnalysis/componentScopePolicyContract");
+const {
+  LF_REFERENCE_MANIFEST_FILE,
+  validateLfReferenceLineManifest,
+} = require("./lfReferenceManifest");
+const { lfReferenceProfileForManifest } = require("./lfReferenceProfile");
 const { publishComparisonArtifactSet } = require("./artifactSetPublisher");
 
 const REFERENCE_RESULT_SCHEMA_VERSION = 2;
@@ -469,7 +474,31 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
     throw new Error("REFERENCE_COMPARISON_EXACTLY_ONE_A_REQUIRED");
   if (sideB.length === 0)
     throw new Error("REFERENCE_COMPARISON_SIDE_B_REQUIRED");
-  const categories = categoryCatalogs().map((definition) => {
+  let referenceManifest = null;
+  const sourceArtifactFile = path.join(
+    sideA[0].outputDirectory,
+    "document.private.json"
+  );
+  if (fs.existsSync(sourceArtifactFile)) {
+    const documentArtifact = readJson(
+      sourceArtifactFile,
+      "REFERENCE_SOURCE_ARTIFACT_INVALID"
+    );
+    const manifestFile = path.join(
+      sideA[0].outputDirectory,
+      LF_REFERENCE_MANIFEST_FILE
+    );
+    if (fs.existsSync(manifestFile))
+      referenceManifest = validateLfReferenceLineManifest(
+        readJson(manifestFile, "REFERENCE_LINE_MANIFEST_INVALID"),
+        { documentArtifact }
+      );
+  }
+  const definitions = categoryCatalogs({ lineManifest: referenceManifest });
+  const referenceProfile = referenceManifest
+    ? lfReferenceProfileForManifest(referenceManifest)
+    : LF_REFERENCE_PROFILE;
+  const categories = definitions.map((definition) => {
     const referenceRows = readRows(sideA[0], definition.categoryView);
     if (referenceRows.length !== definition.catalog.requirements.length)
       throw new Error(
@@ -497,6 +526,10 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
       });
       const counterpart = aggregateCounterpart(counterpartEntries, requirement);
       const pointDecision = referenceDecision(reference, counterpart);
+      const manifestLine = referenceManifest?.lines.find(
+        ({ sourceReferenceId }) =>
+          sourceReferenceId === requirement.sourceReferenceId
+      );
       return {
         categoryId: requirement.sourceReferenceId,
         analysisRowId: requirement.id,
@@ -506,6 +539,17 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
           ...reference,
           documentUuid: sideA[0].document.uuid,
           documentName: sideA[0].document.originalName,
+          ...(manifestLine
+            ? {
+                referenceSource: {
+                  ...manifestLine.source,
+                  lineId: manifestLine.lineId,
+                  sourceReferenceId: manifestLine.sourceReferenceId,
+                  manifestIndex: referenceManifest.lines.indexOf(manifestLine),
+                  values: manifestLine.values,
+                },
+              }
+            : {}),
         },
         packageB: counterpart,
         outcome: pointDecision.outcome,
@@ -525,7 +569,13 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
     comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
     generatedAt: new Date().toISOString(),
     ...metadata,
-    productProfile: LF_REFERENCE_PROFILE,
+    ...(referenceManifest
+      ? {
+          referenceManifestSha256: referenceManifest.manifestSha256,
+          referenceManifestContractId: referenceManifest.contractId,
+        }
+      : {}),
+    productProfile: referenceProfile,
     documents: documentRuns.map(({ document }) => ({
       uuid: document.uuid,
       side: document.side,
@@ -536,48 +586,146 @@ function buildReferenceComparisonResult(documentRuns, metadata = {}) {
     })),
     categories,
     totals: deriveTotals(categories),
-    proofLimit:
-      "Gerichteter LF-IMMO-Referenzvergleich mit 10 Kategorien und 35 versionierten Referenzzeilen. Es werden ausschließlich Gegenstücke zu belegten A-Zeilen gesucht; Inhalte nur in B erzeugen keine Zeile. Ein kontrollierter Nullfund ist kein ausdrücklicher Ausschluss. Der 35-Zeilen-Katalog ist noch keine fachlich vollständige Inventarisierung des gesamten LF-IMMO-Produkts.",
+    proofLimit: referenceManifest
+      ? `Gerichteter LF-IMMO-Referenzvergleich mit ${referenceManifest.lines.length} source-bound A-Zeilen in Dokumentreihenfolge. Die Zeilen stammen aus dem unveränderlichen A-Manifest; Inhalte nur in B erzeugen keine Zeile. Ein kontrollierter Nullfund ist kein ausdrücklicher Ausschluss.`
+      : "Gerichteter LF-IMMO-Referenzvergleich mit 10 Kategorien und 35 versionierten Referenzzeilen. Es werden ausschließlich Gegenstücke zu belegten A-Zeilen gesucht; Inhalte nur in B erzeugen keine Zeile. Ein kontrollierter Nullfund ist kein ausdrücklicher Ausschluss. Der 35-Zeilen-Katalog ist noch keine fachlich vollständige Inventarisierung des gesamten LF-IMMO-Produkts.",
   };
   validateReferenceComparison(result);
   return result;
 }
 
-function validateReferenceComparison(result) {
+function validateReferenceComparison(
+  result,
+  { referenceManifest = null } = {}
+) {
   const acceptedProfiles = [
     ...HISTORICAL_LF_REFERENCE_PROFILES,
     LF_REFERENCE_PROFILE,
   ];
+  const dynamicProfile =
+    result?.productProfile?.id === "LF_IMMO_REFERENCE_SOURCE_MANIFEST_V1";
   if (
     result?.schemaVersion !== REFERENCE_RESULT_SCHEMA_VERSION ||
     result?.contractId !== REFERENCE_RESULT_CONTRACT_ID ||
     result?.comparisonMode !== POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B ||
-    !acceptedProfiles.some(
-      (profile) =>
-        JSON.stringify(result?.productProfile) === JSON.stringify(profile)
-    )
+    (!dynamicProfile &&
+      !acceptedProfiles.some(
+        (profile) =>
+          JSON.stringify(result?.productProfile) === JSON.stringify(profile)
+      )) ||
+    (dynamicProfile &&
+      (result.referenceManifestContractId !==
+        "LF_REFERENCE_A_LINE_MANIFEST_SOURCE_BOUND_V1" ||
+        result.referenceManifestSha256 !==
+          result.productProfile.manifestSha256 ||
+        !Number.isInteger(result.productProfile.rowCount) ||
+        result.productProfile.rowCount < 1))
   )
     throw new Error("REFERENCE_RESULT_CONTRACT_INVALID");
   const sideA = (result.documents || []).filter(({ side }) => side === "A");
   const sideB = (result.documents || []).filter(({ side }) => side === "B");
   if (sideA.length !== 1 || sideB.length === 0)
     throw new Error("REFERENCE_RESULT_DOCUMENT_SET_INVALID");
-  const expected = categoryCatalogs();
+  const expected = dynamicProfile ? null : categoryCatalogs();
   if (
     !Array.isArray(result.categories) ||
-    result.categories.length !== expected.length
+    result.categories.length !==
+      (dynamicProfile ? result.productProfile.categoryCount : expected.length)
   )
     throw new Error("REFERENCE_RESULT_CATEGORY_COUNT_INVALID");
   const rows = result.categories.flatMap(({ rows }) => rows || []);
-  const expectedIds = expected.flatMap(({ catalog }) =>
-    catalog.requirements.map(({ sourceReferenceId }) => sourceReferenceId)
-  );
+  const expectedIds = dynamicProfile
+    ? null
+    : expected.flatMap(({ catalog }) =>
+        catalog.requirements.map(({ sourceReferenceId }) => sourceReferenceId)
+      );
   if (
-    rows.length !== LF_REFERENCE_PROFILE.rowCount ||
-    rows.some((row, index) => row.categoryId !== expectedIds[index]) ||
+    rows.length !== result.productProfile.rowCount ||
+    (!dynamicProfile &&
+      rows.some((row, index) => row.categoryId !== expectedIds[index])) ||
     new Set(rows.map(({ categoryId }) => categoryId)).size !== rows.length
   )
     throw new Error("REFERENCE_RESULT_ROW_SET_INVALID");
+  if (
+    dynamicProfile &&
+    rows.some(
+      (row) =>
+        !row.packageA?.referenceSource ||
+        row.packageA.referenceSource.documentFingerprint !== sideA[0].sha256 ||
+        !Number.isInteger(row.packageA.referenceSource.physicalPageNumber) ||
+        !Number.isInteger(row.packageA.referenceSource.documentStart) ||
+        !Number.isInteger(row.packageA.referenceSource.documentEnd) ||
+        row.packageA.referenceSource.documentEnd <=
+          row.packageA.referenceSource.documentStart ||
+        typeof row.packageA.referenceSource.exactText !== "string" ||
+        !/^LF-LINE-\d{4}$/u.test(row.packageA.referenceSource.lineId || "") ||
+        !/^LF-MAN-\d{4}$/u.test(
+          row.packageA.referenceSource.sourceReferenceId || ""
+        ) ||
+        !Number.isInteger(row.packageA.referenceSource.manifestIndex) ||
+        !Array.isArray(row.packageA.referenceSource.values) ||
+        row.packageA.referenceSource.values.some(
+          (value) =>
+            !row.packageA.referenceSource.exactText.includes(
+              value?.exactText || ""
+            ) ||
+            value?.calculatedAmount !== null ||
+            value?.formula !== null ||
+            value?.calculationBasis !== null
+        ) ||
+        !/^[a-f0-9]{64}$/u.test(
+          row.packageA.referenceSource.sourceTextSha256 || ""
+        )
+    )
+  )
+    throw new Error("REFERENCE_RESULT_SOURCE_BINDING_INVALID");
+  if (
+    dynamicProfile &&
+    rows.some((row) => {
+      const source = row.packageA.referenceSource;
+      return (
+        source.manifestIndex < 0 ||
+        source.manifestIndex >= result.productProfile.rowCount ||
+        source.lineId !==
+          `LF-LINE-${String(source.manifestIndex + 1).padStart(4, "0")}` ||
+        source.sourceReferenceId !==
+          `LF-MAN-${String(source.manifestIndex + 1).padStart(4, "0")}` ||
+        row.categoryId !== source.sourceReferenceId
+      );
+    })
+  )
+    throw new Error("REFERENCE_RESULT_SOURCE_ORDER_INVALID");
+  if (
+    dynamicProfile &&
+    new Set(rows.map(({ packageA }) => packageA.referenceSource.manifestIndex))
+      .size !== rows.length
+  )
+    throw new Error("REFERENCE_RESULT_SOURCE_ORDER_INVALID");
+  if (dynamicProfile && referenceManifest) {
+    const manifest = validateLfReferenceLineManifest(referenceManifest);
+    if (manifest.manifestSha256 !== result.referenceManifestSha256)
+      throw new Error("REFERENCE_RESULT_MANIFEST_DIGEST_INVALID");
+    if (
+      rows.some((row) => {
+        const source = row.packageA.referenceSource;
+        const line = manifest.lines[source.manifestIndex];
+        return (
+          !line ||
+          [
+            "documentFingerprint",
+            "physicalPageNumber",
+            "physicalPageEnd",
+            "documentStart",
+            "documentEnd",
+            "exactText",
+            "sourceTextSha256",
+          ].some((field) => source[field] !== line.source[field]) ||
+          JSON.stringify(source.values) !== JSON.stringify(line.values)
+        );
+      })
+    )
+      throw new Error("REFERENCE_RESULT_MANIFEST_BINDING_INVALID");
+  }
   if (
     rows.some(
       (row) =>
@@ -603,8 +751,8 @@ function validateReferenceComparison(result) {
   return result;
 }
 
-function customerSafeReferenceReadView(result) {
-  validateReferenceComparison(result);
+function customerSafeReferenceReadView(result, options = {}) {
+  validateReferenceComparison(result, options);
   return JSON.parse(JSON.stringify(result));
 }
 

@@ -21,11 +21,11 @@ const {
 } = require("../utils/policyComparison/modes");
 const {
   LF_REFERENCE_PROFILE,
-  categoryCatalogs,
 } = require("../utils/policyComparison/lfReferenceProfile");
 const {
   analyzeReferenceDocument,
   completedReferenceCategoryViews,
+  prepareReferenceDocument,
   prepareReferenceContracts,
 } = require("../utils/policyComparison/referenceRunner");
 const {
@@ -250,17 +250,11 @@ async function main() {
 
   const referenceMode =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
-  const categoryOrder = referenceMode
-    ? categoryCatalogs().map(({ categoryView }) => categoryView)
-    : CATEGORY_ORDER;
-  const categoryCount = categoryOrder.length;
   const { runRoot, signature } = resumableRun({
     sessionUuid,
     manifest,
     comparisonMode,
   });
-  const contracts = referenceMode ? prepareReferenceContracts(runRoot) : null;
-  writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
   const plannedRuns = manifest.documents.map((document) => ({
     document,
     outputDirectory: path.join(
@@ -269,6 +263,45 @@ async function main() {
       `${document.side}-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`
     ),
   }));
+  let contracts = null;
+  let referenceManifest = null;
+  if (referenceMode) {
+    const referencePlan = plannedRuns.find(
+      ({ document }) => document.side === "A"
+    );
+    if (!referencePlan)
+      throw new Error("REFERENCE_COMPARISON_EXACTLY_ONE_A_REQUIRED");
+    const referenceSourceFile = path.resolve(
+      policyComparisonsPath,
+      referencePlan.document.storagePath
+    );
+    if (
+      !isWithin(policyComparisonsPath, referenceSourceFile) ||
+      !fs.existsSync(referenceSourceFile)
+    )
+      throw new Error(
+        `COMPARISON_SOURCE_MISSING:${referencePlan.document.uuid}`
+      );
+    const prepared = await prepareReferenceDocument({
+      file: referenceSourceFile,
+      outputDirectory: referencePlan.outputDirectory,
+      logFile: path.join(runRoot, "worker.log"),
+      expectedFingerprint: referencePlan.document.sha256,
+    });
+    referenceManifest = prepared.lineManifest;
+    writePrivateJson(
+      path.join(runRoot, "lf-reference-a-line-manifest.private.json"),
+      referenceManifest
+    );
+    contracts = prepareReferenceContracts(runRoot, {
+      lineManifest: referenceManifest,
+    });
+  }
+  const categoryOrder = referenceMode
+    ? contracts.map(({ categoryView }) => categoryView)
+    : CATEGORY_ORDER;
+  const categoryCount = categoryOrder.length;
+  writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
   const resumedCategories = plannedRuns.reduce(
     (sum, { outputDirectory }) =>
       sum +
