@@ -93,10 +93,10 @@ function validCertifiedCombinedInsuranceHeading({
   const certified = certifiedCombinedInsuranceHeading(text);
   return Boolean(
     certified &&
-    certified.scopeResolution === scopeResolution &&
-    sameKeys(scopeKeys, certified.scopeKeys) &&
-    Array.isArray(scopeKeys) &&
-    new Set(scopeKeys).size === scopeKeys.length
+      certified.scopeResolution === scopeResolution &&
+      sameKeys(scopeKeys, certified.scopeKeys) &&
+      Array.isArray(scopeKeys) &&
+      new Set(scopeKeys).size === scopeKeys.length
   );
 }
 
