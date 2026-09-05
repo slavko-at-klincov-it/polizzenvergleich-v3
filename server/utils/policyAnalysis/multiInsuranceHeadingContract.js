@@ -42,10 +42,16 @@ function certifiedCombinedInsuranceHeading(value) {
 
   let body = heading[1].replace(/[\r\n\t]+/gu, " ").replace(/\s+/gu, " ");
   const definitions = [
-    ["HAFTPFLICHT_INSURANCE", /\b(?:Geb[aä]ude\s*-\s*und\s*)?Grundst[uü]ckshaftpflicht(?=\s*versicherung\b|\s*[-,]|\s*$)/giu],
+    [
+      "HAFTPFLICHT_INSURANCE",
+      /\b(?:Geb[aä]ude\s*-\s*und\s*)?Grundst[uü]ckshaftpflicht(?=\s*versicherung\b|\s*[-,]|\s*$)/giu,
+    ],
     ["FEUER_INSURANCE", /\bFeuer(?=\s*versicherung\b|\s*[-,]|\s*$)/giu],
     ["STURM_INSURANCE", /\bSturm(?=\s*versicherung\b|\s*[-,]|\s*$)/giu],
-    ["LEITUNGSWASSER_INSURANCE", /\bLeitungswasser(?=\s*versicherung\b|\s*[-,]|\s*$)/giu],
+    [
+      "LEITUNGSWASSER_INSURANCE",
+      /\bLeitungswasser(?=\s*versicherung\b|\s*[-,]|\s*$)/giu,
+    ],
   ];
   const scopeKeys = [];
   for (const [scopeKey, pattern] of definitions) {
@@ -87,10 +93,10 @@ function validCertifiedCombinedInsuranceHeading({
   const certified = certifiedCombinedInsuranceHeading(text);
   return Boolean(
     certified &&
-      certified.scopeResolution === scopeResolution &&
-      sameKeys(scopeKeys, certified.scopeKeys) &&
-      Array.isArray(scopeKeys) &&
-      new Set(scopeKeys).size === scopeKeys.length
+    certified.scopeResolution === scopeResolution &&
+    sameKeys(scopeKeys, certified.scopeKeys) &&
+    Array.isArray(scopeKeys) &&
+    new Set(scopeKeys).size === scopeKeys.length
   );
 }
 

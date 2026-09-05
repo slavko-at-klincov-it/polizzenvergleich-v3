@@ -122,14 +122,12 @@ function directedLiabilityFixture({
   narrowScopeKeys = [],
   requirementId = "RH-03",
   sourceReferenceId = "LF-HP-03",
-  requirementLabel =
-    "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
+  requirementLabel = "Umweltstörung und Umweltsanierung mit Limit und Selbstbehalt",
   requestedFields = ["limit", "deductible"],
   componentId = "environmental_limit",
   componentLabel = "Umwelthaftpflichtlimit",
   factRole = "LIMIT",
-  exactText =
-    "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme",
+  exactText = "Versicherungssumme für Umweltstörungen beträgt bis zu 50% der Pauschalversicherungssumme",
   contextText: suppliedContextText = null,
 } = {}) {
   const fingerprint = "b".repeat(64);
@@ -228,11 +226,7 @@ describe("candidateTriageContract", () => {
     "vs-candidate-triage-system.v0.1.md",
   ])("keeps the %s response schema aligned with the parser", (filename) => {
     const prompt = fs.readFileSync(
-      path.resolve(
-        __dirname,
-        "../../../resources/policyAnalysis",
-        filename
-      ),
+      path.resolve(__dirname, "../../../resources/policyAnalysis", filename),
       "utf8"
     );
 
@@ -818,8 +812,7 @@ describe("candidateTriageContract", () => {
         "LEITUNGSWASSER_INSURANCE",
         "STURM_INSURANCE",
       ],
-      scopeResolution:
-        "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+      scopeResolution: "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
       text: "Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und Grundstückshaftpflichtversicherung",
     };
     occurrence.context.text =

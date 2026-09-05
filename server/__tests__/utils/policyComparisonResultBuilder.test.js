@@ -3075,8 +3075,7 @@ describe("policy comparison result builder", () => {
         delete tampered.categories[0].rows[0].pointDecision
           .unilateralCoverageAbsenceAudit,
       (tampered) =>
-        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible =
-          false),
+        (tampered.categories[0].rows[0].pointDecision.unilateralCoverageAbsenceAudit.eligible = false),
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.ruleId =
           "INCLUDED_OVER_EXCLUDED_V1"),
@@ -3134,8 +3133,7 @@ describe("policy comparison result builder", () => {
       (tampered) =>
         (tampered.categories[0].rows[0].pointDecision.bilateralAbsenceAudit.sides[0].physicalPagesChecked += 1),
       (tampered) =>
-        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction =
-          false),
+        (tampered.categories[0].rows[0].packageA.searchAudit.components[0].gates.completeTextExtraction = false),
       (tampered) => {
         const decision = tampered.categories[0].rows[0].pointDecision;
         decision.outcome = "KEIN_DOKUMENTIERTER_VORTEIL";

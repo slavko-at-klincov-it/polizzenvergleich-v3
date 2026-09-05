@@ -144,8 +144,7 @@ function multiScopeFixture() {
         "LEITUNGSWASSER_INSURANCE",
         "STURM_INSURANCE",
       ],
-      scopeResolution:
-        "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+      scopeResolution: "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
       text: heading,
       pageStart: 0,
       pageEnd: heading.length,
@@ -187,9 +186,7 @@ function multiScopeFixture() {
     requirements: [
       {
         id: "FE-D01",
-        components: [
-          { id: "firefighting_costs", occurrences: [occurrence] },
-        ],
+        components: [{ id: "firefighting_costs", occurrences: [occurrence] }],
       },
     ],
   };
@@ -269,10 +266,7 @@ describe("artifact-backed source scope", () => {
 
   test.each([
     ["unknown resolution", (section) => (section.scopeResolution = "UNKNOWN")],
-    [
-      "partial scope set",
-      (section) => section.scopeKeys.splice(1, 1),
-    ],
+    ["partial scope set", (section) => section.scopeKeys.splice(1, 1)],
     [
       "duplicate scope key",
       (section) => section.scopeKeys.push("FEUER_INSURANCE"),

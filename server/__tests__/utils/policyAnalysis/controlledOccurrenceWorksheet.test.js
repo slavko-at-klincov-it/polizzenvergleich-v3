@@ -2182,8 +2182,7 @@ describe("controlledOccurrenceWorksheet", () => {
     });
     const occurrences = [
       ...component(worksheet, "FE-D01", "firefighting_costs").occurrences,
-      ...component(worksheet, "FE-D01", "firefighting_costs_limit")
-        .occurrences,
+      ...component(worksheet, "FE-D01", "firefighting_costs_limit").occurrences,
     ];
 
     expect(occurrences).toHaveLength(2);
@@ -2196,8 +2195,7 @@ describe("controlledOccurrenceWorksheet", () => {
           "LEITUNGSWASSER_INSURANCE",
           "STURM_INSURANCE",
         ],
-        scopeResolution:
-          "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+        scopeResolution: "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
         text: heading,
         pageStart: 0,
         pageEnd: heading.length,
@@ -2205,9 +2203,9 @@ describe("controlledOccurrenceWorksheet", () => {
         source: "CURRENT_PAGE_HEADING",
       });
 
-    const targets = buildCandidateTriagePayload(worksheet).bindingTargets.filter(
-      ({ requirementId }) => requirementId === "FE-D01"
-    );
+    const targets = buildCandidateTriagePayload(
+      worksheet
+    ).bindingTargets.filter(({ requirementId }) => requirementId === "FE-D01");
     expect(targets).toHaveLength(1);
     expect(targets[0]).toMatchObject({
       roleResolution: { owner: "MODEL", roleMatch: null },
@@ -2235,11 +2233,8 @@ describe("controlledOccurrenceWorksheet", () => {
       documentFingerprint: "wrapped-combined-heading-unknown-branch",
       catalog: feFullCatalog,
     });
-    const occurrence = component(
-      worksheet,
-      "FE-D01",
-      "firefighting_costs"
-    ).occurrences[0];
+    const occurrence = component(worksheet, "FE-D01", "firefighting_costs")
+      .occurrences[0];
 
     expect(occurrence.sectionScopeHint).toMatchObject({
       scopeKey: null,

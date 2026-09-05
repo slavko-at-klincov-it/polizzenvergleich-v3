@@ -823,9 +823,8 @@ function validNestedListContinuationProof(occurrence, pageContent, pageMap) {
     });
     return Boolean(
       expected &&
-        JSON.stringify(
-          canonicalJson(occurrence.nestedListContinuationProof)
-        ) === JSON.stringify(canonicalJson(expected))
+      JSON.stringify(canonicalJson(occurrence.nestedListContinuationProof)) ===
+        JSON.stringify(canonicalJson(expected))
     );
   } catch {
     return false;
@@ -1213,8 +1212,7 @@ function explicitSectionHeadings(pageText) {
       scopeKey: null,
       scopeKeys: certification?.scopeKeys || [],
       scopeResolution:
-        certification?.scopeResolution ||
-        "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+        certification?.scopeResolution || "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
       text,
       pageStart: match.index + leading,
       pageEnd: match.index + leading + text.length,
@@ -2126,21 +2124,21 @@ function validFollowingStructuralBoundaryProof(occurrence) {
         "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX",
         "FOLLOWING_BOUNDARY_SPAN_EXCEEDS_MAX",
       ].includes(proof.reason) &&
-        proof.maximumDistance === MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
-        ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS.has(proof.observedKind) &&
-        proof.observedKind !== FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT &&
-        proof.text === null &&
-        /^[a-f0-9]{64}$/u.test(String(proof.textSha256 || "")) &&
-        skipped.text.length <= MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
-        skipped.complete === (skipped.documentEnd === proof.documentStart) &&
-        (proof.reason === "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX"
-          ? proof.documentStart - context.documentEnd >
+      proof.maximumDistance === MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+      ALLOWED_FOLLOWING_STRUCTURAL_BOUNDARY_KINDS.has(proof.observedKind) &&
+      proof.observedKind !== FOLLOWING_STRUCTURAL_BOUNDARY_KIND.TOO_DISTANT &&
+      proof.text === null &&
+      /^[a-f0-9]{64}$/u.test(String(proof.textSha256 || "")) &&
+      skipped.text.length <= MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE &&
+      skipped.complete === (skipped.documentEnd === proof.documentStart) &&
+      (proof.reason === "FOLLOWING_BOUNDARY_GAP_EXCEEDS_MAX"
+        ? proof.documentStart - context.documentEnd >
+          MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
+        : proof.reason === "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX"
+          ? proof.documentEnd - proof.documentStart >
             MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
-          : proof.reason === "FOLLOWING_BOUNDARY_UNIT_EXCEEDS_MAX"
-            ? proof.documentEnd - proof.documentStart >
-              MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE
-            : proof.documentEnd - context.documentEnd >
-              MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE)
+          : proof.documentEnd - context.documentEnd >
+            MAX_FOLLOWING_STRUCTURAL_BOUNDARY_DISTANCE)
     );
   if (
     typeof proof?.text !== "string" ||
