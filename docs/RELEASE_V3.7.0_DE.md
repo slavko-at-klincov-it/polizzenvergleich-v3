@@ -192,9 +192,16 @@ macOS-Installer-Suite sowie Neu- und Bestandskopie-Migration mit 42/42
 Migrationen und stabilen Datenzeilen. Ein vorangegangener ungültiger Versuch
 unter ungepinnter Homebrew-Node `v26.7.0` traf ausschließlich die bekannte
 `SlowBuffer`-Inkompatibilität einer Alt-Abhängigkeit; der verbindliche
-Node-22-Lauf war vollständig grün. Der Real-Artefakt-Replay und der frische
-symmetrische 224-Zeilen-Vollvergleich bleiben vor Merge, Tag und Deployment
-offen. Die installierte Kundenfassung blieb dabei unverändert auf
+Node-22-Lauf war vollständig grün. Der anschließende modellfreie
+Real-Artefakt-Replay auf `21841672a` bestätigte exakt eine Änderung unter 224
+eindeutigen Zeilen: `VS-22` wechselte von `UNKLAR` zu `VORTEIL_A`; die übrigen
+223 vollständigen Row-Objekte blieben kanonisch bytegleich. Die Partition ist
+damit 5/4/34/125/0/12/44 für Vorteil A, Vorteil B,
+Dokumentationsunterschied, Gleichwertig, kein dokumentierter Vorteil, nicht
+vergleichbar und unklar. Schema 15, V107/V68, Kundenmetrik, der vollständige
+JSON-/Markdown-/XLSX-Roundtrip und die Artefakt-Hashkette bestanden. Der
+frische symmetrische 224-Zeilen-Modellvergleich bleibt vor Merge, Tag und
+Deployment offen. Die installierte Kundenfassung blieb dabei unverändert auf
 `2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
 
 ## First-Hop V3.6.0 → V3.7.0

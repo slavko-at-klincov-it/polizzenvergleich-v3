@@ -6349,10 +6349,19 @@ VORTEIL_A                 4
 VORTEIL_B                 4
 DOKUMENTATIONSUNTERSCHIED 34
 GLEICHWERTIG              125
-KEIN_DOKUMENTIERTER_VORTEIL 12
+KEIN_DOKUMENTIERTER_VORTEIL 0
 NICHT_VERGLEICHBAR        12
 UNKLAR                    45
 ```
+
+Diese korrigierte Partition ist direkt aus
+`comparison.private.json` des Laufs aggregiert und summiert sich exakt auf
+224. Die zuvor an dieser Stelle notierte Zahl 12 für
+`KEIN_DOKUMENTIERTER_VORTEIL` war ein Dokumentationsfehler: 12 gehört
+ausschließlich zu `NICHT_VERGLEICHBAR`; mit beiden 12er-Werten hätte die
+Tabelle unmögliche 236 Zeilen ergeben. Für Laufmetriken gelten fortan nur die
+aus dem validierten Ergebnisartefakt neu aggregierten sieben disjunkten
+Outcomegruppen, deren Summe der eindeutigen Zeilenzahl entsprechen muss.
 
 Gegen den bevorzugten Vorlauf änderten sich exakt drei Zeilen:
 
@@ -6437,13 +6446,10 @@ Portfolioaudit V3 und Source-Atom-Replay V2 versioniert. V106/V67,
 Portfolioaudit V2 und Replay V1 bleiben über den historischen ausschließlich
 `GENERAL` akzeptierenden Pfad lesbar. Das Top-Level-Ergebnisschema bleibt 15.
 
-Status: `IMPLEMENTIERT, TECHNISCHE MAC-STUDIO-GATES BESTANDEN, FACHLICHER
-REAL-ARTEFAKT- UND VOLLLAUFNACHWEIS NOCH OFFEN`. Verbindliche nächste Schritte
-sind ein privater Real-Artefakt-Replay und anschließend ein frischer
-symmetrischer 224-Zeilen-Lauf auf demselben exakten Implementierungsstand.
-Erwartet, aber vor diesem Nachweis nicht behauptet, ist ausschließlich
-`VS-22: UNKLAR -> VORTEIL_A`; alle übrigen 223 Outcomes müssen unverändert
-bleiben.
+Status: `IMPLEMENTIERT, TECHNISCHE MAC-STUDIO-GATES UND REAL-ARTEFAKT-REPLAY
+BESTANDEN, FRISCHER VOLLLAUF NOCH OFFEN`. Verbindlicher nächster Schritt ist
+ein frischer symmetrischer 224-Zeilen-Lauf auf demselben exakten
+Implementierungsstand.
 
 ### 133.4 Technischer Mac-Studio-Nachweis für `494f0cb74`
 
@@ -6478,6 +6484,39 @@ Node `v26.7.0` und scheiterte in der unveränderten Alt-Abhängigkeit
 `buffer-equal-constant-time`, weil Node 26 `SlowBuffer` nicht mehr anbietet.
 Das ist kein Produktfehler und kein gültiger Release-Gate-Lauf. Derselbe
 Commit bestand danach vollständig unter der projektverbindlichen Node-22-
-Runtime. Der Worktree war nach den Gates sauber. Noch nicht erbracht sind der
-Real-Artefakt-Replay und der frische modellgestützte 224-Zeilen-Vollvergleich;
-deshalb ist dies noch keine Merge-, Tag- oder Deploymentfreigabe.
+Runtime. Der Worktree war nach den Gates sauber. Noch nicht erbracht ist der
+frische modellgestützte 224-Zeilen-Vollvergleich; deshalb ist dies noch keine
+Merge-, Tag- oder Deploymentfreigabe.
+
+### 133.5 Real-Artefakt-Replay auf `21841672a`
+
+Der vorhandene modellfreie Stored-Comparison-Replay wurde auf dem Mac Studio
+unter Node `v22.23.2` gegen die zehn unveränderten Dokumentläufe des
+symmetrischen `7ccef337a`-Laufs ausgeführt. Er las Extraktion, Worksheets,
+Targets, Modellwirkungen, angeforderte Felder und Dokumentquellen nur lesend,
+materialisierte aber Atome, Punktentscheidungen sowie JSON, Markdown und XLSX
+vollständig mit dem aktuellen V107/V68-Code neu.
+
+```text
+Commit: 21841672a16529100a8d938916541bf3b4d990ac
+Replay-Ausgabe: QA/REPLAY-V3.7.0-VS22-21841672-20260905-031033
+Session: b8bb856f-1d63-428f-a10e-745dd2629536
+Zeilen: 224
+Vorteil A / Vorteil B: 5 / 4
+Dokumentationsunterschied / Gleichwertig: 34 / 125
+Kein dokumentierter Vorteil / Nicht vergleichbar: 0 / 12
+Unklar / tatsächliche Kundenreviewzahl: 44 / 44
+comparison.private.json: 2f1f4b76163b8a36baafcdd562b342ac34807419878b9b2e5b93d66f1b7cb4b1
+comparison.md: 031534cbf5e2a7601921944b01e69cde8a52a29b7b51f6cfea777ca34ba76587
+polizzenvergleich.xlsx: 97f9dee77b0fb9e676eac37b6fa329e1f4532b7d0511b5443e1652b7ce28e8a3
+```
+
+Der unabhängige 224-Key-Diff bestand. Exakt eine vollständige Row änderte
+sich: `VS:VS-22` von `UNKLAR` zu `VORTEIL_A`; die übrigen 223 vollständigen
+Row-Objekte blieben bytegleich in ihrer kanonischen JSON-Darstellung. Der neue
+VS-22-Entscheid enthält Portfolioaudit V3, Vergleichsbehandlung V2,
+Source-Atom-Replay V2, `GENERAL_AND_NARROW` und den eingebetteten
+`VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_V1`-Nachweis. Schema 15,
+V107/V68, Kundenmetrik, JSON-/Markdown-/224×17-XLSX-Roundtrip und
+Artefakt-Hashkette bestanden. Der Replay isoliert die deterministische Wirkung
+des Fixes, ersetzt aber nicht den noch ausstehenden frischen Modelllauf.
