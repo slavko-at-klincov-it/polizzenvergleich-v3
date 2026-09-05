@@ -2210,7 +2210,7 @@ describe("controlledOccurrenceWorksheet", () => {
     );
     expect(targets).toHaveLength(1);
     expect(targets[0]).toMatchObject({
-      roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
+      roleResolution: { owner: "MODEL", roleMatch: null },
       scopeResolution: {
         owner: "SERVER",
         scopeMatch: "GENERAL",
@@ -2218,6 +2218,9 @@ describe("controlledOccurrenceWorksheet", () => {
         matchedAlias: "FEUER_INSURANCE",
       },
     });
+    expect(targets[0].roleResolution.basis).not.toBe(
+      "LIABILITY_NOT_INSURED_COST"
+    );
   });
 
   test("does not partially certify a wrapped combined heading with an unknown branch", () => {

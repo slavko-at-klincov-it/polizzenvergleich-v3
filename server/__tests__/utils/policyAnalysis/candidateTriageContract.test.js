@@ -824,6 +824,8 @@ describe("candidateTriageContract", () => {
     };
     occurrence.context.text =
       "Nach den AHVB werden Schadenersatzverpflichtungen und Kosten übernommen.";
+    occurrence.scopeLead.text =
+      "Nach den AHVB gelten Schadenersatzverpflichtungen:";
 
     const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
     expect(target.roleResolution).toMatchObject({
