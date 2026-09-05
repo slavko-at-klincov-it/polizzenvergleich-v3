@@ -200,8 +200,15 @@ damit 5/4/34/125/0/12/44 für Vorteil A, Vorteil B,
 Dokumentationsunterschied, Gleichwertig, kein dokumentierter Vorteil, nicht
 vergleichbar und unklar. Schema 15, V107/V68, Kundenmetrik, der vollständige
 JSON-/Markdown-/XLSX-Roundtrip und die Artefakt-Hashkette bestanden. Der
-frische symmetrische 224-Zeilen-Modellvergleich bleibt vor Merge, Tag und
-Deployment offen. Die installierte Kundenfassung blieb dabei unverändert auf
+frische symmetrische 224-Zeilen-Modellvergleich bestand danach auf
+`0090b3cccfeb03f3f71a6fefb4e999e055ff4eca` in 1.704 Sekunden mit 10/10
+Dokumenten, 50/50 Kategorien, null Resume-Schritten und 330 Qwen-Aufrufen.
+Seine Partition und alle 224 Outcomes stimmen exakt mit dem Replay überein;
+gegen `7ccef337a` änderte sich ausschließlich `VS-22: UNKLAR -> VORTEIL_A`.
+Alle neun Vorteilsschlüssel des bevorzugten Laufs blieben erhalten. Vor dem
+nächsten Releaseentscheid bleibt der getrennte bekannte `FE-D01`-Recallfehler
+zu behandeln und der danach entstehende neue Code-SHA erneut zu prüfen. Die
+installierte Kundenfassung blieb dabei unverändert auf
 `2804fa56361084c0ee74fca6f54ef6365d65aeeb`.
 
 ## First-Hop V3.6.0 → V3.7.0

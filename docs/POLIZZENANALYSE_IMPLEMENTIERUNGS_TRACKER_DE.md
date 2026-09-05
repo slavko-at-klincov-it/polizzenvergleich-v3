@@ -6519,3 +6519,62 @@ Source-Atom-Replay V2, `GENERAL_AND_NARROW` und den eingebetteten
 V107/V68, Kundenmetrik, JSON-/Markdown-/224×17-XLSX-Roundtrip und
 Artefakt-Hashkette bestanden. Der Replay isoliert die deterministische Wirkung
 des Fixes, ersetzt aber nicht den noch ausstehenden frischen Modelllauf.
+
+### 133.6 Frischer symmetrischer Vollvergleich auf `0090b3ccc`
+
+Nach der Korrektur der alten falsch dokumentierten Outcomezahl und der rein
+formatierenden Nacharbeit lief der frische symmetrische Finalvergleich auf dem
+Mac Studio im isolierten QA-Root. Vor dem Start waren Worktree und installierte
+Kundenfassung sauber, es gab keinen aktiven Vergleichsworker und LM Studio
+hatte ausschließlich Qwen 3.6 mit 42.496 Token Kontext geladen. Die erste
+Harness-Ausführung erreichte wegen einer in die Shellvariable geratenen
+Prisma-Infozeile den Worker nicht; die korrekt erzeugte Session blieb
+unverändert `QUEUED`, erzeugte keinen Modellaufruf und wurde danach mit ihrer
+bereinigten UUID gestartet.
+
+```text
+Commit: 0090b3cccfeb03f3f71a6fefb4e999e055ff4eca
+QA-Root: QA/RELEASE-V3.7.0-SYMMETRIC-0090B3CC-20260905-032251
+Session: c8813aa8-5853-4425-baec-1caf834e04ea
+Run: resume-76ad44490f39c38c3cb81ad4
+Modell / Kontext: qwen/qwen3.6-35b-a3b / 42496
+Workerzeit: 1.704 Sekunden (28:24)
+Dokumente / Kategorien / Resume: 10/10 / 50/50 / 0
+Qwen-Aufrufe: 330 (243 Triage, 87 Wirkungsprüfung)
+Prompt- / Completion-Token: 742.527 / 22.197
+Embedding-/Hybridartefakte: 0
+Vorteil A / Vorteil B: 5 / 4
+Dokumentationsunterschied / Gleichwertig: 34 / 125
+Kein dokumentierter Vorteil / Nicht vergleichbar: 0 / 12
+Unklar / tatsächliche Kundenreviewzahl: 44 / 44
+comparison.private.json: 0d7262149be6c591714beb457c86a2ede0fd667c680740f35d6a9f057a8dc5c2
+comparison.md: 031534cbf5e2a7601921944b01e69cde8a52a29b7b51f6cfea777ca34ba76587
+polizzenvergleich.xlsx: ecb8e6d2c550ebacd68108804ac2dace28b3f2b6dfb01ff1394d46e52838b86a
+artifact-set-manifest.private.json: 16d93112ffb4352260499edeb2d375b909f9cdb1b8f5b2a6e35320de88a3fb4d
+export.private.json: 667bd5b2d9ac37a02c78de6fea778ad276b1b326d4e0cf0517102280820dfaf0
+```
+
+Der unabhängig validierte Artefaktsatz bestand Schema 15, V107/V68,
+Kundenmetrik, 224 eindeutige Schlüssel, Exportvertrag, JSON-/Markdown-/
+224×17-XLSX-Parität und Archivhashgleichheit. Gegen den frischen
+`7ccef337a`-Lauf änderte sich exakt `VS:VS-22` von `UNKLAR` zu `VORTEIL_A`;
+die übrigen 223 Outcomes blieben identisch. Der frische Lauf hatte null
+Outcomeabweichungen gegen den vorherigen Stored-Comparison-Replay.
+
+Gegen den bevorzugten Lauf `14c2bb1b` blieben alle neun bestätigten
+Vorteilsschlüssel erhalten. Der einzige Outcomeunterschied ist der bereits
+begründete, sicherere Ausgang `FE:FE-A10: NICHT_VERGLEICHBAR -> UNKLAR`.
+Insgesamt 18 Kundenarbeitsblattzellen in acht Zeilen unterscheiden sich:
+`VS-18`, `VS-19`, `FE-A05`, `FE-A10`, `FE-D01`, `FE-E16`, `ST-08` und
+`ST-21`. Sechs dieser Zeilen ändern ausschließlich Belegtext, Quelle oder die
+präzisere Reviewbegründung bei stabilem Outcome; `ST-08` enthält jetzt den
+vollständigen source-bound Governor-/Listenbeleg. `FE-D01` bleibt der bekannte
+echte Recallfehler: A fiel trotz vorhandener Feuerwehr-/Einsatzkostenklausel
+von `BELEGT` auf `UNGEKLÄRT`. Er wird als eigener Forward-Fix behandelt und
+nicht mit VS-22 vermischt.
+
+Die installierte Kundenfassung blieb sauber auf
+`2804fa56361084c0ee74fca6f54ef6365d65aeeb`; der isolierte Worktree blieb
+sauber auf `0090b3cccfeb03f3f71a6fefb4e999e055ff4eca`. VS-22 ist damit für
+diese bekannten zehn Dokumente technisch und im frischen Modelllauf belegt.
+Dies ist kein unbekannter Versicherer-Holdout und kein 99-Prozent-Nachweis.
