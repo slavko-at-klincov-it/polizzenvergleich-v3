@@ -1,5 +1,8 @@
 const crypto = require("crypto");
 const {
+  certifiedCombinedInsuranceHeading,
+} = require("./multiInsuranceHeadingContract");
+const {
   semanticCoverageHeadingPolarity,
 } = require("./semanticCoverageGovernor");
 const {
@@ -1158,27 +1161,6 @@ function explicitPageScopeHints(pageText) {
 }
 
 function explicitSectionHeadings(pageText) {
-  const combinedScopeKeysForHeading = (value) => {
-    const scopeKeys = [
-      ["FEUER_INSURANCE", /\bFeuer/iu],
-      ["STURM_INSURANCE", /\bSturm/iu],
-      ["LEITUNGSWASSER_INSURANCE", /\bLeitungswasser/iu],
-      ["ELEMENTAR_INSURANCE", /\b(?:Elementar|Katastrophen)/iu],
-      ["HAFTPFLICHT_INSURANCE", /\bHaftpflicht/iu],
-      ["GLASBRUCH_INSURANCE", /\b(?:Glasbruch|Glas)/iu],
-    ]
-      .filter(([, pattern]) => pattern.test(value))
-      .map(([scopeKey]) => scopeKey)
-      .sort();
-    return JSON.stringify(scopeKeys) ===
-      JSON.stringify([
-        "FEUER_INSURANCE",
-        "LEITUNGSWASSER_INSURANCE",
-        "STURM_INSURANCE",
-      ])
-      ? scopeKeys
-      : [];
-  };
   const canonicalScopeForHeading = (value) => {
     const normalized = normalizeWithOffsetMap(value).normalized.replace(
       /\s+/gu,
@@ -1222,18 +1204,17 @@ function explicitSectionHeadings(pageText) {
   ];
   const headings = [];
   for (const match of String(pageText || "").matchAll(
-    /^([\t ]*(?:\d{1,3}\.[\t ]+)?Versicherungsumfang[\t ]+[^\n]{0,160}versicherung)[\t ]*$/gimu
+    /^([\t ]*(?:\d{1,3}\.[\t ]+)?Versicherungsumfang[\t ]+[^\n]{1,160}(?:\n[\t ]*[^\n]{1,160})?versicherung)[\t ]*$/gimu
   )) {
     const text = match[1].trim();
-    const scopeKeys = combinedScopeKeysForHeading(text);
+    const certification = certifiedCombinedInsuranceHeading(text);
     const leading = match[0].indexOf(text);
     headings.push({
       scopeKey: null,
-      scopeKeys,
+      scopeKeys: certification?.scopeKeys || [],
       scopeResolution:
-        scopeKeys.length > 0
-          ? "VERIFIED_FEUER_STURM_LEITUNGSWASSER_COMBINATION"
-          : "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+        certification?.scopeResolution ||
+        "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
       text,
       pageStart: match.index + leading,
       pageEnd: match.index + leading + text.length,
@@ -1244,12 +1225,19 @@ function explicitSectionHeadings(pageText) {
       const text = match[0].trim();
       const leading = match[0].indexOf(text);
       const pageStart = match.index + leading;
-      if (headings.some((heading) => heading.pageStart === pageStart)) continue;
+      const pageEnd = pageStart + text.length;
+      if (
+        headings.some(
+          (heading) =>
+            heading.pageStart <= pageStart && heading.pageEnd >= pageEnd
+        )
+      )
+        continue;
       headings.push({
         scopeKey: canonicalScopeForHeading(match[1]),
         text,
         pageStart,
-        pageEnd: pageStart + text.length,
+        pageEnd,
       });
     }
   }

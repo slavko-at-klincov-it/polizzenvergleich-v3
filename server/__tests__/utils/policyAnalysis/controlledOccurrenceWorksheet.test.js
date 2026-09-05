@@ -2164,6 +2164,88 @@ describe("controlledOccurrenceWorksheet", () => {
     });
   });
 
+  test("binds a wrapped four-branch coverage heading without retaining its liability suffix", () => {
+    const heading = [
+      "2. Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und",
+      "Grundstückshaftpflichtversicherung",
+    ].join("\n");
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          heading,
+          "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und Grundstückshaftpflichtversicherung mitversichert:",
+          "- Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontagekosten bis maximal 10%, in der Feuerversicherung maximal 15%, der Gebäudeversicherungssumme auf Erstes Risiko;",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "wrapped-four-branch-coverage-heading",
+      catalog: feFullCatalog,
+    });
+    const occurrences = [
+      ...component(worksheet, "FE-D01", "firefighting_costs").occurrences,
+      ...component(worksheet, "FE-D01", "firefighting_costs_limit")
+        .occurrences,
+    ];
+
+    expect(occurrences).toHaveLength(2);
+    for (const occurrence of occurrences)
+      expect(occurrence.sectionScopeHint).toEqual({
+        scopeKey: null,
+        scopeKeys: [
+          "FEUER_INSURANCE",
+          "HAFTPFLICHT_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+        ],
+        scopeResolution:
+          "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+        text: heading,
+        pageStart: 0,
+        pageEnd: heading.length,
+        physicalPageNumber: 1,
+        source: "CURRENT_PAGE_HEADING",
+      });
+
+    const targets = buildCandidateTriagePayload(worksheet).bindingTargets.filter(
+      ({ requirementId }) => requirementId === "FE-D01"
+    );
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toMatchObject({
+      roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
+      scopeResolution: {
+        owner: "SERVER",
+        scopeMatch: "GENERAL",
+        basis: "MATCHING_CATEGORY_SECTION",
+        matchedAlias: "FEUER_INSURANCE",
+      },
+    });
+  });
+
+  test("does not partially certify a wrapped combined heading with an unknown branch", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: documentFromPages([
+        [
+          "2. Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und",
+          "Cyberversicherung",
+          "Zusätzlich sind Feuerlöschkosten mitversichert.",
+        ].join("\n"),
+      ]),
+      documentFingerprint: "wrapped-combined-heading-unknown-branch",
+      catalog: feFullCatalog,
+    });
+    const occurrence = component(
+      worksheet,
+      "FE-D01",
+      "firefighting_costs"
+    ).occurrences[0];
+
+    expect(occurrence.sectionScopeHint).toMatchObject({
+      scopeKey: null,
+      scopeKeys: [],
+      scopeResolution: "UNRESOLVED_COMBINED_INSURANCE_SCOPE",
+      source: "CURRENT_PAGE_HEADING",
+    });
+  });
+
   test("resets inherited liability but does not certify an unknown combined scope", () => {
     const worksheet = buildControlledOccurrenceWorksheet({
       document: documentFromPages([

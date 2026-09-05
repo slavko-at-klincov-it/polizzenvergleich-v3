@@ -75,6 +75,6 @@ nicht als allgemeiner Ausschluss für Hagel oder Schneedruck gelten.
 
 Gib ausschließlich gültiges JSON ohne Markdown-Codeblock und Zusatztext aus:
 
-`{"schemaVersion":7,"roleMatch":"MATCH","scopeMatch":"GENERAL"}`
+`{"schemaVersion":8,"roleMatch":"MATCH","scopeMatch":"GENERAL"}`
 
 Das Root-Objekt darf ausschließlich diese drei Felder enthalten.

@@ -1,4 +1,7 @@
 const crypto = require("crypto");
+const {
+  validCertifiedCombinedInsuranceHeading,
+} = require("./multiInsuranceHeadingContract");
 
 const ARTIFACT_BACKED_SOURCE_SCOPE_CONTRACT_ID =
   "ARTIFACT_BACKED_SOURCE_SCOPE_V1";
@@ -288,10 +291,17 @@ function sourceBoundSectionScopeKeys(occurrence) {
   const precedingPageRelation =
     section?.source === "PRECEDING_PAGE_HEADING" &&
     sectionPage < occurrencePage;
+  const certifiedMultiScope = validCertifiedCombinedInsuranceHeading({
+    text: sectionText,
+    scopeKey: section?.scopeKey,
+    scopeKeys: section?.scopeKeys,
+    scopeResolution: section?.scopeResolution,
+  });
 
   if (
     keys.length === 0 ||
-    !keys.includes(String(section?.scopeKey || "").trim()) ||
+    (!certifiedMultiScope &&
+      !keys.includes(String(section?.scopeKey || "").trim())) ||
     !Number.isInteger(occurrencePage) ||
     occurrencePage <= 0 ||
     !Number.isInteger(sectionPage) ||

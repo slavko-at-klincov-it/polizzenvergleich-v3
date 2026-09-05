@@ -1,4 +1,4 @@
-const TRIAGE_SCHEMA_VERSION = 7;
+const TRIAGE_SCHEMA_VERSION = 8;
 const {
   deterministicCategoryCandidateBinding,
   expectedCategoryScopeKeys,
@@ -333,9 +333,9 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       source.sectionScopeHint?.scopeKey,
       ...(source.sectionScopeHint?.scopeKeys || []),
     ].filter(Boolean);
-    const isStructurallyLiabilityScoped = [
-      ...observedSectionScopeKeys,
-    ].includes("HAFTPFLICHT_INSURANCE");
+    const isStructurallyLiabilityScoped =
+      observedSectionScopeKeys.length === 1 &&
+      observedSectionScopeKeys[0] === "HAFTPFLICHT_INSURANCE";
     const isExplicitLiabilityScope =
       !["HP", "VB"].includes(categoryView) &&
       (isVs22NonDisposalScope ||

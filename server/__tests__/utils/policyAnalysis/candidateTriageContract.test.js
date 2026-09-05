@@ -113,7 +113,7 @@ GROUPED_WORKSHEET.bindingGroups = [
 ];
 
 function response(judgements) {
-  return JSON.stringify({ schemaVersion: 7, judgements });
+  return JSON.stringify({ schemaVersion: 8, judgements });
 }
 
 function directedLiabilityFixture({
@@ -529,7 +529,7 @@ describe("candidateTriageContract", () => {
     const payload = buildCandidateTriagePayload(WORKSHEET);
 
     expect(payload).toMatchObject({
-      schemaVersion: 7,
+      schemaVersion: 8,
       task: "CLASSIFY_BINDING_TARGETS",
       bindingTargets: [
         {
@@ -645,7 +645,7 @@ describe("candidateTriageContract", () => {
     });
 
     expect(single).toMatchObject({
-      schemaVersion: 7,
+      schemaVersion: 8,
       task: "CLASSIFY_ONE_BINDING_TARGET",
       bindingTarget: {
         targetId: "binding-group:shared-costs",
@@ -656,7 +656,7 @@ describe("candidateTriageContract", () => {
     expect(
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MATCH",
           scopeMatch: "NARROW",
         }),
@@ -677,7 +677,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MATCH",
           scopeMatch: "GENERAL",
           targetId: "candidate:other",
@@ -688,7 +688,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MATCH",
           scopeMatch: "GENERAL",
           explanation: "not allowed",
@@ -705,7 +705,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MISMATCH",
           scopeMatch: "GENERAL",
         }),
@@ -735,13 +735,102 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MISMATCH",
           scopeMatch: "OTHER_SCOPE",
         }),
         target: liability,
       })
     ).toThrow("TRIAGE_SINGLE_TARGET_SERVER_TERMINAL");
+  });
+
+  test("does not treat a matching certified multi-scope heading as liability-only", () => {
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "FE" },
+      requirements: [
+        {
+          id: "FE-D01",
+          label: "Feuerwehrkosten",
+          requestedFields: ["limit"],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "firefighting_costs",
+              label: "Feuerlöschkosten",
+              factRole: "COST",
+              occurrences: [
+                {
+                  candidateId: "candidate:multi-scope-fire-cost",
+                  matchedAlias: "Feuerlöschkosten",
+                  pageNumber: 1,
+                  exactText: "Feuerlöschkosten",
+                  documentStart: 120,
+                  documentEnd: 137,
+                  context: {
+                    unitType: "LIST_ITEM",
+                    text: "Feuerlöschkosten sind bis 15 % mitversichert.",
+                    documentStart: 120,
+                    documentEnd: 168,
+                  },
+                  scopeLead: { text: "" },
+                  sectionScopeHint: {
+                    scopeKey: null,
+                    scopeKeys: [
+                      "FEUER_INSURANCE",
+                      "HAFTPFLICHT_INSURANCE",
+                      "LEITUNGSWASSER_INSURANCE",
+                      "STURM_INSURANCE",
+                    ],
+                    scopeResolution:
+                      "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+                    text: "Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und Grundstückshaftpflichtversicherung",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(target.roleResolution).toMatchObject({
+      owner: "SERVER",
+      roleMatch: "MATCH",
+    });
+    expect(target.scopeResolution).toEqual({
+      owner: "SERVER",
+      scopeMatch: "GENERAL",
+      basis: "MATCHING_CATEGORY_SECTION",
+      matchedAlias: "FEUER_INSURANCE",
+    });
+  });
+
+  test("keeps local liability wording terminal under a mixed heading", () => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+    occurrence.sectionScopeHint = {
+      scopeKey: null,
+      scopeKeys: [
+        "FEUER_INSURANCE",
+        "HAFTPFLICHT_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+      scopeResolution:
+        "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+      text: "Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und Grundstückshaftpflichtversicherung",
+    };
+    occurrence.context.text =
+      "Nach den AHVB werden Schadenersatzverpflichtungen und Kosten übernommen.";
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+    expect(target.roleResolution).toMatchObject({
+      owner: "SERVER",
+      roleMatch: "MISMATCH",
+      basis: "LIABILITY_NOT_INSURED_COST",
+    });
   });
 
   test.each([
@@ -1173,7 +1262,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateSingleBindingTarget({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           roleMatch: "MATCH",
           scopeMatch: "NARROW",
         }),
@@ -1409,7 +1498,7 @@ describe("candidateTriageContract", () => {
     expect(() =>
       parseAndValidateCandidateTriage({
         responseText: JSON.stringify({
-          schemaVersion: 7,
+          schemaVersion: 8,
           judgements: JSON.parse(valid).judgements,
           explanation: "not allowed",
         }),

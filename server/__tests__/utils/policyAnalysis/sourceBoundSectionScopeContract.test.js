@@ -109,6 +109,97 @@ function fixture() {
   };
 }
 
+function multiScopeFixture() {
+  const fingerprint = "c".repeat(64);
+  const heading = [
+    "2. Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und",
+    "Grundstückshaftpflichtversicherung",
+  ].join("\n");
+  const occurrenceText = "Feuerlöschkosten";
+  const pageContent = `${heading}\n${occurrenceText} sind bis 15 % mitversichert.`;
+  const occurrenceStart = pageContent.indexOf(occurrenceText);
+  const occurrence = {
+    candidateId: "candidate:multi-scope-fe-cost",
+    pageNumber: 1,
+    physicalPageNumber: 1,
+    pageStart: occurrenceStart,
+    pageEnd: occurrenceStart + occurrenceText.length,
+    documentStart: occurrenceStart,
+    documentEnd: occurrenceStart + occurrenceText.length,
+    exactText: occurrenceText,
+    context: {
+      unitType: "PARAGRAPH",
+      pageStart: occurrenceStart,
+      pageEnd: pageContent.length,
+      documentStart: occurrenceStart,
+      documentEnd: pageContent.length,
+      text: pageContent.slice(occurrenceStart),
+    },
+    pageScopeHints: [],
+    sectionScopeHint: {
+      scopeKey: null,
+      scopeKeys: [
+        "FEUER_INSURANCE",
+        "HAFTPFLICHT_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+      scopeResolution:
+        "SOURCE_BOUND_MULTILINE_COMBINED_INSURANCE_HEADING_V1",
+      text: heading,
+      pageStart: 0,
+      pageEnd: heading.length,
+      physicalPageNumber: 1,
+      source: "CURRENT_PAGE_HEADING",
+    },
+  };
+  const document = {
+    sourceDocumentId: fingerprint,
+    pageContent,
+    pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+    pdfExtraction: {
+      schemaVersion: 1,
+      complete: true,
+      totalPages: 1,
+      processedPages: 1,
+    },
+  };
+  const worksheet = {
+    schemaVersion: 2,
+    candidateOnly: true,
+    document: {
+      sourceDocumentId: fingerprint,
+      fingerprint,
+      physicalPages: 1,
+      pageContentLength: pageContent.length,
+      pageContentSha256: crypto
+        .createHash("sha256")
+        .update(pageContent)
+        .digest("hex"),
+      pageBoundaries: [
+        {
+          physicalPageNumber: 1,
+          documentStart: 0,
+          documentEnd: pageContent.length,
+        },
+      ],
+    },
+    requirements: [
+      {
+        id: "FE-D01",
+        components: [
+          { id: "firefighting_costs", occurrences: [occurrence] },
+        ],
+      },
+    ],
+  };
+  return {
+    documentArtifact: { schemaVersion: 1, fingerprint, document },
+    worksheet,
+    occurrence,
+  };
+}
+
 describe("artifact-backed source scope", () => {
   test("retains only exact section and page hints from the bound source", () => {
     const { documentArtifact, worksheet, occurrence } = fixture();
@@ -160,6 +251,37 @@ describe("artifact-backed source scope", () => {
         occurrence
       ).sectionScopeHint
     ).toEqual(occurrence.sectionScopeHint);
+  });
+
+  test("accepts a certified exact multiline multi-scope heading", () => {
+    const base = multiScopeFixture();
+    const resolved = createArtifactBackedSourceScopeResolver(
+      base
+    ).resolveOccurrence(base.occurrence);
+
+    expect(sourceBoundSectionScopeKeys(resolved)).toEqual([
+      "FEUER_INSURANCE",
+      "HAFTPFLICHT_INSURANCE",
+      "LEITUNGSWASSER_INSURANCE",
+      "STURM_INSURANCE",
+    ]);
+  });
+
+  test.each([
+    ["unknown resolution", (section) => (section.scopeResolution = "UNKNOWN")],
+    [
+      "partial scope set",
+      (section) => section.scopeKeys.splice(1, 1),
+    ],
+    [
+      "duplicate scope key",
+      (section) => section.scopeKeys.push("FEUER_INSURANCE"),
+    ],
+  ])("does not source-bind a multiline heading with %s", (_label, mutate) => {
+    const base = multiScopeFixture();
+    mutate(base.occurrence.sectionScopeHint);
+
+    expect(sourceBoundSectionScopeKeys(base.occurrence)).toEqual([]);
   });
 
   test.each([

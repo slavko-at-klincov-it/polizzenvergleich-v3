@@ -101,6 +101,6 @@ Text aus.
 
 Gib unabhängig von den Modellfeldern immer dasselbe Root-Schema aus:
 
-`{"schemaVersion":7,"roleMatch":"MATCH","scopeMatch":"GENERAL"}`
+`{"schemaVersion":8,"roleMatch":"MATCH","scopeMatch":"GENERAL"}`
 
 Das Root-Objekt darf ausschließlich diese drei Felder enthalten.
