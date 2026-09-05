@@ -364,6 +364,75 @@ describe("comparison atom canonicalization", () => {
     ]);
   });
 
+  test("requires a plural source scope union to equal the atom scope set", () => {
+    const valid = rawAtom("multi-scope", {
+      factRole: "BENEFIT",
+      coverageEffect: "INCLUDED",
+      selectedScopePicture: "NARROW_ONLY",
+      scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+      comparisonScopeKeys: [
+        "FEUER_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+      sources: [
+        {
+          candidateId: "candidate-multi-scope",
+          candidateBinding: "NARROW_SCOPE",
+          deterministicBindingBasis:
+            "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1",
+          comparisonScopeKeys: [
+            "FEUER_INSURANCE",
+            "LEITUNGSWASSER_INSURANCE",
+            "STURM_INSURANCE",
+          ],
+          physicalPageNumber: 5,
+          exactText: "Mietverlust",
+        },
+      ],
+    });
+
+    expect(completeRawComparisonAtom(valid)).toBe(true);
+    for (const mutate of [
+      (atom) => atom.sources[0].comparisonScopeKeys.pop(),
+      (atom) => atom.sources[0].comparisonScopeKeys.push("FEUER_INSURANCE"),
+      (atom) => atom.sources[0].comparisonScopeKeys.reverse(),
+      (atom) => delete atom.sources[0].comparisonScopeKeys,
+      (atom) => delete atom.sources[0].deterministicBindingBasis,
+      (atom) =>
+        (atom.sources[0].deterministicBindingBasis =
+          "AMBIGUOUS_NARROW_SECTION_SCOPE"),
+      (atom) => (atom.sources[0].candidateBinding = "DIRECT"),
+      (atom) => (atom.sources[0].comparisonScopeKey = "FEUER_INSURANCE"),
+      (atom) => atom.comparisonScopeKeys.pop(),
+      (atom) => atom.comparisonScopeKeys.reverse(),
+      (atom) => atom.comparisonScopeKeys.push("FEUER_INSURANCE"),
+    ]) {
+      const tampered = JSON.parse(JSON.stringify(valid));
+      mutate(tampered);
+      expect(completeRawComparisonAtom(tampered)).toBe(false);
+    }
+
+    const legacySingularSources = JSON.parse(JSON.stringify(valid));
+    legacySingularSources.selectedCandidateIds = [
+      "candidate-fire",
+      "candidate-water",
+      "candidate-storm",
+    ];
+    legacySingularSources.sources = [
+      ["candidate-fire", "FEUER_INSURANCE"],
+      ["candidate-water", "LEITUNGSWASSER_INSURANCE"],
+      ["candidate-storm", "STURM_INSURANCE"],
+    ].map(([candidateId, comparisonScopeKey]) => ({
+      candidateId,
+      candidateBinding: "NARROW_SCOPE",
+      comparisonScopeKey,
+      physicalPageNumber: 5,
+      exactText: "Mietverlust",
+    }));
+    expect(completeRawComparisonAtom(legacySingularSources)).toBe(true);
+  });
+
   test("requires VS-24 narrow scope keys to match every selected source", () => {
     const valid = rawAtom("vs24", {
       requirementId: "VS-24",

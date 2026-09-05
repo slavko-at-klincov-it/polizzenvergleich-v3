@@ -1579,6 +1579,98 @@ describe("policy comparison result builder", () => {
     });
   });
 
+  test("persists a plural candidate scope set in source and comparison atom", () => {
+    const candidateId = "candidate:vs-28:multi-scope";
+    const comparisonScopeKeys = [
+      "FEUER_INSURANCE",
+      "LEITUNGSWASSER_INSURANCE",
+      "STURM_INSURANCE",
+    ];
+    const [atom] = materializeAtomicFacts({
+      document: {
+        uuid: "document-vs-28-multi-scope",
+        role: "MAIN_POLICY",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+      worksheet: {
+        catalog: { id: "vs-occurrence-full-draft-v0.16", categoryView: "VS" },
+        requirements: [
+          {
+            id: "VS-28",
+            requestedFields: [],
+            scopePolicy: "MATCHING_SCOPE_INCLUDED_SUFFICIENT",
+            scopeRules: { narrowScopeKeys: comparisonScopeKeys },
+            componentSatisfactionPolicy: "ALL",
+            components: [
+              {
+                id: "rent_loss",
+                label: "Mietzinsentgang",
+                factRole: "BENEFIT",
+              },
+            ],
+          },
+        ],
+      },
+      materializedEvidence: {
+        judgements: [
+          {
+            targetId: "prepared-target:VS-28:rent_loss",
+            requirementId: "VS-28",
+            componentId: "rent_loss",
+            evidencePresence: "FOUND",
+            coverageEffect: "INCLUDED",
+            conflictState: "NONE",
+            selectedScopePicture: "NARROW_ONLY",
+            comparisonScopeKeys,
+            documentApplicability: "CONDITIONAL",
+            selectedCandidateIds: [candidateId],
+            unresolvedCandidateIds: [],
+          },
+        ],
+      },
+      requestedFields: {
+        requirements: [
+          {
+            requirementId: "VS-28",
+            requestedFieldStatus: "NOT_REQUIRED",
+            fields: [],
+          },
+        ],
+      },
+      targets: [
+        {
+          targetId: "prepared-target:VS-28:rent_loss",
+          candidates: [
+            {
+              candidateId,
+              physicalPageNumber: 5,
+              exactText: "Mietverlust",
+              candidateBinding: "NARROW_SCOPE",
+              deterministicBindingBasis:
+                "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1",
+              comparisonScopeKeys,
+            },
+          ],
+        },
+      ],
+      documentArtifact: null,
+      report: null,
+    });
+
+    expect(atom).toMatchObject({
+      comparisonScopeKeys,
+      sources: [
+        {
+          candidateId,
+          candidateBinding: "NARROW_SCOPE",
+          deterministicBindingBasis:
+            "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1",
+          comparisonScopeKeys,
+        },
+      ],
+    });
+  });
+
   test("preserves only a valid selected FE-C07 condition-absence audit in the comparison atom", () => {
     const candidateId = "candidate:fe-c07-result-builder";
     const clause =
@@ -2688,9 +2780,9 @@ describe("policy comparison result builder", () => {
     );
     expect(result.totals.rows).toBe(5);
     expect(result.productProfile).toMatchObject({
-      id: "CUSTOMER_CORE_5_V108_SOURCE_BOUND_MULTI_SCOPE_HEADING",
+      id: "CUSTOMER_CORE_5_V109_SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET",
       comparisonContractId:
-        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_FE_A01_FE_C07_SOURCE_BOUND_QUALIFICATION_REPLAY_FE_A09_REQUIRED_OBJECT_SCOPE_EL13_OBJECT_SCOPE_IDENTITY_NARROW_ALIAS_SCOPE_IDENTITY_SOURCE_BOUND_TRIAGE_STRUCTURAL_CONCEPT_CONTEXT_VS22_SOURCE_BOUND_CONTINUATION_V68_SOURCE_BOUND_MULTI_SCOPE_HEADING_V69",
+        "PACKAGE_FIRST_QUALIFIED_INCLUSION_ABSENCE_LW20_EQUALITY_FIRE_DEFINITION_VS15_QUALIFIER_VS08_CONSENSUS_OBJECT_FAMILY_ANY_IDENTITY_AMOUNT_LOCAL_CONDITION_VS21_COST_ROLE_BINDING_GROUP_FIELDS_LIMIT_PORTFOLIO_REVIEW_GATE_VS22_LOCAL_WASTE_SCOPE_EXACT_CLAUSE_CODE_FIELD_GOVERNOR_HAZARDOUS_WASTE_PORTFOLIO_HARDENED_VS24_OPTIONAL_LOCAL_LIMIT_EXACT_SCOPE_IDENTITY_GLASS_SCAFFOLDING_COST_EQUALITY_CUSTOMER_REPLAY_VALIDATION_PROOF_LIMIT_LANGUAGE_GATE_VS25_SUM_EQUALIZATION_PRECISION_COMBINED_SCOPE_HEADING_PRECISION_AMOUNT_RECONCILIATION_RELATIVE_LIMIT_PORTFOLIO_TYPED_LIMIT_BASIS_CUSTOMER_REPLAY_SOURCE_BINDING_SUM_EQUALIZATION_TERMINAL_LOCAL_BASIS_BINDING_SOURCE_PROOF_PERCENT_DOCUMENT_BASIS_VS36_SYMBOLIC_LIMITS_EXACT_EVENT_LIMIT_LIST_ITEM_FE_A05_NESTED_LIST_CONTINUATION_PROOF_SOURCE_BOUND_OBJECT_SCOPE_EVIDENCE_INTERNAL_SCOPE_PROVENANCE_SELECTED_SCOPE_REPLAY_FE_C02_CONDITION_SCOPE_DECISION_QUALIFICATION_REPLAY_VS08_WORKSHEET_TRUST_ANCHOR_FE_A01_FE_C07_SOURCE_BOUND_QUALIFICATION_REPLAY_FE_A09_REQUIRED_OBJECT_SCOPE_EL13_OBJECT_SCOPE_IDENTITY_NARROW_ALIAS_SCOPE_IDENTITY_SOURCE_BOUND_TRIAGE_STRUCTURAL_CONCEPT_CONTEXT_VS22_SOURCE_BOUND_CONTINUATION_V68_SOURCE_BOUND_MULTI_SCOPE_HEADING_V69_SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V70",
       categoryViews: ["VS", "FE", "LW", "ST", "EL"],
       expectedRowCount: 224,
     });

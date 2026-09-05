@@ -5,6 +5,8 @@ const {
 
 const ARTIFACT_BACKED_SOURCE_SCOPE_CONTRACT_ID =
   "ARTIFACT_BACKED_SOURCE_SCOPE_V1";
+const SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1 =
+  "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1";
 
 function sourceScopeError(code, detail = "") {
   const error = new Error(detail ? `${code}: ${detail}` : code);
@@ -317,8 +319,31 @@ function sourceBoundSectionScopeKeys(occurrence) {
   return keys;
 }
 
+/**
+ * Returns a plural comparison-scope set only for a fully certified combined
+ * insurance heading. Ordinary legacy hints that merely carry more than one
+ * key remain ambiguous and cannot enter the plural comparison contract.
+ * Side effects: none. Role: validate.
+ */
+function sourceBoundCertifiedMultiSectionScopeKeys(occurrence) {
+  const section = occurrence?.sectionScopeHint;
+  if (
+    !validCertifiedCombinedInsuranceHeading({
+      text: section?.text,
+      scopeKey: section?.scopeKey,
+      scopeKeys: section?.scopeKeys,
+      scopeResolution: section?.scopeResolution,
+    })
+  )
+    return [];
+  const keys = sourceBoundSectionScopeKeys(occurrence);
+  return keys.length > 1 ? keys : [];
+}
+
 module.exports = {
   ARTIFACT_BACKED_SOURCE_SCOPE_CONTRACT_ID,
+  SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1,
   createArtifactBackedSourceScopeResolver,
+  sourceBoundCertifiedMultiSectionScopeKeys,
   sourceBoundSectionScopeKeys,
 };

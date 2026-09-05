@@ -8,6 +8,9 @@ const {
 const {
   projectedFieldFactAppliesToAtom,
 } = require("../policyAnalysis/requestedFieldBindingGroupContract");
+const {
+  SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1,
+} = require("../policyAnalysis/sourceBoundSectionScopeContract");
 
 const PACKAGE_MEMBER = "PACKAGE_MEMBER";
 const CANONICAL_COMPARISON_ATOM_CONTRACT_ID =
@@ -183,13 +186,64 @@ function validComparisonScope(atom) {
   )
     return false;
   if (atom.selectedScopePicture !== "NARROW_ONLY") return true;
-  if (strings(atom.comparisonScopeKeys).length === 0) return false;
-  if (atom.requirementId === "VS-24") {
-    const scopeKeys = strings(atom.comparisonScopeKeys);
-    const selectedIds = new Set(atom.selectedCandidateIds || []);
-    const selectedSources = (atom.sources || []).filter(({ candidateId }) =>
-      selectedIds.has(candidateId)
+  const atomScopeKeys = strings(atom.comparisonScopeKeys);
+  if (atomScopeKeys.length === 0) return false;
+  const selectedIds = new Set(atom.selectedCandidateIds || []);
+  const selectedSources = (atom.sources || []).filter(({ candidateId }) =>
+    selectedIds.has(candidateId)
+  );
+  const requiresSourceScopeUnion =
+    atomScopeKeys.length > 1 ||
+    selectedSources.some(
+      ({ comparisonScopeKeys, deterministicBindingBasis }) =>
+        comparisonScopeKeys !== undefined ||
+        deterministicBindingBasis ===
+          SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1
     );
+  if (requiresSourceScopeUnion) {
+    if (
+      !Array.isArray(atom.comparisonScopeKeys) ||
+      atom.comparisonScopeKeys.length !== atomScopeKeys.length ||
+      JSON.stringify(atom.comparisonScopeKeys) !==
+        JSON.stringify(atomScopeKeys) ||
+      selectedSources.length === 0
+    )
+      return false;
+    const sourceScopeKeys = [];
+    for (const source of selectedSources) {
+      if (source.candidateBinding !== "NARROW_SCOPE") return false;
+      if (source.comparisonScopeKeys !== undefined) {
+        const plural = strings(source.comparisonScopeKeys);
+        if (
+          !Array.isArray(source.comparisonScopeKeys) ||
+          plural.length < 2 ||
+          source.comparisonScopeKeys.length !== plural.length ||
+          JSON.stringify(source.comparisonScopeKeys) !==
+            JSON.stringify(plural) ||
+          source.deterministicBindingBasis !==
+            SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1 ||
+          source.comparisonScopeKey !== undefined
+        )
+          return false;
+        sourceScopeKeys.push(...plural);
+        continue;
+      }
+      if (
+        source.deterministicBindingBasis ===
+          SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1 ||
+        typeof source.comparisonScopeKey !== "string" ||
+        !source.comparisonScopeKey.trim()
+      )
+        return false;
+      sourceScopeKeys.push(source.comparisonScopeKey);
+    }
+    if (
+      JSON.stringify(strings(sourceScopeKeys)) !== JSON.stringify(atomScopeKeys)
+    )
+      return false;
+  }
+  if (atom.requirementId === "VS-24") {
+    const scopeKeys = atomScopeKeys;
     if (
       scopeKeys.length !== 1 ||
       selectedSources.length === 0 ||

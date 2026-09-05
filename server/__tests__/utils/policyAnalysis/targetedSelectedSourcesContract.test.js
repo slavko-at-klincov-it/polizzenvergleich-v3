@@ -326,6 +326,57 @@ describe("targeted selected sources contract", () => {
     expect(input).toEqual(before);
   });
 
+  test("preserves a server-owned plural comparison scope set", () => {
+    const input = fixture();
+    input.targets[1].candidates[0].deterministicBindingBasis =
+      "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1";
+    input.targets[1].candidates[0].comparisonScopeKeys = [
+      "FEUER_INSURANCE",
+      "LEITUNGSWASSER_INSURANCE",
+      "STURM_INSURANCE",
+    ];
+
+    expect(rebuildTargetedSelectedSources(input)[1]).toMatchObject({
+      candidateBinding: "NARROW_SCOPE",
+      deterministicBindingBasis: "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1",
+      comparisonScopeKeys: [
+        "FEUER_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+    });
+  });
+
+  test.each([
+    [
+      "missing multi-scope basis",
+      (candidate) => delete candidate.deterministicBindingBasis,
+    ],
+    [
+      "non-canonical multi-scope order",
+      (candidate) => candidate.comparisonScopeKeys.reverse(),
+    ],
+    [
+      "simultaneous singular scope",
+      (candidate) => (candidate.comparisonScopeKey = "FEUER_INSURANCE"),
+    ],
+  ])("rejects %s", (_label, mutate) => {
+    const input = fixture();
+    const candidate = input.targets[1].candidates[0];
+    candidate.deterministicBindingBasis =
+      "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1";
+    candidate.comparisonScopeKeys = [
+      "FEUER_INSURANCE",
+      "LEITUNGSWASSER_INSURANCE",
+      "STURM_INSURANCE",
+    ];
+    mutate(candidate);
+
+    expect(() => rebuildTargetedSelectedSources(input)).toThrow(
+      "TARGETED_SOURCES_MULTI_SCOPE_PROVENANCE_INVALID"
+    );
+  });
+
   test("replays selected FE-A05 object and parent proofs against original document bytes", () => {
     const input = nestedProvenanceFixture();
     const [source] = rebuildTargetedSelectedSources(input);

@@ -14,6 +14,7 @@ const {
   parseAndValidatePreparedEvidenceResponse,
 } = require("../../../utils/policyAnalysis/preparedEvidenceContract");
 const feFullCatalog = require("../../../resources/policyAnalysis/fe-occurrence-full-draft.v0.1.json");
+const vsFullCatalog = require("../../../resources/policyAnalysis/vs-occurrence-full-draft.v0.2.json");
 const {
   COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_DECISION_BASIS,
   COVERAGE_ONLY_OBJECT_CLASS_EXCLUSION_SCOPE_PROOF_MODE,
@@ -618,6 +619,116 @@ describe("preparedEvidenceContract", () => {
       );
     }
   );
+
+  test("projects a certified combined heading to the exact catalogued comparison scope set", () => {
+    const fingerprint = "b".repeat(64);
+    const heading = [
+      "2. Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und",
+      "Grundstückshaftpflichtversicherung",
+    ].join("\n");
+    const governor =
+      "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und Grundstückshaftpflichtversicherung mitversichert:";
+    const clause =
+      "- der Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und Räume bis zu sechs Monaten;";
+    const pageContent = `${heading}\n${governor}\n${clause}`;
+    const document = {
+      id: "prepared-vs-28-multi-scope",
+      sourceDocumentId: fingerprint,
+      title: "prepared-vs-28-multi-scope.pdf",
+      documentType: "pdf",
+      pageContent,
+      pageMap: [{ pageNumber: 1, start: 0, end: pageContent.length }],
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 1,
+        processedPages: 1,
+        pagesWithText: 1,
+        complete: true,
+      },
+    };
+    const catalog = {
+      ...vsFullCatalog,
+      requirements: [
+        vsFullCatalog.requirements.find(({ id }) => id === "VS-28"),
+      ],
+    };
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: fingerprint,
+      catalog,
+    });
+    const target = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      documentArtifact: {
+        schemaVersion: 1,
+        fingerprint,
+        document,
+      },
+    })[0];
+
+    expect(target.candidates).toEqual([
+      expect.objectContaining({
+        candidateBinding: "NARROW_SCOPE",
+        deterministicBindingBasis: "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1",
+        comparisonScopeKeys: [
+          "FEUER_INSURANCE",
+          "LEITUNGSWASSER_INSURANCE",
+          "STURM_INSURANCE",
+        ],
+      }),
+    ]);
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      evidencePresence: "FOUND",
+      coverageEffect: "INCLUDED",
+      selectedScopePicture: "NARROW_ONLY",
+      comparisonScopeKeys: [
+        "FEUER_INSURANCE",
+        "LEITUNGSWASSER_INSURANCE",
+        "STURM_INSURANCE",
+      ],
+    });
+
+    const withoutArtifact = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    })[0];
+    expect(withoutArtifact.candidates[0]).not.toHaveProperty(
+      "comparisonScopeKeys"
+    );
+    expect(withoutArtifact.candidates[0].deterministicBindingBasis).not.toBe(
+      "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1"
+    );
+
+    const requirementWithNarrowAlias = JSON.parse(
+      JSON.stringify(catalog.requirements[0])
+    );
+    requirementWithNarrowAlias.scopeRules.narrowAliases = [
+      "privat und gewerblich genutzte Gebäudeeinheiten und Räume",
+    ];
+    const narrowAliasWorksheet = buildControlledOccurrenceWorksheet({
+      document,
+      documentFingerprint: fingerprint,
+      catalog: {
+        ...catalog,
+        requirements: [requirementWithNarrowAlias],
+      },
+    });
+    const narrowAliasCandidate = buildPreparedEvidenceTargets({
+      worksheet: narrowAliasWorksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+      documentArtifact: {
+        schemaVersion: 1,
+        fingerprint,
+        document,
+      },
+    })[0].candidates[0];
+    expect(narrowAliasCandidate).toHaveProperty("comparisonScopeKey");
+    expect(narrowAliasCandidate).not.toHaveProperty("comparisonScopeKeys");
+    expect(narrowAliasCandidate.deterministicBindingBasis).not.toBe(
+      "SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1"
+    );
+  });
 
   test("server-certifies only the exact FE-B13 occurrence from a current foreign section", () => {
     const occurrence = {

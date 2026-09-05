@@ -31,7 +31,9 @@ const {
   RG_COST_WITHOUT_EXPLICIT_GLASS_LOSS_SCOPE,
 } = require("./glassLossScopeContract");
 const {
+  SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1,
   createArtifactBackedSourceScopeResolver,
+  sourceBoundCertifiedMultiSectionScopeKeys,
 } = require("./sourceBoundSectionScopeContract");
 
 const PREPARED_EVIDENCE_SCHEMA_VERSION = 1;
@@ -136,6 +138,38 @@ function sourceBoundOccurrenceComparisonScopeKey({
   )
     return section.scopeKey;
   return null;
+}
+
+function sourceBoundOccurrenceComparisonScopeKeys({
+  occurrence,
+  requirement,
+  component,
+  allowCertifiedMultiScope,
+}) {
+  const singular = sourceBoundOccurrenceComparisonScopeKey({
+    occurrence,
+    requirement,
+    component,
+  });
+  if (singular) return [singular];
+  if (!allowCertifiedMultiScope) return [];
+  const allowedKeys =
+    componentScopeContract(requirement, component).scopeRules
+      ?.narrowScopeKeys || [];
+  return sourceBoundCertifiedMultiSectionScopeKeys(occurrence)
+    .filter((scopeKey) => allowedKeys.includes(scopeKey))
+    .sort();
+}
+
+function canonicalCandidateComparisonScopeKeys(candidate) {
+  return [
+    ...new Set(
+      [
+        candidate?.comparisonScopeKey,
+        ...(candidate?.comparisonScopeKeys || []),
+      ].filter(Boolean)
+    ),
+  ].sort();
 }
 
 function validateWorksheet(worksheet, expectedTargetSelectionDigestSha256) {
@@ -381,12 +415,17 @@ function buildPreparedEvidenceTargets({
           });
           continue;
         }
-        const sourceBoundComparisonScopeKey =
-          sourceBoundOccurrenceComparisonScopeKey({
+        const sourceBoundComparisonScopeKeys =
+          sourceBoundOccurrenceComparisonScopeKeys({
             occurrence,
             requirement,
             component,
+            allowCertifiedMultiScope: Boolean(sourceScopeResolver),
           });
+        const [sourceBoundComparisonScopeKey] =
+          sourceBoundComparisonScopeKeys.length === 1
+            ? sourceBoundComparisonScopeKeys
+            : [null];
         const localTargetScopeRebinding =
           deterministicBinding?.basis ===
           "EL_06_LOCAL_TARGET_SCOPE_REBINDING_V2";
@@ -401,6 +440,14 @@ function buildPreparedEvidenceTargets({
           ).includes(deterministicBinding?.comparisonScopeKey) ||
           deterministicBinding?.comparisonScopeKey ===
             catalogNarrowAliasScopeKey;
+        const deterministicMultiScopeAllowed =
+          Boolean(sourceScopeResolver) &&
+          deterministicBinding?.binding === candidateBinding &&
+          candidateBinding === "NARROW_SCOPE" &&
+          !localTargetScopeRebinding &&
+          !deterministicBinding?.comparisonScopeKey &&
+          sourceBoundComparisonScopeKeys.length > 1 &&
+          deterministicBinding?.basis === "AMBIGUOUS_NARROW_SECTION_SCOPE";
         const deterministicComparisonScopeKey =
           deterministicBinding?.binding === candidateBinding &&
           candidateBinding === "NARROW_SCOPE" &&
@@ -416,15 +463,23 @@ function buildPreparedEvidenceTargets({
           candidateBinding === "NARROW_SCOPE" && sourceBoundComparisonScopeKey
             ? sourceBoundComparisonScopeKey
             : null;
-        const comparisonScopeKey =
-          deterministicComparisonScopeKey || sectionComparisonScopeKey;
+        const comparisonScopeKey = deterministicMultiScopeAllowed
+          ? null
+          : deterministicComparisonScopeKey || sectionComparisonScopeKey;
+        const comparisonScopeKeys = deterministicMultiScopeAllowed
+          ? sourceBoundComparisonScopeKeys
+          : [];
+        const deterministicBindingBasis = deterministicMultiScopeAllowed
+          ? SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1
+          : deterministicBinding?.basis;
         candidates.push({
           candidateId: occurrence.candidateId,
           ...(candidateBinding ? { candidateBinding } : {}),
           ...(deterministicBinding?.binding === candidateBinding
-            ? { deterministicBindingBasis: deterministicBinding.basis }
+            ? { deterministicBindingBasis }
             : {}),
           ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+          ...(comparisonScopeKeys.length > 1 ? { comparisonScopeKeys } : {}),
           ...(validObjectScopeProof
             ? {
                 objectScopeProof: JSON.parse(
@@ -619,8 +674,7 @@ function selectedComparisonScopeEvidence({ target, selectedCandidateIds }) {
     ...new Set(
       target.candidates
         .filter(({ candidateId }) => selected.has(candidateId))
-        .map(({ comparisonScopeKey }) => comparisonScopeKey)
-        .filter(Boolean)
+        .flatMap(canonicalCandidateComparisonScopeKeys)
     ),
   ].sort();
   return comparisonScopeKeys.length > 0 ? { comparisonScopeKeys } : {};

@@ -1580,6 +1580,7 @@ function materializeAtomicFacts({
         candidateBinding,
         deterministicBindingBasis,
         comparisonScopeKey,
+        comparisonScopeKeys: candidateComparisonScopeKeys,
       } = candidate;
       const conditionSource = conditionCheckSource(candidate);
       const sourceRangeAvailable =
@@ -1615,6 +1616,10 @@ function materializeAtomicFacts({
         ...(candidateBinding ? { candidateBinding } : {}),
         ...(deterministicBindingBasis ? { deterministicBindingBasis } : {}),
         ...(comparisonScopeKey ? { comparisonScopeKey } : {}),
+        ...(Array.isArray(candidateComparisonScopeKeys) &&
+        candidateComparisonScopeKeys.length > 1
+          ? { comparisonScopeKeys: [...candidateComparisonScopeKeys] }
+          : {}),
         ...(candidate.objectScopeProof
           ? {
               objectScopeProof: JSON.parse(
@@ -1632,7 +1637,10 @@ function materializeAtomicFacts({
       };
     });
     const comparisonScopeKeys = unique(
-      sources.map(({ comparisonScopeKey }) => comparisonScopeKey)
+      sources.flatMap(({ comparisonScopeKey, comparisonScopeKeys: keys }) => [
+        comparisonScopeKey,
+        ...(keys || []),
+      ])
     ).sort();
     const vs22LocalNarrowContinuationProof =
       judgement.requirementId === "VS-22" &&

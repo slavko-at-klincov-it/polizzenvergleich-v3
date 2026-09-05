@@ -6747,3 +6747,20 @@ Der Lauf belegt die Korrektur der mehrzeiligen kombinierten Überschrift auf
 dem bekannten 1+9-Dokumentpaket. Er ist weder ein unbekannter
 Versicherer-/Dokument-Holdout noch ein 99-Prozent-Nachweis und noch keine
 Deploymentfreigabe.
+
+## 135. Unterbrochener VS-28-Mehrfach-Scope-Forward-Fix
+
+Der auf Abschnitt 134 folgende kleine Forward-Fix transportiert eine
+artifact- und bytegebundene kombinierte Überschrift als kanonische
+Mehrfach-Scope-Menge durch Prepared Evidence, Selected Sources und
+Vergleichsatom. Konkrete lokale Narrow-Bindungen behalten Vorrang; fehlende,
+abweichende, vertauschte oder duplizierte Source-/Atom-Provenienz wird
+fail-closed abgewiesen. Das Profil wurde als V109/V70 versioniert, V108/V69
+bleibt historisch lesbar.
+
+Vor der angeordneten Unterbrechung bestanden auf dem Mac Studio unter Node
+22.23.2 sechs fokussierte Suites mit 140/140 Tests. Vollständige Gates,
+Real-Artefakt-Replay, neuer 224-Zeilen-Lauf und Deployment wurden bewusst nicht
+mehr begonnen. Vollständiger Arbeitsstand, Dateiliste, Proof-Limit und sichere
+Fortsetzungsreihenfolge stehen in
+`docs/ARBEITSUNTERBRECHUNG_VS28_MULTI_SCOPE_2026-09-05_DE.md`.

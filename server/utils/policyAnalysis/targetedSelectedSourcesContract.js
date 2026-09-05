@@ -8,6 +8,9 @@ const {
 const {
   validSourceBoundObjectMembershipProof,
 } = require("./objectMembershipEvidenceContract");
+const {
+  SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1,
+} = require("./sourceBoundSectionScopeContract");
 
 const ALLOWED_CANDIDATE_BINDINGS = new Set(["DIRECT", "NARROW_SCOPE"]);
 
@@ -48,6 +51,63 @@ function canonicalEqual(left, right) {
 
 function privateCopy(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function selectedComparisonScopeProvenance(candidate, candidateBinding) {
+  const deterministicBindingBasis = candidate.deterministicBindingBasis;
+  const comparisonScopeKey = candidate.comparisonScopeKey;
+  const comparisonScopeKeys = candidate.comparisonScopeKeys;
+  if (
+    deterministicBindingBasis !== undefined &&
+    (typeof deterministicBindingBasis !== "string" ||
+      !deterministicBindingBasis.trim())
+  )
+    throw sourceError(
+      "TARGETED_SOURCES_DETERMINISTIC_BASIS_INVALID",
+      candidate.candidateId
+    );
+  if (comparisonScopeKeys !== undefined) {
+    const canonical = Array.isArray(comparisonScopeKeys)
+      ? [...new Set(comparisonScopeKeys)].sort()
+      : [];
+    if (
+      candidateBinding !== "NARROW_SCOPE" ||
+      deterministicBindingBasis !==
+        SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1 ||
+      comparisonScopeKey !== undefined ||
+      canonical.length < 2 ||
+      canonical.some(
+        (scopeKey) => !/^[A-Z][A-Z0-9_]*$/u.test(String(scopeKey || ""))
+      ) ||
+      JSON.stringify(canonical) !== JSON.stringify(comparisonScopeKeys)
+    )
+      throw sourceError(
+        "TARGETED_SOURCES_MULTI_SCOPE_PROVENANCE_INVALID",
+        candidate.candidateId
+      );
+    return {
+      deterministicBindingBasis,
+      comparisonScopeKeys: canonical,
+    };
+  }
+  if (deterministicBindingBasis === SOURCE_BOUND_MULTI_COMPARISON_SCOPE_SET_V1)
+    throw sourceError(
+      "TARGETED_SOURCES_MULTI_SCOPE_PROVENANCE_INVALID",
+      candidate.candidateId
+    );
+  if (comparisonScopeKey !== undefined) {
+    if (
+      candidateBinding !== "NARROW_SCOPE" ||
+      typeof comparisonScopeKey !== "string" ||
+      !comparisonScopeKey.trim()
+    )
+      throw sourceError(
+        "TARGETED_SOURCES_SCOPE_PROVENANCE_INVALID",
+        candidate.candidateId
+      );
+    return {};
+  }
+  return {};
 }
 
 function documentPages(documentArtifact) {
@@ -505,6 +565,7 @@ function validateSelectedCandidate({
     componentId: indexed.componentId,
     candidateId,
     candidateBinding,
+    ...selectedComparisonScopeProvenance(candidate, candidateBinding),
     physicalPageNumber,
     printedPageLabel: candidate.printedPageLabel || null,
     exactText,

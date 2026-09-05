@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const {
   ARTIFACT_BACKED_SOURCE_SCOPE_CONTRACT_ID,
   createArtifactBackedSourceScopeResolver,
+  sourceBoundCertifiedMultiSectionScopeKeys,
   sourceBoundSectionScopeKeys,
 } = require("../../../utils/policyAnalysis/sourceBoundSectionScopeContract");
 
@@ -262,6 +263,12 @@ describe("artifact-backed source scope", () => {
       "LEITUNGSWASSER_INSURANCE",
       "STURM_INSURANCE",
     ]);
+    expect(sourceBoundCertifiedMultiSectionScopeKeys(resolved)).toEqual([
+      "FEUER_INSURANCE",
+      "HAFTPFLICHT_INSURANCE",
+      "LEITUNGSWASSER_INSURANCE",
+      "STURM_INSURANCE",
+    ]);
   });
 
   test.each([
@@ -276,6 +283,9 @@ describe("artifact-backed source scope", () => {
     mutate(base.occurrence.sectionScopeHint);
 
     expect(sourceBoundSectionScopeKeys(base.occurrence)).toEqual([]);
+    expect(sourceBoundCertifiedMultiSectionScopeKeys(base.occurrence)).toEqual(
+      []
+    );
   });
 
   test.each([
