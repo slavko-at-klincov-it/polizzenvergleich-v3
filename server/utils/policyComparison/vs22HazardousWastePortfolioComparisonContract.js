@@ -15,6 +15,10 @@ const { derivePackageReviewAudit } = require("./packageReviewAudit");
 const {
   applicabilityFor,
 } = require("../policyAnalysis/preparedEvidenceContract");
+const {
+  locallyBindsVs22HazardousWasteInclusion,
+  validateVs22LocalNarrowContinuationProof,
+} = require("./vs22LocalNarrowContinuationProofContract");
 
 const VS22_CATEGORY_ID = "VS-22";
 const VS22_CATALOG_ID = "vs-occurrence-full-draft-v0.16";
@@ -29,19 +33,32 @@ const VS22_HAZARDOUS_COMPONENT_IDS = Object.freeze([
   "hazardous_waste",
   "hazardous_waste_cost_limit",
 ]);
-const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID =
+const LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID =
   "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2";
-const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION = 2;
+const LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION = 2;
+const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID =
+  "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V3";
+const VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION = 3;
+const LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID =
+  "VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1";
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID =
   "VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1";
 const VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE =
   "INCLUDED_HAZARDOUS_WASTE_OVER_COMPLETE_CONTROLLED_ABSENCE";
-const VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
+const LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
   "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1";
-const VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
+const VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT =
+  "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V2";
+const LEGACY_VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
   "VS22_SOURCE_ATOM_DIGEST_REPLAY_V1";
+const VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID =
+  "VS22_SOURCE_ATOM_DIGEST_REPLAY_V2";
 const HAZARDOUS_WASTE_ANCHOR =
   /(?<!\p{L})(?:sondermüll|sonderabfall|problemstoff\p{L}*|gefährlich\p{L}*\s+abf(?:all|äll)\p{L}*)(?!\p{L})/iu;
+const VS22_HAZARDOUS_WASTE_ADVERSE_LOCAL_TEXT =
+  /(?:(?<!\p{L})(?:nicht|kein\p{L}*)\s+(?:mitversichert|versichert|gedeckt|eingeschlossen|versicherungsschutz)(?!\p{L})|(?<!\p{L})ausgeschlossen(?!\p{L})|(?<!\p{L})(?:optional|wahlweise)(?!\p{L})|(?:gegen\s+(?:zuschlag|mehrprämie)|auf\s+wunsch|nur\s+bei\s+besonderer\s+vereinbarung|k(?:ann|önnen)\s+(?:mitversichert|eingeschlossen)\s+werden)|(?<!\p{L})(?:haftpflichtversicherung|ahvb|schadenersatzpflicht\p{L}*|ersatzpflichtig\p{L}*)(?!\p{L}))/iu;
+const VS22_SAFE_NARROW_HAZARDOUS_WASTE_CONTINUATION =
+  /^(?:(?:gefährlicher|gefährlichem|gefährlichen) abfall(?: und sonderabfall)?|sondermüll(?: und (?:gefährlicher|gefährlichem|gefährlichen) abfall)?), der durch (?:eindringen oder vermischen|vermischen oder eindringen) versicherter sachen (?:in bzw\. mit|in beziehungsweise mit|in oder mit) erdreich, wasser und\/oder luft entsteht, gilt als mitversichert\.?$/iu;
 const DOCUMENT_ROLES = new Set([
   "MAIN_POLICY",
   "SUPPLEMENT",
@@ -270,6 +287,111 @@ function sourceHasDirectHazardousWasteBinding(source) {
   );
 }
 
+function normalizedLocalText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function validMixedScopeSourceEnvelope(source) {
+  const exactText = String(source?.exactText || "");
+  const conditionCheckText = String(source?.conditionCheckText || "");
+  const documentStart = source?.documentStart;
+  const documentEnd = source?.documentEnd;
+  const conditionStart = source?.conditionCheckDocumentStart;
+  const conditionEnd = source?.conditionCheckDocumentEnd;
+  const relativeStart = documentStart - conditionStart;
+  return Boolean(
+    typeof source?.candidateId === "string" &&
+      source.candidateId.length > 0 &&
+      /^[a-f0-9]{64}$/u.test(source?.documentFingerprint || "") &&
+      source.candidateIdentityPageNumber === source.physicalPageNumber &&
+      Number.isInteger(documentStart) &&
+      Number.isInteger(documentEnd) &&
+      Number.isInteger(conditionStart) &&
+      Number.isInteger(conditionEnd) &&
+      documentStart >= conditionStart &&
+      documentEnd > documentStart &&
+      documentEnd <= conditionEnd &&
+      conditionEnd > conditionStart &&
+      exactText.length === documentEnd - documentStart &&
+      conditionCheckText.length === conditionEnd - conditionStart &&
+      conditionCheckText.slice(relativeStart, relativeStart + exactText.length) ===
+        exactText &&
+      source.exactTextSha256 === sha256Text(exactText) &&
+      source.conditionCheckTextSha256 === sha256Text(conditionCheckText)
+  );
+}
+
+function safeMixedScopeHazardousCoverage(
+  atom,
+  { expectedDocumentSha256 } = {}
+) {
+  if (
+    atom?.selectedScopePicture !== "GENERAL_AND_NARROW" ||
+    !Array.isArray(atom.selectedCandidateIds) ||
+    !Array.isArray(atom.sources)
+  )
+    return false;
+  const selectedCandidateIds = strings(atom.selectedCandidateIds);
+  const sourceCandidateIds = strings(
+    (atom.sources || []).map(({ candidateId }) => candidateId)
+  );
+  if (
+    selectedCandidateIds?.length !== atom.selectedCandidateIds.length ||
+    sourceCandidateIds?.length !== atom.sources.length ||
+    !sameJson(selectedCandidateIds, sourceCandidateIds) ||
+    strings(atom.comparisonScopeKeys || [])?.length !== 0 ||
+    !/^[a-f0-9]{64}$/u.test(expectedDocumentSha256 || "") ||
+    atom.vs22LocalNarrowContinuationProof?.documentFingerprint !==
+      expectedDocumentSha256 ||
+    !atom.sources.every(
+      (source) =>
+        validMixedScopeSourceEnvelope(source) &&
+        source.documentFingerprint === expectedDocumentSha256 &&
+        !source.comparisonScopeKey &&
+        !VS22_HAZARDOUS_WASTE_ADVERSE_LOCAL_TEXT.test(
+          source.conditionCheckText
+        )
+    )
+  )
+    return false;
+  if (
+    !validateVs22LocalNarrowContinuationProof(
+      atom.vs22LocalNarrowContinuationProof,
+      { atom }
+    )
+  )
+    return false;
+
+  const directSources = atom.sources.filter(
+    ({ candidateBinding }) => candidateBinding === "DIRECT"
+  );
+  const narrowSources = atom.sources.filter(
+    ({ candidateBinding }) => candidateBinding === "NARROW_SCOPE"
+  );
+  if (
+    directSources.length === 0 ||
+    narrowSources.length !== 1 ||
+    directSources.length + narrowSources.length !== atom.sources.length ||
+    !directSources.every(sourceHasDirectHazardousWasteBinding) ||
+    !directSources.some((source) =>
+      locallyBindsVs22HazardousWasteInclusion(source.conditionCheckText)
+    )
+  )
+    return false;
+
+  const narrowText = normalizedLocalText(
+    narrowSources[0].conditionCheckText
+  ).replace(/^seite\s+\d+\s+/iu, "");
+  return VS22_SAFE_NARROW_HAZARDOUS_WASTE_CONTINUATION.test(narrowText);
+}
+
 function validAtomSourcePages(atom) {
   const totalPhysicalPages = atom?.searchAudit?.totalPhysicalPages;
   return Boolean(
@@ -303,14 +425,21 @@ function hazardousFieldSourcesMatchCandidates(atom) {
   );
 }
 
-function safeHazardousCoverageAtom(atom) {
+function safeHazardousCoverageAtom(
+  atom,
+  { allowMixedScope = true, expectedDocumentSha256 } = {}
+) {
   const fields = atom?.fields || [];
   return Boolean(
     atom?.componentId === "hazardous_waste" &&
       atom?.evidencePresence === "FOUND" &&
       atom.coverageEffect === "INCLUDED" &&
       atom.conflictState === "NONE" &&
-      atom.selectedScopePicture === "GENERAL" &&
+      (atom.selectedScopePicture === "GENERAL" ||
+        (allowMixedScope &&
+          safeMixedScopeHazardousCoverage(atom, {
+            expectedDocumentSha256,
+          }))) &&
       (atom.unresolvedCandidateIds || []).length === 0 &&
       comparisonApplicability(atom) === PACKAGE_MEMBER &&
       validSourceBinding(atom) &&
@@ -396,7 +525,10 @@ function projectedAtoms(atoms) {
     );
 }
 
-function buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB }) {
+function buildVs22SourceAtomDigestReplayForVersion(
+  { categoryId, atomsA, atomsB },
+  { legacy }
+) {
   if (
     categoryId !== VS22_CATEGORY_ID ||
     !Array.isArray(atomsA) ||
@@ -404,8 +536,10 @@ function buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB }) {
   )
     return null;
   const body = {
-    schemaVersion: 1,
-    contractId: VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
+    schemaVersion: legacy ? 1 : 2,
+    contractId: legacy
+      ? LEGACY_VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID
+      : VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
     categoryId,
     sourceAtomDigestsSha256: {
       A: sha256(projectedAtoms(atomsA)),
@@ -415,10 +549,19 @@ function buildVs22SourceAtomDigestReplay({ categoryId, atomsA, atomsB }) {
   return { ...body, replayDigestSha256: sha256(body) };
 }
 
+function buildVs22SourceAtomDigestReplay(options) {
+  return buildVs22SourceAtomDigestReplayForVersion(options, { legacy: false });
+}
+
 function validVs22SourceAtomDigestReplay(replay) {
+  const versionValid =
+    (replay?.schemaVersion === 1 &&
+      replay?.contractId ===
+        LEGACY_VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID) ||
+    (replay?.schemaVersion === 2 &&
+      replay?.contractId === VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID);
   if (
-    replay?.schemaVersion !== 1 ||
-    replay?.contractId !== VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID ||
+    !versionValid ||
     replay?.categoryId !== VS22_CATEGORY_ID ||
     !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.A || "") ||
     !/^[a-f0-9]{64}$/u.test(replay?.sourceAtomDigestsSha256?.B || "")
@@ -446,6 +589,15 @@ function atomProof(atom) {
         exactText,
       })
     ),
+    ...(atom.vs22LocalNarrowContinuationProof
+      ? {
+          vs22LocalNarrowContinuationProof: {
+            contractId: atom.vs22LocalNarrowContinuationProof.contractId,
+            proofDigestSha256:
+              atom.vs22LocalNarrowContinuationProof.proofDigestSha256,
+          },
+        }
+      : {}),
   });
 }
 
@@ -472,6 +624,7 @@ function sideAssessment({
   requirementContract,
   expectedDocuments,
   mode,
+  allowMixedScope,
 }) {
   const manifest = canonicalDocumentManifest(expectedDocuments, side);
   const matrix = manifest
@@ -492,6 +645,13 @@ function sideAssessment({
     return null;
 
   const atomProjection = projectedAtoms(relevant);
+  const documentSha256ByUuid = new Map(
+    manifest.map(({ uuid, sha256: documentSha256 }) => [uuid, documentSha256])
+  );
+  const hazardousCoverageOptions = (atom) => ({
+    allowMixedScope,
+    expectedDocumentSha256: documentSha256ByUuid.get(atom.documentUuids?.[0]),
+  });
   const byComponent = Object.fromEntries(
     VS22_COMPONENTS.map(({ id }) => [
       id,
@@ -511,8 +671,8 @@ function sideAssessment({
   )
     return null;
   if (mode === "INCLUDED") {
-    const hazardousWaste = byComponent.hazardous_waste.filter(
-      safeHazardousCoverageAtom
+    const hazardousWaste = byComponent.hazardous_waste.filter((atom) =>
+      safeHazardousCoverageAtom(atom, hazardousCoverageOptions(atom))
     );
     const hazardousLimit = byComponent.hazardous_waste_cost_limit.filter(
       safeHazardousLimitAtom
@@ -523,7 +683,8 @@ function sideAssessment({
       hazardousLimit.length === 0 ||
       byComponent.hazardous_waste.some(
         (atom) =>
-          atom.evidencePresence === "FOUND" && !safeHazardousCoverageAtom(atom)
+          atom.evidencePresence === "FOUND" &&
+          !safeHazardousCoverageAtom(atom, hazardousCoverageOptions(atom))
       ) ||
       byComponent.hazardous_waste_cost_limit.some(
         (atom) =>
@@ -615,7 +776,8 @@ function packageReviewAllowsVs22Decision({
   );
 }
 
-function buildVs22HazardousWastePortfolioAudit({
+function buildVs22HazardousWastePortfolioAuditForVersion(
+  {
   categoryId,
   packageA,
   packageB,
@@ -625,7 +787,9 @@ function buildVs22HazardousWastePortfolioAudit({
   requirementContractB,
   expectedDocumentsA,
   expectedDocumentsB,
-}) {
+  },
+  { legacy }
+) {
   if (
     categoryId !== VS22_CATEGORY_ID ||
     !exactVs22Contract(requirementContractA) ||
@@ -640,6 +804,7 @@ function buildVs22HazardousWastePortfolioAudit({
       atoms: atomsA,
       requirementContract: requirementContractA,
       expectedDocuments: expectedDocumentsA,
+      allowMixedScope: !legacy,
     },
     B: {
       side: "B",
@@ -648,6 +813,7 @@ function buildVs22HazardousWastePortfolioAudit({
       atoms: atomsB,
       requirementContract: requirementContractB,
       expectedDocuments: expectedDocumentsB,
+      allowMixedScope: !legacy,
     },
   };
   let winner;
@@ -686,8 +852,12 @@ function buildVs22HazardousWastePortfolioAudit({
   )
     return null;
   const body = {
-    schemaVersion: VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION,
-    contractId: VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID,
+    schemaVersion: legacy
+      ? LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION
+      : VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION,
+    contractId: legacy
+      ? LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID
+      : VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID,
     categoryId,
     catalogId: VS22_CATALOG_ID,
     requirementContractDigest: requirementContractA.digest,
@@ -696,40 +866,74 @@ function buildVs22HazardousWastePortfolioAudit({
     winner,
     absentSide,
     missingComponentIds: VS22_HAZARDOUS_COMPONENT_IDS,
-    comparisonTreatment: VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
+    comparisonTreatment: legacy
+      ? LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT
+      : VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
     sides: { [winner]: included, [absentSide]: absent },
   };
   return { ...body, assessmentDigestSha256: sha256(body) };
 }
 
+function buildVs22HazardousWastePortfolioAudit(options) {
+  return buildVs22HazardousWastePortfolioAuditForVersion(options, {
+    legacy: false,
+  });
+}
+
 function vs22HazardousWastePortfolioDecision(audit) {
   const winner = audit.winner;
   const absentSide = audit.absentSide;
+  const legacy =
+    audit?.contractId ===
+      LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID &&
+    audit?.schemaVersion ===
+      LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION;
   return {
     schemaVersion: 7,
     outcome: winner === "A" ? "VORTEIL_A" : "VORTEIL_B",
     reasonCode: VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE,
     reason: `Vorteil Polizze ${winner}: Polizze ${winner} enthält belegten zusätzlichen Schutz für Sondermüll beziehungsweise gefährlichen Abfall mit zugeordnetem Limit. In Polizze ${absentSide} wurde nach vollständiger kontrollierter Prüfung aller bereitgestellten Paketdokumente keine entsprechende Sondermüllregelung gefunden. Damit ist dieser Schutz für den Vergleich in Polizze ${winner} enthalten und in Polizze ${absentSide} nicht enthalten; ein ausdrücklicher Ausschluss oder ein Null-Euro-Limit in Polizze ${absentSide} wird nicht behauptet.`,
     reviewRequired: false,
-    ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
-    comparisonTreatment: VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
+    ruleId: legacy
+      ? LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID
+      : VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+    comparisonTreatment: legacy
+      ? LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT
+      : VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
     vs22HazardousWastePortfolioAudit: audit,
     dimensions: [],
   };
 }
 
 function validateVs22HazardousWastePortfolioAudit(audit, options) {
+  const legacy =
+    audit?.contractId ===
+      LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID &&
+    audit?.schemaVersion ===
+      LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION;
+  const current =
+    audit?.contractId === VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID &&
+    audit?.schemaVersion ===
+      VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION;
+  if (!legacy && !current)
+    throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_VERSION_INVALID");
   const externalAtomsProvided = Boolean(
     Array.isArray(options?.atomsA) && Array.isArray(options?.atomsB)
   );
   const externalReplay = externalAtomsProvided
-    ? buildVs22SourceAtomDigestReplay({
-        categoryId: options.categoryId,
-        atomsA: options.atomsA,
-        atomsB: options.atomsB,
-      })
+    ? buildVs22SourceAtomDigestReplayForVersion(
+        {
+          categoryId: options.categoryId,
+          atomsA: options.atomsA,
+          atomsB: options.atomsB,
+        },
+        { legacy }
+      )
     : options?.sourceAtomDigestReplay;
-  if (!validVs22SourceAtomDigestReplay(externalReplay))
+  if (
+    !validVs22SourceAtomDigestReplay(externalReplay) ||
+    externalReplay.schemaVersion !== (legacy ? 1 : 2)
+  )
     throw new Error("VS22_SOURCE_ATOM_DIGEST_REPLAY_REQUIRED");
   if (
     audit?.sides?.A?.projectedAtomsDigestSha256 !==
@@ -738,15 +942,18 @@ function validateVs22HazardousWastePortfolioAudit(audit, options) {
       externalReplay.sourceAtomDigestsSha256.B
   )
     throw new Error("VS22_SOURCE_ATOM_DIGEST_REPLAY_MISMATCH");
-  const expected = buildVs22HazardousWastePortfolioAudit({
-    ...options,
-    atomsA: externalAtomsProvided
-      ? options.atomsA
-      : audit?.sides?.A?.projectedAtoms,
-    atomsB: externalAtomsProvided
-      ? options.atomsB
-      : audit?.sides?.B?.projectedAtoms,
-  });
+  const expected = buildVs22HazardousWastePortfolioAuditForVersion(
+    {
+      ...options,
+      atomsA: externalAtomsProvided
+        ? options.atomsA
+        : audit?.sides?.A?.projectedAtoms,
+      atomsB: externalAtomsProvided
+        ? options.atomsB
+        : audit?.sides?.B?.projectedAtoms,
+    },
+    { legacy }
+  );
   if (!expected)
     throw new Error("VS22_HAZARDOUS_WASTE_PORTFOLIO_NOT_QUALIFIED");
   if (!sameJson(audit, expected))
@@ -755,6 +962,11 @@ function validateVs22HazardousWastePortfolioAudit(audit, options) {
 }
 
 module.exports = {
+  LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID,
+  LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION,
+  LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+  LEGACY_VS22_HAZARDOUS_WASTE_PORTFOLIO_TREATMENT,
+  LEGACY_VS22_SOURCE_ATOM_DIGEST_REPLAY_CONTRACT_ID,
   VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_CONTRACT_ID,
   VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_SCHEMA_VERSION,
   VS22_HAZARDOUS_WASTE_PORTFOLIO_REASON_CODE,

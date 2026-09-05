@@ -10,7 +10,14 @@ const {
 } = require("../../utils/policyComparison/customerMetricContract");
 const {
   PRODUCT_PROFILE,
+  STRUCTURAL_CONCEPT_CONTEXT_PRODUCT_PROFILE_IDENTITY,
 } = require("../../utils/policyComparison/productContract");
+const {
+  CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT,
+} = require("../../utils/policyComparison/customerResultRuleOutcomeContract");
+const {
+  buildVs22LocalNarrowContinuationProof,
+} = require("../../utils/policyComparison/vs22LocalNarrowContinuationProofContract");
 const {
   VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
   VS22_REQUIREMENT_CONTRACT_DIGEST,
@@ -46,6 +53,45 @@ function sha256(value) {
     .createHash("sha256")
     .update(JSON.stringify(stableValue(value)))
     .digest("hex");
+}
+
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function sourceEnvelope(source, index) {
+  const conditionCheckText = source.conditionCheckText;
+  const exactText = source.exactText;
+  const relativeStart = conditionCheckText.indexOf(exactText);
+  if (relativeStart < 0) throw new Error("TEST_SOURCE_TEXT_NOT_LOCAL");
+  const conditionCheckDocumentStart = 1000 + index * 1000;
+  const documentStart = conditionCheckDocumentStart + relativeStart;
+  return {
+    ...source,
+    documentFingerprint: "a".repeat(64),
+    candidateIdentityPageNumber: source.physicalPageNumber,
+    documentStart,
+    documentEnd: documentStart + exactText.length,
+    exactTextSha256: sha256Text(exactText),
+    conditionCheckDocumentStart,
+    conditionCheckDocumentEnd:
+      conditionCheckDocumentStart + conditionCheckText.length,
+    conditionCheckTextSha256: sha256Text(conditionCheckText),
+  };
+}
+
+function replaceSourceText(source, { exactText, conditionCheckText }, index) {
+  Object.assign(
+    source,
+    sourceEnvelope(
+      {
+        ...source,
+        exactText: exactText ?? source.exactText,
+        conditionCheckText,
+      },
+      index
+    )
+  );
 }
 
 function coherentlyRehash(audit) {
@@ -234,6 +280,157 @@ function fixture(reverse = false) {
   };
 }
 
+function mixedScopeFixture(
+  reverse = false,
+  {
+    positiveDirectLine =
+      "Kosten für Sondermüll sind auf erstes Risiko zusätzlich mitversichert.",
+    narrowText =
+      "gefährlichem Abfall und Sonderabfall, der durch Eindringen oder Vermischen versicherter Sachen in bzw. mit Erdreich, Wasser und/oder Luft entsteht, gilt als mitversichert.",
+    proofFingerprint = null,
+    additionalDirectLine = null,
+  } = {}
+) {
+  const input = fixture(reverse);
+  const winner = reverse ? "B" : "A";
+  const atom = input[`atoms${winner}`].find(
+    ({ componentId }) => componentId === "hazardous_waste"
+  );
+  const fingerprint = input[`expectedDocuments${winner}`][0].sha256;
+  const neutralDirectLines = Array.from(
+    { length: 10 },
+    (_, index) => `Begriff Sondermüll in Vertragsbestimmung ${index + 1}.`
+  );
+  if (additionalDirectLine) neutralDirectLines[0] = additionalDirectLine;
+  const directLines = [positiveDirectLine, ...neutralDirectLines];
+  const page27 = `Seite 27\n${directLines.join("\n")}\nDie dem Gesetz nach notwendige Behandlung von Sondermüll,`;
+  const page28 = `Seite 28\n${narrowText}`;
+  const pageTexts = Array.from(
+    { length: 26 },
+    (_unused, index) => `Seite ${index + 1}\nUnbeteiligter Inhalt.`
+  );
+  pageTexts.push(page27, page28);
+  let pageContent = "";
+  const pageMap = [];
+  for (const [index, pageText] of pageTexts.entries()) {
+    const pageNumber = index + 1;
+    if (index > 0) pageContent += `\n\n[DOCUMENT_PAGE ${pageNumber}]\n`;
+    const start = pageContent.length;
+    pageContent += pageText;
+    pageMap.push({ pageNumber, start, end: pageContent.length });
+  }
+  const page27Start = pageMap[26].start;
+  const page28Start = pageMap[27].start;
+  const directCandidates = directLines.map((line, index) => {
+    const exactText = "Sondermüll";
+    const documentStart = page27Start + page27.indexOf(line) + line.indexOf(exactText);
+    return {
+      candidateId: `candidate:${winner}:hazardous-waste:direct:${index}`,
+      physicalPageNumber: 27,
+      candidateBinding: "DIRECT",
+      deterministicBindingBasis: "EXPLICIT_HAZARDOUS_WASTE_COSTS",
+      exactText,
+      documentStart,
+      documentEnd: documentStart + exactText.length,
+      contextText: page27,
+      contextDocumentStart: page27Start,
+    };
+  });
+  const predecessorText = "Sondermüll";
+  const predecessorStart = page27Start + page27.lastIndexOf(predecessorText);
+  directCandidates.push({
+    candidateId: `candidate:${winner}:hazardous-waste:direct:predecessor`,
+    physicalPageNumber: 27,
+    candidateBinding: "DIRECT",
+    deterministicBindingBasis: "EXPLICIT_HAZARDOUS_WASTE_COSTS",
+    exactText: predecessorText,
+    documentStart: predecessorStart,
+    documentEnd: predecessorStart + predecessorText.length,
+    contextText: page27,
+    contextDocumentStart: page27Start,
+  });
+  const narrowExactText = "gefährlichem Abfall";
+  const narrowStart = page28Start + page28.indexOf(narrowExactText);
+  const narrowCandidate = {
+    candidateId: `candidate:${winner}:hazardous-waste:narrow:continuation`,
+    physicalPageNumber: 28,
+    candidateBinding: "NARROW_SCOPE",
+    exactText: narrowExactText,
+    documentStart: narrowStart,
+    documentEnd: narrowStart + narrowExactText.length,
+    contextText: page28,
+    contextDocumentStart: page28Start,
+  };
+  const selectedCandidates = [...directCandidates, narrowCandidate];
+  const sources = selectedCandidates.map((candidate) => {
+    const relativeStart = candidate.documentStart - candidate.contextDocumentStart;
+    const relativeEnd = candidate.documentEnd - candidate.contextDocumentStart;
+    const conditionStart = Math.max(0, relativeStart - 240);
+    const conditionEnd = Math.min(candidate.contextText.length, relativeEnd + 240);
+    const conditionCheckText = candidate.contextText.slice(
+      conditionStart,
+      conditionEnd
+    );
+    const conditionCheckDocumentStart =
+      candidate.contextDocumentStart + conditionStart;
+    return {
+      candidateId: candidate.candidateId,
+      physicalPageNumber: candidate.physicalPageNumber,
+      candidateIdentityPageNumber: candidate.physicalPageNumber,
+      documentFingerprint: proofFingerprint || fingerprint,
+      candidateBinding: candidate.candidateBinding,
+      ...(candidate.deterministicBindingBasis
+        ? { deterministicBindingBasis: candidate.deterministicBindingBasis }
+        : {}),
+      exactText: candidate.exactText,
+      conditionCheckText,
+      documentStart: candidate.documentStart,
+      documentEnd: candidate.documentEnd,
+      exactTextSha256: sha256Text(candidate.exactText),
+      conditionCheckDocumentStart,
+      conditionCheckDocumentEnd:
+        conditionCheckDocumentStart + conditionCheckText.length,
+      conditionCheckTextSha256: sha256Text(conditionCheckText),
+    };
+  });
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint: proofFingerprint || fingerprint,
+    document: {
+      sourceDocumentId: proofFingerprint || fingerprint,
+      pageContent,
+      pageMap,
+      pdfExtraction: {
+        schemaVersion: 1,
+        totalPages: 28,
+        processedPages: 28,
+        pagesWithText: 28,
+        complete: true,
+      },
+    },
+  };
+  atom.sources = sources;
+  atom.selectedCandidateIds = sources.map(({ candidateId }) => candidateId);
+  atom.selectedScopePicture = "GENERAL_AND_NARROW";
+  atom.vs22LocalNarrowContinuationProof =
+    buildVs22LocalNarrowContinuationProof({
+      documentArtifact,
+      documentFingerprint: proofFingerprint || fingerprint,
+      requirementId: "VS-22",
+      componentId: "hazardous_waste",
+      selectedScopePicture: atom.selectedScopePicture,
+      selectedCandidateIds: atom.selectedCandidateIds,
+      selectedCandidates,
+      sources,
+    });
+  for (const candidateAtom of input[`atoms${winner}`]) {
+    candidateAtom.searchAudit.physicalPagesChecked = 28;
+    candidateAtom.searchAudit.totalPhysicalPages = 28;
+  }
+  input[`package${winner}`].searchAudit.physicalPagesChecked = 28;
+  return input;
+}
+
 describe("VS-22 hazardous-waste portfolio comparison contract", () => {
   test.each([
     [false, "A", "VORTEIL_A"],
@@ -245,8 +442,8 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       const audit = buildVs22HazardousWastePortfolioAudit(input);
 
       expect(audit).toMatchObject({
-        schemaVersion: 2,
-        contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2",
+        schemaVersion: 3,
+        contractId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V3",
         categoryId: "VS-22",
         winner,
         missingComponentIds: ["hazardous_waste", "hazardous_waste_cost_limit"],
@@ -272,6 +469,387 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       ).not.toThrow();
     }
   );
+
+  test("keeps the historical V2 audit and V1 source replay readable", () => {
+    const input = fixture();
+    const audit = buildVs22HazardousWastePortfolioAudit(input);
+    audit.schemaVersion = 2;
+    audit.contractId = "VS22_HAZARDOUS_WASTE_PORTFOLIO_AUDIT_V2";
+    audit.comparisonTreatment =
+      "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1";
+    coherentlyRehash(audit);
+    const sourceAtomDigestReplay = buildVs22SourceAtomDigestReplay(input);
+    sourceAtomDigestReplay.schemaVersion = 1;
+    sourceAtomDigestReplay.contractId = "VS22_SOURCE_ATOM_DIGEST_REPLAY_V1";
+    delete sourceAtomDigestReplay.replayDigestSha256;
+    sourceAtomDigestReplay.replayDigestSha256 = sha256(sourceAtomDigestReplay);
+
+    expect(() =>
+      validateVs22HazardousWastePortfolioAudit(audit, {
+        categoryId: input.categoryId,
+        packageA: input.packageA,
+        packageB: input.packageB,
+        requirementContractA: contract,
+        requirementContractB: contract,
+        expectedDocumentsA: input.expectedDocumentsA,
+        expectedDocumentsB: input.expectedDocumentsB,
+        sourceAtomDigestReplay,
+      })
+    ).not.toThrow();
+    expect(vs22HazardousWastePortfolioDecision(audit)).toMatchObject({
+      ruleId: "VS22_HAZARDOUS_WASTE_PORTFOLIO_ADVANTAGE_V1",
+      comparisonTreatment:
+        "VS22_HAZARDOUS_WASTE_INCLUDED_OVER_CONTROLLED_ABSENCE_V1",
+    });
+
+    const categories = [
+      {
+        categoryView: "VS",
+        rows: [
+          {
+            categoryId: "VS-22",
+            outcome: "A_BELEGT_B_VOLLSTÄNDIG_NICHT_GEFUNDEN",
+            packageA: input.packageA,
+            packageB: input.packageB,
+            pointDecision: vs22HazardousWastePortfolioDecision(audit),
+            vs22SourceAtomDigestReplay: sourceAtomDigestReplay,
+          },
+        ],
+      },
+    ];
+    expect(
+      validateCustomerComparison({
+        schemaVersion: 15,
+        status: "COMPARISON_RESULT_MATERIALIZED",
+        productProfile: STRUCTURAL_CONCEPT_CONTEXT_PRODUCT_PROFILE_IDENTITY,
+        customerResultRuleOutcomeContract: {
+          schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+          contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+        },
+        documents: [
+          ...input.expectedDocumentsA,
+          ...input.expectedDocumentsB,
+        ],
+        categories,
+        totals: deriveCustomerMetrics(categories),
+      })
+    ).toMatchObject({
+      customerReviewRequired: 0,
+      pointDecisions: { VORTEIL_A: 1 },
+    });
+  });
+
+  test.each([
+    [false, "A", "VORTEIL_A"],
+    [true, "B", "VORTEIL_B"],
+  ])(
+    "accepts a source-bound 12-direct plus one safe narrow continuation replay (reverse=%s)",
+    (reverse, winner, outcome) => {
+      const input = mixedScopeFixture(reverse);
+      const audit = buildVs22HazardousWastePortfolioAudit(input);
+      const sourceAtomDigestReplay = buildVs22SourceAtomDigestReplay(input);
+
+      expect(audit).toMatchObject({ winner });
+      expect(
+        audit.sides[winner].hazardousWasteProofs[0]
+      ).toMatchObject({ selectedScopePicture: "GENERAL_AND_NARROW" });
+      expect(decidePoint(input)).toMatchObject({
+        outcome,
+        ruleId: VS22_HAZARDOUS_WASTE_PORTFOLIO_RULE_ID,
+        reviewRequired: false,
+      });
+      expect(sourceAtomDigestReplay).toMatchObject({
+        schemaVersion: 2,
+        contractId: "VS22_SOURCE_ATOM_DIGEST_REPLAY_V2",
+      });
+      expect(() =>
+        validateVs22HazardousWastePortfolioAudit(audit, {
+          categoryId: input.categoryId,
+          packageA: input.packageA,
+          packageB: input.packageB,
+          requirementContractA: contract,
+          requirementContractB: contract,
+          expectedDocumentsA: input.expectedDocumentsA,
+          expectedDocumentsB: input.expectedDocumentsB,
+          sourceAtomDigestReplay,
+        })
+      ).not.toThrow();
+    }
+  );
+
+  test.each([
+    [
+      "an unrelated positive sentence",
+      {
+        positiveDirectLine:
+          "Sondermüll ist nur definiert. Das Gebäude ist versichert.",
+      },
+    ],
+    [
+      "a negated direct inclusion",
+      {
+        positiveDirectLine:
+          "Kosten für Sondermüll sind nicht mitversichert.",
+      },
+    ],
+    [
+      "an optional direct inclusion",
+      {
+        positiveDirectLine:
+          "Kosten für Sondermüll sind nur bei gesonderter Vereinbarung mitversichert.",
+      },
+    ],
+    [
+      "a liability-only direct inclusion",
+      {
+        positiveDirectLine:
+          "In der Haftpflichtversicherung sind Kosten für Sondermüll mitversichert.",
+      },
+    ],
+    [
+      "a negated narrow continuation",
+      {
+        narrowText:
+          "gefährlichem Abfall und Sonderabfall, der durch Eindringen oder Vermischen versicherter Sachen in bzw. mit Erdreich, Wasser und/oder Luft entsteht, gilt als nicht mitversichert.",
+      },
+    ],
+    [
+      "an optional narrow continuation",
+      {
+        narrowText:
+          "gefährlichem Abfall und Sonderabfall, der durch Eindringen oder Vermischen versicherter Sachen in bzw. mit Erdreich, Wasser und/oder Luft entsteht, gilt nur bei gesonderter Vereinbarung als mitversichert.",
+      },
+    ],
+    [
+      "a different narrow cause",
+      {
+        narrowText:
+          "gefährlichem Abfall und Sonderabfall, der durch Zwischenlagerung versicherter Sachen in Erdreich entsteht, gilt als mitversichert.",
+      },
+    ],
+    ["a proof fingerprint outside the package manifest", { proofFingerprint: "f".repeat(64) }],
+  ])("rejects coherently built mixed scope with %s", (_label, options) => {
+    const input = mixedScopeFixture(false, options);
+    expect(buildVs22HazardousWastePortfolioAudit(input)).toBeNull();
+  });
+
+  test.each([
+    "Sondermüll ist nicht eingeschlossen.",
+    "Für Sondermüll besteht kein Versicherungsschutz.",
+  ])(
+    "rejects a coherent additional negative direct source: %s",
+    (additionalDirectLine) => {
+      const input = mixedScopeFixture(false, { additionalDirectLine });
+      const hazardousAtom = input.atomsA.find(
+        ({ componentId }) => componentId === "hazardous_waste"
+      );
+
+      expect(hazardousAtom.vs22LocalNarrowContinuationProof).not.toBeNull();
+      expect(buildVs22HazardousWastePortfolioAudit(input)).toBeNull();
+    }
+  );
+
+  test.each([
+    [
+      "only direct sources",
+      (atom) => {
+        atom.sources = atom.sources.filter(
+          ({ candidateBinding }) => candidateBinding === "DIRECT"
+        );
+      },
+    ],
+    [
+      "only the narrow source",
+      (atom) => {
+        atom.sources = atom.sources.filter(
+          ({ candidateBinding }) => candidateBinding === "NARROW_SCOPE"
+        );
+      },
+    ],
+    [
+      "a second narrow source",
+      (atom) => {
+        atom.sources.push({
+          ...atom.sources.at(-1),
+          candidateId: "candidate:A:hazardous-waste:narrow:second",
+        });
+      },
+    ],
+    [
+      "an unknown source binding",
+      (atom) => {
+        atom.sources[0].candidateBinding = "MENTION_ONLY";
+      },
+    ],
+    [
+      "a wrong direct binding basis",
+      (atom) => {
+        atom.sources[0].deterministicBindingBasis =
+          "EXPLICIT_DISPOSAL_COSTS";
+      },
+    ],
+    [
+      "no locally positive direct source",
+      (atom) => {
+        atom.sources
+          .filter(({ candidateBinding }) => candidateBinding === "DIRECT")
+          .forEach((source, index) =>
+            replaceSourceText(
+              source,
+              {
+                conditionCheckText: source.conditionCheckText.replace(
+                  "sind zusätzlich mitversichert",
+                  "ist definiert"
+                ),
+              },
+              index
+            )
+          );
+      },
+    ],
+    [
+      "a negated direct source",
+      (atom) => {
+        replaceSourceText(
+          atom.sources[0],
+          {
+            conditionCheckText:
+              "Die Kosten für Sondermüll sind nicht versichert.",
+          },
+          0
+        );
+      },
+    ],
+    [
+      "an optional direct source",
+      (atom) => {
+        replaceSourceText(
+          atom.sources[0],
+          {
+            conditionCheckText:
+              "Die Kosten für Sondermüll können gegen Mehrprämie mitversichert werden.",
+          },
+          0
+        );
+      },
+    ],
+    [
+      "a liability source",
+      (atom) => {
+        replaceSourceText(
+          atom.sources[0],
+          {
+            conditionCheckText:
+              "In der Haftpflichtversicherung ist Sondermüll mitversichert.",
+          },
+          0
+        );
+      },
+    ],
+    [
+      "a negated narrow continuation",
+      (atom) => {
+        const source = atom.sources.at(-1);
+        replaceSourceText(
+          source,
+          {
+            conditionCheckText: source.conditionCheckText.replace(
+              "gilt als mitversichert",
+              "gilt als nicht mitversichert"
+            ),
+          },
+          atom.sources.length - 1
+        );
+      },
+    ],
+    [
+      "an appended exclusion inside the narrow context",
+      (atom) => {
+        const source = atom.sources.at(-1);
+        replaceSourceText(
+          source,
+          {
+            conditionCheckText: `${source.conditionCheckText} Schäden durch Sondermüll sind ausgeschlossen.`,
+          },
+          atom.sources.length - 1
+        );
+      },
+    ],
+    [
+      "a different narrow cause",
+      (atom) => {
+        const source = atom.sources.at(-1);
+        replaceSourceText(
+          source,
+          {
+            conditionCheckText: source.conditionCheckText.replace(
+              "Eindringen oder Vermischen",
+              "Zwischenlagerung"
+            ),
+          },
+          atom.sources.length - 1
+        );
+      },
+    ],
+    [
+      "a source scope key",
+      (atom) => {
+        atom.sources.at(-1).comparisonScopeKey = "hazardous:soil-only";
+      },
+    ],
+    [
+      "an atom scope key",
+      (atom) => {
+        atom.comparisonScopeKeys = ["hazardous:soil-only"];
+      },
+    ],
+    [
+      "a source not selected by the atom",
+      (atom) => {
+        atom.sources.push({
+          ...atom.sources[0],
+          candidateId: "candidate:A:hazardous-waste:unselected",
+        });
+      },
+    ],
+    [
+      "a duplicate selected source",
+      (atom) => {
+        atom.sources.push({ ...atom.sources[0] });
+      },
+    ],
+    [
+      "a tampered exact-text hash",
+      (atom) => {
+        atom.sources[0].exactTextSha256 = "f".repeat(64);
+      },
+    ],
+    [
+      "a tampered condition offset",
+      (atom) => {
+        atom.sources.at(-1).conditionCheckDocumentStart += 1;
+      },
+    ],
+  ])("fails closed for mixed scope with %s", (_label, mutate) => {
+    const input = mixedScopeFixture();
+    const atom = input.atomsA.find(
+      ({ componentId }) => componentId === "hazardous_waste"
+    );
+    mutate(atom);
+    atom.selectedCandidateIds = atom.sources.map(
+      ({ candidateId }) => candidateId
+    );
+    expect(buildVs22HazardousWastePortfolioAudit(input)).toBeNull();
+  });
+
+  test("keeps the hazardous-waste limit on the existing GENERAL-only contract", () => {
+    const input = mixedScopeFixture();
+    input.atomsA.find(
+      ({ componentId }) => componentId === "hazardous_waste_cost_limit"
+    ).selectedScopePicture = "GENERAL_AND_NARROW";
+
+    expect(buildVs22HazardousWastePortfolioAudit(input)).toBeNull();
+  });
 
   test("runs before the package review gate and renders the customer advantage", () => {
     const input = fixture();
@@ -353,8 +931,8 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     ).not.toThrow();
   });
 
-  test("replays the customer result against the private row digest and strips it from the read view", () => {
-    const input = fixture();
+  test("replays the current mixed V3 customer result against the private V2 row digest and strips it from the read view", () => {
+    const input = mixedScopeFixture();
     const audit = buildVs22HazardousWastePortfolioAudit(input);
     const categories = [
       {
@@ -372,9 +950,13 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
       },
     ];
     const result = {
-      schemaVersion: 11,
+      schemaVersion: 15,
       status: "COMPARISON_RESULT_MATERIALIZED",
       productProfile: PRODUCT_PROFILE,
+      customerResultRuleOutcomeContract: {
+        schemaVersion: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.schemaVersion,
+        contractId: CUSTOMER_RESULT_RULE_OUTCOME_CONTRACT.contractId,
+      },
       documents: [...input.expectedDocumentsA, ...input.expectedDocumentsB],
       categories,
       totals: deriveCustomerMetrics(categories),
@@ -397,6 +979,16 @@ describe("VS-22 hazardous-waste portfolio comparison contract", () => {
     ).sources[0].exactText = "Allgemeine Entsorgungskosten";
     coherentlyRehash(tamperedAudit);
     expect(() => validateCustomerComparison(tampered)).toThrow(
+      "COMPARISON_VS22_PORTFOLIO_AUDIT_INVALID"
+    );
+
+    const replayTampered = JSON.parse(JSON.stringify(result));
+    const replay = replayTampered.categories[0].rows[0]
+      .vs22SourceAtomDigestReplay;
+    replay.sourceAtomDigestsSha256.A = "f".repeat(64);
+    delete replay.replayDigestSha256;
+    replay.replayDigestSha256 = sha256(replay);
+    expect(() => validateCustomerComparison(replayTampered)).toThrow(
       "COMPARISON_VS22_PORTFOLIO_AUDIT_INVALID"
     );
   });

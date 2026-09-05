@@ -6325,3 +6325,121 @@ Fließtextsätze werden adversarial abgewiesen; die nächste Geschwister-Bullet
 bleibt auch beim echten Governor ausgeschlossen. Das ist eine Härtung der noch
 nicht freigegebenen V106/V67-Semantik und benötigt denselben vollständigen
 Finalgate.
+
+## 133. Finalgate-Differential und VS-22-Seitenfortsetzungsbeweis
+
+### 133.1 Tatsächliche Laufdaten auf `7ccef337a`
+
+Der frische LF-Lauf auf dem Mac Studio terminierte ohne Resume in
+1.206.334 ms. Er verarbeitete 10/10 Dokumente und 100/100
+Dokument-Kategorie-Schritte mit 237 Qwen-Aufrufen, ohne Embedding oder Hybrid.
+Alle 35 Ergebniszeilen und 385 Kundenzellen blieben gegenüber dem letzten
+fachlich guten LF-Lauf stabil. Die tatsächliche Kundenreviewzahl ist genau
+eins (`LF-FE-02 / RF-02`); der gespeicherte breitere Altzähler 16 ist keine
+Kundenreviewzahl.
+
+Der symmetrische Lauf auf demselben Commit terminierte ebenfalls ohne Resume
+in 1.698.241 ms mit 330 Qwen-Aufrufen. Technische Verträge bestanden: 224
+Zeilen, 225 mal 17 Workbookzellen einschließlich Kopfzeile, null
+JSON-/XLSX-Outcomeabweichungen und vollständige Artefakt-Hashkette. Die
+fachliche Partition lautete:
+
+```text
+VORTEIL_A                 4
+VORTEIL_B                 4
+DOKUMENTATIONSUNTERSCHIED 34
+GLEICHWERTIG              125
+KEIN_DOKUMENTIERTER_VORTEIL 12
+NICHT_VERGLEICHBAR        12
+UNKLAR                    45
+```
+
+Gegen den bevorzugten Vorlauf änderten sich exakt drei Zeilen:
+
+1. `VS-22`: `VORTEIL_A` zu `UNKLAR`;
+2. `FE-A10`: `NICHT_VERGLEICHBAR` zu `UNKLAR`;
+3. `FE-D01`: weiterhin `UNKLAR`, aber A von `BELEGT` zu `UNGEKLÄRT`.
+
+Diese drei Änderungen dürfen nicht als ein einziger Fehlerblock behandelt
+werden. `FE-A10` ist auf dem neuen Lauf fachlich sicherer: Der frühere
+Nichtvergleichbarkeitsschluss setzte unterschiedliche enge Fahrzeugobjekte
+ohne vollständigen source-bound Scope-Vektor gleich. Ein sicherer späterer
+Fix benötigt Fahrzeugidentität, Fahrzeugklasse und exakte Objektmenge. Ein
+generischer Entscheidungs-Bypass wurde nach Senior-Review vollständig
+verworfen. `FE-D01` ist dagegen ein separater Parserfehler an einer
+mehrzeiligen kombinierten Spartenüberschrift; die Zeile bleibt in beiden
+Läufen unklar und wird in einem eigenen Forward-Fix behandelt.
+
+### 133.2 Root Cause `VS-22`
+
+Der A-Quelltext und das Worksheet sind bytegleich zum bevorzugten Lauf. Das
+materialisierte `hazardous_waste`-Atom ist `FOUND`, `INCLUDED`, konfliktfrei,
+ohne ungelöste Candidate-IDs und enthält 13 ausgewählte Quellen:
+
+- zwölf `DIRECT`-Quellen mit
+  `EXPLICIT_HAZARDOUS_WASTE_COSTS`;
+- genau eine `NARROW_SCOPE`-Quelle, Candidate `31b7b46f…`, physische Seite 28,
+  Exact-Span `[62612,62632)` und lokaler Kontext `[62602,62796)`;
+- der syntaktisch offene Vorläufer `d8d0c9dc…` endet auf Seite 27 mit
+  „Behandlung von Sondermüll,“ bei `[62570,62580)`; sein voller
+  Klauselkontext endet exakt an der Seitengrenze 62581;
+- die Originalbytes bis zum Start der Seite 28 bei 62602 bestehen nur aus dem
+  kanonischen Marker `\n\n[DOCUMENT_PAGE 28]\n`;
+- `5230e5aa…` belegt getrennt im lokalen 240-Zeichen-Kontext die positive
+  allgemeine Mitversicherung;
+- das separate Limitatom bleibt `GENERAL`, `DEFINED` und typisiert mit
+  3 Prozent, 1,5 Prozent beziehungsweise EUR 7.300.
+
+Die Modellentscheidung `GENERAL_AND_NARROW` ist damit kein Widerspruch und
+kein fehlender Schutz. Der alte VS-22-Portfoliovertrag verlangte jedoch
+bytegenau `GENERAL` und blockierte deshalb allein den Vorteilspfad.
+
+### 133.3 Kleiner source-bound Forward-Fix
+
+Die verworfene erste Lösung hätte PreparedEvidence und deterministische
+Selektion über sechs Dateien und 643 geänderte Zeilen erweitert. Zwei
+unabhängige Reviews fanden dort lokale Negations-, Optionalitäts- und
+Kontextgrenzen. Diese Änderung wurde vor Test und Commit vollständig
+zurückgeführt.
+
+Der kleinere Vertrag arbeitet erst beim Materialisieren der Atome:
+
+- `VS22_SOURCE_BOUND_LOCAL_NARROW_CONTINUATION_V1` wird ausschließlich für
+  `VS-22/hazardous_waste/GENERAL_AND_NARROW` erzeugt;
+- Candidate-IDs und Atomquellen müssen eine eindeutige Bijektion bilden;
+- Dokumentfingerprint, physische Seiten, Candidate- und Condition-Offsets,
+  Originaltext und SHA-256 werden gegen `document.private.json` replayt;
+- genau eine unscoped Narrow-Quelle muss die lokal positive
+  Eindringen-/Vermischen-Fortsetzung bilden;
+- ein eindeutiger offener Vorläufer muss auf der unmittelbar vorangehenden
+  physischen Seite enden; im Bridgebereich sind nur Whitespace und der
+  kanonische Seitenmarker zulässig;
+- mindestens eine davon getrennte DIRECT-Quelle muss die allgemeine positive
+  Sondermülldeckung im selben lokalen Satzteil belegen; eine bloße Definition
+  neben einem positiven Satz zu einem anderen Objekt genügt nicht;
+- Candidate-Kontexte dürfen ihre deklarierte physische Seite nicht
+  überschreiten, und Proof-Fingerprint sowie sämtliche Atomquellen müssen mit
+  dem SHA-256 des zugehörigen Dokuments im Paketmanifest übereinstimmen;
+- optionale, negierte, Haftpflicht-, Lagerungs-, ScopeKey-, Mehrfach-Narrow-
+  und Hash-/Offset-/PageMap-Lookalikes liefern keinen Proof.
+
+Der Portfoliovertrag behält den bisherigen `GENERAL`-Pfad unverändert. Der
+neue Mischpfad verlangt zusätzlich den vollständig validierten Proof, zwölf
+direkt gebundene beziehungsweise allgemein gesprochen mindestens eine
+direkte Quelle, genau eine sichere Narrow-Fortsetzung, keine fremden
+ScopeKeys, keine Optionalität, kein ungelöstes Candidate und das unverändert
+separate sichere Limitatom. Das vollständige Proofobjekt bleibt im privaten
+Atom und im Atomdigest; der Audit weist seinen Contract und Digest aus.
+
+Die Semantik ist als
+`CUSTOMER_CORE_5_V107_VS22_SOURCE_BOUND_CONTINUATION` / Vergleichsvertrag V68,
+Portfolioaudit V3 und Source-Atom-Replay V2 versioniert. V106/V67,
+Portfolioaudit V2 und Replay V1 bleiben über den historischen ausschließlich
+`GENERAL` akzeptierenden Pfad lesbar. Das Top-Level-Ergebnisschema bleibt 15.
+
+Status: `IMPLEMENTIERT, NOCH NICHT GETESTET ODER FREIGEGEBEN`. Verbindliche
+nächste Schritte sind fokussierte Mac-Studio-Tests, vollständige statische
+Gates, ein privater Real-Artefakt-Replay und anschließend ein frischer
+symmetrischer 224-Zeilen-Lauf auf demselben exakten Commit. Erwartet, aber vor
+diesem Nachweis nicht behauptet, ist ausschließlich `VS-22: UNKLAR ->
+VORTEIL_A`; alle übrigen 223 Outcomes müssen unverändert bleiben.

@@ -34,9 +34,9 @@ Versichererabdeckung noch 99 Prozent Fachrichtigkeit.
 - Der produktive Vergleich verwendet Qwen 3.6 ohne Embeddings oder Hybrid.
 - Das aktuelle symmetrische Ergebnisschema ist V15. Es bindet das
   source-verifizierte Produktprofil
-  `CUSTOMER_CORE_5_V106_STRUCTURAL_CONCEPT_CONTEXT` mit Vergleichsvertrag V67;
-  der vorherige V105-/V66-Vertrag bleibt für gespeicherte Schema-15-Ergebnisse
-  lesbar. Der gerichtete Weg bindet
+  `CUSTOMER_CORE_5_V107_VS22_SOURCE_BOUND_CONTINUATION` mit
+  Vergleichsvertrag V68; die vorherigen V105/V66- und V106/V67-Verträge
+  bleiben für gespeicherte Schema-15-Ergebnisse lesbar. Der gerichtete Weg bindet
   `LF_IMMO_REFERENCE_35_V5_SOURCE_BOUND_TRIAGE`.
 - JSON, Markdown und XLSX werden als ein atomarer, hashgebundener Artefaktsatz
   veröffentlicht. Ergebnis- und Downloadendpunkte akzeptieren den Satz nur
@@ -52,7 +52,8 @@ Auf genau dem unveränderten Dokumentations-Freeze-SHA müssen bestehen:
    `quick_check=ok` und null Fremdschlüsselfehlern;
 3. frischer LF-1+9-Lauf mit Prüfung aller 35 Zeilen;
 4. frischer symmetrischer 224-Zeilen-Lauf ohne Verlust der neun bestätigten
-   Vorteile und mit höchstens 43 echten Kundenreviews;
+   Vorteile; die echte Kundenreviewzahl wird zeilenweise berichtet und darf
+   nur mit fachlich belegter Ursache von der bisherigen 43 abweichen;
 5. unabhängiges Zurücklesen des Kunden-XLSX und zeilenweiser Outcomevergleich
    gegen `comparison.private.json`.
 
@@ -148,6 +149,39 @@ Concept-Search-Span bilden, wenn die Governor-Zeile bereits durch den
 bestehenden semantischen Coverage-Parser exakt registriert ist. Überschriften
 und beliebige offene Fließtextsätze können diese Ausnahme nicht mehr auslösen;
 der gültige `ST-08`-Fall und die Geschwistergrenze bleiben regressionsgeschützt.
+
+Der vollständige LF-Lauf auf `7ccef337a` bestand anschließend ohne Resume in
+1.206.334 ms: 35/35 Zeilen und alle 385 Kundenzellen blieben stabil; nach der
+verbindlichen Kundenmetrik ist genau `LF-FE-02 / RF-02` unklar. Der frische
+symmetrische Lauf auf demselben SHA terminierte technisch valide in
+1.698.241 ms mit 224 Zeilen und null JSON-/XLSX-Abweichungen. Gegen den
+bevorzugten Vorlauf änderten sich exakt drei Punktentscheidungen:
+
+- `VS-22` verlor `VORTEIL_A`, weil ein konfliktfreies eingeschlossenes Atom
+  mit zwölf direkt gebundenen Sondermüllquellen und einer echten
+  Seitenfortsetzung als `GENERAL_AND_NARROW` vorlag, der spezialisierte
+  Portfoliovertrag aber ausschließlich `GENERAL` akzeptierte;
+- `FE-A10` wechselte von `NICHT_VERGLEICHBAR` zu `UNKLAR`. Der neue Ausgang
+  ist fachlich sicherer, weil die alte Entscheidung unterschiedliche enge
+  Fahrzeugobjektmengen ohne vollständigen source-bound Scope-Vektor
+  verglich; dieser größere Vertrag bleibt offen und wird nicht durch einen
+  Release-Bypass ersetzt;
+- `FE-D01` blieb `UNKLAR`, verlor aber A-Evidenz, weil eine mehrzeilige
+  kombinierte Feuer-/Sturm-/Leitungswasser-/Haftpflichtüberschrift nur über
+  ihren Haftpflicht-Suffix klassifiziert wurde. Dieser Heading-Vertrag bleibt
+  ein getrennter Forward-Fix.
+
+V107/V68 ergänzt ausschließlich für `VS-22/hazardous_waste` einen
+source-bound Cross-Page-Fortsetzungsbeweis. Er bindet Candidate- und
+Source-Bijektion, Dokumentfingerprint, Originaloffsets, Text-Hashes, PageMap,
+den kanonischen Seitenmarker, seitengenaue Candidate-Kontexte, Paketmanifest,
+eine im selben Satzteil an Sondermüll gebundene getrennte positive allgemeine
+Quelle und die lokal positive Fortsetzung. Der Atomstatus bleibt ehrlich
+`GENERAL_AND_NARROW`; nur Portfolioaudit V3 darf ihn mit gültigem Proof
+akzeptieren. Audit V2 und Source-Replay V1 bleiben über den historischen
+strikten `GENERAL`-Pfad lesbar. Vor Freigabe sind fokussierte und vollständige
+Mac-Studio-Gates sowie ein neuer symmetrischer Lauf auf dem exakten
+V107-Commit erforderlich.
 
 ## First-Hop V3.6.0 → V3.7.0
 

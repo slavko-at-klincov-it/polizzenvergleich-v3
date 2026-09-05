@@ -46,6 +46,9 @@ const {
   buildVs22SourceAtomDigestReplay,
 } = require("./vs22HazardousWastePortfolioComparisonContract");
 const {
+  buildVs22LocalNarrowContinuationProof,
+} = require("./vs22LocalNarrowContinuationProofContract");
+const {
   VS24_SCAFFOLDING_COST_EQUALITY_RULE_ID,
   buildVs24SourceAtomDigestReplay,
 } = require("./vs24ScaffoldingCostEqualityContract");
@@ -1631,6 +1634,20 @@ function materializeAtomicFacts({
     const comparisonScopeKeys = unique(
       sources.map(({ comparisonScopeKey }) => comparisonScopeKey)
     ).sort();
+    const vs22LocalNarrowContinuationProof =
+      judgement.requirementId === "VS-22" &&
+      judgement.componentId === "hazardous_waste"
+        ? buildVs22LocalNarrowContinuationProof({
+            documentArtifact,
+            documentFingerprint: document.sha256,
+            requirementId: judgement.requirementId,
+            componentId: judgement.componentId,
+            selectedScopePicture: judgement.selectedScopePicture,
+            selectedCandidateIds,
+            selectedCandidates: selectedTargetCandidates,
+            sources,
+          })
+        : null;
     return {
       requirementId: judgement.requirementId,
       componentId: judgement.componentId,
@@ -1649,6 +1666,9 @@ function materializeAtomicFacts({
       requestedFieldStatus,
       fields,
       sources,
+      ...(vs22LocalNarrowContinuationProof
+        ? { vs22LocalNarrowContinuationProof }
+        : {}),
       ...(comparisonScopeKeys.length > 0 ? { comparisonScopeKeys } : {}),
       componentSatisfactionPolicy:
         requirement?.componentSatisfactionPolicy || "ALL",
