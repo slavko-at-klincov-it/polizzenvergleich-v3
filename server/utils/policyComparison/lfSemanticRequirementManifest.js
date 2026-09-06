@@ -404,14 +404,34 @@ function extractedValues(requirement, spans) {
           )
         );
         if (valueBindings.length === 1 && distinctValues.size > 1) {
-          const numericMatches = candidates.filter(({ rawValue }) =>
-            bindingNumericallyMatches(valueBindings[0], type, rawValue)
-          );
-          if (numericMatches.length !== 1)
+          const binding = valueBindings[0];
+          let resolvedCandidates = [];
+          if (binding.sourceAnchor) {
+            const sourceMatches = [];
+            const sourceExpression = anchorExpression(binding.sourceAnchor);
+            let sourceMatch;
+            while ((sourceMatch = sourceExpression.exec(span.exactText)))
+              sourceMatches.push({
+                start: sourceMatch.index,
+                end: sourceMatch.index + sourceMatch[0].length,
+              });
+            resolvedCandidates = candidates.filter(({ match: candidate }) =>
+              sourceMatches.some(
+                ({ start, end }) =>
+                  candidate.index < end &&
+                  candidate.index + candidate[0].length > start
+              )
+            );
+          }
+          if (resolvedCandidates.length !== 1)
+            resolvedCandidates = candidates.filter(({ rawValue }) =>
+              bindingNumericallyMatches(binding, type, rawValue)
+            );
+          if (resolvedCandidates.length !== 1)
             throw profileRequired(
               `AMBIGUOUS_VALUE_BINDING:${requirement.id}:${type}`
             );
-          selected = numericMatches;
+          selected = resolvedCandidates;
         }
       }
       for (const { match: selectedMatch, rawValue } of selected) {

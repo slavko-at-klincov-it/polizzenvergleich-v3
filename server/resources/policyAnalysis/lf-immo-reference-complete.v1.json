@@ -1842,7 +1842,8 @@
           "valueBinding": {
             "type": "AMOUNT",
             "basisLabel": "pro Tag und geschädigter Einheit, bis sechs Monate",
-            "currency": "EUR"
+            "currency": "EUR",
+            "sourceAnchor": "EUR 50 pro Tag ohne Nachweis"
           }
         }
       ],
@@ -1878,7 +1879,8 @@
           "valueBinding": {
             "type": "AMOUNT",
             "basisLabel": "pro Tag und geschädigter Einheit, bis sechs Monate",
-            "currency": "EUR"
+            "currency": "EUR",
+            "sourceAnchor": "EUR 120 pro Tag mit Nachweis"
           }
         }
       ],

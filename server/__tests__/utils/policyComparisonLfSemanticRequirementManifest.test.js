@@ -149,6 +149,24 @@ describe("LF SemanticRequirementManifest V1", () => {
     );
   });
 
+  test("resolves a changed value from its value-local source anchor", () => {
+    const input = fixture();
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace(
+        "15 % der Versicherungssumme",
+        "15 % oder 25 % der Versicherungssumme"
+      );
+    input.documentArtifact.document.pageMap[0].end += " oder 25 %".length;
+    input.familyContract.expectedStructureDigestSha256 = buildSourceBlockLedger(
+      input.documentArtifact
+    ).structureDigestSha256;
+    input.oracle.requirements[0].components[1].valueBinding.sourceAnchor =
+      "25 % der Versicherungssumme";
+    const manifest = buildLfSemanticRequirementManifest(input);
+    expect(manifest.requirements[0].values).toHaveLength(1);
+    expect(manifest.requirements[0].values[0].rawValue).toBe("25 %");
+  });
+
   test("regenerates on readback and rejects a rehashed semantic mutation", () => {
     const input = fixture();
     const manifest = buildLfSemanticRequirementManifest(input);
