@@ -147,4 +147,22 @@ describe("LF SemanticRequirementManifest V1", () => {
       "NEUES_LF_PROFIL_ERFORDERLICH:ANCHOR_NOT_FOUND"
     );
   });
+
+  test("binds PDF line-break hyphenation without changing exact source offsets", () => {
+    const input = fixture();
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace(
+        "Neubauwert",
+        "Neu-\nbauwert"
+      );
+    input.documentArtifact.document.pageMap[0].end += 1;
+    input.oracle.requirements[0].anchors[0] = "Neu-bauwert";
+    input.familyContract.expectedStructureDigestSha256 = buildSourceBlockLedger(
+      input.documentArtifact
+    ).structureDigestSha256;
+    const manifest = buildLfSemanticRequirementManifest(input);
+    expect(manifest.requirements[0].sourceSpans[0].exactText).toContain(
+      "Neu-\nbauwert"
+    );
+  });
 });

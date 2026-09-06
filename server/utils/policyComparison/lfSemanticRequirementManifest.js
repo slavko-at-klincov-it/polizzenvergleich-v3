@@ -88,7 +88,7 @@ function anchorExpression(anchor) {
     .normalize("NFKC")
     .trim()
     .split(/\s+/gu)
-    .map(escapeRegex);
+    .map((piece) => escapeRegex(piece).replace(/-/gu, "-\\s*"));
   return new RegExp(pieces.join("\\s+"), "giu");
 }
 
