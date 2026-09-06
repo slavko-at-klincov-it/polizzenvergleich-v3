@@ -58,7 +58,7 @@ function validateLfReferenceFamily({
     )
   );
   const missingAnchors = contract.requiredNormalizedAnchors.filter(
-    (anchor) => !normalizedTexts.has(anchor)
+    (anchor) => !normalizedTexts.has(String(anchor).toLocaleLowerCase("de-AT"))
   );
   const diagnostics = {
     schemaVersion: 1,
