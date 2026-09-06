@@ -149,15 +149,38 @@ Wissens-Write-back:
 
 ## 6. Aktueller Beweisstand
 
-`126ab03b` ist `NO-GO` fuer Merge, Tag oder Deployment. Die bisherigen
+`126ab03b` ist `NO-GO` fuer Merge, Tag oder Deployment. Die damaligen
 39 Jest-Tests, sechs Presenter-Tests, Lints und der 506-Block-Fixturecheck
 belegen nur begrenzte technische Ausfuehrbarkeit. Sie bestehen nicht die im
 urspruenglichen Auftrag definierte Mindestabnahme.
 
+Der Korrekturcommit
+`31334873506f175458db1588bc983796c7b941bb` entfernt den dynamischen
+Rohblock-zu-Ergebnisweg. Gegenueber der bewährten Basis `d266b48ae` sind alle
+Produktdateien wieder bytegleich; nur diese Dokumentation, der Tracker und ein
+Guard-Test bleiben als Aenderung uebrig.
+
+```text
+Mac-Studio-Worktree: /Users/michaelmischkot/Code/validation-worktrees/lf-review-313348735
+Node:                v22.23.2
+Modellzustand:       qwen/qwen3.6-35b-a3b, 42.496 Kontext geladen; kein Modellaufruf
+Fokussierte Tests:   5/5 Suites, 40/40 Tests PASS
+Server-Lint:         PASS
+diff --check:        PASS
+Kundencheckout:      sauber und unveraendert auf 2804fa563
+```
+
+Ein neuer LF- oder symmetrischer Modelllauf wurde nicht als Beleg ausgegeben,
+weil nach der Korrektur keine Produktdatei von der bereits gebundenen Basis
+abweicht. Das ist ein bytegenauer Nichtregressionsbeleg, aber noch kein
+vollstaendiges LF-Profil.
+
 ## 7. Sicherer Wiedereinstieg
 
-Branch und Commit vor jeder Fortsetzung erneut pruefen. Der naechste Commit
-muss zuerst den unqualifizierten dynamischen Nullfund- und
-Rohblock-als-Fakt-Pfad sperren und die dazugehoerigen Negativtests enthalten.
-Danach sind die ausstehenden Schritte in Abschnitt 5 in kleinen, getrennten
-Commits fortzufuehren.
+Branch und Commit vor jeder Fortsetzung erneut pruefen. Der unqualifizierte
+dynamische Nullfund- und Rohblock-als-Fakt-Pfad ist gesperrt. Der naechste
+Implementierungsschritt ist ein nicht entscheidungsfaehiges, deterministisch
+regenerierbares Source-Block-Ledger mit Inhaltsverzeichnis-, Kopf-/Fusszeilen-,
+Tabellen- und Seitenfortsetzungs-Negativtests. Erst danach folgt das getrennte
+atomare Semantic-Requirement-Manifest. Beide Schritte sind in kleinen,
+getrennten Commits fortzufuehren.

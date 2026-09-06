@@ -6607,3 +6607,48 @@ als Review-/Nullfund enden. Vollständigkeit und semantische Korrektheit sind
 erst nach versioniertem Experten-Holdout gemäß Produktcharter belegbar.
 
 Bezug: INV-003, INV-004, INV-008, INV-011, FAIL-001, FAIL-005 und ADR-027.
+
+### 133.8 Reviewkorrektur: Rohblockmanifest nicht als Produktprofil zugelassen
+
+Der unabhaengige Nachreview am 6. September 2026 widerlegte die
+Freigabefaehigkeit von `126ab03b`. Die 506 gezaehlten Einheiten sind
+extraktionsabhaengige Quellbloecke und keine atomaren fachlichen
+Vergleichspunkte. Jeder Block erhielt nur eine regex-abgeleitete Rolle und den
+vollstaendigen A-Wortlaut als einzigen B-Suchalias. Eine fachlich gleiche
+Paraphrase in B konnte dadurch unentdeckt bleiben und dennoch in den
+qualifizierten Nullfundpfad gelangen. Prozentbasen, Mehrfachrollen,
+seitenuebergreifende Fortsetzungen und die LF-Version wurden nicht belastbar
+gebunden.
+
+Weitere Blocker waren ein zu permissiver 8-aus-9-Strukturcheck, eine nur durch
+geaenderte Metadaten simulierte „kompatible Revision“, fehlende
+Manifestregeneration beim Readback sowie unterschiedliche Profilidentitaeten
+in Queue-/Resume- und Ergebnisvertrag. Die gemeldeten 39 Jest- und sechs
+Presenter-Tests prueften keinen dynamischen Runner-zu-Resultat-End-to-End-Pfad.
+Ein echter LF-1+9-Lauf und die symmetrische 224-Zeilen-Nichtregression wurden
+nicht ausgefuehrt.
+
+Der dynamische Rohblock-zu-Ergebnisweg wird deshalb nicht als Produktvertrag
+fortgefuehrt. Korrekturcommit
+`31334873506f175458db1588bc983796c7b941bb` stellt sicher, dass der Worker
+wieder ausschliesslich das versionierte,
+kuratiert atomisierte 35-Punkte-Profil verwendet; dessen feste
+Dokumentidentitaet bleibt
+bis zu einem wirklich versionierten LF-Familien- und Semantikvertrag erhalten.
+Der vollstaendige Korrekturbefund und der sichere Ausbaupfad stehen in
+`docs/LF_REFERENCE_COMPLETE_TEMPLATE_IMPLEMENTATION_DE.md`.
+
+Die fokussierte Mac-Studio-Pruefung lief im isolierten Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/lf-review-313348735` mit
+Node 22.23.2. Fuenf Suites mit 40/40 Tests sowie der vollstaendige Server-Lint
+bestanden. Qwen 3.6 war mit 42.496 Kontext geladen, wurde fuer diese
+bytegenaue Ruecknahme aber nicht aufgerufen. Gegenueber `d266b48ae` sind alle
+Produktdateien identisch; uebrig bleiben nur Dokumentation und der Guard-Test.
+Der installierte Kundencheckout blieb sauber auf `2804fa563`.
+
+Beweisgrenze: Diese Korrektur verhindert die neue unqualifizierte
+Nullfund-/Vorteilsregression. Sie implementiert noch kein vollstaendiges
+LF-Inventar. Ein spaeterer Ausbau benoetigt getrennt ein deterministisch
+regenerierbares Source-Block-Ledger und ein versioniertes atomisiertes
+Semantic-Requirement-Manifest mit Crosswalk, Werte-/Basisrelationen,
+adversarialen Tests und frischem Mac-Studio-Endlauf.
