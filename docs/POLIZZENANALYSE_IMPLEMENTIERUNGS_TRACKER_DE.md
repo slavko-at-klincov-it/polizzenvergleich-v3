@@ -6652,3 +6652,52 @@ LF-Inventar. Ein spaeterer Ausbau benoetigt getrennt ein deterministisch
 regenerierbares Source-Block-Ledger und ein versioniertes atomisiertes
 Semantic-Requirement-Manifest mit Crosswalk, Werte-/Basisrelationen,
 adversarialen Tests und frischem Mac-Studio-Endlauf.
+
+### 133.9 Vollstaendiger source-bound LF-Familienvertrag und 1+1-Endlauf
+
+Der in Abschnitt 133.8 geforderte sichere Ausbau ist auf dem Branch
+`codex/lf-reference-complete-template` umgesetzt. Das semantikfreie
+`SOURCE_BLOCK_LEDGER_V1` inventarisiert fuer das bekannte 31-seitige
+LF-Dokument 1.005 Quellbloecke. Das getrennte
+`LF_A_SEMANTIC_REQUIREMENT_MANIFEST_V1` materialisiert daraus ueber ein
+versioniertes servereigenes Oracle 283 atomare Anforderungen in 13
+Kategorien, 631 Komponenten, 116 source-bound Werte, sechs gemeinsame
+Wertregeln und eine gemeinsame semantische Regel. Alle B-Kataloge werden nur
+aus diesem A-Manifest gebaut; B-only-Inhalte koennen keine Zeile erzeugen.
+
+Der alte feste PDF-SHA ist fuer neue dynamische Laeufe durch einen
+wertunabhaengigen Vollstrukturvertrag ersetzt. Echte numerische Aenderungen
+werden aus dem aktuellen A-Dokument gebunden. Neue, fehlende, umformulierte
+oder umgeordnete operative Struktur bricht fail-closed mit
+`NEUES_LF_PROFIL_ERFORDERLICH` ab. Der Readback regeneriert Ledger und
+Manifest aus dem gespeicherten A-Dokumentartefakt und prueft die Digestkette.
+
+Ein frischer serieller Mac-Studio-Endlauf auf Produktcode-Commit
+`81f9601506a6f27711e00c5cf392e25cabf29058` verwendete exakt ein LF-Dokument
+A und ein WEVIG-Dokument B mit Qwen 3.6 und 42.496 Kontext. Er erzeugte 13/13
+Kategorien und 283/283 eindeutige Zeilen, null B-only-Zeilen, 16 gefundene, 70
+teilweise, eine referenzseitig unklare und 196 gegenstueckseitig unklare
+Zeilen. Kontrollierte Nullfunde blieben bei null, weil alle 283 Suchplaene
+weiterhin ehrlich `EXPLORATORY_INCOMPLETE` sind. Das XLSX bestand mit einem
+Blatt, 12 Spalten und 283 Datenzeilen. Artefakt- und Readbackvalidierung
+bestanden.
+
+Die UI-Korrektur `db9f9eba79b7adea5e3dd22e045bec55d3a3973a` zeigt die
+tatsaechlichen dynamischen Abdeckungszahlen und uebersetzt eine unbekannte
+LF-Struktur in eine verstaendliche Aufforderung fuer ein neues fachlich
+geprueftes Profil. Vier fokussierte Mac-Studio-Suites bestanden mit 19/19
+Tests.
+
+Der getrennte symmetrische 1+1-Nichtregressionslauf bestand danach auf
+`db9f9eba79b7adea5e3dd22e045bec55d3a3973a`: beide Dokumente 224/224
+Kategoriezeilen, Paketresultat 5 Kategorien und 224 eindeutige Zeilen,
+Outcomeverteilung `13/1/38/126/0/16/30`, Kundenreview 30 sowie XLSX mit einem
+Blatt, 17 Spalten und 224 Datenzeilen. Der unabhaengige Ergebnis-,
+Artefakt- und XLSX-Validator bestand.
+
+Status: `IMPLEMENTIERT; LF-1+1 UND SYMMETRISCHER 1+1 TECHNISCH BESTANDEN;
+FINAL-GESAMTGATE NOCH OFFEN`.
+
+Beweisgrenze: bekannte LF-Familie und ein bekanntes B-Dokument; keine
+Expertenabnahme aller Zeilen, kein unbekannter Mehrversicherer-Holdout und
+kein 99-Prozent-Nachweis. Kein Merge, Tag oder Deployment.

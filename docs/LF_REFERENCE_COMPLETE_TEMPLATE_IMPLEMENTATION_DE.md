@@ -265,3 +265,139 @@ Das Ledger bleibt semantikfrei. Nicht aufgeloeste Quellbloecke werden sichtbar
 reviewpflichtig und koennen weder kontrollierten Nullfund noch Vorteil
 erzeugen. Der bestehende 35-Punkte-Vertrag bleibt historisch lesbar und als
 Regression erhalten.
+
+## 9. Implementierter vollstaendiger LF-Familienvertrag
+
+Der sichere Wiedereinstieg ist umgesetzt. Der produktive LF-Zweig besteht nun
+aus zwei getrennten, beim Readback erneut erzeugten beziehungsweise
+validierten Wahrheitsschichten:
+
+1. `SOURCE_BLOCK_LEDGER_V1` bindet alle 1.005 nichtleeren Quellbloecke der
+   bekannten 31-seitigen LF-Fassung an physische Seite, Seiten- und
+   Dokumentoffset, exakten Text sowie Inhalts- und Strukturdigests. Das Ledger
+   besitzt keine fachliche Entscheidungsautoritaet.
+2. `LF_A_SEMANTIC_REQUIREMENT_MANIFEST_V1` bindet 283 fachlich atomisierte
+   Anforderungen in 13 Kategorien und Dokumentreihenfolge an konkrete
+   Quellspans. Es enthaelt 631 Komponenten, 116 typisierte Werte, sechs
+   gemeinsame Wertregeln und eine gemeinsame semantische Regel. Jeder
+   Ledgerblock besitzt genau eine terminale Crosswalk-Disposition; im
+   bekannten Referenzdokument bleiben null offene Quellbloecke.
+
+Das Profil wird nicht mehr durch einen festen PDF-SHA zugelassen. Ein
+wertunabhaengiger Vollstruktur-Digest, 31 physische Seiten und verbindliche
+Strukturanker identifizieren die unterstuetzte LF-Familie. Numerische und
+Jahres-Aenderungen werden aus dem aktuellen Dokument A uebernommen. Fehlende,
+neue, textlich geaenderte oder umgeordnete operative Struktur bricht mit
+`NEUES_LF_PROFIL_ERFORDERLICH` ab. Die UI uebersetzt diesen internen Code in
+eine konkrete Handlungsanweisung.
+
+Die 116 Werte werden nur aus rollenpassenden, source-bound Spans
+materialisiert. Prozentwert, Basis, Formel, Waehrung, Rundungsregel und
+berechneter Betrag bleiben getrennt. Eine Berechnung entsteht nur bei genau
+einer eindeutigen, in derselben Kategorie source-bound gebundenen
+Betragsbasis. Sonst bleibt `calculatedAmount` leer. Damit werden insbesondere
+mehrere Geldrollen in derselben Klausel nicht mehr vermischt.
+
+Alle dynamischen B-Kataloge entstehen ausschliesslich aus dem A-Manifest.
+Seite B darf Gegenstueckbelege liefern, aber weder Kategorien noch Zeilen
+hinzufuegen. Alle 283 Suchplaene sind derzeit bewusst
+`EXPLORATORY_INCOMPLETE`; deshalb kann ein leerer B-Fund niemals als
+kontrollierter Nullfund oder Kundenvorteil ausgegeben werden. Das ist
+fail-closed und keine Behauptung vollstaendiger Synonymabdeckung.
+
+Historische 35-Zeilen-Ergebnisse bleiben ueber ihren alten Resultatvertrag
+lesbar. Der symmetrische `SYMMETRIC_A_B_CORE5_V1`-Zweig, sein Katalog mit 224
+Zeilen und sein Resultatbuilder wurden nicht durch den dynamischen LF-Vertrag
+ersetzt.
+
+Wesentliche Implementierungsmodule:
+
+- `server/utils/policyAnalysis/sourceBlockLedger.js`
+- `server/utils/policyComparison/lfReferenceFamilyContract.js`
+- `server/utils/policyComparison/lfSemanticRequirementManifest.js`
+- `server/utils/policyComparison/lfDynamicReferenceProfile.js`
+- `server/utils/policyComparison/dynamicReferenceRunner.js`
+- `server/utils/policyComparison/dynamicReferenceResultBuilder.js`
+- `server/resources/policyAnalysis/lf-immo-reference-complete.v1.json`
+
+## 10. Frischer LF-1-gegen-1-Endlauf
+
+Der frische Lauf verwendete wie vereinbart genau ein LF-Dokument A und genau
+ein WEVIG-Dokument B. Er lief seriell und ohne parallelen Modellprozess im
+isolierten Mac-Studio-Worktree auf dem exakten Produktcode-Commit
+`81f9601506a6f27711e00c5cf392e25cabf29058`. Die nachfolgende UI-Korrektur
+`db9f9eba79b7adea5e3dd22e045bec55d3a3973a` aendert keinen Analyse-, Manifest-
+oder Ergebnisvertrag.
+
+```text
+Mac-Studio-Worktree: /Users/michaelmischkot/Code/validation-worktrees/lf-complete-template
+QA-Root:             /tmp/lf-one-to-one-e2e.CYnbJJ
+Node:                v22.23.2
+Modell / Kontext:    qwen/qwen3.6-35b-a3b / 42496
+Dokumente:           A 1 / B 1
+Laufzeit:            ca. 35:34 Minuten
+Kategorien:          13/13
+Zeilen:              283/283 eindeutig
+Source-Bloecke:      1005, davon Review 0
+Komponenten:         631/631 technisch verarbeitet
+B-only-Zeilen:       0
+Gefunden / teilweise: 16 / 70
+Referenz unklar / Gegenstueck unklar: 1 / 196
+Kontrollierter Nullfund: 0
+Kundenreview:        267
+XLSX:                1 Blatt / 12 Spalten / 283 Datenzeilen
+```
+
+Die unabhaengige Nachpruefung validierte Artefakt-Digestkette, dynamischen
+Resultatvertrag, 283 eindeutige und manifestgleiche Row-IDs, Reihenfolge,
+Dokumentzuordnung, Outcome-Summen und XLSX-Paritaet. Der persistente Readback
+regenerierte das semantische Manifest erneut aus dem gespeicherten
+A-Dokumentartefakt und bestand.
+
+```text
+Semantic-Manifest: f25a3a71246cee23bf7062787c5f4e94d6ff01ce7e9a7737f8733606e18e1863
+Source-Ledger:      b3b10f6585a2bbf8933e4d04a557977cbab12c8e24af2fc5e6441168a38cad1f
+comparison.json:    0ed3a2252bf501323fd47848236f4fccf7312d18a6b558a09d525bb633767cc3
+comparison.md:      8af692939a73f939d9e6df160e3a3bc393b9e4db8683bb0e7a4d99c75bb95561
+XLSX:               5a3ad53e0f515874a24acf682b11bac3f3acde5788860524ac1eb45f5cc389a9
+```
+
+Beweisgrenze: Der Lauf belegt technische Vollstaendigkeit und
+Provenienzbindung fuer diese bekannte LF-Familie und dieses einzelne
+B-Dokument. Er ist kein unbekannter Versicherer-/LF-Fassungs-Holdout, keine
+fachliche Expertenabnahme aller 283 Zeilen und kein 99-Prozent-Nachweis.
+
+## 11. Symmetrischer 1-gegen-1-Nichtregressionslauf
+
+Auf dem UI-korrigierten Produktcode-Commit
+`db9f9eba79b7adea5e3dd22e045bec55d3a3973a` lief danach derselbe
+Dokumentensatz mit genau einem Dokument je Seite durch den unveraenderten
+symmetrischen `CUSTOMER_CORE_5_V108_SOURCE_BOUND_MULTI_SCOPE_HEADING`-Vertrag.
+Beide Dokumente erzeugten jeweils 224/224 Kategoriezeilen; der
+Paket-Resultatbuilder materialisierte daraus wieder genau 224 eindeutige
+Vergleichszeilen.
+
+```text
+QA-Root:             /tmp/symmetric-one-to-one-e2e.O1Afhr
+Node:                v22.23.2
+Modell / Kontext:    qwen/qwen3.6-35b-a3b / 42496
+Dokumente:           A 1 / B 1
+Kategorien / Zeilen: 5 / 224 eindeutig
+Vorteil A / B:       13 / 1
+Dokumentationsunterschied / gleichwertig: 38 / 126
+Kein dokumentierter Vorteil / nicht vergleichbar: 0 / 16
+Unklar / Kundenreview: 30 / 30
+XLSX:                1 Blatt / 17 Spalten / 224 Datenzeilen
+comparison.json:     63b633220530f85869ee0dc084f6918678909c591767980fe6682758f83b388b
+comparison.md:       ca0031eb6eed3b69ca50fe8c897c2118f597d2838df4c01ba3e60b7d4927631d
+XLSX:                bd490f903db79e05f95a9bf853f86d81a4b9ecfc1984eb27643b64a9eca9c34b
+```
+
+Der unabhaengige Validator bestaetigte Ergebnisprofil, 224 eindeutige Keys,
+Outcome-Summen, Kundenreviewmetrik, Artefaktdigestkette und XLSX-Paritaet. Der
+erste Harnessstart endete vor jedem Modellaufruf, weil im isolierten Worktree
+der erwartete `.runtime`-Link fehlte. Nach Verknuepfung der vorhandenen
+Node-22-Runtime lief derselbe Commit ohne Produktkorrektur vollstaendig durch.
+
+Auch dieser Lauf ist technische Nichtregression fuer genau zwei bekannte
+Dokumente, keine neue fachliche 224-Zeilen-Abnahme und kein Holdoutnachweis.
