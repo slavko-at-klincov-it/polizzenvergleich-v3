@@ -124,8 +124,7 @@ function pageBlocks({ text, page, fingerprint, firstOrdinal }) {
       exactText,
       exactTextSha256,
       structuralKind: kind,
-      disposition:
-        kind === "PAGE_FURNITURE" ? "FURNITURE" : "UNRESOLVED",
+      disposition: kind === "PAGE_FURNITURE" ? "FURNITURE" : "UNRESOLVED",
       classification: {
         status: kind === "PAGE_FURNITURE" ? "PROVEN" : "UNRESOLVED",
         ruleIds:
@@ -155,9 +154,7 @@ function ledgerPayload(documentArtifact) {
       physicalPageNumber: page.pageNumber,
       documentStart: page.start,
       documentEnd: page.end,
-      exactTextSha256: sha256(
-        document.pageContent.slice(page.start, page.end)
-      ),
+      exactTextSha256: sha256(document.pageContent.slice(page.start, page.end)),
       blockIds: pageEntries.map(({ blockId }) => blockId),
     });
   }

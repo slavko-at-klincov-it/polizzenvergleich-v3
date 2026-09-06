@@ -59,7 +59,8 @@ function referenceSide(requirement, sourceDocument) {
       .map(({ exactText }) => exactText.replace(/\s+/gu, " ").trim())
       .join("\n"),
     coverage: review ? "Nicht feststellbar" : "Im LF-Dokument enthalten",
-    coverageAmount: values.length > 0 ? values.join(" · ") : "Nicht feststellbar",
+    coverageAmount:
+      values.length > 0 ? values.join(" · ") : "Nicht feststellbar",
     source: sourceSpans
       .map(
         ({ physicalPageNumber, exactText }) =>
@@ -77,13 +78,13 @@ function referenceSide(requirement, sourceDocument) {
 
 function incompleteSearchCounterpart(counterpart) {
   if (
-    counterpart.reviewStatus !==
-    COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
+    counterpart.reviewStatus !== COUNTERPART_REVIEW_STATUS.CONTROLLED_NOT_FOUND
   )
     return counterpart;
   return {
     ...counterpart,
-    documentedContent: "Fundlage bei unvollständigem Suchplan nicht entscheidbar",
+    documentedContent:
+      "Fundlage bei unvollständigem Suchplan nicht entscheidbar",
     source: "kein entscheidungsfähiger Nullfund",
     reviewStatus: COUNTERPART_REVIEW_STATUS.UNCLEAR,
   };
@@ -133,10 +134,7 @@ function buildDynamicReferenceComparisonResult({
             ...readEvidenceBundle(run, contract.categoryView, requirement.id),
           };
         });
-        let counterpart = aggregateCounterpart(
-          counterpartEntries,
-          requirement
-        );
+        let counterpart = aggregateCounterpart(counterpartEntries, requirement);
         if (semantic.searchPlanStatus !== "CERTIFIED_COMPLETE")
           counterpart = incompleteSearchCounterpart(counterpart);
         const packageA = referenceSide(semantic, sourceDocument);
@@ -163,16 +161,17 @@ function buildDynamicReferenceComparisonResult({
       rows,
     };
   });
-  const documents = [sourceDocument, ...sideBDocumentRuns.map(({ document }) => document)].map(
-    ({ uuid, side, role, documentStatus, originalName, sha256 }) => ({
-      uuid,
-      side,
-      role,
-      documentStatus,
-      originalName,
-      sha256,
-    })
-  );
+  const documents = [
+    sourceDocument,
+    ...sideBDocumentRuns.map(({ document }) => document),
+  ].map(({ uuid, side, role, documentStatus, originalName, sha256 }) => ({
+    uuid,
+    side,
+    role,
+    documentStatus,
+    originalName,
+    sha256,
+  }));
   const result = {
     schemaVersion: DYNAMIC_REFERENCE_RESULT_SCHEMA_VERSION,
     contractId: DYNAMIC_REFERENCE_RESULT_CONTRACT_ID,
@@ -260,7 +259,10 @@ function validateDynamicReferenceComparison(result, { manifest } = {}) {
     )
   )
     throw new Error("LF_DYNAMIC_REFERENCE_RESULT_DECISION_INVALID");
-  if (JSON.stringify(deriveTotals(result.categories)) !== JSON.stringify(result.totals))
+  if (
+    JSON.stringify(deriveTotals(result.categories)) !==
+    JSON.stringify(result.totals)
+  )
     throw new Error("LF_DYNAMIC_REFERENCE_RESULT_TOTALS_INVALID");
   return result;
 }
@@ -322,7 +324,8 @@ async function writeWorkbook(result, file) {
     width: [22, 28, 16, 45, 55, 32, 50, 50, 20, 50, 38, 50][index],
   }));
   for (const category of result.categories)
-    for (const row of category.rows) sheet.addRow(workbookValues(category, row));
+    for (const row of category.rows)
+      sheet.addRow(workbookValues(category, row));
   sheet.views = [{ state: "frozen", ySplit: 1, zoomScale: 80 }];
   sheet.autoFilter = `A1:L${sheet.rowCount}`;
   sheet.eachRow((row, number) =>
@@ -375,7 +378,10 @@ async function writeDynamicReferenceComparisonArtifacts({
       validateDynamicReferenceComparison(persisted, { manifest });
       if (JSON.stringify(persisted) !== JSON.stringify(result))
         throw new Error("LF_DYNAMIC_REFERENCE_JSON_ROUNDTRIP_MISMATCH");
-      if (fs.readFileSync(files["comparison.md"], "utf8") !== markdownResult(result))
+      if (
+        fs.readFileSync(files["comparison.md"], "utf8") !==
+        markdownResult(result)
+      )
         throw new Error("LF_DYNAMIC_REFERENCE_MARKDOWN_ROUNDTRIP_MISMATCH");
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(files["polizzenvergleich.xlsx"]);

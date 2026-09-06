@@ -46,10 +46,7 @@ function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
       "reference-template",
       "semantic-requirement-manifest.private.json"
     );
-    regularFile(
-      manifestFile,
-      "LF_DYNAMIC_REFERENCE_TEMPLATE_MANIFEST_MISSING"
-    );
+    regularFile(manifestFile, "LF_DYNAMIC_REFERENCE_TEMPLATE_MANIFEST_MISSING");
     const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
     const runRoot = path.resolve(path.dirname(resultFile), "..");
     const sourceDocument = (result.documents || []).find(

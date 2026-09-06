@@ -267,7 +267,10 @@ async function main() {
   }));
 
   async function validatedSourceFile(document) {
-    const sourceFile = path.resolve(policyComparisonsPath, document.storagePath);
+    const sourceFile = path.resolve(
+      policyComparisonsPath,
+      document.storagePath
+    );
     if (
       !isWithin(policyComparisonsPath, sourceFile) ||
       !fs.existsSync(sourceFile)

@@ -45,8 +45,7 @@ function absenceMeaning(components) {
   if (roles.size === 1 && roles.has("EXCLUSION")) return "EXCLUSION";
   if ([...roles].every((role) => ["LIMIT", "DEDUCTIBLE"].includes(role)))
     return "VALUE_TERM";
-  if ([...roles].every((role) => role === "CONDITION"))
-    return "CONDITION_ONLY";
+  if ([...roles].every((role) => role === "CONDITION")) return "CONDITION_ONLY";
   if ([...roles].every((role) => role === "DEFINITION"))
     return "DEFINITION_ONLY";
   if (roles.has("COST")) return "COST_COVERAGE";
@@ -115,7 +114,9 @@ function categoryCatalogsFromManifest(manifest) {
             absenceMeaning: absenceMeaning(components),
             reference: {
               physicalPages: requirement.physicalPages,
-              sourceSpanIds: requirement.sourceSpans.map(({ spanId }) => spanId),
+              sourceSpanIds: requirement.sourceSpans.map(
+                ({ spanId }) => spanId
+              ),
             },
           };
         }),

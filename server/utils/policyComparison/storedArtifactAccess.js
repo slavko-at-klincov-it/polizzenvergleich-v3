@@ -1,9 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { LF_REFERENCE_PROFILE } = require("./lfReferenceProfile");
-const {
-  LF_DYNAMIC_REFERENCE_PROFILE,
-} = require("./lfDynamicReferenceProfile");
+const { LF_DYNAMIC_REFERENCE_PROFILE } = require("./lfDynamicReferenceProfile");
 const {
   POLICY_COMPARISON_MODE,
   normalizePolicyComparisonMode,

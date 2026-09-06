@@ -89,9 +89,7 @@ function anchorExpression(anchor) {
     .split(/\s+/gu)
     .map((piece) => {
       const numberPlaceholder = "LFNUMBERPLACEHOLDER";
-      return escapeRegex(
-        piece.replace(/\d[\d.,]*/gu, numberPlaceholder)
-      )
+      return escapeRegex(piece.replace(/\d[\d.,]*/gu, numberPlaceholder))
         .replaceAll(numberPlaceholder, "[\\dIl][\\dIl.,]*")
         .replace(/-/gu, "-\\s*");
     });
@@ -101,7 +99,9 @@ function anchorExpression(anchor) {
 function pageRanges(documentArtifact, pages) {
   const pageMap = documentArtifact.document.pageMap;
   return pages.map((pageNumber) => {
-    const page = pageMap.find(({ pageNumber: number }) => number === pageNumber);
+    const page = pageMap.find(
+      ({ pageNumber: number }) => number === pageNumber
+    );
     if (!page) throw profileRequired(`UNKNOWN_PHYSICAL_PAGE:${pageNumber}`);
     return page;
   });
@@ -153,7 +153,9 @@ function chooseOrderedAnchorMatches(documentArtifact, requirement) {
       )
     );
   }
-  return selected.sort((left, right) => left.documentStart - right.documentStart);
+  return selected.sort(
+    (left, right) => left.documentStart - right.documentStart
+  );
 }
 
 function diagnoseLfSemanticOracleAnchors(documentArtifact, oracle) {
@@ -304,9 +306,10 @@ function bindingForRaw(bindings, family, rawValue) {
   const expected = family === "PERCENT" ? rawNumber / 100 : rawNumber;
   return (
     bindings.find((binding) => {
-      const numbers = String(binding.formula || "")
-        .match(/\d+(?:[.,]\d+)?/gu)
-        ?.map((value) => Number(value.replace(",", "."))) || [];
+      const numbers =
+        String(binding.formula || "")
+          .match(/\d+(?:[.,]\d+)?/gu)
+          ?.map((value) => Number(value.replace(",", "."))) || [];
       return numbers.some(
         (number) => Math.abs(number - expected) < 1e-9 || number === rawNumber
       );
@@ -318,9 +321,10 @@ function bindingNumericallyMatches(binding, family, rawValue) {
   const rawNumber = localizedNumber(rawValue);
   if (rawNumber === null || !binding.formula) return false;
   const expected = family === "PERCENT" ? rawNumber / 100 : rawNumber;
-  const numbers = String(binding.formula)
-    .match(/\d+(?:[.,]\d+)?/gu)
-    ?.map((value) => Number(value.replace(",", "."))) || [];
+  const numbers =
+    String(binding.formula)
+      .match(/\d+(?:[.,]\d+)?/gu)
+      ?.map((value) => Number(value.replace(",", "."))) || [];
   return numbers.some(
     (number) => Math.abs(number - expected) < 1e-9 || number === rawNumber
   );
@@ -417,11 +421,7 @@ function inheritSharedGovernorValues(requirements) {
                 (value) =>
                   valueFamily(value.declaredType || value.type) === family &&
                   (value.basis?.label === (binding.basisLabel || null) ||
-                    bindingNumericallyMatches(
-                      binding,
-                      family,
-                      value.rawValue
-                    ))
+                    bindingNumericallyMatches(binding, family, value.rawValue))
               )
               .map((value) => ({ candidate, value }))
           );
@@ -478,16 +478,21 @@ function bindDeclaredSharedValueGovernors({
       components: governor.components,
     };
     const matches = chooseOrderedAnchorMatches(documentArtifact, definition);
-    const spans = sourceSpans(documentArtifact, ledger, definition, matches).map(
-      (span) => ({
-        ...span,
-        relation: "SHARED_VALUE_GOVERNOR",
-        governorId: governor.id,
-      })
-    );
+    const spans = sourceSpans(
+      documentArtifact,
+      ledger,
+      definition,
+      matches
+    ).map((span) => ({
+      ...span,
+      relation: "SHARED_VALUE_GOVERNOR",
+      governorId: governor.id,
+    }));
     const values = extractedValues(definition, spans);
     if (values.length === 0)
-      throw profileRequired(`SHARED_VALUE_GOVERNOR_VALUE_MISSING:${governor.id}`);
+      throw profileRequired(
+        `SHARED_VALUE_GOVERNOR_VALUE_MISSING:${governor.id}`
+      );
     for (const requirementId of governor.requirementIds) {
       const requirement = requirements.find(
         ({ requirementId: id }) => id === requirementId
@@ -562,7 +567,10 @@ function validateOracle(oracle) {
       throw profileRequired(`${id}:PAGES_MISSING`);
     if (!Array.isArray(requirement.anchors) || requirement.anchors.length === 0)
       throw profileRequired(`${id}:ANCHORS_MISSING`);
-    if (!Array.isArray(requirement.components) || requirement.components.length === 0)
+    if (
+      !Array.isArray(requirement.components) ||
+      requirement.components.length === 0
+    )
       throw profileRequired(`${id}:COMPONENTS_MISSING`);
   }
   return oracle;
@@ -655,7 +663,9 @@ function buildLfSemanticRequirementManifest({
     ])
   );
   const blockCrosswalk = ledger.blocks.map((block) => {
-    const requirementIds = [...new Set(semanticBlockIds.get(block.blockId) || [])];
+    const requirementIds = [
+      ...new Set(semanticBlockIds.get(block.blockId) || []),
+    ];
     if (requirementIds.length > 0)
       return {
         blockId: block.blockId,
@@ -688,7 +698,11 @@ function buildLfSemanticRequirementManifest({
   for (const requirement of requirements) {
     let category = categories.find(({ id }) => id === requirement.categoryId);
     if (!category) {
-      category = { id: requirement.categoryId, label: requirement.categoryLabel, subcategories: [] };
+      category = {
+        id: requirement.categoryId,
+        label: requirement.categoryLabel,
+        subcategories: [],
+      };
       categories.push(category);
     }
     let subcategory = category.subcategories.find(
