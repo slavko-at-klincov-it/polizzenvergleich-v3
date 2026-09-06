@@ -60,6 +60,20 @@ describe("category output acceptance contract", () => {
     ]);
   });
 
+  test("extracts dynamic LF source-row identifiers", () => {
+    const dynamicPrompt = `
+| ID | Stufe | LF-Prüfpunkt |
+|---|---|---|
+| \`LR01-001\` | LF | Erster Referenzpunkt |
+| \`LR13-046\` | LF | Letzter Referenzpunkt |
+`;
+
+    expect(extractCategoryDefinitions(dynamicPrompt)).toEqual([
+      { id: "LR01-001", stage: "LF", label: "Erster Referenzpunkt" },
+      { id: "LR13-046", stage: "LF", label: "Letzter Referenzpunkt" },
+    ]);
+  });
+
   test("accepts an exact table and notice", () => {
     expect(
       validate([HEADER, SEPARATOR, ROW_1, ROW_2, NOTICE].join("\n"))
