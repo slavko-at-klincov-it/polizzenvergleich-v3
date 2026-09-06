@@ -545,9 +545,7 @@ function resolveCalculatedPercentAmounts(requirements) {
       if (value.type !== "PERCENT" || !value.basis?.label) continue;
       const basisLabel = normalizeLabel(value.basis.label);
       const candidates = requirements
-        .filter(
-          (candidate) => candidate.categoryId === requirement.categoryId
-        )
+        .filter((candidate) => candidate.categoryId === requirement.categoryId)
         .flatMap((candidate) =>
           candidate.values
             .filter(
