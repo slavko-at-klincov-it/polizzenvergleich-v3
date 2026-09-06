@@ -135,6 +135,23 @@ function chooseOrderedAnchorMatches(documentArtifact, requirement) {
   return selected;
 }
 
+function diagnoseLfSemanticOracleAnchors(documentArtifact, oracle) {
+  validateOracle(oracle);
+  const diagnostics = [];
+  for (const requirement of oracle.requirements) {
+    try {
+      chooseOrderedAnchorMatches(documentArtifact, requirement);
+    } catch (error) {
+      diagnostics.push({
+        requirementId: requirement.id,
+        code: error.code || "ANCHOR_VALIDATION_FAILED",
+        message: error.message,
+      });
+    }
+  }
+  return diagnostics;
+}
+
 function lineBounds(text, start, end, page) {
   let lineStart = text.lastIndexOf("\n", start - 1);
   lineStart = Math.max(page.start, lineStart < 0 ? page.start : lineStart + 1);
@@ -461,5 +478,6 @@ module.exports = {
   LF_DYNAMIC_REFERENCE_PROFILE_ID,
   LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID,
   buildLfSemanticRequirementManifest,
+  diagnoseLfSemanticOracleAnchors,
   validateLfSemanticRequirementManifest,
 };
