@@ -79,6 +79,7 @@ const ALLOWED_SCOPE_POLICIES = new Set([
   "MATCHING_SCOPE_DEFINITIVE_SUFFICIENT",
 ]);
 const ALLOWED_COMPONENT_SATISFACTION_POLICIES = new Set(["ALL", "ANY"]);
+const ALLOWED_SEARCH_PLAN_STATUSES = new Set(["EXPLORATORY_INCOMPLETE"]);
 const DIRECTED_OBJECT_FAMILY_CONTRACT_ID = "DIRECTED_OBJECT_FAMILY_V1";
 const COVERAGE_PRESENCE_ONLY = "COVERAGE_PRESENCE_ONLY";
 const ALLOWED_ABSENCE_COMPARISON_POLICIES = new Set([
@@ -2197,9 +2198,12 @@ function validateCatalog(
       requirement.components.length === 0
     )
       throw worksheetError("REQUIREMENT_COMPONENTS_REQUIRED", id);
+    const explicitlyExploratory =
+      requirement.searchPlanStatus === "EXPLORATORY_INCOMPLETE";
     if (
       catalog.schemaVersion === 2 &&
-      (requirement.negativeSearchPolicy === undefined ||
+      ((requirement.negativeSearchPolicy === undefined &&
+        !explicitlyExploratory) ||
         requirement.absenceMeaning === undefined)
     )
       throw worksheetError("QUALIFIED_ABSENCE_CONTRACT_REQUIRED", id);
@@ -2783,6 +2787,17 @@ function validateCatalog(
         if (!ALLOWED_COMPONENT_SATISFACTION_POLICIES.has(policy))
           throw worksheetError("COMPONENT_SATISFACTION_POLICY_INVALID", id);
         return policy;
+      })(),
+      searchPlanStatus: (() => {
+        if (requirement.searchPlanStatus === undefined) return null;
+        const status = requireNonEmptyString(
+          requirement.searchPlanStatus,
+          "SEARCH_PLAN_STATUS_INVALID",
+          id
+        );
+        if (!ALLOWED_SEARCH_PLAN_STATUSES.has(status))
+          throw worksheetError("SEARCH_PLAN_STATUS_INVALID", id);
+        return status;
       })(),
       negativeSearchPolicy: (() => {
         if (requirement.negativeSearchPolicy === undefined) return null;
@@ -3843,6 +3858,9 @@ function buildControlledOccurrenceWorksheet({
       scopeRules: requirement.scopeRules,
       scopePolicy: requirement.scopePolicy,
       componentSatisfactionPolicy: requirement.componentSatisfactionPolicy,
+      ...(requirement.searchPlanStatus
+        ? { searchPlanStatus: requirement.searchPlanStatus }
+        : {}),
       ...(requirement.negativeSearchPolicy
         ? { negativeSearchPolicy: requirement.negativeSearchPolicy }
         : {}),

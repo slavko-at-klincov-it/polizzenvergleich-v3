@@ -76,6 +76,7 @@ describe("complete LF dynamic reference profile", () => {
       catalogs.flatMap(({ catalog }) => catalog.requirements).every(
         (requirement) =>
           requirement.negativeSearchPolicy === undefined &&
+          requirement.searchPlanStatus === "EXPLORATORY_INCOMPLETE" &&
           requirement.sourceReferenceId
       )
     ).toBe(true);

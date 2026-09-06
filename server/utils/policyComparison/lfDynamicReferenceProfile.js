@@ -92,6 +92,7 @@ function categoryCatalogsFromManifest(manifest) {
             label: requirement.displayLabel,
             requestedFields: requestedFields(components),
             components,
+            searchPlanStatus: requirement.searchPlanStatus,
             componentSatisfactionPolicy: "ALL",
             coverageAggregationPolicy: components.some(({ factRole }) =>
               [

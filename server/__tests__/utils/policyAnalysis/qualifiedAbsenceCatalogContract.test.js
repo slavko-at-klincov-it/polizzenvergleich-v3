@@ -140,6 +140,42 @@ describe("qualified absence catalog contract", () => {
     ).toThrow("QUALIFIED_ABSENCE_CONTRACT_REQUIRED: VS-01");
   });
 
+  test("accepts an explicitly exploratory row without qualifying absence", () => {
+    const worksheet = buildControlledOccurrenceWorksheet({
+      document: document(),
+      documentFingerprint: "exploratory-fixture",
+      catalog: {
+        schemaVersion: 2,
+        catalogId: "exploratory-catalog-v1",
+        categoryView: "VS",
+        requirements: [
+          {
+            id: "VS-X01",
+            label: "Exploratory fixture",
+            requestedFields: [],
+            searchPlanStatus: "EXPLORATORY_INCOMPLETE",
+            absenceMeaning: "COVERAGE_MIXED",
+            components: [
+              {
+                id: "fixture",
+                label: "Fixture",
+                factRole: "BENEFIT",
+                aliases: ["Fixture"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(worksheet.requirements[0]).toMatchObject({
+      id: "VS-X01",
+      searchPlanStatus: "EXPLORATORY_INCOMPLETE",
+      absenceMeaning: "COVERAGE_MIXED",
+    });
+    expect(worksheet.requirements[0].negativeSearchPolicy).toBeUndefined();
+  });
+
   test("rejects a comparison policy that has no approved registry binding", () => {
     const source = catalogs[0].requirements.find(({ id }) => id === "VS-17");
     expect(() =>
