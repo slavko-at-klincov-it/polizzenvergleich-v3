@@ -2,12 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 const { analysisPrompt, categoryCatalogs } = require("./lfReferenceProfile");
-const {
-  buildCatalogFromLineManifest,
-  buildLfReferenceLineManifest,
-  LF_REFERENCE_MANIFEST_FILE,
-  validateLfReferenceLineManifest,
-} = require("./lfReferenceManifest");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
 const SCRIPT_ROOT = path.join(REPOSITORY_ROOT, "server", "scripts", "qa");
@@ -35,25 +29,10 @@ function writePrivate(file, value) {
   fs.chmodSync(file, 0o600);
 }
 
-function prepareReferenceContracts(runRoot, { lineManifest = null } = {}) {
+function prepareReferenceContracts(runRoot) {
   const contractRoot = path.join(runRoot, "reference-contracts");
   privateDirectory(contractRoot);
-  const definitions = lineManifest
-    ? buildCatalogFromLineManifest(
-        validateLfReferenceLineManifest(lineManifest)
-      )
-    : categoryCatalogs();
-  const manifestFile = lineManifest
-    ? path.join(contractRoot, LF_REFERENCE_MANIFEST_FILE)
-    : null;
-  if (lineManifest) {
-    const manifestBytes = `${JSON.stringify(lineManifest, null, 2)}\n`;
-    if (!fs.existsSync(manifestFile)) writePrivate(manifestFile, manifestBytes);
-    else if (fs.readFileSync(manifestFile, "utf8") !== manifestBytes)
-      throw new Error("REFERENCE_RESUME_LINE_MANIFEST_MISMATCH");
-  }
-
-  return definitions.map((definition) => {
+  return categoryCatalogs().map((definition) => {
     const catalogFile = path.join(
       contractRoot,
       `${definition.categoryView}.catalog.private.json`
@@ -74,12 +53,7 @@ function prepareReferenceContracts(runRoot, { lineManifest = null } = {}) {
       throw new Error(
         `REFERENCE_RESUME_PROMPT_MISMATCH:${definition.categoryView}`
       );
-    return {
-      ...definition,
-      catalogFile,
-      promptFile,
-      ...(lineManifest ? { lineManifest, manifestFile } : {}),
-    };
+    return { ...definition, catalogFile, promptFile };
   });
 }
 
@@ -128,10 +102,15 @@ function runCommand(args, logFile) {
   });
 }
 
-async function ensureReferenceDocumentArtifact({
+async function analyzeReferenceDocument({
   file,
+  documentStatus,
   outputDirectory,
   logFile,
+  contracts,
+  model,
+  modelTokenLimit,
+  onCategoryComplete = () => {},
 }) {
   privateDirectory(outputDirectory);
   const documentArtifact = path.join(outputDirectory, "document.private.json");
@@ -146,59 +125,6 @@ async function ensureReferenceDocumentArtifact({
       ],
       logFile
     );
-  return documentArtifact;
-}
-
-async function prepareReferenceDocument({
-  file,
-  outputDirectory,
-  logFile,
-  expectedFingerprint = null,
-}) {
-  const documentArtifact = await ensureReferenceDocumentArtifact({
-    file,
-    outputDirectory,
-    logFile,
-  });
-  const artifact = JSON.parse(fs.readFileSync(documentArtifact, "utf8"));
-  if (expectedFingerprint && artifact.fingerprint !== expectedFingerprint)
-    throw new Error("REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH");
-  const lineManifestFile = path.join(
-    outputDirectory,
-    LF_REFERENCE_MANIFEST_FILE
-  );
-  const lineManifest = fs.existsSync(lineManifestFile)
-    ? validateLfReferenceLineManifest(
-        JSON.parse(fs.readFileSync(lineManifestFile, "utf8")),
-        { documentArtifact: artifact }
-      )
-    : buildLfReferenceLineManifest(artifact);
-  if (!fs.existsSync(lineManifestFile))
-    writePrivate(lineManifestFile, lineManifest);
-  return {
-    documentArtifactFile: documentArtifact,
-    documentArtifact: artifact,
-    lineManifestFile,
-    lineManifest,
-  };
-}
-
-async function analyzeReferenceDocument({
-  file,
-  documentStatus,
-  outputDirectory,
-  logFile,
-  contracts,
-  model,
-  modelTokenLimit,
-  onCategoryComplete = () => {},
-}) {
-  privateDirectory(outputDirectory);
-  const documentArtifact = await ensureReferenceDocumentArtifact({
-    file,
-    outputDirectory,
-    logFile,
-  });
   for (const contract of contracts) {
     if (categoryComplete(outputDirectory, contract.categoryView)) {
       onCategoryComplete(contract.categoryView);
@@ -324,6 +250,5 @@ async function analyzeReferenceDocument({
 module.exports = {
   analyzeReferenceDocument,
   completedReferenceCategoryViews,
-  prepareReferenceDocument,
   prepareReferenceContracts,
 };

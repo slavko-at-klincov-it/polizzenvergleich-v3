@@ -352,9 +352,12 @@ const PolicyComparison = {
         countA !== 1
       )
         throw new Error("COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED");
-      // The LF family contract is validated against the extracted A artifact
-      // by the worker. Queueing must not reject a structurally compatible
-      // revision merely because its file hash differs from the seed fixture.
+      if (
+        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
+        current.documents.find(({ side }) => side === "A")?.sha256 !==
+          LF_REFERENCE_PROFILE.sourceProduct.documentSha256
+      )
+        throw new Error("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
       const inputManifest = {
         schemaVersion: 3,
         sessionUuid: current.uuid,

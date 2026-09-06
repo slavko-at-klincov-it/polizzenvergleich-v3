@@ -17,13 +17,8 @@ import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.
 import policyComparisonResultPresenter from "@/utils/chat/policyComparisonResultPresenter.cjs";
 
 const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
-const {
-  presentComparisonCoverage,
-  presentComparisonError,
-  presentComparisonMetrics,
-  presentComparisonProgress,
-  presentPointDecision,
-} = policyComparisonResultPresenter;
+const { presentComparisonMetrics, presentPointDecision } =
+  policyComparisonResultPresenter;
 
 const LF_REFERENCE_MODE = "LF_IMMO_REFERENCE_A_TO_B_V1";
 
@@ -124,7 +119,6 @@ export default function PolicyComparisonPanel({
   const totalCount = documents.length;
   const referenceMode =
     (session?.comparisonMode || options.mode?.id) === LF_REFERENCE_MODE;
-  const coverage = presentComparisonCoverage({ session, result });
   const sideLimit = (side) =>
     session?.limits?.[side] || options.mode?.[`maxDocuments${side}`] || 9;
 
@@ -358,12 +352,6 @@ export default function PolicyComparisonPanel({
               Vergleichspakete werden bewusst nicht vermischt.
             </div>
           )}
-          <ComparisonCoverageSummary
-            referenceMode={referenceMode}
-            session={session}
-            options={options}
-            coverage={coverage}
-          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <PackageColumn
               side="A"
@@ -373,7 +361,7 @@ export default function PolicyComparisonPanel({
                   ? "LF-IMMO-Referenzdokument A"
                   : "Dokumentpaket A")
               }
-              documents={coverage.manifest.documentsBySide.A}
+              documents={documents.filter(({ side }) => side === "A")}
               roleOptions={options.documentRoles}
               statusOptions={options.documentStatuses}
               disabled={loading || busy || locked || chatUploadActive}
@@ -385,7 +373,7 @@ export default function PolicyComparisonPanel({
             <PackageColumn
               side="B"
               title={options.mode?.sideBLabel || "Dokumentpaket B"}
-              documents={coverage.manifest.documentsBySide.B}
+              documents={documents.filter(({ side }) => side === "B")}
               roleOptions={options.documentRoles}
               statusOptions={options.documentStatuses}
               disabled={loading || busy || locked || chatUploadActive}
@@ -398,7 +386,7 @@ export default function PolicyComparisonPanel({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] leading-4 text-zinc-400 light:text-slate-500 max-w-[490px]">
               {referenceMode
-                ? "A definiert im LF-Referenzmodus die sichtbaren Vergleichspunkte und deren Reihenfolge. B liefert dazu Gegenstücke; B-only-Inhalte erzeugen keine Ergebniszeile."
+                ? "Die 35 LF-IMMO-Referenzzeilen aus A steuern die Suche in B. Inhalte ausschließlich in B erzeugen keine Ergebniszeile."
                 : "Die PDFs bleiben außerhalb des Workspace-Index. Rolle und Geltungsstatus werden pro Quelldokument gespeichert."}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -441,18 +429,16 @@ export default function PolicyComparisonPanel({
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {referenceMode
-                    ? "LF-Referenzvergleich A → B starten"
+                    ? "35 LF-Referenzzeilen A → B prüfen"
                     : "5 Kernkategorien vollständig vergleichen"}
                 </button>
               )}
             </div>
           </div>
-          {session?.progress && (
-            <ComparisonProgress progress={session.progress} />
-          )}
+          {locked && <ComparisonProgress progress={session.progress} />}
           {session?.status === "FAILED" && (
             <div className="mt-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 light:text-rose-800">
-              Vergleich fehlgeschlagen: {presentComparisonError(session.error)}
+              Vergleich fehlgeschlagen: {session.error || "Unbekannter Fehler"}
             </div>
           )}
           {session?.status === "CANCELLED" && (
@@ -469,12 +455,16 @@ export default function PolicyComparisonPanel({
 }
 
 function ComparisonProgress({ progress }) {
-  const progressView = presentComparisonProgress(progress);
-  const completed = progressView.completedDocuments ?? 0;
-  const total = progressView.totalDocuments ?? 0;
-  const completedCategories = progressView.completedCategories;
-  const totalCategories = progressView.totalCategories;
-  const percent = progressView.percent ?? 0;
+  const completed = progress?.completedDocuments || 0;
+  const total = progress?.totalDocuments || 0;
+  const completedCategories = progress?.completedCategories;
+  const totalCategories = progress?.totalCategories;
+  const percent =
+    totalCategories > 0
+      ? Math.round((completedCategories / totalCategories) * 100)
+      : total > 0
+        ? Math.round((completed / total) * 100)
+        : 0;
   return (
     <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2">
       <div className="flex items-center justify-between text-xs text-sky-200 light:text-sky-800">
@@ -485,32 +475,8 @@ function ComparisonProgress({ progress }) {
               ? `Kategorien ${completedCategories}/${totalCategories}`
               : `Dokumentanalyse ${completed}/${total}`}
         </span>
-        <span>
-          {progressView.percent === null
-            ? "nicht verfügbar"
-            : String(percent) + "%"}
-        </span>
+        <span>{percent}%</span>
       </div>
-      {(progressView.completedDocuments !== null ||
-        progressView.completedCategories !== null) && (
-        <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-          {progressView.completedDocuments !== null &&
-          progressView.totalDocuments !== null
-            ? "Dokumente " +
-              progressView.completedDocuments +
-              "/" +
-              progressView.totalDocuments
-            : "Dokumente nicht verfügbar"}
-          {" · "}
-          {progressView.completedCategories !== null &&
-          progressView.totalCategories !== null
-            ? "Vergleichspunkte " +
-              progressView.completedCategories +
-              "/" +
-              progressView.totalCategories
-            : "Vergleichspunkte nicht verfügbar"}
-        </p>
-      )}
       <div className="mt-2 h-1.5 rounded-full bg-zinc-700 light:bg-slate-200 overflow-hidden">
         <div
           className="h-full bg-sky-400 transition-all"
@@ -525,140 +491,6 @@ function ComparisonProgress({ progress }) {
         </p>
       )}
     </div>
-  );
-}
-
-function ComparisonCoverageSummary({
-  referenceMode,
-  session,
-  options,
-  coverage,
-}) {
-  const manifest = coverage.manifest;
-  const profile = coverage.profile;
-  const sideLimit = (side) =>
-    session?.limits?.[side] || options.mode?.["maxDocuments" + side] || null;
-  const orderedDocuments = [
-    ...manifest.documentsBySide.A.map((document, index) => ({
-      document,
-      label:
-        "A" +
-        (Number.isInteger(document.position)
-          ? document.position + 1
-          : index + 1),
-    })),
-    ...manifest.documentsBySide.B.map((document, index) => ({
-      document,
-      label:
-        "B" +
-        (Number.isInteger(document.position)
-          ? document.position + 1
-          : index + 1),
-    })),
-  ];
-  const modeName =
-    options.mode?.name ||
-    (referenceMode
-      ? "LF-IMMO-Referenzvergleich (A → B)"
-      : "Vollständiger A/B-Vergleich");
-  const profileCoverage =
-    profile.status === "MATCHED"
-      ? profile.observedCategoryCount +
-        "/" +
-        profile.expectedCategoryCount +
-        " Kategorien · " +
-        profile.observedRowCount +
-        "/" +
-        profile.expectedRowCount +
-        " Vergleichspunkte"
-      : profile.status === "MISMATCH"
-        ? profile.observedCategoryCount +
-          "/" +
-          profile.expectedCategoryCount +
-          " Kategorien · " +
-          profile.observedRowCount +
-          "/" +
-          profile.expectedRowCount +
-          " Vergleichspunkte; Profilabweichung"
-        : profile.status === "UNKNOWN"
-          ? "Profil vorhanden, Abdeckung nicht vollständig prüfbar"
-          : "wird mit dem Ergebnis geliefert";
-  return (
-    <section className="mb-3 rounded-lg border border-zinc-700/80 light:border-slate-300 bg-zinc-950/30 light:bg-white px-3 py-2 text-[11px]">
-      <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
-        <p className="min-w-0">
-          <span className="text-zinc-500 light:text-slate-500">
-            Verfahren:{" "}
-          </span>
-          <span className="font-semibold text-zinc-100 light:text-slate-800">
-            {modeName}
-          </span>
-        </p>
-        <p>
-          <span className="text-zinc-500 light:text-slate-500">
-            Paketmanifest:{" "}
-          </span>
-          <span className="font-semibold text-zinc-100 light:text-slate-800">
-            A {manifest.documentsBySide.A.length}/{sideLimit("A") ?? "?"} · B{" "}
-            {manifest.documentsBySide.B.length}/{sideLimit("B") ?? "?"}
-          </span>
-        </p>
-        <p>
-          <span className="text-zinc-500 light:text-slate-500">
-            Ergebnisabdeckung:{" "}
-          </span>
-          <span className="font-semibold text-zinc-100 light:text-slate-800">
-            {manifest.hasResultManifest
-              ? manifest.resultCount +
-                "/" +
-                manifest.uploadedCount +
-                " Manifestdokumente übernommen"
-              : "noch nicht verfügbar"}
-          </span>
-        </p>
-        <p>
-          <span className="text-zinc-500 light:text-slate-500">
-            Profilabdeckung:{" "}
-          </span>
-          <span className="font-semibold text-zinc-100 light:text-slate-800">
-            {profileCoverage}
-          </span>
-        </p>
-      </div>
-      <p className="mt-1.5 text-zinc-400 light:text-slate-500">
-        <span className="text-zinc-500 light:text-slate-500">
-          Reihenfolge:{" "}
-        </span>
-        {orderedDocuments.length > 0
-          ? orderedDocuments
-              .map(
-                ({ document, label }) =>
-                  label + " " + (document.originalName || "Dokument")
-              )
-              .join(" · ")
-          : "wird nach der Paketzuordnung angezeigt"}
-      </p>
-      {profile.profileId && (
-        <p
-          className="mt-1 truncate text-[10px] text-zinc-500 light:text-slate-500"
-          title={profile.profileId}
-        >
-          Profil-ID: {profile.profileId}
-        </p>
-      )}
-      {profile.requiresNewLfProfile && (
-        <p className="mt-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 font-semibold text-amber-200 light:text-amber-800">
-          Profilabweichung erkannt: neues LF-Profil erforderlich. Die angezeigte
-          Abdeckung wird nicht als vollständiges LF-Inventar gewertet.
-        </p>
-      )}
-      {manifest.status === "MISMATCH" && (
-        <p className="mt-1.5 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-semibold text-rose-200 light:text-rose-800">
-          Das Ergebnismanifest weicht von den zugeordneten Dokumenten ab; die
-          Abdeckung ist unvollständig.
-        </p>
-      )}
-    </section>
   );
 }
 
@@ -679,10 +511,7 @@ function ComparisonResult({ result }) {
           {customerMetrics.rows} analysierte Zeilen
         </p>
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
-          {referenceMode
-            ? result.proofLimit ||
-              "Das LF-Referenzmanifest und sein Profilstatus sind nicht verfügbar."
-            : result.proofLimit}
+          {result.proofLimit}
         </p>
         <p className="mt-1 text-[10px] font-semibold text-amber-200 light:text-amber-800">
           Kundenprüfung erforderlich:{" "}

@@ -115,6 +115,11 @@ describe("policy comparison worker contract", () => {
   test("routes the directed LF workflow through the controlled no-embedding path", () => {
     expect(source).toContain("analyzeReferenceDocument");
     expect(source).toContain("writeReferenceComparisonArtifacts");
+    expect(source).toContain(
+      "referenceMode ? prepareReferenceContracts(runRoot) : null"
+    );
+    expect(source).not.toContain("prepareReferenceDocument");
+    expect(source).not.toContain("lineManifest:");
     const referenceRunner = fs.readFileSync(
       path.join(
         REPOSITORY_ROOT,
@@ -125,6 +130,17 @@ describe("policy comparison worker contract", () => {
     expect(referenceRunner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(referenceRunner).toContain("runPreparedEvidenceEvaluation.cjs");
     expect(referenceRunner).not.toContain(".embeddings.");
+  });
+
+  test("keeps the unaccepted source-block manifest out of the product worker", () => {
+    const model = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "server/models/policyComparison.js"),
+      "utf8"
+    );
+    expect(model).toContain("LF_REFERENCE_PROFILE.sourceProduct.documentSha256");
+    expect(model).toContain("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
+    expect(source).not.toContain("LF_REFERENCE_MANIFEST_FILE");
+    expect(source).not.toContain("buildLfReferenceLineManifest");
   });
 
   test("archives the completed workbook before marking the session complete", () => {

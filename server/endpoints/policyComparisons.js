@@ -99,16 +99,6 @@ function errorStatus(error) {
 }
 
 function comparisonStartErrorMessage(error) {
-  if (
-    String(error?.message || "").startsWith("LF_REFERENCE_NEW_PROFILE_REQUIRED")
-  )
-    return "Die LF-Struktur von Dokument A wird nicht unterstützt; neues LF-Profil erforderlich.";
-  if (
-    String(error?.message || "").startsWith(
-      "REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH"
-    )
-  )
-    return "Die Quelldatei von Dokument A hat sich seit dem Upload geändert. Bitte erneut hochladen.";
   const messages = {
     COMPARISON_BOTH_SIDES_REQUIRED:
       "Bitte mindestens ein Dokument auf Seite A und Seite B hinzufügen.",
