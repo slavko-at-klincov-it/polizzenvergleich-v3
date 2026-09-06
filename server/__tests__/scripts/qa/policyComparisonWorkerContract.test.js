@@ -114,12 +114,11 @@ describe("policy comparison worker contract", () => {
 
   test("routes the directed LF workflow through the controlled no-embedding path", () => {
     expect(source).toContain("analyzeReferenceDocument");
-    expect(source).toContain("writeReferenceComparisonArtifacts");
+    expect(source).toContain("prepareDynamicReferenceTemplate");
+    expect(source).toContain("writeDynamicReferenceComparisonArtifacts");
     expect(source).toContain(
-      "referenceMode ? prepareReferenceContracts(runRoot) : null"
+      'plannedRuns.filter(({ document }) => document.side === "B")'
     );
-    expect(source).not.toContain("prepareReferenceDocument");
-    expect(source).not.toContain("lineManifest:");
     const referenceRunner = fs.readFileSync(
       path.join(
         REPOSITORY_ROOT,
@@ -132,15 +131,23 @@ describe("policy comparison worker contract", () => {
     expect(referenceRunner).not.toContain(".embeddings.");
   });
 
-  test("keeps the unaccepted source-block manifest out of the product worker", () => {
+  test("uses the structure-compatible LF source manifest instead of a fixed PDF hash", () => {
     const model = fs.readFileSync(
       path.join(REPOSITORY_ROOT, "server/models/policyComparison.js"),
       "utf8"
     );
-    expect(model).toContain("LF_REFERENCE_PROFILE.sourceProduct.documentSha256");
-    expect(model).toContain("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
-    expect(source).not.toContain("LF_REFERENCE_MANIFEST_FILE");
-    expect(source).not.toContain("buildLfReferenceLineManifest");
+    expect(model).toContain("LF_DYNAMIC_REFERENCE_PROFILE");
+    expect(model).not.toContain("LF_REFERENCE_PROFILE.sourceProduct.documentSha256");
+    expect(model).not.toContain("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
+    const dynamicRunner = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/utils/policyComparison/dynamicReferenceRunner.js"
+      ),
+      "utf8"
+    );
+    expect(dynamicRunner).toContain("semanticRequirementManifestSha256");
+    expect(source).toContain("templateDigest");
   });
 
   test("archives the completed workbook before marking the session complete", () => {

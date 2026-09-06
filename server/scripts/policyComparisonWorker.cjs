@@ -20,18 +20,19 @@ const {
   normalizePolicyComparisonMode,
 } = require("../utils/policyComparison/modes");
 const {
-  LF_REFERENCE_PROFILE,
-  categoryCatalogs,
-} = require("../utils/policyComparison/lfReferenceProfile");
+  LF_DYNAMIC_REFERENCE_PROFILE,
+} = require("../utils/policyComparison/lfDynamicReferenceProfile");
 const {
   analyzeReferenceDocument,
   completedReferenceCategoryViews,
-  prepareReferenceContracts,
 } = require("../utils/policyComparison/referenceRunner");
 const {
-  validateReferenceComparison,
-  writeReferenceComparisonArtifacts,
-} = require("../utils/policyComparison/referenceResultBuilder");
+  prepareDynamicReferenceTemplate,
+} = require("../utils/policyComparison/dynamicReferenceRunner");
+const {
+  validateDynamicReferenceComparison,
+  writeDynamicReferenceComparisonArtifacts,
+} = require("../utils/policyComparison/dynamicReferenceResultBuilder");
 const {
   archiveComparisonWorkbook,
 } = require("../utils/policyComparison/workbookArchive");
@@ -236,7 +237,7 @@ async function main() {
   );
   const expectedProfile =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
-      ? LF_REFERENCE_PROFILE
+      ? LF_DYNAMIC_REFERENCE_PROFILE
       : PRODUCT_PROFILE;
   if (
     manifest?.schemaVersion !== 3 ||
@@ -250,16 +251,11 @@ async function main() {
 
   const referenceMode =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
-  const categoryOrder = referenceMode
-    ? categoryCatalogs().map(({ categoryView }) => categoryView)
-    : CATEGORY_ORDER;
-  const categoryCount = categoryOrder.length;
-  const { runRoot, signature } = resumableRun({
+  const { runRoot, signature: resumeSignature } = resumableRun({
     sessionUuid,
     manifest,
     comparisonMode,
   });
-  const contracts = referenceMode ? prepareReferenceContracts(runRoot) : null;
   writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
   const plannedRuns = manifest.documents.map((document) => ({
     document,
@@ -269,7 +265,62 @@ async function main() {
       `${document.side}-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`
     ),
   }));
-  const resumedCategories = plannedRuns.reduce(
+
+  async function validatedSourceFile(document) {
+    const sourceFile = path.resolve(policyComparisonsPath, document.storagePath);
+    if (
+      !isWithin(policyComparisonsPath, sourceFile) ||
+      !fs.existsSync(sourceFile)
+    )
+      throw new Error(`COMPARISON_SOURCE_MISSING:${document.uuid}`);
+    if ((await sha256File(sourceFile)) !== document.sha256)
+      throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
+    return sourceFile;
+  }
+
+  let dynamicTemplate = null;
+  if (referenceMode) {
+    const sourceRun = plannedRuns.find(({ document }) => document.side === "A");
+    if (!sourceRun) throw new Error("LF_DYNAMIC_REFERENCE_SOURCE_A_MISSING");
+    await updateSession(session.id, {
+      status: "RUNNING",
+      startedAt: new Date(),
+      progress: JSON.stringify({
+        phase: "BUILDING_A_TEMPLATE",
+        completedDocuments: 0,
+        totalDocuments: manifest.documents.length,
+        currentDocument: {
+          uuid: sourceRun.document.uuid,
+          side: "A",
+          originalName: sourceRun.document.originalName,
+        },
+      }),
+    });
+    dynamicTemplate = await prepareDynamicReferenceTemplate({
+      runRoot,
+      sourceFile: await validatedSourceFile(sourceRun.document),
+      documentRun: sourceRun,
+      logFile: path.join(runRoot, "worker.log"),
+    });
+  }
+  const contracts = referenceMode ? dynamicTemplate.contracts : null;
+  const categoryOrder = referenceMode
+    ? contracts.map(({ categoryView }) => categoryView)
+    : CATEGORY_ORDER;
+  const categoryCount = categoryOrder.length;
+  const analysisRuns = referenceMode
+    ? plannedRuns.filter(({ document }) => document.side === "B")
+    : plannedRuns;
+  const signature = referenceMode
+    ? sha256(
+        JSON.stringify({
+          resumeSignature,
+          templateDigest: dynamicTemplate.templateDigest,
+        })
+      )
+    : resumeSignature;
+  const totalCategoryRuns = analysisRuns.length * categoryCount;
+  const resumedCategories = analysisRuns.reduce(
     (sum, { outputDirectory }) =>
       sum +
       (referenceMode
@@ -283,39 +334,29 @@ async function main() {
     startedAt: new Date(),
     progress: JSON.stringify({
       phase: "ANALYZING_DOCUMENTS",
-      completedDocuments: 0,
+      completedDocuments: referenceMode ? 1 : 0,
       totalDocuments: manifest.documents.length,
       completedCategories: resumedCategories,
-      totalCategories: manifest.documents.length * categoryCount,
+      totalCategories: totalCategoryRuns,
       resumedCategories,
       currentDocument: null,
     }),
   });
 
   const documentRuns = [];
-  for (const [index, plannedRun] of plannedRuns.entries()) {
+  for (const [index, plannedRun] of analysisRuns.entries()) {
     const { document, outputDirectory: documentOutput } = plannedRun;
-    const sourceFile = path.resolve(
-      policyComparisonsPath,
-      document.storagePath
-    );
-    if (
-      !isWithin(policyComparisonsPath, sourceFile) ||
-      !fs.existsSync(sourceFile)
-    )
-      throw new Error(`COMPARISON_SOURCE_MISSING:${document.uuid}`);
-    if ((await sha256File(sourceFile)) !== document.sha256)
-      throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
+    const sourceFile = await validatedSourceFile(document);
     const completedBeforeRun = referenceMode
       ? completedReferenceCategoryViews(documentOutput, contracts).length
       : completedCategoryViews(documentOutput).length;
     await updateSession(session.id, {
       progress: JSON.stringify({
         phase: "ANALYZING_DOCUMENTS",
-        completedDocuments: index,
+        completedDocuments: referenceMode ? index + 1 : index,
         totalDocuments: manifest.documents.length,
         completedCategories: index * categoryCount + completedBeforeRun,
-        totalCategories: manifest.documents.length * categoryCount,
+        totalCategories: totalCategoryRuns,
         resumedCategories,
         currentCategory: null,
         currentDocument: {
@@ -334,10 +375,10 @@ async function main() {
         updateSession(session.id, {
           progress: JSON.stringify({
             phase: "ANALYZING_DOCUMENTS",
-            completedDocuments: index,
+            completedDocuments: referenceMode ? index + 1 : index,
             totalDocuments: manifest.documents.length,
             completedCategories: index * categoryCount + completedCount,
-            totalCategories: manifest.documents.length * categoryCount,
+            totalCategories: totalCategoryRuns,
             resumedCategories,
             currentCategory: categoryView,
             currentDocument: {
@@ -378,8 +419,8 @@ async function main() {
       phase: "BUILDING_COMPARISON",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
-      completedCategories: manifest.documents.length * categoryCount,
-      totalCategories: manifest.documents.length * categoryCount,
+      completedCategories: totalCategoryRuns,
+      totalCategories: totalCategoryRuns,
       resumedCategories,
       currentCategory: null,
       currentDocument: null,
@@ -408,10 +449,19 @@ async function main() {
     };
   } else {
     artifacts = referenceMode
-      ? await writeReferenceComparisonArtifacts({
-          documentRuns,
+      ? await writeDynamicReferenceComparisonArtifacts({
+          sourceDocument: plannedRuns.find(
+            ({ document }) => document.side === "A"
+          ).document,
+          sideBDocumentRuns: documentRuns,
+          manifest: dynamicTemplate.manifest,
+          contracts,
           outputDirectory: resultDirectory,
-          metadata: { sessionUuid, runSignature: signature },
+          metadata: {
+            sessionUuid,
+            runSignature: signature,
+            templateDigest: dynamicTemplate.templateDigest,
+          },
         })
       : await writeComparisonArtifacts({
           documentRuns,
@@ -420,7 +470,10 @@ async function main() {
           enforceProductProfile: true,
         });
   }
-  if (referenceMode) validateReferenceComparison(artifacts.result);
+  if (referenceMode)
+    validateDynamicReferenceComparison(artifacts.result, {
+      manifest: dynamicTemplate.manifest,
+    });
   else validateCustomerComparisonFile(artifacts.jsonFile);
   const archivedWorkbook = archiveComparisonWorkbook({
     workbookFile: artifacts.workbookFile,
@@ -446,8 +499,8 @@ async function main() {
       phase: "COMPLETED",
       completedDocuments: manifest.documents.length,
       totalDocuments: manifest.documents.length,
-      completedCategories: manifest.documents.length * categoryCount,
-      totalCategories: manifest.documents.length * categoryCount,
+      completedCategories: totalCategoryRuns,
+      totalCategories: totalCategoryRuns,
       resumedCategories,
       currentCategory: null,
       currentDocument: null,

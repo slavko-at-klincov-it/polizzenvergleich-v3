@@ -29,10 +29,17 @@ function writePrivate(file, value) {
   fs.chmodSync(file, 0o600);
 }
 
-function prepareReferenceContracts(runRoot) {
-  const contractRoot = path.join(runRoot, "reference-contracts");
+function prepareReferenceContracts(
+  runRoot,
+  {
+    definitions = categoryCatalogs(),
+    promptBuilder = analysisPrompt,
+    directoryName = "reference-contracts",
+  } = {}
+) {
+  const contractRoot = path.join(runRoot, directoryName);
   privateDirectory(contractRoot);
-  return categoryCatalogs().map((definition) => {
+  return definitions.map((definition) => {
     const catalogFile = path.join(
       contractRoot,
       `${definition.categoryView}.catalog.private.json`
@@ -42,7 +49,7 @@ function prepareReferenceContracts(runRoot) {
       `${definition.categoryView}.prompt.private.md`
     );
     const catalogBytes = `${JSON.stringify(definition.catalog, null, 2)}\n`;
-    const promptBytes = `${analysisPrompt(definition)}\n`;
+    const promptBytes = `${promptBuilder(definition)}\n`;
     if (!fs.existsSync(catalogFile)) writePrivate(catalogFile, catalogBytes);
     else if (fs.readFileSync(catalogFile, "utf8") !== catalogBytes)
       throw new Error(
@@ -55,6 +62,23 @@ function prepareReferenceContracts(runRoot) {
       );
     return { ...definition, catalogFile, promptFile };
   });
+}
+
+async function extractReferenceDocument({ file, outputDirectory, logFile }) {
+  privateDirectory(outputDirectory);
+  const documentArtifact = path.join(outputDirectory, "document.private.json");
+  if (!fs.existsSync(documentArtifact))
+    await runCommand(
+      [
+        path.join(SCRIPT_ROOT, "extractPolicyDocument.cjs"),
+        "--pdfFile",
+        file,
+        "--output",
+        documentArtifact,
+      ],
+      logFile
+    );
+  return documentArtifact;
 }
 
 function categoryComplete(outputDirectory, categoryView) {
@@ -112,19 +136,11 @@ async function analyzeReferenceDocument({
   modelTokenLimit,
   onCategoryComplete = () => {},
 }) {
-  privateDirectory(outputDirectory);
-  const documentArtifact = path.join(outputDirectory, "document.private.json");
-  if (!fs.existsSync(documentArtifact))
-    await runCommand(
-      [
-        path.join(SCRIPT_ROOT, "extractPolicyDocument.cjs"),
-        "--pdfFile",
-        file,
-        "--output",
-        documentArtifact,
-      ],
-      logFile
-    );
+  const documentArtifact = await extractReferenceDocument({
+    file,
+    outputDirectory,
+    logFile,
+  });
   for (const contract of contracts) {
     if (categoryComplete(outputDirectory, contract.categoryView)) {
       onCategoryComplete(contract.categoryView);
@@ -250,5 +266,6 @@ async function analyzeReferenceDocument({
 module.exports = {
   analyzeReferenceDocument,
   completedReferenceCategoryViews,
+  extractReferenceDocument,
   prepareReferenceContracts,
 };

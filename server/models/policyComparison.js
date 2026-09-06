@@ -11,8 +11,8 @@ const {
   policyComparisonMode,
 } = require("../utils/policyComparison/modes");
 const {
-  LF_REFERENCE_PROFILE,
-} = require("../utils/policyComparison/lfReferenceProfile");
+  LF_DYNAMIC_REFERENCE_PROFILE,
+} = require("../utils/policyComparison/lfDynamicReferenceProfile");
 
 const SIDES = Object.freeze(["A", "B"]);
 const DOCUMENT_ROLES = Object.freeze([
@@ -352,12 +352,6 @@ const PolicyComparison = {
         countA !== 1
       )
         throw new Error("COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED");
-      if (
-        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
-        current.documents.find(({ side }) => side === "A")?.sha256 !==
-          LF_REFERENCE_PROFILE.sourceProduct.documentSha256
-      )
-        throw new Error("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
       const inputManifest = {
         schemaVersion: 3,
         sessionUuid: current.uuid,
@@ -366,7 +360,7 @@ const PolicyComparison = {
         productProfile:
           comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B
             ? PRODUCT_PROFILE
-            : LF_REFERENCE_PROFILE,
+            : LF_DYNAMIC_REFERENCE_PROFILE,
         documents: current.documents.map((document) => ({
           uuid: document.uuid,
           side: document.side,

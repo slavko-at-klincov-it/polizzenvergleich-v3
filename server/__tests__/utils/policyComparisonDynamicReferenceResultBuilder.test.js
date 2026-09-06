@@ -1,0 +1,85 @@
+const {
+  validateDynamicReferenceComparison,
+} = require("../../utils/policyComparison/dynamicReferenceResultBuilder");
+const {
+  LF_DYNAMIC_REFERENCE_PROFILE,
+} = require("../../utils/policyComparison/lfDynamicReferenceProfile");
+const {
+  REFERENCE_OUTCOME,
+} = require("../../utils/policyComparison/referenceResultBuilder");
+
+function fixture() {
+  const manifest = {
+    manifestSha256: "a".repeat(64),
+    source: { sourceBlockLedgerSha256: "b".repeat(64) },
+    summary: {
+      sourceBlocks: 3,
+      semanticRequirements: 1,
+      decisionEligibleRequirements: 1,
+      incompleteSearchRequirements: 1,
+      reviewRequiredBlocks: 1,
+    },
+    requirements: [{ requirementId: "A-01" }],
+  };
+  const row = {
+    categoryId: "A-01",
+    sourceOrder: 0,
+    packageA: {
+      documentUuid: "source-a",
+      searchPlanStatus: "EXPLORATORY_INCOMPLETE",
+    },
+    packageB: { contributors: [] },
+    outcome: REFERENCE_OUTCOME.UNCLEAR,
+    pointDecision: { outcome: REFERENCE_OUTCOME.UNCLEAR, reviewRequired: true },
+  };
+  const outcomes = Object.fromEntries(
+    Object.values(REFERENCE_OUTCOME).map((outcome) => [outcome, 0])
+  );
+  outcomes[REFERENCE_OUTCOME.UNCLEAR] = 1;
+  const result = {
+    schemaVersion: 3,
+    contractId: "LF_DYNAMIC_REFERENCE_A_TO_B_RESULT_V1",
+    comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+    productProfile: LF_DYNAMIC_REFERENCE_PROFILE,
+    template: {
+      semanticRequirementManifestSha256: manifest.manifestSha256,
+      sourceBlockLedgerSha256: manifest.source.sourceBlockLedgerSha256,
+      ...manifest.summary,
+    },
+    documents: [
+      { uuid: "source-a", side: "A" },
+      { uuid: "counterpart-b", side: "B" },
+    ],
+    categories: [{ categoryView: "A", rows: [row] }],
+    totals: {
+      rows: 1,
+      categories: 1,
+      referenceRowsAnalyzed: 1,
+      sideBOnlyRows: 0,
+      customerReviewRequired: 1,
+      outcomes,
+    },
+  };
+  return { manifest, result };
+}
+
+describe("dynamic LF reference result", () => {
+  test("accepts the manifest-owned row order and zero B-only rows", () => {
+    const { manifest, result } = fixture();
+    expect(validateDynamicReferenceComparison(result, { manifest })).toBe(
+      result
+    );
+  });
+
+  test("forbids a controlled null result for an incomplete B search plan", () => {
+    const { manifest, result } = fixture();
+    result.categories[0].rows[0].outcome = REFERENCE_OUTCOME.NOT_FOUND;
+    result.categories[0].rows[0].pointDecision.outcome =
+      REFERENCE_OUTCOME.NOT_FOUND;
+    result.totals.outcomes[REFERENCE_OUTCOME.UNCLEAR] = 0;
+    result.totals.outcomes[REFERENCE_OUTCOME.NOT_FOUND] = 1;
+    expect(() =>
+      validateDynamicReferenceComparison(result, { manifest })
+    ).toThrow("LF_DYNAMIC_REFERENCE_RESULT_DECISION_INVALID");
+  });
+});

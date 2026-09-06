@@ -386,7 +386,7 @@ export default function PolicyComparisonPanel({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] leading-4 text-zinc-400 light:text-slate-500 max-w-[490px]">
               {referenceMode
-                ? "Die 35 LF-IMMO-Referenzzeilen aus A steuern die Suche in B. Inhalte ausschließlich in B erzeugen keine Ergebniszeile."
+                ? "Das LF-IMMO-Dokument A bestimmt Kategorien, Unterkategorien, fachliche Zeilen und Reihenfolge. Für jede A-Zeile werden Gegenstücke in B gesucht; B-only-Inhalte erzeugen keine Zeile."
                 : "Die PDFs bleiben außerhalb des Workspace-Index. Rolle und Geltungsstatus werden pro Quelldokument gespeichert."}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -429,7 +429,7 @@ export default function PolicyComparisonPanel({
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {referenceMode
-                    ? "35 LF-Referenzzeilen A → B prüfen"
+                    ? "LF-Vorlage A erstellen und B prüfen"
                     : "5 Kernkategorien vollständig vergleichen"}
                 </button>
               )}
@@ -469,11 +469,13 @@ function ComparisonProgress({ progress }) {
     <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2">
       <div className="flex items-center justify-between text-xs text-sky-200 light:text-sky-800">
         <span>
-          {progress?.phase === "BUILDING_COMPARISON"
-            ? "Vergleichstabelle wird erstellt"
-            : totalCategories > 0
-              ? `Kategorien ${completedCategories}/${totalCategories}`
-              : `Dokumentanalyse ${completed}/${total}`}
+          {progress?.phase === "BUILDING_A_TEMPLATE"
+            ? "LF-Vorlage aus Dokument A wird erstellt"
+            : progress?.phase === "BUILDING_COMPARISON"
+              ? "Vergleichstabelle wird erstellt"
+              : totalCategories > 0
+                ? `Kategorien ${completedCategories}/${totalCategories}`
+                : `Dokumentanalyse ${completed}/${total}`}
         </span>
         <span>{percent}%</span>
       </div>
@@ -545,19 +547,28 @@ function ComparisonResult({ result }) {
           </>
         )}
         {referenceMode ? (
-          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-            Gegenstücke: gefunden{" "}
-            {result.totals?.outcomes?.GEGENSTUECK_GEFUNDEN || 0}
-            {" · "}teilweise{" "}
-            {result.totals?.outcomes?.TEILWEISES_GEGENSTUECK || 0}
-            {" · "}nicht gefunden{" "}
-            {result.totals?.outcomes
-              ?.KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE || 0}
-            {" · "}unklar{" "}
-            {(result.totals?.outcomes?.GEGENSTUECK_UNKLAR || 0) +
-              (result.totals?.outcomes?.REFERENZZEILE_UNKLAR || 0)}
-            {" · "}B-only-Zeilen 0
-          </p>
+          <div className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+            {result.template && (
+              <p>
+                A-Vorlage: {result.template.semanticRequirements} fachliche
+                Zeilen · {result.template.sourceBlocks} Quellblöcke ·{" "}
+                {result.template.reviewRequiredBlocks} offene Quellbereiche
+              </p>
+            )}
+            <p>
+              Gegenstücke: gefunden{" "}
+              {result.totals?.outcomes?.GEGENSTUECK_GEFUNDEN || 0}
+              {" · "}teilweise{" "}
+              {result.totals?.outcomes?.TEILWEISES_GEGENSTUECK || 0}
+              {" · "}nicht gefunden{" "}
+              {result.totals?.outcomes
+                ?.KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE || 0}
+              {" · "}unklar{" "}
+              {(result.totals?.outcomes?.GEGENSTUECK_UNKLAR || 0) +
+                (result.totals?.outcomes?.REFERENZZEILE_UNKLAR || 0)}
+              {" · "}B-only-Zeilen 0
+            </p>
+          </div>
         ) : customerMetrics.pointDecisions ? (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             Punktentscheidungen: A{" "}
@@ -619,7 +630,14 @@ function ComparisonResult({ result }) {
                   <td className="p-2 font-semibold whitespace-nowrap">
                     {row.categoryId}
                   </td>
-                  <td className="p-2 min-w-[170px]">{row.categoryName}</td>
+                  <td className="p-2 min-w-[170px]">
+                    {row.categoryName}
+                    {row.subcategoryName && (
+                      <p className="mt-1 text-[10px] text-zinc-500 light:text-slate-500">
+                        {row.subcategoryName}
+                      </p>
+                    )}
+                  </td>
                   <PackageResultCell value={row.packageA} />
                   <PackageResultCell value={row.packageB} />
                   <td className="p-2 min-w-[270px]">

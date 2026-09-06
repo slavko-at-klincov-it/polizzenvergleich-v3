@@ -773,10 +773,16 @@ async function writeReferenceComparisonArtifacts({
 }
 
 module.exports = {
+  COUNTERPART_REVIEW_STATUS,
   REFERENCE_OUTCOME,
   REFERENCE_RESULT_CONTRACT_ID,
+  aggregateCounterpart,
   buildReferenceComparisonResult,
   customerSafeReferenceReadView,
+  deriveTotals,
+  readEvidenceBundle,
+  readRows,
+  referenceDecision,
   validateReferenceComparison,
   writeReferenceComparisonArtifacts,
 };

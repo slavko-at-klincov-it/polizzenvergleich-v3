@@ -2,6 +2,9 @@ const fs = require("fs");
 const path = require("path");
 const { LF_REFERENCE_PROFILE } = require("./lfReferenceProfile");
 const {
+  LF_DYNAMIC_REFERENCE_PROFILE,
+} = require("./lfDynamicReferenceProfile");
+const {
   POLICY_COMPARISON_MODE,
   normalizePolicyComparisonMode,
 } = require("./modes");
@@ -41,10 +44,11 @@ function regularFile(file, root, fsImpl, missingCode) {
 }
 
 function sameReferenceProfile(profile) {
-  return (
-    profile?.id === LF_REFERENCE_PROFILE.id &&
-    profile?.catalogId === LF_REFERENCE_PROFILE.catalogId &&
-    profile?.componentContractId === LF_REFERENCE_PROFILE.componentContractId
+  return [LF_REFERENCE_PROFILE, LF_DYNAMIC_REFERENCE_PROFILE].some(
+    (expected) =>
+      profile?.id === expected.id &&
+      profile?.catalogId === expected.catalogId &&
+      profile?.componentContractId === expected.componentContractId
   );
 }
 

@@ -24,7 +24,7 @@ const POLICY_COMPARISON_EXPORT_POLICY = Object.freeze({
   UNSUPPORTED: "UNSUPPORTED",
 });
 const CUSTOMER_COMPARISON_RESULT_SCHEMA_VERSION = 15;
-const LF_REFERENCE_RESULT_SCHEMA_VERSION = 2;
+const LF_REFERENCE_RESULT_SCHEMA_VERSIONS = new Set([2, 3]);
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const SESSION_UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -175,7 +175,7 @@ function validateResultIdentity({
     return expectedCustomerContract();
   }
 
-  if (result?.schemaVersion !== LF_REFERENCE_RESULT_SCHEMA_VERSION)
+  if (!LF_REFERENCE_RESULT_SCHEMA_VERSIONS.has(result?.schemaVersion))
     throw exportContractError(
       "COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID"
     );
