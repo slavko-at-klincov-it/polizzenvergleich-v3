@@ -60,6 +60,7 @@ describe("complete LF dynamic reference profile", () => {
     expect(resource.requirements[0].id).toBe("PR-01");
     expect(resource.requirements.at(-1).id).toBe("AV-46");
     expect(resource.requirements.filter(({ crossPage }) => crossPage)).toHaveLength(10);
+    expect(resource.sharedValueGovernors).toHaveLength(5);
     expect(LF_DYNAMIC_REFERENCE_PROFILE.dynamicCounts).toBe(true);
   });
 

@@ -337,7 +337,7 @@ function extractedValues(requirement, spans) {
     {
       type: "DURATION",
       expression:
-        /\b(?:\d+|ein(?:e|en|em|er|es)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|zwölf)\s+(?:Tag(?:e|en)?|Monat(?:e|en)?|Jahr(?:e|en)?)\b/giu,
+        /\b(?:\d+|ein(?:e|en|em|er|es)?|zwei(?:e|en|er)?|drei(?:e|en|er)?|vier(?:e|en|er)?|fünf(?:e|en|er)?|sechs(?:e|en|er)?|sieben(?:e|en|er)?|acht(?:e|en|er)?|neun(?:e|en|er)?|zehn(?:e|en|er)?|zwölf(?:e|en|er)?)\s+(?:Tag(?:s|e|en)?|Woche(?:n)?|Monat(?:s|e|en)?|Jahr(?:s|e|en)?)\b|\b(?:ein|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|zwölf)(?:monat|jähr|täg)ig\w*/giu,
     },
     {
       type: "MEASUREMENT",
@@ -463,6 +463,84 @@ function inheritSharedGovernorValues(requirements) {
   return requirements;
 }
 
+function bindDeclaredSharedValueGovernors({
+  documentArtifact,
+  ledger,
+  oracle,
+  requirements,
+}) {
+  const governors = oracle.sharedValueGovernors || [];
+  for (const governor of governors) {
+    const definition = {
+      id: governor.id,
+      pages: governor.pages,
+      anchors: governor.anchors,
+      components: governor.components,
+    };
+    const matches = chooseOrderedAnchorMatches(documentArtifact, definition);
+    const spans = sourceSpans(documentArtifact, ledger, definition, matches).map(
+      (span) => ({
+        ...span,
+        relation: "SHARED_VALUE_GOVERNOR",
+        governorId: governor.id,
+      })
+    );
+    const values = extractedValues(definition, spans);
+    if (values.length === 0)
+      throw profileRequired(`SHARED_VALUE_GOVERNOR_VALUE_MISSING:${governor.id}`);
+    for (const requirementId of governor.requirementIds) {
+      const requirement = requirements.find(
+        ({ requirementId: id }) => id === requirementId
+      );
+      if (!requirement)
+        throw profileRequired(
+          `SHARED_VALUE_GOVERNOR_REQUIREMENT_UNKNOWN:${governor.id}:${requirementId}`
+        );
+      requirement.sourceSpans.push(...spans);
+      for (const component of requirement.components) {
+        if (
+          component.valueBinding &&
+          governor.components.some(
+            ({ valueBinding }) =>
+              valueBinding?.basisLabel === component.valueBinding.basisLabel &&
+              valueFamily(valueBinding.type) ===
+                valueFamily(component.valueBinding.type)
+          )
+        )
+          component.sourceSpanIds.push(...spans.map(({ spanId }) => spanId));
+      }
+      for (const value of values) {
+        const targetBinding = requirement.components
+          .map(({ valueBinding }) => valueBinding)
+          .find(
+            (binding) =>
+              binding?.basisLabel === value.basis?.label &&
+              valueFamily(binding.type) === valueFamily(value.declaredType)
+          );
+        if (!targetBinding) continue;
+        requirement.values.push({
+          ...value,
+          valueId: domainDigest(
+            `${LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID}:SHARED_GOVERNOR_VALUE`,
+            {
+              requirementId,
+              governorId: governor.id,
+              sourceValueId: value.valueId,
+            }
+          ),
+          declaredType: targetBinding.type,
+          sourceBindingStatus: "SHARED_GOVERNOR_SOURCE_SPAN",
+          inheritedFromGovernorId: governor.id,
+        });
+      }
+    }
+  }
+  return governors.map(({ id, requirementIds }) => ({
+    governorId: id,
+    requirementIds,
+  }));
+}
+
 function validateOracle(oracle) {
   requiredString(oracle?.oracleId, "ORACLE_ID_MISSING");
   if (!Array.isArray(oracle.requirements) || oracle.requirements.length === 0)
@@ -554,6 +632,12 @@ function buildLfSemanticRequirementManifest({
       values: extractedValues({ ...definition, components }, spans),
     };
   });
+  const sharedValueGovernors = bindDeclaredSharedValueGovernors({
+    documentArtifact,
+    ledger,
+    oracle,
+    requirements,
+  });
   inheritSharedGovernorValues(requirements);
 
   const semanticBlockIds = new Map();
@@ -634,6 +718,7 @@ function buildLfSemanticRequirementManifest({
       sourceDeclaredVersion: family.sourceDeclaredVersion,
     },
     categories,
+    sharedValueGovernors,
     requirements,
     blockCrosswalk,
     summary: {

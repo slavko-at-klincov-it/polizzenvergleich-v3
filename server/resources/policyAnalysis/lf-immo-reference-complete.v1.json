@@ -6,6 +6,67 @@
     "sourceDeclaredVersion": "2023",
     "compatibilityContractId": "LF_IMMO_REFERENCE_FAMILY_STRUCTURE_V1"
   },
+  "sharedValueGovernors": [
+    {
+      "id": "SP-SHARED-10-PERCENT",
+      "requirementIds": ["SP-01", "SP-02", "SP-03", "SP-04", "SP-05", "SP-06", "SP-07", "SP-08"],
+      "pages": [6],
+      "anchors": ["jeweils 10% der Gebäudeversicherungssumme"],
+      "components": [{
+        "id": "shared_limit",
+        "label": "Gemeinsames Zehn-Prozent-Limit",
+        "factRole": "LIMIT",
+        "valueBinding": {"type": "PERCENT", "basisLabel": "Gebäudeversicherungssumme", "formula": "basis * 0.10"}
+      }]
+    },
+    {
+      "id": "FE-SHARED-5-PERCENT",
+      "requirementIds": ["FE-14", "FE-15", "FE-16"],
+      "pages": [8],
+      "anchors": ["mitversichert bis zu jeweils maximal 5 % der Gebäudeversicherungssumme"],
+      "components": [{
+        "id": "shared_limit",
+        "label": "Gemeinsames Fünf-Prozent-Limit",
+        "factRole": "LIMIT",
+        "valueBinding": {"type": "PERCENT", "basisLabel": "Gebäudeversicherungssumme", "formula": "basis * 0.05"}
+      }]
+    },
+    {
+      "id": "ST-CATASTROPHE-SHARED-LIMITS",
+      "requirementIds": ["ST-11", "ST-12", "ST-13", "ST-14", "ST-15"],
+      "pages": [10],
+      "anchors": ["Katastrophen bis 1% der Gebäudeversicherungssumme", "mindestens € 20.000", "maximal € 100.000"],
+      "components": [
+        {"id": "shared_percent", "label": "Katastrophen-Prozentlimit", "factRole": "LIMIT", "valueBinding": {"type": "PERCENT", "basisLabel": "Gebäudeversicherungssumme", "formula": "basis * 0.01"}},
+        {"id": "shared_minimum", "label": "Katastrophen-Mindestbetrag", "factRole": "LIMIT", "valueBinding": {"type": "AMOUNT", "basisLabel": "Katastrophendeckung je Objekt", "currency": "EUR", "formula": "minimum EUR 20000"}},
+        {"id": "shared_maximum", "label": "Katastrophen-Höchstbetrag", "factRole": "LIMIT", "valueBinding": {"type": "AMOUNT", "basisLabel": "pro versichertem Objekt auf Erstes Risiko", "currency": "EUR", "formula": "maximum EUR 100000"}}
+      ]
+    },
+    {
+      "id": "LW-C-SHARED-FIRST-RISK",
+      "requirementIds": ["LW-C-08", "LW-C-09", "LW-C-10", "LW-C-11"],
+      "pages": [13],
+      "anchors": ["Folgende Haftungserweiterungen gelten mit einer Versicherungssumme"],
+      "components": [{
+        "id": "shared_limit",
+        "label": "Gemeinsame C-Haftungserweiterung",
+        "factRole": "LIMIT",
+        "valueBinding": {"type": "AMOUNT", "basisLabel": "gemeinsame C-Haftungserweiterung", "currency": "EUR"}
+      }]
+    },
+    {
+      "id": "LW-D-SHARED-FIRST-RISK",
+      "requirementIds": ["LW-D-09"],
+      "pages": [14],
+      "anchors": ["Folgende Haftungserweiterungen gelten mit einer Versicherungssumme"],
+      "components": [{
+        "id": "shared_limit",
+        "label": "Gemeinsame D-Haftungserweiterung",
+        "factRole": "LIMIT",
+        "valueBinding": {"type": "AMOUNT", "basisLabel": "D-Haftungserweiterung", "currency": "EUR"}
+      }]
+    }
+  ],
   "requirements": [
     {
       "id": "PR-01",
