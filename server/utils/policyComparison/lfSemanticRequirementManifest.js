@@ -26,9 +26,12 @@ const FACT_ROLE_ALIASES = Object.freeze({
   AGGREGATION: "CONDITION",
   BASIS: "CONDITION",
   COVERAGE: "BENEFIT",
+  CONFLICT: "DOCUMENT_STATUS",
   DURATION: "LIMIT",
   OBLIGATION: "CONDITION",
   PROCESS: "CONDITION",
+  REVIEW: "DOCUMENT_STATUS",
+  RIGHT: "BENEFIT",
   SCOPE: "CONDITION",
   TERMINATION: "CONDITION",
   VALUATION: "CONDITION",
@@ -310,6 +313,9 @@ function buildLfSemanticRequirementManifest({
       definition.searchPlanStatus === "CERTIFIED_COMPLETE"
         ? "CERTIFIED_COMPLETE"
         : "EXPLORATORY_INCOMPLETE";
+    const reviewRequired = definition.components.some(({ factRole }) =>
+      ["CONFLICT", "REVIEW"].includes(factRole)
+    );
     return {
       requirementId: definition.id,
       sourceOrder,
@@ -320,8 +326,10 @@ function buildLfSemanticRequirementManifest({
       displayLabel: definition.label,
       physicalPages: [...definition.pages],
       crossPage: definition.crossPage === true,
-      atomizationStatus: "SOURCE_BOUND_TYPED",
-      decisionEligibility: "ELIGIBLE",
+      atomizationStatus: reviewRequired
+        ? "REVIEW_REQUIRED"
+        : "SOURCE_BOUND_TYPED",
+      decisionEligibility: reviewRequired ? "INELIGIBLE" : "ELIGIBLE",
       searchPlanStatus,
       components,
       sourceSpans: spans,
