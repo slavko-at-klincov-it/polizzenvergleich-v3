@@ -401,3 +401,29 @@ Node-22-Runtime lief derselbe Commit ohne Produktkorrektur vollstaendig durch.
 
 Auch dieser Lauf ist technische Nichtregression fuer genau zwei bekannte
 Dokumente, keine neue fachliche 224-Zeilen-Abnahme und kein Holdoutnachweis.
+
+## 12. Technische Schlussgates
+
+Auf dem Dokumentations-HEAD wurden im selben isolierten Mac-Studio-Worktree
+unter Node 22.23.2 die vollstaendige Serverregression, beide relevanten Lints
+und der Frontend-Produktionsbuild ausgefuehrt:
+
+```text
+Server-Jest:     167/167 Suites, 2.336/2.336 Tests PASS
+Server-Lint:     PASS
+Frontend-Lint:   PASS
+Frontend-Build:  PASS
+```
+
+Ein zusaetzlicher, bewusst ueber den Server-Scope hinaus gestarteter
+Repository-Gesamttest bestand 176 Suites und 2.437 Tests. Nur die drei
+unveraenderten Collector-FFmpeg-Tests scheiterten, weil im isolierten
+Validierungsworktree weder ein `ffmpeg` im Shellpfad noch der fuer den
+dynamischen Import erforderliche Jest-VM-Flag vorhanden war. Diese
+Umgebungsabweichung betrifft weder den LF- noch den symmetrischen
+Polizzenvergleich; das verbindliche vollstaendige Server-Gate lief danach
+separat ohne Fehler.
+
+Die installierte Kundenfassung wurde weder fuer die Modelllaeufe noch fuer die
+technischen Gates ausgecheckt oder veraendert. Es erfolgte kein Merge, Tag
+oder Deployment.
