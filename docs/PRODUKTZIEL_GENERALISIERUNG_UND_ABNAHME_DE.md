@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 4. September 2026
+Stand: 6. September 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -44,15 +44,21 @@ Sie bleibt als Herkunftsmetadatum sichtbar. Echte Unterschiede bei Inhalt,
 Wert, Scope, Bedingung, Variante, Version, Widerspruch oder Ersetzung bleiben
 entscheidungsrelevant.
 
-Im gerichteten LF-IMMO-Modus ist dagegen genau ein versioniertes
-LF-IMMO-Referenzdokument auf A zulässig. Zuerst entstehen ausschließlich die
-beleggebundenen A-Zeilen. Danach wird zu jeder A-Zeile im gesamten B-Paket
-nach dem Gegenstück gesucht. B darf ein bis neun Dokumente enthalten. Inhalte,
-die nur in B vorkommen, erzeugen in diesem Modus bewusst keine Ergebniszeile.
-Ein Nullfund bleibt vom ausdrücklichen Ausschluss getrennt. Das erste
-kontrollierte Profil umfasst zehn LF-orientierte Ansichten mit 35
-Referenzzeilen und behauptet noch keine vollständige Inventarisierung des
-gesamten LF-IMMO-Produkts.
+Im gerichteten LF-IMMO-Modus ist dagegen genau ein strukturkompatibles
+LF-IMMO-Referenzdokument auf A zulässig. Ein versioniertes serverseitiges
+Semantikorakel materialisiert daraus 283 atomare Anforderungen in 13
+Kategorien und bindet sie an die tatsächlichen Quellstellen und Werte des
+aktuellen A-Dokuments. Danach wird zu jeder A-Zeile im gesamten B-Paket nach
+dem Gegenstück gesucht. B darf ein bis neun Dokumente enthalten. Inhalte, die
+nur in B vorkommen, erzeugen in diesem Modus bewusst keine Ergebniszeile. Ein
+Nullfund bleibt vom ausdrücklichen Ausschluss getrennt.
+
+Dieser Vertrag entdeckt die fachliche Topologie eines beliebigen neuen
+LF-Dokuments noch nicht frei aus A. Fehlende, neue, umformulierte oder
+umgeordnete operative Struktur bricht deshalb fail-closed mit der Anforderung
+eines neuen fachlich geprüften Profils ab. Die 283 Anforderungen sind ein
+kontrollierter Vertrag für die bekannte LF-Familie und keine bewiesene
+vollständige Inventarisierung des gesamten LF-IMMO-Produkts.
 
 Die aktuelle Kundenansicht besitzt fünf fachliche Kategorien:
 

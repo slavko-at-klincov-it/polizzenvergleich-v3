@@ -6708,3 +6708,52 @@ BESTANDEN; KEINE RELEASEFREIGABE OHNE HOLDOUT/FACHABNAHME`.
 Beweisgrenze: bekannte LF-Familie und ein bekanntes B-Dokument; keine
 Expertenabnahme aller Zeilen, kein unbekannter Mehrversicherer-Holdout und
 kein 99-Prozent-Nachweis. Kein Merge, Tag oder Deployment.
+
+### 133.10 Vorlagen-Button, Lauflebenszyklus und lokale Sichtprüfung
+
+Der vollständige Erstellungs- und Startpfad hinter beiden Vorlagen wurde bis
+zum Worker gehärtet. Alle drei Workspace-Erstellungsrouten lösen
+`analysisMode`, `templateId` und `policyComparisonMode` über denselben
+fail-closed Vertrag auf. Widersprüche und explizit leere Werte werden
+abgewiesen; nur vollständig fehlende Alt-Clients erhalten den symmetrischen
+Standard. Synchrone Speichersperren verhindern doppelte Workspaces bei einem
+Doppelklick.
+
+Vergleichsläufe verwenden eine unveränderliche Lease-Nonce, atomare
+Statusübergänge und einen begrenzten FIFO-Supervisor. Start, Abbruch,
+Dokumentänderung, Reset und Workspace-Löschung prüfen Session, Manifest und
+Lease erneut. Ein gespeicherter Prozessbezeichner allein darf keinen Prozess
+beenden. Die Löschung räumt Uploads, Laufartefakte und sitzungsspezifische
+Exporte auf und bricht bei einem nicht sicher zuordenbaren laufenden Worker
+fail-closed ab. Der Artefakt-Readback regeneriert Source-Ledger und
+Semantikmanifest aus dem gespeicherten A-Dokument und validiert die gesamte
+Digestkette. Interne Dateipfade und Worker-Logs werden nicht an die UI
+weitergegeben.
+
+Auf Commit `be607f4133f95e6812e090d8062c2ddf0123b283` bestanden im isolierten
+Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/lf-complete-template` mit
+Node 22.23.2 die vollständigen 175/175 Server-Suites mit 2.377/2.377 Tests,
+Server- und Frontend-Lint sowie der Frontend-Produktionsbuild. Die
+Worker-Grenze verwendete mangels Override den Standardwert eins; in diesem
+abschließenden technischen Lauf wurde kein LLM aufgerufen.
+
+Die lokale Browser-Sichtprüfung erstellte über den sichtbaren Vorlagen-Dialog
+jeweils genau einen LF- und einen symmetrischen Workspace, obwohl der
+Erstellen-Button doppelt betätigt wurde. Je ein synthetisches PDF auf A und B
+aktivierte den jeweiligen Start-Button und erreichte den korrekt gespeicherten
+Modus sowie den Worker. Das bewusst inkompatible LF-Dokument brach mit
+`NEUES_LF_PROFIL_ERFORDERLICH` fail-closed ab; der symmetrische Lauf erreichte
+den unveränderten symmetrischen Analysepfad. Das sehr kurze synthetische
+Dokument beendete die Analyse vor dem manuellen Abbruchversuch; die
+Abbruch-/PID-Rennen sind daher durch die automatisierten CAS- und
+Supervisor-Tests abgedeckt, nicht durch diesen Browser-Smoke.
+
+Status: `IMPLEMENTIERT, AUF MAC STUDIO VALIDIERT UND LOKAL SICHTGEPRUEFT;
+KEINE RELEASEFREIGABE OHNE HOLDOUT/FACHABNAHME`.
+
+Beweisgrenze: Der Browser-Smoke beweist Verdrahtung, Persistenz und
+Laufanstoß, nicht fachliche Vergleichsgüte. Die fachliche 1+1-Evidenz bleibt
+die in Abschnitt 133.9 dokumentierte bekannte LF/WEVIG-Paarung. Es gibt
+weiterhin keinen unbekannten Mehrversicherer-Holdout und keinen
+99-Prozent-Nachweis.
