@@ -229,10 +229,80 @@ function sourceSpans(documentArtifact, ledger, requirement, matches) {
   });
 }
 
+function valueFamily(type) {
+  if (
+    [
+      "PERCENT",
+      "PERCENTAGE",
+      "PERCENTAGE_THRESHOLD",
+      "PERCENT_OF",
+      "CLAMPED_PERCENT",
+    ].includes(type)
+  )
+    return "PERCENT";
+  if (
+    [
+      "AMOUNT",
+      "ABSOLUTE_AMOUNT",
+      "THRESHOLD",
+      "OR_THRESHOLD",
+      "MAX_OF",
+    ].includes(type)
+  )
+    return "AMOUNT";
+  if (
+    [
+      "DURATION",
+      "APPROXIMATE_DURATION",
+      "DURATION_EXTENSION",
+      "DURATION_THRESHOLD",
+      "MULTI_TRIGGER_DURATION",
+    ].includes(type)
+  )
+    return "DURATION";
+  if (["AREA", "LENGTH", "DISTANCE_THRESHOLD"].includes(type))
+    return "MEASUREMENT";
+  return "RULE";
+}
+
+function localizedNumber(value) {
+  const normalized = String(value || "")
+    .replace(/[Il]/gu, "1")
+    .replace(/[^\d.,]/gu, "");
+  if (!normalized) return null;
+  const comma = normalized.lastIndexOf(",");
+  const dot = normalized.lastIndexOf(".");
+  const decimal = Math.max(comma, dot);
+  const decimalDigits = decimal >= 0 ? normalized.length - decimal - 1 : 0;
+  const hasDecimal = decimalDigits > 0 && decimalDigits <= 2;
+  const canonical = hasDecimal
+    ? `${normalized.slice(0, decimal).replace(/[.,]/gu, "")}.${normalized.slice(decimal + 1)}`
+    : normalized.replace(/[.,]/gu, "");
+  const parsed = Number(canonical);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function bindingForRaw(bindings, family, rawValue) {
+  if (bindings.length <= 1) return bindings[0];
+  const rawNumber = localizedNumber(rawValue);
+  if (rawNumber === null) return bindings[0];
+  const expected = family === "PERCENT" ? rawNumber / 100 : rawNumber;
+  return (
+    bindings.find((binding) => {
+      const numbers = String(binding.formula || "")
+        .match(/\d+(?:[.,]\d+)?/gu)
+        ?.map((value) => Number(value.replace(",", "."))) || [];
+      return numbers.some(
+        (number) => Math.abs(number - expected) < 1e-9 || number === rawNumber
+      );
+    }) || bindings[0]
+  );
+}
+
 function extractedValues(requirement, spans) {
   const values = [];
   const patterns = [
-    { type: "PERCENT", expression: /\b\d[\d.,]*\s*%/gu },
+    { type: "PERCENT", expression: /\b[\dIl][\dIl.,]*\s*%/gu },
     {
       type: "AMOUNT",
       expression: /(?:\bEUR\s*|€\s*)\d[\d.,]*(?:\s*,-)?/giu,
@@ -242,6 +312,10 @@ function extractedValues(requirement, spans) {
       expression:
         /\b(?:\d+|ein(?:e|en|em|er|es)?|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|zwölf)\s+(?:Tag(?:e|en)?|Monat(?:e|en)?|Jahr(?:e|en)?)\b/giu,
     },
+    {
+      type: "MEASUREMENT",
+      expression: /\b\d[\d.,]*\s*m(?:²|2)?\b/giu,
+    },
   ];
   for (const span of spans) {
     for (const { type, expression } of patterns) {
@@ -250,7 +324,8 @@ function extractedValues(requirement, spans) {
         const rawValue = match[0];
         const valueBindings = requirement.components
           .map(({ valueBinding }) => valueBinding)
-          .filter((binding) => binding?.type === type);
+          .filter((binding) => binding && valueFamily(binding.type) === type);
+        const valueBinding = bindingForRaw(valueBindings, type, rawValue);
         values.push({
           valueId: domainDigest(
             `${LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID}:VALUE`,
@@ -263,16 +338,18 @@ function extractedValues(requirement, spans) {
             }
           ),
           type,
+          declaredType: valueBinding?.type || type,
           rawValue,
           normalizedValue: rawValue.normalize("NFKC").replace(/\s+/gu, " "),
           physicalPageNumber: span.physicalPageNumber,
           documentStart: span.documentStart + match.index,
           documentEnd: span.documentStart + match.index + rawValue.length,
           sourceSpanId: span.spanId,
-          basis: valueBindings[0]?.basisLabel
+          sourceBindingStatus: "LOCAL_SOURCE_SPAN",
+          basis: valueBinding?.basisLabel
             ? {
                 status: "SEMANTIC_ORACLE_DECLARED",
-                label: valueBindings[0].basisLabel,
+                label: valueBinding.basisLabel,
               }
             : { status: "UNRESOLVED", label: null },
           calculatedAmount: null,
@@ -281,6 +358,63 @@ function extractedValues(requirement, spans) {
     }
   }
   return values;
+}
+
+function inheritSharedGovernorValues(requirements) {
+  for (const requirement of requirements) {
+    const bindings = requirement.components
+      .map(({ valueBinding }) => valueBinding)
+      .filter(Boolean);
+    for (const binding of bindings) {
+      const family = valueFamily(binding.type);
+      if (family === "RULE") continue;
+      if (
+        requirement.values.some(
+          (value) =>
+            valueFamily(value.declaredType || value.type) === family &&
+            value.basis?.label === (binding.basisLabel || null)
+        )
+      )
+        continue;
+      const candidates = requirements.filter(
+        (candidate) =>
+          candidate.categoryId === requirement.categoryId &&
+          candidate.subcategoryId === requirement.subcategoryId
+      );
+      const matchingValues = candidates.flatMap((candidate) =>
+        candidate.values
+          .filter(
+            (value) =>
+              valueFamily(value.declaredType || value.type) === family &&
+              value.basis?.label === (binding.basisLabel || null)
+          )
+          .map((value) => ({ candidate, value }))
+      );
+      const distinct = [
+        ...new Map(
+          matchingValues.map((entry) => [entry.value.normalizedValue, entry])
+        ).values(),
+      ];
+      if (distinct.length !== 1) continue;
+      const { candidate, value } = distinct[0];
+      requirement.values.push({
+        ...value,
+        valueId: domainDigest(
+          `${LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID}:INHERITED_VALUE`,
+          {
+            requirementId: requirement.requirementId,
+            sourceRequirementId: candidate.requirementId,
+            sourceValueId: value.valueId,
+            basisLabel: binding.basisLabel || null,
+          }
+        ),
+        declaredType: binding.type,
+        sourceBindingStatus: "SHARED_GOVERNOR_SOURCE_SPAN",
+        inheritedFromRequirementId: candidate.requirementId,
+      });
+    }
+  }
+  return requirements;
 }
 
 function validateOracle(oracle) {
@@ -374,6 +508,7 @@ function buildLfSemanticRequirementManifest({
       values: extractedValues({ ...definition, components }, spans),
     };
   });
+  inheritSharedGovernorValues(requirements);
 
   const semanticBlockIds = new Map();
   for (const requirement of requirements)
