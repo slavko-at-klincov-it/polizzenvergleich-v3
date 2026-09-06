@@ -447,7 +447,9 @@ function extractedValues(requirement, spans) {
         const valueBinding = bindingForRaw(valueBindings, type, rawValue);
         const numericValue = localizedNumber(rawValue);
         const formula =
-          type === "PERCENT" && valueBinding?.basisLabel && numericValue !== null
+          type === "PERCENT" &&
+          valueBinding?.basisLabel &&
+          numericValue !== null
             ? `${valueBinding.basisLabel} * ${numericValue / 100}`
             : valueBinding?.formula || null;
         values.push({
@@ -480,8 +482,7 @@ function extractedValues(requirement, spans) {
             : { status: "UNRESOLVED", label: null },
           formula,
           currency:
-            valueBinding?.currency ||
-            (type === "AMOUNT" ? "EUR" : null),
+            valueBinding?.currency || (type === "AMOUNT" ? "EUR" : null),
           roundingRule: valueBinding?.roundingRule || null,
           calculatedAmount: null,
         });

@@ -59,9 +59,7 @@ function referenceSide(requirement, sourceDocument) {
       requirement.sourceSpans.map((span) => [span.spanId, span])
     ).values(),
   ];
-  const values = unique(
-    requirement.values.map(displayValue)
-  );
+  const values = unique(requirement.values.map(displayValue));
   const review = requirement.decisionEligibility !== "ELIGIBLE";
   return {
     categoryId: requirement.requirementId,
