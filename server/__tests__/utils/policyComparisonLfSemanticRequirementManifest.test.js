@@ -165,4 +165,19 @@ describe("LF SemanticRequirementManifest V1", () => {
       "Neu-\nbauwert"
     );
   });
+
+  test("allows value changes and source-reversed anchor declarations", () => {
+    const input = fixture();
+    input.oracle.requirements[0].anchors = [
+      "15 % der Versicherungssumme",
+      "Neubauwert",
+    ];
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace("15 %", "27 %");
+    input.familyContract.expectedStructureDigestSha256 = buildSourceBlockLedger(
+      input.documentArtifact
+    ).structureDigestSha256;
+    const manifest = buildLfSemanticRequirementManifest(input);
+    expect(manifest.requirements[0].values[0].rawValue).toBe("27 %");
+  });
 });

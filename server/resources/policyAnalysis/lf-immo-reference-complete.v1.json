@@ -1795,7 +1795,7 @@
       ],
       "anchors": [
         "Sicherungs-, Aufräumungs-, Abbruch-",
-        "maximal 10%",
+        "Lagerkosten bis zu maximal 10%",
         "maximal 15%"
       ],
       "components": [
@@ -7610,7 +7610,8 @@
         20
       ],
       "anchors": [
-        "jedenfalls Ersatz zum Neuwert",
+        "jedenfalls Ersatz",
+        "zum Neuwert",
         "Außenseite des Gebäudes",
         "allmähliche Einwirkung von Feuchtigkeit"
       ],
@@ -8358,7 +8359,7 @@
         22
       ],
       "anchors": [
-        "EUR 7.300,00 auf Erstes Risiko",
+        "Versicherungssumme von EUR 7.300,00",
         "andere Versicherungssumme"
       ],
       "components": [
@@ -8404,7 +8405,7 @@
         22
       ],
       "anchors": [
-        "Unter Behandlung sind",
+        "alle Maßnahmen zu verstehen",
         "ohne feste Rückstände"
       ],
       "components": [
@@ -8848,7 +8849,7 @@
       ],
       "anchors": [
         "Ursache in die Zeit vor Abschluss",
-        "Ursache bis zum Abschluss nicht bekannt"
+        "nicht bekannt war und auch"
       ],
       "components": [
         {
@@ -10677,7 +10678,7 @@
         28
       ],
       "anchors": [
-        "mit dem Text Erstes Risiko",
+        "gekennzeichnet wurden",
         "ohne dass auf die Bestimmungen über die Unterversicherung"
       ],
       "components": [
@@ -10816,7 +10817,7 @@
       ],
       "anchors": [
         "bei Veräußerung",
-        "wenn die Anzeige unterbleibt"
+        "Anzeige der Veräußerung unterbleibt"
       ],
       "components": [
         {
@@ -11104,7 +11105,7 @@
       "anchors": [
         "keine Personen bestellen",
         "streitigen Zivilrechtsweg",
-        "einen Sachverständigen namhaft"
+        "Sachgebietes namhaft"
       ],
       "components": [
         {
@@ -11296,7 +11297,7 @@
         30
       ],
       "anchors": [
-        "auf Verlangen eine Abschrift",
+        "Versicherungsnehmers eine Abschrift",
         "Schadensfalles erstellten Gutachtens"
       ],
       "components": [
@@ -11667,7 +11668,7 @@
       ],
       "anchors": [
         "gesamte Geschäftsverkehr",
-        "erfüllen das Schriftlichkeitsgebot",
+        "das Schriftlichkeitsgebot",
         "beim Versicherungsmakler eingelangt"
       ],
       "components": [

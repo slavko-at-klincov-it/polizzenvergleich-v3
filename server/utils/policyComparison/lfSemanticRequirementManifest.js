@@ -85,10 +85,16 @@ function escapeRegex(value) {
 
 function anchorExpression(anchor) {
   const pieces = String(anchor)
-    .normalize("NFKC")
     .trim()
     .split(/\s+/gu)
-    .map((piece) => escapeRegex(piece).replace(/-/gu, "-\\s*"));
+    .map((piece) => {
+      const numberPlaceholder = "LFNUMBERPLACEHOLDER";
+      return escapeRegex(
+        piece.replace(/\d[\d.,]*/gu, numberPlaceholder)
+      )
+        .replaceAll(numberPlaceholder, "[\\dIl][\\dIl.,]*")
+        .replace(/-/gu, "-\\s*");
+    });
   return new RegExp(pieces.join("\\s+"), "giu");
 }
 
@@ -120,19 +126,34 @@ function anchorMatches(documentArtifact, pages, anchor) {
 }
 
 function chooseOrderedAnchorMatches(documentArtifact, requirement) {
-  let cursor = -1;
-  const selected = [];
-  for (const anchor of requirement.anchors) {
-    const matches = anchorMatches(documentArtifact, requirement.pages, anchor);
-    const match = matches.find(({ documentStart }) => documentStart >= cursor);
-    if (!match)
+  const candidates = requirement.anchors.map((anchor) => ({
+    anchor,
+    matches: anchorMatches(documentArtifact, requirement.pages, anchor),
+  }));
+  for (const { anchor, matches } of candidates) {
+    if (matches.length === 0)
       throw profileRequired(
         `ANCHOR_NOT_FOUND:${requirement.id}:${String(anchor).slice(0, 80)}`
       );
-    selected.push(match);
-    cursor = match.documentEnd;
   }
-  return selected;
+  candidates.sort((left, right) => left.matches.length - right.matches.length);
+  const selected = [candidates[0].matches[0]];
+  for (const { matches } of candidates.slice(1)) {
+    const center =
+      selected.reduce(
+        (sum, match) => sum + (match.documentStart + match.documentEnd) / 2,
+        0
+      ) / selected.length;
+    selected.push(
+      matches.reduce((best, match) =>
+        Math.abs((match.documentStart + match.documentEnd) / 2 - center) <
+        Math.abs((best.documentStart + best.documentEnd) / 2 - center)
+          ? match
+          : best
+      )
+    );
+  }
+  return selected.sort((left, right) => left.documentStart - right.documentStart);
 }
 
 function diagnoseLfSemanticOracleAnchors(documentArtifact, oracle) {
