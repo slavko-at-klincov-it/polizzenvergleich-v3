@@ -7379,6 +7379,24 @@
             "formula": "max(EUR 440000, 20 % × Gebäudeneuwert)",
             "currency": "EUR"
           }
+        },
+        {
+          "id": "builder_percent",
+          "label": "Zwanzig Prozent des Gebäudeneuwerts",
+          "factRole": "LIMIT",
+          "aliases": [
+            "zwanzig Prozent Gebäudeneuwert",
+            "prozentuale Baukostengrenze"
+          ],
+          "requestedFields": [
+            "percentage",
+            "basis"
+          ],
+          "valueBinding": {
+            "type": "PERCENT_OF",
+            "basisLabel": "Gebäudeneuwert",
+            "formula": "basis * 0.20"
+          }
         }
       ],
       "crossPage": false,
@@ -7671,7 +7689,43 @@
           "valueBinding": {
             "type": "CLAMPED_PERCENT",
             "basisLabel": "Schadenbetrag",
-            "formula": "10 % × Schadenbetrag; min EUR 500; max EUR 3600",
+            "formula": "basis * 0.10",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "environmental_deductible_minimum",
+          "label": "Mindestselbstbehalt EUR 500",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "mindestens EUR 500",
+            "Mindestselbstbehalt Umwelt"
+          ],
+          "requestedFields": [
+            "minimumAmount"
+          ],
+          "valueBinding": {
+            "type": "ABSOLUTE_AMOUNT",
+            "basisLabel": "Mindestselbstbehalt je Versicherungsfall",
+            "formula": "minimum EUR 500",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "environmental_deductible_maximum",
+          "label": "Höchstselbstbehalt EUR 3.600",
+          "factRole": "DEDUCTIBLE",
+          "aliases": [
+            "maximal EUR 3.600",
+            "Höchstselbstbehalt Umwelt"
+          ],
+          "requestedFields": [
+            "maximumAmount"
+          ],
+          "valueBinding": {
+            "type": "ABSOLUTE_AMOUNT",
+            "basisLabel": "Höchstselbstbehalt je Versicherungsfall",
+            "formula": "maximum EUR 3600",
             "currency": "EUR"
           }
         }

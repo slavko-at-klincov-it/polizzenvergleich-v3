@@ -37,6 +37,22 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function displayValue(value) {
+  const details = [];
+  if (value.basis?.label) details.push(`Basis: ${value.basis.label}`);
+  if (value.formula) details.push(`Formel: ${value.formula}`);
+  if (value.type === "PERCENT")
+    details.push(
+      value.calculatedAmount === null
+        ? "Betrag: ungeklärt"
+        : `Betrag: ${value.calculatedAmount} ${value.currency || ""}`.trim()
+    );
+  if (value.roundingRule) details.push(`Rundung: ${value.roundingRule}`);
+  return details.length > 0
+    ? `${value.rawValue} (${details.join("; ")})`
+    : value.rawValue;
+}
+
 function referenceSide(requirement, sourceDocument) {
   const sourceSpans = [
     ...new Map(
@@ -44,11 +60,7 @@ function referenceSide(requirement, sourceDocument) {
     ).values(),
   ];
   const values = unique(
-    requirement.values.map((value) =>
-      value.basis?.label
-        ? `${value.rawValue} (${value.basis.label})`
-        : value.rawValue
-    )
+    requirement.values.map(displayValue)
   );
   const review = requirement.decisionEligibility !== "ELIGIBLE";
   return {

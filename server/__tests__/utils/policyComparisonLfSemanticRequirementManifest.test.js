@@ -220,6 +220,16 @@ describe("LF SemanticRequirementManifest V1", () => {
     ).structureDigestSha256;
     const manifest = buildLfSemanticRequirementManifest(input);
     expect(manifest.requirements[0].values[0].rawValue).toBe("27 %");
+    expect(manifest.requirements[0].values[0]).toMatchObject({
+      formula: "Versicherungssumme * 0.27",
+      currency: null,
+      roundingRule: null,
+      basis: {
+        status: "SEMANTIC_ORACLE_DECLARED",
+        label: "Versicherungssumme",
+        sourceSpanId: expect.any(String),
+      },
+    });
   });
 
   test("propagates source-bound shared value and semantic governors", () => {

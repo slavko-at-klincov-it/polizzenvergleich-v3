@@ -301,6 +301,7 @@ function valueFamily(type) {
     return "DURATION";
   if (["AREA", "LENGTH", "DISTANCE_THRESHOLD"].includes(type))
     return "MEASUREMENT";
+  if (type === "MULTIPLIER") return "MULTIPLIER";
   return "RULE";
 }
 
@@ -377,6 +378,11 @@ function extractedValues(requirement, spans) {
       type: "MEASUREMENT",
       expression: /\b\d[\d.,]*\s*m(?:²|2)?\b/giu,
     },
+    {
+      type: "MULTIPLIER",
+      expression:
+        /\b(?:\d+\s*[x×]|einmal|zweimal|dreimal|viermal|fünfmal|sechsmal)\b/giu,
+    },
   ];
   for (const span of spans) {
     for (const { type, expression } of patterns) {
@@ -403,7 +409,10 @@ function extractedValues(requirement, spans) {
             rawValue.normalize("NFKC").replace(/\s+/gu, " ")
           )
         );
-        if (valueBindings.length === 1 && distinctValues.size > 1) {
+        if (
+          valueBindings.length === 1 &&
+          (distinctValues.size > 1 || valueBindings[0].sourceAnchor)
+        ) {
           const binding = valueBindings[0];
           let resolvedCandidates = [];
           if (binding.sourceAnchor) {
@@ -436,6 +445,11 @@ function extractedValues(requirement, spans) {
       }
       for (const { match: selectedMatch, rawValue } of selected) {
         const valueBinding = bindingForRaw(valueBindings, type, rawValue);
+        const numericValue = localizedNumber(rawValue);
+        const formula =
+          type === "PERCENT" && valueBinding?.basisLabel && numericValue !== null
+            ? `${valueBinding.basisLabel} * ${numericValue / 100}`
+            : valueBinding?.formula || null;
         values.push({
           valueId: domainDigest(
             `${LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID}:VALUE`,
@@ -461,8 +475,14 @@ function extractedValues(requirement, spans) {
             ? {
                 status: "SEMANTIC_ORACLE_DECLARED",
                 label: valueBinding.basisLabel,
+                sourceSpanId: span.spanId,
               }
             : { status: "UNRESOLVED", label: null },
+          formula,
+          currency:
+            valueBinding?.currency ||
+            (type === "AMOUNT" ? "EUR" : null),
+          roundingRule: valueBinding?.roundingRule || null,
           calculatedAmount: null,
         });
       }
