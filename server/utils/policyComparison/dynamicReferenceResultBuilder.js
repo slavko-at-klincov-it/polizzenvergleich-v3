@@ -196,8 +196,7 @@ function buildDynamicReferenceComparisonResult({
     documents,
     categories,
     totals: deriveTotals(categories),
-    proofLimit:
-      `Gerichteter, quellgebundener LF-IMMO-Vergleich. Seite A bestimmt ${manifest.summary.semanticRequirements} fachliche Zeilen, Kategorien, Unterkategorien und Reihenfolge; Inhalte nur in B erzeugen keine Zeile. Unvollständige B-Suchverträge dürfen keinen kontrollierten Nullfund erzeugen. Das Ergebnis ist kein semantischer Holdout- oder 99-Prozent-Nachweis.`,
+    proofLimit: `Gerichteter, quellgebundener LF-IMMO-Vergleich. Seite A bestimmt ${manifest.summary.semanticRequirements} fachliche Zeilen, Kategorien, Unterkategorien und Reihenfolge; Inhalte nur in B erzeugen keine Zeile. Unvollständige B-Suchverträge dürfen keinen kontrollierten Nullfund erzeugen. Das Ergebnis ist kein semantischer Holdout- oder 99-Prozent-Nachweis.`,
   };
   validateDynamicReferenceComparison(result, { manifest });
   return result;

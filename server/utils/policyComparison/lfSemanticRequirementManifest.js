@@ -527,11 +527,7 @@ function bindDeclaredSharedValueGovernors({
       for (const component of governor.components.filter(
         ({ propagateToRequirements }) => propagateToRequirements === true
       )) {
-        if (
-          requirement.components.some(
-            ({ id }) => id === component.id
-          )
-        )
+        if (requirement.components.some(({ id }) => id === component.id))
           throw profileRequired(
             `SHARED_GOVERNOR_COMPONENT_DUPLICATE:${governor.id}:${requirementId}:${component.id}`
           );
@@ -706,8 +702,7 @@ function validateOracle(oracle) {
     ...(oracle.sharedSemanticGovernors || []),
   ]) {
     const id = requiredString(governor.id, "GOVERNOR_ID_MISSING");
-    if (governorIds.has(id))
-      throw profileRequired(`DUPLICATE_GOVERNOR:${id}`);
+    if (governorIds.has(id)) throw profileRequired(`DUPLICATE_GOVERNOR:${id}`);
     governorIds.add(id);
     if (
       !Array.isArray(governor.requirementIds) ||
