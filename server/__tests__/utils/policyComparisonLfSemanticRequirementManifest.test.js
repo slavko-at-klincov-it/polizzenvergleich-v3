@@ -38,7 +38,7 @@ function artifact(pages) {
 
 function fixture() {
   const documentArtifact = artifact([
-    "Seite 1\nFeuerversicherung\nNeubauwert mit Limit 15 % der Versicherungssumme\nUnkartierter Fließtext\n",
+    "Seite 1\nFeuerversicherung\nNeubauwert mit Limit 15 % der Versicherungssumme\n\nUnkartierter Fließtext\n",
   ]);
   const ledger = buildSourceBlockLedger(documentArtifact);
   const oracle = {

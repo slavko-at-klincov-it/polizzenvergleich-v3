@@ -173,12 +173,27 @@ function diagnoseLfSemanticOracleAnchors(documentArtifact, oracle) {
   return diagnostics;
 }
 
-function lineBounds(text, start, end, page) {
-  let lineStart = text.lastIndexOf("\n", start - 1);
-  lineStart = Math.max(page.start, lineStart < 0 ? page.start : lineStart + 1);
-  let lineEnd = text.indexOf("\n", end);
-  lineEnd = Math.min(page.end, lineEnd < 0 ? page.end : lineEnd);
-  return { documentStart: lineStart, documentEnd: lineEnd };
+function logicalBounds(text, start, end, page) {
+  const pageText = text.slice(page.start, page.end);
+  const localStart = start - page.start;
+  const localEnd = end - page.start;
+  const preceding = pageText.slice(0, localStart);
+  const following = pageText.slice(localEnd);
+  const starts = [0];
+  for (const expression of [/\n\s*\n/gu, /\n(?=[•-]\s)/gu]) {
+    let match;
+    while ((match = expression.exec(preceding)))
+      starts.push(match.index + match[0].length);
+  }
+  const ends = [pageText.length];
+  for (const expression of [/\n\s*\n/gu, /\n(?=[•-]\s)/gu]) {
+    const match = expression.exec(following);
+    if (match) ends.push(localEnd + match.index);
+  }
+  return {
+    documentStart: page.start + Math.max(...starts),
+    documentEnd: page.start + Math.min(...ends),
+  };
 }
 
 function sourceSpans(documentArtifact, ledger, requirement, matches) {
@@ -197,7 +212,7 @@ function sourceSpans(documentArtifact, ledger, requirement, matches) {
     const page = documentArtifact.document.pageMap.find(
       ({ pageNumber }) => pageNumber === physicalPageNumber
     );
-    const bounds = lineBounds(text, range.start, range.end, page);
+    const bounds = logicalBounds(text, range.start, range.end, page);
     const exactText = text.slice(bounds.documentStart, bounds.documentEnd);
     const blockIds = ledger.blocks
       .filter(
@@ -299,6 +314,18 @@ function bindingForRaw(bindings, family, rawValue) {
   );
 }
 
+function bindingNumericallyMatches(binding, family, rawValue) {
+  const rawNumber = localizedNumber(rawValue);
+  if (rawNumber === null || !binding.formula) return false;
+  const expected = family === "PERCENT" ? rawNumber / 100 : rawNumber;
+  const numbers = String(binding.formula)
+    .match(/\d+(?:[.,]\d+)?/gu)
+    ?.map((value) => Number(value.replace(",", "."))) || [];
+  return numbers.some(
+    (number) => Math.abs(number - expected) < 1e-9 || number === rawNumber
+  );
+}
+
 function extractedValues(requirement, spans) {
   const values = [];
   const patterns = [
@@ -376,25 +403,44 @@ function inheritSharedGovernorValues(requirements) {
         )
       )
         continue;
-      const candidates = requirements.filter(
-        (candidate) =>
-          candidate.categoryId === requirement.categoryId &&
-          candidate.subcategoryId === requirement.subcategoryId
-      );
-      const matchingValues = candidates.flatMap((candidate) =>
-        candidate.values
+      const candidateValues = (sameSubcategory) =>
+        requirements
           .filter(
-            (value) =>
-              valueFamily(value.declaredType || value.type) === family &&
-              value.basis?.label === (binding.basisLabel || null)
+            (candidate) =>
+              candidate.categoryId === requirement.categoryId &&
+              (!sameSubcategory ||
+                candidate.subcategoryId === requirement.subcategoryId)
           )
-          .map((value) => ({ candidate, value }))
-      );
-      const distinct = [
+          .flatMap((candidate) =>
+            candidate.values
+              .filter(
+                (value) =>
+                  valueFamily(value.declaredType || value.type) === family &&
+                  (value.basis?.label === (binding.basisLabel || null) ||
+                    bindingNumericallyMatches(
+                      binding,
+                      family,
+                      value.rawValue
+                    ))
+              )
+              .map((value) => ({ candidate, value }))
+          );
+      let matchingValues = candidateValues(true);
+      let distinct = [
         ...new Map(
           matchingValues.map((entry) => [entry.value.normalizedValue, entry])
         ).values(),
       ];
+      if (distinct.length !== 1) {
+        matchingValues = candidateValues(false).filter(({ value }) =>
+          bindingNumericallyMatches(binding, family, value.rawValue)
+        );
+        distinct = [
+          ...new Map(
+            matchingValues.map((entry) => [entry.value.normalizedValue, entry])
+          ).values(),
+        ];
+      }
       if (distinct.length !== 1) continue;
       const { candidate, value } = distinct[0];
       requirement.values.push({
