@@ -180,4 +180,83 @@ describe("LF SemanticRequirementManifest V1", () => {
     const manifest = buildLfSemanticRequirementManifest(input);
     expect(manifest.requirements[0].values[0].rawValue).toBe("27 %");
   });
+
+  test("propagates source-bound shared value and semantic governors", () => {
+    const input = fixture();
+    input.oracle.sharedValueGovernors = [
+      {
+        id: "SHARED-PERCENT",
+        requirementIds: ["FE-01"],
+        pages: [1],
+        anchors: ["15 % der Versicherungssumme"],
+        components: [
+          {
+            id: "shared_condition",
+            label: "Gemeinsame Bedingung",
+            factRole: "CONDITION",
+            aliases: ["gemeinsame Bedingung"],
+            propagateToRequirements: true,
+          },
+          {
+            id: "shared_limit",
+            label: "Gemeinsames Limit",
+            factRole: "LIMIT",
+            valueBinding: {
+              type: "PERCENT",
+              basisLabel: "Versicherungssumme",
+            },
+          },
+        ],
+      },
+    ];
+    input.oracle.sharedSemanticGovernors = [
+      {
+        id: "SHARED-SCOPE",
+        requirementIds: ["FE-01"],
+        pages: [1],
+        anchors: ["Feuerversicherung"],
+        components: [
+          {
+            id: "shared_scope",
+            label: "Gemeinsamer Scope",
+            factRole: "SCOPE",
+            aliases: ["gemeinsamer Scope"],
+            propagateToRequirements: true,
+          },
+        ],
+      },
+    ];
+    const manifest = buildLfSemanticRequirementManifest(input);
+    const requirement = manifest.requirements[0];
+    expect(requirement.components.map(({ id }) => id)).toEqual(
+      expect.arrayContaining(["shared_condition", "shared_scope"])
+    );
+    expect(
+      requirement.values.some(
+        ({ inheritedFromGovernorId }) =>
+          inheritedFromGovernorId === "SHARED-PERCENT"
+      )
+    ).toBe(true);
+    expect(manifest.sharedSemanticGovernors).toEqual([
+      { governorId: "SHARED-SCOPE", requirementIds: ["FE-01"] },
+    ]);
+  });
+
+  test("uses only declared metadata and structure rules for nonsemantic blocks", () => {
+    const input = fixture();
+    input.oracle.blockDispositionRules = [
+      {
+        id: "TEST-STRUCTURE",
+        disposition: "STRUCTURE_ONLY",
+        match: "NORMALIZED_EXACT_TEXT",
+        texts: ["Unkartierter Fließtext"],
+      },
+    ];
+    const manifest = buildLfSemanticRequirementManifest(input);
+    expect(manifest.summary.reviewRequiredBlocks).toBe(0);
+    expect(
+      manifest.blockCrosswalk.find(({ ruleId }) => ruleId === "TEST-STRUCTURE")
+        ?.disposition
+    ).toBe("STRUCTURE_ONLY");
+  });
 });

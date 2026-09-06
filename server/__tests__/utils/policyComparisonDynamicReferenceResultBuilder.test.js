@@ -20,6 +20,8 @@ function fixture() {
       reviewRequiredBlocks: 1,
     },
     requirements: [{ requirementId: "A-01" }],
+    sharedValueGovernors: [],
+    sharedSemanticGovernors: [],
   };
   const row = {
     categoryId: "A-01",
@@ -45,6 +47,8 @@ function fixture() {
       semanticRequirementManifestSha256: manifest.manifestSha256,
       sourceBlockLedgerSha256: manifest.source.sourceBlockLedgerSha256,
       ...manifest.summary,
+      sharedValueGovernors: 0,
+      sharedSemanticGovernors: 0,
     },
     documents: [
       { uuid: "source-a", side: "A" },

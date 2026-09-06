@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   buildSourceBlockLedger,
+  normalizeStructuralText,
   validateSourceBlockLedger,
 } = require("../policyAnalysis/sourceBlockLedger");
 const { validateLfReferenceFamily } = require("./lfReferenceFamilyContract");
@@ -77,6 +78,27 @@ function normalizeFactRole(value) {
   if (!ALLOWED_FACT_ROLES.has(role))
     throw profileRequired(`UNSUPPORTED_FACT_ROLE:${value}`);
   return role;
+}
+
+function normalizedComponent(component, sourceSpanIds, detailPrefix) {
+  return {
+    id: requiredString(component.id, `${detailPrefix}:COMPONENT_ID_MISSING`),
+    label: requiredString(
+      component.label,
+      `${detailPrefix}:${component.id}:COMPONENT_LABEL_MISSING`
+    ),
+    factRole: normalizeFactRole(component.factRole),
+    aliases: Array.isArray(component.aliases)
+      ? [...new Set(component.aliases.map((alias) => requiredString(alias)))]
+      : [],
+    ...(Array.isArray(component.requestedFields)
+      ? { requestedFields: component.requestedFields }
+      : {}),
+    ...(component.valueBinding
+      ? { valueBinding: { ...component.valueBinding } }
+      : {}),
+    sourceSpanIds,
+  };
 }
 
 function escapeRegex(value) {
@@ -502,6 +524,25 @@ function bindDeclaredSharedValueGovernors({
           `SHARED_VALUE_GOVERNOR_REQUIREMENT_UNKNOWN:${governor.id}:${requirementId}`
         );
       requirement.sourceSpans.push(...spans);
+      for (const component of governor.components.filter(
+        ({ propagateToRequirements }) => propagateToRequirements === true
+      )) {
+        if (
+          requirement.components.some(
+            ({ id }) => id === component.id
+          )
+        )
+          throw profileRequired(
+            `SHARED_GOVERNOR_COMPONENT_DUPLICATE:${governor.id}:${requirementId}:${component.id}`
+          );
+        requirement.components.push(
+          normalizedComponent(
+            component,
+            spans.map(({ spanId }) => spanId),
+            governor.id
+          )
+        );
+      }
       for (const component of requirement.components) {
         if (
           component.valueBinding &&
@@ -546,6 +587,92 @@ function bindDeclaredSharedValueGovernors({
   }));
 }
 
+function bindDeclaredSharedSemanticGovernors({
+  documentArtifact,
+  ledger,
+  oracle,
+  requirements,
+}) {
+  const governors = oracle.sharedSemanticGovernors || [];
+  for (const governor of governors) {
+    const definition = {
+      id: governor.id,
+      pages: governor.pages,
+      anchors: governor.anchors,
+      components: governor.components,
+    };
+    const matches = chooseOrderedAnchorMatches(documentArtifact, definition);
+    const spans = sourceSpans(
+      documentArtifact,
+      ledger,
+      definition,
+      matches
+    ).map((span) => ({
+      ...span,
+      relation: "SHARED_SEMANTIC_GOVERNOR",
+      governorId: governor.id,
+    }));
+    for (const requirementId of governor.requirementIds) {
+      const requirement = requirements.find(
+        ({ requirementId: id }) => id === requirementId
+      );
+      if (!requirement)
+        throw profileRequired(
+          `SHARED_SEMANTIC_GOVERNOR_REQUIREMENT_UNKNOWN:${governor.id}:${requirementId}`
+        );
+      requirement.sourceSpans.push(...spans);
+      for (const component of governor.components.filter(
+        ({ propagateToRequirements }) => propagateToRequirements === true
+      )) {
+        if (requirement.components.some(({ id }) => id === component.id))
+          throw profileRequired(
+            `SHARED_GOVERNOR_COMPONENT_DUPLICATE:${governor.id}:${requirementId}:${component.id}`
+          );
+        requirement.components.push(
+          normalizedComponent(
+            component,
+            spans.map(({ spanId }) => spanId),
+            governor.id
+          )
+        );
+      }
+    }
+  }
+  return governors.map(({ id, requirementIds }) => ({
+    governorId: id,
+    requirementIds,
+  }));
+}
+
+function declaredBlockDisposition(block, oracle) {
+  for (const rule of oracle.blockDispositionRules || []) {
+    if (
+      Array.isArray(rule.pages) &&
+      !rule.pages.includes(block.physicalPageNumber)
+    )
+      continue;
+    if (rule.match === "ALL_UNBOUND_ON_PAGE")
+      return { disposition: rule.disposition, ruleId: rule.id };
+    if (
+      rule.match === "STRUCTURAL_KIND" &&
+      Array.isArray(rule.structuralKinds) &&
+      rule.structuralKinds.includes(block.structuralKind)
+    )
+      return { disposition: rule.disposition, ruleId: rule.id };
+    if (
+      rule.match === "NORMALIZED_EXACT_TEXT" &&
+      Array.isArray(rule.texts) &&
+      rule.texts.some(
+        (text) =>
+          normalizeStructuralText(text) ===
+          normalizeStructuralText(block.exactText)
+      )
+    )
+      return { disposition: rule.disposition, ruleId: rule.id };
+  }
+  return null;
+}
+
 function validateOracle(oracle) {
   requiredString(oracle?.oracleId, "ORACLE_ID_MISSING");
   if (!Array.isArray(oracle.requirements) || oracle.requirements.length === 0)
@@ -573,6 +700,50 @@ function validateOracle(oracle) {
     )
       throw profileRequired(`${id}:COMPONENTS_MISSING`);
   }
+  const governorIds = new Set();
+  for (const governor of [
+    ...(oracle.sharedValueGovernors || []),
+    ...(oracle.sharedSemanticGovernors || []),
+  ]) {
+    const id = requiredString(governor.id, "GOVERNOR_ID_MISSING");
+    if (governorIds.has(id))
+      throw profileRequired(`DUPLICATE_GOVERNOR:${id}`);
+    governorIds.add(id);
+    if (
+      !Array.isArray(governor.requirementIds) ||
+      governor.requirementIds.length === 0 ||
+      !Array.isArray(governor.pages) ||
+      governor.pages.length === 0 ||
+      !Array.isArray(governor.anchors) ||
+      governor.anchors.length === 0 ||
+      !Array.isArray(governor.components) ||
+      governor.components.length === 0
+    )
+      throw profileRequired(`GOVERNOR_CONTRACT_INVALID:${id}`);
+  }
+  const blockDispositionRuleIds = new Set();
+  for (const rule of oracle.blockDispositionRules || []) {
+    const id = requiredString(rule.id, "BLOCK_DISPOSITION_RULE_ID_MISSING");
+    if (blockDispositionRuleIds.has(id))
+      throw profileRequired(`DUPLICATE_BLOCK_DISPOSITION_RULE:${id}`);
+    blockDispositionRuleIds.add(id);
+    if (
+      !["DOCUMENT_METADATA", "STRUCTURE_ONLY"].includes(rule.disposition) ||
+      ![
+        "ALL_UNBOUND_ON_PAGE",
+        "NORMALIZED_EXACT_TEXT",
+        "STRUCTURAL_KIND",
+      ].includes(rule.match) ||
+      (rule.match === "ALL_UNBOUND_ON_PAGE" &&
+        (!Array.isArray(rule.pages) || rule.pages.length === 0)) ||
+      (rule.match === "NORMALIZED_EXACT_TEXT" &&
+        (!Array.isArray(rule.texts) || rule.texts.length === 0)) ||
+      (rule.match === "STRUCTURAL_KIND" &&
+        (!Array.isArray(rule.structuralKinds) ||
+          rule.structuralKinds.length === 0))
+    )
+      throw profileRequired(`BLOCK_DISPOSITION_RULE_INVALID:${id}`);
+  }
   return oracle;
 }
 
@@ -595,24 +766,13 @@ function buildLfSemanticRequirementManifest({
   const requirements = oracle.requirements.map((definition, sourceOrder) => {
     const matches = chooseOrderedAnchorMatches(documentArtifact, definition);
     const spans = sourceSpans(documentArtifact, ledger, definition, matches);
-    const components = definition.components.map((component) => ({
-      id: requiredString(component.id, `${definition.id}:COMPONENT_ID_MISSING`),
-      label: requiredString(
-        component.label,
-        `${definition.id}:${component.id}:COMPONENT_LABEL_MISSING`
-      ),
-      factRole: normalizeFactRole(component.factRole),
-      aliases: Array.isArray(component.aliases)
-        ? [...new Set(component.aliases.map((alias) => requiredString(alias)))]
-        : [],
-      ...(Array.isArray(component.requestedFields)
-        ? { requestedFields: component.requestedFields }
-        : {}),
-      ...(component.valueBinding
-        ? { valueBinding: { ...component.valueBinding } }
-        : {}),
-      sourceSpanIds: spans.map(({ spanId }) => spanId),
-    }));
+    const components = definition.components.map((component) =>
+      normalizedComponent(
+        component,
+        spans.map(({ spanId }) => spanId),
+        definition.id
+      )
+    );
     const searchPlanStatus =
       definition.searchPlanStatus === "CERTIFIED_COMPLETE"
         ? "CERTIFIED_COMPLETE"
@@ -641,6 +801,12 @@ function buildLfSemanticRequirementManifest({
     };
   });
   const sharedValueGovernors = bindDeclaredSharedValueGovernors({
+    documentArtifact,
+    ledger,
+    oracle,
+    requirements,
+  });
+  const sharedSemanticGovernors = bindDeclaredSharedSemanticGovernors({
     documentArtifact,
     ledger,
     oracle,
@@ -686,6 +852,14 @@ function buildLfSemanticRequirementManifest({
         disposition: "STRUCTURE_ONLY",
         requirementIds: [],
         ruleId: "ORACLE_SECTION_LABEL_V1",
+      };
+    const declaredDisposition = declaredBlockDisposition(block, oracle);
+    if (declaredDisposition)
+      return {
+        blockId: block.blockId,
+        disposition: declaredDisposition.disposition,
+        requirementIds: [],
+        ruleId: declaredDisposition.ruleId,
       };
     return {
       blockId: block.blockId,
@@ -733,6 +907,7 @@ function buildLfSemanticRequirementManifest({
     },
     categories,
     sharedValueGovernors,
+    sharedSemanticGovernors,
     requirements,
     blockCrosswalk,
     summary: {

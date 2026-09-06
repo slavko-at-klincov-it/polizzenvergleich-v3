@@ -191,12 +191,13 @@ function buildDynamicReferenceComparisonResult({
         manifest.summary.incompleteSearchRequirements,
       reviewRequiredBlocks: manifest.summary.reviewRequiredBlocks,
       sharedValueGovernors: manifest.sharedValueGovernors.length,
+      sharedSemanticGovernors: manifest.sharedSemanticGovernors.length,
     },
     documents,
     categories,
     totals: deriveTotals(categories),
     proofLimit:
-      "Gerichteter, quellgebundener LF-IMMO-Vergleich. Seite A bestimmt 283 fachliche Zeilen, Kategorien, Unterkategorien und Reihenfolge; Inhalte nur in B erzeugen keine Zeile. Unvollständige B-Suchverträge dürfen keinen kontrollierten Nullfund erzeugen. Das Ergebnis ist kein semantischer Holdout- oder 99-Prozent-Nachweis.",
+      `Gerichteter, quellgebundener LF-IMMO-Vergleich. Seite A bestimmt ${manifest.summary.semanticRequirements} fachliche Zeilen, Kategorien, Unterkategorien und Reihenfolge; Inhalte nur in B erzeugen keine Zeile. Unvollständige B-Suchverträge dürfen keinen kontrollierten Nullfund erzeugen. Das Ergebnis ist kein semantischer Holdout- oder 99-Prozent-Nachweis.`,
   };
   validateDynamicReferenceComparison(result, { manifest });
   return result;
@@ -231,6 +232,10 @@ function validateDynamicReferenceComparison(result, { manifest } = {}) {
       manifest.summary.incompleteSearchRequirements ||
     result.template?.reviewRequiredBlocks !==
       manifest.summary.reviewRequiredBlocks ||
+    result.template?.sharedValueGovernors !==
+      manifest.sharedValueGovernors.length ||
+    result.template?.sharedSemanticGovernors !==
+      manifest.sharedSemanticGovernors.length ||
     rows.length !== manifest.requirements.length ||
     rows.some(
       (row, index) =>

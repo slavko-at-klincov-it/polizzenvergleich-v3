@@ -8,6 +8,31 @@
   },
   "sharedValueGovernors": [
     {
+      "id": "VS-SHARED-5-PERCENT-FIRST-RISK",
+      "requirementIds": ["VS-25", "VS-26", "VS-27", "VS-28", "VS-29", "VS-30", "VS-31", "VS-32"],
+      "pages": [4],
+      "anchors": [
+        "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer und/oder Gebäudeeigentümer",
+        "eingetretenen Schaden ersatzpflichtig ist und das Gebäude gegen die angeführte Gefahr versichert ist",
+        "bis zu jeweils 5% der Gebäudeversicherungssumme"
+      ],
+      "components": [
+        {
+          "id": "shared_liability_and_insured_peril",
+          "label": "Ersatzpflicht und versicherte Gefahr",
+          "factRole": "CONDITION",
+          "aliases": ["ersatzpflichtiger Gebäudeeigentümer", "Gebäude gegen die Gefahr versichert"],
+          "propagateToRequirements": true
+        },
+        {
+          "id": "shared_limit",
+          "label": "Gemeinsames Fünf-Prozent-Limit auf Erstes Risiko",
+          "factRole": "LIMIT",
+          "valueBinding": {"type": "PERCENT", "basisLabel": "Gebäudeversicherungssumme", "formula": "basis * 0.05"}
+        }
+      ]
+    },
+    {
       "id": "SP-SHARED-10-PERCENT",
       "requirementIds": ["SP-01", "SP-02", "SP-03", "SP-04", "SP-05", "SP-06", "SP-07", "SP-08"],
       "pages": [6],
@@ -65,6 +90,83 @@
         "factRole": "LIMIT",
         "valueBinding": {"type": "AMOUNT", "basisLabel": "D-Haftungserweiterung", "currency": "EUR"}
       }]
+    }
+  ],
+  "sharedSemanticGovernors": [
+    {
+      "id": "KO-SHARED-INSURED-LINES-AND-SUM",
+      "requirementIds": ["KO-01", "KO-02", "KO-03", "KO-04", "KO-05", "KO-06", "KO-07"],
+      "pages": [5],
+      "anchors": [
+        "Versicherungsumfang Feuer-, Sturm-, Leitungswasser- und Gebäude- und",
+        "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und",
+        "Grundstückshaftpflichtversicherung bis zur Höhe der Gebäudeversicherungssumme mitversichert"
+      ],
+      "components": [
+        {
+          "id": "shared_insured_lines",
+          "label": "Geltung in Feuer, Sturm, Leitungswasser und Gebäudehaftpflicht",
+          "factRole": "CONDITION",
+          "aliases": ["gemeinsamer Versicherungsumfang", "Feuer Sturm Leitungswasser Gebäudehaftpflicht"],
+          "propagateToRequirements": true
+        },
+        {
+          "id": "shared_building_sum_cap",
+          "label": "Bis zur Gebäudeversicherungssumme",
+          "factRole": "LIMIT",
+          "aliases": ["bis zur Höhe der Gebäudeversicherungssumme"],
+          "propagateToRequirements": true
+        }
+      ]
+    }
+  ],
+  "blockDispositionRules": [
+    {
+      "id": "LF-COVER-METADATA",
+      "disposition": "DOCUMENT_METADATA",
+      "match": "ALL_UNBOUND_ON_PAGE",
+      "pages": [1]
+    },
+    {
+      "id": "LF-REPEATED-DOCUMENT-BANNER",
+      "disposition": "DOCUMENT_METADATA",
+      "match": "NORMALIZED_EXACT_TEXT",
+      "pages": [3],
+      "texts": [
+        "Deckungskonzept LF IMMO Exklusivschutz 2023 für",
+        "Familienwohnbau Gemeinn. Bau- u. Siedlungs GmbH und",
+        "Tochtergesellschaften (z.B. WEVIG GmbH, Familienwohnbau",
+        "Niederösterreich, WE Pro Bauträger GmbH, WIEBE GmbH und",
+        "Waldmühle Rodaun GmbH)"
+      ]
+    },
+    {
+      "id": "LF-SECTION-HEADINGS",
+      "disposition": "STRUCTURE_ONLY",
+      "match": "STRUCTURAL_KIND",
+      "structuralKinds": ["HEADING_CANDIDATE"]
+    },
+    {
+      "id": "LF-CLAUSE-GOVERNORS",
+      "disposition": "STRUCTURE_ONLY",
+      "match": "NORMALIZED_EXACT_TEXT",
+      "texts": [
+        "Präambel",
+        "Versichert sind",
+        "• bei Gebäuden",
+        "• innerhalb der versicherten Gebäude und Nebengebäude",
+        "• auf dem Versicherungsgrundstück",
+        "Versichert sind Schäden durch",
+        "Zusätzlich versichert sind Schäden durch",
+        "Zusätzlich versichert sind",
+        "Zusätzlich sind versichert",
+        "Nicht versichert sind",
+        "Nicht versichert sind Schäden",
+        "Schäden durch",
+        "Die Versicherung übernimmt",
+        "•",
+        "Sachschäden durch Umweltstörung und Umweltsanierungskosten"
+      ]
     }
   ],
   "requirements": [
@@ -1040,7 +1142,9 @@
         4
       ],
       "anchors": [
-        "Werkzeuge, Geräte und Maschinen"
+        "Werkzeuge, Geräte und Maschinen",
+        "Gebäude und Nebengebäude, der Grünanlagen",
+        "Reinigungsgeräte, Schneeräumgeräte und Rasenmäher"
       ],
       "components": [
         {
@@ -1166,7 +1270,7 @@
         4
       ],
       "anchors": [
-        "Autoabstellplätze"
+        "- Autoabstellplätze;"
       ],
       "components": [
         {
@@ -2650,7 +2754,10 @@
       ],
       "anchors": [
         "indirekter Blitzschlag",
-        "mindestens EUR 10.000"
+        "mindestens EUR 10.000",
+        "Aufzugs-, Gegensprech-, Toröffnungs-, Alarm- und Schrankenanlagen",
+        "elektrischen Teilen von Heizungsanlagen",
+        "elektronischen Steuerungsanlagen dieser Anlagen"
       ],
       "components": [
         {
@@ -7439,7 +7546,9 @@
       ],
       "anchors": [
         "über den sogenannten Umweltpfad",
-        "Vorgezogene Rettungskosten"
+        "Vorgezogene Rettungskosten",
+        "Wenn nur das Erdreich des Versicherungsnehmers beeinträchtigt ist",
+        "Entsorgen des kontaminierten Erdreiches versichert"
       ],
       "components": [
         {
@@ -7672,7 +7781,7 @@
       ],
       "anchors": [
         "jedenfalls Ersatz",
-        "zum Neuwert",
+        "Neuwert.",
         "Außenseite des Gebäudes",
         "allmähliche Einwirkung von Feuchtigkeit"
       ],
@@ -9046,6 +9155,8 @@
         23
       ],
       "anchors": [
+        "Brand, Explosion",
+        "Vandalismus ohne versuchten oder vollbrachten Einbruchsdiebstahl",
         "Polizeidienststelle angezeigt",
         "Anzeige bestätigen"
       ],
@@ -11322,7 +11433,8 @@
       ],
       "anchors": [
         "eine Personen bestellen",
-        "Mitbewerber des Versicherungsnehmers sind"
+        "Mitbewerber des Versicherungsnehmers sind",
+        "Haussachverständige eines Mitbewerbers sind"
       ],
       "components": [
         {
@@ -11545,7 +11657,9 @@
       "anchors": [
         "Kündigung einer rechtlich selbstständigen Sparte",
         "Freigabe all jener anderen Sparten",
-        "ohne Rückverrechnung"
+        "ohne Rückverrechnung",
+        "Vorteilen, die in Abhängigkeit der Laufzeit des Vertrages gewährt wurden",
+        "usw."
       ],
       "components": [
         {
