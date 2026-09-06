@@ -79,6 +79,17 @@ Produktworker bleibt deshalb beim begrenzten, kuratierten 35-Punkte-Profil.
 Die verbindliche Schichtentrennung steht in [ADR-028](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-028-source-block-ledger-und-semantisches-vergleichsprofil-bleiben-getrennt),
 der Mac-Studio-Befund in [Tests und Erkenntnisse, Abschnitt 57](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#57-review-des-dynamischen-lf-rohblockprofils-und-sichere-rücknahme).
 
+Implementierungsnachtrag vom 6. September 2026: Der sichere Ausbau aus
+ADR-028 ist fuer die bekannte LF-Familie implementiert. Ein semantikfreies
+1.005-Block-Ledger und ein getrenntes source-bound 283-Zeilen-Manifest
+erzeugen 13 dynamische A-Kategorien; alle B-Suchplaene bleiben bis zur
+fachlichen Zertifizierung explorativ und koennen keinen Nullfundvorteil
+behaupten. Der frische LF-1+1-Lauf und der getrennte symmetrische
+224-Zeilen-1+1-Lauf bestanden technisch. Vertrag und Grenzen stehen in
+[ADR-029](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-029-vollstaendiges-lf-profil-als-versionierter-familienvertrag-nicht-als-rohblockprofil),
+der Datenfluss in [Architektur, Abschnitt 23](./POLIZZENVERGLEICH_ARCHITEKTUR.md#23-implementierter-lf-familienvertrag-mit-dynamischem-a-manifest) und die
+Messwerte in [Tests und Erkenntnisse, Abschnitt 58](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#58-vollstaendiger-lf-familienvertrag-und-getrennte-11-endlaeufe).
+
 ## 2. Schnelllage
 
 | Statusachse                           | Aktueller Stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Kanonischer Beleg                                                                                                                                                                                                                                                                                      |

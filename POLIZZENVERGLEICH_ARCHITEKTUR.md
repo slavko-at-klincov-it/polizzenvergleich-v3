@@ -805,3 +805,43 @@ Diese Zielgrenze ist mit ADR-028 akzeptiert, aber noch nicht als vollständiges
 LF-Profil implementiert. Der Guard-Test im Korrekturcommit `313348735`
 verhindert nur die erneute direkte Aktivierung eines Source-Block-Manifests im
 Produktworker.
+
+## 23. Implementierter LF-Familienvertrag mit dynamischem A-Manifest
+
+Der in Abschnitt 22 beschriebene Zweischichtenvertrag ist auf dem Branch
+`codex/lf-reference-complete-template` umgesetzt. Neue LF-Laeufe verwenden
+weiterhin den persistenten Workspace-Modus `LF_IMMO_REFERENCE_A_TO_B_V1`,
+aber das statische Produktprofil `LF_IMMO_REFERENCE_COMPLETE_SOURCE_BOUND_V1`.
+Der konkrete A-Inhalt wird erst im Worker als sessiongebundenes Template
+materialisiert:
+
+```text
+LF-PDF A
+  -> document.private.json
+  -> SOURCE_BLOCK_LEDGER_V1
+  -> LF_IMMO_REFERENCE_FAMILY_STRUCTURE_V1
+  -> LF_A_SEMANTIC_REQUIREMENT_MANIFEST_V1
+  -> 13 dynamische B-Kataloge in A-Reihenfolge
+  -> kontrollierte B-Triage und Prepared Evidence
+  -> LF_DYNAMIC_REFERENCE_A_TO_B_RESULT_V1
+```
+
+Das Ledger bindet Reihenfolge, physische Seite, Offsets, exakten Text und
+Strukturdigest, besitzt aber keine semantische Autoritaet. Das getrennte
+servereigene Oracle atomisiert die bekannte 31-seitige LF-Familie in 283
+Anforderungen und bindet Rollen, Scope, Bedingungen, 116 typisierte Werte
+sowie sieben gemeinsame Governors an Quellspans. Jede Quellzeile besitzt eine
+terminale Crosswalk-Disposition.
+
+Der Familienvertrag normalisiert ausschliesslich numerische Inhalte und
+Jahreszahlen. Dadurch werden aktuelle Summen, Prozente, Limits und Dauern aus
+Dokument A uebernommen, waehrend neue, fehlende, umformulierte oder
+umgeordnete operative Struktur fail-closed ein neues LF-Profil verlangt. Der
+Readback regeneriert das semantische Manifest aus dem gespeicherten
+A-Dokumentartefakt und verifiziert die Digestkette erneut.
+
+Alle 283 B-Suchplaene sind derzeit `EXPLORATORY_INCOMPLETE`. Ein leerer Fund
+bleibt deshalb `GEGENSTUECK_UNKLAR`; er kann weder kontrollierten Nullfund noch
+Vorteil erzeugen. B-only-Inhalte koennen den Resultatbuilder konstruktiv nicht
+erreichen. Historische 35-Zeilen-Ergebnisse bleiben ueber ihren alten Vertrag
+lesbar. Der symmetrische Core-5-Pfad bleibt auf 5 Kategorien und 224 Zeilen.

@@ -1003,3 +1003,36 @@ Verbindliche Entscheidung:
 Der Implementierungsversuch `126ab03b` wurde aufgrund dieser Grenze mit
 `313348735` aus dem Produktpfad genommen. Die Messung und Beweisgrenze stehen
 in Tests und Erkenntnisse, Abschnitt 57.
+
+## ADR-029: Vollstaendiges LF-Profil als versionierter Familienvertrag, nicht als Rohblockprofil
+
+**Status:** AKZEPTIERT UND TECHNISCH IMPLEMENTIERT; FACHLICHER HOLDOUT OFFEN
+
+Diese Entscheidung erfuellt ADR-028 fuer die bekannte LF-Familie und ersetzt
+ADR-027 Punkt 9 fuer neue dynamische Laeufe. Historische 35-Zeilen-Laeufe
+bleiben unveraendert lesbar.
+
+1. Das `SourceBlockLedger` bleibt semantikfrei. Kundenzeilen duerfen nur aus
+   einem getrennten, versionierten `SemanticRequirementManifest` entstehen.
+2. Ein servereigenes Oracle atomisiert die bekannte LF-Familie vollstaendig;
+   das aktuelle Dokument A liefert Quelltext, Reihenfolge und Werte, nicht
+   frei generierte Semantik.
+3. Ein wertunabhaengiger Vollstruktur-Digest und verbindliche Anker ersetzen
+   den festen Dokument-SHA. Numerische Aenderungen sind zulaessig;
+   Text-/Strukturabweichungen verlangen fail-closed ein neues Profil.
+4. Prozentwert, Betragsbasis, Formel, Waehrung, Rundung und berechneter Betrag
+   bleiben getrennt. Ohne eindeutige source-bound Basis wird nicht gerechnet.
+5. Seite B wird ausschliesslich gegen aus A abgeleitete Kataloge analysiert.
+   B-only-Inhalte erzeugen keine Zeile.
+6. Ein explorativer Suchplan darf Fundstellen und Teilgegenstuecke liefern,
+   aber niemals einen kontrollierten Nullfund oder automatischen Vorteil aus
+   Nichtfinden ableiten.
+7. Resume und Readback validieren Reportgates, Zeilenzahl, Template-Digests
+   und das gespeicherte A-Dokumentartefakt erneut.
+8. Der symmetrische 224-Zeilen-Vertrag bleibt ein getrennter unveraenderter
+   Workspace- und Ergebnisvertrag.
+
+Technisch belegt sind 283/283 LF-Zeilen im 1+1-Lauf, null B-only-Zeilen und ein
+getrennter symmetrischer 224/224-Lauf. Diese Fixture-Evidenz ist keine
+Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein
+99-Prozent-Nachweis.

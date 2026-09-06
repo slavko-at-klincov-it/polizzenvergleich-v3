@@ -3547,3 +3547,68 @@ der gerichtete Produktworker verwendet wieder den bekannten versionierten
 LF-Versionen, Prozentbasisberechnung, unbekannte Versicherer-Holdouts oder das
 99-Prozent-Ziel. Da keine Produktdatei gegenüber `d266b48ae` verbleibt, wurde
 kein neuer LLM-Endlauf als Korrekturbeleg ausgegeben.
+
+## 58. Vollstaendiger LF-Familienvertrag und getrennte 1+1-Endlaeufe
+
+**Pruefung:** 6. September 2026
+
+Der sichere Ausbau nach Abschnitt 57 wurde auf dem V3-Branch
+`codex/lf-reference-complete-template` implementiert. Der frische gerichtete
+Lauf verwendete exakt ein LF-Dokument A und ein WEVIG-Dokument B auf
+Produktcode-Commit `81f9601506a6f27711e00c5cf392e25cabf29058`:
+
+```text
+Worktree:       /Users/michaelmischkot/Code/validation-worktrees/lf-complete-template
+QA-Root:        /tmp/lf-one-to-one-e2e.CYnbJJ
+Node:           v22.23.2
+Modell/Kontext: qwen/qwen3.6-35b-a3b / 42496
+Kategorien:     13/13
+Zeilen:         283/283 eindeutig
+Quellbloecke:   1005, Review 0
+Komponenten:    631/631 technisch verarbeitet
+B-only:         0
+Outcomes:       gefunden 16 / teilweise 70 / Referenz unklar 1 /
+                Gegenstueck unklar 196 / kontrollierter Nullfund 0
+XLSX:           1 Blatt / 12 Spalten / 283 Datenzeilen
+```
+
+Artefakthashes:
+
+```text
+Manifest:       f25a3a71246cee23bf7062787c5f4e94d6ff01ce7e9a7737f8733606e18e1863
+Source-Ledger:  b3b10f6585a2bbf8933e4d04a557977cbab12c8e24af2fc5e6441168a38cad1f
+comparison:     0ed3a2252bf501323fd47848236f4fccf7312d18a6b558a09d525bb633767cc3
+markdown:       8af692939a73f939d9e6df160e3a3bc393b9e4db8683bb0e7a4d99c75bb95561
+xlsx:           5a3ad53e0f515874a24acf682b11bac3f3acde5788860524ac1eb45f5cc389a9
+```
+
+Der getrennte symmetrische Lauf auf
+`db9f9eba79b7adea5e3dd22e045bec55d3a3973a` verwendete dieselben zwei
+Einzeldokumente, aber das unveraenderte Core-5-Profil:
+
+```text
+QA-Root:        /tmp/symmetric-one-to-one-e2e.O1Afhr
+Kategorien:     5
+Zeilen:         224 eindeutig
+Outcomes:       13 / 1 / 38 / 126 / 0 / 16 / 30
+Kundenreview:   30
+XLSX:           1 Blatt / 17 Spalten / 224 Datenzeilen
+comparison:     63b633220530f85869ee0dc084f6918678909c591767980fe6682758f83b388b
+markdown:       ca0031eb6eed3b69ca50fe8c897c2118f597d2838df4c01ba3e60b7d4927631d
+xlsx:           bd490f903db79e05f95a9bf853f86d81a4b9ecfc1984eb27643b64a9eca9c34b
+```
+
+Auf dem finalen V3-Commit
+`d441d2412440777c79a1b2a3468fbc24a277fc9d` bestanden 167/167 Server-Suites
+mit 2.336/2.336 Tests, Server-/Frontend-Lint und Frontend-Produktionsbuild.
+Ein breiterer Root-Test lief 176 Suites gruen; nur die drei unveraenderten
+Collector-FFmpeg-Tests scheiterten an fehlender Worktree-Runtimeintegration.
+
+**Beweist:** Vollstaendige source-bound Materialisierung und gerichtete
+B-Suche fuer die bekannte LF-Familie, fail-closed Nullfundsemantik, stabile
+Persistenz/Exporte und technische Nichtregression des symmetrischen
+Einzeldokumentpfads.
+
+**Beweist nicht:** Fachrichtigkeit aller 283 Zeilen, vollstaendige Synonym- und
+Paraphrasenabdeckung, unbekannte LF-Fassungen oder Versicherer, Mehrdokument-
+Ranglogik und das 99-Prozent-Ziel.
