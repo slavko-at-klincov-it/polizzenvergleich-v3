@@ -18,7 +18,7 @@ describe("LF comparison UI truth contract", () => {
       POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
     );
 
-    expect(mode.description).toContain("kuratierten LF-Fachprofil");
+    expect(mode.description).toContain("kuratierte LF-Fachprofil");
     expect(source).toContain("283 Zeilen, 13 Kategorien");
     expect(source).toContain("Abweichende oder fehlende Struktur stoppt den Lauf");
     expect(source).toContain("LF-Profil an A binden und B prüfen");
