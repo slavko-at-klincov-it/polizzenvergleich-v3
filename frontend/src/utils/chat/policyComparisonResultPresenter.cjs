@@ -81,7 +81,9 @@ function presentComparisonError(value) {
     return "Die Struktur des LF-IMMO-Dokuments A wird von dieser Vorlage nicht sicher unterstützt. Dafür ist ein neues, fachlich geprüftes LF-Profil erforderlich.";
   if (message.startsWith("REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH"))
     return "Das LF-IMMO-Dokument A hat sich seit dem Upload geändert. Bitte die Datei erneut hochladen und den Vergleich neu starten.";
-  return message || "Unbekannter Fehler";
+  if (message.startsWith("DOCUMENT_ANALYSIS_FAILED"))
+    return "Die Dokumentanalyse konnte technisch nicht abgeschlossen werden. Bitte die Quelldateien prüfen und den Vergleich erneut starten.";
+  return "Der Vergleich konnte technisch nicht abgeschlossen werden. Bitte erneut versuchen oder die Administration kontaktieren.";
 }
 
 function presentComparisonMetrics(result) {

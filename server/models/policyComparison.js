@@ -76,6 +76,21 @@ function publicDocument(document) {
   };
 }
 
+function publicComparisonError(value) {
+  const message = String(value || "");
+  if (!message) return null;
+  const publicCodes = [
+    "NEUES_LF_PROFIL_ERFORDERLICH",
+    "LF_REFERENCE_NEW_PROFILE_REQUIRED",
+    "REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH",
+    "DOCUMENT_ANALYSIS_FAILED",
+  ];
+  return (
+    publicCodes.find((code) => message.startsWith(code)) ||
+    "COMPARISON_TECHNICAL_FAILURE"
+  );
+}
+
 function publicSession(session) {
   const documents = Array.isArray(session?.documents)
     ? session.documents.map(publicDocument)
@@ -84,7 +99,7 @@ function publicSession(session) {
     uuid: session.uuid,
     status: session.status,
     progress: safeJsonParse(session.progress, null),
-    error: session.error,
+    error: publicComparisonError(session.error),
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     createdAt: session.createdAt,

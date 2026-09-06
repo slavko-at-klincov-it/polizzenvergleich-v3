@@ -33,6 +33,28 @@ describe("PolicyComparison public contract", () => {
     expect(session).not.toHaveProperty("inputManifest");
   });
 
+  test("does not expose internal worker paths in session errors", () => {
+    expect(
+      PolicyComparison.publicSession({
+        uuid: "session-1",
+        status: "FAILED",
+        comparisonMode: "SYMMETRIC_A_B_CORE5_V1",
+        error:
+          "DOCUMENT_ANALYSIS_FAILED: log=/Users/private/server/storage/worker.log",
+        documents: [],
+      }).error
+    ).toBe("DOCUMENT_ANALYSIS_FAILED");
+    expect(
+      PolicyComparison.publicSession({
+        uuid: "session-2",
+        status: "FAILED",
+        comparisonMode: "SYMMETRIC_A_B_CORE5_V1",
+        error: "UNKNOWN_INTERNAL:/private/path",
+        documents: [],
+      }).error
+    ).toBe("COMPARISON_TECHNICAL_FAILURE");
+  });
+
   test("fixes the package limit and accepted semantic roles", () => {
     expect(PolicyComparison.MAX_DOCUMENTS_PER_SIDE).toBe(9);
     expect(PolicyComparison.DOCUMENT_ROLES).toEqual(

@@ -14,6 +14,18 @@ describe("policy comparison result presenter", () => {
     ).toMatch(/erneut hochladen/);
   });
 
+  test("never exposes worker logs or local storage paths", () => {
+    const presented = presentComparisonError(
+      "DOCUMENT_ANALYSIS_FAILED: exit=1 log=/Users/private/server/storage/worker.log"
+    );
+    expect(presented).toMatch(/technisch nicht abgeschlossen/);
+    expect(presented).not.toContain("/Users/");
+    expect(presented).not.toContain("worker.log");
+    expect(presentComparisonError("INTERNAL_UNKNOWN:/private/path")).toMatch(
+      /Administration kontaktieren/
+    );
+  });
+
   test("presents a V2 point decision", () => {
     expect(
       presentPointDecision({
