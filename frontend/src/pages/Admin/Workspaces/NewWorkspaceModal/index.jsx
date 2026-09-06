@@ -19,6 +19,8 @@ export default function NewWorkspaceModal({ closeModal }) {
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const mountedRef = useRef(true);
   const [analysisMode, setAnalysisMode] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const { t } = useTranslation();
   const loadTemplates = useCallback(async () => {
     setTemplateError(null);
@@ -45,13 +47,26 @@ export default function NewWorkspaceModal({ closeModal }) {
   const handleCreate = async (e) => {
     setError(null);
     e.preventDefault();
-    const form = new FormData(e.target);
-    const { workspace, error } = await Admin.newWorkspace(
-      form.get("name"),
-      analysisMode
-    );
-    if (!!workspace) window.location.reload();
-    setError(error);
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const form = new FormData(e.target);
+      const { workspace, error } = await Admin.newWorkspace(
+        form.get("name"),
+        analysisMode
+      );
+      if (!!workspace) {
+        window.location.reload();
+        return;
+      }
+      setError(error);
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
+    }
   };
 
   return (
@@ -126,9 +141,9 @@ export default function NewWorkspaceModal({ closeModal }) {
         </ModalSecondaryButton>
         <ModalPrimaryButton
           type="submit"
-          disabled={templatesLoading || !analysisMode}
+          disabled={saving || templatesLoading || !analysisMode}
         >
-          Create workspace
+          {saving ? t("common.saving") : "Create workspace"}
         </ModalPrimaryButton>
       </ModalFooter>
     </form>

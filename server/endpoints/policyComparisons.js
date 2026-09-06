@@ -1,8 +1,12 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
-const { reqBody, multiUserMode, userFromSession } = require("../utils/http");
+const {
+  reqBody,
+  multiUserMode,
+  safeJsonParse,
+  userFromSession,
+} = require("../utils/http");
 const { validatedRequest } = require("../utils/middleware/validatedRequest");
 const {
   flexUserRoleValid,
@@ -21,9 +25,14 @@ const {
 const {
   readValidatedStoredComparisonArtifacts,
 } = require("../utils/policyComparison/storedArtifactAccess");
+const {
+  policyComparisonWorkerSupervisor,
+} = require("../utils/policyComparison/workerSupervisor");
 
-function comparisonOptions(workspace) {
-  const mode = policyComparisonMode(workspace.policyComparisonMode);
+function comparisonOptions(workspace, session = null) {
+  const mode = policyComparisonMode(
+    session?.comparisonMode || workspace.policyComparisonMode
+  );
   return {
     sides: PolicyComparison.SIDES,
     documentRoles: PolicyComparison.DOCUMENT_ROLES,
@@ -94,6 +103,14 @@ function errorStatus(error) {
     return 400;
   if (error?.message === "COMPARISON_SIDE_LIMIT_REACHED") return 409;
   if (error?.message === "COMPARISON_SESSION_LOCKED") return 423;
+  if (
+    ["COMPARISON_SESSION_CHANGED", "COMPARISON_SESSION_NOT_RUNNING"].includes(
+      error?.message
+    )
+  )
+    return 409;
+  if (error?.message?.startsWith("COMPARISON_WORKER_TERMINATION_UNCONFIRMED"))
+    return 409;
   if (error?.code === "P2002") return 409;
   return 500;
 }
@@ -189,7 +206,7 @@ function policyComparisonEndpoints(app) {
           success: true,
           session: session ? PolicyComparison.publicSession(session) : null,
           options: {
-            ...comparisonOptions(scope.workspace),
+            ...comparisonOptions(scope.workspace, session),
           },
         });
       } catch (error) {
@@ -223,7 +240,7 @@ function policyComparisonEndpoints(app) {
         return response.status(201).json({
           success: true,
           session: PolicyComparison.publicSession(session),
-          options: comparisonOptions(scope.workspace),
+          options: comparisonOptions(scope.workspace, session),
         });
       } catch (error) {
         console.error(error.message, error);
@@ -355,31 +372,29 @@ function policyComparisonEndpoints(app) {
     [...protectedRoute, loadOwnedSession],
     async (request, response) => {
       let queuedSession = null;
-      let child = null;
       try {
         const current = request.policyComparisonSession;
-        const { session } = await PolicyComparison.queue(current);
+        const { session, workerLeaseNonce } =
+          await PolicyComparison.queue(current);
         queuedSession = session;
         const worker = path.resolve(
           __dirname,
           "../scripts/policyComparisonWorker.cjs"
         );
-        child = spawn(process.execPath, [worker, session.uuid], {
+        policyComparisonWorkerSupervisor.enqueue({
+          sessionUuid: session.uuid,
+          leaseNonce: workerLeaseNonce,
+          workerFile: worker,
           cwd: path.resolve(__dirname, "../.."),
           env: process.env,
-          detached: true,
-          stdio: "ignore",
+          onFailure: (error, { workerPid }) =>
+            PolicyComparison.markFailedForLease({
+              sessionId: session.id,
+              inputManifest: session.inputManifest,
+              workerPid,
+              error: error.message,
+            }),
         });
-        if (!Number.isInteger(child.pid) || child.pid <= 1)
-          throw new Error("COMPARISON_WORKER_PID_INVALID");
-        await PolicyComparison.setWorkerPid(session.id, child.pid);
-        child.once("error", async (error) => {
-          console.error("Comparison worker failed to start", error);
-          await PolicyComparison.markFailed(session.id, error.message).catch(
-            console.error
-          );
-        });
-        child.unref();
         await EventLogs.logEvent(
           "policy_comparison_started",
           {
@@ -399,18 +414,21 @@ function policyComparisonEndpoints(app) {
         });
       } catch (error) {
         console.error(error.message, error);
-        if (Number.isInteger(child?.pid) && child.pid > 1) {
-          try {
-            process.kill(-child.pid, "SIGTERM");
-          } catch (killError) {
-            if (killError.code !== "ESRCH") console.error(killError);
-          }
+        if (queuedSession) {
+          const queuedManifest = safeJsonParse(
+            queuedSession.inputManifest,
+            null
+          );
+          await policyComparisonWorkerSupervisor.cancel({
+            sessionUuid: queuedSession.uuid,
+            leaseNonce: queuedManifest?.workerLeaseNonce,
+          }).catch(console.error);
+          await PolicyComparison.markFailedForLease({
+            sessionId: queuedSession.id,
+            inputManifest: queuedSession.inputManifest,
+            error: error.message,
+          }).catch(console.error);
         }
-        if (queuedSession)
-          await PolicyComparison.markFailed(
-            queuedSession.id,
-            error.message
-          ).catch(console.error);
         const status =
           error.message === "COMPARISON_BOTH_SIDES_REQUIRED"
             ? 400
@@ -467,21 +485,29 @@ function policyComparisonEndpoints(app) {
             success: false,
             error: "Comparison is not running.",
           });
-        if (Number.isInteger(current.workerPid) && current.workerPid > 1) {
-          try {
-            process.kill(-current.workerPid, "SIGTERM");
-          } catch (error) {
-            if (error.code !== "ESRCH") throw error;
-          }
-        }
         const session = await PolicyComparison.cancel(current);
+        const inputManifest = safeJsonParse(current.inputManifest, null);
+        const workerCancelled = await policyComparisonWorkerSupervisor.cancel({
+          sessionUuid: current.uuid,
+          leaseNonce: inputManifest?.workerLeaseNonce,
+          waitForExit: true,
+          timeoutMs: 2_000,
+        });
+        if (
+          !workerCancelled &&
+          Number.isInteger(current.workerPid) &&
+          current.workerPid > 1
+        )
+          throw new Error(
+            `COMPARISON_WORKER_TERMINATION_UNCONFIRMED:${current.uuid}`
+          );
         return response.status(200).json({
           success: true,
           session: PolicyComparison.publicSession(session),
         });
       } catch (error) {
         console.error(error.message, error);
-        return response.status(500).json({
+        return response.status(errorStatus(error)).json({
           success: false,
           error: error.message,
         });
@@ -551,4 +577,4 @@ function policyComparisonEndpoints(app) {
   );
 }
 
-module.exports = { policyComparisonEndpoints };
+module.exports = { comparisonOptions, policyComparisonEndpoints };

@@ -41,7 +41,11 @@ const {
   WorkspaceTemplateError,
   buildWorkspaceCreationFields,
   listWorkspaceTemplates,
+  resolveWorkspaceCreationMode,
 } = require("../utils/workspaceTemplates");
+const {
+  prepareWorkspaceComparisonDeletion,
+} = require("../utils/workspaceComparisonDeletion");
 
 function workspaceEndpoints(app) {
   if (!app) return;
@@ -63,17 +67,25 @@ function workspaceEndpoints(app) {
         const user = await userFromSession(request, response);
         const {
           name = null,
-          analysisMode = null,
-          templateId = null,
+          analysisMode,
+          templateId,
+          policyComparisonMode,
         } = reqBody(request);
-        const { fields, template } = buildWorkspaceCreationFields(
-          analysisMode ?? templateId
-        );
+        const resolvedMode = resolveWorkspaceCreationMode({
+          analysisMode,
+          templateId,
+          policyComparisonMode,
+        });
+        const { fields, template } = buildWorkspaceCreationFields(resolvedMode);
         const { workspace, message } = await Workspace.new(
           name,
           user?.id,
           fields
         );
+        if (!workspace) {
+          response.status(400).json({ workspace: null, message });
+          return;
+        }
         await Telemetry.sendTelemetry(
           "workspace_created",
           {
@@ -90,7 +102,7 @@ function workspaceEndpoints(app) {
         await EventLogs.logEvent(
           "workspace_created",
           {
-            workspaceName: workspace?.name || "Unknown Workspace",
+            workspaceName: workspace.name,
             workspaceTemplate: template.id,
             policyComparisonMode: template.id,
           },
@@ -337,6 +349,7 @@ function workspaceEndpoints(app) {
           return;
         }
 
+        await prepareWorkspaceComparisonDeletion(workspace.id);
         await WorkspaceChats.delete({ workspaceId: Number(workspace.id) });
         await DocumentVectors.deleteForWorkspace(workspace.id);
         await Document.delete({ workspaceId: Number(workspace.id) });

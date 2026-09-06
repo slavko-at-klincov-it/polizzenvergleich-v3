@@ -30,6 +30,36 @@ const DOCUMENT_STATUSES = Object.freeze([
 const LOCKED_STATUSES = Object.freeze(["QUEUED", "RUNNING"]);
 const MAX_DOCUMENTS_PER_SIDE = 9;
 
+function mutableSessionWhere(session) {
+  return {
+    id: session.id,
+    status: session.status,
+    lastUpdatedAt: session.lastUpdatedAt,
+  };
+}
+
+async function assertSessionMutationWon(tx, session, data) {
+  const updated = await tx.policy_comparison_sessions.updateMany({
+    where: mutableSessionWhere(session),
+    data: { ...data, lastUpdatedAt: new Date() },
+  });
+  if (updated.count !== 1) throw new Error("COMPARISON_SESSION_CHANGED");
+}
+
+function draftSessionData() {
+  return {
+    status: "DRAFT",
+    progress: null,
+    inputManifest: null,
+    resultPath: null,
+    error: null,
+    workerPid: null,
+    cancelRequested: false,
+    startedAt: null,
+    completedAt: null,
+  };
+}
+
 function publicDocument(document) {
   return {
     uuid: document.uuid,
@@ -193,21 +223,11 @@ const PolicyComparison = {
           position: existingCount,
         },
       });
-      await tx.policy_comparison_sessions.update({
-        where: { id: session.id },
-        data: {
-          status: "DRAFT",
-          progress: null,
-          inputManifest: null,
-          resultPath: null,
-          error: null,
-          workerPid: null,
-          cancelRequested: false,
-          startedAt: null,
-          completedAt: null,
-          lastUpdatedAt: new Date(),
-        },
-      });
+      await assertSessionMutationWon(
+        tx,
+        currentSession,
+        draftSessionData()
+      );
       return document;
     });
   },
@@ -225,11 +245,16 @@ const PolicyComparison = {
     if (role === undefined && documentStatus === undefined)
       throw new Error("NO_DOCUMENT_CHANGES");
 
-    const document = await prisma.policy_comparison_documents.findFirst({
-      where: { uuid: documentUuid, sessionId: session.id },
-    });
-    if (!document) return null;
     return prisma.$transaction(async (tx) => {
+      const currentSession = await tx.policy_comparison_sessions.findUnique({
+        where: { id: session.id },
+      });
+      if (!currentSession || LOCKED_STATUSES.includes(currentSession.status))
+        throw new Error("COMPARISON_SESSION_LOCKED");
+      const document = await tx.policy_comparison_documents.findFirst({
+        where: { uuid: documentUuid, sessionId: session.id },
+      });
+      if (!document) return null;
       const updated = await tx.policy_comparison_documents.update({
         where: { id: document.id },
         data: {
@@ -238,21 +263,11 @@ const PolicyComparison = {
           lastUpdatedAt: new Date(),
         },
       });
-      await tx.policy_comparison_sessions.update({
-        where: { id: session.id },
-        data: {
-          status: "DRAFT",
-          progress: null,
-          inputManifest: null,
-          resultPath: null,
-          error: null,
-          workerPid: null,
-          cancelRequested: false,
-          startedAt: null,
-          completedAt: null,
-          lastUpdatedAt: new Date(),
-        },
-      });
+      await assertSessionMutationWon(
+        tx,
+        currentSession,
+        draftSessionData()
+      );
       return updated;
     });
   },
@@ -261,6 +276,11 @@ const PolicyComparison = {
     if (LOCKED_STATUSES.includes(session.status))
       throw new Error("COMPARISON_SESSION_LOCKED");
     return prisma.$transaction(async (tx) => {
+      const currentSession = await tx.policy_comparison_sessions.findUnique({
+        where: { id: session.id },
+      });
+      if (!currentSession || LOCKED_STATUSES.includes(currentSession.status))
+        throw new Error("COMPARISON_SESSION_LOCKED");
       const document = await tx.policy_comparison_documents.findFirst({
         where: { uuid: documentUuid, sessionId: session.id },
       });
@@ -279,21 +299,11 @@ const PolicyComparison = {
           data: { position, lastUpdatedAt: new Date() },
         });
       }
-      await tx.policy_comparison_sessions.update({
-        where: { id: session.id },
-        data: {
-          status: "DRAFT",
-          progress: null,
-          inputManifest: null,
-          resultPath: null,
-          error: null,
-          workerPid: null,
-          cancelRequested: false,
-          startedAt: null,
-          completedAt: null,
-          lastUpdatedAt: new Date(),
-        },
-      });
+      await assertSessionMutationWon(
+        tx,
+        currentSession,
+        draftSessionData()
+      );
       return document;
     });
   },
@@ -302,26 +312,24 @@ const PolicyComparison = {
     if (LOCKED_STATUSES.includes(session.status))
       throw new Error("COMPARISON_SESSION_LOCKED");
     return prisma.$transaction(async (tx) => {
+      const currentSession = await tx.policy_comparison_sessions.findUnique({
+        where: { id: session.id },
+      });
+      if (!currentSession || LOCKED_STATUSES.includes(currentSession.status))
+        throw new Error("COMPARISON_SESSION_LOCKED");
       const documents = await tx.policy_comparison_documents.findMany({
         where: { sessionId: session.id },
       });
       await tx.policy_comparison_documents.deleteMany({
         where: { sessionId: session.id },
       });
-      const updated = await tx.policy_comparison_sessions.update({
+      await assertSessionMutationWon(
+        tx,
+        currentSession,
+        draftSessionData()
+      );
+      const updated = await tx.policy_comparison_sessions.findUnique({
         where: { id: session.id },
-        data: {
-          status: "DRAFT",
-          progress: null,
-          inputManifest: null,
-          resultPath: null,
-          error: null,
-          workerPid: null,
-          cancelRequested: false,
-          startedAt: null,
-          completedAt: null,
-          lastUpdatedAt: new Date(),
-        },
       });
       return { session: updated, documents };
     });
@@ -352,10 +360,12 @@ const PolicyComparison = {
         countA !== 1
       )
         throw new Error("COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED");
+      const workerLeaseNonce = uuidv4();
       const inputManifest = {
         schemaVersion: 3,
         sessionUuid: current.uuid,
         queuedAt: new Date().toISOString(),
+        workerLeaseNonce,
         comparisonMode,
         productProfile:
           comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B
@@ -378,8 +388,8 @@ const PolicyComparison = {
         totalDocuments: current.documents.length,
         currentDocument: null,
       };
-      const queued = await tx.policy_comparison_sessions.update({
-        where: { id: current.id },
+      const queuedUpdate = await tx.policy_comparison_sessions.updateMany({
+        where: mutableSessionWhere(current),
         data: {
           status: "QUEUED",
           progress: JSON.stringify(progress),
@@ -393,16 +403,33 @@ const PolicyComparison = {
           lastUpdatedAt: new Date(),
         },
       });
-      return { session: queued, inputManifest };
+      if (queuedUpdate.count !== 1)
+        throw new Error("COMPARISON_SESSION_CHANGED");
+      const queued = await tx.policy_comparison_sessions.findUnique({
+        where: { id: current.id },
+      });
+      return { session: queued, inputManifest, workerLeaseNonce };
     });
   },
 
-  async markFailed(sessionId, error) {
+  async markFailedForLease({
+    sessionId,
+    inputManifest,
+    workerPid = null,
+    error,
+  }) {
+    const workerStates = [{ status: "QUEUED", workerPid: null }];
+    if (Number.isInteger(workerPid) && workerPid > 1)
+      workerStates.push({ status: "RUNNING", workerPid });
     return prisma.policy_comparison_sessions.updateMany({
-      where: { id: sessionId, status: { not: "CANCELLED" } },
+      where: {
+        id: sessionId,
+        inputManifest,
+        OR: workerStates,
+      },
       data: {
         status: "FAILED",
-        error: String(error || "Comparison failed"),
+        error: String(error || "Comparison worker failed"),
         workerPid: null,
         completedAt: new Date(),
         lastUpdatedAt: new Date(),
@@ -410,22 +437,18 @@ const PolicyComparison = {
     });
   },
 
-  async setWorkerPid(sessionId, workerPid) {
-    return prisma.policy_comparison_sessions.update({
-      where: { id: sessionId },
-      data: { workerPid, lastUpdatedAt: new Date() },
-    });
-  },
-
   async cancel(session) {
     if (!LOCKED_STATUSES.includes(session.status))
       throw new Error("COMPARISON_SESSION_NOT_RUNNING");
     const result = await prisma.policy_comparison_sessions.updateMany({
-      where: { id: session.id, status: { in: LOCKED_STATUSES } },
+      where: {
+        id: session.id,
+        status: session.status,
+        inputManifest: session.inputManifest,
+      },
       data: {
         status: "CANCELLED",
         cancelRequested: true,
-        workerPid: null,
         error: null,
         completedAt: new Date(),
         lastUpdatedAt: new Date(),

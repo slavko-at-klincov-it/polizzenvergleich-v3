@@ -34,7 +34,11 @@ const {
 const {
   WorkspaceTemplateError,
   buildWorkspaceCreationFields,
+  resolveWorkspaceCreationMode,
 } = require("../utils/workspaceTemplates");
+const {
+  prepareWorkspaceComparisonDeletion,
+} = require("../utils/workspaceComparisonDeletion");
 
 function adminEndpoints(app) {
   if (!app) return;
@@ -264,8 +268,18 @@ function adminEndpoints(app) {
     async (request, response) => {
       try {
         const user = await userFromSession(request, response);
-        const { name, analysisMode = null } = reqBody(request);
-        const { fields } = buildWorkspaceCreationFields(analysisMode);
+        const {
+          name,
+          analysisMode,
+          templateId,
+          policyComparisonMode,
+        } = reqBody(request);
+        const resolvedMode = resolveWorkspaceCreationMode({
+          analysisMode,
+          templateId,
+          policyComparisonMode,
+        });
+        const { fields } = buildWorkspaceCreationFields(resolvedMode);
         const { workspace, message: error } = await Workspace.new(
           name,
           user.id,
@@ -319,6 +333,7 @@ function adminEndpoints(app) {
           return;
         }
 
+        await prepareWorkspaceComparisonDeletion(workspace.id);
         await WorkspaceChats.delete({ workspaceId: Number(workspace.id) });
         await DocumentVectors.deleteForWorkspace(Number(workspace.id));
         await Document.delete({ workspaceId: Number(workspace.id) });

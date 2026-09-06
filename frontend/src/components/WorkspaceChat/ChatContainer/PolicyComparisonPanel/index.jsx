@@ -389,7 +389,7 @@ export default function PolicyComparisonPanel({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] leading-4 text-zinc-400 light:text-slate-500 max-w-[490px]">
               {referenceMode
-                ? "Das LF-IMMO-Dokument A bestimmt Kategorien, Unterkategorien, fachliche Zeilen und Reihenfolge. Für jede A-Zeile werden Gegenstücke in B gesucht; B-only-Inhalte erzeugen keine Zeile."
+                ? "Für die unterstützte LF-IMMO-Dokumentfamilie bindet Dokument A die Quellstellen und Werte an das kuratierte Fachprofil (283 Zeilen, 13 Kategorien). Abweichende oder fehlende Struktur stoppt den Lauf. B-only-Inhalte erzeugen keine Zeile."
                 : "Die PDFs bleiben außerhalb des Workspace-Index. Rolle und Geltungsstatus werden pro Quelldokument gespeichert."}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -432,7 +432,7 @@ export default function PolicyComparisonPanel({
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {referenceMode
-                    ? "LF-Vorlage A erstellen und B prüfen"
+                    ? "LF-Profil an A binden und B prüfen"
                     : "5 Kernkategorien vollständig vergleichen"}
                 </button>
               )}
@@ -473,7 +473,7 @@ function ComparisonProgress({ progress }) {
       <div className="flex items-center justify-between text-xs text-sky-200 light:text-sky-800">
         <span>
           {progress?.phase === "BUILDING_A_TEMPLATE"
-            ? "LF-Vorlage aus Dokument A wird erstellt"
+            ? "LF-Fachprofil wird an Dokument A gebunden"
             : progress?.phase === "BUILDING_COMPARISON"
               ? "Vergleichstabelle wird erstellt"
               : totalCategories > 0
@@ -553,7 +553,8 @@ function ComparisonResult({ result }) {
           <div className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             {result.template && (
               <p>
-                A-Vorlage: {result.template.semanticRequirements} fachliche
+                An A gebundenes LF-Profil: {result.template.semanticRequirements}{" "}
+                fachliche
                 Zeilen · {result.template.sourceBlocks} Quellblöcke ·{" "}
                 {result.template.decisionEligibleRequirements}{" "}
                 entscheidungsfähig ·{" "}

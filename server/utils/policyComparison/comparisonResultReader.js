@@ -11,22 +11,35 @@ const {
   customerSafeDynamicReferenceReadView,
 } = require("./dynamicReferenceResultBuilder");
 const {
-  validateLfSemanticRequirementManifest,
-} = require("./lfSemanticRequirementManifest");
-const { oracle } = require("./lfDynamicReferenceProfile");
+  validateDynamicReferenceTemplateArtifacts,
+} = require("./dynamicReferenceRunner");
 
-function regularFile(file, errorCode) {
-  if (!fs.existsSync(file)) throw new Error(errorCode);
-  const stat = fs.lstatSync(file);
+function regularFile(file, fsImpl, errorCode) {
+  if (!fsImpl.existsSync(file)) throw new Error(errorCode);
+  const stat = fsImpl.lstatSync(file);
   if (stat.isSymbolicLink() || !stat.isFile()) throw new Error(errorCode);
   return file;
 }
 
-function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
+function regularDirectory(directory, fsImpl, errorCode) {
+  if (!fsImpl.existsSync(directory)) throw new Error(errorCode);
+  const stat = fsImpl.lstatSync(directory);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error(errorCode);
+  return directory;
+}
+
+function readValidatedComparisonResult(
+  resultFile,
+  expectedComparisonMode,
+  {
+    fsImpl = fs,
+    validateDynamicTemplate = validateDynamicReferenceTemplateArtifacts,
+  } = {}
+) {
   const expectedMode = normalizePolicyComparisonMode(expectedComparisonMode, {
     allowDefault: false,
   });
-  const result = JSON.parse(fs.readFileSync(resultFile, "utf8"));
+  const result = JSON.parse(fsImpl.readFileSync(resultFile, "utf8"));
   const resultMode = result?.comparisonMode
     ? normalizePolicyComparisonMode(result.comparisonMode, {
         allowDefault: false,
@@ -40,20 +53,19 @@ function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
     expectedMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
     result.contractId === DYNAMIC_REFERENCE_RESULT_CONTRACT_ID
   ) {
-    const manifestFile = path.resolve(
-      path.dirname(resultFile),
-      "..",
-      "reference-template",
-      "semantic-requirement-manifest.private.json"
-    );
-    regularFile(manifestFile, "LF_DYNAMIC_REFERENCE_TEMPLATE_MANIFEST_MISSING");
-    const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
     const runRoot = path.resolve(path.dirname(resultFile), "..");
-    const sourceDocument = (result.documents || []).find(
+    const sourceDocuments = (result.documents || []).filter(
       ({ side }) => side === "A"
     );
-    const documentsRoot = path.join(runRoot, "documents");
-    const sourceDirectories = fs
+    if (sourceDocuments.length !== 1)
+      throw new Error("LF_DYNAMIC_REFERENCE_SOURCE_IDENTITY_MISMATCH");
+    const sourceDocument = sourceDocuments[0];
+    const documentsRoot = regularDirectory(
+      path.join(runRoot, "documents"),
+      fsImpl,
+      "LF_DYNAMIC_REFERENCE_SOURCE_ARTIFACT_MISSING"
+    );
+    const sourceDirectories = fsImpl
       .readdirSync(documentsRoot, { withFileTypes: true })
       .filter(
         (entry) =>
@@ -70,15 +82,18 @@ function readValidatedComparisonResult(resultFile, expectedComparisonMode) {
         sourceDirectories[0].name,
         "document.private.json"
       ),
+      fsImpl,
       "LF_DYNAMIC_REFERENCE_SOURCE_ARTIFACT_MISSING"
     );
-    const documentArtifact = JSON.parse(
-      fs.readFileSync(documentArtifactFile, "utf8")
+    const { manifest } = validateDynamicTemplate(
+      {
+        templateRoot: path.join(runRoot, "reference-template"),
+        documentArtifactFile,
+        sourceDocument,
+        templateDigest: result.templateDigest,
+      },
+      { fsImpl }
     );
-    validateLfSemanticRequirementManifest(manifest, {
-      documentArtifact,
-      oracle,
-    });
     return customerSafeDynamicReferenceReadView(result, manifest);
   }
   if (expectedMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B)

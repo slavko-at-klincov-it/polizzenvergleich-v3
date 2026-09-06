@@ -64,7 +64,13 @@ describe("complete LF dynamic reference profile", () => {
     expect(resource.sharedValueGovernors).toHaveLength(6);
     expect(resource.sharedSemanticGovernors).toHaveLength(1);
     expect(resource.blockDispositionRules).toHaveLength(4);
-    expect(LF_DYNAMIC_REFERENCE_PROFILE.dynamicCounts).toBe(true);
+    expect(LF_DYNAMIC_REFERENCE_PROFILE).toMatchObject({
+      topologySource: "SERVER_CURATED_SEMANTIC_ORACLE",
+      topologyRequirements: 283,
+      topologyCategories: 13,
+      sourceEvidenceBoundAtRunTime: true,
+      discoversTopologyFromSourceA: false,
+    });
   });
 
   test("creates 13 execution catalogs while preserving all 283 source rows", () => {
@@ -83,6 +89,9 @@ describe("complete LF dynamic reference profile", () => {
     ).toBe(true);
     expect(dynamicAnalysisPrompt(catalogs[0])).toContain(
       "Schließe unmittelbar nach der Tabelle mit genau diesem Hinweis:"
+    );
+    expect(dynamicAnalysisPrompt(catalogs[0])).toContain(
+      "serverseitig kuratiertes LF-IMMO-Fachprofil"
     );
   });
 

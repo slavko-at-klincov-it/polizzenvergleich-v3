@@ -85,7 +85,7 @@ function readValidatedStoredComparisonArtifacts(
     fsImpl,
     "COMPARISON_WORKBOOK_MISSING"
   );
-  const result = readResult(resultFile, mode);
+  const result = readResult(resultFile, mode, { fsImpl });
   const manifestFile = path.join(
     resultDirectory,
     POLICY_COMPARISON_ARTIFACT_SET_MANIFEST

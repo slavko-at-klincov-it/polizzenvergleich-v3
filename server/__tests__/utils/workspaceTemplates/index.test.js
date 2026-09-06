@@ -70,18 +70,47 @@ describe("workspaceTemplates", () => {
     ).toBe(POLICY_COMPARISON_MODE.SYMMETRIC_A_B);
     expect(
       resolveWorkspaceCreationMode({
+        templateId: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      })
+    ).toBe(POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B);
+    expect(
+      resolveWorkspaceCreationMode({
         analysisMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+        templateId: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
         policyComparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
       })
     ).toBe(POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B);
   });
 
-  test("rejects contradictory public and legacy API mode fields", () => {
+  test("rejects contradictory mode aliases", () => {
     expect(() =>
       resolveWorkspaceCreationMode({
         analysisMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+        templateId: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
         policyComparisonMode: POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
       })
     ).toThrow(WorkspaceTemplateError);
+  });
+
+  test.each(["analysisMode", "templateId", "policyComparisonMode"])(
+    "rejects an explicitly empty %s instead of silently selecting a default",
+    (field) => {
+      expect(() => resolveWorkspaceCreationMode({ [field]: "" })).toThrow(
+        "Bitte Analyseverfahren auswählen."
+      );
+    }
+  );
+
+  test("defaults only when no mode alias was supplied", () => {
+    expect(resolveWorkspaceCreationMode()).toBe(
+      POLICY_COMPARISON_MODE.SYMMETRIC_A_B
+    );
+    expect(
+      resolveWorkspaceCreationMode({
+        analysisMode: null,
+        templateId: undefined,
+        policyComparisonMode: null,
+      })
+    ).toBe(POLICY_COMPARISON_MODE.SYMMETRIC_A_B);
   });
 });

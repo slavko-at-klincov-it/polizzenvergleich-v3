@@ -59,6 +59,24 @@ const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.6-35b-a3b";
 const MODEL_TOKEN_LIMIT = Number(
   process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
 );
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+let activeLease = null;
+
+function terminateOwnedWorkerGroup() {
+  if (process.env.POLICY_COMPARISON_WORKER_GROUP_LEADER === "1") {
+    try {
+      process.kill(-process.pid, "SIGKILL");
+      return;
+    } catch (error) {
+      if (error.code !== "ESRCH") console.error(error);
+    }
+  }
+  process.exit(143);
+}
+
+process.once("SIGTERM", terminateOwnedWorkerGroup);
+process.once("SIGINT", terminateOwnedWorkerGroup);
 
 async function sha256File(file) {
   const hash = crypto.createHash("sha256");
@@ -146,10 +164,89 @@ function resumableRun({ sessionUuid, manifest, comparisonMode }) {
   return { runRoot, signature };
 }
 
+async function claimWorkerLease(session, inputManifest, leaseNonce) {
+  const claimed = await prisma.policy_comparison_sessions.updateMany({
+    where: {
+      id: session.id,
+      status: "QUEUED",
+      inputManifest,
+      workerPid: null,
+    },
+    data: {
+      status: "RUNNING",
+      workerPid: process.pid,
+      startedAt: new Date(),
+      lastUpdatedAt: new Date(),
+    },
+  });
+  if (claimed.count !== 1)
+    throw new Error("COMPARISON_WORKER_LEASE_CLAIM_FAILED");
+  activeLease = {
+    sessionId: session.id,
+    inputManifest,
+    leaseNonce,
+    workerPid: process.pid,
+  };
+}
+
 async function updateSession(id, data) {
-  await prisma.policy_comparison_sessions.update({
-    where: { id },
+  if (!activeLease || activeLease.sessionId !== id)
+    throw new Error("COMPARISON_WORKER_LEASE_REQUIRED");
+  const updated = await prisma.policy_comparison_sessions.updateMany({
+    where: {
+      id,
+      status: "RUNNING",
+      inputManifest: activeLease.inputManifest,
+      workerPid: activeLease.workerPid,
+    },
     data: { ...data, lastUpdatedAt: new Date() },
+  });
+  if (updated.count !== 1) throw new Error("COMPARISON_WORKER_LEASE_LOST");
+}
+
+async function failOwnedSession(sessionUuid, leaseNonce, error) {
+  const session = await prisma.policy_comparison_sessions.findUnique({
+    where: { uuid: sessionUuid },
+  });
+  if (!session || session.status === "CANCELLED") return;
+  let manifest;
+  try {
+    manifest = JSON.parse(session.inputManifest || "null");
+  } catch {
+    return;
+  }
+  if (manifest?.workerLeaseNonce !== leaseNonce) return;
+  await prisma.policy_comparison_sessions.updateMany({
+    where: {
+      id: session.id,
+      inputManifest: session.inputManifest,
+      OR: [
+        { status: "QUEUED", workerPid: null },
+        { status: "RUNNING", workerPid: process.pid },
+      ],
+    },
+    data: {
+      status: "FAILED",
+      error: error.message,
+      workerPid: null,
+      completedAt: new Date(),
+      lastUpdatedAt: new Date(),
+    },
+  });
+}
+
+async function releaseOwnedWorkerPid() {
+  if (!activeLease) return;
+  await prisma.policy_comparison_sessions.updateMany({
+    where: {
+      id: activeLease.sessionId,
+      inputManifest: activeLease.inputManifest,
+      workerPid: activeLease.workerPid,
+    },
+    data: {
+      workerPid: null,
+      lastUpdatedAt: new Date(),
+    },
   });
 }
 
@@ -224,7 +321,10 @@ function runDocument({
 
 async function main() {
   const sessionUuid = String(process.argv[2] || "").trim();
+  const leaseNonce = String(process.argv[3] || "").trim();
   if (!sessionUuid) throw new Error("SESSION_UUID_REQUIRED");
+  if (!UUID_PATTERN.test(leaseNonce))
+    throw new Error("COMPARISON_WORKER_LEASE_INVALID");
   const session = await prisma.policy_comparison_sessions.findUnique({
     where: { uuid: sessionUuid },
   });
@@ -242,12 +342,14 @@ async function main() {
   if (
     manifest?.schemaVersion !== 3 ||
     manifest?.sessionUuid !== sessionUuid ||
+    manifest?.workerLeaseNonce !== leaseNonce ||
     JSON.stringify(manifest?.productProfile) !==
       JSON.stringify(expectedProfile) ||
     manifest?.comparisonMode !== comparisonMode ||
     !Array.isArray(manifest.documents)
   )
     throw new Error("COMPARISON_INPUT_MANIFEST_INVALID");
+  await claimWorkerLease(session, session.inputManifest, leaseNonce);
 
   const referenceMode =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
@@ -510,26 +612,21 @@ async function main() {
     }),
     resultPath,
     error: null,
+    workerPid: null,
     completedAt: new Date(),
   });
 }
 
 main()
   .catch(async (error) => {
+    process.exitCode = 1;
     console.error(error.stack || error.message);
     const sessionUuid = String(process.argv[2] || "").trim();
-    if (!sessionUuid) return;
-    const session = await prisma.policy_comparison_sessions.findUnique({
-      where: { uuid: sessionUuid },
-    });
-    if (!session) return;
-    if (session.status === "CANCELLED") return;
-    await updateSession(session.id, {
-      status: "FAILED",
-      error: error.message,
-      completedAt: new Date(),
-    });
+    const leaseNonce = String(process.argv[3] || "").trim();
+    if (!sessionUuid || !UUID_PATTERN.test(leaseNonce)) return;
+    await failOwnedSession(sessionUuid, leaseNonce, error).catch(console.error);
   })
   .finally(async () => {
+    await releaseOwnedWorkerPid().catch(console.error);
     await prisma.$disconnect();
   });

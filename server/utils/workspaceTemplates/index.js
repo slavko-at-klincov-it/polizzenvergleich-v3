@@ -31,25 +31,33 @@ function listWorkspaceTemplates() {
 }
 
 function resolveWorkspaceCreationMode({
-  analysisMode = null,
-  policyComparisonMode = null,
+  analysisMode,
+  templateId,
+  policyComparisonMode,
 } = {}) {
-  if (analysisMode !== null && policyComparisonMode !== null) {
-    const publicMode = normalizePolicyComparisonMode(analysisMode, {
-      allowDefault: false,
-    });
-    const legacyMode = normalizePolicyComparisonMode(policyComparisonMode, {
-      allowDefault: false,
-    });
-    if (publicMode !== legacyMode)
-      throw new WorkspaceTemplateError(
-        "analysisMode und policyComparisonMode widersprechen einander."
-      );
-    return publicMode;
-  }
-  return normalizePolicyComparisonMode(analysisMode ?? policyComparisonMode, {
-    allowDefault: true,
-  });
+  const suppliedModes = [
+    ["analysisMode", analysisMode],
+    ["templateId", templateId],
+    ["policyComparisonMode", policyComparisonMode],
+  ].filter(([, value]) => value !== null && value !== undefined);
+  if (suppliedModes.length === 0)
+    return normalizePolicyComparisonMode(null, { allowDefault: true });
+
+  const normalizedModes = suppliedModes.map(([field, value]) => [
+    field,
+    normalizePolicyComparisonMode(value, { allowDefault: false }),
+  ]);
+  const selectedMode = normalizedModes[0][1];
+  const conflictingField = normalizedModes.find(
+    ([, mode]) => mode !== selectedMode
+  )?.[0];
+  if (conflictingField)
+    throw new WorkspaceTemplateError(
+      `Die Analyseverfahren widersprechen einander (${normalizedModes
+        .map(([field]) => field)
+        .join(", ")}).`
+    );
+  return selectedMode;
 }
 
 function buildWorkspaceCreationFields(templateId = null) {

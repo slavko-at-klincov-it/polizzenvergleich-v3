@@ -25,6 +25,9 @@ const {
   resolveWorkspaceCreationMode,
   WorkspaceTemplateError,
 } = require("../../../utils/workspaceTemplates");
+const {
+  prepareWorkspaceComparisonDeletion,
+} = require("../../../utils/workspaceComparisonDeletion");
 
 function apiWorkspaceEndpoints(app) {
   if (!app) return;
@@ -83,12 +86,14 @@ function apiWorkspaceEndpoints(app) {
     try {
       const {
         name = null,
-        analysisMode = null,
-        policyComparisonMode = null,
+        analysisMode,
+        templateId,
+        policyComparisonMode,
         ...additionalFields
       } = reqBody(request);
       const resolvedMode = resolveWorkspaceCreationMode({
         analysisMode,
+        templateId,
         policyComparisonMode,
       });
       const { workspace, message } = await Workspace.new(name, null, {
@@ -273,6 +278,7 @@ function apiWorkspaceEndpoints(app) {
         }
 
         const workspaceId = Number(workspace.id);
+        await prepareWorkspaceComparisonDeletion(workspaceId);
         await WorkspaceChats.delete({ workspaceId: workspaceId });
         await DocumentVectors.deleteForWorkspace(workspaceId);
         await Document.delete({ workspaceId: workspaceId });

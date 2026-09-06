@@ -89,6 +89,7 @@ describe("stored policy comparison artifact access", () => {
   test("validates current result and workbook bytes without depending on the Downloads copy", async () => {
     const fixture = await currentFixture(root);
     fs.unlinkSync(fixture.archivedFile);
+    const readResultWithOptions = jest.fn(readResult);
 
     const access = readValidatedStoredComparisonArtifacts(
       {
@@ -97,11 +98,16 @@ describe("stored policy comparison artifact access", () => {
         expectedComparisonMode: POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
         expectedSessionUuid: sessionUuid,
       },
-      { readResult }
+      { readResult: readResultWithOptions }
     );
     expect(access.legacy).toBe(false);
     expect(access.result.runSignature).toBe(runSignature);
     expect(access.workbookBytes).toEqual(Buffer.from("workbook"));
+    expect(readResultWithOptions).toHaveBeenCalledWith(
+      path.join(fixture.resultDirectory, "comparison.private.json"),
+      POLICY_COMPARISON_MODE.SYMMETRIC_A_B,
+      { fsImpl: fs }
+    );
   });
 
   test("rejects a current result when the manifest or export contract is missing", async () => {

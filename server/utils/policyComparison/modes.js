@@ -10,7 +10,7 @@ const POLICY_COMPARISON_MODES = Object.freeze([
     id: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
     name: "LF-IMMO-Referenzvergleich (A → B)",
     description:
-      "LF IMMO auf Seite A analysieren und ausschließlich zu diesen A-Zeilen Gegenstücke im Dokumentpaket B suchen.",
+      "Ein strukturkompatibles LF-IMMO-Dokument A an das kuratierte LF-Fachprofil binden und ausschließlich zu dessen Zeilen Gegenstücke im Dokumentpaket B suchen.",
     direction: "A_TO_B",
     sideALabel: "LF-IMMO-Referenzdokument A",
     sideBLabel: "Vergleichsdokumente B",

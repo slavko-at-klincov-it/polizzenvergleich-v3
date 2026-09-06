@@ -112,6 +112,34 @@ describe("policy comparison worker contract", () => {
     expect(source).not.toContain("const timestamp = new Date()");
   });
 
+  test("claims a queue-run lease and cannot overwrite a cancelled or newer run", () => {
+    const model = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "server/models/policyComparison.js"),
+      "utf8"
+    );
+    const endpoint = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "server/endpoints/policyComparisons.js"),
+      "utf8"
+    );
+    expect(model).toContain("workerLeaseNonce");
+    expect(model).toContain("COMPARISON_SESSION_CHANGED");
+    expect(model).toContain("markFailedForLease");
+    expect(source).toContain("claimWorkerLease");
+    expect(source).toContain("COMPARISON_WORKER_LEASE_LOST");
+    expect(source).toContain("inputManifest: activeLease.inputManifest");
+    expect(source).toContain("workerPid: null");
+    expect(source).toContain("releaseOwnedWorkerPid");
+    expect(source).toContain("workerPid: activeLease.workerPid");
+    expect(source).toContain(
+      "await releaseOwnedWorkerPid().catch(console.error)"
+    );
+    expect(endpoint).toContain("policyComparisonWorkerSupervisor.enqueue");
+    expect(endpoint).toContain("policyComparisonWorkerSupervisor.cancel");
+    expect(endpoint).toContain("waitForExit: true");
+    expect(endpoint).toContain("COMPARISON_WORKER_TERMINATION_UNCONFIRMED");
+    expect(endpoint).not.toContain("process.kill(-current.workerPid");
+  });
+
   test("routes the directed LF workflow through the controlled no-embedding path", () => {
     expect(source).toContain("analyzeReferenceDocument");
     expect(source).toContain("prepareDynamicReferenceTemplate");

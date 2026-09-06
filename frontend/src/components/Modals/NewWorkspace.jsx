@@ -23,6 +23,7 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -53,24 +54,31 @@ export default function NewWorkspaceModal({ hideModal = noop }) {
   const handleCreate = async (e) => {
     setError(null);
     e.preventDefault();
-    if (saving) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
-    const form = new FormData(formEl.current);
-    const data = {
-      name: form.get("name"),
-      analysisMode: selectedTemplate || null,
-    };
-    const { workspace, message } = await Workspace.new(data);
-    if (!!workspace) {
-      window.dispatchEvent(
-        new CustomEvent(WORKSPACE_CREATED_EVENT, { detail: { workspace } })
-      );
-      hideModal();
-      navigate(paths.workspace.chat(workspace.slug));
-      return;
+    try {
+      const form = new FormData(formEl.current);
+      const data = {
+        name: form.get("name"),
+        analysisMode: selectedTemplate,
+      };
+      const { workspace, message } = await Workspace.new(data);
+      if (!!workspace) {
+        window.dispatchEvent(
+          new CustomEvent(WORKSPACE_CREATED_EVENT, { detail: { workspace } })
+        );
+        hideModal();
+        navigate(paths.workspace.chat(workspace.slug));
+        return;
+      }
+      setError(message);
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
-    setError(message);
-    setSaving(false);
   };
 
   return (
