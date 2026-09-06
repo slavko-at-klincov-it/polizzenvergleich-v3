@@ -553,9 +553,9 @@ function ComparisonResult({ result }) {
           <div className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             {result.template && (
               <p>
-                An A gebundenes LF-Profil: {result.template.semanticRequirements}{" "}
-                fachliche
-                Zeilen · {result.template.sourceBlocks} Quellblöcke ·{" "}
+                An A gebundenes LF-Profil:{" "}
+                {result.template.semanticRequirements} fachliche Zeilen ·{" "}
+                {result.template.sourceBlocks} Quellblöcke ·{" "}
                 {result.template.decisionEligibleRequirements}{" "}
                 entscheidungsfähig ·{" "}
                 {result.template.incompleteSearchRequirements} explorative

@@ -268,12 +268,8 @@ function adminEndpoints(app) {
     async (request, response) => {
       try {
         const user = await userFromSession(request, response);
-        const {
-          name,
-          analysisMode,
-          templateId,
-          policyComparisonMode,
-        } = reqBody(request);
+        const { name, analysisMode, templateId, policyComparisonMode } =
+          reqBody(request);
         const resolvedMode = resolveWorkspaceCreationMode({
           analysisMode,
           templateId,

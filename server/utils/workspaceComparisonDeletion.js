@@ -63,8 +63,7 @@ function removeArchivedWorkbooks({ sessionUuids, exportDirectory, fsImpl }) {
     if (!isWithin(exportRoot, target))
       throw new Error("COMPARISON_EXPORT_PATH_INVALID");
     const stat = fsImpl.lstatSync(target);
-    if (stat.isDirectory())
-      throw new Error("COMPARISON_EXPORT_FILE_INVALID");
+    if (stat.isDirectory()) throw new Error("COMPARISON_EXPORT_FILE_INVALID");
     fsImpl.unlinkSync(target);
     removed += 1;
   }
@@ -135,8 +134,8 @@ async function prepareWorkspaceComparisonDeletion(
     if (supervisorCancelled) {
       terminatedWorkers += 1;
       if (Number.isInteger(session.workerPid) && session.workerPid > 1) {
-        const released =
-          await prismaImpl.policy_comparison_sessions.updateMany({
+        const released = await prismaImpl.policy_comparison_sessions.updateMany(
+          {
             where: {
               id: session.id,
               status: "CANCELLED",
@@ -144,7 +143,8 @@ async function prepareWorkspaceComparisonDeletion(
               workerPid: session.workerPid,
             },
             data: { workerPid: null, lastUpdatedAt: new Date() },
-          });
+          }
+        );
         if (released.count !== 1)
           throw new Error(`COMPARISON_SESSION_CHANGED:${session.uuid}`);
       }

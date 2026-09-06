@@ -75,12 +75,7 @@ function validSha256(value) {
 }
 
 function validateDynamicReferenceTemplateArtifacts(
-  {
-    templateRoot,
-    documentArtifactFile,
-    sourceDocument,
-    templateDigest,
-  },
+  { templateRoot, documentArtifactFile, sourceDocument, templateDigest },
   { fsImpl = fs, semanticOracle = oracle, familyContract } = {}
 ) {
   requireRegularDirectory(

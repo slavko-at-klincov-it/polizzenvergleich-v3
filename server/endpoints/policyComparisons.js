@@ -419,10 +419,12 @@ function policyComparisonEndpoints(app) {
             queuedSession.inputManifest,
             null
           );
-          await policyComparisonWorkerSupervisor.cancel({
-            sessionUuid: queuedSession.uuid,
-            leaseNonce: queuedManifest?.workerLeaseNonce,
-          }).catch(console.error);
+          await policyComparisonWorkerSupervisor
+            .cancel({
+              sessionUuid: queuedSession.uuid,
+              leaseNonce: queuedManifest?.workerLeaseNonce,
+            })
+            .catch(console.error);
           await PolicyComparison.markFailedForLease({
             sessionId: queuedSession.id,
             inputManifest: queuedSession.inputManifest,

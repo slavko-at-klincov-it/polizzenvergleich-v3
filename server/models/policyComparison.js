@@ -223,11 +223,7 @@ const PolicyComparison = {
           position: existingCount,
         },
       });
-      await assertSessionMutationWon(
-        tx,
-        currentSession,
-        draftSessionData()
-      );
+      await assertSessionMutationWon(tx, currentSession, draftSessionData());
       return document;
     });
   },
@@ -263,11 +259,7 @@ const PolicyComparison = {
           lastUpdatedAt: new Date(),
         },
       });
-      await assertSessionMutationWon(
-        tx,
-        currentSession,
-        draftSessionData()
-      );
+      await assertSessionMutationWon(tx, currentSession, draftSessionData());
       return updated;
     });
   },
@@ -299,11 +291,7 @@ const PolicyComparison = {
           data: { position, lastUpdatedAt: new Date() },
         });
       }
-      await assertSessionMutationWon(
-        tx,
-        currentSession,
-        draftSessionData()
-      );
+      await assertSessionMutationWon(tx, currentSession, draftSessionData());
       return document;
     });
   },
@@ -323,11 +311,7 @@ const PolicyComparison = {
       await tx.policy_comparison_documents.deleteMany({
         where: { sessionId: session.id },
       });
-      await assertSessionMutationWon(
-        tx,
-        currentSession,
-        draftSessionData()
-      );
+      await assertSessionMutationWon(tx, currentSession, draftSessionData());
       const updated = await tx.policy_comparison_sessions.findUnique({
         where: { id: session.id },
       });
