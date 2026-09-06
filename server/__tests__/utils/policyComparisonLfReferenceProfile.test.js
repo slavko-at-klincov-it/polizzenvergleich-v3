@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const {
   LF_REFERENCE_PROFILE,
@@ -235,5 +236,32 @@ describe("LF reference comparison profile", () => {
     expect(runner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(runner).toContain("runVsCandidateTriage.cjs");
     expect(runner).toContain("runPreparedEvidenceEvaluation.cjs");
+  });
+
+  test("does not resume a reference category whose materialization requested revision", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "reference-resume-"));
+    try {
+      const result = path.join(root, "LR01", "result");
+      fs.mkdirSync(result, { recursive: true });
+      fs.writeFileSync(path.join(result, "answer.md"), "fixture");
+      fs.writeFileSync(path.join(result, "rows.private.json"), "[]");
+      fs.writeFileSync(
+        path.join(result, "report.json"),
+        JSON.stringify({
+          status: "REVISE",
+          rowCount: 1,
+          expectedRowCount: 1,
+          gates: { tableContract: false },
+        })
+      );
+      const {
+        completedReferenceCategoryViews,
+      } = require("../../utils/policyComparison/referenceRunner");
+      expect(
+        completedReferenceCategoryViews(root, [{ categoryView: "LR01" }])
+      ).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -83,9 +83,24 @@ async function extractReferenceDocument({ file, outputDirectory, logFile }) {
 
 function categoryComplete(outputDirectory, categoryView) {
   const result = path.join(outputDirectory, categoryView, "result");
-  return ["report.json", "answer.md", "rows.private.json"].every((name) =>
-    fs.existsSync(path.join(result, name))
-  );
+  if (
+    !["report.json", "answer.md", "rows.private.json"].every((name) =>
+      fs.existsSync(path.join(result, name))
+    )
+  )
+    return false;
+  try {
+    const report = JSON.parse(
+      fs.readFileSync(path.join(result, "report.json"), "utf8")
+    );
+    return (
+      ["PASS", "TECHNICAL_PASS_REVIEW_REQUIRED"].includes(report.status) &&
+      report.rowCount === report.expectedRowCount &&
+      Object.values(report.gates || {}).every(Boolean)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function completedReferenceCategoryViews(outputDirectory, contracts) {
