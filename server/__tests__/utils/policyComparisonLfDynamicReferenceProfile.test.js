@@ -2,6 +2,7 @@ const resource = require("../../resources/policyAnalysis/lf-immo-reference-compl
 const {
   LF_DYNAMIC_REFERENCE_PROFILE,
   categoryCatalogsFromManifest,
+  dynamicAnalysisPrompt,
 } = require("../../utils/policyComparison/lfDynamicReferenceProfile");
 
 function manifestFromResource() {
@@ -80,6 +81,9 @@ describe("complete LF dynamic reference profile", () => {
           requirement.sourceReferenceId
       )
     ).toBe(true);
+    expect(dynamicAnalysisPrompt(catalogs[0])).toContain(
+      "Schließe unmittelbar nach der Tabelle mit genau diesem Hinweis:"
+    );
   });
 
   test("keeps the printed expert-clause contradiction review-only", () => {
