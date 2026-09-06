@@ -528,6 +528,20 @@ function normalizeResponse(responseText) {
   return fenced ? fenced[1].trim() : response;
 }
 
+function normalizeCoverageEffectToken({
+  target,
+  selectedCandidateIds,
+  coverageEffect,
+}) {
+  if (
+    coverageEffect === "CONDITION" &&
+    target.factRole === "CONDITION" &&
+    selectedCandidateIds.length > 0
+  )
+    return COVERAGE_EFFECT.DEFINED;
+  return coverageEffect;
+}
+
 function serverNormalizedCoverageEffect({
   target,
   selectedCandidateIds,
@@ -759,6 +773,11 @@ function parseAndValidatePreparedEvidenceResponse({
     modelSelectedCandidateIds.length,
     ...candidateIdRepair.repaired
   );
+  parsed.coverageEffect = normalizeCoverageEffectToken({
+    target,
+    selectedCandidateIds: modelSelectedCandidateIds,
+    coverageEffect: parsed.coverageEffect,
+  });
   if (!ALLOWED_EFFECTS.has(parsed.coverageEffect))
     throw preparedError("PREPARED_EFFECT_INVALID", target.targetId);
   if (!ALLOWED_CONFLICTS.has(parsed.conflictState))

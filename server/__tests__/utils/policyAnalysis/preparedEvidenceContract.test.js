@@ -3091,6 +3091,47 @@ describe("preparedEvidenceContract", () => {
     ]);
   });
 
+  test("normalizes CONDITION to DEFINED only for a selected CONDITION fact", () => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    worksheet.requirements[0].components[0].factRole = "CONDITION";
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+
+    const judgement = parseAndValidatePreparedEvidenceResponse({
+      target,
+      responseText: response(
+        "winter_garden",
+        ["candidate:winter"],
+        "CONDITION"
+      ),
+    });
+
+    expect(judgement).toMatchObject({
+      evidencePresence: "FOUND",
+      coverageEffect: COVERAGE_EFFECT.DEFINED,
+    });
+  });
+
+  test("rejects CONDITION for non-condition facts", () => {
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet: WORKSHEET,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+
+    expect(() =>
+      parseAndValidatePreparedEvidenceResponse({
+        target,
+        responseText: response(
+          "winter_garden",
+          ["candidate:winter"],
+          "CONDITION"
+        ),
+      })
+    ).toThrow("PREPARED_EFFECT_INVALID");
+  });
+
   test("rejects an ambiguous one-edit candidate repair", () => {
     const [target] = buildPreparedEvidenceTargets({
       worksheet: WORKSHEET,
