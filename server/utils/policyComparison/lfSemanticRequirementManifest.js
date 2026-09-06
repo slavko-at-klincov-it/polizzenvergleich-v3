@@ -341,12 +341,20 @@ function bindingForRaw(bindings, family, rawValue) {
 
 function bindingNumericallyMatches(binding, family, rawValue) {
   const rawNumber = localizedNumber(rawValue);
-  if (rawNumber === null || !binding.formula) return false;
+  const declaredContext = [
+    binding.formula,
+    binding.componentLabel,
+    ...(binding.componentAliases || []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (rawNumber === null || !declaredContext) return false;
   const expected = family === "PERCENT" ? rawNumber / 100 : rawNumber;
   const numbers =
-    String(binding.formula)
+    declaredContext
       .match(/\d+(?:[.,]\d+)?/gu)
-      ?.map((value) => Number(value.replace(",", "."))) || [];
+      ?.map(localizedNumber)
+      .filter((value) => value !== null) || [];
   return numbers.some(
     (number) => Math.abs(number - expected) < 1e-9 || number === rawNumber
   );
@@ -372,12 +380,41 @@ function extractedValues(requirement, spans) {
   ];
   for (const span of spans) {
     for (const { type, expression } of patterns) {
+      const valueBindings = requirement.components
+        .filter(
+          ({ valueBinding }) =>
+            valueBinding && valueFamily(valueBinding.type) === type
+        )
+        .map(({ label, aliases, valueBinding }) => ({
+          ...valueBinding,
+          componentLabel: label,
+          componentAliases: aliases,
+        }));
+      if (valueBindings.length === 0) continue;
+      const candidates = [];
       let match;
-      while ((match = expression.exec(span.exactText))) {
-        const rawValue = match[0];
-        const valueBindings = requirement.components
-          .map(({ valueBinding }) => valueBinding)
-          .filter((binding) => binding && valueFamily(binding.type) === type);
+      while ((match = expression.exec(span.exactText)))
+        candidates.push({ match, rawValue: match[0] });
+      if (candidates.length === 0) continue;
+      let selected = candidates;
+      if (candidates.length > valueBindings.length) {
+        const distinctValues = new Set(
+          candidates.map(({ rawValue }) =>
+            rawValue.normalize("NFKC").replace(/\s+/gu, " ")
+          )
+        );
+        if (valueBindings.length === 1 && distinctValues.size > 1) {
+          const numericMatches = candidates.filter(({ rawValue }) =>
+            bindingNumericallyMatches(valueBindings[0], type, rawValue)
+          );
+          if (numericMatches.length !== 1)
+            throw profileRequired(
+              `AMBIGUOUS_VALUE_BINDING:${requirement.id}:${type}`
+            );
+          selected = numericMatches;
+        }
+      }
+      for (const { match: selectedMatch, rawValue } of selected) {
         const valueBinding = bindingForRaw(valueBindings, type, rawValue);
         values.push({
           valueId: domainDigest(
@@ -385,7 +422,7 @@ function extractedValues(requirement, spans) {
             {
               requirementId: requirement.id,
               spanId: span.spanId,
-              offset: match.index,
+              offset: selectedMatch.index,
               type,
               rawValue,
             }
@@ -395,8 +432,9 @@ function extractedValues(requirement, spans) {
           rawValue,
           normalizedValue: rawValue.normalize("NFKC").replace(/\s+/gu, " "),
           physicalPageNumber: span.physicalPageNumber,
-          documentStart: span.documentStart + match.index,
-          documentEnd: span.documentStart + match.index + rawValue.length,
+          documentStart: span.documentStart + selectedMatch.index,
+          documentEnd:
+            span.documentStart + selectedMatch.index + rawValue.length,
           sourceSpanId: span.spanId,
           sourceBindingStatus: "LOCAL_SOURCE_SPAN",
           basis: valueBinding?.basisLabel

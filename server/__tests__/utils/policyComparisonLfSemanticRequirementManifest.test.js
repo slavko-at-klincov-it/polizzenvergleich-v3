@@ -126,6 +126,29 @@ describe("LF SemanticRequirementManifest V1", () => {
     });
   });
 
+  test("does not attach source numbers to a row without a declared value role", () => {
+    const input = fixture();
+    delete input.oracle.requirements[0].components[1].valueBinding;
+    const manifest = buildLfSemanticRequirementManifest(input);
+    expect(manifest.requirements[0].values).toEqual([]);
+  });
+
+  test("fails closed when one declared value role has multiple unresolved values", () => {
+    const input = fixture();
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace(
+        "15 % der Versicherungssumme",
+        "15 % oder 25 % der Versicherungssumme"
+      );
+    input.documentArtifact.document.pageMap[0].end += " oder 25 %".length;
+    input.familyContract.expectedStructureDigestSha256 = buildSourceBlockLedger(
+      input.documentArtifact
+    ).structureDigestSha256;
+    expect(() => buildLfSemanticRequirementManifest(input)).toThrow(
+      "NEUES_LF_PROFIL_ERFORDERLICH:AMBIGUOUS_VALUE_BINDING:FE-01:PERCENT"
+    );
+  });
+
   test("regenerates on readback and rejects a rehashed semantic mutation", () => {
     const input = fixture();
     const manifest = buildLfSemanticRequirementManifest(input);
