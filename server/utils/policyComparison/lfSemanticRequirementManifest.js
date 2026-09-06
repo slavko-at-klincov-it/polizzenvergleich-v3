@@ -361,6 +361,50 @@ function bindingNumericallyMatches(binding, family, rawValue) {
   );
 }
 
+function multiplierNumber(rawValue) {
+  const normalized = String(rawValue || "")
+    .normalize("NFKC")
+    .trim()
+    .toLocaleLowerCase("de-AT");
+  const words = {
+    einmal: 1,
+    zweimal: 2,
+    dreimal: 3,
+    viermal: 4,
+    fünfmal: 5,
+    sechsmal: 6,
+  };
+  if (words[normalized]) return words[normalized];
+  return localizedNumber(normalized);
+}
+
+function materializedFormula(type, valueBinding, rawValue) {
+  const numericValue = localizedNumber(rawValue);
+  if (type === "PERCENT" && valueBinding?.basisLabel && numericValue !== null)
+    return `${valueBinding.basisLabel} * ${numericValue / 100}`;
+  if (type === "MULTIPLIER" && valueBinding?.basisLabel) {
+    const multiplier = multiplierNumber(rawValue);
+    return multiplier === null
+      ? null
+      : `${multiplier} × ${valueBinding.basisLabel}`;
+  }
+  if (type === "DURATION")
+    return valueBinding?.basisLabel
+      ? `${rawValue} / Bezug: ${valueBinding.basisLabel}`
+      : rawValue;
+  if (type === "MEASUREMENT") return rawValue;
+  if (type === "AMOUNT") {
+    if (/^minimum\b/iu.test(valueBinding?.formula || ""))
+      return `minimum ${rawValue}`;
+    if (/^maximum\b/iu.test(valueBinding?.formula || ""))
+      return `maximum ${rawValue}`;
+    if (valueBinding?.type === "MAX_OF")
+      return `max(${rawValue}, Prozentwert × ${valueBinding.basisLabel || "Basis"})`;
+    return null;
+  }
+  return valueBinding?.formula || null;
+}
+
 function extractedValues(requirement, spans) {
   const values = [];
   const patterns = [
@@ -391,8 +435,9 @@ function extractedValues(requirement, spans) {
           ({ valueBinding }) =>
             valueBinding && valueFamily(valueBinding.type) === type
         )
-        .map(({ label, aliases, valueBinding }) => ({
+        .map(({ id, label, aliases, valueBinding }) => ({
           ...valueBinding,
+          componentId: id,
           componentLabel: label,
           componentAliases: aliases,
         }));
@@ -445,13 +490,7 @@ function extractedValues(requirement, spans) {
       }
       for (const { match: selectedMatch, rawValue } of selected) {
         const valueBinding = bindingForRaw(valueBindings, type, rawValue);
-        const numericValue = localizedNumber(rawValue);
-        const formula =
-          type === "PERCENT" &&
-          valueBinding?.basisLabel &&
-          numericValue !== null
-            ? `${valueBinding.basisLabel} * ${numericValue / 100}`
-            : valueBinding?.formula || null;
+        const formula = materializedFormula(type, valueBinding, rawValue);
         values.push({
           valueId: domainDigest(
             `${LF_SEMANTIC_REQUIREMENT_MANIFEST_CONTRACT_ID}:VALUE`,
@@ -473,6 +512,8 @@ function extractedValues(requirement, spans) {
             span.documentStart + selectedMatch.index + rawValue.length,
           sourceSpanId: span.spanId,
           sourceBindingStatus: "LOCAL_SOURCE_SPAN",
+          componentId: valueBinding?.componentId || null,
+          componentLabel: valueBinding?.componentLabel || null,
           basis: valueBinding?.basisLabel
             ? {
                 status: "SEMANTIC_ORACLE_DECLARED",
@@ -490,6 +531,55 @@ function extractedValues(requirement, spans) {
     }
   }
   return values;
+}
+
+function resolveCalculatedPercentAmounts(requirements) {
+  const normalizeLabel = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .toLocaleLowerCase("de-AT");
+  for (const requirement of requirements) {
+    for (const value of requirement.values) {
+      if (value.type !== "PERCENT" || !value.basis?.label) continue;
+      const basisLabel = normalizeLabel(value.basis.label);
+      const candidates = requirements
+        .filter(
+          (candidate) => candidate.categoryId === requirement.categoryId
+        )
+        .flatMap((candidate) =>
+          candidate.values
+            .filter(
+              (candidateValue) =>
+                candidateValue.type === "AMOUNT" &&
+                normalizeLabel(candidateValue.componentLabel) === basisLabel
+            )
+            .map((candidateValue) => ({
+              requirementId: candidate.requirementId,
+              value: candidateValue,
+              amount: localizedNumber(candidateValue.rawValue),
+            }))
+        )
+        .filter(({ amount }) => amount !== null);
+      const distinctAmounts = [
+        ...new Set(candidates.map(({ amount }) => amount)),
+      ];
+      if (distinctAmounts.length !== 1) continue;
+      const basis = candidates[0];
+      const percent = localizedNumber(value.rawValue);
+      if (percent === null) continue;
+      value.basis.amountSource = {
+        requirementId: basis.requirementId,
+        valueId: basis.value.valueId,
+        sourceSpanId: basis.value.sourceSpanId,
+        rawValue: basis.value.rawValue,
+      };
+      value.calculatedAmount = basis.amount * (percent / 100);
+      value.currency = basis.value.currency || value.currency;
+    }
+  }
+  return requirements;
 }
 
 function inheritSharedGovernorValues(requirements) {
@@ -887,6 +977,7 @@ function buildLfSemanticRequirementManifest({
     requirements,
   });
   inheritSharedGovernorValues(requirements);
+  resolveCalculatedPercentAmounts(requirements);
 
   const semanticBlockIds = new Map();
   for (const requirement of requirements)

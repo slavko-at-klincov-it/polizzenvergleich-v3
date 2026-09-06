@@ -167,6 +167,54 @@ describe("LF SemanticRequirementManifest V1", () => {
     expect(manifest.requirements[0].values[0].rawValue).toBe("25 %");
   });
 
+  test("calculates a percentage only from one source-bound category basis", () => {
+    const input = fixture();
+    const basisLine = "\nBasis EUR 1.000\n";
+    input.documentArtifact.document.pageContent =
+      input.documentArtifact.document.pageContent.replace(
+        "\nUnkartierter Fließtext",
+        `${basisLine}\nUnkartierter Fließtext`
+      );
+    input.documentArtifact.document.pageMap[0].end += basisLine.length;
+    input.oracle.requirements.unshift({
+      id: "FE-BASE",
+      categoryId: "FE",
+      categoryLabel: "Feuerversicherung",
+      subcategoryId: "FE-WERT",
+      subcategoryLabel: "Wert",
+      label: "Versicherungssumme",
+      pages: [1],
+      anchors: ["Basis EUR 1.000"],
+      components: [
+        {
+          id: "sum",
+          label: "Versicherungssumme",
+          factRole: "LIMIT",
+          requestedFields: ["amount"],
+          valueBinding: { type: "ABSOLUTE_AMOUNT", currency: "EUR" },
+        },
+      ],
+    });
+    input.familyContract.expectedStructureDigestSha256 = buildSourceBlockLedger(
+      input.documentArtifact
+    ).structureDigestSha256;
+    const manifest = buildLfSemanticRequirementManifest(input);
+    const percent = manifest.requirements
+      .find(({ requirementId }) => requirementId === "FE-01")
+      .values.find(({ type }) => type === "PERCENT");
+    expect(percent).toMatchObject({
+      calculatedAmount: 150,
+      currency: "EUR",
+      basis: {
+        amountSource: {
+          requirementId: "FE-BASE",
+          rawValue: "EUR 1.000",
+          sourceSpanId: expect.any(String),
+        },
+      },
+    });
+  });
+
   test("regenerates on readback and rejects a rehashed semantic mutation", () => {
     const input = fixture();
     const manifest = buildLfSemanticRequirementManifest(input);
