@@ -184,3 +184,84 @@ regenerierbares Source-Block-Ledger mit Inhaltsverzeichnis-, Kopf-/Fusszeilen-,
 Tabellen- und Seitenfortsetzungs-Negativtests. Erst danach folgt das getrennte
 atomare Semantic-Requirement-Manifest. Beide Schritte sind in kleinen,
 getrennten Commits fortzufuehren.
+
+## 8. Wiederaufnahme zur vollstaendigen Umsetzung
+
+Autorisierung: Der Auftraggeber hat am 6. September 2026 die Umsetzung der
+vollstaendigen LF-Vorlage angefordert. Die Abnahme wird bewusst mit genau einem
+LF-Dokument auf A und einem Vergleichsdokument auf B sowie einem getrennten
+symmetrischen 1+1-Lauf durchgefuehrt.
+
+### 8.1 Aktiver Change Brief
+
+Nutzerproblem / gewuenschtes Ergebnis:
+: Das hochgeladene LF-Dokument A bestimmt Kategorien, Unterkategorien,
+  fachliche Vergleichszeilen und Reihenfolge. Summen, Prozentwerte, Limits,
+  Selbstbehalte, Dauern, Bedingungen und Ausschluesse bleiben an ihre exakten
+  A-Quellen gebunden. B wird ausschliesslich zu diesen A-Zeilen durchsucht.
+
+Beobachtete Evidenz:
+: Die Modustrennung, Persistenz, Uploadgrenzen, Queue, private Artefakte,
+  kontrollierte Gegenstuecksuche und Exporte bestehen bereits. Der innere
+  LF-Vertrag ist aber weiterhin auf 35 kuratierte Punkte und einen exakten
+  Dokumenthash begrenzt.
+
+Root-Cause-Klasse:
+: Strukturinventur, semantische Atomisierung, Werte- und Basisbindung,
+  dynamische Vertragsidentitaet, Resume und Darstellung.
+
+Betroffene Vertraege:
+: `INV-001` bis `INV-004`, `INV-008`, `INV-009`, `INV-011`, `FAIL-001`,
+  `FAIL-003`, `FAIL-005`, `ADR-027` und `ADR-028`.
+
+Scope:
+: Neuer vollstaendiger LF-Produktvertrag fuer die bekannte LF-Familie;
+  deterministisches Quellenledger; kuratiertes semantisches Oracle;
+  sessiongebundenes A-Manifest; dynamische B-Kataloge, Resultate, XLSX und UI.
+
+Nicht-Ziele:
+: Keine Aenderung des symmetrischen 224-Zeilen-Vertrags, kein Deployment, kein
+  stilles Akzeptieren unbekannter LF-Strukturen und keine 99-Prozent-Aussage.
+
+Riskanteste Annahme:
+: Die reine Text- und PageMap-Extraktion bildet alle visuell relevanten
+  Tabellen-, Listen- und Fortsetzungsgrenzen stabil genug ab. Diese Annahme
+  wird gegen alle 31 gerenderten Seiten und mit Struktur-Negativtests geprueft.
+
+Primaeres Abnahmeverhalten:
+: Jede operative A-Quelle besitzt eine terminale Disposition. Jede sichtbare
+  Zeile stammt aus dem semantischen Oracle und aktuellen A-Spans. Eine
+  strukturell kompatible echte Wertaenderung wird uebernommen; neue, fehlende
+  oder umgeordnete operative Struktur beendet den Lauf mit
+  `NEUES_LF_PROFIL_ERFORDERLICH`.
+
+Realstrukturnahe Regression:
+: 31-seitiges LF-A-Dokument plus ein WEVIG-B-Dokument; echte Wertaenderung;
+  fehlende/umgeordnete Sektion; Inhaltsverzeichnis, Furniture, Liste,
+  Seitenfortsetzung und Prozentbasis.
+
+Was diese Tests nicht beweisen:
+: Beliebige LF-Fassungen, unbekannte Versicherer, Mehrdokument-Ranglogik oder
+  das 99-Prozent-Ziel.
+
+Wissens-Write-back:
+: Implementierter Datenfluss in Architektur und ADR-Nachfolger; Laufmessungen
+  in Tests und Erkenntnisse; aktueller Stand in Tracker, Projektgedaechtnis und
+  KB-Index.
+
+### 8.2 Festgelegte Umsetzungsschichten
+
+```text
+LF-PDF A
+  -> kanonisches Dokumentartefakt und SourceBlockLedger
+  -> LF-Familien- und Strukturpruefung
+  -> kuratiertes SemanticRequirementManifest mit vollstaendigem Crosswalk
+  -> unveraenderliches Session-Profil
+  -> ausschliesslich dazu kontrollierte Suche in B
+  -> dynamische Resultat-, XLSX- und UI-Projektion
+```
+
+Das Ledger bleibt semantikfrei. Nicht aufgeloeste Quellbloecke werden sichtbar
+reviewpflichtig und koennen weder kontrollierten Nullfund noch Vorteil
+erzeugen. Der bestehende 35-Punkte-Vertrag bleibt historisch lesbar und als
+Regression erhalten.
