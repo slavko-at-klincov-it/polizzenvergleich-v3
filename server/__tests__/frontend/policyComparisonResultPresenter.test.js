@@ -1,9 +1,19 @@
 const {
+  presentComparisonError,
   presentComparisonMetrics,
   presentPointDecision,
 } = require("../../../frontend/src/utils/chat/policyComparisonResultPresenter.cjs");
 
 describe("policy comparison result presenter", () => {
+  test("maps unsupported LF structures to a customer-safe action", () => {
+    expect(presentComparisonError("NEUES_LF_PROFIL_ERFORDERLICH")).toMatch(
+      /neues, fachlich geprüftes LF-Profil erforderlich/
+    );
+    expect(
+      presentComparisonError("REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH")
+    ).toMatch(/erneut hochladen/);
+  });
+
   test("presents a V2 point decision", () => {
     expect(
       presentPointDecision({

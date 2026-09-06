@@ -17,8 +17,11 @@ import policyComparisonUploadLock from "@/utils/chat/policyComparisonUploadLock.
 import policyComparisonResultPresenter from "@/utils/chat/policyComparisonResultPresenter.cjs";
 
 const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
-const { presentComparisonMetrics, presentPointDecision } =
-  policyComparisonResultPresenter;
+const {
+  presentComparisonError,
+  presentComparisonMetrics,
+  presentPointDecision,
+} = policyComparisonResultPresenter;
 
 const LF_REFERENCE_MODE = "LF_IMMO_REFERENCE_A_TO_B_V1";
 
@@ -438,7 +441,7 @@ export default function PolicyComparisonPanel({
           {locked && <ComparisonProgress progress={session.progress} />}
           {session?.status === "FAILED" && (
             <div className="mt-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 light:text-rose-800">
-              Vergleich fehlgeschlagen: {session.error || "Unbekannter Fehler"}
+              Vergleich fehlgeschlagen: {presentComparisonError(session.error)}
             </div>
           )}
           {session?.status === "CANCELLED" && (
@@ -552,7 +555,14 @@ function ComparisonResult({ result }) {
               <p>
                 A-Vorlage: {result.template.semanticRequirements} fachliche
                 Zeilen · {result.template.sourceBlocks} Quellblöcke ·{" "}
-                {result.template.reviewRequiredBlocks} offene Quellbereiche
+                {result.template.decisionEligibleRequirements}{" "}
+                entscheidungsfähig ·{" "}
+                {result.template.incompleteSearchRequirements} explorative
+                B-Suchpläne ·{" "}
+                {(result.template.sharedValueGovernors || 0) +
+                  (result.template.sharedSemanticGovernors || 0)}{" "}
+                gemeinsame Regeln · {result.template.reviewRequiredBlocks}
+                offene Quellbereiche
               </p>
             )}
             <p>

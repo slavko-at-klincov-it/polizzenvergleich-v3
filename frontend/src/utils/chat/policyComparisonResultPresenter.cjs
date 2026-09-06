@@ -72,6 +72,18 @@ function presentPointDecision(row) {
   };
 }
 
+function presentComparisonError(value) {
+  const message = String(value || "");
+  if (
+    message.startsWith("NEUES_LF_PROFIL_ERFORDERLICH") ||
+    message.startsWith("LF_REFERENCE_NEW_PROFILE_REQUIRED")
+  )
+    return "Die Struktur des LF-IMMO-Dokuments A wird von dieser Vorlage nicht sicher unterstützt. Dafür ist ein neues, fachlich geprüftes LF-Profil erforderlich.";
+  if (message.startsWith("REFERENCE_SOURCE_DOCUMENT_FINGERPRINT_MISMATCH"))
+    return "Das LF-IMMO-Dokument A hat sich seit dem Upload geändert. Bitte die Datei erneut hochladen und den Vergleich neu starten.";
+  return message || "Unbekannter Fehler";
+}
+
 function presentComparisonMetrics(result) {
   const totals = result?.totals || {};
   const rows = (result?.categories || []).flatMap(({ categoryView, rows }) =>
@@ -174,6 +186,7 @@ function presentComparisonMetrics(result) {
 module.exports = {
   OUTCOME_LABELS,
   REVIEW_REASON_LABELS,
+  presentComparisonError,
   presentComparisonMetrics,
   presentPointDecision,
 };
