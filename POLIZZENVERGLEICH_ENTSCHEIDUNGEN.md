@@ -964,3 +964,42 @@ A-Zeilen und null B-only-Zeilen. Die Ergebnisqualität bleibt getrennt: 18
 Referenzzeilen waren nur teilbelegt; `LF-GL-01` ist eine bestätigte offene
 Kalibrierungslücke. Messwerte und Beweisgrenze stehen in Tests und
 Erkenntnisse, Abschnitt 54.
+
+## ADR-028: Source-Block-Ledger und semantisches Vergleichsprofil bleiben getrennt
+
+**Status:** AKZEPTIERT
+
+Ein vollständiges, source-bound Inventar der extrahierten PDF-Blöcke ist eine
+notwendige Provenienz- und Coverage-Schicht, aber kein fachliches
+Vergleichsprofil. Ein Source-Block darf nicht allein wegen seiner Position,
+eines regex-abgeleiteten Rollenhinweises oder seines exakten Wortlauts zu einer
+Kundenzeile, einem vollständigen B-Suchvertrag, einem qualifizierten Nullfund
+oder einem Vorteil werden.
+
+Verbindliche Entscheidung:
+
+1. Ein späteres `SourceBlockLedger` bindet ausschließlich vollständige
+   Extraktionsreihenfolge, PageMap, Offsets, Rohtext, Strukturbeziehungen und
+   unverarbeitete Coverage-Lücken. Es muss aus dem Dokumentartefakt
+   deterministisch regenerierbar sein.
+2. Ein getrenntes versioniertes `SemanticRequirementManifest` besitzt
+   Kundenzeilen und Suchidentitäten. Objekt, Gefahr, Wirkung, Faktrolle,
+   Bedingung, Wert, Basis, Scope, Variante und Ausschluss werden atomar
+   modelliert; ein Block darf mehrere Fakten und ein Fakt mehrere B-Spans
+   besitzen.
+3. Der Crosswalk zwischen beiden Schichten ist vollständig und fail-closed.
+   Nicht klassifizierte operative Source-Blöcke bleiben sichtbar im Review;
+   sie verschwinden nicht und werden nicht als negative Deckung gedeutet.
+4. Ein exakter A-Volltextalias allein zertifiziert keinen paketweiten
+   B-Nullfund. Dafür sind versionierte Alias-/Konzeptverträge, vollständige
+   Paketabarbeitung und terminale Occurrence-/Kandidatenstatus erforderlich.
+5. Eine neue LF-Fassung erhält erst nach Struktur-, Semantik-, Wert-,
+   Crosswalk- und Abnahmeversion einen Produktstatus. Queue-, Resume-, Profil-,
+   Ergebnis- und Exportidentität müssen denselben Vertrag tragen.
+6. Bis dieses Gate besteht, bleibt der kuratierte 35-Punkte-Vertrag der einzige
+   entscheidungsfähige LF-Produktpfad und wird weiterhin sichtbar als
+   unvollständig bezeichnet.
+
+Der Implementierungsversuch `126ab03b` wurde aufgrund dieser Grenze mit
+`313348735` aus dem Produktpfad genommen. Die Messung und Beweisgrenze stehen
+in Tests und Erkenntnisse, Abschnitt 57.

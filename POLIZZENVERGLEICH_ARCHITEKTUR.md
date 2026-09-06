@@ -773,3 +773,35 @@ Komponenten einer A-Zeile belegen; Rohbelege bleiben je Dokument getrennt.
 Die früheren acht Fachprompts bleiben interne Analyseverträge und sind keine
 Workspace-Auswahl mehr. Die zwei sichtbaren Verfahren ändern den
 Vergleichsdatenfluss, nicht den Chat-Systemprompt.
+
+## 22. Grenze zwischen vollständigem Quellledger und semantischem LF-Profil
+
+Der aktuelle Produktworker bleibt nach dem Review von `126ab03b` auf dem
+versionierten 35-Punkte-Profil. Queue, Resume, Katalog, Ergebnis und Export
+tragen wieder dieselbe Profilidentität. Der reine PDF-Fingerprint ist bis zu
+einem abgenommenen Familienvertrag weiterhin Bestandteil der Zulassung.
+
+Der nächste sichere Ausbau besitzt zwei getrennte Schichten:
+
+```text
+kanonisches Dokumentartefakt
+  -> deterministisch regenerierbares SourceBlockLedger
+     -> alle operativen Quellblöcke, PageMap, Offsets, Reihenfolge
+     -> keine Kundenentscheidung und kein qualifizierter Nullfund
+  -> versioniertes SemanticRequirementManifest
+     -> atomare Fakten, Rollen, Scope, Werte und Basisrelationen
+     -> vollständiger Crosswalk zum SourceBlockLedger
+     -> kontrollierte Alias-/Konzeptsuche in Paket B
+     -> erst hier Kundenzeile, Nullfundwirkung und Punktentscheidung
+```
+
+Reine Überschriften, Inhaltsverzeichnis, Kopf-/Fußzeilen und
+Seitenfortsetzungen benötigen eigene Strukturtypen. Ein mehrrolliger Absatz
+wird nicht auf eine regex-priorisierte Einzelrolle reduziert. Prozentwert,
+Basisquelle, Formel, Betrag, Währung und Rundung bilden getrennte gebundene
+Felder; unbekannte oder mehrdeutige Basis bleibt sichtbar ungeklärt.
+
+Diese Zielgrenze ist mit ADR-028 akzeptiert, aber noch nicht als vollständiges
+LF-Profil implementiert. Der Guard-Test im Korrekturcommit `313348735`
+verhindert nur die erneute direkte Aktivierung eines Source-Block-Manifests im
+Produktworker.

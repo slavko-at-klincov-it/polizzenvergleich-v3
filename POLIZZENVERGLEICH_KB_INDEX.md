@@ -70,6 +70,15 @@ bekannte 1+9-Set mit 35/35 Zeilen, ohne Embeddings und ohne B-only-Zeilen.
 Das ist Fixture-Evidenz und weder ein vollständiges LF-Inventar noch ein
 Generalisierungs- oder 99-Prozent-Nachweis.
 
+Reviewkorrektur vom 6. September 2026: Der Versuch `126ab03b`, 506
+extrahierte LF-Rohblöcke unmittelbar als dynamisches Vergleichsprofil zu
+verwenden, ist verworfen und mit `313348735` aus dem Produktpfad genommen.
+Rohblockabdeckung ist keine atomare Faktenabdeckung; ein exakter A-Wortlaut
+allein darf insbesondere keinen kontrollierten B-Nullfund zertifizieren. Der
+Produktworker bleibt deshalb beim begrenzten, kuratierten 35-Punkte-Profil.
+Die verbindliche Schichtentrennung steht in [ADR-028](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-028-source-block-ledger-und-semantisches-vergleichsprofil-bleiben-getrennt),
+der Mac-Studio-Befund in [Tests und Erkenntnisse, Abschnitt 57](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#57-review-des-dynamischen-lf-rohblockprofils-und-sichere-rücknahme).
+
 ## 2. Schnelllage
 
 | Statusachse                           | Aktueller Stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Kanonischer Beleg                                                                                                                                                                                                                                                                                      |

@@ -1026,3 +1026,25 @@ requirementweite statt komponentengenaue enge Sturmfreigabe in `LF-GL-02`.
 Der Kundencheckout darf erst nach getrennten Forward-Fixes, adversarialen
 Tests, erneuten Gates, Merge/Tag und dem manuellen First-Hop-Quieszenzcheck
 von V3.6.0 aktualisiert werden.
+
+## 19. Reviewkorrektur der vollständigen LF-Referenzvorlage
+
+Der Branch `codex/lf-reference-complete-template` enthielt mit `126ab03b`
+einen nicht abgenommenen Versuch, 506 extrahierte LF-Rohblöcke direkt als
+Vergleichsprofil zu verwenden. Der Review am 6. September 2026 bewertete dies
+als `NO-GO`: Rohblöcke waren nicht atomisiert, B wurde nur mit dem exakten
+A-Wortlaut gesucht, Prozentbasen und Seitenfortsetzungen fehlten, und ein
+unqualifizierter Nullfund konnte ohne Review entstehen.
+
+`31334873506f175458db1588bc983796c7b941bb` nimmt diesen Pfad sicher zurück.
+Alle Produktdateien sind gegenüber `d266b48ae` wieder bytegleich; der
+Mac-Studio-Gate-Satz bestand 5/5 Suites mit 40/40 Tests und den vollständigen
+Server-Lint. Die Kundeninstallation blieb unverändert auf `2804fa563`.
+
+Aktueller Stand: Der vollständige LF-Ausbau ist nicht implementiert. Der
+einzige entscheidungsfähige LF-Produktpfad bleibt das sichtbar begrenzte
+35-Punkte-Profil. Nächstes Ziel ist die in ADR-028 definierte Trennung aus
+deterministisch regenerierbarem Source-Block-Ledger, atomarem semantischem
+Requirement-Manifest und vollständigem Crosswalk. Vor Aktivierung bleiben
+geänderte echte LF-Werte/Layoutvarianten, Prozentbasis, Paraphrasen,
+Seitenfortsetzungen, E2E-Lauf und Expertenholdout offen.

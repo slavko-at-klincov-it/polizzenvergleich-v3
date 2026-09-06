@@ -3487,3 +3487,63 @@ Zeile zu breit erfüllt werden. Beide Grenzen benötigen einen eigenen kleinen
 Fix, einen Triage-zu-Prepared-Integrationstest beziehungsweise negative
 Komponententests und danach erneute Gates. Die gemessenen Läufe bleiben
 gültige Bestands- und Fixture-Evidenz, sind aber noch keine Releasefreigabe.
+
+## 57. Review des dynamischen LF-Rohblockprofils und sichere Rücknahme
+
+**Prüfung:** 6. September 2026
+
+**Verworfener Implementierungscommit:**
+`126ab03b562ef598a8e40b37b3cfc6075aa99a7e`
+
+**Korrekturcommit:**
+`31334873506f175458db1588bc983796c7b941bb`
+
+Der verworfene Commit ersetzte das kuratierte 35-Punkte-Profil durch 506 aus
+der PDF-Extraktion abgeleitete Rohblöcke. Der Nachreview zeigte, dass diese
+Blöcke keine atomaren Fachpunkte waren: Jeder Block erhielt genau eine
+regex-abgeleitete Rolle und seinen vollständigen A-Wortlaut als einzigen
+B-Suchalias. Anders formulierte Gegenstücke konnten dadurch unentdeckt bleiben
+und trotzdem als kontrollierter Nullfund ohne Review enden.
+
+Weitere bestätigte Grenzen waren fehlende Mehrfachrollen und
+Seitenfortsetzungen, pauschal unbekannte Prozentbasen, ein permissiver
+8-aus-9-Strukturcheck, eine ungeprüft festgeschriebene Produktversion,
+fehlende deterministische Manifestregeneration beim Readback und verschiedene
+Profilidentitäten in Queue-/Resume- und Ergebnisvertrag. Der Test für eine
+„kompatible Revision“ änderte nur Fingerprint-Metadaten, nicht Text, Wert,
+Struktur oder Layout. Die 506 Blöcke und zehn Abschnittsübergänge waren damit
+reine technische Extraktionsevidenz.
+
+Der Korrekturcommit entfernt den gesamten dynamischen Rohblock-zu-Katalog-,
+Worker-, Ergebnis-, Readback- und UI-Pfad. Gegenüber der bewährten Basis
+`d266b48ae943214b4ee29e756b8ae0d49fc5f7ad` sind alle Produktdateien wieder
+bytegleich. Als verbleibende Quelländerungen existieren nur Dokumentation und
+ein Guard-Test, der den nicht abgenommenen Source-Block-Manifestpfad im
+Produktworker verbietet.
+
+Mac-Studio-Gate für den exakten Korrekturcommit:
+
+```text
+Worktree: /Users/michaelmischkot/Code/validation-worktrees/lf-review-313348735
+Commit:   31334873506f175458db1588bc983796c7b941bb
+Node:     v22.23.2
+Modell:   qwen/qwen3.6-35b-a3b, MLX 4 Bit, geladen mit 42.496 Kontext
+Jest:     5/5 Suites, 40/40 Tests PASS
+Lint:     vollständiger Server-Lint PASS
+Diff:     diff --check PASS; Produktdateien gegen d266b48ae bytegleich
+Kunde:    Checkout sauber und unverändert auf 2804fa56361084c0ee74fca6f54ef6365d65aeeb
+```
+
+Der erste Jest-Aufruf im frischen Worktree konnte zwei Suites wegen fehlendem
+`exceljs` nicht laden. Nach der üblichen Einbindung der bereits installierten
+Server-Abhängigkeiten liefen dieselben fünf Suites vollständig grün. Es lag
+kein Testfehler vor.
+
+**Beweist:** Der nicht abgenommene dynamische Pfad ist nicht mehr erreichbar;
+der gerichtete Produktworker verwendet wieder den bekannten versionierten
+35-Punkte-Vertrag, und der symmetrische Pfad ist auf Dateiebene unverändert.
+
+**Beweist nicht:** ein vollständiges LF-Inventar, kompatible neue
+LF-Versionen, Prozentbasisberechnung, unbekannte Versicherer-Holdouts oder das
+99-Prozent-Ziel. Da keine Produktdatei gegenüber `d266b48ae` verbleibt, wurde
+kein neuer LLM-Endlauf als Korrekturbeleg ausgegeben.
