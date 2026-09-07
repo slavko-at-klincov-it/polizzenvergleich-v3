@@ -519,7 +519,9 @@ async function run() {
       temperature: 0,
       maxTokens: Math.min(4096, 2048 * batch.length),
     });
-    if (completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF)
+    if (
+      completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
+    )
       fail(
         `Falsches LM-Studio-Chatmodell bei ${batchId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
       );
