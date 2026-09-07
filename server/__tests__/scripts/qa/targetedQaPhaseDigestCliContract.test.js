@@ -43,7 +43,9 @@ describe("targeted QA phase digest CLI boundary", () => {
       expect(script).toContain('"maxConcurrentTargets"');
       expect(script).toContain("mapTargetsWithBoundedConcurrency(");
       expect(script).toContain("maxConcurrentTargets,");
-      expect(script).toContain("CLASSIFY_ONE_");
+      expect(script).toMatch(
+        /buildSingle(?:BindingTarget|PreparedEvidence)Payload/u
+      );
     }
   );
 });
