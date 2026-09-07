@@ -327,7 +327,7 @@ function build(args, { fsImpl = fs } = {}) {
     const retrieval = rankCandidates({ row, requirement, chunks });
     const productionEvidence = productionEvidenceForRow({
       documentDirectories,
-      categoryView: row.categoryView,
+      categoryView: row.analysisRowId.split("-")[0],
       analysisRowId: row.analysisRowId,
       fsImpl,
     });
