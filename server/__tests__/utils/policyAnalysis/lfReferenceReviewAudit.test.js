@@ -188,17 +188,17 @@ describe("LF reference review audit contract", () => {
   test.each(["INSURED_OBJECT", "CONDITION"])(
     "rejects support for an unrelated %s component without a semantic anchor",
     (factRole) => {
-    const { auditCase, candidateId } = fixture();
-    const unrelated =
-      "Fahnenstangen und Werkzeuge für die Pflege der Grünanlagen sind mitversichert.";
-    auditCase.semanticRequirement.components[0].factRole = factRole;
-    auditCase.candidates[0].text = unrelated;
-    const result = validResult(candidateId);
-    result.componentAssessments[0].exactQuotes[0].quote = unrelated;
+      const { auditCase, candidateId } = fixture();
+      const unrelated =
+        "Fahnenstangen und Werkzeuge für die Pflege der Grünanlagen sind mitversichert.";
+      auditCase.semanticRequirement.components[0].factRole = factRole;
+      auditCase.candidates[0].text = unrelated;
+      const result = validResult(candidateId);
+      result.componentAssessments[0].exactQuotes[0].quote = unrelated;
 
-    expect(() => validateAuditResult(auditCase, result)).toThrow(
-      "LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID"
-    );
+      expect(() => validateAuditResult(auditCase, result)).toThrow(
+        "LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID"
+      );
     }
   );
 
