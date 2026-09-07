@@ -420,7 +420,7 @@ Regeln:
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
-10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast, gehören ausschließlich in reviewedCandidateIds. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-ID braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
+10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante IDs und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-ID braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
 11. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
 12. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
 13. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
@@ -623,6 +623,8 @@ function validateAuditResult(auditCase, result) {
       assessment.reviewedCandidateIds,
       "REVIEWED_CANDIDATES"
     );
+    if (reviewedCandidateIds.length > 5)
+      throw new Error("LF_REFERENCE_AUDIT_REVIEWED_CANDIDATE_LIMIT_INVALID");
     const evidenceCandidateIds = new Set([
       ...supportingCandidateIds,
       ...contradictingCandidateIds,

@@ -209,6 +209,22 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("limits explicitly reviewed candidates to five relevant sources", () => {
+    const { auditCase, candidateId } = fixture();
+    const reviewedCandidates = Array.from({ length: 6 }, (_value, index) => ({
+      ...auditCase.candidates[0],
+      id: `candidate:${String(index + 1).repeat(64)}`,
+    }));
+    auditCase.candidates.push(...reviewedCandidates);
+    const result = validResult(candidateId);
+    result.componentAssessments[1].reviewedCandidateIds = reviewedCandidates.map(
+      ({ id }) => id
+    );
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      "LF_REFERENCE_AUDIT_REVIEWED_CANDIDATE_LIMIT_INVALID"
+    );
+  });
+
   test.each([
     ["unknown candidate", (result) => {
       result.componentAssessments[0].supportingCandidateIds = ["unknown"];
