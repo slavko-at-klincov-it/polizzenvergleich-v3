@@ -533,6 +533,57 @@ describe("LF reference review audit contract", () => {
     }
   );
 
+  test("reuses a bound row-local object quote for its comparable limit component", () => {
+    const { auditCase, candidateId } = fixture();
+    const component = auditCase.semanticRequirement.components[1];
+    component.sourceSpanIds = ["shared-limit-span"];
+    component.valueBinding = {
+      type: "PERCENT",
+      formula: "basis * 0.05",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "agreed_sum",
+        sourceSpanId: "shared-limit-span",
+        rawValue: "5%",
+      },
+    ];
+    const quote =
+      "Die Photovoltaikanlage ist auf Erstes RisikoEUR 75.000 mitversichert.";
+    auditCase.candidates[0].text = quote;
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes = [{ candidateId, quote }];
+
+    const validated = validateAuditResult(auditCase, result);
+    expect(validated).toMatchObject({
+      rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
+      serverNormalizations: [
+        {
+          componentId: "agreed_sum",
+          originalFinding: "NO_MATCH_IN_CANDIDATES",
+          normalizedFinding: "DIRECT_SUPPORT",
+          reasons: ["ROW_LOCAL_COMPARABLE_LIMIT_REBOUND"],
+        },
+      ],
+      componentAssessments: [
+        expect.any(Object),
+        expect.objectContaining({
+          componentId: "agreed_sum",
+          finding: "DIRECT_SUPPORT",
+          supportingCandidateIds: [candidateId],
+          exactQuotes: [{ candidateId, quote }],
+          observedBValues: [
+            {
+              candidateId,
+              value: "EUR 75.000",
+              relationToA: "DIFFERENT",
+            },
+          ],
+        }),
+      ],
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [

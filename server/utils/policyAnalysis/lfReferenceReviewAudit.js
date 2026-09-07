@@ -122,6 +122,7 @@ const SUPPORT_ANCHOR_NORMALIZATION_REASONS = Object.freeze([
   "SEMANTIC_ANCHOR_MISSING",
   "COMPARABLE_LIMIT_VALUE_MISSING",
   "UNBOUND_QUOTE_DROPPED",
+  "ROW_LOCAL_COMPARABLE_LIMIT_REBOUND",
 ]);
 
 function canonicalValue(value) {
@@ -250,9 +251,120 @@ function hasConcreteComparableLimitValue(value) {
   if (new RegExp(`\\b(?:${percentageWords})\\s+prozent\\b`, "u").test(source))
     return true;
   return (
-    /(?:\beur\b|€)\s*\d/u.test(source) ||
+    /(?:eur|€)\s*\d/u.test(source) ||
     /\b\d[\d.\s]*(?:,\d+)?\s*(?:\beur\b|\beuro\b|€)/u.test(source)
   );
+}
+
+function extractConcreteComparableValues(value) {
+  const source = String(value ?? "");
+  const matches = [
+    ...source.matchAll(/\b\d+(?:[.,]\d+)?\s*%/gu),
+    ...source.matchAll(
+      new RegExp(
+        `\\b(?:${Object.values(GERMAN_PERCENTAGE_WORDS).join("|")})\\s+prozent\\b`,
+        "giu"
+      )
+    ),
+    ...source.matchAll(/(?:EUR|€)\s*\d[\d.\s]*(?:,\d+)?(?:\.-)?/giu),
+    ...source.matchAll(/\b\d[\d.\s]*(?:,\d+)?\s*(?:\bEUR\b|\bEuro\b|€)/giu),
+  ].map(([match]) => match.replace(/\s+/gu, " ").trim());
+  return [...new Set(matches.filter(Boolean))];
+}
+
+function applyRowLocalComparableLimitPolicy(auditCase, result) {
+  const normalizedResult = structuredClone(result);
+  const normalizations = [...(normalizedResult.serverNormalizations ?? [])];
+  for (const assessment of normalizedResult.componentAssessments ?? []) {
+    const component = auditCase.semanticRequirement.components.find(
+      ({ id }) => id === assessment.componentId
+    );
+    if (
+      !component ||
+      normalizations.some(
+        (normalization) =>
+          normalization.componentId === assessment.componentId &&
+          normalization.reasons?.includes("UNBOUND_QUOTE_DROPPED")
+      ) ||
+      requiredPercentageAnchors(auditCase.semanticRequirement, component)
+        .length === 0 ||
+      ![
+        "RELATED_ONLY",
+        "MENTION_ONLY",
+        "NO_MATCH_IN_CANDIDATES",
+        "UNCLEAR",
+      ].includes(assessment.finding)
+    )
+      continue;
+    const donors = (normalizedResult.componentAssessments ?? []).flatMap(
+      (candidateAssessment) => {
+        if (
+          candidateAssessment.componentId === assessment.componentId ||
+          !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
+            candidateAssessment.finding
+          )
+        )
+          return [];
+        const supportingIds = new Set(
+          candidateAssessment.supportingCandidateIds ?? []
+        );
+        return (candidateAssessment.exactQuotes ?? [])
+          .filter(
+            ({ candidateId, quote }) =>
+              supportingIds.has(candidateId) &&
+              hasConcreteComparableLimitValue(quote)
+          )
+          .map((quote) => ({
+            quote,
+            donorFinding: candidateAssessment.finding,
+            donorScopeRelation: candidateAssessment.scopeRelation,
+            values: extractConcreteComparableValues(quote.quote),
+          }))
+          .filter(({ values }) => values.length > 0);
+      }
+    );
+    if (donors.length === 0) continue;
+    const originalFinding = assessment.finding;
+    const supportingCandidateIds = [
+      ...new Set(donors.map(({ quote }) => quote.candidateId)),
+    ];
+    assessment.finding = donors.some(
+      ({ donorFinding, donorScopeRelation }) =>
+        donorFinding === "NARROWER_SUPPORT" || donorScopeRelation === "NARROWER"
+    )
+      ? "NARROWER_SUPPORT"
+      : "DIRECT_SUPPORT";
+    assessment.supportingCandidateIds = supportingCandidateIds;
+    assessment.contradictingCandidateIds = [];
+    assessment.reviewedCandidateIds = (assessment.reviewedCandidateIds ?? [])
+      .filter((candidateId) => !supportingCandidateIds.includes(candidateId))
+      .slice(0, 5);
+    assessment.exactQuotes = donors.map(({ quote }) => quote);
+    assessment.coverageEffect = "DEFINED";
+    assessment.scopeRelation =
+      assessment.finding === "NARROWER_SUPPORT"
+        ? "NARROWER"
+        : "SAME_OR_BROADER";
+    assessment.observedBValues = donors.flatMap(({ quote, values }) =>
+      values.map((value) => ({
+        candidateId: quote.candidateId,
+        value,
+        relationToA: "DIFFERENT",
+      }))
+    );
+    assessment.note = `Server-Rebind (ROW_LOCAL_COMPARABLE_LIMIT_REBOUND): Eine bereits quellengebundene Fundstelle derselben LF-Zeile belegt den Gegenstand und enthält den konkreten Vergleichswert ${assessment.observedBValues
+      .map(({ value }) => value)
+      .join(", ")}.`;
+    normalizations.push({
+      componentId: assessment.componentId,
+      originalFinding,
+      normalizedFinding: assessment.finding,
+      reasons: ["ROW_LOCAL_COMPARABLE_LIMIT_REBOUND"],
+    });
+  }
+  if (normalizations.length > 0)
+    normalizedResult.serverNormalizations = normalizations;
+  return normalizedResult;
 }
 
 function supportAnchorViolations(requirement, component, assessment, quotes) {
@@ -1226,6 +1338,7 @@ function validateAuditResult(auditCase, result) {
   )
     throw new Error("LF_REFERENCE_AUDIT_RESULT_ENUM_OR_REASON_INVALID");
 
+  result = applyRowLocalComparableLimitPolicy(auditCase, result);
   result = applySupportAnchorPolicy(auditCase, result);
   if (Object.hasOwn(result, "serverNormalizations")) {
     const normalizations = exactArray(
@@ -1264,7 +1377,8 @@ function validateAuditResult(auditCase, result) {
           (assessment) =>
             assessment.componentId === normalization.componentId &&
             assessment.finding === normalization.normalizedFinding &&
-            assessment.note.startsWith("Server-Fail-Closed (")
+            (assessment.note.startsWith("Server-Fail-Closed (") ||
+              assessment.note.startsWith("Server-Rebind ("))
         ) ||
         (hasUnboundQuoteDrop &&
           normalization.normalizedFinding !== "UNCLEAR") ||
@@ -1273,6 +1387,16 @@ function validateAuditResult(auditCase, result) {
             normalization.originalFinding
           ) ||
             !["RELATED_ONLY", "NO_MATCH_IN_CANDIDATES"].includes(
+              normalization.normalizedFinding
+            ))) ||
+        (normalization.reasons.includes("ROW_LOCAL_COMPARABLE_LIMIT_REBOUND") &&
+          (![
+            "RELATED_ONLY",
+            "MENTION_ONLY",
+            "NO_MATCH_IN_CANDIDATES",
+            "UNCLEAR",
+          ].includes(normalization.originalFinding) ||
+            !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
               normalization.normalizedFinding
             )))
       )
