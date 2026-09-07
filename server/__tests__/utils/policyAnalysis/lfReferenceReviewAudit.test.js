@@ -167,9 +167,9 @@ describe("LF reference review audit contract", () => {
     const result = validResult(candidateId);
     result.componentAssessments[0].exactQuotes[0].quote = String.raw`Die Photovoltaikanlage ist\nmitversichert.`;
 
-    expect(validateAuditResult(auditCase, result)).toMatchObject({
-      componentAssessments: expect.any(Array),
-    });
+    expect(validateAuditResult(auditCase, result).componentAssessments).toHaveLength(
+      2
+    );
   });
 
   test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
