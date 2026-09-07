@@ -339,9 +339,7 @@ async function writeWorkbook(result, file) {
   sheet.columns = HEADERS.map((header, index) => ({
     header,
     key: `column${index + 1}`,
-    width: [22, 28, 16, 45, 55, 32, 50, 50, 20, 26, 50, 38, 50, 38][
-      index
-    ],
+    width: [22, 28, 16, 45, 55, 32, 50, 50, 20, 26, 50, 38, 50, 38][index],
   }));
   for (const category of result.categories)
     for (const row of category.rows)
@@ -356,11 +354,12 @@ async function writeWorkbook(result, file) {
         bold: number === 1,
         color: number === 1 ? { argb: "FFFFFFFF" } : { argb: "FF1F2937" },
       };
-      if (number === 1) cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF1F4E78" },
-      };
+      if (number === 1)
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF1F4E78" },
+        };
       cell.alignment = { vertical: "top", wrapText: true };
     })
   );
