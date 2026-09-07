@@ -440,13 +440,13 @@ function promptPayload(auditCase) {
     currentPartialResult: {
       documentedContent: String(
         auditCase.originalDecision.packageB?.documentedContent ?? ""
-      ).slice(0, 10000),
+      ).slice(0, 6000),
       coverage: auditCase.originalDecision.packageB?.coverage,
       coverageAmount: auditCase.originalDecision.packageB?.coverageAmount,
       contributorGroups: auditCase.retrieval.currentContributorGroups.map(
         (group) => ({
           ...group,
-          currentSource: String(group.currentSource ?? "").slice(0, 4000),
+          currentSource: String(group.currentSource ?? "").slice(0, 2000),
         })
       ),
       productionEvidence: auditCase.productionEvidence,
