@@ -3612,3 +3612,60 @@ Einzeldokumentpfads.
 **Beweist nicht:** Fachrichtigkeit aller 283 Zeilen, vollstaendige Synonym- und
 Paraphrasenabdeckung, unbekannte LF-Fassungen oder Versicherer, Mehrdokument-
 Ranglogik und das 99-Prozent-Ziel.
+
+## 59. V3.7.1: LF-1-plus-9-Replay, Cache und Kundendeployment
+
+**Pruefung und Deployment:** 7. September 2026
+
+Der exakte Releasecommit
+`db9f047e8dfb593139984a4a6439a3de76b675cd` wurde auf dem Mac Studio unter
+Node 22.23.2 validiert. 187/187 Jest-Suites mit 2.493/2.493 Tests, Server-,
+Frontend- und Collector-Lint, Frontend-Produktionsbuild sowie die macOS-
+Installer-/Updater-Vertragstests bestanden.
+
+Der abschliessende bekannte LF-Replay verwendete ein Dokument A und neun
+Dokumente B mit `qwen/qwen3.6-35b-a3b`, Kontext 42.496 und Parallelitaet 1:
+
+```text
+Session:             8355e13a-d8ba-4ac6-8b8b-5be00445f412
+Run-Signatur:        a2f734c727e6dc9d2ccd7f8f3c8ff881223a691f99ace5c66ed2cb98fb5db576
+Laufzeit:            119,799 Sekunden
+Dokumente:           1 A / 9 B
+B-Kategoriepruefung: 117/117
+Kategorien:          13
+Unterkategorien:     55
+Zeilen:              283/283 eindeutig, Quellreihenfolge 0 bis 282
+Quellbloecke A:      1.005
+B-only-Zeilen:       0
+Cache:               610 Treffer / 0 Modellaufrufe / 0 Schreibfehler
+Outcomes:            26 gefunden / 79 teilweise / 0 kontrolliert nicht gefunden /
+                     1 Referenzzeile unklar / 177 Gegenstueck unklar
+Kundenreview:        257 Zeilen
+```
+
+Die Outcomegruppen sind auf Zeilenebene disjunkt und summieren sich auf 283.
+Die B-Reviewstatus sind ebenfalls disjunkt: 154 ungeklärt, 24
+widersprüchlich, 26 belegt und 79 teilbelegt. Die persistierten Mitglieds-IDs
+stehen im QA-Artefakt `verified-metrics-db9f047e8.json`.
+
+Artefaktset, dynamischer Ergebnisvalidator, Exportvertrag samt archivierter
+Arbeitsmappe, API-Readback und API-Download bestanden. Die Arbeitsmappe hat
+den SHA-256
+`486bffac9b2b689bf6284544e3684bc0ef220ba1efdb73be4f5222d455c9ba62`.
+Source-Block-Ledger und Semantic-Requirement-Manifest sind gegen den
+vorherigen 1+9-Lauf und die 1+1-Baseline bytegleich. Alle 283 A-Zeilen sind
+strukturell gleich; die XLSX-Spalten A:G sind zellgenau gleich.
+
+`origin/main` und der annotierte Tag `v3.7.1` zeigen auf denselben Commit. Der
+offizielle Kunden-Updater erstellte vor der Aktivierung eine SQLite-Sicherung,
+baute die Oberfläche, fand 42 aktuelle Migrationen, startete Server und
+Collector neu und schloss mit `Doctor: PASS` ab. Die Kunden-XLSX wurde nach
+`Downloads/Projekt Lokale KI/Vergleiche` archiviert.
+
+**Beweist:** vollständige technische Wiederholbarkeit dieses bekannten
+1-plus-9-Fixtures, stabile A-Struktur, validierte Exportkette und erfolgreiches
+Kundendeployment.
+
+**Beweist nicht:** eine verkürzte Erstlaufzeit für neue Dokumente, fachliche
+Richtigkeit aller 283 Zeilen, einen unbekannten Versicherer-Holdout oder das
+99-Prozent-Ziel.

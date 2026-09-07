@@ -1036,3 +1036,32 @@ Technisch belegt sind 283/283 LF-Zeilen im 1+1-Lauf, null B-only-Zeilen und ein
 getrennter symmetrischer 224/224-Lauf. Diese Fixture-Evidenz ist keine
 Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein
 99-Prozent-Nachweis.
+
+## ADR-030: Validierte identische LF-Wiederholungen cachen statt Zeilen zu filtern oder Ziele zu batchen
+
+**Status:** AKZEPTIERT UND MIT V3.7.1 AUSGEROLLT
+
+1. Der vollständige LF-Referenzvergleich behält alle 283 A-Zeilen und deren
+   Quellreihenfolge. Trefferstatus oder spätere UI-Filter verändern den
+   Analyseumfang nicht.
+2. Mehrere atomare Modellziele werden nicht in eine gemeinsame Generierung
+   gepackt. Ein realer Drei-Ziel-Versuch sparte nur 9,4 Prozent Laufzeit,
+   veränderte aber Triage, sieben Wirkungsentscheidungen und Quellen.
+3. Parallele Einzelanfragen bleiben deaktiviert. Zwei parallele Ziele
+   reduzierten den realen Abschnitt nur von 233 auf 232 Sekunden.
+4. Bereits validierte Einzelzielantworten dürfen ausschließlich innerhalb
+   derselben Vergleichssitzung inhaltsadressiert wiederverwendet werden.
+   Phase, Provider, Modell, Kontextlimit, Temperatur und exakte Nachrichten
+   sind Teil der Identität; jeder Treffer durchläuft erneut den aktuellen
+   Validator.
+5. Beschädigte oder nach heutigem Vertrag ungültige Einträge werden
+   quarantänisiert. Neue Einträge werden erst nach erfolgreicher Validierung
+   atomar veröffentlicht. Reset und Sitzungsloeschung entfernen den Cache.
+6. Diese Optimierung beschleunigt identische Wiederholungen, nicht den ersten
+   Lauf mit neuen Dokumenten. Ein späterer Schnellvergleich wäre ein eigener,
+   sichtbar als Teilvergleich gekennzeichneter Produktvertrag.
+
+Der finale V3.7.1-Replay erreichte 610 Cachetreffer, null Modellaufrufe und
+119,799 Sekunden bei 283/283 Zeilen. Das ist Wiederholbarkeitsevidenz auf
+bekannten Fixtures, keine Aussage über semantische Qualität unbekannter
+Versicherer.
