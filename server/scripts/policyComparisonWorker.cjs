@@ -52,9 +52,6 @@ const {
   releaseIdentity,
   sha256,
 } = require("../utils/policyAnalysis/runIdentity");
-const {
-  normalizeTargetConcurrency,
-} = require("../utils/policyAnalysis/boundedTargetConcurrency");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
@@ -116,21 +113,15 @@ function completedCategoryViews(outputDirectory) {
   });
 }
 
-function resumableRun({
-  sessionUuid,
-  manifest,
-  comparisonMode,
-  targetConcurrency,
-}) {
+function resumableRun({ sessionUuid, manifest, comparisonMode }) {
   const contract = {
-    schemaVersion: 5,
+    schemaVersion: 4,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
     comparisonMode,
     productProfile: manifest.productProfile,
     configuration: {
       model: MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
-      targetConcurrency,
     },
     documents: manifest.documents.map(
       ({
@@ -362,17 +353,10 @@ async function main() {
 
   const referenceMode =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
-  const targetConcurrency = referenceMode
-    ? normalizeTargetConcurrency(
-        process.env.POLICY_LF_MAX_CONCURRENT_TARGETS,
-        2
-      )
-    : 1;
   const { runRoot, signature: resumeSignature } = resumableRun({
     sessionUuid,
     manifest,
     comparisonMode,
-    targetConcurrency,
   });
   writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
   const plannedRuns = manifest.documents.map((document) => ({
@@ -520,7 +504,6 @@ async function main() {
         contracts,
         model: MODEL,
         modelTokenLimit: MODEL_TOKEN_LIMIT,
-        maxConcurrentTargets: targetConcurrency,
         onCategoryComplete,
       });
     else

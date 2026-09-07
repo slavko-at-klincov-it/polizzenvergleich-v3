@@ -5,10 +5,6 @@ process.umask(0o077);
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const {
-  mapTargetsWithBoundedConcurrency,
-  normalizeTargetConcurrency,
-} = require("../../utils/policyAnalysis/boundedTargetConcurrency");
 const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
 const {
   rebuildTargetedSelectedSources,
@@ -194,7 +190,6 @@ async function run() {
     "modelTokenLimit",
     "documentStatus",
     "maxAttemptsPerTarget",
-    "maxConcurrentTargets",
     "allowUniqueCandidateIdRepair",
     "expectedTargetSelectionDigestSha256",
     "documentArtifact",
@@ -360,21 +355,12 @@ async function run() {
     maxAttemptsPerTarget > 3
   )
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
-  let maxConcurrentTargets;
-  try {
-    maxConcurrentTargets = normalizeTargetConcurrency(
-      args.maxConcurrentTargets
-    );
-  } catch {
-    fail("--maxConcurrentTargets muss 1 oder 2 sein");
-  }
   const startedAt = new Date();
   const calls = [];
   const messages = [];
   const judgements = [];
   let validationError = null;
 
-  const modelTargets = [];
   for (const target of targets.filter(({ candidates }) => candidates.length)) {
     const deterministicJudgement =
       buildDeterministicPreparedEvidenceJudgement(target);
@@ -382,99 +368,77 @@ async function run() {
       judgements.push(deterministicJudgement);
       continue;
     }
-    modelTargets.push(target);
-  }
-
-  const modelOutcomes = await mapTargetsWithBoundedConcurrency(
-    modelTargets,
-    maxConcurrentTargets,
-    async (target) => {
-      const targetCalls = [];
-      const targetMessages = [];
-      const payload = buildSinglePreparedEvidencePayload({ target });
-      let previousError = null;
-      for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
-        const retryPayload = previousError
-          ? {
-              ...payload,
-              retryInstruction:
-                "Die vorige Antwort war formal ungültig. Kopiere ausschließlich Candidate-IDs aus allowedCandidateIds exakt und gib erneut nur das verlangte JSON-Objekt aus.",
-              previousErrorCode: previousError.code,
-              allowedCandidateIds: target.candidates.map(
-                ({ candidateId }) => candidateId
-              ),
-            }
-          : payload;
-        const promptMessages = llm.constructPrompt({
-          systemPrompt,
-          contextTexts: [],
-          chatHistory: [],
-          userPrompt: JSON.stringify(retryPayload),
-        });
-        const completion = await llm.getChatCompletion(promptMessages, {
-          temperature: 0,
-          // A valid response may contain many server-owned candidate IDs for one
-          // atomic component. Keep the cap finite, but large enough for the full
-          // validated ID list instead of truncating otherwise valid JSON.
-          maxTokens: 2048,
-        });
-        if (
-          completion?.metrics?.responseModel !==
-          process.env.LMSTUDIO_MODEL_PREF
-        )
-          fail(
-            `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
-          );
-        targetCalls.push({
-          targetId: target.targetId,
-          attempt,
-          payloadSha256: sha256(JSON.stringify(retryPayload)),
-          responseText: completion?.textResponse || "",
-          metrics: completion?.metrics || null,
-        });
-        targetMessages.push({
-          targetId: target.targetId,
-          attempt,
-          messages: promptMessages,
-        });
-        try {
-          return {
-            calls: targetCalls,
-            messages: targetMessages,
-            judgement: parseAndValidatePreparedEvidenceResponse({
-              responseText: completion?.textResponse || "",
-              target,
-              allowUniqueCandidateIdRepair,
-            }),
-            validationError: null,
-          };
-        } catch (error) {
-          previousError = {
-            code: error.code || "UNKNOWN",
-            message: error.message,
-          };
-        }
+    const payload = buildSinglePreparedEvidencePayload({ target });
+    let targetComplete = false;
+    let previousError = null;
+    for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
+      const retryPayload = previousError
+        ? {
+            ...payload,
+            retryInstruction:
+              "Die vorige Antwort war formal ungültig. Kopiere ausschließlich Candidate-IDs aus allowedCandidateIds exakt und gib erneut nur das verlangte JSON-Objekt aus.",
+            previousErrorCode: previousError.code,
+            allowedCandidateIds: target.candidates.map(
+              ({ candidateId }) => candidateId
+            ),
+          }
+        : payload;
+      const promptMessages = llm.constructPrompt({
+        systemPrompt,
+        contextTexts: [],
+        chatHistory: [],
+        userPrompt: JSON.stringify(retryPayload),
+      });
+      const completion = await llm.getChatCompletion(promptMessages, {
+        temperature: 0,
+        // A valid response may contain many server-owned candidate IDs for one
+        // atomic component. Keep the cap finite, but large enough for the full
+        // validated ID list instead of truncating otherwise valid JSON.
+        maxTokens: 2048,
+      });
+      if (
+        completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
+      )
+        fail(
+          `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
+        );
+      calls.push({
+        targetId: target.targetId,
+        attempt,
+        payloadSha256: sha256(JSON.stringify(retryPayload)),
+        responseText: completion?.textResponse || "",
+        metrics: completion?.metrics || null,
+      });
+      messages.push({
+        targetId: target.targetId,
+        attempt,
+        messages: promptMessages,
+      });
+      try {
+        judgements.push(
+          parseAndValidatePreparedEvidenceResponse({
+            responseText: completion?.textResponse || "",
+            target,
+            allowUniqueCandidateIdRepair,
+          })
+        );
+        targetComplete = true;
+        break;
+      } catch (error) {
+        previousError = {
+          code: error.code || "UNKNOWN",
+          message: error.message,
+        };
       }
-      return {
-        calls: targetCalls,
-        messages: targetMessages,
-        judgement: null,
-        validationError: {
-          ...previousError,
-          targetId: target.targetId,
-          attempts: maxAttemptsPerTarget,
-        },
+    }
+    if (!targetComplete) {
+      validationError = {
+        ...previousError,
+        targetId: target.targetId,
+        attempts: maxAttemptsPerTarget,
       };
-    },
-    { stopWhen: ({ validationError: error }) => Boolean(error) }
-  );
-
-  for (const outcome of modelOutcomes.filter(Boolean)) {
-    calls.push(...outcome.calls);
-    messages.push(...outcome.messages);
-    if (!validationError && outcome.validationError)
-      validationError = outcome.validationError;
-    else if (outcome.judgement) judgements.push(outcome.judgement);
+      break;
+    }
   }
 
   let materialized = null;
@@ -591,7 +555,6 @@ async function run() {
         0
       ),
       maxAttemptsPerTarget,
-      maxConcurrentTargets,
       allowUniqueCandidateIdRepair,
     },
     completion: aggregateCompletionMetrics(

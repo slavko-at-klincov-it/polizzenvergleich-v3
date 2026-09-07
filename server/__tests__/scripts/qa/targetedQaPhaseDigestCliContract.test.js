@@ -40,10 +40,6 @@ describe("targeted QA phase digest CLI boundary", () => {
       );
       expect(script).toContain("releaseId: releaseIdentity(REPOSITORY_ROOT)");
       expect(script).toContain("nodeVersion: process.versions.node");
-      expect(script).toContain('"maxConcurrentTargets"');
-      expect(script).toContain("mapTargetsWithBoundedConcurrency(");
-      expect(script).toContain("maxConcurrentTargets,");
-      expect(script).toContain("CLASSIFY_ONE_");
     }
   );
 });

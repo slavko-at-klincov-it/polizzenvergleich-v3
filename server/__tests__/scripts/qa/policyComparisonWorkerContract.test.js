@@ -107,8 +107,6 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("initialCompletedCategories");
     expect(source).toContain("resumedCategories");
     expect(source).toContain("productProfile: manifest.productProfile");
-    expect(source).toContain("schemaVersion: 5");
-    expect(source).toContain("targetConcurrency,");
     expect(source).toContain("manifest?.schemaVersion !== 3");
     expect(source).toContain("enforceProductProfile: true");
     expect(source).not.toContain("const timestamp = new Date()");
@@ -158,9 +156,6 @@ describe("policy comparison worker contract", () => {
     );
     expect(referenceRunner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(referenceRunner).toContain("runPreparedEvidenceEvaluation.cjs");
-    expect(referenceRunner).toContain('"--maxConcurrentTargets"');
-    expect(referenceRunner).toContain("String(maxConcurrentTargets)");
-    expect(referenceRunner).toContain("maxConcurrentTargets = 1");
     expect(referenceRunner).not.toContain(".embeddings.");
   });
 
