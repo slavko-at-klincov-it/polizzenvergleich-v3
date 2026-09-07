@@ -367,20 +367,11 @@ async function main() {
     comparisonMode,
   });
   const responseCacheDirectory = referenceMode
-    ? path.join(
-        policyComparisonsPath,
-        "runs",
-        sessionUuid,
-        "response-cache-v1"
-      )
+    ? path.join(policyComparisonsPath, "runs", sessionUuid, "response-cache-v1")
     : null;
   const responseCacheSeed = referenceMode
     ? seedResponseCacheFromRunHistory({
-        sessionRunsRoot: path.join(
-          policyComparisonsPath,
-          "runs",
-          sessionUuid
-        ),
+        sessionRunsRoot: path.join(policyComparisonsPath, "runs", sessionUuid),
         cacheDirectory: responseCacheDirectory,
       })
     : null;
