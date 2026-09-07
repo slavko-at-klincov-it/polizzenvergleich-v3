@@ -12,10 +12,9 @@ const items = ["a", "b", "c"].map((itemId) => ({
 
 describe("isolated target batch contract", () => {
   it("bounds batch size and serialized payload size without reordering", () => {
-    expect(buildIsolatedTargetBatches({ items, maxTargetsPerCall: 2 })).toEqual([
-      items.slice(0, 2),
-      items.slice(2),
-    ]);
+    expect(buildIsolatedTargetBatches({ items, maxTargetsPerCall: 2 })).toEqual(
+      [items.slice(0, 2), items.slice(2)]
+    );
     expect(
       buildIsolatedTargetBatches({
         items: [
