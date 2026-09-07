@@ -120,7 +120,7 @@ const GERMAN_PERCENTAGE_WORDS = Object.freeze({
 });
 const SUPPORT_ANCHOR_NORMALIZATION_REASONS = Object.freeze([
   "SEMANTIC_ANCHOR_MISSING",
-  "REQUIRED_PERCENTAGE_MISSING",
+  "COMPARABLE_LIMIT_VALUE_MISSING",
   "UNBOUND_QUOTE_DROPPED",
 ]);
 
@@ -243,6 +243,21 @@ function requiredPercentageAnchors(requirement, component) {
     });
 }
 
+function hasConcreteComparableLimitValue(value) {
+  const source = String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLowerCase();
+  if (/\b\d+(?:[.,]\d+)?\s*%/u.test(source)) return true;
+  const percentageWords = Object.values(GERMAN_PERCENTAGE_WORDS).join("|");
+  if (new RegExp(`\\b(?:${percentageWords})\\s+prozent\\b`, "u").test(source))
+    return true;
+  return (
+    /(?:\beur\b|€)\s*\d/u.test(source) ||
+    /\b\d[\d.\s]*(?:,\d+)?\s*(?:\beur\b|\beuro\b|€)/u.test(source)
+  );
+}
+
 function supportAnchorViolations(requirement, component, assessment, quotes) {
   if (!["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding))
     return [];
@@ -259,9 +274,9 @@ function supportAnchorViolations(requirement, component, assessment, quotes) {
   const percentageAnchors = requiredPercentageAnchors(requirement, component);
   if (
     percentageAnchors.length > 0 &&
-    !percentageAnchors.some((anchor) => quotedText.includes(anchor))
+    !hasConcreteComparableLimitValue(quotes.map(({ quote }) => quote).join(" "))
   )
-    violations.push("REQUIRED_PERCENTAGE_MISSING");
+    violations.push("COMPARABLE_LIMIT_VALUE_MISSING");
   return violations;
 }
 
@@ -631,7 +646,7 @@ Regeln:
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
 5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle und desselben Gegenstands bzw. derselben Gefahr, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Ein benachbartes Objekt derselben Oberkategorie ist dagegen RELATED_ONLY; NARROWER_SUPPORT verlangt dieselbe benannte Sache oder eine ausdrückliche Klasse, die sie umfasst. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.
-7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Leite aus einem ähnlichen wirtschaftlichen Zweck keine Gleichheit der Kostenart ab: Ersatzunterkunft ist beispielsweise kein Beleg für Zwischenlagerung. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe. Verlangt die Komponente einen konkreten Prozentsatz, ist die bloße Formulierung „auf Erstes Risiko“ ohne diesen Prozentsatz kein tragfähiger Prozentlimit-Beleg.
+7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Leite aus einem ähnlichen wirtschaftlichen Zweck keine Gleichheit der Kostenart ab: Ersatzunterkunft ist beispielsweise kein Beleg für Zwischenlagerung. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe. Ein abweichender konkreter Prozent- oder Geldwert für denselben Gegenstand ist dagegen ein echtes Gegenstück und wird über valueComparison als DIFFERENT ausgewiesen. Verlangt die Komponente einen konkreten Prozentsatz, ist die bloße Formulierung „auf Erstes Risiko“ ganz ohne konkreten vergleichbaren Prozent- oder Geldwert kein tragfähiger Limitbeleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
 10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante Referenzen und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-Referenz braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
@@ -1231,7 +1246,7 @@ function validateAuditResult(auditCase, result) {
         "UNBOUND_QUOTE_DROPPED"
       );
       const hasSupportAnchorReason = normalization.reasons.some((reason) =>
-        ["SEMANTIC_ANCHOR_MISSING", "REQUIRED_PERCENTAGE_MISSING"].includes(
+        ["SEMANTIC_ANCHOR_MISSING", "COMPARABLE_LIMIT_VALUE_MISSING"].includes(
           reason
         )
       );

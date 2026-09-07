@@ -332,7 +332,7 @@ describe("LF reference review audit contract", () => {
     }
   );
 
-  test("downgrades first-risk wording that omits a required percentage", () => {
+  test("downgrades first-risk wording that omits every comparable limit value", () => {
     const { auditCase, candidateId } = fixture();
     const component = auditCase.semanticRequirement.components[1];
     component.sourceSpanIds = ["shared-limit-span"];
@@ -349,6 +349,7 @@ describe("LF reference review audit contract", () => {
         normalizedValue: "5%",
       },
     ];
+    auditCase.candidates[0].text += " Die Neuwertsumme gilt auf Erstes Risiko.";
     const result = validResult(candidateId);
     result.componentAssessments[1] = {
       componentId: "agreed_sum",
@@ -359,13 +360,13 @@ describe("LF reference review audit contract", () => {
       exactQuotes: [
         {
           candidateId,
-          quote: "Die Neuwertsumme beträgt EUR 50.000.",
+          quote: "Die Neuwertsumme gilt auf Erstes Risiko.",
         },
       ],
       coverageEffect: "DEFINED",
       scopeRelation: "SAME_OR_BROADER",
       observedBValues: [],
-      note: "Ein allgemeiner Wert ist vorhanden, aber der Prozentsatz fehlt.",
+      note: "Das Limitprinzip ist genannt, aber jeder konkrete Wert fehlt.",
     };
 
     expect(validateAuditResult(auditCase, result)).toMatchObject({
@@ -375,7 +376,7 @@ describe("LF reference review audit contract", () => {
           componentId: "agreed_sum",
           originalFinding: "DIRECT_SUPPORT",
           normalizedFinding: "RELATED_ONLY",
-          reasons: ["REQUIRED_PERCENTAGE_MISSING"],
+          reasons: ["COMPARABLE_LIMIT_VALUE_MISSING"],
         },
       ],
       componentAssessments: [
@@ -435,6 +436,53 @@ describe("LF reference review audit contract", () => {
     });
     expect(validated).not.toHaveProperty("serverNormalizations");
   });
+
+  test.each([
+    "Die Versicherungssumme beträgt zehn Prozent auf Erstes Risiko.",
+    "Die Versicherungssumme beträgt EUR 75.000 auf Erstes Risiko.",
+  ])(
+    "accepts a different concrete limit value as a comparable counterpart: %s",
+    (quote) => {
+      const { auditCase, candidateId } = fixture();
+      const component = auditCase.semanticRequirement.components[1];
+      component.sourceSpanIds = ["shared-limit-span"];
+      component.valueBinding = {
+        type: "PERCENT",
+        formula: "basis * 0.05",
+      };
+      auditCase.semanticRequirement.values = [
+        {
+          componentId: "shared_limit",
+          sourceSpanId: "shared-limit-span",
+          rawValue: "5%",
+        },
+      ];
+      auditCase.candidates[0].text += ` ${quote}`;
+      const result = validResult(candidateId);
+      result.componentAssessments[1] = {
+        componentId: "agreed_sum",
+        finding: "DIRECT_SUPPORT",
+        supportingCandidateIds: [candidateId],
+        contradictingCandidateIds: [],
+        reviewedCandidateIds: [],
+        exactQuotes: [{ candidateId, quote }],
+        coverageEffect: "DEFINED",
+        scopeRelation: "SAME_OR_BROADER",
+        observedBValues: [
+          { candidateId, value: quote, relationToA: "DIFFERENT" },
+        ],
+        note: "Derselbe Limitpunkt ist mit einem abweichenden Wert geregelt.",
+      };
+      result.valueComparison = "DIFFERENT";
+
+      const validated = validateAuditResult(auditCase, result);
+      expect(validated).toMatchObject({
+        rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
+        valueComparison: "DIFFERENT",
+      });
+      expect(validated).not.toHaveProperty("serverNormalizations");
+    }
+  );
 
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
