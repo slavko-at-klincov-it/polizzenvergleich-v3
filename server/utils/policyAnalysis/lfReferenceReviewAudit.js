@@ -417,7 +417,7 @@ Regeln:
 2. Verwende ausschließlich gelieferte kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs. Kopiere Kandidaten-Referenzen exakt. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
 3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
-5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
+5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
@@ -426,7 +426,8 @@ Regeln:
 11. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
 12. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
 13. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
-14. Antworte ausschließlich mit validem JSON ohne Markdown.`;
+14. Zitiere ausschließlich aus sources[].text. Die Angaben zum bisherigen Teiltreffer enthalten keine zitierfähigen Quellentexte.
+15. Antworte ausschließlich mit validem JSON ohne Markdown.`;
 
 function candidateReferenceMaps(auditCase) {
   const idToReference = new Map();
@@ -472,18 +473,14 @@ function promptPayload(auditCase) {
       values: auditCase.semanticRequirement.values,
     },
     currentPartialResult: {
-      documentedContent: String(
-        auditCase.originalDecision.packageB?.documentedContent ?? ""
-      ).slice(0, 6000),
+      outcome: auditCase.originalDecision.outcome,
+      reviewStatus: auditCase.originalDecision.packageBReviewStatus,
+      pointDecision: auditCase.originalDecision.pointDecision,
       coverage: auditCase.originalDecision.packageB?.coverage,
       coverageAmount: auditCase.originalDecision.packageB?.coverageAmount,
       contributorGroups: auditCase.retrieval.currentContributorGroups.map(
-        (group) => ({
-          ...group,
-          currentSource: String(group.currentSource ?? "").slice(0, 2000),
-        })
+        ({ currentSource: _currentSource, ...group }) => group
       ),
-      productionEvidence: auditCase.productionEvidence,
     },
     sources: auditCase.candidates.map((candidate) => ({
       candidateId: candidate.id,

@@ -173,11 +173,13 @@ describe("LF reference review audit contract", () => {
     const digestless = { ...auditCase };
     delete digestless.inputSha256;
     expect(auditCase.inputSha256).toBe(sha256(canonicalJson(digestless)));
-    expect(promptPayload(auditCase).currentPartialResult.productionEvidence).toEqual(
-      auditCase.productionEvidence
+    const prompt = promptPayload(auditCase);
+    expect(prompt.currentPartialResult).not.toHaveProperty("productionEvidence");
+    expect(prompt.currentPartialResult.contributorGroups[0]).not.toHaveProperty(
+      "currentSource"
     );
-    expect(promptPayload(auditCase).sources[0].candidateId).toBe("C01");
-    expect(JSON.stringify(promptPayload(auditCase))).not.toContain(candidateId);
+    expect(prompt.sources[0].candidateId).toBe("C01");
+    expect(JSON.stringify(prompt)).not.toContain(candidateId);
   });
 
   test("expands short model references back to bound candidate hashes", () => {

@@ -4,6 +4,9 @@ const path = require("path");
 const {
   build,
 } = require("../../../scripts/qa/buildLfReferencePartialAuditCases.cjs");
+const {
+  correctionInstruction,
+} = require("../../../scripts/qa/runLfReferencePartialAudit.cjs");
 
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -282,5 +285,16 @@ describe("LF partial counterpart audit case builder", () => {
         expectedCount: 1,
       })
     ).toThrow("LF_REFERENCE_AUDIT_DOCUMENT_HASH_MISMATCH:document-b");
+  });
+
+  test("gives contract-specific retry guidance without weakening evidence", () => {
+    expect(
+      correctionInstruction(
+        new Error("LF_REFERENCE_AUDIT_OBSERVED_VALUE_INVALID")
+      )
+    ).toContain("SAME, DIFFERENT, ADDITIONAL oder UNCLEAR");
+    expect(
+      correctionInstruction(new Error("LF_REFERENCE_AUDIT_QUOTE_INVALID"))
+    ).toContain("wörtlich aus sources[].text");
   });
 });

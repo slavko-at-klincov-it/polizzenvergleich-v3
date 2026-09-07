@@ -126,6 +126,25 @@ function failureRecord({ auditCase, args, attempts, error }) {
   };
 }
 
+function correctionInstruction(error) {
+  const code = String(error?.message || error);
+  const detailByCode = {
+    LF_REFERENCE_AUDIT_QUOTE_INVALID:
+      "Jedes exactQuotes-Zitat muss mindestens 12 Zeichen lang sein und wörtlich aus sources[].text auf derselben physischen Seite stammen. Zitiere nie aus currentPartialResult.",
+    LF_REFERENCE_AUDIT_CANDIDATE_INVALID:
+      "Verwende nur gelieferte C-Referenzen. Innerhalb einer Komponente darf dieselbe Referenz nicht zugleich supporting, contradicting und reviewed sein.",
+    LF_REFERENCE_AUDIT_COMPONENT_EVIDENCE_INVALID:
+      "DIRECT_SUPPORT/NARROWER_SUPPORT benötigt supportingCandidateIds; CONTRADICTION benötigt contradictingCandidateIds; RELATED_ONLY/MENTION_ONLY benötigt reviewedCandidateIds plus ein Zitat; NO_MATCH_IN_CANDIDATES/UNCLEAR darf keine supporting oder contradicting Referenz haben.",
+    LF_REFERENCE_AUDIT_OBSERVED_VALUE_INVALID:
+      "Jeder observedBValues-Eintrag muss eine supporting oder contradicting Referenz verwenden. relationToA ist exakt SAME, DIFFERENT, ADDITIONAL oder UNCLEAR; engerer Scope gehört nur in scopeRelation=NARROWER.",
+    LF_REFERENCE_AUDIT_RECOMMENDATION_INCOHERENT:
+      "KEEP_PARTIAL verlangt mindestens eine tragfähige und mindestens eine nicht tragfähige Komponente; PROMOTE_TO_FOUND verlangt tragfähige Evidenz für alle Komponenten; MARK_CONTRADICTED verlangt einen Widerspruch.",
+  };
+  return `Die vorige Antwort verletzt den Auditvertrag: ${code}. ${
+    detailByCode[code] ?? "Prüfe alle verlangten Felder und Enumerationen exakt."
+  } Korrigiere nur das JSON. Für jede gelieferte Komponente muss genau ein componentAssessment vorliegen. Verwende ausschließlich vorhandene kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs und kopiere sie exakt. Nenne in reviewedCandidateIds höchstens fünf ausdrücklich relevante Kandidaten, nicht den gesamten Bestand. Setze keinen finalen Zeilenstatus.`;
+}
+
 function summaryFromIndex({ auditRoot, index, model }) {
   const summary = {
     schemaVersion: 1,
@@ -293,9 +312,7 @@ async function runAudit(args, dependencies = {}) {
             { role: "assistant", content: modelText },
             {
               role: "user",
-              content: `Die vorige Antwort verletzt den Auditvertrag: ${
-                error.message
-              }. Korrigiere nur das JSON. Für jede gelieferte Komponente muss genau ein componentAssessment vorliegen. Verwende ausschließlich vorhandene kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs und kopiere sie exakt; jede Referenz in supportingCandidateIds oder contradictingCandidateIds braucht ein exaktes, wörtlich auf derselben physischen Kandidatenseite enthaltenes Zitat. Ordne es möglichst dem Textfenster zu, das das Zitat vollständig enthält. Nenne in reviewedCandidateIds höchstens fünf ausdrücklich relevante Kandidaten, nicht den gesamten Bestand; Zitate dazu sind optional. Nicht tragfähige Kandidaten gehören nur in reviewedCandidateIds. Setze keinen finalen Zeilenstatus.`,
+              content: correctionInstruction(error),
             }
           );
       }
@@ -374,6 +391,7 @@ if (require.main === module)
   });
 
 module.exports = {
+  correctionInstruction,
   parseArguments,
   runAudit,
   summaryFromIndex,
