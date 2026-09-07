@@ -273,31 +273,29 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
       const pages = contributorPages(contributor);
       const quotes = contributorQuotes(contributor);
       const matchingCandidateIds = [];
-      for (const pageNumber of pages) {
-        const pageItems = scored
-          .filter(
-            ({ chunk }) =>
-              chunk.documentUuid === contributor.documentUuid &&
-              chunk.pageNumber === pageNumber
-          )
-          .sort((left, right) => {
-            const leftQuoteHits = quotes.filter((quote) =>
-              left.chunk.normalizedText.includes(quote)
-            ).length;
-            const rightQuoteHits = quotes.filter((quote) =>
-              right.chunk.normalizedText.includes(quote)
-            ).length;
-            return (
-              rightQuoteHits - leftQuoteHits ||
-              right.score - left.score ||
-              left.chunk.id.localeCompare(right.chunk.id)
-            );
-          })
-          .slice(0, 3);
-        for (const item of pageItems) {
-          selected.set(item.chunk.id, item);
-          matchingCandidateIds.push(item.chunk.id);
-        }
+      const currentSourceItems = scored
+        .filter(
+          ({ chunk }) =>
+            chunk.documentUuid === contributor.documentUuid &&
+            pages.includes(chunk.pageNumber)
+        )
+        .sort((left, right) => {
+          const leftQuoteHits = quotes.filter((quote) =>
+            left.chunk.normalizedText.includes(quote)
+          ).length;
+          const rightQuoteHits = quotes.filter((quote) =>
+            right.chunk.normalizedText.includes(quote)
+          ).length;
+          return (
+            rightQuoteHits - leftQuoteHits ||
+            right.score - left.score ||
+            left.chunk.id.localeCompare(right.chunk.id)
+          );
+        })
+        .slice(0, 2);
+      for (const item of currentSourceItems) {
+        selected.set(item.chunk.id, item);
+        matchingCandidateIds.push(item.chunk.id);
       }
       return {
         documentUuid: contributor.documentUuid,
