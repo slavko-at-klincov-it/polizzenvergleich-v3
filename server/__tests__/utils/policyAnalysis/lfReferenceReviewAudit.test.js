@@ -208,12 +208,11 @@ describe("LF reference review audit contract", () => {
         relationToA: "NARROWER",
       },
     ];
-    expect(normalizeModelAuditMetadata(metadata)).toMatchObject({
-      valueComparison: "DIFFERENT",
-      componentAssessments: [
-        { observedBValues: [{ relationToA: "DIFFERENT" }] },
-      ],
-    });
+    const normalized = normalizeModelAuditMetadata(metadata);
+    expect(normalized.valueComparison).toBe("DIFFERENT");
+    expect(
+      normalized.componentAssessments[0].observedBValues[0].relationToA
+    ).toBe("DIFFERENT");
   });
 
   test("derives the partial row disposition from atomic component findings", () => {
