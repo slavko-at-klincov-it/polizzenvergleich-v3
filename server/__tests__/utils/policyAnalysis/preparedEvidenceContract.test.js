@@ -3091,6 +3091,52 @@ describe("preparedEvidenceContract", () => {
     ]);
   });
 
+  test("repairs a uniquely attributable three-character omission in a canonical candidate hash", () => {
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet: WORKSHEET,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+    const canonicalId =
+      "candidate:ac6fc4cdf186aa097e670b43b2e0e45132477caa96ec31e31e3fffa1fe37e1d8";
+    const observedId =
+      "candidate:ac6fc4cdf186aa097e670b43b2e0e45132477caa96ec31e3fffa1fe37e1d8";
+    target.candidates[0].candidateId = canonicalId;
+
+    const judgement = parseAndValidatePreparedEvidenceResponse({
+      target,
+      allowUniqueCandidateIdRepair: true,
+      responseText: response(
+        "winter_garden",
+        [observedId],
+        COVERAGE_EFFECT.INCLUDED
+      ),
+    });
+
+    expect(judgement.selectedCandidateIds).toEqual([canonicalId]);
+    expect(judgement.candidateIdCorrections).toEqual([
+      { observed: observedId, repaired: canonicalId },
+    ]);
+  });
+
+  test("does not widen candidate repair for non-hash opaque IDs", () => {
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet: WORKSHEET,
+      documentStatus: DOCUMENT_STATUS.FRAMEWORK_TERMS,
+    });
+
+    expect(() =>
+      parseAndValidatePreparedEvidenceResponse({
+        target,
+        allowUniqueCandidateIdRepair: true,
+        responseText: response(
+          "winter_garden",
+          ["candidate:wint"],
+          COVERAGE_EFFECT.INCLUDED
+        ),
+      })
+    ).toThrow("PREPARED_SELECTED_ID_UNKNOWN");
+  });
+
   test("normalizes CONDITION to DEFINED only for a selected CONDITION fact", () => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     worksheet.requirements[0].components[0].factRole = "CONDITION";

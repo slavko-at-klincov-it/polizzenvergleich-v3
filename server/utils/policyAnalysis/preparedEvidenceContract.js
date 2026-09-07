@@ -702,6 +702,16 @@ function isBoundedOpaqueIdEdit(left, right, maxDistance = 2) {
   return previous[right.length] > 0 && previous[right.length] <= maxDistance;
 }
 
+function candidateIdRepairDistance(observedId, allowedId) {
+  const observedPayload = String(observedId).replace(/^candidate:/, "");
+  const allowedPayload = String(allowedId).replace(/^candidate:/, "");
+  const isCanonicalHashId = /^[0-9a-f]{64}$/.test(allowedPayload);
+  const isPlausiblyTranscribedHashId = /^[0-9a-f]{60,68}$/.test(
+    observedPayload
+  );
+  return isCanonicalHashId && isPlausiblyTranscribedHashId ? 4 : 2;
+}
+
 function repairSelectedCandidateIds({
   selectedCandidateIds,
   allowedIds,
@@ -713,7 +723,11 @@ function repairSelectedCandidateIds({
     if (!allowUniqueCandidateIdRepair)
       throw preparedError("PREPARED_SELECTED_ID_UNKNOWN", candidateId);
     const matches = [...allowedIds].filter((allowedId) =>
-      isBoundedOpaqueIdEdit(candidateId, allowedId)
+      isBoundedOpaqueIdEdit(
+        candidateId,
+        allowedId,
+        candidateIdRepairDistance(candidateId, allowedId)
+      )
     );
     if (matches.length !== 1)
       throw preparedError("PREPARED_SELECTED_ID_UNKNOWN", candidateId);
