@@ -156,6 +156,12 @@ describe("policy comparison worker contract", () => {
     );
     expect(referenceRunner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(referenceRunner).toContain("runPreparedEvidenceEvaluation.cjs");
+    expect(referenceRunner).toContain('"--maxTargetsPerCall"');
+    expect(referenceRunner).toContain(
+      '"isolated-target-batch-addon.v0.1.md"'
+    );
+    expect(source).toContain("POLICY_LF_MAX_TARGETS_PER_CALL || 3");
+    expect(source).toContain("POLICY_LF_MAX_TARGETS_PER_CALL_INVALID");
     expect(referenceRunner).not.toContain(".embeddings.");
   });
 

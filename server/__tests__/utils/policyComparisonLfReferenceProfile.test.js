@@ -236,6 +236,8 @@ describe("LF reference comparison profile", () => {
     expect(runner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(runner).toContain("runVsCandidateTriage.cjs");
     expect(runner).toContain("runPreparedEvidenceEvaluation.cjs");
+    expect(runner).toContain("--maxTargetsPerCall");
+    expect(runner).toContain("isolated-target-batch-addon.v0.1.md");
   });
 
   test("does not resume a reference category whose materialization requested revision", () => {
