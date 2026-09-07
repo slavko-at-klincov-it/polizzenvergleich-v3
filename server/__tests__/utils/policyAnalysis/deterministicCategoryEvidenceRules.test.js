@@ -75,6 +75,68 @@ describe("deterministicCategoryEvidenceRules", () => {
     ).toBe("NEGATIVE");
   });
 
+  test("keeps a branch name in a foreign exclusion exception reference-only", () => {
+    const text =
+      "Nicht versichert sind Schäden verursacht durch Kernenergie " +
+      "(ausgenommen versicherte Schäden durch Isotope von Brandmeldeanlagen " +
+      "gemäß Feuer-, Leitungswasser- und Sturmversicherung).";
+    const input = bindingInput({ text, exactText: "Sturmversicherung" });
+    input.requirement.sourceReferenceId = "PR-05";
+
+    expect(deterministicCategoryCandidateBinding(input)).toEqual({
+      binding: "MENTION_ONLY",
+      basis: "EXCLUSION_EXCEPTION_COVERAGE_REFERENCE",
+      authoritative: true,
+    });
+  });
+
+  test("does not apply the directed LF exception rule to symmetric catalogs", () => {
+    const text =
+      "Nicht versichert sind Kernenergieschäden (ausgenommen versicherte Schäden " +
+      "gemäß Sturmversicherung).";
+    const input = bindingInput({ text, exactText: "Sturmversicherung" });
+
+    expect(deterministicCategoryCandidateBinding(input)).toMatchObject({
+      binding: "DIRECT",
+      basis: expect.stringContaining("NEGATIVE"),
+    });
+  });
+
+  test("keeps a direct storm exclusion decisive", () => {
+    const text = "Nicht versichert sind Schäden durch Sturmversicherung.";
+    const input = bindingInput({ text, exactText: "Sturmversicherung" });
+    input.requirement.sourceReferenceId = "PR-05";
+
+    expect(deterministicCategoryCandidateBinding(input)).toMatchObject({
+      binding: "DIRECT",
+      basis: expect.stringContaining("NEGATIVE"),
+      authoritative: true,
+    });
+  });
+
+  test("binds repeated coverage names by their exact source offset", () => {
+    const text =
+      "Nicht versichert sind Kernenergieschäden (ausgenommen versicherte Schäden " +
+      "gemäß Sturmversicherung), während die Sturmversicherung ausdrücklich versichert ist.";
+    const first = bindingInput({ text, exactText: "Sturmversicherung" });
+    first.requirement.sourceReferenceId = "PR-05";
+    const second = bindingInput({ text, exactText: "Sturmversicherung" });
+    second.requirement.sourceReferenceId = "PR-05";
+    const secondStart = text.lastIndexOf("Sturmversicherung");
+    second.occurrence.documentStart = 1_000 + secondStart;
+    second.occurrence.documentEnd =
+      second.occurrence.documentStart + "Sturmversicherung".length;
+
+    expect(deterministicCategoryCandidateBinding(first)).toMatchObject({
+      binding: "MENTION_ONLY",
+      basis: "EXCLUSION_EXCEPTION_COVERAGE_REFERENCE",
+    });
+    expect(deterministicCategoryCandidateBinding(second)).toMatchObject({
+      binding: "DIRECT",
+      basis: expect.stringContaining("NEGATIVE"),
+    });
+  });
+
   test.each([
     [
       "Zusätzlich sind im Rahmen des Vertrages mitversichert:\n- Mietverlust;\n- tatsächliche Kosten für Ersatzräumlichkeiten",
@@ -449,9 +511,7 @@ describe("deterministicCategoryEvidenceRules", () => {
   ])(
     "rejects a foreign storm scope for general-only glass component %s",
     (componentId, factRole, exactText, text) => {
-      expect(expectedCategoryScopeKeys("RG")).toEqual([
-        "GLASBRUCH_INSURANCE",
-      ]);
+      expect(expectedCategoryScopeKeys("RG")).toEqual(["GLASBRUCH_INSURANCE"]);
       const input = bindingInput({ text, exactText });
       input.worksheet.catalog.categoryView = "RG";
       input.requirement = {
@@ -744,7 +804,8 @@ describe("deterministicCategoryEvidenceRules", () => {
   });
 
   test("keeps a cross-cutting general clause in the directed storm view model-owned", () => {
-    const text = "Der Vertrag beschreibt Hochwasser im nachfolgenden Abschnitt.";
+    const text =
+      "Der Vertrag beschreibt Hochwasser im nachfolgenden Abschnitt.";
     const input = bindingInput({ text, exactText: "Hochwasser" });
     input.worksheet.catalog.categoryView = "RS";
     input.requirement = {
@@ -1230,8 +1291,7 @@ describe("deterministicCategoryEvidenceRules", () => {
         {
           candidateId: "candidate:annual-aggregate",
           candidateBinding: "DIRECT",
-          deterministicBindingBasis:
-            "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+          deterministicBindingBasis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
         },
       ],
     },
@@ -1241,8 +1301,7 @@ describe("deterministicCategoryEvidenceRules", () => {
         {
           candidateId: "candidate:annual-aggregate",
           candidateBinding: "MENTION_ONLY",
-          deterministicBindingBasis:
-            "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
+          deterministicBindingBasis: "RH_01_EXPLICIT_ANNUAL_AGGREGATE_MULTIPLE",
         },
       ],
     },

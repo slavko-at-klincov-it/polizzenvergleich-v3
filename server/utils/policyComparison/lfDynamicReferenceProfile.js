@@ -2,6 +2,10 @@ const oracle = require("../../resources/policyAnalysis/lf-immo-reference-complet
 const {
   LF_DYNAMIC_REFERENCE_PROFILE_ID,
 } = require("./lfSemanticRequirementManifest");
+const {
+  applySideBDiscovery,
+  discoveryPlanIdentity,
+} = require("./lfDynamicSideBDiscovery");
 
 const LF_DYNAMIC_REFERENCE_PROFILE = Object.freeze({
   id: LF_DYNAMIC_REFERENCE_PROFILE_ID,
@@ -59,6 +63,7 @@ function absenceMeaning(components) {
 }
 
 function categoryCatalogsFromManifest(manifest) {
+  const sideBDiscoveryIdentity = discoveryPlanIdentity(oracle);
   return manifest.categories.map((category, categoryIndex) => {
     const requirements = category.subcategories.flatMap((subcategory) =>
       subcategory.requirementIds.map((requirementId) => {
@@ -77,19 +82,29 @@ function categoryCatalogsFromManifest(manifest) {
       categoryView,
       catalog: {
         schemaVersion: 2,
-        catalogId: `${LF_DYNAMIC_REFERENCE_PROFILE.catalogId}:${categoryView}:${manifest.manifestSha256}`,
+        catalogId: `${LF_DYNAMIC_REFERENCE_PROFILE.catalogId}:${sideBDiscoveryIdentity}:${categoryView}:${manifest.manifestSha256}`,
         categoryView,
         requirements: requirements.map((requirement, index) => {
-          const components = requirement.components.map((component) => ({
-            id: component.id,
-            label: component.label,
-            factRole: component.factRole,
-            contextMode: "CLAUSE_SECTION",
-            aliases: component.aliases,
-            ...(component.requestedFields
-              ? { requestedFields: requestedFields([component]) }
-              : {}),
-          }));
+          const components = requirement.components.map((manifestComponent) => {
+            const component = applySideBDiscovery({
+              oracle,
+              requirementId: requirement.requirementId,
+              component: manifestComponent,
+            });
+            return {
+              id: component.id,
+              label: component.label,
+              factRole: component.factRole,
+              contextMode: "CLAUSE_SECTION",
+              aliases: component.aliases,
+              ...(component.conceptSearches
+                ? { conceptSearches: component.conceptSearches }
+                : {}),
+              ...(component.requestedFields
+                ? { requestedFields: requestedFields([component]) }
+                : {}),
+            };
+          });
           const completeSearch =
             requirement.searchPlanStatus === "CERTIFIED_COMPLETE";
           return {

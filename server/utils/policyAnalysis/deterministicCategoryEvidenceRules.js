@@ -1377,6 +1377,63 @@ function explicitGeneralBranchMaximumBinding({
 }
 
 /**
+ * A coverage name inside an exception may merely identify the policy branch
+ * whose insured losses are carved out of a different exclusion. That
+ * reference neither includes nor excludes the named branch itself.
+ * Side effects: none. Role: decide.
+ */
+function exclusionExceptionCoverageReferenceBinding(
+  requirement,
+  component,
+  occurrence
+) {
+  if (requirement?.sourceReferenceId !== "PR-05") return null;
+  if (!["PERIL", "DAMAGE", "BENEFIT"].includes(component?.factRole))
+    return null;
+  const clause = occurrenceClauseText(occurrence);
+  const exactText = String(occurrence?.exactText || "");
+  const context = String(occurrence?.context?.text || "");
+  const relativeOccurrenceStart =
+    Number(occurrence?.documentStart) -
+    Number(occurrence?.context?.documentStart);
+  let clauseStart = context.indexOf(clause);
+  while (
+    clauseStart >= 0 &&
+    !(
+      relativeOccurrenceStart >= clauseStart &&
+      relativeOccurrenceStart < clauseStart + clause.length
+    )
+  )
+    clauseStart = context.indexOf(clause, clauseStart + 1);
+  const occurrenceIndex = relativeOccurrenceStart - clauseStart;
+  if (
+    clauseStart < 0 ||
+    occurrenceIndex < 0 ||
+    clause
+      .slice(occurrenceIndex, occurrenceIndex + exactText.length)
+      .toLocaleLowerCase("de-AT") !== exactText.toLocaleLowerCase("de-AT")
+  )
+    return null;
+  const lead = clause.slice(0, occurrenceIndex);
+  const reference = lead.match(
+    /(?:ausgenommen|mit\s+Ausnahme)[\s\S]{0,360}?versicherte\w*\s+Schäden[\s\S]{0,260}?(?:gemäß|laut|nach\s+Maßgabe)([\s\S]{0,180})$/iu
+  );
+  if (
+    !reference ||
+    /[.!?;:()[\]]/u.test(reference[1]) ||
+    /\b(?:ist|sind|gilt|gelten|versichert|ausgeschlossen)\b/iu.test(
+      reference[1]
+    )
+  )
+    return null;
+  return {
+    binding: DETERMINISTIC_BINDING.MENTION_ONLY,
+    basis: "EXCLUSION_EXCEPTION_COVERAGE_REFERENCE",
+    authoritative: true,
+  };
+}
+
+/**
  * Resolves only category-independent scope and role cases supported by an
  * explicit clause governor or section heading. VS keeps its already proven
  * specialised rules. Unknown wording deliberately returns null for the LLM.
@@ -1649,6 +1706,14 @@ function deterministicCategoryCandidateBinding({
             : {}),
         }
       : null;
+
+  const exclusionExceptionReference =
+    exclusionExceptionCoverageReferenceBinding(
+      requirement,
+      component,
+      occurrence
+    );
+  if (exclusionExceptionReference) return exclusionExceptionReference;
 
   const operativePolarity = operativeCoveragePolarity(
     occurrence,

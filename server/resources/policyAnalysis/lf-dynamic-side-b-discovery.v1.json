@@ -1,0 +1,99 @@
+{
+  "planId": "LF_DYNAMIC_SIDE_B_DISCOVERY_V1",
+  "semanticOracleId": "LF_IMMO_EXKLUSIVSCHUTZ_COMPLETE_2023_V1",
+  "targets": [
+    {
+      "requirementId": "PR-01",
+      "componentId": "applicability",
+      "conceptSearches": [
+        {
+          "id": "lr-pr01-new-or-converted-contract",
+          "requiredGroups": [
+            { "prefixes": ["neuvert", "neuantrag"] },
+            { "prefixes": ["konvert"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 360
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-03",
+      "componentId": "broker_condition",
+      "conceptSearches": [
+        {
+          "id": "lr-pr03-broker-administration",
+          "requiredGroups": [
+            { "prefixes": ["makler"] },
+            {
+              "prefixes": [
+                "betreu",
+                "schriftverkehr",
+                "korrespondenz",
+                "abwickl"
+              ]
+            }
+          ],
+          "maxLines": 2,
+          "maxChars": 420
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-04",
+      "componentId": "base_product",
+      "conceptSearches": [
+        {
+          "id": "lr-pr04-premium-product-variant",
+          "requiredGroups": [
+            { "prefixes": ["premium"] },
+            { "prefixes": ["produktvariant", "grundprodukt"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 360
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-05",
+      "componentId": "glass",
+      "additionalAliases": ["Glaspauschalversicherung"]
+    },
+    {
+      "requirementId": "PR-05",
+      "componentId": "liability",
+      "conceptSearches": [
+        {
+          "id": "lr-pr05-liability-insurance-line",
+          "requiredGroups": [
+            { "prefixes": ["haftpflichtversicher"] },
+            { "prefixes": ["sparte"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 260
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-06",
+      "componentId": "liability_sum",
+      "additionalAliases": ["Pauschalversicherungssumme"]
+    },
+    {
+      "requirementId": "PR-08",
+      "componentId": "additional_cover",
+      "conceptSearches": [
+        {
+          "id": "lr-pr08-framework-clauses-contract-content",
+          "requiredGroups": [
+            { "prefixes": ["rahmenvereinbar", "sonderklausel"] },
+            { "prefixes": ["vertragsinhalt", "vereinbart"] },
+            { "prefixes": ["allgemein", "grundvertrag"] }
+          ],
+          "maxLines": 3,
+          "maxChars": 620
+        }
+      ]
+    }
+  ]
+}
