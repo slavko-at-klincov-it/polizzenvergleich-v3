@@ -132,8 +132,18 @@ describe("validated model response cache", () => {
   });
 
   it("seeds only matching successful single-target calls", () => {
-    const phaseRoot = path.join(root, "resume-old", "B-01", "LR01", "triage");
+    const runRoot = path.join(root, "resume-old");
+    const phaseRoot = path.join(runRoot, "B-01", "LR01", "triage");
     fs.mkdirSync(phaseRoot, { recursive: true });
+    const resultRoot = path.join(runRoot, "result");
+    fs.mkdirSync(resultRoot, { recursive: true });
+    for (const name of [
+      "artifact-set-manifest.private.json",
+      "comparison.private.json",
+      "export.private.json",
+      "polizzenvergleich.xlsx",
+    ])
+      fs.writeFileSync(path.join(resultRoot, name), "fixture");
     fs.writeFileSync(
       path.join(phaseRoot, "answers.private.json"),
       JSON.stringify([
@@ -152,6 +162,7 @@ describe("validated model response cache", () => {
     fs.writeFileSync(
       path.join(phaseRoot, "report.json"),
       JSON.stringify({
+        status: "TECHNICAL_PASS_REVIEW_REQUIRED",
         model: {
           provider: "LMStudioLLM",
           id: model,
@@ -166,6 +177,7 @@ describe("validated model response cache", () => {
       cacheDirectory,
     });
     expect(stats).toMatchObject({
+      completedRunRoots: 1,
       answerFiles: 1,
       candidateResponses: 1,
       published: 1,

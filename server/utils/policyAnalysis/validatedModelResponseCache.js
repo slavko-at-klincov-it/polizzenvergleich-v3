@@ -244,13 +244,35 @@ function safeJson(file) {
 function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
   privateDirectory(cacheDirectory);
   const stats = {
+    completedRunRoots: 0,
     scannedFiles: 0,
     answerFiles: 0,
     candidateResponses: 0,
     published: 0,
   };
   if (!fs.existsSync(sessionRunsRoot)) return stats;
-  stats.scannedFiles = walkRegularFiles(sessionRunsRoot, (file) => {
+  const completedRunRoots = fs
+    .readdirSync(sessionRunsRoot, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        entry.name.startsWith("resume-") &&
+        [
+          "artifact-set-manifest.private.json",
+          "comparison.private.json",
+          "export.private.json",
+          "polizzenvergleich.xlsx",
+        ].every((name) =>
+          fs.existsSync(path.join(sessionRunsRoot, entry.name, "result", name))
+        )
+    )
+    .map((entry) => path.join(sessionRunsRoot, entry.name))
+    .sort(
+      (left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs
+    );
+  stats.completedRunRoots = completedRunRoots.length;
+
+  const visitAnswerFile = (file) => {
     if (path.basename(file) !== "answers.private.json") return;
     const phase = file.includes(`${path.sep}triage${path.sep}`)
       ? "TRIAGE"
@@ -269,6 +291,7 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
       !Array.isArray(answers) ||
       !Array.isArray(messageCalls) ||
       answers.length !== messageCalls.length ||
+      !["PASS", "TECHNICAL_PASS_REVIEW_REQUIRED"].includes(report?.status) ||
       report?.model?.provider !== CACHE_PROVIDER ||
       report.model.temperature !== 0 ||
       typeof report.model.id !== "string" ||
@@ -306,7 +329,9 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
       });
       if (!existed && fs.existsSync(destination)) stats.published += 1;
     });
-  });
+  };
+  for (const runRoot of completedRunRoots)
+    stats.scannedFiles += walkRegularFiles(runRoot, visitAnswerFile);
   return stats;
 }
 
