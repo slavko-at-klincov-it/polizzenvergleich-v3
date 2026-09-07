@@ -80,6 +80,7 @@ const SUPPORT_ANCHOR_FACT_ROLES = new Set([
   "PERIL",
   "COST",
   "BENEFIT",
+  "CONDITION",
   "EXCLUSION",
   "DEFINITION",
 ]);
