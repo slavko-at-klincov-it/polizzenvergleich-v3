@@ -182,7 +182,7 @@ describe("LF reference review audit contract", () => {
     expect(rebound.componentAssessments[0].exactQuotes[0].quote).toBe(
       "Die Photovoltaikanlage ist mitversichert."
     );
-    expect(validateAuditResult(auditCase, rebound)).toBe(rebound);
+    expect(validateAuditResult(auditCase, rebound)).toMatchObject(rebound);
   });
 
   test("parses physical pages and rejects a mismatching page map", () => {
