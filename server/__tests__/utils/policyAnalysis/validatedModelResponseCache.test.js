@@ -76,7 +76,10 @@ describe("validated model response cache", () => {
     expect(hit).toMatchObject({ cacheKey, responseText });
     expect(hit.validated.answer).toBe("YES");
     expect(validateResponse).toHaveBeenCalledWith(responseText);
-    expect(fs.statSync(path.join(cacheDirectory, `${cacheKey}.private.json`)).mode & 0o777).toBe(0o600);
+    expect(
+      fs.statSync(path.join(cacheDirectory, `${cacheKey}.private.json`)).mode &
+        0o777
+    ).toBe(0o600);
   });
 
   it("fails closed on corruption and current-parser rejection", () => {
