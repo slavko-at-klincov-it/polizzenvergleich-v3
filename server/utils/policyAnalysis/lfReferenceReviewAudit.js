@@ -465,12 +465,20 @@ function normalizeModelAuditMetadata(result) {
     return result;
   const normalized = structuredClone(result);
   const observedRelations = [];
-  for (const assessment of normalized.componentAssessments ?? [])
+  for (const assessment of normalized.componentAssessments ?? []) {
+    if (
+      assessment.finding === "DIRECT_SUPPORT" &&
+      assessment.scopeRelation === "NARROWER"
+    )
+      assessment.finding = "NARROWER_SUPPORT";
+    if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding))
+      assessment.coverageEffect = "UNKNOWN";
     for (const observedValue of assessment.observedBValues ?? []) {
       if (["NARROWER", "BROADER"].includes(observedValue.relationToA))
         observedValue.relationToA = "DIFFERENT";
       observedRelations.push(observedValue.relationToA);
     }
+  }
   if (!CURRENT_SOURCE_ASSESSMENTS.includes(normalized.currentSourceAssessment))
     normalized.currentSourceAssessment = "UNCLEAR";
   if (!ROOT_CAUSES.includes(normalized.rootCause))
@@ -590,11 +598,13 @@ function deriveRowDisposition(componentAssessments) {
   const findings = new Set(componentAssessments.map(({ finding }) => finding));
   if (findings.has("CONTRADICTION")) return "CONTRADICTION_REVIEW_REQUIRED";
   if (findings.has("UNCLEAR")) return "AUDIT_UNCLEAR";
+  if (
+    componentAssessments.every(({ finding }) => finding === "DIRECT_SUPPORT")
+  )
+    return "COMPLETE_COUNTERPART_CANDIDATE";
   const supported = componentAssessments.filter(({ finding }) =>
     ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(finding)
   ).length;
-  if (supported === componentAssessments.length)
-    return "COMPLETE_COUNTERPART_CANDIDATE";
   if (supported > 0) return "PARTIAL_REMAINS_WITH_EVIDENCE";
   if (findings.has("RELATED_ONLY") || findings.has("MENTION_ONLY"))
     return "PRESENT_BUT_NO_DECISION_READY_COMPONENT";

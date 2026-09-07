@@ -208,11 +208,17 @@ describe("LF reference review audit contract", () => {
         relationToA: "NARROWER",
       },
     ];
+    metadata.componentAssessments[0].scopeRelation = "NARROWER";
+    metadata.componentAssessments[1].coverageEffect = "EXCLUDED";
     const normalized = normalizeModelAuditMetadata(metadata);
     expect(normalized.valueComparison).toBe("DIFFERENT");
+    expect(normalized.componentAssessments[0].finding).toBe(
+      "NARROWER_SUPPORT"
+    );
     expect(
       normalized.componentAssessments[0].observedBValues[0].relationToA
     ).toBe("DIFFERENT");
+    expect(normalized.componentAssessments[1].coverageEffect).toBe("UNKNOWN");
   });
 
   test("derives the partial row disposition from atomic component findings", () => {
@@ -221,6 +227,39 @@ describe("LF reference review audit contract", () => {
     result.componentAssessments[1].reviewedCandidateIds = [candidateId];
     expect(validateAuditResult(auditCase, result)).toMatchObject({
       rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
+  });
+
+  test("does not promote a row when every component is only narrowly supported", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0].finding = "NARROWER_SUPPORT";
+    result.componentAssessments[0].scopeRelation = "NARROWER";
+    result.componentAssessments[1] = {
+      ...result.componentAssessments[1],
+      finding: "NARROWER_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      exactQuotes: [
+        {
+          candidateId,
+          quote: "Die Neuwertsumme beträgt EUR 50.000.",
+        },
+      ],
+      coverageEffect: "LIMITED",
+      scopeRelation: "NARROWER",
+    };
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+      recommendedAction: "KEEP_PARTIAL",
+    });
+
+    result.componentAssessments.forEach((assessment) => {
+      assessment.finding = "DIRECT_SUPPORT";
+      assessment.scopeRelation = "SAME_OR_BROADER";
+    });
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
+      recommendedAction: "PROMOTE_TO_FOUND_AFTER_RULE_FIX",
     });
   });
 
