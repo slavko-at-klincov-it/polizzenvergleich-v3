@@ -249,6 +249,8 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
     answerFiles: 0,
     candidateResponses: 0,
     successfulTargets: 0,
+    cacheAssistedAnswerFilesSkipped: 0,
+    repairedAttemptEntries: 0,
     published: 0,
   };
   if (!fs.existsSync(sessionRunsRoot)) return stats;
@@ -287,6 +289,9 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
     const messageCalls = safeJson(
       path.join(directory, "messages.private.json")
     );
+    const cacheHits = safeJson(
+      path.join(directory, "cache-hits.private.json")
+    );
     const report = safeJson(path.join(directory, "report.json"));
     if (
       !Array.isArray(answers) ||
@@ -299,6 +304,10 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
       !Number.isInteger(report.model.declaredTokenLimit)
     )
       return;
+    if (Array.isArray(cacheHits) && cacheHits.length > 0) {
+      stats.cacheAssistedAnswerFilesSkipped += 1;
+      return;
+    }
     const pairedAttempts = [];
     answers.forEach((answer, index) => {
       const messageCall = messageCalls[index];
@@ -331,7 +340,21 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
         messages: messageCall.messages,
       });
       const destination = cacheEntryFile(cacheDirectory, identity.cacheKey);
-      const existed = fs.existsSync(destination);
+      let existed = fs.existsSync(destination);
+      if (existed) {
+        const existing = safeJson(destination);
+        const rawAttemptSha256 = sha256(answer.responseText);
+        const acceptedSha256 = sha256(accepted.responseText);
+        const invalidEntry = !validEntry(existing, identity);
+        const supersededAttempt =
+          rawAttemptSha256 !== acceptedSha256 &&
+          existing?.responseSha256 === rawAttemptSha256;
+        if (invalidEntry || supersededAttempt) {
+          quarantineCacheEntry(cacheDirectory, destination);
+          existed = fs.existsSync(destination);
+          if (!existed) stats.repairedAttemptEntries += 1;
+        }
+      }
       publishCachedResponse({
         cacheDirectory,
         phase,

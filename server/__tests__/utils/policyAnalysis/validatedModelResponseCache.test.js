@@ -213,6 +213,15 @@ describe("validated model response cache", () => {
       { role: "user", content: "repair the invalid response" },
     ];
     const acceptedResponse = '{"schemaVersion":1,"answer":"NO"}';
+    publishCachedResponse({
+      cacheDirectory,
+      phase: "PREPARED_EVIDENCE",
+      model,
+      modelTokenLimit,
+      messages,
+      responseText: '{"schemaVersion":1,"answer":',
+      responseModel: model,
+    });
     fs.writeFileSync(
       path.join(phaseRoot, "answers.private.json"),
       JSON.stringify([
@@ -259,6 +268,7 @@ describe("validated model response cache", () => {
       answerFiles: 1,
       candidateResponses: 2,
       successfulTargets: 1,
+      repairedAttemptEntries: 1,
       published: 2,
     });
     for (const promptMessages of [messages, retryMessages]) {
@@ -273,5 +283,66 @@ describe("validated model response cache", () => {
         })?.validated.answer
       ).toBe("NO");
     }
+  });
+
+  it("does not infer an accepted response from live attempts in a cache-assisted report", () => {
+    const runRoot = path.join(root, "resume-cache-assisted");
+    const phaseRoot = path.join(runRoot, "B-01", "LR04", "effects");
+    fs.mkdirSync(phaseRoot, { recursive: true });
+    const resultRoot = path.join(runRoot, "result");
+    fs.mkdirSync(resultRoot, { recursive: true });
+    for (const name of [
+      "artifact-set-manifest.private.json",
+      "comparison.private.json",
+      "export.private.json",
+      "polizzenvergleich.xlsx",
+    ])
+      fs.writeFileSync(path.join(resultRoot, name), "fixture");
+    fs.writeFileSync(
+      path.join(phaseRoot, "answers.private.json"),
+      JSON.stringify([
+        {
+          targetId: "target:mixed",
+          attempt: 1,
+          responseText,
+          metrics: { responseModel: model },
+        },
+      ])
+    );
+    fs.writeFileSync(
+      path.join(phaseRoot, "messages.private.json"),
+      JSON.stringify([{ targetId: "target:mixed", attempt: 1, messages }])
+    );
+    fs.writeFileSync(
+      path.join(phaseRoot, "cache-hits.private.json"),
+      JSON.stringify([
+        { targetId: "target:mixed", attempt: 2, cacheKey: "a".repeat(64) },
+      ])
+    );
+    fs.writeFileSync(
+      path.join(phaseRoot, "report.json"),
+      JSON.stringify({
+        status: "PASS",
+        model: {
+          provider: "LMStudioLLM",
+          id: model,
+          declaredTokenLimit: modelTokenLimit,
+          temperature: 0,
+        },
+      })
+    );
+
+    const stats = seedResponseCacheFromRunHistory({
+      sessionRunsRoot: root,
+      cacheDirectory,
+    });
+    expect(stats).toMatchObject({
+      completedRunRoots: 1,
+      answerFiles: 1,
+      candidateResponses: 0,
+      successfulTargets: 0,
+      cacheAssistedAnswerFilesSkipped: 1,
+      published: 0,
+    });
   });
 });
