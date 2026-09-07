@@ -149,7 +149,6 @@ async function analyzeReferenceDocument({
   contracts,
   model,
   modelTokenLimit,
-  maxTargetsPerCall = 1,
   onCategoryComplete = () => {},
 }) {
   const documentArtifact = await extractReferenceDocument({
@@ -206,13 +205,6 @@ async function analyzeReferenceDocument({
           String(modelTokenLimit),
           "--maxAttemptsPerTarget",
           "2",
-          "--maxTargetsPerCall",
-          String(maxTargetsPerCall),
-          "--batchSystemPromptAddonFile",
-          path.join(
-            RESOURCE_ROOT,
-            "isolated-target-batch-addon.v0.1.md"
-          ),
         ],
         logFile
       );
@@ -241,13 +233,6 @@ async function analyzeReferenceDocument({
           String(modelTokenLimit),
           "--maxAttemptsPerTarget",
           "2",
-          "--maxTargetsPerCall",
-          String(maxTargetsPerCall),
-          "--batchSystemPromptAddonFile",
-          path.join(
-            RESOURCE_ROOT,
-            "isolated-target-batch-addon.v0.1.md"
-          ),
           "--allowUniqueCandidateIdRepair",
           "true",
         ],

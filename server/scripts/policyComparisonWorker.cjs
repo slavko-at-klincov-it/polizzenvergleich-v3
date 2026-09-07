@@ -59,9 +59,6 @@ const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.6-35b-a3b";
 const MODEL_TOKEN_LIMIT = Number(
   process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
 );
-const LF_MAX_TARGETS_PER_CALL = Number(
-  process.env.POLICY_LF_MAX_TARGETS_PER_CALL || 3
-);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 let activeLease = null;
@@ -118,17 +115,13 @@ function completedCategoryViews(outputDirectory) {
 
 function resumableRun({ sessionUuid, manifest, comparisonMode }) {
   const contract = {
-    schemaVersion: 5,
+    schemaVersion: 4,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
     comparisonMode,
     productProfile: manifest.productProfile,
     configuration: {
       model: MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
-      lfMaxTargetsPerCall:
-        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
-          ? LF_MAX_TARGETS_PER_CALL
-          : 1,
     },
     documents: manifest.documents.map(
       ({
@@ -360,13 +353,6 @@ async function main() {
 
   const referenceMode =
     comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
-  if (
-    referenceMode &&
-    (!Number.isInteger(LF_MAX_TARGETS_PER_CALL) ||
-      LF_MAX_TARGETS_PER_CALL < 1 ||
-      LF_MAX_TARGETS_PER_CALL > 4)
-  )
-    throw new Error("POLICY_LF_MAX_TARGETS_PER_CALL_INVALID");
   const { runRoot, signature: resumeSignature } = resumableRun({
     sessionUuid,
     manifest,
@@ -518,7 +504,6 @@ async function main() {
         contracts,
         model: MODEL,
         modelTokenLimit: MODEL_TOKEN_LIMIT,
-        maxTargetsPerCall: LF_MAX_TARGETS_PER_CALL,
         onCategoryComplete,
       });
     else

@@ -190,8 +190,6 @@ async function run() {
     "modelTokenLimit",
     "documentStatus",
     "maxAttemptsPerTarget",
-    "maxTargetsPerCall",
-    "batchSystemPromptAddonFile",
     "allowUniqueCandidateIdRepair",
     "expectedTargetSelectionDigestSha256",
     "documentArtifact",
@@ -209,16 +207,10 @@ async function run() {
   const documentArtifactFile = args.documentArtifact
     ? path.resolve(args.documentArtifact)
     : null;
-  const batchSystemPromptAddonFile = args.batchSystemPromptAddonFile
-    ? path.resolve(args.batchSystemPromptAddonFile)
-    : null;
   const outputDirectory = path.resolve(args.output || "");
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ["Systemprompt", systemPromptFile],
-    ...(batchSystemPromptAddonFile
-      ? [["Batch-Systemprompt-Zusatz", batchSystemPromptAddonFile]]
-      : []),
   ]) {
     if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
   }
@@ -263,12 +255,6 @@ async function run() {
     materializePreparedEvidence,
     parseAndValidatePreparedEvidenceResponse,
   } = require("../../utils/policyAnalysis/preparedEvidenceContract");
-  const {
-    buildIsolatedTargetBatchPayload,
-    buildIsolatedTargetBatches,
-    normalizedBatchSize,
-    parseAndValidateIsolatedTargetBatch,
-  } = require("../../utils/policyAnalysis/isolatedTargetBatchContract");
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
   const {
     buildTechnicalReviewControlSet,
@@ -334,9 +320,6 @@ async function run() {
       "--expectedTargetSelectionDigestSha256 ist nur für Target-Worksheets zulässig"
     );
   const systemPrompt = fs.readFileSync(systemPromptFile, "utf8");
-  const batchSystemPromptAddon = batchSystemPromptAddonFile
-    ? fs.readFileSync(batchSystemPromptAddonFile, "utf8")
-    : null;
   const controlSet =
     controlMode === "technical-review"
       ? buildTechnicalReviewControlSet({
@@ -372,17 +355,11 @@ async function run() {
     maxAttemptsPerTarget > 3
   )
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
-  const maxTargetsPerCall = normalizedBatchSize(args.maxTargetsPerCall || 1);
-  if (maxTargetsPerCall > 1 && !batchSystemPromptAddon)
-    fail(
-      "--maxTargetsPerCall groesser 1 erfordert --batchSystemPromptAddonFile"
-    );
   const startedAt = new Date();
   const calls = [];
   const messages = [];
   const judgements = [];
   let validationError = null;
-  const modelItemsByRole = new Map();
 
   for (const target of targets.filter(({ candidates }) => candidates.length)) {
     const deterministicJudgement =
@@ -391,17 +368,7 @@ async function run() {
       judgements.push(deterministicJudgement);
       continue;
     }
-    const factRole = String(target.factRole || "UNKNOWN");
-    if (!modelItemsByRole.has(factRole)) modelItemsByRole.set(factRole, []);
-    modelItemsByRole.get(factRole).push({
-      itemId: target.targetId,
-      payload: buildSinglePreparedEvidencePayload({ target }),
-      target,
-    });
-  }
-
-  async function runSingleTarget(item, fallbackFromBatchId = null) {
-    const { target, payload } = item;
+    const payload = buildSinglePreparedEvidencePayload({ target });
     let targetComplete = false;
     let previousError = null;
     for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
@@ -437,9 +404,6 @@ async function run() {
         );
       calls.push({
         targetId: target.targetId,
-        targetIds: [target.targetId],
-        executionMode: fallbackFromBatchId ? "SINGLE_FALLBACK" : "SINGLE",
-        fallbackFromBatchId,
         attempt,
         payloadSha256: sha256(JSON.stringify(retryPayload)),
         responseText: completion?.textResponse || "",
@@ -447,9 +411,6 @@ async function run() {
       });
       messages.push({
         targetId: target.targetId,
-        targetIds: [target.targetId],
-        executionMode: fallbackFromBatchId ? "SINGLE_FALLBACK" : "SINGLE",
-        fallbackFromBatchId,
         attempt,
         messages: promptMessages,
       });
@@ -462,7 +423,7 @@ async function run() {
           })
         );
         targetComplete = true;
-        return null;
+        break;
       } catch (error) {
         previousError = {
           code: error.code || "UNKNOWN",
@@ -471,101 +432,13 @@ async function run() {
       }
     }
     if (!targetComplete) {
-      return {
+      validationError = {
         ...previousError,
         targetId: target.targetId,
         attempts: maxAttemptsPerTarget,
       };
+      break;
     }
-    return null;
-  }
-
-  const modelBatches = [...modelItemsByRole.values()].flatMap((items) =>
-    buildIsolatedTargetBatches({
-      items,
-      maxTargetsPerCall,
-    })
-  );
-  let batchSequence = 0;
-  for (const batch of modelBatches) {
-    if (batch.length === 1) {
-      validationError = await runSingleTarget(batch[0]);
-      if (validationError) break;
-      continue;
-    }
-    batchSequence += 1;
-    const batchId = `prepared-evidence-batch:${batchSequence}`;
-    const batchPayload = buildIsolatedTargetBatchPayload({
-      task: "CLASSIFY_ISOLATED_ATOMIC_EVIDENCE_COMPONENT_BATCH",
-      items: batch.map(({ itemId, payload: itemPayload }) => ({
-        itemId,
-        payload: itemPayload,
-      })),
-      exampleResponse: {
-        schemaVersion: 1,
-        componentId: batch[0].target.componentId,
-        selectedCandidateIds: [],
-        coverageEffect: "UNKNOWN",
-        conflictState: "NONE",
-      },
-    });
-    const promptMessages = llm.constructPrompt({
-      systemPrompt: `${systemPrompt.trimEnd()}\n\n${batchSystemPromptAddon.trim()}\n`,
-      contextTexts: [],
-      chatHistory: [],
-      userPrompt: JSON.stringify(batchPayload),
-    });
-    const completion = await llm.getChatCompletion(promptMessages, {
-      temperature: 0,
-      maxTokens: Math.min(4096, 2048 * batch.length),
-    });
-    if (
-      completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
-    )
-      fail(
-        `Falsches LM-Studio-Chatmodell bei ${batchId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
-      );
-    const targetIds = batch.map(({ itemId }) => itemId);
-    calls.push({
-      batchId,
-      targetIds,
-      executionMode: "ISOLATED_BATCH",
-      attempt: 1,
-      payloadSha256: sha256(JSON.stringify(batchPayload)),
-      responseText: completion?.textResponse || "",
-      metrics: completion?.metrics || null,
-    });
-    messages.push({
-      batchId,
-      targetIds,
-      executionMode: "ISOLATED_BATCH",
-      attempt: 1,
-      messages: promptMessages,
-    });
-    try {
-      judgements.push(
-        ...parseAndValidateIsolatedTargetBatch({
-          responseText: completion?.textResponse || "",
-          items: batch,
-          parseItemResponse: ({ item, responseText }) =>
-            parseAndValidatePreparedEvidenceResponse({
-              responseText,
-              target: item.target,
-              allowUniqueCandidateIdRepair,
-            }),
-        })
-      );
-    } catch (batchError) {
-      calls[calls.length - 1].validationError = {
-        code: batchError.code || "UNKNOWN",
-        message: batchError.message,
-      };
-      for (const item of batch) {
-        validationError = await runSingleTarget(item, batchId);
-        if (validationError) break;
-      }
-    }
-    if (validationError) break;
   }
 
   let materialized = null;
@@ -643,10 +516,6 @@ async function run() {
       documentFingerprint: documentArtifact?.fingerprint || null,
       systemPromptPath: systemPromptFile,
       systemPromptSha256: sha256File(systemPromptFile),
-      batchSystemPromptAddonPath: batchSystemPromptAddonFile,
-      batchSystemPromptAddonSha256: batchSystemPromptAddonFile
-        ? sha256File(batchSystemPromptAddonFile)
-        : null,
       controlPath: controlFile,
       controlSha256: controlFile
         ? sha256File(controlFile)
@@ -679,24 +548,8 @@ async function run() {
       deterministicTargetCount: judgements.filter(({ decisionOwner }) =>
         String(decisionOwner).startsWith("SERVER_EXPLICIT_")
       ).length,
-      modelTargetCount: new Set(
-        calls.flatMap(({ targetId, targetIds = [] }) =>
-          targetId ? [targetId] : targetIds
-        )
-      ).size,
+      modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
       modelAttemptCount: calls.length,
-      modelLogicalTargetAttemptCount: calls.reduce(
-        (sum, call) => sum + (call.targetIds?.length || 1),
-        0
-      ),
-      maxTargetsPerCall,
-      batchCallCount: calls.filter(
-        ({ executionMode }) => executionMode === "ISOLATED_BATCH"
-      ).length,
-      batchFallbackCount: calls.filter(
-        ({ executionMode, validationError: callError }) =>
-          executionMode === "ISOLATED_BATCH" && callError
-      ).length,
       candidateCount: targets.reduce(
         (sum, target) => sum + target.candidates.length,
         0

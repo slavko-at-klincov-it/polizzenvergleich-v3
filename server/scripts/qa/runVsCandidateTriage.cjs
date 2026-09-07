@@ -90,8 +90,6 @@ async function run() {
     "model",
     "modelTokenLimit",
     "maxAttemptsPerTarget",
-    "maxTargetsPerCall",
-    "batchSystemPromptAddonFile",
     "expectedTargetSelectionDigestSha256",
   ]);
   const unknownArguments = Object.keys(args).filter(
@@ -107,9 +105,6 @@ async function run() {
   const hybridSystemPromptFile = args.hybridSystemPromptFile
     ? path.resolve(args.hybridSystemPromptFile)
     : null;
-  const batchSystemPromptAddonFile = args.batchSystemPromptAddonFile
-    ? path.resolve(args.batchSystemPromptAddonFile)
-    : null;
   const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
   const controlMode = args.controlMode || "file";
   const outputDirectory = path.resolve(args.output || "");
@@ -121,9 +116,6 @@ async function run() {
     ["Systemprompt", systemPromptFile],
     ...(hybridSystemPromptFile
       ? [["Hybrid-Systemprompt", hybridSystemPromptFile]]
-      : []),
-    ...(batchSystemPromptAddonFile
-      ? [["Batch-Systemprompt-Zusatz", batchSystemPromptAddonFile]]
       : []),
   ]) {
     if (!file || !fs.existsSync(file)) fail(`${label} fehlt: ${file}`);
@@ -156,12 +148,6 @@ async function run() {
     parseAndValidateCandidateTriage,
     parseAndValidateSingleBindingTarget,
   } = require("../../utils/policyAnalysis/candidateTriageContract");
-  const {
-    buildIsolatedTargetBatchPayload,
-    buildIsolatedTargetBatches,
-    normalizedBatchSize,
-    parseAndValidateIsolatedTargetBatch,
-  } = require("../../utils/policyAnalysis/isolatedTargetBatchContract");
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
@@ -209,9 +195,6 @@ async function run() {
   const hybridSystemPrompt = hybridSystemPromptAddon
     ? `${systemPrompt.trimEnd()}\n\n${hybridSystemPromptAddon.trim()}\n`
     : null;
-  const batchSystemPromptAddon = batchSystemPromptAddonFile
-    ? fs.readFileSync(batchSystemPromptAddonFile, "utf8")
-    : null;
   let controlSet = controlFile
     ? JSON.parse(fs.readFileSync(controlFile, "utf8"))
     : null;
@@ -251,17 +234,11 @@ async function run() {
     maxAttemptsPerTarget > 3
   )
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
-  const maxTargetsPerCall = normalizedBatchSize(args.maxTargetsPerCall || 1);
-  if (maxTargetsPerCall > 1 && !batchSystemPromptAddon)
-    fail(
-      "--maxTargetsPerCall groesser 1 erfordert --batchSystemPromptAddonFile"
-    );
   const startedAt = new Date();
   const calls = [];
   const messageCalls = [];
   const targetJudgements = [];
   let validationError = null;
-  const modelItemsByPrompt = new Map();
 
   for (const target of payload.bindingTargets) {
     if (target.modelDecisionFields.length === 0) {
@@ -280,29 +257,6 @@ async function run() {
       payload,
       targetId: target.targetId,
     });
-    const targetSystemPrompt = target.hybridSemanticContract
-      ? hybridSystemPrompt
-      : systemPrompt;
-    const promptKey = [
-      sha256(targetSystemPrompt),
-      [...target.modelDecisionFields].sort().join("+"),
-      target.roleResolution.owner,
-      target.scopeResolution.owner,
-    ].join(":");
-    if (!modelItemsByPrompt.has(promptKey))
-      modelItemsByPrompt.set(promptKey, {
-        systemPrompt: targetSystemPrompt,
-        items: [],
-      });
-    modelItemsByPrompt.get(promptKey).items.push({
-      itemId: target.targetId,
-      payload: singlePayload,
-      target,
-    });
-  }
-
-  async function runSingleTarget(item, fallbackFromBatchId = null) {
-    const { target, payload: singlePayload } = item;
     let targetComplete = false;
     let previousError = null;
     for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
@@ -334,22 +288,12 @@ async function run() {
         );
       calls.push({
         targetId: target.targetId,
-        targetIds: [target.targetId],
-        executionMode: fallbackFromBatchId ? "SINGLE_FALLBACK" : "SINGLE",
-        fallbackFromBatchId,
         attempt,
         payloadSha256: sha256(JSON.stringify(retryPayload)),
         responseText: completion?.textResponse || "",
         metrics: completion?.metrics || null,
       });
-      messageCalls.push({
-        targetId: target.targetId,
-        targetIds: [target.targetId],
-        executionMode: fallbackFromBatchId ? "SINGLE_FALLBACK" : "SINGLE",
-        fallbackFromBatchId,
-        attempt,
-        messages,
-      });
+      messageCalls.push({ targetId: target.targetId, attempt, messages });
       try {
         if (!completion?.textResponse) {
           const emptyError = new Error(
@@ -365,7 +309,7 @@ async function run() {
           })
         );
         targetComplete = true;
-        return null;
+        break;
       } catch (error) {
         previousError = {
           code: error.code || "UNKNOWN",
@@ -374,102 +318,13 @@ async function run() {
       }
     }
     if (!targetComplete) {
-      return {
+      validationError = {
         ...previousError,
         targetId: target.targetId,
         attempts: maxAttemptsPerTarget,
       };
+      break;
     }
-    return null;
-  }
-
-  let batchSequence = 0;
-  for (const {
-    systemPrompt: targetSystemPrompt,
-    items,
-  } of modelItemsByPrompt.values()) {
-    const batches = buildIsolatedTargetBatches({
-      items,
-      maxTargetsPerCall,
-    });
-    for (const batch of batches) {
-      if (batch.length === 1) {
-        validationError = await runSingleTarget(batch[0]);
-        if (validationError) break;
-        continue;
-      }
-      batchSequence += 1;
-      const batchId = `triage-batch:${batchSequence}`;
-      const batchPayload = buildIsolatedTargetBatchPayload({
-        task: "CLASSIFY_ISOLATED_BINDING_TARGET_BATCH",
-        items: batch.map(({ itemId, payload: itemPayload }) => ({
-          itemId,
-          payload: itemPayload,
-        })),
-        exampleResponse: {
-          schemaVersion: payload.schemaVersion,
-          roleMatch: "MATCH",
-          scopeMatch: "GENERAL",
-        },
-      });
-      const messages = llm.constructPrompt({
-        systemPrompt: `${targetSystemPrompt.trimEnd()}\n\n${batchSystemPromptAddon.trim()}\n`,
-        contextTexts: [],
-        chatHistory: [],
-        userPrompt: JSON.stringify(batchPayload),
-      });
-      const completion = await llm.getChatCompletion(messages, {
-        temperature: 0,
-        maxTokens: 128 * batch.length + 128,
-      });
-      if (
-        completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
-      )
-        fail(
-          `Falsches LM-Studio-Chatmodell bei ${batchId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
-        );
-      const targetIds = batch.map(({ itemId }) => itemId);
-      calls.push({
-        batchId,
-        targetIds,
-        executionMode: "ISOLATED_BATCH",
-        attempt: 1,
-        payloadSha256: sha256(JSON.stringify(batchPayload)),
-        responseText: completion?.textResponse || "",
-        metrics: completion?.metrics || null,
-      });
-      messageCalls.push({
-        batchId,
-        targetIds,
-        executionMode: "ISOLATED_BATCH",
-        attempt: 1,
-        messages,
-      });
-      try {
-        targetJudgements.push(
-          ...parseAndValidateIsolatedTargetBatch({
-            responseText: completion?.textResponse || "",
-            items: batch,
-            parseItemResponse: ({ item, responseText }) =>
-              parseAndValidateSingleBindingTarget({
-                responseText,
-                target: item.target,
-              }),
-          })
-        );
-      } catch (batchError) {
-        calls[calls.length - 1].validationError = {
-          code: batchError.code || "UNKNOWN",
-          message: batchError.message,
-        };
-        for (const item of batch) {
-          validationError = await runSingleTarget(item, batchId);
-          if (validationError) break;
-        }
-      }
-      if (validationError) break;
-    }
-    if (validationError) break;
   }
   const finishedAt = new Date();
   const combinedJudgements = targetJudgements.map(({ targetId, binding }) => ({
@@ -568,10 +423,6 @@ async function run() {
       hybridSystemPromptSha256: hybridSystemPromptFile
         ? sha256File(hybridSystemPromptFile)
         : null,
-      batchSystemPromptAddonPath: batchSystemPromptAddonFile,
-      batchSystemPromptAddonSha256: batchSystemPromptAddonFile
-        ? sha256File(batchSystemPromptAddonFile)
-        : null,
       controlPath: controlFile,
       controlSha256: controlFile
         ? sha256File(controlFile)
@@ -595,25 +446,9 @@ async function run() {
       serverTerminalTargetCount: payload.bindingTargets.filter(
         (target) => target.modelDecisionFields.length === 0
       ).length,
-      modelTargetCount: new Set(
-        calls.flatMap(({ targetId, targetIds = [] }) =>
-          targetId ? [targetId] : targetIds
-        )
-      ).size,
+      modelTargetCount: new Set(calls.map(({ targetId }) => targetId)).size,
       hybridTargetCount,
       modelAttemptCount: calls.length,
-      modelLogicalTargetAttemptCount: calls.reduce(
-        (sum, call) => sum + (call.targetIds?.length || 1),
-        0
-      ),
-      maxTargetsPerCall,
-      batchCallCount: calls.filter(
-        ({ executionMode }) => executionMode === "ISOLATED_BATCH"
-      ).length,
-      batchFallbackCount: calls.filter(
-        ({ executionMode, validationError: callError }) =>
-          executionMode === "ISOLATED_BATCH" && callError
-      ).length,
       candidateCount: payload.bindingTargets.reduce(
         (sum, target) => sum + target.candidateIds.length,
         0
