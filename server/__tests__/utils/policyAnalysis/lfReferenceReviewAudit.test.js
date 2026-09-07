@@ -230,8 +230,7 @@ describe("LF reference review audit contract", () => {
         },
         {
           candidateId,
-          quote:
-            "Die Versicherungssumme für Außenanlagen beträgt EUR 77.000.",
+          quote: "Die Versicherungssumme für Außenanlagen beträgt EUR 77.000.",
         },
       ],
       coverageEffect: "UNKNOWN",
