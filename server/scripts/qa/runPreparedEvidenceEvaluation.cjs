@@ -418,7 +418,10 @@ async function run() {
           // validated ID list instead of truncating otherwise valid JSON.
           maxTokens: 2048,
         });
-        if (completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF)
+        if (
+          completion?.metrics?.responseModel !==
+          process.env.LMSTUDIO_MODEL_PREF
+        )
           fail(
             `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
           );
