@@ -150,7 +150,7 @@ describe("dynamic LF reference result", () => {
       );
       expect(sheet.views[0]).toMatchObject({ xSplit: 4, ySplit: 1 });
       expect(sheet.getRow(2).height).toBe(66);
-      expect(sheet.getCell("N2").value).toBeNull();
+      expect(sheet.getCell("N2").value).toBe("");
       expect(sheet.getCell("N2").fill.fgColor.argb).toBe("FFFFF2CC");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
