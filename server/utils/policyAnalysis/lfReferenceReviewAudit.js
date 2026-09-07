@@ -111,6 +111,11 @@ function normalizeQuote(value) {
   return String(value ?? "")
     .normalize("NFKC")
     .replace(/\u00ad/gu, "")
+    // Structured-output models sometimes serialize a copied line break twice,
+    // leaving the literal characters "\\n" in the parsed JSON string. Treat
+    // only escaped whitespace markers like physical-page whitespace; all other
+    // characters must still match the source text.
+    .replace(/\\(?:r\\n|n|r|t)/gu, " ")
     .replace(/([\p{L}\p{N}])-\s+(?=[\p{L}\p{N}])/gu, "$1")
     .replace(/\s+/gu, " ")
     .trim()

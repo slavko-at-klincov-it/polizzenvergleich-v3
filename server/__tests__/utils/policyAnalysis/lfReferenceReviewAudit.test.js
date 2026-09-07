@@ -154,6 +154,17 @@ function validResult(candidateId) {
 }
 
 describe("LF reference review audit contract", () => {
+  test("accepts model-serialized escaped whitespace in an otherwise exact quote", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      String.raw`Die Photovoltaikanlage ist\nmitversichert.`;
+
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      componentAssessments: expect.any(Array),
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [
