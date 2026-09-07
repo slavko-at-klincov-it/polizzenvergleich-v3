@@ -185,6 +185,29 @@ describe("LF reference review audit contract", () => {
     ).toHaveLength(2);
   });
 
+  test("binds non-supporting comparison quotes as reviewed candidates", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0] = {
+      ...result.componentAssessments[0],
+      finding: "NO_MATCH_IN_CANDIDATES",
+      supportingCandidateIds: [],
+      reviewedCandidateIds: [],
+      coverageEffect: "UNKNOWN",
+      scopeRelation: "DIFFERENT",
+      observedBValues: [],
+      note: "Die zitierte Passage betrifft nur einen fachlich anderen Gegenstand.",
+    };
+
+    const normalized = normalizeModelAuditMetadata(result);
+    expect(normalized.componentAssessments[0].reviewedCandidateIds).toEqual([
+      candidateId,
+    ]);
+    expect(validateAuditResult(auditCase, normalized)).toMatchObject({
+      rowDisposition: "NO_ADDITIONAL_MATCH_IN_CANDIDATES",
+    });
+  });
+
   test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
