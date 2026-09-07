@@ -385,7 +385,7 @@ function build(args, { fsImpl = fs } = {}) {
 
   const targetIdentity = cases.map((auditCase) => {
     const promptCharacterCount = canonicalJson(promptPayload(auditCase)).length;
-    if (promptCharacterCount > 110000)
+    if (promptCharacterCount > 115000)
       throw new Error(
         `LF_REFERENCE_AUDIT_PROMPT_BUDGET_EXCEEDED:${auditCase.caseId}:${promptCharacterCount}`
       );
