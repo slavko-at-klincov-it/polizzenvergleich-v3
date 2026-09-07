@@ -213,7 +213,7 @@ describe("LF reference review audit contract", () => {
     const secondCandidate = {
       ...auditCase.candidates[0],
       id: `candidate:${"d".repeat(64)}`,
-      text: "Die Neuwertsumme beträgt EUR 50.000.",
+      text: "Die Versicherungssumme für Außenanlagen beträgt EUR 77.000.",
       textSha256: "e".repeat(64),
     };
     auditCase.candidates.push(secondCandidate);
@@ -230,7 +230,8 @@ describe("LF reference review audit contract", () => {
         },
         {
           candidateId,
-          quote: "Die Neuwertsumme beträgt EUR 50.000.",
+          quote:
+            "Die Versicherungssumme für Außenanlagen beträgt EUR 77.000.",
         },
       ],
       coverageEffect: "UNKNOWN",
