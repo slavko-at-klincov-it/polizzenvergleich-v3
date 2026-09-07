@@ -301,7 +301,8 @@ async function runAudit(args, dependencies = {}) {
             expandModelCandidateReferences(
               auditCase,
               normalizeModelAuditMetadata(parsed.value)
-            )
+            ),
+            { failClosedUnboundQuotes: attempt === args.maxAttempts }
           )
         );
         attempts.push({

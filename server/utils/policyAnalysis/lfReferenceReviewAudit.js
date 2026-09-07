@@ -797,7 +797,11 @@ function expandModelCandidateReferences(auditCase, result) {
   );
 }
 
-function rebindModelEvidenceCandidates(auditCase, result) {
+function rebindModelEvidenceCandidates(
+  auditCase,
+  result,
+  { failClosedUnboundQuotes = false } = {}
+) {
   if (!result || typeof result !== "object" || Array.isArray(result))
     return result;
   const rebound = structuredClone(result);
@@ -860,7 +864,7 @@ function rebindModelEvidenceCandidates(auditCase, result) {
             ])
           ),
         ];
-    if (unboundQuotes.size > 0) {
+    if (unboundQuotes.size > 0 && failClosedUnboundQuotes) {
       const originalFinding = assessment.finding;
       assessment.exactQuotes = (assessment.exactQuotes ?? []).filter(
         (quote) => !unboundQuotes.has(quote)
@@ -875,7 +879,7 @@ function rebindModelEvidenceCandidates(auditCase, result) {
       assessment.exactQuotes = assessment.exactQuotes.filter(
         ({ candidateId }) => validQuoteCandidateIds.includes(candidateId)
       );
-      assessment.finding = "NO_MATCH_IN_CANDIDATES";
+      assessment.finding = "UNCLEAR";
       assessment.reviewedCandidateIds = validQuoteCandidateIds;
       assessment.supportingCandidateIds = [];
       assessment.contradictingCandidateIds = [];
@@ -1263,7 +1267,7 @@ function validateAuditResult(auditCase, result) {
             assessment.note.startsWith("Server-Fail-Closed (")
         ) ||
         (hasUnboundQuoteDrop &&
-          normalization.normalizedFinding !== "NO_MATCH_IN_CANDIDATES") ||
+          normalization.normalizedFinding !== "UNCLEAR") ||
         (hasSupportAnchorReason &&
           (!["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
             normalization.originalFinding

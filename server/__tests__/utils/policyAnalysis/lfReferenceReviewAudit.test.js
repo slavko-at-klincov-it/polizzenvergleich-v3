@@ -252,16 +252,30 @@ describe("LF reference review audit contract", () => {
     });
   });
 
-  test("drops an unbound model quote and fails the component closed", () => {
+  test("keeps an unbound quote invalid before the final fail-closed attempt", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
     result.componentAssessments[0].exactQuotes[0].quote =
       "Dieser angebliche Beleg steht in keinem Dokument von Paket B.";
 
     const rebound = rebindModelEvidenceCandidates(auditCase, result);
+    expect(() => validateAuditResult(auditCase, rebound)).toThrow(
+      "LF_REFERENCE_AUDIT_QUOTE_INVALID"
+    );
+  });
+
+  test("marks a repeatedly unbound model quote unclear on the final attempt", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Dieser angebliche Beleg steht in keinem Dokument von Paket B.";
+
+    const rebound = rebindModelEvidenceCandidates(auditCase, result, {
+      failClosedUnboundQuotes: true,
+    });
     expect(rebound.componentAssessments[0]).toMatchObject({
       componentId: "technical_objects",
-      finding: "NO_MATCH_IN_CANDIDATES",
+      finding: "UNCLEAR",
       supportingCandidateIds: [],
       contradictingCandidateIds: [],
       reviewedCandidateIds: [],
@@ -271,12 +285,12 @@ describe("LF reference review audit contract", () => {
       observedBValues: [],
     });
     expect(validateAuditResult(auditCase, rebound)).toMatchObject({
-      rowDisposition: "NO_ADDITIONAL_MATCH_IN_CANDIDATES",
+      rowDisposition: "AUDIT_UNCLEAR",
       serverNormalizations: [
         {
           componentId: "technical_objects",
           originalFinding: "DIRECT_SUPPORT",
-          normalizedFinding: "NO_MATCH_IN_CANDIDATES",
+          normalizedFinding: "UNCLEAR",
           reasons: ["UNBOUND_QUOTE_DROPPED"],
         },
       ],
