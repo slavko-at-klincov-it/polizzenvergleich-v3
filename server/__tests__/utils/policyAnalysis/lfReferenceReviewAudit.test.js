@@ -584,6 +584,57 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("does not let an orphan limit create a partial counterpart", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0] = {
+      ...result.componentAssessments[0],
+      finding: "NO_MATCH_IN_CANDIDATES",
+      supportingCandidateIds: [],
+      exactQuotes: [],
+      coverageEffect: "UNKNOWN",
+      scopeRelation: "NOT_APPLICABLE",
+      note: "Der verlangte technische Gegenstand ist nicht belegt.",
+    };
+    result.componentAssessments[1] = {
+      ...result.componentAssessments[1],
+      finding: "DIRECT_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      exactQuotes: [
+        { candidateId, quote: "Die Neuwertsumme beträgt EUR 50.000." },
+      ],
+      coverageEffect: "DEFINED",
+      scopeRelation: "SAME_OR_BROADER",
+      observedBValues: [
+        { candidateId, value: "EUR 50.000", relationToA: "DIFFERENT" },
+      ],
+      note: "Ein allgemeines Limit ist definiert.",
+    };
+
+    const validated = validateAuditResult(auditCase, result);
+    expect(validated).toMatchObject({
+      rowDisposition: "PRESENT_BUT_NO_DECISION_READY_COMPONENT",
+      serverNormalizations: [
+        {
+          componentId: "agreed_sum",
+          originalFinding: "DIRECT_SUPPORT",
+          normalizedFinding: "RELATED_ONLY",
+          reasons: ["ORPHAN_LIMIT_WITHOUT_SUBJECT"],
+        },
+      ],
+      componentAssessments: [
+        expect.any(Object),
+        expect.objectContaining({
+          componentId: "agreed_sum",
+          finding: "RELATED_ONLY",
+          supportingCandidateIds: [],
+          reviewedCandidateIds: [candidateId],
+          observedBValues: [],
+        }),
+      ],
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [

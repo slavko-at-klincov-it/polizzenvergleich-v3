@@ -123,6 +123,7 @@ const SUPPORT_ANCHOR_NORMALIZATION_REASONS = Object.freeze([
   "COMPARABLE_LIMIT_VALUE_MISSING",
   "UNBOUND_QUOTE_DROPPED",
   "ROW_LOCAL_COMPARABLE_LIMIT_REBOUND",
+  "ORPHAN_LIMIT_WITHOUT_SUBJECT",
 ]);
 
 function canonicalValue(value) {
@@ -360,6 +361,57 @@ function applyRowLocalComparableLimitPolicy(auditCase, result) {
       originalFinding,
       normalizedFinding: assessment.finding,
       reasons: ["ROW_LOCAL_COMPARABLE_LIMIT_REBOUND"],
+    });
+  }
+  if (normalizations.length > 0)
+    normalizedResult.serverNormalizations = normalizations;
+  return normalizedResult;
+}
+
+function applyOrphanLimitPolicy(auditCase, result) {
+  const normalizedResult = structuredClone(result);
+  const normalizations = [...(normalizedResult.serverNormalizations ?? [])];
+  const subjectComponentIds = new Set(
+    auditCase.semanticRequirement.components
+      .filter(({ factRole }) =>
+        ["INSURED_OBJECT", "PERIL", "COST", "BENEFIT"].includes(factRole)
+      )
+      .map(({ id }) => id)
+  );
+  if (subjectComponentIds.size === 0) return normalizedResult;
+  const subjectSupported = (normalizedResult.componentAssessments ?? []).some(
+    ({ componentId, finding }) =>
+      subjectComponentIds.has(componentId) &&
+      ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(finding)
+  );
+  if (subjectSupported) return normalizedResult;
+  for (const assessment of normalizedResult.componentAssessments ?? []) {
+    const component = auditCase.semanticRequirement.components.find(
+      ({ id }) => id === assessment.componentId
+    );
+    if (
+      component?.factRole !== "LIMIT" ||
+      !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding)
+    )
+      continue;
+    const originalFinding = assessment.finding;
+    assessment.finding = "RELATED_ONLY";
+    assessment.reviewedCandidateIds = [
+      ...new Set([
+        ...(assessment.supportingCandidateIds ?? []),
+        ...(assessment.reviewedCandidateIds ?? []),
+      ]),
+    ].slice(0, 5);
+    assessment.supportingCandidateIds = [];
+    assessment.observedBValues = [];
+    assessment.coverageEffect = "UNKNOWN";
+    assessment.scopeRelation = "DIFFERENT";
+    assessment.note = `Server-Fail-Closed (ORPHAN_LIMIT_WITHOUT_SUBJECT): ${assessment.note}`;
+    normalizations.push({
+      componentId: assessment.componentId,
+      originalFinding,
+      normalizedFinding: assessment.finding,
+      reasons: ["ORPHAN_LIMIT_WITHOUT_SUBJECT"],
     });
   }
   if (normalizations.length > 0)
@@ -1339,6 +1391,7 @@ function validateAuditResult(auditCase, result) {
     throw new Error("LF_REFERENCE_AUDIT_RESULT_ENUM_OR_REASON_INVALID");
 
   result = applyRowLocalComparableLimitPolicy(auditCase, result);
+  result = applyOrphanLimitPolicy(auditCase, result);
   result = applySupportAnchorPolicy(auditCase, result);
   if (Object.hasOwn(result, "serverNormalizations")) {
     const normalizations = exactArray(
@@ -1360,9 +1413,11 @@ function validateAuditResult(auditCase, result) {
         "UNBOUND_QUOTE_DROPPED"
       );
       const hasSupportAnchorReason = normalization.reasons.some((reason) =>
-        ["SEMANTIC_ANCHOR_MISSING", "COMPARABLE_LIMIT_VALUE_MISSING"].includes(
-          reason
-        )
+        [
+          "SEMANTIC_ANCHOR_MISSING",
+          "COMPARABLE_LIMIT_VALUE_MISSING",
+          "ORPHAN_LIMIT_WITHOUT_SUBJECT",
+        ].includes(reason)
       );
       if (
         typeof normalization.componentId !== "string" ||
