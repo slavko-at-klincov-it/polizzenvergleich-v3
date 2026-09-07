@@ -5,6 +5,10 @@ process.umask(0o077);
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const {
+  mapTargetsWithBoundedConcurrency,
+  normalizeTargetConcurrency,
+} = require("../../utils/policyAnalysis/boundedTargetConcurrency");
 const { releaseIdentity } = require("../../utils/policyAnalysis/runIdentity");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../..");
@@ -90,6 +94,7 @@ async function run() {
     "model",
     "modelTokenLimit",
     "maxAttemptsPerTarget",
+    "maxConcurrentTargets",
     "expectedTargetSelectionDigestSha256",
   ]);
   const unknownArguments = Object.keys(args).filter(
@@ -234,12 +239,21 @@ async function run() {
     maxAttemptsPerTarget > 3
   )
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
+  let maxConcurrentTargets;
+  try {
+    maxConcurrentTargets = normalizeTargetConcurrency(
+      args.maxConcurrentTargets
+    );
+  } catch {
+    fail("--maxConcurrentTargets muss 1 oder 2 sein");
+  }
   const startedAt = new Date();
   const calls = [];
   const messageCalls = [];
   const targetJudgements = [];
   let validationError = null;
 
+  const modelTargets = [];
   for (const target of payload.bindingTargets) {
     if (target.modelDecisionFields.length === 0) {
       const roleMatch = target.roleResolution.roleMatch;
@@ -253,78 +267,100 @@ async function run() {
       });
       continue;
     }
-    const singlePayload = buildSingleBindingTargetPayload({
-      payload,
-      targetId: target.targetId,
-    });
-    let targetComplete = false;
-    let previousError = null;
-    for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
-      const retryPayload = previousError
-        ? {
-            ...singlePayload,
-            retryInstruction:
-              "Die vorige Antwort war formal ungültig. Gib kein targetId-Feld aus, verwende nur die erlaubten Enumwerte und antworte erneut ausschließlich mit dem verlangten JSON-Objekt.",
-            previousErrorCode: previousError.code,
-          }
-        : singlePayload;
-      const messages = llm.constructPrompt({
-        systemPrompt: target.hybridSemanticContract
-          ? hybridSystemPrompt
-          : systemPrompt,
-        contextTexts: [],
-        chatHistory: [],
-        userPrompt: JSON.stringify(retryPayload),
-      });
-      const completion = await llm.getChatCompletion(messages, {
-        temperature: 0,
-        maxTokens: 128,
-      });
-      if (
-        completion?.metrics?.responseModel !== process.env.LMSTUDIO_MODEL_PREF
-      )
-        fail(
-          `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
-        );
-      calls.push({
+    modelTargets.push(target);
+  }
+
+  const modelOutcomes = await mapTargetsWithBoundedConcurrency(
+    modelTargets,
+    maxConcurrentTargets,
+    async (target) => {
+      const targetCalls = [];
+      const targetMessages = [];
+      const singlePayload = buildSingleBindingTargetPayload({
+        payload,
         targetId: target.targetId,
-        attempt,
-        payloadSha256: sha256(JSON.stringify(retryPayload)),
-        responseText: completion?.textResponse || "",
-        metrics: completion?.metrics || null,
       });
-      messageCalls.push({ targetId: target.targetId, attempt, messages });
-      try {
-        if (!completion?.textResponse) {
-          const emptyError = new Error(
-            `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`
+      let previousError = null;
+      for (let attempt = 1; attempt <= maxAttemptsPerTarget; attempt += 1) {
+        const retryPayload = previousError
+          ? {
+              ...singlePayload,
+              retryInstruction:
+                "Die vorige Antwort war formal ungültig. Gib kein targetId-Feld aus, verwende nur die erlaubten Enumwerte und antworte erneut ausschließlich mit dem verlangten JSON-Objekt.",
+              previousErrorCode: previousError.code,
+            }
+          : singlePayload;
+        const messages = llm.constructPrompt({
+          systemPrompt: target.hybridSemanticContract
+            ? hybridSystemPrompt
+            : systemPrompt,
+          contextTexts: [],
+          chatHistory: [],
+          userPrompt: JSON.stringify(retryPayload),
+        });
+        const completion = await llm.getChatCompletion(messages, {
+          temperature: 0,
+          maxTokens: 128,
+        });
+        if (
+          completion?.metrics?.responseModel !==
+          process.env.LMSTUDIO_MODEL_PREF
+        )
+          fail(
+            `Falsches LM-Studio-Chatmodell bei ${target.targetId}: erwartet ${process.env.LMSTUDIO_MODEL_PREF}, erhalten ${completion?.metrics?.responseModel || "NICHT_GEMELDET"}. Lauf sofort abgebrochen.`
           );
-          emptyError.code = "TRIAGE_EMPTY_RESPONSE";
-          throw emptyError;
+        targetCalls.push({
+          targetId: target.targetId,
+          attempt,
+          payloadSha256: sha256(JSON.stringify(retryPayload)),
+          responseText: completion?.textResponse || "",
+          metrics: completion?.metrics || null,
+        });
+        targetMessages.push({ targetId: target.targetId, attempt, messages });
+        try {
+          if (!completion?.textResponse) {
+            const emptyError = new Error(
+              `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`
+            );
+            emptyError.code = "TRIAGE_EMPTY_RESPONSE";
+            throw emptyError;
+          }
+          return {
+            calls: targetCalls,
+            messages: targetMessages,
+            judgement: parseAndValidateSingleBindingTarget({
+              responseText: completion.textResponse,
+              target,
+            }),
+            validationError: null,
+          };
+        } catch (error) {
+          previousError = {
+            code: error.code || "UNKNOWN",
+            message: error.message,
+          };
         }
-        targetJudgements.push(
-          parseAndValidateSingleBindingTarget({
-            responseText: completion.textResponse,
-            target,
-          })
-        );
-        targetComplete = true;
-        break;
-      } catch (error) {
-        previousError = {
-          code: error.code || "UNKNOWN",
-          message: error.message,
-        };
       }
-    }
-    if (!targetComplete) {
-      validationError = {
-        ...previousError,
-        targetId: target.targetId,
-        attempts: maxAttemptsPerTarget,
+      return {
+        calls: targetCalls,
+        messages: targetMessages,
+        judgement: null,
+        validationError: {
+            ...previousError,
+            targetId: target.targetId,
+            attempts: maxAttemptsPerTarget,
+        },
       };
-      break;
-    }
+    },
+    { stopWhen: ({ validationError: error }) => Boolean(error) }
+  );
+
+  for (const outcome of modelOutcomes.filter(Boolean)) {
+    calls.push(...outcome.calls);
+    messageCalls.push(...outcome.messages);
+    if (!validationError && outcome.validationError)
+      validationError = outcome.validationError;
+    else if (outcome.judgement) targetJudgements.push(outcome.judgement);
   }
   const finishedAt = new Date();
   const combinedJudgements = targetJudgements.map(({ targetId, binding }) => ({
@@ -454,6 +490,7 @@ async function run() {
         0
       ),
       maxAttemptsPerTarget,
+      maxConcurrentTargets,
     },
     completion: aggregateCompletionMetrics(
       calls,

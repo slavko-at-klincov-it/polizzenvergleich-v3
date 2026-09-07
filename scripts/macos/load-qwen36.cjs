@@ -28,7 +28,7 @@ async function run() {
     verbose: "info",
     config: {
       contextLength: 42496,
-      maxParallelPredictions: 1,
+      maxParallelPredictions: 2,
       speculativeDraftMtp: false,
       mlxKvCacheQuantization: {
         enabled: true,
@@ -48,7 +48,7 @@ async function run() {
       `Falsches Kontextfenster: ${info.contextLength || "NICHT_GEMELDET"}`
     );
   console.log(
-    `[qwen36-load] ${identifier} geladen: Kontext 42496, Parallelität 1, MLX-KV-Cache 8 Bit, Thinking standardmäßig aus.`
+    `[qwen36-load] ${identifier} geladen: Kontext 42496, Parallelität 2, MLX-KV-Cache 8 Bit, Thinking standardmäßig aus.`
   );
 }
 

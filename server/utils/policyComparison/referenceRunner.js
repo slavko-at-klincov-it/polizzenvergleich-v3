@@ -149,6 +149,7 @@ async function analyzeReferenceDocument({
   contracts,
   model,
   modelTokenLimit,
+  maxConcurrentTargets = 1,
   onCategoryComplete = () => {},
 }) {
   const documentArtifact = await extractReferenceDocument({
@@ -205,6 +206,8 @@ async function analyzeReferenceDocument({
           String(modelTokenLimit),
           "--maxAttemptsPerTarget",
           "2",
+          "--maxConcurrentTargets",
+          String(maxConcurrentTargets),
         ],
         logFile
       );
@@ -233,6 +236,8 @@ async function analyzeReferenceDocument({
           String(modelTokenLimit),
           "--maxAttemptsPerTarget",
           "2",
+          "--maxConcurrentTargets",
+          String(maxConcurrentTargets),
           "--allowUniqueCandidateIdRepair",
           "true",
         ],

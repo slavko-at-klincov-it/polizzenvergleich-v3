@@ -55,10 +55,10 @@ if [ -x "$LMS_BIN" ]; then
   LMS_MODEL_COUNT="$(printf '%s\n' "$LMS_STATUS" | /usr/bin/awk 'NF && $1 != "IDENTIFIER" { count += 1 } END { print count + 0 }')"
   printf '%s\n' "$LMS_STATUS" | /usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' &&
     printf '%s\n' "$LMS_STATUS" | /usr/bin/grep -Fq '42496' &&
-    printf '%s\n' "$LMS_STATUS" | /usr/bin/grep -Eq '42496[[:space:]]+1[[:space:]]' &&
+    printf '%s\n' "$LMS_STATUS" | /usr/bin/grep -Eq '42496[[:space:]]+2[[:space:]]' &&
     [ "$LMS_MODEL_COUNT" = "1" ] &&
-    ok "Qwen 3.6: Kontext 42.496, Parallelität 1" ||
-    bad "Erwartet wird ausschließlich Qwen 3.6 mit Kontext 42.496 und Parallelität 1"
+    ok "Qwen 3.6: Kontext 42.496, Parallelität 2" ||
+    bad "Erwartet wird ausschließlich Qwen 3.6 mit Kontext 42.496 und Parallelität 2"
   [ "$LMS_MODEL_COUNT" = "1" ] &&
     ok "Kein weiteres Chat- oder Embeddingmodell geladen" ||
     bad "Zusätzliches Chat- oder Embeddingmodell ist geladen"
