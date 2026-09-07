@@ -97,7 +97,11 @@ describe("dynamic LF reference result", () => {
     };
 
     expect(HEADERS).toHaveLength(14);
-    expect(HEADERS.at(-1)).toBe("Fachliche_Bewertung_manuell");
+    expect(HEADERS.slice(-3)).toEqual([
+      "KI_Fundstatus",
+      "KI_Prüfhinweis",
+      "Fachliche Bewertung (manuell)",
+    ]);
     expect(workbookValues(category, row)).toEqual([
       "Kategorie",
       "Unterkategorie",
@@ -110,7 +114,7 @@ describe("dynamic LF reference result", () => {
       "B-Wirkung",
       "B-Wert",
       "B-Fundstelle",
-      REFERENCE_OUTCOME.PARTIAL,
+      "Teilweises Gegenstück",
       "Prüfhinweis",
       "",
     ]);

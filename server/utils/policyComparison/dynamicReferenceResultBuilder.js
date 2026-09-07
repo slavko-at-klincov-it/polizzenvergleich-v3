@@ -30,10 +30,17 @@ const HEADERS = [
   "B_Deckung",
   "B_Werte",
   "B_Quelle",
-  "Gegenstückstatus",
-  "Begründung",
-  "Fachliche_Bewertung_manuell",
+  "KI_Fundstatus",
+  "KI_Prüfhinweis",
+  "Fachliche Bewertung (manuell)",
 ];
+const REFERENCE_OUTCOME_LABELS = Object.freeze({
+  [REFERENCE_OUTCOME.FOUND]: "Gegenstück gefunden",
+  [REFERENCE_OUTCOME.PARTIAL]: "Teilweises Gegenstück",
+  [REFERENCE_OUTCOME.NOT_FOUND]: "Kein Gegenstück nach kontrollierter Suche",
+  [REFERENCE_OUTCOME.REFERENCE_UNCLEAR]: "LF-Referenzzeile unklar",
+  [REFERENCE_OUTCOME.UNCLEAR]: "Gegenstück unklar",
+});
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -326,7 +333,7 @@ function workbookValues(category, row) {
     row.packageB.coverage,
     row.packageB.coverageAmount,
     row.packageB.source,
-    row.outcome,
+    REFERENCE_OUTCOME_LABELS[row.outcome] ?? row.outcome,
     row.pointDecision.reason,
     "",
   ];
