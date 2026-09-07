@@ -420,7 +420,7 @@ Regeln:
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
-10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast, gehören ausschließlich in reviewedCandidateIds. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede Kandidaten-ID in einer dieser drei Listen braucht mindestens ein exaktes Zitat.
+10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast, gehören ausschließlich in reviewedCandidateIds. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-ID braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
 11. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
 12. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
 13. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
@@ -654,7 +654,10 @@ function validateAuditResult(auditCase, result) {
       )
         throw new Error("LF_REFERENCE_AUDIT_QUOTE_INVALID");
     }
-    for (const candidateId of evidenceCandidateIds)
+    for (const candidateId of [
+      ...supportingCandidateIds,
+      ...contradictingCandidateIds,
+    ])
       if (!quotes.some((quote) => quote.candidateId === candidateId))
         throw new Error("LF_REFERENCE_AUDIT_EVIDENCE_WITHOUT_QUOTE");
     const needsSupport = ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
@@ -665,7 +668,11 @@ function validateAuditResult(auditCase, result) {
     );
     if (
       (needsSupport && supportingCandidateIds.length === 0) ||
-      (needsReviewed && reviewedCandidateIds.length === 0) ||
+      (needsReviewed &&
+        (reviewedCandidateIds.length === 0 ||
+          !quotes.some((quote) =>
+            reviewedCandidateIds.includes(quote.candidateId)
+          ))) ||
       (assessment.finding === "CONTRADICTION" &&
         contradictingCandidateIds.length === 0) ||
       (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding) &&
@@ -679,7 +686,10 @@ function validateAuditResult(auditCase, result) {
     );
     for (const observedValue of observedValues)
       if (
-        !evidenceCandidateIds.has(observedValue?.candidateId) ||
+        ![
+          ...supportingCandidateIds,
+          ...contradictingCandidateIds,
+        ].includes(observedValue?.candidateId) ||
         typeof observedValue.value !== "string" ||
         !["SAME", "DIFFERENT", "ADDITIONAL", "UNCLEAR"].includes(
           observedValue.relationToA

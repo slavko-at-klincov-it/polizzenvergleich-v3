@@ -179,9 +179,11 @@ describe("LF reference review audit contract", () => {
 
   test("derives the partial row disposition from atomic component findings", () => {
     const { auditCase, candidateId } = fixture();
-    expect(validateAuditResult(auditCase, validResult(candidateId))).toMatchObject(
-      { rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE" }
-    );
+    const result = validResult(candidateId);
+    result.componentAssessments[1].reviewedCandidateIds = [candidateId];
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
   });
 
   test("does not mislabel a one-component related hit as a true partial", () => {
