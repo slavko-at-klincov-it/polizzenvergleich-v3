@@ -6817,6 +6817,17 @@ Triage-, Wirkungs- und ausgewählte Quellartefakte waren jeweils bytegleich
 zum erfolgreichen Originallauf. 77 angrenzende QA-/Policy-Analysis-Suites mit
 1.262/1.262 Tests bestanden auf demselben Commit.
 
+Der erste vollständige Cachelauf deckte anschließend noch eine persistente
+Altlast auf: Ein bereits vorhandener, formal intakter Cacheeintrag enthielt
+den verworfenen Erstversuch von `B-01/LR04`, sodass der Leser ihn korrekt
+quarantänisierte und genau einen neuen Modellaufruf ausführte. Commit
+`6556b0e1350e448944b7741d9322bd62468e6df5` überspringt beim historischen
+Seeding cache-unterstützte Phasenreports und ersetzt einen vorhandenen
+Erstversuch nur dann, wenn sein Hash exakt dem nachweislich verworfenen
+Versuch desselben Ziels entspricht. Der reale `B-01/LR04`-Canary erreichte
+danach 22 Triage- und neun Wirkungstreffer, null Modellaufrufe, null
+Schreibfehler und bytegleiche Triage-, Wirkungs- und Quellartefakte.
+
 Messbare Freigabegrenze: Ein realer Cache-Replay muss null Modellaufrufe, null
 Cache-Schreibfehler, bytegleiche materialisierte Triage-/Wirkungs-/Quellwerte
 und einen vollständigen 1+9-Endlauf mit 283/283 Zeilen sowie validierter XLSX
