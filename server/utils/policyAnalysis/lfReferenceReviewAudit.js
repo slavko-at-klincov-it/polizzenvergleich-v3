@@ -460,6 +460,68 @@ function expandModelCandidateReferences(auditCase, result) {
   );
 }
 
+function rebindModelEvidenceCandidates(auditCase, result) {
+  if (!result || typeof result !== "object" || Array.isArray(result))
+    return result;
+  const rebound = structuredClone(result);
+  const candidateById = new Map(
+    auditCase.candidates.map((candidate) => [candidate.id, candidate])
+  );
+  for (const assessment of rebound.componentAssessments ?? []) {
+    const replacements = new Map();
+    for (const quote of assessment.exactQuotes ?? []) {
+      const normalized = normalizeQuote(quote?.quote);
+      const supplied = candidateById.get(quote?.candidateId);
+      if (
+        normalized.length < 12 ||
+        (supplied && normalizeQuote(supplied.text).includes(normalized))
+      )
+        continue;
+      const matchingCandidates = auditCase.candidates.filter((candidate) =>
+        normalizeQuote(candidate.text).includes(normalized)
+      );
+      if (matchingCandidates.length === 0) continue;
+      const replacement =
+        matchingCandidates.find(
+          (candidate) =>
+            supplied &&
+            candidate.documentUuid === supplied.documentUuid &&
+            candidate.pageNumber === supplied.pageNumber
+        ) ?? matchingCandidates[0];
+      if (!replacements.has(quote.candidateId))
+        replacements.set(quote.candidateId, new Set());
+      replacements.get(quote.candidateId).add(replacement.id);
+      quote.candidateId = replacement.id;
+    }
+    for (const key of [
+      "supportingCandidateIds",
+      "contradictingCandidateIds",
+      "reviewedCandidateIds",
+    ])
+      if (Array.isArray(assessment[key]))
+        assessment[key] = [
+          ...new Set(
+            assessment[key].flatMap((candidateId) => [
+              ...(replacements.get(candidateId) ?? [candidateId]),
+            ])
+          ),
+        ];
+    for (const observedValue of assessment.observedBValues ?? []) {
+      const candidates = replacements.get(observedValue.candidateId);
+      if (candidates?.size) observedValue.candidateId = [...candidates][0];
+    }
+    const usedEvidence = new Set([
+      ...(assessment.supportingCandidateIds ?? []),
+      ...(assessment.contradictingCandidateIds ?? []),
+    ]);
+    if (Array.isArray(assessment.reviewedCandidateIds))
+      assessment.reviewedCandidateIds = assessment.reviewedCandidateIds.filter(
+        (candidateId) => !usedEvidence.has(candidateId)
+      );
+  }
+  return rebound;
+}
+
 function normalizeModelAuditMetadata(result) {
   if (!result || typeof result !== "object" || Array.isArray(result))
     return result;
@@ -903,6 +965,7 @@ module.exports = {
   parseDocumentPages,
   promptPayload,
   rankCandidates,
+  rebindModelEvidenceCandidates,
   sha256,
   validateAuditResult,
   validateAuditResultRecord,

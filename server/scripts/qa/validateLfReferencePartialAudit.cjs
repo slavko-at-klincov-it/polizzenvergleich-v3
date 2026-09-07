@@ -105,7 +105,7 @@ function buildReviewPacket(records) {
                 exactText: quote.quote,
                 exactTextSha256: sha256(quote.quote),
                 candidateTextSha256: candidate.textSha256,
-                validationStatus: "BOUND_TO_AUDIT_SOURCE_CHUNK",
+                validationStatus: "BOUND_TO_AUDIT_SOURCE_PAGE",
               };
             }),
           })

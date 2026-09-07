@@ -14,6 +14,7 @@ const {
   jsonFromModelText,
   normalizeModelAuditMetadata,
   promptPayload,
+  rebindModelEvidenceCandidates,
   sha256,
   validateAuditResult,
   validateAuditResultRecord,
@@ -275,9 +276,12 @@ async function runAudit(args, dependencies = {}) {
         modelText = response.choices?.[0]?.message?.content ?? "";
         const result = validateAuditResult(
           auditCase,
-          expandModelCandidateReferences(
+          rebindModelEvidenceCandidates(
             auditCase,
-            normalizeModelAuditMetadata(jsonFromModelText(modelText))
+            expandModelCandidateReferences(
+              auditCase,
+              normalizeModelAuditMetadata(jsonFromModelText(modelText))
+            )
           )
         );
         attempts.push({

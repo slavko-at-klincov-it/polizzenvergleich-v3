@@ -9,6 +9,7 @@ const {
   parseDocumentPages,
   promptPayload,
   rankCandidates,
+  rebindModelEvidenceCandidates,
   sha256,
   validateAuditResult,
   validateAuditResultRecord,
@@ -194,6 +195,31 @@ describe("LF reference review audit contract", () => {
       candidateId
     );
     expect(validateAuditResult(auditCase, expanded)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
+  });
+
+  test("rebinds a real quote from a wrong model reference to its source", () => {
+    const { auditCase, candidateId } = fixture();
+    const wrongCandidateId = `candidate:${"e".repeat(64)}`;
+    auditCase.candidates.push({
+      ...auditCase.candidates[0],
+      id: wrongCandidateId,
+      pageNumber: 2,
+      text: "Ein anderer Quellentext ohne die zitierte Aussage.",
+      textSha256: sha256("Ein anderer Quellentext ohne die zitierte Aussage."),
+    });
+    const rebound = rebindModelEvidenceCandidates(
+      auditCase,
+      validResult(wrongCandidateId)
+    );
+    expect(rebound.componentAssessments[0].supportingCandidateIds).toEqual([
+      candidateId,
+    ]);
+    expect(rebound.componentAssessments[0].exactQuotes[0].candidateId).toBe(
+      candidateId
+    );
+    expect(validateAuditResult(auditCase, rebound)).toMatchObject({
       rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
     });
   });
