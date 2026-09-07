@@ -384,10 +384,19 @@ function build(args, { fsImpl = fs } = {}) {
   }
 
   const targetIdentity = cases.map((auditCase) => {
-    const promptCharacterCount = canonicalJson(promptPayload(auditCase)).length;
+    const payload = promptPayload(auditCase);
+    const promptCharacterCount = canonicalJson(payload).length;
+    const promptSectionCharacters = Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => [
+        key,
+        canonicalJson(value).length,
+      ])
+    );
     if (promptCharacterCount > 115000)
       throw new Error(
-        `LF_REFERENCE_AUDIT_PROMPT_BUDGET_EXCEEDED:${auditCase.caseId}:${promptCharacterCount}`
+        `LF_REFERENCE_AUDIT_PROMPT_BUDGET_EXCEEDED:${auditCase.caseId}:${promptCharacterCount}:${canonicalJson(
+          promptSectionCharacters
+        )}`
       );
     return {
       sourceOrder: auditCase.sourceOrder,
@@ -395,6 +404,7 @@ function build(args, { fsImpl = fs } = {}) {
       requirementId: auditCase.requirementId,
       inputSha256: auditCase.inputSha256,
       promptCharacterCount,
+      promptSectionCharacters,
     };
   });
   const index = {
