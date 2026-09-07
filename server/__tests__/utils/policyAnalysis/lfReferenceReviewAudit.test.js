@@ -5,6 +5,7 @@ const {
   buildSourceChunks,
   canonicalJson,
   expandModelCandidateReferences,
+  modelResponseFormat,
   normalizeModelAuditMetadata,
   parseModelJson,
   parseDocumentPages,
@@ -183,6 +184,26 @@ describe("LF reference review audit contract", () => {
     );
     expect(prompt.sources[0].candidateId).toBe("C01");
     expect(JSON.stringify(prompt)).not.toContain(candidateId);
+  });
+
+  test("builds a strict model schema from bound components and short references", () => {
+    const { auditCase } = fixture();
+    const format = modelResponseFormat(auditCase);
+    const schema = format.json_schema.schema;
+    const component = schema.properties.componentAssessments;
+    expect(format).toMatchObject({
+      type: "json_schema",
+      json_schema: { strict: true },
+    });
+    expect(schema.additionalProperties).toBe(false);
+    expect(component).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(
+      component.items.properties.componentId.enum
+    ).toEqual(["technical_objects", "agreed_sum"]);
+    expect(
+      component.items.properties.supportingCandidateIds.items.enum
+    ).toEqual(["C01"]);
+    expect(component.items.required).toContain("exactQuotes");
   });
 
   test("expands short model references back to bound candidate hashes", () => {

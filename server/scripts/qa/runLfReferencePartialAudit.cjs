@@ -12,6 +12,7 @@ const {
   canonicalJson,
   expandModelCandidateReferences,
   normalizeModelAuditMetadata,
+  modelResponseFormat,
   parseModelJson,
   promptPayload,
   rebindModelEvidenceCandidates,
@@ -277,6 +278,7 @@ async function runAudit(args, dependencies = {}) {
           messages,
           temperature: 0,
           max_tokens: 5000,
+          response_format: modelResponseFormat(auditCase),
         });
         responseBody = response;
         modelText = response.choices?.[0]?.message?.content ?? "";

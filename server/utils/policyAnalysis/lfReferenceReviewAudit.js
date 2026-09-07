@@ -453,6 +453,119 @@ function candidateReferenceMaps(auditCase) {
   return { idToReference, referenceToId };
 }
 
+function modelResponseFormat(auditCase) {
+  const candidateReferences = [
+    ...candidateReferenceMaps(auditCase).referenceToId.keys(),
+  ];
+  const candidateReferenceSchema = {
+    type: "string",
+    enum: candidateReferences,
+  };
+  const candidateReferenceArraySchema = {
+    type: "array",
+    items: candidateReferenceSchema,
+    uniqueItems: true,
+  };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "lf_reference_partial_audit",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          componentAssessments: {
+            type: "array",
+            minItems: auditCase.semanticRequirement.components.length,
+            maxItems: auditCase.semanticRequirement.components.length,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                componentId: {
+                  type: "string",
+                  enum: auditCase.semanticRequirement.components.map(
+                    ({ id }) => id
+                  ),
+                },
+                finding: { type: "string", enum: COMPONENT_FINDINGS },
+                supportingCandidateIds: candidateReferenceArraySchema,
+                contradictingCandidateIds: candidateReferenceArraySchema,
+                reviewedCandidateIds: {
+                  ...candidateReferenceArraySchema,
+                  maxItems: 5,
+                },
+                exactQuotes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      candidateId: candidateReferenceSchema,
+                      quote: { type: "string", minLength: 12 },
+                    },
+                    required: ["candidateId", "quote"],
+                  },
+                },
+                coverageEffect: { type: "string", enum: COVERAGE_EFFECTS },
+                scopeRelation: { type: "string", enum: SCOPE_RELATIONS },
+                observedBValues: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      candidateId: candidateReferenceSchema,
+                      value: { type: "string" },
+                      relationToA: {
+                        type: "string",
+                        enum: ["SAME", "DIFFERENT", "ADDITIONAL", "UNCLEAR"],
+                      },
+                    },
+                    required: ["candidateId", "value", "relationToA"],
+                  },
+                },
+                note: { type: "string", minLength: 8 },
+              },
+              required: [
+                "componentId",
+                "finding",
+                "supportingCandidateIds",
+                "contradictingCandidateIds",
+                "reviewedCandidateIds",
+                "exactQuotes",
+                "coverageEffect",
+                "scopeRelation",
+                "observedBValues",
+                "note",
+              ],
+            },
+          },
+          currentSourceAssessment: {
+            type: "string",
+            enum: CURRENT_SOURCE_ASSESSMENTS,
+          },
+          rootCause: { type: "string", enum: ROOT_CAUSES },
+          recommendedAction: { type: "string", enum: RECOMMENDED_ACTIONS },
+          valueComparison: { type: "string", enum: VALUE_COMPARISONS },
+          reasoning: { type: "string", minLength: 12 },
+          confidence: { type: "string", enum: CONFIDENCE_LEVELS },
+        },
+        required: [
+          "componentAssessments",
+          "currentSourceAssessment",
+          "rootCause",
+          "recommendedAction",
+          "valueComparison",
+          "reasoning",
+          "confidence",
+        ],
+      },
+    },
+  };
+}
+
 function replaceCandidateReferences(value, references) {
   if (typeof value === "string") return references.get(value) ?? value;
   if (Array.isArray(value))
@@ -1055,6 +1168,7 @@ module.exports = {
   jsonFromModelText,
   normalize,
   normalizeModelAuditMetadata,
+  modelResponseFormat,
   parseDocumentPages,
   parseModelJson,
   promptPayload,
