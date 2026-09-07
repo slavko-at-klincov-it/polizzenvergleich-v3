@@ -11,6 +11,7 @@ const {
   buildSourceChunks,
   canonicalJson,
   parseDocumentPages,
+  promptPayload,
   rankCandidates,
   sha256,
 } = require("../../utils/policyAnalysis/lfReferenceReviewAudit");
@@ -342,12 +343,20 @@ function build(args, { fsImpl = fs } = {}) {
     cases.push(auditCase);
   }
 
-  const targetIdentity = cases.map((auditCase) => ({
-    sourceOrder: auditCase.sourceOrder,
-    caseId: auditCase.caseId,
-    requirementId: auditCase.requirementId,
-    inputSha256: auditCase.inputSha256,
-  }));
+  const targetIdentity = cases.map((auditCase) => {
+    const promptCharacterCount = canonicalJson(promptPayload(auditCase)).length;
+    if (promptCharacterCount > 110000)
+      throw new Error(
+        `LF_REFERENCE_AUDIT_PROMPT_BUDGET_EXCEEDED:${auditCase.caseId}:${promptCharacterCount}`
+      );
+    return {
+      sourceOrder: auditCase.sourceOrder,
+      caseId: auditCase.caseId,
+      requirementId: auditCase.requirementId,
+      inputSha256: auditCase.inputSha256,
+      promptCharacterCount,
+    };
+  });
   const index = {
     schemaVersion: 1,
     contractId: INDEX_CONTRACT_ID,

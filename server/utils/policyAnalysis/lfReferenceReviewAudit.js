@@ -200,6 +200,12 @@ function contributorPages(contributor) {
   ].map((match) => Number(match[1]));
 }
 
+function contributorQuotes(contributor) {
+  return [
+    ...String(contributor?.source ?? "").matchAll(/„([^“]{12,})“/gu),
+  ].map((match) => normalize(match[1]));
+}
+
 function rankCandidates({ row, requirement, chunks, topK = 14 }) {
   const documentFrequency = new Map();
   for (const chunk of chunks)
@@ -265,14 +271,33 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
   const currentContributorGroups = (row.packageB?.contributors ?? []).map(
     (contributor) => {
       const pages = contributorPages(contributor);
+      const quotes = contributorQuotes(contributor);
       const matchingCandidateIds = [];
-      for (const item of scored.filter(
-        ({ chunk }) =>
-          chunk.documentUuid === contributor.documentUuid &&
-          pages.includes(chunk.pageNumber)
-      )) {
-        selected.set(item.chunk.id, item);
-        matchingCandidateIds.push(item.chunk.id);
+      for (const pageNumber of pages) {
+        const pageItems = scored
+          .filter(
+            ({ chunk }) =>
+              chunk.documentUuid === contributor.documentUuid &&
+              chunk.pageNumber === pageNumber
+          )
+          .sort((left, right) => {
+            const leftQuoteHits = quotes.filter((quote) =>
+              left.chunk.normalizedText.includes(quote)
+            ).length;
+            const rightQuoteHits = quotes.filter((quote) =>
+              right.chunk.normalizedText.includes(quote)
+            ).length;
+            return (
+              rightQuoteHits - leftQuoteHits ||
+              right.score - left.score ||
+              left.chunk.id.localeCompare(right.chunk.id)
+            );
+          })
+          .slice(0, 3);
+        for (const item of pageItems) {
+          selected.set(item.chunk.id, item);
+          matchingCandidateIds.push(item.chunk.id);
+        }
       }
       return {
         documentUuid: contributor.documentUuid,
