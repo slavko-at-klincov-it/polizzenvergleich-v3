@@ -156,6 +156,12 @@ function validResult(candidateId) {
 }
 
 describe("LF reference review audit contract", () => {
+  test("forbids treating economically related but different cost types as support", () => {
+    expect(SYSTEM_PROMPT).toContain(
+      "Ersatzunterkunft ist beispielsweise kein Beleg für Zwischenlagerung"
+    );
+  });
+
   test("accepts model-serialized escaped whitespace in an otherwise exact quote", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
