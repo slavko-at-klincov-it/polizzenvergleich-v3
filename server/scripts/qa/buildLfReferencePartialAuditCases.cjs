@@ -172,7 +172,7 @@ function productionEvidenceForRow({
         physicalPageNumber: source.physicalPageNumber,
         printedPageLabel: source.printedPageLabel,
         exactText: source.exactText,
-        contextText: String(source.contextText ?? "").slice(0, 1800),
+        contextText: String(source.contextText ?? "").slice(0, 600),
         contextDocumentStart: source.contextDocumentStart,
       }));
     const requestedForRequirement = (requestedFields.requirements ?? []).find(
@@ -206,10 +206,10 @@ function productionEvidenceForRow({
       documentStatus: document.documentStatus,
       row: {
         categoryId: row.categoryId,
-        documentedContent: row.documentedContent,
+        documentedContent: String(row.documentedContent ?? "").slice(0, 2500),
         coverage: row.coverage,
         coverageAmount: row.coverageAmount,
-        source: row.source,
+        source: String(row.source ?? "").slice(0, 4000),
         reviewStatus: row.reviewStatus,
       },
       judgements,

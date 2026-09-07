@@ -417,10 +417,17 @@ function promptPayload(auditCase) {
       values: auditCase.semanticRequirement.values,
     },
     currentPartialResult: {
-      documentedContent: auditCase.originalDecision.packageB?.documentedContent,
+      documentedContent: String(
+        auditCase.originalDecision.packageB?.documentedContent ?? ""
+      ).slice(0, 10000),
       coverage: auditCase.originalDecision.packageB?.coverage,
       coverageAmount: auditCase.originalDecision.packageB?.coverageAmount,
-      contributorGroups: auditCase.retrieval.currentContributorGroups,
+      contributorGroups: auditCase.retrieval.currentContributorGroups.map(
+        (group) => ({
+          ...group,
+          currentSource: String(group.currentSource ?? "").slice(0, 4000),
+        })
+      ),
       productionEvidence: auditCase.productionEvidence,
     },
     sources: auditCase.candidates.map((candidate) => ({
