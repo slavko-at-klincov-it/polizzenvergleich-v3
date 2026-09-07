@@ -149,6 +149,7 @@ async function analyzeReferenceDocument({
   contracts,
   model,
   modelTokenLimit,
+  responseCacheDirectory = null,
   onCategoryComplete = () => {},
 }) {
   const documentArtifact = await extractReferenceDocument({
@@ -205,6 +206,9 @@ async function analyzeReferenceDocument({
           String(modelTokenLimit),
           "--maxAttemptsPerTarget",
           "2",
+          ...(responseCacheDirectory
+            ? ["--responseCacheDirectory", responseCacheDirectory]
+            : []),
         ],
         logFile
       );
@@ -235,6 +239,9 @@ async function analyzeReferenceDocument({
           "2",
           "--allowUniqueCandidateIdRepair",
           "true",
+          ...(responseCacheDirectory
+            ? ["--responseCacheDirectory", responseCacheDirectory]
+            : []),
         ],
         logFile
       );

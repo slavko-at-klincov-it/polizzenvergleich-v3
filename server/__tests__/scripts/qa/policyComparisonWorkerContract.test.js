@@ -156,6 +156,10 @@ describe("policy comparison worker contract", () => {
     );
     expect(referenceRunner).toContain("buildCategoryOccurrenceWorksheet.cjs");
     expect(referenceRunner).toContain("runPreparedEvidenceEvaluation.cjs");
+    expect(referenceRunner).toContain('"--responseCacheDirectory"');
+    expect(source).toContain("seedResponseCacheFromRunHistory");
+    expect(source).toContain('"response-cache-v1"');
+    expect(source).toContain("MODEL_RESPONSE_CACHE_SCHEMA_VERSION");
     expect(referenceRunner).not.toContain(".embeddings.");
   });
 

@@ -124,7 +124,7 @@ function writePrivateJson(outputDirectory, fileName, value) {
   fs.chmodSync(file, 0o600);
 }
 
-function aggregateCompletionMetrics(calls, model) {
+function aggregateCompletionMetrics(calls, model, cacheHitCount = 0) {
   const totals = calls.reduce(
     (result, call) => {
       result.prompt_tokens += call.metrics?.prompt_tokens || 0;
@@ -151,7 +151,14 @@ function aggregateCompletionMetrics(calls, model) {
     responseModelComplete:
       calls.length === 0 ||
       calls.every(({ metrics }) => metrics?.responseModel === model),
-    executionMode: calls.length === 0 ? "SERVER_ONLY" : "MODEL_ASSISTED",
+    executionMode:
+      calls.length === 0
+        ? cacheHitCount > 0
+          ? "CACHE_ASSISTED"
+          : "SERVER_ONLY"
+        : cacheHitCount > 0
+          ? "MODEL_AND_CACHE_ASSISTED"
+          : "MODEL_ASSISTED",
   };
 }
 
@@ -190,6 +197,7 @@ async function run() {
     "modelTokenLimit",
     "documentStatus",
     "maxAttemptsPerTarget",
+    "responseCacheDirectory",
     "allowUniqueCandidateIdRepair",
     "expectedTargetSelectionDigestSha256",
     "documentArtifact",
@@ -208,6 +216,9 @@ async function run() {
     ? path.resolve(args.documentArtifact)
     : null;
   const outputDirectory = path.resolve(args.output || "");
+  const responseCacheDirectory = args.responseCacheDirectory
+    ? path.resolve(args.responseCacheDirectory)
+    : null;
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ["Systemprompt", systemPromptFile],
@@ -255,6 +266,10 @@ async function run() {
     materializePreparedEvidence,
     parseAndValidatePreparedEvidenceResponse,
   } = require("../../utils/policyAnalysis/preparedEvidenceContract");
+  const {
+    publishCachedResponse,
+    readValidatedCachedResponse,
+  } = require("../../utils/policyAnalysis/validatedModelResponseCache");
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
   const {
     buildTechnicalReviewControlSet,
@@ -357,6 +372,8 @@ async function run() {
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
   const startedAt = new Date();
   const calls = [];
+  const cacheHits = [];
+  const cacheWriteErrors = [];
   const messages = [];
   const judgements = [];
   let validationError = null;
@@ -389,6 +406,31 @@ async function run() {
         chatHistory: [],
         userPrompt: JSON.stringify(retryPayload),
       });
+      const validateResponse = (responseText) =>
+        parseAndValidatePreparedEvidenceResponse({
+          responseText,
+          target,
+          allowUniqueCandidateIdRepair,
+        });
+      const cached = readValidatedCachedResponse({
+        cacheDirectory: responseCacheDirectory,
+        phase: "PREPARED_EVIDENCE",
+        model: process.env.LMSTUDIO_MODEL_PREF,
+        modelTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
+        messages: promptMessages,
+        validateResponse,
+      });
+      if (cached) {
+        judgements.push(cached.validated);
+        cacheHits.push({
+          targetId: target.targetId,
+          attempt,
+          cacheKey: cached.cacheKey,
+          responseSha256: sha256(cached.responseText),
+        });
+        targetComplete = true;
+        break;
+      }
       const completion = await llm.getChatCompletion(promptMessages, {
         temperature: 0,
         // A valid response may contain many server-owned candidate IDs for one
@@ -415,13 +457,25 @@ async function run() {
         messages: promptMessages,
       });
       try {
-        judgements.push(
-          parseAndValidatePreparedEvidenceResponse({
-            responseText: completion?.textResponse || "",
-            target,
-            allowUniqueCandidateIdRepair,
-          })
-        );
+        const judgement = validateResponse(completion?.textResponse || "");
+        judgements.push(judgement);
+        try {
+          publishCachedResponse({
+            cacheDirectory: responseCacheDirectory,
+            phase: "PREPARED_EVIDENCE",
+            model: process.env.LMSTUDIO_MODEL_PREF,
+            modelTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
+            messages: promptMessages,
+            responseText: completion.textResponse,
+            responseModel: completion.metrics.responseModel,
+          });
+        } catch (error) {
+          cacheWriteErrors.push({
+            targetId: target.targetId,
+            code: error.code || "UNKNOWN",
+            message: error.message,
+          });
+        }
         targetComplete = true;
         break;
       } catch (error) {
@@ -473,6 +527,12 @@ async function run() {
   }
 
   writePrivateJson(outputDirectory, "answers.private.json", calls);
+  writePrivateJson(outputDirectory, "cache-hits.private.json", cacheHits);
+  writePrivateJson(
+    outputDirectory,
+    "cache-write-errors.private.json",
+    cacheWriteErrors
+  );
   writePrivateJson(outputDirectory, "messages.private.json", messages);
   writePrivateJson(outputDirectory, "targets.private.json", targets);
   if (materialized) {
@@ -556,10 +616,14 @@ async function run() {
       ),
       maxAttemptsPerTarget,
       allowUniqueCandidateIdRepair,
+      responseCacheEnabled: Boolean(responseCacheDirectory),
+      responseCacheHitCount: cacheHits.length,
+      responseCacheWriteErrorCount: cacheWriteErrors.length,
     },
     completion: aggregateCompletionMetrics(
       calls,
-      process.env.LMSTUDIO_MODEL_PREF
+      process.env.LMSTUDIO_MODEL_PREF,
+      cacheHits.length
     ),
     validation: {
       pass: Boolean(materialized && !validationError),

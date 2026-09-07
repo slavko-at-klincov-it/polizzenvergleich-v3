@@ -52,6 +52,10 @@ const {
   releaseIdentity,
   sha256,
 } = require("../utils/policyAnalysis/runIdentity");
+const {
+  CACHE_SCHEMA_VERSION: MODEL_RESPONSE_CACHE_SCHEMA_VERSION,
+  seedResponseCacheFromRunHistory,
+} = require("../utils/policyAnalysis/validatedModelResponseCache");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
@@ -115,13 +119,17 @@ function completedCategoryViews(outputDirectory) {
 
 function resumableRun({ sessionUuid, manifest, comparisonMode }) {
   const contract = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
     comparisonMode,
     productProfile: manifest.productProfile,
     configuration: {
       model: MODEL,
       modelTokenLimit: MODEL_TOKEN_LIMIT,
+      validatedModelResponseCacheSchemaVersion:
+        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+          ? MODEL_RESPONSE_CACHE_SCHEMA_VERSION
+          : null,
     },
     documents: manifest.documents.map(
       ({
@@ -358,7 +366,30 @@ async function main() {
     manifest,
     comparisonMode,
   });
+  const responseCacheDirectory = referenceMode
+    ? path.join(
+        policyComparisonsPath,
+        "runs",
+        sessionUuid,
+        "response-cache-v1"
+      )
+    : null;
+  const responseCacheSeed = referenceMode
+    ? seedResponseCacheFromRunHistory({
+        sessionRunsRoot: path.join(
+          policyComparisonsPath,
+          "runs",
+          sessionUuid
+        ),
+        cacheDirectory: responseCacheDirectory,
+      })
+    : null;
   writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
+  if (responseCacheSeed)
+    writePrivateJson(
+      path.join(runRoot, "response-cache-seed.private.json"),
+      responseCacheSeed
+    );
   const plannedRuns = manifest.documents.map((document) => ({
     document,
     outputDirectory: path.join(
@@ -504,6 +535,7 @@ async function main() {
         contracts,
         model: MODEL,
         modelTokenLimit: MODEL_TOKEN_LIMIT,
+        responseCacheDirectory,
         onCategoryComplete,
       });
     else

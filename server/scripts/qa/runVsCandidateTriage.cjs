@@ -42,7 +42,7 @@ function writePrivateJson(outputDirectory, fileName, value) {
   fs.chmodSync(file, 0o600);
 }
 
-function aggregateCompletionMetrics(calls, model) {
+function aggregateCompletionMetrics(calls, model, cacheHitCount = 0) {
   const totals = calls.reduce(
     (result, call) => {
       result.prompt_tokens += call.metrics?.prompt_tokens || 0;
@@ -71,7 +71,14 @@ function aggregateCompletionMetrics(calls, model) {
     responseModelComplete:
       calls.length === 0 ||
       calls.every(({ metrics }) => metrics?.responseModel === model),
-    executionMode: calls.length === 0 ? "SERVER_ONLY" : "MODEL_ASSISTED",
+    executionMode:
+      calls.length === 0
+        ? cacheHitCount > 0
+          ? "CACHE_ASSISTED"
+          : "SERVER_ONLY"
+        : cacheHitCount > 0
+          ? "MODEL_AND_CACHE_ASSISTED"
+          : "MODEL_ASSISTED",
     provider: "LMStudioLLM",
     timestamp: new Date(),
   };
@@ -90,6 +97,7 @@ async function run() {
     "model",
     "modelTokenLimit",
     "maxAttemptsPerTarget",
+    "responseCacheDirectory",
     "expectedTargetSelectionDigestSha256",
   ]);
   const unknownArguments = Object.keys(args).filter(
@@ -108,6 +116,9 @@ async function run() {
   const controlFile = args.controlFile ? path.resolve(args.controlFile) : null;
   const controlMode = args.controlMode || "file";
   const outputDirectory = path.resolve(args.output || "");
+  const responseCacheDirectory = args.responseCacheDirectory
+    ? path.resolve(args.responseCacheDirectory)
+    : null;
   for (const [label, file] of [
     ["Worksheet", worksheetFile],
     ...(documentArtifactFile
@@ -148,6 +159,10 @@ async function run() {
     parseAndValidateCandidateTriage,
     parseAndValidateSingleBindingTarget,
   } = require("../../utils/policyAnalysis/candidateTriageContract");
+  const {
+    publishCachedResponse,
+    readValidatedCachedResponse,
+  } = require("../../utils/policyAnalysis/validatedModelResponseCache");
   const { LMStudioLLM } = require("../../utils/AiProviders/lmStudio");
 
   const worksheet = JSON.parse(fs.readFileSync(worksheetFile, "utf8"));
@@ -236,6 +251,8 @@ async function run() {
     fail("--maxAttemptsPerTarget muss zwischen 1 und 3 liegen");
   const startedAt = new Date();
   const calls = [];
+  const cacheHits = [];
+  const cacheWriteErrors = [];
   const messageCalls = [];
   const targetJudgements = [];
   let validationError = null;
@@ -276,6 +293,35 @@ async function run() {
         chatHistory: [],
         userPrompt: JSON.stringify(retryPayload),
       });
+      const validateResponse = (responseText) => {
+        if (!responseText) {
+          const emptyError = new Error(
+            `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`
+          );
+          emptyError.code = "TRIAGE_EMPTY_RESPONSE";
+          throw emptyError;
+        }
+        return parseAndValidateSingleBindingTarget({ responseText, target });
+      };
+      const cached = readValidatedCachedResponse({
+        cacheDirectory: responseCacheDirectory,
+        phase: "TRIAGE",
+        model: process.env.LMSTUDIO_MODEL_PREF,
+        modelTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
+        messages,
+        validateResponse,
+      });
+      if (cached) {
+        targetJudgements.push(cached.validated);
+        cacheHits.push({
+          targetId: target.targetId,
+          attempt,
+          cacheKey: cached.cacheKey,
+          responseSha256: sha256(cached.responseText),
+        });
+        targetComplete = true;
+        break;
+      }
       const completion = await llm.getChatCompletion(messages, {
         temperature: 0,
         maxTokens: 128,
@@ -295,19 +341,25 @@ async function run() {
       });
       messageCalls.push({ targetId: target.targetId, attempt, messages });
       try {
-        if (!completion?.textResponse) {
-          const emptyError = new Error(
-            `TRIAGE_EMPTY_RESPONSE: ${target.targetId}`
-          );
-          emptyError.code = "TRIAGE_EMPTY_RESPONSE";
-          throw emptyError;
-        }
-        targetJudgements.push(
-          parseAndValidateSingleBindingTarget({
+        const judgement = validateResponse(completion?.textResponse || "");
+        targetJudgements.push(judgement);
+        try {
+          publishCachedResponse({
+            cacheDirectory: responseCacheDirectory,
+            phase: "TRIAGE",
+            model: process.env.LMSTUDIO_MODEL_PREF,
+            modelTokenLimit: Number(process.env.LMSTUDIO_MODEL_TOKEN_LIMIT),
+            messages,
             responseText: completion.textResponse,
-            target,
-          })
-        );
+            responseModel: completion.metrics.responseModel,
+          });
+        } catch (error) {
+          cacheWriteErrors.push({
+            targetId: target.targetId,
+            code: error.code || "UNKNOWN",
+            message: error.message,
+          });
+        }
         targetComplete = true;
         break;
       } catch (error) {
@@ -332,6 +384,12 @@ async function run() {
     binding,
   }));
   writePrivateJson(outputDirectory, "answers.private.json", calls);
+  writePrivateJson(outputDirectory, "cache-hits.private.json", cacheHits);
+  writePrivateJson(
+    outputDirectory,
+    "cache-write-errors.private.json",
+    cacheWriteErrors
+  );
   writePrivateJson(outputDirectory, "messages.private.json", messageCalls);
   writePrivateJson(outputDirectory, "combined-answer.private.json", {
     schemaVersion: payload.schemaVersion,
@@ -454,10 +512,14 @@ async function run() {
         0
       ),
       maxAttemptsPerTarget,
+      responseCacheEnabled: Boolean(responseCacheDirectory),
+      responseCacheHitCount: cacheHits.length,
+      responseCacheWriteErrorCount: cacheWriteErrors.length,
     },
     completion: aggregateCompletionMetrics(
       calls,
-      process.env.LMSTUDIO_MODEL_PREF
+      process.env.LMSTUDIO_MODEL_PREF,
+      cacheHits.length
     ),
     validation: {
       formalPass,

@@ -6757,3 +6757,53 @@ Laufanstoß, nicht fachliche Vergleichsgüte. Die fachliche 1+1-Evidenz bleibt
 die in Abschnitt 133.9 dokumentierte bekannte LF/WEVIG-Paarung. Es gibt
 weiterhin keinen unbekannten Mehrversicherer-Holdout und keinen
 99-Prozent-Nachweis.
+
+### 133.11 LF-Laufzeit: verworfene Parallel-/Batchversuche und sicherer Replay-Cache
+
+Nutzerproblem / gewünschtes Ergebnis: Der gerichtete LF-Lauf mit einem
+A-Dokument und neun B-Dokumenten benötigte bei 613 lokalen Modellaufrufen rund
+eine Stunde. Alle 283 A-Zeilen und ihre Reihenfolge müssen erhalten bleiben;
+ein vollständiger Lauf muss weiterhin eine validierte Kunden-XLSX erzeugen.
+
+Beobachtete Evidenz: Auf dem eingefrorenen realen Abschnitt `B-01/LR05`
+benötigte der serielle Einzelzielweg 233 Sekunden. Zwei gleichzeitig
+ausgeführte Einzelanfragen lieferten bytegleiche Triage-, Wirkungs- und
+Quellartefakte, reduzierten die Wandzeit aber nur auf 232 Sekunden. Ein
+homogener Drei-Ziel-Batch bestand zwar die formalen Validatoren und benötigte
+211 Sekunden, änderte jedoch die Triage, sieben Wirkungsentscheidungen und die
+ausgewählten Quellen. Beide Ansätze verfehlten damit die Freigabegrenze und
+wurden aus dem Produktcode zurückgenommen.
+
+Root-Cause-Klasse: Ressourcen und Prozess. Das lokale MLX-Modell gewinnt auf
+dieser Hardware durch parallele Einzelgenerierung praktisch keinen Durchsatz;
+gemeinsame Generierungen verletzen trotz isolierter Hülle die semantische
+Unabhängigkeit der atomaren Entscheidungen.
+
+Betroffene Verträge: `INV-003`, `INV-004`, `INV-008`, `INV-009`, `INV-011`,
+`FAIL-001`, `FAIL-004`, `ADR-017`, `ADR-023`, `ADR-027`.
+
+Sicherer Kandidat: Für den LF-Pfad wird ein sitzungsgebundener,
+inhaltsadressierter Cache ausschließlich für bereits erzeugte
+Einzelzielantworten eingeführt. Der Schlüssel bindet Phase, Provider,
+Modell-ID, Kontextlimit, Temperatur und den Hash der vollständigen
+System-/Benutzernachrichten. Der Cache speichert keine Prompt- oder
+Dokumenttexte. Jeder Treffer wird vor Verwendung erneut durch den aktuellen
+Einzelzielvalidator geprüft; beschädigte oder heute ungültige Einträge werden
+aus dem aktiven Namensraum verschoben. Neue Einträge werden erst nach
+erfolgreicher Modellidentitäts- und Ergebnisvalidierung atomar publiziert.
+Reset/Löschung des sitzungsspezifischen Run-Verzeichnisses entfernt auch den
+Cache.
+
+Scope und Nicht-Ziele: Der erste Lauf über bisher unbekannte Dokumente wird
+nicht künstlich beschleunigt. Es werden keine Zeilen gefiltert, keine
+Modellentscheidungen über mehrere Ziele vermischt und keine Ergebnisse
+workspace- oder nutzerübergreifend geteilt. Wiederholungen derselben
+Dokumente unter identischen Verträgen sollen dagegen ohne erneute 613
+Modellaufrufe auskommen.
+
+Messbare Freigabegrenze: Ein realer Cache-Replay muss null Modellaufrufe, null
+Cache-Schreibfehler, bytegleiche materialisierte Triage-/Wirkungs-/Quellwerte
+und einen vollständigen 1+9-Endlauf mit 283/283 Zeilen sowie validierter XLSX
+erreichen. Jede Abweichung beendet den Kandidaten. Dies beweist
+Wiederholbarkeit auf bekannten Entwicklungsfixtures, nicht semantische Güte
+auf unbekannten Versicherern und keine 99-Prozent-Zuverlässigkeit.
