@@ -1391,8 +1391,8 @@ function validateAuditResult(auditCase, result) {
     throw new Error("LF_REFERENCE_AUDIT_RESULT_ENUM_OR_REASON_INVALID");
 
   result = applyRowLocalComparableLimitPolicy(auditCase, result);
-  result = applyOrphanLimitPolicy(auditCase, result);
   result = applySupportAnchorPolicy(auditCase, result);
+  result = applyOrphanLimitPolicy(auditCase, result);
   if (Object.hasOwn(result, "serverNormalizations")) {
     const normalizations = exactArray(
       result.serverNormalizations,

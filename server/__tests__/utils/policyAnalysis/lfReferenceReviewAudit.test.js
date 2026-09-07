@@ -635,6 +635,38 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("keeps support and orphan normalization idempotent", () => {
+    const { auditCase, candidateId } = fixture();
+    const unrelated =
+      "Fahnenstangen und Werkzeuge für die Pflege der Grünanlagen sind mitversichert.";
+    auditCase.candidates[0].text = `${unrelated} Die Neuwertsumme beträgt EUR 50.000.`;
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote = unrelated;
+    result.componentAssessments[1] = {
+      ...result.componentAssessments[1],
+      finding: "DIRECT_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      exactQuotes: [
+        { candidateId, quote: "Die Neuwertsumme beträgt EUR 50.000." },
+      ],
+      coverageEffect: "DEFINED",
+      scopeRelation: "SAME_OR_BROADER",
+      observedBValues: [],
+      note: "Ein allgemeines Limit ist definiert.",
+    };
+
+    const first = validateAuditResult(auditCase, result);
+    const second = validateAuditResult(auditCase, first);
+    expect(second).toEqual(first);
+    expect(second).toMatchObject({
+      rowDisposition: "PRESENT_BUT_NO_DECISION_READY_COMPONENT",
+      componentAssessments: [
+        expect.objectContaining({ finding: "RELATED_ONLY" }),
+        expect.objectContaining({ finding: "RELATED_ONLY" }),
+      ],
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [
