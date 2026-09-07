@@ -846,6 +846,41 @@ function rebindModelEvidenceCandidates(auditCase, result) {
       const candidates = replacements.get(observedValue.candidateId);
       if (candidates?.size) observedValue.candidateId = [...candidates][0];
     }
+    const reboundQuoteCandidateIds = [
+      ...new Set(
+        (assessment.exactQuotes ?? [])
+          .map(({ candidateId }) => candidateId)
+          .filter(Boolean)
+      ),
+    ];
+    if (["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding))
+      assessment.supportingCandidateIds = [
+        ...new Set([
+          ...(assessment.supportingCandidateIds ?? []),
+          ...reboundQuoteCandidateIds,
+        ]),
+      ];
+    if (assessment.finding === "CONTRADICTION")
+      assessment.contradictingCandidateIds = [
+        ...new Set([
+          ...(assessment.contradictingCandidateIds ?? []),
+          ...reboundQuoteCandidateIds,
+        ]),
+      ];
+    if (
+      [
+        "RELATED_ONLY",
+        "MENTION_ONLY",
+        "NO_MATCH_IN_CANDIDATES",
+        "UNCLEAR",
+      ].includes(assessment.finding)
+    )
+      assessment.reviewedCandidateIds = [
+        ...new Set([
+          ...reboundQuoteCandidateIds,
+          ...(assessment.reviewedCandidateIds ?? []),
+        ]),
+      ].slice(0, 5);
     const usedEvidence = new Set([
       ...(assessment.supportingCandidateIds ?? []),
       ...(assessment.contradictingCandidateIds ?? []),

@@ -208,6 +208,50 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("retains every reviewed source when one model reference is rebound to multiple candidates", () => {
+    const { auditCase, candidateId } = fixture();
+    const secondCandidate = {
+      ...auditCase.candidates[0],
+      id: `candidate:${"d".repeat(64)}`,
+      text: "Die Neuwertsumme beträgt EUR 50.000.",
+      textSha256: "e".repeat(64),
+    };
+    auditCase.candidates.push(secondCandidate);
+    const result = validResult(candidateId);
+    result.componentAssessments[0] = {
+      ...result.componentAssessments[0],
+      finding: "NO_MATCH_IN_CANDIDATES",
+      supportingCandidateIds: [],
+      reviewedCandidateIds: [candidateId],
+      exactQuotes: [
+        {
+          candidateId,
+          quote: "Die Photovoltaikanlage ist mitversichert.",
+        },
+        {
+          candidateId,
+          quote: "Die Neuwertsumme beträgt EUR 50.000.",
+        },
+      ],
+      coverageEffect: "UNKNOWN",
+      scopeRelation: "DIFFERENT",
+      observedBValues: [],
+      note: "Die Passagen wurden geprüft, tragen diese Komponente aber nicht.",
+    };
+
+    const rebound = rebindModelEvidenceCandidates(
+      auditCase,
+      normalizeModelAuditMetadata(result)
+    );
+    expect(rebound.componentAssessments[0].reviewedCandidateIds).toEqual([
+      candidateId,
+      secondCandidate.id,
+    ]);
+    expect(validateAuditResult(auditCase, rebound)).toMatchObject({
+      rowDisposition: "NO_ADDITIONAL_MATCH_IN_CANDIDATES",
+    });
+  });
+
   test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
