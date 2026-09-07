@@ -731,6 +731,49 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("does not rebind a limit from a non-subject component", () => {
+    const { auditCase, candidateId } = fixture();
+    auditCase.semanticRequirement.components[0].factRole = "CONDITION";
+    const limitComponent = auditCase.semanticRequirement.components[1];
+    limitComponent.sourceSpanIds = ["shared-limit-span"];
+    limitComponent.valueBinding = {
+      type: "PERCENT",
+      formula: "basis * 0.1",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "agreed_sum",
+        sourceSpanId: "shared-limit-span",
+        rawValue: "10%",
+      },
+    ];
+    const conditionQuote =
+      "Die Photovoltaikanlage ist bei Meldung bis 5 % mitversichert.";
+    auditCase.candidates[0].text = conditionQuote;
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes = [
+      { candidateId, quote: conditionQuote },
+    ];
+
+    const first = validateAuditResult(auditCase, result);
+    const second = validateAuditResult(auditCase, first);
+    expect(second).toEqual(first);
+    expect(second).not.toHaveProperty("serverNormalizations");
+    expect(second).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+      componentAssessments: [
+        expect.objectContaining({
+          componentId: "technical_objects",
+          finding: "DIRECT_SUPPORT",
+        }),
+        expect.objectContaining({
+          componentId: "agreed_sum",
+          finding: "NO_MATCH_IN_CANDIDATES",
+        }),
+      ],
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [

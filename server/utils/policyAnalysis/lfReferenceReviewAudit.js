@@ -84,6 +84,12 @@ const SUPPORT_ANCHOR_FACT_ROLES = new Set([
   "EXCLUSION",
   "DEFINITION",
 ]);
+const COUNTERPART_SUBJECT_FACT_ROLES = new Set([
+  "INSURED_OBJECT",
+  "PERIL",
+  "COST",
+  "BENEFIT",
+]);
 const GENERIC_SUPPORT_TOKENS = new Set([
   "bedingung",
   "deckung",
@@ -299,8 +305,13 @@ function applyRowLocalComparableLimitPolicy(auditCase, result) {
       continue;
     const donors = (normalizedResult.componentAssessments ?? []).flatMap(
       (candidateAssessment) => {
+        const candidateComponent =
+          auditCase.semanticRequirement.components.find(
+            ({ id }) => id === candidateAssessment.componentId
+          );
         if (
           candidateAssessment.componentId === assessment.componentId ||
+          !COUNTERPART_SUBJECT_FACT_ROLES.has(candidateComponent?.factRole) ||
           !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
             candidateAssessment.finding
           )
@@ -384,7 +395,7 @@ function applyOrphanLimitPolicy(auditCase, result) {
   const subjectComponentIds = new Set(
     auditCase.semanticRequirement.components
       .filter(({ factRole }) =>
-        ["INSURED_OBJECT", "PERIL", "COST", "BENEFIT"].includes(factRole)
+        COUNTERPART_SUBJECT_FACT_ROLES.has(factRole)
       )
       .map(({ id }) => id)
   );
