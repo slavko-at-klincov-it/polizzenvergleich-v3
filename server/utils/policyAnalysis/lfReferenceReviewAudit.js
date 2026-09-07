@@ -930,10 +930,7 @@ function normalizeModelAuditMetadata(result) {
     }
     if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding)) {
       assessment.reviewedCandidateIds = [
-        ...new Set([
-          ...quoteCandidateIds,
-          ...assessment.reviewedCandidateIds,
-        ]),
+        ...new Set([...quoteCandidateIds, ...assessment.reviewedCandidateIds]),
       ].slice(0, 5);
     }
     if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding)) {
