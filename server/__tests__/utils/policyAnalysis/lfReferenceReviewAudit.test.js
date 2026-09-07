@@ -186,7 +186,7 @@ describe("LF reference review audit contract", () => {
   });
 
   test.each(["INSURED_OBJECT", "CONDITION"])(
-    "rejects support for an unrelated %s component without a semantic anchor",
+    "downgrades support for an unrelated %s component without a semantic anchor",
     (factRole) => {
       const { auditCase, candidateId } = fixture();
       const unrelated =
@@ -196,13 +196,32 @@ describe("LF reference review audit contract", () => {
       const result = validResult(candidateId);
       result.componentAssessments[0].exactQuotes[0].quote = unrelated;
 
-      expect(() => validateAuditResult(auditCase, result)).toThrow(
-        "LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID"
-      );
+      expect(validateAuditResult(auditCase, result)).toMatchObject({
+        rowDisposition: "PRESENT_BUT_NO_DECISION_READY_COMPONENT",
+        serverNormalizations: [
+          {
+            componentId: "technical_objects",
+            originalFinding: "DIRECT_SUPPORT",
+            normalizedFinding: "RELATED_ONLY",
+            reasons: ["SEMANTIC_ANCHOR_MISSING"],
+          },
+        ],
+        componentAssessments: [
+          expect.objectContaining({
+            componentId: "technical_objects",
+            finding: "RELATED_ONLY",
+            supportingCandidateIds: [],
+            reviewedCandidateIds: [candidateId],
+            coverageEffect: "UNKNOWN",
+            scopeRelation: "DIFFERENT",
+          }),
+          expect.any(Object),
+        ],
+      });
     }
   );
 
-  test("rejects first-risk wording that omits a required percentage", () => {
+  test("downgrades first-risk wording that omits a required percentage", () => {
     const { auditCase, candidateId } = fixture();
     const component = auditCase.semanticRequirement.components[1];
     component.sourceSpanIds = ["shared-limit-span"];
@@ -238,9 +257,28 @@ describe("LF reference review audit contract", () => {
       note: "Ein allgemeiner Wert ist vorhanden, aber der Prozentsatz fehlt.",
     };
 
-    expect(() => validateAuditResult(auditCase, result)).toThrow(
-      "LF_REFERENCE_AUDIT_PERCENTAGE_ANCHOR_INVALID"
-    );
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+      serverNormalizations: [
+        {
+          componentId: "agreed_sum",
+          originalFinding: "DIRECT_SUPPORT",
+          normalizedFinding: "RELATED_ONLY",
+          reasons: ["REQUIRED_PERCENTAGE_MISSING"],
+        },
+      ],
+      componentAssessments: [
+        expect.any(Object),
+        expect.objectContaining({
+          componentId: "agreed_sum",
+          finding: "RELATED_ONLY",
+          supportingCandidateIds: [],
+          reviewedCandidateIds: [candidateId],
+          coverageEffect: "UNKNOWN",
+          scopeRelation: "UNCLEAR",
+        }),
+      ],
+    });
   });
 
   test("accepts a required percentage when the exact quote carries it", () => {
@@ -280,9 +318,11 @@ describe("LF reference review audit contract", () => {
       note: "Der konkrete Prozentsatz ist direkt an den Beleg gebunden.",
     };
 
-    expect(validateAuditResult(auditCase, result)).toMatchObject({
+    const validated = validateAuditResult(auditCase, result);
+    expect(validated).toMatchObject({
       rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
     });
+    expect(validated).not.toHaveProperty("serverNormalizations");
   });
 
   test("parses physical pages and rejects a mismatching page map", () => {

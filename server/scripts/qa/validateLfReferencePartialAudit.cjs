@@ -78,6 +78,7 @@ function buildReviewPacket(records) {
         valueComparison: record.result.valueComparison,
         confidence: record.result.confidence,
         reasoning: record.result.reasoning,
+        serverNormalizations: record.result.serverNormalizations ?? [],
         componentAssessments: record.result.componentAssessments.map(
           (assessment) => ({
             componentId: assessment.componentId,
@@ -252,6 +253,18 @@ function validateAudit({ auditRoot, model }) {
         return [rootCause, { count: caseIds.length, caseIds }];
       })
   );
+  const serverNormalizations = records
+    .flatMap(({ auditCase, record }) =>
+      (record.result.serverNormalizations ?? []).map((normalization) => ({
+        caseId: auditCase.caseId,
+        ...normalization,
+      }))
+    )
+    .sort((left, right) =>
+      `${left.caseId}:${left.componentId}`.localeCompare(
+        `${right.caseId}:${right.componentId}`
+      )
+    );
   const summary = {
     schemaVersion: 1,
     contractId: "LF_PARTIAL_COUNTERPART_AUDIT_SUMMARY_V1",
@@ -263,6 +276,8 @@ function validateAudit({ auditRoot, model }) {
     caseCount: records.length,
     dispositions,
     rootCauses,
+    serverNormalizationCount: serverNormalizations.length,
+    serverNormalizations,
     proofLimit:
       "Der Audit betrifft nur die 79 Teiltreffer des gebundenen bekannten LF-/WEVIG-Laufs. Modellbefunde sind Prüfvorschläge, keine Fachfreigabe. NO_ADDITIONAL_MATCH_IN_CANDIDATES ist kein kontrollierter Paket-Nullfund und kein Holdout- oder 99-Prozent-Nachweis.",
   };

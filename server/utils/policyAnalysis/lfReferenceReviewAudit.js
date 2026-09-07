@@ -118,6 +118,10 @@ const GERMAN_PERCENTAGE_WORDS = Object.freeze({
   50: "funfzig",
   100: "hundert",
 });
+const SUPPORT_ANCHOR_NORMALIZATION_REASONS = Object.freeze([
+  "SEMANTIC_ANCHOR_MISSING",
+  "REQUIRED_PERCENTAGE_MISSING",
+]);
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -233,9 +237,10 @@ function requiredPercentageAnchors(requirement, component) {
     });
 }
 
-function validateSupportAnchors(requirement, component, assessment, quotes) {
+function supportAnchorViolations(requirement, component, assessment, quotes) {
   if (!["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding))
-    return;
+    return [];
+  const violations = [];
   const quotedText = normalize(quotes.map(({ quote }) => quote).join(" "));
   if (SUPPORT_ANCHOR_FACT_ROLES.has(component.factRole)) {
     const semanticAnchors = componentSupportAnchors(component);
@@ -243,13 +248,78 @@ function validateSupportAnchors(requirement, component, assessment, quotes) {
       semanticAnchors.length > 0 &&
       !semanticAnchors.some((anchor) => quotedText.includes(anchor))
     )
-      throw new Error("LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID");
+      violations.push("SEMANTIC_ANCHOR_MISSING");
   }
   const percentageAnchors = requiredPercentageAnchors(requirement, component);
   if (
     percentageAnchors.length > 0 &&
     !percentageAnchors.some((anchor) => quotedText.includes(anchor))
   )
+    violations.push("REQUIRED_PERCENTAGE_MISSING");
+  return violations;
+}
+
+function applySupportAnchorPolicy(auditCase, result) {
+  const normalizedResult = structuredClone(result);
+  const normalizations = [...(normalizedResult.serverNormalizations ?? [])];
+  for (const assessment of normalizedResult.componentAssessments ?? []) {
+    const component = auditCase.semanticRequirement.components.find(
+      ({ id }) => id === assessment.componentId
+    );
+    if (!component) continue;
+    const supportingIds = assessment.supportingCandidateIds ?? [];
+    const supportingQuotes = (assessment.exactQuotes ?? []).filter(
+      ({ candidateId }) => supportingIds.includes(candidateId)
+    );
+    const violations = supportAnchorViolations(
+      auditCase.semanticRequirement,
+      component,
+      assessment,
+      supportingQuotes
+    );
+    if (violations.length === 0) continue;
+    const originalFinding = assessment.finding;
+    const quoteCandidateIds = supportingQuotes.map(
+      ({ candidateId }) => candidateId
+    );
+    assessment.finding =
+      quoteCandidateIds.length > 0 ? "RELATED_ONLY" : "NO_MATCH_IN_CANDIDATES";
+    assessment.reviewedCandidateIds = [
+      ...new Set([
+        ...quoteCandidateIds,
+        ...(assessment.reviewedCandidateIds ?? []),
+        ...supportingIds,
+      ]),
+    ].slice(0, 5);
+    assessment.supportingCandidateIds = [];
+    assessment.observedBValues = [];
+    assessment.coverageEffect = "UNKNOWN";
+    assessment.scopeRelation = violations.includes("SEMANTIC_ANCHOR_MISSING")
+      ? "DIFFERENT"
+      : "UNCLEAR";
+    assessment.note = `Server-Fail-Closed (${violations.join(", ")}): ${assessment.note}`;
+    normalizations.push({
+      componentId: assessment.componentId,
+      originalFinding,
+      normalizedFinding: assessment.finding,
+      reasons: violations,
+    });
+  }
+  if (normalizations.length > 0)
+    normalizedResult.serverNormalizations = normalizations;
+  return normalizedResult;
+}
+
+function validateSupportAnchors(requirement, component, assessment, quotes) {
+  const violations = supportAnchorViolations(
+    requirement,
+    component,
+    assessment,
+    quotes
+  );
+  if (violations.includes("SEMANTIC_ANCHOR_MISSING"))
+    throw new Error("LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID");
+  if (violations.includes("REQUIRED_PERCENTAGE_MISSING"))
     throw new Error("LF_REFERENCE_AUDIT_PERCENTAGE_ANCHOR_INVALID");
 }
 
@@ -1036,6 +1106,9 @@ function validateAuditResult(auditCase, result) {
       ...(Object.hasOwn(result ?? {}, "modelRecommendedAction")
         ? ["modelRecommendedAction"]
         : []),
+      ...(Object.hasOwn(result ?? {}, "serverNormalizations")
+        ? ["serverNormalizations"]
+        : []),
     ],
     "RESULT"
   );
@@ -1054,6 +1127,52 @@ function validateAuditResult(auditCase, result) {
     result.reasoning.trim().length < 12
   )
     throw new Error("LF_REFERENCE_AUDIT_RESULT_ENUM_OR_REASON_INVALID");
+
+  result = applySupportAnchorPolicy(auditCase, result);
+  if (Object.hasOwn(result, "serverNormalizations")) {
+    const normalizations = exactArray(
+      result.serverNormalizations,
+      "SERVER_NORMALIZATIONS"
+    );
+    if (
+      new Set(normalizations.map(({ componentId }) => componentId)).size !==
+      normalizations.length
+    )
+      throw new Error("LF_REFERENCE_AUDIT_SERVER_NORMALIZATION_INVALID");
+    for (const normalization of normalizations) {
+      exactKeys(
+        normalization,
+        [
+          "componentId",
+          "originalFinding",
+          "normalizedFinding",
+          "reasons",
+        ],
+        "SERVER_NORMALIZATION"
+      );
+      if (
+        typeof normalization.componentId !== "string" ||
+        !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
+          normalization.originalFinding
+        ) ||
+        !["RELATED_ONLY", "NO_MATCH_IN_CANDIDATES"].includes(
+          normalization.normalizedFinding
+        ) ||
+        !Array.isArray(normalization.reasons) ||
+        normalization.reasons.length === 0 ||
+        normalization.reasons.some(
+          (reason) => !SUPPORT_ANCHOR_NORMALIZATION_REASONS.includes(reason)
+        ) ||
+        !result.componentAssessments.some(
+          (assessment) =>
+            assessment.componentId === normalization.componentId &&
+            assessment.finding === normalization.normalizedFinding &&
+            assessment.note.startsWith("Server-Fail-Closed (")
+        )
+      )
+        throw new Error("LF_REFERENCE_AUDIT_SERVER_NORMALIZATION_INVALID");
+    }
+  }
 
   const candidateById = new Map(
     auditCase.candidates.map((candidate) => [candidate.id, candidate])
