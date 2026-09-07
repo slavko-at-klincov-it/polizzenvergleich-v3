@@ -109,6 +109,8 @@ function normalize(value) {
 function normalizeQuote(value) {
   return String(value ?? "")
     .normalize("NFKC")
+    .replace(/\u00ad/gu, "")
+    .replace(/([\p{L}\p{N}])-\s+(?=[\p{L}\p{N}])/gu, "$1")
     .replace(/\s+/gu, " ")
     .trim()
     .toLowerCase();
@@ -414,10 +416,10 @@ Regeln:
 1. Erfinde keine Quelle, Seite, Klausel, Zahl, Komponente oder Rechtsfolge.
 2. Verwende ausschließlich gelieferte kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs. Kopiere Kandidaten-Referenzen exakt. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
 3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
-4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope.
-5. NARROWER_SUPPORT: echtes Gegenstück, aber engerer Scope oder zusätzliche Bedingung. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
+4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
+5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.
-7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg.
+7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
 10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante Referenzen und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-Referenz braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.

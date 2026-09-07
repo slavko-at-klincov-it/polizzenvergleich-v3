@@ -269,6 +269,24 @@ describe("LF reference review audit contract", () => {
     );
   });
 
+  test("accepts PDF line-wrap hyphenation without accepting a paraphrase", () => {
+    const { auditCase, candidateId } = fixture();
+    auditCase.candidates[0].text =
+      "Die Photovoltaikanlage am Versicherungs-\ngrundstück ist mitversichert.";
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Die Photovoltaikanlage am Versicherungsgrundstück ist mitversichert.";
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
+
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Die Photovoltaikanlage ist ohne Einschränkung mitversichert.";
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      "LF_REFERENCE_AUDIT_QUOTE_INVALID"
+    );
+  });
+
   test.each([
     ["unknown candidate", (result) => {
       result.componentAssessments[0].supportingCandidateIds = ["unknown"];
