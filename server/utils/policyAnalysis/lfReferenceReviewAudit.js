@@ -394,9 +394,7 @@ function applyOrphanLimitPolicy(auditCase, result) {
   const normalizations = [...(normalizedResult.serverNormalizations ?? [])];
   const subjectComponentIds = new Set(
     auditCase.semanticRequirement.components
-      .filter(({ factRole }) =>
-        COUNTERPART_SUBJECT_FACT_ROLES.has(factRole)
-      )
+      .filter(({ factRole }) => COUNTERPART_SUBJECT_FACT_ROLES.has(factRole))
       .map(({ id }) => id)
   );
   if (subjectComponentIds.size === 0) return normalizedResult;
