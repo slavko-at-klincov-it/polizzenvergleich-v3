@@ -162,19 +162,59 @@ function productionEvidenceForRow({
       throw new Error(
         `LF_REFERENCE_AUDIT_PRODUCTION_EVIDENCE_MISSING:${document.uuid}:${analysisRowId}`
       );
+    const selectedForRequirement = selectedSources
+      .filter(({ requirementId }) => requirementId === analysisRowId)
+      .map((source) => ({
+        requirementId: source.requirementId,
+        componentId: source.componentId,
+        candidateId: source.candidateId,
+        candidateBinding: source.candidateBinding,
+        physicalPageNumber: source.physicalPageNumber,
+        printedPageLabel: source.printedPageLabel,
+        exactText: source.exactText,
+        contextText: String(source.contextText ?? "").slice(0, 1800),
+        contextDocumentStart: source.contextDocumentStart,
+      }));
+    const requestedForRequirement = (requestedFields.requirements ?? []).find(
+      ({ requirementId }) => requirementId === analysisRowId
+    );
+    const compactRequestedFields = requestedForRequirement
+      ? {
+          requirementId: requestedForRequirement.requirementId,
+          requestedFields: requestedForRequirement.requestedFields,
+          requestedFieldStatus: requestedForRequirement.requestedFieldStatus,
+          fields: (requestedForRequirement.fields ?? []).map((field) => ({
+            field: field.field,
+            status: field.status,
+            facts: (field.facts ?? []).map((fact) => ({
+              rawValue: fact.rawValue,
+              normalizedValue: fact.normalizedValue,
+              valueType: fact.valueType,
+              unit: fact.unit,
+              limitKind: fact.limitKind,
+              comparisonBasis: fact.comparisonBasis,
+              binding: fact.binding,
+              source: fact.source,
+            })),
+          })),
+        }
+      : null;
     return {
       documentUuid: document.uuid,
       documentName: document.originalName,
       documentRole: document.role,
       documentStatus: document.documentStatus,
-      row,
+      row: {
+        categoryId: row.categoryId,
+        documentedContent: row.documentedContent,
+        coverage: row.coverage,
+        coverageAmount: row.coverageAmount,
+        source: row.source,
+        reviewStatus: row.reviewStatus,
+      },
       judgements,
-      selectedSources: selectedSources.filter(
-        ({ requirementId }) => requirementId === analysisRowId
-      ),
-      requestedFields: (requestedFields.requirements ?? []).find(
-        ({ requirementId }) => requirementId === analysisRowId
-      ),
+      selectedSources: selectedForRequirement,
+      requestedFields: compactRequestedFields,
       artifactSha256: Object.fromEntries(
         Object.entries(files).map(([key, file]) => [
           key,
