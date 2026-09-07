@@ -172,6 +172,19 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "...Die Photovoltaikanlage ist mitversichert.";
+
+    const rebound = rebindModelEvidenceCandidates(auditCase, result);
+    expect(rebound.componentAssessments[0].exactQuotes[0].quote).toBe(
+      "Die Photovoltaikanlage ist mitversichert."
+    );
+    expect(validateAuditResult(auditCase, rebound)).toBe(rebound);
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [

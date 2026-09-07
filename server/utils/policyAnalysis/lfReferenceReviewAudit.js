@@ -608,6 +608,18 @@ function rebindModelEvidenceCandidates(auditCase, result) {
   for (const assessment of rebound.componentAssessments ?? []) {
     const replacements = new Map();
     for (const quote of assessment.exactQuotes ?? []) {
+      const rawQuote = String(quote?.quote ?? "").trim();
+      const quoteWithoutBoundaryEllipsis = rawQuote
+        .replace(/^(?:\.{3}|…)+\s*/u, "")
+        .replace(/\s*(?:\.{3}|…)+$/u, "")
+        .trim();
+      if (
+        quoteWithoutBoundaryEllipsis !== rawQuote &&
+        auditCase.candidates.some((candidate) =>
+          quoteMatchesText(candidate.text, quoteWithoutBoundaryEllipsis)
+        )
+      )
+        quote.quote = quoteWithoutBoundaryEllipsis;
       const normalized = normalizeQuote(quote?.quote);
       const supplied = candidateById.get(quote?.candidateId);
       if (
