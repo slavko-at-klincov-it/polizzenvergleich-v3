@@ -121,6 +121,7 @@ const GERMAN_PERCENTAGE_WORDS = Object.freeze({
 const SUPPORT_ANCHOR_NORMALIZATION_REASONS = Object.freeze([
   "SEMANTIC_ANCHOR_MISSING",
   "REQUIRED_PERCENTAGE_MISSING",
+  "UNBOUND_QUOTE_DROPPED",
 ]);
 
 function canonicalValue(value) {
@@ -788,11 +789,13 @@ function rebindModelEvidenceCandidates(auditCase, result) {
   if (!result || typeof result !== "object" || Array.isArray(result))
     return result;
   const rebound = structuredClone(result);
+  const normalizations = [...(rebound.serverNormalizations ?? [])];
   const candidateById = new Map(
     auditCase.candidates.map((candidate) => [candidate.id, candidate])
   );
   for (const assessment of rebound.componentAssessments ?? []) {
     const replacements = new Map();
+    const unboundQuotes = new Set();
     for (const quote of assessment.exactQuotes ?? []) {
       const rawQuote = String(quote?.quote ?? "").trim();
       const quoteWithoutBoundaryEllipsis = rawQuote
@@ -816,7 +819,10 @@ function rebindModelEvidenceCandidates(auditCase, result) {
       const matchingCandidates = auditCase.candidates.filter((candidate) =>
         quoteMatchesText(candidate.text, quote.quote)
       );
-      if (matchingCandidates.length === 0) continue;
+      if (matchingCandidates.length === 0) {
+        unboundQuotes.add(quote);
+        continue;
+      }
       const replacement =
         matchingCandidates.find(
           (candidate) =>
@@ -842,6 +848,36 @@ function rebindModelEvidenceCandidates(auditCase, result) {
             ])
           ),
         ];
+    if (unboundQuotes.size > 0) {
+      const originalFinding = assessment.finding;
+      assessment.exactQuotes = (assessment.exactQuotes ?? []).filter(
+        (quote) => !unboundQuotes.has(quote)
+      );
+      const validQuoteCandidateIds = [
+        ...new Set(
+          assessment.exactQuotes
+            .map(({ candidateId }) => candidateId)
+            .filter((candidateId) => candidateById.has(candidateId))
+        ),
+      ].slice(0, 5);
+      assessment.exactQuotes = assessment.exactQuotes.filter(
+        ({ candidateId }) => validQuoteCandidateIds.includes(candidateId)
+      );
+      assessment.finding = "NO_MATCH_IN_CANDIDATES";
+      assessment.reviewedCandidateIds = validQuoteCandidateIds;
+      assessment.supportingCandidateIds = [];
+      assessment.contradictingCandidateIds = [];
+      assessment.observedBValues = [];
+      assessment.coverageEffect = "UNKNOWN";
+      assessment.scopeRelation = "UNCLEAR";
+      assessment.note = `Server-Fail-Closed (UNBOUND_QUOTE_DROPPED): ${assessment.note}`;
+      normalizations.push({
+        componentId: assessment.componentId,
+        originalFinding,
+        normalizedFinding: assessment.finding,
+        reasons: ["UNBOUND_QUOTE_DROPPED"],
+      });
+    }
     for (const observedValue of assessment.observedBValues ?? []) {
       const candidates = replacements.get(observedValue.candidateId);
       if (candidates?.size) observedValue.candidateId = [...candidates][0];
@@ -890,6 +926,7 @@ function rebindModelEvidenceCandidates(auditCase, result) {
         (candidateId) => !usedEvidence.has(candidateId)
       );
   }
+  if (normalizations.length > 0) rebound.serverNormalizations = normalizations;
   return rebound;
 }
 
@@ -1190,14 +1227,18 @@ function validateAuditResult(auditCase, result) {
         ["componentId", "originalFinding", "normalizedFinding", "reasons"],
         "SERVER_NORMALIZATION"
       );
+      const hasUnboundQuoteDrop = normalization.reasons.includes(
+        "UNBOUND_QUOTE_DROPPED"
+      );
+      const hasSupportAnchorReason = normalization.reasons.some((reason) =>
+        ["SEMANTIC_ANCHOR_MISSING", "REQUIRED_PERCENTAGE_MISSING"].includes(
+          reason
+        )
+      );
       if (
         typeof normalization.componentId !== "string" ||
-        !["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
-          normalization.originalFinding
-        ) ||
-        !["RELATED_ONLY", "NO_MATCH_IN_CANDIDATES"].includes(
-          normalization.normalizedFinding
-        ) ||
+        !COMPONENT_FINDINGS.includes(normalization.originalFinding) ||
+        !COMPONENT_FINDINGS.includes(normalization.normalizedFinding) ||
         !Array.isArray(normalization.reasons) ||
         normalization.reasons.length === 0 ||
         normalization.reasons.some(
@@ -1208,7 +1249,16 @@ function validateAuditResult(auditCase, result) {
             assessment.componentId === normalization.componentId &&
             assessment.finding === normalization.normalizedFinding &&
             assessment.note.startsWith("Server-Fail-Closed (")
-        )
+        ) ||
+        (hasUnboundQuoteDrop &&
+          normalization.normalizedFinding !== "NO_MATCH_IN_CANDIDATES") ||
+        (hasSupportAnchorReason &&
+          (!["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
+            normalization.originalFinding
+          ) ||
+            !["RELATED_ONLY", "NO_MATCH_IN_CANDIDATES"].includes(
+              normalization.normalizedFinding
+            )))
       )
         throw new Error("LF_REFERENCE_AUDIT_SERVER_NORMALIZATION_INVALID");
     }

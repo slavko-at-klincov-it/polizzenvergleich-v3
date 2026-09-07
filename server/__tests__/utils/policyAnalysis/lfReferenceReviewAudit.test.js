@@ -252,6 +252,37 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("drops an unbound model quote and fails the component closed", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Dieser angebliche Beleg steht in keinem Dokument von Paket B.";
+
+    const rebound = rebindModelEvidenceCandidates(auditCase, result);
+    expect(rebound.componentAssessments[0]).toMatchObject({
+      componentId: "technical_objects",
+      finding: "NO_MATCH_IN_CANDIDATES",
+      supportingCandidateIds: [],
+      contradictingCandidateIds: [],
+      reviewedCandidateIds: [],
+      exactQuotes: [],
+      coverageEffect: "UNKNOWN",
+      scopeRelation: "UNCLEAR",
+      observedBValues: [],
+    });
+    expect(validateAuditResult(auditCase, rebound)).toMatchObject({
+      rowDisposition: "NO_ADDITIONAL_MATCH_IN_CANDIDATES",
+      serverNormalizations: [
+        {
+          componentId: "technical_objects",
+          originalFinding: "DIRECT_SUPPORT",
+          normalizedFinding: "NO_MATCH_IN_CANDIDATES",
+          reasons: ["UNBOUND_QUOTE_DROPPED"],
+        },
+      ],
+    });
+  });
+
   test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
