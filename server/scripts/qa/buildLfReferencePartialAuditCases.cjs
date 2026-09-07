@@ -162,8 +162,31 @@ function productionEvidenceForRow({
       throw new Error(
         `LF_REFERENCE_AUDIT_PRODUCTION_EVIDENCE_MISSING:${document.uuid}:${analysisRowId}`
       );
-    const selectedForRequirement = selectedSources
+    const selectedForRequirementAll = selectedSources
       .filter(({ requirementId }) => requirementId === analysisRowId)
+      .sort(
+        (left, right) =>
+          left.componentId.localeCompare(right.componentId) ||
+          left.physicalPageNumber - right.physicalPageNumber ||
+          left.candidateId.localeCompare(right.candidateId)
+      );
+    const selectedSourceCountByComponent = Object.fromEntries(
+      [...new Set(selectedForRequirementAll.map(({ componentId }) => componentId))]
+        .sort()
+        .map((componentId) => [
+          componentId,
+          selectedForRequirementAll.filter(
+            (source) => source.componentId === componentId
+          ).length,
+        ])
+    );
+    const selectedForRequirement = selectedForRequirementAll
+      .filter(
+        (source, index, values) =>
+          values
+            .filter((candidate) => candidate.componentId === source.componentId)
+            .indexOf(source) < 6
+      )
       .map((source) => ({
         requirementId: source.requirementId,
         componentId: source.componentId,
@@ -186,7 +209,8 @@ function productionEvidenceForRow({
           fields: (requestedForRequirement.fields ?? []).map((field) => ({
             field: field.field,
             status: field.status,
-            facts: (field.facts ?? []).map((fact) => ({
+            factCount: (field.facts ?? []).length,
+            facts: (field.facts ?? []).slice(0, 6).map((fact) => ({
               rawValue: fact.rawValue,
               normalizedValue: fact.normalizedValue,
               valueType: fact.valueType,
@@ -212,8 +236,31 @@ function productionEvidenceForRow({
         source: String(row.source ?? "").slice(0, 1200),
         reviewStatus: row.reviewStatus,
       },
-      judgements,
+      judgements: judgements.map((judgement) => ({
+        targetId: judgement.targetId,
+        requirementId: judgement.requirementId,
+        componentId: judgement.componentId,
+        selectedCandidateIds: (judgement.selectedCandidateIds ?? []).slice(
+          0,
+          20
+        ),
+        selectedCandidateCount: (judgement.selectedCandidateIds ?? []).length,
+        unresolvedCandidateIds: (judgement.unresolvedCandidateIds ?? []).slice(
+          0,
+          20
+        ),
+        unresolvedCandidateCount: (judgement.unresolvedCandidateIds ?? [])
+          .length,
+        evidencePresence: judgement.evidencePresence,
+        coverageEffect: judgement.coverageEffect,
+        conflictState: judgement.conflictState,
+        selectedScopePicture: judgement.selectedScopePicture,
+        comparisonScopeKeys: judgement.comparisonScopeKeys,
+        documentApplicability: judgement.documentApplicability,
+        decisionOwner: judgement.decisionOwner,
+      })),
       selectedSources: selectedForRequirement,
+      selectedSourceCountByComponent,
       requestedFields: compactRequestedFields,
       artifactSha256: Object.fromEntries(
         Object.entries(files).map(([key, file]) => [
