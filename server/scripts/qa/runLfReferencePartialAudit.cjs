@@ -11,8 +11,8 @@ const {
   buildAuditResultRecord,
   canonicalJson,
   expandModelCandidateReferences,
-  jsonFromModelText,
   normalizeModelAuditMetadata,
+  parseModelJson,
   promptPayload,
   rebindModelEvidenceCandidates,
   sha256,
@@ -144,8 +144,11 @@ function correctionInstruction(error) {
     LF_REFERENCE_AUDIT_RECOMMENDATION_INCOHERENT:
       "KEEP_PARTIAL verlangt mindestens eine tragfähige und mindestens eine nicht tragfähige Komponente; PROMOTE_TO_FOUND verlangt tragfähige Evidenz für alle Komponenten; MARK_CONTRADICTED verlangt einen Widerspruch.",
   };
+  const fallbackDetail = /JSON|Expected|position|column/iu.test(code)
+    ? "Liefere syntaktisch vollständiges JSON und escape doppelte Anführungszeichen innerhalb von Textwerten."
+    : "Prüfe alle verlangten Felder und Enumerationen exakt.";
   return `Die vorige Antwort verletzt den Auditvertrag: ${code}. ${
-    detailByCode[code] ?? "Prüfe alle verlangten Felder und Enumerationen exakt."
+    detailByCode[code] ?? fallbackDetail
   } Korrigiere nur das JSON. Für jede gelieferte Komponente muss genau ein componentAssessment vorliegen. Verwende ausschließlich vorhandene kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs und kopiere sie exakt. Nenne in reviewedCandidateIds höchstens fünf ausdrücklich relevante Kandidaten, nicht den gesamten Bestand. Setze keinen finalen Zeilenstatus.`;
 }
 
@@ -266,6 +269,7 @@ async function runAudit(args, dependencies = {}) {
     for (let attempt = 1; attempt <= args.maxAttempts; attempt += 1) {
       let responseBody = null;
       let modelText = "";
+      let jsonRepairApplied = false;
       const attemptStarted = performance.now();
       try {
         const response = await client.chat.completions.create({
@@ -276,13 +280,15 @@ async function runAudit(args, dependencies = {}) {
         });
         responseBody = response;
         modelText = response.choices?.[0]?.message?.content ?? "";
+        const parsed = parseModelJson(modelText);
+        jsonRepairApplied = parsed.repaired;
         const result = validateAuditResult(
           auditCase,
           rebindModelEvidenceCandidates(
             auditCase,
             expandModelCandidateReferences(
               auditCase,
-              normalizeModelAuditMetadata(jsonFromModelText(modelText))
+              normalizeModelAuditMetadata(parsed.value)
             )
           )
         );
@@ -292,6 +298,7 @@ async function runAudit(args, dependencies = {}) {
           durationMs: Math.round(performance.now() - attemptStarted),
           responseModel: response.model ?? null,
           usage: response.usage ?? null,
+          jsonRepairApplied,
           rawResponse: response,
         });
         completed = buildAuditResultRecord({
@@ -311,6 +318,7 @@ async function runAudit(args, dependencies = {}) {
           status: "INVALID",
           durationMs: Math.round(performance.now() - attemptStarted),
           error: String(error?.message || error),
+          jsonRepairApplied,
           rawText: modelText,
           rawResponse: responseBody,
         });

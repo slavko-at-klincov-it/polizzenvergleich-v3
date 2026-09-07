@@ -6,6 +6,7 @@ const {
   canonicalJson,
   expandModelCandidateReferences,
   normalizeModelAuditMetadata,
+  parseModelJson,
   parseDocumentPages,
   promptPayload,
   rankCandidates,
@@ -247,6 +248,15 @@ describe("LF reference review audit contract", () => {
     expect(normalized.componentAssessments[1].coverageEffect).toBe("UNKNOWN");
   });
 
+  test("assigns an exact quote to the supporting role declared by the finding", () => {
+    const metadata = validResult("C01");
+    metadata.componentAssessments[0].supportingCandidateIds = [];
+    expect(
+      normalizeModelAuditMetadata(metadata).componentAssessments[0]
+        .supportingCandidateIds
+    ).toEqual(["C01"]);
+  });
+
   test("turns a missing finding with different scope into non-supporting evidence", () => {
     const metadata = validResult("C01");
     const assessment = metadata.componentAssessments[0];
@@ -390,11 +400,32 @@ describe("LF reference review audit contract", () => {
       rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
     });
 
+    auditCase.candidates[0].text =
+      "Die Photovoltaikanlage ist auf Erstes Risiko \n EUR 50.000 versichert.";
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Die Photovoltaikanlage ist auf Erstes RisikoEUR 50.000 versichert.";
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
+
     result.componentAssessments[0].exactQuotes[0].quote =
       "Die Photovoltaikanlage ist ohne Einschränkung mitversichert.";
     expect(() => validateAuditResult(auditCase, result)).toThrow(
       "LF_REFERENCE_AUDIT_QUOTE_INVALID"
     );
+  });
+
+  test("repairs malformed model JSON before applying the audit contract", () => {
+    const parsed = parseModelJson(
+      '{"note":"bis zu 5% auf ,,Erstes Risiko" und danach","value":1}'
+    );
+    expect(parsed).toMatchObject({
+      repaired: true,
+      value: {
+        note: 'bis zu 5% auf ,,Erstes Risiko" und danach',
+        value: 1,
+      },
+    });
   });
 
   test.each([

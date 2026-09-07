@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { jsonrepair } = require("jsonrepair");
 
 const AUDIT_CASE_SCHEMA_VERSION = 1;
 const AUDIT_CASE_CONTRACT_ID = "LF_REFERENCE_REVIEW_AUDIT_CASE_V1";
@@ -114,6 +115,18 @@ function normalizeQuote(value) {
     .replace(/\s+/gu, " ")
     .trim()
     .toLowerCase();
+}
+
+function quoteMatchesText(text, quote) {
+  const normalizedQuote = normalizeQuote(quote);
+  if (normalizedQuote.length < 12) return false;
+  const normalizedText = normalizeQuote(text);
+  return (
+    normalizedText.includes(normalizedQuote) ||
+    normalizedText
+      .replace(/\s+/gu, "")
+      .includes(normalizedQuote.replace(/\s+/gu, ""))
+  );
 }
 
 function tokens(value) {
@@ -474,11 +487,11 @@ function rebindModelEvidenceCandidates(auditCase, result) {
       const supplied = candidateById.get(quote?.candidateId);
       if (
         normalized.length < 12 ||
-        (supplied && normalizeQuote(supplied.text).includes(normalized))
+        (supplied && quoteMatchesText(supplied.text, quote.quote))
       )
         continue;
       const matchingCandidates = auditCase.candidates.filter((candidate) =>
-        normalizeQuote(candidate.text).includes(normalized)
+        quoteMatchesText(candidate.text, quote.quote)
       );
       if (matchingCandidates.length === 0) continue;
       const replacement =
@@ -566,6 +579,20 @@ function normalizeModelAuditMetadata(result) {
     const quoteCandidateIds = assessment.exactQuotes
       .map(({ candidateId }) => candidateId)
       .filter(Boolean);
+    if (["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding))
+      assessment.supportingCandidateIds = [
+        ...new Set([
+          ...assessment.supportingCandidateIds,
+          ...quoteCandidateIds,
+        ]),
+      ];
+    if (assessment.finding === "CONTRADICTION")
+      assessment.contradictingCandidateIds = [
+        ...new Set([
+          ...assessment.contradictingCandidateIds,
+          ...quoteCandidateIds,
+        ]),
+      ];
     if (["RELATED_ONLY", "MENTION_ONLY"].includes(assessment.finding)) {
       assessment.reviewedCandidateIds = [
         ...new Set([
@@ -686,13 +713,24 @@ function promptPayload(auditCase) {
   );
 }
 
+function parseModelJson(content) {
+  const source = String(content ?? "")
+    .trim()
+    .replace(/^```(?:json)?\s*/iu, "")
+    .replace(/\s*```$/u, "");
+  try {
+    return { value: JSON.parse(source), repaired: false };
+  } catch (originalError) {
+    return {
+      value: JSON.parse(jsonrepair(source)),
+      repaired: true,
+      originalError: String(originalError?.message || originalError),
+    };
+  }
+}
+
 function jsonFromModelText(content) {
-  return JSON.parse(
-    String(content ?? "")
-      .trim()
-      .replace(/^```(?:json)?\s*/iu, "")
-      .replace(/\s*```$/u, "")
-  );
+  return parseModelJson(content).value;
 }
 
 function exactArray(value, label) {
@@ -864,13 +902,13 @@ function validateAuditResult(auditCase, result) {
           (pageCandidate) =>
             pageCandidate.documentUuid === candidate.documentUuid &&
             pageCandidate.pageNumber === candidate.pageNumber &&
-            normalizeQuote(pageCandidate.text).includes(normalized)
+            quoteMatchesText(pageCandidate.text, quote.quote)
         );
       if (
         !candidate ||
         !evidenceCandidateIds.has(quote.candidateId) ||
         normalized.length < 12 ||
-        (!normalizeQuote(candidate.text).includes(normalized) &&
+        (!quoteMatchesText(candidate.text, quote.quote) &&
           !appearsOnBoundPage)
       )
         throw new Error("LF_REFERENCE_AUDIT_QUOTE_INVALID");
@@ -1018,6 +1056,7 @@ module.exports = {
   normalize,
   normalizeModelAuditMetadata,
   parseDocumentPages,
+  parseModelJson,
   promptPayload,
   rankCandidates,
   rebindModelEvidenceCandidates,
