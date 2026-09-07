@@ -3130,7 +3130,7 @@ describe("preparedEvidenceContract", () => {
         allowUniqueCandidateIdRepair: true,
         responseText: response(
           "winter_garden",
-          ["candidate:wint"],
+          ["candidate:win"],
           COVERAGE_EFFECT.INCLUDED
         ),
       })
