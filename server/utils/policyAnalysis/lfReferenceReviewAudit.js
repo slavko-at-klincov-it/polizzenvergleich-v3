@@ -417,7 +417,7 @@ Regeln:
 2. Verwende ausschließlich gelieferte kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs. Kopiere Kandidaten-Referenzen exakt. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
 3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
-5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
+5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle und desselben Gegenstands bzw. derselben Gefahr, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Ein benachbartes Objekt derselben Oberkategorie ist dagegen RELATED_ONLY; NARROWER_SUPPORT verlangt dieselbe benannte Sache oder eine ausdrückliche Klasse, die sie umfasst. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
@@ -528,13 +528,68 @@ function normalizeModelAuditMetadata(result) {
   const normalized = structuredClone(result);
   const observedRelations = [];
   for (const assessment of normalized.componentAssessments ?? []) {
+    for (const key of [
+      "supportingCandidateIds",
+      "contradictingCandidateIds",
+      "reviewedCandidateIds",
+      "exactQuotes",
+      "observedBValues",
+    ])
+      if (!Array.isArray(assessment[key])) assessment[key] = [];
+    if (!SCOPE_RELATIONS.includes(assessment.scopeRelation))
+      assessment.scopeRelation = "UNCLEAR";
+    if (!COMPONENT_FINDINGS.includes(assessment.finding)) {
+      if (assessment.contradictingCandidateIds.length > 0)
+        assessment.finding = "CONTRADICTION";
+      else if (assessment.supportingCandidateIds.length > 0)
+        assessment.finding = ["DIFFERENT", "NOT_APPLICABLE"].includes(
+          assessment.scopeRelation
+        )
+          ? "RELATED_ONLY"
+          : assessment.scopeRelation === "NARROWER"
+            ? "NARROWER_SUPPORT"
+            : "DIRECT_SUPPORT";
+      else assessment.finding = "UNCLEAR";
+    }
     if (
       assessment.finding === "DIRECT_SUPPORT" &&
       assessment.scopeRelation === "NARROWER"
     )
       assessment.finding = "NARROWER_SUPPORT";
-    if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding))
+    if (
+      ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding) &&
+      ["DIFFERENT", "NOT_APPLICABLE"].includes(assessment.scopeRelation)
+    )
+      assessment.finding = "RELATED_ONLY";
+    if (!COVERAGE_EFFECTS.includes(assessment.coverageEffect))
       assessment.coverageEffect = "UNKNOWN";
+    const quoteCandidateIds = assessment.exactQuotes
+      .map(({ candidateId }) => candidateId)
+      .filter(Boolean);
+    if (["RELATED_ONLY", "MENTION_ONLY"].includes(assessment.finding)) {
+      assessment.reviewedCandidateIds = [
+        ...new Set([
+          ...quoteCandidateIds,
+          ...assessment.reviewedCandidateIds,
+          ...assessment.supportingCandidateIds,
+        ]),
+      ].slice(0, 5);
+      assessment.supportingCandidateIds = [];
+      assessment.contradictingCandidateIds = [];
+      assessment.observedBValues = [];
+    }
+    if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding)) {
+      assessment.coverageEffect = "UNKNOWN";
+      assessment.reviewedCandidateIds = [
+        ...new Set([
+          ...quoteCandidateIds,
+          ...assessment.reviewedCandidateIds,
+        ]),
+      ].slice(0, 5);
+      assessment.supportingCandidateIds = [];
+      assessment.contradictingCandidateIds = [];
+      assessment.observedBValues = [];
+    }
     for (const observedValue of assessment.observedBValues ?? []) {
       if (["NARROWER", "BROADER"].includes(observedValue.relationToA))
         observedValue.relationToA = "DIFFERENT";

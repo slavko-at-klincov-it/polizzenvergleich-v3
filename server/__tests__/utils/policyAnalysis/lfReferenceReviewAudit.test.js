@@ -247,6 +247,31 @@ describe("LF reference review audit contract", () => {
     expect(normalized.componentAssessments[1].coverageEffect).toBe("UNKNOWN");
   });
 
+  test("turns a missing finding with different scope into non-supporting evidence", () => {
+    const metadata = validResult("C01");
+    const assessment = metadata.componentAssessments[0];
+    delete assessment.finding;
+    delete assessment.contradictingCandidateIds;
+    delete assessment.coverageEffect;
+    assessment.scopeRelation = "DIFFERENT";
+    assessment.observedBValues = [
+      {
+        candidateId: "C01",
+        value: "anderer Gegenstand",
+        relationToA: "DIFFERENT",
+      },
+    ];
+    const normalized = normalizeModelAuditMetadata(metadata);
+    expect(normalized.componentAssessments[0]).toMatchObject({
+      finding: "RELATED_ONLY",
+      supportingCandidateIds: [],
+      contradictingCandidateIds: [],
+      reviewedCandidateIds: ["C01"],
+      coverageEffect: "UNKNOWN",
+      observedBValues: [],
+    });
+  });
+
   test("derives the partial row disposition from atomic component findings", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);

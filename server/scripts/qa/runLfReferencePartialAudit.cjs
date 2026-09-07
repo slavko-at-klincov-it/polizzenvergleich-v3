@@ -137,6 +137,8 @@ function correctionInstruction(error) {
       "Verwende nur gelieferte C-Referenzen. Innerhalb einer Komponente darf dieselbe Referenz nicht zugleich supporting, contradicting und reviewed sein.",
     LF_REFERENCE_AUDIT_COMPONENT_EVIDENCE_INVALID:
       "DIRECT_SUPPORT/NARROWER_SUPPORT benötigt supportingCandidateIds; CONTRADICTION benötigt contradictingCandidateIds; RELATED_ONLY/MENTION_ONLY benötigt reviewedCandidateIds plus ein Zitat; NO_MATCH_IN_CANDIDATES/UNCLEAR darf keine supporting oder contradicting Referenz haben.",
+    LF_REFERENCE_AUDIT_COMPONENT_ASSESSMENT_KEYS_INVALID:
+      "Jede Komponente braucht exakt componentId, finding, supportingCandidateIds, contradictingCandidateIds, reviewedCandidateIds, exactQuotes, coverageEffect, scopeRelation, observedBValues und note; keine zusätzlichen Felder.",
     LF_REFERENCE_AUDIT_OBSERVED_VALUE_INVALID:
       "Jeder observedBValues-Eintrag muss eine supporting oder contradicting Referenz verwenden. relationToA ist exakt SAME, DIFFERENT, ADDITIONAL oder UNCLEAR; engerer Scope gehört nur in scopeRelation=NARROWER.",
     LF_REFERENCE_AUDIT_RECOMMENDATION_INCOHERENT:
