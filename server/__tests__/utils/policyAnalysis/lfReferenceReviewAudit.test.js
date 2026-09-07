@@ -185,6 +185,102 @@ describe("LF reference review audit contract", () => {
     expect(validateAuditResult(auditCase, rebound)).toMatchObject(rebound);
   });
 
+  test("rejects support for an unrelated insured object without a semantic anchor", () => {
+    const { auditCase, candidateId } = fixture();
+    const unrelated =
+      "Fahnenstangen und Werkzeuge für die Pflege der Grünanlagen sind mitversichert.";
+    auditCase.candidates[0].text = unrelated;
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote = unrelated;
+
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      "LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID"
+    );
+  });
+
+  test("rejects first-risk wording that omits a required percentage", () => {
+    const { auditCase, candidateId } = fixture();
+    const component = auditCase.semanticRequirement.components[1];
+    component.sourceSpanIds = ["shared-limit-span"];
+    component.valueBinding = {
+      type: "PERCENT",
+      basisLabel: "Gebäudeversicherungssumme",
+      formula: "basis * 0.05",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "shared_limit",
+        sourceSpanId: "shared-limit-span",
+        rawValue: "5%",
+        normalizedValue: "5%",
+      },
+    ];
+    const result = validResult(candidateId);
+    result.componentAssessments[1] = {
+      componentId: "agreed_sum",
+      finding: "DIRECT_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      contradictingCandidateIds: [],
+      reviewedCandidateIds: [],
+      exactQuotes: [
+        {
+          candidateId,
+          quote: "Die Neuwertsumme beträgt EUR 50.000.",
+        },
+      ],
+      coverageEffect: "DEFINED",
+      scopeRelation: "SAME_OR_BROADER",
+      observedBValues: [],
+      note: "Ein allgemeiner Wert ist vorhanden, aber der Prozentsatz fehlt.",
+    };
+
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      "LF_REFERENCE_AUDIT_PERCENTAGE_ANCHOR_INVALID"
+    );
+  });
+
+  test("accepts a required percentage when the exact quote carries it", () => {
+    const { auditCase, candidateId } = fixture();
+    const component = auditCase.semanticRequirement.components[1];
+    component.sourceSpanIds = ["shared-limit-span"];
+    component.valueBinding = {
+      type: "PERCENT",
+      formula: "basis * 0.05",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "shared_limit",
+        sourceSpanId: "shared-limit-span",
+        rawValue: "5%",
+      },
+    ];
+    auditCase.candidates[0].text +=
+      " Die Versicherungssumme beträgt fünf Prozent auf Erstes Risiko.";
+    const result = validResult(candidateId);
+    result.componentAssessments[1] = {
+      componentId: "agreed_sum",
+      finding: "DIRECT_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      contradictingCandidateIds: [],
+      reviewedCandidateIds: [],
+      exactQuotes: [
+        {
+          candidateId,
+          quote:
+            "Die Versicherungssumme beträgt fünf Prozent auf Erstes Risiko.",
+        },
+      ],
+      coverageEffect: "DEFINED",
+      scopeRelation: "SAME_OR_BROADER",
+      observedBValues: [],
+      note: "Der konkrete Prozentsatz ist direkt an den Beleg gebunden.",
+    };
+
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [

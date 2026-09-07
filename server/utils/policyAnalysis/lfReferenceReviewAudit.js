@@ -75,6 +75,48 @@ const STOPWORDS = new Set(
     " "
   )
 );
+const SUPPORT_ANCHOR_FACT_ROLES = new Set([
+  "INSURED_OBJECT",
+  "PERIL",
+  "COST",
+  "BENEFIT",
+  "EXCLUSION",
+  "DEFINITION",
+]);
+const GENERIC_SUPPORT_TOKENS = new Set([
+  "bedingung",
+  "deckung",
+  "enthalten",
+  "erstes",
+  "gefahr",
+  "gebaude",
+  "grundstuck",
+  "kosten",
+  "leistung",
+  "objekt",
+  "risiko",
+  "sache",
+  "sachen",
+  "schaden",
+  "summe",
+  "versichert",
+  "versicherung",
+  "versicherungssumme",
+]);
+const GERMAN_PERCENTAGE_WORDS = Object.freeze({
+  1: "ein",
+  2: "zwei",
+  3: "drei",
+  4: "vier",
+  5: "funf",
+  10: "zehn",
+  15: "funfzehn",
+  20: "zwanzig",
+  25: "funfundzwanzig",
+  30: "dreissig",
+  50: "funfzig",
+  100: "hundert",
+});
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -140,6 +182,74 @@ function tokens(value) {
   return normalize(value)
     .split(/\s+/u)
     .filter((token) => token.length >= 3 && !STOPWORDS.has(token));
+}
+
+function componentSupportAnchors(component) {
+  return [
+    ...new Set(
+      tokens([component.label, ...(component.aliases ?? [])].join(" ")).filter(
+        (token) => !GENERIC_SUPPORT_TOKENS.has(token)
+      )
+    ),
+  ];
+}
+
+function requiredPercentageAnchors(requirement, component) {
+  const componentSourceSpans = new Set(component.sourceSpanIds ?? []);
+  const relatedValues = (requirement.values ?? []).filter(
+    (value) =>
+      value.componentId === component.id ||
+      componentSourceSpans.has(value.sourceSpanId)
+  );
+  const sourceStrings = [
+    component.valueBinding?.formula,
+    ...relatedValues.flatMap((value) => [
+      value.rawValue,
+      value.normalizedValue,
+      value.formula,
+    ]),
+  ].filter(Boolean);
+  const percentages = new Set();
+  for (const source of sourceStrings) {
+    const normalizedOcr = String(source).replace(/\b[lI](?=\d+\s*%)/gu, "1");
+    for (const match of normalizedOcr.matchAll(/\b(\d+(?:[.,]\d+)?)\s*%/gu))
+      percentages.add(Number(match[1].replace(",", ".")));
+    for (const match of normalizedOcr.matchAll(/\*\s*(0[.,]\d+)\b/gu))
+      percentages.add(Number(match[1].replace(",", ".")) * 100);
+  }
+  return [...percentages]
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .flatMap((value) => {
+      const display = String(value);
+      return [
+        `${display}%`,
+        `${display} %`,
+        `${display} prozent`,
+        ...(GERMAN_PERCENTAGE_WORDS[display]
+          ? [`${GERMAN_PERCENTAGE_WORDS[display]} prozent`]
+          : []),
+      ];
+    });
+}
+
+function validateSupportAnchors(requirement, component, assessment, quotes) {
+  if (!["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(assessment.finding))
+    return;
+  const quotedText = normalize(quotes.map(({ quote }) => quote).join(" "));
+  if (SUPPORT_ANCHOR_FACT_ROLES.has(component.factRole)) {
+    const semanticAnchors = componentSupportAnchors(component);
+    if (
+      semanticAnchors.length > 0 &&
+      !semanticAnchors.some((anchor) => quotedText.includes(anchor))
+    )
+      throw new Error("LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID");
+  }
+  const percentageAnchors = requiredPercentageAnchors(requirement, component);
+  if (
+    percentageAnchors.length > 0 &&
+    !percentageAnchors.some((anchor) => quotedText.includes(anchor))
+  )
+    throw new Error("LF_REFERENCE_AUDIT_PERCENTAGE_ANCHOR_INVALID");
 }
 
 function parseDocumentPages(pageContent, pageMap) {
@@ -444,7 +554,7 @@ Regeln:
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
 5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle und desselben Gegenstands bzw. derselben Gefahr, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Ein benachbartes Objekt derselben Oberkategorie ist dagegen RELATED_ONLY; NARROWER_SUPPORT verlangt dieselbe benannte Sache oder eine ausdrückliche Klasse, die sie umfasst. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.
-7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Leite aus einem ähnlichen wirtschaftlichen Zweck keine Gleichheit der Kostenart ab: Ersatzunterkunft ist beispielsweise kein Beleg für Zwischenlagerung. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe.
+7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg. Leite aus einem ähnlichen wirtschaftlichen Zweck keine Gleichheit der Kostenart ab: Ersatzunterkunft ist beispielsweise kein Beleg für Zwischenlagerung. Insbesondere ist eine Versicherungssumme, ein Sublimit oder ein Geldbetrag für einen anderen Gegenstand bzw. eine andere Kostenart niemals NARROWER_SUPPORT für die verlangte Summe. Verlangt die Komponente einen konkreten Prozentsatz, ist die bloße Formulierung „auf Erstes Risiko“ ohne diesen Prozentsatz kein tragfähiger Prozentlimit-Beleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
 10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante Referenzen und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-Referenz braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
@@ -964,6 +1074,9 @@ function validateAuditResult(auditCase, result) {
   )
     throw new Error("LF_REFERENCE_AUDIT_COMPONENT_PARTITION_INVALID");
   for (const assessment of componentAssessments) {
+    const component = auditCase.semanticRequirement.components.find(
+      ({ id }) => id === assessment.componentId
+    );
     exactKeys(
       assessment,
       [
@@ -1053,6 +1166,14 @@ function validateAuditResult(auditCase, result) {
     );
     const needsReviewed = ["RELATED_ONLY", "MENTION_ONLY"].includes(
       assessment.finding
+    );
+    validateSupportAnchors(
+      auditCase.semanticRequirement,
+      component,
+      assessment,
+      quotes.filter(({ candidateId }) =>
+        supportingCandidateIds.includes(candidateId)
+      )
     );
     if (
       (needsSupport && supportingCandidateIds.length === 0) ||

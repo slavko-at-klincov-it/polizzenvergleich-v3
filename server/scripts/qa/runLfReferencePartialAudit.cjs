@@ -148,6 +148,10 @@ function correctionInstruction(error) {
       "Jede Komponente braucht exakt componentId, finding, supportingCandidateIds, contradictingCandidateIds, reviewedCandidateIds, exactQuotes, coverageEffect, scopeRelation, observedBValues und note; keine zusätzlichen Felder.",
     LF_REFERENCE_AUDIT_OBSERVED_VALUE_INVALID:
       "Jeder observedBValues-Eintrag muss eine supporting oder contradicting Referenz verwenden. relationToA ist exakt SAME, DIFFERENT, ADDITIONAL oder UNCLEAR; engerer Scope gehört nur in scopeRelation=NARROWER.",
+    LF_REFERENCE_AUDIT_SUPPORT_ANCHOR_INVALID:
+      "DIRECT_SUPPORT/NARROWER_SUPPORT für Gegenstand, Gefahr, Kostenart, Leistung, Ausschluss oder Definition benötigt im exakten Zitat mindestens einen konkreten Begriff aus Komponentenlabel oder Alias. Thematisch benachbarte andere Gegenstände sind RELATED_ONLY oder NO_MATCH_IN_CANDIDATES.",
+    LF_REFERENCE_AUDIT_PERCENTAGE_ANCHOR_INVALID:
+      "Wenn die Komponente einen bestimmten Prozentwert verlangt, muss das tragende exakte Zitat genau diesen Prozentwert enthalten. 'Auf Erstes Risiko' ohne den verlangten Prozentsatz ist kein vollständiger Prozentlimit-Beleg.",
     LF_REFERENCE_AUDIT_RECOMMENDATION_INCOHERENT:
       "KEEP_PARTIAL verlangt mindestens eine tragfähige und mindestens eine nicht tragfähige Komponente; PROMOTE_TO_FOUND verlangt tragfähige Evidenz für alle Komponenten; MARK_CONTRADICTED verlangt einen Widerspruch.",
   };
