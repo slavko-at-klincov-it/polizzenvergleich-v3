@@ -206,11 +206,8 @@ function componentSupportAnchors(component) {
 }
 
 function requiredPercentageAnchors(requirement, component) {
-  const componentSourceSpans = new Set(component.sourceSpanIds ?? []);
   const relatedValues = (requirement.values ?? []).filter(
-    (value) =>
-      value.componentId === component.id ||
-      componentSourceSpans.has(value.sourceSpanId)
+    (value) => value.componentId === component.id
   );
   const sourceStrings = [
     component.valueBinding?.formula,
@@ -642,7 +639,7 @@ const SYSTEM_PROMPT = `Du auditierst genau EINEN bestehenden Teiltreffer eines g
 Regeln:
 1. Erfinde keine Quelle, Seite, Klausel, Zahl, Komponente oder Rechtsfolge.
 2. Verwende ausschließlich gelieferte kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs. Kopiere Kandidaten-Referenzen exakt. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
-3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
+3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details. Werte gelten ausschließlich für die ausdrücklich zugeordnete Komponente. Ein Prozent- oder Betragswert aus demselben A-Absatz darf insbesondere nicht zusätzlich der Objekt-, Gefahren- oder Bedingungskomponente zugerechnet werden.
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope. Wenn eine Komponente mehrere Gegenstände ausdrücklich aufzählt, müssen alle wesentlichen Gegenstände gedeckt sein.
 5. NARROWER_SUPPORT: echtes Gegenstück derselben Faktrolle und desselben Gegenstands bzw. derselben Gefahr, aber engerer Scope, nur ein echter Teil einer aufgezählten Gegenstandsgruppe oder eine zusätzliche Bedingung. Ein belegtes Mitglied einer ausdrücklich aufgezählten Gruppe ist NARROWER_SUPPORT und nicht RELATED_ONLY. Ein benachbartes Objekt derselben Oberkategorie ist dagegen RELATED_ONLY; NARROWER_SUPPORT verlangt dieselbe benannte Sache oder eine ausdrückliche Klasse, die sie umfasst. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
 6. CONTRADICTION: dieselbe Komponente ist in einer maßgeblichen B-Quelle ausdrücklich ausgeschlossen oder gegenteilig geregelt.

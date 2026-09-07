@@ -393,6 +393,32 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("does not impose a co-located limit value on a separate object component", () => {
+    const { auditCase, candidateId } = fixture();
+    const sharedSpanId = "shared-source-span";
+    auditCase.semanticRequirement.components[0].sourceSpanIds = [sharedSpanId];
+    auditCase.semanticRequirement.components[1].sourceSpanIds = [sharedSpanId];
+    auditCase.semanticRequirement.components[1].valueBinding = {
+      type: "PERCENT",
+      formula: "basis * 0.05",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "agreed_sum",
+        sourceSpanId: sharedSpanId,
+        rawValue: "5%",
+      },
+    ];
+    const result = validResult(candidateId);
+
+    const validated = validateAuditResult(auditCase, result);
+    expect(validated.componentAssessments[0]).toMatchObject({
+      componentId: "technical_objects",
+      finding: "DIRECT_SUPPORT",
+    });
+    expect(validated).not.toHaveProperty("serverNormalizations");
+  });
+
   test("accepts a required percentage when the exact quote carries it", () => {
     const { auditCase, candidateId } = fixture();
     const component = auditCase.semanticRequirement.components[1];
