@@ -6801,6 +6801,22 @@ workspace- oder nutzerübergreifend geteilt. Wiederholungen derselben
 Dokumente unter identischen Verträgen sollen dagegen ohne erneute 613
 Modellaufrufe auskommen.
 
+Retry-Invariante: Ein vollständig erfolgreicher Phasenreport kann mehrere
+Antwortversuche für dasselbe atomare Ziel enthalten. Nur die letzte Antwort
+dieses Ziels hat den Phasenvalidator bestanden. Der Seeder veröffentlicht
+daher diese akzeptierte Zielantwort unter allen aufgezeichneten
+Promptvarianten desselben Ziels; eine Zuordnung auf andere Ziel-IDs bleibt
+ausgeschlossen. Der aktuelle Parser validiert auch diese Treffer erneut.
+
+Realer Mac-Studio-Canary auf Commit `7800e3942a2a560f41070f63a8bbcd5dd15fbc10`
+verwendete den zuvor problematischen Abschnitt `B-01/LR02`. Das Seeding aus
+dem vollständig abgeschlossenen 1+9-Lauf fand 613 Antwortversuche für 610
+erfolgreiche Einzelziele und veröffentlichte 613 promptgebundene Einträge.
+Der Replay benötigte für 23 Triage- und 11 Wirkungsziele null Modellaufrufe;
+Triage-, Wirkungs- und ausgewählte Quellartefakte waren jeweils bytegleich
+zum erfolgreichen Originallauf. 77 angrenzende QA-/Policy-Analysis-Suites mit
+1.262/1.262 Tests bestanden auf demselben Commit.
+
 Messbare Freigabegrenze: Ein realer Cache-Replay muss null Modellaufrufe, null
 Cache-Schreibfehler, bytegleiche materialisierte Triage-/Wirkungs-/Quellwerte
 und einen vollständigen 1+9-Endlauf mit 283/283 Zeilen sowie validierter XLSX
