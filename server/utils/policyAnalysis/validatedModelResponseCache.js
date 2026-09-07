@@ -289,9 +289,7 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
     const messageCalls = safeJson(
       path.join(directory, "messages.private.json")
     );
-    const cacheHits = safeJson(
-      path.join(directory, "cache-hits.private.json")
-    );
+    const cacheHits = safeJson(path.join(directory, "cache-hits.private.json"));
     const report = safeJson(path.join(directory, "report.json"));
     if (
       !Array.isArray(answers) ||
