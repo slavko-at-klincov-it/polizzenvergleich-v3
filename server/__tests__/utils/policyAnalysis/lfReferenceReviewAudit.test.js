@@ -172,6 +172,19 @@ describe("LF reference review audit contract", () => {
     ).toHaveLength(2);
   });
 
+  test("accepts Unicode quotation-mark variants around otherwise exact text", () => {
+    const { auditCase, candidateId } = fixture();
+    auditCase.candidates[0].text =
+      "Die Photovoltaikanlage gilt auf „Erstes Risiko“ als mitversichert.";
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes[0].quote =
+      "Die Photovoltaikanlage gilt auf “Erstes Risiko” als mitversichert.";
+
+    expect(
+      validateAuditResult(auditCase, result).componentAssessments
+    ).toHaveLength(2);
+  });
+
   test("removes model-added boundary ellipses only when the remaining quote is exact", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);

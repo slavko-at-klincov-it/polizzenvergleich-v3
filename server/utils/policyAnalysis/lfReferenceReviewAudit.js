@@ -164,6 +164,11 @@ function normalizeQuote(value) {
       // only escaped whitespace markers like physical-page whitespace; all other
       // characters must still match the source text.
       .replace(/\\(?:r\\n|n|r|t)/gu, " ")
+      // OCR and structured-output models can use different Unicode quotation
+      // marks around otherwise verbatim source text. Treat only the glyph
+      // variants as equivalent; wording and punctuation still have to match.
+      .replace(/[\u2018\u2019\u201a\u201b\u2032']/gu, "'")
+      .replace(/[\u201c\u201d\u201e\u201f\u2033"]/gu, '"')
       .replace(/([\p{L}\p{N}])-\s+(?=[\p{L}\p{N}])/gu, "$1")
       .replace(/\s+/gu, " ")
       .trim()

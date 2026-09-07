@@ -500,7 +500,13 @@ function build(args, { fsImpl = fs } = {}) {
 
   writePrivateJson(
     path.join(args.output, "source-chunks.private.json"),
-    chunks.map(({ normalizedText, tokenSet, ...chunk }) => chunk),
+    chunks.map((chunk) =>
+      Object.fromEntries(
+        Object.entries(chunk).filter(
+          ([key]) => !["normalizedText", "tokenSet"].includes(key)
+        )
+      )
+    ),
     fsImpl
   );
   for (const auditCase of cases)
