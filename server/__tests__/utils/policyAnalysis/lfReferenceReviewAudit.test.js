@@ -162,6 +162,15 @@ describe("LF reference review audit contract", () => {
     );
   });
 
+  test("requires a differing amount for the same object to remain a counterpart", () => {
+    expect(SYSTEM_PROMPT).toContain(
+      "Ein fester EUR-Betrag in B ist auch dann ein vergleichbarer Limitbeleg"
+    );
+    expect(SYSTEM_PROMPT).toContain(
+      "verwende diese Passage zusätzlich als Beleg der zugehörigen Limitkomponente"
+    );
+  });
+
   test("accepts model-serialized escaped whitespace in an otherwise exact quote", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
