@@ -308,15 +308,36 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
       };
     }
   );
+  const orderedSelected = [...selected.values()].sort(
+    (left, right) =>
+      right.score - left.score || left.chunk.id.localeCompare(right.chunk.id)
+  );
+  const prioritized = new Map();
+  const addCandidate = (item) => {
+    if (item) prioritized.set(item.chunk.id, item);
+  };
+  for (const candidateId of currentContributorGroups.flatMap(
+    ({ matchingCandidateIds }) => matchingCandidateIds
+  ))
+    addCandidate(selected.get(candidateId));
+  for (const documentUuid of documentUuids)
+    addCandidate(
+      orderedSelected.find(
+        ({ chunk }) => chunk.documentUuid === documentUuid
+      )
+    );
+  for (const item of orderedSelected) addCandidate(item);
+  const retained = [...prioritized.values()].slice(0, 28);
+  const retainedIds = new Set(retained.map(({ chunk }) => chunk.id));
   return {
     queryTokens,
-    currentContributorGroups,
-    candidates: [...selected.values()]
-      .sort(
-        (left, right) =>
-          right.score - left.score || left.chunk.id.localeCompare(right.chunk.id)
-      )
-      .map(({ chunk, score, matchedTokens, phraseHits }) => ({
+    currentContributorGroups: currentContributorGroups.map((group) => ({
+      ...group,
+      matchingCandidateIds: group.matchingCandidateIds.filter((candidateId) =>
+        retainedIds.has(candidateId)
+      ),
+    })),
+    candidates: retained.map(({ chunk, score, matchedTokens, phraseHits }) => ({
         id: chunk.id,
         documentUuid: chunk.documentUuid,
         documentName: chunk.documentName,
