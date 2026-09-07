@@ -1,5 +1,7 @@
 const {
+  HEADERS,
   validateDynamicReferenceComparison,
+  workbookValues,
 } = require("../../utils/policyComparison/dynamicReferenceResultBuilder");
 const {
   LF_DYNAMIC_REFERENCE_PROFILE,
@@ -68,6 +70,47 @@ function fixture() {
 }
 
 describe("dynamic LF reference result", () => {
+  test("exports B values and keeps the final customer assessment column empty", () => {
+    const category = { categoryName: "Kategorie" };
+    const row = {
+      subcategoryName: "Unterkategorie",
+      categoryId: "A-01",
+      categoryName: "Prüfpunkt",
+      packageA: {
+        documentedContent: "A-Inhalt",
+        coverageAmount: "A-Wert",
+        source: "A-Fundstelle",
+      },
+      packageB: {
+        documentedContent: "B-Gegenstück",
+        coverage: "B-Wirkung",
+        coverageAmount: "B-Wert",
+        source: "B-Fundstelle",
+      },
+      outcome: REFERENCE_OUTCOME.PARTIAL,
+      pointDecision: { reason: "Prüfhinweis" },
+    };
+
+    expect(HEADERS).toHaveLength(14);
+    expect(HEADERS.at(-1)).toBe("Fachliche_Bewertung_manuell");
+    expect(workbookValues(category, row)).toEqual([
+      "Kategorie",
+      "Unterkategorie",
+      "A-01",
+      "Prüfpunkt",
+      "A-Inhalt",
+      "A-Wert",
+      "A-Fundstelle",
+      "B-Gegenstück",
+      "B-Wirkung",
+      "B-Wert",
+      "B-Fundstelle",
+      REFERENCE_OUTCOME.PARTIAL,
+      "Prüfhinweis",
+      "",
+    ]);
+  });
+
   test("accepts the manifest-owned row order and zero B-only rows", () => {
     const { manifest, result } = fixture();
     expect(validateDynamicReferenceComparison(result, { manifest })).toBe(

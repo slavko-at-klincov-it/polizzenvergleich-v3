@@ -28,9 +28,11 @@ const HEADERS = [
   "A_Quelle",
   "B_Gegenstück",
   "B_Deckung",
+  "B_Werte",
   "B_Quelle",
   "Gegenstückstatus",
   "Begründung",
+  "Fachliche_Bewertung_manuell",
 ];
 
 function unique(values) {
@@ -322,9 +324,11 @@ function workbookValues(category, row) {
     row.packageA.source,
     row.packageB.documentedContent,
     row.packageB.coverage,
+    row.packageB.coverageAmount,
     row.packageB.source,
     row.outcome,
     row.pointDecision.reason,
+    "",
   ];
 }
 
@@ -335,19 +339,40 @@ async function writeWorkbook(result, file) {
   sheet.columns = HEADERS.map((header, index) => ({
     header,
     key: `column${index + 1}`,
-    width: [22, 28, 16, 45, 55, 32, 50, 50, 20, 50, 38, 50][index],
+    width: [22, 28, 16, 45, 55, 32, 50, 50, 20, 26, 50, 38, 50, 38][
+      index
+    ],
   }));
   for (const category of result.categories)
     for (const row of category.rows)
       sheet.addRow(workbookValues(category, row));
-  sheet.views = [{ state: "frozen", ySplit: 1, zoomScale: 80 }];
-  sheet.autoFilter = `A1:L${sheet.rowCount}`;
+  sheet.views = [{ state: "frozen", xSplit: 4, ySplit: 1, zoomScale: 80 }];
+  sheet.autoFilter = `A1:N${sheet.rowCount}`;
   sheet.eachRow((row, number) =>
     row.eachCell((cell) => {
-      cell.font = { name: "Aptos Narrow", size: 11, bold: number === 1 };
+      cell.font = {
+        name: "Aptos Narrow",
+        size: number === 1 ? 10 : 9,
+        bold: number === 1,
+        color: number === 1 ? { argb: "FFFFFFFF" } : { argb: "FF1F2937" },
+      };
+      if (number === 1) cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1F4E78" },
+      };
       cell.alignment = { vertical: "top", wrapText: true };
     })
   );
+  sheet.getRow(1).height = 34;
+  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    sheet.getRow(rowNumber).height = 66;
+    sheet.getCell(rowNumber, HEADERS.length).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFF2CC" },
+    };
+  }
   await workbook.xlsx.writeFile(file);
   fs.chmodSync(file, 0o600);
 }
@@ -416,8 +441,11 @@ async function writeDynamicReferenceComparisonArtifacts({
 
 module.exports = {
   DYNAMIC_REFERENCE_RESULT_CONTRACT_ID,
+  HEADERS,
   buildDynamicReferenceComparisonResult,
   customerSafeDynamicReferenceReadView,
   validateDynamicReferenceComparison,
+  workbookValues,
+  writeWorkbook,
   writeDynamicReferenceComparisonArtifacts,
 };
