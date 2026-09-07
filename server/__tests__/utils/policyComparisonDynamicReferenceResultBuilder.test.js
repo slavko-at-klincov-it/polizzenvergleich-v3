@@ -1,7 +1,12 @@
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const ExcelJS = require("exceljs");
 const {
   HEADERS,
   validateDynamicReferenceComparison,
   workbookValues,
+  writeWorkbook,
 } = require("../../utils/policyComparison/dynamicReferenceResultBuilder");
 const {
   LF_DYNAMIC_REFERENCE_PROFILE,
@@ -109,6 +114,47 @@ describe("dynamic LF reference result", () => {
       "Prüfhinweis",
       "",
     ]);
+  });
+
+  test("writes a compact review workbook with exact row parity", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "lf-review-workbook-"));
+    const file = path.join(root, "review.xlsx");
+    const category = { categoryName: "Kategorie" };
+    const row = {
+      subcategoryName: "Unterkategorie",
+      categoryId: "A-01",
+      categoryName: "Prüfpunkt",
+      packageA: {
+        documentedContent: "A-Inhalt",
+        coverageAmount: "A-Wert",
+        source: "A-Fundstelle",
+      },
+      packageB: {
+        documentedContent: "B-Gegenstück",
+        coverage: "B-Wirkung",
+        coverageAmount: "B-Wert",
+        source: "B-Fundstelle",
+      },
+      outcome: REFERENCE_OUTCOME.PARTIAL,
+      pointDecision: { reason: "Prüfhinweis" },
+    };
+    try {
+      await writeWorkbook({ categories: [{ ...category, rows: [row] }] }, file);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(file);
+      const sheet = workbook.getWorksheet("LF Vorlage A nach B");
+
+      expect(sheet.getRow(1).values.slice(1)).toEqual(HEADERS);
+      expect(sheet.getRow(2).values.slice(1)).toEqual(
+        workbookValues(category, row).slice(0, -1)
+      );
+      expect(sheet.views[0]).toMatchObject({ xSplit: 4, ySplit: 1 });
+      expect(sheet.getRow(2).height).toBe(66);
+      expect(sheet.getCell("N2").value).toBeNull();
+      expect(sheet.getCell("N2").fill.fgColor.argb).toBe("FFFFF2CC");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("accepts the manifest-owned row order and zero B-only rows", () => {

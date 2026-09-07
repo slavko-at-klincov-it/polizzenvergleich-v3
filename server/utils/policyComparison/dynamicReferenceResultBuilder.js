@@ -332,6 +332,12 @@ function workbookValues(category, row) {
   ];
 }
 
+function persistedWorkbookValues(sheet, rowNumber) {
+  return HEADERS.map(
+    (_header, index) => sheet.getCell(rowNumber, index + 1).value ?? ""
+  );
+}
+
 async function writeWorkbook(result, file) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Polizzenvergleich V3";
@@ -426,6 +432,22 @@ async function writeDynamicReferenceComparisonArtifacts({
       const sheet = workbook.getWorksheet(SHEET_NAME);
       if (!sheet || sheet.rowCount !== result.totals.rows + 1)
         throw new Error("LF_DYNAMIC_REFERENCE_WORKBOOK_ROUNDTRIP_MISMATCH");
+      if (
+        JSON.stringify(persistedWorkbookValues(sheet, 1)) !==
+        JSON.stringify(HEADERS)
+      )
+        throw new Error("LF_DYNAMIC_REFERENCE_WORKBOOK_HEADER_MISMATCH");
+      const expectedRows = result.categories.flatMap((category) =>
+        category.rows.map((row) => workbookValues(category, row))
+      );
+      if (
+        expectedRows.some(
+          (expectedRow, index) =>
+            JSON.stringify(persistedWorkbookValues(sheet, index + 2)) !==
+            JSON.stringify(expectedRow)
+        )
+      )
+        throw new Error("LF_DYNAMIC_REFERENCE_WORKBOOK_CONTENT_MISMATCH");
     },
   });
   return {
