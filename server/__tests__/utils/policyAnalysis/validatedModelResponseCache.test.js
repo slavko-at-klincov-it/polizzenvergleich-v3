@@ -180,6 +180,7 @@ describe("validated model response cache", () => {
       completedRunRoots: 1,
       answerFiles: 1,
       candidateResponses: 1,
+      successfulTargets: 1,
       published: 1,
     });
     expect(
@@ -192,5 +193,85 @@ describe("validated model response cache", () => {
         validateResponse: JSON.parse,
       })?.validated.answer
     ).toBe("YES");
+  });
+
+  it("aliases the final accepted retry response to earlier prompts for the same target", () => {
+    const runRoot = path.join(root, "resume-retry");
+    const phaseRoot = path.join(runRoot, "B-01", "LR02", "effects");
+    fs.mkdirSync(phaseRoot, { recursive: true });
+    const resultRoot = path.join(runRoot, "result");
+    fs.mkdirSync(resultRoot, { recursive: true });
+    for (const name of [
+      "artifact-set-manifest.private.json",
+      "comparison.private.json",
+      "export.private.json",
+      "polizzenvergleich.xlsx",
+    ])
+      fs.writeFileSync(path.join(resultRoot, name), "fixture");
+    const retryMessages = [
+      ...messages,
+      { role: "user", content: "repair the invalid response" },
+    ];
+    const acceptedResponse = '{"schemaVersion":1,"answer":"NO"}';
+    fs.writeFileSync(
+      path.join(phaseRoot, "answers.private.json"),
+      JSON.stringify([
+        {
+          targetId: "target:retry",
+          attempt: 1,
+          responseText: '{"schemaVersion":1,"answer":',
+          metrics: { responseModel: model },
+        },
+        {
+          targetId: "target:retry",
+          attempt: 2,
+          responseText: acceptedResponse,
+          metrics: { responseModel: model },
+        },
+      ])
+    );
+    fs.writeFileSync(
+      path.join(phaseRoot, "messages.private.json"),
+      JSON.stringify([
+        { targetId: "target:retry", attempt: 1, messages },
+        { targetId: "target:retry", attempt: 2, messages: retryMessages },
+      ])
+    );
+    fs.writeFileSync(
+      path.join(phaseRoot, "report.json"),
+      JSON.stringify({
+        status: "PASS",
+        model: {
+          provider: "LMStudioLLM",
+          id: model,
+          declaredTokenLimit: modelTokenLimit,
+          temperature: 0,
+        },
+      })
+    );
+
+    const stats = seedResponseCacheFromRunHistory({
+      sessionRunsRoot: root,
+      cacheDirectory,
+    });
+    expect(stats).toMatchObject({
+      completedRunRoots: 1,
+      answerFiles: 1,
+      candidateResponses: 2,
+      successfulTargets: 1,
+      published: 2,
+    });
+    for (const promptMessages of [messages, retryMessages]) {
+      expect(
+        readValidatedCachedResponse({
+          cacheDirectory,
+          phase: "PREPARED_EVIDENCE",
+          model,
+          modelTokenLimit,
+          messages: promptMessages,
+          validateResponse: JSON.parse,
+        })?.validated.answer
+      ).toBe("NO");
+    }
   });
 });

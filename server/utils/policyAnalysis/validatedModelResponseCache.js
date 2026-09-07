@@ -248,6 +248,7 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
     scannedFiles: 0,
     answerFiles: 0,
     candidateResponses: 0,
+    successfulTargets: 0,
     published: 0,
   };
   if (!fs.existsSync(sessionRunsRoot)) return stats;
@@ -298,6 +299,7 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
       !Number.isInteger(report.model.declaredTokenLimit)
     )
       return;
+    const pairedAttempts = [];
     answers.forEach((answer, index) => {
       const messageCall = messageCalls[index];
       if (
@@ -310,6 +312,18 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
       )
         return;
       stats.candidateResponses += 1;
+      pairedAttempts.push({ answer, messageCall });
+    });
+    const acceptedByTarget = new Map();
+    for (const pair of pairedAttempts) {
+      const previous = acceptedByTarget.get(pair.answer.targetId);
+      if (!previous || pair.answer.attempt >= previous.answer.attempt)
+        acceptedByTarget.set(pair.answer.targetId, pair);
+    }
+    stats.successfulTargets += acceptedByTarget.size;
+    for (const { answer, messageCall } of pairedAttempts) {
+      const accepted = acceptedByTarget.get(answer.targetId)?.answer;
+      if (!accepted) continue;
       const identity = responseCacheIdentity({
         phase,
         model: report.model.id,
@@ -324,11 +338,11 @@ function seedResponseCacheFromRunHistory({ sessionRunsRoot, cacheDirectory }) {
         model: report.model.id,
         modelTokenLimit: report.model.declaredTokenLimit,
         messages: messageCall.messages,
-        responseText: answer.responseText,
-        responseModel: answer.metrics.responseModel,
+        responseText: accepted.responseText,
+        responseModel: accepted.metrics.responseModel,
       });
       if (!existed && fs.existsSync(destination)) stats.published += 1;
-    });
+    }
   };
   for (const runRoot of completedRunRoots)
     stats.scannedFiles += walkRegularFiles(runRoot, visitAnswerFile);
