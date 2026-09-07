@@ -4,6 +4,7 @@ const {
   buildAuditResultRecord,
   buildSourceChunks,
   canonicalJson,
+  expandModelCandidateReferences,
   parseDocumentPages,
   promptPayload,
   rankCandidates,
@@ -175,6 +176,23 @@ describe("LF reference review audit contract", () => {
     expect(promptPayload(auditCase).currentPartialResult.productionEvidence).toEqual(
       auditCase.productionEvidence
     );
+    expect(promptPayload(auditCase).sources[0].candidateId).toBe("C01");
+    expect(JSON.stringify(promptPayload(auditCase))).not.toContain(candidateId);
+  });
+
+  test("expands short model references back to bound candidate hashes", () => {
+    const { auditCase, candidateId } = fixture();
+    const modelResult = validResult("C01");
+    const expanded = expandModelCandidateReferences(auditCase, modelResult);
+    expect(expanded.componentAssessments[0].supportingCandidateIds).toEqual([
+      candidateId,
+    ]);
+    expect(expanded.componentAssessments[0].exactQuotes[0].candidateId).toBe(
+      candidateId
+    );
+    expect(validateAuditResult(auditCase, expanded)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
   });
 
   test("derives the partial row disposition from atomic component findings", () => {

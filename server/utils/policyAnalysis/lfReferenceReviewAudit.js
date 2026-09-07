@@ -412,7 +412,7 @@ const SYSTEM_PROMPT = `Du auditierst genau EINEN bestehenden Teiltreffer eines g
 
 Regeln:
 1. Erfinde keine Quelle, Seite, Klausel, Zahl, Komponente oder Rechtsfolge.
-2. Verwende ausschließlich gelieferte Kandidaten-IDs und Komponenten-IDs. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
+2. Verwende ausschließlich gelieferte kurze Kandidaten-Referenzen (C01, C02, ...) und Komponenten-IDs. Kopiere Kandidaten-Referenzen exakt. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
 3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope.
 5. NARROWER_SUPPORT: echtes Gegenstück, aber engerer Scope oder zusätzliche Bedingung. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
@@ -420,14 +420,45 @@ Regeln:
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
-10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante IDs und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-ID braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
+10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast und ausdrücklich in Begründung oder Negativzitat verwendest, gehören ausschließlich in reviewedCandidateIds. Nenne dort höchstens fünf relevante Referenzen und kopiere sie exakt; liste nicht den gesamten Kandidatenbestand auf. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede tragende oder widersprechende Kandidaten-Referenz braucht mindestens ein exaktes Zitat; bei reviewedCandidateIds sind Zitate optional.
 11. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
 12. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
 13. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
 14. Antworte ausschließlich mit validem JSON ohne Markdown.`;
 
+function candidateReferenceMaps(auditCase) {
+  const idToReference = new Map();
+  const referenceToId = new Map();
+  auditCase.candidates.forEach(({ id }, index) => {
+    const reference = `C${String(index + 1).padStart(2, "0")}`;
+    idToReference.set(id, reference);
+    referenceToId.set(reference, id);
+  });
+  return { idToReference, referenceToId };
+}
+
+function replaceCandidateReferences(value, references) {
+  if (typeof value === "string") return references.get(value) ?? value;
+  if (Array.isArray(value))
+    return value.map((item) => replaceCandidateReferences(item, references));
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      replaceCandidateReferences(item, references),
+    ])
+  );
+}
+
+function expandModelCandidateReferences(auditCase, result) {
+  return replaceCandidateReferences(
+    result,
+    candidateReferenceMaps(auditCase).referenceToId
+  );
+}
+
 function promptPayload(auditCase) {
-  return {
+  const payload = {
     caseId: auditCase.caseId,
     requirement: {
       id: auditCase.requirementId,
@@ -468,17 +499,17 @@ function promptPayload(auditCase) {
         {
           componentId: "component_id",
           finding: COMPONENT_FINDINGS.join(" | "),
-          supportingCandidateIds: ["candidate:sha256"],
-          contradictingCandidateIds: ["candidate:sha256"],
-          reviewedCandidateIds: ["candidate:sha256"],
+          supportingCandidateIds: ["C01"],
+          contradictingCandidateIds: ["C02"],
+          reviewedCandidateIds: ["C03"],
           exactQuotes: [
-            { candidateId: "candidate:sha256", quote: "kurzes exaktes Zitat" },
+            { candidateId: "C01", quote: "kurzes exaktes Zitat" },
           ],
           coverageEffect: COVERAGE_EFFECTS.join(" | "),
           scopeRelation: SCOPE_RELATIONS.join(" | "),
           observedBValues: [
             {
-              candidateId: "candidate:sha256",
+              candidateId: "C01",
               value: "exakter B-Wert oder Bedingung",
               relationToA: "SAME | DIFFERENT | ADDITIONAL | UNCLEAR",
             },
@@ -494,6 +525,10 @@ function promptPayload(auditCase) {
       confidence: CONFIDENCE_LEVELS.join(" | "),
     },
   };
+  return replaceCandidateReferences(
+    payload,
+    candidateReferenceMaps(auditCase).idToReference
+  );
 }
 
 function jsonFromModelText(content) {
@@ -809,6 +844,7 @@ module.exports = {
   buildSourceChunks,
   canonicalJson,
   deriveRowDisposition,
+  expandModelCandidateReferences,
   jsonFromModelText,
   normalize,
   parseDocumentPages,
