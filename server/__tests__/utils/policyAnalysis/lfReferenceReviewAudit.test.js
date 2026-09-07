@@ -5,6 +5,7 @@ const {
   buildSourceChunks,
   canonicalJson,
   expandModelCandidateReferences,
+  normalizeModelAuditMetadata,
   parseDocumentPages,
   promptPayload,
   rankCandidates,
@@ -197,6 +198,24 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("normalizes non-steering model metadata before evidence validation", () => {
+    const metadata = validResult("C01");
+    delete metadata.valueComparison;
+    metadata.componentAssessments[0].observedBValues = [
+      {
+        candidateId: "C01",
+        value: "engerer Wert",
+        relationToA: "NARROWER",
+      },
+    ];
+    expect(normalizeModelAuditMetadata(metadata)).toMatchObject({
+      valueComparison: "DIFFERENT",
+      componentAssessments: [
+        { observedBValues: [{ relationToA: "DIFFERENT" }] },
+      ],
+    });
+  });
+
   test("derives the partial row disposition from atomic component findings", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
@@ -300,9 +319,6 @@ describe("LF reference review audit contract", () => {
     ["extra output key", (result) => {
       result.uncontracted = true;
     }],
-    ["incoherent recommendation", (result) => {
-      result.recommendedAction = "PROMOTE_TO_FOUND_AFTER_RULE_FIX";
-    }],
   ])("rejects %s", (_label, mutate) => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
@@ -310,6 +326,17 @@ describe("LF reference review audit contract", () => {
     expect(() => validateAuditResult(auditCase, result)).toThrow(
       /LF_REFERENCE_AUDIT_/u
     );
+  });
+
+  test("server-derives the action while retaining the model recommendation", () => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    result.recommendedAction = "PROMOTE_TO_FOUND_AFTER_RULE_FIX";
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+      recommendedAction: "KEEP_PARTIAL",
+      modelRecommendedAction: "PROMOTE_TO_FOUND_AFTER_RULE_FIX",
+    });
   });
 
   test("detects persisted audit record tampering", () => {

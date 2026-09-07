@@ -12,6 +12,7 @@ const {
   canonicalJson,
   expandModelCandidateReferences,
   jsonFromModelText,
+  normalizeModelAuditMetadata,
   promptPayload,
   sha256,
   validateAuditResult,
@@ -276,7 +277,7 @@ async function runAudit(args, dependencies = {}) {
           auditCase,
           expandModelCandidateReferences(
             auditCase,
-            jsonFromModelText(modelText)
+            normalizeModelAuditMetadata(jsonFromModelText(modelText))
           )
         );
         attempts.push({

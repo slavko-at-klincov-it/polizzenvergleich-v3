@@ -460,6 +460,37 @@ function expandModelCandidateReferences(auditCase, result) {
   );
 }
 
+function normalizeModelAuditMetadata(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result))
+    return result;
+  const normalized = structuredClone(result);
+  const observedRelations = [];
+  for (const assessment of normalized.componentAssessments ?? [])
+    for (const observedValue of assessment.observedBValues ?? []) {
+      if (["NARROWER", "BROADER"].includes(observedValue.relationToA))
+        observedValue.relationToA = "DIFFERENT";
+      observedRelations.push(observedValue.relationToA);
+    }
+  if (!CURRENT_SOURCE_ASSESSMENTS.includes(normalized.currentSourceAssessment))
+    normalized.currentSourceAssessment = "UNCLEAR";
+  if (!ROOT_CAUSES.includes(normalized.rootCause))
+    normalized.rootCause = "INSUFFICIENT_EVIDENCE";
+  if (!RECOMMENDED_ACTIONS.includes(normalized.recommendedAction))
+    normalized.recommendedAction = "MANUAL_REVIEW_REQUIRED";
+  if (!CONFIDENCE_LEVELS.includes(normalized.confidence))
+    normalized.confidence = "LOW";
+  if (!VALUE_COMPARISONS.includes(normalized.valueComparison)) {
+    normalized.valueComparison = observedRelations.includes("DIFFERENT")
+      ? "DIFFERENT"
+      : observedRelations.includes("SAME")
+        ? "SAME"
+        : observedRelations.includes("ADDITIONAL")
+          ? "DIFFERENT"
+          : "UNCLEAR";
+  }
+  return normalized;
+}
+
 function promptPayload(auditCase) {
   const payload = {
     caseId: auditCase.caseId,
@@ -570,6 +601,18 @@ function deriveRowDisposition(componentAssessments) {
   return "NO_ADDITIONAL_MATCH_IN_CANDIDATES";
 }
 
+function deriveRecommendedAction(rowDisposition) {
+  return {
+    COMPLETE_COUNTERPART_CANDIDATE: "PROMOTE_TO_FOUND_AFTER_RULE_FIX",
+    PARTIAL_REMAINS_WITH_EVIDENCE: "KEEP_PARTIAL",
+    PRESENT_BUT_NO_DECISION_READY_COMPONENT:
+      "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX",
+    CONTRADICTION_REVIEW_REQUIRED: "MARK_CONTRADICTED_AFTER_RULE_FIX",
+    AUDIT_UNCLEAR: "MANUAL_REVIEW_REQUIRED",
+    NO_ADDITIONAL_MATCH_IN_CANDIDATES: "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX",
+  }[rowDisposition];
+}
+
 function validateAuditResult(auditCase, result) {
   exactKeys(
     result,
@@ -584,6 +627,9 @@ function validateAuditResult(auditCase, result) {
       ...(Object.hasOwn(result ?? {}, "rowDisposition")
         ? ["rowDisposition"]
         : []),
+      ...(Object.hasOwn(result ?? {}, "modelRecommendedAction")
+        ? ["modelRecommendedAction"]
+        : []),
     ],
     "RESULT"
   );
@@ -594,6 +640,8 @@ function validateAuditResult(auditCase, result) {
     !CURRENT_SOURCE_ASSESSMENTS.includes(result.currentSourceAssessment) ||
     !ROOT_CAUSES.includes(result.rootCause) ||
     !RECOMMENDED_ACTIONS.includes(result.recommendedAction) ||
+    (Object.hasOwn(result, "modelRecommendedAction") &&
+      !RECOMMENDED_ACTIONS.includes(result.modelRecommendedAction)) ||
     !VALUE_COMPARISONS.includes(result.valueComparison) ||
     !CONFIDENCE_LEVELS.includes(result.confidence) ||
     typeof result.reasoning !== "string" ||
@@ -750,20 +798,14 @@ function validateAuditResult(auditCase, result) {
     result.rowDisposition !== rowDisposition
   )
     throw new Error("LF_REFERENCE_AUDIT_ROW_DISPOSITION_INVALID");
-  if (
-    (result.rootCause === "TRUE_PARTIAL" &&
-      rowDisposition !== "PARTIAL_REMAINS_WITH_EVIDENCE") ||
-    (result.rootCause === "MISSED_COUNTERPART_CANDIDATE" &&
-      rowDisposition !== "COMPLETE_COUNTERPART_CANDIDATE") ||
-    (result.recommendedAction === "KEEP_PARTIAL" &&
-      rowDisposition !== "PARTIAL_REMAINS_WITH_EVIDENCE") ||
-    (result.recommendedAction === "PROMOTE_TO_FOUND_AFTER_RULE_FIX" &&
-      rowDisposition !== "COMPLETE_COUNTERPART_CANDIDATE") ||
-    (result.recommendedAction === "MARK_CONTRADICTED_AFTER_RULE_FIX" &&
-      rowDisposition !== "CONTRADICTION_REVIEW_REQUIRED")
-  )
-    throw new Error("LF_REFERENCE_AUDIT_RECOMMENDATION_INCOHERENT");
-  return { ...result, rowDisposition };
+  const modelRecommendedAction =
+    result.modelRecommendedAction ?? result.recommendedAction;
+  return {
+    ...result,
+    modelRecommendedAction,
+    recommendedAction: deriveRecommendedAction(rowDisposition),
+    rowDisposition,
+  };
 }
 
 function buildAuditResultRecord({
@@ -843,9 +885,11 @@ module.exports = {
   buildSourceChunks,
   canonicalJson,
   deriveRowDisposition,
+  deriveRecommendedAction,
   expandModelCandidateReferences,
   jsonFromModelText,
   normalize,
+  normalizeModelAuditMetadata,
   parseDocumentPages,
   promptPayload,
   rankCandidates,
