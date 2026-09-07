@@ -6834,3 +6834,22 @@ und einen vollständigen 1+9-Endlauf mit 283/283 Zeilen sowie validierter XLSX
 erreichen. Jede Abweichung beendet den Kandidaten. Dies beweist
 Wiederholbarkeit auf bekannten Entwicklungsfixtures, nicht semantische Güte
 auf unbekannten Versicherern und keine 99-Prozent-Zuverlässigkeit.
+
+Der vollständige 1+9-Replay auf Commit
+`35fb7052d711f09a61b51d73e02a21e2c3e6c301` erfüllte diese Grenze auf dem
+Mac Studio. Er benötigte 123,17 Sekunden, verarbeitete 117/117
+B-Kategorieprüfungen und verwendete 610 validierte Cachetreffer bei null
+Modellaufrufen und null Cache-Schreibfehlern. Das Ergebnis enthält unverändert
+13 Kategorien, 55 Unterkategorien, 283 eindeutige A-Zeilen in Quellreihenfolge
+und 1.005 A-Quellblöcke; B-only-Inhalte erzeugten null zusätzliche Zeilen.
+Die exklusiven Ergebnisgruppen sind 26 gefundene, 79 teilweise gefundene,
+null kontrolliert nicht gefundene, eine referenzseitig unklare und 177
+gegenstückseitig unklare Zeilen und summieren sich auf 283.
+
+API-Readback, Artefaktset, dynamischer Ergebnisvalidator und XLSX-Download
+bestanden. Source-Block-Ledger und Semantic-Requirement-Manifest waren zum
+eingefrorenen Baseline-Lauf bytegleich; die 283 A-Zeilen samt Reihenfolge und
+Werten waren strukturell gleich, und die XLSX-Spalten A:G waren zellgenau
+gleich. Das ist ein Wiederholungsnachweis mit bekannten Entwicklungsfixtures,
+kein erster Lauf für unbekannte Dokumente, kein Versicherer-Holdout und kein
+99-Prozent-Nachweis.
