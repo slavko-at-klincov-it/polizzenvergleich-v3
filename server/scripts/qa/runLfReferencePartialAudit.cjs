@@ -65,7 +65,12 @@ function parseArguments(argv) {
   };
 }
 
-async function verifyModel({ endpoint, model, modelTokenLimit, fetchImpl = fetch }) {
+async function verifyModel({
+  endpoint,
+  model,
+  modelTokenLimit,
+  fetchImpl = fetch,
+}) {
   const apiRoot = endpoint.replace(/\/v1\/?$/u, "");
   const response = await fetchImpl(`${apiRoot}/api/v0/models`, {
     signal: AbortSignal.timeout(15000),
@@ -74,7 +79,8 @@ async function verifyModel({ endpoint, model, modelTokenLimit, fetchImpl = fetch
     throw new Error(`LF_REFERENCE_AUDIT_MODEL_LIST_FAILED:${response.status}`);
   const body = await response.json();
   const loaded = body?.data?.find(
-    ({ id, type, state }) => id === model && type === "llm" && state === "loaded"
+    ({ id, type, state }) =>
+      id === model && type === "llm" && state === "loaded"
   );
   if (
     !loaded ||

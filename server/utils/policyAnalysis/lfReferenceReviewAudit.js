@@ -108,18 +108,20 @@ function normalize(value) {
 }
 
 function normalizeQuote(value) {
-  return String(value ?? "")
-    .normalize("NFKC")
-    .replace(/\u00ad/gu, "")
-    // Structured-output models sometimes serialize a copied line break twice,
-    // leaving the literal characters "\\n" in the parsed JSON string. Treat
-    // only escaped whitespace markers like physical-page whitespace; all other
-    // characters must still match the source text.
-    .replace(/\\(?:r\\n|n|r|t)/gu, " ")
-    .replace(/([\p{L}\p{N}])-\s+(?=[\p{L}\p{N}])/gu, "$1")
-    .replace(/\s+/gu, " ")
-    .trim()
-    .toLowerCase();
+  return (
+    String(value ?? "")
+      .normalize("NFKC")
+      .replace(/\u00ad/gu, "")
+      // Structured-output models sometimes serialize a copied line break twice,
+      // leaving the literal characters "\\n" in the parsed JSON string. Treat
+      // only escaped whitespace markers like physical-page whitespace; all other
+      // characters must still match the source text.
+      .replace(/\\(?:r\\n|n|r|t)/gu, " ")
+      .replace(/([\p{L}\p{N}])-\s+(?=[\p{L}\p{N}])/gu, "$1")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function quoteMatchesText(text, quote) {
@@ -162,7 +164,10 @@ function parseDocumentPages(pageContent, pageMap) {
   return pages;
 }
 
-function buildSourceChunks(documents, { windowSize = 1800, overlap = 350 } = {}) {
+function buildSourceChunks(
+  documents,
+  { windowSize = 1800, overlap = 350 } = {}
+) {
   if (windowSize < 900 || overlap < 0 || overlap >= windowSize)
     throw new Error("LF_REFERENCE_AUDIT_CHUNK_CONFIGURATION_INVALID");
   const chunks = [];
@@ -221,9 +226,9 @@ function contributorPages(contributor) {
 }
 
 function contributorQuotes(contributor) {
-  return [
-    ...String(contributor?.source ?? "").matchAll(/„([^“]{12,})“/gu),
-  ].map((match) => normalize(match[1]));
+  return [...String(contributor?.source ?? "").matchAll(/„([^“]{12,})“/gu)].map(
+    (match) => normalize(match[1])
+  );
 }
 
 function rankCandidates({ row, requirement, chunks, topK = 14 }) {
@@ -283,9 +288,13 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
 
   const selected = new Map();
   for (const item of scored.slice(0, topK)) selected.set(item.chunk.id, item);
-  const documentUuids = [...new Set(chunks.map(({ documentUuid }) => documentUuid))];
+  const documentUuids = [
+    ...new Set(chunks.map(({ documentUuid }) => documentUuid)),
+  ];
   for (const documentUuid of documentUuids) {
-    const best = scored.find((item) => item.chunk.documentUuid === documentUuid);
+    const best = scored.find(
+      (item) => item.chunk.documentUuid === documentUuid
+    );
     if (best) selected.set(best.chunk.id, best);
   }
   const currentContributorGroups = (row.packageB?.contributors ?? []).map(
@@ -342,9 +351,7 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
     addCandidate(selected.get(candidateId));
   for (const documentUuid of documentUuids)
     addCandidate(
-      orderedSelected.find(
-        ({ chunk }) => chunk.documentUuid === documentUuid
-      )
+      orderedSelected.find(({ chunk }) => chunk.documentUuid === documentUuid)
     );
   for (const item of orderedSelected) addCandidate(item);
   const retained = [...prioritized.values()].slice(0, 28);
@@ -358,21 +365,21 @@ function rankCandidates({ row, requirement, chunks, topK = 14 }) {
       ),
     })),
     candidates: retained.map(({ chunk, score, matchedTokens, phraseHits }) => ({
-        id: chunk.id,
-        documentUuid: chunk.documentUuid,
-        documentName: chunk.documentName,
-        documentRole: chunk.documentRole,
-        documentStatus: chunk.documentStatus,
-        documentPosition: chunk.documentPosition,
-        pageNumber: chunk.pageNumber,
-        pageOffsetStart: chunk.pageOffsetStart,
-        pageOffsetEnd: chunk.pageOffsetEnd,
-        retrievalScore: Number(score.toFixed(4)),
-        matchedTokens,
-        phraseHits,
-        text: chunk.text,
-        textSha256: chunk.textSha256,
-      })),
+      id: chunk.id,
+      documentUuid: chunk.documentUuid,
+      documentName: chunk.documentName,
+      documentRole: chunk.documentRole,
+      documentStatus: chunk.documentStatus,
+      documentPosition: chunk.documentPosition,
+      pageNumber: chunk.pageNumber,
+      pageOffsetStart: chunk.pageOffsetStart,
+      pageOffsetEnd: chunk.pageOffsetEnd,
+      retrievalScore: Number(score.toFixed(4)),
+      matchedTokens,
+      phraseHits,
+      text: chunk.text,
+      textSha256: chunk.textSha256,
+    })),
   };
 }
 
@@ -726,10 +733,7 @@ function normalizeModelAuditMetadata(result) {
     if (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding)) {
       assessment.coverageEffect = "UNKNOWN";
       assessment.reviewedCandidateIds = [
-        ...new Set([
-          ...quoteCandidateIds,
-          ...assessment.reviewedCandidateIds,
-        ]),
+        ...new Set([...quoteCandidateIds, ...assessment.reviewedCandidateIds]),
       ].slice(0, 5);
       assessment.supportingCandidateIds = [];
       assessment.contradictingCandidateIds = [];
@@ -790,7 +794,8 @@ function promptPayload(auditCase) {
       documentStatus: candidate.documentStatus,
       physicalPdfPage: candidate.pageNumber,
       isCurrentSource: auditCase.retrieval.currentContributorGroups.some(
-        ({ matchingCandidateIds }) => matchingCandidateIds.includes(candidate.id)
+        ({ matchingCandidateIds }) =>
+          matchingCandidateIds.includes(candidate.id)
       ),
       text: candidate.text,
     })),
@@ -802,9 +807,7 @@ function promptPayload(auditCase) {
           supportingCandidateIds: ["C01"],
           contradictingCandidateIds: ["C02"],
           reviewedCandidateIds: ["C03"],
-          exactQuotes: [
-            { candidateId: "C01", quote: "kurzes exaktes Zitat" },
-          ],
+          exactQuotes: [{ candidateId: "C01", quote: "kurzes exaktes Zitat" }],
           coverageEffect: COVERAGE_EFFECTS.join(" | "),
           scopeRelation: SCOPE_RELATIONS.join(" | "),
           observedBValues: [
@@ -871,9 +874,7 @@ function deriveRowDisposition(componentAssessments) {
   const findings = new Set(componentAssessments.map(({ finding }) => finding));
   if (findings.has("CONTRADICTION")) return "CONTRADICTION_REVIEW_REQUIRED";
   if (findings.has("UNCLEAR")) return "AUDIT_UNCLEAR";
-  if (
-    componentAssessments.every(({ finding }) => finding === "DIRECT_SUPPORT")
-  )
+  if (componentAssessments.every(({ finding }) => finding === "DIRECT_SUPPORT"))
     return "COMPLETE_COUNTERPART_CANDIDATE";
   const supported = componentAssessments.filter(({ finding }) =>
     ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(finding)
@@ -888,8 +889,7 @@ function deriveRecommendedAction(rowDisposition) {
   return {
     COMPLETE_COUNTERPART_CANDIDATE: "PROMOTE_TO_FOUND_AFTER_RULE_FIX",
     PARTIAL_REMAINS_WITH_EVIDENCE: "KEEP_PARTIAL",
-    PRESENT_BUT_NO_DECISION_READY_COMPONENT:
-      "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX",
+    PRESENT_BUT_NO_DECISION_READY_COMPONENT: "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX",
     CONTRADICTION_REVIEW_REQUIRED: "MARK_CONTRADICTED_AFTER_RULE_FIX",
     AUDIT_UNCLEAR: "MANUAL_REVIEW_REQUIRED",
     NO_ADDITIONAL_MATCH_IN_CANDIDATES: "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX",
@@ -1026,8 +1026,7 @@ function validateAuditResult(auditCase, result) {
         !candidate ||
         !evidenceCandidateIds.has(quote.candidateId) ||
         normalized.length < 12 ||
-        (!quoteMatchesText(candidate.text, quote.quote) &&
-          !appearsOnBoundPage)
+        (!quoteMatchesText(candidate.text, quote.quote) && !appearsOnBoundPage)
       )
         throw new Error("LF_REFERENCE_AUDIT_QUOTE_INVALID");
     }
@@ -1063,10 +1062,9 @@ function validateAuditResult(auditCase, result) {
     );
     for (const observedValue of observedValues)
       if (
-        ![
-          ...supportingCandidateIds,
-          ...contradictingCandidateIds,
-        ].includes(observedValue?.candidateId) ||
+        ![...supportingCandidateIds, ...contradictingCandidateIds].includes(
+          observedValue?.candidateId
+        ) ||
         typeof observedValue.value !== "string" ||
         !["SAME", "DIFFERENT", "ADDITIONAL", "UNCLEAR"].includes(
           observedValue.relationToA

@@ -116,7 +116,10 @@ function fixture() {
       },
     ],
   };
-  writeJson(path.join(runRoot, "result", "comparison.private.json"), comparison);
+  writeJson(
+    path.join(runRoot, "result", "comparison.private.json"),
+    comparison
+  );
   writeJson(
     path.join(runRoot, "result", "artifact-set-manifest.private.json"),
     { contractId: "fixture" }
@@ -166,12 +169,7 @@ function fixture() {
     },
   ]);
   writeJson(
-    path.join(
-      documentRoot,
-      "LR01",
-      "effects",
-      "materialized.private.json"
-    ),
+    path.join(documentRoot, "LR01", "effects", "materialized.private.json"),
     {
       judgements: [
         {
@@ -185,21 +183,11 @@ function fixture() {
     }
   );
   writeJson(
-    path.join(
-      documentRoot,
-      "LR01",
-      "effects",
-      "selected-sources.private.json"
-    ),
+    path.join(documentRoot, "LR01", "effects", "selected-sources.private.json"),
     []
   );
   writeJson(
-    path.join(
-      documentRoot,
-      "LR01",
-      "result",
-      "requested-fields.private.json"
-    ),
+    path.join(documentRoot, "LR01", "result", "requested-fields.private.json"),
     { requirements: [{ requirementId: "LR01-001", fields: [] }] }
   );
   return { root, runRoot, output, sourceCommit };
@@ -251,9 +239,9 @@ describe("LF partial counterpart audit case builder", () => {
       documentUuid: "document-b",
       pageNumber: 1,
     });
-    expect(fs.statSync(path.join(value.output, "index.private.json")).mode & 0o777).toBe(
-      0o600
-    );
+    expect(
+      fs.statSync(path.join(value.output, "index.private.json")).mode & 0o777
+    ).toBe(0o600);
   });
 
   test("fails closed when the observed partial count differs", () => {

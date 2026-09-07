@@ -27,7 +27,12 @@ function parseArguments(argv) {
       throw new Error(`LF_REFERENCE_AUDIT_ARGUMENT_INVALID:${key || "-"}`);
     values[key.slice(2)] = value;
   }
-  const allowed = new Set(["runRoot", "output", "sourceCommit", "expectedCount"]);
+  const allowed = new Set([
+    "runRoot",
+    "output",
+    "sourceCommit",
+    "expectedCount",
+  ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length)
     throw new Error(`LF_REFERENCE_AUDIT_ARGUMENT_UNKNOWN:${unknown.join(",")}`);
@@ -171,7 +176,11 @@ function productionEvidenceForRow({
           left.candidateId.localeCompare(right.candidateId)
       );
     const selectedSourceCountByComponent = Object.fromEntries(
-      [...new Set(selectedForRequirementAll.map(({ componentId }) => componentId))]
+      [
+        ...new Set(
+          selectedForRequirementAll.map(({ componentId }) => componentId)
+        ),
+      ]
         .sort()
         .map((componentId) => [
           componentId,
@@ -300,7 +309,11 @@ function build(args, { fsImpl = fs } = {}) {
   };
   const comparison = readJson(files.comparison, "COMPARISON", fsImpl);
   const input = readJson(files.inputManifest, "INPUT_MANIFEST", fsImpl);
-  const manifest = readJson(files.semanticManifest, "SEMANTIC_MANIFEST", fsImpl);
+  const manifest = readJson(
+    files.semanticManifest,
+    "SEMANTIC_MANIFEST",
+    fsImpl
+  );
   const inputSideA = (input.documents ?? []).filter(({ side }) => side === "A");
   const inputSideB = (input.documents ?? []).filter(({ side }) => side === "B");
   if (
@@ -328,7 +341,10 @@ function build(args, { fsImpl = fs } = {}) {
     throw new Error("LF_REFERENCE_AUDIT_BASE_CONTRACT_INVALID");
 
   const rows = comparison.categories.flatMap((category) =>
-    category.rows.map((row) => ({ ...row, categoryView: category.categoryView }))
+    category.rows.map((row) => ({
+      ...row,
+      categoryView: category.categoryView,
+    }))
   );
   const recomputedOutcomes = Object.fromEntries(
     Object.keys(comparison.totals.outcomes).map((outcome) => [
@@ -338,7 +354,8 @@ function build(args, { fsImpl = fs } = {}) {
   );
   if (
     rows.length !== comparison.totals.rows ||
-    canonicalJson(recomputedOutcomes) !== canonicalJson(comparison.totals.outcomes)
+    canonicalJson(recomputedOutcomes) !==
+      canonicalJson(comparison.totals.outcomes)
   )
     throw new Error("LF_REFERENCE_AUDIT_BASE_TOTALS_INVALID");
   const targets = rows
@@ -384,7 +401,9 @@ function build(args, { fsImpl = fs } = {}) {
       role: document.role,
       documentStatus: document.documentStatus,
       sha256: document.sha256,
-      artifactSha256: sha256(readRegular(artifactFile, "DOCUMENT_ARTIFACT", fsImpl)),
+      artifactSha256: sha256(
+        readRegular(artifactFile, "DOCUMENT_ARTIFACT", fsImpl)
+      ),
       pages: parseDocumentPages(
         artifact.document.pageContent,
         artifact.document.pageMap
@@ -411,7 +430,9 @@ function build(args, { fsImpl = fs } = {}) {
   for (const row of targets) {
     const requirement = requirementById.get(row.categoryId);
     if (!requirement)
-      throw new Error(`LF_REFERENCE_AUDIT_REQUIREMENT_MISSING:${row.categoryId}`);
+      throw new Error(
+        `LF_REFERENCE_AUDIT_REQUIREMENT_MISSING:${row.categoryId}`
+      );
     const retrieval = rankCandidates({ row, requirement, chunks });
     const productionEvidence = productionEvidenceForRow({
       documentDirectories,

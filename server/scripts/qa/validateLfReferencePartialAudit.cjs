@@ -282,14 +282,8 @@ function validateAudit({ auditRoot, model }) {
     findingCount: 0,
   };
   validation.validationSha256 = sha256(canonicalJson(validation));
-  writePrivateJson(
-    path.join(auditRoot, "audit-summary.private.json"),
-    summary
-  );
-  writePrivateJson(
-    path.join(auditRoot, "review-packet.private.json"),
-    packet
-  );
+  writePrivateJson(path.join(auditRoot, "audit-summary.private.json"), summary);
+  writePrivateJson(path.join(auditRoot, "review-packet.private.json"), packet);
   fs.writeFileSync(
     path.join(auditRoot, "review-packet.tsv"),
     reviewPacketTsv(packet),

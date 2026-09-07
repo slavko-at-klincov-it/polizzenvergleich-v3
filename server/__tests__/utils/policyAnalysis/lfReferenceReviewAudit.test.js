@@ -58,8 +58,7 @@ function fixture() {
           documentName: "B.pdf",
           documentStatus: "FRAMEWORK_TERMS",
           reviewStatus: "BELEGT",
-          source:
-            "PDF-Seite 1: „Die Photovoltaikanlage ist mitversichert.“",
+          source: "PDF-Seite 1: „Die Photovoltaikanlage ist mitversichert.“",
         },
       ],
     },
@@ -86,7 +85,10 @@ function fixture() {
       ],
     },
   ];
-  const chunks = buildSourceChunks(documents, { windowSize: 900, overlap: 100 });
+  const chunks = buildSourceChunks(documents, {
+    windowSize: 900,
+    overlap: 100,
+  });
   const retrieval = rankCandidates({ row, requirement, chunks });
   const auditCase = buildAuditCase({
     row,
@@ -157,8 +159,7 @@ describe("LF reference review audit contract", () => {
   test("accepts model-serialized escaped whitespace in an otherwise exact quote", () => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
-    result.componentAssessments[0].exactQuotes[0].quote =
-      String.raw`Die Photovoltaikanlage ist\nmitversichert.`;
+    result.componentAssessments[0].exactQuotes[0].quote = String.raw`Die Photovoltaikanlage ist\nmitversichert.`;
 
     expect(validateAuditResult(auditCase, result)).toMatchObject({
       componentAssessments: expect.any(Array),
@@ -189,7 +190,9 @@ describe("LF reference review audit contract", () => {
     delete digestless.inputSha256;
     expect(auditCase.inputSha256).toBe(sha256(canonicalJson(digestless)));
     const prompt = promptPayload(auditCase);
-    expect(prompt.currentPartialResult).not.toHaveProperty("productionEvidence");
+    expect(prompt.currentPartialResult).not.toHaveProperty(
+      "productionEvidence"
+    );
     expect(prompt.currentPartialResult.contributorGroups[0]).not.toHaveProperty(
       "currentSource"
     );
@@ -208,9 +211,10 @@ describe("LF reference review audit contract", () => {
     });
     expect(schema.additionalProperties).toBe(false);
     expect(component).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(
-      component.items.properties.componentId.enum
-    ).toEqual(["technical_objects", "agreed_sum"]);
+    expect(component.items.properties.componentId.enum).toEqual([
+      "technical_objects",
+      "agreed_sum",
+    ]);
     expect(
       component.items.properties.supportingCandidateIds.items.enum
     ).toEqual(["C01"]);
@@ -271,9 +275,7 @@ describe("LF reference review audit contract", () => {
     metadata.componentAssessments[1].coverageEffect = "EXCLUDED";
     const normalized = normalizeModelAuditMetadata(metadata);
     expect(normalized.valueComparison).toBe("DIFFERENT");
-    expect(normalized.componentAssessments[0].finding).toBe(
-      "NARROWER_SUPPORT"
-    );
+    expect(normalized.componentAssessments[0].finding).toBe("NARROWER_SUPPORT");
     expect(
       normalized.componentAssessments[0].observedBValues[0].relationToA
     ).toBe("DIFFERENT");
@@ -387,9 +389,8 @@ describe("LF reference review audit contract", () => {
     }));
     auditCase.candidates.push(...reviewedCandidates);
     const result = validResult(candidateId);
-    result.componentAssessments[1].reviewedCandidateIds = reviewedCandidates.map(
-      ({ id }) => id
-    );
+    result.componentAssessments[1].reviewedCandidateIds =
+      reviewedCandidates.map(({ id }) => id);
     expect(() => validateAuditResult(auditCase, result)).toThrow(
       "LF_REFERENCE_AUDIT_REVIEWED_CANDIDATE_LIMIT_INVALID"
     );
@@ -461,16 +462,25 @@ describe("LF reference review audit contract", () => {
   });
 
   test.each([
-    ["unknown candidate", (result) => {
-      result.componentAssessments[0].supportingCandidateIds = ["unknown"];
-    }],
-    ["invented quote", (result) => {
-      result.componentAssessments[0].exactQuotes[0].quote =
-        "Dieses Zitat ist in keinem Kandidaten enthalten.";
-    }],
-    ["extra output key", (result) => {
-      result.uncontracted = true;
-    }],
+    [
+      "unknown candidate",
+      (result) => {
+        result.componentAssessments[0].supportingCandidateIds = ["unknown"];
+      },
+    ],
+    [
+      "invented quote",
+      (result) => {
+        result.componentAssessments[0].exactQuotes[0].quote =
+          "Dieses Zitat ist in keinem Kandidaten enthalten.";
+      },
+    ],
+    [
+      "extra output key",
+      (result) => {
+        result.uncontracted = true;
+      },
+    ],
   ])("rejects %s", (_label, mutate) => {
     const { auditCase, candidateId } = fixture();
     const result = validResult(candidateId);
@@ -503,10 +513,11 @@ describe("LF reference review audit contract", () => {
       finishedAt: new Date("2026-09-07T12:00:01.000Z"),
       rawResponse: {},
     });
-    expect(validateAuditResultRecord(auditCase, record, { model: "qwen/test" })).toBe(
-      record
-    );
-    record.result.reasoning = "Manipulierte Begründung mit ausreichender Länge.";
+    expect(
+      validateAuditResultRecord(auditCase, record, { model: "qwen/test" })
+    ).toBe(record);
+    record.result.reasoning =
+      "Manipulierte Begründung mit ausreichender Länge.";
     expect(() =>
       validateAuditResultRecord(auditCase, record, { model: "qwen/test" })
     ).toThrow("LF_REFERENCE_AUDIT_RECORD_DIGEST_INVALID");
