@@ -420,10 +420,11 @@ Regeln:
 7. RELATED_ONLY oder MENTION_ONLY: thematische Nähe, anderer Gegenstand, andere Faktrolle, anderer Scope oder bloße Erwähnung sind kein tragfähiger Komponentenbeleg.
 8. NO_MATCH_IN_CANDIDATES bedeutet nur, dass die gelieferten Kandidaten keinen Beleg enthalten. Es ist niemals ein vollständiger Paket-Nullfund.
 9. UNCLEAR: die gelieferten Kandidaten reichen für diese Komponente nicht aus.
-10. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
-11. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
-12. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
-13. Antworte ausschließlich mit validem JSON ohne Markdown.`;
+10. Kandidaten, die du geprüft, aber nicht als Gegenstück anerkannt hast, gehören ausschließlich in reviewedCandidateIds. Nutze supportingCandidateIds nur für DIRECT_SUPPORT/NARROWER_SUPPORT und contradictingCandidateIds nur für CONTRADICTION. Jede Kandidaten-ID in einer dieser drei Listen braucht mindestens ein exaktes Zitat.
+11. Liefere für jede Komponente genau ein assessment. Setze keinen finalen Zeilenstatus; der Server rollt die Komponenten deterministisch auf.
+12. Beurteile die bisher verwendeten Fundstellen separat. Produktionsdiagnosen sind Kontext und dürfen nicht ungeprüft übernommen werden.
+13. Das Ergebnis ist nur ein KI-Prüfvorschlag. Empfehle keine automatische Ergebnisänderung ohne Regeländerung, Replay und Regressionstests.
+14. Antworte ausschließlich mit validem JSON ohne Markdown.`;
 
 function promptPayload(auditCase) {
   return {
@@ -469,6 +470,7 @@ function promptPayload(auditCase) {
           finding: COMPONENT_FINDINGS.join(" | "),
           supportingCandidateIds: ["candidate:sha256"],
           contradictingCandidateIds: ["candidate:sha256"],
+          reviewedCandidateIds: ["candidate:sha256"],
           exactQuotes: [
             { candidateId: "candidate:sha256", quote: "kurzes exaktes Zitat" },
           ],
@@ -592,6 +594,7 @@ function validateAuditResult(auditCase, result) {
         "finding",
         "supportingCandidateIds",
         "contradictingCandidateIds",
+        "reviewedCandidateIds",
         "exactQuotes",
         "coverageEffect",
         "scopeRelation",
@@ -616,9 +619,14 @@ function validateAuditResult(auditCase, result) {
       assessment.contradictingCandidateIds,
       "CONTRADICTING_CANDIDATES"
     );
+    const reviewedCandidateIds = exactArray(
+      assessment.reviewedCandidateIds,
+      "REVIEWED_CANDIDATES"
+    );
     const evidenceCandidateIds = new Set([
       ...supportingCandidateIds,
       ...contradictingCandidateIds,
+      ...reviewedCandidateIds,
     ]);
     if (
       [...evidenceCandidateIds].some(
@@ -626,6 +634,11 @@ function validateAuditResult(auditCase, result) {
       ) ||
       supportingCandidateIds.some((candidateId) =>
         contradictingCandidateIds.includes(candidateId)
+      ) ||
+      reviewedCandidateIds.some(
+        (candidateId) =>
+          supportingCandidateIds.includes(candidateId) ||
+          contradictingCandidateIds.includes(candidateId)
       )
     )
       throw new Error("LF_REFERENCE_AUDIT_CANDIDATE_INVALID");
@@ -644,18 +657,20 @@ function validateAuditResult(auditCase, result) {
     for (const candidateId of evidenceCandidateIds)
       if (!quotes.some((quote) => quote.candidateId === candidateId))
         throw new Error("LF_REFERENCE_AUDIT_EVIDENCE_WITHOUT_QUOTE");
-    const needsSupport = [
-      "DIRECT_SUPPORT",
-      "NARROWER_SUPPORT",
-      "RELATED_ONLY",
-      "MENTION_ONLY",
-    ].includes(assessment.finding);
+    const needsSupport = ["DIRECT_SUPPORT", "NARROWER_SUPPORT"].includes(
+      assessment.finding
+    );
+    const needsReviewed = ["RELATED_ONLY", "MENTION_ONLY"].includes(
+      assessment.finding
+    );
     if (
       (needsSupport && supportingCandidateIds.length === 0) ||
+      (needsReviewed && reviewedCandidateIds.length === 0) ||
       (assessment.finding === "CONTRADICTION" &&
         contradictingCandidateIds.length === 0) ||
       (["NO_MATCH_IN_CANDIDATES", "UNCLEAR"].includes(assessment.finding) &&
-        evidenceCandidateIds.size > 0)
+        (supportingCandidateIds.length > 0 ||
+          contradictingCandidateIds.length > 0))
     )
       throw new Error("LF_REFERENCE_AUDIT_COMPONENT_EVIDENCE_INVALID");
     const observedValues = exactArray(

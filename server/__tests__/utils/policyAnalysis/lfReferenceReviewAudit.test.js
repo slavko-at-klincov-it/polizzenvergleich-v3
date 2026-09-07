@@ -114,6 +114,7 @@ function validResult(candidateId) {
         finding: "DIRECT_SUPPORT",
         supportingCandidateIds: [candidateId],
         contradictingCandidateIds: [],
+        reviewedCandidateIds: [],
         exactQuotes: [
           {
             candidateId,
@@ -130,6 +131,7 @@ function validResult(candidateId) {
         finding: "NO_MATCH_IN_CANDIDATES",
         supportingCandidateIds: [],
         contradictingCandidateIds: [],
+        reviewedCandidateIds: [],
         exactQuotes: [],
         coverageEffect: "UNKNOWN",
         scopeRelation: "UNCLEAR",
@@ -192,6 +194,8 @@ describe("LF reference review audit contract", () => {
       {
         ...result.componentAssessments[0],
         finding: "RELATED_ONLY",
+        supportingCandidateIds: [],
+        reviewedCandidateIds: [candidateId],
         note: "Nur thematisch verwandt, aber nicht derselbe versicherte Gegenstand.",
       },
     ];
