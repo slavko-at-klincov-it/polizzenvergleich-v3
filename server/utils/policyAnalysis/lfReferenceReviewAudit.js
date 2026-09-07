@@ -325,7 +325,17 @@ function applyRowLocalComparableLimitPolicy(auditCase, result) {
       }
     );
     if (donors.length === 0) continue;
-    const originalFinding = assessment.finding;
+    const previousNormalizationIndex = normalizations.findIndex(
+      ({ componentId }) => componentId === assessment.componentId
+    );
+    const previousNormalization =
+      previousNormalizationIndex >= 0
+        ? normalizations[previousNormalizationIndex]
+        : null;
+    const originalFinding =
+      previousNormalization?.originalFinding ?? assessment.finding;
+    if (previousNormalizationIndex >= 0)
+      normalizations.splice(previousNormalizationIndex, 1);
     const supportingCandidateIds = [
       ...new Set(donors.map(({ quote }) => quote.candidateId)),
     ];
@@ -1390,8 +1400,8 @@ function validateAuditResult(auditCase, result) {
   )
     throw new Error("LF_REFERENCE_AUDIT_RESULT_ENUM_OR_REASON_INVALID");
 
-  result = applyRowLocalComparableLimitPolicy(auditCase, result);
   result = applySupportAnchorPolicy(auditCase, result);
+  result = applyRowLocalComparableLimitPolicy(auditCase, result);
   result = applyOrphanLimitPolicy(auditCase, result);
   if (Object.hasOwn(result, "serverNormalizations")) {
     const normalizations = exactArray(
@@ -1446,6 +1456,8 @@ function validateAuditResult(auditCase, result) {
             ))) ||
         (normalization.reasons.includes("ROW_LOCAL_COMPARABLE_LIMIT_REBOUND") &&
           (![
+            "DIRECT_SUPPORT",
+            "NARROWER_SUPPORT",
             "RELATED_ONLY",
             "MENTION_ONLY",
             "NO_MATCH_IN_CANDIDATES",

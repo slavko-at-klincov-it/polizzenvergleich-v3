@@ -667,6 +667,70 @@ describe("LF reference review audit contract", () => {
     });
   });
 
+  test("rebinds an inadequate limit quote once from a supported row subject", () => {
+    const { auditCase, candidateId } = fixture();
+    const limitComponent = auditCase.semanticRequirement.components[1];
+    limitComponent.sourceSpanIds = ["shared-limit-span"];
+    limitComponent.valueBinding = {
+      type: "PERCENT",
+      formula: "basis * 0.1",
+    };
+    auditCase.semanticRequirement.values = [
+      {
+        componentId: "agreed_sum",
+        sourceSpanId: "shared-limit-span",
+        rawValue: "10%",
+      },
+    ];
+    const subjectQuote =
+      "Die Photovoltaikanlage ist bis 5 % des Neuwerts mitversichert.";
+    const inadequateLimitQuote =
+      "Ersetzt wird bis zur vereinbarten Versicherungssumme auf Erstes Risiko.";
+    auditCase.candidates[0].text = `${subjectQuote} ${inadequateLimitQuote}`;
+    const result = validResult(candidateId);
+    result.componentAssessments[0].exactQuotes = [
+      { candidateId, quote: subjectQuote },
+    ];
+    result.componentAssessments[1] = {
+      ...result.componentAssessments[1],
+      finding: "NARROWER_SUPPORT",
+      supportingCandidateIds: [candidateId],
+      exactQuotes: [{ candidateId, quote: inadequateLimitQuote }],
+      coverageEffect: "LIMITED",
+      scopeRelation: "NARROWER",
+      observedBValues: [
+        { candidateId, value: "5 %", relationToA: "DIFFERENT" },
+      ],
+      note: "Ein abweichendes Limit ist dokumentiert.",
+    };
+
+    const first = validateAuditResult(auditCase, result);
+    const second = validateAuditResult(auditCase, first);
+    expect(second).toEqual(first);
+    expect(second).toMatchObject({
+      rowDisposition: "COMPLETE_COUNTERPART_CANDIDATE",
+      serverNormalizations: [
+        {
+          componentId: "agreed_sum",
+          originalFinding: "NARROWER_SUPPORT",
+          normalizedFinding: "DIRECT_SUPPORT",
+          reasons: ["ROW_LOCAL_COMPARABLE_LIMIT_REBOUND"],
+        },
+      ],
+      componentAssessments: [
+        expect.any(Object),
+        expect.objectContaining({
+          componentId: "agreed_sum",
+          finding: "DIRECT_SUPPORT",
+          exactQuotes: [{ candidateId, quote: subjectQuote }],
+          observedBValues: [
+            { candidateId, value: "5 %", relationToA: "DIFFERENT" },
+          ],
+        }),
+      ],
+    });
+  });
+
   test("parses physical pages and rejects a mismatching page map", () => {
     expect(
       parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [
