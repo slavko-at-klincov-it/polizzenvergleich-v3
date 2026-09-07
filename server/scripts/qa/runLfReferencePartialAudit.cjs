@@ -291,7 +291,7 @@ async function runAudit(args, dependencies = {}) {
               role: "user",
               content: `Die vorige Antwort verletzt den Auditvertrag: ${
                 error.message
-              }. Korrigiere nur das JSON. Für jede gelieferte Komponente muss genau ein componentAssessment vorliegen. Verwende ausschließlich vorhandene Kandidaten- und Komponenten-IDs und kopiere sie exakt; jede ID in supportingCandidateIds oder contradictingCandidateIds braucht ein exaktes, wörtlich enthaltenes Zitat. Nenne in reviewedCandidateIds höchstens fünf ausdrücklich relevante Kandidaten, nicht den gesamten Bestand; Zitate dazu sind optional. Nicht tragfähige Kandidaten gehören nur in reviewedCandidateIds. Setze keinen finalen Zeilenstatus.`,
+              }. Korrigiere nur das JSON. Für jede gelieferte Komponente muss genau ein componentAssessment vorliegen. Verwende ausschließlich vorhandene Kandidaten- und Komponenten-IDs und kopiere sie exakt; jede ID in supportingCandidateIds oder contradictingCandidateIds braucht ein exaktes, wörtlich auf derselben physischen Kandidatenseite enthaltenes Zitat. Ordne es möglichst dem Textfenster zu, das das Zitat vollständig enthält. Nenne in reviewedCandidateIds höchstens fünf ausdrücklich relevante Kandidaten, nicht den gesamten Bestand; Zitate dazu sind optional. Nicht tragfähige Kandidaten gehören nur in reviewedCandidateIds. Setze keinen finalen Zeilenstatus.`,
             }
           );
       }

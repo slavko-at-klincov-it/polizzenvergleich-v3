@@ -412,7 +412,7 @@ const SYSTEM_PROMPT = `Du auditierst genau EINEN bestehenden Teiltreffer eines g
 
 Regeln:
 1. Erfinde keine Quelle, Seite, Klausel, Zahl, Komponente oder Rechtsfolge.
-2. Verwende ausschließlich gelieferte Kandidaten-IDs und Komponenten-IDs. Zitate müssen wörtlich und zusammenhängend im Kandidatentext vorkommen.
+2. Verwende ausschließlich gelieferte Kandidaten-IDs und Komponenten-IDs. Zitate müssen wörtlich und zusammenhängend auf der physischen Seite des Kandidaten vorkommen. Bei überlappenden Textfenstern ordne das Zitat möglichst dem Fenster zu, das es vollständig enthält.
 3. Der A-Text liefert Kontext. Bewertet werden nur die gelieferten Komponenten und Werte; verlange keine unmodellierten Details.
 4. DIRECT_SUPPORT: Kandidat trägt dieselbe fachliche Funktion und einen gleichen oder breiteren wesentlichen Scope.
 5. NARROWER_SUPPORT: echtes Gegenstück, aber engerer Scope oder zusätzliche Bedingung. Andere Werte allein machen ein Gegenstück nicht enger; erfasse sie getrennt.
@@ -648,11 +648,21 @@ function validateAuditResult(auditCase, result) {
     for (const quote of quotes) {
       const candidate = candidateById.get(quote?.candidateId);
       const normalized = normalizeQuote(quote?.quote);
+      const appearsOnBoundPage =
+        candidate &&
+        Number.isInteger(candidate.pageNumber) &&
+        auditCase.candidates.some(
+          (pageCandidate) =>
+            pageCandidate.documentUuid === candidate.documentUuid &&
+            pageCandidate.pageNumber === candidate.pageNumber &&
+            normalizeQuote(pageCandidate.text).includes(normalized)
+        );
       if (
         !candidate ||
         !evidenceCandidateIds.has(quote.candidateId) ||
         normalized.length < 12 ||
-        !normalizeQuote(candidate.text).includes(normalized)
+        (!normalizeQuote(candidate.text).includes(normalized) &&
+          !appearsOnBoundPage)
       )
         throw new Error("LF_REFERENCE_AUDIT_QUOTE_INVALID");
     }

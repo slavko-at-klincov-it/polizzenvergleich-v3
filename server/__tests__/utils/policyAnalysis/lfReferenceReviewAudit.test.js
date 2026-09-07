@@ -225,6 +225,32 @@ describe("LF reference review audit contract", () => {
     );
   });
 
+  test("binds an exact quote across overlapping windows on the same physical page", () => {
+    const { auditCase, candidateId } = fixture();
+    const overlappingCandidateId = `candidate:${"d".repeat(64)}`;
+    auditCase.candidates.push({
+      ...auditCase.candidates[0],
+      id: overlappingCandidateId,
+      pageOffsetStart: 45,
+      text: "Die Neuwertsumme beträgt EUR 50.000.",
+      textSha256: sha256("Die Neuwertsumme beträgt EUR 50.000."),
+    });
+    const result = validResult(candidateId);
+    result.componentAssessments[0].supportingCandidateIds = [
+      overlappingCandidateId,
+    ];
+    result.componentAssessments[0].exactQuotes[0].candidateId =
+      overlappingCandidateId;
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE",
+    });
+
+    auditCase.candidates.at(-1).pageNumber = 2;
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      "LF_REFERENCE_AUDIT_QUOTE_INVALID"
+    );
+  });
+
   test.each([
     ["unknown candidate", (result) => {
       result.componentAssessments[0].supportingCandidateIds = ["unknown"];
