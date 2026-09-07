@@ -439,7 +439,7 @@ function build(args, { fsImpl = fs } = {}) {
         canonicalJson(value).length,
       ])
     );
-    if (promptCharacterCount > 115000)
+    if (promptCharacterCount > 130000)
       throw new Error(
         `LF_REFERENCE_AUDIT_PROMPT_BUDGET_EXCEEDED:${auditCase.caseId}:${promptCharacterCount}:${canonicalJson(
           promptSectionCharacters
