@@ -146,7 +146,7 @@ describe("dynamic LF reference result", () => {
 
       expect(sheet.getRow(1).values.slice(1)).toEqual(HEADERS);
       expect(sheet.getRow(2).values.slice(1)).toEqual(
-        workbookValues(category, row).slice(0, -1)
+        workbookValues(category, row)
       );
       expect(sheet.views[0]).toMatchObject({ xSplit: 4, ySplit: 1 });
       expect(sheet.getRow(2).height).toBe(66);
