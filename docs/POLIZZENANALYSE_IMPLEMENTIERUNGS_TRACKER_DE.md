@@ -6853,3 +6853,38 @@ Werten waren strukturell gleich, und die XLSX-Spalten A:G waren zellgenau
 gleich. Das ist ein Wiederholungsnachweis mit bekannten Entwicklungsfixtures,
 kein erster Lauf für unbekannte Dokumente, kein Versicherer-Holdout und kein
 99-Prozent-Nachweis.
+
+### 133.12 LF-Gegenstücksuche: enger Discovery-Fix aus dem 177-Fälle-Zweitaudit
+
+Der dokumentgebundene Zweitaudit zeigte mehrere Fälle, in denen das
+B-Dokument ein fachlich passendes Gegenstück enthielt, der unvollständige
+Suchvertrag dieses aber nicht als Kandidat bereitstellte. Commit
+`778f4f6c43f1a9779e2742e3433e575149cd6121` ergänzt deshalb eine getrennte,
+versionierte Side-B-Discovery-Schicht. Sie erweitert ausschließlich bestätigte
+LF-Anforderungen; A-Oracle, A-Manifest und die 283-zeilige Topologie bleiben
+unverändert.
+
+Die neue Schicht deckt PR-01, PR-03, PR-04, PR-05, PR-06 und PR-08 mit
+begrenzten exakten Begriffen oder Begriffskombinationen ab. PR-02 wurde bewusst
+nicht erweitert, weil die derzeitige Quellkomponente Muttergesellschaft und
+Tochtergesellschaften bündelt und ein breiter Alias einen Teiltreffer
+fälschlich zum Volltreffer machen könnte. Eine Ausschlussausnahme in PR-05
+bindet die exakte Fundstelle über Quelloffsets und behandelt den darin nur
+referenzierten Deckungsnamen als `MENTION_ONLY`; direkte Ausschlüsse und der
+symmetrische Vergleichspfad bleiben unverändert.
+
+Auf dem Mac Studio bestanden auf dem finalen Commit 187/187 Server-Suites mit
+2.499/2.499 Tests und der vollständige Server-Lint. Der frische vollständige
+1+9-Lauf mit `qwen/qwen3.6-35b-a3b` benötigte 60 Minuten und 59,628 Sekunden
+und schloss 117/117 Kategorieprüfungen ab. Das Ergebnis verbesserte sich von
+26 auf 31 gefundene Gegenstücke; teilweise gefundene Zeilen blieben bei 79,
+gegenstückseitig unklare Zeilen sanken von 177 auf 172. Die fünf Änderungen
+betreffen LR01-001, LR01-003, LR01-004, LR01-005 und LR01-006.
+
+API-Readback, Artefaktmanifest und XLSX-Download bestanden. Source-Block-Ledger
+und Semantic-Requirement-Manifest waren zur V3.7.1-Baseline bytegleich; alle
+283 A-Zeilen waren nach Abzug der laufabhängigen Dokument-UUID strukturell
+identisch, und XLSX A:G war zellgenau identisch. Der Lauf ist ein
+dokumentgebundener Nachweis auf bekannten Entwicklungsfixtures, keine
+fachliche Expertenabnahme, kein unbekannter Holdout und kein
+99-Prozent-Nachweis.
