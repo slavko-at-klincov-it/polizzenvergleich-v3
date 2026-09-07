@@ -1142,12 +1142,7 @@ function validateAuditResult(auditCase, result) {
     for (const normalization of normalizations) {
       exactKeys(
         normalization,
-        [
-          "componentId",
-          "originalFinding",
-          "normalizedFinding",
-          "reasons",
-        ],
+        ["componentId", "originalFinding", "normalizedFinding", "reasons"],
         "SERVER_NORMALIZATION"
       );
       if (
