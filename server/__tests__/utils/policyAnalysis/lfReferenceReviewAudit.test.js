@@ -1,0 +1,250 @@
+const {
+  SYSTEM_PROMPT,
+  buildAuditCase,
+  buildAuditResultRecord,
+  buildSourceChunks,
+  canonicalJson,
+  parseDocumentPages,
+  promptPayload,
+  rankCandidates,
+  sha256,
+  validateAuditResult,
+  validateAuditResultRecord,
+} = require("../../../utils/policyAnalysis/lfReferenceReviewAudit");
+
+function fixture() {
+  const requirement = {
+    requirementId: "VS-05",
+    components: [
+      {
+        id: "technical_objects",
+        label: "Aufzüge, Antennen, Solar und Photovoltaik",
+        factRole: "INSURED_OBJECT",
+        aliases: ["Photovoltaikanlage"],
+      },
+      {
+        id: "agreed_sum",
+        label: "Vereinbarte Versicherungssumme",
+        factRole: "LIMIT",
+        aliases: ["Neuwertsumme"],
+      },
+    ],
+    values: [],
+  };
+  const row = {
+    categoryId: "VS-05",
+    analysisRowId: "LR02-005",
+    sourceOrder: 4,
+    categoryName: "Technische Anlagen am Gebäude",
+    subcategoryId: "VS-GEB",
+    subcategoryName: "Gebäude",
+    packageA: {
+      documentedContent: "Aufzüge und Photovoltaik zum Neuwert",
+      source: "Seite 3",
+    },
+    packageB: {
+      reviewStatus: "TEILBELEGT",
+      documentedContent: "Photovoltaikanlage versichert",
+      coverage: "Ja",
+      coverageAmount: "Nicht feststellbar",
+      contributors: [
+        {
+          documentUuid: "b-document",
+          documentName: "B.pdf",
+          documentStatus: "FRAMEWORK_TERMS",
+          reviewStatus: "BELEGT",
+          source:
+            "PDF-Seite 1: „Die Photovoltaikanlage ist mitversichert.“",
+        },
+      ],
+    },
+    outcome: "TEILWEISES_GEGENSTUECK",
+    pointDecision: {
+      outcome: "TEILWEISES_GEGENSTUECK",
+      reasonCode: "ONLY_PART_OF_REFERENCE_COMPONENTS_EVIDENCED_IN_B",
+    },
+  };
+  const documents = [
+    {
+      uuid: "b-document",
+      position: 0,
+      name: "B.pdf",
+      role: "TERMS",
+      documentStatus: "FRAMEWORK_TERMS",
+      sha256: "a".repeat(64),
+      artifactSha256: "b".repeat(64),
+      pages: [
+        {
+          pageNumber: 1,
+          text: "Die Photovoltaikanlage ist mitversichert. Die Neuwertsumme beträgt EUR 50.000.",
+        },
+      ],
+    },
+  ];
+  const chunks = buildSourceChunks(documents, { windowSize: 900, overlap: 100 });
+  const retrieval = rankCandidates({ row, requirement, chunks });
+  const auditCase = buildAuditCase({
+    row,
+    requirement,
+    retrieval,
+    sourceInventory: documents.map(({ pages, ...document }) => ({
+      ...document,
+      pageCount: pages.length,
+    })),
+    productionEvidence: [
+      {
+        documentUuid: "b-document",
+        judgements: [],
+        selectedSources: [],
+      },
+    ],
+    bindings: {
+      sourceCommit: "c".repeat(40),
+      comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+    },
+  });
+  return { auditCase, candidateId: auditCase.candidates[0].id };
+}
+
+function validResult(candidateId) {
+  return {
+    componentAssessments: [
+      {
+        componentId: "technical_objects",
+        finding: "DIRECT_SUPPORT",
+        supportingCandidateIds: [candidateId],
+        contradictingCandidateIds: [],
+        exactQuotes: [
+          {
+            candidateId,
+            quote: "Die Photovoltaikanlage ist mitversichert.",
+          },
+        ],
+        coverageEffect: "INCLUDED",
+        scopeRelation: "SAME_OR_BROADER",
+        observedBValues: [],
+        note: "Die technische Anlage ist ausdrücklich mitversichert.",
+      },
+      {
+        componentId: "agreed_sum",
+        finding: "NO_MATCH_IN_CANDIDATES",
+        supportingCandidateIds: [],
+        contradictingCandidateIds: [],
+        exactQuotes: [],
+        coverageEffect: "UNKNOWN",
+        scopeRelation: "UNCLEAR",
+        observedBValues: [],
+        note: "Kein sicher gebundener Wertbeleg im Auditkandidaten.",
+      },
+    ],
+    currentSourceAssessment: "VALID_PARTIAL_EVIDENCE",
+    rootCause: "TRUE_PARTIAL",
+    recommendedAction: "KEEP_PARTIAL",
+    valueComparison: "UNCLEAR",
+    reasoning: "Eine Komponente ist belegt, der erforderliche Wertbeleg fehlt.",
+    confidence: "HIGH",
+  };
+}
+
+describe("LF reference review audit contract", () => {
+  test("parses physical pages and rejects a mismatching page map", () => {
+    expect(
+      parseDocumentPages("[DOCUMENT_PAGE 1]\nEins\n[DOCUMENT_PAGE 2]\nZwei", [
+        { pageNumber: 1 },
+        { pageNumber: 2 },
+      ])
+    ).toEqual([
+      { pageNumber: 1, text: "Eins" },
+      { pageNumber: 2, text: "Zwei" },
+    ]);
+    expect(() =>
+      parseDocumentPages("[DOCUMENT_PAGE 1]\nEins", [{ pageNumber: 2 }])
+    ).toThrow("LF_REFERENCE_AUDIT_PAGE_MAP_MISMATCH");
+  });
+
+  test("always includes current source pages and binds the case digest", () => {
+    const { auditCase, candidateId } = fixture();
+    expect(
+      auditCase.retrieval.currentContributorGroups[0].matchingCandidateIds
+    ).toContain(candidateId);
+    const digestless = { ...auditCase };
+    delete digestless.inputSha256;
+    expect(auditCase.inputSha256).toBe(sha256(canonicalJson(digestless)));
+    expect(promptPayload(auditCase).currentPartialResult.productionEvidence).toEqual(
+      auditCase.productionEvidence
+    );
+  });
+
+  test("derives the partial row disposition from atomic component findings", () => {
+    const { auditCase, candidateId } = fixture();
+    expect(validateAuditResult(auditCase, validResult(candidateId))).toMatchObject(
+      { rowDisposition: "PARTIAL_REMAINS_WITH_EVIDENCE" }
+    );
+  });
+
+  test("does not mislabel a one-component related hit as a true partial", () => {
+    const { auditCase, candidateId } = fixture();
+    auditCase.semanticRequirement.components = [
+      auditCase.semanticRequirement.components[0],
+    ];
+    const result = validResult(candidateId);
+    result.componentAssessments = [
+      {
+        ...result.componentAssessments[0],
+        finding: "RELATED_ONLY",
+        note: "Nur thematisch verwandt, aber nicht derselbe versicherte Gegenstand.",
+      },
+    ];
+    result.currentSourceAssessment = "RELATED_ONLY";
+    result.rootCause = "FALSE_POSITIVE_CURRENT_SOURCE";
+    result.recommendedAction = "DEMOTE_TO_UNCLEAR_AFTER_RULE_FIX";
+    expect(validateAuditResult(auditCase, result)).toMatchObject({
+      rowDisposition: "PRESENT_BUT_NO_DECISION_READY_COMPONENT",
+    });
+  });
+
+  test.each([
+    ["unknown candidate", (result) => {
+      result.componentAssessments[0].supportingCandidateIds = ["unknown"];
+    }],
+    ["invented quote", (result) => {
+      result.componentAssessments[0].exactQuotes[0].quote =
+        "Dieses Zitat ist in keinem Kandidaten enthalten.";
+    }],
+    ["extra output key", (result) => {
+      result.uncontracted = true;
+    }],
+    ["incoherent recommendation", (result) => {
+      result.recommendedAction = "PROMOTE_TO_FOUND_AFTER_RULE_FIX";
+    }],
+  ])("rejects %s", (_label, mutate) => {
+    const { auditCase, candidateId } = fixture();
+    const result = validResult(candidateId);
+    mutate(result);
+    expect(() => validateAuditResult(auditCase, result)).toThrow(
+      /LF_REFERENCE_AUDIT_/u
+    );
+  });
+
+  test("detects persisted audit record tampering", () => {
+    const { auditCase, candidateId } = fixture();
+    const startedAt = new Date("2026-09-07T12:00:00.000Z");
+    const record = buildAuditResultRecord({
+      auditCase,
+      result: validResult(candidateId),
+      model: "qwen/test",
+      endpoint: "http://127.0.0.1:1234/v1",
+      startedAt,
+      finishedAt: new Date("2026-09-07T12:00:01.000Z"),
+      rawResponse: {},
+    });
+    expect(validateAuditResultRecord(auditCase, record, { model: "qwen/test" })).toBe(
+      record
+    );
+    record.result.reasoning = "Manipulierte Begründung mit ausreichender Länge.";
+    expect(() =>
+      validateAuditResultRecord(auditCase, record, { model: "qwen/test" })
+    ).toThrow("LF_REFERENCE_AUDIT_RECORD_DIGEST_INVALID");
+    expect(record.systemPromptSha256).toBe(sha256(SYSTEM_PROMPT));
+  });
+});
