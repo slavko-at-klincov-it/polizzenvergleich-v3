@@ -6888,3 +6888,47 @@ identisch, und XLSX A:G war zellgenau identisch. Der Lauf ist ein
 dokumentgebundener Nachweis auf bekannten Entwicklungsfixtures, keine
 fachliche Expertenabnahme, kein unbekannter Holdout und kein
 99-Prozent-Nachweis.
+
+### 133.13 Audit der 79 Teiltreffer und kundenlesbare Review-Arbeitsmappe
+
+Der nicht autoritative Audit aller 79 aktuellen LF-Teiltreffer ist auf dem
+Mac Studio am Source-Commit `b759c60607d48a64d19dc8c62b64269285ce927f`
+abgeschlossen. Qwen 3.6 lief mit 42.496 Kontext rund 125 Minuten. Der
+Gesamtvalidator bestand mit 79/79 Ergebnisrecords und null Findings. Die
+maschinelle Verteilung lautet: 9 vollstaendige Gegenstueck-Kandidaten, 52
+bestaetigte Teiltreffer, 6 Zeilen ohne entscheidungsreife Komponente, 2
+Widerspruchshinweise, 7 Audit-unklare Zeilen und 3 Zeilen ohne zusaetzlichen
+Auditfund.
+
+Die manuelle Hochrisikostichprobe aller neun Promotions und beider
+Widerspruchshinweise bestaetigte sieben starke Promotionskandidaten. Sie
+verwarf die Promotions fuer `LR13-002` und `LR13-012` sowie die angeblichen
+Widersprueche fuer `LR09-025` und `LR13-023`; diese vier Zeilen bleiben
+Teiltreffer beziehungsweise fachlich offen. Modell-Audit und manuelle
+Stichprobe sind in der Kundenarbeitsmappe sichtbar getrennt.
+
+Die wiederverwendbaren Guards verbieten die wirtschaftliche Substitution
+unterschiedlicher Kostenarten, verwaiste Limits ohne belegten Gegenstand und
+Limit-Rebinds aus blossen Dauer- oder Nebenbedingungen. Abweichende B-Werte
+bleiben dagegen als Werte desselben Gegenstands vergleichbar und werden
+separat von A ausgegeben. Nach drei nicht bindbaren Zitatversuchen wird nur
+die betroffene Komponente fail-closed unklar.
+
+Die Arbeitsmappe `LF-IMMO-Review-V3.7.2-2026-09-08.xlsx` enthaelt 283
+LF-Reviewzeilen, 253 komponentenbezogene Auditbelegzeilen und 172 getrennte
+Alt-Audit-Hinweise. A:G ist fuer alle 283 Zeilen zellgenau zur validierten
+V3.7.2-Referenz, die letzte manuelle Bewertungsspalte ist 283/283 leer und der
+XLSX-Fehlerscan ist leer. Der produktive Basiszaehlstand 31 gefunden, 79
+teilweise, 172 Gegenstuecke unklar und 1 Referenz unklar bleibt unveraendert.
+
+Vollstaendige Bindungen, Hashes, Einzelfallkorrekturen und Beweisgrenzen sind
+in `docs/LF_REFERENCE_PARTIAL_AUDIT_2026-09-08_DE.md` dokumentiert.
+
+Status: `79/79 AUDIT UND KUNDENREVIEW-ARBEITSMAPPE BESTANDEN; KEINE
+AUTOMATISCHE PRODUKTMUTATION, KEIN DEPLOYMENT`.
+
+Beweisgrenze: bekannte Entwicklungsdokumente, kein fachlich gelabelter
+unbekannter Mehrversicherer-Holdout und kein 99-Prozent-Nachweis. Die sieben
+starken Promotionskandidaten benoetigen vor einer Produktuebernahme jeweils
+eine semantische Regel, positive und negative Regressionen sowie die
+Fachfreigabe.
