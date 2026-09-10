@@ -31,6 +31,12 @@ const {
 const {
   runBatch,
 } = require("../../scripts/qa/runADrivenReferenceClassification.cjs");
+const {
+  runBatch: runCounterpartDecisionBatch,
+} = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
+const {
+  buildADrivenCounterpartDecisionPlan,
+} = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const crypto = require("crypto");
 
 function digest(contractId, payload) {
@@ -989,6 +995,97 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
+  test("validates a bounded semantic decision runner batch", async () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude und Nebengebäude sind versichert.";
+    const packageResults = searchPlan.packages.map((item) => ({
+      packageId: item.packageId,
+      completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+      candidates: [
+        {
+          compactCandidateId: "candidate-one",
+          documentUuid: "b-doc",
+          documentSha256: "b".repeat(64),
+          clauseBoundaryId: "clause-one",
+          channels: ["DINGHY"],
+          sourceSpans: [
+            {
+              spanId: "span-one",
+              exactText,
+              exactTextSha256: crypto
+                .createHash("sha256")
+                .update(exactText)
+                .digest("hex"),
+              physicalPageNumber: 1,
+              documentStart: 0,
+              documentEnd: exactText.length,
+            },
+          ],
+        },
+      ],
+    }));
+    const retrieval = retrievalArtifact(searchPlan, packageResults);
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const batch = buildADrivenCounterpartDecisionPlan(searchExecution, {
+      maximumPackages: 2,
+      maximumCharacters: 14_000,
+    }).batches[0];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const request = JSON.parse(messages[1].content);
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      request.packages.map((item) => ({
+                        packageId: item.packageId,
+                        decision: "SUPPORTED",
+                        selectedCandidateIds: ["candidate-one"],
+                        dimensionChecks: item.semanticChecks.map(
+                          ({ checkId, dimension }) => ({
+                            checkId,
+                            dimension,
+                            outcome: "MATCH",
+                            candidateIds: ["candidate-one"],
+                          })
+                        ),
+                      }))
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runCounterpartDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      searchExecution,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toHaveLength(batch.expectedPackageIds.length);
+    expect(result.attempts).toHaveLength(1);
+  });
+
   test("plans every A component against every B document without B-only rows", () => {
     const manifest = searchEligibleManifest();
     const bDocuments = [
