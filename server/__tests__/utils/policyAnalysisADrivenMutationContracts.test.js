@@ -18,6 +18,9 @@ const {
   buildClauseBoundaries,
   retrieveADrivenCounterpartCandidates,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartRetrieval");
+const {
+  rankedClauses,
+} = require("../../scripts/qa/runADrivenReferenceDinghyRetrieval.cjs");
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -309,6 +312,31 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
+  test("ranks every Dinghy query deterministically inside one B document", () => {
+    const clauses = [
+      { clauseBoundaryId: "later", documentStart: 20 },
+      { clauseBoundaryId: "first", documentStart: 10 },
+      { clauseBoundaryId: "weak", documentStart: 30 },
+    ];
+
+    expect(
+      rankedClauses({
+        clauses,
+        queryVector: [1, 0],
+        clauseVectors: [
+          [1, 0],
+          [1, 0],
+          [0, 1],
+        ],
+        topK: 2,
+        minimumScore: 0,
+      })
+    ).toEqual([
+      { clauseBoundaryId: "first", score: 1 },
+      { clauseBoundaryId: "later", score: 1 },
+    ]);
+  });
+
   test("uses independent deterministic channels and a per-package Dinghy result", () => {
     const { manifest } = completeManifest([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
