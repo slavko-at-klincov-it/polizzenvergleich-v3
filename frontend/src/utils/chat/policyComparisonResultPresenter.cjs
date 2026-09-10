@@ -157,14 +157,14 @@ function presentComparisonMetrics(result) {
       legacyFallback: false,
       storedMetricDiscrepancy: Boolean(
         declaredRowDiscrepancy ||
-        Number(totals.rows) !== rows.length ||
-        Number(totals.sideBOnlyRows) !== 0 ||
-        Object.keys(LF_SEARCH_STATUS_LABELS).some(
-          (status) =>
-            Number(storedStatuses[status]) !== searchStatuses[status] ||
-            JSON.stringify(storedRowKeysByStatus[status]) !==
-              JSON.stringify(searchRowKeysByStatus[status])
-        )
+          Number(totals.rows) !== rows.length ||
+          Number(totals.sideBOnlyRows) !== 0 ||
+          Object.keys(LF_SEARCH_STATUS_LABELS).some(
+            (status) =>
+              Number(storedStatuses[status]) !== searchStatuses[status] ||
+              JSON.stringify(storedRowKeysByStatus[status]) !==
+                JSON.stringify(searchRowKeysByStatus[status])
+          )
       ),
     };
   }
@@ -207,12 +207,12 @@ function presentComparisonMetrics(result) {
       legacyFallback: false,
       storedMetricDiscrepancy: Boolean(
         Number(totals.rows) !== rows.length ||
-        Number(totals.sideBOnlyRows) !== 0 ||
-        (totals.customerSearchStatuses &&
-          (Number(totals.customerSearchStatuses.GEFUNDEN) !==
-            searchStatuses.GEFUNDEN ||
-            Number(totals.customerSearchStatuses.NICHT_GEFUNDEN) !==
-              searchStatuses.NICHT_GEFUNDEN))
+          Number(totals.sideBOnlyRows) !== 0 ||
+          (totals.customerSearchStatuses &&
+            (Number(totals.customerSearchStatuses.GEFUNDEN) !==
+              searchStatuses.GEFUNDEN ||
+              Number(totals.customerSearchStatuses.NICHT_GEFUNDEN) !==
+                searchStatuses.NICHT_GEFUNDEN))
       ),
     };
   }
