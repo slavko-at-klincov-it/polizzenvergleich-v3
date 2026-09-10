@@ -9,7 +9,7 @@ const {
 // Output: a deterministic package plan; it has no semantic or row authority.
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
-const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V3";
+const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V4";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -88,6 +88,38 @@ function unitKind(blocks) {
   )
     return "HEADING";
   return "CLAUSE";
+}
+
+function isOpenListGovernor(unit) {
+  const value = normalizeLine(unit?.source?.combinedText);
+  if (!value || /[.!?][”"')\]]?$/u.test(value)) return false;
+  return (
+    /:$/u.test(value) ||
+    /\b(?:an|auf|aus|bei|bis|durch|für|fuer|gegen|in|mit|nach|ohne|sowie|über|ueber|um|unter|von|vor|zu|zum|zur)$/iu.test(
+      value
+    )
+  );
+}
+
+function governingContext(governors) {
+  if (!governors.length) return null;
+  const blocks = [];
+  const seen = new Set();
+  for (const governor of governors)
+    for (const block of governor.source.blocks)
+      if (!seen.has(block.blockId)) {
+        seen.add(block.blockId);
+        blocks.push(block);
+      }
+  const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+  return {
+    relationType: "GOVERNS_FOLLOWING_LIST",
+    unitIds: governors.map(({ unitId }) => unitId),
+    blockIds: blocks.map(({ blockId }) => blockId),
+    blocks,
+    combinedText,
+    combinedTextSha256: sha256(combinedText),
+  };
 }
 
 function shouldJoin(previous, current, artifact, currentBlocks) {
@@ -180,7 +212,7 @@ function planDocumentUnits({ document, artifact, ledger }) {
   flush();
 
   let activeStructurePath = [];
-  const units = groups.map((blocks, unitOrder) => {
+  const baseUnits = groups.map((blocks, unitOrder) => {
     const kind = unitKind(blocks);
     if (kind === "HEADING")
       activeStructurePath = [normalizeLine(blocks[0].exactText)];
@@ -246,10 +278,35 @@ function planDocumentUnits({ document, artifact, ledger }) {
           : "PENDING_CLASSIFICATION",
     };
   });
+  const relations = [];
+  let activeGovernors = [];
+  const units = baseUnits.map((unit) => {
+    if (unit.unitKind === "METADATA") return unit;
+    if (["HEADING", "TABLE"].includes(unit.unitKind)) {
+      activeGovernors = [];
+      return unit;
+    }
+    const context =
+      unit.unitKind === "LIST" ? governingContext(activeGovernors) : null;
+    if (context)
+      for (const governorUnitId of context.unitIds)
+        relations.push({
+          relationId: `AUR-${sha256(
+            `${A_SOURCE_UNIT_PLAN_CONTRACT_ID}:${governorUnitId}:${unit.unitId}:GOVERNS_FOLLOWING_LIST`
+          ).slice(0, 24)}`,
+          type: "GOVERNS_FOLLOWING_LIST",
+          fromUnitId: governorUnitId,
+          toUnitId: unit.unitId,
+        });
+    if (unit.unitKind !== "LIST")
+      activeGovernors = isOpenListGovernor(unit) ? [unit] : [];
+    else if (isOpenListGovernor(unit))
+      activeGovernors = [...activeGovernors, unit].slice(-3);
+    return context ? { ...unit, governingContext: context } : unit;
+  });
   const contentUnits = units.filter(
     ({ unitKind: kind }) => kind !== "METADATA"
   );
-  const relations = [];
   for (let index = 1; index < contentUnits.length; index += 1) {
     const previous = contentUnits[index - 1];
     const currentUnit = contentUnits[index];
@@ -329,7 +386,12 @@ function buildADrivenSourceUnitPlan({ documents } = {}) {
       documents: plannedDocuments.length,
       sourceBlocks: blockIds.length,
       plannedUnits: units.length,
-      continuationRelations: relations.length,
+      continuationRelations: relations.filter(
+        ({ type }) => type === "CONTINUES_ON_NEXT_PAGE"
+      ).length,
+      governingRelations: relations.filter(
+        ({ type }) => type === "GOVERNS_FOLLOWING_LIST"
+      ).length,
       pendingUnits: units.filter(
         ({ initialDisposition }) =>
           initialDisposition === "PENDING_CLASSIFICATION"

@@ -4,7 +4,7 @@ const { A_SOURCE_UNIT_PLAN_CONTRACT_ID } = require("./aDrivenSourceUnitPlan");
 // Builds bounded, ID-complete classification/atomization requests for Qwen.
 // The prompt contains only server-planned source units. Model output remains
 // untrusted until aDrivenSemanticManifest validates every ID and source block.
-const A_CLASSIFICATION_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_V1";
+const A_CLASSIFICATION_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -36,22 +36,46 @@ function buildADrivenClassificationBatches(
   let currentCharacters = 0;
   const flush = () => {
     if (!current.length) return;
-    const payload = current.map((unit) => ({
-      unitId: unit.unitId,
-      unitKind: unit.unitKind,
-      structurePath: unit.structurePath,
-      sourceBlockIds: unit.source.blockIds,
-      sourceBlocks: unit.source.blocks.map(
-        ({ blockId, physicalPageNumber, exactText, exactTextSha256 }) => ({
-          blockId,
-          physicalPageNumber,
-          exactText,
-          exactTextSha256,
-        })
-      ),
-      physicalPages: unit.source.physicalPages,
-      originalText: unit.source.combinedText,
-    }));
+    const payload = current.map((unit) => {
+      const contextBlocks = unit.governingContext?.blocks || [];
+      const evidenceBlocks = [...contextBlocks, ...unit.source.blocks];
+      return {
+        unitId: unit.unitId,
+        unitKind: unit.unitKind,
+        structurePath: unit.structurePath,
+        ownedSourceBlockIds: unit.source.blockIds,
+        evidenceSourceBlockIds: evidenceBlocks.map(({ blockId }) => blockId),
+        sourceBlocks: unit.source.blocks.map(
+          ({ blockId, physicalPageNumber, exactText, exactTextSha256 }) => ({
+            blockId,
+            physicalPageNumber,
+            exactText,
+            exactTextSha256,
+          })
+        ),
+        governingContext: unit.governingContext
+          ? {
+              relationType: unit.governingContext.relationType,
+              unitIds: unit.governingContext.unitIds,
+              sourceBlocks: contextBlocks.map(
+                ({
+                  blockId,
+                  physicalPageNumber,
+                  exactText,
+                  exactTextSha256,
+                }) => ({
+                  blockId,
+                  physicalPageNumber,
+                  exactText,
+                  exactTextSha256,
+                })
+              ),
+            }
+          : null,
+        physicalPages: unit.source.physicalPages,
+        originalText: unit.source.combinedText,
+      };
+    });
     const batchIndex = batches.length;
     batches.push({
       batchId: `AUB-${sha256(
@@ -92,7 +116,9 @@ function buildADrivenClassificationBatches(
     currentCharacters = 0;
   };
   for (const unit of units) {
-    const characters = unit.source.combinedText.length;
+    const characters =
+      unit.source.combinedText.length +
+      (unit.governingContext?.combinedText.length || 0);
     if (characters > maximumCharacters)
       throw contractError("LF_A_CLASSIFICATION_UNIT_TOO_LARGE");
     if (

@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V4";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V5";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -110,9 +110,25 @@ function responseIndex(responses, plannedIds) {
   return { byId, diagnostics };
 }
 
-function sourceContains(unit, sourceBlockIds, value) {
+function evidenceBlocks(unit) {
+  const blocks = [
+    ...(unit.governingContext?.blocks || []),
+    ...unit.source.blocks,
+  ];
+  return blocks.filter(
+    ({ blockId }, index) =>
+      blocks.findIndex((candidate) => candidate.blockId === blockId) === index
+  );
+}
+
+function sourceContains(
+  unit,
+  sourceBlockIds,
+  value,
+  blocks = evidenceBlocks(unit)
+) {
   if (!value) return true;
-  const sourceText = unit.source.blocks
+  const sourceText = blocks
     .filter(({ blockId }) => sourceBlockIds.includes(blockId))
     .map(({ exactText }) => exactText)
     .join("\n");
@@ -123,9 +139,10 @@ function minimalSourceRange(unit, value, declaredBlockIds) {
   const needle = comparableText(value);
   if (!needle) return [];
   const matches = [];
-  for (let start = 0; start < unit.source.blocks.length; start += 1) {
-    for (let end = start; end < unit.source.blocks.length; end += 1) {
-      const blocks = unit.source.blocks.slice(start, end + 1);
+  const availableBlocks = evidenceBlocks(unit);
+  for (let start = 0; start < availableBlocks.length; start += 1) {
+    for (let end = start; end < availableBlocks.length; end += 1) {
+      const blocks = availableBlocks.slice(start, end + 1);
       if (
         comparableText(
           blocks.map(({ exactText }) => exactText).join("\n")
@@ -155,14 +172,18 @@ function canonicalComponentSourceBlockIds(unit, declaredBlockIds, values) {
     ...declaredBlockIds,
     ...derivedRanges.flatMap((ids) => ids),
   ]);
-  return unit.source.blockIds.filter((blockId) => selected.has(blockId));
+  return evidenceBlocks(unit)
+    .map(({ blockId }) => blockId)
+    .filter((blockId) => selected.has(blockId));
 }
 
 function validateComponent(component, unit) {
   const type = text(component?.type);
   const label = text(component?.label);
   const sourceBlockIds = uniqueStrings(component?.sourceBlockIds);
-  const allowedBlockIds = new Set(unit.source.blockIds);
+  const allowedBlockIds = new Set(
+    evidenceBlocks(unit).map(({ blockId }) => blockId)
+  );
   if (!COMPONENT_TYPES.has(type))
     return { value: null, code: "COMPONENT_TYPE_INVALID" };
   if (!label) return { value: null, code: "COMPONENT_LABEL_MISSING" };
@@ -220,7 +241,12 @@ function validateRequirement(draft, unit, requirementIndex) {
   const components = componentResults.map(({ value }) => value);
   if (
     !displayLabel ||
-    !sourceContains(unit, unit.source.blockIds, displayLabel) ||
+    !sourceContains(
+      unit,
+      unit.source.blockIds,
+      displayLabel,
+      unit.source.blocks
+    ) ||
     components.length === 0 ||
     components.some((item) => !item)
   )
@@ -248,8 +274,9 @@ function validateRequirement(draft, unit, requirementIndex) {
   const sourceBlockIds = [
     ...new Set(components.flatMap((component) => component.sourceBlockIds)),
   ];
+  const availableBlocks = evidenceBlocks(unit);
   const sourceBlocks = sourceBlockIds.map((blockId) =>
-    unit.source.blocks.find(({ blockId: id }) => id === blockId)
+    availableBlocks.find(({ blockId: id }) => id === blockId)
   );
   if (
     sourceBlocks.some((block) => !block) ||

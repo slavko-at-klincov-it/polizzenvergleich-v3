@@ -266,7 +266,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(left.summary.sourceBlocks).toBeGreaterThan(8);
     expect(left.units.some(({ unitKind }) => unitKind === "LIST")).toBe(true);
     expect(left.summary.continuationRelations).toBe(1);
-    expect(left.relations[0].type).toBe("CONTINUES_ON_NEXT_PAGE");
+    expect(
+      left.relations.some(({ type }) => type === "CONTINUES_ON_NEXT_PAGE")
+    ).toBe(true);
     expect(
       new Set(left.units.flatMap(({ source }) => source.blockIds)).size
     ).toBe(left.summary.sourceBlocks);
@@ -286,17 +288,97 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(
       batches.batches.every(({ units }) =>
         units.every(
-          ({ sourceBlockIds, sourceBlocks }) =>
-            sourceBlocks.length === sourceBlockIds.length &&
+          ({ ownedSourceBlockIds, evidenceSourceBlockIds, sourceBlocks }) =>
+            sourceBlocks.length === ownedSourceBlockIds.length &&
+            evidenceSourceBlockIds.length >= ownedSourceBlockIds.length &&
             sourceBlocks.every(
               ({ blockId, exactText, exactTextSha256 }) =>
-                sourceBlockIds.includes(blockId) &&
+                ownedSourceBlockIds.includes(blockId) &&
                 exactText.length > 0 &&
                 /^[a-f0-9]{64}$/u.test(exactTextSha256)
             )
         )
       )
     ).toBe(true);
+  });
+
+  test("binds list requirements to an explicit preceding governor without duplicating owned blocks", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDECKUNG\nZusätzlich versichert sind Schäden durch\n• Rauch;\n",
+      ],
+      "9"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const governor = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Zusätzlich versichert")
+    );
+    const list = plan.units.find(({ unitKind }) => unitKind === "LIST");
+    const governorBlock = governor.source.blocks[0];
+    const listBlock = list.source.blocks[0];
+
+    expect(list.governingContext.unitIds).toEqual([governor.unitId]);
+    expect(list.governingContext.blockIds).toEqual([governorBlock.blockId]);
+    expect(
+      plan.relations.some(
+        ({ type, fromUnitId, toUnitId }) =>
+          type === "GOVERNS_FOLLOWING_LIST" &&
+          fromUnitId === governor.unitId &&
+          toUnitId === list.unitId
+      )
+    ).toBe(true);
+    expect(
+      plan.units.flatMap(({ source: unitSource }) => unitSource.blockIds)
+    ).toHaveLength(plan.summary.sourceBlocks);
+
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map((unit) => {
+        if (unit.unitId === list.unitId)
+          return {
+            unitId: unit.unitId,
+            primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+            semanticClasses: [
+              "OPERATIVE_COVERAGE_STATEMENT",
+              "PERIL_OR_DAMAGE",
+            ],
+            requirements: [
+              {
+                displayLabel: "Rauch;",
+                components: [
+                  {
+                    type: "PERIL_OR_CAUSE",
+                    label: "Rauch",
+                    sourceBlockIds: [listBlock.blockId],
+                  },
+                  {
+                    type: "COVERAGE_EFFECT",
+                    label: "versichert",
+                    coverageEffect: "INCLUDED",
+                    sourceBlockIds: [governorBlock.blockId],
+                  },
+                ],
+              },
+            ],
+          };
+        return validResponse(unit);
+      });
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const requirement = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(list.unitId)
+    );
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(requirement.sourceBlockIds).toEqual([
+      governorBlock.blockId,
+      listBlock.blockId,
+    ]);
+    expect(requirement.sourceSpans).toHaveLength(2);
   });
 
   test("materializes multiple requirements from one bounded unit and owns final IDs", () => {
