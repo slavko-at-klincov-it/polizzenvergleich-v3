@@ -7,7 +7,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // Validates untrusted counterpart decisions against server-owned packages.
 // Missing, duplicate and unknown IDs are retained as diagnostics; affected
 // planned packages become UNRESOLVED instead of being guessed or repaired.
-const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V3";
+const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V4";
 const DECISIONS = new Set(["SUPPORTED", "CONTRADICTED", "NOT_SUPPORTED"]);
 const DIMENSIONS = new Set([
   "OBJECT",
@@ -233,7 +233,9 @@ function validateCounterpartDecisions({
         (selected.length === 0 ||
           !outcomes.includes("MISMATCH") ||
           outcomes.includes("NOT_ESTABLISHED"))) ||
-      (decision === "NOT_SUPPORTED" && selected.length !== 0);
+      (decision === "NOT_SUPPORTED" &&
+        (!outcomes.includes("NOT_ESTABLISHED") ||
+          outcomes.includes("MISMATCH")));
     if (invalid) {
       diagnostics.push({
         code: "INVALID_PACKAGE_DECISION",
@@ -266,11 +268,12 @@ function validateCounterpartDecisions({
           : "SELECTED_SERVER_CANDIDATES",
       absenceConclusion:
         decision === "NOT_SUPPORTED" &&
+        selected.length === 0 &&
         packageContract.negativeConclusionEligible,
     };
   });
   const payload = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     contractId: COUNTERPART_DECISION_CONTRACT_ID,
     searchExecutionSha256: searchExecution.executionSha256,
     results,

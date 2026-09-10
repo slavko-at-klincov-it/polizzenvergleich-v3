@@ -1122,6 +1122,34 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         0
       )
     ).toBe(manifest.summary.semanticComponents);
+    const partialResponses = searchExecution.packages.map((item, index) =>
+      index === 0
+        ? {
+            packageId: item.packageId,
+            decision: "NOT_SUPPORTED",
+            selectedCandidateIds: ["candidate-one"],
+            dimensionChecks: item.semanticChecks.map(
+              ({ checkId, dimension }, checkIndex) => ({
+                checkId,
+                dimension,
+                outcome: checkIndex === 0 ? "MATCH" : "NOT_ESTABLISHED",
+                candidateIds: checkIndex === 0 ? ["candidate-one"] : [],
+              })
+            ),
+          }
+        : responses[index]
+    );
+    const partial = validateCounterpartDecisions({
+      searchExecution,
+      responses: partialResponses,
+    });
+    expect(partial.summary.unresolvedPackages).toBe(0);
+    expect(partial.results[0]).toMatchObject({
+      status: "TERMINAL",
+      decision: "NOT_SUPPORTED",
+      selectedCandidateIds: ["candidate-one"],
+      absenceConclusion: false,
+    });
     const boundedMisses = validateCounterpartDecisions({
       searchExecution,
       responses: searchExecution.packages.map((item) => ({
