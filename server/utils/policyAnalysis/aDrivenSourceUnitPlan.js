@@ -105,6 +105,13 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
   const previousTable = isTableLike(previous.exactText);
   const currentTable = isTableLike(current.exactText);
   if (previousTable || currentTable) return previousTable && currentTable;
+  const previousText = normalizeLine(previous.exactText);
+  const currentText = normalizeLine(current.exactText);
+  if (
+    /[.!?][”"')\]]?$/u.test(previousText) &&
+    /^[\p{Lu}\d„“"'(]/u.test(currentText)
+  )
+    return false;
   const gap = artifact.document.pageContent.slice(
     previous.documentEnd,
     current.documentStart

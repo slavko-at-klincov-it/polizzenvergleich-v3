@@ -213,6 +213,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
     expect(content.source.combinedText).toContain("€ 2.000.000,-");
   });
 
+  test("splits complete adjacent sentences without requiring a blank line", () => {
+    const source = artifact([
+      "Seite 1\nDECKUNG\nDer Schutz wird auf der Polizze vermerkt.\nDaher gilt der folgende Deckungsumfang.\n",
+    ]);
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [sourceDocument(source)],
+    });
+    const clauses = plan.units.filter(({ unitKind }) => unitKind === "CLAUSE");
+
+    expect(clauses).toHaveLength(2);
+    expect(clauses.map(({ source }) => source.blockIds.length)).toEqual([1, 1]);
+  });
+
   test("covers a second A document and a cross-page continuation", () => {
     const main = artifact([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude;\n",
