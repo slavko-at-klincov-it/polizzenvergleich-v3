@@ -1499,6 +1499,109 @@ describe("category semantic exceptions", () => {
     expect(target.unresolvedCandidateIds).toEqual([]);
   });
 
+  test("treats an explicit first-risk list item as positive contrary evidence for an exclusion target", () => {
+    const exactText = "Verstopfung";
+    const firstRiskClause = occurrence({
+      candidateId: "candidate:lr07:first-risk-blockage-cleaning",
+      exactText,
+      contextText:
+        "- Kosten der Rohrreinigung für das Säubern der versicherten Ableitungsrohre innerhalb des versicherten Gebäudes, auch wenn keine Verstopfung vorliegt auf Erstes Risiko (EUR 3.750,00)",
+      scopeLeadText: "",
+      sectionScopeKey: "LEITUNGSWASSER_INSURANCE",
+      pageNumber: 3,
+    });
+    const worksheet = {
+      candidateOnly: true,
+      catalog: { categoryView: "LR07" },
+      requirements: [
+        {
+          id: "LR07-011",
+          label: "Dichtungsschäden und Verstopfungen ausgeschlossen",
+          sourceReferenceId: "LW-G-11",
+          requestedFields: [],
+          scopeRules: { narrowAliases: [], narrowScopeKeys: [] },
+          components: [
+            {
+              id: "seals_blockage",
+              label: "Behebung von Dichtungen und Verstopfungen",
+              factRole: "EXCLUSION",
+              occurrences: [firstRiskClause],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: firstRiskClause,
+      })
+    ).toEqual({
+      binding: "DIRECT",
+      basis: "EXPLICIT_POSITIVE_OPERATIVE_COVERAGE_CLAUSE",
+      authoritative: true,
+    });
+
+    const [target] = buildPreparedEvidenceTargets({
+      worksheet,
+      documentStatus: DOCUMENT_STATUS.PROPOSAL,
+      candidateTriage: [
+        {
+          requirementId: "LR07-011",
+          componentId: "seals_blockage",
+          candidateId: firstRiskClause.candidateId,
+          binding: "UNRESOLVED",
+        },
+      ],
+    });
+    expect(buildDeterministicPreparedEvidenceJudgement(target)).toMatchObject({
+      selectedCandidateIds: [firstRiskClause.candidateId],
+      coverageEffect: COVERAGE_EFFECT.INCLUDED,
+      conflictState: CONFLICT_STATE.NONE,
+      decisionOwner: "SERVER_EXPLICIT_CATEGORY_CLAUSE:LW:LR07-011",
+    });
+
+    const denied = JSON.parse(JSON.stringify(firstRiskClause));
+    denied.context.text =
+      "Kein Versicherungsschutz besteht für Verstopfung, auch nicht auf Erstes Risiko.";
+    denied.context.documentEnd =
+      denied.context.documentStart + denied.context.text.length;
+    denied.documentStart =
+      denied.context.documentStart + denied.context.text.indexOf(exactText);
+    denied.documentEnd = denied.documentStart + exactText.length;
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: denied,
+      })
+    ).toMatchObject({
+      binding: "DIRECT",
+      basis: "EXPLICIT_NEGATIVE_CLAUSE_GOVERNOR",
+    });
+
+    const optional = JSON.parse(JSON.stringify(firstRiskClause));
+    optional.context.text =
+      "Optional kann Verstopfung auf Erstes Risiko (EUR 3.750,00) versichert werden.";
+    optional.context.documentEnd =
+      optional.context.documentStart + optional.context.text.length;
+    optional.documentStart =
+      optional.context.documentStart + optional.context.text.indexOf(exactText);
+    optional.documentEnd = optional.documentStart + exactText.length;
+    expect(
+      deterministicCategoryCandidateBinding({
+        worksheet,
+        requirement: worksheet.requirements[0],
+        component: worksheet.requirements[0].components[0],
+        occurrence: optional,
+      })
+    ).toBeNull();
+  });
+
   test("a tank object outside a liability clause does not prove HP-11", () => {
     const tankObject = occurrence({
       candidateId: "candidate:hp11:building-object",

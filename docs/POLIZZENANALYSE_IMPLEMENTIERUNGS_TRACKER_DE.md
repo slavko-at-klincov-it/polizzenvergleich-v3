@@ -6992,8 +6992,22 @@ Worktree. Nach Spiegelung der unveränderten installierten Abhängigkeiten war
 keine Produktkorrektur nötig. Diese Ereignisse sind als QA-Umgebungsfehler,
 nicht als Produkt- oder Modellregression klassifiziert.
 
-Status: `IMPLEMENTIERT UND 1+1-NICHTREGRESSION BESTANDEN; VOLLSTÄNDIGE
-RELEASE-GATES, FRISCHER LF-1+9-LAUF, TAG UND DEPLOYMENT NOCH OFFEN`.
+Der erste LF-1+9-Endlauf auf RC `c7b4b002e` brach bei B01/LR07 nach 6/117
+Kategorie-Dokument-Prüfungen fail-closed ab. Qwen wählte für `LR07-011` die
+einzige echte Candidate-ID, fügte aber ein unerlaubtes Feld hinzu; der Retry
+verstümmelte dieselbe ID reproduzierbar. Zugleich wurde die positive Klausel
+`auf Erstes Risiko` fälschlich als Ausschluss bezeichnet. Die Korrektur ist
+nicht ein breiterer ID-Reparaturmechanismus, der die falsche Semantik
+durchgelassen hätte, sondern eine allgemeine, enge serverseitige
+First-Risk-Positivregel mit negativer Gegenkontrolle. Synthetischer Test und
+echter B01/LR07-Canary sind grün; letzterer materialisiert 42/42 Zeilen und
+besteht 67/67 Komponenten sowie 67/67 Kontrollen. Wegen der neuen Produktlogik
+werden vollständige technische Gates und LF-1+9 auf einem neuen exakten RC
+wiederholt.
+
+Status: `IMPLEMENTIERT, 1+1-NICHTREGRESSION UND FIRST-RISK-CANARY BESTANDEN;
+TECHNISCHE GATES AUF NEUEM RC, FRISCHER LF-1+9-LAUF, TAG UND DEPLOYMENT NOCH
+OFFEN`.
 
 Beweisgrenze: bekannte LF-/WEVIG-Entwicklungsdokumente, keine vollständige
 fachliche Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein

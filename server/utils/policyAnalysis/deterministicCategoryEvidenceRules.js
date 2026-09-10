@@ -346,6 +346,12 @@ function operativeCoveragePolarity(occurrence, factRole = null) {
     /\b(?:es\s+)?(?:werden|wird)\b[\s\S]{0,320}?\b(?:ersetzt|entschädigt|vergütet)\b/iu.test(
       clause
     ) ||
+    (occurrence?.context?.unitType === "LIST_ITEM" &&
+      /\bauf\s+[,„“"']*Erstes\s+Risiko\b/iu.test(clause) &&
+      /(?:EUR|€)\s*\d/iu.test(clause) &&
+      !/\b(?:nicht\s+auf\s+[,„“"']*Erstes\s+Risiko|optional|wahlweise|gegen\s+(?:Mehrprämie|Mehrbeitrag|Prämienzuschlag)|kann\b[\s\S]{0,160}\bversichert\s+werden)\b/iu.test(
+        clause
+      )) ||
     (/\b(?:der\s+)?Versicherer\s+(?:ersetzt|entschädigt|vergütet|übernimmt)\b/iu.test(
       clause
     ) &&
@@ -1855,6 +1861,7 @@ function effectForCandidate(target, candidate) {
       documentStart: candidate.documentStart,
       documentEnd: candidate.documentEnd,
       context: {
+        unitType: candidate.contextUnitType,
         text: candidate.contextText,
         documentStart: candidate.contextDocumentStart,
       },
@@ -1871,6 +1878,7 @@ function effectForCandidate(target, candidate) {
         documentStart: candidate.documentStart,
         documentEnd: candidate.documentEnd,
         context: {
+          unitType: candidate.contextUnitType,
           text: candidate.contextText,
           documentStart: candidate.contextDocumentStart,
         },

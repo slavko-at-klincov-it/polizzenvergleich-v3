@@ -35,6 +35,15 @@ B01-Dokument gefundener Fehlalarm einer zu breiten Eigenschaden-Suchphrase
 wurde vor der Freigabe entfernt. Bloße Tätigkeitsnennungen reichen weiterhin
 nicht als Kostenfundstelle.
 
+Der erste vollständige LF-Endlauf deckte zusätzlich eine reproduzierbare
+Modellgrenze auf: Bei einer positiven, lokal vollständigen Klausel `auf Erstes
+Risiko` gab Qwen zweimal eine formal ungültige Candidate-ID-Antwort aus und
+bezeichnete die Klausel zugleich fälschlich als Ausschluss. Der strikte
+Validator brach korrekt ab. Solche ausdrücklich auf Erstes Risiko gestellten
+Klauseln werden deshalb nun mit einer engen serverseitigen Positivregel
+klassifiziert; explizite negative Versicherungssätze haben weiterhin Vorrang.
+Der echte B01/LR07-Canary besteht mit 67/67 Komponenten und Kontrollen.
+
 Am Implementierungsstand bestanden auf dem Mac Studio 37/37 breit betroffene
 Server-Suites mit 840/840 Tests sowie die zusätzlichen Candidate- und
 Discovery-Verträge mit 77/77 beziehungsweise 6/6 Tests. Echte gezielte
@@ -50,9 +59,10 @@ Kundenreview bleibt 30. Artefaktmanifest und die XLSX mit einem Blatt, 17
 Spalten und 224 Datenzeilen bestanden die unabhängige Nachprüfung. Der neue
 LF-Kundenmarker ist im symmetrischen Ergebnis erwartungsgemäß nicht vorhanden.
 
-Die vollständigen technischen Release-Gates und der frische LF-1+9-Endlauf
-werden vor Tag und Deployment in diesem Dokument mit ihren endgültigen
-Artefakt- und Ergebniskennzahlen ergänzt.
+Da die First-Risk-Korrektur nach dem ersten Releasegate hinzukam, werden die
+vollständigen technischen Release-Gates und ein neuer LF-1+9-Endlauf vor Tag
+und Deployment nochmals auf dem endgültigen Commit ausgeführt. Ihre
+endgültigen Artefakt- und Ergebniskennzahlen werden hier ergänzt.
 
 Alle Messungen verwenden bekannte LF-/WEVIG-Entwicklungsdokumente. Sie sind
 keine fachliche Expertenabnahme, kein unbekannter Versicherer-Holdout und kein
