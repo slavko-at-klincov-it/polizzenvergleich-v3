@@ -1,4 +1,8 @@
 const crypto = require("crypto");
+const {
+  validateADrivenCounterpartSearchExecution,
+} = require("./aDrivenCounterpartSearchPlan");
+const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
 // Validates untrusted counterpart decisions against server-owned packages.
 // Missing, duplicate and unknown IDs are retained as diagnostics; affected
@@ -65,7 +69,9 @@ function normalizedUnique(values) {
     : null;
 }
 
-function validateCounterpartDecisions({ packages, responses = [] } = {}) {
+function validateCounterpartDecisions({ searchExecution, responses = [] } = {}) {
+  validateADrivenCounterpartSearchExecution(searchExecution);
+  const packages = searchExecution.packages;
   if (!Array.isArray(packages) || packages.length === 0)
     throw contractError("LF_COUNTERPART_PACKAGES_REQUIRED");
   const packageIds = new Set();
@@ -109,11 +115,9 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
     candidateIdsByPackage.set(item.packageId, new Set(candidateIds));
     packageContracts.set(item.packageId, {
       requiredDimensions,
-      searchComplete:
-        item.searchCoverage.status === "COMPLETE" &&
-        requiredChannels.every((channel) =>
-          completedChannels.includes(channel)
-        ),
+      negativeConclusionEligible:
+        item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
+        item.searchCoverage.negativeConclusionEligible === true,
     });
   }
 
@@ -148,6 +152,8 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
         decision: null,
         selectedCandidateIds: [],
         reasonCode: code,
+        decisionScope: null,
+        absenceConclusion: false,
       };
     }
     const response = records[0];
@@ -184,8 +190,7 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
         (selected.length === 0 ||
           !outcomes.includes("MISMATCH") ||
           outcomes.includes("NOT_ESTABLISHED"))) ||
-      (decision === "NOT_SUPPORTED" &&
-        (selected.length !== 0 || !packageContract.searchComplete));
+      (decision === "NOT_SUPPORTED" && selected.length !== 0);
     if (invalid) {
       diagnostics.push({
         code: "INVALID_PACKAGE_DECISION",
@@ -199,6 +204,8 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
         decision: null,
         selectedCandidateIds: [],
         reasonCode: "INVALID_PACKAGE_DECISION",
+        decisionScope: null,
+        absenceConclusion: false,
       };
     }
     return {
@@ -210,11 +217,19 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
       selectedCandidateIds: selected,
       dimensionChecks: checks,
       reasonCode: null,
+      decisionScope:
+        decision === "NOT_SUPPORTED"
+          ? "RETRIEVED_CANDIDATES_ONLY"
+          : "SELECTED_SERVER_CANDIDATES",
+      absenceConclusion:
+        decision === "NOT_SUPPORTED" &&
+        packageContract.negativeConclusionEligible,
     };
   });
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     contractId: COUNTERPART_DECISION_CONTRACT_ID,
+    searchExecutionSha256: searchExecution.executionSha256,
     results,
     diagnostics,
     summary: {
@@ -228,11 +243,34 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
   };
   return {
     ...payload,
-    decisionSha256: sha256(JSON.stringify(payload)),
+    decisionSha256: sha256(
+      `${COUNTERPART_DECISION_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    ),
   };
+}
+
+function validateCounterpartDecisionArtifact(decisions, searchExecution) {
+  if (
+    decisions?.contractId !== COUNTERPART_DECISION_CONTRACT_ID ||
+    decisions.searchExecutionSha256 !== searchExecution?.executionSha256 ||
+    !Array.isArray(decisions.results) ||
+    !/^[a-f0-9]{64}$/u.test(String(decisions.decisionSha256 || ""))
+  )
+    throw contractError("LF_COUNTERPART_DECISION_ARTIFACT_INVALID");
+  validateADrivenCounterpartSearchExecution(searchExecution);
+  const { decisionSha256, ...payload } = decisions;
+  if (
+    decisionSha256 !==
+    sha256(
+      `${COUNTERPART_DECISION_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    )
+  )
+    throw contractError("LF_COUNTERPART_DECISION_DIGEST_INVALID");
+  return decisions;
 }
 
 module.exports = {
   COUNTERPART_DECISION_CONTRACT_ID,
+  validateCounterpartDecisionArtifact,
   validateCounterpartDecisions,
 };

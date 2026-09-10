@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   buildADrivenSourceUnitPlan,
+  stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   buildADrivenSemanticManifest,
@@ -14,6 +15,7 @@ const {
   validateCounterpartDecisions,
 } = require("../../utils/policyAnalysis/referenceCounterpartDecisionContract");
 const {
+  DINGHY_RANKING_RESULT_CONTRACT_ID,
   buildClauseBoundaries,
   retrieveADrivenCounterpartCandidates,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartRetrieval");
@@ -278,9 +280,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
       ({ exactText }) => exactText.includes("Wohnobjekte")
     );
     const dinghyRankings = new Map(
-      plan.packages.map(({ packageId }) => [
-        packageId,
-        [{ clauseBoundaryId: semanticClause.clauseBoundaryId, score: 0.82 }],
+      plan.packages.map((item) => [
+        item.packageId,
+        {
+          contractId: DINGHY_RANKING_RESULT_CONTRACT_ID,
+          packageId: item.packageId,
+          documentUuid: item.documentUuid,
+          documentSha256: item.documentSha256,
+          querySha256: sha256(stableStringify(item.query)),
+          modelId: "text-embedding-qwen3-embedding-4b",
+          rankedClauses: [
+            { clauseBoundaryId: semanticClause.clauseBoundaryId, score: 0.82 },
+          ],
+        },
       ])
     );
     const deterministicOnly = retrieveADrivenCounterpartCandidates({
@@ -312,6 +324,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
       packages: plan.packages.length,
       completeDinghyPackages: plan.packages.length,
       noGlobalTopN: true,
+      absenceCertified: false,
     });
     expect(
       full.packageResults.every(
@@ -327,39 +340,36 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     const { manifest } = completeManifest([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
     ]);
+    const bArtifact = artifact([
+      "Seite 1\nDECKUNG\nFahrzeuge sind versichert.\n",
+    ]);
     const plan = buildADrivenCounterpartSearchPlan({
       manifest,
-      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+      documents: [
+        { uuid: "b-doc", position: 0, sha256: bArtifact.fingerprint },
+      ],
     });
-    const exactText = "Fahrzeuge sind versichert.";
-    const candidate = {
-      compactCandidateId: "wrong-object",
-      documentUuid: "b-doc",
-      documentSha256: "b".repeat(64),
-      clauseBoundaryId: "clause-one",
-      sourceSpans: [
+    const retrieval = retrieveADrivenCounterpartCandidates({
+      plan,
+      documents: [
         {
-          exactText,
-          exactTextSha256: sha256(exactText),
-          documentStart: 0,
-          documentEnd: exactText.length,
+          document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+          artifact: bArtifact,
         },
       ],
-    };
+    });
     const execution = materializeADrivenCounterpartSearchExecution({
       plan,
-      packageResults: plan.packages.map(({ packageId }) => ({
-        packageId,
-        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
-        candidates: [candidate],
-      })),
+      retrieval,
     });
     const decisions = validateCounterpartDecisions({
-      packages: execution.packages,
+      searchExecution: execution,
       responses: execution.packages.map((item) => ({
         packageId: item.packageId,
         decision: "SUPPORTED",
-        selectedCandidateIds: [candidate.compactCandidateId],
+        selectedCandidateIds: [
+          item.candidates[0]?.compactCandidateId || "missing-candidate",
+        ],
         dimensionChecks: item.requiredDimensions.map((dimension, index) => ({
           dimension,
           outcome: index === 0 ? "MISMATCH" : "MATCH",
@@ -371,26 +381,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     expect(decisions.summary.unresolvedPackages).toBe(plan.packages.length);
   });
 
-  test("does not accept not-found while one retrieval channel is incomplete", () => {
+  test("keeps bounded candidate misses separate from certified absence", () => {
     const { manifest } = completeManifest([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
     ]);
+    const bArtifact = artifact(["Seite 1\nSONSTIGES\nKeine passende Aussage.\n"]);
     const plan = buildADrivenCounterpartSearchPlan({
       manifest,
-      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+      documents: [
+        { uuid: "b-doc", position: 0, sha256: bArtifact.fingerprint },
+      ],
+    });
+    const retrieval = retrieveADrivenCounterpartCandidates({
+      plan,
+      documents: [
+        {
+          document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+          artifact: bArtifact,
+        },
+      ],
     });
     const execution = materializeADrivenCounterpartSearchExecution({
       plan,
-      packageResults: plan.packages.map(({ packageId }) => ({
-        packageId,
-        completedChannels: REQUIRED_SEARCH_CHANNELS.filter(
-          (channel) => channel !== "DINGHY"
-        ),
-        candidates: [],
-      })),
+      retrieval,
     });
     const decisions = validateCounterpartDecisions({
-      packages: execution.packages,
+      searchExecution: execution,
       responses: execution.packages.map((item) => ({
         packageId: item.packageId,
         decision: "NOT_SUPPORTED",
@@ -402,7 +418,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
       })),
     });
 
-    expect(execution.summary.partialPackages).toBe(plan.packages.length);
-    expect(decisions.summary.unresolvedPackages).toBe(plan.packages.length);
+    expect(execution.summary.channelsPartialPackages).toBe(
+      plan.packages.length
+    );
+    expect(execution.summary.absenceCertifiedPackages).toBe(0);
+    expect(decisions.summary.terminalPackages).toBe(plan.packages.length);
+    expect(decisions.results.every(({ absenceConclusion }) => !absenceConclusion))
+      .toBe(true);
   });
 });

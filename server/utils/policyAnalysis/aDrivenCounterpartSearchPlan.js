@@ -1,14 +1,22 @@
 const crypto = require("crypto");
-const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
+const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  validateADrivenSemanticManifest,
+} = require("./aDrivenSemanticManifest");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
 // Builds the complete component x B-document retrieval matrix for the
 // A-driven reference mode. This layer only plans searches; it cannot create
 // candidates or make semantic decisions.
 const A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V1";
+  "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V2";
+const A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID =
+  "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V2";
 const A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID =
-  "LF_A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_V1";
+  "LF_A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_V2";
+const BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID =
+  "LF_BOUNDED_COUNTERPART_RETRIEVAL_V1";
+const DEFAULT_PER_CHANNEL_TOP_K = 8;
 const REQUIRED_SEARCH_CHANNELS = Object.freeze([
   "CURRENT",
   "LEXICAL_BM25",
@@ -73,15 +81,21 @@ function validateDocument(document, seenUuids, seenPositions) {
   };
 }
 
-function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
+function buildADrivenCounterpartSearchPlan({
+  manifest,
+  documents,
+  perChannelTopK = DEFAULT_PER_CHANNEL_TOP_K,
+} = {}) {
+  validateADrivenSemanticManifest(manifest);
   if (
     manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
-    !Array.isArray(manifest.requirements) ||
     manifest.summary?.unresolvedUnits !== 0 ||
     manifest.summary?.responseIntegrityStatus !== "VALID" ||
     manifest.requirements.some(
       ({ decisionEligibility }) => decisionEligibility !== "ELIGIBLE"
-    )
+    ) ||
+    !Number.isInteger(perChannelTopK) ||
+    perChannelTopK < 1
   )
     throw planError("LF_A_DRIVEN_MANIFEST_NOT_SEARCH_ELIGIBLE");
   if (!Array.isArray(documents) || documents.length === 0)
@@ -155,6 +169,8 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
           documentUuid: document.documentUuid,
           documentSha256: document.documentSha256,
           documentPosition: document.documentPosition,
+          documentRole: document.documentRole,
+          documentStatus: document.documentStatus,
           requiredDimensions,
           query: {
             focalText: normalizedText(component.label),
@@ -182,7 +198,9 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
             scope: "ONE_COMPONENT_ONE_B_DOCUMENT",
             requiredChannels: [...REQUIRED_SEARCH_CHANNELS],
             completedChannels: [],
-            status: "PENDING",
+            channelExecutionStatus: "PENDING",
+            absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
+            negativeConclusionEligible: false,
             globalTopNAllowed: false,
           },
           candidates: [],
@@ -199,10 +217,17 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
   )
     throw planError("LF_A_DRIVEN_SEARCH_MATRIX_INCOMPLETE");
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
     runContractId: manifest.runContractId,
     dynamicManifestSha256: manifest.manifestSha256,
+    retrievalPolicy: {
+      contractId: BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID,
+      selectionMode: "PER_CHANNEL_TOP_K",
+      perChannelTopK,
+      candidateSemantics: "NAVIGATION_ONLY",
+      absenceCertification: "NOT_AVAILABLE",
+    },
     documents: plannedDocuments,
     packages,
     summary: {
@@ -226,10 +251,68 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
   };
 }
 
+function validateADrivenCounterpartSearchPlan(plan, manifest) {
+  if (
+    plan?.contractId !== A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID ||
+    !Array.isArray(plan.packages) ||
+    !Array.isArray(plan.documents) ||
+    plan.retrievalPolicy?.contractId !==
+      BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID ||
+    plan.retrievalPolicy?.selectionMode !== "PER_CHANNEL_TOP_K" ||
+    !Number.isInteger(plan.retrievalPolicy?.perChannelTopK) ||
+    plan.retrievalPolicy.perChannelTopK < 1 ||
+    plan.retrievalPolicy?.absenceCertification !== "NOT_AVAILABLE" ||
+    !/^[a-f0-9]{64}$/u.test(String(plan.planSha256 || ""))
+  )
+    throw planError("LF_A_DRIVEN_SEARCH_PLAN_INVALID");
+  const { planSha256, ...payload } = plan;
+  if (
+    planSha256 !==
+    sha256(
+      `${A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    )
+  )
+    throw planError("LF_A_DRIVEN_SEARCH_PLAN_DIGEST_INVALID");
+  if (manifest) {
+    validateADrivenSemanticManifest(manifest);
+    if (plan.dynamicManifestSha256 !== manifest.manifestSha256)
+      throw planError("LF_A_DRIVEN_SEARCH_PLAN_MANIFEST_MISMATCH");
+  }
+  return plan;
+}
+
+function validateCounterpartRetrievalArtifact(retrieval, plan) {
+  if (
+    retrieval?.contractId !== A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID ||
+    retrieval.searchPlanSha256 !== plan.planSha256 ||
+    stableStringify(retrieval.retrievalPolicy) !==
+      stableStringify(plan.retrievalPolicy) ||
+    !Array.isArray(retrieval.packageResults) ||
+    !/^[a-f0-9]{64}$/u.test(String(retrieval.retrievalSha256 || ""))
+  )
+    throw planError("LF_A_DRIVEN_RETRIEVAL_ARTIFACT_INVALID");
+  const { retrievalSha256, ...payload } = retrieval;
+  if (
+    retrievalSha256 !==
+    sha256(
+      `${A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    )
+  )
+    throw planError("LF_A_DRIVEN_RETRIEVAL_DIGEST_INVALID");
+  return retrieval;
+}
+
 function materializeADrivenCounterpartSearchExecution({
   plan,
-  packageResults,
+  retrieval,
 } = {}) {
+  validateADrivenCounterpartSearchPlan(plan);
+  validateCounterpartRetrievalArtifact(retrieval, plan);
+  const packageResults = retrieval.packageResults;
   if (
     plan?.contractId !== A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID ||
     !Array.isArray(plan.packages) ||
@@ -272,23 +355,31 @@ function materializeADrivenCounterpartSearchExecution({
       searchCoverage: {
         ...item.searchCoverage,
         completedChannels: [...result.completedChannels].sort(),
-        status: complete ? "COMPLETE" : "PARTIAL",
+        channelExecutionStatus: complete
+          ? "CHANNELS_COMPLETE"
+          : "CHANNELS_PARTIAL",
+        absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
+        negativeConclusionEligible: false,
       },
     };
   });
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
     searchPlanSha256: plan.planSha256,
+    counterpartRetrievalSha256: retrieval.retrievalSha256,
     packages,
     summary: {
       plannedPackages: packages.length,
-      completePackages: packages.filter(
-        ({ searchCoverage }) => searchCoverage.status === "COMPLETE"
+      channelsCompletePackages: packages.filter(
+        ({ searchCoverage }) =>
+          searchCoverage.channelExecutionStatus === "CHANNELS_COMPLETE"
       ).length,
-      partialPackages: packages.filter(
-        ({ searchCoverage }) => searchCoverage.status === "PARTIAL"
+      channelsPartialPackages: packages.filter(
+        ({ searchCoverage }) =>
+          searchCoverage.channelExecutionStatus === "CHANNELS_PARTIAL"
       ).length,
+      absenceCertifiedPackages: 0,
       completeMatrix: packages.length === plan.summary.expectedPackages,
     },
   };
@@ -302,10 +393,52 @@ function materializeADrivenCounterpartSearchExecution({
   };
 }
 
+function validateADrivenCounterpartSearchExecution(
+  execution,
+  { plan, retrieval } = {}
+) {
+  if (
+    execution?.contractId !==
+      A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID ||
+    !Array.isArray(execution.packages) ||
+    !/^[a-f0-9]{64}$/u.test(String(execution.executionSha256 || ""))
+  )
+    throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_INVALID");
+  const { executionSha256, ...payload } = execution;
+  if (
+    executionSha256 !==
+    sha256(
+      `${A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    )
+  )
+    throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_DIGEST_INVALID");
+  if (plan) {
+    validateADrivenCounterpartSearchPlan(plan);
+    if (execution.searchPlanSha256 !== plan.planSha256)
+      throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_PLAN_MISMATCH");
+  }
+  if (retrieval) {
+    if (!plan)
+      throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_PLAN_REQUIRED");
+    validateCounterpartRetrievalArtifact(retrieval, plan);
+    if (execution.counterpartRetrievalSha256 !== retrieval.retrievalSha256)
+      throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_RETRIEVAL_MISMATCH");
+  }
+  return execution;
+}
+
 module.exports = {
   A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
+  A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
+  BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID,
+  DEFAULT_PER_CHANNEL_TOP_K,
   REQUIRED_SEARCH_CHANNELS,
   buildADrivenCounterpartSearchPlan,
   materializeADrivenCounterpartSearchExecution,
+  validateADrivenCounterpartSearchExecution,
+  validateADrivenCounterpartSearchPlan,
+  validateCounterpartRetrievalArtifact,
 };

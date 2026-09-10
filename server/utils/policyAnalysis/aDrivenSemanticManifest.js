@@ -561,10 +561,31 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
   };
 }
 
+function validateADrivenSemanticManifest(manifest) {
+  if (
+    manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    !Array.isArray(manifest.requirements) ||
+    !Array.isArray(manifest.unitTerminals) ||
+    !Array.isArray(manifest.blockTerminals) ||
+    !/^[a-f0-9]{64}$/u.test(String(manifest.manifestSha256 || ""))
+  )
+    throw manifestError("LF_A_DYNAMIC_MANIFEST_INVALID");
+  const { manifestSha256, ...payload } = manifest;
+  if (
+    manifestSha256 !==
+    sha256(
+      `${A_DYNAMIC_MANIFEST_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    )
+  )
+    throw manifestError("LF_A_DYNAMIC_MANIFEST_DIGEST_INVALID");
+  return manifest;
+}
+
 module.exports = {
   A_BLOCK_TERMINAL_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
+  validateADrivenSemanticManifest,
 };

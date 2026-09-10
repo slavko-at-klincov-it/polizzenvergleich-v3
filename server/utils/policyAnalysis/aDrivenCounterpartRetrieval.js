@@ -6,13 +6,15 @@ const {
   tokens,
 } = require("./lfReferenceDiscoveryBenchmark");
 const {
+  A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
   REQUIRED_SEARCH_CHANNELS,
+  validateADrivenCounterpartSearchPlan,
 } = require("./aDrivenCounterpartSearchPlan");
+const { stableStringify } = require("./aDrivenSourceUnitPlan");
 const { compactReferenceCandidates } = require("./referenceCandidateCompactor");
 
-const A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID =
-  "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V1";
+const DINGHY_RANKING_RESULT_CONTRACT_ID = "LF_DINGHY_RANKING_RESULT_V1";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -183,14 +185,14 @@ function retrieveADrivenCounterpartCandidates({
   plan,
   documents,
   dinghyRankings = new Map(),
-  topK = 8,
 } = {}) {
+  validateADrivenCounterpartSearchPlan(plan);
+  const topK = plan.retrievalPolicy.perChannelTopK;
   if (
     plan?.contractId !== A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID ||
     !Array.isArray(plan.packages) ||
     !Array.isArray(documents) ||
-    !Number.isInteger(topK) ||
-    topK < 1
+    !(dinghyRankings instanceof Map)
   )
     throw retrievalError("LF_A_DRIVEN_RETRIEVAL_INPUT_INVALID");
   const documentIndexes = new Map();
@@ -267,10 +269,23 @@ function retrieveADrivenCounterpartCandidates({
     const valueRole = index.clauses
       .filter((clause) => valueRoleMatches(clause, packageItem))
       .slice(0, topK);
-    const hasDinghyResult = dinghyRankings.has(packageItem.packageId);
+    const dinghyResult = dinghyRankings.get(packageItem.packageId);
+    const hasDinghyResult = Boolean(dinghyResult);
+    if (
+      hasDinghyResult &&
+      (dinghyResult.contractId !== DINGHY_RANKING_RESULT_CONTRACT_ID ||
+        dinghyResult.packageId !== packageItem.packageId ||
+        dinghyResult.documentUuid !== packageItem.documentUuid ||
+        dinghyResult.documentSha256 !== packageItem.documentSha256 ||
+        dinghyResult.querySha256 !==
+          sha256(stableStringify(packageItem.query)) ||
+        typeof dinghyResult.modelId !== "string" ||
+        !dinghyResult.modelId ||
+        !Array.isArray(dinghyResult.rankedClauses))
+    )
+      throw retrievalError("LF_A_DRIVEN_DINGHY_RESULT_INVALID");
     const dinghy = hasDinghyResult
-      ? dinghyRankings
-          .get(packageItem.packageId)
+      ? dinghyResult.rankedClauses
           .slice(0, topK)
           .map(({ clauseBoundaryId, score }) => ({
             ...index.clausesById.get(clauseBoundaryId),
@@ -309,10 +324,11 @@ function retrieveADrivenCounterpartCandidates({
       ),
     };
   });
-  return {
-    schemaVersion: 1,
+  const payload = {
+    schemaVersion: 2,
     contractId: A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
     searchPlanSha256: plan.planSha256,
+    retrievalPolicy: plan.retrievalPolicy,
     packageResults,
     summary: {
       packages: packageResults.length,
@@ -325,12 +341,29 @@ function retrieveADrivenCounterpartCandidates({
       ),
       noGlobalTopN: true,
       perChannelTopK: topK,
+      channelExecutionComplete:
+        packageResults.length === plan.packages.length &&
+        packageResults.every(({ completedChannels }) =>
+          REQUIRED_SEARCH_CHANNELS.every((channel) =>
+            completedChannels.includes(channel)
+          )
+        ),
+      absenceCertified: false,
     },
+  };
+  return {
+    ...payload,
+    retrievalSha256: sha256(
+      `${A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    ),
   };
 }
 
 module.exports = {
   A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
+  DINGHY_RANKING_RESULT_CONTRACT_ID,
   buildClauseBoundaries,
   retrieveADrivenCounterpartCandidates,
 };

@@ -1,5 +1,6 @@
 const {
   buildADrivenSourceUnitPlan,
+  stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   buildADrivenSemanticManifest,
@@ -18,6 +19,8 @@ const {
   validateCounterpartDecisions,
 } = require("../../utils/policyAnalysis/referenceCounterpartDecisionContract");
 const {
+  A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
+  A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
   REQUIRED_SEARCH_CHANNELS,
   buildADrivenCounterpartSearchPlan,
   materializeADrivenCounterpartSearchExecution,
@@ -26,6 +29,49 @@ const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const crypto = require("crypto");
+
+function digest(contractId, payload) {
+  return crypto
+    .createHash("sha256")
+    .update(`${contractId}\u0000${stableStringify(payload)}`)
+    .digest("hex");
+}
+
+function retrievalArtifact(plan, packageResults) {
+  const payload = {
+    schemaVersion: 2,
+    contractId: A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
+    searchPlanSha256: plan.planSha256,
+    retrievalPolicy: plan.retrievalPolicy,
+    packageResults,
+    summary: {},
+  };
+  return {
+    ...payload,
+    retrievalSha256: digest(
+      A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
+      payload
+    ),
+  };
+}
+
+function searchExecutionArtifact(packages) {
+  const payload = {
+    schemaVersion: 2,
+    contractId: A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
+    searchPlanSha256: "1".repeat(64),
+    counterpartRetrievalSha256: "2".repeat(64),
+    packages,
+    summary: {},
+  };
+  return {
+    ...payload,
+    executionSha256: digest(
+      A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
+      payload
+    ),
+  };
+}
 
 function artifact(pages, fingerprintCharacter) {
   const chunks = [];
@@ -569,7 +615,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
         candidates,
         requiredDimensions: ["OBJECT", "COVERAGE_EFFECT"],
         searchCoverage: {
-          status: "INCOMPLETE",
+          channelExecutionStatus: "CHANNELS_PARTIAL",
+          absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
+          negativeConclusionEligible: false,
           requiredChannels: ["CURRENT", "BM25", "STRUCTURE", "DINGHY"],
           completedChannels: ["CURRENT", "BM25"],
         },
@@ -581,14 +629,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
         candidates: [],
         requiredDimensions: ["OBJECT"],
         searchCoverage: {
-          status: "COMPLETE",
+          channelExecutionStatus: "CHANNELS_COMPLETE",
+          absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
+          negativeConclusionEligible: false,
           requiredChannels: ["CURRENT", "BM25", "STRUCTURE", "DINGHY"],
           completedChannels: ["CURRENT", "BM25", "STRUCTURE", "DINGHY"],
         },
       },
     ];
     const result = validateCounterpartDecisions({
-      packages,
+      searchExecution: searchExecutionArtifact(packages),
       responses: [
         {
           packageId: "package-1",
@@ -691,75 +741,121 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       .createHash("sha256")
       .update(exactText)
       .digest("hex");
-    const packageResults = searchPlan.packages.map((item, index) => ({
+    const packageResults = searchPlan.packages.map((item) => ({
       packageId: item.packageId,
       completedChannels: [...REQUIRED_SEARCH_CHANNELS],
-      candidates:
-        index === 0
-          ? [
-              {
-                compactCandidateId: "candidate-one",
-                documentUuid: "b-doc",
-                documentSha256: "b".repeat(64),
-                clauseBoundaryId: "clause-one",
-                sourceSpans: [
-                  {
-                    exactText,
-                    exactTextSha256,
-                    documentStart: 0,
-                    documentEnd: exactText.length,
-                  },
-                ],
-              },
-            ]
-          : [],
+      candidates: [
+        {
+          compactCandidateId: "candidate-one",
+          documentUuid: "b-doc",
+          documentSha256: "b".repeat(64),
+          clauseBoundaryId: "clause-one",
+          sourceSpans: [
+            {
+              exactText,
+              exactTextSha256,
+              documentStart: 0,
+              documentEnd: exactText.length,
+            },
+          ],
+        },
+      ],
     }));
+    const retrieval = retrievalArtifact(searchPlan, packageResults);
     const searchExecution = materializeADrivenCounterpartSearchExecution({
       plan: searchPlan,
-      packageResults,
+      retrieval,
     });
-    const responses = searchExecution.packages.map((item, index) => ({
+    const responses = searchExecution.packages.map((item) => ({
       packageId: item.packageId,
-      decision: index === 0 ? "SUPPORTED" : "NOT_SUPPORTED",
-      selectedCandidateIds: index === 0 ? ["candidate-one"] : [],
+      decision: "SUPPORTED",
+      selectedCandidateIds: ["candidate-one"],
       dimensionChecks: item.requiredDimensions.map((dimension) => ({
         dimension,
-        outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
+        outcome: "MATCH",
       })),
     }));
     const decisions = validateCounterpartDecisions({
-      packages: searchExecution.packages,
+      searchExecution,
       responses,
     });
     const result = buildADrivenBinaryReferenceResult({
       manifest,
       searchPlan,
+      retrieval,
       searchExecution,
       decisions,
     });
 
     expect(result.summary).toMatchObject({
       rows: manifest.summary.semanticComponents,
-      found: 1,
-      notFound: manifest.summary.semanticComponents - 1,
+      found: manifest.summary.semanticComponents,
+      notFound: 0,
       unresolved: 0,
       sideBOnlyRows: 0,
       binaryCustomerStatus: true,
     });
     expect(
       new Set(result.rows.map(({ customerStatus }) => customerStatus))
-    ).toEqual(new Set(["FOUND", "NOT_FOUND"]));
+    ).toEqual(new Set(["FOUND"]));
+    const boundedMisses = validateCounterpartDecisions({
+      searchExecution,
+      responses: searchExecution.packages.map((item) => ({
+        packageId: item.packageId,
+        decision: "NOT_SUPPORTED",
+        selectedCandidateIds: [],
+        dimensionChecks: item.requiredDimensions.map((dimension) => ({
+          dimension,
+          outcome: "NOT_ESTABLISHED",
+        })),
+      })),
+    });
+    expect(() =>
+      buildADrivenBinaryReferenceResult({
+        manifest,
+        searchPlan,
+        retrieval,
+        searchExecution,
+        decisions: boundedMisses,
+      })
+    ).toThrow("LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE");
     const unresolved = validateCounterpartDecisions({
-      packages: searchExecution.packages,
+      searchExecution,
       responses: responses.slice(1),
     });
     expect(() =>
       buildADrivenBinaryReferenceResult({
         manifest,
         searchPlan,
+        retrieval,
         searchExecution,
         decisions: unresolved,
       })
     ).toThrow("LF_A_DRIVEN_BINARY_RESULT_INPUT_INVALID");
+  });
+
+  test("rejects tampering at the retrieval boundary", () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map(({ packageId }) => ({
+        packageId,
+        completedChannels: [],
+        candidates: [],
+      }))
+    );
+    const tampered = JSON.parse(JSON.stringify(retrieval));
+    tampered.packageResults[0].completedChannels.push("CURRENT");
+
+    expect(() =>
+      materializeADrivenCounterpartSearchExecution({
+        plan: searchPlan,
+        retrieval: tampered,
+      })
+    ).toThrow("LF_A_DRIVEN_RETRIEVAL_DIGEST_INVALID");
   });
 });

@@ -1,11 +1,19 @@
 const crypto = require("crypto");
-const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
 const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  validateADrivenSemanticManifest,
+} = require("./aDrivenSemanticManifest");
+const {
+  A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
+  validateADrivenCounterpartSearchExecution,
+  validateADrivenCounterpartSearchPlan,
+  validateCounterpartRetrievalArtifact,
 } = require("./aDrivenCounterpartSearchPlan");
 const {
   COUNTERPART_DECISION_CONTRACT_ID,
+  validateCounterpartDecisionArtifact,
 } = require("./referenceCounterpartDecisionContract");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
@@ -49,17 +57,29 @@ function selectedEvidence(item, selectedCandidateIds) {
 function buildADrivenBinaryReferenceResult({
   manifest,
   searchPlan,
+  retrieval,
   searchExecution,
   decisions,
 } = {}) {
+  validateADrivenSemanticManifest(manifest);
+  validateADrivenCounterpartSearchPlan(searchPlan, manifest);
+  validateCounterpartRetrievalArtifact(retrieval, searchPlan);
+  validateADrivenCounterpartSearchExecution(searchExecution, {
+    plan: searchPlan,
+    retrieval,
+  });
+  validateCounterpartDecisionArtifact(decisions, searchExecution);
   if (
     manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
     searchPlan?.contractId !== A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID ||
     searchExecution?.contractId !==
       A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID ||
+    retrieval?.contractId !== A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID ||
     decisions?.contractId !== COUNTERPART_DECISION_CONTRACT_ID ||
     searchPlan.dynamicManifestSha256 !== manifest.manifestSha256 ||
     searchExecution.searchPlanSha256 !== searchPlan.planSha256 ||
+    searchExecution.counterpartRetrievalSha256 !== retrieval.retrievalSha256 ||
+    decisions.searchExecutionSha256 !== searchExecution.executionSha256 ||
     !Array.isArray(searchExecution.packages) ||
     !Array.isArray(decisions.results) ||
     decisions.summary?.unresolvedPackages !== 0
@@ -114,12 +134,27 @@ function buildADrivenBinaryReferenceResult({
         .map(({ item, decision }) => ({
           documentUuid: item.documentUuid,
           documentSha256: item.documentSha256,
+          documentRole: item.documentRole,
+          documentStatus: item.documentStatus,
           decision: decision.decision,
+          decisionScope: decision.decisionScope,
+          absenceConclusion: decision.absenceConclusion,
           evidence: selectedEvidence(item, decision.selectedCandidateIds),
         }));
       const found = documentFindings.some(({ decision }) =>
         ["SUPPORTED", "CONTRADICTED"].includes(decision)
       );
+      const absenceCertified = cells.every(
+        ({ item, decision }) =>
+          item.searchCoverage.absenceStatus ===
+            "CERTIFIED_COMPLETE_ABSENCE" &&
+          item.searchCoverage.negativeConclusionEligible === true &&
+          decision.absenceConclusion === true
+      );
+      if (!found && !absenceCertified)
+        throw resultError(
+          "LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE"
+        );
       const sourceBlockIds = new Set(component.sourceBlockIds);
       const aSourceSpans = requirement.sourceSpans.filter(({ blockId }) =>
         sourceBlockIds.has(blockId)
@@ -158,6 +193,7 @@ function buildADrivenBinaryReferenceResult({
     runContractId: manifest.runContractId,
     dynamicManifestSha256: manifest.manifestSha256,
     counterpartSearchPlanSha256: searchPlan.planSha256,
+    counterpartRetrievalSha256: retrieval.retrievalSha256,
     counterpartSearchExecutionSha256: searchExecution.executionSha256,
     counterpartDecisionSha256: decisions.decisionSha256,
     rows,
