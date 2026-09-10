@@ -258,6 +258,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
     expect(content.unitKind).toBe("CLAUSE");
   });
 
+  test("does not let a heading candidate cut an incomplete sentence", () => {
+    const source = artifact([
+      "Seite 1\nDie Betreuung erfolgt durch die LF Immo\nVersicherungsmakler GmbH, folgender Deckungsumfang:\n",
+    ]);
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [sourceDocument(source)],
+    });
+    const sentence = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Die Betreuung erfolgt")
+    );
+
+    expect(sentence.unitKind).toBe("CLAUSE");
+    expect(sentence.source.blockIds).toHaveLength(2);
+    expect(sentence.source.combinedText).toContain("Versicherungsmakler GmbH");
+  });
+
   test("covers a second A document and a cross-page continuation", () => {
     const main = artifact([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude;\n",

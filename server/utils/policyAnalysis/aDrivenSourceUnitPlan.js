@@ -9,7 +9,7 @@ const {
 // Output: a deterministic package plan; it has no semantic or row authority.
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
-const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V2";
+const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V3";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -93,10 +93,21 @@ function unitKind(blocks) {
 function shouldJoin(previous, current, artifact, currentBlocks) {
   if (!previous || previous.structuralKind === "PAGE_FURNITURE") return false;
   if (current.structuralKind === "PAGE_FURNITURE") return false;
-  if (
-    current.structuralKind === "HEADING_CANDIDATE" ||
-    previous.structuralKind === "HEADING_CANDIDATE"
-  )
+  const gap = artifact.document.pageContent.slice(
+    previous.documentEnd,
+    current.documentStart
+  );
+  const previousText = normalizeLine(previous.exactText);
+  if (current.structuralKind === "HEADING_CANDIDATE") {
+    const adjacentIncompleteSentence =
+      previous.structuralKind !== "HEADING_CANDIDATE" &&
+      previous.physicalPageNumber === current.physicalPageNumber &&
+      !/\n\s*\n/u.test(gap) &&
+      !/[.;!?][”"')\]]?$/u.test(previousText) &&
+      currentBlocks.length < 12;
+    return adjacentIncompleteSentence;
+  }
+  if (previous.structuralKind === "HEADING_CANDIDATE")
     return false;
   const previousList = isListLike(previous.exactText, previous.structuralKind);
   const currentList = isListLike(current.exactText, current.structuralKind);
@@ -104,7 +115,6 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
   if (previousList || currentList) {
     if (previousList && currentList) return true;
     if (previousList && !currentList) {
-      const previousText = normalizeLine(previous.exactText);
       return !/[.;!?][”"')\]]?$/u.test(previousText);
     }
     return false;
@@ -112,17 +122,12 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
   const previousTable = isTableLike(previous.exactText);
   const currentTable = isTableLike(current.exactText);
   if (previousTable || currentTable) return previousTable && currentTable;
-  const previousText = normalizeLine(previous.exactText);
   const currentText = normalizeLine(current.exactText);
   if (
     /[.!?][”"')\]]?$/u.test(previousText) &&
     /^[\p{Lu}\d„“"'(]/u.test(currentText)
   )
     return false;
-  const gap = artifact.document.pageContent.slice(
-    previous.documentEnd,
-    current.documentStart
-  );
   if (previous.physicalPageNumber !== current.physicalPageNumber)
     return isContinuation(previous, current, artifact);
   if (/\n\s*\n/u.test(gap)) return false;
@@ -155,8 +160,15 @@ function planDocumentUnits({ document, artifact, ledger }) {
       continue;
     }
     if (block.structuralKind === "HEADING_CANDIDATE") {
-      flush();
-      groups.push([block]);
+      if (
+        current.length &&
+        shouldJoin(current[current.length - 1], block, artifact, current)
+      )
+        current.push(block);
+      else {
+        flush();
+        groups.push([block]);
+      }
       continue;
     }
     if (
