@@ -432,6 +432,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toHaveLength(plan.summary.sourceBlocks);
   });
 
+  test("does not report an unpunctuated page footer as a heading continuation", () => {
+    const source = artifact(
+      [
+        "Seite 1\nVERSICHERUNG AG",
+        "Seite 2\nPRÄAMBEL\nVersichert sind Gebäude.\n",
+      ],
+      "d"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+
+    expect(
+      plan.relations.filter(({ type }) => type === "CONTINUES_ON_NEXT_PAGE")
+    ).toEqual([]);
+    expect(
+      plan.units
+        .flatMap(({ source: unitSource }) => unitSource.blocks)
+        .every(({ structuralKind }) => typeof structuralKind === "string")
+    ).toBe(true);
+  });
+
   test("materializes multiple requirements from one bounded unit and owns final IDs", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Garage und Carport.\n"],

@@ -248,6 +248,7 @@ function planDocumentUnits({ document, artifact, ledger }) {
         ({
           blockId,
           ordinal,
+          structuralKind,
           physicalPageNumber,
           documentStart,
           documentEnd,
@@ -256,6 +257,7 @@ function planDocumentUnits({ document, artifact, ledger }) {
         }) => ({
           blockId,
           ordinal,
+          structuralKind,
           physicalPageNumber,
           documentStart,
           documentEnd,
@@ -346,6 +348,12 @@ function planDocumentUnits({ document, artifact, ledger }) {
   for (let index = 1; index < contentUnits.length; index += 1) {
     const previous = contentUnits[index - 1];
     const currentUnit = contentUnits[index];
+    if (
+      [previous.unitKind, currentUnit.unitKind].some((kind) =>
+        ["HEADING", "METADATA"].includes(kind)
+      )
+    )
+      continue;
     const previousBlock = previous.source.blocks.at(-1);
     const currentBlock = currentUnit.source.blocks[0];
     if (
