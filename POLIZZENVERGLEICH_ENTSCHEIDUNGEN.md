@@ -1065,3 +1065,58 @@ Der finale V3.7.1-Replay erreichte 610 Cachetreffer, null Modellaufrufe und
 119,799 Sekunden bei 283/283 Zeilen. Das ist Wiederholbarkeitsevidenz auf
 bekannten Fixtures, keine Aussage über semantische Qualität unbekannter
 Versicherer.
+
+## ADR-031: Das Referenzpaket A erzeugt das LF-Zeilenuniversum dynamisch
+
+**Status:** AKZEPTIERT ALS VERBINDLICHES PRODUKTZIEL; SHADOW-IMPLEMENTIERUNG
+UND ABNAHME OFFEN
+
+ADR-031 ersetzt für neue LF-Läufe die festen Struktur- und
+Semantikorakelannahmen aus ADR-027 Punkt 3 und 9 sowie ADR-029 Punkt 2 und 3.
+Historische Laufverträge und Ergebnisse bleiben unverändert lesbar.
+
+1. Der neue Laufvertrag `LF_REFERENCE_A_DRIVEN_V2` akzeptiert ein oder
+   mehrere zusammengehörige Referenzdokumente auf A. Die tatsächliche
+   A-Dokument-, Kapitel-, Klausel-, Listen-, Tabellen- und Quellreihenfolge
+   bestimmt Kategorien, Anforderungen, Komponenten und Ergebniszeilen.
+2. Eine Seitenzahl, bekannte Überschrift, feste Reihenfolge oder die
+   historische Zahl 283 darf weder Zulassung noch Zeilenquelle sein. Das
+   283-Oracle bleibt ausschließlich Regression und Kontroll-Crosswalk.
+3. Jedes A-Dokument erhält eine PageMap und ein vollständiges
+   `SourceBlockLedger`. Jeder Block terminiert in einer operativen Rolle,
+   Struktur, Metadatum, Duplikat oder `UNRESOLVED`; ungeklärter operativer
+   Inhalt bleibt sichtbar reviewpflichtig.
+4. Source-Blöcke werden nie direkt zu Kundenzeilen. Deterministischer Code
+   plant stabile Analyse-IDs für Klauseln, Listen und Tabellen. Ein begrenzter
+   source-bound Modellschritt klassifiziert und atomisiert diese Einheiten.
+   Fehlende, doppelte oder unbekannte Antwort-IDs werden fail-closed
+   `UNRESOLVED`.
+5. Das dynamische `SemanticRequirementManifest` trennt mindestens Objekt,
+   Gefahr/Ursache, Schaden/Wirkung, Ein-/Ausschluss, Scope, Faktrolle,
+   Bedingung, Wert/Einheit, Limitbasis, Selbstbehalt, zeitliche Geltung sowie
+   Dokumentrolle, Rang und Ersetzung. Ein Block kann mehrere Anforderungen
+   und eine Anforderung mehrere verpflichtende Komponenten erzeugen.
+6. Paket B wird pro A-Komponente und pro Dokument über die Union aus
+   CURRENT/Occurrences, BM25/kontrollierten Begriffsvarianten,
+   Struktur-/Klauselnachbarschaft, Dinghy sowie Werte-/Rollensuche geprüft.
+   Es gibt kein globales Top-N und keine B-only-Zeilen.
+7. Überlappende beziehungsweise benachbarte Kandidaten werden nur innerhalb
+   derselben Klauselgrenze kompaktiert. Qwen entscheidet kleine
+   servergebundene Kandidatenpakete komponentenweise als `SUPPORTED`,
+   `CONTRADICTED` oder `NOT_SUPPORTED`; nur servervalidierte Originalspans
+   dürfen Fundstellen werden.
+8. Die sichtbare Kundensicht bleibt binär `Gefunden`/`Nicht gefunden` und
+   erhält Originalinhalt, Werte und Quelle beider Seiten sowie eine leere
+   manuelle Bewertung. Teilbeleg, Widerspruch, Vollständigkeit und ungeklärte
+   Semantik bleiben zusätzlich im privaten Ergebnis erhalten.
+9. Der V3.7.4-Produktpfad bleibt während der Shadow-Entwicklung unangetastet.
+   Ein Deployment ist erst nach vollständiger A-Block-Abdeckung,
+   283-Crosswalk, dynamischen A- und adversarialen B-Mutationen,
+   Wiederholbarkeit, symmetrischer Nichtregression und vollständigen
+   Mac-Studio-Gates zulässig.
+
+Der verworfene Commit `126ab03b` bleibt die Negativreferenz: Er machte
+extrahierte Zeilen unmittelbar zu Fachzeilen, gab ihnen eine einzelne
+regex-basierte Rolle und suchte B im Wesentlichen über den exakten A-Wortlaut.
+Diese Schichtenvermischung darf im V2-Vertrag weder direkt noch über einen
+LLM-generierten freien Vollinventarprompt zurückkehren.

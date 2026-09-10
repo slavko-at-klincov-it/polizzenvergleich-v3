@@ -845,3 +845,60 @@ bleibt deshalb `GEGENSTUECK_UNKLAR`; er kann weder kontrollierten Nullfund noch
 Vorteil erzeugen. B-only-Inhalte koennen den Resultatbuilder konstruktiv nicht
 erreichen. Historische 35-Zeilen-Ergebnisse bleiben ueber ihren alten Vertrag
 lesbar. Der symmetrische Core-5-Pfad bleibt auf 5 Kategorien und 224 Zeilen.
+
+## 24. Zielarchitektur `LF_REFERENCE_A_DRIVEN_V2`
+
+Der korrigierte LF-Vertrag ersetzt die feste LF-Familientopologie für neue
+Läufe durch ein A-getriebenes, paketfähiges Shadow-Verfahren. Der bestehende
+V3.7.4-Pfad bleibt unverändert, bis alle Abnahmegates bestanden sind.
+
+```text
+A-Paket 1..n
+  -> DocumentArtifact + PageMap je Dokument
+  -> PackageSourceBlockLedger in Upload- und Quellreihenfolge
+  -> deterministische Clause/List/Table Units mit stabilen Server-IDs
+  -> terminale Blockklassifikation
+       operative Rolle | STRUCTURE | METADATA | DUPLICATE | UNRESOLVED
+  -> bounded Atomization Responses genau für die geplanten Unit-IDs
+  -> servervalidiertes DynamicSemanticRequirementManifest
+       1 Unit -> 0..n Requirements -> 1..n Komponenten
+  -> Oracle-Crosswalk als Messung, niemals als Row-Generator
+  -> pro Komponente × B-Dokument Hybridkandidaten
+       CURRENT | BM25 | STRUCTURE | DINGHY | VALUE_ROLE
+  -> klausellokale Kandidatenkompaktierung
+  -> bounded Counterpart Decisions
+       SUPPORTED | CONTRADICTED | NOT_SUPPORTED | UNRESOLVED
+  -> privates Ergebnis + binäre Kundenprojektion + XLSX
+```
+
+Verbindliche Modulgrenzen:
+
+- `SourceBlockLedger` besitzt Dokument, PageMap, Offset, Originaltext und
+  Reihenfolge, aber keine Zeilen- oder Deckungsautorität.
+- Der `AnalysisUnitPlanner` besitzt Segmentierung, Strukturpfad,
+  Nachbarschaften und stabile geplante IDs, aber keine freie Semantik.
+- Der `SourceBlockClassifier` terminiert jeden Block; unvollständige oder
+  ungültige Modellantworten werden nicht repariert, sondern sichtbar
+  `UNRESOLVED`.
+- Der `DynamicRequirementManifestBuilder` besitzt die serverseitige
+  Validierung, Reihenfolge, Quellenbindung und Komponentenidentität. Das
+  Modell darf nur Inhalte zu bekannten Unit-IDs liefern.
+- Der `LegacyOracleCrosswalk` misst Abdeckung der bekannten 283 Anforderungen
+  und zusätzliche dynamische Anforderungen. Er darf nichts in das Manifest
+  einfügen.
+- Der `CounterpartCandidateUnion` übernimmt die V3.7.5-Kanäle pro Komponente
+  und B-Dokument. Der `CandidateCompactor` darf nur innerhalb belegter
+  Klauselgrenzen zusammenführen.
+- Der `CounterpartDecisionValidator` akzeptiert ausschließlich bekannte
+  Candidate- und Component-IDs sowie exakte servereigene Spans.
+
+Paketidentität, Segmentierungsvertrag, Klassifikationsvertrag,
+Atomisierungsprompt, Modellvertrag, Retrievalkanäle und Entscheidungsvalidator
+werden gemeinsam versioniert und in Resume/Readback hashgebunden. Identische
+Inputs müssen dieselben geplanten IDs, Reihenfolgen, Quellen und serverseitig
+validierten Resultate erzeugen.
+
+Noch offene Implementierungsgrenze: Die derzeitige produktive Workerroute
+erlaubt nur ein A-Dokument und baut das Manifest aus dem 283-Oracle. Bis der
+neue Shadow alle Gates besteht, wird diese Route nicht auf V2 umgestellt und
+es erfolgt kein Kundendeployment.

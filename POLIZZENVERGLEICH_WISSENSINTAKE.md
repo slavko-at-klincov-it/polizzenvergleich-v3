@@ -2564,3 +2564,64 @@ Vollständigkeitsbehauptung erzeugen.
   Geheimnisse eintragen.
 - Golden Cases verwenden nur synthetische oder vollständig anonymisierte
   Strukturen.
+
+## INT-20260910-035 — Referenzpaket A bestimmt den LF-Vergleich dynamisch
+
+- Erfasst: 2026-09-10
+- Typ: `ZIEL`
+- Status: `PROMOTED`
+- Aussage: Im neuen LF-Laufvertrag bestimmt der tatsächliche Inhalt eines aus
+  einem oder mehreren Dokumenten bestehenden Referenzpakets A dynamisch und
+  vollständig Kategorien, Kapitel, operative Aussagen, atomare Komponenten,
+  Reihenfolge und Ergebniszeilen. Feste Seiten-, Kapitel-, Struktur- oder
+  283-Zeilen-Annahmen sind keine Produktionsvoraussetzung mehr.
+- Ist-Wahrheit: `JA` als verbindliches Ziel; `NEIN` als produktiv
+  implementierter und abgenommener Lauf. V3.7.4 bleibt bis zu allen Gates der
+  laufende Kundenvertrag.
+- Quelle: ausdrückliche Nutzerkorrektur; ohne Kundenwortlaut, Dokumentpfade,
+  Hashes oder private Artefakte.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Jede operative Aussage
+  des aktuellen Referenzprodukts erscheint in A-Quellreihenfolge und zeigt
+  eine belegte Gegenstelle in B oder sichtbar `Nicht gefunden`; die letzte
+  Spalte bleibt für die manuelle Bewertung leer.
+- Scope und ausdrückliche Nicht-Ziele: neuer Shadow-Vertrag
+  `LF_REFERENCE_A_DRIVEN_V2`; keine B-only-Zeilen, kein monolithisches
+  LLM-Vollinventar, kein automatischer Ausschluss aus einem Nullfund, keine
+  Änderung historischer Ergebnisse und kein Deployment vor Vollabnahme.
+- Evidenz und Beweisgrenze: Die aktuelle Codeprüfung zeigt das feste
+  283-Oracle als Produktionszeilenquelle. V3.7.5 belegt komplementäre
+  deterministische und Dinghy-Retrievalkanäle auf bekannten Fixtures, aber
+  keine dynamische A-Atomisierung oder unbekannte Generalisierung.
+- Systembezug: Produktziel, Uploadlimits, Queue/Resume, A-Ledger,
+  Segmentierung, Modellvertrag, Manifest, B-Retrieval, Ergebnis, UI, XLSX und
+  Mac-Studio-Abnahme; `INV-001` bis `INV-004`, `INV-009` bis `INV-011`,
+  `FAIL-001`, `FAIL-003`, `FAIL-005`, `ADR-028`, `ADR-029`.
+- Beziehungen:
+  - ersetzt_für_neue_läufe -> feste Familienannahmen aus `ADR-029`
+  - präzisiert -> `INT-20260904-034`, `INV-011`
+  - nutzt -> `ADR-025`, V3.7.5-Retrieval-Shadow
+  - verhindert -> Wiederholung des verworfenen Commits `126ab03b`
+- Spezialistenurteil:
+  - Local-AI/RAG: Deterministischer Unit-Plan und servereigene IDs müssen vor
+    bounded Klassifikation/Atomisierung existieren; Retrieval bleibt pro
+    Komponente und B-Dokument ohne globales Top-N.
+  - Kunde/Versicherung: Source-Blöcke sind keine Fachzeilen; Scope, Wirkung,
+    Rolle, Bedingung, Wert und Dokumentrang müssen atomar erhalten bleiben.
+  - Datenschutz/Betrieb: Private A-/B-Texte bleiben in lokalen, gehashten
+    Runartefakten; Wissensdokumentation enthält nur Verträge und Aggregate.
+  - Kritik/Test: Zwei Crosswalks sind getrennt zu prüfen: A-Block zu
+    Analyse-Unit/Requirement sowie dynamische Requirement-Komponenten zu
+    283/631 Legacy-Regression.
+- Hard-Gates: `OFFEN`
+- Bewertung: als verbindliches Ziel akzeptiert; Implementierung und Abnahme
+  schrittweise im Shadow.
+- Evidenzqualität: `NUTZERANGABE` plus `BEOBACHTET_CODE`
+- Riskanteste Annahme: Clause-/Listen-/Tabellen- und Cross-Page-Segmentierung
+  deckt unbekannte Layouts vollständig genug ab, damit bounded Atomisierung
+  keine operative Aussage still verliert.
+- Nächster Prüfschritt: Source-Package-Ledger, stabile Analyse-Units und
+  terminale Klassifikation implementieren; danach 283/631-Crosswalk und
+  Mutationsmatrix auf dem Mac Studio ausführen.
+- Entscheidung: akzeptieren und im Shadow implementieren.
+- Kanonischer Ausgang: [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpaket-a-erzeugt-das-lf-zeilenuniversum-dynamisch),
+  Architektur Abschnitt 24 und aktualisierter Produktcharter.

@@ -1048,3 +1048,31 @@ deterministisch regenerierbarem Source-Block-Ledger, atomarem semantischem
 Requirement-Manifest und vollständigem Crosswalk. Vor Aktivierung bleiben
 geänderte echte LF-Werte/Layoutvarianten, Prozentbasis, Paraphrasen,
 Seitenfortsetzungen, E2E-Lauf und Expertenholdout offen.
+
+## 20. Korrigiertes LF-Produktziel: A-getriebener Laufvertrag V2
+
+Die Nutzerkorrektur vom 10. September 2026 ersetzt für neue LF-Läufe die
+feste Familienannahme aus Abschnitt 19 und ADR-029. Das aktuelle Referenzpaket
+A darf aus mehreren Dokumenten bestehen und erzeugt aus seinem tatsächlichen
+Inhalt Kategorien, Strukturpfade, operative Anforderungen, Komponenten,
+Quellreihenfolge und sämtliche Ergebniszeilen. Die 283 bekannten
+Anforderungen bleiben ausschließlich Regression und Crosswalk.
+
+Der neue Vertrag `LF_REFERENCE_A_DRIVEN_V2` wird zunächst ergebnisneutral im
+Shadow entwickelt. Er trennt ein vollständiges Paket-Source-Ledger,
+deterministisch geplante Klausel-/Listen-/Tabelleneinheiten, terminale
+Blockklassifikation, bounded source-bound Atomisierung und das dynamische
+Requirement-Manifest. Fehlende, doppelte oder unbekannte Modellantwort-IDs
+bleiben `UNRESOLVED`; Source-Blöcke werden nie direkt Kundenzeilen.
+
+Für B wird die V3.7.5-Union aus deterministischer Suche, Struktur und Dinghy
+pro A-Komponente und pro Dokument genutzt. Nur servervalidierte Originalspans
+dürfen nach klausellokaler Kompaktierung als Gegenstück erscheinen. B-only-
+Inhalte erzeugen weiterhin keine Zeile; begrenztes Nichtfinden ist kein
+fehlender Versicherungsschutz.
+
+Aktueller Status: Ziel, ADR und Architekturvertrag sind akzeptiert;
+Produkt-Routing, Laufmessung und Kundendeployment bleiben gesperrt, bis
+A-Block-Abdeckung, 283/631-Crosswalk, Mutationsmatrix, B-Semantik,
+Wiederholbarkeit, symmetrische Nichtregression sowie vollständige
+Mac-Studio-Gates bestanden sind.

@@ -1,6 +1,6 @@
 # Polizzenvergleich – KB-Index und Arbeitsmatrix
 
-Stand: 4. September 2026
+Stand: 10. September 2026
 
 Dieser Index ist der kurze Einstieg vor jeder projektbezogenen Antwort,
 Diagnose, Planung oder Änderung. Er ersetzt weder Quellcode und Tests noch die
@@ -17,10 +17,11 @@ zu lesen. Er legt verbindlich fest:
   Gebäudeversicherungs-Vertragspakete und kein LF-IMMO-spezifischer Parser.
 - LF IMMO und WEVIG sind bekannte Entwicklungs- und Regressionsexemplare,
   keine ausreichende Generalisierungs- oder 99-Prozent-Evidenz.
-- Bis zu neun Paketdokumente werden im produktiven Profil
-  `CUSTOMER_CORE_5_V2` in VS, FE, LW, ST und EL mit 224 sichtbaren Zeilen
-  ausgewertet; Kategorien sind Views über atomare Fakten. HP, VB und WE
-  bleiben interne Katalog- und historische Regressionsevidenz.
+- Der symmetrische Modus bleibt ein getrenntes versioniertes Kernprofil. Im
+  neuen gerichteten LF-Vertrag erzeugt das tatsächliche Referenzpaket A seine
+  Kategorien, operativen Anforderungen, Komponenten und Zeilen dynamisch;
+  feste Seiten-, Struktur- oder 283-Zeilen-Annahmen sind dort nur historische
+  Regression, keine Produktionsgrenze.
 - Jede dokumentbezogene Korrektur muss einen allgemeinen semantischen Vertrag
   implementieren und Varianten- sowie Holdout-Gates bestehen.
 - Ein 99-Prozent-Anspruch erfordert ein versioniertes fachliches Oracle und
@@ -90,6 +91,16 @@ behaupten. Der frische LF-1+1-Lauf und der getrennte symmetrische
 der Datenfluss in [Architektur, Abschnitt 23](./POLIZZENVERGLEICH_ARCHITEKTUR.md#23-implementierter-lf-familienvertrag-mit-dynamischem-a-manifest) und die
 Messwerte in [Tests und Erkenntnisse, Abschnitt 58](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#58-vollstaendiger-lf-familienvertrag-und-getrennte-11-endlaeufe).
 
+Produktzielkorrektur vom 10. September 2026: Für neue LF-Läufe darf dieses
+283-Zeilen-Familienoracle nicht mehr die Produktionszeilen bestimmen. Das aus
+einem oder mehreren Dokumenten bestehende Referenzpaket A muss seine
+Kategorien, Anforderungen, atomaren Komponenten, Quellen und Reihenfolge
+dynamisch erzeugen. Der neue Shadow-Vertrag ist
+`LF_REFERENCE_A_DRIVEN_V2`; V3.7.4 und historische Ergebnisse bleiben
+lesbar. [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpaket-a-erzeugt-das-lf-zeilenuniversum-dynamisch) und
+[Architektur, Abschnitt 24](./POLIZZENVERGLEICH_ARCHITEKTUR.md#24-zielarchitektur-lf_reference_a_driven_v2)
+definieren die Schichten und Freigabegates.
+
 ## 2. Schnelllage
 
 | Statusachse                           | Aktueller Stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Kanonischer Beleg                                                                                                                                                                                                                                                                                      |
@@ -158,7 +169,8 @@ den verlinkten Fachdokumenten.
 | `INV-008` | Ein vollständiger kontrollierter Paket-Nullfund bleibt `coverageEffect: UNKNOWN`, bedeutet im neuen Vergleichsvertrag aber getrennt „für diesen Vergleich nicht enthalten“. Beidseitige vollständige Abwesenheit ist als solche gleichwertig; positiver vollständiger Einschluss gegen vollständige Abwesenheit kann punktweise gewinnen. Ein ausdrücklicher Ausschluss ist damit nie belegt. | [ADR-026](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-026-vergleichspaket-vor-dokumenttyp-und-vollständiger-paket-nullfund-als-vergleichswirkung)                                                                                    |
 | `INV-009` | Produktive Kategorieprofile sind versionierte Laufverträge. Kunden-XLSX enthält nur freigegebene Kundenspalten; technische Entscheidungs- und Suchdetails bleiben im privaten JSON.                                                                                                                                                                                                           | [ADR-023](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-023-produktives-fünf-kategorien-profil-und-einblatt-kundenexport)                                                                                                              |
 | `INV-010` | Die Uploadzuordnung bestimmt Paket A oder B. Dokumenttyp und -status bleiben Provenienzmetadaten und dürfen allein weder Atomidentität, Vergleichbarkeit, Vorteil noch Reviewstatus bestimmen. Maßgeblich bleibt der gebundene Klauselinhalt.                                                                                                                                                 | [ADR-026](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-026-vergleichspaket-vor-dokumenttyp-und-vollständiger-paket-nullfund-als-vergleichswirkung)                                                                                    |
-| `INV-011` | Der Workspace-Modus ist ein persistenter Laufvertrag. Im LF-Referenzmodus besitzt A das Zeilenuniversum; B darf ausschließlich Gegenstückbelege zu A-Zeilen liefern und niemals B-only-Zeilen erzeugen. Der vollständige A/B-Modus bleibt davon getrennt.                                                                                                                                     | [ADR-027](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-027-zwei-getrennte-workspace-laufverträge-für-lf-referenz-ab-und-vollständiges-ab)                                                                                             |
+| `INV-011` | Der Workspace-Modus ist ein persistenter Laufvertrag. Im LF-Referenzmodus besitzt A das Zeilenuniversum; im neuen V2-Vertrag erzeugt der tatsächliche Inhalt des A-Pakets dieses dynamisch. B darf ausschließlich Gegenstückbelege zu A-Zeilen liefern und niemals B-only-Zeilen erzeugen. Der vollständige A/B-Modus bleibt davon getrennt.                                                                 | [ADR-027](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-027-zwei-getrennte-workspace-laufverträge-für-lf-referenz-ab-und-vollständiges-ab), [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpaket-a-erzeugt-das-lf-zeilenuniversum-dynamisch) |
+| `INV-012` | Ein Source-Block ist eine Provenienzeinheit und niemals unmittelbar eine fachliche Kundenzeile. Jeder A-Block muss über geplante bounded Units terminal klassifiziert und vollständig zu dynamischen Requirements, nichtoperativer Struktur, Duplikat oder sichtbarem `UNRESOLVED` gecrosswalkt werden.                                                                                         | [ADR-028](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-028-source-block-ledger-und-semantisches-vergleichsprofil-bleiben-getrennt), [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpaket-a-erzeugt-das-lf-zeilenuniversum-dynamisch) |
 
 | ID         | Fehler/Learning                                                                                                                                                                                                                                                                                                                       | Status                                                                                                                                                                                                                                                                               | Nicht wieder als Lösung anbieten                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
