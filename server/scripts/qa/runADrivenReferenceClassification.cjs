@@ -11,13 +11,15 @@ const {
   A_CLASSIFICATION_CONTRACT_ID,
 } = require("../../utils/policyAnalysis/aDrivenClassificationContract");
 const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
   buildADrivenSemanticManifest,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V1";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V2";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -125,6 +127,7 @@ function prompt(batch) {
       role: "user",
       content: JSON.stringify({
         contractId: A_CLASSIFICATION_CONTRACT_ID,
+        promptContractId: PROMPT_CONTRACT_ID,
         batchId: batch.batchId,
         expectedUnitIds: batch.expectedUnitIds,
         units: batch.units,
@@ -194,19 +197,31 @@ async function verifyModel({ baseUrl, model, modelContext }) {
   };
 }
 
-function existingBatchResult(file, plan, batch) {
+function existingBatchResult(file, plan, batch, args) {
   const result = readJson(file, "LF_A_CLASSIFICATION_BATCH_RESULT");
   if (
     result?.contractId !== RUN_CONTRACT_ID ||
     result.sourceUnitPlanSha256 !== plan.planSha256 ||
     result.batchId !== batch.batchId ||
+    result.promptContractId !== PROMPT_CONTRACT_ID ||
+    result.promptSha256 !== sha256(JSON.stringify(prompt(batch))) ||
+    result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    result.requestedModel !== args.model ||
+    result.modelContext !== args.modelContext ||
     !Array.isArray(result.responses)
   )
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
   return result;
 }
 
-async function runBatch({ client, model, plan, batch, maximumAttempts }) {
+async function runBatch({
+  client,
+  model,
+  modelContext,
+  plan,
+  batch,
+  maximumAttempts,
+}) {
   let messages = prompt(batch);
   let last = {
     responses: [],
@@ -279,6 +294,11 @@ async function runBatch({ client, model, plan, batch, maximumAttempts }) {
     schemaVersion: 1,
     contractId: RUN_CONTRACT_ID,
     sourceUnitPlanSha256: plan.planSha256,
+    promptContractId: PROMPT_CONTRACT_ID,
+    promptSha256: sha256(JSON.stringify(prompt(batch))),
+    validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+    requestedModel: model,
+    modelContext,
     batchId: batch.batchId,
     batchIndex: batch.batchIndex,
     expectedUnitIds: batch.expectedUnitIds,
@@ -341,10 +361,11 @@ async function run() {
       `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.private.json`
     );
     const result = fs.existsSync(file)
-      ? existingBatchResult(file, plan, batch)
+      ? existingBatchResult(file, plan, batch, args)
       : await runBatch({
           client,
           model: args.model,
+          modelContext: args.modelContext,
           plan,
           batch,
           maximumAttempts: args.maximumAttempts,
@@ -362,6 +383,8 @@ async function run() {
     schemaVersion: 1,
     contractId: RUN_CONTRACT_ID,
     sourceUnitPlanSha256: plan.planSha256,
+    promptContractId: PROMPT_CONTRACT_ID,
+    validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     classificationBatchesSha256: sha256(JSON.stringify(batches)),
     model: loadedModel,
     startedAt,
