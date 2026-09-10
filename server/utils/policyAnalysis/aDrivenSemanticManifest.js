@@ -80,7 +80,8 @@ function comparableText(value) {
   return String(value || "")
     .normalize("NFKC")
     .replace(/\s+/gu, " ")
-    .trim();
+    .trim()
+    .replace(/(^| )[-–—•▪] (?=\S)/gu, "$1• ");
 }
 
 function uniqueStrings(values) {

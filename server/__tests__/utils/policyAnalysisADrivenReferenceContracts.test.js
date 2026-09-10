@@ -814,6 +814,49 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("normalizes only the list marker while retaining the exact source span", () => {
+    const source = artifact(["Seite 1\nOBJEKTE\n• gemauerte Öfen;\n"], "1");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "LIST");
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: plan.units
+        .filter(
+          ({ initialDisposition }) =>
+            initialDisposition === "PENDING_CLASSIFICATION"
+        )
+        .map((plannedUnit) =>
+          plannedUnit.unitId === unit.unitId
+            ? {
+                unitId: unit.unitId,
+                primaryClass: "INSURED_OBJECT",
+                semanticClasses: ["INSURED_OBJECT"],
+                requirements: [
+                  {
+                    displayLabel: "- gemauerte Öfen;",
+                    components: [
+                      {
+                        type: "OBJECT",
+                        label: "- gemauerte Öfen;",
+                        sourceBlockIds: [block.blockId],
+                      },
+                    ],
+                  },
+                ],
+              }
+            : validResponse(plannedUnit)
+        ),
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[0].sourceSpans[0].exactText).toBe(
+      "• gemauerte Öfen;"
+    );
+  });
+
   test("keeps the legacy oracle strictly evaluation-only", () => {
     const source = artifact(
       ["Seite 1\nDeckung\nVersichert sind Gebäude.\n"],
