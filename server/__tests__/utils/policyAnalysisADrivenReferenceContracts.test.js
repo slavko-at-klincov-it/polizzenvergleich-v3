@@ -251,8 +251,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("plans every block across multiple A documents without fixed pages or rows", () => {
     const first = artifact(
       [
-        "Seite 1\nFeuer\nVersichert sind Gebäude und Nebengebäude:\n",
-        "Seite 2\n- Garagen\n- Carports\nNeue Deckung Hagel\n",
+        "Seite 1\nFeuer\nZusätzlich versichert sind Schäden durch\n",
+        "Seite 2\n- Rauch\n- Explosion\nNeue Deckung Hagel\n",
       ],
       "a"
     );
