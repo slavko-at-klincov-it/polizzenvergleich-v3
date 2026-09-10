@@ -76,6 +76,16 @@ function worksheet(fingerprint, coverageOccurrences = []) {
           component("object"),
         ],
       },
+      {
+        id: "LR01-003",
+        label: "Unklare Referenz",
+        components: [component("reference")],
+      },
+      {
+        id: "LR01-004",
+        label: "Bestehender öffentlicher Fund",
+        components: [component("coverage", coverageOccurrences)],
+      },
     ],
   };
 }
@@ -144,6 +154,26 @@ function buildRunFixture(root) {
       packageB: { documentedContent: "", source: "", contributors: [] },
       outcome: "REFERENZZEILE_UNKLAR",
       pointDecision: { outcome: "REFERENZZEILE_UNKLAR" },
+    },
+    {
+      categoryId: "PR-04",
+      analysisRowId: "LR01-004",
+      categoryName: "Bestehender Fund",
+      subcategoryName: "Kontrolle",
+      sourceOrder: 3,
+      packageA: { documentedContent: "Feuer am Gebäude" },
+      packageB: {
+        documentedContent: "Feuerschäden sind versichert",
+        source: "PDF-Seite 1",
+        contributors: [
+          {
+            documentUuid: b1.uuid,
+            source: "PDF-Seite 1: Feuerschäden",
+          },
+        ],
+      },
+      outcome: "GEGENSTUECK_GEFUNDEN",
+      pointDecision: { outcome: "GEGENSTUECK_GEFUNDEN" },
     },
   ];
   const comparison = {
@@ -215,18 +245,23 @@ describe("lfReferenceDiscoveryBenchmark", () => {
       const inventory = inventoryLfReferenceRun({ runRoot: root });
 
       expect(inventory.summary).toMatchObject({
+        allReferenceRows: 4,
+        publicFoundRows: 1,
         publicNotFoundRows: 3,
         referenceUnclearRows: 1,
-        sideBRows: 2,
+        notFoundSideBRows: 2,
         pureNullRows: 1,
         rowsWithCurrentCandidates: 1,
+        allPureNullRows: 2,
+        allRowsWithCurrentCandidates: 2,
         bDocumentCount: 2,
-        uniqueComponentTargets: 3,
-        componentDocumentCells: 6,
-        currentNullCells: 5,
-        currentPositiveCells: 1,
-        currentOccurrenceCount: 1,
+        uniqueComponentTargets: 5,
+        componentDocumentCells: 10,
+        currentNullCells: 8,
+        currentPositiveCells: 2,
+        currentOccurrenceCount: 2,
       });
+      expect(inventory.rowSets.publicFound).toEqual(["PR-04"]);
       expect(inventory.rowSets.pureNull).toEqual(["PR-01"]);
       expect(inventory.rowSets.withCurrentCandidates).toEqual(["PR-02"]);
     } finally {
@@ -318,11 +353,20 @@ describe("lfReferenceDiscoveryBenchmark", () => {
       ).toBe(span.exactText);
 
     const shared = structural[0];
-    const union = fuseCandidateChannels({
-      CURRENT: [{ ...shared, rank: null, score: null }],
-      STRUCTURAL: [{ ...shared, rank: 1, score: 2 }],
-      DINGHY: [],
-    });
+    const union = fuseCandidateChannels(
+      {
+        CURRENT: [{ ...shared, rank: null, score: null }],
+        STRUCTURAL: [{ ...shared, rank: 1, score: 2 }],
+        DINGHY: [],
+      },
+      {
+        analysisRowId: "LR01-001",
+        componentId: "coverage",
+        documentUuid: "document-1",
+        documentPosition: 0,
+        documentFingerprint: "f".repeat(64),
+      }
+    );
     expect(union).toHaveLength(1);
     expect(union[0].channelTraces.map(({ channel }) => channel)).toEqual([
       "CURRENT",

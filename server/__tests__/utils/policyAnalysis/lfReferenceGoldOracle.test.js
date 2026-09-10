@@ -1,5 +1,7 @@
 const {
+  LF_REFERENCE_ABSENCE_COMPLETENESS_CONTRACT_ID,
   LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID,
+  REQUIRED_ABSENCE_CHANNELS,
   buildLfReferenceGoldOracleSkeleton,
   calculateLfReferenceGoldOracleMetrics,
   sha256,
@@ -35,6 +37,21 @@ function fixture() {
     },
   }));
   const bFingerprint = "b".repeat(64);
+  const quote = "Gebäude am Versicherungsort laut Polizze.";
+  const documentArtifact = {
+    schemaVersion: 1,
+    fingerprint: bFingerprint,
+    document: {
+      sourceDocumentId: bFingerprint,
+      pageContent: quote,
+      pageMap: [{ pageNumber: 1, start: 0, end: quote.length }],
+    },
+  };
+  const artifactBytes = Buffer.from(JSON.stringify(documentArtifact));
+  const artifactSha256 = sha256(artifactBytes);
+  const pageMapSha256 = sha256(
+    JSON.stringify([{ end: quote.length, pageNumber: 1, start: 0 }])
+  );
   const result = {
     comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
     contractId: "LF_DYNAMIC_REFERENCE_A_TO_B_RESULT_V1",
@@ -63,28 +80,49 @@ function fixture() {
     ],
     categories: [{ categoryView: "LR01", rows }],
   };
+  const input = {
+    comparisonMode: result.comparisonMode,
+    sessionUuid: result.sessionUuid,
+    documents: result.documents.map((document, position) => ({
+      ...document,
+      position: document.side === "B" ? position - 1 : 0,
+    })),
+  };
+  const runContract = {
+    comparisonMode: result.comparisonMode,
+    releaseId: "d".repeat(40),
+  };
   const semanticManifest = {
     semanticOracleId: "semantic-test-v1",
     manifestSha256: "e".repeat(64),
     requirements,
   };
-  const quote = "Gebäude am Versicherungsort laut Polizze.";
   const benchmark = {
     schemaVersion: 1,
     contractId: LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID,
     artifactKind: "LF_COUNTERPART_BENCHMARK_CANDIDATES",
-    status: "SEARCH_COMPLETE_REVIEW_REQUIRED",
+    status: "CHANNELS_COMPLETE_REVIEW_REQUIRED",
     shadowOnly: true,
     primaryMutationAllowed: false,
     qwenExecuted: false,
     candidateKind: "NAVIGATION_EXACT_ORIGINAL_SPAN",
+    source: {
+      runSignature: result.runSignature,
+      semanticRequirementManifestSha256: semanticManifest.manifestSha256,
+      inventorySha256: "5".repeat(64),
+      candidatesSha256: "3".repeat(64),
+    },
+    runSignature: result.runSignature,
+    sourceResultSha256: "1".repeat(64),
+    sourceSemanticManifestSha256: "2".repeat(64),
+    sourceInventorySha256: "5".repeat(64),
     candidates: [
       {
         candidateId: "candidate:test",
         analysisRowId: "LR-001",
         requirementId: "REQ-001",
         componentId: "component-1",
-        channel: "EMBEDDING",
+        channel: "UNION",
         rank: 1,
         score: 0.9,
         candidateKind: "NAVIGATION_EXACT_ORIGINAL_SPAN",
@@ -103,10 +141,54 @@ function fixture() {
       },
     ],
   };
+  const inventory = {
+    sourceBindings: {
+      runReleaseId: runContract.releaseId,
+      runSignature: result.runSignature,
+      semanticRequirementManifestSha256: semanticManifest.manifestSha256,
+    },
+  };
+  const benchmarkManifest = {
+    status: benchmark.status,
+    implementation: { releaseId: "f".repeat(40) },
+    source: {
+      runSignature: result.runSignature,
+      semanticRequirementManifestSha256: semanticManifest.manifestSha256,
+      inventorySha256: "5".repeat(64),
+      candidatesSha256: "3".repeat(64),
+    },
+  };
+  const documentArtifactsByUuid = new Map([
+    [
+      "document-b",
+      {
+        artifact: documentArtifact,
+        artifactBytes,
+        artifactSha256,
+        pageMapSha256,
+      },
+    ],
+  ]);
   return {
+    input,
+    runContract,
     result,
     semanticManifest,
     benchmark,
+    benchmarkManifest,
+    inventory,
+    hashes: {
+      inputSha256: "6".repeat(64),
+      runContractSha256: "7".repeat(64),
+      resultSha256: "1".repeat(64),
+      resultArtifactManifestSha256: "8".repeat(64),
+      semanticManifestSha256: "2".repeat(64),
+      templateArtifactManifestSha256: "9".repeat(64),
+      inventorySha256: "5".repeat(64),
+      benchmarkSha256: "3".repeat(64),
+      benchmarkManifestSha256: "0".repeat(64),
+    },
+    documentArtifactsByUuid,
     bFingerprint,
     quote,
   };
@@ -118,19 +200,13 @@ function skeleton() {
     input,
     oracle: buildLfReferenceGoldOracleSkeleton({
       oracleId: "lf-known-packet-v1",
-      sourceCommit: "d".repeat(40),
-      result: input.result,
-      resultSha256: "1".repeat(64),
-      semanticManifest: input.semanticManifest,
-      semanticManifestSha256: "2".repeat(64),
-      benchmark: input.benchmark,
-      benchmarkSha256: "3".repeat(64),
+      ...input,
       createdAt: "2026-09-10T00:00:00.000Z",
     }),
   };
 }
 
-function approveAsAbsent(oracle, bFingerprint) {
+function approveAsAbsent(oracle) {
   const approved = JSON.parse(JSON.stringify(oracle));
   const reviewedAt = "2026-09-10T01:00:00.000Z";
   approved.approval = {
@@ -156,10 +232,19 @@ function approveAsAbsent(oracle, bFingerprint) {
       component.coverageEffect = "NOT_APPLICABLE";
       component.scopeRelation = "NOT_APPLICABLE";
       component.absenceCertification = {
+        schemaVersion: 1,
+        contractId: LF_REFERENCE_ABSENCE_COMPLETENESS_CONTRACT_ID,
         status: "CERTIFIED_ABSENT",
-        protocolId: "FULL_PACKET_DOUBLE_REVIEW_V1",
         reviewerIds: ["expert-a", "expert-b"],
-        reviewedDocumentFingerprints: [bFingerprint],
+        requiredChannels: REQUIRED_ABSENCE_CHANNELS,
+        reviewedDocuments: approved.documents
+          .filter(({ side }) => side === "B")
+          .map(({ uuid, fingerprint, artifactSha256, pageMapSha256 }) => ({
+            uuid,
+            fingerprint,
+            artifactSha256,
+            pageMapSha256,
+          })),
         completedAt: reviewedAt,
       };
       component.review = {
@@ -207,6 +292,26 @@ describe("lfReferenceGoldOracle", () => {
     );
   });
 
+  test("allows the same PDF fingerprint under distinct document UUIDs", () => {
+    const { oracle, input } = skeleton();
+    const duplicate = {
+      ...oracle.documents.find(({ side }) => side === "B"),
+      uuid: "document-b-duplicate",
+      originalName: "B duplicate.pdf",
+    };
+    oracle.documents.push(duplicate);
+    input.documentArtifactsByUuid.set(
+      duplicate.uuid,
+      input.documentArtifactsByUuid.get("document-b")
+    );
+
+    expect(
+      validateLfReferenceGoldOracle(oracle, {
+        documentArtifactsByUuid: input.documentArtifactsByUuid,
+      })
+    ).toBe(oracle);
+  });
+
   test("does not emit quality metrics for an unapproved skeleton", () => {
     const { oracle } = skeleton();
 
@@ -221,7 +326,7 @@ describe("lfReferenceGoldOracle", () => {
 
   test("evaluates only a fully approved and completely predicted oracle", () => {
     const { oracle, input } = skeleton();
-    const approved = approveAsAbsent(oracle, input.bFingerprint);
+    const approved = approveAsAbsent(oracle);
     const predictions = {
       rows: approved.rows.map((row) => ({
         analysisRowId: row.analysisRowId,
@@ -241,6 +346,7 @@ describe("lfReferenceGoldOracle", () => {
       calculateLfReferenceGoldOracleMetrics({
         oracle: approved,
         predictions,
+        documentArtifactsByUuid: input.documentArtifactsByUuid,
       })
     ).toMatchObject({
       status: "EVALUATED",
@@ -250,5 +356,36 @@ describe("lfReferenceGoldOracle", () => {
         componentEvidenceFalsePositiveRate: 0,
       },
     });
+  });
+
+  test("requires every B artifact before an approved oracle can be evaluated", () => {
+    const { oracle } = skeleton();
+    const approved = approveAsAbsent(oracle);
+
+    expect(() => validateLfReferenceGoldOracle(approved)).toThrow(
+      "LF_GOLD_ORACLE_DOCUMENT_ARTIFACTS_REQUIRED"
+    );
+  });
+
+  test("does not count narrower support as full when equality is required", () => {
+    const { oracle, input } = skeleton();
+    const approved = approveAsAbsent(oracle);
+    const row = approved.rows[0];
+    row.rowTruth = "FULL_COUNTERPART";
+    for (const component of row.components) {
+      component.truth = "DIRECT_SUPPORT";
+      component.coverageEffect = "INCLUDED";
+      component.scopeRelation = "SAME_OR_BROADER";
+      component.acceptedSourceRanges = [approved.benchmarkCandidates[0].range];
+      component.absenceCertification = null;
+    }
+    row.components[0].truth = "NARROWER_SUPPORT";
+    row.components[0].scopeRelation = "NARROWER";
+
+    expect(() =>
+      validateLfReferenceGoldOracle(approved, {
+        documentArtifactsByUuid: input.documentArtifactsByUuid,
+      })
+    ).toThrow("LF_GOLD_ORACLE_ROW_TRUTH_INCONSISTENT");
   });
 });

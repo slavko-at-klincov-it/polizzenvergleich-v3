@@ -4,9 +4,9 @@ process.umask(0o077);
 
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 const {
   buildLfReferenceGoldOracleSkeleton,
+  loadLfReferenceGoldOracleInputs,
 } = require("../../utils/policyAnalysis/lfReferenceGoldOracle");
 
 function fail(message) {
@@ -26,33 +26,16 @@ function parseArguments(argv) {
     values[name] = value;
   }
   const allowed = new Set([
-    "result",
-    "semanticManifest",
+    "runRoot",
     "benchmarkCandidates",
     "output",
     "oracleId",
-    "sourceCommit",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
   for (const required of allowed)
     if (!values[required]) fail(`--${required} ist erforderlich`);
   return values;
-}
-
-function readJson(file, label) {
-  const absolute = path.resolve(file);
-  if (!path.isAbsolute(file) || !fs.existsSync(absolute))
-    fail(`${label} fehlt oder ist nicht absolut: ${file}`);
-  const bytes = fs.readFileSync(absolute);
-  try {
-    return {
-      value: JSON.parse(bytes.toString("utf8")),
-      sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
-    };
-  } catch (error) {
-    fail(`${label} ist kein gültiges JSON: ${error.message}`);
-  }
 }
 
 function writePrivateJson(file, value) {
@@ -70,21 +53,16 @@ function writePrivateJson(file, value) {
 
 try {
   const args = parseArguments(process.argv.slice(2));
-  const result = readJson(args.result, "Privates Ergebnis");
-  const semanticManifest = readJson(
-    args.semanticManifest,
-    "Semantisches Manifest"
-  );
-  const benchmark = readJson(args.benchmarkCandidates, "Benchmark-Kandidaten");
+  if (!path.isAbsolute(args.runRoot)) fail("--runRoot muss absolut sein");
+  if (!path.isAbsolute(args.benchmarkCandidates))
+    fail("--benchmarkCandidates muss absolut sein");
+  const inputs = loadLfReferenceGoldOracleInputs({
+    runRoot: args.runRoot,
+    benchmarkCandidatesFile: args.benchmarkCandidates,
+  });
   const oracle = buildLfReferenceGoldOracleSkeleton({
     oracleId: args.oracleId,
-    sourceCommit: args.sourceCommit,
-    result: result.value,
-    resultSha256: result.sha256,
-    semanticManifest: semanticManifest.value,
-    semanticManifestSha256: semanticManifest.sha256,
-    benchmark: benchmark.value,
-    benchmarkSha256: benchmark.sha256,
+    ...inputs,
   });
   writePrivateJson(args.output, oracle);
   console.log(

@@ -213,6 +213,8 @@ function flatCandidate({
       [
         cell.analysisRowId,
         cell.componentId,
+        documentRun.input.uuid,
+        documentRun.input.position,
         documentRun.input.sha256,
         channel,
         source.physicalPageNumber,
@@ -247,9 +249,17 @@ async function run() {
 
   const inventory = inventoryLfReferenceRun({ runRoot: args.runRoot });
   validateExpected(inventory.summary, args.expected);
+  const challengerTargetKeys = new Set(
+    inventory.cells
+      .filter(({ currentCandidateCount }) => currentCandidateCount === 0)
+      .map(({ targetKey }) => targetKey)
+  );
+  const challengerTargets = inventory.targets.filter(({ targetKey }) =>
+    challengerTargetKeys.has(targetKey)
+  );
   const embedding = await prepareEmbeddingChannel({
     contractFile: args.contractFile,
-    targets: inventory.targets,
+    targets: challengerTargets,
   });
   fs.mkdirSync(args.output, { recursive: false, mode: 0o700 });
   const inventoryFile = path.join(args.output, "inventory.private.json");
@@ -297,64 +307,52 @@ async function run() {
         if (!target)
           throw new Error(`LF_DISCOVERY_TARGET_MISSING:${cell.targetKey}`);
         const current = cell.currentOccurrences.map(occurrenceCandidate);
-        const lexical = rankLexicalCandidates({
-          target,
-          candidates: pools.lexicalCandidates,
-          index: pools.lexicalIndex,
-          topK: 5,
-        });
-        const structural = rankLexicalCandidates({
-          target,
-          candidates: pools.structuralCandidates,
-          index: pools.structuralIndex,
-          topK: 5,
-          structural: true,
-        });
-        const dinghy = embedding.enabled
-          ? rankEmbeddingCandidates({
+        const challengerEligible = current.length === 0;
+        const lexical = challengerEligible
+          ? rankLexicalCandidates({
               target,
-              targetVector: embedding.queryVectorBySha256.get(
-                target.querySha256
-              ),
               candidates: pools.lexicalCandidates,
-              candidateVectors: embeddingVectors,
-              topK: embedding.contract.retrieval.topK,
-              minimumScore: embedding.contract.retrieval.minimumScore,
+              index: pools.lexicalIndex,
+              topK: 5,
             })
           : [];
-        const union = fuseCandidateChannels({
-          CURRENT: current,
-          LEXICAL_BM25: lexical,
-          STRUCTURAL: structural,
-          DINGHY: dinghy,
-        });
-        for (const [channel, candidates] of Object.entries({
-          CURRENT: current,
-          LEXICAL_BM25: lexical,
-          STRUCTURAL: structural,
-          DINGHY: dinghy,
-        }))
-          candidates.forEach((candidate, candidateIndex) =>
-            flatCandidates.push(
-              flatCandidate({
-                cell,
-                documentRun,
-                channel,
-                candidate,
-                rank: candidate.rank || candidateIndex + 1,
-                score: Number.isFinite(candidate.score)
-                  ? candidate.score
-                  : null,
-                channelProvenance: {
-                  retrievalId: candidate.id || null,
-                  discoveryMethod: candidate.discoveryMethod || null,
-                  matchedTokens: candidate.matchedTokens || [],
-                  phraseHits: candidate.phraseHits || [],
-                  structuralKinds: candidate.structuralKinds || [],
-                },
+        const structural = challengerEligible
+          ? rankLexicalCandidates({
+              target,
+              candidates: pools.structuralCandidates,
+              index: pools.structuralIndex,
+              topK: 5,
+              structural: true,
+            })
+          : [];
+        const dinghy =
+          embedding.enabled && challengerEligible
+            ? rankEmbeddingCandidates({
+                target,
+                targetVector: embedding.queryVectorBySha256.get(
+                  target.querySha256
+                ),
+                candidates: pools.lexicalCandidates,
+                candidateVectors: embeddingVectors,
+                topK: embedding.contract.retrieval.topK,
+                minimumScore: embedding.contract.retrieval.minimumScore,
               })
-            )
-          );
+            : [];
+        const union = fuseCandidateChannels(
+          {
+            CURRENT: current,
+            LEXICAL_BM25: lexical,
+            STRUCTURAL: structural,
+            DINGHY: dinghy,
+          },
+          {
+            analysisRowId: cell.analysisRowId,
+            componentId: cell.componentId,
+            documentUuid: documentRun.input.uuid,
+            documentPosition: documentRun.input.position,
+            documentFingerprint: documentRun.input.sha256,
+          }
+        );
         for (const candidate of union)
           flatCandidates.push(
             flatCandidate({
@@ -383,6 +381,7 @@ async function run() {
           componentId: cell.componentId,
           querySha256: target.querySha256,
           currentCandidateCount: current.length,
+          challengerEligible,
           channels: {
             CURRENT: current,
             LEXICAL_BM25: lexical,
@@ -429,11 +428,14 @@ async function run() {
     });
   }
 
+  const completionStatus = embedding.enabled
+    ? "CHANNELS_COMPLETE_REVIEW_REQUIRED"
+    : "EMBEDDING_NOT_RUN";
   const candidatesArtifact = {
     schemaVersion: 1,
     contractId: BENCHMARK_CANDIDATES_CONTRACT_ID,
     artifactKind: "LF_COUNTERPART_BENCHMARK_CANDIDATES",
-    status: "SEARCH_COMPLETE_REVIEW_REQUIRED",
+    status: completionStatus,
     shadowOnly: true,
     primaryMutationAllowed: false,
     qwenExecuted: false,
@@ -442,16 +444,30 @@ async function run() {
       inventoryPath: inventoryFile,
       inventorySha256: sha256File(inventoryFile),
       runSignature: inventory.sourceBindings.runSignature,
+      resultPath: inventory.sourceBindings.files.comparison.path,
+      resultSha256: inventory.sourceBindings.files.comparison.sha256,
+      semanticManifestPath:
+        inventory.sourceBindings.files.semanticManifest.path,
+      semanticManifestSha256:
+        inventory.sourceBindings.files.semanticManifest.sha256,
       semanticRequirementManifestSha256:
         inventory.sourceBindings.semanticRequirementManifestSha256,
     },
+    runSignature: inventory.sourceBindings.runSignature,
+    sourceResultSha256: inventory.sourceBindings.files.comparison.sha256,
+    sourceSemanticManifestSha256:
+      inventory.sourceBindings.files.semanticManifest.sha256,
+    sourceInventorySha256: sha256File(inventoryFile),
     summary: {
       candidateCount: flatCandidates.length,
-      byChannel: Object.fromEntries(
-        Object.keys(channelTotals).map((channel) => [
+      byContributingChannel: Object.fromEntries(
+        ["CURRENT", "LEXICAL_BM25", "STRUCTURAL", "DINGHY"].map((channel) => [
           channel,
-          flatCandidates.filter((candidate) => candidate.channel === channel)
-            .length,
+          flatCandidates.filter((candidate) =>
+            candidate.channelProvenance.channelTraces.some(
+              (trace) => trace.channel === channel
+            )
+          ).length,
         ])
       ),
     },
@@ -462,12 +478,12 @@ async function run() {
   const candidatesFile = path.join(args.output, "candidates.private.json");
   writePrivateJson(candidatesFile, candidatesArtifact);
 
-  const uniqueQueryCount = uniqueQueries(inventory.targets).length;
+  const uniqueQueryCount = uniqueQueries(challengerTargets).length;
   const manifest = {
     schemaVersion: BENCHMARK_SCHEMA_VERSION,
     contractId: BENCHMARK_CONTRACT_ID,
     artifactKind: "LF_REFERENCE_DISCOVERY_BENCHMARK_MANIFEST",
-    status: "SEARCH_COMPLETE_REVIEW_REQUIRED",
+    status: completionStatus,
     shadowOnly: true,
     primaryMutationAllowed: false,
     customerMaterializationAllowed: false,
@@ -528,7 +544,7 @@ async function run() {
   const manifestFile = path.join(args.output, "manifest.private.json");
   writePrivateJson(manifestFile, manifest);
   console.log(
-    `[lf-discovery-benchmark] SEARCH_COMPLETE_REVIEW_REQUIRED: ${inventory.summary.publicNotFoundRows} öffentliche Nichtfunde, ${inventory.summary.pureNullRows} reine B-Nullzeilen, ${inventory.summary.uniqueComponentTargets} Komponenten, ${inventory.summary.componentDocumentCells} Zellen, Dinghy=${embedding.enabled ? "AN" : "AUS"}`
+    `[lf-discovery-benchmark] ${completionStatus}: ${inventory.summary.publicNotFoundRows} öffentliche Nichtfunde, ${inventory.summary.pureNullRows} reine B-Nullzeilen, ${inventory.summary.uniqueComponentTargets} Komponenten, ${inventory.summary.componentDocumentCells} Zellen, Dinghy=${embedding.enabled ? "AN" : "AUS"}`
   );
 }
 

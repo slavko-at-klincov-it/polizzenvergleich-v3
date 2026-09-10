@@ -1,10 +1,22 @@
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 const LF_REFERENCE_GOLD_ORACLE_SCHEMA_VERSION = 1;
 const LF_REFERENCE_GOLD_ORACLE_CONTRACT_ID = "LF_COUNTERPART_GOLD_ORACLE_V1";
 const LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID =
   "LF_COUNTERPART_BENCHMARK_CANDIDATES_V1";
-
+const LF_REFERENCE_BENCHMARK_MANIFEST_CONTRACT_ID =
+  "LF_REFERENCE_DISCOVERY_BENCHMARK_V1";
+const LF_REFERENCE_ABSENCE_COMPLETENESS_CONTRACT_ID =
+  "LF_COUNTERPART_ABSENCE_COMPLETENESS_V1";
+const REQUIRED_ABSENCE_CHANNELS = Object.freeze([
+  "CURRENT",
+  "DINGHY",
+  "LEXICAL_BM25",
+  "STRUCTURAL",
+  "UNION",
+]);
 const APPROVAL_STATUSES = new Set(["DRAFT", "APPROVED"]);
 const REVIEW_STATUSES = new Set([
   "UNREVIEWED",
@@ -42,6 +54,14 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
   "NOT_APPLICABLE",
 ]);
+const SUBSTANTIVE_EFFECTS = new Set([
+  "INCLUDED",
+  "LIMITED",
+  "EXCLUDED",
+  "CONDITIONAL",
+  "OPTIONAL",
+  "DEFINED",
+]);
 const SCOPE_RELATIONS = new Set([
   "UNREVIEWED",
   "SAME_OR_BROADER",
@@ -54,6 +74,10 @@ const EVIDENCE_COMPONENT_TRUTHS = new Set([
   "DIRECT_SUPPORT",
   "NARROWER_SUPPORT",
   "CONTRADICTION",
+]);
+const FULL_COUNTERPART_POLICIES = new Set([
+  "SAME_OR_BROADER_REQUIRED",
+  "NARROWER_ACCEPTED",
 ]);
 
 function oracleError(code, detail = "") {
@@ -73,16 +97,17 @@ function canonicalJson(value) {
 }
 
 function sha256(value) {
-  return crypto.createHash("sha256").update(value).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(Buffer.isBuffer(value) ? value : String(value))
+    .digest("hex");
 }
 
-function validSha256(value) {
-  return /^[a-f0-9]{64}$/u.test(value || "");
-}
+const validSha256 = (value) => /^[a-f0-9]{64}$/u.test(value || "");
+const validCommitSha = (value) => /^[a-f0-9]{40}$/u.test(value || "");
 
 function requiredString(value, code) {
-  if (typeof value !== "string" || value.trim().length === 0)
-    throw oracleError(code);
+  if (typeof value !== "string" || !value.trim()) throw oracleError(code);
   return value.trim();
 }
 
@@ -94,6 +119,254 @@ function uniqueStrings(values, code) {
   )
     throw oracleError(code);
   return values;
+}
+
+function readRegularJson(file, code, fsImpl = fs) {
+  if (!path.isAbsolute(file) || !fsImpl.existsSync(file))
+    throw oracleError(`${code}_MISSING`, file);
+  const stat = fsImpl.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink())
+    throw oracleError(`${code}_NOT_REGULAR`, file);
+  const bytes = fsImpl.readFileSync(file);
+  try {
+    return { file, bytes, sha256: sha256(bytes), value: JSON.parse(bytes) };
+  } catch {
+    throw oracleError(`${code}_JSON_INVALID`, file);
+  }
+}
+
+const samePath = (left, right) => path.resolve(left) === path.resolve(right);
+const documentDirectoryName = (document) =>
+  `B-${String(document.position + 1).padStart(2, "0")}-${document.uuid}`;
+const findArtifactHash = (manifest, filename) =>
+  manifest?.artifacts?.find((artifact) => artifact.filename === filename)
+    ?.sha256;
+
+function loadLfReferenceGoldOracleInputs({
+  runRoot,
+  benchmarkCandidatesFile,
+  fsImpl = fs,
+}) {
+  const root = path.resolve(runRoot);
+  if (
+    !path.isAbsolute(runRoot) ||
+    !fsImpl.existsSync(root) ||
+    !fsImpl.lstatSync(root).isDirectory() ||
+    fsImpl.lstatSync(root).isSymbolicLink()
+  )
+    throw oracleError("LF_GOLD_ORACLE_RUN_ROOT_INVALID", root);
+  const files = {
+    input: path.join(root, "input-manifest.private.json"),
+    runContract: path.join(root, "run-contract.private.json"),
+    comparison: path.join(root, "result", "comparison.private.json"),
+    resultArtifacts: path.join(
+      root,
+      "result",
+      "artifact-set-manifest.private.json"
+    ),
+    semanticManifest: path.join(
+      root,
+      "reference-template",
+      "semantic-requirement-manifest.private.json"
+    ),
+    templateArtifacts: path.join(
+      root,
+      "reference-template",
+      "artifact-set-manifest.private.json"
+    ),
+  };
+  const reads = Object.fromEntries(
+    Object.entries(files).map(([key, file]) => [
+      key,
+      readRegularJson(file, `LF_GOLD_ORACLE_${key.toUpperCase()}`, fsImpl),
+    ])
+  );
+  const candidatesRead = readRegularJson(
+    path.resolve(benchmarkCandidatesFile),
+    "LF_GOLD_ORACLE_BENCHMARK_CANDIDATES",
+    fsImpl
+  );
+  const benchmarkManifestRead = readRegularJson(
+    path.join(path.dirname(candidatesRead.file), "manifest.private.json"),
+    "LF_GOLD_ORACLE_BENCHMARK_MANIFEST",
+    fsImpl
+  );
+  const benchmark = candidatesRead.value;
+  const benchmarkManifest = benchmarkManifestRead.value;
+  if (
+    benchmark?.contractId !== LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID ||
+    !path.isAbsolute(benchmark?.source?.inventoryPath || "") ||
+    !validSha256(benchmark?.source?.inventorySha256) ||
+    benchmarkManifest?.contractId !==
+      LF_REFERENCE_BENCHMARK_MANIFEST_CONTRACT_ID ||
+    benchmarkManifest?.status !== benchmark?.status ||
+    !samePath(
+      benchmarkManifest?.source?.candidatesPath || "",
+      candidatesRead.file
+    ) ||
+    benchmarkManifest?.source?.candidatesSha256 !== candidatesRead.sha256 ||
+    !samePath(
+      benchmarkManifest?.source?.inventoryPath || "",
+      benchmark?.source?.inventoryPath || ""
+    ) ||
+    benchmarkManifest?.source?.inventorySha256 !==
+      benchmark?.source?.inventorySha256
+  )
+    throw oracleError("LF_GOLD_ORACLE_BENCHMARK_CHAIN_INVALID");
+  const inventoryRead = readRegularJson(
+    path.resolve(benchmark.source.inventoryPath),
+    "LF_GOLD_ORACLE_INVENTORY",
+    fsImpl
+  );
+  if (inventoryRead.sha256 !== benchmark.source.inventorySha256)
+    throw oracleError("LF_GOLD_ORACLE_INVENTORY_HASH_MISMATCH");
+  const inventory = inventoryRead.value;
+
+  for (const [key, read] of Object.entries(reads)) {
+    const bound = inventory?.sourceBindings?.files?.[key];
+    if (
+      !bound ||
+      !samePath(bound.path, read.file) ||
+      bound.sha256 !== read.sha256
+    )
+      throw oracleError("LF_GOLD_ORACLE_INVENTORY_SOURCE_MISMATCH", key);
+  }
+  const input = reads.input.value;
+  const runContract = reads.runContract.value;
+  const result = reads.comparison.value;
+  const semanticManifest = reads.semanticManifest.value;
+  const { manifestDigestSha256: _resultDigest, ...resultDigestBasis } =
+    reads.resultArtifacts.value || {};
+  const { manifestSha256: _semanticDigest, ...semanticDigestBasis } =
+    semanticManifest || {};
+  const computedResultManifestDigest = sha256(
+    Buffer.from(JSON.stringify(resultDigestBasis), "utf8")
+  );
+  const computedSemanticContractHash = sha256(
+    `${semanticManifest?.contractId}\u0000${canonicalJson(semanticDigestBasis)}`
+  );
+  if (
+    findArtifactHash(reads.resultArtifacts.value, "comparison.private.json") !==
+      reads.comparison.sha256 ||
+    reads.templateArtifacts.value?.files?.[
+      "semantic-requirement-manifest.private.json"
+    ] !== reads.semanticManifest.sha256 ||
+    reads.templateArtifacts.value?.semanticRequirementManifestSha256 !==
+      semanticManifest.manifestSha256 ||
+    result?.template?.semanticRequirementManifestSha256 !==
+      semanticManifest.manifestSha256 ||
+    reads.resultArtifacts.value?.manifestDigestSha256 !==
+      computedResultManifestDigest ||
+    semanticManifest.manifestSha256 !== computedSemanticContractHash
+  )
+    throw oracleError("LF_GOLD_ORACLE_ARTIFACT_HASH_CHAIN_INVALID");
+  if (
+    !validCommitSha(runContract?.releaseId) ||
+    !validCommitSha(benchmarkManifest?.implementation?.releaseId) ||
+    inventory?.sourceBindings?.runReleaseId !== runContract.releaseId ||
+    result?.runSignature !== inventory?.sourceBindings?.runSignature ||
+    result.runSignature !== benchmark?.source?.runSignature ||
+    result.runSignature !== benchmark?.runSignature ||
+    result.runSignature !== benchmarkManifest?.source?.runSignature ||
+    reads.comparison.sha256 !== benchmark?.sourceResultSha256 ||
+    reads.semanticManifest.sha256 !== benchmark?.sourceSemanticManifestSha256 ||
+    inventoryRead.sha256 !== benchmark?.sourceInventorySha256 ||
+    semanticManifest.manifestSha256 !==
+      inventory?.sourceBindings?.semanticRequirementManifestSha256 ||
+    semanticManifest.manifestSha256 !==
+      benchmark?.source?.semanticRequirementManifestSha256 ||
+    semanticManifest.manifestSha256 !==
+      benchmarkManifest?.source?.semanticRequirementManifestSha256
+  )
+    throw oracleError("LF_GOLD_ORACLE_IDENTITY_CHAIN_INVALID");
+  if (
+    input?.sessionUuid !== result?.sessionUuid ||
+    input?.comparisonMode !== result?.comparisonMode ||
+    runContract?.comparisonMode !== result?.comparisonMode
+  )
+    throw oracleError("LF_GOLD_ORACLE_RUN_CONTRACT_MISMATCH");
+  if (
+    !Array.isArray(input.documents) ||
+    !Array.isArray(runContract.documents) ||
+    !Array.isArray(result.documents) ||
+    input.documents.length !== runContract.documents.length ||
+    input.documents.length !== result.documents.length
+  )
+    throw oracleError("LF_GOLD_ORACLE_DOCUMENT_IDENTITY_MISMATCH");
+  for (const document of input.documents) {
+    const runDocument = runContract.documents.find(
+      ({ uuid }) => uuid === document.uuid
+    );
+    const resultDocument = result.documents.find(
+      ({ uuid }) => uuid === document.uuid
+    );
+    if (
+      !runDocument ||
+      !resultDocument ||
+      runDocument.sha256 !== document.sha256 ||
+      resultDocument.sha256 !== document.sha256 ||
+      runDocument.side !== document.side ||
+      resultDocument.side !== document.side
+    )
+      throw oracleError(
+        "LF_GOLD_ORACLE_DOCUMENT_IDENTITY_MISMATCH",
+        document.uuid
+      );
+  }
+
+  const bInputs = (input.documents || [])
+    .filter(({ side }) => side === "B")
+    .sort((left, right) => left.position - right.position);
+  const documentArtifactReads = new Map();
+  for (const document of bInputs) {
+    const documentRead = readRegularJson(
+      path.join(
+        root,
+        "documents",
+        documentDirectoryName(document),
+        "document.private.json"
+      ),
+      "LF_GOLD_ORACLE_DOCUMENT_ARTIFACT",
+      fsImpl
+    );
+    if (
+      documentRead.value?.fingerprint !== document.sha256 ||
+      documentRead.value?.document?.sourceDocumentId !== document.sha256 ||
+      !Array.isArray(documentRead.value?.document?.pageMap) ||
+      typeof documentRead.value?.document?.pageContent !== "string"
+    )
+      throw oracleError(
+        "LF_GOLD_ORACLE_DOCUMENT_ARTIFACT_INVALID",
+        document.uuid
+      );
+    documentArtifactReads.set(document.uuid, {
+      artifact: documentRead.value,
+      artifactBytes: documentRead.bytes,
+      artifactSha256: documentRead.sha256,
+      pageMapSha256: sha256(canonicalJson(documentRead.value.document.pageMap)),
+    });
+  }
+  return {
+    input,
+    runContract,
+    result,
+    semanticManifest,
+    benchmark,
+    benchmarkManifest,
+    inventory,
+    hashes: {
+      inputSha256: reads.input.sha256,
+      runContractSha256: reads.runContract.sha256,
+      resultSha256: reads.comparison.sha256,
+      resultArtifactManifestSha256: reads.resultArtifacts.sha256,
+      semanticManifestSha256: reads.semanticManifest.sha256,
+      templateArtifactManifestSha256: reads.templateArtifacts.sha256,
+      inventorySha256: inventoryRead.sha256,
+      benchmarkSha256: candidatesRead.sha256,
+      benchmarkManifestSha256: benchmarkManifestRead.sha256,
+    },
+    documentArtifactsByUuid: documentArtifactReads,
+  };
 }
 
 function baselineCustomerSearchStatus(row) {
@@ -117,7 +390,6 @@ function normalizeCandidateRange(candidate) {
   const source = candidate?.source || candidate || {};
   const exactQuote = source.exactQuote ?? source.exactText ?? null;
   if (exactQuote === null) return null;
-  const exactQuoteSha256 = source.exactQuoteSha256 || sha256(exactQuote);
   return {
     documentUuid: source.documentUuid || candidate.documentUuid || null,
     documentFingerprint:
@@ -130,7 +402,7 @@ function normalizeCandidateRange(candidate) {
     documentStart: source.documentStart ?? null,
     documentEnd: source.documentEnd ?? null,
     exactQuote,
-    exactQuoteSha256,
+    exactQuoteSha256: source.exactQuoteSha256 || sha256(exactQuote),
   };
 }
 
@@ -140,32 +412,33 @@ function normalizeBenchmarkCandidates(benchmark) {
     benchmark.contractId !== LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID ||
     benchmark.schemaVersion !== 1 ||
     benchmark.artifactKind !== "LF_COUNTERPART_BENCHMARK_CANDIDATES" ||
-    benchmark.status !== "SEARCH_COMPLETE_REVIEW_REQUIRED" ||
+    !new Set(["EMBEDDING_NOT_RUN", "CHANNELS_COMPLETE_REVIEW_REQUIRED"]).has(
+      benchmark.status
+    ) ||
     benchmark.shadowOnly !== true ||
     benchmark.primaryMutationAllowed !== false ||
     benchmark.qwenExecuted !== false ||
-    benchmark.candidateKind !== "NAVIGATION_EXACT_ORIGINAL_SPAN"
+    benchmark.candidateKind !== "NAVIGATION_EXACT_ORIGINAL_SPAN" ||
+    !Array.isArray(benchmark.candidates)
   )
     throw oracleError("LF_GOLD_ORACLE_BENCHMARK_CONTRACT_INVALID");
-  const candidates = benchmark.candidates;
-  if (!Array.isArray(candidates))
-    throw oracleError("LF_GOLD_ORACLE_BENCHMARK_CANDIDATES_INVALID");
-  const candidateIds = new Set();
-  return candidates.map((candidate) => {
+  const ids = new Set();
+  return benchmark.candidates.map((candidate) => {
     const candidateId = requiredString(
-      candidate.candidateId || candidate.id,
+      candidate.candidateId,
       "LF_GOLD_ORACLE_BENCHMARK_CANDIDATE_ID_REQUIRED"
     );
-    if (candidateIds.has(candidateId))
+    if (ids.has(candidateId))
       throw oracleError(
         "LF_GOLD_ORACLE_BENCHMARK_CANDIDATE_DUPLICATE",
         candidateId
       );
-    candidateIds.add(candidateId);
+    ids.add(candidateId);
     if (
       candidate.candidateKind !== "NAVIGATION_EXACT_ORIGINAL_SPAN" ||
       candidate.navigationOnly !== true ||
       candidate.semanticDecision !== null ||
+      candidate.channel !== "UNION" ||
       !Number.isInteger(candidate.rank) ||
       candidate.rank < 1 ||
       (candidate.score !== null && !Number.isFinite(candidate.score))
@@ -174,38 +447,6 @@ function normalizeBenchmarkCandidates(benchmark) {
         "LF_GOLD_ORACLE_BENCHMARK_CANDIDATE_CONTRACT_INVALID",
         candidateId
       );
-    const analysisRowId = requiredString(
-      candidate.analysisRowId || candidate.caseId,
-      "LF_GOLD_ORACLE_BENCHMARK_ROW_REQUIRED"
-    );
-    const requirementId = requiredString(
-      candidate.requirementId || candidate.publicRowId,
-      "LF_GOLD_ORACLE_BENCHMARK_REQUIREMENT_REQUIRED"
-    );
-    const componentId =
-      candidate.componentId === null || candidate.componentId === undefined
-        ? null
-        : requiredString(
-            candidate.componentId,
-            "LF_GOLD_ORACLE_BENCHMARK_COMPONENT_INVALID"
-          );
-    const rawChannels = Array.isArray(candidate.channels)
-      ? candidate.channels
-      : Array.isArray(candidate.channelTraces)
-        ? candidate.channelTraces.map(({ channel }) => channel)
-        : [
-            candidate.channel ||
-              candidate.trace?.channel ||
-              candidate.discoveryMethod ||
-              "UNSPECIFIED",
-          ];
-    const channels = [
-      ...new Set(
-        rawChannels.map((channel) =>
-          requiredString(channel, "LF_GOLD_ORACLE_BENCHMARK_CHANNEL_REQUIRED")
-        )
-      ),
-    ].sort();
     const range = normalizeCandidateRange(candidate);
     if (!range)
       throw oracleError(
@@ -214,10 +455,27 @@ function normalizeBenchmarkCandidates(benchmark) {
       );
     return {
       candidateId,
-      analysisRowId,
-      requirementId,
-      componentId,
-      channels,
+      analysisRowId: requiredString(
+        candidate.analysisRowId,
+        "LF_GOLD_ORACLE_BENCHMARK_ROW_REQUIRED"
+      ),
+      requirementId: requiredString(
+        candidate.requirementId,
+        "LF_GOLD_ORACLE_BENCHMARK_REQUIREMENT_REQUIRED"
+      ),
+      componentId:
+        candidate.componentId == null
+          ? null
+          : requiredString(
+              candidate.componentId,
+              "LF_GOLD_ORACLE_BENCHMARK_COMPONENT_INVALID"
+            ),
+      channels: [
+        requiredString(
+          candidate.channel,
+          "LF_GOLD_ORACLE_BENCHMARK_CHANNEL_REQUIRED"
+        ),
+      ],
       rank: candidate.rank,
       score: candidate.score,
       candidateKind: candidate.candidateKind,
@@ -229,15 +487,17 @@ function normalizeBenchmarkCandidates(benchmark) {
   });
 }
 
-function unreviewedReview() {
-  return {
-    status: "UNREVIEWED",
-    reviewerIds: [],
-    adjudicatorId: null,
-    reviewedAt: null,
-    note: null,
-  };
-}
+const unreviewedReview = () => ({
+  status: "UNREVIEWED",
+  reviewerIds: [],
+  adjudicatorId: null,
+  reviewedAt: null,
+  note: null,
+});
+const fullCounterpartPolicy = (component) =>
+  component.fullCounterpartPolicy === "NARROWER_ACCEPTED"
+    ? "NARROWER_ACCEPTED"
+    : "SAME_OR_BROADER_REQUIRED";
 
 function unreviewedComponent(component, candidates) {
   return {
@@ -245,6 +505,7 @@ function unreviewedComponent(component, candidates) {
     label: component.label,
     factRole: component.factRole,
     componentContractSha256: sha256(canonicalJson(component)),
+    fullCounterpartPolicy: fullCounterpartPolicy(component),
     truth: "UNREVIEWED",
     coverageEffect: "UNREVIEWED",
     scopeRelation: "UNREVIEWED",
@@ -259,28 +520,47 @@ function unreviewedComponent(component, candidates) {
 
 function buildLfReferenceGoldOracleSkeleton({
   oracleId,
-  sourceCommit,
+  input,
+  runContract,
   result,
-  resultSha256,
   semanticManifest,
-  semanticManifestSha256,
   benchmark,
-  benchmarkSha256,
+  benchmarkManifest,
+  inventory,
+  hashes,
+  documentArtifactsByUuid,
   createdAt = new Date().toISOString(),
 }) {
   requiredString(oracleId, "LF_GOLD_ORACLE_ID_REQUIRED");
-  if (!/^[a-f0-9]{40}$/u.test(sourceCommit || ""))
-    throw oracleError("LF_GOLD_ORACLE_SOURCE_COMMIT_INVALID");
-  for (const [label, value] of Object.entries({
-    resultSha256,
-    semanticManifestSha256,
-    benchmarkSha256,
-  }))
-    if (!validSha256(value))
-      throw oracleError(`LF_GOLD_ORACLE_${label.toUpperCase()}_INVALID`);
+  const hashKeys = [
+    "inputSha256",
+    "runContractSha256",
+    "resultSha256",
+    "resultArtifactManifestSha256",
+    "semanticManifestSha256",
+    "templateArtifactManifestSha256",
+    "inventorySha256",
+    "benchmarkSha256",
+    "benchmarkManifestSha256",
+  ];
+  if (hashKeys.some((key) => !validSha256(hashes?.[key])))
+    throw oracleError("LF_GOLD_ORACLE_SOURCE_HASH_INVALID");
   if (
+    !validCommitSha(runContract?.releaseId) ||
+    !validCommitSha(benchmarkManifest?.implementation?.releaseId) ||
     result?.comparisonMode !== "LF_IMMO_REFERENCE_A_TO_B_V1" ||
     result?.contractId !== "LF_DYNAMIC_REFERENCE_A_TO_B_RESULT_V1" ||
+    input?.sessionUuid !== result.sessionUuid ||
+    !validSha256(result.runSignature) ||
+    inventory?.sourceBindings?.runReleaseId !== runContract.releaseId ||
+    inventory?.sourceBindings?.runSignature !== result.runSignature ||
+    benchmark?.source?.runSignature !== result.runSignature ||
+    benchmarkManifest?.source?.runSignature !== result.runSignature ||
+    benchmark?.sourceResultSha256 !== hashes.resultSha256 ||
+    benchmark?.sourceSemanticManifestSha256 !== hashes.semanticManifestSha256 ||
+    benchmark?.sourceInventorySha256 !== hashes.inventorySha256 ||
+    benchmarkManifest?.source?.inventorySha256 !== hashes.inventorySha256 ||
+    benchmarkManifest?.source?.candidatesSha256 !== hashes.benchmarkSha256 ||
     !Array.isArray(result.categories) ||
     !Array.isArray(result.documents) ||
     result.documents.filter(({ side }) => side === "A").length !== 1 ||
@@ -291,7 +571,7 @@ function buildLfReferenceGoldOracleSkeleton({
     !Array.isArray(semanticManifest?.requirements) ||
     semanticManifest.requirements.length !== 283 ||
     !validSha256(semanticManifest.manifestSha256) ||
-    result?.template?.semanticRequirementManifestSha256 !==
+    result.template?.semanticRequirementManifestSha256 !==
       semanticManifest.manifestSha256
   )
     throw oracleError("LF_GOLD_ORACLE_MANIFEST_REQUIREMENTS_INVALID");
@@ -314,7 +594,6 @@ function buildLfReferenceGoldOracleSkeleton({
   );
   if (requirementById.size !== 283)
     throw oracleError("LF_GOLD_ORACLE_MANIFEST_REQUIREMENTS_INVALID");
-
   const candidates = normalizeBenchmarkCandidates(benchmark);
   const resultRowById = new Map(
     resultRows.map((row) => [row.analysisRowId, row])
@@ -345,7 +624,7 @@ function buildLfReferenceGoldOracleSkeleton({
         !requirement ||
         requirement.sourceOrder !== row.sourceOrder ||
         !Array.isArray(requirement.components) ||
-        requirement.components.length === 0
+        !requirement.components.length
       )
         throw oracleError(
           "LF_GOLD_ORACLE_ROW_REQUIREMENT_MISMATCH",
@@ -394,7 +673,27 @@ function buildLfReferenceGoldOracleSkeleton({
       "LF_GOLD_ORACLE_COMPONENT_COUNT_INVALID",
       String(componentCount)
     );
-
+  const documents = result.documents.map((document) => {
+    const artifact =
+      document.side === "B"
+        ? documentArtifactsByUuid?.get(document.uuid)
+        : null;
+    if (document.side === "B" && !artifact)
+      throw oracleError(
+        "LF_GOLD_ORACLE_DOCUMENT_ARTIFACT_MISSING",
+        document.uuid
+      );
+    return {
+      uuid: document.uuid,
+      side: document.side,
+      role: document.role,
+      documentStatus: document.documentStatus,
+      originalName: document.originalName,
+      fingerprint: document.sha256,
+      artifactSha256: artifact?.artifactSha256 || null,
+      pageMapSha256: artifact?.pageMapSha256 || null,
+    };
+  });
   const oracle = {
     schemaVersion: LF_REFERENCE_GOLD_ORACLE_SCHEMA_VERSION,
     contractId: LF_REFERENCE_GOLD_ORACLE_CONTRACT_ID,
@@ -409,32 +708,17 @@ function buildLfReferenceGoldOracleSkeleton({
     split: "KNOWN_DEVELOPMENT_FIXTURE",
     authority: "HUMAN_EXPERT_GOLD_REQUIRED",
     bindings: {
-      sourceCommit,
+      runReleaseCommitSha: runContract.releaseId,
+      benchmarkImplementationCommitSha:
+        benchmarkManifest.implementation.releaseId,
+      benchmarkStatus: benchmark.status,
       sessionUuid: result.sessionUuid,
       runSignature: result.runSignature,
-      resultSha256,
-      semanticManifestSha256,
-      semanticManifestContractSha256: semanticManifest.manifestSha256,
       semanticOracleId: semanticManifest.semanticOracleId,
-      benchmarkSha256,
+      semanticManifestContractSha256: semanticManifest.manifestSha256,
+      ...hashes,
     },
-    documents: result.documents.map(
-      ({
-        uuid,
-        side,
-        role,
-        documentStatus,
-        originalName,
-        sha256: fingerprint,
-      }) => ({
-        uuid,
-        side,
-        role,
-        documentStatus,
-        originalName,
-        fingerprint,
-      })
-    ),
+    documents,
     summary: {
       rowCount: rows.length,
       componentCount,
@@ -445,7 +729,7 @@ function buildLfReferenceGoldOracleSkeleton({
     benchmarkCandidates: candidates,
     rows,
   };
-  return validateLfReferenceGoldOracle(oracle);
+  return validateLfReferenceGoldOracle(oracle, { documentArtifactsByUuid });
 }
 
 function validateReview(review, approved, code) {
@@ -466,17 +750,76 @@ function validateReview(review, approved, code) {
     throw oracleError(code);
 }
 
+const normalizeArtifactEntry = (entry) =>
+  entry?.artifact
+    ? entry
+    : {
+        artifact: entry,
+        artifactBytes: null,
+        artifactSha256: null,
+        pageMapSha256: null,
+      };
+
+function validateDocumentArtifacts(oracle, documentArtifactsByUuid, approved) {
+  if (!documentArtifactsByUuid) {
+    if (approved)
+      throw oracleError("LF_GOLD_ORACLE_DOCUMENT_ARTIFACTS_REQUIRED");
+    return new Map();
+  }
+  const byUuid =
+    documentArtifactsByUuid instanceof Map
+      ? documentArtifactsByUuid
+      : new Map(Object.entries(documentArtifactsByUuid));
+  const expected = oracle.documents.filter(({ side }) => side === "B");
+  if (approved && byUuid.size !== expected.length)
+    throw oracleError("LF_GOLD_ORACLE_DOCUMENT_ARTIFACT_PARTITION_INVALID");
+  for (const document of expected) {
+    const entry = normalizeArtifactEntry(byUuid.get(document.uuid));
+    const source = entry.artifact?.document;
+    let bytesValue = null;
+    try {
+      bytesValue = entry.artifactBytes
+        ? JSON.parse(Buffer.from(entry.artifactBytes).toString("utf8"))
+        : null;
+    } catch {
+      throw oracleError(
+        "LF_GOLD_ORACLE_DOCUMENT_ARTIFACT_INVALID",
+        document.uuid
+      );
+    }
+    const pageMapSha256 = Array.isArray(source?.pageMap)
+      ? sha256(canonicalJson(source.pageMap))
+      : null;
+    if (
+      !entry.artifact ||
+      entry.artifact.fingerprint !== document.fingerprint ||
+      source?.sourceDocumentId !== document.fingerprint ||
+      typeof source?.pageContent !== "string" ||
+      !Array.isArray(source?.pageMap) ||
+      canonicalJson(bytesValue) !== canonicalJson(entry.artifact) ||
+      sha256(entry.artifactBytes || "") !== document.artifactSha256 ||
+      entry.artifactSha256 !== document.artifactSha256 ||
+      pageMapSha256 !== document.pageMapSha256 ||
+      (entry.pageMapSha256 && entry.pageMapSha256 !== pageMapSha256)
+    )
+      throw oracleError(
+        "LF_GOLD_ORACLE_DOCUMENT_ARTIFACT_INVALID",
+        document.uuid
+      );
+  }
+  return byUuid;
+}
+
 function validateEvidenceRange(
   range,
-  bDocumentsByFingerprint,
-  documentArtifacts
+  bDocumentsByUuid,
+  documentArtifactsByUuid
 ) {
+  const boundDocument = bDocumentsByUuid.get(range?.documentUuid);
   if (
     !range ||
-    typeof range.documentUuid !== "string" ||
-    !range.documentUuid ||
-    bDocumentsByFingerprint.get(range.documentFingerprint)?.uuid !==
-      range.documentUuid ||
+    !boundDocument ||
+    boundDocument.fingerprint !== range.documentFingerprint ||
     !Number.isInteger(range.physicalPageNumber) ||
     range.physicalPageNumber < 1 ||
     !Number.isInteger(range.documentStart) ||
@@ -484,58 +827,118 @@ function validateEvidenceRange(
     !Number.isInteger(range.documentEnd) ||
     range.documentEnd <= range.documentStart ||
     typeof range.exactQuote !== "string" ||
-    range.exactQuote.length === 0 ||
+    !range.exactQuote ||
     !validSha256(range.exactQuoteSha256) ||
     sha256(range.exactQuote) !== range.exactQuoteSha256
   )
     throw oracleError("LF_GOLD_ORACLE_EVIDENCE_RANGE_INVALID");
-  if (!documentArtifacts) return;
-  const artifact =
-    documentArtifacts instanceof Map
-      ? documentArtifacts.get(range.documentFingerprint)
-      : documentArtifacts[range.documentFingerprint];
-  const document = artifact?.document || artifact;
-  const page = document?.pageMap?.find(
+  if (!documentArtifactsByUuid.size) return;
+  const source = normalizeArtifactEntry(
+    documentArtifactsByUuid.get(range.documentUuid)
+  ).artifact?.document;
+  const page = source?.pageMap?.find(
     ({ pageNumber }) => pageNumber === range.physicalPageNumber
   );
   if (
-    !document ||
-    typeof document.pageContent !== "string" ||
     !page ||
     range.documentStart < page.start ||
     range.documentEnd > page.end ||
-    document.pageContent.slice(range.documentStart, range.documentEnd) !==
+    source.pageContent.slice(range.documentStart, range.documentEnd) !==
       range.exactQuote
   )
     throw oracleError("LF_GOLD_ORACLE_EVIDENCE_SOURCE_MISMATCH");
 }
 
-function validateAbsenceCertification(certification, bFingerprints) {
+function validateAbsenceCertification(certification, bDocuments) {
+  const reviewed = certification?.reviewedDocuments;
+  const reviewedByUuid = new Map(
+    Array.isArray(reviewed)
+      ? reviewed.map((document) => [document.uuid, document])
+      : []
+  );
   if (
-    !certification ||
-    certification.status !== "CERTIFIED_ABSENT" ||
-    typeof certification.protocolId !== "string" ||
-    !certification.protocolId ||
-    typeof certification.completedAt !== "string" ||
+    certification?.schemaVersion !== 1 ||
+    certification?.contractId !==
+      LF_REFERENCE_ABSENCE_COMPLETENESS_CONTRACT_ID ||
+    certification?.status !== "CERTIFIED_ABSENT" ||
+    typeof certification?.completedAt !== "string" ||
     !certification.completedAt ||
     !Array.isArray(certification.reviewerIds) ||
     new Set(certification.reviewerIds).size !==
       certification.reviewerIds.length ||
     certification.reviewerIds.length < 2 ||
-    !Array.isArray(certification.reviewedDocumentFingerprints) ||
-    new Set(certification.reviewedDocumentFingerprints).size !==
-      certification.reviewedDocumentFingerprints.length ||
-    certification.reviewedDocumentFingerprints.length !== bFingerprints.size ||
-    certification.reviewedDocumentFingerprints.some(
-      (fingerprint) => !bFingerprints.has(fingerprint)
-    )
+    canonicalJson([...(certification.requiredChannels || [])].sort()) !==
+      canonicalJson(REQUIRED_ABSENCE_CHANNELS) ||
+    !Array.isArray(reviewed) ||
+    reviewedByUuid.size !== bDocuments.length ||
+    reviewed.length !== bDocuments.length
   )
     throw oracleError("LF_GOLD_ORACLE_ABSENCE_CERTIFICATION_INVALID");
+  for (const document of bDocuments) {
+    const actual = reviewedByUuid.get(document.uuid);
+    if (
+      !actual ||
+      actual.fingerprint !== document.fingerprint ||
+      actual.artifactSha256 !== document.artifactSha256 ||
+      actual.pageMapSha256 !== document.pageMapSha256
+    )
+      throw oracleError("LF_GOLD_ORACLE_ABSENCE_CERTIFICATION_INVALID");
+  }
 }
+
+function validateTruthEffectScope(component) {
+  const accepted = component.acceptedSourceRanges.length;
+  const adversarial = component.knownAdversarialSourceRanges.length;
+  const valid =
+    (component.truth === "UNREVIEWED" &&
+      component.coverageEffect === "UNREVIEWED" &&
+      component.scopeRelation === "UNREVIEWED" &&
+      !accepted &&
+      !adversarial &&
+      component.absenceCertification === null) ||
+    (component.truth === "DIRECT_SUPPORT" &&
+      SUBSTANTIVE_EFFECTS.has(component.coverageEffect) &&
+      component.scopeRelation === "SAME_OR_BROADER" &&
+      accepted > 0 &&
+      component.absenceCertification === null) ||
+    (component.truth === "NARROWER_SUPPORT" &&
+      SUBSTANTIVE_EFFECTS.has(component.coverageEffect) &&
+      component.scopeRelation === "NARROWER" &&
+      accepted > 0 &&
+      component.absenceCertification === null) ||
+    (component.truth === "CONTRADICTION" &&
+      SUBSTANTIVE_EFFECTS.has(component.coverageEffect) &&
+      new Set(["SAME_OR_BROADER", "NARROWER"]).has(component.scopeRelation) &&
+      accepted > 0 &&
+      component.absenceCertification === null) ||
+    (component.truth === "RELATED_ONLY" &&
+      new Set(["UNKNOWN", "NOT_APPLICABLE"]).has(component.coverageEffect) &&
+      new Set(["DIFFERENT", "NOT_APPLICABLE"]).has(component.scopeRelation) &&
+      !accepted &&
+      adversarial > 0 &&
+      component.absenceCertification === null) ||
+    (component.truth === "ABSENT_CERTIFIED" &&
+      component.coverageEffect === "NOT_APPLICABLE" &&
+      component.scopeRelation === "NOT_APPLICABLE" &&
+      !accepted &&
+      !adversarial &&
+      component.absenceCertification !== null) ||
+    (component.truth === "INDETERMINATE" &&
+      component.coverageEffect === "UNKNOWN" &&
+      component.scopeRelation === "UNCLEAR" &&
+      !accepted &&
+      component.absenceCertification === null);
+  if (!valid) throw oracleError("LF_GOLD_ORACLE_TRUTH_EFFECT_SCOPE_INVALID");
+}
+
+const componentCountsAsFull = (component) =>
+  component.truth === "DIRECT_SUPPORT" ||
+  (component.truth === "NARROWER_SUPPORT" &&
+    component.fullCounterpartPolicy === "NARROWER_ACCEPTED");
 
 function validateLfReferenceGoldOracle(
   oracle,
-  { documentArtifactsByFingerprint = null, requireApproved = false } = {}
+  { documentArtifactsByUuid = null, requireApproved = false } = {}
 ) {
   if (
     oracle?.schemaVersion !== LF_REFERENCE_GOLD_ORACLE_SCHEMA_VERSION ||
@@ -546,15 +949,28 @@ function validateLfReferenceGoldOracle(
     !Array.isArray(oracle?.benchmarkCandidates)
   )
     throw oracleError("LF_GOLD_ORACLE_CONTRACT_INVALID");
+  const hashBindings = [
+    "runSignature",
+    "resultSha256",
+    "resultArtifactManifestSha256",
+    "semanticManifestSha256",
+    "templateArtifactManifestSha256",
+    "semanticManifestContractSha256",
+    "inventorySha256",
+    "benchmarkSha256",
+    "benchmarkManifestSha256",
+    "inputSha256",
+    "runContractSha256",
+  ];
   if (
-    !/^[a-f0-9]{40}$/u.test(oracle.bindings?.sourceCommit || "") ||
-    !validSha256(oracle.bindings?.runSignature) ||
-    !validSha256(oracle.bindings?.resultSha256) ||
-    !validSha256(oracle.bindings?.semanticManifestSha256) ||
-    !validSha256(oracle.bindings?.semanticManifestContractSha256) ||
-    !validSha256(oracle.bindings?.benchmarkSha256) ||
+    !validCommitSha(oracle.bindings?.runReleaseCommitSha) ||
+    !validCommitSha(oracle.bindings?.benchmarkImplementationCommitSha) ||
+    hashBindings.some((key) => !validSha256(oracle.bindings?.[key])) ||
     typeof oracle.bindings?.sessionUuid !== "string" ||
     !oracle.bindings.sessionUuid ||
+    !new Set(["EMBEDDING_NOT_RUN", "CHANNELS_COMPLETE_REVIEW_REQUIRED"]).has(
+      oracle.bindings?.benchmarkStatus
+    ) ||
     typeof oracle.bindings?.semanticOracleId !== "string" ||
     !oracle.bindings.semanticOracleId
   )
@@ -577,29 +993,31 @@ function validateLfReferenceGoldOracle(
     throw oracleError("LF_GOLD_ORACLE_APPROVAL_INVALID");
 
   const documentIds = new Set();
-  const fingerprints = new Set();
-  const bFingerprints = new Set();
-  const bDocumentsByFingerprint = new Map();
+  const bDocumentsByUuid = new Map();
   for (const document of oracle.documents) {
     if (
       documentIds.has(document.uuid) ||
-      fingerprints.has(document.fingerprint) ||
+      typeof document.uuid !== "string" ||
       !validSha256(document.fingerprint) ||
-      !new Set(["A", "B"]).has(document.side)
+      !new Set(["A", "B"]).has(document.side) ||
+      (document.side === "B" &&
+        (!validSha256(document.artifactSha256) ||
+          !validSha256(document.pageMapSha256)))
     )
       throw oracleError("LF_GOLD_ORACLE_DOCUMENTS_INVALID");
     documentIds.add(document.uuid);
-    fingerprints.add(document.fingerprint);
-    if (document.side === "B") {
-      bFingerprints.add(document.fingerprint);
-      bDocumentsByFingerprint.set(document.fingerprint, document);
-    }
+    if (document.side === "B") bDocumentsByUuid.set(document.uuid, document);
   }
   if (
     oracle.documents.filter(({ side }) => side === "A").length !== 1 ||
-    bFingerprints.size < 1
+    !bDocumentsByUuid.size
   )
     throw oracleError("LF_GOLD_ORACLE_DOCUMENTS_INVALID");
+  const artifactMap = validateDocumentArtifacts(
+    oracle,
+    documentArtifactsByUuid,
+    approved
+  );
 
   const candidateIds = new Set();
   const candidateById = new Map();
@@ -609,22 +1027,13 @@ function validateLfReferenceGoldOracle(
       typeof candidate.analysisRowId !== "string" ||
       typeof candidate.requirementId !== "string" ||
       !Array.isArray(candidate.channels) ||
-      candidate.channels.length === 0 ||
-      candidate.channels.some(
-        (channel) => typeof channel !== "string" || !channel
-      )
+      candidate.channels.length !== 1
     )
       throw oracleError("LF_GOLD_ORACLE_BENCHMARK_CANDIDATES_INVALID");
     candidateIds.add(candidate.candidateId);
     candidateById.set(candidate.candidateId, candidate);
-    if (candidate.range)
-      validateEvidenceRange(
-        candidate.range,
-        bDocumentsByFingerprint,
-        documentArtifactsByFingerprint
-      );
+    validateEvidenceRange(candidate.range, bDocumentsByUuid, artifactMap);
   }
-
   if (
     oracle.rows.length !== 283 ||
     new Set(oracle.rows.map(({ analysisRowId }) => analysisRowId)).size !==
@@ -635,19 +1044,19 @@ function validateLfReferenceGoldOracle(
   let componentCount = 0;
   let unreviewedRowCount = 0;
   let unreviewedComponentCount = 0;
+  const bDocuments = [...bDocumentsByUuid.values()];
   for (const row of oracle.rows) {
     if (
       !REFERENCE_VALIDITIES.has(row.referenceValidity) ||
       !ROW_TRUTHS.has(row.rowTruth) ||
       !Array.isArray(row.components) ||
-      row.components.length === 0 ||
+      !row.components.length ||
       new Set(row.components.map(({ componentId }) => componentId)).size !==
         row.components.length ||
-      row.benchmarkCandidateIds.some(
-        (candidateId) =>
-          !candidateIds.has(candidateId) ||
-          candidateById.get(candidateId).analysisRowId !== row.analysisRowId
-      )
+      row.benchmarkCandidateIds.some((candidateId) => {
+        const candidate = candidateById.get(candidateId);
+        return !candidate || candidate.analysisRowId !== row.analysisRowId;
+      })
     )
       throw oracleError("LF_GOLD_ORACLE_ROW_INVALID", row.analysisRowId);
     validateReview(row.review, approved, "LF_GOLD_ORACLE_ROW_REVIEW_INVALID");
@@ -663,6 +1072,7 @@ function validateLfReferenceGoldOracle(
         !COMPONENT_TRUTHS.has(component.truth) ||
         !COVERAGE_EFFECTS.has(component.coverageEffect) ||
         !SCOPE_RELATIONS.has(component.scopeRelation) ||
+        !FULL_COUNTERPART_POLICIES.has(component.fullCounterpartPolicy) ||
         !Array.isArray(component.normalizedValues) ||
         !Array.isArray(component.acceptedSourceRanges) ||
         !Array.isArray(component.knownAdversarialSourceRanges) ||
@@ -689,25 +1099,18 @@ function validateLfReferenceGoldOracle(
         ...component.acceptedSourceRanges,
         ...component.knownAdversarialSourceRanges,
       ])
-        validateEvidenceRange(
-          range,
-          bDocumentsByFingerprint,
-          documentArtifactsByFingerprint
-        );
-      if (
-        EVIDENCE_COMPONENT_TRUTHS.has(component.truth) &&
-        component.acceptedSourceRanges.length === 0
-      )
-        throw oracleError("LF_GOLD_ORACLE_COMPONENT_EVIDENCE_REQUIRED");
-      if (
-        component.truth === "RELATED_ONLY" &&
-        component.knownAdversarialSourceRanges.length === 0
-      )
-        throw oracleError("LF_GOLD_ORACLE_COMPONENT_ADVERSARIAL_REQUIRED");
+        validateEvidenceRange(range, bDocumentsByUuid, artifactMap);
+      validateTruthEffectScope(component);
+      if (component.truth === "ABSENT_CERTIFIED")
+        if (
+          oracle.bindings.benchmarkStatus !==
+          "CHANNELS_COMPLETE_REVIEW_REQUIRED"
+        )
+          throw oracleError("LF_GOLD_ORACLE_ABSENCE_CHANNELS_INCOMPLETE");
       if (component.truth === "ABSENT_CERTIFIED")
         validateAbsenceCertification(
           component.absenceCertification,
-          bFingerprints
+          bDocuments
         );
       if (
         approved &&
@@ -723,19 +1126,15 @@ function validateLfReferenceGoldOracle(
       const hasSupport = truths.some((truth) =>
         new Set(["DIRECT_SUPPORT", "NARROWER_SUPPORT"]).has(truth)
       );
+      const allFull = row.components.every(componentCountsAsFull);
       const rowTruthConsistent =
         (row.referenceValidity === "INDETERMINATE" &&
           row.rowTruth === "INDETERMINATE") ||
         (row.referenceValidity === "VALID" &&
-          ((row.rowTruth === "FULL_COUNTERPART" &&
-            truths.every((truth) =>
-              new Set(["DIRECT_SUPPORT", "NARROWER_SUPPORT"]).has(truth)
-            )) ||
+          ((row.rowTruth === "FULL_COUNTERPART" && allFull) ||
             (row.rowTruth === "PARTIAL_COUNTERPART" &&
               hasSupport &&
-              !truths.every((truth) =>
-                new Set(["DIRECT_SUPPORT", "NARROWER_SUPPORT"]).has(truth)
-              ) &&
+              !allFull &&
               !truths.includes("CONTRADICTION")) ||
             (row.rowTruth === "CONTRADICTED" &&
               truths.includes("CONTRADICTION")) ||
@@ -765,41 +1164,39 @@ function validateLfReferenceGoldOracle(
   return oracle;
 }
 
-function rangeMatches(predicted, expected) {
-  return (
-    predicted.documentFingerprint === expected.documentFingerprint &&
-    predicted.physicalPageNumber === expected.physicalPageNumber &&
-    predicted.documentStart >= expected.documentStart &&
-    predicted.documentEnd <= expected.documentEnd
-  );
-}
-
-function ratio(numerator, denominator) {
-  return denominator > 0 ? numerator / denominator : null;
-}
-
-function countsBy(values) {
-  return Object.fromEntries(
+const rangeMatches = (predicted, expected) =>
+  predicted.documentUuid === expected.documentUuid &&
+  predicted.documentFingerprint === expected.documentFingerprint &&
+  predicted.physicalPageNumber === expected.physicalPageNumber &&
+  predicted.documentStart >= expected.documentStart &&
+  predicted.documentEnd <= expected.documentEnd;
+const ratio = (numerator, denominator) =>
+  denominator > 0 ? numerator / denominator : null;
+const countsBy = (values) =>
+  Object.fromEntries(
     [...new Set(values)]
       .sort()
       .map((value) => [value, values.filter((item) => item === value).length])
   );
-}
 
-function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
-  validateLfReferenceGoldOracle(oracle);
-  const incompleteReasons = [];
+function calculateLfReferenceGoldOracleMetrics({
+  oracle,
+  predictions,
+  documentArtifactsByUuid = null,
+}) {
+  validateLfReferenceGoldOracle(oracle, { documentArtifactsByUuid });
+  const reasons = [];
   if (oracle.approval.status !== "APPROVED")
-    incompleteReasons.push("ORACLE_NOT_APPROVED");
+    reasons.push("ORACLE_NOT_APPROVED");
   if (
-    oracle.summary.unreviewedRowCount !== 0 ||
-    oracle.summary.unreviewedComponentCount !== 0
+    oracle.summary.unreviewedRowCount ||
+    oracle.summary.unreviewedComponentCount
   )
-    incompleteReasons.push("ORACLE_LABELS_INCOMPLETE");
-  if (incompleteReasons.length)
+    reasons.push("ORACLE_LABELS_INCOMPLETE");
+  if (reasons.length)
     return {
       status: "NOT_EVALUABLE",
-      reasons: incompleteReasons,
+      reasons,
       coverage: {
         rowCount: oracle.summary.rowCount,
         componentCount: oracle.summary.componentCount,
@@ -808,7 +1205,10 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
       },
       qualityMetrics: null,
     };
-
+  validateLfReferenceGoldOracle(oracle, {
+    documentArtifactsByUuid,
+    requireApproved: true,
+  });
   if (!Array.isArray(predictions?.rows))
     throw oracleError("LF_GOLD_ORACLE_PREDICTIONS_INVALID");
   const predictionByRow = new Map(
@@ -819,24 +1219,33 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
     predictions.rows.length !== oracle.rows.length
   )
     throw oracleError("LF_GOLD_ORACLE_PREDICTION_PARTITION_INVALID");
-
-  let exactRowCount = 0;
-  let exactComponentCount = 0;
-  let evidenceTruePositive = 0;
-  let evidenceFalsePositive = 0;
-  let evidenceFalseNegative = 0;
-  let evidenceTrueNegative = 0;
-  let selectedRangeCount = 0;
-  let selectedAcceptedRangeCount = 0;
-  let acceptedRangeCount = 0;
-  let recoveredAcceptedRangeCount = 0;
+  const bDocumentsByUuid = new Map(
+    oracle.documents
+      .filter(({ side }) => side === "B")
+      .map((doc) => [doc.uuid, doc])
+  );
+  const artifactMap =
+    documentArtifactsByUuid instanceof Map
+      ? documentArtifactsByUuid
+      : new Map(Object.entries(documentArtifactsByUuid));
+  const counts = {
+    exactRowCount: 0,
+    exactComponentCount: 0,
+    evidenceTruePositive: 0,
+    evidenceFalsePositive: 0,
+    evidenceFalseNegative: 0,
+    evidenceTrueNegative: 0,
+    selectedRangeCount: 0,
+    selectedAcceptedRangeCount: 0,
+    acceptedRangeCount: 0,
+    recoveredAcceptedRangeCount: 0,
+  };
   let effectCorrect = 0;
   let scopeCorrect = 0;
   let valueCorrect = 0;
   let comparableSemanticComponents = 0;
   const predictedRowTruths = [];
   const predictedComponentTruths = [];
-
   for (const goldRow of oracle.rows) {
     const predictedRow = predictionByRow.get(goldRow.analysisRowId);
     if (
@@ -846,7 +1255,7 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
       !Array.isArray(predictedRow.components)
     )
       throw oracleError("LF_GOLD_ORACLE_PREDICTION_ROW_INVALID");
-    if (predictedRow.rowTruth === goldRow.rowTruth) exactRowCount += 1;
+    if (predictedRow.rowTruth === goldRow.rowTruth) counts.exactRowCount += 1;
     predictedRowTruths.push(predictedRow.rowTruth);
     const predictedByComponent = new Map(
       predictedRow.components.map((component) => [
@@ -867,34 +1276,38 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
         !predicted ||
         !COMPONENT_TRUTHS.has(predicted.truth) ||
         predicted.truth === "UNREVIEWED" ||
+        !COVERAGE_EFFECTS.has(predicted.coverageEffect) ||
+        !SCOPE_RELATIONS.has(predicted.scopeRelation) ||
         !Array.isArray(predicted.selectedSourceRanges) ||
         !Array.isArray(predicted.normalizedValues)
       )
         throw oracleError("LF_GOLD_ORACLE_PREDICTION_COMPONENT_INVALID");
-      if (predicted.truth === goldComponent.truth) exactComponentCount += 1;
+      for (const range of predicted.selectedSourceRanges)
+        validateEvidenceRange(range, bDocumentsByUuid, artifactMap);
+      if (predicted.truth === goldComponent.truth)
+        counts.exactComponentCount += 1;
       predictedComponentTruths.push(predicted.truth);
       const goldRelevant = EVIDENCE_COMPONENT_TRUTHS.has(goldComponent.truth);
       const predictedRelevant = EVIDENCE_COMPONENT_TRUTHS.has(predicted.truth);
-      if (goldRelevant && predictedRelevant) evidenceTruePositive += 1;
-      else if (!goldRelevant && predictedRelevant) evidenceFalsePositive += 1;
-      else if (goldRelevant && !predictedRelevant) evidenceFalseNegative += 1;
-      else evidenceTrueNegative += 1;
-
-      selectedRangeCount += predicted.selectedSourceRanges.length;
-      selectedAcceptedRangeCount += predicted.selectedSourceRanges.filter(
-        (selected) =>
+      if (goldRelevant && predictedRelevant) counts.evidenceTruePositive += 1;
+      else if (!goldRelevant && predictedRelevant)
+        counts.evidenceFalsePositive += 1;
+      else if (goldRelevant) counts.evidenceFalseNegative += 1;
+      else counts.evidenceTrueNegative += 1;
+      counts.selectedRangeCount += predicted.selectedSourceRanges.length;
+      counts.selectedAcceptedRangeCount +=
+        predicted.selectedSourceRanges.filter((selected) =>
           goldComponent.acceptedSourceRanges.some((expected) =>
             rangeMatches(selected, expected)
           )
-      ).length;
-      acceptedRangeCount += goldComponent.acceptedSourceRanges.length;
-      recoveredAcceptedRangeCount += goldComponent.acceptedSourceRanges.filter(
-        (expected) =>
+        ).length;
+      counts.acceptedRangeCount += goldComponent.acceptedSourceRanges.length;
+      counts.recoveredAcceptedRangeCount +=
+        goldComponent.acceptedSourceRanges.filter((expected) =>
           predicted.selectedSourceRanges.some((selected) =>
             rangeMatches(selected, expected)
           )
-      ).length;
-
+        ).length;
       if (goldRelevant) {
         comparableSemanticComponents += 1;
         if (predicted.coverageEffect === goldComponent.coverageEffect)
@@ -928,30 +1341,30 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
         ),
         predictedComponents: countsBy(predictedComponentTruths),
       },
-      exactRowAccuracy: ratio(exactRowCount, oracle.rows.length),
+      exactRowAccuracy: ratio(counts.exactRowCount, oracle.rows.length),
       exactComponentAccuracy: ratio(
-        exactComponentCount,
+        counts.exactComponentCount,
         oracle.summary.componentCount
       ),
       componentEvidenceRecall: ratio(
-        evidenceTruePositive,
-        evidenceTruePositive + evidenceFalseNegative
+        counts.evidenceTruePositive,
+        counts.evidenceTruePositive + counts.evidenceFalseNegative
       ),
       componentEvidencePrecision: ratio(
-        evidenceTruePositive,
-        evidenceTruePositive + evidenceFalsePositive
+        counts.evidenceTruePositive,
+        counts.evidenceTruePositive + counts.evidenceFalsePositive
       ),
       componentEvidenceFalsePositiveRate: ratio(
-        evidenceFalsePositive,
-        evidenceFalsePositive + evidenceTrueNegative
+        counts.evidenceFalsePositive,
+        counts.evidenceFalsePositive + counts.evidenceTrueNegative
       ),
       selectedEvidencePrecision: ratio(
-        selectedAcceptedRangeCount,
-        selectedRangeCount
+        counts.selectedAcceptedRangeCount,
+        counts.selectedRangeCount
       ),
       acceptedEvidenceRecall: ratio(
-        recoveredAcceptedRangeCount,
-        acceptedRangeCount
+        counts.recoveredAcceptedRangeCount,
+        counts.acceptedRangeCount
       ),
       coverageEffectAccuracy: ratio(
         effectCorrect,
@@ -962,18 +1375,7 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
         valueCorrect,
         comparableSemanticComponents
       ),
-      counts: {
-        exactRowCount,
-        exactComponentCount,
-        evidenceTruePositive,
-        evidenceFalsePositive,
-        evidenceFalseNegative,
-        evidenceTrueNegative,
-        selectedRangeCount,
-        selectedAcceptedRangeCount,
-        acceptedRangeCount,
-        recoveredAcceptedRangeCount,
-      },
+      counts,
     },
   };
 }
@@ -981,14 +1383,17 @@ function calculateLfReferenceGoldOracleMetrics({ oracle, predictions }) {
 module.exports = {
   COMPONENT_TRUTHS,
   COVERAGE_EFFECTS,
+  LF_REFERENCE_ABSENCE_COMPLETENESS_CONTRACT_ID,
   LF_REFERENCE_BENCHMARK_CANDIDATES_CONTRACT_ID,
   LF_REFERENCE_GOLD_ORACLE_CONTRACT_ID,
   LF_REFERENCE_GOLD_ORACLE_SCHEMA_VERSION,
+  REQUIRED_ABSENCE_CHANNELS,
   ROW_TRUTHS,
   SCOPE_RELATIONS,
   buildLfReferenceGoldOracleSkeleton,
   calculateLfReferenceGoldOracleMetrics,
   canonicalJson,
+  loadLfReferenceGoldOracleInputs,
   sha256,
   validateLfReferenceGoldOracle,
 };

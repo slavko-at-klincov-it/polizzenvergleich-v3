@@ -254,15 +254,18 @@ function inventoryLfReferenceRun({ runRoot, fsImpl = fs }) {
     (row) =>
       referenceCustomerSearchStatus(row) === LF_CUSTOMER_SEARCH_STATUS.NOT_FOUND
   );
+  const publicFoundRows = allRows.filter(
+    (row) =>
+      referenceCustomerSearchStatus(row) === LF_CUSTOMER_SEARCH_STATUS.FOUND
+  );
   const referenceUnclearRows = publicNotFoundRows.filter(
     ({ pointDecision }) => pointDecision?.outcome === "REFERENZZEILE_UNKLAR"
   );
-  const sideBRows = publicNotFoundRows.filter(
+  const notFoundSideBRows = publicNotFoundRows.filter(
     ({ pointDecision }) => pointDecision?.outcome !== "REFERENZZEILE_UNKLAR"
   );
   if (
-    new Set(publicNotFoundRows.map(({ categoryId }) => categoryId)).size !==
-    publicNotFoundRows.length
+    new Set(allRows.map(({ categoryId }) => categoryId)).size !== allRows.length
   )
     throw benchmarkError("LF_DISCOVERY_PUBLIC_ROW_ID_DUPLICATE");
 
@@ -310,9 +313,9 @@ function inventoryLfReferenceRun({ runRoot, fsImpl = fs }) {
   const targets = new Map();
   const cells = [];
   const rowOccurrenceCounts = new Map(
-    sideBRows.map(({ categoryId }) => [categoryId, 0])
+    allRows.map(({ categoryId }) => [categoryId, 0])
   );
-  for (const row of sideBRows) {
+  for (const row of allRows) {
     for (const documentRun of documents) {
       const worksheetFile = path.join(
         documentRun.directory,
@@ -412,10 +415,16 @@ function inventoryLfReferenceRun({ runRoot, fsImpl = fs }) {
       }
     }
   }
-  const pureNullRows = sideBRows.filter(
+  const allPureNullRows = allRows.filter(
     ({ categoryId }) => rowOccurrenceCounts.get(categoryId) === 0
   );
-  const rowsWithCurrentCandidates = sideBRows.filter(
+  const allRowsWithCurrentCandidates = allRows.filter(
+    ({ categoryId }) => rowOccurrenceCounts.get(categoryId) > 0
+  );
+  const pureNullRows = notFoundSideBRows.filter(
+    ({ categoryId }) => rowOccurrenceCounts.get(categoryId) === 0
+  );
+  const rowsWithCurrentCandidates = notFoundSideBRows.filter(
     ({ categoryId }) => rowOccurrenceCounts.get(categoryId) > 0
   );
   const worksheetBindings = documents.flatMap((documentRun) =>
@@ -430,11 +439,14 @@ function inventoryLfReferenceRun({ runRoot, fsImpl = fs }) {
   );
   const summary = {
     allReferenceRows: allRows.length,
+    publicFoundRows: publicFoundRows.length,
     publicNotFoundRows: publicNotFoundRows.length,
     referenceUnclearRows: referenceUnclearRows.length,
-    sideBRows: sideBRows.length,
+    notFoundSideBRows: notFoundSideBRows.length,
     pureNullRows: pureNullRows.length,
     rowsWithCurrentCandidates: rowsWithCurrentCandidates.length,
+    allPureNullRows: allPureNullRows.length,
+    allRowsWithCurrentCandidates: allRowsWithCurrentCandidates.length,
     bDocumentCount: documents.length,
     uniqueComponentTargets: targets.size,
     componentDocumentCells: cells.length,
@@ -467,12 +479,17 @@ function inventoryLfReferenceRun({ runRoot, fsImpl = fs }) {
     },
     summary,
     rowSets: {
+      publicFound: publicFoundRows.map(({ categoryId }) => categoryId),
       publicNotFound: publicNotFoundRows.map(({ categoryId }) => categoryId),
       referenceUnclear: referenceUnclearRows.map(
         ({ categoryId }) => categoryId
       ),
       pureNull: pureNullRows.map(({ categoryId }) => categoryId),
       withCurrentCandidates: rowsWithCurrentCandidates.map(
+        ({ categoryId }) => categoryId
+      ),
+      allPureNull: allPureNullRows.map(({ categoryId }) => categoryId),
+      allWithCurrentCandidates: allRowsWithCurrentCandidates.map(
         ({ categoryId }) => categoryId
       ),
     },
@@ -749,7 +766,21 @@ function normalizedChannelCandidate(candidate, channel) {
   };
 }
 
-function fuseCandidateChannels(channels) {
+function fuseCandidateChannels(channels, identity) {
+  const identityParts = [
+    identity?.analysisRowId,
+    identity?.componentId,
+    identity?.documentUuid,
+    identity?.documentPosition,
+    identity?.documentFingerprint,
+  ];
+  if (
+    identityParts.some(
+      (value) =>
+        (typeof value !== "string" && !Number.isInteger(value)) || value === ""
+    )
+  )
+    throw benchmarkError("LF_DISCOVERY_UNION_IDENTITY_INVALID");
   const fused = new Map();
   for (const [channel, candidates] of Object.entries(channels)) {
     for (const [candidateIndex, candidate] of candidates.entries()) {
@@ -766,7 +797,9 @@ function fuseCandidateChannels(channels) {
       ].join(":");
       if (!fused.has(key))
         fused.set(key, {
-          unionCandidateId: `lf-discovery-union:${sha256(key)}`,
+          unionCandidateId: `lf-discovery-union:${sha256(
+            [...identityParts, key].join(":")
+          )}`,
           source: normalizedCandidate.source,
           channelTraces: [],
         });
