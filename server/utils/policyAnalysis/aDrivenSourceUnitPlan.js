@@ -44,7 +44,7 @@ function normalizeLine(value) {
 }
 
 function isTableLike(text) {
-  return /\t/u.test(text) || /\S\s{2,}\S/u.test(text);
+  return /\t/u.test(text) || /\S {3,}\S/u.test(text);
 }
 
 function isListLike(text, structuralKind) {

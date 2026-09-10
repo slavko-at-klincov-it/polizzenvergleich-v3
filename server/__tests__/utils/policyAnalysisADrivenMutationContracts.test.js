@@ -197,6 +197,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
     ).toBe(true);
   });
 
+  test("does not split one clause merely because OCR inserted double spaces", () => {
+    const source = artifact([
+      "Seite 1\nDECKUNG\nPauschalversicherungssumme von  \n€ 2.000.000,- . In  der  Sparte Leitungswasser gilt die Variante.\n",
+    ]);
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [sourceDocument(source)],
+    });
+    const content = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Pauschalversicherungssumme")
+    );
+
+    expect(content.unitKind).toBe("CLAUSE");
+    expect(content.source.blockIds).toHaveLength(2);
+    expect(content.source.combinedText).toContain("€ 2.000.000,-");
+  });
+
   test("covers a second A document and a cross-page continuation", () => {
     const main = artifact([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude;\n",
