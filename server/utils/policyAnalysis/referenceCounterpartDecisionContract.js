@@ -104,7 +104,9 @@ function validateCounterpartDecisions({
       !requiredDimensions?.length ||
       requiredDimensions.some((dimension) => !DIMENSIONS.has(dimension)) ||
       semanticChecks.length === 0 ||
-      semanticCheckIds.some((checkId) => typeof checkId !== "string" || !checkId) ||
+      semanticCheckIds.some(
+        (checkId) => typeof checkId !== "string" || !checkId
+      ) ||
       new Set(semanticCheckIds).size !== semanticCheckIds.length ||
       semanticChecks.some(
         ({ role, componentId, dimension, label }) =>
@@ -201,7 +203,8 @@ function validateCounterpartDecisions({
       ) &&
       checks.every(
         ({ checkId, dimension, outcome, candidateIds = [] }) =>
-          packageContract.semanticChecks.get(checkId)?.dimension === dimension &&
+          packageContract.semanticChecks.get(checkId)?.dimension ===
+            dimension &&
           DIMENSION_OUTCOMES.has(outcome) &&
           Array.isArray(candidateIds) &&
           new Set(candidateIds).size === candidateIds.length &&
@@ -220,7 +223,9 @@ function validateCounterpartDecisions({
       new Set(selected).size !== selected.length ||
       selected.some((candidateId) => !allowed.has(candidateId)) ||
       selected.length !== checkCandidateIds.length ||
-      selected.some((candidateId) => !checkCandidateIds.includes(candidateId)) ||
+      selected.some(
+        (candidateId) => !checkCandidateIds.includes(candidateId)
+      ) ||
       (decision === "SUPPORTED" &&
         (selected.length === 0 ||
           outcomes.some((outcome) => outcome !== "MATCH"))) ||

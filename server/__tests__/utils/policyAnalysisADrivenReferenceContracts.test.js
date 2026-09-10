@@ -815,11 +815,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
           packageId: "package-1",
           decision: "SUPPORTED",
           selectedCandidateIds: [candidates[0].compactCandidateId],
-          dimensionChecks: decisionChecks(
-            packages[0],
-            "MATCH",
-            [candidates[0].compactCandidateId]
-          ),
+          dimensionChecks: decisionChecks(packages[0], "MATCH", [
+            candidates[0].compactCandidateId,
+          ]),
         },
         {
           packageId: "package-2",
@@ -906,7 +904,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       left.packages.every(
         ({ componentId, semanticChecks: checks }) =>
           checks.length > 0 &&
-          new Set(checks.map(({ checkId }) => checkId)).size === checks.length &&
+          new Set(checks.map(({ checkId }) => checkId)).size ===
+            checks.length &&
           checks.filter(
             ({ role, componentId: checkedId }) =>
               role === "TARGET" && checkedId === componentId
