@@ -3669,3 +3669,58 @@ Kundendeployment.
 **Beweist nicht:** eine verkürzte Erstlaufzeit für neue Dokumente, fachliche
 Richtigkeit aller 283 Zeilen, einen unbekannten Versicherer-Holdout oder das
 99-Prozent-Ziel.
+
+## 60. LF-Retrieval-Shadow: deterministische Suche und Embeddings ergänzen sich
+
+**Prüfung:** 10. September 2026
+
+Der vollständige ergebnisneutrale Shadow-Lauf gegen den bekannten
+V3.7.4-1+9-Lauf erfasste 283 LF-Zeilen, 631 Komponenten, neun B-Dokumente und
+5.679 Komponenten-Dokument-Zellen. Er erzeugte 2.164 CURRENT-, 12.013 BM25-,
+18.459 Struktur-, 14.499 Dinghy- und 42.429 deduplizierte UNION-Kandidaten.
+9.793 UNION-Spans kamen ausschließlich über Dinghy; diese Rohzahl ist keine
+Trefferzahl, weil alle Challenger-Ausgaben nur Navigationskandidaten sind.
+
+Der Rücktest gegen 220 exakte positive Evidenzzitate des früheren
+177er-Qwen-Audits ergab:
+
+```text
+CURRENT:                         44/220 = 20,0 %
+CURRENT + BM25 + Struktur:      198/220 = 90,0 %
+Dinghy allein:                  159/220 = 72,3 %
+vollständige Union:             208/220 = 94,5 %
+Dinghy zusätzlich zur Deterministik: 10 Zitate
+Deterministik zusätzlich zu Dinghy:  49 Zitate
+```
+
+Damit ist die bisherige Annahme präzisiert: Synonyme und abweichender Wortlaut
+sind ein relevanter Teil der Suchlücke, aber ein Embedding-Modell allein löst
+sie nicht. Lexikalische und strukturelle Suche liefern mehr historische
+Evidenz als Dinghy; Dinghy findet zugleich zehn echte zusätzliche
+Navigationsstellen. Der richtige Ausbau ist eine Union unabhängiger
+Retrievalkanäle mit nachgelagerter semantischer Prüfung, nicht der Ersatz des
+Codes durch RAG und nicht eine weitere breite Aliasliste.
+
+Zwölf positive historische Zitate blieben selbst in der Union offen. Sie
+betreffen vor allem kurze Aufzählungen, Ausschluss-/Negationskontext,
+Subsidiarität und benachbarte Definitionen. Diese Fälle sind der nächste
+generische Retrieval-Testbestand. Ein pauschal größeres Top-K ist wegen der
+bereits 543 MiB großen Rohkandidatenmenge verworfen; zuerst müssen
+überlappende Spans zusammengeführt und dokumentübergreifende Reviewpakete
+kompaktiert werden.
+
+Der Rücktest ist kein Gold-Set: Seine Qwen-Entscheidungen wurden nicht
+vollständig fachlich freigegeben. Er belegt Navigations-Recall auf bekannten
+Entwicklungsdokumenten, nicht semantische Richtigkeit, Abwesenheit,
+Generalisierung oder 99 Prozent. Der parallel materialisierte
+`LF_COUNTERPART_GOLD_ORACLE_V1` startet deshalb mit allen 283 Zeilen und 631
+Komponenten als `UNREVIEWED`; vor vollständiger Expertenfreigabe werden keine
+Qualitätsmetriken ausgegeben.
+
+**Beweist:** Der aktuelle Kandidatenpfad ist eine wesentliche Verluststufe;
+die kombinierte Suche bringt einen großen reproduzierbaren Recallgewinn, und
+Dinghy hat messbaren komplementären Nutzen.
+
+**Beweist nicht:** dass alle neuen Kandidaten fachliche Gegenstücke sind,
+dass die 135 öffentlichen Nichtfunde falsch sind, dass Abwesenheit sicher
+feststeht oder dass die Ergebnisse auf unbekannte Versicherer generalisieren.
