@@ -6932,3 +6932,71 @@ unbekannter Mehrversicherer-Holdout und kein 99-Prozent-Nachweis. Die sieben
 starken Promotionskandidaten benoetigen vor einer Produktuebernahme jeweils
 eine semantische Regel, positive und negative Regressionen sowie die
 Fachfreigabe.
+
+### 133.14 V3.7.4: binäre LF-Kundensicht und Discovery-V2-Präzisionstranche
+
+Die V3.7.4-Arbeit folgt der persistenten Checkliste unter
+`.codex/test-fix-loop/` und trennt drei bisher vermischte Ebenen. Der private
+LF-Ergebnisvertrag behält die fünf differenzierten Analyseoutcomes. Neu
+erzeugte LF-Ergebnisse tragen zusätzlich den Marker
+`LF_REFERENCE_CUSTOMER_PRESENTATION_V1`; nur diese Ergebnisse werden in API,
+UI und XLSX auf die binäre Kundensicht `Gefunden`/`Nicht gefunden` projiziert.
+Historische V3.7.3-Ergebnisse bleiben ohne nachträgliche Umdeutung lesbar. Die
+öffentliche Projektion entfernt private Outcomes, Regelcodes und
+Reviewfelder; der sichtbare Status wird aus darstellbarem B-Inhalt,
+B-Fundstelle oder darstellbarem Contributor nachgezählt.
+
+Die Ursachenanalyse der offenen und teilweisen Fälle führte nicht zu einem
+pauschalen Prompt. Drei voneinander unabhängige Semantikfehler wurden
+test-first behoben: `Kosten der/des <Gegenstand>` als lokale Kostengrammatik,
+die source-gebundene Fachkategorie für dynamische LR-Anforderungen und
+`DURATION` als `CONDITION` statt `LIMIT`. Echte B01-/B06-Canaries bestätigen
+die neuen Quellen; abweichende Werte oder fehlende weitere Komponenten
+bleiben intern korrekt teilweise belegt.
+
+Die versionierte Datei `lf-dynamic-side-b-discovery.v2.json` ergänzt eng
+begrenzte Discovery-Verträge für die bestätigten Komponenten von VS-03,
+VS-04, VS-18, VS-21, GL-18, GL-24, HP-02, HP-X01, GLT-02 und GLT-05. Eine
+Vollinventur über alle neun bekannten B-Dokumente fand alle zwölf geplanten
+Komponenten. Fünf kleine Qwen-Pakete bestanden vollständig. `LR02-021` fand
+nur die Messgeräte, nicht die weiter fehlende Ersatzpflicht; `LR08-024`
+blieb ausgeschlossen; `LR11-002` fand beide Zeitkomponenten. Die
+Negativkontrolle `LR01-008` blieb trotz Kandidat ohne akzeptierte Quelle.
+
+Zwei erste Regelentwürfe wurden nach echten Gegenbelegen verworfen oder
+nachgeschärft. Der breite Alias `Versicherungsnehmer selbst` band im
+B01-Dokument fälschlich eine Sanitärpflicht und wurde durch vollständige
+Ein-/Ausschlussformulierungen einschließlich OCR-Variante ersetzt. Die
+Hindernisbeseitigung in GL-18 benötigte eine eng begrenzte positive
+Nebenleistungsregel für ausdrücklich inklusive versicherte Beseitigung und
+Wiederanbringung; bloße Tätigkeits- oder Prüfverweise bleiben negativ.
+
+Auf dem Mac Studio bestanden am Implementierungscommit
+`82e6ab4ab8a5f0a3c0e2a69c0001fbe191d7de7d` das breite betroffene Gate mit
+37/37 Suites und 840/840 Tests, der Candidate-Vertrag mit 77/77 und das
+Discovery-V2-Profil mit 6/6 Tests. Der frische symmetrische 1+1-Lauf unter
+Session `a1c1ee60-f187-42b8-84cb-4975068d4331` verwendete exakt LF SHA
+`2f1be7924ccda069a3fe197da30fc15d393dc3efb34d115ca6cad9dcb7ee9d62`
+gegen WEVIG-Muster SHA
+`a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16`.
+Er endete in 1.019.345 ms mit 2/2 Dokumenten, 10/10 Kategorien, 224/224
+eindeutigen Zeilen, der unveränderten Outcomeverteilung
+`13/1/38/126/0/16/30` und Kundenreview 30. Artefaktmanifest, JSON-Reihenfolge
+und XLSX mit einem Blatt, 17 Spalten und 224 Datenzeilen bestanden; XLSX
+SHA-256 ist
+`604485e5d134b335da8659ee3d4c8f0491b1a90be4716e715b452fcf1c0e2560`.
+
+Zwei vorangegangene 1+1-Harnessstarts endeten vor jedem Modellaufruf wegen
+fehlender Runtime- beziehungsweise Collector-Abhängigkeitslinks im isolierten
+Worktree. Nach Spiegelung der unveränderten installierten Abhängigkeiten war
+keine Produktkorrektur nötig. Diese Ereignisse sind als QA-Umgebungsfehler,
+nicht als Produkt- oder Modellregression klassifiziert.
+
+Status: `IMPLEMENTIERT UND 1+1-NICHTREGRESSION BESTANDEN; VOLLSTÄNDIGE
+RELEASE-GATES, FRISCHER LF-1+9-LAUF, TAG UND DEPLOYMENT NOCH OFFEN`.
+
+Beweisgrenze: bekannte LF-/WEVIG-Entwicklungsdokumente, keine vollständige
+fachliche Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein
+99-Prozent-Nachweis. `Nicht gefunden` bedeutet ausschließlich, dass der
+aktuelle Lauf keine robuste darstellbare Fundstelle lieferte; es bedeutet
+nicht automatisch fehlenden Versicherungsschutz.
