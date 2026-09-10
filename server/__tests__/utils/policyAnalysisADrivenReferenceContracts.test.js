@@ -17,6 +17,14 @@ const {
 const {
   validateCounterpartDecisions,
 } = require("../../utils/policyAnalysis/referenceCounterpartDecisionContract");
+const {
+  REQUIRED_SEARCH_CHANNELS,
+  buildADrivenCounterpartSearchPlan,
+  materializeADrivenCounterpartSearchExecution,
+} = require("../../utils/policyAnalysis/aDrivenCounterpartSearchPlan");
+const {
+  buildADrivenBinaryReferenceResult,
+} = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const crypto = require("crypto");
 
 function artifact(pages, fingerprintCharacter) {
@@ -94,6 +102,23 @@ function validResponse(unit) {
       },
     ],
   };
+}
+
+function searchEligibleManifest() {
+  const source = artifact(
+    ["Seite 1\nDECKUNG\nVersichert sind Gebäude und Nebengebäude.\n"],
+    "8"
+  );
+  const plan = buildADrivenSourceUnitPlan({
+    documents: [document("source", 0, source)],
+  });
+  const responses = plan.units
+    .filter(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    )
+    .map(validResponse);
+  return buildADrivenSemanticManifest({ plan, responses });
 }
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
@@ -467,5 +492,142 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
     expect(result.diagnostics.map(({ code }) => code)).toContain(
       "UNKNOWN_PACKAGE_ID"
     );
+  });
+});
+
+describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
+  test("plans every A component against every B document without B-only rows", () => {
+    const manifest = searchEligibleManifest();
+    const bDocuments = [
+      {
+        uuid: "b-two",
+        position: 1,
+        sha256: "2".repeat(64),
+        originalName: "Nachtrag.pdf",
+      },
+      {
+        uuid: "b-one",
+        position: 0,
+        sha256: "1".repeat(64),
+        originalName: "Polizze.pdf",
+      },
+    ];
+    const left = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: bDocuments,
+    });
+    const right = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [...bDocuments].reverse(),
+    });
+
+    expect(left).toEqual(right);
+    expect(left.summary).toMatchObject({
+      components: manifest.summary.semanticComponents,
+      documents: 2,
+      plannedPackages: manifest.summary.semanticComponents * 2,
+      completeMatrix: true,
+      customerRowsFromSideB: 0,
+    });
+    expect(left.summary.requiredChannels).toEqual(REQUIRED_SEARCH_CHANNELS);
+    expect(
+      left.packages.every(
+        ({ searchCoverage }) =>
+          searchCoverage.scope === "ONE_COMPONENT_ONE_B_DOCUMENT" &&
+          searchCoverage.globalTopNAllowed === false
+      )
+    ).toBe(true);
+    expect(
+      new Set(
+        left.packages.map(
+          ({ componentId, documentUuid }) => `${componentId}:${documentUuid}`
+        )
+      ).size
+    ).toBe(left.packages.length);
+  });
+
+  test("publishes only binary rows after a complete terminal decision matrix", () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [
+        { uuid: "b-doc", position: 0, sha256: "b".repeat(64) },
+      ],
+    });
+    const exactText = "Gebäude sind versichert.";
+    const exactTextSha256 = crypto
+      .createHash("sha256")
+      .update(exactText)
+      .digest("hex");
+    const packageResults = searchPlan.packages.map((item, index) => ({
+      packageId: item.packageId,
+      completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+      candidates:
+        index === 0
+          ? [
+              {
+                compactCandidateId: "candidate-one",
+                documentUuid: "b-doc",
+                documentSha256: "b".repeat(64),
+                clauseBoundaryId: "clause-one",
+                sourceSpans: [
+                  {
+                    exactText,
+                    exactTextSha256,
+                    documentStart: 0,
+                    documentEnd: exactText.length,
+                  },
+                ],
+              },
+            ]
+          : [],
+    }));
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      packageResults,
+    });
+    const responses = searchExecution.packages.map((item, index) => ({
+      packageId: item.packageId,
+      decision: index === 0 ? "SUPPORTED" : "NOT_SUPPORTED",
+      selectedCandidateIds: index === 0 ? ["candidate-one"] : [],
+      dimensionChecks: item.requiredDimensions.map((dimension) => ({
+        dimension,
+        outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
+      })),
+    }));
+    const decisions = validateCounterpartDecisions({
+      packages: searchExecution.packages,
+      responses,
+    });
+    const result = buildADrivenBinaryReferenceResult({
+      manifest,
+      searchPlan,
+      searchExecution,
+      decisions,
+    });
+
+    expect(result.summary).toMatchObject({
+      rows: manifest.summary.semanticComponents,
+      found: 1,
+      notFound: manifest.summary.semanticComponents - 1,
+      unresolved: 0,
+      sideBOnlyRows: 0,
+      binaryCustomerStatus: true,
+    });
+    expect(new Set(result.rows.map(({ customerStatus }) => customerStatus))).toEqual(
+      new Set(["FOUND", "NOT_FOUND"])
+    );
+    const unresolved = validateCounterpartDecisions({
+      packages: searchExecution.packages,
+      responses: responses.slice(1),
+    });
+    expect(() =>
+      buildADrivenBinaryReferenceResult({
+        manifest,
+        searchPlan,
+        searchExecution,
+        decisions: unresolved,
+      })
+    ).toThrow("LF_A_DRIVEN_BINARY_RESULT_INPUT_INVALID");
   });
 });
