@@ -78,7 +78,7 @@ function legacyComponents(legacyManifest) {
               .filter(({ spanId: id }) => id === spanId)
               .flatMap(({ blockIds = [] }) => blockIds
           )
-        ),
+        )
       ],
     }))
   );
