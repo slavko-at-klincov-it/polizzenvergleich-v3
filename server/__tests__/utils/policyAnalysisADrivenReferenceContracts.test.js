@@ -435,6 +435,54 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.requirements[0].components[0].type).toBe("LIMIT_BASIS");
   });
 
+  test("server-expands a source-bound label across its unique adjacent blocks", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDEFINITION\nBetreuung durch die LF Immo\nVersicherungsmakler GmbH erfolgt.\n",
+      ],
+      "4"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Betreuung durch")
+    );
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map((plannedUnit) =>
+        plannedUnit.unitId === unit.unitId
+          ? {
+              unitId: unit.unitId,
+              primaryClass: "DEFINITION",
+              semanticClasses: ["DEFINITION"],
+              requirements: [
+                {
+                  displayLabel: unit.source.combinedText,
+                  components: [
+                    {
+                      type: "FACT_ROLE",
+                      label: "LF Immo\nVersicherungsmakler GmbH",
+                      sourceBlockIds: [unit.source.blockIds[0]],
+                    },
+                  ],
+                },
+              ],
+            }
+          : validResponse(plannedUnit)
+      );
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const component = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(unit.unitId)
+    ).components[0];
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(component.sourceBlockIds).toEqual(unit.source.blockIds);
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],

@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V3";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V4";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -119,6 +119,44 @@ function sourceContains(unit, sourceBlockIds, value) {
   return comparableText(sourceText).includes(comparableText(value));
 }
 
+function minimalSourceRange(unit, value, declaredBlockIds) {
+  const needle = comparableText(value);
+  if (!needle) return [];
+  const matches = [];
+  for (let start = 0; start < unit.source.blocks.length; start += 1) {
+    for (let end = start; end < unit.source.blocks.length; end += 1) {
+      const blocks = unit.source.blocks.slice(start, end + 1);
+      if (
+        comparableText(blocks.map(({ exactText }) => exactText).join("\n"))
+          .includes(needle)
+      ) {
+        matches.push(blocks.map(({ blockId }) => blockId));
+        break;
+      }
+    }
+  }
+  if (!matches.length) return null;
+  const shortestLength = Math.min(...matches.map((ids) => ids.length));
+  const shortest = matches.filter((ids) => ids.length === shortestLength);
+  if (shortest.length === 1) return shortest[0];
+  const hinted = shortest.filter((ids) =>
+    declaredBlockIds.some((blockId) => ids.includes(blockId))
+  );
+  return hinted.length === 1 ? hinted[0] : null;
+}
+
+function canonicalComponentSourceBlockIds(unit, declaredBlockIds, values) {
+  const derivedRanges = values.map((value) =>
+    minimalSourceRange(unit, value, declaredBlockIds)
+  );
+  if (derivedRanges.some((ids) => !ids)) return null;
+  const selected = new Set([
+    ...declaredBlockIds,
+    ...derivedRanges.flatMap((ids) => ids),
+  ]);
+  return unit.source.blockIds.filter((blockId) => selected.has(blockId));
+}
+
 function validateComponent(component, unit) {
   const type = text(component?.type);
   const label = text(component?.label);
@@ -128,17 +166,23 @@ function validateComponent(component, unit) {
     !COMPONENT_TYPES.has(type) ||
     !label ||
     !sourceBlockIds?.length ||
-    sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId)) ||
-    !sourceContains(unit, sourceBlockIds, label)
+    sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId))
   )
     return null;
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
+  const canonicalSourceBlockIds = canonicalComponentSourceBlockIds(
+    unit,
+    sourceBlockIds,
+    [label, rawValue, unitValue, qualifier].filter(Boolean)
+  );
   if (
-    !sourceContains(unit, sourceBlockIds, rawValue) ||
-    !sourceContains(unit, sourceBlockIds, unitValue) ||
-    !sourceContains(unit, sourceBlockIds, qualifier)
+    !canonicalSourceBlockIds ||
+    !sourceContains(unit, canonicalSourceBlockIds, label) ||
+    !sourceContains(unit, canonicalSourceBlockIds, rawValue) ||
+    !sourceContains(unit, canonicalSourceBlockIds, unitValue) ||
+    !sourceContains(unit, canonicalSourceBlockIds, qualifier)
   )
     return null;
   const effect = text(component?.coverageEffect);
@@ -152,7 +196,7 @@ function validateComponent(component, unit) {
   return {
     type,
     label,
-    sourceBlockIds,
+    sourceBlockIds: canonicalSourceBlockIds,
     ...(rawValue ? { rawValue } : {}),
     ...(unitValue ? { unit: unitValue } : {}),
     ...(effect ? { coverageEffect: effect } : {}),
