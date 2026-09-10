@@ -4,7 +4,7 @@ const { A_SOURCE_UNIT_PLAN_CONTRACT_ID } = require("./aDrivenSourceUnitPlan");
 // Builds bounded, ID-complete classification/atomization requests for Qwen.
 // The prompt contains only server-planned source units. Model output remains
 // untrusted until aDrivenSemanticManifest validates every ID and source block.
-const A_CLASSIFICATION_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_V2";
+const A_CLASSIFICATION_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_V3";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");

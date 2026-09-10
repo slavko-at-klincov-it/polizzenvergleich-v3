@@ -9,7 +9,7 @@ const {
 // Output: a deterministic package plan; it has no semantic or row authority.
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
-const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V4";
+const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V5";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -54,23 +54,42 @@ function isListLike(text, structuralKind) {
   );
 }
 
-function isContinuation(previous, current, artifact) {
+function isContinuation(previous, current) {
   if (!previous || !current) return false;
-  const gap = artifact.document.pageContent.slice(
-    previous.documentEnd,
-    current.documentStart
-  );
-  const withoutPageMarker = gap.replace(/\[DOCUMENT_PAGE\s+\d+\]/gu, "");
   if (
-    previous.physicalPageNumber === current.physicalPageNumber &&
-    /\n\s*\n/u.test(withoutPageMarker)
+    [previous.structuralKind, current.structuralKind].some((kind) =>
+      ["HEADING_CANDIDATE", "PAGE_FURNITURE"].includes(kind)
+    ) ||
+    previous.physicalPageNumber === current.physicalPageNumber
   )
     return false;
   const previousText = normalizeLine(previous.exactText);
-  return (
-    /(?:[,;:]|\b(?:und|oder|sowie))$/iu.test(previousText) ||
-    /-$/u.test(previousText)
-  );
+  const currentText = normalizeLine(current.exactText);
+  if (!previousText || !currentText) return false;
+  if (/[.!?][”"')\]]?$/u.test(previousText)) return false;
+  return true;
+}
+
+function mergeCrossPageContentGroups(groups) {
+  const merged = groups.map((blocks) => [...blocks]);
+  for (let index = 0; index < merged.length; index += 1) {
+    if (unitKind(merged[index]) === "METADATA") continue;
+    let previousIndex = index - 1;
+    while (previousIndex >= 0 && unitKind(merged[previousIndex]) === "METADATA")
+      previousIndex -= 1;
+    if (previousIndex < 0) continue;
+    const previous = merged[previousIndex];
+    const current = merged[index];
+    if (
+      previous.length + current.length <= 12 &&
+      isContinuation(previous.at(-1), current[0])
+    ) {
+      previous.push(...current);
+      merged.splice(index, 1);
+      index -= 1;
+    }
+  }
+  return merged;
 }
 
 function unitKind(blocks) {
@@ -160,7 +179,7 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
   )
     return false;
   if (previous.physicalPageNumber !== current.physicalPageNumber)
-    return isContinuation(previous, current, artifact);
+    return isContinuation(previous, current);
   if (/\n\s*\n/u.test(gap)) return false;
   return true;
 }
@@ -211,8 +230,9 @@ function planDocumentUnits({ document, artifact, ledger }) {
   }
   flush();
 
+  const contentMergedGroups = mergeCrossPageContentGroups(groups);
   let activeStructurePath = [];
-  const baseUnits = groups.map((blocks, unitOrder) => {
+  const baseUnits = contentMergedGroups.map((blocks, unitOrder) => {
     const kind = unitKind(blocks);
     if (kind === "HEADING")
       activeStructurePath = [normalizeLine(blocks[0].exactText)];
@@ -307,6 +327,22 @@ function planDocumentUnits({ document, artifact, ledger }) {
   const contentUnits = units.filter(
     ({ unitKind: kind }) => kind !== "METADATA"
   );
+  for (const unit of contentUnits)
+    for (let index = 1; index < unit.source.blocks.length; index += 1) {
+      const previousBlock = unit.source.blocks[index - 1];
+      const currentBlock = unit.source.blocks[index];
+      if (!isContinuation(previousBlock, currentBlock)) continue;
+      relations.push({
+        relationId: `AUR-${sha256(
+          `${A_SOURCE_UNIT_PLAN_CONTRACT_ID}:${unit.unitId}:${previousBlock.blockId}:${currentBlock.blockId}:CONTINUES_ON_NEXT_PAGE`
+        ).slice(0, 24)}`,
+        type: "CONTINUES_ON_NEXT_PAGE",
+        fromUnitId: unit.unitId,
+        toUnitId: unit.unitId,
+        fromBlockId: previousBlock.blockId,
+        toBlockId: currentBlock.blockId,
+      });
+    }
   for (let index = 1; index < contentUnits.length; index += 1) {
     const previous = contentUnits[index - 1];
     const currentUnit = contentUnits[index];
@@ -314,7 +350,7 @@ function planDocumentUnits({ document, artifact, ledger }) {
     const currentBlock = currentUnit.source.blocks[0];
     if (
       previousBlock.physicalPageNumber !== currentBlock.physicalPageNumber &&
-      isContinuation(previousBlock, currentBlock, artifact)
+      isContinuation(previousBlock, currentBlock)
     )
       relations.push({
         relationId: `AUR-${sha256(

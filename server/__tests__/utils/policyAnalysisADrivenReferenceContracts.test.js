@@ -387,6 +387,51 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(requirement.sourceSpans).toHaveLength(2);
   });
 
+  test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDECKUNG\nZusätzlich versichert sind:\n- Bewegliche Gegenstände sowie unbewegliche",
+        "Seite 2\nGegenstände auf dem Grundstück wie Laternen und Schwimmbecken;\n- Inhalt von Heizöltanks;\n",
+      ],
+      "c"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const continued = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Bewegliche Gegenstände")
+    );
+    const followingList = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Inhalt von Heizöltanks")
+    );
+    const pageFurniture = plan.units.find(
+      ({ unitKind, source: unitSource }) =>
+        unitKind === "METADATA" && unitSource.combinedText.includes("Seite 2")
+    );
+    const continuation = plan.relations.find(
+      ({ type, fromUnitId, toUnitId }) =>
+        type === "CONTINUES_ON_NEXT_PAGE" &&
+        fromUnitId === continued.unitId &&
+        toUnitId === continued.unitId
+    );
+
+    expect(continued.unitKind).toBe("LIST");
+    expect(continued.source.physicalPages).toEqual([1, 2]);
+    expect(continued.source.combinedText).toContain(
+      "Gegenstände auf dem Grundstück"
+    );
+    expect(continued.source.contiguous).toBe(false);
+    expect(pageFurniture.source.blockIds).toHaveLength(1);
+    expect(continuation.fromBlockId).toBe(continued.source.blockIds[0]);
+    expect(continuation.toBlockId).toBe(continued.source.blockIds[1]);
+    expect(followingList.governingContext.combinedText).toContain(
+      "Zusätzlich versichert sind"
+    );
+    expect(
+      plan.units.flatMap(({ source: unitSource }) => unitSource.blockIds)
+    ).toHaveLength(plan.summary.sourceBlocks);
+  });
+
   test("materializes multiple requirements from one bounded unit and owns final IDs", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Garage und Carport.\n"],
