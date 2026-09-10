@@ -24,6 +24,9 @@ const {
 const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
+const {
+  controlledQueryVariants,
+} = require("../../utils/policyAnalysis/counterpartQueryVariants");
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -315,6 +318,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
+  test("expands only controlled retrieval terminology families", () => {
+    expect(controlledQueryVariants(["Selbstbehalt"])).toEqual(
+      expect.arrayContaining(["eigenbehalt", "franchise"])
+    );
+    expect(controlledQueryVariants(["Hagelschaden"])).toEqual([]);
+  });
+
   test("ranks every Dinghy query deterministically inside one B document", () => {
     const clauses = [
       { clauseBoundaryId: "later", documentStart: 20 },
@@ -357,6 +367,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         },
       ],
     });
+    expect(
+      plan.packages.some(({ query }) =>
+        query.controlledVariants.includes("gedeckt")
+      )
+    ).toBe(true);
     const documentForClauses = {
       uuid: "b-doc",
       sha256: bArtifact.fingerprint,

@@ -4,12 +4,13 @@ const {
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
+const { controlledQueryVariants } = require("./counterpartQueryVariants");
 
 // Builds the complete component x B-document retrieval matrix for the
 // A-driven reference mode. This layer only plans searches; it cannot create
 // candidates or make semantic decisions.
 const A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V2";
+  "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V3";
 const A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID =
   "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V2";
 const A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID =
@@ -150,6 +151,10 @@ function buildADrivenCounterpartSearchPlan({
         component.qualifier,
         component.coverageEffect,
       ]);
+      const controlledVariants = controlledQueryVariants([
+        ...componentQueryValues,
+        ...contextLabels,
+      ]);
       const semanticChecks = requirement.components.map((checkedComponent) => ({
         checkId: `ASC-${sha256(
           `${requirement.requirementId}:${component.componentId}:${checkedComponent.componentId}`
@@ -198,10 +203,12 @@ function buildADrivenCounterpartSearchPlan({
           query: {
             focalText: normalizedText(component.label),
             focalValues: componentQueryValues,
+            controlledVariants,
             contextText: normalizedText(contextLabels.join(" | ")),
             lexicalTerms: queryTerms([
               ...componentQueryValues,
               ...contextLabels,
+              ...controlledVariants,
             ]),
             structurePath: [...requirement.structurePath],
             semanticComponent: {
