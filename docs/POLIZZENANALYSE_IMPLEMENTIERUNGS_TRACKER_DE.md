@@ -7005,9 +7005,36 @@ besteht 67/67 Komponenten sowie 67/67 Kontrollen. Wegen der neuen Produktlogik
 werden vollständige technische Gates und LF-1+9 auf einem neuen exakten RC
 wiederholt.
 
-Status: `IMPLEMENTIERT, 1+1-NICHTREGRESSION UND FIRST-RISK-CANARY BESTANDEN;
-TECHNISCHE GATES AUF NEUEM RC, FRISCHER LF-1+9-LAUF, TAG UND DEPLOYMENT NOCH
-OFFEN`.
+Auf RC2 `e8e9e94862acf1e48a7f8110382af084e5d37439` bestanden anschließend
+190/190 Suites und 2.570/2.570 Tests, alle Lints, Frontend-Build,
+Prisma-Validierung und Installer-Suite. Der frische cachefreie Ersatzlauf
+`df7d7179-1c49-412b-b2ff-0ec6b1fdc52f` schloss in 44:30,203 mit 10/10
+Dokumenten und 117/117 Kategorieprüfungen ab. Die private Verteilung lautet
+40 gefunden, 91 teilweise gefunden, 151 gegenstückseitig unklar und eine
+Referenzzeile unklar; öffentlich werden 148 `Gefunden` und 135
+`Nicht gefunden` dargestellt.
+
+Alle 13 geplanten neuen Fundstellen wurden im Endartefakt bestätigt. Der
+einzige öffentliche Rückgang `ST-07` ist eine Präzisionskorrektur: Der alte
+Beleg nannte ein Regenablaufrohr in einer Außenmauer und belegte keinen
+Fassadenschaden. `LW-G-15` und `HP-18` behalten ihre Fundstellen, zeigen aber
+nun korrekt den dokumentierten Einschluss statt des alten falschen
+Ausschlusses. Weitere interne Outcomeänderungen betreffen bereits vorher
+öffentlich sichtbare Quellen und sind wegen der differenzierten privaten
+Diagnose kein zusätzlicher Kundenfund.
+
+Der Lauf verwendete 550 Modellaufrufe, 1.227.028 Prompt-Tokens und 30.618
+Completion-Tokens bei null Cachetreffern und null Cache-Schreibfehlern. Das
+sind 86 Aufrufe und 17:02,572 Laufzeit weniger als V3.7.3. Strikter
+Artefakt-/Export-/API-Readback, 283-A-Zeilen-Parität und die 283×14-XLSX
+bestanden. Das Source-Ledger blieb bytegleich; im semantischen Manifest
+änderten sich ausschließlich elf beabsichtigte Dauer-/Fristrollen. Die
+Kundenkopie `LF-IMMO-Referenzvergleich-V3.7.4-2026-09-10.xlsx` hat SHA-256
+`972d6a7db623d71d1f98f32e2e80effde786e9d82421bb4699498e6dbd982b8c`.
+
+Status: `RELEASEFÄHIG; IMPLEMENTIERUNG, TECHNISCHE GATES, 1+1-
+NICHTREGRESSION, FRISCHER 1+9-ENDLAUF UND KUNDEN-XLSX BESTANDEN; ANNOTIERTER
+TAG, DEPLOYMENT UND DOCTOR FOLGEN NACH DIESEM DOKUMENTATIONSCOMMIT`.
 
 Beweisgrenze: bekannte LF-/WEVIG-Entwicklungsdokumente, keine vollständige
 fachliche Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein
