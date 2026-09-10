@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V7";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V8";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -211,10 +211,10 @@ function validateComponent(component, unit) {
   )
     return { value: null, code: "COMPONENT_SOURCE_TEXT_INVALID" };
   const effect = text(component?.coverageEffect);
-  if (effect && !COVERAGE_EFFECTS.has(effect))
-    return { value: null, code: "COVERAGE_EFFECT_VALUE_INVALID" };
   if (effect && type !== "COVERAGE_EFFECT")
     return { value: null, code: "COVERAGE_EFFECT_TYPE_INVALID" };
+  if (effect && !COVERAGE_EFFECTS.has(effect))
+    return { value: null, code: "COVERAGE_EFFECT_VALUE_INVALID" };
   if (type === "COVERAGE_EFFECT" && !effect)
     return { value: null, code: "COVERAGE_EFFECT_VALUE_MISSING" };
   return {
@@ -415,8 +415,8 @@ function requiredComponentGroups(semanticClasses) {
 }
 
 function logicalSegmentDiagnostics(unit, requirements) {
-  return (unit.logicalSourceSegments || []).flatMap((segment) => {
-    if (segment.blockIds.length < 2) return [];
+  const segments = unit.logicalSourceSegments || [];
+  const segmentDiagnostics = segments.flatMap((segment) => {
     const overlapping = requirements.filter(({ sourceBlockIds }) =>
       segment.blockIds.some((blockId) => sourceBlockIds.includes(blockId))
     );
@@ -439,6 +439,21 @@ function logicalSegmentDiagnostics(unit, requirements) {
       },
     ];
   });
+  const mergeDiagnostics = requirements.flatMap((requirement) => {
+    const overlappingSegments = segments.filter(({ blockIds }) =>
+      blockIds.some((blockId) => requirement.sourceBlockIds.includes(blockId))
+    );
+    if (overlappingSegments.length <= 1) return [];
+    return [
+      {
+        code: "LIST_SOURCE_SEGMENTS_MERGED",
+        unitId: unit.unitId,
+        requirementId: requirement.requirementId,
+        segmentIds: overlappingSegments.map(({ segmentId }) => segmentId),
+      },
+    ];
+  });
+  return [...segmentDiagnostics, ...mergeDiagnostics];
 }
 
 function classifyUnit(unit, records) {

@@ -391,7 +391,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const source = artifact(
       [
         "Seite 1\nDECKUNG\nZusätzlich sind mitversichert, wenn der Versicherungsnehmer ersatzpflichtig ist, Schäden durch\n- Bewegliche Gegenstände sowie unbewegliche",
-        "Seite 2\nGegenstände auf dem Grundstück wie Laternen und Schwimmbecken;\n- Inhalt von Heizöltanks;\n",
+        "Seite 2\nGegenstände auf dem Grundstück wie Laternen und Schwimmbecken;\n- Inhalt von Heizöltanks;\n- Erdkabel;\n",
       ],
       "c"
     );
@@ -437,6 +437,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(followingList.governingContext.combinedText).toContain(
       "Zusätzlich sind mitversichert"
     );
+    expect(followingList.logicalSourceSegments).toHaveLength(2);
     expect(
       plan.units.flatMap(({ source: unitSource }) => unitSource.blockIds)
     ).toHaveLength(plan.summary.sourceBlocks);
@@ -493,6 +494,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         ({ unitId }) => unitId === continued.unitId
       ).terminalDisposition
     ).toBe("OPERATIVE_MAPPED");
+
+    const mergedListManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: followingList.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: followingList.source.blocks[0].exactText,
+              components: followingList.source.blocks.map((block) => ({
+                type: "OBJECT",
+                label: block.exactText,
+                sourceBlockIds: [block.blockId],
+              })),
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      mergedListManifest.unitTerminals
+        .find(({ unitId }) => unitId === followingList.unitId)
+        .diagnostics.map(({ code }) => code)
+    ).toContain("LIST_SOURCE_SEGMENTS_MERGED");
   });
 
   test("does not report an unpunctuated page footer as a heading continuation", () => {
