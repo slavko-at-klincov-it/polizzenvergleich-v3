@@ -854,7 +854,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(rejected.summary.unresolvedUnits).toBe(1);
     expect(rejected.diagnostics).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "COMPONENT_SOURCE_TEXT_INVALID" }),
+        expect.objectContaining({
+          code: "COMPONENT_SOURCE_TEXT_INVALID",
+          blockIds: [unit.source.blockIds[1]],
+        }),
       ])
     );
 

@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V10";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -180,6 +180,19 @@ function canonicalComponentSourceBlockIds(unit, declaredBlockIds, values) {
     .filter((blockId) => selected.has(blockId));
 }
 
+function missingComponentSourceBlockIds(unit, declaredBlockIds, values) {
+  const ranges = values.map((value) =>
+    minimalSourceRange(unit, value, declaredBlockIds)
+  );
+  if (ranges.some((ids) => !ids)) return null;
+  const declared = new Set(declaredBlockIds);
+  return [
+    ...new Set(
+      ranges.flatMap((ids) => ids.filter((blockId) => !declared.has(blockId)))
+    ),
+  ];
+}
+
 function validateComponent(component, unit) {
   const type = text(component?.type);
   const label = text(component?.label);
@@ -197,10 +210,26 @@ function validateComponent(component, unit) {
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
+  const componentValues = [label, rawValue, unitValue, qualifier].filter(
+    Boolean
+  );
+  const missingSourceBlockIds = missingComponentSourceBlockIds(
+    unit,
+    sourceBlockIds,
+    componentValues
+  );
+  if (missingSourceBlockIds === null || missingSourceBlockIds.length)
+    return {
+      value: null,
+      code: "COMPONENT_SOURCE_TEXT_INVALID",
+      ...(missingSourceBlockIds?.length
+        ? { blockIds: missingSourceBlockIds }
+        : {}),
+    };
   const canonicalSourceBlockIds = canonicalComponentSourceBlockIds(
     unit,
     sourceBlockIds,
-    [label, rawValue, unitValue, qualifier].filter(Boolean)
+    componentValues
   );
   if (type === "VALUE_AND_UNIT" && !rawValue)
     return { value: null, code: "VALUE_AND_UNIT_RAW_VALUE_MISSING" };
@@ -238,8 +267,18 @@ function validateRequirement(draft, unit, requirementIndex) {
   const componentResults = Array.isArray(draft?.components)
     ? draft.components.map((component) => validateComponent(component, unit))
     : [];
-  const diagnostics = componentResults.flatMap((result, componentIndex) =>
-    result.code ? [{ code: result.code, requirementIndex, componentIndex }] : []
+  const diagnostics = componentResults.flatMap(
+    ({ code, blockIds }, componentIndex) =>
+      code
+        ? [
+            {
+              code,
+              requirementIndex,
+              componentIndex,
+              ...(blockIds ? { blockIds } : {}),
+            },
+          ]
+        : []
   );
   const components = componentResults.map(({ value }) => value);
   if (
