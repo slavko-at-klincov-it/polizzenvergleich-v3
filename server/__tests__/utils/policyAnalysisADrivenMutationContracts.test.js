@@ -21,6 +21,9 @@ const {
 const {
   rankedClauses,
 } = require("../../scripts/qa/runADrivenReferenceDinghyRetrieval.cjs");
+const {
+  buildADrivenCounterpartDecisionPlan,
+} = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -421,6 +424,33 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
           channelCandidateCounts.DINGHY === 1 &&
           channelProvenance.DINGHY.embeddingContractSha256 === "e".repeat(64) &&
           candidates.some(({ channels }) => channels.includes("DINGHY"))
+      )
+    ).toBe(true);
+
+    const execution = materializeADrivenCounterpartSearchExecution({
+      plan,
+      retrieval: full,
+    });
+    const decisionPlan = buildADrivenCounterpartDecisionPlan(execution, {
+      maximumPackages: 1,
+      maximumCharacters: 14_000,
+    });
+    expect(decisionPlan.summary).toEqual({
+      plannedPackages: plan.packages.length,
+      modelPackages: plan.packages.length,
+      deterministicEmptyCandidatePackages: 0,
+      batches: plan.packages.length,
+    });
+    expect(
+      decisionPlan.batches.every(
+        ({ packages }) =>
+          packages.length === 1 &&
+          packages[0].candidates.every(({ sourceSpans }) =>
+            sourceSpans.every(
+              ({ exactText, exactTextSha256 }) =>
+                /^[a-f0-9]{64}$/u.test(exactTextSha256) && exactText.length > 0
+            )
+          )
       )
     ).toBe(true);
 
