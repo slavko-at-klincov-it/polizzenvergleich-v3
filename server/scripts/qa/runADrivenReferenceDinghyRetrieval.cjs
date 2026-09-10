@@ -5,7 +5,6 @@ process.umask(0o077);
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { performance } = require("perf_hooks");
 const {
   buildADrivenCounterpartSearchPlan,
   materializeADrivenCounterpartSearchExecution,
