@@ -77,7 +77,8 @@ function text(value) {
 }
 
 function uniqueStrings(values) {
-  if (!Array.isArray(values) || values.some((value) => !text(value))) return null;
+  if (!Array.isArray(values) || values.some((value) => !text(value)))
+    return null;
   const normalized = values.map(text);
   return new Set(normalized).size === normalized.length ? normalized : null;
 }
@@ -158,9 +159,10 @@ function validateRequirement(draft, unit) {
     components.some((item) => !item)
   )
     return null;
-  const componentKeys = components.map((component) => stableStringify(component));
-  if (new Set(componentKeys).size !== components.length)
-    return null;
+  const componentKeys = components.map((component) =>
+    stableStringify(component)
+  );
+  if (new Set(componentKeys).size !== components.length) return null;
   const sourceBlockIds = [
     ...new Set(components.flatMap((component) => component.sourceBlockIds)),
   ];
@@ -187,9 +189,10 @@ function validateRequirement(draft, unit) {
         exactText,
         exactTextSha256,
       }) => ({
-        spanId: `AS-${sha256(
-          `${unit.source.documentSha256}:${blockId}`
-        ).slice(0, 24)}`,
+        spanId: `AS-${sha256(`${unit.source.documentSha256}:${blockId}`).slice(
+          0,
+          24
+        )}`,
         documentUuid: unit.source.documentUuid,
         documentSha256: unit.source.documentSha256,
         blockId,
@@ -218,7 +221,10 @@ function finalizeRequirements(unit, drafts) {
       left.sourceTextOrder - right.sourceTextOrder ||
       stableStringify(left).localeCompare(stableStringify(right))
   );
-  if (new Set(ordered.map((item) => stableStringify(item))).size !== ordered.length)
+  if (
+    new Set(ordered.map((item) => stableStringify(item))).size !==
+    ordered.length
+  )
     return null;
   return ordered.map((draft, atomOrder) => {
     const requirementIdentity = {
@@ -316,7 +322,9 @@ function classifyUnit(unit, records) {
       primaryClass: "UNRESOLVED",
       semanticClasses: ["UNRESOLVED"],
       requirements: [],
-      diagnostics: [{ code: "INVALID_UNIT_CLASSIFICATION", unitId: unit.unitId }],
+      diagnostics: [
+        { code: "INVALID_UNIT_CLASSIFICATION", unitId: unit.unitId },
+      ],
     };
   if (primaryClass === "UNRESOLVED" || semanticClasses.includes("UNRESOLVED"))
     return {
@@ -369,9 +377,9 @@ function classifyUnit(unit, records) {
       components.map(({ type }) => type)
     ) || []
   );
-  const missingRequiredTypes = [...requiredComponentTypes(semanticClasses)].filter(
-    (type) => !observedTypes.has(type)
-  );
+  const missingRequiredTypes = [
+    ...requiredComponentTypes(semanticClasses),
+  ].filter((type) => !observedTypes.has(type));
   const exclusionEffects = requirements?.flatMap(({ components }) =>
     components
       .filter(({ type }) => type === "COVERAGE_EFFECT")
@@ -402,7 +410,10 @@ function classifyUnit(unit, records) {
       semanticClasses: ["UNRESOLVED"],
       requirements: [],
       diagnostics: [
-        { code: "OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE", unitId: unit.unitId },
+        {
+          code: "OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE",
+          unitId: unit.unitId,
+        },
       ],
     };
   return {
@@ -430,8 +441,8 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
     unit,
     classification: classifyUnit(unit, indexed.byId.get(unit.unitId)),
   }));
-  const requirements = classifications.flatMap(({ classification }) =>
-    classification.requirements
+  const requirements = classifications.flatMap(
+    ({ classification }) => classification.requirements
   );
   const unitTerminals = classifications.map(({ unit, classification }) => ({
     unitId: unit.unitId,
@@ -464,8 +475,7 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
       blockTerminals.map(
         ({ documentUuid, blockId }) => `${documentUuid}:${blockId}`
       )
-    ).size !==
-      blockTerminals.length
+    ).size !== blockTerminals.length
   )
     throw manifestError("LF_A_BLOCK_TERMINAL_COVERAGE_INVALID");
 
@@ -509,8 +519,9 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
         (sum, requirement) => sum + requirement.components.length,
         0
       ),
-      reviewRequiredBlocks: blockTerminals.filter(({ reviewRequired }) => reviewRequired)
-        .length,
+      reviewRequiredBlocks: blockTerminals.filter(
+        ({ reviewRequired }) => reviewRequired
+      ).length,
       allBlocksTerminal:
         blockTerminals.length === plan.summary.sourceBlocks &&
         blockTerminals.every(

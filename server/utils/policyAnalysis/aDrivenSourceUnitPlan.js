@@ -83,7 +83,9 @@ function unitKind(blocks) {
     )
   )
     return "LIST";
-  if (blocks.every(({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"))
+  if (
+    blocks.every(({ structuralKind }) => structuralKind === "HEADING_CANDIDATE")
+  )
     return "HEADING";
   return "CLAUSE";
 }
@@ -184,7 +186,9 @@ function planDocumentUnits({ document, artifact, ledger }) {
           exactTextSha256,
         })
       ),
-      physicalPages: [...new Set(blocks.map(({ physicalPageNumber }) => physicalPageNumber))],
+      physicalPages: [
+        ...new Set(blocks.map(({ physicalPageNumber }) => physicalPageNumber)),
+      ],
       documentStart: blocks[0].documentStart,
       documentEnd: blocks[blocks.length - 1].documentEnd,
       combinedText,
@@ -212,10 +216,14 @@ function planDocumentUnits({ document, artifact, ledger }) {
       source,
       semanticAuthority: false,
       initialDisposition:
-        kind === "METADATA" ? "NON_OPERATIVE_TERMINAL" : "PENDING_CLASSIFICATION",
+        kind === "METADATA"
+          ? "NON_OPERATIVE_TERMINAL"
+          : "PENDING_CLASSIFICATION",
     };
   });
-  const contentUnits = units.filter(({ unitKind: kind }) => kind !== "METADATA");
+  const contentUnits = units.filter(
+    ({ unitKind: kind }) => kind !== "METADATA"
+  );
   const relations = [];
   for (let index = 1; index < contentUnits.length; index += 1) {
     const previous = contentUnits[index - 1];
@@ -298,10 +306,12 @@ function buildADrivenSourceUnitPlan({ documents } = {}) {
       plannedUnits: units.length,
       continuationRelations: relations.length,
       pendingUnits: units.filter(
-        ({ initialDisposition }) => initialDisposition === "PENDING_CLASSIFICATION"
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
       ).length,
       terminalNonOperativeUnits: units.filter(
-        ({ initialDisposition }) => initialDisposition === "NON_OPERATIVE_TERMINAL"
+        ({ initialDisposition }) =>
+          initialDisposition === "NON_OPERATIVE_TERMINAL"
       ).length,
     },
   };

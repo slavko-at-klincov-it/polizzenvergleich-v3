@@ -223,9 +223,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     ]);
     const plan = buildADrivenCounterpartSearchPlan({
       manifest,
-      documents: [
-        { uuid: "b-doc", position: 0, sha256: "b".repeat(64) },
-      ],
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
     });
     const exactText = "Fahrzeuge sind versichert.";
     const candidate = {
@@ -273,9 +271,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     ]);
     const plan = buildADrivenCounterpartSearchPlan({
       manifest,
-      documents: [
-        { uuid: "b-doc", position: 0, sha256: "b".repeat(64) },
-      ],
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
     });
     const execution = materializeADrivenCounterpartSearchExecution({
       plan,

@@ -156,7 +156,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     expect(batches.summary.expectedUnits).toBe(left.summary.pendingUnits);
     expect(
-      batches.batches.every(({ expectedUnitIds }) => expectedUnitIds.length <= 2)
+      batches.batches.every(
+        ({ expectedUnitIds }) => expectedUnitIds.length <= 2
+      )
     ).toBe(true);
     expect(
       batches.batches.flatMap(({ expectedUnitIds }) => expectedUnitIds)
@@ -173,7 +175,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     const clause = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
     const responses = plan.units
-      .filter(({ initialDisposition }) => initialDisposition !== "NON_OPERATIVE_TERMINAL")
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition !== "NON_OPERATIVE_TERMINAL"
+      )
       .map(validResponse);
     const response = responses.find(({ unitId }) => unitId === clause.unitId);
     const blockId = clause.source.blocks.find(({ exactText }) =>
@@ -194,9 +199,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const manifest = buildADrivenSemanticManifest({ plan, responses });
     const reorderedResponses = JSON.parse(JSON.stringify(responses));
-    reorderedResponses.find(
-      ({ unitId }) => unitId === clause.unitId
-    ).requirements.reverse();
+    reorderedResponses
+      .find(({ unitId }) => unitId === clause.unitId)
+      .requirements.reverse();
     const reordered = buildADrivenSemanticManifest({
       plan,
       responses: reorderedResponses.reverse(),
@@ -210,23 +215,24 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       )
     ).toHaveLength(2);
     expect(
-      manifest.requirements.every(({ requirementId }) => /^AR-[a-f0-9]{24}$/u.test(requirementId))
+      manifest.requirements.every(({ requirementId }) =>
+        /^AR-[a-f0-9]{24}$/u.test(requirementId)
+      )
     ).toBe(true);
     expect(reordered.manifestSha256).toBe(manifest.manifestSha256);
   });
 
   test("turns missing, duplicate, unknown and invalid model IDs into visible unresolved state", () => {
     const source = artifact(
-      [
-        "Seite 1\nDeckung\nVersichert sind Gebäude.\n\nSelbstbehalt EUR 500.\n",
-      ],
+      ["Seite 1\nDeckung\nVersichert sind Gebäude.\n\nSelbstbehalt EUR 500.\n"],
       "d"
     );
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });
     const pending = plan.units.filter(
-      ({ initialDisposition }) => initialDisposition === "PENDING_CLASSIFICATION"
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
     );
     const duplicate = validResponse(pending[0]);
     const manifest = buildADrivenSemanticManifest({
@@ -257,7 +263,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       documents: [document("source", 0, source)],
     });
     const unit = plan.units.find(
-      ({ initialDisposition }) => initialDisposition === "PENDING_CLASSIFICATION"
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
     );
     const manifest = buildADrivenSemanticManifest({
       plan,
@@ -288,11 +295,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       documents: [document("source", 0, source)],
     });
     const responses = plan.units
-      .filter(({ initialDisposition }) => initialDisposition !== "NON_OPERATIVE_TERMINAL")
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition !== "NON_OPERATIVE_TERMINAL"
+      )
       .map(validResponse);
     const manifest = buildADrivenSemanticManifest({ plan, responses });
     const dynamic = manifest.requirements[0];
-    const dynamicObject = dynamic.components.find(({ type }) => type === "OBJECT");
+    const dynamicObject = dynamic.components.find(
+      ({ type }) => type === "OBJECT"
+    );
     const legacyManifest = {
       manifestSha256: "f".repeat(64),
       categories: [
@@ -353,7 +365,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
-  const pageContent = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const pageContent =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const documents = [
     {
       uuid: "b-doc",
@@ -406,7 +419,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
     expect(result.inputCandidates).toBe(3);
     expect(result.compactCandidates).toHaveLength(2);
     expect(
-      result.compactCandidates.find(({ clauseBoundaryId }) => clauseBoundaryId === "clause-1")
+      result.compactCandidates.find(
+        ({ clauseBoundaryId }) => clauseBoundaryId === "clause-1"
+      )
     ).toMatchObject({
       memberCandidateIds: ["one", "two"],
       channels: ["BM25", "DINGHY"],
@@ -417,16 +432,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
   test("rejects a candidate whose quote does not match the server document", () => {
     const forged = candidate("forged", 10, 30);
     forged.exactText = "erfundene Fundstelle";
-    expect(() =>
-      compactReferenceCandidates([forged], { documents })
-    ).toThrow("LF_COUNTERPART_CANDIDATE_SOURCE_INVALID");
+    expect(() => compactReferenceCandidates([forged], { documents })).toThrow(
+      "LF_COUNTERPART_CANDIDATE_SOURCE_INVALID"
+    );
   });
 
   test("accepts only server-owned candidates and keeps bad model output unresolved", () => {
-    const candidates = compactReferenceCandidates(
-      [candidate("one", 10, 30)],
-      { documents }
-    ).compactCandidates;
+    const candidates = compactReferenceCandidates([candidate("one", 10, 30)], {
+      documents,
+    }).compactCandidates;
     const packages = [
       {
         packageId: "package-1",
@@ -550,9 +564,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     const manifest = searchEligibleManifest();
     const searchPlan = buildADrivenCounterpartSearchPlan({
       manifest,
-      documents: [
-        { uuid: "b-doc", position: 0, sha256: "b".repeat(64) },
-      ],
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
     });
     const exactText = "Gebäude sind versichert.";
     const exactTextSha256 = crypto
@@ -614,9 +626,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       sideBOnlyRows: 0,
       binaryCustomerStatus: true,
     });
-    expect(new Set(result.rows.map(({ customerStatus }) => customerStatus))).toEqual(
-      new Set(["FOUND", "NOT_FOUND"])
-    );
+    expect(
+      new Set(result.rows.map(({ customerStatus }) => customerStatus))
+    ).toEqual(new Set(["FOUND", "NOT_FOUND"]));
     const unresolved = validateCounterpartDecisions({
       packages: searchExecution.packages,
       responses: responses.slice(1),

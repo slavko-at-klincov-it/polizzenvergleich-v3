@@ -49,7 +49,8 @@ function argumentsFrom(argv) {
 function readJson(file, code) {
   if (!fs.existsSync(file)) throw new Error(`${code}_MISSING`);
   const stat = fs.lstatSync(file);
-  if (stat.isSymbolicLink() || !stat.isFile()) throw new Error(`${code}_INVALID`);
+  if (stat.isSymbolicLink() || !stat.isFile())
+    throw new Error(`${code}_INVALID`);
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
@@ -87,7 +88,10 @@ function loadADocuments(runRoot) {
     .sort((left, right) => left.position - right.position)
     .map((document) => {
       const artifact = readJson(
-        path.join(documentDirectory(runRoot, document), "document.private.json"),
+        path.join(
+          documentDirectory(runRoot, document),
+          "document.private.json"
+        ),
         "LF_A_SHADOW_DOCUMENT_ARTIFACT"
       );
       return {
@@ -102,7 +106,8 @@ function loadADocuments(runRoot) {
 
 try {
   const args = argumentsFrom(process.argv.slice(2));
-  if (fs.existsSync(args.output)) fail(`Ausgabe existiert bereits: ${args.output}`);
+  if (fs.existsSync(args.output))
+    fail(`Ausgabe existiert bereits: ${args.output}`);
   const sourceDocuments = loadADocuments(args.runRoot);
   const plan = buildADrivenSourceUnitPlan({ documents: sourceDocuments });
   const classificationBatches = buildADrivenClassificationBatches(plan);
@@ -136,7 +141,10 @@ try {
       ),
       ledger
     );
-  writePrivateJson(path.join(args.output, "source-unit-plan.private.json"), plan);
+  writePrivateJson(
+    path.join(args.output, "source-unit-plan.private.json"),
+    plan
+  );
   writePrivateJson(
     path.join(args.output, "classification-batches.private.json"),
     classificationBatches
@@ -164,7 +172,8 @@ try {
     unresolvedUnits: dynamicManifest.summary.unresolvedUnits,
     reviewRequiredBlocks: dynamicManifest.summary.reviewRequiredBlocks,
     responseIntegrityStatus: dynamicManifest.summary.responseIntegrityStatus,
-    legacyRequirements: legacyCrosswalkDraft?.summary.legacyRequirements ?? null,
+    legacyRequirements:
+      legacyCrosswalkDraft?.summary.legacyRequirements ?? null,
     legacyComponents: legacyCrosswalkDraft?.summary.legacyComponents ?? null,
     legacyCoveredComponents:
       legacyCrosswalkDraft?.summary.coveredComponents ?? null,

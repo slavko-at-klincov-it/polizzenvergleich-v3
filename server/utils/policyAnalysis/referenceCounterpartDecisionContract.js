@@ -56,8 +56,11 @@ function validCompactCandidate(candidate) {
 
 function normalizedUnique(values) {
   if (!Array.isArray(values)) return null;
-  const normalized = values.filter((value) => typeof value === "string" && value);
-  return normalized.length === values.length && new Set(normalized).size === values.length
+  const normalized = values.filter(
+    (value) => typeof value === "string" && value
+  );
+  return normalized.length === values.length &&
+    new Set(normalized).size === values.length
     ? normalized
     : null;
 }
@@ -70,8 +73,12 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
   const packageContracts = new Map();
   for (const item of packages) {
     const requiredDimensions = normalizedUnique(item?.requiredDimensions);
-    const requiredChannels = normalizedUnique(item?.searchCoverage?.requiredChannels);
-    const completedChannels = normalizedUnique(item?.searchCoverage?.completedChannels);
+    const requiredChannels = normalizedUnique(
+      item?.searchCoverage?.requiredChannels
+    );
+    const completedChannels = normalizedUnique(
+      item?.searchCoverage?.completedChannels
+    );
     if (
       typeof item?.packageId !== "string" ||
       !item.packageId ||
@@ -104,7 +111,9 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
       requiredDimensions,
       searchComplete:
         item.searchCoverage.status === "COMPLETE" &&
-        requiredChannels.every((channel) => completedChannels.includes(channel)),
+        requiredChannels.every((channel) =>
+          completedChannels.includes(channel)
+        ),
     });
   }
 
@@ -127,7 +136,9 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
   const results = packages.map((item) => {
     const records = responsesByPackage.get(item.packageId) || [];
     if (records.length !== 1) {
-      const code = records.length ? "DUPLICATE_PACKAGE_RESPONSE" : "MISSING_PACKAGE_RESPONSE";
+      const code = records.length
+        ? "DUPLICATE_PACKAGE_RESPONSE"
+        : "MISSING_PACKAGE_RESPONSE";
       diagnostics.push({ code, packageId: item.packageId });
       return {
         packageId: item.packageId,
@@ -167,7 +178,8 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
       new Set(selected).size !== selected.length ||
       selected.some((candidateId) => !allowed.has(candidateId)) ||
       (decision === "SUPPORTED" &&
-        (selected.length === 0 || outcomes.some((outcome) => outcome !== "MATCH"))) ||
+        (selected.length === 0 ||
+          outcomes.some((outcome) => outcome !== "MATCH"))) ||
       (decision === "CONTRADICTED" &&
         (selected.length === 0 ||
           !outcomes.includes("MISMATCH") ||
@@ -209,8 +221,9 @@ function validateCounterpartDecisions({ packages, responses = [] } = {}) {
       plannedPackages: packages.length,
       terminalPackages: results.filter(({ status }) => status === "TERMINAL")
         .length,
-      unresolvedPackages: results.filter(({ status }) => status === "UNRESOLVED")
-        .length,
+      unresolvedPackages: results.filter(
+        ({ status }) => status === "UNRESOLVED"
+      ).length,
     },
   };
   return {

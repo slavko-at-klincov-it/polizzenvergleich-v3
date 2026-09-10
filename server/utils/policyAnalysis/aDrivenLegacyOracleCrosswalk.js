@@ -1,13 +1,10 @@
 const crypto = require("crypto");
-const {
-  A_DYNAMIC_MANIFEST_CONTRACT_ID,
-} = require("./aDrivenSemanticManifest");
+const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
 
 // Compares a dynamic A manifest with the historical 283/631 oracle output.
 // The legacy manifest is an evaluation denominator only: it can propose
 // overlap candidates but can never create or amend production requirements.
-const LEGACY_CROSSWALK_CONTRACT_ID =
-  "LF_A_DYNAMIC_TO_LEGACY_283_CROSSWALK_V1";
+const LEGACY_CROSSWALK_CONTRACT_ID = "LF_A_DYNAMIC_TO_LEGACY_283_CROSSWALK_V1";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const COVERED_RELATIONS = new Set([
@@ -17,11 +14,7 @@ const COVERED_RELATIONS = new Set([
   "SPLIT_INTO_DYNAMIC",
   "MERGED_INTO_DYNAMIC",
 ]);
-const RELATIONS = new Set([
-  ...COVERED_RELATIONS,
-  "MISSING",
-  "AMBIGUOUS",
-]);
+const RELATIONS = new Set([...COVERED_RELATIONS, "MISSING", "AMBIGUOUS"]);
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
   INSURED_OBJECT: ["OBJECT"],
   PERIL: ["PERIL_OR_CAUSE"],
@@ -100,7 +93,10 @@ function dynamicComponents(dynamicManifest) {
   );
 }
 
-function buildLegacyOracleCrosswalkDraft({ dynamicManifest, legacyManifest } = {}) {
+function buildLegacyOracleCrosswalkDraft({
+  dynamicManifest,
+  legacyManifest,
+} = {}) {
   const legacy = legacyComponents(legacyManifest);
   if (legacy.some(({ legacyAnalysisRowId }) => !legacyAnalysisRowId))
     throw crosswalkError("LF_LEGACY_ANALYSIS_ROW_ID_MISSING");
@@ -143,7 +139,11 @@ function buildLegacyOracleCrosswalkDraft({ dynamicManifest, legacyManifest } = {
   };
 }
 
-function validateLegacyOracleCrosswalk({ draft, dynamicManifest, decisions } = {}) {
+function validateLegacyOracleCrosswalk({
+  draft,
+  dynamicManifest,
+  decisions,
+} = {}) {
   if (
     draft?.contractId !== LEGACY_CROSSWALK_CONTRACT_ID ||
     draft.dynamicManifestSha256 !== dynamicManifest?.manifestSha256 ||
@@ -187,7 +187,13 @@ function validateLegacyOracleCrosswalk({ draft, dynamicManifest, decisions } = {
       )
     );
     const reviewerIds = Array.isArray(decision.reviewerIds)
-      ? [...new Set(decision.reviewerIds.filter((value) => typeof value === "string" && value))]
+      ? [
+          ...new Set(
+            decision.reviewerIds.filter(
+              (value) => typeof value === "string" && value
+            )
+          ),
+        ]
       : [];
     const allowedDynamicTypes =
       LEGACY_ROLE_TO_DYNAMIC_TYPES[record.legacyFactRole] || [];
@@ -199,7 +205,8 @@ function validateLegacyOracleCrosswalk({ draft, dynamicManifest, decisions } = {
     const cardinalityValid =
       (["EQUIVALENT", "REPHRASED_EQUIVALENT", "MOVED_EQUIVALENT"].includes(
         decision.relation
-      ) && targets.length === 1) ||
+      ) &&
+        targets.length === 1) ||
       (decision.relation === "SPLIT_INTO_DYNAMIC" && targets.length >= 2) ||
       (decision.relation === "MERGED_INTO_DYNAMIC" && targets.length === 1) ||
       (["MISSING", "AMBIGUOUS"].includes(decision.relation) &&
@@ -230,8 +237,9 @@ function validateLegacyOracleCrosswalk({ draft, dynamicManifest, decisions } = {
       reviewerIds,
     };
   });
-  const covered = records.filter(({ relation, semanticDecision }) =>
-    COVERED_RELATIONS.has(relation) && semanticDecision === "REVIEWED"
+  const covered = records.filter(
+    ({ relation, semanticDecision }) =>
+      COVERED_RELATIONS.has(relation) && semanticDecision === "REVIEWED"
   );
   const payload = {
     ...draft,
@@ -245,16 +253,18 @@ function validateLegacyOracleCrosswalk({ draft, dynamicManifest, decisions } = {
       coveredRequirements: new Set(
         covered.map(({ legacyRequirementId }) => legacyRequirementId)
       ).size,
-      missingComponents: records.filter(({ relation }) => relation === "MISSING")
-        .length,
-      ambiguousComponents: records.filter(({ relation }) => relation === "AMBIGUOUS")
-        .length,
+      missingComponents: records.filter(
+        ({ relation }) => relation === "MISSING"
+      ).length,
+      ambiguousComponents: records.filter(
+        ({ relation }) => relation === "AMBIGUOUS"
+      ).length,
       acceptanceReady:
         draft.summary.legacyRequirements === EXPECTED_LEGACY_REQUIREMENTS &&
         records.length === EXPECTED_LEGACY_COMPONENTS &&
         covered.length === records.length &&
-        new Set(covered.map(({ legacyRequirementId }) => legacyRequirementId)).size ===
-          draft.summary.legacyRequirements,
+        new Set(covered.map(({ legacyRequirementId }) => legacyRequirementId))
+          .size === draft.summary.legacyRequirements,
     },
   };
   return {

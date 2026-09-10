@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  A_SOURCE_UNIT_PLAN_CONTRACT_ID,
-} = require("./aDrivenSourceUnitPlan");
+const { A_SOURCE_UNIT_PLAN_CONTRACT_ID } = require("./aDrivenSourceUnitPlan");
 
 // Builds bounded, ID-complete classification/atomization requests for Qwen.
 // The prompt contains only server-planned source units. Model output remains

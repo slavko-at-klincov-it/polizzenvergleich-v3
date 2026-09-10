@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  A_DYNAMIC_MANIFEST_CONTRACT_ID,
-} = require("./aDrivenSemanticManifest");
+const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
 // Builds the complete component x B-document retrieval matrix for the
@@ -162,14 +160,19 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
             focalText: normalizedText(component.label),
             focalValues: componentQueryValues,
             contextText: normalizedText(contextLabels.join(" | ")),
-            lexicalTerms: queryTerms([...componentQueryValues, ...contextLabels]),
+            lexicalTerms: queryTerms([
+              ...componentQueryValues,
+              ...contextLabels,
+            ]),
             structurePath: [...requirement.structurePath],
             semanticComponent: {
               type: component.type,
               label: component.label,
               ...(component.rawValue ? { rawValue: component.rawValue } : {}),
               ...(component.unit ? { unit: component.unit } : {}),
-              ...(component.qualifier ? { qualifier: component.qualifier } : {}),
+              ...(component.qualifier
+                ? { qualifier: component.qualifier }
+                : {}),
               ...(component.coverageEffect
                 ? { coverageEffect: component.coverageEffect }
                 : {}),
@@ -188,7 +191,8 @@ function buildADrivenCounterpartSearchPlan({ manifest, documents } = {}) {
       }
     }
   }
-  const expectedPackages = manifest.summary.semanticComponents * documents.length;
+  const expectedPackages =
+    manifest.summary.semanticComponents * documents.length;
   if (
     packages.length !== expectedPackages ||
     new Set(packages.map(({ packageId }) => packageId)).size !== packages.length
@@ -239,7 +243,8 @@ function materializeADrivenCounterpartSearchExecution({
       !plannedIds.has(result?.packageId) ||
       indexed.has(result.packageId) ||
       !Array.isArray(result.completedChannels) ||
-      new Set(result.completedChannels).size !== result.completedChannels.length ||
+      new Set(result.completedChannels).size !==
+        result.completedChannels.length ||
       !Array.isArray(result.candidates)
     )
       throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_IDS_INVALID");

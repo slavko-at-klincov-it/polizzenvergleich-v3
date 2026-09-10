@@ -43,8 +43,7 @@ function validateCandidate(candidate, documentsByUuid) {
     ({ pageNumber }) => pageNumber === candidate.physicalPageNumber
   );
   const clauseBoundary = document?.clauseBoundaries?.find(
-    ({ clauseBoundaryId }) =>
-      clauseBoundaryId === candidate.clauseBoundaryId
+    ({ clauseBoundaryId }) => clauseBoundaryId === candidate.clauseBoundaryId
   );
   if (
     !document ||
@@ -57,8 +56,10 @@ function validateCandidate(candidate, documentsByUuid) {
     candidate.documentEnd > page.end ||
     candidate.documentStart < clauseBoundary.documentStart ||
     candidate.documentEnd > clauseBoundary.documentEnd ||
-    document.pageContent.slice(candidate.documentStart, candidate.documentEnd) !==
-      candidate.exactText ||
+    document.pageContent.slice(
+      candidate.documentStart,
+      candidate.documentEnd
+    ) !== candidate.exactText ||
     (candidate.exactTextSha256 &&
       candidate.exactTextSha256 !== sha256(candidate.exactText))
   )
@@ -149,8 +150,9 @@ function compactReferenceCandidates(
         ),
         physicalPages: [
           ...new Set(
-            active.members.flatMap(({ physicalPages = [], physicalPageNumber }) =>
-              physicalPages.length ? physicalPages : [physicalPageNumber]
+            active.members.flatMap(
+              ({ physicalPages = [], physicalPageNumber }) =>
+                physicalPages.length ? physicalPages : [physicalPageNumber]
             )
           ),
         ].filter(Number.isInteger),
@@ -192,7 +194,10 @@ function compactReferenceCandidates(
         candidate.documentStart <= active.documentEnd + maximumGap
       ) {
         active.members.push(candidate);
-        active.documentEnd = Math.max(active.documentEnd, candidate.documentEnd);
+        active.documentEnd = Math.max(
+          active.documentEnd,
+          candidate.documentEnd
+        );
       } else {
         flush();
         active = {

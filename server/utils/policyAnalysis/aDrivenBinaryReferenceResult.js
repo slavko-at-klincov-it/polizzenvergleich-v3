@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  A_DYNAMIC_MANIFEST_CONTRACT_ID,
-} = require("./aDrivenSemanticManifest");
+const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
 const {
   A_DRIVEN_COUNTERPART_SEARCH_EXECUTION_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
@@ -99,10 +97,15 @@ function buildADrivenBinaryReferenceResult({
       left.sourceOrder[2] - right.sourceOrder[2] ||
       left.requirementId.localeCompare(right.requirementId)
   )) {
-    for (const [componentOrder, component] of requirement.components.entries()) {
+    for (const [
+      componentOrder,
+      component,
+    ] of requirement.components.entries()) {
       const cells = packagesByComponent.get(component.componentId) || [];
       if (cells.length !== searchPlan.summary.documents)
-        throw resultError("LF_A_DRIVEN_BINARY_RESULT_COMPONENT_MATRIX_INCOMPLETE");
+        throw resultError(
+          "LF_A_DRIVEN_BINARY_RESULT_COMPONENT_MATRIX_INCOMPLETE"
+        );
       const documentFindings = cells
         .sort(
           (left, right) =>
