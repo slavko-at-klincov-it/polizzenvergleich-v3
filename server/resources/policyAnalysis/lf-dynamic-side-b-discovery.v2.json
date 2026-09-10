@@ -1,0 +1,218 @@
+{
+  "planId": "LF_DYNAMIC_SIDE_B_DISCOVERY_V2",
+  "semanticOracleId": "LF_IMMO_EXKLUSIVSCHUTZ_COMPLETE_2023_V1",
+  "targets": [
+    {
+      "requirementId": "PR-01",
+      "componentId": "applicability",
+      "conceptSearches": [
+        {
+          "id": "lr-pr01-new-or-converted-contract",
+          "requiredGroups": [
+            { "prefixes": ["neuvert", "neuantrag"] },
+            { "prefixes": ["konvert"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 360
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-03",
+      "componentId": "broker_condition",
+      "conceptSearches": [
+        {
+          "id": "lr-pr03-broker-administration",
+          "requiredGroups": [
+            { "prefixes": ["makler"] },
+            {
+              "prefixes": [
+                "betreu",
+                "schriftverkehr",
+                "korrespondenz",
+                "abwickl"
+              ]
+            }
+          ],
+          "maxLines": 2,
+          "maxChars": 420
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-04",
+      "componentId": "base_product",
+      "conceptSearches": [
+        {
+          "id": "lr-pr04-premium-product-variant",
+          "requiredGroups": [
+            { "prefixes": ["premium"] },
+            { "prefixes": ["produktvariant", "grundprodukt"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 360
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-05",
+      "componentId": "glass",
+      "additionalAliases": ["Glaspauschalversicherung"]
+    },
+    {
+      "requirementId": "PR-05",
+      "componentId": "liability",
+      "conceptSearches": [
+        {
+          "id": "lr-pr05-liability-insurance-line",
+          "requiredGroups": [
+            { "prefixes": ["haftpflichtversicher"] },
+            { "prefixes": ["sparte"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 260
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-06",
+      "componentId": "liability_sum",
+      "additionalAliases": ["Pauschalversicherungssumme"]
+    },
+    {
+      "requirementId": "PR-08",
+      "componentId": "additional_cover",
+      "conceptSearches": [
+        {
+          "id": "lr-pr08-framework-clauses-contract-content",
+          "requiredGroups": [
+            { "prefixes": ["rahmenvereinbar", "sonderklausel"] },
+            { "prefixes": ["vertragsinhalt", "vereinbart"] },
+            { "prefixes": ["allgemein", "grundvertrag"] }
+          ],
+          "maxLines": 3,
+          "maxChars": 620
+        }
+      ]
+    },
+    {
+      "requirementId": "VS-03",
+      "componentId": "extensions",
+      "additionalAliases": ["Baubestandteile und Gebäudezubehör"],
+      "conceptSearches": [
+        {
+          "id": "lr-vs03-fixed-building-exterior-elements",
+          "requiredGroups": [
+            { "prefixes": ["gebaeude"] },
+            { "prefixes": ["verbund"] },
+            { "prefixes": ["beschatt", "pergol", "rolllaed", "sichtschutz"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 520
+        }
+      ]
+    },
+    {
+      "requirementId": "VS-04",
+      "componentId": "building_installations",
+      "additionalAliases": [
+        "Haustechnische Anlagen",
+        "Gebäudeelektroinstallationen"
+      ]
+    },
+    {
+      "requirementId": "VS-18",
+      "componentId": "solar_pv",
+      "additionalAliases": ["Solar- und Photovoltaikanlagen"]
+    },
+    {
+      "requirementId": "VS-21",
+      "componentId": "meters_controls",
+      "conceptSearches": [
+        {
+          "id": "lr-vs21-switch-distribution-meter-devices",
+          "requiredGroups": [
+            { "prefixes": ["schalt"] },
+            { "prefixes": ["verteil"] },
+            { "prefixes": ["messgeraet"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 420
+        }
+      ]
+    },
+    {
+      "requirementId": "GL-18",
+      "componentId": "obstacle_costs",
+      "conceptSearches": [
+        {
+          "id": "lr-gl18-remove-and-reinstall-obstacles",
+          "requiredGroups": [
+            { "prefixes": ["beseitig", "entfern"] },
+            { "prefixes": ["wiederanbring"] },
+            { "prefixes": ["hindern"] }
+          ],
+          "maxLines": 2,
+          "maxChars": 420
+        }
+      ]
+    },
+    {
+      "requirementId": "GL-24",
+      "componentId": "surface_damage",
+      "additionalAliases": [
+        "Zerkratzen",
+        "Verschrammen",
+        "Absplittern",
+        "Erblinden der Verglasung"
+      ]
+    },
+    {
+      "requirementId": "HP-02",
+      "componentId": "legal_liability_trigger",
+      "additionalAliases": [
+        "gesetzlicher Haftpflichtbestimmungen privatrechtlichen Inhalts"
+      ]
+    },
+    {
+      "requirementId": "HP-02",
+      "componentId": "insured_risk_origin",
+      "additionalAliases": ["dem versicherten Risiko entspringt"]
+    },
+    {
+      "requirementId": "HP-X01",
+      "componentId": "insured_self",
+      "suppressedAliases": [
+        "Eigenschaden Versicherungsnehmer",
+        "Versicherungsnehmer selbst"
+      ],
+      "additionalAliases": [
+        "sich der Versicherungsnehmer selbst zufügt",
+        "sich der Versicherungnehmer selbst zufügt"
+      ]
+    },
+    {
+      "requirementId": "HP-X01",
+      "componentId": "household_members",
+      "additionalAliases": [
+        "mit ihm in häuslicher Gemeinschaft lebender Ehegatten oder Lebensgefährten",
+        "mit ihm in häuslicher Gemeinschaft lebenden Ehegatten oder Lebensgefährten"
+      ]
+    },
+    {
+      "requirementId": "GLT-02",
+      "componentId": "event_during_policy",
+      "additionalAliases": [
+        "Vorfall muss sich während der Wirksamkeit des Versicherungsschutzes ereignen"
+      ]
+    },
+    {
+      "requirementId": "GLT-05",
+      "componentId": "first_medical_diagnosis",
+      "additionalAliases": [
+        "erste Feststellung der Gesundheitsschädigung durch einen Arzt",
+        "ersten Feststellung der Gesundheitsschädigung durch einen Arzt"
+      ]
+    }
+  ]
+}

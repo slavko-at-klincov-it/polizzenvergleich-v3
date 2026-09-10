@@ -1,10 +1,11 @@
-const plan = require("../../resources/policyAnalysis/lf-dynamic-side-b-discovery.v1.json");
+const plan = require("../../resources/policyAnalysis/lf-dynamic-side-b-discovery.v2.json");
 const { sha256 } = require("../policyAnalysis/runIdentity");
 
 const ALLOWED_TARGET_KEYS = new Set([
   "requirementId",
   "componentId",
   "additionalAliases",
+  "suppressedAliases",
   "conceptSearches",
 ]);
 const ALLOWED_SEARCH_KEYS = new Set([
@@ -64,6 +65,22 @@ function validatedDiscoveryPlan(oracle) {
         target.additionalAliases.some((alias) => !nonEmptyString(alias)))
     )
       throw new Error(`LF_DYNAMIC_DISCOVERY_ALIASES_INVALID:${targetKey}`);
+    if (
+      target.suppressedAliases !== undefined &&
+      (!Array.isArray(target.suppressedAliases) ||
+        target.suppressedAliases.length === 0 ||
+        target.suppressedAliases.some((alias) => !nonEmptyString(alias)) ||
+        target.suppressedAliases.some(
+          (alias) =>
+            !(
+              requirement.components.find(({ id }) => id === target.componentId)
+                ?.aliases || []
+            ).includes(alias)
+        ))
+    )
+      throw new Error(
+        `LF_DYNAMIC_DISCOVERY_SUPPRESSED_ALIASES_INVALID:${targetKey}`
+      );
     if (
       target.conceptSearches !== undefined &&
       (!Array.isArray(target.conceptSearches) ||
@@ -137,7 +154,9 @@ function applySideBDiscovery({ oracle, requirementId, component }) {
     ...component,
     aliases: [
       ...new Set([
-        ...(component.aliases || []),
+        ...(component.aliases || []).filter(
+          (alias) => !(target.suppressedAliases || []).includes(alias)
+        ),
         ...(target.additionalAliases || []),
       ]),
     ],

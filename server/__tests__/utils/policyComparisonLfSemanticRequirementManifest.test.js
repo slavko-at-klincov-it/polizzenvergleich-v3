@@ -106,9 +106,30 @@ describe("LF SemanticRequirementManifest V1", () => {
     expect(manifest.summary.semanticRequirements).toBe(1);
     expect(manifest.summary.reviewRequiredBlocks).toBe(1);
     expect(manifest.blockCrosswalk).toHaveLength(manifest.summary.sourceBlocks);
-    expect(new Set(manifest.blockCrosswalk.map(({ blockId }) => blockId)).size).toBe(
-      manifest.summary.sourceBlocks
+    expect(
+      new Set(manifest.blockCrosswalk.map(({ blockId }) => blockId)).size
+    ).toBe(manifest.summary.sourceBlocks);
+  });
+
+  test("preserves duration as a temporal condition with a duration field", () => {
+    const input = fixture();
+    input.oracle.requirements[0].components.push({
+      id: "reporting_tail",
+      label: "Feststellung innerhalb Nachfrist",
+      factRole: "DURATION",
+      aliases: ["Nachmeldefrist"],
+      requestedFields: ["duration"],
+    });
+
+    const manifest = buildLfSemanticRequirementManifest(input);
+    const duration = manifest.requirements[0].components.find(
+      ({ id }) => id === "reporting_tail"
     );
+
+    expect(duration).toMatchObject({
+      factRole: "CONDITION",
+      requestedFields: ["duration"],
+    });
   });
 
   test("binds percentages and their declared basis but never invents an amount", () => {

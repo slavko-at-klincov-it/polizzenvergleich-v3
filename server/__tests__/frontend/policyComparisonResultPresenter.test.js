@@ -1,6 +1,7 @@
 const {
   presentComparisonError,
   presentComparisonMetrics,
+  presentLfSearchStatus,
   presentPointDecision,
 } = require("../../../frontend/src/utils/chat/policyComparisonResultPresenter.cjs");
 
@@ -133,8 +134,144 @@ describe("policy comparison result presenter", () => {
       rows: 1,
       customerReviewRequired: 1,
       pointDecisions: { TEILWEISES_GEGENSTUECK: 1 },
+      searchStatuses: { GEFUNDEN: 0, NICHT_GEFUNDEN: 1 },
       storedMetricDiscrepancy: false,
     });
+  });
+
+  test("presents only binary LF search states while preserving the internal outcome", () => {
+    const partial = {
+      packageB: {
+        documentedContent: "Teilbeleg",
+        source: "B.pdf: Seite 2: Teilbeleg",
+        contributors: [{ documentUuid: "b-1", source: "Seite 2: Teilbeleg" }],
+      },
+      outcome: "TEILWEISES_GEGENSTUECK",
+      pointDecision: { outcome: "TEILWEISES_GEGENSTUECK" },
+    };
+    const conflicting = {
+      packageB: {
+        documentedContent: "Konfliktbeleg",
+        source: "B.pdf: Seite 3: Konfliktbeleg",
+        contributors: [
+          { documentUuid: "b-1", source: "Seite 3: Konfliktbeleg" },
+        ],
+      },
+      outcome: "GEGENSTUECK_UNKLAR",
+      pointDecision: { outcome: "GEGENSTUECK_UNKLAR" },
+    };
+    const missing = {
+      packageB: { contributors: [] },
+      outcome: "GEGENSTUECK_UNKLAR",
+      pointDecision: { outcome: "GEGENSTUECK_UNKLAR" },
+    };
+
+    expect(presentLfSearchStatus(partial)).toEqual({
+      status: "GEFUNDEN",
+      label: "Gefunden",
+    });
+    expect(presentLfSearchStatus(conflicting)).toEqual({
+      status: "GEFUNDEN",
+      label: "Gefunden",
+    });
+    expect(presentLfSearchStatus(missing)).toEqual({
+      status: "NICHT_GEFUNDEN",
+      label: "Nicht gefunden",
+    });
+    expect(presentPointDecision(partial).outcome).toBe(
+      "TEILWEISES_GEGENSTUECK"
+    );
+  });
+
+  test("recounts a V3.7.4 public LF result from visible evidence and member rows", () => {
+    const result = {
+      schemaVersion: 1,
+      contractId: "LF_REFERENCE_CUSTOMER_PRESENTATION_V1",
+      comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+      categories: [
+        {
+          categoryView: "LR01",
+          rows: [
+            {
+              categoryId: "A-01",
+              customerSearchStatus: "GEFUNDEN",
+              customerSearchStatusLabel: "Gefunden",
+              packageB: {
+                documentedContent: "Teilbeleg",
+                source: "B.pdf: Seite 2: Teilbeleg",
+                contributors: [
+                  { documentUuid: "b-1", source: "Seite 2: Teilbeleg" },
+                ],
+              },
+            },
+            {
+              categoryId: "A-02",
+              customerSearchStatus: "NICHT_GEFUNDEN",
+              customerSearchStatusLabel: "Nicht gefunden",
+              packageB: { contributors: [] },
+            },
+          ],
+        },
+      ],
+      totals: {
+        rows: 2,
+        sideBOnlyRows: 0,
+        customerSearchStatuses: { GEFUNDEN: 1, NICHT_GEFUNDEN: 1 },
+        customerSearchRowKeysByStatus: {
+          GEFUNDEN: ["LR01:A-01"],
+          NICHT_GEFUNDEN: ["LR01:A-02"],
+        },
+      },
+    };
+
+    expect(presentComparisonMetrics(result)).toEqual({
+      rows: 2,
+      customerReviewRequired: null,
+      pointDecisions: {},
+      searchStatuses: { GEFUNDEN: 1, NICHT_GEFUNDEN: 1 },
+      searchRowKeysByStatus: {
+        GEFUNDEN: ["LR01:A-01"],
+        NICHT_GEFUNDEN: ["LR01:A-02"],
+      },
+      pointDecisionRowKeysByOutcome: {},
+      customerReviewBreakdown: [],
+      customerPresentation: true,
+      legacyFallback: false,
+      storedMetricDiscrepancy: false,
+    });
+  });
+
+  test("does not trust a declared LF customer status over visible evidence", () => {
+    const row = {
+      categoryId: "A-01",
+      customerSearchStatus: "GEFUNDEN",
+      customerSearchStatusLabel: "Gefunden",
+      packageB: { contributors: [] },
+    };
+    expect(presentLfSearchStatus(row)).toEqual({
+      status: "NICHT_GEFUNDEN",
+      label: "Nicht gefunden",
+    });
+    const metrics = presentComparisonMetrics({
+      schemaVersion: 1,
+      contractId: "LF_REFERENCE_CUSTOMER_PRESENTATION_V1",
+      comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+      categories: [{ categoryView: "LR01", rows: [row] }],
+      totals: {
+        rows: 1,
+        sideBOnlyRows: 0,
+        customerSearchStatuses: { GEFUNDEN: 1, NICHT_GEFUNDEN: 0 },
+        customerSearchRowKeysByStatus: {
+          GEFUNDEN: ["LR01:A-01"],
+          NICHT_GEFUNDEN: [],
+        },
+      },
+    });
+    expect(metrics.searchStatuses).toEqual({
+      GEFUNDEN: 0,
+      NICHT_GEFUNDEN: 1,
+    });
+    expect(metrics.storedMetricDiscrepancy).toBe(true);
   });
 
   test("uses only the customer-review metric and never the legacy difference total", () => {

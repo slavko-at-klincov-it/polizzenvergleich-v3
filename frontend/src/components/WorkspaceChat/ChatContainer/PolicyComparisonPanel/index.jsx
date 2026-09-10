@@ -20,6 +20,7 @@ const { UNKNOWN_COMPARISON_DOCUMENT_COUNT } = policyComparisonUploadLock;
 const {
   presentComparisonError,
   presentComparisonMetrics,
+  presentLfSearchStatus,
   presentPointDecision,
 } = policyComparisonResultPresenter;
 
@@ -502,6 +503,8 @@ function ComparisonProgress({ progress }) {
 function ComparisonResult({ result }) {
   const customerMetrics = presentComparisonMetrics(result);
   const referenceMode = result.comparisonMode === LF_REFERENCE_MODE;
+  const binaryReferencePresentation =
+    referenceMode && customerMetrics.customerPresentation === true;
   const [activeCategory, setActiveCategory] = useState(
     result.categories?.[0]?.categoryView || "VS"
   );
@@ -518,38 +521,47 @@ function ComparisonResult({ result }) {
         <p className="mt-0.5 text-[10px] text-zinc-400 light:text-slate-500">
           {result.proofLimit}
         </p>
-        <p className="mt-1 text-[10px] font-semibold text-amber-200 light:text-amber-800">
-          Kundenprüfung erforderlich:{" "}
-          {customerMetrics.customerReviewRequired === null
-            ? "nicht verfügbar"
-            : customerMetrics.customerReviewRequired}
-        </p>
+        {binaryReferencePresentation ? (
+          <p className="mt-1 text-[10px] font-semibold text-amber-200 light:text-amber-800">
+            „Nicht gefunden“ bedeutet nur: In diesem Lauf wurde keine belastbare
+            Fundstelle gefunden. Die fachliche Bewertung erfolgt in der letzten
+            Excel-Spalte.
+          </p>
+        ) : (
+          <p className="mt-1 text-[10px] font-semibold text-amber-200 light:text-amber-800">
+            Kundenprüfung erforderlich:{" "}
+            {customerMetrics.customerReviewRequired === null
+              ? "nicht verfügbar"
+              : customerMetrics.customerReviewRequired}
+          </p>
+        )}
         {customerMetrics.storedMetricDiscrepancy && (
           <p className="mt-1 text-[10px] font-semibold text-red-200 light:text-red-800">
             Gespeicherte Kennzahl widerspricht den sichtbaren Zeilen. Angezeigt
             wird die unabhängig nachgezählte Zeilenzahl.
           </p>
         )}
-        {customerMetrics.customerReviewBreakdown.length > 0 && (
-          <>
-            <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
-              Prüfgründe:{" "}
-              {customerMetrics.customerReviewBreakdown
-                .map(({ label, count }) => `${label}: ${count}`)
-                .join(" · ")}
-            </p>
-            {customerMetrics.customerReviewBreakdown.some(
-              ({ reasonCode }) =>
-                reasonCode === "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
-            ) && (
-              <p className="mt-1 text-[10px] text-zinc-400 light:text-slate-500">
-                Mehrere Hinweise innerhalb derselben Vergleichszeile werden
-                nicht zusätzlich gezählt.
+        {!binaryReferencePresentation &&
+          customerMetrics.customerReviewBreakdown.length > 0 && (
+            <>
+              <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+                Prüfgründe:{" "}
+                {customerMetrics.customerReviewBreakdown
+                  .map(({ label, count }) => `${label}: ${count}`)
+                  .join(" · ")}
               </p>
-            )}
-          </>
-        )}
-        {referenceMode ? (
+              {customerMetrics.customerReviewBreakdown.some(
+                ({ reasonCode }) =>
+                  reasonCode === "PACKAGE_REVIEW_STATUS_BLOCKS_DECISION"
+              ) && (
+                <p className="mt-1 text-[10px] text-zinc-400 light:text-slate-500">
+                  Mehrere Hinweise innerhalb derselben Vergleichszeile werden
+                  nicht zusätzlich gezählt.
+                </p>
+              )}
+            </>
+          )}
+        {binaryReferencePresentation ? (
           <div className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             {result.template && (
               <p>
@@ -567,19 +579,25 @@ function ComparisonResult({ result }) {
               </p>
             )}
             <p>
-              Gegenstücke: gefunden{" "}
-              {result.totals?.outcomes?.GEGENSTUECK_GEFUNDEN || 0}
-              {" · "}teilweise{" "}
-              {result.totals?.outcomes?.TEILWEISES_GEGENSTUECK || 0}
-              {" · "}nicht gefunden{" "}
-              {result.totals?.outcomes
-                ?.KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE || 0}
-              {" · "}unklar{" "}
-              {(result.totals?.outcomes?.GEGENSTUECK_UNKLAR || 0) +
-                (result.totals?.outcomes?.REFERENZZEILE_UNKLAR || 0)}
+              Gegenstücke: Gefunden {customerMetrics.searchStatuses.GEFUNDEN}
+              {" · "}Nicht gefunden{" "}
+              {customerMetrics.searchStatuses.NICHT_GEFUNDEN}
               {" · "}B-only-Zeilen 0
             </p>
           </div>
+        ) : referenceMode ? (
+          <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
+            Gegenstückentscheidungen: gefunden{" "}
+            {customerMetrics.pointDecisions.GEGENSTUECK_GEFUNDEN || 0} ·
+            teilweise{" "}
+            {customerMetrics.pointDecisions.TEILWEISES_GEGENSTUECK || 0} · kein
+            Gegenstück{" "}
+            {customerMetrics.pointDecisions
+              .KEIN_GEGENSTUECK_NACH_KONTROLLIERTER_SUCHE || 0}
+            {" · "}Gegenstück unklar{" "}
+            {customerMetrics.pointDecisions.GEGENSTUECK_UNKLAR || 0} · Referenz
+            unklar {customerMetrics.pointDecisions.REFERENZZEILE_UNKLAR || 0}
+          </p>
         ) : customerMetrics.pointDecisions ? (
           <p className="mt-1 text-[10px] text-zinc-300 light:text-slate-600">
             Punktentscheidungen: A{" "}
@@ -633,6 +651,7 @@ function ComparisonResult({ result }) {
           <tbody>
             {category?.rows?.map((row) => {
               const pointDecision = presentPointDecision(row);
+              const lfSearchStatus = presentLfSearchStatus(row);
               return (
                 <tr
                   key={row.categoryId}
@@ -649,16 +668,32 @@ function ComparisonResult({ result }) {
                       </p>
                     )}
                   </td>
-                  <PackageResultCell value={row.packageA} />
-                  <PackageResultCell value={row.packageB} />
+                  <PackageResultCell
+                    value={row.packageA}
+                    showReviewStatus={!binaryReferencePresentation}
+                  />
+                  <PackageResultCell
+                    value={row.packageB}
+                    showReviewStatus={!binaryReferencePresentation}
+                  />
                   <td className="p-2 min-w-[270px]">
                     <span className="inline-flex rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-200 light:text-sky-800">
-                      {pointDecision.label}
+                      {binaryReferencePresentation
+                        ? lfSearchStatus.label
+                        : pointDecision.label}
                     </span>
-                    <p className="mt-1.5">{pointDecision.reason}</p>
-                    <p className="mt-1 text-[10px] text-zinc-500 light:text-slate-500">
-                      Regel: {pointDecision.ruleId} · Technisch: {row.outcome}
+                    <p className="mt-1.5">
+                      {binaryReferencePresentation
+                        ? `Fachlicher Hinweis: ${
+                            row.customerSearchHint || pointDecision.reason
+                          }`
+                        : pointDecision.reason}
                     </p>
+                    {!binaryReferencePresentation && (
+                      <p className="mt-1 text-[10px] text-zinc-500 light:text-slate-500">
+                        Regel: {pointDecision.ruleId} · Technisch: {row.outcome}
+                      </p>
+                    )}
                   </td>
                 </tr>
               );
@@ -670,13 +705,15 @@ function ComparisonResult({ result }) {
   );
 }
 
-function PackageResultCell({ value }) {
+function PackageResultCell({ value, showReviewStatus = true }) {
   return (
     <td className="p-2 min-w-[300px]">
       <div className="flex flex-wrap gap-1 mb-1.5">
-        <span className="rounded-full border border-zinc-600 light:border-slate-300 px-1.5 py-0.5 text-[10px] font-semibold">
-          {value.reviewStatus}
-        </span>
+        {showReviewStatus && (
+          <span className="rounded-full border border-zinc-600 light:border-slate-300 px-1.5 py-0.5 text-[10px] font-semibold">
+            {value.reviewStatus}
+          </span>
+        )}
         <span className="rounded-full bg-zinc-800 light:bg-slate-100 px-1.5 py-0.5 text-[10px]">
           Deckung: {value.coverage}
         </span>

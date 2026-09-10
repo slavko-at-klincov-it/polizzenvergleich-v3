@@ -3,6 +3,7 @@ const {
   deterministicCategoryCandidateBinding,
   deterministicCategoryPreparedDecision,
   expectedCategoryScopeKeys,
+  resolvedCategoryView,
 } = require("../../../utils/policyAnalysis/deterministicCategoryEvidenceRules");
 
 function occurrence({ text, exactText, scopeLeadText = "" }) {
@@ -50,6 +51,27 @@ describe("deterministicCategoryEvidenceRules", () => {
     input.occurrence.sectionScopeHint.scopeKey = "GENERAL_CONTRACT_TERMS";
     return input;
   }
+
+  test("resolves dynamic LF execution views through their semantic source category", () => {
+    expect(
+      resolvedCategoryView(
+        { catalog: { categoryView: "LR09" } },
+        { id: "LR09-006", sourceReferenceId: "HP-06" }
+      )
+    ).toBe("HP");
+    expect(
+      resolvedCategoryView(
+        { catalog: { categoryView: "LR01" } },
+        { id: "LR01-005", sourceReferenceId: "PR-05" }
+      )
+    ).toBe("LR01");
+    expect(
+      resolvedCategoryView(
+        { catalog: { categoryView: "HP" } },
+        { id: "HP-06", sourceReferenceId: "HP-06" }
+      )
+    ).toBe("HP");
+  });
 
   test("uses the nearest explicit coverage governor", () => {
     const text = [

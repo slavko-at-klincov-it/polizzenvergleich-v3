@@ -6,6 +6,7 @@ const {
 } = require("../../utils/policyComparison/lfDynamicReferenceProfile");
 const {
   discoveryPlanIdentity,
+  plan,
 } = require("../../utils/policyComparison/lfDynamicSideBDiscovery");
 const {
   buildControlledOccurrenceWorksheet,
@@ -67,7 +68,7 @@ function manifestFromResource() {
             BASIS: "CONDITION",
             COVERAGE: "BENEFIT",
             CONFLICT: "DOCUMENT_STATUS",
-            DURATION: "LIMIT",
+            DURATION: "CONDITION",
             OBLIGATION: "CONDITION",
             PROCESS: "CONDITION",
             REVIEW: "DOCUMENT_STATUS",
@@ -155,9 +156,7 @@ describe("complete LF dynamic reference profile", () => {
     expect(component("PR-05", "glass").aliases).toContain(
       "Glaspauschalversicherung"
     );
-    expect(component("PR-05", "liability").conceptSearches).toHaveLength(
-      1
-    );
+    expect(component("PR-05", "liability").conceptSearches).toHaveLength(1);
     expect(component("PR-06", "liability_sum").aliases).toContain(
       "Pauschalversicherungssumme"
     );
@@ -165,7 +164,179 @@ describe("complete LF dynamic reference profile", () => {
       1
     );
     expect(component("PR-02", "insured_group").conceptSearches).toBeUndefined();
+    const durationRequirement = requirements.find(
+      ({ sourceReferenceId }) => sourceReferenceId === "GLT-02"
+    );
+    expect(
+      durationRequirement.components.find(
+        ({ id }) => id === "environmental_discovery_tail"
+      )
+    ).toMatchObject({
+      factRole: "CONDITION",
+      requestedFields: ["duration"],
+    });
+    expect(durationRequirement.requestedFields).toEqual(["duration"]);
     expect(JSON.stringify(manifest)).toBe(manifestBytes);
+  });
+
+  test("adds the bounded V2 discovery tranche for audited semantic wording", () => {
+    expect(plan.planId).toBe("LF_DYNAMIC_SIDE_B_DISCOVERY_V2");
+    const catalogs = categoryCatalogsFromManifest(manifestFromResource());
+    const executionRequirement = (sourceReferenceId) =>
+      catalogs
+        .flatMap(({ catalog }) => catalog.requirements)
+        .find(
+          (requirement) => requirement.sourceReferenceId === sourceReferenceId
+        );
+    const catalogFor = (sourceReferenceId) =>
+      catalogs.find(({ catalog }) =>
+        catalog.requirements.some(
+          (requirement) => requirement.sourceReferenceId === sourceReferenceId
+        )
+      ).catalog;
+
+    const probes = [
+      [
+        "VS-03",
+        "extensions",
+        "Baubestandteile und Gebäudezubehör, die fest mit dem Bauwerk verbunden sind.",
+      ],
+      [
+        "VS-03",
+        "extensions",
+        "Versichert sind fix mit dem Gebäude verbundene Beschattungen, Pergolen und Rollläden.",
+      ],
+      [
+        "VS-04",
+        "building_installations",
+        "Gebäudeelektroinstallationen inklusive Schaltgeräten.",
+      ],
+      [
+        "VS-18",
+        "solar_pv",
+        "Versichert sind Solar- und Photovoltaikanlagen am Grundstück.",
+      ],
+      [
+        "VS-21",
+        "meters_controls",
+        "Gebäudeelektroinstallationen inklusive Schalt-, Verteiler- und Messgeräten.",
+      ],
+      [
+        "GL-18",
+        "obstacle_costs",
+        "Ersetzt werden Entfernung und Wiederanbringen von Hindernissen wie Gittern.",
+      ],
+      [
+        "GL-24",
+        "surface_damage",
+        "Ausgeschlossen sind Schäden durch Zerkratzen oder Verschrammen der Oberflächen.",
+      ],
+      [
+        "HP-02",
+        "legal_liability_trigger",
+        "Es bestehen Schadenersatzverpflichtungen aufgrund gesetzlicher Haftpflichtbestimmungen privatrechtlichen Inhalts.",
+      ],
+      [
+        "HP-02",
+        "insured_risk_origin",
+        "Versicherungsfall ist ein Schadenereignis, das dem versicherten Risiko entspringt.",
+      ],
+      [
+        "HP-X01",
+        "insured_self",
+        "Kein Versicherungsschutz besteht für Schäden, die sich der Versicherungsnehmer selbst zufügt.",
+      ],
+      [
+        "HP-X01",
+        "household_members",
+        "Ausgeschlossen sind Schäden zwischen dem Versicherungsnehmer und mit ihm in häuslicher Gemeinschaft lebenden Ehegatten oder Lebensgefährten.",
+      ],
+      [
+        "GLT-02",
+        "event_during_policy",
+        "Der Vorfall muss sich während der Wirksamkeit des Versicherungsschutzes ereignen.",
+      ],
+      [
+        "GLT-05",
+        "first_medical_diagnosis",
+        "Der Versicherungsfall gilt mit der ersten Feststellung der Gesundheitsschädigung durch einen Arzt als eingetreten.",
+      ],
+    ];
+
+    for (const [sourceReferenceId, componentId, text] of probes) {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        catalog: catalogFor(sourceReferenceId),
+        document: documentFromText(text, `${sourceReferenceId}-${componentId}`),
+        documentFingerprint: "d".repeat(64),
+      });
+      const requirement = worksheet.requirements.find(
+        (entry) => entry.sourceReferenceId === sourceReferenceId
+      );
+      const occurrenceCount = requirement.components.find(
+        ({ id }) => id === componentId
+      ).occurrenceCount;
+      if (occurrenceCount === 0)
+        throw new Error(
+          `DISCOVERY_PROBE_MISSED:${sourceReferenceId}:${componentId}`
+        );
+    }
+
+    const negativeText = [
+      "Gebäudetechnik wird regelmäßig gewartet.",
+      "Solarenergie ist ein Thema der Nachhaltigkeit.",
+      "Messwerte werden dokumentiert.",
+      "Ein Hindernis wird erwähnt.",
+      "Die Haftungsfrage bleibt offen.",
+      "Der Vertrag besitzt eine Wirksamkeit.",
+      "Eine ärztliche Behandlung kann erforderlich sein.",
+    ].join("\n");
+    for (const [sourceReferenceId, componentId] of probes) {
+      const worksheet = buildControlledOccurrenceWorksheet({
+        catalog: catalogFor(sourceReferenceId),
+        document: documentFromText(
+          negativeText,
+          `negative-${sourceReferenceId}-${componentId}`
+        ),
+        documentFingerprint: "e".repeat(64),
+      });
+      const requirement = worksheet.requirements.find(
+        (entry) => entry.sourceReferenceId === sourceReferenceId
+      );
+      expect(
+        requirement.components.find(({ id }) => id === componentId)
+          .occurrenceCount
+      ).toBe(0);
+    }
+
+    const broadSelfReference = buildControlledOccurrenceWorksheet({
+      catalog: catalogFor("HP-X01"),
+      document: documentFromText(
+        "Der Versicherungsnehmer selbst hat die Sanierung durchzuführen.",
+        "negative-hp-x01-broad-self-reference"
+      ),
+      documentFingerprint: "f".repeat(64),
+    });
+    expect(
+      broadSelfReference.requirements
+        .find(({ sourceReferenceId }) => sourceReferenceId === "HP-X01")
+        .components.find(({ id }) => id === "insured_self").occurrenceCount
+    ).toBe(0);
+
+    const ocrSelfExclusion = buildControlledOccurrenceWorksheet({
+      catalog: catalogFor("HP-X01"),
+      document: documentFromText(
+        "Kein Versicherungsschutz besteht für Schäden, die sich der Versicherungnehmer selbst zufügt.",
+        "positive-hp-x01-ocr-self-exclusion"
+      ),
+      documentFingerprint: "1".repeat(64),
+    });
+    expect(
+      ocrSelfExclusion.requirements
+        .find(({ sourceReferenceId }) => sourceReferenceId === "HP-X01")
+        .components.find(({ id }) => id === "insured_self").occurrenceCount
+    ).toBe(1);
+
+    expect(executionRequirement("VS-21").components).toHaveLength(2);
   });
 
   test("discovers the confirmed semantic side-B wording without broad single-term matches", () => {
@@ -218,13 +389,7 @@ describe("complete LF dynamic reference profile", () => {
       isolatedWorksheet.requirements.find(
         (requirement) => requirement.sourceReferenceId === sourceReferenceId
       );
-    for (const requirementId of [
-      "PR-01",
-      "PR-03",
-      "PR-04",
-      "PR-05",
-      "PR-08",
-    ])
+    for (const requirementId of ["PR-01", "PR-03", "PR-04", "PR-05", "PR-08"])
       expect(
         isolatedRequirement(requirementId).components.reduce(
           (sum, component) => sum + component.occurrenceCount,

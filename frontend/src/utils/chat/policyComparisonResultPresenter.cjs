@@ -27,6 +27,13 @@ const SYMMETRIC_OUTCOMES = Object.freeze([
   "UNKLAR",
 ]);
 
+const LF_SEARCH_STATUS_LABELS = Object.freeze({
+  GEFUNDEN: "Gefunden",
+  NICHT_GEFUNDEN: "Nicht gefunden",
+});
+const LF_CUSTOMER_PRESENTATION_CONTRACT_ID =
+  "LF_REFERENCE_CUSTOMER_PRESENTATION_V1";
+
 const REVIEW_REASON_LABELS = Object.freeze({
   PACKAGE_REVIEW_STATUS_BLOCKS_DECISION:
     "Offene Teilpunkte in mindestens einer Polizze",
@@ -72,6 +79,23 @@ function presentPointDecision(row) {
   };
 }
 
+function nonEmpty(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function presentLfSearchStatus(row) {
+  const displayableContributor = (row?.packageB?.contributors || []).some(
+    ({ documentUuid, source }) => nonEmpty(documentUuid) && nonEmpty(source)
+  );
+  const status =
+    displayableContributor &&
+    nonEmpty(row?.packageB?.documentedContent) &&
+    nonEmpty(row?.packageB?.source)
+      ? "GEFUNDEN"
+      : "NICHT_GEFUNDEN";
+  return { status, label: LF_SEARCH_STATUS_LABELS[status] };
+}
+
 function presentComparisonError(value) {
   const message = String(value || "");
   if (
@@ -91,11 +115,71 @@ function presentComparisonMetrics(result) {
   const rows = (result?.categories || []).flatMap(({ categoryView, rows }) =>
     (rows || []).map((row) => ({ ...row, categoryView }))
   );
+  if (
+    result?.comparisonMode === "LF_IMMO_REFERENCE_A_TO_B_V1" &&
+    result?.contractId === LF_CUSTOMER_PRESENTATION_CONTRACT_ID
+  ) {
+    const presentedSearchRows = rows.map((row) => ({
+      ...presentLfSearchStatus(row),
+      rowKey: `${row.categoryView}:${row.categoryId}`,
+      declaredStatus: row.customerSearchStatus,
+      declaredLabel: row.customerSearchStatusLabel,
+    }));
+    const searchRowKeysByStatus = Object.fromEntries(
+      Object.keys(LF_SEARCH_STATUS_LABELS).map((status) => [
+        status,
+        presentedSearchRows
+          .filter((row) => row.status === status)
+          .map(({ rowKey }) => rowKey),
+      ])
+    );
+    const searchStatuses = Object.fromEntries(
+      Object.entries(searchRowKeysByStatus).map(([status, rowKeys]) => [
+        status,
+        rowKeys.length,
+      ])
+    );
+    const storedRowKeysByStatus = totals.customerSearchRowKeysByStatus || {};
+    const storedStatuses = totals.customerSearchStatuses || {};
+    const declaredRowDiscrepancy = presentedSearchRows.some(
+      ({ status, label, declaredStatus, declaredLabel }) =>
+        status !== declaredStatus || label !== declaredLabel
+    );
+    return {
+      rows: rows.length,
+      customerReviewRequired: null,
+      pointDecisions: {},
+      searchStatuses,
+      searchRowKeysByStatus,
+      pointDecisionRowKeysByOutcome: {},
+      customerReviewBreakdown: [],
+      customerPresentation: true,
+      legacyFallback: false,
+      storedMetricDiscrepancy: Boolean(
+        declaredRowDiscrepancy ||
+        Number(totals.rows) !== rows.length ||
+        Number(totals.sideBOnlyRows) !== 0 ||
+        Object.keys(LF_SEARCH_STATUS_LABELS).some(
+          (status) =>
+            Number(storedStatuses[status]) !== searchStatuses[status] ||
+            JSON.stringify(storedRowKeysByStatus[status]) !==
+              JSON.stringify(searchRowKeysByStatus[status])
+        )
+      ),
+    };
+  }
   const presentedRows = rows.map((row) => ({
     ...presentPointDecision(row),
     rowKey: `${row.categoryView}:${row.categoryId}`,
   }));
   if (result?.comparisonMode === "LF_IMMO_REFERENCE_A_TO_B_V1") {
+    const searchStatuses = rows.reduce(
+      (counts, row) => {
+        counts[presentLfSearchStatus(row).status] += 1;
+        return counts;
+      },
+      { GEFUNDEN: 0, NICHT_GEFUNDEN: 0 }
+    );
     const customerReviewRequired = presentedRows.filter(
       ({ reviewRequired }) => reviewRequired === true
     ).length;
@@ -110,6 +194,8 @@ function presentComparisonMetrics(result) {
       rows: rows.length,
       customerReviewRequired,
       pointDecisions: { ...(totals.outcomes || {}) },
+      searchStatuses,
+      customerPresentation: false,
       pointDecisionRowKeysByOutcome: {},
       customerReviewBreakdown: Object.entries(reviewCounts).map(
         ([reasonCode, count]) => ({
@@ -119,10 +205,15 @@ function presentComparisonMetrics(result) {
         })
       ),
       legacyFallback: false,
-      storedMetricDiscrepancy:
+      storedMetricDiscrepancy: Boolean(
         Number(totals.rows) !== rows.length ||
-        Number(totals.customerReviewRequired) !== customerReviewRequired ||
-        Number(totals.sideBOnlyRows) !== 0,
+        Number(totals.sideBOnlyRows) !== 0 ||
+        (totals.customerSearchStatuses &&
+          (Number(totals.customerSearchStatuses.GEFUNDEN) !==
+            searchStatuses.GEFUNDEN ||
+            Number(totals.customerSearchStatuses.NICHT_GEFUNDEN) !==
+              searchStatuses.NICHT_GEFUNDEN))
+      ),
     };
   }
   const pointDecisionRowKeysByOutcome = Object.fromEntries(
@@ -190,5 +281,6 @@ module.exports = {
   REVIEW_REASON_LABELS,
   presentComparisonError,
   presentComparisonMetrics,
+  presentLfSearchStatus,
   presentPointDecision,
 };

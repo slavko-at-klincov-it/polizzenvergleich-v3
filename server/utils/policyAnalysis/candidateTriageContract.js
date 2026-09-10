@@ -82,6 +82,8 @@ function hasExplicitLocalCostRole(members, contextText) {
       [
         `Kosten für ${member.exactText}`,
         `Kosten für die ${member.exactText}`,
+        `Kosten der ${member.exactText}`,
+        `Kosten des ${member.exactText}`,
         `Aufwendungen für ${member.exactText}`,
         `Aufwendungen für die ${member.exactText}`,
       ].some((phrase) => containsNormalizedPhrase(contextText, phrase))
@@ -104,6 +106,22 @@ function hasExplicitLocalCostRole(members, contextText) {
       );
     });
   });
+}
+
+function hasExplicitIncludedAncillaryServiceRole(members, contextText) {
+  if (
+    !/(?:versichert(?:e|en)?|ersetzt(?:e|en)?)\s+(?:sind|werden)?[\s\S]{0,240}\binklusive\s+(?:der\s+)?(?:Beseitigung|Entfernung)[\s\S]{0,160}\bWiederanbringung\s+von\s+Hindernissen\b/iu.test(
+      contextText || ""
+    )
+  )
+    return false;
+  return members.every(
+    (member) =>
+      member.factRole === "COST" &&
+      /(?:Beseitigung|Entfernung)[\s\S]{0,160}\bWiederanbringung\s+von\s+Hindernissen\b/iu.test(
+        member.exactText || ""
+      )
+  );
 }
 
 function triageError(code, detail = "") {
@@ -313,6 +331,12 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
     const hasExplicitLocalCostRoleEvidence =
       allCostMembers &&
       hasExplicitLocalCostRole(members, explicitCostGovernorContext);
+    const hasExplicitIncludedAncillaryServiceRoleEvidence =
+      allCostMembers &&
+      hasExplicitIncludedAncillaryServiceRole(
+        members,
+        explicitCostGovernorContext
+      );
     const hasExplicitCostGovernor =
       allCostMembers &&
       /(?:Kosten\s+für\s+(?:die\s+)?(?:nötige[nr]?\s+)?(?:Aufräumung|Abbruch)|Aufräum(?:ungs)?-?\s*(?:und|,)?\s*Abbruchkosten|Aufräum-\s*,?\s*Abbruch-\s*und\s*Feuerlöschkosten)/iu.test(
@@ -392,7 +416,8 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
       allCostMembers &&
       (allExplicitCostTerms ||
         hasExplicitCostGovernor ||
-        hasExplicitLocalCostRoleEvidence)
+        hasExplicitLocalCostRoleEvidence ||
+        hasExplicitIncludedAncillaryServiceRoleEvidence)
     ) {
       roleResolution = {
         owner: "SERVER",
@@ -401,7 +426,9 @@ function buildBindingTargets(worksheet, candidates, bindingGroups) {
           ? "EXPLICIT_COST_TERM"
           : hasExplicitCostGovernor
             ? "EXPLICIT_COST_GOVERNOR"
-            : "EXPLICIT_LOCAL_COST_ROLE",
+            : hasExplicitIncludedAncillaryServiceRoleEvidence
+              ? "EXPLICIT_INCLUDED_ANCILLARY_SERVICE_ROLE"
+              : "EXPLICIT_LOCAL_COST_ROLE",
       };
     } else if (allCostMembers) {
       roleResolution = {

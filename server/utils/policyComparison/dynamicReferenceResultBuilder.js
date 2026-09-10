@@ -13,6 +13,11 @@ const {
   referenceDecision,
 } = require("./referenceResultBuilder");
 const { publishComparisonArtifactSet } = require("./artifactSetPublisher");
+const {
+  LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
+  referenceCustomerSearchHint,
+  referenceCustomerSearchStatusLabel,
+} = require("./referenceCustomerPresentation");
 
 const DYNAMIC_REFERENCE_RESULT_SCHEMA_VERSION = 3;
 const DYNAMIC_REFERENCE_RESULT_CONTRACT_ID =
@@ -34,14 +39,6 @@ const HEADERS = [
   "KI_Prüfhinweis",
   "Fachliche Bewertung (manuell)",
 ];
-const REFERENCE_OUTCOME_LABELS = Object.freeze({
-  [REFERENCE_OUTCOME.FOUND]: "Gegenstück gefunden",
-  [REFERENCE_OUTCOME.PARTIAL]: "Teilweises Gegenstück",
-  [REFERENCE_OUTCOME.NOT_FOUND]: "Kein Gegenstück nach kontrollierter Suche",
-  [REFERENCE_OUTCOME.REFERENCE_UNCLEAR]: "LF-Referenzzeile unklar",
-  [REFERENCE_OUTCOME.UNCLEAR]: "Gegenstück unklar",
-});
-
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -194,6 +191,7 @@ function buildDynamicReferenceComparisonResult({
   const result = {
     schemaVersion: DYNAMIC_REFERENCE_RESULT_SCHEMA_VERSION,
     contractId: DYNAMIC_REFERENCE_RESULT_CONTRACT_ID,
+    customerPresentationContractId: LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
     status: "LF_DYNAMIC_REFERENCE_COMPARISON_RESULT_MATERIALIZED",
     comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
     generatedAt: new Date().toISOString(),
@@ -230,6 +228,12 @@ function validateDynamicReferenceComparison(result, { manifest } = {}) {
       JSON.stringify(LF_DYNAMIC_REFERENCE_PROFILE)
   )
     throw new Error("LF_DYNAMIC_REFERENCE_RESULT_CONTRACT_INVALID");
+  if (
+    result.customerPresentationContractId !== undefined &&
+    result.customerPresentationContractId !==
+      LF_CUSTOMER_PRESENTATION_CONTRACT_ID
+  )
+    throw new Error("LF_DYNAMIC_REFERENCE_RESULT_PRESENTATION_INVALID");
   const rows = (result.categories || []).flatMap(({ rows }) => rows || []);
   const sideA = (result.documents || []).filter(({ side }) => side === "A");
   const sideB = (result.documents || []).filter(({ side }) => side === "B");
@@ -333,8 +337,8 @@ function workbookValues(category, row) {
     row.packageB.coverage,
     row.packageB.coverageAmount,
     row.packageB.source,
-    REFERENCE_OUTCOME_LABELS[row.outcome] ?? row.outcome,
-    row.pointDecision.reason,
+    referenceCustomerSearchStatusLabel(row),
+    referenceCustomerSearchHint(row),
     "",
   ];
 }

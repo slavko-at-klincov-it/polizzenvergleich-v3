@@ -9,9 +9,14 @@ const PANEL = path.resolve(
   __dirname,
   "../../../frontend/src/components/WorkspaceChat/ChatContainer/PolicyComparisonPanel/index.jsx"
 );
+const PRESENTER = path.resolve(
+  __dirname,
+  "../../../frontend/src/utils/chat/policyComparisonResultPresenter.cjs"
+);
 
 describe("LF comparison UI truth contract", () => {
   const source = fs.readFileSync(PANEL, "utf8");
+  const presenterSource = fs.readFileSync(PRESENTER, "utf8");
 
   test("describes the curated topology and the runtime binding to source A", () => {
     const mode = policyComparisonMode(
@@ -20,7 +25,9 @@ describe("LF comparison UI truth contract", () => {
 
     expect(mode.description).toContain("kuratierte LF-Fachprofil");
     expect(source).toContain("283 Zeilen, 13 Kategorien");
-    expect(source).toContain("Abweichende oder fehlende Struktur stoppt den Lauf");
+    expect(source).toContain(
+      "Abweichende oder fehlende Struktur stoppt den Lauf"
+    );
     expect(source).toContain("LF-Profil an A binden und B prüfen");
   });
 
@@ -29,5 +36,16 @@ describe("LF comparison UI truth contract", () => {
       "Dokument A bestimmt Kategorien, Unterkategorien, fachliche Zeilen"
     );
     expect(source).not.toContain("LF-Vorlage aus Dokument A wird erstellt");
+  });
+
+  test("shows only binary counterpart search states and keeps technical outcomes out of the LF status cell", () => {
+    expect(source).toContain("presentLfSearchStatus");
+    expect(presenterSource).toContain('GEFUNDEN: "Gefunden"');
+    expect(presenterSource).toContain('NICHT_GEFUNDEN: "Nicht gefunden"');
+    expect(source).toContain("Fachlicher Hinweis:");
+    expect(source).toContain("binaryReferencePresentation");
+    expect(source).toContain("showReviewStatus={!binaryReferencePresentation}");
+    expect(source).toContain("!binaryReferencePresentation && (");
+    expect(source).toContain("Technisch: {row.outcome}");
   });
 });

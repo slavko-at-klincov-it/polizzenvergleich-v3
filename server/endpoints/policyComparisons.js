@@ -26,6 +26,10 @@ const {
   readValidatedStoredComparisonArtifacts,
 } = require("../utils/policyComparison/storedArtifactAccess");
 const {
+  LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
+  presentReferenceCustomerResult,
+} = require("../utils/policyComparison/referenceCustomerPresentation");
+const {
   policyComparisonWorkerSupervisor,
 } = require("../utils/policyComparison/workerSupervisor");
 
@@ -39,6 +43,14 @@ function comparisonOptions(workspace, session = null) {
     documentStatuses: PolicyComparison.DOCUMENT_STATUSES,
     mode,
   };
+}
+
+function comparisonResultForCustomer(result, comparisonMode) {
+  return comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
+    result?.customerPresentationContractId ===
+      LF_CUSTOMER_PRESENTATION_CONTRACT_ID
+    ? presentReferenceCustomerResult(result)
+    : result;
 }
 
 function safeUnlink(file) {
@@ -465,7 +477,10 @@ function policyComparisonEndpoints(app) {
         });
         return response.status(200).json({
           success: true,
-          result: artifacts.result,
+          result: comparisonResultForCustomer(
+            artifacts.result,
+            session.comparisonMode
+          ),
         });
       } catch (error) {
         console.error(error.message, error);
@@ -579,4 +594,8 @@ function policyComparisonEndpoints(app) {
   );
 }
 
-module.exports = { comparisonOptions, policyComparisonEndpoints };
+module.exports = {
+  comparisonOptions,
+  comparisonResultForCustomer,
+  policyComparisonEndpoints,
+};

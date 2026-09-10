@@ -14,6 +14,9 @@ const {
 const {
   REFERENCE_OUTCOME,
 } = require("../../utils/policyComparison/referenceResultBuilder");
+const {
+  LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
+} = require("../../utils/policyComparison/referenceCustomerPresentation");
 
 function fixture() {
   const manifest = {
@@ -48,6 +51,7 @@ function fixture() {
   const result = {
     schemaVersion: 3,
     contractId: "LF_DYNAMIC_REFERENCE_A_TO_B_RESULT_V1",
+    customerPresentationContractId: LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
     comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
     productProfile: LF_DYNAMIC_REFERENCE_PROFILE,
     template: {
@@ -91,6 +95,9 @@ describe("dynamic LF reference result", () => {
         coverage: "B-Wirkung",
         coverageAmount: "B-Wert",
         source: "B-Fundstelle",
+        contributors: [
+          { documentUuid: "counterpart-b", source: "B-Fundstelle" },
+        ],
       },
       outcome: REFERENCE_OUTCOME.PARTIAL,
       pointDecision: { reason: "Prüfhinweis" },
@@ -114,10 +121,45 @@ describe("dynamic LF reference result", () => {
       "B-Wirkung",
       "B-Wert",
       "B-Fundstelle",
-      "Teilweises Gegenstück",
-      "Prüfhinweis",
+      "Gefunden",
+      "Im Dokumentpaket B wurde mindestens eine belastbare Fundstelle gefunden. Der gefundene Inhalt und seine Quelle sind in den Spalten B_Gegenstück und B_Quelle dargestellt.",
       "",
     ]);
+  });
+
+  test("explains a binary not-found workbook status without claiming missing coverage", () => {
+    const category = { categoryName: "Kategorie" };
+    const row = {
+      subcategoryName: "Unterkategorie",
+      categoryId: "A-02",
+      categoryName: "Prüfpunkt",
+      packageA: {
+        documentedContent: "A-Inhalt",
+        coverageAmount: "A-Wert",
+        source: "A-Fundstelle",
+      },
+      packageB: {
+        documentedContent: "Fundlage nicht eindeutig auflösbar",
+        coverage: "Nicht feststellbar",
+        coverageAmount: "Nicht feststellbar",
+        source: "keine entscheidungsreife Fundstelle",
+        contributors: [],
+      },
+      outcome: REFERENCE_OUTCOME.UNCLEAR,
+      pointDecision: {
+        outcome: REFERENCE_OUTCOME.UNCLEAR,
+        reason: "Interne Fundlage ungeklärt.",
+      },
+    };
+
+    const values = workbookValues(category, row);
+    expect(values[11]).toBe("Nicht gefunden");
+    expect(values[12]).toContain(
+      "Im aktuellen Lauf wurde keine belastbare Fundstelle"
+    );
+    expect(values[12]).toContain(
+      "nicht automatisch, dass kein Versicherungsschutz besteht"
+    );
   });
 
   test("writes a compact review workbook with exact row parity", async () => {
@@ -166,6 +208,14 @@ describe("dynamic LF reference result", () => {
     expect(validateDynamicReferenceComparison(result, { manifest })).toBe(
       result
     );
+  });
+
+  test("rejects an unknown customer-presentation contract marker", () => {
+    const { manifest, result } = fixture();
+    result.customerPresentationContractId = "UNKNOWN_PRESENTATION";
+    expect(() =>
+      validateDynamicReferenceComparison(result, { manifest })
+    ).toThrow("LF_DYNAMIC_REFERENCE_RESULT_PRESENTATION_INVALID");
   });
 
   test("forbids a controlled null result for an incomplete B search plan", () => {

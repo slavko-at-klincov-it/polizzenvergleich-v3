@@ -282,6 +282,35 @@ describe("candidateTriageContract", () => {
       roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
       scopeResolution: { owner: "SERVER", scopeMatch: "GENERAL" },
     });
+    expect(target.modelDecisionFields).toEqual([]);
+  });
+
+  test("preserves the HP source category for a dynamically numbered LF requirement", () => {
+    const exactText = "Kosten der Feststellung und Abwehr";
+    const fixture = directedLiabilityFixture({
+      requirementId: "LR09-006",
+      sourceReferenceId: "HP-06",
+      requirementLabel: "Anspruchsprüfung und Abwehr",
+      requestedFields: [],
+      componentId: "defence_costs",
+      componentLabel: "Kosten der Feststellung und Abwehr",
+      factRole: "COST",
+      exactText,
+      contextText: `Der Versicherer übernimmt die ${exactText} einer behaupteten Schadenersatzverpflichtung.`,
+    });
+    fixture.worksheet.catalog.categoryView = "LR09";
+
+    const [target] = buildCandidateTriagePayload(fixture.worksheet, {
+      documentArtifact: fixture.documentArtifact,
+    }).bindingTargets;
+
+    expect(target).toMatchObject({
+      categoryView: "HP",
+      roleResolution: { owner: "SERVER", roleMatch: "MATCH" },
+    });
+    expect(target.scopeResolution.scopeMatch).not.toBe("OTHER_SCOPE");
+    expect(target.modelDecisionFields).toEqual(["scopeMatch"]);
+    expect(target.roleResolution.basis).not.toBe("LIABILITY_NOT_INSURED_COST");
   });
 
   test("binds source-proven RH liability sections without model scope variance", () => {
@@ -1012,6 +1041,14 @@ describe("candidateTriageContract", () => {
       "Bewachung",
       "Sicherungskosten sind Kosten für kurzfristig notwendige Notverschalung, Bewachung und weitere Maßnahmen.",
     ],
+    [
+      "Rohrreinigung der Ableitungsrohre",
+      "Kosten der Rohrreinigung der Ableitungsrohre nach der Beseitigung von Verstopfungen.",
+    ],
+    [
+      "ausgetretenen Wassers",
+      "Ersetzt werden die Kosten des ausgetretenen Wassers gegenüber dem Versorger.",
+    ],
   ])(
     "attests only the local cost role and leaves scope open (%s)",
     (exactText, text) => {
@@ -1051,6 +1088,8 @@ describe("candidateTriageContract", () => {
     "Kosten für eine Prüfung, ob Bewachung erforderlich sein könnte.",
     "Aufwendungen für Werbung erwähnen auch die Bewachung.",
     "Bewachung ist eine Obliegenheit, während Sicherungskosten Kosten für Notverschalung sind.",
+    "Kosten der Prüfung, ob eine Bewachung künftig erforderlich sein könnte.",
+    "Die Kosten der Wiederherstellung werden ersetzt; Bewachung wird nur als Obliegenheit erwähnt.",
   ])("keeps a non-local cost mention unresolved (%s)", (text) => {
     const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
     const occurrence = worksheet.requirements[0].components[0].occurrences[0];
@@ -1082,6 +1121,64 @@ describe("candidateTriageContract", () => {
     });
     expect(target.modelDecisionFields).toEqual([]);
   });
+
+  test("attests an explicitly included obstacle removal service as the ancillary cost role", () => {
+    const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+    const component = worksheet.requirements[0].components[0];
+    const occurrence = component.occurrences[0];
+    const text =
+      "Versichert sind Schäden durch Bruch der Verglasungen inklusive der Beseitigung und Wiederanbringung von Hindernissen wie Schutzstangen.";
+    component.id = "obstacle_costs";
+    component.label = "Hindernisse beseitigen und wieder anbringen";
+    occurrence.exactText = text;
+    occurrence.context = {
+      unitType: "PARAGRAPH",
+      text,
+      documentStart: 0,
+      documentEnd: text.length,
+    };
+    occurrence.documentStart = 0;
+    occurrence.documentEnd = text.length;
+    occurrence.scopeLead = { text: "" };
+
+    const [target] = buildCandidateTriagePayload(worksheet).bindingTargets;
+
+    expect(target.roleResolution).toEqual({
+      owner: "SERVER",
+      roleMatch: "MATCH",
+      basis: "EXPLICIT_INCLUDED_ANCILLARY_SERVICE_ROLE",
+    });
+    expect(target.modelDecisionFields).toEqual(["scopeMatch"]);
+  });
+
+  test.each([
+    "Die Beseitigung und Wiederanbringung von Hindernissen kann erforderlich sein.",
+    "Versichert ist die Prüfung, ob eine Beseitigung und Wiederanbringung von Hindernissen erforderlich sein könnte.",
+  ])(
+    "does not infer the ancillary cost role from a mere operation mention (%s)",
+    (text) => {
+      const worksheet = JSON.parse(JSON.stringify(WORKSHEET));
+      const occurrence = worksheet.requirements[0].components[0].occurrences[0];
+      occurrence.exactText = text;
+      occurrence.context = {
+        unitType: "PARAGRAPH",
+        text,
+        documentStart: 0,
+        documentEnd: text.length,
+      };
+      occurrence.documentStart = 0;
+      occurrence.documentEnd = text.length;
+      occurrence.scopeLead = { text: "" };
+
+      expect(
+        buildCandidateTriagePayload(worksheet).bindingTargets[0].roleResolution
+      ).toEqual({
+        owner: "SERVER",
+        roleMatch: "UNRESOLVED",
+        basis: "NO_EXPLICIT_COST_ROLE",
+      });
+    }
+  );
 
   test.each([
     [
