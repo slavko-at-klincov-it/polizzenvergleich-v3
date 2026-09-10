@@ -156,7 +156,9 @@ function buildADrivenBinaryReferenceResult({
         documentFindings,
       };
     });
-    const found = componentFindings.some(({ componentFound }) => componentFound);
+    const found = componentFindings.some(
+      ({ componentFound }) => componentFound
+    );
     const absenceCertified = componentFindings.every(
       ({ componentAbsenceCertified }) => componentAbsenceCertified
     );
@@ -164,8 +166,11 @@ function buildADrivenBinaryReferenceResult({
       throw resultError(
         "LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE"
       );
-    if (!Array.isArray(requirement.sourceSpans) || !requirement.sourceSpans.length)
-        throw resultError("LF_A_DRIVEN_BINARY_RESULT_A_SOURCE_MISSING");
+    if (
+      !Array.isArray(requirement.sourceSpans) ||
+      !requirement.sourceSpans.length
+    )
+      throw resultError("LF_A_DRIVEN_BINARY_RESULT_A_SOURCE_MISSING");
     const bEvidence = componentFindings.flatMap(({ documentFindings }) =>
       documentFindings
         .filter(({ evidence }) => evidence.length > 0)
