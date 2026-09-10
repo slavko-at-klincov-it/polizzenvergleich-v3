@@ -9,7 +9,7 @@ const {
 // Output: a deterministic package plan; it has no semantic or row authority.
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
-const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V5";
+const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V6";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -107,6 +107,33 @@ function unitKind(blocks) {
   )
     return "HEADING";
   return "CLAUSE";
+}
+
+function logicalSourceSegments(blocks, kind) {
+  if (kind !== "LIST") return [];
+  const segments = [];
+  for (const block of blocks) {
+    if (isListLike(block.exactText, block.structuralKind)) {
+      segments.push([block]);
+      continue;
+    }
+    if (segments.length) segments.at(-1).push(block);
+  }
+  return segments.map((segmentBlocks) => {
+    const blockIds = segmentBlocks.map(({ blockId }) => blockId);
+    const combinedText = segmentBlocks
+      .map(({ exactText }) => exactText)
+      .join("\n");
+    return {
+      segmentId: `ALS-${sha256(
+        `${A_SOURCE_UNIT_PLAN_CONTRACT_ID}:${blockIds.join(":")}`
+      ).slice(0, 24)}`,
+      type: "LIST_ITEM_WITH_CONTINUATIONS",
+      blockIds,
+      combinedText,
+      combinedTextSha256: sha256(combinedText),
+    };
+  });
 }
 
 function isOpenListGovernor(unit) {
@@ -293,6 +320,7 @@ function planDocumentUnits({ document, artifact, ledger }) {
       unitKind: kind,
       structurePath: [...activeStructurePath],
       source,
+      logicalSourceSegments: logicalSourceSegments(blocks, kind),
       semanticAuthority: false,
       initialDisposition:
         kind === "METADATA"

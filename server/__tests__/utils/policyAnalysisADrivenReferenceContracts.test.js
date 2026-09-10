@@ -421,6 +421,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "Gegenstände auf dem Grundstück"
     );
     expect(continued.source.contiguous).toBe(false);
+    expect(continued.logicalSourceSegments).toHaveLength(1);
+    expect(continued.logicalSourceSegments[0].blockIds).toEqual(
+      continued.source.blockIds
+    );
+    const classificationUnit = buildADrivenClassificationBatches(plan)
+      .batches.flatMap(({ units }) => units)
+      .find(({ unitId }) => unitId === continued.unitId);
+    expect(classificationUnit.logicalSourceSegments).toEqual(
+      continued.logicalSourceSegments
+    );
     expect(pageFurniture.source.blockIds).toHaveLength(1);
     expect(continuation.fromBlockId).toBe(continued.source.blockIds[0]);
     expect(continuation.toBlockId).toBe(continued.source.blockIds[1]);
@@ -430,6 +440,59 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(
       plan.units.flatMap(({ source: unitSource }) => unitSource.blockIds)
     ).toHaveLength(plan.summary.sourceBlocks);
+
+    const splitResponse = {
+      unitId: continued.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: continued.source.blocks.map((block) => ({
+        displayLabel: block.exactText,
+        components: [
+          {
+            type: "OBJECT",
+            label: block.exactText,
+            sourceBlockIds: [block.blockId],
+          },
+        ],
+      })),
+    };
+    const splitManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [splitResponse],
+    });
+    expect(
+      splitManifest.unitTerminals
+        .find(({ unitId }) => unitId === continued.unitId)
+        .diagnostics.map(({ code }) => code)
+    ).toContain("LIST_CONTINUATION_SEGMENT_SPLIT");
+
+    const joinedManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: continued.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: continued.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: continued.source.combinedText,
+                  sourceBlockIds: continued.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      joinedManifest.unitTerminals.find(
+        ({ unitId }) => unitId === continued.unitId
+      ).terminalDisposition
+    ).toBe("OPERATIVE_MAPPED");
   });
 
   test("does not report an unpunctuated page footer as a heading continuation", () => {

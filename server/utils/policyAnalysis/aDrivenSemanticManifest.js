@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V6";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V7";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -414,6 +414,33 @@ function requiredComponentGroups(semanticClasses) {
   return required;
 }
 
+function logicalSegmentDiagnostics(unit, requirements) {
+  return (unit.logicalSourceSegments || []).flatMap((segment) => {
+    if (segment.blockIds.length < 2) return [];
+    const overlapping = requirements.filter(({ sourceBlockIds }) =>
+      segment.blockIds.some((blockId) => sourceBlockIds.includes(blockId))
+    );
+    if (
+      overlapping.length === 1 &&
+      segment.blockIds.every((blockId) =>
+        overlapping[0].sourceBlockIds.includes(blockId)
+      )
+    )
+      return [];
+    return [
+      {
+        code: "LIST_CONTINUATION_SEGMENT_SPLIT",
+        unitId: unit.unitId,
+        segmentId: segment.segmentId,
+        blockIds: segment.blockIds,
+        overlappingRequirementIds: overlapping.map(
+          ({ requirementId }) => requirementId
+        ),
+      },
+    ];
+  });
+}
+
 function classifyUnit(unit, records) {
   if (unit.initialDisposition === "NON_OPERATIVE_TERMINAL")
     return {
@@ -517,6 +544,17 @@ function classifyUnit(unit, records) {
       ],
     };
   const requirements = finalizeRequirements(unit, drafts);
+  const segmentDiagnostics = requirements
+    ? logicalSegmentDiagnostics(unit, requirements)
+    : [];
+  if (segmentDiagnostics.length)
+    return {
+      terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
+      primaryClass: "UNRESOLVED",
+      semanticClasses: ["UNRESOLVED"],
+      requirements: [],
+      diagnostics: segmentDiagnostics,
+    };
   const observedTypes = new Set(
     requirements?.flatMap(({ components }) =>
       components.map(({ type }) => type)
