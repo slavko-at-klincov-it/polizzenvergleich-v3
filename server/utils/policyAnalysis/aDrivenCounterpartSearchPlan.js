@@ -150,6 +150,28 @@ function buildADrivenCounterpartSearchPlan({
         component.qualifier,
         component.coverageEffect,
       ]);
+      const semanticChecks = requirement.components.map((checkedComponent) => ({
+        checkId: `ASC-${sha256(
+          `${requirement.requirementId}:${component.componentId}:${checkedComponent.componentId}`
+        ).slice(0, 24)}`,
+        role:
+          checkedComponent.componentId === component.componentId
+            ? "TARGET"
+            : "CONTEXT",
+        componentId: checkedComponent.componentId,
+        dimension: checkedComponent.type,
+        label: checkedComponent.label,
+        ...(checkedComponent.rawValue
+          ? { rawValue: checkedComponent.rawValue }
+          : {}),
+        ...(checkedComponent.unit ? { unit: checkedComponent.unit } : {}),
+        ...(checkedComponent.qualifier
+          ? { qualifier: checkedComponent.qualifier }
+          : {}),
+        ...(checkedComponent.coverageEffect
+          ? { coverageEffect: checkedComponent.coverageEffect }
+          : {}),
+      }));
       for (const document of plannedDocuments) {
         const identity = {
           contractId: A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
@@ -172,6 +194,7 @@ function buildADrivenCounterpartSearchPlan({
           documentRole: document.documentRole,
           documentStatus: document.documentStatus,
           requiredDimensions,
+          semanticChecks,
           query: {
             focalText: normalizedText(component.label),
             focalValues: componentQueryValues,

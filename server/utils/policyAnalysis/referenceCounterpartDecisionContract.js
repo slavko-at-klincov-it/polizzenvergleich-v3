@@ -7,7 +7,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // Validates untrusted counterpart decisions against server-owned packages.
 // Missing, duplicate and unknown IDs are retained as diagnostics; affected
 // planned packages become UNRESOLVED instead of being guessed or repaired.
-const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V2";
+const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V3";
 const DECISIONS = new Set(["SUPPORTED", "CONTRADICTED", "NOT_SUPPORTED"]);
 const DIMENSIONS = new Set([
   "OBJECT",
@@ -82,6 +82,10 @@ function validateCounterpartDecisions({
   const packageContracts = new Map();
   for (const item of packages) {
     const requiredDimensions = normalizedUnique(item?.requiredDimensions);
+    const semanticChecks = Array.isArray(item?.semanticChecks)
+      ? item.semanticChecks
+      : [];
+    const semanticCheckIds = semanticChecks.map(({ checkId }) => checkId);
     const requiredChannels = normalizedUnique(
       item?.searchCoverage?.requiredChannels
     );
@@ -99,6 +103,22 @@ function validateCounterpartDecisions({
       item.candidates.some((candidate) => !validCompactCandidate(candidate)) ||
       !requiredDimensions?.length ||
       requiredDimensions.some((dimension) => !DIMENSIONS.has(dimension)) ||
+      semanticChecks.length === 0 ||
+      semanticCheckIds.some((checkId) => typeof checkId !== "string" || !checkId) ||
+      new Set(semanticCheckIds).size !== semanticCheckIds.length ||
+      semanticChecks.some(
+        ({ role, componentId, dimension, label }) =>
+          !["TARGET", "CONTEXT"].includes(role) ||
+          typeof componentId !== "string" ||
+          !componentId ||
+          !DIMENSIONS.has(dimension) ||
+          typeof label !== "string" ||
+          !label
+      ) ||
+      semanticChecks.filter(
+        ({ role, componentId }) =>
+          role === "TARGET" && componentId === item.componentId
+      ).length !== 1 ||
       !requiredChannels?.length ||
       !completedChannels ||
       completedChannels.some((channel) => !requiredChannels.includes(channel))
@@ -118,6 +138,9 @@ function validateCounterpartDecisions({
     candidateIdsByPackage.set(item.packageId, new Set(candidateIds));
     packageContracts.set(item.packageId, {
       requiredDimensions,
+      semanticChecks: new Map(
+        semanticChecks.map((check) => [check.checkId, check])
+      ),
       negativeConclusionEligible:
         item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
         item.searchCoverage.negativeConclusionEligible === true,
@@ -169,23 +192,35 @@ function validateCounterpartDecisions({
     const checks = Array.isArray(response.dimensionChecks)
       ? response.dimensionChecks
       : [];
-    const checkDimensions = checks.map(({ dimension }) => dimension);
+    const checkIds = checks.map(({ checkId }) => checkId);
     const dimensionChecksValid =
-      checks.length === packageContract.requiredDimensions.length &&
-      new Set(checkDimensions).size === checks.length &&
-      packageContract.requiredDimensions.every((dimension) =>
-        checkDimensions.includes(dimension)
+      checks.length === packageContract.semanticChecks.size &&
+      new Set(checkIds).size === checks.length &&
+      [...packageContract.semanticChecks.keys()].every((checkId) =>
+        checkIds.includes(checkId)
       ) &&
       checks.every(
-        ({ dimension, outcome }) =>
-          DIMENSIONS.has(dimension) && DIMENSION_OUTCOMES.has(outcome)
+        ({ checkId, dimension, outcome, candidateIds = [] }) =>
+          packageContract.semanticChecks.get(checkId)?.dimension === dimension &&
+          DIMENSION_OUTCOMES.has(outcome) &&
+          Array.isArray(candidateIds) &&
+          new Set(candidateIds).size === candidateIds.length &&
+          candidateIds.every((candidateId) => allowed.has(candidateId)) &&
+          (outcome === "NOT_ESTABLISHED"
+            ? candidateIds.length === 0
+            : candidateIds.length > 0)
       );
     const outcomes = checks.map(({ outcome }) => outcome);
+    const checkCandidateIds = [
+      ...new Set(checks.flatMap(({ candidateIds = [] }) => candidateIds)),
+    ];
     const invalid =
       !DECISIONS.has(decision) ||
       !dimensionChecksValid ||
       new Set(selected).size !== selected.length ||
       selected.some((candidateId) => !allowed.has(candidateId)) ||
+      selected.length !== checkCandidateIds.length ||
+      selected.some((candidateId) => !checkCandidateIds.includes(candidateId)) ||
       (decision === "SUPPORTED" &&
         (selected.length === 0 ||
           outcomes.some((outcome) => outcome !== "MATCH"))) ||

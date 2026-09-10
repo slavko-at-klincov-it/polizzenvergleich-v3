@@ -76,6 +76,25 @@ function searchExecutionArtifact(packages) {
   };
 }
 
+function semanticChecks(componentId, dimensions) {
+  return dimensions.map((dimension, index) => ({
+    checkId: `check-${componentId}-${index}`,
+    role: index === 0 ? "TARGET" : "CONTEXT",
+    componentId: index === 0 ? componentId : `${componentId}-context-${index}`,
+    dimension,
+    label: `${dimension}-${index}`,
+  }));
+}
+
+function decisionChecks(item, outcome, candidateIds = []) {
+  return item.semanticChecks.map(({ checkId, dimension }) => ({
+    checkId,
+    dimension,
+    outcome,
+    candidateIds: outcome === "NOT_ESTABLISHED" ? [] : candidateIds,
+  }));
+}
+
 function artifact(pages, fingerprintCharacter) {
   const chunks = [];
   const pageMap = [];
@@ -761,6 +780,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
         documentUuid: "b-doc",
         candidates,
         requiredDimensions: ["OBJECT", "COVERAGE_EFFECT"],
+        semanticChecks: semanticChecks("component-1", [
+          "OBJECT",
+          "COVERAGE_EFFECT",
+        ]),
         searchCoverage: {
           channelExecutionStatus: "CHANNELS_PARTIAL",
           absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
@@ -775,6 +798,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
         documentUuid: "b-doc",
         candidates: [],
         requiredDimensions: ["OBJECT"],
+        semanticChecks: semanticChecks("component-2", ["OBJECT"]),
         searchCoverage: {
           channelExecutionStatus: "CHANNELS_COMPLETE",
           absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
@@ -791,16 +815,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
           packageId: "package-1",
           decision: "SUPPORTED",
           selectedCandidateIds: [candidates[0].compactCandidateId],
-          dimensionChecks: [
-            { dimension: "OBJECT", outcome: "MATCH" },
-            { dimension: "COVERAGE_EFFECT", outcome: "MATCH" },
-          ],
+          dimensionChecks: decisionChecks(
+            packages[0],
+            "MATCH",
+            [candidates[0].compactCandidateId]
+          ),
         },
         {
           packageId: "package-2",
           decision: "SUPPORTED",
           selectedCandidateIds: ["invented-candidate"],
-          dimensionChecks: [{ dimension: "OBJECT", outcome: "MATCH" }],
+          dimensionChecks: decisionChecks(packages[1], "MATCH", [
+            "invented-candidate",
+          ]),
         },
         {
           packageId: "unknown",
@@ -875,6 +902,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         )
       ).size
     ).toBe(left.packages.length);
+    expect(
+      left.packages.every(
+        ({ componentId, semanticChecks: checks }) =>
+          checks.length > 0 &&
+          new Set(checks.map(({ checkId }) => checkId)).size === checks.length &&
+          checks.filter(
+            ({ role, componentId: checkedId }) =>
+              role === "TARGET" && checkedId === componentId
+          ).length === 1
+      )
+    ).toBe(true);
   });
 
   test("publishes only binary rows after a complete terminal decision matrix", () => {
@@ -917,10 +955,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       packageId: item.packageId,
       decision: "SUPPORTED",
       selectedCandidateIds: ["candidate-one"],
-      dimensionChecks: item.requiredDimensions.map((dimension) => ({
-        dimension,
-        outcome: "MATCH",
-      })),
+      dimensionChecks: decisionChecks(item, "MATCH", ["candidate-one"]),
     }));
     const decisions = validateCounterpartDecisions({
       searchExecution,
@@ -957,10 +992,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         packageId: item.packageId,
         decision: "NOT_SUPPORTED",
         selectedCandidateIds: [],
-        dimensionChecks: item.requiredDimensions.map((dimension) => ({
-          dimension,
-          outcome: "NOT_ESTABLISHED",
-        })),
+        dimensionChecks: decisionChecks(item, "NOT_ESTABLISHED"),
       })),
     });
     expect(() =>

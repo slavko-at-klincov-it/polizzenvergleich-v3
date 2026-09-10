@@ -24,6 +24,18 @@ function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function decisionChecks(item, outcomes, candidateIds = []) {
+  return item.semanticChecks.map(({ checkId, dimension }, index) => {
+    const outcome = Array.isArray(outcomes) ? outcomes[index] : outcomes;
+    return {
+      checkId,
+      dimension,
+      outcome,
+      candidateIds: outcome === "NOT_ESTABLISHED" ? [] : candidateIds,
+    };
+  });
+}
+
 function artifact(pages) {
   const chunks = [];
   const pageMap = [];
@@ -416,10 +428,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         selectedCandidateIds: [
           item.candidates[0]?.compactCandidateId || "missing-candidate",
         ],
-        dimensionChecks: item.requiredDimensions.map((dimension, index) => ({
-          dimension,
-          outcome: index === 0 ? "MISMATCH" : "MATCH",
-        })),
+        dimensionChecks: decisionChecks(
+          item,
+          item.semanticChecks.map((_check, index) =>
+            index === 0 ? "MISMATCH" : "MATCH"
+          ),
+          [item.candidates[0]?.compactCandidateId || "missing-candidate"]
+        ),
       })),
     });
 
@@ -459,10 +474,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         packageId: item.packageId,
         decision: "NOT_SUPPORTED",
         selectedCandidateIds: [],
-        dimensionChecks: item.requiredDimensions.map((dimension) => ({
-          dimension,
-          outcome: "NOT_ESTABLISHED",
-        })),
+        dimensionChecks: decisionChecks(item, "NOT_ESTABLISHED"),
       })),
     });
 
