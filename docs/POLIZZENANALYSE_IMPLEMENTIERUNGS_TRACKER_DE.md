@@ -7041,3 +7041,48 @@ fachliche Expertenabnahme, kein unbekannter Mehrversicherer-Holdout und kein
 99-Prozent-Nachweis. `Nicht gefunden` bedeutet ausschließlich, dass der
 aktuelle Lauf keine robuste darstellbare Fundstelle lieferte; es bedeutet
 nicht automatisch fehlenden Versicherungsschutz.
+
+### 133.15 V3.7.5: vollständiger LF-Retrieval-Shadow mit Dinghy
+
+Der ergebnisneutrale V3.7.5-Shadow inventarisiert den bekannten
+V3.7.4-1+9-Lauf vollständig: 283 LF-Zeilen, 631 Komponenten, neun
+B-Dokumente, 5.679 Komponenten-Dokument-Zellen, davon 5.278 ohne
+CURRENT-Kandidat. Bestehende Funde bleiben als False-Positive-Kontrolle im
+Register. BM25, Struktur- und Dinghy-Kanal laufen nur auf CURRENT-Nullzellen;
+alle Ausgaben sind exakte Originalspans mit Dokumentfingerprint, physischer
+Seite und Offset. Der Produktpfad, die API und die Kunden-XLSX werden nicht
+verändert.
+
+Auf dem Mac Studio erzeugte Commit
+`ec69212c04ad30ff6be72b8c6d3baa196953b28b` 2.164 CURRENT-, 12.013 BM25-,
+18.459 Struktur- und 14.499 Dinghy-Kandidaten sowie 42.429 UNION-Spans. Das
+Embedding-Modell `text-embedding-dinghy-law-4b-v1` mit 2.560 Dimensionen war
+174,709 Sekunden in 55 API-Batches aktiv. Der sichere Wrapper stellte danach
+`qwen/qwen3.6-35b-a3b` mit Kontext 42.496 wieder her. Kundencheckout und
+installierter Ergebnisstand blieben sauber und unverändert.
+
+Der auf Commit `87bc6f77305e68eb96bfca72b27282ec152bf88f`
+materialisierte Rücktest gegen die exakten Evidenzzitate des früheren
+177er-Qwen-Audits misst bei 220 positiven Zitaten: CURRENT 44/220, Dinghy
+159/220, deterministische Union 198/220 und vollständige Union 208/220.
+Dinghy ergänzt zehn Zitate, die deterministischen Kanäle ergänzen umgekehrt 49
+Zitate. Zwölf positive Zitate bleiben offen. Das belegt komplementären
+Embedding-Nutzen und zugleich die Überlegenheit des kombinierten Suchpfads.
+
+Der neue `LF_COUNTERPART_GOLD_ORACLE_V1`-Draft umfasst alle 283 Zeilen, 631
+Komponenten und 42.429 Kandidaten. Er bleibt vollständig `UNREVIEWED` und
+berechnet vor fachlicher Freigabe keine Qualitätsmetriken. Zertifizierte
+Abwesenheit verlangt vollständige Dokument- und Kanalbindung sowie zwei
+Reviewer.
+
+Nächster Gate: überlappende Kandidaten kompakt zusammenführen, ein kleines
+dokumentübergreifendes Qwen-Reviewpaket bei unverändertem 208/220-Rücktest-
+Recall bilden, die zwölf Misses mit generischen Aufzählungs-, Negations-,
+Subsidiaritäts- und Definitionskontextregeln schließen und erst danach eine
+komponentenweise Produktions-Allowlist bewerten.
+
+Vollständige Messwerte, Artefakthashes und Beweisgrenzen stehen in
+`docs/V3.7.5_LF_RETRIEVAL_SHADOW_DE.md`.
+
+Status: `SHADOW UND LIVE-DINGHY BESTANDEN; KEINE PRODUKTMUTATION, KEIN
+DEPLOYMENT, KEIN GOLD- ODER 99-PROZENT-NACHWEIS`.
