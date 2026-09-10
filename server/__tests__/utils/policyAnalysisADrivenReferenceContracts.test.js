@@ -411,21 +411,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         .map((plannedUnit) =>
           plannedUnit.unitId === unit.unitId
             ? {
-          unitId: unit.unitId,
-          primaryClass: "LIMIT",
-          semanticClasses: ["LIMIT"],
-          requirements: [
-            {
-              displayLabel: block.exactText,
-              components: [
-                {
-                  type: "LIMIT_BASIS",
-                  label: block.exactText,
-                  sourceBlockIds: [block.blockId],
-                },
-              ],
-            },
-          ],
+                unitId: unit.unitId,
+                primaryClass: "LIMIT",
+                semanticClasses: ["LIMIT"],
+                requirements: [
+                  {
+                    displayLabel: block.exactText,
+                    components: [
+                      {
+                        type: "LIMIT_BASIS",
+                        label: block.exactText,
+                        sourceBlockIds: [block.blockId],
+                      },
+                    ],
+                  },
+                ],
               }
             : validResponse(plannedUnit)
         ),
