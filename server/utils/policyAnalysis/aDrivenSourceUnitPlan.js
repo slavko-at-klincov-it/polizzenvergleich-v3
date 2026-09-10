@@ -107,8 +107,7 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
       currentBlocks.length < 12;
     return adjacentIncompleteSentence;
   }
-  if (previous.structuralKind === "HEADING_CANDIDATE")
-    return false;
+  if (previous.structuralKind === "HEADING_CANDIDATE") return false;
   const previousList = isListLike(previous.exactText, previous.structuralKind);
   const currentList = isListLike(current.exactText, current.structuralKind);
   if (currentBlocks.length >= 12) return false;
