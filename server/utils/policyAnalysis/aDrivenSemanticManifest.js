@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V9";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V10";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -170,10 +170,11 @@ function canonicalComponentSourceBlockIds(unit, declaredBlockIds, values) {
     minimalSourceRange(unit, value, declaredBlockIds)
   );
   if (derivedRanges.some((ids) => !ids)) return null;
-  const selected = new Set([
-    ...declaredBlockIds,
-    ...derivedRanges.flatMap((ids) => ids),
-  ]);
+  const selected = new Set(declaredBlockIds);
+  if (
+    derivedRanges.some((ids) => ids.some((blockId) => !selected.has(blockId)))
+  )
+    return null;
   return evidenceBlocks(unit)
     .map(({ blockId }) => blockId)
     .filter((blockId) => selected.has(blockId));

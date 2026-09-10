@@ -811,7 +811,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.requirements[0].components[0].type).toBe("LIMIT_BASIS");
   });
 
-  test("server-expands a source-bound label across its unique adjacent blocks", () => {
+  test("rejects source IDs that omit a block used by a component label", () => {
     const source = artifact(
       [
         "Seite 1\nDEFINITION\nBetreuung durch die LF Immo\nVersicherungsmakler GmbH erfolgt.\n",
@@ -850,12 +850,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             }
           : validResponse(plannedUnit)
       );
-    const manifest = buildADrivenSemanticManifest({ plan, responses });
-    const component = manifest.requirements.find(({ sourceUnitIds }) =>
+    const rejected = buildADrivenSemanticManifest({ plan, responses });
+    expect(rejected.summary.unresolvedUnits).toBe(1);
+    expect(rejected.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "COMPONENT_SOURCE_TEXT_INVALID" }),
+      ])
+    );
+
+    responses.find(
+      ({ unitId }) => unitId === unit.unitId
+    ).requirements[0].components[0].sourceBlockIds = unit.source.blockIds;
+    const accepted = buildADrivenSemanticManifest({ plan, responses });
+    const component = accepted.requirements.find(({ sourceUnitIds }) =>
       sourceUnitIds.includes(unit.unitId)
     ).components[0];
-
-    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(accepted.summary.unresolvedUnits).toBe(0);
     expect(component.sourceBlockIds).toEqual(unit.source.blockIds);
   });
 
