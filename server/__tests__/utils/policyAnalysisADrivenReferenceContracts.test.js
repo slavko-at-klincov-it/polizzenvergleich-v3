@@ -390,7 +390,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
     const source = artifact(
       [
-        "Seite 1\nDECKUNG\nZusätzlich versichert sind:\n- Bewegliche Gegenstände sowie unbewegliche",
+        "Seite 1\nDECKUNG\nZusätzlich sind mitversichert, wenn der Versicherungsnehmer für den Schaden ersatzpflichtig ist:\n- Bewegliche Gegenstände sowie unbewegliche",
         "Seite 2\nGegenstände auf dem Grundstück wie Laternen und Schwimmbecken;\n- Inhalt von Heizöltanks;\n",
       ],
       "c"
@@ -425,7 +425,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(continuation.fromBlockId).toBe(continued.source.blockIds[0]);
     expect(continuation.toBlockId).toBe(continued.source.blockIds[1]);
     expect(followingList.governingContext.combinedText).toContain(
-      "Zusätzlich versichert sind"
+      "Zusätzlich sind mitversichert"
     );
     expect(
       plan.units.flatMap(({ source: unitSource }) => unitSource.blockIds)
