@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V8";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V9";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -79,6 +79,7 @@ function text(value) {
 function comparableText(value) {
   return String(value || "")
     .normalize("NFKC")
+    .replace(/[„“”«»]/gu, '"')
     .replace(/\s+/gu, " ")
     .trim()
     .replace(/(^| )[-–—•▪] (?=\S)/gu, "$1• ");

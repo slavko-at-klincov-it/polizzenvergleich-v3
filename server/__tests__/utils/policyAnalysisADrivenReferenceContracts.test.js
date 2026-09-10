@@ -1016,6 +1016,48 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("normalizes equivalent double-quote glyphs while retaining the exact source span", () => {
+    const source = artifact(
+      ["Seite 1\nVARIANTE\nEs gilt die Variante „A-Deckung“.\n"],
+      "2"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        ...plan.units
+          .filter(({ unitKind }) => unitKind === "HEADING")
+          .map(validResponse),
+        {
+          unitId: unit.unitId,
+          primaryClass: "VARIANT",
+          semanticClasses: ["VARIANT"],
+          requirements: [
+            {
+              displayLabel: 'Es gilt die Variante "A-Deckung".',
+              components: [
+                {
+                  type: "SCOPE",
+                  label: 'Variante "A-Deckung"',
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[0].sourceSpans[0].exactText).toBe(
+      "Es gilt die Variante „A-Deckung“."
+    );
+  });
+
   test("keeps the legacy oracle strictly evaluation-only", () => {
     const source = artifact(
       ["Seite 1\nDeckung\nVersichert sind Gebäude.\n"],
