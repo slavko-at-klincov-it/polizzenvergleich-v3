@@ -134,7 +134,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       batches.batches.every(({ expectedUnitIds }) => expectedUnitIds.length <= 2)
     ).toBe(true);
     expect(
-      batches.batches.flatMap(({ expectedUnitIds }) => expectedUnitIds
+      batches.batches.flatMap(({ expectedUnitIds }) => expectedUnitIds)
     ).toHaveLength(left.summary.pendingUnits);
   });
 
