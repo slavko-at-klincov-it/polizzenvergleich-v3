@@ -164,7 +164,6 @@ function compactReferenceCandidates(
             documentStart,
             documentEnd,
             exactText,
-            exactTextSha256: sha256(exactText),
             physicalPageNumber,
             physicalPages,
             channels,
@@ -173,6 +172,7 @@ function compactReferenceCandidates(
             documentStart,
             documentEnd,
             exactText,
+            exactTextSha256: sha256(exactText),
             ...(Number.isInteger(physicalPageNumber)
               ? { physicalPageNumber }
               : {}),
