@@ -127,8 +127,9 @@ function minimalSourceRange(unit, value, declaredBlockIds) {
     for (let end = start; end < unit.source.blocks.length; end += 1) {
       const blocks = unit.source.blocks.slice(start, end + 1);
       if (
-        comparableText(blocks.map(({ exactText }) => exactText).join("\n"))
-          .includes(needle)
+        comparableText(
+          blocks.map(({ exactText }) => exactText).join("\n")
+        ).includes(needle)
       ) {
         matches.push(blocks.map(({ blockId }) => blockId));
         break;
