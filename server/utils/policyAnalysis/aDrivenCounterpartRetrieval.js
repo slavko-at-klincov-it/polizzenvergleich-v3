@@ -34,21 +34,32 @@ function buildClauseBoundaries(document, maximumCharacters = 1_800) {
   const clauses = [];
   for (const page of document.pageMap) {
     const pageText = document.pageContent.slice(page.start, page.end);
-    const paragraphs = [
-      ...pageText.matchAll(/\S(?:[\s\S]*?\S)?(?=\n\s*\n|$)/gu),
-    ];
-    for (const paragraph of paragraphs) {
-      const rawStart = paragraph.index;
-      const rawText = paragraph[0];
-      const lines = [...rawText.matchAll(/[^\r\n]+/gu)].filter(({ 0: line }) =>
-        /\S/u.test(line)
-      );
+    const lines = [...pageText.matchAll(/[^\r\n]+/gu)].filter(({ 0: line }) =>
+      /\S/u.test(line)
+    );
+    const paragraphs = [];
+    let paragraph = [];
+    for (const line of lines) {
+      const previous = paragraph.at(-1);
+      if (
+        previous &&
+        /\r?\n\s*\r?\n/u.test(
+          pageText.slice(previous.index + previous[0].length, line.index)
+        )
+      ) {
+        paragraphs.push(paragraph);
+        paragraph = [];
+      }
+      paragraph.push(line);
+    }
+    if (paragraph.length) paragraphs.push(paragraph);
+    for (const paragraphLines of paragraphs) {
       let current = [];
       const flush = () => {
         if (!current.length) return;
-        const start = page.start + rawStart + current[0].index;
+        const start = page.start + current[0].index;
         const last = current.at(-1);
-        const end = page.start + rawStart + last.index + last[0].length;
+        const end = page.start + last.index + last[0].length;
         const exactText = document.pageContent.slice(start, end);
         const clauseBoundaryId = `BC-${sha256(
           `${document.uuid}:${document.sha256}:${page.pageNumber}:${start}:${end}`
@@ -64,7 +75,7 @@ function buildClauseBoundaries(document, maximumCharacters = 1_800) {
         });
         current = [];
       };
-      for (const line of lines) {
+      for (const line of paragraphLines) {
         const prospectiveStart = current[0]?.index ?? line.index;
         const prospectiveEnd = line.index + line[0].length;
         if (
