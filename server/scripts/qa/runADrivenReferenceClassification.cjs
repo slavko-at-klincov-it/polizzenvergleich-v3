@@ -19,8 +19,8 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V2";
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V4";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V3";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V5";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -290,7 +290,9 @@ async function runBatch({
   batch,
   maximumAttempts,
 }) {
-  let messages = prompt(batch);
+  const acceptedResponses = new Map();
+  let workingBatch = batch;
+  let messages = prompt(workingBatch);
   let last = {
     responses: [],
     validation: {
@@ -305,6 +307,7 @@ async function runBatch({
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     const started = performance.now();
     try {
+      const messagesSha256 = sha256(JSON.stringify(messages));
       const completion = await client.chat.completions.create({
         model,
         messages,
@@ -313,23 +316,59 @@ async function runBatch({
       });
       const rawText = completion.choices?.[0]?.message?.content || "";
       const responses = parseJsonArray(rawText);
-      const validation = validateBatchResponses(plan, batch, responses);
+      const workingValidation = validateBatchResponses(
+        plan,
+        workingBatch,
+        responses
+      );
+      for (const unitId of workingBatch.expectedUnitIds) {
+        if (
+          workingValidation.terminalDispositions[unitId] ===
+          "UNRESOLVED_REVIEW_REQUIRED"
+        )
+          continue;
+        const records = responses.filter((response) => response.unitId === unitId);
+        if (records.length === 1) acceptedResponses.set(unitId, records[0]);
+      }
+      const pendingUnitIds = batch.expectedUnitIds.filter(
+        (unitId) => !acceptedResponses.has(unitId)
+      );
+      const pendingResponses = responses.filter(({ unitId }) =>
+        pendingUnitIds.includes(unitId)
+      );
+      const mergedResponses = batch.expectedUnitIds.flatMap((unitId) => {
+        if (acceptedResponses.has(unitId))
+          return [acceptedResponses.get(unitId)];
+        return pendingResponses.filter((response) => response.unitId === unitId);
+      });
+      const validation = validateBatchResponses(plan, batch, mergedResponses);
       attempts.push({
         attempt,
+        requestedUnitIds: workingBatch.expectedUnitIds,
+        messagesSha256,
         durationMs: Math.round(performance.now() - started),
         responseModel: completion.model || null,
         promptTokens: completion.usage?.prompt_tokens || 0,
         completionTokens: completion.usage?.completion_tokens || 0,
         totalTokens: completion.usage?.total_tokens || 0,
         parsedResponses: responses.length,
+        acceptedUnits: acceptedResponses.size,
+        pendingUnits: pendingUnitIds.length,
         validationPassed: validation.passed,
         diagnostics: validation.diagnostics,
       });
-      last = { responses, validation, rawText, error: null };
+      last = { responses: mergedResponses, validation, rawText, error: null };
       if (validation.passed) break;
+      workingBatch = {
+        ...batch,
+        batchId: `${batch.batchId}-retry-${attempt + 1}`,
+        expectedUnitIds: pendingUnitIds,
+        units: batch.units.filter(({ unitId }) =>
+          pendingUnitIds.includes(unitId)
+        ),
+      };
       messages = [
-        ...prompt(batch),
-        { role: "assistant", content: rawText },
+        ...prompt(workingBatch),
         {
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
@@ -340,12 +379,16 @@ async function runBatch({
     } catch (error) {
       attempts.push({
         attempt,
+        requestedUnitIds: workingBatch.expectedUnitIds,
+        messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
         validationPassed: false,
         error: error.message,
       });
       last = {
-        responses: [],
+        responses: batch.expectedUnitIds
+          .filter((unitId) => acceptedResponses.has(unitId))
+          .map((unitId) => acceptedResponses.get(unitId)),
         validation: {
           passed: false,
           diagnostics: [
@@ -491,4 +534,7 @@ async function run() {
   );
 }
 
-run().catch((error) => fail(error.stack || error.message));
+if (require.main === module)
+  run().catch((error) => fail(error.stack || error.message));
+
+module.exports = { runBatch };

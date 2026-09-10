@@ -28,6 +28,9 @@ const {
 const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
+const {
+  runBatch,
+} = require("../../scripts/qa/runADrivenReferenceClassification.cjs");
 const crypto = require("crypto");
 
 function digest(contractId, payload) {
@@ -168,6 +171,61 @@ function searchEligibleManifest() {
 }
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
+  test("retries only unresolved unit IDs and preserves accepted responses", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n",
+      ],
+      "3"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    const invalid = JSON.parse(JSON.stringify(valid));
+    invalid.at(-1).requirements[0].components[0].label = "";
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const input = JSON.parse(messages[1].content);
+            requested.push(input.expectedUnitIds);
+            const responses =
+              requested.length === 1 ? invalid : [valid.at(-1)];
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify(responses) } }],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 3,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toEqual(valid);
+    expect(requested).toEqual([
+      batch.expectedUnitIds,
+      [batch.expectedUnitIds.at(-1)],
+    ]);
+    expect(result.attempts.map(({ pendingUnits }) => pendingUnits)).toEqual([
+      1, 0,
+    ]);
+  });
+
   test("plans every block across multiple A documents without fixed pages or rows", () => {
     const first = artifact(
       [
