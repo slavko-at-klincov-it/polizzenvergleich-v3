@@ -281,6 +281,9 @@ function validateRequirement(draft, unit, requirementIndex) {
   const sourceBlocks = sourceBlockIds.map((blockId) =>
     availableBlocks.find(({ blockId: id }) => id === blockId)
   );
+  const uncitedOwnedBlockIds = unit.source.blockIds.filter(
+    (blockId) => !selectedBlockIds.has(blockId)
+  );
   if (
     sourceBlocks.some((block) => !block) ||
     !sourceContains(unit, sourceBlockIds, displayLabel)
@@ -289,6 +292,15 @@ function validateRequirement(draft, unit, requirementIndex) {
       value: null,
       diagnostics: [
         { code: "REQUIREMENT_SOURCE_TEXT_INVALID", requirementIndex },
+        ...(uncitedOwnedBlockIds.length
+          ? [
+              {
+                code: "REQUIREMENT_OWNED_BLOCKS_UNCITED",
+                requirementIndex,
+                blockIds: uncitedOwnedBlockIds,
+              },
+            ]
+          : []),
       ],
     };
   return {

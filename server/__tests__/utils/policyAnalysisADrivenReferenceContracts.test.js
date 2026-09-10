@@ -700,6 +700,59 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(component.sourceBlockIds).toEqual(unit.source.blockIds);
   });
 
+  test("reports owned blocks omitted by an operative requirement", () => {
+    const source = artifact(
+      ["Seite 1\nDEFINITION\nProdukt gilt für\nVersicherungsmakler GmbH.\n"],
+      "2"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Produkt gilt")
+    );
+    const lastBlock = unit.source.blocks.at(-1);
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: plan.units
+        .filter(
+          ({ initialDisposition }) =>
+            initialDisposition === "PENDING_CLASSIFICATION"
+        )
+        .map((plannedUnit) =>
+          plannedUnit.unitId === unit.unitId
+            ? {
+                unitId: unit.unitId,
+                primaryClass: "DEFINITION",
+                semanticClasses: ["DEFINITION"],
+                requirements: [
+                  {
+                    displayLabel: unit.source.combinedText,
+                    components: [
+                      {
+                        type: "FACT_ROLE",
+                        label: lastBlock.exactText,
+                        sourceBlockIds: [lastBlock.blockId],
+                      },
+                    ],
+                  },
+                ],
+              }
+            : validResponse(plannedUnit)
+        ),
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_OWNED_BLOCKS_UNCITED",
+          unitId: unit.unitId,
+          blockIds: [unit.source.blockIds[0]],
+        }),
+      ])
+    );
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],
