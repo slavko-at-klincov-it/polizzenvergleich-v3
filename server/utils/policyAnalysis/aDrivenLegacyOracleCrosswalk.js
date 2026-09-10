@@ -71,15 +71,15 @@ function legacyComponents(legacyManifest) {
       legacyRequirementId: requirement.requirementId,
       legacyComponentId: component.id,
       legacyFactRole: component.factRole,
-      sourceBlockIds: [
-        ...new Set(
+      sourceBlockIds: Array.from(
+        new Set(
           (component.sourceSpanIds || []).flatMap((spanId) =>
             requirement.sourceSpans
               .filter(({ spanId: id }) => id === spanId)
-              .flatMap(({ blockIds = [] }) => blockIds
+              .flatMap(({ blockIds = [] }) => blockIds)
           )
         )
-      ],
+      ),
     }))
   );
 }
