@@ -1,7 +1,6 @@
 const crypto = require("crypto");
 const {
   buildADrivenSourceUnitPlan,
-  stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   buildADrivenSemanticManifest,
@@ -15,7 +14,7 @@ const {
   validateCounterpartDecisions,
 } = require("../../utils/policyAnalysis/referenceCounterpartDecisionContract");
 const {
-  DINGHY_RANKING_RESULT_CONTRACT_ID,
+  buildDinghyRankingResult,
   buildClauseBoundaries,
   retrieveADrivenCounterpartCandidates,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartRetrieval");
@@ -340,17 +339,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     const dinghyRankings = new Map(
       plan.packages.map((item) => [
         item.packageId,
-        {
-          contractId: DINGHY_RANKING_RESULT_CONTRACT_ID,
-          packageId: item.packageId,
-          documentUuid: item.documentUuid,
-          documentSha256: item.documentSha256,
-          querySha256: sha256(stableStringify(item.query)),
+        buildDinghyRankingResult({
+          packageItem: item,
+          clauses: buildClauseBoundaries(documentForClauses),
           modelId: "text-embedding-qwen3-embedding-4b",
+          embeddingContractSha256: "e".repeat(64),
           rankedClauses: [
             { clauseBoundaryId: semanticClause.clauseBoundaryId, score: 0.82 },
           ],
-        },
+        }),
       ])
     );
     const deterministicOnly = retrieveADrivenCounterpartCandidates({
@@ -386,12 +383,42 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     });
     expect(
       full.packageResults.every(
-        ({ completedChannels, channelCandidateCounts, candidates }) =>
+        ({
+          completedChannels,
+          channelCandidateCounts,
+          channelProvenance,
+          candidates,
+        }) =>
           completedChannels.length === REQUIRED_SEARCH_CHANNELS.length &&
           channelCandidateCounts.DINGHY === 1 &&
+          channelProvenance.DINGHY.embeddingContractSha256 === "e".repeat(64) &&
           candidates.some(({ channels }) => channels.includes("DINGHY"))
       )
     ).toBe(true);
+
+    const [firstPackageId, firstRanking] = dinghyRankings
+      .entries()
+      .next().value;
+    const tamperedRankings = new Map(dinghyRankings);
+    tamperedRankings.set(firstPackageId, {
+      ...firstRanking,
+      rankedClauses: firstRanking.rankedClauses.map((ranked) => ({
+        ...ranked,
+        score: ranked.score + 0.01,
+      })),
+    });
+    expect(() =>
+      retrieveADrivenCounterpartCandidates({
+        plan,
+        documents: [
+          {
+            document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+            artifact: bArtifact,
+          },
+        ],
+        dinghyRankings: tamperedRankings,
+      })
+    ).toThrow("LF_A_DRIVEN_DINGHY_RESULT_INVALID");
   });
 
   test("rejects found when a required semantic dimension mismatches", () => {

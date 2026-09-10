@@ -14,7 +14,7 @@ const {
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 const { compactReferenceCandidates } = require("./referenceCandidateCompactor");
 
-const DINGHY_RANKING_RESULT_CONTRACT_ID = "LF_DINGHY_RANKING_RESULT_V1";
+const DINGHY_RANKING_RESULT_CONTRACT_ID = "LF_DINGHY_RANKING_RESULT_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -24,6 +24,67 @@ function retrievalError(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
   error.code = code;
   return error;
+}
+
+function clauseCorpusSha256(clauses) {
+  return sha256(
+    stableStringify(
+      clauses.map(
+        ({ clauseBoundaryId, documentStart, documentEnd, exactText }) => ({
+          clauseBoundaryId,
+          documentStart,
+          documentEnd,
+          exactTextSha256: sha256(exactText),
+        })
+      )
+    )
+  );
+}
+
+function buildDinghyRankingResult({
+  packageItem,
+  clauses,
+  modelId,
+  embeddingContractSha256,
+  rankedClauses,
+} = {}) {
+  const clauseIds = new Set(
+    (clauses || []).map(({ clauseBoundaryId }) => clauseBoundaryId)
+  );
+  if (
+    !packageItem?.packageId ||
+    !Array.isArray(clauses) ||
+    clauses.length === 0 ||
+    typeof modelId !== "string" ||
+    !modelId ||
+    !/^[a-f0-9]{64}$/u.test(String(embeddingContractSha256 || "")) ||
+    !Array.isArray(rankedClauses) ||
+    rankedClauses.some(
+      ({ clauseBoundaryId, score }) =>
+        !clauseIds.has(clauseBoundaryId) || !Number.isFinite(score)
+    ) ||
+    new Set(rankedClauses.map(({ clauseBoundaryId }) => clauseBoundaryId))
+      .size !== rankedClauses.length
+  )
+    throw retrievalError("LF_A_DRIVEN_DINGHY_RESULT_INPUT_INVALID");
+  const payload = {
+    schemaVersion: 1,
+    contractId: DINGHY_RANKING_RESULT_CONTRACT_ID,
+    packageId: packageItem.packageId,
+    documentUuid: packageItem.documentUuid,
+    documentSha256: packageItem.documentSha256,
+    querySha256: sha256(stableStringify(packageItem.query)),
+    clauseCorpusSha256: clauseCorpusSha256(clauses),
+    embeddingContractSha256,
+    modelId,
+    rankedClauses,
+  };
+  return {
+    ...payload,
+    rankingSha256: sha256(
+      `${DINGHY_RANKING_RESULT_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    ),
+  };
 }
 
 function buildClauseBoundaries(document, maximumCharacters = 1_800) {
@@ -271,6 +332,11 @@ function retrieveADrivenCounterpartCandidates({
       .slice(0, topK);
     const dinghyResult = dinghyRankings.get(packageItem.packageId);
     const hasDinghyResult = Boolean(dinghyResult);
+    const dinghyPayload = hasDinghyResult
+      ? (({ rankingSha256: _rankingSha256, ...payload }) => payload)(
+          dinghyResult
+        )
+      : null;
     if (
       hasDinghyResult &&
       (dinghyResult.contractId !== DINGHY_RANKING_RESULT_CONTRACT_ID ||
@@ -279,9 +345,28 @@ function retrieveADrivenCounterpartCandidates({
         dinghyResult.documentSha256 !== packageItem.documentSha256 ||
         dinghyResult.querySha256 !==
           sha256(stableStringify(packageItem.query)) ||
+        dinghyResult.clauseCorpusSha256 !== clauseCorpusSha256(index.clauses) ||
+        !/^[a-f0-9]{64}$/u.test(
+          String(dinghyResult.embeddingContractSha256 || "")
+        ) ||
         typeof dinghyResult.modelId !== "string" ||
         !dinghyResult.modelId ||
-        !Array.isArray(dinghyResult.rankedClauses))
+        !Array.isArray(dinghyResult.rankedClauses) ||
+        dinghyResult.rankedClauses.some(
+          ({ clauseBoundaryId, score }) =>
+            !index.clausesById.has(clauseBoundaryId) || !Number.isFinite(score)
+        ) ||
+        new Set(
+          dinghyResult.rankedClauses.map(
+            ({ clauseBoundaryId }) => clauseBoundaryId
+          )
+        ).size !== dinghyResult.rankedClauses.length ||
+        dinghyResult.rankingSha256 !==
+          sha256(
+            `${DINGHY_RANKING_RESULT_CONTRACT_ID}\u0000${stableStringify(
+              dinghyPayload
+            )}`
+          ))
     )
       throw retrievalError("LF_A_DRIVEN_DINGHY_RESULT_INVALID");
     const dinghy = hasDinghyResult
@@ -322,6 +407,18 @@ function retrieveADrivenCounterpartCandidates({
           items.length,
         ])
       ),
+      channelProvenance: {
+        ...(hasDinghyResult
+          ? {
+              DINGHY: {
+                contractId: dinghyResult.contractId,
+                rankingSha256: dinghyResult.rankingSha256,
+                embeddingContractSha256: dinghyResult.embeddingContractSha256,
+                modelId: dinghyResult.modelId,
+              },
+            }
+          : {}),
+      },
     };
   });
   const payload = {
@@ -364,6 +461,7 @@ function retrieveADrivenCounterpartCandidates({
 module.exports = {
   A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
   DINGHY_RANKING_RESULT_CONTRACT_ID,
+  buildDinghyRankingResult,
   buildClauseBoundaries,
   retrieveADrivenCounterpartCandidates,
 };
