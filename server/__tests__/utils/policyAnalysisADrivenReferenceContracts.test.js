@@ -140,7 +140,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
   test("materializes multiple requirements from one bounded unit and owns final IDs", () => {
     const source = artifact(
-      ["Seite 1\nDeckung\nVersichert sind Garage und Carport.\n"],
+      ["Seite 1\nDECKUNG\nVersichert sind Garage und Carport.\n"],
       "c"
     );
     const plan = buildADrivenSourceUnitPlan({
@@ -151,7 +151,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       .filter(({ initialDisposition }) => initialDisposition !== "NON_OPERATIVE_TERMINAL")
       .map(validResponse);
     const response = responses.find(({ unitId }) => unitId === clause.unitId);
-    const blockId = clause.source.blocks[0].blockId;
+    const blockId = clause.source.blocks.find(({ exactText }) =>
+      exactText.includes("Garage und Carport")
+    ).blockId;
     response.requirements = ["Garage", "Carport"].map((label) => ({
       displayLabel: label,
       components: [
@@ -177,7 +179,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(manifest.summary.allBlocksTerminal).toBe(true);
     expect(manifest.summary.unresolvedUnits).toBe(0);
-    expect(manifest.requirements.filter(({ sourceUnitIds }) => sourceUnitIds.includes(clause.unitId))).toHaveLength(2);
+    expect(
+      manifest.requirements.filter(({ sourceUnitIds }) =>
+        sourceUnitIds.includes(clause.unitId)
+      )
+    ).toHaveLength(2);
     expect(
       manifest.requirements.every(({ requirementId }) => /^AR-[a-f0-9]{24}$/u.test(requirementId))
     ).toBe(true);
@@ -186,7 +192,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
   test("turns missing, duplicate, unknown and invalid model IDs into visible unresolved state", () => {
     const source = artifact(
-      ["Seite 1\nDeckung\nVersichert sind Gebäude.\nSelbstbehalt EUR 500.\n"],
+      [
+        "Seite 1\nDeckung\nVersichert sind Gebäude.\n\nSelbstbehalt EUR 500.\n",
+      ],
       "d"
     );
     const plan = buildADrivenSourceUnitPlan({
@@ -238,7 +246,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ],
     });
     expect(manifest.summary.unresolvedUnits).toBe(1);
-    expect(manifest.blockTerminals.find(({ unitId }) => unit.unitId)).toMatchObject({
+    expect(
+      manifest.blockTerminals.find(({ unitId }) => unitId === unit.unitId)
+    ).toMatchObject({
       terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
       reviewRequired: true,
     });
@@ -289,7 +299,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(draft.summary.coveredComponents).toBe(0);
-    expect(draft.records[0].sourceOverlapCandidates).toHaveLength(1);
+    expect(draft.records[0].sourceOverlapCandidates).toHaveLength(2);
     expect(manifest.requirements).toHaveLength(
       manifest.summary.semanticRequirements
     );
