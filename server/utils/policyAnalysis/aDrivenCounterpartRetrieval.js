@@ -300,7 +300,7 @@ function retrieveADrivenCounterpartCandidates({
       completedChannels: REQUIRED_SEARCH_CHANNELS.filter(
         (channel) => channel !== "DINGHY" || hasDinghyResult
       ),
-      candidates: compacted,
+      candidates: compacted.compactCandidates,
       channelCandidateCounts: Object.fromEntries(
         Object.entries(channelLists).map(([channel, items]) => [
           channel,
