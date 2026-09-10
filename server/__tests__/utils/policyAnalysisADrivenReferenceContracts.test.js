@@ -267,6 +267,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       .map(validResponse);
     const manifest = buildADrivenSemanticManifest({ plan, responses });
     const dynamic = manifest.requirements[0];
+    const dynamicObject = dynamic.components.find(({ type }) => type === "OBJECT");
     const legacyManifest = {
       manifestSha256: "f".repeat(64),
       categories: [
@@ -312,7 +313,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           legacyRequirementId: "PR-01",
           legacyComponentId: "object",
           relation: "EQUIVALENT",
-          dynamicTargets: [dynamic.components[0].componentId],
+          dynamicTargets: [dynamicObject.componentId],
           reviewStatus: "APPROVED",
           reviewerIds: ["reviewer-1", "reviewer-2"],
         },
