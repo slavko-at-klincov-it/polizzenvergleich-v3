@@ -246,7 +246,7 @@ function finalizeRequirements(unit, drafts) {
           `${requirementId}:${stableStringify(component)}`
         ).slice(0, 24)}`,
       }));
-    const { sourceTextOrder, ...requirement } = draft;
+    const { sourceTextOrder: _sourceTextOrder, ...requirement } = draft;
     return {
       ...requirement,
       requirementId,
