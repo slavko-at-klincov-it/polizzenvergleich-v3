@@ -7196,3 +7196,45 @@ Deployment wurden nicht verändert.
 Status: `A- UND B-SHADOWVERTRÄGE IMPLEMENTIERT; REALER V4-A-LAUF LÄUFT;
 283/631-CROSSWALK, NULLFUND-ZERTIFIZIERUNG, VOLLGATES UND HOLDOUT OFFEN;
 KEIN DEPLOYMENT`.
+
+Nachtrag zum kontrollierten A-Pilotzyklus: Der reale V4-Lauf wurde nach
+7/60 Batches bewusst beendet und als Negativbeleg erhalten, nachdem eine
+Aufzählungsklausel auf Seite 4 mitten im Satz endete und erst nach dem
+Seitenmarker auf Seite 5 fortgesetzt wurde. Source-Plan V6 hält nun acht
+echte seitenübergreifende Inhaltsfortsetzungen als jeweils eine Unit,
+besitzt den Seitenmarker weiterhin separat und blockgenau und bewahrt den
+Listengovernor für nachfolgende Punkte. Auf dem bekannten A-Dokument bleiben
+1.005/1.005 Blöcke genau einmal besessen; es entstehen 380 Units, davon 349
+bounded zu klassifizieren und 31 deterministisch nichtoperativ. Acht
+Fortsetzungsrelationen sind interne Blockrelationen; falsch positive
+Heading-Verknüpfungen wurden durch Erhalt von `structuralKind` entfernt.
+
+Der erste Sechs-Batch-Pilot nach dem Cross-Page-Fix bestand 6/6, offenbarte
+bei der Artefaktprüfung aber eine formal gültige, fachlich falsche Zerlegung
+des einen über Seiten umbrochenen Listenpunkts in vier Requirements. Der
+neue `logicalSourceSegments`-Vertrag erzwingt deshalb genau eine Requirement
+pro Listenmarker, hält dessen Umbruchblöcke zusammen und verhindert zugleich
+das Zusammenziehen verschiedener Bullet-Elemente. Weitere gestoppte Piloten
+legten getrennt offen: Verwechslung von Terminalklassen und
+Komponententypen, reine Produkttitel als operative Definition, typografische
+Quote-Glyphen sowie erfundene COVERAGE_EFFECT-Belege in reinen Objektlisten.
+Jeder Befund wurde fail-closed erhalten; kein unvollständiger Pilot wurde
+als bestanden oder als Produktresultat weiterverwendet.
+
+Am exakten Commit `b653e64ff7d69e29f6ef6f22559b8ff87ff61562`
+bestehen auf dem Mac Studio Format und 43/43 A-driven Vertrags- und
+Mutationstests. Der aktuelle Manifestvertrag V11 akzeptiert äquivalente
+typografische Doppelquotes, bewahrt aber den Originalspan. Vor allem darf
+der Server unvollständige Modell-Source-IDs nicht mehr durch einen anderen,
+nur textähnlichen Evidenzblock erweitern. Stattdessen nennt
+`COMPONENT_SOURCE_TEXT_INVALID` die konkret fehlenden serverbekannten
+Block-IDs; Qwen muss sie im Repair ausdrücklich deklarieren. Ein weiterer
+Real-Pilot V12 steht aus. Der projektweite ESLint-Aufruf ist unabhängig von
+diesen Änderungen derzeit durch die installierte Kombination ESLint 9 /
+älteres `eslint-plugin-react` blockiert (`context.getFirstTokens is not a
+function`); Format und Jest laufen im isolierten Worktree.
+
+Aktueller Status: `SOURCE- UND ATOMISIERUNGSVERTRÄGE NACH REALBEFUND
+GEHÄRTET; NÄCHSTER V12-FRÜHPILOT, VOLLSTÄNDIGE A-KLASSIFIKATION,
+283/631-DOPPELREVIEW, B-SUCHE, NULLFUND-ZERTIFIZIERUNG, E2E/XLSX,
+VOLLGATES UND HOLDOUT OFFEN; KEIN KUNDEN-DEPLOYMENT`.
