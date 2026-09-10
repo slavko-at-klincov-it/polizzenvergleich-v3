@@ -1300,6 +1300,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       selectedCandidateIds: ["candidate-one"],
       absenceConclusion: false,
     });
+    expect(() =>
+      buildADrivenBinaryReferenceResult({
+        manifest,
+        searchPlan,
+        retrieval,
+        searchExecution,
+        decisions: partial,
+      })
+    ).toThrow("LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE");
     const boundedMisses = validateCounterpartDecisions({
       searchExecution,
       responses: searchExecution.packages.map((item) => ({

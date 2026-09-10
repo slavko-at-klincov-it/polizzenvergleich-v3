@@ -17,11 +17,11 @@ const {
 } = require("./referenceCounterpartDecisionContract");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
-// Projects only fully terminal component decisions into the customer-visible
-// binary result. CONTRADICTED is still a found counterpart; its differing
-// content remains visible instead of being collapsed into "not found".
+// Projects only complete requirement-level decisions into the customer-visible
+// binary result. CONTRADICTED is still a found counterpart for its component;
+// a partial component match can never make the whole A requirement FOUND.
 const A_DRIVEN_BINARY_RESULT_CONTRACT_ID =
-  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V2";
+  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V3";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -156,13 +156,13 @@ function buildADrivenBinaryReferenceResult({
         documentFindings,
       };
     });
-    const found = componentFindings.some(
+    const found = componentFindings.every(
       ({ componentFound }) => componentFound
     );
-    const absenceCertified = componentFindings.every(
+    const notFoundCertified = componentFindings.some(
       ({ componentAbsenceCertified }) => componentAbsenceCertified
     );
-    if (!found && !absenceCertified)
+    if (!found && !notFoundCertified)
       throw resultError(
         "LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE"
       );
