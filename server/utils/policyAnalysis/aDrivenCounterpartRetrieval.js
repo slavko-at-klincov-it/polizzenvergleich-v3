@@ -9,9 +9,7 @@ const {
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
   REQUIRED_SEARCH_CHANNELS,
 } = require("./aDrivenCounterpartSearchPlan");
-const {
-  compactReferenceCandidates,
-} = require("./referenceCandidateCompactor");
+const { compactReferenceCandidates } = require("./referenceCandidateCompactor");
 
 const A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID =
   "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V1";
@@ -36,7 +34,9 @@ function buildClauseBoundaries(document, maximumCharacters = 1_800) {
   const clauses = [];
   for (const page of document.pageMap) {
     const pageText = document.pageContent.slice(page.start, page.end);
-    const paragraphs = [...pageText.matchAll(/\S(?:[\s\S]*?\S)?(?=\n\s*\n|$)/gu)];
+    const paragraphs = [
+      ...pageText.matchAll(/\S(?:[\s\S]*?\S)?(?=\n\s*\n|$)/gu),
+    ];
     for (const paragraph of paragraphs) {
       const rawStart = paragraph.index;
       const rawText = paragraph[0];
@@ -152,13 +152,17 @@ function valueRoleMatches(item, packageItem) {
   ]
     .filter(Boolean)
     .map(normalize);
-  if (needles.length && needles.some((needle) => item.normalizedText.includes(needle)))
+  if (
+    needles.length &&
+    needles.some((needle) => item.normalizedText.includes(needle))
+  )
     return true;
   const rolePatterns = {
     VALUE_AND_UNIT: /\b(?:eur|euro|%|prozent|summe|betrag|limit)\b/iu,
     LIMIT_BASIS: /\b(?:summe|limit|maximum|höchst|hoechst|anteil)\b/iu,
     DEDUCTIBLE: /\b(?:selbstbehalt|franchise|eigenbehalt)\b/iu,
-    COVERAGE_EFFECT: /\b(?:versichert|gedeckt|ausgeschlossen|nicht versichert)\b/iu,
+    COVERAGE_EFFECT:
+      /\b(?:versichert|gedeckt|ausgeschlossen|nicht versichert)\b/iu,
     PRECEDENCE_OR_REPLACEMENT: /\b(?:ersetzt|vorrang|nachtrag|abweichend)\b/iu,
   };
   return rolePatterns[packageItem.componentType]?.test(item.exactText) || false;
