@@ -228,6 +228,36 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
     expect(clauses.map(({ source }) => source.blockIds.length)).toEqual([1, 1]);
   });
 
+  test("keeps a wrapped list item with its non-punctuated continuation", () => {
+    const source = artifact([
+      "Seite 1\n- Kellerabteile samt Türen, jedoch exklusive\nderen Inhalt;\n- gemauerte Öfen;\n",
+    ]);
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [sourceDocument(source)],
+    });
+    const firstItem = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Kellerabteile")
+    );
+
+    expect(firstItem.unitKind).toBe("LIST");
+    expect(firstItem.source.blockIds).toHaveLength(2);
+    expect(firstItem.source.combinedText).toContain("deren Inhalt;");
+  });
+
+  test("does not treat OCR spacing alone as table structure", () => {
+    const source = artifact([
+      "Seite 1\nZubehör    und Messgeräte,    Fernwärmeleitungen,    Heizungsanlagen;\n",
+    ]);
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [sourceDocument(source)],
+    });
+    const content = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Fernwärmeleitungen")
+    );
+
+    expect(content.unitKind).toBe("CLAUSE");
+  });
+
   test("covers a second A document and a cross-page continuation", () => {
     const main = artifact([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude;\n",

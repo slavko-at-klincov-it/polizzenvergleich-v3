@@ -11,7 +11,7 @@ const {
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
-  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V2";
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V3";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -271,26 +271,26 @@ function finalizeRequirements(unit, drafts) {
   });
 }
 
-function requiredComponentTypes(semanticClasses) {
-  const required = new Set();
+function requiredComponentGroups(semanticClasses) {
+  const required = [];
   const mappings = {
-    OPERATIVE_COVERAGE_STATEMENT: "COVERAGE_EFFECT",
-    EXCLUSION: "COVERAGE_EFFECT",
-    INSURED_OBJECT: "OBJECT",
-    PERIL_OR_DAMAGE: "PERIL_OR_CAUSE",
-    DEFINITION: "FACT_ROLE",
-    CONDITION: "CONDITION",
-    COST: "FACT_ROLE",
-    LIMIT: "VALUE_AND_UNIT",
-    DEDUCTIBLE: "DEDUCTIBLE",
-    OBLIGATION: "CONDITION",
-    DURATION: "TEMPORAL_VALIDITY",
-    VARIANT: "SCOPE",
-    DOCUMENT_PRECEDENCE_OR_REPLACEMENT: "PRECEDENCE_OR_REPLACEMENT",
+    OPERATIVE_COVERAGE_STATEMENT: ["COVERAGE_EFFECT"],
+    EXCLUSION: ["COVERAGE_EFFECT"],
+    INSURED_OBJECT: ["OBJECT"],
+    PERIL_OR_DAMAGE: ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT"],
+    DEFINITION: ["FACT_ROLE"],
+    CONDITION: ["CONDITION"],
+    COST: ["FACT_ROLE", "VALUE_AND_UNIT"],
+    LIMIT: ["VALUE_AND_UNIT", "LIMIT_BASIS"],
+    DEDUCTIBLE: ["DEDUCTIBLE"],
+    OBLIGATION: ["CONDITION"],
+    DURATION: ["TEMPORAL_VALIDITY"],
+    VARIANT: ["SCOPE"],
+    DOCUMENT_PRECEDENCE_OR_REPLACEMENT: ["PRECEDENCE_OR_REPLACEMENT"],
   };
   for (const semanticClass of semanticClasses) {
-    const componentType = mappings[semanticClass];
-    if (componentType) required.add(componentType);
+    const componentTypes = mappings[semanticClass];
+    if (componentTypes) required.push(componentTypes);
   }
   return required;
 }
@@ -392,9 +392,9 @@ function classifyUnit(unit, records) {
       components.map(({ type }) => type)
     ) || []
   );
-  const missingRequiredTypes = [
-    ...requiredComponentTypes(semanticClasses),
-  ].filter((type) => !observedTypes.has(type));
+  const missingRequiredGroups = requiredComponentGroups(semanticClasses).filter(
+    (types) => !types.some((type) => observedTypes.has(type))
+  );
   const exclusionEffects = requirements?.flatMap(({ components }) =>
     components
       .filter(({ type }) => type === "COVERAGE_EFFECT")
@@ -402,7 +402,7 @@ function classifyUnit(unit, records) {
   );
   if (
     !requirements ||
-    missingRequiredTypes.length > 0 ||
+    missingRequiredGroups.length > 0 ||
     (semanticClasses.includes("EXCLUSION") &&
       !exclusionEffects.includes("EXCLUDED"))
   )

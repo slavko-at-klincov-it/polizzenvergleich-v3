@@ -9,7 +9,7 @@ const {
 // Output: a deterministic package plan; it has no semantic or row authority.
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
-const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V1";
+const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -44,7 +44,7 @@ function normalizeLine(value) {
 }
 
 function isTableLike(text) {
-  return /\t/u.test(text) || /\S {3,}\S/u.test(text);
+  return /\t/u.test(text);
 }
 
 function isListLike(text, structuralKind) {
@@ -101,7 +101,14 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
   const previousList = isListLike(previous.exactText, previous.structuralKind);
   const currentList = isListLike(current.exactText, current.structuralKind);
   if (currentBlocks.length >= 12) return false;
-  if (previousList || currentList) return previousList && currentList;
+  if (previousList || currentList) {
+    if (previousList && currentList) return true;
+    if (previousList && !currentList) {
+      const previousText = normalizeLine(previous.exactText);
+      return !/[.;!?][”"')\]]?$/u.test(previousText);
+    }
+    return false;
+  }
   const previousTable = isTableLike(previous.exactText);
   const currentTable = isTableLike(current.exactText);
   if (previousTable || currentTable) return previousTable && currentTable;

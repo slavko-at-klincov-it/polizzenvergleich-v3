@@ -391,6 +391,50 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("accepts a limit basis without inventing a numeric value", () => {
+    const source = artifact(
+      ["Seite 1\nLIMIT\nBis zur vereinbarten Versicherungssumme.\n"],
+      "5"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: plan.units
+        .filter(
+          ({ initialDisposition }) =>
+            initialDisposition === "PENDING_CLASSIFICATION"
+        )
+        .map((plannedUnit) =>
+          plannedUnit.unitId === unit.unitId
+            ? {
+          unitId: unit.unitId,
+          primaryClass: "LIMIT",
+          semanticClasses: ["LIMIT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "LIMIT_BASIS",
+                  label: block.exactText,
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+              }
+            : validResponse(plannedUnit)
+        ),
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[0].components[0].type).toBe("LIMIT_BASIS");
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],
