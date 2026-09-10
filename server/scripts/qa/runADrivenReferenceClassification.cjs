@@ -183,10 +183,7 @@ async function verifyModel({ baseUrl, model, modelContext }) {
     ({ id, type, state }) =>
       id === model && type === "llm" && state === "loaded"
   );
-  if (
-    !loaded ||
-    Number(loaded.loaded_context_length) !== Number(modelContext)
-  )
+  if (!loaded || Number(loaded.loaded_context_length) !== Number(modelContext))
     throw new Error(
       `LF_A_CLASSIFICATION_MODEL_NOT_EXACTLY_LOADED:${model}:${modelContext}`
     );
@@ -268,7 +265,9 @@ async function runBatch({ client, model, plan, batch, maximumAttempts }) {
         responses: [],
         validation: {
           passed: false,
-          diagnostics: [{ code: "MODEL_RESPONSE_INVALID", detail: error.message }],
+          diagnostics: [
+            { code: "MODEL_RESPONSE_INVALID", detail: error.message },
+          ],
           terminalDispositions: {},
         },
         rawText: "",
@@ -325,8 +324,7 @@ async function run() {
   } else {
     fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   }
-  const baseUrl =
-    process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
+  const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const loadedModel = await verifyModel({
     baseUrl,
     model: args.model,
@@ -389,10 +387,7 @@ async function run() {
     proofLimit:
       "Bounded A-Klassifizierungs-Shadow. Ohne doppelt geprüften 283/631-Crosswalk, vollständige B-Suche, Experten-Goldstandard und Holdout kein Produkt- oder 99-Prozent-Nachweis.",
   };
-  writePrivateJson(
-    path.join(args.output, "responses.private.json"),
-    responses
-  );
+  writePrivateJson(path.join(args.output, "responses.private.json"), responses);
   writePrivateJson(
     path.join(args.output, "dynamic-semantic-manifest.private.json"),
     manifest
