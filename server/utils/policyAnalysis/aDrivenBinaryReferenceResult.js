@@ -21,7 +21,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // binary result. CONTRADICTED is still a found counterpart; its differing
 // content remains visible instead of being collapsed into "not found".
 const A_DRIVEN_BINARY_RESULT_CONTRACT_ID =
-  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V1";
+  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -117,10 +117,7 @@ function buildADrivenBinaryReferenceResult({
       left.sourceOrder[2] - right.sourceOrder[2] ||
       left.requirementId.localeCompare(right.requirementId)
   )) {
-    for (const [
-      componentOrder,
-      component,
-    ] of requirement.components.entries()) {
+    const componentFindings = requirement.components.map((component) => {
       const cells = packagesByComponent.get(component.componentId) || [];
       if (cells.length !== searchPlan.summary.documents)
         throw resultError(
@@ -141,49 +138,57 @@ function buildADrivenBinaryReferenceResult({
           absenceConclusion: decision.absenceConclusion,
           evidence: selectedEvidence(item, decision.selectedCandidateIds),
         }));
-      const found = documentFindings.some(({ decision }) =>
+      const componentFound = documentFindings.some(({ decision }) =>
         ["SUPPORTED", "CONTRADICTED"].includes(decision)
       );
-      const absenceCertified = cells.every(
+      const componentAbsenceCertified = cells.every(
         ({ item, decision }) =>
           item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
           item.searchCoverage.negativeConclusionEligible === true &&
           decision.absenceConclusion === true
       );
-      if (!found && !absenceCertified)
-        throw resultError(
-          "LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE"
-        );
-      const sourceBlockIds = new Set(component.sourceBlockIds);
-      const aSourceSpans = requirement.sourceSpans.filter(({ blockId }) =>
-        sourceBlockIds.has(blockId)
-      );
-      if (aSourceSpans.length === 0)
-        throw resultError("LF_A_DRIVEN_BINARY_RESULT_A_SOURCE_MISSING");
-      rows.push({
-        rowId: `ABR-${sha256(
-          `${manifest.manifestSha256}:${component.componentId}`
-        ).slice(0, 24)}`,
-        sourceOrder: [...requirement.sourceOrder, componentOrder],
-        structurePath: [...requirement.structurePath],
-        requirementId: requirement.requirementId,
-        requirementLabel: requirement.displayLabel,
+      return {
         componentId: component.componentId,
         componentType: component.type,
         componentLabel: component.label,
-        aSourceSpans,
-        customerStatus: found ? "FOUND" : "NOT_FOUND",
-        customerStatusLabel: found ? "Gefunden" : "Nicht gefunden",
-        bEvidence: documentFindings
-          .filter(({ evidence }) => evidence.length > 0)
-          .flatMap(({ evidence }) => evidence),
+        componentFound,
+        componentAbsenceCertified,
         documentFindings,
-      });
-    }
+      };
+    });
+    const found = componentFindings.some(({ componentFound }) => componentFound);
+    const absenceCertified = componentFindings.every(
+      ({ componentAbsenceCertified }) => componentAbsenceCertified
+    );
+    if (!found && !absenceCertified)
+      throw resultError(
+        "LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE"
+      );
+    if (!Array.isArray(requirement.sourceSpans) || !requirement.sourceSpans.length)
+        throw resultError("LF_A_DRIVEN_BINARY_RESULT_A_SOURCE_MISSING");
+    const bEvidence = componentFindings.flatMap(({ documentFindings }) =>
+      documentFindings
+        .filter(({ evidence }) => evidence.length > 0)
+        .flatMap(({ evidence }) => evidence)
+    );
+    rows.push({
+      rowId: `ABR-${sha256(
+        `${manifest.runContractId}:${requirement.requirementId}`
+      ).slice(0, 24)}`,
+      sourceOrder: [...requirement.sourceOrder],
+      structurePath: [...requirement.structurePath],
+      requirementId: requirement.requirementId,
+      requirementLabel: requirement.displayLabel,
+      aSourceSpans: requirement.sourceSpans,
+      customerStatus: found ? "FOUND" : "NOT_FOUND",
+      customerStatusLabel: found ? "Gefunden" : "Nicht gefunden",
+      bEvidence,
+      componentFindings,
+    });
   }
   if (
-    rows.length !== manifest.summary.semanticComponents ||
-    new Set(rows.map(({ componentId }) => componentId)).size !== rows.length
+    rows.length !== manifest.summary.semanticRequirements ||
+    new Set(rows.map(({ requirementId }) => requirementId)).size !== rows.length
   )
     throw resultError("LF_A_DRIVEN_BINARY_RESULT_ROW_COVERAGE_INVALID");
   const payload = {

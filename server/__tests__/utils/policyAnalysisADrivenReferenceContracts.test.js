@@ -935,8 +935,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     });
 
     expect(result.summary).toMatchObject({
-      rows: manifest.summary.semanticComponents,
-      found: manifest.summary.semanticComponents,
+      rows: manifest.summary.semanticRequirements,
+      found: manifest.summary.semanticRequirements,
       notFound: 0,
       unresolved: 0,
       sideBOnlyRows: 0,
@@ -945,6 +945,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(
       new Set(result.rows.map(({ customerStatus }) => customerStatus))
     ).toEqual(new Set(["FOUND"]));
+    expect(
+      result.rows.reduce(
+        (sum, { componentFindings }) => sum + componentFindings.length,
+        0
+      )
+    ).toBe(manifest.summary.semanticComponents);
     const boundedMisses = validateCounterpartDecisions({
       searchExecution,
       responses: searchExecution.packages.map((item) => ({
