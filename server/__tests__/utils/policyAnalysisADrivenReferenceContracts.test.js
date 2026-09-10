@@ -215,7 +215,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       chat: {
         completions: {
           create: jest.fn(async ({ messages }) => {
-            const input = JSON.parse(messages[1].content);
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
             requested.push(input.expectedUnitIds);
             const responses = requested.length === 1 ? invalid : [valid.at(-1)];
             return {
