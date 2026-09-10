@@ -271,10 +271,13 @@ function validateRequirement(draft, unit, requirementIndex) {
         { code: "REQUIREMENT_COMPONENTS_DUPLICATE", requirementIndex },
       ],
     };
-  const sourceBlockIds = [
-    ...new Set(components.flatMap((component) => component.sourceBlockIds)),
-  ];
   const availableBlocks = evidenceBlocks(unit);
+  const selectedBlockIds = new Set(
+    components.flatMap((component) => component.sourceBlockIds)
+  );
+  const sourceBlockIds = availableBlocks
+    .map(({ blockId }) => blockId)
+    .filter((blockId) => selectedBlockIds.has(blockId));
   const sourceBlocks = sourceBlockIds.map((blockId) =>
     availableBlocks.find(({ blockId: id }) => id === blockId)
   );
