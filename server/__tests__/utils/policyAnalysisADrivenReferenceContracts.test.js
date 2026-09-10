@@ -345,6 +345,67 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("accepts only whitespace-normalized labels while preserving exact spans", () => {
+    const source = artifact(
+      ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],
+      "6"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const normalized = unit.source.blocks
+      .map(({ exactText }) => exactText)
+      .join(" ");
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        ...plan.units
+          .filter(({ unitKind }) => unitKind === "HEADING")
+          .map(validResponse),
+        {
+          unitId: unit.unitId,
+          primaryClass: "CONDITION",
+          semanticClasses: ["CONDITION"],
+          requirements: [
+            {
+              displayLabel: normalized,
+              components: [
+                {
+                  type: "CONDITION",
+                  label: normalized,
+                  sourceBlockIds: unit.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[0].sourceSpans).toEqual(
+      unit.source.blocks.map(
+        ({
+          blockId,
+          physicalPageNumber,
+          documentStart,
+          documentEnd,
+          exactText,
+          exactTextSha256,
+        }) =>
+          expect.objectContaining({
+            blockId,
+            physicalPageNumber,
+            documentStart,
+            documentEnd,
+            exactText,
+            exactTextSha256,
+          })
+      )
+    );
+  });
+
   test("keeps the legacy oracle strictly evaluation-only", () => {
     const source = artifact(
       ["Seite 1\nDeckung\nVersichert sind Gebäude.\n"],

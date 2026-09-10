@@ -76,6 +76,13 @@ function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function comparableText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 function uniqueStrings(values) {
   if (!Array.isArray(values) || values.some((value) => !text(value)))
     return null;
@@ -105,11 +112,11 @@ function responseIndex(responses, plannedIds) {
 
 function sourceContains(unit, sourceBlockIds, value) {
   if (!value) return true;
-  return sourceBlockIds.some((blockId) =>
-    unit.source.blocks
-      .find(({ blockId: id }) => id === blockId)
-      ?.exactText.includes(value)
-  );
+  const sourceText = unit.source.blocks
+    .filter(({ blockId }) => sourceBlockIds.includes(blockId))
+    .map(({ exactText }) => exactText)
+    .join("\n");
+  return comparableText(sourceText).includes(comparableText(value));
 }
 
 function validateComponent(component, unit) {
@@ -160,7 +167,7 @@ function validateRequirement(draft, unit) {
     : [];
   if (
     !displayLabel ||
-    !unit.source.combinedText.includes(displayLabel) ||
+    !sourceContains(unit, unit.source.blockIds, displayLabel) ||
     components.length === 0 ||
     components.some((item) => !item)
   )
@@ -182,7 +189,9 @@ function validateRequirement(draft, unit) {
     return null;
   return {
     displayLabel,
-    sourceTextOrder: unit.source.combinedText.indexOf(displayLabel),
+    sourceTextOrder: comparableText(unit.source.combinedText).indexOf(
+      comparableText(displayLabel)
+    ),
     structurePath: [...unit.structurePath],
     sourceUnitIds: [unit.unitId],
     sourceBlockIds,
