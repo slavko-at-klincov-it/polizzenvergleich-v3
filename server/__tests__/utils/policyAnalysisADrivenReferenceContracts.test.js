@@ -390,7 +390,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
     const source = artifact(
       [
-        "Seite 1\nDECKUNG\nZusätzlich sind mitversichert, wenn der Versicherungsnehmer für den Schaden ersatzpflichtig ist:\n- Bewegliche Gegenstände sowie unbewegliche",
+        "Seite 1\nDECKUNG\nZusätzlich sind mitversichert, wenn der Versicherungsnehmer ersatzpflichtig ist, Schäden durch\n- Bewegliche Gegenstände sowie unbewegliche",
         "Seite 2\nGegenstände auf dem Grundstück wie Laternen und Schwimmbecken;\n- Inhalt von Heizöltanks;\n",
       ],
       "c"
