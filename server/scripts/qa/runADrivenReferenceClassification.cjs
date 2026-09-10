@@ -16,6 +16,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+  stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
 const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V2";
@@ -199,19 +200,86 @@ async function verifyModel({ baseUrl, model, modelContext }) {
 
 function existingBatchResult(file, plan, batch, args) {
   const result = readJson(file, "LF_A_CLASSIFICATION_BATCH_RESULT");
+  const expectedPromptSha256 = sha256(JSON.stringify(prompt(batch)));
   if (
     result?.contractId !== RUN_CONTRACT_ID ||
     result.sourceUnitPlanSha256 !== plan.planSha256 ||
     result.batchId !== batch.batchId ||
     result.promptContractId !== PROMPT_CONTRACT_ID ||
-    result.promptSha256 !== sha256(JSON.stringify(prompt(batch))) ||
+    result.promptSha256 !== expectedPromptSha256 ||
     result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||
-    !Array.isArray(result.responses)
+    result.batchIndex !== batch.batchIndex ||
+    stableStringify(result.expectedUnitIds) !==
+      stableStringify(batch.expectedUnitIds) ||
+    !Array.isArray(result.responses) ||
+    typeof result.rawResponse !== "string" ||
+    result.rawResponseSha256 !== sha256(result.rawResponse)
   )
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
+  const validation = validateBatchResponses(plan, batch, result.responses);
+  if (stableStringify(validation) !== stableStringify(result.validation))
+    throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
   return result;
+}
+
+function validateCompletedRun({ args, plan, batches, summaryFile }) {
+  const summary = readJson(summaryFile, "LF_A_CLASSIFICATION_SUMMARY");
+  if (
+    summary?.contractId !== RUN_CONTRACT_ID ||
+    summary.sourceUnitPlanSha256 !== plan.planSha256 ||
+    summary.promptContractId !== PROMPT_CONTRACT_ID ||
+    summary.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    summary.classificationBatchesSha256 !== sha256(JSON.stringify(batches)) ||
+    summary.model?.id !== args.model ||
+    summary.model?.loadedContextLength !== args.modelContext ||
+    summary.batches !== batches.batches.length
+  )
+    throw new Error("LF_A_CLASSIFICATION_SUMMARY_BINDING_INVALID");
+  const batchResults = batches.batches.map((batch) =>
+    existingBatchResult(
+      path.join(
+        args.output,
+        "batches",
+        `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.private.json`
+      ),
+      plan,
+      batch,
+      args
+    )
+  );
+  const responses = batchResults.flatMap(({ responses: items }) => items);
+  const storedResponses = readJson(
+    path.join(args.output, "responses.private.json"),
+    "LF_A_CLASSIFICATION_RESPONSES"
+  );
+  if (stableStringify(responses) !== stableStringify(storedResponses))
+    throw new Error("LF_A_CLASSIFICATION_RESPONSES_BINDING_INVALID");
+  const manifest = buildADrivenSemanticManifest({ plan, responses });
+  const storedManifest = readJson(
+    path.join(args.output, "dynamic-semantic-manifest.private.json"),
+    "LF_A_CLASSIFICATION_MANIFEST"
+  );
+  if (stableStringify(manifest) !== stableStringify(storedManifest))
+    throw new Error("LF_A_CLASSIFICATION_MANIFEST_BINDING_INVALID");
+  const expectedCounts = {
+    validBatches: batchResults.filter(({ validation }) => validation.passed)
+      .length,
+    unresolvedBatches: batchResults.filter(
+      ({ validation }) => !validation.passed
+    ).length,
+    semanticRequirements: manifest.summary.semanticRequirements,
+    semanticComponents: manifest.summary.semanticComponents,
+    unresolvedUnits: manifest.summary.unresolvedUnits,
+    reviewRequiredBlocks: manifest.summary.reviewRequiredBlocks,
+    allBlocksTerminal: manifest.summary.allBlocksTerminal,
+    responseIntegrityStatus: manifest.summary.responseIntegrityStatus,
+  };
+  for (const [key, value] of Object.entries(expectedCounts))
+    if (summary[key] !== value)
+      throw new Error(`LF_A_CLASSIFICATION_SUMMARY_COUNT_INVALID:${key}`);
+  return summary;
 }
 
 async function runBatch({
@@ -328,10 +396,12 @@ async function run() {
   )
     throw new Error("LF_A_CLASSIFICATION_INPUT_BINDING_INVALID");
   if (fs.existsSync(path.join(args.output, "summary.private.json"))) {
-    const summary = readJson(
-      path.join(args.output, "summary.private.json"),
-      "LF_A_CLASSIFICATION_SUMMARY"
-    );
+    const summary = validateCompletedRun({
+      args,
+      plan,
+      batches,
+      summaryFile: path.join(args.output, "summary.private.json"),
+    });
     console.log(
       `[lf-a-driven-classification] bereits vollständig: ${summary.validBatches}/${summary.batches} Batches`
     );
