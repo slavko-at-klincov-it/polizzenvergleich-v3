@@ -300,6 +300,51 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("rejects semantic attributes attached to the wrong component type", () => {
+    const source = artifact(
+      ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
+      "7"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        ...plan.units
+          .filter(({ unitKind }) => unitKind === "HEADING")
+          .map(validResponse),
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Gebäude",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(1);
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_UNIT_ATOMIZATION" }),
+      ])
+    );
+  });
+
   test("keeps the legacy oracle strictly evaluation-only", () => {
     const source = artifact(
       ["Seite 1\nDeckung\nVersichert sind Gebäude.\n"],

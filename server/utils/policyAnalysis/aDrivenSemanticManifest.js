@@ -135,7 +135,13 @@ function validateComponent(component, unit) {
   )
     return null;
   const effect = text(component?.coverageEffect);
-  if (effect && !COVERAGE_EFFECTS.has(effect)) return null;
+  if (
+    (effect && !COVERAGE_EFFECTS.has(effect)) ||
+    (effect && type !== "COVERAGE_EFFECT") ||
+    (type === "COVERAGE_EFFECT" && !effect) ||
+    (type === "VALUE_AND_UNIT" && !rawValue)
+  )
+    return null;
   return {
     type,
     label,

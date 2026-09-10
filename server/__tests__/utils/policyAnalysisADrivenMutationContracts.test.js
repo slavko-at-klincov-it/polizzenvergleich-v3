@@ -13,6 +13,10 @@ const {
 const {
   validateCounterpartDecisions,
 } = require("../../utils/policyAnalysis/referenceCounterpartDecisionContract");
+const {
+  buildClauseBoundaries,
+  retrieveADrivenCounterpartCandidates,
+} = require("../../utils/policyAnalysis/aDrivenCounterpartRetrieval");
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -217,6 +221,79 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
+  test("uses independent deterministic channels and a per-package Dinghy result", () => {
+    const { manifest } = completeManifest([
+      "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
+    ]);
+    const bArtifact = artifact([
+      "Seite 1\n\nDECKUNG\nWohnobjekte stehen unter Versicherungsschutz.\n",
+    ]);
+    const plan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [
+        {
+          uuid: "b-doc",
+          position: 0,
+          sha256: bArtifact.fingerprint,
+        },
+      ],
+    });
+    const documentForClauses = {
+      uuid: "b-doc",
+      sha256: bArtifact.fingerprint,
+      pageContent: bArtifact.document.pageContent,
+      pageContentSha256: sha256(bArtifact.document.pageContent),
+      pageMap: bArtifact.document.pageMap,
+    };
+    const semanticClause = buildClauseBoundaries(documentForClauses).find(
+      ({ exactText }) => exactText.includes("Wohnobjekte")
+    );
+    const dinghyRankings = new Map(
+      plan.packages.map(({ packageId }) => [
+        packageId,
+        [{ clauseBoundaryId: semanticClause.clauseBoundaryId, score: 0.82 }],
+      ])
+    );
+    const deterministicOnly = retrieveADrivenCounterpartCandidates({
+      plan,
+      documents: [
+        {
+          document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+          artifact: bArtifact,
+        },
+      ],
+    });
+    const full = retrieveADrivenCounterpartCandidates({
+      plan,
+      documents: [
+        {
+          document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+          artifact: bArtifact,
+        },
+      ],
+      dinghyRankings,
+    });
+
+    expect(
+      deterministicOnly.packageResults.every(
+        ({ completedChannels }) => !completedChannels.includes("DINGHY")
+      )
+    ).toBe(true);
+    expect(full.summary).toMatchObject({
+      packages: plan.packages.length,
+      completeDinghyPackages: plan.packages.length,
+      noGlobalTopN: true,
+    });
+    expect(
+      full.packageResults.every(
+        ({ completedChannels, channelCandidateCounts, candidates }) =>
+          completedChannels.length === REQUIRED_SEARCH_CHANNELS.length &&
+          channelCandidateCounts.DINGHY === 1 &&
+          candidates.some(({ channels }) => channels.includes("DINGHY"))
+      )
+    ).toBe(true);
+  });
+
   test("rejects found when a required semantic dimension mismatches", () => {
     const { manifest } = completeManifest([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
