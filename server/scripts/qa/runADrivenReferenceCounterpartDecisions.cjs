@@ -12,7 +12,6 @@ const {
   validateADrivenCounterpartSearchExecution,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartSearchPlan");
 const {
-  A_DRIVEN_COUNTERPART_DECISION_PLAN_CONTRACT_ID,
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const {
