@@ -215,9 +215,7 @@ function validateRequirement(draft, unit, requirementIndex) {
     ? draft.components.map((component) => validateComponent(component, unit))
     : [];
   const diagnostics = componentResults.flatMap((result, componentIndex) =>
-    result.code
-      ? [{ code: result.code, requirementIndex, componentIndex }]
-      : []
+    result.code ? [{ code: result.code, requirementIndex, componentIndex }] : []
   );
   const components = componentResults.map(({ value }) => value);
   if (
@@ -230,7 +228,12 @@ function validateRequirement(draft, unit, requirementIndex) {
       value: null,
       diagnostics: diagnostics.length
         ? diagnostics
-        : [{ code: "REQUIREMENT_SOURCE_OR_COMPONENTS_INVALID", requirementIndex }],
+        : [
+            {
+              code: "REQUIREMENT_SOURCE_OR_COMPONENTS_INVALID",
+              requirementIndex,
+            },
+          ],
     };
   const componentKeys = components.map((component) =>
     stableStringify(component)
@@ -238,7 +241,9 @@ function validateRequirement(draft, unit, requirementIndex) {
   if (new Set(componentKeys).size !== components.length)
     return {
       value: null,
-      diagnostics: [{ code: "REQUIREMENT_COMPONENTS_DUPLICATE", requirementIndex }],
+      diagnostics: [
+        { code: "REQUIREMENT_COMPONENTS_DUPLICATE", requirementIndex },
+      ],
     };
   const sourceBlockIds = [
     ...new Set(components.flatMap((component) => component.sourceBlockIds)),
@@ -252,7 +257,9 @@ function validateRequirement(draft, unit, requirementIndex) {
   )
     return {
       value: null,
-      diagnostics: [{ code: "REQUIREMENT_SOURCE_TEXT_INVALID", requirementIndex }],
+      diagnostics: [
+        { code: "REQUIREMENT_SOURCE_TEXT_INVALID", requirementIndex },
+      ],
     };
   return {
     value: {
@@ -272,10 +279,9 @@ function validateRequirement(draft, unit, requirementIndex) {
           exactText,
           exactTextSha256,
         }) => ({
-          spanId: `AS-${sha256(`${unit.source.documentSha256}:${blockId}`).slice(
-            0,
-            24
-          )}`,
+          spanId: `AS-${sha256(
+            `${unit.source.documentSha256}:${blockId}`
+          ).slice(0, 24)}`,
           documentUuid: unit.source.documentUuid,
           documentSha256: unit.source.documentSha256,
           blockId,
