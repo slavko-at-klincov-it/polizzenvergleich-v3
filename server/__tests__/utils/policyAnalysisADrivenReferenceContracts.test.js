@@ -163,6 +163,20 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(
       batches.batches.flatMap(({ expectedUnitIds }) => expectedUnitIds)
     ).toHaveLength(left.summary.pendingUnits);
+    expect(
+      batches.batches.every(({ units }) =>
+        units.every(
+          ({ sourceBlockIds, sourceBlocks }) =>
+            sourceBlocks.length === sourceBlockIds.length &&
+            sourceBlocks.every(
+              ({ blockId, exactText, exactTextSha256 }) =>
+                sourceBlockIds.includes(blockId) &&
+                exactText.length > 0 &&
+                /^[a-f0-9]{64}$/u.test(exactTextSha256)
+            )
+        )
+      )
+    ).toBe(true);
   });
 
   test("materializes multiple requirements from one bounded unit and owns final IDs", () => {

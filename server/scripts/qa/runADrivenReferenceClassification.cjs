@@ -1,0 +1,406 @@
+#!/usr/bin/env node
+
+process.umask(0o077);
+
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const { performance } = require("perf_hooks");
+const { OpenAI } = require("openai");
+const {
+  A_CLASSIFICATION_CONTRACT_ID,
+} = require("../../utils/policyAnalysis/aDrivenClassificationContract");
+const {
+  buildADrivenSemanticManifest,
+} = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
+const {
+  A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+} = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
+
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V1";
+const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
+const DEFAULT_CONTEXT = 42_496;
+
+function fail(message) {
+  console.error(`[lf-a-driven-classification] ${message}`);
+  process.exit(1);
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function argumentsFrom(argv) {
+  const values = {};
+  for (let index = 0; index < argv.length; index += 2) {
+    const key = argv[index];
+    const value = argv[index + 1];
+    if (!key?.startsWith("--") || !value)
+      fail(`Ungültiges Argument: ${key || "-"}`);
+    const name = key.slice(2);
+    if (Object.hasOwn(values, name)) fail(`Doppeltes Argument: ${name}`);
+    values[name] = value;
+  }
+  const allowed = new Set([
+    "shadowRoot",
+    "output",
+    "model",
+    "modelContext",
+    "maximumAttempts",
+  ]);
+  const unknown = Object.keys(values).filter((key) => !allowed.has(key));
+  if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
+  for (const required of ["shadowRoot", "output"])
+    if (!values[required]) fail(`--${required} ist erforderlich`);
+  const modelContext = Number(values.modelContext || DEFAULT_CONTEXT);
+  const maximumAttempts = Number(values.maximumAttempts || 2);
+  if (
+    !Number.isInteger(modelContext) ||
+    modelContext < 1_000 ||
+    !Number.isInteger(maximumAttempts) ||
+    maximumAttempts < 1 ||
+    maximumAttempts > 3
+  )
+    fail("Numerische Laufparameter sind ungültig");
+  return {
+    shadowRoot: path.resolve(values.shadowRoot),
+    output: path.resolve(values.output),
+    model: values.model || DEFAULT_MODEL,
+    modelContext,
+    maximumAttempts,
+  };
+}
+
+function readJson(file, code) {
+  let stat;
+  try {
+    stat = fs.lstatSync(file);
+  } catch {
+    throw new Error(`${code}_MISSING`);
+  }
+  if (!stat.isFile() || stat.isSymbolicLink())
+    throw new Error(`${code}_INVALID`);
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    throw new Error(`${code}_INVALID`);
+  }
+}
+
+function writePrivateJson(file, value) {
+  if (fs.existsSync(file))
+    throw new Error(`LF_A_CLASSIFICATION_OUTPUT_EXISTS:${file}`);
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temporary = `${file}.tmp-${process.pid}`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  fs.renameSync(temporary, file);
+  fs.chmodSync(file, 0o600);
+}
+
+function parseJsonArray(modelText) {
+  const normalized = String(modelText || "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim();
+  const start = normalized.indexOf("[");
+  const end = normalized.lastIndexOf("]");
+  if (start < 0 || end < start)
+    throw new Error("LF_A_CLASSIFICATION_RESPONSE_JSON_ARRAY_MISSING");
+  const parsed = JSON.parse(normalized.slice(start, end + 1));
+  if (!Array.isArray(parsed))
+    throw new Error("LF_A_CLASSIFICATION_RESPONSE_NOT_ARRAY");
+  return parsed;
+}
+
+function prompt(batch) {
+  return [
+    {
+      role: "system",
+      content:
+        "Du zerlegst ausschließlich die übergebenen Originaleinheiten eines österreichischen Gebäudeversicherungs-Referenzpakets A. Erfinde keine IDs und keinen Text. Antworte nur als JSON-Array mit exakt einem Objekt je unitId. Jede operative Aussage wird in eine oder mehrere atomare Anforderungen zerlegt. displayLabel, label, rawValue, unit und qualifier müssen jeweils wörtliche Teilstrings mindestens eines referenzierten sourceBlocks sein. Jeder operative sourceBlock muss mindestens einer Anforderung zugeordnet sein. Reine Überschriften/Struktur/Metadaten/Duplikate erzeugen keine Anforderungen. Wenn keine sichere Klassifikation möglich ist, verwende UNRESOLVED. primaryClass und semanticClasses dürfen nur folgende Werte enthalten: OPERATIVE_COVERAGE_STATEMENT, EXCLUSION, INSURED_OBJECT, PERIL_OR_DAMAGE, DEFINITION, CONDITION, COST, LIMIT, DEDUCTIBLE, OBLIGATION, DURATION, VARIANT, DOCUMENT_PRECEDENCE_OR_REPLACEMENT, STRUCTURE, METADATA, DUPLICATE, UNRESOLVED. Jede Anforderung enthält exakt displayLabel und components. Komponenten enthalten type, label, sourceBlockIds und optional rawValue, unit, coverageEffect, qualifier. type darf nur sein: OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, COVERAGE_EFFECT, SCOPE, FACT_ROLE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE, TEMPORAL_VALIDITY, DOCUMENT_ROLE, PRECEDENCE_OR_REPLACEMENT. coverageEffect darf nur INCLUDED, EXCLUDED, CONDITIONAL, OPTIONAL oder UNKNOWN sein. Eine Deckungs- oder Ausschlussaussage braucht COVERAGE_EFFECT; INSURED_OBJECT braucht OBJECT; LIMIT braucht VALUE_AND_UNIT; DEDUCTIBLE braucht DEDUCTIBLE. Ausgabeform je Einheit: {unitId,primaryClass,semanticClasses,requirements}.",
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        contractId: A_CLASSIFICATION_CONTRACT_ID,
+        batchId: batch.batchId,
+        expectedUnitIds: batch.expectedUnitIds,
+        units: batch.units,
+      }),
+    },
+  ];
+}
+
+function validateBatchResponses(plan, batch, responses) {
+  const manifest = buildADrivenSemanticManifest({ plan, responses });
+  const expected = new Set(batch.expectedUnitIds);
+  const unitTerminals = manifest.unitTerminals.filter(({ unitId }) =>
+    expected.has(unitId)
+  );
+  const diagnostics = [
+    ...manifest.diagnostics.filter(
+      ({ unitId, code }) =>
+        expected.has(unitId) ||
+        ["UNKNOWN_UNIT_ID", "DUPLICATE_UNIT_RESPONSE"].includes(code)
+    ),
+  ];
+  const passed =
+    unitTerminals.length === expected.size &&
+    unitTerminals.every(
+      ({ terminalDisposition }) =>
+        terminalDisposition !== "UNRESOLVED_REVIEW_REQUIRED"
+    ) &&
+    !diagnostics.some(({ code }) =>
+      [
+        "UNKNOWN_UNIT_ID",
+        "DUPLICATE_UNIT_RESPONSE",
+        "MISSING_UNIT_RESPONSE",
+      ].includes(code)
+    );
+  return {
+    passed,
+    diagnostics,
+    terminalDispositions: Object.fromEntries(
+      unitTerminals.map(({ unitId, terminalDisposition }) => [
+        unitId,
+        terminalDisposition,
+      ])
+    ),
+  };
+}
+
+async function verifyModel({ baseUrl, model, modelContext }) {
+  const apiRoot = baseUrl.replace(/\/v1\/?$/u, "");
+  const response = await fetch(`${apiRoot}/api/v0/models`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok)
+    throw new Error(`LF_A_CLASSIFICATION_MODEL_LIST_FAILED:${response.status}`);
+  const body = await response.json();
+  const loaded = body?.data?.find(
+    ({ id, type, state }) =>
+      id === model && type === "llm" && state === "loaded"
+  );
+  if (
+    !loaded ||
+    Number(loaded.loaded_context_length) !== Number(modelContext)
+  )
+    throw new Error(
+      `LF_A_CLASSIFICATION_MODEL_NOT_EXACTLY_LOADED:${model}:${modelContext}`
+    );
+  return {
+    id: loaded.id,
+    state: loaded.state,
+    loadedContextLength: Number(loaded.loaded_context_length),
+  };
+}
+
+function existingBatchResult(file, plan, batch) {
+  const result = readJson(file, "LF_A_CLASSIFICATION_BATCH_RESULT");
+  if (
+    result?.contractId !== RUN_CONTRACT_ID ||
+    result.sourceUnitPlanSha256 !== plan.planSha256 ||
+    result.batchId !== batch.batchId ||
+    !Array.isArray(result.responses)
+  )
+    throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
+  return result;
+}
+
+async function runBatch({ client, model, plan, batch, maximumAttempts }) {
+  let messages = prompt(batch);
+  let last = {
+    responses: [],
+    validation: {
+      passed: false,
+      diagnostics: [{ code: "NO_MODEL_ATTEMPT" }],
+      terminalDispositions: {},
+    },
+    rawText: "",
+    error: null,
+  };
+  const attempts = [];
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    const started = performance.now();
+    try {
+      const completion = await client.chat.completions.create({
+        model,
+        messages,
+        temperature: 0,
+        max_tokens: 12_000,
+      });
+      const rawText = completion.choices?.[0]?.message?.content || "";
+      const responses = parseJsonArray(rawText);
+      const validation = validateBatchResponses(plan, batch, responses);
+      attempts.push({
+        attempt,
+        durationMs: Math.round(performance.now() - started),
+        responseModel: completion.model || null,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
+        totalTokens: completion.usage?.total_tokens || 0,
+        parsedResponses: responses.length,
+        validationPassed: validation.passed,
+        diagnostics: validation.diagnostics,
+      });
+      last = { responses, validation, rawText, error: null };
+      if (validation.passed) break;
+      messages = [
+        ...prompt(batch),
+        { role: "assistant", content: rawText },
+        {
+          role: "user",
+          content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
+            validation.diagnostics
+          )}. Korrigiere ausschließlich das JSON-Array. Verwende exakt alle expectedUnitIds einmal, keine unbekannten IDs und nur wörtlich quellgebundene Komponenten.`,
+        },
+      ];
+    } catch (error) {
+      attempts.push({
+        attempt,
+        durationMs: Math.round(performance.now() - started),
+        validationPassed: false,
+        error: error.message,
+      });
+      last = {
+        responses: [],
+        validation: {
+          passed: false,
+          diagnostics: [{ code: "MODEL_RESPONSE_INVALID", detail: error.message }],
+          terminalDispositions: {},
+        },
+        rawText: "",
+        error: error.message,
+      };
+    }
+  }
+  return {
+    schemaVersion: 1,
+    contractId: RUN_CONTRACT_ID,
+    sourceUnitPlanSha256: plan.planSha256,
+    batchId: batch.batchId,
+    batchIndex: batch.batchIndex,
+    expectedUnitIds: batch.expectedUnitIds,
+    responses: last.responses,
+    validation: last.validation,
+    rawResponseSha256: sha256(last.rawText),
+    rawResponse: last.rawText,
+    error: last.error,
+    attempts,
+  };
+}
+
+async function run() {
+  const args = argumentsFrom(process.argv.slice(2));
+  const plan = readJson(
+    path.join(args.shadowRoot, "source-unit-plan.private.json"),
+    "LF_A_CLASSIFICATION_SOURCE_PLAN"
+  );
+  const batches = readJson(
+    path.join(args.shadowRoot, "classification-batches.private.json"),
+    "LF_A_CLASSIFICATION_BATCHES"
+  );
+  if (
+    plan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
+    batches?.contractId !== A_CLASSIFICATION_CONTRACT_ID ||
+    batches.sourceUnitPlanSha256 !== plan.planSha256
+  )
+    throw new Error("LF_A_CLASSIFICATION_INPUT_BINDING_INVALID");
+  if (fs.existsSync(path.join(args.output, "summary.private.json"))) {
+    const summary = readJson(
+      path.join(args.output, "summary.private.json"),
+      "LF_A_CLASSIFICATION_SUMMARY"
+    );
+    console.log(
+      `[lf-a-driven-classification] bereits vollständig: ${summary.validBatches}/${summary.batches} Batches`
+    );
+    return;
+  }
+  if (fs.existsSync(args.output)) {
+    const stat = fs.lstatSync(args.output);
+    if (!stat.isDirectory() || stat.isSymbolicLink())
+      throw new Error("LF_A_CLASSIFICATION_OUTPUT_INVALID");
+  } else {
+    fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
+  }
+  const baseUrl =
+    process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
+  const loadedModel = await verifyModel({
+    baseUrl,
+    model: args.model,
+    modelContext: args.modelContext,
+  });
+  const client = new OpenAI({ baseURL: baseUrl, apiKey: "lm-studio" });
+  const startedAt = new Date().toISOString();
+  const started = performance.now();
+  const batchResults = [];
+  for (const batch of batches.batches) {
+    const file = path.join(
+      args.output,
+      "batches",
+      `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.private.json`
+    );
+    const result = fs.existsSync(file)
+      ? existingBatchResult(file, plan, batch)
+      : await runBatch({
+          client,
+          model: args.model,
+          plan,
+          batch,
+          maximumAttempts: args.maximumAttempts,
+        });
+    if (!fs.existsSync(file)) writePrivateJson(file, result);
+    batchResults.push(result);
+    console.log(
+      `[lf-a-driven-classification] Batch ${batch.batchIndex + 1}/${batches.batches.length}: ${result.validation.passed ? "PASS" : "UNRESOLVED"}`
+    );
+  }
+  const responses = batchResults.flatMap(({ responses: items }) => items);
+  const manifest = buildADrivenSemanticManifest({ plan, responses });
+  const completedAt = new Date().toISOString();
+  const summary = {
+    schemaVersion: 1,
+    contractId: RUN_CONTRACT_ID,
+    sourceUnitPlanSha256: plan.planSha256,
+    classificationBatchesSha256: sha256(JSON.stringify(batches)),
+    model: loadedModel,
+    startedAt,
+    completedAt,
+    wallDurationMs: Math.round(performance.now() - started),
+    batches: batchResults.length,
+    validBatches: batchResults.filter(({ validation }) => validation.passed)
+      .length,
+    unresolvedBatches: batchResults.filter(
+      ({ validation }) => !validation.passed
+    ).length,
+    modelAttempts: batchResults.reduce(
+      (sum, { attempts }) => sum + attempts.length,
+      0
+    ),
+    semanticRequirements: manifest.summary.semanticRequirements,
+    semanticComponents: manifest.summary.semanticComponents,
+    unresolvedUnits: manifest.summary.unresolvedUnits,
+    reviewRequiredBlocks: manifest.summary.reviewRequiredBlocks,
+    allBlocksTerminal: manifest.summary.allBlocksTerminal,
+    responseIntegrityStatus: manifest.summary.responseIntegrityStatus,
+    acceptanceReady: false,
+    proofLimit:
+      "Bounded A-Klassifizierungs-Shadow. Ohne doppelt geprüften 283/631-Crosswalk, vollständige B-Suche, Experten-Goldstandard und Holdout kein Produkt- oder 99-Prozent-Nachweis.",
+  };
+  writePrivateJson(
+    path.join(args.output, "responses.private.json"),
+    responses
+  );
+  writePrivateJson(
+    path.join(args.output, "dynamic-semantic-manifest.private.json"),
+    manifest
+  );
+  writePrivateJson(path.join(args.output, "summary.private.json"), summary);
+  console.log(
+    `[lf-a-driven-classification] ${summary.validBatches}/${summary.batches} Batches PASS, ${summary.semanticRequirements} Anforderungen, ${summary.unresolvedUnits} Units ungeklärt`
+  );
+}
+
+run().catch((error) => fail(error.stack || error.message));

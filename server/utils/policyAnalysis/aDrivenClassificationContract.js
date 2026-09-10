@@ -41,6 +41,14 @@ function buildADrivenClassificationBatches(
       unitKind: unit.unitKind,
       structurePath: unit.structurePath,
       sourceBlockIds: unit.source.blockIds,
+      sourceBlocks: unit.source.blocks.map(
+        ({ blockId, physicalPageNumber, exactText, exactTextSha256 }) => ({
+          blockId,
+          physicalPageNumber,
+          exactText,
+          exactTextSha256,
+        })
+      ),
       physicalPages: unit.source.physicalPages,
       originalText: unit.source.combinedText,
     }));
