@@ -21,7 +21,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // binary result. CONTRADICTED is still a found counterpart for its component;
 // a partial component match can never make the whole A requirement FOUND.
 const A_DRIVEN_BINARY_RESULT_CONTRACT_ID =
-  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V3";
+  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V4";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -52,6 +52,42 @@ function selectedEvidence(item, selectedCandidateIds) {
       sourceSpans: candidate.sourceSpans,
     };
   });
+}
+
+function aValues(requirement) {
+  return requirement.components
+    .filter(({ type }) =>
+      ["VALUE_AND_UNIT", "LIMIT_BASIS", "DEDUCTIBLE"].includes(type)
+    )
+    .map(({ componentId, type, label, rawValue, unit, qualifier }) => ({
+      componentId,
+      type,
+      label,
+      ...(rawValue ? { rawValue } : {}),
+      ...(unit ? { unit } : {}),
+      ...(qualifier ? { qualifier } : {}),
+    }));
+}
+
+function bDimensionFindings(componentFindings, dimensions) {
+  return componentFindings.flatMap(({ componentId, documentFindings }) =>
+    documentFindings.flatMap(
+      ({ documentUuid, decision, dimensionChecks, evidence }) =>
+        dimensionChecks
+          .filter(({ dimension }) => dimensions.includes(dimension))
+          .map(({ checkId, dimension, outcome, candidateIds }) => ({
+            componentId,
+            documentUuid,
+            decision,
+            checkId,
+            dimension,
+            outcome,
+            evidence: evidence.filter(({ compactCandidateId }) =>
+              candidateIds.includes(compactCandidateId)
+            ),
+          }))
+    )
+  );
 }
 
 function buildADrivenBinaryReferenceResult({
@@ -136,6 +172,7 @@ function buildADrivenBinaryReferenceResult({
           decision: decision.decision,
           decisionScope: decision.decisionScope,
           absenceConclusion: decision.absenceConclusion,
+          dimensionChecks: decision.dimensionChecks,
           evidence: selectedEvidence(item, decision.selectedCandidateIds),
         }));
       const componentFound = documentFindings.some(({ decision }) =>
@@ -184,10 +221,27 @@ function buildADrivenBinaryReferenceResult({
       structurePath: [...requirement.structurePath],
       requirementId: requirement.requirementId,
       requirementLabel: requirement.displayLabel,
+      aCategoryPath: [...requirement.structurePath],
+      aCheckPoint: requirement.displayLabel,
+      aOriginalContent: requirement.sourceSpans
+        .map(({ exactText }) => exactText)
+        .join("\n"),
+      aValues: aValues(requirement),
       aSourceSpans: requirement.sourceSpans,
       customerStatus: found ? "FOUND" : "NOT_FOUND",
       customerStatusLabel: found ? "Gefunden" : "Nicht gefunden",
       bEvidence,
+      bCounterparts: bEvidence,
+      bEffects: bDimensionFindings(componentFindings, ["COVERAGE_EFFECT"]),
+      bValues: bDimensionFindings(componentFindings, [
+        "VALUE_AND_UNIT",
+        "LIMIT_BASIS",
+        "DEDUCTIBLE",
+      ]),
+      reviewHint: found
+        ? "Vollständiges Gegenstück für alle Pflichtkomponenten belegt."
+        : "Mindestens eine Pflichtkomponente ist vollständig als nicht vorhanden zertifiziert; Teilbelege bleiben dargestellt.",
+      manualAssessment: "",
       componentFindings,
     });
   }

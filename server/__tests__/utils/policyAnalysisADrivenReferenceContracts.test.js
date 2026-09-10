@@ -1267,6 +1267,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       new Set(result.rows.map(({ customerStatus }) => customerStatus))
     ).toEqual(new Set(["FOUND"]));
     expect(
+      result.rows.every(
+        ({
+          aCategoryPath,
+          aCheckPoint,
+          aOriginalContent,
+          aSourceSpans,
+          bCounterparts,
+          bEffects,
+          reviewHint,
+          manualAssessment,
+        }) =>
+          Array.isArray(aCategoryPath) &&
+          aCheckPoint.length > 0 &&
+          aOriginalContent.length > 0 &&
+          aSourceSpans.length > 0 &&
+          bCounterparts.length > 0 &&
+          bEffects.length > 0 &&
+          reviewHint.length > 0 &&
+          manualAssessment === ""
+      )
+    ).toBe(true);
+    expect(
       result.rows.reduce(
         (sum, { componentFindings }) => sum + componentFindings.length,
         0
