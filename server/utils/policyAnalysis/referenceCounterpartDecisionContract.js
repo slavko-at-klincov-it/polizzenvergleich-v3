@@ -69,7 +69,10 @@ function normalizedUnique(values) {
     : null;
 }
 
-function validateCounterpartDecisions({ searchExecution, responses = [] } = {}) {
+function validateCounterpartDecisions({
+  searchExecution,
+  responses = [],
+} = {}) {
   validateADrivenCounterpartSearchExecution(searchExecution);
   const packages = searchExecution.packages;
   if (!Array.isArray(packages) || packages.length === 0)

@@ -573,9 +573,7 @@ function validateADrivenSemanticManifest(manifest) {
   const { manifestSha256, ...payload } = manifest;
   if (
     manifestSha256 !==
-    sha256(
-      `${A_DYNAMIC_MANIFEST_CONTRACT_ID}\u0000${stableStringify(payload)}`
-    )
+    sha256(`${A_DYNAMIC_MANIFEST_CONTRACT_ID}\u0000${stableStringify(payload)}`)
   )
     throw manifestError("LF_A_DYNAMIC_MANIFEST_DIGEST_INVALID");
   return manifest;

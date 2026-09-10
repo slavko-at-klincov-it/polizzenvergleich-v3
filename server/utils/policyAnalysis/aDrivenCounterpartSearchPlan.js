@@ -256,8 +256,7 @@ function validateADrivenCounterpartSearchPlan(plan, manifest) {
     plan?.contractId !== A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID ||
     !Array.isArray(plan.packages) ||
     !Array.isArray(plan.documents) ||
-    plan.retrievalPolicy?.contractId !==
-      BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID ||
+    plan.retrievalPolicy?.contractId !== BOUNDED_RETRIEVAL_POLICY_CONTRACT_ID ||
     plan.retrievalPolicy?.selectionMode !== "PER_CHANNEL_TOP_K" ||
     !Number.isInteger(plan.retrievalPolicy?.perChannelTopK) ||
     plan.retrievalPolicy.perChannelTopK < 1 ||
@@ -420,8 +419,7 @@ function validateADrivenCounterpartSearchExecution(
       throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_PLAN_MISMATCH");
   }
   if (retrieval) {
-    if (!plan)
-      throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_PLAN_REQUIRED");
+    if (!plan) throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_PLAN_REQUIRED");
     validateCounterpartRetrievalArtifact(retrieval, plan);
     if (execution.counterpartRetrievalSha256 !== retrieval.retrievalSha256)
       throw planError("LF_A_DRIVEN_SEARCH_EXECUTION_RETRIEVAL_MISMATCH");

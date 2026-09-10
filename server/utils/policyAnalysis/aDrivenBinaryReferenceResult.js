@@ -146,8 +146,7 @@ function buildADrivenBinaryReferenceResult({
       );
       const absenceCertified = cells.every(
         ({ item, decision }) =>
-          item.searchCoverage.absenceStatus ===
-            "CERTIFIED_COMPLETE_ABSENCE" &&
+          item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
           item.searchCoverage.negativeConclusionEligible === true &&
           decision.absenceConclusion === true
       );

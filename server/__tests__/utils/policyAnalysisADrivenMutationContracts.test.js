@@ -385,7 +385,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     const { manifest } = completeManifest([
       "Seite 1\nDECKUNG\nVersichert sind Gebäude.\n",
     ]);
-    const bArtifact = artifact(["Seite 1\nSONSTIGES\nKeine passende Aussage.\n"]);
+    const bArtifact = artifact([
+      "Seite 1\nSONSTIGES\nKeine passende Aussage.\n",
+    ]);
     const plan = buildADrivenCounterpartSearchPlan({
       manifest,
       documents: [
@@ -423,7 +425,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     );
     expect(execution.summary.absenceCertifiedPackages).toBe(0);
     expect(decisions.summary.terminalPackages).toBe(plan.packages.length);
-    expect(decisions.results.every(({ absenceConclusion }) => !absenceConclusion))
-      .toBe(true);
+    expect(
+      decisions.results.every(({ absenceConclusion }) => !absenceConclusion)
+    ).toBe(true);
   });
 });
