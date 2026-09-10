@@ -7158,5 +7158,41 @@ Verbindliche Arbeitsreihenfolge:
    dem Mac Studio prüfen.
 9. Erst nach allen Gates Produkt-Routing und Deployment gesondert freigeben.
 
-Status: `ZIEL UND CHANGE BRIEF KORRIGIERT; SHADOW-IMPLEMENTIERUNG LÄUFT;
+Implementierungsstand vom 10. September 2026: Der Shadow besitzt nun
+getrennte, gehashte Verträge für Source-Units (`LF_A_SOURCE_UNIT_PLAN_V4`),
+bounded Klassifikation (`LF_A_BOUNDED_CLASSIFICATION_PROMPT_V6`), das
+dynamische Manifest (`LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V5`), die
+vollständige Komponenten×B-Dokument-Suchmatrix, die Dinghy-Rankings
+(`LF_DINGHY_RANKING_RESULT_V2`), Kandidatenkompaktierung und die
+komponentenweise semantische Entscheidung
+(`LF_COUNTERPART_SEMANTIC_REVIEW_V4`). Generische BM25-/Token-Bausteine sind
+aus dem alten LF-Benchmark in ein produktneutrales Retrieval-Modul
+verschoben. Bounded Top-K bleibt ausdrücklich Navigation und kann keinen
+Nullfund zertifizieren.
+
+Der erste reale A-Klassifikationspilot auf Source-Unit-Plan V3 wurde nach 21
+von 60 Batches kontrolliert beendet und vollständig als Negativbeleg
+erhalten: 11 Batches bestanden, 10 blieben nach insgesamt 46 Versuchen mit
+24 ungeklärten Units offen. Die Logs zeigten zwei allgemeine Ursachen:
+vertauschte Prozentwert-/Limitbasis-Komponenten sowie Aufzählungspunkte, deren
+Deckungswirkung nur im vorangestellten Governor steht. V4 bindet solche
+Governor-Blöcke nun als expliziten Evidenzkontext, ohne ihre einmalige
+Blockzuständigkeit zu duplizieren. Auf dem bekannten A-Dokument entstehen
+damit weiterhin 1.005 einmalig besessene Blöcke und 388 Units; 44
+Listeneinheiten tragen 50 Governor-Beziehungen, maximal zwei Governor je
+Einheit. 31 Units sind deterministisch nichtoperativ, 357 benötigen bounded
+Klassifikation in 60 Batches.
+
+Am exakten Shadow-Commit `b8c211520` bestanden auf dem Mac Studio Format und
+Lint der betroffenen Module sowie 42/42 A-driven Vertrags-, Mutations-,
+Retrieval- und Runner-Tests. Der vollständige reale V4-Klassifikationslauf
+läuft im isolierten QA-Artefakt
+`LF-A-DRIVEN-V2-SHADOW-20260910-B8C21152`; sein Ergebnis ist noch kein Gate.
+Die 283 Legacy-Anforderungen und 631 Komponenten sind im Crosswalk-Entwurf
+vorhanden, aber ihre vollständige fachliche Abdeckung ist erst nach gültiger
+A-Klassifikation und Doppelreview bewiesen. Produkt-Routing, Kunden-XLSX und
+Deployment wurden nicht verändert.
+
+Status: `A- UND B-SHADOWVERTRÄGE IMPLEMENTIERT; REALER V4-A-LAUF LÄUFT;
+283/631-CROSSWALK, NULLFUND-ZERTIFIZIERUNG, VOLLGATES UND HOLDOUT OFFEN;
 KEIN DEPLOYMENT`.
