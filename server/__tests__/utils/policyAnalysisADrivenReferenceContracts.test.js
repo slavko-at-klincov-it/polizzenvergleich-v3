@@ -173,9 +173,7 @@ function searchEligibleManifest() {
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("retries only unresolved unit IDs and preserves accepted responses", async () => {
     const source = artifact(
-      [
-        "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n",
-      ],
+      ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n"],
       "3"
     );
     const plan = buildADrivenSourceUnitPlan({
@@ -194,8 +192,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           create: jest.fn(async ({ messages }) => {
             const input = JSON.parse(messages[1].content);
             requested.push(input.expectedUnitIds);
-            const responses =
-              requested.length === 1 ? invalid : [valid.at(-1)];
+            const responses = requested.length === 1 ? invalid : [valid.at(-1)];
             return {
               model: "qwen/qwen3.6-35b-a3b",
               choices: [{ message: { content: JSON.stringify(responses) } }],

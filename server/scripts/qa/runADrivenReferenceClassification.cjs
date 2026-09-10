@@ -327,7 +327,9 @@ async function runBatch({
           "UNRESOLVED_REVIEW_REQUIRED"
         )
           continue;
-        const records = responses.filter((response) => response.unitId === unitId);
+        const records = responses.filter(
+          (response) => response.unitId === unitId
+        );
         if (records.length === 1) acceptedResponses.set(unitId, records[0]);
       }
       const pendingUnitIds = batch.expectedUnitIds.filter(
@@ -339,7 +341,9 @@ async function runBatch({
       const mergedResponses = batch.expectedUnitIds.flatMap((unitId) => {
         if (acceptedResponses.has(unitId))
           return [acceptedResponses.get(unitId)];
-        return pendingResponses.filter((response) => response.unitId === unitId);
+        return pendingResponses.filter(
+          (response) => response.unitId === unitId
+        );
       });
       const validation = validateBatchResponses(plan, batch, mergedResponses);
       attempts.push({
