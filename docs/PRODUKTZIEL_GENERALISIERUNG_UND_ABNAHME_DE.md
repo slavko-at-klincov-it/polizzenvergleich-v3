@@ -1,6 +1,6 @@
 # Produktziel, Generalisierung und fachliche Abnahme
 
-Stand: 6. September 2026
+Stand: 10. September 2026
 Geltung: verbindlicher V3-Produkt- und Entwicklungsvertrag
 
 ## 1. Kurzurteil
@@ -44,21 +44,22 @@ Sie bleibt als Herkunftsmetadatum sichtbar. Echte Unterschiede bei Inhalt,
 Wert, Scope, Bedingung, Variante, Version, Widerspruch oder Ersetzung bleiben
 entscheidungsrelevant.
 
-Im gerichteten LF-IMMO-Modus ist dagegen genau ein strukturkompatibles
-LF-IMMO-Referenzdokument auf A zulässig. Ein versioniertes serverseitiges
-Semantikorakel materialisiert daraus 283 atomare Anforderungen in 13
-Kategorien und bindet sie an die tatsächlichen Quellstellen und Werte des
-aktuellen A-Dokuments. Danach wird zu jeder A-Zeile im gesamten B-Paket nach
-dem Gegenstück gesucht. B darf ein bis neun Dokumente enthalten. Inhalte, die
-nur in B vorkommen, erzeugen in diesem Modus bewusst keine Ergebniszeile. Ein
-Nullfund bleibt vom ausdrücklichen Ausschluss getrennt.
+Im gerichteten LF-IMMO-Modus ist Paket A das Referenzprodukt des Kunden und
+darf aus einem oder mehreren zusammengehörigen Dokumenten bestehen. A
+bestimmt bei jedem Lauf aus seinem tatsächlichen Inhalt dynamisch Kategorien,
+Kapitel, Reihenfolge, fachlich relevante Aussagen, atomare Komponenten und
+damit sämtliche Ergebniszeilen. Weder eine feste Seitenzahl noch bestimmte
+Kapitel, eine unveränderte Reihenfolge oder exakt 283 bekannte Zeilen dürfen
+Produktionsvoraussetzung sein. Danach wird zu jeder aus A erzeugten
+Anforderung im gesamten Paket B nach dem fachlichen Gegenstück gesucht.
+Inhalte, die nur in B vorkommen, erzeugen in diesem Modus bewusst keine
+Ergebniszeile. Ein Nullfund bleibt vom ausdrücklichen Ausschluss getrennt.
 
-Dieser Vertrag entdeckt die fachliche Topologie eines beliebigen neuen
-LF-Dokuments noch nicht frei aus A. Fehlende, neue, umformulierte oder
-umgeordnete operative Struktur bricht deshalb fail-closed mit der Anforderung
-eines neuen fachlich geprüften Profils ab. Die 283 Anforderungen sind ein
-kontrollierter Vertrag für die bekannte LF-Familie und keine bewiesene
-vollständige Inventarisierung des gesamten LF-IMMO-Produkts.
+Der neue versionierte Laufvertrag heißt `LF_REFERENCE_A_DRIVEN_V2`. Der
+bisherige V3.7.4-Vertrag und alle mit ihm gespeicherten Ergebnisse bleiben
+unverändert lesbar. Das bestehende 283-Zeilen-Oracle ist ausschließlich
+Regression und Kontroll-Crosswalk für das bekannte LF-Dokument; es darf die
+Produktionszeilen eines neuen A-Pakets weder vorgeben noch begrenzen.
 
 Die aktuelle Kundenansicht besitzt fünf fachliche Kategorien:
 
@@ -92,16 +93,21 @@ ist noch durch vollständige neue End-to-End-Läufe zu bestätigen.
 
 ```text
 Vertragspaket
-  -> einmalige Dokumentidentität, PageMap und Strukturerfassung
+  -> einmalige Dokumentidentität, PageMap und vollständiges Source-Block-Ledger
   -> Dokumentrolle, Version, Rang und Ersetzungsbeziehungen
-  -> atomare Requirements je fachlichem Vergleichspunkt
-  -> dokumentweite kontrollierte Alias-/Occurrence-Suche
+  -> deterministische Klausel-, Listen- und Tabellensegmentierung
+  -> terminale Einordnung jedes A-Quellblocks
+  -> begrenzte source-bound Klassifikation und Atomisierung geplanter IDs
+  -> dynamisches SemanticRequirementManifest in A-Reihenfolge
+  -> pro A-Komponente und B-Dokument kontrollierte Mehrkanalsuche
+  -> CURRENT/Occurrences, BM25, Struktur, Dinghy, Werte und Rollen
+  -> Kandidatenkompaktierung innerhalb der Klauselgrenze
   -> kleinster vollständiger Klausel-, Listen- oder Tabellenkontext
   -> unveränderliche servereigene Evidence-Spans
-  -> begrenzte LLM-Klassifikation nur für bekannte Kandidaten
+  -> begrenzte LLM-Klassifikation nur für servergebundene Einheiten/Kandidaten
   -> deterministische Rollen-, Scope-, Werte- und Konflikt-Gates
   -> paketisolierte atomare Vertragsfakten
-  -> Rollup in das versionierte Kundenprofil VS/FE/LW/ST/EL
+  -> gerichtete A-Zeilen oder Rollup in das symmetrische Kundenprofil
   -> serverseitig erzeugte Tabelle, Detailansicht und Export
 ```
 
@@ -179,6 +185,14 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
     darf nur begrenzte bekannte Kandidaten klassifizieren und nichts erfinden.
 11. Ein globales Top-N ist kein Vollständigkeitsbeweis für ein mehrteiliges
     Dokumentpaket.
+12. Im LF-Modus muss jeder A-Quellblock terminal als operative Rolle,
+    Struktur, Metadatum, Duplikat oder `UNRESOLVED` enden. Ungeklärter
+    operativer Inhalt bleibt sichtbar und darf nicht still verschwinden.
+13. Source-Blöcke sind Provenienzeinheiten, keine Kundenzeilen. Erst die
+    source-bound Atomisierung darf eine oder mehrere Anforderungen erzeugen;
+    ein Absatz kann mehrere Zeilen oder verpflichtende Komponenten besitzen.
+14. Jeder geplante Modellauftrag besitzt serverseitige IDs. Fehlende,
+    doppelte oder unbekannte Antwort-IDs werden fail-closed `UNRESOLVED`.
 
 Die Regeln 8 und 9 beschreiben den am 2. September beschlossenen
 Nachfolgevertrag. Paket-/Dokumenttypneutralität und die getrennte

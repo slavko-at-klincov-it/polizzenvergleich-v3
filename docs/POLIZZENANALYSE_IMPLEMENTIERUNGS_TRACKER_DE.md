@@ -7086,3 +7086,77 @@ Vollständige Messwerte, Artefakthashes und Beweisgrenzen stehen in
 
 Status: `SHADOW UND LIVE-DINGHY BESTANDEN; KEINE PRODUKTMUTATION, KEIN
 DEPLOYMENT, KEIN GOLD- ODER 99-PROZENT-NACHWEIS`.
+
+### 133.16 Zielkorrektur: dynamisch A-getriebener LF-Vertrag V2
+
+Die Nutzerkorrektur vom 10. September 2026 ersetzt für neue LF-Läufe die
+feste 31-Seiten-/283-Zeilen-Familienannahme. Paket A ist das Referenzprodukt
+und muss seine Kategorien, Kapitel, operativen Aussagen, Komponenten,
+Reihenfolge und Ergebniszeilen bei jedem Lauf selbst bestimmen. Ein neues,
+verschobenes, umformuliertes oder in einem weiteren A-Dokument enthaltenes
+Element darf nicht mehr mit `NEUES_LF_PROFIL_ERFORDERLICH` aus dem Lauf
+fallen. Das bestehende 283-Oracle bleibt Regression und Crosswalk, aber keine
+Produktionszeilenquelle.
+
+Der neue Shadow-Laufvertrag heißt `LF_REFERENCE_A_DRIVEN_V2`. V3.7.4,
+`LF_IMMO_REFERENCE_A_TO_B_V1`, gespeicherte Ergebnisse und der getrennte
+symmetrische A/B-Modus bleiben während der Entwicklung unverändert.
+
+Change Brief:
+
+```text
+Nutzerproblem / Ergebnis:
+  Neue oder geänderte A-Inhalte müssen automatisch als geordnete,
+  source-bound Vergleichszeilen entstehen und gezielt in B gesucht werden.
+Beobachtete Evidenz:
+  Der aktuelle V3.7.4-Pfad materialisiert 283 Anforderungen aus einem festen
+  Oracle und lehnt unbekannte Text-/Strukturänderungen fail-closed ab.
+Root-Cause-Klasse:
+  Semantikquelle, Segmentierung, Rollenassoziation und Laufvertragsrouting.
+Betroffene Verträge:
+  INV-001..004, INV-009..011, FAIL-001, FAIL-003, FAIL-005,
+  ADR-027..031.
+Caller und Seiteneffekte:
+  Uploadlimits, Queue/InputManifest, Worker, A-Template, Resume/Readback,
+  B-Retrieval, Resultatbuilder, API, UI und XLSX; symmetrischer Pfad getrennt.
+Verworfene Negativreferenz:
+  126ab03b: Source-Linien direkt als Rows, Einzelrolle, Exact-Alias-Suche.
+Scope:
+  Modularer Shadow von A-Paket-Ledger über bounded Atomisierung,
+  Oracle-Crosswalk, Hybrid-B-Suche und servervalidierte Ergebnisse.
+Nicht-Ziele:
+  Kein Produkt-Routing, kein Deployment, keine 99-%- oder Holdout-Aussage.
+Riskanteste Annahme:
+  Deterministische Segmentierung bildet Klauseln, Listen, Tabellen und
+  Seitenfortsetzungen ausreichend vollständig für bounded Atomisierung ab.
+Messbare Verbesserung:
+  100 % terminale A-Block-Abdeckung; 283/283 Legacy-Crosswalk; Mutationen
+  erzeugen stabile neue/verschobene Rows; keine B-only-Zeilen.
+Realstrukturregression:
+  Bekanntes LF A + 1/9 B, zusätzliche A-Dokumente sowie Struktur-, Text-,
+  Tabellen-, Cross-Page- und OCR-Mutationen.
+Beweisgrenze:
+  Synthetische und bekannte Fixtures beweisen keine unbekannte reale
+  Versicherer-/Layoutgeneralisierung.
+Wissens-Write-back:
+  Produktcharter, ADR-031, Architektur Abschnitt 24, KB-Intake und -Index;
+  Messungen nach Ausführung zusätzlich in Tests und Erkenntnisse.
+```
+
+Verbindliche Arbeitsreihenfolge:
+
+1. Produktcharter, ADR, Architektur, Intake und Tracker korrigieren.
+2. `126ab03b` als Negativreferenz gegen die aktuelle Caller-Kette prüfen.
+3. Paketfähiges Source-Ledger und stabile bounded Analyse-Units bauen.
+4. Terminale Blockklassifikation und streng validierten
+   Atomisierungsvertrag implementieren.
+5. Dynamisches Manifest und 283/631-Crosswalk als getrennte Schichten bauen.
+6. V3.7.5-Kandidatenkanäle pro Komponente/Dokument integrieren und
+   klausellokal kompaktieren.
+7. Kleine servergebundene Qwen-Gegenstückentscheidungen integrieren.
+8. Mutation, Wiederholung, Symmetrie, Lint, Build und E2E ausschließlich auf
+   dem Mac Studio prüfen.
+9. Erst nach allen Gates Produkt-Routing und Deployment gesondert freigeben.
+
+Status: `ZIEL UND CHANGE BRIEF KORRIGIERT; SHADOW-IMPLEMENTIERUNG LÄUFT;
+KEIN DEPLOYMENT`.
