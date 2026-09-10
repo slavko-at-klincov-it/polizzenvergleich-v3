@@ -163,13 +163,13 @@ function validateComponent(component, unit) {
   const label = text(component?.label);
   const sourceBlockIds = uniqueStrings(component?.sourceBlockIds);
   const allowedBlockIds = new Set(unit.source.blockIds);
-  if (
-    !COMPONENT_TYPES.has(type) ||
-    !label ||
-    !sourceBlockIds?.length ||
-    sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId))
-  )
-    return null;
+  if (!COMPONENT_TYPES.has(type))
+    return { value: null, code: "COMPONENT_TYPE_INVALID" };
+  if (!label) return { value: null, code: "COMPONENT_LABEL_MISSING" };
+  if (!sourceBlockIds?.length)
+    return { value: null, code: "COMPONENT_SOURCE_BLOCK_IDS_INVALID" };
+  if (sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId)))
+    return { value: null, code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE" };
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
@@ -178,6 +178,8 @@ function validateComponent(component, unit) {
     sourceBlockIds,
     [label, rawValue, unitValue, qualifier].filter(Boolean)
   );
+  if (type === "VALUE_AND_UNIT" && !rawValue)
+    return { value: null, code: "VALUE_AND_UNIT_RAW_VALUE_MISSING" };
   if (
     !canonicalSourceBlockIds ||
     !sourceContains(unit, canonicalSourceBlockIds, label) ||
@@ -185,42 +187,59 @@ function validateComponent(component, unit) {
     !sourceContains(unit, canonicalSourceBlockIds, unitValue) ||
     !sourceContains(unit, canonicalSourceBlockIds, qualifier)
   )
-    return null;
+    return { value: null, code: "COMPONENT_SOURCE_TEXT_INVALID" };
   const effect = text(component?.coverageEffect);
-  if (
-    (effect && !COVERAGE_EFFECTS.has(effect)) ||
-    (effect && type !== "COVERAGE_EFFECT") ||
-    (type === "COVERAGE_EFFECT" && !effect) ||
-    (type === "VALUE_AND_UNIT" && !rawValue)
-  )
-    return null;
+  if (effect && !COVERAGE_EFFECTS.has(effect))
+    return { value: null, code: "COVERAGE_EFFECT_VALUE_INVALID" };
+  if (effect && type !== "COVERAGE_EFFECT")
+    return { value: null, code: "COVERAGE_EFFECT_TYPE_INVALID" };
+  if (type === "COVERAGE_EFFECT" && !effect)
+    return { value: null, code: "COVERAGE_EFFECT_VALUE_MISSING" };
   return {
-    type,
-    label,
-    sourceBlockIds: canonicalSourceBlockIds,
-    ...(rawValue ? { rawValue } : {}),
-    ...(unitValue ? { unit: unitValue } : {}),
-    ...(effect ? { coverageEffect: effect } : {}),
-    ...(qualifier ? { qualifier } : {}),
+    value: {
+      type,
+      label,
+      sourceBlockIds: canonicalSourceBlockIds,
+      ...(rawValue ? { rawValue } : {}),
+      ...(unitValue ? { unit: unitValue } : {}),
+      ...(effect ? { coverageEffect: effect } : {}),
+      ...(qualifier ? { qualifier } : {}),
+    },
+    code: null,
   };
 }
 
-function validateRequirement(draft, unit) {
+function validateRequirement(draft, unit, requirementIndex) {
   const displayLabel = text(draft?.displayLabel);
-  const components = Array.isArray(draft?.components)
+  const componentResults = Array.isArray(draft?.components)
     ? draft.components.map((component) => validateComponent(component, unit))
     : [];
+  const diagnostics = componentResults.flatMap((result, componentIndex) =>
+    result.code
+      ? [{ code: result.code, requirementIndex, componentIndex }]
+      : []
+  );
+  const components = componentResults.map(({ value }) => value);
   if (
     !displayLabel ||
     !sourceContains(unit, unit.source.blockIds, displayLabel) ||
     components.length === 0 ||
     components.some((item) => !item)
   )
-    return null;
+    return {
+      value: null,
+      diagnostics: diagnostics.length
+        ? diagnostics
+        : [{ code: "REQUIREMENT_SOURCE_OR_COMPONENTS_INVALID", requirementIndex }],
+    };
   const componentKeys = components.map((component) =>
     stableStringify(component)
   );
-  if (new Set(componentKeys).size !== components.length) return null;
+  if (new Set(componentKeys).size !== components.length)
+    return {
+      value: null,
+      diagnostics: [{ code: "REQUIREMENT_COMPONENTS_DUPLICATE", requirementIndex }],
+    };
   const sourceBlockIds = [
     ...new Set(components.flatMap((component) => component.sourceBlockIds)),
   ];
@@ -231,47 +250,53 @@ function validateRequirement(draft, unit) {
     sourceBlocks.some((block) => !block) ||
     !sourceContains(unit, sourceBlockIds, displayLabel)
   )
-    return null;
+    return {
+      value: null,
+      diagnostics: [{ code: "REQUIREMENT_SOURCE_TEXT_INVALID", requirementIndex }],
+    };
   return {
-    displayLabel,
-    sourceTextOrder: comparableText(unit.source.combinedText).indexOf(
-      comparableText(displayLabel)
-    ),
-    structurePath: [...unit.structurePath],
-    sourceUnitIds: [unit.unitId],
-    sourceBlockIds,
-    sourceSpans: sourceBlocks.map(
-      ({
-        blockId,
-        physicalPageNumber,
-        documentStart,
-        documentEnd,
-        exactText,
-        exactTextSha256,
-      }) => ({
-        spanId: `AS-${sha256(`${unit.source.documentSha256}:${blockId}`).slice(
-          0,
-          24
-        )}`,
-        documentUuid: unit.source.documentUuid,
-        documentSha256: unit.source.documentSha256,
-        blockId,
-        physicalPageNumber,
-        documentStart,
-        documentEnd,
-        exactText,
-        exactTextSha256,
-      })
-    ),
-    atomizationStatus: "SOURCE_BOUND_TYPED",
-    decisionEligibility: "ELIGIBLE",
-    components,
-    documentAuthority: {
-      role: unit.source.documentRole,
-      status: unit.source.documentStatus,
-      precedence: "UNRESOLVED",
-      replacement: "UNRESOLVED",
+    value: {
+      displayLabel,
+      sourceTextOrder: comparableText(unit.source.combinedText).indexOf(
+        comparableText(displayLabel)
+      ),
+      structurePath: [...unit.structurePath],
+      sourceUnitIds: [unit.unitId],
+      sourceBlockIds,
+      sourceSpans: sourceBlocks.map(
+        ({
+          blockId,
+          physicalPageNumber,
+          documentStart,
+          documentEnd,
+          exactText,
+          exactTextSha256,
+        }) => ({
+          spanId: `AS-${sha256(`${unit.source.documentSha256}:${blockId}`).slice(
+            0,
+            24
+          )}`,
+          documentUuid: unit.source.documentUuid,
+          documentSha256: unit.source.documentSha256,
+          blockId,
+          physicalPageNumber,
+          documentStart,
+          documentEnd,
+          exactText,
+          exactTextSha256,
+        })
+      ),
+      atomizationStatus: "SOURCE_BOUND_TYPED",
+      decisionEligibility: "ELIGIBLE",
+      components,
+      documentAuthority: {
+        role: unit.source.documentRole,
+        status: unit.source.documentStatus,
+        precedence: "UNRESOLVED",
+        replacement: "UNRESOLVED",
+      },
     },
+    diagnostics: [],
   };
 }
 
@@ -420,16 +445,27 @@ function classifyUnit(unit, records) {
     };
   }
 
-  const drafts = Array.isArray(response.requirements)
-    ? response.requirements.map((draft) => validateRequirement(draft, unit))
+  const draftResults = Array.isArray(response.requirements)
+    ? response.requirements.map((draft, requirementIndex) =>
+        validateRequirement(draft, unit, requirementIndex)
+      )
     : [];
+  const drafts = draftResults.map(({ value }) => value);
   if (drafts.length === 0 || drafts.some((item) => !item))
     return {
       terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
       primaryClass: "UNRESOLVED",
       semanticClasses: ["UNRESOLVED"],
       requirements: [],
-      diagnostics: [{ code: "INVALID_UNIT_ATOMIZATION", unitId: unit.unitId }],
+      diagnostics: [
+        { code: "INVALID_UNIT_ATOMIZATION", unitId: unit.unitId },
+        ...draftResults.flatMap(({ diagnostics }) =>
+          diagnostics.map((diagnostic) => ({
+            ...diagnostic,
+            unitId: unit.unitId,
+          }))
+        ),
+      ],
     };
   const requirements = finalizeRequirements(unit, drafts);
   const observedTypes = new Set(

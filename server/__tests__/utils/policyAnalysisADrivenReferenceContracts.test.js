@@ -461,6 +461,61 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "INVALID_UNIT_ATOMIZATION" }),
+        expect.objectContaining({ code: "COVERAGE_EFFECT_TYPE_INVALID" }),
+      ])
+    );
+  });
+
+  test("reports a missing literal raw value precisely for retry", () => {
+    const source = artifact(
+      ["Seite 1\nLIMIT\nBis zu 10% der Gebäudeversicherungssumme.\n"],
+      "8"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        ...plan.units
+          .filter(({ unitKind }) => unitKind === "HEADING")
+          .map(validResponse),
+        {
+          unitId: unit.unitId,
+          primaryClass: "LIMIT",
+          semanticClasses: ["LIMIT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "VALUE_AND_UNIT",
+                  label: "10%",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "LIMIT_BASIS",
+                  label: "Gebäudeversicherungssumme",
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(1);
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "VALUE_AND_UNIT_RAW_VALUE_MISSING",
+          unitId: unit.unitId,
+          requirementIndex: 0,
+          componentIndex: 0,
+        }),
       ])
     );
   });
