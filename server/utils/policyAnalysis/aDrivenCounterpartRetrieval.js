@@ -4,7 +4,7 @@ const {
   normalize,
   rankLexicalCandidates,
   tokens,
-} = require("./lfReferenceDiscoveryBenchmark");
+} = require("./counterpartRetrievalPrimitives");
 const {
   A_DRIVEN_COUNTERPART_RETRIEVAL_CONTRACT_ID,
   A_DRIVEN_COUNTERPART_SEARCH_PLAN_CONTRACT_ID,
