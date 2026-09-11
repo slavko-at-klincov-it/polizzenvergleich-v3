@@ -235,12 +235,20 @@ function validateComponent(component, unit) {
     return {
       value: null,
       code: "COMPONENT_SOURCE_TEXT_INVALID",
+      componentType: type,
+      invalidLiteralValues: componentValues,
+      allowedEvidence: evidenceBlocks(unit).map(({ blockId, exactText }) => ({
+        blockId,
+        exactText,
+      })),
     };
   if (missingSourceBlockIds.length) {
     const required = new Set([...sourceBlockIds, ...missingSourceBlockIds]);
     return {
       value: null,
       code: "COMPONENT_SOURCE_TEXT_INVALID",
+      componentType: type,
+      invalidLiteralValues: componentValues,
       blockIds: missingSourceBlockIds,
       declaredSourceBlockIds: sourceBlockIds,
       requiredSourceBlockIds: evidenceBlocks(unit)

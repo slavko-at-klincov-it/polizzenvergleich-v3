@@ -1626,6 +1626,50 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("reports an invented component literal without silently replacing it", () => {
+    const source = artifact(["Seite 1\nAustritt von Wasser.\n"], "e");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const response = validResponse(unit);
+    response.primaryClass = "PERIL_OR_DAMAGE";
+    response.semanticClasses = ["PERIL_OR_DAMAGE"];
+    response.requirements[0].components = [
+      {
+        type: "PERIL_OR_CAUSE",
+        label: unit.source.blocks[0].exactText,
+        sourceBlockIds: [unit.source.blockIds[0]],
+      },
+      {
+        type: "COVERAGE_EFFECT",
+        label: "versichert",
+        coverageEffect: "INCLUDED",
+        sourceBlockIds: [unit.source.blockIds[0]],
+      },
+    ];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "COMPONENT_SOURCE_TEXT_INVALID",
+          componentType: "COVERAGE_EFFECT",
+          invalidLiteralValues: ["versichert"],
+          allowedEvidence: expect.arrayContaining([
+            expect.objectContaining({ blockId: unit.source.blockIds[0] }),
+          ]),
+        }),
+      ])
+    );
+  });
+
   test("rejects semantic attributes attached to the wrong component type", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
