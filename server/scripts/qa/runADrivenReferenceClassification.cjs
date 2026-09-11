@@ -376,12 +376,44 @@ function mergeCompatibleDuplicateUnitResponses(responses) {
   };
 }
 
-function normalizeUnambiguousComponentTypes(responses) {
+function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
-  const normalized = responses.map((response) => ({
-    ...response,
-    requirements: Array.isArray(response?.requirements)
-      ? response.requirements.map((requirement, requirementIndex) => ({
+  const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
+  const normalized = responses.map((response) => {
+    const unit = unitsById.get(response?.unitId);
+    const sourceText = String(unit?.source?.combinedText || "");
+    const numberedHeadingWithoutPredicate =
+      unit?.unitKind === "LIST" &&
+      unit.source?.blocks?.length > 0 &&
+      unit.source.blocks.every(
+        ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+      ) &&
+      /^\s*\d+[.)]\s/u.test(sourceText) &&
+      !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
+        sourceText
+      );
+    if (numberedHeadingWithoutPredicate) {
+      if (
+        response?.primaryClass !== "STRUCTURE" ||
+        response?.semanticClasses?.length !== 1 ||
+        response.semanticClasses[0] !== "STRUCTURE" ||
+        response?.requirements?.length
+      )
+        repairs.push({
+          unitId: response?.unitId,
+          action: "NORMALIZE_NUMBERED_HEADING_TO_STRUCTURE",
+        });
+      return {
+        unitId: response?.unitId,
+        primaryClass: "STRUCTURE",
+        semanticClasses: ["STRUCTURE"],
+        requirements: [],
+      };
+    }
+    return {
+      ...response,
+      requirements: Array.isArray(response?.requirements)
+        ? response.requirements.map((requirement, requirementIndex) => ({
           ...requirement,
           components: Array.isArray(requirement?.components)
             ? requirement.components.flatMap((component, componentIndex) => {
@@ -472,9 +504,10 @@ function normalizeUnambiguousComponentTypes(responses) {
                 ];
               })
             : requirement?.components,
-        }))
-      : response?.requirements,
-  }));
+          }))
+        : response?.requirements,
+    };
+  });
   return {
     responses: normalized,
     componentRepairs: repairs,
@@ -865,7 +898,8 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       continue;
     const journalResponses = normalizeUnambiguousComponentTypes(
       mergeCompatibleDuplicateUnitResponses(artifact.attempt.responses)
-        .responses
+        .responses,
+      batch.units
     ).responses;
     for (const response of journalResponses) {
       if (accepted.has(response?.unitId)) continue;
@@ -1087,7 +1121,10 @@ async function runBatch({
       const { responses: mergedResponsesFromEnvelope, envelopeRepair } =
         mergeCompatibleDuplicateUnitResponses(parsed.responses);
       const { responses, componentRepairs } =
-        normalizeUnambiguousComponentTypes(mergedResponsesFromEnvelope);
+        normalizeUnambiguousComponentTypes(
+          mergedResponsesFromEnvelope,
+          workingBatch.units
+        );
       const { syntaxRepair } = parsed;
       observedResponses = responses;
       const workingValidation = validateBatchResponses(

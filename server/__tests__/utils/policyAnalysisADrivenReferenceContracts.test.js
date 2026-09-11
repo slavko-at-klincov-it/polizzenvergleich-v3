@@ -1532,6 +1532,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
+  test("normalizes a numbered heading-only list unit without borrowing clause semantics", async () => {
+    const source = artifact(
+      ["Seite 1\n12. Radioaktive Isotope: Kosten für Aufräumung\n"],
+      "b"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = batch.units[0];
+    expect(unit.unitKind).toBe("LIST");
+    expect(
+      unit.source.blocks.every(
+        ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+      )
+    ).toBe(true);
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    {
+                      unitId: unit.unitId,
+                      primaryClass: "EXCLUSION",
+                      semanticClasses: ["EXCLUSION"],
+                      requirements: [
+                        {
+                          displayLabel: unit.source.combinedText,
+                          components: [
+                            {
+                              type: "OBJECT",
+                              label: unit.source.combinedText,
+                              sourceBlockIds: unit.source.blockIds,
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ]),
+                },
+              },
+            ],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toEqual([
+      {
+        unitId: unit.unitId,
+        primaryClass: "STRUCTURE",
+        semanticClasses: ["STRUCTURE"],
+        requirements: [],
+      },
+    ]);
+    expect(result.attempts[0].componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_NUMBERED_HEADING_TO_STRUCTURE",
+    });
+  });
+
   test("serializes multiple semantic retry failures into bounded single-unit repairs", async () => {
     const source = artifact(
       [
