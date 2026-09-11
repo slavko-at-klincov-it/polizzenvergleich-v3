@@ -222,14 +222,23 @@ function validateComponent(component, unit) {
     sourceBlockIds,
     componentValues
   );
-  if (missingSourceBlockIds === null || missingSourceBlockIds.length)
+  if (missingSourceBlockIds === null)
     return {
       value: null,
       code: "COMPONENT_SOURCE_TEXT_INVALID",
-      ...(missingSourceBlockIds?.length
-        ? { blockIds: missingSourceBlockIds }
-        : {}),
     };
+  if (missingSourceBlockIds.length) {
+    const required = new Set([...sourceBlockIds, ...missingSourceBlockIds]);
+    return {
+      value: null,
+      code: "COMPONENT_SOURCE_TEXT_INVALID",
+      blockIds: missingSourceBlockIds,
+      declaredSourceBlockIds: sourceBlockIds,
+      requiredSourceBlockIds: evidenceBlocks(unit)
+        .map(({ blockId }) => blockId)
+        .filter((blockId) => required.has(blockId)),
+    };
+  }
   const canonicalSourceBlockIds = canonicalComponentSourceBlockIds(
     unit,
     sourceBlockIds,
@@ -271,19 +280,11 @@ function validateRequirement(draft, unit, requirementIndex) {
   const componentResults = Array.isArray(draft?.components)
     ? draft.components.map((component) => validateComponent(component, unit))
     : [];
-  const diagnostics = componentResults.flatMap(
-    ({ code, blockIds }, componentIndex) =>
-      code
-        ? [
-            {
-              code,
-              requirementIndex,
-              componentIndex,
-              ...(blockIds ? { blockIds } : {}),
-            },
-          ]
-        : []
-  );
+  const diagnostics = componentResults.flatMap((result, componentIndex) => {
+    if (!result.code) return [];
+    const { value: _value, ...diagnostic } = result;
+    return [{ ...diagnostic, requirementIndex, componentIndex }];
+  });
   const components = componentResults.map(({ value }) => value);
   const displayLabelInOwnedSource =
     displayLabel &&

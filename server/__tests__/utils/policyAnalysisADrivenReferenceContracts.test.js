@@ -1680,6 +1680,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         expect.objectContaining({
           code: "COMPONENT_SOURCE_TEXT_INVALID",
           blockIds: [unit.source.blockIds[1]],
+          declaredSourceBlockIds: [unit.source.blockIds[0]],
+          requiredSourceBlockIds: unit.source.blockIds,
         }),
       ])
     );
