@@ -2319,6 +2319,53 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toBe("Nicht versichert");
   });
 
+  test("accepts Versicherungsschutz besteht in either German word order", () => {
+    const source = artifact(
+      ["Seite 1\nEs besteht Versicherungsschutz für Nebengebäude.\n"],
+      "2"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "INSURED_OBJECT",
+          ],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Nebengebäude",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "besteht Versicherungsschutz",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
     const source = artifact(
       ["Seite 1\nNicht versichert sind Vorschäden.\n"],
