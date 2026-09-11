@@ -1270,9 +1270,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(unit.logicalSourceSegments).toHaveLength(3);
     const [governor, ...items] = unit.logicalSourceSegments;
     expect(
-      unit.source.blocks.find(
-        ({ blockId }) => blockId === governor.blockIds[0]
-      ).structuralKind
+      unit.source.blocks.find(({ blockId }) => blockId === governor.blockIds[0])
+        .structuralKind
     ).toBe("LIST_GOVERNOR");
     const itemRequirements = items.map((segment) => ({
       displayLabel: segment.combinedText,
@@ -1302,9 +1301,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       responses: [response],
     });
     expect(
-      validManifest.unitTerminals.find(
-        ({ unitId }) => unitId === unit.unitId
-      ).terminalDisposition
+      validManifest.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
+        .terminalDisposition
     ).toBe("OPERATIVE_MAPPED");
 
     const standaloneManifest = buildADrivenSemanticManifest({
