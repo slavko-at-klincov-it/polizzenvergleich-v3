@@ -919,6 +919,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente"
     );
     expect(repairMessages[1]).toContain(
+      "ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds"
+    );
+    expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
@@ -1644,6 +1647,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           declaredSourceBlockIds: [foreignBlockId],
           outOfScopeBlockIds: [foreignBlockId],
           allowedSourceBlockIds: unit.source.blockIds,
+          requiredSourceBlockIds: unit.source.blockIds,
         }),
       ])
     );

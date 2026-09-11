@@ -209,23 +209,45 @@ function validateComponent(component, unit) {
   if (!label) return { value: null, code: "COMPONENT_LABEL_MISSING" };
   if (!sourceBlockIds?.length)
     return { value: null, code: "COMPONENT_SOURCE_BLOCK_IDS_INVALID" };
-  const outOfScopeBlockIds = sourceBlockIds.filter(
-    (blockId) => !allowedBlockIds.has(blockId)
-  );
-  if (outOfScopeBlockIds.length)
-    return {
-      value: null,
-      code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE",
-      declaredSourceBlockIds: sourceBlockIds,
-      outOfScopeBlockIds,
-      allowedSourceBlockIds: [...allowedBlockIds],
-    };
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
   const componentValues = [label, rawValue, unitValue, qualifier].filter(
     Boolean
   );
+  const outOfScopeBlockIds = sourceBlockIds.filter(
+    (blockId) => !allowedBlockIds.has(blockId)
+  );
+  if (outOfScopeBlockIds.length) {
+    const inScopeBlockIds = sourceBlockIds.filter((blockId) =>
+      allowedBlockIds.has(blockId)
+    );
+    const missingSourceBlockIds = missingComponentSourceBlockIds(
+      unit,
+      inScopeBlockIds,
+      componentValues
+    );
+    const requiredSourceBlockIds =
+      missingSourceBlockIds === null
+        ? null
+        : (() => {
+            const requiredBlockIds = new Set([
+              ...inScopeBlockIds,
+              ...missingSourceBlockIds,
+            ]);
+            return evidenceBlocks(unit)
+              .map(({ blockId }) => blockId)
+              .filter((blockId) => requiredBlockIds.has(blockId));
+          })();
+    return {
+      value: null,
+      code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE",
+      declaredSourceBlockIds: sourceBlockIds,
+      outOfScopeBlockIds,
+      allowedSourceBlockIds: [...allowedBlockIds],
+      ...(requiredSourceBlockIds?.length ? { requiredSourceBlockIds } : {}),
+    };
+  }
   const missingSourceBlockIds = missingComponentSourceBlockIds(
     unit,
     sourceBlockIds,

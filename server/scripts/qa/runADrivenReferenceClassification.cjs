@@ -977,7 +977,7 @@ async function runBatch({
         },
       ];
       messages.at(-1).content +=
-        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt.";
+        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort.";
     } catch (error) {
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
