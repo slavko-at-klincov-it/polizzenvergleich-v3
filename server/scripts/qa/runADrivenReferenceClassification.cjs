@@ -329,6 +329,53 @@ function parseJsonArray(modelText) {
   return { responses: parsed, syntaxRepair };
 }
 
+function mergeCompatibleDuplicateUnitResponses(responses) {
+  const grouped = new Map();
+  for (const response of responses) {
+    const records = grouped.get(response?.unitId) || [];
+    records.push(response);
+    grouped.set(response?.unitId, records);
+  }
+  const mergedUnitIds = [];
+  const emitted = new Set();
+  const normalized = [];
+  for (const response of responses) {
+    const unitId = response?.unitId;
+    if (emitted.has(unitId)) continue;
+    const records = grouped.get(unitId) || [];
+    const compatible =
+      records.length > 1 &&
+      records.every(
+        (record) =>
+          record?.primaryClass === records[0]?.primaryClass &&
+          stableStringify(record?.semanticClasses) ===
+            stableStringify(records[0]?.semanticClasses) &&
+          Array.isArray(record?.requirements)
+      );
+    if (!compatible) {
+      normalized.push(...records);
+      emitted.add(unitId);
+      continue;
+    }
+    normalized.push({
+      ...records[0],
+      requirements: records.flatMap(({ requirements }) => requirements),
+    });
+    mergedUnitIds.push(unitId);
+    emitted.add(unitId);
+  }
+  return {
+    responses: normalized,
+    envelopeRepair: mergedUnitIds.length
+      ? {
+          applied: true,
+          strategy: "COMPATIBLE_DUPLICATE_UNIT_ENVELOPES",
+          mergedUnitIds,
+        }
+      : null,
+  };
+}
+
 function endsWithSentence(textValue) {
   return /[.!?][”"')\]]?$/u.test(String(textValue || "").trim());
 }
@@ -711,7 +758,10 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       !Array.isArray(artifact.attempt?.responses)
     )
       continue;
-    for (const response of artifact.attempt.responses) {
+    const journalResponses = mergeCompatibleDuplicateUnitResponses(
+      artifact.attempt.responses
+    ).responses;
+    for (const response of journalResponses) {
       if (accepted.has(response?.unitId)) continue;
       const unit = batch.units.find(
         ({ unitId }) => unitId === response?.unitId
@@ -927,7 +977,10 @@ async function runBatch({
       });
       const rawText = completion.choices?.[0]?.message?.content || "";
       observedRawText = rawText;
-      const { responses, syntaxRepair } = parseJsonArray(rawText);
+      const parsed = parseJsonArray(rawText);
+      const { responses, envelopeRepair } =
+        mergeCompatibleDuplicateUnitResponses(parsed.responses);
+      const { syntaxRepair } = parsed;
       observedResponses = responses;
       const workingValidation = validateBatchResponses(
         plan,
@@ -991,6 +1044,7 @@ async function runBatch({
         rawResponseSha256: sha256(rawText),
         rawResponse: rawText,
         syntaxRepair,
+        envelopeRepair,
         responses,
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
@@ -1038,7 +1092,7 @@ async function runBatch({
         },
       ];
       messages.at(-1).content +=
-        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihren COVERAGE_EFFECT stattdessen in jeder fachlichen Requirement der folgenden Item-Segmente. Der gemeinsame Governor darf in mehreren Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente.";
+        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. COVERAGE_EFFECT_LABEL_INVALID bedeutet: Das bisherige label ist keine Deckungswirkung. Verwende ausschließlich einen wörtlichen Wirkungsausdruck samt blockId aus allowedCoverageEffectEvidence. Ist diese Liste leer, lösche die COVERAGE_EFFECT-Komponente und entferne die unbelegte operative Deckungsklasse. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihren COVERAGE_EFFECT stattdessen in jeder fachlichen Requirement der folgenden Item-Segmente. Der gemeinsame Governor darf in mehreren Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente.";
     } catch (error) {
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&

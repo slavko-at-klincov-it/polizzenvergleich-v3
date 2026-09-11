@@ -61,6 +61,8 @@ const COVERAGE_EFFECTS = new Set([
   "OPTIONAL",
   "UNKNOWN",
 ]);
+const COVERAGE_EFFECT_TEXT_PATTERN =
+  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|Entschädigung\s+(?:wird|erfolgt))\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -336,6 +338,15 @@ function validateComponent(component, unit) {
     return { value: null, code: "COVERAGE_EFFECT_VALUE_INVALID" };
   if (type === "COVERAGE_EFFECT" && !effect)
     return { value: null, code: "COVERAGE_EFFECT_VALUE_MISSING" };
+  if (type === "COVERAGE_EFFECT" && !COVERAGE_EFFECT_TEXT_PATTERN.test(label))
+    return {
+      value: null,
+      code: "COVERAGE_EFFECT_LABEL_INVALID",
+      invalidLiteralValue: label,
+      allowedCoverageEffectEvidence: evidenceBlocks(unit)
+        .filter(({ exactText }) => COVERAGE_EFFECT_TEXT_PATTERN.test(exactText))
+        .map(({ blockId, exactText }) => ({ blockId, exactText })),
+    };
   return {
     value: {
       type,
@@ -553,9 +564,7 @@ function requiredComponentGroups(semanticClasses) {
 
 function hasCoverageEffectEvidence(unit) {
   return evidenceBlocks(unit).some(({ exactText }) =>
-    /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|gilt\s+als\s+(?:mit)?versichert)\b/iu.test(
-      exactText
-    )
+    COVERAGE_EFFECT_TEXT_PATTERN.test(exactText)
   );
 }
 

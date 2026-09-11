@@ -637,6 +637,68 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("merges compatible duplicate unit envelopes before semantic validation", async () => {
+    const source = artifact(
+      ["Seite 1\n• Sprengstoffexplosion;\n• Blitzschlag;\n"],
+      "b"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const duplicateEnvelopes = unit.logicalSourceSegments.map((segment) => ({
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: segment.combinedText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: segment.combinedText,
+              sourceBlockIds: segment.blockIds,
+            },
+          ],
+        },
+      ],
+    }));
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [
+              { message: { content: JSON.stringify(duplicateEnvelopes) } },
+            ],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toHaveLength(1);
+    expect(result.responses[0].requirements).toHaveLength(2);
+    expect(result.attempts[0].envelopeRepair).toEqual({
+      applied: true,
+      strategy: "COMPATIBLE_DUPLICATE_UNIT_ENVELOPES",
+      mergedUnitIds: [unit.unitId],
+    });
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")
@@ -1111,6 +1173,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText"
     );
+    expect(repairMessages[1]).toContain("COVERAGE_EFFECT_LABEL_INVALID");
     expect(repairMessages[1]).toContain(
       "LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet"
     );
@@ -2159,6 +2222,53 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       requirement.components.find(({ type }) => type === "COVERAGE_EFFECT")
         .label
     ).toBe("Nicht versichert");
+  });
+
+  test("rejects a coverage effect component whose label is not a coverage effect", () => {
+    const source = artifact(
+      ["Seite 1\nNicht versichert sind Vorschäden.\n"],
+      "1"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const response = validResponse(unit);
+    response.primaryClass = "EXCLUSION";
+    response.semanticClasses = ["EXCLUSION"];
+    response.requirements[0].components = [
+      {
+        type: "OBJECT",
+        label: "Vorschäden",
+        sourceBlockIds: unit.source.blockIds,
+      },
+      {
+        type: "COVERAGE_EFFECT",
+        label: "Vorschäden",
+        sourceBlockIds: unit.source.blockIds,
+        coverageEffect: "EXCLUDED",
+      },
+    ];
+
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "COVERAGE_EFFECT_LABEL_INVALID",
+          invalidLiteralValue: "Vorschäden",
+          allowedCoverageEffectEvidence: [
+            expect.objectContaining({ blockId: unit.source.blockIds[0] }),
+          ],
+        }),
+      ])
+    );
   });
 
   test("rejects semantic attributes attached to the wrong component type", () => {
