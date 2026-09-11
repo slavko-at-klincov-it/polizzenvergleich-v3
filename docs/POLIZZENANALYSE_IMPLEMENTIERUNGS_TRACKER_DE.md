@@ -7238,3 +7238,63 @@ Aktueller Status: `SOURCE- UND ATOMISIERUNGSVERTRÄGE NACH REALBEFUND
 GEHÄRTET; NÄCHSTER V12-FRÜHPILOT, VOLLSTÄNDIGE A-KLASSIFIKATION,
 283/631-DOPPELREVIEW, B-SUCHE, NULLFUND-ZERTIFIZIERUNG, E2E/XLSX,
 VOLLGATES UND HOLDOUT OFFEN; KEIN KUNDEN-DEPLOYMENT`.
+
+### 133.17 A-getriebener V12-Realbefund vor Timeout-Härtung
+
+Der reale V12-A-Klassifikationslauf auf dem Mac Studio wurde am exakten
+Quellcommit `b653e64ff7d69e29f6ef6f22559b8ff87ff61562` aus dem isolierten
+Worktree `/private/tmp/lf-v2-validate.CJAIPu` gestartet. Sein unveränderter
+Laufpfad ist:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-SHADOW-20260910-08E9DC70/qwen-classification-v12
+```
+
+Die Eingabe ist Source-Unit-Plan `LF_A_SOURCE_UNIT_PLAN_V6` mit SHA-256
+`9f7c392a83b76b9df3e300174642da76fce92ebd10ff729bedacb511c3520485`:
+1 A-Dokument, 1.005 Source-Blöcke, 380 Units, 349 zu klassifizierende Units,
+31 deterministisch nichtoperative Units, acht Fortsetzungs- und 50
+Governor-Beziehungen. `LF_A_BOUNDED_CLASSIFICATION_V4` teilt die 349 Units
+in 59 Batches mit höchstens sechs Units beziehungsweise 12.000 Zeichen.
+
+Laufkonfiguration: Runnervertrag `LF_A_BOUNDED_CLASSIFICATION_RUN_V12`,
+Promptvertrag `LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14`, Modell
+`qwen/qwen3.6-35b-a3b`, Kontext 42.496, Temperatur 0, maximal 12.000
+Completion-Tokens und maximal drei semantische Versuche je Batch über
+`http://127.0.0.1:1234/v1`. Ein harter Request-Timeout war in diesem Stand
+noch nicht implementiert.
+
+Der tatsächliche Befund lautet:
+
+- Batch 1/59, `AUB-7b4369194ffd155cf2362c0d`: PASS im ersten Versuch;
+  Artefakt-SHA-256
+  `4be95beae73f9fb9963a81a96321d96d91af6329910df3d02d756a312bb4aaf0`.
+- Batch 2/59, `AUB-65106db5de0ff5b053ee65f3`: PASS nach drei
+  semantischen Versuchen; Artefakt-SHA-256
+  `f09ce7883d8929db3f2d4c04a35f4ab7a8970fc079e3d0d5933bdd8340c87a79`.
+- Batch 3/59, `AUB-05b8b536e0f07bb5483e0230`: PASS nach drei
+  semantischen Versuchen; Artefakt-SHA-256
+  `e28b087ed0dc40fd8069a8536565916064a9497782f194af587ca368aa1c33a2`.
+- Batch 4/59, `AUB-0627307b04acb0ed597fb6da`, blieb im
+  `chat.completions.create`-Aufruf länger als sechs Minuten ohne Antwort
+  hängen. Der Prozess wurde danach kontrolliert abgebrochen und ist nicht
+  mehr aktiv.
+
+Der Abbruch bewahrte den Resume-Vertrag: Es existieren genau die drei
+vollständigen, validierten PASS-Batchdateien. Für Batch 4 wurde keine Datei
+und für den Gesamtlauf keine `summary.private.json` geschrieben. Damit darf
+ein korrigierter Runner Batch 1–3 wiederverwenden und muss beim ersten
+unvollständigen Batch 4 beginnen. Dieser Zwischenstand ist ausdrücklich kein
+vollständiger A-Befund und kein fachliches Gate.
+
+Root Cause: Jeder Qwen-Aufruf war unbegrenzt. Zusätzlich hätte der bisherige
+Runner nach ausgeschöpften Versuchen auch ein nicht bestandenes Batchresultat
+materialisiert und mit späteren Batches fortgesetzt. Der nächste Fix muss
+daher Transport-Timeout, tatsächlichen Abort, sichere Server-Settlement-
+Barriere, Late-Response-Isolation, append-only Fehlerprotokollierung und
+fail-closed Persistenz gemeinsam umsetzen.
+
+Status: `V12 BATCH 1-3 PASS UND RESUMIERBAR GESICHERT; BATCH 4 TECHNISCH
+HÄNGENGEBLIEBEN UND KONTROLLIERT BEENDET; TIMEOUT-/RESUME-HÄRTUNG,
+VOLLSTÄNDIGE 59-BATCH-A-KLASSIFIKATION UND 283/631-CROSSWALK OFFEN; KEIN
+PRODUKT-ROUTING, KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
