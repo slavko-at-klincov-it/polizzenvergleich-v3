@@ -378,7 +378,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         const seeded = await runBatch({
           client: {
             chat: {
-              completions: { create: jest.fn(async () => completionFor(batch)) },
+              completions: {
+                create: jest.fn(async () => completionFor(batch)),
+              },
             },
           },
           model: args.model,

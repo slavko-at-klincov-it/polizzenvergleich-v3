@@ -93,7 +93,9 @@ function argumentsFrom(argv) {
   )
     fail("Numerische Laufparameter sind ungültig");
   if (!values.lmStudioSdk || !values.qwenModelKey)
-    fail("--lmStudioSdk und --qwenModelKey sind für sichere Timeouts erforderlich");
+    fail(
+      "--lmStudioSdk und --qwenModelKey sind für sichere Timeouts erforderlich"
+    );
   return {
     shadowRoot: path.resolve(values.shadowRoot),
     output: path.resolve(values.output),
@@ -224,9 +226,7 @@ async function requestCompletionWithTimeout({
         timeoutMs: requestTimeoutMs,
         abortTriggered: true,
         requestSettledAfterAbort,
-        settlementDurationMs: Math.round(
-          performance.now() - settlementStarted
-        ),
+        settlementDurationMs: Math.round(performance.now() - settlementStarted),
         recovery: {
           status: "FAILED",
           error: recoveryError.message,
@@ -637,8 +637,7 @@ async function runBatch({
         abortTriggered: error?.telemetry?.abortTriggered === true,
         requestSettledAfterAbort:
           error?.telemetry?.requestSettledAfterAbort ?? null,
-        settlementDurationMs:
-          error?.telemetry?.settlementDurationMs ?? null,
+        settlementDurationMs: error?.telemetry?.settlementDurationMs ?? null,
         recovery: error?.telemetry?.recovery || null,
         validationPassed: false,
         error: error.message,
@@ -712,7 +711,12 @@ async function processClassificationBatches({
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
-        onAttempt: createAttemptRecorder({ output: args.output, plan, batch, args }),
+        onAttempt: createAttemptRecorder({
+          output: args.output,
+          plan,
+          batch,
+          args,
+        }),
       });
       if (!result.validation.passed) {
         const failure = new Error(
