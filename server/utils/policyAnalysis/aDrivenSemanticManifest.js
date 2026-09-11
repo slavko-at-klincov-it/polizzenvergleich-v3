@@ -456,9 +456,7 @@ function validateRequirement(draft, unit, requirementIndex) {
             .filter(Boolean)
             .map(({ exactText }) => exactText)
             .join("\n"),
-          ...(requiredSourceBlockIds?.length
-            ? { requiredSourceBlockIds }
-            : {}),
+          ...(requiredSourceBlockIds?.length ? { requiredSourceBlockIds } : {}),
         },
         ...(uncitedOwnedBlockIds.length
           ? [
