@@ -210,6 +210,9 @@ async function requestCompletionWithTimeout({
       request,
       abortSettlementTimeoutMs
     );
+    const settlementDurationMs = Math.round(
+      performance.now() - settlementStarted
+    );
     let recovery;
     try {
       recovery = await recoverModelAfterAbort({
@@ -226,7 +229,7 @@ async function requestCompletionWithTimeout({
         timeoutMs: requestTimeoutMs,
         abortTriggered: true,
         requestSettledAfterAbort,
-        settlementDurationMs: Math.round(performance.now() - settlementStarted),
+        settlementDurationMs,
         recovery: {
           status: "FAILED",
           error: recoveryError.message,
@@ -240,7 +243,7 @@ async function requestCompletionWithTimeout({
       timeoutMs: requestTimeoutMs,
       abortTriggered: true,
       requestSettledAfterAbort,
-      settlementDurationMs: Math.round(performance.now() - settlementStarted),
+      settlementDurationMs,
       recovery,
     };
     throw error;
