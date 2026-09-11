@@ -282,6 +282,9 @@ function buildADrivenAStatusAudit({
   const legacySourceBlockIds = new Set(
     legacyComponents.flatMap(({ sourceBlockIds }) => sourceBlockIds)
   );
+  const dynamicComponentSourceBlockIds = new Set(
+    dynamicComponents.flatMap(({ sourceBlockIds }) => sourceBlockIds)
+  );
   const unresolvedUnits = manifest.unitTerminals
     .filter(
       ({ terminalDisposition }) =>
@@ -291,7 +294,7 @@ function buildADrivenAStatusAudit({
       ...terminal,
       source: unitById.get(terminal.unitId)?.source || null,
     }));
-  const suspiciousNonOperativeUnits = manifest.unitTerminals
+  const reviewedNonOperativeUnits = manifest.unitTerminals
     .filter(
       ({ terminalDisposition }) =>
         terminalDisposition !== "OPERATIVE_MAPPED" &&
@@ -313,16 +316,47 @@ function buildADrivenAStatusAudit({
         reasons.push("STRONG_OPERATIVE_TEXT_SIGNAL");
       if (overlappingLegacySourceBlockIds.length)
         reasons.push("OVERLAPS_LEGACY_OPERATIVE_COMPONENT");
+      const citedAsDynamicEvidence = unit.source.blockIds.filter((blockId) =>
+        dynamicComponentSourceBlockIds.has(blockId)
+      );
+      const text = String(unit.source.combinedText || "").trim();
+      const headingCandidateOnly =
+        unit.source.blocks.length > 0 &&
+        unit.source.blocks.every(
+          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+        );
+      let reviewDisposition = "SUSPICIOUS_REVIEW_REQUIRED";
+      if (
+        citedAsDynamicEvidence.length === unit.source.blockIds.length &&
+        STRONG_OPERATIVE_TEXT.test(text)
+      )
+        reviewDisposition = "OPERATIVE_GOVERNOR_EVIDENCE_REUSED";
+      else if (unit.unitKind === "METADATA" && /^Seite\s+\d+$/iu.test(text))
+        reviewDisposition = "PAGE_MARKER_CONFIRMED";
+      else if (
+        headingCandidateOnly &&
+        (unit.unitKind === "HEADING" ||
+          /^\s*(?:\d+(?:\.\d+)*[.)]?|[A-Z][.)])\s+/u.test(text))
+      )
+        reviewDisposition = "STRUCTURAL_HEADING_CONFIRMED";
+      else if (/^(?:Versicherer|Präambel)$/iu.test(text))
+        reviewDisposition = "STRUCTURAL_LABEL_CONFIRMED";
       return {
         ...terminal,
         unitKind: unit.unitKind,
         initialDisposition: unit.initialDisposition,
         source: unit.source,
         overlappingLegacySourceBlockIds,
+        citedAsDynamicEvidence,
         reasons,
+        reviewDisposition,
       };
     })
     .filter(({ reasons }) => reasons.length > 0);
+  const suspiciousNonOperativeUnits = reviewedNonOperativeUnits.filter(
+    ({ reviewDisposition }) =>
+      reviewDisposition === "SUSPICIOUS_REVIEW_REQUIRED"
+  );
 
   const summary = {
     sourceBlocks: plan.summary.sourceBlocks,
@@ -345,6 +379,9 @@ function buildADrivenAStatusAudit({
     semanticComponents: manifest.summary.semanticComponents,
     unresolvedUnits: unresolvedUnits.length,
     suspiciousNonOperativeUnits: suspiciousNonOperativeUnits.length,
+    reviewedNonOperativeUnits: reviewedNonOperativeUnits.length,
+    resolvedNonOperativeUnits:
+      reviewedNonOperativeUnits.length - suspiciousNonOperativeUnits.length,
     legacyRequirements: legacy.length,
     legacyComponents: legacyComponents.length,
     missingLegacyRequirements: requirementCrosswalk.filter(
@@ -403,6 +440,7 @@ function buildADrivenAStatusAudit({
     legacyManifestSha256: legacyManifest.manifestSha256,
     summary,
     unresolvedUnits,
+    reviewedNonOperativeUnits,
     suspiciousNonOperativeUnits,
     invalidSourceReferences,
     responseEnvelope: {

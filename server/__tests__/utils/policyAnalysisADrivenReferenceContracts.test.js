@@ -4059,6 +4059,106 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ])
     );
   });
+
+  test("resolves nonoperative page markers, structural headings and reused operative governors", () => {
+    const source = artifact(
+      ["Seite 1\nNicht versichert sind:\nVorschäden.\n"],
+      "a"
+    );
+    const sourcePlan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const plan = deriveClassificationEvidencePlan(sourcePlan);
+    const heading = plan.units.find(({ unitKind }) => unitKind === "HEADING");
+    const operativeClause = plan.units.find(
+      ({ initialDisposition, unitKind }) =>
+        initialDisposition === "PENDING_CLASSIFICATION" &&
+        unitKind !== "HEADING"
+    );
+    const metadata = plan.units.find(({ unitKind }) => unitKind === "METADATA");
+    const responses = [
+      {
+        unitId: operativeClause.unitId,
+        primaryClass: "EXCLUSION",
+        semanticClasses: ["EXCLUSION"],
+        requirements: [
+          {
+            displayLabel: operativeClause.source.blocks[0].exactText,
+            components: [
+              {
+                type: "OBJECT",
+                label: operativeClause.source.blocks[0].exactText,
+                sourceBlockIds: operativeClause.source.blockIds,
+              },
+              {
+                type: "COVERAGE_EFFECT",
+                label: "Nicht versichert",
+                sourceBlockIds: heading.source.blockIds,
+                coverageEffect: "EXCLUDED",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const classificationBatches = buildADrivenClassificationBatches(plan);
+    const legacyManifest = {
+      manifestSha256: "b".repeat(64),
+      requirements: [
+        {
+          requirementId: "EX-01",
+          displayLabel: "Vorschäden",
+          components: [
+            {
+              id: "effect",
+              label: "Nicht versichert",
+              factRole: "EXCLUSION",
+              sourceSpanIds: ["span"],
+            },
+          ],
+          sourceSpans: [
+            {
+              spanId: "span",
+              blockIds: [
+                ...heading.source.blockIds,
+                ...(metadata?.source.blockIds || []),
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const audit = buildADrivenAStatusAudit({
+      plan,
+      manifest,
+      responses,
+      classificationBatches,
+      batchResults: classificationBatches.batches.map((batch) => ({
+        batchId: batch.batchId,
+        validation: { passed: true },
+      })),
+      legacyManifest,
+    });
+
+    expect(audit.summary.suspiciousNonOperativeUnits).toBe(0);
+    expect(audit.reviewedNonOperativeUnits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: heading.unitId,
+          reviewDisposition: "OPERATIVE_GOVERNOR_EVIDENCE_REUSED",
+        }),
+        ...(metadata
+          ? [
+              expect.objectContaining({
+                unitId: metadata.unitId,
+                reviewDisposition: "PAGE_MARKER_CONFIRMED",
+              }),
+            ]
+          : []),
+      ])
+    );
+  });
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
