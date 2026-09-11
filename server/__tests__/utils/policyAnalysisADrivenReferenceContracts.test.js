@@ -531,7 +531,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   });
 
   test("repairs malformed JSON instead of repeating the identical request", async () => {
-    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "json");
+    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "9");
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });
