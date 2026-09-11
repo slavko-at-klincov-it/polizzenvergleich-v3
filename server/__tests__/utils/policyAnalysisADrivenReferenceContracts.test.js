@@ -2407,6 +2407,50 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.summary.unresolvedUnits).toBe(0);
   });
 
+  test("accepts erstattet as a cost coverage effect", () => {
+    const source = artifact(
+      ["Seite 1\nDie erforderlichen Kosten werden erstattet.\n"],
+      "4"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "COST"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Kosten",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "erstattet",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
     const source = artifact(
       ["Seite 1\nNicht versichert sind Vorschäden.\n"],

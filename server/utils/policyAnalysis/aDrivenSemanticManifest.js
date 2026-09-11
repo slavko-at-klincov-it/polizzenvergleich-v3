@@ -62,7 +62,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|Entschädigung\s+(?:wird|erfolgt)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
+  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
