@@ -521,7 +521,25 @@ function hasCoverageEffectEvidence(unit) {
 
 function logicalSegmentDiagnostics(unit, requirements) {
   const segments = unit.logicalSourceSegments || [];
-  const segmentDiagnostics = segments.flatMap((segment) => {
+  const ownedBlocksById = new Map(
+    unit.source.blocks.map((block) => [block.blockId, block])
+  );
+  const sharedGovernorSegments = segments.filter(
+    (segment, index) =>
+      index === 0 &&
+      segments.length > 1 &&
+      segment.blockIds.every(
+        (blockId) =>
+          ownedBlocksById.get(blockId)?.structuralKind === "LIST_GOVERNOR"
+      )
+  );
+  const sharedGovernorBlockIds = new Set(
+    sharedGovernorSegments.flatMap(({ blockIds }) => blockIds)
+  );
+  const itemSegments = segments.filter(
+    (segment) => !sharedGovernorSegments.includes(segment)
+  );
+  const segmentDiagnostics = itemSegments.flatMap((segment) => {
     const overlapping = requirements.filter(({ sourceBlockIds }) =>
       segment.blockIds.some((blockId) => sourceBlockIds.includes(blockId))
     );
@@ -545,7 +563,7 @@ function logicalSegmentDiagnostics(unit, requirements) {
     ];
   });
   const mergeDiagnostics = requirements.flatMap((requirement) => {
-    const overlappingSegments = segments.filter(({ blockIds }) =>
+    const overlappingSegments = itemSegments.filter(({ blockIds }) =>
       blockIds.some((blockId) => requirement.sourceBlockIds.includes(blockId))
     );
     if (overlappingSegments.length <= 1) return [];
@@ -558,7 +576,31 @@ function logicalSegmentDiagnostics(unit, requirements) {
       },
     ];
   });
-  return [...segmentDiagnostics, ...mergeDiagnostics];
+  const standaloneGovernorDiagnostics = requirements.flatMap((requirement) => {
+    if (
+      sharedGovernorBlockIds.size === 0 ||
+      !requirement.sourceBlockIds.some((blockId) =>
+        sharedGovernorBlockIds.has(blockId)
+      ) ||
+      itemSegments.some(({ blockIds }) =>
+        blockIds.some((blockId) => requirement.sourceBlockIds.includes(blockId))
+      )
+    )
+      return [];
+    return [
+      {
+        code: "LIST_GOVERNOR_REQUIREMENT_STANDALONE",
+        unitId: unit.unitId,
+        requirementId: requirement.requirementId,
+        blockIds: requirement.sourceBlockIds,
+      },
+    ];
+  });
+  return [
+    ...segmentDiagnostics,
+    ...mergeDiagnostics,
+    ...standaloneGovernorDiagnostics,
+  ];
 }
 
 function classifyUnit(unit, records) {

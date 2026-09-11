@@ -967,6 +967,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds"
     );
     expect(repairMessages[1]).toContain(
+      "LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet"
+    );
+    expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
@@ -1249,6 +1252,88 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
     expect(requirement.sourceUnitIds).toEqual([governor.unitId, list.unitId]);
     expect(requirement.sourceSpans).toHaveLength(2);
+  });
+
+  test("shares an owned list governor across item requirements without treating it as an item", () => {
+    const source = artifact(
+      [
+        "Seite 1\n• Mitversichert sind Schadenersatzverpflichtungen\n- des Hauseigentümers;\n- des Hausverwalters;\n",
+      ],
+      "7"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Mitversichert sind")
+    );
+    expect(unit.logicalSourceSegments).toHaveLength(3);
+    const [governor, ...items] = unit.logicalSourceSegments;
+    expect(
+      unit.source.blocks.find(
+        ({ blockId }) => blockId === governor.blockIds[0]
+      ).structuralKind
+    ).toBe("LIST_GOVERNOR");
+    const itemRequirements = items.map((segment) => ({
+      displayLabel: segment.combinedText,
+      components: [
+        {
+          type: "FACT_ROLE",
+          label: segment.combinedText,
+          sourceBlockIds: segment.blockIds,
+        },
+        {
+          type: "COVERAGE_EFFECT",
+          label: "Mitversichert sind",
+          sourceBlockIds: governor.blockIds,
+          coverageEffect: "INCLUDED",
+        },
+      ],
+    }));
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: itemRequirements,
+    };
+
+    const validManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+    expect(
+      validManifest.unitTerminals.find(
+        ({ unitId }) => unitId === unit.unitId
+      ).terminalDisposition
+    ).toBe("OPERATIVE_MAPPED");
+
+    const standaloneManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          ...response,
+          requirements: [
+            {
+              displayLabel: governor.combinedText,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Mitversichert sind",
+                  sourceBlockIds: governor.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+            ...itemRequirements,
+          ],
+        },
+      ],
+    });
+    expect(
+      standaloneManifest.unitTerminals
+        .find(({ unitId }) => unitId === unit.unitId)
+        .diagnostics.map(({ code }) => code)
+    ).toContain("LIST_GOVERNOR_REQUIREMENT_STANDALONE");
   });
 
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
