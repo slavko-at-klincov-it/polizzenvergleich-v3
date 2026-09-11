@@ -1207,6 +1207,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("explains when primaryClass is missing from semanticClasses", () => {
+    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "a");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          ...validResponse(unit),
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["INSURED_OBJECT"],
+        },
+      ],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "INVALID_UNIT_CLASSIFICATION",
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["INSURED_OBJECT"],
+          reasons: ["PRIMARY_CLASS_MISSING_FROM_SEMANTIC_CLASSES"],
+        }),
+      ])
+    );
+  });
+
   test("rejects semantic attributes attached to the wrong component type", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],

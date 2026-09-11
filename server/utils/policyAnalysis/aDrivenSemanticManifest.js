@@ -540,7 +540,29 @@ function classifyUnit(unit, records) {
       semanticClasses: ["UNRESOLVED"],
       requirements: [],
       diagnostics: [
-        { code: "INVALID_UNIT_CLASSIFICATION", unitId: unit.unitId },
+        {
+          code: "INVALID_UNIT_CLASSIFICATION",
+          unitId: unit.unitId,
+          primaryClass: primaryClass || null,
+          semanticClasses: semanticClasses || [],
+          reasons: [
+            ...(!TERMINAL_CLASSES.includes(primaryClass)
+              ? ["PRIMARY_CLASS_INVALID"]
+              : []),
+            ...(!semanticClasses?.length
+              ? ["SEMANTIC_CLASSES_INVALID_OR_EMPTY"]
+              : []),
+            ...(semanticClasses?.some(
+              (value) => !TERMINAL_CLASSES.includes(value)
+            )
+              ? ["SEMANTIC_CLASS_INVALID"]
+              : []),
+            ...(semanticClasses?.length &&
+            !semanticClasses.includes(primaryClass)
+              ? ["PRIMARY_CLASS_MISSING_FROM_SEMANTIC_CLASSES"]
+              : []),
+          ],
+        },
       ],
     };
   if (primaryClass === "UNRESOLVED" || semanticClasses.includes("UNRESOLVED"))
