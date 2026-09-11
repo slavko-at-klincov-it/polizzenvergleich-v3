@@ -1540,8 +1540,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });
-    const batch = buildADrivenClassificationBatches(plan).batches[0];
-    const unit = batch.units[0];
+    const unit = plan.units.find(({ unitKind }) => unitKind === "LIST");
+    const plannedBatch = buildADrivenClassificationBatches(plan).batches.find(
+      ({ expectedUnitIds }) => expectedUnitIds.includes(unit.unitId)
+    );
+    const batch = {
+      ...plannedBatch,
+      units: plannedBatch.expectedUnitIds.map((unitId) =>
+        plan.units.find((candidate) => candidate.unitId === unitId)
+      ),
+    };
     expect(unit.unitKind).toBe("LIST");
     expect(
       unit.source.blocks.every(
