@@ -1348,6 +1348,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText"
     );
+    expect(repairMessages[1]).toContain(
+      "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE bedeutet"
+    );
+    expect(repairMessages[1]).toContain(
+      "REQUIREMENT_SOURCE_TEXT_INVALID bedeutet"
+    );
     expect(repairMessages[1]).toContain("COVERAGE_EFFECT_LABEL_INVALID");
     expect(repairMessages[1]).toContain(
       "LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet"
