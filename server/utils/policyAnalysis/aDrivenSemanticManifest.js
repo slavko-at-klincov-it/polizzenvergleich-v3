@@ -353,10 +353,7 @@ function validateRequirement(draft, unit, requirementIndex) {
       ),
       structurePath: [...unit.structurePath],
       sourceUnitIds: [
-        ...new Set([
-          ...(unit.governingContext?.unitIds || []),
-          unit.unitId,
-        ]),
+        ...new Set([...(unit.governingContext?.unitIds || []), unit.unitId]),
       ],
       sourceBlockIds,
       sourceSpans: sourceBlocks.map(

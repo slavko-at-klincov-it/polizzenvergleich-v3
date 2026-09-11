@@ -1094,8 +1094,7 @@ async function run() {
       modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
       recoveryMethod: "TARGETED_UNLOAD_RELOAD_AND_EXACT_MODEL_VERIFY",
     },
-    classificationEvidenceContext:
-      plan.classificationEvidenceContext,
+    classificationEvidenceContext: plan.classificationEvidenceContext,
     startedAt,
     completedAt,
     wallDurationMs: Math.round(performance.now() - started),
