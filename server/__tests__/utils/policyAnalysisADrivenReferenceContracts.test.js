@@ -1471,9 +1471,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
     expect(unit.logicalSourceSegments).toHaveLength(2);
     expect(
-      unit.logicalSourceSegments.map(({ blockIds }) =>
-        unit.source.blocks.find(({ blockId }) => blockId === blockIds[0])
-          .structuralKind
+      unit.logicalSourceSegments.map(
+        ({ blockIds }) =>
+          unit.source.blocks.find(({ blockId }) => blockId === blockIds[0])
+            .structuralKind
       )
     ).toEqual(["LIST_GOVERNOR", "LIST_GOVERNOR"]);
 

@@ -532,9 +532,11 @@ function logicalSegmentDiagnostics(unit, requirements) {
   // Same-level `•` segments remain independent operative list items.
   const hasSubordinateItemSegments =
     segments.length > 1 &&
-    segments.slice(1).every((segment) =>
-      segmentStartsWithStructuralKind(segment, "LIST_ITEM")
-    );
+    segments
+      .slice(1)
+      .every((segment) =>
+        segmentStartsWithStructuralKind(segment, "LIST_ITEM")
+      );
   const sharedGovernorSegments = segments.filter(
     (segment, index) =>
       index === 0 &&
