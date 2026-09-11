@@ -1237,10 +1237,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       path.join(os.tmpdir(), "lf-a-classification-heading-pass-")
     );
     try {
-      const source = artifact(
-        ["Seite 1\nVersichert sind Gebäude.\n"],
-        "d"
-      );
+      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "d");
       const sourcePlan = buildADrivenSourceUnitPlan({
         documents: [document("source", 0, source)],
       });
