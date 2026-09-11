@@ -414,96 +414,99 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       ...response,
       requirements: Array.isArray(response?.requirements)
         ? response.requirements.map((requirement, requirementIndex) => ({
-          ...requirement,
-          components: Array.isArray(requirement?.components)
-            ? requirement.components.flatMap((component, componentIndex) => {
-                const hasComponentType = (type) =>
-                  requirement.components.some(
-                    (candidate) => candidate?.type === type
-                  );
-                const componentLabel = String(component?.label || "");
-                if (
-                  component?.type === "COVERAGE_EFFECT" &&
-                  /^gilt$/iu.test(componentLabel) &&
-                  /\bals\b[\s\S]*\bgilt\b/iu.test(
-                    String(requirement.displayLabel || "")
-                  )
-                ) {
-                  repairs.push({
-                    unitId: response.unitId,
-                    requirementIndex,
-                    componentIndex,
-                    action: "NORMALIZE_BARE_GILT_TO_FACT_ROLE",
-                  });
-                  const { coverageEffect: _coverageEffect, ...rest } =
-                    component;
-                  return [{ ...rest, type: "FACT_ROLE" }];
-                }
-                if (
-                  component?.type === "COVERAGE_EFFECT" &&
-                  component.coverageEffect === "CONDITIONAL" &&
-                  /\bgelten\b[\s\S]*\bBestimmungen\b/iu.test(
-                    String(component.label || "")
-                  ) &&
-                  requirement.components.some(
-                    ({ type }) => type === "CONDITION"
-                  )
-                ) {
-                  repairs.push({
-                    unitId: response.unitId,
-                    requirementIndex,
-                    componentIndex,
-                    action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
-                  });
-                  return [];
-                }
-                if (
-                  component?.type === "COVERAGE_EFFECT" &&
-                  ((/^gilt$/iu.test(componentLabel) &&
-                    hasComponentType("FACT_ROLE")) ||
-                    (/\bwird\s+die\s+Frist\b[\s\S]*\berstreckt\b/iu.test(
-                      componentLabel
+            ...requirement,
+            components: Array.isArray(requirement?.components)
+              ? requirement.components.flatMap((component, componentIndex) => {
+                  const hasComponentType = (type) =>
+                    requirement.components.some(
+                      (candidate) => candidate?.type === type
+                    );
+                  const componentLabel = String(component?.label || "");
+                  if (
+                    component?.type === "COVERAGE_EFFECT" &&
+                    /^gilt$/iu.test(componentLabel) &&
+                    /\bals\b[\s\S]*\bgilt\b/iu.test(
+                      String(requirement.displayLabel || "")
+                    )
+                  ) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "NORMALIZE_BARE_GILT_TO_FACT_ROLE",
+                    });
+                    const { coverageEffect: _coverageEffect, ...rest } =
+                      component;
+                    return [{ ...rest, type: "FACT_ROLE" }];
+                  }
+                  if (
+                    component?.type === "COVERAGE_EFFECT" &&
+                    component.coverageEffect === "CONDITIONAL" &&
+                    /\bgelten\b[\s\S]*\bBestimmungen\b/iu.test(
+                      String(component.label || "")
                     ) &&
-                      (hasComponentType("CONDITION") ||
-                        hasComponentType("TEMPORAL_VALIDITY"))) ||
-                    (/\bgilt\s+als\s+vereinbart\b/iu.test(componentLabel) &&
-                      requirement.components.some(
-                        (candidate) =>
-                          candidate !== component &&
-                          candidate?.type === "COVERAGE_EFFECT" &&
-                          /\b\w*entschädigung\s+geleistet\s+wird\b/iu.test(
-                            String(candidate.label || "")
-                          )
-                      )))
-                ) {
+                    requirement.components.some(
+                      ({ type }) => type === "CONDITION"
+                    )
+                  ) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
+                    });
+                    return [];
+                  }
+                  if (
+                    component?.type === "COVERAGE_EFFECT" &&
+                    ((/^gilt$/iu.test(componentLabel) &&
+                      hasComponentType("FACT_ROLE")) ||
+                      (/\bwird\s+die\s+Frist\b[\s\S]*\berstreckt\b/iu.test(
+                        componentLabel
+                      ) &&
+                        (hasComponentType("CONDITION") ||
+                          hasComponentType("TEMPORAL_VALIDITY"))) ||
+                      (/\bgilt\s+als\s+vereinbart\b/iu.test(componentLabel) &&
+                        requirement.components.some(
+                          (candidate) =>
+                            candidate !== component &&
+                            candidate?.type === "COVERAGE_EFFECT" &&
+                            /\b\w*entschädigung\s+geleistet\s+wird\b/iu.test(
+                              String(candidate.label || "")
+                            )
+                        )))
+                  ) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "DROP_REDUNDANT_NON_COVERAGE_EFFECT",
+                    });
+                    return [];
+                  }
+                  if (
+                    component?.type !== "EXCLUSION" ||
+                    component.coverageEffect
+                  )
+                    return [component];
                   repairs.push({
                     unitId: response.unitId,
                     requirementIndex,
                     componentIndex,
-                    action: "DROP_REDUNDANT_NON_COVERAGE_EFFECT",
-                  });
-                  return [];
-                }
-                if (component?.type !== "EXCLUSION" || component.coverageEffect)
-                  return [component];
-                repairs.push({
-                  unitId: response.unitId,
-                  requirementIndex,
-                  componentIndex,
-                  action: "NORMALIZE_COMPONENT_TYPE",
-                  fromType: "EXCLUSION",
-                  toType: "COVERAGE_EFFECT",
-                  coverageEffect: "EXCLUDED",
-                });
-                return [
-                  {
-                    ...component,
-                    type: "COVERAGE_EFFECT",
+                    action: "NORMALIZE_COMPONENT_TYPE",
+                    fromType: "EXCLUSION",
+                    toType: "COVERAGE_EFFECT",
                     coverageEffect: "EXCLUDED",
-                  },
-                ];
-              })
-            : requirement?.components,
+                  });
+                  return [
+                    {
+                      ...component,
+                      type: "COVERAGE_EFFECT",
+                      coverageEffect: "EXCLUDED",
+                    },
+                  ];
+                })
+              : requirement?.components,
           }))
         : response?.requirements,
     };
