@@ -912,6 +912,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "ersetze die falsch typisierte OBJECT-Komponente"
     );
+    expect(repairMessages[1]).toContain(
+      "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
+    );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
