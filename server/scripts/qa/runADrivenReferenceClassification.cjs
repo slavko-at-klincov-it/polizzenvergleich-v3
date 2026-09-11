@@ -322,6 +322,7 @@ function classificationGovernorContext(previous, current) {
   const continuesEmbeddedList =
     embeddedListStart > 0 && !endsWithSentence(previousText);
   const opensFollowingList =
+    previous.unitKind !== "LIST" &&
     current.unitKind === "LIST" &&
     !endsWithSentence(previousText) &&
     /\b(?:Deckung|gedeckt|mitversichert|versichert|Versicherungsschutz)\b/iu.test(
