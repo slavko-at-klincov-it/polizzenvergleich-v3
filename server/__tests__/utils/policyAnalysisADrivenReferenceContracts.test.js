@@ -1619,6 +1619,86 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("normalizes a sum-allocation process to a definition", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nDie Versicherungssumme dient zum Ausgleich und wird aufgeteilt. Die Verteilung richtet sich nach der Unterversicherung.\n",
+      ],
+      "d"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const plannedBatch = buildADrivenClassificationBatches(plan).batches.find(
+      ({ expectedUnitIds }) => expectedUnitIds.includes(unit.unitId)
+    );
+    const batch = {
+      ...plannedBatch,
+      units: plannedBatch.expectedUnitIds.map((unitId) =>
+        plan.units.find((candidate) => candidate.unitId === unitId)
+      ),
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    {
+                      unitId: unit.unitId,
+                      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+                      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+                      requirements: [
+                        {
+                          displayLabel: unit.source.combinedText,
+                          components: [
+                            {
+                              type: "OBJECT",
+                              label: unit.source.combinedText,
+                              sourceBlockIds: unit.source.blockIds,
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ]),
+                },
+              },
+            ],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses[0].primaryClass).toBe("DEFINITION");
+    expect(result.responses[0].semanticClasses).toEqual(["DEFINITION"]);
+    expect(result.responses[0].requirements[0].components[0].type).toBe(
+      "FACT_ROLE"
+    );
+    expect(result.attempts[0].componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_ALLOCATION_RULE_TO_DEFINITION",
+    });
+  });
+
   test("serializes multiple semantic retry failures into bounded single-unit repairs", async () => {
     const source = artifact(
       [
