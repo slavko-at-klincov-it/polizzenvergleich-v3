@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  A_DYNAMIC_MANIFEST_CONTRACT_ID,
-} = require("./aDrivenSemanticManifest");
+const { A_DYNAMIC_MANIFEST_CONTRACT_ID } = require("./aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
   stableStringify,
@@ -169,9 +167,9 @@ function buildADrivenAStatusAudit({
     const compatibleDynamicTargets = dynamicComponents
       .filter(
         (candidate) =>
-          (LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || []).includes(
-            candidate.dynamicComponentType
-          ) &&
+          (
+            LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || []
+          ).includes(candidate.dynamicComponentType) &&
           intersection(candidate.sourceBlockIds, component.sourceBlockIds)
             .length > 0
       )
@@ -205,7 +203,12 @@ function buildADrivenAStatusAudit({
         )
       )
       .map(
-        ({ legacyRequirementId, legacyComponentId, legacyFactRole, label }) => ({
+        ({
+          legacyRequirementId,
+          legacyComponentId,
+          legacyFactRole,
+          label,
+        }) => ({
           legacyRequirementId,
           legacyComponentId,
           legacyFactRole,
@@ -388,8 +391,7 @@ function buildADrivenAStatusAudit({
     summary.legacyComponents === EXPECTED_LEGACY_COMPONENTS &&
     summary.missingLegacyRequirements === 0 &&
     summary.missingLegacyComponents === 0;
-  summary.nonOperativeReviewPassed =
-    summary.suspiciousNonOperativeUnits === 0;
+  summary.nonOperativeReviewPassed = summary.suspiciousNonOperativeUnits === 0;
   summary.semanticCrosswalkApproved = false;
   summary.acceptanceReady = false;
 

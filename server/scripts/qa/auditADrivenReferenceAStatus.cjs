@@ -99,7 +99,10 @@ try {
     responses,
     classificationBatches,
     batchResults,
-    legacyManifest: readJson(args.legacyManifest, "LF_A_STATUS_LEGACY_MANIFEST"),
+    legacyManifest: readJson(
+      args.legacyManifest,
+      "LF_A_STATUS_LEGACY_MANIFEST"
+    ),
   });
   writePrivateJson(args.output, audit);
   console.log(JSON.stringify(audit.summary, null, 2));
