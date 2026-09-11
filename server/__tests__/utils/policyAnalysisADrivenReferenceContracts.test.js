@@ -1978,6 +1978,63 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("identifies an unsupported coverage class without literal effect evidence", () => {
+    const source = artifact(
+      [
+        "Seite 1\nAustritt von Wasser aus Solarheizungsanlagen, wenn diese fix installiert sind.\n",
+      ],
+      "1"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "PERIL_OR_DAMAGE",
+            "OPERATIVE_COVERAGE_STATEMENT",
+          ],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: block.exactText,
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "UNIT_SEMANTIC_COMPONENTS_INCOMPLETE",
+          unitId: unit.unitId,
+          missingRequiredComponentGroups: [
+            ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT"],
+            ["COVERAGE_EFFECT"],
+          ],
+          observedComponentTypes: ["OBJECT"],
+          unsupportedSemanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+        }),
+      ])
+    );
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],

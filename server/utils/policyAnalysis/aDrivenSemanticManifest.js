@@ -489,6 +489,14 @@ function requiredComponentGroups(semanticClasses) {
   return required;
 }
 
+function hasCoverageEffectEvidence(unit) {
+  return evidenceBlocks(unit).some(({ exactText }) =>
+    /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|gilt\s+als\s+(?:mit)?versichert)\b/iu.test(
+      exactText
+    )
+  );
+}
+
 function logicalSegmentDiagnostics(unit, requirements) {
   const segments = unit.logicalSourceSegments || [];
   const segmentDiagnostics = segments.flatMap((segment) => {
@@ -680,6 +688,15 @@ function classifyUnit(unit, records) {
       .filter(({ type }) => type === "COVERAGE_EFFECT")
       .map(({ coverageEffect }) => coverageEffect)
   );
+  const unsupportedSemanticClasses =
+    missingRequiredGroups.some((types) => types.includes("COVERAGE_EFFECT")) &&
+    !hasCoverageEffectEvidence(unit)
+      ? semanticClasses.filter((semanticClass) =>
+          ["EXCLUSION", "OPERATIVE_COVERAGE_STATEMENT"].includes(
+            semanticClass
+          )
+        )
+      : [];
   if (
     !requirements ||
     missingRequiredGroups.length > 0 ||
@@ -697,6 +714,9 @@ function classifyUnit(unit, records) {
           unitId: unit.unitId,
           missingRequiredComponentGroups: missingRequiredGroups,
           observedComponentTypes: [...observedTypes].sort(),
+          ...(unsupportedSemanticClasses.length
+            ? { unsupportedSemanticClasses }
+            : {}),
         },
       ],
     };
