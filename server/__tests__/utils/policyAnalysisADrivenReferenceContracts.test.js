@@ -4102,6 +4102,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       },
     ];
     const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const headingTerminal = manifest.unitTerminals.find(
+      ({ unitId }) => unitId === heading.unitId
+    );
+    headingTerminal.terminalDisposition = "NON_OPERATIVE_TERMINAL";
+    headingTerminal.primaryClass = "STRUCTURE";
+    headingTerminal.semanticClasses = ["STRUCTURE"];
+    headingTerminal.requirementIds = [];
     const classificationBatches = buildADrivenClassificationBatches(plan);
     const legacyManifest = {
       manifestSha256: "b".repeat(64),
