@@ -1770,9 +1770,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(result.validation.passed).toBe(true);
-    expect(
-      result.responses[0].requirements[0].components[0].label
-    ).toContain("bei Veräußerung der Sache auch dann");
+    expect(result.responses[0].requirements[0].components[0].label).toContain(
+      "bei Veräußerung der Sache auch dann"
+    );
     expect(result.attempts[0].componentRepairs).toContainEqual({
       unitId: unit.unitId,
       requirementIndex: 0,
