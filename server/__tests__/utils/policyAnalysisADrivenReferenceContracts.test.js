@@ -968,6 +968,68 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toHaveLength(3);
   });
 
+  test("normalizes bare gilt in an as-definition without treating it as coverage", async () => {
+    const source = artifact(
+      ["Seite 1\nDer Neubauwert als Ersatzwert gilt.\n"],
+      "f"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "CONDITIONAL",
+            },
+          ],
+        },
+      ],
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: JSON.stringify([response]) } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses[0].requirements[0].components[0]).toEqual({
+      type: "FACT_ROLE",
+      label: "gilt",
+      sourceBlockIds: unit.source.blockIds,
+    });
+    expect(result.attempts[0].componentRepairs).toEqual([
+      expect.objectContaining({ action: "NORMALIZE_BARE_GILT_TO_FACT_ROLE" }),
+    ]);
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")
@@ -2741,6 +2803,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     "erwirbt den Anspruch auf Zahlung",
     "erfolgt die Entschädigung nach dem Zeitwert",
     "Neuwertentschädigung geleistet wird",
+    "zum Neuwert zu ersetzten",
   ])("accepts a source-bound indemnity effect: %s", (effectLabel) => {
     const source = artifact(
       [`Seite 1\nVersicherte Leistung: ${effectLabel}.\n`],
@@ -2778,6 +2841,66 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
+  test("trims only an uncited leading article from a source-bound requirement label", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDer Neubauwert gilt. Der \nVersicherungsnehmer erwirbt den Anspruch auf Zahlung.\n",
+      ],
+      "7"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition, source: unitSource }) =>
+        initialDisposition === "PENDING_CLASSIFICATION" &&
+        unitSource.blocks.length > 1
+    );
+    const [definitionBlock, claimBlock] = unit.source.blocks;
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "DEFINITION",
+          ],
+          requirements: [
+            {
+              displayLabel: definitionBlock.exactText,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: definitionBlock.exactText,
+                  sourceBlockIds: [definitionBlock.blockId],
+                },
+              ],
+            },
+            {
+              displayLabel:
+                "Der Versicherungsnehmer erwirbt den Anspruch auf Zahlung.",
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "erwirbt den Anspruch auf Zahlung",
+                  sourceBlockIds: [claimBlock.blockId],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[1].displayLabel).toBe(
+      "Versicherungsnehmer erwirbt den Anspruch auf Zahlung."
+    );
   });
 
   test("rejects a coverage effect component whose label is not a coverage effect", () => {

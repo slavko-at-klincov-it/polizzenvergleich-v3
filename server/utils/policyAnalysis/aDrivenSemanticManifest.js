@@ -62,7 +62,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -412,7 +412,7 @@ function validateComponent(component, unit) {
 }
 
 function validateRequirement(draft, unit, requirementIndex) {
-  const displayLabel = canonicalExactSourceText(
+  let displayLabel = canonicalExactSourceText(
     text(draft?.displayLabel),
     unit.source.blockIds,
     unit.source.blocks
@@ -482,6 +482,16 @@ function validateRequirement(draft, unit, requirementIndex) {
   const sourceBlocks = sourceBlockIds.map((blockId) =>
     availableBlocks.find(({ blockId: id }) => id === blockId)
   );
+  const articleTrimmedDisplayLabel = displayLabel.replace(
+    /^(?:der|die|das|ein|eine)\s+/iu,
+    ""
+  );
+  if (
+    articleTrimmedDisplayLabel !== displayLabel &&
+    !sourceContains(unit, sourceBlockIds, displayLabel) &&
+    sourceContains(unit, sourceBlockIds, articleTrimmedDisplayLabel)
+  )
+    displayLabel = articleTrimmedDisplayLabel;
   const uncitedOwnedBlockIds = unit.source.blockIds.filter(
     (blockId) => !selectedBlockIds.has(blockId)
   );

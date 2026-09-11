@@ -392,6 +392,22 @@ function normalizeUnambiguousComponentTypes(responses) {
                 const componentLabel = String(component?.label || "");
                 if (
                   component?.type === "COVERAGE_EFFECT" &&
+                  /^gilt$/iu.test(componentLabel) &&
+                  /\bals\b[\s\S]*\bgilt\b/iu.test(
+                    String(requirement.displayLabel || "")
+                  )
+                ) {
+                  repairs.push({
+                    unitId: response.unitId,
+                    requirementIndex,
+                    componentIndex,
+                    action: "NORMALIZE_BARE_GILT_TO_FACT_ROLE",
+                  });
+                  const { coverageEffect: _coverageEffect, ...rest } = component;
+                  return [{ ...rest, type: "FACT_ROLE" }];
+                }
+                if (
+                  component?.type === "COVERAGE_EFFECT" &&
                   component.coverageEffect === "CONDITIONAL" &&
                   /\bgelten\b[\s\S]*\bBestimmungen\b/iu.test(
                     String(component.label || "")
