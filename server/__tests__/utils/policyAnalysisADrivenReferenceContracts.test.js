@@ -883,7 +883,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const valid = batch.expectedUnitIds.map((unitId) =>
       validResponse(plan.units.find((unit) => unit.unitId === unitId))
     );
-    const invalid = valid.map((response) => JSON.parse(JSON.stringify(response)));
+    const invalid = valid.map((response) =>
+      JSON.parse(JSON.stringify(response))
+    );
     invalid[1].requirements[0].components[0].label = "";
     invalid[2].requirements[0].components[0].label = "";
     const requested = [];
@@ -928,11 +930,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
     expect(
       result.attempts.map(({ semanticRetryUnitIds }) => semanticRetryUnitIds)
-    ).toEqual([
-      [batch.expectedUnitIds[1]],
-      [batch.expectedUnitIds[2]],
-      [],
-    ]);
+    ).toEqual([[batch.expectedUnitIds[1]], [batch.expectedUnitIds[2]], []]);
   });
 
   test("plans every block across multiple A documents without fixed pages or rows", () => {
@@ -1395,7 +1393,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
     const sourceBlock = unit.source.blocks[0];
-    const markerBlockId = crypto.createHash("sha256").update("marker").digest("hex");
+    const markerBlockId = crypto
+      .createHash("sha256")
+      .update("marker")
+      .digest("hex");
     const markerBlock = {
       ...sourceBlock,
       blockId: markerBlockId,
