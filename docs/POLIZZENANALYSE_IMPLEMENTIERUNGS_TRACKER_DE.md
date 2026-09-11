@@ -7298,3 +7298,119 @@ Status: `V12 BATCH 1-3 PASS UND RESUMIERBAR GESICHERT; BATCH 4 TECHNISCH
 HÄNGENGEBLIEBEN UND KONTROLLIERT BEENDET; TIMEOUT-/RESUME-HÄRTUNG,
 VOLLSTÄNDIGE 59-BATCH-A-KLASSIFIKATION UND 283/631-CROSSWALK OFFEN; KEIN
 PRODUKT-ROUTING, KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
+
+### 133.18 V12-Timeout-Härtung, vollständiger A-Lauf und Crosswalk-Gate
+
+Der technische Root Cause aus Abschnitt 133.17 ist behoben und auf
+`origin/codex/v3.7.5-lf-retrieval-shadow` veröffentlicht. Der Kernfix beginnt
+mit Commit `398676659` und ist im abschließend geprüften Stand
+`9836216b9db6fc0b83bc65177f69f9fa6a938acc` enthalten. Jeder
+Qwen-Klassifikationsrequest besitzt nun einen konfigurierbaren harten Timeout,
+einen echten `AbortController`, eine Settlement-Barriere und eine sichere
+LM-Studio-Wiederherstellung durch gezieltes Entladen, Neuladen und Prüfung von
+exakter Modell-ID und Kontextlänge. Erst danach darf ein begrenzter Retry
+beginnen. Versuche werden append-only mit Versuch, Dauer, Timeout-/Abortstatus,
+Fehlerklasse, Response-Hash und Recovery-Nachweis protokolliert. Nicht
+bestandene Batches werden nicht als PASS gespeichert; nach ausgeschöpften
+Retries stoppt der Lauf fail-closed und bleibt resumierbar.
+
+Im unveränderten V12-Laufpfad liegen 573 private Versuchsjournale. Vier reale
+Batch-4-Requests erreichten den konfigurierten Timeout von 180.000 ms. Bei
+allen vier wurde der Abort ausgelöst, der Request settelte danach, und LM
+Studio wurde vor einem Folgeversuch jeweils `SAFE_RELOADED`; die geprüfte
+Modell-ID blieb `qwen/qwen3.6-35b-a3b`, der Kontext 42.496. Die gemessenen
+Gesamtdauern einschließlich Recovery betrugen 192.099 bis 192.328 ms. Dreizehn
+weitere Versuchsjournale enthalten ungültige beziehungsweise abgeschnittene
+JSON-Antworten als technische Fehler; sie wurden nicht als Semantikresultat
+übernommen.
+
+Der vollständige Real-Lauf wurde am Klassifikationsstand
+`bd051b23f1facb15943ca0de5312e387aa2dd10a` abgeschlossen. Der abschließende
+Integritäts-Resume lief aus dem isolierten Mac-Studio-Worktree
+`/private/tmp/lf-a-verified59.cpf7ge/repo` auf
+`9836216b9db6fc0b83bc65177f69f9fa6a938acc` mit:
+
+```text
+model: qwen/qwen3.6-35b-a3b
+modelContext: 42496
+maximumAttempts: 8
+requestTimeoutMs: 180000
+abortSettlementTimeoutMs: 15000
+modelRecoveryTimeoutMs: 180000
+qwenModelKey: qwen3.6-35b-a3b-mlx-text
+```
+
+Die bereits gespeicherten Batches 1 bis 38 wurden wiederverwendet. Nur Batch
+39 wurde aus seinem archivierten Resultat neu materialisiert, weil die reine
+Überschrift „3. Obliegenheiten des Versicherungsnehmers im Schadenfall“ in
+einem alten PASS fälschlich als `INSURED_OBJECT` gespeichert war. Batch 40 bis
+59 wurden wiederverwendet. Der Abschluss dauerte deshalb 394 ms und machte
+keinen neuen Modellrequest. Reine Aufzählungsmarker innerhalb operativer Units
+werden nun blockweise als Struktur terminiert, statt den operativen Unitstatus
+ohne Requirement-Beleg zu erben.
+
+Wichtige Abweichung: Während einer früheren Validatorhärtung in diesem
+Arbeitszyklus wurden Batch 2 und 3 entgegen der Vorgabe neu berechnet. Die
+ursprünglichen Dateien sind unverändert unter `superseded-batches` erhalten;
+sie enthielten unter anderem semantisch unzulässige Coverage-Effekte wie das
+bloße „ist“, „mit einer“ oder „gilt“. Der finale Integritäts-Resume hat Batch 1
+bis 3 nicht erneut berechnet. Ihre aktuellen SHA-256-Werte sind:
+
+```text
+Batch 1: 4be95beae73f9fb9963a81a96321d96d91af6329910df3d02d756a312bb4aaf0
+Batch 2: 17acb45439f4cc82e41cac3d4b802fa56b9d1bfb3aaa33bafad021995f554b34
+Batch 3: 9816cd5e782a52889ea5ea931bf07af07df0e0396b728238ca73c5bdb51ae360
+```
+
+Finaler A-Befund: 59/59 Batches PASS, 349/349 erwartete Modellantwort-Units
+genau einmal vorhanden, keine fehlenden, unbekannten oder doppelten
+Antwort-IDs, keine ungültigen oder still ergänzten Source-IDs, 364 dynamische
+Requirements, 755 Komponenten und null `UNRESOLVED`-Units. Alle 1.005
+Source-Blöcke sind genau einmal besessen und genau einmal terminalisiert;
+`allBlocksTerminal` ist jetzt wahr und kein operativer Block bleibt ohne
+Requirement-ID. Der zusätzliche Fehlklassifikationsaudit fand null verdächtig
+operative und null verdächtig nichtoperative Units. Von 68 geprüften
+nichtoperativen Risikoeinheiten wurden 52 als Strukturüberschriften, neun als
+Seitenmarker, zwei als Strukturlabel und fünf als wiederverwendete operative
+Governor-Evidenz erklärt. Das ist eine source- und regelgebundene Prüfung,
+kein Expertenbeweis beliebiger fachlicher Vollständigkeit.
+
+Der mechanische Crosswalk gegen die historische 283/631-Regression ist
+vollständig, aber der semantische Doppelreview-Gate ist nicht bestanden:
+
+```text
+Legacy-Requirements: 171 1:1-Kandidaten, 112 Split-Kandidaten, 0 fehlend
+Dynamic-Requirements: 228 1:1-Kandidaten, 110 Merge-Kandidaten, 26 zusätzlich
+Legacy-Komponenten: 188 1:1-Kandidaten, 102 Split-Kandidaten,
+                   341 rolleninkompatible Source-Overlaps, 0 source-fehlend
+Dynamic-Komponenten: 148 1:1-Kandidaten, 122 Merge-Kandidaten,
+                     325 rolleninkompatible Source-Overlaps, 160 zusätzlich
+```
+
+Damit sind Blockbesitz, Response-Hülle, Source-Referenzintegrität,
+Nonoperative-/Operative-Risikofilter und mechanische Source-Abdeckung PASS.
+`semanticCrosswalkApproved` und `acceptanceReady` bleiben bewusst falsch: Der
+Crosswalk-Vertrag verlangt für alle 631 Komponenten eine gültige semantische
+Relation, `APPROVED` und zwei unabhängige Reviewer. Source-Overlap oder ein
+zweiter Modelllauf darf diese fachliche Doppelreview nicht vortäuschen.
+
+Beweishashes im V12-Laufpfad:
+
+```text
+summary.private.json: 062ea40a24bf4ccfad2d26efde663e98e6ab209470f5935a7f3e4f691cb8b77f
+responses.private.json: dfc81ade63c098fca6de4d0a4a1bcc709d59deea1b01f6c3e269e34c035e9e3c
+dynamic-semantic-manifest.private.json: d39ff07f4cfa1137a62c1fd340cc31bfbc4f807a1e550375a24fc6f9adcc5d33
+a-status-audit-v12-9836216b.private.json:
+  332a3e88ef71ad0e57f6c087061ca2009be983f91980aae95cd22745ddc8d2f5
+resume-9836216b-final-integrity.runner.log:
+  deb52eeeadca7f633499b6eb4723fb72299271992ae37e27a289c6bd8c2c93a8
+```
+
+Auf dem Mac Studio bestanden am exakten Commit `9836216b9` Format, Lint und
+beide A-driven Jest-Suites mit 92/92 Tests. Wegen des offenen semantischen
+283/631-Doppelreviews wurden Kandidatenkompaktierung, vollständige B-Suche,
+Produkt-Routing, Kunden-XLSX und Deployment nicht gestartet.
+
+Status: `V12 A-KLASSIFIKATION 59/59 TECHNISCH UND SOURCE-SEITIG PASS;
+283/631 MECHANISCH VOLLSTÄNDIG, ABER SEMANTISCHER DOPPELREVIEW OFFEN; B-GATE
+NICHT FREIGEGEBEN; KEIN PRODUKT-ROUTING, KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
