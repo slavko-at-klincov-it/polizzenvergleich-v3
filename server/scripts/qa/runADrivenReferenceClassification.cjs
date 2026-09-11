@@ -455,6 +455,26 @@ function validateBatchResponses(plan, batch, responses) {
   };
 }
 
+function envelopeRepairCanStayGrouped(diagnostics, pendingUnitIds) {
+  const pending = new Set(pendingUnitIds);
+  const relevant = diagnostics.filter(({ unitId }) => pending.has(unitId));
+  return (
+    relevant.length === pending.size &&
+    relevant.every(
+      ({ code, reasons }) =>
+        code === "INVALID_UNIT_CLASSIFICATION" &&
+        Array.isArray(reasons) &&
+        reasons.length > 0 &&
+        reasons.every((reason) =>
+          [
+            "PRIMARY_CLASS_MISSING_FROM_SEMANTIC_CLASSES",
+            "SEMANTIC_CLASSES_INVALID_OR_EMPTY",
+          ].includes(reason)
+        )
+    )
+  );
+}
+
 async function verifyModel({ baseUrl, model, modelContext }) {
   const apiRoot = baseUrl.replace(/\/v1\/?$/u, "");
   const response = await fetch(`${apiRoot}/api/v0/models`, {
@@ -822,9 +842,14 @@ async function runBatch({
         );
       });
       const validation = validateBatchResponses(plan, batch, mergedResponses);
+      const groupedEnvelopeRepair = envelopeRepairCanStayGrouped(
+        validation.diagnostics,
+        pendingUnitIds
+      );
       const semanticRetryUnitIds =
         pendingUnitIds.length > 1 &&
-        !workingBatch.batchId.includes("-timeout-split-")
+        !workingBatch.batchId.includes("-timeout-split-") &&
+        !groupedEnvelopeRepair
           ? [pendingUnitIds[0]]
           : pendingUnitIds;
       const attemptRecord = {
@@ -846,6 +871,11 @@ async function runBatch({
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
         semanticRetryUnitIds,
+        semanticRetryStrategy: groupedEnvelopeRepair
+          ? "GROUPED_ENVELOPE_REPAIR"
+          : semanticRetryUnitIds.length < pendingUnitIds.length
+            ? "SINGLE_UNIT_REPAIR"
+            : "ALL_PENDING",
         validationPassed: validation.passed,
         diagnostics: validation.diagnostics,
       };

@@ -933,6 +933,66 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual([[batch.expectedUnitIds[1]], [batch.expectedUnitIds[2]], []]);
   });
 
+  test("keeps homogeneous classification-envelope repairs grouped", async () => {
+    const source = artifact(
+      ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n"],
+      "5"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    const invalid = valid.map((response) => ({
+      ...response,
+      semanticClasses: ["INSURED_OBJECT"],
+    }));
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedUnitIds);
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      requested.length === 1 ? invalid : valid
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(requested).toEqual([batch.expectedUnitIds, batch.expectedUnitIds]);
+    expect(result.attempts[0]).toMatchObject({
+      semanticRetryUnitIds: batch.expectedUnitIds,
+      semanticRetryStrategy: "GROUPED_ENVELOPE_REPAIR",
+    });
+  });
+
   test("plans every block across multiple A documents without fixed pages or rows", () => {
     const first = artifact(
       [
