@@ -403,7 +403,8 @@ function normalizeUnambiguousComponentTypes(responses) {
                     componentIndex,
                     action: "NORMALIZE_BARE_GILT_TO_FACT_ROLE",
                   });
-                  const { coverageEffect: _coverageEffect, ...rest } = component;
+                  const { coverageEffect: _coverageEffect, ...rest } =
+                    component;
                   return [{ ...rest, type: "FACT_ROLE" }];
                 }
                 if (
