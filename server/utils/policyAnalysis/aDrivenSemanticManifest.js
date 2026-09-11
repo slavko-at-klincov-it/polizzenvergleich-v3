@@ -800,6 +800,13 @@ function classifyUnit(unit, records) {
           code: "OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE",
           unitId: unit.unitId,
           blockIds: uncitedSemanticBlockIds,
+          uncoveredBlocks: unit.source.blocks
+            .filter(({ blockId }) => uncitedSemanticBlockIds.includes(blockId))
+            .map(({ blockId, structuralKind, exactText }) => ({
+              blockId,
+              structuralKind,
+              exactText,
+            })),
         },
       ],
     };

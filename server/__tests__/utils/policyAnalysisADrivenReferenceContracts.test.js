@@ -1050,6 +1050,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet"
     );
     expect(repairMessages[1]).toContain(
+      "uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR"
+    );
+    expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
@@ -1412,6 +1415,46 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         .find(({ unitId }) => unitId === unit.unitId)
         .diagnostics.map(({ code }) => code)
     ).toContain("LIST_GOVERNOR_REQUIREMENT_STANDALONE");
+
+    const uncoveredManifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: items.map((segment) => ({
+            displayLabel: segment.combinedText,
+            components: [
+              {
+                type: "OBJECT",
+                label: segment.combinedText,
+                sourceBlockIds: segment.blockIds,
+              },
+            ],
+          })),
+        },
+      ],
+    });
+    expect(
+      uncoveredManifest.unitTerminals
+        .find(({ unitId }) => unitId === unit.unitId)
+        .diagnostics
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE",
+          blockIds: governor.blockIds,
+          uncoveredBlocks: [
+            expect.objectContaining({
+              blockId: governor.blockIds[0],
+              structuralKind: "LIST_GOVERNOR",
+              exactText: governor.combinedText,
+            }),
+          ],
+        }),
+      ])
+    );
   });
 
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
