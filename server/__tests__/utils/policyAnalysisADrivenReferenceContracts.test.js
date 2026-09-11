@@ -628,6 +628,101 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
+  test("resumes a failed batch with only the previously unaccepted units", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-partial-resume-")
+    );
+    try {
+      const source = artifact(
+        ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n"],
+        "0"
+      );
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const built = buildADrivenClassificationBatches(plan, {
+        maximumUnits: 2,
+        maximumCharacters: 12_000,
+      });
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      expect(batch.expectedUnitIds).toHaveLength(2);
+      const valid = batch.expectedUnitIds.map((unitId) =>
+        validResponse(plan.units.find((unit) => unit.unitId === unitId))
+      );
+      const invalidSecond = JSON.parse(JSON.stringify(valid[1]));
+      invalidSecond.requirements[0].components[0].label = "";
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+
+      await expect(
+        processClassificationBatches({
+          args,
+          plan,
+          batches,
+          client: {
+            chat: {
+              completions: {
+                create: jest.fn(async () => ({
+                  model: args.model,
+                  choices: [
+                    {
+                      message: {
+                        content: JSON.stringify([valid[0], invalidSecond]),
+                      },
+                    },
+                  ],
+                  usage: {},
+                })),
+              },
+            },
+          },
+          recoverModelAfterAbort: jest.fn(),
+        })
+      ).rejects.toThrow("LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED");
+
+      const requested = [];
+      const results = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async ({ messages }) => {
+                const input = JSON.parse(
+                  messages.find(({ role }) => role === "user").content
+                );
+                requested.push(input.expectedUnitIds);
+                return {
+                  model: args.model,
+                  choices: [
+                    { message: { content: JSON.stringify([valid[1]]) } },
+                  ],
+                  usage: {},
+                };
+              }),
+            },
+          },
+        },
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(requested).toEqual([[batch.expectedUnitIds[1]]]);
+      expect(results[0].responses).toEqual(valid);
+      expect(results[0].resumedAcceptedUnits).toBe(1);
+      expect(fs.existsSync(batchResultFile(temporary, batch))).toBe(true);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("retries only unresolved unit IDs and preserves accepted responses", async () => {
     const source = artifact(
       ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n"],

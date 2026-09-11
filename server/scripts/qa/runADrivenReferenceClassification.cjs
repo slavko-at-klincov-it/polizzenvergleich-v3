@@ -490,6 +490,51 @@ function createAttemptRecorder({ output, plan, batch, args }) {
   };
 }
 
+function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
+  const directory = path.join(
+    output,
+    "attempts",
+    `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}`
+  );
+  if (!fs.existsSync(directory)) return [];
+  const accepted = new Map();
+  for (const name of fs.readdirSync(directory).sort()) {
+    if (!/^cycle-\d+-attempt-\d+\.private\.json$/u.test(name)) continue;
+    const artifact = readJson(
+      path.join(directory, name),
+      "LF_A_CLASSIFICATION_ATTEMPT"
+    );
+    if (
+      artifact?.contractId !== TRANSPORT_CONTRACT_ID ||
+      artifact?.sourceUnitPlanSha256 !== plan.planSha256 ||
+      artifact.promptContractId !== PROMPT_CONTRACT_ID ||
+      artifact.requestedModel !== args.model ||
+      artifact.modelContext !== args.modelContext ||
+      artifact.batchIndex !== batch.batchIndex ||
+      artifact.batchId !== batch.batchId ||
+      !Array.isArray(artifact.attempt?.responses)
+    )
+      continue;
+    for (const response of artifact.attempt.responses) {
+      if (accepted.has(response?.unitId)) continue;
+      const unit = batch.units.find(({ unitId }) => unitId === response?.unitId);
+      if (!unit) continue;
+      const singleUnitBatch = {
+        ...batch,
+        expectedUnitIds: [unit.unitId],
+        units: [unit],
+      };
+      const validation = validateBatchResponses(plan, singleUnitBatch, [
+        response,
+      ]);
+      if (validation.passed) accepted.set(unit.unitId, response);
+    }
+  }
+  return batch.expectedUnitIds
+    .filter((unitId) => accepted.has(unitId))
+    .map((unitId) => accepted.get(unitId));
+}
+
 function validateCompletedRun({ args, plan, batches, summaryFile }) {
   const summary = readJson(summaryFile, "LF_A_CLASSIFICATION_SUMMARY");
   if (
@@ -559,9 +604,23 @@ async function runBatch({
   abortSettlementTimeoutMs = DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS,
   recoverModelAfterAbort = async () => ({ status: "SAFE_TEST_DOUBLE" }),
   onAttempt = async () => {},
+  initialAcceptedResponses = [],
 }) {
-  const acceptedResponses = new Map();
-  let workingBatch = batch;
+  const acceptedResponses = new Map(
+    initialAcceptedResponses.map((response) => [response.unitId, response])
+  );
+  const initiallyPendingUnitIds = batch.expectedUnitIds.filter(
+    (unitId) => !acceptedResponses.has(unitId)
+  );
+  let workingBatch = {
+    ...batch,
+    batchId:
+      acceptedResponses.size > 0 ? `${batch.batchId}-resume-pending` : batch.batchId,
+    expectedUnitIds: initiallyPendingUnitIds,
+    units: batch.units.filter(({ unitId }) =>
+      initiallyPendingUnitIds.includes(unitId)
+    ),
+  };
   let messages = prompt(workingBatch);
   let last = {
     responses: [],
@@ -574,6 +633,35 @@ async function runBatch({
     error: null,
   };
   const attempts = [];
+  if (initiallyPendingUnitIds.length === 0) {
+    const responses = batch.expectedUnitIds.map((unitId) =>
+      acceptedResponses.get(unitId)
+    );
+    const validation = validateBatchResponses(plan, batch, responses);
+    return {
+      schemaVersion: 1,
+      contractId: RUN_CONTRACT_ID,
+      sourceUnitPlanSha256: plan.planSha256,
+      promptContractId: PROMPT_CONTRACT_ID,
+      promptSha256: sha256(JSON.stringify(prompt(batch))),
+      validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+      requestedModel: model,
+      modelContext,
+      transportContractId: TRANSPORT_CONTRACT_ID,
+      requestTimeoutMs,
+      abortSettlementTimeoutMs,
+      batchId: batch.batchId,
+      batchIndex: batch.batchIndex,
+      expectedUnitIds: batch.expectedUnitIds,
+      responses,
+      validation,
+      rawResponseSha256: sha256(""),
+      rawResponse: "",
+      error: null,
+      attempts,
+      resumedAcceptedUnits: acceptedResponses.size,
+    };
+  }
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     const started = performance.now();
     let observedRawText = "";
@@ -665,7 +753,7 @@ async function runBatch({
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
             validation.diagnostics
-          )}. Korrigiere ausschließlich das JSON-Array. Verwende exakt alle expectedUnitIds einmal und keine unbekannten IDs. primaryClass muss in semanticClasses enthalten sein. OBJECT, SCOPE, FACT_ROLE und andere component.type-Werte sind niemals primaryClass/semanticClasses. Deckungskonzept-/Produkttitel plus Firmenrollen verwenden DEFINITION mit SCOPE-/FACT_ROLE-Komponenten. Jede in missingRequiredComponentGroups genannte Typgruppe muss durch mindestens eine eigene Komponente erfüllt sein. Wenn observedComponentTypes stattdessen OBJECT nennt, ersetze die falsch typisierte OBJECT-Komponente durch PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT; erzeuge dafür keine zusätzliche Requirement. Enthält semanticClasses DEFINITION, ergänze immer eine FACT_ROLE-Komponente mit einem wörtlichen Definitionssignal aus der Quelle, zum Beispiel „ist“, „sind“ oder „gilt als“; enthält dieselbe Unit zusätzlich PERIL_OR_DAMAGE, bleibt dafür eine getrennte PERIL_OR_CAUSE- oder DAMAGE_OR_EFFECT-Komponente erforderlich. Kopiere displayLabel und alle Komponentenfelder exakt aus den referenzierten sourceBlocks; formuliere keine Kurzlabels und entferne keine Wörter, Satzzeichen oder OCR-Zeichen. Nenne in sourceBlockIds jeden Block, aus dem label, rawValue, unit oder qualifier Text übernimmt. REQUIREMENT_OWNED_BLOCKS_UNCITED nennt ownedSourceBlockIds, für deren Text noch keine Komponente existiert; ergänze SCOPE/FACT_ROLE für Deckungskonzept-, Produkt- oder Firmenrollen oder klassifiziere eine wirklich vollständig nichtoperative Unit korrekt. LIST_CONTINUATION_SEGMENT_SPLIT bedeutet: alle genannten blockIds in genau einer gemeinsamen Anforderung. LIST_SOURCE_SEGMENTS_MERGED bedeutet: jedes genannte segmentId als eigene Anforderung ausgeben. governingContext ist ausschließlich Evidenz für den abhängigen Listenpunkt: Zitiere seinen Wirkungsblock als COVERAGE_EFFECT-Komponente in jeder betroffenen Requirement, aber erzeuge niemals eine eigene Requirement, deren displayLabel nur aus governingContext stammt. Entferne coverageEffect aus jeder OBJECT- oder sonstigen Nicht-COVERAGE_EFFECT-Komponente. Erzeuge stattdessen eine separate Komponente {type:"COVERAGE_EFFECT",label:"<wörtliches Wirkungswort>",sourceBlockIds:["<Belegblock>"],coverageEffect:"INCLUDED|EXCLUDED|CONDITIONAL|OPTIONAL|UNKNOWN"}; der Enumwert ist niemals ein deutsches Wort. Die Vereinigungsmenge aller components.sourceBlockIds muss für jede operative Einheit alle ownedSourceBlockIds der Einheit abdecken; vergiss keine einleitenden governingContext-Blöcke. Vertragsrollen sind DEFINITION/FACT_ROLE, keine versicherten Objekte. Administrative Pflichten oder Voraussetzungen sind CONDITION oder OBLIGATION als semanticClass, ihre Komponente hat aber immer type CONDITION. Terminalklassen wie VARIANT, OBLIGATION, LIMIT, COST und DURATION sind niemals component.type. Ein LIMIT mit konkreter Zahl benötigt VALUE_AND_UNIT samt rawValue; eine Limitbezugsgröße ohne Zahl verwendet LIMIT_BASIS. Bei einer Prozentgrenze bezeichnet VALUE_AND_UNIT die wörtliche Prozentangabe und rawValue wiederholt mindestens deren wörtlichen Zahlenwert; LIMIT_BASIS bezeichnet die wörtliche Bezugsgröße wie „Gebäudeversicherungssumme“. VARIANT verwendet SCOPE.`,
+          )}. Korrigiere ausschließlich das JSON-Array. Verwende exakt alle expectedUnitIds einmal und keine unbekannten IDs. primaryClass muss in semanticClasses enthalten sein. OBJECT, SCOPE, FACT_ROLE und andere component.type-Werte sind niemals primaryClass/semanticClasses. Deckungskonzept-/Produkttitel plus Firmenrollen verwenden DEFINITION mit SCOPE-/FACT_ROLE-Komponenten. Jede in missingRequiredComponentGroups genannte Typgruppe muss durch mindestens eine eigene Komponente erfüllt sein. Wenn observedComponentTypes stattdessen OBJECT nennt, ersetze die falsch typisierte OBJECT-Komponente durch PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT; erzeuge dafür keine zusätzliche Requirement. Enthält semanticClasses DEFINITION, ergänze immer eine FACT_ROLE-Komponente mit einem wörtlichen Definitionssignal aus der Quelle, zum Beispiel „ist“, „sind“ oder „gilt als“; enthält dieselbe Unit zusätzlich PERIL_OR_DAMAGE, bleibt dafür eine getrennte PERIL_OR_CAUSE- oder DAMAGE_OR_EFFECT-Komponente erforderlich. Kopiere displayLabel und alle Komponentenfelder exakt aus den referenzierten sourceBlocks; formuliere keine Kurzlabels und entferne keine Wörter, Satzzeichen oder OCR-Zeichen. Nenne in sourceBlockIds jeden Block, aus dem label, rawValue, unit oder qualifier Text übernimmt. REQUIREMENT_OWNED_BLOCKS_UNCITED nennt ownedSourceBlockIds, für deren Text noch keine Komponente existiert; ergänze eine fachlich passende Komponente für genau diese Blöcke und lasse sie nicht fallen. LIST_CONTINUATION_SEGMENT_SPLIT bedeutet: alle genannten blockIds in genau einer gemeinsamen Anforderung. LIST_SOURCE_SEGMENTS_MERGED bedeutet: jedes genannte segmentId als eigene Anforderung ausgeben. governingContext ist ausschließlich Evidenz für den abhängigen Listenpunkt: Zitiere seinen Wirkungsblock als COVERAGE_EFFECT-Komponente in jeder betroffenen Requirement, aber erzeuge niemals eine eigene Requirement, deren displayLabel nur aus governingContext stammt. Fehlt ein COVERAGE_EFFECT und enthält weder ownedSourceBlocks noch governingContext ein wörtliches Wirkungswort, erfinde keines: Entferne OPERATIVE_COVERAGE_STATEMENT aus primaryClass/semanticClasses und verwende die tatsächlich belegte Rolle LIMIT, DEDUCTIBLE, COST, CONDITION, OBLIGATION oder DEFINITION. Entferne coverageEffect aus jeder OBJECT- oder sonstigen Nicht-COVERAGE_EFFECT-Komponente. Erzeuge bei vorhandenem Wirkungswort stattdessen eine separate Komponente {type:"COVERAGE_EFFECT",label:"<wörtliches Wirkungswort>",sourceBlockIds:["<Belegblock>"],coverageEffect:"INCLUDED|EXCLUDED|CONDITIONAL|OPTIONAL|UNKNOWN"}; der Enumwert ist niemals ein deutsches Wort. Die Vereinigungsmenge aller components.sourceBlockIds muss für jede operative Einheit alle ownedSourceBlockIds der Einheit abdecken; vergiss keine einleitenden governingContext-Blöcke. Vertragsrollen sind DEFINITION/FACT_ROLE, keine versicherten Objekte. Administrative Pflichten oder Voraussetzungen sind CONDITION oder OBLIGATION als semanticClass, ihre Komponente hat aber immer type CONDITION. COMPONENT_TYPE_INVALID bedeutet, dass der genannte Terminalklassen-Typ ersetzt werden muss. Terminalklassen wie VARIANT, OBLIGATION, LIMIT, COST und DURATION sind niemals component.type. Ein LIMIT mit konkreter Zahl benötigt VALUE_AND_UNIT samt rawValue; eine Limitbezugsgröße ohne Zahl verwendet LIMIT_BASIS. Bei einer Prozentgrenze bezeichnet VALUE_AND_UNIT die wörtliche Prozentangabe und rawValue wiederholt mindestens deren wörtlichen Zahlenwert; LIMIT_BASIS bezeichnet die wörtliche Bezugsgröße wie „Gebäudeversicherungssumme“. VARIANT verwendet SCOPE.`,
         },
       ];
     } catch (error) {
@@ -750,6 +838,7 @@ async function runBatch({
     rawResponse: last.rawText,
     error: last.error,
     attempts,
+    resumedAcceptedUnits: initialAcceptedResponses.length,
   };
 }
 
@@ -779,6 +868,12 @@ async function processClassificationBatches({
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
+        initialAcceptedResponses: acceptedResponsesFromAttemptJournal({
+          output: args.output,
+          plan,
+          batch,
+          args,
+        }),
         onAttempt: createAttemptRecorder({
           output: args.output,
           plan,
@@ -922,6 +1017,7 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  acceptedResponsesFromAttemptJournal,
   batchResultFile,
   createAttemptRecorder,
   processClassificationBatches,
