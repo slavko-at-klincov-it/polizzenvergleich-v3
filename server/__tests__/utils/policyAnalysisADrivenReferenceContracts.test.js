@@ -723,6 +723,77 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("normalizes only an exclusion terminal used as a component type", async () => {
+    const source = artifact(
+      ["Seite 1\nNicht versichert sind Treibhäuser.\n"],
+      "c"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Treibhäuser",
+              sourceBlockIds: unit.source.blockIds,
+            },
+            {
+              type: "EXCLUSION",
+              label: "Nicht versichert",
+              sourceBlockIds: unit.source.blockIds,
+            },
+          ],
+        },
+      ],
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: JSON.stringify([response]) } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses[0].requirements[0].components[1]).toMatchObject({
+      type: "COVERAGE_EFFECT",
+      coverageEffect: "EXCLUDED",
+      label: "Nicht versichert",
+    });
+    expect(result.attempts[0].componentTypeRepairs).toEqual([
+      expect.objectContaining({
+        unitId: unit.unitId,
+        fromType: "EXCLUSION",
+        toType: "COVERAGE_EFFECT",
+        coverageEffect: "EXCLUDED",
+      }),
+    ]);
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")

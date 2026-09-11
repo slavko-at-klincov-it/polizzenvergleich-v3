@@ -376,6 +376,44 @@ function mergeCompatibleDuplicateUnitResponses(responses) {
   };
 }
 
+function normalizeUnambiguousComponentTypes(responses) {
+  const repairs = [];
+  const normalized = responses.map((response) => ({
+    ...response,
+    requirements: Array.isArray(response?.requirements)
+      ? response.requirements.map((requirement, requirementIndex) => ({
+          ...requirement,
+          components: Array.isArray(requirement?.components)
+            ? requirement.components.map((component, componentIndex) => {
+                if (
+                  component?.type !== "EXCLUSION" ||
+                  component.coverageEffect
+                )
+                  return component;
+                repairs.push({
+                  unitId: response.unitId,
+                  requirementIndex,
+                  componentIndex,
+                  fromType: "EXCLUSION",
+                  toType: "COVERAGE_EFFECT",
+                  coverageEffect: "EXCLUDED",
+                });
+                return {
+                  ...component,
+                  type: "COVERAGE_EFFECT",
+                  coverageEffect: "EXCLUDED",
+                };
+              })
+            : requirement?.components,
+        }))
+      : response?.requirements,
+  }));
+  return {
+    responses: normalized,
+    componentTypeRepairs: repairs,
+  };
+}
+
 function endsWithSentence(textValue) {
   return /[.!?][”"')\]]?$/u.test(String(textValue || "").trim());
 }
@@ -758,8 +796,9 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       !Array.isArray(artifact.attempt?.responses)
     )
       continue;
-    const journalResponses = mergeCompatibleDuplicateUnitResponses(
-      artifact.attempt.responses
+    const journalResponses = normalizeUnambiguousComponentTypes(
+      mergeCompatibleDuplicateUnitResponses(artifact.attempt.responses)
+        .responses
     ).responses;
     for (const response of journalResponses) {
       if (accepted.has(response?.unitId)) continue;
@@ -978,8 +1017,10 @@ async function runBatch({
       const rawText = completion.choices?.[0]?.message?.content || "";
       observedRawText = rawText;
       const parsed = parseJsonArray(rawText);
-      const { responses, envelopeRepair } =
+      const { responses: mergedResponsesFromEnvelope, envelopeRepair } =
         mergeCompatibleDuplicateUnitResponses(parsed.responses);
+      const { responses, componentTypeRepairs } =
+        normalizeUnambiguousComponentTypes(mergedResponsesFromEnvelope);
       const { syntaxRepair } = parsed;
       observedResponses = responses;
       const workingValidation = validateBatchResponses(
@@ -1045,6 +1086,7 @@ async function runBatch({
         rawResponse: rawText,
         syntaxRepair,
         envelopeRepair,
+        componentTypeRepairs,
         responses,
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
