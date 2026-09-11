@@ -1529,6 +1529,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit"
     );
+    expect(repairMessages[1]).toContain(
+      "„ausgenommen sind“ die Deckungswirkung EXCLUDED"
+    );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
@@ -3068,6 +3071,56 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                     "verzichtet der Versicherer auf den Einwand der Gefahrenerhöhung",
                   sourceBlockIds: [block.blockId],
                   coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.diagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "COVERAGE_EFFECT_LABEL_INVALID" }),
+      ])
+    );
+  });
+
+  test("accepts an express exception as a literal excluded coverage effect", () => {
+    const source = artifact(
+      ["Seite 1\nVom Summenausgleich ausgenommen sind Erst-Risiko-Summen.\n"],
+      "c"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Erst-Risiko-Summen",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "ausgenommen sind",
+                  sourceBlockIds: [block.blockId],
+                  coverageEffect: "EXCLUDED",
                 },
               ],
             },
