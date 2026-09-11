@@ -1047,6 +1047,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds"
     );
     expect(repairMessages[1]).toContain(
+      "COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText"
+    );
+    expect(repairMessages[1]).toContain(
       "LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet"
     );
     expect(repairMessages[1]).toContain(
@@ -1993,6 +1996,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           code: "COMPONENT_SOURCE_TEXT_INVALID",
           componentType: "COVERAGE_EFFECT",
           invalidLiteralValues: ["versichert"],
+          declaredSourceBlockIds: [unit.source.blockIds[0]],
+          declaredSourceExactText: unit.source.blocks[0].exactText,
           allowedEvidence: expect.arrayContaining([
             expect.objectContaining({ blockId: unit.source.blockIds[0] }),
           ]),

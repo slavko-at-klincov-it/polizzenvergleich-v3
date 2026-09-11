@@ -259,6 +259,11 @@ function validateComponent(component, unit) {
       code: "COMPONENT_SOURCE_TEXT_INVALID",
       componentType: type,
       invalidLiteralValues: componentValues,
+      declaredSourceBlockIds: sourceBlockIds,
+      declaredSourceExactText: evidenceBlocks(unit)
+        .filter(({ blockId }) => sourceBlockIds.includes(blockId))
+        .map(({ exactText }) => exactText)
+        .join("\n"),
       allowedEvidence: evidenceBlocks(unit).map(({ blockId, exactText }) => ({
         blockId,
         exactText,
