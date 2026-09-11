@@ -951,8 +951,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               requested.length === 1
                 ? [valid[0], invalid[1], invalid[2]]
                 : requested.length === 2
-                  ? [valid[1]]
-                  : [valid[2]];
+                  ? [invalid[1]]
+                  : requested.length === 3
+                    ? [valid[1]]
+                    : [valid[2]];
             return {
               model: "qwen/qwen3.6-35b-a3b",
               choices: [{ message: { content: JSON.stringify(responses) } }],
@@ -976,11 +978,23 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(requested).toEqual([
       batch.expectedUnitIds,
       [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[1]],
       [batch.expectedUnitIds[2]],
     ]);
     expect(
       result.attempts.map(({ semanticRetryUnitIds }) => semanticRetryUnitIds)
-    ).toEqual([[batch.expectedUnitIds[1]], [batch.expectedUnitIds[2]], []]);
+    ).toEqual([
+      [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[2]],
+      [],
+    ]);
+    expect(result.attempts.map(({ unitAttempts }) => unitAttempts)).toEqual([
+      Object.fromEntries(batch.expectedUnitIds.map((unitId) => [unitId, 1])),
+      { [batch.expectedUnitIds[1]]: 2 },
+      { [batch.expectedUnitIds[1]]: 3 },
+      { [batch.expectedUnitIds[2]]: 2 },
+    ]);
   });
 
   test("keeps homogeneous classification-envelope repairs grouped", async () => {

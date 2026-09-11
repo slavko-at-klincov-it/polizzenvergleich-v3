@@ -783,6 +783,9 @@ async function runBatch({
   const initiallyPendingUnitIds = batch.expectedUnitIds.filter(
     (unitId) => !acceptedResponses.has(unitId)
   );
+  const attemptsByUnit = new Map(
+    initiallyPendingUnitIds.map((unitId) => [unitId, 0])
+  );
   let workingBatch = {
     ...batch,
     batchId:
@@ -835,7 +838,16 @@ async function runBatch({
       resumedAcceptedUnits: acceptedResponses.size,
     };
   }
-  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+  const maximumRequestCalls = initiallyPendingUnitIds.length * maximumAttempts;
+  for (let attempt = 1; attempt <= maximumRequestCalls; attempt += 1) {
+    if (
+      workingBatch.expectedUnitIds.some(
+        (unitId) => (attemptsByUnit.get(unitId) || 0) >= maximumAttempts
+      )
+    )
+      break;
+    for (const unitId of workingBatch.expectedUnitIds)
+      attemptsByUnit.set(unitId, (attemptsByUnit.get(unitId) || 0) + 1);
     const started = performance.now();
     let observedRawText = "";
     let observedResponses = [];
@@ -900,6 +912,12 @@ async function runBatch({
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
+        unitAttempts: Object.fromEntries(
+          workingBatch.expectedUnitIds.map((unitId) => [
+            unitId,
+            attemptsByUnit.get(unitId),
+          ])
+        ),
         messagesSha256,
         durationMs: Math.round(performance.now() - started),
         errorClass: null,
@@ -928,6 +946,12 @@ async function runBatch({
       await onAttempt(attemptRecord);
       last = { responses: mergedResponses, validation, rawText, error: null };
       if (validation.passed) break;
+      if (
+        semanticRetryUnitIds.some(
+          (unitId) => (attemptsByUnit.get(unitId) || 0) >= maximumAttempts
+        )
+      )
+        break;
       workingBatch = {
         ...batch,
         batchId: `${batch.batchId}-retry-${attempt + 1}`,
@@ -956,12 +980,20 @@ async function runBatch({
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
         error.retrySafe !== false &&
-        attempt < maximumAttempts
+        workingBatch.expectedUnitIds.some(
+          (unitId) => (attemptsByUnit.get(unitId) || 0) < maximumAttempts
+        )
           ? timeoutRetryPartition(workingBatch)
           : null;
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
+        unitAttempts: Object.fromEntries(
+          workingBatch.expectedUnitIds.map((unitId) => [
+            unitId,
+            attemptsByUnit.get(unitId),
+          ])
+        ),
         messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
         errorClass: errorClass(error),
