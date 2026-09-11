@@ -459,6 +459,24 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const exactPerformanceObligation =
+                    component?.type === "COVERAGE_EFFECT" &&
+                    /(?:\.\.\.|…)/u.test(componentLabel)
+                      ? /\bist\s+der\s+Versicherer[\s\S]{1,240}?\bzur\s+Leistung\s+verpflichtet\b/iu.exec(
+                          sourceText
+                        )?.[0]
+                      : null;
+                  if (exactPerformanceObligation) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "EXPAND_ELIDED_PERFORMANCE_OBLIGATION",
+                    });
+                    return [
+                      { ...component, label: exactPerformanceObligation },
+                    ];
+                  }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
                     /^gilt$/iu.test(componentLabel) &&
