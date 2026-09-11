@@ -2363,6 +2363,50 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.summary.unresolvedUnits).toBe(0);
   });
 
+  test("accepts erstreckt sich dabei nicht as an exclusion effect", () => {
+    const source = artifact(
+      ["Seite 1\nDie Versicherung erstreckt sich dabei nicht auf Schäden.\n"],
+      "3"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION", "PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "DAMAGE_OR_EFFECT",
+                  label: "Schäden",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "erstreckt sich dabei nicht",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
     const source = artifact(
       ["Seite 1\nNicht versichert sind Vorschäden.\n"],
