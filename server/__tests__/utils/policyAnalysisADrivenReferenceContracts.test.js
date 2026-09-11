@@ -1357,6 +1357,51 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("reports the exact missing component group for a mixed definition", () => {
+    const source = artifact(["Seite 1\nBrand ist ein Feuer.\n"], "1");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION", "PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Brand",
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "UNIT_SEMANTIC_COMPONENTS_INCOMPLETE",
+          unitId: unit.unitId,
+          missingRequiredComponentGroups: [["FACT_ROLE"]],
+          observedComponentTypes: ["PERIL_OR_CAUSE"],
+        }),
+      ])
+    );
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],

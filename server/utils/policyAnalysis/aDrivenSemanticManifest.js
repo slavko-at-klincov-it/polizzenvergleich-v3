@@ -636,7 +636,12 @@ function classifyUnit(unit, records) {
       semanticClasses: ["UNRESOLVED"],
       requirements: [],
       diagnostics: [
-        { code: "UNIT_SEMANTIC_COMPONENTS_INCOMPLETE", unitId: unit.unitId },
+        {
+          code: "UNIT_SEMANTIC_COMPONENTS_INCOMPLETE",
+          unitId: unit.unitId,
+          missingRequiredComponentGroups: missingRequiredGroups,
+          observedComponentTypes: [...observedTypes].sort(),
+        },
       ],
     };
   const coveredBlockIds = new Set(
