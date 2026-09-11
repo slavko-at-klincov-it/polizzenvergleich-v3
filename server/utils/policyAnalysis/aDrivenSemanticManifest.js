@@ -992,18 +992,28 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
     diagnostics: classification.diagnostics,
   }));
   const blockTerminals = classifications.flatMap(({ unit, classification }) =>
-    unit.source.blockIds.map((blockId) => ({
-      blockId,
-      documentUuid: unit.source.documentUuid,
-      unitId: unit.unitId,
-      terminalDisposition: classification.terminalDisposition,
-      primaryClass: classification.primaryClass,
-      requirementIds: classification.requirements
-        .filter(({ sourceBlockIds }) => sourceBlockIds.includes(blockId))
-        .map(({ requirementId }) => requirementId),
-      reviewRequired:
-        classification.terminalDisposition === "UNRESOLVED_REVIEW_REQUIRED",
-    }))
+    unit.source.blocks.map((block) => {
+      const layoutOnly = isLayoutOnlyBlock(block);
+      return {
+        blockId: block.blockId,
+        documentUuid: unit.source.documentUuid,
+        unitId: unit.unitId,
+        terminalDisposition: layoutOnly
+          ? "NON_OPERATIVE_TERMINAL"
+          : classification.terminalDisposition,
+        primaryClass: layoutOnly ? "STRUCTURE" : classification.primaryClass,
+        requirementIds: layoutOnly
+          ? []
+          : classification.requirements
+              .filter(({ sourceBlockIds }) =>
+                sourceBlockIds.includes(block.blockId)
+              )
+              .map(({ requirementId }) => requirementId),
+        reviewRequired:
+          !layoutOnly &&
+          classification.terminalDisposition === "UNRESOLVED_REVIEW_REQUIRED",
+      };
+    })
   );
   if (
     blockTerminals.length !== plan.summary.sourceBlocks ||

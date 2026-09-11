@@ -908,10 +908,16 @@ function existingBatchResult(file, plan, batch, args) {
     result.rawResponseSha256 !== sha256(result.rawResponse)
   )
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
+  const normalizedResponses = normalizeUnambiguousComponentTypes(
+    result.responses,
+    validationBatch.units
+  ).responses;
+  if (stableStringify(normalizedResponses) !== stableStringify(result.responses))
+    throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
   const validation = validateBatchResponses(
     plan,
     validationBatch,
-    result.responses
+    normalizedResponses
   );
   if (stableStringify(validation) !== stableStringify(result.validation))
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
@@ -1012,7 +1018,11 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
 
 function currentlyValidResponses(plan, batch, responses) {
   const accepted = new Map();
-  for (const response of Array.isArray(responses) ? responses : []) {
+  const normalizedResponses = normalizeUnambiguousComponentTypes(
+    Array.isArray(responses) ? responses : [],
+    batch.units
+  ).responses;
+  for (const response of normalizedResponses) {
     if (accepted.has(response?.unitId)) continue;
     const unit = batch.units.find(({ unitId }) => unitId === response?.unitId);
     if (!unit) continue;
@@ -1644,4 +1654,5 @@ module.exports = {
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
+  validateBatchResponses,
 };

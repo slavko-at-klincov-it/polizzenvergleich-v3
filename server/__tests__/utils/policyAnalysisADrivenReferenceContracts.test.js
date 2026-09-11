@@ -37,6 +37,7 @@ const {
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
+  validateBatchResponses,
 } = require("../../scripts/qa/runADrivenReferenceClassification.cjs");
 const {
   runBatch: runCounterpartDecisionBatch,
@@ -1223,6 +1224,135 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(results[0].validation.passed).toBe(true);
       expect(client.chat.completions.create).not.toHaveBeenCalled();
       expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(1);
+      expect(
+        fs.readdirSync(path.join(temporary, "superseded-batches"))
+      ).toHaveLength(1);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("normalizes a historically accepted numbered heading before reusing its PASS batch", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-heading-pass-")
+    );
+    try {
+      const source = artifact(
+        ["Seite 1\n3. Obliegenheiten des Versicherungsnehmers im Schadenfall\n"],
+        "h"
+      );
+      const sourcePlan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const plan = deriveClassificationEvidencePlan(sourcePlan);
+      const built = buildADrivenClassificationBatches(plan);
+      const batch = built.batches.find(({ expectedUnitIds }) =>
+        expectedUnitIds.some((unitId) => {
+          const unit = plan.units.find((candidate) => candidate.unitId === unitId);
+          return unit?.unitKind === "LIST";
+        })
+      );
+      expect(batch).toBeDefined();
+      const batches = { ...built, batches: [batch] };
+      const unit = plan.units.find(
+        ({ unitId }) =>
+          unitId === batch.units.find(({ unitKind }) => unitKind === "LIST").unitId
+      );
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const staleResponse = {
+        unitId: unit.unitId,
+        primaryClass: "INSURED_OBJECT",
+        semanticClasses: ["INSURED_OBJECT"],
+        requirements: [
+          {
+            displayLabel: unit.source.combinedText,
+            components: unit.source.blocks.map((block) => ({
+              type: "OBJECT",
+              label: block.exactText,
+              sourceBlockIds: [block.blockId],
+            })),
+          },
+        ],
+      };
+      const otherResponses = batch.units
+        .filter(({ unitId }) => unitId !== unit.unitId)
+        .map(({ unitId }) =>
+          validResponse(plan.units.find((candidate) => candidate.unitId === unitId))
+        );
+      const responses = [...otherResponses, staleResponse];
+      const rawResponse = JSON.stringify(responses);
+      const result = {
+        schemaVersion: 1,
+        contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+        sourceUnitPlanSha256: plan.planSha256,
+        promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
+        classificationEvidenceContextContractId:
+          "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1",
+        requestedModel: args.model,
+        modelContext: args.modelContext,
+        batchId: batch.batchId,
+        batchIndex: batch.batchIndex,
+        expectedUnitIds: batch.expectedUnitIds,
+        responses,
+        validation: validateBatchResponses(plan, batch, responses),
+        rawResponse,
+        rawResponseSha256: crypto
+          .createHash("sha256")
+          .update(rawResponse)
+          .digest("hex"),
+        promptSha256: null,
+        attempts: [],
+      };
+      const seeded = await runBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: args.model,
+                choices: [{ message: { content: rawResponse } }],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch,
+        maximumAttempts: 1,
+      });
+      result.promptSha256 = seeded.promptSha256;
+      const file = batchResultFile(temporary, batch);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`, {
+        mode: 0o600,
+      });
+
+      const client = { chat: { completions: { create: jest.fn() } } };
+      const [repaired] = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(
+        repaired.responses.find(({ unitId }) => unitId === unit.unitId)
+      ).toEqual({
+        unitId: unit.unitId,
+        primaryClass: "STRUCTURE",
+        semanticClasses: ["STRUCTURE"],
+        requirements: [],
+      });
       expect(
         fs.readdirSync(path.join(temporary, "superseded-batches"))
       ).toHaveLength(1);
@@ -2534,6 +2664,37 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       )
     ).toBe(true);
     expect(reordered.manifestSha256).toBe(manifest.manifestSha256);
+  });
+
+  test("terminates layout-only bullets as structure inside an operative unit", () => {
+    const source = artifact(
+      ["Seite 1\nZusätzlich sind mitversichert:\n•\nGartenanlagen.\n"],
+      "l"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map(validResponse);
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const bullet = plan.units
+      .flatMap(({ source: unitSource }) => unitSource.blocks)
+      .find(({ exactText }) => exactText.trim() === "•");
+
+    expect(bullet).toBeDefined();
+    expect(
+      manifest.blockTerminals.find(({ blockId }) => blockId === bullet.blockId)
+    ).toMatchObject({
+      terminalDisposition: "NON_OPERATIVE_TERMINAL",
+      primaryClass: "STRUCTURE",
+      requirementIds: [],
+      reviewRequired: false,
+    });
+    expect(manifest.summary.allBlocksTerminal).toBe(true);
   });
 
   test("turns missing, duplicate, unknown and invalid model IDs into visible unresolved state", () => {
@@ -4013,6 +4174,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               factRole: "INSURED_OBJECT",
               sourceSpanIds: ["span"],
             },
+            {
+              id: "condition",
+              label: "Gebäude",
+              factRole: "CONDITION",
+              sourceSpanIds: ["span"],
+            },
           ],
           sourceSpans: [
             {
@@ -4042,6 +4209,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       unresolvedUnits: 0,
       missingLegacyRequirements: 0,
       missingLegacyComponents: 0,
+      roleIncompatibleLegacyComponents: 1,
       semanticCrosswalkApproved: false,
       acceptanceReady: false,
     });
@@ -4052,6 +4220,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           dynamicComponentId: dynamicObject.componentId,
         }),
       ],
+    });
+    expect(audit.componentCrosswalk[1]).toMatchObject({
+      relationCandidate: "ROLE_INCOMPATIBLE",
+      sourceOverlappingDynamicTargets: expect.any(Array),
+      compatibleDynamicTargets: [],
     });
     expect(audit.dynamicComponentCrosswalk).toEqual(
       expect.arrayContaining([

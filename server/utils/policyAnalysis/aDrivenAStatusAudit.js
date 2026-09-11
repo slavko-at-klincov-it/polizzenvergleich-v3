@@ -5,7 +5,7 @@ const {
   stableStringify,
 } = require("./aDrivenSourceUnitPlan");
 
-const A_STATUS_AUDIT_CONTRACT_ID = "LF_A_DYNAMIC_STATUS_AUDIT_V1";
+const A_STATUS_AUDIT_CONTRACT_ID = "LF_A_DYNAMIC_STATUS_AUDIT_V2";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
@@ -164,12 +164,9 @@ function buildADrivenAStatusAudit({
   const legacyComponents = legacy.flatMap(({ components }) => components);
   const dynamicComponents = dynamic.flatMap(({ components }) => components);
   const componentCrosswalk = legacyComponents.map((component) => {
-    const compatibleDynamicTargets = dynamicComponents
+    const sourceOverlappingDynamicTargets = dynamicComponents
       .filter(
         (candidate) =>
-          (
-            LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || []
-          ).includes(candidate.dynamicComponentType) &&
           intersection(candidate.sourceBlockIds, component.sourceBlockIds)
             .length > 0
       )
@@ -183,18 +180,51 @@ function buildADrivenAStatusAudit({
           component.sourceBlockIds
         ),
       }));
+    const compatibleDynamicTargets = sourceOverlappingDynamicTargets.filter(
+      (candidate) =>
+        (LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || []).includes(
+          candidate.dynamicComponentType
+        )
+    );
     return {
       ...component,
       relationCandidate:
-        compatibleDynamicTargets.length === 0
+        sourceOverlappingDynamicTargets.length === 0
           ? "MISSING"
+          : compatibleDynamicTargets.length === 0
+            ? "ROLE_INCOMPATIBLE"
           : compatibleDynamicTargets.length === 1
             ? "ONE_TO_ONE_CANDIDATE"
             : "SPLIT_CANDIDATE",
+      sourceOverlappingDynamicTargets,
       compatibleDynamicTargets,
     };
   });
   const dynamicComponentCrosswalk = dynamicComponents.map((component) => {
+    const sourceOverlappingLegacySources = legacyComponents
+      .filter(
+        (candidate) =>
+          intersection(candidate.sourceBlockIds, component.sourceBlockIds)
+            .length > 0
+      )
+      .map(
+        ({
+          legacyRequirementId,
+          legacyComponentId,
+          legacyFactRole,
+          label,
+          sourceBlockIds,
+        }) => ({
+          legacyRequirementId,
+          legacyComponentId,
+          legacyFactRole,
+          label,
+          overlappingSourceBlockIds: intersection(
+            sourceBlockIds,
+            component.sourceBlockIds
+          ),
+        })
+      );
     const compatibleLegacySources = componentCrosswalk
       .filter(({ compatibleDynamicTargets }) =>
         compatibleDynamicTargets.some(
@@ -218,11 +248,14 @@ function buildADrivenAStatusAudit({
     return {
       ...component,
       relationCandidate:
-        compatibleLegacySources.length === 0
+        sourceOverlappingLegacySources.length === 0
           ? "ADDITIONAL"
+          : compatibleLegacySources.length === 0
+            ? "ROLE_INCOMPATIBLE"
           : compatibleLegacySources.length === 1
             ? "ONE_TO_ONE_CANDIDATE"
             : "MERGED_CANDIDATE",
+      sourceOverlappingLegacySources,
       compatibleLegacySources,
     };
   });
@@ -357,6 +390,31 @@ function buildADrivenAStatusAudit({
     ({ reviewDisposition }) =>
       reviewDisposition === "SUSPICIOUS_REVIEW_REQUIRED"
   );
+  const reviewedOperativeUnits = manifest.unitTerminals
+    .filter(
+      ({ terminalDisposition }) => terminalDisposition === "OPERATIVE_MAPPED"
+    )
+    .map((terminal) => {
+      const unit = unitById.get(terminal.unitId);
+      const text = String(unit?.source?.combinedText || "").trim();
+      const numberedHeadingWithoutPredicate =
+        unit?.unitKind === "LIST" &&
+        unit.source.blocks.length > 0 &&
+        unit.source.blocks.every(
+          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+        ) &&
+        /^\s*\d+[.)]\s/u.test(text) &&
+        !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
+          text
+        );
+      const reasons = [];
+      if (!terminal.requirementIds.length)
+        reasons.push("OPERATIVE_WITHOUT_REQUIREMENT_IDS");
+      if (numberedHeadingWithoutPredicate)
+        reasons.push("NUMBERED_HEADING_WITHOUT_PREDICATE");
+      return { ...terminal, source: unit?.source || null, reasons };
+    })
+    .filter(({ reasons }) => reasons.length > 0);
 
   const summary = {
     sourceBlocks: plan.summary.sourceBlocks,
@@ -379,6 +437,7 @@ function buildADrivenAStatusAudit({
     semanticComponents: manifest.summary.semanticComponents,
     unresolvedUnits: unresolvedUnits.length,
     suspiciousNonOperativeUnits: suspiciousNonOperativeUnits.length,
+    suspiciousOperativeUnits: reviewedOperativeUnits.length,
     reviewedNonOperativeUnits: reviewedNonOperativeUnits.length,
     resolvedNonOperativeUnits:
       reviewedNonOperativeUnits.length - suspiciousNonOperativeUnits.length,
@@ -399,11 +458,17 @@ function buildADrivenAStatusAudit({
     missingLegacyComponents: componentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "MISSING"
     ).length,
+    roleIncompatibleLegacyComponents: componentCrosswalk.filter(
+      ({ relationCandidate }) => relationCandidate === "ROLE_INCOMPATIBLE"
+    ).length,
     splitLegacyComponents: componentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "SPLIT_CANDIDATE"
     ).length,
     additionalDynamicComponents: dynamicComponentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "ADDITIONAL"
+    ).length,
+    roleIncompatibleDynamicComponents: dynamicComponentCrosswalk.filter(
+      ({ relationCandidate }) => relationCandidate === "ROLE_INCOMPATIBLE"
     ).length,
     mergedDynamicComponents: dynamicComponentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "MERGED_CANDIDATE"
@@ -429,6 +494,7 @@ function buildADrivenAStatusAudit({
     summary.missingLegacyRequirements === 0 &&
     summary.missingLegacyComponents === 0;
   summary.nonOperativeReviewPassed = summary.suspiciousNonOperativeUnits === 0;
+  summary.operativeReviewPassed = summary.suspiciousOperativeUnits === 0;
   summary.semanticCrosswalkApproved = false;
   summary.acceptanceReady = false;
 
@@ -442,6 +508,7 @@ function buildADrivenAStatusAudit({
     unresolvedUnits,
     reviewedNonOperativeUnits,
     suspiciousNonOperativeUnits,
+    reviewedOperativeUnits,
     invalidSourceReferences,
     responseEnvelope: {
       missingResponseUnitIds,
