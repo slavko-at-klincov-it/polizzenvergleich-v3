@@ -29,6 +29,9 @@ const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const {
+  batchResultFile,
+  processClassificationBatches,
+  requestCompletionWithTimeout,
   runBatch,
 } = require("../../scripts/qa/runADrivenReferenceClassification.cjs");
 const {
@@ -38,6 +41,9 @@ const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 function digest(contractId, payload) {
   return crypto
@@ -196,6 +202,348 @@ function searchEligibleManifest() {
 }
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
+  test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
+    let lateResolve;
+    let abortTriggered = false;
+    const recoverModelAfterAbort = jest.fn(async (settlement) => ({
+      status: "SAFE_RELOADED",
+      ...settlement,
+    }));
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(
+            (_payload, { signal }) =>
+              new Promise((resolve) => {
+                lateResolve = resolve;
+                signal.addEventListener("abort", () => {
+                  abortTriggered = true;
+                });
+              })
+          ),
+        },
+      },
+    };
+
+    const request = requestCompletionWithTimeout({
+      client,
+      payload: { model: "qwen", messages: [] },
+      requestTimeoutMs: 10,
+      abortSettlementTimeoutMs: 5,
+      recoverModelAfterAbort,
+    });
+
+    await expect(request).rejects.toMatchObject({
+      errorClass: "MODEL_REQUEST_TIMEOUT",
+      retrySafe: true,
+      telemetry: expect.objectContaining({
+        timedOut: true,
+        timeoutMs: 10,
+        abortTriggered: true,
+        requestSettledAfterAbort: false,
+        recovery: expect.objectContaining({ status: "SAFE_RELOADED" }),
+      }),
+    });
+    expect(abortTriggered).toBe(true);
+    expect(recoverModelAfterAbort).toHaveBeenCalledTimes(1);
+    lateResolve({ choices: [{ message: { content: "late" } }] });
+  });
+
+  test("starts a retry only after safe settlement and ignores the late response", async () => {
+    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "6");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    let lateResolve;
+    let releaseRecovery;
+    const recoverModelAfterAbort = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          releaseRecovery = () => resolve({ status: "SAFE_RELOADED" });
+        })
+    );
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn((_payload, options) => {
+            if (client.chat.completions.create.mock.calls.length === 1)
+              return new Promise((resolve) => {
+                lateResolve = resolve;
+                options.signal.addEventListener("abort", () => {});
+              });
+            return Promise.resolve({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify(valid) } }],
+              usage: {},
+            });
+          }),
+        },
+      },
+    };
+
+    const running = runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 2,
+      requestTimeoutMs: 10,
+      abortSettlementTimeoutMs: 5,
+      recoverModelAfterAbort,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(recoverModelAfterAbort).toHaveBeenCalledTimes(1);
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
+
+    lateResolve({
+      model: "stale-model-response",
+      choices: [{ message: { content: "[]" } }],
+      usage: {},
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
+    releaseRecovery();
+
+    const result = await running;
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(2);
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toEqual(valid);
+    expect(result.attempts[0]).toMatchObject({
+      errorClass: "MODEL_REQUEST_TIMEOUT",
+      timedOut: true,
+      abortTriggered: true,
+      validationPassed: false,
+    });
+    expect(result.attempts[1]).toMatchObject({
+      errorClass: null,
+      timedOut: false,
+      validationPassed: true,
+    });
+  });
+
+  test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-resume-")
+    );
+    try {
+      const source = artifact(
+        [
+          "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n\nSelbstbehalt EUR 500.\n",
+        ],
+        "5"
+      );
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const allBatches = buildADrivenClassificationBatches(plan, {
+        maximumUnits: 1,
+        maximumCharacters: 12_000,
+      });
+      expect(allBatches.batches.length).toBeGreaterThanOrEqual(3);
+      const batches = {
+        ...allBatches,
+        batches: allBatches.batches.slice(0, 3),
+      };
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const completionFor = (batch) => ({
+        model: args.model,
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(
+                batch.expectedUnitIds.map((unitId) =>
+                  validResponse(
+                    plan.units.find((unit) => unit.unitId === unitId)
+                  )
+                )
+              ),
+            },
+          },
+        ],
+        usage: {},
+      });
+      for (const batch of [batches.batches[0], batches.batches[2]]) {
+        const seeded = await runBatch({
+          client: {
+            chat: {
+              completions: { create: jest.fn(async () => completionFor(batch)) },
+            },
+          },
+          model: args.model,
+          modelContext: args.modelContext,
+          plan,
+          batch,
+          maximumAttempts: 1,
+          requestTimeoutMs: args.requestTimeoutMs,
+          abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+        });
+        const file = batchResultFile(temporary, batch);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, `${JSON.stringify(seeded, null, 2)}\n`, {
+          mode: 0o600,
+        });
+      }
+      const before = fs.readFileSync(
+        batchResultFile(temporary, batches.batches[0]),
+        "utf8"
+      );
+      const requestedBatchIds = [];
+      const client = {
+        chat: {
+          completions: {
+            create: jest.fn(async ({ messages }) => {
+              const input = JSON.parse(
+                messages.find(({ role }) => role === "user").content
+              );
+              requestedBatchIds.push(input.batchId);
+              return completionFor(batches.batches[1]);
+            }),
+          },
+        },
+      };
+
+      const results = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(results).toHaveLength(3);
+      expect(requestedBatchIds).toEqual([batches.batches[1].batchId]);
+      expect(
+        fs.readFileSync(batchResultFile(temporary, batches.batches[0]), "utf8")
+      ).toBe(before);
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(3);
+
+      const secondClient = {
+        chat: { completions: { create: jest.fn() } },
+      };
+      await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: secondClient,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(secondClient.chat.completions.create).not.toHaveBeenCalled();
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(3);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("exhausted retries stop fail-closed and leave the batch resumable", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-fail-closed-")
+    );
+    try {
+      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "4");
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const built = buildADrivenClassificationBatches(plan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const invalidClient = {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: args.model,
+              choices: [{ message: { content: "[]" } }],
+              usage: {},
+            })),
+          },
+        },
+      };
+
+      await expect(
+        processClassificationBatches({
+          args,
+          plan,
+          batches,
+          client: invalidClient,
+          recoverModelAfterAbort: jest.fn(),
+        })
+      ).rejects.toThrow(
+        `LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED:${batch.batchIndex}:${batch.batchId}`
+      );
+      expect(fs.existsSync(batchResultFile(temporary, batch))).toBe(false);
+      const attemptDirectory = path.join(
+        temporary,
+        "attempts",
+        `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}`
+      );
+      expect(fs.readdirSync(attemptDirectory)).toHaveLength(1);
+      const failedAttempt = JSON.parse(
+        fs.readFileSync(
+          path.join(attemptDirectory, fs.readdirSync(attemptDirectory)[0]),
+          "utf8"
+        )
+      );
+      expect(failedAttempt.attempt).toMatchObject({
+        attempt: 1,
+        validationPassed: false,
+      });
+
+      const validClient = {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: args.model,
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      batch.expectedUnitIds.map((unitId) =>
+                        validResponse(
+                          plan.units.find((unit) => unit.unitId === unitId)
+                        )
+                      )
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            })),
+          },
+        },
+      };
+      await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: validClient,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(fs.existsSync(batchResultFile(temporary, batch))).toBe(true);
+      expect(fs.readdirSync(attemptDirectory)).toHaveLength(2);
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(1);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("retries only unresolved unit IDs and preserves accepted responses", async () => {
     const source = artifact(
       ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n"],

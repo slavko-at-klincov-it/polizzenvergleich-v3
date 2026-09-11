@@ -3,9 +3,11 @@
 process.umask(0o077);
 
 const crypto = require("crypto");
+const childProcess = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { performance } = require("perf_hooks");
+const { promisify } = require("util");
 const { OpenAI } = require("openai");
 const {
   A_CLASSIFICATION_CONTRACT_ID,
@@ -23,6 +25,11 @@ const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V12";
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
+const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
+const DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS = 15_000;
+const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
+const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
+const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
   console.error(`[lf-a-driven-classification] ${message}`);
@@ -50,6 +57,11 @@ function argumentsFrom(argv) {
     "model",
     "modelContext",
     "maximumAttempts",
+    "requestTimeoutMs",
+    "abortSettlementTimeoutMs",
+    "modelRecoveryTimeoutMs",
+    "lmStudioSdk",
+    "qwenModelKey",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
@@ -57,20 +69,42 @@ function argumentsFrom(argv) {
     if (!values[required]) fail(`--${required} ist erforderlich`);
   const modelContext = Number(values.modelContext || DEFAULT_CONTEXT);
   const maximumAttempts = Number(values.maximumAttempts || 2);
+  const requestTimeoutMs = Number(
+    values.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS
+  );
+  const abortSettlementTimeoutMs = Number(
+    values.abortSettlementTimeoutMs || DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS
+  );
+  const modelRecoveryTimeoutMs = Number(
+    values.modelRecoveryTimeoutMs || DEFAULT_MODEL_RECOVERY_TIMEOUT_MS
+  );
   if (
     !Number.isInteger(modelContext) ||
     modelContext < 1_000 ||
     !Number.isInteger(maximumAttempts) ||
     maximumAttempts < 1 ||
-    maximumAttempts > 3
+    maximumAttempts > 3 ||
+    !Number.isInteger(requestTimeoutMs) ||
+    requestTimeoutMs < 1 ||
+    !Number.isInteger(abortSettlementTimeoutMs) ||
+    abortSettlementTimeoutMs < 1 ||
+    !Number.isInteger(modelRecoveryTimeoutMs) ||
+    modelRecoveryTimeoutMs < 1
   )
     fail("Numerische Laufparameter sind ungültig");
+  if (!values.lmStudioSdk || !values.qwenModelKey)
+    fail("--lmStudioSdk und --qwenModelKey sind für sichere Timeouts erforderlich");
   return {
     shadowRoot: path.resolve(values.shadowRoot),
     output: path.resolve(values.output),
     model: values.model || DEFAULT_MODEL,
     modelContext,
     maximumAttempts,
+    requestTimeoutMs,
+    abortSettlementTimeoutMs,
+    modelRecoveryTimeoutMs,
+    lmStudioSdk: path.resolve(values.lmStudioSdk),
+    qwenModelKey: values.qwenModelKey,
   };
 }
 
@@ -101,6 +135,118 @@ function writePrivateJson(file, value) {
   });
   fs.renameSync(temporary, file);
   fs.chmodSync(file, 0o600);
+}
+
+function batchResultFile(output, batch) {
+  return path.join(
+    output,
+    "batches",
+    `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.private.json`
+  );
+}
+
+function errorClass(error) {
+  if (typeof error?.errorClass === "string") return error.errorClass;
+  if (error?.name === "AbortError") return "MODEL_REQUEST_ABORTED";
+  return "MODEL_RESPONSE_INVALID";
+}
+
+async function waitForSettlement(promise, timeoutMs) {
+  let timeoutId;
+  try {
+    return await Promise.race([
+      promise.then(
+        () => true,
+        () => true
+      ),
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve(false), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function requestCompletionWithTimeout({
+  client,
+  payload,
+  requestTimeoutMs,
+  abortSettlementTimeoutMs,
+  recoverModelAfterAbort,
+}) {
+  const controller = new AbortController();
+  let timeoutId;
+  let timedOut = false;
+  const request = Promise.resolve().then(() =>
+    client.chat.completions.create(payload, {
+      signal: controller.signal,
+      timeout: requestTimeoutMs + abortSettlementTimeoutMs + 1_000,
+      maxRetries: 0,
+    })
+  );
+  request.catch(() => {});
+  try {
+    return await Promise.race([
+      request,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          const timeoutError = new Error(
+            `LF_A_CLASSIFICATION_MODEL_REQUEST_TIMEOUT:${requestTimeoutMs}`
+          );
+          timeoutError.errorClass = "MODEL_REQUEST_TIMEOUT";
+          reject(timeoutError);
+        }, requestTimeoutMs);
+      }),
+    ]);
+  } catch (error) {
+    if (!timedOut) throw error;
+    controller.abort(error);
+    const settlementStarted = performance.now();
+    const requestSettledAfterAbort = await waitForSettlement(
+      request,
+      abortSettlementTimeoutMs
+    );
+    let recovery;
+    try {
+      recovery = await recoverModelAfterAbort({
+        requestSettledAfterAbort,
+      });
+    } catch (recoveryError) {
+      const unsafe = new Error(
+        `LF_A_CLASSIFICATION_MODEL_SAFE_RECOVERY_FAILED:${recoveryError.message}`
+      );
+      unsafe.errorClass = "MODEL_SAFE_RECOVERY_FAILED";
+      unsafe.retrySafe = false;
+      unsafe.telemetry = {
+        timedOut: true,
+        timeoutMs: requestTimeoutMs,
+        abortTriggered: true,
+        requestSettledAfterAbort,
+        settlementDurationMs: Math.round(
+          performance.now() - settlementStarted
+        ),
+        recovery: {
+          status: "FAILED",
+          error: recoveryError.message,
+        },
+      };
+      throw unsafe;
+    }
+    error.retrySafe = true;
+    error.telemetry = {
+      timedOut: true,
+      timeoutMs: requestTimeoutMs,
+      abortTriggered: true,
+      requestSettledAfterAbort,
+      settlementDurationMs: Math.round(performance.now() - settlementStarted),
+      recovery,
+    };
+    throw error;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function parseJsonArray(modelText) {
@@ -203,6 +349,47 @@ async function verifyModel({ baseUrl, model, modelContext }) {
   };
 }
 
+function createLmStudioRecovery({
+  baseUrl,
+  model,
+  modelContext,
+  lmStudioSdk,
+  qwenModelKey,
+  modelRecoveryTimeoutMs,
+}) {
+  const unloadScript = path.resolve(
+    __dirname,
+    "../../../scripts/macos/unload-lmstudio-model.cjs"
+  );
+  const loadScript = path.resolve(
+    __dirname,
+    "../../../scripts/macos/load-qwen36.cjs"
+  );
+  return async ({ requestSettledAfterAbort }) => {
+    const started = performance.now();
+    await execFile(process.execPath, [unloadScript, lmStudioSdk, model], {
+      timeout: modelRecoveryTimeoutMs,
+      maxBuffer: 1024 * 1024,
+    });
+    await execFile(
+      process.execPath,
+      [loadScript, lmStudioSdk, qwenModelKey, model],
+      {
+        timeout: modelRecoveryTimeoutMs,
+        maxBuffer: 1024 * 1024,
+      }
+    );
+    const verified = await verifyModel({ baseUrl, model, modelContext });
+    return {
+      status: "SAFE_RELOADED",
+      method: "TARGETED_UNLOAD_RELOAD_AND_EXACT_MODEL_VERIFY",
+      requestSettledAfterAbort,
+      durationMs: Math.round(performance.now() - started),
+      verified,
+    };
+  };
+}
+
 function existingBatchResult(file, plan, batch, args) {
   const result = readJson(file, "LF_A_CLASSIFICATION_BATCH_RESULT");
   const expectedPromptSha256 = sha256(JSON.stringify(prompt(batch)));
@@ -226,7 +413,45 @@ function existingBatchResult(file, plan, batch, args) {
   const validation = validateBatchResponses(plan, batch, result.responses);
   if (stableStringify(validation) !== stableStringify(result.validation))
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
+  if (!validation.passed)
+    throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_NOT_PASS");
   return result;
+}
+
+function createAttemptRecorder({ output, plan, batch, args }) {
+  const batchStem = `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}`;
+  const directory = path.join(output, "attempts", batchStem);
+  const existing = fs.existsSync(directory)
+    ? fs
+        .readdirSync(directory)
+        .map((name) => /^cycle-(\d+)-attempt-\d+\.private\.json$/u.exec(name))
+        .filter(Boolean)
+        .map((match) => Number(match[1]))
+    : [];
+  const cycle = (existing.length ? Math.max(...existing) : 0) + 1;
+  return async (attempt) => {
+    const file = path.join(
+      directory,
+      `cycle-${String(cycle).padStart(4, "0")}-attempt-${String(
+        attempt.attempt
+      ).padStart(2, "0")}.private.json`
+    );
+    writePrivateJson(file, {
+      schemaVersion: 1,
+      contractId: TRANSPORT_CONTRACT_ID,
+      sourceUnitPlanSha256: plan.planSha256,
+      promptContractId: PROMPT_CONTRACT_ID,
+      requestedModel: args.model,
+      modelContext: args.modelContext,
+      requestTimeoutMs: args.requestTimeoutMs,
+      abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+      batchIndex: batch.batchIndex,
+      batchId: batch.batchId,
+      resumeCycle: cycle,
+      recordedAt: new Date().toISOString(),
+      attempt,
+    });
+  };
 }
 
 function validateCompletedRun({ args, plan, batches, summaryFile }) {
@@ -294,6 +519,10 @@ async function runBatch({
   plan,
   batch,
   maximumAttempts,
+  requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+  abortSettlementTimeoutMs = DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS,
+  recoverModelAfterAbort = async () => ({ status: "SAFE_TEST_DOUBLE" }),
+  onAttempt = async () => {},
 }) {
   const acceptedResponses = new Map();
   let workingBatch = batch;
@@ -313,11 +542,17 @@ async function runBatch({
     const started = performance.now();
     try {
       const messagesSha256 = sha256(JSON.stringify(messages));
-      const completion = await client.chat.completions.create({
-        model,
-        messages,
-        temperature: 0,
-        max_tokens: 12_000,
+      const completion = await requestCompletionWithTimeout({
+        client,
+        payload: {
+          model,
+          messages,
+          temperature: 0,
+          max_tokens: 12_000,
+        },
+        requestTimeoutMs,
+        abortSettlementTimeoutMs,
+        recoverModelAfterAbort,
       });
       const rawText = completion.choices?.[0]?.message?.content || "";
       const responses = parseJsonArray(rawText);
@@ -351,11 +586,14 @@ async function runBatch({
         );
       });
       const validation = validateBatchResponses(plan, batch, mergedResponses);
-      attempts.push({
+      const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
         messagesSha256,
         durationMs: Math.round(performance.now() - started),
+        errorClass: null,
+        timedOut: false,
+        abortTriggered: false,
         responseModel: completion.model || null,
         promptTokens: completion.usage?.prompt_tokens || 0,
         completionTokens: completion.usage?.completion_tokens || 0,
@@ -365,7 +603,9 @@ async function runBatch({
         pendingUnits: pendingUnitIds.length,
         validationPassed: validation.passed,
         diagnostics: validation.diagnostics,
-      });
+      };
+      attempts.push(attemptRecord);
+      await onAttempt(attemptRecord);
       last = { responses: mergedResponses, validation, rawText, error: null };
       if (validation.passed) break;
       workingBatch = {
@@ -386,14 +626,25 @@ async function runBatch({
         },
       ];
     } catch (error) {
-      attempts.push({
+      const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
         messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
+        errorClass: errorClass(error),
+        timedOut: error?.telemetry?.timedOut === true,
+        timeoutMs: error?.telemetry?.timeoutMs || requestTimeoutMs,
+        abortTriggered: error?.telemetry?.abortTriggered === true,
+        requestSettledAfterAbort:
+          error?.telemetry?.requestSettledAfterAbort ?? null,
+        settlementDurationMs:
+          error?.telemetry?.settlementDurationMs ?? null,
+        recovery: error?.telemetry?.recovery || null,
         validationPassed: false,
         error: error.message,
-      });
+      };
+      attempts.push(attemptRecord);
+      await onAttempt(attemptRecord);
       last = {
         responses: batch.expectedUnitIds
           .filter((unitId) => acceptedResponses.has(unitId))
@@ -408,6 +659,7 @@ async function runBatch({
         rawText: "",
         error: error.message,
       };
+      if (error.retrySafe === false) break;
     }
   }
   return {
@@ -419,6 +671,9 @@ async function runBatch({
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     requestedModel: model,
     modelContext,
+    transportContractId: TRANSPORT_CONTRACT_ID,
+    requestTimeoutMs,
+    abortSettlementTimeoutMs,
     batchId: batch.batchId,
     batchIndex: batch.batchIndex,
     expectedUnitIds: batch.expectedUnitIds,
@@ -429,6 +684,51 @@ async function runBatch({
     error: last.error,
     attempts,
   };
+}
+
+async function processClassificationBatches({
+  args,
+  plan,
+  batches,
+  client,
+  recoverModelAfterAbort,
+}) {
+  const batchResults = [];
+  for (const batch of batches.batches) {
+    const file = batchResultFile(args.output, batch);
+    let result;
+    let reused = false;
+    if (fs.existsSync(file)) {
+      result = existingBatchResult(file, plan, batch, args);
+      reused = true;
+    } else {
+      result = await runBatch({
+        client,
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch,
+        maximumAttempts: args.maximumAttempts,
+        requestTimeoutMs: args.requestTimeoutMs,
+        abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+        recoverModelAfterAbort,
+        onAttempt: createAttemptRecorder({ output: args.output, plan, batch, args }),
+      });
+      if (!result.validation.passed) {
+        const failure = new Error(
+          `LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED:${batch.batchIndex}:${batch.batchId}`
+        );
+        failure.batchResult = result;
+        throw failure;
+      }
+      writePrivateJson(file, result);
+    }
+    batchResults.push(result);
+    console.log(
+      `[lf-a-driven-classification] Batch ${batch.batchIndex + 1}/${batches.batches.length}: PASS${reused ? " (wiederverwendet)" : ""}`
+    );
+  }
+  return batchResults;
 }
 
 async function run() {
@@ -472,32 +772,28 @@ async function run() {
     model: args.model,
     modelContext: args.modelContext,
   });
-  const client = new OpenAI({ baseURL: baseUrl, apiKey: "lm-studio" });
+  const client = new OpenAI({
+    baseURL: baseUrl,
+    apiKey: "lm-studio",
+    maxRetries: 0,
+  });
+  const recoverModelAfterAbort = createLmStudioRecovery({
+    baseUrl,
+    model: args.model,
+    modelContext: args.modelContext,
+    lmStudioSdk: args.lmStudioSdk,
+    qwenModelKey: args.qwenModelKey,
+    modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+  });
   const startedAt = new Date().toISOString();
   const started = performance.now();
-  const batchResults = [];
-  for (const batch of batches.batches) {
-    const file = path.join(
-      args.output,
-      "batches",
-      `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.private.json`
-    );
-    const result = fs.existsSync(file)
-      ? existingBatchResult(file, plan, batch, args)
-      : await runBatch({
-          client,
-          model: args.model,
-          modelContext: args.modelContext,
-          plan,
-          batch,
-          maximumAttempts: args.maximumAttempts,
-        });
-    if (!fs.existsSync(file)) writePrivateJson(file, result);
-    batchResults.push(result);
-    console.log(
-      `[lf-a-driven-classification] Batch ${batch.batchIndex + 1}/${batches.batches.length}: ${result.validation.passed ? "PASS" : "UNRESOLVED"}`
-    );
-  }
+  const batchResults = await processClassificationBatches({
+    args,
+    plan,
+    batches,
+    client,
+    recoverModelAfterAbort,
+  });
   const responses = batchResults.flatMap(({ responses: items }) => items);
   const manifest = buildADrivenSemanticManifest({ plan, responses });
   const completedAt = new Date().toISOString();
@@ -509,6 +805,13 @@ async function run() {
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     classificationBatchesSha256: sha256(JSON.stringify(batches)),
     model: loadedModel,
+    transport: {
+      contractId: TRANSPORT_CONTRACT_ID,
+      requestTimeoutMs: args.requestTimeoutMs,
+      abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+      modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+      recoveryMethod: "TARGETED_UNLOAD_RELOAD_AND_EXACT_MODEL_VERIFY",
+    },
     startedAt,
     completedAt,
     wallDurationMs: Math.round(performance.now() - started),
@@ -546,4 +849,10 @@ async function run() {
 if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
-module.exports = { runBatch };
+module.exports = {
+  batchResultFile,
+  createAttemptRecorder,
+  processClassificationBatches,
+  requestCompletionWithTimeout,
+  runBatch,
+};

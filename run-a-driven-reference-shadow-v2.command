@@ -119,7 +119,12 @@ verify_model_state "$QWEN_MODEL" llm loaded "$QWEN_CONTEXT"
   --output "$A_CLASSIFICATION_ROOT" \
   --model "$QWEN_MODEL" \
   --modelContext "$QWEN_CONTEXT" \
-  --maximumAttempts 3
+  --maximumAttempts 3 \
+  --requestTimeoutMs "${LF_A_QWEN_REQUEST_TIMEOUT_MS:-180000}" \
+  --abortSettlementTimeoutMs "${LF_A_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
+  --modelRecoveryTimeoutMs "${LF_A_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
+  --lmStudioSdk "$LMSTUDIO_SDK" \
+  --qwenModelKey "$QWEN_MODEL_KEY"
 
 if ! "$NODE_BIN" -e '
   const fs = require("fs");
