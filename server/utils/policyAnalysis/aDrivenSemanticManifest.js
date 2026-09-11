@@ -99,6 +99,52 @@ function selectedSourceText(sourceBlockIds, blocks) {
     .trim();
 }
 
+function differsByOneEdit(left, right) {
+  if (Math.abs(left.length - right.length) > 1 || left === right) return false;
+  if (left.length === right.length) {
+    let differences = 0;
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] !== right[index]) differences += 1;
+      if (differences > 1) return false;
+    }
+    return differences === 1;
+  }
+  const shorter = left.length < right.length ? left : right;
+  const longer = left.length < right.length ? right : left;
+  let shorterIndex = 0;
+  let longerIndex = 0;
+  let edits = 0;
+  while (shorterIndex < shorter.length && longerIndex < longer.length) {
+    if (shorter[shorterIndex] === longer[longerIndex]) {
+      shorterIndex += 1;
+      longerIndex += 1;
+      continue;
+    }
+    edits += 1;
+    longerIndex += 1;
+    if (edits > 1) return false;
+  }
+  return true;
+}
+
+function uniqueSingleEditSourceSubstring(source, value) {
+  if (value.length < 24) return null;
+  const boundary = (character) =>
+    character === undefined || /[\s,.;:!?()[\]{}]/u.test(character);
+  const matches = new Set();
+  for (const length of [value.length - 1, value.length, value.length + 1]) {
+    if (length < 1 || length > source.length) continue;
+    for (let start = 0; start + length <= source.length; start += 1) {
+      if (!boundary(source[start - 1]) || !boundary(source[start + length]))
+        continue;
+      const candidate = source.slice(start, start + length);
+      if (differsByOneEdit(candidate, value)) matches.add(candidate);
+      if (matches.size > 1) return null;
+    }
+  }
+  return matches.size === 1 ? [...matches][0] : null;
+}
+
 function canonicalExactSourceText(value, sourceBlockIds, blocks) {
   const exact = selectedSourceText(sourceBlockIds, blocks);
   const caseInsensitiveIndex = exact
@@ -109,12 +155,16 @@ function canonicalExactSourceText(value, sourceBlockIds, blocks) {
       caseInsensitiveIndex,
       caseInsensitiveIndex + value.length
     );
-  if (
-    !exact ||
-    comparableText(exact).includes(comparableText(value)) ||
-    layoutComparableText(exact) !== layoutComparableText(value)
-  )
-    return value;
+  if (!exact) return value;
+  const comparableExact = comparableText(exact);
+  const comparableValue = comparableText(value);
+  if (comparableExact.includes(comparableValue)) return value;
+  const sourceCorrection = uniqueSingleEditSourceSubstring(
+    comparableExact,
+    comparableValue
+  );
+  if (sourceCorrection) return sourceCorrection;
+  if (layoutComparableText(exact) !== layoutComparableText(value)) return value;
   return exact;
 }
 

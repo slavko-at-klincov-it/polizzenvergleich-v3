@@ -2593,6 +2593,59 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.summary.unresolvedUnits).toBe(0);
   });
 
+  test("canonicalizes one unambiguous OCR character in a long source label", () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Gebäude, die zum Neuwert zu ersetzten sind.\n",
+      ],
+      "5"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "INSURED_OBJECT",
+          ],
+          requirements: [
+            {
+              displayLabel:
+                "Versichert sind Gebäude, die zum Neuwert zu ersetzen sind.",
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Gebäude",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.requirements[0].displayLabel).toBe(
+      "Versichert sind Gebäude, die zum Neuwert zu ersetzten sind."
+    );
+  });
+
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
     const source = artifact(
       ["Seite 1\nNicht versichert sind Vorschäden.\n"],
