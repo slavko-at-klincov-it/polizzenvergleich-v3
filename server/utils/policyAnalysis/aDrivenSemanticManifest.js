@@ -159,13 +159,13 @@ function canonicalExactSourceText(value, sourceBlockIds, blocks) {
   const comparableExact = comparableText(exact);
   const comparableValue = comparableText(value);
   if (comparableExact.includes(comparableValue)) return value;
+  if (layoutComparableText(exact) === layoutComparableText(value)) return exact;
   const sourceCorrection = uniqueSingleEditSourceSubstring(
     comparableExact,
     comparableValue
   );
   if (sourceCorrection) return sourceCorrection;
-  if (layoutComparableText(exact) !== layoutComparableText(value)) return value;
-  return exact;
+  return value;
 }
 
 function uniqueStrings(values) {
