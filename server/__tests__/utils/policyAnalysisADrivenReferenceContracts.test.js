@@ -530,6 +530,63 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(result.attempts.at(-1).validationPassed).toBe(true);
   });
 
+  test("repairs malformed JSON instead of repeating the identical request", async () => {
+    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "json");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    const observedMessages = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            observedMessages.push(messages);
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content:
+                      observedMessages.length === 1
+                        ? `[{"unitId":"${batch.expectedUnitIds[0]}"}`
+                        : JSON.stringify(valid),
+                  },
+                },
+              ],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.attempts[0]).toMatchObject({
+      errorClass: "MODEL_RESPONSE_INVALID",
+      validationPassed: false,
+    });
+    expect(observedMessages[1].at(-2)).toEqual({
+      role: "assistant",
+      content: `[{"unitId":"${batch.expectedUnitIds[0]}"}`,
+    });
+    expect(observedMessages[1].at(-1).content).toContain(
+      "Repariere ausschließlich die JSON-Syntax"
+    );
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")

@@ -1044,6 +1044,19 @@ async function runBatch({
           units: partition.retryUnits,
         };
         messages = prompt(workingBatch);
+      } else if (
+        errorClass(error) === "MODEL_RESPONSE_INVALID" &&
+        observedRawText &&
+        observedResponses.length === 0
+      ) {
+        messages = [
+          ...prompt(workingBatch),
+          { role: "assistant", content: observedRawText },
+          {
+            role: "user",
+            content: `Die vorige Antwort war technisch ungültiges JSON (${error.message}). Repariere ausschließlich die JSON-Syntax. Gib genau ein vollständiges JSON-Array mit allen expectedUnitIds aus; ändere keine fachlichen Werte, Source-IDs oder Texte und füge kein Markdown hinzu.`,
+          },
+        ];
       }
     }
   }
