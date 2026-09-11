@@ -2114,10 +2114,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   });
 
   test("canonicalizes a case-only literal from its declared source block", () => {
-    const source = artifact(
-      ["Seite 1\nNicht versichert sind Gebäude.\n"],
-      "0"
-    );
+    const source = artifact(["Seite 1\nNicht versichert sind Gebäude.\n"], "0");
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });

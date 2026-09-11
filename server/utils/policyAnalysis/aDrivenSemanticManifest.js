@@ -103,7 +103,10 @@ function canonicalExactSourceText(value, sourceBlockIds, blocks) {
     .toLocaleLowerCase("de-AT")
     .indexOf(value.toLocaleLowerCase("de-AT"));
   if (caseInsensitiveIndex >= 0)
-    return exact.slice(caseInsensitiveIndex, caseInsensitiveIndex + value.length);
+    return exact.slice(
+      caseInsensitiveIndex,
+      caseInsensitiveIndex + value.length
+    );
   if (
     !exact ||
     comparableText(exact).includes(comparableText(value)) ||
