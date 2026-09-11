@@ -739,6 +739,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     invalid.at(-1).requirements[0].components[0].label = "";
     const requested = [];
     const repairMessages = [];
+    const previousAnswers = [];
     const client = {
       chat: {
         completions: {
@@ -748,6 +749,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             );
             requested.push(input.expectedUnitIds);
             repairMessages.push(messages.at(-1).content);
+            previousAnswers.push(
+              messages.find(({ role }) => role === "assistant")?.content || null
+            );
             const responses = requested.length === 1 ? invalid : [valid.at(-1)];
             return {
               model: "qwen/qwen3.6-35b-a3b",
@@ -783,6 +787,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "ersetze die falsch typisierte OBJECT-Komponente"
     );
+    expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
   test("plans every block across multiple A documents without fixed pages or rows", () => {

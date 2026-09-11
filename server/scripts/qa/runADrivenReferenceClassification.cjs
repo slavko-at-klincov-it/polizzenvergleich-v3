@@ -754,6 +754,10 @@ async function runBatch({
       messages = [
         ...prompt(workingBatch),
         {
+          role: "assistant",
+          content: JSON.stringify(pendingResponses),
+        },
+        {
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
             validation.diagnostics
