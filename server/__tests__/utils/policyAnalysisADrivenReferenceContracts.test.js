@@ -1458,6 +1458,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("keeps same-level bullet segments as independent operative items", () => {
+    const source = artifact(
+      ["Seite 1\n• Sprengstoffexplosion;\n• Blitzschlag;\n"],
+      "8"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Sprengstoffexplosion")
+    );
+    expect(unit.logicalSourceSegments).toHaveLength(2);
+    expect(
+      unit.logicalSourceSegments.map(({ blockIds }) =>
+        unit.source.blocks.find(({ blockId }) => blockId === blockIds[0])
+          .structuralKind
+      )
+    ).toEqual(["LIST_GOVERNOR", "LIST_GOVERNOR"]);
+
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: unit.logicalSourceSegments.map((segment) => ({
+        displayLabel: segment.combinedText,
+        components: [
+          {
+            type: "PERIL_OR_CAUSE",
+            label: segment.combinedText,
+            sourceBlockIds: segment.blockIds,
+          },
+        ],
+      })),
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+    const terminal = manifest.unitTerminals.find(
+      ({ unitId }) => unitId === unit.unitId
+    );
+
+    expect(terminal.terminalDisposition).toBe("OPERATIVE_MAPPED");
+    expect(terminal.diagnostics).toEqual([]);
+    expect(
+      manifest.requirements.filter(({ sourceUnitIds }) =>
+        sourceUnitIds.includes(unit.unitId)
+      )
+    ).toHaveLength(2);
+  });
+
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {
     const source = artifact(
       [

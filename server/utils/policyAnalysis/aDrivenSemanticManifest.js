@@ -524,10 +524,21 @@ function logicalSegmentDiagnostics(unit, requirements) {
   const ownedBlocksById = new Map(
     unit.source.blocks.map((block) => [block.blockId, block])
   );
+  const segmentStartsWithStructuralKind = (segment, structuralKind) =>
+    ownedBlocksById.get(segment.blockIds[0])?.structuralKind === structuralKind;
+  // SOURCE_BLOCK_LEDGER_V1 calls every leading `•` line LIST_GOVERNOR.
+  // It is only a shared governor inside one list unit when the following
+  // logical segments are the typographically subordinate `-` list items.
+  // Same-level `•` segments remain independent operative list items.
+  const hasSubordinateItemSegments =
+    segments.length > 1 &&
+    segments.slice(1).every((segment) =>
+      segmentStartsWithStructuralKind(segment, "LIST_ITEM")
+    );
   const sharedGovernorSegments = segments.filter(
     (segment, index) =>
       index === 0 &&
-      segments.length > 1 &&
+      hasSubordinateItemSegments &&
       segment.blockIds.every(
         (blockId) =>
           ownedBlocksById.get(blockId)?.structuralKind === "LIST_GOVERNOR"
