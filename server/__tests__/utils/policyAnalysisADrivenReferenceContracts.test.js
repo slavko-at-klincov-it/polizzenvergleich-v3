@@ -2744,7 +2744,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   ])("accepts a source-bound indemnity effect: %s", (effectLabel) => {
     const source = artifact(
       [`Seite 1\nVersicherte Leistung: ${effectLabel}.\n`],
-      effectLabel
+      "6"
     );
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
