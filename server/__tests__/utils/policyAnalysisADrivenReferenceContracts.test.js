@@ -575,6 +575,68 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("repairs a prematurely closed requirements envelope before semantic validation", async () => {
+    const source = artifact(
+      ["Seite 1\n• Sprengstoffexplosion;\n• Blitzschlag;\n"],
+      "a"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: unit.logicalSourceSegments.map((segment) => ({
+        displayLabel: segment.combinedText,
+        components: [
+          {
+            type: "PERIL_OR_CAUSE",
+            label: segment.combinedText,
+            sourceBlockIds: segment.blockIds,
+          },
+        ],
+      })),
+    };
+    const validJson = JSON.stringify([response]);
+    const malformedJson = validJson.replace(
+      /\]\},\{"displayLabel"/u,
+      ']}]},{"displayLabel"'
+    );
+    expect(malformedJson).not.toBe(validJson);
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: malformedJson } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toEqual([response]);
+    expect(result.attempts[0].syntaxRepair).toMatchObject({
+      applied: true,
+      strategy: "PREMATURE_REQUIREMENTS_ARRAY_CLOSE",
+    });
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")

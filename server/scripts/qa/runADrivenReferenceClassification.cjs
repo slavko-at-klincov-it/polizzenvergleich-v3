@@ -303,10 +303,23 @@ function parseJsonArray(modelText) {
   try {
     parsed = JSON.parse(candidate);
   } catch (strictError) {
-    const repaired = jsonrepair(candidate);
-    parsed = JSON.parse(repaired);
+    let repaired;
+    let strategy = "JSONREPAIR";
+    try {
+      repaired = jsonrepair(candidate);
+      parsed = JSON.parse(repaired);
+    } catch (jsonRepairError) {
+      repaired = candidate.replace(
+        /\]\}\s*,\s*(?=\{\s*"displayLabel"\s*:)/gu,
+        ","
+      );
+      if (repaired === candidate) throw jsonRepairError;
+      parsed = JSON.parse(repaired);
+      strategy = "PREMATURE_REQUIREMENTS_ARRAY_CLOSE";
+    }
     syntaxRepair = {
       applied: true,
+      strategy,
       originalError: strictError.message,
       originalResponseSha256: sha256(candidate),
       repairedResponseSha256: sha256(repaired),
