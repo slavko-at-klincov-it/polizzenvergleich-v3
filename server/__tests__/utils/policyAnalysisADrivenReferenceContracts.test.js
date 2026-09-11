@@ -1437,9 +1437,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ],
     });
     expect(
-      uncoveredManifest.unitTerminals
-        .find(({ unitId }) => unitId === unit.unitId)
-        .diagnostics
+      uncoveredManifest.unitTerminals.find(
+        ({ unitId }) => unitId === unit.unitId
+      ).diagnostics
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
