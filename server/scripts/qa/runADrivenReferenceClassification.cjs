@@ -517,7 +517,9 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       continue;
     for (const response of artifact.attempt.responses) {
       if (accepted.has(response?.unitId)) continue;
-      const unit = batch.units.find(({ unitId }) => unitId === response?.unitId);
+      const unit = batch.units.find(
+        ({ unitId }) => unitId === response?.unitId
+      );
       if (!unit) continue;
       const singleUnitBatch = {
         ...batch,
@@ -615,7 +617,9 @@ async function runBatch({
   let workingBatch = {
     ...batch,
     batchId:
-      acceptedResponses.size > 0 ? `${batch.batchId}-resume-pending` : batch.batchId,
+      acceptedResponses.size > 0
+        ? `${batch.batchId}-resume-pending`
+        : batch.batchId,
     expectedUnitIds: initiallyPendingUnitIds,
     units: batch.units.filter(({ unitId }) =>
       initiallyPendingUnitIds.includes(unitId)
