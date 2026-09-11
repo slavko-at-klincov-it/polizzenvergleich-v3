@@ -584,6 +584,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       );
       expect(failedAttempt.attempt).toMatchObject({
         attempt: 1,
+        rawResponse: "[]",
+        rawResponseSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        responses: [],
         validationPassed: false,
       });
 

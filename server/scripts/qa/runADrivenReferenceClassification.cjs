@@ -576,6 +576,8 @@ async function runBatch({
   const attempts = [];
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     const started = performance.now();
+    let observedRawText = "";
+    let observedResponses = [];
     try {
       const messagesSha256 = sha256(JSON.stringify(messages));
       const completion = await requestCompletionWithTimeout({
@@ -591,7 +593,9 @@ async function runBatch({
         recoverModelAfterAbort,
       });
       const rawText = completion.choices?.[0]?.message?.content || "";
+      observedRawText = rawText;
       const responses = parseJsonArray(rawText);
+      observedResponses = responses;
       const workingValidation = validateBatchResponses(
         plan,
         workingBatch,
@@ -635,6 +639,9 @@ async function runBatch({
         completionTokens: completion.usage?.completion_tokens || 0,
         totalTokens: completion.usage?.total_tokens || 0,
         parsedResponses: responses.length,
+        rawResponseSha256: sha256(rawText),
+        rawResponse: rawText,
+        responses,
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
         validationPassed: validation.passed,
@@ -681,6 +688,9 @@ async function runBatch({
           error?.telemetry?.requestSettledAfterAbort ?? null,
         settlementDurationMs: error?.telemetry?.settlementDurationMs ?? null,
         recovery: error?.telemetry?.recovery || null,
+        rawResponseSha256: sha256(observedRawText),
+        rawResponse: observedRawText,
+        responses: observedResponses,
         timeoutRetryPartition: partition
           ? {
               strategy: partition.strategy,
