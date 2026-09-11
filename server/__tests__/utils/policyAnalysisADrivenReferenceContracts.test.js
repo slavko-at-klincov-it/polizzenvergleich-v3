@@ -33,6 +33,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenAStatusAudit");
 const {
   batchResultFile,
+  deriveClassificationEvidencePlan,
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
@@ -47,6 +48,83 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+
+describe("A-driven classification evidence recovery", () => {
+  test("recovers only adjacent, source-bound list governors without changing ownership", () => {
+    const source = (documentUuid, blocks) => ({
+      documentUuid,
+      blockIds: blocks.map(({ blockId }) => blockId),
+      blocks,
+      combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+    });
+    const block = (blockId, exactText) => ({ blockId, exactText });
+    const plan = {
+      units: [
+        {
+          unitId: "embedded-governor",
+          unitKind: "CLAUSE",
+          source: source("doc", [
+            block("effect", "Zusätzlich sind mitversichert bis 5 %"),
+            block("bullet", "•"),
+            block("dangling", "im Zusammenhang mit einem versuchten"),
+          ]),
+        },
+        {
+          unitId: "page-furniture",
+          unitKind: "METADATA",
+          source: source("doc", [block("page", "Seite 2")]),
+        },
+        {
+          unitId: "continued-item",
+          unitKind: "CLAUSE",
+          source: source("doc", [block("item", "Einbruchdiebstahl.")]),
+        },
+        {
+          unitId: "list-governor",
+          unitKind: "CLAUSE",
+          source: source("doc", [
+            block("list-effect", "Im Rahmen der Deckung sind mitversichert"),
+            block("list-limit", "maximal EUR 10.000 auf Erstes Risiko"),
+          ]),
+        },
+        {
+          unitId: "governed-list",
+          unitKind: "LIST",
+          source: source("doc", [block("list-item", "• Gartenanlagen")]),
+        },
+        {
+          unitId: "closed-sentence",
+          unitKind: "CLAUSE",
+          source: source("other-doc", [
+            block("closed", "Diese Sachen sind versichert."),
+          ]),
+        },
+        {
+          unitId: "unrelated-list",
+          unitKind: "LIST",
+          source: source("other-doc", [block("other-item", "• Fahrzeuge")]),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("continued-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_EMBEDDED_LIST_GOVERNOR",
+      unitIds: ["embedded-governor"],
+      blockIds: ["effect"],
+    });
+    expect(byId.get("governed-list").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["list-governor"],
+      blockIds: ["list-effect", "list-limit"],
+    });
+    expect(byId.get("unrelated-list").governingContext).toBeUndefined();
+    expect(plan.units.some((unit) => unit.governingContext)).toBe(false);
+    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(2);
+  });
+});
 
 function digest(contractId, payload) {
   return crypto

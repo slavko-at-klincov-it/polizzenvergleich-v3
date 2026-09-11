@@ -352,7 +352,12 @@ function validateRequirement(draft, unit, requirementIndex) {
         comparableText(displayLabel)
       ),
       structurePath: [...unit.structurePath],
-      sourceUnitIds: [unit.unitId],
+      sourceUnitIds: [
+        ...new Set([
+          ...(unit.governingContext?.unitIds || []),
+          unit.unitId,
+        ]),
+      ],
       sourceBlockIds,
       sourceSpans: sourceBlocks.map(
         ({

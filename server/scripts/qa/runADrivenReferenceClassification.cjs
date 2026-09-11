@@ -29,6 +29,8 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 const DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
+const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -299,6 +301,96 @@ function parseJsonArray(modelText) {
   return parsed;
 }
 
+function endsWithSentence(textValue) {
+  return /[.!?][”"')\]]?$/u.test(String(textValue || "").trim());
+}
+
+function classificationGovernorContext(previous, current) {
+  if (
+    !previous ||
+    !current ||
+    previous.source?.documentUuid !== current.source?.documentUuid ||
+    current.governingContext ||
+    !Array.isArray(previous.source?.blocks) ||
+    previous.source.blocks.length === 0
+  )
+    return null;
+  const previousText = String(previous.source.combinedText || "").trim();
+  const embeddedListStart = previous.source.blocks.findIndex(
+    ({ exactText }) => String(exactText || "").trim() === "•"
+  );
+  const continuesEmbeddedList =
+    embeddedListStart > 0 && !endsWithSentence(previousText);
+  const opensFollowingList =
+    current.unitKind === "LIST" &&
+    !endsWithSentence(previousText) &&
+    /\b(?:Deckung|gedeckt|mitversichert|versichert|Versicherungsschutz)\b/iu.test(
+      previousText
+    );
+  if (!continuesEmbeddedList && !opensFollowingList) return null;
+  const blocks = continuesEmbeddedList
+    ? previous.source.blocks.slice(0, embeddedListStart)
+    : previous.source.blocks;
+  if (blocks.length === 0) return null;
+  const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+  return {
+    relationType: continuesEmbeddedList
+      ? "RECOVERS_EMBEDDED_LIST_GOVERNOR"
+      : "RECOVERS_ADJACENT_LIST_GOVERNOR",
+    contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
+    unitIds: [previous.unitId],
+    blockIds: blocks.map(({ blockId }) => blockId),
+    blocks,
+    combinedText,
+    combinedTextSha256: sha256(combinedText),
+  };
+}
+
+function deriveClassificationEvidencePlan(plan) {
+  const units = plan.units.map((unit) => ({ ...unit }));
+  const contentUnitsByDocument = new Map();
+  for (const unit of units) {
+    if (unit.unitKind === "METADATA") continue;
+    const documentUuid = unit.source?.documentUuid;
+    const entries = contentUnitsByDocument.get(documentUuid) || [];
+    entries.push(unit);
+    contentUnitsByDocument.set(documentUuid, entries);
+  }
+  let recoveredContexts = 0;
+  for (const contentUnits of contentUnitsByDocument.values())
+    for (let index = 1; index < contentUnits.length; index += 1) {
+      const current = contentUnits[index];
+      const context = classificationGovernorContext(
+        contentUnits[index - 1],
+        current
+      );
+      if (!context) continue;
+      current.governingContext = context;
+      recoveredContexts += 1;
+    }
+  return {
+    ...plan,
+    units,
+    classificationEvidenceContext: {
+      contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
+      recoveredContexts,
+    },
+  };
+}
+
+function classificationBatch(plan, batch) {
+  const units = new Map(plan.units.map((unit) => [unit.unitId, unit]));
+  return {
+    ...batch,
+    units: batch.expectedUnitIds.map((unitId) => {
+      const unit = units.get(unitId);
+      if (!unit)
+        throw new Error(`LF_A_CLASSIFICATION_CONTEXT_UNIT_MISSING:${unitId}`);
+      return unit;
+    }),
+  };
+}
+
 function prompt(batch) {
   return [
     {
@@ -428,7 +520,12 @@ function createLmStudioRecovery({
 
 function existingBatchResult(file, plan, batch, args) {
   const result = readJson(file, "LF_A_CLASSIFICATION_BATCH_RESULT");
-  const expectedPromptSha256 = sha256(JSON.stringify(prompt(batch)));
+  const validationBatch =
+    result?.classificationEvidenceContextContractId ===
+    CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID
+      ? classificationBatch(plan, batch)
+      : batch;
+  const expectedPromptSha256 = sha256(JSON.stringify(prompt(validationBatch)));
   if (
     result?.contractId !== RUN_CONTRACT_ID ||
     result.sourceUnitPlanSha256 !== plan.planSha256 ||
@@ -446,7 +543,11 @@ function existingBatchResult(file, plan, batch, args) {
     result.rawResponseSha256 !== sha256(result.rawResponse)
   )
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
-  const validation = validateBatchResponses(plan, batch, result.responses);
+  const validation = validateBatchResponses(
+    plan,
+    validationBatch,
+    result.responses
+  );
   if (stableStringify(validation) !== stableStringify(result.validation))
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
   if (!validation.passed)
@@ -477,6 +578,8 @@ function createAttemptRecorder({ output, plan, batch, args }) {
       contractId: TRANSPORT_CONTRACT_ID,
       sourceUnitPlanSha256: plan.planSha256,
       promptContractId: PROMPT_CONTRACT_ID,
+      classificationEvidenceContextContractId:
+        CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
       requestedModel: args.model,
       modelContext: args.modelContext,
       requestTimeoutMs: args.requestTimeoutMs,
@@ -866,12 +969,13 @@ async function processClassificationBatches({
       result = existingBatchResult(file, plan, batch, args);
       reused = true;
     } else {
+      const contextualBatch = classificationBatch(plan, batch);
       result = await runBatch({
         client,
         model: args.model,
         modelContext: args.modelContext,
         plan,
-        batch,
+        batch: contextualBatch,
         maximumAttempts: args.maximumAttempts,
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
@@ -879,16 +983,18 @@ async function processClassificationBatches({
         initialAcceptedResponses: acceptedResponsesFromAttemptJournal({
           output: args.output,
           plan,
-          batch,
+          batch: contextualBatch,
           args,
         }),
         onAttempt: createAttemptRecorder({
           output: args.output,
           plan,
-          batch,
+          batch: contextualBatch,
           args,
         }),
       });
+      result.classificationEvidenceContextContractId =
+        CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID;
       if (!result.validation.passed) {
         const failure = new Error(
           `LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED:${batch.batchIndex}:${batch.batchId}`
@@ -908,7 +1014,7 @@ async function processClassificationBatches({
 
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
-  const plan = readJson(
+  const sourcePlan = readJson(
     path.join(args.shadowRoot, "source-unit-plan.private.json"),
     "LF_A_CLASSIFICATION_SOURCE_PLAN"
   );
@@ -917,11 +1023,12 @@ async function run() {
     "LF_A_CLASSIFICATION_BATCHES"
   );
   if (
-    plan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
+    sourcePlan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
     batches?.contractId !== A_CLASSIFICATION_CONTRACT_ID ||
-    batches.sourceUnitPlanSha256 !== plan.planSha256
+    batches.sourceUnitPlanSha256 !== sourcePlan.planSha256
   )
     throw new Error("LF_A_CLASSIFICATION_INPUT_BINDING_INVALID");
+  const plan = deriveClassificationEvidencePlan(sourcePlan);
   if (fs.existsSync(path.join(args.output, "summary.private.json"))) {
     const summary = validateCompletedRun({
       args,
@@ -987,6 +1094,8 @@ async function run() {
       modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
       recoveryMethod: "TARGETED_UNLOAD_RELOAD_AND_EXACT_MODEL_VERIFY",
     },
+    classificationEvidenceContext:
+      plan.classificationEvidenceContext,
     startedAt,
     completedAt,
     wallDurationMs: Math.round(performance.now() - started),
@@ -1025,9 +1134,11 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
   acceptedResponsesFromAttemptJournal,
   batchResultFile,
   createAttemptRecorder,
+  deriveClassificationEvidencePlan,
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
