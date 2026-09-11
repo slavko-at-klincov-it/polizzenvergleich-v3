@@ -2846,59 +2846,59 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test.each(["Der", "Desgleichen"])(
     "trims only an uncited nonsemantic boundary token: %s",
     (boundaryToken) => {
-    const source = artifact(
-      [
+      const source = artifact(
+        [
           `Seite 1\nDer Neubauwert gilt. ${boundaryToken} \nVersicherungsnehmer erwirbt den Anspruch auf Zahlung.\n`,
-      ],
-      "7"
-    );
-    const plan = buildADrivenSourceUnitPlan({
-      documents: [document("source", 0, source)],
-    });
-    const unit = plan.units.find(
-      ({ initialDisposition, source: unitSource }) =>
-        initialDisposition === "PENDING_CLASSIFICATION" &&
-        unitSource.blocks.length > 1
-    );
-    const [definitionBlock, claimBlock] = unit.source.blocks;
-    const manifest = buildADrivenSemanticManifest({
-      plan,
-      responses: [
-        {
-          unitId: unit.unitId,
-          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "DEFINITION"],
-          requirements: [
-            {
-              displayLabel: definitionBlock.exactText,
-              components: [
-                {
-                  type: "FACT_ROLE",
-                  label: definitionBlock.exactText,
-                  sourceBlockIds: [definitionBlock.blockId],
-                },
-              ],
-            },
-            {
+        ],
+        "7"
+      );
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const unit = plan.units.find(
+        ({ initialDisposition, source: unitSource }) =>
+          initialDisposition === "PENDING_CLASSIFICATION" &&
+          unitSource.blocks.length > 1
+      );
+      const [definitionBlock, claimBlock] = unit.source.blocks;
+      const manifest = buildADrivenSemanticManifest({
+        plan,
+        responses: [
+          {
+            unitId: unit.unitId,
+            primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+            semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "DEFINITION"],
+            requirements: [
+              {
+                displayLabel: definitionBlock.exactText,
+                components: [
+                  {
+                    type: "FACT_ROLE",
+                    label: definitionBlock.exactText,
+                    sourceBlockIds: [definitionBlock.blockId],
+                  },
+                ],
+              },
+              {
                 displayLabel: `${boundaryToken} Versicherungsnehmer erwirbt den Anspruch auf Zahlung.`,
-              components: [
-                {
-                  type: "COVERAGE_EFFECT",
-                  label: "erwirbt den Anspruch auf Zahlung",
-                  sourceBlockIds: [claimBlock.blockId],
-                  coverageEffect: "INCLUDED",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+                components: [
+                  {
+                    type: "COVERAGE_EFFECT",
+                    label: "erwirbt den Anspruch auf Zahlung",
+                    sourceBlockIds: [claimBlock.blockId],
+                    coverageEffect: "INCLUDED",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
 
-    expect(manifest.summary.unresolvedUnits).toBe(0);
-    expect(manifest.requirements[1].displayLabel).toBe(
-      "Versicherungsnehmer erwirbt den Anspruch auf Zahlung."
-    );
+      expect(manifest.summary.unresolvedUnits).toBe(0);
+      expect(manifest.requirements[1].displayLabel).toBe(
+        "Versicherungsnehmer erwirbt den Anspruch auf Zahlung."
+      );
     }
   );
 
