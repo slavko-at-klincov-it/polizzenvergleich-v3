@@ -1052,9 +1052,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR"
     );
-    expect(repairMessages[1]).toContain(
-      "DUPLICATE_UNIT_RESPONSE bedeutet"
-    );
+    expect(repairMessages[1]).toContain("DUPLICATE_UNIT_RESPONSE bedeutet");
     expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
