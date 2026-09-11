@@ -912,7 +912,9 @@ function existingBatchResult(file, plan, batch, args) {
     result.responses,
     validationBatch.units
   ).responses;
-  if (stableStringify(normalizedResponses) !== stableStringify(result.responses))
+  if (
+    stableStringify(normalizedResponses) !== stableStringify(result.responses)
+  )
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID");
   const validation = validateBatchResponses(
     plan,

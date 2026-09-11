@@ -193,9 +193,9 @@ function buildADrivenAStatusAudit({
           ? "MISSING"
           : compatibleDynamicTargets.length === 0
             ? "ROLE_INCOMPATIBLE"
-          : compatibleDynamicTargets.length === 1
-            ? "ONE_TO_ONE_CANDIDATE"
-            : "SPLIT_CANDIDATE",
+            : compatibleDynamicTargets.length === 1
+              ? "ONE_TO_ONE_CANDIDATE"
+              : "SPLIT_CANDIDATE",
       sourceOverlappingDynamicTargets,
       compatibleDynamicTargets,
     };
@@ -252,9 +252,9 @@ function buildADrivenAStatusAudit({
           ? "ADDITIONAL"
           : compatibleLegacySources.length === 0
             ? "ROLE_INCOMPATIBLE"
-          : compatibleLegacySources.length === 1
-            ? "ONE_TO_ONE_CANDIDATE"
-            : "MERGED_CANDIDATE",
+            : compatibleLegacySources.length === 1
+              ? "ONE_TO_ONE_CANDIDATE"
+              : "MERGED_CANDIDATE",
       sourceOverlappingLegacySources,
       compatibleLegacySources,
     };

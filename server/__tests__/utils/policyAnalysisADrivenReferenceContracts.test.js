@@ -1238,7 +1238,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
     try {
       const source = artifact(
-        ["Seite 1\n3. Obliegenheiten des Versicherungsnehmers im Schadenfall\n"],
+        [
+          "Seite 1\n3. Obliegenheiten des Versicherungsnehmers im Schadenfall\n",
+        ],
         "h"
       );
       const sourcePlan = buildADrivenSourceUnitPlan({
@@ -1248,7 +1250,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       const built = buildADrivenClassificationBatches(plan);
       const batch = built.batches.find(({ expectedUnitIds }) =>
         expectedUnitIds.some((unitId) => {
-          const unit = plan.units.find((candidate) => candidate.unitId === unitId);
+          const unit = plan.units.find(
+            (candidate) => candidate.unitId === unitId
+          );
           return unit?.unitKind === "LIST";
         })
       );
@@ -1256,7 +1260,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       const batches = { ...built, batches: [batch] };
       const unit = plan.units.find(
         ({ unitId }) =>
-          unitId === batch.units.find(({ unitKind }) => unitKind === "LIST").unitId
+          unitId ===
+          batch.units.find(({ unitKind }) => unitKind === "LIST").unitId
       );
       const args = {
         output: temporary,
@@ -1284,7 +1289,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       const otherResponses = batch.units
         .filter(({ unitId }) => unitId !== unit.unitId)
         .map(({ unitId }) =>
-          validResponse(plan.units.find((candidate) => candidate.unitId === unitId))
+          validResponse(
+            plan.units.find((candidate) => candidate.unitId === unitId)
+          )
         );
       const responses = [...otherResponses, staleResponse];
       const rawResponse = JSON.stringify(responses);
