@@ -913,6 +913,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "ersetze die falsch typisierte OBJECT-Komponente"
     );
     expect(repairMessages[1]).toContain(
+      "Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält"
+    );
+    expect(repairMessages[1]).toContain(
+      "Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente"
+    );
+    expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
