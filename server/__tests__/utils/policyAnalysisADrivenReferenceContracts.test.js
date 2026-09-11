@@ -157,7 +157,18 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["exclusion-effect", "local-effect"],
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
-    expect(plan.units.some((unit) => unit.governingContext)).toBe(false);
+    expect(
+      plan.units.find(({ unitId }) => unitId === "excluded-two")
+        .governingContext
+    ).toMatchObject({
+      relationType: "GOVERNS_FOLLOWING_LIST",
+      unitIds: ["local-governor"],
+      blockIds: ["local-effect"],
+    });
+    expect(
+      plan.units.find(({ unitId }) => unitId === "continued-item")
+        .governingContext
+    ).toBeUndefined();
     expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(4);
   });
 });
