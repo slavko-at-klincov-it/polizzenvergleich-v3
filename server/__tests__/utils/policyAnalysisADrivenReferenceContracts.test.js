@@ -2957,7 +2957,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       [
         "Seite 1\nBei versicherten Schäden verzichtet der Versicherer auf den Einwand der Gefahrenerhöhung.\n",
       ],
-      "w"
+      "a"
     );
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
