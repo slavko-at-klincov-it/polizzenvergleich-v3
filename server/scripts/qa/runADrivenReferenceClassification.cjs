@@ -28,6 +28,7 @@ const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 const DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
+const MAXIMUM_ATTEMPTS = 4;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
   "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1";
@@ -85,7 +86,7 @@ function argumentsFrom(argv) {
     modelContext < 1_000 ||
     !Number.isInteger(maximumAttempts) ||
     maximumAttempts < 1 ||
-    maximumAttempts > 3 ||
+    maximumAttempts > MAXIMUM_ATTEMPTS ||
     !Number.isInteger(requestTimeoutMs) ||
     requestTimeoutMs < 1 ||
     !Number.isInteger(abortSettlementTimeoutMs) ||
