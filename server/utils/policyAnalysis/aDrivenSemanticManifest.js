@@ -97,8 +97,13 @@ function selectedSourceText(sourceBlockIds, blocks) {
     .trim();
 }
 
-function canonicalExactLayoutText(value, sourceBlockIds, blocks) {
+function canonicalExactSourceText(value, sourceBlockIds, blocks) {
   const exact = selectedSourceText(sourceBlockIds, blocks);
+  const caseInsensitiveIndex = exact
+    .toLocaleLowerCase("de-AT")
+    .indexOf(value.toLocaleLowerCase("de-AT"));
+  if (caseInsensitiveIndex >= 0)
+    return exact.slice(caseInsensitiveIndex, caseInsensitiveIndex + value.length);
   if (
     !exact ||
     comparableText(exact).includes(comparableText(value)) ||
@@ -269,7 +274,7 @@ function validateComponent(component, unit) {
       ...(requiredSourceBlockIds?.length ? { requiredSourceBlockIds } : {}),
     };
   }
-  label = canonicalExactLayoutText(label, sourceBlockIds, evidenceBlocks(unit));
+  label = canonicalExactSourceText(label, sourceBlockIds, evidenceBlocks(unit));
   componentValues = [label, rawValue, unitValue, qualifier].filter(Boolean);
   const missingSourceBlockIds = missingComponentSourceBlockIds(
     unit,
@@ -343,7 +348,7 @@ function validateComponent(component, unit) {
 }
 
 function validateRequirement(draft, unit, requirementIndex) {
-  const displayLabel = canonicalExactLayoutText(
+  const displayLabel = canonicalExactSourceText(
     text(draft?.displayLabel),
     unit.source.blockIds,
     unit.source.blocks

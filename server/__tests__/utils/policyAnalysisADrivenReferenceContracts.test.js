@@ -2113,6 +2113,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("canonicalizes a case-only literal from its declared source block", () => {
+    const source = artifact(
+      ["Seite 1\nNicht versichert sind Gebäude.\n"],
+      "0"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Gebäude",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "nicht versichert",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const requirement = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(unit.unitId)
+    );
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(
+      requirement.components.find(({ type }) => type === "COVERAGE_EFFECT")
+        .label
+    ).toBe("Nicht versichert");
+  });
+
   test("rejects semantic attributes attached to the wrong component type", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
