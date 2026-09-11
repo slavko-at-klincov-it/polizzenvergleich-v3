@@ -385,10 +385,7 @@ function normalizeUnambiguousComponentTypes(responses) {
           ...requirement,
           components: Array.isArray(requirement?.components)
             ? requirement.components.map((component, componentIndex) => {
-                if (
-                  component?.type !== "EXCLUSION" ||
-                  component.coverageEffect
-                )
+                if (component?.type !== "EXCLUSION" || component.coverageEffect)
                   return component;
                 repairs.push({
                   unitId: response.unitId,
