@@ -1308,28 +1308,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         );
       const responses = [...otherResponses, staleResponse];
       const rawResponse = JSON.stringify(responses);
-      const result = {
-        schemaVersion: 1,
-        contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
-        sourceUnitPlanSha256: plan.planSha256,
-        promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
-        classificationEvidenceContextContractId:
-          "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1",
-        requestedModel: args.model,
-        modelContext: args.modelContext,
-        batchId: batch.batchId,
-        batchIndex: batch.batchIndex,
-        expectedUnitIds: batch.expectedUnitIds,
-        responses,
-        validation: validateBatchResponses(plan, batch, responses),
-        rawResponse,
-        rawResponseSha256: crypto
-          .createHash("sha256")
-          .update(rawResponse)
-          .digest("hex"),
-        promptSha256: null,
-        attempts: [],
-      };
       const seeded = await runBatch({
         client: {
           chat: {
@@ -1348,7 +1326,18 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         batch: contextualBatch,
         maximumAttempts: 1,
       });
-      result.promptSha256 = seeded.promptSha256;
+      const result = {
+        ...seeded,
+        classificationEvidenceContextContractId:
+          "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1",
+        responses,
+        validation: validateBatchResponses(plan, batch, responses),
+        rawResponse,
+        rawResponseSha256: crypto
+          .createHash("sha256")
+          .update(rawResponse)
+          .digest("hex"),
+      };
       const file = batchResultFile(temporary, batch);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`, {
