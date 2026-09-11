@@ -2507,10 +2507,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         {
           unitId: unit.unitId,
           primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-          semanticClasses: [
-            "OPERATIVE_COVERAGE_STATEMENT",
-            "PERIL_OR_DAMAGE",
-          ],
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "PERIL_OR_DAMAGE"],
           requirements: [
             {
               displayLabel: unit.source.combinedText,
@@ -2522,8 +2519,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                 },
                 {
                   type: "COVERAGE_EFFECT",
-                  label:
-                    "bezieht sich in Abänderung von Art. 7 auch auf",
+                  label: "bezieht sich in Abänderung von Art. 7 auch auf",
                   sourceBlockIds: unit.source.blockIds,
                   coverageEffect: "INCLUDED",
                 },

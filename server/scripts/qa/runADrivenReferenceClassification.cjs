@@ -403,10 +403,7 @@ function normalizeUnambiguousComponentTypes(responses) {
                   });
                   return [];
                 }
-                if (
-                  component?.type !== "EXCLUSION" ||
-                  component.coverageEffect
-                )
+                if (component?.type !== "EXCLUSION" || component.coverageEffect)
                   return [component];
                 repairs.push({
                   unitId: response.unitId,
