@@ -2843,10 +2843,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.summary.unresolvedUnits).toBe(0);
   });
 
-  test("trims only an uncited leading article from a source-bound requirement label", () => {
+  test.each(["Der", "Desgleichen"])(
+    "trims only an uncited nonsemantic boundary token: %s",
+    (boundaryToken) => {
     const source = artifact(
       [
-        "Seite 1\nDer Neubauwert gilt. Der \nVersicherungsnehmer erwirbt den Anspruch auf Zahlung.\n",
+          `Seite 1\nDer Neubauwert gilt. ${boundaryToken} \nVersicherungsnehmer erwirbt den Anspruch auf Zahlung.\n`,
       ],
       "7"
     );
@@ -2878,8 +2880,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               ],
             },
             {
-              displayLabel:
-                "Der Versicherungsnehmer erwirbt den Anspruch auf Zahlung.",
+                displayLabel: `${boundaryToken} Versicherungsnehmer erwirbt den Anspruch auf Zahlung.`,
               components: [
                 {
                   type: "COVERAGE_EFFECT",
@@ -2898,7 +2899,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.requirements[1].displayLabel).toBe(
       "Versicherungsnehmer erwirbt den Anspruch auf Zahlung."
     );
-  });
+    }
+  );
 
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
     const source = artifact(

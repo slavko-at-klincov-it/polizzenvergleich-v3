@@ -483,7 +483,7 @@ function validateRequirement(draft, unit, requirementIndex) {
     availableBlocks.find(({ blockId: id }) => id === blockId)
   );
   const articleTrimmedDisplayLabel = displayLabel.replace(
-    /^(?:der|die|das|ein|eine)\s+/iu,
+    /^(?:der|die|das|ein|eine|desgleichen)\s+/iu,
     ""
   );
   if (
