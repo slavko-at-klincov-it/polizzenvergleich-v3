@@ -868,6 +868,73 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
+  test("serializes multiple semantic retry failures into bounded single-unit repairs", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n\nVersichert sind Nebengebäude.\n",
+      ],
+      "4"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    expect(batch.expectedUnitIds).toHaveLength(3);
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    const invalid = valid.map((response) => JSON.parse(JSON.stringify(response)));
+    invalid[1].requirements[0].components[0].label = "";
+    invalid[2].requirements[0].components[0].label = "";
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedUnitIds);
+            const responses =
+              requested.length === 1
+                ? [valid[0], invalid[1], invalid[2]]
+                : requested.length === 2
+                  ? [valid[1]]
+                  : [valid[2]];
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify(responses) } }],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 3,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(requested).toEqual([
+      batch.expectedUnitIds,
+      [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[2]],
+    ]);
+    expect(
+      result.attempts.map(({ semanticRetryUnitIds }) => semanticRetryUnitIds)
+    ).toEqual([
+      [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[2]],
+      [],
+    ]);
+  });
+
   test("plans every block across multiple A documents without fixed pages or rows", () => {
     const first = artifact(
       [
@@ -1004,6 +1071,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       governorBlock.blockId,
       listBlock.blockId,
     ]);
+    expect(requirement.sourceUnitIds).toEqual([governor.unitId, list.unitId]);
     expect(requirement.sourceSpans).toHaveLength(2);
   });
 
@@ -1312,6 +1380,110 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
           semanticClasses: ["INSURED_OBJECT"],
           reasons: ["PRIMARY_CLASS_MISSING_FROM_SEMANTIC_CLASSES"],
+        }),
+      ])
+    );
+  });
+
+  test("keeps layout-only bullet blocks owned without inventing semantic components", () => {
+    const source = artifact(
+      ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
+      "b"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const sourceBlock = unit.source.blocks[0];
+    const markerBlockId = crypto.createHash("sha256").update("marker").digest("hex");
+    const markerBlock = {
+      ...sourceBlock,
+      blockId: markerBlockId,
+      exactText: "•",
+      exactTextSha256: crypto.createHash("sha256").update("•").digest("hex"),
+    };
+    unit.source.blocks.push(markerBlock);
+    unit.source.blockIds.push(markerBlockId);
+    unit.source.combinedText += "\n•";
+    plan.summary.sourceBlocks += 1;
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map((plannedUnit) =>
+        plannedUnit.unitId === unit.unitId
+          ? {
+              unitId: unit.unitId,
+              primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+              semanticClasses: [
+                "OPERATIVE_COVERAGE_STATEMENT",
+                "INSURED_OBJECT",
+              ],
+              requirements: [
+                {
+                  displayLabel: sourceBlock.exactText,
+                  components: [
+                    {
+                      type: "OBJECT",
+                      label: sourceBlock.exactText,
+                      sourceBlockIds: [sourceBlock.blockId],
+                    },
+                    {
+                      type: "COVERAGE_EFFECT",
+                      label: sourceBlock.exactText,
+                      coverageEffect: "INCLUDED",
+                      sourceBlockIds: [sourceBlock.blockId],
+                    },
+                  ],
+                },
+              ],
+            }
+          : validResponse(plannedUnit)
+      );
+
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const markerTerminal = manifest.blockTerminals.find(
+      ({ blockId }) => blockId === markerBlockId
+    );
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(markerTerminal).toMatchObject({
+      terminalDisposition: "OPERATIVE_MAPPED",
+      requirementIds: [],
+      reviewRequired: false,
+    });
+  });
+
+  test("reports a requirement label taken only from outside the owned unit", () => {
+    const source = artifact(
+      ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
+      "c"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(({ unitKind }) => unitKind === "CLAUSE");
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map((plannedUnit) => {
+        const response = validResponse(plannedUnit);
+        if (plannedUnit.unitId === unit.unitId)
+          response.requirements[0].displayLabel = "nur aus Governor-Kontext";
+        return response;
+      });
+
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE",
+          unitId: unit.unitId,
+          requirementIndex: 0,
         }),
       ])
     );

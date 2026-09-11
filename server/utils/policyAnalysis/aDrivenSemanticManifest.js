@@ -92,6 +92,10 @@ function uniqueStrings(values) {
   return new Set(normalized).size === normalized.length ? normalized : null;
 }
 
+function isLayoutOnlyBlock(block) {
+  return /^[•▪◦‣]+$/u.test(String(block?.exactText || "").trim());
+}
+
 function responseIndex(responses, plannedIds) {
   const byId = new Map();
   const diagnostics = [];
@@ -281,27 +285,37 @@ function validateRequirement(draft, unit, requirementIndex) {
         : []
   );
   const components = componentResults.map(({ value }) => value);
-  if (
-    !displayLabel ||
-    !sourceContains(
+  const displayLabelInOwnedSource =
+    displayLabel &&
+    sourceContains(
       unit,
       unit.source.blockIds,
       displayLabel,
       unit.source.blocks
-    ) ||
+    );
+  if (
+    !displayLabelInOwnedSource ||
     components.length === 0 ||
     components.some((item) => !item)
   )
     return {
       value: null,
-      diagnostics: diagnostics.length
-        ? diagnostics
-        : [
-            {
-              code: "REQUIREMENT_SOURCE_OR_COMPONENTS_INVALID",
-              requirementIndex,
-            },
-          ],
+      diagnostics: [
+        ...(!displayLabel
+          ? [{ code: "REQUIREMENT_DISPLAY_LABEL_MISSING", requirementIndex }]
+          : !displayLabelInOwnedSource
+            ? [
+                {
+                  code: "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE",
+                  requirementIndex,
+                },
+              ]
+            : []),
+        ...(components.length === 0
+          ? [{ code: "REQUIREMENT_COMPONENTS_MISSING", requirementIndex }]
+          : []),
+        ...diagnostics,
+      ],
     };
   const componentKeys = components.map((component) =>
     stableStringify(component)
@@ -671,7 +685,11 @@ function classifyUnit(unit, records) {
   const coveredBlockIds = new Set(
     requirements.flatMap(({ sourceBlockIds }) => sourceBlockIds)
   );
-  if (unit.source.blockIds.some((blockId) => !coveredBlockIds.has(blockId)))
+  const uncitedSemanticBlockIds = unit.source.blocks
+    .filter((block) => !isLayoutOnlyBlock(block))
+    .map(({ blockId }) => blockId)
+    .filter((blockId) => !coveredBlockIds.has(blockId));
+  if (uncitedSemanticBlockIds.length)
     return {
       terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
       primaryClass: "UNRESOLVED",
@@ -681,6 +699,7 @@ function classifyUnit(unit, records) {
         {
           code: "OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE",
           unitId: unit.unitId,
+          blockIds: uncitedSemanticBlockIds,
         },
       ],
     };
