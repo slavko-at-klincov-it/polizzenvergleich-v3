@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const { performance } = require("perf_hooks");
 const { promisify } = require("util");
+const { jsonrepair } = require("jsonrepair");
 const { OpenAI } = require("openai");
 const {
   A_CLASSIFICATION_CONTRACT_ID,
@@ -293,13 +294,27 @@ function parseJsonArray(modelText) {
     .replace(/<think>[\s\S]*?<\/think>/giu, "")
     .trim();
   const start = normalized.indexOf("[");
-  const end = normalized.lastIndexOf("]");
-  if (start < 0 || end < start)
+  if (start < 0)
     throw new Error("LF_A_CLASSIFICATION_RESPONSE_JSON_ARRAY_MISSING");
-  const parsed = JSON.parse(normalized.slice(start, end + 1));
+  const end = normalized.lastIndexOf("]");
+  const candidate = normalized.slice(start, end >= start ? end + 1 : undefined);
+  let parsed;
+  let syntaxRepair = null;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch (strictError) {
+    const repaired = jsonrepair(candidate);
+    parsed = JSON.parse(repaired);
+    syntaxRepair = {
+      applied: true,
+      originalError: strictError.message,
+      originalResponseSha256: sha256(candidate),
+      repairedResponseSha256: sha256(repaired),
+    };
+  }
   if (!Array.isArray(parsed))
     throw new Error("LF_A_CLASSIFICATION_RESPONSE_NOT_ARRAY");
-  return parsed;
+  return { responses: parsed, syntaxRepair };
 }
 
 function endsWithSentence(textValue) {
@@ -867,7 +882,7 @@ async function runBatch({
       });
       const rawText = completion.choices?.[0]?.message?.content || "";
       observedRawText = rawText;
-      const responses = parseJsonArray(rawText);
+      const { responses, syntaxRepair } = parseJsonArray(rawText);
       observedResponses = responses;
       const workingValidation = validateBatchResponses(
         plan,
@@ -930,6 +945,7 @@ async function runBatch({
         parsedResponses: responses.length,
         rawResponseSha256: sha256(rawText),
         rawResponse: rawText,
+        syntaxRepair,
         responses,
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,

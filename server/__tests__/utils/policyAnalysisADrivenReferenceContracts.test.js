@@ -530,7 +530,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(result.attempts.at(-1).validationPassed).toBe(true);
   });
 
-  test("repairs malformed JSON instead of repeating the identical request", async () => {
+  test("repairs only JSON syntax before validating the semantic response", async () => {
     const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "9");
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
@@ -539,27 +539,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const valid = batch.expectedUnitIds.map((unitId) =>
       validResponse(plan.units.find((unit) => unit.unitId === unitId))
     );
-    const observedMessages = [];
+    const validJson = JSON.stringify(valid);
+    const malformedJson = `${validJson.slice(0, -1)}}]`;
     const client = {
       chat: {
         completions: {
-          create: jest.fn(async ({ messages }) => {
-            observedMessages.push(messages);
-            return {
-              model: "qwen/qwen3.6-35b-a3b",
-              choices: [
-                {
-                  message: {
-                    content:
-                      observedMessages.length === 1
-                        ? `[{"unitId":"${batch.expectedUnitIds[0]}"}`
-                        : JSON.stringify(valid),
-                  },
-                },
-              ],
-              usage: {},
-            };
-          }),
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: malformedJson } }],
+            usage: {},
+          })),
         },
       },
     };
@@ -574,17 +563,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(result.validation.passed).toBe(true);
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
     expect(result.attempts[0]).toMatchObject({
-      errorClass: "MODEL_RESPONSE_INVALID",
-      validationPassed: false,
+      errorClass: null,
+      validationPassed: true,
+      syntaxRepair: expect.objectContaining({
+        applied: true,
+        originalResponseSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        repairedResponseSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      }),
     });
-    expect(observedMessages[1].at(-2)).toEqual({
-      role: "assistant",
-      content: `[{"unitId":"${batch.expectedUnitIds[0]}"}`,
-    });
-    expect(observedMessages[1].at(-1).content).toContain(
-      "Repariere ausschließlich die JSON-Syntax"
-    );
   });
 
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
