@@ -209,8 +209,17 @@ function validateComponent(component, unit) {
   if (!label) return { value: null, code: "COMPONENT_LABEL_MISSING" };
   if (!sourceBlockIds?.length)
     return { value: null, code: "COMPONENT_SOURCE_BLOCK_IDS_INVALID" };
-  if (sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId)))
-    return { value: null, code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE" };
+  const outOfScopeBlockIds = sourceBlockIds.filter(
+    (blockId) => !allowedBlockIds.has(blockId)
+  );
+  if (outOfScopeBlockIds.length)
+    return {
+      value: null,
+      code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE",
+      declaredSourceBlockIds: sourceBlockIds,
+      outOfScopeBlockIds,
+      allowedSourceBlockIds: [...allowedBlockIds],
+    };
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);

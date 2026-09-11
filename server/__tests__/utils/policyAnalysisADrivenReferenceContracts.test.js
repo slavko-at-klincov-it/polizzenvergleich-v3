@@ -80,6 +80,26 @@ describe("A-driven classification evidence recovery", () => {
           source: source("doc", [block("item", "Einbruchdiebstahl.")]),
         },
         {
+          unitId: "operative-heading",
+          unitKind: "HEADING",
+          structurePath: ["Nicht versichert sind:"],
+          source: source("doc", [
+            block("exclusion-effect", "Nicht versichert sind:"),
+          ]),
+        },
+        {
+          unitId: "excluded-one",
+          unitKind: "CLAUSE",
+          structurePath: ["Nicht versichert sind:"],
+          source: source("doc", [block("excluded-one-block", "Schäden A")]),
+        },
+        {
+          unitId: "excluded-two",
+          unitKind: "CLAUSE",
+          structurePath: ["Nicht versichert sind:"],
+          source: source("doc", [block("excluded-two-block", "Schäden B")]),
+        },
+        {
           unitId: "list-governor",
           unitKind: "CLAUSE",
           source: source("doc", [
@@ -120,9 +140,19 @@ describe("A-driven classification evidence recovery", () => {
       unitIds: ["list-governor"],
       blockIds: ["list-effect", "list-limit"],
     });
+    expect(byId.get("excluded-one").governingContext).toMatchObject({
+      relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
+      unitIds: ["operative-heading"],
+      blockIds: ["exclusion-effect"],
+    });
+    expect(byId.get("excluded-two").governingContext).toMatchObject({
+      relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
+      unitIds: ["operative-heading"],
+      blockIds: ["exclusion-effect"],
+    });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(plan.units.some((unit) => unit.governingContext)).toBe(false);
-    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(2);
+    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(4);
   });
 });
 
@@ -1545,6 +1575,35 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           code: "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE",
           unitId: unit.unitId,
           requirementIndex: 0,
+        }),
+      ])
+    );
+  });
+
+  test("reports declared, rejected and allowed IDs for out-of-scope evidence", () => {
+    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "d");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const response = validResponse(unit);
+    const foreignBlockId = "f".repeat(64);
+    response.requirements[0].components[0].sourceBlockIds = [foreignBlockId];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE",
+          declaredSourceBlockIds: [foreignBlockId],
+          outOfScopeBlockIds: [foreignBlockId],
+          allowedSourceBlockIds: unit.source.blockIds,
         }),
       ])
     );
