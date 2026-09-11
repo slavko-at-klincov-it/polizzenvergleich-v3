@@ -784,12 +784,92 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       coverageEffect: "EXCLUDED",
       label: "Nicht versichert",
     });
-    expect(result.attempts[0].componentTypeRepairs).toEqual([
+    expect(result.attempts[0].componentRepairs).toEqual([
       expect.objectContaining({
         unitId: unit.unitId,
+        action: "NORMALIZE_COMPONENT_TYPE",
         fromType: "EXCLUSION",
         toType: "COVERAGE_EFFECT",
         coverageEffect: "EXCLUDED",
+      }),
+    ]);
+  });
+
+  test("drops a redundant applicability effect when a condition already owns it", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Schäden; dafür gelten ausschließlich die Bestimmungen, sofern vereinbart.\n",
+      ],
+      "d"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "CONDITION"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden",
+              sourceBlockIds: unit.source.blockIds,
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Versichert",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "INCLUDED",
+            },
+            {
+              type: "CONDITION",
+              label: "sofern vereinbart",
+              sourceBlockIds: unit.source.blockIds,
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gelten ausschließlich die Bestimmungen",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "CONDITIONAL",
+            },
+          ],
+        },
+      ],
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: JSON.stringify([response]) } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses[0].requirements[0].components).toHaveLength(3);
+    expect(result.attempts[0].componentRepairs).toEqual([
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
       }),
     ]);
   });
@@ -2396,6 +2476,56 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                   label: "erstreckt sich dabei nicht",
                   sourceBlockIds: unit.source.blockIds,
                   coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
+  test("accepts bezieht sich in Abänderung auch auf as an inclusion effect", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDer Versicherungsschutz bezieht sich in Abänderung von Art. 7 auch auf Sachschäden.\n",
+      ],
+      "4"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "PERIL_OR_DAMAGE",
+          ],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "DAMAGE_OR_EFFECT",
+                  label: "Sachschäden",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label:
+                    "bezieht sich in Abänderung von Art. 7 auch auf",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
                 },
               ],
             },

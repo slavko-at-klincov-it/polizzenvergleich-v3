@@ -384,22 +384,46 @@ function normalizeUnambiguousComponentTypes(responses) {
       ? response.requirements.map((requirement, requirementIndex) => ({
           ...requirement,
           components: Array.isArray(requirement?.components)
-            ? requirement.components.map((component, componentIndex) => {
-                if (component?.type !== "EXCLUSION" || component.coverageEffect)
-                  return component;
+            ? requirement.components.flatMap((component, componentIndex) => {
+                if (
+                  component?.type === "COVERAGE_EFFECT" &&
+                  component.coverageEffect === "CONDITIONAL" &&
+                  /\bgelten\b[\s\S]*\bBestimmungen\b/iu.test(
+                    String(component.label || "")
+                  ) &&
+                  requirement.components.some(
+                    ({ type }) => type === "CONDITION"
+                  )
+                ) {
+                  repairs.push({
+                    unitId: response.unitId,
+                    requirementIndex,
+                    componentIndex,
+                    action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
+                  });
+                  return [];
+                }
+                if (
+                  component?.type !== "EXCLUSION" ||
+                  component.coverageEffect
+                )
+                  return [component];
                 repairs.push({
                   unitId: response.unitId,
                   requirementIndex,
                   componentIndex,
+                  action: "NORMALIZE_COMPONENT_TYPE",
                   fromType: "EXCLUSION",
                   toType: "COVERAGE_EFFECT",
                   coverageEffect: "EXCLUDED",
                 });
-                return {
-                  ...component,
-                  type: "COVERAGE_EFFECT",
-                  coverageEffect: "EXCLUDED",
-                };
+                return [
+                  {
+                    ...component,
+                    type: "COVERAGE_EFFECT",
+                    coverageEffect: "EXCLUDED",
+                  },
+                ];
               })
             : requirement?.components,
         }))
@@ -407,7 +431,7 @@ function normalizeUnambiguousComponentTypes(responses) {
   }));
   return {
     responses: normalized,
-    componentTypeRepairs: repairs,
+    componentRepairs: repairs,
   };
 }
 
@@ -1016,7 +1040,7 @@ async function runBatch({
       const parsed = parseJsonArray(rawText);
       const { responses: mergedResponsesFromEnvelope, envelopeRepair } =
         mergeCompatibleDuplicateUnitResponses(parsed.responses);
-      const { responses, componentTypeRepairs } =
+      const { responses, componentRepairs } =
         normalizeUnambiguousComponentTypes(mergedResponsesFromEnvelope);
       const { syntaxRepair } = parsed;
       observedResponses = responses;
@@ -1083,7 +1107,7 @@ async function runBatch({
         rawResponse: rawText,
         syntaxRepair,
         envelopeRepair,
-        componentTypeRepairs,
+        componentRepairs,
         responses,
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
