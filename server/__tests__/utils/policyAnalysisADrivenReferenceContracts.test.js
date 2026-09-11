@@ -1360,9 +1360,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "beschreiben für sich eine Bewertungs- oder Definitionsregel"
     );
-    expect(repairMessages[1]).toContain(
-      "ist nur eine Vereinbarungseinleitung"
-    );
+    expect(repairMessages[1]).toContain("ist nur eine Vereinbarungseinleitung");
     expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
