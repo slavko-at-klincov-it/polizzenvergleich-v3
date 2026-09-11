@@ -3724,3 +3724,49 @@ Dinghy hat messbaren komplementären Nutzen.
 **Beweist nicht:** dass alle neuen Kandidaten fachliche Gegenstücke sind,
 dass die 135 öffentlichen Nichtfunde falsch sind, dass Abwesenheit sicher
 feststeht oder dass die Ergebnisse auf unbekannte Versicherer generalisieren.
+
+## 61. A-getriebener V12-Lauf: Timeout-Recovery und vollständiger A-Status
+
+**Prüfung:** 11. September 2026
+
+Der reale V12-Lauf auf dem Kunden-Mac-Studio hing nach drei bestandenen
+Batches im vierten Qwen-Aufruf ohne Antwort. Der Timeout-/Resume-Fix setzt
+nun pro Request einen harten Timeout, löst einen echten Abort aus, wartet auf
+das Settlement des alten Requests und lädt anschließend gezielt nur das
+geprüfte Qwen-Modell mit derselben Kontextlänge neu. Erst dann ist ein
+begrenzter Retry erlaubt. Fehler- und Versuchsjournale sind append-only;
+unvollständige Batches werden nicht als PASS gespeichert.
+
+Vier reale Requests erreichten den 180-Sekunden-Timeout. Alle vier Aborts
+wurden ausgelöst, settelten und endeten vor dem nächsten Versuch mit
+`SAFE_RELOADED`, Modell `qwen/qwen3.6-35b-a3b` und Kontext 42.496. Der
+resumierte Lauf schloss alle 59 Batches ab. Der abschließende Integritätslauf
+auf Commit `9836216b9db6fc0b83bc65177f69f9fa6a938acc` verwendete Batch 1 bis 38
+und 40 bis 59 wieder und materialisierte nur Batch 39 neu, nachdem eine
+nummerierte Überschrift in einem alten PASS fälschlich als Versicherungsobjekt
+gespeichert gewesen war.
+
+Der finale A-Status umfasst 1.005/1.005 genau einmal besessene und terminale
+Source-Blöcke, 349/349 eindeutige Modellantwort-Units, 364 dynamische
+Requirements, 755 Komponenten und null `UNRESOLVED`. Es gibt keine
+unbekannten oder still ergänzten Source-IDs und keinen operativen Block ohne
+Requirement-Beleg. Der zusätzliche Fehlklassifikationsaudit erklärt 68
+riskante nichtoperative Units vollständig und findet null verdächtig
+operative oder nichtoperative Units.
+
+Der 283/631-Crosswalk ist mechanisch source-vollständig: keine historische
+Anforderung und keine historische Komponente fehlt ohne Source-Overlap.
+Semantisch ist er noch nicht freigegeben. 341 historische Komponenten haben
+nur rolleninkompatible dynamische Source-Overlaps; der verbindliche Vertrag
+verlangt für alle 631 Komponenten eine fachliche Relation, `APPROVED` und zwei
+unabhängige Reviewer. Deshalb bleiben `semanticCrosswalkApproved:false` und
+`acceptanceReady:false`, und B-Suche, Produkt-Routing, Kunden-XLSX sowie
+Deployment wurden nicht gestartet.
+
+**Beweist:** transportseitig sichere, resumierbare Vollklassifikation des
+bekannten A-Dokuments sowie vollständigen Source-Besitz und einen getrennt
+ausgewiesenen mechanischen Crosswalk.
+
+**Beweist nicht:** die fachliche Gleichwertigkeit aller 283/631 Elemente,
+einen Experten-Doppelreview, B-Gegenstücke, unbekannte
+Versicherer-Generalisierung oder 99 Prozent.

@@ -101,6 +101,16 @@ lesbar. [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpake
 [Architektur, Abschnitt 24](./POLIZZENVERGLEICH_ARCHITEKTUR.md#24-zielarchitektur-lf_reference_a_driven_v2)
 definieren die Schichten und Freigabegates.
 
+V12-Nachtrag vom 11. September 2026: Die A-Klassifikation des bekannten
+LF-Dokuments ist nach hartem Request-Timeout, Abort, Settlement-Barriere und
+sicherer LM-Studio-Wiederherstellung mit 59/59 Batches abgeschlossen. Das
+dynamische Manifest besitzt 1.005/1.005 Blöcke genau einmal und enthält 364
+Requirements sowie 755 Komponenten ohne `UNRESOLVED`. Der mechanische
+283/631-Source-Crosswalk ist vollständig; die semantische Doppelreview ist
+wegen 341 rolleninkompatibler Komponenten-Overlaps weiterhin offen. Daher
+wurde B noch nicht gestartet. Messwerte und Beweisgrenze stehen in
+[Tests und Erkenntnisse, Abschnitt 61](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#61-a-getriebener-v12-lauf-timeout-recovery-und-vollständiger-a-status).
+
 ## 2. Schnelllage
 
 | Statusachse                           | Aktueller Stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Kanonischer Beleg                                                                                                                                                                                                                                                                                      |
