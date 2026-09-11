@@ -1265,6 +1265,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       );
       expect(batch).toBeDefined();
       const batches = { ...built, batches: [batch] };
+      const contextualBatch = {
+        ...batch,
+        units: batch.expectedUnitIds.map((unitId) =>
+          plan.units.find((candidate) => candidate.unitId === unitId)
+        ),
+      };
       const unit = plan.units.find(
         ({ unitId }) =>
           unitId ===
@@ -1339,7 +1345,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         model: args.model,
         modelContext: args.modelContext,
         plan,
-        batch,
+        batch: contextualBatch,
         maximumAttempts: 1,
       });
       result.promptSha256 = seeded.promptSha256;
