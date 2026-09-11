@@ -1526,6 +1526,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairMessages[1]).toContain(
       "entferne zugleich OPERATIVE_COVERAGE_STATEMENT"
     );
+    expect(repairMessages[1]).toContain(
+      "ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit"
+    );
     expect(previousAnswers).toEqual([null, JSON.stringify([invalid.at(-1)])]);
   });
 
@@ -2945,6 +2948,54 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             expect.objectContaining({ blockId: unit.source.blockIds[0] }),
           ],
         }),
+      ])
+    );
+  });
+
+  test("accepts an insurer waiver of objections as a literal coverage effect", () => {
+    const source = artifact(
+      [
+        "Seite 1\nBei versicherten Schäden verzichtet der Versicherer auf den Einwand der Gefahrenerhöhung.\n",
+      ],
+      "waiver"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label:
+                    "verzichtet der Versicherer auf den Einwand der Gefahrenerhöhung",
+                  sourceBlockIds: [block.blockId],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(manifest.diagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "COVERAGE_EFFECT_LABEL_INVALID" }),
       ])
     );
   });
