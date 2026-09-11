@@ -235,9 +235,7 @@ function validateComponent(component, unit) {
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
-  let componentValues = [label, rawValue, unitValue, qualifier].filter(
-    Boolean
-  );
+  let componentValues = [label, rawValue, unitValue, qualifier].filter(Boolean);
   const outOfScopeBlockIds = sourceBlockIds.filter(
     (blockId) => !allowedBlockIds.has(blockId)
   );
@@ -271,11 +269,7 @@ function validateComponent(component, unit) {
       ...(requiredSourceBlockIds?.length ? { requiredSourceBlockIds } : {}),
     };
   }
-  label = canonicalExactLayoutText(
-    label,
-    sourceBlockIds,
-    evidenceBlocks(unit)
-  );
+  label = canonicalExactLayoutText(label, sourceBlockIds, evidenceBlocks(unit));
   componentValues = [label, rawValue, unitValue, qualifier].filter(Boolean);
   const missingSourceBlockIds = missingComponentSourceBlockIds(
     unit,
