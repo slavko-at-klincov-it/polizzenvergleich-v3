@@ -97,6 +97,12 @@ describe("A-driven classification evidence recovery", () => {
           unitId: "excluded-two",
           unitKind: "CLAUSE",
           structurePath: ["Nicht versichert sind:"],
+          governingContext: {
+            relationType: "GOVERNS_FOLLOWING_LIST",
+            unitIds: ["local-governor"],
+            blockIds: ["local-effect"],
+            blocks: [block("local-effect", "unter dieser Voraussetzung")],
+          },
           source: source("doc", [block("excluded-two-block", "Schäden B")]),
         },
         {
@@ -146,9 +152,9 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["exclusion-effect"],
     });
     expect(byId.get("excluded-two").governingContext).toMatchObject({
-      relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
-      unitIds: ["operative-heading"],
-      blockIds: ["exclusion-effect"],
+      relationType: "AUGMENTS_WITH_OPERATIVE_HEADING_GOVERNOR",
+      unitIds: ["operative-heading", "local-governor"],
+      blockIds: ["exclusion-effect", "local-effect"],
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(plan.units.some((unit) => unit.governingContext)).toBe(false);

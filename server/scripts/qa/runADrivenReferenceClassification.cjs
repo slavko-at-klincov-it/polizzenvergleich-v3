@@ -352,7 +352,6 @@ function operativeHeadingGovernorContext(heading, current) {
   if (
     heading?.unitKind !== "HEADING" ||
     current?.unitKind === "HEADING" ||
-    current?.governingContext ||
     heading.source?.documentUuid !== current?.source?.documentUuid ||
     String(current?.structurePath?.at(-1) || "").trim() !== headingText ||
     !/\b(?:ausgeschlossen|mitversichert|nicht\s+versichert|versichert\s+sind|Versicherungsschutz\s+(?:besteht|gilt))\b/iu.test(
@@ -360,15 +359,22 @@ function operativeHeadingGovernorContext(heading, current) {
     )
   )
     return null;
-  const blocks = heading.source.blocks;
+  const existing = current.governingContext;
+  const blocks = [...heading.source.blocks, ...(existing?.blocks || [])].filter(
+    ({ blockId }, index, entries) =>
+      entries.findIndex((candidate) => candidate.blockId === blockId) === index
+  );
+  const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
   return {
-    relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
+    relationType: existing
+      ? "AUGMENTS_WITH_OPERATIVE_HEADING_GOVERNOR"
+      : "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
     contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
-    unitIds: [heading.unitId],
+    unitIds: [...new Set([heading.unitId, ...(existing?.unitIds || [])])],
     blockIds: blocks.map(({ blockId }) => blockId),
     blocks,
-    combinedText: heading.source.combinedText,
-    combinedTextSha256: heading.source.combinedTextSha256,
+    combinedText,
+    combinedTextSha256: sha256(combinedText),
   };
 }
 
