@@ -311,7 +311,7 @@ function parseJsonArray(modelText) {
     try {
       if (repaired === candidate) throw strictError;
       parsed = JSON.parse(repaired);
-    } catch (_targetedRepairError) {
+    } catch {
       repaired = jsonrepair(candidate);
       parsed = JSON.parse(repaired);
       strategy = "JSONREPAIR";
