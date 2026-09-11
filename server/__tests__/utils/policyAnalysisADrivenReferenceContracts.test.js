@@ -326,6 +326,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("splits a timed-out parent batch deterministically and passes only after every unit is merged", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n\nVersichert sind Garagen.\n\nVersichert sind Carports.\n",
+      ],
+      "b"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan, {
+      maximumUnits: 4,
+      maximumCharacters: 12_000,
+    }).batches[0];
+    expect(batch.expectedUnitIds).toHaveLength(4);
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedUnitIds);
+            if (requested.length === 1) return new Promise(() => {});
+            return Promise.resolve({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      input.expectedUnitIds.map((unitId) =>
+                        validResponse(
+                          plan.units.find((unit) => unit.unitId === unitId)
+                        )
+                      )
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            });
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 3,
+      requestTimeoutMs: 10,
+      abortSettlementTimeoutMs: 5,
+      recoverModelAfterAbort: jest.fn(async () => ({
+        status: "SAFE_RELOADED",
+      })),
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toHaveLength(batch.expectedUnitIds.length);
+    expect(requested[0]).toEqual(batch.expectedUnitIds);
+    expect(requested[1]).toEqual(
+      result.attempts[0].timeoutRetryPartition.retryUnitIds
+    );
+    expect(requested[2]).toEqual(
+      result.attempts[0].timeoutRetryPartition.deferredUnitIds
+    );
+    expect(new Set(requested.slice(1).flat())).toEqual(
+      new Set(batch.expectedUnitIds)
+    );
+    expect(result.attempts.at(-1).validationPassed).toBe(true);
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")

@@ -153,6 +153,39 @@ function errorClass(error) {
   return "MODEL_RESPONSE_INVALID";
 }
 
+function timeoutRetryPartition(batch) {
+  if (!Array.isArray(batch?.units) || batch.units.length < 2) return null;
+  const weights = batch.units.map((unit) =>
+    Math.max(
+      1,
+      (unit.sourceBlocks || []).reduce(
+        (sum, block) => sum + String(block.exactText || "").length,
+        0
+      )
+    )
+  );
+  const total = weights.reduce((sum, value) => sum + value, 0);
+  let left = 0;
+  let splitIndex = 1;
+  let bestDifference = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < weights.length; index += 1) {
+    left += weights[index - 1];
+    const difference = Math.abs(left - (total - left));
+    if (difference < bestDifference) {
+      bestDifference = difference;
+      splitIndex = index;
+    }
+  }
+  const retryUnits = batch.units.slice(0, splitIndex);
+  const deferredUnits = batch.units.slice(splitIndex);
+  return {
+    strategy: "CONTIGUOUS_CHARACTER_BALANCED_SPLIT",
+    retryUnitIds: retryUnits.map(({ unitId }) => unitId),
+    deferredUnitIds: deferredUnits.map(({ unitId }) => unitId),
+    retryUnits,
+  };
+}
+
 async function waitForSettlement(promise, timeoutMs) {
   let timeoutId;
   try {
@@ -629,6 +662,12 @@ async function runBatch({
         },
       ];
     } catch (error) {
+      const partition =
+        errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
+        error.retrySafe !== false &&
+        attempt < maximumAttempts
+          ? timeoutRetryPartition(workingBatch)
+          : null;
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
@@ -642,6 +681,13 @@ async function runBatch({
           error?.telemetry?.requestSettledAfterAbort ?? null,
         settlementDurationMs: error?.telemetry?.settlementDurationMs ?? null,
         recovery: error?.telemetry?.recovery || null,
+        timeoutRetryPartition: partition
+          ? {
+              strategy: partition.strategy,
+              retryUnitIds: partition.retryUnitIds,
+              deferredUnitIds: partition.deferredUnitIds,
+            }
+          : null,
         validationPassed: false,
         error: error.message,
       };
@@ -662,6 +708,15 @@ async function runBatch({
         error: error.message,
       };
       if (error.retrySafe === false) break;
+      if (partition) {
+        workingBatch = {
+          ...batch,
+          batchId: `${batch.batchId}-timeout-split-${attempt + 1}`,
+          expectedUnitIds: partition.retryUnitIds,
+          units: partition.retryUnits,
+        };
+        messages = prompt(workingBatch);
+      }
     }
   }
   return {
