@@ -692,9 +692,7 @@ function classifyUnit(unit, records) {
     missingRequiredGroups.some((types) => types.includes("COVERAGE_EFFECT")) &&
     !hasCoverageEffectEvidence(unit)
       ? semanticClasses.filter((semanticClass) =>
-          ["EXCLUSION", "OPERATIVE_COVERAGE_STATEMENT"].includes(
-            semanticClass
-          )
+          ["EXCLUSION", "OPERATIVE_COVERAGE_STATEMENT"].includes(semanticClass)
         )
       : [];
   if (

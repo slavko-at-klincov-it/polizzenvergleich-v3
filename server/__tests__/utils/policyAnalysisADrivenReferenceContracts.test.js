@@ -1999,10 +1999,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         {
           unitId: unit.unitId,
           primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-          semanticClasses: [
-            "PERIL_OR_DAMAGE",
-            "OPERATIVE_COVERAGE_STATEMENT",
-          ],
+          semanticClasses: ["PERIL_OR_DAMAGE", "OPERATIVE_COVERAGE_STATEMENT"],
           requirements: [
             {
               displayLabel: block.exactText,
