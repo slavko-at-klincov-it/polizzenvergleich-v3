@@ -643,6 +643,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const invalid = JSON.parse(JSON.stringify(valid));
     invalid.at(-1).requirements[0].components[0].label = "";
     const requested = [];
+    const repairMessages = [];
     const client = {
       chat: {
         completions: {
@@ -651,6 +652,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               messages.find(({ role }) => role === "user").content
             );
             requested.push(input.expectedUnitIds);
+            repairMessages.push(messages.at(-1).content);
             const responses = requested.length === 1 ? invalid : [valid.at(-1)];
             return {
               model: "qwen/qwen3.6-35b-a3b",
@@ -680,6 +682,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(result.attempts.map(({ pendingUnits }) => pendingUnits)).toEqual([
       1, 0,
     ]);
+    expect(repairMessages[1]).toContain(
+      "governingContext ist ausschließlich Evidenz"
+    );
+    expect(repairMessages[1]).toContain(
+      "ersetze die falsch typisierte OBJECT-Komponente"
+    );
   });
 
   test("plans every block across multiple A documents without fixed pages or rows", () => {
