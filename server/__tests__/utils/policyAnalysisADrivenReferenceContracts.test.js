@@ -2006,6 +2006,51 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("canonicalizes only a whole declared source range dehyphenated by layout", () => {
+    const source = artifact(
+      ["Seite 1\n- Bundes-\nUmwelthaftungsgesetz.\n"],
+      "f"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const normalizedLabel = "- Bundes-Umwelthaftungsgesetz.";
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: normalizedLabel,
+          components: [
+            {
+              type: "OBJECT",
+              label: normalizedLabel,
+              sourceBlockIds: unit.source.blockIds,
+            },
+          ],
+        },
+      ],
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [response],
+    });
+    const requirement = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(unit.unitId)
+    );
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(requirement.displayLabel).toBe(unit.source.combinedText.trim());
+    expect(requirement.components[0].label).toBe(
+      unit.source.combinedText.trim()
+    );
+  });
+
   test("rejects semantic attributes attached to the wrong component type", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],

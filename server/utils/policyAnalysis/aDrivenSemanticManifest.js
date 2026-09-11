@@ -85,6 +85,29 @@ function comparableText(value) {
     .replace(/(^| )[-–—•▪] (?=\S)/gu, "$1• ");
 }
 
+function layoutComparableText(value) {
+  return comparableText(value).replace(/(\p{L})-\s+(?=\p{L})/gu, "$1-");
+}
+
+function selectedSourceText(sourceBlockIds, blocks) {
+  return blocks
+    .filter(({ blockId }) => sourceBlockIds.includes(blockId))
+    .map(({ exactText }) => exactText)
+    .join("\n")
+    .trim();
+}
+
+function canonicalExactLayoutText(value, sourceBlockIds, blocks) {
+  const exact = selectedSourceText(sourceBlockIds, blocks);
+  if (
+    !exact ||
+    comparableText(exact).includes(comparableText(value)) ||
+    layoutComparableText(exact) !== layoutComparableText(value)
+  )
+    return value;
+  return exact;
+}
+
 function uniqueStrings(values) {
   if (!Array.isArray(values) || values.some((value) => !text(value)))
     return null;
@@ -199,7 +222,7 @@ function missingComponentSourceBlockIds(unit, declaredBlockIds, values) {
 
 function validateComponent(component, unit) {
   const type = text(component?.type);
-  const label = text(component?.label);
+  let label = text(component?.label);
   const sourceBlockIds = uniqueStrings(component?.sourceBlockIds);
   const allowedBlockIds = new Set(
     evidenceBlocks(unit).map(({ blockId }) => blockId)
@@ -212,7 +235,7 @@ function validateComponent(component, unit) {
   const rawValue = text(component?.rawValue);
   const unitValue = text(component?.unit);
   const qualifier = text(component?.qualifier);
-  const componentValues = [label, rawValue, unitValue, qualifier].filter(
+  let componentValues = [label, rawValue, unitValue, qualifier].filter(
     Boolean
   );
   const outOfScopeBlockIds = sourceBlockIds.filter(
@@ -248,6 +271,12 @@ function validateComponent(component, unit) {
       ...(requiredSourceBlockIds?.length ? { requiredSourceBlockIds } : {}),
     };
   }
+  label = canonicalExactLayoutText(
+    label,
+    sourceBlockIds,
+    evidenceBlocks(unit)
+  );
+  componentValues = [label, rawValue, unitValue, qualifier].filter(Boolean);
   const missingSourceBlockIds = missingComponentSourceBlockIds(
     unit,
     sourceBlockIds,
@@ -320,7 +349,11 @@ function validateComponent(component, unit) {
 }
 
 function validateRequirement(draft, unit, requirementIndex) {
-  const displayLabel = text(draft?.displayLabel);
+  const displayLabel = canonicalExactLayoutText(
+    text(draft?.displayLabel),
+    unit.source.blockIds,
+    unit.source.blocks
+  );
   const componentResults = Array.isArray(draft?.components)
     ? draft.components.map((component) => validateComponent(component, unit))
     : [];
