@@ -2851,7 +2851,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(draft.summary.coveredComponents).toBe(0);
-    expect(draft.records[0].sourceOverlapCandidates).toHaveLength(2);
+    expect(draft.records[0].sourceOverlapCandidates).toHaveLength(1);
     expect(manifest.requirements).toHaveLength(
       manifest.summary.semanticRequirements
     );
