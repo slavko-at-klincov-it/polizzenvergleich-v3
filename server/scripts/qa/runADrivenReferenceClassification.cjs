@@ -721,6 +721,39 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
     .map((unitId) => accepted.get(unitId));
 }
 
+function currentlyValidResponses(plan, batch, responses) {
+  const accepted = new Map();
+  for (const response of Array.isArray(responses) ? responses : []) {
+    if (accepted.has(response?.unitId)) continue;
+    const unit = batch.units.find(({ unitId }) => unitId === response?.unitId);
+    if (!unit) continue;
+    const validation = validateBatchResponses(
+      plan,
+      { ...batch, expectedUnitIds: [unit.unitId], units: [unit] },
+      [response]
+    );
+    if (validation.passed) accepted.set(unit.unitId, response);
+  }
+  return batch.expectedUnitIds
+    .filter((unitId) => accepted.has(unitId))
+    .map((unitId) => accepted.get(unitId));
+}
+
+function archiveSupersededBatchResult(file, output, batch, reason) {
+  const raw = fs.readFileSync(file, "utf8");
+  const directory = path.join(output, "superseded-batches");
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const target = path.join(
+    directory,
+    `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.${reason.toLowerCase()}.${sha256(raw).slice(0, 16)}.private.json`
+  );
+  if (fs.existsSync(target))
+    throw new Error(`LF_A_CLASSIFICATION_SUPERSEDED_OUTPUT_EXISTS:${target}`);
+  fs.renameSync(file, target);
+  fs.chmodSync(target, 0o600);
+  return { responses: readJson(target, "LF_A_SUPERSEDED_BATCH").responses };
+}
+
 function validateCompletedRun({ args, plan, batches, summaryFile }) {
   const summary = readJson(summaryFile, "LF_A_CLASSIFICATION_SUMMARY");
   if (
@@ -1113,11 +1146,40 @@ async function processClassificationBatches({
     const file = batchResultFile(args.output, batch);
     let result;
     let reused = false;
+    let supersededResponses = [];
     if (fs.existsSync(file)) {
-      result = existingBatchResult(file, plan, batch, args);
-      reused = true;
-    } else {
+      try {
+        result = existingBatchResult(file, plan, batch, args);
+        reused = true;
+      } catch (error) {
+        if (
+          ![
+            "LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID",
+            "LF_A_CLASSIFICATION_BATCH_RESULT_NOT_PASS",
+          ].includes(error.message)
+        )
+          throw error;
+        supersededResponses = archiveSupersededBatchResult(
+          file,
+          args.output,
+          batch,
+          error.message
+        ).responses;
+      }
+    }
+    if (!reused) {
       const contextualBatch = classificationBatch(plan, batch);
+      const journalResponses = acceptedResponsesFromAttemptJournal({
+        output: args.output,
+        plan,
+        batch: contextualBatch,
+        args,
+      });
+      const acceptedResponses = currentlyValidResponses(
+        plan,
+        contextualBatch,
+        [...journalResponses, ...supersededResponses]
+      );
       result = await runBatch({
         client,
         model: args.model,
@@ -1128,12 +1190,7 @@ async function processClassificationBatches({
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
-        initialAcceptedResponses: acceptedResponsesFromAttemptJournal({
-          output: args.output,
-          plan,
-          batch: contextualBatch,
-          args,
-        }),
+        initialAcceptedResponses: acceptedResponses,
         onAttempt: createAttemptRecorder({
           output: args.output,
           plan,

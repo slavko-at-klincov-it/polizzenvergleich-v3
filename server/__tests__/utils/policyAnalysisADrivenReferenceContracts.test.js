@@ -696,6 +696,86 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
+  test("archives a stale PASS validation and reuses its still-valid unit responses", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-stale-pass-")
+    );
+    try {
+      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "8");
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const built = buildADrivenClassificationBatches(plan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const seeded = await runBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: args.model,
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(
+                        batch.expectedUnitIds.map((unitId) =>
+                          validResponse(
+                            plan.units.find((unit) => unit.unitId === unitId)
+                          )
+                        )
+                      ),
+                    },
+                  },
+                ],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch,
+        maximumAttempts: 1,
+      });
+      seeded.validation = {
+        ...seeded.validation,
+        diagnostics: [{ code: "STALE_VALIDATION" }],
+      };
+      const file = batchResultFile(temporary, batch);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, `${JSON.stringify(seeded, null, 2)}\n`, {
+        mode: 0o600,
+      });
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const results = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(results[0].validation.passed).toBe(true);
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(1);
+      expect(
+        fs.readdirSync(path.join(temporary, "superseded-batches"))
+      ).toHaveLength(1);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("exhausted retries stop fail-closed and leave the batch resumable", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-fail-closed-")
