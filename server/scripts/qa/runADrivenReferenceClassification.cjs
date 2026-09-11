@@ -823,7 +823,10 @@ async function runBatch({
       });
       const validation = validateBatchResponses(plan, batch, mergedResponses);
       const semanticRetryUnitIds =
-        pendingUnitIds.length > 1 ? [pendingUnitIds[0]] : pendingUnitIds;
+        pendingUnitIds.length > 1 &&
+        !workingBatch.batchId.includes("-timeout-split-")
+          ? [pendingUnitIds[0]]
+          : pendingUnitIds;
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
