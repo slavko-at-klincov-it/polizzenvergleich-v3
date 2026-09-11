@@ -2236,6 +2236,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           code: "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE",
           unitId: unit.unitId,
           requirementIndex: 0,
+          invalidLiteralValue: "nur aus Governor-Kontext",
+          allowedEvidence: unit.source.blocks.map(({ blockId, exactText }) => ({
+            blockId,
+            exactText,
+          })),
         }),
       ])
     );
@@ -2886,6 +2891,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(manifest.diagnostics).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_SOURCE_TEXT_INVALID",
+          unitId: unit.unitId,
+          requirementIndex: 0,
+          invalidLiteralValue: unit.source.combinedText.trim(),
+          selectedSourceBlockIds: [lastBlock.blockId],
+          selectedSourceExactText: lastBlock.exactText,
+          requiredSourceBlockIds: unit.source.blockIds,
+        }),
         expect.objectContaining({
           code: "REQUIREMENT_OWNED_BLOCKS_UNCITED",
           unitId: unit.unitId,

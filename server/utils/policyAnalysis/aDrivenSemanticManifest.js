@@ -399,6 +399,10 @@ function validateRequirement(draft, unit, requirementIndex) {
                 {
                   code: "REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE",
                   requirementIndex,
+                  invalidLiteralValue: displayLabel,
+                  allowedEvidence: unit.source.blocks.map(
+                    ({ blockId, exactText }) => ({ blockId, exactText })
+                  ),
                 },
               ]
             : []),
@@ -434,11 +438,28 @@ function validateRequirement(draft, unit, requirementIndex) {
   if (
     sourceBlocks.some((block) => !block) ||
     !sourceContains(unit, sourceBlockIds, displayLabel)
-  )
+  ) {
+    const requiredSourceBlockIds = minimalSourceRange(
+      unit,
+      displayLabel,
+      sourceBlockIds
+    );
     return {
       value: null,
       diagnostics: [
-        { code: "REQUIREMENT_SOURCE_TEXT_INVALID", requirementIndex },
+        {
+          code: "REQUIREMENT_SOURCE_TEXT_INVALID",
+          requirementIndex,
+          invalidLiteralValue: displayLabel,
+          selectedSourceBlockIds: sourceBlockIds,
+          selectedSourceExactText: sourceBlocks
+            .filter(Boolean)
+            .map(({ exactText }) => exactText)
+            .join("\n"),
+          ...(requiredSourceBlockIds?.length
+            ? { requiredSourceBlockIds }
+            : {}),
+        },
         ...(uncitedOwnedBlockIds.length
           ? [
               {
@@ -450,6 +471,7 @@ function validateRequirement(draft, unit, requirementIndex) {
           : []),
       ],
     };
+  }
   return {
     value: {
       displayLabel,
