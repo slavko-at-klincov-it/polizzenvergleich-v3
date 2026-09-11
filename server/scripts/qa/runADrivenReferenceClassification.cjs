@@ -385,6 +385,11 @@ function normalizeUnambiguousComponentTypes(responses) {
           ...requirement,
           components: Array.isArray(requirement?.components)
             ? requirement.components.flatMap((component, componentIndex) => {
+                const hasComponentType = (type) =>
+                  requirement.components.some(
+                    (candidate) => candidate?.type === type
+                  );
+                const componentLabel = String(component?.label || "");
                 if (
                   component?.type === "COVERAGE_EFFECT" &&
                   component.coverageEffect === "CONDITIONAL" &&
@@ -400,6 +405,33 @@ function normalizeUnambiguousComponentTypes(responses) {
                     requirementIndex,
                     componentIndex,
                     action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
+                  });
+                  return [];
+                }
+                if (
+                  component?.type === "COVERAGE_EFFECT" &&
+                  ((/^gilt$/iu.test(componentLabel) &&
+                    hasComponentType("FACT_ROLE")) ||
+                    (/\bwird\s+die\s+Frist\b[\s\S]*\berstreckt\b/iu.test(
+                      componentLabel
+                    ) &&
+                      (hasComponentType("CONDITION") ||
+                        hasComponentType("TEMPORAL_VALIDITY"))) ||
+                    (/\bgilt\s+als\s+vereinbart\b/iu.test(componentLabel) &&
+                      requirement.components.some(
+                        (candidate) =>
+                          candidate !== component &&
+                          candidate?.type === "COVERAGE_EFFECT" &&
+                          /\b\w*entschädigung\s+geleistet\s+wird\b/iu.test(
+                            String(candidate.label || "")
+                          )
+                      )))
+                ) {
+                  repairs.push({
+                    unitId: response.unitId,
+                    requirementIndex,
+                    componentIndex,
+                    action: "DROP_REDUNDANT_NON_COVERAGE_EFFECT",
                   });
                   return [];
                 }

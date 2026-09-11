@@ -62,7 +62,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+  /\b(?:ausgeschlossen|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -128,7 +128,7 @@ function differsByOneEdit(left, right) {
 }
 
 function uniqueSingleEditSourceSubstring(source, value) {
-  if (value.length < 24) return null;
+  if (value.length < 16) return null;
   const boundary = (character) =>
     character === undefined || /[\s,.;:!?()[\]{}]/u.test(character);
   const matches = new Set();

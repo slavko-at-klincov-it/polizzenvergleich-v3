@@ -874,6 +874,100 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("drops redundant definition, duration and agreement effects only beside their semantic owners", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nDer Neubauwert gilt. Im Falle eines Prozesses wird die Frist erstreckt; es gilt als vereinbart, dass die Neuwertentschädigung geleistet wird.\n",
+      ],
+      "e"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    const unit = plan.units.find(
+      ({ unitId }) => unitId === batch.expectedUnitIds[0]
+    );
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "DEFINITION",
+        "CONDITION",
+      ],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: "Neubauwert gilt",
+              sourceBlockIds: unit.source.blockIds,
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "CONDITIONAL",
+            },
+            {
+              type: "CONDITION",
+              label: "Im Falle eines Prozesses",
+              sourceBlockIds: unit.source.blockIds,
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "wird die Frist erstreckt",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "CONDITIONAL",
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt als vereinbart",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "CONDITIONAL",
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Neuwertentschädigung geleistet wird",
+              sourceBlockIds: unit.source.blockIds,
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: JSON.stringify([response]) } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses[0].requirements[0].components).toHaveLength(3);
+    expect(
+      result.attempts[0].componentRepairs.filter(
+        ({ action }) => action === "DROP_REDUNDANT_NON_COVERAGE_EFFECT"
+      )
+    ).toHaveLength(3);
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")
@@ -2641,6 +2735,49 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(manifest.requirements[0].displayLabel).toBe(
       "Versichert sind Gebäude, die zum Neuwert zu ersetzten sind."
     );
+  });
+
+  test.each([
+    "erwirbt den Anspruch auf Zahlung",
+    "erfolgt die Entschädigung nach dem Zeitwert",
+    "Neuwertentschädigung geleistet wird",
+  ])("accepts a source-bound indemnity effect: %s", (effectLabel) => {
+    const source = artifact(
+      [`Seite 1\nVersicherte Leistung: ${effectLabel}.\n`],
+      effectLabel
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: effectLabel,
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
   });
 
   test("rejects a coverage effect component whose label is not a coverage effect", () => {
