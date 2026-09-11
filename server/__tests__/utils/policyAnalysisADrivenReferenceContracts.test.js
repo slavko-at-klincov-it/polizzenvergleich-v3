@@ -287,6 +287,30 @@ function validResponse(unit) {
       requirements: [],
     };
   const firstBlock = unit.source.blocks[0];
+  const coverageEvidence = unit.source.blocks
+    .map((block) => ({
+      block,
+      match: block.exactText.match(
+        /\b(?:ausgeschlossen|(?:mit)?versichert|nicht\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en))\b/iu
+      ),
+    }))
+    .find(({ match }) => match);
+  if (!coverageEvidence)
+    return {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: firstBlock.exactText,
+          components: unit.source.blocks.map((block) => ({
+            type: "OBJECT",
+            label: block.exactText,
+            sourceBlockIds: [block.blockId],
+          })),
+        },
+      ],
+    };
   return {
     unitId: unit.unitId,
     primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
@@ -302,9 +326,9 @@ function validResponse(unit) {
           })),
           {
             type: "COVERAGE_EFFECT",
-            label: firstBlock.exactText,
+            label: coverageEvidence.match[0],
             coverageEffect: "INCLUDED",
-            sourceBlockIds: [firstBlock.blockId],
+            sourceBlockIds: [coverageEvidence.block.blockId],
           },
         ],
       },
@@ -1820,7 +1844,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         { type: "OBJECT", label, sourceBlockIds: [blockId] },
         {
           type: "COVERAGE_EFFECT",
-          label,
+          label: "Versichert",
           coverageEffect: "INCLUDED",
           sourceBlockIds: [blockId],
         },
