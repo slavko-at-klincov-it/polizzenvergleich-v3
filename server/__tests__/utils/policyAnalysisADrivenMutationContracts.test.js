@@ -96,26 +96,54 @@ function response(unit) {
       semanticClasses: ["STRUCTURE"],
       requirements: [],
     };
+  const text = unit.source.combinedText;
+  const exclusion = text.match(
+    /(?:nicht\s+versichert|vom\s+Schutz\s+ausgenommen)/iu
+  );
+  const inclusion = text.match(/(?:versichert\s+sind|mitversichert)/iu);
+  const effect = exclusion || inclusion;
+  const effectBlock = effect
+    ? unit.source.blocks.find(({ exactText }) =>
+        exactText
+          .toLocaleLowerCase("de-AT")
+          .includes(effect[0].toLocaleLowerCase("de-AT"))
+      )
+    : null;
+  const operative = Boolean(effectBlock);
   return {
     unitId: unit.unitId,
-    primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-    semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
-    requirements: unit.source.blocks.map((block) => ({
-      displayLabel: block.exactText,
-      components: [
-        {
-          type: "OBJECT",
-          label: block.exactText,
-          sourceBlockIds: [block.blockId],
-        },
-        {
-          type: "COVERAGE_EFFECT",
-          label: block.exactText,
-          coverageEffect: "INCLUDED",
-          sourceBlockIds: [block.blockId],
-        },
-      ],
-    })),
+    primaryClass: exclusion
+      ? "EXCLUSION"
+      : operative
+        ? "OPERATIVE_COVERAGE_STATEMENT"
+        : "INSURED_OBJECT",
+    semanticClasses: exclusion
+      ? ["EXCLUSION", "INSURED_OBJECT"]
+      : operative
+        ? ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"]
+        : ["INSURED_OBJECT"],
+    requirements: [
+      {
+        displayLabel: text,
+        components: [
+          {
+            type: "OBJECT",
+            label: text,
+            sourceBlockIds: unit.source.blockIds,
+          },
+          ...(operative
+            ? [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: effect[0],
+                  coverageEffect: exclusion ? "EXCLUDED" : "INCLUDED",
+                  sourceBlockIds: [effectBlock.blockId],
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
   };
 }
 

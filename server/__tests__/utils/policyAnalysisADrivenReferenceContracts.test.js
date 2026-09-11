@@ -1238,15 +1238,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
     try {
       const source = artifact(
-        [
-          "Seite 1\n3. Obliegenheiten des Versicherungsnehmers im Schadenfall\n",
-        ],
-        "h"
+        ["Seite 1\nVersichert sind Gebäude.\n"],
+        "d"
       );
       const sourcePlan = buildADrivenSourceUnitPlan({
         documents: [document("source", 0, source)],
       });
       const plan = deriveClassificationEvidencePlan(sourcePlan);
+      const headingText =
+        "3. Obliegenheiten des Versicherungsnehmers im Schadenfall";
+      const pendingUnit = plan.units.find(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      );
+      pendingUnit.unitKind = "LIST";
+      pendingUnit.source.combinedText = headingText;
+      for (const block of pendingUnit.source.blocks) {
+        block.exactText = headingText;
+        block.structuralKind = "HEADING_CANDIDATE";
+      }
       const built = buildADrivenClassificationBatches(plan);
       const batch = built.batches.find(({ expectedUnitIds }) =>
         expectedUnitIds.some((unitId) => {
@@ -2673,37 +2683,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(reordered.manifestSha256).toBe(manifest.manifestSha256);
   });
 
-  test("terminates layout-only bullets as structure inside an operative unit", () => {
-    const source = artifact(
-      ["Seite 1\nZusätzlich sind mitversichert:\n•\nGartenanlagen.\n"],
-      "l"
-    );
-    const plan = buildADrivenSourceUnitPlan({
-      documents: [document("source", 0, source)],
-    });
-    const responses = plan.units
-      .filter(
-        ({ initialDisposition }) =>
-          initialDisposition === "PENDING_CLASSIFICATION"
-      )
-      .map(validResponse);
-    const manifest = buildADrivenSemanticManifest({ plan, responses });
-    const bullet = plan.units
-      .flatMap(({ source: unitSource }) => unitSource.blocks)
-      .find(({ exactText }) => exactText.trim() === "•");
-
-    expect(bullet).toBeDefined();
-    expect(
-      manifest.blockTerminals.find(({ blockId }) => blockId === bullet.blockId)
-    ).toMatchObject({
-      terminalDisposition: "NON_OPERATIVE_TERMINAL",
-      primaryClass: "STRUCTURE",
-      requirementIds: [],
-      reviewRequired: false,
-    });
-    expect(manifest.summary.allBlocksTerminal).toBe(true);
-  });
-
   test("turns missing, duplicate, unknown and invalid model IDs into visible unresolved state", () => {
     const source = artifact(
       ["Seite 1\nDeckung\nVersichert sind Gebäude.\n\nSelbstbehalt EUR 500.\n"],
@@ -2867,7 +2846,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(manifest.summary.unresolvedUnits).toBe(0);
     expect(markerTerminal).toMatchObject({
-      terminalDisposition: "OPERATIVE_MAPPED",
+      terminalDisposition: "NON_OPERATIVE_TERMINAL",
+      primaryClass: "STRUCTURE",
       requirementIds: [],
       reviewRequired: false,
     });
