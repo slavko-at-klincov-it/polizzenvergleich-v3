@@ -29,6 +29,9 @@ const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const {
+  buildADrivenAStatusAudit,
+} = require("../../utils/policyAnalysis/aDrivenAStatusAudit");
+const {
   batchResultFile,
   processClassificationBatches,
   requestCompletionWithTimeout,
@@ -1572,6 +1575,86 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       coveredComponents: 1,
       acceptanceReady: false,
     });
+  });
+
+  test("audits ownership, response IDs, nonoperative risk and both crosswalk directions separately", () => {
+    const source = artifact(
+      ["Seite 1\nDeckung\nVersichert sind Gebäude.\n"],
+      "f"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const classificationBatches = buildADrivenClassificationBatches(plan);
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map(validResponse);
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const dynamicRequirement = manifest.requirements[0];
+    const dynamicObject = dynamicRequirement.components.find(
+      ({ type }) => type === "OBJECT"
+    );
+    const legacyManifest = {
+      manifestSha256: "a".repeat(64),
+      requirements: [
+        {
+          requirementId: "PR-01",
+          displayLabel: "Gebäude",
+          components: [
+            {
+              id: "object",
+              label: "Gebäude",
+              factRole: "INSURED_OBJECT",
+              sourceSpanIds: ["span"],
+            },
+          ],
+          sourceSpans: [
+            {
+              spanId: "span",
+              blockIds: dynamicObject.sourceBlockIds,
+            },
+          ],
+        },
+      ],
+    };
+    const audit = buildADrivenAStatusAudit({
+      plan,
+      manifest,
+      responses,
+      classificationBatches,
+      batchResults: classificationBatches.batches.map((batch) => ({
+        batchId: batch.batchId,
+        validation: { passed: true },
+      })),
+      legacyManifest,
+    });
+
+    expect(audit.summary).toMatchObject({
+      sourceOwnershipPassed: true,
+      responseEnvelopePassed: true,
+      sourceReferenceIntegrityPassed: true,
+      unresolvedUnits: 0,
+      missingLegacyRequirements: 0,
+      missingLegacyComponents: 0,
+      semanticCrosswalkApproved: false,
+      acceptanceReady: false,
+    });
+    expect(audit.componentCrosswalk[0]).toMatchObject({
+      relationCandidate: "ONE_TO_ONE_CANDIDATE",
+      compatibleDynamicTargets: [
+        expect.objectContaining({
+          dynamicComponentId: dynamicObject.componentId,
+        }),
+      ],
+    });
+    expect(audit.dynamicComponentCrosswalk).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ relationCandidate: "ADDITIONAL" }),
+      ])
+    );
   });
 });
 
