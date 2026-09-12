@@ -270,6 +270,7 @@ function terminalRiskAssessment({ plan, manifest }) {
 
 function buildAutomatedADrivenIntegrityReceipt({
   plan,
+  classificationPlan = plan,
   classificationBatches,
   batchResults,
   responses,
@@ -281,6 +282,14 @@ function buildAutomatedADrivenIntegrityReceipt({
 } = {}) {
   validateSourceUnitPlan(plan);
   validateClassificationBatches(classificationBatches, plan);
+  if (
+    classificationPlan?.planSha256 !== plan.planSha256 ||
+    stableStringify(classificationPlan.documents) !==
+      stableStringify(plan.documents) ||
+    stableStringify(classificationPlan.summary) !==
+      stableStringify(plan.summary)
+  )
+    throw gateError("LF_A_AUTOMATED_GATE_CLASSIFICATION_CONTEXT_INVALID");
   validateADrivenSemanticManifest(manifest);
   if (
     !Array.isArray(batchResults) ||
@@ -303,7 +312,7 @@ function buildAutomatedADrivenIntegrityReceipt({
   )
     throw gateError("LF_A_AUTOMATED_GATE_RESPONSES_MISMATCH");
   const rebuiltManifest = buildADrivenSemanticManifest({
-    plan,
+    plan: classificationPlan,
     responses,
     semanticSignalContractId: manifest.semanticSignalContractId,
   });
@@ -380,7 +389,10 @@ function buildAutomatedADrivenIntegrityReceipt({
       stableStringify([...plannedBlockKeys].sort())
   )
     throw gateError("LF_A_AUTOMATED_GATE_BLOCK_TERMINALS_INVALID");
-  const terminalRisk = terminalRiskAssessment({ plan, manifest });
+  const terminalRisk = terminalRiskAssessment({
+    plan: classificationPlan,
+    manifest,
+  });
   if (
     terminalRisk.suspiciousNonOperativeUnits.length ||
     terminalRisk.suspiciousOperativeUnits.length

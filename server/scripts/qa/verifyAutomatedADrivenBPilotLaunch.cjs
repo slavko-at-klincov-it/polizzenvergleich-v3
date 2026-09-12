@@ -19,6 +19,7 @@ const {
   buildAutomatedADrivenIntegrityReceipt,
 } = require("../../utils/policyAnalysis/aDrivenAutomaticIntegrityGate");
 const {
+  deriveClassificationEvidencePlan,
   validateCompletedRun,
 } = require("./runADrivenReferenceClassification.cjs");
 
@@ -133,6 +134,7 @@ function main(argv = process.argv.slice(2)) {
   const plan = readJson(planFile, "LF_A_AUTOMATED_GATE_SOURCE_PLAN");
   if (stableStringify(reconstructedPlan) !== stableStringify(plan.value))
     throw new Error("LF_A_AUTOMATED_GATE_SOURCE_PLAN_RECONSTRUCTION_MISMATCH");
+  const classificationPlan = deriveClassificationEvidencePlan(plan.value);
   const batchesFile = path.join(
     args.classificationRoot,
     "classification-batches.private.json"
@@ -158,7 +160,7 @@ function main(argv = process.argv.slice(2)) {
       model: summary.value.model?.id,
       modelContext: summary.value.model?.loadedContextLength,
     },
-    plan: plan.value,
+    plan: classificationPlan,
     batches: batches.value,
     summaryFile,
   });
@@ -181,6 +183,7 @@ function main(argv = process.argv.slice(2)) {
   );
   const receipt = buildAutomatedADrivenIntegrityReceipt({
     plan: plan.value,
+    classificationPlan,
     classificationBatches: batches.value,
     batchResults,
     responses: responses.value,
