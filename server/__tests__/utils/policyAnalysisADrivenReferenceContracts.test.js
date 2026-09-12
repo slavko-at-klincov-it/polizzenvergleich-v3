@@ -5896,7 +5896,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   ])(
     "normalizes a positive more-favorable selection rule: %s",
     (sourceText, expectedTypes, expectedLabels) => {
-      const source = artifact([`Seite 1\n${sourceText}\n`], sourceText);
+      const source = artifact([`Seite 1\n${sourceText}\n`], "8");
       const plan = buildADrivenSourceUnitPlan({
         documents: [document("source", 0, source)],
       });
@@ -5963,7 +5963,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   ])(
     "does not normalize a non-positive selection statement: %s",
     (sourceText) => {
-      const source = artifact([`Seite 1\n${sourceText}\n`], sourceText);
+      const source = artifact([`Seite 1\n${sourceText}\n`], "9");
       const plan = buildADrivenSourceUnitPlan({
         documents: [document("source", 0, source)],
       });
