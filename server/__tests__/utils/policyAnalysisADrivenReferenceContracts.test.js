@@ -6361,6 +6361,114 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(messages[0].content).toContain(
       "alle candidateIds [] und selectedCandidateIds []"
     );
+    expect(messages[0].content).toContain(
+      "darf selectedCandidateIds niemals leer sein"
+    );
+  });
+
+  test("retries a partial NOT_SUPPORTED response whose selected candidate union is empty", async () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude sind am Versicherungsort erwähnt.";
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: "candidate-one",
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-one",
+            channels: ["DINGHY"],
+            sourceSpans: [
+              {
+                spanId: "span-one",
+                exactText,
+                exactTextSha256: crypto
+                  .createHash("sha256")
+                  .update(exactText)
+                  .digest("hex"),
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const batch = buildADrivenCounterpartDecisionPlan(searchExecution, {
+      maximumPackages: 1,
+      maximumCharacters: 14_000,
+    }).batches.find(({ packages }) => packages[0].semanticChecks.length > 1);
+    const partialResponses = batch.packages.map((item) => ({
+      packageId: item.packageId,
+      decision: "NOT_SUPPORTED",
+      selectedCandidateIds: [],
+      dimensionChecks: item.semanticChecks.map(
+        ({ checkId, dimension }, index) => ({
+          checkId,
+          dimension,
+          outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
+          candidateIds: index === 0 ? ["candidate-one"] : [],
+        })
+      ),
+    }));
+    const repairedResponses = partialResponses.map((response) => ({
+      ...response,
+      selectedCandidateIds: ["candidate-one"],
+    }));
+    const client = {
+      chat: {
+        completions: {
+          create: jest
+            .fn()
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                { message: { content: JSON.stringify(partialResponses) } },
+              ],
+              usage: {},
+            })
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                { message: { content: JSON.stringify(repairedResponses) } },
+              ],
+              usage: {},
+            }),
+        },
+      },
+    };
+
+    const result = await runCounterpartDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      searchExecution,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts[0]).toMatchObject({
+      acceptedPackages: 0,
+      pendingPackages: 1,
+      validationPassed: false,
+    });
+    expect(
+      client.chat.completions.create.mock.calls[1][0].messages.at(-1).content
+    ).toContain("darf bei einem MATCH oder MISMATCH niemals leer sein");
   });
 
   test("keeps a real-sized compacted candidate package inside the default decision budget", () => {
@@ -6850,7 +6958,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       fs.readdirSync(path.join(output, "batches"))[0]
     );
     const predecessor = JSON.parse(fs.readFileSync(completedBatch, "utf8"));
-    predecessor.promptContractId = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
+    predecessor.promptContractId = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V2";
     predecessor.promptSha256 = "a".repeat(64);
     fs.writeFileSync(completedBatch, `${JSON.stringify(predecessor)}\n`);
 
