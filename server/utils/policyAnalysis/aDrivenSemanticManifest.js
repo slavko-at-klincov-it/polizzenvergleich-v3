@@ -298,6 +298,20 @@ function signalApplies(signal, matchedEvidence) {
   return true;
 }
 
+function signalBelongsToRequirement(unit, requirement, signal, blockId) {
+  if ((unit.governingContext?.blockIds || []).includes(blockId)) return true;
+  if (!requirement.displayLabel) return true;
+  const localTexts = [
+    requirement.displayLabel,
+    ...requirement.components.flatMap((component) =>
+      component.sourceBlockIds.includes(blockId) ? [component.label] : []
+    ),
+  ];
+  return localTexts.some(
+    (localText) => matchesForPattern(signal.pattern, localText).length > 0
+  );
+}
+
 function requirementRoleEvidenceDiagnostics(unit, requirements) {
   const blocksById = new Map(
     evidenceBlocks(unit).map((block) => [block.blockId, block])
@@ -312,11 +326,22 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
     return REQUIREMENT_ROLE_SIGNALS.flatMap((signal) => {
       const matchedEvidence = selectedBlocks.flatMap((block) => {
         const matches = matchesForPattern(signal.pattern, block.exactText);
-        return matches.map((match) => ({
-          blockId: block.blockId,
-          exactText: block.exactText,
-          match,
-        }));
+        return matches.flatMap((match) =>
+          signalBelongsToRequirement(
+            unit,
+            requirement,
+            signal,
+            block.blockId
+          )
+            ? [
+                {
+                  blockId: block.blockId,
+                  exactText: block.exactText,
+                  match,
+                },
+              ]
+            : []
+        );
       });
       if (!matchedEvidence.length) return [];
       return matchedEvidence.flatMap((evidence) => {
@@ -362,11 +387,22 @@ function materializeSharedSignalComponents(unit, requirements) {
       .filter(Boolean);
     for (const signal of REQUIREMENT_ROLE_SIGNALS) {
       const matchedEvidence = selectedBlocks.flatMap((block) =>
-        matchesForPattern(signal.pattern, block.exactText).map((match) => ({
-          blockId: block.blockId,
-          exactText: block.exactText,
-          match,
-        }))
+        matchesForPattern(signal.pattern, block.exactText).flatMap((match) =>
+          signalBelongsToRequirement(
+            unit,
+            requirement,
+            signal,
+            block.blockId
+          )
+            ? [
+                {
+                  blockId: block.blockId,
+                  exactText: block.exactText,
+                  match,
+                },
+              ]
+            : []
+        )
       );
       for (const evidence of matchedEvidence) {
         if (

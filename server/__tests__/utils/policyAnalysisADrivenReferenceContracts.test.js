@@ -487,6 +487,58 @@ describe("requirement-local semantic evidence completeness", () => {
     ]);
   });
 
+  test("ignores a signal that only spills into the same physical source block", () => {
+    const unit = evidenceUnit(
+      ["shared-line", "Blitzschlag – soweit Eigentum besteht – bis 1 %"]
+    );
+    const diagnostics = requirementRoleEvidenceDiagnostics(unit, [
+      {
+        ...requirement(
+          ["shared-line"],
+          [
+            component("PERIL_OR_CAUSE", "shared-line", {
+              label: "Blitzschlag",
+            }),
+          ]
+        ),
+        displayLabel: "Blitzschlag",
+      },
+    ]);
+
+    expect(diagnostics).toEqual([]);
+  });
+
+  test("keeps a governing-context signal mandatory for every dependent requirement", () => {
+    const unit = {
+      ...evidenceUnit(["item", "Nebengebäude"]),
+      governingContext: {
+        blockIds: ["governor"],
+        blocks: [
+          {
+            blockId: "governor",
+            exactText: "Mitversichert, wenn das Gebäude betroffen ist",
+          },
+        ],
+      },
+    };
+    const diagnostics = requirementRoleEvidenceDiagnostics(unit, [
+      {
+        ...requirement(
+          ["governor", "item"],
+          [component("OBJECT", "item", { label: "Nebengebäude" })]
+        ),
+        displayLabel: "Nebengebäude",
+      },
+    ]);
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        signalId: "EXPLICIT_CONDITION",
+        matchedEvidence: [expect.objectContaining({ blockId: "governor" })],
+      }),
+    ]);
+  });
+
   test("materializes a unique source-bound governor role into a sibling requirement", () => {
     const unit = evidenceUnit(
       ["governor", "Mitversichert, wenn das Gebäude betroffen ist"],
