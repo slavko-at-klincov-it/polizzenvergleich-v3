@@ -380,6 +380,72 @@ function mergeCompatibleDuplicateUnitResponses(responses) {
   };
 }
 
+function attachTopLevelRequirementFragments(responses, expectedUnitIds) {
+  if (expectedUnitIds.length !== 1) return { responses, envelopeRepair: null };
+  const expectedUnitId = expectedUnitIds[0];
+  const owners = responses.filter(
+    (response) => response?.unitId === expectedUnitId
+  );
+  const fragments = responses.filter((response) => !response?.unitId);
+  const fragmentsAreUnambiguous = fragments.every(
+    (fragment) =>
+      fragment &&
+      typeof fragment === "object" &&
+      !Array.isArray(fragment) &&
+      typeof fragment.displayLabel === "string" &&
+      fragment.displayLabel.trim().length > 0 &&
+      Array.isArray(fragment.components) &&
+      fragment.components.length > 0 &&
+      Object.keys(fragment).every((key) =>
+        ["displayLabel", "components"].includes(key)
+      )
+  );
+  if (
+    owners.length !== 1 ||
+    fragments.length === 0 ||
+    responses.length !== owners.length + fragments.length ||
+    !Array.isArray(owners[0].requirements) ||
+    !fragmentsAreUnambiguous
+  )
+    return { responses, envelopeRepair: null };
+  return {
+    responses: [
+      {
+        ...owners[0],
+        requirements: [...owners[0].requirements, ...fragments],
+      },
+    ],
+    envelopeRepair: {
+      applied: true,
+      strategy: "ATTACH_UNAMBIGUOUS_TOP_LEVEL_REQUIREMENT_FRAGMENTS",
+      unitId: expectedUnitId,
+      attachedRequirements: fragments.length,
+    },
+  };
+}
+
+function listSegmentRepairSkeletons(batch, diagnostics) {
+  const requested = new Map(
+    diagnostics
+      .filter(({ code, unitId, segmentId }) =>
+        ["LIST_CONTINUATION_SEGMENT_SPLIT", "LIST_SOURCE_SEGMENTS_MERGED"].includes(
+          code
+        ) && unitId && segmentId
+      )
+      .map(({ unitId, segmentId }) => [`${unitId}:${segmentId}`, true])
+  );
+  return batch.units.flatMap((unit) =>
+    (unit.logicalSourceSegments || [])
+      .filter(({ segmentId }) => requested.has(`${unit.unitId}:${segmentId}`))
+      .map(({ segmentId, combinedText, blockIds }) => ({
+        unitId: unit.unitId,
+        segmentId,
+        exactDisplayLabel: combinedText,
+        requiredBlockIds: blockIds,
+      }))
+  );
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -1266,8 +1332,16 @@ async function runBatch({
       const rawText = completion.choices?.[0]?.message?.content || "";
       observedRawText = rawText;
       const parsed = parseJsonArray(rawText);
-      const { responses: mergedResponsesFromEnvelope, envelopeRepair } =
-        mergeCompatibleDuplicateUnitResponses(parsed.responses);
+      const fragmentRepair = attachTopLevelRequirementFragments(
+        parsed.responses,
+        workingBatch.expectedUnitIds
+      );
+      const duplicateRepair = mergeCompatibleDuplicateUnitResponses(
+        fragmentRepair.responses
+      );
+      const mergedResponsesFromEnvelope = duplicateRepair.responses;
+      const envelopeRepair =
+        fragmentRepair.envelopeRepair || duplicateRepair.envelopeRepair;
       const { responses, componentRepairs } =
         normalizeUnambiguousComponentTypes(
           mergedResponsesFromEnvelope,
@@ -1389,6 +1463,15 @@ async function runBatch({
         " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE bedeutet: Ersetze das displayLabel am genannten requirementIndex durch einen exakt kopierten zusammenhängenden Ausschnitt aus allowedEvidence; erhalte insbesondere OCR-Schreibfehler, Leerzeichen und Zeilenumbrüche. REQUIREMENT_SOURCE_TEXT_INVALID bedeutet: Die Vereinigungsmenge der Komponenten-sourceBlockIds dieser Requirement muss jeden Block enthalten, aus dem ihr displayLabel Text übernimmt. Wenn requiredSourceBlockIds angegeben sind, ergänze eine fachlich passende Komponente für den fehlenden Randblock oder verkürze displayLabel auf einen exakt zitierten zusammenhängenden Ausschnitt aus selectedSourceExactText; erfinde keine ID. COVERAGE_EFFECT_LABEL_INVALID bedeutet: Das bisherige label ist keine Deckungswirkung. Verwende ausschließlich einen wörtlichen Wirkungsausdruck samt blockId aus allowedCoverageEffectEvidence. Ist diese Liste leer, lösche die COVERAGE_EFFECT-Komponente und entferne die unbelegte operative Deckungsklasse. Bei einer EXCLUSION bedeutet der wörtliche Ausdruck „ausgenommen sind“ die Deckungswirkung EXCLUDED und ist als eigene COVERAGE_EFFECT-Komponente auszugeben. Eine nummerierte, ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit ohne eigenes Prädikat oder Wirkungswort ist STRUCTURE mit requirements:[]; übertrage die Wirkung der nachfolgenden Klausel niemals auf diese Überschrift. Eine Regel, die ausschließlich beschreibt, wozu eine Versicherungssumme dient, wie sie aufgeteilt wird oder wonach sich ihre Verteilung richtet, ist DEFINITION mit FACT_ROLE-Komponenten und keine OPERATIVE_COVERAGE_STATEMENT. Eine ausdrückliche Erweiterung der Anwendbarkeit eines Gesetzesparagraphen auf weitere Sparten ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT mit PRECEDENCE_OR_REPLACEMENT-Komponente und keine Deckungswirkung. Wörter wie „angerechnet“, „gelten als verloren“, „Bewertung“, „Ersatzwert“, „Restwert“, „Neuwert“ und „Zeitwert“ beschreiben für sich eine Bewertungs- oder Definitionsregel, keine Deckungswirkung und keine Gefahr. Verwende dafür DEFINITION mit einer wörtlichen FACT_ROLE-Komponente; enthält die Regel eine konkrete Grenze, ergänze LIMIT mit VALUE_AND_UNIT und LIMIT_BASIS. „gilt als vereinbart“ ist nur eine Vereinbarungseinleitung; wenn derselbe Satz die tatsächliche Leistung „Neuwertentschädigung geleistet wird“ enthält, ist ausschließlich dieser Leistungsausdruck der COVERAGE_EFFECT. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihren COVERAGE_EFFECT stattdessen in jeder fachlichen Requirement der folgenden Item-Segmente. Der gemeinsame Governor darf in mehreren Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente. UNKNOWN_UNIT_ID bedeutet: Erzeuge niemals eine Ersatz- oder Unter-ID. Ordne alle fachlich getrennten Aussagen als mehrere requirements demselben einzigen erwarteten unitId-Objekt zu. Das gilt auch für lange Fließtextklauseln; alle uncoveredBlocks müssen durch fachlich passende Komponenten unter dieser unveränderten unitId belegt werden.";
       messages.at(-1).content +=
         " REQUIREMENT_ROLE_EVIDENCE_UNMAPPED bedeutet: In der exakt genannten Requirement fehlt für matchedEvidence eine anforderungsbezogene Rollenkomponente. Ergänze sie in derselben Requirement und zitiere den genannten blockId; leihe keine Komponente aus einer benachbarten Requirement. EXPLICIT_CONDITION benötigt CONDITION. EXPLICIT_DEDUCTIBLE benötigt DEDUCTIBLE. EXPLICIT_QUANTIFIED_VALUE benötigt VALUE_AND_UNIT mit wörtlichem rawValue. EXPLICIT_LIMIT_BASIS benötigt LIMIT_BASIS. EXPLICIT_NON_NUMERIC_LIMIT benötigt LIMIT_BASIS. EXPLICIT_EXCLUSION benötigt eine eigene COVERAGE_EFFECT-Komponente mit coverageEffect EXCLUDED und einem wörtlichen Ausschlussausdruck als label.";
+      const segmentSkeletons = listSegmentRepairSkeletons(
+        workingBatch,
+        repairDiagnostics
+      );
+      if (segmentSkeletons.length)
+        messages.at(-1).content +=
+          ` Verbindliche serverseitige Requirement-Skelette: ${JSON.stringify(
+            segmentSkeletons
+          )}. Erzeuge für jedes Skelett genau einen getrennten Eintrag innerhalb des requirements-Arrays des zugehörigen unitId-Objekts. exactDisplayLabel ist wörtlich zu übernehmen; requiredBlockIds müssen gemeinsam von dessen Komponenten zitiert werden. Gib niemals eine Requirement als eigenes Top-Level-Arrayobjekt aus und vereinige niemals zwei segmentIds.`;
     } catch (error) {
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
@@ -1711,6 +1794,7 @@ if (require.main === module)
 module.exports = {
   CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
   acceptedResponsesFromAttemptJournal,
+  attachTopLevelRequirementFragments,
   batchResultFile,
   classificationBatch,
   createAttemptRecorder,

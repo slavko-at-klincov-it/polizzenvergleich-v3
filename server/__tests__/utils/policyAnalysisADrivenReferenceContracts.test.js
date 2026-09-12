@@ -34,6 +34,7 @@ const {
   buildADrivenAStatusAudit,
 } = require("../../utils/policyAnalysis/aDrivenAStatusAudit");
 const {
+  attachTopLevelRequirementFragments,
   batchResultFile,
   deriveClassificationEvidencePlan,
   processClassificationBatches,
@@ -591,6 +592,45 @@ describe("requirement-local semantic evidence completeness", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
+  test("attaches only unambiguous top-level requirement fragments to one unit", () => {
+    const owner = {
+      unitId: "unit-one",
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [{ displayLabel: "Objekt A", components: [{}] }],
+    };
+    const fragment = { displayLabel: "Objekt B", components: [{}] };
+
+    expect(
+      attachTopLevelRequirementFragments([owner, fragment], ["unit-one"])
+    ).toEqual({
+      responses: [
+        {
+          ...owner,
+          requirements: [...owner.requirements, fragment],
+        },
+      ],
+      envelopeRepair: {
+        applied: true,
+        strategy: "ATTACH_UNAMBIGUOUS_TOP_LEVEL_REQUIREMENT_FRAGMENTS",
+        unitId: "unit-one",
+        attachedRequirements: 1,
+      },
+    });
+    expect(
+      attachTopLevelRequirementFragments(
+        [owner, { ...fragment, unitId: "unknown" }],
+        ["unit-one"]
+      ).envelopeRepair
+    ).toBeNull();
+    expect(
+      attachTopLevelRequirementFragments([owner, fragment], [
+        "unit-one",
+        "unit-two",
+      ]).envelopeRepair
+    ).toBeNull();
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;
