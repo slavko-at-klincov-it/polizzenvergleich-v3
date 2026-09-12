@@ -174,7 +174,7 @@ function parseTargets(value) {
 }
 
 function assertNoUnexpectedRows(sheet, firstUnexpectedRow, idColumn) {
-  for (let row = firstUnexpectedRow; row <= sheet.actualRowCount; row += 1) {
+  for (let row = firstUnexpectedRow; row <= sheet.rowCount; row += 1) {
     const cell = sheet.getCell(row, idColumn);
     if (primitiveCellValue(cell, `${sheet.name}!${cell.address}`) !== null)
       throw workbookError(
