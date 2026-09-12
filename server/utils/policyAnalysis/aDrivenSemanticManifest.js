@@ -372,11 +372,7 @@ function requirementSignalEvidence(unit, requirement, signal) {
       .map(({ exactText }) => exactText)
       .join("\n");
     for (const match of matchesForPattern(signal.pattern, combinedText)) {
-      const blockIds = minimalSourceRange(
-        unit,
-        match,
-        [...selectedBlockIds]
-      );
+      const blockIds = minimalSourceRange(unit, match, [...selectedBlockIds]);
       if (!blockIds?.length) continue;
       evidence.push({
         blockId: blockIds[0],
