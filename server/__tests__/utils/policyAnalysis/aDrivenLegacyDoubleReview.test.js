@@ -601,7 +601,8 @@ describe("V12 283/631 double-review contract", () => {
       authorityPublicKeyFingerprintSha256,
       reviewerSlot: "A",
     });
-    invalidReuseInput.independenceAttestation.reviewPerformedIndependently = true;
+    invalidReuseInput.independenceAttestation.reviewPerformedIndependently =
+      true;
     invalidReuseInput.decisions = approvableLegacyDecisions(draft);
     invalidReuseInput.decisions[1] = {
       ...invalidReuseInput.decisions[1],
@@ -630,7 +631,8 @@ describe("V12 283/631 double-review contract", () => {
       authorityPublicKeyFingerprintSha256,
       reviewerSlot: "A",
     });
-    invalidSplitCauseInput.independenceAttestation.reviewPerformedIndependently = true;
+    invalidSplitCauseInput.independenceAttestation.reviewPerformedIndependently =
+      true;
     invalidSplitCauseInput.decisions = approvableLegacyDecisions(draft);
     invalidSplitCauseInput.decisions[0].rootCauseDisposition =
       "SPLIT_OR_MERGE_RELATION";
