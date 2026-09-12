@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V27";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V28";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -46,6 +46,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V24",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V25",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V26",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V27",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -818,6 +819,13 @@ function normalizeConditionalMembershipObjects(requirements, unit) {
         return result;
       });
       if (conditionSourceBlockIds.length === 0) return requirement;
+      const hasObjectOutsideCondition = components.some((component) => {
+        if (component?.type !== "OBJECT") return false;
+        const label = String(component.label || "")
+          .replace(/\s+/gu, " ")
+          .trim();
+        return label && !normalizedCondition.includes(label);
+      });
       const rejected = components.filter((component) => {
         if (component?.type !== "OBJECT") return false;
         const label = String(component.label || "")
@@ -826,7 +834,7 @@ function normalizeConditionalMembershipObjects(requirements, unit) {
         return (
           label &&
           normalizedCondition.includes(label) &&
-          roleOrActionPattern.test(label)
+          (hasObjectOutsideCondition || roleOrActionPattern.test(label))
         );
       });
       if (rejected.length === 0) return requirement;
@@ -1146,6 +1154,53 @@ function normalizeNonPhysicalCostObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeCostPurposeObjectComponents(requirements) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = requirement.components || [];
+      const hasCostRole = components.some(
+        (component) =>
+          component?.type === "FACT_ROLE" &&
+          /^\s*[-•]?\s*(?:Mehr)?\p{L}*kosten\b/iu.test(
+            String(component.label || "")
+          )
+      );
+      if (!hasCostRole) return requirement;
+      return {
+        ...requirement,
+        components: components.map((component, componentIndex) => {
+          if (component?.type !== "OBJECT") return component;
+          const label = String(component.label || "");
+          let toType = null;
+          if (
+            /^\s*(?:Tätigkeiten|Leistungen|Planung|Bauleitung|Projektabwicklung|Ausschreibung)\b/iu.test(
+              label
+            )
+          )
+            toType = "FACT_ROLE";
+          else if (
+            /^\s*(?:Wiederaufbau|Wiederherstellung|Wiederbeschaffung|Reparatur)\b[\s\S]*\berforderlich(?:e[snmr]?)?(?:\s+sind)?\b/iu.test(
+              label
+            )
+          )
+            toType = "CONDITION";
+          if (!toType) return component;
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "NORMALIZE_COST_PURPOSE_OBJECT_ROLE",
+            fromType: "OBJECT",
+            toType,
+          });
+          return { ...component, type: toType };
+        }),
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeAtomicCostRoleComponents(requirements, unit) {
   const repairs = [];
   const normalizedRequirements = requirements.map(
@@ -1155,6 +1210,81 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
         (component, componentIndex) => {
           if (component?.type !== "FACT_ROLE") return [component];
           const label = String(component.label || "");
+          const costDefinition =
+            /^\s*[-•]?\s*(?<role>Mehrkosten\s+für\s+[^;\n-]+?)\s+-\s+(?<definition>das\s+sind\s+Kosten[\s\S]*?ergeben;?)\s*$/iu.exec(
+              label
+            );
+          if (costDefinition?.groups) {
+            const roleSourceBlockIds = sourceBlockIdsForExactSpan(
+              unit,
+              costDefinition.groups.role
+            );
+            const definitionSourceBlockIds = sourceBlockIdsForExactSpan(
+              unit,
+              costDefinition.groups.definition
+            );
+            if (roleSourceBlockIds.length && definitionSourceBlockIds.length) {
+              repairs.push({
+                requirementIndex,
+                componentIndex,
+                action: "SPLIT_COST_DEFINITION_ROLE",
+              });
+              return [
+                {
+                  ...component,
+                  label: costDefinition.groups.role,
+                  sourceBlockIds: roleSourceBlockIds,
+                },
+                {
+                  type: "DEFINITION",
+                  label: costDefinition.groups.definition,
+                  sourceBlockIds: definitionSourceBlockIds,
+                },
+              ];
+            }
+          }
+          const priceIncrease =
+            /^\s*[-•]?\s*(?<role>Mehrkosten\s+infolge\s+Preissteigerung)\s+(?<temporal>zwischen\s+dem\s+Eintritt\s+des\s+Schadenereignisses\s+und\s+der\s+Wiederherstellung\s+oder\s+Wiederbeschaffung)\s+entstandenen\s+(?<result>Erhöhung\s+der\s+Ersatzleistung);?\s*$/iu.exec(
+              label
+            );
+          if (priceIncrease?.groups) {
+            const components = [
+              {
+                ...component,
+                label: priceIncrease.groups.role,
+                sourceBlockIds: sourceBlockIdsForExactSpan(
+                  unit,
+                  priceIncrease.groups.role
+                ),
+              },
+              {
+                type: "TEMPORAL_VALIDITY",
+                label: priceIncrease.groups.temporal,
+                sourceBlockIds: sourceBlockIdsForExactSpan(
+                  unit,
+                  priceIncrease.groups.temporal
+                ),
+              },
+              {
+                type: "FACT_ROLE",
+                label: priceIncrease.groups.result,
+                sourceBlockIds: sourceBlockIdsForExactSpan(
+                  unit,
+                  priceIncrease.groups.result
+                ),
+              },
+            ];
+            if (
+              components.every(({ sourceBlockIds }) => sourceBlockIds.length)
+            ) {
+              repairs.push({
+                requirementIndex,
+                componentIndex,
+                action: "SPLIT_PRICE_INCREASE_COST_ROLE",
+              });
+              return components;
+            }
+          }
           const lossWithObjectScope =
             /^\s*(?<role>(?:der\s+)?(?:Miet(?:verlust|ausfall)|Pacht(?:verlust|ausfall)|Ertragsausfall))\s+(?<scope>für\s+[\s\S]*(?:Gebäude|Räum|Einheit|Objekt|Standort|Grundstück)[-\p{L}\s–/]*)\s*$/iu.exec(
               label
@@ -1577,6 +1707,11 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ),
       };
     }
+    const costPurposeObjects =
+      normalizeCostPurposeObjectComponents(requirements);
+    requirements = costPurposeObjects.requirements;
+    for (const repair of costPurposeObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const atomicCostRoles = normalizeAtomicCostRoleComponents(
       requirements,
       unit
@@ -1593,6 +1728,17 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ...response,
         semanticClasses: [
           ...new Set([...(response.semanticClasses || []), "VARIANT"]),
+        ],
+      };
+    if (
+      atomicCostRoles.repairs.some(
+        ({ action }) => action === "SPLIT_COST_DEFINITION_ROLE"
+      )
+    )
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "DEFINITION"]),
         ],
       };
     const tieredLimitBasis = normalizeTieredLimitBasisComponents(

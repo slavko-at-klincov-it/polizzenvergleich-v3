@@ -1973,6 +1973,64 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("removes a condition-only object reference when an operative object exists outside it", () => {
+    const source =
+      "Versichert sind Vorräte, soweit sie zum Gebäude zählen und kein anderer Versicherungsschutz besteht.";
+    const unit = {
+      unitId: "condition-object-reference",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Vorräte",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "OBJECT",
+                  label: "Gebäude",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "CONDITION",
+                  label:
+                    "soweit sie zum Gebäude zählen und kein anderer Versicherungsschutz besteht.",
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["OBJECT", "Vorräte"],
+      [
+        "CONDITION",
+        "soweit sie zum Gebäude zählen und kein anderer Versicherungsschutz besteht.",
+      ],
+    ]);
+  });
+
   test("materializes branch scopes and a limit basis from a coverage governor", () => {
     const first =
       "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und";
@@ -2184,6 +2242,122 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       }
     );
   });
+
+  test("maps cost-purpose pseudo objects to their operative roles", () => {
+    const source =
+      "Kosten für Planung und Tätigkeiten, die für den Wiederaufbau nach einem ersatzpflichtigen Schaden erforderlich sind.";
+    const unit = {
+      unitId: "cost-purpose-roles",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "COST",
+          semanticClasses: ["COST"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Kosten für Planung",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "OBJECT",
+                  label: "Tätigkeiten",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "OBJECT",
+                  label:
+                    "Wiederaufbau nach einem ersatzpflichtigen Schaden erforderlich sind",
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
+    ).toEqual(["FACT_ROLE", "FACT_ROLE", "CONDITION"]);
+  });
+
+  test.each([
+    {
+      source:
+        "- Mehrkosten für bauliche Verbesserungen - das sind Kosten, die sich anlässlich der Wiederherstellung nach einem Schaden ergeben;",
+      expected: [
+        ["FACT_ROLE", "Mehrkosten für bauliche Verbesserungen"],
+        [
+          "DEFINITION",
+          "das sind Kosten, die sich anlässlich der Wiederherstellung nach einem Schaden ergeben;",
+        ],
+      ],
+    },
+    {
+      source:
+        "- Mehrkosten infolge Preissteigerung zwischen dem Eintritt des Schadenereignisses und der Wiederherstellung oder Wiederbeschaffung entstandenen Erhöhung der Ersatzleistung;",
+      expected: [
+        ["FACT_ROLE", "Mehrkosten infolge Preissteigerung"],
+        [
+          "TEMPORAL_VALIDITY",
+          "zwischen dem Eintritt des Schadenereignisses und der Wiederherstellung oder Wiederbeschaffung",
+        ],
+        ["FACT_ROLE", "Erhöhung der Ersatzleistung"],
+      ],
+    },
+  ])(
+    "splits broad cost roles into searchable atoms: $source",
+    ({ source, expected }) => {
+      const unit = {
+        unitId: "broad-cost-role",
+        source: {
+          blockIds: ["block"],
+          combinedText: source,
+          blocks: [{ blockId: "block", exactText: source }],
+        },
+      };
+      const normalized = normalizeUnambiguousComponentTypes(
+        [
+          {
+            unitId: unit.unitId,
+            primaryClass: "COST",
+            semanticClasses: ["COST"],
+            requirements: [
+              {
+                displayLabel: source,
+                components: [
+                  {
+                    type: "FACT_ROLE",
+                    label: source,
+                    sourceBlockIds: ["block"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        [unit]
+      );
+
+      expect(
+        normalized.responses[0].requirements[0].components.map(
+          ({ type, label }) => [type, label]
+        )
+      ).toEqual(expected);
+    }
+  );
 
   test("separates a financial-loss role from its insured-object scope", () => {
     const label =
@@ -3754,7 +3928,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V27");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V28");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
