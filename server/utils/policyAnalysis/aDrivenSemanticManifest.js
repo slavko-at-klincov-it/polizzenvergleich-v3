@@ -20,8 +20,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V3 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V3";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V4 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V4";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V5 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V5";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -159,17 +161,27 @@ const REQUIREMENT_ROLE_SIGNALS_V4 = Object.freeze([
 const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V5 = Object.freeze({
   ...EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V4,
   pattern:
-    /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?!(?:[^.;:]|\.(?=[0-9])){0,420}\bnicht\b))(?:[^.;:]|\.(?=[0-9])){1,420}|(?:ist|sind)\s+(?:der|die)\s+versicherungsnehmer\p{L}*\s+berechtigt(?:[^.;:]|\.(?=[0-9])){1,420}|verzichtet\s+der\s+versicherer\s+(?:[^.;:]|\.(?=\s*[0-9])){0,180}\bauf\s+(?:[^.;:]|\.(?=[0-9])){1,260}|der\s+versicherer\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:bleibt\s+(?:gleichwohl\s+)?(?:die\s+)?|(?:die\s+)?)verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bestehen|bleibt\s+(?:gleichwohl\s+)?bestehen)|(?:erste\s+)?teilzahlung\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bverlangt\s+werden\s+kann|(?:eine\s+)?akontierung\s+(?:[^.;:]|\.(?=[0-9])){0,360}\bvorgenommen|(?:wiederaufbau|wiederherstellung)\s+(?:[^.;:]|\.(?=[0-9])){0,260}\bkann\s+(?:auch\s+)?(?:[^.;:]|\.(?=[0-9])){0,180}\berfolgen|versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bvermindert\s+sich\s+nicht|volle\s+versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bzur\s+verfügung\s+steht|gilt\s+dies\s+nicht\s+als\s+anzeigepflichtig|erfolgt\s+auf\s+verlangen\s+des\s+versicherungsnehmers\s+eine\s+freigabe|vorläufige\s+deckung\s+gilt\s+(?!nicht\b)(?:[^.;:]|\.(?=[0-9])){1,260})\b/giu,
+    /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?!(?:[^.;:]|\.(?=[0-9])){0,420}\bnicht\b))(?:[^.;:]|\.(?=[0-9])){1,420}|verzichtet\s+der\s+versicherer\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bauf\s+(?:[^.;:]|\.(?=[0-9])){1,260}|der\s+versicherer\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:bleibt\s+(?:gleichwohl\s+)?(?:die\s+)?|(?:die\s+)?)verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bestehen|bleibt\s+(?:gleichwohl\s+)?bestehen)|(?:erste\s+)?teilzahlung\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bverlangt\s+werden\s+kann|(?:eine\s+)?akontierung\s+(?:[^.;:]|\.(?=[0-9])){0,360}\bvorgenommen|(?:wiederaufbau|wiederherstellung)\s+(?:[^.;:]|\.(?=[0-9])){0,260}\bkann\s+(?:auch\s+)?(?:[^.;:]|\.(?=[0-9])){0,180}\berfolgen|versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bvermindert\s+sich\s+nicht|volle\s+versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bzur\s+verfügung\s+steht|gilt\s+dies\s+nicht\s+als\s+anzeigepflichtig|erfolgt\s+auf\s+verlangen\s+des\s+versicherungsnehmers\s+eine\s+freigabe|vorläufige\s+deckung\s+gilt\s+(?!nicht\b)(?:[^.;:]|\.(?=[0-9])){1,260})\b/giu,
 });
 const REQUIREMENT_ROLE_SIGNALS_V5 = Object.freeze([
   ...REQUIREMENT_ROLE_SIGNALS_V1,
   EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V5,
+]);
+const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V6 = Object.freeze({
+  ...EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V5,
+  pattern:
+    /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?!(?:[^.;:]|\.(?=[0-9])){0,420}\bnicht\b))(?:[^.;:]|\.(?=[0-9])){1,420}|(?:ist|sind)\s+(?:der|die)\s+versicherungsnehmer\p{L}*\s+berechtigt(?:[^.;:]|\.(?=[0-9])){1,420}|verzichtet\s+der\s+versicherer\s+(?:[^.;:]|\.(?=\s*[0-9])){0,180}\bauf\s+(?:[^.;:]|\.(?=[0-9])){1,260}|der\s+versicherer\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:bleibt\s+(?:gleichwohl\s+)?(?:die\s+)?|(?:die\s+)?)verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bestehen|bleibt\s+(?:gleichwohl\s+)?bestehen)|(?:erste\s+)?teilzahlung\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bverlangt\s+werden\s+kann|(?:eine\s+)?akontierung\s+(?:[^.;:]|\.(?=[0-9])){0,360}\bvorgenommen|(?:wiederaufbau|wiederherstellung)\s+(?:[^.;:]|\.(?=[0-9])){0,260}\bkann\s+(?:auch\s+)?(?:[^.;:]|\.(?=[0-9])){0,180}\berfolgen|versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bvermindert\s+sich\s+nicht|volle\s+versicherungssumme\s+(?:[^.;:]|\.(?=[0-9])){0,120}\bzur\s+verfügung\s+steht|gilt\s+dies\s+nicht\s+als\s+anzeigepflichtig|erfolgt\s+auf\s+verlangen\s+des\s+versicherungsnehmers\s+eine\s+freigabe|vorläufige\s+deckung\s+gilt\s+(?!nicht\b)(?:[^.;:]|\.(?=[0-9])){1,260})\b/giu,
+});
+const REQUIREMENT_ROLE_SIGNALS_V6 = Object.freeze([
+  ...REQUIREMENT_ROLE_SIGNALS_V1,
+  EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V6,
 ]);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -178,8 +190,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V1;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V4)
     return REQUIREMENT_ROLE_SIGNALS_V4;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V5)
     return REQUIREMENT_ROLE_SIGNALS_V5;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V6;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -651,11 +665,15 @@ function materializeSharedSignalComponents(
           [
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeBenefitEvidence =
           signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
-          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+          [
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          ].includes(semanticSignalContractId);
         const localText = exactEvidenceBinding
           ? evidence.match
           : localComponent?.label ||
@@ -700,6 +718,7 @@ function materializeSharedSignalComponents(
           [
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId)
             ? [...matchedEvidenceBlockIds(evidence)]
@@ -1738,6 +1757,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
