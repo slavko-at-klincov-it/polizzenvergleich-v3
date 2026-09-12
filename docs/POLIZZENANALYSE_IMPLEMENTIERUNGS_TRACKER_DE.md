@@ -7727,3 +7727,85 @@ zweier realer Fachreviewer sowie der Schlüssel der Akzeptanzautorität.
 Status: `TECHNISCHER DOPPELREVIEW UND EXHAUSTIVER DYNAMISCHER RESTGATE
 AUSFÜHRBAR UND GETESTET; REALE FACHREVIEWS 0/631; KONTROLLIERTER B-PILOT,
 1+9-LAUF, PRODUKT-ROUTING, KUNDEN-XLSX UND DEPLOYMENT WEITERHIN GESPERRT`.
+
+### 133.22 Review-Gate gegen False-Open und Freeze-Austausch gehärtet
+
+Eine erneute unabhängige Systemprüfung des ausführbaren Reviewpfads fand vier
+weitere technische Vertrauenslücken. Diese wurden am Commit
+`537c245d00481b4b241b72f5abc66014b065eef6` geschlossen:
+
+- `SPLIT_OR_MERGE_RELATION` ist jetzt bidirektional an
+  `SPLIT_INTO_DYNAMIC` oder `MERGED_INTO_DYNAMIC` gebunden. Die Ursache kann
+  nicht mehr zusammen mit einer einfachen `EQUIVALENT`-Entscheidung
+  eingeschleust werden.
+- Der Freeze-Index prüft nicht mehr nur seine eigene interne Konsistenz. Jede
+  eingefrorene Eingabedatei wird erneut gegen den in Reviewbasis,
+  Klassifikationsevidenz oder Run-Provenienz gebundenen SHA-256 geprüft.
+- Die finale Rest-Reconciliation muss zusätzlich gegen erwartete `profileId`,
+  `runSignature` und `basisSha256` validiert werden. Damit kann kein formal
+  valides Ergebnis einer älteren Kampagne als aktuelles Ergebnis abgespielt
+  werden.
+- Die Signaturprüfung einer im selben CLI-Aufruf gelieferten Autoritäts-
+  Fingerprint wird nicht mehr als externe Freigabe bezeichnet. Selbst wenn
+  631er- und dynamischer Rest-Doppelreview technisch vollständig bestehen,
+  setzt der QA-Vertrag nur
+  `technicalBPilotPrerequisitesSatisfied:true`. `bPilotAllowed` bleibt
+  fail-closed `false`, bis eine separat administrierte, außerhalb des
+  Reviewaufrufs verankerte Freigabeautorität implementiert und geprüft ist.
+- Auch der Top-Level-Status und die historischen `*Approved`-Felder bleiben
+  jetzt fail-closed. Ein erfolgreicher technischer Review heißt ausschließlich
+  `TECHNICAL_PREREQUISITES_SATISFIED`; nur explizit mit `technical*`
+  bezeichnete Felder können wahr werden. Damit kann ein älterer oder
+  unvollständiger Consumer nicht versehentlich `APPROVED` als B-Freigabe
+  interpretieren.
+
+Wegen der geänderten Feld- und Gate-Semantik wurden die Verträge für
+dynamischen Rest-Draft, Reviewer-Input, Reviewer-Artefakt und Reconciliation
+auf V2 angehoben. Ein zuvor zulässiger synthetischer End-to-End-Test mit
+absichtlich erfundenen Dateihashes wurde entfernt; er hätte die neue
+Source-Bindung nur über eine Test-Ausnahme umgehen können. Stattdessen prüfen
+die Tests explizit, dass falsche Source-Hashes und nachträgliche
+Freeze-Mutationen abgewiesen werden. Die echte Mac-Studio-V30-Freeze dient als
+Integrationsevidenz.
+
+Die verschärfte Prüfung materialisierte aus der echten Freeze
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V30-REVIEW-FREEZE-V2-20260912-94002DCB
+```
+
+den neuen write-once Draft
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V30-REVIEW-DRAFT-V3-STRICT-20260912-537C245D
+```
+
+erfolgreich. Das Ergebnis ist deterministisch unverändert:
+
+```text
+Draft intrinsic SHA-256:
+  077a2cd5ccc797200926c9f700451cecf919e4340c8a21e796c90766ad65410e
+Draft file SHA-256:
+  9d7eff57a355daa783d6ff6ea2cb8f6f849c836000f5b5164df1463860947c51
+Records: 631
+mechanischer dynamischer Vorabrest: 42
+approvalStatus: UNREVIEWED
+```
+
+Am exakten finalen Commit bestanden im isolierten Mac-Studio-Worktree unter
+Node 22.23.2 der fokussierte Vertragstest 10/10, Prettier, serverseitiges
+ESLint ohne Fehler sowie die vollständige Server-Suite mit 187/187 Suites und
+2.646/2.646 Tests. Der ESLint-Aufruf meldete nur, dass die Jest-Datei gemäß
+bestehender Ignore-Konfiguration nicht gelintet wird; beide geänderten
+Produkt-/CLI-Dateien wurden fehlerfrei geprüft.
+
+Aktueller Wahrheitsstand: Die technische Kampagne ist reproduzierbar und
+strenger fail-closed als zuvor, aber fachlich weiterhin bei 0/631 realen
+Doppelreviews. Es wurden keine Reviewer, Berechtigungsnachweise oder Schlüssel
+erfunden. Für den B-Pilot fehlen damit weiterhin zwei echte unabhängige
+Fachreviewer und zusätzlich eine extern verankerte Freigabeautorität. Der
+vollständige 1+9-Lauf, Produkt-Routing, Kunden-XLSX und Deployment wurden nicht
+gestartet.
+
+Status: `A-REVIEWINFRASTRUKTUR TECHNISCH PASS; ECHTE V30-FREEZE STRENG
+VALIDIERT; 0/631 FACHREVIEWS; B-PILOT UND 1+9 WEITER FAIL-CLOSED`.
