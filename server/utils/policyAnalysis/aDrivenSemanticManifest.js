@@ -653,6 +653,9 @@ function materializeSharedSignalComponents(
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
+        const authoritativeBenefitEvidence =
+          signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
         const localText = exactEvidenceBinding
           ? evidence.match
           : localComponent?.label ||
@@ -661,7 +664,7 @@ function materializeSharedSignalComponents(
           ? [evidence.match]
           : matchesForPattern(signal.pattern, localText);
         if (
-          localCandidates.length > 1 ||
+          (localCandidates.length > 1 && !authoritativeBenefitEvidence) ||
           localMatches.length === 0 ||
           (!localComponent &&
             ![

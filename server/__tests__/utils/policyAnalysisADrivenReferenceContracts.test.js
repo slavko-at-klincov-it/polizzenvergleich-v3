@@ -877,6 +877,35 @@ describe("requirement-local semantic evidence completeness", () => {
     }
   );
 
+  test("uses authoritative benefit evidence when model roles duplicate the same clause", () => {
+    const source =
+      "Nach Anzeige des Schadens eine erste Teilzahlung verlangt werden kann.";
+    const unit = evidenceUnit(["benefit-duplicate-role", source]);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["benefit-duplicate-role"],
+          [
+            component("OBJECT", "benefit-duplicate-role", { label: source }),
+            component("CONDITION", "benefit-duplicate-role", {
+              label: source,
+            }),
+          ]
+        ),
+        displayLabel: source,
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "FACT_ROLE",
+      label: "erste Teilzahlung verlangt werden kann",
+      sourceBlockIds: ["benefit-duplicate-role"],
+    });
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test.each([
     "Der Versicherer ist berechtigt, den Vertrag zu kündigen.",
     "Der Versicherungsnehmer kann die Prämie nicht zurückfordern.",
