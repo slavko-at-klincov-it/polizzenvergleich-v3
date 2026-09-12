@@ -4010,8 +4010,7 @@ Requirements, 1.054 Komponenten und null `UNRESOLVED`. Sein intrinsischer
 Manifesthash ist
 `d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce`.
 
-Die mechanischen direkten Rollenabweichungen sanken gegenüber V30 von 98 auf
-79. Der neue 631er-Draft enthält 287 1:1-, 203 Split-, 62 geerbte und 79
+Die mechanischen direkten Rollenabweichungen sanken gegenüber V30 von 98 auf 79. Der neue 631er-Draft enthält 287 1:1-, 203 Split-, 62 geerbte und 79
 rolleninkompatible Kandidaten bei null kandidatenlosen Records. Von den 79
 Fällen sind 60 historische `CONDITION`-Labels, sieben `BENEFIT`, sieben
 `EXCLUSION` und fünf andersartige Einzelfälle. Die Quellprüfung zeigt, dass
