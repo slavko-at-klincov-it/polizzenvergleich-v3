@@ -659,7 +659,7 @@ describe("requirement-local semantic evidence completeness", () => {
     expect(diagnostics).toEqual([]);
   });
 
-  test("fails the manifest closed until the same requirement carries its condition", () => {
+  test("materializes a source-bound condition carried by the same requirement", () => {
     const source = artifact(
       ["Seite 1\nGebäude, sofern sie ständig bewohnt sind.\n"],
       "6"
@@ -678,44 +678,24 @@ describe("requirement-local semantic evidence completeness", () => {
           initialDisposition === "PENDING_CLASSIFICATION"
       )
       .map(validResponse);
-    const rejected = buildADrivenSemanticManifest({
+    const manifest = buildADrivenSemanticManifest({
       plan,
       responses,
       semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
     });
 
     expect(
-      rejected.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
-        .terminalDisposition
-    ).toBe("UNRESOLVED_REVIEW_REQUIRED");
-    const repairedResponses = responses.map((response) => {
-      if (response.unitId !== unit.unitId) return response;
-      return {
-        ...response,
-        semanticClasses: [...response.semanticClasses, "CONDITION"],
-        requirements: response.requirements.map((item) => ({
-          ...item,
-          components: [
-            ...item.components,
-            {
-              type: "CONDITION",
-              label: "sofern sie ständig bewohnt sind",
-              sourceBlockIds: [unit.source.blocks[0].blockId],
-            },
-          ],
-        })),
-      };
-    });
-    const accepted = buildADrivenSemanticManifest({
-      plan,
-      responses: repairedResponses,
-      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
-    });
-
-    expect(
-      accepted.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
+      manifest.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
         .terminalDisposition
     ).toBe("OPERATIVE_MAPPED");
+    expect(
+      manifest.requirements
+        .find(({ sourceUnitIds }) => sourceUnitIds.includes(unit.unitId))
+        .components.some(
+          ({ type, label }) =>
+            type === "CONDITION" && label === "sofern sie ständig bewohnt sind."
+        )
+    ).toBe(true);
   });
 });
 
