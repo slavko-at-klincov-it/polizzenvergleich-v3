@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V26";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V27";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -45,6 +45,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V23",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V24",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V25",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V26",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1021,29 +1022,74 @@ function normalizeCoverageBranchGovernorComponents(requirements, unit) {
   const normalizedGovernorBranches = governor.branchesText
     .replace(/\s+/gu, " ")
     .trim();
+  const normalizedComponentLabel = (component) =>
+    String(component?.label || "")
+      .replace(/\s+/gu, " ")
+      .trim();
   const repairs = [];
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => {
+      let removedObjectComponents = 0;
+      let removedScopeComponents = 0;
+      let removedEquivalentGovernorComponents = 0;
       const retained = (requirement.components || []).filter((component) => {
-        if (component?.type !== "OBJECT") return true;
         const label = String(component.label || "");
-        const normalizedLabel = label.replace(/\s+/gu, " ").trim();
+        const normalizedLabel = normalizedComponentLabel(component);
         const usesGovernor = (component.sourceBlockIds || []).some((blockId) =>
           governorBlockIds.has(blockId)
         );
-        return !(
-          usesGovernor &&
-          /versicherung\b/iu.test(label) &&
+        if (!usesGovernor) return true;
+        const matchesGovernorBranches =
+          normalizedLabel &&
           (normalizedGovernorBranches.includes(normalizedLabel) ||
-            normalizedLabel.includes(normalizedGovernorBranches) ||
+            normalizedLabel.includes(normalizedGovernorBranches));
+        if (
+          component?.type === "OBJECT" &&
+          /versicherung\b/iu.test(label) &&
+          (matchesGovernorBranches ||
             /\b(?:Versicherungssumme|bis\s+zur\s+Höhe)\b/iu.test(label))
+        ) {
+          removedObjectComponents += 1;
+          return false;
+        }
+        if (component?.type === "SCOPE" && matchesGovernorBranches) {
+          removedScopeComponents += 1;
+          return false;
+        }
+        const matchesCanonicalGovernorRole = governor.components.some(
+          (governorComponent) =>
+            governorComponent.type === component?.type &&
+            normalizedComponentLabel(governorComponent) === normalizedLabel
         );
+        if (
+          matchesCanonicalGovernorRole &&
+          ["VALUE_AND_UNIT", "LIMIT_BASIS"].includes(component?.type)
+        ) {
+          removedEquivalentGovernorComponents += 1;
+          return false;
+        }
+        return true;
       });
       const existing = new Set(
-        retained.map(({ type, label }) => stableStringify({ type, label }))
+        retained.map(({ type, label }) =>
+          stableStringify({
+            type,
+            label: String(label || "")
+              .replace(/\s+/gu, " ")
+              .trim(),
+          })
+        )
       );
       const additions = governor.components.filter(
-        ({ type, label }) => !existing.has(stableStringify({ type, label }))
+        ({ type, label }) =>
+          !existing.has(
+            stableStringify({
+              type,
+              label: String(label || "")
+                .replace(/\s+/gu, " ")
+                .trim(),
+            })
+          )
       );
       if (
         additions.length === 0 &&
@@ -1055,8 +1101,11 @@ function normalizeCoverageBranchGovernorComponents(requirements, unit) {
         action: "NORMALIZE_COVERAGE_BRANCH_GOVERNOR_ROLES",
         scopes: governor.components.filter(({ type }) => type === "SCOPE")
           .length,
-        removedObjectComponents:
-          requirement.components.length - retained.length,
+        removedObjectComponents,
+        ...(removedScopeComponents > 0 ? { removedScopeComponents } : {}),
+        ...(removedEquivalentGovernorComponents > 0
+          ? { removedEquivalentGovernorComponents }
+          : {}),
       });
       return { ...requirement, components: [...retained, ...additions] };
     }

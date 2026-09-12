@@ -2090,6 +2090,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                   coverageEffect: "INCLUDED",
                   sourceBlockIds: ["governor-one"],
                 },
+                {
+                  type: "SCOPE",
+                  label: "Feuer- / Sturm- und Leitungswasserversicherung",
+                  sourceBlockIds: ["governor-one"],
+                },
+                {
+                  type: "VALUE_AND_UNIT",
+                  label: "bis zu jeweils l0%",
+                  rawValue: "l0%",
+                  sourceBlockIds: ["governor-one", "governor-two"],
+                },
+                {
+                  type: "LIMIT_BASIS",
+                  label: "der Gebäudeversicherungssumme auf ,,Erstes Risiko“",
+                  sourceBlockIds: ["governor-two"],
+                },
               ],
             },
           ],
@@ -2123,6 +2139,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       action: "NORMALIZE_COVERAGE_BRANCH_GOVERNOR_ROLES",
       scopes: 3,
       removedObjectComponents: 1,
+      removedScopeComponents: 1,
+      removedEquivalentGovernorComponents: 2,
     });
   });
 
@@ -3736,7 +3754,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V26");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V27");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
