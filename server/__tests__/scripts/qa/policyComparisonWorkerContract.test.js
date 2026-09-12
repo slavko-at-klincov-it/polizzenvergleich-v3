@@ -123,6 +123,20 @@ describe("policy comparison worker contract", () => {
     expect(controlledPilotRunner).toContain("--requestTimeoutMs");
     expect(controlledPilotRunner).toContain("--abortSettlementTimeoutMs");
     expect(controlledPilotRunner).toContain("--modelRecoveryTimeoutMs");
+    expect(controlledPilotRunner).toContain("--maximumPackages");
+    expect(controlledPilotRunner).toContain("--maximumCharacters");
+    expect(controlledPilotRunner).toContain(
+      'if [ -e "$B_RETRIEVAL_ROOT" ]'
+    );
+    const dinghyRunner = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs"
+      ),
+      "utf8"
+    );
+    expect(dinghyRunner).toContain("validateCompletedDinghyRun");
+    expect(dinghyRunner).toContain("FORTGESETZT");
     expect(controlledPilotRunner).toContain(
       "dynamic-semantic-manifest.private.json"
     );

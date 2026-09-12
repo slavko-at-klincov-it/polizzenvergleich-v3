@@ -34,6 +34,8 @@ const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
+const DEFAULT_MAXIMUM_PACKAGES = 4;
+const DEFAULT_MAXIMUM_CHARACTERS = 30_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 const DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
@@ -80,8 +82,12 @@ function argumentsFrom(argv) {
   const numbers = {
     modelContext: Number(values.modelContext || DEFAULT_CONTEXT),
     maximumAttempts: Number(values.maximumAttempts || 3),
-    maximumPackages: Number(values.maximumPackages || 4),
-    maximumCharacters: Number(values.maximumCharacters || 14_000),
+    maximumPackages: Number(
+      values.maximumPackages || DEFAULT_MAXIMUM_PACKAGES
+    ),
+    maximumCharacters: Number(
+      values.maximumCharacters || DEFAULT_MAXIMUM_CHARACTERS
+    ),
     requestTimeoutMs: Number(
       values.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS
     ),

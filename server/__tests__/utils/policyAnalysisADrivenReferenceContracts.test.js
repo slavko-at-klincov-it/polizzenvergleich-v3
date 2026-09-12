@@ -6348,6 +6348,58 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
+  test("keeps a real-sized compacted candidate package inside the default decision budget", () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = `Versicherter Originalwortlaut ${"x".repeat(15_000)}`;
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: "candidate-large",
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-large",
+            channels: ["DINGHY"],
+            sourceSpans: [
+              {
+                spanId: "span-large",
+                exactText,
+                exactTextSha256: crypto
+                  .createHash("sha256")
+                  .update(exactText)
+                  .digest("hex"),
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const execution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+
+    expect(() =>
+      buildADrivenCounterpartDecisionPlan(execution, {
+        maximumPackages: 2,
+        maximumCharacters: 14_000,
+      })
+    ).toThrow("LF_A_DRIVEN_DECISION_PACKAGE_TOO_LARGE");
+    const plan = buildADrivenCounterpartDecisionPlan(execution);
+    expect(plan.summary.plannedPackages).toBe(execution.packages.length);
+    expect(plan.batches.length).toBeGreaterThan(0);
+  });
+
   test("validates a bounded semantic decision runner batch", async () => {
     const manifest = searchEligibleManifest();
     const searchPlan = buildADrivenCounterpartSearchPlan({

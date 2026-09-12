@@ -66,7 +66,7 @@ function deterministicNotSupported(item) {
 
 function buildADrivenCounterpartDecisionPlan(
   searchExecution,
-  { maximumPackages = 4, maximumCharacters = 14_000 } = {}
+  { maximumPackages = 4, maximumCharacters = 30_000 } = {}
 ) {
   validateADrivenCounterpartSearchExecution(searchExecution);
   if (

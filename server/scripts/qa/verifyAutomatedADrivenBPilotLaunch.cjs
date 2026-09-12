@@ -69,8 +69,12 @@ function readJson(file, code) {
 }
 
 function writePrivateJson(file, value) {
-  if (fs.existsSync(file))
-    throw new Error(`LF_A_AUTOMATED_GATE_OUTPUT_EXISTS:${file}`);
+  if (fs.existsSync(file)) {
+    const existing = readJson(file, "LF_A_AUTOMATED_GATE_EXISTING_OUTPUT");
+    if (stableStringify(existing.value) !== stableStringify(value))
+      throw new Error(`LF_A_AUTOMATED_GATE_EXISTING_OUTPUT_MISMATCH:${file}`);
+    return false;
+  }
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const temporary = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
@@ -79,6 +83,7 @@ function writePrivateJson(file, value) {
   });
   fs.renameSync(temporary, file);
   fs.chmodSync(file, 0o600);
+  return true;
 }
 
 function documentDirectory(runRoot, document) {

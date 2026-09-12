@@ -8,6 +8,9 @@ const path = require("path");
 const {
   buildADrivenCounterpartSearchPlan,
   materializeADrivenCounterpartSearchExecution,
+  validateADrivenCounterpartSearchExecution,
+  validateADrivenCounterpartSearchPlan,
+  validateCounterpartRetrievalArtifact,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartSearchPlan");
 const {
   buildClauseBoundaries,
@@ -163,10 +166,97 @@ function rankedClauses({
     }));
 }
 
+function validateCompletedDinghyRun({
+  args,
+  dynamicManifest,
+  documents,
+  contract,
+  identity,
+}) {
+  const stat = fs.lstatSync(args.output);
+  if (!stat.isDirectory() || stat.isSymbolicLink())
+    throw new Error("LF_A_DRIVEN_DINGHY_EXISTING_OUTPUT_INVALID");
+  const plan = readJson(
+    path.join(args.output, "search-plan.private.json"),
+    "LF_A_DRIVEN_DINGHY_EXISTING_SEARCH_PLAN"
+  );
+  const rankings = readJson(
+    path.join(args.output, "dinghy-rankings.private.json"),
+    "LF_A_DRIVEN_DINGHY_EXISTING_RANKINGS"
+  );
+  const retrieval = readJson(
+    path.join(args.output, "counterpart-retrieval.private.json"),
+    "LF_A_DRIVEN_DINGHY_EXISTING_RETRIEVAL"
+  );
+  const execution = readJson(
+    path.join(args.output, "search-execution.private.json"),
+    "LF_A_DRIVEN_DINGHY_EXISTING_EXECUTION"
+  );
+  const summary = readJson(
+    path.join(args.output, "summary.private.json"),
+    "LF_A_DRIVEN_DINGHY_EXISTING_SUMMARY"
+  );
+  validateADrivenCounterpartSearchPlan(plan, dynamicManifest);
+  validateCounterpartRetrievalArtifact(retrieval, plan);
+  validateADrivenCounterpartSearchExecution(execution, { plan, retrieval });
+  const rebuiltExecution = materializeADrivenCounterpartSearchExecution({
+    plan,
+    retrieval,
+  });
+  const expectedDocuments = documents.map(({ document }) => ({
+    documentUuid: document.uuid,
+    documentSha256: document.sha256,
+    documentPosition: document.position,
+    documentRole: document.role || "OTHER",
+    documentStatus: document.documentStatus || "ACTIVE",
+    originalName: document.originalName || null,
+  }));
+  const clauseCounts = new Map(
+    documents.map((item) => [item.document.uuid, clausesFor(item).length])
+  );
+  const expectedClauses = [...clauseCounts.values()].reduce(
+    (sum, count) => sum + count,
+    0
+  );
+  if (
+    stableStringify(plan.documents) !== stableStringify(expectedDocuments) ||
+    stableStringify(execution) !== stableStringify(rebuiltExecution) ||
+    !Array.isArray(rankings) ||
+    rankings.length !== plan.packages.length ||
+    new Set(rankings.map(({ packageId }) => packageId)).size !==
+      plan.packages.length ||
+    stableStringify(rankings.map(({ packageId }) => packageId).sort()) !==
+      stableStringify(plan.packages.map(({ packageId }) => packageId).sort()) ||
+    summary?.contractId !== RUN_CONTRACT_ID ||
+    summary.dynamicManifestSha256 !== dynamicManifest.manifestSha256 ||
+    summary.searchPlanSha256 !== plan.planSha256 ||
+    summary.embeddingContractSha256 !== identity.contractSha256 ||
+    summary.embeddingModel?.id !== contract.provider.model ||
+    summary.documents !== documents.length ||
+    summary.clauses !== expectedClauses ||
+    summary.packages !== plan.packages.length ||
+    summary.rankingResults !== rankings.length ||
+    summary.retrievalSha256 !== retrieval.retrievalSha256 ||
+    summary.executionSha256 !== execution.executionSha256 ||
+    summary.absenceCertified !== false ||
+    summary.customerNotFoundEligible !== false ||
+    !Array.isArray(summary.documentEmbeddingRuns) ||
+    summary.documentEmbeddingRuns.length !== documents.length ||
+    summary.documentEmbeddingRuns.some(
+      ({ documentUuid, clauses }) => clauseCounts.get(documentUuid) !== clauses
+    )
+  )
+    throw new Error("LF_A_DRIVEN_DINGHY_EXISTING_OUTPUT_MISMATCH");
+  const { runSha256, ...payload } = summary;
+  if (
+    runSha256 !== sha256(`${RUN_CONTRACT_ID}\u0000${stableStringify(payload)}`)
+  )
+    throw new Error("LF_A_DRIVEN_DINGHY_EXISTING_SUMMARY_DIGEST_INVALID");
+  return summary;
+}
+
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
-  if (fs.existsSync(args.output))
-    throw new Error("LF_A_DRIVEN_DINGHY_OUTPUT_ALREADY_EXISTS");
   const dynamicManifest = readJson(
     path.join(args.shadowRoot, "dynamic-semantic-manifest.private.json"),
     "LF_A_DRIVEN_DINGHY_SEMANTIC_MANIFEST"
@@ -176,6 +266,19 @@ async function run() {
   if (!contract?.enabled || !identity?.contractSha256)
     throw new Error("LF_A_DRIVEN_DINGHY_CONTRACT_NOT_ENABLED");
   await verifyHybridShadowRuntimeArtifacts(contract);
+  if (fs.existsSync(args.output)) {
+    const summary = validateCompletedDinghyRun({
+      args,
+      dynamicManifest,
+      documents,
+      contract,
+      identity,
+    });
+    console.log(
+      `[lf-a-driven-dinghy] FORTGESETZT: ${summary.rankingResults}/${summary.packages} Rankings wiederverwendet`
+    );
+    return summary;
+  }
   const loadedModel = await verifyLoadedEmbeddingModel(contract);
   const plan = buildADrivenCounterpartSearchPlan({
     manifest: dynamicManifest,
@@ -318,4 +421,4 @@ async function run() {
 if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
-module.exports = { rankedClauses };
+module.exports = { rankedClauses, validateCompletedDinghyRun };

@@ -91,7 +91,9 @@ esac
 [ -f "$CONTRACT_FILE" ] || { printf '%s\n' "Embeddingvertrag fehlt." >&2; exit 1; }
 [ -f "$A_FINAL_ROOT/dynamic-semantic-manifest.private.json" ] || { printf '%s\n' "Dynamisches A-Manifest fehlt." >&2; exit 1; }
 [ -f "$RUN_ROOT/input-manifest.private.json" ] || { printf '%s\n' "Input-Manifest fehlt." >&2; exit 1; }
-[ ! -e "$OUTPUT_ROOT" ] || { printf '%s\n' "Ausgabe existiert bereits." >&2; exit 1; }
+if [ -e "$OUTPUT_ROOT" ]; then
+  [ -d "$OUTPUT_ROOT" ] && [ ! -L "$OUTPUT_ROOT" ] || { printf '%s\n' "Bestehende Ausgabe ist kein regulärer Ordner." >&2; exit 1; }
+fi
 
 umask 077
 mkdir -p "$PRIVATE_QA_ROOT"
@@ -137,31 +139,40 @@ if ! "$LMS_BIN" runtime ls | grep -F "$RUNTIME_REVISION" | grep -F '✓' >/dev/n
   exit 1
 fi
 
-RESTORE_QWEN=1
-"$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
-  "$LMSTUDIO_SDK" \
-  "$QWEN_MODEL"
-verify_model_state "$QWEN_MODEL" llm not-loaded ""
-"$LMS_BIN" load "$DINGHY_MODEL_KEY" \
-  --identifier "$DINGHY_IDENTIFIER" \
-  --context-length "$DINGHY_CONTEXT" \
-  --yes
-DINGHY_LOADED=1
-verify_model_state "$DINGHY_IDENTIFIER" embeddings loaded "$DINGHY_CONTEXT"
+if [ -e "$B_RETRIEVAL_ROOT" ]; then
+  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
+    --shadowRoot "$A_FINAL_ROOT" \
+    --runRoot "$RUN_ROOT" \
+    --contractFile "$CONTRACT_FILE" \
+    --output "$B_RETRIEVAL_ROOT"
+else
+  RESTORE_QWEN=1
+  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+    "$LMSTUDIO_SDK" \
+    "$QWEN_MODEL"
+  verify_model_state "$QWEN_MODEL" llm not-loaded ""
+  "$LMS_BIN" load "$DINGHY_MODEL_KEY" \
+    --identifier "$DINGHY_IDENTIFIER" \
+    --context-length "$DINGHY_CONTEXT" \
+    --yes
+  DINGHY_LOADED=1
+  verify_model_state "$DINGHY_IDENTIFIER" embeddings loaded "$DINGHY_CONTEXT"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
-  --shadowRoot "$A_FINAL_ROOT" \
-  --runRoot "$RUN_ROOT" \
-  --contractFile "$CONTRACT_FILE" \
-  --output "$B_RETRIEVAL_ROOT"
+  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
+    --shadowRoot "$A_FINAL_ROOT" \
+    --runRoot "$RUN_ROOT" \
+    --contractFile "$CONTRACT_FILE" \
+    --output "$B_RETRIEVAL_ROOT"
 
-"$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
-  "$LMSTUDIO_SDK" \
-  "$DINGHY_IDENTIFIER"
-DINGHY_LOADED=0
-verify_model_state "$DINGHY_IDENTIFIER" embeddings not-loaded ""
-load_qwen
-RESTORE_QWEN=0
+  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+    "$LMSTUDIO_SDK" \
+    "$DINGHY_IDENTIFIER"
+  DINGHY_LOADED=0
+  verify_model_state "$DINGHY_IDENTIFIER" embeddings not-loaded ""
+  load_qwen
+  RESTORE_QWEN=0
+fi
+verify_model_state "$QWEN_MODEL" llm loaded "$QWEN_CONTEXT"
 
 "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceCounterpartDecisions.cjs" \
   --searchExecution "$B_RETRIEVAL_ROOT/search-execution.private.json" \
@@ -169,6 +180,8 @@ RESTORE_QWEN=0
   --model "$QWEN_MODEL" \
   --modelContext "$QWEN_CONTEXT" \
   --maximumAttempts "${LF_B_QWEN_MAXIMUM_ATTEMPTS:-3}" \
+  --maximumPackages "${LF_B_QWEN_MAXIMUM_PACKAGES:-4}" \
+  --maximumCharacters "${LF_B_QWEN_MAXIMUM_CHARACTERS:-30000}" \
   --requestTimeoutMs "${LF_B_QWEN_REQUEST_TIMEOUT_MS:-180000}" \
   --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
   --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
