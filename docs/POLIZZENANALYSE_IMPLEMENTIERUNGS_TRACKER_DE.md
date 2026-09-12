@@ -8178,3 +8178,57 @@ geprüft.
 Status: `631ER REVIEW-ARBEITSMAPPE UND FAIL-CLOSED RÜCKIMPORT TECHNISCH PASS;
 0/631 REALE FACHENTSCHEIDUNGEN; KEINE REGISTRY, SIGNATUR ODER AUTORISIERUNG;
 B-PILOT UND 1+9 WEITER GESPERRT`.
+
+### 133.27 Identitätsgebundener, deterministischer Workbook-Export
+
+Die allgemeine V35-Arbeitsmappe aus Abschnitt 133.26 ist eine geeignete
+Vorbereitung, aber noch kein reproduzierbarer Reviewer-Paketvertrag. Eine
+manuelle Kopie könnte Slot oder Reviewer-ID vertauschen und würde erneut eine
+externe OOXML-Normalisierung benötigen. Deshalb erzeugt die QA-CLI nun mit
+`workbook-template` direkt aus einem frischen registrierten
+`REVIEW_INPUT_V2` eine write-once Arbeitsmappe für genau diesen Reviewer.
+
+Export und Import verwenden dieselben Projektionen für alle 631 Legacy- und
+5.678 Kandidatenzeilen. Der Export setzt Basis-SHA, Draft-SHA, Reviewer-Slot
+und Reviewer-ID bereits unveränderlich aus dem registrierten Template. Nur
+die ausgeschriebene Unabhängigkeitsattestierung und die fünf fachlichen
+Entscheidungsfelder bleiben leer. Nach dem Schreiben wird die XLSX erneut mit
+ExcelJS geladen und vollständig gegen Draft und Template geprüft. Identische
+Eingaben erzeugen byteidentische Dateien; ein wiederverwendetes oder bereits
+ausgefülltes Reviewer-Template wird abgelehnt.
+
+Die XLSX wird nun direkt mit der im Produkt bereits verwendeten ExcelJS-
+Version erzeugt. Dadurch entfällt für künftige reale Reviewer-Pakete die in
+Abschnitt 133.26 benötigte LibreOffice-Normalisierung. Ein echter V35-
+Vertragstest mit einer ausdrücklich synthetischen Identität, aber ohne
+synthetische Fachentscheidung, erzeugte auf dem Mac Studio:
+
+```text
+Dateigröße:       511.059 Bytes
+Reviewzeilen:     631
+Kandidatenzeilen: 5.678
+Review-Blatt:     Zeilen 1..636
+Kandidaten-Blatt: Zeilen 1..5.682
+Importresultat:   erwarteter fail-closed Stopp am ersten leeren Record
+                  DR-6e7f2bc9ca6b36b25bd10dd8
+```
+
+Zwei unmittelbar aufeinanderfolgende Exporte mit denselben Eingaben waren
+byteidentisch. Die Datei wurde zusätzlich mit dem unabhängigen
+Spreadsheet-Runtime importiert, alle drei Blätter wurden gerendert und der
+Formelfehlerscan fand keine Treffer. Damit ist die Export-/Importgrenze nun
+ohne manuelle Konvertierung reproduzierbar.
+
+Am exakten Commit `284ed43931128db6820ca6e77662243d20cd0edd`
+im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-review-export-284e-EZMLP7` unter Node 22.23.2 bestanden
+Node-Syntax, Prettier, Produkt-/CLI-ESLint, 20/20 fokussierte Tests und
+189/189 Server-Suites mit 2.690/2.690 Tests.
+
+Der Exporter erzeugt keine Registry und keine Fachentscheidung. Ohne echte
+Reviewer- und Autoritätsdaten konnten daher weiterhin keine realen
+identitätsgebundenen Pakete materialisiert werden.
+
+Status: `REPRODUZIERBARER REVIEWER-WORKBOOK-EXPORT UND RÜCKIMPORT TECHNISCH
+PASS; REALE REVIEWER-IDENTITÄTEN UND 631ER ENTSCHEIDUNGEN FEHLEN; B-PILOT UND
+1+9 WEITER FAIL-CLOSED`.
