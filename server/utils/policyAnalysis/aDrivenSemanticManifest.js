@@ -613,9 +613,13 @@ function materializeSharedSignalComponents(
           "EXPLICIT_QUANTIFIED_VALUE",
           "EXPLICIT_CONTRACTUAL_BENEFIT",
         ].includes(signal.signalId);
-        const localText =
-          localComponent?.label ||
-          (evidenceBackedSignal ? evidence.match : requirement.displayLabel);
+        const exactEvidenceBinding =
+          evidenceBackedSignal &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+        const localText = exactEvidenceBinding
+          ? evidence.match
+          : localComponent?.label ||
+            (evidenceBackedSignal ? evidence.match : requirement.displayLabel);
         const localMatches = evidenceBackedSignal
           ? [evidence.match]
           : matchesForPattern(signal.pattern, localText);

@@ -767,7 +767,10 @@ describe("requirement-local semantic evidence completeness", () => {
           ),
           {
             type: "CONDITION",
-            label: source,
+            label: source.replace(
+              "der Versicherer auf Verlangen",
+              "der\nVersicherer auf Verlangen"
+            ),
             sourceBlockIds,
           },
           {
