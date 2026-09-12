@@ -646,6 +646,102 @@ describe("requirement-local semantic evidence completeness", () => {
     ]);
   });
 
+  test.each([
+    {
+      source: "Der Rohrersatz beträgt bis zu 10m Länge.",
+      signalId: "EXPLICIT_QUANTIFIED_VALUE",
+      type: "VALUE_AND_UNIT",
+      rawValue: "10",
+      unit: "m",
+    },
+    {
+      source: "Die Einzelscheibengröße beträgt maximal 10m².",
+      signalId: "EXPLICIT_QUANTIFIED_VALUE",
+      type: "VALUE_AND_UNIT",
+      rawValue: "10",
+      unit: "m²",
+    },
+    {
+      source: "Der Schaden darf bis voraussichtlich EUR 8.000 betragen.",
+      signalId: "EXPLICIT_QUANTIFIED_VALUE",
+      type: "VALUE_AND_UNIT",
+      rawValue: "8.000",
+      unit: "EUR",
+    },
+    {
+      source:
+        "Die Kosten werden auf die Pauschalversicherungssumme angerechnet.",
+      signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+      type: "LIMIT_BASIS",
+    },
+    {
+      source: "Versichert ist eine höchstens sechsmonatige Zwischenlagerung.",
+      signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+      type: "LIMIT_BASIS",
+    },
+    {
+      source:
+        "In jedem Schadenfall wird der entschädigungspflichtige Betrag um 25% gekürzt.",
+      signalId: "EXPLICIT_DEDUCTIBLE",
+      type: "DEDUCTIBLE",
+    },
+  ])(
+    "materializes the general $signalId wording '$source'",
+    ({ source, signalId, type, rawValue, unit }) => {
+      const result = materializeSharedSignalComponents(
+        evidenceUnit(["limit", source]),
+        [
+          {
+            ...requirement(
+              ["limit"],
+              [component("OBJECT", "limit", { label: source })]
+            ),
+            displayLabel: source,
+          },
+        ]
+      );
+
+      expect(result.requirements[0].components).toContainEqual({
+        type,
+        label: expect.any(String),
+        sourceBlockIds: ["limit"],
+        ...(rawValue ? { rawValue } : {}),
+        ...(unit ? { unit } : {}),
+      });
+      expect(result.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+            signalId,
+          }),
+        ])
+      );
+      expect(
+        requirementRoleEvidenceDiagnostics(
+          evidenceUnit(["limit", source]),
+          result.requirements
+        )
+      ).toEqual([]);
+    }
+  );
+
+  test("does not infer a limit or deductible from unrelated counts and reductions", () => {
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(
+        ["count", "Es stehen maximal drei Facharbeiter bereit."],
+        ["increase", "Der Betrag wird um 25% erhöht."],
+        ["period", "Im Geschäftsjahr wird der Betrag um 25% gekürzt."]
+      ),
+      [
+        requirement(["count"], [component("OBJECT", "count")]),
+        requirement(["increase"], [component("OBJECT", "increase")]),
+        requirement(["period"], [component("OBJECT", "period")]),
+      ]
+    );
+
+    expect(diagnostics).toEqual([]);
+  });
+
   test("accepts complete signals and ignores ordinary wording", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(

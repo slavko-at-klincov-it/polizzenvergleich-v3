@@ -81,13 +81,14 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   }),
   Object.freeze({
     signalId: "EXPLICIT_DEDUCTIBLE",
-    pattern: /\b(?:selbstbehalt|eigenbehalt)\p{L}*\b/giu,
+    pattern:
+      /\b(?:selbstbehalt|eigenbehalt)\p{L}*\b|\bin\s+(?:jedem|einem)\s+schadenfall\b[^.;:]{0,160}\b(?:betrag|entschädigung)\b[^.;:]{0,80}\bum\s+[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+gekürzt\b/giu,
     requiredComponentTypes: Object.freeze(["DEDUCTIBLE"]),
   }),
   Object.freeze({
     signalId: "EXPLICIT_QUANTIFIED_VALUE",
     pattern:
-      /\b(?:bis(?:\s+zu)?|höchstens|maximal|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:€\s*)?(?:[0-9lI]+(?:[.,][0-9lI]+)?)(?:\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?))?\b|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:€\s*[0-9lI]+(?:[.,][0-9lI]+)?|(?:EUR|Euro)\s+[0-9lI]+(?:[.,][0-9lI]+)?|[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b/giu,
+      /\b(?:bis(?:\s+zu)?|höchstens|maximal|max\.|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:voraussichtlich\s+)?(?:(?:€|EUR|Euro)\s*)?(?:[0-9lI]+(?:[.,][0-9lI]+)?)(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?(?=$|[\s,.;:)\]])|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:(?:€|EUR|Euro)\s*)?[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:(?:€|EUR|Euro)\s*[0-9lI]+(?:[.,][0-9lI]+)?|[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b/giu,
     requiredComponentTypes: Object.freeze(["VALUE_AND_UNIT"]),
   }),
   Object.freeze({
@@ -104,7 +105,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
     pattern:
-      /\b(?:versicherungssummen?\s+(?:werden\s+)?nicht\s+addiert|nur\s+einmal\s+pro\s+schadenfall)\b/giu,
+      /\b(?:versicherungssummen?\s+(?:werden\s+)?nicht\s+addiert|nur\s+einmal\s+pro\s+schadenfall|bis\s+zur\s+höhe\s+der\s+(?:jeweils\s+)?vereinbarten\s+versicherungssumme|auf\s+die\s+(?:pauschal)?versicherungssumme\s+angerechnet|mit\s+jenem\s+betrag\s+begrenzt|nicht\s+limitiert|bis\s+zu\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:tage?|monate?|jahre?)|höchstens\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)(?:monatigen?|jährigen?|\s+(?:tage?|monate?|jahre?)))\b/giu,
     requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
   }),
 ]);
@@ -255,6 +256,24 @@ function quantifiedLiterals(value) {
     )
     .filter(Boolean)
     .filter((literal) => /[0-9lI]/iu.test(literal));
+}
+
+function quantifiedComponent(signalMatch, sourceBlockIds) {
+  const valueMatch = signalMatch.match(/[0-9]+(?:[.,][0-9]+)?/u);
+  if (!valueMatch) return null;
+  const beforeValue = signalMatch.slice(0, valueMatch.index);
+  const afterValue = signalMatch.slice(valueMatch.index + valueMatch[0].length);
+  const unitMatch =
+    afterValue.match(
+      /^\s*(%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?)/iu
+    ) || beforeValue.match(/(€|EUR|Euro)\s*$/iu);
+  return {
+    type: "VALUE_AND_UNIT",
+    label: signalMatch,
+    sourceBlockIds,
+    rawValue: valueMatch[0],
+    ...(unitMatch ? { unit: unitMatch[1] } : {}),
+  };
 }
 
 function componentSupportsSignal(signal, component, matchedEvidence) {
@@ -442,16 +461,34 @@ function materializeSharedSignalComponents(unit, requirements) {
           continue;
         }
         if (
-          signal.signalId !== "EXPLICIT_CONDITION" &&
-          signal.signalId !== "EXPLICIT_COST_ROLE"
+          ![
+            "EXPLICIT_CONDITION",
+            "EXPLICIT_COST_ROLE",
+            "EXPLICIT_QUANTIFIED_VALUE",
+            "EXPLICIT_LIMIT_BASIS",
+            "EXPLICIT_NON_NUMERIC_LIMIT",
+            "EXPLICIT_DEDUCTIBLE",
+          ].includes(signal.signalId)
         )
           continue;
-        const localCandidates = requirement.components.filter(
-          (component) =>
-            !signal.requiredComponentTypes.includes(component.type) &&
-            component.sourceBlockIds.includes(evidence.blockId) &&
-            matchesForPattern(signal.pattern, component.label).length > 0
-        );
+        const localCandidates = [
+          ...new Map(
+            requirement.components
+              .filter(
+                (component) =>
+                  !signal.requiredComponentTypes.includes(component.type) &&
+                  component.sourceBlockIds.includes(evidence.blockId) &&
+                  matchesForPattern(signal.pattern, component.label).length > 0
+              )
+              .map((component) => [
+                stableStringify({
+                  label: component.label,
+                  sourceBlockIds: component.sourceBlockIds,
+                }),
+                component,
+              ])
+          ).values(),
+        ];
         const localComponent =
           localCandidates.length === 1 ? localCandidates[0] : null;
         const localText = localComponent?.label || requirement.displayLabel;
@@ -469,7 +506,9 @@ function materializeSharedSignalComponents(unit, requirements) {
         const label =
           signal.signalId === "EXPLICIT_CONDITION"
             ? localText.slice(matchIndex).trim()
-            : localText;
+            : signal.signalId === "EXPLICIT_COST_ROLE"
+              ? localText
+              : localMatches[0];
         const sourceBlockIds = localComponent
           ? [...localComponent.sourceBlockIds]
           : minimalSourceRange(unit, label, requirement.sourceBlockIds);
@@ -480,14 +519,22 @@ function materializeSharedSignalComponents(unit, requirements) {
           )
         )
           continue;
-        const localRole = {
-          type:
-            signal.signalId === "EXPLICIT_CONDITION"
-              ? "CONDITION"
-              : "FACT_ROLE",
-          label,
-          sourceBlockIds,
-        };
+        const localRole =
+          signal.signalId === "EXPLICIT_QUANTIFIED_VALUE"
+            ? quantifiedComponent(label, sourceBlockIds)
+            : {
+                type:
+                  signal.signalId === "EXPLICIT_CONDITION"
+                    ? "CONDITION"
+                    : signal.signalId === "EXPLICIT_COST_ROLE"
+                      ? "FACT_ROLE"
+                      : signal.signalId === "EXPLICIT_DEDUCTIBLE"
+                        ? "DEDUCTIBLE"
+                        : "LIMIT_BASIS",
+                label,
+                sourceBlockIds,
+              };
+        if (!localRole) continue;
         requirement.components.push(localRole);
         diagnostics.push({
           code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
