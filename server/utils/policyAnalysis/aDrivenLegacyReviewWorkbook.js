@@ -1,7 +1,5 @@
 const ExcelJS = require("exceljs");
-const {
-  normalizeReviewerDecisions,
-} = require("./aDrivenLegacyDoubleReview");
+const { normalizeReviewerDecisions } = require("./aDrivenLegacyDoubleReview");
 
 // QA-only bridge. It imports human worksheet entries into an unsigned reviewer
 // input. It cannot sign a review, approve a crosswalk, authorize B or mutate a
@@ -247,7 +245,12 @@ function importReviewerWorkbook({ workbook, draft, input }) {
   assertHeaders(review, REVIEW_HEADER_ROW, REVIEW_HEADERS);
   const decisions = draft.records.map((record, index) => {
     const rowNumber = REVIEW_FIRST_DATA_ROW + index;
-    assertRow(review, rowNumber, expectedReviewRow(record, index), record.recordId);
+    assertRow(
+      review,
+      rowNumber,
+      expectedReviewRow(record, index),
+      record.recordId
+    );
     const values = [];
     for (let column = 12; column <= 16; column += 1) {
       const cell = review.getCell(rowNumber, column);

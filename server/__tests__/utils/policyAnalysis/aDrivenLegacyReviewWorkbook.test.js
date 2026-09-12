@@ -152,9 +152,24 @@ describe("A-driven legacy review workbook", () => {
   });
 
   test.each([
-    ["review evidence", (workbook) => (workbook.getWorksheet("Review").getCell("H6").value = "manipuliert")],
-    ["candidate evidence", (workbook) => (workbook.getWorksheet("Kandidaten").getCell("L5").value = "manipuliert")],
-    ["draft binding", (workbook) => (workbook.getWorksheet("Anleitung").getCell("B10").value = "f".repeat(64))],
+    [
+      "review evidence",
+      (workbook) =>
+        (workbook.getWorksheet("Review").getCell("H6").value = "manipuliert"),
+    ],
+    [
+      "candidate evidence",
+      (workbook) =>
+        (workbook.getWorksheet("Kandidaten").getCell("L5").value =
+          "manipuliert"),
+    ],
+    [
+      "draft binding",
+      (workbook) =>
+        (workbook.getWorksheet("Anleitung").getCell("B10").value = "f".repeat(
+          64
+        )),
+    ],
   ])("rejects mutated %s", (_name, mutate) => {
     const { draft, input } = fixture();
     const workbook = workbookFixture(draft, input);
