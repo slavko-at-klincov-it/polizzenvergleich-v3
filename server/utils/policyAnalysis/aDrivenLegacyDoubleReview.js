@@ -147,11 +147,54 @@ const CURRENT_V22_REVIEW_PROFILE = Object.freeze({
     CURRENT_V22_REVIEW_PROFILE_PAYLOAD
   ),
 });
+const CURRENT_V30_REVIEW_PROFILE_PAYLOAD = {
+  schemaVersion: 1,
+  contractId: REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+  profileId: "LF_A_V30_FINAL_354_1036_WITH_V374_LEGACY_283_631",
+  dynamicManifestSha256:
+    "683cd3f304203d4d1c95bfc92221b726c852c6d7cc64974269875787b544d9ad",
+  dynamicManifestFileSha256:
+    "4a38c40b5b365e0c55fa5e26a73e4dd9e958d75b6a345eb3955ecaacd16c9648",
+  dynamicRequirements: 354,
+  dynamicComponents: 1036,
+  legacyManifestSha256:
+    "3697afe4a18760bd893d50e0c3f8dadf48ff0106447829d32f1cb7845011efb0",
+  legacyManifestFileSha256:
+    "c8e4c7cb303879d0efb35eb8215be6b6b75a75332e8a1b892c5f1bc85d6be4c7",
+  legacyRequirements: EXPECTED_LEGACY_REQUIREMENTS,
+  legacyComponents: EXPECTED_LEGACY_COMPONENTS,
+  implementationCommitSha: "653ece7a0ff517dda1d0216e2f80566e89789a15",
+  manifestCompletionCommitSha: "653ece7a0ff517dda1d0216e2f80566e89789a15",
+  releaseId: "e8e9e94862acf1e48a7f8110382af084e5d37439",
+  runSignature:
+    "df7d7179-1c49-412b-b2ff-0ec6b1fdc52f/resume-eb1202f45007d9995ddd60a9",
+  productRunContractId: "LF_REFERENCE_A_DRIVEN_V2",
+  classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+  promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
+  modelId: "qwen/qwen3.6-35b-a3b",
+  modelContext: 42496,
+  maximumAttempts: 8,
+  requestTimeoutMs: 180000,
+  abortSettlementTimeoutMs: 15000,
+  modelRecoveryTimeoutMs: 180000,
+  qwenModelKey: "qwen3.6-35b-a3b-mlx-text",
+  transportContractId: "LF_A_CLASSIFICATION_TRANSPORT_V1",
+  classificationBatches: 59,
+  classificationResponses: 349,
+};
+const CURRENT_V30_REVIEW_PROFILE = Object.freeze({
+  ...CURRENT_V30_REVIEW_PROFILE_PAYLOAD,
+  profileSha256: domainDigest(
+    REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+    CURRENT_V30_REVIEW_PROFILE_PAYLOAD
+  ),
+});
 const REVIEW_CAMPAIGN_PROFILES = new Map(
-  [CURRENT_V12_REVIEW_PROFILE, CURRENT_V22_REVIEW_PROFILE].map((profile) => [
-    profile.profileId,
-    profile,
-  ])
+  [
+    CURRENT_V12_REVIEW_PROFILE,
+    CURRENT_V22_REVIEW_PROFILE,
+    CURRENT_V30_REVIEW_PROFILE,
+  ].map((profile) => [profile.profileId, profile])
 );
 
 function reviewError(code, detail) {
@@ -236,6 +279,10 @@ function semanticSignalContractFor(campaignProfile) {
     CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
     ? null
     : A_SEMANTIC_SIGNAL_CONTRACT_ID;
+}
+
+function includesInheritedRoleEvidence(campaignProfile) {
+  return semanticSignalContractFor(campaignProfile) !== null;
 }
 
 function validateClassificationChain({
@@ -1028,9 +1075,7 @@ function createCrosswalkDraft({ basis } = {}) {
       legacyComponent.legacyFactRole,
       candidates,
       {
-        includeInherited:
-          basis.campaignProfile.profileId ===
-          CURRENT_V22_REVIEW_PROFILE.profileId,
+        includeInherited: includesInheritedRoleEvidence(basis.campaignProfile),
       }
     );
     return {
@@ -1082,8 +1127,7 @@ function createCrosswalkDraft({ basis } = {}) {
         ({ mechanicalRoleReview }) =>
           mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
       ).length,
-      ...(basis.campaignProfile.profileId ===
-      CURRENT_V22_REVIEW_PROFILE.profileId
+      ...(includesInheritedRoleEvidence(basis.campaignProfile)
         ? {
             inheritedRoleCandidateRecords: records.filter(
               ({ mechanicalRoleReview }) =>
@@ -1677,6 +1721,7 @@ module.exports = {
   CROSSWALK_DRAFT_CONTRACT_ID,
   CURRENT_V12_REVIEW_PROFILE,
   CURRENT_V22_REVIEW_PROFILE,
+  CURRENT_V30_REVIEW_PROFILE,
   REVIEW_ARTIFACT_CONTRACT_ID,
   REVIEW_BASIS_CONTRACT_ID,
   REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
