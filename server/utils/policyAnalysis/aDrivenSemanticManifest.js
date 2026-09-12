@@ -383,7 +383,12 @@ function requirementSignalEvidence(unit, requirement, signal) {
       .map(({ exactText }) => exactText)
       .join("\n");
     for (const match of matchesForPattern(signal.pattern, combinedText)) {
-      const blockIds = minimalSourceRange(unit, match, [...selectedBlockIds]);
+      const blockIds = minimalSourceRange(
+        unit,
+        match,
+        [...selectedBlockIds],
+        selectedBlocks
+      );
       if (!blockIds?.length) continue;
       evidence.push({
         blockId: blockIds[0],
@@ -666,11 +671,15 @@ function sourceContains(
   return comparableText(sourceText).includes(comparableText(value));
 }
 
-function minimalSourceRange(unit, value, declaredBlockIds) {
+function minimalSourceRange(
+  unit,
+  value,
+  declaredBlockIds,
+  availableBlocks = evidenceBlocks(unit)
+) {
   const needle = comparableText(value);
   if (!needle) return [];
   const matches = [];
-  const availableBlocks = evidenceBlocks(unit);
   for (let start = 0; start < availableBlocks.length; start += 1) {
     for (let end = start; end < availableBlocks.length; end += 1) {
       const blocks = availableBlocks.slice(start, end + 1);

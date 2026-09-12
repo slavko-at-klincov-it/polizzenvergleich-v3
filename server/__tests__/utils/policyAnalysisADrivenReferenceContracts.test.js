@@ -899,7 +899,10 @@ describe("requirement-local semantic evidence completeness", () => {
 
   test("materializes a local peril from a generic damages-through governor", () => {
     const unit = {
-      ...evidenceUnit(["item", "- Hochwasser und Überschwemmung;"]),
+      ...evidenceUnit(
+        ["sibling", "- Lawinen und Lawinenluftdruck;"],
+        ["item", "- Hochwasser und Überschwemmung;"]
+      ),
       governingContext: {
         blockIds: ["governor"],
         blocks: [
