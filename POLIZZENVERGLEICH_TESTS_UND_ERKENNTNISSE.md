@@ -4174,3 +4174,39 @@ Hash-, Registry-, Signatur- oder Gatekette zu umgehen.
 **Beweist nicht:** irgendeine fachliche Entscheidung. Der reale Stand bleibt
 0/631; erst zwei echte unabhängige Fachreviewer, Restreview und externe
 Autorisierung können den kontrollierten B-Pilot freigeben.
+
+## 70. Reviewer-Arbeitsmappen müssen aus der Registry entstehen, nicht aus manuellen Kopien
+
+**Prüfung:** 12. September 2026
+
+Die allgemeine 631er Vorbereitungstabelle löst die Ergonomie, bindet aber noch
+keine reale Reviewer-Identität. Der neue QA-Befehl `workbook-template`
+materialisiert deshalb erst nach Registry und Reviewer-Template eine eigene
+write-once XLSX für Slot A oder B. Basis-SHA, Draft-SHA, Slot und Reviewer-ID
+kommen direkt aus dem frischen `REVIEW_INPUT_V2`; nur Attestierung und
+fachliche Entscheidungen bleiben offen.
+
+Exporter und Importer verwenden dieselben Funktionen für die 631 Legacy- und
+5.678 Kandidatenzeilen. Nach dem Export wird die XLSX erneut geladen und gegen
+den kompletten Draft geprüft. Bereits ausgefüllte Templates, abweichende
+Identitäten, manipulierte Belege oder zusätzliche Zeilen werden fail-closed
+abgelehnt. Identische Eingaben erzeugen byteidentische Dateien.
+
+Im Gegensatz zur einmaligen Vorbereitungstabelle verwendet der
+wiederholbare Produktpfad direkt ExcelJS. Ein Realstrukturtest mit dem echten
+V35-Draft, einer klar als synthetisch markierten Testidentität und null
+Fachentscheidungen erzeugte 631 Review- sowie 5.678 Kandidatenzeilen. ExcelJS
+und der unabhängige Spreadsheet-Runtime konnten die Datei direkt lesen; alle
+drei Blätter wurden visuell geprüft, der Formelfehlerscan war leer und der
+Import stoppte erwartungsgemäß an der ersten fehlenden Entscheidung.
+
+Am Commit `284ed43931128db6820ca6e77662243d20cd0edd` bestanden auf dem Mac
+Studio unter Node 22.23.2 Format, Lint, 20/20 fokussierte Tests und 189/189
+Server-Suites mit 2.690/2.690 Tests.
+
+**Beweist:** Sobald echte Reviewer registriert sind, können zwei getrennte,
+identitätsgebundene und technisch rückprüfbare Arbeitsmappen ohne manuelle
+OOXML-Konvertierung erzeugt werden.
+
+**Beweist nicht:** eine reale Revieweridentität, Qualifikation oder
+Fachentscheidung. Der tatsächliche Reviewstand bleibt 0/631.
