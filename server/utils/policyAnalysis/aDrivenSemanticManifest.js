@@ -14,8 +14,10 @@ const A_DYNAMIC_MANIFEST_CONTRACT_ID =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V2";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V3";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -142,6 +144,7 @@ const REQUIREMENT_ROLE_SIGNALS_V2 = Object.freeze([
 ]);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -649,7 +652,8 @@ function materializeSharedSignalComponents(
                 ? localText
                 : localMatches[0];
         const sourceBlockIds =
-          signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT"
+          signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
             ? [...matchedEvidenceBlockIds(evidence)]
             : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
               (localComponent ? [...localComponent.sourceBlockIds] : null);
@@ -1683,6 +1687,7 @@ module.exports = {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
