@@ -461,6 +461,42 @@ function listSegmentRepairSkeletons(batch, diagnostics) {
   );
 }
 
+function exactConditionLabel(unit, component) {
+  if (
+    component?.type !== "CONDITION" ||
+    !Array.isArray(component.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0
+  )
+    return null;
+  const selectedIds = new Set(component.sourceBlockIds);
+  const selectedBlocks = (unit?.source?.blocks || []).filter(({ blockId }) =>
+    selectedIds.has(blockId)
+  );
+  if (selectedBlocks.length !== selectedIds.size) return null;
+  const declaredSourceText = selectedBlocks
+    .map(({ exactText }) => exactText)
+    .join("\n")
+    .trim();
+  const marker =
+    /\b(?:sofern|wenn|falls|vorausgesetzt|soweit)\b|\bunter\s+der\s+voraussetzung\b/iu.exec(
+      declaredSourceText
+    );
+  if (!marker) return null;
+  const normalizedSource = declaredSourceText.replace(/\s+/gu, " ").trim();
+  const normalizedLabel = String(component.label || "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (!normalizedLabel || normalizedSource.includes(normalizedLabel))
+    return null;
+  if (
+    !/\b(?:sofern|wenn|falls|vorausgesetzt|soweit|dass)\b/iu.test(
+      normalizedLabel
+    )
+  )
+    return null;
+  return declaredSourceText.slice(marker.index).trim();
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -573,6 +609,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const sourceBoundConditionLabel = exactConditionLabel(
+                    unit,
+                    component
+                  );
+                  if (sourceBoundConditionLabel) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_EXACT_CONDITION_SOURCE_TEXT",
+                    });
+                    return [
+                      { ...component, label: sourceBoundConditionLabel },
+                    ];
+                  }
                   const exactPerformanceObligation =
                     component?.type === "COVERAGE_EFFECT" &&
                     /(?:\.\.\.|…)/u.test(componentLabel)
@@ -1977,6 +2028,7 @@ module.exports = {
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
   normalizeStandaloneListGovernorRequirements,
+  normalizeUnambiguousComponentTypes,
   parseJsonArray,
   processClassificationBatches,
   prompt,

@@ -40,6 +40,7 @@ const {
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
   normalizeStandaloneListGovernorRequirements,
+  normalizeUnambiguousComponentTypes,
   parseJsonArray,
   processClassificationBatches,
   requestCompletionWithTimeout,
@@ -780,6 +781,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         sourceRequirementIndex: 0,
         targetRequirementIndexes: [1],
         governorBlockIds: ["governor"],
+      }),
+    ]);
+  });
+
+  test("restores an exact source-bound condition when a model omits connective source text", () => {
+    const unit = {
+      unitId: "unit-one",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText:
+          "Die Kosten sind unter der Voraussetzung versichert, dass sie angezeigt werden;",
+        blocks: [
+          {
+            blockId: "condition-one",
+            structuralKind: "PARAGRAPH",
+            exactText: "Die Kosten sind unter der Voraussetzung",
+          },
+          {
+            blockId: "condition-two",
+            structuralKind: "PARAGRAPH",
+            exactText: "versichert, dass sie angezeigt werden;",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "CONDITION",
+              label: "unter der Voraussetzung dass sie angezeigt werden;",
+              sourceBlockIds: ["condition-one", "condition-two"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components[0].label).toBe(
+      "unter der Voraussetzung\nversichert, dass sie angezeigt werden;"
+    );
+    expect(normalized.componentRepairs).toEqual([
+      expect.objectContaining({
+        unitId: "unit-one",
+        action: "RESTORE_EXACT_CONDITION_SOURCE_TEXT",
       }),
     ]);
   });
