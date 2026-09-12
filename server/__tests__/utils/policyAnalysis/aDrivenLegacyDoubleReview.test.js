@@ -31,6 +31,7 @@ const {
   createReviewerRegistry,
   createReviewerTemplate,
   createRunProvenance,
+  mechanicalRoleDisposition,
   reconcileApprovedCrosswalk,
   reviewCampaignProfile,
   sealReviewerArtifact,
@@ -399,6 +400,34 @@ describe("V12 283/631 double-review contract", () => {
     expect(() => reviewCampaignProfile("LF_A_UNKNOWN")).toThrow(
       "LF_A_DOUBLE_REVIEW_PROFILE_UNKNOWN"
     );
+  });
+
+  test("separates inherited role evidence from direct role incompatibility", () => {
+    const candidates = [
+      {
+        contextKind: "EXACT_COMPONENT_SOURCE_OVERLAP",
+        dynamicComponentType: "OBJECT",
+      },
+      {
+        contextKind: "SIBLING_IN_OVERLAPPING_REQUIREMENT",
+        dynamicComponentType: "CONDITION",
+      },
+    ];
+    expect(
+      mechanicalRoleDisposition("CONDITION", candidates, {
+        includeInherited: true,
+      })
+    ).toEqual({
+      disposition: "INHERITED_ROLE_CANDIDATE",
+      exactCandidateCount: 1,
+      compatibleCandidateCount: 0,
+      inheritedCandidateCount: 1,
+    });
+    expect(mechanicalRoleDisposition("CONDITION", candidates)).toEqual({
+      disposition: "ROLE_INCOMPATIBLE",
+      exactCandidateCount: 1,
+      compatibleCandidateCount: 0,
+    });
   });
 
   test("regenerates the full 631-record draft and rejects a rehashed mutation", () => {

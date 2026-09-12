@@ -941,7 +941,11 @@ function candidateProjection(component, overlap, contextKind) {
   };
 }
 
-function mechanicalRoleDisposition(legacyFactRole, candidates) {
+function mechanicalRoleDisposition(
+  legacyFactRole,
+  candidates,
+  { includeInherited = false } = {}
+) {
   const exactCandidates = candidates.filter(
     ({ contextKind }) => contextKind === "EXACT_COMPONENT_SOURCE_OVERLAP"
   );
@@ -951,17 +955,29 @@ function mechanicalRoleDisposition(legacyFactRole, candidates) {
   const compatibleCandidates = exactCandidates.filter(
     ({ dynamicComponentType }) => compatibleTypes.has(dynamicComponentType)
   );
+  const inheritedCandidates = includeInherited
+    ? candidates.filter(
+        ({ contextKind, dynamicComponentType }) =>
+          contextKind === "SIBLING_IN_OVERLAPPING_REQUIREMENT" &&
+          compatibleTypes.has(dynamicComponentType)
+      )
+    : [];
   return {
     disposition:
-      exactCandidates.length === 0
-        ? "MISSING"
-        : compatibleCandidates.length === 0
-          ? "ROLE_INCOMPATIBLE"
-          : compatibleCandidates.length === 1
-            ? "ONE_TO_ONE_CANDIDATE"
-            : "SPLIT_CANDIDATE",
+      compatibleCandidates.length === 1
+        ? "ONE_TO_ONE_CANDIDATE"
+        : compatibleCandidates.length > 1
+          ? "SPLIT_CANDIDATE"
+          : inheritedCandidates.length > 0
+            ? "INHERITED_ROLE_CANDIDATE"
+            : exactCandidates.length === 0
+              ? "MISSING"
+              : "ROLE_INCOMPATIBLE",
     exactCandidateCount: exactCandidates.length,
     compatibleCandidateCount: compatibleCandidates.length,
+    ...(includeInherited
+      ? { inheritedCandidateCount: inheritedCandidates.length }
+      : {}),
   };
 }
 
@@ -1010,7 +1026,12 @@ function createCrosswalkDraft({ basis } = {}) {
     );
     const mechanicalRoleReview = mechanicalRoleDisposition(
       legacyComponent.legacyFactRole,
-      candidates
+      candidates,
+      {
+        includeInherited:
+          basis.campaignProfile.profileId ===
+          CURRENT_V22_REVIEW_PROFILE.profileId,
+      }
     );
     return {
       recordId: `DR-${sha256(
@@ -1022,7 +1043,9 @@ function createCrosswalkDraft({ basis } = {}) {
       reviewPriority:
         mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
           ? "P1_ROLE_INCOMPATIBLE"
-          : "P2_ALL_OTHER_COMPONENTS",
+          : mechanicalRoleReview.disposition === "INHERITED_ROLE_CANDIDATE"
+            ? "P1_INHERITED_ROLE_CANDIDATE"
+            : "P2_ALL_OTHER_COMPONENTS",
       reviewState: "UNREVIEWED",
     };
   });
@@ -1059,6 +1082,15 @@ function createCrosswalkDraft({ basis } = {}) {
         ({ mechanicalRoleReview }) =>
           mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
       ).length,
+      ...(basis.campaignProfile.profileId ===
+      CURRENT_V22_REVIEW_PROFILE.profileId
+        ? {
+            inheritedRoleCandidateRecords: records.filter(
+              ({ mechanicalRoleReview }) =>
+                mechanicalRoleReview.disposition === "INHERITED_ROLE_CANDIDATE"
+            ).length,
+          }
+        : {}),
       oneToOneCandidateRecords: records.filter(
         ({ mechanicalRoleReview }) =>
           mechanicalRoleReview.disposition === "ONE_TO_ONE_CANDIDATE"
@@ -1354,7 +1386,9 @@ function normalizeDecisions(decisions, draft) {
       (relation === "MISSING" && targets?.length === 0) ||
       (relation === "AMBIGUOUS" && Array.isArray(targets));
     const roleMismatchCauseValid =
-      record.mechanicalRoleReview.disposition !== "ROLE_INCOMPATIBLE" ||
+      !["ROLE_INCOMPATIBLE", "INHERITED_ROLE_CANDIDATE"].includes(
+        record.mechanicalRoleReview.disposition
+      ) ||
       [
         "DYNAMIC_CLASSIFICATION_ERROR",
         "ROLE_MAPPING_TOO_NARROW",
@@ -1655,6 +1689,7 @@ module.exports = {
   createReviewerRegistry,
   createReviewerTemplate,
   createRunProvenance,
+  mechanicalRoleDisposition,
   reconcileApprovedCrosswalk,
   reviewCampaignProfile,
   sealReviewerArtifact,
