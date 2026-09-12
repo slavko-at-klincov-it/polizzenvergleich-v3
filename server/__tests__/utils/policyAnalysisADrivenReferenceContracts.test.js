@@ -749,7 +749,6 @@ describe("requirement-local semantic evidence completeness", () => {
       type: "VALUE_AND_UNIT",
       rawValue: "10",
       unit: "m",
-      expectedSourceBlockIds: ["value"],
     },
     {
       source: "Die Einzelscheibengröße beträgt maximal 10m².",
@@ -972,6 +971,7 @@ describe("requirement-local semantic evidence completeness", () => {
       type: "VALUE_AND_UNIT",
       rawValue: "10",
       unit: "m",
+      expectedSourceBlockIds: ["value"],
     },
     {
       blocks: [
