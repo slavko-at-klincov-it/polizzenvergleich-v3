@@ -680,9 +680,119 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         : response?.requirements,
     };
   });
+  const listGovernorNormalization =
+    normalizeStandaloneListGovernorRequirements(normalized, units);
   return {
-    responses: normalized,
-    componentRepairs: repairs,
+    responses: listGovernorNormalization.responses,
+    componentRepairs: [...repairs, ...listGovernorNormalization.repairs],
+  };
+}
+
+function normalizeStandaloneListGovernorRequirements(responses, units = []) {
+  const repairs = [];
+  const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
+  return {
+    responses: responses.map((response) => {
+      const unit = unitsById.get(response?.unitId);
+      const segments = unit?.logicalSourceSegments || [];
+      const firstSegment = segments[0];
+      const firstBlockId = firstSegment?.blockIds?.[0];
+      const firstBlock = unit?.source?.blocks?.find(
+        ({ blockId }) => blockId === firstBlockId
+      );
+      const hasSubordinateItems =
+        segments.length > 1 &&
+        segments.slice(1).every((segment) => {
+          const block = unit.source.blocks.find(
+            ({ blockId }) => blockId === segment.blockIds[0]
+          );
+          return block?.structuralKind === "LIST_ITEM";
+        });
+      if (
+        firstBlock?.structuralKind !== "LIST_GOVERNOR" ||
+        !hasSubordinateItems ||
+        !Array.isArray(response?.requirements)
+      )
+        return response;
+      const governorBlockIds = new Set(firstSegment.blockIds);
+      const itemBlockIds = new Set(
+        segments.slice(1).flatMap(({ blockIds }) => blockIds)
+      );
+      const standalone = response.requirements
+        .map((requirement, requirementIndex) => ({
+          requirement,
+          requirementIndex,
+          sourceBlockIds: new Set(
+            (requirement.components || []).flatMap(
+              ({ sourceBlockIds }) => sourceBlockIds || []
+            )
+          ),
+        }))
+        .filter(
+          ({ sourceBlockIds }) =>
+            [...sourceBlockIds].some((blockId) =>
+              governorBlockIds.has(blockId)
+            ) &&
+            ![...sourceBlockIds].some((blockId) => itemBlockIds.has(blockId))
+        );
+      const targets = response.requirements
+        .map((requirement, requirementIndex) => ({
+          requirement,
+          requirementIndex,
+        }))
+        .filter(({ requirement, requirementIndex }) => {
+          if (
+            standalone.some(
+              (candidate) => candidate.requirementIndex === requirementIndex
+            )
+          )
+            return false;
+          return (requirement.components || []).some(({ sourceBlockIds }) =>
+            (sourceBlockIds || []).some((blockId) => itemBlockIds.has(blockId))
+          );
+        });
+      if (standalone.length !== 1 || targets.length === 0) return response;
+      const [governor] = standalone;
+      const movedComponents = governor.requirement.components || [];
+      repairs.push({
+        unitId: unit.unitId,
+        action: "MATERIALIZE_SHARED_LIST_GOVERNOR_COMPONENTS",
+        sourceRequirementIndex: governor.requirementIndex,
+        targetRequirementIndexes: targets.map(
+          ({ requirementIndex }) => requirementIndex
+        ),
+        governorBlockIds: [...governorBlockIds],
+      });
+      return {
+        ...response,
+        requirements: response.requirements.flatMap(
+          (requirement, requirementIndex) => {
+            if (requirementIndex === governor.requirementIndex) return [];
+            if (
+              !targets.some(
+                (target) => target.requirementIndex === requirementIndex
+              )
+            )
+              return [requirement];
+            const existing = new Set(
+              (requirement.components || []).map(stableStringify)
+            );
+            return [
+              {
+                ...requirement,
+                components: [
+                  ...(requirement.components || []),
+                  ...movedComponents.filter(
+                    (component) => !existing.has(stableStringify(component))
+                  ),
+                ],
+              },
+            ];
+          }
+        ),
+      };
+    }),
+    repairs,
   };
 }
 
@@ -1863,6 +1973,7 @@ module.exports = {
   createAttemptRecorder,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  normalizeStandaloneListGovernorRequirements,
   parseJsonArray,
   processClassificationBatches,
   prompt,

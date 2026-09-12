@@ -39,6 +39,7 @@ const {
   batchResultFile,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  normalizeStandaloneListGovernorRequirements,
   parseJsonArray,
   processClassificationBatches,
   requestCompletionWithTimeout,
@@ -728,6 +729,59 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(
       parsed.responses[0].requirements.map(({ displayLabel }) => displayLabel)
     ).toEqual(["A", "B", "C"]);
+  });
+
+  test("moves an owned shared list governor into its subordinate item requirement", () => {
+    const unit = {
+      unitId: "unit-one",
+      source: {
+        blocks: [
+          { blockId: "governor", structuralKind: "LIST_GOVERNOR" },
+          { blockId: "item", structuralKind: "LIST_ITEM" },
+        ],
+      },
+      logicalSourceSegments: [
+        { segmentId: "one", blockIds: ["governor"] },
+        { segmentId: "two", blockIds: ["item"] },
+      ],
+    };
+    const governorComponent = {
+      type: "VALUE_AND_UNIT",
+      label: "5 %",
+      rawValue: "5",
+      sourceBlockIds: ["governor"],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        { displayLabel: "5 %", components: [governorComponent] },
+        {
+          displayLabel: "Nebengebäude",
+          components: [
+            { type: "OBJECT", label: "Nebengebäude", sourceBlockIds: ["item"] },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeStandaloneListGovernorRequirements(
+      [response],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toHaveLength(1);
+    expect(normalized.responses[0].requirements[0].components).toContainEqual(
+      governorComponent
+    );
+    expect(normalized.repairs).toEqual([
+      expect.objectContaining({
+        unitId: "unit-one",
+        action: "MATERIALIZE_SHARED_LIST_GOVERNOR_COMPONENTS",
+        sourceRequirementIndex: 0,
+        targetRequirementIndexes: [1],
+        governorBlockIds: ["governor"],
+      }),
+    ]);
   });
 
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
