@@ -5,6 +5,7 @@ const {
 const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   buildADrivenSemanticManifest,
+  materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
@@ -482,6 +483,40 @@ describe("requirement-local semantic evidence completeness", () => {
         signalId: "EXPLICIT_CONDITION",
       }),
     ]);
+  });
+
+  test("materializes a unique source-bound governor role into a sibling requirement", () => {
+    const unit = evidenceUnit(
+      ["governor", "Mitversichert, wenn das Gebäude betroffen ist"],
+      ["item-one", "Nebengebäude"],
+      ["item-two", "Garagen"]
+    );
+    const condition = component("CONDITION", "governor", {
+      label: "wenn das Gebäude betroffen ist",
+    });
+    const result = materializeSharedSignalComponents(unit, [
+      requirement(
+        ["governor", "item-one"],
+        [component("OBJECT", "item-one"), condition]
+      ),
+      requirement(
+        ["governor", "item-two"],
+        [component("OBJECT", "item-two")]
+      ),
+    ]);
+
+    expect(result.requirements[1].components).toContainEqual(condition);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "SHARED_SIGNAL_COMPONENT_MATERIALIZED",
+        requirementIndex: 1,
+        sourceRequirementIndex: 0,
+        signalId: "EXPLICIT_CONDITION",
+      }),
+    ]);
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
   });
 
   test("accepts complete signals and ignores ordinary wording", () => {

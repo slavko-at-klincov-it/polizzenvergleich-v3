@@ -347,6 +347,78 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
   });
 }
 
+function materializeSharedSignalComponents(unit, requirements) {
+  const blocksById = new Map(
+    evidenceBlocks(unit).map((block) => [block.blockId, block])
+  );
+  const materialized = requirements.map((requirement) => ({
+    ...requirement,
+    components: [...requirement.components],
+  }));
+  const diagnostics = [];
+  for (const [requirementIndex, requirement] of materialized.entries()) {
+    const selectedBlocks = requirement.sourceBlockIds
+      .map((blockId) => blocksById.get(blockId))
+      .filter(Boolean);
+    for (const signal of REQUIREMENT_ROLE_SIGNALS) {
+      const matchedEvidence = selectedBlocks.flatMap((block) =>
+        matchesForPattern(signal.pattern, block.exactText).map((match) => ({
+          blockId: block.blockId,
+          exactText: block.exactText,
+          match,
+        }))
+      );
+      for (const evidence of matchedEvidence) {
+        if (
+          !signalApplies(signal, evidence) ||
+          requirement.components.some((component) =>
+            componentSupportsSignal(signal, component, evidence)
+          )
+        )
+          continue;
+        const candidates = materialized.flatMap(
+          (sibling, siblingRequirementIndex) =>
+            siblingRequirementIndex === requirementIndex
+              ? []
+              : sibling.components
+                  .filter(
+                    (component) =>
+                      component.sourceBlockIds.every((blockId) =>
+                        requirement.sourceBlockIds.includes(blockId)
+                      ) && componentSupportsSignal(signal, component, evidence)
+                  )
+                  .map((component) => ({
+                    component,
+                    siblingRequirementIndex,
+                  }))
+        );
+        const uniqueCandidates = [
+          ...new Map(
+            candidates.map((candidate) => [
+              stableStringify(candidate.component),
+              candidate,
+            ])
+          ).values(),
+        ];
+        if (uniqueCandidates.length !== 1) continue;
+        const [{ component, siblingRequirementIndex }] = uniqueCandidates;
+        requirement.components.push({ ...component });
+        diagnostics.push({
+          code: "SHARED_SIGNAL_COMPONENT_MATERIALIZED",
+          unitId: unit.unitId,
+          requirementIndex,
+          sourceRequirementIndex: siblingRequirementIndex,
+          signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          signalId: signal.signalId,
+          componentType: component.type,
+          sourceBlockIds: component.sourceBlockIds,
+        });
+      }
+    }
+  }
+  return { requirements: materialized, diagnostics };
+}
+
 function responseIndex(responses, plannedIds) {
   const byId = new Map();
   const diagnostics = [];
@@ -1037,9 +1109,16 @@ function classifyUnit(unit, records, semanticSignalContractId) {
         ),
       ],
     };
+  const sharedSignalMaterialization =
+    semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
+      ? materializeSharedSignalComponents(unit, drafts)
+      : { requirements: drafts, diagnostics: [] };
   const roleEvidenceDiagnostics =
     semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
-      ? requirementRoleEvidenceDiagnostics(unit, drafts)
+      ? requirementRoleEvidenceDiagnostics(
+          unit,
+          sharedSignalMaterialization.requirements
+        )
       : [];
   if (roleEvidenceDiagnostics.length)
     return {
@@ -1049,7 +1128,10 @@ function classifyUnit(unit, records, semanticSignalContractId) {
       requirements: [],
       diagnostics: roleEvidenceDiagnostics,
     };
-  const requirements = finalizeRequirements(unit, drafts);
+  const requirements = finalizeRequirements(
+    unit,
+    sharedSignalMaterialization.requirements
+  );
   const segmentDiagnostics = requirements
     ? logicalSegmentDiagnostics(unit, requirements)
     : [];
@@ -1137,7 +1219,7 @@ function classifyUnit(unit, records, semanticSignalContractId) {
     primaryClass,
     semanticClasses,
     requirements,
-    diagnostics: [],
+    diagnostics: sharedSignalMaterialization.diagnostics,
   };
 }
 
@@ -1311,6 +1393,7 @@ module.exports = {
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
+  materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
   validateADrivenSemanticManifest,
 };
