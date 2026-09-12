@@ -352,12 +352,13 @@ function signalBelongsToRequirement(unit, requirement, signal, blockIds) {
 }
 
 function requirementSignalEvidence(unit, requirement, signal) {
-  const blocksById = new Map(
-    evidenceBlocks(unit).map((block) => [block.blockId, block])
+  const selectedBlockIds = new Set([
+    ...(unit.governingContext?.blockIds || []),
+    ...requirement.sourceBlockIds,
+  ]);
+  const selectedBlocks = evidenceBlocks(unit).filter(({ blockId }) =>
+    selectedBlockIds.has(blockId)
   );
-  const selectedBlocks = requirement.sourceBlockIds
-    .map((blockId) => blocksById.get(blockId))
-    .filter(Boolean);
   const evidence = selectedBlocks.flatMap((block) =>
     matchesForPattern(signal.pattern, block.exactText).map((match) => ({
       blockId: block.blockId,
@@ -374,7 +375,7 @@ function requirementSignalEvidence(unit, requirement, signal) {
       const blockIds = minimalSourceRange(
         unit,
         match,
-        requirement.sourceBlockIds
+        [...selectedBlockIds]
       );
       if (!blockIds?.length) continue;
       evidence.push({

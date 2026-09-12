@@ -869,7 +869,7 @@ describe("requirement-local semantic evidence completeness", () => {
     const result = materializeSharedSignalComponents(unit, [
       {
         ...requirement(
-          ["governor", "item"],
+          ["item"],
           [
             component("COVERAGE_EFFECT", "governor", {
               label: "Versichert sind",
