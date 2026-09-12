@@ -26,6 +26,7 @@ const {
 const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V13";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+  RUN_CONTRACT_ID,
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -1411,7 +1412,6 @@ function predecessorBatchResponses(file, plan, batch, args) {
     result.batchId !== batch.batchId ||
     result.batchIndex !== batch.batchIndex ||
     result.promptContractId !== PROMPT_CONTRACT_ID ||
-    result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
     result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||

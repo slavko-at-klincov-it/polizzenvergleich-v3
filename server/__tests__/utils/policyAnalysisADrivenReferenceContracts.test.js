@@ -2637,6 +2637,79 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
+  test("revalidates a bound V13 predecessor after its evidence context changes", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-v13-context-upgrade-")
+    );
+    try {
+      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "c");
+      const plan = deriveClassificationEvidencePlan(
+        buildADrivenSourceUnitPlan({
+          documents: [document("source", 0, source)],
+        })
+      );
+      const built = buildADrivenClassificationBatches(plan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      const responses = batch.expectedUnitIds.map((unitId) =>
+        validResponse(plan.units.find((unit) => unit.unitId === unitId))
+      );
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const seeded = await runBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: args.model,
+                choices: [{ message: { content: JSON.stringify(responses) } }],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch,
+        maximumAttempts: 1,
+      });
+      const predecessor = {
+        ...seeded,
+        promptSha256: "f".repeat(64),
+      };
+      const file = batchResultFile(temporary, batch);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, `${JSON.stringify(predecessor, null, 2)}\n`, {
+        mode: 0o600,
+      });
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const [upgraded] = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(upgraded.promptSha256).not.toBe(predecessor.promptSha256);
+      expect(upgraded.responses).toEqual(responses);
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(
+        fs.readdirSync(path.join(temporary, "superseded-batches"))
+      ).toHaveLength(1);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("normalizes a historically accepted numbered heading before reusing its PASS batch", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-heading-pass-")
