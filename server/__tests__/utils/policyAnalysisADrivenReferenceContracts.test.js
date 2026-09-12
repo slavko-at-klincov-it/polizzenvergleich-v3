@@ -926,6 +926,20 @@ describe("requirement-local semantic evidence completeness", () => {
       expectedSourceBlockIds: ["event", "finding"],
       signalId: "EXPLICIT_DEFINITION",
     },
+    {
+      blocks: [
+        [
+          "definition-subject",
+          "Nebengebäude sind privat oder betrieblich genutzte",
+        ],
+        ["definition-body", "Gebäude und Anbauten, die fest verankert sind."],
+      ],
+      expectedType: "FACT_ROLE",
+      expectedLabel:
+        "Nebengebäude sind privat oder betrieblich genutzte\nGebäude und Anbauten, die fest verankert sind",
+      expectedSourceBlockIds: ["definition-subject", "definition-body"],
+      signalId: "EXPLICIT_COPULAR_DEFINITION",
+    },
   ])(
     "materializes $signalId when its exact relation spans component labels",
     ({
