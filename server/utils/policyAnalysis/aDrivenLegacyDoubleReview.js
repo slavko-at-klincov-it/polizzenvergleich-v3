@@ -2948,6 +2948,7 @@ module.exports = {
   createReviewerTemplate,
   createRunProvenance,
   mechanicalRoleDisposition,
+  normalizeReviewerDecisions: normalizeDecisions,
   reconcileApprovedCrosswalk,
   reconcileDynamicRemainderReview,
   reviewCampaignProfile,

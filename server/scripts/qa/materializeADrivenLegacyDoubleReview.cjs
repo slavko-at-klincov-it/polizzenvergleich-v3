@@ -36,6 +36,10 @@ const {
   validateReviewerRegistry,
   reviewCampaignProfile,
 } = require("../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
+const {
+  importReviewerWorkbook,
+  loadReviewWorkbook,
+} = require("../../utils/policyAnalysis/aDrivenLegacyReviewWorkbook");
 
 const BASIS_FILE = "review-basis.private.json";
 const DRAFT_FILE = "crosswalk-draft.private.json";
@@ -695,6 +699,50 @@ function materializeReviewerTemplate({
   return input;
 }
 
+async function materializeReviewerWorkbookImport({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewInputPath,
+  reviewWorkbookPath,
+  target,
+}) {
+  if (!reviewInputPath || !reviewWorkbookPath || !target)
+    fail("LF_A_REVIEW_WORKBOOK_IMPORT_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const pristineInput = readRegular(reviewInputPath).value;
+  const expectedInput = createReviewerTemplate({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewerSlot: pristineInput.reviewerSlot,
+  });
+  if (stableJson(pristineInput) !== stableJson(expectedInput))
+    fail("LF_A_REVIEW_WORKBOOK_TEMPLATE_NOT_PRISTINE");
+  const workbook = await loadReviewWorkbook(readRawRegular(reviewWorkbookPath));
+  const populatedInput = importReviewerWorkbook({
+    workbook,
+    draft: campaign.draft,
+    input: pristineInput,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(
+    temp,
+    `review-input-${populatedInput.reviewerSlot}.private.json`
+  );
+  writeJsonPrivate(file, populatedInput);
+  if (stableJson(readRegular(file).value) !== stableJson(populatedInput))
+    fail("LF_A_REVIEW_WORKBOOK_IMPORT_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return populatedInput;
+}
+
 function stableJson(value) {
   return JSON.stringify(value);
 }
@@ -1082,7 +1130,7 @@ function materializeControlledBPilotGate({
   return gate;
 }
 
-function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   const { command, values } = parseArgs(argv);
   if (command === "freeze") {
     const basis = materializeFreeze({
@@ -1136,6 +1184,20 @@ function main(argv = process.argv.slice(2)) {
       authorityPublicKeyFingerprintSha256:
         values["authority-public-key-fingerprint"],
       reviewerSlot: values.slot,
+      target: values.target,
+    });
+    process.stdout.write(`${input.reviewerSlot} ${input.reviewerId}\n`);
+    return;
+  }
+  if (command === "workbook-import") {
+    const input = await materializeReviewerWorkbookImport({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      registryRoot: values["registry-root"],
+      authorityPublicKeyFingerprintSha256:
+        values["authority-public-key-fingerprint"],
+      reviewInputPath: values["review-input"],
+      reviewWorkbookPath: values["review-workbook"],
       target: values.target,
     });
     process.stdout.write(`${input.reviewerSlot} ${input.reviewerId}\n`);
@@ -1263,7 +1325,11 @@ function main(argv = process.argv.slice(2)) {
   fail("LF_A_DOUBLE_REVIEW_COMMAND_INVALID", command);
 }
 
-if (require.main === module) main();
+if (require.main === module)
+  main().catch((error) => {
+    process.stderr.write(`${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });
 
 module.exports = {
   BASIS_FILE,
@@ -1292,6 +1358,7 @@ module.exports = {
   materializeFreezeArtifactSetIndex,
   materializeRegistry,
   materializeReviewerArtifact,
+  materializeReviewerWorkbookImport,
   materializeReviewerTemplate,
   parseArgs,
   readDynamicRemainderReviewCompletion,
