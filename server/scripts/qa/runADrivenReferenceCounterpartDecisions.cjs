@@ -353,6 +353,7 @@ async function runBatch({
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     const started = performance.now();
     const messagesSha256 = sha256(JSON.stringify(messages));
+    let observedRawText = "";
     try {
       const completion = await requestCompletionWithTimeout({
         client,
@@ -366,8 +367,8 @@ async function runBatch({
         abortSettlementTimeoutMs,
         recoverModelAfterAbort,
       });
-      const rawText = completion.choices?.[0]?.message?.content || "";
-      const parsed = parseJsonArray(rawText);
+      observedRawText = completion.choices?.[0]?.message?.content || "";
+      const parsed = parseJsonArray(observedRawText);
       const trialResponses = [
         ...acceptedResponses.values(),
         ...parsed.filter(({ packageId }) => !acceptedResponses.has(packageId)),
@@ -398,6 +399,8 @@ async function runBatch({
         promptTokens: completion.usage?.prompt_tokens || 0,
         completionTokens: completion.usage?.completion_tokens || 0,
         totalTokens: completion.usage?.total_tokens || 0,
+        rawResponseSha256: sha256(observedRawText),
+        rawResponse: observedRawText,
         parsedResponses: parsed.length,
         responses: parsed,
         acceptedPackages: acceptedResponses.size,
@@ -407,7 +410,7 @@ async function runBatch({
       };
       attempts.push(attemptRecord);
       await onAttempt(attemptRecord);
-      last = { rawText, validation, error: null };
+      last = { rawText: observedRawText, validation, error: null };
       if (validation.passed) break;
       workingBatch = {
         ...batch,
@@ -440,6 +443,8 @@ async function runBatch({
           error?.telemetry?.requestSettledAfterAbort ?? null,
         settlementDurationMs: error?.telemetry?.settlementDurationMs ?? null,
         recovery: error?.telemetry?.recovery || null,
+        rawResponseSha256: sha256(observedRawText),
+        rawResponse: observedRawText,
         responses: [],
         validationPassed: false,
         error: error.message,
@@ -447,7 +452,7 @@ async function runBatch({
       attempts.push(attemptRecord);
       await onAttempt(attemptRecord);
       last = {
-        rawText: "",
+        rawText: observedRawText,
         validation: {
           passed: false,
           diagnostics: [
@@ -458,6 +463,16 @@ async function runBatch({
         error: error.message,
       };
       if (error.retrySafe === false) break;
+      if (errorClass(error) === "MODEL_RESPONSE_INVALID" && observedRawText) {
+        messages = [
+          ...prompt(workingBatch),
+          { role: "assistant", content: observedRawText },
+          {
+            role: "user",
+            content: `Die vorige Antwort war technisch ungültiges JSON (${error.message}). Repariere ausschließlich die JSON-Syntax. Gib genau ein vollständiges JSON-Array mit exakt einem Objekt je expectedPackageId aus; ändere keine fachlichen Entscheidungen, IDs oder Kandidatenzuordnungen und füge kein Markdown oder weiteren Text hinzu.`,
+          },
+        ];
+      }
     }
   }
   const responses = batch.expectedPackageIds

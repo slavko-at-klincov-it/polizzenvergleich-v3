@@ -6506,6 +6506,119 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(result.attempts).toHaveLength(1);
   });
 
+  test("journals malformed B output and changes the retry prompt before accepting repaired JSON", async () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude und Nebengebäude sind versichert.";
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: "candidate-one",
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-one",
+            channels: ["DINGHY"],
+            sourceSpans: [
+              {
+                spanId: "span-one",
+                exactText,
+                exactTextSha256: crypto
+                  .createHash("sha256")
+                  .update(exactText)
+                  .digest("hex"),
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const batch = buildADrivenCounterpartDecisionPlan(searchExecution, {
+      maximumPackages: 1,
+      maximumCharacters: 14_000,
+    }).batches[0];
+    const validResponses = batch.packages.map((item) => ({
+      packageId: item.packageId,
+      decision: "SUPPORTED",
+      selectedCandidateIds: ["candidate-one"],
+      dimensionChecks: item.semanticChecks.map(({ checkId, dimension }) => ({
+        checkId,
+        dimension,
+        outcome: "MATCH",
+        candidateIds: ["candidate-one"],
+      })),
+    }));
+    const malformed = `${JSON.stringify(validResponses)}\n${JSON.stringify(
+      validResponses
+    )}`;
+    const client = {
+      chat: {
+        completions: {
+          create: jest
+            .fn()
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: malformed } }],
+              usage: {},
+            })
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                { message: { content: JSON.stringify(validResponses) } },
+              ],
+              usage: {},
+            }),
+        },
+      },
+    };
+
+    const result = await runCounterpartDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      searchExecution,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.attempts[0]).toMatchObject({
+      errorClass: "MODEL_RESPONSE_INVALID",
+      rawResponse: malformed,
+      rawResponseSha256: crypto
+        .createHash("sha256")
+        .update(malformed)
+        .digest("hex"),
+      responses: [],
+      validationPassed: false,
+    });
+    expect(result.attempts[1].messagesSha256).not.toBe(
+      result.attempts[0].messagesSha256
+    );
+    const retryMessages =
+      client.chat.completions.create.mock.calls[1][0].messages;
+    expect(retryMessages.at(-2)).toEqual({
+      role: "assistant",
+      content: malformed,
+    });
+    expect(retryMessages.at(-1).content).toContain(
+      "Repariere ausschließlich die JSON-Syntax"
+    );
+  });
+
   test("aborts a hanging B decision request and retries only after safe recovery", async () => {
     const manifest = searchEligibleManifest();
     const searchPlan = buildADrivenCounterpartSearchPlan({
