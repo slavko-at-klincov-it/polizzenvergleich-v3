@@ -1001,9 +1001,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       },
     ]);
 
-    expect(
-      result.requirements[0].components.map(({ type }) => type)
-    ).toEqual(["OBJECT", "OBJECT", "FACT_ROLE"]);
+    expect(result.requirements[0].components.map(({ type }) => type)).toEqual([
+      "OBJECT",
+      "OBJECT",
+      "FACT_ROLE",
+    ]);
     expect(result.requirements[0].components[2]).toEqual({
       type: "FACT_ROLE",
       label: "Kosten für Planung",

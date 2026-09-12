@@ -454,7 +454,10 @@ function materializeSharedSignalComponents(unit, requirements) {
         );
         if (localCandidates.length !== 1) continue;
         const [localComponent] = localCandidates;
-        const localMatch = matchesForPattern(signal.pattern, localComponent.label)[0];
+        const localMatch = matchesForPattern(
+          signal.pattern,
+          localComponent.label
+        )[0];
         const matchIndex = localComponent.label
           .toLocaleLowerCase("de-AT")
           .indexOf(localMatch.toLocaleLowerCase("de-AT"));
