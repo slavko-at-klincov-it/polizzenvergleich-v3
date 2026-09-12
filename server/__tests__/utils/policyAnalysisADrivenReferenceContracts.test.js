@@ -841,7 +841,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       unitId: "unit-one",
       unitKind: "CLAUSE",
       source: {
-        combinedText: "Kosten der Wiederauffüllung der Aushubgrube mit\nErdreich",
+        combinedText:
+          "Kosten der Wiederauffüllung der Aushubgrube mit\nErdreich",
         blocks: [
           {
             blockId: "cost-one",

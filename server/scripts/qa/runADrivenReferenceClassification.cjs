@@ -512,7 +512,10 @@ function completeComponentSourceBlockIds(unit, component) {
     )
   )
     return null;
-  const normalize = (value) => String(value || "").replace(/\s+/gu, " ").trim();
+  const normalize = (value) =>
+    String(value || "")
+      .replace(/\s+/gu, " ")
+      .trim();
   const label = normalize(component.label);
   if (!label) return null;
   const declaredText = normalize(
@@ -529,7 +532,11 @@ function completeComponentSourceBlockIds(unit, component) {
       const selectedIds = selected.map(({ blockId }) => blockId);
       if (![...declaredIds].every((blockId) => selectedIds.includes(blockId)))
         continue;
-      if (!normalize(selected.map(({ exactText }) => exactText).join("\n")).includes(label))
+      if (
+        !normalize(
+          selected.map(({ exactText }) => exactText).join("\n")
+        ).includes(label)
+      )
         continue;
       candidates.push(selectedIds);
     }
@@ -538,7 +545,9 @@ function completeComponentSourceBlockIds(unit, component) {
   const minimumLength = Math.min(...candidates.map(({ length }) => length));
   const minimal = candidates.filter(({ length }) => length === minimumLength);
   const unique = [
-    ...new Map(minimal.map((blockIds) => [stableStringify(blockIds), blockIds])).values(),
+    ...new Map(
+      minimal.map((blockIds) => [stableStringify(blockIds), blockIds])
+    ).values(),
   ];
   if (unique.length !== 1 || unique[0].length === declaredIds.size) return null;
   return unique[0];
@@ -656,10 +665,8 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
-                  const completeSourceBlockIds = completeComponentSourceBlockIds(
-                    unit,
-                    component
-                  );
+                  const completeSourceBlockIds =
+                    completeComponentSourceBlockIds(unit, component);
                   if (completeSourceBlockIds) {
                     const sourceRepairedComponent = {
                       ...component,
