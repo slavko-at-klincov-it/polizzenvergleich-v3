@@ -715,6 +715,8 @@ describe("requirement-local semantic evidence completeness", () => {
     "Unbeabsichtigte Meldefehler beeinträchtigen die Leistungspflicht nicht.",
     "Ein Verstoß des Handwerkers schränkt dies nicht die Leistung des Versicherers ein.",
     "Der Versicherungsnehmer ist berechtigt, den Vertrag auf die neuen Bedingungen abzuändern und eine niedrigere Prämie zu verlangen.",
+    "So ist der Versicherungsnehmer berechtigt, den Vertrag auf neue Bedingungen abzuändern.",
+    "Es verzichtet der Versicherer für die Dauer von ca. 3 Jahren auf den Einwand der Unterversicherung.",
     "Eine erste Teilzahlung nach Anzeige des Schadens verlangt werden kann.",
     "Eine Akontierung ohne Präjudiz wird bei ausreichenden Sicherheiten vorgenommen.",
     "Der Wiederaufbau innerhalb Österreichs kann auch an anderer Stelle erfolgen.",
