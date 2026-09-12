@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   buildADrivenSemanticManifest,
   validateADrivenSemanticManifest,
@@ -210,11 +211,55 @@ const CURRENT_V30_REVIEW_PROFILE = Object.freeze({
     CURRENT_V30_REVIEW_PROFILE_PAYLOAD
   ),
 });
+const CURRENT_V35_REVIEW_PROFILE_PAYLOAD = {
+  schemaVersion: 1,
+  contractId: REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+  profileId: "LF_A_V35_FINAL_357_1054_WITH_V374_LEGACY_283_631",
+  dynamicManifestSha256:
+    "d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce",
+  dynamicManifestFileSha256:
+    "a4651bc1a9864a516823926d512d9ffd4be9bf8c09ecc559a9e7737834d7a1d1",
+  dynamicRequirements: 357,
+  dynamicComponents: 1054,
+  legacyManifestSha256:
+    "3697afe4a18760bd893d50e0c3f8dadf48ff0106447829d32f1cb7845011efb0",
+  legacyManifestFileSha256:
+    "c8e4c7cb303879d0efb35eb8215be6b6b75a75332e8a1b892c5f1bc85d6be4c7",
+  legacyRequirements: EXPECTED_LEGACY_REQUIREMENTS,
+  legacyComponents: EXPECTED_LEGACY_COMPONENTS,
+  implementationCommitSha: "828dafddd26f90a298f486455ff1f967371bdcdd",
+  manifestCompletionCommitSha: "828dafddd26f90a298f486455ff1f967371bdcdd",
+  releaseId: "e8e9e94862acf1e48a7f8110382af084e5d37439",
+  runSignature:
+    "df7d7179-1c49-412b-b2ff-0ec6b1fdc52f/resume-eb1202f45007d9995ddd60a9",
+  productRunContractId: "LF_REFERENCE_A_DRIVEN_V2",
+  classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+  promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
+  semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  modelId: "qwen/qwen3.6-35b-a3b",
+  modelContext: 42496,
+  maximumAttempts: 8,
+  requestTimeoutMs: 180000,
+  abortSettlementTimeoutMs: 15000,
+  modelRecoveryTimeoutMs: 180000,
+  qwenModelKey: "qwen3.6-35b-a3b-mlx-text",
+  transportContractId: "LF_A_CLASSIFICATION_TRANSPORT_V1",
+  classificationBatches: 59,
+  classificationResponses: 349,
+};
+const CURRENT_V35_REVIEW_PROFILE = Object.freeze({
+  ...CURRENT_V35_REVIEW_PROFILE_PAYLOAD,
+  profileSha256: domainDigest(
+    REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+    CURRENT_V35_REVIEW_PROFILE_PAYLOAD
+  ),
+});
 const REVIEW_CAMPAIGN_PROFILES = new Map(
   [
     CURRENT_V12_REVIEW_PROFILE,
     CURRENT_V22_REVIEW_PROFILE,
     CURRENT_V30_REVIEW_PROFILE,
+    CURRENT_V35_REVIEW_PROFILE,
   ].map((profile) => [profile.profileId, profile])
 );
 
@@ -296,6 +341,8 @@ function reviewCampaignProfileForManifest(manifestSha256) {
 }
 
 function semanticSignalContractFor(campaignProfile) {
+  if (campaignProfile.semanticSignalContractId)
+    return campaignProfile.semanticSignalContractId;
   return campaignProfile.classificationRunContractId ===
     CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
     ? null
@@ -2462,6 +2509,7 @@ module.exports = {
   CURRENT_V12_REVIEW_PROFILE,
   CURRENT_V22_REVIEW_PROFILE,
   CURRENT_V30_REVIEW_PROFILE,
+  CURRENT_V35_REVIEW_PROFILE,
   REVIEW_ARTIFACT_CONTRACT_ID,
   REVIEW_BASIS_CONTRACT_ID,
   REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,

@@ -28,6 +28,7 @@ const {
   CURRENT_V12_REVIEW_PROFILE,
   CURRENT_V22_REVIEW_PROFILE,
   CURRENT_V30_REVIEW_PROFILE,
+  CURRENT_V35_REVIEW_PROFILE,
   createClassificationEvidence,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
@@ -455,6 +456,20 @@ describe("V12 283/631 double-review contract", () => {
       dynamicRequirements: 354,
       dynamicComponents: 1036,
       classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+      classificationBatches: 59,
+      classificationResponses: 349,
+    });
+    expect(reviewCampaignProfile(CURRENT_V35_REVIEW_PROFILE.profileId)).toBe(
+      CURRENT_V35_REVIEW_PROFILE
+    );
+    expect(CURRENT_V35_REVIEW_PROFILE).toMatchObject({
+      dynamicManifestSha256:
+        "d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce",
+      dynamicRequirements: 357,
+      dynamicComponents: 1054,
+      classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+      semanticSignalContractId:
+        "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6",
       classificationBatches: 59,
       classificationResponses: 349,
     });
