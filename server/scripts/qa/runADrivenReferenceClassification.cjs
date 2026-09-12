@@ -696,6 +696,7 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
   return {
     responses: responses.map((response) => {
       const unit = unitsById.get(response?.unitId);
+      if (!unit) return response;
       const segments = unit?.logicalSourceSegments || [];
       const firstSegment = segments[0];
       const firstBlockId = firstSegment?.blockIds?.[0];
