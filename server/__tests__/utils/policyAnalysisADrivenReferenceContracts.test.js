@@ -2051,10 +2051,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   });
 
   test.each([
-    "der Mietverlust für privat genutzte Gebäudeeinheiten",
     "die tatsächlichen Kosten für Ersatzräumlichkeiten",
     "Kosten für ein Hotelzimmer",
-    "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch- und Reinigungskosten",
   ])("maps a non-physical cost role out of OBJECT: %s", (label) => {
     const unit = {
       unitId: "non-physical-cost",
@@ -2091,6 +2089,190 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         label,
       }
     );
+  });
+
+  test("separates a financial-loss role from its insured-object scope", () => {
+    const label =
+      "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und –räume";
+    const unit = {
+      unitId: "financial-loss-scope",
+      source: {
+        blockIds: ["loss"],
+        combinedText: label,
+        blocks: [{ blockId: "loss", exactText: label }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: label,
+              components: [{ type: "OBJECT", label, sourceBlockIds: ["loss"] }],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: ["COST", "VARIANT"],
+    });
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      { type: "FACT_ROLE", label: "Mietverlust", sourceBlockIds: ["loss"] },
+      {
+        type: "SCOPE",
+        label: "für privat und gewerblich genutzte Gebäudeeinheiten und –räume",
+        sourceBlockIds: ["loss"],
+      },
+    ]);
+  });
+
+  test("splits a coordinated cost list into independently searchable roles", () => {
+    const label =
+      "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch-, De- und Remontage-, Bewegungs-, Schutz- und Reinigungskosten sowie Lagerkosten";
+    const unit = {
+      unitId: "coordinated-cost-roles",
+      source: {
+        blockIds: ["costs"],
+        combinedText: label,
+        blocks: [{ blockId: "costs", exactText: label }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: label,
+              components: [
+                { type: "OBJECT", label, sourceBlockIds: ["costs"] },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: ["COST"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ label }) => label
+      )
+    ).toEqual([
+      "Sicherungs-",
+      "Aufräumungs-",
+      "Abbruch-",
+      "Feuerlösch-",
+      "De- und Remontage-",
+      "Bewegungs-",
+      "Schutz-",
+      "Reinigungskosten",
+      "Lagerkosten",
+    ]);
+    expect(
+      normalized.responses[0].requirements[0].components.every(
+        ({ type }) => type === "FACT_ROLE"
+      )
+    ).toBe(true);
+  });
+
+  test("splits OCR-bearing tiered limits into values, scope and basis", () => {
+    const source =
+      "Sicherungs- und Reinigungskosten bis zu maximal l0%, in der Feuerversicherung maximal 15%, der Gebäudeversicherungssumme auf ,,Erstes Risiko“;";
+    const broadLimit =
+      "bis zu maximal l0%, in der Feuerversicherung maximal 15%, der Gebäudeversicherungssumme";
+    const firstRisk = "auf ,,Erstes Risiko“;";
+    const unit = {
+      unitId: "tiered-limit-basis",
+      source: {
+        blockIds: ["limit"],
+        combinedText: source,
+        blocks: [{ blockId: "limit", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "COST",
+          semanticClasses: ["COST"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Sicherungs- und Reinigungskosten",
+                  sourceBlockIds: ["limit"],
+                },
+                {
+                  type: "LIMIT_BASIS",
+                  label: broadLimit,
+                  sourceBlockIds: ["limit"],
+                },
+                {
+                  type: "SCOPE",
+                  label: firstRisk,
+                  sourceBlockIds: ["limit"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: ["COST", "LIMIT", "VARIANT"],
+    });
+    expect(components).toEqual([
+      {
+        type: "FACT_ROLE",
+        label: "Sicherungs- und Reinigungskosten",
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "VALUE_AND_UNIT",
+        label: "bis zu maximal l0%",
+        rawValue: "l0",
+        unit: "%",
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "VALUE_AND_UNIT",
+        label: "maximal 15%",
+        rawValue: "15",
+        unit: "%",
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "SCOPE",
+        label: "in der Feuerversicherung",
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "LIMIT_BASIS",
+        label: "der Gebäudeversicherungssumme",
+        sourceBlockIds: ["limit"],
+      },
+      { type: "LIMIT_BASIS", label: firstRisk, sourceBlockIds: ["limit"] },
+    ]);
   });
 
   test("does not reinterpret a physical object merely because a cost follows", () => {
@@ -3478,7 +3660,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V24");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V25");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V24";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V25";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -43,6 +43,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V21",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V22",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V23",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V24",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -53,7 +54,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -66,6 +67,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -1066,6 +1068,162 @@ function normalizeNonPhysicalCostObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeAtomicCostRoleComponents(requirements, unit) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "FACT_ROLE") return [component];
+          const label = String(component.label || "");
+          const lossWithObjectScope =
+            /^\s*(?<role>(?:der\s+)?(?:Miet(?:verlust|ausfall)|Pacht(?:verlust|ausfall)|Ertragsausfall))\s+(?<scope>für\s+[\s\S]*(?:Gebäude|Räum|Einheit|Objekt|Standort|Grundstück)[-\p{L}\s–/]*)\s*$/iu.exec(
+              label
+            );
+          if (lossWithObjectScope?.groups) {
+            const roleSourceBlockIds = sourceBlockIdsForExactSpan(
+              unit,
+              lossWithObjectScope.groups.role
+            );
+            const scopeSourceBlockIds = sourceBlockIdsForExactSpan(
+              unit,
+              lossWithObjectScope.groups.scope
+            );
+            if (roleSourceBlockIds.length && scopeSourceBlockIds.length) {
+              repairs.push({
+                requirementIndex,
+                componentIndex,
+                action: "SPLIT_FINANCIAL_LOSS_ROLE_AND_SCOPE",
+              });
+              return [
+                {
+                  ...component,
+                  label: lossWithObjectScope.groups.role,
+                  sourceBlockIds: roleSourceBlockIds,
+                },
+                {
+                  type: "SCOPE",
+                  label: lossWithObjectScope.groups.scope,
+                  sourceBlockIds: scopeSourceBlockIds,
+                },
+              ];
+            }
+          }
+          const costParts = [
+            ...label.matchAll(
+              /(?:\p{L}+-\s+und\s+\p{L}+-|\p{L}+-|\p{L}*kosten)/giu
+            ),
+          ].map(([value]) => value.trim());
+          if (
+            costParts.length < 3 ||
+            !costParts.some((value) => /kosten$/iu.test(value))
+          )
+            return [component];
+          const remainder = costParts.reduce(
+            (value, part) => value.replace(part, " "),
+            label
+          );
+          if (
+            remainder
+              .replace(/\b(?:und|sowie)\b/giu, " ")
+              .replace(/[-–—•,;\s]/gu, "")
+          )
+            return [component];
+          const components = costParts.map((part) => ({
+            type: "FACT_ROLE",
+            label: part,
+            sourceBlockIds: sourceBlockIdsForExactSpan(unit, part),
+          }));
+          if (
+            components.some(({ sourceBlockIds }) => sourceBlockIds.length === 0)
+          )
+            return [component];
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "SPLIT_COORDINATED_COST_ROLES",
+            components: components.length,
+          });
+          return components;
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function normalizeTieredLimitBasisComponents(requirements, unit) {
+  const repairs = [];
+  let addedScope = false;
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "LIMIT_BASIS") return [component];
+          const label = String(component.label || "");
+          const basis =
+            /\b(?:der\s+)?(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme)\b/iu.exec(
+              label
+            );
+          const values = [
+            ...label.matchAll(
+              /\b(?:bis\s+zu\s+)?(?:maximal|max\.?|höchstens)\s+(?:(?<currency>€|EUR|Euro)\s*)?(?<raw>[0-9lI]+(?:[.,][0-9lI]+)?)\s*(?<unit>%|€|EUR|Euro)?/giu
+            ),
+          ];
+          if (!basis || values.length === 0) return [component];
+          const valueComponents = values.map((match) => ({
+            type: "VALUE_AND_UNIT",
+            label: match[0],
+            rawValue: match.groups.raw,
+            ...(match.groups.unit || match.groups.currency
+              ? { unit: match.groups.unit || match.groups.currency }
+              : {}),
+            sourceBlockIds: sourceBlockIdsForExactSpan(unit, match[0]),
+          }));
+          const scopes = [
+            ...label.matchAll(/\bin\s+der\s+\p{L}+versicherung\b/giu),
+          ].map((match) => ({
+            type: "SCOPE",
+            label: match[0],
+            sourceBlockIds: sourceBlockIdsForExactSpan(unit, match[0]),
+          }));
+          const basisSourceBlockIds = sourceBlockIdsForExactSpan(
+            unit,
+            basis[0]
+          );
+          if (
+            basisSourceBlockIds.length === 0 ||
+            [...valueComponents, ...scopes].some(
+              ({ sourceBlockIds }) => sourceBlockIds.length === 0
+            )
+          )
+            return [component];
+          addedScope ||= scopes.length > 0;
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "SPLIT_TIERED_LIMIT_BASIS",
+            values: valueComponents.length,
+            scopes: scopes.length,
+          });
+          return [
+            ...valueComponents,
+            ...scopes,
+            {
+              type: "LIMIT_BASIS",
+              label: basis[0],
+              sourceBlockIds: basisSourceBlockIds,
+            },
+          ];
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs, addedScope };
+}
+
 function normalizeSubsidiaryPrecedenceRequirements(requirements, unit) {
   const sourceText = String(unit?.source?.combinedText || "").trim();
   const match =
@@ -1341,6 +1499,42 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ),
       };
     }
+    const atomicCostRoles = normalizeAtomicCostRoleComponents(
+      requirements,
+      unit
+    );
+    requirements = atomicCostRoles.requirements;
+    for (const repair of atomicCostRoles.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (
+      atomicCostRoles.repairs.some(
+        ({ action }) => action === "SPLIT_FINANCIAL_LOSS_ROLE_AND_SCOPE"
+      )
+    )
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "VARIANT"]),
+        ],
+      };
+    const tieredLimitBasis = normalizeTieredLimitBasisComponents(
+      requirements,
+      unit
+    );
+    requirements = tieredLimitBasis.requirements;
+    for (const repair of tieredLimitBasis.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (tieredLimitBasis.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "LIMIT",
+            ...(tieredLimitBasis.addedScope ? ["VARIANT"] : []),
+          ]),
+        ],
+      };
     const subsidiaryPrecedence = normalizeSubsidiaryPrecedenceRequirements(
       requirements,
       unit
@@ -2171,6 +2365,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Versicherungssparten und Versicherungsproduktnamen sind keine versicherten Sachen. Eine prädikatlose alleinstehende Spartenbezeichnung ist STRUCTURE. In einem Deckungs-Governor wie „im Rahmen der Feuer-, Sturm- und Leitungswasserversicherung ... mitversichert“ ist jede Sparte eine eigene SCOPE-Komponente; eine genannte Versicherungssumme bleibt LIMIT_BASIS. Kostenarten, Aufwendungen, Miet-/Pacht-/Ertragsausfall oder Mietverlust sind COST mit FACT_ROLE und niemals OBJECT. „subsidiär“ oder „nachrangig“ bezeichnet eine eigene DOCUMENT_PRECEDENCE_OR_REPLACEMENT-Anforderung. „auf Erstes Risiko“ ist LIMIT_BASIS, nicht SCOPE.",
+    },
+    {
+      role: "system",
+      content:
+        "Koordinierte Kostenaufzählungen werden in getrennte, wörtliche FACT_ROLE-Komponenten atomisiert, soweit die einzelnen Quellfragmente selbstständig suchbar sind. Trenne bei Miet-/Pacht-/Ertragsausfall den Leistungsbegriff als FACT_ROLE von einem ausdrücklich genannten Objekt- oder Nutzungsscope. Bei mehreren Limitstufen bekommt jede konkrete Prozent- oder Geldangabe eine eigene VALUE_AND_UNIT-Komponente; ein zugehöriger Spartensatz ist SCOPE und die gemeinsame Versicherungssumme ist LIMIT_BASIS. OCR-Zeichen wie l oder I in einer Zahl werden nicht still korrigiert, sondern exakt als rawValue zitiert.",
     },
     {
       role: "user",
