@@ -50,6 +50,17 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20";
+const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V15",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V16",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V17",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V18",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
+  PROMPT_CONTRACT_ID,
+]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -1855,7 +1866,7 @@ function predecessorBatchResponses(file, plan, batch, args) {
     result.sourceUnitPlanSha256 !== plan.planSha256 ||
     result.batchId !== batch.batchId ||
     result.batchIndex !== batch.batchIndex ||
-    result.promptContractId !== PROMPT_CONTRACT_ID ||
+    !RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS.has(result.promptContractId) ||
     result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||

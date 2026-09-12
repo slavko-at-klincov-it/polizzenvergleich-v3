@@ -2906,7 +2906,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
-  test("upgrades a bound V12 batch by revalidating and reusing its responses", async () => {
+  test("upgrades an older run and prompt by revalidating its responses", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-v12-upgrade-")
     );
@@ -2956,6 +2956,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       const predecessor = {
         ...seeded,
         contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+        promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
       };
       delete predecessor.semanticSignalContractId;
       const file = batchResultFile(temporary, batch);
