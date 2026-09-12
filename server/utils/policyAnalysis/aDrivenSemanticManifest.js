@@ -240,8 +240,14 @@ function comparableSignalText(value) {
   return comparableText(value).toLocaleLowerCase("de-AT");
 }
 
-function componentHasSignalSource(component, matchedBlockId) {
-  return component.sourceBlockIds.includes(matchedBlockId);
+function matchedEvidenceBlockIds(matchedEvidence) {
+  return matchedEvidence.blockIds || [matchedEvidence.blockId];
+}
+
+function componentHasSignalSource(component, matchedEvidence) {
+  return matchedEvidenceBlockIds(matchedEvidence).every((blockId) =>
+    component.sourceBlockIds.includes(blockId)
+  );
 }
 
 function quantifiedLiterals(value) {
@@ -277,8 +283,7 @@ function quantifiedComponent(signalMatch, sourceBlockIds) {
 }
 
 function componentSupportsSignal(signal, component, matchedEvidence) {
-  if (!componentHasSignalSource(component, matchedEvidence.blockId))
-    return false;
+  if (!componentHasSignalSource(component, matchedEvidence)) return false;
   if (signal.signalId === "EXPLICIT_EXCLUSION")
     return (
       component.type === "COVERAGE_EFFECT" &&
@@ -307,24 +312,32 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
 }
 
 function signalApplies(signal, matchedEvidence) {
+  const exactText = comparableSignalText(matchedEvidence.exactText);
   if (
     signal.signalId === "EXPLICIT_EXCLUSION" &&
     [
       /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu,
       /\bsoweit\b.+\bkeine\s+deckung\s+finden\b/iu,
-    ].some((pattern) => pattern.test(matchedEvidence.exactText))
+    ].some((pattern) => pattern.test(exactText))
   )
     return false;
   return true;
 }
 
-function signalBelongsToRequirement(unit, requirement, signal, blockId) {
-  if ((unit.governingContext?.blockIds || []).includes(blockId)) return true;
+function signalBelongsToRequirement(unit, requirement, signal, blockIds) {
+  if (
+    blockIds.some((blockId) =>
+      (unit.governingContext?.blockIds || []).includes(blockId)
+    )
+  )
+    return true;
   if (!requirement.displayLabel) return true;
   const localTexts = [
     requirement.displayLabel,
     ...requirement.components.flatMap((component) =>
-      component.sourceBlockIds.includes(blockId) ? [component.label] : []
+      component.sourceBlockIds.some((blockId) => blockIds.includes(blockId))
+        ? [component.label]
+        : []
     ),
   ];
   return localTexts.some(
@@ -332,32 +345,65 @@ function signalBelongsToRequirement(unit, requirement, signal, blockId) {
   );
 }
 
-function requirementRoleEvidenceDiagnostics(unit, requirements) {
+function requirementSignalEvidence(unit, requirement, signal) {
   const blocksById = new Map(
     evidenceBlocks(unit).map((block) => [block.blockId, block])
   );
+  const selectedBlocks = requirement.sourceBlockIds
+    .map((blockId) => blocksById.get(blockId))
+    .filter(Boolean);
+  const evidence = selectedBlocks.flatMap((block) =>
+    matchesForPattern(signal.pattern, block.exactText).map((match) => ({
+      blockId: block.blockId,
+      blockIds: [block.blockId],
+      exactText: block.exactText,
+      match,
+    }))
+  );
+  if (selectedBlocks.length > 1) {
+    const combinedText = selectedBlocks
+      .map(({ exactText }) => exactText)
+      .join("\n");
+    for (const match of matchesForPattern(signal.pattern, combinedText)) {
+      const blockIds = minimalSourceRange(
+        unit,
+        match,
+        requirement.sourceBlockIds
+      );
+      if (!blockIds?.length) continue;
+      evidence.push({
+        blockId: blockIds[0],
+        blockIds,
+        exactText: combinedText,
+        match,
+      });
+    }
+  }
+  return [
+    ...new Map(
+      evidence
+        .filter(({ blockIds }) =>
+          signalBelongsToRequirement(unit, requirement, signal, blockIds)
+        )
+        .map((entry) => [
+          stableStringify({ blockIds: entry.blockIds, match: entry.match }),
+          entry,
+        ])
+    ).values(),
+  ];
+}
+
+function requirementRoleEvidenceDiagnostics(unit, requirements) {
   return requirements.flatMap((requirement, requirementIndex) => {
-    const selectedBlocks = requirement.sourceBlockIds
-      .map((blockId) => blocksById.get(blockId))
-      .filter(Boolean);
     const observedComponentTypes = [
       ...new Set(requirement.components.map(({ type }) => type)),
     ].sort();
     return REQUIREMENT_ROLE_SIGNALS.flatMap((signal) => {
-      const matchedEvidence = selectedBlocks.flatMap((block) => {
-        const matches = matchesForPattern(signal.pattern, block.exactText);
-        return matches.flatMap((match) =>
-          signalBelongsToRequirement(unit, requirement, signal, block.blockId)
-            ? [
-                {
-                  blockId: block.blockId,
-                  exactText: block.exactText,
-                  match,
-                },
-              ]
-            : []
-        );
-      });
+      const matchedEvidence = requirementSignalEvidence(
+        unit,
+        requirement,
+        signal
+      );
       if (!matchedEvidence.length) return [];
       return matchedEvidence.flatMap((evidence) => {
         if (!signalApplies(signal, evidence)) return [];
@@ -388,31 +434,17 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
 }
 
 function materializeSharedSignalComponents(unit, requirements) {
-  const blocksById = new Map(
-    evidenceBlocks(unit).map((block) => [block.blockId, block])
-  );
   const materialized = requirements.map((requirement) => ({
     ...requirement,
     components: [...requirement.components],
   }));
   const diagnostics = [];
   for (const [requirementIndex, requirement] of materialized.entries()) {
-    const selectedBlocks = requirement.sourceBlockIds
-      .map((blockId) => blocksById.get(blockId))
-      .filter(Boolean);
     for (const signal of REQUIREMENT_ROLE_SIGNALS) {
-      const matchedEvidence = selectedBlocks.flatMap((block) =>
-        matchesForPattern(signal.pattern, block.exactText).flatMap((match) =>
-          signalBelongsToRequirement(unit, requirement, signal, block.blockId)
-            ? [
-                {
-                  blockId: block.blockId,
-                  exactText: block.exactText,
-                  match,
-                },
-              ]
-            : []
-        )
+      const matchedEvidence = requirementSignalEvidence(
+        unit,
+        requirement,
+        signal
       );
       for (const evidence of matchedEvidence) {
         if (
@@ -478,7 +510,9 @@ function materializeSharedSignalComponents(unit, requirements) {
               .filter(
                 (component) =>
                   !signal.requiredComponentTypes.includes(component.type) &&
-                  component.sourceBlockIds.includes(evidence.blockId) &&
+                  matchedEvidenceBlockIds(evidence).some((blockId) =>
+                    component.sourceBlockIds.includes(blockId)
+                  ) &&
                   matchesForPattern(signal.pattern, component.label).length > 0
               )
               .map((component) => [
@@ -510,9 +544,9 @@ function materializeSharedSignalComponents(unit, requirements) {
             : signal.signalId === "EXPLICIT_COST_ROLE"
               ? localText
               : localMatches[0];
-        const sourceBlockIds = localComponent
-          ? [...localComponent.sourceBlockIds]
-          : minimalSourceRange(unit, label, requirement.sourceBlockIds);
+        const sourceBlockIds =
+          minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+          (localComponent ? [...localComponent.sourceBlockIds] : null);
         if (
           !sourceBlockIds?.length ||
           sourceBlockIds.some(

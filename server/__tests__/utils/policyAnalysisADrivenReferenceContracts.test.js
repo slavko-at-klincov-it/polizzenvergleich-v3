@@ -742,6 +742,56 @@ describe("requirement-local semantic evidence completeness", () => {
     expect(diagnostics).toEqual([]);
   });
 
+  test.each([
+    {
+      blocks: [
+        ["lead", "Rohrbruch außerhalb des Grundstücks (max."],
+        ["value", "10m)."],
+      ],
+      type: "VALUE_AND_UNIT",
+      rawValue: "10",
+      unit: "m",
+    },
+    {
+      blocks: [
+        ["lead", "Entschädigung bis zur Höhe der jeweils"],
+        ["basis", "vereinbarten Versicherungssumme."],
+      ],
+      type: "LIMIT_BASIS",
+    },
+  ])(
+    "materializes a $type whose literal is split across adjacent source blocks",
+    ({ blocks, type, rawValue, unit }) => {
+      const source = blocks.map(([, exactText]) => exactText).join("\n");
+      const sourceBlockIds = blocks.map(([blockId]) => blockId);
+      const result = materializeSharedSignalComponents(
+        evidenceUnit(...blocks),
+        [
+          {
+            ...requirement(sourceBlockIds, [
+              component("OBJECT", sourceBlockIds[0], { label: source }),
+            ]),
+            displayLabel: source,
+          },
+        ]
+      );
+
+      expect(result.requirements[0].components).toContainEqual({
+        type,
+        label: expect.any(String),
+        sourceBlockIds,
+        ...(rawValue ? { rawValue } : {}),
+        ...(unit ? { unit } : {}),
+      });
+      expect(
+        requirementRoleEvidenceDiagnostics(
+          evidenceUnit(...blocks),
+          result.requirements
+        )
+      ).toEqual([]);
+    }
+  );
+
   test("accepts complete signals and ignores ordinary wording", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(
