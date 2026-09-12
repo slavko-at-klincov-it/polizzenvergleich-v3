@@ -93,6 +93,9 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "Produkt- und Tarifkonfigurationen sind keine versicherten Sachobjekte"
     );
+    expect(systemText).toContain(
+      "in den jeweils beantragten/vereinbarten Sparten"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -2964,7 +2967,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V15");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V16");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5783,7 +5786,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("normalizes a product configuration without effect evidence to definition and variant", () => {
     const source = artifact(
       [
-        "Seite 1\nGrunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM.\n",
+        "Seite 1\nGrunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM in den jeweils beantragten Sparten.\n",
       ],
       "7"
     );
@@ -5811,8 +5814,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                   sourceBlockIds: [block.blockId],
                 },
                 {
-                  type: "SCOPE",
+                  type: "FACT_ROLE",
                   label: "mit der Variante PREMIUM",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "FACT_ROLE",
+                  label: "in den jeweils beantragten Sparten",
                   sourceBlockIds: [block.blockId],
                 },
                 {
@@ -5835,11 +5843,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     expect(
       normalized.responses[0].requirements[0].components.map(({ type }) => type)
-    ).toEqual(["FACT_ROLE", "SCOPE"]);
+    ).toEqual(["FACT_ROLE", "SCOPE", "SCOPE"]);
     expect(normalized.componentRepairs).toContainEqual({
       unitId: unit.unitId,
       action: "NORMALIZE_PRODUCT_CONFIGURATION_TO_DEFINITION",
     });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
+      fromType: "FACT_ROLE",
+      toType: "SCOPE",
+    });
+    expect(
+      normalized.componentRepairs.filter(
+        ({ action }) => action === "NORMALIZE_EXPLICIT_SCOPE_ROLE"
+      )
+    ).toHaveLength(2);
   });
 
   test("drops only the unsupported coverage class from a non-product fact", () => {

@@ -29,11 +29,12 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V15";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V16";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V14",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V15",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -44,7 +45,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V16";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V17";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -616,6 +617,21 @@ function explicitCoverageEffectRepair(unit, component) {
   return { label: evidence[0], coverageEffect };
 }
 
+function explicitScopeRoleRepair(component, { allowObject = false } = {}) {
+  if (
+    component?.type !== "FACT_ROLE" &&
+    !(allowObject && component?.type === "OBJECT")
+  )
+    return null;
+  if (
+    !/^\s*(?:(?:mit|unter)\s+(?:der\s+)?Variante\b|(?:in|für)\s+(?:den|die|allen)\s+(?:jeweils\s+)?(?:beantragten|vereinbarten|gewählten)\s+Sparten\b)/iu.test(
+      String(component.label || "")
+    )
+  )
+    return null;
+  return { ...component, type: "SCOPE" };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -660,31 +676,44 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         sourceText
       );
     if (productConfigurationDefinition) {
-      const hasScope = requirements.some((requirement) =>
-        (requirement.components || []).some(({ type }) => type === "SCOPE")
-      );
       repairs.push({
         unitId: response?.unitId,
         action: "NORMALIZE_PRODUCT_CONFIGURATION_TO_DEFINITION",
       });
+      const normalizedRequirements = requirements.map((requirement) => ({
+        ...requirement,
+        components: (requirement.components || []).flatMap((component) => {
+          if (component?.type === "COVERAGE_EFFECT") return [];
+          const scopeComponent = explicitScopeRoleRepair(component, {
+            allowObject: true,
+          });
+          if (scopeComponent) {
+            repairs.push({
+              unitId: response.unitId,
+              action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
+              fromType: component.type,
+              toType: "SCOPE",
+            });
+            return [scopeComponent];
+          }
+          if (
+            component?.type === "OBJECT" &&
+            /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
+              String(component.label || "")
+            )
+          )
+            return [{ ...component, type: "FACT_ROLE" }];
+          return [component];
+        }),
+      }));
+      const hasScope = normalizedRequirements.some((requirement) =>
+        requirement.components.some(({ type }) => type === "SCOPE")
+      );
       return {
         ...response,
         primaryClass: "DEFINITION",
         semanticClasses: ["DEFINITION", ...(hasScope ? ["VARIANT"] : [])],
-        requirements: requirements.map((requirement) => ({
-          ...requirement,
-          components: (requirement.components || []).flatMap((component) => {
-            if (component?.type === "COVERAGE_EFFECT") return [];
-            if (
-              component?.type === "OBJECT" &&
-              /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
-                String(component.label || "")
-              )
-            )
-              return [{ ...component, type: "FACT_ROLE" }];
-            return [component];
-          }),
-        })),
+        requirements: normalizedRequirements,
       };
     }
     const allocationDefinition =
@@ -762,6 +791,18 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const scopeComponent = explicitScopeRoleRepair(component);
+                  if (scopeComponent) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
+                      fromType: component.type,
+                      toType: "SCOPE",
+                    });
+                    return [scopeComponent];
+                  }
                   const completeSourceBlockIds =
                     completeComponentSourceBlockIds(unit, component);
                   if (completeSourceBlockIds) {
@@ -1312,6 +1353,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Produkt- und Tarifkonfigurationen sind keine versicherten Sachobjekte: Eine Aussage wie Grund- oder Basisdeckung ist Produkt/Tarif X mit Variante Y wird als DEFINITION und bei genannter Variante zusätzlich VARIANT klassifiziert, mit getrennten FACT_ROLE- und SCOPE-Komponenten. Verwende INSURED_OBJECT/OBJECT nur für das tatsächlich versicherte Sachobjekt wie Gebäude, Nebengebäude oder technische Anlage, niemals allein für den Namen oder die Konfiguration eines Versicherungsprodukts.",
+    },
+    {
+      role: "system",
+      content:
+        "Explizite Geltungsbereichsangaben wie „mit der Variante …“ sowie „in den jeweils beantragten/vereinbarten Sparten“ sind SCOPE-Komponenten und niemals FACT_ROLE oder OBJECT. Mehrere getrennte Scope-Angaben derselben Requirement bleiben mehrere source-bound SCOPE-Komponenten.",
     },
     {
       role: "user",
