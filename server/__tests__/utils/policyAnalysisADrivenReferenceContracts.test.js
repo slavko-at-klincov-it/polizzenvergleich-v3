@@ -6444,9 +6444,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
       reasonCode: "INVALID_PACKAGE_DECISION",
     });
     expect(
-      result.diagnostics.find(
-        ({ packageId }) => packageId === "package-2"
-      )?.issues
+      result.diagnostics.find(({ packageId }) => packageId === "package-2")
+        ?.issues
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "DIMENSION_CHECKS_INVALID" }),
@@ -6470,10 +6469,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
       documentUuid: "b-doc",
       candidates,
       requiredDimensions: ["FACT_ROLE", "SCOPE"],
-      semanticChecks: semanticChecks("component-mixed", [
-        "FACT_ROLE",
-        "SCOPE",
-      ]),
+      semanticChecks: semanticChecks("component-mixed", ["FACT_ROLE", "SCOPE"]),
       searchCoverage: {
         channelExecutionStatus: "CHANNELS_COMPLETE",
         absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
@@ -6759,13 +6755,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
 
     expect(result.validation.passed).toBe(true);
     expect(client.chat.completions.create).toHaveBeenCalledTimes(4);
-    expect(result.attempts.map(({ requestedPackageIds }) => requestedPackageIds))
-      .toEqual([
-        batch.expectedPackageIds,
-        [batch.expectedPackageIds[0]],
-        [batch.expectedPackageIds[0]],
-        [batch.expectedPackageIds[1]],
-      ]);
+    expect(
+      result.attempts.map(({ requestedPackageIds }) => requestedPackageIds)
+    ).toEqual([
+      batch.expectedPackageIds,
+      [batch.expectedPackageIds[0]],
+      [batch.expectedPackageIds[0]],
+      [batch.expectedPackageIds[1]],
+    ]);
     expect(result.attempts[2].packageAttemptCounts).toEqual({
       [batch.expectedPackageIds[0]]: 3,
     });

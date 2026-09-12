@@ -248,8 +248,7 @@ function validateCounterpartDecisions({
       });
     if (
       decision === "SUPPORTED" &&
-      (selected.length === 0 ||
-        outcomes.some((outcome) => outcome !== "MATCH"))
+      (selected.length === 0 || outcomes.some((outcome) => outcome !== "MATCH"))
     )
       decisionIssues.push({
         code: "SUPPORTED_OUTCOME_CONTRACT_INVALID",
@@ -267,8 +266,7 @@ function validateCounterpartDecisions({
       });
     if (
       decision === "NOT_SUPPORTED" &&
-      (!outcomes.includes("NOT_ESTABLISHED") ||
-        outcomes.includes("MISMATCH"))
+      (!outcomes.includes("NOT_ESTABLISHED") || outcomes.includes("MISMATCH"))
     )
       decisionIssues.push({
         code: "NOT_SUPPORTED_OUTCOME_CONTRACT_INVALID",

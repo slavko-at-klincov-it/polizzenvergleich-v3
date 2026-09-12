@@ -367,8 +367,7 @@ async function runBatch({
     };
   }
   const maximumInvocations =
-    1 +
-    initiallyPendingPackageIds.length * Math.max(0, maximumAttempts - 1);
+    1 + initiallyPendingPackageIds.length * Math.max(0, maximumAttempts - 1);
   for (let attempt = 1; attempt <= maximumInvocations; attempt += 1) {
     const started = performance.now();
     const messagesSha256 = sha256(JSON.stringify(messages));
