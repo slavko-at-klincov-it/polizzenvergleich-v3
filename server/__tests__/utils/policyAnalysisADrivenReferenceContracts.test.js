@@ -571,6 +571,47 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes an explicit local condition from a uniquely typed source component", () => {
+    const unit = evidenceUnit(
+      [
+        "scope-one",
+        "auf Erstes Risiko, sofern kein zusätzlicher Betrag vereinbart wurde",
+      ]
+    );
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["scope-one"],
+          [
+            component("SCOPE", "scope-one", {
+              label:
+                "auf Erstes Risiko, sofern kein zusätzlicher Betrag vereinbart wurde",
+            }),
+          ]
+        ),
+        displayLabel:
+          "auf Erstes Risiko, sofern kein zusätzlicher Betrag vereinbart wurde",
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "CONDITION",
+      label: "sofern kein zusätzlicher Betrag vereinbart wurde",
+      sourceBlockIds: ["scope-one"],
+    });
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        requirementIndex: 0,
+        sourceRequirementIndex: 0,
+        signalId: "EXPLICIT_CONDITION",
+      }),
+    ]);
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test("accepts complete signals and ignores ordinary wording", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(

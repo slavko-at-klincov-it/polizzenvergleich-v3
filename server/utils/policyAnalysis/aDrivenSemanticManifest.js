@@ -426,18 +426,53 @@ function materializeSharedSignalComponents(unit, requirements) {
             ])
           ).values(),
         ];
-        if (uniqueCandidates.length !== 1) continue;
-        const [{ component, siblingRequirementIndex }] = uniqueCandidates;
-        requirement.components.push({ ...component });
+        if (uniqueCandidates.length === 1) {
+          const [{ component, siblingRequirementIndex }] = uniqueCandidates;
+          requirement.components.push({ ...component });
+          diagnostics.push({
+            code: "SHARED_SIGNAL_COMPONENT_MATERIALIZED",
+            unitId: unit.unitId,
+            requirementIndex,
+            sourceRequirementIndex: siblingRequirementIndex,
+            signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+            signalId: signal.signalId,
+            componentType: component.type,
+            sourceBlockIds: component.sourceBlockIds,
+          });
+          continue;
+        }
+        if (signal.signalId !== "EXPLICIT_CONDITION") continue;
+        const localCandidates = requirement.components.filter(
+          (component) =>
+            component.type !== "CONDITION" &&
+            component.sourceBlockIds.includes(evidence.blockId) &&
+            matchesForPattern(signal.pattern, component.label).length > 0
+        );
+        if (localCandidates.length !== 1) continue;
+        const [localComponent] = localCandidates;
+        const localMatch = matchesForPattern(
+          signal.pattern,
+          localComponent.label
+        )[0];
+        const markerIndex = localComponent.label
+          .toLocaleLowerCase("de-AT")
+          .indexOf(localMatch.toLocaleLowerCase("de-AT"));
+        if (markerIndex < 0) continue;
+        const condition = {
+          type: "CONDITION",
+          label: localComponent.label.slice(markerIndex).trim(),
+          sourceBlockIds: [...localComponent.sourceBlockIds],
+        };
+        requirement.components.push(condition);
         diagnostics.push({
-          code: "SHARED_SIGNAL_COMPONENT_MATERIALIZED",
+          code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
           unitId: unit.unitId,
           requirementIndex,
-          sourceRequirementIndex: siblingRequirementIndex,
+          sourceRequirementIndex: requirementIndex,
           signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
           signalId: signal.signalId,
-          componentType: component.type,
-          sourceBlockIds: component.sourceBlockIds,
+          componentType: condition.type,
+          sourceBlockIds: condition.sourceBlockIds,
         });
       }
     }
