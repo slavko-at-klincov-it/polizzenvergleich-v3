@@ -637,13 +637,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       units: [
         {
           unitId: "unit-one",
-          logicalSourceSegments: ["one", "two", "three"].map(
-            (segmentId) => ({
-              segmentId,
-              combinedText: `Text ${segmentId}`,
-              blockIds: [`block-${segmentId}`],
-            })
-          ),
+          logicalSourceSegments: ["one", "two", "three"].map((segmentId) => ({
+            segmentId,
+            combinedText: `Text ${segmentId}`,
+            blockIds: [`block-${segmentId}`],
+          })),
         },
       ],
     };
