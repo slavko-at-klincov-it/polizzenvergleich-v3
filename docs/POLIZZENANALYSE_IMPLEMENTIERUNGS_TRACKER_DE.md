@@ -7658,3 +7658,72 @@ gesperrt.
 
 Status: `V30 A TECHNISCH PASS UND IMMUTABLE EINGEFROREN; 631/631 RECORDS
 VORBEREITET, 0/631 FACHLICH DOPPELT GEPRÜFT; B-GATE NICHT FREIGEGEBEN`.
+
+### 133.21 Ausführbarer 631er- und dynamischer Rest-Doppelreview
+
+Die technische Reviewvorbereitung ist nun als vollständiger write-once
+Kommandoablauf ausführbar. `materializeADrivenLegacyDoubleReview.cjs`
+materialisiert nach der bereits eingefrorenen Basis und dem Draft eine durch
+eine externe Akzeptanzautorität signierte Reviewer-Registry, getrennte
+Templates für Slot A und B, getrennt signierte Reviewartefakte und den
+deterministisch reconcilierten 631er-Crosswalk. Private Schlüssel werden nur
+aus regulären Einzeldateien gelesen und niemals in ein Zielartefakt kopiert.
+Vorhandene Zielverzeichnisse werden nicht überschrieben; alle erzeugten
+Artefakte bleiben an Basis-, Draft-, Registry-, Reviewer- und Quelldigests
+gebunden.
+
+Dabei wurde ein weiterer Gatefehler geschlossen: Die im V30-Draft genannten
+42 `dynamicOnlyComponents` sind nur der vor dem fachlichen Review sicher
+sichtbare Mindestrest ohne Legacy-Quellkontext. Sie sind nicht automatisch
+die vollständige Menge dynamischer Zusatzkomponenten. Erst nach einem
+bestandenen 631er-Crosswalk kennt das System alle tatsächlich gewählten
+dynamischen Ziele. Der neue Vertrag
+`LF_A_DYNAMIC_REMAINDER_REVIEW_DRAFT_V1` bildet deshalb anschließend
+deterministisch die Differenz aus allen 1.036 dynamischen Komponenten und
+allen im freigegebenen Crosswalk verwendeten Zielkomponenten. Damit kann keine
+nicht gewählte dynamische Komponente still aus der Vollständigkeitsprüfung
+fallen.
+
+Auch dieser Rest wird von denselben zwei autorisierten menschlichen
+Fachreviewern unabhängig und signiert geprüft. Zulässige Befunde sind
+`VALID_DYNAMIC_ADDITION`, `LEGACY_CANDIDATE_MISSING`,
+`DYNAMIC_COMPONENT_DUPLICATE`, `DYNAMIC_ATOMIZATION_ERROR`,
+`DYNAMIC_SOURCE_BINDING_ERROR` und `AMBIGUOUS`. Nur vollständige exakte
+Übereinstimmung beider Reviewer und ausschließlich
+`VALID_DYNAMIC_ADDITION` für jeden Restrecord setzt
+`dynamicManifestSemanticCompletenessApproved` und `bPilotAllowed` auf wahr.
+Jeder andere übereinstimmende Befund erzeugt
+`REMEDIATION_REQUIRED`; eine Reviewerabweichung stoppt fail-closed. Selbst
+der bestandene QA-Gate setzt `productRoutingAllowed` und
+`resultMutationAllowed` weiterhin ausdrücklich auf falsch.
+
+Der ausführbare Ablauf umfasst jetzt:
+
+```text
+registry -> template A/B -> seal A/B -> reconcile
+         -> reverse-draft -> reverse-template A/B
+         -> reverse-seal A/B -> reverse-reconcile
+```
+
+Die Implementierung wurde am exakten Commit
+`ff57ae7b632b6490a2a8bbef9ecbcefe84c6c336` im isolierten Mac-Studio-
+Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/lf-signal-24b5bda51`
+unter Node 22.23.2 geprüft. Prettier und serverseitiges ESLint bestanden. Die
+fokussierte Suite bestand 10/10 Tests einschließlich eines synthetischen
+vollständigen 631er- plus Rest-End-to-End-Laufs, unabhängiger Signaturen,
+write-once Materialisierung, nicht kopierter privater Schlüssel und eines
+fail-closed Restbefunds. Anschließend bestanden 187/187 Server-Suites mit
+2.646/2.646 Tests.
+
+Es wurden bewusst keine künstlichen Revieweridentitäten für die reale V30-
+Kampagne erzeugt. Deshalb existieren weiterhin keine fachlich signierten
+631er-Entscheidungen und folglich noch kein realer dynamischer Rest-Draft. Die
+exakte Restzahl kann erst aus den echten 631 Entscheidungen berechnet werden;
+42 ist nur ihre garantierte Untergrenze. Der nächste externe Eingang sind die
+Identitäten, Qualifikationsnachweise und getrennten öffentlichen Schlüssel
+zweier realer Fachreviewer sowie der Schlüssel der Akzeptanzautorität.
+
+Status: `TECHNISCHER DOPPELREVIEW UND EXHAUSTIVER DYNAMISCHER RESTGATE
+AUSFÜHRBAR UND GETESTET; REALE FACHREVIEWS 0/631; KONTROLLIERTER B-PILOT,
+1+9-LAUF, PRODUKT-ROUTING, KUNDEN-XLSX UND DEPLOYMENT WEITERHIN GESPERRT`.
