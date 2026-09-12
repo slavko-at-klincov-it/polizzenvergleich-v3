@@ -90,6 +90,9 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "verwende UNRESOLVED statt eines überbreiten Sammellabels"
     );
+    expect(systemText).toContain(
+      "Produkt- und Tarifkonfigurationen sind keine versicherten Sachobjekte"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -2961,7 +2964,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V14");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V15");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5777,7 +5780,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
-  test("drops an unsupported coverage class when another source-bound class remains", () => {
+  test("normalizes a product configuration without effect evidence to definition and variant", () => {
     const source = artifact(
       [
         "Seite 1\nGrunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM.\n",
@@ -5808,6 +5811,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                   sourceBlockIds: [block.blockId],
                 },
                 {
+                  type: "SCOPE",
+                  label: "mit der Variante PREMIUM",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
                   type: "COVERAGE_EFFECT",
                   label: "ist",
                   sourceBlockIds: [block.blockId],
@@ -5822,17 +5830,83 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
 
     expect(normalized.responses[0]).toMatchObject({
-      primaryClass: "INSURED_OBJECT",
-      semanticClasses: ["INSURED_OBJECT"],
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION", "VARIANT"],
     });
     expect(
       normalized.responses[0].requirements[0].components.map(({ type }) => type)
-    ).toEqual(["OBJECT"]);
+    ).toEqual(["FACT_ROLE", "SCOPE"]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_PRODUCT_CONFIGURATION_TO_DEFINITION",
+    });
+  });
+
+  test("drops only the unsupported coverage class from a non-product fact", () => {
+    const unit = {
+      unitId: "peril-without-effect",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText:
+          "Austritt von Wasser aus Solarheizungsanlagen, wenn diese fix installiert sind.",
+        blocks: [
+          {
+            blockId: "block",
+            structuralKind: "PARAGRAPH",
+            exactText:
+              "Austritt von Wasser aus Solarheizungsanlagen, wenn diese fix installiert sind.",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["PERIL_OR_DAMAGE", "OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Austritt von Wasser",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "CONDITION",
+                  label: "wenn diese fix installiert sind",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "ist",
+                  sourceBlockIds: ["block"],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
+    ).toEqual(["PERIL_OR_CAUSE", "CONDITION"]);
     expect(normalized.componentRepairs).toContainEqual({
       unitId: unit.unitId,
       action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
       fromPrimaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-      toPrimaryClass: "INSURED_OBJECT",
+      toPrimaryClass: "PERIL_OR_DAMAGE",
     });
   });
 

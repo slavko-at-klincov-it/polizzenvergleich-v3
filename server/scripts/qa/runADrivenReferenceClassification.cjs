@@ -29,10 +29,11 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V14";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V15";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V14",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -43,7 +44,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V15";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V16";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -652,6 +653,40 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     const requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
+    const productConfigurationDefinition =
+      requirements.length > 0 &&
+      !hasCoverageEffectEvidence(unit) &&
+      /\b(?:Grund|Basis)deckung\b[\s\S]{0,240}\b(?:Produkt|Tarif)\b[\s\S]{0,240}\bVariante\b/iu.test(
+        sourceText
+      );
+    if (productConfigurationDefinition) {
+      const hasScope = requirements.some((requirement) =>
+        (requirement.components || []).some(({ type }) => type === "SCOPE")
+      );
+      repairs.push({
+        unitId: response?.unitId,
+        action: "NORMALIZE_PRODUCT_CONFIGURATION_TO_DEFINITION",
+      });
+      return {
+        ...response,
+        primaryClass: "DEFINITION",
+        semanticClasses: ["DEFINITION", ...(hasScope ? ["VARIANT"] : [])],
+        requirements: requirements.map((requirement) => ({
+          ...requirement,
+          components: (requirement.components || []).flatMap((component) => {
+            if (component?.type === "COVERAGE_EFFECT") return [];
+            if (
+              component?.type === "OBJECT" &&
+              /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
+                String(component.label || "")
+              )
+            )
+              return [{ ...component, type: "FACT_ROLE" }];
+            return [component];
+          }),
+        })),
+      };
+    }
     const allocationDefinition =
       response?.primaryClass === "OPERATIVE_COVERAGE_STATEMENT" &&
       response?.semanticClasses?.length === 1 &&
@@ -1272,6 +1307,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Verbindliche Atomisierungspräzisierung: Ein Komponentenlabel ist der kürzeste zusammenhängende wörtliche Quellteil, der genau die eigene semantische Dimension noch eindeutig bezeichnet. Kopiere niemals vorsorglich den ganzen Satz oder Listenpunkt in OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, COVERAGE_EFFECT, FACT_ROLE, VALUE_AND_UNIT oder LIMIT_BASIS, wenn darin eigenständige Inhalte anderer Typen enthalten sind. Das frühere Platzhalterbeispiel <wörtlicher Listenpunkt> bedeutet daher den kürzesten wörtlichen Objektteil innerhalb dieses Listenpunkts, nicht automatisch den vollständigen Listenpunkt. Trenne Deckungswirkung, Objekt, Gefahr/Ursache, Schaden/Wirkung, Bedingung, Rollenbezeichnung, konkrete Zahl samt Einheit und Limitbasis in eigene Komponenten. Ein Komponentenlabel darf das Label einer anders typisierten Schwesterkomponente nur enthalten, wenn kein kürzerer zusammenhängender Quellteil die eigene Dimension eindeutig ausdrückt. Koordinierte Aufzählungen desselben Typs werden in einzelne Komponenten zerlegt, wenn jedes Element fachlich selbstständig in B gesucht und gefunden werden kann; untrennbare zusammengesetzte Begriffe und bloße Synonyme bleiben zusammen. FACT_ROLE bezeichnet die konkrete fachliche Rolle oder Leistungsart und lässt separat typisierte Bedingungen, Werte und Limitbasen weg. VALUE_AND_UNIT.label und rawValue enthalten den konkreten Wertausdruck; LIMIT_BASIS enthält nur die wörtliche Bezugsgröße. Komponenten müssen gemeinsam weiterhin alle operativen ownedSourceBlockIds belegen. Wenn eine fachlich saubere wörtliche Trennung wegen Grammatik oder Quellfragmentierung nicht sicher möglich ist, verwende UNRESOLVED statt eines überbreiten Sammellabels.",
+    },
+    {
+      role: "system",
+      content:
+        "Produkt- und Tarifkonfigurationen sind keine versicherten Sachobjekte: Eine Aussage wie Grund- oder Basisdeckung ist Produkt/Tarif X mit Variante Y wird als DEFINITION und bei genannter Variante zusätzlich VARIANT klassifiziert, mit getrennten FACT_ROLE- und SCOPE-Komponenten. Verwende INSURED_OBJECT/OBJECT nur für das tatsächlich versicherte Sachobjekt wie Gebäude, Nebengebäude oder technische Anlage, niemals allein für den Namen oder die Konfiguration eines Versicherungsprodukts.",
     },
     {
       role: "user",
