@@ -204,7 +204,7 @@ function dynamicManifest() {
   };
 }
 
-function basis() {
+function basis({ firstRequirementComponentType } = {}) {
   const sourceArtifacts = Object.fromEntries(
     [
       "sourcePdf",
@@ -224,8 +224,12 @@ function basis() {
       },
     ])
   );
+  const manifest = dynamicManifest();
+  if (firstRequirementComponentType)
+    for (const component of manifest.requirements[0].components)
+      component.type = firstRequirementComponentType;
   return createReviewBasis({
-    dynamicManifest: dynamicManifest(),
+    dynamicManifest: manifest,
     dynamicManifestFileSha256:
       CURRENT_V12_REVIEW_PROFILE.dynamicManifestFileSha256,
     legacyManifest: legacyManifest(),
@@ -394,7 +398,7 @@ describe("V12 283/631 double-review contract", () => {
     mutated.draftSha256 = crypto
       .createHash("sha256")
       .update(
-        `LF_A_V12_283_631_CROSSWALK_DRAFT_V1\u0000${stableStringify(
+        `LF_A_V12_283_631_CROSSWALK_DRAFT_V2\u0000${stableStringify(
           Object.fromEntries(
             Object.entries(mutated).filter(([key]) => key !== "draftSha256")
           )
@@ -477,6 +481,45 @@ describe("V12 283/631 double-review contract", () => {
         reviewB: artifacts[1],
       }).summary
     ).toMatchObject({ records: 631, semanticCrosswalkApproved: true });
+    const unresolvedArtifacts = ["A", "B"].map((slot, index) => {
+      const input = createReviewerTemplate({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewerSlot: slot,
+      });
+      input.independenceAttestation.reviewPerformedIndependently = true;
+      input.decisions = draft.records.map((record) => ({
+        recordId: record.recordId,
+        relation: "EQUIVALENT",
+        dynamicTargets: [record.candidates[0].dynamicComponentId],
+        mergeGroupId: null,
+        rootCauseDisposition: "UNDETERMINED",
+        rationale: "Root cause still requires a final determination.",
+      }));
+      return sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input,
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      });
+    });
+    expect(() =>
+      reconcileApprovedCrosswalk({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: unresolvedArtifacts[0],
+        reviewB: unresolvedArtifacts[1],
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_ROOT_CAUSE_UNDETERMINED");
     artifacts[1].decisions[0].relation = "MISSING";
     expect(() =>
       reconcileApprovedCrosswalk({
@@ -488,6 +531,89 @@ describe("V12 283/631 double-review contract", () => {
         reviewB: artifacts[1],
       })
     ).toThrow();
+  });
+
+  test("marks role-incompatible records and requires a determined mismatch cause", () => {
+    const frozen = basis({ firstRequirementComponentType: "OBJECT" });
+    const draft = createCrosswalkDraft({ basis: frozen });
+    const record = draft.records[0];
+    expect(record.mechanicalRoleReview).toEqual({
+      disposition: "ROLE_INCOMPATIBLE",
+      exactCandidateCount: 3,
+      compatibleCandidateCount: 0,
+    });
+    const keys = [
+      crypto.generateKeyPairSync("ed25519"),
+      crypto.generateKeyPairSync("ed25519"),
+    ];
+    const authorityKeys = crypto.generateKeyPairSync("ed25519");
+    const authorityPublicKeyPem = authorityKeys.publicKey.export({
+      type: "spki",
+      format: "pem",
+    });
+    const authorityPublicKeyFingerprintSha256 = crypto
+      .createHash("sha256")
+      .update(authorityKeys.publicKey.export({ type: "spki", format: "der" }))
+      .digest("hex");
+    const registry = createReviewerRegistry({
+      basis: frozen,
+      draft,
+      authorityId: "acceptance-owner",
+      authorityPublicKeyPem,
+      authorityPrivateKeyPem: authorityKeys.privateKey.export({
+        type: "pkcs8",
+        format: "pem",
+      }),
+      reviewers: keys.map(({ publicKey }, index) => ({
+        reviewerId: `reviewer-${index + 1}`,
+        reviewerSlot: index === 0 ? "A" : "B",
+        credentialId: `credential-${index + 1}`,
+        publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
+      })),
+    });
+    const input = createReviewerTemplate({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewerSlot: "A",
+    });
+    input.independenceAttestation.reviewPerformedIndependently = true;
+    input.decisions = draft.records.map((entry) => ({
+      recordId: entry.recordId,
+      relation: "EQUIVALENT",
+      dynamicTargets: [entry.candidates[0].dynamicComponentId],
+      mergeGroupId: null,
+      rootCauseDisposition: "NO_UPSTREAM_DEFECT",
+      rationale: "Independent source and semantic review.",
+    }));
+    expect(() =>
+      sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input,
+        privateKeyPem: keys[0].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_DECISION_INVALID");
+    input.decisions[0].rootCauseDisposition = "ROLE_MAPPING_TOO_NARROW";
+    expect(
+      sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input,
+        privateKeyPem: keys[0].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      }).status
+    ).toBe("SUBMITTED");
   });
 });
 

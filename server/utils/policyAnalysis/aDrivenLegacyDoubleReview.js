@@ -4,6 +4,9 @@ const {
   buildADrivenSemanticManifest,
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
+const {
+  LEGACY_ROLE_TO_DYNAMIC_TYPES,
+} = require("./aDrivenAStatusAudit");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 const {
   CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
@@ -24,7 +27,7 @@ const CLASSIFICATION_CHAIN_CONTRACT_ID =
 const RUN_PROVENANCE_CONTRACT_ID = "LF_A_V12_REVIEW_RUN_PROVENANCE_V1";
 const REVIEWER_REGISTRY_CONTRACT_ID =
   "LF_A_V12_283_631_HUMAN_REVIEWER_REGISTRY_V1";
-const CROSSWALK_DRAFT_CONTRACT_ID = "LF_A_V12_283_631_CROSSWALK_DRAFT_V1";
+const CROSSWALK_DRAFT_CONTRACT_ID = "LF_A_V12_283_631_CROSSWALK_DRAFT_V2";
 const REVIEW_INPUT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_INPUT_V1";
 const REVIEW_ARTIFACT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_V1";
 const APPROVED_CROSSWALK_CONTRACT_ID = "LF_A_V12_283_631_APPROVED_CROSSWALK_V1";
@@ -857,6 +860,30 @@ function candidateProjection(component, overlap, contextKind) {
   };
 }
 
+function mechanicalRoleDisposition(legacyFactRole, candidates) {
+  const exactCandidates = candidates.filter(
+    ({ contextKind }) => contextKind === "EXACT_COMPONENT_SOURCE_OVERLAP"
+  );
+  const compatibleTypes = new Set(
+    LEGACY_ROLE_TO_DYNAMIC_TYPES[legacyFactRole] || []
+  );
+  const compatibleCandidates = exactCandidates.filter(
+    ({ dynamicComponentType }) => compatibleTypes.has(dynamicComponentType)
+  );
+  return {
+    disposition:
+      exactCandidates.length === 0
+        ? "MISSING"
+        : compatibleCandidates.length === 0
+          ? "ROLE_INCOMPATIBLE"
+          : compatibleCandidates.length === 1
+            ? "ONE_TO_ONE_CANDIDATE"
+            : "SPLIT_CANDIDATE",
+    exactCandidateCount: exactCandidates.length,
+    compatibleCandidateCount: compatibleCandidates.length,
+  };
+}
+
 function createCrosswalkDraft({ basis } = {}) {
   validateReviewBasis(basis);
   const legacy = legacyInventory(basis.frozenLegacyManifest);
@@ -900,12 +927,21 @@ function createCrosswalkDraft({ basis } = {}) {
     candidates.sort((left, right) =>
       left.dynamicComponentId.localeCompare(right.dynamicComponentId)
     );
+    const mechanicalRoleReview = mechanicalRoleDisposition(
+      legacyComponent.legacyFactRole,
+      candidates
+    );
     return {
       recordId: `DR-${sha256(
         `${basis.basisSha256}:${legacyComponent.legacyRequirementId}:${legacyComponent.legacyComponentId}`
       ).slice(0, 24)}`,
       ...legacyComponent,
       candidates,
+      mechanicalRoleReview,
+      reviewPriority:
+        mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
+          ? "P1_ROLE_INCOMPATIBLE"
+          : "P2_ALL_OTHER_COMPONENTS",
       reviewState: "UNREVIEWED",
     };
   });
@@ -937,6 +973,22 @@ function createCrosswalkDraft({ basis } = {}) {
       dynamicComponents: dynamic.components.length,
       recordsWithoutCandidates: records.filter(
         ({ candidates }) => !candidates.length
+      ).length,
+      roleIncompatibleRecords: records.filter(
+        ({ mechanicalRoleReview }) =>
+          mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
+      ).length,
+      oneToOneCandidateRecords: records.filter(
+        ({ mechanicalRoleReview }) =>
+          mechanicalRoleReview.disposition === "ONE_TO_ONE_CANDIDATE"
+      ).length,
+      splitCandidateRecords: records.filter(
+        ({ mechanicalRoleReview }) =>
+          mechanicalRoleReview.disposition === "SPLIT_CANDIDATE"
+      ).length,
+      missingCandidateRecords: records.filter(
+        ({ mechanicalRoleReview }) =>
+          mechanicalRoleReview.disposition === "MISSING"
       ).length,
       dynamicOnlyComponents: dynamicOnlyComponents.length,
       reviewedRecords: 0,
@@ -1220,6 +1272,20 @@ function normalizeDecisions(decisions, draft) {
         mergeGroupId) ||
       (relation === "MISSING" && targets?.length === 0) ||
       (relation === "AMBIGUOUS" && Array.isArray(targets));
+    const roleMismatchCauseValid =
+      record.mechanicalRoleReview.disposition !== "ROLE_INCOMPATIBLE" ||
+      [
+        "DYNAMIC_CLASSIFICATION_ERROR",
+        "ROLE_MAPPING_TOO_NARROW",
+        "SPLIT_OR_MERGE_RELATION",
+        "DYNAMIC_COMPONENT_MISSING",
+        "UNDETERMINED",
+      ].includes(rootCauseDisposition);
+    const relationCauseValid =
+      (!["SPLIT_INTO_DYNAMIC", "MERGED_INTO_DYNAMIC"].includes(relation) ||
+        rootCauseDisposition === "SPLIT_OR_MERGE_RELATION") &&
+      (relation !== "MISSING" ||
+        rootCauseDisposition === "DYNAMIC_COMPONENT_MISSING");
     if (
       !decision ||
       !REVIEW_RELATIONS.has(relation) ||
@@ -1228,6 +1294,8 @@ function normalizeDecisions(decisions, draft) {
       !ROOT_CAUSE_DISPOSITIONS.has(rootCauseDisposition) ||
       (relation !== "MERGED_INTO_DYNAMIC" && mergeGroupId) ||
       !cardinalityValid ||
+      !roleMismatchCauseValid ||
+      !relationCauseValid ||
       !rationale
     )
       throw reviewError("LF_A_DOUBLE_REVIEW_DECISION_INVALID", record.recordId);
@@ -1434,6 +1502,11 @@ function reconcileApprovedCrosswalk({
     if (!COVERED_RELATIONS.has(left.relation))
       throw reviewError(
         "LF_A_DOUBLE_REVIEW_SEMANTIC_COVERAGE_NOT_APPROVED",
+        left.recordId
+      );
+    if (left.rootCauseDisposition === "UNDETERMINED")
+      throw reviewError(
+        "LF_A_DOUBLE_REVIEW_ROOT_CAUSE_UNDETERMINED",
         left.recordId
       );
     const source = draft.records.find(

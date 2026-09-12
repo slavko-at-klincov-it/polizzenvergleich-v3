@@ -532,5 +532,6 @@ function buildADrivenAStatusAudit({
 
 module.exports = {
   A_STATUS_AUDIT_CONTRACT_ID,
+  LEGACY_ROLE_TO_DYNAMIC_TYPES,
   buildADrivenAStatusAudit,
 };
