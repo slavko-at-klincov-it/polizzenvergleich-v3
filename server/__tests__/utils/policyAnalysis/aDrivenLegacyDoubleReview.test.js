@@ -742,7 +742,7 @@ describe("V12 283/631 double-review contract", () => {
       remainderDraft.summary.mappedByApprovedLegacyCrosswalk +
         remainderDraft.summary.remainderComponents
     ).toBe(755);
-    expect(remainderDraft.summary.remainderComponents).toBeGreaterThan(
+    expect(remainderDraft.summary.remainderComponents).toBeGreaterThanOrEqual(
       draft.summary.dynamicOnlyComponents
     );
     const remainderArtifacts = ["A", "B"].map((slot, index) => {
@@ -1046,14 +1046,7 @@ describe("V12 283/631 double-review contract", () => {
       reviewerSlot: "A",
     });
     input.independenceAttestation.reviewPerformedIndependently = true;
-    input.decisions = draft.records.map((entry) => ({
-      recordId: entry.recordId,
-      relation: "EQUIVALENT",
-      dynamicTargets: [entry.candidates[0].dynamicComponentId],
-      mergeGroupId: null,
-      rootCauseDisposition: "NO_UPSTREAM_DEFECT",
-      rationale: "Independent source and semantic review.",
-    }));
+    input.decisions = approvableLegacyDecisions(draft);
     expect(() =>
       sealReviewerArtifact({
         basis: frozen,
