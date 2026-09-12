@@ -708,7 +708,7 @@ describe("requirement-local semantic evidence completeness", () => {
   });
 
   test.each([
-    "Der Versicherungsnehmer ist berechtigt, Ersatz der notwendigen Aufwendungen zu verlangen.",
+    "Der Versicherungsnehmer ist berechtigt, eine Vertragsänderung zu verlangen.",
     "Die Versicherungsnehmerin kann nach einem versicherten Schaden unverzüglich mit der Reparatur beginnen.",
     "Verzichtet der Versicherer auf seinen Regressanspruch, bleibt der Mieter geschützt.",
     "Unbeabsichtigte Meldefehler beeinträchtigen die Leistungspflicht nicht.",
