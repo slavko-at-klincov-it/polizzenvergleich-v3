@@ -680,8 +680,10 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         : response?.requirements,
     };
   });
-  const listGovernorNormalization =
-    normalizeStandaloneListGovernorRequirements(normalized, units);
+  const listGovernorNormalization = normalizeStandaloneListGovernorRequirements(
+    normalized,
+    units
+  );
   return {
     responses: listGovernorNormalization.responses,
     componentRepairs: [...repairs, ...listGovernorNormalization.repairs],
