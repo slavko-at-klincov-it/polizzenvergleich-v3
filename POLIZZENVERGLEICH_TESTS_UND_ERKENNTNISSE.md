@@ -4296,3 +4296,61 @@ Lockerung des Validators behoben.
 **Beweist nicht:** Dass spätere fachlich andere Batches keine neuen
 Modellmuster zeigen. Timeout, Retry, Einzelvalidierung und Resume bleiben
 deshalb für den gesamten Lauf aktiv.
+
+## 74. Ein Retrylimit gehört zum fehlerhaften Paket, nicht zum gesamten Modellbatch
+
+Der reale B-Shadow stoppte nach 25 PASS-Batches an einem Batch mit vier
+Paketen. Das erste Paket benötigte mehrere Reparaturen für eine unvollständige
+`selectedCandidateIds`-Union. Ein späteres Paket lieferte unter
+`NOT_SUPPORTED` gleichzeitig `MISMATCH` und `MATCH`. Der Validator lehnte
+beides richtig ab, das globale Acht-Versuche-Limit war danach jedoch
+verbraucht, obwohl nicht jedes offene Paket sein eigenes Reparaturbudget
+erhalten hatte.
+
+Der Runner zählt Versuche nun je Paket, repariert nach dem initialen
+Mehrpaketaufruf nur noch ein ungültiges Paket pro Request und begrenzt die
+Worst-Case-Aufrufe auf
+`1 + offene Pakete * (maximumAttempts - 1)`. Strukturierte Fehlercodes nennen
+die konkrete Ursache, insbesondere falsche Ergebnis-/Dimensionskombination,
+unbekannte IDs und eine fehlerhafte Kandidaten-Union. Der semantische
+Validator wurde nicht gelockert.
+
+Beim echten Resume blieben Batch 1 bis 25 unangetastet. In Batch 26 wurde das
+bereits gültige erste Paket aus dem Attempt-Journal übernommen und nur die
+drei offenen Pakete neu bewertet. Am Commit `9c102daba` bestanden auf dem Mac
+Studio 190/190 Suites und 2.700/2.700 Tests; der Realrun erreichte anschließend
+mindestens 37/2.372 PASS-Batches und lief weiter.
+
+**Beweist:** Einzelne schwierige Pakete können weder andere Pakete
+verunreinigen noch ihnen ihr begrenztes Retrybudget entziehen; PASS- und
+gültige Teilartefakte bleiben resumierbar.
+
+**Beweist nicht:** Die fachliche Richtigkeit der noch ausstehenden Batches
+oder die Vollständigkeit der Suche.
+
+## 75. Lückenlose A-Blockzuständigkeit und fachliche Atomizität sind zwei getrennte Gates
+
+Der V35-A-Lauf besitzt für alle 1.005 Quellblöcke genau einen terminalen
+Status und null offene Units. Eine Quellprüfung des aktuellen Validators
+zeigte dennoch eine verbleibende Vertragslücke: Komponentenlabels müssen
+wörtlich source-bound sein, dürfen aber einen vollständigen langen Satz oder
+Listenpunkt umfassen, obwohl im selben Requirement bereits anders typisierte
+Teilkomponenten stecken. Das ist quelltreu, aber nicht automatisch atomar.
+
+Ein separater, ergebnisneutraler Audit markierte im unveränderten Manifest
+141 von 1.054 Komponenten mit 177 Risikosignalen: 122 Labels enthalten eine
+anders typisierte Schwesterkomponente, 53 sind länger als 240 normalisierte
+Zeichen, ein Label verbindet mehrere Parteienrollen und ein isoliertes
+Parteienrollenlabel besitzt relevanten Folgekontext. Das Audit verändert
+nichts und sein eigener Vertrag warnt ausdrücklich: Ein Treffer beweist
+keinen Fehler; null Treffer beweisen keine Vollständigkeit.
+
+**Beweist:** Das frühere automatische Gate war als Startgate für einen
+privaten B-Shadow ausreichend, aber als Freigabenachweis für korrekte
+A-Atomisierung zu schwach. Blockabdeckung und Atomizität müssen getrennt
+berichtet werden.
+
+**Beweist nicht:** Dass alle 141 markierten Komponenten falsch sind. Der
+nächste Beleg muss aus einer begrenzten source-bound Re-Atomisierung,
+vollständigem Manifest-Rebuild und messbarem Vorher-/Nachhervergleich kommen;
+eine pauschale Regex-Zerlegung wäre nicht zulässig.

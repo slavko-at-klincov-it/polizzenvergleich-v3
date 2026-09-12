@@ -1111,3 +1111,29 @@ Der erste reale Qwen-Fehler war kein Suchmiss: Das Modell setzte bei
 `NOT_ESTABLISHED` trotzdem Kandidaten-IDs. Der Validator sperrte dies. Prompt
 V2 bindet jede unbelegte Dimension ausdrücklich an eine leere ID-Liste und
 übernimmt ältere gültige Antworten nur nach erneuter aktueller Validierung.
+
+## 22. Aktueller Shadow-Stand: B-Resume stabil, A-Atomizität als separates Gate offen
+
+Der reale 1+9-Shadow besitzt vollständige, hashgebundene Hybrid-Retrieval-
+Evidenz für 1.054 A-Komponenten über neun B-Dokumente: 9.486/9.486 Pakete,
+50.627 kompaktierte Kandidaten und nur drei Pakete ohne Kandidat. Qwen
+entscheidet 2.372 kleine Batches. Ein realer Fehler nach 25 PASS-Batches
+zeigte, dass das technische Retrylimit noch batchweit statt paketweit galt.
+Commit `9c102daba` korrigiert dies, erhält bereits gültige Teilantworten und
+liefert granulare Fehlerursachen, ohne den Ergebnisvalidator zu lockern. Der
+fortgesetzte Lauf erreichte mindestens 37/2.372 PASS und lief weiter.
+
+Die A-Seite bleibt dynamisch und vollständig source-bound, aber ihre
+fachliche Atomizität ist noch nicht bewiesen. Ein neuer rein diagnostischer
+Audit markiert 141 von 1.054 Komponenten mit 177 Hochrisikosignalen, vor allem
+überbreite Labels und Labels, die bereits anders typisierte
+Schwesterkomponenten enthalten. Diese Treffer sind keine automatischen
+Fehlerurteile. Sie begründen einen gezielten Re-Atomisierungsschritt für die
+betroffenen Units mit anschließendem vollständigem Manifest-Rebuild und
+Vorher-/Nachherprüfung.
+
+Damit gilt: 1.005/1.005 terminal verarbeitete A-Blöcke sind notwendige
+Quellenintegrität, aber keine hinreichende Aussage über korrekte atomare
+Fachkomponenten. Produkt-Routing, Kunden-XLSX und Deployment bleiben bis zu
+diesem zusätzlichen Gate sowie bis zum vollständigen B- und
+Nichtregressionsnachweis gesperrt.
