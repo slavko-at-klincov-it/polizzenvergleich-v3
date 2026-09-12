@@ -944,7 +944,11 @@ function existingBatchResult(file, plan, batch, args) {
 
 function predecessorBatchResponses(file, plan, batch, args) {
   const result = readJson(file, "LF_A_CLASSIFICATION_PREDECESSOR_BATCH_RESULT");
-  const validationBatch = classificationBatch(plan, batch);
+  const validationBatch =
+    result?.classificationEvidenceContextContractId ===
+    CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID
+      ? classificationBatch(plan, batch)
+      : batch;
   if (
     !RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS.has(result?.contractId) ||
     result.sourceUnitPlanSha256 !== plan.planSha256 ||
@@ -953,8 +957,6 @@ function predecessorBatchResponses(file, plan, batch, args) {
     result.promptContractId !== PROMPT_CONTRACT_ID ||
     result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
     result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
-    result.classificationEvidenceContextContractId !==
-      CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||
     stableStringify(result.expectedUnitIds) !==

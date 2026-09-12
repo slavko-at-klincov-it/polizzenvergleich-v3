@@ -1512,14 +1512,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         model: args.model,
         modelContext: args.modelContext,
         plan,
-        batch: contextualBatch,
+        batch,
         maximumAttempts: 1,
       });
       const predecessor = {
         ...seeded,
         contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
-        classificationEvidenceContextContractId:
-          "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1",
       };
       delete predecessor.semanticSignalContractId;
       const file = batchResultFile(temporary, batch);
