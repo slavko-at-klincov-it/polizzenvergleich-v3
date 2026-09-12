@@ -6,6 +6,7 @@ const {
 } = require("./aDrivenSemanticManifest");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 const {
+  CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
   classificationBatch,
   deriveClassificationEvidencePlan,
   prompt,
@@ -202,6 +203,11 @@ function validateClassificationChain({
   const orderedResults = batchPlan.batches.map((batch, batchIndex) => {
     const result = resultsById.get(batch.batchId);
     const expectedUnitIds = uniqueStrings(batch.expectedUnitIds);
+    const validationBatch =
+      result?.classificationEvidenceContextContractId ===
+      CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID
+        ? classificationBatch(plan, batch)
+        : batch;
     if (
       !result ||
       batch.batchIndex !== batchIndex ||
@@ -213,8 +219,7 @@ function validateClassificationChain({
         CURRENT_V12_REVIEW_PROFILE.classificationRunContractId ||
       result.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
       result.promptContractId !== CURRENT_V12_REVIEW_PROFILE.promptContractId ||
-      result.promptSha256 !==
-        sha256(JSON.stringify(prompt(classificationBatch(plan, batch)))) ||
+      result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
       result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
       result.requestedModel !== CURRENT_V12_REVIEW_PROFILE.modelId ||
       result.modelContext !== CURRENT_V12_REVIEW_PROFILE.modelContext ||
@@ -232,10 +237,9 @@ function validateClassificationChain({
         batch.batchId
       );
     expectedUnitIds.forEach((unitId) => seenUnits.add(unitId));
-    const contextualBatch = classificationBatch(plan, batch);
     const validation = validateBatchResponses(
       plan,
-      contextualBatch,
+      validationBatch,
       result.responses
     );
     if (
