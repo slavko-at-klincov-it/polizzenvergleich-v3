@@ -1503,9 +1503,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             completions: {
               create: jest.fn(async () => ({
                 model: args.model,
-                choices: [
-                  { message: { content: JSON.stringify(responses) } },
-                ],
+                choices: [{ message: { content: JSON.stringify(responses) } }],
                 usage: {},
               })),
             },
