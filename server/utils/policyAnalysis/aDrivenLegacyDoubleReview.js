@@ -245,8 +245,7 @@ function validateClassificationChain({
     !validSha(sourcePlan.planSha256) ||
     batchPlan?.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
     !Array.isArray(batchPlan?.batches) ||
-    batchPlan.batches.length !==
-      campaignProfile.classificationBatches ||
+    batchPlan.batches.length !== campaignProfile.classificationBatches ||
     !Array.isArray(batchResults) ||
     batchResults.length !== batchPlan.batches.length ||
     !Array.isArray(responses) ||
@@ -283,8 +282,7 @@ function validateClassificationChain({
       expectedUnitIds.some(
         (unitId) => !unitById.has(unitId) || seenUnits.has(unitId)
       ) ||
-      result.contractId !==
-        campaignProfile.classificationRunContractId ||
+      result.contractId !== campaignProfile.classificationRunContractId ||
       result.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
       result.promptContractId !== campaignProfile.promptContractId ||
       result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
@@ -407,10 +405,8 @@ function validateClassificationChainReceipt(receipt, campaignProfile) {
   validateReviewCampaignProfile(profile);
   if (
     receipt.status !== "DETERMINISTICALLY_REVALIDATED" ||
-    receipt.summary?.batches !==
-      profile.classificationBatches ||
-    receipt.summary?.responses !==
-      profile.classificationResponses ||
+    receipt.summary?.batches !== profile.classificationBatches ||
+    receipt.summary?.responses !== profile.classificationResponses ||
     receipt.dynamicManifestSha256 !== profile.dynamicManifestSha256
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_CHAIN_RECEIPT_BINDING_INVALID");
@@ -586,7 +582,8 @@ function createRunProvenance({
   };
   if (
     !/^[a-f0-9]{40,64}$/u.test(payload.implementationCommitSha || "") ||
-    payload.implementationCommitSha !== campaignProfile.implementationCommitSha ||
+    payload.implementationCommitSha !==
+      campaignProfile.implementationCommitSha ||
     payload.sourceRun.runContractId !== campaignProfile.productRunContractId ||
     payload.sourceRun.classificationRunContractId !==
       campaignProfile.classificationRunContractId ||
@@ -637,9 +634,7 @@ function validateRunProvenance(
     "LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_DIGEST_INVALID"
   );
   if (
-    stableStringify(
-      createRunProvenance({ ...provenance, campaignProfile })
-    ) !==
+    stableStringify(createRunProvenance({ ...provenance, campaignProfile })) !==
     stableStringify(provenance)
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_CANONICAL_INVALID");
