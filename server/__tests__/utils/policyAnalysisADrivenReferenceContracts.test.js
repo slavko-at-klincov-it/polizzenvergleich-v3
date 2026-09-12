@@ -635,8 +635,7 @@ describe("requirement-local semantic evidence completeness", () => {
 
     expect(result.requirements[0].components).toContainEqual({
       type: "CONDITION",
-      label:
-        "wenn in der Sparte\nkeine Position Sondermüll versichert ist.",
+      label: "wenn in der Sparte\nkeine Position Sondermüll versichert ist.",
       sourceBlockIds: ["peril", "tail"],
     });
     expect(result.diagnostics).toEqual([
