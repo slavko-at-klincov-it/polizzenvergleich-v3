@@ -7479,20 +7479,27 @@ referenzierte Eingabeartefakte. Ein erneuter Materialisierungsversuch auf
 dasselbe Ziel stoppte erwartungsgemäß mit
 `LF_A_DOUBLE_REVIEW_TARGET_EXISTS`.
 
-Der deterministische Review-Draft liegt getrennt unter:
+Der erste deterministische V1-Draft blieb unverändert und `UNREVIEWED`, wurde
+aber vor Ausgabe an Reviewer durch die härtere V2-Fassung ersetzt. V2 markiert
+die mechanischen Rollenabweichungen explizit als Priorität 1, übernimmt die
+identische Rollenmatrix des A-Audits und weist die vier mechanischen Klassen
+vollständig aus. Er liegt getrennt unter:
 
 ```text
-/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V12-REVIEW-DRAFT-20260912-5FCB889C
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V12-REVIEW-DRAFT-V2-20260912-5FCB889C
 crosswalk-draft.private.json draftSha256:
-  16ae02acd4ba2709203adc731107a719cdfcb01ded78603f3c0610733fdd7c9d
+  b01c87012b9ace268572c50dba3c3d3b4c81f020991b269208f1c491fbb0b42d
 crosswalk-draft.private.json file SHA-256:
-  53351b71ab041d1bd211b140958b502da18b6375d63e6c7626643671a9d95c2b
+  9e16f0ed3d40d419f6b4063ade4deaf80dd3d4ab295e9d9c6b76ad7b9d1dd021
 ```
 
 Der Draft enthält 631/631 Legacy-Komponenten, 283/283 Legacy-Requirements,
 die exakten Legacy-Quelltexte und -positionen sowie den vollständigen
 dynamischen Geschwisterkontext aller source-überlappenden Requirements. Kein
-Record ist kandidatenlos. Seine Reverse-Diagnostik nennt 42 dynamische
+Record ist kandidatenlos. Er klassifiziert mechanisch 333 Records als
+`P1_ROLE_INCOMPATIBLE`, 191 als 1:1-Kandidaten, 107 als Split-Kandidaten und
+null als kandidatenlos; 333/333 P1-Records tragen die richtige Priorität.
+Seine Reverse-Diagnostik nennt 42 dynamische
 Komponenten ohne Kandidatenkontext. Diese 42 sind nicht mit den 160
 source-exakt zusätzlichen Komponenten des korrigierten A-Audits gleichzusetzen:
 Der Review-Draft erweitert ausschließlich den sichtbaren Kontext um
@@ -7508,6 +7515,13 @@ Rollenabweichungen ist zusätzlich genau eine Ursachenklasse erforderlich:
 bei nachweislich keinem Upstream-Defekt `NO_UPSTREAM_DEFECT`. Ein Merge ist nur
 mit gemeinsamer Merge-Gruppen-ID und mindestens zwei Legacy-Komponenten auf
 dasselbe dynamische Ziel gültig.
+
+Der Stand `a7a4ee34b` erzwingt zusätzlich: Ein mechanisch
+rolleninkompatibler Record darf nicht als `NO_UPSTREAM_DEFECT` eingereicht
+werden; Split und Merge verlangen `SPLIT_OR_MERGE_RELATION`, `MISSING`
+verlangt `DYNAMIC_COMPONENT_MISSING`, und `UNDETERMINED` kann niemals den
+Freigabegate passieren. Auf dem Mac Studio bestanden für diesen Stand Format,
+serverseitiges ESLint ohne Fehler und drei A-driven Suites mit 98/98 Tests.
 
 Reviewer A und B müssen getrennte, durch eine externe Autorität registrierte
 Signaturschlüssel und fachliche Qualifikationsnachweise besitzen. Jeder prüft
