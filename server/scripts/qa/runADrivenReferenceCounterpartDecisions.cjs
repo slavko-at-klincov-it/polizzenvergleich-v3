@@ -582,7 +582,13 @@ function archiveSupersededBatch(file, output, batch, reason) {
   fs.chmodSync(target, 0o600);
 }
 
-function createAttemptRecorder({ output, searchExecution, decisionPlan, batch, args }) {
+function createAttemptRecorder({
+  output,
+  searchExecution,
+  decisionPlan,
+  batch,
+  args,
+}) {
   const directory = path.join(
     output,
     "attempts",

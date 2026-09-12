@@ -6671,7 +6671,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
           create: jest.fn(async (payload) => ({
             model: args.model,
             choices: [
-              { message: { content: JSON.stringify(validForPayload(payload)) } },
+              {
+                message: { content: JSON.stringify(validForPayload(payload)) },
+              },
             ],
             usage: {},
           })),
