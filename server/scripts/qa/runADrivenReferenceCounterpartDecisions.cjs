@@ -82,9 +82,7 @@ function argumentsFrom(argv) {
   const numbers = {
     modelContext: Number(values.modelContext || DEFAULT_CONTEXT),
     maximumAttempts: Number(values.maximumAttempts || 3),
-    maximumPackages: Number(
-      values.maximumPackages || DEFAULT_MAXIMUM_PACKAGES
-    ),
+    maximumPackages: Number(values.maximumPackages || DEFAULT_MAXIMUM_PACKAGES),
     maximumCharacters: Number(
       values.maximumCharacters || DEFAULT_MAXIMUM_CHARACTERS
     ),

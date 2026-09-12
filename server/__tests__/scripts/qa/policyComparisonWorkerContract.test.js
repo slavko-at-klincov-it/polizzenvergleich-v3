@@ -125,9 +125,7 @@ describe("policy comparison worker contract", () => {
     expect(controlledPilotRunner).toContain("--modelRecoveryTimeoutMs");
     expect(controlledPilotRunner).toContain("--maximumPackages");
     expect(controlledPilotRunner).toContain("--maximumCharacters");
-    expect(controlledPilotRunner).toContain(
-      'if [ -e "$B_RETRIEVAL_ROOT" ]'
-    );
+    expect(controlledPilotRunner).toContain('if [ -e "$B_RETRIEVAL_ROOT" ]');
     const dinghyRunner = fs.readFileSync(
       path.join(
         REPOSITORY_ROOT,
