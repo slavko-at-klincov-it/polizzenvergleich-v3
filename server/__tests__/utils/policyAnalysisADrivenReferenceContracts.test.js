@@ -2050,6 +2050,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("normalizes slash-separated branch scopes before a quantified governor limit", () => {
+    const first =
+      "Zusätzlich im Rahmen der Feuer- / Sturm- und Leitungswasserversicherung sind mitversichert bis zu";
+    const second =
+      'jeweils l0% der Gebäudeversicherungssumme auf ,,Erstes Risiko“:';
+    const source = [first, second].join("\n");
+    const unit = {
+      unitId: "quantified-coverage-branch-governor",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["governor-one", "governor-two"],
+        combinedText: source,
+        blocks: [
+          { blockId: "governor-one", exactText: first },
+          { blockId: "governor-two", exactText: second },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Feuer- / Sturm- und Leitungswasserversicherung",
+                  sourceBlockIds: ["governor-one"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "mitversichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: ["governor-one"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(components.some(({ type }) => type === "OBJECT")).toBe(false);
+    expect(
+      components
+        .filter(({ type }) => type === "SCOPE")
+        .map(({ label }) => label)
+    ).toEqual(["Feuer-", "Sturm-", "Leitungswasserversicherung"]);
+    expect(components).toContainEqual({
+      type: "VALUE_AND_UNIT",
+      label: "bis zu\njeweils l0%",
+      rawValue: "l0%",
+      unit: "%",
+      sourceBlockIds: ["governor-one", "governor-two"],
+    });
+    expect(components).toContainEqual({
+      type: "LIMIT_BASIS",
+      label: 'der Gebäudeversicherungssumme auf ,,Erstes Risiko“',
+      sourceBlockIds: ["governor-two"],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "NORMALIZE_COVERAGE_BRANCH_GOVERNOR_ROLES",
+      scopes: 3,
+      removedObjectComponents: 1,
+    });
+  });
+
   test.each([
     "die tatsächlichen Kosten für Ersatzräumlichkeiten",
     "Kosten für ein Hotelzimmer",
@@ -3660,7 +3736,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V25");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V26");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

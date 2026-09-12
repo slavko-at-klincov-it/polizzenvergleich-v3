@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V25";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V26";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -44,6 +44,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V22",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V23",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V24",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V25",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -955,13 +956,21 @@ function coverageBranchGovernor(unit) {
     (source) => source?.combinedText && Array.isArray(source?.blocks)
   );
   for (const source of evidenceSources) {
-    const match =
+    const sourceText = String(source.combinedText || "");
+    const fixedBasisMatch =
       /\bim\s+Rahmen\s+der\s+(?<branches>[\s\S]{1,240}?)\s+(?<limit>bis\s+zur\s+Höhe\s+der\s+(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme))\s+(?<effect>(?:mit)?versichert)\b/iu.exec(
-        String(source.combinedText || "")
+        sourceText
       );
-    if (!match?.groups?.branches || !match.groups.limit) continue;
+    const quantifiedMatch =
+      /\bim\s+Rahmen\s+der\s+(?<branches>[\s\S]{1,240}?)\s+(?:(?:ist|sind)\s+)?(?<effect>(?:mit)?versichert)\s+(?<value>bis\s+(?:zu\s+)?(?:jeweils\s+)?(?<raw>[0-9lI]+(?:[.,][0-9lI]+)?)\s*(?<unit>%|€|EUR|Euro))\s+(?<basis>der\s+(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme)(?:\s+auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*)?)/iu.exec(
+        sourceText
+      );
+    const match = fixedBasisMatch || quantifiedMatch;
+    const limitLabel = fixedBasisMatch?.groups?.limit;
+    const basisLabel = quantifiedMatch?.groups?.basis;
+    if (!match?.groups?.branches || (!limitLabel && !basisLabel)) continue;
     const branches = match.groups.branches
-      .split(/\s*,\s*|\s+und\s+/iu)
+      .split(/\s*(?:,|\/)\s*|\s+und\s+/iu)
       .map((label) => label.trim())
       .filter((label) => label && label.length <= 120 && /\p{L}/u.test(label));
     if (branches.length < 2 || !/versicherung\s*$/iu.test(branches.at(-1)))
@@ -973,18 +982,32 @@ function coverageBranchGovernor(unit) {
         label,
         sourceBlockIds: sourceBlockIdsForExactSpan(evidenceUnit, label),
       })),
+      ...(quantifiedMatch
+        ? [
+            {
+              type: "VALUE_AND_UNIT",
+              label: quantifiedMatch.groups.value,
+              rawValue: quantifiedMatch.groups.raw,
+              unit: quantifiedMatch.groups.unit,
+              sourceBlockIds: sourceBlockIdsForExactSpan(
+                evidenceUnit,
+                quantifiedMatch.groups.value
+              ),
+            },
+          ]
+        : []),
       {
         type: "LIMIT_BASIS",
-        label: match.groups.limit,
+        label: limitLabel || basisLabel,
         sourceBlockIds: sourceBlockIdsForExactSpan(
           evidenceUnit,
-          match.groups.limit
+          limitLabel || basisLabel
         ),
       },
     ];
     if (components.some(({ sourceBlockIds }) => sourceBlockIds.length === 0))
       continue;
-    return { source, components };
+    return { source, branchesText: match.groups.branches, components };
   }
   return null;
 }
@@ -995,19 +1018,25 @@ function normalizeCoverageBranchGovernorComponents(requirements, unit) {
   const governorBlockIds = new Set(
     governor.components.flatMap(({ sourceBlockIds }) => sourceBlockIds)
   );
+  const normalizedGovernorBranches = governor.branchesText
+    .replace(/\s+/gu, " ")
+    .trim();
   const repairs = [];
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => {
       const retained = (requirement.components || []).filter((component) => {
         if (component?.type !== "OBJECT") return true;
         const label = String(component.label || "");
+        const normalizedLabel = label.replace(/\s+/gu, " ").trim();
         const usesGovernor = (component.sourceBlockIds || []).some((blockId) =>
           governorBlockIds.has(blockId)
         );
         return !(
           usesGovernor &&
           /versicherung\b/iu.test(label) &&
-          /\b(?:Versicherungssumme|bis\s+zur\s+Höhe)\b/iu.test(label)
+          (normalizedGovernorBranches.includes(normalizedLabel) ||
+            normalizedLabel.includes(normalizedGovernorBranches) ||
+            /\b(?:Versicherungssumme|bis\s+zur\s+Höhe)\b/iu.test(label))
         );
       });
       const existing = new Set(
