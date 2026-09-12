@@ -37,6 +37,7 @@ const {
   attachTopLevelRequirementFragments,
   batchResultFile,
   deriveClassificationEvidencePlan,
+  listSegmentRepairSkeletons,
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
@@ -629,6 +630,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         ["unit-one", "unit-two"]
       ).envelopeRepair
     ).toBeNull();
+  });
+
+  test("materializes repair skeletons for both split and merged list segments", () => {
+    const batch = {
+      units: [
+        {
+          unitId: "unit-one",
+          logicalSourceSegments: ["one", "two", "three"].map(
+            (segmentId) => ({
+              segmentId,
+              combinedText: `Text ${segmentId}`,
+              blockIds: [`block-${segmentId}`],
+            })
+          ),
+        },
+      ],
+    };
+
+    expect(
+      listSegmentRepairSkeletons(batch, [
+        {
+          code: "LIST_CONTINUATION_SEGMENT_SPLIT",
+          unitId: "unit-one",
+          segmentId: "three",
+        },
+        {
+          code: "LIST_SOURCE_SEGMENTS_MERGED",
+          unitId: "unit-one",
+          segmentIds: ["one", "two"],
+        },
+      ])
+    ).toEqual([
+      {
+        unitId: "unit-one",
+        segmentId: "one",
+        exactDisplayLabel: "Text one",
+        requiredBlockIds: ["block-one"],
+      },
+      {
+        unitId: "unit-one",
+        segmentId: "two",
+        exactDisplayLabel: "Text two",
+        requiredBlockIds: ["block-two"],
+      },
+      {
+        unitId: "unit-one",
+        segmentId: "three",
+        exactDisplayLabel: "Text three",
+        requiredBlockIds: ["block-three"],
+      },
+    ]);
   });
 
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {

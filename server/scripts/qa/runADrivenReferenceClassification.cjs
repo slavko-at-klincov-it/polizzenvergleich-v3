@@ -426,17 +426,14 @@ function attachTopLevelRequirementFragments(responses, expectedUnitIds) {
 
 function listSegmentRepairSkeletons(batch, diagnostics) {
   const requested = new Map(
-    diagnostics
-      .filter(
-        ({ code, unitId, segmentId }) =>
-          [
-            "LIST_CONTINUATION_SEGMENT_SPLIT",
-            "LIST_SOURCE_SEGMENTS_MERGED",
-          ].includes(code) &&
-          unitId &&
-          segmentId
-      )
-      .map(({ unitId, segmentId }) => [`${unitId}:${segmentId}`, true])
+    diagnostics.flatMap(({ code, unitId, segmentId, segmentIds }) => {
+      if (!unitId) return [];
+      if (code === "LIST_CONTINUATION_SEGMENT_SPLIT" && segmentId)
+        return [[`${unitId}:${segmentId}`, true]];
+      if (code === "LIST_SOURCE_SEGMENTS_MERGED" && Array.isArray(segmentIds))
+        return segmentIds.map((id) => [`${unitId}:${id}`, true]);
+      return [];
+    })
   );
   return batch.units.flatMap((unit) =>
     (unit.logicalSourceSegments || [])
@@ -1851,6 +1848,7 @@ module.exports = {
   classificationBatch,
   createAttemptRecorder,
   deriveClassificationEvidencePlan,
+  listSegmentRepairSkeletons,
   processClassificationBatches,
   prompt,
   requestCompletionWithTimeout,
