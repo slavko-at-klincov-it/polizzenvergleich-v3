@@ -64,7 +64,7 @@ describe("VS-36 symbolic maximum-indemnity limit contract", () => {
         occurrence(text, text, "LIST_ITEM")
       )
     ).toMatchObject({
-      match: expect.objectContaining({ 0: "150 %" }),
+      match: expect.arrayContaining(["150 %"]),
       value: {
         normalizedValue: "150 %",
         valueType: "PERCENT",
