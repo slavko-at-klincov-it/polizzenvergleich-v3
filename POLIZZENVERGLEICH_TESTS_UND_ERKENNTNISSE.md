@@ -4241,3 +4241,58 @@ atomisiert sind, dass B vollständig gefunden wurde, dass die sichtbare
 Binärentscheidung fachlich kalibriert ist oder dass Produkt-Routing,
 Kunden-XLSX beziehungsweise Deployment freigegeben wären. Diese Aussagen
 erfordern den vollständigen B-Lauf und dessen nachgelagerte Qualitätsprüfung.
+
+## 72. Der reale B-Shadow benötigt ein datengetragenes Paketbudget und Retrieval-Resume
+
+Der erste 1+9-B-Shadow erzeugte aus 1.054 A-Komponenten vollständig 9.486
+Komponente-x-Dokument-Rankings und 50.627 kompaktierte Kandidaten. Nur drei
+Pakete blieben ohne Kandidat. Vor dem ersten Qwen-Aufruf stoppte der
+Batchplaner, weil 1.518 reale Pakete größer als die synthetisch gesetzte
+14.000-Zeichen-Grenze waren; der Höchstwert lag bei 26.274 Zeichen.
+
+Das Standardbudget wurde auf 30.000 Zeichen korrigiert, ohne die maximale
+Zahl von vier Paketen pro Modellaufruf zu erhöhen. Zusätzlich validiert der
+Runner bei einer Wiederaufnahme das vorhandene A-Receipt und die komplette
+Dinghy-Kette gegen aktuelles Manifest, B-Dokumente, Embeddingvertrag,
+Search-Plan, Retrieval, rekonstruierte Search-Execution, Rankings und
+Summary-Digest. Erst danach wird Qwen fortgesetzt.
+
+Am Commit `a1bf3319138eb988fcd836c019cbb6edc2a7ef52` bestanden auf dem Mac
+Studio 174/174 fokussierte und 2.694/2.694 vollständige Servertests. Der reale
+Resume-Check meldete `9.486/9.486 Rankings wiederverwendet`; der neue
+Qwen-Plan umfasst unter der konkreten Laufkonfiguration 2.372 Batches, deren
+erster Batch bestand.
+
+**Beweist:** Der reale Retrievalstand ist vollständig, gebunden und ohne
+erneutes Embedding wiederverwendbar; das frühere Paketbudget war ein
+technischer Fehlalarm und ist allgemein korrigiert.
+
+**Beweist nicht:** Dass die noch laufenden 2.372 Qwen-Batches fachlich richtig
+oder vollständig sind. Das kann erst die terminale Entscheidungsdatei samt
+nachgelagerter Quellen- und Qualitätsanalyse zeigen.
+
+## 73. `NOT_ESTABLISHED` muss im Prompt unmittelbar an leere Kandidaten-IDs gebunden sein
+
+Im realen Batch 2 bewertete Qwen alle Dimensionen als nicht belegt, trug aber
+trotzdem die geprüften Kandidaten-IDs in jede Dimension und in
+`selectedCandidateIds` ein. Der Server verwarf alle vier Pakete korrekt. Der
+allgemeine Fehler lag in einer zu indirekten Promptformulierung: Leere IDs
+waren für den vollständig unbelegten Gesamtfall beschrieben, nicht direkt an
+jeden einzelnen `NOT_ESTABLISHED`-Check gebunden.
+
+Prompt V2 sagt nun an beiden relevanten Stellen explizit: Jeder
+`NOT_ESTABLISHED`-Check hat `candidateIds: []`; Kandidaten-IDs sind nur bei
+`MATCH` oder `MISMATCH` zulässig. Gültige Antworten aus Prompt V1 dürfen nur
+nach erneuter aktueller Einzelvalidierung übernommen werden. Ungültige alte
+Versuche werden ignoriert.
+
+Commit `31adbb10c` bestand auf dem Mac Studio 175/175 fokussierte und
+2.695/2.695 vollständige Servertests. Im echten Resume wurde Batch 1 validiert
+übernommen und Batch 2 mit Prompt V2 im ersten Versuch terminal.
+
+**Beweist:** Der beobachtete Formfehler ist reproduziert, erklärt und ohne
+Lockerung des Validators behoben.
+
+**Beweist nicht:** Dass spätere fachlich andere Batches keine neuen
+Modellmuster zeigen. Timeout, Retry, Einzelvalidierung und Resume bleiben
+deshalb für den gesamten Lauf aktiv.

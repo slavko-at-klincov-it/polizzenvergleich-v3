@@ -1099,3 +1099,15 @@ Anforderungen und 1.054 Komponenten. Der vollständige B-Shadow wurde danach
 Produkt-Routing, Kunden-XLSX und Deployment getrennt gesperrt; der frühere
 Hinweis, der interne Shadow müsse auf 631 menschliche Doppelreviews oder einen
 Ed25519-Public-Key warten, ist überholt.
+
+Der erste reale B-Start zeigte anschließend eine rein technische Grenze: Die
+vollständig erzeugten 9.486 Rankings und 50.627 Kandidaten passten teilweise
+nicht in das alte 14.000-Zeichen-Paketbudget. Dieses Budget wurde allgemein
+auf reale kompaktierte Pakete erweitert und der Runner so gehärtet, dass er
+das fertige Retrieval vollständig prüft und ohne Neuberechnung übernimmt.
+Der fortgesetzte Qwen-Plan hat 2.372 kleine, fail-closed resumierbare Batches.
+
+Der erste reale Qwen-Fehler war kein Suchmiss: Das Modell setzte bei
+`NOT_ESTABLISHED` trotzdem Kandidaten-IDs. Der Validator sperrte dies. Prompt
+V2 bindet jede unbelegte Dimension ausdrücklich an eine leere ID-Liste und
+übernimmt ältere gültige Antworten nur nach erneuter aktueller Validierung.
