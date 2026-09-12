@@ -80,9 +80,15 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
     requiredComponentTypes: Object.freeze(["CONDITION"]),
   }),
   Object.freeze({
+    signalId: "EXPLICIT_DEFINITION",
+    pattern:
+      /\bunter\s+[^.;:]{1,120}?\b(?:versteht\s+man|(?:ist|sind)\s+[^.;:]{0,80}\bzu\s+verstehen)\b[^.;:]*|\bist\s+der\s+versicherungsfall\s+[^.;:]+/giu,
+    requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
+  }),
+  Object.freeze({
     signalId: "EXPLICIT_PERIL_OR_CAUSE",
     pattern:
-      /\b(?:schäden?|beschädigungen?)\b[^.;:]{0,320}\bdurch\s+(?=\S)[^.;:]+|(?:^|[•-]\s*)(?:\p{L}[\p{L}-]*\s+){0,4}\p{L}[\p{L}-]*schäden\b[^.;:]*/gimu,
+      /\b(?:schäden?|beschädigung(?:en)?)\b[^.;:]{0,320}\bdurch\s+(?=\S)[^.;:]+|(?:^|[•-]\s*)(?:\p{L}[\p{L}-]*\s+){0,4}\p{L}[\p{L}-]*schäden\b[^.;:]*/gimu,
     requiredComponentTypes: Object.freeze(["PERIL_OR_CAUSE"]),
   }),
   Object.freeze({
@@ -518,6 +524,7 @@ function materializeSharedSignalComponents(unit, requirements) {
         if (
           ![
             "EXPLICIT_CONDITION",
+            "EXPLICIT_DEFINITION",
             "EXPLICIT_PERIL_OR_CAUSE",
             "EXPLICIT_COST_ROLE",
             "EXPLICIT_QUANTIFIED_VALUE",
@@ -598,13 +605,15 @@ function materializeSharedSignalComponents(unit, requirements) {
                 type:
                   signal.signalId === "EXPLICIT_CONDITION"
                     ? "CONDITION"
-                    : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
-                      ? "PERIL_OR_CAUSE"
-                      : signal.signalId === "EXPLICIT_COST_ROLE"
-                        ? "FACT_ROLE"
-                        : signal.signalId === "EXPLICIT_DEDUCTIBLE"
-                          ? "DEDUCTIBLE"
-                          : "LIMIT_BASIS",
+                    : signal.signalId === "EXPLICIT_DEFINITION"
+                      ? "FACT_ROLE"
+                      : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+                        ? "PERIL_OR_CAUSE"
+                        : signal.signalId === "EXPLICIT_COST_ROLE"
+                          ? "FACT_ROLE"
+                          : signal.signalId === "EXPLICIT_DEDUCTIBLE"
+                            ? "DEDUCTIBLE"
+                            : "LIMIT_BASIS",
                 label,
                 sourceBlockIds,
               };

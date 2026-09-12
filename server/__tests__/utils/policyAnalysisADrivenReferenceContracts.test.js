@@ -757,6 +757,18 @@ describe("requirement-local semantic evidence completeness", () => {
       type: "PERIL_OR_CAUSE",
     },
     {
+      source:
+        "Unter Behandlung sind alle Maßnahmen zu verstehen, die gefährlichen Abfall beseitigen.",
+      signalId: "EXPLICIT_DEFINITION",
+      type: "FACT_ROLE",
+    },
+    {
+      source:
+        "Beschädigung von Gebäuden und Einfriedungen durch unbekannte Fahrzeuge.",
+      signalId: "EXPLICIT_PERIL_OR_CAUSE",
+      type: "PERIL_OR_CAUSE",
+    },
+    {
       source: "- Bruch- und Verstopfungsschäden an Außenleitungen.",
       signalId: "EXPLICIT_PERIL_OR_CAUSE",
       type: "PERIL_OR_CAUSE",
