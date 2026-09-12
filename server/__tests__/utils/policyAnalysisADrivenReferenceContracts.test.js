@@ -836,6 +836,58 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("adds a uniquely required adjacent source block to a split component", () => {
+    const unit = {
+      unitId: "unit-one",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: "Kosten der Wiederauffüllung der Aushubgrube mit\nErdreich",
+        blocks: [
+          {
+            blockId: "cost-one",
+            structuralKind: "PARAGRAPH",
+            exactText: "Kosten der Wiederauffüllung der Aushubgrube mit",
+          },
+          {
+            blockId: "cost-two",
+            structuralKind: "PARAGRAPH",
+            exactText: "Erdreich",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: unit.source.combinedText,
+              sourceBlockIds: ["cost-one"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components[0].sourceBlockIds
+    ).toEqual(["cost-one", "cost-two"]);
+    expect(normalized.componentRepairs).toEqual([
+      expect.objectContaining({
+        unitId: "unit-one",
+        action: "RESTORE_COMPONENT_SOURCE_BLOCK_IDS",
+        fromSourceBlockIds: ["cost-one"],
+        toSourceBlockIds: ["cost-one", "cost-two"],
+      }),
+    ]);
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;

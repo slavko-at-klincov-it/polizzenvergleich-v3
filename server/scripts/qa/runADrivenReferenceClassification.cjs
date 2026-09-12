@@ -497,6 +497,53 @@ function exactConditionLabel(unit, component) {
   return declaredSourceText.slice(marker.index).trim();
 }
 
+function completeComponentSourceBlockIds(unit, component) {
+  if (
+    !Array.isArray(component?.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0
+  )
+    return null;
+  const blocks = unit?.source?.blocks || [];
+  const declaredIds = new Set(component.sourceBlockIds);
+  if (
+    blocks.length === 0 ||
+    [...declaredIds].some(
+      (blockId) => !blocks.some((block) => block.blockId === blockId)
+    )
+  )
+    return null;
+  const normalize = (value) => String(value || "").replace(/\s+/gu, " ").trim();
+  const label = normalize(component.label);
+  if (!label) return null;
+  const declaredText = normalize(
+    blocks
+      .filter(({ blockId }) => declaredIds.has(blockId))
+      .map(({ exactText }) => exactText)
+      .join("\n")
+  );
+  if (declaredText.includes(label)) return null;
+  const candidates = [];
+  for (let start = 0; start < blocks.length; start += 1) {
+    for (let end = start; end < blocks.length; end += 1) {
+      const selected = blocks.slice(start, end + 1);
+      const selectedIds = selected.map(({ blockId }) => blockId);
+      if (![...declaredIds].every((blockId) => selectedIds.includes(blockId)))
+        continue;
+      if (!normalize(selected.map(({ exactText }) => exactText).join("\n")).includes(label))
+        continue;
+      candidates.push(selectedIds);
+    }
+  }
+  if (candidates.length === 0) return null;
+  const minimumLength = Math.min(...candidates.map(({ length }) => length));
+  const minimal = candidates.filter(({ length }) => length === minimumLength);
+  const unique = [
+    ...new Map(minimal.map((blockIds) => [stableStringify(blockIds), blockIds])).values(),
+  ];
+  if (unique.length !== 1 || unique[0].length === declaredIds.size) return null;
+  return unique[0];
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -609,6 +656,43 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const completeSourceBlockIds = completeComponentSourceBlockIds(
+                    unit,
+                    component
+                  );
+                  if (completeSourceBlockIds) {
+                    const sourceRepairedComponent = {
+                      ...component,
+                      sourceBlockIds: completeSourceBlockIds,
+                    };
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_COMPONENT_SOURCE_BLOCK_IDS",
+                      fromSourceBlockIds: component.sourceBlockIds,
+                      toSourceBlockIds: completeSourceBlockIds,
+                    });
+                    const repairedConditionLabel = exactConditionLabel(
+                      unit,
+                      sourceRepairedComponent
+                    );
+                    if (repairedConditionLabel) {
+                      repairs.push({
+                        unitId: response.unitId,
+                        requirementIndex,
+                        componentIndex,
+                        action: "RESTORE_EXACT_CONDITION_SOURCE_TEXT",
+                      });
+                      return [
+                        {
+                          ...sourceRepairedComponent,
+                          label: repairedConditionLabel,
+                        },
+                      ];
+                    }
+                    return [sourceRepairedComponent];
+                  }
                   const sourceBoundConditionLabel = exactConditionLabel(
                     unit,
                     component
