@@ -7,7 +7,7 @@ const {
 
 const A_STATUS_AUDIT_CONTRACT_ID = "LF_A_DYNAMIC_STATUS_AUDIT_V2";
 const A_ATOMICITY_RISK_AUDIT_CONTRACT_ID =
-  "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V1";
+  "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V2";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
@@ -86,10 +86,14 @@ function assessADrivenManifestAtomicityRisks({ plan, manifest } = {}) {
   const addRisk = (requirement, component, code, details = {}) => {
     const identity = `${requirement.requirementId}:${component.componentId}:${code}`;
     if (riskByIdentity.has(identity)) return;
+    const owningUnitId = requirement.sourceUnitIds.at(-1);
+    if (!unitById.has(owningUnitId))
+      throw new Error("LF_A_ATOMICITY_RISK_OWNING_UNIT_INVALID");
     riskByIdentity.set(identity, {
       code,
       dynamicRequirementId: requirement.requirementId,
       dynamicComponentId: component.componentId,
+      owningUnitId,
       componentType: component.type,
       label: component.label,
       sourceUnitIds: requirement.sourceUnitIds,
@@ -174,6 +178,7 @@ function assessADrivenManifestAtomicityRisks({ plan, manifest } = {}) {
   const riskComponentIds = new Set(
     risks.map(({ dynamicComponentId }) => dynamicComponentId)
   );
+  const riskUnitIds = new Set(risks.map(({ owningUnitId }) => owningUnitId));
   const byCode = Object.fromEntries(
     [...new Set(risks.map(({ code }) => code))]
       .sort()
@@ -190,6 +195,7 @@ function assessADrivenManifestAtomicityRisks({ plan, manifest } = {}) {
         (sum, requirement) => sum + requirement.components.length,
         0
       ),
+      reviewRequiredUnits: riskUnitIds.size,
       reviewRequiredComponents: riskComponentIds.size,
       risks: risks.length,
       byCode,

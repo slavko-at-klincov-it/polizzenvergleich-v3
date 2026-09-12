@@ -45,6 +45,7 @@ const {
   normalizeStandaloneListGovernorRequirements,
   normalizeUnambiguousComponentTypes,
   parseJsonArray,
+  prompt: classificationPrompt,
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
@@ -64,6 +65,31 @@ const os = require("os");
 const path = require("path");
 
 describe("A-driven classification evidence recovery", () => {
+  test("binds the model to minimal typed component labels instead of whole-clause labels", () => {
+    const messages = classificationPrompt({
+      batchId: "batch",
+      expectedUnitIds: ["unit"],
+      units: [],
+    });
+    const systemText = messages
+      .filter(({ role }) => role === "system")
+      .map(({ content }) => content)
+      .join("\n");
+
+    expect(systemText).toContain(
+      "der kürzeste zusammenhängende wörtliche Quellteil"
+    );
+    expect(systemText).toContain(
+      "nicht automatisch den vollständigen Listenpunkt"
+    );
+    expect(systemText).toContain(
+      "Koordinierte Aufzählungen desselben Typs werden in einzelne Komponenten zerlegt"
+    );
+    expect(systemText).toContain(
+      "verwende UNRESOLVED statt eines überbreiten Sammellabels"
+    );
+  });
+
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
     const source = (documentUuid, blocks) => ({
       documentUuid,
@@ -2933,7 +2959,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V13");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V14");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -6141,17 +6167,23 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     const audit = assessADrivenManifestAtomicityRisks({ plan, manifest });
 
-    expect(audit.summary.atomicityReviewPassed).toBe(false);
+    expect(audit.summary).toMatchObject({
+      reviewRequiredUnits: 2,
+      reviewRequiredComponents: 2,
+      atomicityReviewPassed: false,
+    });
     expect(audit.auditSha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(audit.risks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "COMPONENT_LABEL_CONTAINS_TYPED_SIBLING",
           componentType: "OBJECT",
+          owningUnitId: coverageUnit.unitId,
         }),
         expect.objectContaining({
           code: "COMPOUND_PARTY_ROLE_COMPONENT",
           componentType: "FACT_ROLE",
+          owningUnitId: partyUnit.unitId,
         }),
         expect.objectContaining({
           code: "ISOLATED_PARTY_ROLE_LABEL",
