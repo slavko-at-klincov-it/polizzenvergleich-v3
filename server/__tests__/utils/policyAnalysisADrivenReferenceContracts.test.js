@@ -877,6 +877,7 @@ describe("requirement-local semantic evidence completeness", () => {
   test.each([
     "Gebäude sind versichert.",
     "Versichert sind Gebäude einschließlich ihrer Fundamente und Anlagen.",
+    "Schäden an Personen (eine außereheliche Gemeinschaft ist in ihrer Auswirkung der ehelichen gleichgestellt) sind ausgeschlossen.",
   ])(
     "does not turn the coverage statement '%s' into a definition",
     (source) => {
