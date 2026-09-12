@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V29";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V30";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -48,6 +48,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V26",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V27",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V28",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V29",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1227,12 +1228,13 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
             ) &&
             label.replace(/\s+/gu, " ").trim().length >=
               unitSourceText.replace(/\s+/gu, " ").trim().length * 0.85;
-          const costDefinition =
-            costDefinitionPattern.exec(label) ||
-            (coversWholeUnit
-              ? costDefinitionPattern.exec(unitSourceText)
-              : null);
-          if (costDefinition?.groups) {
+          const costDefinitions = [
+            costDefinitionPattern.exec(label),
+            ...(coversWholeUnit
+              ? [costDefinitionPattern.exec(unitSourceText)]
+              : []),
+          ].filter(Boolean);
+          for (const costDefinition of costDefinitions) {
             const roleSourceBlockIds = sourceBlockIdsForExactSpan(
               unit,
               costDefinition.groups.role
@@ -1261,12 +1263,13 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
               ];
             }
           }
-          const priceIncrease =
-            priceIncreasePattern.exec(label) ||
-            (coversWholeUnit
-              ? priceIncreasePattern.exec(unitSourceText)
-              : null);
-          if (priceIncrease?.groups) {
+          const priceIncreases = [
+            priceIncreasePattern.exec(label),
+            ...(coversWholeUnit
+              ? [priceIncreasePattern.exec(unitSourceText)]
+              : []),
+          ].filter(Boolean);
+          for (const priceIncrease of priceIncreases) {
             const components = [
               {
                 ...component,
