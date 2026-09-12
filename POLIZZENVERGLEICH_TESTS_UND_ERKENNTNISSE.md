@@ -3980,3 +3980,62 @@ Freigabestatus gehärtet.
 **Beweist nicht:** reale Fachreview-Entscheidungen oder eine externe
 B-Autorisierung. Der Wahrheitsstand bleibt 0/631; B-Pilot, vollständiger
 1+9-Lauf, Produkt-Routing, Kunden-XLSX und Deployment bleiben gesperrt.
+
+## 66. V35-Leistungsrollen verbessern die A-Basis, ersetzen aber keinen Fachreview
+
+**Prüfung:** 12. September 2026
+
+Die 25 im V30-Crosswalk mechanisch inkompatiblen Legacy-Leistungsrollen wurden
+nicht durch eine pauschale Rollenmatrix freigegeben. Stattdessen wurde der
+A-Manifestvertrag iterativ um eng begrenzte, quellgebundene Vertragsvorteile
+erweitert. Ein V31-Realversuch stoppte Batch 55 nach acht semantisch ungültigen
+Qwen-Antworten korrekt fail-closed. Der Befund zeigte, dass nicht der
+Transport, sondern verkürzte beziehungsweise modellseitig umformatierte
+Mehrblockevidenz die Validierung verhinderte.
+
+Der akzeptierte Vertrag
+`LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6` verwendet deshalb die
+kanonische Quellspanne, erhält Zahlenpunkte und Bindestrichfortsetzungen,
+bevorzugt vollständige zusammenhängende Evidenz und materialisiert nur
+hochpräzise aktive Anspruchs-, Freigabe-, Teilzahlungs-, Wiederherstellungs-
+und Verzichtsaussagen als `BENEFIT`. Alte Attempt-Artefakte sind nur als
+explizit erlaubte Vorgänger zulässig und müssen unter dem aktuellen Vertrag
+erneut bestehen. Der V35-Lauf benötigte dadurch keine neuen Modellaufrufe,
+validierte aber alle 349 Response-Units erneut.
+
+Der Mac-Studio-Lauf
+`LF-A-DRIVEN-V35-FINAL-BENEFIT-EVIDENCE-20260912-828DAFDD` bestätigt 59/59
+Batches, 1.005/1.005 genau einmal besessene und terminale Source-Blöcke, 357
+Requirements, 1.054 Komponenten und null `UNRESOLVED`. Sein intrinsischer
+Manifesthash ist
+`d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce`.
+
+Die mechanischen direkten Rollenabweichungen sanken gegenüber V30 von 98 auf
+79. Der neue 631er-Draft enthält 287 1:1-, 203 Split-, 62 geerbte und 79
+rolleninkompatible Kandidaten bei null kandidatenlosen Records. Von den 79
+Fällen sind 60 historische `CONDITION`-Labels, sieben `BENEFIT`, sieben
+`EXCLUSION` und fünf andersartige Einzelfälle. Die Quellprüfung zeigt, dass
+viele davon bereits inhaltlich erfasst, aber anders atomisiert sind. Eine
+weitere breite Regex würde deshalb die mechanische Kennzahl wahrscheinlich
+senken, ohne fachliche Richtigkeit oder Generalisierung zu beweisen.
+
+Die vollständige Kette wurde als V35-Freeze mit Basisdigest
+`c983db1f8c208eee86b317cdc447ad6b229aa05443d8498e9f650204708fa340`
+und als strenger Draft mit Digest
+`caccf75988264ce12b64a4c34b8b41165d1f2e1e2c0a53205533819f2ba0db8d`
+write-once materialisiert. Am Commit
+`f6c4f3cc145b8087ebeaa6d9e75831fd7a1ee3fd` bestanden auf dem Mac Studio
+unter Node 22.23.2 Prettier, ESLint, 169/169 fokussierte Tests und 187/187
+Server-Suites mit 2.674/2.674 Tests.
+
+**Beweist:** Die allgemeine, versionierte Leistungsrollenerkennung verbessert
+die nachgelagerte Suchbasis in 19 zuvor rolleninkompatiblen Legacy-Relationen,
+ohne alte Batchantworten ungeprüft zu übernehmen; V35 ist die aktuelle
+reproduzierbare technische A-Reviewbasis.
+
+**Beweist nicht:** dass alle 79 übrigen Rollenabweichungen A-Fehler sind, dass
+alle 1.054 dynamischen Komponenten fachlich korrekt und vollständig sind,
+dass B durchsucht wurde, Generalisierung oder 99 Prozent. Der reale Stand ist
+weiterhin 0/631 unabhängige Fach-Doppelreviews; B-Pilot und 1+9 bleiben bis
+zum vollständigen Legacy- und dynamischen Restreview plus externer
+Autorisierung fail-closed.
