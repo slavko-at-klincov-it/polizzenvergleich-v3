@@ -60,7 +60,9 @@ function evidence() {
       semanticComponents: 755,
     },
   };
-  const { stableStringify } = require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan");
+  const {
+    stableStringify,
+  } = require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan");
   const chainValidation = {
     ...chainPayload,
     chainSha256: crypto
@@ -90,7 +92,10 @@ function evidence() {
     batchResults: Array.from({ length: 59 }, (_, index) => ({
       batchId: `batch-${String(index + 1).padStart(2, "0")}`,
       relativePath: `inputs/batches/${index + 1}.json`,
-      fileSha256: crypto.createHash("sha256").update(String(index)).digest("hex"),
+      fileSha256: crypto
+        .createHash("sha256")
+        .update(String(index))
+        .digest("hex"),
       status: "PASS",
       expectedUnits: 1,
     })),
@@ -116,12 +121,15 @@ function legacyManifest() {
           exactText: `Source ${index + 1}`,
         },
       ],
-      components: Array.from({ length: componentCount }, (_, componentIndex) => ({
-        id: `${requirementId}-C${componentIndex + 1}`,
-        label: `Component ${componentIndex + 1}`,
-        factRole: "CONDITION",
-        sourceSpanIds: [`${requirementId}-span`],
-      })),
+      components: Array.from(
+        { length: componentCount },
+        (_, componentIndex) => ({
+          id: `${requirementId}-C${componentIndex + 1}`,
+          label: `Component ${componentIndex + 1}`,
+          factRole: "CONDITION",
+          sourceSpanIds: [`${requirementId}-span`],
+        })
+      ),
     };
   });
   return {
@@ -130,7 +138,11 @@ function legacyManifest() {
     categories: [
       {
         subcategories: [
-          { requirementIds: requirements.map(({ requirementId }) => requirementId) },
+          {
+            requirementIds: requirements.map(
+              ({ requirementId }) => requirementId
+            ),
+          },
         ],
       },
     ],
@@ -206,10 +218,7 @@ function basis() {
       name,
       {
         relativePath: `inputs/source/${name}`,
-        fileSha256: crypto
-          .createHash("sha256")
-          .update(name)
-          .digest("hex"),
+        fileSha256: crypto.createHash("sha256").update(name).digest("hex"),
         contractId: `TEST_${name}`,
         intrinsicSha256: null,
       },
@@ -224,14 +233,12 @@ function basis() {
       CURRENT_V12_REVIEW_PROFILE.legacyManifestFileSha256,
     classificationEvidence: evidence(),
     runProvenance: createRunProvenance({
-      implementationCommitSha:
-        "9836216b9db6fc0b83bc65177f69f9fa6a938acc",
+      implementationCommitSha: "9836216b9db6fc0b83bc65177f69f9fa6a938acc",
       sourceArtifacts,
       sourceRun: {
         runContractId: "LF_REFERENCE_A_DRIVEN_V2",
         classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
-        manifestCompletionCommitSha:
-          "bd051b23f1facb15943ca0de5312e387aa2dd10a",
+        manifestCompletionCommitSha: "bd051b23f1facb15943ca0de5312e387aa2dd10a",
         releaseId: "e8e9e94862acf1e48a7f8110382af084e5d37439",
         runSignature:
           "df7d7179-1c49-412b-b2ff-0ec6b1fdc52f/resume-eb1202f45007d9995ddd60a9",
@@ -284,7 +291,10 @@ test("revalidates the exact 349-unit Plan -> Batch -> response -> manifest chain
       responses: batch.expectedUnitIds.map((unitId) => ({ unitId })),
       validation: { passed: true },
       rawResponse,
-      rawResponseSha256: crypto.createHash("sha256").update(rawResponse).digest("hex"),
+      rawResponseSha256: crypto
+        .createHash("sha256")
+        .update(rawResponse)
+        .digest("hex"),
     };
   });
   const responses = batchResults.flatMap((result) => result.responses);
@@ -378,24 +388,31 @@ describe("V12 283/631 double-review contract", () => {
     );
     const mutated = JSON.parse(JSON.stringify(draft));
     mutated.records[0].legacyFactRole = "LIMIT";
-    const { stableStringify } = require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan");
+    const {
+      stableStringify,
+    } = require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan");
     mutated.draftSha256 = crypto
       .createHash("sha256")
-      .update(`LF_A_V12_283_631_CROSSWALK_DRAFT_V1\u0000${stableStringify(
-        Object.fromEntries(
-          Object.entries(mutated).filter(([key]) => key !== "draftSha256")
-        )
-      )}`)
+      .update(
+        `LF_A_V12_283_631_CROSSWALK_DRAFT_V1\u0000${stableStringify(
+          Object.fromEntries(
+            Object.entries(mutated).filter(([key]) => key !== "draftSha256")
+          )
+        )}`
+      )
       .digest("hex");
-    expect(() => validateCrosswalkDraft({ basis: frozen, draft: mutated })).toThrow(
-      "LF_A_DOUBLE_REVIEW_DRAFT_NOT_DETERMINISTIC"
-    );
+    expect(() =>
+      validateCrosswalkDraft({ basis: frozen, draft: mutated })
+    ).toThrow("LF_A_DOUBLE_REVIEW_DRAFT_NOT_DETERMINISTIC");
   });
 
   test("requires two distinct registered human principals and exact agreement", () => {
     const frozen = basis();
     const draft = createCrosswalkDraft({ basis: frozen });
-    const keys = [crypto.generateKeyPairSync("ed25519"), crypto.generateKeyPairSync("ed25519")];
+    const keys = [
+      crypto.generateKeyPairSync("ed25519"),
+      crypto.generateKeyPairSync("ed25519"),
+    ];
     const authorityKeys = crypto.generateKeyPairSync("ed25519");
     const authorityPublicKeyPem = authorityKeys.publicKey.export({
       type: "spki",
@@ -444,7 +461,10 @@ describe("V12 283/631 double-review contract", () => {
         registry,
         authorityPublicKeyFingerprintSha256,
         input,
-        privateKeyPem: keys[index].privateKey.export({ type: "pkcs8", format: "pem" }),
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
       });
     });
     expect(

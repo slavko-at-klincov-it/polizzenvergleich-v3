@@ -26,8 +26,7 @@ const REVIEWER_REGISTRY_CONTRACT_ID =
 const CROSSWALK_DRAFT_CONTRACT_ID = "LF_A_V12_283_631_CROSSWALK_DRAFT_V1";
 const REVIEW_INPUT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_INPUT_V1";
 const REVIEW_ARTIFACT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_V1";
-const APPROVED_CROSSWALK_CONTRACT_ID =
-  "LF_A_V12_283_631_APPROVED_CROSSWALK_V1";
+const APPROVED_CROSSWALK_CONTRACT_ID = "LF_A_V12_283_631_APPROVED_CROSSWALK_V1";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const REVIEW_SLOTS = new Set(["A", "B"]);
@@ -77,8 +76,7 @@ const CURRENT_V12_REVIEW_PROFILE_PAYLOAD = {
   legacyRequirements: EXPECTED_LEGACY_REQUIREMENTS,
   legacyComponents: EXPECTED_LEGACY_COMPONENTS,
   implementationCommitSha: "9836216b9db6fc0b83bc65177f69f9fa6a938acc",
-  manifestCompletionCommitSha:
-    "bd051b23f1facb15943ca0de5312e387aa2dd10a",
+  manifestCompletionCommitSha: "bd051b23f1facb15943ca0de5312e387aa2dd10a",
   releaseId: "e8e9e94862acf1e48a7f8110382af084e5d37439",
   runSignature:
     "df7d7179-1c49-412b-b2ff-0ec6b1fdc52f/resume-eb1202f45007d9995ddd60a9",
@@ -121,7 +119,8 @@ function validSha(value) {
 function uniqueStrings(values) {
   if (!Array.isArray(values)) return null;
   const result = values.map(text);
-  return result.some((value) => !value) || new Set(result).size !== result.length
+  return result.some((value) => !value) ||
+    new Set(result).size !== result.length
     ? null
     : result;
 }
@@ -177,7 +176,8 @@ function validateClassificationChain({
     !validSha(sourcePlan.planSha256) ||
     batchPlan?.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
     !Array.isArray(batchPlan?.batches) ||
-    batchPlan.batches.length !== CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
+    batchPlan.batches.length !==
+      CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
     !Array.isArray(batchResults) ||
     batchResults.length !== batchPlan.batches.length ||
     !Array.isArray(responses) ||
@@ -187,7 +187,10 @@ function validateClassificationChain({
   const plan = deriveClassificationEvidencePlan(sourcePlan);
   const unitById = new Map(plan.units.map((unit) => [unit.unitId, unit]));
   const pendingUnitIds = plan.units
-    .filter(({ initialDisposition }) => initialDisposition === "PENDING_CLASSIFICATION")
+    .filter(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    )
     .map(({ unitId }) => unitId);
   const seenUnits = new Set();
   const resultsById = new Map();
@@ -203,31 +206,46 @@ function validateClassificationChain({
       !result ||
       batch.batchIndex !== batchIndex ||
       !expectedUnitIds?.length ||
-      expectedUnitIds.some((unitId) => !unitById.has(unitId) || seenUnits.has(unitId)) ||
-      result.contractId !== CURRENT_V12_REVIEW_PROFILE.classificationRunContractId ||
+      expectedUnitIds.some(
+        (unitId) => !unitById.has(unitId) || seenUnits.has(unitId)
+      ) ||
+      result.contractId !==
+        CURRENT_V12_REVIEW_PROFILE.classificationRunContractId ||
       result.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
       result.promptContractId !== CURRENT_V12_REVIEW_PROFILE.promptContractId ||
-      result.promptSha256 !== sha256(JSON.stringify(prompt(classificationBatch(plan, batch)))) ||
+      result.promptSha256 !==
+        sha256(JSON.stringify(prompt(classificationBatch(plan, batch)))) ||
       result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
       result.requestedModel !== CURRENT_V12_REVIEW_PROFILE.modelId ||
       result.modelContext !== CURRENT_V12_REVIEW_PROFILE.modelContext ||
       result.batchId !== batch.batchId ||
       result.batchIndex !== batch.batchIndex ||
-      stableStringify(result.expectedUnitIds) !== stableStringify(expectedUnitIds) ||
+      stableStringify(result.expectedUnitIds) !==
+        stableStringify(expectedUnitIds) ||
       !Array.isArray(result.responses) ||
       result.validation?.passed !== true ||
       typeof result.rawResponse !== "string" ||
       result.rawResponseSha256 !== sha256(result.rawResponse)
     )
-      throw reviewError("LF_A_DOUBLE_REVIEW_BATCH_RESULT_BINDING_INVALID", batch.batchId);
+      throw reviewError(
+        "LF_A_DOUBLE_REVIEW_BATCH_RESULT_BINDING_INVALID",
+        batch.batchId
+      );
     expectedUnitIds.forEach((unitId) => seenUnits.add(unitId));
     const contextualBatch = classificationBatch(plan, batch);
-    const validation = validateBatchResponses(plan, contextualBatch, result.responses);
+    const validation = validateBatchResponses(
+      plan,
+      contextualBatch,
+      result.responses
+    );
     if (
       validation.passed !== true ||
       stableStringify(validation) !== stableStringify(result.validation)
     )
-      throw reviewError("LF_A_DOUBLE_REVIEW_BATCH_REVALIDATION_FAILED", batch.batchId);
+      throw reviewError(
+        "LF_A_DOUBLE_REVIEW_BATCH_REVALIDATION_FAILED",
+        batch.batchId
+      );
     return result;
   });
   if (
@@ -236,11 +254,18 @@ function validateClassificationChain({
     [...seenUnits].some((unitId) => !pendingUnitIds.includes(unitId))
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_BATCH_UNIT_COVERAGE_INVALID");
-  const reconstructedResponses = orderedResults.flatMap((result) => result.responses);
+  const reconstructedResponses = orderedResults.flatMap(
+    (result) => result.responses
+  );
   if (stableStringify(reconstructedResponses) !== stableStringify(responses))
     throw reviewError("LF_A_DOUBLE_REVIEW_RESPONSES_BINDING_INVALID");
-  const reconstructedManifest = buildADrivenSemanticManifest({ plan, responses });
-  if (stableStringify(reconstructedManifest) !== stableStringify(dynamicManifest))
+  const reconstructedManifest = buildADrivenSemanticManifest({
+    plan,
+    responses,
+  });
+  if (
+    stableStringify(reconstructedManifest) !== stableStringify(dynamicManifest)
+  )
     throw reviewError("LF_A_DOUBLE_REVIEW_MANIFEST_REBUILD_INVALID");
   const expectedSummary = {
     sourceUnitPlanSha256: sourcePlan.planSha256,
@@ -262,7 +287,8 @@ function validateClassificationChain({
       throw reviewError("LF_A_DOUBLE_REVIEW_SUMMARY_BINDING_INVALID", key);
   if (
     summary.model?.id !== CURRENT_V12_REVIEW_PROFILE.modelId ||
-    summary.model?.loadedContextLength !== CURRENT_V12_REVIEW_PROFILE.modelContext ||
+    summary.model?.loadedContextLength !==
+      CURRENT_V12_REVIEW_PROFILE.modelContext ||
     summary.transport?.contractId !==
       CURRENT_V12_REVIEW_PROFILE.transportContractId ||
     summary.transport?.requestTimeoutMs !==
@@ -307,9 +333,12 @@ function validateClassificationChainReceipt(receipt) {
   );
   if (
     receipt.status !== "DETERMINISTICALLY_REVALIDATED" ||
-    receipt.summary?.batches !== CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
-    receipt.summary?.responses !== CURRENT_V12_REVIEW_PROFILE.classificationResponses ||
-    receipt.dynamicManifestSha256 !== CURRENT_V12_REVIEW_PROFILE.dynamicManifestSha256
+    receipt.summary?.batches !==
+      CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
+    receipt.summary?.responses !==
+      CURRENT_V12_REVIEW_PROFILE.classificationResponses ||
+    receipt.dynamicManifestSha256 !==
+      CURRENT_V12_REVIEW_PROFILE.dynamicManifestSha256
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_CHAIN_RECEIPT_BINDING_INVALID");
   return receipt;
@@ -424,10 +453,7 @@ function createRunProvenance({
       !validSha(artifact?.fileSha256) ||
       !text(artifact?.contractId)
     )
-      throw reviewError(
-        "LF_A_DOUBLE_REVIEW_SOURCE_ARTIFACT_INVALID",
-        name
-      );
+      throw reviewError("LF_A_DOUBLE_REVIEW_SOURCE_ARTIFACT_INVALID", name);
     normalizedSourceArtifacts[name] = {
       relativePath: artifact.relativePath,
       fileSha256: artifact.fileSha256,
@@ -446,9 +472,7 @@ function createRunProvenance({
       classificationRunContractId:
         text(sourceRun?.classificationRunContractId) ||
         CURRENT_V12_REVIEW_PROFILE.classificationRunContractId,
-      manifestCompletionCommitSha: text(
-        sourceRun?.manifestCompletionCommitSha
-      ),
+      manifestCompletionCommitSha: text(sourceRun?.manifestCompletionCommitSha),
       releaseId: text(sourceRun?.releaseId),
       runSignature: text(sourceRun?.runSignature),
       modelId: text(sourceRun?.modelId),
@@ -475,8 +499,7 @@ function createRunProvenance({
       qwenModelKey: "ATTESTED_EXTERNAL_NOT_DERIVED_FROM_CLASSIFICATION_FILES",
       timeoutsAndAttempts:
         "ATTESTED_EXTERNAL_NOT_DERIVED_FROM_CLASSIFICATION_FILES",
-      sourceArtifacts:
-        "HASH_BOUND_AND_CROSSCHECKED_BY_FREEZE_MATERIALIZER",
+      sourceArtifacts: "HASH_BOUND_AND_CROSSCHECKED_BY_FREEZE_MATERIALIZER",
     },
   };
   if (
@@ -490,11 +513,13 @@ function createRunProvenance({
     payload.sourceRun.manifestCompletionCommitSha !==
       CURRENT_V12_REVIEW_PROFILE.manifestCompletionCommitSha ||
     payload.sourceRun.releaseId !== CURRENT_V12_REVIEW_PROFILE.releaseId ||
-    payload.sourceRun.runSignature !== CURRENT_V12_REVIEW_PROFILE.runSignature ||
+    payload.sourceRun.runSignature !==
+      CURRENT_V12_REVIEW_PROFILE.runSignature ||
     payload.sourceRun.modelId !== CURRENT_V12_REVIEW_PROFILE.modelId ||
     payload.sourceRun.promptContractId !==
       CURRENT_V12_REVIEW_PROFILE.promptContractId ||
-    payload.sourceRun.contextLength !== CURRENT_V12_REVIEW_PROFILE.modelContext ||
+    payload.sourceRun.contextLength !==
+      CURRENT_V12_REVIEW_PROFILE.modelContext ||
     payload.sourceRun.maximumAttempts !==
       CURRENT_V12_REVIEW_PROFILE.maximumAttempts ||
     payload.sourceRun.requestTimeoutMs !==
@@ -503,7 +528,8 @@ function createRunProvenance({
       CURRENT_V12_REVIEW_PROFILE.abortSettlementTimeoutMs ||
     payload.sourceRun.modelRecoveryTimeoutMs !==
       CURRENT_V12_REVIEW_PROFILE.modelRecoveryTimeoutMs ||
-    payload.sourceRun.qwenModelKey !== CURRENT_V12_REVIEW_PROFILE.qwenModelKey ||
+    payload.sourceRun.qwenModelKey !==
+      CURRENT_V12_REVIEW_PROFILE.qwenModelKey ||
     payload.sourceRun.transportContractId !==
       CURRENT_V12_REVIEW_PROFILE.transportContractId ||
     Object.values(payload.sourceRun).some((value) => value === null) ||
@@ -533,7 +559,10 @@ function validateRunProvenance(provenance) {
     "provenanceSha256",
     "LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_DIGEST_INVALID"
   );
-  if (stableStringify(createRunProvenance(provenance)) !== stableStringify(provenance))
+  if (
+    stableStringify(createRunProvenance(provenance)) !==
+    stableStringify(provenance)
+  )
     throw reviewError("LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_CANONICAL_INVALID");
   return provenance;
 }
@@ -597,7 +626,9 @@ function legacyInventory(manifest) {
   for (const [categoryIndex, category] of manifest.categories.entries()) {
     if (!Array.isArray(category?.subcategories))
       throw reviewError("LF_A_DOUBLE_REVIEW_LEGACY_TOPOLOGY_INVALID");
-    const ids = category.subcategories.flatMap((value) => value.requirementIds || []);
+    const ids = category.subcategories.flatMap(
+      (value) => value.requirementIds || []
+    );
     for (const [rowIndex, id] of ids.entries()) {
       if (!requirements.has(id) || rows.has(id))
         throw reviewError("LF_A_DOUBLE_REVIEW_LEGACY_TOPOLOGY_INVALID");
@@ -607,7 +638,10 @@ function legacyInventory(manifest) {
       );
     }
   }
-  if (rows.size !== EXPECTED_LEGACY_REQUIREMENTS || rows.size !== requirements.size)
+  if (
+    rows.size !== EXPECTED_LEGACY_REQUIREMENTS ||
+    rows.size !== requirements.size
+  )
     throw reviewError("LF_A_DOUBLE_REVIEW_LEGACY_REQUIREMENT_COUNT_INVALID");
   const seen = new Set();
   const components = [];
@@ -636,7 +670,8 @@ function legacyInventory(manifest) {
       components.push({
         legacyAnalysisRowId: rows.get(requirement.requirementId),
         legacyRequirementId: requirement.requirementId,
-        legacyRequirementLabel: text(requirement.displayLabel) || requirement.requirementId,
+        legacyRequirementLabel:
+          text(requirement.displayLabel) || requirement.requirementId,
         legacyComponentId: id,
         legacyComponentLabel: text(component.label) || id,
         legacyFactRole: component.factRole,
@@ -665,34 +700,48 @@ function dynamicInventory(manifest) {
   const requirements = [];
   const components = [];
   for (const requirement of manifest.requirements) {
-    if (!text(requirement?.requirementId) || requirementIds.has(requirement.requirementId))
+    if (
+      !text(requirement?.requirementId) ||
+      requirementIds.has(requirement.requirementId)
+    )
       throw reviewError("LF_A_DOUBLE_REVIEW_DYNAMIC_REQUIREMENT_INVALID");
     requirementIds.add(requirement.requirementId);
     const members = [];
     for (const component of requirement.components || []) {
       const id = text(component?.componentId);
       const blocks = uniqueStrings(component?.sourceBlockIds);
-      if (!id || componentIds.has(id) || !text(component.type) || !blocks?.length)
+      if (
+        !id ||
+        componentIds.has(id) ||
+        !text(component.type) ||
+        !blocks?.length
+      )
         throw reviewError("LF_A_DOUBLE_REVIEW_DYNAMIC_COMPONENT_INVALID");
       componentIds.add(id);
       const item = {
         dynamicRequirementId: requirement.requirementId,
-        dynamicRequirementLabel: text(requirement.displayLabel) || requirement.requirementId,
+        dynamicRequirementLabel:
+          text(requirement.displayLabel) || requirement.requirementId,
         dynamicComponentId: id,
         dynamicComponentType: component.type,
         dynamicComponentLabel: text(component.label) || id,
         sourceBlockIds: [...blocks].sort(),
         sourceEvidence: (requirement.sourceSpans || [])
           .map(normalizeSpan)
-          .filter((span) => span.blockIds.some((blockId) => blocks.includes(blockId))),
+          .filter((span) =>
+            span.blockIds.some((blockId) => blocks.includes(blockId))
+          ),
       };
       components.push(item);
       members.push(item);
     }
     requirements.push({
       dynamicRequirementId: requirement.requirementId,
-      dynamicRequirementLabel: text(requirement.displayLabel) || requirement.requirementId,
-      sourceBlockIds: [...new Set(members.flatMap((item) => item.sourceBlockIds))].sort(),
+      dynamicRequirementLabel:
+        text(requirement.displayLabel) || requirement.requirementId,
+      sourceBlockIds: [
+        ...new Set(members.flatMap((item) => item.sourceBlockIds)),
+      ].sort(),
       components: members,
     });
   }
@@ -882,8 +931,9 @@ function createCrosswalkDraft({ basis } = {}) {
       legacyComponents: legacy.components.length,
       dynamicRequirements: dynamic.requirements.length,
       dynamicComponents: dynamic.components.length,
-      recordsWithoutCandidates: records.filter(({ candidates }) => !candidates.length)
-        .length,
+      recordsWithoutCandidates: records.filter(
+        ({ candidates }) => !candidates.length
+      ).length,
       dynamicOnlyComponents: dynamicOnlyComponents.length,
       reviewedRecords: 0,
       approvalStatus: "UNREVIEWED",
@@ -934,10 +984,10 @@ function createReviewerRegistry({
     draftSha256: draft.draftSha256,
     authorityId: text(authorityId),
     authorityPublicKeyPem,
-    authorityPublicKeyFingerprintSha256:
-      publicKeyFingerprint(authorityPublicKeyPem),
-    proofLimit:
-      "HUMAN_EXPERT_STATUS_ATTESTED_BY_EXTERNAL_ACCEPTANCE_AUTHORITY",
+    authorityPublicKeyFingerprintSha256: publicKeyFingerprint(
+      authorityPublicKeyPem
+    ),
+    proofLimit: "HUMAN_EXPERT_STATUS_ATTESTED_BY_EXTERNAL_ACCEPTANCE_AUTHORITY",
     reviewers: (reviewers || []).map((reviewer) => ({
       reviewerId: text(reviewer.reviewerId),
       reviewerSlot: reviewer.reviewerSlot,
@@ -1156,11 +1206,10 @@ function normalizeDecisions(decisions, draft) {
       record.candidates.map(({ dynamicComponentId }) => dynamicComponentId)
     );
     const cardinalityValid =
-      ([
-        "EQUIVALENT",
-        "REPHRASED_EQUIVALENT",
-        "MOVED_EQUIVALENT",
-      ].includes(relation) && targets?.length === 1) ||
+      (["EQUIVALENT", "REPHRASED_EQUIVALENT", "MOVED_EQUIVALENT"].includes(
+        relation
+      ) &&
+        targets?.length === 1) ||
       (relation === "SPLIT_INTO_DYNAMIC" && targets?.length >= 2) ||
       (relation === "MERGED_INTO_DYNAMIC" &&
         targets?.length === 1 &&
@@ -1177,10 +1226,7 @@ function normalizeDecisions(decisions, draft) {
       !cardinalityValid ||
       !rationale
     )
-      throw reviewError(
-        "LF_A_DOUBLE_REVIEW_DECISION_INVALID",
-        record.recordId
-      );
+      throw reviewError("LF_A_DOUBLE_REVIEW_DECISION_INVALID", record.recordId);
     return {
       recordId: record.recordId,
       relation,
@@ -1202,10 +1248,7 @@ function normalizeDecisions(decisions, draft) {
       group.length < 2 ||
       new Set(group.map(({ dynamicTargets }) => dynamicTargets[0])).size !== 1
     )
-      throw reviewError(
-        "LF_A_DOUBLE_REVIEW_MERGE_GROUP_INVALID",
-        mergeGroupId
-      );
+      throw reviewError("LF_A_DOUBLE_REVIEW_MERGE_GROUP_INVALID", mergeGroupId);
   }
   return normalized;
 }
@@ -1281,8 +1324,7 @@ function sealReviewerArtifact({
     privateKeyPem
   );
   if (
-    signature.publicKeyFingerprintSha256 !==
-    unsigned.publicKeyFingerprintSha256
+    signature.publicKeyFingerprintSha256 !== unsigned.publicKeyFingerprintSha256
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_NOT_AUTHORIZED");
   const payload = { ...unsigned, signature };

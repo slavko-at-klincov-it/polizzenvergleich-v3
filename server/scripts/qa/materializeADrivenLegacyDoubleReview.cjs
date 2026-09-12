@@ -81,10 +81,7 @@ function copyRegularVerified(source, destination) {
   fs.chmodSync(destination, 0o400);
   const destinationStat = assertRegularSingleLink(destination);
   const destinationHash = digest(fs.readFileSync(destination));
-  if (
-    sourceStat.ino === destinationStat.ino ||
-    sourceHash !== destinationHash
-  )
+  if (sourceStat.ino === destinationStat.ino || sourceHash !== destinationHash)
     fail("LF_A_DOUBLE_REVIEW_COPY_VERIFICATION_FAILED", source);
   return sourceHash;
 }
@@ -269,8 +266,8 @@ function materializeFreeze({
   if (new Set(uniqueRelative).size !== uniqueRelative.length)
     fail("LF_A_DOUBLE_REVIEW_INPUT_MAP_DUPLICATE");
   if (
-    new Set(map.files.batchResults.map((value) => path.basename(value))).size !==
-    map.files.batchResults.length
+    new Set(map.files.batchResults.map((value) => path.basename(value)))
+      .size !== map.files.batchResults.length
   )
     fail("LF_A_DOUBLE_REVIEW_BATCH_BASENAME_DUPLICATE");
 
@@ -285,7 +282,10 @@ function materializeFreeze({
     Object.entries(sources).map(([name, source]) => [name, readRegular(source)])
   );
   const legacy = readRegular(legacyManifestPath);
-  const batchReads = batches.map((entry) => ({ ...entry, ...readRegular(entry.source) }));
+  const batchReads = batches.map((entry) => ({
+    ...entry,
+    ...readRegular(entry.source),
+  }));
   const sourceReads = Object.fromEntries(
     Object.entries(sourcePaths).map(([name, source]) => [
       name,
@@ -351,44 +351,42 @@ function materializeFreeze({
   });
 
   const temp = makeTempTarget(target);
-  try {
-    fs.mkdirSync(path.join(temp, "inputs", "batches"), { recursive: true, mode: 0o700 });
-    fs.mkdirSync(path.join(temp, "inputs", "source"), {
-      recursive: true,
-      mode: 0o700,
-    });
-    copyRegularVerified(inputMapPath, path.join(temp, "input-map.json"));
-    copyRegularVerified(legacyManifestPath, path.join(temp, "inputs", "legacy-manifest.json"));
-    for (const [name, source] of Object.entries(sources))
-      copyRegularVerified(source, path.join(temp, "inputs", `${name}.json`));
-    for (const entry of batches)
-      copyRegularVerified(
-        entry.source,
-        path.join(temp, "inputs", "batches", path.basename(entry.relativePath))
-      );
-    for (const [name, source] of Object.entries(sourcePaths))
-      copyRegularVerified(
-        source,
-        path.join(
-          temp,
-          sourceArtifacts[name].relativePath
-        )
-      );
-    writeJsonPrivate(path.join(temp, BASIS_FILE), basis);
-    validateReviewBasis(readRegular(path.join(temp, BASIS_FILE)).value);
-    lockTree(temp);
-    fs.renameSync(temp, target);
-  } catch (error) {
-    // The temp root is deliberately retained for forensic inspection; it is
-    // never renamed into the requested immutable target after a failure.
-    throw error;
-  }
+  // On failure the temp root is retained for forensic inspection and is never
+  // renamed into the requested immutable target.
+  fs.mkdirSync(path.join(temp, "inputs", "batches"), {
+    recursive: true,
+    mode: 0o700,
+  });
+  fs.mkdirSync(path.join(temp, "inputs", "source"), {
+    recursive: true,
+    mode: 0o700,
+  });
+  copyRegularVerified(inputMapPath, path.join(temp, "input-map.json"));
+  copyRegularVerified(
+    legacyManifestPath,
+    path.join(temp, "inputs", "legacy-manifest.json")
+  );
+  for (const [name, source] of Object.entries(sources))
+    copyRegularVerified(source, path.join(temp, "inputs", `${name}.json`));
+  for (const entry of batches)
+    copyRegularVerified(
+      entry.source,
+      path.join(temp, "inputs", "batches", path.basename(entry.relativePath))
+    );
+  for (const [name, source] of Object.entries(sourcePaths))
+    copyRegularVerified(
+      source,
+      path.join(temp, sourceArtifacts[name].relativePath)
+    );
+  writeJsonPrivate(path.join(temp, BASIS_FILE), basis);
+  validateReviewBasis(readRegular(path.join(temp, BASIS_FILE)).value);
+  lockTree(temp);
+  fs.renameSync(temp, target);
   return basis;
 }
 
 function materializeDraft({ basisRoot, target }) {
-  if (!basisRoot || !target)
-    fail("LF_A_DOUBLE_REVIEW_DRAFT_ARGUMENT_REQUIRED");
+  if (!basisRoot || !target) fail("LF_A_DOUBLE_REVIEW_DRAFT_ARGUMENT_REQUIRED");
   const basis = readRegular(path.join(basisRoot, BASIS_FILE)).value;
   validateReviewBasis(basis);
   const draft = createCrosswalkDraft({ basis });
