@@ -120,6 +120,9 @@ describe("policy comparison worker contract", () => {
       "LF_A_B_PILOT_TRUST_ANCHOR_PIN_FILE"
     );
     expect(controlledPilotRunner).toContain("--expectedTrustAnchorFile");
+    expect(controlledPilotRunner).toContain("--requestTimeoutMs");
+    expect(controlledPilotRunner).toContain("--abortSettlementTimeoutMs");
+    expect(controlledPilotRunner).toContain("--modelRecoveryTimeoutMs");
     expect(controlledPilotRunner).toContain(
       "dynamic-semantic-manifest.private.json"
     );

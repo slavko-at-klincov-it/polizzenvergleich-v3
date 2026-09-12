@@ -2245,6 +2245,7 @@ module.exports = {
   attachTopLevelRequirementFragments,
   batchResultFile,
   classificationBatch,
+  createLmStudioRecovery,
   createAttemptRecorder,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,

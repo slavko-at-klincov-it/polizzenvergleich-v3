@@ -185,7 +185,12 @@ RESTORE_QWEN=0
   --output "$B_DECISION_ROOT" \
   --model "$QWEN_MODEL" \
   --modelContext "$QWEN_CONTEXT" \
-  --maximumAttempts 3
+  --maximumAttempts "${LF_B_QWEN_MAXIMUM_ATTEMPTS:-3}" \
+  --requestTimeoutMs "${LF_B_QWEN_REQUEST_TIMEOUT_MS:-180000}" \
+  --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
+  --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
+  --lmStudioSdk "$LMSTUDIO_SDK" \
+  --qwenModelKey "$QWEN_MODEL_KEY"
 
 if ! "$NODE_BIN" -e '
   const fs = require("fs");
