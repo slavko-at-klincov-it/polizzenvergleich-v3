@@ -1770,6 +1770,55 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("normalizes an agreed replacement value to precedence semantics", () => {
+    const unit = {
+      unitId: "unit-one",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText:
+          "Sollte in der Polizze eine andere Versicherungssumme aufscheinen, gilt diese vereinbart.",
+        blocks: [
+          {
+            blockId: "replacement",
+            structuralKind: "PARAGRAPH",
+            exactText:
+              "Sollte in der Polizze eine andere Versicherungssumme aufscheinen, gilt diese vereinbart.",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt diese vereinbart",
+              sourceBlockIds: ["replacement"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual({
+      type: "PRECEDENCE_OR_REPLACEMENT",
+      label: "gilt diese vereinbart",
+      sourceBlockIds: ["replacement"],
+    });
+    expect(normalized.componentRepairs).toEqual([
+      expect.objectContaining({
+        action: "NORMALIZE_AGREED_REPLACEMENT_TO_PRECEDENCE_ROLE",
+      }),
+    ]);
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")

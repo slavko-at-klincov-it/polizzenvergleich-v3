@@ -796,6 +796,25 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                   }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
+                    /\bgilt\s+(?:diese|dieser|dieses)\s+vereinbart\b/iu.test(
+                      componentLabel
+                    )
+                  ) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action:
+                        "NORMALIZE_AGREED_REPLACEMENT_TO_PRECEDENCE_ROLE",
+                    });
+                    const { coverageEffect: _coverageEffect, ...rest } =
+                      component;
+                    return [
+                      { ...rest, type: "PRECEDENCE_OR_REPLACEMENT" },
+                    ];
+                  }
+                  if (
+                    component?.type === "COVERAGE_EFFECT" &&
                     component.coverageEffect === "CONDITIONAL" &&
                     /\bgelten\b[\s\S]*\bBestimmungen\b/iu.test(
                       String(component.label || "")
