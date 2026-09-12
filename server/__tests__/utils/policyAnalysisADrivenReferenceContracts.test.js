@@ -1503,6 +1503,18 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(
         fs.readdirSync(path.join(temporary, "superseded-batches"))
       ).toHaveLength(1);
+
+      fs.rmSync(batchResultFile(temporary, batch));
+      const resumeClient = { chat: { completions: { create: jest.fn() } } };
+      const resumed = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: resumeClient,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(resumed[0].validation.passed).toBe(true);
+      expect(resumeClient.chat.completions.create).not.toHaveBeenCalled();
     } finally {
       fs.rmSync(temporary, { recursive: true, force: true });
     }

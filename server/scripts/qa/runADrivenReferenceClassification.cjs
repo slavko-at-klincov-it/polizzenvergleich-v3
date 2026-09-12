@@ -1168,6 +1168,47 @@ function archiveSupersededBatchResult(file, output, batch, reason) {
   return { responses: readJson(target, "LF_A_SUPERSEDED_BATCH").responses };
 }
 
+function responsesFromSupersededBatchArtifacts({ output, plan, batch, args }) {
+  const directory = path.join(output, "superseded-batches");
+  if (!fs.existsSync(directory)) return [];
+  const stem = `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}.`;
+  return fs
+    .readdirSync(directory)
+    .filter((name) => name.startsWith(stem) && name.endsWith(".private.json"))
+    .sort()
+    .flatMap((name) => {
+      const file = path.join(directory, name);
+      const artifact = readJson(file, "LF_A_CLASSIFICATION_SUPERSEDED_BATCH");
+      const validationBatch =
+        artifact?.classificationEvidenceContextContractId ===
+        CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID
+          ? classificationBatch(plan, batch)
+          : batch;
+      const recognizedContract =
+        artifact?.contractId === RUN_CONTRACT_ID ||
+        RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS.has(artifact?.contractId);
+      if (
+        !recognizedContract ||
+        artifact.sourceUnitPlanSha256 !== plan.planSha256 ||
+        artifact.batchId !== batch.batchId ||
+        artifact.batchIndex !== batch.batchIndex ||
+        artifact.promptContractId !== PROMPT_CONTRACT_ID ||
+        artifact.promptSha256 !==
+          sha256(JSON.stringify(prompt(validationBatch))) ||
+        artifact.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+        artifact.requestedModel !== args.model ||
+        artifact.modelContext !== args.modelContext ||
+        stableStringify(artifact.expectedUnitIds) !==
+          stableStringify(batch.expectedUnitIds) ||
+        !Array.isArray(artifact.responses) ||
+        typeof artifact.rawResponse !== "string" ||
+        artifact.rawResponseSha256 !== sha256(artifact.rawResponse)
+      )
+        return [];
+      return artifact.responses;
+    });
+}
+
 function validateCompletedRun({ args, plan, batches, summaryFile }) {
   const summary = readJson(summaryFile, "LF_A_CLASSIFICATION_SUMMARY");
   if (
@@ -1629,9 +1670,16 @@ async function processClassificationBatches({
         batch: contextualBatch,
         args,
       });
+      const archivedResponses = responsesFromSupersededBatchArtifacts({
+        output: args.output,
+        plan,
+        batch,
+        args,
+      });
       const acceptedResponses = currentlyValidResponses(plan, contextualBatch, [
         ...journalResponses,
         ...supersededResponses,
+        ...archivedResponses,
       ]);
       result = await runBatch({
         client,
@@ -1806,6 +1854,7 @@ module.exports = {
   processClassificationBatches,
   prompt,
   requestCompletionWithTimeout,
+  responsesFromSupersededBatchArtifacts,
   runBatch,
   validateBatchResponses,
 };
