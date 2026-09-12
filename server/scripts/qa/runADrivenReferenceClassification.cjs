@@ -695,7 +695,11 @@ function normalizeProductConfigurationFactRelation(components, unit) {
     /\b(?:(?:mit|unter)\s+(?:der\s+)?Variante\b|(?:in|für)\s+(?:den|die|allen)\s+(?:jeweils\s+)?(?:beantragten|vereinbarten|gewählten)\s+Sparten\b)/iu.exec(
       sourceText
     );
-  if (!definitionStart || !scopeStart || scopeStart.index <= definitionStart.index)
+  if (
+    !definitionStart ||
+    !scopeStart ||
+    scopeStart.index <= definitionStart.index
+  )
     return { components, mergedFactRoles: 0 };
   const relation = sourceText
     .slice(definitionStart.index, scopeStart.index)
@@ -718,11 +722,9 @@ function normalizeProductConfigurationFactRelation(components, unit) {
       ? [index]
       : [];
   });
-  if (factRoleIndexes.length < 2)
-    return { components, mergedFactRoles: 0 };
+  if (factRoleIndexes.length < 2) return { components, mergedFactRoles: 0 };
   const sourceBlockIds = sourceBlockIdsForExactSpan(unit, relation);
-  if (sourceBlockIds.length === 0)
-    return { components, mergedFactRoles: 0 };
+  if (sourceBlockIds.length === 0) return { components, mergedFactRoles: 0 };
   const firstIndex = factRoleIndexes[0];
   const mergedIndexes = new Set(factRoleIndexes);
   return {
@@ -1063,37 +1065,37 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         (requirement, requirementIndex) => {
           const scopedComponents = (requirement.components || []).flatMap(
             (component) => {
-          if (component?.type === "COVERAGE_EFFECT") return [];
-          const productRoleComponent =
-            component?.type === "OBJECT" &&
-            /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
-              String(component.label || "")
-            )
-              ? { ...component, type: "FACT_ROLE" }
-              : component;
-          const splitScopeComponents =
-            splitProductConfigurationScopeRoles(productRoleComponent);
-          if (splitScopeComponents) {
-            const scopeCount = splitScopeComponents.filter(
-              ({ type }) => type === "SCOPE"
-            ).length;
-            if (splitScopeComponents.length > scopeCount)
-              repairs.push({
-                unitId: response.unitId,
-                action: "SPLIT_EMBEDDED_EXPLICIT_SCOPE_ROLE",
-                fromType: component.type,
-                scopeComponents: scopeCount,
-              });
-            repairs.push({
-              unitId: response.unitId,
-              action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
-              fromType: component.type,
-              toType: "SCOPE",
-              components: scopeCount,
-            });
-            return splitScopeComponents;
-          }
-          return [productRoleComponent];
+              if (component?.type === "COVERAGE_EFFECT") return [];
+              const productRoleComponent =
+                component?.type === "OBJECT" &&
+                /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
+                  String(component.label || "")
+                )
+                  ? { ...component, type: "FACT_ROLE" }
+                  : component;
+              const splitScopeComponents =
+                splitProductConfigurationScopeRoles(productRoleComponent);
+              if (splitScopeComponents) {
+                const scopeCount = splitScopeComponents.filter(
+                  ({ type }) => type === "SCOPE"
+                ).length;
+                if (splitScopeComponents.length > scopeCount)
+                  repairs.push({
+                    unitId: response.unitId,
+                    action: "SPLIT_EMBEDDED_EXPLICIT_SCOPE_ROLE",
+                    fromType: component.type,
+                    scopeComponents: scopeCount,
+                  });
+                repairs.push({
+                  unitId: response.unitId,
+                  action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
+                  fromType: component.type,
+                  toType: "SCOPE",
+                  components: scopeCount,
+                });
+                return splitScopeComponents;
+              }
+              return [productRoleComponent];
             }
           );
           const factRelation = normalizeProductConfigurationFactRelation(
