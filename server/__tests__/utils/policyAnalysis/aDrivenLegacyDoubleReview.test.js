@@ -766,9 +766,9 @@ describe("write-once freeze primitives", () => {
       reviewersPath,
       target: registryRoot,
     });
-    expect(fs.existsSync(path.join(registryRoot, "authority-private.pem"))).toBe(
-      false
-    );
+    expect(
+      fs.existsSync(path.join(registryRoot, "authority-private.pem"))
+    ).toBe(false);
 
     const reviewRoots = ["A", "B"].map((slot, index) => {
       const templateRoot = path.join(root, `template-${slot}`);

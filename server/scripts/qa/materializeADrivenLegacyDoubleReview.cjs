@@ -560,10 +560,7 @@ function materializeReviewerArtifact({
     privateKeyPem: readRawRegular(reviewerPrivateKeyPath).toString("utf8"),
   });
   const temp = makeTempTarget(target);
-  const file = path.join(
-    temp,
-    `review-${review.reviewerSlot}.private.json`
-  );
+  const file = path.join(temp, `review-${review.reviewerSlot}.private.json`);
   writeJsonPrivate(file, review);
   validateReviewerArtifact({
     ...campaign,
