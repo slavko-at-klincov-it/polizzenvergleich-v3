@@ -563,6 +563,36 @@ describe("V12 283/631 double-review contract", () => {
       semanticCrosswalkApproved: true,
       bRoutingAllowed: false,
     });
+    const forgedCrosswalk = JSON.parse(JSON.stringify(approvedCrosswalk));
+    forgedCrosswalk.records[0].dynamicTargets = [
+      draft.records[0].candidates[1].dynamicComponentId,
+    ];
+    const {
+      approvedCrosswalkSha256: _approvedCrosswalkSha256,
+      ...forgedPayload
+    } = forgedCrosswalk;
+    const {
+      stableStringify,
+    } = require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan");
+    forgedCrosswalk.approvedCrosswalkSha256 = crypto
+      .createHash("sha256")
+      .update(
+        `LF_A_V12_283_631_APPROVED_CROSSWALK_V1\u0000${stableStringify(
+          forgedPayload
+        )}`
+      )
+      .digest("hex");
+    expect(() =>
+      createDynamicRemainderDraft({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: artifacts[0],
+        reviewB: artifacts[1],
+        approvedCrosswalk: forgedCrosswalk,
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_APPROVED_CROSSWALK_CANONICAL_INVALID");
     const remainderDraft = createDynamicRemainderDraft({
       basis: frozen,
       draft,
