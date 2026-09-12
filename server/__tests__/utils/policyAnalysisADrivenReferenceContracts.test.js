@@ -1726,6 +1726,169 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("separates a pure quantified list limit from the insured object it governs", () => {
+    const limit =
+      '• bis zu jeweils 5% der Gebäudeversicherungssumme auf ,,Erstes Risiko"';
+    const object = "- Nebengebäude";
+    const unit = {
+      unitId: "quantified-limit-governor",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["limit", "object"],
+        combinedText: [limit, object].join("\n"),
+        blocks: [
+          {
+            blockId: "limit",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: limit,
+          },
+          {
+            blockId: "object",
+            structuralKind: "LIST_ITEM",
+            exactText: object,
+          },
+        ],
+      },
+      logicalSourceSegments: [
+        { segmentId: "limit", blockIds: ["limit"] },
+        { segmentId: "object", blockIds: ["object"] },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: limit,
+                  sourceBlockIds: ["limit"],
+                },
+                {
+                  type: "OBJECT",
+                  label: "Nebengebäude",
+                  sourceBlockIds: ["object"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT", "LIMIT"],
+    });
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      {
+        type: "VALUE_AND_UNIT",
+        label: "bis zu jeweils 5%",
+        rawValue: "5",
+        unit: "%",
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "LIMIT_BASIS",
+        label: 'der Gebäudeversicherungssumme auf ,,Erstes Risiko"',
+        sourceBlockIds: ["limit"],
+      },
+      {
+        type: "OBJECT",
+        label: "Nebengebäude",
+        sourceBlockIds: ["object"],
+      },
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "NORMALIZE_PURE_QUANTIFIED_LIMIT_OBJECT",
+      fromType: "OBJECT",
+      toTypes: ["VALUE_AND_UNIT", "LIMIT_BASIS"],
+    });
+  });
+
+  test("turns a standalone pure quantified limit out of an object terminal", () => {
+    const source = "Höchstens 10 % der Versicherungssumme.";
+    const unit = {
+      unitId: "standalone-quantified-limit",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["limit"],
+        combinedText: source,
+        blocks: [{ blockId: "limit", exactText: source }],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                { type: "OBJECT", label: source, sourceBlockIds: ["limit"] },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "LIMIT",
+      semanticClasses: ["LIMIT"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
+    ).toEqual(["VALUE_AND_UNIT", "LIMIT_BASIS"]);
+  });
+
+  test.each([
+    "Nebengebäude mit einer Fläche von höchstens 50 % der Gesamtfläche",
+    "bis zu 100 m² große Nebengebäude",
+    "bis zu 10 % der Versicherungssumme, wenn der Schaden gemeldet wird",
+  ])(
+    "does not reinterpret a mixed or conditional object label: %s",
+    (label) => {
+      const unit = {
+        unitId: "mixed-object-limit",
+        source: {
+          blockIds: ["block"],
+          combinedText: label,
+          blocks: [{ blockId: "block", exactText: label }],
+        },
+      };
+      const response = {
+        unitId: unit.unitId,
+        primaryClass: "INSURED_OBJECT",
+        semanticClasses: ["INSURED_OBJECT"],
+        requirements: [
+          {
+            displayLabel: label,
+            components: [{ type: "OBJECT", label, sourceBlockIds: ["block"] }],
+          },
+        ],
+      };
+
+      expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+        responses: [response],
+        componentRepairs: [],
+      });
+    }
+  );
+
   test("restores an exact source-bound condition when a model omits connective source text", () => {
     const unit = {
       unitId: "unit-one",
@@ -2974,7 +3137,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V22");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V23");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

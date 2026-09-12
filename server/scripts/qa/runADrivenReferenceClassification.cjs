@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V22";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V23";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -41,6 +41,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V19",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V20",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V21",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V22",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -51,7 +52,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -62,6 +63,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V18",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -901,6 +903,49 @@ function normalizeCoverageBranchScheduleComponents(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizePureQuantifiedLimitObjectComponents(requirements) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "OBJECT") return [component];
+          const match =
+            /^\s*[•▪\-–—]?\s*(?<value>(?:bis\s+(?:zu\s+)?(?:jeweils\s+)?|höchstens\s+|maximal\s+|max\.\s+)?(?:(?<currency>€|EUR|Euro)\s*)?(?<raw>[0-9lI]+(?:[.,][0-9lI]+)?)\s*(?<unit>%|€|EUR|Euro)?)(?:\s+)(?<basis>(?:(?:der\s+)?(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme)(?:\s+auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*)?|auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*))\s*[.;]?\s*$/iu.exec(
+              String(component.label || "")
+            );
+          if (!match?.groups?.value || !match.groups.raw || !match.groups.basis)
+            return [component];
+          const unit = match.groups.unit || match.groups.currency || null;
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "NORMALIZE_PURE_QUANTIFIED_LIMIT_OBJECT",
+            fromType: "OBJECT",
+            toTypes: ["VALUE_AND_UNIT", "LIMIT_BASIS"],
+          });
+          return [
+            {
+              type: "VALUE_AND_UNIT",
+              label: match.groups.value,
+              rawValue: match.groups.raw,
+              ...(unit ? { unit } : {}),
+              sourceBlockIds: component.sourceBlockIds,
+            },
+            {
+              type: "LIMIT_BASIS",
+              label: match.groups.basis,
+              sourceBlockIds: component.sourceBlockIds,
+            },
+          ];
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function semanticClassesFromSourceBoundComponents(requirements, unit) {
   const components = requirements.flatMap((requirement) =>
     Array.isArray(requirement?.components) ? requirement.components : []
@@ -1043,6 +1088,29 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
         ...repair,
       });
+    const pureQuantifiedLimit =
+      normalizePureQuantifiedLimitObjectComponents(requirements);
+    requirements = pureQuantifiedLimit.requirements;
+    for (const repair of pureQuantifiedLimit.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (pureQuantifiedLimit.repairs.length > 0) {
+      const hasObject = requirements.some((requirement) =>
+        (requirement.components || []).some(({ type }) => type === "OBJECT")
+      );
+      const semanticClasses = [
+        ...new Set([...(response.semanticClasses || []), "LIMIT"]),
+      ].filter(
+        (semanticClass) => semanticClass !== "INSURED_OBJECT" || hasObject
+      );
+      response = {
+        ...response,
+        primaryClass:
+          response.primaryClass === "INSURED_OBJECT" && !hasObject
+            ? "LIMIT"
+            : response.primaryClass,
+        semanticClasses,
+      };
+    }
     const coverageBranchSchedule = normalizeCoverageBranchScheduleComponents(
       requirements,
       unit
@@ -1792,6 +1860,11 @@ function prompt(batch) {
       role: "system",
       content:
         "In einer durch sofern/wenn/falls/vorausgesetzt/soweit eingeleiteten Eigentums-, Zuordnungs- oder Wiederbeschaffungsbedingung sind Parteien wie Versicherungsnehmer, Eigentümer, Mieter oder Pächter und Handlungen wie Wiederbeschaffung/Wiederherstellung niemals versicherte OBJECT-Komponenten. Bilde den vollständigen wörtlichen Bedingungssatz als CONDITION ab und lasse nur die tatsächlich versicherten Sachen als OBJECT stehen.",
+    },
+    {
+      role: "system",
+      content:
+        "Ein eigenständiger quantifizierter Listengovernor wie „bis zu jeweils 5 % der Gebäudeversicherungssumme auf Erstes Risiko“ ist niemals OBJECT. Bilde den konkreten Wertausdruck als VALUE_AND_UNIT mit rawValue und die Bezugsgröße einschließlich „auf Erstes Risiko“ als LIMIT_BASIS ab. Wenn dieser Governor nachfolgende versicherte Objekte begrenzt, gehören seine Limitkomponenten zu deren jeweiliger Anforderung; die versicherten Sachen bleiben davon getrennte OBJECT-Komponenten.",
     },
     {
       role: "user",
