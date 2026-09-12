@@ -105,7 +105,7 @@ describe("policy comparison worker contract", () => {
       "utf8"
     );
     const gateCheck = controlledPilotRunner.indexOf(
-      "verifyControlledBPilotLaunch.cjs"
+      "verifyAutomatedADrivenBPilotLaunch.cjs"
     );
     const retrieval = controlledPilotRunner.indexOf(
       "runADrivenReferenceDinghyRetrieval.cjs"
@@ -116,10 +116,10 @@ describe("policy comparison worker contract", () => {
     expect(gateCheck).toBeGreaterThan(-1);
     expect(gateCheck).toBeLessThan(retrieval);
     expect(retrieval).toBeLessThan(decisions);
-    expect(controlledPilotRunner).toContain(
-      "LF_A_B_PILOT_TRUST_ANCHOR_PIN_FILE"
-    );
-    expect(controlledPilotRunner).toContain("--expectedTrustAnchorFile");
+    expect(controlledPilotRunner).toContain("--classificationRoot");
+    expect(controlledPilotRunner).not.toContain("--expectedTrustAnchorFile");
+    expect(controlledPilotRunner).not.toContain("--authorization");
+    expect(controlledPilotRunner).not.toContain("--trustAnchor");
     expect(controlledPilotRunner).toContain("--requestTimeoutMs");
     expect(controlledPilotRunner).toContain("--abortSettlementTimeoutMs");
     expect(controlledPilotRunner).toContain("--modelRecoveryTimeoutMs");

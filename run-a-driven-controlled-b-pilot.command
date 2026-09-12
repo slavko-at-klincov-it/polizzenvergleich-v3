@@ -13,25 +13,18 @@ DINGHY_MODEL_KEY="${HYBRID_SHADOW_DINGHY_MODEL_KEY:-text-embedding-dinghy-law-4b
 DINGHY_CONTEXT="${HYBRID_SHADOW_DINGHY_CONTEXT:-2048}"
 EXPECTED_DINGHY_RUNTIME="${HYBRID_SHADOW_DINGHY_RUNTIME:-llama.cpp-mac-arm64-apple-metal-advsimd@2.28.2}"
 PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
-TRUST_ANCHOR_PIN_FILE="${LF_A_B_PILOT_TRUST_ANCHOR_PIN_FILE:-$PRIVATE_QA_ROOT/trust/controlled-b-pilot-trust-anchor.sha256}"
 GLOBAL_LOCK_DIR="$PRIVATE_QA_ROOT/.all-categories-quality.lock"
 
-if [ "$#" -ne 8 ]; then
-  printf '%s\n' "Verwendung: $0 '/ABSOLUTER/1+N-LAUF' '/ABSOLUTER/A-FINAL' '/ABSOLUTER/EMBEDDING-VERTRAG.json' '/ABSOLUTER/AUTORISIERUNGSREQUEST.json' '/ABSOLUTER/AUTORISIERUNG.json' '/ABSOLUTER/TRUST-ANCHOR.json' '/ABSOLUTER/GATE.json' '/ABSOLUTER/NEUER/AUSGABEORDNER'" >&2
+if [ "$#" -ne 4 ]; then
+  printf '%s\n' "Verwendung: $0 '/ABSOLUTER/1+N-LAUF' '/ABSOLUTER/A-FINAL' '/ABSOLUTER/EMBEDDING-VERTRAG.json' '/ABSOLUTER/NEUER/AUSGABEORDNER'" >&2
   exit 1
 fi
 
 RUN_ROOT="$1"
 A_FINAL_ROOT="$2"
 CONTRACT_FILE="$3"
-AUTHORIZATION_REQUEST_FILE="$4"
-AUTHORIZATION_FILE="$5"
-TRUST_ANCHOR_FILE="$6"
-GATE_FILE="$7"
-OUTPUT_ROOT="$8"
-DYNAMIC_MANIFEST="$A_FINAL_ROOT/dynamic-semantic-manifest.private.json"
-INPUT_MANIFEST="$RUN_ROOT/input-manifest.private.json"
-LAUNCH_RECEIPT="$OUTPUT_ROOT/controlled-b-pilot-launch.private.json"
+OUTPUT_ROOT="$4"
+LAUNCH_RECEIPT="$OUTPUT_ROOT/automated-a-integrity-launch.private.json"
 B_RETRIEVAL_ROOT="$OUTPUT_ROOT/b-retrieval"
 B_DECISION_ROOT="$OUTPUT_ROOT/b-decisions"
 LOCK_ACQUIRED=0
@@ -83,8 +76,8 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' HUP INT TERM
 
-case "$RUN_ROOT:$A_FINAL_ROOT:$CONTRACT_FILE:$AUTHORIZATION_REQUEST_FILE:$AUTHORIZATION_FILE:$TRUST_ANCHOR_FILE:$GATE_FILE:$OUTPUT_ROOT" in
-  /*:/*:/*:/*:/*:/*:/*:/*) ;;
+case "$RUN_ROOT:$A_FINAL_ROOT:$CONTRACT_FILE:$OUTPUT_ROOT" in
+  /*:/*:/*:/*) ;;
   *)
     printf '%s\n' "Alle Eingabe- und Ausgabepfade müssen absolut sein." >&2
     exit 1
@@ -96,13 +89,8 @@ esac
 [ -d "$RUN_ROOT" ] || { printf '%s\n' "1+N-Lauf fehlt." >&2; exit 1; }
 [ -d "$A_FINAL_ROOT" ] || { printf '%s\n' "Eingefrorenes A-Final fehlt." >&2; exit 1; }
 [ -f "$CONTRACT_FILE" ] || { printf '%s\n' "Embeddingvertrag fehlt." >&2; exit 1; }
-[ -f "$AUTHORIZATION_REQUEST_FILE" ] || { printf '%s\n' "Autorisierungsrequest fehlt." >&2; exit 1; }
-[ -f "$AUTHORIZATION_FILE" ] || { printf '%s\n' "Autorisierung fehlt." >&2; exit 1; }
-[ -f "$TRUST_ANCHOR_FILE" ] || { printf '%s\n' "Trust Anchor fehlt." >&2; exit 1; }
-[ -f "$TRUST_ANCHOR_PIN_FILE" ] || { printf '%s\n' "Administrativ gepinnte Trust-Anchor-Datei fehlt." >&2; exit 1; }
-[ -f "$GATE_FILE" ] || { printf '%s\n' "B-Pilot-Gate fehlt." >&2; exit 1; }
-[ -f "$DYNAMIC_MANIFEST" ] || { printf '%s\n' "Dynamisches A-Manifest fehlt." >&2; exit 1; }
-[ -f "$INPUT_MANIFEST" ] || { printf '%s\n' "Input-Manifest fehlt." >&2; exit 1; }
+[ -f "$A_FINAL_ROOT/dynamic-semantic-manifest.private.json" ] || { printf '%s\n' "Dynamisches A-Manifest fehlt." >&2; exit 1; }
+[ -f "$RUN_ROOT/input-manifest.private.json" ] || { printf '%s\n' "Input-Manifest fehlt." >&2; exit 1; }
 [ ! -e "$OUTPUT_ROOT" ] || { printf '%s\n' "Ausgabe existiert bereits." >&2; exit 1; }
 
 umask 077
@@ -119,14 +107,9 @@ mkdir -p "$OUTPUT_ROOT"
   fs.writeFileSync(file, `pid=${pid} kind=lf-a-controlled-b-pilot output=${output}\n`, {mode: 0o600});
 ' "$GLOBAL_LOCK_DIR/owner.private.txt" "$$" "$OUTPUT_ROOT"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyControlledBPilotLaunch.cjs" \
-  --request "$AUTHORIZATION_REQUEST_FILE" \
-  --authorization "$AUTHORIZATION_FILE" \
-  --trustAnchor "$TRUST_ANCHOR_FILE" \
-  --expectedTrustAnchorFile "$TRUST_ANCHOR_PIN_FILE" \
-  --gate "$GATE_FILE" \
-  --dynamicManifest "$DYNAMIC_MANIFEST" \
-  --inputManifest "$INPUT_MANIFEST" \
+"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs" \
+  --runRoot "$RUN_ROOT" \
+  --classificationRoot "$A_FINAL_ROOT" \
   --output "$LAUNCH_RECEIPT"
 
 "$LMS_BIN" daemon up >/dev/null
@@ -201,5 +184,5 @@ if ! "$NODE_BIN" -e '
   exit 2
 fi
 
-printf '%s\n' "[lf-a-controlled-b-pilot] Shadow vollständig: $OUTPUT_ROOT"
-printf '%s\n' "[lf-a-controlled-b-pilot] Kein vollständiger Produktlauf, keine Kundenausgabe und kein Deployment erzeugt."
+printf '%s\n' "[lf-a-controlled-b-pilot] B-Shadow vollständig: $OUTPUT_ROOT"
+printf '%s\n' "[lf-a-controlled-b-pilot] A wurde dynamisch und automatisch geprüft; kein Produktlauf, keine Kundenausgabe und kein Deployment erzeugt."

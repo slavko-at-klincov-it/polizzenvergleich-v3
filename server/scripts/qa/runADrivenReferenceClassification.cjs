@@ -2258,4 +2258,5 @@ module.exports = {
   responsesFromSupersededBatchArtifacts,
   runBatch,
   validateBatchResponses,
+  validateCompletedRun,
 };
