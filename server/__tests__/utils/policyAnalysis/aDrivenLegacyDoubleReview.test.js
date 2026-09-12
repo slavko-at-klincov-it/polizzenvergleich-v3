@@ -29,6 +29,8 @@ const {
   CURRENT_V22_REVIEW_PROFILE,
   CURRENT_V30_REVIEW_PROFILE,
   CURRENT_V35_REVIEW_PROFILE,
+  createControlledBPilotAuthorizationRequest,
+  createControlledBPilotGate,
   createClassificationEvidence,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
@@ -43,6 +45,8 @@ const {
   reviewCampaignProfile,
   sealReviewerArtifact,
   sealDynamicRemainderReviewerArtifact,
+  sealControlledBPilotAuthorization,
+  validateControlledBPilotGate,
   validateClassificationChain,
   validateCrosswalkDraft,
   validateDynamicRemainderReconciliation,
@@ -864,6 +868,147 @@ describe("V12 283/631 double-review contract", () => {
         expectedBasisSha256: frozen.basisSha256,
       })
     ).toBe(finalReconciliation);
+    const reconciliationArgs = {
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: artifacts[0],
+      reviewB: artifacts[1],
+      approvedCrosswalk,
+      remainderDraft,
+      remainderReviewA: remainderArtifacts[0],
+      remainderReviewB: remainderArtifacts[1],
+      reconciliation: finalReconciliation,
+      expectedProfileId: frozen.campaignProfile.profileId,
+      expectedRunSignature: frozen.runProvenance.sourceRun.runSignature,
+      expectedBasisSha256: frozen.basisSha256,
+    };
+    const authorizationRequest =
+      createControlledBPilotAuthorizationRequest(reconciliationArgs);
+    expect(authorizationRequest).toMatchObject({
+      status: "AWAITING_EXTERNAL_AUTHORIZATION",
+      profileId: frozen.campaignProfile.profileId,
+      reconciliationSha256: finalReconciliation.reconciliationSha256,
+      policy: {
+        searchMethods: ["BM25", "STRUCTURE", "DINGHY"],
+        qwenCounterpartVerification: "COMPONENT_BY_COMPONENT_REQUIRED",
+        bPilotAllowed: false,
+        fullOnePlusNineAllowed: false,
+        productRoutingAllowed: false,
+        customerWorkbookAllowed: false,
+        deploymentAllowed: false,
+      },
+    });
+    const authorizationKeys = crypto.generateKeyPairSync("ed25519");
+    const authorizationPublicKeyPem = authorizationKeys.publicKey.export({
+      type: "spki",
+      format: "pem",
+    });
+    const authorizationPublicKeyFingerprintSha256 = crypto
+      .createHash("sha256")
+      .update(
+        authorizationKeys.publicKey.export({ type: "spki", format: "der" })
+      )
+      .digest("hex");
+    const trustAnchorPayload = {
+      schemaVersion: 1,
+      contractId: "LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_V1",
+      environmentId: "synthetic-test-environment",
+      authorityId: "external-b-pilot-authority",
+      authorityPublicKeyPem: authorizationPublicKeyPem,
+      authorityPublicKeyFingerprintSha256:
+        authorizationPublicKeyFingerprintSha256,
+      scope: "LF_REFERENCE_A_DRIVEN_CONTROLLED_B_RETRIEVAL_SHADOW_PILOT",
+      status: "ACTIVE",
+    };
+    const trustAnchor = {
+      ...trustAnchorPayload,
+      trustAnchorSha256: crypto
+        .createHash("sha256")
+        .update(
+          `LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_V1\u0000${require("../../../utils/policyAnalysis/aDrivenSourceUnitPlan").stableStringify(
+            trustAnchorPayload
+          )}`
+        )
+        .digest("hex"),
+    };
+    const authorization = sealControlledBPilotAuthorization({
+      request: authorizationRequest,
+      authorityId: trustAnchor.authorityId,
+      privateKeyPem: authorizationKeys.privateKey.export({
+        type: "pkcs8",
+        format: "pem",
+      }),
+    });
+    expect(authorization).not.toHaveProperty("authorityPublicKeyPem");
+    const rogueAuthorizationKeys = crypto.generateKeyPairSync("ed25519");
+    const rogueAuthorization = sealControlledBPilotAuthorization({
+      request: authorizationRequest,
+      authorityId: trustAnchor.authorityId,
+      privateKeyPem: rogueAuthorizationKeys.privateKey.export({
+        type: "pkcs8",
+        format: "pem",
+      }),
+    });
+    expect(() =>
+      createControlledBPilotGate({
+        ...reconciliationArgs,
+        request: authorizationRequest,
+        authorization: rogueAuthorization,
+        trustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+      })
+    ).toThrow("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_INVALID");
+    expect(() =>
+      createControlledBPilotGate({
+        ...reconciliationArgs,
+        request: authorizationRequest,
+        authorization,
+        trustAnchor,
+      })
+    ).toThrow("LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_EXPECTATION_REQUIRED");
+    const bPilotGate = createControlledBPilotGate({
+      ...reconciliationArgs,
+      request: authorizationRequest,
+      authorization,
+      trustAnchor,
+      expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+    });
+    expect(bPilotGate).toMatchObject({
+      status: "CONTROLLED_B_PILOT_AUTHORIZED",
+      summary: {
+        technicalBPilotPrerequisitesSatisfied: true,
+        configuredTrustAnchorMatched: true,
+        bPilotAllowed: true,
+        fullOnePlusNineAllowed: false,
+        productRoutingAllowed: false,
+        resultMutationAllowed: false,
+        customerWorkbookAllowed: false,
+        deploymentAllowed: false,
+      },
+    });
+    expect(
+      validateControlledBPilotGate({
+        ...reconciliationArgs,
+        request: authorizationRequest,
+        authorization,
+        trustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+        gate: bPilotGate,
+      })
+    ).toBe(bPilotGate);
+    const wrongTrustAnchor = JSON.parse(JSON.stringify(trustAnchor));
+    wrongTrustAnchor.authorityId = "untrusted-authority";
+    expect(() =>
+      createControlledBPilotGate({
+        ...reconciliationArgs,
+        request: authorizationRequest,
+        authorization,
+        trustAnchor: wrongTrustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+      })
+    ).toThrow("LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_INVALID");
     expect(() =>
       validateDynamicRemainderReconciliation({
         basis: frozen,
@@ -1076,6 +1221,24 @@ describe("V12 283/631 double-review contract", () => {
         bPilotAllowed: false,
       },
     });
+    expect(() =>
+      createControlledBPilotAuthorizationRequest({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: legacyReviews[0],
+        reviewB: legacyReviews[1],
+        approvedCrosswalk,
+        remainderDraft,
+        remainderReviewA: remainderReviews[0],
+        remainderReviewB: remainderReviews[1],
+        reconciliation,
+        expectedProfileId: frozen.campaignProfile.profileId,
+        expectedRunSignature: frozen.runProvenance.sourceRun.runSignature,
+        expectedBasisSha256: frozen.basisSha256,
+      })
+    ).toThrow("LF_A_CONTROLLED_B_PILOT_TECHNICAL_PREREQUISITES_NOT_SATISFIED");
   });
 
   test("marks role-incompatible records and requires a determined mismatch cause", () => {

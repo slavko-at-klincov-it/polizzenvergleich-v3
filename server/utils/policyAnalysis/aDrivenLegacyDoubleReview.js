@@ -39,6 +39,28 @@ const DYNAMIC_REMAINDER_REVIEW_ARTIFACT_CONTRACT_ID =
   "LF_A_DYNAMIC_REMAINDER_REVIEW_V2";
 const DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID =
   "LF_A_DYNAMIC_REMAINDER_RECONCILIATION_V2";
+const CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID =
+  "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_V1";
+const CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID =
+  "LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_V1";
+const CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID =
+  "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_V1";
+const CONTROLLED_B_PILOT_GATE_CONTRACT_ID = "LF_A_CONTROLLED_B_PILOT_GATE_V1";
+const CONTROLLED_B_PILOT_SCOPE =
+  "LF_REFERENCE_A_DRIVEN_CONTROLLED_B_RETRIEVAL_SHADOW_PILOT";
+const CONTROLLED_B_PILOT_POLICY = Object.freeze({
+  scope: CONTROLLED_B_PILOT_SCOPE,
+  resultScope: "PRIVATE_QA_SHADOW_ONLY",
+  packageBSearchScope: "ALL_UPLOADED_B_DOCUMENTS",
+  searchMethods: Object.freeze(["BM25", "STRUCTURE", "DINGHY"]),
+  qwenCounterpartVerification: "COMPONENT_BY_COMPONENT_REQUIRED",
+  bPilotAllowed: false,
+  fullOnePlusNineAllowed: false,
+  productRoutingAllowed: false,
+  resultMutationAllowed: false,
+  customerWorkbookAllowed: false,
+  deploymentAllowed: false,
+});
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const REVIEW_SLOTS = new Set(["A", "B"]);
@@ -1256,6 +1278,11 @@ function validateCrosswalkDraft({ basis, draft } = {}) {
 }
 
 function publicKeyFingerprint(publicKeyPem) {
+  if (
+    typeof publicKeyPem !== "string" ||
+    /-----BEGIN [^-\r\n]*PRIVATE KEY-----/u.test(publicKeyPem)
+  )
+    return null;
   try {
     const key = crypto.createPublicKey(publicKeyPem);
     if (key.asymmetricKeyType !== "ed25519") return null;
@@ -1513,6 +1540,20 @@ function verifySignature(contractId, payload, signature, publicKeyPem) {
     );
   } catch {
     return false;
+  }
+}
+
+function privateKeyPublicFingerprint(privateKeyPem) {
+  try {
+    const key = crypto.createPrivateKey(privateKeyPem);
+    if (key.asymmetricKeyType !== "ed25519")
+      throw reviewError("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_INVALID");
+    return publicKeyFingerprint(
+      crypto.createPublicKey(key).export({ type: "spki", format: "pem" })
+    );
+  } catch (error) {
+    if (error?.code === "LF_A_DOUBLE_REVIEW_PRIVATE_KEY_INVALID") throw error;
+    throw reviewError("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_INVALID");
   }
 }
 
@@ -2497,8 +2538,285 @@ function validateDynamicRemainderReconciliation({
   return reconciliation;
 }
 
+function authorizationRequestEnvelope(request) {
+  validateDigest(
+    request,
+    CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID,
+    "requestSha256",
+    "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_DIGEST_INVALID"
+  );
+  if (
+    request.schemaVersion !== 1 ||
+    request.contractId !==
+      CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID ||
+    request.status !== "AWAITING_EXTERNAL_AUTHORIZATION" ||
+    !validSha(request.basisSha256) ||
+    !validSha(request.dynamicManifestSha256) ||
+    !validSha(request.approvedCrosswalkSha256) ||
+    !validSha(request.remainderDraftSha256) ||
+    !validSha(request.reconciliationSha256) ||
+    !text(request.profileId) ||
+    !text(request.runSignature) ||
+    stableStringify(request.policy) !==
+      stableStringify(CONTROLLED_B_PILOT_POLICY) ||
+    request.technicalEvidence?.reconciliationStatus !==
+      "TECHNICAL_PREREQUISITES_SATISFIED" ||
+    request.technicalEvidence?.technicalBPilotPrerequisitesSatisfied !== true ||
+    request.technicalEvidence?.dynamicComponentsPartitioned < 1
+  )
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_INVALID");
+  return request;
+}
+
+function createControlledBPilotAuthorizationRequest(args = {}) {
+  const reconciliation = validateDynamicRemainderReconciliation(args);
+  if (
+    reconciliation.status !== "TECHNICAL_PREREQUISITES_SATISFIED" ||
+    reconciliation.summary?.technicalBPilotPrerequisitesSatisfied !== true ||
+    reconciliation.summary?.remediationRequired !== 0 ||
+    reconciliation.summary?.dynamicDefects !== 0 ||
+    reconciliation.summary?.dynamicComponentsPartitioned !==
+      reconciliation.partitionLedger?.length
+  )
+    throw reviewError(
+      "LF_A_CONTROLLED_B_PILOT_TECHNICAL_PREREQUISITES_NOT_SATISFIED"
+    );
+  const payload = {
+    schemaVersion: 1,
+    contractId: CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID,
+    basisSha256: reconciliation.basisSha256,
+    profileId: reconciliation.profileId,
+    runSignature: reconciliation.runSignature,
+    dynamicManifestSha256: reconciliation.dynamicManifestSha256,
+    approvedCrosswalkSha256: reconciliation.approvedCrosswalkSha256,
+    remainderDraftSha256: reconciliation.remainderDraftSha256,
+    reconciliationSha256: reconciliation.reconciliationSha256,
+    technicalEvidence: {
+      reconciliationStatus: reconciliation.status,
+      technicalSemanticCrosswalkReviewSatisfied:
+        reconciliation.summary.technicalSemanticCrosswalkReviewSatisfied,
+      technicalReverseDynamicAdditionsReviewSatisfied:
+        reconciliation.summary.technicalReverseDynamicAdditionsReviewSatisfied,
+      technicalDynamicManifestSemanticReviewSatisfied:
+        reconciliation.summary.technicalDynamicManifestSemanticReviewSatisfied,
+      technicalBPilotPrerequisitesSatisfied:
+        reconciliation.summary.technicalBPilotPrerequisitesSatisfied,
+      dynamicComponentsPartitioned:
+        reconciliation.summary.dynamicComponentsPartitioned,
+      remediationRequired: reconciliation.summary.remediationRequired,
+      dynamicDefects: reconciliation.summary.dynamicDefects,
+    },
+    policy: CONTROLLED_B_PILOT_POLICY,
+    status: "AWAITING_EXTERNAL_AUTHORIZATION",
+  };
+  return {
+    ...payload,
+    requestSha256: domainDigest(
+      CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID,
+      payload
+    ),
+  };
+}
+
+function validateControlledBPilotAuthorizationRequest({
+  request,
+  ...args
+} = {}) {
+  authorizationRequestEnvelope(request);
+  const rebuilt = createControlledBPilotAuthorizationRequest(args);
+  if (stableStringify(rebuilt) !== stableStringify(request))
+    throw reviewError(
+      "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CANONICAL_INVALID"
+    );
+  return request;
+}
+
+function validateControlledBPilotTrustAnchor({
+  trustAnchor,
+  expectedTrustAnchorSha256,
+} = {}) {
+  if (!validSha(expectedTrustAnchorSha256))
+    throw reviewError(
+      "LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_EXPECTATION_REQUIRED"
+    );
+  validateDigest(
+    trustAnchor,
+    CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID,
+    "trustAnchorSha256",
+    "LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_INVALID"
+  );
+  if (
+    trustAnchor.trustAnchorSha256 !== expectedTrustAnchorSha256 ||
+    trustAnchor.schemaVersion !== 1 ||
+    trustAnchor.contractId !== CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID ||
+    !text(trustAnchor.environmentId) ||
+    !text(trustAnchor.authorityId) ||
+    trustAnchor.scope !== CONTROLLED_B_PILOT_SCOPE ||
+    trustAnchor.status !== "ACTIVE" ||
+    !validSha(trustAnchor.authorityPublicKeyFingerprintSha256) ||
+    publicKeyFingerprint(trustAnchor.authorityPublicKeyPem) !==
+      trustAnchor.authorityPublicKeyFingerprintSha256
+  )
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_TRUST_ANCHOR_INVALID");
+  return trustAnchor;
+}
+
+function controlledBPilotAuthorizationPayload({
+  request,
+  authorityId,
+  authorityPublicKeyFingerprintSha256,
+}) {
+  return {
+    schemaVersion: 1,
+    contractId: CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+    requestSha256: request.requestSha256,
+    basisSha256: request.basisSha256,
+    profileId: request.profileId,
+    runSignature: request.runSignature,
+    dynamicManifestSha256: request.dynamicManifestSha256,
+    reconciliationSha256: request.reconciliationSha256,
+    authorityId,
+    authorityPublicKeyFingerprintSha256,
+    decision: "AUTHORIZE_CONTROLLED_B_RETRIEVAL_SHADOW_PILOT",
+    scope: CONTROLLED_B_PILOT_SCOPE,
+    fullOnePlusNineAllowed: false,
+    productRoutingAllowed: false,
+    resultMutationAllowed: false,
+    customerWorkbookAllowed: false,
+    deploymentAllowed: false,
+  };
+}
+
+function sealControlledBPilotAuthorization({
+  request,
+  authorityId,
+  privateKeyPem,
+} = {}) {
+  authorizationRequestEnvelope(request);
+  const normalizedAuthorityId = text(authorityId);
+  if (!normalizedAuthorityId)
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_AUTHORITY_INVALID");
+  const signature = signPayload(
+    CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+    controlledBPilotAuthorizationPayload({
+      request,
+      authorityId: normalizedAuthorityId,
+      authorityPublicKeyFingerprintSha256:
+        privateKeyPublicFingerprint(privateKeyPem),
+    }),
+    privateKeyPem
+  );
+  const payload = controlledBPilotAuthorizationPayload({
+    request,
+    authorityId: normalizedAuthorityId,
+    authorityPublicKeyFingerprintSha256: signature.publicKeyFingerprintSha256,
+  });
+  const signed = { ...payload, signature };
+  return {
+    ...signed,
+    authorizationSha256: domainDigest(
+      CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+      signed
+    ),
+  };
+}
+
+function validateControlledBPilotAuthorization({
+  request,
+  authorization,
+  trustAnchor,
+  expectedTrustAnchorSha256,
+  ...args
+} = {}) {
+  validateControlledBPilotAuthorizationRequest({ request, ...args });
+  validateControlledBPilotTrustAnchor({
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  });
+  validateDigest(
+    authorization,
+    CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+    "authorizationSha256",
+    "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_DIGEST_INVALID"
+  );
+  const {
+    authorizationSha256: _authorizationSha256,
+    signature,
+    ...unsigned
+  } = authorization;
+  const expected = controlledBPilotAuthorizationPayload({
+    request,
+    authorityId: trustAnchor.authorityId,
+    authorityPublicKeyFingerprintSha256:
+      trustAnchor.authorityPublicKeyFingerprintSha256,
+  });
+  if (
+    stableStringify(unsigned) !== stableStringify(expected) ||
+    !verifySignature(
+      CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+      unsigned,
+      signature,
+      trustAnchor.authorityPublicKeyPem
+    )
+  )
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_INVALID");
+  return authorization;
+}
+
+function createControlledBPilotGate(args = {}) {
+  const { request, authorization, trustAnchor, expectedTrustAnchorSha256 } =
+    args;
+  validateControlledBPilotAuthorization(args);
+  const payload = {
+    schemaVersion: 1,
+    contractId: CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+    requestSha256: request.requestSha256,
+    authorizationSha256: authorization.authorizationSha256,
+    trustAnchorSha256: trustAnchor.trustAnchorSha256,
+    basisSha256: request.basisSha256,
+    profileId: request.profileId,
+    runSignature: request.runSignature,
+    dynamicManifestSha256: request.dynamicManifestSha256,
+    reconciliationSha256: request.reconciliationSha256,
+    status: "CONTROLLED_B_PILOT_AUTHORIZED",
+    summary: {
+      technicalBPilotPrerequisitesSatisfied: true,
+      configuredTrustAnchorMatched:
+        trustAnchor.trustAnchorSha256 === expectedTrustAnchorSha256,
+      bPilotAllowed: true,
+      bPilotScope: CONTROLLED_B_PILOT_SCOPE,
+      fullOnePlusNineAllowed: false,
+      productRoutingAllowed: false,
+      resultMutationAllowed: false,
+      customerWorkbookAllowed: false,
+      deploymentAllowed: false,
+    },
+  };
+  return {
+    ...payload,
+    gateSha256: domainDigest(CONTROLLED_B_PILOT_GATE_CONTRACT_ID, payload),
+  };
+}
+
+function validateControlledBPilotGate({ gate, ...args } = {}) {
+  validateDigest(
+    gate,
+    CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+    "gateSha256",
+    "LF_A_CONTROLLED_B_PILOT_GATE_DIGEST_INVALID"
+  );
+  const rebuilt = createControlledBPilotGate(args);
+  if (stableStringify(rebuilt) !== stableStringify(gate))
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_GATE_CANONICAL_INVALID");
+  return gate;
+}
+
 module.exports = {
   APPROVED_CROSSWALK_CONTRACT_ID,
+  CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
+  CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID,
+  CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+  CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID,
   CLASSIFICATION_EVIDENCE_CONTRACT_ID,
   CLASSIFICATION_CHAIN_CONTRACT_ID,
   CROSSWALK_DRAFT_CONTRACT_ID,
@@ -2517,6 +2835,8 @@ module.exports = {
   REVIEWER_REGISTRY_CONTRACT_ID,
   RUN_PROVENANCE_CONTRACT_ID,
   createClassificationEvidence,
+  createControlledBPilotAuthorizationRequest,
+  createControlledBPilotGate,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
   createDynamicRemainderReviewerTemplate,
@@ -2530,9 +2850,14 @@ module.exports = {
   reviewCampaignProfile,
   sealReviewerArtifact,
   sealDynamicRemainderReviewerArtifact,
+  sealControlledBPilotAuthorization,
   validateClassificationEvidence,
   validateClassificationChain,
   validateClassificationChainReceipt,
+  validateControlledBPilotAuthorization,
+  validateControlledBPilotAuthorizationRequest,
+  validateControlledBPilotGate,
+  validateControlledBPilotTrustAnchor,
   validateCrosswalkDraft,
   validateDynamicRemainderDraft,
   validateDynamicRemainderReconciliation,

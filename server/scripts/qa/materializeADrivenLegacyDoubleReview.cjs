@@ -10,6 +10,8 @@ const {
 const {
   CURRENT_V12_REVIEW_PROFILE,
   createClassificationEvidence,
+  createControlledBPilotAuthorizationRequest,
+  createControlledBPilotGate,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
   createDynamicRemainderReviewerTemplate,
@@ -21,7 +23,9 @@ const {
   reconcileDynamicRemainderReview,
   sealReviewerArtifact,
   sealDynamicRemainderReviewerArtifact,
+  sealControlledBPilotAuthorization,
   validateClassificationChain,
+  validateControlledBPilotGate,
   validateCrosswalkDraft,
   validateDynamicRemainderDraft,
   validateDynamicRemainderReconciliation,
@@ -40,6 +44,11 @@ const APPROVED_CROSSWALK_FILE = "approved-crosswalk.private.json";
 const DYNAMIC_REMAINDER_DRAFT_FILE = "dynamic-remainder-draft.private.json";
 const DYNAMIC_REMAINDER_RECONCILIATION_FILE =
   "dynamic-remainder-reconciliation.private.json";
+const CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_FILE =
+  "controlled-b-pilot-authorization-request.private.json";
+const CONTROLLED_B_PILOT_AUTHORIZATION_FILE =
+  "controlled-b-pilot-authorization.private.json";
+const CONTROLLED_B_PILOT_GATE_FILE = "controlled-b-pilot-gate.private.json";
 const FREEZE_ARTIFACT_SET_FILE = "freeze-artifact-set.private.json";
 const FREEZE_ARTIFACT_SET_CONTRACT_ID = "LF_A_REVIEW_FREEZE_ARTIFACT_SET_V1";
 
@@ -954,6 +963,125 @@ function materializeDynamicRemainderReconciliation({
   return reconciliation;
 }
 
+function readDynamicRemainderReviewCompletion({
+  remainderReviewAPath,
+  remainderReviewBPath,
+  reconciliationPath,
+  ...campaignArgs
+}) {
+  if (!remainderReviewAPath || !remainderReviewBPath || !reconciliationPath)
+    fail("LF_A_CONTROLLED_B_PILOT_COMPLETION_ARGUMENT_REQUIRED");
+  const campaign = readDynamicRemainderCampaign(campaignArgs);
+  const remainderReviewA = readRegular(remainderReviewAPath).value;
+  const remainderReviewB = readRegular(remainderReviewBPath).value;
+  const reconciliation = readRegular(reconciliationPath).value;
+  const expectedProfileId = campaign.basis.campaignProfile.profileId;
+  const expectedRunSignature =
+    campaign.basis.runProvenance.sourceRun.runSignature;
+  const expectedBasisSha256 = campaign.basis.basisSha256;
+  validateDynamicRemainderReconciliation({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    remainderReviewA,
+    remainderReviewB,
+    reconciliation,
+    expectedProfileId,
+    expectedRunSignature,
+    expectedBasisSha256,
+  });
+  return {
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    remainderReviewA,
+    remainderReviewB,
+    reconciliation,
+    expectedProfileId,
+    expectedRunSignature,
+    expectedBasisSha256,
+  };
+}
+
+function materializeControlledBPilotAuthorizationRequest({ target, ...args }) {
+  if (!target)
+    fail("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_ARGUMENT_REQUIRED");
+  const completion = readDynamicRemainderReviewCompletion(args);
+  const request = createControlledBPilotAuthorizationRequest(completion);
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_FILE);
+  writeJsonPrivate(file, request);
+  if (stableJson(readRegular(file).value) !== stableJson(request))
+    fail("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return request;
+}
+
+function materializeControlledBPilotAuthorization({
+  requestPath,
+  authorityId,
+  authorityPrivateKeyPath,
+  target,
+}) {
+  if (!requestPath || !authorityId || !authorityPrivateKeyPath || !target)
+    fail("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_ARGUMENT_REQUIRED");
+  const request = readRegular(requestPath).value;
+  const authorization = sealControlledBPilotAuthorization({
+    request,
+    authorityId,
+    privateKeyPem: readRawRegular(authorityPrivateKeyPath).toString("utf8"),
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, CONTROLLED_B_PILOT_AUTHORIZATION_FILE);
+  writeJsonPrivate(file, authorization);
+  if (stableJson(readRegular(file).value) !== stableJson(authorization))
+    fail("LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return authorization;
+}
+
+function materializeControlledBPilotGate({
+  requestPath,
+  authorizationPath,
+  trustAnchorPath,
+  expectedTrustAnchorSha256,
+  target,
+  ...args
+}) {
+  if (
+    !requestPath ||
+    !authorizationPath ||
+    !trustAnchorPath ||
+    !expectedTrustAnchorSha256 ||
+    !target
+  )
+    fail("LF_A_CONTROLLED_B_PILOT_GATE_ARGUMENT_REQUIRED");
+  const completion = readDynamicRemainderReviewCompletion(args);
+  const request = readRegular(requestPath).value;
+  const authorization = readRegular(authorizationPath).value;
+  const trustAnchor = readRegular(trustAnchorPath).value;
+  const gateArgs = {
+    ...completion,
+    request,
+    authorization,
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  };
+  const gate = createControlledBPilotGate(gateArgs);
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, CONTROLLED_B_PILOT_GATE_FILE);
+  writeJsonPrivate(file, gate);
+  validateControlledBPilotGate({
+    ...gateArgs,
+    gate: readRegular(file).value,
+  });
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return gate;
+}
+
 function main(argv = process.argv.slice(2)) {
   const { command, values } = parseArgs(argv);
   if (command === "freeze") {
@@ -1096,6 +1224,42 @@ function main(argv = process.argv.slice(2)) {
     );
     return;
   }
+  const completedReviewValues = {
+    ...reverseCampaignValues,
+    remainderReviewAPath: values["remainder-review-a"],
+    remainderReviewBPath: values["remainder-review-b"],
+    reconciliationPath: values.reconciliation,
+  };
+  if (command === "b-pilot-request") {
+    const request = materializeControlledBPilotAuthorizationRequest({
+      ...completedReviewValues,
+      target: values.target,
+    });
+    process.stdout.write(`${request.requestSha256}\n`);
+    return;
+  }
+  if (command === "b-pilot-authorize") {
+    const authorization = materializeControlledBPilotAuthorization({
+      requestPath: values.request,
+      authorityId: values["authority-id"],
+      authorityPrivateKeyPath: values["authority-private-key"],
+      target: values.target,
+    });
+    process.stdout.write(`${authorization.authorizationSha256}\n`);
+    return;
+  }
+  if (command === "b-pilot-gate") {
+    const gate = materializeControlledBPilotGate({
+      ...completedReviewValues,
+      requestPath: values.request,
+      authorizationPath: values.authorization,
+      trustAnchorPath: values["trust-anchor"],
+      expectedTrustAnchorSha256: values["expected-trust-anchor-sha256"],
+      target: values.target,
+    });
+    process.stdout.write(`${gate.gateSha256} ${gate.status}\n`);
+    return;
+  }
   fail("LF_A_DOUBLE_REVIEW_COMMAND_INVALID", command);
 }
 
@@ -1103,6 +1267,9 @@ if (require.main === module) main();
 
 module.exports = {
   BASIS_FILE,
+  CONTROLLED_B_PILOT_AUTHORIZATION_FILE,
+  CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_FILE,
+  CONTROLLED_B_PILOT_GATE_FILE,
   DRAFT_FILE,
   DYNAMIC_REMAINDER_DRAFT_FILE,
   DYNAMIC_REMAINDER_RECONCILIATION_FILE,
@@ -1113,6 +1280,9 @@ module.exports = {
   copyRegularVerified,
   main,
   materializeApprovedCrosswalk,
+  materializeControlledBPilotAuthorization,
+  materializeControlledBPilotAuthorizationRequest,
+  materializeControlledBPilotGate,
   materializeDynamicRemainderDraft,
   materializeDynamicRemainderReconciliation,
   materializeDynamicRemainderReviewerArtifact,
@@ -1124,6 +1294,7 @@ module.exports = {
   materializeReviewerArtifact,
   materializeReviewerTemplate,
   parseArgs,
+  readDynamicRemainderReviewCompletion,
   readRawRegular,
   readRegular,
   validateAndDescribeSourceChain,
