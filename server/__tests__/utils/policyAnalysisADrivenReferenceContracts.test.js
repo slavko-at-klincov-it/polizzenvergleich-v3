@@ -2974,7 +2974,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V20");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V21");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -6376,6 +6376,86 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           ],
         },
       ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test("normalizes only an unambiguous component alias used as a semantic class", () => {
+    const source =
+      "Darüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.";
+    const unit = {
+      unitId: "limit-basis-semantic-alias",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION", "CONDITION", "LIMIT_BASIS"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "gilt der Exklusivschutz",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "CONDITION",
+                  label: "wobei die Versicherungssummen nicht addiert werden",
+                  sourceBlockIds: ["block"],
+                },
+                {
+                  type: "LIMIT_BASIS",
+                  label: "nur einmal pro Schadenfall",
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "DEFINITION",
+      "CONDITION",
+      "LIMIT",
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_SEMANTIC_CLASS_ALIAS",
+      field: "semanticClasses",
+      from: "LIMIT_BASIS",
+      to: "LIMIT",
+    });
+  });
+
+  test("does not guess an ambiguous value component used as a semantic class", () => {
+    const response = {
+      unitId: "ambiguous-value-semantic-alias",
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION", "VALUE_AND_UNIT"],
+      requirements: [],
+    };
+    const unit = {
+      unitId: response.unitId,
+      unitKind: "CLAUSE",
+      source: { blockIds: [], blocks: [], combinedText: "" },
+      logicalSourceSegments: [],
     };
 
     expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({

@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V20";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V21";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -39,6 +39,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V17",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V18",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V19",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V20",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -49,7 +50,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -59,6 +60,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V17",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V18",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -886,10 +888,51 @@ function semanticClassesFromSourceBoundComponents(requirements, unit) {
   return priority.filter((semanticClass) => classes.has(semanticClass));
 }
 
+function normalizeUnambiguousSemanticClassAliases(response) {
+  const aliases = new Map([
+    ["OBJECT", "INSURED_OBJECT"],
+    ["PERIL_OR_CAUSE", "PERIL_OR_DAMAGE"],
+    ["DAMAGE_OR_EFFECT", "PERIL_OR_DAMAGE"],
+    ["FACT_ROLE", "DEFINITION"],
+    ["SCOPE", "VARIANT"],
+    ["LIMIT_BASIS", "LIMIT"],
+    ["TEMPORAL_VALIDITY", "DURATION"],
+    ["PRECEDENCE_OR_REPLACEMENT", "DOCUMENT_PRECEDENCE_OR_REPLACEMENT"],
+  ]);
+  const repairs = [];
+  const mapAlias = (value, field) => {
+    const mapped = aliases.get(value) || value;
+    if (mapped !== value) repairs.push({ field, from: value, to: mapped });
+    return mapped;
+  };
+  const primaryClass = mapAlias(response?.primaryClass, "primaryClass");
+  const semanticClasses = [
+    ...new Set(
+      (Array.isArray(response?.semanticClasses)
+        ? response.semanticClasses
+        : []
+      ).map((semanticClass) => mapAlias(semanticClass, "semanticClasses"))
+    ),
+  ];
+  return {
+    response: { ...response, primaryClass, semanticClasses },
+    repairs,
+  };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
   const normalized = responses.map((response) => {
+    const semanticAliasNormalization =
+      normalizeUnambiguousSemanticClassAliases(response);
+    response = semanticAliasNormalization.response;
+    for (const repair of semanticAliasNormalization.repairs)
+      repairs.push({
+        unitId: response?.unitId,
+        action: "NORMALIZE_SEMANTIC_CLASS_ALIAS",
+        ...repair,
+      });
     const unit = unitsById.get(response?.unitId);
     const sourceText = String(unit?.source?.combinedText || "");
     const numberedHeadingWithoutPredicate =
@@ -2355,6 +2398,8 @@ async function runBatch({
         " Die Reparaturpflicht zur Zeichen- und Quelltreue hebt die Atomisierungspräzisierung nicht auf: Erfinde keine Kurzbezeichnung und paraphrasiere nicht, aber verkürze ein überbreites Komponentenlabel auf den kürzesten noch eindeutigen, zusammenhängenden und zeichengetreu kopierten Quellsubstring seiner eigenen Dimension. Erhalte bereits gültige Komponenten nur dann unverändert, wenn sie auch diese typed-minimal-Regel erfüllen.";
       messages.at(-1).content +=
         " Eine bloße Spartenaufzählung mit Versicherungssumme und gewählter Variante, aber ohne wörtlichen Deckungswirkungsausdruck, bleibt LIMIT/VARIANT statt OPERATIVE_COVERAGE_STATEMENT. Verwende jede komma-getrennte Sparte als eigene SCOPE-Komponente. Das Wort „gilt“ in „in der Sparte ... gilt die Variante“ ist keine Deckungswirkung und darf nicht als COVERAGE_EFFECT ausgegeben werden.";
+      messages.at(-1).content +=
+        " Verwende in semanticClasses ausschließlich Terminalklassen. Insbesondere wird eine LIMIT_BASIS-Komponente durch die Terminalklasse LIMIT getragen; LIMIT_BASIS selbst ist niemals eine semanticClass.";
       const segmentSkeletons = listSegmentRepairSkeletons(
         workingBatch,
         repairDiagnostics
