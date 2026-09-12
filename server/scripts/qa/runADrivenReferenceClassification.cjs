@@ -780,9 +780,7 @@ function normalizeCoverageBranchScheduleComponents(requirements, unit) {
       const hasExplicitBranchScope = components.some(
         (component) =>
           component?.type === "SCOPE" &&
-          /\b(?:Sparte|Variante)(?:n)?\b/iu.test(
-            String(component.label || "")
-          )
+          /\b(?:Sparte|Variante)(?:n)?\b/iu.test(String(component.label || ""))
       );
       if (!hasExplicitBranchScope) return requirement;
       const normalizedComponents = components.flatMap(
