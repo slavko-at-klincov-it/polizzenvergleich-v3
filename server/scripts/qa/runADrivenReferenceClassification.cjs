@@ -16,6 +16,8 @@ const {
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   buildADrivenSemanticManifest,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
@@ -27,6 +29,11 @@ const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V13";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   RUN_CONTRACT_ID,
+]);
+const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -1477,7 +1484,9 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       artifact?.contractId !== TRANSPORT_CONTRACT_ID ||
       artifact?.sourceUnitPlanSha256 !== plan.planSha256 ||
       artifact.promptContractId !== PROMPT_CONTRACT_ID ||
-      artifact.semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID ||
+      !RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS.has(
+        artifact.semanticSignalContractId
+      ) ||
       artifact.requestedModel !== args.model ||
       artifact.modelContext !== args.modelContext ||
       artifact.batchIndex !== batch.batchIndex ||

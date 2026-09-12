@@ -5,6 +5,7 @@ const {
 const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -3144,7 +3145,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
-  test("resumes a failed batch with only the previously unaccepted units", async () => {
+  test("revalidates a predecessor journal and resumes only its unaccepted units", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-partial-resume-")
     );
@@ -3202,6 +3203,24 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         })
       ).rejects.toThrow("LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED");
+
+      const attemptDirectory = path.join(
+        temporary,
+        "attempts",
+        `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}`
+      );
+      const [attemptName] = fs.readdirSync(attemptDirectory);
+      const attemptFile = path.join(attemptDirectory, attemptName);
+      const predecessorAttempt = JSON.parse(
+        fs.readFileSync(attemptFile, "utf8")
+      );
+      predecessorAttempt.semanticSignalContractId =
+        A_SEMANTIC_SIGNAL_CONTRACT_ID_V2;
+      fs.writeFileSync(
+        attemptFile,
+        `${JSON.stringify(predecessorAttempt, null, 2)}\n`,
+        { mode: 0o600 }
+      );
 
       const requested = [];
       const results = await processClassificationBatches({
