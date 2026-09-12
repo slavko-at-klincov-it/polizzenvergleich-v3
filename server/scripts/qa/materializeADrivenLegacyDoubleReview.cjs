@@ -255,32 +255,43 @@ function materializeFreeze({
   ];
   if (
     required.some((name) => typeof map?.files?.[name] !== "string") ||
-    !Array.isArray(map?.files?.batchResults) ||
-    map.files.batchResults.length !== 59
+    (!Array.isArray(map?.files?.batchResults) &&
+      typeof map?.files?.batchResultsDirectory !== "string")
   )
     fail("LF_A_DOUBLE_REVIEW_INPUT_MAP_INVALID");
-  const uniqueRelative = [
-    ...required.map((name) => map.files[name]),
-    ...map.files.batchResults,
-  ];
-  if (new Set(uniqueRelative).size !== uniqueRelative.length)
-    fail("LF_A_DOUBLE_REVIEW_INPUT_MAP_DUPLICATE");
-  if (
-    new Set(map.files.batchResults.map((value) => path.basename(value)))
-      .size !== map.files.batchResults.length
-  )
-    fail("LF_A_DOUBLE_REVIEW_BATCH_BASENAME_DUPLICATE");
 
   const sources = Object.fromEntries(
     required.map((name) => [name, resolveInside(runRoot, map.files[name])])
   );
-  const batches = map.files.batchResults.map((relativePath) => ({
-    relativePath,
-    source: resolveInside(runRoot, relativePath),
-  }));
   const reads = Object.fromEntries(
     Object.entries(sources).map(([name, source]) => [name, readRegular(source)])
   );
+  const batchResultPaths = Array.isArray(map.files.batchResults)
+    ? map.files.batchResults
+    : reads.classificationBatchPlan.value.batches.map(
+        ({ batchId, batchIndex }) =>
+          `${map.files.batchResultsDirectory}/${String(batchIndex).padStart(
+            4,
+            "0"
+          )}-${batchId}.private.json`
+      );
+  if (batchResultPaths.length !== 59)
+    fail("LF_A_DOUBLE_REVIEW_INPUT_MAP_INVALID");
+  const uniqueRelative = [
+    ...required.map((name) => map.files[name]),
+    ...batchResultPaths,
+  ];
+  if (new Set(uniqueRelative).size !== uniqueRelative.length)
+    fail("LF_A_DOUBLE_REVIEW_INPUT_MAP_DUPLICATE");
+  if (
+    new Set(batchResultPaths.map((value) => path.basename(value))).size !==
+    batchResultPaths.length
+  )
+    fail("LF_A_DOUBLE_REVIEW_BATCH_BASENAME_DUPLICATE");
+  const batches = batchResultPaths.map((relativePath) => ({
+    relativePath,
+    source: resolveInside(runRoot, relativePath),
+  }));
   const legacy = readRegular(legacyManifestPath);
   const batchReads = batches.map((entry) => ({
     ...entry,
