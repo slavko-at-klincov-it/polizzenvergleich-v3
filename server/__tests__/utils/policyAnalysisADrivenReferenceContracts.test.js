@@ -572,12 +572,10 @@ describe("requirement-local semantic evidence completeness", () => {
   });
 
   test("materializes an explicit local condition from a uniquely typed source component", () => {
-    const unit = evidenceUnit(
-      [
-        "scope-one",
-        "auf Erstes Risiko, sofern kein zusätzlicher Betrag vereinbart wurde",
-      ]
-    );
+    const unit = evidenceUnit([
+      "scope-one",
+      "auf Erstes Risiko, sofern kein zusätzlicher Betrag vereinbart wurde",
+    ]);
     const result = materializeSharedSignalComponents(unit, [
       {
         ...requirement(
