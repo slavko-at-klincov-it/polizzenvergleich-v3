@@ -88,7 +88,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_QUANTIFIED_VALUE",
     pattern:
-      /\b(?:bis(?:\s+zu)?|höchstens|maximal|max\.|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:voraussichtlich\s+)?(?:(?:€|EUR|Euro)\s*)?(?:[0-9lI]+(?:[.,][0-9lI]+)?)(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?(?=$|[\s,.;:)\]])|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:(?:€|EUR|Euro)\s*)?[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:(?:€|EUR|Euro)\s*[0-9lI]+(?:[.,][0-9lI]+)?|[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b/giu,
+      /\b(?:bis(?:\s+zu)?|höchstens|maximal|max\.|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:voraussichtlich\s+)?(?:(?:€|EUR|Euro)\s*)?(?:[0-9lI]+(?:[.,][0-9lI]+)?)(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?(?=$|[\s,.;:)\]])|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:(?:€|EUR|Euro)\s*)?[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:(?:€|EUR|Euro)\s*[0-9lI]+(?:[.,][0-9lI]+)?|[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b|\b[0-9]+(?:[.,][0-9]+)?\s*(?:m(?:²|2)?|qm|Tage?|Monate?|Jahre?)(?=$|[\s,.;:)\]])/giu,
     requiredComponentTypes: Object.freeze(["VALUE_AND_UNIT"]),
   }),
   Object.freeze({
@@ -105,7 +105,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
     pattern:
-      /\b(?:versicherungssummen?\s+(?:werden\s+)?nicht\s+addiert|nur\s+einmal\s+pro\s+schadenfall|bis\s+zur\s+höhe\s+der\s+(?:jeweils\s+)?vereinbarten\s+versicherungssumme|auf\s+die\s+(?:pauschal)?versicherungssumme\s+angerechnet|mit\s+jenem\s+betrag\s+begrenzt|nicht\s+limitiert|bis\s+zu\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:tage?|monate?|jahre?)|höchstens\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)(?:monatigen?|jährigen?|\s+(?:tage?|monate?|jahre?)))\b/giu,
+      /\b(?:versicherungssummen?\s+(?:werden\s+)?nicht\s+addiert|nur\s+einmal\s+pro\s+schadenfall|bis\s+zur\s+höhe\s+der\s+(?:jeweils\s+)?vereinbarten\s+versicherungssumme|bis\s+zu\s+(?:der|den)\s+(?:\p{L}+\s+){0,12}versicherungssummen?|auf\s+die\s+(?:pauschal)?versicherungssumme\s+angerechnet|mit\s+jenem\s+betrag\s+begrenzt|nicht\s+limitiert|bis\s+zu\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+(?:tag(?:e|en)?|monat(?:e|en)?|jahr(?:e|en)?)|höchstens\s+(?:einem|einer|eines|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)(?:monatigen?|jährigen?|\s+(?:tag(?:e|en)?|monat(?:e|en)?|jahr(?:e|en)?)))\b/giu,
     requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
   }),
 ]);

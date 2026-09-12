@@ -662,6 +662,13 @@ describe("requirement-local semantic evidence completeness", () => {
       unit: "m²",
     },
     {
+      source: "Versichert ist eine Glasfläche von 10m².",
+      signalId: "EXPLICIT_QUANTIFIED_VALUE",
+      type: "VALUE_AND_UNIT",
+      rawValue: "10",
+      unit: "m²",
+    },
+    {
       source: "Der Schaden darf bis voraussichtlich EUR 8.000 betragen.",
       signalId: "EXPLICIT_QUANTIFIED_VALUE",
       type: "VALUE_AND_UNIT",
@@ -676,6 +683,17 @@ describe("requirement-local semantic evidence completeness", () => {
     },
     {
       source: "Versichert ist eine höchstens sechsmonatige Zwischenlagerung.",
+      signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+      type: "LIMIT_BASIS",
+    },
+    {
+      source: "Der Mietverlust ist bis zu sechs Monaten gedeckt.",
+      signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+      type: "LIMIT_BASIS",
+    },
+    {
+      source:
+        "Der Schaden wird bis zu den in der Polizze angegebenen Versicherungssummen ersetzt.",
       signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
       type: "LIMIT_BASIS",
     },
