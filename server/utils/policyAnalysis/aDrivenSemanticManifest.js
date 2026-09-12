@@ -76,7 +76,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_CONDITION",
     pattern:
-      /\b(?:sofern|wenn|falls|vorausgesetzt|soweit)\b|\bunter\s+der\s+voraussetzung\b/giu,
+      /\b(?:sofern|wenn|falls|vorausgesetzt|soweit|muss|müssen)\b|\bunter\s+der\s+voraussetzung\b/giu,
     requiredComponentTypes: Object.freeze(["CONDITION"]),
   }),
   Object.freeze({

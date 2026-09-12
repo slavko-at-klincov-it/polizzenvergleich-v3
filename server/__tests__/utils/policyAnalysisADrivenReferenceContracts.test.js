@@ -654,6 +654,31 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes a modal prerequisite as a condition", () => {
+    const source =
+      "Problemstoffe müssen am Versicherungsort im Zusammenhang mit einem ersatzpflichtigen Schaden anfallen.";
+    const unit = evidenceUnit(["condition", source]);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["condition"],
+          [component("OBJECT", "condition", { label: source })]
+        ),
+        displayLabel: source,
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "CONDITION",
+      label:
+        "müssen am Versicherungsort im Zusammenhang mit einem ersatzpflichtigen Schaden anfallen.",
+      sourceBlockIds: ["condition"],
+    });
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test("materializes a split condition from an exact requirement display label", () => {
     const unit = evidenceUnit(
       ["peril", "Feuer und Sturm, auch wenn in der Sparte"],
