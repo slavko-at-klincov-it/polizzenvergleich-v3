@@ -889,6 +889,63 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("normalizes only an explicit cost object to a fact role", () => {
+    const unit = {
+      unitId: "unit-one",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: "Kosten für Planung; eine kosten- oder zeitsparende Art",
+        blocks: [
+          {
+            blockId: "cost",
+            structuralKind: "PARAGRAPH",
+            exactText: "Kosten für Planung",
+          },
+          {
+            blockId: "adjective",
+            structuralKind: "PARAGRAPH",
+            exactText: "eine kosten- oder zeitsparende Art",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Kosten für Planung",
+              sourceBlockIds: ["cost"],
+            },
+            {
+              type: "OBJECT",
+              label: "eine kosten- oder zeitsparende Art",
+              sourceBlockIds: ["adjective"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) =>
+        type
+      )
+    ).toEqual(["FACT_ROLE", "OBJECT"]);
+    expect(normalized.componentRepairs).toEqual([
+      expect.objectContaining({
+        unitId: "unit-one",
+        action: "NORMALIZE_EXPLICIT_COST_OBJECT_TO_FACT_ROLE",
+      }),
+    ]);
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;
