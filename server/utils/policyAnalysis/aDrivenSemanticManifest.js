@@ -88,7 +88,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_COPULAR_DEFINITION",
     pattern:
-      /(?:(?<![\s\S])|(?<=[.!?]\s))\b(?!(?:\p{L}[\p{L}-]*\s+){0,3}(?:[Mm]it)?[Vv]ersichert\s+(?:ist|sind)\b)\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,3}\s+(?:ist|sind)\s+(?!\s*(?:mit)?versichert\b|\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)[^.;:]{1,180}\b(?:Gebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b[^.;:]*/gu,
+      /(?:(?<![\s\S])|(?<=[.!?]\s))\b(?:(?:\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,2}\s+)?(?:Gebäude|Nebengebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen))\s+(?:ist|sind)\s+(?![^.;:]{0,180}\b(?:mit)?versichert\b)(?!\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)[^.;:]{1,180}/gu,
     requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
   }),
   Object.freeze({
