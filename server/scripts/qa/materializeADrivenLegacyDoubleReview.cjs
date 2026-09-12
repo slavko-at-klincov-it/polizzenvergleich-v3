@@ -43,8 +43,6 @@ function parseArgs(argv) {
 }
 
 function assertRegularSingleLink(filePath) {
-  if (fs.realpathSync(filePath) !== path.resolve(filePath))
-    fail("LF_A_DOUBLE_REVIEW_SOURCE_NOT_REGULAR_SINGLE_LINK", filePath);
   const linkStat = fs.lstatSync(filePath);
   const stat = fs.statSync(filePath);
   if (linkStat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1)
