@@ -15,6 +15,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenClassificationContract");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
   buildADrivenSemanticManifest,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
@@ -22,7 +23,10 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V12";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V13";
+const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -761,8 +765,17 @@ function prompt(batch) {
   ];
 }
 
-function validateBatchResponses(plan, batch, responses) {
-  const manifest = buildADrivenSemanticManifest({ plan, responses });
+function validateBatchResponses(
+  plan,
+  batch,
+  responses,
+  { semanticSignalContractId = A_SEMANTIC_SIGNAL_CONTRACT_ID } = {}
+) {
+  const manifest = buildADrivenSemanticManifest({
+    plan,
+    responses,
+    semanticSignalContractId,
+  });
   const expected = new Set(batch.expectedUnitIds);
   const unitTerminals = manifest.unitTerminals.filter(({ unitId }) =>
     expected.has(unitId)
@@ -898,6 +911,7 @@ function existingBatchResult(file, plan, batch, args) {
     result.promptContractId !== PROMPT_CONTRACT_ID ||
     result.promptSha256 !== expectedPromptSha256 ||
     result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    result.semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||
     result.batchIndex !== batch.batchIndex ||
@@ -928,6 +942,31 @@ function existingBatchResult(file, plan, batch, args) {
   return result;
 }
 
+function predecessorBatchResponses(file, plan, batch, args) {
+  const result = readJson(file, "LF_A_CLASSIFICATION_PREDECESSOR_BATCH_RESULT");
+  const validationBatch = classificationBatch(plan, batch);
+  if (
+    !RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS.has(result?.contractId) ||
+    result.sourceUnitPlanSha256 !== plan.planSha256 ||
+    result.batchId !== batch.batchId ||
+    result.batchIndex !== batch.batchIndex ||
+    result.promptContractId !== PROMPT_CONTRACT_ID ||
+    result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
+    result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    result.classificationEvidenceContextContractId !==
+      CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID ||
+    result.requestedModel !== args.model ||
+    result.modelContext !== args.modelContext ||
+    stableStringify(result.expectedUnitIds) !==
+      stableStringify(batch.expectedUnitIds) ||
+    !Array.isArray(result.responses) ||
+    typeof result.rawResponse !== "string" ||
+    result.rawResponseSha256 !== sha256(result.rawResponse)
+  )
+    throw new Error("LF_A_CLASSIFICATION_PREDECESSOR_BINDING_INVALID");
+  return result.responses;
+}
+
 function createAttemptRecorder({ output, plan, batch, args }) {
   const batchStem = `${String(batch.batchIndex).padStart(4, "0")}-${batch.batchId}`;
   const directory = path.join(output, "attempts", batchStem);
@@ -951,6 +990,7 @@ function createAttemptRecorder({ output, plan, batch, args }) {
       contractId: TRANSPORT_CONTRACT_ID,
       sourceUnitPlanSha256: plan.planSha256,
       promptContractId: PROMPT_CONTRACT_ID,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
       classificationEvidenceContextContractId:
         CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
       requestedModel: args.model,
@@ -984,6 +1024,7 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
       artifact?.contractId !== TRANSPORT_CONTRACT_ID ||
       artifact?.sourceUnitPlanSha256 !== plan.planSha256 ||
       artifact.promptContractId !== PROMPT_CONTRACT_ID ||
+      artifact.semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID ||
       artifact.requestedModel !== args.model ||
       artifact.modelContext !== args.modelContext ||
       artifact.batchIndex !== batch.batchIndex ||
@@ -1062,6 +1103,7 @@ function validateCompletedRun({ args, plan, batches, summaryFile }) {
     summary.sourceUnitPlanSha256 !== plan.planSha256 ||
     summary.promptContractId !== PROMPT_CONTRACT_ID ||
     summary.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    summary.semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID ||
     summary.classificationBatchesSha256 !== sha256(JSON.stringify(batches)) ||
     summary.model?.id !== args.model ||
     summary.model?.loadedContextLength !== args.modelContext ||
@@ -1087,7 +1129,11 @@ function validateCompletedRun({ args, plan, batches, summaryFile }) {
   );
   if (stableStringify(responses) !== stableStringify(storedResponses))
     throw new Error("LF_A_CLASSIFICATION_RESPONSES_BINDING_INVALID");
-  const manifest = buildADrivenSemanticManifest({ plan, responses });
+  const manifest = buildADrivenSemanticManifest({
+    plan,
+    responses,
+    semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  });
   const storedManifest = readJson(
     path.join(args.output, "dynamic-semantic-manifest.private.json"),
     "LF_A_CLASSIFICATION_MANIFEST"
@@ -1168,6 +1214,7 @@ async function runBatch({
       contractId: RUN_CONTRACT_ID,
       sourceUnitPlanSha256: plan.planSha256,
       promptContractId: PROMPT_CONTRACT_ID,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
       promptSha256: sha256(JSON.stringify(prompt(batch))),
       validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
       requestedModel: model,
@@ -1338,6 +1385,8 @@ async function runBatch({
       ];
       messages.at(-1).content +=
         " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE bedeutet: Ersetze das displayLabel am genannten requirementIndex durch einen exakt kopierten zusammenhängenden Ausschnitt aus allowedEvidence; erhalte insbesondere OCR-Schreibfehler, Leerzeichen und Zeilenumbrüche. REQUIREMENT_SOURCE_TEXT_INVALID bedeutet: Die Vereinigungsmenge der Komponenten-sourceBlockIds dieser Requirement muss jeden Block enthalten, aus dem ihr displayLabel Text übernimmt. Wenn requiredSourceBlockIds angegeben sind, ergänze eine fachlich passende Komponente für den fehlenden Randblock oder verkürze displayLabel auf einen exakt zitierten zusammenhängenden Ausschnitt aus selectedSourceExactText; erfinde keine ID. COVERAGE_EFFECT_LABEL_INVALID bedeutet: Das bisherige label ist keine Deckungswirkung. Verwende ausschließlich einen wörtlichen Wirkungsausdruck samt blockId aus allowedCoverageEffectEvidence. Ist diese Liste leer, lösche die COVERAGE_EFFECT-Komponente und entferne die unbelegte operative Deckungsklasse. Bei einer EXCLUSION bedeutet der wörtliche Ausdruck „ausgenommen sind“ die Deckungswirkung EXCLUDED und ist als eigene COVERAGE_EFFECT-Komponente auszugeben. Eine nummerierte, ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit ohne eigenes Prädikat oder Wirkungswort ist STRUCTURE mit requirements:[]; übertrage die Wirkung der nachfolgenden Klausel niemals auf diese Überschrift. Eine Regel, die ausschließlich beschreibt, wozu eine Versicherungssumme dient, wie sie aufgeteilt wird oder wonach sich ihre Verteilung richtet, ist DEFINITION mit FACT_ROLE-Komponenten und keine OPERATIVE_COVERAGE_STATEMENT. Eine ausdrückliche Erweiterung der Anwendbarkeit eines Gesetzesparagraphen auf weitere Sparten ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT mit PRECEDENCE_OR_REPLACEMENT-Komponente und keine Deckungswirkung. Wörter wie „angerechnet“, „gelten als verloren“, „Bewertung“, „Ersatzwert“, „Restwert“, „Neuwert“ und „Zeitwert“ beschreiben für sich eine Bewertungs- oder Definitionsregel, keine Deckungswirkung und keine Gefahr. Verwende dafür DEFINITION mit einer wörtlichen FACT_ROLE-Komponente; enthält die Regel eine konkrete Grenze, ergänze LIMIT mit VALUE_AND_UNIT und LIMIT_BASIS. „gilt als vereinbart“ ist nur eine Vereinbarungseinleitung; wenn derselbe Satz die tatsächliche Leistung „Neuwertentschädigung geleistet wird“ enthält, ist ausschließlich dieser Leistungsausdruck der COVERAGE_EFFECT. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihren COVERAGE_EFFECT stattdessen in jeder fachlichen Requirement der folgenden Item-Segmente. Der gemeinsame Governor darf in mehreren Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente. UNKNOWN_UNIT_ID bedeutet: Erzeuge niemals eine Ersatz- oder Unter-ID. Ordne alle fachlich getrennten Aussagen als mehrere requirements demselben einzigen erwarteten unitId-Objekt zu. Das gilt auch für lange Fließtextklauseln; alle uncoveredBlocks müssen durch fachlich passende Komponenten unter dieser unveränderten unitId belegt werden.";
+      messages.at(-1).content +=
+        " REQUIREMENT_ROLE_EVIDENCE_UNMAPPED bedeutet: In der exakt genannten Requirement fehlt für matchedEvidence eine anforderungsbezogene Rollenkomponente. Ergänze sie in derselben Requirement und zitiere den genannten blockId; leihe keine Komponente aus einer benachbarten Requirement. EXPLICIT_CONDITION benötigt CONDITION. EXPLICIT_DEDUCTIBLE benötigt DEDUCTIBLE. EXPLICIT_QUANTIFIED_VALUE benötigt VALUE_AND_UNIT mit wörtlichem rawValue. EXPLICIT_LIMIT_BASIS benötigt LIMIT_BASIS. EXPLICIT_NON_NUMERIC_LIMIT benötigt LIMIT_BASIS. EXPLICIT_EXCLUSION benötigt eine eigene COVERAGE_EFFECT-Komponente mit coverageEffect EXCLUDED und einem wörtlichen Ausschlussausdruck als label.";
     } catch (error) {
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
@@ -1425,6 +1474,7 @@ async function runBatch({
     contractId: RUN_CONTRACT_ID,
     sourceUnitPlanSha256: plan.planSha256,
     promptContractId: PROMPT_CONTRACT_ID,
+    semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
     promptSha256: sha256(JSON.stringify(prompt(batch))),
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     requestedModel: model,
@@ -1463,18 +1513,22 @@ async function processClassificationBatches({
         result = existingBatchResult(file, plan, batch, args);
         reused = true;
       } catch (error) {
-        if (
-          ![
-            "LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID",
-            "LF_A_CLASSIFICATION_BATCH_RESULT_NOT_PASS",
-          ].includes(error.message)
-        )
-          throw error;
+        const recoverableCurrentFailure = [
+          "LF_A_CLASSIFICATION_BATCH_RESULT_VALIDATION_INVALID",
+          "LF_A_CLASSIFICATION_BATCH_RESULT_NOT_PASS",
+        ].includes(error.message);
+        const resumablePredecessor =
+          error.message === "LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID"
+            ? predecessorBatchResponses(file, plan, batch, args)
+            : null;
+        if (!recoverableCurrentFailure && !resumablePredecessor) throw error;
         supersededResponses = archiveSupersededBatchResult(
           file,
           args.output,
           batch,
-          error.message
+          resumablePredecessor
+            ? "LF_A_CLASSIFICATION_PREDECESSOR_UPGRADE"
+            : error.message
         ).responses;
       }
     }
@@ -1592,7 +1646,11 @@ async function run() {
     recoverModelAfterAbort,
   });
   const responses = batchResults.flatMap(({ responses: items }) => items);
-  const manifest = buildADrivenSemanticManifest({ plan, responses });
+  const manifest = buildADrivenSemanticManifest({
+    plan,
+    responses,
+    semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  });
   const completedAt = new Date().toISOString();
   const summary = {
     schemaVersion: 1,
@@ -1600,6 +1658,7 @@ async function run() {
     sourceUnitPlanSha256: plan.planSha256,
     promptContractId: PROMPT_CONTRACT_ID,
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+    semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
     classificationBatchesSha256: sha256(JSON.stringify(batches)),
     model: loadedModel,
     transport: {

@@ -12,6 +12,8 @@ const {
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -63,6 +65,49 @@ const COVERAGE_EFFECTS = new Set([
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
   /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
+  Object.freeze({
+    signalId: "EXPLICIT_EXCLUSION",
+    pattern:
+      /\b(?:ausgenommen|exklusive|ausgeschlossen|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz))\b/giu,
+    requiredComponentTypes: Object.freeze(["COVERAGE_EFFECT"]),
+    requiredCoverageEffect: "EXCLUDED",
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_CONDITION",
+    pattern:
+      /\b(?:sofern|wenn|falls|vorausgesetzt|soweit)\b|\bunter\s+der\s+voraussetzung\b/giu,
+    requiredComponentTypes: Object.freeze(["CONDITION"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_DEDUCTIBLE",
+    pattern: /\b(?:selbstbehalt|eigenbehalt)\p{L}*\b/giu,
+    requiredComponentTypes: Object.freeze(["DEDUCTIBLE"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_QUANTIFIED_VALUE",
+    pattern:
+      /\b(?:bis(?:\s+zu)?|höchstens|maximal|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:€\s*)?(?:[0-9lI]+(?:[.,][0-9lI]+)?)(?:\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?))?\b|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:€\s*[0-9lI]+(?:[.,][0-9lI]+)?|(?:EUR|Euro)\s+[0-9lI]+(?:[.,][0-9lI]+)?|[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b/giu,
+    requiredComponentTypes: Object.freeze(["VALUE_AND_UNIT"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_LIMIT_BASIS",
+    pattern:
+      /\b(?:[0-9lI]+(?:[.,][0-9]+)?\s*%|€\s*[0-9lI][0-9lI.,\s]*|(?:EUR|Euro)\s*[0-9lI][0-9lI.,\s]*)\s*(?:der\s+)?(?:gebäude(?:gesamt)?versicherungssumme|versicherungssumme|erstes\s+risiko)\b/giu,
+    requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_COST_ROLE",
+    pattern: /\b(?:kosten|mehrkosten|aufwendungen)\b/giu,
+    requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+    pattern:
+      /\b(?:versicherungssummen?\s+(?:werden\s+)?nicht\s+addiert|nur\s+einmal\s+pro\s+schadenfall)\b/giu,
+    requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
+  }),
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -177,6 +222,115 @@ function uniqueStrings(values) {
 
 function isLayoutOnlyBlock(block) {
   return /^[•▪◦‣]+$/u.test(String(block?.exactText || "").trim());
+}
+
+function matchesForPattern(pattern, value) {
+  return [
+    ...String(value || "").matchAll(
+      new RegExp(
+        pattern.source,
+        pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`
+      )
+    ),
+  ].map((match) => match[0]);
+}
+
+function comparableSignalText(value) {
+  return comparableText(value).toLocaleLowerCase("de-AT");
+}
+
+function componentHasSignalSource(component, matchedBlockId) {
+  return component.sourceBlockIds.includes(matchedBlockId);
+}
+
+function quantifiedLiterals(value) {
+  return [
+    ...String(value || "").matchAll(
+      /(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?)?/giu
+    ),
+  ]
+    .map(([literal]) =>
+      comparableSignalText(literal).match(/[0-9lI]+(?:[.,][0-9lI]+)?/iu)?.[0]
+    )
+    .filter(Boolean)
+    .filter((literal) => /[0-9lI]/iu.test(literal));
+}
+
+function componentSupportsSignal(signal, component, matchedEvidence) {
+  if (!componentHasSignalSource(component, matchedEvidence.blockId))
+    return false;
+  if (signal.signalId === "EXPLICIT_EXCLUSION")
+    return (
+      component.type === "COVERAGE_EFFECT" &&
+      component.coverageEffect === "EXCLUDED" &&
+      matchesForPattern(signal.pattern, component.label).length > 0
+    );
+  if (signal.signalId === "EXPLICIT_QUANTIFIED_VALUE") {
+    const literals = quantifiedLiterals(matchedEvidence.match);
+    const componentValue = comparableSignalText(
+      [component.rawValue, component.label].filter(Boolean).join(" ")
+    );
+    const carriesLiteral = literals.some((literal) =>
+      componentValue.includes(literal)
+    );
+    return (
+      carriesLiteral &&
+      (component.type === "VALUE_AND_UNIT" ||
+        component.type === "DEDUCTIBLE")
+    );
+  }
+  if (signal.signalId === "EXPLICIT_COST_ROLE")
+    return (
+      component.type === "FACT_ROLE" &&
+      /\b(?:kosten|mehrkosten|aufwendungen)\b/iu.test(component.label)
+    );
+  return signal.requiredComponentTypes.includes(component.type);
+}
+
+function requirementRoleEvidenceDiagnostics(unit, requirements) {
+  const blocksById = new Map(
+    evidenceBlocks(unit).map((block) => [block.blockId, block])
+  );
+  return requirements.flatMap((requirement, requirementIndex) => {
+    const selectedBlocks = requirement.sourceBlockIds
+      .map((blockId) => blocksById.get(blockId))
+      .filter(Boolean);
+    const observedComponentTypes = [
+      ...new Set(requirement.components.map(({ type }) => type)),
+    ].sort();
+    return REQUIREMENT_ROLE_SIGNALS.flatMap((signal) => {
+      const matchedEvidence = selectedBlocks.flatMap((block) => {
+        const matches = matchesForPattern(signal.pattern, block.exactText);
+        return matches.map((match) => ({
+          blockId: block.blockId,
+          exactText: block.exactText,
+          match,
+        }));
+      });
+      if (!matchedEvidence.length) return [];
+      return matchedEvidence.flatMap((evidence) => {
+        if (
+          requirement.components.some((component) =>
+            componentSupportsSignal(signal, component, evidence)
+          )
+        )
+          return [];
+        return [{
+          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+          unitId: unit.unitId,
+          requirementIndex,
+          signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          signalId: signal.signalId,
+          requiredComponentGroups: [signal.requiredComponentTypes],
+          ...(signal.requiredCoverageEffect
+            ? { requiredCoverageEffect: signal.requiredCoverageEffect }
+            : {}),
+          observedComponentTypes,
+          matchedEvidence: [evidence],
+        }];
+      });
+    });
+  });
 }
 
 function responseIndex(responses, plannedIds) {
@@ -745,7 +899,7 @@ function logicalSegmentDiagnostics(unit, requirements) {
   ];
 }
 
-function classifyUnit(unit, records) {
+function classifyUnit(unit, records, semanticSignalContractId) {
   if (unit.initialDisposition === "NON_OPERATIVE_TERMINAL")
     return {
       terminalDisposition: "NON_OPERATIVE_TERMINAL",
@@ -869,6 +1023,18 @@ function classifyUnit(unit, records) {
         ),
       ],
     };
+  const roleEvidenceDiagnostics =
+    semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
+      ? requirementRoleEvidenceDiagnostics(unit, drafts)
+      : [];
+  if (roleEvidenceDiagnostics.length)
+    return {
+      terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
+      primaryClass: "UNRESOLVED",
+      semanticClasses: ["UNRESOLVED"],
+      requirements: [],
+      diagnostics: roleEvidenceDiagnostics,
+    };
   const requirements = finalizeRequirements(unit, drafts);
   const segmentDiagnostics = requirements
     ? logicalSegmentDiagnostics(unit, requirements)
@@ -961,7 +1127,11 @@ function classifyUnit(unit, records) {
   };
 }
 
-function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
+function buildADrivenSemanticManifest({
+  plan,
+  responses = [],
+  semanticSignalContractId = null,
+} = {}) {
   if (
     plan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
     plan?.runContractId !== A_DRIVEN_RUN_CONTRACT_ID ||
@@ -973,9 +1143,18 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
   if (plannedIds.size !== plan.units.length)
     throw manifestError("LF_A_SOURCE_UNIT_IDS_DUPLICATE");
   const indexed = responseIndex(responses, plannedIds);
+  if (
+    semanticSignalContractId !== null &&
+    semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID
+  )
+    throw manifestError("LF_A_SEMANTIC_SIGNAL_CONTRACT_INVALID");
   const classifications = plan.units.map((unit) => ({
     unit,
-    classification: classifyUnit(unit, indexed.byId.get(unit.unitId)),
+    classification: classifyUnit(
+      unit,
+      indexed.byId.get(unit.unitId),
+      semanticSignalContractId
+    ),
   }));
   const requirements = classifications.flatMap(
     ({ classification }) => classification.requirements
@@ -1043,6 +1222,7 @@ function buildADrivenSemanticManifest({ plan, responses = [] } = {}) {
     runContractId: A_DRIVEN_RUN_CONTRACT_ID,
     sourceUnitPlanSha256: plan.planSha256,
     blockTerminalContractId: A_BLOCK_TERMINAL_CONTRACT_ID,
+    ...(semanticSignalContractId ? { semanticSignalContractId } : {}),
     documents: plan.documents,
     requirements,
     unitTerminals,
@@ -1113,8 +1293,10 @@ function validateADrivenSemanticManifest(manifest) {
 module.exports = {
   A_BLOCK_TERMINAL_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
+  requirementRoleEvidenceDiagnostics,
   validateADrivenSemanticManifest,
 };

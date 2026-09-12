@@ -241,7 +241,8 @@ function validateClassificationChain({
     const validation = validateBatchResponses(
       plan,
       validationBatch,
-      result.responses
+      result.responses,
+      { semanticSignalContractId: null }
     );
     if (
       validation.passed !== true ||

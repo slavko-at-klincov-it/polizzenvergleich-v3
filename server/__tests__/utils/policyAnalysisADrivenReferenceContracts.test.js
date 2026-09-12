@@ -3,7 +3,9 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
   buildADrivenSemanticManifest,
+  requirementRoleEvidenceDiagnostics,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   buildADrivenClassificationBatches,
@@ -353,6 +355,198 @@ function searchEligibleManifest() {
     .map(validResponse);
   return buildADrivenSemanticManifest({ plan, responses });
 }
+
+describe("requirement-local semantic evidence completeness", () => {
+  const evidenceUnit = (...blocks) => ({
+    unitId: "signal-unit",
+    source: {
+      blocks: blocks.map(([blockId, exactText]) => ({ blockId, exactText })),
+    },
+  });
+  const requirement = (sourceBlockIds, components) => ({
+    sourceBlockIds,
+    components,
+  });
+  const component = (type, blockId, extra = {}) => ({
+    type,
+    label: extra.label || "Beleg",
+    sourceBlockIds: [blockId],
+    ...extra,
+  });
+
+  test.each([
+    {
+      text: "Gebäude, sofern sie ständig bewohnt sind",
+      signalId: "EXPLICIT_CONDITION",
+      components: [component("OBJECT", "b1")],
+    },
+    {
+      text: "Selbstbehalt EUR 350 je Schadenfall",
+      signalId: "EXPLICIT_DEDUCTIBLE",
+      components: [
+        component("VALUE_AND_UNIT", "b1", { rawValue: "350" }),
+      ],
+    },
+    {
+      text: "exklusive deren Inhalt",
+      signalId: "EXPLICIT_EXCLUSION",
+      components: [
+        component("COVERAGE_EFFECT", "b1", {
+          coverageEffect: "INCLUDED",
+        }),
+      ],
+    },
+    {
+      text: "maximal 5 % der Gebäudeversicherungssumme",
+      signalId: "EXPLICIT_QUANTIFIED_VALUE",
+      components: [component("LIMIT_BASIS", "b1")],
+    },
+    {
+      text: "5 % der Gebäudeversicherungssumme",
+      signalId: "EXPLICIT_LIMIT_BASIS",
+      components: [
+        component("VALUE_AND_UNIT", "b1", { rawValue: "5" }),
+      ],
+    },
+    {
+      text: "Mehrkosten infolge behördlicher Auflagen",
+      signalId: "EXPLICIT_COST_ROLE",
+      components: [component("OBJECT", "b1")],
+    },
+  ])("rejects missing $signalId evidence in its own requirement", ({
+    text,
+    signalId,
+    components,
+  }) => {
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", text]),
+      [requirement(["b1"], components)]
+    );
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+          requirementIndex: 0,
+          signalId,
+        }),
+      ])
+    );
+  });
+
+  test("does not borrow a compatible role from a sibling requirement", () => {
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(
+        ["condition", "sofern die Anlage gewartet wird"],
+        ["sibling", "Wartungsnachweis"]
+      ),
+      [
+        requirement(["condition"], [component("OBJECT", "condition")]),
+        requirement(
+          ["sibling"],
+          [component("CONDITION", "sibling", { label: "Wartungsnachweis" })]
+        ),
+      ]
+    );
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        requirementIndex: 0,
+        signalId: "EXPLICIT_CONDITION",
+      }),
+    ]);
+  });
+
+  test("accepts complete signals and ignores ordinary wording", () => {
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(
+        [
+          "complete",
+          "Gebäude sind versichert, sofern sie bewohnt sind, maximal 5 % der Gebäudeversicherungssumme, ausgenommen Inhalt; Selbstbehalt EUR 350",
+        ],
+        ["plain", "Gebäude sind versichert."]
+      ),
+      [
+        requirement(
+          ["complete"],
+          [
+            component("OBJECT", "complete"),
+            component("CONDITION", "complete"),
+            component("VALUE_AND_UNIT", "complete", { rawValue: "5" }),
+            component("LIMIT_BASIS", "complete"),
+            component("DEDUCTIBLE", "complete"),
+            component("COVERAGE_EFFECT", "complete", {
+              label: "ausgenommen",
+              coverageEffect: "EXCLUDED",
+            }),
+          ]
+        ),
+        requirement(["plain"], [component("OBJECT", "plain")]),
+      ]
+    );
+
+    expect(diagnostics).toEqual([]);
+  });
+
+  test("fails the manifest closed until the same requirement carries its condition", () => {
+    const source = artifact(
+      ["Seite 1\nGebäude, sofern sie ständig bewohnt sind.\n"],
+      "6"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition, source: unitSource }) =>
+        initialDisposition === "PENDING_CLASSIFICATION" &&
+        unitSource.combinedText.includes("sofern")
+    );
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map(validResponse);
+    const rejected = buildADrivenSemanticManifest({
+      plan,
+      responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+
+    expect(
+      rejected.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
+        .terminalDisposition
+    ).toBe("UNRESOLVED_REVIEW_REQUIRED");
+    const repairedResponses = responses.map((response) => {
+      if (response.unitId !== unit.unitId) return response;
+      return {
+        ...response,
+        semanticClasses: [...response.semanticClasses, "CONDITION"],
+        requirements: response.requirements.map((item) => ({
+          ...item,
+          components: [
+            ...item.components,
+            {
+              type: "CONDITION",
+              label: "sofern sie ständig bewohnt sind",
+              sourceBlockIds: [unit.source.blocks[0].blockId],
+            },
+          ],
+        })),
+      };
+    });
+    const accepted = buildADrivenSemanticManifest({
+      plan,
+      responses: repairedResponses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+
+    expect(
+      accepted.unitTerminals.find(({ unitId }) => unitId === unit.unitId)
+        .terminalDisposition
+    ).toBe("OPERATIVE_MAPPED");
+  });
+});
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
