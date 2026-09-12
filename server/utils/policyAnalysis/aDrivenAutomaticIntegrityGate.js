@@ -149,9 +149,7 @@ function validateSourceUnitPlan(plan) {
   }
   for (const document of plan.documents) {
     const actual = plan.units
-      .filter(
-        ({ source }) => source.documentUuid === document.documentUuid
-      )
+      .filter(({ source }) => source.documentUuid === document.documentUuid)
       .map(({ unitId }) => unitId);
     if (stableStringify(actual) !== stableStringify(document.unitIds))
       throw gateError("LF_A_AUTOMATED_GATE_SOURCE_PLAN_DOCUMENT_UNITS_INVALID");
@@ -211,8 +209,7 @@ function terminalRiskAssessment({ plan, manifest }) {
   const suspiciousOperativeUnits = [];
   for (const terminal of manifest.unitTerminals) {
     const unit = unitById.get(terminal.unitId);
-    if (!unit)
-      throw gateError("LF_A_AUTOMATED_GATE_TERMINAL_UNIT_UNKNOWN");
+    if (!unit) throw gateError("LF_A_AUTOMATED_GATE_TERMINAL_UNIT_UNKNOWN");
     const sourceText = String(unit.source?.combinedText || "").trim();
     if (terminal.terminalDisposition === "OPERATIVE_MAPPED") {
       const numberedHeadingWithoutPredicate =
@@ -234,8 +231,7 @@ function terminalRiskAssessment({ plan, manifest }) {
         });
       continue;
     }
-    if (terminal.terminalDisposition === "UNRESOLVED_REVIEW_REQUIRED")
-      continue;
+    if (terminal.terminalDisposition === "UNRESOLVED_REVIEW_REQUIRED") continue;
     const pendingNonHeading =
       unit.initialDisposition === "PENDING_CLASSIFICATION" &&
       !["HEADING", "METADATA"].includes(unit.unitKind);

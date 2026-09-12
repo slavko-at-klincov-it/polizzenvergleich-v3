@@ -45,7 +45,10 @@ function artifact(text, fingerprintCharacter = "a") {
 }
 
 function fixture() {
-  const source = artifact("Zum Gebäude gehören die fest verbundenen Bauteile.\n", "a");
+  const source = artifact(
+    "Zum Gebäude gehören die fest verbundenen Bauteile.\n",
+    "a"
+  );
   const plan = buildADrivenSourceUnitPlan({
     documents: [
       {
@@ -68,7 +71,8 @@ function fixture() {
     )
     .map((unit) => ({
       unitId: unit.unitId,
-      primaryClass: unit.unitKind === "HEADING" ? "STRUCTURE" : "INSURED_OBJECT",
+      primaryClass:
+        unit.unitKind === "HEADING" ? "STRUCTURE" : "INSURED_OBJECT",
       semanticClasses:
         unit.unitKind === "HEADING" ? ["STRUCTURE"] : ["INSURED_OBJECT"],
       requirements:
@@ -99,9 +103,7 @@ function fixture() {
   }));
   const classificationSummary = {
     sourceUnitPlanSha256: plan.planSha256,
-    classificationBatchesSha256: sha256(
-      JSON.stringify(classificationBatches)
-    ),
+    classificationBatchesSha256: sha256(JSON.stringify(classificationBatches)),
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     semanticSignalContractId: manifest.semanticSignalContractId,
     model: { id: "model", loadedContextLength: 1024 },

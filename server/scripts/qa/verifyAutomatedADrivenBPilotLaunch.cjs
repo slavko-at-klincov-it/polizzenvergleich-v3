@@ -94,7 +94,10 @@ function reconstructSourcePlan(runRoot, inputManifest) {
     .sort((left, right) => left.position - right.position)
     .map((document) => {
       const artifact = readJson(
-        path.join(documentDirectory(runRoot, document), "document.private.json"),
+        path.join(
+          documentDirectory(runRoot, document),
+          "document.private.json"
+        ),
         "LF_A_AUTOMATED_GATE_A_DOCUMENT_ARTIFACT"
       ).value;
       return {
@@ -123,7 +126,10 @@ function main(argv = process.argv.slice(2)) {
   if (!Array.isArray(input.value?.documents))
     throw new Error("LF_A_AUTOMATED_GATE_INPUT_MANIFEST_INVALID");
   const reconstructedPlan = reconstructSourcePlan(args.runRoot, input.value);
-  const planFile = path.join(args.classificationRoot, "source-unit-plan.private.json");
+  const planFile = path.join(
+    args.classificationRoot,
+    "source-unit-plan.private.json"
+  );
   const plan = readJson(planFile, "LF_A_AUTOMATED_GATE_SOURCE_PLAN");
   if (stableStringify(reconstructedPlan) !== stableStringify(plan.value))
     throw new Error("LF_A_AUTOMATED_GATE_SOURCE_PLAN_RECONSTRUCTION_MISMATCH");
@@ -141,7 +147,10 @@ function main(argv = process.argv.slice(2)) {
   });
   if (stableStringify(rebuiltBatches) !== stableStringify(batches.value))
     throw new Error("LF_A_AUTOMATED_GATE_CLASSIFICATION_PLAN_MISMATCH");
-  const summaryFile = path.join(args.classificationRoot, "summary.private.json");
+  const summaryFile = path.join(
+    args.classificationRoot,
+    "summary.private.json"
+  );
   const summary = readJson(summaryFile, "LF_A_AUTOMATED_GATE_SUMMARY");
   validateCompletedRun({
     args: {
@@ -163,11 +172,12 @@ function main(argv = process.argv.slice(2)) {
   );
   const responses = readJson(responsesFile, "LF_A_AUTOMATED_GATE_RESPONSES");
   const manifest = readJson(manifestFile, "LF_A_AUTOMATED_GATE_MANIFEST");
-  const batchResults = batches.value.batches.map((batch) =>
-    readJson(
-      batchFile(args.classificationRoot, batch),
-      "LF_A_AUTOMATED_GATE_BATCH_RESULT"
-    ).value
+  const batchResults = batches.value.batches.map(
+    (batch) =>
+      readJson(
+        batchFile(args.classificationRoot, batch),
+        "LF_A_AUTOMATED_GATE_BATCH_RESULT"
+      ).value
   );
   const receipt = buildAutomatedADrivenIntegrityReceipt({
     plan: plan.value,
