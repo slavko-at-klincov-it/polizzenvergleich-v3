@@ -128,6 +128,20 @@ describe("A-driven classification evidence recovery", () => {
           source: source("doc", [block("list-item", "• Gartenanlagen")]),
         },
         {
+          unitId: "quantified-list-item",
+          unitKind: "LIST",
+          source: source("doc", [
+            block("glass-size", "• Einzelscheibengröße von 10m²."),
+          ]),
+        },
+        {
+          unitId: "anaphoric-list-item",
+          unitKind: "LIST",
+          source: source("doc", [
+            block("anaphora", "• Fenster gelten bis zu dieser Größe."),
+          ]),
+        },
+        {
           unitId: "closed-sentence",
           unitKind: "CLAUSE",
           source: source("other-doc", [
@@ -138,6 +152,13 @@ describe("A-driven classification evidence recovery", () => {
           unitId: "unrelated-list",
           unitKind: "LIST",
           source: source("other-doc", [block("other-item", "• Fahrzeuge")]),
+        },
+        {
+          unitId: "unsupported-anaphora",
+          unitKind: "LIST",
+          source: source("other-doc", [
+            block("unsupported-reference", "• Fenster bis zu dieser Größe"),
+          ]),
         },
       ],
     };
@@ -155,6 +176,11 @@ describe("A-driven classification evidence recovery", () => {
       unitIds: ["list-governor"],
       blockIds: ["list-effect", "list-limit"],
     });
+    expect(byId.get("anaphoric-list-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_ANAPHORIC_CONTEXT",
+      unitIds: ["quantified-list-item"],
+      blockIds: ["glass-size"],
+    });
     expect(byId.get("excluded-one").governingContext).toMatchObject({
       relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
       unitIds: ["operative-heading"],
@@ -166,6 +192,7 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["exclusion-effect", "local-effect"],
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
+    expect(byId.get("unsupported-anaphora").governingContext).toBeUndefined();
     expect(
       plan.units.find(({ unitId }) => unitId === "excluded-two")
         .governingContext
@@ -178,7 +205,7 @@ describe("A-driven classification evidence recovery", () => {
       plan.units.find(({ unitId }) => unitId === "continued-item")
         .governingContext
     ).toBeUndefined();
-    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(4);
+    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(5);
   });
 });
 
@@ -1010,6 +1037,45 @@ describe("requirement-local semantic evidence completeness", () => {
     ]);
 
     expect(diagnostics).toEqual([]);
+  });
+
+  test("materializes an explicit value from a source-bound anaphoric context", () => {
+    const unit = {
+      ...evidenceUnit(["anaphora", "Fenster gelten bis zu dieser Größe."]),
+      governingContext: {
+        blockIds: ["antecedent"],
+        blocks: [
+          {
+            blockId: "antecedent",
+            exactText: "Einzelscheibengröße von 10m².",
+          },
+        ],
+      },
+    };
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["anaphora"],
+          [
+            component("OBJECT", "anaphora", {
+              label: "Fenster gelten bis zu dieser Größe.",
+            }),
+          ]
+        ),
+        displayLabel: "Fenster gelten bis zu dieser Größe.",
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "VALUE_AND_UNIT",
+      label: "10m²",
+      sourceBlockIds: ["antecedent"],
+      rawValue: "10",
+      unit: "m²",
+    });
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
   });
 
   test("materializes a local peril from a generic damages-through governor", () => {

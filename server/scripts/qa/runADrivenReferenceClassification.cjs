@@ -1073,7 +1073,20 @@ function classificationGovernorContext(previous, current) {
     /\b(?:Deckung|gedeckt|mitversichert|versichert|Versicherungsschutz)\b/iu.test(
       previousText
     );
-  if (!continuesEmbeddedList && !opensFollowingList) return null;
+  const recoversAdjacentAnaphora =
+    ["LIST", "CLAUSE"].includes(current.unitKind) &&
+    /\b(?:bis\s+zu\s+)?(?:dies(?:er|e|es|em|en)|derselben)\s+(?:Größe|Höhe|Dauer|Summe|Betrag|Wert|Frist|Anzahl)\b/iu.test(
+      String(current.source?.combinedText || "")
+    ) &&
+    /(?:€\s*)?[0-9]+(?:[.,][0-9]+)?\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?)\b/iu.test(
+      previousText
+    );
+  if (
+    !continuesEmbeddedList &&
+    !opensFollowingList &&
+    !recoversAdjacentAnaphora
+  )
+    return null;
   const blocks = continuesEmbeddedList
     ? previous.source.blocks.slice(0, embeddedListStart)
     : previous.source.blocks;
@@ -1082,7 +1095,9 @@ function classificationGovernorContext(previous, current) {
   return {
     relationType: continuesEmbeddedList
       ? "RECOVERS_EMBEDDED_LIST_GOVERNOR"
-      : "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      : opensFollowingList
+        ? "RECOVERS_ADJACENT_LIST_GOVERNOR"
+        : "RECOVERS_ADJACENT_ANAPHORIC_CONTEXT",
     contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
     unitIds: [previous.unitId],
     blockIds: blocks.map(({ blockId }) => blockId),

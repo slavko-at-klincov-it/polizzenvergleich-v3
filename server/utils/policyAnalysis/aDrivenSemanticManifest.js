@@ -560,6 +560,7 @@ function materializeSharedSignalComponents(unit, requirements) {
         const evidenceBackedSignal = [
           "EXPLICIT_DEFINITION",
           "EXPLICIT_PERIL_OR_CAUSE",
+          "EXPLICIT_QUANTIFIED_VALUE",
         ].includes(signal.signalId);
         const localText =
           localComponent?.label ||
@@ -575,6 +576,7 @@ function materializeSharedSignalComponents(unit, requirements) {
               "EXPLICIT_CONDITION",
               "EXPLICIT_DEFINITION",
               "EXPLICIT_PERIL_OR_CAUSE",
+              "EXPLICIT_QUANTIFIED_VALUE",
             ].includes(signal.signalId))
         )
           continue;
@@ -599,11 +601,13 @@ function materializeSharedSignalComponents(unit, requirements) {
         const sourceBlockIds =
           minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
           (localComponent ? [...localComponent.sourceBlockIds] : null);
+        const allowedSourceBlockIds = new Set([
+          ...requirement.sourceBlockIds,
+          ...(unit.governingContext?.blockIds || []),
+        ]);
         if (
           !sourceBlockIds?.length ||
-          sourceBlockIds.some(
-            (blockId) => !requirement.sourceBlockIds.includes(blockId)
-          )
+          sourceBlockIds.some((blockId) => !allowedSourceBlockIds.has(blockId))
         )
           continue;
         const localRole =
