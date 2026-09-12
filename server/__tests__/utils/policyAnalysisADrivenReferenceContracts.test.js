@@ -6366,7 +6366,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     );
   });
 
-  test("retries a partial NOT_SUPPORTED response whose selected candidate union is empty", async () => {
+  test("repairs invalid partial NOT_SUPPORTED responses one package at a time", async () => {
     const manifest = searchEligibleManifest();
     const searchPlan = buildADrivenCounterpartSearchPlan({
       manifest,
@@ -6407,7 +6407,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       retrieval,
     });
     const batch = buildADrivenCounterpartDecisionPlan(searchExecution, {
-      maximumPackages: 1,
+      maximumPackages: 2,
       maximumCharacters: 14_000,
     }).batches.find(({ packages }) => packages[0].semanticChecks.length > 1);
     const partialResponses = batch.packages.map((item) => ({
@@ -6423,10 +6423,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         })
       ),
     }));
-    const repairedResponses = partialResponses.map((response) => ({
-      ...response,
-      selectedCandidateIds: ["candidate-one"],
-    }));
     const client = {
       chat: {
         completions: {
@@ -6439,12 +6435,29 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
               ],
               usage: {},
             })
-            .mockResolvedValueOnce({
-              model: "qwen/qwen3.6-35b-a3b",
-              choices: [
-                { message: { content: JSON.stringify(repairedResponses) } },
-              ],
-              usage: {},
+            .mockImplementation(({ messages }) => {
+              const request = JSON.parse(messages[1].content);
+              return Promise.resolve({
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(
+                        request.packages.map((item) => {
+                          const original = partialResponses.find(
+                            ({ packageId }) => packageId === item.packageId
+                          );
+                          return {
+                            ...original,
+                            selectedCandidateIds: ["candidate-one"],
+                          };
+                        })
+                      ),
+                    },
+                  },
+                ],
+                usage: {},
+              });
             }),
         },
       },
@@ -6456,19 +6469,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       modelContext: 42_496,
       searchExecution,
       batch,
-      maximumAttempts: 2,
+      maximumAttempts: batch.expectedPackageIds.length + 1,
     });
 
     expect(result.validation.passed).toBe(true);
-    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts).toHaveLength(batch.expectedPackageIds.length + 1);
     expect(result.attempts[0]).toMatchObject({
       acceptedPackages: 0,
-      pendingPackages: 1,
+      pendingPackages: batch.expectedPackageIds.length,
       validationPassed: false,
     });
-    expect(
-      client.chat.completions.create.mock.calls[1][0].messages.at(-1).content
-    ).toContain("darf bei einem MATCH oder MISMATCH niemals leer sein");
+    for (const [index, call] of client.chat.completions.create.mock.calls
+      .slice(1)
+      .entries()) {
+      const request = JSON.parse(call[0].messages[1].content);
+      expect(request.expectedPackageIds).toEqual([
+        batch.expectedPackageIds[index],
+      ]);
+      expect(request.packages).toHaveLength(1);
+      expect(call[0].messages.at(-1).content).toContain(
+        "darf bei einem MATCH oder MISMATCH niemals leer sein"
+      );
+    }
   });
 
   test("keeps a real-sized compacted candidate package inside the default decision budget", () => {

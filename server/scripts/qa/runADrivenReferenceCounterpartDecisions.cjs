@@ -232,6 +232,18 @@ function subsetExecution(searchExecution, packages) {
   };
 }
 
+function repairBatch(batch, pendingPackageIds, attempt) {
+  const requestedPackageIds = pendingPackageIds.slice(0, 1);
+  return {
+    ...batch,
+    batchId: `${batch.batchId}-retry-${attempt}`,
+    expectedPackageIds: requestedPackageIds,
+    packages: batch.packages.filter(({ packageId }) =>
+      requestedPackageIds.includes(packageId)
+    ),
+  };
+}
+
 function validateBatchResponses(searchExecution, batch, responses) {
   const expected = new Set(batch.expectedPackageIds);
   const packages = searchExecution.packages.filter(({ packageId }) =>
@@ -413,14 +425,7 @@ async function runBatch({
       await onAttempt(attemptRecord);
       last = { rawText: observedRawText, validation, error: null };
       if (validation.passed) break;
-      workingBatch = {
-        ...batch,
-        batchId: `${batch.batchId}-retry-${attempt + 1}`,
-        expectedPackageIds: pendingPackageIds,
-        packages: batch.packages.filter(({ packageId }) =>
-          pendingPackageIds.includes(packageId)
-        ),
-      };
+      workingBatch = repairBatch(batch, pendingPackageIds, attempt + 1);
       messages = [
         ...prompt(workingBatch),
         {
