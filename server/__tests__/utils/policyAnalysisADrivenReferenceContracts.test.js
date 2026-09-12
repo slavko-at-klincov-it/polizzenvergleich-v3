@@ -5885,7 +5885,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("rejoins split product subject and predicate into one source-bound fact relation", () => {
     const sourceText =
       "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM in den jeweils beantragten Sparten.";
-    const source = artifact([`Seite 1\n${sourceText}\n`], "7a");
+    const source = artifact([`Seite 1\n${sourceText}\n`], "a");
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });
@@ -5955,7 +5955,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test("does not merge multiple product relations across a semicolon", () => {
     const sourceText =
       "Grunddeckung ist das Produkt BASIS; der Tarif ist PREMIUM mit der Variante PLUS in den jeweils beantragten Sparten.";
-    const source = artifact([`Seite 1\n${sourceText}\n`], "7b");
+    const source = artifact([`Seite 1\n${sourceText}\n`], "b");
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
     });
