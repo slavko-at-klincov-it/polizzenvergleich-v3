@@ -7944,3 +7944,85 @@ Relationsevidenz voraussichtlich Überanpassung an LF IMMO.
 Status: `V35 A TECHNISCH PASS, HASHGEBUNDEN UND STRENG EINGEFROREN;
 ROLLENABWEICHUNGEN 98 -> 79; 631/631 REVIEWRECORDS VORBEREITET, 0/631 REAL
 FACHLICH DOPPELT GEPRÜFT; B-PILOT UND 1+9 WEITER FAIL-CLOSED`.
+
+### 133.24 Kontrollierte B-Pilot-Autorisierung mit extern gepinntem Trust Root
+
+Die V35-Reviewkette hatte nach einem künftig vollständig bestandenen
+Legacy- und dynamischen Restreview noch keinen ausführbaren Übergang in einen
+eng begrenzten B-Shadow-Pilot: Die finale technische Reconciliation setzte
+`bPilotAllowed` absichtlich immer auf `false`. Diese Sperre war korrekt, ließ
+aber auch keinen sicheren, prüfbaren Autorisierungsschritt zu.
+
+Der Vertrag wurde deshalb um eine getrennte, write-once materialisierte
+Freigabekette ergänzt:
+
+```text
+TECHNICAL_PREREQUISITES_SATISFIED
+  -> LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_V1
+  -> LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_V1
+  -> LF_A_CONTROLLED_B_PILOT_GATE_V1
+```
+
+Der Request ist nur aus einer vollständig validierten, exakt an Profil,
+Run-Signatur und Basisdigest gebundenen technischen Reconciliation ohne
+Remediation- oder Dynamic-Restdefekte erzeugbar. Die Autorisierung muss mit
+einem separaten Ed25519-Autoritätsschlüssel signiert werden. Sie enthält
+selbst keinen öffentlichen Schlüssel und kann sich deshalb nicht selbst als
+vertrauenswürdig erklären. Das finale Gate verlangt zusätzlich ein getrenntes
+Trust-Anchor-Artefakt und dessen außerhalb des Aufrufs administrativ
+konfigurierten erwarteten SHA-256. Private-Key-Material wird nur gelesen und
+nie in die QA-Artefakte kopiert; als Public Key übergebenes Private-Key-PEM
+wird abgelehnt. Ein fremder Schlüssel, ein mutierter Trust Anchor, ein
+fehlender erwarteter Trust-Anchor-Hash oder eine technisch nicht bestandene
+Reconciliation stoppen fail-closed.
+
+Das Gate erlaubt ausschließlich den privaten QA-Scope
+`LF_REFERENCE_A_DRIVEN_CONTROLLED_B_RETRIEVAL_SHADOW_PILOT` über alle
+B-Dokumente mit BM25, Struktur, Dinghy und komponentenweiser Qwen-Prüfung.
+Auch bei gültiger Autorisierung bleiben folgende Felder ausdrücklich falsch:
+
+```text
+fullOnePlusNineAllowed: false
+productRoutingAllowed: false
+resultMutationAllowed: false
+customerWorkbookAllowed: false
+deploymentAllowed: false
+```
+
+Die Materialisierungs-CLI besitzt dafür die getrennten Befehle
+`b-pilot-request`, `b-pilot-authorize` und `b-pilot-gate`. Sämtliche Ausgaben
+werden write-once im privaten Reviewbaum gespeichert. Die Gate-Datei ist noch
+nicht an einen produktiven B-Runner angeschlossen; ein künftiger Pilot-Runner
+muss sie vor jedem Start vollständig validieren. Es wurden bewusst weder
+echte Autoritätsartefakte noch Schlüssel oder Reviewerentscheidungen erzeugt.
+
+Implementiert wurde dies mit Commit
+`e1724594ac27b498f05a8be6c85ab0fd2315bdfc`. Ein unabhängiger Alt-Test legte
+bei der anschließenden Vollregression einen matcherabhängigen Testfehler offen:
+Der VS36-Vertrag liefert absichtlich ein Array, der Test prüfte es jedoch mit
+`objectContaining`. Commit
+`ce63f53a090a2468d1885dc00d5e5810a540297a` änderte ausschließlich diese
+Testaussage auf `arrayContaining`; Produktlogik und fachliche Werte blieben
+unverändert.
+
+Am exakten Commit `ce63f53a090a2468d1885dc00d5e5810a540297a` im isolierten
+Mac-Studio-Worktree
+`/private/tmp/lf-bpilot-e1724594-hmTls2/repo` unter Node 22.23.2 bestanden:
+
+```text
+VS36-Vertragstest:       11/11 PASS
+Server-Gesamtregression: 187/187 Suites, 2.674/2.674 Tests PASS
+Prettier:                PASS
+ESLint Produkt/CLI:      PASS, 0 Fehler
+```
+
+Ein zusätzlicher Root-Jest-Aufruf nahm Collector-Suites auf und scheiterte in
+sieben Suites an im isolierten Worktree nicht installierten
+Collector-Abhängigkeiten (`ignore`, `@langchain/community`, `slugify`,
+`dotenv`, `fix-path`, `uuid`). Dieser Lauf wird nicht als Collector- oder
+Monorepo-PASS gewertet; die verbindliche vollständige Serverregression ist
+davon getrennt grün.
+
+Status: `KONTROLLIERTER B-PILOT-AUTORISIERUNGSVERTRAG TECHNISCH PASS; KEINE
+REALE AUTORISIERUNG, 0/631 FACHREVIEWS, PILOT-RUNNER NOCH NICHT GEGATET;
+B-PILOT UND 1+9 REAL WEITER GESPERRT`.
