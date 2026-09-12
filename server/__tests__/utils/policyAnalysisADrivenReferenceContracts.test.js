@@ -571,6 +571,50 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes an outer exclusion governor without treating its local exception as another exclusion", () => {
+    const unit = {
+      ...evidenceUnit(
+        ["item-one", "Schäden durch Verschleiß;"],
+        [
+          "item-two",
+          "Schäden an angeschlossenen Armaturen - ausgenommen durch Frost;",
+        ]
+      ),
+      governingContext: {
+        blockIds: ["governor"],
+        blocks: [
+          {
+            blockId: "governor",
+            exactText: "Nicht versichert sind",
+          },
+        ],
+      },
+    };
+    const exclusion = component("COVERAGE_EFFECT", "governor", {
+      label: "Nicht versichert sind",
+      coverageEffect: "EXCLUDED",
+    });
+    const result = materializeSharedSignalComponents(unit, [
+      requirement(["item-one"], [component("OBJECT", "item-one"), exclusion]),
+      requirement(["item-two"], [component("OBJECT", "item-two")]),
+    ]);
+
+    expect(result.requirements[1].components).toContainEqual(exclusion);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "SHARED_SIGNAL_COMPONENT_MATERIALIZED",
+          requirementIndex: 1,
+          sourceRequirementIndex: 0,
+          signalId: "EXPLICIT_EXCLUSION",
+        }),
+      ])
+    );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test("materializes an explicit local condition from a uniquely typed source component", () => {
     const unit = evidenceUnit([
       "scope-one",

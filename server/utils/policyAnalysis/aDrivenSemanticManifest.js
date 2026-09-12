@@ -317,14 +317,25 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
   return signal.requiredComponentTypes.includes(component.type);
 }
 
-function signalApplies(signal, matchedEvidence) {
+function signalApplies(signal, matchedEvidence, unit) {
   const exactText = comparableSignalText(matchedEvidence.exactText);
+  const matchedText = comparableSignalText(matchedEvidence.match);
+  const governingText = comparableSignalText(
+    (unit?.governingContext?.blocks || [])
+      .map(({ exactText: blockText }) => blockText)
+      .join("\n")
+  );
   if (
     signal.signalId === "EXPLICIT_EXCLUSION" &&
     [
       /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu,
       /\bsoweit\b.+\bkeine\s+deckung\s+finden\b/iu,
-    ].some((pattern) => pattern.test(exactText))
+      ...(matchedText.startsWith("ausgenommen")
+        ? [
+            /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+(?:deckung|versicherungsschutz))\b[^.;:]*\bausgenommen\b/iu,
+          ]
+        : []),
+    ].some((pattern) => pattern.test(`${governingText}\n${exactText}`))
   )
     return false;
   return true;
@@ -409,7 +420,7 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
       );
       if (!matchedEvidence.length) return [];
       return matchedEvidence.flatMap((evidence) => {
-        if (!signalApplies(signal, evidence)) return [];
+        if (!signalApplies(signal, evidence, unit)) return [];
         if (
           requirement.components.some((component) =>
             componentSupportsSignal(signal, component, evidence)
@@ -451,7 +462,7 @@ function materializeSharedSignalComponents(unit, requirements) {
       );
       for (const evidence of matchedEvidence) {
         if (
-          !signalApplies(signal, evidence) ||
+          !signalApplies(signal, evidence, unit) ||
           requirement.components.some((component) =>
             componentSupportsSignal(signal, component, evidence)
           )
@@ -465,7 +476,10 @@ function materializeSharedSignalComponents(unit, requirements) {
                   .filter(
                     (component) =>
                       component.sourceBlockIds.every((blockId) =>
-                        requirement.sourceBlockIds.includes(blockId)
+                        [
+                          ...requirement.sourceBlockIds,
+                          ...(unit.governingContext?.blockIds || []),
+                        ].includes(blockId)
                       ) && componentSupportsSignal(signal, component, evidence)
                   )
                   .map((component) => ({
