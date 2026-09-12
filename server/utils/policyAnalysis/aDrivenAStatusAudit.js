@@ -190,29 +190,36 @@ function buildADrivenAStatusAudit({
         ...candidate,
         matchScope: "DIRECT_COMPONENT_SOURCE",
       }));
-    const requirementScopedCompatibleDynamicTargets = dynamic
-      .filter(
-        (requirement) =>
-          intersection(requirement.sourceBlockIds, component.sourceBlockIds)
-            .length > 0
-      )
-      .flatMap((requirement) =>
-        requirement.components
-          .filter(
-            (candidate) =>
-              compatibleTypes.includes(candidate.dynamicComponentType) &&
-              intersection(candidate.sourceBlockIds, component.sourceBlockIds)
-                .length === 0
-          )
-          .map((candidate) => ({
-            ...candidate,
-            matchScope: "SAME_DYNAMIC_REQUIREMENT",
-            overlappingRequirementSourceBlockIds: intersection(
-              requirement.sourceBlockIds,
-              component.sourceBlockIds
-            ),
-          }))
-      );
+    const requirementScopedCompatibleDynamicTargets =
+      directlyCompatibleDynamicTargets.length > 0
+        ? []
+        : dynamic
+            .filter(
+              (requirement) =>
+                intersection(
+                  requirement.sourceBlockIds,
+                  component.sourceBlockIds
+                ).length > 0
+            )
+            .flatMap((requirement) =>
+              requirement.components
+                .filter(
+                  (candidate) =>
+                    compatibleTypes.includes(candidate.dynamicComponentType) &&
+                    intersection(
+                      candidate.sourceBlockIds,
+                      component.sourceBlockIds
+                    ).length === 0
+                )
+                .map((candidate) => ({
+                  ...candidate,
+                  matchScope: "SAME_DYNAMIC_REQUIREMENT",
+                  overlappingRequirementSourceBlockIds: intersection(
+                    requirement.sourceBlockIds,
+                    component.sourceBlockIds
+                  ),
+                }))
+            );
     const compatibleDynamicTargets = [
       ...directlyCompatibleDynamicTargets,
       ...requirementScopedCompatibleDynamicTargets,
