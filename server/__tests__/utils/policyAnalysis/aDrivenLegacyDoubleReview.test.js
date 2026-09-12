@@ -22,6 +22,7 @@ const os = require("os");
 const path = require("path");
 const {
   CURRENT_V12_REVIEW_PROFILE,
+  CURRENT_V22_REVIEW_PROFILE,
   createClassificationEvidence,
   createCrosswalkDraft,
   createReviewBasis,
@@ -29,6 +30,7 @@ const {
   createReviewerTemplate,
   createRunProvenance,
   reconcileApprovedCrosswalk,
+  reviewCampaignProfile,
   sealReviewerArtifact,
   validateClassificationChain,
   validateCrosswalkDraft,
@@ -374,6 +376,27 @@ describe("V12 283/631 double-review contract", () => {
       legacyRequirements: 283,
       legacyComponents: 631,
     });
+  });
+
+  test("registers V22 without changing the frozen V12 review basis", () => {
+    expect(reviewCampaignProfile(CURRENT_V12_REVIEW_PROFILE.profileId)).toBe(
+      CURRENT_V12_REVIEW_PROFILE
+    );
+    expect(reviewCampaignProfile(CURRENT_V22_REVIEW_PROFILE.profileId)).toBe(
+      CURRENT_V22_REVIEW_PROFILE
+    );
+    expect(CURRENT_V22_REVIEW_PROFILE).toMatchObject({
+      dynamicManifestSha256:
+        "8709e8bc73af0d268d35d4e23c6b4e32debe51c5ccff2dd08589261e67f042c1",
+      dynamicRequirements: 354,
+      dynamicComponents: 1029,
+      classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+      classificationBatches: 59,
+      classificationResponses: 349,
+    });
+    expect(() => reviewCampaignProfile("LF_A_UNKNOWN")).toThrow(
+      "LF_A_DOUBLE_REVIEW_PROFILE_UNKNOWN"
+    );
   });
 
   test("regenerates the full 631-record draft and rejects a rehashed mutation", () => {

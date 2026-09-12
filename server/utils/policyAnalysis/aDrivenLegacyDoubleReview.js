@@ -104,6 +104,55 @@ const CURRENT_V12_REVIEW_PROFILE = Object.freeze({
   ),
 });
 
+const CURRENT_V22_REVIEW_PROFILE_PAYLOAD = {
+  schemaVersion: 1,
+  contractId: REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+  profileId: "LF_A_V22_FINAL_354_1029_WITH_V374_LEGACY_283_631",
+  dynamicManifestSha256:
+    "8709e8bc73af0d268d35d4e23c6b4e32debe51c5ccff2dd08589261e67f042c1",
+  dynamicManifestFileSha256:
+    "efdf47fa8a28633be25b2b8da4a5bfd05d6c0d9b5a0c88030491cb215ddb50c0",
+  dynamicRequirements: 354,
+  dynamicComponents: 1029,
+  legacyManifestSha256:
+    "3697afe4a18760bd893d50e0c3f8dadf48ff0106447829d32f1cb7845011efb0",
+  legacyManifestFileSha256:
+    "c8e4c7cb303879d0efb35eb8215be6b6b75a75332e8a1b892c5f1bc85d6be4c7",
+  legacyRequirements: EXPECTED_LEGACY_REQUIREMENTS,
+  legacyComponents: EXPECTED_LEGACY_COMPONENTS,
+  implementationCommitSha: "a631025f5f83e9d79aaf1bbc2ab0e2da600b7833",
+  manifestCompletionCommitSha: "a631025f5f83e9d79aaf1bbc2ab0e2da600b7833",
+  releaseId: "e8e9e94862acf1e48a7f8110382af084e5d37439",
+  runSignature:
+    "df7d7179-1c49-412b-b2ff-0ec6b1fdc52f/resume-eb1202f45007d9995ddd60a9",
+  productRunContractId: "LF_REFERENCE_A_DRIVEN_V2",
+  classificationRunContractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
+  promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14",
+  modelId: "qwen/qwen3.6-35b-a3b",
+  modelContext: 42496,
+  maximumAttempts: 8,
+  requestTimeoutMs: 180000,
+  abortSettlementTimeoutMs: 15000,
+  modelRecoveryTimeoutMs: 180000,
+  qwenModelKey: "qwen3.6-35b-a3b-mlx-text",
+  transportContractId: "LF_A_CLASSIFICATION_TRANSPORT_V1",
+  classificationBatches: 59,
+  classificationResponses: 349,
+};
+const CURRENT_V22_REVIEW_PROFILE = Object.freeze({
+  ...CURRENT_V22_REVIEW_PROFILE_PAYLOAD,
+  profileSha256: domainDigest(
+    REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
+    CURRENT_V22_REVIEW_PROFILE_PAYLOAD
+  ),
+});
+const REVIEW_CAMPAIGN_PROFILES = new Map(
+  [CURRENT_V12_REVIEW_PROFILE, CURRENT_V22_REVIEW_PROFILE].map((profile) => [
+    profile.profileId,
+    profile,
+  ])
+);
+
 function reviewError(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
   error.code = code;
@@ -149,8 +198,10 @@ function validateReviewCampaignProfile(profile) {
     "profileSha256",
     "LF_A_DOUBLE_REVIEW_PROFILE_DIGEST_INVALID"
   );
+  const registered = REVIEW_CAMPAIGN_PROFILES.get(profile?.profileId);
   if (
-    stableStringify(profile) !== stableStringify(CURRENT_V12_REVIEW_PROFILE) ||
+    !registered ||
+    stableStringify(profile) !== stableStringify(registered) ||
     !text(profile.profileId) ||
     !validSha(profile.dynamicManifestSha256) ||
     !validSha(profile.dynamicManifestFileSha256) ||
@@ -165,6 +216,20 @@ function validateReviewCampaignProfile(profile) {
   return profile;
 }
 
+function reviewCampaignProfile(profileId) {
+  const profile = REVIEW_CAMPAIGN_PROFILES.get(profileId);
+  if (!profile) throw reviewError("LF_A_DOUBLE_REVIEW_PROFILE_UNKNOWN");
+  return profile;
+}
+
+function reviewCampaignProfileForManifest(manifestSha256) {
+  const profile = [...REVIEW_CAMPAIGN_PROFILES.values()].find(
+    (candidate) => candidate.dynamicManifestSha256 === manifestSha256
+  );
+  if (!profile) throw reviewError("LF_A_DOUBLE_REVIEW_PROFILE_UNKNOWN");
+  return profile;
+}
+
 function validateClassificationChain({
   sourcePlan,
   batchPlan,
@@ -172,18 +237,20 @@ function validateClassificationChain({
   responses,
   summary,
   dynamicManifest,
+  campaignProfile = CURRENT_V12_REVIEW_PROFILE,
 } = {}) {
+  validateReviewCampaignProfile(campaignProfile);
   if (
     !sourcePlan ||
     !validSha(sourcePlan.planSha256) ||
     batchPlan?.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
     !Array.isArray(batchPlan?.batches) ||
     batchPlan.batches.length !==
-      CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
+      campaignProfile.classificationBatches ||
     !Array.isArray(batchResults) ||
     batchResults.length !== batchPlan.batches.length ||
     !Array.isArray(responses) ||
-    responses.length !== CURRENT_V12_REVIEW_PROFILE.classificationResponses
+    responses.length !== campaignProfile.classificationResponses
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_CLASSIFICATION_CHAIN_INVALID");
   const plan = deriveClassificationEvidencePlan(sourcePlan);
@@ -217,13 +284,13 @@ function validateClassificationChain({
         (unitId) => !unitById.has(unitId) || seenUnits.has(unitId)
       ) ||
       result.contractId !==
-        CURRENT_V12_REVIEW_PROFILE.classificationRunContractId ||
+        campaignProfile.classificationRunContractId ||
       result.sourceUnitPlanSha256 !== sourcePlan.planSha256 ||
-      result.promptContractId !== CURRENT_V12_REVIEW_PROFILE.promptContractId ||
+      result.promptContractId !== campaignProfile.promptContractId ||
       result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
       result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
-      result.requestedModel !== CURRENT_V12_REVIEW_PROFILE.modelId ||
-      result.modelContext !== CURRENT_V12_REVIEW_PROFILE.modelContext ||
+      result.requestedModel !== campaignProfile.modelId ||
+      result.modelContext !== campaignProfile.modelContext ||
       result.batchId !== batch.batchId ||
       result.batchIndex !== batch.batchIndex ||
       stableStringify(result.expectedUnitIds) !==
@@ -275,7 +342,7 @@ function validateClassificationChain({
     throw reviewError("LF_A_DOUBLE_REVIEW_MANIFEST_REBUILD_INVALID");
   const expectedSummary = {
     sourceUnitPlanSha256: sourcePlan.planSha256,
-    promptContractId: CURRENT_V12_REVIEW_PROFILE.promptContractId,
+    promptContractId: campaignProfile.promptContractId,
     validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
     classificationBatchesSha256: sha256(JSON.stringify(batchPlan)),
     batches: orderedResults.length,
@@ -292,17 +359,14 @@ function validateClassificationChain({
     if (summary?.[key] !== value)
       throw reviewError("LF_A_DOUBLE_REVIEW_SUMMARY_BINDING_INVALID", key);
   if (
-    summary.model?.id !== CURRENT_V12_REVIEW_PROFILE.modelId ||
-    summary.model?.loadedContextLength !==
-      CURRENT_V12_REVIEW_PROFILE.modelContext ||
-    summary.transport?.contractId !==
-      CURRENT_V12_REVIEW_PROFILE.transportContractId ||
-    summary.transport?.requestTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.requestTimeoutMs ||
+    summary.model?.id !== campaignProfile.modelId ||
+    summary.model?.loadedContextLength !== campaignProfile.modelContext ||
+    summary.transport?.contractId !== campaignProfile.transportContractId ||
+    summary.transport?.requestTimeoutMs !== campaignProfile.requestTimeoutMs ||
     summary.transport?.abortSettlementTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.abortSettlementTimeoutMs ||
+      campaignProfile.abortSettlementTimeoutMs ||
     summary.transport?.modelRecoveryTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.modelRecoveryTimeoutMs
+      campaignProfile.modelRecoveryTimeoutMs
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_SUMMARY_RUNTIME_INVALID");
   const payload = {
@@ -330,21 +394,24 @@ function validateClassificationChain({
   };
 }
 
-function validateClassificationChainReceipt(receipt) {
+function validateClassificationChainReceipt(receipt, campaignProfile) {
   validateDigest(
     receipt,
     CLASSIFICATION_CHAIN_CONTRACT_ID,
     "chainSha256",
     "LF_A_DOUBLE_REVIEW_CHAIN_RECEIPT_INVALID"
   );
+  const profile =
+    campaignProfile ||
+    reviewCampaignProfileForManifest(receipt?.dynamicManifestSha256);
+  validateReviewCampaignProfile(profile);
   if (
     receipt.status !== "DETERMINISTICALLY_REVALIDATED" ||
     receipt.summary?.batches !==
-      CURRENT_V12_REVIEW_PROFILE.classificationBatches ||
+      profile.classificationBatches ||
     receipt.summary?.responses !==
-      CURRENT_V12_REVIEW_PROFILE.classificationResponses ||
-    receipt.dynamicManifestSha256 !==
-      CURRENT_V12_REVIEW_PROFILE.dynamicManifestSha256
+      profile.classificationResponses ||
+    receipt.dynamicManifestSha256 !== profile.dynamicManifestSha256
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_CHAIN_RECEIPT_BINDING_INVALID");
   return receipt;
@@ -354,8 +421,12 @@ function createClassificationEvidence({
   artifacts,
   batchResults,
   chainValidation,
+  campaignProfile,
 } = {}) {
-  validateClassificationChainReceipt(chainValidation);
+  const profile =
+    campaignProfile ||
+    reviewCampaignProfileForManifest(chainValidation?.dynamicManifestSha256);
+  validateClassificationChainReceipt(chainValidation, profile);
   const normalizedArtifacts = {};
   for (const name of [
     "sourceUnitPlan",
@@ -380,7 +451,10 @@ function createClassificationEvidence({
         : null,
     };
   }
-  if (!Array.isArray(batchResults) || batchResults.length !== 59)
+  if (
+    !Array.isArray(batchResults) ||
+    batchResults.length !== profile.classificationBatches
+  )
     throw reviewError("LF_A_DOUBLE_REVIEW_BATCH_EVIDENCE_COUNT_INVALID");
   const batches = batchResults
     .map((entry) => {
@@ -450,7 +524,9 @@ function createRunProvenance({
   implementationCommitSha,
   sourceRun,
   sourceArtifacts,
+  campaignProfile = CURRENT_V12_REVIEW_PROFILE,
 } = {}) {
+  validateReviewCampaignProfile(campaignProfile);
   const normalizedSourceArtifacts = {};
   for (const name of REQUIRED_SOURCE_ARTIFACTS) {
     const artifact = sourceArtifacts?.[name];
@@ -477,7 +553,7 @@ function createRunProvenance({
       runContractId: text(sourceRun?.runContractId),
       classificationRunContractId:
         text(sourceRun?.classificationRunContractId) ||
-        CURRENT_V12_REVIEW_PROFILE.classificationRunContractId,
+        campaignProfile.classificationRunContractId,
       manifestCompletionCommitSha: text(sourceRun?.manifestCompletionCommitSha),
       releaseId: text(sourceRun?.releaseId),
       runSignature: text(sourceRun?.runSignature),
@@ -510,34 +586,26 @@ function createRunProvenance({
   };
   if (
     !/^[a-f0-9]{40,64}$/u.test(payload.implementationCommitSha || "") ||
-    payload.implementationCommitSha !==
-      CURRENT_V12_REVIEW_PROFILE.implementationCommitSha ||
-    payload.sourceRun.runContractId !==
-      CURRENT_V12_REVIEW_PROFILE.productRunContractId ||
+    payload.implementationCommitSha !== campaignProfile.implementationCommitSha ||
+    payload.sourceRun.runContractId !== campaignProfile.productRunContractId ||
     payload.sourceRun.classificationRunContractId !==
-      CURRENT_V12_REVIEW_PROFILE.classificationRunContractId ||
+      campaignProfile.classificationRunContractId ||
     payload.sourceRun.manifestCompletionCommitSha !==
-      CURRENT_V12_REVIEW_PROFILE.manifestCompletionCommitSha ||
-    payload.sourceRun.releaseId !== CURRENT_V12_REVIEW_PROFILE.releaseId ||
-    payload.sourceRun.runSignature !==
-      CURRENT_V12_REVIEW_PROFILE.runSignature ||
-    payload.sourceRun.modelId !== CURRENT_V12_REVIEW_PROFILE.modelId ||
-    payload.sourceRun.promptContractId !==
-      CURRENT_V12_REVIEW_PROFILE.promptContractId ||
-    payload.sourceRun.contextLength !==
-      CURRENT_V12_REVIEW_PROFILE.modelContext ||
-    payload.sourceRun.maximumAttempts !==
-      CURRENT_V12_REVIEW_PROFILE.maximumAttempts ||
-    payload.sourceRun.requestTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.requestTimeoutMs ||
+      campaignProfile.manifestCompletionCommitSha ||
+    payload.sourceRun.releaseId !== campaignProfile.releaseId ||
+    payload.sourceRun.runSignature !== campaignProfile.runSignature ||
+    payload.sourceRun.modelId !== campaignProfile.modelId ||
+    payload.sourceRun.promptContractId !== campaignProfile.promptContractId ||
+    payload.sourceRun.contextLength !== campaignProfile.modelContext ||
+    payload.sourceRun.maximumAttempts !== campaignProfile.maximumAttempts ||
+    payload.sourceRun.requestTimeoutMs !== campaignProfile.requestTimeoutMs ||
     payload.sourceRun.abortSettlementTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.abortSettlementTimeoutMs ||
+      campaignProfile.abortSettlementTimeoutMs ||
     payload.sourceRun.modelRecoveryTimeoutMs !==
-      CURRENT_V12_REVIEW_PROFILE.modelRecoveryTimeoutMs ||
-    payload.sourceRun.qwenModelKey !==
-      CURRENT_V12_REVIEW_PROFILE.qwenModelKey ||
+      campaignProfile.modelRecoveryTimeoutMs ||
+    payload.sourceRun.qwenModelKey !== campaignProfile.qwenModelKey ||
     payload.sourceRun.transportContractId !==
-      CURRENT_V12_REVIEW_PROFILE.transportContractId ||
+      campaignProfile.transportContractId ||
     Object.values(payload.sourceRun).some((value) => value === null) ||
     [
       "contextLength",
@@ -558,7 +626,10 @@ function createRunProvenance({
   };
 }
 
-function validateRunProvenance(provenance) {
+function validateRunProvenance(
+  provenance,
+  campaignProfile = CURRENT_V12_REVIEW_PROFILE
+) {
   validateDigest(
     provenance,
     RUN_PROVENANCE_CONTRACT_ID,
@@ -566,7 +637,9 @@ function validateRunProvenance(provenance) {
     "LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_DIGEST_INVALID"
   );
   if (
-    stableStringify(createRunProvenance(provenance)) !==
+    stableStringify(
+      createRunProvenance({ ...provenance, campaignProfile })
+    ) !==
     stableStringify(provenance)
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_RUN_PROVENANCE_CANONICAL_INVALID");
@@ -772,7 +845,7 @@ function createReviewBasis({
   const dynamic = dynamicInventory(dynamicManifest);
   const legacy = legacyInventory(legacyManifest);
   const evidence = validateClassificationEvidence(classificationEvidence);
-  const provenance = validateRunProvenance(runProvenance);
+  const provenance = validateRunProvenance(runProvenance, campaignProfile);
   if (
     dynamicManifest.manifestSha256 !== campaignProfile.dynamicManifestSha256 ||
     dynamicManifestFileSha256 !== campaignProfile.dynamicManifestFileSha256 ||
@@ -1560,6 +1633,7 @@ module.exports = {
   CLASSIFICATION_CHAIN_CONTRACT_ID,
   CROSSWALK_DRAFT_CONTRACT_ID,
   CURRENT_V12_REVIEW_PROFILE,
+  CURRENT_V22_REVIEW_PROFILE,
   REVIEW_ARTIFACT_CONTRACT_ID,
   REVIEW_BASIS_CONTRACT_ID,
   REVIEW_CAMPAIGN_PROFILE_CONTRACT_ID,
@@ -1573,6 +1647,7 @@ module.exports = {
   createReviewerTemplate,
   createRunProvenance,
   reconcileApprovedCrosswalk,
+  reviewCampaignProfile,
   sealReviewerArtifact,
   validateClassificationEvidence,
   validateClassificationChain,

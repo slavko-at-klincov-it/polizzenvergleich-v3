@@ -13,6 +13,7 @@ const {
   validateClassificationChain,
   validateCrosswalkDraft,
   validateReviewBasis,
+  reviewCampaignProfile,
 } = require("../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
 
 const BASIS_FILE = "review-basis.private.json";
@@ -246,6 +247,9 @@ function materializeFreeze({
     fail("LF_A_DOUBLE_REVIEW_FREEZE_ARGUMENT_REQUIRED");
   const mapRead = readRegular(inputMapPath);
   const map = mapRead.value;
+  const campaignProfile = reviewCampaignProfile(
+    map.reviewProfileId || CURRENT_V12_REVIEW_PROFILE.profileId
+  );
   const required = [
     "dynamicManifest",
     "sourceUnitPlan",
@@ -327,10 +331,12 @@ function materializeFreeze({
     responses: reads.responses.value,
     summary: reads.summary.value,
     dynamicManifest: reads.dynamicManifest.value,
+    campaignProfile,
   });
   const evidence = createClassificationEvidence({
     artifacts,
     chainValidation,
+    campaignProfile,
     batchResults: batchReads.map((entry) => ({
       batchId: entry.value.batchId,
       relativePath: `inputs/batches/${path.basename(entry.relativePath)}`,
@@ -350,9 +356,10 @@ function materializeFreeze({
     implementationCommitSha: map.implementationCommitSha,
     sourceRun: map.sourceRun,
     sourceArtifacts,
+    campaignProfile,
   });
   const basis = createReviewBasis({
-    campaignProfile: CURRENT_V12_REVIEW_PROFILE,
+    campaignProfile,
     dynamicManifest: reads.dynamicManifest.value,
     dynamicManifestFileSha256: reads.dynamicManifest.fileSha256,
     legacyManifest: legacy.value,
