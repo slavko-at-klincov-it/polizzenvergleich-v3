@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
   buildADrivenSemanticManifest,
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
@@ -230,6 +231,13 @@ function reviewCampaignProfileForManifest(manifestSha256) {
   return profile;
 }
 
+function semanticSignalContractFor(campaignProfile) {
+  return campaignProfile.classificationRunContractId ===
+    CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
+    ? null
+    : A_SEMANTIC_SIGNAL_CONTRACT_ID;
+}
+
 function validateClassificationChain({
   sourcePlan,
   batchPlan,
@@ -240,6 +248,7 @@ function validateClassificationChain({
   campaignProfile = CURRENT_V12_REVIEW_PROFILE,
 } = {}) {
   validateReviewCampaignProfile(campaignProfile);
+  const semanticSignalContractId = semanticSignalContractFor(campaignProfile);
   if (
     !sourcePlan ||
     !validSha(sourcePlan.planSha256) ||
@@ -287,6 +296,8 @@ function validateClassificationChain({
       result.promptContractId !== campaignProfile.promptContractId ||
       result.promptSha256 !== sha256(JSON.stringify(prompt(validationBatch))) ||
       result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+      (semanticSignalContractId &&
+        result.semanticSignalContractId !== semanticSignalContractId) ||
       result.requestedModel !== campaignProfile.modelId ||
       result.modelContext !== campaignProfile.modelContext ||
       result.batchId !== batch.batchId ||
@@ -307,10 +318,7 @@ function validateClassificationChain({
       plan,
       validationBatch,
       result.responses,
-      campaignProfile.classificationRunContractId ===
-        CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
-        ? { semanticSignalContractId: null }
-        : undefined
+      { semanticSignalContractId }
     );
     if (
       validation.passed !== true ||
@@ -336,6 +344,7 @@ function validateClassificationChain({
   const reconstructedManifest = buildADrivenSemanticManifest({
     plan,
     responses,
+    semanticSignalContractId,
   });
   if (
     stableStringify(reconstructedManifest) !== stableStringify(dynamicManifest)
@@ -367,7 +376,9 @@ function validateClassificationChain({
     summary.transport?.abortSettlementTimeoutMs !==
       campaignProfile.abortSettlementTimeoutMs ||
     summary.transport?.modelRecoveryTimeoutMs !==
-      campaignProfile.modelRecoveryTimeoutMs
+      campaignProfile.modelRecoveryTimeoutMs ||
+    (semanticSignalContractId &&
+      summary.semanticSignalContractId !== semanticSignalContractId)
   )
     throw reviewError("LF_A_DOUBLE_REVIEW_SUMMARY_RUNTIME_INVALID");
   const payload = {
