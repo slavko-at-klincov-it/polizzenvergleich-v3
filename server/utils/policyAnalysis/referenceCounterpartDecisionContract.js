@@ -217,29 +217,69 @@ function validateCounterpartDecisions({
     const checkCandidateIds = [
       ...new Set(checks.flatMap(({ candidateIds = [] }) => candidateIds)),
     ];
-    const invalid =
-      !DECISIONS.has(decision) ||
-      !dimensionChecksValid ||
-      new Set(selected).size !== selected.length ||
-      selected.some((candidateId) => !allowed.has(candidateId)) ||
+    const decisionIssues = [];
+    if (!DECISIONS.has(decision))
+      decisionIssues.push({ code: "DECISION_VALUE_INVALID", decision });
+    if (!dimensionChecksValid)
+      decisionIssues.push({ code: "DIMENSION_CHECKS_INVALID" });
+    if (
+      !Array.isArray(response.selectedCandidateIds) ||
+      selected.some((candidateId) => typeof candidateId !== "string")
+    )
+      decisionIssues.push({ code: "SELECTED_CANDIDATE_IDS_INVALID" });
+    if (new Set(selected).size !== selected.length)
+      decisionIssues.push({ code: "SELECTED_CANDIDATE_IDS_DUPLICATE" });
+    const unknownSelectedCandidateIds = selected.filter(
+      (candidateId) => !allowed.has(candidateId)
+    );
+    if (unknownSelectedCandidateIds.length)
+      decisionIssues.push({
+        code: "SELECTED_CANDIDATE_IDS_UNKNOWN",
+        candidateIds: unknownSelectedCandidateIds,
+      });
+    if (
       selected.length !== checkCandidateIds.length ||
-      selected.some(
-        (candidateId) => !checkCandidateIds.includes(candidateId)
-      ) ||
-      (decision === "SUPPORTED" &&
-        (selected.length === 0 ||
-          outcomes.some((outcome) => outcome !== "MATCH"))) ||
-      (decision === "CONTRADICTED" &&
-        (selected.length === 0 ||
-          !outcomes.includes("MISMATCH") ||
-          outcomes.includes("NOT_ESTABLISHED"))) ||
-      (decision === "NOT_SUPPORTED" &&
-        (!outcomes.includes("NOT_ESTABLISHED") ||
-          outcomes.includes("MISMATCH")));
+      selected.some((candidateId) => !checkCandidateIds.includes(candidateId))
+    )
+      decisionIssues.push({
+        code: "SELECTED_CANDIDATE_UNION_MISMATCH",
+        expectedCandidateIds: [...checkCandidateIds].sort(),
+        receivedCandidateIds: [...selected].sort(),
+      });
+    if (
+      decision === "SUPPORTED" &&
+      (selected.length === 0 ||
+        outcomes.some((outcome) => outcome !== "MATCH"))
+    )
+      decisionIssues.push({
+        code: "SUPPORTED_OUTCOME_CONTRACT_INVALID",
+        outcomes,
+      });
+    if (
+      decision === "CONTRADICTED" &&
+      (selected.length === 0 ||
+        !outcomes.includes("MISMATCH") ||
+        outcomes.includes("NOT_ESTABLISHED"))
+    )
+      decisionIssues.push({
+        code: "CONTRADICTED_OUTCOME_CONTRACT_INVALID",
+        outcomes,
+      });
+    if (
+      decision === "NOT_SUPPORTED" &&
+      (!outcomes.includes("NOT_ESTABLISHED") ||
+        outcomes.includes("MISMATCH"))
+    )
+      decisionIssues.push({
+        code: "NOT_SUPPORTED_OUTCOME_CONTRACT_INVALID",
+        outcomes,
+      });
+    const invalid = decisionIssues.length > 0;
     if (invalid) {
       diagnostics.push({
         code: "INVALID_PACKAGE_DECISION",
         packageId: item.packageId,
+        issues: decisionIssues,
       });
       return {
         packageId: item.packageId,

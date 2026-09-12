@@ -313,6 +313,9 @@ async function runBatch({
   const initiallyPendingPackageIds = batch.expectedPackageIds.filter(
     (packageId) => !acceptedResponses.has(packageId)
   );
+  const packageAttemptCounts = new Map(
+    initiallyPendingPackageIds.map((packageId) => [packageId, 0])
+  );
   let workingBatch = {
     ...batch,
     batchId:
@@ -363,9 +366,19 @@ async function runBatch({
       resumedAcceptedPackages: acceptedResponses.size,
     };
   }
-  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+  const maximumInvocations =
+    1 +
+    initiallyPendingPackageIds.length * Math.max(0, maximumAttempts - 1);
+  for (let attempt = 1; attempt <= maximumInvocations; attempt += 1) {
     const started = performance.now();
     const messagesSha256 = sha256(JSON.stringify(messages));
+    const currentPackageAttemptCounts = Object.fromEntries(
+      workingBatch.expectedPackageIds.map((packageId) => {
+        const count = (packageAttemptCounts.get(packageId) || 0) + 1;
+        packageAttemptCounts.set(packageId, count);
+        return [packageId, count];
+      })
+    );
     let observedRawText = "";
     try {
       const completion = await requestCompletionWithTimeout({
@@ -382,27 +395,30 @@ async function runBatch({
       });
       observedRawText = completion.choices?.[0]?.message?.content || "";
       const parsed = parseJsonArray(observedRawText);
-      const trialResponses = [
-        ...acceptedResponses.values(),
-        ...parsed.filter(({ packageId }) => !acceptedResponses.has(packageId)),
-      ];
+      const currentValidation = validateBatchResponses(
+        searchExecution,
+        workingBatch,
+        parsed
+      );
+      for (const packageId of currentValidation.terminalPackageIds) {
+        const response = parsed.find(
+          (candidate) => candidate.packageId === packageId
+        );
+        if (response) acceptedResponses.set(packageId, response);
+      }
+      const trialResponses = [...acceptedResponses.values()];
       const validation = validateBatchResponses(
         searchExecution,
         batch,
         trialResponses
       );
-      for (const packageId of validation.terminalPackageIds) {
-        const response = trialResponses.find(
-          (candidate) => candidate.packageId === packageId
-        );
-        if (response) acceptedResponses.set(packageId, response);
-      }
       const pendingPackageIds = batch.expectedPackageIds.filter(
         (packageId) => !acceptedResponses.has(packageId)
       );
       const attemptRecord = {
         attempt,
         requestedPackageIds: workingBatch.expectedPackageIds,
+        packageAttemptCounts: currentPackageAttemptCounts,
         messagesSha256,
         durationMs: Math.round(performance.now() - started),
         errorClass: null,
@@ -419,19 +435,25 @@ async function runBatch({
         acceptedPackages: acceptedResponses.size,
         pendingPackages: pendingPackageIds.length,
         validationPassed: validation.passed,
-        diagnostics: validation.diagnostics,
+        requestValidationPassed: currentValidation.passed,
+        diagnostics: currentValidation.diagnostics,
       };
       attempts.push(attemptRecord);
       await onAttempt(attemptRecord);
       last = { rawText: observedRawText, validation, error: null };
       if (validation.passed) break;
-      workingBatch = repairBatch(batch, pendingPackageIds, attempt + 1);
+      const retryablePackageIds = pendingPackageIds.filter(
+        (packageId) =>
+          (packageAttemptCounts.get(packageId) || 0) < maximumAttempts
+      );
+      if (retryablePackageIds.length === 0) break;
+      workingBatch = repairBatch(batch, retryablePackageIds, attempt + 1);
       messages = [
         ...prompt(workingBatch),
         {
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
-            validation.diagnostics
+            currentValidation.diagnostics
           )}. Korrigiere ausschließlich die noch erwarteten Pakete. Verwende nur vorhandene compactCandidateIds. SUPPORTED verlangt ausschließlich MATCH; CONTRADICTED verlangt mindestens ein MISMATCH und kein NOT_ESTABLISHED; NOT_SUPPORTED verlangt mindestens ein NOT_ESTABLISHED und kein MISMATCH. Jeder NOT_ESTABLISHED-Check hat candidateIds exakt []; nur MATCH oder MISMATCH dürfen Kandidaten-IDs tragen. Teilbelege bleiben MATCH mit candidateIds. selectedCandidateIds ist exakt die Vereinigungsmenge aller dimensionChecks.candidateIds und darf bei einem MATCH oder MISMATCH niemals leer sein. Nur wenn ausnahmslos alle Checks NOT_ESTABLISHED sind, ist selectedCandidateIds:[] zulässig.`,
         },
       ];
@@ -439,6 +461,7 @@ async function runBatch({
       const attemptRecord = {
         attempt,
         requestedPackageIds: workingBatch.expectedPackageIds,
+        packageAttemptCounts: currentPackageAttemptCounts,
         messagesSha256,
         durationMs: Math.round(performance.now() - started),
         errorClass: errorClass(error),
@@ -469,6 +492,13 @@ async function runBatch({
         error: error.message,
       };
       if (error.retrySafe === false) break;
+      if (
+        workingBatch.expectedPackageIds.some(
+          (packageId) =>
+            (packageAttemptCounts.get(packageId) || 0) >= maximumAttempts
+        )
+      )
+        break;
       if (errorClass(error) === "MODEL_RESPONSE_INVALID" && observedRawText) {
         messages = [
           ...prompt(workingBatch),

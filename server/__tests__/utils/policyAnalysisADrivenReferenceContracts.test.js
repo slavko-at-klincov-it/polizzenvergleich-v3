@@ -6443,9 +6443,75 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
       status: "UNRESOLVED",
       reasonCode: "INVALID_PACKAGE_DECISION",
     });
+    expect(
+      result.diagnostics.find(
+        ({ packageId }) => packageId === "package-2"
+      )?.issues
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "DIMENSION_CHECKS_INVALID" }),
+        expect.objectContaining({
+          code: "SELECTED_CANDIDATE_IDS_UNKNOWN",
+        }),
+      ])
+    );
     expect(result.diagnostics.map(({ code }) => code)).toContain(
       "UNKNOWN_PACKAGE_ID"
     );
+  });
+
+  test("reports the exact aggregate decision contract violated by mixed outcomes", () => {
+    const candidates = compactReferenceCandidates([candidate("one", 10, 30)], {
+      documents,
+    }).compactCandidates;
+    const packageItem = {
+      packageId: "package-mixed",
+      componentId: "component-mixed",
+      documentUuid: "b-doc",
+      candidates,
+      requiredDimensions: ["FACT_ROLE", "SCOPE"],
+      semanticChecks: semanticChecks("component-mixed", [
+        "FACT_ROLE",
+        "SCOPE",
+      ]),
+      searchCoverage: {
+        channelExecutionStatus: "CHANNELS_COMPLETE",
+        absenceStatus: "NOT_CERTIFIED_BOUNDED_TOP_K",
+        negativeConclusionEligible: false,
+        requiredChannels: ["CURRENT", "BM25", "STRUCTURE", "DINGHY"],
+        completedChannels: ["CURRENT", "BM25", "STRUCTURE", "DINGHY"],
+      },
+    };
+    const candidateId = candidates[0].compactCandidateId;
+    const result = validateCounterpartDecisions({
+      searchExecution: searchExecutionArtifact([packageItem]),
+      responses: [
+        {
+          packageId: packageItem.packageId,
+          decision: "NOT_SUPPORTED",
+          selectedCandidateIds: [candidateId],
+          dimensionChecks: packageItem.semanticChecks.map(
+            ({ checkId, dimension }, index) => ({
+              checkId,
+              dimension,
+              outcome: index === 0 ? "MISMATCH" : "MATCH",
+              candidateIds: [candidateId],
+            })
+          ),
+        },
+      ],
+    });
+
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PACKAGE_DECISION",
+      packageId: packageItem.packageId,
+      issues: [
+        {
+          code: "NOT_SUPPORTED_OUTCOME_CONTRACT_INVALID",
+          outcomes: ["MISMATCH", "MATCH"],
+        },
+      ],
+    });
   });
 });
 
@@ -6592,6 +6658,120 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         "darf bei einem MATCH oder MISMATCH niemals leer sein"
       );
     }
+  });
+
+  test("applies the retry limit per package instead of exhausting the batch on the first package", async () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude sind am Versicherungsort erwähnt.";
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: "candidate-one",
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-one",
+            channels: ["DINGHY"],
+            sourceSpans: [
+              {
+                spanId: "span-one",
+                exactText,
+                exactTextSha256: crypto
+                  .createHash("sha256")
+                  .update(exactText)
+                  .digest("hex"),
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const batch = buildADrivenCounterpartDecisionPlan(searchExecution, {
+      maximumPackages: 2,
+      maximumCharacters: 14_000,
+    }).batches.find(({ packages }) => packages[0].semanticChecks.length > 1);
+    const invalidByPackage = new Map(
+      batch.packages.map((item) => [
+        item.packageId,
+        {
+          packageId: item.packageId,
+          decision: "NOT_SUPPORTED",
+          selectedCandidateIds: [],
+          dimensionChecks: item.semanticChecks.map(
+            ({ checkId, dimension }, index) => ({
+              checkId,
+              dimension,
+              outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
+              candidateIds: index === 0 ? ["candidate-one"] : [],
+            })
+          ),
+        },
+      ])
+    );
+    const modelCallsByPackage = new Map();
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn().mockImplementation(({ messages }) => {
+            const request = JSON.parse(messages[1].content);
+            const responses = request.expectedPackageIds.map((packageId) => {
+              const count = (modelCallsByPackage.get(packageId) || 0) + 1;
+              modelCallsByPackage.set(packageId, count);
+              const original = invalidByPackage.get(packageId);
+              const requiredCount =
+                packageId === batch.expectedPackageIds[0] ? 3 : 2;
+              return count < requiredCount
+                ? original
+                : { ...original, selectedCandidateIds: ["candidate-one"] };
+            });
+            return Promise.resolve({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify(responses) } }],
+              usage: {},
+            });
+          }),
+        },
+      },
+    };
+
+    const result = await runCounterpartDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      searchExecution,
+      batch,
+      maximumAttempts: 3,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(4);
+    expect(result.attempts.map(({ requestedPackageIds }) => requestedPackageIds))
+      .toEqual([
+        batch.expectedPackageIds,
+        [batch.expectedPackageIds[0]],
+        [batch.expectedPackageIds[0]],
+        [batch.expectedPackageIds[1]],
+      ]);
+    expect(result.attempts[2].packageAttemptCounts).toEqual({
+      [batch.expectedPackageIds[0]]: 3,
+    });
+    expect(
+      client.chat.completions.create.mock.calls[1][0].messages.at(-1).content
+    ).toContain("SELECTED_CANDIDATE_UNION_MISMATCH");
   });
 
   test("keeps a real-sized compacted candidate package inside the default decision budget", () => {
