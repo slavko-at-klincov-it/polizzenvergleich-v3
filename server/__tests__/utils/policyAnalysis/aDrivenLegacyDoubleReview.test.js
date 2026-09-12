@@ -601,11 +601,8 @@ describe("V12 283/631 double-review contract", () => {
       })
     ).toThrow("LF_A_DOUBLE_REVIEW_DECISION_INVALID");
     for (const [index, entry] of draft.records.entries())
-      if (
-        entry.mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE"
-      )
-        input.decisions[index].rootCauseDisposition =
-          "ROLE_MAPPING_TOO_NARROW";
+      if (entry.mechanicalRoleReview.disposition === "ROLE_INCOMPATIBLE")
+        input.decisions[index].rootCauseDisposition = "ROLE_MAPPING_TOO_NARROW";
     expect(
       sealReviewerArtifact({
         basis: frozen,
