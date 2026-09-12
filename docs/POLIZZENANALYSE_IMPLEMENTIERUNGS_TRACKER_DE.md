@@ -8232,3 +8232,72 @@ identitätsgebundenen Pakete materialisiert werden.
 Status: `REPRODUZIERBARER REVIEWER-WORKBOOK-EXPORT UND RÜCKIMPORT TECHNISCH
 PASS; REALE REVIEWER-IDENTITÄTEN UND 631ER ENTSCHEIDUNGEN FEHLEN; B-PILOT UND
 1+9 WEITER FAIL-CLOSED`.
+
+### 133.28 Korrektur des Startgates: dynamisches A statt Legacy-Review und Kryptoschlüssel
+
+Die in 133.24 bis 133.27 eingeführte 631er-Doppelreview- und
+Ed25519-Autorisierungskette wurde irrtümlich zur Voraussetzung für den
+internen B-Shadow gemacht. Das widerspricht dem A-getriebenen Produktziel:
+Die aktuelle Eingabe A muss selbst Kategorien, Reihenfolge, Anforderungen,
+Komponenten und damit das Ergebniszeilenuniversum bestimmen. Ein historischer
+283/631-Crosswalk darf diese dynamische Ableitung nur regressiv beurteilen,
+nicht den Lauf gegen ein geändertes oder erweitertes A sperren.
+
+Der neue automatische Vertrag `LF_A_AUTOMATED_B_SHADOW_READINESS_V1` prüft
+deshalb ausschließlich maschinell belegbare Eigenschaften des aktuellen
+Laufs:
+
+- das Inputmanifest bindet alle A- und B-Dokumente eindeutig;
+- der A-Source-Unit-Plan wird aus den aktuellen Dokumentartefakten erneut
+  aufgebaut und muss byteäquivalent zum gespeicherten Plan sein;
+- Batchplan, Batchresultate, Modellantworten und Manifest werden aus der
+  deterministisch rekonstruierten Klassifikation erneut validiert;
+- jeder A-Quellblock besitzt genau einen terminalen Status;
+- offene Units oder Blöcke, fehlende Besitzer und verdächtig als
+  nichtoperativ verworfene operative Blöcke stoppen fail-closed;
+- Anforderungs- und Komponentenzahl bleiben vollständig dynamisch; es gibt
+  weder eine feste Seitenzahl noch ein 283-/631- oder Ein-Dokument-Gate.
+
+Der freigegebene Scope bleibt eng: nur privater B-Retrieval- und
+Gegenstück-Shadow. Produkt-Routing, Kundenergebnis, XLSX und Deployment
+bleiben ausdrücklich unzulässig. SHA-256 dient dabei nur als technischer
+Fingerabdruck gespeicherter Artefakte. Eine Ed25519-Signatur, ein Public Key,
+menschliche Reviewer oder der Legacy-Crosswalk sind für diesen internen
+Shadow nicht erforderlich.
+
+Der reale V35-Freeze bestand das automatische Gate auf Commit
+`e67900f240e704b51f39828e178e6bda894ee11c` im isolierten Mac-Studio-
+Worktree `/private/tmp/lf-auto-gate-e679-vcozsT`:
+
+```text
+A-Dokumente:                 1
+B-Dokumente:                 9
+A-Quellblöcke:               1.005
+geplante A-Units:              380
+A-Batches:                      59
+terminale Modellantworten:     349
+dynamische Anforderungen:      357
+dynamische Komponenten:      1.054
+UNRESOLVED Units/Blöcke:         0/0
+Legacy-/Reviewer-/Krypto-Gate:  nicht erforderlich
+Readiness-SHA-256:
+  f2bd24e788b5cf8aad280b7abca6e178dbb27f4414fc158d2054abe0c35fc124
+```
+
+Der erste Realcheck deckte einen Integrationsfehler auf: Der gespeicherte
+Batchplan bindet den Basis-Source-Plan, die Modellantworten werden jedoch
+gegen den daraus deterministisch abgeleiteten Evidence-Plan validiert. Der
+Verifier verwendete zunächst fälschlich den Basisplan auch für die
+Responsevalidierung und stoppte korrekt. Commit `e67900f24` trennt beide
+Kontexte; danach bestand derselbe unveränderte V35-Freeze.
+
+Am exakten Commit bestanden auf dem Mac Studio Node- und Shellsyntax,
+Prettier, Produkt-ESLint, 15/15 fokussierte Tests sowie 190/190 Server-Suites
+mit 2.693/2.693 Tests. Anschließend wurde der vollständige private B-Shadow
+über alle neun B-Dokumente mit BM25, Struktur, Dinghy und Qwen gestartet.
+Sein Ergebnis ist noch kein Produkt- oder Qualitätsnachweis und wird erst
+nach vollständigem Abschluss separat ausgewertet.
+
+Status: `DYNAMISCHES AUTOMATISCHES A-GATE PASS; FESTE 283/631-ZAHLEN,
+REVIEWER UND ED25519 AUS DEM INTERNEN SHADOW-START ENTFERNT; 1+9-B-SHADOW
+GESTARTET; PRODUKTROUTING, KUNDEN-XLSX UND DEPLOYMENT WEITER GESPERRT`.
