@@ -88,7 +88,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_COPULAR_DEFINITION",
     pattern:
-      /(?:(?<![\s\S])|(?<=[.!?]\s))\b(?:(?:\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,2}\s+)?(?:Gebäude|Nebengebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen))\s+(?:ist|sind)\s+(?![^.;:]{0,400}\b(?:mit)?versichert\p{L}*\b)(?!\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)(?=[^.;:]{1,180}\b(?:Gebäude|Nebengebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b)[^.;:]{1,400}/gu,
+      /(?:(?<![\s\S])|(?<=[.!?]\s))\b(?:(?:\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,2}\s+)?(?:Gebäude|Nebengebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen))\s+(?:ist|sind)\s+(?![^.;:]{0,400}\b(?:(?:mit)?versichert|gedeckt|ausgeschlossen)\s*(?:[.;:]|$))(?!\s*verpflichtet\b|\s*berechtigt\b)(?=[^.;:]{1,180}\b(?:Gebäude|Nebengebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b)[^.;:]{1,400}/gu,
     requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
   }),
   Object.freeze({

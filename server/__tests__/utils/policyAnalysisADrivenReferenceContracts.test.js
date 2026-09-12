@@ -876,6 +876,7 @@ describe("requirement-local semantic evidence completeness", () => {
 
   test.each([
     "Gebäude sind versichert.",
+    "Gebäude sind samt Anlagen mitversichert.",
     "Versichert sind Gebäude einschließlich ihrer Fundamente und Anlagen.",
     "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und Grundstückshaftpflichtversicherung bis zur Höhe der Gebäudeversicherungssumme mitversichert:",
     "Schäden an Personen (eine außereheliche Gemeinschaft ist in ihrer Auswirkung der ehelichen gleichgestellt) sind ausgeschlossen.",
