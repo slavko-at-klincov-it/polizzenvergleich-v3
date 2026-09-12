@@ -479,8 +479,8 @@ function exactConditionLabel(unit, component) {
   )
     return null;
   const selectedIds = new Set(component.sourceBlockIds);
-  const selectedBlocks = normalizationEvidenceBlocks(unit).filter(({ blockId }) =>
-    selectedIds.has(blockId)
+  const selectedBlocks = normalizationEvidenceBlocks(unit).filter(
+    ({ blockId }) => selectedIds.has(blockId)
   );
   if (selectedBlocks.length !== selectedIds.size) return null;
   const declaredSourceText = selectedBlocks
