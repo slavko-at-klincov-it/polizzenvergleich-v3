@@ -773,18 +773,29 @@ describe("requirement-local semantic evidence completeness", () => {
     expect(diagnostics).toEqual([]);
   });
 
-  test("ignores a cost-saving adjective and a legal liability disclaimer", () => {
+  test("ignores cost-saving wording and non-coverage references that are not local exclusions", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(
         ["cost", "die Wahl einer kosten- oder zeitsparenden Arbeitsweise"],
         [
           "liability",
           "Die Haftung für eine leicht fahrlässige Pflichtverletzung wird ausgeschlossen.",
+        ],
+        [
+          "fallback",
+          "Mehrkosten sind versichert, soweit sie in einer anderen Deckung keine Deckung finden.",
         ]
       ),
       [
         requirement(["cost"], [component("OBJECT", "cost")]),
         requirement(["liability"], [component("CONDITION", "liability")]),
+        requirement(
+          ["fallback"],
+          [
+            component("CONDITION", "fallback"),
+            component("FACT_ROLE", "fallback", { label: "Mehrkosten" }),
+          ]
+        ),
       ]
     );
 

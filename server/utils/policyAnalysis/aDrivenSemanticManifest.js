@@ -309,9 +309,10 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
 function signalApplies(signal, matchedEvidence) {
   if (
     signal.signalId === "EXPLICIT_EXCLUSION" &&
-    /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu.test(
-      matchedEvidence.exactText
-    )
+    [
+      /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu,
+      /\bsoweit\b.+\bkeine\s+deckung\s+finden\b/iu,
+    ].some((pattern) => pattern.test(matchedEvidence.exactText))
   )
     return false;
   return true;
