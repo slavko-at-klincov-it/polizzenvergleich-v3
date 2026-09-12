@@ -46,6 +46,8 @@ const CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID =
 const CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID =
   "LF_A_CONTROLLED_B_PILOT_AUTHORIZATION_V1";
 const CONTROLLED_B_PILOT_GATE_CONTRACT_ID = "LF_A_CONTROLLED_B_PILOT_GATE_V1";
+const CONTROLLED_B_PILOT_LAUNCH_CONTRACT_ID =
+  "LF_A_CONTROLLED_B_PILOT_LAUNCH_V1";
 const CONTROLLED_B_PILOT_SCOPE =
   "LF_REFERENCE_A_DRIVEN_CONTROLLED_B_RETRIEVAL_SHADOW_PILOT";
 const CONTROLLED_B_PILOT_POLICY = Object.freeze({
@@ -2729,6 +2731,21 @@ function validateControlledBPilotAuthorization({
   ...args
 } = {}) {
   validateControlledBPilotAuthorizationRequest({ request, ...args });
+  return validateControlledBPilotAuthorizationEnvelope({
+    request,
+    authorization,
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  });
+}
+
+function validateControlledBPilotAuthorizationEnvelope({
+  request,
+  authorization,
+  trustAnchor,
+  expectedTrustAnchorSha256,
+} = {}) {
+  authorizationRequestEnvelope(request);
   validateControlledBPilotTrustAnchor({
     trustAnchor,
     expectedTrustAnchorSha256,
@@ -2763,11 +2780,13 @@ function validateControlledBPilotAuthorization({
   return authorization;
 }
 
-function createControlledBPilotGate(args = {}) {
-  const { request, authorization, trustAnchor, expectedTrustAnchorSha256 } =
-    args;
-  validateControlledBPilotAuthorization(args);
-  const payload = {
+function controlledBPilotGatePayload({
+  request,
+  authorization,
+  trustAnchor,
+  expectedTrustAnchorSha256,
+}) {
+  return {
     schemaVersion: 1,
     contractId: CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
     requestSha256: request.requestSha256,
@@ -2792,6 +2811,18 @@ function createControlledBPilotGate(args = {}) {
       deploymentAllowed: false,
     },
   };
+}
+
+function createControlledBPilotGate(args = {}) {
+  const { request, authorization, trustAnchor, expectedTrustAnchorSha256 } =
+    args;
+  validateControlledBPilotAuthorization(args);
+  const payload = controlledBPilotGatePayload({
+    request,
+    authorization,
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  });
   return {
     ...payload,
     gateSha256: domainDigest(CONTROLLED_B_PILOT_GATE_CONTRACT_ID, payload),
@@ -2811,11 +2842,82 @@ function validateControlledBPilotGate({ gate, ...args } = {}) {
   return gate;
 }
 
+function validateControlledBPilotLaunchBundle({
+  request,
+  authorization,
+  trustAnchor,
+  expectedTrustAnchorSha256,
+  gate,
+  dynamicManifest,
+} = {}) {
+  validateControlledBPilotAuthorizationEnvelope({
+    request,
+    authorization,
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  });
+  validateDigest(
+    gate,
+    CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+    "gateSha256",
+    "LF_A_CONTROLLED_B_PILOT_GATE_DIGEST_INVALID"
+  );
+  const expectedGatePayload = controlledBPilotGatePayload({
+    request,
+    authorization,
+    trustAnchor,
+    expectedTrustAnchorSha256,
+  });
+  const expectedGate = {
+    ...expectedGatePayload,
+    gateSha256: domainDigest(
+      CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+      expectedGatePayload
+    ),
+  };
+  if (stableStringify(expectedGate) !== stableStringify(gate))
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_GATE_CANONICAL_INVALID");
+  validateADrivenSemanticManifest(dynamicManifest);
+  if (
+    dynamicManifest?.manifestSha256 !== gate.dynamicManifestSha256 ||
+    dynamicManifest?.manifestSha256 !== request.dynamicManifestSha256
+  )
+    throw reviewError("LF_A_CONTROLLED_B_PILOT_DYNAMIC_MANIFEST_MISMATCH");
+  return gate;
+}
+
+function createControlledBPilotLaunchReceipt(args = {}) {
+  const { gate, request, authorization, trustAnchor, dynamicManifest } = args;
+  validateControlledBPilotLaunchBundle(args);
+  const payload = {
+    schemaVersion: 1,
+    contractId: CONTROLLED_B_PILOT_LAUNCH_CONTRACT_ID,
+    gateSha256: gate.gateSha256,
+    requestSha256: request.requestSha256,
+    authorizationSha256: authorization.authorizationSha256,
+    trustAnchorSha256: trustAnchor.trustAnchorSha256,
+    dynamicManifestSha256: dynamicManifest.manifestSha256,
+    scope: CONTROLLED_B_PILOT_SCOPE,
+    status: "CONTROLLED_B_PILOT_LAUNCH_VALIDATED",
+    bPilotAllowed: true,
+    fullOnePlusNineAllowed: false,
+    productRoutingAllowed: false,
+    resultMutationAllowed: false,
+    customerWorkbookAllowed: false,
+    deploymentAllowed: false,
+  };
+  return {
+    ...payload,
+    launchSha256: domainDigest(CONTROLLED_B_PILOT_LAUNCH_CONTRACT_ID, payload),
+  };
+}
+
 module.exports = {
   APPROVED_CROSSWALK_CONTRACT_ID,
   CONTROLLED_B_PILOT_AUTHORIZATION_CONTRACT_ID,
   CONTROLLED_B_PILOT_AUTHORIZATION_REQUEST_CONTRACT_ID,
   CONTROLLED_B_PILOT_GATE_CONTRACT_ID,
+  CONTROLLED_B_PILOT_LAUNCH_CONTRACT_ID,
   CONTROLLED_B_PILOT_TRUST_ANCHOR_CONTRACT_ID,
   CLASSIFICATION_EVIDENCE_CONTRACT_ID,
   CLASSIFICATION_CHAIN_CONTRACT_ID,
@@ -2837,6 +2939,7 @@ module.exports = {
   createClassificationEvidence,
   createControlledBPilotAuthorizationRequest,
   createControlledBPilotGate,
+  createControlledBPilotLaunchReceipt,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
   createDynamicRemainderReviewerTemplate,
@@ -2857,6 +2960,7 @@ module.exports = {
   validateControlledBPilotAuthorization,
   validateControlledBPilotAuthorizationRequest,
   validateControlledBPilotGate,
+  validateControlledBPilotLaunchBundle,
   validateControlledBPilotTrustAnchor,
   validateCrosswalkDraft,
   validateDynamicRemainderDraft,

@@ -1,0 +1,200 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NODE_BIN="$SCRIPT_DIR/.runtime/node-v22.23.2/bin/node"
+LMS_BIN="${V3_LMS_BIN:-$HOME/.lmstudio/bin/lms}"
+LMSTUDIO_SDK="${V3_LMSTUDIO_SDK:-$HOME/.lmstudio/extensions/plugins/lmstudio/js-code-sandbox/node_modules/@lmstudio/sdk/dist/index.cjs}"
+BASE_URL="${LMSTUDIO_BASE_PATH:-http://127.0.0.1:1234/v1}"
+QWEN_MODEL="${POLICY_FULL_MODEL:-qwen/qwen3.6-35b-a3b}"
+QWEN_CONTEXT="${POLICY_FULL_MODEL_TOKEN_LIMIT:-42496}"
+QWEN_MODEL_KEY="${V3_QWEN36_MODEL_KEY:-qwen3.6-35b-a3b-mlx-text}"
+DINGHY_MODEL_KEY="${HYBRID_SHADOW_DINGHY_MODEL_KEY:-text-embedding-dinghy-law-4b-v1}"
+DINGHY_CONTEXT="${HYBRID_SHADOW_DINGHY_CONTEXT:-2048}"
+EXPECTED_DINGHY_RUNTIME="${HYBRID_SHADOW_DINGHY_RUNTIME:-llama.cpp-mac-arm64-apple-metal-advsimd@2.28.2}"
+PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
+TRUST_ANCHOR_PIN_FILE="${LF_A_B_PILOT_TRUST_ANCHOR_PIN_FILE:-$PRIVATE_QA_ROOT/trust/controlled-b-pilot-trust-anchor.sha256}"
+GLOBAL_LOCK_DIR="$PRIVATE_QA_ROOT/.all-categories-quality.lock"
+
+if [ "$#" -ne 8 ]; then
+  printf '%s\n' "Verwendung: $0 '/ABSOLUTER/1+N-LAUF' '/ABSOLUTER/A-FINAL' '/ABSOLUTER/EMBEDDING-VERTRAG.json' '/ABSOLUTER/AUTORISIERUNGSREQUEST.json' '/ABSOLUTER/AUTORISIERUNG.json' '/ABSOLUTER/TRUST-ANCHOR.json' '/ABSOLUTER/GATE.json' '/ABSOLUTER/NEUER/AUSGABEORDNER'" >&2
+  exit 1
+fi
+
+RUN_ROOT="$1"
+A_FINAL_ROOT="$2"
+CONTRACT_FILE="$3"
+AUTHORIZATION_REQUEST_FILE="$4"
+AUTHORIZATION_FILE="$5"
+TRUST_ANCHOR_FILE="$6"
+GATE_FILE="$7"
+OUTPUT_ROOT="$8"
+DYNAMIC_MANIFEST="$A_FINAL_ROOT/dynamic-semantic-manifest.private.json"
+INPUT_MANIFEST="$RUN_ROOT/input-manifest.private.json"
+LAUNCH_RECEIPT="$OUTPUT_ROOT/controlled-b-pilot-launch.private.json"
+B_RETRIEVAL_ROOT="$OUTPUT_ROOT/b-retrieval"
+B_DECISION_ROOT="$OUTPUT_ROOT/b-decisions"
+LOCK_ACQUIRED=0
+RESTORE_QWEN=0
+DINGHY_LOADED=0
+
+verify_model_state() {
+  local state_args=(
+    --baseUrl "$BASE_URL"
+    --model "$1"
+    --type "$2"
+    --state "$3"
+  )
+  if [ -n "${4:-}" ]; then
+    state_args+=(--context "$4")
+  fi
+  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyLmStudioModelState.cjs" \
+    "${state_args[@]}"
+}
+
+load_qwen() {
+  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/load-qwen36.cjs" \
+    "$LMSTUDIO_SDK" \
+    "$QWEN_MODEL_KEY" \
+    "$QWEN_MODEL"
+  verify_model_state "$QWEN_MODEL" llm loaded "$QWEN_CONTEXT"
+}
+
+cleanup() {
+  local exit_code=$?
+  trap - EXIT HUP INT TERM
+  if [ "$DINGHY_LOADED" -eq 1 ]; then
+    "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+      "$LMSTUDIO_SDK" \
+      "$DINGHY_IDENTIFIER" || exit_code=1
+    DINGHY_LOADED=0
+  fi
+  if [ "$RESTORE_QWEN" -eq 1 ]; then
+    load_qwen || exit_code=1
+    RESTORE_QWEN=0
+  fi
+  if [ "$LOCK_ACQUIRED" -eq 1 ]; then
+    rm -f "$GLOBAL_LOCK_DIR/owner.private.txt"
+    rmdir "$GLOBAL_LOCK_DIR" 2>/dev/null || true
+  fi
+  exit "$exit_code"
+}
+
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+
+case "$RUN_ROOT:$A_FINAL_ROOT:$CONTRACT_FILE:$AUTHORIZATION_REQUEST_FILE:$AUTHORIZATION_FILE:$TRUST_ANCHOR_FILE:$GATE_FILE:$OUTPUT_ROOT" in
+  /*:/*:/*:/*:/*:/*:/*:/*) ;;
+  *)
+    printf '%s\n' "Alle Eingabe- und Ausgabepfade müssen absolut sein." >&2
+    exit 1
+    ;;
+esac
+[ -x "$NODE_BIN" ] || { printf '%s\n' "Node-22-Laufzeit fehlt." >&2; exit 1; }
+[ -x "$LMS_BIN" ] || { printf '%s\n' "LM-Studio-CLI fehlt." >&2; exit 1; }
+[ -f "$LMSTUDIO_SDK" ] || { printf '%s\n' "LM-Studio-SDK fehlt." >&2; exit 1; }
+[ -d "$RUN_ROOT" ] || { printf '%s\n' "1+N-Lauf fehlt." >&2; exit 1; }
+[ -d "$A_FINAL_ROOT" ] || { printf '%s\n' "Eingefrorenes A-Final fehlt." >&2; exit 1; }
+[ -f "$CONTRACT_FILE" ] || { printf '%s\n' "Embeddingvertrag fehlt." >&2; exit 1; }
+[ -f "$AUTHORIZATION_REQUEST_FILE" ] || { printf '%s\n' "Autorisierungsrequest fehlt." >&2; exit 1; }
+[ -f "$AUTHORIZATION_FILE" ] || { printf '%s\n' "Autorisierung fehlt." >&2; exit 1; }
+[ -f "$TRUST_ANCHOR_FILE" ] || { printf '%s\n' "Trust Anchor fehlt." >&2; exit 1; }
+[ -f "$TRUST_ANCHOR_PIN_FILE" ] || { printf '%s\n' "Administrativ gepinnte Trust-Anchor-Datei fehlt." >&2; exit 1; }
+[ -f "$GATE_FILE" ] || { printf '%s\n' "B-Pilot-Gate fehlt." >&2; exit 1; }
+[ -f "$DYNAMIC_MANIFEST" ] || { printf '%s\n' "Dynamisches A-Manifest fehlt." >&2; exit 1; }
+[ -f "$INPUT_MANIFEST" ] || { printf '%s\n' "Input-Manifest fehlt." >&2; exit 1; }
+[ ! -e "$OUTPUT_ROOT" ] || { printf '%s\n' "Ausgabe existiert bereits." >&2; exit 1; }
+
+umask 077
+mkdir -p "$PRIVATE_QA_ROOT"
+if ! mkdir "$GLOBAL_LOCK_DIR" 2>/dev/null; then
+  printf '%s\n' "Ein anderer Qualitätslauf hält die globale Modellsperre." >&2
+  exit 1
+fi
+LOCK_ACQUIRED=1
+mkdir -p "$OUTPUT_ROOT"
+"$NODE_BIN" -e '
+  const fs = require("fs");
+  const [file, pid, output] = process.argv.slice(1);
+  fs.writeFileSync(file, `pid=${pid} kind=lf-a-controlled-b-pilot output=${output}\n`, {mode: 0o600});
+' "$GLOBAL_LOCK_DIR/owner.private.txt" "$$" "$OUTPUT_ROOT"
+
+"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyControlledBPilotLaunch.cjs" \
+  --request "$AUTHORIZATION_REQUEST_FILE" \
+  --authorization "$AUTHORIZATION_FILE" \
+  --trustAnchor "$TRUST_ANCHOR_FILE" \
+  --expectedTrustAnchorFile "$TRUST_ANCHOR_PIN_FILE" \
+  --gate "$GATE_FILE" \
+  --dynamicManifest "$DYNAMIC_MANIFEST" \
+  --inputManifest "$INPUT_MANIFEST" \
+  --output "$LAUNCH_RECEIPT"
+
+"$LMS_BIN" daemon up >/dev/null
+"$LMS_BIN" server start >/dev/null 2>&1 || true
+verify_model_state "$QWEN_MODEL" llm loaded "$QWEN_CONTEXT"
+
+DINGHY_IDENTIFIER="$("$NODE_BIN" -e '
+  const fs = require("fs");
+  const contract = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  if (contract?.enabled !== true || !contract?.provider?.model) process.exit(2);
+  process.stdout.write(contract.provider.model);
+' "$CONTRACT_FILE")"
+RUNTIME_REVISION="$("$NODE_BIN" -e '
+  const fs = require("fs");
+  const contract = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  if (!contract?.provider?.runtimeRevision) process.exit(2);
+  process.stdout.write(contract.provider.runtimeRevision);
+' "$CONTRACT_FILE")"
+if [ "$RUNTIME_REVISION" != "$EXPECTED_DINGHY_RUNTIME" ]; then
+  printf '%s\n' "Embeddingvertrag fordert unerwartete Runtime." >&2
+  exit 1
+fi
+if ! "$LMS_BIN" runtime ls | grep -F "$RUNTIME_REVISION" | grep -F '✓' >/dev/null; then
+  printf '%s\n' "Dinghy-Runtime ist nicht ausgewählt." >&2
+  exit 1
+fi
+
+RESTORE_QWEN=1
+"$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+  "$LMSTUDIO_SDK" \
+  "$QWEN_MODEL"
+verify_model_state "$QWEN_MODEL" llm not-loaded ""
+"$LMS_BIN" load "$DINGHY_MODEL_KEY" \
+  --identifier "$DINGHY_IDENTIFIER" \
+  --context-length "$DINGHY_CONTEXT" \
+  --yes
+DINGHY_LOADED=1
+verify_model_state "$DINGHY_IDENTIFIER" embeddings loaded "$DINGHY_CONTEXT"
+
+"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
+  --shadowRoot "$A_FINAL_ROOT" \
+  --runRoot "$RUN_ROOT" \
+  --contractFile "$CONTRACT_FILE" \
+  --output "$B_RETRIEVAL_ROOT"
+
+"$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+  "$LMSTUDIO_SDK" \
+  "$DINGHY_IDENTIFIER"
+DINGHY_LOADED=0
+verify_model_state "$DINGHY_IDENTIFIER" embeddings not-loaded ""
+load_qwen
+RESTORE_QWEN=0
+
+"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceCounterpartDecisions.cjs" \
+  --searchExecution "$B_RETRIEVAL_ROOT/search-execution.private.json" \
+  --output "$B_DECISION_ROOT" \
+  --model "$QWEN_MODEL" \
+  --modelContext "$QWEN_CONTEXT" \
+  --maximumAttempts 3
+
+if ! "$NODE_BIN" -e '
+  const fs = require("fs");
+  const summary = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  process.exit(summary.unresolvedPackages === 0 ? 0 : 2);
+' "$B_DECISION_ROOT/summary.private.json"; then
+  printf '%s\n' "B-Entscheidungen enthalten ungeklärte Pakete; Pilot bleibt unvollständig." >&2
+  exit 2
+fi
+
+printf '%s\n' "[lf-a-controlled-b-pilot] Shadow vollständig: $OUTPUT_ROOT"
+printf '%s\n' "[lf-a-controlled-b-pilot] Kein vollständiger Produktlauf, keine Kundenausgabe und kein Deployment erzeugt."

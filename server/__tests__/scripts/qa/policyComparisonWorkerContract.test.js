@@ -99,6 +99,40 @@ describe("policy comparison worker contract", () => {
     expect(pilotRunner).toContain("RESTORE_QWEN=1");
   });
 
+  test("gates the A-driven B-only pilot before any model or retrieval work", () => {
+    const controlledPilotRunner = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "run-a-driven-controlled-b-pilot.command"
+      ),
+      "utf8"
+    );
+    const gateCheck = controlledPilotRunner.indexOf(
+      "verifyControlledBPilotLaunch.cjs"
+    );
+    const retrieval = controlledPilotRunner.indexOf(
+      "runADrivenReferenceDinghyRetrieval.cjs"
+    );
+    const decisions = controlledPilotRunner.indexOf(
+      "runADrivenReferenceCounterpartDecisions.cjs"
+    );
+    expect(gateCheck).toBeGreaterThan(-1);
+    expect(gateCheck).toBeLessThan(retrieval);
+    expect(retrieval).toBeLessThan(decisions);
+    expect(controlledPilotRunner).toContain(
+      "LF_A_B_PILOT_TRUST_ANCHOR_PIN_FILE"
+    );
+    expect(controlledPilotRunner).toContain("--expectedTrustAnchorFile");
+    expect(controlledPilotRunner).toContain(
+      "dynamic-semantic-manifest.private.json"
+    );
+    expect(controlledPilotRunner).not.toContain(
+      "runADrivenReferenceClassification.cjs"
+    );
+    expect(controlledPilotRunner).not.toContain("materializeCustomer");
+    expect(controlledPilotRunner).not.toContain("policyComparisonWorker.cjs");
+  });
+
   test("uses a release-bound resumable run and counts completed categories", () => {
     expect(source).toContain("resumableRun({");
     expect(source).toContain("comparisonMode,");

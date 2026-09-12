@@ -31,6 +31,7 @@ const {
   CURRENT_V35_REVIEW_PROFILE,
   createControlledBPilotAuthorizationRequest,
   createControlledBPilotGate,
+  createControlledBPilotLaunchReceipt,
   createClassificationEvidence,
   createCrosswalkDraft,
   createDynamicRemainderDraft,
@@ -47,6 +48,7 @@ const {
   sealDynamicRemainderReviewerArtifact,
   sealControlledBPilotAuthorization,
   validateControlledBPilotGate,
+  validateControlledBPilotLaunchBundle,
   validateClassificationChain,
   validateCrosswalkDraft,
   validateDynamicRemainderReconciliation,
@@ -998,6 +1000,47 @@ describe("V12 283/631 double-review contract", () => {
         gate: bPilotGate,
       })
     ).toBe(bPilotGate);
+    const launchDynamicManifest = {
+      manifestSha256: authorizationRequest.dynamicManifestSha256,
+    };
+    expect(
+      validateControlledBPilotLaunchBundle({
+        request: authorizationRequest,
+        authorization,
+        trustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+        gate: bPilotGate,
+        dynamicManifest: launchDynamicManifest,
+      })
+    ).toBe(bPilotGate);
+    expect(
+      createControlledBPilotLaunchReceipt({
+        request: authorizationRequest,
+        authorization,
+        trustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+        gate: bPilotGate,
+        dynamicManifest: launchDynamicManifest,
+      })
+    ).toMatchObject({
+      status: "CONTROLLED_B_PILOT_LAUNCH_VALIDATED",
+      bPilotAllowed: true,
+      fullOnePlusNineAllowed: false,
+      productRoutingAllowed: false,
+      resultMutationAllowed: false,
+      customerWorkbookAllowed: false,
+      deploymentAllowed: false,
+    });
+    expect(() =>
+      validateControlledBPilotLaunchBundle({
+        request: authorizationRequest,
+        authorization,
+        trustAnchor,
+        expectedTrustAnchorSha256: trustAnchor.trustAnchorSha256,
+        gate: bPilotGate,
+        dynamicManifest: { manifestSha256: "f".repeat(64) },
+      })
+    ).toThrow("LF_A_CONTROLLED_B_PILOT_DYNAMIC_MANIFEST_MISMATCH");
     const wrongTrustAnchor = JSON.parse(JSON.stringify(trustAnchor));
     wrongTrustAnchor.authorityId = "untrusted-authority";
     expect(() =>
