@@ -759,20 +759,6 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                     });
                     return [{ ...component, label: sourceBoundConditionLabel }];
                   }
-                  if (
-                    component?.type === "OBJECT" &&
-                    /\b(?:kosten|mehrkosten|aufwendungen)\b(?!-)/iu.test(
-                      componentLabel
-                    )
-                  ) {
-                    repairs.push({
-                      unitId: response.unitId,
-                      requirementIndex,
-                      componentIndex,
-                      action: "NORMALIZE_EXPLICIT_COST_OBJECT_TO_FACT_ROLE",
-                    });
-                    return [{ ...component, type: "FACT_ROLE" }];
-                  }
                   const exactPerformanceObligation =
                     component?.type === "COVERAGE_EFFECT" &&
                     /(?:\.\.\.|…)/u.test(componentLabel)

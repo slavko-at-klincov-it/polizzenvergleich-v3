@@ -961,7 +961,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
-  test("normalizes only an explicit cost object to a fact role", () => {
+  test("materializes a cost fact role without removing its object role", () => {
     const unit = {
       unitId: "unit-one",
       unitKind: "CLAUSE",
@@ -982,36 +982,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       },
       logicalSourceSegments: [],
     };
-    const response = {
-      unitId: unit.unitId,
-      requirements: [
-        {
-          displayLabel: unit.source.combinedText,
-          components: [
-            {
-              type: "OBJECT",
-              label: "Kosten für Planung",
-              sourceBlockIds: ["cost"],
-            },
-            {
-              type: "OBJECT",
-              label: "eine kosten- oder zeitsparende Art",
-              sourceBlockIds: ["adjective"],
-            },
-          ],
-        },
-      ],
-    };
-
-    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        displayLabel: unit.source.combinedText,
+        sourceBlockIds: ["cost", "adjective"],
+        components: [
+          {
+            type: "OBJECT",
+            label: "Kosten für Planung",
+            sourceBlockIds: ["cost"],
+          },
+          {
+            type: "OBJECT",
+            label: "eine kosten- oder zeitsparende Art",
+            sourceBlockIds: ["adjective"],
+          },
+        ],
+      },
+    ]);
 
     expect(
-      normalized.responses[0].requirements[0].components.map(({ type }) => type)
-    ).toEqual(["FACT_ROLE", "OBJECT"]);
-    expect(normalized.componentRepairs).toEqual([
+      result.requirements[0].components.map(({ type }) => type)
+    ).toEqual(["OBJECT", "OBJECT", "FACT_ROLE"]);
+    expect(result.requirements[0].components[2]).toEqual({
+      type: "FACT_ROLE",
+      label: "Kosten für Planung",
+      sourceBlockIds: ["cost"],
+    });
+    expect(result.diagnostics).toEqual([
       expect.objectContaining({
         unitId: "unit-one",
-        action: "NORMALIZE_EXPLICIT_COST_OBJECT_TO_FACT_ROLE",
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        signalId: "EXPLICIT_COST_ROLE",
       }),
     ]);
   });

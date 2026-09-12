@@ -441,29 +441,36 @@ function materializeSharedSignalComponents(unit, requirements) {
           });
           continue;
         }
-        if (signal.signalId !== "EXPLICIT_CONDITION") continue;
+        if (
+          signal.signalId !== "EXPLICIT_CONDITION" &&
+          signal.signalId !== "EXPLICIT_COST_ROLE"
+        )
+          continue;
         const localCandidates = requirement.components.filter(
           (component) =>
-            component.type !== "CONDITION" &&
+            !signal.requiredComponentTypes.includes(component.type) &&
             component.sourceBlockIds.includes(evidence.blockId) &&
             matchesForPattern(signal.pattern, component.label).length > 0
         );
         if (localCandidates.length !== 1) continue;
         const [localComponent] = localCandidates;
-        const localMatch = matchesForPattern(
-          signal.pattern,
-          localComponent.label
-        )[0];
-        const markerIndex = localComponent.label
+        const localMatch = matchesForPattern(signal.pattern, localComponent.label)[0];
+        const matchIndex = localComponent.label
           .toLocaleLowerCase("de-AT")
           .indexOf(localMatch.toLocaleLowerCase("de-AT"));
-        if (markerIndex < 0) continue;
-        const condition = {
-          type: "CONDITION",
-          label: localComponent.label.slice(markerIndex).trim(),
+        if (matchIndex < 0) continue;
+        const localRole = {
+          type:
+            signal.signalId === "EXPLICIT_CONDITION"
+              ? "CONDITION"
+              : "FACT_ROLE",
+          label:
+            signal.signalId === "EXPLICIT_CONDITION"
+              ? localComponent.label.slice(matchIndex).trim()
+              : localComponent.label,
           sourceBlockIds: [...localComponent.sourceBlockIds],
         };
-        requirement.components.push(condition);
+        requirement.components.push(localRole);
         diagnostics.push({
           code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
           unitId: unit.unitId,
@@ -471,8 +478,8 @@ function materializeSharedSignalComponents(unit, requirements) {
           sourceRequirementIndex: requirementIndex,
           signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
           signalId: signal.signalId,
-          componentType: condition.type,
-          sourceBlockIds: condition.sourceBlockIds,
+          componentType: localRole.type,
+          sourceBlockIds: localRole.sourceBlockIds,
         });
       }
     }
