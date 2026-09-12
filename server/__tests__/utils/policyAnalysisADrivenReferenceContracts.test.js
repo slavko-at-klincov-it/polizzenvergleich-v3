@@ -792,6 +792,33 @@ describe("requirement-local semantic evidence completeness", () => {
     }
   );
 
+  test("accepts value and basis components split across one combined limit signal", () => {
+    const unit = evidenceUnit(
+      ["value", "Entschädigung bis 1% der"],
+      ["basis", "Gebäudeversicherungssumme."]
+    );
+    const diagnostics = requirementRoleEvidenceDiagnostics(unit, [
+      {
+        ...requirement(
+          ["value", "basis"],
+          [
+            component("VALUE_AND_UNIT", "value", {
+              label: "bis 1%",
+              rawValue: "1",
+              unit: "%",
+            }),
+            component("LIMIT_BASIS", "basis", {
+              label: "Gebäudeversicherungssumme",
+            }),
+          ]
+        ),
+        displayLabel: "Entschädigung bis 1% der Gebäudeversicherungssumme.",
+      },
+    ]);
+
+    expect(diagnostics).toEqual([]);
+  });
+
   test("accepts complete signals and ignores ordinary wording", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(

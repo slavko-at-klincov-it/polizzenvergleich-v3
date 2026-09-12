@@ -245,7 +245,7 @@ function matchedEvidenceBlockIds(matchedEvidence) {
 }
 
 function componentHasSignalSource(component, matchedEvidence) {
-  return matchedEvidenceBlockIds(matchedEvidence).every((blockId) =>
+  return matchedEvidenceBlockIds(matchedEvidence).some((blockId) =>
     component.sourceBlockIds.includes(blockId)
   );
 }
