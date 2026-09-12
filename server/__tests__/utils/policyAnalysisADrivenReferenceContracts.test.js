@@ -6737,8 +6737,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       fs.readdirSync(path.join(output, "batches"))[0]
     );
     const predecessor = JSON.parse(fs.readFileSync(completedBatch, "utf8"));
-    predecessor.promptContractId =
-      "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
+    predecessor.promptContractId = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
     predecessor.promptSha256 = "a".repeat(64);
     fs.writeFileSync(completedBatch, `${JSON.stringify(predecessor)}\n`);
 
