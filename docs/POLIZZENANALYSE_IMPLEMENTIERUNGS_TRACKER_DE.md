@@ -7809,3 +7809,138 @@ gestartet.
 
 Status: `A-REVIEWINFRASTRUKTUR TECHNISCH PASS; ECHTE V30-FREEZE STRENG
 VALIDIERT; 0/631 FACHREVIEWS; B-PILOT UND 1+9 WEITER FAIL-CLOSED`.
+
+### 133.23 V35: quellgebundene Leistungsrollen und strenge neue Reviewbasis
+
+Die nächste Iteration bearbeitete gezielt die im V30-Draft auffälligen
+Leistungsrollen. Der erste Realversuch V31 blieb in Batch 55 fail-closed: Acht
+vollständig beantwortete Qwen-Versuche für `AU-d853135b13905dac104eb396`
+lieferten keine semantisch gültige, exakt quellgebundene Leistungsrolle. Dies
+war kein Timeout oder Transportfehler. Der Batch wurde nicht als `PASS`
+gespeichert; die bisherigen 54 Batches und sämtliche Attempt-Artefakte blieben
+resumierbar unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V31-CONTRACTUAL-BENEFIT-20260912-304B3E96
+```
+
+Die Ursache lag nicht in fehlender Modellantwort, sondern in der nachgelagerten
+Materialisierung: Mehrblockige Vertragsvorteile konnten auf einen verkürzten
+lokalen Bestandteil oder auf modellseitig umformatierte Evidenz gebunden
+werden. Die Korrektur wurde als versionierter allgemeiner Semantikvertrag
+`LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6` umgesetzt. Er bindet
+Leistungsrollen an den exakten kanonischen Source-Blockbereich, bevorzugt bei
+zusammenhängender Evidenz die vollständige Mehrblockspanne, erhält Punkte in
+Zahlen wie `EUR 8.000`, akzeptiert eng begrenzte aktive Anspruchs-,
+Freigabe-, Teilzahlungs-, Wiederherstellungs- und Verzichtsformulierungen und
+behandelt eine autoritative Leistungsfundstelle nicht als mehrdeutig, nur weil
+Qwen denselben Text zusätzlich als `OBJECT` oder `CONDITION` ausgab.
+
+Jede Verhaltensänderung erhielt eine eigene Signalvertragsversion. Alte
+Attempt-Journale dürfen nur aus einer expliziten Vorgängerliste gelesen werden
+und werden unter dem aktuellen Vertrag erneut vollständig validiert; ein alter
+Response kann daher weder eine neuere Entscheidung überschreiben noch ohne
+aktuelle Validierung als `PASS` gelten. Die Regressionstests umfassen
+Mehrblockbindung, kanonische Quelltexte, Dezimal-/Tausenderpunkte,
+Bindestrichfortsetzungen, Negativformulierungen, umgekehrte Anspruchssätze und
+zeitlich quantifizierte Verzichtsklauseln.
+
+Die Zwischenläufe V32 bis V34 und der aktuelle V35-Lauf wurden ausschließlich
+im isolierten Mac-Studio-Worktree materialisiert. V35 liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V35-FINAL-BENEFIT-EVIDENCE-20260912-828DAFDD
+```
+
+Sein belegbarer A-Status lautet:
+
+```text
+Manifest-Commit: 828dafddd26f90a298f486455ff1f967371bdcdd
+Klassifikationsvertrag: LF_A_BOUNDED_CLASSIFICATION_RUN_V13
+Promptvertrag: LF_A_BOUNDED_CLASSIFICATION_PROMPT_V14
+Semantiksignalvertrag: LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Timeout/Abort-Settlement/Recovery: 180000/15000/180000 ms
+Maximum Attempts: 8
+Batches: 59/59 PASS
+Responses: 349/349 eindeutig und unter V6 erneut validiert
+Neue Modellaufrufe in V35: 0
+Source-Blöcke: 1005/1005 genau einmal besessen und terminal
+Requirements: 357
+Komponenten: 1054
+UNRESOLVED: 0
+verdächtig nichtoperative/operative Einheiten: 0/0
+```
+
+Beweishashes:
+
+```text
+dynamic manifestSha256:
+  d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce
+dynamic-semantic-manifest.private.json:
+  a4651bc1a9864a516823926d512d9ffd4be9bf8c09ecc559a9e7737834d7a1d1
+responses.private.json:
+  184e2537e0e6d6194b51a92718ccb1c17e2592cc37782ec0503c436e3da58dfa
+summary.private.json:
+  6a4b5acb1c5bd4a91c4cac06d64c05700d770ad18434e47041f334f4ddcc0886
+a-status-audit-v35-828dafdd.private.json intrinsisch:
+  578a51fac8cda964d127ef77f076b1801e92b3d840cbfbf07c65b2eab0c8cdb9
+a-status-audit-v35-828dafdd.private.json als Datei:
+  ebd49df641447e59ab82e0d28b492581d2554fae8aa2806d4270725b6aacc8c9
+```
+
+Gegenüber V30 sank die mechanische Zahl direkter Rollenabweichungen von 98
+auf 79. Der strenge V35-Draft enthält nun 287 direkte 1:1-, 203 Split-, 62
+geerbte Rollenkandidaten, 79 direkte Rollenabweichungen und null
+kandidatenlose Records. Die verbleibenden 79 verteilen sich auf 60 historische
+`CONDITION`-Komponenten, sieben `BENEFIT`, sieben `EXCLUSION`, zwei
+`DOCUMENT_STATUS` sowie je einen `COST`-, `DEFINITION`- und
+`INSURED_OBJECT`-Fall. Die Einzelfallprüfung zeigt keine gemeinsame sichere
+Regex: Zahlreiche Legacy-Labels beschreiben Bedingungen, Leistungen oder
+Ausschlüsse, während V35 denselben Quellinhalt bereits als Objekt, Wirkung,
+Ursache, Wert oder breit gebundene Klausel atomisiert. Diese 79 sind daher
+Reviewprioritäten und weder 79 nachgewiesene A-Fehler noch 79 fehlende
+B-Gegenstücke.
+
+Die V35-Kampagne wurde am Codecommit
+`f6c4f3cc145b8087ebeaa6d9e75831fd7a1ee3fd` registriert und streng
+rekonstruiert:
+
+```text
+Freeze:
+  /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V35-REVIEW-FREEZE-V1-20260912-D7CE4316
+review-basis.private.json basisSha256:
+  c983db1f8c208eee86b317cdc447ad6b229aa05443d8498e9f650204708fa340
+review-basis.private.json file SHA-256:
+  b0e0a47889ce1d2acba146325107c0542fbabb79a45e23e3fb44626a08081c68
+freeze-artifact-set.private.json file SHA-256:
+  f4f13a410cb6c67f464441bd6f5380d6cf83c4c8ad0dd224d8d1000d18a0fc3d
+
+Draft:
+  /Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V35-REVIEW-DRAFT-V1-STRICT-20260912-F6C4F3CC
+crosswalk-draft.private.json draftSha256:
+  caccf75988264ce12b64a4c34b8b41165d1f2e1e2c0a53205533819f2ba0db8d
+crosswalk-draft.private.json file SHA-256:
+  1c26f0eca35066ba701c00823d1ebc27ffce9016a9acc09b5548ce4d127a3382
+Records: 631
+approvalStatus: UNREVIEWED
+```
+
+Am exakten Commit `f6c4f3cc145b8087ebeaa6d9e75831fd7a1ee3fd`
+bestanden auf dem Mac Studio unter Node 22.23.2 Prettier, serverseitiges ESLint,
+die zwei fokussierten A-Suites mit 169/169 Tests und anschließend die
+vollständige Server-Suite mit 187/187 Suites und 2.674/2.674 Tests.
+
+V35 ist damit die derzeit beste, reproduzierbare technische A-Reviewbasis.
+Sie beweist jedoch weiterhin keine fachliche Vollständigkeit: `reviewedRecords`
+bleibt 0/631. Ohne zwei echte unabhängige, registrierte Fachreviewer, eine
+vollständige übereinstimmende 631er-Prüfung, die anschließende exhaustive
+dynamische Restprüfung und eine extern verankerte B-Pilot-Autorisierung darf
+weder der B-Pilot noch der vollständige 1+9-Lauf gestartet werden. Breite
+weitere Rollenregeln allein zur Reduktion der Zahl 79 wären ohne diese
+Relationsevidenz voraussichtlich Überanpassung an LF IMMO.
+
+Status: `V35 A TECHNISCH PASS, HASHGEBUNDEN UND STRENG EINGEFROREN;
+ROLLENABWEICHUNGEN 98 -> 79; 631/631 REVIEWRECORDS VORBEREITET, 0/631 REAL
+FACHLICH DOPPELT GEPRÜFT; B-PILOT UND 1+9 WEITER FAIL-CLOSED`.
