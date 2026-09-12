@@ -848,7 +848,8 @@ describe("requirement-local semantic evidence completeness", () => {
         ["cause", "durch unbekannte Fahrzeuge."],
       ],
       expectedType: "PERIL_OR_CAUSE",
-      expectedLabel: "unbekannte Fahrzeuge.",
+      expectedLabel: "unbekannte Fahrzeuge",
+      expectedSourceBlockIds: ["cause"],
       signalId: "EXPLICIT_PERIL_OR_CAUSE",
     },
     {
@@ -861,12 +862,19 @@ describe("requirement-local semantic evidence completeness", () => {
       ],
       expectedType: "FACT_ROLE",
       expectedLabel:
-        "gilt mit der\nersten Feststellung der Gesundheitsschädigung durch einen Arzt als eingetreten.",
+        "gilt mit der\nersten Feststellung der Gesundheitsschädigung durch einen Arzt als eingetreten",
+      expectedSourceBlockIds: ["event", "finding"],
       signalId: "EXPLICIT_DEFINITION",
     },
   ])(
     "materializes $signalId when its exact relation spans component labels",
-    ({ blocks, expectedType, expectedLabel, signalId }) => {
+    ({
+      blocks,
+      expectedType,
+      expectedLabel,
+      expectedSourceBlockIds,
+      signalId,
+    }) => {
       const sourceBlockIds = blocks.map(([blockId]) => blockId);
       const result = materializeSharedSignalComponents(
         evidenceUnit(...blocks),
@@ -886,7 +894,7 @@ describe("requirement-local semantic evidence completeness", () => {
       expect(result.requirements[0].components).toContainEqual({
         type: expectedType,
         label: expectedLabel,
-        sourceBlockIds,
+        sourceBlockIds: expectedSourceBlockIds,
       });
       expect(result.diagnostics).toEqual(
         expect.arrayContaining([
