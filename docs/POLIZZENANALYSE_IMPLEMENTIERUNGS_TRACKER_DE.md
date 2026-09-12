@@ -8026,3 +8026,77 @@ davon getrennt grün.
 Status: `KONTROLLIERTER B-PILOT-AUTORISIERUNGSVERTRAG TECHNISCH PASS; KEINE
 REALE AUTORISIERUNG, 0/631 FACHREVIEWS, PILOT-RUNNER NOCH NICHT GEGATET;
 B-PILOT UND 1+9 REAL WEITER GESPERRT`.
+
+### 133.25 B-only-Launchgate, transportfeste Qwen-Prüfung und Bypass-Sperre
+
+Der kontrollierte Autorisierungsvertrag wurde bis zum tatsächlichen
+Ausführungseinstieg geschlossen. Der neue Runner
+`run-a-driven-controlled-b-pilot.command` übernimmt ein bereits
+eingefrorenes A-Final und berechnet A ausdrücklich nicht erneut. Noch vor
+jeder LM-Studio- oder Retrieval-Aktion prüft er:
+
+- Request, Ed25519-Autorisierung, Trust Anchor und finales Gate als
+  zusammenhängende Hash- und Signaturkette;
+- den erwarteten Trust-Anchor-SHA ausschließlich aus einer separaten,
+  regulären, nicht verlinkten und nicht gruppen-/weltbeschreibbaren
+  Pin-Datei;
+- den exakten dynamischen A-Manifesthash und die A-Dokument-UUID samt
+  Dokument-SHA;
+- dass das Laufmanifest ausschließlich die gebundenen A-Dokumente plus
+  mindestens ein B-Dokument enthält und alle B-Positionen vollständig und
+  eindeutig sind.
+
+Danach führt der Runner ausschließlich die B-Stufen aus: vollständige
+BM25-/Struktur-/Dinghy-Kandidatensuche über alle B-Dokumente und
+komponentenweise Qwen-Gegenstückprüfung. Das private Launch-Receipt bindet
+Gate, A-Manifest, Input-Manifest-Dateihash und jede B-Dokumentidentität. Es
+enthält weiterhin harte Sperren für Voll-Lauf, Produkt-Routing,
+Resultatmutation, Kunden-XLSX und Deployment.
+
+Die B-Qwen-Phase wurde gleichzeitig von
+`LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V1` auf V2 gehärtet. Jeder Aufruf
+besitzt jetzt konfigurierbaren Request-Timeout, Abort, Settlement-Wartezeit,
+gezieltes LM-Studio-Unload/Reload mit exakter Modell-/Kontextprüfung und
+begrenzte Retries. OpenAI-interne Retries sind deaktiviert. Jeder Versuch
+wird privat mit Dauer, Fehlerklasse, Timeout-, Abort-, Settlement- und
+Recoverydaten sowie den beobachteten Responses journalisiert. Bereits
+einzeln terminale Paketantworten werden beim Resume wiederverwendet.
+Unvollständige Batches werden niemals als PASS-Datei gespeichert; nach
+ausgeschöpften Versuchen stoppt die Kette am ersten offenen Batch
+fail-closed. Alte gültige V1-Batchantworten können nach aktueller
+Einzelvalidierung ohne neuen Modellaufruf in V2 übernommen werden.
+
+Die abschließende Bypass-Prüfung fand den historischen Runner
+`run-a-driven-reference-shadow-v2.command`, der A und B noch ohne das neue
+Autorisierungsgate starten konnte. Dieser Einstieg beendet sich jetzt vor
+jeder Argument-, Modell- oder Retrievalverarbeitung mit Exit 2 und verweist
+auf den kontrollierten B-only-Runner. Damit existiert im vorgesehenen
+A-getriebenen QA-Pfad kein dokumentierter ungateter B-Einstieg mehr.
+
+Der echte eingefrorene V35-Input bestand die neue Dokumentbindung:
+
+```text
+dynamicManifestSha256:
+  d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce
+inputManifestFileSha256:
+  9c114a33e2241ca7e2a6bc5e9c4301bef9bfb3a9ca02af8d56c34baf64a4d609
+A-Dokumente: 1
+B-Dokumente: 9
+B-Positionen: 0..8 vollständig
+```
+
+Am exakten Commit `d335fcf3e2cc253ca79d0f01444d64ba3c3a0ef6`
+im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-bfinal-d335-8s5YtQ/repo` unter Node 22.23.2 bestanden
+Shell- und Node-Syntax, Prettier, ESLint der Produkt-/CLI-Dateien und die
+vollständige Serverregression mit 188/188 Suites und 2.680/2.680 Tests.
+
+Es wurde kein echtes Launch-Receipt erzeugt und kein B-Modelllauf gestartet:
+Der reale V35-Stand bleibt bei 0/631 menschlichen Doppelreviews, ohne
+dynamischen Restreview, externe Autorität, Trust-Anchor-Pin und signierte
+Autorisierung. Ein künstlicher Schlüssel oder synthetisches Review darf
+diesen Zustand nicht ersetzen.
+
+Status: `TECHNISCHER B-ONLY-PILOTPFAD UND B-TRANSPORT PASS; ECHTE V35-
+DOKUMENTBINDUNG 1+9 PASS; ALTER UNGATED BYPASS GESPERRT; REALER B-PILOT UND
+VOLLSTÄNDIGER 1+9-LAUF WEITER FAIL-CLOSED BEI 0/631 FACHREVIEWS`.
