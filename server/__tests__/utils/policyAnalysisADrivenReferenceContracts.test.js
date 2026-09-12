@@ -690,15 +690,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(parsed.syntaxRepair).toMatchObject({
       applied: true,
-      strategy:
-        "PREMATURE_REQUIREMENTS_ARRAY_CLOSE_AND_REPEATED_OWNER_CLOSE",
+      strategy: "PREMATURE_REQUIREMENTS_ARRAY_CLOSE_AND_REPEATED_OWNER_CLOSE",
     });
     expect(parsed.responses).toHaveLength(1);
-    expect(parsed.responses[0].requirements.map(({ displayLabel }) => displayLabel)).toEqual([
-      "A",
-      "B",
-      "C",
-    ]);
+    expect(
+      parsed.responses[0].requirements.map(({ displayLabel }) => displayLabel)
+    ).toEqual(["A", "B", "C"]);
   });
 
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
