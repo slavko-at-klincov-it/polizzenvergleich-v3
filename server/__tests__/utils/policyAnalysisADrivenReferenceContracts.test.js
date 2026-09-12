@@ -499,10 +499,7 @@ describe("requirement-local semantic evidence completeness", () => {
         ["governor", "item-one"],
         [component("OBJECT", "item-one"), condition]
       ),
-      requirement(
-        ["governor", "item-two"],
-        [component("OBJECT", "item-two")]
-      ),
+      requirement(["governor", "item-two"], [component("OBJECT", "item-two")]),
     ]);
 
     expect(result.requirements[1].components).toContainEqual(condition);
