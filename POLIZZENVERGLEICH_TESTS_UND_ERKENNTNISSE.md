@@ -3892,3 +3892,40 @@ der vollständige technische A-Lauf und das Reviewpaket sind reproduzierbar.
 **Beweist nicht:** dass die verbleibenden 98 direkten Rollenabweichungen
 Manifestfehler sind, dass 631 Komponenten fachlich freigegeben wurden, dass
 B vollständig durchsucht wurde, einen Holdout oder das 99-Prozent-Ziel.
+
+## 64. Ein 631er-Crosswalk allein beweist nicht die Vollständigkeit des dynamischen Manifests
+
+**Prüfung:** 12. September 2026
+
+Der ausführbare Doppelreviewpfad wurde um eine notwendige Rückwärtsprüfung
+ergänzt. Die 42 im V30-Draft ausgewiesenen `dynamicOnlyComponents` sind nur
+jene Komponenten, die bereits vor einer fachlichen Entscheidung keinen
+erweiterten Legacy-Kandidatenkontext besitzen. Sie sind nicht zwingend alle
+später ungemappten dynamischen Komponenten: Auch ein sichtbarer Kandidat kann
+von beiden Reviewern zu Recht nicht als Ziel gewählt werden.
+
+Deshalb wird der prüfpflichtige Rest erst nach dem freigegebenen 631er-
+Crosswalk erzeugt. Der neue, hashgebundene Vertrag bildet alle dynamischen
+Komponenten minus aller tatsächlich gewählten Crosswalk-Ziele. Zwei
+registrierte menschliche Fachreviewer müssen jeden Restrecord unabhängig
+prüfen und getrennt signieren. Nur der übereinstimmende Befund
+`VALID_DYNAMIC_ADDITION` für sämtliche Restrecords öffnet den kontrollierten
+B-Pilot. Erkannte Kandidatenlücken, Duplikate, Atomisierungs- oder
+Source-Bindungsfehler sowie Unklarheiten bleiben fail-closed und müssen im
+Upstream-Vertrag behoben werden. Produkt-Routing und Resultatmutation bleiben
+auch bei bestandenem QA-Pilotgate gesperrt.
+
+Der komplette write-once Ablauf für Registry, A/B-Templates, Signatur,
+631er-Reconciliation, dynamischen Rest-Draft und Rest-Reconciliation bestand
+auf dem Mac Studio am Commit
+`ff57ae7b632b6490a2a8bbef9ecbcefe84c6c336` unter Node 22.23.2: Prettier
+PASS, serverseitiges ESLint PASS, fokussiert 10/10 Tests und vollständig
+187/187 Server-Suites mit 2.646/2.646 Tests.
+
+**Beweist:** Kein dynamischer Rest kann allein deshalb als vollständig gelten,
+weil er im mechanischen 42er-Vorfilter nicht auftauchte; das B-Pilotgate ist
+an eine exhaustive, doppelt signierte Restprüfung gebunden.
+
+**Beweist nicht:** irgendeine reale Fachentscheidung. Der reale V30-Stand
+bleibt bei 0/631 Reviews; ohne zwei tatsächliche unabhängige Fachreviewer und
+Akzeptanzautorität darf kein Review- oder Freigabeartefakt erzeugt werden.
