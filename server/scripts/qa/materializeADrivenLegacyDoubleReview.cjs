@@ -37,6 +37,7 @@ const {
   reviewCampaignProfile,
 } = require("../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
 const {
+  exportReviewerWorkbookBuffer,
   importReviewerWorkbook,
   loadReviewWorkbook,
 } = require("../../utils/policyAnalysis/aDrivenLegacyReviewWorkbook");
@@ -170,6 +171,13 @@ function writeJsonPrivate(filePath, value) {
     flag: "wx",
     mode: 0o400,
   });
+}
+
+function writeBinaryPrivate(filePath, value) {
+  if (!Buffer.isBuffer(value) || value.length === 0)
+    fail("LF_A_DOUBLE_REVIEW_BINARY_INVALID", filePath);
+  assertNoPrivateKeyMaterial(value, filePath);
+  fs.writeFileSync(filePath, value, { flag: "wx", mode: 0o400 });
 }
 
 function freezeArtifactSetDigest(payload) {
@@ -699,6 +707,52 @@ function materializeReviewerTemplate({
   return input;
 }
 
+async function materializeReviewerWorkbook({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewInputPath,
+  target,
+}) {
+  if (!reviewInputPath || !target)
+    fail("LF_A_REVIEW_WORKBOOK_TEMPLATE_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const pristineInput = readRegular(reviewInputPath).value;
+  const expectedInput = createReviewerTemplate({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewerSlot: pristineInput.reviewerSlot,
+  });
+  if (stableJson(pristineInput) !== stableJson(expectedInput))
+    fail("LF_A_REVIEW_WORKBOOK_TEMPLATE_NOT_PRISTINE");
+  const bytes = await exportReviewerWorkbookBuffer({
+    draft: campaign.draft,
+    input: pristineInput,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(
+    temp,
+    `review-workbook-${pristineInput.reviewerSlot}.private.xlsx`
+  );
+  writeBinaryPrivate(file, bytes);
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return {
+    file: path.join(
+      target,
+      `review-workbook-${pristineInput.reviewerSlot}.private.xlsx`
+    ),
+    bytes,
+    input: pristineInput,
+  };
+}
+
 async function materializeReviewerWorkbookImport({
   basisRoot,
   draftRoot,
@@ -1203,6 +1257,21 @@ async function main(argv = process.argv.slice(2)) {
     process.stdout.write(`${input.reviewerSlot} ${input.reviewerId}\n`);
     return;
   }
+  if (command === "workbook-template") {
+    const workbook = await materializeReviewerWorkbook({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      registryRoot: values["registry-root"],
+      authorityPublicKeyFingerprintSha256:
+        values["authority-public-key-fingerprint"],
+      reviewInputPath: values["review-input"],
+      target: values.target,
+    });
+    process.stdout.write(
+      `${workbook.input.reviewerSlot} ${workbook.input.reviewerId}\n`
+    );
+    return;
+  }
   if (command === "seal") {
     const review = materializeReviewerArtifact({
       basisRoot: values["basis-root"],
@@ -1358,6 +1427,7 @@ module.exports = {
   materializeFreezeArtifactSetIndex,
   materializeRegistry,
   materializeReviewerArtifact,
+  materializeReviewerWorkbook,
   materializeReviewerWorkbookImport,
   materializeReviewerTemplate,
   parseArgs,

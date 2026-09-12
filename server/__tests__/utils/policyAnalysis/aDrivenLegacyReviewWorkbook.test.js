@@ -1,11 +1,8 @@
-const ExcelJS = require("exceljs");
 const {
-  CANDIDATE_HEADERS,
   INDEPENDENCE_ATTESTATION,
   MAX_WORKBOOK_BYTES,
-  REVIEW_HEADERS,
-  expectedCandidateRows,
-  expectedReviewRow,
+  createReviewerWorkbook,
+  exportReviewerWorkbookBuffer,
   importReviewerWorkbook,
   loadReviewWorkbook,
 } = require("../../../utils/policyAnalysis/aDrivenLegacyReviewWorkbook");
@@ -79,23 +76,10 @@ function fixture() {
 }
 
 function workbookFixture(draft, input) {
-  const workbook = new ExcelJS.Workbook();
-  const guide = workbook.addWorksheet("Anleitung");
-  guide.getCell("B9").value = draft.basisSha256;
-  guide.getCell("B10").value = draft.draftSha256;
+  const workbook = createReviewerWorkbook({ draft, input });
+  const guide = workbook.getWorksheet("Anleitung");
   guide.getCell("B22").value = INDEPENDENCE_ATTESTATION;
-  guide.getCell("B23").value = input.reviewerSlot;
-  guide.getCell("B24").value = input.reviewerId;
-
-  const review = workbook.addWorksheet("Review");
-  REVIEW_HEADERS.forEach((value, index) => {
-    review.getCell(5, index + 1).value = value;
-  });
-  draft.records.forEach((item, index) => {
-    expectedReviewRow(item, index).forEach((value, column) => {
-      review.getCell(6 + index, column + 1).value = value;
-    });
-  });
+  const review = workbook.getWorksheet("Review");
   review.getCell("L6").value = "EQUIVALENT";
   review.getCell("M6").value = "AC-one";
   review.getCell("O6").value = "NO_UPSTREAM_DEFECT";
@@ -104,16 +88,6 @@ function workbookFixture(draft, input) {
   review.getCell("M7").value = "AC-three; AC-two";
   review.getCell("O7").value = "SPLIT_OR_MERGE_RELATION";
   review.getCell("P7").value = "Zwei getrennte Gefahrenkomponenten.";
-
-  const candidates = workbook.addWorksheet("Kandidaten");
-  CANDIDATE_HEADERS.forEach((value, index) => {
-    candidates.getCell(4, index + 1).value = value;
-  });
-  expectedCandidateRows(draft).forEach((row, rowIndex) => {
-    row.forEach((value, column) => {
-      candidates.getCell(5 + rowIndex, column + 1).value = value;
-    });
-  });
   return workbook;
 }
 
@@ -239,8 +213,13 @@ describe("A-driven legacy review workbook", () => {
 
   test("loads valid XLSX bytes and rejects invalid or oversized payloads", async () => {
     const { draft, input } = fixture();
-    const bytes = await workbookFixture(draft, input).xlsx.writeBuffer();
-    await expect(loadReviewWorkbook(Buffer.from(bytes))).resolves.toBeDefined();
+    const bytes = await exportReviewerWorkbookBuffer({ draft, input });
+    const workbook = await loadReviewWorkbook(bytes);
+    expect(workbook.getWorksheet("Anleitung").getCell("B22").value).toBeNull();
+    expect(workbook.getWorksheet("Anleitung").getCell("B23").value).toBe("A");
+    expect(workbook.getWorksheet("Anleitung").getCell("B24").value).toBe(
+      "reviewer-a"
+    );
     await expect(loadReviewWorkbook(Buffer.from("not xlsx"))).rejects.toThrow(
       "LF_A_REVIEW_WORKBOOK_XLSX_INVALID"
     );
