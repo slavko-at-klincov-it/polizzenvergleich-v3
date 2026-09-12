@@ -7414,3 +7414,120 @@ Produkt-Routing, Kunden-XLSX und Deployment nicht gestartet.
 Status: `V12 A-KLASSIFIKATION 59/59 TECHNISCH UND SOURCE-SEITIG PASS;
 283/631 MECHANISCH VOLLSTÄNDIG, ABER SEMANTISCHER DOPPELREVIEW OFFEN; B-GATE
 NICHT FREIGEGEBEN; KEIN PRODUKT-ROUTING, KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
+
+### 133.19 Korrigierte V3.7.4-Reviewbasis und 631er-Doppelreview-Vertrag
+
+Vor Beginn der fachlichen Doppelprüfung wurde der in Abschnitt 133.18
+verwendete mechanische Crosswalk nochmals gegen Laufprovenienz und Release
+gebunden. Dabei wurden zwei veraltete Eingaben entdeckt: Der vorherige
+Root-Crosswalk referenzierte ein leeres Vorklassifikationsmanifest, und der
+erste finale A-Audit verglich gegen das Legacy-Manifest aus V3.7.3 statt gegen
+das im V3.7.4-Lauf tatsächlich verwendete Manifest. Diese Artefakte bleiben
+historische Befunde, dürfen aber nicht als Oracle für die nächste Iteration
+verwendet werden.
+
+Die korrigierte V3.7.4-Basis ist:
+
+```text
+Dynamic V12 manifestSha256:
+  5fcb889c0352f3808afeffda9f6801d987b61e0cccb18899c97ba90d0eacab6a
+Dynamic V12 file SHA-256:
+  d39ff07f4cfa1137a62c1fd340cc31bfbc4f807a1e550375a24fc6f9adcc5d33
+Legacy V3.7.4 manifestSha256:
+  3697afe4a18760bd893d50e0c3f8dadf48ff0106447829d32f1cb7845011efb0
+Legacy V3.7.4 file SHA-256:
+  c8e4c7cb303879d0efb35eb8215be6b6b75a75332e8a1b892c5f1bc85d6be4c7
+Korrigierter A-Audit file SHA-256:
+  5c7a98ff3d9532b4f98eec78ef77b89d327da9d7ed07f5f567c6bcba5ed2c17c
+```
+
+Damit ändern sich die mechanischen Komponentenzahlen aus Abschnitt 133.18.
+Die aktuelle Wahrheit lautet 333 statt 341 rolleninkompatible
+Legacy-Komponenten, 107 statt 102 Split-Kandidaten, 324 statt 325
+rolleninkompatible dynamische Komponenten und 123 statt 122
+Merge-Kandidaten. Die Requirement-Zahlen bleiben 283 Legacy-Requirements,
+364 dynamische Requirements, 112 Split-, 110 Merge- und 26 zusätzliche
+dynamische Requirement-Kandidaten. Es fehlen weiterhin weder ein
+Legacy-Requirement noch eine Legacy-Komponente auf reiner Source-Ebene. Diese
+Zahlen sind Kandidatenstatistik und ausdrücklich keine semantische Freigabe.
+
+Der neue Vertrag `LF_A_LEGACY_DOUBLE_REVIEW_V1` friert diese exakte Kampagne
+unveränderlich ein und validiert die vollständige Kette PDF ->
+Dokumentartefakt -> Source-Ledger -> Lauf-/Input-Manifest -> Source-Unit-Plan
+-> 59 Batchartefakte -> 349 Responses -> Dynamic-Manifest -> korrigierter
+A-Audit. Er bindet außerdem Quellcommit, Release-ID, Laufpfad, Modell,
+Kontext, Timeouts, Promptvertrag und alle relevanten Datei- und intrinsischen
+Hashes. Die Materialisierung kopiert reguläre Dateien ohne Hardlinks oder
+Symlinks, prüft sie nach dem Kopieren erneut, setzt Dateien auf Modus `0400`,
+Verzeichnisse auf `0500` und verweigert das Überschreiben eines vorhandenen
+Ziels.
+
+Der eingefrorene Reviewstand liegt auf dem Mac Studio unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V12-REVIEW-FREEZE-20260912-5FCB889C
+review-basis.private.json basisSha256:
+  d7b1bd772bf8a76cc0082ebfeca26defef95004e19e4635a37e6da09bdf4f283
+review-basis.private.json file SHA-256:
+  78ecb488a27a9ad856df66354a58ad344aff60c832b1adf7e00f65a922cd04b3
+```
+
+Eine unabhängige Nachprüfung am Implementierungscommit
+`dc60d98c845ca914a9cead3798ccc1edaad185d3` bestätigte 74 reguläre Dateien,
+null Symlinks, null mehrfach verlinkte Dateien und 70/70 hashgleiche
+referenzierte Eingabeartefakte. Ein erneuter Materialisierungsversuch auf
+dasselbe Ziel stoppte erwartungsgemäß mit
+`LF_A_DOUBLE_REVIEW_TARGET_EXISTS`.
+
+Der deterministische Review-Draft liegt getrennt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V12-REVIEW-DRAFT-20260912-5FCB889C
+crosswalk-draft.private.json draftSha256:
+  16ae02acd4ba2709203adc731107a719cdfcb01ded78603f3c0610733fdd7c9d
+crosswalk-draft.private.json file SHA-256:
+  53351b71ab041d1bd211b140958b502da18b6375d63e6c7626643671a9d95c2b
+```
+
+Der Draft enthält 631/631 Legacy-Komponenten, 283/283 Legacy-Requirements,
+die exakten Legacy-Quelltexte und -positionen sowie den vollständigen
+dynamischen Geschwisterkontext aller source-überlappenden Requirements. Kein
+Record ist kandidatenlos. Seine Reverse-Diagnostik nennt 42 dynamische
+Komponenten ohne Kandidatenkontext. Diese 42 sind nicht mit den 160
+source-exakt zusätzlichen Komponenten des korrigierten A-Audits gleichzusetzen:
+Der Review-Draft erweitert ausschließlich den sichtbaren Kontext um
+Geschwisterkomponenten überlappender Requirements, ohne daraus Äquivalenz oder
+Freigabe abzuleiten.
+
+Pro Reviewerentscheidung sind ausschließlich die Relationen `EQUIVALENT`,
+`REPHRASED_EQUIVALENT`, `MOVED_EQUIVALENT`, `SPLIT_INTO_DYNAMIC`,
+`MERGED_INTO_DYNAMIC`, `MISSING` oder `AMBIGUOUS` zulässig. Für
+Rollenabweichungen ist zusätzlich genau eine Ursachenklasse erforderlich:
+`DYNAMIC_CLASSIFICATION_ERROR`, `ROLE_MAPPING_TOO_NARROW`,
+`SPLIT_OR_MERGE_RELATION`, `DYNAMIC_COMPONENT_MISSING`, `UNDETERMINED` oder
+bei nachweislich keinem Upstream-Defekt `NO_UPSTREAM_DEFECT`. Ein Merge ist nur
+mit gemeinsamer Merge-Gruppen-ID und mindestens zwei Legacy-Komponenten auf
+dasselbe dynamische Ziel gültig.
+
+Reviewer A und B müssen getrennte, durch eine externe Autorität registrierte
+Signaturschlüssel und fachliche Qualifikationsnachweise besitzen. Jeder prüft
+alle 631 Records unabhängig. Gleiche Modellläufe, AI-Selbstaussagen oder ein
+Source-Overlap dürfen kein `APPROVED` erzeugen. Erst exakte Übereinstimmung
+beider signierter Reviewartefakte über alle Records kann einen freigegebenen
+Legacy-Crosswalk erzeugen; `MISSING`, `AMBIGUOUS`, unbestimmte Ursachen oder
+eine Abweichung zwischen A und B stoppen fail-closed. Auch ein bestandener
+Legacy-Crosswalk gibt die 42 Reverse-Diagnostikfälle oder B nicht automatisch
+frei.
+
+Aktueller fachlicher Stand: Der technische Reviewvertrag, Freeze und
+631er-Draft sind fertig; `reviewedRecords` ist korrekt 0/631 und
+`approvalStatus` ist `UNREVIEWED`, weil noch keine zwei realen unabhängigen
+Fachreviewer registriert und keine signierten Entscheidungen eingereicht
+wurden. Erkannte fachliche Fehler dürfen nicht im Draft oder Endartefakt
+korrigiert werden. Sie müssen als allgemeine Rollen- oder Atomisierungsregel
+implementiert, auf dem Mac Studio getestet und durch erneute V12-
+Materialisierung sichtbar gemacht werden.
+
+Status: `V12-BASIS HASHGEBUNDEN UND EINGEFROREN; 631/631 REVIEWRECORDS
+VORBEREITET, 0/631 FACHLICH DOPPELT GEPRÜFT; SEMANTIKGATE OFFEN; B-SUCHE,
+PRODUKT-ROUTING, KUNDEN-XLSX UND DEPLOYMENT NICHT GESTARTET`.
