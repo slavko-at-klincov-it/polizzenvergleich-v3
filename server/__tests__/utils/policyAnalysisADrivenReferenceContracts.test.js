@@ -714,6 +714,16 @@ describe("requirement-local semantic evidence completeness", () => {
     "Verzichtet der Versicherer auf seinen Regressanspruch, bleibt der Mieter geschützt.",
     "Unbeabsichtigte Meldefehler beeinträchtigen die Leistungspflicht nicht.",
     "Ein Verstoß des Handwerkers schränkt dies nicht die Leistung des Versicherers ein.",
+    "Der Versicherungsnehmer ist berechtigt, den Vertrag auf die neuen Bedingungen abzuändern und eine niedrigere Prämie zu verlangen.",
+    "Eine erste Teilzahlung nach Anzeige des Schadens verlangt werden kann.",
+    "Eine Akontierung ohne Präjudiz wird bei ausreichenden Sicherheiten vorgenommen.",
+    "Der Wiederaufbau innerhalb Österreichs kann auch an anderer Stelle erfolgen.",
+    "Bleibt gleichwohl die Verpflichtung des Versicherers zur Leistung bestehen.",
+    "Die Versicherungssumme vermindert sich nicht um den Betrag der Entschädigung.",
+    "Für jeden Versicherungsfall die volle Versicherungssumme zur Verfügung steht.",
+    "Bei einer Verlegung am selben Grundstück gilt dies nicht als anzeigepflichtig.",
+    "Es erfolgt auf Verlangen des Versicherungsnehmers eine Freigabe der übrigen Sparten.",
+    "Eine vom Versicherer gewährte vorläufige Deckung gilt bis zum Einlangen der Polizze.",
   ])("materializes a source-bound contractual benefit: %s", (source) => {
     const unit = evidenceUnit(["benefit", source]);
     const result = materializeSharedSignalComponents(unit, [
@@ -871,6 +881,9 @@ describe("requirement-local semantic evidence completeness", () => {
     "Der Versicherer ist berechtigt, den Vertrag zu kündigen.",
     "Der Versicherungsnehmer kann die Prämie nicht zurückfordern.",
     "Der Versicherungsnehmer muss die Gefahr unverzüglich anzeigen.",
+    "Die Versicherungssumme vermindert sich nach dem Schaden.",
+    "Eine vorläufige Deckung gilt nicht als erteilt.",
+    "Eine Freigabe erfolgt nicht auf Verlangen des Versicherungsnehmers.",
   ])("does not invent a contractual benefit for: %s", (source) => {
     const unit = evidenceUnit(["not-benefit", source]);
     const input = [
