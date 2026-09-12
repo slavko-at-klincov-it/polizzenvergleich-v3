@@ -4130,3 +4130,47 @@ Timeouts und Teilfortschritt bleiben resumierbar und fail-closed.
 **Beweist nicht:** eine echte Fachfreigabe oder ein B-Suchergebnis. Ohne zwei
 reale unabhängige Reviews für 631/631, dynamischen Restreview und externe
 Autorisierung wurde bewusst kein Launch-Receipt und kein B-Lauf erzeugt.
+
+## 69. Eine Review-Arbeitsmappe braucht einen fail-closed Rückweg, nicht nur Dropdowns
+
+**Prüfung:** 12. September 2026
+
+Für die reale Doppelprüfung der 631 Legacy-Komponenten wurde eine private,
+hashgebundene Excel-Arbeitsmappe erzeugt. Sie stellt 631 Reviewzeilen und alle
+5.678 dynamischen Kandidatenzeilen mit ihren Quellbelegen dar. Relation und
+Ursachenklasse besitzen Dropdowns; Targets, Merge-Gruppe und Begründung
+bleiben explizite menschliche Eingaben. Reviewer-Slot, Reviewer-ID und die
+ausgeschriebene Unabhängigkeitserklärung müssen ebenfalls gesetzt werden.
+
+Entscheidend ist der Rückimport: Die Excel-Datei darf weder Registry noch
+Signatur oder Freigabestatus erzeugen. Der QA-only-Importer akzeptiert deshalb
+nur ein frisches registriertes Reviewer-Template, vergleicht alle sichtbaren
+Legacy- und Dynamic-Evidenzzellen mit dem eingefrorenen Draft, lehnt Formeln,
+fremde Targets, ungültige Kardinalitäten, unvollständige Begründungen,
+zusätzliche Zeilen und Identitätsabweichungen ab und schreibt erst danach ein
+neues unsigniertes Reviewer-Input-Artefakt.
+
+Die Negativtests entdeckten, dass `ExcelJS.actualRowCount` eine angehängte
+Sparse-Zeile übersehen kann. Für die Manipulationsprüfung ist daher die
+höchste definierte `rowCount` maßgeblich. Außerdem war die ursprüngliche
+Spreadsheet-Runtime-XLSX nicht direkt mit ExcelJS 4.4 kompatibel. Erst eine
+OOXML-Normalisierung über LibreOffice am Mac Studio erzeugte eine Datei, die
+sowohl Spreadsheet-Runtime als auch Produktimporter lesen. Dropdowns, 633
+Formeln, drei Blätter und visuelle Struktur blieben erhalten.
+
+Die finale Arbeitsmappe hat SHA-256
+`2ee7d9d1ce98363cb7871d2db7d9b5632108adb0277c30ec4cf602918062ed20`.
+Ein Realtest gegen den V35-Draft validierte 631/631 Review- und 5.678/5.678
+Kandidatenzeilen und stoppte bei leeren Entscheidungen erwartungsgemäß am
+ersten Record fail-closed. Am Commit
+`086fa312cfad73b5d87698ce2ba696cce78ecddb` bestanden auf dem Mac Studio
+unter Node 22.23.2 Prettier, ESLint ohne Produktfehler, 20/20 fokussierte
+Tests sowie 189/189 Server-Suites mit 2.690/2.690 Tests.
+
+**Beweist:** Die zwei menschlichen Reviewläufe können jetzt in einer
+arbeitsfähigen Excel-Oberfläche durchgeführt werden, ohne die bestehende
+Hash-, Registry-, Signatur- oder Gatekette zu umgehen.
+
+**Beweist nicht:** irgendeine fachliche Entscheidung. Der reale Stand bleibt
+0/631; erst zwei echte unabhängige Fachreviewer, Restreview und externe
+Autorisierung können den kontrollierten B-Pilot freigeben.
