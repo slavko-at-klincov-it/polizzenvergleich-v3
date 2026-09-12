@@ -50,6 +50,7 @@ const {
   validateBatchResponses,
 } = require("../../scripts/qa/runADrivenReferenceClassification.cjs");
 const {
+  prompt: counterpartDecisionPrompt,
   processCounterpartDecisionBatches,
   runBatch: runCounterpartDecisionBatch,
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
@@ -6348,6 +6349,20 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
+  test("tells Qwen that unestablished dimensions cannot cite candidates", () => {
+    const messages = counterpartDecisionPrompt({
+      batchId: "batch",
+      expectedPackageIds: [],
+      packages: [],
+    });
+    expect(messages[0].content).toContain(
+      "Für jeden NOT_ESTABLISHED-Check muss candidateIds exakt [] sein"
+    );
+    expect(messages[0].content).toContain(
+      "alle candidateIds [] und selectedCandidateIds []"
+    );
+  });
+
   test("keeps a real-sized compacted candidate package inside the default decision budget", () => {
     const manifest = searchEligibleManifest();
     const searchPlan = buildADrivenCounterpartSearchPlan({

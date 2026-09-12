@@ -30,7 +30,7 @@ const RUN_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V2";
 const PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V1",
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V2";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -182,7 +182,7 @@ function prompt(batch) {
     {
       role: "system",
       content:
-        "Du prüfst kleine, servergebundene Kandidatenpakete aus Versicherungsdokumenten B gegen atomare Anforderungen aus Referenzpaket A. Antworte ausschließlich als JSON-Array mit exakt einem Objekt je expectedPackageId und keiner anderen ID. Erfinde keine Zitate, Seiten, IDs oder Tatsachen. Nutze ausschließlich compactCandidateId und die darin enthaltenen sourceSpans. Für jeden semanticCheck ist exakt ein dimensionCheck auszugeben: {checkId,dimension,outcome,candidateIds}. outcome ist MATCH, MISMATCH oder NOT_ESTABLISHED. MATCH verlangt einen ausdrücklichen, bedeutungsgleichen Beleg; ähnliche Wörter reichen nicht. Prüfe insbesondere Gegenstand, Gefahr, Wirkung/Negation, Scope, Rolle, Bedingung und Werte. MISMATCH verlangt einen ausdrücklichen Widerspruch im fachlich passenden Kontext. NOT_ESTABLISHED gilt, wenn die vorgelegten Kandidaten die Dimension nicht sicher belegen. decision ist ausschließlich SUPPORTED, CONTRADICTED oder NOT_SUPPORTED. SUPPORTED ist nur zulässig, wenn alle Checks MATCH sind. CONTRADICTED ist nur zulässig, wenn mindestens ein Check MISMATCH und kein Check NOT_ESTABLISHED ist. NOT_SUPPORTED ist zu verwenden, wenn mindestens ein Check NOT_ESTABLISHED und kein Check MISMATCH ist; vorhandene Teilbelege bleiben dabei als MATCH samt candidateIds erhalten. selectedCandidateIds ist exakt die sortierte Vereinigungsmenge aller candidateIds aus den dimensionChecks. Bei vollständig fehlendem Beleg sind alle Checks NOT_ESTABLISHED und selectedCandidateIds leer. Ausgabeform je Paket exakt: {packageId,decision,selectedCandidateIds,dimensionChecks}.",
+        "Du prüfst kleine, servergebundene Kandidatenpakete aus Versicherungsdokumenten B gegen atomare Anforderungen aus Referenzpaket A. Antworte ausschließlich als JSON-Array mit exakt einem Objekt je expectedPackageId und keiner anderen ID. Erfinde keine Zitate, Seiten, IDs oder Tatsachen. Nutze ausschließlich compactCandidateId und die darin enthaltenen sourceSpans. Für jeden semanticCheck ist exakt ein dimensionCheck auszugeben: {checkId,dimension,outcome,candidateIds}. outcome ist MATCH, MISMATCH oder NOT_ESTABLISHED. MATCH verlangt einen ausdrücklichen, bedeutungsgleichen Beleg; ähnliche Wörter reichen nicht. Prüfe insbesondere Gegenstand, Gefahr, Wirkung/Negation, Scope, Rolle, Bedingung und Werte. MISMATCH verlangt einen ausdrücklichen Widerspruch im fachlich passenden Kontext. NOT_ESTABLISHED gilt, wenn die vorgelegten Kandidaten die Dimension nicht sicher belegen. Für jeden NOT_ESTABLISHED-Check muss candidateIds exakt [] sein; Kandidaten-IDs sind nur bei MATCH oder MISMATCH zulässig. decision ist ausschließlich SUPPORTED, CONTRADICTED oder NOT_SUPPORTED. SUPPORTED ist nur zulässig, wenn alle Checks MATCH sind. CONTRADICTED ist nur zulässig, wenn mindestens ein Check MISMATCH und kein Check NOT_ESTABLISHED ist. NOT_SUPPORTED ist zu verwenden, wenn mindestens ein Check NOT_ESTABLISHED und kein Check MISMATCH ist; vorhandene Teilbelege bleiben dabei als MATCH samt candidateIds erhalten. selectedCandidateIds ist exakt die sortierte Vereinigungsmenge aller candidateIds aus den dimensionChecks. Bei vollständig fehlendem Beleg sind alle Checks NOT_ESTABLISHED, alle candidateIds [] und selectedCandidateIds []. Ausgabeform je Paket exakt: {packageId,decision,selectedCandidateIds,dimensionChecks}.",
     },
     {
       role: "user",
@@ -420,7 +420,7 @@ async function runBatch({
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
             validation.diagnostics
-          )}. Korrigiere ausschließlich die noch erwarteten Pakete. Verwende nur vorhandene compactCandidateIds. SUPPORTED verlangt ausschließlich MATCH; CONTRADICTED verlangt mindestens ein MISMATCH und kein NOT_ESTABLISHED; NOT_SUPPORTED verlangt mindestens ein NOT_ESTABLISHED und kein MISMATCH. Teilbelege bleiben MATCH mit candidateIds. selectedCandidateIds ist exakt die Vereinigungsmenge aller dimensionChecks.candidateIds.`,
+          )}. Korrigiere ausschließlich die noch erwarteten Pakete. Verwende nur vorhandene compactCandidateIds. SUPPORTED verlangt ausschließlich MATCH; CONTRADICTED verlangt mindestens ein MISMATCH und kein NOT_ESTABLISHED; NOT_SUPPORTED verlangt mindestens ein NOT_ESTABLISHED und kein MISMATCH. Jeder NOT_ESTABLISHED-Check hat candidateIds exakt []; nur MATCH oder MISMATCH dürfen Kandidaten-IDs tragen. Teilbelege bleiben MATCH mit candidateIds. selectedCandidateIds ist exakt die Vereinigungsmenge aller dimensionChecks.candidateIds.`,
         },
       ];
     } catch (error) {
