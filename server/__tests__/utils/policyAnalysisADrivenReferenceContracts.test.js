@@ -610,6 +610,43 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes a split condition from an exact requirement display label", () => {
+    const unit = evidenceUnit(
+      ["peril", "Feuer und Sturm, auch wenn in der Sparte"],
+      ["tail", "keine Position Sondermüll versichert ist."]
+    );
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["peril", "tail"],
+          [
+            component("PERIL_OR_CAUSE", "peril", {
+              label: "Feuer und Sturm",
+            }),
+            component("FACT_ROLE", "tail", {
+              label: "keine Position Sondermüll versichert ist.",
+            }),
+          ]
+        ),
+        displayLabel:
+          "Feuer und Sturm, auch wenn in der Sparte\nkeine Position Sondermüll versichert ist.",
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "CONDITION",
+      label:
+        "wenn in der Sparte\nkeine Position Sondermüll versichert ist.",
+      sourceBlockIds: ["peril", "tail"],
+    });
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        signalId: "EXPLICIT_CONDITION",
+      }),
+    ]);
+  });
+
   test("accepts complete signals and ignores ordinary wording", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(

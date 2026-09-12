@@ -452,26 +452,41 @@ function materializeSharedSignalComponents(unit, requirements) {
             component.sourceBlockIds.includes(evidence.blockId) &&
             matchesForPattern(signal.pattern, component.label).length > 0
         );
-        if (localCandidates.length !== 1) continue;
-        const [localComponent] = localCandidates;
-        const localMatch = matchesForPattern(
-          signal.pattern,
-          localComponent.label
-        )[0];
-        const matchIndex = localComponent.label
+        const localComponent =
+          localCandidates.length === 1 ? localCandidates[0] : null;
+        const localText = localComponent?.label || requirement.displayLabel;
+        const localMatches = matchesForPattern(signal.pattern, localText);
+        if (
+          localCandidates.length > 1 ||
+          localMatches.length === 0 ||
+          (!localComponent && signal.signalId !== "EXPLICIT_CONDITION")
+        )
+          continue;
+        const matchIndex = localText
           .toLocaleLowerCase("de-AT")
-          .indexOf(localMatch.toLocaleLowerCase("de-AT"));
+          .indexOf(localMatches[0].toLocaleLowerCase("de-AT"));
         if (matchIndex < 0) continue;
+        const label =
+          signal.signalId === "EXPLICIT_CONDITION"
+            ? localText.slice(matchIndex).trim()
+            : localText;
+        const sourceBlockIds = localComponent
+          ? [...localComponent.sourceBlockIds]
+          : minimalSourceRange(unit, label, requirement.sourceBlockIds);
+        if (
+          !sourceBlockIds?.length ||
+          sourceBlockIds.some(
+            (blockId) => !requirement.sourceBlockIds.includes(blockId)
+          )
+        )
+          continue;
         const localRole = {
           type:
             signal.signalId === "EXPLICIT_CONDITION"
               ? "CONDITION"
               : "FACT_ROLE",
-          label:
-            signal.signalId === "EXPLICIT_CONDITION"
-              ? localComponent.label.slice(matchIndex).trim()
-              : localComponent.label,
-          sourceBlockIds: [...localComponent.sourceBlockIds],
+          label,
+          sourceBlockIds,
         };
         requirement.components.push(localRole);
         diagnostics.push({
