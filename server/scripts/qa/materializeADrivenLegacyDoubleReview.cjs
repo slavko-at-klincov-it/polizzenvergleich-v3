@@ -169,20 +169,30 @@ function freezeArtifactSetDigest(payload) {
 }
 
 function requiredFreezeArtifactPaths(basis) {
-  return new Set([
-    BASIS_FILE,
-    "inputs/dynamicManifest.json",
-    "inputs/legacy-manifest.json",
-    ...Object.values(basis.classificationEvidence.artifacts).map(
-      ({ relativePath }) => relativePath
-    ),
-    ...basis.classificationEvidence.batchResults.map(
-      ({ relativePath }) => relativePath
-    ),
-    ...Object.values(basis.runProvenance.sourceArtifacts).map(
-      ({ relativePath }) => relativePath
-    ),
+  return new Set([BASIS_FILE, ...expectedFreezeArtifactBindings(basis).keys()]);
+}
+
+function expectedFreezeArtifactBindings(basis) {
+  const bindings = new Map([
+    [
+      "inputs/dynamicManifest.json",
+      basis.sourceBindings.dynamicManifestFileSha256,
+    ],
+    [
+      "inputs/legacy-manifest.json",
+      basis.sourceBindings.legacyManifestFileSha256,
+    ],
   ]);
+  for (const { relativePath, fileSha256 } of [
+    ...Object.values(basis.classificationEvidence.artifacts),
+    ...basis.classificationEvidence.batchResults,
+    ...Object.values(basis.runProvenance.sourceArtifacts),
+  ]) {
+    if (bindings.has(relativePath) && bindings.get(relativePath) !== fileSha256)
+      fail("LF_A_DOUBLE_REVIEW_FREEZE_BINDING_CONFLICT", relativePath);
+    bindings.set(relativePath, fileSha256);
+  }
+  return bindings;
 }
 
 function freezeArtifactFiles(root) {
@@ -250,6 +260,17 @@ function validateFreezeArtifactSet({ basisRoot, basis }) {
     [...requiredFreezeArtifactPaths(basis)].some((item) => !present.has(item))
   )
     fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_INCOMPLETE");
+  const currentByPath = new Map(
+    currentFiles.map(({ relativePath, fileSha256 }) => [
+      relativePath,
+      fileSha256,
+    ])
+  );
+  for (const [relativePath, expectedSha256] of expectedFreezeArtifactBindings(
+    basis
+  ))
+    if (currentByPath.get(relativePath) !== expectedSha256)
+      fail("LF_A_DOUBLE_REVIEW_FREEZE_SOURCE_BINDING_INVALID", relativePath);
   return artifactSet;
 }
 
@@ -924,6 +945,9 @@ function materializeDynamicRemainderReconciliation({
     remainderReviewA,
     remainderReviewB,
     reconciliation: reopened,
+    expectedProfileId: campaign.basis.campaignProfile.profileId,
+    expectedRunSignature: campaign.basis.runProvenance.sourceRun.runSignature,
+    expectedBasisSha256: campaign.basis.basisSha256,
   });
   lockTree(temp);
   fs.renameSync(temp, target);

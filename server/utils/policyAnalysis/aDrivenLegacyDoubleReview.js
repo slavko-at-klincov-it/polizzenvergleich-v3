@@ -31,13 +31,13 @@ const REVIEW_INPUT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_INPUT_V2";
 const REVIEW_ARTIFACT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_V2";
 const APPROVED_CROSSWALK_CONTRACT_ID = "LF_A_V12_283_631_APPROVED_CROSSWALK_V2";
 const DYNAMIC_REMAINDER_DRAFT_CONTRACT_ID =
-  "LF_A_DYNAMIC_REMAINDER_REVIEW_DRAFT_V1";
+  "LF_A_DYNAMIC_REMAINDER_REVIEW_DRAFT_V2";
 const DYNAMIC_REMAINDER_REVIEW_INPUT_CONTRACT_ID =
-  "LF_A_DYNAMIC_REMAINDER_REVIEW_INPUT_V1";
+  "LF_A_DYNAMIC_REMAINDER_REVIEW_INPUT_V2";
 const DYNAMIC_REMAINDER_REVIEW_ARTIFACT_CONTRACT_ID =
-  "LF_A_DYNAMIC_REMAINDER_REVIEW_V1";
+  "LF_A_DYNAMIC_REMAINDER_REVIEW_V2";
 const DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID =
-  "LF_A_DYNAMIC_REMAINDER_RECONCILIATION_V1";
+  "LF_A_DYNAMIC_REMAINDER_RECONCILIATION_V2";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const REVIEW_SLOTS = new Set(["A", "B"]);
@@ -1249,10 +1249,11 @@ function createReviewerRegistry({
     authorityPublicKeyPem,
     authorityPublicKeyFingerprintSha256,
     trustAnchor: {
-      kind: "EXTERNALLY_PINNED_ED25519_FINGERPRINT",
+      kind: "CALLER_SUPPLIED_EXPECTED_ED25519_FINGERPRINT",
       publicKeyFingerprintSha256: trustedAuthorityPublicKeyFingerprintSha256,
     },
-    proofLimit: "HUMAN_EXPERT_STATUS_ATTESTED_BY_EXTERNAL_ACCEPTANCE_AUTHORITY",
+    proofLimit:
+      "SIGNATURE_AND_CALLER_SUPPLIED_KEY_CONSISTENCY_ONLY_NOT_EXTERNAL_B_AUTHORIZATION",
     reviewers: (reviewers || []).map((reviewer) => ({
       reviewerId: text(reviewer.reviewerId),
       reviewerSlot: reviewer.reviewerSlot,
@@ -1311,6 +1312,8 @@ function validateReviewerRegistry({
     ...unsignedRegistry
   } = registry;
   if (
+    registry.schemaVersion !== 1 ||
+    registry.contractId !== REVIEWER_REGISTRY_CONTRACT_ID ||
     registry.basisSha256 !== basis.basisSha256 ||
     registry.draftSha256 !== draft.draftSha256 ||
     !validSha(registry.freezeArtifactSetSha256) ||
@@ -1318,9 +1321,12 @@ function validateReviewerRegistry({
     !validSha(authorityPublicKeyFingerprintSha256) ||
     registry.authorityPublicKeyFingerprintSha256 !==
       authorityPublicKeyFingerprintSha256 ||
-    registry.trustAnchor?.kind !== "EXTERNALLY_PINNED_ED25519_FINGERPRINT" ||
+    registry.trustAnchor?.kind !==
+      "CALLER_SUPPLIED_EXPECTED_ED25519_FINGERPRINT" ||
     registry.trustAnchor?.publicKeyFingerprintSha256 !==
       authorityPublicKeyFingerprintSha256 ||
+    registry.proofLimit !==
+      "SIGNATURE_AND_CALLER_SUPPLIED_KEY_CONSISTENCY_ONLY_NOT_EXTERNAL_B_AUTHORIZATION" ||
     publicKeyFingerprint(registry.authorityPublicKeyPem) !==
       authorityPublicKeyFingerprintSha256 ||
     !verifySignature(
@@ -1506,6 +1512,8 @@ function normalizeDecisions(decisions, draft) {
     const relationCauseValid =
       (!["SPLIT_INTO_DYNAMIC", "MERGED_INTO_DYNAMIC"].includes(relation) ||
         rootCauseDisposition === "SPLIT_OR_MERGE_RELATION") &&
+      (rootCauseDisposition !== "SPLIT_OR_MERGE_RELATION" ||
+        ["SPLIT_INTO_DYNAMIC", "MERGED_INTO_DYNAMIC"].includes(relation)) &&
       (relation !== "MISSING" ||
         rootCauseDisposition === "DYNAMIC_COMPONENT_MISSING");
     if (
@@ -1928,7 +1936,7 @@ function createDynamicRemainderDraft({
   )
     throw reviewError("LF_A_DYNAMIC_REMAINDER_DRAFT_COVERAGE_INVALID");
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: DYNAMIC_REMAINDER_DRAFT_CONTRACT_ID,
     basisSha256: basis.basisSha256,
     draftSha256: draft.draftSha256,
@@ -2016,7 +2024,7 @@ function createDynamicRemainderReviewerTemplate({
     (entry) => entry.reviewerSlot === reviewerSlot
   );
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: DYNAMIC_REMAINDER_REVIEW_INPUT_CONTRACT_ID,
     basisSha256: basis.basisSha256,
     draftSha256: draft.draftSha256,
@@ -2161,7 +2169,7 @@ function dynamicRemainderReviewerPayload({
   )
     throw reviewError("LF_A_DYNAMIC_REMAINDER_SUBMISSION_INVALID");
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: DYNAMIC_REMAINDER_REVIEW_ARTIFACT_CONTRACT_ID,
     basisSha256: basis.basisSha256,
     draftSha256: draft.draftSha256,
@@ -2362,7 +2370,7 @@ function reconcileDynamicRemainderReview({
   )
     throw reviewError("LF_A_DYNAMIC_REMAINDER_PARTITION_INVALID");
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID,
     basisSha256: basis.basisSha256,
     draftSha256: draft.draftSha256,
@@ -2389,7 +2397,9 @@ function reconcileDynamicRemainderReview({
       semanticCrosswalkApproved: true,
       reverseDynamicAdditionsApproved: approved,
       dynamicManifestSemanticCompletenessApproved: approved,
-      bPilotAllowed: approved,
+      technicalBPilotPrerequisitesSatisfied: approved,
+      externallyPinnedAuthorityConfigured: false,
+      bPilotAllowed: false,
       productRoutingAllowed: false,
       resultMutationAllowed: false,
     },
@@ -2405,8 +2415,20 @@ function reconcileDynamicRemainderReview({
 
 function validateDynamicRemainderReconciliation({
   reconciliation,
+  expectedProfileId,
+  expectedRunSignature,
+  expectedBasisSha256,
   ...args
 } = {}) {
+  if (
+    !text(expectedProfileId) ||
+    !text(expectedRunSignature) ||
+    !validSha(expectedBasisSha256) ||
+    reconciliation?.profileId !== expectedProfileId ||
+    reconciliation?.runSignature !== expectedRunSignature ||
+    reconciliation?.basisSha256 !== expectedBasisSha256
+  )
+    throw reviewError("LF_A_DYNAMIC_REMAINDER_CAMPAIGN_PIN_INVALID");
   validateDigest(
     reconciliation,
     DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID,

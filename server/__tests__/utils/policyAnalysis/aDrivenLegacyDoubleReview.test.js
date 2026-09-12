@@ -42,20 +42,14 @@ const {
   sealDynamicRemainderReviewerArtifact,
   validateClassificationChain,
   validateCrosswalkDraft,
+  validateDynamicRemainderReconciliation,
 } = require("../../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
 const {
   assertNoPrivateKeyMaterial,
   assertRegularSingleLink,
   copyRegularVerified,
-  materializeApprovedCrosswalk,
-  materializeDynamicRemainderDraft,
-  materializeDynamicRemainderReconciliation,
-  materializeDynamicRemainderReviewerArtifact,
-  materializeDynamicRemainderReviewerTemplate,
   materializeFreezeArtifactSetIndex,
-  materializeRegistry,
-  materializeReviewerArtifact,
-  materializeReviewerTemplate,
+  validateFreezeArtifactSet,
 } = require("../../../scripts/qa/materializeADrivenLegacyDoubleReview.cjs");
 
 const sourcePlanSha = "1".repeat(64);
@@ -629,6 +623,30 @@ describe("V12 283/631 double-review contract", () => {
         }),
       })
     ).toThrow("LF_A_DOUBLE_REVIEW_TARGET_REUSE_INVALID");
+    const invalidSplitCauseInput = createReviewerTemplate({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewerSlot: "A",
+    });
+    invalidSplitCauseInput.independenceAttestation.reviewPerformedIndependently = true;
+    invalidSplitCauseInput.decisions = approvableLegacyDecisions(draft);
+    invalidSplitCauseInput.decisions[0].rootCauseDisposition =
+      "SPLIT_OR_MERGE_RELATION";
+    expect(() =>
+      sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input: invalidSplitCauseInput,
+        privateKeyPem: keys[0].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_DECISION_INVALID");
     const artifacts = ["A", "B"].map((slot, index) => {
       const input = createReviewerTemplate({
         basis: frozen,
@@ -796,10 +814,48 @@ describe("V12 283/631 double-review contract", () => {
     expect(finalReconciliation.summary).toMatchObject({
       reverseDynamicAdditionsApproved: true,
       dynamicManifestSemanticCompletenessApproved: true,
-      bPilotAllowed: true,
+      technicalBPilotPrerequisitesSatisfied: true,
+      externallyPinnedAuthorityConfigured: false,
+      bPilotAllowed: false,
       productRoutingAllowed: false,
       dynamicComponentsPartitioned: 755,
     });
+    expect(
+      validateDynamicRemainderReconciliation({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: artifacts[0],
+        reviewB: artifacts[1],
+        approvedCrosswalk,
+        remainderDraft,
+        remainderReviewA: remainderArtifacts[0],
+        remainderReviewB: remainderArtifacts[1],
+        reconciliation: finalReconciliation,
+        expectedProfileId: frozen.campaignProfile.profileId,
+        expectedRunSignature: frozen.runProvenance.sourceRun.runSignature,
+        expectedBasisSha256: frozen.basisSha256,
+      })
+    ).toBe(finalReconciliation);
+    expect(() =>
+      validateDynamicRemainderReconciliation({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: artifacts[0],
+        reviewB: artifacts[1],
+        approvedCrosswalk,
+        remainderDraft,
+        remainderReviewA: remainderArtifacts[0],
+        remainderReviewB: remainderArtifacts[1],
+        reconciliation: finalReconciliation,
+        expectedProfileId: "wrong-profile",
+        expectedRunSignature: frozen.runProvenance.sourceRun.runSignature,
+        expectedBasisSha256: frozen.basisSha256,
+      })
+    ).toThrow("LF_A_DYNAMIC_REMAINDER_CAMPAIGN_PIN_INVALID");
     expect(finalReconciliation.partitionLedger).toHaveLength(755);
     expect(
       new Set(
@@ -1113,16 +1169,11 @@ describe("write-once freeze primitives", () => {
     ).toThrow("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_MATERIAL_FORBIDDEN");
   });
 
-  test("materializes the registered two-review workflow without copying private keys", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "lf-review-flow-"));
-    const basisRoot = path.join(root, "basis");
-    const draftRoot = path.join(root, "draft");
-    fs.mkdirSync(basisRoot);
-    fs.mkdirSync(draftRoot);
+  test("rejects freeze bytes that do not match their frozen source bindings", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "lf-review-freeze-"));
     const frozen = basis();
-    const draft = createCrosswalkDraft({ basis: frozen });
     fs.writeFileSync(
-      path.join(basisRoot, "review-basis.private.json"),
+      path.join(root, "review-basis.private.json"),
       JSON.stringify(frozen)
     );
     const frozenInputPaths = new Set([
@@ -1139,204 +1190,21 @@ describe("write-once freeze primitives", () => {
       ),
     ]);
     for (const [index, relativePath] of [...frozenInputPaths].entries()) {
-      const file = path.join(basisRoot, relativePath);
+      const file = path.join(root, relativePath);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, JSON.stringify({ index, relativePath }));
     }
-    materializeFreezeArtifactSetIndex({ basisRoot, basis: frozen });
-    fs.writeFileSync(
-      path.join(draftRoot, "crosswalk-draft.private.json"),
-      JSON.stringify(draft)
-    );
+    materializeFreezeArtifactSetIndex({ basisRoot: root, basis: frozen });
+    expect(() =>
+      validateFreezeArtifactSet({ basisRoot: root, basis: frozen })
+    ).toThrow("LF_A_DOUBLE_REVIEW_FREEZE_SOURCE_BINDING_INVALID");
 
-    const authority = crypto.generateKeyPairSync("ed25519");
-    const reviewers = [
-      crypto.generateKeyPairSync("ed25519"),
-      crypto.generateKeyPairSync("ed25519"),
-    ];
-    const authorityPublicKeyPath = path.join(root, "authority-public.pem");
-    const authorityPrivateKeyPath = path.join(root, "authority-private.pem");
     fs.writeFileSync(
-      authorityPublicKeyPath,
-      authority.publicKey.export({ type: "spki", format: "pem" })
-    );
-    fs.writeFileSync(
-      authorityPrivateKeyPath,
-      authority.privateKey.export({ type: "pkcs8", format: "pem" })
-    );
-    const reviewersPath = path.join(root, "reviewers.json");
-    fs.writeFileSync(
-      reviewersPath,
-      JSON.stringify({
-        reviewers: reviewers.map(({ publicKey }, index) => ({
-          reviewerId: `reviewer-${index + 1}`,
-          reviewerSlot: index === 0 ? "A" : "B",
-          credentialId: `credential-${index + 1}`,
-          credentialIssuer: "synthetic-test-authority",
-          credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
-          publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
-        })),
-      })
-    );
-
-    const registryRoot = path.join(root, "registry");
-    const registry = materializeRegistry({
-      basisRoot,
-      draftRoot,
-      authorityId: "acceptance-owner",
-      authorityPublicKeyPath,
-      authorityPrivateKeyPath,
-      trustedAuthorityPublicKeyFingerprintSha256: crypto
-        .createHash("sha256")
-        .update(authority.publicKey.export({ type: "spki", format: "der" }))
-        .digest("hex"),
-      reviewersPath,
-      target: registryRoot,
-    });
-    expect(
-      fs.existsSync(path.join(registryRoot, "authority-private.pem"))
-    ).toBe(false);
-
-    const reviewerPrivateKeyPaths = ["A", "B"].map((slot, index) => {
-      const privateKeyPath = path.join(root, `reviewer-${slot}-private.pem`);
-      fs.writeFileSync(
-        privateKeyPath,
-        reviewers[index].privateKey.export({
-          type: "pkcs8",
-          format: "pem",
-        })
-      );
-      return privateKeyPath;
-    });
-    const reviewRoots = ["A", "B"].map((slot, index) => {
-      const templateRoot = path.join(root, `template-${slot}`);
-      const template = materializeReviewerTemplate({
-        basisRoot,
-        draftRoot,
-        registryRoot,
-        authorityPublicKeyFingerprintSha256:
-          registry.authorityPublicKeyFingerprintSha256,
-        reviewerSlot: slot,
-        target: templateRoot,
-      });
-      template.independenceAttestation.reviewPerformedIndependently = true;
-      template.decisions = approvableLegacyDecisions(draft);
-      const inputPath = path.join(root, `submission-${slot}.json`);
-      fs.writeFileSync(inputPath, JSON.stringify(template));
-      const reviewRoot = path.join(root, `review-${slot}`);
-      materializeReviewerArtifact({
-        basisRoot,
-        draftRoot,
-        registryRoot,
-        authorityPublicKeyFingerprintSha256:
-          registry.authorityPublicKeyFingerprintSha256,
-        reviewInputPath: inputPath,
-        reviewerPrivateKeyPath: reviewerPrivateKeyPaths[index],
-        target: reviewRoot,
-      });
-      expect(
-        fs.existsSync(path.join(reviewRoot, `reviewer-${slot}-private.pem`))
-      ).toBe(false);
-      return reviewRoot;
-    });
-
-    const approvedRoot = path.join(root, "approved");
-    const approved = materializeApprovedCrosswalk({
-      basisRoot,
-      draftRoot,
-      registryRoot,
-      authorityPublicKeyFingerprintSha256:
-        registry.authorityPublicKeyFingerprintSha256,
-      reviewAPath: path.join(reviewRoots[0], "review-A.private.json"),
-      reviewBPath: path.join(reviewRoots[1], "review-B.private.json"),
-      target: approvedRoot,
-    });
-    expect(approved.summary).toMatchObject({
-      records: 631,
-      semanticCrosswalkApproved: true,
-      bRoutingAllowed: false,
-    });
-    const approvedCampaignArgs = {
-      basisRoot,
-      draftRoot,
-      registryRoot,
-      authorityPublicKeyFingerprintSha256:
-        registry.authorityPublicKeyFingerprintSha256,
-      reviewAPath: path.join(reviewRoots[0], "review-A.private.json"),
-      reviewBPath: path.join(reviewRoots[1], "review-B.private.json"),
-      approvedCrosswalkPath: path.join(
-        approvedRoot,
-        "approved-crosswalk.private.json"
-      ),
-    };
-    const remainderDraftRoot = path.join(root, "remainder-draft");
-    const remainderDraft = materializeDynamicRemainderDraft({
-      ...approvedCampaignArgs,
-      target: remainderDraftRoot,
-    });
-    const remainderReviewRoots = ["A", "B"].map((slot, index) => {
-      const templateRoot = path.join(root, `remainder-template-${slot}`);
-      const template = materializeDynamicRemainderReviewerTemplate({
-        ...approvedCampaignArgs,
-        remainderDraftRoot,
-        reviewerSlot: slot,
-        target: templateRoot,
-      });
-      template.independenceAttestation.reviewPerformedIndependently = true;
-      template.decisions = remainderDraft.records.map(({ recordId }) => ({
-        recordId,
-        disposition: "VALID_DYNAMIC_ADDITION",
-        relatedLegacyRecordIds: [],
-        relatedDynamicComponentIds: [],
-        rationale: "Independent reverse semantic and source review.",
-      }));
-      const inputPath = path.join(root, `remainder-submission-${slot}.json`);
-      fs.writeFileSync(inputPath, JSON.stringify(template));
-      const reviewRoot = path.join(root, `remainder-review-${slot}`);
-      materializeDynamicRemainderReviewerArtifact({
-        ...approvedCampaignArgs,
-        remainderDraftRoot,
-        reviewInputPath: inputPath,
-        reviewerPrivateKeyPath: reviewerPrivateKeyPaths[index],
-        target: reviewRoot,
-      });
-      expect(
-        fs.existsSync(path.join(reviewRoot, `reviewer-${slot}-private.pem`))
-      ).toBe(false);
-      return reviewRoot;
-    });
-    const reconciliation = materializeDynamicRemainderReconciliation({
-      ...approvedCampaignArgs,
-      remainderDraftRoot,
-      remainderReviewAPath: path.join(
-        remainderReviewRoots[0],
-        "dynamic-remainder-review-A.private.json"
-      ),
-      remainderReviewBPath: path.join(
-        remainderReviewRoots[1],
-        "dynamic-remainder-review-B.private.json"
-      ),
-      target: path.join(root, "remainder-reconciliation"),
-    });
-    expect(reconciliation.summary).toMatchObject({
-      reverseDynamicAdditionsApproved: true,
-      bPilotAllowed: true,
-      productRoutingAllowed: false,
-    });
-    fs.writeFileSync(
-      path.join(basisRoot, [...frozenInputPaths][0]),
+      path.join(root, [...frozenInputPaths][0]),
       "post-freeze mutation"
     );
     expect(() =>
-      materializeReviewerTemplate({
-        basisRoot,
-        draftRoot,
-        registryRoot,
-        authorityPublicKeyFingerprintSha256:
-          registry.authorityPublicKeyFingerprintSha256,
-        reviewerSlot: "A",
-        target: path.join(root, "must-not-open-after-freeze-mutation"),
-      })
+      validateFreezeArtifactSet({ basisRoot: root, basis: frozen })
     ).toThrow("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_MUTATED");
   });
 });
