@@ -8100,3 +8100,81 @@ diesen Zustand nicht ersetzen.
 Status: `TECHNISCHER B-ONLY-PILOTPFAD UND B-TRANSPORT PASS; ECHTE V35-
 DOKUMENTBINDUNG 1+9 PASS; ALTER UNGATED BYPASS GESPERRT; REALER B-PILOT UND
 VOLLSTÄNDIGER 1+9-LAUF WEITER FAIL-CLOSED BEI 0/631 FACHREVIEWS`.
+
+### 133.26 Manipulationsfester Excel-Rückweg für die reale 631er-Doppelprüfung
+
+Der nächste Engpass war nicht mehr die A-Materialisierung, sondern die
+praktische Durchführung der 631 menschlichen Entscheidungen. Rohes JSON ist
+für zwei unabhängige Fachreviewer zu fehleranfällig. Deshalb wurde eine
+private V35-Arbeitsmappe mit drei Sichten erstellt:
+
+- `Anleitung` bindet Basis- und Draft-SHA, erklärt die sieben zulässigen
+  Relationen und sechs Ursachenklassen und verlangt Reviewer-Slot,
+  Reviewer-ID sowie eine ausgeschriebene Unabhängigkeitsattestierung;
+- `Review` enthält exakt 631 Legacy-Komponenten mit Legacy-Quellbeleg,
+  mechanischem Rollenbefund, zulässigen Kandidaten-IDs und gelben
+  Entscheidungsspalten;
+- `Kandidaten` normalisiert alle 5.678 dynamischen Kandidaten mit
+  Anforderungs-, Komponenten-, Rollen-, Seiten- und Quelltextbeleg.
+
+Die Mappe ist ausdrücklich kein Reviewer-Artefakt, keine Signatur, keine
+Freigabe und kein Kundenergebnis. Der neue QA-only-Befehl `workbook-import`
+akzeptiert ausschließlich ein frisches, registriertes Reviewer-Template. Er
+prüft vor jedem write-once Output:
+
+- Basis- und Draft-Bindung sowie Reviewer-Slot und Reviewer-ID;
+- alle 631 Record-IDs und sämtliche sichtbaren Legacy-Belege;
+- alle 5.678 Kandidatenzeilen und sämtliche sichtbaren Dynamic-Belege;
+- unveränderte Kopfzeilen, keine zusätzlichen Sparse-Zeilen und keine
+  Formeln oder komplexen Zellobjekte in menschlichen Eingabefeldern;
+- ausschließlich Targets aus dem jeweiligen Record;
+- Relations-, Kardinalitäts-, Mergegruppen-, Ursachen- und
+  Begründungsvertrag;
+- die explizite Erklärung, dass das andere Reviewer-Ergebnis vor Abgabe nicht
+  gesehen wurde.
+
+Der Rückimport erzeugt nur ein ausgefülltes, weiterhin unsigniertes
+`REVIEW_INPUT_V2`. Signatur, Crosswalk-Approval, dynamischer Restreview,
+B-Autorisierung und B-Gate bleiben getrennte spätere Schritte.
+
+Die Iteration fand zwei reale Integrationsfehler. Erstens erfasst
+`ExcelJS.actualRowCount` bei angehängten Sparse-Zeilen nicht zuverlässig die
+höchste Blattzeile; die zusätzliche Zeile konnte dadurch unentdeckt bleiben.
+Der Importer verwendet nun `rowCount`, und der Negativtest besteht. Zweitens
+war die direkt mit dem Spreadsheet-Runtime erzeugte XLSX dort zwar lesbar und
+visuell korrekt, für ExcelJS 4.4 aber nicht importierbar. Die ausgelieferte
+Arbeitsmappe wurde deshalb über LibreOffice auf dem Mac Studio nach OOXML
+normalisiert und anschließend mit beiden Engines erneut geprüft.
+
+Finale private Arbeitsmappe:
+
+```text
+/Users/slavkoklincov/Code/AnythingLLMStudio-Versicherung/outputs/lf-v35-review-20260912/LF-A-V35-631-Review-Arbeitsmappe.xlsx
+SHA-256:
+  2ee7d9d1ce98363cb7871d2db7d9b5632108adb0277c30ec4cf602918062ed20
+Zeilen:
+  631 Reviewrecords, 5.678 Kandidatenrecords
+Ausgangsstatus:
+  631 OFFEN, 0 Eingaben
+```
+
+Ein echter V35-Vertragstest auf dem Mac Studio las die normalisierte Datei,
+validierte alle 631 Review- und 5.678 Kandidatenzeilen gegen den eingefrorenen
+Draft und stoppte anschließend erwartungsgemäß fail-closed an der ersten
+leeren Fachentscheidung
+`LF_A_DOUBLE_REVIEW_DECISION_INVALID:DR-6e7f2bc9ca6b36b25bd10dd8`.
+Damit ist belegt, dass weder die Belege noch leere Felder still als Review
+übernommen werden.
+
+Am exakten Codecommit `086fa312cfad73b5d87698ce2ba696cce78ecddb`
+im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-review-import-086f-FhCyt6` unter Node 22.23.2 bestanden
+Node-Syntax, Prettier, Produkt-/CLI-ESLint ohne Fehler, 20/20 fokussierte Tests
+und die vollständige Serverregression mit 189/189 Suites und 2.690/2.690
+Tests. Die XLSX bestand außerdem den Formel-Fehlerscan ohne Treffer; alle
+drei Blätter wurden nach der Normalisierung erneut gerendert und visuell
+geprüft.
+
+Status: `631ER REVIEW-ARBEITSMAPPE UND FAIL-CLOSED RÜCKIMPORT TECHNISCH PASS;
+0/631 REALE FACHENTSCHEIDUNGEN; KEINE REGISTRY, SIGNATUR ODER AUTORISIERUNG;
+B-PILOT UND 1+9 WEITER GESPERRT`.
