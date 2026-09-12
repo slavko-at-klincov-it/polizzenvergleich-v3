@@ -3929,3 +3929,54 @@ an eine exhaustive, doppelt signierte Restprüfung gebunden.
 **Beweist nicht:** irgendeine reale Fachentscheidung. Der reale V30-Stand
 bleibt bei 0/631 Reviews; ohne zwei tatsächliche unabhängige Fachreviewer und
 Akzeptanzautorität darf kein Review- oder Freigabeartefakt erzeugt werden.
+
+## 65. Technische Doppelreview-Vollständigkeit ist noch keine B-Autorisierung
+
+**Prüfung:** 12. September 2026
+
+Eine unabhängige Systemprüfung des ausführbaren 631er- und Restreviewpfads
+zeigte, dass kryptografisch konsistente Artefakte allein keine externe
+Freigabe beweisen. Wenn Autoritätsschlüssel und erwarteter Fingerprint im
+selben CLI-Aufruf geliefert werden, ist damit nur Schlüssel- und
+Signaturkonsistenz nachgewiesen. Es existiert noch kein außerhalb dieses
+Aufrufs administrativ verankerter Trust Root.
+
+Der Vertrag wurde deshalb fail-closed geändert. Selbst zwei vollständig
+übereinstimmende, formal gültige Reviews setzen nur
+`technicalBPilotPrerequisitesSatisfied:true`. `bPilotAllowed`,
+`productRoutingAllowed`, `resultMutationAllowed` und die historischen
+`*Approved`-Felder bleiben falsch. Der erfolgreiche Top-Level-Status heißt
+`TECHNICAL_PREREQUISITES_SATISFIED`, nicht `APPROVED`. Erst ein künftig
+separat implementiertes und extern signiertes Autorisierungsartefakt darf
+einen B-Start freigeben.
+
+Zusätzlich wurde die Beweiskette verschärft: Alle 74 Freeze-Dateien werden
+nicht nur gegen den Freeze-Index, sondern gegen ihre in Basis,
+Klassifikationsevidenz und Run-Provenienz gebundenen SHA-256 geprüft. Die
+finale Reconciliation verlangt erwartete Kampagnen-Pins für Profil,
+Run-Signatur und Basis. `SPLIT_OR_MERGE_RELATION` ist bidirektional an eine
+echte Split-/Merge-Entscheidung gebunden. Die dynamischen Restverträge wurden
+wegen der Semantikänderung auf V2 angehoben.
+
+Die echte V30-Freeze bestand diese strengere Prüfung am Commit
+`537c245d00481b4b241b72f5abc66014b065eef6`. Der neu materialisierte
+write-once Draft liegt unter
+`LF-A-V30-REVIEW-DRAFT-V3-STRICT-20260912-537C245D` und blieb deterministisch
+identisch: intrinsisch
+`077a2cd5ccc797200926c9f700451cecf919e4340c8a21e796c90766ad65410e`,
+als Datei
+`9d7eff57a355daa783d6ff6ea2cb8f6f849c836000f5b5164df1463860947c51`,
+631 Records, 42 mechanische dynamische Vorab-Restkomponenten und
+`UNREVIEWED`.
+
+Auf dem Mac Studio bestanden am exakten Commit unter Node 22.23.2 der
+fokussierte Vertragstest 10/10, Prettier, serverseitiges ESLint ohne Fehler
+und 187/187 Server-Suites mit 2.646/2.646 Tests.
+
+**Beweist:** Die technische Reviewkette ist gegen Freeze-Austausch,
+Kampagnen-Replay, unechte Split-/Merge-Ursachen und mehrdeutige
+Freigabestatus gehärtet.
+
+**Beweist nicht:** reale Fachreview-Entscheidungen oder eine externe
+B-Autorisierung. Der Wahrheitsstand bleibt 0/631; B-Pilot, vollständiger
+1+9-Lauf, Produkt-Routing, Kunden-XLSX und Deployment bleiben gesperrt.
