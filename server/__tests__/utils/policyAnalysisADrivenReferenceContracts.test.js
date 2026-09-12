@@ -2108,7 +2108,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(components).toContainEqual({
       type: "VALUE_AND_UNIT",
       label: "bis zu\njeweils l0%",
-      rawValue: "l0%",
+      rawValue: "l0",
       unit: "%",
       sourceBlockIds: ["governor-one", "governor-two"],
     });
