@@ -4086,3 +4086,47 @@ Voll-Lauf oder Produktwirkungen zu erlauben.
 **Beweist nicht:** dass eine solche reale Autorisierung bereits existiert,
 dass 631 Komponenten fachlich geprüft sind oder dass der B-Pilot ausgeführt
 wurde. Der reale Stand bleibt 0/631 und damit fail-closed.
+
+## 68. Ein Autorisierungsgate muss am Runner sitzen und jeden Modellretry absichern
+
+**Prüfung:** 12. September 2026
+
+Ein korrektes Freigabeartefakt reicht nicht, solange ein alter Runner die
+nachgelagerte B-Suche umgehen oder der B-Modellaufruf unbegrenzt hängen kann.
+Der kontrollierte A-getriebene Pfad besitzt deshalb nun einen eigenen
+B-only-Runner. Er validiert Request, Signatur, Trust Anchor, geschützte
+Trust-Anchor-Pin-Datei, Gate, dynamischen A-Manifesthash, A-Dokumentidentität
+und sämtliche B-Dokumentidentitäten vor jeder Modellumschaltung. Er verwendet
+das eingefrorene A-Final wieder und startet keine neue A-Klassifikation.
+
+Die komponentenweise B-Qwen-Prüfung verwendet jetzt denselben nachweisbaren
+Transportstandard wie A: konfigurierbarer harter Timeout, echter Abort,
+Settlement vor Retry, gezieltes LM-Studio-Recovery, ausgeschaltete
+Bibliotheks-Retries und begrenzte eigene Versuche. Private Attempt-Journale
+erhalten Dauer, Fehlerklasse, Timeout, Abort, Settlement, Recovery und
+Responses. Gültige Teilantworten werden beim Resume wiederverwendet;
+unvollständige Batches werden nicht als PASS gespeichert und stoppen den Lauf
+am ersten offenen Batch.
+
+Der historische ungatete A+B-Shadow-Runner wurde vor seiner ersten Aktion
+mit Exit 2 gesperrt. Damit kann die neue Betriebsgrenze nicht durch den alten
+QA-Einstieg umgangen werden. Der echte V35-Freeze bestand die neue
+Dokumentbindung mit exakt einem A- und neun B-Dokumenten, B-Positionen 0 bis
+8, Manifesthash
+`d7ce4316c9c416e10aff6348d6f8ef573de19b12f5d7743dc83a475bd240fbce`
+und Input-Manifest-Dateihash
+`9c114a33e2241ca7e2a6bc5e9c4301bef9bfb3a9ca02af8d56c34baf64a4d609`.
+
+Am exakten Commit `d335fcf3e2cc253ca79d0f01444d64ba3c3a0ef6`
+bestanden auf dem Mac Studio unter Node 22.23.2 Shell-/Node-Syntax,
+Prettier, Produkt-/CLI-ESLint und 188/188 Server-Suites mit 2.680/2.680
+Tests. Der isolierte Worktree war
+`/private/tmp/lf-bfinal-d335-8s5YtQ/repo`.
+
+**Beweist:** Der vorgesehene kontrollierte B-Pilot kann technisch weder ohne
+extern verankerte Freigabekette noch mit einem abweichenden A-/B-Lauf starten;
+Timeouts und Teilfortschritt bleiben resumierbar und fail-closed.
+
+**Beweist nicht:** eine echte Fachfreigabe oder ein B-Suchergebnis. Ohne zwei
+reale unabhängige Reviews für 631/631, dynamischen Restreview und externe
+Autorisierung wurde bewusst kein Launch-Receipt und kein B-Lauf erzeugt.
