@@ -9,15 +9,23 @@ const {
   createClassificationEvidence,
   createCrosswalkDraft,
   createReviewBasis,
+  createReviewerRegistry,
+  createReviewerTemplate,
   createRunProvenance,
+  reconcileApprovedCrosswalk,
+  sealReviewerArtifact,
   validateClassificationChain,
   validateCrosswalkDraft,
   validateReviewBasis,
+  validateReviewerArtifact,
+  validateReviewerRegistry,
   reviewCampaignProfile,
 } = require("../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
 
 const BASIS_FILE = "review-basis.private.json";
 const DRAFT_FILE = "crosswalk-draft.private.json";
+const REGISTRY_FILE = "reviewer-registry.private.json";
+const APPROVED_CROSSWALK_FILE = "approved-crosswalk.private.json";
 
 function fail(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
@@ -419,6 +427,196 @@ function materializeDraft({ basisRoot, target }) {
   return draft;
 }
 
+function readReviewCampaign({ basisRoot, draftRoot }) {
+  if (!basisRoot || !draftRoot)
+    fail("LF_A_DOUBLE_REVIEW_CAMPAIGN_ARGUMENT_REQUIRED");
+  const basis = readRegular(path.join(basisRoot, BASIS_FILE)).value;
+  const draft = readRegular(path.join(draftRoot, DRAFT_FILE)).value;
+  validateReviewBasis(basis);
+  validateCrosswalkDraft({ basis, draft });
+  return { basis, draft };
+}
+
+function materializeRegistry({
+  basisRoot,
+  draftRoot,
+  authorityId,
+  authorityPublicKeyPath,
+  authorityPrivateKeyPath,
+  reviewersPath,
+  target,
+}) {
+  if (
+    !authorityId ||
+    !authorityPublicKeyPath ||
+    !authorityPrivateKeyPath ||
+    !reviewersPath ||
+    !target
+  )
+    fail("LF_A_DOUBLE_REVIEW_REGISTRY_ARGUMENT_REQUIRED");
+  const { basis, draft } = readReviewCampaign({ basisRoot, draftRoot });
+  const registry = createReviewerRegistry({
+    basis,
+    draft,
+    authorityId,
+    authorityPublicKeyPem: readRawRegular(authorityPublicKeyPath).toString(
+      "utf8"
+    ),
+    authorityPrivateKeyPem: readRawRegular(authorityPrivateKeyPath).toString(
+      "utf8"
+    ),
+    reviewers: readRegular(reviewersPath).value.reviewers,
+  });
+  const temp = makeTempTarget(target);
+  writeJsonPrivate(path.join(temp, REGISTRY_FILE), registry);
+  validateReviewerRegistry({
+    basis,
+    draft,
+    registry: readRegular(path.join(temp, REGISTRY_FILE)).value,
+    authorityPublicKeyFingerprintSha256:
+      registry.authorityPublicKeyFingerprintSha256,
+  });
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return registry;
+}
+
+function readRegisteredCampaign({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+}) {
+  if (!registryRoot || !authorityPublicKeyFingerprintSha256)
+    fail("LF_A_DOUBLE_REVIEW_REGISTERED_CAMPAIGN_ARGUMENT_REQUIRED");
+  const { basis, draft } = readReviewCampaign({ basisRoot, draftRoot });
+  const registry = readRegular(path.join(registryRoot, REGISTRY_FILE)).value;
+  validateReviewerRegistry({
+    basis,
+    draft,
+    registry,
+    authorityPublicKeyFingerprintSha256,
+  });
+  return { basis, draft, registry };
+}
+
+function materializeReviewerTemplate({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewerSlot,
+  target,
+}) {
+  if (!reviewerSlot || !target)
+    fail("LF_A_DOUBLE_REVIEW_TEMPLATE_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const input = createReviewerTemplate({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewerSlot,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, `review-input-${reviewerSlot}.private.json`);
+  writeJsonPrivate(file, input);
+  if (stableJson(readRegular(file).value) !== stableJson(input))
+    fail("LF_A_DOUBLE_REVIEW_TEMPLATE_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return input;
+}
+
+function stableJson(value) {
+  return JSON.stringify(value);
+}
+
+function materializeReviewerArtifact({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewInputPath,
+  reviewerPrivateKeyPath,
+  target,
+}) {
+  if (!reviewInputPath || !reviewerPrivateKeyPath || !target)
+    fail("LF_A_DOUBLE_REVIEW_SEAL_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const input = readRegular(reviewInputPath).value;
+  const review = sealReviewerArtifact({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    input,
+    privateKeyPem: readRawRegular(reviewerPrivateKeyPath).toString("utf8"),
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(
+    temp,
+    `review-${review.reviewerSlot}.private.json`
+  );
+  writeJsonPrivate(file, review);
+  validateReviewerArtifact({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    review: readRegular(file).value,
+  });
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return review;
+}
+
+function materializeApprovedCrosswalk({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewAPath,
+  reviewBPath,
+  target,
+}) {
+  if (!reviewAPath || !reviewBPath || !target)
+    fail("LF_A_DOUBLE_REVIEW_RECONCILE_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const reviewA = readRegular(reviewAPath).value;
+  const reviewB = readRegular(reviewBPath).value;
+  const approved = reconcileApprovedCrosswalk({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewA,
+    reviewB,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, APPROVED_CROSSWALK_FILE);
+  writeJsonPrivate(file, approved);
+  const reopened = readRegular(file).value;
+  const regenerated = reconcileApprovedCrosswalk({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewA,
+    reviewB,
+  });
+  if (stableJson(reopened) !== stableJson(regenerated))
+    fail("LF_A_DOUBLE_REVIEW_APPROVED_CROSSWALK_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return approved;
+}
+
 function main(argv = process.argv.slice(2)) {
   const { command, values } = parseArgs(argv);
   if (command === "freeze") {
@@ -448,6 +646,62 @@ function main(argv = process.argv.slice(2)) {
     process.stdout.write(`${draft.draftSha256}\n`);
     return;
   }
+  if (command === "registry") {
+    const registry = materializeRegistry({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      authorityId: values["authority-id"],
+      authorityPublicKeyPath: values["authority-public-key"],
+      authorityPrivateKeyPath: values["authority-private-key"],
+      reviewersPath: values.reviewers,
+      target: values.target,
+    });
+    process.stdout.write(
+      `${registry.registrySha256} ${registry.authorityPublicKeyFingerprintSha256}\n`
+    );
+    return;
+  }
+  if (command === "template") {
+    const input = materializeReviewerTemplate({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      registryRoot: values["registry-root"],
+      authorityPublicKeyFingerprintSha256:
+        values["authority-public-key-fingerprint"],
+      reviewerSlot: values.slot,
+      target: values.target,
+    });
+    process.stdout.write(`${input.reviewerSlot} ${input.reviewerId}\n`);
+    return;
+  }
+  if (command === "seal") {
+    const review = materializeReviewerArtifact({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      registryRoot: values["registry-root"],
+      authorityPublicKeyFingerprintSha256:
+        values["authority-public-key-fingerprint"],
+      reviewInputPath: values["review-input"],
+      reviewerPrivateKeyPath: values["reviewer-private-key"],
+      target: values.target,
+    });
+    process.stdout.write(`${review.reviewSha256}\n`);
+    return;
+  }
+  if (command === "reconcile") {
+    const approved = materializeApprovedCrosswalk({
+      basisRoot: values["basis-root"],
+      draftRoot: values["draft-root"],
+      registryRoot: values["registry-root"],
+      authorityPublicKeyFingerprintSha256:
+        values["authority-public-key-fingerprint"],
+      reviewAPath: values["review-a"],
+      reviewBPath: values["review-b"],
+      target: values.target,
+    });
+    process.stdout.write(`${approved.approvedCrosswalkSha256}\n`);
+    return;
+  }
   fail("LF_A_DOUBLE_REVIEW_COMMAND_INVALID", command);
 }
 
@@ -456,11 +710,16 @@ if (require.main === module) main();
 module.exports = {
   BASIS_FILE,
   DRAFT_FILE,
+  REGISTRY_FILE,
   assertRegularSingleLink,
   copyRegularVerified,
   main,
+  materializeApprovedCrosswalk,
   materializeDraft,
   materializeFreeze,
+  materializeRegistry,
+  materializeReviewerArtifact,
+  materializeReviewerTemplate,
   parseArgs,
   readRawRegular,
   readRegular,

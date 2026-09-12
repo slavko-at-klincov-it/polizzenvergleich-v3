@@ -42,6 +42,10 @@ const {
 const {
   assertRegularSingleLink,
   copyRegularVerified,
+  materializeApprovedCrosswalk,
+  materializeRegistry,
+  materializeReviewerArtifact,
+  materializeReviewerTemplate,
 } = require("../../../scripts/qa/materializeADrivenLegacyDoubleReview.cjs");
 
 const sourcePlanSha = "1".repeat(64);
@@ -705,5 +709,133 @@ describe("write-once freeze primitives", () => {
     expect(() => assertRegularSingleLink(source)).toThrow(
       "LF_A_DOUBLE_REVIEW_SOURCE_NOT_REGULAR_SINGLE_LINK"
     );
+  });
+
+  test("materializes the registered two-review workflow without copying private keys", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "lf-review-flow-"));
+    const basisRoot = path.join(root, "basis");
+    const draftRoot = path.join(root, "draft");
+    fs.mkdirSync(basisRoot);
+    fs.mkdirSync(draftRoot);
+    const frozen = basis();
+    const draft = createCrosswalkDraft({ basis: frozen });
+    fs.writeFileSync(
+      path.join(basisRoot, "review-basis.private.json"),
+      JSON.stringify(frozen)
+    );
+    fs.writeFileSync(
+      path.join(draftRoot, "crosswalk-draft.private.json"),
+      JSON.stringify(draft)
+    );
+
+    const authority = crypto.generateKeyPairSync("ed25519");
+    const reviewers = [
+      crypto.generateKeyPairSync("ed25519"),
+      crypto.generateKeyPairSync("ed25519"),
+    ];
+    const authorityPublicKeyPath = path.join(root, "authority-public.pem");
+    const authorityPrivateKeyPath = path.join(root, "authority-private.pem");
+    fs.writeFileSync(
+      authorityPublicKeyPath,
+      authority.publicKey.export({ type: "spki", format: "pem" })
+    );
+    fs.writeFileSync(
+      authorityPrivateKeyPath,
+      authority.privateKey.export({ type: "pkcs8", format: "pem" })
+    );
+    const reviewersPath = path.join(root, "reviewers.json");
+    fs.writeFileSync(
+      reviewersPath,
+      JSON.stringify({
+        reviewers: reviewers.map(({ publicKey }, index) => ({
+          reviewerId: `reviewer-${index + 1}`,
+          reviewerSlot: index === 0 ? "A" : "B",
+          credentialId: `credential-${index + 1}`,
+          publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
+        })),
+      })
+    );
+
+    const registryRoot = path.join(root, "registry");
+    const registry = materializeRegistry({
+      basisRoot,
+      draftRoot,
+      authorityId: "acceptance-owner",
+      authorityPublicKeyPath,
+      authorityPrivateKeyPath,
+      reviewersPath,
+      target: registryRoot,
+    });
+    expect(fs.existsSync(path.join(registryRoot, "authority-private.pem"))).toBe(
+      false
+    );
+
+    const reviewRoots = ["A", "B"].map((slot, index) => {
+      const templateRoot = path.join(root, `template-${slot}`);
+      const template = materializeReviewerTemplate({
+        basisRoot,
+        draftRoot,
+        registryRoot,
+        authorityPublicKeyFingerprintSha256:
+          registry.authorityPublicKeyFingerprintSha256,
+        reviewerSlot: slot,
+        target: templateRoot,
+      });
+      template.independenceAttestation.reviewPerformedIndependently = true;
+      template.decisions = draft.records.map((record) => ({
+        recordId: record.recordId,
+        relation: "EQUIVALENT",
+        dynamicTargets: [record.candidates[0].dynamicComponentId],
+        mergeGroupId: null,
+        rootCauseDisposition: [
+          "ROLE_INCOMPATIBLE",
+          "INHERITED_ROLE_CANDIDATE",
+        ].includes(record.mechanicalRoleReview.disposition)
+          ? "ROLE_MAPPING_TOO_NARROW"
+          : "NO_UPSTREAM_DEFECT",
+        rationale: "Independent source and semantic review.",
+      }));
+      const inputPath = path.join(root, `submission-${slot}.json`);
+      const privateKeyPath = path.join(root, `reviewer-${slot}-private.pem`);
+      fs.writeFileSync(inputPath, JSON.stringify(template));
+      fs.writeFileSync(
+        privateKeyPath,
+        reviewers[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        })
+      );
+      const reviewRoot = path.join(root, `review-${slot}`);
+      materializeReviewerArtifact({
+        basisRoot,
+        draftRoot,
+        registryRoot,
+        authorityPublicKeyFingerprintSha256:
+          registry.authorityPublicKeyFingerprintSha256,
+        reviewInputPath: inputPath,
+        reviewerPrivateKeyPath: privateKeyPath,
+        target: reviewRoot,
+      });
+      expect(
+        fs.existsSync(path.join(reviewRoot, `reviewer-${slot}-private.pem`))
+      ).toBe(false);
+      return reviewRoot;
+    });
+
+    const approved = materializeApprovedCrosswalk({
+      basisRoot,
+      draftRoot,
+      registryRoot,
+      authorityPublicKeyFingerprintSha256:
+        registry.authorityPublicKeyFingerprintSha256,
+      reviewAPath: path.join(reviewRoots[0], "review-A.private.json"),
+      reviewBPath: path.join(reviewRoots[1], "review-B.private.json"),
+      target: path.join(root, "approved"),
+    });
+    expect(approved.summary).toMatchObject({
+      records: 631,
+      semanticCrosswalkApproved: true,
+      bRoutingAllowed: false,
+    });
   });
 });
