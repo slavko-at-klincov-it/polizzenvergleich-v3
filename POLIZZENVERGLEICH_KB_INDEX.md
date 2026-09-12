@@ -1,6 +1,6 @@
 # Polizzenvergleich – KB-Index und Arbeitsmatrix
 
-Stand: 10. September 2026
+Stand: 12. September 2026
 
 Dieser Index ist der kurze Einstieg vor jeder projektbezogenen Antwort,
 Diagnose, Planung oder Änderung. Er ersetzt weder Quellcode und Tests noch die
@@ -106,10 +106,15 @@ LF-Dokuments ist nach hartem Request-Timeout, Abort, Settlement-Barriere und
 sicherer LM-Studio-Wiederherstellung mit 59/59 Batches abgeschlossen. Das
 dynamische Manifest besitzt 1.005/1.005 Blöcke genau einmal und enthält 364
 Requirements sowie 755 Komponenten ohne `UNRESOLVED`. Der mechanische
-283/631-Source-Crosswalk ist vollständig; die semantische Doppelreview ist
-wegen 341 rolleninkompatibler Komponenten-Overlaps weiterhin offen. Daher
-wurde B noch nicht gestartet. Messwerte und Beweisgrenze stehen in
+283/631-Source-Crosswalk ist vollständig. Eine Provenienzkorrektur vom
+12. September bindet ihn an das tatsächlich verwendete V3.7.4-Legacy-Manifest
+und korrigiert die rolleninkompatiblen Legacy-Overlaps von 341 auf 333. Die
+semantische Doppelreview bleibt mit 0/631 geprüften Records offen; daher wurde
+B noch nicht gestartet. Messwerte und Beweisgrenze stehen in
 [Tests und Erkenntnisse, Abschnitt 61](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#61-a-getriebener-v12-lauf-timeout-recovery-und-vollständiger-a-status).
+Der unveränderliche Freeze- und Doppelreview-Vertrag ist in
+[Abschnitt 62](./POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md#62-korrigierte-v374-reviewbasis-und-631er-doppelreview-vorbereitung)
+dokumentiert.
 
 ## 2. Schnelllage
 

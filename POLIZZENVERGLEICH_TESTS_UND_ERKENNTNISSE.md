@@ -3770,3 +3770,66 @@ ausgewiesenen mechanischen Crosswalk.
 **Beweist nicht:** die fachliche Gleichwertigkeit aller 283/631 Elemente,
 einen Experten-Doppelreview, B-Gegenstücke, unbekannte
 Versicherer-Generalisierung oder 99 Prozent.
+
+## 62. Korrigierte V3.7.4-Reviewbasis und 631er-Doppelreview-Vorbereitung
+
+**Prüfung:** 12. September 2026
+
+Vor dem fachlichen Review wurde die bisherige Crosswalk-Provenienz nochmals
+gegen den tatsächlichen V3.7.4-Lauf geprüft. Der ältere Root-Crosswalk war an
+ein leeres Vorklassifikationsmanifest gebunden; der erste finale A-Audit
+verwendete außerdem das Legacy-Manifest aus V3.7.3. Das korrekte V3.7.4-
+Legacy-Manifest hat den intrinsischen Hash
+`3697afe4a18760bd893d50e0c3f8dadf48ff0106447829d32f1cb7845011efb0`,
+das finale dynamische V12-Manifest
+`5fcb889c0352f3808afeffda9f6801d987b61e0cccb18899c97ba90d0eacab6a`.
+
+Der korrigierte Audit bestätigt weiterhin 1.005/1.005 Source-Blöcke, 59/59
+Batches, 349/349 Response-Units, 364 Requirements, 755 Komponenten und null
+`UNRESOLVED`. Die mechanische Crosswalk-Statistik lautet nun 333 statt 341
+rolleninkompatible Legacy-Komponenten, 107 Split-Kandidaten, 324
+rolleninkompatible dynamische Komponenten, 123 Merge-Kandidaten und 160
+source-exakt zusätzliche dynamische Komponenten. Es fehlen source-mechanisch
+weder Legacy-Requirements noch Legacy-Komponenten. Diese Werte sind keine
+fachliche Äquivalenzentscheidung.
+
+Auf dem Mac Studio wurde danach eine unveränderliche Reviewbasis mit 74
+regulären Dateien materialisiert. Eine unabhängige Prüfung bestätigte null
+Symlinks, null Hardlinks und 70/70 hashgleiche referenzierte
+Eingabeartefakte. Basis-Hash ist
+`d7b1bd772bf8a76cc0082ebfeca26defef95004e19e4635a37e6da09bdf4f283`.
+Der getrennte Draft-Hash ist
+`16ae02acd4ba2709203adc731107a719cdfcb01ded78603f3c0610733fdd7c9d`.
+Der Draft enthält alle 631 Legacy-Komponenten, deren exakte Quellen und den
+vollständigen dynamischen Kandidatenkontext; kein Record ist kandidatenlos.
+
+Der Vertrag akzeptiert pro Komponente ausschließlich `EQUIVALENT`,
+`REPHRASED_EQUIVALENT`, `MOVED_EQUIVALENT`, `SPLIT_INTO_DYNAMIC`,
+`MERGED_INTO_DYNAMIC`, `MISSING` oder `AMBIGUOUS`. Rollenabweichungen benötigen
+zusätzlich eine explizite Ursachenklasse. Zwei getrennt signierte,
+autorisierte Fachreviewer müssen unabhängig alle 631 Records prüfen. Erst
+vollständige Übereinstimmung ohne `MISSING`, `AMBIGUOUS`, unbestimmte Ursache
+oder Reviewerabweichung kann den Legacy-Crosswalk freigeben. Gefundene Fehler
+werden nicht im Ergebnisartefakt editiert, sondern als allgemeine Rollen- oder
+Atomisierungsregel umgesetzt und über einen neuen Resume-Lauf materialisiert.
+
+Der Implementierungsstand `1bdd03185` bestand auf dem Mac Studio den
+Formatcheck, serverseitiges ESLint mit null Fehlern sowie 97/97 fokussierte
+und angrenzende Tests. Die normale Root-Konfiguration darf dabei nicht mit
+der separaten `server/eslint.config.mjs` verwechselt werden.
+
+Aktueller Gate-Stand: `reviewedRecords:0`, `approvalStatus:UNREVIEWED`. Ohne
+zwei reale unabhängige Fachreviewer existiert keine zulässige Abkürzung. Die
+Reverse-Diagnostik des Drafts weist 42 dynamische Komponenten ohne erweiterten
+Kandidatenkontext aus; diese Zahl ist wegen der Geschwisterkontext-Erweiterung
+nicht direkt mit den 160 source-exakt zusätzlichen Komponenten des Audits
+vergleichbar. B-Suche, Produkt-Routing, Kunden-XLSX und Deployment bleiben
+gesperrt.
+
+**Beweist:** eine an die richtige V3.7.4-Laufprovenienz gebundene,
+write-once Reviewbasis und die vollständige technische Vorbereitung für zwei
+unabhängige 631er-Fachreviews.
+
+**Beweist nicht:** eine einzige fachlich freigegebene Komponentenrelation,
+die Vollständigkeit der 755 dynamischen Komponenten, B-Gegenstücke,
+Generalisierung oder 99 Prozent.
