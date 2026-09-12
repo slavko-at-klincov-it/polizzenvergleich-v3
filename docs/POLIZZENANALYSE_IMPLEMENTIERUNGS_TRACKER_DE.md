@@ -7545,3 +7545,116 @@ Materialisierung sichtbar gemacht werden.
 Status: `V12-BASIS HASHGEBUNDEN UND EINGEFROREN; 631/631 REVIEWRECORDS
 VORBEREITET, 0/631 FACHLICH DOPPELT GEPRÜFT; SEMANTIKGATE OFFEN; B-SUCHE,
 PRODUKT-ROUTING, KUNDEN-XLSX UND DEPLOYMENT NICHT GESTARTET`.
+
+### 133.20 V30: requirement-lokale Rollenvollständigkeit und eingefrorene neue Reviewbasis
+
+Die 631er-Triage zeigte, dass die ursprüngliche A-Klassifikation fachliche
+Rollen teilweise in breiten Komponenten verlor. Deshalb wurde nicht die
+Rollenmatrix pauschal verbreitert, sondern der allgemeine semantische Vertrag
+gehärtet: Explizite Bedingungen, Ausschlüsse, Gefahren, Kosten, Werte,
+Limitbasen, Selbstbehalte und Definitionen müssen innerhalb derselben
+Requirement quellgebunden materialisiert sein. Governor-Evidenz darf nur
+begrenzt und nachvollziehbar vererbt werden. Alte valide Batchantworten werden
+unter dem aktuellen Kontext erneut geprüft; nur tatsächlich unvollständige
+Batches werden per Resume neu berechnet.
+
+Die Iterationen V22 bis V24 reduzierten die direkten Rollenabweichungen durch
+allgemeine Regeln von 102 auf 99. Sie ergänzten insbesondere über Quellblöcke
+gesplittete Gefahren-/Definitionsrelationen und eine eng begrenzte quantitative
+Anapher wie „bis zu dieser Größe“. Die zwischenzeitlichen V25-/V26-Regeln für
+kopulare Definitionen wurden nicht als Reviewbasis akzeptiert: Eine zu breite
+Regel interpretierte Deckungsaussagen wie „Versichert sind …“ und „Zusätzlich
+versichert sind …“ fälschlich als Definitionen. Diese Fehlversuche blieben als
+resumierbare Diagnoseartefakte erhalten.
+
+Der finale allgemeine Definitionsvertrag verlangt jetzt ein fachliches
+Subjekt vor `ist/sind`, einen Definitionsgegenstand im Prädikat und schließt
+satzabschließende Deckungsprädikate aus. Mehrblockige Definitionen werden als
+vollständige Quellspanne materialisiert. Positive, negative und gesplittete
+Formulierungsvarianten sind getestet; insbesondere werden
+„Gebäude sind versichert“, „Gebäude sind samt Anlagen mitversichert“ und die
+reale „Zusätzlich sind … mitversichert“-Klausel nicht zu `FACT_ROLE`.
+
+Der daraus erzeugte V30-Lauf liegt ausschließlich auf dem Mac Studio unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V30-TERMINAL-PREDICATE-20260912-653ECE7A
+```
+
+Laufkonfiguration und Ergebnis:
+
+```text
+Manifest-Implementierungscommit: 653ece7a0ff517dda1d0216e2f80566e89789a15
+Qwen-Modell: qwen/qwen3.6-35b-a3b
+Modellschlüssel: qwen3.6-35b-a3b-mlx-text
+Kontext: 42496
+Request-Timeout: 180000 ms
+Abort-Settlement-Timeout: 15000 ms
+Model-Recovery-Timeout: 180000 ms
+Maximum Attempts: 8
+Batches: 59/59 PASS
+Responses: 349/349 eindeutig
+Source-Blöcke: 1005/1005 genau einmal besessen und terminal
+Requirements: 354
+Komponenten: 1036
+UNRESOLVED: 0
+```
+
+Gegenüber V24 kam exakt eine zusätzliche fachliche Komponente hinzu: die
+vollständige, vier Source-Blöcke umfassende Definition der Nebengebäude. Nur
+`VS-08/outbuilding_definition` wechselte dadurch von `ROLE_INCOMPATIBLE` zu
+`ONE_TO_ONE_CANDIDATE`. Es wurden weder Komponenten entfernt noch die drei
+zuvor beobachteten falschen „Zusätzlich sind …“-Rollen übernommen.
+
+Beweishashes:
+
+```text
+dynamic manifestSha256:
+  683cd3f304203d4d1c95bfc92221b726c852c6d7cc64974269875787b544d9ad
+dynamic-semantic-manifest.private.json:
+  4a38c40b5b365e0c55fa5e26a73e4dd9e958d75b6a345eb3955ecaacd16c9648
+responses.private.json:
+  9d6d835ccd06c052aec954a98be661b55348abd918734155e97fac5ae5bae12d
+summary.private.json:
+  aaee4c376a2a5d549c9a88cfc5c9236f1628f0521e6ee284e0744385627ae27a
+a-status-audit-v30-653ece7a.private.json:
+  e9a0aaab54dca45e501a8f975ed26fb29e6357afb97f502a96495e4f71779da8
+```
+
+Die neue immutable Reviewbasis und der getrennte Draft liegen unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V30-REVIEW-FREEZE-20260912-683CD3F3
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-V30-REVIEW-DRAFT-20260912-2F63B522
+```
+
+Ihre intrinsischen Digests sind
+`2f63b52291b40353b456c398b8ad212bf4f2893821bc1e7b77027a701195eb6e`
+und
+`69575563a024b1cdb5d680f8b363856284dee4aec4a8e54145294ff2a834d2e3`.
+Der Draft enthält 631 Records: 271 direkte 1:1-, 200 Split-, 62 geerbte
+Rollenkandidaten, 98 direkte Rollenabweichungen und null kandidatenlose
+Records. Die 98 direkten Abweichungen verteilen sich auf 60 Bedingungen, 25
+Leistungen, sieben Ausschlüsse, zwei Kosten, zwei Dokumentstatusfälle, eine
+Definition und ein Versicherungsobjekt. Diese Verteilung ist Triage, keine
+Fehler- oder Freigabeentscheidung.
+
+Am finalen Codecommit `5622bf8037f0fe2ea4ee8edfd7cf8320321ee794`
+bestanden auf dem Mac Studio der Formatcheck, serverseitiges ESLint und die
+vollständige Server-Suite mit 187/187 Suites und 2.644/2.644 Tests. Ein erster
+Root-Jest-Lauf unter dem dort standardmäßig aktiven Node 26 scheiterte an
+vorhandenen, nicht LF-bezogenen Dependency-/Runtimeproblemen; derselbe
+vollständige Serverbestand bestand unter Node 22.23.2. Collector-Suites sind in
+diesem isolierten Worktree nicht installiert und deshalb kein behaupteter PASS.
+
+Der technische A-Pfad ist damit bereit für die fachliche Doppelprüfung, aber
+noch nicht für B. Es fehlen weiterhin zwei reale, unabhängig registrierte
+Fachreviewer und 631/631 übereinstimmende, signierte Entscheidungen ohne
+`MISSING`, `AMBIGUOUS` oder offene Upstream-Ursache. Weitere breit wirkende
+Regex- oder Rollenmatrixänderungen allein aufgrund der verbleibenden 98 Fälle
+wären ohne diese Entscheidungen nicht evidenzgerecht. Kandidatenkompaktierung,
+vollständige B-Suche, Produkt-Routing, Kunden-XLSX und Deployment bleiben
+gesperrt.
+
+Status: `V30 A TECHNISCH PASS UND IMMUTABLE EINGEFROREN; 631/631 RECORDS
+VORBEREITET, 0/631 FACHLICH DOPPELT GEPRÜFT; B-GATE NICHT FREIGEGEBEN`.
