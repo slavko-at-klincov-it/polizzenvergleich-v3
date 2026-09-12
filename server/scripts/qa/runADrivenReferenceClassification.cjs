@@ -1118,7 +1118,7 @@ function existingBatchResult(file, plan, batch, args) {
     throw new Error("LF_A_CLASSIFICATION_BATCH_RESULT_BINDING_INVALID");
   const normalizedResponses = normalizeUnambiguousComponentTypes(
     result.responses,
-    validationBatch.units
+    plan.units
   ).responses;
   if (
     stableStringify(normalizedResponses) !== stableStringify(result.responses)
@@ -1231,7 +1231,7 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
     const journalResponses = normalizeUnambiguousComponentTypes(
       mergeCompatibleDuplicateUnitResponses(artifact.attempt.responses)
         .responses,
-      batch.units
+      plan.units
     ).responses;
     for (const response of journalResponses) {
       if (accepted.has(response?.unitId)) continue;
@@ -1259,7 +1259,7 @@ function currentlyValidResponses(plan, batch, responses) {
   const accepted = new Map();
   const normalizedResponses = normalizeUnambiguousComponentTypes(
     Array.isArray(responses) ? responses : [],
-    batch.units
+    plan.units
   ).responses;
   for (const response of normalizedResponses) {
     if (accepted.has(response?.unitId)) continue;
@@ -1514,7 +1514,7 @@ async function runBatch({
       const { responses, componentRepairs } =
         normalizeUnambiguousComponentTypes(
           mergedResponsesFromEnvelope,
-          workingBatch.units
+          plan.units
         );
       const { syntaxRepair } = parsed;
       observedResponses = responses;
