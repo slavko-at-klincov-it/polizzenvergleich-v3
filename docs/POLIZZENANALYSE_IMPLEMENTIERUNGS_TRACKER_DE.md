@@ -8386,3 +8386,86 @@ Der reale Lauf wurde aus denselben Retrievalartefakten fortgesetzt.
 Status: `QWEN-PROMPT V2 UND VALIDIERTE VORGÄNGERMIGRATION PASS;
 B-ENTSCHEIDUNGEN 2/2.372 PASS UND LAUFEND; KEIN KUNDENARTEFAKT ODER
 DEPLOYMENT`.
+
+### 133.31 Reale B-Retries sind paketisoliert und pro Paket begrenzt
+
+Der fortgesetzte reale B-Shadow legte nach 25 bestandenen Batches zwei weitere
+allgemeine Antwortmuster offen. Erstens lieferte ein als `SUPPORTED`
+bewertetes Paket zwar belegte `FACT_ROLE`- und `SCOPE`-Dimensionen, führte in
+`selectedCandidateIds` aber nur einen Teil ihrer Kandidaten-Union. Zweitens
+enthielt ein als `NOT_SUPPORTED` bewertetes Paket gleichzeitig eine
+`MISMATCH`- und eine `MATCH`-Dimension. Beide Antworten waren semantisch
+inkonsistent und wurden vom unveränderten Validator korrekt verworfen.
+
+Die bereits eingeführte serielle Reparatur ungültiger Pakete verhinderte,
+dass ein Modellfehler weitere Pakete desselben Batches verunreinigte. Ihr
+Versuchslimit galt jedoch noch für den gesamten Batch. Ein schwieriges erstes
+Paket konnte dadurch alle acht Versuche verbrauchen, bevor die übrigen
+Pakete ihr eigenes begrenztes Reparaturbudget erhielten. Der Runner behandelt
+`maximumAttempts` nun als Grenze je Paket. Der erste Mehrpaketaufruf bleibt
+für den Normalfall erhalten; danach werden ausschließlich die noch
+ungültigen Pakete einzeln repariert. Die maximale Zahl der Modellaufrufe ist
+deterministisch auf `1 + offene Pakete * (maximumAttempts - 1)` begrenzt.
+
+Ungültige Antworten erhalten zusätzlich maschinenlesbare Ursachen, darunter
+ungültige Ergebniswerte, unbekannte oder doppelte Kandidaten-IDs, eine
+abweichende Kandidaten-Union sowie nicht zusammenpassende
+`SUPPORTED`-/`CONTRADICTED`-/`NOT_SUPPORTED`-Dimensionsmuster. Diese
+Diagnostik lockert keine gültige Ergebnisregel und ändert den V4-Vertrag
+gespeicherter PASS-Artefakte nicht.
+
+Beim echten Resume wurden die 25 bestandenen Batches nicht neu berechnet.
+Für Batch 26 wurde ein bereits gültiges Paket aus dem alten Attempt-Journal
+übernommen; nur die drei noch offenen Pakete wurden erneut angefragt und der
+Batch anschließend PASS materialisiert. Am exakten Commit
+`9c102daba` bestanden im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-b-retry-9c1-t2NGx2/repo` Node-Syntax, Prettier, der
+vollständige Server-Lint sowie 190/190 Suites mit 2.700/2.700 Tests. Der reale
+Lauf erreichte danach mindestens 37/2.372 PASS-Batches und lief weiter.
+
+Status: `PER-PAKET-RETRY UND GRANULARE FEHLERDIAGNOSTIK PASS; BESTEHENDE
+PASS- UND TEILARTEFAKTE WIEDERVERWENDET; B-SHADOW LÄUFT; KEINE
+PRODUKTFREIGABE`.
+
+### 133.32 Blockabdeckung ist noch kein Atomizitätsnachweis
+
+Das automatische A-Gate belegt für den eingefrorenen V35-Lauf weiterhin die
+eindeutige terminale Verarbeitung aller 1.005 A-Quellblöcke. Es beweist aber
+nicht, dass jede der 1.054 dynamischen Komponenten fachlich minimal und
+richtig typisiert ist. Der Klassifikationsprompt verlangt atomare
+Anforderungen, erlaubt als Komponentenlabel jedoch jeden nichtleeren
+wörtlichen Quellsubstring und verwendet im Listenbeispiel den vollständigen
+Listenpunkt als `OBJECT`. Der serverseitige Validator prüft Quellenbindung,
+Typen, Rollenpflichten und Blockabdeckung, aber bislang keine fachliche
+Minimalität eines Komponentenlabels.
+
+Der neue getrennte Diagnosevertrag
+`LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V1` verändert deshalb weder Manifest noch
+historischen Statusaudit. Er markiert source-bound Hochrisikofälle für eine
+nachfolgende gezielte Re-Atomisierung und darf weder automatisch splitten
+noch einen Fachfehler behaupten. Im realen unveränderten V35-Manifest meldet
+er:
+
+```text
+dynamische Anforderungen:                  357
+dynamische Komponenten:                  1.054
+reviewpflichtige Risikokomponenten:         141
+Risikosignale insgesamt:                    177
+Label enthält anders typisierte Schwester: 122
+überbreites Label (> 240 Zeichen):           53
+zusammengesetzte Parteienrolle:               1
+isolierte Parteienrolle mit Folgekontext:     1
+Atomicity-Review:                          FAIL
+```
+
+Das private Audit liegt im B-Shadow-Ordner als
+`a-atomicity-risk-audit.private.json`; sein Dateihash ist
+`0deb39dd57b62f94547314bb3c7527ca8fc3dcbc093f1c4eda68c4b0d43e502e`.
+Ein Treffer ist nur Reviewevidenz, null Treffer wären ebenfalls kein
+Vollständigkeitsbeweis. Die nächste zulässige Änderung ist daher eine
+begrenzte, source-bound Re-Atomisierung der betroffenen Units mit vollständigem
+Manifest-Rebuild und Vorher-/Nachher-Audit. Eine Regex-Zerlegung oder eine
+direkte Korrektur gespeicherter Ergebnisartefakte bleibt unzulässig.
+
+Status: `A-QUELLABDECKUNG PASS; A-ATOMIZITÄT NICHT BEWIESEN; 141
+RISIKOKOMPONENTEN VOR PRODUKTROUTING GEZIELT ZU PRÜFEN`.
