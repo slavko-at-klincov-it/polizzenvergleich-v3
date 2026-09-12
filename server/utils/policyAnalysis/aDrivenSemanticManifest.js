@@ -1761,6 +1761,7 @@ module.exports = {
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
+  hasCoverageEffectEvidence,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
   validateADrivenSemanticManifest,

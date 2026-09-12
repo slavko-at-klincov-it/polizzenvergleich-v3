@@ -3,6 +3,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -36,6 +37,7 @@ const {
 const {
   assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
+  compareADrivenManifestAtomicity,
 } = require("../../utils/policyAnalysis/aDrivenAStatusAudit");
 const {
   attachTopLevelRequirementFragments,
@@ -5775,6 +5777,111 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("drops an unsupported coverage class when another source-bound class remains", () => {
+    const source = artifact(
+      [
+        "Seite 1\nGrunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM.\n",
+      ],
+      "7"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["INSURED_OBJECT", "OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Produkt der Wohnhausversicherung",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "ist",
+                  sourceBlockIds: [block.blockId],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
+    ).toEqual(["OBJECT"]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
+      fromPrimaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      toPrimaryClass: "INSURED_OBJECT",
+    });
+  });
+
+  test("preserves an operative coverage class with explicit literal effect evidence", () => {
+    const unit = {
+      unitId: "explicit-effect",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: "Versichert sind Gebäude.",
+        blocks: [
+          {
+            blockId: "block",
+            structuralKind: "PARAGRAPH",
+            exactText: "Versichert sind Gebäude.",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Gebäude",
+              sourceBlockIds: ["block"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Versichert",
+              sourceBlockIds: ["block"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses).toEqual([response]);
+    expect(normalized.componentRepairs).toEqual([]);
+  });
+
   test("accepts only whitespace-normalized labels while preserving exact spans", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\ngilt für alle Gebäude,\nund Nebengebäude.\n"],
@@ -6194,6 +6301,73 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         }),
       ])
     );
+  });
+
+  test("compares atomicity audits without treating a lower heuristic count as product approval", () => {
+    const manifest = (manifestSha256, components) => ({
+      contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+      sourceUnitPlanSha256: "plan",
+      manifestSha256,
+      requirements: [{ components }],
+      summary: {
+        totalSourceBlocks: 10,
+        unresolvedUnits: 0,
+        reviewRequiredBlocks: 0,
+        allBlocksTerminal: true,
+      },
+    });
+    const risk = {
+      code: "OVERBROAD_COMPONENT_LABEL",
+      componentType: "OBJECT",
+      sourceUnitIds: ["unit"],
+    };
+    const audit = (contractId, dynamicManifestSha256, risks) => ({
+      contractId,
+      sourceUnitPlanSha256: "plan",
+      dynamicManifestSha256,
+      auditSha256: `${dynamicManifestSha256}-audit`,
+      risks,
+      summary: {
+        reviewRequiredUnits: new Set(
+          risks.map((item) => item.sourceUnitIds.at(-1))
+        ).size,
+        reviewRequiredComponents: risks.length,
+        risks: risks.length,
+      },
+    });
+    const comparison = compareADrivenManifestAtomicity({
+      baselineManifest: manifest("baseline", [{ id: "one" }]),
+      baselineAudit: audit("LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V1", "baseline", [
+        risk,
+      ]),
+      currentManifest: manifest("current", [{ id: "one" }, { id: "two" }]),
+      currentAudit: audit(
+        "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V2",
+        "current",
+        []
+      ),
+    });
+
+    expect(comparison.delta).toMatchObject({
+      semanticComponents: 1,
+      reviewRequiredUnits: -1,
+      risks: -1,
+    });
+    expect(comparison.riskGroups.resolved).toEqual([
+      expect.objectContaining({
+        owningUnitId: "unit",
+        baseline: 1,
+        current: 0,
+      }),
+    ]);
+    expect(comparison.assessment).toEqual({
+      sourceIntegrityMaintained: true,
+      atomicitySignalsReduced: true,
+      noNewRiskGroups: true,
+      candidateImprovement: true,
+      productGatePassed: false,
+    });
+    expect(comparison.comparisonSha256).toMatch(/^[a-f0-9]{64}$/u);
   });
 
   test("resolves nonoperative page markers, structural headings and reused operative governors", () => {

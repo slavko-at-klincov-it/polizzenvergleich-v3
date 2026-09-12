@@ -22,6 +22,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   buildADrivenSemanticManifest,
+  hasCoverageEffectEvidence,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
@@ -912,7 +913,51 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         : response?.requirements,
     };
   });
-  const polarityNormalized = normalized.map((response) => {
+  const unsupportedCoverageNormalized = normalized.map((response) => {
+    const unit = unitsById.get(response?.unitId);
+    const semanticClasses = Array.isArray(response?.semanticClasses)
+      ? response.semanticClasses
+      : [];
+    const remainingClasses = semanticClasses.filter(
+      (semanticClass) => semanticClass !== "OPERATIVE_COVERAGE_STATEMENT"
+    );
+    if (
+      !unit ||
+      (response?.primaryClass !== "OPERATIVE_COVERAGE_STATEMENT" &&
+        !semanticClasses.includes("OPERATIVE_COVERAGE_STATEMENT")) ||
+      hasCoverageEffectEvidence(unit) ||
+      remainingClasses.length === 0
+    )
+      return response;
+    repairs.push({
+      unitId: response.unitId,
+      action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
+      fromPrimaryClass: response.primaryClass,
+      toPrimaryClass:
+        response.primaryClass === "OPERATIVE_COVERAGE_STATEMENT"
+          ? remainingClasses[0]
+          : response.primaryClass,
+    });
+    return {
+      ...response,
+      primaryClass:
+        response.primaryClass === "OPERATIVE_COVERAGE_STATEMENT"
+          ? remainingClasses[0]
+          : response.primaryClass,
+      semanticClasses: remainingClasses,
+      requirements: Array.isArray(response.requirements)
+        ? response.requirements.map((requirement) => ({
+            ...requirement,
+            components: Array.isArray(requirement?.components)
+              ? requirement.components.filter(
+                  ({ type }) => type !== "COVERAGE_EFFECT"
+                )
+              : requirement?.components,
+          }))
+        : response.requirements,
+    };
+  });
+  const polarityNormalized = unsupportedCoverageNormalized.map((response) => {
     if (response?.primaryClass !== "EXCLUSION") return response;
     const coverageEffects = (response.requirements || []).flatMap(
       ({ components }) =>

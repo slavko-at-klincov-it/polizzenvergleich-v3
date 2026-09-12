@@ -8,6 +8,8 @@ const {
 const A_STATUS_AUDIT_CONTRACT_ID = "LF_A_DYNAMIC_STATUS_AUDIT_V2";
 const A_ATOMICITY_RISK_AUDIT_CONTRACT_ID =
   "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V2";
+const A_ATOMICITY_COMPARISON_CONTRACT_ID =
+  "LF_A_DYNAMIC_ATOMICITY_COMPARISON_V1";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
@@ -209,6 +211,175 @@ function assessADrivenManifestAtomicityRisks({ plan, manifest } = {}) {
     ...payload,
     auditSha256: sha256(
       `${A_ATOMICITY_RISK_AUDIT_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    ),
+  };
+}
+
+function compareADrivenManifestAtomicity({
+  baselineManifest,
+  baselineAudit,
+  currentManifest,
+  currentAudit,
+} = {}) {
+  const acceptedAuditContracts = new Set([
+    "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V1",
+    A_ATOMICITY_RISK_AUDIT_CONTRACT_ID,
+  ]);
+  for (const [manifest, audit] of [
+    [baselineManifest, baselineAudit],
+    [currentManifest, currentAudit],
+  ])
+    if (
+      manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+      !acceptedAuditContracts.has(audit?.contractId) ||
+      audit.sourceUnitPlanSha256 !== manifest.sourceUnitPlanSha256 ||
+      audit.dynamicManifestSha256 !== manifest.manifestSha256 ||
+      !Array.isArray(manifest.requirements) ||
+      !Array.isArray(audit.risks)
+    )
+      throw new Error("LF_A_ATOMICITY_COMPARISON_INPUT_INVALID");
+  if (
+    baselineManifest.sourceUnitPlanSha256 !==
+    currentManifest.sourceUnitPlanSha256
+  )
+    throw new Error("LF_A_ATOMICITY_COMPARISON_SOURCE_PLAN_MISMATCH");
+
+  const riskProfile = (audit) => {
+    const counts = new Map();
+    for (const risk of audit.risks) {
+      const owningUnitId =
+        risk.owningUnitId || risk.sourceUnitIds?.at(-1) || null;
+      if (
+        !owningUnitId ||
+        typeof risk.code !== "string" ||
+        typeof risk.componentType !== "string"
+      )
+        throw new Error("LF_A_ATOMICITY_COMPARISON_RISK_INVALID");
+      const key = `${owningUnitId}:${risk.code}:${risk.componentType}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return counts;
+  };
+  const baselineProfile = riskProfile(baselineAudit);
+  const currentProfile = riskProfile(currentAudit);
+  const riskGroupDelta = [
+    ...new Set([...baselineProfile.keys(), ...currentProfile.keys()]),
+  ]
+    .sort()
+    .map((key) => {
+      const [owningUnitId, code, componentType] = key.split(":");
+      const baseline = baselineProfile.get(key) || 0;
+      const current = currentProfile.get(key) || 0;
+      return {
+        owningUnitId,
+        code,
+        componentType,
+        baseline,
+        current,
+        delta: current - baseline,
+      };
+    });
+  const manifestCounts = (manifest) => ({
+    semanticRequirements: manifest.requirements.length,
+    semanticComponents: manifest.requirements.reduce(
+      (sum, requirement) => sum + requirement.components.length,
+      0
+    ),
+    sourceBlocks:
+      manifest.summary?.sourceBlocks ??
+      manifest.summary?.totalSourceBlocks ??
+      null,
+    unresolvedUnits: manifest.summary?.unresolvedUnits ?? null,
+    reviewRequiredBlocks: manifest.summary?.reviewRequiredBlocks ?? null,
+    allBlocksTerminal: manifest.summary?.allBlocksTerminal === true,
+  });
+  const auditCounts = (audit) => ({
+    reviewRequiredUnits:
+      audit.summary?.reviewRequiredUnits ??
+      new Set(
+        audit.risks.map(
+          (risk) => risk.owningUnitId || risk.sourceUnitIds.at(-1)
+        )
+      ).size,
+    reviewRequiredComponents:
+      audit.summary?.reviewRequiredComponents ??
+      new Set(
+        audit.risks.map(
+          (risk) =>
+            risk.dynamicComponentId ||
+            `${risk.owningUnitId || risk.sourceUnitIds.at(-1)}:${risk.componentType}:${risk.label || ""}`
+        )
+      ).size,
+    risks: audit.risks.length,
+  });
+  const baseline = {
+    manifestSha256: baselineManifest.manifestSha256,
+    auditSha256: baselineAudit.auditSha256,
+    ...manifestCounts(baselineManifest),
+    ...auditCounts(baselineAudit),
+  };
+  const current = {
+    manifestSha256: currentManifest.manifestSha256,
+    auditSha256: currentAudit.auditSha256,
+    ...manifestCounts(currentManifest),
+    ...auditCounts(currentAudit),
+  };
+  const sourceIntegrityMaintained =
+    baseline.sourceBlocks === current.sourceBlocks &&
+    current.allBlocksTerminal &&
+    current.unresolvedUnits === 0 &&
+    current.reviewRequiredBlocks === 0;
+  const payload = {
+    schemaVersion: 1,
+    contractId: A_ATOMICITY_COMPARISON_CONTRACT_ID,
+    sourceUnitPlanSha256: baselineManifest.sourceUnitPlanSha256,
+    baseline,
+    current,
+    delta: {
+      semanticRequirements:
+        current.semanticRequirements - baseline.semanticRequirements,
+      semanticComponents:
+        current.semanticComponents - baseline.semanticComponents,
+      reviewRequiredUnits:
+        current.reviewRequiredUnits - baseline.reviewRequiredUnits,
+      reviewRequiredComponents:
+        current.reviewRequiredComponents - baseline.reviewRequiredComponents,
+      risks: current.risks - baseline.risks,
+    },
+    riskGroups: {
+      resolved: riskGroupDelta.filter(({ baseline, current }) =>
+        Boolean(baseline && !current)
+      ),
+      reduced: riskGroupDelta.filter(
+        ({ baseline, current }) => current > 0 && current < baseline
+      ),
+      unchanged: riskGroupDelta.filter(
+        ({ baseline, current }) => baseline > 0 && current === baseline
+      ),
+      increased: riskGroupDelta.filter(
+        ({ baseline, current }) => baseline > 0 && current > baseline
+      ),
+      new: riskGroupDelta.filter(({ baseline, current }) =>
+        Boolean(!baseline && current)
+      ),
+    },
+    assessment: {
+      sourceIntegrityMaintained,
+      atomicitySignalsReduced: current.risks < baseline.risks,
+      noNewRiskGroups: riskGroupDelta.every(
+        ({ baseline, current }) => baseline > 0 || current === 0
+      ),
+      candidateImprovement:
+        sourceIntegrityMaintained && current.risks < baseline.risks,
+      productGatePassed: false,
+    },
+    proofLimit:
+      "Ein reduzierter heuristischer Risikowert bei erhaltener Quellenintegrität ist nur Kandidatenevidenz. Er beweist weder fachlich richtige Atomisierung noch Generalisierung oder Produktreife; verbleibende, neue und weggefallene Gruppen müssen source-bound geprüft werden.",
+  };
+  return {
+    ...payload,
+    comparisonSha256: sha256(
+      `${A_ATOMICITY_COMPARISON_CONTRACT_ID}\u0000${stableStringify(payload)}`
     ),
   };
 }
@@ -757,9 +928,11 @@ function buildADrivenAStatusAudit({
 }
 
 module.exports = {
+  A_ATOMICITY_COMPARISON_CONTRACT_ID,
   A_ATOMICITY_RISK_AUDIT_CONTRACT_ID,
   A_STATUS_AUDIT_CONTRACT_ID,
   LEGACY_ROLE_TO_DYNAMIC_TYPES,
   assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
+  compareADrivenManifestAtomicity,
 };
