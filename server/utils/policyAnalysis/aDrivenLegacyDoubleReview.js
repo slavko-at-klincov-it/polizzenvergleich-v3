@@ -2330,7 +2330,7 @@ function reconcileDynamicRemainderReview({
   const blocking = records.filter(
     ({ disposition }) => disposition !== "VALID_DYNAMIC_ADDITION"
   );
-  const approved = blocking.length === 0;
+  const technicalPrerequisitesSatisfied = blocking.length === 0;
   const partitionLedger = [
     ...remainderDraft.mappedPartition.map(
       ({ dynamicRequirementId, dynamicComponentId, legacyMappings }) => ({
@@ -2382,7 +2382,9 @@ function reconcileDynamicRemainderReview({
     registrySha256: registry.registrySha256,
     reviewASha256: first.reviewSha256,
     reviewBSha256: second.reviewSha256,
-    status: approved ? "APPROVED" : "REMEDIATION_REQUIRED",
+    status: technicalPrerequisitesSatisfied
+      ? "TECHNICAL_PREREQUISITES_SATISFIED"
+      : "TECHNICAL_REMEDIATION_REQUIRED",
     records,
     partitionLedger,
     summary: {
@@ -2394,10 +2396,15 @@ function reconcileDynamicRemainderReview({
       legacyPreservations: remainderDraft.mappedPartition.length,
       legitimateDynamicAdditions: records.length - blocking.length,
       dynamicDefects: blocking.length,
-      semanticCrosswalkApproved: true,
-      reverseDynamicAdditionsApproved: approved,
-      dynamicManifestSemanticCompletenessApproved: approved,
-      technicalBPilotPrerequisitesSatisfied: approved,
+      semanticCrosswalkApproved: false,
+      reverseDynamicAdditionsApproved: false,
+      dynamicManifestSemanticCompletenessApproved: false,
+      technicalSemanticCrosswalkReviewSatisfied: true,
+      technicalReverseDynamicAdditionsReviewSatisfied:
+        technicalPrerequisitesSatisfied,
+      technicalDynamicManifestSemanticReviewSatisfied:
+        technicalPrerequisitesSatisfied,
+      technicalBPilotPrerequisitesSatisfied: technicalPrerequisitesSatisfied,
       externallyPinnedAuthorityConfigured: false,
       bPilotAllowed: false,
       productRoutingAllowed: false,

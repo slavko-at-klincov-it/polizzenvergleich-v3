@@ -601,8 +601,7 @@ describe("V12 283/631 double-review contract", () => {
       authorityPublicKeyFingerprintSha256,
       reviewerSlot: "A",
     });
-    invalidReuseInput.independenceAttestation.reviewPerformedIndependently =
-      true;
+    invalidReuseInput.independenceAttestation.reviewPerformedIndependently = true;
     invalidReuseInput.decisions = approvableLegacyDecisions(draft);
     invalidReuseInput.decisions[1] = {
       ...invalidReuseInput.decisions[1],
@@ -631,8 +630,7 @@ describe("V12 283/631 double-review contract", () => {
       authorityPublicKeyFingerprintSha256,
       reviewerSlot: "A",
     });
-    invalidSplitCauseInput.independenceAttestation.reviewPerformedIndependently =
-      true;
+    invalidSplitCauseInput.independenceAttestation.reviewPerformedIndependently = true;
     invalidSplitCauseInput.decisions = approvableLegacyDecisions(draft);
     invalidSplitCauseInput.decisions[0].rootCauseDisposition =
       "SPLIT_OR_MERGE_RELATION";
@@ -813,9 +811,16 @@ describe("V12 283/631 double-review contract", () => {
       remainderReviewA: remainderArtifacts[0],
       remainderReviewB: remainderArtifacts[1],
     });
+    expect(finalReconciliation.status).toBe(
+      "TECHNICAL_PREREQUISITES_SATISFIED"
+    );
     expect(finalReconciliation.summary).toMatchObject({
-      reverseDynamicAdditionsApproved: true,
-      dynamicManifestSemanticCompletenessApproved: true,
+      semanticCrosswalkApproved: false,
+      reverseDynamicAdditionsApproved: false,
+      dynamicManifestSemanticCompletenessApproved: false,
+      technicalSemanticCrosswalkReviewSatisfied: true,
+      technicalReverseDynamicAdditionsReviewSatisfied: true,
+      technicalDynamicManifestSemanticReviewSatisfied: true,
       technicalBPilotPrerequisitesSatisfied: true,
       externallyPinnedAuthorityConfigured: false,
       bPilotAllowed: false,
@@ -1044,9 +1049,10 @@ describe("V12 283/631 double-review contract", () => {
       remainderReviewB: remainderReviews[1],
     });
     expect(reconciliation).toMatchObject({
-      status: "REMEDIATION_REQUIRED",
+      status: "TECHNICAL_REMEDIATION_REQUIRED",
       summary: {
         remediationRequired: 1,
+        technicalReverseDynamicAdditionsReviewSatisfied: false,
         reverseDynamicAdditionsApproved: false,
         bPilotAllowed: false,
       },
