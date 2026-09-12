@@ -8301,3 +8301,88 @@ nach vollständigem Abschluss separat ausgewertet.
 Status: `DYNAMISCHES AUTOMATISCHES A-GATE PASS; FESTE 283/631-ZAHLEN,
 REVIEWER UND ED25519 AUS DEM INTERNEN SHADOW-START ENTFERNT; 1+9-B-SHADOW
 GESTARTET; PRODUKTROUTING, KUNDEN-XLSX UND DEPLOYMENT WEITER GESPERRT`.
+
+### 133.29 Realer B-Lauf: Paketbudget korrigiert und Retrieval resumierbar gemacht
+
+Der erste automatische 1+9-Start schloss die vollständige B-Suche erfolgreich
+ab:
+
+```text
+A-Komponenten:                 1.054
+B-Dokumente:                       9
+Komponente-x-Dokument-Pakete:  9.486/9.486
+Dinghy-Rankings:               9.486/9.486
+kompaktierte Kandidaten:          50.627
+Pakete ohne Kandidat:                  3
+maximale Kandidaten pro Paket:        15
+```
+
+Vor dem ersten Qwen-Aufruf stoppte der Lauf korrekt mit
+`LF_A_DRIVEN_DECISION_PACKAGE_TOO_LARGE`. Die bisherige feste
+14.000-Zeichen-Grenze war nur an synthetischen Paketen kalibriert. Im realen
+Lauf überschritten 1.518 Pakete diese Grenze; das größte gültig kompaktierte
+Paket hatte 26.274 Zeichen. Das war kein A-, Such- oder Modellfehler, sondern
+ein zu enger technischer Batchvertrag.
+
+Die allgemeine Korrektur setzt das sichere Standardbudget auf 30.000 Zeichen,
+behält maximal vier Pakete pro Modellaufruf bei und macht beide vorgelagerten
+Artefaktgrenzen wiederaufnahmefähig:
+
+- ein bereits vorhandenes automatisches A-Receipt wird nur bei vollständiger
+  Inhaltsgleichheit wiederverwendet;
+- ein vorhandener Dinghy-Lauf wird gegen aktuelles A-Manifest,
+  B-Dokumentidentitäten, Embeddingvertrag, Search-Plan, Retrieval,
+  rekonstruierte Search-Execution, Rankings und Summary-Digest erneut geprüft;
+- erst danach darf der Qwen-Runner vorhandene terminale Batches übernehmen
+  und beim ersten unvollständigen Batch fortsetzen;
+- unvollständige oder mutierte Retrievalordner bleiben fail-closed und werden
+  nicht überschrieben.
+
+Der echte Resume-Check auf Commit
+`a1bf3319138eb988fcd836c019cbb6edc2a7ef52` übernahm 9.486/9.486 Rankings,
+ohne ein Dokument oder eine Query neu zu embeddeten. Im isolierten
+Mac-Studio-Worktree `/private/tmp/lf-b-resume-a1bf-Z3nn7K` bestanden Syntax,
+Shellsyntax, Prettier, Produkt-ESLint, 174/174 fokussierte Tests und 190/190
+Server-Suites mit 2.694/2.694 Tests.
+
+Der reale Qwen-Lauf wurde mit maximal vier Paketen, 60.000 Zeichen
+Gesamtbatchbudget, acht Versuchen, 180 Sekunden Request-Timeout, 15 Sekunden
+Abort-Settlement und 180 Sekunden Modell-Recovery fortgesetzt. Der
+materialisierte Plan umfasst 2.372 Batches; Batch 1 bestand. Diese Zahlen
+sind Laufkonfiguration und keine feste Produktannahme.
+
+Status: `B-RETRIEVAL 9.486/9.486 PASS UND HASHGEBUNDEN RESUMIERBAR;
+QWEN-ENTSCHEIDUNGEN 1/2.372 PASS UND LAUFEND; KEIN PRODUKTROUTING, KEINE
+KUNDEN-XLSX, KEIN DEPLOYMENT`.
+
+### 133.30 Reale Qwen-Antworten: `NOT_ESTABLISHED` explizit ohne Kandidaten-IDs
+
+Batch 2 des ersten fortgesetzten Qwen-Laufs lieferte in zwei Versuchen
+dieselbe formal ungültige, aber diagnostisch klare Struktur: Alle vier
+Pakete wurden als `NOT_SUPPORTED` bewertet und alle Dimensionen als
+`NOT_ESTABLISHED`, gleichzeitig trug das Modell jedoch sämtliche geprüften
+Kandidaten-IDs in diese nicht belegten Dimensionen ein. Der Server lehnte
+alle vier Antworten zu Recht als `INVALID_PACKAGE_DECISION` ab.
+
+Der V1-Prompt erklärte bereits, dass ein vollständig fehlender Beleg leere
+`selectedCandidateIds` benötigt. Er sagte jedoch nicht unmittelbar bei der
+Definition jeder einzelnen `NOT_ESTABLISHED`-Dimension, dass deren
+`candidateIds` zwingend leer sein müssen. Der Promptvertrag V2 macht diese
+Invariante im Haupt- und Retrytext explizit: Kandidaten-IDs sind ausschließlich
+bei `MATCH` oder `MISMATCH` erlaubt; jeder `NOT_ESTABLISHED`-Check trägt
+`candidateIds: []`.
+
+Gültige terminale V1-Antworten werden nach einem Promptwechsel nicht blind
+übernommen. Sie werden nur bei anerkannter Vorgängerversion, unveränderter
+Search-/Plan-/Batch-/Modellbindung und erneut bestandener aktueller
+Einzelvalidierung migriert. Alte ungültige Attempt-Antworten bleiben
+unverwendet. Damit konnte Batch 1 ohne Modellneuberechnung übernommen werden;
+Batch 2 bestand mit Prompt V2 im ersten neuen Versuch.
+
+Commit `31adbb10c` bestand auf dem Mac Studio Syntax, Prettier, Produkt-ESLint,
+175/175 fokussierte Tests und 190/190 Server-Suites mit 2.695/2.695 Tests.
+Der reale Lauf wurde aus denselben Retrievalartefakten fortgesetzt.
+
+Status: `QWEN-PROMPT V2 UND VALIDIERTE VORGÄNGERMIGRATION PASS;
+B-ENTSCHEIDUNGEN 2/2.372 PASS UND LAUFEND; KEIN KUNDENARTEFAKT ODER
+DEPLOYMENT`.
