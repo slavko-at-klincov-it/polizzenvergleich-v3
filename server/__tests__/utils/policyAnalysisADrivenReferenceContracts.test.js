@@ -5569,6 +5569,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               factRole: "EXCLUSION",
               sourceSpanIds: ["span"],
             },
+            {
+              id: "inherited-effect",
+              label: "Vorschäden nicht versichert",
+              factRole: "EXCLUSION",
+              sourceSpanIds: ["item-span"],
+            },
           ],
           sourceSpans: [
             {
@@ -5577,6 +5583,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                 ...heading.source.blockIds,
                 ...(metadata?.source.blockIds || []),
               ],
+            },
+            {
+              spanId: "item-span",
+              blockIds: operativeClause.source.blockIds,
             },
           ],
         },
@@ -5595,6 +5605,23 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
 
     expect(audit.summary.suspiciousNonOperativeUnits).toBe(0);
+    expect(audit.summary.inheritedRoleCandidateLegacyComponents).toBe(1);
+    expect(
+      audit.componentCrosswalk.find(
+        ({ legacyComponentId }) => legacyComponentId === "inherited-effect"
+      )
+    ).toMatchObject({
+      relationCandidate: "INHERITED_ROLE_CANDIDATE",
+      sourceOverlappingDynamicTargets: [
+        expect.objectContaining({ dynamicComponentType: "OBJECT" }),
+      ],
+      requirementScopedCompatibleDynamicTargets: [
+        expect.objectContaining({
+          dynamicComponentType: "COVERAGE_EFFECT",
+          matchScope: "SAME_DYNAMIC_REQUIREMENT",
+        }),
+      ],
+    });
     expect(audit.reviewedNonOperativeUnits).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

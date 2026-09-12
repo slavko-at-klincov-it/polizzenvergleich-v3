@@ -164,6 +164,8 @@ function buildADrivenAStatusAudit({
   const legacyComponents = legacy.flatMap(({ components }) => components);
   const dynamicComponents = dynamic.flatMap(({ components }) => components);
   const componentCrosswalk = legacyComponents.map((component) => {
+    const compatibleTypes =
+      LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || [];
     const sourceOverlappingDynamicTargets = dynamicComponents
       .filter(
         (candidate) =>
@@ -180,23 +182,57 @@ function buildADrivenAStatusAudit({
           component.sourceBlockIds
         ),
       }));
-    const compatibleDynamicTargets = sourceOverlappingDynamicTargets.filter(
-      (candidate) =>
-        (LEGACY_ROLE_TO_DYNAMIC_TYPES[component.legacyFactRole] || []).includes(
-          candidate.dynamicComponentType
-        )
-    );
+    const directlyCompatibleDynamicTargets = sourceOverlappingDynamicTargets
+      .filter((candidate) =>
+        compatibleTypes.includes(candidate.dynamicComponentType)
+      )
+      .map((candidate) => ({
+        ...candidate,
+        matchScope: "DIRECT_COMPONENT_SOURCE",
+      }));
+    const requirementScopedCompatibleDynamicTargets = dynamic
+      .filter(
+        (requirement) =>
+          intersection(requirement.sourceBlockIds, component.sourceBlockIds)
+            .length > 0
+      )
+      .flatMap((requirement) =>
+        requirement.components
+          .filter(
+            (candidate) =>
+              compatibleTypes.includes(candidate.dynamicComponentType) &&
+              intersection(candidate.sourceBlockIds, component.sourceBlockIds)
+                .length === 0
+          )
+          .map((candidate) => ({
+            ...candidate,
+            matchScope: "SAME_DYNAMIC_REQUIREMENT",
+            overlappingRequirementSourceBlockIds: intersection(
+              requirement.sourceBlockIds,
+              component.sourceBlockIds
+            ),
+          }))
+      );
+    const compatibleDynamicTargets = [
+      ...directlyCompatibleDynamicTargets,
+      ...requirementScopedCompatibleDynamicTargets,
+    ];
     return {
       ...component,
       relationCandidate:
-        sourceOverlappingDynamicTargets.length === 0
+        sourceOverlappingDynamicTargets.length === 0 &&
+        requirementScopedCompatibleDynamicTargets.length === 0
           ? "MISSING"
-          : compatibleDynamicTargets.length === 0
-            ? "ROLE_INCOMPATIBLE"
-            : compatibleDynamicTargets.length === 1
-              ? "ONE_TO_ONE_CANDIDATE"
-              : "SPLIT_CANDIDATE",
+          : directlyCompatibleDynamicTargets.length === 0 &&
+              requirementScopedCompatibleDynamicTargets.length > 0
+            ? "INHERITED_ROLE_CANDIDATE"
+            : compatibleDynamicTargets.length === 0
+              ? "ROLE_INCOMPATIBLE"
+              : compatibleDynamicTargets.length === 1
+                ? "ONE_TO_ONE_CANDIDATE"
+                : "SPLIT_CANDIDATE",
       sourceOverlappingDynamicTargets,
+      requirementScopedCompatibleDynamicTargets,
       compatibleDynamicTargets,
     };
   });
@@ -460,6 +496,10 @@ function buildADrivenAStatusAudit({
     ).length,
     roleIncompatibleLegacyComponents: componentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "ROLE_INCOMPATIBLE"
+    ).length,
+    inheritedRoleCandidateLegacyComponents: componentCrosswalk.filter(
+      ({ relationCandidate }) =>
+        relationCandidate === "INHERITED_ROLE_CANDIDATE"
     ).length,
     splitLegacyComponents: componentCrosswalk.filter(
       ({ relationCandidate }) => relationCandidate === "SPLIT_CANDIDATE"
