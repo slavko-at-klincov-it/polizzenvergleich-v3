@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V28";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V29";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -47,6 +47,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V25",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V26",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V27",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V28",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1203,6 +1204,12 @@ function normalizeCostPurposeObjectComponents(requirements) {
 
 function normalizeAtomicCostRoleComponents(requirements, unit) {
   const repairs = [];
+  const unitSourceText = String(unit?.source?.combinedText || "");
+  const unitSourceBlockIds = unit?.source?.blockIds || [];
+  const costDefinitionPattern =
+    /^\s*[-•]?\s*(?<role>Mehrkosten\s+für\s+[^;\n-]+?)\s+-\s+(?<definition>das\s+sind\s+Kosten[\s\S]*?ergeben;?)\s*$/iu;
+  const priceIncreasePattern =
+    /^\s*[-•]?\s*(?<role>Mehrkosten\s+infolge\s+Preissteigerung)\s+(?<temporal>zwischen\s+dem\s+Eintritt\s+des\s+Schadenereignisses\s+und\s+der\s+Wiederherstellung\s+oder\s+Wiederbeschaffung)\s+entstandenen\s+(?<result>Erhöhung\s+der\s+Ersatzleistung);?\s*$/iu;
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => ({
       ...requirement,
@@ -1210,10 +1217,21 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
         (component, componentIndex) => {
           if (component?.type !== "FACT_ROLE") return [component];
           const label = String(component.label || "");
+          const declaredSourceBlockIds = new Set(
+            component.sourceBlockIds || []
+          );
+          const coversWholeUnit =
+            unitSourceBlockIds.length > 0 &&
+            unitSourceBlockIds.every((blockId) =>
+              declaredSourceBlockIds.has(blockId)
+            ) &&
+            label.replace(/\s+/gu, " ").trim().length >=
+              unitSourceText.replace(/\s+/gu, " ").trim().length * 0.85;
           const costDefinition =
-            /^\s*[-•]?\s*(?<role>Mehrkosten\s+für\s+[^;\n-]+?)\s+-\s+(?<definition>das\s+sind\s+Kosten[\s\S]*?ergeben;?)\s*$/iu.exec(
-              label
-            );
+            costDefinitionPattern.exec(label) ||
+            (coversWholeUnit
+              ? costDefinitionPattern.exec(unitSourceText)
+              : null);
           if (costDefinition?.groups) {
             const roleSourceBlockIds = sourceBlockIdsForExactSpan(
               unit,
@@ -1244,9 +1262,10 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
             }
           }
           const priceIncrease =
-            /^\s*[-•]?\s*(?<role>Mehrkosten\s+infolge\s+Preissteigerung)\s+(?<temporal>zwischen\s+dem\s+Eintritt\s+des\s+Schadenereignisses\s+und\s+der\s+Wiederherstellung\s+oder\s+Wiederbeschaffung)\s+entstandenen\s+(?<result>Erhöhung\s+der\s+Ersatzleistung);?\s*$/iu.exec(
-              label
-            );
+            priceIncreasePattern.exec(label) ||
+            (coversWholeUnit
+              ? priceIncreasePattern.exec(unitSourceText)
+              : null);
           if (priceIncrease?.groups) {
             const components = [
               {

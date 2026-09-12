@@ -2296,12 +2296,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test.each([
     {
       source:
-        "- Mehrkosten für bauliche Verbesserungen - das sind Kosten, die sich anlässlich der Wiederherstellung nach einem Schaden ergeben;",
+        "- Mehrkosten für bauliche Verbesserungen - das sind Kosten, die sich anlässlich der Wiederherstellung von Gebäuden  und/oder Betriebseinrichtung nach einem Schaden ergeben;",
+      modelLabel:
+        "- Mehrkosten für bauliche Verbesserungen - das sind Kosten, die sich anlässlich der Wiederherstellung von Gebäuden und/oder Betriebseinrichtung nach einem Schaden ergeben;",
       expected: [
         ["FACT_ROLE", "Mehrkosten für bauliche Verbesserungen"],
         [
           "DEFINITION",
-          "das sind Kosten, die sich anlässlich der Wiederherstellung nach einem Schaden ergeben;",
+          "das sind Kosten, die sich anlässlich der Wiederherstellung von Gebäuden  und/oder Betriebseinrichtung nach einem Schaden ergeben;",
         ],
       ],
     },
@@ -2319,7 +2321,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     },
   ])(
     "splits broad cost roles into searchable atoms: $source",
-    ({ source, expected }) => {
+    ({ source, modelLabel = source, expected }) => {
       const unit = {
         unitId: "broad-cost-role",
         source: {
@@ -2340,7 +2342,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                 components: [
                   {
                     type: "FACT_ROLE",
-                    label: source,
+                    label: modelLabel,
                     sourceBlockIds: ["block"],
                   },
                 ],
@@ -3928,7 +3930,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V28");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V29");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
