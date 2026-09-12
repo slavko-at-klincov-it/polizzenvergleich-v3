@@ -461,6 +461,16 @@ function listSegmentRepairSkeletons(batch, diagnostics) {
   );
 }
 
+function normalizationEvidenceBlocks(unit) {
+  return [
+    ...(unit?.source?.blocks || []),
+    ...(unit?.governingContext?.blocks || []),
+  ].filter(
+    (block, index, blocks) =>
+      blocks.findIndex(({ blockId }) => blockId === block.blockId) === index
+  );
+}
+
 function exactConditionLabel(unit, component) {
   if (
     component?.type !== "CONDITION" ||
@@ -469,7 +479,7 @@ function exactConditionLabel(unit, component) {
   )
     return null;
   const selectedIds = new Set(component.sourceBlockIds);
-  const selectedBlocks = (unit?.source?.blocks || []).filter(({ blockId }) =>
+  const selectedBlocks = normalizationEvidenceBlocks(unit).filter(({ blockId }) =>
     selectedIds.has(blockId)
   );
   if (selectedBlocks.length !== selectedIds.size) return null;
@@ -503,7 +513,7 @@ function completeComponentSourceBlockIds(unit, component) {
     component.sourceBlockIds.length === 0
   )
     return null;
-  const blocks = unit?.source?.blocks || [];
+  const blocks = normalizationEvidenceBlocks(unit);
   const declaredIds = new Set(component.sourceBlockIds);
   if (
     blocks.length === 0 ||
@@ -551,6 +561,42 @@ function completeComponentSourceBlockIds(unit, component) {
   ];
   if (unique.length !== 1 || unique[0].length === declaredIds.size) return null;
   return unique[0];
+}
+
+function explicitCoverageEffectRepair(unit, component) {
+  if (
+    component?.type !== "COVERAGE_EFFECT" ||
+    !Array.isArray(component.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0
+  )
+    return null;
+  const selectedIds = new Set(component.sourceBlockIds);
+  const blocks = normalizationEvidenceBlocks(unit).filter(({ blockId }) =>
+    selectedIds.has(blockId)
+  );
+  if (blocks.length !== selectedIds.size) return null;
+  const sourceText = blocks.map(({ exactText }) => exactText).join("\n");
+  const negative =
+    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz))\b/iu.exec(
+      sourceText
+    );
+  const positive =
+    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu.exec(
+      sourceText
+    );
+  if ((negative && positive) || (!negative && !positive)) return null;
+  const evidence = negative || positive;
+  const coverageEffect = negative ? "EXCLUDED" : "INCLUDED";
+  const normalizedSource = sourceText.replace(/\s+/gu, " ").trim();
+  const normalizedLabel = String(component.label || "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (
+    component.coverageEffect === coverageEffect &&
+    normalizedSource.includes(normalizedLabel)
+  )
+    return null;
+  return { label: evidence[0], coverageEffect };
 }
 
 function normalizeUnambiguousComponentTypes(responses, units = []) {
@@ -665,6 +711,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const coverageEffectRepair = explicitCoverageEffectRepair(
+                    unit,
+                    component
+                  );
+                  if (coverageEffectRepair) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
+                      fromCoverageEffect: component.coverageEffect || null,
+                      toCoverageEffect: coverageEffectRepair.coverageEffect,
+                    });
+                    return [{ ...component, ...coverageEffectRepair }];
+                  }
                   const completeSourceBlockIds =
                     completeComponentSourceBlockIds(unit, component);
                   if (completeSourceBlockIds) {
@@ -834,8 +895,38 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         : response?.requirements,
     };
   });
+  const polarityNormalized = normalized.map((response) => {
+    if (response?.primaryClass !== "EXCLUSION") return response;
+    const coverageEffects = (response.requirements || []).flatMap(
+      ({ components }) =>
+        (components || []).filter(({ type }) => type === "COVERAGE_EFFECT")
+    );
+    if (
+      coverageEffects.length === 0 ||
+      coverageEffects.some(
+        ({ coverageEffect }) => coverageEffect !== "INCLUDED"
+      )
+    )
+      return response;
+    repairs.push({
+      unitId: response.unitId,
+      action: "NORMALIZE_POSITIVE_COVERAGE_PRIMARY_CLASS",
+    });
+    return {
+      ...response,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        ...(response.semanticClasses || []).filter(
+          (semanticClass) =>
+            semanticClass !== "EXCLUSION" &&
+            semanticClass !== "OPERATIVE_COVERAGE_STATEMENT"
+        ),
+      ],
+    };
+  });
   const listGovernorNormalization = normalizeStandaloneListGovernorRequirements(
-    normalized,
+    polarityNormalized,
     units
   );
   return {

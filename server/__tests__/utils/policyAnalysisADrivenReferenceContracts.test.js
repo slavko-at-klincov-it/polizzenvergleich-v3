@@ -944,6 +944,80 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("restores source-bound positive coverage polarity and its primary class", () => {
+    const unit = {
+      unitId: "unit-one",
+      unitKind: "LIST",
+      source: {
+        combinedText: "Verrußung",
+        blocks: [
+          {
+            blockId: "item",
+            structuralKind: "LIST_ITEM",
+            exactText: "Verrußung",
+          },
+        ],
+      },
+      governingContext: {
+        blocks: [
+          {
+            blockId: "governor",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: "Zusätzlich versichert sind Schäden durch",
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION", "PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: "Verrußung",
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Verrußung",
+              sourceBlockIds: ["item"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "ausgenommen sind",
+              coverageEffect: "EXCLUDED",
+              sourceBlockIds: ["governor"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const result = normalized.responses[0];
+
+    expect(result.primaryClass).toBe("OPERATIVE_COVERAGE_STATEMENT");
+    expect(result.semanticClasses).toEqual([
+      "OPERATIVE_COVERAGE_STATEMENT",
+      "PERIL_OR_DAMAGE",
+    ]);
+    expect(result.requirements[0].components[1]).toMatchObject({
+      label: "Zusätzlich versichert sind",
+      coverageEffect: "INCLUDED",
+      sourceBlockIds: ["governor"],
+    });
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
+        }),
+        expect.objectContaining({
+          action: "NORMALIZE_POSITIVE_COVERAGE_PRIMARY_CLASS",
+        }),
+      ])
+    );
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;
