@@ -620,9 +620,7 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       componentIndex,
                       action: "RESTORE_EXACT_CONDITION_SOURCE_TEXT",
                     });
-                    return [
-                      { ...component, label: sourceBoundConditionLabel },
-                    ];
+                    return [{ ...component, label: sourceBoundConditionLabel }];
                   }
                   const exactPerformanceObligation =
                     component?.type === "COVERAGE_EFFECT" &&
