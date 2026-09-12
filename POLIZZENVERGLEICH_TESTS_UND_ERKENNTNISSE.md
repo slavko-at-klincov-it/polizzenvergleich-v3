@@ -3798,10 +3798,12 @@ regulären Dateien materialisiert. Eine unabhängige Prüfung bestätigte null
 Symlinks, null Hardlinks und 70/70 hashgleiche referenzierte
 Eingabeartefakte. Basis-Hash ist
 `d7b1bd772bf8a76cc0082ebfeca26defef95004e19e4635a37e6da09bdf4f283`.
-Der getrennte Draft-Hash ist
-`16ae02acd4ba2709203adc731107a719cdfcb01ded78603f3c0610733fdd7c9d`.
+Der getrennte, gehärtete V2-Draft-Hash ist
+`b01c87012b9ace268572c50dba3c3d3b4c81f020991b269208f1c491fbb0b42d`.
 Der Draft enthält alle 631 Legacy-Komponenten, deren exakte Quellen und den
 vollständigen dynamischen Kandidatenkontext; kein Record ist kandidatenlos.
+Er markiert 333/333 rolleninkompatible Records explizit als Priorität 1 und
+weist daneben 191 1:1- sowie 107 Split-Kandidaten aus.
 
 Der Vertrag akzeptiert pro Komponente ausschließlich `EQUIVALENT`,
 `REPHRASED_EQUIVALENT`, `MOVED_EQUIVALENT`, `SPLIT_INTO_DYNAMIC`,
@@ -3813,8 +3815,8 @@ oder Reviewerabweichung kann den Legacy-Crosswalk freigeben. Gefundene Fehler
 werden nicht im Ergebnisartefakt editiert, sondern als allgemeine Rollen- oder
 Atomisierungsregel umgesetzt und über einen neuen Resume-Lauf materialisiert.
 
-Der Implementierungsstand `1bdd03185` bestand auf dem Mac Studio den
-Formatcheck, serverseitiges ESLint mit null Fehlern sowie 97/97 fokussierte
+Der Implementierungsstand `a7a4ee34b` bestand auf dem Mac Studio den
+Formatcheck, serverseitiges ESLint mit null Fehlern sowie 98/98 fokussierte
 und angrenzende Tests. Die normale Root-Konfiguration darf dabei nicht mit
 der separaten `server/eslint.config.mjs` verwechselt werden.
 
