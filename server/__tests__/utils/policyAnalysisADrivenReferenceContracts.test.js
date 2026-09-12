@@ -7369,10 +7369,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     }));
     let lateResolve;
     let releaseRecovery;
+    let signalRecoveryStarted;
     let abortTriggered = false;
+    const recoveryStarted = new Promise((resolve) => {
+      signalRecoveryStarted = resolve;
+    });
     const recoverModelAfterAbort = jest.fn(
       () =>
         new Promise((resolve) => {
+          signalRecoveryStarted();
           releaseRecovery = () => resolve({ status: "SAFE_RELOADED" });
         })
     );
@@ -7409,7 +7414,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       abortSettlementTimeoutMs: 5,
       recoverModelAfterAbort,
     });
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await recoveryStarted;
     expect(abortTriggered).toBe(true);
     expect(recoverModelAfterAbort).toHaveBeenCalledTimes(1);
     expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
