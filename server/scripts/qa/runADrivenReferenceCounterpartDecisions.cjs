@@ -31,6 +31,9 @@ const PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V1",
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V2";
+const PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
+  "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1",
+]);
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -543,6 +546,15 @@ function currentlyValidResponses(searchExecution, batch, responses) {
     .map((packageId) => accepted.get(packageId));
 }
 
+function recoverablePromptBinding(artifact, batch) {
+  if (artifact?.promptContractId === PROMPT_CONTRACT_ID)
+    return artifact.promptSha256 === sha256(JSON.stringify(prompt(batch)));
+  return (
+    PREDECESSOR_PROMPT_CONTRACT_IDS.has(artifact?.promptContractId) &&
+    /^[a-f0-9]{64}$/u.test(String(artifact?.promptSha256 || ""))
+  );
+}
+
 function recoverableBatchResponses(
   file,
   searchExecution,
@@ -557,8 +569,7 @@ function recoverableBatchResponses(
     ) ||
     result.searchExecutionSha256 !== searchExecution.executionSha256 ||
     ![null, decisionPlan.planSha256].includes(result.decisionPlanSha256) ||
-    result.promptContractId !== PROMPT_CONTRACT_ID ||
-    result.promptSha256 !== sha256(JSON.stringify(prompt(batch))) ||
+    !recoverablePromptBinding(result, batch) ||
     result.validatorContractId !== COUNTERPART_DECISION_CONTRACT_ID ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||
@@ -655,8 +666,7 @@ function acceptedResponsesFromAttemptJournal({
       artifact?.contractId !== TRANSPORT_CONTRACT_ID ||
       artifact.searchExecutionSha256 !== searchExecution.executionSha256 ||
       artifact.decisionPlanSha256 !== decisionPlan.planSha256 ||
-      artifact.promptContractId !== PROMPT_CONTRACT_ID ||
-      artifact.promptSha256 !== sha256(JSON.stringify(prompt(batch))) ||
+      !recoverablePromptBinding(artifact, batch) ||
       artifact.requestedModel !== args.model ||
       artifact.modelContext !== args.modelContext ||
       artifact.requestTimeoutMs !== args.requestTimeoutMs ||

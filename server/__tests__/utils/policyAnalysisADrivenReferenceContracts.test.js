@@ -6731,6 +6731,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(
       fs.readdirSync(path.join(output, "batches"), { recursive: true })
     ).toHaveLength(1);
+    const completedBatch = path.join(
+      output,
+      "batches",
+      fs.readdirSync(path.join(output, "batches"))[0]
+    );
+    const predecessor = JSON.parse(fs.readFileSync(completedBatch, "utf8"));
+    predecessor.promptContractId =
+      "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1";
+    predecessor.promptSha256 = "a".repeat(64);
+    fs.writeFileSync(completedBatch, `${JSON.stringify(predecessor)}\n`);
 
     const resumeClient = {
       chat: {
@@ -6761,6 +6771,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(
       fs.readdirSync(path.join(output, "batches"), { recursive: true })
     ).toHaveLength(decisionPlan.batches.length);
+    expect(
+      fs.readdirSync(path.join(output, "superseded-batches"))
+    ).toHaveLength(1);
   });
 
   test("plans every A component against every B document without B-only rows", () => {
