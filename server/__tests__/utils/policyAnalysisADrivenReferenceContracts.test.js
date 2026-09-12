@@ -2967,7 +2967,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V16");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V17");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5810,12 +5810,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               components: [
                 {
                   type: "OBJECT",
-                  label: "Produkt der Wohnhausversicherung",
-                  sourceBlockIds: [block.blockId],
-                },
-                {
-                  type: "FACT_ROLE",
-                  label: "mit der Variante PREMIUM",
+                  label:
+                    "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM",
                   sourceBlockIds: [block.blockId],
                 },
                 {
@@ -5851,14 +5847,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(normalized.componentRepairs).toContainEqual({
       unitId: unit.unitId,
       action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
-      fromType: "FACT_ROLE",
+      fromType: "OBJECT",
       toType: "SCOPE",
+      components: 1,
     });
     expect(
-      normalized.componentRepairs.filter(
-        ({ action }) => action === "NORMALIZE_EXPLICIT_SCOPE_ROLE"
+      normalized.responses[0].requirements[0].components.map(({ label }) =>
+        label.trim()
       )
-    ).toHaveLength(2);
+    ).toEqual([
+      "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung",
+      "mit der Variante PREMIUM",
+      "in den jeweils beantragten Sparten",
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "SPLIT_EMBEDDED_EXPLICIT_SCOPE_ROLE",
+      fromType: "OBJECT",
+      scopeComponents: 1,
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
+      fromType: "FACT_ROLE",
+      toType: "SCOPE",
+      components: 1,
+    });
   });
 
   test("drops only the unsupported coverage class from a non-product fact", () => {

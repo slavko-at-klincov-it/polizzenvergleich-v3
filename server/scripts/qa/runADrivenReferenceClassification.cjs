@@ -29,12 +29,13 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V16";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V17";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V14",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V15",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V16",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -632,6 +633,29 @@ function explicitScopeRoleRepair(component, { allowObject = false } = {}) {
   return { ...component, type: "SCOPE" };
 }
 
+function splitProductConfigurationScopeRoles(component) {
+  if (component?.type !== "FACT_ROLE" && component?.type !== "OBJECT")
+    return null;
+  const label = String(component.label || "");
+  const starts = [
+    ...label.matchAll(
+      /\b(?:(?:mit|unter)\s+(?:der\s+)?Variante\b|(?:in|für)\s+(?:den|die|allen)\s+(?:jeweils\s+)?(?:beantragten|vereinbarten|gewählten)\s+Sparten\b)/giu
+    ),
+  ].map(({ index }) => index);
+  if (starts.length === 0) return null;
+  const components = [];
+  const prefix = label.slice(0, starts[0]).trim();
+  if (prefix) components.push({ ...component, label: prefix });
+  for (let index = 0; index < starts.length; index += 1) {
+    const scope = label
+      .slice(starts[index], starts[index + 1] ?? label.length)
+      .trim();
+    if (scope)
+      components.push({ ...component, type: "SCOPE", label: scope });
+  }
+  return components.some(({ type }) => type === "SCOPE") ? components : null;
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -684,26 +708,36 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ...requirement,
         components: (requirement.components || []).flatMap((component) => {
           if (component?.type === "COVERAGE_EFFECT") return [];
-          const scopeComponent = explicitScopeRoleRepair(component, {
-            allowObject: true,
-          });
-          if (scopeComponent) {
+          const productRoleComponent =
+            component?.type === "OBJECT" &&
+            /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
+              String(component.label || "")
+            )
+              ? { ...component, type: "FACT_ROLE" }
+              : component;
+          const scopedComponents =
+            splitProductConfigurationScopeRoles(productRoleComponent);
+          if (scopedComponents) {
+            const scopeCount = scopedComponents.filter(
+              ({ type }) => type === "SCOPE"
+            ).length;
+            if (scopedComponents.length > scopeCount)
+              repairs.push({
+                unitId: response.unitId,
+                action: "SPLIT_EMBEDDED_EXPLICIT_SCOPE_ROLE",
+                fromType: component.type,
+                scopeComponents: scopeCount,
+              });
             repairs.push({
               unitId: response.unitId,
               action: "NORMALIZE_EXPLICIT_SCOPE_ROLE",
               fromType: component.type,
               toType: "SCOPE",
+              components: scopeCount,
             });
-            return [scopeComponent];
+            return scopedComponents;
           }
-          if (
-            component?.type === "OBJECT" &&
-            /\b(?:Produkt|Tarif|Versicherung)\b/iu.test(
-              String(component.label || "")
-            )
-          )
-            return [{ ...component, type: "FACT_ROLE" }];
-          return [component];
+          return [productRoleComponent];
         }),
       }));
       const hasScope = normalizedRequirements.some((requirement) =>
