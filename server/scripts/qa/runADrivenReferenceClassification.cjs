@@ -650,8 +650,7 @@ function splitProductConfigurationScopeRoles(component) {
     const scope = label
       .slice(starts[index], starts[index + 1] ?? label.length)
       .trim();
-    if (scope)
-      components.push({ ...component, type: "SCOPE", label: scope });
+    if (scope) components.push({ ...component, type: "SCOPE", label: scope });
   }
   return components.some(({ type }) => type === "SCOPE") ? components : null;
 }
