@@ -6,6 +6,8 @@ const {
 } = require("./aDrivenSourceUnitPlan");
 
 const A_STATUS_AUDIT_CONTRACT_ID = "LF_A_DYNAMIC_STATUS_AUDIT_V2";
+const A_ATOMICITY_RISK_AUDIT_CONTRACT_ID =
+  "LF_A_DYNAMIC_ATOMICITY_RISK_AUDIT_V1";
 const EXPECTED_LEGACY_REQUIREMENTS = 283;
 const EXPECTED_LEGACY_COMPONENTS = 631;
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
@@ -23,6 +25,25 @@ const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
 });
 const STRONG_OPERATIVE_TEXT =
   /\b(?:versichert\s+sind|mitversichert|nicht\s+versichert|ausgeschlossen|versicherungsschutz\s+(?:besteht|gilt)|gilt\s+(?:als|für|bei)|beträgt|bis\s+zu|unter\s+der\s+voraussetzung|hat\s+zu|muss|ist\s+verpflichtet|ersetzt|innerhalb\s+von)\b|\b\d+(?:[.,]\d+)?\s*(?:%|EUR|Euro|Tage?|Monate?|Jahre?)\b/iu;
+const ATOMIC_LABEL_COMPONENT_TYPES = new Set([
+  "OBJECT",
+  "PERIL_OR_CAUSE",
+  "DAMAGE_OR_EFFECT",
+  "COVERAGE_EFFECT",
+  "FACT_ROLE",
+  "VALUE_AND_UNIT",
+  "LIMIT_BASIS",
+  "DEDUCTIBLE",
+  "TEMPORAL_VALIDITY",
+  "DOCUMENT_ROLE",
+  "PRECEDENCE_OR_REPLACEMENT",
+]);
+const PARTY_ROLE_PATTERN =
+  /\b(?:Versicherungsnehmer(?:in)?|Versicherer|Verwalter|Treuhänder|Makler|Vermittler|Gebäudeeigentümer|Eigentümer|Mieter|Pächter)\b/giu;
+const PARTY_ROLE_COORDINATION_PATTERN =
+  /\b(?:bzw\.|beziehungsweise|und|oder|sowie|und\/oder)\b|[/,&]/iu;
+const PREDICATE_PATTERN =
+  /\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -31,6 +52,159 @@ function sha256(value) {
 function intersection(left, right) {
   const rightSet = right instanceof Set ? right : new Set(right);
   return left.filter((value) => rightSet.has(value));
+}
+
+function comparable(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .toLocaleLowerCase("de-AT");
+}
+
+function partyRoles(value) {
+  return [
+    ...new Set(
+      [...String(value || "").matchAll(PARTY_ROLE_PATTERN)].map(([match]) =>
+        comparable(match)
+      )
+    ),
+  ];
+}
+
+function assessADrivenManifestAtomicityRisks({ plan, manifest } = {}) {
+  if (
+    plan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
+    manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    manifest.sourceUnitPlanSha256 !== plan.planSha256 ||
+    !Array.isArray(plan.units) ||
+    !Array.isArray(manifest.requirements)
+  )
+    throw new Error("LF_A_ATOMICITY_RISK_AUDIT_INPUT_INVALID");
+  const unitById = new Map(plan.units.map((unit) => [unit.unitId, unit]));
+  const riskByIdentity = new Map();
+  const addRisk = (requirement, component, code, details = {}) => {
+    const identity = `${requirement.requirementId}:${component.componentId}:${code}`;
+    if (riskByIdentity.has(identity)) return;
+    riskByIdentity.set(identity, {
+      code,
+      dynamicRequirementId: requirement.requirementId,
+      dynamicComponentId: component.componentId,
+      componentType: component.type,
+      label: component.label,
+      sourceUnitIds: requirement.sourceUnitIds,
+      sourceBlockIds: component.sourceBlockIds,
+      ...details,
+    });
+  };
+  for (const requirement of manifest.requirements) {
+    for (const component of requirement.components) {
+      const label = comparable(component.label);
+      if (!ATOMIC_LABEL_COMPONENT_TYPES.has(component.type)) continue;
+      const containedTypedSiblings = requirement.components
+        .filter(
+          (candidate) =>
+            candidate.componentId !== component.componentId &&
+            candidate.type !== component.type
+        )
+        .filter((candidate) => {
+          const candidateLabel = comparable(candidate.label);
+          return (
+            candidateLabel.length >= 4 &&
+            label !== candidateLabel &&
+            label.includes(candidateLabel)
+          );
+        })
+        .map(({ componentId, type, label: siblingLabel }) => ({
+          componentId,
+          type,
+          label: siblingLabel,
+        }));
+      if (containedTypedSiblings.length)
+        addRisk(
+          requirement,
+          component,
+          "COMPONENT_LABEL_CONTAINS_TYPED_SIBLING",
+          { containedTypedSiblings }
+        );
+      if (label.length > 240)
+        addRisk(requirement, component, "OVERBROAD_COMPONENT_LABEL", {
+          normalizedCharacters: label.length,
+        });
+      const roles = partyRoles(component.label);
+      if (
+        component.type === "FACT_ROLE" &&
+        roles.length > 1 &&
+        PARTY_ROLE_COORDINATION_PATTERN.test(component.label)
+      )
+        addRisk(requirement, component, "COMPOUND_PARTY_ROLE_COMPONENT", {
+          partyRoles: roles,
+        });
+      if (
+        component.type === "FACT_ROLE" &&
+        requirement.components.length === 1 &&
+        roles.length > 0 &&
+        label.length <= 140 &&
+        !PREDICATE_PATTERN.test(component.label)
+      ) {
+        const unit = requirement.sourceUnitIds
+          .map((unitId) => unitById.get(unitId))
+          .find(Boolean);
+        const nextUnit = unit
+          ? plan.units.find(
+              ({ packageOrder }) =>
+                packageOrder[0] === unit.packageOrder[0] &&
+                packageOrder[1] === unit.packageOrder[1] + 1
+            )
+          : null;
+        addRisk(requirement, component, "ISOLATED_PARTY_ROLE_LABEL", {
+          partyRoles: roles,
+          nextUnit: nextUnit
+            ? {
+                unitId: nextUnit.unitId,
+                unitKind: nextUnit.unitKind,
+                exactText: nextUnit.source.combinedText,
+              }
+            : null,
+        });
+      }
+    }
+  }
+  const risks = [...riskByIdentity.values()];
+  const riskComponentIds = new Set(
+    risks.map(({ dynamicComponentId }) => dynamicComponentId)
+  );
+  const byCode = Object.fromEntries(
+    [...new Set(risks.map(({ code }) => code))]
+      .sort()
+      .map((code) => [code, risks.filter((risk) => risk.code === code).length])
+  );
+  const payload = {
+    schemaVersion: 1,
+    contractId: A_ATOMICITY_RISK_AUDIT_CONTRACT_ID,
+    sourceUnitPlanSha256: plan.planSha256,
+    dynamicManifestSha256: manifest.manifestSha256,
+    summary: {
+      semanticRequirements: manifest.requirements.length,
+      semanticComponents: manifest.requirements.reduce(
+        (sum, requirement) => sum + requirement.components.length,
+        0
+      ),
+      reviewRequiredComponents: riskComponentIds.size,
+      risks: risks.length,
+      byCode,
+      atomicityReviewPassed: risks.length === 0,
+    },
+    risks,
+    proofLimit:
+      "Deterministischer Hochrisikofilter für eine nachfolgende source-bound Re-Atomisierung. Ein Treffer beweist noch keinen Fachfehler und darf keine automatische Regex-Splittung auslösen; null Treffer beweisen keine vollständige Atomizität.",
+  };
+  return {
+    ...payload,
+    auditSha256: sha256(
+      `${A_ATOMICITY_RISK_AUDIT_CONTRACT_ID}\u0000${stableStringify(payload)}`
+    ),
+  };
 }
 
 function legacyRequirements(legacyManifest) {
@@ -302,7 +476,6 @@ function buildADrivenAStatusAudit({
       compatibleLegacySources,
     };
   });
-
   const requirementCrosswalk = legacy.map((requirement) => {
     const dynamicTargets = dynamic
       .filter(
@@ -578,7 +751,9 @@ function buildADrivenAStatusAudit({
 }
 
 module.exports = {
+  A_ATOMICITY_RISK_AUDIT_CONTRACT_ID,
   A_STATUS_AUDIT_CONTRACT_ID,
   LEGACY_ROLE_TO_DYNAMIC_TYPES,
+  assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
 };

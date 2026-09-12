@@ -34,6 +34,7 @@ const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const {
+  assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
 } = require("../../utils/policyAnalysis/aDrivenAStatusAudit");
 const {
@@ -6054,6 +6055,106 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(audit.dynamicComponentCrosswalk).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ relationCandidate: "ADDITIONAL" }),
+      ])
+    );
+  });
+
+  test("routes overbroad typed labels and isolated party roles to atomicity review", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDECKUNG\nVersichert sind Gebäude, sofern sie ständig bewohnt sind.\nVersicherungsnehmer bzw. Verwalter und Treuhänder\n\nFamilienwohnbau GmbH\n",
+      ],
+      "d"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const headingResponses = plan.units
+      .filter(({ unitKind }) => unitKind === "HEADING")
+      .map(validResponse);
+    const clauses = plan.units.filter(({ unitKind }) => unitKind === "CLAUSE");
+    const coverageUnit = clauses.find(({ source }) =>
+      source.combinedText.includes("Versichert sind Gebäude")
+    );
+    const partyUnit = clauses.find(({ source }) =>
+      source.combinedText.includes("Versicherungsnehmer")
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        ...headingResponses,
+        {
+          unitId: coverageUnit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: [
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "INSURED_OBJECT",
+            "CONDITION",
+          ],
+          requirements: [
+            {
+              displayLabel: coverageUnit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: coverageUnit.source.combinedText,
+                  sourceBlockIds: coverageUnit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: coverageUnit.source.blockIds,
+                },
+                {
+                  type: "CONDITION",
+                  label: "sofern sie ständig bewohnt sind",
+                  sourceBlockIds: coverageUnit.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          unitId: partyUnit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION"],
+          requirements: [
+            {
+              displayLabel: partyUnit.source.combinedText,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: partyUnit.source.combinedText,
+                  sourceBlockIds: partyUnit.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const audit = assessADrivenManifestAtomicityRisks({ plan, manifest });
+
+    expect(audit.summary.atomicityReviewPassed).toBe(false);
+    expect(audit.auditSha256).toMatch(/^[a-f0-9]{64}$/u);
+    expect(audit.risks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "COMPONENT_LABEL_CONTAINS_TYPED_SIBLING",
+          componentType: "OBJECT",
+        }),
+        expect.objectContaining({
+          code: "COMPOUND_PARTY_ROLE_COMPONENT",
+          componentType: "FACT_ROLE",
+        }),
+        expect.objectContaining({
+          code: "ISOLATED_PARTY_ROLE_LABEL",
+          componentType: "FACT_ROLE",
+          nextUnit: expect.objectContaining({
+            exactText: expect.stringContaining("Familienwohnbau GmbH"),
+          }),
+        }),
       ])
     );
   });
