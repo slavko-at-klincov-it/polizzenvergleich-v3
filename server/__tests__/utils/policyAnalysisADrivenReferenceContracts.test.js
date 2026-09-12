@@ -749,6 +749,7 @@ describe("requirement-local semantic evidence completeness", () => {
       type: "VALUE_AND_UNIT",
       rawValue: "10",
       unit: "m",
+      expectedSourceBlockIds: ["value"],
     },
     {
       source: "Die Einzelscheibengröße beträgt maximal 10m².",
@@ -981,7 +982,7 @@ describe("requirement-local semantic evidence completeness", () => {
     },
   ])(
     "materializes a $type whose literal is split across adjacent source blocks",
-    ({ blocks, type, rawValue, unit }) => {
+    ({ blocks, type, rawValue, unit, expectedSourceBlockIds }) => {
       const source = blocks.map(([, exactText]) => exactText).join("\n");
       const sourceBlockIds = blocks.map(([blockId]) => blockId);
       const result = materializeSharedSignalComponents(
@@ -999,7 +1000,7 @@ describe("requirement-local semantic evidence completeness", () => {
       expect(result.requirements[0].components).toContainEqual({
         type,
         label: expect.any(String),
-        sourceBlockIds,
+        sourceBlockIds: expectedSourceBlockIds || sourceBlockIds,
         ...(rawValue ? { rawValue } : {}),
         ...(unit ? { unit } : {}),
       });
