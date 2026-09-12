@@ -4038,3 +4038,51 @@ dass B durchsucht wurde, Generalisierung oder 99 Prozent. Der reale Stand ist
 weiterhin 0/631 unabhängige Fach-Doppelreviews; B-Pilot und 1+9 bleiben bis
 zum vollständigen Legacy- und dynamischen Restreview plus externer
 Autorisierung fail-closed.
+
+## 67. Ein kontrollierter B-Pilot braucht eine fremd verankerte Autorisierung
+
+**Prüfung:** 12. September 2026
+
+Die technische Review-Reconciliation durfte zu Recht keinen B-Start
+freigeben, bot danach aber auch keinen sicheren Übergang zu einem eng
+begrenzten Shadow-Pilot. Ein neuer dreistufiger Vertrag trennt nun
+Autorisierungsrequest, signierte Autorisierung und finales Pilotgate. Der
+Request ist nur aus einer vollständig bestandenen und kampagnengebundenen
+Legacy- plus dynamischen Rest-Reconciliation erzeugbar.
+
+Die signierte Autorisierung ist nicht selbstvertrauend: Sie enthält keinen
+öffentlichen Schlüssel. Das Gate verlangt einen separaten Ed25519-Trust Anchor
+und dessen außerhalb des CLI-Aufrufs administrativ gepinnten SHA-256. Damit
+reichen ein spontan erzeugtes Schlüsselpaar, ein zusammen mit der Signatur
+gelieferter Fingerprint oder ein mutiertes Trust-Anchor-Artefakt nicht zur
+Freigabe. Private-Key-PEM wird als Public-Key-Eingabe abgelehnt; private
+Schlüssel werden nicht in den Reviewbaum kopiert.
+
+Ein gültiges Gate erlaubt ausschließlich einen privaten A-getriebenen
+B-Retrieval-Shadow-Pilot über alle B-Dokumente mit BM25, Struktur, Dinghy und
+komponentenweiser Qwen-Prüfung. Vollständiger 1+9-Lauf, Produkt-Routing,
+Resultatmutation, Kundenarbeitsmappe und Deployment bleiben auch dann
+gesperrt. Der B-Pilot-Runner konsumiert dieses Gate noch nicht; das ist der
+nächste technische Integrationsschritt, sobald echte Reviewer- und
+Autoritätsdaten verfügbar sind.
+
+Die Implementierung in `e1724594ac27b498f05a8be6c85ab0fd2315bdfc` und eine
+rein matcherbezogene VS36-Testkorrektur in
+`ce63f53a090a2468d1885dc00d5e5810a540297a` bestanden auf dem Mac Studio am
+letztgenannten exakten Commit unter Node 22.23.2: 187/187 Server-Suites,
+2.674/2.674 Tests, Prettier und serverseitiges ESLint der Produkt-/CLI-Dateien.
+Der Prüfpfad lag unter
+`/private/tmp/lf-bpilot-e1724594-hmTls2/repo`.
+
+Ein daneben ausgeführter Root-Jest-Lauf ist kein Monorepo-PASS: Sieben
+Collector-Suites konnten wegen fehlender Collector-Abhängigkeiten im
+isolierten Worktree nicht geladen werden. Der gezielte vollständige
+Serverbestand war davon getrennt vollständig grün.
+
+**Beweist:** Nach echten bestandenen Doppelreviews kann eine externe Autorität
+genau einen kontrollierten B-Shadow-Pilot freigeben, ohne damit still den
+Voll-Lauf oder Produktwirkungen zu erlauben.
+
+**Beweist nicht:** dass eine solche reale Autorisierung bereits existiert,
+dass 631 Komponenten fachlich geprüft sind oder dass der B-Pilot ausgeführt
+wurde. Der reale Stand bleibt 0/631 und damit fail-closed.
