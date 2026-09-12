@@ -96,6 +96,9 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "in den jeweils beantragten/vereinbarten Sparten"
     );
+    expect(systemText).toContain(
+      "die bessere, günstigere oder weitergehende Deckung/Regelung/Leistung"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -2967,7 +2970,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V17");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V18");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5874,6 +5877,116 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       components: 1,
     });
   });
+
+  test.each([
+    [
+      "Es gilt die für den Versicherungsnehmer im jeweiligen Schadensfall bessere Deckung.",
+      ["SCOPE", "SCOPE", "PRECEDENCE_OR_REPLACEMENT"],
+      [
+        "für den Versicherungsnehmer",
+        "im jeweiligen Schadensfall",
+        "bessere Deckung",
+      ],
+    ],
+    [
+      "Es gilt im Versicherungsfall die günstigere Regelung.",
+      ["SCOPE", "PRECEDENCE_OR_REPLACEMENT"],
+      ["im Versicherungsfall", "günstigere Regelung"],
+    ],
+  ])(
+    "normalizes a positive more-favorable selection rule: %s",
+    (sourceText, expectedTypes, expectedLabels) => {
+      const source = artifact([`Seite 1\n${sourceText}\n`], sourceText);
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const unit = plan.units.find(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      );
+      const block = unit.source.blocks[0];
+      const normalized = normalizeUnambiguousComponentTypes(
+        [
+          {
+            unitId: unit.unitId,
+            primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+            semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+            requirements: [
+              {
+                displayLabel: sourceText,
+                components: [
+                  {
+                    type: "COVERAGE_EFFECT",
+                    label: "gilt",
+                    sourceBlockIds: [block.blockId],
+                    coverageEffect: "INCLUDED",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        [unit]
+      );
+
+      expect(normalized.responses[0]).toMatchObject({
+        primaryClass: "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+        semanticClasses: ["DOCUMENT_PRECEDENCE_OR_REPLACEMENT"],
+      });
+      expect(
+        normalized.responses[0].requirements[0].components.map(
+          ({ type }) => type
+        )
+      ).toEqual(expectedTypes);
+      expect(
+        normalized.responses[0].requirements[0].components.map(
+          ({ label }) => label
+        )
+      ).toEqual(expectedLabels);
+      expect(normalized.componentRepairs).toContainEqual({
+        unitId: unit.unitId,
+        action: "NORMALIZE_MORE_FAVORABLE_COVERAGE_PRECEDENCE",
+      });
+      expect(
+        buildADrivenSemanticManifest({
+          plan,
+          responses: normalized.responses,
+          semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+        }).summary.unresolvedUnits
+      ).toBe(0);
+    }
+  );
+
+  test.each([
+    "Die bessere Deckung gilt nicht.",
+    "Das Informationsblatt erläutert die bessere Deckung.",
+  ])(
+    "does not normalize a non-positive selection statement: %s",
+    (sourceText) => {
+      const source = artifact([`Seite 1\n${sourceText}\n`], sourceText);
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      });
+      const unit = plan.units.find(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      );
+      const response = {
+        unitId: unit.unitId,
+        primaryClass: "CONDITION",
+        semanticClasses: ["CONDITION"],
+        requirements: [],
+      };
+      const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+      expect(normalized.responses).toEqual([response]);
+      expect(normalized.componentRepairs).not.toContainEqual(
+        expect.objectContaining({
+          action: "NORMALIZE_MORE_FAVORABLE_COVERAGE_PRECEDENCE",
+        })
+      );
+    }
+  );
 
   test("drops only the unsupported coverage class from a non-product fact", () => {
     const unit = {

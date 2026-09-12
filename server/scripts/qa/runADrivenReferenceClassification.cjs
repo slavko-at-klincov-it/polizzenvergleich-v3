@@ -29,13 +29,14 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V17";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V18";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V14",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V15",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V16",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V17",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -46,7 +47,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V17";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V18";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -655,6 +656,46 @@ function splitProductConfigurationScopeRoles(component) {
   return components.some(({ type }) => type === "SCOPE") ? components : null;
 }
 
+function moreFavorableCoveragePrecedence(unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const relation =
+    /^\s*(?:Es\s+)?(?:gilt|gelten|kommt|kommen)\b(?<middle>[\s\S]{0,240}?)\b(?<precedence>(?:bessere|günstigere|weitergehende)\s+(?:Deckung|Regelung|Leistung))\b(?:\s+zur\s+Anwendung)?[.!]?\s*$/iu.exec(
+      sourceText
+    );
+  if (!relation || /\b(?:nicht|kein(?:e[snmr]?)?)\b/iu.test(relation[0]))
+    return null;
+  const sourceBlockIds = [...(unit?.source?.blockIds || [])];
+  if (sourceBlockIds.length === 0) return null;
+  const components = [];
+  const scopePatterns = [
+    /\bfür\s+(?:den|die)\s+Versicherungsnehmer(?:in|innen)?\b/iu,
+    /\b(?:im|pro|je)\s+(?:jeweiligen\s+)?(?:Schadensfall|Versicherungsfall|Kollisionsfall)\b/iu,
+  ];
+  for (const pattern of scopePatterns) {
+    const match = pattern.exec(sourceText);
+    if (match)
+      components.push({
+        sourceTextOrder: match.index,
+        type: "SCOPE",
+        label: match[0],
+        sourceBlockIds,
+      });
+  }
+  const precedenceIndex = sourceText.indexOf(relation.groups.precedence);
+  components.push({
+    sourceTextOrder: precedenceIndex,
+    type: "PRECEDENCE_OR_REPLACEMENT",
+    label: relation.groups.precedence,
+    sourceBlockIds,
+  });
+  return {
+    displayLabel: sourceText.trim(),
+    components: components
+      .sort((left, right) => left.sourceTextOrder - right.sourceTextOrder)
+      .map(({ sourceTextOrder: _sourceTextOrder, ...component }) => component),
+  };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -747,6 +788,19 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         primaryClass: "DEFINITION",
         semanticClasses: ["DEFINITION", ...(hasScope ? ["VARIANT"] : [])],
         requirements: normalizedRequirements,
+      };
+    }
+    const favorableCoveragePrecedence = moreFavorableCoveragePrecedence(unit);
+    if (favorableCoveragePrecedence) {
+      repairs.push({
+        unitId: response?.unitId,
+        action: "NORMALIZE_MORE_FAVORABLE_COVERAGE_PRECEDENCE",
+      });
+      return {
+        ...response,
+        primaryClass: "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+        semanticClasses: ["DOCUMENT_PRECEDENCE_OR_REPLACEMENT"],
+        requirements: [favorableCoveragePrecedence],
       };
     }
     const allocationDefinition =
@@ -1391,6 +1445,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Explizite Geltungsbereichsangaben wie „mit der Variante …“ sowie „in den jeweils beantragten/vereinbarten Sparten“ sind SCOPE-Komponenten und niemals FACT_ROLE oder OBJECT. Mehrere getrennte Scope-Angaben derselben Requirement bleiben mehrere source-bound SCOPE-Komponenten.",
+    },
+    {
+      role: "system",
+      content:
+        "Eine positive Auswahlregel, wonach im Schaden-, Versicherungs- oder Kollisionsfall die bessere, günstigere oder weitergehende Deckung/Regelung/Leistung gilt, ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT. Gib den wörtlichen günstigeren Regelgegenstand als PRECEDENCE_OR_REPLACEMENT und Begünstigten- sowie Fallscope getrennt als SCOPE aus. Eine negierte Aussage ist von dieser Regel ausdrücklich nicht erfasst.",
     },
     {
       role: "user",
