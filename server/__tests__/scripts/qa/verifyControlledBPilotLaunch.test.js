@@ -97,9 +97,9 @@ describe("controlled B-pilot launch binding", () => {
     missingB.inputManifest.documents = missingB.inputManifest.documents.filter(
       ({ side }) => side === "A"
     );
-    expect(() =>
-      validateInputManifestBinding(missingB)
-    ).toThrow("LF_A_CONTROLLED_B_PILOT_DOCUMENT_SCOPE_INVALID");
+    expect(() => validateInputManifestBinding(missingB)).toThrow(
+      "LF_A_CONTROLLED_B_PILOT_DOCUMENT_SCOPE_INVALID"
+    );
 
     const unknownSide = fixture();
     unknownSide.inputManifest.documents.push({
@@ -108,9 +108,9 @@ describe("controlled B-pilot launch binding", () => {
       sha256: "8".repeat(64),
       position: 0,
     });
-    expect(() =>
-      validateInputManifestBinding(unknownSide)
-    ).toThrow("LF_A_CONTROLLED_B_PILOT_DOCUMENT_SCOPE_INVALID");
+    expect(() => validateInputManifestBinding(unknownSide)).toThrow(
+      "LF_A_CONTROLLED_B_PILOT_DOCUMENT_SCOPE_INVALID"
+    );
   });
 
   test("reads the trust anchor digest only from a protected regular file", () => {

@@ -101,10 +101,7 @@ describe("policy comparison worker contract", () => {
 
   test("gates the A-driven B-only pilot before any model or retrieval work", () => {
     const controlledPilotRunner = fs.readFileSync(
-      path.join(
-        REPOSITORY_ROOT,
-        "run-a-driven-controlled-b-pilot.command"
-      ),
+      path.join(REPOSITORY_ROOT, "run-a-driven-controlled-b-pilot.command"),
       "utf8"
     );
     const gateCheck = controlledPilotRunner.indexOf(
@@ -203,7 +200,9 @@ describe("policy comparison worker contract", () => {
       "utf8"
     );
     expect(model).toContain("LF_DYNAMIC_REFERENCE_PROFILE");
-    expect(model).not.toContain("LF_REFERENCE_PROFILE.sourceProduct.documentSha256");
+    expect(model).not.toContain(
+      "LF_REFERENCE_PROFILE.sourceProduct.documentSha256"
+    );
     expect(model).not.toContain("COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED");
     const dynamicRunner = fs.readFileSync(
       path.join(
