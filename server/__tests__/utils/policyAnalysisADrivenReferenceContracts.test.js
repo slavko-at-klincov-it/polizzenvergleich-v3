@@ -798,7 +798,7 @@ describe("requirement-local semantic evidence completeness", () => {
     {
       source:
         "Nebengebäude sind privat oder betrieblich genutzte Gebäude und Anbauten, die fest verankert sind.",
-      signalId: "EXPLICIT_DEFINITION",
+      signalId: "EXPLICIT_COPULAR_DEFINITION",
       type: "FACT_ROLE",
     },
     {

@@ -82,7 +82,13 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_DEFINITION",
     pattern:
-      /\bunter\s+[^.;:]{1,120}?\b(?:versteht\s+man|(?:ist|sind)\s+[^.;:]{0,80}\bzu\s+verstehen)\b[^.;:]*|\bist\s+der\s+versicherungsfall\s+[^.;:]+|\b(?:gilt|gelten)\b[^.;:]{0,220}\bals\s+(?:eingetreten|zugegangen|gegeben)\b[^.;:]*|(?:(?<![\s\S])|(?<=[.!?]\s))\b(?!Versichert(?:e[nrsm]?)?\s+(?:ist|sind)\b)\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,3}\s+(?:ist|sind)\s+(?!\s*(?:mit)?versichert\b|\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)[^.;:]{1,180}\b(?:Gebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b[^.;:]*/giu,
+      /\bunter\s+[^.;:]{1,120}?\b(?:versteht\s+man|(?:ist|sind)\s+[^.;:]{0,80}\bzu\s+verstehen)\b[^.;:]*|\bist\s+der\s+versicherungsfall\s+[^.;:]+|\b(?:gilt|gelten)\b[^.;:]{0,220}\bals\s+(?:eingetreten|zugegangen|gegeben)\b[^.;:]*/giu,
+    requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
+  }),
+  Object.freeze({
+    signalId: "EXPLICIT_COPULAR_DEFINITION",
+    pattern:
+      /(?:(?<![\s\S])|(?<=[.!?]\s))\b(?!(?:\p{L}[\p{L}-]*\s+){0,3}(?:mit)?versichert\s+(?:ist|sind)\b)\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,3}\s+(?:ist|sind)\s+(?!\s*(?:mit)?versichert\b|\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)[^.;:]{1,180}\b(?:Gebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b[^.;:]*/gu,
     requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
   }),
   Object.freeze({
@@ -526,6 +532,7 @@ function materializeSharedSignalComponents(unit, requirements) {
           ![
             "EXPLICIT_CONDITION",
             "EXPLICIT_DEFINITION",
+            "EXPLICIT_COPULAR_DEFINITION",
             "EXPLICIT_PERIL_OR_CAUSE",
             "EXPLICIT_COST_ROLE",
             "EXPLICIT_QUANTIFIED_VALUE",
@@ -559,6 +566,7 @@ function materializeSharedSignalComponents(unit, requirements) {
           localCandidates.length === 1 ? localCandidates[0] : null;
         const evidenceBackedSignal = [
           "EXPLICIT_DEFINITION",
+          "EXPLICIT_COPULAR_DEFINITION",
           "EXPLICIT_PERIL_OR_CAUSE",
           "EXPLICIT_QUANTIFIED_VALUE",
         ].includes(signal.signalId);
@@ -575,6 +583,7 @@ function materializeSharedSignalComponents(unit, requirements) {
             ![
               "EXPLICIT_CONDITION",
               "EXPLICIT_DEFINITION",
+              "EXPLICIT_COPULAR_DEFINITION",
               "EXPLICIT_PERIL_OR_CAUSE",
               "EXPLICIT_QUANTIFIED_VALUE",
             ].includes(signal.signalId))
@@ -617,7 +626,10 @@ function materializeSharedSignalComponents(unit, requirements) {
                 type:
                   signal.signalId === "EXPLICIT_CONDITION"
                     ? "CONDITION"
-                    : signal.signalId === "EXPLICIT_DEFINITION"
+                    : [
+                          "EXPLICIT_DEFINITION",
+                          "EXPLICIT_COPULAR_DEFINITION",
+                        ].includes(signal.signalId)
                       ? "FACT_ROLE"
                       : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
                         ? "PERIL_OR_CAUSE"
