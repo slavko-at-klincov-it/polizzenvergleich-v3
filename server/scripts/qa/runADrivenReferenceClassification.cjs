@@ -804,14 +804,11 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       unitId: response.unitId,
                       requirementIndex,
                       componentIndex,
-                      action:
-                        "NORMALIZE_AGREED_REPLACEMENT_TO_PRECEDENCE_ROLE",
+                      action: "NORMALIZE_AGREED_REPLACEMENT_TO_PRECEDENCE_ROLE",
                     });
                     const { coverageEffect: _coverageEffect, ...rest } =
                       component;
-                    return [
-                      { ...rest, type: "PRECEDENCE_OR_REPLACEMENT" },
-                    ];
+                    return [{ ...rest, type: "PRECEDENCE_OR_REPLACEMENT" }];
                   }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
