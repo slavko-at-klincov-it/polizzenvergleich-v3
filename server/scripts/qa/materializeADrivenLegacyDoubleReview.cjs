@@ -5,6 +5,9 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const {
+  stableStringify,
+} = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
+const {
   CURRENT_V12_REVIEW_PROFILE,
   createClassificationEvidence,
   createCrosswalkDraft,
@@ -21,6 +24,7 @@ const {
   validateClassificationChain,
   validateCrosswalkDraft,
   validateDynamicRemainderDraft,
+  validateDynamicRemainderReconciliation,
   validateDynamicRemainderReviewerArtifact,
   validateApprovedCrosswalk,
   validateReviewBasis,
@@ -36,6 +40,8 @@ const APPROVED_CROSSWALK_FILE = "approved-crosswalk.private.json";
 const DYNAMIC_REMAINDER_DRAFT_FILE = "dynamic-remainder-draft.private.json";
 const DYNAMIC_REMAINDER_RECONCILIATION_FILE =
   "dynamic-remainder-reconciliation.private.json";
+const FREEZE_ARTIFACT_SET_FILE = "freeze-artifact-set.private.json";
+const FREEZE_ARTIFACT_SET_CONTRACT_ID = "LF_A_REVIEW_FREEZE_ARTIFACT_SET_V1";
 
 function fail(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
@@ -45,6 +51,12 @@ function fail(code, detail) {
 
 function digest(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+function assertNoPrivateKeyMaterial(value, source = "generated-artifact") {
+  const text = Buffer.isBuffer(value) ? value.toString("utf8") : String(value);
+  if (/-----BEGIN [^-\r\n]*PRIVATE KEY-----/u.test(text))
+    fail("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_MATERIAL_FORBIDDEN", source);
 }
 
 function parseArgs(argv) {
@@ -95,7 +107,9 @@ function resolveInside(root, relativePath) {
 
 function copyRegularVerified(source, destination) {
   const sourceStat = assertRegularSingleLink(source);
-  const sourceHash = digest(fs.readFileSync(source));
+  const sourceBytes = fs.readFileSync(source);
+  assertNoPrivateKeyMaterial(sourceBytes, source);
+  const sourceHash = digest(sourceBytes);
   fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
   fs.chmodSync(destination, 0o400);
   const destinationStat = assertRegularSingleLink(destination);
@@ -136,11 +150,107 @@ function batchExpectedUnits(value) {
 }
 
 function writeJsonPrivate(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, {
+  const serialized = `${JSON.stringify(value, null, 2)}\n`;
+  assertNoPrivateKeyMaterial(serialized, filePath);
+  fs.writeFileSync(filePath, serialized, {
     encoding: "utf8",
     flag: "wx",
     mode: 0o400,
   });
+}
+
+function freezeArtifactSetDigest(payload) {
+  return digest(
+    Buffer.from(
+      `${FREEZE_ARTIFACT_SET_CONTRACT_ID}\u0000${stableStringify(payload)}`,
+      "utf8"
+    )
+  );
+}
+
+function requiredFreezeArtifactPaths(basis) {
+  return new Set([
+    BASIS_FILE,
+    "inputs/dynamicManifest.json",
+    "inputs/legacy-manifest.json",
+    ...Object.values(basis.classificationEvidence.artifacts).map(
+      ({ relativePath }) => relativePath
+    ),
+    ...basis.classificationEvidence.batchResults.map(
+      ({ relativePath }) => relativePath
+    ),
+    ...Object.values(basis.runProvenance.sourceArtifacts).map(
+      ({ relativePath }) => relativePath
+    ),
+  ]);
+}
+
+function freezeArtifactFiles(root) {
+  const files = [];
+  function visit(directory) {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolute = path.join(directory, entry.name);
+      const relativePath = path.relative(root, absolute);
+      if (relativePath === FREEZE_ARTIFACT_SET_FILE) continue;
+      if (entry.isDirectory()) visit(absolute);
+      else {
+        const raw = readRawRegular(absolute);
+        assertNoPrivateKeyMaterial(raw, absolute);
+        files.push({ relativePath, fileSha256: digest(raw) });
+      }
+    }
+  }
+  visit(root);
+  return files;
+}
+
+function materializeFreezeArtifactSetIndex({ basisRoot, basis }) {
+  const file = path.join(basisRoot, FREEZE_ARTIFACT_SET_FILE);
+  if (fs.existsSync(file))
+    fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_EXISTS", file);
+  const files = freezeArtifactFiles(basisRoot);
+  const present = new Set(files.map(({ relativePath }) => relativePath));
+  if (
+    [...requiredFreezeArtifactPaths(basis)].some((item) => !present.has(item))
+  )
+    fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_INCOMPLETE");
+  const payload = {
+    schemaVersion: 1,
+    contractId: FREEZE_ARTIFACT_SET_CONTRACT_ID,
+    basisSha256: basis.basisSha256,
+    files,
+  };
+  const artifactSet = {
+    ...payload,
+    artifactSetSha256: freezeArtifactSetDigest(payload),
+  };
+  writeJsonPrivate(file, artifactSet);
+  return artifactSet;
+}
+
+function validateFreezeArtifactSet({ basisRoot, basis }) {
+  const artifactSet = readRegular(
+    path.join(basisRoot, FREEZE_ARTIFACT_SET_FILE)
+  ).value;
+  const { artifactSetSha256, ...payload } = artifactSet;
+  if (
+    artifactSet.contractId !== FREEZE_ARTIFACT_SET_CONTRACT_ID ||
+    artifactSet.basisSha256 !== basis.basisSha256 ||
+    artifactSetSha256 !== freezeArtifactSetDigest(payload) ||
+    !Array.isArray(artifactSet.files)
+  )
+    fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_INVALID");
+  const currentFiles = freezeArtifactFiles(basisRoot);
+  if (stableStringify(currentFiles) !== stableStringify(artifactSet.files))
+    fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_MUTATED");
+  const present = new Set(currentFiles.map(({ relativePath }) => relativePath));
+  if (
+    [...requiredFreezeArtifactPaths(basis)].some((item) => !present.has(item))
+  )
+    fail("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_INCOMPLETE");
+  return artifactSet;
 }
 
 function makeTempTarget(target) {
@@ -416,6 +526,8 @@ function materializeFreeze({
     );
   writeJsonPrivate(path.join(temp, BASIS_FILE), basis);
   validateReviewBasis(readRegular(path.join(temp, BASIS_FILE)).value);
+  materializeFreezeArtifactSetIndex({ basisRoot: temp, basis });
+  validateFreezeArtifactSet({ basisRoot: temp, basis });
   lockTree(temp);
   fs.renameSync(temp, target);
   return basis;
@@ -425,6 +537,7 @@ function materializeDraft({ basisRoot, target }) {
   if (!basisRoot || !target) fail("LF_A_DOUBLE_REVIEW_DRAFT_ARGUMENT_REQUIRED");
   const basis = readRegular(path.join(basisRoot, BASIS_FILE)).value;
   validateReviewBasis(basis);
+  validateFreezeArtifactSet({ basisRoot, basis });
   const draft = createCrosswalkDraft({ basis });
   const temp = makeTempTarget(target);
   writeJsonPrivate(path.join(temp, DRAFT_FILE), draft);
@@ -443,8 +556,9 @@ function readReviewCampaign({ basisRoot, draftRoot }) {
   const basis = readRegular(path.join(basisRoot, BASIS_FILE)).value;
   const draft = readRegular(path.join(draftRoot, DRAFT_FILE)).value;
   validateReviewBasis(basis);
+  const freezeArtifactSet = validateFreezeArtifactSet({ basisRoot, basis });
   validateCrosswalkDraft({ basis, draft });
-  return { basis, draft };
+  return { basis, draft, freezeArtifactSet };
 }
 
 function materializeRegistry({
@@ -453,6 +567,7 @@ function materializeRegistry({
   authorityId,
   authorityPublicKeyPath,
   authorityPrivateKeyPath,
+  trustedAuthorityPublicKeyFingerprintSha256,
   reviewersPath,
   target,
 }) {
@@ -460,11 +575,15 @@ function materializeRegistry({
     !authorityId ||
     !authorityPublicKeyPath ||
     !authorityPrivateKeyPath ||
+    !trustedAuthorityPublicKeyFingerprintSha256 ||
     !reviewersPath ||
     !target
   )
     fail("LF_A_DOUBLE_REVIEW_REGISTRY_ARGUMENT_REQUIRED");
-  const { basis, draft } = readReviewCampaign({ basisRoot, draftRoot });
+  const { basis, draft, freezeArtifactSet } = readReviewCampaign({
+    basisRoot,
+    draftRoot,
+  });
   const registry = createReviewerRegistry({
     basis,
     draft,
@@ -475,6 +594,8 @@ function materializeRegistry({
     authorityPrivateKeyPem: readRawRegular(authorityPrivateKeyPath).toString(
       "utf8"
     ),
+    trustedAuthorityPublicKeyFingerprintSha256,
+    freezeArtifactSetSha256: freezeArtifactSet.artifactSetSha256,
     reviewers: readRegular(reviewersPath).value.reviewers,
   });
   const temp = makeTempTarget(target);
@@ -500,6 +621,7 @@ function readRegisteredCampaign({
   if (!registryRoot || !authorityPublicKeyFingerprintSha256)
     fail("LF_A_DOUBLE_REVIEW_REGISTERED_CAMPAIGN_ARGUMENT_REQUIRED");
   const { basis, draft } = readReviewCampaign({ basisRoot, draftRoot });
+  const freezeArtifactSet = validateFreezeArtifactSet({ basisRoot, basis });
   const registry = readRegular(path.join(registryRoot, REGISTRY_FILE)).value;
   validateReviewerRegistry({
     basis,
@@ -507,6 +629,8 @@ function readRegisteredCampaign({
     registry,
     authorityPublicKeyFingerprintSha256,
   });
+  if (registry.freezeArtifactSetSha256 !== freezeArtifactSet.artifactSetSha256)
+    fail("LF_A_DOUBLE_REVIEW_REGISTRY_FREEZE_BINDING_INVALID");
   return { basis, draft, registry };
 }
 
@@ -793,15 +917,14 @@ function materializeDynamicRemainderReconciliation({
   const file = path.join(temp, DYNAMIC_REMAINDER_RECONCILIATION_FILE);
   writeJsonPrivate(file, reconciliation);
   const reopened = readRegular(file).value;
-  const regenerated = reconcileDynamicRemainderReview({
+  validateDynamicRemainderReconciliation({
     ...campaign,
     authorityPublicKeyFingerprintSha256:
       campaignArgs.authorityPublicKeyFingerprintSha256,
     remainderReviewA,
     remainderReviewB,
+    reconciliation: reopened,
   });
-  if (stableJson(reopened) !== stableJson(regenerated))
-    fail("LF_A_DYNAMIC_REMAINDER_RECONCILIATION_COPY_INVALID");
   lockTree(temp);
   fs.renameSync(temp, target);
   return reconciliation;
@@ -843,6 +966,8 @@ function main(argv = process.argv.slice(2)) {
       authorityId: values["authority-id"],
       authorityPublicKeyPath: values["authority-public-key"],
       authorityPrivateKeyPath: values["authority-private-key"],
+      trustedAuthorityPublicKeyFingerprintSha256:
+        values["trusted-authority-public-key-fingerprint"],
       reviewersPath: values.reviewers,
       target: values.target,
     });
@@ -957,8 +1082,10 @@ module.exports = {
   DRAFT_FILE,
   DYNAMIC_REMAINDER_DRAFT_FILE,
   DYNAMIC_REMAINDER_RECONCILIATION_FILE,
+  FREEZE_ARTIFACT_SET_FILE,
   REGISTRY_FILE,
   assertRegularSingleLink,
+  assertNoPrivateKeyMaterial,
   copyRegularVerified,
   main,
   materializeApprovedCrosswalk,
@@ -968,6 +1095,7 @@ module.exports = {
   materializeDynamicRemainderReviewerTemplate,
   materializeDraft,
   materializeFreeze,
+  materializeFreezeArtifactSetIndex,
   materializeRegistry,
   materializeReviewerArtifact,
   materializeReviewerTemplate,
@@ -975,4 +1103,5 @@ module.exports = {
   readRawRegular,
   readRegular,
   validateAndDescribeSourceChain,
+  validateFreezeArtifactSet,
 };

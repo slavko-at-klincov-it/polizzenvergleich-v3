@@ -25,11 +25,11 @@ const CLASSIFICATION_CHAIN_CONTRACT_ID =
   "LF_A_V12_CLASSIFICATION_CHAIN_VALIDATION_V1";
 const RUN_PROVENANCE_CONTRACT_ID = "LF_A_V12_REVIEW_RUN_PROVENANCE_V1";
 const REVIEWER_REGISTRY_CONTRACT_ID =
-  "LF_A_V12_283_631_HUMAN_REVIEWER_REGISTRY_V1";
-const CROSSWALK_DRAFT_CONTRACT_ID = "LF_A_V12_283_631_CROSSWALK_DRAFT_V2";
-const REVIEW_INPUT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_INPUT_V1";
-const REVIEW_ARTIFACT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_V1";
-const APPROVED_CROSSWALK_CONTRACT_ID = "LF_A_V12_283_631_APPROVED_CROSSWALK_V1";
+  "LF_A_V12_283_631_HUMAN_REVIEWER_REGISTRY_V2";
+const CROSSWALK_DRAFT_CONTRACT_ID = "LF_A_V12_283_631_CROSSWALK_DRAFT_V3";
+const REVIEW_INPUT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_INPUT_V2";
+const REVIEW_ARTIFACT_CONTRACT_ID = "LF_A_V12_283_631_REVIEW_V2";
+const APPROVED_CROSSWALK_CONTRACT_ID = "LF_A_V12_283_631_APPROVED_CROSSWALK_V2";
 const DYNAMIC_REMAINDER_DRAFT_CONTRACT_ID =
   "LF_A_DYNAMIC_REMAINDER_REVIEW_DRAFT_V1";
 const DYNAMIC_REMAINDER_REVIEW_INPUT_CONTRACT_ID =
@@ -60,6 +60,11 @@ const ROOT_CAUSE_DISPOSITIONS = new Set([
   "SPLIT_OR_MERGE_RELATION",
   "DYNAMIC_COMPONENT_MISSING",
   "UNDETERMINED",
+]);
+const UPSTREAM_REMEDIATION_DISPOSITIONS = new Set([
+  "DYNAMIC_CLASSIFICATION_ERROR",
+  "ROLE_MAPPING_TOO_NARROW",
+  "DYNAMIC_COMPONENT_MISSING",
 ]);
 const DYNAMIC_REMAINDER_DISPOSITIONS = new Set([
   "VALID_DYNAMIC_ADDITION",
@@ -797,6 +802,11 @@ function legacyInventory(manifest) {
   const seen = new Set();
   const components = [];
   for (const requirement of manifest.requirements) {
+    const {
+      components: _components,
+      sourceSpans: _sourceSpans,
+      ...legacyRequirementContext
+    } = requirement;
     const spans = requirement.sourceSpans.map(normalizeSpan);
     const spansById = new Map(spans.map((span) => [span.spanId, span]));
     for (const component of requirement.components) {
@@ -826,6 +836,8 @@ function legacyInventory(manifest) {
         legacyComponentId: id,
         legacyComponentLabel: text(component.label) || id,
         legacyFactRole: component.factRole,
+        legacyRequirementContext,
+        legacyComponentPayload: component,
         sourceBlockIds,
         sourceEvidence,
       });
@@ -857,6 +869,11 @@ function dynamicInventory(manifest) {
     )
       throw reviewError("LF_A_DOUBLE_REVIEW_DYNAMIC_REQUIREMENT_INVALID");
     requirementIds.add(requirement.requirementId);
+    const {
+      components: _components,
+      sourceSpans: _sourceSpans,
+      ...dynamicRequirementContext
+    } = requirement;
     const members = [];
     for (const component of requirement.components || []) {
       const id = text(component?.componentId);
@@ -876,6 +893,8 @@ function dynamicInventory(manifest) {
         dynamicComponentId: id,
         dynamicComponentType: component.type,
         dynamicComponentLabel: text(component.label) || id,
+        dynamicRequirementContext,
+        dynamicComponentPayload: component,
         sourceBlockIds: [...blocks].sort(),
         sourceEvidence: (requirement.sourceSpans || [])
           .map(normalizeSpan)
@@ -997,6 +1016,8 @@ function candidateProjection(component, overlap, contextKind) {
     dynamicComponentId: component.dynamicComponentId,
     dynamicComponentType: component.dynamicComponentType,
     dynamicComponentLabel: component.dynamicComponentLabel,
+    dynamicRequirementContext: component.dynamicRequirementContext,
+    dynamicComponentPayload: component.dynamicComponentPayload,
     sourceBlockIds: component.sourceBlockIds,
     sourceEvidence: component.sourceEvidence,
     overlappingSourceBlockIds: [...new Set(overlap)].sort(),
@@ -1203,25 +1224,42 @@ function createReviewerRegistry({
   authorityId,
   authorityPublicKeyPem,
   authorityPrivateKeyPem,
+  trustedAuthorityPublicKeyFingerprintSha256,
+  freezeArtifactSetSha256,
   reviewers,
 } = {}) {
   validateCrosswalkDraft({ basis, draft });
+  const authorityPublicKeyFingerprintSha256 = publicKeyFingerprint(
+    authorityPublicKeyPem
+  );
+  if (
+    !validSha(trustedAuthorityPublicKeyFingerprintSha256) ||
+    !validSha(freezeArtifactSetSha256) ||
+    authorityPublicKeyFingerprintSha256 !==
+      trustedAuthorityPublicKeyFingerprintSha256
+  )
+    throw reviewError("LF_A_DOUBLE_REVIEW_AUTHORITY_TRUST_ANCHOR_INVALID");
   const payload = {
     schemaVersion: 1,
     contractId: REVIEWER_REGISTRY_CONTRACT_ID,
     basisSha256: basis.basisSha256,
     draftSha256: draft.draftSha256,
+    freezeArtifactSetSha256,
     authorityId: text(authorityId),
     authorityPublicKeyPem,
-    authorityPublicKeyFingerprintSha256: publicKeyFingerprint(
-      authorityPublicKeyPem
-    ),
+    authorityPublicKeyFingerprintSha256,
+    trustAnchor: {
+      kind: "EXTERNALLY_PINNED_ED25519_FINGERPRINT",
+      publicKeyFingerprintSha256: trustedAuthorityPublicKeyFingerprintSha256,
+    },
     proofLimit: "HUMAN_EXPERT_STATUS_ATTESTED_BY_EXTERNAL_ACCEPTANCE_AUTHORITY",
     reviewers: (reviewers || []).map((reviewer) => ({
       reviewerId: text(reviewer.reviewerId),
       reviewerSlot: reviewer.reviewerSlot,
       reviewerKind: "HUMAN_DOMAIN_EXPERT",
       credentialId: text(reviewer.credentialId),
+      credentialIssuer: text(reviewer.credentialIssuer),
+      credentialEvidenceSha256: reviewer.credentialEvidenceSha256,
       modelOrAutomationIdentity: null,
       publicKeyPem: reviewer.publicKeyPem,
       publicKeyFingerprintSha256: publicKeyFingerprint(reviewer.publicKeyPem),
@@ -1275,9 +1313,13 @@ function validateReviewerRegistry({
   if (
     registry.basisSha256 !== basis.basisSha256 ||
     registry.draftSha256 !== draft.draftSha256 ||
+    !validSha(registry.freezeArtifactSetSha256) ||
     !text(registry.authorityId) ||
     !validSha(authorityPublicKeyFingerprintSha256) ||
     registry.authorityPublicKeyFingerprintSha256 !==
+      authorityPublicKeyFingerprintSha256 ||
+    registry.trustAnchor?.kind !== "EXTERNALLY_PINNED_ED25519_FINGERPRINT" ||
+    registry.trustAnchor?.publicKeyFingerprintSha256 !==
       authorityPublicKeyFingerprintSha256 ||
     publicKeyFingerprint(registry.authorityPublicKeyPem) !==
       authorityPublicKeyFingerprintSha256 ||
@@ -1293,6 +1335,7 @@ function validateReviewerRegistry({
   const slots = new Set();
   const principals = new Set();
   const credentials = new Set();
+  const credentialEvidence = new Set();
   const keys = new Set();
   for (const reviewer of registry.reviewers) {
     const fingerprint = publicKeyFingerprint(reviewer.publicKeyPem);
@@ -1300,6 +1343,8 @@ function validateReviewerRegistry({
       !["A", "B", "ADJUDICATOR"].includes(reviewer.reviewerSlot) ||
       !text(reviewer.reviewerId) ||
       !text(reviewer.credentialId) ||
+      !text(reviewer.credentialIssuer) ||
+      !validSha(reviewer.credentialEvidenceSha256) ||
       reviewer.reviewerKind !== "HUMAN_DOMAIN_EXPERT" ||
       reviewer.modelOrAutomationIdentity !== null ||
       !fingerprint ||
@@ -1307,12 +1352,14 @@ function validateReviewerRegistry({
       slots.has(reviewer.reviewerSlot) ||
       principals.has(reviewer.reviewerId) ||
       credentials.has(reviewer.credentialId) ||
+      credentialEvidence.has(reviewer.credentialEvidenceSha256) ||
       keys.has(fingerprint)
     )
       throw reviewError("LF_A_DOUBLE_REVIEW_REGISTRY_REVIEWER_INVALID");
     slots.add(reviewer.reviewerSlot);
     principals.add(reviewer.reviewerId);
     credentials.add(reviewer.credentialId);
+    credentialEvidence.add(reviewer.credentialEvidenceSha256);
     keys.add(fingerprint);
   }
   if (!slots.has("A") || !slots.has("B"))
@@ -1497,6 +1544,25 @@ function normalizeDecisions(decisions, draft) {
     )
       throw reviewError("LF_A_DOUBLE_REVIEW_MERGE_GROUP_INVALID", mergeGroupId);
   }
+  const decisionsByTarget = new Map();
+  for (const decision of normalized)
+    for (const target of decision.dynamicTargets) {
+      const values = decisionsByTarget.get(target) || [];
+      values.push(decision);
+      decisionsByTarget.set(target, values);
+    }
+  for (const [target, values] of decisionsByTarget) {
+    if (values.length < 2) continue;
+    const mergeGroupIds = new Set(
+      values.map(({ mergeGroupId }) => mergeGroupId)
+    );
+    if (
+      values.some(({ relation }) => relation !== "MERGED_INTO_DYNAMIC") ||
+      mergeGroupIds.size !== 1 ||
+      ![...mergeGroupIds][0]
+    )
+      throw reviewError("LF_A_DOUBLE_REVIEW_TARGET_REUSE_INVALID", target);
+  }
   return normalized;
 }
 
@@ -1541,6 +1607,8 @@ function reviewerPayload({
     reviewerId: reviewer.reviewerId,
     reviewerKind: reviewer.reviewerKind,
     credentialId: reviewer.credentialId,
+    credentialIssuer: reviewer.credentialIssuer,
+    credentialEvidenceSha256: reviewer.credentialEvidenceSha256,
     publicKeyFingerprintSha256: reviewer.publicKeyFingerprintSha256,
     reviewOrigin: "HUMAN_REVIEW",
     modelOrAutomationIdentity: null,
@@ -1684,6 +1752,11 @@ function reconcileApprovedCrosswalk({
         "LF_A_DOUBLE_REVIEW_ROOT_CAUSE_UNDETERMINED",
         left.recordId
       );
+    if (UPSTREAM_REMEDIATION_DISPOSITIONS.has(left.rootCauseDisposition))
+      throw reviewError(
+        "LF_A_DOUBLE_REVIEW_UPSTREAM_REMEDIATION_REQUIRED",
+        left.recordId
+      );
     const source = draft.records.find(
       ({ recordId }) => recordId === left.recordId
     );
@@ -1782,9 +1855,37 @@ function createDynamicRemainderDraft({
   const mapped = new Set(
     approvedCrosswalk.records.flatMap(({ dynamicTargets }) => dynamicTargets)
   );
-  const allLegacyRecordIds = new Set(
-    draft.records.map(({ recordId }) => recordId)
-  );
+  const mappedPartition = dynamic.components
+    .filter(({ dynamicComponentId }) => mapped.has(dynamicComponentId))
+    .map((component) => ({
+      ...component,
+      partitionClass: "LEGACY_PRESERVATION",
+      legacyMappings: approvedCrosswalk.records
+        .filter(({ dynamicTargets }) =>
+          dynamicTargets.includes(component.dynamicComponentId)
+        )
+        .map(
+          ({
+            recordId,
+            legacyAnalysisRowId,
+            legacyRequirementId,
+            legacyComponentId,
+            relation,
+            mergeGroupId,
+          }) => ({
+            recordId,
+            legacyAnalysisRowId,
+            legacyRequirementId,
+            legacyComponentId,
+            relation,
+            mergeGroupId,
+          })
+        )
+        .sort((left, right) => left.recordId.localeCompare(right.recordId)),
+    }))
+    .sort((left, right) =>
+      left.dynamicComponentId.localeCompare(right.dynamicComponentId)
+    );
   const records = dynamic.components
     .filter(({ dynamicComponentId }) => !mapped.has(dynamicComponentId))
     .map((component) => {
@@ -1822,7 +1923,8 @@ function createDynamicRemainderDraft({
     new Set(records.map(({ recordId }) => recordId)).size !== records.length ||
     new Set(records.map(({ dynamicComponentId }) => dynamicComponentId))
       .size !== records.length ||
-    draft.records.some(({ recordId }) => !allLegacyRecordIds.has(recordId))
+    mappedPartition.length + records.length !== dynamic.components.length ||
+    mappedPartition.some(({ legacyMappings }) => !legacyMappings.length)
   )
     throw reviewError("LF_A_DYNAMIC_REMAINDER_DRAFT_COVERAGE_INVALID");
   const payload = {
@@ -1832,10 +1934,13 @@ function createDynamicRemainderDraft({
     draftSha256: draft.draftSha256,
     approvedCrosswalkSha256: approvedCrosswalk.approvedCrosswalkSha256,
     dynamicManifestSha256: basis.sourceBindings.dynamicManifestSha256,
+    profileId: basis.campaignProfile.profileId,
+    runSignature: basis.runProvenance.sourceRun.runSignature,
+    mappedPartition,
     records,
     summary: {
       dynamicComponents: dynamic.components.length,
-      mappedByApprovedLegacyCrosswalk: mapped.size,
+      mappedByApprovedLegacyCrosswalk: mappedPartition.length,
       remainderComponents: records.length,
       preCrosswalkGuaranteedDynamicOnly:
         draft.reverseAudit.dynamicOnlyComponents.length,
@@ -2067,6 +2172,8 @@ function dynamicRemainderReviewerPayload({
     reviewerId: reviewer.reviewerId,
     reviewerKind: reviewer.reviewerKind,
     credentialId: reviewer.credentialId,
+    credentialIssuer: reviewer.credentialIssuer,
+    credentialEvidenceSha256: reviewer.credentialEvidenceSha256,
     publicKeyFingerprintSha256: reviewer.publicKeyFingerprintSha256,
     reviewOrigin: "HUMAN_REVIEW",
     modelOrAutomationIdentity: null,
@@ -2216,6 +2323,44 @@ function reconcileDynamicRemainderReview({
     ({ disposition }) => disposition !== "VALID_DYNAMIC_ADDITION"
   );
   const approved = blocking.length === 0;
+  const partitionLedger = [
+    ...remainderDraft.mappedPartition.map(
+      ({ dynamicRequirementId, dynamicComponentId, legacyMappings }) => ({
+        dynamicRequirementId,
+        dynamicComponentId,
+        partitionClass: "LEGACY_PRESERVATION",
+        legacyMappings,
+        reverseRecordId: null,
+        reverseDisposition: null,
+      })
+    ),
+    ...records.map(
+      ({
+        recordId,
+        dynamicRequirementId,
+        dynamicComponentId,
+        disposition,
+      }) => ({
+        dynamicRequirementId,
+        dynamicComponentId,
+        partitionClass:
+          disposition === "VALID_DYNAMIC_ADDITION"
+            ? "LEGITIMATE_DYNAMIC_ADDITION"
+            : "DYNAMIC_DEFECT",
+        legacyMappings: [],
+        reverseRecordId: recordId,
+        reverseDisposition: disposition,
+      })
+    ),
+  ].sort((left, right) =>
+    left.dynamicComponentId.localeCompare(right.dynamicComponentId)
+  );
+  if (
+    partitionLedger.length !== remainderDraft.summary.dynamicComponents ||
+    new Set(partitionLedger.map(({ dynamicComponentId }) => dynamicComponentId))
+      .size !== partitionLedger.length
+  )
+    throw reviewError("LF_A_DYNAMIC_REMAINDER_PARTITION_INVALID");
   const payload = {
     schemaVersion: 1,
     contractId: DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID,
@@ -2223,16 +2368,24 @@ function reconcileDynamicRemainderReview({
     draftSha256: draft.draftSha256,
     approvedCrosswalkSha256: approvedCrosswalk.approvedCrosswalkSha256,
     remainderDraftSha256: remainderDraft.remainderDraftSha256,
+    profileId: basis.campaignProfile.profileId,
+    runSignature: basis.runProvenance.sourceRun.runSignature,
+    dynamicManifestSha256: basis.sourceBindings.dynamicManifestSha256,
     registrySha256: registry.registrySha256,
     reviewASha256: first.reviewSha256,
     reviewBSha256: second.reviewSha256,
     status: approved ? "APPROVED" : "REMEDIATION_REQUIRED",
     records,
+    partitionLedger,
     summary: {
       records: records.length,
       independentlyAgreed: records.length,
       validDynamicAdditions: records.length - blocking.length,
       remediationRequired: blocking.length,
+      dynamicComponentsPartitioned: partitionLedger.length,
+      legacyPreservations: remainderDraft.mappedPartition.length,
+      legitimateDynamicAdditions: records.length - blocking.length,
+      dynamicDefects: blocking.length,
       semanticCrosswalkApproved: true,
       reverseDynamicAdditionsApproved: approved,
       dynamicManifestSemanticCompletenessApproved: approved,
@@ -2248,6 +2401,24 @@ function reconcileDynamicRemainderReview({
       payload
     ),
   };
+}
+
+function validateDynamicRemainderReconciliation({
+  reconciliation,
+  ...args
+} = {}) {
+  validateDigest(
+    reconciliation,
+    DYNAMIC_REMAINDER_RECONCILIATION_CONTRACT_ID,
+    "reconciliationSha256",
+    "LF_A_DYNAMIC_REMAINDER_RECONCILIATION_DIGEST_INVALID"
+  );
+  const rebuilt = reconcileDynamicRemainderReview(args);
+  if (stableStringify(rebuilt) !== stableStringify(reconciliation))
+    throw reviewError(
+      "LF_A_DYNAMIC_REMAINDER_RECONCILIATION_CANONICAL_INVALID"
+    );
+  return reconciliation;
 }
 
 module.exports = {
@@ -2287,6 +2458,7 @@ module.exports = {
   validateClassificationChainReceipt,
   validateCrosswalkDraft,
   validateDynamicRemainderDraft,
+  validateDynamicRemainderReconciliation,
   validateDynamicRemainderReviewerArtifact,
   validateApprovedCrosswalk,
   validateReviewBasis,

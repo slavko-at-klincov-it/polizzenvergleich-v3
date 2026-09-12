@@ -44,6 +44,7 @@ const {
   validateCrosswalkDraft,
 } = require("../../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
 const {
+  assertNoPrivateKeyMaterial,
   assertRegularSingleLink,
   copyRegularVerified,
   materializeApprovedCrosswalk,
@@ -51,6 +52,7 @@ const {
   materializeDynamicRemainderReconciliation,
   materializeDynamicRemainderReviewerArtifact,
   materializeDynamicRemainderReviewerTemplate,
+  materializeFreezeArtifactSetIndex,
   materializeRegistry,
   materializeReviewerArtifact,
   materializeReviewerTemplate,
@@ -181,12 +183,22 @@ function dynamicManifest() {
         componentId: `DC-${String(componentNumber).padStart(4, "0")}`,
         type: "CONDITION",
         label: `Dynamic component ${componentNumber}`,
+        rawValue: `${componentNumber}`,
+        unit: "TEST_UNIT",
+        coverageEffect: "CONDITIONAL",
+        qualifier: "Synthetic qualifier",
         sourceBlockIds: [blockId],
       };
     });
     return {
       requirementId,
       displayLabel: `Dynamic ${index + 1}`,
+      structurePath: ["Synthetic", requirementId],
+      sourceOrder: index,
+      documentAuthority: {
+        role: "MAIN_POLICY",
+        status: "FRAMEWORK_TERMS",
+      },
       components,
       sourceSpans: [
         {
@@ -275,6 +287,34 @@ function basis({ firstRequirementComponentType } = {}) {
         modelRecoveryTimeoutMs: 180000,
       },
     }),
+  });
+}
+
+function approvableLegacyDecisions(draft) {
+  const recordsByRequirement = new Map();
+  for (const record of draft.records) {
+    const values = recordsByRequirement.get(record.legacyRequirementId) || [];
+    values.push(record);
+    recordsByRequirement.set(record.legacyRequirementId, values);
+  }
+  return draft.records.map((record) => {
+    const siblings = recordsByRequirement.get(record.legacyRequirementId);
+    const index = siblings.findIndex(
+      ({ recordId }) => recordId === record.recordId
+    );
+    const mergeRequired = siblings.length > record.candidates.length;
+    const mergeMember = mergeRequired && index >= record.candidates.length - 1;
+    const candidateIndex = mergeMember ? record.candidates.length - 1 : index;
+    return {
+      recordId: record.recordId,
+      relation: mergeMember ? "MERGED_INTO_DYNAMIC" : "EQUIVALENT",
+      dynamicTargets: [record.candidates[candidateIndex].dynamicComponentId],
+      mergeGroupId: mergeMember ? `MG-${record.legacyRequirementId}` : null,
+      rootCauseDisposition: mergeMember
+        ? "SPLIT_OR_MERGE_RELATION"
+        : "NO_UPSTREAM_DEFECT",
+      rationale: "Independent source and semantic review.",
+    };
   });
 }
 
@@ -466,6 +506,18 @@ describe("V12 283/631 double-review contract", () => {
       pageStart: 20,
       pageEnd: 40,
     });
+    expect(draft.records[0].candidates[0]).toMatchObject({
+      dynamicRequirementContext: {
+        structurePath: ["Synthetic", "D-001"],
+        sourceOrder: 0,
+      },
+      dynamicComponentPayload: {
+        rawValue: "1",
+        unit: "TEST_UNIT",
+        coverageEffect: "CONDITIONAL",
+        qualifier: "Synthetic qualifier",
+      },
+    });
     expect(draft.reverseAudit.dynamicManifestSemanticCompletenessApproved).toBe(
       false
     );
@@ -477,7 +529,7 @@ describe("V12 283/631 double-review contract", () => {
     mutated.draftSha256 = crypto
       .createHash("sha256")
       .update(
-        `LF_A_V12_283_631_CROSSWALK_DRAFT_V2\u0000${stableStringify(
+        `LF_A_V12_283_631_CROSSWALK_DRAFT_V3\u0000${stableStringify(
           Object.fromEntries(
             Object.entries(mutated).filter(([key]) => key !== "draftSha256")
           )
@@ -514,13 +566,69 @@ describe("V12 283/631 double-review contract", () => {
         type: "pkcs8",
         format: "pem",
       }),
+      trustedAuthorityPublicKeyFingerprintSha256:
+        authorityPublicKeyFingerprintSha256,
+      freezeArtifactSetSha256: "c".repeat(64),
       reviewers: keys.map(({ publicKey }, index) => ({
         reviewerId: `reviewer-${index + 1}`,
         reviewerSlot: index === 0 ? "A" : "B",
         credentialId: `credential-${index + 1}`,
+        credentialIssuer: "synthetic-test-authority",
+        credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
         publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
       })),
     });
+    expect(() =>
+      createReviewerRegistry({
+        basis: frozen,
+        draft,
+        authorityId: "acceptance-owner",
+        authorityPublicKeyPem,
+        authorityPrivateKeyPem: authorityKeys.privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+        trustedAuthorityPublicKeyFingerprintSha256: "0".repeat(64),
+        freezeArtifactSetSha256: "c".repeat(64),
+        reviewers: keys.map(({ publicKey }, index) => ({
+          reviewerId: `reviewer-${index + 1}`,
+          reviewerSlot: index === 0 ? "A" : "B",
+          credentialId: `credential-${index + 1}`,
+          credentialIssuer: "synthetic-test-authority",
+          credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
+          publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
+        })),
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_AUTHORITY_TRUST_ANCHOR_INVALID");
+    const invalidReuseInput = createReviewerTemplate({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewerSlot: "A",
+    });
+    invalidReuseInput.independenceAttestation.reviewPerformedIndependently = true;
+    invalidReuseInput.decisions = approvableLegacyDecisions(draft);
+    invalidReuseInput.decisions[1] = {
+      ...invalidReuseInput.decisions[1],
+      relation: "EQUIVALENT",
+      dynamicTargets: invalidReuseInput.decisions[0].dynamicTargets,
+      mergeGroupId: null,
+      rootCauseDisposition: "NO_UPSTREAM_DEFECT",
+    };
+    expect(() =>
+      sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input: invalidReuseInput,
+        privateKeyPem: keys[0].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_TARGET_REUSE_INVALID");
     const artifacts = ["A", "B"].map((slot, index) => {
       const input = createReviewerTemplate({
         basis: frozen,
@@ -530,14 +638,7 @@ describe("V12 283/631 double-review contract", () => {
         reviewerSlot: slot,
       });
       input.independenceAttestation.reviewPerformedIndependently = true;
-      input.decisions = draft.records.map((record) => ({
-        recordId: record.recordId,
-        relation: "EQUIVALENT",
-        dynamicTargets: [record.candidates[0].dynamicComponentId],
-        mergeGroupId: null,
-        rootCauseDisposition: "NO_UPSTREAM_DEFECT",
-        rationale: "Independent source and semantic review.",
-      }));
+      input.decisions = approvableLegacyDecisions(draft);
       return sealReviewerArtifact({
         basis: frozen,
         draft,
@@ -563,6 +664,41 @@ describe("V12 283/631 double-review contract", () => {
       semanticCrosswalkApproved: true,
       bRoutingAllowed: false,
     });
+    const upstreamErrorArtifacts = ["A", "B"].map((slot, index) => {
+      const input = createReviewerTemplate({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewerSlot: slot,
+      });
+      input.independenceAttestation.reviewPerformedIndependently = true;
+      input.decisions = approvableLegacyDecisions(draft);
+      input.decisions[0].rootCauseDisposition = "DYNAMIC_CLASSIFICATION_ERROR";
+      input.decisions[0].rationale =
+        "The selected target still contains a classification defect.";
+      return sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input,
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      });
+    });
+    expect(() =>
+      reconcileApprovedCrosswalk({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: upstreamErrorArtifacts[0],
+        reviewB: upstreamErrorArtifacts[1],
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_UPSTREAM_REMEDIATION_REQUIRED");
     const forgedCrosswalk = JSON.parse(JSON.stringify(approvedCrosswalk));
     forgedCrosswalk.records[0].dynamicTargets = [
       draft.records[0].candidates[1].dynamicComponentId,
@@ -577,7 +713,7 @@ describe("V12 283/631 double-review contract", () => {
     forgedCrosswalk.approvedCrosswalkSha256 = crypto
       .createHash("sha256")
       .update(
-        `LF_A_V12_283_631_APPROVED_CROSSWALK_V1\u0000${stableStringify(
+        `LF_A_V12_283_631_APPROVED_CROSSWALK_V2\u0000${stableStringify(
           forgedPayload
         )}`
       )
@@ -645,25 +781,33 @@ describe("V12 283/631 double-review contract", () => {
         }),
       });
     });
-    expect(
-      reconcileDynamicRemainderReview({
-        basis: frozen,
-        draft,
-        registry,
-        authorityPublicKeyFingerprintSha256,
-        reviewA: artifacts[0],
-        reviewB: artifacts[1],
-        approvedCrosswalk,
-        remainderDraft,
-        remainderReviewA: remainderArtifacts[0],
-        remainderReviewB: remainderArtifacts[1],
-      }).summary
-    ).toMatchObject({
+    const finalReconciliation = reconcileDynamicRemainderReview({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: artifacts[0],
+      reviewB: artifacts[1],
+      approvedCrosswalk,
+      remainderDraft,
+      remainderReviewA: remainderArtifacts[0],
+      remainderReviewB: remainderArtifacts[1],
+    });
+    expect(finalReconciliation.summary).toMatchObject({
       reverseDynamicAdditionsApproved: true,
       dynamicManifestSemanticCompletenessApproved: true,
       bPilotAllowed: true,
       productRoutingAllowed: false,
+      dynamicComponentsPartitioned: 755,
     });
+    expect(finalReconciliation.partitionLedger).toHaveLength(755);
+    expect(
+      new Set(
+        finalReconciliation.partitionLedger.map(
+          ({ dynamicComponentId }) => dynamicComponentId
+        )
+      ).size
+    ).toBe(755);
     const unresolvedArtifacts = ["A", "B"].map((slot, index) => {
       const input = createReviewerTemplate({
         basis: frozen,
@@ -673,14 +817,10 @@ describe("V12 283/631 double-review contract", () => {
         reviewerSlot: slot,
       });
       input.independenceAttestation.reviewPerformedIndependently = true;
-      input.decisions = draft.records.map((record) => ({
-        recordId: record.recordId,
-        relation: "EQUIVALENT",
-        dynamicTargets: [record.candidates[0].dynamicComponentId],
-        mergeGroupId: null,
-        rootCauseDisposition: "UNDETERMINED",
-        rationale: "Root cause still requires a final determination.",
-      }));
+      input.decisions = approvableLegacyDecisions(draft);
+      input.decisions[0].rootCauseDisposition = "UNDETERMINED";
+      input.decisions[0].rationale =
+        "Root cause still requires a final determination.";
       return sealReviewerArtifact({
         basis: frozen,
         draft,
@@ -741,10 +881,15 @@ describe("V12 283/631 double-review contract", () => {
         type: "pkcs8",
         format: "pem",
       }),
+      trustedAuthorityPublicKeyFingerprintSha256:
+        authorityPublicKeyFingerprintSha256,
+      freezeArtifactSetSha256: "c".repeat(64),
       reviewers: keys.map(({ publicKey }, index) => ({
         reviewerId: `reviewer-${index + 1}`,
         reviewerSlot: index === 0 ? "A" : "B",
         credentialId: `credential-${index + 1}`,
+        credentialIssuer: "synthetic-test-authority",
+        credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
         publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
       })),
     });
@@ -757,14 +902,7 @@ describe("V12 283/631 double-review contract", () => {
         reviewerSlot: slot,
       });
       input.independenceAttestation.reviewPerformedIndependently = true;
-      input.decisions = draft.records.map((record) => ({
-        recordId: record.recordId,
-        relation: "EQUIVALENT",
-        dynamicTargets: [record.candidates[0].dynamicComponentId],
-        mergeGroupId: null,
-        rootCauseDisposition: "NO_UPSTREAM_DEFECT",
-        rationale: "Independent source and semantic review.",
-      }));
+      input.decisions = approvableLegacyDecisions(draft);
       return sealReviewerArtifact({
         basis: frozen,
         draft,
@@ -888,10 +1026,15 @@ describe("V12 283/631 double-review contract", () => {
         type: "pkcs8",
         format: "pem",
       }),
+      trustedAuthorityPublicKeyFingerprintSha256:
+        authorityPublicKeyFingerprintSha256,
+      freezeArtifactSetSha256: "c".repeat(64),
       reviewers: keys.map(({ publicKey }, index) => ({
         reviewerId: `reviewer-${index + 1}`,
         reviewerSlot: index === 0 ? "A" : "B",
         credentialId: `credential-${index + 1}`,
+        credentialIssuer: "synthetic-test-authority",
+        credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
         publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
       })),
     });
@@ -962,6 +1105,19 @@ describe("write-once freeze primitives", () => {
     expect(() => assertRegularSingleLink(source)).toThrow(
       "LF_A_DOUBLE_REVIEW_SOURCE_NOT_REGULAR_SINGLE_LINK"
     );
+    const privateKeySource = path.join(root, "leaked-private-key.pem");
+    fs.writeFileSync(
+      privateKeySource,
+      "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\n"
+    );
+    expect(() =>
+      copyRegularVerified(privateKeySource, path.join(root, "leaked-copy.pem"))
+    ).toThrow("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_MATERIAL_FORBIDDEN");
+    expect(() =>
+      assertNoPrivateKeyMaterial(
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nsecret\n"
+      )
+    ).toThrow("LF_A_DOUBLE_REVIEW_PRIVATE_KEY_MATERIAL_FORBIDDEN");
   });
 
   test("materializes the registered two-review workflow without copying private keys", () => {
@@ -976,6 +1132,25 @@ describe("write-once freeze primitives", () => {
       path.join(basisRoot, "review-basis.private.json"),
       JSON.stringify(frozen)
     );
+    const frozenInputPaths = new Set([
+      "inputs/dynamicManifest.json",
+      "inputs/legacy-manifest.json",
+      ...Object.values(frozen.classificationEvidence.artifacts).map(
+        ({ relativePath }) => relativePath
+      ),
+      ...frozen.classificationEvidence.batchResults.map(
+        ({ relativePath }) => relativePath
+      ),
+      ...Object.values(frozen.runProvenance.sourceArtifacts).map(
+        ({ relativePath }) => relativePath
+      ),
+    ]);
+    for (const [index, relativePath] of [...frozenInputPaths].entries()) {
+      const file = path.join(basisRoot, relativePath);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify({ index, relativePath }));
+    }
+    materializeFreezeArtifactSetIndex({ basisRoot, basis: frozen });
     fs.writeFileSync(
       path.join(draftRoot, "crosswalk-draft.private.json"),
       JSON.stringify(draft)
@@ -1004,6 +1179,8 @@ describe("write-once freeze primitives", () => {
           reviewerId: `reviewer-${index + 1}`,
           reviewerSlot: index === 0 ? "A" : "B",
           credentialId: `credential-${index + 1}`,
+          credentialIssuer: "synthetic-test-authority",
+          credentialEvidenceSha256: (index === 0 ? "a" : "b").repeat(64),
           publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
         })),
       })
@@ -1016,6 +1193,10 @@ describe("write-once freeze primitives", () => {
       authorityId: "acceptance-owner",
       authorityPublicKeyPath,
       authorityPrivateKeyPath,
+      trustedAuthorityPublicKeyFingerprintSha256: crypto
+        .createHash("sha256")
+        .update(authority.publicKey.export({ type: "spki", format: "der" }))
+        .digest("hex"),
       reviewersPath,
       target: registryRoot,
     });
@@ -1046,19 +1227,7 @@ describe("write-once freeze primitives", () => {
         target: templateRoot,
       });
       template.independenceAttestation.reviewPerformedIndependently = true;
-      template.decisions = draft.records.map((record) => ({
-        recordId: record.recordId,
-        relation: "EQUIVALENT",
-        dynamicTargets: [record.candidates[0].dynamicComponentId],
-        mergeGroupId: null,
-        rootCauseDisposition: [
-          "ROLE_INCOMPATIBLE",
-          "INHERITED_ROLE_CANDIDATE",
-        ].includes(record.mechanicalRoleReview.disposition)
-          ? "ROLE_MAPPING_TOO_NARROW"
-          : "NO_UPSTREAM_DEFECT",
-        rationale: "Independent source and semantic review.",
-      }));
+      template.decisions = approvableLegacyDecisions(draft);
       const inputPath = path.join(root, `submission-${slot}.json`);
       fs.writeFileSync(inputPath, JSON.stringify(template));
       const reviewRoot = path.join(root, `review-${slot}`);
@@ -1161,5 +1330,20 @@ describe("write-once freeze primitives", () => {
       bPilotAllowed: true,
       productRoutingAllowed: false,
     });
+    fs.writeFileSync(
+      path.join(basisRoot, [...frozenInputPaths][0]),
+      "post-freeze mutation"
+    );
+    expect(() =>
+      materializeReviewerTemplate({
+        basisRoot,
+        draftRoot,
+        registryRoot,
+        authorityPublicKeyFingerprintSha256:
+          registry.authorityPublicKeyFingerprintSha256,
+        reviewerSlot: "A",
+        target: path.join(root, "must-not-open-after-freeze-mutation"),
+      })
+    ).toThrow("LF_A_DOUBLE_REVIEW_FREEZE_ARTIFACT_SET_MUTATED");
   });
 });
