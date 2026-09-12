@@ -80,6 +80,12 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
     requiredComponentTypes: Object.freeze(["CONDITION"]),
   }),
   Object.freeze({
+    signalId: "EXPLICIT_PERIL_OR_CAUSE",
+    pattern:
+      /\b(?:schäden?|beschädigungen?)\b[^.;:]{0,320}\bdurch\s+(?=\S)[^.;:]+|(?:^|[•-]\s*)(?:\p{L}[\p{L}-]*\s+){0,4}\p{L}[\p{L}-]*schäden\b[^.;:]*/gimu,
+    requiredComponentTypes: Object.freeze(["PERIL_OR_CAUSE"]),
+  }),
+  Object.freeze({
     signalId: "EXPLICIT_DEDUCTIBLE",
     pattern:
       /\b(?:selbstbehalt|eigenbehalt)\p{L}*\b|\bin\s+(?:jedem|einem)\s+schadenfall\b[^.;:]{0,160}\b(?:betrag|entschädigung)\b[^.;:]{0,80}\bum\s+[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+gekürzt\b/giu,
@@ -496,6 +502,7 @@ function materializeSharedSignalComponents(unit, requirements) {
         if (
           ![
             "EXPLICIT_CONDITION",
+            "EXPLICIT_PERIL_OR_CAUSE",
             "EXPLICIT_COST_ROLE",
             "EXPLICIT_QUANTIFIED_VALUE",
             "EXPLICIT_LIMIT_BASIS",
@@ -527,23 +534,37 @@ function materializeSharedSignalComponents(unit, requirements) {
         const localComponent =
           localCandidates.length === 1 ? localCandidates[0] : null;
         const localText = localComponent?.label || requirement.displayLabel;
-        const localMatches = matchesForPattern(signal.pattern, localText);
+        const localMatches =
+          signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+            ? [evidence.match]
+            : matchesForPattern(signal.pattern, localText);
         if (
           localCandidates.length > 1 ||
           localMatches.length === 0 ||
-          (!localComponent && signal.signalId !== "EXPLICIT_CONDITION")
+          (!localComponent &&
+            !["EXPLICIT_CONDITION", "EXPLICIT_PERIL_OR_CAUSE"].includes(
+              signal.signalId
+            ))
         )
           continue;
-        const matchIndex = localText
-          .toLocaleLowerCase("de-AT")
-          .indexOf(localMatches[0].toLocaleLowerCase("de-AT"));
+        const matchIndex =
+          signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+            ? 0
+            : localText
+                .toLocaleLowerCase("de-AT")
+                .indexOf(localMatches[0].toLocaleLowerCase("de-AT"));
         if (matchIndex < 0) continue;
         const label =
           signal.signalId === "EXPLICIT_CONDITION"
             ? localText.slice(matchIndex).trim()
-            : signal.signalId === "EXPLICIT_COST_ROLE"
-              ? localText
-              : localMatches[0];
+            : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+              ? (
+                  /(?:^|\s)durch\s+(.+)$/isu.exec(evidence.match)?.[1] ||
+                  localMatches[0]
+                ).trim()
+              : signal.signalId === "EXPLICIT_COST_ROLE"
+                ? localText
+                : localMatches[0];
         const sourceBlockIds =
           minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
           (localComponent ? [...localComponent.sourceBlockIds] : null);
@@ -561,11 +582,13 @@ function materializeSharedSignalComponents(unit, requirements) {
                 type:
                   signal.signalId === "EXPLICIT_CONDITION"
                     ? "CONDITION"
-                    : signal.signalId === "EXPLICIT_COST_ROLE"
-                      ? "FACT_ROLE"
-                      : signal.signalId === "EXPLICIT_DEDUCTIBLE"
-                        ? "DEDUCTIBLE"
-                        : "LIMIT_BASIS",
+                    : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+                      ? "PERIL_OR_CAUSE"
+                      : signal.signalId === "EXPLICIT_COST_ROLE"
+                        ? "FACT_ROLE"
+                        : signal.signalId === "EXPLICIT_DEDUCTIBLE"
+                          ? "DEDUCTIBLE"
+                          : "LIMIT_BASIS",
                 label,
                 sourceBlockIds,
               };

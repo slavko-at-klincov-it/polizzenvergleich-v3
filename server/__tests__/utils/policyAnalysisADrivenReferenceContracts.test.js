@@ -682,6 +682,17 @@ describe("requirement-local semantic evidence completeness", () => {
       type: "LIMIT_BASIS",
     },
     {
+      source:
+        "Versichert sind Schäden durch Gewalthandlungen bei einer Kundgebung.",
+      signalId: "EXPLICIT_PERIL_OR_CAUSE",
+      type: "PERIL_OR_CAUSE",
+    },
+    {
+      source: "- Bruch- und Verstopfungsschäden an Außenleitungen.",
+      signalId: "EXPLICIT_PERIL_OR_CAUSE",
+      type: "PERIL_OR_CAUSE",
+    },
+    {
       source: "Versichert ist eine höchstens sechsmonatige Zwischenlagerung.",
       signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
       type: "LIMIT_BASIS",
@@ -748,12 +759,17 @@ describe("requirement-local semantic evidence completeness", () => {
       evidenceUnit(
         ["count", "Es stehen maximal drei Facharbeiter bereit."],
         ["increase", "Der Betrag wird um 25% erhöht."],
-        ["period", "Im Geschäftsjahr wird der Betrag um 25% gekürzt."]
+        ["period", "Im Geschäftsjahr wird der Betrag um 25% gekürzt."],
+        ["governor-only", "Versichert sind Schäden durch  "]
       ),
       [
         requirement(["count"], [component("OBJECT", "count")]),
         requirement(["increase"], [component("OBJECT", "increase")]),
         requirement(["period"], [component("OBJECT", "period")]),
+        requirement(
+          ["governor-only"],
+          [component("COVERAGE_EFFECT", "governor-only")]
+        ),
       ]
     );
 
@@ -835,6 +851,47 @@ describe("requirement-local semantic evidence completeness", () => {
     ]);
 
     expect(diagnostics).toEqual([]);
+  });
+
+  test("materializes a local peril from a generic damages-through governor", () => {
+    const unit = {
+      ...evidenceUnit(["item", "- Hochwasser und Überschwemmung;"]),
+      governingContext: {
+        blockIds: ["governor"],
+        blocks: [
+          {
+            blockId: "governor",
+            exactText: "Versichert sind insbesondere Schäden durch",
+          },
+        ],
+      },
+    };
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["governor", "item"],
+          [
+            component("COVERAGE_EFFECT", "governor", {
+              label: "Versichert sind",
+              coverageEffect: "INCLUDED",
+            }),
+            component("OBJECT", "item", {
+              label: "- Hochwasser und Überschwemmung;",
+            }),
+          ]
+        ),
+        displayLabel: "- Hochwasser und Überschwemmung;",
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "PERIL_OR_CAUSE",
+      label: "- Hochwasser und Überschwemmung",
+      sourceBlockIds: ["item"],
+    });
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
   });
 
   test("accepts complete signals and ignores ordinary wording", () => {
