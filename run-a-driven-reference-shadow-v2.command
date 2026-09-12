@@ -15,6 +15,9 @@ EXPECTED_DINGHY_RUNTIME="${HYBRID_SHADOW_DINGHY_RUNTIME:-llama.cpp-mac-arm64-app
 PRIVATE_QA_ROOT="$HOME/Library/Application Support/at.klincov.polizzenvergleich-v3/QA"
 GLOBAL_LOCK_DIR="$PRIVATE_QA_ROOT/.all-categories-quality.lock"
 
+printf '%s\n' "Dieser ungated A+B-Shadow-Runner ist gesperrt. Verwende nach vollständigem Doppelreview und externer Autorisierung run-a-driven-controlled-b-pilot.command." >&2
+exit 2
+
 if [ "$#" -ne 3 ]; then
   printf '%s\n' "Verwendung: $0 '/ABSOLUTER/1+N-LAUF' '/ABSOLUTER/EMBEDDING-VERTRAG.json' '/ABSOLUTER/NEUER/AUSGABEORDNER'" >&2
   exit 1

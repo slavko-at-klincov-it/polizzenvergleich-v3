@@ -131,6 +131,15 @@ describe("policy comparison worker contract", () => {
     );
     expect(controlledPilotRunner).not.toContain("materializeCustomer");
     expect(controlledPilotRunner).not.toContain("policyComparisonWorker.cjs");
+
+    const legacyRunner = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "run-a-driven-reference-shadow-v2.command"),
+      "utf8"
+    );
+    expect(legacyRunner).toContain("Dieser ungated A+B-Shadow-Runner ist gesperrt");
+    expect(legacyRunner.indexOf("exit 2")).toBeLessThan(
+      legacyRunner.indexOf("runADrivenReferenceDinghyRetrieval.cjs")
+    );
   });
 
   test("uses a release-bound resumable run and counts completed categories", () => {
