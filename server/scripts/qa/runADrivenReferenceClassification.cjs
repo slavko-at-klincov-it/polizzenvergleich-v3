@@ -1677,9 +1677,9 @@ async function processClassificationBatches({
         args,
       });
       const acceptedResponses = currentlyValidResponses(plan, contextualBatch, [
-        ...journalResponses,
         ...supersededResponses,
         ...archivedResponses,
+        ...journalResponses,
       ]);
       result = await runBatch({
         client,
