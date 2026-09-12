@@ -1889,6 +1889,347 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   );
 
+  test("keeps a predicate-free insurance branch title out of insured objects", () => {
+    const source = "Grundstückshaftpflichtversicherung";
+    const unit = {
+      unitId: "insurance-branch-heading",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["heading"],
+        combinedText: source,
+        blocks: [
+          {
+            blockId: "heading",
+            structuralKind: "BODY_LINE",
+            exactText: source,
+          },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                { type: "OBJECT", label: source, sourceBlockIds: ["heading"] },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: unit.unitId,
+      primaryClass: "STRUCTURE",
+      semanticClasses: ["STRUCTURE"],
+      requirements: [],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_INSURANCE_BRANCH_HEADING_TO_STRUCTURE",
+    });
+  });
+
+  test("does not hide a predicated insurance-branch statement as structure", () => {
+    const source = "Die Grundstückshaftpflichtversicherung ist mitversichert.";
+    const unit = {
+      unitId: "insurance-branch-statement",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["statement"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test("materializes branch scopes and a limit basis from a coverage governor", () => {
+    const first =
+      "Zusätzlich sind im Rahmen der Feuer-, Sturm-, Leitungswasser-, Gebäude- und";
+    const second =
+      "Grundstückshaftpflichtversicherung bis zur Höhe der Gebäudeversicherungssumme mitversichert:";
+    const item = "- Nebengebäude";
+    const unit = {
+      unitId: "coverage-branch-governed-item",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["item"],
+        combinedText: item,
+        blocks: [{ blockId: "item", exactText: item }],
+      },
+      governingContext: {
+        blockIds: ["governor-one", "governor-two"],
+        combinedText: [first, second].join("\n"),
+        blocks: [
+          { blockId: "governor-one", exactText: first },
+          { blockId: "governor-two", exactText: second },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: item,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Nebengebäude",
+                  sourceBlockIds: ["item"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "mitversichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: ["governor-two"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "INSURED_OBJECT",
+      "LIMIT",
+      "VARIANT",
+    ]);
+    expect(
+      components
+        .filter(({ type }) => type === "SCOPE")
+        .map(({ label }) => label)
+    ).toEqual([
+      "Feuer-",
+      "Sturm-",
+      "Leitungswasser-",
+      "Gebäude-",
+      "Grundstückshaftpflichtversicherung",
+    ]);
+    expect(components).toContainEqual({
+      type: "LIMIT_BASIS",
+      label: "bis zur Höhe der Gebäudeversicherungssumme",
+      sourceBlockIds: ["governor-two"],
+    });
+  });
+
+  test.each([
+    "der Mietverlust für privat genutzte Gebäudeeinheiten",
+    "die tatsächlichen Kosten für Ersatzräumlichkeiten",
+    "Kosten für ein Hotelzimmer",
+    "Sicherungs-, Aufräumungs-, Abbruch-, Feuerlösch- und Reinigungskosten",
+  ])("maps a non-physical cost role out of OBJECT: %s", (label) => {
+    const unit = {
+      unitId: "non-physical-cost",
+      source: {
+        blockIds: ["cost"],
+        combinedText: label,
+        blocks: [{ blockId: "cost", exactText: label }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: label,
+              components: [{ type: "OBJECT", label, sourceBlockIds: ["cost"] }],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: ["COST"],
+    });
+    expect(normalized.responses[0].requirements[0].components[0]).toMatchObject(
+      {
+        type: "FACT_ROLE",
+        label,
+      }
+    );
+  });
+
+  test("does not reinterpret a physical object merely because a cost follows", () => {
+    const label = "Gebäude samt notwendigen Reparaturkosten";
+    const unit = {
+      unitId: "object-with-cost-qualifier",
+      source: {
+        blockIds: ["object"],
+        combinedText: label,
+        blocks: [{ blockId: "object", exactText: label }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: label,
+          components: [{ type: "OBJECT", label, sourceBlockIds: ["object"] }],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test("splits a terminal subsidiary clause into its own precedence requirement", () => {
+    const condition =
+      "Die Entschädigung wird nur insoweit geleistet, als die Wohnung unbenutzbar ist;";
+    const precedence =
+      "Diese Deckung gilt subsidiär zu einer bestehenden Haushaltsversicherung.";
+    const source = [condition, precedence].join("\n");
+    const unit = {
+      unitId: "subsidiary-precedence",
+      source: {
+        blockIds: ["condition", "precedence"],
+        combinedText: source,
+        blocks: [
+          { blockId: "condition", exactText: condition },
+          { blockId: "precedence", exactText: precedence },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "CONDITION",
+          semanticClasses: ["CONDITION"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "CONDITION",
+                  label: condition,
+                  sourceBlockIds: ["condition"],
+                },
+                {
+                  type: "CONDITION",
+                  label: precedence,
+                  sourceBlockIds: ["precedence"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "CONDITION",
+      "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+    ]);
+    expect(normalized.responses[0].requirements).toEqual([
+      {
+        displayLabel: condition,
+        components: [
+          {
+            type: "CONDITION",
+            label: condition,
+            sourceBlockIds: ["condition"],
+          },
+        ],
+      },
+      {
+        displayLabel: precedence,
+        components: [
+          {
+            type: "PRECEDENCE_OR_REPLACEMENT",
+            label: precedence,
+            sourceBlockIds: ["precedence"],
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("moves a pure first-risk scope into the limit basis", () => {
+    const label = "auf ,,Erstes Risiko“;";
+    const unit = {
+      unitId: "first-risk-basis",
+      source: {
+        blockIds: ["basis"],
+        combinedText: label,
+        blocks: [{ blockId: "basis", exactText: label }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "VARIANT",
+          semanticClasses: ["VARIANT"],
+          requirements: [
+            {
+              displayLabel: label,
+              components: [{ type: "SCOPE", label, sourceBlockIds: ["basis"] }],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "LIMIT",
+      semanticClasses: ["LIMIT"],
+    });
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      { type: "LIMIT_BASIS", label, sourceBlockIds: ["basis"] },
+    ]);
+  });
+
   test("restores an exact source-bound condition when a model omits connective source text", () => {
     const unit = {
       unitId: "unit-one",
@@ -3137,7 +3478,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V23");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V24");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

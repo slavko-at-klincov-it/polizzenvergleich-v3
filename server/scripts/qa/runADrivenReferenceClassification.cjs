@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V23";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V24";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -42,6 +42,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V20",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V21",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V22",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V23",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -52,7 +53,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -64,6 +65,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -946,6 +948,180 @@ function normalizePureQuantifiedLimitObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function coverageBranchGovernor(unit) {
+  const evidenceSources = [unit?.source, unit?.governingContext].filter(
+    (source) => source?.combinedText && Array.isArray(source?.blocks)
+  );
+  for (const source of evidenceSources) {
+    const match =
+      /\bim\s+Rahmen\s+der\s+(?<branches>[\s\S]{1,240}?)\s+(?<limit>bis\s+zur\s+Höhe\s+der\s+(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme))\s+(?<effect>(?:mit)?versichert)\b/iu.exec(
+        String(source.combinedText || "")
+      );
+    if (!match?.groups?.branches || !match.groups.limit) continue;
+    const branches = match.groups.branches
+      .split(/\s*,\s*|\s+und\s+/iu)
+      .map((label) => label.trim())
+      .filter((label) => label && label.length <= 120 && /\p{L}/u.test(label));
+    if (branches.length < 2 || !/versicherung\s*$/iu.test(branches.at(-1)))
+      continue;
+    const evidenceUnit = { source };
+    const components = [
+      ...branches.map((label) => ({
+        type: "SCOPE",
+        label,
+        sourceBlockIds: sourceBlockIdsForExactSpan(evidenceUnit, label),
+      })),
+      {
+        type: "LIMIT_BASIS",
+        label: match.groups.limit,
+        sourceBlockIds: sourceBlockIdsForExactSpan(
+          evidenceUnit,
+          match.groups.limit
+        ),
+      },
+    ];
+    if (components.some(({ sourceBlockIds }) => sourceBlockIds.length === 0))
+      continue;
+    return { source, components };
+  }
+  return null;
+}
+
+function normalizeCoverageBranchGovernorComponents(requirements, unit) {
+  const governor = coverageBranchGovernor(unit);
+  if (!governor) return { requirements, repairs: [] };
+  const governorBlockIds = new Set(
+    governor.components.flatMap(({ sourceBlockIds }) => sourceBlockIds)
+  );
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const retained = (requirement.components || []).filter((component) => {
+        if (component?.type !== "OBJECT") return true;
+        const label = String(component.label || "");
+        const usesGovernor = (component.sourceBlockIds || []).some((blockId) =>
+          governorBlockIds.has(blockId)
+        );
+        return !(
+          usesGovernor &&
+          /versicherung\b/iu.test(label) &&
+          /\b(?:Versicherungssumme|bis\s+zur\s+Höhe)\b/iu.test(label)
+        );
+      });
+      const existing = new Set(
+        retained.map(({ type, label }) => stableStringify({ type, label }))
+      );
+      const additions = governor.components.filter(
+        ({ type, label }) => !existing.has(stableStringify({ type, label }))
+      );
+      if (
+        additions.length === 0 &&
+        retained.length === requirement.components.length
+      )
+        return requirement;
+      repairs.push({
+        requirementIndex,
+        action: "NORMALIZE_COVERAGE_BRANCH_GOVERNOR_ROLES",
+        scopes: governor.components.filter(({ type }) => type === "SCOPE")
+          .length,
+        removedObjectComponents:
+          requirement.components.length - retained.length,
+      });
+      return { ...requirement, components: [...retained, ...additions] };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function normalizeNonPhysicalCostObjectComponents(requirements) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).map(
+        (component, componentIndex) => {
+          if (component?.type !== "OBJECT") return component;
+          const label = String(component.label || "");
+          const startsWithCostRole =
+            /^\s*[-•]?\s*(?:(?:der|die|das)\s+)?(?:(?:tatsächlich(?:e|en|er|es)?|zusätzlich(?:e|en|er|es)?|notwendig(?:e|en|er|es)?|erforderlich(?:e|en|er|es)?)\s+)?(?:\p{L}*kosten|Miet(?:verlust|ausfall)|Pacht(?:verlust|ausfall)|Ertragsausfall)\b/iu.test(
+              label
+            );
+          const coordinatedCostList =
+            /^\s*[-•]?\s*(?:\p{L}+-\s*,\s*){2,}[\s\S]*\p{L}*kosten\b/iu.test(
+              label
+            );
+          if (!startsWithCostRole && !coordinatedCostList) return component;
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "NORMALIZE_NON_PHYSICAL_COST_OBJECT",
+            fromType: "OBJECT",
+            toType: "FACT_ROLE",
+          });
+          return { ...component, type: "FACT_ROLE" };
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function normalizeSubsidiaryPrecedenceRequirements(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "").trim();
+  const match =
+    /(?<clause>\b(?:Diese|Die|Der|Das)\s+(?:Deckung|Versicherungsschutz|Leistung|Versicherung)\s+(?:gilt|ist)\s+(?:subsidiär|nachrangig)\s+(?:zu|gegenüber)\s+[^.;!?]+[.]?)\s*$/iu.exec(
+      sourceText
+    );
+  if (!match?.groups?.clause) return { requirements, repairs: [] };
+  const clause = match.groups.clause;
+  const sourceBlockIds = sourceBlockIdsForExactSpan(unit, clause);
+  if (sourceBlockIds.length === 0) return { requirements, repairs: [] };
+  const sourceIds = new Set(sourceBlockIds);
+  const repairs = [];
+  const normalizedRequirements = requirements.flatMap(
+    (requirement, requirementIndex) => {
+      const displayLabel = String(requirement.displayLabel || "");
+      const clauseIndex = displayLabel.indexOf(clause);
+      if (clauseIndex < 0) return [requirement];
+      const retained = (requirement.components || []).filter((component) => {
+        const label = String(component.label || "").trim();
+        const touchesPrecedenceBlocks = component.sourceBlockIds?.some(
+          (blockId) => sourceIds.has(blockId)
+        );
+        const whollyInsideClause =
+          label && touchesPrecedenceBlocks && clause.includes(label);
+        const onlyPrecedenceBlocks =
+          component.sourceBlockIds?.length > 0 &&
+          component.sourceBlockIds.every((blockId) => sourceIds.has(blockId));
+        return !whollyInsideClause && !onlyPrecedenceBlocks;
+      });
+      const prefix = displayLabel.slice(0, clauseIndex).trim();
+      repairs.push({
+        requirementIndex,
+        action: "SPLIT_SUBSIDIARY_PRECEDENCE_REQUIREMENT",
+        removedComponents:
+          (requirement.components || []).length - retained.length,
+      });
+      return [
+        ...(prefix && retained.length > 0
+          ? [{ ...requirement, displayLabel: prefix, components: retained }]
+          : []),
+        {
+          displayLabel: clause,
+          components: [
+            {
+              type: "PRECEDENCE_OR_REPLACEMENT",
+              label: clause,
+              sourceBlockIds,
+            },
+          ],
+        },
+      ];
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function semanticClassesFromSourceBoundComponents(requirements, unit) {
   const components = requirements.flatMap((requirement) =>
     Array.isArray(requirement?.components) ? requirement.components : []
@@ -1074,6 +1250,24 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         requirements: [],
       };
     }
+    const predicateFreeInsuranceBranchHeading =
+      unit?.source?.blocks?.length === 1 &&
+      /^\s*[\p{L}][\p{L}\s-]{1,120}versicherung\s*$/iu.test(sourceText) &&
+      !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
+        sourceText
+      );
+    if (predicateFreeInsuranceBranchHeading) {
+      repairs.push({
+        unitId: response?.unitId,
+        action: "NORMALIZE_INSURANCE_BRANCH_HEADING_TO_STRUCTURE",
+      });
+      return {
+        unitId: response?.unitId,
+        primaryClass: "STRUCTURE",
+        semanticClasses: ["STRUCTURE"],
+        requirements: [],
+      };
+    }
     let requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
@@ -1109,6 +1303,97 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
             ? "LIMIT"
             : response.primaryClass,
         semanticClasses,
+      };
+    }
+    const coverageBranchGovernor = normalizeCoverageBranchGovernorComponents(
+      requirements,
+      unit
+    );
+    requirements = coverageBranchGovernor.requirements;
+    for (const repair of coverageBranchGovernor.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (coverageBranchGovernor.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "LIMIT", "VARIANT"]),
+        ],
+      };
+    const nonPhysicalCost =
+      normalizeNonPhysicalCostObjectComponents(requirements);
+    requirements = nonPhysicalCost.requirements;
+    for (const repair of nonPhysicalCost.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (nonPhysicalCost.repairs.length > 0) {
+      const hasObject = requirements.some((requirement) =>
+        (requirement.components || []).some(({ type }) => type === "OBJECT")
+      );
+      response = {
+        ...response,
+        primaryClass:
+          response.primaryClass === "INSURED_OBJECT" && !hasObject
+            ? "COST"
+            : response.primaryClass,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "COST"]),
+        ].filter(
+          (semanticClass) => semanticClass !== "INSURED_OBJECT" || hasObject
+        ),
+      };
+    }
+    const subsidiaryPrecedence = normalizeSubsidiaryPrecedenceRequirements(
+      requirements,
+      unit
+    );
+    requirements = subsidiaryPrecedence.requirements;
+    for (const repair of subsidiaryPrecedence.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (subsidiaryPrecedence.repairs.length > 0) {
+      const hasNonPrecedenceRequirement = requirements.some((requirement) =>
+        (requirement.components || []).some(
+          ({ type }) => type !== "PRECEDENCE_OR_REPLACEMENT"
+        )
+      );
+      response = {
+        ...response,
+        primaryClass: hasNonPrecedenceRequirement
+          ? response.primaryClass
+          : "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+          ]),
+        ],
+      };
+    }
+    const firstRiskScopes = requirements.flatMap((requirement) =>
+      (requirement.components || []).filter(
+        (component) =>
+          component?.type === "SCOPE" &&
+          /^\s*auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*\s*[.;]?\s*$/iu.test(
+            String(component.label || "")
+          )
+      )
+    );
+    if (firstRiskScopes.length > 0) {
+      const hasOtherScope = requirements.some((requirement) =>
+        (requirement.components || []).some(
+          (component) =>
+            component?.type === "SCOPE" && !firstRiskScopes.includes(component)
+        )
+      );
+      response = {
+        ...response,
+        primaryClass:
+          response.primaryClass === "VARIANT" && !hasOtherScope
+            ? "LIMIT"
+            : response.primaryClass,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "LIMIT"]),
+        ].filter(
+          (semanticClass) => semanticClass !== "VARIANT" || hasOtherScope
+        ),
       };
     }
     const coverageBranchSchedule = normalizeCoverageBranchScheduleComponents(
@@ -1278,6 +1563,22 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  if (
+                    component?.type === "SCOPE" &&
+                    /^\s*auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*\s*[.;]?\s*$/iu.test(
+                      componentLabel
+                    )
+                  ) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "NORMALIZE_FIRST_RISK_TO_LIMIT_BASIS",
+                      fromType: "SCOPE",
+                      toType: "LIMIT_BASIS",
+                    });
+                    return [{ ...component, type: "LIMIT_BASIS" }];
+                  }
                   const scopeComponent = explicitScopeRoleRepair(component);
                   if (scopeComponent) {
                     repairs.push({
@@ -1865,6 +2166,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Ein eigenständiger quantifizierter Listengovernor wie „bis zu jeweils 5 % der Gebäudeversicherungssumme auf Erstes Risiko“ ist niemals OBJECT. Bilde den konkreten Wertausdruck als VALUE_AND_UNIT mit rawValue und die Bezugsgröße einschließlich „auf Erstes Risiko“ als LIMIT_BASIS ab. Wenn dieser Governor nachfolgende versicherte Objekte begrenzt, gehören seine Limitkomponenten zu deren jeweiliger Anforderung; die versicherten Sachen bleiben davon getrennte OBJECT-Komponenten.",
+    },
+    {
+      role: "system",
+      content:
+        "Versicherungssparten und Versicherungsproduktnamen sind keine versicherten Sachen. Eine prädikatlose alleinstehende Spartenbezeichnung ist STRUCTURE. In einem Deckungs-Governor wie „im Rahmen der Feuer-, Sturm- und Leitungswasserversicherung ... mitversichert“ ist jede Sparte eine eigene SCOPE-Komponente; eine genannte Versicherungssumme bleibt LIMIT_BASIS. Kostenarten, Aufwendungen, Miet-/Pacht-/Ertragsausfall oder Mietverlust sind COST mit FACT_ROLE und niemals OBJECT. „subsidiär“ oder „nachrangig“ bezeichnet eine eigene DOCUMENT_PRECEDENCE_OR_REPLACEMENT-Anforderung. „auf Erstes Risiko“ ist LIMIT_BASIS, nicht SCOPE.",
     },
     {
       role: "user",
