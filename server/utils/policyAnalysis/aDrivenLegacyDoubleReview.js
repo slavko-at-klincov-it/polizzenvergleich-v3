@@ -307,7 +307,10 @@ function validateClassificationChain({
       plan,
       validationBatch,
       result.responses,
-      { semanticSignalContractId: null }
+      campaignProfile.classificationRunContractId ===
+        CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
+        ? { semanticSignalContractId: null }
+        : undefined
     );
     if (
       validation.passed !== true ||
