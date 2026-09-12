@@ -3835,3 +3835,60 @@ unabhängige 631er-Fachreviews.
 **Beweist nicht:** eine einzige fachlich freigegebene Komponentenrelation,
 die Vollständigkeit der 755 dynamischen Komponenten, B-Gegenstücke,
 Generalisierung oder 99 Prozent.
+
+## 63. V30-A-Manifest: gezielte Rollenergänzung ohne Coverage-Fehlpositive
+
+**Prüfung:** 12. September 2026
+
+Aus dem 631er-Crosswalk wurde nicht direkt auf fehlende B-Gegenstücke
+geschlossen. Stattdessen wurden allgemeine A-Rollen- und
+Atomisierungsregeln iterativ gegen die gespeicherten 59 Batches geprüft. Die
+Zwischenstände V25 und V26 zeigten dabei eine wichtige negative Erkenntnis:
+Ein breites Muster für „Subjekt ist/sind …“ erzeugt falsche Definitionen aus
+Deckungsaussagen wie „Versichert sind …“ oder „Zusätzlich sind …
+mitversichert“. Solche Zuwächse dürfen nicht als Qualitätsverbesserung gezählt
+werden.
+
+Die akzeptierte V30-Regel bindet kopulare Definitionen deshalb an ein
+fachliches Subjekt, einen Definitionsgegenstand im Prädikat, eine vollständige
+Mehrblock-Quellspanne und den Ausschluss satzabschließender
+Deckungsprädikate. Gegenüber dem sauberen V24-Stand entstand exakt eine neue
+Komponente: die vollständige Nebengebäude-Definition. Ausschließlich
+`VS-08/outbuilding_definition` wechselte von direkter Rollenabweichung zu
+einem 1:1-Kandidaten. Drei zuvor erzeugte falsche `FACT_ROLE`-Komponenten aus
+„Zusätzlich sind … mitversichert“ sind nicht mehr vorhanden.
+
+Der Mac-Studio-Lauf
+`LF-A-DRIVEN-V30-TERMINAL-PREDICATE-20260912-653ECE7A` bestätigt 59/59
+Batches, 349/349 Response-Units, 1.005/1.005 genau einmal besessene und
+terminale Source-Blöcke, 354 Requirements, 1.036 Komponenten und null
+`UNRESOLVED`. Das dynamische Manifest hat den intrinsischen Hash
+`683cd3f304203d4d1c95bfc92221b726c852c6d7cc64974269875787b544d9ad`.
+
+Die neue unveränderliche Reviewbasis hat den Hash
+`2f63b52291b40353b456c398b8ad212bf4f2893821bc1e7b77027a701195eb6e`;
+der getrennte 631er-Draft den Hash
+`69575563a024b1cdb5d680f8b363856284dee4aec4a8e54145294ff2a834d2e3`.
+Der Draft enthält 271 direkte 1:1-, 200 Split-, 62 geerbte Rollenkandidaten,
+98 direkte Rollenabweichungen und null kandidatenlose Records. Von den 98
+direkten Abweichungen sind 60 Legacy-Bedingungen und 25 Legacy-Leistungen;
+der Rest verteilt sich auf sieben Ausschlüsse, zwei Kosten, zwei
+Dokumentstatusfälle, eine Definition und ein Versicherungsobjekt. Diese
+Kategorien sind nur eine Priorisierung für Menschen, kein Beweis für 98
+Extraktionsfehler.
+
+Auf dem finalen Codecommit
+`5622bf8037f0fe2ea4ee8edfd7cf8320321ee794` bestanden auf dem Mac Studio
+Format, serverseitiges ESLint und 187/187 Server-Suites mit 2.644/2.644
+Tests unter Node 22.23.2. Der Root-Lauf unter Node 26 legte davon getrennte
+Dependency-/Runtimeprobleme offen; Collector-Abhängigkeiten fehlen im
+isolierten Worktree. Deshalb wird weder ein globaler Monorepo-PASS noch ein
+Collector-PASS behauptet.
+
+**Beweist:** Die gezielte Regel verbessert die A-Rollenabdeckung in genau
+einem belegten Fall, ohne die beobachteten Coverage-Fehlpositive zu behalten;
+der vollständige technische A-Lauf und das Reviewpaket sind reproduzierbar.
+
+**Beweist nicht:** dass die verbleibenden 98 direkten Rollenabweichungen
+Manifestfehler sind, dass 631 Komponenten fachlich freigegeben wurden, dass
+B vollständig durchsucht wurde, einen Holdout oder das 99-Prozent-Ziel.
