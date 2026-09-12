@@ -28,14 +28,18 @@ const {
   CURRENT_V30_REVIEW_PROFILE,
   createClassificationEvidence,
   createCrosswalkDraft,
+  createDynamicRemainderDraft,
+  createDynamicRemainderReviewerTemplate,
   createReviewBasis,
   createReviewerRegistry,
   createReviewerTemplate,
   createRunProvenance,
   mechanicalRoleDisposition,
   reconcileApprovedCrosswalk,
+  reconcileDynamicRemainderReview,
   reviewCampaignProfile,
   sealReviewerArtifact,
+  sealDynamicRemainderReviewerArtifact,
   validateClassificationChain,
   validateCrosswalkDraft,
 } = require("../../../utils/policyAnalysis/aDrivenLegacyDoubleReview");
@@ -542,16 +546,90 @@ describe("V12 283/631 double-review contract", () => {
         }),
       });
     });
+    const approvedCrosswalk = reconcileApprovedCrosswalk({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: artifacts[0],
+      reviewB: artifacts[1],
+    });
+    expect(approvedCrosswalk.summary).toMatchObject({
+      records: 631,
+      semanticCrosswalkApproved: true,
+      bRoutingAllowed: false,
+    });
+    const remainderDraft = createDynamicRemainderDraft({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: artifacts[0],
+      reviewB: artifacts[1],
+      approvedCrosswalk,
+    });
     expect(
-      reconcileApprovedCrosswalk({
+      remainderDraft.summary.mappedByApprovedLegacyCrosswalk +
+        remainderDraft.summary.remainderComponents
+    ).toBe(755);
+    expect(remainderDraft.summary.remainderComponents).toBeGreaterThan(
+      draft.summary.dynamicOnlyComponents
+    );
+    const remainderArtifacts = ["A", "B"].map((slot, index) => {
+      const input = createDynamicRemainderReviewerTemplate({
         basis: frozen,
         draft,
         registry,
         authorityPublicKeyFingerprintSha256,
         reviewA: artifacts[0],
         reviewB: artifacts[1],
+        approvedCrosswalk,
+        remainderDraft,
+        reviewerSlot: slot,
+      });
+      input.independenceAttestation.reviewPerformedIndependently = true;
+      input.decisions = remainderDraft.records.map(({ recordId }) => ({
+        recordId,
+        disposition: "VALID_DYNAMIC_ADDITION",
+        relatedLegacyRecordIds: [],
+        relatedDynamicComponentIds: [],
+        rationale: "Independent reverse semantic and source review.",
+      }));
+      return sealDynamicRemainderReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: artifacts[0],
+        reviewB: artifacts[1],
+        approvedCrosswalk,
+        remainderDraft,
+        input,
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      });
+    });
+    expect(
+      reconcileDynamicRemainderReview({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: artifacts[0],
+        reviewB: artifacts[1],
+        approvedCrosswalk,
+        remainderDraft,
+        remainderReviewA: remainderArtifacts[0],
+        remainderReviewB: remainderArtifacts[1],
       }).summary
-    ).toMatchObject({ records: 631, semanticCrosswalkApproved: true });
+    ).toMatchObject({
+      reverseDynamicAdditionsApproved: true,
+      dynamicManifestSemanticCompletenessApproved: true,
+      bPilotAllowed: true,
+      productRoutingAllowed: false,
+    });
     const unresolvedArtifacts = ["A", "B"].map((slot, index) => {
       const input = createReviewerTemplate({
         basis: frozen,
@@ -602,6 +680,147 @@ describe("V12 283/631 double-review contract", () => {
         reviewB: artifacts[1],
       })
     ).toThrow();
+  });
+
+  test("keeps the B pilot fail-closed when both reverse reviewers find an upstream defect", () => {
+    const frozen = basis();
+    const draft = createCrosswalkDraft({ basis: frozen });
+    const keys = [
+      crypto.generateKeyPairSync("ed25519"),
+      crypto.generateKeyPairSync("ed25519"),
+    ];
+    const authorityKeys = crypto.generateKeyPairSync("ed25519");
+    const authorityPublicKeyPem = authorityKeys.publicKey.export({
+      type: "spki",
+      format: "pem",
+    });
+    const authorityPublicKeyFingerprintSha256 = crypto
+      .createHash("sha256")
+      .update(authorityKeys.publicKey.export({ type: "spki", format: "der" }))
+      .digest("hex");
+    const registry = createReviewerRegistry({
+      basis: frozen,
+      draft,
+      authorityId: "acceptance-owner",
+      authorityPublicKeyPem,
+      authorityPrivateKeyPem: authorityKeys.privateKey.export({
+        type: "pkcs8",
+        format: "pem",
+      }),
+      reviewers: keys.map(({ publicKey }, index) => ({
+        reviewerId: `reviewer-${index + 1}`,
+        reviewerSlot: index === 0 ? "A" : "B",
+        credentialId: `credential-${index + 1}`,
+        publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
+      })),
+    });
+    const legacyReviews = ["A", "B"].map((slot, index) => {
+      const input = createReviewerTemplate({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewerSlot: slot,
+      });
+      input.independenceAttestation.reviewPerformedIndependently = true;
+      input.decisions = draft.records.map((record) => ({
+        recordId: record.recordId,
+        relation: "EQUIVALENT",
+        dynamicTargets: [record.candidates[0].dynamicComponentId],
+        mergeGroupId: null,
+        rootCauseDisposition: "NO_UPSTREAM_DEFECT",
+        rationale: "Independent source and semantic review.",
+      }));
+      return sealReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        input,
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      });
+    });
+    const approvedCrosswalk = reconcileApprovedCrosswalk({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: legacyReviews[0],
+      reviewB: legacyReviews[1],
+    });
+    const remainderDraft = createDynamicRemainderDraft({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: legacyReviews[0],
+      reviewB: legacyReviews[1],
+      approvedCrosswalk,
+    });
+    const remainderReviews = ["A", "B"].map((slot, index) => {
+      const input = createDynamicRemainderReviewerTemplate({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: legacyReviews[0],
+        reviewB: legacyReviews[1],
+        approvedCrosswalk,
+        remainderDraft,
+        reviewerSlot: slot,
+      });
+      input.independenceAttestation.reviewPerformedIndependently = true;
+      input.decisions = remainderDraft.records.map(
+        ({ recordId }, decisionIndex) => ({
+          recordId,
+          disposition:
+            decisionIndex === 0
+              ? "DYNAMIC_ATOMIZATION_ERROR"
+              : "VALID_DYNAMIC_ADDITION",
+          relatedLegacyRecordIds: [],
+          relatedDynamicComponentIds: [],
+          rationale: "Independent reverse semantic and source review.",
+        })
+      );
+      return sealDynamicRemainderReviewerArtifact({
+        basis: frozen,
+        draft,
+        registry,
+        authorityPublicKeyFingerprintSha256,
+        reviewA: legacyReviews[0],
+        reviewB: legacyReviews[1],
+        approvedCrosswalk,
+        remainderDraft,
+        input,
+        privateKeyPem: keys[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        }),
+      });
+    });
+    const reconciliation = reconcileDynamicRemainderReview({
+      basis: frozen,
+      draft,
+      registry,
+      authorityPublicKeyFingerprintSha256,
+      reviewA: legacyReviews[0],
+      reviewB: legacyReviews[1],
+      approvedCrosswalk,
+      remainderDraft,
+      remainderReviewA: remainderReviews[0],
+      remainderReviewB: remainderReviews[1],
+    });
+    expect(reconciliation).toMatchObject({
+      status: "REMEDIATION_REQUIRED",
+      summary: {
+        remediationRequired: 1,
+        reverseDynamicAdditionsApproved: false,
+        bPilotAllowed: false,
+      },
+    });
   });
 
   test("marks role-incompatible records and requires a determined mismatch cause", () => {
