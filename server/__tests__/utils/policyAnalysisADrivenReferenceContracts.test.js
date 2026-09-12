@@ -3965,6 +3965,52 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("accepts exklusive as a literal excluded coverage effect", () => {
+    const source = artifact(
+      ["Seite 1\nKellerabteile, jedoch exklusive deren Inhalt.\n"],
+      "b"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION", "INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Kellerabteile",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "exklusive",
+                  sourceBlockIds: [block.blockId],
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
   test("rejects semantic attributes attached to the wrong component type", () => {
     const source = artifact(
       ["Seite 1\nDECKUNG\nVersichert sind Gebäude.\n"],
