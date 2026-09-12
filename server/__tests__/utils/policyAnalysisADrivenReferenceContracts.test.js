@@ -6238,6 +6238,151 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("normalizes an effect-free coverage branch schedule to atomic scopes and limits", () => {
+    const branchList =
+      "Feuer, Sturm, Leitungswasser, Glasbruch, Haus- und Grundbesitz Haftpflicht";
+    const valueLead = "mit einer Pauschalversicherungssumme von";
+    const valueAndVariant =
+      "€ 2.000.000,-. In der Sparte Leitungswasser gilt die jeweils beantragte Variante A, C oder D.";
+    const unit = {
+      unitId: "coverage-branch-schedule",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["branches", "value-lead", "value-variant"],
+        combinedText: [branchList, valueLead, valueAndVariant].join("\n"),
+        blocks: [
+          { blockId: "branches", exactText: branchList },
+          { blockId: "value-lead", exactText: valueLead },
+          { blockId: "value-variant", exactText: valueAndVariant },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: branchList,
+                  sourceBlockIds: ["branches"],
+                },
+                {
+                  type: "VALUE_AND_UNIT",
+                  label: "Pauschalversicherungssumme von\n€ 2.000.000,-",
+                  rawValue: "€ 2.000.000,-",
+                  sourceBlockIds: ["value-lead", "value-variant"],
+                },
+                {
+                  type: "SCOPE",
+                  label:
+                    "In der Sparte Leitungswasser gilt die jeweils beantragte Variante A, C oder D.",
+                  sourceBlockIds: ["value-variant"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "gilt",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: ["value-variant"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "LIMIT",
+      semanticClasses: ["LIMIT", "VARIANT"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["SCOPE", "Feuer"],
+      ["SCOPE", "Sturm"],
+      ["SCOPE", "Leitungswasser"],
+      ["SCOPE", "Glasbruch"],
+      ["SCOPE", "Haus- und Grundbesitz Haftpflicht"],
+      ["VALUE_AND_UNIT", "Pauschalversicherungssumme von\n€ 2.000.000,-"],
+      [
+        "SCOPE",
+        "In der Sparte Leitungswasser gilt die jeweils beantragte Variante A, C oder D.",
+      ],
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "SPLIT_COVERAGE_BRANCH_SCHEDULE_SCOPE",
+      fromType: "OBJECT",
+      components: 5,
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
+      fromPrimaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      toPrimaryClass: "LIMIT",
+    });
+  });
+
+  test("does not reinterpret an explicit coverage statement as a branch schedule", () => {
+    const source =
+      "Versichert sind Gebäude, Nebengebäude. In der Sparte Gebäude gilt die Variante Premium.";
+    const unit = {
+      unitId: "explicit-coverage-branch-list",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Gebäude, Nebengebäude",
+              sourceBlockIds: ["block"],
+            },
+            {
+              type: "SCOPE",
+              label: "In der Sparte Gebäude gilt die Variante Premium",
+              sourceBlockIds: ["block"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Versichert",
+              sourceBlockIds: ["block"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
   test("preserves an operative coverage class with explicit literal effect evidence", () => {
     const unit = {
       unitId: "explicit-effect",

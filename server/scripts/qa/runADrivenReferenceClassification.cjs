@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V19";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V20";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -38,6 +38,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V16",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V17",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V18",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V19",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -48,7 +49,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V20";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -762,6 +763,120 @@ function normalizeConditionalMembershipObjects(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeCoverageBranchScheduleComponents(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (
+    hasCoverageEffectEvidence(unit) ||
+    !/\bSparte(?:n)?\b/iu.test(sourceText) ||
+    !/\bVariante(?:n)?\b/iu.test(sourceText)
+  )
+    return { requirements, repairs: [] };
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = Array.isArray(requirement?.components)
+        ? requirement.components
+        : [];
+      const hasExplicitBranchScope = components.some(
+        (component) =>
+          component?.type === "SCOPE" &&
+          /\b(?:Sparte|Variante)(?:n)?\b/iu.test(
+            String(component.label || "")
+          )
+      );
+      if (!hasExplicitBranchScope) return requirement;
+      const normalizedComponents = components.flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "OBJECT") return [component];
+          const label = String(component.label || "");
+          const branchLabels = label
+            .split(/\s*,\s*/u)
+            .map((value) => value.trim())
+            .filter(Boolean);
+          if (
+            branchLabels.length < 2 ||
+            branchLabels.some(
+              (value) =>
+                value.length > 120 ||
+                /\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen)\b/iu.test(
+                  value
+                )
+            )
+          )
+            return [component];
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "SPLIT_COVERAGE_BRANCH_SCHEDULE_SCOPE",
+            fromType: "OBJECT",
+            components: branchLabels.length,
+          });
+          return branchLabels.map((branchLabel) => ({
+            ...component,
+            type: "SCOPE",
+            label: branchLabel,
+          }));
+        }
+      );
+      return { ...requirement, components: normalizedComponents };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function semanticClassesFromSourceBoundComponents(requirements, unit) {
+  const components = requirements.flatMap((requirement) =>
+    Array.isArray(requirement?.components) ? requirement.components : []
+  );
+  const componentTypes = new Set(
+    components
+      .map(({ type }) => type)
+      .filter((type) => type && type !== "COVERAGE_EFFECT")
+  );
+  const sourceText = String(unit?.source?.combinedText || "");
+  const classes = new Set();
+  if (componentTypes.has("DEDUCTIBLE")) classes.add("DEDUCTIBLE");
+  if (componentTypes.has("LIMIT_BASIS")) classes.add("LIMIT");
+  if (componentTypes.has("VALUE_AND_UNIT")) {
+    const costSignal =
+      /\b(?:Kosten|Aufwendungen|Gebühren|Honorar|Entsorgung|Räumung|Abbruch|Dekontamination)\b/iu.test(
+        sourceText
+      );
+    const limitSignal =
+      /\b(?:Versicherungssumme|Höchst(?:betrag|entschädigung)|Limit|Grenze|bis\s+zu|Prozent|%|EUR|Euro|€|einmal\s+pro)\b/iu.test(
+        sourceText
+      );
+    if (limitSignal || !costSignal) classes.add("LIMIT");
+    else classes.add("COST");
+  }
+  if (componentTypes.has("TEMPORAL_VALIDITY")) classes.add("DURATION");
+  if (componentTypes.has("SCOPE")) classes.add("VARIANT");
+  if (
+    componentTypes.has("PERIL_OR_CAUSE") ||
+    componentTypes.has("DAMAGE_OR_EFFECT")
+  )
+    classes.add("PERIL_OR_DAMAGE");
+  if (componentTypes.has("CONDITION")) classes.add("CONDITION");
+  if (componentTypes.has("FACT_ROLE")) classes.add("DEFINITION");
+  if (componentTypes.has("PRECEDENCE_OR_REPLACEMENT"))
+    classes.add("DOCUMENT_PRECEDENCE_OR_REPLACEMENT");
+  if (componentTypes.has("OBJECT") && classes.size > 0)
+    classes.add("INSURED_OBJECT");
+  const priority = [
+    "LIMIT",
+    "DEDUCTIBLE",
+    "COST",
+    "DURATION",
+    "VARIANT",
+    "PERIL_OR_DAMAGE",
+    "INSURED_OBJECT",
+    "CONDITION",
+    "DEFINITION",
+    "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+  ];
+  return priority.filter((semanticClass) => classes.has(semanticClass));
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -810,6 +925,13 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
         ...repair,
       });
+    const coverageBranchSchedule = normalizeCoverageBranchScheduleComponents(
+      requirements,
+      unit
+    );
+    requirements = coverageBranchSchedule.requirements;
+    for (const repair of coverageBranchSchedule.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const productConfigurationDefinition =
       requirements.length > 0 &&
       !hasCoverageEffectEvidence(unit) &&
@@ -1158,17 +1280,22 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     const semanticClasses = Array.isArray(response?.semanticClasses)
       ? response.semanticClasses
       : [];
-    const remainingClasses = semanticClasses.filter(
+    let remainingClasses = semanticClasses.filter(
       (semanticClass) => semanticClass !== "OPERATIVE_COVERAGE_STATEMENT"
     );
     if (
       !unit ||
       (response?.primaryClass !== "OPERATIVE_COVERAGE_STATEMENT" &&
         !semanticClasses.includes("OPERATIVE_COVERAGE_STATEMENT")) ||
-      hasCoverageEffectEvidence(unit) ||
-      remainingClasses.length === 0
+      hasCoverageEffectEvidence(unit)
     )
       return response;
+    if (remainingClasses.length === 0)
+      remainingClasses = semanticClassesFromSourceBoundComponents(
+        response.requirements || [],
+        unit
+      );
+    if (remainingClasses.length === 0) return response;
     repairs.push({
       unitId: response.unitId,
       action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
@@ -1501,7 +1628,7 @@ function prompt(batch) {
     {
       role: "system",
       content:
-        'Du zerlegst ausschließlich die übergebenen Originaleinheiten eines österreichischen Gebäudeversicherungs-Referenzpakets A. Erfinde keine IDs, Kurzbezeichnungen oder Textparaphrasen. Antworte nur als JSON-Array mit exakt einem Objekt je expectedUnitId und keiner weiteren ID. Jede operative Aussage wird in eine oder mehrere atomare Anforderungen zerlegt. Physische Textblöcke oder Seitenumbrüche sind keine fachlichen Elementgrenzen. Jedes logicalSourceSegments-Element vom Typ LIST_ITEM_WITH_CONTINUATIONS ist genau ein zusammenhängender Listenpunkt und erzeugt genau eine eigene Anforderung: Alle seine blockIds müssen gemeinsam in dieser einen Anforderung vorkommen; teile ihn nie nach Zeile oder Seite und vereinige nie zwei segmentIds in einer Anforderung. primaryClass muss immer auch wortgleich in semanticClasses enthalten sein. displayLabel muss ein wörtlicher, zusammenhängender Teilstring aus originalText sein; kopiere ihn exakt, statt einen Titel zu formulieren. Jede Anforderung enthält ausschließlich displayLabel und components, keine weiteren Felder. Komponenten enthalten type, label, sourceBlockIds und optional rawValue, unit, coverageEffect, qualifier. label ist immer ein nichtleerer wörtlicher Teilstring. rawValue, unit und qualifier müssen, wenn gesetzt, jeweils wörtliche Teilstrings mindestens eines in sourceBlockIds referenzierten sourceBlocks sein. Komponenten dürfen ausschließlich evidenceSourceBlockIds zitieren. ownedSourceBlockIds gehören der Einheit; governingContext enthält ausschließlich serverseitig verknüpfte, vorangestellte Listengovernor-Evidenz. Verwende deren wörtliche Deckungswirkung für abhängige Listenpunkte. Beispielstruktur für einen versicherten Listenpunkt: components:[{type:"OBJECT",label:"<wörtlicher Listenpunkt>",sourceBlockIds:["<Listenblock>"]},{type:"COVERAGE_EFFECT",label:"mitversichert",sourceBlockIds:["<Governorblock>"],coverageEffect:"INCLUDED"}]. OBJECT enthält niemals coverageEffect. coverageEffect ist nur bei type COVERAGE_EFFECT erlaubt, dort verpflichtend und exakt einer der Enumwerte INCLUDED, EXCLUDED, CONDITIONAL, OPTIONAL, UNKNOWN; das deutsche Quellwort steht ausschließlich in label. COVERAGE_EFFECT.label muss ein nichtleerer wörtlicher Wirkungsausdruck aus der Quelle sein, zum Beispiel „versichert“, „nicht versichert“, „gilt“ oder „ausgeschlossen“. Bei jeder operativen Einheit muss die Vereinigungsmenge aller components.sourceBlockIds mindestens alle ownedSourceBlockIds der Einheit enthalten. Referenziere auch einleitende Klausel-Governor wie „Versicherungsschutz ... besteht unter der“, selbst wenn die eigentliche Bedingung im Folgeblock steht. Deckungskonzept-/Produkttitel und Firmenrollen auf einem Deckblatt verwenden primaryClass DEFINITION und semanticClasses ["DEFINITION"] mit SCOPE- und FACT_ROLE-Komponenten oder sind vollständig nichtoperativ; SCOPE und FACT_ROLE sind niemals primaryClass oder semanticClasses. Auch der Titelblock muss bei einer operativen Misch-Unit durch eine Komponente zitiert sein. Reine Überschriften/Struktur/Metadaten/Duplikate erzeugen keine Anforderungen. Wenn keine sichere Klassifikation möglich ist, verwende UNRESOLVED. primaryClass und semanticClasses dürfen nur folgende Werte enthalten: OPERATIVE_COVERAGE_STATEMENT, EXCLUSION, INSURED_OBJECT, PERIL_OR_DAMAGE, DEFINITION, CONDITION, COST, LIMIT, DEDUCTIBLE, OBLIGATION, DURATION, VARIANT, DOCUMENT_PRECEDENCE_OR_REPLACEMENT, STRUCTURE, METADATA, DUPLICATE, UNRESOLVED. Komponentenwerte wie OBJECT, SCOPE und FACT_ROLE sind dort verboten. type darf nur sein: OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, COVERAGE_EFFECT, SCOPE, FACT_ROLE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE, TEMPORAL_VALIDITY, DOCUMENT_ROLE, PRECEDENCE_OR_REPLACEMENT. Terminalklassen sind keine Komponententypen. Verwende für INSURED_OBJECT→OBJECT, PERIL_OR_DAMAGE→PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT, DEFINITION→FACT_ROLE, CONDITION und OBLIGATION→CONDITION, COST→FACT_ROLE oder VALUE_AND_UNIT, LIMIT mit konkreter Zahl→VALUE_AND_UNIT samt rawValue, LIMIT ohne konkrete Zahl→LIMIT_BASIS, DURATION→TEMPORAL_VALIDITY, VARIANT→SCOPE sowie DOCUMENT_PRECEDENCE_OR_REPLACEMENT→PRECEDENCE_OR_REPLACEMENT. Es gibt insbesondere niemals type VARIANT, OBLIGATION, LIMIT, COST oder DURATION. Vertragsrollen wie Versicherungsnehmer, Verwalter, Makler oder Treuhänder sind FACT_ROLE unter DEFINITION, niemals INSURED_OBJECT. INSURED_OBJECT bezeichnet das versicherte Sachobjekt wie Gebäude oder Nebengebäude und braucht OBJECT. OPERATIVE_COVERAGE_STATEMENT gilt nur für tatsächliche Deckungswirkung und braucht COVERAGE_EFFECT; administrative Vermerkspflichten, Voraussetzungen oder Betreuung sind CONDITION beziehungsweise OBLIGATION und keine Deckungswirkung. VALUE_AND_UNIT braucht immer ein wörtliches rawValue; LIMIT_BASIS bezeichnet eine Bezugsgröße ohne konkrete Zahl. DEDUCTIBLE braucht DEDUCTIBLE. Ausgabeform je Einheit exakt: {unitId,primaryClass,semanticClasses,requirements}.',
+        'Du zerlegst ausschließlich die übergebenen Originaleinheiten eines österreichischen Gebäudeversicherungs-Referenzpakets A. Erfinde keine IDs, Kurzbezeichnungen oder Textparaphrasen. Antworte nur als JSON-Array mit exakt einem Objekt je expectedUnitId und keiner weiteren ID. Jede operative Aussage wird in eine oder mehrere atomare Anforderungen zerlegt. Physische Textblöcke oder Seitenumbrüche sind keine fachlichen Elementgrenzen. Jedes logicalSourceSegments-Element vom Typ LIST_ITEM_WITH_CONTINUATIONS ist genau ein zusammenhängender Listenpunkt und erzeugt genau eine eigene Anforderung: Alle seine blockIds müssen gemeinsam in dieser einen Anforderung vorkommen; teile ihn nie nach Zeile oder Seite und vereinige nie zwei segmentIds in einer Anforderung. primaryClass muss immer auch wortgleich in semanticClasses enthalten sein. displayLabel muss ein wörtlicher, zusammenhängender Teilstring aus originalText sein; kopiere ihn exakt, statt einen Titel zu formulieren. Jede Anforderung enthält ausschließlich displayLabel und components, keine weiteren Felder. Komponenten enthalten type, label, sourceBlockIds und optional rawValue, unit, coverageEffect, qualifier. label ist immer ein nichtleerer wörtlicher Teilstring. rawValue, unit und qualifier müssen, wenn gesetzt, jeweils wörtliche Teilstrings mindestens eines in sourceBlockIds referenzierten sourceBlocks sein. Komponenten dürfen ausschließlich evidenceSourceBlockIds zitieren. ownedSourceBlockIds gehören der Einheit; governingContext enthält ausschließlich serverseitig verknüpfte, vorangestellte Listengovernor-Evidenz. Verwende deren wörtliche Deckungswirkung für abhängige Listenpunkte. Beispielstruktur für einen versicherten Listenpunkt: components:[{type:"OBJECT",label:"<wörtlicher Listenpunkt>",sourceBlockIds:["<Listenblock>"]},{type:"COVERAGE_EFFECT",label:"mitversichert",sourceBlockIds:["<Governorblock>"],coverageEffect:"INCLUDED"}]. OBJECT enthält niemals coverageEffect. coverageEffect ist nur bei type COVERAGE_EFFECT erlaubt, dort verpflichtend und exakt einer der Enumwerte INCLUDED, EXCLUDED, CONDITIONAL, OPTIONAL, UNKNOWN; das deutsche Quellwort steht ausschließlich in label. COVERAGE_EFFECT.label muss ein nichtleerer wörtlicher Wirkungsausdruck aus der Quelle sein, zum Beispiel „versichert“, „nicht versichert“, „gilt“ oder „ausgeschlossen“. Bei jeder operativen Einheit muss die Vereinigungsmenge aller components.sourceBlockIds mindestens alle ownedSourceBlockIds der Einheit enthalten. Referenziere auch einleitende Klausel-Governor wie „Versicherungsschutz ... besteht unter der“, selbst wenn die eigentliche Bedingung im Folgeblock steht. Deckungskonzept-/Produkttitel und Firmenrollen auf einem Deckblatt verwenden primaryClass DEFINITION und semanticClasses ["DEFINITION"] mit SCOPE- und FACT_ROLE-Komponenten oder sind vollständig nichtoperativ; SCOPE und FACT_ROLE sind niemals primaryClass oder semanticClasses. Auch der Titelblock muss bei einer operativen Misch-Unit durch eine Komponente zitiert sein. Reine Überschriften/Struktur/Metadaten/Duplikate erzeugen keine Anforderungen. Wenn keine sichere Klassifikation möglich ist, verwende UNRESOLVED. primaryClass und semanticClasses dürfen nur folgende Werte enthalten: OPERATIVE_COVERAGE_STATEMENT, EXCLUSION, INSURED_OBJECT, PERIL_OR_DAMAGE, DEFINITION, CONDITION, COST, LIMIT, DEDUCTIBLE, OBLIGATION, DURATION, VARIANT, DOCUMENT_PRECEDENCE_OR_REPLACEMENT, STRUCTURE, METADATA, DUPLICATE, UNRESOLVED. Komponentenwerte wie OBJECT, SCOPE und FACT_ROLE sind dort verboten. type darf nur sein: OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, COVERAGE_EFFECT, SCOPE, FACT_ROLE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE, TEMPORAL_VALIDITY, DOCUMENT_ROLE, PRECEDENCE_OR_REPLACEMENT. Terminalklassen sind keine Komponententypen. Verwende für INSURED_OBJECT→OBJECT, PERIL_OR_DAMAGE→PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT, DEFINITION→FACT_ROLE, CONDITION und OBLIGATION→CONDITION, COST→FACT_ROLE oder VALUE_AND_UNIT, LIMIT mit konkreter Zahl→VALUE_AND_UNIT samt rawValue, LIMIT ohne konkrete Zahl→LIMIT_BASIS, DURATION→TEMPORAL_VALIDITY, VARIANT→SCOPE sowie DOCUMENT_PRECEDENCE_OR_REPLACEMENT→PRECEDENCE_OR_REPLACEMENT. Es gibt insbesondere niemals type VARIANT, OBLIGATION, LIMIT, COST oder DURATION. Vertragsrollen wie Versicherungsnehmer, Verwalter, Makler oder Treuhänder sind FACT_ROLE unter DEFINITION, niemals INSURED_OBJECT. INSURED_OBJECT bezeichnet das versicherte Sachobjekt wie Gebäude oder Nebengebäude und braucht OBJECT. OPERATIVE_COVERAGE_STATEMENT gilt nur für tatsächliche Deckungswirkung und braucht COVERAGE_EFFECT; administrative Vermerkspflichten, Voraussetzungen oder Betreuung sind CONDITION beziehungsweise OBLIGATION und keine Deckungswirkung. Eine bloße Aufzählung von Versicherungssparten mit Versicherungssumme und gewählter Variante, aber ohne wörtlichen Deckungswirkungsausdruck, ist LIMIT/VARIANT und keine OPERATIVE_COVERAGE_STATEMENT. Gib jede komma-getrennte Sparte als eigene SCOPE-Komponente aus; „gilt“ in „in der Sparte ... gilt die Variante“ ist kein COVERAGE_EFFECT. VALUE_AND_UNIT braucht immer ein wörtliches rawValue; LIMIT_BASIS bezeichnet eine Bezugsgröße ohne konkrete Zahl. DEDUCTIBLE braucht DEDUCTIBLE. Ausgabeform je Einheit exakt: {unitId,primaryClass,semanticClasses,requirements}.',
     },
     {
       role: "system",
@@ -2217,6 +2344,8 @@ async function runBatch({
         " REQUIREMENT_ROLE_EVIDENCE_UNMAPPED bedeutet: In der exakt genannten Requirement fehlt für matchedEvidence eine anforderungsbezogene Rollenkomponente. Ergänze sie in derselben Requirement und zitiere den genannten blockId; leihe keine Komponente aus einer benachbarten Requirement. EXPLICIT_CONDITION benötigt CONDITION. EXPLICIT_DEDUCTIBLE benötigt DEDUCTIBLE. EXPLICIT_QUANTIFIED_VALUE benötigt VALUE_AND_UNIT mit wörtlichem rawValue. EXPLICIT_LIMIT_BASIS benötigt LIMIT_BASIS. EXPLICIT_NON_NUMERIC_LIMIT benötigt LIMIT_BASIS. EXPLICIT_EXCLUSION benötigt eine eigene COVERAGE_EFFECT-Komponente mit coverageEffect EXCLUDED und einem wörtlichen Ausschlussausdruck als label.";
       messages.at(-1).content +=
         " Die Reparaturpflicht zur Zeichen- und Quelltreue hebt die Atomisierungspräzisierung nicht auf: Erfinde keine Kurzbezeichnung und paraphrasiere nicht, aber verkürze ein überbreites Komponentenlabel auf den kürzesten noch eindeutigen, zusammenhängenden und zeichengetreu kopierten Quellsubstring seiner eigenen Dimension. Erhalte bereits gültige Komponenten nur dann unverändert, wenn sie auch diese typed-minimal-Regel erfüllen.";
+      messages.at(-1).content +=
+        " Eine bloße Spartenaufzählung mit Versicherungssumme und gewählter Variante, aber ohne wörtlichen Deckungswirkungsausdruck, bleibt LIMIT/VARIANT statt OPERATIVE_COVERAGE_STATEMENT. Verwende jede komma-getrennte Sparte als eigene SCOPE-Komponente. Das Wort „gilt“ in „in der Sparte ... gilt die Variante“ ist keine Deckungswirkung und darf nicht als COVERAGE_EFFECT ausgegeben werden.";
       const segmentSkeletons = listSegmentRepairSkeletons(
         workingBatch,
         repairDiagnostics
