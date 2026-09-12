@@ -427,10 +427,14 @@ function attachTopLevelRequirementFragments(responses, expectedUnitIds) {
 function listSegmentRepairSkeletons(batch, diagnostics) {
   const requested = new Map(
     diagnostics
-      .filter(({ code, unitId, segmentId }) =>
-        ["LIST_CONTINUATION_SEGMENT_SPLIT", "LIST_SOURCE_SEGMENTS_MERGED"].includes(
-          code
-        ) && unitId && segmentId
+      .filter(
+        ({ code, unitId, segmentId }) =>
+          [
+            "LIST_CONTINUATION_SEGMENT_SPLIT",
+            "LIST_SOURCE_SEGMENTS_MERGED",
+          ].includes(code) &&
+          unitId &&
+          segmentId
       )
       .map(({ unitId, segmentId }) => [`${unitId}:${segmentId}`, true])
   );

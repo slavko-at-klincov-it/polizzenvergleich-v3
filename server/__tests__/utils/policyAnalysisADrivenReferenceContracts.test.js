@@ -624,10 +624,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ).envelopeRepair
     ).toBeNull();
     expect(
-      attachTopLevelRequirementFragments([owner, fragment], [
-        "unit-one",
-        "unit-two",
-      ]).envelopeRepair
+      attachTopLevelRequirementFragments(
+        [owner, fragment],
+        ["unit-one", "unit-two"]
+      ).envelopeRepair
     ).toBeNull();
   });
 
