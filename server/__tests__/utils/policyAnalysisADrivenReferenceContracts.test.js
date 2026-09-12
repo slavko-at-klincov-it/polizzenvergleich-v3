@@ -1981,9 +1981,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
     let lateResolve;
     let releaseRecovery;
+    let signalRecoveryStarted;
+    const recoveryStarted = new Promise((resolve) => {
+      signalRecoveryStarted = resolve;
+    });
     const recoverModelAfterAbort = jest.fn(
       () =>
         new Promise((resolve) => {
+          signalRecoveryStarted();
           releaseRecovery = () => resolve({ status: "SAFE_RELOADED" });
         })
     );
@@ -2017,7 +2022,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       abortSettlementTimeoutMs: 5,
       recoverModelAfterAbort,
     });
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await recoveryStarted;
     expect(recoverModelAfterAbort).toHaveBeenCalledTimes(1);
     expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
 
