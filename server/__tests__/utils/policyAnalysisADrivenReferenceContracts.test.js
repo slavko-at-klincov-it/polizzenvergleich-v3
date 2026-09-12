@@ -764,6 +764,12 @@ describe("requirement-local semantic evidence completeness", () => {
     },
     {
       source:
+        "Eine Geschäftsverbindung gilt nur dann als gegeben, wenn sie dauerhaft besteht.",
+      signalId: "EXPLICIT_DEFINITION",
+      type: "FACT_ROLE",
+    },
+    {
+      source:
         "Beschädigung von Gebäuden und Einfriedungen durch unbekannte Fahrzeuge.",
       signalId: "EXPLICIT_PERIL_OR_CAUSE",
       type: "PERIL_OR_CAUSE",
