@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
-  A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   buildADrivenSemanticManifest,
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
@@ -299,7 +299,7 @@ function semanticSignalContractFor(campaignProfile) {
   return campaignProfile.classificationRunContractId ===
     CURRENT_V12_REVIEW_PROFILE.classificationRunContractId
     ? null
-    : A_SEMANTIC_SIGNAL_CONTRACT_ID;
+    : A_SEMANTIC_SIGNAL_CONTRACT_ID_V1;
 }
 
 function includesInheritedRoleEvidence(campaignProfile) {

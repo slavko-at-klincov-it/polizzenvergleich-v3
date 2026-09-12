@@ -4,6 +4,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -704,6 +705,92 @@ describe("requirement-local semantic evidence completeness", () => {
     expect(
       requirementRoleEvidenceDiagnostics(unit, result.requirements)
     ).toEqual([]);
+  });
+
+  test.each([
+    "Der Versicherungsnehmer ist berechtigt, Ersatz der notwendigen Aufwendungen zu verlangen.",
+    "Die Versicherungsnehmerin kann nach einem versicherten Schaden unverzüglich mit der Reparatur beginnen.",
+    "Verzichtet der Versicherer auf seinen Regressanspruch, bleibt der Mieter geschützt.",
+    "Unbeabsichtigte Meldefehler beeinträchtigen die Leistungspflicht nicht.",
+    "Ein Verstoß des Handwerkers schränkt dies nicht die Leistung des Versicherers ein.",
+  ])("materializes a source-bound contractual benefit: %s", (source) => {
+    const unit = evidenceUnit(["benefit", source]);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["benefit"],
+          [component("OBJECT", "benefit", { label: source })]
+        ),
+        displayLabel: source,
+      },
+    ]);
+
+    expect(result.requirements[0].components).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "FACT_ROLE",
+          sourceBlockIds: ["benefit"],
+        }),
+      ])
+    );
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+        signalId: "EXPLICIT_CONTRACTUAL_BENEFIT",
+      }),
+    ]);
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
+  test.each([
+    "Der Versicherer ist berechtigt, den Vertrag zu kündigen.",
+    "Der Versicherungsnehmer kann die Prämie nicht zurückfordern.",
+    "Der Versicherungsnehmer muss die Gefahr unverzüglich anzeigen.",
+  ])("does not invent a contractual benefit for: %s", (source) => {
+    const unit = evidenceUnit(["not-benefit", source]);
+    const input = [
+      {
+        ...requirement(
+          ["not-benefit"],
+          [component("OBJECT", "not-benefit", { label: source })]
+        ),
+        displayLabel: source,
+      },
+    ];
+    const result = materializeSharedSignalComponents(unit, input);
+
+    expect(
+      result.requirements[0].components.some(({ type }) => type === "FACT_ROLE")
+    ).toBe(false);
+    expect(
+      result.diagnostics.some(
+        ({ signalId }) => signalId === "EXPLICIT_CONTRACTUAL_BENEFIT"
+      )
+    ).toBe(false);
+  });
+
+  test("keeps the frozen V1 signal contract free of V2 benefit materialization", () => {
+    const source =
+      "Der Versicherungsnehmer ist berechtigt, eine angemessene Teilzahlung zu verlangen.";
+    const unit = evidenceUnit(["benefit-v1", source]);
+    const result = materializeSharedSignalComponents(
+      unit,
+      [
+        {
+          ...requirement(
+            ["benefit-v1"],
+            [component("OBJECT", "benefit-v1", { label: source })]
+          ),
+          displayLabel: source,
+        },
+      ],
+      { semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 }
+    );
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.requirements[0].components).toHaveLength(1);
   });
 
   test("materializes a split condition from an exact requirement display label", () => {

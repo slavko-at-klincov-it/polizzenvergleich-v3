@@ -12,8 +12,10 @@ const {
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V2";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -65,7 +67,7 @@ const COVERAGE_EFFECTS = new Set([
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
   /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
-const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
+const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_EXCLUSION",
     pattern:
@@ -127,6 +129,27 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
     requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
   }),
 ]);
+const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL = Object.freeze({
+  signalId: "EXPLICIT_CONTRACTUAL_BENEFIT",
+  pattern:
+    /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?![^.;:]{0,220}\bnicht\b))[^.;:]{1,220}|verzichtet\s+der\s+versicherer\s+auf\s+[^.;:]{1,220}|der\s+versicherer\s+[^.;:]{0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:die\s+)?verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bleibt\s+(?:gleichwohl\s+)?bestehen))\b/giu,
+  requiredComponentTypes: Object.freeze(["FACT_ROLE", "COVERAGE_EFFECT"]),
+  materializedComponentType: "FACT_ROLE",
+});
+const REQUIREMENT_ROLE_SIGNALS_V2 = Object.freeze([
+  ...REQUIREMENT_ROLE_SIGNALS_V1,
+  EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL,
+]);
+const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID,
+]);
+
+function requirementRoleSignals(semanticSignalContractId) {
+  return semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V1
+    ? REQUIREMENT_ROLE_SIGNALS_V1
+    : REQUIREMENT_ROLE_SIGNALS_V2;
+}
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -326,6 +349,11 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
       component.type === "FACT_ROLE" &&
       /\b(?:kosten|mehrkosten|aufwendungen)\b/iu.test(component.label)
     );
+  if (signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT")
+    return (
+      signal.requiredComponentTypes.includes(component.type) &&
+      matchesForPattern(signal.pattern, component.label).length > 0
+    );
   return signal.requiredComponentTypes.includes(component.type);
 }
 
@@ -425,12 +453,17 @@ function requirementSignalEvidence(unit, requirement, signal) {
   ];
 }
 
-function requirementRoleEvidenceDiagnostics(unit, requirements) {
+function requirementRoleEvidenceDiagnostics(
+  unit,
+  requirements,
+  { semanticSignalContractId = A_SEMANTIC_SIGNAL_CONTRACT_ID } = {}
+) {
+  const signals = requirementRoleSignals(semanticSignalContractId);
   return requirements.flatMap((requirement, requirementIndex) => {
     const observedComponentTypes = [
       ...new Set(requirement.components.map(({ type }) => type)),
     ].sort();
-    return REQUIREMENT_ROLE_SIGNALS.flatMap((signal) => {
+    return signals.flatMap((signal) => {
       const matchedEvidence = requirementSignalEvidence(
         unit,
         requirement,
@@ -450,7 +483,7 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
             code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
             unitId: unit.unitId,
             requirementIndex,
-            signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+            signalContractId: semanticSignalContractId,
             signalId: signal.signalId,
             requiredComponentGroups: [signal.requiredComponentTypes],
             ...(signal.requiredCoverageEffect
@@ -465,14 +498,19 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
   });
 }
 
-function materializeSharedSignalComponents(unit, requirements) {
+function materializeSharedSignalComponents(
+  unit,
+  requirements,
+  { semanticSignalContractId = A_SEMANTIC_SIGNAL_CONTRACT_ID } = {}
+) {
+  const signals = requirementRoleSignals(semanticSignalContractId);
   const materialized = requirements.map((requirement) => ({
     ...requirement,
     components: [...requirement.components],
   }));
   const diagnostics = [];
   for (const [requirementIndex, requirement] of materialized.entries()) {
-    for (const signal of REQUIREMENT_ROLE_SIGNALS) {
+    for (const signal of signals) {
       const matchedEvidence = requirementSignalEvidence(
         unit,
         requirement,
@@ -521,7 +559,7 @@ function materializeSharedSignalComponents(unit, requirements) {
             unitId: unit.unitId,
             requirementIndex,
             sourceRequirementIndex: siblingRequirementIndex,
-            signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+            signalContractId: semanticSignalContractId,
             signalId: signal.signalId,
             componentType: component.type,
             sourceBlockIds: component.sourceBlockIds,
@@ -539,6 +577,7 @@ function materializeSharedSignalComponents(unit, requirements) {
             "EXPLICIT_LIMIT_BASIS",
             "EXPLICIT_NON_NUMERIC_LIMIT",
             "EXPLICIT_DEDUCTIBLE",
+            "EXPLICIT_CONTRACTUAL_BENEFIT",
           ].includes(signal.signalId)
         )
           continue;
@@ -569,6 +608,7 @@ function materializeSharedSignalComponents(unit, requirements) {
           "EXPLICIT_COPULAR_DEFINITION",
           "EXPLICIT_PERIL_OR_CAUSE",
           "EXPLICIT_QUANTIFIED_VALUE",
+          "EXPLICIT_CONTRACTUAL_BENEFIT",
         ].includes(signal.signalId);
         const localText =
           localComponent?.label ||
@@ -586,6 +626,7 @@ function materializeSharedSignalComponents(unit, requirements) {
               "EXPLICIT_COPULAR_DEFINITION",
               "EXPLICIT_PERIL_OR_CAUSE",
               "EXPLICIT_QUANTIFIED_VALUE",
+              "EXPLICIT_CONTRACTUAL_BENEFIT",
             ].includes(signal.signalId))
         )
           continue;
@@ -624,7 +665,8 @@ function materializeSharedSignalComponents(unit, requirements) {
             ? quantifiedComponent(label, sourceBlockIds)
             : {
                 type:
-                  signal.signalId === "EXPLICIT_CONDITION"
+                  signal.materializedComponentType ||
+                  (signal.signalId === "EXPLICIT_CONDITION"
                     ? "CONDITION"
                     : [
                           "EXPLICIT_DEFINITION",
@@ -637,7 +679,7 @@ function materializeSharedSignalComponents(unit, requirements) {
                           ? "FACT_ROLE"
                           : signal.signalId === "EXPLICIT_DEDUCTIBLE"
                             ? "DEDUCTIBLE"
-                            : "LIMIT_BASIS",
+                            : "LIMIT_BASIS"),
                 label,
                 sourceBlockIds,
               };
@@ -648,7 +690,7 @@ function materializeSharedSignalComponents(unit, requirements) {
           unitId: unit.unitId,
           requirementIndex,
           sourceRequirementIndex: requirementIndex,
-          signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          signalContractId: semanticSignalContractId,
           signalId: signal.signalId,
           componentType: localRole.type,
           sourceBlockIds: localRole.sourceBlockIds,
@@ -1354,16 +1396,20 @@ function classifyUnit(unit, records, semanticSignalContractId) {
       ],
     };
   const sharedSignalMaterialization =
-    semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
-      ? materializeSharedSignalComponents(unit, drafts)
+    SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS.has(semanticSignalContractId)
+      ? materializeSharedSignalComponents(unit, drafts, {
+          semanticSignalContractId,
+        })
       : { requirements: drafts, diagnostics: [] };
-  const roleEvidenceDiagnostics =
-    semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
-      ? requirementRoleEvidenceDiagnostics(
-          unit,
-          sharedSignalMaterialization.requirements
-        )
-      : [];
+  const roleEvidenceDiagnostics = SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS.has(
+    semanticSignalContractId
+  )
+    ? requirementRoleEvidenceDiagnostics(
+        unit,
+        sharedSignalMaterialization.requirements,
+        { semanticSignalContractId }
+      )
+    : [];
   if (roleEvidenceDiagnostics.length)
     return {
       terminalDisposition: "UNRESOLVED_REVIEW_REQUIRED",
@@ -1485,7 +1531,7 @@ function buildADrivenSemanticManifest({
   const indexed = responseIndex(responses, plannedIds);
   if (
     semanticSignalContractId !== null &&
-    semanticSignalContractId !== A_SEMANTIC_SIGNAL_CONTRACT_ID
+    !SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS.has(semanticSignalContractId)
   )
     throw manifestError("LF_A_SEMANTIC_SIGNAL_CONTRACT_INVALID");
   const classifications = plan.units.map((unit) => ({
@@ -1634,6 +1680,7 @@ module.exports = {
   A_BLOCK_TERMINAL_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
