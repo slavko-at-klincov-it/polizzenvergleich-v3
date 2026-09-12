@@ -2974,7 +2974,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V21");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V22");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5880,6 +5880,127 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       toType: "SCOPE",
       components: 1,
     });
+  });
+
+  test("rejoins split product subject and predicate into one source-bound fact relation", () => {
+    const sourceText =
+      "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung mit der Variante PREMIUM in den jeweils beantragten Sparten.";
+    const source = artifact([`Seite 1\n${sourceText}\n`], "7a");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION", "VARIANT"],
+          requirements: [
+            {
+              displayLabel: block.exactText,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Grunddeckung der Versicherung",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "FACT_ROLE",
+                  label: "Produkt der Wohnhausversicherung",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "SCOPE",
+                  label: "mit der Variante PREMIUM",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "SCOPE",
+                  label: "in den jeweils beantragten Sparten",
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label.trim()]
+      )
+    ).toEqual([
+      [
+        "FACT_ROLE",
+        "Grunddeckung der Versicherung ist das Produkt der Wohnhausversicherung",
+      ],
+      ["SCOPE", "mit der Variante PREMIUM"],
+      ["SCOPE", "in den jeweils beantragten Sparten"],
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "MERGE_PRODUCT_CONFIGURATION_FACT_RELATION",
+      mergedFactRoles: 2,
+    });
+  });
+
+  test("does not merge multiple product relations across a semicolon", () => {
+    const sourceText =
+      "Grunddeckung ist das Produkt BASIS; der Tarif ist PREMIUM mit der Variante PLUS in den jeweils beantragten Sparten.";
+    const source = artifact([`Seite 1\n${sourceText}\n`], "7b");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION", "VARIANT"],
+      requirements: [
+        {
+          displayLabel: block.exactText,
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: "Grunddeckung ist das Produkt BASIS",
+              sourceBlockIds: [block.blockId],
+            },
+            {
+              type: "FACT_ROLE",
+              label: "der Tarif ist PREMIUM",
+              sourceBlockIds: [block.blockId],
+            },
+            {
+              type: "SCOPE",
+              label: "mit der Variante PLUS",
+              sourceBlockIds: [block.blockId],
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components).toEqual(
+      response.requirements[0].components
+    );
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "MERGE_PRODUCT_CONFIGURATION_FACT_RELATION",
+      })
+    );
   });
 
   test.each([

@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V21";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V22";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -40,6 +40,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V18",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V19",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V20",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V21",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -671,6 +672,69 @@ function splitProductConfigurationScopeRoles(component) {
   return components.some(({ type }) => type === "SCOPE") ? components : null;
 }
 
+function sourceBlockIdsForExactSpan(unit, exactSpan) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const blocks = unit?.source?.blocks || [];
+  const start = sourceText.indexOf(exactSpan);
+  if (start < 0 || !exactSpan || blocks.length === 0) return [];
+  const end = start + exactSpan.length;
+  let blockStart = 0;
+  return blocks.flatMap((block, index) => {
+    const blockEnd = blockStart + String(block.exactText || "").length;
+    const overlaps = blockEnd > start && blockStart < end;
+    const result = overlaps ? [block.blockId] : [];
+    blockStart = blockEnd + (index < blocks.length - 1 ? 1 : 0);
+    return result;
+  });
+}
+
+function normalizeProductConfigurationFactRelation(components, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const definitionStart = /\b(?:Grund|Basis)deckung\b/iu.exec(sourceText);
+  const scopeStart =
+    /\b(?:(?:mit|unter)\s+(?:der\s+)?Variante\b|(?:in|für)\s+(?:den|die|allen)\s+(?:jeweils\s+)?(?:beantragten|vereinbarten|gewählten)\s+Sparten\b)/iu.exec(
+      sourceText
+    );
+  if (!definitionStart || !scopeStart || scopeStart.index <= definitionStart.index)
+    return { components, mergedFactRoles: 0 };
+  const relation = sourceText
+    .slice(definitionStart.index, scopeStart.index)
+    .trim();
+  const copulas = relation.match(/\b(?:ist|sind)\b/giu) || [];
+  if (
+    copulas.length !== 1 ||
+    /[;!?]/u.test(relation) ||
+    !/\b(?:Produkt|Tarif|Versicherung)\b/iu.test(relation)
+  )
+    return { components, mergedFactRoles: 0 };
+  const comparableRelation = relation.replace(/\s+/gu, " ").trim();
+  const factRoleIndexes = components.flatMap((component, index) => {
+    const comparableLabel = String(component?.label || "")
+      .replace(/\s+/gu, " ")
+      .trim();
+    return component?.type === "FACT_ROLE" &&
+      comparableLabel &&
+      comparableRelation.includes(comparableLabel)
+      ? [index]
+      : [];
+  });
+  if (factRoleIndexes.length < 2)
+    return { components, mergedFactRoles: 0 };
+  const sourceBlockIds = sourceBlockIdsForExactSpan(unit, relation);
+  if (sourceBlockIds.length === 0)
+    return { components, mergedFactRoles: 0 };
+  const firstIndex = factRoleIndexes[0];
+  const mergedIndexes = new Set(factRoleIndexes);
+  return {
+    components: components.flatMap((component, index) => {
+      if (index === firstIndex)
+        return [{ type: "FACT_ROLE", label: relation, sourceBlockIds }];
+      return mergedIndexes.has(index) ? [] : [component];
+    }),
+    mergedFactRoles: factRoleIndexes.length,
+  };
+}
+
 function moreFavorableCoveragePrecedence(unit) {
   const sourceText = String(unit?.source?.combinedText || "");
   const relation =
@@ -995,9 +1059,10 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         unitId: response?.unitId,
         action: "NORMALIZE_PRODUCT_CONFIGURATION_TO_DEFINITION",
       });
-      const normalizedRequirements = requirements.map((requirement) => ({
-        ...requirement,
-        components: (requirement.components || []).flatMap((component) => {
+      const normalizedRequirements = requirements.map(
+        (requirement, requirementIndex) => {
+          const scopedComponents = (requirement.components || []).flatMap(
+            (component) => {
           if (component?.type === "COVERAGE_EFFECT") return [];
           const productRoleComponent =
             component?.type === "OBJECT" &&
@@ -1006,13 +1071,13 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
             )
               ? { ...component, type: "FACT_ROLE" }
               : component;
-          const scopedComponents =
+          const splitScopeComponents =
             splitProductConfigurationScopeRoles(productRoleComponent);
-          if (scopedComponents) {
-            const scopeCount = scopedComponents.filter(
+          if (splitScopeComponents) {
+            const scopeCount = splitScopeComponents.filter(
               ({ type }) => type === "SCOPE"
             ).length;
-            if (scopedComponents.length > scopeCount)
+            if (splitScopeComponents.length > scopeCount)
               repairs.push({
                 unitId: response.unitId,
                 action: "SPLIT_EMBEDDED_EXPLICIT_SCOPE_ROLE",
@@ -1026,11 +1091,25 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
               toType: "SCOPE",
               components: scopeCount,
             });
-            return scopedComponents;
+            return splitScopeComponents;
           }
           return [productRoleComponent];
-        }),
-      }));
+            }
+          );
+          const factRelation = normalizeProductConfigurationFactRelation(
+            scopedComponents,
+            unit
+          );
+          if (factRelation.mergedFactRoles > 0)
+            repairs.push({
+              unitId: response.unitId,
+              requirementIndex,
+              action: "MERGE_PRODUCT_CONFIGURATION_FACT_RELATION",
+              mergedFactRoles: factRelation.mergedFactRoles,
+            });
+          return { ...requirement, components: factRelation.components };
+        }
+      );
       const hasScope = normalizedRequirements.some((requirement) =>
         requirement.components.some(({ type }) => type === "SCOPE")
       );
