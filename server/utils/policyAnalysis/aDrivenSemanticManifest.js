@@ -98,7 +98,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   }),
   Object.freeze({
     signalId: "EXPLICIT_COST_ROLE",
-    pattern: /\b(?:kosten|mehrkosten|aufwendungen)\b/giu,
+    pattern: /\b(?:kosten|mehrkosten|aufwendungen)\b(?!-)/giu,
     requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
   }),
   Object.freeze({
@@ -287,6 +287,17 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
   return signal.requiredComponentTypes.includes(component.type);
 }
 
+function signalApplies(signal, matchedEvidence) {
+  if (
+    signal.signalId === "EXPLICIT_EXCLUSION" &&
+    /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu.test(
+      matchedEvidence.exactText
+    )
+  )
+    return false;
+  return true;
+}
+
 function requirementRoleEvidenceDiagnostics(unit, requirements) {
   const blocksById = new Map(
     evidenceBlocks(unit).map((block) => [block.blockId, block])
@@ -309,6 +320,7 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
       });
       if (!matchedEvidence.length) return [];
       return matchedEvidence.flatMap((evidence) => {
+        if (!signalApplies(signal, evidence)) return [];
         if (
           requirement.components.some((component) =>
             componentSupportsSignal(signal, component, evidence)

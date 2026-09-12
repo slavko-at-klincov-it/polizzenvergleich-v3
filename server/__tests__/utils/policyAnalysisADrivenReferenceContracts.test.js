@@ -512,6 +512,24 @@ describe("requirement-local semantic evidence completeness", () => {
     expect(diagnostics).toEqual([]);
   });
 
+  test("ignores a cost-saving adjective and a legal liability disclaimer", () => {
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(
+        ["cost", "die Wahl einer kosten- oder zeitsparenden Arbeitsweise"],
+        [
+          "liability",
+          "Die Haftung für eine leicht fahrlässige Pflichtverletzung wird ausgeschlossen.",
+        ]
+      ),
+      [
+        requirement(["cost"], [component("OBJECT", "cost")]),
+        requirement(["liability"], [component("CONDITION", "liability")]),
+      ]
+    );
+
+    expect(diagnostics).toEqual([]);
+  });
+
   test("fails the manifest closed until the same requirement carries its condition", () => {
     const source = artifact(
       ["Seite 1\nGebäude, sofern sie ständig bewohnt sind.\n"],
@@ -1442,6 +1460,91 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(results[0].validation.passed).toBe(true);
       expect(client.chat.completions.create).not.toHaveBeenCalled();
       expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(1);
+      expect(
+        fs.readdirSync(path.join(temporary, "superseded-batches"))
+      ).toHaveLength(1);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("upgrades a bound V12 batch by revalidating and reusing its responses", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-v12-upgrade-")
+    );
+    try {
+      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "1");
+      const plan = deriveClassificationEvidencePlan(
+        buildADrivenSourceUnitPlan({
+          documents: [document("source", 0, source)],
+        })
+      );
+      const built = buildADrivenClassificationBatches(plan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      const contextualBatch = {
+        ...batch,
+        units: batch.expectedUnitIds.map((unitId) =>
+          plan.units.find((unit) => unit.unitId === unitId)
+        ),
+      };
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const responses = contextualBatch.units.map(validResponse);
+      const seeded = await runBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: args.model,
+                choices: [
+                  { message: { content: JSON.stringify(responses) } },
+                ],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch: contextualBatch,
+        maximumAttempts: 1,
+      });
+      const predecessor = {
+        ...seeded,
+        contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+        classificationEvidenceContextContractId:
+          "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1",
+      };
+      delete predecessor.semanticSignalContractId;
+      const file = batchResultFile(temporary, batch);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, `${JSON.stringify(predecessor, null, 2)}\n`, {
+        mode: 0o600,
+      });
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const [upgraded] = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V13");
+      expect(upgraded.semanticSignalContractId).toBe(
+        A_SEMANTIC_SIGNAL_CONTRACT_ID
+      );
+      expect(upgraded.responses).toEqual(responses);
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
       expect(
         fs.readdirSync(path.join(temporary, "superseded-batches"))
       ).toHaveLength(1);
