@@ -311,16 +311,30 @@ function parseJsonArray(modelText) {
       /\]\}\s*,\s*(?=\{\s*"displayLabel"\s*:)/gu,
       ","
     );
-    let strategy = "PREMATURE_REQUIREMENTS_ARRAY_CLOSE";
+    const withoutRepeatedOwnerClosures = repaired.replace(
+      /(\]\})\}\s*,\s*(?=\{\s*"displayLabel"\s*:)/gu,
+      "$1,"
+    );
+    const strategy =
+      withoutRepeatedOwnerClosures === repaired
+        ? "PREMATURE_REQUIREMENTS_ARRAY_CLOSE"
+        : "PREMATURE_REQUIREMENTS_ARRAY_CLOSE_AND_REPEATED_OWNER_CLOSE";
+    repaired = withoutRepeatedOwnerClosures;
     try {
       if (repaired === candidate) throw strictError;
       parsed = JSON.parse(repaired);
     } catch {
       repaired = jsonrepair(candidate);
       parsed = JSON.parse(repaired);
-      strategy = "JSONREPAIR";
+      syntaxRepair = {
+        applied: true,
+        strategy: "JSONREPAIR",
+        originalError: strictError.message,
+        originalResponseSha256: sha256(candidate),
+        repairedResponseSha256: sha256(repaired),
+      };
     }
-    syntaxRepair = {
+    syntaxRepair ||= {
       applied: true,
       strategy,
       originalError: strictError.message,
@@ -1849,6 +1863,7 @@ module.exports = {
   createAttemptRecorder,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  parseJsonArray,
   processClassificationBatches,
   prompt,
   requestCompletionWithTimeout,

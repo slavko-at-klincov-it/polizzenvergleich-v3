@@ -38,6 +38,7 @@ const {
   batchResultFile,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  parseJsonArray,
   processClassificationBatches,
   requestCompletionWithTimeout,
   runBatch,
@@ -678,6 +679,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         exactDisplayLabel: "Text three",
         requiredBlockIds: ["block-three"],
       },
+    ]);
+  });
+
+  test("repairs repeated owner closures around top-level requirement fragments", () => {
+    const malformed =
+      '[{"unitId":"unit-one","primaryClass":"INSURED_OBJECT","semanticClasses":["INSURED_OBJECT"],"requirements":[{"displayLabel":"A","components":[{}]}]},{"displayLabel":"B","components":[{}]}},{"displayLabel":"C","components":[{}]}]}]';
+
+    const parsed = parseJsonArray(malformed);
+
+    expect(parsed.syntaxRepair).toMatchObject({
+      applied: true,
+      strategy:
+        "PREMATURE_REQUIREMENTS_ARRAY_CLOSE_AND_REPEATED_OWNER_CLOSE",
+    });
+    expect(parsed.responses).toHaveLength(1);
+    expect(parsed.responses[0].requirements.map(({ displayLabel }) => displayLabel)).toEqual([
+      "A",
+      "B",
+      "C",
     ]);
   });
 
