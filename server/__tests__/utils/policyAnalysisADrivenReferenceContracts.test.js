@@ -874,25 +874,30 @@ describe("requirement-local semantic evidence completeness", () => {
     }
   );
 
-  test("does not turn an ordinary coverage statement into a definition", () => {
-    const source = "Gebäude sind versichert.";
-    const result = materializeSharedSignalComponents(
-      evidenceUnit(["coverage", source]),
-      [
-        {
-          ...requirement(
-            ["coverage"],
-            [component("OBJECT", "coverage", { label: source })]
-          ),
-          displayLabel: source,
-        },
-      ]
-    );
+  test.each([
+    "Gebäude sind versichert.",
+    "Versichert sind Gebäude einschließlich ihrer Fundamente und Anlagen.",
+  ])(
+    "does not turn the coverage statement '%s' into a definition",
+    (source) => {
+      const result = materializeSharedSignalComponents(
+        evidenceUnit(["coverage", source]),
+        [
+          {
+            ...requirement(
+              ["coverage"],
+              [component("OBJECT", "coverage", { label: source })]
+            ),
+            displayLabel: source,
+          },
+        ]
+      );
 
-    expect(result.requirements[0].components).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ type: "FACT_ROLE" })])
-    );
-  });
+      expect(result.requirements[0].components).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "FACT_ROLE" })])
+      );
+    }
+  );
 
   test.each([
     {
