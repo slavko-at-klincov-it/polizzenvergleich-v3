@@ -4,9 +4,7 @@ const {
   buildADrivenSemanticManifest,
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
-const {
-  LEGACY_ROLE_TO_DYNAMIC_TYPES,
-} = require("./aDrivenAStatusAudit");
+const { LEGACY_ROLE_TO_DYNAMIC_TYPES } = require("./aDrivenAStatusAudit");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 const {
   CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
