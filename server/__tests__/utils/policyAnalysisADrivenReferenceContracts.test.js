@@ -841,6 +841,70 @@ describe("requirement-local semantic evidence completeness", () => {
     }
   );
 
+  test.each([
+    {
+      blocks: [
+        ["damage", "Beschädigung von Gebäuden und Einfriedungen"],
+        ["cause", "durch unbekannte Fahrzeuge."],
+      ],
+      expectedType: "PERIL_OR_CAUSE",
+      expectedLabel: "unbekannte Fahrzeuge.",
+      signalId: "EXPLICIT_PERIL_OR_CAUSE",
+    },
+    {
+      blocks: [
+        ["event", "Der Versicherungsfall gilt mit der"],
+        [
+          "finding",
+          "ersten Feststellung der Gesundheitsschädigung durch einen Arzt als eingetreten.",
+        ],
+      ],
+      expectedType: "FACT_ROLE",
+      expectedLabel:
+        "gilt mit der\nersten Feststellung der Gesundheitsschädigung durch einen Arzt als eingetreten.",
+      signalId: "EXPLICIT_DEFINITION",
+    },
+  ])(
+    "materializes $signalId when its exact relation spans component labels",
+    ({ blocks, expectedType, expectedLabel, signalId }) => {
+      const sourceBlockIds = blocks.map(([blockId]) => blockId);
+      const result = materializeSharedSignalComponents(
+        evidenceUnit(...blocks),
+        [
+          {
+            ...requirement(
+              sourceBlockIds,
+              blocks.map(([blockId, label]) =>
+                component("OBJECT", blockId, { label })
+              )
+            ),
+            displayLabel: blocks[0][1],
+          },
+        ]
+      );
+
+      expect(result.requirements[0].components).toContainEqual({
+        type: expectedType,
+        label: expectedLabel,
+        sourceBlockIds,
+      });
+      expect(result.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+            signalId,
+          }),
+        ])
+      );
+      expect(
+        requirementRoleEvidenceDiagnostics(
+          evidenceUnit(...blocks),
+          result.requirements
+        )
+      ).toEqual([]);
+    }
+  );
+
   test("does not infer a limit or deductible from unrelated counts and reductions", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
       evidenceUnit(

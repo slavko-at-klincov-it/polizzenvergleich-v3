@@ -362,7 +362,8 @@ function signalBelongsToRequirement(unit, requirement, signal, blockIds) {
         ? [component.label]
         : []
     ),
-  ];
+  ].filter(Boolean);
+  if (localTexts.length > 1) localTexts.push(localTexts.join("\n"));
   return localTexts.some(
     (localText) => matchesForPattern(signal.pattern, localText).length > 0
   );
@@ -556,18 +557,25 @@ function materializeSharedSignalComponents(unit, requirements) {
         ];
         const localComponent =
           localCandidates.length === 1 ? localCandidates[0] : null;
-        const localText = localComponent?.label || requirement.displayLabel;
-        const localMatches =
-          signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
-            ? [evidence.match]
-            : matchesForPattern(signal.pattern, localText);
+        const evidenceBackedSignal = [
+          "EXPLICIT_DEFINITION",
+          "EXPLICIT_PERIL_OR_CAUSE",
+        ].includes(signal.signalId);
+        const localText =
+          localComponent?.label ||
+          (evidenceBackedSignal ? evidence.match : requirement.displayLabel);
+        const localMatches = evidenceBackedSignal
+          ? [evidence.match]
+          : matchesForPattern(signal.pattern, localText);
         if (
           localCandidates.length > 1 ||
           localMatches.length === 0 ||
           (!localComponent &&
-            !["EXPLICIT_CONDITION", "EXPLICIT_PERIL_OR_CAUSE"].includes(
-              signal.signalId
-            ))
+            ![
+              "EXPLICIT_CONDITION",
+              "EXPLICIT_DEFINITION",
+              "EXPLICIT_PERIL_OR_CAUSE",
+            ].includes(signal.signalId))
         )
           continue;
         const matchIndex =
