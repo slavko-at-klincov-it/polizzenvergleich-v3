@@ -327,12 +327,7 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
       const matchedEvidence = selectedBlocks.flatMap((block) => {
         const matches = matchesForPattern(signal.pattern, block.exactText);
         return matches.flatMap((match) =>
-          signalBelongsToRequirement(
-            unit,
-            requirement,
-            signal,
-            block.blockId
-          )
+          signalBelongsToRequirement(unit, requirement, signal, block.blockId)
             ? [
                 {
                   blockId: block.blockId,
@@ -388,12 +383,7 @@ function materializeSharedSignalComponents(unit, requirements) {
     for (const signal of REQUIREMENT_ROLE_SIGNALS) {
       const matchedEvidence = selectedBlocks.flatMap((block) =>
         matchesForPattern(signal.pattern, block.exactText).flatMap((match) =>
-          signalBelongsToRequirement(
-            unit,
-            requirement,
-            signal,
-            block.blockId
-          )
+          signalBelongsToRequirement(unit, requirement, signal, block.blockId)
             ? [
                 {
                   blockId: block.blockId,

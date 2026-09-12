@@ -488,9 +488,10 @@ describe("requirement-local semantic evidence completeness", () => {
   });
 
   test("ignores a signal that only spills into the same physical source block", () => {
-    const unit = evidenceUnit(
-      ["shared-line", "Blitzschlag – soweit Eigentum besteht – bis 1 %"]
-    );
+    const unit = evidenceUnit([
+      "shared-line",
+      "Blitzschlag – soweit Eigentum besteht – bis 1 %",
+    ]);
     const diagnostics = requirementRoleEvidenceDiagnostics(unit, [
       {
         ...requirement(
