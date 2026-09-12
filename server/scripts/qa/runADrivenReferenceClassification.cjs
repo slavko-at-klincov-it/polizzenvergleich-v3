@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V18";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V19";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -37,6 +37,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V15",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V16",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V17",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V18",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -47,7 +48,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V18";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -696,6 +697,71 @@ function moreFavorableCoveragePrecedence(unit) {
   };
 }
 
+function normalizeConditionalMembershipObjects(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const sourceBlocks = unit?.source?.blocks || [];
+  if (!Array.isArray(unit?.source?.blockIds) || sourceBlocks.length === 0)
+    return { requirements, repairs: [] };
+  const roleOrActionPattern =
+    /\b(?:Versicherungsnehmer|Gebäudeeigentümer|Eigentümer|Mieter|Pächter)\p{L}*\b|\b(?:Wiederbeschaffung|Wiederherstellung|Reparatur|Ersatzleistung)\p{L}*\b/iu;
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const displayLabel = String(requirement?.displayLabel || "");
+      const conditionMarker =
+        /\b(?:sofern|wenn|falls|vorausgesetzt|soweit)\b|\bunter\s+der\s+Voraussetzung\b/iu.exec(
+          displayLabel
+        );
+      const components = Array.isArray(requirement?.components)
+        ? requirement.components
+        : [];
+      if (!conditionMarker || components.length === 0) return requirement;
+      const conditionLabel = displayLabel.slice(conditionMarker.index).trim();
+      const normalizedCondition = conditionLabel.replace(/\s+/gu, " ").trim();
+      const conditionStart = sourceText.indexOf(conditionLabel);
+      if (conditionStart < 0) return requirement;
+      const conditionEnd = conditionStart + conditionLabel.length;
+      let blockStart = 0;
+      const conditionSourceBlockIds = sourceBlocks.flatMap((block, index) => {
+        const blockEnd = blockStart + String(block.exactText || "").length;
+        const overlaps = blockEnd > conditionStart && blockStart < conditionEnd;
+        const result = overlaps ? [block.blockId] : [];
+        blockStart = blockEnd + (index < sourceBlocks.length - 1 ? 1 : 0);
+        return result;
+      });
+      if (conditionSourceBlockIds.length === 0) return requirement;
+      const rejected = components.filter((component) => {
+        if (component?.type !== "OBJECT") return false;
+        const label = String(component.label || "")
+          .replace(/\s+/gu, " ")
+          .trim();
+        return (
+          label &&
+          normalizedCondition.includes(label) &&
+          roleOrActionPattern.test(label)
+        );
+      });
+      if (rejected.length === 0) return requirement;
+      const retained = components.filter(
+        (component) => !rejected.includes(component)
+      );
+      if (!retained.some(({ type }) => type === "CONDITION"))
+        retained.push({
+          type: "CONDITION",
+          label: conditionLabel,
+          sourceBlockIds: conditionSourceBlockIds,
+        });
+      repairs.push({
+        requirementIndex,
+        removedObjectComponents: rejected.length,
+        removedLabels: rejected.map(({ label }) => label),
+      });
+      return { ...requirement, components: retained };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -730,9 +796,20 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         requirements: [],
       };
     }
-    const requirements = Array.isArray(response?.requirements)
+    let requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
+    const conditionalMembership = normalizeConditionalMembershipObjects(
+      requirements,
+      unit
+    );
+    requirements = conditionalMembership.requirements;
+    for (const repair of conditionalMembership.repairs)
+      repairs.push({
+        unitId: response?.unitId,
+        action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
+        ...repair,
+      });
     const productConfigurationDefinition =
       requirements.length > 0 &&
       !hasCoverageEffectEvidence(unit) &&
@@ -869,7 +946,7 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     return {
       ...response,
       requirements: Array.isArray(response?.requirements)
-        ? response.requirements.map((requirement, requirementIndex) => ({
+        ? requirements.map((requirement, requirementIndex) => ({
             ...requirement,
             components: Array.isArray(requirement?.components)
               ? requirement.components.flatMap((component, componentIndex) => {
@@ -1450,6 +1527,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Eine positive Auswahlregel, wonach im Schaden-, Versicherungs- oder Kollisionsfall die bessere, günstigere oder weitergehende Deckung/Regelung/Leistung gilt, ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT. Gib den wörtlichen günstigeren Regelgegenstand als PRECEDENCE_OR_REPLACEMENT und Begünstigten- sowie Fallscope getrennt als SCOPE aus. Eine negierte Aussage ist von dieser Regel ausdrücklich nicht erfasst.",
+    },
+    {
+      role: "system",
+      content:
+        "In einer durch sofern/wenn/falls/vorausgesetzt/soweit eingeleiteten Eigentums-, Zuordnungs- oder Wiederbeschaffungsbedingung sind Parteien wie Versicherungsnehmer, Eigentümer, Mieter oder Pächter und Handlungen wie Wiederbeschaffung/Wiederherstellung niemals versicherte OBJECT-Komponenten. Bilde den vollständigen wörtlichen Bedingungssatz als CONDITION ab und lasse nur die tatsächlich versicherten Sachen als OBJECT stehen.",
     },
     {
       role: "user",

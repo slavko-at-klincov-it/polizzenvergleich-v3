@@ -99,6 +99,9 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "die bessere, günstigere oder weitergehende Deckung/Regelung/Leistung"
     );
+    expect(systemText).toContain(
+      "Eigentümer, Mieter oder Pächter und Handlungen wie Wiederbeschaffung/Wiederherstellung"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -2970,7 +2973,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V18");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V19");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -5987,6 +5990,185 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       );
     }
   );
+
+  test("moves party and restoration fragments out of insured objects into their full condition", () => {
+    const sourceText =
+      "Versichert sind Heizungsanlagen, sofern sie dem Versicherungsnehmer oder Gebäudeeigentümer gehören und dieser für die Wiederbeschaffung aufzukommen hat.";
+    const source = artifact([`Seite 1\n${sourceText}\n`], "a");
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const block = unit.source.blocks[0];
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: sourceText,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert",
+                  sourceBlockIds: [block.blockId],
+                  coverageEffect: "INCLUDED",
+                },
+                {
+                  type: "OBJECT",
+                  label: "Heizungsanlagen",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "OBJECT",
+                  label: "Gebäudeeigentümer",
+                  sourceBlockIds: [block.blockId],
+                },
+                {
+                  type: "OBJECT",
+                  label: "Wiederbeschaffung",
+                  sourceBlockIds: [block.blockId],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(components.filter(({ type }) => type === "OBJECT")).toEqual([
+      expect.objectContaining({ label: "Heizungsanlagen" }),
+    ]);
+    expect(components.filter(({ type }) => type === "CONDITION")).toEqual([
+      expect.objectContaining({
+        label:
+          "sofern sie dem Versicherungsnehmer oder Gebäudeeigentümer gehören und dieser für die Wiederbeschaffung aufzukommen hat.",
+      }),
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
+      requirementIndex: 0,
+      removedObjectComponents: 2,
+      removedLabels: ["Gebäudeeigentümer", "Wiederbeschaffung"],
+    });
+    expect(
+      buildADrivenSemanticManifest({
+        plan,
+        responses: normalized.responses,
+        semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+      }).summary.unresolvedUnits
+    ).toBe(0);
+  });
+
+  test("does not rewrite restoration wording outside an explicit condition", () => {
+    const unit = {
+      unitId: "restoration-object-without-condition",
+      source: {
+        blockIds: ["block"],
+        combinedText: "Versichert sind Anlagen zur Wiederherstellung.",
+        blocks: [
+          {
+            blockId: "block",
+            exactText: "Versichert sind Anlagen zur Wiederherstellung.",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Anlagen zur Wiederherstellung",
+              sourceBlockIds: ["block"],
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses).toEqual([response]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
+      })
+    );
+  });
+
+  test("limits a repaired condition to its requirement instead of consuming later list items", () => {
+    const first =
+      "Versichert sind Heizungsanlagen, sofern sie dem Versicherungsnehmer";
+    const second = "oder Gebäudeeigentümer gehören.";
+    const later = "Weitere versicherte Sachen.";
+    const unit = {
+      unitId: "multi-requirement-condition",
+      source: {
+        blockIds: ["first", "second", "later"],
+        combinedText: [first, second, later].join("\n"),
+        blocks: [
+          { blockId: "first", exactText: first },
+          { blockId: "second", exactText: second },
+          { blockId: "later", exactText: later },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: [first, second].join("\n"),
+          components: [
+            {
+              type: "OBJECT",
+              label: "Heizungsanlagen",
+              sourceBlockIds: ["first"],
+            },
+            {
+              type: "OBJECT",
+              label: "Gebäudeeigentümer",
+              sourceBlockIds: ["second"],
+            },
+          ],
+        },
+        {
+          displayLabel: later,
+          components: [
+            { type: "OBJECT", label: later, sourceBlockIds: ["later"] },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const condition = normalized.responses[0].requirements[0].components.find(
+      ({ type }) => type === "CONDITION"
+    );
+
+    expect(condition).toEqual({
+      type: "CONDITION",
+      label:
+        "sofern sie dem Versicherungsnehmer\noder Gebäudeeigentümer gehören.",
+      sourceBlockIds: ["first", "second"],
+    });
+    expect(normalized.responses[0].requirements[1]).toEqual(
+      response.requirements[1]
+    );
+  });
 
   test("drops only the unsupported coverage class from a non-product fact", () => {
     const unit = {
