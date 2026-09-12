@@ -711,21 +711,6 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
-                  const coverageEffectRepair = explicitCoverageEffectRepair(
-                    unit,
-                    component
-                  );
-                  if (coverageEffectRepair) {
-                    repairs.push({
-                      unitId: response.unitId,
-                      requirementIndex,
-                      componentIndex,
-                      action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
-                      fromCoverageEffect: component.coverageEffect || null,
-                      toCoverageEffect: coverageEffectRepair.coverageEffect,
-                    });
-                    return [{ ...component, ...coverageEffectRepair }];
-                  }
                   const completeSourceBlockIds =
                     completeComponentSourceBlockIds(unit, component);
                   if (completeSourceBlockIds) {
@@ -840,6 +825,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       action: "DROP_REDUNDANT_APPLICABILITY_EFFECT",
                     });
                     return [];
+                  }
+                  const coverageEffectRepair = explicitCoverageEffectRepair(
+                    unit,
+                    component
+                  );
+                  if (coverageEffectRepair) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
+                      fromCoverageEffect: component.coverageEffect || null,
+                      toCoverageEffect: coverageEffectRepair.coverageEffect,
+                    });
+                    return [{ ...component, ...coverageEffectRepair }];
                   }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
