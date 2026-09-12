@@ -4210,3 +4210,34 @@ OOXML-Konvertierung erzeugt werden.
 
 **Beweist nicht:** eine reale Revieweridentität, Qualifikation oder
 Fachentscheidung. Der tatsächliche Reviewstand bleibt 0/631.
+
+## 71. Automatisches A-Integritätsgate ersetzt den falschen Legacy-/Krypto-Blocker
+
+Der reale V35-A-Freeze wurde ohne Änderung seiner Inhalte aus dem aktuellen
+1+9-Input erneut aufgebaut und geprüft. Das neue Gate verlangt keine feste
+Zeilen- oder Komponentenzahl. Es akzeptierte 1.005 Quellblöcke, 380 geplante
+Units, 59 vollständige Batches, 349 terminale Antworten, 357 dynamische
+Anforderungen und 1.054 Komponenten; offene Units, offene Blöcke und die
+operative Risikoprüfung standen jeweils auf null.
+
+Der erste Realaufruf stoppte an einer echten Verifier-Lücke: Der Basisplan
+und der deterministisch daraus abgeleitete Klassifikations-Evidence-Plan
+tragen absichtlich unterschiedliche Payloads bei gleicher Source-Identität.
+Die Responsevalidierung hatte den falschen Kontext erhalten. Nach Trennung
+beider Kontexte bestand derselbe unveränderte Freeze mit Readiness-SHA-256
+`f2bd24e788b5cf8aad280b7abca6e178dbb27f4414fc158d2054abe0c35fc124`.
+
+Am Commit `e67900f240e704b51f39828e178e6bda894ee11c` bestanden im isolierten
+Mac-Studio-Worktree `/private/tmp/lf-auto-gate-e679-vcozsT` Node- und
+Shellsyntax, Prettier, Produkt-ESLint, 15/15 fokussierte Tests und 190/190
+Server-Suites mit 2.693/2.693 Tests.
+
+**Beweist:** Der private B-Shadow kann aus der automatisch verifizierten,
+dynamischen A-Wahrheit gestartet werden; feste 283/631-Zahlen, menschliche
+Reviewer und Ed25519-Schlüssel sind dafür nicht notwendig.
+
+**Beweist nicht:** Dass alle dynamisch extrahierten Fachkomponenten richtig
+atomisiert sind, dass B vollständig gefunden wurde, dass die sichtbare
+Binärentscheidung fachlich kalibriert ist oder dass Produkt-Routing,
+Kunden-XLSX beziehungsweise Deployment freigegeben wären. Diese Aussagen
+erfordern den vollständigen B-Lauf und dessen nachgelagerte Qualitätsprüfung.

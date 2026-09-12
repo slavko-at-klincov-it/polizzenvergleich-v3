@@ -1076,3 +1076,26 @@ Produkt-Routing, Laufmessung und Kundendeployment bleiben gesperrt, bis
 A-Block-Abdeckung, 283/631-Crosswalk, Mutationsmatrix, B-Semantik,
 Wiederholbarkeit, symmetrische Nichtregression sowie vollständige
 Mac-Studio-Gates bestanden sind.
+
+## 21. Korrektur vom 12. September 2026: kein Legacy- oder Kryptogate vor dem internen B-Shadow
+
+Die 283 bekannten Anforderungen und 631 Legacy-Komponenten sind nicht die
+Definition des Produkts. Sie bleiben eine Regression gegen das bekannte
+Referenzdokument. Ebenso sind SHA-256-Dateifingerabdrücke technische
+Integritätsmittel; Ed25519-Schlüssel und externe Reviewer sind kein
+Bestandteil der fachlichen A-Ableitung.
+
+Der interne B-Shadow darf starten, sobald der aktuelle A-Lauf automatisch
+belegt, dass alle extrahierten A-Blöcke genau einmal terminal verarbeitet
+wurden, keine Units oder Blöcke offen sind, gespeicherte Pläne und Antworten
+zusammenpassen und die generische operative Risikoprüfung keinen still als
+nichtoperativ verworfenen Fachinhalt meldet. Seitenzahl, Dokumentzahl,
+Kapitelstruktur, Reihenfolge sowie Requirement- und Komponentenzahl bleiben
+dynamisch.
+
+Der echte V35-Freeze bestand diesen Vertrag mit 1 A + 9 B, 357 dynamischen
+Anforderungen und 1.054 Komponenten. Der vollständige B-Shadow wurde danach
+über alle neun B-Dokumente gestartet. Bis zu seiner Auswertung bleiben
+Produkt-Routing, Kunden-XLSX und Deployment getrennt gesperrt; der frühere
+Hinweis, der interne Shadow müsse auf 631 menschliche Doppelreviews oder einen
+Ed25519-Public-Key warten, ist überholt.

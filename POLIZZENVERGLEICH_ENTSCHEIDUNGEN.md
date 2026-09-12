@@ -1120,3 +1120,38 @@ extrahierte Zeilen unmittelbar zu Fachzeilen, gab ihnen eine einzelne
 regex-basierte Rolle und suchte B im Wesentlichen über den exakten A-Wortlaut.
 Diese Schichtenvermischung darf im V2-Vertrag weder direkt noch über einen
 LLM-generierten freien Vollinventarprompt zurückkehren.
+
+## ADR-032: Der interne B-Shadow startet aus automatischer A-Integrität, nicht aus Legacy-Autorisierung
+
+**Status:** AKZEPTIERT UND TECHNISCH ABGENOMMEN; B-SHADOW LÄUFT
+
+ADR-031 bleibt das verbindliche Produktziel. Die spätere Kopplung des
+internen B-Shadow an 631 menschliche Doppelreviews, Ed25519-Signaturen und
+einen externen Public Key war eine zu enge Betriebsannahme und wird für
+diesen Scope aufgehoben.
+
+Verbindliche Entscheidung:
+
+1. Das aktuelle Dokumentpaket A allein bestimmt dynamisch Kategorien,
+   Kapitel, Reihenfolge, Anforderungen, Einzelkomponenten und Ergebniszeilen.
+2. Das Startgate rekonstruiert den A-Source-Plan aus den aktuellen
+   Dokumentartefakten und validiert lückenlose terminale Blockabdeckung,
+   Batch-/Responsebindung, Manifestkonsistenz und operative Fehlklassifikation.
+3. Weder 31 Seiten noch ein einzelnes A-Dokument noch 283 Anforderungen oder
+   631 Legacy-Komponenten sind Laufvoraussetzungen.
+4. Der 283/631-Crosswalk bleibt ein wertvoller, aber optionaler
+   Regressionsvergleich gegen das bekannte LF-Dokument. Er darf ein neues,
+   umformuliertes, verschobenes, erweitertes oder mehrteiliges A nicht
+   definieren oder den internen B-Shadow blockieren.
+5. SHA-256 bleibt ein technischer Dateifingerabdruck zur Replay- und
+   Manipulationserkennung. Ed25519, Public Key, Revieweridentität und externe
+   Autorisierung sind für den internen, privaten B-Shadow nicht erforderlich.
+6. Dieser Gatewechsel erlaubt weder Produkt-Routing noch Kundenergebnis,
+   XLSX oder Deployment. Diese Schritte benötigen weiterhin die getrennten
+   fachlichen und betrieblichen Abnahmen des Produktvertrags.
+
+Der reale V35-Freeze bestand dieses automatische Gate mit 1 A-, 9
+B-Dokumenten, 1.005/1.005 terminal besessenen Quellblöcken, 357 dynamischen
+Anforderungen, 1.054 Komponenten und null `UNRESOLVED`. Commit
+`e67900f240e704b51f39828e178e6bda894ee11c` bestand 190/190 Server-Suites mit
+2.693/2.693 Tests auf dem Mac Studio.
