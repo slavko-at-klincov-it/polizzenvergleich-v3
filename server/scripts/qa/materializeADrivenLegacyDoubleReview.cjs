@@ -8,14 +8,21 @@ const {
   CURRENT_V12_REVIEW_PROFILE,
   createClassificationEvidence,
   createCrosswalkDraft,
+  createDynamicRemainderDraft,
+  createDynamicRemainderReviewerTemplate,
   createReviewBasis,
   createReviewerRegistry,
   createReviewerTemplate,
   createRunProvenance,
   reconcileApprovedCrosswalk,
+  reconcileDynamicRemainderReview,
   sealReviewerArtifact,
+  sealDynamicRemainderReviewerArtifact,
   validateClassificationChain,
   validateCrosswalkDraft,
+  validateDynamicRemainderDraft,
+  validateDynamicRemainderReviewerArtifact,
+  validateApprovedCrosswalk,
   validateReviewBasis,
   validateReviewerArtifact,
   validateReviewerRegistry,
@@ -26,6 +33,9 @@ const BASIS_FILE = "review-basis.private.json";
 const DRAFT_FILE = "crosswalk-draft.private.json";
 const REGISTRY_FILE = "reviewer-registry.private.json";
 const APPROVED_CROSSWALK_FILE = "approved-crosswalk.private.json";
+const DYNAMIC_REMAINDER_DRAFT_FILE = "dynamic-remainder-draft.private.json";
+const DYNAMIC_REMAINDER_RECONCILIATION_FILE =
+  "dynamic-remainder-reconciliation.private.json";
 
 function fail(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
@@ -614,6 +624,189 @@ function materializeApprovedCrosswalk({
   return approved;
 }
 
+function readApprovedCampaign({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewAPath,
+  reviewBPath,
+  approvedCrosswalkPath,
+}) {
+  if (!reviewAPath || !reviewBPath || !approvedCrosswalkPath)
+    fail("LF_A_DYNAMIC_REMAINDER_APPROVED_CAMPAIGN_ARGUMENT_REQUIRED");
+  const campaign = readRegisteredCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const reviewA = readRegular(reviewAPath).value;
+  const reviewB = readRegular(reviewBPath).value;
+  const approvedCrosswalk = readRegular(approvedCrosswalkPath).value;
+  validateApprovedCrosswalk({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    reviewA,
+    reviewB,
+    approvedCrosswalk,
+  });
+  return { ...campaign, reviewA, reviewB, approvedCrosswalk };
+}
+
+function materializeDynamicRemainderDraft({
+  basisRoot,
+  draftRoot,
+  registryRoot,
+  authorityPublicKeyFingerprintSha256,
+  reviewAPath,
+  reviewBPath,
+  approvedCrosswalkPath,
+  target,
+}) {
+  if (!target) fail("LF_A_DYNAMIC_REMAINDER_DRAFT_ARGUMENT_REQUIRED");
+  const campaign = readApprovedCampaign({
+    basisRoot,
+    draftRoot,
+    registryRoot,
+    authorityPublicKeyFingerprintSha256,
+    reviewAPath,
+    reviewBPath,
+    approvedCrosswalkPath,
+  });
+  const remainderDraft = createDynamicRemainderDraft({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, DYNAMIC_REMAINDER_DRAFT_FILE);
+  writeJsonPrivate(file, remainderDraft);
+  validateDynamicRemainderDraft({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256,
+    remainderDraft: readRegular(file).value,
+  });
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return remainderDraft;
+}
+
+function readDynamicRemainderCampaign({
+  remainderDraftRoot,
+  ...approvedCampaignArgs
+}) {
+  if (!remainderDraftRoot)
+    fail("LF_A_DYNAMIC_REMAINDER_CAMPAIGN_ARGUMENT_REQUIRED");
+  const campaign = readApprovedCampaign(approvedCampaignArgs);
+  const remainderDraft = readRegular(
+    path.join(remainderDraftRoot, DYNAMIC_REMAINDER_DRAFT_FILE)
+  ).value;
+  validateDynamicRemainderDraft({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      approvedCampaignArgs.authorityPublicKeyFingerprintSha256,
+    remainderDraft,
+  });
+  return { ...campaign, remainderDraft };
+}
+
+function materializeDynamicRemainderReviewerTemplate({
+  reviewerSlot,
+  target,
+  ...campaignArgs
+}) {
+  if (!reviewerSlot || !target)
+    fail("LF_A_DYNAMIC_REMAINDER_TEMPLATE_ARGUMENT_REQUIRED");
+  const campaign = readDynamicRemainderCampaign(campaignArgs);
+  const input = createDynamicRemainderReviewerTemplate({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    reviewerSlot,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(
+    temp,
+    `dynamic-remainder-review-input-${reviewerSlot}.private.json`
+  );
+  writeJsonPrivate(file, input);
+  if (stableJson(readRegular(file).value) !== stableJson(input))
+    fail("LF_A_DYNAMIC_REMAINDER_TEMPLATE_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return input;
+}
+
+function materializeDynamicRemainderReviewerArtifact({
+  reviewInputPath,
+  reviewerPrivateKeyPath,
+  target,
+  ...campaignArgs
+}) {
+  if (!reviewInputPath || !reviewerPrivateKeyPath || !target)
+    fail("LF_A_DYNAMIC_REMAINDER_SEAL_ARGUMENT_REQUIRED");
+  const campaign = readDynamicRemainderCampaign(campaignArgs);
+  const input = readRegular(reviewInputPath).value;
+  const review = sealDynamicRemainderReviewerArtifact({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    input,
+    privateKeyPem: readRawRegular(reviewerPrivateKeyPath).toString("utf8"),
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(
+    temp,
+    `dynamic-remainder-review-${review.reviewerSlot}.private.json`
+  );
+  writeJsonPrivate(file, review);
+  validateDynamicRemainderReviewerArtifact({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    review: readRegular(file).value,
+  });
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return review;
+}
+
+function materializeDynamicRemainderReconciliation({
+  remainderReviewAPath,
+  remainderReviewBPath,
+  target,
+  ...campaignArgs
+}) {
+  if (!remainderReviewAPath || !remainderReviewBPath || !target)
+    fail("LF_A_DYNAMIC_REMAINDER_RECONCILE_ARGUMENT_REQUIRED");
+  const campaign = readDynamicRemainderCampaign(campaignArgs);
+  const remainderReviewA = readRegular(remainderReviewAPath).value;
+  const remainderReviewB = readRegular(remainderReviewBPath).value;
+  const reconciliation = reconcileDynamicRemainderReview({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    remainderReviewA,
+    remainderReviewB,
+  });
+  const temp = makeTempTarget(target);
+  const file = path.join(temp, DYNAMIC_REMAINDER_RECONCILIATION_FILE);
+  writeJsonPrivate(file, reconciliation);
+  const reopened = readRegular(file).value;
+  const regenerated = reconcileDynamicRemainderReview({
+    ...campaign,
+    authorityPublicKeyFingerprintSha256:
+      campaignArgs.authorityPublicKeyFingerprintSha256,
+    remainderReviewA,
+    remainderReviewB,
+  });
+  if (stableJson(reopened) !== stableJson(regenerated))
+    fail("LF_A_DYNAMIC_REMAINDER_RECONCILIATION_COPY_INVALID");
+  lockTree(temp);
+  fs.renameSync(temp, target);
+  return reconciliation;
+}
+
 function main(argv = process.argv.slice(2)) {
   const { command, values } = parseArgs(argv);
   if (command === "freeze") {
@@ -699,6 +892,61 @@ function main(argv = process.argv.slice(2)) {
     process.stdout.write(`${approved.approvedCrosswalkSha256}\n`);
     return;
   }
+  const approvedCampaignValues = {
+    basisRoot: values["basis-root"],
+    draftRoot: values["draft-root"],
+    registryRoot: values["registry-root"],
+    authorityPublicKeyFingerprintSha256:
+      values["authority-public-key-fingerprint"],
+    reviewAPath: values["review-a"],
+    reviewBPath: values["review-b"],
+    approvedCrosswalkPath: values["approved-crosswalk"],
+  };
+  if (command === "reverse-draft") {
+    const remainderDraft = materializeDynamicRemainderDraft({
+      ...approvedCampaignValues,
+      target: values.target,
+    });
+    process.stdout.write(
+      `${remainderDraft.remainderDraftSha256} ${remainderDraft.summary.remainderComponents}\n`
+    );
+    return;
+  }
+  const reverseCampaignValues = {
+    ...approvedCampaignValues,
+    remainderDraftRoot: values["remainder-draft-root"],
+  };
+  if (command === "reverse-template") {
+    const input = materializeDynamicRemainderReviewerTemplate({
+      ...reverseCampaignValues,
+      reviewerSlot: values.slot,
+      target: values.target,
+    });
+    process.stdout.write(`${input.reviewerSlot} ${input.reviewerId}\n`);
+    return;
+  }
+  if (command === "reverse-seal") {
+    const review = materializeDynamicRemainderReviewerArtifact({
+      ...reverseCampaignValues,
+      reviewInputPath: values["review-input"],
+      reviewerPrivateKeyPath: values["reviewer-private-key"],
+      target: values.target,
+    });
+    process.stdout.write(`${review.reviewSha256}\n`);
+    return;
+  }
+  if (command === "reverse-reconcile") {
+    const reconciliation = materializeDynamicRemainderReconciliation({
+      ...reverseCampaignValues,
+      remainderReviewAPath: values["remainder-review-a"],
+      remainderReviewBPath: values["remainder-review-b"],
+      target: values.target,
+    });
+    process.stdout.write(
+      `${reconciliation.reconciliationSha256} ${reconciliation.status}\n`
+    );
+    return;
+  }
   fail("LF_A_DOUBLE_REVIEW_COMMAND_INVALID", command);
 }
 
@@ -707,11 +955,17 @@ if (require.main === module) main();
 module.exports = {
   BASIS_FILE,
   DRAFT_FILE,
+  DYNAMIC_REMAINDER_DRAFT_FILE,
+  DYNAMIC_REMAINDER_RECONCILIATION_FILE,
   REGISTRY_FILE,
   assertRegularSingleLink,
   copyRegularVerified,
   main,
   materializeApprovedCrosswalk,
+  materializeDynamicRemainderDraft,
+  materializeDynamicRemainderReconciliation,
+  materializeDynamicRemainderReviewerArtifact,
+  materializeDynamicRemainderReviewerTemplate,
   materializeDraft,
   materializeFreeze,
   materializeRegistry,

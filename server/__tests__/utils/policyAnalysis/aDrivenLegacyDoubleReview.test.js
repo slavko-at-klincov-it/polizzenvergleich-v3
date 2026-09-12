@@ -47,6 +47,10 @@ const {
   assertRegularSingleLink,
   copyRegularVerified,
   materializeApprovedCrosswalk,
+  materializeDynamicRemainderDraft,
+  materializeDynamicRemainderReconciliation,
+  materializeDynamicRemainderReviewerArtifact,
+  materializeDynamicRemainderReviewerTemplate,
   materializeRegistry,
   materializeReviewerArtifact,
   materializeReviewerTemplate,
@@ -989,6 +993,17 @@ describe("write-once freeze primitives", () => {
       fs.existsSync(path.join(registryRoot, "authority-private.pem"))
     ).toBe(false);
 
+    const reviewerPrivateKeyPaths = ["A", "B"].map((slot, index) => {
+      const privateKeyPath = path.join(root, `reviewer-${slot}-private.pem`);
+      fs.writeFileSync(
+        privateKeyPath,
+        reviewers[index].privateKey.export({
+          type: "pkcs8",
+          format: "pem",
+        })
+      );
+      return privateKeyPath;
+    });
     const reviewRoots = ["A", "B"].map((slot, index) => {
       const templateRoot = path.join(root, `template-${slot}`);
       const template = materializeReviewerTemplate({
@@ -1015,15 +1030,7 @@ describe("write-once freeze primitives", () => {
         rationale: "Independent source and semantic review.",
       }));
       const inputPath = path.join(root, `submission-${slot}.json`);
-      const privateKeyPath = path.join(root, `reviewer-${slot}-private.pem`);
       fs.writeFileSync(inputPath, JSON.stringify(template));
-      fs.writeFileSync(
-        privateKeyPath,
-        reviewers[index].privateKey.export({
-          type: "pkcs8",
-          format: "pem",
-        })
-      );
       const reviewRoot = path.join(root, `review-${slot}`);
       materializeReviewerArtifact({
         basisRoot,
@@ -1032,7 +1039,7 @@ describe("write-once freeze primitives", () => {
         authorityPublicKeyFingerprintSha256:
           registry.authorityPublicKeyFingerprintSha256,
         reviewInputPath: inputPath,
-        reviewerPrivateKeyPath: privateKeyPath,
+        reviewerPrivateKeyPath: reviewerPrivateKeyPaths[index],
         target: reviewRoot,
       });
       expect(
@@ -1041,6 +1048,7 @@ describe("write-once freeze primitives", () => {
       return reviewRoot;
     });
 
+    const approvedRoot = path.join(root, "approved");
     const approved = materializeApprovedCrosswalk({
       basisRoot,
       draftRoot,
@@ -1049,12 +1057,79 @@ describe("write-once freeze primitives", () => {
         registry.authorityPublicKeyFingerprintSha256,
       reviewAPath: path.join(reviewRoots[0], "review-A.private.json"),
       reviewBPath: path.join(reviewRoots[1], "review-B.private.json"),
-      target: path.join(root, "approved"),
+      target: approvedRoot,
     });
     expect(approved.summary).toMatchObject({
       records: 631,
       semanticCrosswalkApproved: true,
       bRoutingAllowed: false,
+    });
+    const approvedCampaignArgs = {
+      basisRoot,
+      draftRoot,
+      registryRoot,
+      authorityPublicKeyFingerprintSha256:
+        registry.authorityPublicKeyFingerprintSha256,
+      reviewAPath: path.join(reviewRoots[0], "review-A.private.json"),
+      reviewBPath: path.join(reviewRoots[1], "review-B.private.json"),
+      approvedCrosswalkPath: path.join(
+        approvedRoot,
+        "approved-crosswalk.private.json"
+      ),
+    };
+    const remainderDraftRoot = path.join(root, "remainder-draft");
+    const remainderDraft = materializeDynamicRemainderDraft({
+      ...approvedCampaignArgs,
+      target: remainderDraftRoot,
+    });
+    const remainderReviewRoots = ["A", "B"].map((slot, index) => {
+      const templateRoot = path.join(root, `remainder-template-${slot}`);
+      const template = materializeDynamicRemainderReviewerTemplate({
+        ...approvedCampaignArgs,
+        remainderDraftRoot,
+        reviewerSlot: slot,
+        target: templateRoot,
+      });
+      template.independenceAttestation.reviewPerformedIndependently = true;
+      template.decisions = remainderDraft.records.map(({ recordId }) => ({
+        recordId,
+        disposition: "VALID_DYNAMIC_ADDITION",
+        relatedLegacyRecordIds: [],
+        relatedDynamicComponentIds: [],
+        rationale: "Independent reverse semantic and source review.",
+      }));
+      const inputPath = path.join(root, `remainder-submission-${slot}.json`);
+      fs.writeFileSync(inputPath, JSON.stringify(template));
+      const reviewRoot = path.join(root, `remainder-review-${slot}`);
+      materializeDynamicRemainderReviewerArtifact({
+        ...approvedCampaignArgs,
+        remainderDraftRoot,
+        reviewInputPath: inputPath,
+        reviewerPrivateKeyPath: reviewerPrivateKeyPaths[index],
+        target: reviewRoot,
+      });
+      expect(
+        fs.existsSync(path.join(reviewRoot, `reviewer-${slot}-private.pem`))
+      ).toBe(false);
+      return reviewRoot;
+    });
+    const reconciliation = materializeDynamicRemainderReconciliation({
+      ...approvedCampaignArgs,
+      remainderDraftRoot,
+      remainderReviewAPath: path.join(
+        remainderReviewRoots[0],
+        "dynamic-remainder-review-A.private.json"
+      ),
+      remainderReviewBPath: path.join(
+        remainderReviewRoots[1],
+        "dynamic-remainder-review-B.private.json"
+      ),
+      target: path.join(root, "remainder-reconciliation"),
+    });
+    expect(reconciliation.summary).toMatchObject({
+      reverseDynamicAdditionsApproved: true,
+      bPilotAllowed: true,
+      productRoutingAllowed: false,
     });
   });
 });
