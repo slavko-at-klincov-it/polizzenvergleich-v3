@@ -82,7 +82,7 @@ const REQUIREMENT_ROLE_SIGNALS = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_DEFINITION",
     pattern:
-      /\bunter\s+[^.;:]{1,120}?\b(?:versteht\s+man|(?:ist|sind)\s+[^.;:]{0,80}\bzu\s+verstehen)\b[^.;:]*|\bist\s+der\s+versicherungsfall\s+[^.;:]+|\b(?:gilt|gelten)\b[^.;:]{0,220}\bals\s+(?:eingetreten|zugegangen|gegeben)\b[^.;:]*/giu,
+      /\bunter\s+[^.;:]{1,120}?\b(?:versteht\s+man|(?:ist|sind)\s+[^.;:]{0,80}\bzu\s+verstehen)\b[^.;:]*|\bist\s+der\s+versicherungsfall\s+[^.;:]+|\b(?:gilt|gelten)\b[^.;:]{0,220}\bals\s+(?:eingetreten|zugegangen|gegeben)\b[^.;:]*|\b\p{Lu}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,3}\s+(?:ist|sind)\s+(?!\s*(?:mit)?versichert\b|\s*gedeckt\b|\s*ausgeschlossen\b|\s*verpflichtet\b|\s*berechtigt\b)[^.;:]{1,180}\b(?:Gebäude|Anbauten|Sachen|Personen|Unternehmen|Flächen|Anlagen)\b[^.;:]*/giu,
     requiredComponentTypes: Object.freeze(["FACT_ROLE"]),
   }),
   Object.freeze({

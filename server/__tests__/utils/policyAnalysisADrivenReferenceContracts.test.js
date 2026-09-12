@@ -797,6 +797,12 @@ describe("requirement-local semantic evidence completeness", () => {
     },
     {
       source:
+        "Nebengebäude sind privat oder betrieblich genutzte Gebäude und Anbauten, die fest verankert sind.",
+      signalId: "EXPLICIT_DEFINITION",
+      type: "FACT_ROLE",
+    },
+    {
+      source:
         "Beschädigung von Gebäuden und Einfriedungen durch unbekannte Fahrzeuge.",
       signalId: "EXPLICIT_PERIL_OR_CAUSE",
       type: "PERIL_OR_CAUSE",
@@ -867,6 +873,26 @@ describe("requirement-local semantic evidence completeness", () => {
       ).toEqual([]);
     }
   );
+
+  test("does not turn an ordinary coverage statement into a definition", () => {
+    const source = "Gebäude sind versichert.";
+    const result = materializeSharedSignalComponents(
+      evidenceUnit(["coverage", source]),
+      [
+        {
+          ...requirement(
+            ["coverage"],
+            [component("OBJECT", "coverage", { label: source })]
+          ),
+          displayLabel: source,
+        },
+      ]
+    );
+
+    expect(result.requirements[0].components).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: "FACT_ROLE" })])
+    );
+  });
 
   test.each([
     {
