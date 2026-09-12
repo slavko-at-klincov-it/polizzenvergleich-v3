@@ -249,8 +249,9 @@ function quantifiedLiterals(value) {
       /(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?)?/giu
     ),
   ]
-    .map(([literal]) =>
-      comparableSignalText(literal).match(/[0-9lI]+(?:[.,][0-9lI]+)?/iu)?.[0]
+    .map(
+      ([literal]) =>
+        comparableSignalText(literal).match(/[0-9lI]+(?:[.,][0-9lI]+)?/iu)?.[0]
     )
     .filter(Boolean)
     .filter((literal) => /[0-9lI]/iu.test(literal));
@@ -275,8 +276,7 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
     );
     return (
       carriesLiteral &&
-      (component.type === "VALUE_AND_UNIT" ||
-        component.type === "DEDUCTIBLE")
+      (component.type === "VALUE_AND_UNIT" || component.type === "DEDUCTIBLE")
     );
   }
   if (signal.signalId === "EXPLICIT_COST_ROLE")
@@ -315,19 +315,21 @@ function requirementRoleEvidenceDiagnostics(unit, requirements) {
           )
         )
           return [];
-        return [{
-          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
-          unitId: unit.unitId,
-          requirementIndex,
-          signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
-          signalId: signal.signalId,
-          requiredComponentGroups: [signal.requiredComponentTypes],
-          ...(signal.requiredCoverageEffect
-            ? { requiredCoverageEffect: signal.requiredCoverageEffect }
-            : {}),
-          observedComponentTypes,
-          matchedEvidence: [evidence],
-        }];
+        return [
+          {
+            code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+            unitId: unit.unitId,
+            requirementIndex,
+            signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+            signalId: signal.signalId,
+            requiredComponentGroups: [signal.requiredComponentTypes],
+            ...(signal.requiredCoverageEffect
+              ? { requiredCoverageEffect: signal.requiredCoverageEffect }
+              : {}),
+            observedComponentTypes,
+            matchedEvidence: [evidence],
+          },
+        ];
       });
     });
   });

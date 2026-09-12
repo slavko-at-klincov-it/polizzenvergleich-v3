@@ -290,6 +290,35 @@ function validResponse(unit) {
       requirements: [],
     };
   const firstBlock = unit.source.blocks[0];
+  const deductibleEvidence = unit.source.blocks.find(({ exactText }) =>
+    /\b(?:selbstbehalt|eigenbehalt)\b/iu.test(exactText)
+  );
+  if (deductibleEvidence) {
+    const deductibleLabel = deductibleEvidence.exactText.match(
+      /\b(?:selbstbehalt|eigenbehalt)\b/iu
+    )[0];
+    const rawValue = deductibleEvidence.exactText.match(
+      /(?:EUR|Euro|€)\s*([0-9lI]+(?:[.,][0-9lI]+)?)/iu
+    )?.[1];
+    return {
+      unitId: unit.unitId,
+      primaryClass: "DEDUCTIBLE",
+      semanticClasses: ["DEDUCTIBLE"],
+      requirements: [
+        {
+          displayLabel: firstBlock.exactText,
+          components: [
+            {
+              type: "DEDUCTIBLE",
+              label: deductibleLabel,
+              sourceBlockIds: [deductibleEvidence.blockId],
+              ...(rawValue ? { rawValue } : {}),
+            },
+          ],
+        },
+      ],
+    };
+  }
   const coverageEvidence = unit.source.blocks
     .map((block) => ({
       block,
@@ -383,9 +412,7 @@ describe("requirement-local semantic evidence completeness", () => {
     {
       text: "Selbstbehalt EUR 350 je Schadenfall",
       signalId: "EXPLICIT_DEDUCTIBLE",
-      components: [
-        component("VALUE_AND_UNIT", "b1", { rawValue: "350" }),
-      ],
+      components: [component("VALUE_AND_UNIT", "b1", { rawValue: "350" })],
     },
     {
       text: "exklusive deren Inhalt",
@@ -404,35 +431,32 @@ describe("requirement-local semantic evidence completeness", () => {
     {
       text: "5 % der Gebäudeversicherungssumme",
       signalId: "EXPLICIT_LIMIT_BASIS",
-      components: [
-        component("VALUE_AND_UNIT", "b1", { rawValue: "5" }),
-      ],
+      components: [component("VALUE_AND_UNIT", "b1", { rawValue: "5" })],
     },
     {
       text: "Mehrkosten infolge behördlicher Auflagen",
       signalId: "EXPLICIT_COST_ROLE",
       components: [component("OBJECT", "b1")],
     },
-  ])("rejects missing $signalId evidence in its own requirement", ({
-    text,
-    signalId,
-    components,
-  }) => {
-    const diagnostics = requirementRoleEvidenceDiagnostics(
-      evidenceUnit(["b1", text]),
-      [requirement(["b1"], components)]
-    );
+  ])(
+    "rejects missing $signalId evidence in its own requirement",
+    ({ text, signalId, components }) => {
+      const diagnostics = requirementRoleEvidenceDiagnostics(
+        evidenceUnit(["b1", text]),
+        [requirement(["b1"], components)]
+      );
 
-    expect(diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
-          requirementIndex: 0,
-          signalId,
-        }),
-      ])
-    );
-  });
+      expect(diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+            requirementIndex: 0,
+            signalId,
+          }),
+        ])
+      );
+    }
+  );
 
   test("does not borrow a compatible role from a sibling requirement", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
