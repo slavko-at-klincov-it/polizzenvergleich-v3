@@ -805,6 +805,69 @@ describe("requirement-local semantic evidence completeness", () => {
   });
 
   test.each([
+    {
+      blocks: [
+        [
+          "benefit-value-lead",
+          "Der Versicherungsnehmer kann nach einem versicherten Schadensfall bis voraussichtlich EUR 8.000,-",
+        ],
+        [
+          "benefit-value-tail",
+          "unverzüglich mit den Aufräumungs- und Reparaturarbeiten beginnen.",
+        ],
+      ],
+      expectedLabel:
+        "Der Versicherungsnehmer kann nach einem versicherten Schadensfall bis voraussichtlich EUR 8.000,-\nunverzüglich mit den Aufräumungs- und Reparaturarbeiten beginnen",
+    },
+    {
+      blocks: [
+        [
+          "benefit-hyphen-lead",
+          "Im Falle des Verkaufs verzichtet der Versicherer auf die etwaige Dauerrabatt-",
+        ],
+        [
+          "benefit-hyphen-tail",
+          "Rückforderung, soweit die Voraussetzungen erfüllt sind.",
+        ],
+      ],
+      expectedLabel:
+        "verzichtet der Versicherer auf die etwaige Dauerrabatt-\nRückforderung, soweit die Voraussetzungen erfüllt sind",
+    },
+  ])(
+    "prefers the complete benefit across numeric punctuation and block continuation",
+    ({ blocks, expectedLabel }) => {
+      const sourceBlockIds = blocks.map(([blockId]) => blockId);
+      const source = blocks.map(([, exactText]) => exactText).join("\n");
+      const unit = evidenceUnit(...blocks);
+      const result = materializeSharedSignalComponents(unit, [
+        {
+          ...requirement(
+            sourceBlockIds,
+            blocks.map(([blockId, label]) =>
+              component("OBJECT", blockId, { label })
+            )
+          ),
+          displayLabel: source,
+        },
+      ]);
+
+      const benefitRoles = result.requirements[0].components.filter(
+        ({ type }) => type === "FACT_ROLE"
+      );
+      expect(benefitRoles).toEqual([
+        {
+          type: "FACT_ROLE",
+          label: expectedLabel,
+          sourceBlockIds,
+        },
+      ]);
+      expect(
+        requirementRoleEvidenceDiagnostics(unit, result.requirements)
+      ).toEqual([]);
+    }
+  );
+
+  test.each([
     "Der Versicherer ist berechtigt, den Vertrag zu kündigen.",
     "Der Versicherungsnehmer kann die Prämie nicht zurückfordern.",
     "Der Versicherungsnehmer muss die Gefahr unverzüglich anzeigen.",

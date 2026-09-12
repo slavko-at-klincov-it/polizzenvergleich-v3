@@ -16,8 +16,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V2";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V3 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V3";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V4";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -131,7 +133,7 @@ const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
     requiredComponentTypes: Object.freeze(["LIMIT_BASIS"]),
   }),
 ]);
-const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL = Object.freeze({
+const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V2 = Object.freeze({
   signalId: "EXPLICIT_CONTRACTUAL_BENEFIT",
   pattern:
     /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?![^.;:]{0,220}\bnicht\b))[^.;:]{1,220}|verzichtet\s+der\s+versicherer\s+auf\s+[^.;:]{1,220}|der\s+versicherer\s+[^.;:]{0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:die\s+)?verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bleibt\s+(?:gleichwohl\s+)?bestehen))\b/giu,
@@ -140,18 +142,31 @@ const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL = Object.freeze({
 });
 const REQUIREMENT_ROLE_SIGNALS_V2 = Object.freeze([
   ...REQUIREMENT_ROLE_SIGNALS_V1,
-  EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL,
+  EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V2,
+]);
+const EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V4 = Object.freeze({
+  ...EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V2,
+  pattern:
+    /\b(?:(?:der|die)\s+versicherungsnehmer\p{L}*\s+(?:(?:ist|sind)\s+berechtigt|kann(?!(?:[^.;:]|\.(?=[0-9])){0,220}\bnicht\b))(?:[^.;:]|\.(?=[0-9])){1,220}|verzichtet\s+der\s+versicherer\s+auf\s+(?:[^.;:]|\.(?=[0-9])){1,220}|der\s+versicherer\s+(?:[^.;:]|\.(?=[0-9])){0,180}\bzur\s+verfügung\s+stellt|unbeabsichtigte\p{L}*\s+[^.;:]{0,160}\bbeeinträchtig(?:t|en)\s+die\s+(?:ersatz|leistungs)pflicht\s+nicht|schränkt\s+dies\s+nicht\s+die\s+leistung\s+des\s+versicherers\s+ein|(?:die\s+)?verpflichtung\s+des\s+versicherers\s+zur\s+leistung\s+(?:besteht|bleibt\s+(?:gleichwohl\s+)?bestehen))\b/giu,
+  preferCombinedEvidence: true,
+});
+const REQUIREMENT_ROLE_SIGNALS_V4 = Object.freeze([
+  ...REQUIREMENT_ROLE_SIGNALS_V1,
+  EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V4,
 ]);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
 function requirementRoleSignals(semanticSignalContractId) {
-  return semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V1
-    ? REQUIREMENT_ROLE_SIGNALS_V1
-    : REQUIREMENT_ROLE_SIGNALS_V2;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V1)
+    return REQUIREMENT_ROLE_SIGNALS_V1;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V4;
+  return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
 function sha256(value) {
@@ -414,7 +429,7 @@ function requirementSignalEvidence(unit, requirement, signal) {
   const selectedBlocks = evidenceBlocks(unit).filter(({ blockId }) =>
     selectedBlockIds.has(blockId)
   );
-  const evidence = selectedBlocks.flatMap((block) =>
+  const localEvidence = selectedBlocks.flatMap((block) =>
     matchesForPattern(signal.pattern, block.exactText).map((match) => ({
       blockId: block.blockId,
       blockIds: [block.blockId],
@@ -422,6 +437,7 @@ function requirementSignalEvidence(unit, requirement, signal) {
       match,
     }))
   );
+  const combinedEvidence = [];
   if (selectedBlocks.length > 1) {
     const combinedText = selectedBlocks
       .map(({ exactText }) => exactText)
@@ -434,7 +450,7 @@ function requirementSignalEvidence(unit, requirement, signal) {
         selectedBlocks
       );
       if (!blockIds?.length) continue;
-      evidence.push({
+      combinedEvidence.push({
         blockId: blockIds[0],
         blockIds,
         exactText: combinedText,
@@ -442,6 +458,9 @@ function requirementSignalEvidence(unit, requirement, signal) {
       });
     }
   }
+  const evidence = signal.preferCombinedEvidence
+    ? [...combinedEvidence, ...localEvidence]
+    : [...localEvidence, ...combinedEvidence];
   return [
     ...new Map(
       evidence
@@ -615,7 +634,10 @@ function materializeSharedSignalComponents(
         ].includes(signal.signalId);
         const exactEvidenceBinding =
           evidenceBackedSignal &&
-          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+          [
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          ].includes(semanticSignalContractId);
         const localText = exactEvidenceBinding
           ? evidence.match
           : localComponent?.label ||
@@ -657,7 +679,10 @@ function materializeSharedSignalComponents(
                 : localMatches[0];
         const sourceBlockIds =
           signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
-          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID
+          [
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          ].includes(semanticSignalContractId)
             ? [...matchedEvidenceBlockIds(evidence)]
             : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
               (localComponent ? [...localComponent.sourceBlockIds] : null);
@@ -1692,6 +1717,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
