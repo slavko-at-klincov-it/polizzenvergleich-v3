@@ -744,6 +744,62 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes a contractual benefit across its exact source-block range", () => {
+    const blocks = [
+      [
+        "benefit-lead",
+        "Ergänzend zu § 11a VersVG gilt vereinbart, dass der Versicherer auf Verlangen des",
+      ],
+      [
+        "benefit-body",
+        "Versicherungsnehmers eine Abschrift eines auf Grund eines Schadensfalles erstellten Gutachtens zur",
+      ],
+      ["benefit-tail", "Verfügung stellt."],
+    ];
+    const sourceBlockIds = blocks.map(([blockId]) => blockId);
+    const source = blocks.map(([, exactText]) => exactText).join("\n");
+    const unit = evidenceUnit(...blocks);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(sourceBlockIds, [
+          ...blocks.map(([blockId, label]) =>
+            component("OBJECT", blockId, { label })
+          ),
+          {
+            type: "CONDITION",
+            label: source,
+            sourceBlockIds,
+          },
+          {
+            type: "FACT_ROLE",
+            label: "auf Verlangen des\nVersicherungsnehmers",
+            sourceBlockIds: sourceBlockIds.slice(0, 2),
+          },
+        ]),
+        displayLabel: source,
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "FACT_ROLE",
+      label:
+        "der Versicherer auf Verlangen des\nVersicherungsnehmers eine Abschrift eines auf Grund eines Schadensfalles erstellten Gutachtens zur\nVerfügung stellt",
+      sourceBlockIds,
+    });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+          signalId: "EXPLICIT_CONTRACTUAL_BENEFIT",
+          sourceBlockIds,
+        }),
+      ])
+    );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test.each([
     "Der Versicherer ist berechtigt, den Vertrag zu kündigen.",
     "Der Versicherungsnehmer kann die Prämie nicht zurückfordern.",

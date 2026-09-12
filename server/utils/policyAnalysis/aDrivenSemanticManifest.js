@@ -649,8 +649,10 @@ function materializeSharedSignalComponents(
                 ? localText
                 : localMatches[0];
         const sourceBlockIds =
-          minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
-          (localComponent ? [...localComponent.sourceBlockIds] : null);
+          signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT"
+            ? [...matchedEvidenceBlockIds(evidence)]
+            : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+              (localComponent ? [...localComponent.sourceBlockIds] : null);
         const allowedSourceBlockIds = new Set([
           ...requirement.sourceBlockIds,
           ...(unit.governingContext?.blockIds || []),
