@@ -2054,7 +2054,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const first =
       "Zusätzlich im Rahmen der Feuer- / Sturm- und Leitungswasserversicherung sind mitversichert bis zu";
     const second =
-      'jeweils l0% der Gebäudeversicherungssumme auf ,,Erstes Risiko“:';
+      "jeweils l0% der Gebäudeversicherungssumme auf ,,Erstes Risiko“:";
     const source = [first, second].join("\n");
     const unit = {
       unitId: "quantified-coverage-branch-governor",
@@ -2114,7 +2114,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
     expect(components).toContainEqual({
       type: "LIMIT_BASIS",
-      label: 'der Gebäudeversicherungssumme auf ,,Erstes Risiko“',
+      label: "der Gebäudeversicherungssumme auf ,,Erstes Risiko“",
       sourceBlockIds: ["governor-two"],
     });
     expect(normalized.componentRepairs).toContainEqual({
