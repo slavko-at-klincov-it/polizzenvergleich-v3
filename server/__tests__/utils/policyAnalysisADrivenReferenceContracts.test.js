@@ -934,9 +934,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
     expect(
-      normalized.responses[0].requirements[0].components.map(({ type }) =>
-        type
-      )
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
     ).toEqual(["FACT_ROLE", "OBJECT"]);
     expect(normalized.componentRepairs).toEqual([
       expect.objectContaining({
