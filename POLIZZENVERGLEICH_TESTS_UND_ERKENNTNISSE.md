@@ -4512,3 +4512,45 @@ aktuellen Quellenreview getrennt und testbar.
 **Beweist nicht:** Dass Qwen allein Gold erzeugt, dass die übrigen 253 Zeilen
 fachlich entschieden sind oder dass unbekannte Versichererdokumente die
 Generalisierungsgates bestehen.
+
+## 80. Ein schneller blinder Modellpass ist ohne Kalibrierqualität kein Goldpfad
+
+Qwen wurde nach 98/283 gültigen Zeilen an ST-20 regelkonform fail-closed
+gestoppt und aus dem kritischen Goldpfad genommen. Seine gültigen Antworten
+und Retry-Artefakte bleiben unverändert und resumierbar als späterer
+Benchmark. Der Abbruchgrund war dreimal fehlende source-bound Evidenz für
+einen behaupteten Unterschied, nicht ein Ressourcenkonflikt mit Codex.
+
+Für den unabhängigen Codex-Pass wurde ein eigener A-only-Paketvertrag gebaut.
+Er entfernt nicht nur sichtbare Qwen-, Claude-, System- und Goldlabels,
+sondern auch Claudes Einfluss auf Kandidatenranking, globale Rückbindung und
+Ausschnittwahl. Der Vertrag umfasst weiterhin 283 A-Zeilen, 631 Komponenten,
+914 Checks, neun B-Dokumente und exakte Quellenbereiche. Auf dem Mac Studio
+bestanden 8/8 fokussierte Tests.
+
+`gpt-5.6-sol` mit Reasoning `high` entschied die ersten zehn Zeilen in 158
+Sekunden, also 15,8 Sekunden pro Zeile. Alle zehn JSON-Antworten und alle 24
+Komponentenfindings waren technisch gültig. Gegenüber Qwens ersten zehn
+Zeilen mit 43,607 Sekunden pro Zeile ist Sol damit um Faktor 2,76 schneller;
+linear wären 283 Zeilen in rund 74,5 Minuten erreichbar.
+
+Nach Aufhebung der Blindheit schlug jedoch die fachliche Kalibrierung fehl:
+Von den vier Zeilen mit bereits eingefrorenem source-bound Gold stimmte kein
+binärer Fundstatus. Sol verfehlte die vorhandenen Gegenstücke PR-01, PR-02 und
+PR-08 und erzeugte für PR-09 einen falschen Treffer. Die richtigen Quellen
+für PR-01 und PR-02 waren im Blindinput vorhanden; der Fehler kann daher nicht
+allein dem Retrieval zugeschrieben werden. Der Sammelinput der ersten zehn
+Zeilen umfasste rund 297.000 JSON-Zeichen, 131 eindeutige Kandidaten und rund
+89.000 Zeichen Quellzitate. Zehn Zeilen in einem Modellkontext sind für die
+Goldadjudikation damit nicht freigegeben.
+
+**Beweist:** Ein blindes, labelunabhängiges A-/Quellenpaket ist technisch
+herstellbar und Sol ist schnell genug für einen wirtschaftlichen Goldpass.
+Technische Schema-Gültigkeit ist erneut klar von fachlicher Richtigkeit
+getrennt.
+
+**Beweist nicht:** Dass der aktuelle Sol-Sammelpass Goldqualität erreicht,
+dass 283 Zeilen in dieser Form fortgesetzt werden dürfen oder dass die
+bekannten 1+9-Dokumente Generalisierung nachweisen. Nächster Gate ist ein
+frischer, zeilenisolierter Blindtest gegen die bekannten Kalibrierzeilen;
+Streit- und Hochrisikofälle gehen danach an Astra mit `xhigh`.
