@@ -637,19 +637,17 @@ function explicitCoverageEffectRepair(unit, component) {
   );
   if (blocks.length !== selectedIds.size) return null;
   const sourceText = blocks.map(({ exactText }) => exactText).join("\n");
-  const negative =
-    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu.exec(
-      sourceText
-    );
+  const negativePattern =
+    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
+  const positivePattern =
+    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu;
+  const negative = negativePattern.exec(sourceText);
   const positiveEvidenceText = negative
     ? `${sourceText.slice(0, negative.index)}${" ".repeat(
         negative[0].length
       )}${sourceText.slice(negative.index + negative[0].length)}`
     : sourceText;
-  const positive =
-    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu.exec(
-      positiveEvidenceText
-    );
+  const positive = positivePattern.exec(positiveEvidenceText);
   if ((negative && positive) || (!negative && !positive)) return null;
   const evidence = negative || positive;
   const coverageEffect = negative ? "EXCLUDED" : "INCLUDED";
@@ -657,13 +655,14 @@ function explicitCoverageEffectRepair(unit, component) {
   const normalizedLabel = String(component.label || "")
     .replace(/\s+/gu, " ")
     .trim();
-  const normalizedEvidence = evidence[0].replace(/\s+/gu, " ").trim();
+  const labelCarriesEffect = (negative
+    ? negativePattern
+    : positivePattern
+  ).test(component.label);
   if (
     component.coverageEffect === coverageEffect &&
     normalizedSource.includes(normalizedLabel) &&
-    normalizedLabel
-      .toLocaleLowerCase("de-AT")
-      .includes(normalizedEvidence.toLocaleLowerCase("de-AT"))
+    labelCarriesEffect
   )
     return null;
   return { label: evidence[0], coverageEffect };
