@@ -36,11 +36,11 @@ function canonicalJson(value) {
 function sourceIdentity(candidate) {
   return {
     candidateId: candidate.candidateId,
+    documentFingerprint: candidate.documentFingerprint,
     documentName: candidate.documentName,
     documentRole: candidate.documentRole,
     documentStatus: candidate.documentStatus,
     physicalPageNumber: candidate.physicalPageNumber,
-    exactQuote: candidate.exactQuote,
     oracleExactQuoteSha256: candidate.oracleExactQuoteSha256,
   };
 }
@@ -54,17 +54,26 @@ function rowCandidates(row) {
   const byId = new Map();
   for (const candidate of candidates) {
     if (!candidate?.candidateId) continue;
-    const existing = byId.get(candidate.candidateId);
+    const existing = byId.get(candidate.candidateId) || [];
     if (
-      existing &&
-      canonicalJson(sourceIdentity(existing)) !==
+      existing.length > 0 &&
+      canonicalJson(sourceIdentity(existing[0])) !==
         canonicalJson(sourceIdentity(candidate))
     )
       throw adjudicationError(
         "LF_SOURCE_ADJUDICATION_CANDIDATE_CONFLICT",
         candidate.candidateId
       );
-    byId.set(candidate.candidateId, candidate);
+    if (
+      !existing.some(
+        (item) =>
+          item.documentStart === candidate.documentStart &&
+          item.documentEnd === candidate.documentEnd &&
+          item.exactQuoteSha256 === candidate.exactQuoteSha256
+      )
+    )
+      existing.push(candidate);
+    byId.set(candidate.candidateId, existing);
   }
   return byId;
 }
@@ -85,11 +94,15 @@ function qwenUsedCandidateIds(response) {
 function evidence(candidate) {
   return {
     candidateId: candidate.candidateId,
+    documentFingerprint: candidate.documentFingerprint,
     documentName: candidate.documentName,
     documentRole: candidate.documentRole,
     documentStatus: candidate.documentStatus,
     physicalPageNumber: candidate.physicalPageNumber,
+    documentStart: candidate.documentStart,
+    documentEnd: candidate.documentEnd,
     exactQuote: candidate.exactQuote,
+    exactQuoteSha256: candidate.exactQuoteSha256,
     oracleExactQuoteSha256: candidate.oracleExactQuoteSha256,
     evidenceOrigin: candidate.evidenceOrigin || "ROW_RETRIEVAL",
   };
@@ -186,8 +199,8 @@ function buildLfKnownFixtureSourceAdjudication({
         expertReviewRequired: decision.expertReviewRequired,
         absenceCertified: false,
         rationale: decision.rationale.trim(),
-        selectedSources: decision.selectedCandidateIds.map((candidateId) =>
-          evidence(candidates.get(candidateId))
+        selectedSources: decision.selectedCandidateIds.flatMap((candidateId) =>
+          candidates.get(candidateId).map(evidence)
         ),
       },
     };

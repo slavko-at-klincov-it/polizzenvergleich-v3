@@ -9,11 +9,15 @@ const digest = (character) => character.repeat(64);
 function fixture() {
   const candidate = {
     candidateId: "candidate-1",
+    documentFingerprint: digest("e"),
     documentName: "B.pdf",
     documentRole: "TERMS",
     documentStatus: "FRAMEWORK_TERMS",
     physicalPageNumber: 2,
+    documentStart: 10,
+    documentEnd: 30,
     exactQuote: "Exakter Gegenbeleg",
+    exactQuoteSha256: digest("f"),
     oracleExactQuoteSha256: digest("a"),
   };
   const packet = {
@@ -31,7 +35,14 @@ function fixture() {
         claudeClaim: { foundStatus: "Ja" },
         systemClaim: { customerSearchStatus: "Nicht gefunden" },
         globalReferenceARebind: [
-          { ...candidate, evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND" },
+          {
+            ...candidate,
+            documentStart: 31,
+            documentEnd: 50,
+            exactQuote: "Zweiter Ausschnitt derselben Originalrange",
+            exactQuoteSha256: digest("g"),
+            evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND",
+          },
         ],
         components: [
           { candidates: [{ ...candidate, evidenceOrigin: "ROW_RETRIEVAL" }] },
@@ -118,10 +129,12 @@ describe("LF known fixture source adjudication", () => {
       qwenDisagreement: 1,
       absenceCertifiedRows: 0,
     });
-    expect(artifact.rows[0].codexDecision.selectedSources[0]).toMatchObject({
-      candidateId: "candidate-1",
-      exactQuote: "Exakter Gegenbeleg",
-    });
+    expect(artifact.rows[0].codexDecision.selectedSources).toHaveLength(2);
+    expect(
+      artifact.rows[0].codexDecision.selectedSources.map(
+        ({ candidateId }) => candidateId
+      )
+    ).toEqual(["candidate-1", "candidate-1"]);
     expect(artifact.rows[1].codexDecision.status).toBe(
       "NEGATIVE_FULL_CORPUS_SEARCH_PENDING"
     );
