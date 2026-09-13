@@ -57,6 +57,7 @@ describe("LF known fixture source review runner", () => {
     expect(system).toContain(
       "gemeinschaftlich genutzt ist nicht gewerblich genutzt"
     );
+    expect(system).toContain("globalReferenceARebind");
     expect(system).toContain("__row_context__-Check ist zwingend");
     expect(system).toContain("unmodeledDifferences immer als Array");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");

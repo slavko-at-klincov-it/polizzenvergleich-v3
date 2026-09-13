@@ -94,10 +94,12 @@ describe("LF known fixture source review", () => {
     expect(packet.summary.actualComponents).toBe(30);
     expect(packet.summary.semanticChecks).toBe(60);
     expect(packet.summary.globalClaudeRebindCandidates).toBeGreaterThan(0);
+    expect(packet.summary.globalReferenceARebindCandidates).toBeGreaterThan(0);
     expect(packet.summary.searchedDocumentsPerRow).toBe(9);
     expect(packet.summary.absenceCertifiedRows).toBe(0);
     expect(packet.rows[0].components[0].contextOnly).toBe(true);
     expect(packet.rows[0].globalClaudeRebind.length).toBeGreaterThan(0);
+    expect(packet.rows[0].globalReferenceARebind.length).toBeGreaterThan(0);
     expect(packet.rows[0].components[1].candidates).toHaveLength(1);
   });
 

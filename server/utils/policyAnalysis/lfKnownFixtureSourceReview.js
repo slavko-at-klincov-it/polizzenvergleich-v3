@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V5";
+const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
   "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
 const REVIEW_OUTCOMES = new Set([
@@ -389,6 +389,89 @@ function globalClaudeRebindCandidates({
     });
 }
 
+function globalReferenceARebindCandidates({
+  candidateIndex,
+  existingCandidates,
+  row,
+  semanticChecks,
+  documentsByUuid,
+  maximumQuoteCharacters,
+  maximumPerCheck = 2,
+}) {
+  const existingRanges = new Set(
+    existingCandidates.map(
+      ({ documentFingerprint, physicalPageNumber, oracleExactQuoteSha256 }) =>
+        `${documentFingerprint}:${physicalPageNumber}:${oracleExactQuoteSha256}`
+    )
+  );
+  const selectedByRange = new Map();
+  for (const component of semanticChecks) {
+    const focusedQuery = tokens([row.point, component.label].join(" "));
+    const referenceQuery = tokens(row.system?.aContent);
+    if (!focusedQuery.size && !referenceQuery.size) continue;
+    const seenRanges = new Set();
+    const scored = [];
+    for (const { candidate, sourceTokens } of candidateIndex) {
+      const rangeKey = `${candidate.range.documentFingerprint}:${candidate.range.physicalPageNumber}:${candidate.range.exactQuoteSha256}`;
+      if (
+        existingRanges.has(rangeKey) ||
+        selectedByRange.has(rangeKey) ||
+        seenRanges.has(rangeKey)
+      )
+        continue;
+      const focusedOverlap = overlapRatio(focusedQuery, sourceTokens);
+      const referenceOverlap = overlapRatio(referenceQuery, sourceTokens);
+      if (focusedOverlap <= 0 && referenceOverlap <= 0) continue;
+      seenRanges.add(rangeKey);
+      scored.push({ candidate, focusedOverlap, referenceOverlap, rangeKey });
+    }
+    const selected = [];
+    const selectedDocuments = new Set();
+    const ranked = scored.sort(
+      (left, right) =>
+        right.focusedOverlap - left.focusedOverlap ||
+        right.referenceOverlap - left.referenceOverlap ||
+        left.candidate.range.exactQuote.length -
+          right.candidate.range.exactQuote.length ||
+        left.candidate.rank - right.candidate.rank ||
+        left.candidate.candidateId.localeCompare(right.candidate.candidateId)
+    );
+    for (const item of ranked) {
+      if (selected.length >= maximumPerCheck) break;
+      if (selectedDocuments.has(item.candidate.range.documentUuid)) continue;
+      selected.push(item);
+      selectedDocuments.add(item.candidate.range.documentUuid);
+    }
+    for (const item of ranked) {
+      if (selected.length >= maximumPerCheck) break;
+      if (selected.includes(item)) continue;
+      selected.push(item);
+    }
+    for (const { candidate, rangeKey } of selected) {
+      const document = documentsByUuid.get(candidate.range.documentUuid);
+      if (!document)
+        throw reviewError(
+          "LF_SOURCE_REVIEW_CANDIDATE_DOCUMENT_MISSING",
+          candidate.candidateId
+        );
+      selectedByRange.set(rangeKey, {
+        ...compactCandidate(
+          candidate,
+          document,
+          component,
+          row,
+          maximumQuoteCharacters
+        ),
+        evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND",
+        targetComponentIds: [component.componentId],
+        originalTargetRequirementId: candidate.requirementId,
+        originalTargetComponentId: candidate.componentId,
+      });
+    }
+  }
+  return [...selectedByRange.values()];
+}
+
 function buildLfKnownFixtureSourceReviewPacket({
   goldCandidate,
   oracle,
@@ -511,6 +594,14 @@ function buildLfKnownFixtureSourceReviewPacket({
         documentsByUuid,
         maximumQuoteCharacters,
       });
+      const globalReferenceARebind = globalReferenceARebindCandidates({
+        candidateIndex: globalCandidateIndex,
+        existingCandidates: [...selectedCandidates, ...globalClaudeRebind],
+        row,
+        semanticChecks,
+        documentsByUuid,
+        maximumQuoteCharacters,
+      });
       return {
         reviewIndex,
         analysisRowId: row.analysisRowId,
@@ -559,6 +650,7 @@ function buildLfKnownFixtureSourceReviewPacket({
             "NO_COUNTERPART_ESTABLISHED means no counterpart in the reviewed exact candidates, not certified global absence.",
         },
         globalClaudeRebind,
+        globalReferenceARebind,
         actualComponents: components.length,
         components: semanticChecks,
       };
@@ -601,11 +693,16 @@ function buildLfKnownFixtureSourceReviewPacket({
         (sum, row) =>
           sum +
           row.retrieval.selectedCandidateCount +
-          row.globalClaudeRebind.length,
+          row.globalClaudeRebind.length +
+          row.globalReferenceARebind.length,
         0
       ),
       globalClaudeRebindCandidates: rows.reduce(
         (sum, row) => sum + row.globalClaudeRebind.length,
+        0
+      ),
+      globalReferenceARebindCandidates: rows.reduce(
+        (sum, row) => sum + row.globalReferenceARebind.length,
         0
       ),
       searchedDocumentsPerRow: bDocuments.length,
@@ -638,6 +735,9 @@ function validateSourceReviewResponse(row, response) {
   );
   const rowCandidateIds = new Set([
     ...(row.globalClaudeRebind || []).map(({ candidateId }) => candidateId),
+    ...(row.globalReferenceARebind || []).map(
+      ({ candidateId }) => candidateId
+    ),
     ...row.components.flatMap(({ candidates }) =>
       candidates.map(({ candidateId }) => candidateId)
     ),
