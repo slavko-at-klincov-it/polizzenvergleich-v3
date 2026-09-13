@@ -547,6 +547,45 @@ function requirementRoleEvidenceDiagnostics(
   });
 }
 
+function governingConditionEvidence(unit, evidence) {
+  const governingBlockIds = new Set(unit?.governingContext?.blockIds || []);
+  if (
+    !matchedEvidenceBlockIds(evidence).some((blockId) =>
+      governingBlockIds.has(blockId)
+    )
+  )
+    return null;
+  const blocks = evidenceBlocks(unit);
+  const startIndex = blocks.findIndex(
+    ({ blockId }) =>
+      governingBlockIds.has(blockId) &&
+      matchedEvidenceBlockIds(evidence).includes(blockId)
+  );
+  if (startIndex < 0) return null;
+  const marker = String(evidence.match || "");
+  const markerIndex = String(blocks[startIndex].exactText || "")
+    .toLocaleLowerCase("de-AT")
+    .indexOf(marker.toLocaleLowerCase("de-AT"));
+  if (markerIndex < 0) return null;
+  const tail = [
+    String(blocks[startIndex].exactText || "").slice(markerIndex),
+    ...blocks.slice(startIndex + 1).map(({ exactText }) => exactText),
+  ].join("\n");
+  const boundary = /\s+[–—]\s+|[,;.]/u.exec(tail);
+  if (!boundary || boundary.index < marker.length) return null;
+  const label = tail.slice(0, boundary.index).trim();
+  if (label.length > 400) return null;
+  const sourceBlockIds = minimalSourceRange(unit, label, [
+    ...governingBlockIds,
+  ]);
+  if (
+    !sourceBlockIds?.length ||
+    sourceBlockIds.some((blockId) => !governingBlockIds.has(blockId))
+  )
+    return null;
+  return { label, sourceBlockIds };
+}
+
 function materializeSharedSignalComponents(
   unit,
   requirements,
@@ -676,15 +715,23 @@ function materializeSharedSignalComponents(
         const authoritativeQuantifiedEvidence =
           signal.signalId === "EXPLICIT_QUANTIFIED_VALUE" &&
           semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+        const inheritedConditionEvidence =
+          signal.signalId === "EXPLICIT_CONDITION"
+            ? governingConditionEvidence(unit, evidence)
+            : null;
         const authoritativeExactEvidence =
-          authoritativeBenefitEvidence || authoritativeQuantifiedEvidence;
+          authoritativeBenefitEvidence ||
+          authoritativeQuantifiedEvidence ||
+          Boolean(inheritedConditionEvidence);
         const localText = exactEvidenceBinding
           ? evidence.match
-          : localComponent?.label ||
+          : inheritedConditionEvidence?.label ||
+            localComponent?.label ||
             (evidenceBackedSignal ? evidence.match : requirement.displayLabel);
-        const localMatches = evidenceBackedSignal
-          ? [evidence.match]
-          : matchesForPattern(signal.pattern, localText);
+        const localMatches =
+          evidenceBackedSignal || inheritedConditionEvidence
+            ? [evidence.match]
+            : matchesForPattern(signal.pattern, localText);
         if (
           (localCandidates.length > 1 && !authoritativeExactEvidence) ||
           localMatches.length === 0 ||
@@ -726,10 +773,12 @@ function materializeSharedSignalComponents(
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
               A_SEMANTIC_SIGNAL_CONTRACT_ID,
             ].includes(semanticSignalContractId));
-        const sourceBlockIds = authoritativeSourceEvidence
-          ? [...matchedEvidenceBlockIds(evidence)]
-          : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
-            (localComponent ? [...localComponent.sourceBlockIds] : null);
+        const sourceBlockIds = inheritedConditionEvidence
+          ? inheritedConditionEvidence.sourceBlockIds
+          : authoritativeSourceEvidence
+            ? [...matchedEvidenceBlockIds(evidence)]
+            : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+              (localComponent ? [...localComponent.sourceBlockIds] : null);
         const allowedSourceBlockIds = new Set([
           ...requirement.sourceBlockIds,
           ...(unit.governingContext?.blockIds || []),

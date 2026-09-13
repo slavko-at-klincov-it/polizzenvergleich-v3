@@ -708,6 +708,81 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("materializes every bounded parent condition into each subordinate item", () => {
+    const unit = {
+      unitId: "subordinate-objects",
+      source: {
+        blockIds: ["item-one", "item-two"],
+        blocks: [
+          { blockId: "item-one", exactText: "elektrische Einrichtungen" },
+          { blockId: "item-two", exactText: "Pumpen und Motoren" },
+        ],
+        combinedText: "elektrische Einrichtungen\nPumpen und Motoren",
+      },
+      governingContext: {
+        blockIds: [
+          "ownership-lead",
+          "ownership-tail",
+          "limit-condition-lead",
+          "limit-condition-tail",
+        ],
+        blocks: [
+          {
+            blockId: "ownership-lead",
+            exactText: "soweit sie im Eigentum des Versicherungsnehmers /",
+          },
+          {
+            blockId: "ownership-tail",
+            exactText: "Gebäudeeigentümers stehen – bis 1%",
+          },
+          {
+            blockId: "limit-condition-lead",
+            exactText: "sofern kein zusätzlicher Betrag",
+          },
+          {
+            blockId: "limit-condition-tail",
+            exactText: "laut Polizze vereinbart wurde, innerhalb von Gebäuden",
+          },
+        ],
+      },
+    };
+    const result = materializeSharedSignalComponents(unit, [
+      requirement(
+        ["item-one"],
+        [
+          component("OBJECT", "item-one", {
+            label: "elektrische Einrichtungen",
+          }),
+        ]
+      ),
+      requirement(
+        ["item-two"],
+        [component("OBJECT", "item-two", { label: "Pumpen und Motoren" })]
+      ),
+    ]);
+
+    for (const requirementResult of result.requirements)
+      expect(
+        requirementResult.components
+          .filter(({ type }) => type === "CONDITION")
+          .map(({ label, sourceBlockIds }) => ({ label, sourceBlockIds }))
+      ).toEqual([
+        {
+          label:
+            "soweit sie im Eigentum des Versicherungsnehmers /\nGebäudeeigentümers stehen",
+          sourceBlockIds: ["ownership-lead", "ownership-tail"],
+        },
+        {
+          label:
+            "sofern kein zusätzlicher Betrag\nlaut Polizze vereinbart wurde",
+          sourceBlockIds: ["limit-condition-lead", "limit-condition-tail"],
+        },
+      ]);
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test("materializes an outer exclusion governor without treating its local exception as another exclusion", () => {
     const unit = {
       ...evidenceUnit(
@@ -4824,7 +4899,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V38");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V39");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
