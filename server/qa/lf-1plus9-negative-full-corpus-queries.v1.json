@@ -1,0 +1,195 @@
+{
+  "contractId": "LF_1PLUS9_FULL_CORPUS_QUERY_V1",
+  "rows": [
+    {
+      "requirementId": "VS-25",
+      "routes": [
+        {
+          "routeId": "outbuilding-commercial-use",
+          "maximumNormalizedSpan": 2500,
+          "groups": [
+            { "alternatives": ["Nebengebäude", "Nebengebäuden"] },
+            { "alternatives": ["betrieblich", "gewerblich", "Gewerbenutzung"] }
+          ]
+        },
+        {
+          "routeId": "outbuilding-half-area",
+          "maximumNormalizedSpan": 2500,
+          "groups": [
+            { "alternatives": ["Nebengebäude", "Nebengebäuden"] },
+            { "alternatives": ["Hälfte", "50 Prozent", "50%"] }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "SP-03",
+      "routes": [
+        {
+          "routeId": "temporary-storage",
+          "maximumNormalizedSpan": 4000,
+          "groups": [
+            {
+              "alternatives": [
+                "Zwischenlagerung",
+                "Einlagerung",
+                "Auslagerung",
+                "Lagerkosten",
+                "Lagerung"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "LW-G-06",
+      "routes": [
+        {
+          "routeId": "irrigation",
+          "maximumNormalizedSpan": 4000,
+          "groups": [
+            {
+              "alternatives": [
+                "Beregnung",
+                "Beregnungsanlage",
+                "Bewässerung",
+                "Bewässerungsanlage",
+                "Grünflächenbewässerung",
+                "Sprinkleranlage"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "GL-26",
+      "routes": [
+        {
+          "routeId": "glass-and-fire-perils",
+          "maximumNormalizedSpan": 4000,
+          "groups": [
+            { "alternatives": ["Glas", "Glasbruch", "Verglasung", "Glasschaden"] },
+            {
+              "alternatives": [
+                "Brand",
+                "Blitzschlag",
+                "Explosion",
+                "Meteorit",
+                "Satellit",
+                "Luftfahrzeug",
+                "Raumfahrzeug"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "OK-09",
+      "routes": [
+        {
+          "routeId": "eco-termination",
+          "maximumNormalizedSpan": 6000,
+          "groups": [
+            { "alternatives": ["Ökoschutz", "Öko Schutz", "Entsorgungsschutz", "Entsorgung"] },
+            { "alternatives": ["Kündigung", "gekündigt", "kündigen"] }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "VS-31",
+      "routes": [
+        {
+          "routeId": "overhead-lines",
+          "maximumNormalizedSpan": 4000,
+          "groups": [
+            {
+              "alternatives": [
+                "Freileitung",
+                "Oberleitung",
+                "technische Bauten",
+                "Grabungsarbeiten"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-02",
+      "routes": [
+        {
+          "routeId": "eligible-policyholder-group",
+          "maximumNormalizedSpan": 6000,
+          "groups": [
+            {
+              "alternatives": [
+                "Familienwohnbau",
+                "Tochtergesellschaft",
+                "Versicherungsnehmerkreis",
+                "Wohnbauträger",
+                "Bau- und Siedlungsgesellschaft",
+                "LF Immo Versicherungsmakler"
+              ]
+            }
+          ]
+        },
+        {
+          "routeId": "policyholder-weg",
+          "maximumNormalizedSpan": 6000,
+          "groups": [
+            { "alternatives": ["Wohnungseigentümergemeinschaft", "WEG"] },
+            { "alternatives": ["Versicherungsnehmer", "Versicherungsnehmerin", "Firma"] }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "PR-09",
+      "routes": [
+        {
+          "routeId": "sum-non-addition",
+          "maximumNormalizedSpan": 6000,
+          "groups": [
+            {
+              "alternatives": [
+                "Summenaddition",
+                "nicht addiert",
+                "keine Addition",
+                "nur einmal pro Schadenfall",
+                "bessere Deckung",
+                "Günstigkeitsklausel"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requirementId": "VS-08",
+      "routes": [
+        {
+          "routeId": "outbuilding-definition",
+          "maximumNormalizedSpan": 6000,
+          "groups": [
+            {
+              "alternatives": [
+                "Nebengebäude",
+                "Schuppen",
+                "Gartenhaus",
+                "Gartenhäuser",
+                "Gewächshaus",
+                "Gewächshäuser",
+                "Treibhaus",
+                "Treib- und Gewächshäuser"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
