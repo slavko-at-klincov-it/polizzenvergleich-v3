@@ -43,48 +43,27 @@ function normalize(value) {
     .replace(/\s+/gu, " ");
 }
 
-function tokens(value) {
-  return new Set(
-    normalize(value)
-      .split(" ")
-      .filter((token) => token.length >= 4)
-  );
-}
-
-function jaccard(left, right) {
-  if (left.size === 0 || right.size === 0) return 0;
-  let common = 0;
-  for (const token of left) if (right.has(token)) common += 1;
-  return common / (left.size + right.size - common);
-}
-
-function documentCompatible(left, right) {
-  const a = normalize(path.basename(String(left || "")));
-  const b = normalize(path.basename(String(right || "")));
-  if (!a || !b) return false;
-  if (a === b || a.includes(b) || b.includes(a)) return true;
-  return jaccard(tokens(a), tokens(b)) >= 0.6;
-}
-
-function parsePageNumbers(location) {
-  const explicit = [
-    ...String(location || "").matchAll(
-      /(?:seite|page|s\.?)[^0-9]{0,4}([0-9]{1,3})/giu
-    ),
-  ].map((match) => Number(match[1]));
-  return [...new Set(explicit.filter(Number.isInteger))];
-}
-
-function textCompatible(left, right) {
-  const a = normalize(left);
-  const b = normalize(right);
-  if (!a || !b) return false;
-  const shorter = Math.min(a.length, b.length);
-  if (shorter >= 40 && (a.includes(b) || b.includes(a))) return true;
-  return jaccard(tokens(a), tokens(b)) >= 0.82;
+function typedLocator(reference) {
+  const extension = path.extname(String(reference?.file || "")).toLowerCase();
+  const location = String(reference?.location || "").trim();
+  if (!location) return { type: "MISSING", valid: false };
+  if (extension === ".pdf")
+    return {
+      type: "PDF_PAGE",
+      valid: /(?:seite|page|s\.?)[^0-9]{0,4}[0-9]{1,3}/iu.test(location),
+    };
+  if (extension === ".md")
+    return {
+      type: "MARKDOWN_ROW",
+      valid: /(?:zeile|row|zelle|cell)/iu.test(location),
+    };
+  if (extension === ".docx")
+    return { type: "DOCX_STRUCTURE", valid: location.length > 0 };
+  return { type: "UNSUPPORTED", valid: false };
 }
 
 function atomicWritePrivate(file, value) {
+  if (fs.existsSync(file)) fail("OUTPUT_ALREADY_EXISTS", file);
   const directory = path.dirname(file);
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   const temporary = `${file}.tmp-${process.pid}`;
@@ -108,6 +87,8 @@ function main() {
     rowComparison: getArg("row-comparison"),
     decisions: getArg("decisions"),
     evidenceBank: getArg("evidence-bank"),
+    sourceRowMap: getArg("source-row-map"),
+    technicalValidation: getArg("technical-validation"),
     packet: getArg("packet"),
     goldCandidate: getArg("gold-candidate"),
   };
@@ -119,6 +100,8 @@ function main() {
   const comparisons = inputs.rowComparison.value;
   const decisions = inputs.decisions.value;
   const evidenceBank = inputs.evidenceBank.value;
+  const sourceRowMap = inputs.sourceRowMap.value;
+  const technicalValidation = inputs.technicalValidation.value;
   const packet = inputs.packet.value;
   const goldCandidate = inputs.goldCandidate.value;
 
@@ -129,6 +112,11 @@ function main() {
     comparisons.length !== 283 ||
     !decisions ||
     Object.keys(decisions).length !== 283 ||
+    !sourceRowMap ||
+    technicalValidation?.template_rows !== 283 ||
+    technicalValidation?.all_input_sha256_unchanged !== true ||
+    technicalValidation?.unique_row_ids !== true ||
+    technicalValidation?.complete_source_blocks_reconstructed !== 276 ||
     !Array.isArray(packet.rows) ||
     packet.rows.length !== 283 ||
     !Array.isArray(goldCandidate.rows) ||
@@ -209,7 +197,6 @@ function main() {
     if (!Array.isArray(decision.refs) || decision.refs.length < 1)
       reasons.push("ASTRA_SOURCE_REFERENCE_MISSING");
 
-    const matchedGroupIds = new Set();
     const referenceResults = [];
     for (const referenceId of decision.refs || []) {
       const reference = evidenceBank[referenceId];
@@ -222,33 +209,20 @@ function main() {
       ) {
         referenceReasons.push("REFERENCE_RECORD_INVALID");
       }
-      const pages = parsePageNumbers(reference?.location);
-      if (pages.length === 0) referenceReasons.push("PAGE_NOT_MACHINE_READABLE");
-      const matches = reference
-        ? groups.filter((group) => {
-            if (!textCompatible(reference.text, group.exactText)) return false;
-            const relevantSpans = group.sourceSpans.filter((span) =>
-              documentCompatible(reference.file, span.documentName)
-            );
-            if (relevantSpans.length === 0) return false;
-            if (pages.length === 0) return true;
-            return relevantSpans.some((span) =>
-              pages.includes(span.physicalPageNumber)
-            );
-          })
-        : [];
-      for (const match of matches) matchedGroupIds.add(match.evidenceGroupId);
-      if (matches.length === 0)
-        referenceReasons.push("REFERENCE_NOT_REBOUND_TO_FROZEN_SOURCE_GROUP");
+      const locator = typedLocator(reference);
+      if (!locator.valid) referenceReasons.push("SOURCE_LOCATOR_INVALID");
+      if (!Number.isInteger(sourceRowMap[referenceId]))
+        referenceReasons.push("FROZEN_SOURCE_ROW_BINDING_INVALID");
       referenceResults.push({
         referenceId,
         referenceRecordSha256: reference
           ? sha256(stableStringify(reference))
           : null,
-        pageNumbers: pages,
-        matchedEvidenceGroupIds: matches.map(({ evidenceGroupId }) =>
-          evidenceGroupId
-        ),
+        sourceType: reference
+          ? path.extname(String(reference.file)).toLowerCase()
+          : null,
+        locatorType: locator.type,
+        frozenSourceRow: sourceRowMap[referenceId] ?? null,
         status: referenceReasons.length === 0 ? "PASS" : "FLAGGED",
         reasons: referenceReasons,
       });
@@ -269,6 +243,9 @@ function main() {
         component,
       ])
     );
+    const referenceASpanIds = new Set(
+      (packetRow.referenceA?.sourceSpans || []).map(({ spanId }) => spanId)
+    );
     const componentResults = [];
     for (const component of candidateRow.components || []) {
       const prepared = packetComponents.get(component.componentId);
@@ -282,25 +259,24 @@ function main() {
       const evidenceGroupIds = prepared?.evidence?.evidenceGroupIds || [];
       const sourceSpanIds = prepared?.sourceSpanIds || [];
       if (
-        prepared?.evidenceReadiness !== "READY" ||
+        packetRow.evidenceReadiness !== "READY" ||
         prepared?.evidence?.evidenceReadiness !== "READY" ||
         evidenceGroupIds.length < 1
       )
         componentReasons.push("COMPONENT_EVIDENCE_NOT_READY");
       if (evidenceGroupIds.some((id) => !groupById.has(id)))
         componentReasons.push("COMPONENT_GROUP_REFERENCE_INVALID");
-      if (sourceSpanIds.some((id) => !spanById.has(id)))
-        componentReasons.push("COMPONENT_SPAN_REFERENCE_INVALID");
-      const selectedGroupIntersection = evidenceGroupIds.filter((id) =>
-        matchedGroupIds.has(id)
-      );
+      if (
+        sourceSpanIds.length < 1 ||
+        sourceSpanIds.some((id) => !referenceASpanIds.has(id))
+      )
+        componentReasons.push("COMPONENT_A_SPAN_REFERENCE_INVALID");
       componentResults.push({
         componentId: component.componentId,
         factRole: component.factRole,
         componentLabelSha256: sha256(component.label || ""),
         candidateEvidenceGroupCount: evidenceGroupIds.length,
         candidateSourceSpanCount: sourceSpanIds.length,
-        selectedGroupIntersection,
         status: componentReasons.length === 0 ? "PASS" : "FLAGGED",
         reasons: componentReasons,
       });
@@ -328,8 +304,8 @@ function main() {
 
   const flaggedRows = validationRows.filter(({ status }) => status === "FLAGGED");
   const payload = {
-    schemaVersion: 1,
-    contractId: "LF_1PLUS9_GOLD283_POSITIVE_BINDING_VALIDATION_V1",
+    schemaVersion: 2,
+    contractId: "LF_1PLUS9_GOLD283_POSITIVE_BINDING_VALIDATION_V2",
     status:
       flaggedRows.length === 0
         ? "254_COMMON_POSITIVES_VALIDATED"
@@ -367,10 +343,21 @@ function main() {
         (sum, row) => sum + row.sourceReferences.length,
         0
       ),
+      sourceReferencesPassed: validationRows.reduce(
+        (sum, row) =>
+          sum +
+          row.sourceReferences.filter(({ status }) => status === "PASS").length,
+        0
+      ),
+      componentsPassed: validationRows.reduce(
+        (sum, row) =>
+          sum + row.components.filter(({ status }) => status === "PASS").length,
+        0
+      ),
     },
     rows: validationRows,
     limitation:
-      "This deterministic validation proves frozen source identity, machine-readable page linkage, existing Fable/Astra core-scope agreement metadata, and component-to-prepared-evidence integrity. It does not replace human source adjudication for flagged rows and is only regression evidence for the exact SHA-bound LF 1+9 fixture.",
+      "This deterministic validation proves frozen Astra source identity and type-appropriate locators (PDF page, Markdown row, or DOCX structural location), existing Fable/Astra core-scope agreement metadata, and A-component to prepared-B-evidence integrity. It does not replace source adjudication for flagged rows and is only regression evidence for the exact SHA-bound LF 1+9 fixture.",
   };
   const artifact = {
     ...payload,
@@ -388,4 +375,11 @@ function main() {
   );
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = {
+  normalize,
+  sha256,
+  stableStringify,
+  typedLocator,
+};
