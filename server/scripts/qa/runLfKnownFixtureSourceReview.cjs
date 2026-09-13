@@ -523,6 +523,7 @@ async function runReviewRow({
         rawResponse,
         validated: false,
       });
+      if (error?.retrySafe === false) break;
       if (rawResponse)
         requestMessages = repairMessages(row, rawResponse, error);
     }

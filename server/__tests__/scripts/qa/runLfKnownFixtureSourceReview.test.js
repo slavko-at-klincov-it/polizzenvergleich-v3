@@ -8,7 +8,11 @@ const {
   repairMessages,
   responseFormat,
   reviewRowForModel,
+  runReviewRow,
 } = require("../../../scripts/qa/runLfKnownFixtureSourceReview.cjs");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 const row = {
   requirementId: "VS-25",
@@ -142,5 +146,55 @@ describe("LF known fixture source review runner", () => {
       "RELATED_ONLY",
       "NOT_ESTABLISHED",
     ]);
+  });
+
+  it("stops fail-closed without retrying when model recovery is unsafe", async () => {
+    const output = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-source-review-unsafe-")
+    );
+    const unsafe = new Error("recovery failed");
+    unsafe.errorClass = "MODEL_SAFE_RECOVERY_FAILED";
+    unsafe.retrySafe = false;
+    unsafe.telemetry = {
+      timedOut: true,
+      timeoutMs: 10,
+      abortTriggered: true,
+      requestSettledAfterAbort: false,
+      recovery: { status: "FAILED", error: "SDK missing" },
+    };
+    const create = jest.fn().mockRejectedValue(unsafe);
+
+    await expect(
+      runReviewRow({
+        client: { chat: { completions: { create } } },
+        recoverModelAfterAbort: jest.fn(),
+        args: {
+          output,
+          model: "qwen/qwen3.6-35b-a3b",
+          modelContext: 42_496,
+          maximumAttempts: 3,
+          requestTimeoutMs: 10,
+          abortSettlementTimeoutMs: 10,
+        },
+        packet: { packetSha256: "packet-sha" },
+        row: { ...row, reviewIndex: 0, relation: "CLAUDE_FULL_SYSTEM_FOUND" },
+      })
+    ).rejects.toThrow(
+      "LF_SOURCE_REVIEW_RETRIES_EXHAUSTED:VS-25:MODEL_SAFE_RECOVERY_FAILED"
+    );
+
+    expect(create).toHaveBeenCalledTimes(1);
+    const attempts = fs.readdirSync(path.join(output, "attempts"));
+    expect(attempts).toHaveLength(1);
+    const attempt = JSON.parse(
+      fs.readFileSync(path.join(output, "attempts", attempts[0]), "utf8")
+    );
+    expect(attempt).toMatchObject({
+      errorClass: "MODEL_SAFE_RECOVERY_FAILED",
+      timedOut: true,
+      abortTriggered: true,
+      validated: false,
+    });
+    expect(fs.existsSync(path.join(output, "rows"))).toBe(false);
   });
 });
