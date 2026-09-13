@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V39";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V40";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -58,6 +58,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V36",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V37",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V38",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V39",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1170,6 +1171,78 @@ function normalizeNonPhysicalCostObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeQualifiedBenefitListHeading(requirements, unit) {
+  const firstBlock = unit?.source?.blocks?.[0];
+  const segments = unit?.logicalSourceSegments || [];
+  if (
+    unit?.unitKind !== "LIST" ||
+    segments.length !== 1 ||
+    firstBlock?.structuralKind !== "LIST_GOVERNOR" ||
+    requirements.length !== 1
+  )
+    return { requirements, repairs: [] };
+  const heading =
+    /^\s*[•-]\s*(?<role>[^:\n()]{3,180}?)\s*(?<scope>\((?:im|in|bei|für|während|nach|vor|unter|ab)\b[^()\n]{1,120}\))\s*:\s*$/iu.exec(
+      String(firstBlock.exactText || "")
+    );
+  if (
+    !heading ||
+    !/^(?:Vorsorge|(?:Mehr|Zusatz|Sonder)?kosten|Entschädigung|Erstattung|Deckung|Leistung|Prämie)\b/iu.test(
+      heading.groups.role.trim()
+    )
+  )
+    return { requirements, repairs: [] };
+  const normalize = (value) =>
+    String(value || "")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const role = heading.groups.role.trim();
+  const scope = heading.groups.scope.trim();
+  const components = requirements[0].components || [];
+  const roleIndex = components.findIndex(
+    (component) =>
+      ["OBJECT", "FACT_ROLE"].includes(component?.type) &&
+      normalize(component.label) === normalize(role)
+  );
+  if (roleIndex < 0) return { requirements, repairs: [] };
+  const normalizedComponents = components.map((component, componentIndex) =>
+    componentIndex === roleIndex
+      ? {
+          ...component,
+          type: "FACT_ROLE",
+          label: role,
+          sourceBlockIds: [firstBlock.blockId],
+        }
+      : component
+  );
+  if (
+    !normalizedComponents.some(
+      (component) =>
+        component?.type === "SCOPE" &&
+        normalize(component.label) === normalize(scope)
+    )
+  )
+    normalizedComponents.push({
+      type: "SCOPE",
+      label: scope,
+      sourceBlockIds: [firstBlock.blockId],
+    });
+  return {
+    requirements: [
+      { ...requirements[0], components: normalizedComponents },
+    ],
+    repairs: [
+      {
+        requirementIndex: 0,
+        componentIndex: roleIndex,
+        action: "NORMALIZE_QUALIFIED_BENEFIT_LIST_HEADING",
+        roleSourceBlockIds: [firstBlock.blockId],
+        scope,
+      },
+    ],
+  };
+}
+
 function normalizeCostPurposeObjectComponents(requirements) {
   const repairs = [];
   const normalizedRequirements = requirements.map(
@@ -2011,16 +2084,16 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       });
     const unit = unitsById.get(response?.unitId);
     const sourceText = String(unit?.source?.combinedText || "");
-    const pureConsumedDamageCauseGovernor =
+    const pureConsumedCoverageGovernor =
       consumedGovernorUnitIds.has(response?.unitId) &&
       unit?.unitKind === "CLAUSE" &&
-      /^(?:Zusätzlich\s+)?(?:versichert\s+sind|sind\s+(?:mit)?versichert)\s+Schäden\s+durch\s*$/iu.test(
+      /^(?:(?:Zusätzlich|Weiters)\s+)?(?:versichert\s+sind|sind\s+(?:mit)?versichert|mitversichert\s+sind)(?:\s+Schäden\s+durch)?\s*:?\s*$/iu.test(
         sourceText
       );
-    if (pureConsumedDamageCauseGovernor) {
+    if (pureConsumedCoverageGovernor) {
       repairs.push({
         unitId: response?.unitId,
-        action: "TERMINALIZE_CONSUMED_DAMAGE_CAUSE_GOVERNOR",
+        action: "TERMINALIZE_CONSUMED_COVERAGE_GOVERNOR",
         consumerUnitIds: units
           .filter((candidate) =>
             candidate?.governingContext?.unitIds?.includes(response?.unitId)
@@ -2238,6 +2311,20 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ),
       };
     }
+    const qualifiedBenefitHeading = normalizeQualifiedBenefitListHeading(
+      requirements,
+      unit
+    );
+    requirements = qualifiedBenefitHeading.requirements;
+    for (const repair of qualifiedBenefitHeading.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (qualifiedBenefitHeading.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "VARIANT"]),
+        ],
+      };
     const costPurposeObjects =
       normalizeCostPurposeObjectComponents(requirements);
     requirements = costPurposeObjects.requirements;

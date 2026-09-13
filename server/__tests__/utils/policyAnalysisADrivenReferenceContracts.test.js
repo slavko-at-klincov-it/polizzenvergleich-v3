@@ -3198,6 +3198,80 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual(response);
   });
 
+  test("terminalizes a consumed pure coverage governor without a damage phrase", () => {
+    const governor = {
+      unitId: "coverage-governor",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["coverage-block"],
+        combinedText: "Zusätzlich versichert sind",
+        blocks: [
+          {
+            blockId: "coverage-block",
+            exactText: "Zusätzlich versichert sind",
+          },
+        ],
+      },
+    };
+    const consumer = {
+      unitId: "cost-item",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["cost-block"],
+        combinedText: "• Mehrkosten für die Abfallbehandlung",
+        blocks: [
+          {
+            blockId: "cost-block",
+            exactText: "• Mehrkosten für die Abfallbehandlung",
+          },
+        ],
+      },
+      governingContext: {
+        unitIds: [governor.unitId],
+        blockIds: ["coverage-block"],
+        combinedText: governor.source.combinedText,
+        blocks: governor.source.blocks,
+      },
+    };
+    const response = {
+      unitId: governor.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: [
+        {
+          displayLabel: governor.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "versichert sind",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["coverage-block"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes(
+      [response],
+      [governor, consumer]
+    );
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: governor.unitId,
+      primaryClass: "DUPLICATE",
+      semanticClasses: ["DUPLICATE"],
+      requirements: [],
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: governor.unitId,
+        action: "TERMINALIZE_CONSUMED_COVERAGE_GOVERNOR",
+        consumerUnitIds: [consumer.unitId],
+      })
+    );
+  });
+
   test("atomizes a named peril definition, explicit extension, and preserved right in one list requirement", () => {
     const source =
       "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
@@ -3532,6 +3606,142 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         {
           displayLabel: label,
           components: [{ type: "OBJECT", label, sourceBlockIds: ["object"] }],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test("binds a repeated qualified benefit list heading to its owning block", () => {
+    const heading = "• Vorsorge für Umsatzsteuer (im Totalschadenfall): ";
+    const body =
+      "Vorläufige Deckung in Höhe von 20 % betreffend die Vorsorge für Umsatzsteuer.";
+    const unit = {
+      unitId: "qualified-benefit-heading",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["heading", "body"],
+        combinedText: `${heading}\n${body}`,
+        blocks: [
+          {
+            blockId: "heading",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: heading,
+          },
+          { blockId: "body", structuralKind: "BODY_LINE", exactText: body },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "benefit-item",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["heading", "body"],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "LIMIT",
+          semanticClasses: ["LIMIT"],
+          requirements: [
+            {
+              displayLabel: heading.trim(),
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Vorsorge für Umsatzsteuer",
+                  sourceBlockIds: ["body"],
+                },
+                {
+                  type: "VALUE_AND_UNIT",
+                  label: "20 %",
+                  rawValue: "20",
+                  unit: "%",
+                  sourceBlockIds: ["body"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "LIMIT",
+      "VARIANT",
+    ]);
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      {
+        type: "FACT_ROLE",
+        label: "Vorsorge für Umsatzsteuer",
+        sourceBlockIds: ["heading"],
+      },
+      {
+        type: "VALUE_AND_UNIT",
+        label: "20 %",
+        rawValue: "20",
+        unit: "%",
+        sourceBlockIds: ["body"],
+      },
+      {
+        type: "SCOPE",
+        label: "(im Totalschadenfall)",
+        sourceBlockIds: ["heading"],
+      },
+    ]);
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "NORMALIZE_QUALIFIED_BENEFIT_LIST_HEADING",
+      })
+    );
+  });
+
+  test("does not reinterpret a qualified physical-object list heading as a benefit", () => {
+    const heading = "• Gebäude (im Eigentum des Versicherungsnehmers): ";
+    const unit = {
+      unitId: "qualified-object-heading",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["heading"],
+        combinedText: heading,
+        blocks: [
+          {
+            blockId: "heading",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: heading,
+          },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "object-item",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["heading"],
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: heading.trim(),
+          components: [
+            {
+              type: "OBJECT",
+              label: "Gebäude",
+              sourceBlockIds: ["heading"],
+            },
+          ],
         },
       ],
     };
@@ -4899,7 +5109,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V39");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V40");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
