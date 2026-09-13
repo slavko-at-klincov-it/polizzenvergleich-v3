@@ -2788,13 +2788,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual([
       {
         type: "COVERAGE_EFFECT",
-        label: "versichert sind",
+        label: "Zusätzlich versichert sind",
         sourceBlockIds: ["governor"],
         coverageEffect: "INCLUDED",
       },
       {
         type: "COVERAGE_EFFECT",
-        label: "versichert sind",
+        label: "Zusätzlich versichert sind",
         sourceBlockIds: ["governor"],
         coverageEffect: "INCLUDED",
       },
@@ -2876,7 +2876,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toBe(true);
   });
 
-  test("materializes an inherited exclusion without replacing an existing effect", () => {
+  test("materializes an inherited exclusion without duplicating an existing effect", () => {
     const unit = {
       unitId: "excluded-list",
       source: {
@@ -2941,7 +2941,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       normalized.responses[0].requirements.map(({ components }) =>
         components.filter(({ type }) => type === "COVERAGE_EFFECT")
       )
-    ).toEqual([[existingEffect], [existingEffect]]);
+    ).toEqual([
+      [{ ...existingEffect, label: "Nicht versichert" }],
+      [{ ...existingEffect, label: "Nicht versichert" }],
+    ]);
   });
 
   test("terminalizes a pure governor only after its evidence is attached to consumers", () => {
@@ -4713,7 +4716,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V36");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V37");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
