@@ -378,7 +378,7 @@ describe("A-driven classification evidence recovery", () => {
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
       recoveredContexts: 2,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
@@ -447,8 +447,60 @@ describe("A-driven classification evidence recovery", () => {
         blockIds: ["governor"],
       });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
       recoveredContexts: 3,
+      refinedListUnits: 0,
+      additionalLogicalSegments: 0,
+    });
+  });
+
+  test("recovers a negative reimbursement governor across adjacent list items", () => {
+    const source = (combinedText, blockId, ordinal) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText, ordinal }],
+      combinedText,
+    });
+    const structurePath = ["Entschädigung"];
+    const plan = {
+      units: [
+        {
+          unitId: "negative-governor",
+          unitKind: "CLAUSE",
+          structurePath,
+          source: source("Nicht ersetzt werden", "governor", 1),
+        },
+        {
+          unitId: "first-exclusion",
+          unitKind: "LIST",
+          structurePath,
+          source: source("• ein persönlicher Liebhaberwert;", "first", 2),
+        },
+        {
+          unitId: "second-exclusion",
+          unitKind: "LIST",
+          structurePath,
+          source: source("• Vorschäden.", "second", 3),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("first-exclusion").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["negative-governor"],
+      blockIds: ["governor"],
+    });
+    expect(byId.get("second-exclusion").governingContext).toMatchObject({
+      relationType: "RECOVERS_CONTINUED_LIST_GOVERNOR",
+      unitIds: ["negative-governor"],
+      blockIds: ["governor"],
+    });
+    expect(recovered.classificationEvidenceContext).toEqual({
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      recoveredContexts: 2,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
     });
@@ -516,7 +568,7 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["positive-governor"],
     });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
       recoveredContexts: 2,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
@@ -4585,6 +4637,72 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("terminalizes a consumed negative reimbursement governor", () => {
+    const governor = {
+      unitId: "negative-reimbursement-governor",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["governor-block"],
+        combinedText: "Nicht ersetzt werden",
+        blocks: [
+          { blockId: "governor-block", exactText: "Nicht ersetzt werden" },
+        ],
+      },
+    };
+    const consumer = {
+      unitId: "excluded-item",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["item-block"],
+        combinedText: "• Vorschäden.",
+        blocks: [{ blockId: "item-block", exactText: "• Vorschäden." }],
+      },
+      governingContext: {
+        unitIds: [governor.unitId],
+        blockIds: ["governor-block"],
+        combinedText: governor.source.combinedText,
+        blocks: governor.source.blocks,
+      },
+    };
+    const response = {
+      unitId: governor.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION"],
+      requirements: [
+        {
+          displayLabel: governor.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Nicht ersetzt werden",
+              coverageEffect: "EXCLUDED",
+              sourceBlockIds: ["governor-block"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes(
+      [response],
+      [governor, consumer]
+    );
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: governor.unitId,
+      primaryClass: "DUPLICATE",
+      semanticClasses: ["DUPLICATE"],
+      requirements: [],
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: governor.unitId,
+        action: "TERMINALIZE_CONSUMED_COVERAGE_GOVERNOR",
+        consumerUnitIds: [consumer.unitId],
+      })
+    );
+  });
+
   test("atomizes a named peril definition, explicit extension, and preserved right in one list requirement", () => {
     const source =
       "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
@@ -5596,6 +5714,131 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
     expect(normalized.componentRepairs).not.toContainEqual(
       expect.objectContaining({ action: "DROP_CROSS_SEGMENT_COMPONENT" })
+    );
+  });
+
+  test("rebinds same-polarity list effects to their exact inherited governor", () => {
+    const unit = {
+      unitId: "negative-reimbursement-items",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["first", "second"],
+        combinedText: "• ein persönlicher Liebhaberwert;\n• Vorschäden.",
+        blocks: [
+          {
+            blockId: "first",
+            exactText: "• ein persönlicher Liebhaberwert;",
+          },
+          { blockId: "second", exactText: "• Vorschäden." },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-segment",
+          blockIds: ["first"],
+          combinedText: "• ein persönlicher Liebhaberwert;",
+        },
+        {
+          segmentId: "second-segment",
+          blockIds: ["second"],
+          combinedText: "• Vorschäden.",
+        },
+      ],
+      governingContext: {
+        unitIds: ["negative-governor"],
+        blockIds: ["governor"],
+        combinedText: "Nicht ersetzt werden",
+        blocks: [{ blockId: "governor", exactText: "Nicht ersetzt werden" }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION"],
+      requirements: [
+        ["first", "• ein persönlicher Liebhaberwert;", "Liebhaberwert"],
+        ["second", "• Vorschäden.", "Vorschäden"],
+      ].map(([blockId, displayLabel, objectLabel]) => ({
+        displayLabel,
+        components: [
+          { type: "OBJECT", label: objectLabel, sourceBlockIds: [blockId] },
+          {
+            type: "COVERAGE_EFFECT",
+            label: "ausgenommen sind",
+            sourceBlockIds: [blockId],
+            coverageEffect: "EXCLUDED",
+          },
+        ],
+      })),
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.find(({ type }) => type === "COVERAGE_EFFECT")
+      )
+    ).toEqual([
+      {
+        type: "COVERAGE_EFFECT",
+        label: "Nicht ersetzt",
+        sourceBlockIds: ["governor"],
+        coverageEffect: "EXCLUDED",
+      },
+      {
+        type: "COVERAGE_EFFECT",
+        label: "Nicht ersetzt",
+        sourceBlockIds: ["governor"],
+        coverageEffect: "EXCLUDED",
+      },
+    ]);
+    expect(
+      normalized.componentRepairs.filter(
+        ({ action }) => action === "REBIND_INHERITED_COVERAGE_EFFECT"
+      )
+    ).toHaveLength(2);
+  });
+
+  test("does not rebind an inherited coverage effect across opposite polarity", () => {
+    const unit = {
+      unitId: "opposite-inherited-polarity",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["item"],
+        combinedText: "• Vorschäden.",
+        blocks: [{ blockId: "item", exactText: "• Vorschäden." }],
+      },
+      logicalSourceSegments: [],
+      governingContext: {
+        unitIds: ["negative-governor"],
+        blockIds: ["governor"],
+        combinedText: "Nicht ersetzt werden",
+        blocks: [{ blockId: "governor", exactText: "Nicht ersetzt werden" }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: "• Vorschäden.",
+          components: [
+            { type: "OBJECT", label: "Vorschäden", sourceBlockIds: ["item"] },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "versichert",
+              sourceBlockIds: ["item"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses).toEqual([response]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({ action: "REBIND_INHERITED_COVERAGE_EFFECT" })
     );
   });
 
@@ -6876,7 +7119,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V54");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V55");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -8246,7 +8489,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "sofern sie in Verwahrung genommen wurden"
     );
     expect(recovered.classificationEvidenceContext).toMatchObject({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
       refinedListUnits: 1,
       additionalLogicalSegments: 2,
     });

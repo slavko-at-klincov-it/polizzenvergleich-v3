@@ -35,7 +35,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V54";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V55";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -79,6 +79,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V51",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V52",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V53",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V54",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -123,7 +124,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -1594,6 +1595,59 @@ function materializeInheritedCoverageEffect(requirements, unit) {
   };
 }
 
+function normalizeInheritedCoverageEffectReferences(requirements, unit) {
+  const contextBlocks = unit?.governingContext?.blocks || [];
+  if (contextBlocks.length === 0) return { requirements, repairs: [] };
+  const candidates = contextBlocks.flatMap(({ blockId }) => {
+    const component = {
+      type: "COVERAGE_EFFECT",
+      label: "",
+      sourceBlockIds: [blockId],
+    };
+    const repair = explicitCoverageEffectRepair(unit, component);
+    return repair ? [{ ...component, ...repair }] : [];
+  });
+  if (candidates.length !== 1) return { requirements, repairs: [] };
+  const inheritedComponent = candidates[0];
+  const evidenceBlocks = normalizationEvidenceBlocks(unit);
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).map(
+        (component, componentIndex) => {
+          if (
+            component?.type !== "COVERAGE_EFFECT" ||
+            component.coverageEffect !== inheritedComponent.coverageEffect
+          )
+            return component;
+          const declaredIds = new Set(component.sourceBlockIds || []);
+          const declaredText = evidenceBlocks
+            .filter(({ blockId }) => declaredIds.has(blockId))
+            .map(({ exactText }) => exactText)
+            .join("\n")
+            .replace(/\s+/gu, " ")
+            .trim();
+          const label = String(component.label || "")
+            .replace(/\s+/gu, " ")
+            .trim();
+          if (label && declaredText.includes(label)) return component;
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "REBIND_INHERITED_COVERAGE_EFFECT",
+            coverageEffect: inheritedComponent.coverageEffect,
+            fromSourceBlockIds: [...declaredIds],
+            toSourceBlockIds: inheritedComponent.sourceBlockIds,
+          });
+          return { ...component, ...inheritedComponent };
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
   const sourceText = String(unit?.source?.combinedText || "");
   const inheritedComponents = requirements
@@ -2532,9 +2586,12 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     const pureConsumedCoverageGovernor =
       consumedGovernorUnitIds.has(response?.unitId) &&
       unit?.unitKind === "CLAUSE" &&
-      /^(?:(?:Zusätzlich|Weiters)\s+)?(?:versichert\s+sind|sind\s+(?:mit)?versichert|mitversichert\s+sind)(?:\s+Schäden\s+durch)?\s*:?\s*$/iu.test(
+      (/^(?:(?:Zusätzlich|Weiters)\s+)?(?:versichert\s+sind|sind\s+(?:mit)?versichert|mitversichert\s+sind)(?:\s+Schäden\s+durch)?\s*:?\s*$/iu.test(
         sourceText
-      );
+      ) ||
+        /^\s*(?:nicht\s+(?:ersetzt|erstattet|entschädigt)\s+werden|keine\s+Entschädigung\s+(?:wird\s+)?(?:geleistet|bezahlt))\s*:?\s*$/iu.test(
+          sourceText
+        ));
     if (pureConsumedCoverageGovernor) {
       repairs.push({
         unitId: response?.unitId,
@@ -2728,6 +2785,11 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
           ]),
         ],
       };
+    const reboundInheritedCoverageEffects =
+      normalizeInheritedCoverageEffectReferences(requirements, unit);
+    requirements = reboundInheritedCoverageEffects.requirements;
+    for (const repair of reboundInheritedCoverageEffects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const inheritedCoverageEffect = materializeInheritedCoverageEffect(
       requirements,
       unit
@@ -3553,7 +3615,7 @@ function endsWithSentence(textValue) {
 function explicitCoveragePolarity(textValue) {
   const sourceText = String(textValue || "");
   const negative =
-    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu.exec(
+    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|nicht\s+(?:ersetzt|erstattet|entschädigt)(?:\s+werden)?|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|keine\s+Entschädigung(?:\s+wird)?(?:\s+(?:geleistet|bezahlt))?|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu.exec(
       sourceText
     );
   const positiveEvidenceText = negative
