@@ -61,9 +61,8 @@ describe("LF known fixture source review runner", () => {
 
   it("constrains structured output to the source review contract", () => {
     const schema = responseFormat(row).json_schema.schema;
-    expect(schema.properties.outcome.enum).not.toContain(
-      "PARTIAL_COUNTERPART_ESTABLISHED"
-    );
+    expect(schema.properties.outcome).toBeUndefined();
+    expect(schema.required).not.toContain("outcome");
     expect(schema.required).toContain("unmodeledDifferences");
     expect(schema.properties.componentFindings.minItems).toBe(2);
   });

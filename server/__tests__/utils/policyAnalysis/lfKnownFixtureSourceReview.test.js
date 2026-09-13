@@ -120,7 +120,6 @@ describe("LF known fixture source review", () => {
     const response = {
       contractId: SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
       requirementId: row.requirementId,
-      outcome: "FULL_COUNTERPART",
       componentFindings: row.components.map((component) => ({
         componentId: component.componentId,
         dimension: component.dimension,
@@ -130,18 +129,22 @@ describe("LF known fixture source review", () => {
       unmodeledDifferences: [],
       rationale: "Die Originalstelle nennt den Gegenstand ausdrücklich.",
     };
-    expect(validateSourceReviewResponse(row, response)).toEqual(response);
+    expect(validateSourceReviewResponse(row, response)).toEqual({
+      ...response,
+      outcome: "FULL_COUNTERPART",
+    });
     const partial = {
       ...response,
-      outcome: "PARTIAL_COUNTERPART",
       componentFindings: response.componentFindings.map((finding, index) =>
         index ? { ...finding, outcome: "MISMATCH" } : finding
       ),
     };
-    expect(validateSourceReviewResponse(row, partial)).toEqual(partial);
+    expect(validateSourceReviewResponse(row, partial)).toEqual({
+      ...partial,
+      outcome: "PARTIAL_COUNTERPART",
+    });
     const implicitRestriction = {
       ...response,
-      outcome: "PARTIAL_COUNTERPART",
       unmodeledDifferences: [
         {
           dimension: "CONDITION",
@@ -150,9 +153,10 @@ describe("LF known fixture source review", () => {
         },
       ],
     };
-    expect(validateSourceReviewResponse(row, implicitRestriction)).toEqual(
-      implicitRestriction
-    );
+    expect(validateSourceReviewResponse(row, implicitRestriction)).toEqual({
+      ...implicitRestriction,
+      outcome: "PARTIAL_COUNTERPART",
+    });
     expect(() =>
       validateSourceReviewResponse(row, {
         ...response,

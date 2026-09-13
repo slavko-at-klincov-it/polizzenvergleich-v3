@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V2";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V3";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -504,7 +504,8 @@ function validateSourceReviewResponse(row, response) {
   if (
     response?.contractId !== SOURCE_REVIEW_RESPONSE_CONTRACT_ID ||
     response.requirementId !== row?.requirementId ||
-    !REVIEW_OUTCOMES.has(response.outcome) ||
+    (response.outcome !== undefined &&
+      !REVIEW_OUTCOMES.has(response.outcome)) ||
     !Array.isArray(response.componentFindings) ||
     response.componentFindings.length !== row.components.length ||
     !Array.isArray(response.unmodeledDifferences) ||
@@ -569,9 +570,11 @@ function validateSourceReviewResponse(row, response) {
         : outcomes.every((outcome) => outcome === "MISMATCH")
           ? "CONTRADICTED"
           : "NO_COUNTERPART_ESTABLISHED";
-  if (response.outcome !== expectedOutcome)
+  if (!REVIEW_OUTCOMES.has(expectedOutcome))
     throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");
-  return response;
+  if (response.outcome !== undefined && response.outcome !== expectedOutcome)
+    throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");
+  return { ...response, outcome: expectedOutcome };
 }
 
 module.exports = {
