@@ -1,4 +1,6 @@
 const {
+  A_DRIVEN_RUN_CONTRACT_ID,
+  A_SOURCE_UNIT_PLAN_CONTRACT_ID,
   buildADrivenSourceUnitPlan,
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
@@ -112,6 +114,12 @@ describe("A-driven classification evidence recovery", () => {
       "eine einleitende Formulierung „aus der/dem …“"
     );
     expect(systemText).toContain("Die Versicherung erstreckt sich auf …");
+    expect(systemText).toContain(
+      "structurePath ist ausschließlich Navigation und niemals Evidenz"
+    );
+    expect(systemText).toContain(
+      "governingContext kann Deckungswirkung, Limit, Bedingung, Scope, Gefahr"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -7548,7 +7556,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V57");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V58");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11197,6 +11205,283 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       fromPrimaryClass: "OPERATIVE_COVERAGE_STATEMENT",
       toPrimaryClass: "PERIL_OR_DAMAGE",
     });
+  });
+
+  test("ignores a navigation-only exclusion heading and completes one continued peril item", () => {
+    const lead =
+      "- Starkregen (unvorhersehbares, unregelmäßiges Ansteigen von Wasserläufen, ";
+    const continuation = "Rückhaltebecken und künstlichen Wasseranlagen);";
+    const governorLead =
+      "• Naturereignisse bis 1 % der Gebäudeversicherungssumme – mindestens EUR 20.000, maximal";
+    const governorTail =
+      "EUR 100.000 pro Objekt – auf Erstes Risiko, insbesondere Schäden durch";
+    const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 4,
+      documentStart: ordinal * 100,
+      documentEnd: ordinal * 100 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const ownedBlocks = [
+      exactBlock("peril-lead", lead, 10, "LIST_ITEM"),
+      exactBlock("peril-tail", continuation, 11, "BODY_LINE"),
+    ];
+    const governingBlocks = [
+      exactBlock("limit-lead", governorLead, 8, "LIST_GOVERNOR"),
+      exactBlock("limit-tail", governorTail, 9, "BODY_LINE"),
+    ];
+    const combinedText = `${lead}\n${continuation}`;
+    const unit = {
+      unitId: "continued-peril-with-navigation-heading",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Nicht versichert sind:"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: ownedBlocks.map(({ blockId }) => blockId),
+        blocks: ownedBlocks,
+        physicalPages: [4],
+        documentStart: ownedBlocks[0].documentStart,
+        documentEnd: ownedBlocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "continued-peril",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ownedBlocks.map(({ blockId }) => blockId),
+          combinedText,
+          combinedTextSha256: crypto
+            .createHash("sha256")
+            .update(combinedText)
+            .digest("hex"),
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: {
+        relationType: "GOVERNS_FOLLOWING_LIST",
+        unitIds: ["limit-governor"],
+        blockIds: governingBlocks.map(({ blockId }) => blockId),
+        blocks: governingBlocks,
+        combinedText: `${governorLead}\n${governorTail}`,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION"],
+          requirements: [
+            {
+              displayLabel: combinedText,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Starkregen",
+                  sourceBlockIds: ["peril-lead"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "ausgenommen sind",
+                  sourceBlockIds: ["limit-lead"],
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Starkregen",
+              sourceBlockIds: ["peril-lead", "peril-tail"],
+            },
+          ],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: unit.unitId,
+          action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
+          fromPrimaryClass: "EXCLUSION",
+          toPrimaryClass: "PERIL_OR_DAMAGE",
+        }),
+        expect.objectContaining({
+          unitId: unit.unitId,
+          action: "COMPLETE_SINGLE_LIST_CONTINUATION_COMPONENT_SOURCE_IDS",
+          segmentId: "continued-peril",
+          fromSourceBlockIds: ["peril-lead"],
+          toSourceBlockIds: ["peril-lead", "peril-tail"],
+        }),
+      ])
+    );
+
+    const plan = {
+      schemaVersion: 2,
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+      planSha256: "a".repeat(64),
+      documents: [{ documentUuid: "doc" }],
+      units: [unit],
+      relations: [],
+      summary: { sourceBlocks: 2 },
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("preserves an exclusion backed by a literal source effect", () => {
+    const sourceText = "Ausgeschlossen sind Schäden durch Hagel.";
+    const unit = {
+      unitId: "literal-exclusion",
+      unitKind: "CLAUSE",
+      structurePath: ["Deckungsumfang"],
+      source: {
+        blockIds: ["block"],
+        combinedText: sourceText,
+        blocks: [{ blockId: "block", exactText: sourceText }],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION", "PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: sourceText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Ausgeschlossen",
+              sourceBlockIds: ["block"],
+              coverageEffect: "EXCLUDED",
+            },
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Hagel",
+              sourceBlockIds: ["block"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test("does not extend one component across independent list segments", () => {
+    const first = "- Starkregen";
+    const second = "- Erdrutsch";
+    const unit = {
+      unitId: "independent-perils",
+      unitKind: "LIST",
+      structurePath: ["Nicht versichert sind:"],
+      source: {
+        blockIds: ["first", "second"],
+        combinedText: `${first}\n${second}`,
+        blocks: [
+          { blockId: "first", exactText: first },
+          { blockId: "second", exactText: second },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-peril",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first"],
+          combinedText: first,
+        },
+        {
+          segmentId: "second-peril",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["second"],
+          combinedText: second,
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION"],
+          requirements: [
+            {
+              displayLabel: first,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Starkregen",
+                  sourceBlockIds: ["first"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "ausgenommen sind",
+                  sourceBlockIds: ["first"],
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual({
+      type: "PERIL_OR_CAUSE",
+      label: "Starkregen",
+      sourceBlockIds: ["first"],
+    });
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "COMPLETE_SINGLE_LIST_CONTINUATION_COMPONENT_SOURCE_IDS",
+      })
+    );
   });
 
   test("normalizes an effect-free coverage branch schedule to atomic scopes and limits", () => {

@@ -36,7 +36,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V57";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V58";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -83,6 +83,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V54",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V55",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V56",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V57",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -102,7 +103,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V26";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -117,6 +118,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -2640,6 +2642,106 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function completeSingleListContinuationComponentSources(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length !== 1 ||
+    !Array.isArray(requirements) ||
+    requirements.length !== 1
+  )
+    return { requirements, repairs: [] };
+  const segment = unit.logicalSourceSegments[0];
+  if (
+    segment?.type !== "LIST_ITEM_WITH_CONTINUATIONS" ||
+    !Array.isArray(segment.blockIds) ||
+    segment.blockIds.length < 2
+  )
+    return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .replace(/^[•▪–—-]\s*/u, "");
+  const requirement = requirements[0];
+  if (
+    comparable(requirement?.displayLabel) !== comparable(segment.combinedText)
+  )
+    return { requirements, repairs: [] };
+  const components = Array.isArray(requirement?.components)
+    ? requirement.components
+    : [];
+  if (
+    components.length !== 1 ||
+    !["OBJECT", "PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT", "FACT_ROLE"].includes(
+      components[0]?.type
+    )
+  )
+    return { requirements, repairs: [] };
+  const component = components[0];
+  const segmentBlockIds = new Set(segment.blockIds);
+  const declaredIds = Array.isArray(component.sourceBlockIds)
+    ? component.sourceBlockIds
+    : [];
+  if (
+    declaredIds.length === 0 ||
+    new Set(declaredIds).size !== declaredIds.length ||
+    declaredIds.length >= segment.blockIds.length ||
+    declaredIds.some((blockId) => !segmentBlockIds.has(blockId))
+  )
+    return { requirements, repairs: [] };
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  if (segment.blockIds.some((blockId) => !sourceBlocksById.has(blockId)))
+    return { requirements, repairs: [] };
+  const segmentBlocks = segment.blockIds.map((blockId) =>
+    sourceBlocksById.get(blockId)
+  );
+  const parenthesisBalance = (value) =>
+    [...String(value || "")].reduce(
+      (balance, character) =>
+        balance + (character === "(" ? 1 : character === ")" ? -1 : 0),
+      0
+    );
+  if (
+    segmentBlocks[0]?.structuralKind !== "LIST_ITEM" ||
+    segmentBlocks
+      .slice(1)
+      .some(({ structuralKind }) => structuralKind !== "BODY_LINE") ||
+    parenthesisBalance(segmentBlocks[0].exactText) <= 0 ||
+    parenthesisBalance(segment.combinedText) !== 0
+  )
+    return { requirements, repairs: [] };
+  const componentLabel = comparable(component.label);
+  const declaredText = comparable(
+    declaredIds
+      .map((blockId) => sourceBlocksById.get(blockId)?.exactText)
+      .join("\n")
+  );
+  if (!componentLabel || !declaredText.includes(componentLabel))
+    return { requirements, repairs: [] };
+  return {
+    requirements: [
+      {
+        ...requirement,
+        components: [{ ...component, sourceBlockIds: [...segment.blockIds] }],
+      },
+    ],
+    repairs: [
+      {
+        requirementIndex: 0,
+        componentIndex: 0,
+        action: "COMPLETE_SINGLE_LIST_CONTINUATION_COMPONENT_SOURCE_IDS",
+        segmentId: segment.segmentId,
+        fromSourceBlockIds: declaredIds,
+        toSourceBlockIds: [...segment.blockIds],
+      },
+    ],
+  };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -3512,19 +3614,42 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     const semanticClasses = Array.isArray(response?.semanticClasses)
       ? response.semanticClasses
       : [];
+    const coverageClasses = new Set([
+      "OPERATIVE_COVERAGE_STATEMENT",
+      "EXCLUSION",
+    ]);
     let remainingClasses = semanticClasses.filter(
-      (semanticClass) => semanticClass !== "OPERATIVE_COVERAGE_STATEMENT"
+      (semanticClass) => !coverageClasses.has(semanticClass)
     );
     if (
       !unit ||
-      (response?.primaryClass !== "OPERATIVE_COVERAGE_STATEMENT" &&
-        !semanticClasses.includes("OPERATIVE_COVERAGE_STATEMENT")) ||
+      (!coverageClasses.has(response?.primaryClass) &&
+        !semanticClasses.some((semanticClass) =>
+          coverageClasses.has(semanticClass)
+        )) ||
       hasCoverageEffectEvidence(unit)
     )
       return response;
+    const requirementsWithoutCoverage = Array.isArray(response.requirements)
+      ? response.requirements.map((requirement) => ({
+          ...requirement,
+          components: Array.isArray(requirement?.components)
+            ? requirement.components.filter(
+                ({ type }) => type !== "COVERAGE_EFFECT"
+              )
+            : requirement?.components,
+        }))
+      : response.requirements;
+    const completedContinuation =
+      completeSingleListContinuationComponentSources(
+        requirementsWithoutCoverage,
+        unit
+      );
+    for (const repair of completedContinuation.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     if (remainingClasses.length === 0)
       remainingClasses = semanticClassesFromSourceBoundComponents(
-        response.requirements || [],
+        completedContinuation.requirements || [],
         unit
       );
     if (remainingClasses.length === 0) return response;
@@ -3532,28 +3657,17 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       unitId: response.unitId,
       action: "DROP_UNSUPPORTED_COVERAGE_CLASS",
       fromPrimaryClass: response.primaryClass,
-      toPrimaryClass:
-        response.primaryClass === "OPERATIVE_COVERAGE_STATEMENT"
-          ? remainingClasses[0]
-          : response.primaryClass,
+      toPrimaryClass: coverageClasses.has(response.primaryClass)
+        ? remainingClasses[0]
+        : response.primaryClass,
     });
     return {
       ...response,
-      primaryClass:
-        response.primaryClass === "OPERATIVE_COVERAGE_STATEMENT"
-          ? remainingClasses[0]
-          : response.primaryClass,
+      primaryClass: coverageClasses.has(response.primaryClass)
+        ? remainingClasses[0]
+        : response.primaryClass,
       semanticClasses: remainingClasses,
-      requirements: Array.isArray(response.requirements)
-        ? response.requirements.map((requirement) => ({
-            ...requirement,
-            components: Array.isArray(requirement?.components)
-              ? requirement.components.filter(
-                  ({ type }) => type !== "COVERAGE_EFFECT"
-                )
-              : requirement?.components,
-          }))
-        : response.requirements,
+      requirements: completedContinuation.requirements,
     };
   });
   const polarityNormalized = unsupportedCoverageNormalized.map((response) => {
@@ -4090,6 +4204,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Präzisierung: Eine reine unitKind-HEADING-Unit ist immer STRUCTURE mit requirements:[], auch wenn sie einen Produktnamen enthält. Nur eine gemischte Nicht-HEADING-Unit, die Titeltext und Firmenrollen gemeinsam besitzt, wird als DEFINITION mit SCOPE-/FACT_ROLE-Komponenten abgebildet. Wenn governingContext null ist und in den ownedSourceBlocks kein wörtliches Deckungswirkungswort steht, klassifiziere eine Objektliste als INSURED_OBJECT mit OBJECT-Komponenten ohne COVERAGE_EFFECT. Erfinde insbesondere niemals das label versichert und suche keinen Ersatzbeleg in einem anderen Listenelement. Nennt COMPONENT_SOURCE_TEXT_INVALID konkrete blockIds, muss die korrigierte Komponente diese IDs zusätzlich ausdrücklich in sourceBlockIds aufnehmen; der Server ergänzt sie niemals still.",
+    },
+    {
+      role: "system",
+      content:
+        "Verbindliche Evidenzgrenze: structurePath ist ausschließlich Navigation und niemals Evidenz für primaryClass, semanticClasses, Komponenten oder Deckungswirkung. governingContext kann Deckungswirkung, Limit, Bedingung, Scope, Gefahr oder anderen fachlichen Kontext tragen. Erzeuge COVERAGE_EFFECT, OPERATIVE_COVERAGE_STATEMENT oder EXCLUSION nur, wenn ein wörtlicher Wirkungs- beziehungsweise Ausschlussausdruck in ownedSourceBlocks oder governingContext steht. Fehlt er dort, klassifiziere unabhängig vom Vorhandensein eines governingContext ausschließlich den tatsächlich belegten Inhalt, etwa PERIL_OR_DAMAGE, INSURED_OBJECT, LIMIT oder CONDITION. Erfinde insbesondere niemals versichert, nicht versichert, ausgeschlossen oder ausgenommen aus structurePath oder Kapitelkontext.",
     },
     {
       role: "system",
@@ -5014,6 +5133,8 @@ async function runBatch({
         " Eine bloße Spartenaufzählung mit Versicherungssumme und gewählter Variante, aber ohne wörtlichen Deckungswirkungsausdruck, bleibt LIMIT/VARIANT statt OPERATIVE_COVERAGE_STATEMENT. Verwende jede komma-getrennte Sparte als eigene SCOPE-Komponente. Das Wort „gilt“ in „in der Sparte ... gilt die Variante“ ist keine Deckungswirkung und darf nicht als COVERAGE_EFFECT ausgegeben werden.";
       messages.at(-1).content +=
         " Verwende in semanticClasses ausschließlich Terminalklassen. Insbesondere wird eine LIMIT_BASIS-Komponente durch die Terminalklasse LIMIT getragen; LIMIT_BASIS selbst ist niemals eine semanticClass.";
+      messages.at(-1).content +=
+        " structurePath ist ausschließlich Navigation und niemals semantische Evidenz. governingContext ist nur für die dort wörtlich vorhandenen Dimensionen Evidenz. Enthält es etwa Limit, Scope oder Gefahr, aber keinen wörtlichen Deckungswirkungs- oder Ausschlussausdruck, erzeuge weder COVERAGE_EFFECT noch OPERATIVE_COVERAGE_STATEMENT noch EXCLUSION. Entferne diese unbelegten Klassen und klassifiziere den tatsächlichen Inhalt, etwa als PERIL_OR_DAMAGE, INSURED_OBJECT, LIMIT oder CONDITION. Erfinde niemals versichert, nicht versichert, ausgeschlossen oder ausgenommen aus structurePath.";
       const segmentSkeletons = listSegmentRepairSkeletons(
         workingBatch,
         repairDiagnostics
