@@ -63,6 +63,7 @@ describe("LF known fixture source review runner", () => {
     expect(system).toContain(
       "__row_context__-Check kann allein niemals ein Gegenstück begründen"
     );
+    expect(system).toContain("COUNTERPART_WITH_DIFFERENCE");
     expect(system).toContain("unmodeledDifferences ist immer ein Array");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
@@ -131,6 +132,12 @@ describe("LF known fixture source review runner", () => {
     expect(schema.properties.componentFindings.minItems).toBe(2);
     expect(
       schema.properties.componentFindings.items.properties.outcome.enum
-    ).toEqual(["MATCH", "OPPOSITE", "RELATED_ONLY", "NOT_ESTABLISHED"]);
+    ).toEqual([
+      "MATCH",
+      "COUNTERPART_WITH_DIFFERENCE",
+      "OPPOSITE",
+      "RELATED_ONLY",
+      "NOT_ESTABLISHED",
+    ]);
   });
 });

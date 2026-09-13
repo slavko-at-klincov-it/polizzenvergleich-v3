@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V6";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V7";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -11,6 +11,7 @@ const REVIEW_OUTCOMES = new Set([
 ]);
 const COMPONENT_OUTCOMES = new Set([
   "MATCH",
+  "COUNTERPART_WITH_DIFFERENCE",
   "OPPOSITE",
   "RELATED_ONLY",
   "NOT_ESTABLISHED",
@@ -810,6 +811,17 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_UNMODELED_DIFFERENCE_INVALID");
   }
+  for (const finding of response.componentFindings) {
+    if (
+      finding.outcome === "COUNTERPART_WITH_DIFFERENCE" &&
+      !response.unmodeledDifferences.some((difference) =>
+        difference.candidateIds.some((candidateId) =>
+          finding.candidateIds.includes(candidateId)
+        )
+      )
+    )
+      throw reviewError("LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING");
+  }
   const contextFindings = response.componentFindings.filter(
     ({ componentId }) => componentById.get(componentId)?.contextOnly === true
   );
@@ -820,22 +832,36 @@ function validateSourceReviewResponse(row, response) {
     throw reviewError("LF_SOURCE_REVIEW_ROW_FINDING_TOPOLOGY_INVALID");
   const contextOutcome = contextFindings[0].outcome;
   const substantiveOutcomes = substantiveFindings.map(({ outcome }) => outcome);
-  const sameScopeEstablished = ["MATCH", "OPPOSITE"].includes(contextOutcome);
-  const expectedOutcome =
+  const compatibleContext = [
+    "MATCH",
+    "COUNTERPART_WITH_DIFFERENCE",
+    "OPPOSITE",
+  ].includes(contextOutcome);
+  let expectedOutcome = "NO_COUNTERPART_ESTABLISHED";
+  if (
     contextOutcome === "MATCH" &&
     substantiveOutcomes.every((outcome) => outcome === "MATCH") &&
     response.unmodeledDifferences.length === 0
-      ? "FULL_COUNTERPART"
-      : contextOutcome === "MATCH" && substantiveOutcomes.includes("MATCH")
-        ? "PARTIAL_COUNTERPART"
-        : sameScopeEstablished && substantiveOutcomes.includes("OPPOSITE")
-          ? "CONTRADICTED"
-          : "NO_COUNTERPART_ESTABLISHED";
+  )
+    expectedOutcome = "FULL_COUNTERPART";
+  else if (compatibleContext && substantiveOutcomes.includes("OPPOSITE"))
+    expectedOutcome = "CONTRADICTED";
+  else if (
+    ["MATCH", "COUNTERPART_WITH_DIFFERENCE"].includes(contextOutcome) &&
+    substantiveOutcomes.some((outcome) =>
+      ["MATCH", "COUNTERPART_WITH_DIFFERENCE"].includes(outcome)
+    )
+  )
+    expectedOutcome = "PARTIAL_COUNTERPART";
   if (!REVIEW_OUTCOMES.has(expectedOutcome))
     throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");
   if (response.outcome !== undefined && response.outcome !== expectedOutcome)
     throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");
-  return { ...response, outcome: expectedOutcome };
+  return {
+    ...response,
+    outcome: expectedOutcome,
+    customerFound: expectedOutcome !== "NO_COUNTERPART_ESTABLISHED",
+  };
 }
 
 module.exports = {

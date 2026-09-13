@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V8";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V8";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V8";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V9";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V9";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V9";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -166,6 +166,7 @@ function messages(row) {
         "Der synthetische __row_context__-Check kann allein niemals ein Gegenstück begründen; mindestens eine nicht-synthetische fachliche Komponente muss im selben Scope belegt sein.",
         "Pro Check ist genau ein Ergebnis auszugeben:",
         "MATCH mit mindestens einer candidateId bedeutet fachlich gleiche Unterstützung.",
+        "COUNTERPART_WITH_DIFFERENCE mit mindestens einer candidateId bedeutet dasselbe fachliche Vergleichselement, aber mit abweichendem Wert, Limit, Scope oder einer abweichenden Bedingung; die Abweichung muss zusätzlich source-bound in unmodeledDifferences stehen.",
         "OPPOSITE mit mindestens einer candidateId bedeutet ein echtes Gegenstück desselben Scopes mit gegenteiliger Wirkung.",
         "RELATED_ONLY mit mindestens einer candidateId bedeutet nur thematische Nähe bei anderem Gegenstand, Scope, Rolle oder Sachverhalt.",
         "NOT_ESTABLISHED bedeutet, dass in den Kandidaten kein tragfähiger Beleg vorliegt, und verlangt candidateIds:[].",
@@ -174,8 +175,9 @@ function messages(row) {
         "Gib keinen Zeilenstatus aus; der Server leitet ihn deterministisch aus den Einzelbefunden ab.",
         "NO_COUNTERPART_ESTABLISHED bedeutet später nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis.",
         "Erfinde niemals Fundstellen, IDs oder Inhalte.",
+        "Ein abweichender Wert oder eine engere beziehungsweise weitere Bedingung macht eine echte Vergleichsstelle nicht zu RELATED_ONLY; RELATED_ONLY gilt nur für ein anderes fachliches Element, Objekt, eine andere Rolle oder einen anderen Sachverhalt.",
         "Das Ausgabeformat ist exakt {contractId,requirementId,componentFindings:[{componentId,dimension,outcome,candidateIds}],unmodeledDifferences:[{dimension,description,candidateIds}],rationale}.",
-        "contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V6 sein.",
+        "contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V7 sein.",
       ].join(" "),
     },
     {
@@ -237,6 +239,7 @@ function responseFormat(row) {
                   type: "string",
                   enum: [
                     "MATCH",
+                    "COUNTERPART_WITH_DIFFERENCE",
                     "OPPOSITE",
                     "RELATED_ONLY",
                     "NOT_ESTABLISHED",
@@ -308,7 +311,7 @@ function repairMessages(row, rawResponse, error) {
       role: "user",
       content: `Die Antwort ist formal ungültig (${errorClass(
         error
-      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: Gib keinen outcome auf Zeilenebene aus; der Server rollt ihn auf. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH, OPPOSITE und RELATED_ONLY benötigen mindestens eine erlaubte candidateId. unmodeledDifferences ist immer ein Array; jeder Eintrag braucht dimension, eine Beschreibung und mindestens eine vorhandene candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
+      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: Gib keinen outcome auf Zeilenebene aus; der Server rollt ihn auf. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, COUNTERPART_WITH_DIFFERENCE, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; alle anderen Outcomes benötigen mindestens eine erlaubte candidateId. COUNTERPART_WITH_DIFFERENCE benötigt außerdem mindestens eine source-bound unmodeledDifference mit einer derselben candidateIds. unmodeledDifferences ist immer ein Array; jeder Eintrag braucht dimension, eine Beschreibung und mindestens eine vorhandene candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
     },
   ];
 }
@@ -637,6 +640,11 @@ async function run() {
     rows: results.length,
     reusedRows: results.filter(({ reused }) => reused).length,
     outcomeCounts,
+    customerFoundRows: responses.filter(({ customerFound }) => customerFound)
+      .length,
+    customerNotFoundRows: responses.filter(
+      ({ customerFound }) => !customerFound
+    ).length,
     nextGate: "INDEPENDENT_SOURCE_ADJUDICATION",
   };
   const summaryFile = path.join(args.output, "summary.private.json");

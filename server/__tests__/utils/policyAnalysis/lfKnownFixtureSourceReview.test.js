@@ -195,6 +195,7 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, response)).toEqual({
       ...response,
       outcome: "FULL_COUNTERPART",
+      customerFound: true,
     });
     const contextOnlyMatch = {
       ...response,
@@ -205,6 +206,7 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, contextOnlyMatch)).toEqual({
       ...contextOnlyMatch,
       outcome: "NO_COUNTERPART_ESTABLISHED",
+      customerFound: false,
     });
     const contradicted = {
       ...response,
@@ -216,6 +218,7 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, contradicted)).toEqual({
       ...contradicted,
       outcome: "CONTRADICTED",
+      customerFound: true,
     });
     const wrongScope = {
       ...response,
@@ -226,7 +229,31 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, wrongScope)).toEqual({
       ...wrongScope,
       outcome: "NO_COUNTERPART_ESTABLISHED",
+      customerFound: false,
     });
+    const differingCounterpart = {
+      ...response,
+      componentFindings: response.componentFindings.map((finding) => ({
+        ...finding,
+        outcome: "COUNTERPART_WITH_DIFFERENCE",
+      })),
+      unmodeledDifferences: response.componentFindings.map((finding) => ({
+        dimension: finding.dimension,
+        description: "B enthält dasselbe Vergleichselement mit anderem Wert.",
+        candidateIds: finding.candidateIds,
+      })),
+    };
+    expect(validateSourceReviewResponse(row, differingCounterpart)).toEqual({
+      ...differingCounterpart,
+      outcome: "PARTIAL_COUNTERPART",
+      customerFound: true,
+    });
+    expect(() =>
+      validateSourceReviewResponse(row, {
+        ...differingCounterpart,
+        unmodeledDifferences: [],
+      })
+    ).toThrow("LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING");
     const implicitRestriction = {
       ...response,
       unmodeledDifferences: [
@@ -240,6 +267,7 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, implicitRestriction)).toEqual({
       ...implicitRestriction,
       outcome: "PARTIAL_COUNTERPART",
+      customerFound: true,
     });
     expect(() =>
       validateSourceReviewResponse(row, {
