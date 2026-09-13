@@ -127,7 +127,7 @@ function fixture(primaryText) {
   };
 }
 
-describe("LF blind evidence V2", () => {
+describe("LF blind evidence V3", () => {
   it("keeps the complete clause when decisive evidence occurs after character 600", () => {
     const prefix = "Diese vollständige Klausel enthält Kontext. ".repeat(18);
     const decisive =
@@ -265,6 +265,47 @@ describe("LF blind evidence V2", () => {
       "MULTI_SOURCE_ALLOWED"
     );
     expect(ids.length).toBeLessThanOrEqual(30);
+  });
+
+  it("closes a navigation range over every overlapping complete boundary without a fixed group cap", () => {
+    const source = [
+      "1 Allgemeine Bestimmung",
+      "Ein vollständiger, aber unmaßgeblicher Satz.",
+      "2 Besondere Gefahr",
+      "Schäden durch Explosion von Spreng- und pyrotechnischen Stoffen sind nur bedingt versichert.",
+      "3 Weitere Bestimmung",
+      "Ein weiterer vollständiger Satz.",
+      "4 Schlussbestimmung",
+      "Ein abschließender vollständiger Satz.",
+    ].join("\n\n");
+    const input = fixture(source);
+    input.oracle.benchmarkCandidates[0].range.documentEnd = source.length;
+    input.oracle.benchmarkCandidates[0].range.exactQuote = source;
+    input.oracle.benchmarkCandidates[0].range.exactQuoteSha256 = sha256(source);
+    input.semanticManifest.requirements[0].displayLabel =
+      "Sprengstoffexplosion";
+    input.semanticManifest.requirements[0].components[0].label =
+      "Sprengstoffexplosion";
+    input.semanticManifest.requirements[0].components[0].aliases = [];
+    const packet = buildLfKnownFixtureBlindEvidencePacket({
+      ...input,
+      maximumEvidenceGroupsPerCheck: 1,
+      maximumNavigationAnchors: 1,
+      createdAt: "2026-09-13T00:00:00.000Z",
+    });
+    const anchor =
+      packet.rows[0].components[0].evidence.navigationAnchors[0];
+    expect(anchor.boundaryClosure).toBe(
+      "ALL_COMPLETE_EVIDENCE_GROUPS_OVERLAPPING_NAVIGATION_RANGE"
+    );
+    expect(anchor.evidenceGroupIds.length).toBeGreaterThan(3);
+    expect(packet.evidencePolicy.navigationRangeBoundaryClosure).toContain(
+      "NO_FIXED_GROUP_CAP"
+    );
+    const rowInput = buildBlindEvidenceRowInputs(packet, "PR-01")[0];
+    const serialized = JSON.stringify(rowInput);
+    expect(serialized).toContain("Explosion von Spreng-");
+    expect(serialized).toContain("weiterer vollständiger Satz");
   });
 
   it("is independent of prior decision labels and gold-candidate input", () => {

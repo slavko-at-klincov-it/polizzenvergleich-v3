@@ -14,7 +14,7 @@ const {
 } = require("../../utils/policyAnalysis/lfReferenceGoldOracle");
 
 function fail(message) {
-  console.error(`[lf-blind-evidence-v2] ${message}`);
+  console.error(`[lf-blind-evidence-v3] ${message}`);
   process.exit(1);
 }
 
@@ -50,9 +50,6 @@ function argumentsFrom(argv) {
       values.maximumEvidenceGroupsPerCheck || 12
     ),
     maximumNavigationAnchors: Number(values.maximumNavigationAnchors || 6),
-    maximumEvidenceGroupsPerAnchor: Number(
-      values.maximumEvidenceGroupsPerAnchor || 3
-    ),
     maximumEvidenceGroupCharacters: Number(
       values.maximumEvidenceGroupCharacters || 12_000
     ),
@@ -151,7 +148,6 @@ function run() {
     bDocuments: documentInputs(oracle, args.documentCatalogDirectory),
     maximumEvidenceGroupsPerCheck: args.maximumEvidenceGroupsPerCheck,
     maximumNavigationAnchors: args.maximumNavigationAnchors,
-    maximumEvidenceGroupsPerAnchor: args.maximumEvidenceGroupsPerAnchor,
     maximumEvidenceGroupCharacters: args.maximumEvidenceGroupCharacters,
   });
   writePrivateJson(args.output, packet);
@@ -175,7 +171,7 @@ function run() {
     }
   }
   console.log(
-    `[lf-blind-evidence-v2] ${packet.status}: ${packet.summary.readyRows}/${packet.summary.rows} Zeilen, ${packet.summary.components} Komponenten, ${packet.summary.evidenceGroups} vollständige Evidenzgruppen`
+    `[lf-blind-evidence-v3] ${packet.status}: ${packet.summary.readyRows}/${packet.summary.rows} Zeilen, ${packet.summary.components} Komponenten, ${packet.summary.evidenceGroups} vollständige Evidenzgruppen`
   );
   console.log(JSON.stringify(packet.summary));
 }

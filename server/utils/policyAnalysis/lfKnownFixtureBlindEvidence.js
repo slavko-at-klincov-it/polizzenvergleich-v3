@@ -12,9 +12,9 @@ const {
 const { factRoleDimension } = require("./lfKnownFixtureSourceReview");
 
 const BLIND_EVIDENCE_PACKET_CONTRACT_ID =
-  "LF_1PLUS9_BLIND_SOURCE_REVIEW_PACKET_V2";
+  "LF_1PLUS9_BLIND_SOURCE_REVIEW_PACKET_V3";
 const BLIND_EVIDENCE_ROW_INPUT_CONTRACT_ID =
-  "LF_1PLUS9_BLIND_SOURCE_REVIEW_ROW_INPUT_V2";
+  "LF_1PLUS9_BLIND_SOURCE_REVIEW_ROW_INPUT_V3";
 const GERMAN_SEMANTIC_TOKEN_CONCEPTS = Object.freeze([
   {
     concept: "concept_favorable_precedence",
@@ -236,7 +236,6 @@ function navigationAnchors({
   groupsByDocument,
   query,
   maximumNavigationAnchors,
-  maximumEvidenceGroupsPerAnchor,
 }) {
   const candidates = oracleRow.benchmarkCandidateIds
     .map((candidateId) => candidatesById.get(candidateId))
@@ -270,14 +269,17 @@ function navigationAnchors({
         ),
       })
     );
-    const overlappingCandidates = overlappingGroups.map(groupCandidate);
-    const evidenceGroupIds = rankLexicalCandidates({
-      target: query,
-      candidates: overlappingCandidates,
-      index: bm25Index(overlappingCandidates),
-      topK: maximumEvidenceGroupsPerAnchor,
-      structural: true,
-    }).map(({ evidenceGroupId }) => evidenceGroupId);
+    const evidenceGroupIds = overlappingGroups
+      .sort(
+        (left, right) =>
+          Math.min(
+            ...left.sourceSpans.map(({ documentStart }) => documentStart)
+          ) -
+            Math.min(
+              ...right.sourceSpans.map(({ documentStart }) => documentStart)
+            ) || left.evidenceGroupId.localeCompare(right.evidenceGroupId)
+      )
+      .map(({ evidenceGroupId }) => evidenceGroupId);
     return {
       navigationAnchorId: candidateId,
       documentUuid: range.documentUuid,
@@ -288,6 +290,8 @@ function navigationAnchors({
       exactQuoteSha256: range.exactQuoteSha256,
       matchedTokens,
       evidenceGroupIds,
+      boundaryClosure:
+        "ALL_COMPLETE_EVIDENCE_GROUPS_OVERLAPPING_NAVIGATION_RANGE",
     };
   });
 }
@@ -305,7 +309,6 @@ function retrieveEvidence({
   groupsByDocument,
   maximumEvidenceGroupsPerCheck,
   maximumNavigationAnchors,
-  maximumEvidenceGroupsPerAnchor,
 }) {
   const query = queryFor(requirement, component);
   const lexical = rankLexicalCandidates({
@@ -328,7 +331,6 @@ function retrieveEvidence({
     groupsByDocument,
     query,
     maximumNavigationAnchors,
-    maximumEvidenceGroupsPerAnchor,
   });
   const ids = [];
   const seen = new Set();
@@ -374,7 +376,7 @@ function retrieveEvidence({
       "GENERALIZED_GERMAN_SEMANTIC_BM25",
       "STRUCTURAL_BOUNDARY_EXPANSION",
       "DOCUMENT_IDENTITY_CONTEXT",
-      "ORACLE_RANGE_NAVIGATION_WITHOUT_PRIOR_LABELS",
+      "ORACLE_RANGE_COMPLETE_BOUNDARY_CLOSURE_WITHOUT_PRIOR_LABELS",
     ],
     evidenceGroupIds: ids.filter((id) => groupsById.has(id)),
     navigationAnchors: anchors,
@@ -400,7 +402,6 @@ function buildLfKnownFixtureBlindEvidencePacket({
   bDocuments,
   maximumEvidenceGroupsPerCheck = 12,
   maximumNavigationAnchors = 6,
-  maximumEvidenceGroupsPerAnchor = 3,
   maximumEvidenceGroupCharacters = 12_000,
   createdAt = new Date().toISOString(),
 } = {}) {
@@ -416,9 +417,7 @@ function buildLfKnownFixtureBlindEvidencePacket({
     !Number.isInteger(maximumEvidenceGroupsPerCheck) ||
     maximumEvidenceGroupsPerCheck < 1 ||
     !Number.isInteger(maximumNavigationAnchors) ||
-    maximumNavigationAnchors < 0 ||
-    !Number.isInteger(maximumEvidenceGroupsPerAnchor) ||
-    maximumEvidenceGroupsPerAnchor < 1
+    maximumNavigationAnchors < 0
   )
     blindError("LF_BLIND_EVIDENCE_INPUT_INVALID");
   const oracleBDocuments = oracle.documents.filter(({ side }) => side === "B");
@@ -506,7 +505,6 @@ function buildLfKnownFixtureBlindEvidencePacket({
       groupsByDocument,
       maximumEvidenceGroupsPerCheck,
       maximumNavigationAnchors,
-      maximumEvidenceGroupsPerAnchor,
     });
     const components = requirement.components.map((component) => ({
       ...component,
@@ -523,7 +521,6 @@ function buildLfKnownFixtureBlindEvidencePacket({
         groupsByDocument,
         maximumEvidenceGroupsPerCheck,
         maximumNavigationAnchors,
-        maximumEvidenceGroupsPerAnchor,
       }),
     }));
     const evidenceReadiness = [
@@ -610,6 +607,8 @@ function buildLfKnownFixtureBlindEvidencePacket({
       selectionUnit: "COMPLETE_EVIDENCE_GROUP",
       promptBudgetPolicy:
         "PARTITION_COMPLETE_GROUPS_OR_FAIL_CLOSED; NEVER_TRUNCATE_SOURCE_TEXT",
+      navigationRangeBoundaryClosure:
+        "INCLUDE_EVERY_COMPLETE_EVIDENCE_GROUP_OVERLAPPING_THE_HASH_BOUND_RANGE; NO_FIXED_GROUP_CAP",
       negativeDecisionScope:
         "NO_COUNTERPART_ESTABLISHED_IS_NOT_GLOBAL_ABSENCE_UNLESS_SEPARATELY_CERTIFIED",
       multiSourceSelectionAllowed: true,

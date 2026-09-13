@@ -8926,3 +8926,27 @@ und Astra als primärem 283er-Reviewer entschieden werden.
 Status: `SOL PROBLEM-4 NICHT BESTANDEN; BLINDQUELLENINPUT NICHT
 EVIDENZVOLLSTÄNDIG; GOLD-30 NICHT GESTARTET; 283 NICHT FREIGEGEBEN; QWEN
 98/283 UNVERÄNDERT RESUMIERBAR`.
+
+### 133.39 Verbindlicher Fernzugriff für Mac-Studio-Prüfungen
+
+Der operative Fernzugriff für Entwicklung, QA und Blindreviews erfolgt
+ausschließlich über den bereits konfigurierten Tailscale-SSH-Alias
+`ssh macstudio`. Der Alias löst am 13. September 2026 auf die private
+Tailscale-Adresse `100.86.10.67` auf; die erfolgreiche Prüfung meldete den
+Zielhost `MacStudio-von-Michael.local`.
+
+Screen Sharing, CUA, Accessibility-Steuerung und Screenshots sind keine
+zulässigen Ersatzwege. Ist Tailscale-SSH nicht verfügbar, wird der jeweilige
+Schritt gestoppt und als Verbindungsfehler berichtet. Ein Unteragent hatte bei
+einem fehlgeschlagenen Dateizugriff irrtümlich Screen Sharing geöffnet; der
+Versuch wurde sofort abgebrochen, ohne Bildschirmsteuerung oder -auswertung.
+Die Arbeitsanweisung in der Projektwurzel verbietet diesen Fallback nun
+ausdrücklich.
+
+Private Kundenquellen und Blindreview-Pakete verbleiben standardmäßig im
+Mac-Studio-QA-Verzeichnis. Für Modellreviews wird über Tailscale-SSH nur die
+exakt angeforderte einzelne Reviewzeile gelesen; Gold-, Qwen-, Claude- und
+Systemlabels bleiben bis nach der blinden Entscheidung ausgeschlossen.
+
+Status: `TAILSCALE-SSH VERBINDLICH UND ERREICHBAR; GUI-FERNZUGRIFF ALS
+FALLBACK VERBOTEN`.

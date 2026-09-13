@@ -99,6 +99,13 @@ integration, regression, lint, formatting, build, QA, PDF-fixture, LLM,
 embedding, release, installer, and Doctor runs. Do not execute these checks on
 the local MacBook.
 
+The alias is the only approved remote-control path for unattended project
+work. If Tailscale SSH is unavailable, stop and report the connection failure.
+Never fall back to macOS Screen Sharing, CUA, accessibility control,
+screenshots, or another GUI remote-control mechanism. Keep customer-private
+artifacts in the Mac Studio QA area by default and read only the minimum exact
+fixture or review input required for the current step.
+
 The local workspace is limited to source inspection, editing, documentation,
 and Git preparation. Before remote validation, make the exact commit available
 on the Mac Studio and record checkout path, commit SHA, Node/runtime version,
