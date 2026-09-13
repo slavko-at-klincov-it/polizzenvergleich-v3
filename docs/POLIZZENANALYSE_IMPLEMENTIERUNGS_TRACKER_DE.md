@@ -8869,3 +8869,60 @@ Private Artefakte auf dem Mac Studio:
 Status: `QWEN 98/283 RESUMIERBAR UND NICHTBLOCKIEREND; SOL-BLINDPILOT 10/10
 TECHNISCH GÜLTIG, ABER QUALITÄTSGATE 0/4 GEGEN BEKANNTES GOLD; SOL NICHT AUF
 283 SKALIERT; KEINE KUNDEN-XLSX UND KEIN DEPLOYMENT`.
+
+### 133.38 Zweistufiges Sol-Gate: Problem-4 vor Gold-30 vor 283
+
+Der Auftraggeber verschärfte den Freigabevertrag: Auch ein bestandener
+isolierter Problemtest mit PR-01, PR-02, PR-08 und PR-09 darf niemals direkt
+zur 283er-Skalierung führen. Danach müssen zwingend alle 30 bereits
+eingefrorenen Goldzeilen jeweils in einem getrennten frischen blinden
+`gpt-5.6-sol`-Kontext mit Reasoning `high` geprüft werden. Erst dieses
+30er-Gate bewertet binären Fundstatus, `FULL`/`PARTIAL`/`CONTRADICTED`/`NO`,
+Quellenwahl, False Positives, False Negatives, Detailfehler, technische Fehler
+und Laufzeit. Nur bei klar bestandenem 30er-Gate darf Sol für 283 verwendet
+werden; andernfalls muss Astra den primären Goldpass übernehmen.
+
+Der erste zeilenisolierte Problem-4-Test wurde in vier voneinander getrennten
+frischen Sol-Kontexten durchgeführt. Sämtliche Modellinputs blieben A-only;
+Gold, Qwen, Claude und System-B-Entscheidungen wurden erst nach Abschluss und
+Mac-Studio-Validierung eingeblendet. Die kumulierte Modellzeit betrug 412,276
+Sekunden, durchschnittlich 103,069 Sekunden pro Zeile. Wegen paralleler
+Ausführung lag die beobachtete Spanne zwischen erstem Start und letztem Ende
+bei 254 Sekunden. Einzelzeiten: PR-01 43 Sekunden, PR-02 172,332 Sekunden,
+PR-08 32,944 Sekunden und PR-09 164 Sekunden.
+
+Das Vor-Gate ist nicht bestanden:
+
+- PR-01: technisch gültig, aber weiterhin falsch negativ gegenüber
+  `FULL_COUNTERPART`;
+- PR-02: technisch ungültig, weil der zwingende synthetische Kontextcheck
+  fehlte; die sichtbare Familienwohnbau-Fundstelle wurde außerdem nur als
+  entfernt verwandt bewertet;
+- PR-08: technisch gültig, aber weiterhin falsch negativ gegenüber
+  `PARTIAL_COUNTERPART`;
+- PR-09: technisch gültiger Rollup `NO_COUNTERPART_ESTABLISHED` und damit
+  binär korrekt, obwohl die Einzelkomponente die scopefremde
+  Mehrfachversicherungsregel noch als abweichendes Gegenstück bewertete.
+
+Die anschließende Inputprüfung trennt Modell- und Retrievalursachen. Der
+richtige PR-01-Kandidat war zwar anhand seiner ID enthalten, sein
+600-Zeichen-Ausschnitt endete aber unmittelbar vor der entscheidenden Passage
+über Neuverträge und Konvertierungen. Bei PR-08 war ebenfalls nur der
+vorangestellte Rahmenvereinbarungsausschnitt vorhanden; die zweite
+Gold-Fundstelle zur Günstigkeitsklausel fehlte vollständig. PR-02 enthielt den
+Wortlaut `RV WEVIG/Familienwohnbau gilt als vereinbart`, aber nicht die zweite
+vollständige Goldquelle zum konkreten Versicherungsnehmerkreis in einer
+gleichwertig klaren Quellenkombination. Damit ist der jetzige A-only-
+Kandidatenkompaktierungsvertrag für eine blinde Goldentscheidung noch nicht
+evidenzvollständig.
+
+Folgerung: Das Gold-30-Gate wurde nicht gestartet. Zuerst muss der blinde
+Quellenvertrag pro Zeile einen vollständigen, hashgebundenen Zugriff auf den
+relevanten Originalkorpus erlauben, ohne frühere Entscheidungslabels oder
+Goldsuchbegriffe einzublenden. Danach wird Problem-4 erneut frisch geprüft.
+Selbst bei 4/4 folgt weiterhin zwingend Gold-30; erst danach kann zwischen Sol
+und Astra als primärem 283er-Reviewer entschieden werden.
+
+Status: `SOL PROBLEM-4 NICHT BESTANDEN; BLINDQUELLENINPUT NICHT
+EVIDENZVOLLSTÄNDIG; GOLD-30 NICHT GESTARTET; 283 NICHT FREIGEGEBEN; QWEN
+98/283 UNVERÄNDERT RESUMIERBAR`.
