@@ -1,5 +1,7 @@
 const {
+  BLIND_REVIEW_PACKET_CONTRACT_ID,
   SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
+  buildLfKnownFixtureBlindReviewPacket,
   buildLfKnownFixtureSourceReviewPacket,
   compoundOverlapRatio,
   factRoleDimension,
@@ -78,6 +80,62 @@ function fixture() {
 }
 
 describe("LF known fixture source review", () => {
+  it("materializes a genuinely blind A-only packet independent of prior labels", () => {
+    const firstInput = fixture();
+    const secondInput = fixture();
+    secondInput.goldCandidate.rows.forEach((row) => {
+      row.claude = {
+        foundStatus: "Nein",
+        sourceQuote: "ABSICHTLICH ABWEICHENDES CLAUDE-SIGNAL",
+        note: "nicht an den Reviewer weitergeben",
+      };
+      row.system.customerSearchStatus = "ABSICHTLICH ABWEICHEND";
+      row.system.bCounterpart = "nicht an den Reviewer weitergeben";
+    });
+    const options = {
+      createdAt: "2026-09-13T00:00:00.000Z",
+      maximumQuoteCharacters: 1_200,
+    };
+    const first = buildLfKnownFixtureBlindReviewPacket({
+      ...firstInput,
+      ...options,
+    });
+    const second = buildLfKnownFixtureBlindReviewPacket({
+      ...secondInput,
+      ...options,
+    });
+    expect(first).toEqual(second);
+    expect(first.contractId).toBe(BLIND_REVIEW_PACKET_CONTRACT_ID);
+    expect(first.summary.rows).toBe(283);
+    expect(first.summary.actualComponents).toBe(283);
+    expect(first.blindness).toEqual(
+      expect.objectContaining({
+        status: "CONFIRMED_BY_CONTRACT",
+        candidateSelection: "A_ONLY",
+        requiredReviewerModel: "gpt-5.6-sol",
+        requiredReasoningEffort: "high",
+      })
+    );
+    const serialized = JSON.stringify(first);
+    for (const forbidden of [
+      "claudeClaim",
+      "systemClaim",
+      "globalClaudeRebind",
+      '"relation"',
+      "ABSICHTLICH ABWEICHEND",
+    ])
+      expect(serialized).not.toContain(forbidden);
+    expect(first.rows[0].referenceA.content).toBe("Gegenstand 0");
+    expect(first.rows[0].searchedDocuments).toHaveLength(9);
+    expect(first.rows[0].components[1].candidates[0]).toEqual(
+      expect.objectContaining({
+        candidateId: "candidate-0",
+        documentName: "B-0.pdf",
+        exactQuote: "Versicherter Gegenstand 0",
+      })
+    );
+  });
+
   it("maps every known fact role to an explicit semantic dimension", () => {
     expect(factRoleDimension("INSURED_OBJECT")).toBe("OBJECT");
     expect(factRoleDimension("EXCLUSION")).toBe("COVERAGE_EFFECT");

@@ -1,6 +1,8 @@
 const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
+const BLIND_REVIEW_PACKET_CONTRACT_ID =
+  "LF_1PLUS9_BLIND_SOURCE_REVIEW_PACKET_V1";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
   "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V8";
 const REVIEW_OUTCOMES = new Set([
@@ -168,12 +170,12 @@ function factRoleDimension(factRole) {
   return dimension;
 }
 
-function candidateScore(candidate, component, row) {
+function candidateScore(candidate, component, row, includeClaudeGuidance = true) {
   const query = tokens(
     [
       row.point,
       row.system?.aContent,
-      row.claude?.sourceQuote,
+      includeClaudeGuidance ? row.claude?.sourceQuote : null,
       component.label,
     ].join(" ")
   );
@@ -236,11 +238,17 @@ function compactCandidate(
   document,
   component,
   row,
-  maximumQuoteCharacters
+  maximumQuoteCharacters,
+  includeClaudeGuidance = true
 ) {
   const excerpt = excerptRange(
     candidate,
-    [component.label, row.point, row.system?.aContent, row.claude?.sourceQuote],
+    [
+      component.label,
+      row.point,
+      row.system?.aContent,
+      includeClaudeGuidance ? row.claude?.sourceQuote : null,
+    ],
     maximumQuoteCharacters
   );
   return {
@@ -271,6 +279,7 @@ function selectComponentCandidates({
   maximumPerComponent,
   maximumQuoteCharacters,
   allowAllComponents = false,
+  includeClaudeGuidance = true,
 }) {
   const seenQuotes = new Set();
   const scored = candidates
@@ -288,11 +297,18 @@ function selectComponentCandidates({
     })
     .map((candidate) => ({
       candidate,
-      reviewScore: candidateScore(candidate, component, row),
-      claudeOverlap: overlapRatio(
-        tokens(row.claude?.sourceQuote),
-        tokens(candidate.range.exactQuote)
+      reviewScore: candidateScore(
+        candidate,
+        component,
+        row,
+        includeClaudeGuidance
       ),
+      claudeOverlap: includeClaudeGuidance
+        ? overlapRatio(
+            tokens(row.claude?.sourceQuote),
+            tokens(candidate.range.exactQuote)
+          )
+        : 0,
     }))
     .sort(
       (left, right) =>
@@ -305,7 +321,8 @@ function selectComponentCandidates({
   const selected = [];
   const selectedIds = new Set();
   const selectedDocuments = new Set();
-  const claudeRebind = scored
+  const claudeRebind = includeClaudeGuidance
+    ? scored
     .filter(
       ({ claudeOverlap }) =>
         row.claude?.foundStatus !== "Nein" && claudeOverlap > 0
@@ -316,7 +333,8 @@ function selectComponentCandidates({
         left.candidate.range.exactQuote.length -
           right.candidate.range.exactQuote.length ||
         left.candidate.rank - right.candidate.rank
-    )[0];
+        )[0]
+    : null;
   if (claudeRebind) {
     selected.push(claudeRebind);
     selectedIds.add(claudeRebind.candidate.candidateId);
@@ -348,7 +366,8 @@ function selectComponentCandidates({
       document,
       component,
       row,
-      maximumQuoteCharacters
+      maximumQuoteCharacters,
+      includeClaudeGuidance
     );
   });
 }
@@ -429,6 +448,7 @@ function globalReferenceARebindCandidates({
   documentsByUuid,
   maximumQuoteCharacters,
   maximumPerCheck = 3,
+  includeClaudeGuidance = true,
 }) {
   const existingRanges = new Set(
     existingCandidates.map(
@@ -495,7 +515,8 @@ function globalReferenceARebindCandidates({
           document,
           component,
           row,
-          maximumQuoteCharacters
+          maximumQuoteCharacters,
+          includeClaudeGuidance
         ),
         evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND",
         targetComponentIds: [component.componentId],
@@ -513,6 +534,7 @@ function buildLfKnownFixtureSourceReviewPacket({
   selection = "REPRESENTATIVE_30_V1",
   maximumPerComponent = 4,
   maximumQuoteCharacters = 1_200,
+  blind = false,
   createdAt = new Date().toISOString(),
 } = {}) {
   const globalReferenceMaximumQuoteCharacters = Math.min(
@@ -599,8 +621,9 @@ function buildLfKnownFixtureSourceReviewPacket({
           component,
           row,
           documentsByUuid,
-          maximumPerComponent,
-          maximumQuoteCharacters,
+        maximumPerComponent,
+        maximumQuoteCharacters,
+        includeClaudeGuidance: !blind,
         }),
       }));
       const rowContext = {
@@ -620,19 +643,22 @@ function buildLfKnownFixtureSourceReviewPacket({
           maximumPerComponent,
           maximumQuoteCharacters,
           allowAllComponents: true,
+          includeClaudeGuidance: !blind,
         }),
       };
       const semanticChecks = [rowContext, ...components];
       const selectedCandidates = semanticChecks.flatMap(
         ({ candidates }) => candidates
       );
-      const globalClaudeRebind = globalClaudeRebindCandidates({
-        candidateIndex: globalCandidateIndex,
-        existingCandidates: selectedCandidates,
-        row,
-        documentsByUuid,
-        maximumQuoteCharacters,
-      });
+      const globalClaudeRebind = blind
+        ? []
+        : globalClaudeRebindCandidates({
+            candidateIndex: globalCandidateIndex,
+            existingCandidates: selectedCandidates,
+            row,
+            documentsByUuid,
+            maximumQuoteCharacters,
+          });
       const globalReferenceARebind = globalReferenceARebindCandidates({
         candidateIndex: globalCandidateIndex,
         existingCandidates: [...selectedCandidates, ...globalClaudeRebind],
@@ -640,12 +666,12 @@ function buildLfKnownFixtureSourceReviewPacket({
         semanticChecks,
         documentsByUuid,
         maximumQuoteCharacters: globalReferenceMaximumQuoteCharacters,
+        includeClaudeGuidance: !blind,
       });
-      return {
+      const reviewRow = {
         reviewIndex,
         analysisRowId: row.analysisRowId,
         requirementId,
-        relation,
         category: row.category,
         subcategory: row.subcategory,
         point: row.point,
@@ -653,21 +679,6 @@ function buildLfKnownFixtureSourceReviewPacket({
           content: row.system.aContent,
           values: row.system.aValues,
           source: row.system.aSource,
-        },
-        claudeClaim: {
-          foundStatus: row.claude.foundStatus,
-          coverageStatus: row.claude.coverageStatus,
-          values: row.claude.values,
-          sourceQuote: clippedText(row.claude.sourceQuote, 3_000),
-          sourceFiles: row.claude.sourceFiles,
-          note: clippedText(row.claude.note, 2_000),
-        },
-        systemClaim: {
-          customerSearchStatus: row.system.customerSearchStatus,
-          bCounterpart: clippedText(row.system.bCounterpart, 3_000),
-          bCoverage: row.system.bCoverage,
-          bValues: row.system.bValues,
-          note: clippedText(row.system.note, 1_000),
         },
         searchedDocuments: bDocuments.map(
           ({ uuid, fingerprint, originalName, role, documentStatus }) => ({
@@ -688,22 +699,45 @@ function buildLfKnownFixtureSourceReviewPacket({
           negativeMeaning:
             "NO_COUNTERPART_ESTABLISHED means no counterpart in the reviewed exact candidates, not certified global absence.",
         },
-        globalClaudeRebind,
         globalReferenceARebind,
         actualComponents: components.length,
         components: semanticChecks,
+      };
+      if (blind) return reviewRow;
+      return {
+        ...reviewRow,
+        relation,
+        claudeClaim: {
+          foundStatus: row.claude.foundStatus,
+          coverageStatus: row.claude.coverageStatus,
+          values: row.claude.values,
+          sourceQuote: clippedText(row.claude.sourceQuote, 3_000),
+          sourceFiles: row.claude.sourceFiles,
+          note: clippedText(row.claude.note, 2_000),
+        },
+        systemClaim: {
+          customerSearchStatus: row.system.customerSearchStatus,
+          bCounterpart: clippedText(row.system.bCounterpart, 3_000),
+          bCoverage: row.system.bCoverage,
+          bValues: row.system.bValues,
+          note: clippedText(row.system.note, 1_000),
+        },
+        globalClaudeRebind,
       };
     }
   );
   const payload = {
     schemaVersion: 1,
-    contractId: SOURCE_REVIEW_PACKET_CONTRACT_ID,
+    contractId: blind
+      ? BLIND_REVIEW_PACKET_CONTRACT_ID
+      : SOURCE_REVIEW_PACKET_CONTRACT_ID,
     status: "READY_FOR_SOURCE_REVIEW",
     qaOnly: true,
     productionRule: false,
     createdAt,
-    authority:
-      "EXACT_SOURCE_RANGES_ARE_EVIDENCE; MODEL_OUTPUT_REQUIRES_CODEX_ADJUDICATION",
+    authority: blind
+      ? "A_AND_EXACT_B_SOURCE_RANGES_ONLY; NO_PRIOR_MODEL_OR_SYSTEM_DECISION_LABELS"
+      : "EXACT_SOURCE_RANGES_ARE_EVIDENCE; MODEL_OUTPUT_REQUIRES_CODEX_ADJUDICATION",
     bindings: {
       goldCandidateSha256: goldCandidate.candidateSha256,
       oracleSha256: goldCandidate.bindings.oracleSha256,
@@ -715,8 +749,27 @@ function buildLfKnownFixtureSourceReviewPacket({
       maximumQuoteCharacters,
       globalReferenceMaximumQuoteCharacters,
       candidatePolicy:
-        "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
+        blind
+          ? "REFERENCE_A_PLUS_COMPONENT_LEXICAL_RANK_WITH_DOCUMENT_DIVERSITY_AND_GLOBAL_REFERENCE_A_REBIND; NAVIGATION_ONLY"
+          : "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },
+    ...(blind
+      ? {
+          blindness: {
+            status: "CONFIRMED_BY_CONTRACT",
+            candidateSelection: "A_ONLY",
+            excludedInputs: [
+              "QWEN_DECISIONS",
+              "CLAUDE_DECISIONS_AND_QUOTES",
+              "SYSTEM_B_DECISIONS_AND_LABELS",
+              "PREVIOUS_GOLD_DECISIONS",
+              "RELATION_LABELS",
+            ],
+            requiredReviewerModel: "gpt-5.6-sol",
+            requiredReasoningEffort: "high",
+          },
+        }
+      : {}),
     rows,
     summary: {
       rows: rows.length,
@@ -733,14 +786,16 @@ function buildLfKnownFixtureSourceReviewPacket({
         (sum, row) =>
           sum +
           row.retrieval.selectedCandidateCount +
-          row.globalClaudeRebind.length +
+          (row.globalClaudeRebind || []).length +
           row.globalReferenceARebind.length,
         0
       ),
-      globalClaudeRebindCandidates: rows.reduce(
-        (sum, row) => sum + row.globalClaudeRebind.length,
-        0
-      ),
+      globalClaudeRebindCandidates: blind
+        ? 0
+        : rows.reduce(
+            (sum, row) => sum + row.globalClaudeRebind.length,
+            0
+          ),
       globalReferenceARebindCandidates: rows.reduce(
         (sum, row) => sum + row.globalReferenceARebind.length,
         0
@@ -749,12 +804,23 @@ function buildLfKnownFixtureSourceReviewPacket({
       absenceCertifiedRows: 0,
     },
   };
+  const packetContractId = blind
+    ? BLIND_REVIEW_PACKET_CONTRACT_ID
+    : SOURCE_REVIEW_PACKET_CONTRACT_ID;
   return {
     ...payload,
     packetSha256: sha256(
-      `${SOURCE_REVIEW_PACKET_CONTRACT_ID}\u0000${stableStringify(payload)}`
+      `${packetContractId}\u0000${stableStringify(payload)}`
     ),
   };
+}
+
+function buildLfKnownFixtureBlindReviewPacket(options = {}) {
+  return buildLfKnownFixtureSourceReviewPacket({
+    ...options,
+    blind: true,
+    selection: options.selection || "ALL_283_V1",
+  });
 }
 
 function validateSourceReviewResponse(row, response) {
@@ -877,9 +943,11 @@ function validateSourceReviewResponse(row, response) {
 }
 
 module.exports = {
+  BLIND_REVIEW_PACKET_CONTRACT_ID,
   SOURCE_REVIEW_PACKET_CONTRACT_ID,
   SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
   buildLfKnownFixtureSourceReviewPacket,
+  buildLfKnownFixtureBlindReviewPacket,
   compoundOverlapRatio,
   factRoleDimension,
   normalizedText,
