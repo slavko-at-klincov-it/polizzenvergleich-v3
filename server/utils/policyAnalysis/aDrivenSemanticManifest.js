@@ -28,8 +28,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V5 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V5";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V6 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V7 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V7";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V8";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -192,6 +194,20 @@ const REQUIREMENT_ROLE_SIGNALS_V7 = Object.freeze([
   ...REQUIREMENT_ROLE_SIGNALS_V6,
   EXPLICIT_INTENTIONAL_DAMAGE_SIGNAL_V7,
 ]);
+const EXPLICIT_QUANTIFIED_VALUE_SIGNAL_V8 = Object.freeze({
+  ...REQUIREMENT_ROLE_SIGNALS_V1.find(
+    ({ signalId }) => signalId === "EXPLICIT_QUANTIFIED_VALUE"
+  ),
+  pattern:
+    /\b(?:bis(?:\s+zu)?|höchstens|maximal|max\.|mindestens|längstens|nicht\s+mehr\s+als|in\s+höhe\s+von|beträgt|versicherungssumme\s+von|ersetzt)\s+(?:voraussichtlich\s+)?(?:(?:€|EUR|Euro)\s*)?(?=[0-9lI]*[0-9])[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?(?=$|[\s,.;:)\]])|\b(?:selbstbehalt|eigenbehalt)\p{L}*(?:\s+(?:von|beträgt))?\s+(?:(?:€|EUR|Euro)\s*)?(?=[0-9lI]*[0-9])[0-9lI]+(?:[.,][0-9lI]+)?(?:\s*(?:%|€|EUR|Euro))?\b|(?:(?:€|EUR|Euro)\s*(?=[0-9lI]*[0-9])[0-9lI]+(?:[.,][0-9lI]+)?|(?=[0-9lI]*[0-9])[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro))\s*(?:pro|je)\s+(?:schadenfall|objekt|einheit)\b|\b(?=[0-9lI]*[0-9])[0-9lI]+(?:[.,][0-9lI]+)?\s*%\s+(?:auf\s+)?erstes\s+risiko\b|\b[0-9]+(?:[.,][0-9]+)?\s*(?:m(?:²|2)?|qm|Tage?|Monate?|Jahre?)(?=$|[\s,.;:)\]])/giu,
+});
+const REQUIREMENT_ROLE_SIGNALS_V8 = Object.freeze(
+  REQUIREMENT_ROLE_SIGNALS_V7.map((signal) =>
+    signal.signalId === "EXPLICIT_QUANTIFIED_VALUE"
+      ? EXPLICIT_QUANTIFIED_VALUE_SIGNAL_V8
+      : signal
+  )
+);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -199,6 +215,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -211,8 +228,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V5;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V6)
     return REQUIREMENT_ROLE_SIGNALS_V6;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V7)
     return REQUIREMENT_ROLE_SIGNALS_V7;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V8;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -739,6 +758,7 @@ function materializeSharedSignalComponents(
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeBenefitEvidence =
@@ -746,17 +766,22 @@ function materializeSharedSignalComponents(
           [
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeQuantifiedEvidence =
           signal.signalId === "EXPLICIT_QUANTIFIED_VALUE" &&
           [
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeLimitBasisEvidence =
           signal.signalId === "EXPLICIT_LIMIT_BASIS" &&
-          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+          [
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          ].includes(semanticSignalContractId);
         const inheritedConditionEvidence =
           signal.signalId === "EXPLICIT_CONDITION"
             ? governingConditionEvidence(unit, evidence)
@@ -828,6 +853,7 @@ function materializeSharedSignalComponents(
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+              A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
               A_SEMANTIC_SIGNAL_CONTRACT_ID,
             ].includes(semanticSignalContractId));
         const sourceBlockIds = inheritedConditionEvidence
@@ -1878,6 +1904,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,

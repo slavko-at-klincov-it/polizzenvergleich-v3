@@ -10,6 +10,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -705,6 +706,7 @@ function validResponse(unit) {
   const deductibleEvidence = unit.source.blocks.find(({ exactText }) =>
     /\b(?:selbstbehalt|eigenbehalt)\b/iu.test(exactText)
   );
+
   if (deductibleEvidence) {
     const deductibleLabel = deductibleEvidence.exactText.match(
       /\b(?:selbstbehalt|eigenbehalt)\b/iu
@@ -869,6 +871,102 @@ describe("requirement-local semantic evidence completeness", () => {
       );
     }
   );
+
+  test("does not treat a German word after beträgt as an OCR numeric value", () => {
+    const source =
+      "Die Versicherungssumme beträgt im Rahmen der Pauschalversicherungssumme.";
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", source]),
+      [
+        requirement(
+          ["b1"],
+          [
+            component("LIMIT_BASIS", "b1", {
+              label: "im Rahmen der Pauschalversicherungssumme",
+            }),
+          ]
+        ),
+      ]
+    );
+
+    expect(diagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signalId: "EXPLICIT_QUANTIFIED_VALUE",
+        }),
+      ])
+    );
+  });
+
+  test("keeps an OCR-like quantity when it contains at least one real digit", () => {
+    const source = "Die Entschädigung beträgt l0 % der Versicherungssumme.";
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", source]),
+      [requirement(["b1"], [component("LIMIT_BASIS", "b1")])]
+    );
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+          signalId: "EXPLICIT_QUANTIFIED_VALUE",
+          matchedEvidence: expect.arrayContaining([
+            expect.objectContaining({ match: "beträgt l0 %" }),
+          ]),
+        }),
+      ])
+    );
+  });
+
+  test("accepts a source-bound amount after im Rahmen without inventing an extra value", () => {
+    const source =
+      "Die Versicherungssumme beträgt im Rahmen der Pauschalversicherungssumme EUR 5.000,- pro Schadenfall.";
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", source]),
+      [
+        requirement(
+          ["b1"],
+          [
+            component("LIMIT_BASIS", "b1", {
+              label: "im Rahmen der Pauschalversicherungssumme",
+            }),
+            component("VALUE_AND_UNIT", "b1", {
+              label: "EUR 5.000,- pro Schadenfall",
+              rawValue: "5.000",
+              unit: "EUR",
+            }),
+          ]
+        ),
+      ]
+    );
+
+    expect(diagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signalId: "EXPLICIT_QUANTIFIED_VALUE",
+        }),
+      ])
+    );
+  });
+
+  test("keeps the frozen V7 quantified-value behavior available for replay", () => {
+    const source =
+      "Die Versicherungssumme beträgt im Rahmen der Pauschalversicherungssumme.";
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", source]),
+      [requirement(["b1"], [component("LIMIT_BASIS", "b1")])],
+      { semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V7 }
+    );
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+          signalId: "EXPLICIT_QUANTIFIED_VALUE",
+        }),
+      ])
+    );
+  });
 
   test("does not borrow a compatible role from a sibling requirement", () => {
     const diagnostics = requirementRoleEvidenceDiagnostics(
@@ -6239,7 +6337,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V48");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V49");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
