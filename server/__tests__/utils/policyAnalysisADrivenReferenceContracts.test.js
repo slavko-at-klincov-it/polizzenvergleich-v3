@@ -5411,6 +5411,253 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("keeps sibling list segments separate and types governed damage events correctly", () => {
+    const first =
+      "- das Abhandenkommen von versicherten Sachen anlässlich des Schadens,";
+    const secondLead =
+      "- die Beschädigung von Gebäudebestandteilen anlässlich eines versuchten oder vollbrachten";
+    const secondTail = "Einbruchdiebstahles";
+    const unit = {
+      unitId: "damage-list-segments",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["first", "second-lead", "second-tail"],
+        combinedText: [first, secondLead, secondTail].join("\n"),
+        blocks: [
+          { blockId: "first", exactText: first },
+          { blockId: "second-lead", exactText: secondLead },
+          { blockId: "second-tail", exactText: secondTail },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first"],
+          combinedText: first,
+        },
+        {
+          segmentId: "second-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["second-lead", "second-tail"],
+          combinedText: [secondLead, secondTail].join("\n"),
+        },
+      ],
+      governingContext: {
+        blockIds: ["governor"],
+        combinedText: "Schäden durch",
+        blocks: [{ blockId: "governor", exactText: "Schäden durch" }],
+      },
+    };
+    const secondRequirement = {
+      displayLabel: [secondLead, secondTail].join("\n"),
+      components: [
+        {
+          type: "DAMAGE_OR_EFFECT",
+          label: "Beschädigung von Gebäudebestandteilen",
+          sourceBlockIds: ["second-lead"],
+        },
+        {
+          type: "PERIL_OR_CAUSE",
+          label: "versuchten oder vollbrachten\nEinbruchdiebstahles",
+          sourceBlockIds: ["second-lead", "second-tail"],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "PERIL_OR_DAMAGE",
+          semanticClasses: ["PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: first,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Abhandenkommen von versicherten Sachen",
+                  sourceBlockIds: ["first"],
+                },
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Einbruchdiebstahles",
+                  sourceBlockIds: ["second-tail"],
+                },
+              ],
+            },
+            secondRequirement,
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toEqual([
+      {
+        displayLabel: first,
+        components: [
+          {
+            type: "DAMAGE_OR_EFFECT",
+            label: "Abhandenkommen von versicherten Sachen",
+            sourceBlockIds: ["first"],
+          },
+        ],
+      },
+      secondRequirement,
+    ]);
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: unit.unitId,
+          requirementIndex: 0,
+          componentIndex: 1,
+          action: "DROP_CROSS_SEGMENT_COMPONENT",
+          segmentId: "first-segment",
+          sourceBlockIds: ["second-tail"],
+        }),
+        expect.objectContaining({
+          unitId: unit.unitId,
+          requirementIndex: 0,
+          componentIndex: 0,
+          action: "NORMALIZE_DAMAGE_CAUSE_GOVERNOR_OBJECT",
+          fromType: "OBJECT",
+          toType: "DAMAGE_OR_EFFECT",
+        }),
+      ])
+    );
+  });
+
+  test("retains a shared governor component in every matched list segment", () => {
+    const unit = {
+      unitId: "shared-list-governor",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["first", "second"],
+        combinedText: "- Brand\n- Sturm",
+        blocks: [
+          { blockId: "first", exactText: "- Brand" },
+          { blockId: "second", exactText: "- Sturm" },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-segment",
+          blockIds: ["first"],
+          combinedText: "- Brand",
+        },
+        {
+          segmentId: "second-segment",
+          blockIds: ["second"],
+          combinedText: "- Sturm",
+        },
+      ],
+      governingContext: {
+        blockIds: ["governor"],
+        combinedText: "Versichert sind Schäden durch",
+        blocks: [
+          {
+            blockId: "governor",
+            exactText: "Versichert sind Schäden durch",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "PERIL_OR_DAMAGE"],
+      requirements: ["first", "second"].map((blockId, index) => ({
+        displayLabel: index === 0 ? "• Brand" : "• Sturm",
+        components: [
+          {
+            type: "PERIL_OR_CAUSE",
+            label: index === 0 ? "Brand" : "Sturm",
+            sourceBlockIds: [blockId],
+          },
+          {
+            type: "COVERAGE_EFFECT",
+            label: "Versichert sind",
+            sourceBlockIds: ["governor"],
+            coverageEffect: "INCLUDED",
+          },
+        ],
+      })),
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.find(({ type }) => type === "COVERAGE_EFFECT")
+      )
+    ).toEqual([
+      expect.objectContaining({ sourceBlockIds: ["governor"] }),
+      expect.objectContaining({ sourceBlockIds: ["governor"] }),
+    ]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({ action: "DROP_CROSS_SEGMENT_COMPONENT" })
+    );
+  });
+
+  test("does not auto-repair a component that mixes local and sibling segment sources", () => {
+    const unit = {
+      unitId: "mixed-list-segment-source",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["first", "second"],
+        combinedText: "- erste Regel\n- zweite Regel",
+        blocks: [
+          { blockId: "first", exactText: "- erste Regel" },
+          { blockId: "second", exactText: "- zweite Regel" },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-segment",
+          blockIds: ["first"],
+          combinedText: "- erste Regel",
+        },
+        {
+          segmentId: "second-segment",
+          blockIds: ["second"],
+          combinedText: "- zweite Regel",
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION"],
+      requirements: [
+        {
+          displayLabel: "- erste Regel",
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: "erste Regel",
+              sourceBlockIds: ["first", "second"],
+            },
+          ],
+        },
+        {
+          displayLabel: "- zweite Regel",
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: "zweite Regel",
+              sourceBlockIds: ["second"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
   test("restores a source-bound exclusion effect from an invalid partial label", () => {
     const source =
       "Die Versicherung erstreckt sich dabei nicht auf Schäden durch Einbruchdiebstahl.";
@@ -6556,7 +6803,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V52");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V53");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );

@@ -35,7 +35,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V52";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V53";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -77,6 +77,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V49",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V50",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V51",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V52",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -1320,13 +1321,16 @@ function normalizeCostPurposeObjectComponents(requirements) {
 
 function normalizeDamageCauseGovernorComponents(requirements, unit) {
   const governorText = String(unit?.governingContext?.combinedText || "");
-  if (!/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText))
+  if (
+    !/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText) &&
+    !/^\s*Schäden\s+durch\s*:?\s*$/iu.test(governorText)
+  )
     return { requirements, repairs: [] };
   const introducesInsuredObjects = /(?:^|[\s,;:])an\s*$/iu.test(
     governorText.trim()
   );
   const damageLabelPattern =
-    /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchsch(?:aden|äden)|Rußsch(?:aden|äden)|Schmorsch(?:aden|äden)|Kabelschmorsch(?:aden|äden)|Beschädigung|Zerstörung)(?:\b|en\b)/iu;
+    /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchsch(?:aden|äden)|Rußsch(?:aden|äden)|Schmorsch(?:aden|äden)|Kabelschmorsch(?:aden|äden)|Abhandenkommen|Beschädigung(?:en)?|Zerstörung(?:en)?|Unbrauchbarmachung(?:en)?|Verlust)\b/iu;
   const repairs = [];
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => ({
@@ -2436,6 +2440,64 @@ function normalizeUnambiguousSemanticClassAliases(response) {
   };
 }
 
+function normalizeListSegmentComponentBoundaries(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length < 2
+  )
+    return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .replace(/^[•▪–—-]\s*/u, "");
+  const governingBlockIds = new Set(unit.governingContext?.blockIds || []);
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const displayLabel = comparable(requirement.displayLabel);
+      const matchingSegments = unit.logicalSourceSegments.filter((segment) => {
+        const segmentText = comparable(segment.combinedText);
+        return (
+          displayLabel &&
+          segmentText &&
+          (segmentText.includes(displayLabel) ||
+            displayLabel.includes(segmentText))
+        );
+      });
+      if (matchingSegments.length !== 1) return requirement;
+      const segment = matchingSegments[0];
+      const allowedBlockIds = new Set([
+        ...segment.blockIds,
+        ...governingBlockIds,
+      ]);
+      const components = (requirement.components || []).flatMap(
+        (component, componentIndex) => {
+          const sourceBlockIds = component.sourceBlockIds || [];
+          if (
+            sourceBlockIds.length > 0 &&
+            sourceBlockIds.every((blockId) => !allowedBlockIds.has(blockId))
+          ) {
+            repairs.push({
+              requirementIndex,
+              componentIndex,
+              action: "DROP_CROSS_SEGMENT_COMPONENT",
+              segmentId: segment.segmentId,
+              sourceBlockIds,
+            });
+            return [];
+          }
+          return [component];
+        }
+      );
+      return { ...requirement, components };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -2526,6 +2588,13 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     let requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
+    const listSegmentBoundaries = normalizeListSegmentComponentBoundaries(
+      requirements,
+      unit
+    );
+    requirements = listSegmentBoundaries.requirements;
+    for (const repair of listSegmentBoundaries.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const conditionalMembership = normalizeConditionalMembershipObjects(
       requirements,
       unit
