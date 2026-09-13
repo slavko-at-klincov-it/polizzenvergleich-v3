@@ -12646,6 +12646,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           displayLabel: "• Suchkosten",
           sourceUnitIds: ["coverage-governor", "cost-item"],
           sourceBlockIds: ["governor-block", "item-block"],
+          sourceSpans: [
+            { documentUuid: "doc", blockId: "governor-block" },
+            { documentUuid: "doc", blockId: "item-block" },
+          ],
           components: [
             {
               componentId: "coverage-component",

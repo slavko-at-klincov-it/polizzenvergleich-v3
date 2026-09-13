@@ -56,6 +56,131 @@ function intersection(left, right) {
   return left.filter((value) => rightSet.has(value));
 }
 
+function assessADrivenTerminalRoleRisks({
+  plan,
+  manifest,
+  legacySourceBlockIds = new Set(),
+} = {}) {
+  if (!Array.isArray(plan?.units) || !Array.isArray(manifest?.unitTerminals))
+    throw new Error("LF_A_TERMINAL_ROLE_RISK_AUDIT_INPUT_INVALID");
+  const unitById = new Map(plan.units.map((unit) => [unit.unitId, unit]));
+  const legacyBlocks =
+    legacySourceBlockIds instanceof Set
+      ? legacySourceBlockIds
+      : new Set(legacySourceBlockIds || []);
+  const dynamicEvidenceBlockKeys = new Set(
+    (manifest.requirements || []).flatMap((requirement) =>
+      (requirement.components || []).flatMap((component) =>
+        (component.sourceBlockIds || []).flatMap((blockId) => {
+          const span = (requirement.sourceSpans || []).find(
+            ({ blockId: sourceBlockId }) => sourceBlockId === blockId
+          );
+          return span?.documentUuid ? [`${span.documentUuid}:${blockId}`] : [];
+        })
+      )
+    )
+  );
+  const reviewedNonOperativeUnits = manifest.unitTerminals
+    .filter(
+      ({ terminalDisposition }) =>
+        terminalDisposition !== "OPERATIVE_MAPPED" &&
+        terminalDisposition !== "UNRESOLVED_REVIEW_REQUIRED"
+    )
+    .map((terminal) => {
+      const unit = unitById.get(terminal.unitId);
+      if (!unit) throw new Error("LF_A_TERMINAL_ROLE_RISK_UNIT_UNKNOWN");
+      const overlappingLegacySourceBlockIds = intersection(
+        unit.source.blockIds,
+        legacyBlocks
+      );
+      const reasons = [];
+      if (
+        unit.initialDisposition === "PENDING_CLASSIFICATION" &&
+        !["HEADING", "METADATA"].includes(unit.unitKind)
+      )
+        reasons.push("PENDING_NON_HEADING_CLASSIFIED_NON_OPERATIVE");
+      if (STRONG_OPERATIVE_TEXT.test(unit.source.combinedText))
+        reasons.push("STRONG_OPERATIVE_TEXT_SIGNAL");
+      if (overlappingLegacySourceBlockIds.length)
+        reasons.push("OVERLAPS_LEGACY_OPERATIVE_COMPONENT");
+      const citedAsDynamicEvidence = unit.source.blockIds.filter((blockId) =>
+        dynamicEvidenceBlockKeys.has(`${unit.source.documentUuid}:${blockId}`)
+      );
+      const text = String(unit.source.combinedText || "").trim();
+      const headingCandidateOnly =
+        unit.source.blocks.length > 0 &&
+        unit.source.blocks.every(
+          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+        );
+      let reviewDisposition = "SUSPICIOUS_REVIEW_REQUIRED";
+      if (
+        citedAsDynamicEvidence.length === unit.source.blockIds.length &&
+        STRONG_OPERATIVE_TEXT.test(text)
+      )
+        reviewDisposition = "OPERATIVE_GOVERNOR_EVIDENCE_REUSED";
+      else if (unit.unitKind === "METADATA" && /^Seite\s+\d+$/iu.test(text))
+        reviewDisposition = "PAGE_MARKER_CONFIRMED";
+      else if (
+        headingCandidateOnly &&
+        (unit.unitKind === "HEADING" ||
+          /^\s*(?:\d+(?:\.\d+)*[.)]?|[A-Z][.)])\s+/u.test(text))
+      )
+        reviewDisposition = "STRUCTURAL_HEADING_CONFIRMED";
+      else if (
+        /^\s*[\p{L}][\p{L}\s-]{1,120}versicherung\s*$/iu.test(text) &&
+        !PREDICATE_PATTERN.test(text)
+      )
+        reviewDisposition = "INSURANCE_BRANCH_HEADING_CONFIRMED";
+      else if (/^(?:Versicherer|Präambel)$/iu.test(text))
+        reviewDisposition = "STRUCTURAL_LABEL_CONFIRMED";
+      return {
+        ...terminal,
+        unitKind: unit.unitKind,
+        initialDisposition: unit.initialDisposition,
+        source: unit.source,
+        overlappingLegacySourceBlockIds,
+        citedAsDynamicEvidence,
+        reasons,
+        reviewDisposition,
+      };
+    })
+    .filter(({ reasons }) => reasons.length > 0);
+  const suspiciousNonOperativeUnits = reviewedNonOperativeUnits.filter(
+    ({ reviewDisposition }) =>
+      reviewDisposition === "SUSPICIOUS_REVIEW_REQUIRED"
+  );
+  const reviewedOperativeUnits = manifest.unitTerminals
+    .filter(
+      ({ terminalDisposition }) => terminalDisposition === "OPERATIVE_MAPPED"
+    )
+    .map((terminal) => {
+      const unit = unitById.get(terminal.unitId);
+      if (!unit) throw new Error("LF_A_TERMINAL_ROLE_RISK_UNIT_UNKNOWN");
+      const text = String(unit.source?.combinedText || "").trim();
+      const numberedHeadingWithoutPredicate =
+        unit.unitKind === "LIST" &&
+        unit.source.blocks.length > 0 &&
+        unit.source.blocks.every(
+          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+        ) &&
+        /^\s*\d+[.)]\s/u.test(text) &&
+        !PREDICATE_PATTERN.test(text);
+      const reasons = [];
+      if (!terminal.requirementIds.length)
+        reasons.push("OPERATIVE_WITHOUT_REQUIREMENT_IDS");
+      if (numberedHeadingWithoutPredicate)
+        reasons.push("NUMBERED_HEADING_WITHOUT_PREDICATE");
+      return { ...terminal, source: unit.source, reasons };
+    })
+    .filter(({ reasons }) => reasons.length > 0);
+  return {
+    reviewedNonOperativeUnits,
+    suspiciousNonOperativeUnits,
+    reviewedOperativeUnits,
+    suspiciousOperativeUnits: reviewedOperativeUnits,
+  };
+}
+
 function comparable(value) {
   return String(value || "")
     .normalize("NFKC")
@@ -708,9 +833,6 @@ function buildADrivenAStatusAudit({
   const legacySourceBlockIds = new Set(
     legacyComponents.flatMap(({ sourceBlockIds }) => sourceBlockIds)
   );
-  const dynamicComponentSourceBlockIds = new Set(
-    dynamicComponents.flatMap(({ sourceBlockIds }) => sourceBlockIds)
-  );
   const unresolvedUnits = manifest.unitTerminals
     .filter(
       ({ terminalDisposition }) =>
@@ -720,99 +842,15 @@ function buildADrivenAStatusAudit({
       ...terminal,
       source: unitById.get(terminal.unitId)?.source || null,
     }));
-  const reviewedNonOperativeUnits = manifest.unitTerminals
-    .filter(
-      ({ terminalDisposition }) =>
-        terminalDisposition !== "OPERATIVE_MAPPED" &&
-        terminalDisposition !== "UNRESOLVED_REVIEW_REQUIRED"
-    )
-    .map((terminal) => {
-      const unit = unitById.get(terminal.unitId);
-      const overlappingLegacySourceBlockIds = intersection(
-        unit.source.blockIds,
-        legacySourceBlockIds
-      );
-      const reasons = [];
-      if (
-        unit.initialDisposition === "PENDING_CLASSIFICATION" &&
-        !["HEADING", "METADATA"].includes(unit.unitKind)
-      )
-        reasons.push("PENDING_NON_HEADING_CLASSIFIED_NON_OPERATIVE");
-      if (STRONG_OPERATIVE_TEXT.test(unit.source.combinedText))
-        reasons.push("STRONG_OPERATIVE_TEXT_SIGNAL");
-      if (overlappingLegacySourceBlockIds.length)
-        reasons.push("OVERLAPS_LEGACY_OPERATIVE_COMPONENT");
-      const citedAsDynamicEvidence = unit.source.blockIds.filter((blockId) =>
-        dynamicComponentSourceBlockIds.has(blockId)
-      );
-      const text = String(unit.source.combinedText || "").trim();
-      const headingCandidateOnly =
-        unit.source.blocks.length > 0 &&
-        unit.source.blocks.every(
-          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
-        );
-      let reviewDisposition = "SUSPICIOUS_REVIEW_REQUIRED";
-      if (
-        citedAsDynamicEvidence.length === unit.source.blockIds.length &&
-        STRONG_OPERATIVE_TEXT.test(text)
-      )
-        reviewDisposition = "OPERATIVE_GOVERNOR_EVIDENCE_REUSED";
-      else if (unit.unitKind === "METADATA" && /^Seite\s+\d+$/iu.test(text))
-        reviewDisposition = "PAGE_MARKER_CONFIRMED";
-      else if (
-        headingCandidateOnly &&
-        (unit.unitKind === "HEADING" ||
-          /^\s*(?:\d+(?:\.\d+)*[.)]?|[A-Z][.)])\s+/u.test(text))
-      )
-        reviewDisposition = "STRUCTURAL_HEADING_CONFIRMED";
-      else if (
-        /^\s*[\p{L}][\p{L}\s-]{1,120}versicherung\s*$/iu.test(text) &&
-        !PREDICATE_PATTERN.test(text)
-      )
-        reviewDisposition = "INSURANCE_BRANCH_HEADING_CONFIRMED";
-      else if (/^(?:Versicherer|Präambel)$/iu.test(text))
-        reviewDisposition = "STRUCTURAL_LABEL_CONFIRMED";
-      return {
-        ...terminal,
-        unitKind: unit.unitKind,
-        initialDisposition: unit.initialDisposition,
-        source: unit.source,
-        overlappingLegacySourceBlockIds,
-        citedAsDynamicEvidence,
-        reasons,
-        reviewDisposition,
-      };
-    })
-    .filter(({ reasons }) => reasons.length > 0);
-  const suspiciousNonOperativeUnits = reviewedNonOperativeUnits.filter(
-    ({ reviewDisposition }) =>
-      reviewDisposition === "SUSPICIOUS_REVIEW_REQUIRED"
-  );
-  const reviewedOperativeUnits = manifest.unitTerminals
-    .filter(
-      ({ terminalDisposition }) => terminalDisposition === "OPERATIVE_MAPPED"
-    )
-    .map((terminal) => {
-      const unit = unitById.get(terminal.unitId);
-      const text = String(unit?.source?.combinedText || "").trim();
-      const numberedHeadingWithoutPredicate =
-        unit?.unitKind === "LIST" &&
-        unit.source.blocks.length > 0 &&
-        unit.source.blocks.every(
-          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
-        ) &&
-        /^\s*\d+[.)]\s/u.test(text) &&
-        !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
-          text
-        );
-      const reasons = [];
-      if (!terminal.requirementIds.length)
-        reasons.push("OPERATIVE_WITHOUT_REQUIREMENT_IDS");
-      if (numberedHeadingWithoutPredicate)
-        reasons.push("NUMBERED_HEADING_WITHOUT_PREDICATE");
-      return { ...terminal, source: unit?.source || null, reasons };
-    })
-    .filter(({ reasons }) => reasons.length > 0);
+  const {
+    reviewedNonOperativeUnits,
+    suspiciousNonOperativeUnits,
+    reviewedOperativeUnits,
+  } = assessADrivenTerminalRoleRisks({
+    plan,
+    manifest,
+    legacySourceBlockIds,
+  });
 
   const summary = {
     sourceBlocks: plan.summary.sourceBlocks,
@@ -937,6 +975,7 @@ module.exports = {
   A_ATOMICITY_RISK_AUDIT_CONTRACT_ID,
   A_STATUS_AUDIT_CONTRACT_ID,
   LEGACY_ROLE_TO_DYNAMIC_TYPES,
+  assessADrivenTerminalRoleRisks,
   assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
   compareADrivenManifestAtomicity,

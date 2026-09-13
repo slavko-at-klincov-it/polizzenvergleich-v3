@@ -152,6 +152,7 @@ describe("automatic A-driven B-shadow readiness", () => {
   test("allows a private B shadow solely from dynamic A integrity", () => {
     const receipt = buildAutomatedADrivenIntegrityReceipt(fixture());
     expect(receipt).toMatchObject({
+      contractId: "LF_A_AUTOMATED_B_SHADOW_READINESS_V2",
       status: "AUTOMATED_A_INTEGRITY_PASS",
       bShadowPilotAllowed: true,
       legacyCrosswalkRequiredForLaunch: false,
@@ -170,6 +171,32 @@ describe("automatic A-driven B-shadow readiness", () => {
     });
     expect(receipt).not.toHaveProperty("legacyRequirements");
     expect(receipt).not.toHaveProperty("legacyComponents");
+  });
+
+  test("stops fail-closed while a source-bound component still has an atomicity risk", () => {
+    const atomicityRisk = fixture();
+    const response = atomicityRisk.responses[0];
+    const sourceUnit = atomicityRisk.plan.units.find(
+      ({ unitId }) => unitId === response.unitId
+    );
+    response.semanticClasses.push("DEFINITION");
+    response.requirements[0].components.push({
+      type: "FACT_ROLE",
+      label: "Zum Gebäude gehören die fest verbundenen Bauteile.",
+      sourceBlockIds: [sourceUnit.source.blockIds[0]],
+    });
+    atomicityRisk.manifest = buildADrivenSemanticManifest({
+      plan: atomicityRisk.plan,
+      responses: atomicityRisk.responses,
+    });
+    atomicityRisk.classificationSummary.semanticRequirements =
+      atomicityRisk.manifest.summary.semanticRequirements;
+    atomicityRisk.classificationSummary.semanticComponents =
+      atomicityRisk.manifest.summary.semanticComponents;
+
+    expect(() => buildAutomatedADrivenIntegrityReceipt(atomicityRisk)).toThrow(
+      "LF_A_AUTOMATED_GATE_ATOMICITY_RISK_UNRESOLVED"
+    );
   });
 
   test("stops fail-closed for an incomplete batch or mutated A manifest", () => {

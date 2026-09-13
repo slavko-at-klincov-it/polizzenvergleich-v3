@@ -13,17 +13,19 @@ const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
   stableStringify,
 } = require("./aDrivenSourceUnitPlan");
+const {
+  assessADrivenManifestAtomicityRisks,
+  assessADrivenTerminalRoleRisks,
+} = require("./aDrivenAStatusAudit");
 
 // This is the runtime gate for a private A-driven B shadow pilot. It proves
 // only automatic provenance and execution integrity for the concrete A input.
 // Legacy LF row counts, human reviewers and signatures are intentionally not
 // part of this contract.
 const AUTOMATED_A_INTEGRITY_CONTRACT_ID =
-  "LF_A_AUTOMATED_B_SHADOW_READINESS_V1";
+  "LF_A_AUTOMATED_B_SHADOW_READINESS_V2";
 const AUTOMATED_B_SHADOW_SCOPE =
   "LF_REFERENCE_A_DRIVEN_AUTOMATED_B_RETRIEVAL_SHADOW_PILOT";
-const STRONG_OPERATIVE_TEXT =
-  /\b(?:versichert\s+sind|mitversichert|nicht\s+versichert|ausgeschlossen|versicherungsschutz\s+(?:besteht|gilt)|gilt\s+(?:als|für|bei)|beträgt|bis\s+zu|unter\s+der\s+voraussetzung|hat\s+zu|muss|ist\s+verpflichtet|ersetzt|innerhalb\s+von)\b|\b\d+(?:[.,]\d+)?\s*(?:%|EUR|Euro|Tage?|Monate?|Jahre?)\b/iu;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -191,83 +193,6 @@ function validateClassificationBatches(classificationBatches, plan) {
   return classificationBatches;
 }
 
-function terminalRiskAssessment({ plan, manifest }) {
-  const unitById = new Map(plan.units.map((unit) => [unit.unitId, unit]));
-  const dynamicEvidenceBlockKeys = new Set(
-    manifest.requirements.flatMap((requirement) =>
-      requirement.components.flatMap((component) =>
-        component.sourceBlockIds.map((blockId) => {
-          const span = requirement.sourceSpans?.find(
-            ({ blockId: sourceBlockId }) => sourceBlockId === blockId
-          );
-          return `${span?.documentUuid}:${blockId}`;
-        })
-      )
-    )
-  );
-  const suspiciousNonOperativeUnits = [];
-  const suspiciousOperativeUnits = [];
-  for (const terminal of manifest.unitTerminals) {
-    const unit = unitById.get(terminal.unitId);
-    if (!unit) throw gateError("LF_A_AUTOMATED_GATE_TERMINAL_UNIT_UNKNOWN");
-    const sourceText = String(unit.source?.combinedText || "").trim();
-    if (terminal.terminalDisposition === "OPERATIVE_MAPPED") {
-      const numberedHeadingWithoutPredicate =
-        unit.unitKind === "LIST" &&
-        unit.source.blocks.length > 0 &&
-        unit.source.blocks.every(
-          ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
-        ) &&
-        /^\s*\d+[.)]\s/u.test(sourceText) &&
-        !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
-          sourceText
-        );
-      if (!terminal.requirementIds.length || numberedHeadingWithoutPredicate)
-        suspiciousOperativeUnits.push({
-          unitId: terminal.unitId,
-          reason: !terminal.requirementIds.length
-            ? "OPERATIVE_WITHOUT_REQUIREMENT_IDS"
-            : "NUMBERED_HEADING_WITHOUT_PREDICATE",
-        });
-      continue;
-    }
-    if (terminal.terminalDisposition === "UNRESOLVED_REVIEW_REQUIRED") continue;
-    const pendingNonHeading =
-      unit.initialDisposition === "PENDING_CLASSIFICATION" &&
-      !["HEADING", "METADATA"].includes(unit.unitKind);
-    const strongOperativeSignal = STRONG_OPERATIVE_TEXT.test(sourceText);
-    if (!pendingNonHeading && !strongOperativeSignal) continue;
-    const allBlocksReusedAsEvidence = unit.source.blockIds.every((blockId) =>
-      dynamicEvidenceBlockKeys.has(`${unit.source.documentUuid}:${blockId}`)
-    );
-    const pageMarker =
-      unit.unitKind === "METADATA" && /^Seite\s+\d+$/iu.test(sourceText);
-    const structuralHeading =
-      unit.source.blocks.length > 0 &&
-      unit.source.blocks.every(
-        ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
-      ) &&
-      (unit.unitKind === "HEADING" ||
-        /^\s*(?:\d+(?:\.\d+)*[.)]?|[A-Z][.)])\s+/u.test(sourceText));
-    const structuralLabel = /^(?:Versicherer|Präambel)$/iu.test(sourceText);
-    if (
-      !(
-        (allBlocksReusedAsEvidence && strongOperativeSignal) ||
-        pageMarker ||
-        structuralHeading ||
-        structuralLabel
-      )
-    )
-      suspiciousNonOperativeUnits.push({
-        unitId: terminal.unitId,
-        reason: pendingNonHeading
-          ? "PENDING_NON_HEADING_CLASSIFIED_NON_OPERATIVE"
-          : "STRONG_OPERATIVE_TEXT_SIGNAL",
-      });
-  }
-  return { suspiciousNonOperativeUnits, suspiciousOperativeUnits };
-}
-
 function buildAutomatedADrivenIntegrityReceipt({
   plan,
   classificationPlan = plan,
@@ -389,7 +314,7 @@ function buildAutomatedADrivenIntegrityReceipt({
       stableStringify([...plannedBlockKeys].sort())
   )
     throw gateError("LF_A_AUTOMATED_GATE_BLOCK_TERMINALS_INVALID");
-  const terminalRisk = terminalRiskAssessment({
+  const terminalRisk = assessADrivenTerminalRoleRisks({
     plan: classificationPlan,
     manifest,
   });
@@ -398,6 +323,15 @@ function buildAutomatedADrivenIntegrityReceipt({
     terminalRisk.suspiciousOperativeUnits.length
   )
     throw gateError("LF_A_AUTOMATED_GATE_TERMINAL_RISK_UNRESOLVED");
+  const atomicityRisk = assessADrivenManifestAtomicityRisks({
+    plan: classificationPlan,
+    manifest,
+  });
+  if (!atomicityRisk.summary.atomicityReviewPassed)
+    throw gateError(
+      "LF_A_AUTOMATED_GATE_ATOMICITY_RISK_UNRESOLVED",
+      `${atomicityRisk.summary.reviewRequiredUnits}/${atomicityRisk.summary.reviewRequiredComponents}/${atomicityRisk.summary.risks}`
+    );
   const documentBinding = validateInputManifestBinding({
     inputManifest,
     dynamicManifest: manifest,
@@ -432,6 +366,9 @@ function buildAutomatedADrivenIntegrityReceipt({
       unresolvedUnits: 0,
       suspiciousNonOperativeUnits: 0,
       suspiciousOperativeUnits: 0,
+      atomicityReviewRequiredUnits: 0,
+      atomicityReviewRequiredComponents: 0,
+      atomicityRisks: 0,
     },
     checks: {
       sourcePlanReconstructedFromCurrentADocuments: true,
@@ -442,6 +379,7 @@ function buildAutomatedADrivenIntegrityReceipt({
       allBlocksTerminal: true,
       noUnresolvedUnitsOrBlocks: true,
       noSuspiciousTerminalRoleClassification: true,
+      noUnresolvedAtomicityRisk: true,
       everyRequirementSearchEligible: true,
       inputDocumentsBound: true,
     },
@@ -472,7 +410,6 @@ module.exports = {
   AUTOMATED_A_INTEGRITY_CONTRACT_ID,
   AUTOMATED_B_SHADOW_SCOPE,
   buildAutomatedADrivenIntegrityReceipt,
-  terminalRiskAssessment,
   validateClassificationBatches,
   validateInputManifestBinding,
   validateSourceUnitPlan,
