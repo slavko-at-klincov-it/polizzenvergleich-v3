@@ -120,6 +120,12 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "governingContext kann Deckungswirkung, Limit, Bedingung, Scope, Gefahr"
     );
+    expect(systemText).toContain(
+      "einen gemeinsamen Schaden-, Wirkungs- oder Ursachenbegriff nicht künstlich vor jedes Zielobjekt kopieren"
+    );
+    expect(systemText).toContain(
+      "Ellipsen wie „...“ und neu zusammengesetzte Labels sind verboten"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -11367,6 +11373,211 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       reviewRequiredBlocks: 0,
       allBlocksTerminal: true,
       responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("splits a repeated shared damage phrase from coordinated literal objects", () => {
+    const lead =
+      "• die nur in einem Zerkratzen, Verschrammen oder Absplittern der Glasoberfläche bzw. der darauf ";
+    const continuation =
+      "angebrachten Folie, Malerei, Schriften oder Beläge, auch des Spiegelbelages, bestehen;  ";
+    const exclusion = "Nicht versichert sind Schäden  ";
+    const block = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 16,
+      documentStart: ordinal * 200,
+      documentEnd: ordinal * 200 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const ownedBlocks = [
+      block("lead", lead, 451, "LIST_GOVERNOR"),
+      block("continuation", continuation, 452, "BODY_LINE"),
+    ];
+    const governor = block("exclusion", exclusion, 450, "LIST_GOVERNOR");
+    const combinedText = `${lead}\n${continuation}`;
+    const unit = {
+      unitId: "shared-damage-object-enumeration",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Versichert sind im Rahmen der Glaspauschale:"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "FRAMEWORK_TERMS",
+        blockIds: ownedBlocks.map(({ blockId }) => blockId),
+        blocks: ownedBlocks,
+        physicalPages: [16],
+        documentStart: ownedBlocks[0].documentStart,
+        documentEnd: ownedBlocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "glass-surface-damage",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ownedBlocks.map(({ blockId }) => blockId),
+          combinedText,
+          combinedTextSha256: crypto
+            .createHash("sha256")
+            .update(combinedText)
+            .digest("hex"),
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: {
+        relationType: "GOVERNS_FOLLOWING_LIST",
+        unitIds: ["exclusion-governor"],
+        blockIds: [governor.blockId],
+        blocks: [governor],
+        combinedText: exclusion,
+      },
+    };
+    const repeatedLabels = [
+      "Zerkratzen, Verschrammen oder Absplittern der Glasoberfläche",
+      "Zerkratzen, Verschrammen oder Absplittern der darauf angebrachten Folie",
+      "Zerkratzen, Verschrammen oder Absplittern Malerei",
+      "Zerkratzen, Verschrammen oder Absplittern Schriften",
+      "Zerkratzen, Verschrammen oder Absplittern Beläge",
+      "Zerkratzen, Verschrammen oder Absplittern Spiegelbelages",
+    ];
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION"],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            ...repeatedLabels.map((label) => ({
+              type: "PERIL_OR_CAUSE",
+              label,
+              sourceBlockIds: ["lead", "continuation"],
+            })),
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Nicht versichert",
+              sourceBlockIds: ["exclusion"],
+              coverageEffect: "EXCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0]).toEqual({
+      ...response,
+      semanticClasses: ["EXCLUSION", "PERIL_OR_DAMAGE", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Zerkratzen, Verschrammen oder Absplittern",
+              sourceBlockIds: ["lead"],
+            },
+            ...[
+              ["Glasoberfläche", "lead"],
+              ["Folie", "continuation"],
+              ["Malerei", "continuation"],
+              ["Schriften", "continuation"],
+              ["Beläge", "continuation"],
+              ["Spiegelbelages", "continuation"],
+            ].map(([label, blockId]) => ({
+              type: "OBJECT",
+              label,
+              sourceBlockIds: [blockId],
+            })),
+            response.requirements[0].components.at(-1),
+          ],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "SPLIT_SHARED_ACTION_OBJECT_ENUMERATION",
+      fromComponentType: "PERIL_OR_CAUSE",
+      sharedLabel: "Zerkratzen, Verschrammen oder Absplittern",
+      objectLabels: [
+        "Glasoberfläche",
+        "Folie",
+        "Malerei",
+        "Schriften",
+        "Beläge",
+        "Spiegelbelages",
+      ],
+    });
+
+    const manifest = buildADrivenSemanticManifest({
+      plan: {
+        schemaVersion: 2,
+        contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+        runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+        planSha256: "a".repeat(64),
+        documents: [{ documentUuid: "doc" }],
+        units: [unit],
+        relations: [],
+        summary: { sourceBlocks: 2 },
+      },
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("does not split a generic shared preposition into a false peril", () => {
+    const sourceText = "Schäden durch Feuer, Sturm und Hagel";
+    const unit = {
+      unitId: "generic-shared-preposition",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: sourceText,
+        blocks: [{ blockId: "block", exactText: sourceText }],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: sourceText,
+          components: ["Feuer", "Sturm", "Hagel"].map((peril) => ({
+            type: "PERIL_OR_CAUSE",
+            label: `Schäden durch ${peril}`,
+            sourceBlockIds: ["block"],
+          })),
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
     });
   });
 

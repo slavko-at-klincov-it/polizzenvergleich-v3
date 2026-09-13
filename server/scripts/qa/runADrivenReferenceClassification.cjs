@@ -36,7 +36,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V58";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V59";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -84,6 +84,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V55",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V56",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V57",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V58",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -103,7 +104,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V26";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V27";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -119,6 +120,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V26",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -1629,6 +1631,136 @@ function normalizeCoordinatedObjectEnumerations(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeSharedActionObjectEnumerations(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const comparableSource = sourceText
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (!comparableSource) return { requirements, repairs: [] };
+  const repairs = [];
+  const wordMatches = (value) => [
+    ...String(value || "")
+      .replace(/(?:\.\.\.|…)/gu, " ")
+      .matchAll(/\p{L}[\p{L}\p{M}-]*/gu),
+  ];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = requirement?.components || [];
+      const candidates = components
+        .map((component, componentIndex) => ({ component, componentIndex }))
+        .filter(
+          ({ component }) =>
+            ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT"].includes(component?.type) &&
+            Object.keys(component).every((key) =>
+              ["type", "label", "sourceBlockIds"].includes(key)
+            )
+        );
+      if (
+        candidates.length < 3 ||
+        candidates.length !==
+          components.filter(({ type }) =>
+            ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT"].includes(type)
+          ).length ||
+        new Set(candidates.map(({ component }) => component.type)).size !== 1
+      )
+        return requirement;
+      const labels = candidates.map(({ component }) =>
+        String(component.label || "")
+      );
+      const words = labels.map(wordMatches);
+      if (words.some((items) => items.length < 2)) return requirement;
+      let sharedWords = 0;
+      while (
+        words.every(
+          (items) =>
+            items[sharedWords] &&
+            items[sharedWords][0].localeCompare(
+              words[0][sharedWords][0],
+              "de-AT",
+              { sensitivity: "base" }
+            ) === 0
+        )
+      )
+        sharedWords += 1;
+      if (sharedWords < 3 || words.some((items) => items.length <= sharedWords))
+        return requirement;
+      const firstBoundary =
+        words[0][sharedWords - 1].index + words[0][sharedWords - 1][0].length;
+      const sharedLabel = labels[0].slice(0, firstBoundary).trim();
+      const finalSharedWord = words[0][sharedWords - 1][0];
+      if (
+        !/[,;]|\b(?:und|oder|sowie)\b/iu.test(sharedLabel) ||
+        /^(?:an|auf|aus|bei|der|die|das|den|dem|des|durch|für|in|mit|nach|oder|sowie|und|von|vor|zu)$/iu.test(
+          finalSharedWord
+        )
+      )
+        return requirement;
+      const sharedSourceBlockIds = sourceBlockIdsForExactSpan(
+        unit,
+        sharedLabel
+      );
+      if (sharedSourceBlockIds.length === 0) return requirement;
+      const hasInventedExpansion = labels.some(
+        (label) =>
+          !comparableSource.includes(
+            label.normalize("NFKC").replace(/\s+/gu, " ").trim()
+          )
+      );
+      if (!hasInventedExpansion) return requirement;
+      const objectComponents = words.map((items) => {
+        const label = items.at(-1)?.[0] || "";
+        return {
+          type: "OBJECT",
+          label,
+          sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+        };
+      });
+      if (
+        objectComponents.some(
+          ({ label, sourceBlockIds }) =>
+            !/^\p{Lu}/u.test(label) || sourceBlockIds.length === 0
+        ) ||
+        new Set(objectComponents.map(({ label }) => label)).size !==
+          objectComponents.length ||
+        objectComponents.some(
+          ({ label }) =>
+            comparableSource.indexOf(label) <=
+            comparableSource.indexOf(sharedLabel)
+        )
+      )
+        return requirement;
+      const candidateIndexes = new Set(
+        candidates.map(({ componentIndex }) => componentIndex)
+      );
+      const firstCandidateIndex = candidates[0].componentIndex;
+      repairs.push({
+        requirementIndex,
+        action: "SPLIT_SHARED_ACTION_OBJECT_ENUMERATION",
+        fromComponentType: candidates[0].component.type,
+        sharedLabel,
+        objectLabels: objectComponents.map(({ label }) => label),
+      });
+      return {
+        ...requirement,
+        components: components.flatMap((component, componentIndex) => {
+          if (componentIndex === firstCandidateIndex)
+            return [
+              {
+                type: component.type,
+                label: sharedLabel,
+                sourceBlockIds: sharedSourceBlockIds,
+              },
+              ...objectComponents,
+            ];
+          return candidateIndexes.has(componentIndex) ? [] : [component];
+        }),
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function materializeInheritedCoverageEffect(requirements, unit) {
   const contextBlocks = unit?.governingContext?.blocks || [];
   if (contextBlocks.length === 0) return { requirements, repairs: [] };
@@ -2915,6 +3047,24 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     requirements = coverageBranchSchedule.requirements;
     for (const repair of coverageBranchSchedule.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
+    const sharedActionObjects = normalizeSharedActionObjectEnumerations(
+      requirements,
+      unit
+    );
+    requirements = sharedActionObjects.requirements;
+    for (const repair of sharedActionObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (sharedActionObjects.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "PERIL_OR_DAMAGE",
+            "INSURED_OBJECT",
+          ]),
+        ],
+      };
     const coordinatedObjects = normalizeCoordinatedObjectEnumerations(
       requirements,
       unit
@@ -4218,6 +4368,11 @@ function prompt(batch) {
     {
       role: "system",
       content:
+        "Bei grammatisch koordinierten Aussagen darfst du einen gemeinsamen Schaden-, Wirkungs- oder Ursachenbegriff nicht künstlich vor jedes Zielobjekt kopieren. Beispiel: Bei „Zerkratzen, Verschrammen oder Absplittern der Oberfläche, Folie oder Beschriftung“ steht der gemeinsame wörtliche Vorgang genau einmal als PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT; Oberfläche, Folie und Beschriftung stehen jeweils als eigene wörtliche OBJECT-Komponenten. Ellipsen wie „...“ und neu zusammengesetzte Labels sind verboten, weil sie keine zusammenhängenden Quellteilstrings sind. Der gemeinsame Governor oder COVERAGE_EFFECT bleibt eine getrennte Komponente.",
+    },
+    {
+      role: "system",
+      content:
         "In Haftpflichtaussagen bezeichnet eine einleitende Formulierung „aus der/dem …“ vor dem betroffenen Sachobjekt regelmäßig die versicherte Tätigkeit oder Ursache, nicht das Objekt selbst und nicht bloße Struktur. Gib selbstständig suchbare koordinierte Tätigkeiten als getrennte PERIL_OR_CAUSE-Komponenten aus und das danach genannte Gebäude, Grundstück oder andere Sachobjekt getrennt als OBJECT. Die Formulierung „Die Versicherung erstreckt sich auf …“ ist ein positiver Deckungs-Governor; übernimm ihren exakten Wirkungsausdruck nur über serverseitig bereitgestellten governingContext.",
     },
     {
@@ -5135,6 +5290,8 @@ async function runBatch({
         " Verwende in semanticClasses ausschließlich Terminalklassen. Insbesondere wird eine LIMIT_BASIS-Komponente durch die Terminalklasse LIMIT getragen; LIMIT_BASIS selbst ist niemals eine semanticClass.";
       messages.at(-1).content +=
         " structurePath ist ausschließlich Navigation und niemals semantische Evidenz. governingContext ist nur für die dort wörtlich vorhandenen Dimensionen Evidenz. Enthält es etwa Limit, Scope oder Gefahr, aber keinen wörtlichen Deckungswirkungs- oder Ausschlussausdruck, erzeuge weder COVERAGE_EFFECT noch OPERATIVE_COVERAGE_STATEMENT noch EXCLUSION. Entferne diese unbelegten Klassen und klassifiziere den tatsächlichen Inhalt, etwa als PERIL_OR_DAMAGE, INSURED_OBJECT, LIMIT oder CONDITION. Erfinde niemals versichert, nicht versichert, ausgeschlossen oder ausgenommen aus structurePath.";
+      messages.at(-1).content +=
+        " Wiederhole bei einer grammatisch koordinierten Aussage niemals denselben einleitenden Schaden-, Wirkungs- oder Ursachenbegriff vor jedem Objekt. Gib den gemeinsamen wörtlichen Begriff einmal als PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT und jedes selbstständig suchbare, wörtliche Zielobjekt getrennt als OBJECT aus. Verwende weder Ellipsen noch neu zusammengesetzte Labels; jedes label muss als zusammenhängender Quellsubstring vorkommen.";
       const segmentSkeletons = listSegmentRepairSkeletons(
         workingBatch,
         repairDiagnostics
