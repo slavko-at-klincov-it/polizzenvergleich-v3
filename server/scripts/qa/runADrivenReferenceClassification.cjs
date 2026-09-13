@@ -35,7 +35,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V55";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V56";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -80,6 +80,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V52",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V53",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V54",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V55",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -1271,6 +1272,74 @@ function normalizeQualifiedBenefitListHeading(requirements, unit) {
         scope,
       },
     ],
+  };
+}
+
+function materializeExplicitContractualWaiverRequirement(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const match =
+    /\b(?:(?:der\s+versicherer\s+verzichtet)|(?:verzichtet\s+der\s+versicherer))(?<between>(?:[^.;:]|\.(?=\s*[0-9])){0,180}?)\bauf\s+(?:[^.;:]|\.(?=[0-9])){1,260}[.]?/iu.exec(
+      sourceText
+    );
+  if (!match?.[0] || /\bnicht\b/iu.test(match.groups?.between || ""))
+    return { requirements, repairs: [], addedBenefit: false };
+  const waiver = match[0];
+  const sourceBlockIds = sourceBlockIdsForExactSpan(unit, waiver);
+  if (sourceBlockIds.length === 0)
+    return { requirements, repairs: [], addedBenefit: false };
+  const alreadyMapped = requirements.some((requirement) =>
+    (requirement.components || []).some(
+      (component) =>
+        ["FACT_ROLE", "COVERAGE_EFFECT"].includes(component?.type) &&
+        /\b(?:(?:der\s+versicherer\s+verzichtet)|(?:verzichtet\s+der\s+versicherer))\b/iu.test(
+          String(component.label || "")
+        )
+    )
+  );
+  if (alreadyMapped) return { requirements, repairs: [], addedBenefit: false };
+  const comparable = (value) =>
+    String(value || "")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const waiverComparable = comparable(waiver);
+  const prefix = sourceText.slice(0, match.index).trim();
+  const repairs = [];
+  const retainedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      if (
+        !prefix ||
+        !comparable(requirement.displayLabel).includes(waiverComparable)
+      )
+        return requirement;
+      repairs.push({
+        requirementIndex,
+        action: "TRIM_MATERIALIZED_CONTRACTUAL_WAIVER_FROM_REQUIREMENT",
+      });
+      return { ...requirement, displayLabel: prefix };
+    }
+  );
+  return {
+    requirements: [
+      ...retainedRequirements,
+      {
+        displayLabel: waiver,
+        components: [
+          {
+            type: "FACT_ROLE",
+            label: waiver,
+            sourceBlockIds,
+          },
+        ],
+      },
+    ],
+    repairs: [
+      ...repairs,
+      {
+        action: "MATERIALIZE_EXPLICIT_CONTRACTUAL_WAIVER",
+        sourceBlockIds,
+      },
+    ],
+    addedBenefit: true,
   };
 }
 
@@ -2911,6 +2980,28 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
           ...new Set([...(response.semanticClasses || []), "VARIANT"]),
         ],
       };
+    const contractualWaiver = materializeExplicitContractualWaiverRequirement(
+      requirements,
+      unit
+    );
+    requirements = contractualWaiver.requirements;
+    for (const repair of contractualWaiver.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (contractualWaiver.addedBenefit) {
+      const terminal = [
+        "STRUCTURE",
+        "METADATA",
+        "DUPLICATE",
+        "UNRESOLVED",
+      ].includes(response?.primaryClass);
+      response = {
+        ...response,
+        primaryClass: terminal ? "DEFINITION" : response.primaryClass,
+        semanticClasses: terminal
+          ? ["DEFINITION"]
+          : [...new Set([...(response.semanticClasses || []), "DEFINITION"])],
+      };
+    }
     const costPurposeObjects =
       normalizeCostPurposeObjectComponents(requirements);
     requirements = costPurposeObjects.requirements;

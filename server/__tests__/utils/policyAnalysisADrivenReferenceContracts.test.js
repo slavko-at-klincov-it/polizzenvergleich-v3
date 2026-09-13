@@ -4703,6 +4703,141 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("materializes an omitted source-bound contractual waiver as its own requirement", () => {
+    const unit = {
+      unitId: "contractual-waiver",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["cause-a", "cause-b", "waiver"],
+        combinedText:
+          "Bei Schäden, die nach Feuerwehr- und Alarmübungen bzw. durch Einrichtungen von Feuerwehren entstehen, verzichtet der\nVersicherer auf den Einwand der Gefahrenerhöhung und der Verletzung der Anzeigepflicht.",
+        blocks: [
+          {
+            blockId: "cause-a",
+            exactText: "Bei Schäden, die nach Feuerwehr- und Alarmübungen bzw.",
+          },
+          {
+            blockId: "cause-b",
+            exactText:
+              "durch Einrichtungen von Feuerwehren entstehen, verzichtet der",
+          },
+          {
+            blockId: "waiver",
+            exactText:
+              "Versicherer auf den Einwand der Gefahrenerhöhung und der Verletzung der Anzeigepflicht.",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel:
+            "Bei Schäden, die nach Feuerwehr- und Alarmübungen bzw. durch Einrichtungen von Feuerwehren entstehen, verzichtet der Versicherer auf den Einwand der Gefahrenerhöhung und der Verletzung der Anzeigepflicht.",
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Feuerwehr- und Alarmübungen",
+              sourceBlockIds: ["cause-a", "cause-b"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const waiver = normalized.responses[0].requirements[1];
+
+    expect(normalized.responses[0].primaryClass).toBe("PERIL_OR_DAMAGE");
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "PERIL_OR_DAMAGE",
+      "DEFINITION",
+    ]);
+    expect(normalized.responses[0].requirements[0].displayLabel).toBe(
+      "Bei Schäden, die nach Feuerwehr- und Alarmübungen bzw. durch Einrichtungen von Feuerwehren entstehen,"
+    );
+    expect(waiver).toEqual({
+      displayLabel:
+        "verzichtet der\nVersicherer auf den Einwand der Gefahrenerhöhung und der Verletzung der Anzeigepflicht.",
+      components: [
+        {
+          type: "FACT_ROLE",
+          label:
+            "verzichtet der\nVersicherer auf den Einwand der Gefahrenerhöhung und der Verletzung der Anzeigepflicht.",
+          sourceBlockIds: ["cause-b", "waiver"],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "MATERIALIZE_EXPLICIT_CONTRACTUAL_WAIVER",
+      sourceBlockIds: ["cause-b", "waiver"],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "TRIM_MATERIALIZED_CONTRACTUAL_WAIVER_FROM_REQUIREMENT",
+    });
+  });
+
+  test("does not materialize a negated or already mapped contractual waiver", () => {
+    const unit = (unitId, combinedText) => ({
+      unitId,
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: [unitId],
+        combinedText,
+        blocks: [{ blockId: unitId, exactText: combinedText }],
+      },
+    });
+    const negativeUnit = unit(
+      "negative-waiver",
+      "Der Versicherer verzichtet nicht auf den Einwand der Gefahrenerhöhung."
+    );
+    const mappedUnit = unit(
+      "mapped-waiver",
+      "Der Versicherer verzichtet auf den Einwand der Gefahrenerhöhung."
+    );
+    const negativeResponse = {
+      unitId: negativeUnit.unitId,
+      primaryClass: "CONDITION",
+      semanticClasses: ["CONDITION"],
+      requirements: [],
+    };
+    const mappedResponse = {
+      unitId: mappedUnit.unitId,
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION"],
+      requirements: [
+        {
+          displayLabel: mappedUnit.source.combinedText,
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: mappedUnit.source.combinedText,
+              sourceBlockIds: [mappedUnit.unitId],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes(
+      [negativeResponse, mappedResponse],
+      [negativeUnit, mappedUnit]
+    );
+
+    expect(normalized.responses).toEqual([negativeResponse, mappedResponse]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "MATERIALIZE_EXPLICIT_CONTRACTUAL_WAIVER",
+      })
+    );
+  });
+
   test("atomizes a named peril definition, explicit extension, and preserved right in one list requirement", () => {
     const source =
       "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
@@ -7119,7 +7254,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V55");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V56");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
