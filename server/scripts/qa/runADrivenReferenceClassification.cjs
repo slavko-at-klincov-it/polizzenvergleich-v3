@@ -35,7 +35,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V53";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V54";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -78,6 +78,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V50",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V51",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V52",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V53",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -2453,6 +2454,17 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
       .replace(/\s+/gu, " ")
       .trim()
       .replace(/^[•▪–—-]\s*/u, "");
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const internalGovernorBlockIds = new Set(
+    unit.logicalSourceSegments.flatMap((segment) => {
+      const firstBlock = sourceBlocksById.get(segment.blockIds?.[0]);
+      return firstBlock?.structuralKind === "LIST_GOVERNOR"
+        ? segment.blockIds
+        : [];
+    })
+  );
   const governingBlockIds = new Set(unit.governingContext?.blockIds || []);
   const repairs = [];
   const normalizedRequirements = requirements.map(
@@ -2472,6 +2484,7 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
       const allowedBlockIds = new Set([
         ...segment.blockIds,
         ...governingBlockIds,
+        ...internalGovernorBlockIds,
       ]);
       const components = (requirement.components || []).flatMap(
         (component, componentIndex) => {

@@ -5599,6 +5599,79 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("retains an internal list governor that qualifies a following item", () => {
+    const limit =
+      "• bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko";
+    const item = "- Nebengebäude";
+    const unit = {
+      unitId: "internal-list-governor",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["limit", "item"],
+        combinedText: `${limit}\n${item}`,
+        blocks: [
+          {
+            blockId: "limit",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: limit,
+          },
+          {
+            blockId: "item",
+            structuralKind: "LIST_ITEM",
+            exactText: item,
+          },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "limit-segment",
+          blockIds: ["limit"],
+          combinedText: limit,
+        },
+        {
+          segmentId: "item-segment",
+          blockIds: ["item"],
+          combinedText: item,
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT", "LIMIT"],
+      requirements: [
+        {
+          displayLabel: item,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Nebengebäude",
+              sourceBlockIds: ["item"],
+            },
+            {
+              type: "VALUE_AND_UNIT",
+              label: "bis zu jeweils 5%",
+              rawValue: "5",
+              unit: "%",
+              sourceBlockIds: ["limit"],
+            },
+            {
+              type: "LIMIT_BASIS",
+              label: "der Gebäudeversicherungssumme auf Erstes Risiko",
+              sourceBlockIds: ["limit"],
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses).toEqual([response]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({ action: "DROP_CROSS_SEGMENT_COMPONENT" })
+    );
+  });
+
   test("does not auto-repair a component that mixes local and sibling segment sources", () => {
     const unit = {
       unitId: "mixed-list-segment-source",
@@ -6803,7 +6876,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V53");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V54");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
