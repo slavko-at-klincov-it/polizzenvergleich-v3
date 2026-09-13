@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V5";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V5";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V5";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V6";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V6";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V6";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -102,6 +102,54 @@ function parseJsonObject(modelText) {
   return parsed;
 }
 
+function candidateForModel(candidate) {
+  return {
+    candidateId: candidate.candidateId,
+    documentName: candidate.documentName,
+    documentRole: candidate.documentRole,
+    documentStatus: candidate.documentStatus,
+    physicalPageNumber: candidate.physicalPageNumber,
+    exactQuote: candidate.exactQuote,
+    evidenceOrigin: candidate.evidenceOrigin || "ROW_RETRIEVAL",
+  };
+}
+
+function reviewRowForModel(row) {
+  return {
+    reviewIndex: row.reviewIndex,
+    analysisRowId: row.analysisRowId,
+    requirementId: row.requirementId,
+    relation: row.relation,
+    category: row.category,
+    subcategory: row.subcategory,
+    point: row.point,
+    referenceA: row.referenceA,
+    claudeClaim: row.claudeClaim,
+    systemClaim: row.systemClaim,
+    searchedDocuments: (row.searchedDocuments || []).map(
+      ({ originalName, role, documentStatus }) => ({
+        originalName,
+        role,
+        documentStatus,
+      })
+    ),
+    retrieval: row.retrieval,
+    actualComponents: row.actualComponents,
+    components: row.components.map((component) => ({
+      componentId: component.componentId,
+      label: component.label,
+      factRole: component.factRole,
+      dimension: component.dimension,
+      contextOnly: component.contextOnly === true,
+      candidates: component.candidates.map(candidateForModel),
+    })),
+    globalClaudeRebind: (row.globalClaudeRebind || []).map(candidateForModel),
+    globalReferenceARebind: (row.globalReferenceARebind || []).map(
+      candidateForModel
+    ),
+  };
+}
+
 function messages(row) {
   return [
     {
@@ -114,7 +162,7 @@ function messages(row) {
       content: JSON.stringify({
         promptContractId: PROMPT_CONTRACT_ID,
         responseContractId: SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
-        reviewRow: row,
+        reviewRow: reviewRowForModel(row),
       }),
     },
   ];
@@ -585,6 +633,7 @@ module.exports = {
   expectedPacketRowCount,
   messages,
   parseJsonObject,
+  reviewRowForModel,
   recoverValidatedAttempt,
   repairMessages,
   responseFormat,

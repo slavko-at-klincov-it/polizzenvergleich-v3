@@ -7,6 +7,7 @@ const {
   parseJsonObject,
   repairMessages,
   responseFormat,
+  reviewRowForModel,
 } = require("../../../scripts/qa/runLfKnownFixtureSourceReview.cjs");
 
 const row = {
@@ -62,6 +63,50 @@ describe("LF known fixture source review runner", () => {
     expect(system).toContain("unmodeledDifferences immer als Array");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
+  });
+
+  it("sends compact source evidence while retaining the review semantics", () => {
+    const compact = reviewRowForModel({
+      ...row,
+      searchedDocuments: [
+        {
+          uuid: "doc-1",
+          fingerprint: "a".repeat(64),
+          originalName: "B.pdf",
+          role: "TERMS",
+          documentStatus: "FRAMEWORK_TERMS",
+        },
+      ],
+      globalReferenceARebind: [
+        {
+          candidateId: "candidate-1",
+          documentFingerprint: "a".repeat(64),
+          documentName: "B.pdf",
+          documentRole: "TERMS",
+          documentStatus: "FRAMEWORK_TERMS",
+          physicalPageNumber: 2,
+          documentStart: 100,
+          documentEnd: 140,
+          exactQuote: "Exakter Belegtext",
+          exactQuoteSha256: "b".repeat(64),
+          evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND",
+        },
+      ],
+    });
+    expect(compact.searchedDocuments[0]).toEqual({
+      originalName: "B.pdf",
+      role: "TERMS",
+      documentStatus: "FRAMEWORK_TERMS",
+    });
+    expect(compact.globalReferenceARebind[0]).toEqual({
+      candidateId: "candidate-1",
+      documentName: "B.pdf",
+      documentRole: "TERMS",
+      documentStatus: "FRAMEWORK_TERMS",
+      physicalPageNumber: 2,
+      exactQuote: "Exakter Belegtext",
+      evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND",
+    });
   });
 
   it("repairs a row-level outcome mistakenly used on a component", () => {
