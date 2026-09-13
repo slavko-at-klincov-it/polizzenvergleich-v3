@@ -8950,3 +8950,40 @@ Systemlabels bleiben bis nach der blinden Entscheidung ausgeschlossen.
 
 Status: `TAILSCALE-SSH VERBINDLICH UND ERREICHBAR; GUI-FERNZUGRIFF ALS
 FALLBACK VERBOTEN`.
+
+### 133.40 Sichere Konsolidierungsgrenze vor Gold-283 und Produktlauf
+
+Auf Auftrag des Auftraggebers wurden alle weiteren Vollreviews und die
+Fortsetzung des begonnenen V3-Evidenzentwurfs gestoppt. Sol-Gold-30 und neun
+blinde Astra-Streitprüfungen sind als neue, nicht überschreibende private
+Zusammenfassungen auf dem Mac Studio gesichert und per SHA-256 verifiziert.
+Beide verwenden das auf Commit `8da2dd6a7` materialisierte Blindpaket. Sol
+lieferte in 4.141 Sekunden gültiger Modellzeit 30/30 Entscheidungen, bestand
+mit 23/30 binären und 21/30 Klassenübereinstimmungen das Frozen-Gold-30-Gate
+aber nicht. Astra lieferte neun Streitentscheidungen mit Reasoning `high` in
+593 Sekunden gültiger Modellzeit; vier waren gefunden und fünf nicht
+gefunden.
+
+Gold-30-V1/V2 blieb bytegenau unverändert. Die von Sol und Astra gestützten
+Abweichungen für `VS-25`, `PR-01` und `PR-09` sind ausschließlich in einem
+getrennten `PROPOSAL_NOT_GOLD` gespeichert. Eine gemeinsame, modellfreie
+283-Zeilen-Matrix bindet Fable/Claude 283, Altsystem 283, Qwen 98, Sol 30,
+Astra 9 und Frozen Gold 30. Das angekündigte separate blinde Astra-283-
+Abschlussartefakt konnte im Mac-Studio-QA-Bestand, Repository oder den
+vorhandenen Anhängen nicht gefunden und daher nicht hashgebunden werden. Die
+Matrix steht deshalb korrekt auf
+`INCOMPLETE_MISSING_ASTRA283_ARTIFACT_NOT_GOLD`; es wurde kein Ersatzlauf
+gestartet.
+
+Der Repository-HEAD `a667b26b0` enthält einen begonnenen V3-
+Navigationsentwurf, dessen Mac-Studio-Prüfung bereits beim Formatcheck stoppte.
+Er bleibt unverändert diagnostisch und ist weder validiert noch produktiv
+freigegeben. Der letzte vollständig validierte Blindquellenstand bleibt
+`8da2dd6a7` mit Syntax, Formatcheck und 314/314 Tests. Vollständige Pfade,
+Hashes, Laufdaten, die Vierfachklassifikation der letzten 36 Stunden und der
+verbindliche Restweg stehen in
+`docs/LF_1PLUS9_KONSOLIDIERUNG_2026-09-13_DE.md`.
+
+Status: `SICHERE ARTEFAKTGRENZE ERREICHT; GOLD-30 UNVERÄNDERT; GEMEINSAME
+MATRIX TEILWEISE GEBUNDEN; ASTRA-283-ARTEFAKT FEHLT; KEIN VOLLLAUF, KEINE
+PRODUKTMUTATION, KEINE XLSX UND KEIN DEPLOYMENT`.
