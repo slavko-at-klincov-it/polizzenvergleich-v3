@@ -1932,9 +1932,10 @@ function normalizeAggregatedEventDefinition(requirements, unit) {
 
 function normalizeCostAllocationDefinition(requirements, unit) {
   const sourceText = String(unit?.source?.combinedText || "");
-  const allocation = /(?<relation>\b(?:(?:Diese|Die|Sämtliche)\s+)?(?:\p{L}*kosten|Aufwendungen)\s+werden\s+(?!nicht\b)auf\s+(?:die|den)\s+(?<basis>(?:Pauschal)?versicherungssumme)\s+angerechnet\b[.]?)/iu.exec(
-    sourceText
-  );
+  const allocation =
+    /(?<relation>\b(?:(?:Diese|Die|Sämtliche)\s+)?(?:\p{L}*kosten|Aufwendungen)\s+werden\s+(?!nicht\b)auf\s+(?:die|den)\s+(?<basis>(?:Pauschal)?versicherungssumme)\s+angerechnet\b[.]?)/iu.exec(
+      sourceText
+    );
   if (!allocation?.groups) return { requirements, repairs: [] };
   const relationSourceBlockIds = sourceBlockIdsForExactSpan(
     unit,
