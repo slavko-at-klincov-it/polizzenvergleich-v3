@@ -502,6 +502,10 @@ function buildLfKnownFixtureSourceReviewPacket({
   maximumQuoteCharacters = 1_200,
   createdAt = new Date().toISOString(),
 } = {}) {
+  const globalReferenceMaximumQuoteCharacters = Math.min(
+    maximumQuoteCharacters,
+    600
+  );
   if (
     goldCandidate?.contractId !== "LF_1PLUS9_GOLD_CANDIDATE_V1" ||
     goldCandidate?.status !== "SOURCE_REVIEW_REQUIRED" ||
@@ -622,7 +626,7 @@ function buildLfKnownFixtureSourceReviewPacket({
         row,
         semanticChecks,
         documentsByUuid,
-        maximumQuoteCharacters,
+        maximumQuoteCharacters: globalReferenceMaximumQuoteCharacters,
       });
       return {
         reviewIndex,
@@ -696,6 +700,7 @@ function buildLfKnownFixtureSourceReviewPacket({
       sample: selection,
       maximumPerComponent,
       maximumQuoteCharacters,
+      globalReferenceMaximumQuoteCharacters,
       candidatePolicy:
         "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },

@@ -139,6 +139,7 @@ describe("LF known fixture source review", () => {
     expect(packet.summary.semanticChecks).toBe(60);
     expect(packet.summary.globalClaudeRebindCandidates).toBeGreaterThan(0);
     expect(packet.summary.globalReferenceARebindCandidates).toBeGreaterThan(0);
+    expect(packet.selection.globalReferenceMaximumQuoteCharacters).toBe(600);
     expect(packet.summary.searchedDocumentsPerRow).toBe(9);
     expect(packet.summary.absenceCertifiedRows).toBe(0);
     expect(packet.rows[0].components[0].contextOnly).toBe(true);
