@@ -120,7 +120,7 @@ describe("LF known fixture source review runner", () => {
       { code: "LF_SOURCE_REVIEW_COMPONENT_FINDING_INVALID" }
     );
     expect(repaired.at(-1).content).toContain(
-      "innerhalb jedes componentFinding ist ausschließlich MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED"
+      "innerhalb jedes componentFinding ist ausschließlich MATCH, COUNTERPART_WITH_DIFFERENCE, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED"
     );
   });
 
