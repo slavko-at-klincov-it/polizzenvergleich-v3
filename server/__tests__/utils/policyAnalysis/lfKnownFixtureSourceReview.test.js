@@ -268,11 +268,10 @@ describe("LF known fixture source review", () => {
     expect(() =>
       validateSourceReviewResponse(row, {
         ...response,
-        componentFindings: response.componentFindings.map(
-          (finding, index) =>
-            index
-              ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
-              : finding
+        componentFindings: response.componentFindings.map((finding, index) =>
+          index
+            ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+            : finding
         ),
         unmodeledDifferences: [
           {
