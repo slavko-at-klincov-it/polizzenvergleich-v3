@@ -224,6 +224,8 @@ describe("LF blind evidence V2", () => {
 
   it("allows multiple complete sources for one component without document deduplication", () => {
     const source = [
+      "Firma",
+      "WEG Treustraße 57",
       "1 Versicherungsnehmer",
       "Der Versicherungsnehmer ist die Familienwohnbau GmbH.",
       "2 Rahmenvereinbarung",
@@ -252,6 +254,13 @@ describe("LF blind evidence V2", () => {
     expect(groups.some(({ exactText }) => exactText.includes("RV WEVIG"))).toBe(
       true
     );
+    expect(
+      groups.some(
+        ({ boundaryKind, exactText }) =>
+          boundaryKind === "DOCUMENT_CONTEXT" &&
+          exactText.includes("WEG Treustraße 57")
+      )
+    ).toBe(true);
     expect(packet.rows[0].components[0].evidence.combinationPolicy).toContain(
       "MULTI_SOURCE_ALLOWED"
     );

@@ -213,6 +213,55 @@ function unitEvidenceGroups({
   ];
 }
 
+function documentContextEvidenceGroups({
+  units,
+  document,
+  maximumEvidenceGroupCharacters,
+}) {
+  const blocks = units
+    .flatMap(({ source }) => source.blocks)
+    .filter(({ physicalPageNumber }) => physicalPageNumber === 1)
+    .sort((left, right) => left.ordinal - right.ordinal);
+  const groups = [];
+  const used = new Set();
+  for (const [index, block] of blocks.entries()) {
+    const text = block.exactText.trim();
+    if (
+      !/^(?:Firma|Versicherungsnehmer(?:in)?|Polizzennummer|Versicherungsort|Versichertes Risiko)\b/iu.test(
+        text
+      )
+    )
+      continue;
+    const bodyBlocks = [block];
+    if (
+      /^(?:Firma|Versicherungsnehmer(?:in)?|Versichertes Risiko)\s*:?[\s]*$/iu.test(
+        text
+      ) &&
+      blocks[index + 1]?.physicalPageNumber === block.physicalPageNumber
+    )
+      bodyBlocks.push(blocks[index + 1]);
+    const key = bodyBlocks.map(({ blockId }) => blockId).join(":");
+    if (used.has(key)) continue;
+    used.add(key);
+    groups.push(
+      evidenceGroup({
+        unit: {
+          unitId: `DOCUMENT_CONTEXT:${document.uuid}:${block.blockId}`,
+          unitKind: "DOCUMENT_CONTEXT",
+          structurePath: [],
+          source: { blocks: bodyBlocks },
+        },
+        document,
+        headingUnit: null,
+        bodyBlocks,
+        groupDiscriminator: `DOCUMENT_CONTEXT:${document.uuid}:${key}`,
+        maximumEvidenceGroupCharacters,
+      })
+    );
+  }
+  return groups;
+}
+
 function buildSourceEvidenceBoundaryPlan({
   documents,
   maximumEvidenceGroupCharacters = DEFAULT_MAXIMUM_EVIDENCE_GROUP_CHARACTERS,
@@ -249,6 +298,16 @@ function buildSourceEvidenceBoundaryPlan({
       })
     );
   }
+  for (const { document } of documents)
+    groups.push(
+      ...documentContextEvidenceGroups({
+        units: sourcePlan.units.filter(
+          ({ source }) => source.documentUuid === document.uuid
+        ),
+        document,
+        maximumEvidenceGroupCharacters,
+      })
+    );
   const payload = {
     schemaVersion: 1,
     contractId: SOURCE_EVIDENCE_BOUNDARY_PLAN_CONTRACT_ID,

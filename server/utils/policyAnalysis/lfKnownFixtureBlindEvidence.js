@@ -348,6 +348,18 @@ function retrieveEvidence({
         seen.add(evidenceGroupId);
         ids.push(evidenceGroupId);
       }
+  const representedDocuments = new Set(
+    ids.map((id) => groupsById.get(id)?.document.uuid).filter(Boolean)
+  );
+  for (const documentUuid of representedDocuments)
+    for (const group of groupsByDocument.get(documentUuid) || [])
+      if (
+        group.boundaryKind === "DOCUMENT_CONTEXT" &&
+        !seen.has(group.evidenceGroupId)
+      ) {
+        seen.add(group.evidenceGroupId);
+        ids.push(group.evidenceGroupId);
+      }
   const unavailableAnchors = anchors.filter(
     ({ evidenceGroupIds }) => evidenceGroupIds.length === 0
   );
@@ -361,6 +373,7 @@ function retrieveEvidence({
       "FULL_CORPUS_LEXICAL_BM25",
       "GENERALIZED_GERMAN_SEMANTIC_BM25",
       "STRUCTURAL_BOUNDARY_EXPANSION",
+      "DOCUMENT_IDENTITY_CONTEXT",
       "ORACLE_RANGE_NAVIGATION_WITHOUT_PRIOR_LABELS",
     ],
     evidenceGroupIds: ids.filter((id) => groupsById.has(id)),
