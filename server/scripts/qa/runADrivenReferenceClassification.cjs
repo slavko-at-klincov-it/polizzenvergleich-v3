@@ -1228,9 +1228,7 @@ function normalizeQualifiedBenefitListHeading(requirements, unit) {
       sourceBlockIds: [firstBlock.blockId],
     });
   return {
-    requirements: [
-      { ...requirements[0], components: normalizedComponents },
-    ],
+    requirements: [{ ...requirements[0], components: normalizedComponents }],
     repairs: [
       {
         requirementIndex: 0,
