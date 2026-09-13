@@ -3268,7 +3268,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         )
       )
     ).toEqual(new Set([...unit.source.blockIds, "coverage-governor"]));
-    expect(normalized.repairs).toContainEqual({
+    expect(normalized.componentRepairs).toContainEqual({
       unitId: unit.unitId,
       requirementIndex: 0,
       action: "CANONICALIZE_AGGREGATED_EVENT_DEFINITION",
