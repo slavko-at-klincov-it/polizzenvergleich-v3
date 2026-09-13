@@ -240,12 +240,7 @@ function compactCandidate(
 ) {
   const excerpt = excerptRange(
     candidate,
-    [
-      component.label,
-      row.point,
-      row.system?.aContent,
-      row.claude?.sourceQuote,
-    ],
+    [component.label, row.point, row.system?.aContent, row.claude?.sourceQuote],
     maximumQuoteCharacters
   );
   return {
