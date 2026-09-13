@@ -207,11 +207,15 @@ describe("LF blind evidence V2", () => {
       createdAt: "2026-09-13T00:00:00.000Z",
     });
     const ids = packet.rows[0].components[0].evidence.evidenceGroupIds;
-    const groups = packet.sourceCatalog.evidenceGroups.filter(({ evidenceGroupId }) =>
-      ids.includes(evidenceGroupId)
+    const groups = packet.sourceCatalog.evidenceGroups.filter(
+      ({ evidenceGroupId }) => ids.includes(evidenceGroupId)
     );
-    expect(groups.some(({ exactText }) => exactText.includes("Versicherungsnehmer"))).toBe(true);
-    expect(groups.some(({ exactText }) => exactText.includes("RV WEVIG"))).toBe(true);
+    expect(
+      groups.some(({ exactText }) => exactText.includes("Versicherungsnehmer"))
+    ).toBe(true);
+    expect(groups.some(({ exactText }) => exactText.includes("RV WEVIG"))).toBe(
+      true
+    );
     expect(packet.rows[0].components[0].evidence.combinationPolicy).toContain(
       "MULTI_SOURCE_ALLOWED"
     );
@@ -249,6 +253,26 @@ describe("LF blind evidence V2", () => {
     expect(() => buildLfKnownFixtureBlindEvidencePacket(input)).toThrow(
       "LF_BLIND_EVIDENCE_NAVIGATION_RANGE_INVALID"
     );
+  });
+
+  it("keeps a completed zero-hit corpus search reviewable without certifying absence", () => {
+    const input = fixture("Eine vollständig andere Vertragsbestimmung.");
+    input.oracle.rows[0].benchmarkCandidateIds = [];
+    input.oracle.benchmarkCandidates = [];
+    const packet = buildLfKnownFixtureBlindEvidencePacket({
+      ...input,
+      createdAt: "2026-09-13T00:00:00.000Z",
+    });
+    expect(packet.rows[0].evidenceReadiness).toBe("READY");
+    expect(packet.rows[0].components[0].evidence.corpusSearch).toEqual(
+      expect.objectContaining({
+        positiveEvidenceGroups: 0,
+        globalAbsenceCertified: false,
+      })
+    );
+    const rowInputs = buildBlindEvidenceRowInputs(packet, "PR-01");
+    expect(rowInputs).toHaveLength(1);
+    expect(rowInputs[0].evidenceGroups).toEqual([]);
   });
 
   it("partitions only whole evidence groups and fails on an oversized group", () => {

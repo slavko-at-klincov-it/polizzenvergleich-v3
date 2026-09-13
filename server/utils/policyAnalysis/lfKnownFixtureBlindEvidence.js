@@ -150,8 +150,7 @@ function groupCandidate(group) {
 function queryFor(requirement, component = null) {
   const sourceText = requirement.referenceA.sourceSpans
     .filter(
-      ({ spanId }) =>
-        !component || component.sourceSpanIds.includes(spanId)
+      ({ spanId }) => !component || component.sourceSpanIds.includes(spanId)
     )
     .map(({ exactText }) => exactText)
     .join(" ");
@@ -315,16 +314,16 @@ function retrieveEvidence({
     evidenceGroupIds: ids.filter((id) => groupsById.has(id)),
     navigationAnchors: anchors,
     evidenceReadiness:
-      ids.length > 0 && unavailableAnchors.length === 0
-        ? "READY"
-        : "BLOCKED_BOUNDARY_UNPROVEN",
-    blockedReasons:
-      ids.length === 0
-        ? ["NO_COMPLETE_EVIDENCE_GROUP_RETRIEVED"]
-        : unavailableAnchors.map(
-            ({ navigationAnchorId }) =>
-              `NAVIGATION_ANCHOR_WITHOUT_COMPLETE_BOUNDARY:${navigationAnchorId}`
-          ),
+      unavailableAnchors.length === 0 ? "READY" : "BLOCKED_BOUNDARY_UNPROVEN",
+    blockedReasons: unavailableAnchors.map(
+      ({ navigationAnchorId }) =>
+        `NAVIGATION_ANCHOR_WITHOUT_COMPLETE_BOUNDARY:${navigationAnchorId}`
+    ),
+    corpusSearch: {
+      searchedEvidenceGroups: groupCandidates.length,
+      positiveEvidenceGroups: ids.length,
+      globalAbsenceCertified: false,
+    },
     combinationPolicy:
       "MULTI_SOURCE_ALLOWED; REVIEWER_MAY_SELECT_MULTIPLE_COMPLETE_GROUPS_AS_ALL_OF_OR_ANY_OF",
   };
@@ -375,7 +374,9 @@ function buildLfKnownFixtureBlindEvidencePacket({
     artifactsByUuid.set(document.uuid, artifact);
   }
   for (const candidate of oracle.benchmarkCandidates) {
-    const oracleDocument = oracleDocumentByUuid.get(candidate?.range?.documentUuid);
+    const oracleDocument = oracleDocumentByUuid.get(
+      candidate?.range?.documentUuid
+    );
     if (!oracleDocument) continue;
     validateNavigationRange(
       candidate,
@@ -446,9 +447,10 @@ function buildLfKnownFixtureBlindEvidencePacket({
         maximumNavigationAnchors,
       }),
     }));
-    const evidenceReadiness = [rowContext, ...components.map(({ evidence }) => evidence)].every(
-      ({ evidenceReadiness: status }) => status === "READY"
-    )
+    const evidenceReadiness = [
+      rowContext,
+      ...components.map(({ evidence }) => evidence),
+    ].every(({ evidenceReadiness: status }) => status === "READY")
       ? "READY"
       : "BLOCKED";
     return {
@@ -541,8 +543,12 @@ function buildLfKnownFixtureBlindEvidencePacket({
       searchedDocumentsPerRow: oracleBDocuments.length,
       evidenceGroups: boundaryPlan.summary.evidenceGroups,
       evidenceSpans: boundaryPlan.summary.evidenceSpans,
-      readyRows: rows.filter(({ evidenceReadiness }) => evidenceReadiness === "READY").length,
-      blockedRows: rows.filter(({ evidenceReadiness }) => evidenceReadiness !== "READY").length,
+      readyRows: rows.filter(
+        ({ evidenceReadiness }) => evidenceReadiness === "READY"
+      ).length,
+      blockedRows: rows.filter(
+        ({ evidenceReadiness }) => evidenceReadiness !== "READY"
+      ).length,
       absenceCertifiedRows: 0,
     },
   };
@@ -564,25 +570,21 @@ function buildBlindEvidenceRowInputs(
   const row = packet.rows.find(
     (candidate) => candidate.requirementId === requirementId
   );
-  if (!row)
-    blindError("LF_BLIND_EVIDENCE_ROW_MISSING", requirementId);
+  if (!row) blindError("LF_BLIND_EVIDENCE_ROW_MISSING", requirementId);
   if (row.evidenceReadiness !== "READY")
     blindError("LF_BLIND_EVIDENCE_ROW_NOT_READY", requirementId);
   const groupIds = new Set([
     ...row.rowContextEvidence.evidenceGroupIds,
-    ...row.components.flatMap(
-      ({ evidence }) => evidence.evidenceGroupIds
-    ),
+    ...row.components.flatMap(({ evidence }) => evidence.evidenceGroupIds),
   ]);
-  const groups = packet.sourceCatalog.evidenceGroups.filter(({ evidenceGroupId }) =>
-    groupIds.has(evidenceGroupId)
+  const groups = packet.sourceCatalog.evidenceGroups.filter(
+    ({ evidenceGroupId }) => groupIds.has(evidenceGroupId)
   );
   if (groups.length !== groupIds.size)
     blindError("LF_BLIND_EVIDENCE_CATALOG_BINDING_INVALID", requirementId);
-  const partitions = partitionCompleteEvidenceGroups(
-    groups,
-    maximumPartitionCharacters
-  );
+  const partitions = groups.length
+    ? partitionCompleteEvidenceGroups(groups, maximumPartitionCharacters)
+    : [[]];
   return partitions.map((evidenceGroups, partitionIndex) => {
     const payload = {
       schemaVersion: 2,
@@ -599,7 +601,15 @@ function buildBlindEvidenceRowInputs(
         sourceSpans: row.referenceA.sourceSpans,
         values: row.referenceA.values,
         components: row.components.map(
-          ({ componentId, label, aliases, factRole, dimension, sourceSpanIds, evidence }) => ({
+          ({
+            componentId,
+            label,
+            aliases,
+            factRole,
+            dimension,
+            sourceSpanIds,
+            evidence,
+          }) => ({
             componentId,
             label,
             aliases,

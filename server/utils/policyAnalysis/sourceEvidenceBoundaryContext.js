@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  buildADrivenSourceUnitPlan,
-} = require("./aDrivenSourceUnitPlan");
+const { buildADrivenSourceUnitPlan } = require("./aDrivenSourceUnitPlan");
 
 const SOURCE_EVIDENCE_BOUNDARY_PLAN_CONTRACT_ID =
   "SOURCE_EVIDENCE_BOUNDARY_PLAN_V1";
@@ -217,8 +215,7 @@ function unitEvidenceGroups({
 
 function buildSourceEvidenceBoundaryPlan({
   documents,
-  maximumEvidenceGroupCharacters =
-    DEFAULT_MAXIMUM_EVIDENCE_GROUP_CHARACTERS,
+  maximumEvidenceGroupCharacters = DEFAULT_MAXIMUM_EVIDENCE_GROUP_CHARACTERS,
 } = {}) {
   if (
     !Number.isInteger(maximumEvidenceGroupCharacters) ||
@@ -308,7 +305,10 @@ function partitionCompleteEvidenceGroups(
         "LF_BLIND_EVIDENCE_GROUP_TOO_LARGE",
         `${group.evidenceGroupId}:${group.characterCount}`
       );
-    if (current.length && characters + group.characterCount > maximumPartitionCharacters) {
+    if (
+      current.length &&
+      characters + group.characterCount > maximumPartitionCharacters
+    ) {
       partitions.push(current);
       current = [];
       characters = 0;
