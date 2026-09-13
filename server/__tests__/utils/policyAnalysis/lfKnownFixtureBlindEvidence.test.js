@@ -143,6 +143,35 @@ describe("LF blind evidence V2", () => {
     expect(serialized).toContain(prefix.trim());
     expect(serialized).not.toContain("excerpted");
     expect(packet.evidencePolicy.characterClippingAllowed).toBe(false);
+    expect(serialized).toContain("Neuverträge");
+  });
+
+  it("retrieves a favorable-precedence clause from a generalized German semantic variant", () => {
+    const input = fixture(
+      "AK16 Günstigkeitsklausel\nSofern Vertragsbestandteile widersprechen, gilt die für den Versicherungsnehmer günstigere Auslegung."
+    );
+    const aText =
+      "Es gilt die für den Versicherungsnehmer im jeweiligen Schadensfall bessere Deckung.";
+    input.semanticManifest.requirements[0].sourceSpans[0] = {
+      ...input.semanticManifest.requirements[0].sourceSpans[0],
+      documentEnd: 10 + aText.length,
+      exactText: aText,
+      exactTextSha256: sha256(aText),
+    };
+    input.semanticManifest.requirements[0].components[0] = {
+      ...input.semanticManifest.requirements[0].components[0],
+      label: "Bessere Deckung hat Vorrang",
+      aliases: ["Vorteilhaftere Vertragsregelung"],
+    };
+    const packet = buildLfKnownFixtureBlindEvidencePacket({
+      ...input,
+      createdAt: "2026-09-13T00:00:00.000Z",
+    });
+    const rowInput = buildBlindEvidenceRowInputs(packet, "PR-01")[0];
+    expect(JSON.stringify(rowInput)).toContain("günstigere Auslegung");
+    expect(packet.rows[0].components[0].evidence.retrievalChannels).toContain(
+      "GENERALIZED_GERMAN_SEMANTIC_BM25"
+    );
   });
 
   it("keeps list governor and target item but does not merge a sibling item", () => {

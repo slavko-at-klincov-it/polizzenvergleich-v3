@@ -15,6 +15,24 @@ const BLIND_EVIDENCE_PACKET_CONTRACT_ID =
   "LF_1PLUS9_BLIND_SOURCE_REVIEW_PACKET_V2";
 const BLIND_EVIDENCE_ROW_INPUT_CONTRACT_ID =
   "LF_1PLUS9_BLIND_SOURCE_REVIEW_ROW_INPUT_V2";
+const GERMAN_SEMANTIC_TOKEN_CONCEPTS = Object.freeze([
+  {
+    concept: "concept_favorable_precedence",
+    stems: ["besser", "gunstig", "vorteilhaft"],
+  },
+  {
+    concept: "concept_new_contract_application",
+    stems: ["neuantrag", "neuvertrag", "neuabschluss"],
+  },
+  {
+    concept: "concept_contract_conversion",
+    stems: ["konvertier", "umdeck", "umstell"],
+  },
+  {
+    concept: "concept_supplemental_coverage",
+    stems: ["zusatzdeck", "deckungserweiter", "exklusivschutz"],
+  },
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -29,6 +47,14 @@ function stableStringify(value) {
       .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
       .join(",")}}`;
   return JSON.stringify(value);
+}
+
+function semanticTokens(value) {
+  const lexical = tokens(value);
+  const concepts = GERMAN_SEMANTIC_TOKEN_CONCEPTS.filter(({ stems }) =>
+    lexical.some((token) => stems.some((stem) => token.startsWith(stem)))
+  ).map(({ concept }) => concept);
+  return [...lexical, ...concepts];
 }
 
 function blindError(code, detail = "") {
@@ -271,6 +297,8 @@ function retrieveEvidence({
   component,
   groupCandidates,
   groupIndex,
+  semanticGroupCandidates,
+  semanticGroupIndex,
   groupsById,
   oracleRow,
   candidatesById,
@@ -287,6 +315,13 @@ function retrieveEvidence({
     topK: maximumEvidenceGroupsPerCheck,
     structural: true,
   });
+  const semantic = rankLexicalCandidates({
+    target: { ...query, queryTokens: semanticTokens(query.query) },
+    candidates: semanticGroupCandidates,
+    index: semanticGroupIndex,
+    topK: maximumEvidenceGroupsPerCheck,
+    structural: true,
+  });
   const anchors = navigationAnchors({
     oracleRow,
     candidatesById,
@@ -298,6 +333,11 @@ function retrieveEvidence({
   const ids = [];
   const seen = new Set();
   for (const { evidenceGroupId } of lexical)
+    if (!seen.has(evidenceGroupId)) {
+      seen.add(evidenceGroupId);
+      ids.push(evidenceGroupId);
+    }
+  for (const { evidenceGroupId } of semantic)
     if (!seen.has(evidenceGroupId)) {
       seen.add(evidenceGroupId);
       ids.push(evidenceGroupId);
@@ -319,6 +359,7 @@ function retrieveEvidence({
     },
     retrievalChannels: [
       "FULL_CORPUS_LEXICAL_BM25",
+      "GENERALIZED_GERMAN_SEMANTIC_BM25",
       "STRUCTURAL_BOUNDARY_EXPANSION",
       "ORACLE_RANGE_NAVIGATION_WITHOUT_PRIOR_LABELS",
     ],
@@ -413,6 +454,11 @@ function buildLfKnownFixtureBlindEvidencePacket({
   }
   const groupCandidates = boundaryPlan.evidenceGroups.map(groupCandidate);
   const groupIndex = bm25Index(groupCandidates);
+  const semanticGroupCandidates = boundaryPlan.evidenceGroups.map((group) => ({
+    ...groupCandidate(group),
+    tokenList: semanticTokens(group.exactText),
+  }));
+  const semanticGroupIndex = bm25Index(semanticGroupCandidates);
   const oracleRows = new Map(
     oracle.rows.map((row) => [row.requirementId, row])
   );
@@ -439,6 +485,8 @@ function buildLfKnownFixtureBlindEvidencePacket({
       component: null,
       groupCandidates,
       groupIndex,
+      semanticGroupCandidates,
+      semanticGroupIndex,
       groupsById,
       oracleRow,
       candidatesById,
@@ -454,6 +502,8 @@ function buildLfKnownFixtureBlindEvidencePacket({
         component,
         groupCandidates,
         groupIndex,
+        semanticGroupCandidates,
+        semanticGroupIndex,
         groupsById,
         oracleRow,
         candidatesById,
