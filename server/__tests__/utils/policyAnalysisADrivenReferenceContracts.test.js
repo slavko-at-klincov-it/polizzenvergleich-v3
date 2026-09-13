@@ -2943,7 +2943,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       )
     ).toEqual([
       [{ ...existingEffect, label: "Nicht versichert" }],
-      [{ ...existingEffect, label: "Nicht versichert" }],
+      [existingEffect],
     ]);
   });
 
