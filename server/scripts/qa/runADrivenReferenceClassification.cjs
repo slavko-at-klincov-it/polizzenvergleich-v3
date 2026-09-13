@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V37";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V38";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -56,6 +56,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V34",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V35",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V36",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V37",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1219,6 +1220,9 @@ function normalizeDamageCauseGovernorComponents(requirements, unit) {
   const governorText = String(unit?.governingContext?.combinedText || "");
   if (!/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText))
     return { requirements, repairs: [] };
+  const introducesInsuredObjects = /(?:^|[\s,;:])an\s*$/iu.test(
+    governorText.trim()
+  );
   const damageLabelPattern =
     /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchsch(?:aden|äden)|Rußsch(?:aden|äden)|Schmorsch(?:aden|äden)|Kabelschmorsch(?:aden|äden)|Beschädigung|Zerstörung)(?:\b|en\b)/iu;
   const repairs = [];
@@ -1232,9 +1236,11 @@ function normalizeDamageCauseGovernorComponents(requirements, unit) {
             component?.type !== "PERIL_OR_CAUSE"
           )
             return component;
-          const toType = damageLabelPattern.test(String(component.label || ""))
-            ? "DAMAGE_OR_EFFECT"
-            : "PERIL_OR_CAUSE";
+          const toType = introducesInsuredObjects
+            ? "OBJECT"
+            : damageLabelPattern.test(String(component.label || ""))
+              ? "DAMAGE_OR_EFFECT"
+              : "PERIL_OR_CAUSE";
           if (component.type === toType) return component;
           repairs.push({
             requirementIndex,
@@ -2098,17 +2104,30 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       const hasObject = requirements.some((requirement) =>
         (requirement.components || []).some(({ type }) => type === "OBJECT")
       );
+      const hasPerilOrDamage = requirements.some((requirement) =>
+        (requirement.components || []).some(({ type }) =>
+          ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT"].includes(type)
+        )
+      );
       response = {
         ...response,
         primaryClass:
           response.primaryClass === "INSURED_OBJECT" && !hasObject
             ? "PERIL_OR_DAMAGE"
-            : response.primaryClass,
+            : response.primaryClass === "PERIL_OR_DAMAGE" && !hasPerilOrDamage
+              ? "INSURED_OBJECT"
+              : response.primaryClass,
         semanticClasses: [
-          ...new Set([...(response.semanticClasses || []), "PERIL_OR_DAMAGE"]),
-        ].filter(
-          (semanticClass) => semanticClass !== "INSURED_OBJECT" || hasObject
-        ),
+          ...new Set([
+            ...(response.semanticClasses || []),
+            ...(hasObject ? ["INSURED_OBJECT"] : []),
+            ...(hasPerilOrDamage ? ["PERIL_OR_DAMAGE"] : []),
+          ]),
+        ].filter((semanticClass) => {
+          if (semanticClass === "INSURED_OBJECT") return hasObject;
+          if (semanticClass === "PERIL_OR_DAMAGE") return hasPerilOrDamage;
+          return true;
+        }),
       };
     }
     const inheritedCoverageEffect = materializeInheritedCoverageEffect(

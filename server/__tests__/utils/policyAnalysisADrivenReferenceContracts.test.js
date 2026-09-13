@@ -816,6 +816,55 @@ describe("requirement-local semantic evidence completeness", () => {
     ).toEqual([]);
   });
 
+  test("does not treat a different larger numeric literal as evidence for a smaller value", () => {
+    const unit = {
+      ...evidenceUnit(["item", "elektrische Einrichtungen"]),
+      governingContext: {
+        blockIds: ["limit-governor"],
+        blocks: [
+          {
+            blockId: "limit-governor",
+            exactText: "bis 1% der Versicherungssumme mindestens EUR 10.000",
+          },
+        ],
+      },
+    };
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["limit-governor", "item"],
+          [
+            component("OBJECT", "item", {
+              label: "elektrische Einrichtungen",
+            }),
+            component("LIMIT_BASIS", "limit-governor", {
+              label: "bis 1% der Versicherungssumme",
+            }),
+            {
+              type: "VALUE_AND_UNIT",
+              label: "mindestens EUR 10.000",
+              rawValue: "10.000",
+              unit: "EUR",
+              sourceBlockIds: ["limit-governor"],
+            },
+          ]
+        ),
+        displayLabel: "elektrische Einrichtungen",
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "VALUE_AND_UNIT",
+      label: "bis 1%",
+      rawValue: "1",
+      unit: "%",
+      sourceBlockIds: ["limit-governor"],
+    });
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
   test.each([
     "Der Versicherungsnehmer ist berechtigt, eine Vertragsänderung zu verlangen.",
     "Die Versicherungsnehmerin kann nach einem versicherten Schaden unverzüglich mit der Reparatur beginnen.",
@@ -2876,6 +2925,65 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toBe(true);
   });
 
+  test("types a subordinate list after a damages-at governor as insured objects", () => {
+    const unit = {
+      unitId: "insured-equipment-list",
+      source: {
+        blockIds: ["equipment"],
+        combinedText: "- sämtlichen elektrischen Einrichtungen",
+        blocks: [
+          {
+            blockId: "equipment",
+            exactText: "- sämtlichen elektrischen Einrichtungen",
+          },
+        ],
+      },
+      governingContext: {
+        unitIds: ["coverage-governor", "cause-governor"],
+        blockIds: ["coverage", "cause"],
+        combinedText:
+          "Zusätzlich versichert sind Schäden durch\n• Überspannung innerhalb von Gebäuden an",
+        blocks: [
+          {
+            blockId: "coverage",
+            exactText: "Zusätzlich versichert sind Schäden durch",
+          },
+          {
+            blockId: "cause",
+            exactText: "• Überspannung innerhalb von Gebäuden an",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: "sämtlichen elektrischen Einrichtungen",
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "sämtlichen elektrischen Einrichtungen",
+              sourceBlockIds: ["equipment"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT", "OPERATIVE_COVERAGE_STATEMENT"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
+    ).toEqual(["OBJECT", "COVERAGE_EFFECT"]);
+  });
+
   test("materializes an inherited exclusion without duplicating an existing effect", () => {
     const unit = {
       unitId: "excluded-list",
@@ -4716,7 +4824,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V37");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V38");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

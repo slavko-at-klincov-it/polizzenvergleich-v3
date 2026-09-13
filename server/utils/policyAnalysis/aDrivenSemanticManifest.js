@@ -379,11 +379,11 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
     );
   if (signal.signalId === "EXPLICIT_QUANTIFIED_VALUE") {
     const literals = quantifiedLiterals(matchedEvidence.match);
-    const componentValue = comparableSignalText(
+    const componentLiterals = quantifiedLiterals(
       [component.rawValue, component.label].filter(Boolean).join(" ")
     );
     const carriesLiteral = literals.some((literal) =>
-      componentValue.includes(literal)
+      componentLiterals.includes(literal)
     );
     return (
       carriesLiteral &&
