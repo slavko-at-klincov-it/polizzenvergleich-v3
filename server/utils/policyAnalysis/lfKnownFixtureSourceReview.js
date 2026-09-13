@@ -170,7 +170,12 @@ function factRoleDimension(factRole) {
   return dimension;
 }
 
-function candidateScore(candidate, component, row, includeClaudeGuidance = true) {
+function candidateScore(
+  candidate,
+  component,
+  row,
+  includeClaudeGuidance = true
+) {
   const query = tokens(
     [
       row.point,
@@ -323,16 +328,16 @@ function selectComponentCandidates({
   const selectedDocuments = new Set();
   const claudeRebind = includeClaudeGuidance
     ? scored
-    .filter(
-      ({ claudeOverlap }) =>
-        row.claude?.foundStatus !== "Nein" && claudeOverlap > 0
-    )
-    .sort(
-      (left, right) =>
-        right.claudeOverlap - left.claudeOverlap ||
-        left.candidate.range.exactQuote.length -
-          right.candidate.range.exactQuote.length ||
-        left.candidate.rank - right.candidate.rank
+        .filter(
+          ({ claudeOverlap }) =>
+            row.claude?.foundStatus !== "Nein" && claudeOverlap > 0
+        )
+        .sort(
+          (left, right) =>
+            right.claudeOverlap - left.claudeOverlap ||
+            left.candidate.range.exactQuote.length -
+              right.candidate.range.exactQuote.length ||
+            left.candidate.rank - right.candidate.rank
         )[0]
     : null;
   if (claudeRebind) {
@@ -621,9 +626,9 @@ function buildLfKnownFixtureSourceReviewPacket({
           component,
           row,
           documentsByUuid,
-        maximumPerComponent,
-        maximumQuoteCharacters,
-        includeClaudeGuidance: !blind,
+          maximumPerComponent,
+          maximumQuoteCharacters,
+          includeClaudeGuidance: !blind,
         }),
       }));
       const rowContext = {
@@ -748,10 +753,9 @@ function buildLfKnownFixtureSourceReviewPacket({
       maximumPerComponent,
       maximumQuoteCharacters,
       globalReferenceMaximumQuoteCharacters,
-      candidatePolicy:
-        blind
-          ? "REFERENCE_A_PLUS_COMPONENT_LEXICAL_RANK_WITH_DOCUMENT_DIVERSITY_AND_GLOBAL_REFERENCE_A_REBIND; NAVIGATION_ONLY"
-          : "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
+      candidatePolicy: blind
+        ? "REFERENCE_A_PLUS_COMPONENT_LEXICAL_RANK_WITH_DOCUMENT_DIVERSITY_AND_GLOBAL_REFERENCE_A_REBIND; NAVIGATION_ONLY"
+        : "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },
     ...(blind
       ? {
@@ -792,10 +796,7 @@ function buildLfKnownFixtureSourceReviewPacket({
       ),
       globalClaudeRebindCandidates: blind
         ? 0
-        : rows.reduce(
-            (sum, row) => sum + row.globalClaudeRebind.length,
-            0
-          ),
+        : rows.reduce((sum, row) => sum + row.globalClaudeRebind.length, 0),
       globalReferenceARebindCandidates: rows.reduce(
         (sum, row) => sum + row.globalReferenceARebind.length,
         0
