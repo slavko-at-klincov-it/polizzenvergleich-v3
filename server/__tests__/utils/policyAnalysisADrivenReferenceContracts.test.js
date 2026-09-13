@@ -314,7 +314,7 @@ describe("A-driven classification evidence recovery", () => {
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
       recoveredContexts: 2,
     });
   });
@@ -381,8 +381,75 @@ describe("A-driven classification evidence recovery", () => {
         blockIds: ["governor"],
       });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
       recoveredContexts: 3,
+    });
+  });
+
+  test("keeps the nearest explicit coverage governor when an outer heading has the opposite polarity", () => {
+    const source = (combinedText, blockId, ordinal) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText, ordinal }],
+      combinedText,
+    });
+    const plan = {
+      units: [
+        {
+          unitId: "positive-heading",
+          unitKind: "HEADING",
+          source: source("Versichert sind:", "positive-heading", 1),
+        },
+        {
+          unitId: "negative-governor",
+          unitKind: "CLAUSE",
+          structurePath: ["Versichert sind:"],
+          source: source("Nicht versichert sind", "negative-governor", 2),
+        },
+        {
+          unitId: "excluded-item",
+          unitKind: "LIST",
+          structurePath: ["Versichert sind:"],
+          source: source("• Innenverglasungen", "excluded-item", 3),
+        },
+        {
+          unitId: "negative-heading",
+          unitKind: "HEADING",
+          source: source("Nicht versichert sind:", "negative-heading", 4),
+        },
+        {
+          unitId: "positive-governor",
+          unitKind: "CLAUSE",
+          structurePath: ["Nicht versichert sind:"],
+          source: source("Mitversichert sind", "positive-governor", 5),
+        },
+        {
+          unitId: "included-item",
+          unitKind: "LIST",
+          structurePath: ["Nicht versichert sind:"],
+          source: source("• Solaranlagen", "included-item", 6),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("negative-governor").governingContext).toBeUndefined();
+    expect(byId.get("excluded-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["negative-governor"],
+      blockIds: ["negative-governor"],
+    });
+    expect(byId.get("positive-governor").governingContext).toBeUndefined();
+    expect(byId.get("included-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["positive-governor"],
+      blockIds: ["positive-governor"],
+    });
+    expect(recovered.classificationEvidenceContext).toEqual({
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
+      recoveredContexts: 2,
     });
   });
 
@@ -5442,7 +5509,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V43");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V44");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

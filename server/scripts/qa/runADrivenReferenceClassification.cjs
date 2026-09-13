@@ -30,7 +30,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V43";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V44";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -63,6 +63,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V40",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V41",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V42",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V43",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -98,7 +99,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -3252,6 +3253,16 @@ function operativeHeadingGovernorContext(heading, current) {
   )
     return null;
   const existing = current.governingContext;
+  const headingPolarity = explicitCoveragePolarity(headingText);
+  const nearestPolarity =
+    explicitCoveragePolarity(existing?.combinedText) ||
+    explicitCoveragePolarity(current.source?.combinedText);
+  if (
+    headingPolarity &&
+    nearestPolarity &&
+    headingPolarity !== nearestPolarity
+  )
+    return null;
   const blocks = [...heading.source.blocks, ...(existing?.blocks || [])].filter(
     ({ blockId }, index, entries) =>
       entries.findIndex((candidate) => candidate.blockId === blockId) === index
