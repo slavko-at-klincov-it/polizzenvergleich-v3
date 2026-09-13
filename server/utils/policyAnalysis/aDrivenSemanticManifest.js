@@ -713,6 +713,7 @@ function materializeSharedSignalComponents(
           "EXPLICIT_PERIL_OR_CAUSE",
           "EXPLICIT_QUANTIFIED_VALUE",
           "EXPLICIT_CONTRACTUAL_BENEFIT",
+          "EXPLICIT_INTENTIONAL_DAMAGE",
         ].includes(signal.signalId);
         const exactEvidenceBinding =
           evidenceBackedSignal &&
@@ -720,17 +721,22 @@ function materializeSharedSignalComponents(
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeBenefitEvidence =
           signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
           [
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
         const authoritativeQuantifiedEvidence =
           signal.signalId === "EXPLICIT_QUANTIFIED_VALUE" &&
-          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+          [
+            A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+            A_SEMANTIC_SIGNAL_CONTRACT_ID,
+          ].includes(semanticSignalContractId);
         const authoritativeLimitBasisEvidence =
           signal.signalId === "EXPLICIT_LIMIT_BASIS" &&
           semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
@@ -743,7 +749,8 @@ function materializeSharedSignalComponents(
           authoritativeQuantifiedEvidence ||
           authoritativeLimitBasisEvidence ||
           Boolean(inheritedConditionEvidence);
-        const localText = exactEvidenceBinding
+        const localText =
+          exactEvidenceBinding || authoritativeLimitBasisEvidence
           ? evidence.match
           : inheritedConditionEvidence?.label ||
             localComponent?.label ||
@@ -801,6 +808,7 @@ function materializeSharedSignalComponents(
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+              A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
               A_SEMANTIC_SIGNAL_CONTRACT_ID,
             ].includes(semanticSignalContractId));
         const sourceBlockIds = inheritedConditionEvidence

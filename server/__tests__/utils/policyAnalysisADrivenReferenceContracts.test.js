@@ -7,6 +7,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -729,6 +730,30 @@ describe("requirement-local semantic evidence completeness", () => {
       requirements: input,
       diagnostics: [],
     });
+  });
+
+  test("keeps the frozen V6 signal contract free of V7 intentional-damage materialization", () => {
+    const source = "Vorsätzliche Beschädigung von Gebäudebestandteilen";
+    const unit = evidenceUnit(["item", source]);
+    const input = [
+      {
+        ...requirement(
+          ["item"],
+          [
+            component("OBJECT", "item", {
+              label: "Gebäudebestandteilen",
+            }),
+          ]
+        ),
+        displayLabel: source,
+      },
+    ];
+
+    expect(
+      materializeSharedSignalComponents(unit, input, {
+        semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
+      })
+    ).toEqual({ requirements: input, diagnostics: [] });
   });
 
   test("ignores a signal that only spills into the same physical source block", () => {
