@@ -735,9 +735,7 @@ function validateSourceReviewResponse(row, response) {
   );
   const rowCandidateIds = new Set([
     ...(row.globalClaudeRebind || []).map(({ candidateId }) => candidateId),
-    ...(row.globalReferenceARebind || []).map(
-      ({ candidateId }) => candidateId
-    ),
+    ...(row.globalReferenceARebind || []).map(({ candidateId }) => candidateId),
     ...row.components.flatMap(({ candidates }) =>
       candidates.map(({ candidateId }) => candidateId)
     ),
