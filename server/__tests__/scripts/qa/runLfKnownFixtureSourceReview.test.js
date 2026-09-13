@@ -122,6 +122,9 @@ describe("LF known fixture source review runner", () => {
     expect(repaired.at(-1).content).toContain(
       "innerhalb jedes componentFinding ist ausschließlich MATCH, COUNTERPART_WITH_DIFFERENCE, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED"
     );
+    expect(repaired.at(-1).content).toContain(
+      "derselbe fachliche Kern belegt ist und nur ein Modifikator abweicht, setze den Kern auf MATCH"
+    );
   });
 
   it("constrains structured output to the source review contract", () => {
