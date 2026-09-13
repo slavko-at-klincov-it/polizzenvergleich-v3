@@ -33,6 +33,18 @@ function canonicalJson(value) {
   return JSON.stringify(value);
 }
 
+function sourceIdentity(candidate) {
+  return {
+    candidateId: candidate.candidateId,
+    documentName: candidate.documentName,
+    documentRole: candidate.documentRole,
+    documentStatus: candidate.documentStatus,
+    physicalPageNumber: candidate.physicalPageNumber,
+    exactQuote: candidate.exactQuote,
+    oracleExactQuoteSha256: candidate.oracleExactQuoteSha256,
+  };
+}
+
 function rowCandidates(row) {
   const candidates = [
     ...(row.globalClaudeRebind || []),
@@ -43,7 +55,11 @@ function rowCandidates(row) {
   for (const candidate of candidates) {
     if (!candidate?.candidateId) continue;
     const existing = byId.get(candidate.candidateId);
-    if (existing && canonicalJson(existing) !== canonicalJson(candidate))
+    if (
+      existing &&
+      canonicalJson(sourceIdentity(existing)) !==
+        canonicalJson(sourceIdentity(candidate))
+    )
       throw adjudicationError(
         "LF_SOURCE_ADJUDICATION_CANDIDATE_CONFLICT",
         candidate.candidateId

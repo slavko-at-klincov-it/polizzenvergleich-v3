@@ -30,7 +30,12 @@ function fixture() {
         point: "Punkt",
         claudeClaim: { foundStatus: "Ja" },
         systemClaim: { customerSearchStatus: "Nicht gefunden" },
-        components: [{ candidates: [candidate] }],
+        globalReferenceARebind: [
+          { ...candidate, evidenceOrigin: "GLOBAL_REFERENCE_A_REBIND" },
+        ],
+        components: [
+          { candidates: [{ ...candidate, evidenceOrigin: "ROW_RETRIEVAL" }] },
+        ],
       },
       {
         reviewIndex: 1,
