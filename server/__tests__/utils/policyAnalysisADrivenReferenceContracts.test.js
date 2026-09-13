@@ -314,9 +314,149 @@ describe("A-driven classification evidence recovery", () => {
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V2",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3",
       recoveredContexts: 2,
     });
+  });
+
+  test("continues an open list governor across adjacent items and a same-polarity semicolon bridge", () => {
+    const source = (combinedText, blockId, ordinal) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText, ordinal }],
+      combinedText,
+    });
+    const plan = {
+      units: [
+        {
+          unitId: "governor",
+          unitKind: "CLAUSE",
+          structurePath: ["Grunddeckung"],
+          source: source("Versichert sind Schäden durch", "governor", 1),
+        },
+        {
+          unitId: "first-item",
+          unitKind: "LIST",
+          structurePath: ["Grunddeckung"],
+          source: source("• Rohrbruch.", "first", 2),
+        },
+        {
+          unitId: "covered-bridge",
+          unitKind: "CLAUSE",
+          structurePath: ["Grunddeckung"],
+          source: source(
+            "Das Vorhandensein einer Fußbodenheizung ist mitversichert;",
+            "bridge",
+            3
+          ),
+        },
+        {
+          unitId: "second-item",
+          unitKind: "LIST",
+          structurePath: ["Grunddeckung"],
+          source: source("• Frostschäden;", "second", 4),
+        },
+        {
+          unitId: "third-item",
+          unitKind: "LIST",
+          structurePath: ["Grunddeckung"],
+          source: source("• Wasseraustritt.", "third", 5),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("first-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["governor"],
+      blockIds: ["governor"],
+    });
+    expect(byId.get("covered-bridge").governingContext).toBeUndefined();
+    for (const unitId of ["second-item", "third-item"])
+      expect(byId.get(unitId).governingContext).toMatchObject({
+        relationType: "RECOVERS_CONTINUED_LIST_GOVERNOR",
+        unitIds: ["governor"],
+        blockIds: ["governor"],
+      });
+    expect(recovered.classificationEvidenceContext).toEqual({
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3",
+      recoveredContexts: 3,
+    });
+  });
+
+  test.each([
+    {
+      name: "opposite-polarity bridge",
+      bridgeText: "Dieser Baustein ist nicht versichert;",
+      bridgeOrdinal: 3,
+      targetOrdinal: 4,
+      targetPath: ["Grunddeckung"],
+    },
+    {
+      name: "closed intervening clause",
+      bridgeText: "Der Vertrag endet heute.",
+      bridgeOrdinal: 3,
+      targetOrdinal: 4,
+      targetPath: ["Grunddeckung"],
+    },
+    {
+      name: "source gap",
+      bridgeText: "Dieser Baustein ist mitversichert;",
+      bridgeOrdinal: 3,
+      targetOrdinal: 5,
+      targetPath: ["Grunddeckung"],
+    },
+    {
+      name: "structure change",
+      bridgeText: "Dieser Baustein ist mitversichert;",
+      bridgeOrdinal: 3,
+      targetOrdinal: 4,
+      targetPath: ["Ausschlüsse"],
+    },
+  ])("stops continued list governors at a $name", (variant) => {
+    const source = (combinedText, blockId, ordinal) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText, ordinal }],
+      combinedText,
+    });
+    const plan = {
+      units: [
+        {
+          unitId: "governor",
+          unitKind: "CLAUSE",
+          structurePath: ["Grunddeckung"],
+          source: source("Versichert sind Schäden durch", "governor", 1),
+        },
+        {
+          unitId: "first-item",
+          unitKind: "LIST",
+          structurePath: ["Grunddeckung"],
+          source: source("• Rohrbruch.", "first", 2),
+        },
+        {
+          unitId: "bridge",
+          unitKind: "CLAUSE",
+          structurePath: ["Grunddeckung"],
+          source: source(variant.bridgeText, "bridge", variant.bridgeOrdinal),
+        },
+        {
+          unitId: "target",
+          unitKind: "LIST",
+          structurePath: variant.targetPath,
+          source: source("• Frostschäden.", "target", variant.targetOrdinal),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+
+    expect(
+      recovered.units.find(({ unitId }) => unitId === "target")
+        .governingContext
+    ).toBeUndefined();
   });
 });
 

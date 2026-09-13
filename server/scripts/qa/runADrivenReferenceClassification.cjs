@@ -30,7 +30,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V42";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V43";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -62,6 +62,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V39",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V40",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V41",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V42",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -97,7 +98,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V2";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V3";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -3037,6 +3038,52 @@ function endsWithSentence(textValue) {
   return /[.!?][”"')\]]?$/u.test(String(textValue || "").trim());
 }
 
+function explicitCoveragePolarity(textValue) {
+  const sourceText = String(textValue || "");
+  const negative =
+    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu.exec(
+      sourceText
+    );
+  const positiveEvidenceText = negative
+    ? `${sourceText.slice(0, negative.index)}${" ".repeat(
+        negative[0].length
+      )}${sourceText.slice(negative.index + negative[0].length)}`
+    : sourceText;
+  const positive =
+    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu.exec(
+      positiveEvidenceText
+    );
+  if (Boolean(negative) === Boolean(positive)) return null;
+  return negative ? "EXCLUDED" : "INCLUDED";
+}
+
+function isOpenCoverageGovernor(textValue) {
+  const sourceText = String(textValue || "").trim();
+  return (
+    sourceText.length > 0 &&
+    sourceText.length <= 400 &&
+    !/[.!?;][”"')\]]?$/u.test(sourceText) &&
+    explicitCoveragePolarity(sourceText) !== null
+  );
+}
+
+function sameStructurePath(left, right) {
+  return (
+    stableStringify(left?.structurePath || []) ===
+    stableStringify(right?.structurePath || [])
+  );
+}
+
+function sourceUnitsAreAdjacent(left, right) {
+  const leftOrdinal = left?.source?.blocks?.at(-1)?.ordinal;
+  const rightOrdinal = right?.source?.blocks?.[0]?.ordinal;
+  return (
+    Number.isInteger(leftOrdinal) &&
+    Number.isInteger(rightOrdinal) &&
+    rightOrdinal === leftOrdinal + 1
+  );
+}
+
 function classificationGovernorContext(previous, current) {
   if (
     !previous ||
@@ -3056,10 +3103,7 @@ function classificationGovernorContext(previous, current) {
   const opensFollowingList =
     previous.unitKind !== "LIST" &&
     current.unitKind === "LIST" &&
-    !endsWithSentence(previousText) &&
-    /\b(?:Deckung|gedeckt|mitversichert|versichert|Versicherungsschutz)\b/iu.test(
-      previousText
-    );
+    isOpenCoverageGovernor(previousText);
   const recoversAdjacentAnaphora =
     ["LIST", "CLAUSE"].includes(current.unitKind) &&
     /\b(?:bis\s+zu\s+)?(?:dies(?:er|e|es|em|en)|derselben)\s+(?:Größe|Höhe|Dauer|Summe|Betrag|Wert|Frist|Anzahl)\b/iu.test(
@@ -3092,6 +3136,57 @@ function classificationGovernorContext(previous, current) {
     combinedText,
     combinedTextSha256: sha256(combinedText),
   };
+}
+
+function continuedListGovernorContext(contentUnits, currentIndex) {
+  const current = contentUnits[currentIndex];
+  if (current?.unitKind !== "LIST" || current.governingContext) return null;
+  let right = current;
+  const bridges = [];
+  for (
+    let candidateIndex = currentIndex - 1;
+    candidateIndex >= 0 && bridges.length <= 3;
+    candidateIndex -= 1
+  ) {
+    const candidate = contentUnits[candidateIndex];
+    if (
+      candidate?.source?.documentUuid !== current.source?.documentUuid ||
+      !sameStructurePath(candidate, current) ||
+      !sourceUnitsAreAdjacent(candidate, right)
+    )
+      return null;
+    if (candidate.unitKind === "LIST") {
+      const inherited = candidate.governingContext;
+      const inheritedPolarity = explicitCoveragePolarity(
+        inherited?.combinedText
+      );
+      if (
+        !inherited ||
+        !isOpenCoverageGovernor(inherited.combinedText) ||
+        bridges.some(
+          (bridge) =>
+            explicitCoveragePolarity(bridge.source?.combinedText) !==
+            inheritedPolarity
+        )
+      )
+        return null;
+      return {
+        ...inherited,
+        relationType: "RECOVERS_CONTINUED_LIST_GOVERNOR",
+        contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
+      };
+    }
+    const bridgeText = String(candidate.source?.combinedText || "").trim();
+    if (
+      candidate.unitKind !== "CLAUSE" ||
+      !/;[”"')\]]?$/u.test(bridgeText) ||
+      explicitCoveragePolarity(bridgeText) === null
+    )
+      return null;
+    bridges.unshift(candidate);
+    right = candidate;
+  }
+  return null;
 }
 
 function interruptedListGovernorContext(contentUnits, currentIndex) {
@@ -3201,6 +3296,14 @@ function deriveClassificationEvidencePlan(plan) {
     for (let index = 1; index < contentUnits.length; index += 1) {
       const current = contentUnits[index];
       const context = interruptedListGovernorContext(contentUnits, index);
+      if (!context) continue;
+      current.governingContext = context;
+      recoveredContexts += 1;
+    }
+  for (const contentUnits of contentUnitsByDocument.values())
+    for (let index = 1; index < contentUnits.length; index += 1) {
+      const current = contentUnits[index];
+      const context = continuedListGovernorContext(contentUnits, index);
       if (!context) continue;
       current.governingContext = context;
       recoveredContexts += 1;
