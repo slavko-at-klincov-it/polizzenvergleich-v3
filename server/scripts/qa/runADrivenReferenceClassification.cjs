@@ -657,9 +657,13 @@ function explicitCoverageEffectRepair(unit, component) {
   const normalizedLabel = String(component.label || "")
     .replace(/\s+/gu, " ")
     .trim();
+  const normalizedEvidence = evidence[0].replace(/\s+/gu, " ").trim();
   if (
     component.coverageEffect === coverageEffect &&
-    normalizedSource.includes(normalizedLabel)
+    normalizedSource.includes(normalizedLabel) &&
+    normalizedLabel
+      .toLocaleLowerCase("de-AT")
+      .includes(normalizedEvidence.toLocaleLowerCase("de-AT"))
   )
     return null;
   return { label: evidence[0], coverageEffect };
