@@ -4554,3 +4554,39 @@ dass 283 Zeilen in dieser Form fortgesetzt werden dürfen oder dass die
 bekannten 1+9-Dokumente Generalisierung nachweisen. Nächster Gate ist ein
 frischer, zeilenisolierter Blindtest gegen die bekannten Kalibrierzeilen;
 Streit- und Hochrisikofälle gehen danach an Astra mit `xhigh`.
+
+## 81. Frische Einzelkontexte beheben keinen unvollständigen Blindquelleninput
+
+Die vier Problemzeilen PR-01, PR-02, PR-08 und PR-09 wurden unabhängig in
+vier getrennten frischen `gpt-5.6-sol`-Kontexten mit Reasoning `high` geprüft.
+Die Blindheit blieb erhalten. Drei Antworten bestanden den Mac-Studio-
+Quellenvalidator; PR-02 ließ einen zwingenden Komponentencheck aus und war
+technisch ungültig. Nur PR-09 erreichte den korrekten binären Nullfund. PR-01
+und PR-08 blieben falsch negativ; PR-02 war zusätzlich fachlich zu eng.
+
+Die Laufzeit stieg gegenüber dem Sammelpass stark: kumuliert 412,276 Sekunden
+beziehungsweise 103,069 Sekunden pro Zeile, bei parallel beobachteten 254
+Sekunden Gesamtspanne. Die Einzelzeiten lagen zwischen 32,944 und 172,332
+Sekunden. Frische Kontexte allein sind damit weder ein Qualitäts- noch ein
+stabiler Geschwindigkeitsbeweis.
+
+Die Ursachenprüfung zeigte eine entscheidende Differenz zwischen vorhandener
+Candidate-ID und sichtbarer Evidenz. PR-01 enthielt zwar die ID der späteren
+Goldquelle, der A-only erzeugte 600-Zeichen-Ausschnitt endete jedoch vor dem
+entscheidenden Satz über Neuverträge und Konvertierungen. PR-08 erhielt
+ebenfalls nur den unvollständigen Rahmenvereinbarungsausschnitt; die zweite
+Goldquelle fehlte. PR-02 zeigte `RV WEVIG/Familienwohnbau`, aber die für die
+Goldentscheidung benötigte Quellenkombination zum konkreten
+Versicherungsnehmerkreis war nicht vollständig und gleichwertig sichtbar.
+
+**Beweist:** Ein Blindreview darf nicht allein anhand vorhandener Candidate-
+IDs oder hoher Blockabdeckung als source-bound gelten. Der tatsächlich dem
+Reviewer sichtbare Quellbereich muss den relevanten fachlichen Satz und bei
+zusammengesetzten Aussagen alle notwendigen Quellen enthalten.
+
+**Beweist nicht:** Dass Sol als Einzelmodell ungeeignet ist oder dass Astra
+ohne denselben vollständigen Quellenvertrag besser wäre. Vor dem verbindlich
+nachgelagerten Gold-30-Gate muss zuerst die blinde Evidenzbereitstellung
+vollständig werden und der Problem-4-Test erneut bestehen. Auch 4/4 gibt
+keine 283er-Freigabe; erst Gold-30 entscheidet zwischen Sol und Astra als
+primärem Goldpass.
