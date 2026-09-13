@@ -26,7 +26,7 @@ const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
   DOCUMENT_STATUS: ["DOCUMENT_ROLE", "PRECEDENCE_OR_REPLACEMENT"],
 });
 const STRONG_OPERATIVE_TEXT =
-  /\b(?:versichert\s+sind|mitversichert|nicht\s+versichert|ausgeschlossen|versicherungsschutz\s+(?:besteht|gilt)|gilt\s+(?:als|für|bei)|beträgt|bis\s+zu|unter\s+der\s+voraussetzung|hat\s+zu|muss|ist\s+verpflichtet|ersetzt|innerhalb\s+von)\b|\b\d+(?:[.,]\d+)?\s*(?:%|EUR|Euro|Tage?|Monate?|Jahre?)\b/iu;
+  /\b(?:versichert\s+sind|sind\s+(?:mit)?versichert|mitversichert|nicht\s+versichert|ausgeschlossen|versicherungsschutz\s+(?:besteht|gilt)|gilt\s+(?:als|für|bei)|beträgt|bis\s+zu|unter\s+der\s+voraussetzung|hat\s+zu|muss|ist\s+verpflichtet|ersetzt|innerhalb\s+von)\b|\b\d+(?:[.,]\d+)?\s*(?:%|EUR|Euro|Tage?|Monate?|Jahre?)\b/iu;
 const ATOMIC_LABEL_COMPONENT_TYPES = new Set([
   "OBJECT",
   "PERIL_OR_CAUSE",
@@ -765,6 +765,11 @@ function buildADrivenAStatusAudit({
           /^\s*(?:\d+(?:\.\d+)*[.)]?|[A-Z][.)])\s+/u.test(text))
       )
         reviewDisposition = "STRUCTURAL_HEADING_CONFIRMED";
+      else if (
+        /^\s*[\p{L}][\p{L}\s-]{1,120}versicherung\s*$/iu.test(text) &&
+        !PREDICATE_PATTERN.test(text)
+      )
+        reviewDisposition = "INSURANCE_BRANCH_HEADING_CONFIRMED";
       else if (/^(?:Versicherer|Präambel)$/iu.test(text))
         reviewDisposition = "STRUCTURAL_LABEL_CONFIRMED";
       return {

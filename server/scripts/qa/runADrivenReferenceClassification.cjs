@@ -36,7 +36,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V60";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V61";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -86,6 +86,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V57",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V58",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V59",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V60",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -1763,9 +1764,9 @@ function normalizeSharedActionObjectEnumerations(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
-function materializeInheritedCoverageEffect(requirements, unit) {
+function nearestUnambiguousInheritedCoverageEffect(unit) {
   const contextBlocks = unit?.governingContext?.blocks || [];
-  if (contextBlocks.length === 0) return { requirements, repairs: [] };
+  if (contextBlocks.length === 0) return null;
   const candidates = contextBlocks.flatMap(({ blockId }) => {
     const component = {
       type: "COVERAGE_EFFECT",
@@ -1775,8 +1776,17 @@ function materializeInheritedCoverageEffect(requirements, unit) {
     const repair = explicitCoverageEffectRepair(unit, component);
     return repair ? [{ ...component, ...repair }] : [];
   });
-  if (candidates.length !== 1) return { requirements, repairs: [] };
-  const inheritedComponent = candidates[0];
+  if (
+    candidates.length === 0 ||
+    new Set(candidates.map(({ coverageEffect }) => coverageEffect)).size !== 1
+  )
+    return null;
+  return candidates.at(-1);
+}
+
+function materializeInheritedCoverageEffect(requirements, unit) {
+  const inheritedComponent = nearestUnambiguousInheritedCoverageEffect(unit);
+  if (!inheritedComponent) return { requirements, repairs: [] };
   const repairs = [];
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => {
@@ -1809,17 +1819,9 @@ function materializeInheritedCoverageEffect(requirements, unit) {
 function normalizeInheritedCoverageEffectReferences(requirements, unit) {
   const contextBlocks = unit?.governingContext?.blocks || [];
   if (contextBlocks.length === 0) return { requirements, repairs: [] };
-  const candidates = contextBlocks.flatMap(({ blockId }) => {
-    const component = {
-      type: "COVERAGE_EFFECT",
-      label: "",
-      sourceBlockIds: [blockId],
-    };
-    const repair = explicitCoverageEffectRepair(unit, component);
-    return repair ? [{ ...component, ...repair }] : [];
-  });
-  if (candidates.length !== 1) return { requirements, repairs: [] };
-  const inheritedComponent = candidates[0];
+  const inheritedComponent = nearestUnambiguousInheritedCoverageEffect(unit);
+  if (!inheritedComponent) return { requirements, repairs: [] };
+  const contextBlockIds = new Set(contextBlocks.map(({ blockId }) => blockId));
   const evidenceBlocks = normalizationEvidenceBlocks(unit);
   const repairs = [];
   const normalizedRequirements = requirements.map(
@@ -1842,11 +1844,27 @@ function normalizeInheritedCoverageEffectReferences(requirements, unit) {
           const label = String(component.label || "")
             .replace(/\s+/gu, " ")
             .trim();
-          if (label && declaredText.includes(label)) return component;
+          const labelIsSourceBound = label && declaredText.includes(label);
+          const declaredOnlyInheritedContext =
+            declaredIds.size > 0 &&
+            [...declaredIds].every((blockId) => contextBlockIds.has(blockId));
+          const alreadyUsesNearestGovernor =
+            declaredIds.size === inheritedComponent.sourceBlockIds.length &&
+            inheritedComponent.sourceBlockIds.every((blockId) =>
+              declaredIds.has(blockId)
+            );
+          if (
+            labelIsSourceBound &&
+            (!declaredOnlyInheritedContext || alreadyUsesNearestGovernor)
+          )
+            return component;
           repairs.push({
             requirementIndex,
             componentIndex,
-            action: "REBIND_INHERITED_COVERAGE_EFFECT",
+            action:
+              labelIsSourceBound && declaredOnlyInheritedContext
+                ? "REBIND_NEAREST_INHERITED_COVERAGE_EFFECT"
+                : "REBIND_INHERITED_COVERAGE_EFFECT",
             coverageEffect: inheritedComponent.coverageEffect,
             fromSourceBlockIds: [...declaredIds],
             toSourceBlockIds: inheritedComponent.sourceBlockIds,

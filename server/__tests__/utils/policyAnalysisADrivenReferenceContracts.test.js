@@ -6035,6 +6035,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toHaveLength(2);
   });
 
+  test("prefers the nearest same-polarity governor over an outer coverage heading", () => {
+    const unit = {
+      unitId: "locally-augmented-list",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["item"],
+        combinedText: "• Kosten für Notverglasung;",
+        blocks: [{ blockId: "item", exactText: "• Kosten für Notverglasung;" }],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "item-segment",
+          blockIds: ["item"],
+          combinedText: "• Kosten für Notverglasung;",
+        },
+      ],
+      governingContext: {
+        unitIds: ["outer-heading", "local-governor"],
+        blockIds: ["outer", "local"],
+        combinedText:
+          "Versichert sind im Rahmen der Glaspauschale:\nZusätzlich versichert sind",
+        blocks: [
+          {
+            blockId: "outer",
+            exactText: "Versichert sind im Rahmen der Glaspauschale:",
+          },
+          { blockId: "local", exactText: "Zusätzlich versichert sind" },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "COST"],
+      requirements: [
+        {
+          displayLabel: "• Kosten für Notverglasung;",
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: "Kosten für Notverglasung",
+              sourceBlockIds: ["item"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Versichert sind",
+              sourceBlockIds: ["outer"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components.find(
+        ({ type }) => type === "COVERAGE_EFFECT"
+      )
+    ).toEqual({
+      type: "COVERAGE_EFFECT",
+      label: "Zusätzlich versichert sind",
+      sourceBlockIds: ["local"],
+      coverageEffect: "INCLUDED",
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "REBIND_NEAREST_INHERITED_COVERAGE_EFFECT",
+        fromSourceBlockIds: ["outer"],
+        toSourceBlockIds: ["local"],
+      })
+    );
+  });
+
   test("does not rebind an inherited coverage effect across opposite polarity", () => {
     const unit = {
       unitId: "opposite-inherited-polarity",
@@ -7568,7 +7644,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V60");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V61");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -12474,6 +12550,172 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(audit.dynamicComponentCrosswalk).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ relationCandidate: "ADDITIONAL" }),
+      ])
+    );
+  });
+
+  test("accepts predicate-free insurance headings and fully reused list governors as nonoperative terminals", () => {
+    const plannedSource = (blockId, exactText, ordinal) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [
+        {
+          blockId,
+          ordinal,
+          structuralKind: "BODY_LINE",
+          exactText,
+        },
+      ],
+      combinedText: exactText,
+    });
+    const plan = {
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      planSha256: "status-plan",
+      summary: { sourceBlocks: 3 },
+      units: [
+        {
+          unitId: "branch-heading",
+          unitKind: "CLAUSE",
+          initialDisposition: "PENDING_CLASSIFICATION",
+          source: plannedSource(
+            "branch-block",
+            "Grundstückshaftpflichtversicherung",
+            1
+          ),
+        },
+        {
+          unitId: "coverage-governor",
+          unitKind: "CLAUSE",
+          initialDisposition: "PENDING_CLASSIFICATION",
+          source: plannedSource(
+            "governor-block",
+            "Zusätzlich sind versichert",
+            2
+          ),
+        },
+        {
+          unitId: "cost-item",
+          unitKind: "LIST",
+          initialDisposition: "PENDING_CLASSIFICATION",
+          source: plannedSource("item-block", "• Suchkosten", 3),
+        },
+      ],
+    };
+    const manifest = {
+      contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+      sourceUnitPlanSha256: plan.planSha256,
+      manifestSha256: "b".repeat(64),
+      summary: {
+        semanticRequirements: 1,
+        semanticComponents: 2,
+      },
+      unitTerminals: [
+        {
+          unitId: "branch-heading",
+          terminalDisposition: "NON_OPERATIVE_TERMINAL",
+          primaryClass: "STRUCTURE",
+          semanticClasses: ["STRUCTURE"],
+          requirementIds: [],
+          diagnostics: [],
+        },
+        {
+          unitId: "coverage-governor",
+          terminalDisposition: "DUPLICATE_TERMINAL",
+          primaryClass: "DUPLICATE",
+          semanticClasses: ["DUPLICATE"],
+          requirementIds: [],
+          diagnostics: [],
+        },
+        {
+          unitId: "cost-item",
+          terminalDisposition: "OPERATIVE_MAPPED",
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "COST"],
+          requirementIds: ["dynamic-requirement"],
+          diagnostics: [],
+        },
+      ],
+      blockTerminals: [
+        { documentUuid: "doc", blockId: "branch-block" },
+        { documentUuid: "doc", blockId: "governor-block" },
+        { documentUuid: "doc", blockId: "item-block" },
+      ],
+      requirements: [
+        {
+          requirementId: "dynamic-requirement",
+          displayLabel: "• Suchkosten",
+          sourceUnitIds: ["coverage-governor", "cost-item"],
+          sourceBlockIds: ["governor-block", "item-block"],
+          components: [
+            {
+              componentId: "coverage-component",
+              type: "COVERAGE_EFFECT",
+              label: "versichert",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["governor-block"],
+            },
+            {
+              componentId: "cost-component",
+              type: "FACT_ROLE",
+              label: "Suchkosten",
+              sourceBlockIds: ["item-block"],
+            },
+          ],
+        },
+      ],
+    };
+    const responses = plan.units.map((unit) => ({ unitId: unit.unitId }));
+    const audit = buildADrivenAStatusAudit({
+      plan,
+      manifest,
+      responses,
+      classificationBatches: {
+        batches: [
+          {
+            expectedUnitIds: plan.units.map(({ unitId }) => unitId),
+          },
+        ],
+      },
+      batchResults: [{ validation: { passed: true } }],
+      legacyManifest: {
+        manifestSha256: "c".repeat(64),
+        requirements: [
+          {
+            requirementId: "legacy-branch",
+            displayLabel: "Grundstückshaftpflichtversicherung",
+            components: [
+              {
+                id: "legacy-branch-component",
+                label: "Grundstückshaftpflichtversicherung",
+                factRole: "INSURED_OBJECT",
+                sourceSpanIds: ["legacy-branch-span"],
+              },
+            ],
+            sourceSpans: [
+              {
+                spanId: "legacy-branch-span",
+                blockIds: ["branch-block"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(audit.summary).toMatchObject({
+      suspiciousNonOperativeUnits: 0,
+      nonOperativeReviewPassed: true,
+    });
+    expect(audit.reviewedNonOperativeUnits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: "branch-heading",
+          reviewDisposition: "INSURANCE_BRANCH_HEADING_CONFIRMED",
+        }),
+        expect.objectContaining({
+          unitId: "coverage-governor",
+          reviewDisposition: "OPERATIVE_GOVERNOR_EVIDENCE_REUSED",
+        }),
       ])
     );
   });
