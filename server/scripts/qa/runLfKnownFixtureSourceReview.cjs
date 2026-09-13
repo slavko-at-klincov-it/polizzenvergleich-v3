@@ -120,6 +120,120 @@ function messages(row) {
   ];
 }
 
+function responseFormat(row) {
+  const candidateIds = [
+    ...new Set(
+      row.components.flatMap(({ candidates }) =>
+        candidates.map(({ candidateId }) => candidateId)
+      )
+    ),
+  ];
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "lf_known_fixture_source_review",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          contractId: {
+            type: "string",
+            enum: [SOURCE_REVIEW_RESPONSE_CONTRACT_ID],
+          },
+          requirementId: { type: "string", enum: [row.requirementId] },
+          outcome: {
+            type: "string",
+            enum: [
+              "FULL_COUNTERPART",
+              "PARTIAL_COUNTERPART",
+              "NO_COUNTERPART_ESTABLISHED",
+              "CONTRADICTED",
+            ],
+          },
+          componentFindings: {
+            type: "array",
+            minItems: row.components.length,
+            maxItems: row.components.length,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                componentId: {
+                  type: "string",
+                  enum: row.components.map(({ componentId }) => componentId),
+                },
+                dimension: {
+                  type: "string",
+                  enum: [
+                    ...new Set(
+                      row.components.map(({ dimension }) => dimension)
+                    ),
+                  ],
+                },
+                outcome: {
+                  type: "string",
+                  enum: ["MATCH", "MISMATCH", "NOT_ESTABLISHED"],
+                },
+                candidateIds: {
+                  type: "array",
+                  items: { type: "string", enum: candidateIds },
+                  uniqueItems: true,
+                },
+              },
+              required: ["componentId", "dimension", "outcome", "candidateIds"],
+            },
+          },
+          unmodeledDifferences: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                dimension: {
+                  type: "string",
+                  enum: [
+                    "OBJECT",
+                    "PERIL_OR_CAUSE",
+                    "DAMAGE_OR_EFFECT",
+                    "COVERAGE_EFFECT",
+                    "SCOPE",
+                    "FACT_ROLE",
+                    "CONDITION",
+                    "VALUE_AND_UNIT",
+                    "LIMIT_BASIS",
+                    "DEDUCTIBLE",
+                    "TEMPORAL_VALIDITY",
+                    "DOCUMENT_ROLE",
+                    "PRECEDENCE_OR_REPLACEMENT",
+                  ],
+                },
+                description: { type: "string", minLength: 1 },
+                candidateIds: {
+                  type: "array",
+                  minItems: 1,
+                  items: { type: "string", enum: candidateIds },
+                  uniqueItems: true,
+                },
+              },
+              required: ["dimension", "description", "candidateIds"],
+            },
+          },
+          rationale: { type: "string", minLength: 1 },
+        },
+        required: [
+          "contractId",
+          "requirementId",
+          "outcome",
+          "componentFindings",
+          "unmodeledDifferences",
+          "rationale",
+        ],
+      },
+    },
+  };
+}
+
 function repairMessages(row, rawResponse, error) {
   return [
     ...messages(row),
@@ -269,6 +383,7 @@ async function runReviewRow({
           messages: requestMessages,
           temperature: 0,
           max_tokens: 6_000,
+          response_format: responseFormat(row),
         },
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
@@ -471,6 +586,7 @@ module.exports = {
   parseJsonObject,
   recoverValidatedAttempt,
   repairMessages,
+  responseFormat,
   reusableResult,
   runReviewRow,
 };

@@ -5,6 +5,7 @@ const {
   messages,
   parseJsonObject,
   repairMessages,
+  responseFormat,
 } = require("../../../scripts/qa/runLfKnownFixtureSourceReview.cjs");
 
 const row = {
@@ -56,5 +57,14 @@ describe("LF known fixture source review runner", () => {
     expect(repaired.at(-1).content).toContain(
       "innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED"
     );
+  });
+
+  it("constrains structured output to the source review contract", () => {
+    const schema = responseFormat(row).json_schema.schema;
+    expect(schema.properties.outcome.enum).not.toContain(
+      "PARTIAL_COUNTERPART_ESTABLISHED"
+    );
+    expect(schema.required).toContain("unmodeledDifferences");
+    expect(schema.properties.componentFindings.minItems).toBe(2);
   });
 });
