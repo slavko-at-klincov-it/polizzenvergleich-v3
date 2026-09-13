@@ -4230,6 +4230,68 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("restores a source-bound exclusion effect from an invalid partial label", () => {
+    const source =
+      "Die Versicherung erstreckt sich dabei nicht auf Schäden durch Einbruchdiebstahl.";
+    const unit = {
+      unitId: "negative-effect-unit",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["clause"],
+        combinedText: source,
+        blocks: [
+          {
+            blockId: "clause",
+            structuralKind: "PARAGRAPH",
+            exactText: source,
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION", "PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Einbruchdiebstahl",
+                  sourceBlockIds: ["clause"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "nicht auf Schäden durch",
+                  sourceBlockIds: ["clause"],
+                  coverageEffect: "EXCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components[1]).toEqual({
+      type: "COVERAGE_EFFECT",
+      label: "erstreckt sich dabei nicht",
+      sourceBlockIds: ["clause"],
+      coverageEffect: "EXCLUDED",
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
+      })
+    );
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;
@@ -5241,7 +5303,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V41");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V42");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
