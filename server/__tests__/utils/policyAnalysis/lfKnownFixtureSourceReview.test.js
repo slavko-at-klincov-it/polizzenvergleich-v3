@@ -93,6 +93,9 @@ describe("LF known fixture source review", () => {
         new Set(["einbruchdiebstahl", "beraubung"])
       )
     ).toBe(0.5);
+    expect(
+      compoundOverlapRatio(new Set(["einbruch"]), new Set(["bruch"]))
+    ).toBe(0);
 
     const input = fixture();
     input.goldCandidate.rows[0].point =

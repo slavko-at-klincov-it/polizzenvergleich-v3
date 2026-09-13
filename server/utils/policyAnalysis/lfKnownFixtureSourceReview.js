@@ -124,8 +124,8 @@ function compoundOverlapRatio(query, candidate) {
       [...candidate].some(
         (candidateToken) =>
           queryToken === candidateToken ||
-          (queryToken.length >= 5 &&
-            candidateToken.length >= 5 &&
+          (queryToken.length >= 6 &&
+            candidateToken.length >= 6 &&
             (queryToken.includes(candidateToken) ||
               candidateToken.includes(queryToken)))
       )
