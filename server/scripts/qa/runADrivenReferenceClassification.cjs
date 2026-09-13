@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V33";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V34";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -52,6 +52,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V30",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V31",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V32",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V33",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1206,6 +1207,150 @@ function normalizeCostPurposeObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeDamageCauseGovernorObjectComponents(requirements, unit) {
+  const governorText = String(unit?.governingContext?.combinedText || "");
+  if (!/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText))
+    return { requirements, repairs: [] };
+  const damageLabelPattern =
+    /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchschaden|Rußschaden|Schmorschaden|Kabelschmorschaden|Beschädigung|Zerstörung)(?:\b|en\b)/iu;
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement.components || []).map(
+        (component, componentIndex) => {
+          if (component?.type !== "OBJECT") return component;
+          const toType = damageLabelPattern.test(String(component.label || ""))
+            ? "DAMAGE_OR_EFFECT"
+            : "PERIL_OR_CAUSE";
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "NORMALIZE_DAMAGE_CAUSE_GOVERNOR_OBJECT",
+            fromType: "OBJECT",
+            toType,
+          });
+          return { ...component, type: toType };
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const inheritedComponents = requirements
+    .flatMap((requirement) => requirement.components || [])
+    .filter(
+      (component) =>
+        (component.sourceBlockIds || []).length > 0 &&
+        (component.sourceBlockIds || []).every((blockId) =>
+          (unit?.governingContext?.blockIds || []).includes(blockId)
+        )
+    );
+  const component = (type, label, extra = {}) => ({
+    type,
+    label,
+    sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+    ...extra,
+  });
+  const validComponents = (components) =>
+    components.every(({ sourceBlockIds }) => sourceBlockIds.length > 0);
+  const copularWithCoverage =
+    /^(?<definitionStatement>\s*[•-]\s*(?<term>[^;\n]{1,80})\s+(?<definition>(?:das\s+)?ist\s+(?:ein|eine)\s+[\s\S]{1,300}?;))\s*(?<coverageStatement>(?<damage>Schäden\s+durch\s+[\s\S]{1,160}?)\s+sind\s+(?<effect>mitversichert)\.)\s*(?<precedenceStatement>Das\s+[\s\S]{1,220}?\bbleibt\b[\s\S]{0,120}?\bunberührt;)\s*$/iu.exec(
+      sourceText
+    );
+  if (copularWithCoverage?.groups) {
+    const definitionComponents = [
+      component("PERIL_OR_CAUSE", copularWithCoverage.groups.term.trim()),
+      component("FACT_ROLE", copularWithCoverage.groups.definition),
+      ...inheritedComponents,
+    ];
+    const coverageComponents = [
+      component("DAMAGE_OR_EFFECT", copularWithCoverage.groups.damage),
+      component("COVERAGE_EFFECT", copularWithCoverage.groups.effect, {
+        coverageEffect: "INCLUDED",
+      }),
+    ];
+    const precedenceComponents = [
+      component(
+        "PRECEDENCE_OR_REPLACEMENT",
+        copularWithCoverage.groups.precedenceStatement
+      ),
+    ];
+    if (
+      validComponents(definitionComponents) &&
+      validComponents(coverageComponents) &&
+      validComponents(precedenceComponents)
+    )
+      return {
+        requirements: [
+          {
+            displayLabel: copularWithCoverage.groups.definitionStatement,
+            components: definitionComponents,
+          },
+          {
+            displayLabel: copularWithCoverage.groups.coverageStatement,
+            components: coverageComponents,
+          },
+          {
+            displayLabel: copularWithCoverage.groups.precedenceStatement,
+            components: precedenceComponents,
+          },
+        ],
+        repairs: [
+          {
+            action: "SPLIT_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS",
+            requirements: 3,
+          },
+        ],
+      };
+  }
+  const definitionWithCondition =
+    /^(?<definitionStatement>\s*[•-]\s*(?<term>[^.;\n]{1,80})\s+(?<definition>ist\s+(?:ein|eine)\s+[\s\S]{1,360}?\.))\s*(?<conditionStatement>(?<conditionDomain>(?:Ein|Eine)\s+[^\s,;.]+(?:\s+\([^)]*\))?)\s+(?<conditionScope>(?:eines|einer|einem|einen)\s+[\s\S]{1,200}?)\s+(?<condition>liegt\s+nur\s+vor,\s+wenn\s+[\s\S]{1,360}?\.))\s*$/iu.exec(
+      sourceText
+    );
+  if (definitionWithCondition?.groups) {
+    const definitionComponents = [
+      component("PERIL_OR_CAUSE", definitionWithCondition.groups.term.trim()),
+      component("FACT_ROLE", definitionWithCondition.groups.definition),
+      ...inheritedComponents,
+    ];
+    const conditionComponents = [
+      component(
+        "PERIL_OR_CAUSE",
+        definitionWithCondition.groups.conditionDomain
+      ),
+      component("SCOPE", definitionWithCondition.groups.conditionScope),
+      component("CONDITION", definitionWithCondition.groups.condition),
+    ];
+    if (
+      validComponents(definitionComponents) &&
+      validComponents(conditionComponents)
+    )
+      return {
+        requirements: [
+          {
+            displayLabel: definitionWithCondition.groups.definitionStatement,
+            components: definitionComponents,
+          },
+          {
+            displayLabel: definitionWithCondition.groups.conditionStatement,
+            components: conditionComponents,
+          },
+        ],
+        repairs: [
+          {
+            action: "SPLIT_NAMED_PERIL_DEFINITION_AND_CONDITION",
+            requirements: 2,
+          },
+        ],
+      };
+  }
+  return { requirements, repairs: [] };
+}
+
 function normalizeAtomicCostRoleComponents(requirements, unit) {
   const repairs = [];
   const unitSourceText = String(unit?.source?.combinedText || "");
@@ -1865,6 +2010,56 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
         ...repair,
       });
+    const damageCauseGovernorObjects =
+      normalizeDamageCauseGovernorObjectComponents(requirements, unit);
+    requirements = damageCauseGovernorObjects.requirements;
+    for (const repair of damageCauseGovernorObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (damageCauseGovernorObjects.repairs.length > 0) {
+      const hasObject = requirements.some((requirement) =>
+        (requirement.components || []).some(({ type }) => type === "OBJECT")
+      );
+      response = {
+        ...response,
+        primaryClass:
+          response.primaryClass === "INSURED_OBJECT" && !hasObject
+            ? "PERIL_OR_DAMAGE"
+            : response.primaryClass,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "PERIL_OR_DAMAGE"]),
+        ].filter(
+          (semanticClass) => semanticClass !== "INSURED_OBJECT" || hasObject
+        ),
+      };
+    }
+    const namedPerilDefinitions = normalizeNamedPerilDefinitionRequirements(
+      requirements,
+      unit
+    );
+    requirements = namedPerilDefinitions.requirements;
+    for (const repair of namedPerilDefinitions.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (namedPerilDefinitions.repairs.length > 0) {
+      const splitFollowUps = namedPerilDefinitions.repairs.some(
+        ({ action }) => action === "SPLIT_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS"
+      );
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "PERIL_OR_DAMAGE",
+            "DEFINITION",
+            ...(splitFollowUps
+              ? [
+                  "OPERATIVE_COVERAGE_STATEMENT",
+                  "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+                ]
+              : ["CONDITION", "VARIANT"]),
+          ]),
+        ],
+      };
+    }
     const pureQuantifiedLimit =
       normalizePureQuantifiedLimitObjectComponents(requirements);
     requirements = pureQuantifiedLimit.requirements;

@@ -2645,6 +2645,206 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("types list items governed by insured damages as causes or damages", () => {
+    const source = "Verrußung\ndie Energie des elektrischen Stromes";
+    const unit = {
+      unitId: "damage-cause-list",
+      source: {
+        blockIds: ["soot", "electricity"],
+        combinedText: source,
+        blocks: [
+          { blockId: "soot", exactText: "Verrußung" },
+          {
+            blockId: "electricity",
+            exactText: "die Energie des elektrischen Stromes",
+          },
+        ],
+      },
+      governingContext: {
+        blockIds: ["governor"],
+        combinedText: "Zusätzlich versichert sind Schäden durch",
+        blocks: [
+          {
+            blockId: "governor",
+            exactText: "Zusätzlich versichert sind Schäden durch",
+          },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: "Verrußung",
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Verrußung",
+                  sourceBlockIds: ["soot"],
+                },
+              ],
+            },
+            {
+              displayLabel: "die Energie des elektrischen Stromes",
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "die Energie des elektrischen Stromes",
+                  sourceBlockIds: ["electricity"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+    });
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.map(({ type }) => type)
+      )
+    ).toEqual([["DAMAGE_OR_EFFECT"], ["PERIL_OR_CAUSE"]]);
+  });
+
+  test("splits a named peril definition, explicit extension, and preserved right", () => {
+    const source =
+      "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
+    const blocks = [
+      { blockId: "heading", exactText: "• Brand " },
+      {
+        blockId: "definition",
+        exactText:
+          " das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind ",
+      },
+      {
+        blockId: "follow-up",
+        exactText:
+          "mitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ",
+      },
+    ];
+    const unit = {
+      unitId: "named-peril-with-follow-ups",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText: source,
+        blocks,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["PERIL_OR_DAMAGE", "OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label:
+                    "Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet",
+                  sourceBlockIds: ["heading", "definition"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "mitversichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: ["follow-up"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "PERIL_OR_DAMAGE",
+      "OPERATIVE_COVERAGE_STATEMENT",
+      "DEFINITION",
+      "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+    ]);
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.map(({ type }) => type)
+      )
+    ).toEqual([
+      ["PERIL_OR_CAUSE", "FACT_ROLE"],
+      ["DAMAGE_OR_EFFECT", "COVERAGE_EFFECT"],
+      ["PRECEDENCE_OR_REPLACEMENT"],
+    ]);
+  });
+
+  test("splits a named peril definition from its scoped occurrence condition", () => {
+    const source =
+      "• Explosion \n ist eine auf Gasen beruhende Kraftäußerung. Eine Explosion (Zerbersten) eines Behälters (Kessel, Rohrleitungen) liegt nur vor, wenn seine Wandung zerrissen wird.";
+    const unit = {
+      unitId: "named-peril-with-condition",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "PERIL_OR_DAMAGE",
+          semanticClasses: ["PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: source,
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "PERIL_OR_DAMAGE",
+      "DEFINITION",
+      "CONDITION",
+      "VARIANT",
+    ]);
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.map(({ type, label }) => [type, label])
+      )
+    ).toEqual([
+      [
+        ["PERIL_OR_CAUSE", "Explosion"],
+        ["FACT_ROLE", "ist eine auf Gasen beruhende Kraftäußerung."],
+      ],
+      [
+        ["PERIL_OR_CAUSE", "Eine Explosion (Zerbersten)"],
+        ["SCOPE", "eines Behälters (Kessel, Rohrleitungen)"],
+        ["CONDITION", "liegt nur vor, wenn seine Wandung zerrissen wird."],
+      ],
+    ]);
+  });
+
   test("separates a financial-loss role from its insured-object scope", () => {
     const label =
       "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und –räume";
@@ -4214,7 +4414,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V33");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V34");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
