@@ -70,7 +70,9 @@
           "routeId": "glass-and-fire-perils",
           "maximumNormalizedSpan": 4000,
           "groups": [
-            { "alternatives": ["Glas", "Glasbruch", "Verglasung", "Glasschaden"] },
+            {
+              "alternatives": ["Glas", "Glasbruch", "Verglasung", "Glasschaden"]
+            },
             {
               "alternatives": [
                 "Brand",
@@ -93,7 +95,14 @@
           "routeId": "eco-termination",
           "maximumNormalizedSpan": 6000,
           "groups": [
-            { "alternatives": ["Ökoschutz", "Öko Schutz", "Entsorgungsschutz", "Entsorgung"] },
+            {
+              "alternatives": [
+                "Ökoschutz",
+                "Öko Schutz",
+                "Entsorgungsschutz",
+                "Entsorgung"
+              ]
+            },
             { "alternatives": ["Kündigung", "gekündigt", "kündigen"] }
           ]
         }
@@ -142,7 +151,13 @@
           "maximumNormalizedSpan": 6000,
           "groups": [
             { "alternatives": ["Wohnungseigentümergemeinschaft", "WEG"] },
-            { "alternatives": ["Versicherungsnehmer", "Versicherungsnehmerin", "Firma"] }
+            {
+              "alternatives": [
+                "Versicherungsnehmer",
+                "Versicherungsnehmerin",
+                "Firma"
+              ]
+            }
           ]
         }
       ]

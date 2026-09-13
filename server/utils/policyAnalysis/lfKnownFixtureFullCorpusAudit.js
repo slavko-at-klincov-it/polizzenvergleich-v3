@@ -47,7 +47,11 @@ function termOccurrences(text, alternatives) {
     while (from < text.length) {
       const index = text.indexOf(alternative, from);
       if (index < 0) break;
-      found.push({ alternative, start: index, end: index + alternative.length });
+      found.push({
+        alternative,
+        start: index,
+        end: index + alternative.length,
+      });
       from = index + Math.max(1, alternative.length);
     }
   }
@@ -240,7 +244,10 @@ function buildLfKnownFixtureFullCorpusAudit({
       requirementId: row.requirementId,
       routesExecuted: row.routes.length,
       documentsSearched: documents.length,
-      pagesSearched: documents.reduce((sum, document) => sum + document.pageCount, 0),
+      pagesSearched: documents.reduce(
+        (sum, document) => sum + document.pageCount,
+        0
+      ),
       matches,
       sourceSearchComplete: true,
       absenceCertified: false,

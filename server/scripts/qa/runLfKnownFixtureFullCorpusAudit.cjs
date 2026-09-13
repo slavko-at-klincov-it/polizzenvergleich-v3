@@ -51,12 +51,11 @@ function extractPdfKitPages(pdfFile) {
     "}",
     "JSON.stringify({ pageCount: count, pages });",
   ].join("\n");
-  const result = execFileSync("/usr/bin/osascript", [
-    "-l",
-    "JavaScript",
-    "-e",
-    jxa,
-  ], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+  const result = execFileSync(
+    "/usr/bin/osascript",
+    ["-l", "JavaScript", "-e", jxa],
+    { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
+  );
   const parsed = JSON.parse(result);
   if (parsed.pageCount !== parsed.pages.length)
     throw new Error(`PDF_PAGE_COUNT_INVALID:${pdfFile}`);
