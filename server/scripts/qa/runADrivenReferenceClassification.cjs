@@ -30,7 +30,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V45";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V46";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -65,6 +65,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V42",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V43",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V44",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V45",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1929,6 +1930,92 @@ function normalizeAggregatedEventDefinition(requirements, unit) {
   };
 }
 
+function normalizeCostAllocationDefinition(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const allocation = /(?<relation>\b(?:(?:Diese|Die|Sämtliche)\s+)?(?:\p{L}*kosten|Aufwendungen)\s+werden\s+(?!nicht\b)auf\s+(?:die|den)\s+(?<basis>(?:Pauschal)?versicherungssumme)\s+angerechnet\b[.]?)/iu.exec(
+    sourceText
+  );
+  if (!allocation?.groups) return { requirements, repairs: [] };
+  const relationSourceBlockIds = sourceBlockIdsForExactSpan(
+    unit,
+    allocation.groups.relation
+  );
+  const basisSourceBlockIds = sourceBlockIdsForExactSpan(
+    unit,
+    allocation.groups.basis
+  );
+  if (relationSourceBlockIds.length === 0 || basisSourceBlockIds.length === 0)
+    return { requirements, repairs: [] };
+  const relationBlockIds = new Set(relationSourceBlockIds);
+  const comparable = (value) =>
+    String(value || "")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const comparableRelation = comparable(allocation.groups.relation);
+  const comparableBasis = comparable(allocation.groups.basis);
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = requirement.components || [];
+      const ownsAllocation =
+        comparable(requirement.displayLabel).includes(comparableRelation) ||
+        components.some((component) =>
+          (component.sourceBlockIds || []).some((blockId) =>
+            relationBlockIds.has(blockId)
+          )
+        );
+      if (!ownsAllocation) return requirement;
+      const retained = components.filter((component) => {
+        const label = comparable(component.label);
+        const touchesAllocation = (component.sourceBlockIds || []).some(
+          (blockId) => relationBlockIds.has(blockId)
+        );
+        if (!touchesAllocation) return true;
+        if (
+          component.type === "COVERAGE_EFFECT" &&
+          comparableRelation.includes(label)
+        )
+          return false;
+        if (
+          component.type === "OBJECT" &&
+          (label === comparableBasis || comparableRelation.includes(label))
+        )
+          return false;
+        if (component.type === "FACT_ROLE" && label === comparableRelation)
+          return false;
+        if (
+          component.type === "LIMIT_BASIS" &&
+          (label === comparableBasis || comparableRelation.includes(label))
+        )
+          return false;
+        return true;
+      });
+      repairs.push({
+        requirementIndex,
+        action: "CANONICALIZE_COST_ALLOCATION_DEFINITION",
+        replacedComponents: components.length - retained.length,
+      });
+      return {
+        ...requirement,
+        components: [
+          ...retained,
+          {
+            type: "FACT_ROLE",
+            label: allocation.groups.relation,
+            sourceBlockIds: relationSourceBlockIds,
+          },
+          {
+            type: "LIMIT_BASIS",
+            label: allocation.groups.basis,
+            sourceBlockIds: basisSourceBlockIds,
+          },
+        ],
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeTieredLimitBasisComponents(requirements, unit) {
   const repairs = [];
   let addedScope = false;
@@ -2291,6 +2378,33 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ...response,
         primaryClass: "DEFINITION",
         semanticClasses: ["DEFINITION", "CONDITION"],
+      };
+    const costAllocationDefinition = normalizeCostAllocationDefinition(
+      requirements,
+      unit
+    );
+    requirements = costAllocationDefinition.requirements;
+    for (const repair of costAllocationDefinition.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (costAllocationDefinition.repairs.length > 0)
+      response = {
+        ...response,
+        primaryClass:
+          response.primaryClass === "OPERATIVE_COVERAGE_STATEMENT"
+            ? "COST"
+            : response.primaryClass,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []).filter(
+              (semanticClass) =>
+                semanticClass !== "OPERATIVE_COVERAGE_STATEMENT" ||
+                hasCoverageEffectEvidence(unit)
+            ),
+            "COST",
+            "LIMIT",
+            "DEFINITION",
+          ]),
+        ],
       };
     const inheritedCoverageEffect = materializeInheritedCoverageEffect(
       requirements,

@@ -3359,13 +3359,199 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
     expect(normalized.responses[0]).toEqual(response);
-    expect(normalized.repairs).not.toEqual(
+    expect(normalized.componentRepairs).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           action: "CANONICALIZE_AGGREGATED_EVENT_DEFINITION",
         }),
       ])
     );
+  });
+
+  test("canonicalizes an anaphoric cost allocation rule without losing its coverage governor", () => {
+    const blocks = [
+      {
+        blockId: "cost-role",
+        exactText:
+          "• die Kosten der Feststellung und Abwehr einer behaupteten Schadenersatzverpflichtung. ",
+      },
+      {
+        blockId: "cost-allocation",
+        exactText:
+          "Diese Kosten werden auf die Pauschalversicherungssumme angerechnet. ",
+      },
+    ];
+    const source = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "anaphoric-cost-allocation",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText: source,
+        blocks,
+      },
+      governingContext: {
+        blockIds: ["coverage-governor"],
+        combinedText: "Versichert sind",
+        blocks: [
+          { blockId: "coverage-governor", exactText: "Versichert sind" },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "COST",
+          semanticClasses: ["COST", "OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label:
+                    "die Kosten der Feststellung und Abwehr einer behaupteten Schadenersatzverpflichtung",
+                  sourceBlockIds: ["cost-role"],
+                },
+                {
+                  type: "LIMIT_BASIS",
+                  label: "auf die Pauschalversicherungssumme angerechnet",
+                  sourceBlockIds: ["cost-allocation"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert sind",
+                  sourceBlockIds: ["coverage-governor"],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: expect.arrayContaining([
+        "COST",
+        "LIMIT",
+        "DEFINITION",
+        "OPERATIVE_COVERAGE_STATEMENT",
+      ]),
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      [
+        "FACT_ROLE",
+        "die Kosten der Feststellung und Abwehr einer behaupteten Schadenersatzverpflichtung",
+      ],
+      ["COVERAGE_EFFECT", "Versichert sind"],
+      [
+        "FACT_ROLE",
+        "Diese Kosten werden auf die Pauschalversicherungssumme angerechnet.",
+      ],
+      ["LIMIT_BASIS", "Pauschalversicherungssumme"],
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "CANONICALIZE_COST_ALLOCATION_DEFINITION",
+      replacedComponents: 1,
+    });
+  });
+
+  test("canonicalizes a source-bound standalone cost allocation relation", () => {
+    const source =
+      "Verteidigungskosten werden auf die Versicherungssumme angerechnet.";
+    const unit = {
+      unitId: "standalone-cost-allocation",
+      source: {
+        blockIds: ["allocation"],
+        combinedText: source,
+        blocks: [{ blockId: "allocation", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: source,
+                  sourceBlockIds: ["allocation"],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "COST",
+      semanticClasses: ["COST", "LIMIT", "DEFINITION"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["FACT_ROLE", source],
+      ["LIMIT_BASIS", "Versicherungssumme"],
+    ]);
+  });
+
+  test.each([
+    "Diese Kosten werden nicht auf die Versicherungssumme angerechnet.",
+    "Die Versicherungssumme wird auf die Kosten angerechnet.",
+    "Kosten werden angerechnet.",
+    "Kosten werden auf die Deckung angerechnet.",
+    "Kosten werden ersetzt.",
+  ])("does not reinterpret a non-allocation statement: %s", (source) => {
+    const unit = {
+      unitId: "non-cost-allocation",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "COST",
+      semanticClasses: ["COST"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            {
+              type: "FACT_ROLE",
+              label: source,
+              sourceBlockIds: ["statement"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
   });
 
   test("types list items governed by insured damages as causes or damages", () => {
