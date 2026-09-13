@@ -1,5 +1,10 @@
 {
   "contractId": "LF_1PLUS9_GOLD_30_DECISIONS_V1",
+  "positiveRationaleOverrides": {
+    "FE-18": "B versichert ausdrücklich Schäden an Gebäudeteilen und Einfriedungen im Zuge eines Einbruchdiebstahls. Damit besteht ein fachlich darstellbares Gegenstück zum A-Einbruch-/Raub-Ausschluss; Deckungsbaustein und Wirkung weichen ab und werden deshalb als teilweise statt vollständig gleich behandelt.",
+    "PR-08": "B enthält mit Premiumschutz und Günstigkeitsklausel ein fachliches Gegenstück zur A-Regel über den zusätzlichen Produktbaustein und die günstigere Vertragsauslegung. Die A-Nichtaddition und einmalige Summenanwendung ist darin nicht enthalten und bleibt getrennt unter PR-09 nicht gefunden.",
+    "GL-02": "B versichert Gebäudeverglasungen in Wohnungen beziehungsweise nicht gemeinschaftlich genutzten Bereichen. Das ist ein Gegenstück zur A-Mehrscheibenisolierverglasung; die spezielle Mehrscheibenausführung ist in B nicht ausdrücklich genannt, daher teilweise statt vollständig."
+  },
   "rows": [
     {
       "requirementId": "VS-25",

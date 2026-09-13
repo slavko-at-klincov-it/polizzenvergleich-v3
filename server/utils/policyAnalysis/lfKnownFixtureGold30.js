@@ -127,7 +127,10 @@ function validateBindings({
     fullCorpusAudit?.summary?.documents !== 9 ||
     fullCorpusAudit?.summary?.pages !== 77 ||
     decisions?.contractId !== DECISIONS_CONTRACT_ID ||
-    !Array.isArray(decisions.rows)
+    !Array.isArray(decisions.rows) ||
+    !decisions.positiveRationaleOverrides ||
+    Array.isArray(decisions.positiveRationaleOverrides) ||
+    typeof decisions.positiveRationaleOverrides !== "object"
   )
     throw goldError("LF_GOLD_30_INPUT_INVALID");
   const packetRequirements = packet.rows.map(
@@ -142,6 +145,20 @@ function validateBindings({
     .filter(({ codexDecision }) => !codexDecision.customerFound)
     .map(({ requirementId }) => requirementId)
     .sort();
+  const positive = new Set(
+    adjudication.rows
+      .filter(({ codexDecision }) => codexDecision.customerFound)
+      .map(({ requirementId }) => requirementId)
+  );
+  if (
+    Object.entries(decisions.positiveRationaleOverrides).some(
+      ([requirementId, rationale]) =>
+        !positive.has(requirementId) ||
+        typeof rationale !== "string" ||
+        !rationale.trim()
+    )
+  )
+    throw goldError("LF_GOLD_30_POSITIVE_OVERRIDE_INVALID");
   const decisionIds = decisions.rows.map(({ requirementId }) => requirementId);
   if (
     new Set(decisionIds).size !== decisionIds.length ||
@@ -186,20 +203,27 @@ function buildLfKnownFixtureGold30({
     decisions.rows.map((row) => [row.requirementId, row])
   );
   const rows = adjudication.rows.map((base) => {
+    const { codexDecision: priorCodexDraft, ...baseEvidence } = base;
     const packetRow = packetByRequirement.get(base.requirementId);
     const auditRow = auditByRequirement.get(base.requirementId);
     const override = decisionsByRequirement.get(base.requirementId);
-    if (!override)
+    if (!override) {
+      const confirmedRationale =
+        decisions.positiveRationaleOverrides[base.requirementId] ||
+        priorCodexDraft.rationale;
       return {
-        ...base,
+        ...baseEvidence,
+        priorCodexDraft,
         goldDecision: {
-          outcome: base.codexDecision.outcome,
+          reviewStatus: "SOURCE_BOUND_FINAL_FOR_KNOWN_FIXTURE",
+          outcome: priorCodexDraft.outcome,
           customerFound: true,
-          rationale: base.codexDecision.rationale,
-          sources: base.codexDecision.selectedSources,
+          rationale: confirmedRationale,
+          sources: priorCodexDraft.selectedSources,
           absenceSearch: null,
         },
       };
+    }
     if (
       !OUTCOMES.has(override.outcome) ||
       typeof override.rationale !== "string" ||
@@ -240,8 +264,10 @@ function buildLfKnownFixtureGold30({
       selectedCorpus.map(({ exactQuoteSha256 }) => exactQuoteSha256)
     );
     return {
-      ...base,
+      ...baseEvidence,
+      priorCodexDraft,
       goldDecision: {
+        reviewStatus: "SOURCE_BOUND_FINAL_FOR_KNOWN_FIXTURE",
         outcome: override.outcome,
         customerFound,
         rationale: override.rationale.trim(),

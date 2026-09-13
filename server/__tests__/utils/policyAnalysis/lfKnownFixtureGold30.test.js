@@ -97,6 +97,7 @@ function fixture() {
     },
     decisions: {
       contractId: DECISIONS_CONTRACT_ID,
+      positiveRationaleOverrides: {},
       rows: requirements.slice(21).map((requirementId, index) => ({
         requirementId,
         outcome:
@@ -140,6 +141,10 @@ describe("LF known fixture Gold 30", () => {
       knownFixtureAbsenceCertified: 8,
     });
     expect(gold.rows[21].goldDecision.sources).toHaveLength(2);
+    expect(gold.rows[0].goldDecision.reviewStatus).toBe(
+      "SOURCE_BOUND_FINAL_FOR_KNOWN_FIXTURE"
+    );
+    expect(gold.rows[0].priorCodexDraft).toBeDefined();
     expect(gold.rows[22].goldDecision.absenceSearch).toMatchObject({
       certifiedForKnownFixture: true,
       documentsSearched: 9,
