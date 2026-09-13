@@ -674,6 +674,11 @@ function materializeSharedSignalComponents(
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
+        const authoritativeQuantifiedEvidence =
+          signal.signalId === "EXPLICIT_QUANTIFIED_VALUE" &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+        const authoritativeExactEvidence =
+          authoritativeBenefitEvidence || authoritativeQuantifiedEvidence;
         const localText = exactEvidenceBinding
           ? evidence.match
           : localComponent?.label ||
@@ -682,7 +687,7 @@ function materializeSharedSignalComponents(
           ? [evidence.match]
           : matchesForPattern(signal.pattern, localText);
         if (
-          (localCandidates.length > 1 && !authoritativeBenefitEvidence) ||
+          (localCandidates.length > 1 && !authoritativeExactEvidence) ||
           localMatches.length === 0 ||
           (!localComponent &&
             ![
@@ -713,17 +718,19 @@ function materializeSharedSignalComponents(
               : signal.signalId === "EXPLICIT_COST_ROLE"
                 ? localText
                 : localMatches[0];
-        const sourceBlockIds =
-          signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
-          [
-            A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
-            A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
-            A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
-            A_SEMANTIC_SIGNAL_CONTRACT_ID,
-          ].includes(semanticSignalContractId)
-            ? [...matchedEvidenceBlockIds(evidence)]
-            : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
-              (localComponent ? [...localComponent.sourceBlockIds] : null);
+        const authoritativeSourceEvidence =
+          authoritativeQuantifiedEvidence ||
+          (signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
+            [
+              A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
+              A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
+              A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+              A_SEMANTIC_SIGNAL_CONTRACT_ID,
+            ].includes(semanticSignalContractId));
+        const sourceBlockIds = authoritativeSourceEvidence
+          ? [...matchedEvidenceBlockIds(evidence)]
+          : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+            (localComponent ? [...localComponent.sourceBlockIds] : null);
         const allowedSourceBlockIds = new Set([
           ...requirement.sourceBlockIds,
           ...(unit.governingContext?.blockIds || []),
