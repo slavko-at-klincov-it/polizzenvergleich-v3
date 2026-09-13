@@ -120,6 +120,19 @@ function messages(row) {
   ];
 }
 
+function repairMessages(row, rawResponse, error) {
+  return [
+    ...messages(row),
+    { role: "assistant", content: rawResponse },
+    {
+      role: "user",
+      content: `Die Antwort ist formal ungültig (${errorClass(
+        error
+      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: outcome auf Zeilenebene ist ausschließlich FULL_COUNTERPART, PARTIAL_COUNTERPART, NO_COUNTERPART_ESTABLISHED oder CONTRADICTED. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
+    },
+  ];
+}
+
 function errorClass(error) {
   if (typeof error?.errorClass === "string") return error.errorClass;
   if (error instanceof SyntaxError) return "MODEL_JSON_INVALID";
@@ -181,11 +194,11 @@ async function runReviewRow({
     row,
   });
   if (reusable) return { result: reusable, reused: true };
-  const requestMessages = messages(row);
-  const requestSha256 = sha256(JSON.stringify(requestMessages));
+  let requestMessages = messages(row);
   let lastError = null;
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
     const started = performance.now();
+    const requestSha256 = sha256(JSON.stringify(requestMessages));
     let rawResponse = "";
     try {
       const completion = await requestCompletionWithTimeout({
@@ -264,6 +277,8 @@ async function runReviewRow({
         rawResponse,
         validated: false,
       });
+      if (rawResponse)
+        requestMessages = repairMessages(row, rawResponse, error);
     }
   }
   throw new Error(
@@ -393,6 +408,7 @@ if (require.main === module)
 module.exports = {
   messages,
   parseJsonObject,
+  repairMessages,
   reusableResult,
   runReviewRow,
 };

@@ -4,6 +4,7 @@ const {
 const {
   messages,
   parseJsonObject,
+  repairMessages,
 } = require("../../../scripts/qa/runLfKnownFixtureSourceReview.cjs");
 
 const row = {
@@ -37,5 +38,16 @@ describe("LF known fixture source review runner", () => {
     );
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
+  });
+
+  it("repairs a row-level outcome mistakenly used on a component", () => {
+    const repaired = repairMessages(
+      row,
+      '{"outcome":"NO_COUNTERPART_ESTABLISHED"}',
+      { code: "LF_SOURCE_REVIEW_COMPONENT_FINDING_INVALID" }
+    );
+    expect(repaired.at(-1).content).toContain(
+      "innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED"
+    );
   });
 });
