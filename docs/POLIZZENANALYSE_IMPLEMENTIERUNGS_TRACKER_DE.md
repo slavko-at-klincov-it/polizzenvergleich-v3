@@ -8809,8 +8809,7 @@ Auf Auftrag des Auftraggebers ist Qwen keine blockierende Voraussetzung für
 die Gold-Erstellung mehr. Der V10-Lauf blieb unverändert erhalten und stoppte
 nach 98/283 gültigen Zeilen an der vollständigen Zeilengrenze ST-20
 fail-closed. Drei Antworten verletzten nacheinander
-`LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING`; es wurde keine ungültige
-99. Zeile gespeichert. Alle 98 gültigen Zeilen sowie die drei
+`LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING`; es wurde keine ungültige 99. Zeile gespeichert. Alle 98 gültigen Zeilen sowie die drei
 Versuchsartefakte bleiben resumierbarer, unabhängiger Benchmark.
 
 Der bisherige Quellenreview-Paketvertrag war nicht blind nutzbar: Claude war

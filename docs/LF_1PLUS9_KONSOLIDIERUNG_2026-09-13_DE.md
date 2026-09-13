@@ -184,15 +184,15 @@ Status:
 
 Gebundene Daten:
 
-| Quelle | Stand | Bindung / Ergebnis |
-| --- | ---: | --- |
-| Fable-/Claude-283-Projektion | 283/283 | im Gold-Candidate, 219 `Ja`, 41 `Teilweise`, 23 `Nein`; Kandidat, nicht Gold |
-| altes System | 283/283 | im Gold-Candidate, 148 gefunden, 135 nicht gefunden |
-| Qwen | 98/283 | 57 gefunden, 41 nicht gefunden; `NOT_GOLD`, resumierbar |
-| Sol-Gold-30 | 30/30 | 23 gefunden, 7 nicht gefunden |
-| Astra-Streitprüfung | 9/9 | 4 gefunden, 5 nicht gefunden |
-| Frozen Gold-30 | 30/30 | 22 gefunden, 8 nicht gefunden |
-| blinder Astra-283-Lauf | 0/283 gebunden | angekündigtes Abschlussartefakt nicht auffindbar |
+| Quelle                       |          Stand | Bindung / Ergebnis                                                           |
+| ---------------------------- | -------------: | ---------------------------------------------------------------------------- |
+| Fable-/Claude-283-Projektion |        283/283 | im Gold-Candidate, 219 `Ja`, 41 `Teilweise`, 23 `Nein`; Kandidat, nicht Gold |
+| altes System                 |        283/283 | im Gold-Candidate, 148 gefunden, 135 nicht gefunden                          |
+| Qwen                         |         98/283 | 57 gefunden, 41 nicht gefunden; `NOT_GOLD`, resumierbar                      |
+| Sol-Gold-30                  |          30/30 | 23 gefunden, 7 nicht gefunden                                                |
+| Astra-Streitprüfung          |            9/9 | 4 gefunden, 5 nicht gefunden                                                 |
+| Frozen Gold-30               |          30/30 | 22 gefunden, 8 nicht gefunden                                                |
+| blinder Astra-283-Lauf       | 0/283 gebunden | angekündigtes Abschlussartefakt nicht auffindbar                             |
 
 Der verwendete Gold-Candidate liegt unter
 `LF-1PLUS9-GOLD-CANDIDATE-V1-20260913-65BE17FB/gold-candidate.private.json`
