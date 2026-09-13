@@ -115,7 +115,10 @@ function readJson(file, label) {
 
 function headerTexts(worksheet, count) {
   return Array.from({ length: count }, (_unused, index) =>
-    worksheet.getRow(1).getCell(index + 1).text.trim()
+    worksheet
+      .getRow(1)
+      .getCell(index + 1)
+      .text.trim()
   );
 }
 
@@ -258,7 +261,9 @@ function resolveSourceDocuments({ claudeRows, sourceDirectory, oracle }) {
     };
   });
   if (resolved.length !== 9)
-    fail(`Erwartet sind neun Claude-Quelldokumente, erhalten: ${resolved.length}`);
+    fail(
+      `Erwartet sind neun Claude-Quelldokumente, erhalten: ${resolved.length}`
+    );
   const exact = resolved.filter(
     ({ sourceRelation }) => sourceRelation === "EXACT_PRODUCT_DOCUMENT_SHA"
   );

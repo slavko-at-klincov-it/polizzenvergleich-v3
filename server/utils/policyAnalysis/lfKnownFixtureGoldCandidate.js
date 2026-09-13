@@ -146,10 +146,7 @@ function normalizeClaudeRow(row) {
       row.requirementId,
       "LF_GOLD_CANDIDATE_CLAUDE_REQUIREMENT_REQUIRED"
     ),
-    point: requiredString(
-      row.point,
-      "LF_GOLD_CANDIDATE_CLAUDE_POINT_REQUIRED"
-    ),
+    point: requiredString(row.point, "LF_GOLD_CANDIDATE_CLAUDE_POINT_REQUIRED"),
     foundStatus,
     coverageStatus: requiredString(
       row.coverageStatus,
@@ -164,10 +161,7 @@ function normalizeClaudeRow(row) {
       row.sourceFiles,
       "LF_GOLD_CANDIDATE_CLAUDE_SOURCES_REQUIRED"
     ),
-    note: requiredString(
-      row.note,
-      "LF_GOLD_CANDIDATE_CLAUDE_NOTE_REQUIRED"
-    ),
+    note: requiredString(row.note, "LF_GOLD_CANDIDATE_CLAUDE_NOTE_REQUIRED"),
     manualAssessment: optionalString(row.manualAssessment),
   };
 }
@@ -195,10 +189,7 @@ function normalizeSystemRow(row) {
       row.requirementId,
       "LF_GOLD_CANDIDATE_SYSTEM_REQUIREMENT_REQUIRED"
     ),
-    point: requiredString(
-      row.point,
-      "LF_GOLD_CANDIDATE_SYSTEM_POINT_REQUIRED"
-    ),
+    point: requiredString(row.point, "LF_GOLD_CANDIDATE_SYSTEM_POINT_REQUIRED"),
     aContent: requiredString(
       row.aContent,
       "LF_GOLD_CANDIDATE_SYSTEM_A_CONTENT_REQUIRED"
@@ -222,10 +213,7 @@ function normalizeSystemRow(row) {
       "LF_GOLD_CANDIDATE_SYSTEM_B_SOURCE_REQUIRED"
     ),
     customerSearchStatus,
-    note: requiredString(
-      row.note,
-      "LF_GOLD_CANDIDATE_SYSTEM_NOTE_REQUIRED"
-    ),
+    note: requiredString(row.note, "LF_GOLD_CANDIDATE_SYSTEM_NOTE_REQUIRED"),
     manualAssessment: optionalString(row.manualAssessment),
   };
 }
@@ -321,10 +309,7 @@ function buildLfKnownFixtureGoldCandidate({
       category: claude.category,
       subcategory: claude.subcategory,
       point: claude.point,
-      relation: statusRelation(
-        claude.foundStatus,
-        system.customerSearchStatus
-      ),
+      relation: statusRelation(claude.foundStatus, system.customerSearchStatus),
       claude,
       system,
       benchmarkCandidateCount: oracleRow.benchmarkCandidateIds.length,
@@ -360,10 +345,7 @@ function buildLfKnownFixtureGoldCandidate({
       rowCount: rows.length,
       componentCount,
       claudeStatuses: countBy(rows, (row) => row.claude.foundStatus),
-      systemStatuses: countBy(
-        rows,
-        (row) => row.system.customerSearchStatus
-      ),
+      systemStatuses: countBy(rows, (row) => row.system.customerSearchStatus),
       relations: countBy(rows, (row) => row.relation),
       sourceAdjudicatedRows: 0,
       sourceAdjudicatedComponents: 0,
@@ -428,10 +410,7 @@ function validateLfKnownFixtureGoldCandidate(candidate) {
       !Array.isArray(row.components) ||
       row.components.length < 1
     )
-      throw candidateError(
-        "LF_GOLD_CANDIDATE_ROW_INVALID",
-        row.requirementId
-      );
+      throw candidateError("LF_GOLD_CANDIDATE_ROW_INVALID", row.requirementId);
     requirementIds.add(row.requirementId);
     analysisRowIds.add(row.analysisRowId);
     if (row.adjudication.status === "SOURCE_ADJUDICATED")
@@ -450,10 +429,7 @@ function validateLfKnownFixtureGoldCandidate(candidate) {
   const expectedSummary = {
     rowCount: 283,
     componentCount,
-    claudeStatuses: countBy(
-      candidate.rows,
-      (row) => row.claude.foundStatus
-    ),
+    claudeStatuses: countBy(candidate.rows, (row) => row.claude.foundStatus),
     systemStatuses: countBy(
       candidate.rows,
       (row) => row.system.customerSearchStatus
