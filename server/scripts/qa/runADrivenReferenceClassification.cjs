@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V30";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V31";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -49,6 +49,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V27",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V28",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V29",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V30",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1208,7 +1209,7 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
   const unitSourceText = String(unit?.source?.combinedText || "");
   const unitSourceBlockIds = unit?.source?.blockIds || [];
   const costDefinitionPattern =
-    /^\s*[-•]?\s*(?<role>Mehrkosten\s+für\s+[^;\n-]+?)\s+-\s+(?<definition>das\s+sind\s+Kosten[\s\S]*?ergeben;?)\s*$/iu;
+    /^\s*[-•]?\s*(?<role>Mehrkosten\s+für\s+[^;\n-]+?)\s+-\s+(?<definition>(?:das\s+sind|hierunter\s+fallen)\s+Kosten[\s\S]*?ergeben;?)\s*$/iu;
   const priceIncreasePattern =
     /^\s*[-•]?\s*(?<role>Mehrkosten\s+infolge\s+Preissteigerung)\s+(?<temporal>zwischen\s+dem\s+Eintritt\s+des\s+Schadenereignisses\s+und\s+der\s+Wiederherstellung\s+oder\s+Wiederbeschaffung)\s+entstandenen\s+(?<result>Erhöhung\s+der\s+Ersatzleistung);?\s*$/iu;
   const normalizedRequirements = requirements.map(
@@ -1244,10 +1245,74 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
               costDefinition.groups.definition
             );
             if (roleSourceBlockIds.length && definitionSourceBlockIds.length) {
+              const definitionText = costDefinition.groups.definition;
+              const relationMatch =
+                /\b(?:das\s+sind|hierunter\s+fallen)\s+Kosten\b/iu.exec(
+                  definitionText
+                );
+              const scopeMatch =
+                /\b(?:Wiederherstellung|Wiederbeschaffung|Reparatur)\s+(?:von\s+)?[\s\S]{1,180}?(?=\s+(?:nach|bei)\s+einem\b)/iu.exec(
+                  definitionText
+                );
+              const insuredLossConditionMatch =
+                /\b(?:nach|bei)\s+einem(?:\s+\p{L}+){0,4}\s+Schaden\b/iu.exec(
+                  definitionText
+                );
+              const regulationConditionMatch =
+                /\b(?:auf\s+Grund|aufgrund|wegen)\s+[\s\S]{1,260}?\bVorschriften\b/iu.exec(
+                  definitionText
+                );
+              const trailingAction = regulationConditionMatch
+                ? definitionText
+                    .slice(
+                      regulationConditionMatch.index +
+                        regulationConditionMatch[0].length
+                    )
+                    .replace(/^\s*,\s*/u, "")
+                    .trim()
+                : "";
+              const actionMatch =
+                trailingAction && /\bergeben;?\s*$/iu.test(trailingAction)
+                  ? [trailingAction]
+                  : null;
+              const atomicDefinitionParts = [
+                {
+                  type: "FACT_ROLE",
+                  match: relationMatch,
+                },
+                {
+                  type: "SCOPE",
+                  match: scopeMatch,
+                },
+                {
+                  type: "CONDITION",
+                  match: insuredLossConditionMatch,
+                },
+                {
+                  type: "CONDITION",
+                  match: regulationConditionMatch,
+                },
+                {
+                  type: "FACT_ROLE",
+                  match: actionMatch,
+                },
+              ]
+                .filter(({ match }) => match?.[0])
+                .map(({ type, match }) => ({
+                  type,
+                  label: match[0],
+                  sourceBlockIds: sourceBlockIdsForExactSpan(unit, match[0]),
+                }));
+              const hasCompleteAtomicDefinition =
+                atomicDefinitionParts.length === 5 &&
+                atomicDefinitionParts.every(
+                  ({ sourceBlockIds }) => sourceBlockIds.length > 0
+                );
               repairs.push({
                 requirementIndex,
                 componentIndex,
                 action: "SPLIT_COST_DEFINITION_ROLE",
+                atomicDefinition: hasCompleteAtomicDefinition,
               });
               return [
                 {
@@ -1255,11 +1320,15 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
                   label: costDefinition.groups.role,
                   sourceBlockIds: roleSourceBlockIds,
                 },
-                {
-                  type: "DEFINITION",
-                  label: costDefinition.groups.definition,
-                  sourceBlockIds: definitionSourceBlockIds,
-                },
+                ...(hasCompleteAtomicDefinition
+                  ? atomicDefinitionParts
+                  : [
+                      {
+                        type: "FACT_ROLE",
+                        label: costDefinition.groups.definition,
+                        sourceBlockIds: definitionSourceBlockIds,
+                      },
+                    ]),
               ];
             }
           }
