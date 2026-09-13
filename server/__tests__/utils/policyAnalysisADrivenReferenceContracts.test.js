@@ -2389,6 +2389,86 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   );
 
+  test("canonicalizes a pre-split cost definition across the whole requirement", () => {
+    const source =
+      "- Mehrkosten für bauliche Verbesserungen - das sind Kosten, die sich anlässlich der Wiederherstellung von Gebäuden und Betriebseinrichtung nach einem ersatzpflichtigen Schaden auf Grund gelinderter technischer Vorschriften, Anlagenteile teilweise zu erneuern oder neu herzustellen, ergeben;";
+    const unit = {
+      unitId: "pre-split-cost-definition",
+      source: {
+        blockIds: ["owned"],
+        combinedText: source,
+        blocks: [{ blockId: "owned", exactText: source }],
+      },
+      governingContext: {
+        blockIds: ["governor"],
+        combinedText: "mitversichert",
+        blocks: [{ blockId: "governor", exactText: "mitversichert" }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "COST",
+          semanticClasses: ["COST"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Mehrkosten für bauliche Verbesserungen",
+                  sourceBlockIds: ["owned"],
+                },
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label:
+                    "Wiederherstellung von Gebäuden und Betriebseinrichtung nach einem ersatzpflichtigen Schaden",
+                  sourceBlockIds: ["owned"],
+                },
+                {
+                  type: "CONDITION",
+                  label: "auf Grund gelinderter technischer Vorschriften",
+                  sourceBlockIds: ["owned"],
+                },
+                {
+                  type: "OBJECT",
+                  label:
+                    "Anlagenteile teilweise zu erneuern oder neu herzustellen, ergeben;",
+                  sourceBlockIds: ["owned"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "mitversichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: ["governor"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["FACT_ROLE", "Mehrkosten für bauliche Verbesserungen"],
+      ["FACT_ROLE", "das sind Kosten"],
+      ["SCOPE", "Wiederherstellung von Gebäuden und Betriebseinrichtung"],
+      ["CONDITION", "nach einem ersatzpflichtigen Schaden"],
+      ["CONDITION", "auf Grund gelinderter technischer Vorschriften"],
+      [
+        "FACT_ROLE",
+        "Anlagenteile teilweise zu erneuern oder neu herzustellen, ergeben;",
+      ],
+      ["COVERAGE_EFFECT", "mitversichert"],
+    ]);
+  });
+
   test("does not atomize a cost statement without a definition structure", () => {
     const source = "Mehrkosten für Umbauten werden nicht ersetzt;";
     const unit = {
@@ -3998,7 +4078,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V31");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V32");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
