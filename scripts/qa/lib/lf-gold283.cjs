@@ -376,6 +376,8 @@ function buildLfKnownFixtureGold283({
       automaticallyAcceptedRows: [...automaticIds].sort(),
       scopeExpansionBeyond76: false,
     },
+    rejectedUnverifiableReferences:
+      adjudication.technicallyUnverifiableRejectedRefs || [],
     summary: {
       rows: rows.length,
       customerFound: rows.filter((row) => row.goldDecision.customerFound).length,
