@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V36";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V37";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -55,6 +55,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V33",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V34",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V35",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V36",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -633,9 +634,14 @@ function explicitCoverageEffectRepair(unit, component) {
     /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz))\b/iu.exec(
       sourceText
     );
+  const positiveEvidenceText = negative
+    ? `${sourceText.slice(0, negative.index)}${" ".repeat(
+        negative[0].length
+      )}${sourceText.slice(negative.index + negative[0].length)}`
+    : sourceText;
   const positive =
     /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu.exec(
-      sourceText
+      positiveEvidenceText
     );
   if ((negative && positive) || (!negative && !positive)) return null;
   const evidence = negative || positive;
@@ -1209,7 +1215,7 @@ function normalizeCostPurposeObjectComponents(requirements) {
   return { requirements: normalizedRequirements, repairs };
 }
 
-function normalizeDamageCauseGovernorObjectComponents(requirements, unit) {
+function normalizeDamageCauseGovernorComponents(requirements, unit) {
   const governorText = String(unit?.governingContext?.combinedText || "");
   if (!/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText))
     return { requirements, repairs: [] };
@@ -1221,10 +1227,15 @@ function normalizeDamageCauseGovernorObjectComponents(requirements, unit) {
       ...requirement,
       components: (requirement.components || []).map(
         (component, componentIndex) => {
-          if (component?.type !== "OBJECT") return component;
+          if (
+            component?.type !== "OBJECT" &&
+            component?.type !== "PERIL_OR_CAUSE"
+          )
+            return component;
           const toType = damageLabelPattern.test(String(component.label || ""))
             ? "DAMAGE_OR_EFFECT"
             : "PERIL_OR_CAUSE";
+          if (component.type === toType) return component;
           repairs.push({
             requirementIndex,
             componentIndex,
@@ -1238,6 +1249,51 @@ function normalizeDamageCauseGovernorObjectComponents(requirements, unit) {
     })
   );
   return { requirements: normalizedRequirements, repairs };
+}
+
+function materializeInheritedCoverageEffect(requirements, unit) {
+  const contextBlocks = unit?.governingContext?.blocks || [];
+  if (contextBlocks.length === 0) return { requirements, repairs: [] };
+  const candidates = contextBlocks.flatMap(({ blockId }) => {
+    const component = {
+      type: "COVERAGE_EFFECT",
+      label: "",
+      sourceBlockIds: [blockId],
+    };
+    const repair = explicitCoverageEffectRepair(unit, component);
+    return repair
+      ? [{ ...component, ...repair }]
+      : [];
+  });
+  if (candidates.length !== 1) return { requirements, repairs: [] };
+  const inheritedComponent = candidates[0];
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      if (
+        !Array.isArray(requirement?.components) ||
+        requirement.components.length === 0 ||
+        requirement.components.some(({ type }) => type === "COVERAGE_EFFECT")
+      )
+        return requirement;
+      repairs.push({
+        requirementIndex,
+        action: "MATERIALIZE_INHERITED_COVERAGE_EFFECT",
+        coverageEffect: inheritedComponent.coverageEffect,
+        sourceBlockIds: inheritedComponent.sourceBlockIds,
+      });
+      return {
+        ...requirement,
+        components: [...requirement.components, inheritedComponent],
+      };
+    }
+  );
+  return {
+    requirements: normalizedRequirements,
+    repairs,
+    coverageEffect:
+      repairs.length > 0 ? inheritedComponent.coverageEffect : null,
+  };
 }
 
 function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
@@ -2034,7 +2090,7 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ...repair,
       });
     const damageCauseGovernorObjects =
-      normalizeDamageCauseGovernorObjectComponents(requirements, unit);
+      normalizeDamageCauseGovernorComponents(requirements, unit);
     requirements = damageCauseGovernorObjects.requirements;
     for (const repair of damageCauseGovernorObjects.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
@@ -2053,6 +2109,25 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ].filter(
           (semanticClass) => semanticClass !== "INSURED_OBJECT" || hasObject
         ),
+      };
+    }
+    const inheritedCoverageEffect = materializeInheritedCoverageEffect(
+      requirements,
+      unit
+    );
+    requirements = inheritedCoverageEffect.requirements;
+    for (const repair of inheritedCoverageEffect.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (inheritedCoverageEffect.coverageEffect) {
+      const coverageClass =
+        inheritedCoverageEffect.coverageEffect === "EXCLUDED"
+          ? "EXCLUSION"
+          : "OPERATIVE_COVERAGE_STATEMENT";
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), coverageClass]),
+        ],
       };
     }
     const namedPerilDefinitions = normalizeNamedPerilDefinitionRequirements(

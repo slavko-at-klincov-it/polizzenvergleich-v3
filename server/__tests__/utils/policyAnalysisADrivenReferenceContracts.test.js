@@ -2771,13 +2771,180 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(normalized.responses[0]).toMatchObject({
       primaryClass: "PERIL_OR_DAMAGE",
-      semanticClasses: ["PERIL_OR_DAMAGE"],
+      semanticClasses: [
+        "PERIL_OR_DAMAGE",
+        "OPERATIVE_COVERAGE_STATEMENT",
+      ],
     });
     expect(
       normalized.responses[0].requirements.map(({ components }) =>
         components.map(({ type }) => type)
       )
-    ).toEqual([["DAMAGE_OR_EFFECT"], ["PERIL_OR_CAUSE"]]);
+    ).toEqual([
+      ["DAMAGE_OR_EFFECT", "COVERAGE_EFFECT"],
+      ["PERIL_OR_CAUSE", "COVERAGE_EFFECT"],
+    ]);
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.at(-1)
+      )
+    ).toEqual([
+      {
+        type: "COVERAGE_EFFECT",
+        label: "versichert sind",
+        sourceBlockIds: ["governor"],
+        coverageEffect: "INCLUDED",
+      },
+      {
+        type: "COVERAGE_EFFECT",
+        label: "versichert sind",
+        sourceBlockIds: ["governor"],
+        coverageEffect: "INCLUDED",
+      },
+    ]);
+  });
+
+  test("repairs an already peril-typed damage and materializes one inherited effect per item", () => {
+    const unit = {
+      unitId: "interrupted-damage-cause-list",
+      source: {
+        blockIds: ["blast", "cable"],
+        combinedText: "• Sprengstoffexplosion\n• Kabelschmorschäden",
+        blocks: [
+          { blockId: "blast", exactText: "• Sprengstoffexplosion" },
+          { blockId: "cable", exactText: "• Kabelschmorschäden" },
+        ],
+      },
+      governingContext: {
+        relationType: "RECOVERS_INTERRUPTED_LIST_GOVERNOR",
+        unitIds: ["governor"],
+        blockIds: ["governor-block"],
+        combinedText: "Versichert sind Schäden durch",
+        blocks: [
+          {
+            blockId: "governor-block",
+            exactText: "Versichert sind Schäden durch",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: "• Sprengstoffexplosion",
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Sprengstoffexplosion",
+              sourceBlockIds: ["blast"],
+            },
+          ],
+        },
+        {
+          displayLabel: "• Kabelschmorschäden",
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Kabelschmorschäden",
+              sourceBlockIds: ["cable"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "PERIL_OR_DAMAGE",
+      "OPERATIVE_COVERAGE_STATEMENT",
+    ]);
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.map(({ type }) => type)
+      )
+    ).toEqual([
+      ["PERIL_OR_CAUSE", "COVERAGE_EFFECT"],
+      ["DAMAGE_OR_EFFECT", "COVERAGE_EFFECT"],
+    ]);
+    expect(
+      normalized.responses[0].requirements.every(
+        ({ components }) =>
+          components.filter(({ type }) => type === "COVERAGE_EFFECT")
+            .length === 1
+      )
+    ).toBe(true);
+  });
+
+  test("materializes an inherited exclusion without replacing an existing effect", () => {
+    const unit = {
+      unitId: "excluded-list",
+      source: {
+        blockIds: ["item-a", "item-b"],
+        combinedText: "• Schäden A\n• Schäden B",
+        blocks: [
+          { blockId: "item-a", exactText: "• Schäden A" },
+          { blockId: "item-b", exactText: "• Schäden B" },
+        ],
+      },
+      governingContext: {
+        unitIds: ["exclusion-governor"],
+        blockIds: ["exclusion-block"],
+        combinedText: "Nicht versichert sind",
+        blocks: [
+          { blockId: "exclusion-block", exactText: "Nicht versichert sind" },
+        ],
+      },
+    };
+    const existingEffect = {
+      type: "COVERAGE_EFFECT",
+      label: "Nicht versichert sind",
+      sourceBlockIds: ["exclusion-block"],
+      coverageEffect: "EXCLUDED",
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: "• Schäden A",
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden A",
+              sourceBlockIds: ["item-a"],
+            },
+          ],
+        },
+        {
+          displayLabel: "• Schäden B",
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden B",
+              sourceBlockIds: ["item-b"],
+            },
+            existingEffect,
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "PERIL_OR_DAMAGE",
+      "EXCLUSION",
+    ]);
+    expect(
+      normalized.responses[0].requirements.map(({ components }) =>
+        components.filter(({ type }) => type === "COVERAGE_EFFECT")
+      )
+    ).toEqual([[existingEffect], [existingEffect]]);
   });
 
   test("terminalizes a pure governor only after its evidence is attached to consumers", () => {
