@@ -415,7 +415,7 @@ function globalReferenceARebindCandidates({
   semanticChecks,
   documentsByUuid,
   maximumQuoteCharacters,
-  maximumPerCheck = 2,
+  maximumPerCheck = 3,
 }) {
   const existingRanges = new Set(
     existingCandidates.map(
