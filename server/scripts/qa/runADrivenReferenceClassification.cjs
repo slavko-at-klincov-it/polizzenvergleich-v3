@@ -36,7 +36,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V59";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V60";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -85,6 +85,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V56",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V57",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V58",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V59",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -104,7 +105,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V27";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V28";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -121,6 +122,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V26",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V27",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -2619,6 +2621,70 @@ function normalizeSubsidiaryPrecedenceRequirements(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function materializeSupplementalDocumentContext(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const match =
+    /^\s*(?<context>In\s+Ergänzung\s+(?:bestehender|der\s+bestehenden)[\s\S]{1,500}?\b(?:Bestimmungen|Bedingungen)\b(?:\s+in\s+Versicherungsbedingungen\s+o\.\s+ä\.)?)\s+(?=(?:gilt|gelten|ist|sind|wird|werden)\b)/iu.exec(
+      sourceText
+    );
+  if (!match?.groups?.context || !Array.isArray(requirements))
+    return { requirements, repairs: [] };
+  const label = match.groups.context.trim();
+  const sourceBlockIds = sourceBlockIdsForExactSpan(unit, label);
+  if (sourceBlockIds.length === 0) return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const sourceRemainder = comparable(
+    sourceText.slice(match.index + match[0].length)
+  );
+  const context = comparable(label);
+  const targets = requirements.flatMap((requirement, requirementIndex) => {
+    const displayLabel = comparable(requirement?.displayLabel);
+    return displayLabel &&
+      (displayLabel.includes(context) ||
+        sourceRemainder.startsWith(displayLabel))
+      ? [{ requirement, requirementIndex }]
+      : [];
+  });
+  if (targets.length !== 1) return { requirements, repairs: [] };
+  const [{ requirementIndex }] = targets;
+  if (
+    (requirements[requirementIndex].components || []).some(
+      ({ type, label: componentLabel }) =>
+        type === "PRECEDENCE_OR_REPLACEMENT" &&
+        comparable(componentLabel) === context
+    )
+  )
+    return { requirements, repairs: [] };
+  return {
+    requirements: requirements.map((requirement, index) =>
+      index === requirementIndex
+        ? {
+            ...requirement,
+            components: [
+              {
+                type: "PRECEDENCE_OR_REPLACEMENT",
+                label,
+                sourceBlockIds,
+              },
+              ...(requirement.components || []),
+            ],
+          }
+        : requirement
+    ),
+    repairs: [
+      {
+        requirementIndex,
+        action: "MATERIALIZE_SUPPLEMENTAL_DOCUMENT_CONTEXT",
+        sourceBlockIds,
+      },
+    ],
+  };
+}
+
 function semanticClassesFromSourceBoundComponents(requirements, unit) {
   const components = requirements.flatMap((requirement) =>
     Array.isArray(requirement?.components) ? requirement.components : []
@@ -3356,6 +3422,23 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ],
       };
     }
+    const supplementalDocumentContext = materializeSupplementalDocumentContext(
+      requirements,
+      unit
+    );
+    requirements = supplementalDocumentContext.requirements;
+    for (const repair of supplementalDocumentContext.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (supplementalDocumentContext.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+          ]),
+        ],
+      };
     const firstRiskScopes = requirements.flatMap((requirement) =>
       (requirement.components || []).filter(
         (component) =>
@@ -4393,6 +4476,11 @@ function prompt(batch) {
     {
       role: "system",
       content:
+        "Eine ausdrückliche Einleitung „In Ergänzung bestehender/der bestehenden Bestimmungen oder Bedingungen“ beschreibt eine zusätzliche Dokument- beziehungsweise Regelbeziehung und ist fachlicher Inhalt. Gib diese Einleitung als eigene wörtliche PRECEDENCE_OR_REPLACEMENT-Komponente in derselben Requirement aus und ergänze DOCUMENT_PRECEDENCE_OR_REPLACEMENT in semanticClasses; die danach geregelte Deckung, Leistung, Bedingung oder Grenze bleibt getrennt typisiert. Lasse den einleitenden Quellblock nicht unzitiert.",
+    },
+    {
+      role: "system",
+      content:
         "In einer durch sofern/wenn/falls/vorausgesetzt/soweit eingeleiteten Eigentums-, Zuordnungs- oder Wiederbeschaffungsbedingung sind Parteien wie Versicherungsnehmer, Eigentümer, Mieter oder Pächter und Handlungen wie Wiederbeschaffung/Wiederherstellung niemals versicherte OBJECT-Komponenten. Bilde den vollständigen wörtlichen Bedingungssatz als CONDITION ab und lasse nur die tatsächlich versicherten Sachen als OBJECT stehen.",
     },
     {
@@ -5292,6 +5380,8 @@ async function runBatch({
         " structurePath ist ausschließlich Navigation und niemals semantische Evidenz. governingContext ist nur für die dort wörtlich vorhandenen Dimensionen Evidenz. Enthält es etwa Limit, Scope oder Gefahr, aber keinen wörtlichen Deckungswirkungs- oder Ausschlussausdruck, erzeuge weder COVERAGE_EFFECT noch OPERATIVE_COVERAGE_STATEMENT noch EXCLUSION. Entferne diese unbelegten Klassen und klassifiziere den tatsächlichen Inhalt, etwa als PERIL_OR_DAMAGE, INSURED_OBJECT, LIMIT oder CONDITION. Erfinde niemals versichert, nicht versichert, ausgeschlossen oder ausgenommen aus structurePath.";
       messages.at(-1).content +=
         " Wiederhole bei einer grammatisch koordinierten Aussage niemals denselben einleitenden Schaden-, Wirkungs- oder Ursachenbegriff vor jedem Objekt. Gib den gemeinsamen wörtlichen Begriff einmal als PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT und jedes selbstständig suchbare, wörtliche Zielobjekt getrennt als OBJECT aus. Verwende weder Ellipsen noch neu zusammengesetzte Labels; jedes label muss als zusammenhängender Quellsubstring vorkommen.";
+      messages.at(-1).content +=
+        " Eine Einleitung „In Ergänzung bestehender/der bestehenden Bestimmungen oder Bedingungen“ ist als wörtliche PRECEDENCE_OR_REPLACEMENT-Komponente derselben fachlichen Requirement auszugeben und durch DOCUMENT_PRECEDENCE_OR_REPLACEMENT in semanticClasses zu tragen. Sie darf weder aus dem displayLabel entfernt noch als unzitierter Randblock stehen bleiben.";
       const segmentSkeletons = listSegmentRepairSkeletons(
         workingBatch,
         repairDiagnostics

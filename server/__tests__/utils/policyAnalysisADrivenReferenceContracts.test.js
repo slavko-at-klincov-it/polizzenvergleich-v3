@@ -126,6 +126,12 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "Ellipsen wie „...“ und neu zusammengesetzte Labels sind verboten"
     );
+    expect(systemText).toContain(
+      "In Ergänzung bestehender/der bestehenden Bestimmungen oder Bedingungen"
+    );
+    expect(systemText).toContain(
+      "als eigene wörtliche PRECEDENCE_OR_REPLACEMENT-Komponente"
+    );
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -7562,7 +7568,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V59");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V60");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11373,6 +11379,178 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       reviewRequiredBlocks: 0,
       allBlocksTerminal: true,
       responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("materializes a source-bound supplemental document relationship", () => {
+    const intro =
+      "In Ergänzung bestehender, dem Vertrag zugrunde liegender einschlägiger Bestimmungen in ";
+    const ruleLead =
+      "Versicherungsbedingungen o. ä. gilt die Behandlung von Sonderabfall ";
+    const ruleTail = "als mitversichert.";
+    const block = (blockId, exactText, ordinal) => ({
+      blockId,
+      ordinal,
+      structuralKind: "BODY_LINE",
+      physicalPageNumber: 1,
+      documentStart: ordinal * 100,
+      documentEnd: ordinal * 100 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const blocks = [
+      block("intro", intro, 1),
+      block("rule-lead", ruleLead, 2),
+      block("rule-tail", ruleTail, 3),
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "supplemental-document-context",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "CLAUSE",
+      structurePath: [],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "FRAMEWORK_TERMS",
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        physicalPages: [1],
+        documentStart: blocks[0].documentStart,
+        documentEnd: blocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: [
+        {
+          displayLabel:
+            "gilt die Behandlung von Sonderabfall \nals mitversichert.",
+          components: [
+            {
+              type: "OBJECT",
+              label: "Behandlung von Sonderabfall",
+              sourceBlockIds: ["rule-lead"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: ["rule-tail"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0]).toEqual({
+      ...response,
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+      ],
+      requirements: [
+        {
+          ...response.requirements[0],
+          components: [
+            {
+              type: "PRECEDENCE_OR_REPLACEMENT",
+              label:
+                "In Ergänzung bestehender, dem Vertrag zugrunde liegender einschlägiger Bestimmungen in \nVersicherungsbedingungen o. ä.",
+              sourceBlockIds: ["intro", "rule-lead"],
+            },
+            ...response.requirements[0].components,
+          ],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "MATERIALIZE_SUPPLEMENTAL_DOCUMENT_CONTEXT",
+      sourceBlockIds: ["intro", "rule-lead"],
+    });
+
+    const manifest = buildADrivenSemanticManifest({
+      plan: {
+        schemaVersion: 2,
+        contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+        runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+        planSha256: "a".repeat(64),
+        documents: [{ documentUuid: "doc" }],
+        units: [unit],
+        relations: [],
+        summary: { sourceBlocks: 3 },
+      },
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("does not treat a supplemental physical object as a document relationship", () => {
+    const sourceText =
+      "In Ergänzung bestehender Gebäude gilt die Garage als mitversichert.";
+    const unit = {
+      unitId: "supplemental-object",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: sourceText,
+        blocks: [{ blockId: "block", exactText: sourceText }],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: sourceText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Garage",
+              sourceBlockIds: ["block"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: ["block"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
     });
   });
 
