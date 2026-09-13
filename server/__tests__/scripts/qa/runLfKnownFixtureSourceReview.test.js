@@ -116,7 +116,7 @@ describe("LF known fixture source review runner", () => {
       { code: "LF_SOURCE_REVIEW_COMPONENT_FINDING_INVALID" }
     );
     expect(repaired.at(-1).content).toContain(
-      "innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED"
+      "innerhalb jedes componentFinding ist ausschließlich MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED"
     );
   });
 
@@ -126,5 +126,8 @@ describe("LF known fixture source review runner", () => {
     expect(schema.required).not.toContain("outcome");
     expect(schema.required).toContain("unmodeledDifferences");
     expect(schema.properties.componentFindings.minItems).toBe(2);
+    expect(
+      schema.properties.componentFindings.items.properties.outcome.enum
+    ).toEqual(["MATCH", "OPPOSITE", "RELATED_ONLY", "NOT_ESTABLISHED"]);
   });
 });

@@ -199,12 +199,23 @@ describe("LF known fixture source review", () => {
     const partial = {
       ...response,
       componentFindings: response.componentFindings.map((finding, index) =>
-        index ? { ...finding, outcome: "MISMATCH" } : finding
+          index ? { ...finding, outcome: "RELATED_ONLY" } : finding
       ),
     };
     expect(validateSourceReviewResponse(row, partial)).toEqual({
       ...partial,
       outcome: "PARTIAL_COUNTERPART",
+    });
+    const contradicted = {
+      ...response,
+      componentFindings: response.componentFindings.map((finding) => ({
+        ...finding,
+        outcome: "OPPOSITE",
+      })),
+    };
+    expect(validateSourceReviewResponse(row, contradicted)).toEqual({
+      ...contradicted,
+      outcome: "CONTRADICTED",
     });
     const implicitRestriction = {
       ...response,

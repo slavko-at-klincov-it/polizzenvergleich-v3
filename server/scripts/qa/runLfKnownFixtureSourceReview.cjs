@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V6";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V6";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V6";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V7";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V7";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V7";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -154,8 +154,28 @@ function messages(row) {
   return [
     {
       role: "system",
-      content:
-        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. globalClaudeRebind enthält unabhängig vom aktuellen Zeilenretrieval im gesamten Quellkorpus rückgebundene Claude-Fundstellen. globalReferenceARebind enthält für jeden A-Check zusätzlich unabhängig im gesamten Quellkorpus gesuchte A-Wortlautkandidaten. Beide dürfen für jeden Check verwendet werden, aber nur soweit ihr Wortlaut ihn wirklich trägt. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. Zusätzlich ist unmodeledDifferences immer als Array auszugeben. Jede fachlich relevante Abweichung der B-Stelle, für die kein passender Check vorhanden ist, muss dort source-bound als {dimension,description,candidateIds} erfasst werden; candidateIds darf dabei nicht leer sein. Beispiele sind eine zusätzliche Einschränkung, ein engerer Scope oder eine abweichende Wirkung. Gib keinen Zeilenstatus aus; der Server leitet ihn deterministisch aus den Einzelbefunden ab. NO_COUNTERPART_ESTABLISHED bedeutet dabei später nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,componentFindings:[{componentId,dimension,outcome,candidateIds}],unmodeledDifferences:[{dimension,description,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4 sein.",
+      content: [
+        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch.",
+        "Antworte ausschließlich mit genau einem JSON-Objekt und verwende nur vorgelegte candidateId-Werte und deren exakte Originaltexte.",
+        "globalClaudeRebind enthält unabhängig vom Zeilenretrieval im gesamten Quellkorpus rückgebundene Claude-Fundstellen.",
+        "globalReferenceARebind enthält für jeden A-Check zusätzlich unabhängig im gesamten Quellkorpus gesuchte A-Wortlautkandidaten.",
+        "Beide dürfen für jeden Check verwendet werden, aber nur soweit ihr Wortlaut ihn wirklich trägt.",
+        "Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen; gemeinschaftlich genutzt ist nicht gewerblich genutzt.",
+        "Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH.",
+        "Der synthetische __row_context__-Check ist zwingend und prüft Kategorie, Unterkategorie und Prüfpunkt als fachlichen Scope; allgemeine Klauseln dürfen keinen speziellen Produktbaustein ersetzen.",
+        "Pro Check ist genau ein Ergebnis auszugeben:",
+        "MATCH mit mindestens einer candidateId bedeutet fachlich gleiche Unterstützung.",
+        "OPPOSITE mit mindestens einer candidateId bedeutet ein echtes Gegenstück desselben Scopes mit gegenteiliger Wirkung.",
+        "RELATED_ONLY mit mindestens einer candidateId bedeutet nur thematische Nähe bei anderem Gegenstand, Scope, Rolle oder Sachverhalt.",
+        "NOT_ESTABLISHED bedeutet, dass in den Kandidaten kein tragfähiger Beleg vorliegt, und verlangt candidateIds:[].",
+        "Das bloße Fehlen einer A-Regel in B ist niemals OPPOSITE.",
+        "unmodeledDifferences ist immer ein Array; jede fachlich relevante zusätzliche Einschränkung, jeder engere Scope und jede abweichende Wirkung ohne passenden Check muss dort source-bound als {dimension,description,candidateIds} stehen.",
+        "Gib keinen Zeilenstatus aus; der Server leitet ihn deterministisch aus den Einzelbefunden ab.",
+        "NO_COUNTERPART_ESTABLISHED bedeutet später nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis.",
+        "Erfinde niemals Fundstellen, IDs oder Inhalte.",
+        "Das Ausgabeformat ist exakt {contractId,requirementId,componentFindings:[{componentId,dimension,outcome,candidateIds}],unmodeledDifferences:[{dimension,description,candidateIds}],rationale}.",
+        "contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V5 sein.",
+      ].join(" "),
     },
     {
       role: "user",
@@ -214,7 +234,12 @@ function responseFormat(row) {
                 },
                 outcome: {
                   type: "string",
-                  enum: ["MATCH", "MISMATCH", "NOT_ESTABLISHED"],
+                  enum: [
+                    "MATCH",
+                    "OPPOSITE",
+                    "RELATED_ONLY",
+                    "NOT_ESTABLISHED",
+                  ],
                 },
                 candidateIds: {
                   type: "array",
@@ -282,7 +307,7 @@ function repairMessages(row, rawResponse, error) {
       role: "user",
       content: `Die Antwort ist formal ungültig (${errorClass(
         error
-      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: Gib keinen outcome auf Zeilenebene aus; der Server rollt ihn auf. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. unmodeledDifferences ist immer ein Array; jeder Eintrag braucht dimension, eine Beschreibung und mindestens eine vorhandene candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
+      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: Gib keinen outcome auf Zeilenebene aus; der Server rollt ihn auf. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH, OPPOSITE und RELATED_ONLY benötigen mindestens eine erlaubte candidateId. unmodeledDifferences ist immer ein Array; jeder Eintrag braucht dimension, eine Beschreibung und mindestens eine vorhandene candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
     },
   ];
 }

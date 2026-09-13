@@ -2,14 +2,19 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V5";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
   "NO_COUNTERPART_ESTABLISHED",
   "CONTRADICTED",
 ]);
-const COMPONENT_OUTCOMES = new Set(["MATCH", "MISMATCH", "NOT_ESTABLISHED"]);
+const COMPONENT_OUTCOMES = new Set([
+  "MATCH",
+  "OPPOSITE",
+  "RELATED_ONLY",
+  "NOT_ESTABLISHED",
+]);
 const REVIEW_DIMENSIONS = new Set([
   "OBJECT",
   "PERIL_OR_CAUSE",
@@ -812,7 +817,7 @@ function validateSourceReviewResponse(row, response) {
       ? "FULL_COUNTERPART"
       : outcomes.includes("MATCH")
         ? "PARTIAL_COUNTERPART"
-        : outcomes.every((outcome) => outcome === "MISMATCH")
+        : outcomes.includes("OPPOSITE")
           ? "CONTRADICTED"
           : "NO_COUNTERPART_ESTABLISHED";
   if (!REVIEW_OUTCOMES.has(expectedOutcome))
