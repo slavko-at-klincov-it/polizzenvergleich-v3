@@ -475,14 +475,22 @@ async function verifyModel({ baseUrl, model, modelContext }) {
   };
 }
 
+function expectedPacketRowCount(packet) {
+  if (packet?.selection?.sample === "REPRESENTATIVE_30_V1") return 30;
+  if (packet?.selection?.sample === "ALL_283_V1") return 283;
+  return null;
+}
+
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
   const packet = readJson(args.packet, "LF_SOURCE_REVIEW_PACKET");
+  const expectedRows = expectedPacketRowCount(packet);
   if (
     packet?.contractId !== SOURCE_REVIEW_PACKET_CONTRACT_ID ||
     packet?.status !== "READY_FOR_SOURCE_REVIEW" ||
+    expectedRows === null ||
     !Array.isArray(packet.rows) ||
-    packet.rows.length !== 30
+    packet.rows.length !== expectedRows
   )
     throw new Error("LF_SOURCE_REVIEW_PACKET_INVALID");
   if (fs.existsSync(args.output)) {
@@ -573,6 +581,7 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  expectedPacketRowCount,
   messages,
   parseJsonObject,
   recoverValidatedAttempt,

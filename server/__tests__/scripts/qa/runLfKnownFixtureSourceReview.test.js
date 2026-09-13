@@ -2,6 +2,7 @@ const {
   SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
 } = require("../../../utils/policyAnalysis/lfKnownFixtureSourceReview");
 const {
+  expectedPacketRowCount,
   messages,
   parseJsonObject,
   repairMessages,
@@ -27,6 +28,20 @@ const row = {
 };
 
 describe("LF known fixture source review runner", () => {
+  it("accepts only the versioned 30-row or complete 283-row review scope", () => {
+    expect(
+      expectedPacketRowCount({
+        selection: { sample: "REPRESENTATIVE_30_V1" },
+      })
+    ).toBe(30);
+    expect(
+      expectedPacketRowCount({ selection: { sample: "ALL_283_V1" } })
+    ).toBe(283);
+    expect(
+      expectedPacketRowCount({ selection: { sample: "ARBITRARY" } })
+    ).toBeNull();
+  });
+
   it("parses one JSON object after a hidden thinking block", () => {
     expect(
       parseJsonObject(
