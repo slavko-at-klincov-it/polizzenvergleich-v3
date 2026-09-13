@@ -1,0 +1,85 @@
+{
+  "contractId": "LF_1PLUS9_GOLD_30_DECISIONS_V1",
+  "rows": [
+    {
+      "requirementId": "VS-25",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Alle neun B-Dokumente und 77 Seiten wurden geprüft. B regelt gemeinschaftlich genutzte Nebengebäude und eine Gewerbenutzung des Hauptgebäudes, aber nicht gewerblich genutzte Nebengebäude mit höchstens halber Gewerbefläche im A-Scope.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "SP-03",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Die vollständige PDF-Suche fand nur Zwischenlagerung gefährlicher Abfälle in der Haftpflicht sowie allgemeine Lagerbehältnisse. Beides ist weder die versicherte Gebäudeschaden-Zwischenlagerung noch deren Sechsmonats-, Anzeige- und Zehnprozentregel.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "LW-G-06",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Die vollständige PDF-Suche fand Sprinkler- und Löschanlagen. Sie fand keine automatische Beregnung oder Bewässerung allgemeiner Grünflächen mit dem A-Eigentums- oder Ersatzpflichtscope.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "GL-26",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Die einzige kombinierte Glas-/Gefahrenfundstelle ist ein allgemeiner Verglasungsausschluss in der Sturmversicherung. Sie regelt nicht den A-Glasausschluss für Brand, Blitz, Explosion, Meteoriten, Satelliten sowie Luft- und Raumfahrzeuge.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "OK-09",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Alle neun B-Dokumente und 77 Seiten wurden geprüft. Allgemeine Kündigungsrechte sind vorhanden, aber kein eigenständiger Ökoschutz- oder Entsorgungsschutz-Baustein mit beidseitigem Monatskündigungsrecht zur jährlichen Hauptfälligkeit.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "VS-31",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Alle neun B-Dokumente und 77 Seiten wurden geprüft. Erdkabel, Masten in Blitzklauseln und allgemeine technische Anlagen sind andere Elemente; Freileitungen, technische Bauten und Grabungsarbeiten im A-Erstrisikoscope fehlen.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "PR-02",
+      "outcome": "PARTIAL_COUNTERPART",
+      "rationale": "B nennt den konkreten Versicherungsnehmer Firma WEG Treustraße 57 und vereinbart ausdrücklich RV WEVIG/Familienwohnbau. Der vollständige A-Kreis Familienwohnbau, Tochtergesellschaften und Betreuung durch LF Immo ist in B nicht gleichlautend definiert; deshalb gefunden, aber teilweise beziehungsweise abweichend.",
+      "selectedPacketCandidateIds": [
+        "lf-counterpart-benchmark:6d6d7d021e2440122358a765b6eed8a766f4043ce2997bb527559f89860a4667"
+      ],
+      "selectedFullCorpusMatches": [
+        {
+          "routeId": "policyholder-weg",
+          "documentFingerprint": "a476cc2e0d970c0143e552bd7d901d82abd89324ba4cf316bc7ee3202a8b0b16",
+          "physicalPageNumber": 1
+        }
+      ],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "PR-09",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "Die vollständige PDF-Suche fand die Günstigkeitsklausel, aber keine Regel, wonach die parallelen Versicherungssummen des Exklusivschutzes nicht addiert werden und je Schadenfall nur einmal gelten.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    },
+    {
+      "requirementId": "VS-08",
+      "outcome": "NO_COUNTERPART_ESTABLISHED",
+      "rationale": "B nennt gemeinschaftlich genutzte Nebengebäude, definiert aber nicht den A-Begriff mit privater oder betrieblicher Nutzung, fehlender Wohneignung, getrenntem Dach, Bodenverankerung und Gewächshaus-Ausschluss. Der Glas-Ausschluss für Glas- und Gewächshäuser ist ein anderer Scope.",
+      "selectedPacketCandidateIds": [],
+      "selectedFullCorpusMatches": [],
+      "rejectAllOtherFullCorpusMatches": true
+    }
+  ]
+}
